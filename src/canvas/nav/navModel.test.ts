@@ -160,6 +160,9 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kanallar/hepsiburada')).toBe('kanallar'); // M42 kanal detayı → Kanal karnesi
     expect(at('/kanallar/matris')).toBe('kanal-matris');
     expect(at('/kanallar/eslesme')).toBe('kanal-eslesme');
+    expect(at('/e-ticaret')).toBe('eticaret'); // M34 platform durumu
+    expect(at('/e-ticaret/farklar')).toBe('eticaret-farklar');
+    expect(at('/e-ticaret/pazar-yerleri')).toBe('eticaret-pazar-yerleri');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

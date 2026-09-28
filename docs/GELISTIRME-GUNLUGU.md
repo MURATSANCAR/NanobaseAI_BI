@@ -153,6 +153,66 @@
   `temizlik.py` rol, bağ, aday, pozisyon ve bağlı bütün satırları siler.
 - **Sunucuda kalan:** köprü + arayüz kurulumu, `timas-hr-purge.timer` ve `timas-hr-recruit-reminders.timer` (önce elle
   `systemctl start`), pytest/vitest/tsc, kabul ve temizlik; İK rolü atanana kadar ekranlar yalnız yöneticide görünür.
+## 2026-09-28 — M34 E-ticaret ve platform yönetimi (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+- **Neden:** yol haritası «Dijital ve müşteri» bloku. Ürün kartı CRM'de, stok ve maliyet Logo'da, vitrin T-soft'ta; üçü
+  arasındaki farkı gösteren ekran yoktu, hatalı kart ancak okur ya da Google fark edince görülüyordu (analiz
+  `docs/analiz/kullanici-ihtiyaclari/M34-eticaret-platform.md`, 14. bölüm). İş tanımındaki «otomatik eşitleme ve listeleme»
+  T-soft yazma yasağı ve CRM yazma yetkisizliği yüzünden bu sürümde K4'tür: fark gösterilir, düzeltmeyi kişi yapar.
+- **Ne yapıldı:**
+  - Köprü `eticaret.py` / `eticaret_sources.py` / `eticaret_api.py`; tablolar `semantic_eticaret_items`, `_diffs`, `_diff_log`,
+    `_runs`. Yazmalar `semantic_audit`'e (`eticaret_diff`, `eticaret_proposal`, `eticaret_export`, `eticaret_refresh`).
+  - Uçlar `/api/v1/eticaret/*`: `meta`, `overview`, `status`, `refresh`, `run-due` (sistem), `diffs` (+ `export.csv`,
+    `mark-bulk`, `{id}`, `{id}/mark`), `items/{anahtar}` (+ `propose`), `proposals` (+ `{id}/decide`), `funnel`,
+    `marketplaces` (+ `stock-risk`, `{cari}/books`), `export/content-pack`.
+  - Ön yüz `src/canvas/eticaret/` (`EticaretHome`, `DiffsScreen`, `FunnelScreen`, `MarketplacesScreen`, `ItemDrawer`, `parts`,
+    `api`); menü Pazarlama › «E-ticaret» bölümü (4 öğe; alanın ipucu «Plan, içerik, e-ticaret, SEO & GEO, set ve hediye»);
+    Kampüs `M34: '/e-ticaret'`, grup girişi «Dijital & Topluluk». Telefonda fark satırı kart, üç kaynak alt alta; geniş cari
+    tablosu kendi kabında kayar. Yeni animasyon yok (mevcut düğme/sekme geçişleri).
+  - Yetki: `sayfa:eticaret`, `sayfa:eticaret-farklar`, `sayfa:eticaret-huni`, `sayfa:eticaret-pazar-yerleri`,
+    `ozellik:eticaret.fark-isaretle`, `ozellik:eticaret.oneri-uret`, açık `ozellik:eticaret.oneri-onay`; indirmeler
+    `ozellik:veri.disa-aktar`. Ayarlar (Yönetim › E-ticaret): `ECOM_CHANNELS` (E-TICARET), `ECOM_PRICE_REFERENCE` (crm),
+    `ECOM_PRICE_TOLERANCE` (0,01), `ECOM_STOCK_MIN` (0), `ECOM_REQUIRED_FIELDS`, `ECOM_ALERT_KINDS` (hak,fiyat,stok),
+    `ECOM_ALERT_RECIPIENTS`, `ECOM_WEEKLY_TO`, `ECOM_STOCKOUT_DAYS` (30); yalnız ortamdan: `ECOM_DIFF_KINDS`, `ECOM_HAK_RIGHTS`,
+    `ECOM_SNOOZE_DAYS` (7), `ECOM_SALES_MONTHS` (12), `ECOM_FUNNEL_MIN_VIEWS` (500), `ECOM_FUNNEL_LOW_RATIO` (0,5),
+    `ECOM_REASON_MIN_P` (0,70), `ECOM_REASON_MIN_MARGIN` (0,30), `ECOM_LLM_BUDGET_SEC` (600), `ECOM_DEFAULT_OWNERS`,
+    `ECOM_NAME_CHECK` (1), `ECOM_WEEKLY_DAY` (0 = Pazartesi).
+  - Zamanlayıcı `scripts/server/timas-eticaret.{service,timer}` her gece 04:30 (SEO eşitlemesi 03:00'ten sonra); ilk kez elle.
+- **Kararlar (sormadan, gerekçeli; analiz 10. bölüm ve plan boşlukları):**
+  1. *Site verisi:* T-soft yeniden okunmaz; SEO eşitlemesinin tablosu tek kaynak (çift istek ve yazma riski yok). Site fiyatı
+     ve stoğu Google Alışveriş hazırlığının alan seçicisiyle okunur; alan yoksa değer boş kalır, fark açılmaz (uydurulmaz).
+  2. *Geçerli fiyat (soru 4):* bilinmiyor → esas fiyat ayar (`ECOM_PRICE_REFERENCE`, varsayılan CRM `new_kdvdahilfiyat`:
+     CRM'in `Tsoft_KitapDetay` görünümünün «Fiyat» kolonu). Logo listesi her satırda üçüncü sütun olarak durur.
+  3. *Satışta olmaması gereken:* SEO Haklar ekranının kuralı (CRM yayın durumu: bizim değil, devredildi, geri istendi, iptal,
+     çekildi). «Sözleşme kaydı yok» (2.575) hukuki kesinlik taşımadığı için varsayılan değil; `ECOM_HAK_RIGHTS=yok,eksik`
+     ile açılır.
+  4. *Stok:* M12/M33 tanımı (planlanan üretim girişi hariç); donmuş kopya olduğu için her satırda kesim tarihi yazılır.
+  5. *Pazar yeri satışı:* satır tanımı (`LINENET`, faturalı) — kokpit, bütçe ve M32 ile aynı. Analizin önerdiği fatura
+     başlığı (`NETTOTAL`) ile fark kabulde ÖLÇÜM olarak raporlanır. Satış görünümleri kullanılmadı (plan tuzakları).
+  6. *Kim kapatır (soru 5):* sahip alanı kişiye atanır (`ECOM_DEFAULT_OWNERS` tür başına varsayılan); fiyat farkında ayrı
+     finans onayı yok — onay gerektiren iş portalda değil, T-soft/CRM'de yapılıyor.
+  7. *Kapanma:* koşulu kalkan fark kendiliğinden kapanır; «düzeltildi» yalnız işaretten **sonra** okunan site verisiyle
+     doğrulanır ya da yeniden açılır; okunamayan kaynağa bağlı tür o turda kapanmaz (yanlış «kapandı» yok).
+  8. *Model:* yalnız fiyat farkı nedeni (kapalı küme, olasılıklı) ve kart metni. Huninin «olası nedenleri» veriden kurallı
+     (kart doluluğu, yorum, stok, fiyat) — deterministik bilgiyi model tekrar etmez.
+  9. *Platform satıcı verisi (soru 2–3):* yok → pazar yeri ekranı yalnız sell-in; «okura satış bu sürümde yok» ekranda yazar.
+     T-soft siparişleri kişisel veri içerdiği için okunmadı.
+- **Zeki AI'a sorulacaklar:** «Sitede aktif, Logo stoğu sıfır kaç kitap» → `diffs?tur=stok`; «Görüntülenip satmayan 20 kitap»
+  → `funnel?dusuk=1`; «Kitapyurdu'na bu yıl satış, iade oranı» → `marketplaces`; «CRM fiyatı sitedekinden farklı» →
+  `diffs?tur=fiyat`; «Arka kapağı boş çok satanlar» → `diffs?tur=eksik_kart`; «Hakkı bizde olmadığı hâlde satışta» →
+  `diffs?tur=hak`. Sohbet kapsamında `eticaret` konusu zaten var (`chat_topics.json`).
+- **Testler:** `backend/semantic_layer/tests/test_eticaret.py` (yedi tür, eşleme, yaşam döngüsü, okunamayan kaynak, huni,
+  pazar yeri özeti ve pencereleri, tükenme riski, içerik paketi, neden eşiği, bildirim/haftalık, ayar, yetki, yazma yasağı,
+  uçlar: 422/403/409/503/401). `navModel.test.ts`'e M34 rotaları. **Koşulmadı** (yerelde test yasak); yalnız `py_compile` ve
+  `access_catalog.json` JSON doğrulaması yapıldı. tsc/vitest/derleme de sunucuda.
+- **Kabul (sunucuda koşulacak):** `scripts/acceptance/M34/check.sh` (pytest + tsc + vitest + derleme), `kabul.py` (R1 CRM TSOFT
+  Aktif, R2 CRM'de aktif–sitede yok kümesi ve ilk 20 barkod, R3 cari başına net ciro kuruş + NETTOTAL ölçümü, R4 20 rastgele
+  stok, R5 satışta olmaması gereken = Haklar kuralı, R6 huni sayaçları, R7 cari kitap kırılımı, R8 fiyat farkında CRM fiyatı,
+  Ö1 sitede fiyat/stok alanı doluluğu; `--yazma` işaret akışı), `temizlik.py` (farkın önceki hâli, günlük ve değişiklik
+  kaydı). **Ölçülecek:** sitede fiyat/stok alan adları ve doluluğu, `CountTotalSales` dönemi, `E-TICARET` kanal carilerinin
+  kapsamı, aynı EAN'lı çift CRM kartı sayısı, fiyat nedeni eşiklerinin isabeti.
+- **Açık:** platform satıcı raporu yüklemesi (sell-through, M40–M42 ile), GA4 sepet hunisi, CRM Web API yetkisi gelince onaylı
+  metnin CRM'e yazılması, M35 kampanya bağı (bu modülün `items`/`diffs` tabloları okunur), M43 stok bağı.
 
 ## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 
@@ -169,7 +229,6 @@
   - **M9 Fiyatlama: doğrulanamadı** — ilk veri hazırlığı (Logo 211 beş yıl) köprü her yeniden başladığında sıfırlanıyor; 05:40–06:37 arasında köprü başka oturumlarca 7 kez yeniden başlatıldı, `books`/`actuals` hep 503 «hazırlanıyor».
   - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
 - **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
-
 ## 2026-09-28 (06:30) — Efekt sesleri kuruldu: GPU (dokuz editör servisi `68a1d411`) ve test sunucusu
 
 - **GPU:** `releases/68a1d411` (`._*` 0), `editor-py:0.15.9-68a1d411`, stüdyo `editor-py-studio:0.15.9-68a1d411`

@@ -7250,6 +7250,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
     from semantic_bridge import channels
     app.state.channels = channels.register(app, rt, _require_caller, _can)
+    # M34 E-ticaret ve platform yönetimi: site (SEO eşitlemesinden) ↔ CRM ↔ Logo farkları, huni, pazar yeri sell-in,
+    # içerik paketi. Uçlar /api/v1/eticaret/*; tablolar semantic_eticaret_*; öneriler SEO öneri kaydına düşer. Yazma yok.
+    from semantic_bridge import eticaret_api
+    from semantic_bridge.budget_api import _send_mail as _ecom_send_mail
+    app.state.eticaret = eticaret_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("eticaret", priority), "seo": app.state.seo_geo, "send_mail": _ecom_send_mail,
+    })
     return app
 
 

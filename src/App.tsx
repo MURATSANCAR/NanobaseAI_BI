@@ -102,6 +102,10 @@ const HrRecordsScreen = lazy(() => import('@/canvas/hr/records/HrRecordsScreen')
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
+const EticaretHome = lazy(() => import('@/canvas/eticaret/EticaretHome'));
+const EticaretDiffs = lazy(() => import('@/canvas/eticaret/DiffsScreen'));
+const EticaretFunnel = lazy(() => import('@/canvas/eticaret/FunnelScreen'));
+const EticaretMarkets = lazy(() => import('@/canvas/eticaret/MarketplacesScreen'));
 const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
 const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
 const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
@@ -348,6 +352,11 @@ export default function App() {
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
             <Route path="pazarlama/set-hediye/set/:id" element={<SetEditor />} />
             <Route path="pazarlama/set-hediye/teklif/:id" element={<GiftOfferEditor />} />
+            {/* M34 E-ticaret ve platform (/api/v1/eticaret): platform durumu, farklar, huni, pazar yerleri. */}
+            <Route path="e-ticaret" element={<EticaretHome />} />
+            <Route path="e-ticaret/farklar" element={<EticaretDiffs />} />
+            <Route path="e-ticaret/huni" element={<EticaretFunnel />} />
+            <Route path="e-ticaret/pazar-yerleri" element={<EticaretMarkets />} />
             <Route path="pazarlama/icerik" element={<CreativeHome />} />
             <Route path="pazarlama/icerik/:id" element={<CreativeRequest />} />
             <Route path="seo-geo" element={<SeoHome />} />

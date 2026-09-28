@@ -3,6 +3,9 @@ import {
   Headset,
   Server,
   Handshake,
+  Filter,
+  GitCompareArrows,
+  Store,
   HeartHandshake,
   CalendarHeart,
   MessageSquareReply,
@@ -353,7 +356,7 @@ export const NAV: NavGroup[] = [
   {
     id: 'pazarlama',
     label: 'Pazarlama',
-    hint: 'Plan, içerik, SEO & GEO, set ve hediye',
+    hint: 'Plan, içerik, e-ticaret, SEO & GEO, set ve hediye',
     icon: Megaphone,
     items: [
       // M18: ay planı bölümün ilk öğesi; föy sayfası saha temsilcisine de açık (telefon alt menüsünde görünür).
@@ -391,6 +394,11 @@ export const NAV: NavGroup[] = [
       { id: 'etkinlikler', label: 'Fuar ve etkinlik', to: '/etkinlikler', icon: CalendarRange, section: 'Etkinlik', hint: 'Fuar, imza günü, söyleşi ve ödüller', keywords: ['fuar', 'tüyap', 'imza günü', 'söyleşi', 'etkinlik', 'ödül', 'stant', 'fuar sonucu', 'ajanda'] },
       // M28: kişi kartı, kurumlar, hediye programı, projeler ve rapor alt adresleri (/kurumsal-iliskiler/…) bu öğenin altında.
       { id: 'kurumsal-iliskiler', label: 'Kurumsal ilişkiler', to: '/kurumsal-iliskiler', icon: Landmark, section: 'İlişkiler', hint: 'Kanaat önderleri, kurumlar ve kamu projeleri', keywords: ['kanaat önderi', 'hediye kitap', 'kamu projesi', 'belediye', 'milli eğitim', 'kütüphane bağışı', 'okuma kampanyası', 'akademisyen', 'teklif dosyası'] },
+      // M34 E-ticaret: site ↔ CRM ↔ Logo farkları, huni, pazar yeri carileri (portal hiçbir sisteme yazmaz).
+      { id: 'eticaret', label: 'Platform durumu', to: '/e-ticaret', icon: Store, section: 'E-ticaret', hint: 'Sitedeki ürün, CRM kartı ve Logo kaydı: açık fark, eksik kart, satışta olmaması gereken kitap', keywords: ['e-ticaret', 'site', 't-soft', 'platform', 'tsoft aktif', 'satışta olmaması gereken'] },
+      { id: 'eticaret-farklar', label: 'Farklar', to: '/e-ticaret/farklar', icon: GitCompareArrows, section: 'E-ticaret', hint: 'Fiyat, stok, aktiflik, barkod ve kart farkları; işaretleme ve içerik paketi', keywords: ['fark', 'eşitleme', 'fiyat farkı', 'stok', 'barkod', 'içerik paketi'] },
+      { id: 'eticaret-huni', label: 'Huni', to: '/e-ticaret/huni', icon: Filter, section: 'E-ticaret', hint: 'Sitede görüntülenme → satış; çok bakılıp az satan kitaplar', keywords: ['huni', 'dönüşüm', 'görüntülenme'] },
+      { id: 'eticaret-pazar-yerleri', label: 'Pazar yerleri', to: '/e-ticaret/pazar-yerleri', icon: ShoppingBag, section: 'E-ticaret', hint: 'Pazar yeri carilerine Logo satışı, iade, tükenme riski', keywords: ['pazar yeri', 'kitapyurdu', 'hepsiburada', 'amazon', 'trendyol', 'sell-in', 'iade'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },

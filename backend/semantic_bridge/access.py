@@ -612,6 +612,12 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
+    # M34 E-ticaret: ortak uçlar (meta, kitap çekmecesi, öneri) dört ekranda; liste uçları kendi ekranı + platform durumu.
+    ("/api/v1/eticaret/run-due", SYSTEM),
+    ("/api/v1/eticaret/diffs", frozenset({page("eticaret"), page("eticaret-farklar")})),
+    ("/api/v1/eticaret/funnel", frozenset({page("eticaret"), page("eticaret-huni")})),
+    ("/api/v1/eticaret/marketplaces", frozenset({page("eticaret"), page("eticaret-pazar-yerleri")})),
+    ("/api/v1/eticaret/", frozenset(page(x) for x in ("eticaret", "eticaret-farklar", "eticaret-huni", "eticaret-pazar-yerleri"))),
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
@@ -965,6 +971,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/okur/categories/classify$", "ozellik:topluluk.segment-yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/okur/programs(/[^/]+(/draft)?)?$", "ozellik:topluluk.program-yaz"),
     (frozenset({"POST"}), r"^/api/v1/okur/reviews/[^/]+/(draft|mark)$", "ozellik:topluluk.yorum-taslak"),
+    # M34 E-ticaret: fark işaretleme ve okumayı yenileme; Zeki AI kart önerisi (model harcar); fark CSV'si ve içerik paketi.
+    # Öneri onayı açıkça verilen `eticaret.oneri-onay` ile ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/eticaret/(refresh|diffs/mark-bulk|diffs/[^/]+/mark)$", "ozellik:eticaret.fark-isaretle"),
+    (frozenset({"POST"}), r"^/api/v1/eticaret/items/[^/]+/propose$", "ozellik:eticaret.oneri-uret"),
+    (frozenset({"GET"}), r"^/api/v1/eticaret/(diffs/export\.csv|export/content-pack)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",

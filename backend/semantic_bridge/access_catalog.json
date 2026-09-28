@@ -620,6 +620,26 @@
       "key": "sayfa:kanal-eslesme",
       "area": "platform",
       "label": "Cari eşleme"
+    },
+    {
+      "key": "sayfa:eticaret",
+      "area": "pazarlama",
+      "label": "E-ticaret: platform durumu"
+    },
+    {
+      "key": "sayfa:eticaret-farklar",
+      "area": "pazarlama",
+      "label": "E-ticaret: farklar"
+    },
+    {
+      "key": "sayfa:eticaret-huni",
+      "area": "pazarlama",
+      "label": "E-ticaret: huni"
+    },
+    {
+      "key": "sayfa:eticaret-pazar-yerleri",
+      "area": "pazarlama",
+      "label": "E-ticaret: pazar yerleri"
     }
   ],
   "features": [
@@ -2070,6 +2090,28 @@
       "page": "sayfa:kanallar",
       "label": "Kanal önerisi taslağı",
       "hint": "Simülasyondan iskonto önerisi ve D2C'ye özel set önerisi taslağı açma (Zeki AI gerekçe yazar)"
+    },
+    {
+      "key": "ozellik:eticaret.fark-isaretle",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-farklar",
+      "label": "E-ticaret farkını işaretleme",
+      "hint": "Farkı düzeltildi / bilinçli fark / sonra diye işaretleme, sahip atama, CRM–Logo–site okumasını yenileme"
+    },
+    {
+      "key": "ozellik:eticaret.oneri-uret",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret",
+      "label": "E-ticaret kart önerisi üretme",
+      "hint": "Zeki AI'dan ürün kartı başlık, açıklama ve anahtar kelime taslağı isteme (model harcar)"
+    },
+    {
+      "key": "ozellik:eticaret.oneri-onay",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret",
+      "label": "E-ticaret kart önerisi onayı",
+      "hint": "Zeki AI kart önerisini onaylama ya da gerekçeyle reddetme (öneriyi isteyen onaylayamaz); onay kayıttır, siteye gönderilmez",
+      "explicit": true
     }
   ]
 }
