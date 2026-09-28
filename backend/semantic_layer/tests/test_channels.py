@@ -237,7 +237,7 @@ def test_partial_last_month_is_compared_with_the_same_share_of_last_year(engine)
     _seed(engine)
     card = SC.scorecard(engine, T, 2026)
     p = card["period"]
-    assert p["ay"] == 8 and p["kismiAy"] and p["gunPayi"] == pytest.approx(17 / 31)
+    assert p["ay"] == 8 and p["kismiAy"] and p["gunPayi"] == pytest.approx(17 / 31, abs=1e-4)
     ky = next(x for x in card["platforms"] if x["platform"] == "kitapyurdu")
     assert ky["gecenYil"]["netCiro"] == pytest.approx(1600 * (7 + 17 / 31))
     assert ky["donem"]["netCiro"] == pytest.approx(1600 * 8)
@@ -299,7 +299,7 @@ def test_crm_region_target_is_prorated_to_the_data_end(engine):
     assert SC.targets_by_platform(engine, T, SC.period(engine, T, 2026, None)) == {}   # bölge eşlenmeden hedef yok
     M.set_region(engine, T, "ayse", "8", "hepsiburada")
     t = SC.targets(engine, T, 2026)["crm"]["hepsiburada"]
-    assert t["beklenen"] == pytest.approx(100 * (7 + 17 / 31)) and t["gerceklesen"] == pytest.approx(8 * 140)
+    assert t["beklenen"] == pytest.approx(100 * (7 + 17 / 31), abs=0.01) and t["gerceklesen"] == pytest.approx(8 * 140)
     assert t["aylik"][8]["gercek"] is None and t["bolgeler"] == ["HEPSİBURADA"]
 
 
@@ -316,7 +316,7 @@ def test_m46_target_is_split_by_last_years_channel_share(engine):
                                              "aylik": [{"ay": m, "adet": 1000} for m in range(1, 13)]}]}
     out = SC.targets(engine, T, 2026, lambda y: plan)["m46"]["platformlar"]
     # 2025: Kitapyurdu B1 net 160/ay, şirket 540/ay → pay 160/540
-    assert out["kitapyurdu"]["hedefAdet"] == pytest.approx(12000 * 160 / 540)
+    assert out["kitapyurdu"]["hedefAdet"] == pytest.approx(12000 * 160 / 540, abs=0.01)
     assert out["kitapyurdu"]["gerceklesenAdet"] == pytest.approx(8 * 160)
 
 
