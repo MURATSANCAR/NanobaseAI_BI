@@ -355,6 +355,372 @@
       "retention": null,
       "retentionNote": "M1'e aktarıldıktan sonra başvuru kaydı M1'de tutulur; otomatik silinmez",
       "module": "Kurumsal e-posta"
+    },
+    {
+      "object": "semantic_infl_people",
+      "columns": [
+        "crm_contact_id",
+        "email",
+        "phone",
+        "contact_pref",
+        "do_not_contact"
+      ],
+      "data": "İçerik üreticisinin iletişim bilgisi, CRM kişi kimliği, iletişim tercihi",
+      "subjects": "içerik üreticisi",
+      "purpose": "İşbirliği teklifi ve takip",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "İşbirlikleri (M23)"
+    },
+    {
+      "object": "semantic_readers",
+      "columns": [
+        "email_hash",
+        "phone_hash",
+        "birth_year"
+      ],
+      "data": "E-posta/telefonun tuzlu özeti (geri çevrilemez), doğum yılı",
+      "subjects": "okur",
+      "purpose": "Tekil okur ve izin özeti",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur veri tabanı (H2)"
+    },
+    {
+      "object": "semantic_reader_import_rows",
+      "columns": [
+        "email_hash",
+        "phone_hash"
+      ],
+      "data": "Etkinlik dosyası satırının tuzlu özeti",
+      "subjects": "okur",
+      "purpose": "Etkinlik katılımcısını okura eşleme",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur veri tabanı (H2)"
+    },
+    {
+      "object": "semantic_reader_segment_snapshots",
+      "columns": [
+        "email_ok"
+      ],
+      "data": "Yalnız sayı ya da evet/hayır; kişi verisi yok (kolon adı yüzünden listede)",
+      "subjects": "—",
+      "purpose": "Segment sayımı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur veri tabanı (H2)"
+    },
+    {
+      "object": "semantic_okur_inventory",
+      "columns": [
+        "eposta_izinli"
+      ],
+      "data": "Yalnız sayı ya da evet/hayır; kişi verisi yok (kolon adı yüzünden listede)",
+      "subjects": "—",
+      "purpose": "Okur kitlesi sayıları",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur topluluğu (M37)"
+    },
+    {
+      "object": "semantic_okur_segments",
+      "columns": [
+        "son_eposta"
+      ],
+      "data": "Yalnız sayı ya da evet/hayır; kişi verisi yok (kolon adı yüzünden listede)",
+      "subjects": "—",
+      "purpose": "Segment ölçümü",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur topluluğu (M37)"
+    },
+    {
+      "object": "semantic_okur_segment_sizes",
+      "columns": [
+        "eposta"
+      ],
+      "data": "Yalnız sayı ya da evet/hayır; kişi verisi yok (kolon adı yüzünden listede)",
+      "subjects": "—",
+      "purpose": "Segment büyüklüğü",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Okur topluluğu (M37)"
+    },
+    {
+      "object": "semantic_hr_candidates",
+      "columns": [
+        "full_name",
+        "email",
+        "phone"
+      ],
+      "data": "Aday adı ve iletişim bilgisi",
+      "subjects": "iş adayı",
+      "purpose": "İşe alım süreci",
+      "retention": null,
+      "retentionNote": "Saklama süresi İK ayarından; gece imha işi siler (hr_core)",
+      "module": "İnsan kaynakları (M55)"
+    },
+    {
+      "object": "semantic_hr_employees",
+      "columns": [
+        "display_name"
+      ],
+      "data": "Çalışan görünen adı",
+      "subjects": "çalışan",
+      "purpose": "Çalışan ve birim kaydı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "İnsan kaynakları (İK-0)"
+    },
+    {
+      "object": "semantic_support_insights",
+      "columns": [
+        "contact_ref"
+      ],
+      "data": "Destek masasındaki kişinin kimlik başvurusu (ad/iletişim değil)",
+      "subjects": "müşteri/okur",
+      "purpose": "Talep sınıfı ve kalite",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Müşteri hizmetleri (M51)"
+    },
+    {
+      "object": "semantic_events_authors",
+      "columns": [
+        "crm_contact_id"
+      ],
+      "data": "Fuar/etkinliğe katılan yazarın CRM kişi kimliği",
+      "subjects": "yazar",
+      "purpose": "Etkinlik katılım planı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Fuar ve etkinlik (M27)"
+    },
+    {
+      "object": "semantic_rel_people",
+      "columns": [
+        "crm_contact_id",
+        "owner_display",
+        "email",
+        "phone"
+      ],
+      "data": "Kanaat önderi/kurum kişisinin iletişim bilgisi, sorumlu çalışan",
+      "subjects": "kurum temsilcisi; çalışan",
+      "purpose": "Kurumsal ilişki takibi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurumsal ilişkiler (M28)"
+    },
+    {
+      "object": "semantic_rel_orgs",
+      "columns": [
+        "owner_display"
+      ],
+      "data": "Sorumlu çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Kurum kartı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurumsal ilişkiler (M28)"
+    },
+    {
+      "object": "semantic_rel_notes",
+      "columns": [
+        "created_display"
+      ],
+      "data": "Notu yazan çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "İlişki notu",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurumsal ilişkiler (M28)"
+    },
+    {
+      "object": "semantic_rel_projects",
+      "columns": [
+        "owner_display"
+      ],
+      "data": "Sorumlu çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Kamu projesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurumsal ilişkiler (M28)"
+    },
+    {
+      "object": "semantic_rel_project_events",
+      "columns": [
+        "user_display"
+      ],
+      "data": "İşlemi yapan çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Proje geçmişi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurumsal ilişkiler (M28)"
+    },
+    {
+      "object": "semantic_pr_contacts",
+      "columns": [
+        "crm_contact_id",
+        "email",
+        "phone",
+        "do_not_contact"
+      ],
+      "data": "Medya kişisinin iletişim bilgisi ve «haberdar olmak istemiyor» işareti",
+      "subjects": "gazeteci/medya kişisi",
+      "purpose": "Basın gönderimi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Basın ilişkileri (M20)"
+    },
+    {
+      "object": "semantic_pr_sends",
+      "columns": [
+        "contact_key",
+        "contact_name"
+      ],
+      "data": "Gönderim yapılan medya kişisinin adı",
+      "subjects": "gazeteci/medya kişisi",
+      "purpose": "Gönderim listesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Basın ilişkileri (M20)"
+    },
+    {
+      "object": "semantic_pr_coverage",
+      "columns": [
+        "contact_key",
+        "author_name",
+        "author_contact_id"
+      ],
+      "data": "Haberi yazan kişinin adı ve kimliği",
+      "subjects": "gazeteci/medya kişisi",
+      "purpose": "Yansıma kaydı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Basın ilişkileri (M20)"
+    },
+    {
+      "object": "semantic_author_reminders",
+      "columns": [
+        "email"
+      ],
+      "data": "Yazar e-posta adresi",
+      "subjects": "yazar",
+      "purpose": "Yazar hatırlatmaları",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Yazar ilişkileri (M7)"
+    },
+    {
+      "object": "semantic_author_growth",
+      "columns": [
+        "contact_id"
+      ],
+      "data": "Yazarın CRM kişi kimliği",
+      "subjects": "yazar",
+      "purpose": "Gelişim takibi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Yazar ilişkileri (M7)"
+    },
+    {
+      "object": "semantic_author_advice",
+      "columns": [
+        "contact_id"
+      ],
+      "data": "Yazarın CRM kişi kimliği",
+      "subjects": "yazar",
+      "purpose": "Zeki AI önerisi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Yazar ilişkileri (M7)"
+    },
+    {
+      "object": "semantic_risk_register",
+      "columns": [
+        "sahip_eposta"
+      ],
+      "data": "Risk sahibinin iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Risk kaydı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_risk_indicators",
+      "columns": [
+        "sahip_eposta"
+      ],
+      "data": "Gösterge sahibinin iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Gösterge bildirimi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_risk_actions",
+      "columns": [
+        "sahip_eposta"
+      ],
+      "data": "Aksiyon sahibinin iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Aksiyon takibi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_compliance_items",
+      "columns": [
+        "sorumlu_eposta"
+      ],
+      "data": "Sorumlunun iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Uyum yükümlülüğü",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_risk_policies",
+      "columns": [
+        "sorumlu_eposta"
+      ],
+      "data": "Sorumlunun iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Sigorta poliçesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_risk_bcp",
+      "columns": [
+        "sorumlu_eposta"
+      ],
+      "data": "Sorumlunun iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "İş sürekliliği",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Risk ve uyum (M47)"
+    },
+    {
+      "object": "semantic_royalty_party_statements",
+      "columns": [
+        "eposta"
+      ],
+      "data": "Hak sahibinin e-posta adresi (beyanname gönderim kaydı)",
+      "subjects": "yazar/hak sahibi",
+      "purpose": "Telif beyannamesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Telif dönemi (M54)"
     }
   ],
   "files": [
