@@ -5386,12 +5386,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M4 → M8: çeviri işinin serbest çalışanı, kelime ücreti, M8 iş paketi ve hakedişe aktarım (translation_payout.py).
     from semantic_bridge import translation_payout as tr_payout_mod
     tr_payout_mod.register(app, {"auth": _tr, "audit": admin_mod.audit})
-<<<<<<< HEAD
-=======
     # Dış çeviri belleği (TMX) ve terim bankası TBX içe/dışa aktarımı: uçlar editorial_translation_io.py'de.
     from semantic_bridge import editorial_translation_io as tr_io
     tr_io.register(app, _tr, _tr_call, _attachment, admin_mod.audit)
->>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
 
     # ------------------------------------------------------------------ serbest çalışanlar (M8)
     # Kayıt + portfolyo, iş paketi ve toplu dağıtım, kapasite, teslim, hakediş, yazışma. Kendi tablolarımız;
