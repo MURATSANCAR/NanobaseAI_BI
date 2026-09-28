@@ -46,6 +46,7 @@ export const LIVE: Record<string, string> = {
   M32: '/kurumsal-satis',
   M33: '/ihale',
   M45: '/finansal-raporlar',
+  M38: '/musteri-iliskileri',
   M46: '/butce',
   M59: '/bayi-risk',
   M50: '/zeki-kalite',
@@ -69,6 +70,9 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   Pazarlama: { to: '/pazarlama/aylik-plan', hint: 'Aylık plan, satış föyleri, yeni kitap planı, lansman ve backlist' },
   'Altyapı & Destek': { to: '/sistem-durumu', hint: 'Sistem durumu, olaylar ve zamanlanmış işler' },
   'Bayi & Kitapçı Risk Yönetimi': { to: '/bayi-risk', hint: 'Günlük risk skoru, alacak yaşlandırması, limit önerisi ve risk brifi' },
+  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
+  Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
+  'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski ve CRM veri sağlığı' },
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */

@@ -76,6 +76,11 @@ const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
 const DealersScreen = lazy(() => import('@/canvas/dealers/DealersScreen'));
 const DealerCard = lazy(() => import('@/canvas/dealers/DealerCard'));
+const MusteriHome = lazy(() => import('@/canvas/musteri/CustomersHome'));
+const MusteriAccounts = lazy(() => import('@/canvas/musteri/AccountsScreen'));
+const MusteriAccount = lazy(() => import('@/canvas/musteri/AccountDetail'));
+const MusteriPortfolio = lazy(() => import('@/canvas/musteri/PortfolioPhone'));
+const MusteriHealth = lazy(() => import('@/canvas/musteri/DataHealthScreen'));
 const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
@@ -195,6 +200,12 @@ export default function App() {
             {/* M59 Bayi riski (Satış ve saha): pano, bayiler, limit önerileri, aksiyonlar, kurallar; bayi kartı cari koduyla (/api/v1/dealers). */}
             <Route path="bayi-risk" element={<DealersScreen />} />
             <Route path="bayi-risk/:code" element={<DealerCard />} />
+            {/* M38 Müşteri ilişkileri (Satış ve saha): özet, cariler, cari ayrıntısı, telefon portföyü, CRM veri sağlığı (/api/v1/musteri). */}
+            <Route path="musteri-iliskileri" element={<MusteriHome />} />
+            <Route path="musteri-iliskileri/cariler" element={<MusteriAccounts />} />
+            <Route path="musteri-iliskileri/cari/:kod" element={<MusteriAccount />} />
+            <Route path="musteri-iliskileri/portfoyum" element={<MusteriPortfolio />} />
+            <Route path="musteri-iliskileri/veri-sagligi" element={<MusteriHealth />} />
             {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
             <Route path="okul-tanitim" element={<SchoolsScreen />} />
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />

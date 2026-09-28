@@ -485,6 +485,16 @@
       "area": "altyapi",
       "label": "Zeki AI kalitesi",
       "explicit": true
+    },
+    {
+      "key": "sayfa:musteri-iliskileri",
+      "area": "satis",
+      "label": "Müşteri ilişkileri"
+    },
+    {
+      "key": "sayfa:musteri-veri-sagligi",
+      "area": "satis",
+      "label": "CRM veri sağlığı"
     }
   ],
   "features": [
@@ -1244,6 +1254,36 @@
       "page": "sayfa:kurumsal-satis",
       "label": "Kitap teması onayı",
       "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
+    },
+    {
+      "key": "ozellik:musteri.herkesinki",
+      "area": "satis",
+      "page": "sayfa:musteri-iliskileri",
+      "label": "Bütün carilerin değeri ve riski",
+      "hint": "Yalnız kendi portföyü yerine bütün temsilcilerin carileri, aksiyonları ve temsilci süzgeci (müdür, yönetim)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:musteri.eylem-yaz",
+      "area": "satis",
+      "page": "sayfa:musteri-iliskileri",
+      "label": "Müşteri aksiyonu yazma",
+      "hint": "Riskli cariye arama, ziyaret, kampanya aksiyonu yazma; durum ve sonuç notu (sonuç 30/90 gün sonra Logo'dan ölçülür)"
+    },
+    {
+      "key": "ozellik:musteri.bulgu-isaretle",
+      "area": "satis",
+      "page": "sayfa:musteri-veri-sagligi",
+      "label": "Veri sağlığı bulgusunu işaretleme",
+      "hint": "«CRM'de düzeltildi» (ertesi gece doğrulanır) ya da gerekçeyle «yok say»"
+    },
+    {
+      "key": "ozellik:musteri.guvenlik-bulgulari",
+      "area": "satis",
+      "page": "sayfa:musteri-veri-sagligi",
+      "label": "CRM güvenlik bulguları",
+      "hint": "Şifre içeren tablo/kolon/görünüm bulgularını görme ve işaretleme (değer gösterilmez; BT)",
+      "explicit": true
     },
     {
       "key": "ozellik:pazarlama.plan-yaz",

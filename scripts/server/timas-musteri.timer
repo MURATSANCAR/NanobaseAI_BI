@@ -1,0 +1,10 @@
+[Unit]
+Description=Müşteri ilişkileri (M38) gece turu: her gün 04:15 (ilk kez elle koşturulur: systemctl start timas-musteri@gece)
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+Persistent=true
+Unit=timas-musteri@gece.service
+
+[Install]
+WantedBy=timers.target

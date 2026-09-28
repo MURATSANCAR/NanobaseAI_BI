@@ -501,6 +501,10 @@ RULES: list[tuple[str, Any]] = [
     # M47 Risk ve uyum (Finans). DYK gelince summary/reports satırlarına kendi sayfa anahtarını ekler.
     ("/api/v1/risk/run-due", SYSTEM),
     ("/api/v1/risk/", frozenset({page("risk-uyum")})),
+    # M38 Müşteri ilişkileri (Satış ve saha). Veri sağlığı ayrı sayfa; zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/musteri/run-due", SYSTEM),
+    ("/api/v1/musteri/health", frozenset({page("musteri-veri-sagligi")})),
+    ("/api/v1/musteri/", frozenset({page("musteri-iliskileri")})),
     # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
     # M53 Set, hediye ve promosyon (Pazarlama → Üretim).
     ("/api/v1/marketing/sets/run-due", SYSTEM),
@@ -755,6 +759,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH"}), r"^/api/v1/dealers/actions(/[^/]+)?$", "ozellik:bayi.aksiyon"),
     (frozenset({"POST", "PATCH"}), r"^/api/v1/dealers/rules(/[^/]+(/submit)?)?$", "ozellik:bayi.kural"),
     (frozenset({"GET"}), r"^/api/v1/dealers/list/export\.csv$", "ozellik:veri.disa-aktar"),
+    # M38 Müşteri ilişkileri: aksiyon yazma/güncelleme; veri sağlığı bulgusunu işaretleme; dışa aktarma. Bütün carileri
+    # görme ve güvenlik bulguları açıkça verilen anahtarlarla ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/musteri/(accounts/[^/]+/actions|actions/[^/]+)$", "ozellik:musteri.eylem-yaz"),
+    (frozenset({"POST"}), r"^/api/v1/musteri/health/[^/]+/mark$", "ozellik:musteri.bulgu-isaretle"),
+    (frozenset({"GET"}), r"^/api/v1/musteri/(accounts|health)/export\.csv$", "ozellik:veri.disa-aktar"),
     # M32 Kurumsal satış: fırsat, paket, teklif, kurum segmenti, hatırlatmadan fırsat, veri yenileme. Teklif onayı/geri
     # gönderme açıkça verilen `kurumsal.teklif-onay` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
     (frozenset({"POST", "PATCH", "DELETE"}),
