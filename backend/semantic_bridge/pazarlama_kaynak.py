@@ -10,6 +10,7 @@ Kurallar provenance.py ile aynı: şablon SQL yok, sır yok, kişisel veride son
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
@@ -148,6 +149,10 @@ F_HEDEF = ("Hedef = yayın yılının yürürlükteki (onaylı) bütçe planınd
 # ------------------------------------------------------------------ ilk baskı tahmini veri kümesi (M10)
 
 
+#: Görüntüde kalmış şablon işaretleri (ör. «{satis:yil}»): ortak denetimin `{ad}` kalıbı iki noktalıyı yakalamaz.
+_TEMPLATE = re.compile(r"\{[A-Za-z_][\w:]*\}")
+
+
 def ilk_baski(k: P.Kaynaklar, state: Any, *, prefix: str = "ilkbaski") -> list[str]:
     """İlk baskı tahmininin veri kümesini dolduran sorgular (CRM kitaplar, CRM emsal bağı, Logo aylık kanal satışı).
     Rapor görüntüsünde kaydedilen çalışmış metin kullanılır; görüntü yoksa kayıt açılmaz."""
@@ -165,7 +170,7 @@ def ilk_baski(k: P.Kaynaklar, state: Any, *, prefix: str = "ilkbaski") -> list[s
     for sid, (conn, title) in names.items():
         s = stats.get(sid) or {}
         sql = s.get("sql")
-        if not sql or P.placeholders_left(sql):
+        if not sql or P.placeholders_left(sql) or _TEMPLATE.search(sql):
             continue
         desc = ("İlk baskı tahmini veri kümesini dolduran sorgu. Aylık satış sorgusu yıl başına ayrı koşar (yıllık satış "
                 "görünümü); burada son koşan yılın metni var, diğer yıllar aynı metnin yıl değiştirilmiş hâlidir."
