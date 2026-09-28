@@ -49,7 +49,27 @@ SETTINGS = [
 ]
 
 
+CUSTOM_FIELDS = {
+	"HD Ticket": [
+		{"fieldname": "nb_yz_section", "fieldtype": "Section Break", "label": "NanobaseAI", "collapsible": 1},
+		{"fieldname": "nb_duygu", "fieldtype": "Select", "label": "Müşteri duygusu",
+		 "options": "\nOlumlu\nNötr\nOlumsuz\nÖfkeli", "read_only": 1, "insert_after": "nb_yz_section"},
+		{"fieldname": "nb_yz_not", "fieldtype": "Small Text", "label": "Sınıflama gerekçesi", "read_only": 1,
+		 "insert_after": "nb_duygu"},
+		{"fieldname": "nb_yz_ozet", "fieldtype": "Small Text", "label": "Yazışma özeti", "read_only": 1,
+		 "insert_after": "nb_yz_not"},
+		{"fieldname": "nb_yz_ozet_zamani", "fieldtype": "Datetime", "label": "Özet zamanı", "read_only": 1,
+		 "insert_after": "nb_yz_ozet"},
+	],
+	"HD Article": [
+		{"fieldname": "nb_kaynak_kayit", "fieldtype": "Link", "options": "HD Ticket", "label": "Kaynak kayıt",
+		 "read_only": 1},
+	],
+}
+
+
 def apply():
+	_custom_fields()
 	for doctype, values in SETTINGS:
 		if not frappe.db.exists("DocType", doctype):
 			continue
@@ -85,3 +105,19 @@ def _write_single(doctype, values):
 def _exists_for_link(meta, field, value):
 	target = meta.get_field(field).options
 	return not target or bool(frappe.db.exists(target, value))
+
+
+def _custom_fields():
+	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+	present = {dt: fields for dt, fields in CUSTOM_FIELDS.items() if frappe.db.exists("DocType", dt)}
+	if present:
+		create_custom_fields(present, ignore_validate=True, update=True)
+		frappe.db.commit()
+	# Bilgi bankası model tanımlıysa kurulur; ilk kurulumda model sonradan gelir (ai.ensure_model çağırır).
+	try:
+		from nanobase_brand.yz import bilgi
+
+		bilgi.ensure()
+	except Exception:
+		frappe.log_error(title="NanobaseAI bilgi bankası kurulamadı")

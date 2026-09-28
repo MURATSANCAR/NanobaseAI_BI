@@ -141,9 +141,14 @@ WHERE LOWER(u.DomainName) LIKE '%\\{rep}' AND a.StateCode = 0 AND ISNULL(a.new_B
     il = rows(crm, f"""SELECT COUNT(*) AS n FROM {p}AccountBase a JOIN {p}new_illerBase i ON i.new_illerId = a.new_cariyeaitil
 JOIN {p}SystemUserBase u ON u.SystemUserId = i.new_musteritemsilcisi
 WHERE LOWER(u.DomainName) LIKE '%\\{rep}' AND a.StateCode = 0 AND a.new_BMTilveyaCari = 0""")[0]["n"]
+    # «BMT İl» carisinde il tablosunda temsilci yoksa atama kaydın sahibine düşer (field_sales.assign); referans da sayar.
+    # (2026-09-28 kabulünde bu geri düşme sayılmadığı için 840 > 749 «BAŞARISIZ» çıkmıştı; 112 cari bu yoldan geliyordu.)
+    fallback = rows(crm, f"""SELECT COUNT(*) AS n FROM {p}AccountBase a JOIN {p}SystemUserBase u ON u.SystemUserId = a.OwnerId
+LEFT JOIN {p}new_illerBase i ON i.new_illerId = a.new_cariyeaitil
+WHERE LOWER(u.DomainName) LIKE '%\\{rep}' AND a.StateCode = 0 AND a.new_BMTilveyaCari = 0 AND i.new_musteritemsilcisi IS NULL""")[0]["n"]
     got = port["count"]
-    record(3, "Portföy cari sayısı", "BAŞARILI" if got <= int(own) + int(il) and got > 0 else "BAŞARISIZ",
-           {"api": got, "crmSahip": int(own), "crmIl": int(il),
+    record(3, "Portföy cari sayısı", "BAŞARILI" if got <= int(own) + int(il) + int(fallback) and got > 0 else "BAŞARISIZ",
+           {"api": got, "crmSahip": int(own), "crmIl": int(il), "crmIlTemsilcisizSahibe": int(fallback),
             "not": "API yalnız Logo'da kodu eşleşen müşteri carilerini sayar; fark = Logo'da olmayan CRM carisi"})
 
     # 4. CRM onay bekleyen tahsilat

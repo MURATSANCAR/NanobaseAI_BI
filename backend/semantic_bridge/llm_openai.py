@@ -8,6 +8,7 @@ ve bu servisler aynı slotları paylaşır; biri ötekini zaman aşımına düş
 Uçlar (köprü içi yol; dışarıya nginx `…/destek-llm/v1/` ile açılır):
     GET  /api/v1/llm/openai/v1/models
     POST /api/v1/llm/openai/v1/chat/completions
+    POST /api/v1/llm/openai/v1/embeddings   (BI'ın gömme servisine aynen; model sırasına girmez)
 
 Başlıklar: `X-LLM-Module` (sırada görünen modül adı, vars. `openai`), `X-LLM-Priority`
 (0 etkileşimli · 1 normal · 2 arka plan; vars. 0). İstekteki `model` yok sayılır, köprünün
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any, Callable, Optional
 
 import httpx
@@ -142,6 +144,39 @@ def register(app: Any, rt: Callable[[], Any], require_caller: Callable[[Any], No
 
         return StreamingResponse(relay(), media_type=upstream.headers.get("content-type", "text/event-stream"),
                                  headers={**wait_headers, "X-Accel-Buffering": "no", "Cache-Control": "no-store"})
+
+
+def register_embeddings(app: Any, require_caller: Callable[[Any], None]) -> None:
+    """BI'ın gömme servisi (`BI_EMBED_URL`, işlemcide, OpenAI biçimi). Gömme hızlı ve model slotunu
+    kullanmaz; kiralık alınmaz, aynen iletilir. Konteynerdeki servisler (Destek bilgi bankası) servise
+    doğrudan erişemediği için buradan gider."""
+
+    @app.post(f"{PREFIX}/embeddings")
+    async def openai_embeddings(request: Request):
+        require_caller(request)
+        url = os.environ.get("BI_EMBED_URL", "").strip()
+        if not url:
+            raise HTTPException(status_code=503, detail={"code": "NO_EMBEDDER", "message": "Gömme servisi bağlı değil."})
+        try:
+            body = await request.json()
+        except (ValueError, json.JSONDecodeError):
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Gövde JSON değil."}) from None
+        if not isinstance(body, dict) or not body.get("input"):
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "input gerekli."})
+        # OpenAI istemcileri boş alanı null gönderir (encoding_format: null); gömme servisi null'ı reddeder (500).
+        body = {k: v for k, v in body.items() if v is not None}
+        body.setdefault("encoding_format", "float")
+        headers = {"Content-Type": "application/json"}
+        key = os.environ.get("BI_EMBED_API_KEY", "").strip().strip('"')
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
+                resp = await client.post(url, json=body, headers=headers)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail={"code": "UPSTREAM", "message": "Gömme servisine ulaşılamadı."}) from exc
+        return Response(content=resp.content, status_code=resp.status_code,
+                        media_type=resp.headers.get("content-type", "application/json"))
 
 
 def _json_or_text(content: bytes) -> Any:

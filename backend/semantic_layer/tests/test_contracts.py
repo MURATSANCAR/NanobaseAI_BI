@@ -480,3 +480,13 @@ def test_lookups_page_with_visible_total():
     assert C.lookup_page(rows, 0) == {"total": 45, "shown": 20, "page": 0}
     assert C.lookup_page([{"toplam": 45}] * 5, 2) == {"total": 45, "shown": 45, "page": 2}
     assert C.lookup_page([], 0) == {"total": 0, "shown": 0, "page": 0}
+
+
+def test_related_contracts_sort_by_number():
+    ana = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+    rows = [{"new_sozlesmeId": f"{i:08x}-0000-0000-0000-000000000000", "new_name": f"2024007186-{i}", "durum_kod": 1}
+            for i in (10, 100, 2, 11, 9)] + [{"new_sozlesmeId": ana, "new_name": "2024007186-1", "durum_kod": 1}]
+    out = C.related(rows, ana)
+    assert [r["no"] for r in out] == ["2024007186-1", "2024007186-2", "2024007186-9", "2024007186-10",
+                                      "2024007186-11", "2024007186-100"]
+    assert out[0]["relation"] == "ana"

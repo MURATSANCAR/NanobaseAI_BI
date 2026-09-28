@@ -51,6 +51,8 @@ log "python: $("$PYTHON_BIN" -V 2>&1)"
 
 # Persistent editorial summaries must be writable by the service, outside the source tree.
 sudo install -d -o "${SERVICE_USER:-administrator}" -m 700 "/data/nanobaseai/bi/var/editorial-home"
+# M19 pazarlama görsel/metin arşivi (onaylı PNG'ler, yüklenen kapak, marka kiti dosyaları; MARKETING_ASSETS_DIR).
+sudo install -d -o "${SERVICE_USER:-administrator}" -m 700 "/data/nanobaseai/bi/var/marketing-assets"
 
 # --- 0. scope guard: profiling touches the customer's live database ------------------------------
 # An empty table filter means "every table in the schema"; on an ERP that is thousands of tables and a

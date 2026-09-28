@@ -25,7 +25,16 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
   Frappe kök yolda çalışır (`/helpdesk`, `/app`, `/api`, `/assets`), o yüzden `/timas/` altına değil ayrı porta konur.
 - Ekranlar: `/helpdesk` temsilci ekranı ve müşteri portalı (`/helpdesk/my-tickets`), `/app` masaüstü;
   masaüstünde `Ctrl+I` yapay zekâ panelini açar.
-- Giriş Frappe'nin kendi kullanıcılarıyla. Yönetici şifresi sunucuda `/etc/nanobase/destek-admin.txt` (root, 600).
+- Giriş Timaş Active Directory ile, iki yol:
+  1. **Portal oturumuyla otomatik (tek oturum):** portala girmiş kişi Destek'e gelince giriş sayfası tarayıcıyı
+     portalın `/timas/auth/destek-sso` adresine yollar (portal çerezi `Path=/timas/` olduğu için Destek onu doğrudan
+     göremez). Portal giriş servisi (`scripts/server/portal-login/server.py`) oturumu okur, 60 sn'lik tek kullanımlık
+     HMAC jetonla Destek'e döner; Destek imzayı, süreyi, tek kullanımı denetler, kişiyi AD'den bulur ve oturum açar
+     (`nanobase_brand/sso.py`, `public/js/portal_sso.js`). Ortak anahtar `/etc/nanobase/destek-sso.key`
+     (`root:www-data 640`) → site ayarı `destek_sso_secret`.
+  2. **AD kullanıcı adı + şifre:** portal oturumu yoksa `/login?sso=0` formu; NTLM ile doğrulanır (`ldap_ntlm.py`).
+  Her etkin AD kişisi temsilcidir; portal yöneticileri (`TIMAS_ADMIN_USERS`/`TIMAS_ADMIN_GROUP`) yöneticidir.
+  Yerel yönetici hesabı (Administrator) şifresi `/etc/nanobase/destek-admin.txt` (root, 600), `/login?sso=0`'dan.
 - Model: NanobaseAI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
   `deploy/nginx-destek-llm.conf`, Bearer anahtarı `/etc/nanobase/destek-llm.key`) → köprünün OpenAI uyumlu girişi
   `/api/v1/llm/openai/v1/chat/completions` (`backend/semantic_bridge/llm_openai.py`). Her çağrı `sl_llm_queue`
@@ -75,5 +84,4 @@ HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Açık işler
 
-- Portalın AD girişiyle ortak oturum yok; Frappe'nin LDAP ayarıyla AD'ye bağlanabilir.
 - Müşteri VM'ine kurulmadı.

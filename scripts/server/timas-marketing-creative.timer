@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazarlama görsel ve metin: onaylı plan materyallerinden talep (iş saatlerinde saatte bir) ve günlük özet (08:30)
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 08..19:30:00 Europe/Istanbul
+Persistent=true
+Unit=timas-marketing-creative.service
+
+[Install]
+WantedBy=timers.target

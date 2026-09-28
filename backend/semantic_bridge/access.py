@@ -446,9 +446,10 @@ SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
-                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
+                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa",
+                                   "seo-isler", "seo-karne", "seo-biyografi", "seo-sss", "seo-benzer", "seo-eslesme", "seo-soru", "seo-youtube", "seo-alisveris", "seo-aylik"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
-                                         "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
+                                         "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
@@ -480,7 +481,18 @@ RULES: list[tuple[str, Any]] = [
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
+    # M19 Pazarlama görsel ve metin. Onaylı varlık sözleşmesini (contract/assets) okuyacak modül (M21/M22/M24) kendi
+    # sayfa anahtarını o satıra ekler. M15'in genel «/api/v1/marketing/» satırından önce durur (en uzun önek kazanır;
+    # sıra okunurluk içindir).
+    ("/api/v1/marketing/creative/run-due", SYSTEM),
+    ("/api/v1/marketing/creative/contract/", frozenset({page("pazarlama-icerik")})),
+    ("/api/v1/marketing/creative/", frozenset({page("pazarlama-icerik")})),
     # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
+    # M53 Set, hediye ve promosyon (Pazarlama → Üretim).
+    ("/api/v1/marketing/sets/run-due", SYSTEM),
+    ("/api/v1/marketing/sets/", frozenset({page("pazarlama-set-hediye")})),
+    ("/api/v1/marketing/gift-offers/", frozenset({page("pazarlama-set-hediye")})),
+    ("/api/v1/marketing/promo-items", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/run-due", SYSTEM),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
@@ -497,6 +509,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
     ("/api/v1/board/run-due", SYSTEM),
     ("/api/v1/board", frozenset({page("panolar"), page("genel-bakis")})),
+    # Kapak arşivi kendi sayfasıdır; stüdyoda kapak tarzı seçen de örneklere bakabilsin diye ikisi.
+    ("/api/v1/editorial/studio/library", frozenset({page("kapak-arsivi"), page("kitap-tasarim")})),
     ("/api/v1/editorial/studio", frozenset({page("kitap-tasarim")})),
     ("/api/v1/editorial/translation", frozenset({page("ceviri"), page("ceviri-masam")})),
     # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.
@@ -517,6 +531,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
     ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
+    ("/api/v1/editorial/authors/reminders/run-due", SYSTEM),
     ("/api/v1/editorial/authors/copurchase/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -594,11 +609,21 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:pazarlama.plan-yaz"),
     (frozenset({"GET"}), r"^/api/v1/marketing/plans/[^/]+/(export\.(pdf|csv)|package\.zip|crm-todo\.csv)$",
      "ozellik:veri.disa-aktar"),
+    # M53 Set ve hediye: set/öneri/teklif yazma, veri yenileme. Set onayı (`set.onay`) ve teklif onayı (`set.teklif-onay`)
+    # açıkça verilir, ucun içinde denetlenir; fiyat hesabı (price) kaydetmez, sayfa yetkisiyle gelir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/sets(/refresh|/suggestions/[^/]+/(adopt|dismiss)|/(?!run-due$)[^/]+(/(items|submit|withdraw|link|text))?)?$",
+     "ozellik:set.yaz"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/marketing/gift-offers(/[^/]+(/(letter|submit|withdraw))?)?$",
+     "ozellik:set.yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/sets/[^/]+/card-todo\.(csv|pdf)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
-    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur.
+    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
+    # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada
+    # yazılamadığı için ucun içinde denetlenir (editorial_translation_qe.may_run), bu listede kuralı yoktur.
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs$", "ozellik:ceviri.yonet"),
     (frozenset({"PATCH", "DELETE"}), r"^/api/v1/editorial/translation/jobs/[^/]+$", "ozellik:ceviri.yonet"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/jobs/[^/]+/source$", "ozellik:ceviri.yonet"),
@@ -610,6 +635,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$", "ozellik:ceviri.yonet"),
     (frozenset({"GET", "PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$",
      "ozellik:serbest.yonet"),
+<<<<<<< HEAD
+=======
+    # Terim bankası TBX ve dış çeviri belleği (TMX): içe aktarma terim/yönetim yetkisiyle, dışa aktarma veri yetkisiyle.
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import\.tbx$", "ozellik:ceviri.terim"),
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/memory/import$", "ozellik:ceviri.yonet"),
+    (frozenset({"DELETE"}), r"^/api/v1/editorial/translation/memory$", "ozellik:ceviri.yonet"),
+    (frozenset({"GET"}), r"^/api/v1/editorial/translation/(terms/export\.tbx|memory/export\.tmx)$", "ozellik:veri.disa-aktar"),
+>>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
     # Serbest çalışan kaydı, paket, atama, teslim kararı, hakediş taslağı. Yazışma ve öneri (suggest) sayfayla gelir;
     # hakediş onayı/ödemesi açıkça verilen `serbest.hakedis-onay` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
@@ -643,6 +676,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}), r"^/api/v1/editorial/applications(/.*)?$", "ozellik:basvuru.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
+    (frozenset({"POST"}), r"^/api/v1/editorial/authors/advice/[^/]+$", "ozellik:yazar-iliski.oneri"),
     # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.
     # Plan onayı (`okul.plan`), bayi eşleştirme onayı (açıkça verilen `okul.bayi-onay`) ve bütün ekibi görme
     # (`okul.herkesinki`) ucun içinde denetlenir.
@@ -655,10 +689,26 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
                                r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"
                                r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
+    # M19: talep açma; üretim (görsel dizimi, Zeki AI metni, başlık önerisi), kapak yükleme ve varlık düzeltme.
+    # Tasarım/mesaj onayı ve marka kiti açıkça verilen yetkilerle ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/marketing/creative/(requests|from-material/[^/]+)$", "ozellik:icerik.talep"),
+    (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests/[^/]+/(produce|copy|headlines)$", "ozellik:icerik.uret"),
+    (frozenset({"PUT"}), r"^/api/v1/marketing/creative/(requests/[^/]+/cover|assets/[^/]+)$", "ozellik:icerik.uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",
      "ozellik:seo.calistir"),
+    # Uzman özellikleri (2.–3. tur): taslak üretme «öneri üret»; okuma/tarama/yenileme, iş listesi durumu ve soru önerisi
+    # kararı «çalıştır»; dosya indirme «dışa aktar». Onay/ret/gönderim uçları onay yetkisini kendi içinde ister.
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/(guides|bios/[^/]+/draft|faq/[^/]+/draft)$", "ozellik:seo.oneri-uret"),
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/((authors-trust|backlinks|bing|bios|entity|opportunities|qsuggest|reviews|seasons"
+                          r"|similar|sunset|youtube|tech/sitemaps)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
+                          r"|tech/crawl|monthly/build|worklist/[^/]+/status|qsuggest/[^/]+/(accept|reject))$",
+     "ozellik:seo.calistir"),
+    (frozenset({"GET"}), r"^/api/v1/seo-geo/((worklist|similar|keymap|sunset)/export\.csv|video/(sitemap\.xml|theme-request\.md)"
+                         r"|schema/theme-request\.md|(bios/drafts|guides)/[^/]+/export\.html|faq/export\.json|shopping/feed\.tsv"
+                         r"|monthly/[^/]+\.pdf|watch/report/[^/]+\.html)$",
+     "ozellik:veri.disa-aktar"),
 ]
 _FEATURE_RULES = [(m, re.compile(rx), k) for m, rx, k in FEATURE_RULES]
 

@@ -301,6 +301,25 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		"helpdesk/desk/src/components/Settings/EmailNotifications/ShareFeedback.vue",
 		[('documentationLink="https://docs.frappe.io/helpdesk/email-notifications#available-variables-share-feedback"', 'documentationLink=""')],
 	),
+	(
+		# Canlı bildirim: sayfa standart dışı portta açılınca (portal.nanobase.ai:8446) üst kaynak geliştirme
+		# sunucusu sanıp http://…:9000'e gidiyordu (karışık içerik, engellenir). Masaüstü gibi sayfanın kökü:
+		# ters vekil /socket.io'yu websocket servisine taşır.
+		"helpdesk/desk/src/socket.ts",
+		[('  let host = window.location.hostname;\n  let siteName = window.site_name || host;\n'
+		  '  let port = window.location.port ? `:${socketio_port}` : "";\n  let protocol = port ? "http" : "https";\n'
+		  '  let url = `${protocol}://${host}${port}/${siteName}`;\n',
+		  '  const siteName = window.site_name || window.location.hostname;\n'
+		  '  const url = `${window.location.origin}/${siteName}`;\n'),
+		 ('import { socketio_port } from "../../../../sites/common_site_config.json";\n', '')],
+	),
+	(
+		# Temsilci ekranı: «NanobaseAI» bölümü (sınıflama, özet, yanıt taslağı, makale taslağı) — bileşen bizim:
+		# helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue, arka uç nanobase_brand/yz/kayit.py.
+		"helpdesk/desk/src/components/ticket-agent/TicketDetailsTab.vue",
+		[('        <!-- Key Info (core fields) -->\n', '        <NanobaseAIPanel />\n\n        <!-- Key Info (core fields) -->\n'),
+		 ('import TicketSLA from "./TicketSLA.vue";\n', 'import TicketSLA from "./TicketSLA.vue";\nimport NanobaseAIPanel from "./NanobaseAIPanel.vue";\n')],
+	),
 	# ── Flow ──────────────────────────────────────────────────────────────
 	(
 		"flow/flow/hooks.py",
@@ -386,10 +405,11 @@ WRITES: list[tuple[str, str]] = [
 	("flow/frontend/src/components/BrandMark.vue", FLOW_BRAND_MARK_VUE),
 ]
 
-# Dosyanın sonuna eklenenler (zaten varsa atlanır). frappe-ui yardım merkezi yalnız üretici
-# belge makalelerini açar: patch-package yamasıyla kapatılır (sürüm yama dosyasının adında).
+# Dosyanın sonuna eklenenler (zaten varsa atlanır). frappe-ui yaması (patch-package; sürüm yama dosyasının
+# adında): yardım merkezi kapanır (yalnız üretici belge makalelerini açıyordu), kurulum rehberi ve kenar
+# çubuğunun sabit İngilizce metinleri Türkçe. Aynı dosyaya iki ayrı yama çakışır: hepsi tek yama dosyasında.
 APPENDS: list[tuple[str, Path]] = [
-	("helpdesk/desk/patches/frappe-ui+1.0.0-beta.24.patch", MARKA / "yamalar" / "frappe-ui-yardim-merkezi.patch"),
+	("helpdesk/desk/patches/frappe-ui+1.0.0-beta.24.patch", MARKA / "yamalar" / "frappe-ui-nanobase.patch"),
 ]
 
 COPIES: list[tuple[Path, str]] = [

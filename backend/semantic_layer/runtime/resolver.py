@@ -928,11 +928,20 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
-        # "20.08.2026 03:00 ve 21.08.2026 03:00 arasındaki": a time of day. No certified column of these
-        # records carries it, so the day bounds are all this can filter on — asked, never silently dropped.
+        # "20.08.2026 03:00 ve 21.08.2026 03:00 arasındaki": a time of day. Where the measure's records carry a
+        # declared time-of-day column beside their date (equivalences.yml `time_of_day`), a span between two
+        # times is filtered on it by the compiler. Otherwise — or for a single time, which says "at" and not
+        # "between" — the day bounds are all this can filter on: asked, never silently dropped.
+        measure_entities = {h.mapping.entity for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping}
         for t in sq.temporal:
             p = t.params or {}
             times = [v for v in (p.get("time"), p.get("from_time"), p.get("to_time")) if v]
+            timed = [self.conventions.time_of_day(e) for e in measure_entities]
+            if (p.get("from_time") or p.get("to_time")) and not p.get("time") and measure_entities and all(timed):
+                cols = ", ".join(sorted(f"{e}.{d['column']}" for e, d in zip(measure_entities, timed)))
+                sq.explanation.append(f"'{t.text}' saatle birlikte süzülür ({cols}): "
+                                      f"{p.get('from_time') or '00:00'} – {p.get('to_time') or '24:00'}")
+                continue
             if times and t.start and t.end:
                 last = t.end - timedelta(days=1)
                 days = t.start.strftime("%d.%m.%Y") + ("" if last == t.start else "–" + last.strftime("%d.%m.%Y"))

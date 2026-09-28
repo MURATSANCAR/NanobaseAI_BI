@@ -142,6 +142,7 @@ def test_invalid_changes_are_refused(engine):
 def test_rules_cover_the_shared_endpoints():
     assert A.rule_for("/api/v1/financial-audit/overview") == {"sayfa:finansal-denetim"}
     assert A.rule_for("/api/v1/editorial/studio/jobs/abc/pdf/ic") == {"sayfa:kitap-tasarim"}
+    assert A.rule_for("/api/v1/editorial/studio/library/covers") == {"sayfa:kapak-arsivi", "sayfa:kitap-tasarim"}
     assert "sayfa:kisiler" in A.rule_for("/api/v1/editorial/contributors")
     assert A.rule_for("/api/v1/editorial/web/status") == A.OPEN
     assert A.rule_for("/api/v1/board/run-due") == A.SYSTEM
@@ -269,6 +270,16 @@ def test_feature_rules_match_the_actions_not_the_reads():
     assert f("GET", "/api/v1/financial-audit/lines") == ["ozellik:denetim.detay"]
     assert f("POST", "/api/v1/seo-geo/questions/measure") == ["ozellik:seo.calistir"]
     assert f("POST", "/api/v1/seo-geo/proposals/p1/decide") == []          # onay ucun içinde (açıkça verilen)
+    assert f("POST", "/api/v1/seo-geo/bios/k1/draft") == ["ozellik:seo.oneri-uret"]
+    assert f("POST", "/api/v1/seo-geo/guides") == ["ozellik:seo.oneri-uret"]
+    assert f("POST", "/api/v1/seo-geo/tech/crawl") == ["ozellik:seo.calistir"]
+    assert f("POST", "/api/v1/seo-geo/worklist/abc/status") == ["ozellik:seo.calistir"]
+    assert f("POST", "/api/v1/seo-geo/qsuggest/q1/accept") == ["ozellik:seo.calistir"]
+    assert f("GET", "/api/v1/seo-geo/worklist/export.csv") == ["ozellik:veri.disa-aktar"]
+    assert f("GET", "/api/v1/seo-geo/monthly/2026-08.pdf") == ["ozellik:veri.disa-aktar"]
+    assert f("GET", "/api/v1/seo-geo/worklist") == [] and f("GET", "/api/v1/seo-geo/faq/p1") == []
+    assert f("POST", "/api/v1/seo-geo/bios/drafts/d1/decide") == []        # onay ucun içinde
+    assert f("POST", "/api/v1/seo-geo/indexnow/submit") == []              # onay ucun içinde
     keys = {k for _, _, k in A.FEATURE_RULES}
     assert keys <= A.all_keys() - A.explicit_keys()
 

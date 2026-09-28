@@ -1554,6 +1554,69 @@ export type AuthorHeatRow = {
   crmContracts: number;
   /** «İlgi bekleyen» nedenleri (sözleşme bitiyor + görüşme yok, notu girilmemiş randevu, geçmiş adım). */
   attention: string[];
+  /** Sadakat puanı (yalnız CRM'deki yazar için; CRM okunamadıysa null). */
+  loyalty: AuthorLoyalty | null;
+};
+export type LoyaltyBand = 'bagli' | 'duzenli' | 'zayif';
+export type AuthorLoyalty = {
+  score: number;
+  band: LoyaltyBand;
+  parts: { years: number; books: number; recent: number; active: number; returning: number };
+  since: string | null;
+  last: string | null;
+  years?: number;
+  books: number;
+  contracts: number;
+  activeContracts: number;
+};
+export type SalesTotals = { qty: number; net: number; retQty: number };
+export type AuthorGrowth = {
+  contactId: string;
+  books: Array<{ id: string; title: string | null; stockCode: string | null; hasCode: boolean; firstPublished: string | null } & SalesTotals>;
+  booksTotal: number;
+  booksWithCode: number;
+  newBooksByYear: Array<{ year: number; count: number }>;
+  sales: {
+    last12: SalesTotals;
+    prev12: SalesTotals;
+    changePct: number | null;
+    direction: 'artis' | 'dusus' | 'yatay' | null;
+    series: Array<{ month: string } & SalesTotals>;
+    years: Array<{ year: number } & SalesTotals>;
+    window: { from: string; to: string; prevFrom: string; prevTo: string };
+  };
+  dataEnd: string | null;
+  royalty: {
+    contracts: number;
+    statements: Array<{ contractNo: string; periodStart: string; periodEnd: string; status: string; gross: number; net: number; currency: string; approved: boolean }>;
+  };
+  readers: {
+    site: { available: boolean; comments: number; rated: number; average: number | null; stars: Record<string, number>; books: Array<{ title: string | null; comments: number; rated: number; average: number | null }> };
+    web: Record<string, number> | null;
+  };
+  loyalty: AuthorLoyalty;
+  loyaltyRules?: Record<string, number>;
+  notes: string[];
+  computedAt: string;
+  cached?: boolean;
+  preparedAt?: string;
+  snapshot?: AuthorSnapshot;
+};
+/** Önceden hazırlanan M7 verisinin durumu (CRM + Logo parçaları, 5 dk'da bir ve «Yenile» ile). */
+export type AuthorSnapshot = {
+  intervalSeconds: number;
+  refreshing: boolean;
+  crm: { updatedAt: string; error: string | null; seconds: number | null } | null;
+  sales: { updatedAt: string; error: string | null; seconds: number | null } | null;
+};
+export type AuthorAdvice = {
+  id: string;
+  summary: string;
+  recommendations: Array<{ title: string; why: string; when: string }>;
+  risks: string[];
+  createdBy: string;
+  createdAt: string;
+  input?: Record<string, unknown>;
 };
 export type AuthorHeatmap = {
   months: string[];
@@ -1622,6 +1685,16 @@ export const authorsApi = {
   agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
   createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
   updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),
+  growth: (contactId: string, refresh = false) =>
+    send<AuthorGrowth>('GET', `${A}/growth/${encodeURIComponent(contactId)}${refresh ? '?refresh=true' : ''}`, undefined, 600_000),
+  advice: (contactId: string) =>
+    send<{ advice: AuthorAdvice | null; modelReady: boolean }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
+  makeAdvice: (contactId: string) => send<AuthorAdvice>('POST', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 600_000),
+  snapshot: () => send<AuthorSnapshot>('GET', `${A}/snapshot`, undefined, 30_000),
+  refresh: () => send<AuthorSnapshot>('POST', `${A}/refresh`, undefined, 30_000),
+  remindersMe: () =>
+    send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number } }>('GET', `${A}/reminders/me`, undefined, 30_000),
+  setReminders: (enabled: boolean) => send<{ enabled: boolean }>('PUT', `${A}/reminders/me`, { enabled }, 30_000),
   deleteMeeting: (id: string) => send<{ ok: boolean }>('DELETE', `${A}/meetings/${encodeURIComponent(id)}`, undefined, 30_000),
 };
 
@@ -2149,6 +2222,13 @@ export const translationApi = {
     send<{ status: SegmentStatus; updatedAt: string; repeatsFilled: number }>('PUT', `${TR}/segments/${enc(id)}`, b, 30_000),
   review: (id: string, b: { action: 'onayla' | 'geri'; target?: string; toTranslator?: boolean; note?: string }) =>
     send<{ updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/review`, b, 30_000),
+  /** İşteki bir sonraki segment (süzgeçten bağımsız) ve birleştirilebilir mi; birleştir/böl: çevirmen ya da işi yöneten. */
+  segmentNext: (id: string) =>
+    send<{ next: { id: string; no: number; para: number; source: string; target: string; status: SegmentStatus; updatedAt: string | null } | null; mergeable: boolean; reason: string | null }>('GET', `${TR}/segments/${enc(id)}/next`, undefined, 30_000),
+  mergeNext: (id: string, b: { nextId: string; updatedAt?: string | null; nextUpdatedAt?: string | null }) =>
+    send<{ id: string; removed: string; source: string; target: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/merge`, b, 30_000),
+  split: (id: string, b: { at: number; source: string; updatedAt?: string | null }) =>
+    send<{ id: string; newId: string; source: string; newSource: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/split`, b, 30_000),
   addError: (id: string, b: { category: string; severity: string; note?: string }) => send<{ id: string }>('POST', `${TR}/segments/${enc(id)}/errors`, b, 30_000),
   deleteError: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/errors/${enc(id)}`, undefined, 30_000),
   approveMany: (id: string, chapter: number | null) => send<{ approved: number }>('POST', `${TR}/jobs/${enc(id)}/approve`, { chapter }, 60_000),
@@ -3239,4 +3319,44 @@ export const freelanceApi = {
     send<{ id: string; emailStatus: FlMessage['emailStatus'] }>('POST', `${FL}/threads/${enc(id)}/messages`, b, 60_000),
   logoCards: (q: string) => send<{ items: FlLogoCard[]; year: number; db?: DbTiming | null }>('GET', `${FL}/logo/cards${qs({ q })}`, undefined, 60_000),
   logo: (personId: string) => send<FlLogoMovements>('GET', `${FL}/people/${enc(personId)}/logo`, undefined, 60_000),
+};
+
+// ------------------------------------------------------------------ kapak arşivi (stüdyo)
+export type LibraryAudience = 'CHILD' | 'YOUNG' | 'ADULT';
+export type LibraryCategory = { name: string; path: string; count: number; children: LibraryCategory[] };
+export type LibraryTree = {
+  categories: LibraryCategory[];
+  uncategorized: number;
+  total: number;
+  audiences: Record<LibraryAudience, number>;
+};
+export type LibraryCover = {
+  id: string; title: string; authors: string[]; illustrators: string[]; isbn: string | null; brand: string | null;
+  category: string[]; audience: LibraryAudience | null; ageFrom: number | null; ageTo: number | null; genres: string[];
+  onSale: boolean; pageUrl: string | null; w: number | null; h: number | null;
+};
+export type LibraryPage = { total: number; page: number; size: number; pages: number; items: LibraryCover[] };
+export type LibraryStats = {
+  total: number; ok: number; pending: number; failed: number; none: number; lastFeed: string | null;
+  fetch: { running: boolean; done: number; failed: number };
+  feed: { running: boolean; sent: number; error: string | null; result: Record<string, number | string> | null };
+};
+/** `cat`: null = bütün kapaklar, '' = kategorisiz, «Kök > Alt» = o kategori ve altı. */
+export type LibraryQuery = { cat: string | null; q: string; audience: LibraryAudience | null; sort: 'sales' | 'title'; page: number; size: number };
+
+const libraryBase = '/api/v1/editorial/studio/library';
+export const coverLibraryApi = {
+  stats: () => send<LibraryStats>('GET', libraryBase, undefined, 30_000),
+  categories: (audience: LibraryAudience | null) =>
+    send<LibraryTree>('GET', `${libraryBase}/categories${audience ? `?audience=${audience}` : ''}`, undefined, 30_000),
+  covers: (x: LibraryQuery) => {
+    const p = new URLSearchParams({ sort: x.sort, page: String(x.page), size: String(x.size) });
+    if (x.cat !== null) p.set('cat', x.cat);
+    if (x.q.trim()) p.set('q', x.q.trim());
+    if (x.audience) p.set('audience', x.audience);
+    return send<LibraryPage>('GET', `${libraryBase}/covers?${p}`, undefined, 30_000);
+  },
+  /** Beslemeyi elle başlatır (yalnız yönetici); görseller arka planda iner. */
+  refresh: () => send<{ started: boolean }>('POST', `${libraryBase}/refresh`, {}, 30_000),
+  imageUrl: (id: string, width = 360) => `${ENGINE_BASE}${libraryBase}/covers/${encodeURIComponent(id)}/image?w=${width}`,
 };

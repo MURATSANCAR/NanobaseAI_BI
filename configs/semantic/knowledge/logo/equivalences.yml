@@ -125,3 +125,28 @@ join_keys:
 # Ölçüldü: 120.658 sipariş, 154.376 fatura, net 2.400.390.375,43. Sevkiyatı olmayan 109.929 sipariş
 # bu yoldan görünmez (iptal, bekleyen, taslak) — "kaç sipariş" ile "ne kadar faturalandı" aynı şey değil.
 # Müşteri+tarih+tutar eşleştirmesi hâlâ yasak: bu zincir varken tahmine gerek yok.
+
+# Saat: belgenin iş tarihi (DATE_) gün, saati ayrı bir tamsayı kolonda: saat*2^24 + dakika*2^16 + saniye*2^8.
+# Ölçüm 2026-09-28 (.155, Ağustos 2026): sipariş TIME_ 3.266/3.386, fatura TIME_ 4.225/4.959 kayıtta Logo'nun
+# oluşturma saatiyle (CAPIBLOCK_CREATEDHOUR/MIN) aynı saat:dakika; kalanlar sonradan kaydedilmiş belgeler.
+time_of_day:
+  - entity: ORFICHE
+    date: DATE_
+    column: TIME_
+    encoding: logo_packed
+    reason: "Sipariş fişinin saati; tarihle birlikte belgenin kesilme anı."
+  - entity: LG_ORFICHE
+    date: DATE_
+    column: TIME_
+    encoding: logo_packed
+    reason: "Sipariş fişinin saati (aynı tablonun ikinci adı)."
+  - entity: INVOICE
+    date: DATE_
+    column: TIME_
+    encoding: logo_packed
+    reason: "Faturanın saati; tarihle birlikte belgenin kesilme anı."
+  - entity: STLINE
+    date: DATE_
+    column: FTIME
+    encoding: logo_packed
+    reason: "Stok/satış satırının saati; bağlı olduğu fişin saati."

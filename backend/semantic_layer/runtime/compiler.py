@@ -19,6 +19,7 @@ import time
 import sqlglot
 from sqlglot import exp
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
@@ -308,6 +309,31 @@ def _rank_alias(q: SemanticQuery, metrics: list, aliases: list[str]) -> str:
 class DeterministicCompiler:
     name = "deterministic"
 
+    def _time_of_day_bounds(self, plan: "_Plan", alias: str, t: Any, d: Any, explain: list[str]) -> list[str]:
+        """"20.08.2026 03:00 ile 21.08.2026 03:00 arası": the first day from its time on, the last day up to its
+        time. The day bounds stay as they are (they are what the date index serves); the time only trims the two
+        edge days, on the time-of-day column declared beside this entity's date."""
+        from semantic_layer.conventions import TIME_ENCODINGS
+        p = t.params or {}
+        timed = self.conventions.time_of_day(plan.entity)
+        if not timed or p.get("time") or not (p.get("from_time") or p.get("to_time")):
+            return []
+        enc = TIME_ENCODINGS[timed["encoding"]]
+        col, tcol = f"{alias}.{d.q(plan.date_column)}", f"{alias}.{d.q(timed['column'])}"
+        out = []
+
+        def packed(hms: str) -> int:
+            h, m, s = (int(x) for x in (hms.split(":") + ["0", "0"])[:3])
+            return enc(h, m, s)
+        if p.get("from_time"):
+            nxt = (t.start + timedelta(days=1)).isoformat()
+            out.append(f"({col} >= '{nxt}' OR {tcol} >= {packed(p['from_time'])})")
+        if p.get("to_time"):
+            last = (t.end - timedelta(days=1)).isoformat()
+            out.append(f"({col} < '{last}' OR {tcol} < {packed(p['to_time'])})")
+        explain.append(f"saat: {t.start} {p.get('from_time') or '00:00'} – {t.end - timedelta(days=1)} {p.get('to_time') or '24:00'} ({plan.entity}.{timed['column']})")
+        return out
+
     def __init__(self, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql", *, default_filters: Optional[Callable[[str], list[Mapping]]] = None, conventions: Any = None):
         from semantic_layer.conventions import Conventions
 
@@ -530,6 +556,9 @@ class DeterministicCompiler:
         used: set[str] = set(plan.extra_columns.get(entity, set()))
         if plan.date_column:
             used.add(plan.date_column)
+            timed = self.conventions.time_of_day(plan.entity)
+            if timed and any((t.params or {}).get("from_time") or (t.params or {}).get("to_time") for t in q.temporal):
+                used.add(timed["column"])
         for s_ in plan.metrics + plan.filters + plan.group_cols:
             if s_.mapping and s_.mapping.entity == entity and s_.mapping.column:
                 used.add(s_.mapping.column)
@@ -712,6 +741,7 @@ class DeterministicCompiler:
                 col = f"{alias}.{d.q(plan.date_column)}"
                 where.append(f"{col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}'")
                 explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
+                where += self._time_of_day_bounds(plan, alias, t, d, explain)
         sql = "SELECT " + ", ".join(select)
         read = self._chosen(plan.entity, q)
         firms = {self._firm_of(p) for p in read}
