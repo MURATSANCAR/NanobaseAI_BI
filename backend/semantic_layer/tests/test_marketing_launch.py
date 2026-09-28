@@ -351,7 +351,7 @@ def test_access_rules_for_launch():
     assert A.rule_for("/api/v1/marketing/launches") == page
     assert A.rule_for("/api/v1/marketing/launches/ML-2026-0001/tracking") == page
     assert A.rule_for("/api/v1/marketing/launches/run-due") == A.SYSTEM
-    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap")})
+    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap"), A.page("pazarlama-backlist")})
     f = A.features_for
     w = "ozellik:pazarlama.lansman-yaz"
     assert f("POST", "/api/v1/marketing/launches") == [w]

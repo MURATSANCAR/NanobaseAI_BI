@@ -144,6 +144,14 @@ def explicit_keys() -> frozenset[str]:
             | frozenset(p["key"] for p in cat.get("pages", []) if p.get("explicit")))
 
 
+
+def sensitive_keys() -> frozenset[str]:
+    """Kişisel veri gösteren anahtarlar (katalogda `sensitive`, ör. İK aday verisi): yönetici bile bunları yalnız
+    rolüyle alır; «yönetici her şeyi görür» kuralı bunlarda işlemez (hr_core.who_from)."""
+    cat = catalog()
+    return (frozenset(f["key"] for f in cat.get("features", []) if f.get("sensitive"))
+            | frozenset(p["key"] for p in cat.get("pages", []) if p.get("sensitive")))
+
 # ------------------------------------------------------------------ veri alanları (Aşama C)
 #
 # ZEKİ AI'ın hangi tabloları okuyabileceği. Kataloğun her varlığı bir alana düşer (kural dosyası + yöneticinin
@@ -532,7 +540,6 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/backlist", frozenset({page("pazarlama-backlist")})),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap"), page("pazarlama-backlist")})),
-    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
     # M20 Basın ilişkileri (Pazarlama). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/pr/run-due", SYSTEM),
     ("/api/v1/pr/", frozenset({page("basin-iliskileri")})),
