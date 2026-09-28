@@ -2243,3 +2243,12 @@ msgstr "Yandex kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şi
 
 msgid "Use your own IMAP/SMTP settings. Open in Desk"
 msgstr "Kendi IMAP/SMTP ayarlarınızı kullanın. Masaüstünde açın"
+
+msgid "Directory is unreachable right now. Please try again later."
+msgstr "Kurum dizinine (AD) şu an ulaşılamıyor. Lütfen biraz sonra yeniden deneyin."
+
+msgid "Directory passwords are changed in Active Directory, not here."
+msgstr "Kurum şifresi burada değil, Active Directory'de değiştirilir."
+
+msgid "Login with LDAP"
+msgstr "Kurum hesabıyla giriş"

@@ -1,13 +1,13 @@
 """Yapay zekâ panelinin modelini kurar: NanobaseAI modeli, LLM kapısının OpenAI uyumlu girişi.
 
 Kurulum betiği çağırır:
-    bench --site destek execute nanobase_brand.ai.ensure_model \
-        --kwargs '{"base_url": "...", "api_key": "..."}'
+    echo '{"base_url": "...", "api_key": "..."}' | bench --site destek execute nanobase_brand.ai.ensure_model
 Anahtar depoda tutulmaz; sunucudaki anahtar dosyasından okunup buraya verilir ve
 Frappe'nin şifreli Password alanında saklanır.
 """
 
 import json
+import sys
 
 import frappe
 
@@ -19,7 +19,11 @@ MODEL = "nanobaseAI"
 PARAMS = {"extra_headers": {"X-LLM-Module": "destek"}}
 
 
-def ensure_model(base_url: str, api_key: str, model: str = MODEL) -> str:
+def ensure_model(base_url: str | None = None, api_key: str | None = None, model: str = MODEL) -> str:
+	if base_url is None:
+		# Standart girişten {"base_url", "api_key"}: anahtar komut satırına düşmez.
+		given = json.load(sys.stdin)
+		base_url, api_key = given["base_url"], given["api_key"]
 	if not frappe.db.exists("Flow Provider", PROVIDER):
 		frappe.get_doc({"doctype": "Flow Provider", "provider": PROVIDER, "enabled": 1}).insert(
 			ignore_permissions=True

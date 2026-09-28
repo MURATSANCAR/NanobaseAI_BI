@@ -19,6 +19,8 @@ PUBLIC_URL=${PUBLIC_URL:-https://portal.nanobase.ai:8446}
 LLM_BASE=${LLM_BASE:-https://portal.nanobase.ai/destek-llm/v1}
 LLM_KEY_FILE=${LLM_KEY_FILE:-/etc/nanobase/destek-llm.key}
 ADMIN_FILE=${ADMIN_FILE:-/etc/nanobase/destek-admin.txt}
+AD_FILE=${AD_FILE:-/etc/nanobase/timas-ad.json}
+BRIDGE_ENV=${BRIDGE_ENV:-/etc/nanobase/semantic-bridge.env}
 VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$SRC/frappe-apps/nanobase_brand/nanobase_brand/__init__.py")
 IMAGE="nanobase-destek:${VERSION}-${SHORT}"
 
@@ -73,12 +75,22 @@ dc exec -T backend bench --site "$SITE" execute nanobase_brand.install.apply
 
 if sudo test -f "$LLM_KEY_FILE"; then
   say "Model tanımı"
-  KEY=$(sudo cat "$LLM_KEY_FILE")
-  python3 -c 'import json,sys; print(json.dumps({"base_url": sys.argv[1], "api_key": sys.argv[2]}))' "$LLM_BASE" "$KEY" \
-    | dc exec -T backend bash -c "bench --site '$SITE' execute nanobase_brand.ai.ensure_model --kwargs \"\$(cat)\"" >/dev/null
-  unset KEY
+  # Anahtar dosyadan okunur, standart girişten gider: komut satırında görünmez.
+  sudo python3 -c 'import json,sys; print(json.dumps({"base_url": sys.argv[1], "api_key": open(sys.argv[2]).read().strip()}))' "$LLM_BASE" "$LLM_KEY_FILE" \
+    | dc exec -T backend bench --site "$SITE" execute nanobase_brand.ai.ensure_model >/dev/null
 else
   echo "UYARI: $LLM_KEY_FILE yok; yapay zekâ paneli model olmadan açılır"
+fi
+if sudo test -f "$AD_FILE"; then
+  say "AD girişi (NTLM)"
+  # Portal girişinin AD dosyası + köprünün yönetici grubu/listesi; standart girişten gider.
+  ADMIN_GROUP=$(sudo sed -n 's/^TIMAS_ADMIN_GROUP=//p' "$BRIDGE_ENV" 2>/dev/null | tail -1)
+  ADMIN_USERS=$(sudo sed -n 's/^TIMAS_ADMIN_USERS=//p' "$BRIDGE_ENV" 2>/dev/null | tail -1)
+  sudo python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["admin_group"]=sys.argv[2] or "Administrators"; d["admin_users"]=sys.argv[3] or "zekiai,timasai,muratsancar"; print(json.dumps(d))' \
+    "$AD_FILE" "$ADMIN_GROUP" "$ADMIN_USERS" \
+    | dc exec -T backend bench --site "$SITE" execute nanobase_brand.ad.ensure_ldap
+else
+  echo "UYARI: $AD_FILE yok; AD girişi kapalı"
 fi
 dc exec -T backend bench --site "$SITE" clear-cache
 dc restart backend websocket queue-short queue-long scheduler frontend >/dev/null

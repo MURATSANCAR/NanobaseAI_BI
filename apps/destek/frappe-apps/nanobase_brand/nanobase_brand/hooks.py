@@ -11,6 +11,9 @@ app_license = "agpl-3.0"
 app_include_css = ["/assets/nanobase_brand/css/nanobase.css"]
 web_include_css = ["/assets/nanobase_brand/css/nanobase.css"]
 
+# AD girişi portal girişiyle aynı yöntemle (NTLM): nanobase_brand/ldap_ntlm.py
+override_doctype_class = {"LDAP Settings": "nanobase_brand.ldap_ntlm.NtlmLDAPSettings"}
+
 app_logo_url = "/assets/nanobase_brand/images/logo-mark.svg"
 
 website_context = {
