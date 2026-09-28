@@ -37,7 +37,10 @@ export default function PaPersonCard() {
     onError: (e) => toast.error(errText(e, 'Kart güncellenemedi.') ?? ''),
   });
   const noteOp = useMutation({
-    mutationFn: ({ nid, op }: { nid: string; op: 'done' | 'delete' }) => (op === 'done' ? paApi.updateNote(nid, { nextDone: true }) : paApi.deleteNote(nid)),
+    mutationFn: async ({ nid, op }: { nid: string; op: 'done' | 'delete' }) => {
+      if (op === 'done') await paApi.updateNote(nid, { nextDone: true });
+      else await paApi.deleteNote(nid);
+    },
     onSuccess: () => invalidatePa(qc),
     onError: (e) => toast.error(errText(e, 'Not güncellenemedi.') ?? ''),
   });

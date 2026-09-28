@@ -23,7 +23,7 @@ export default function SocialAccounts() {
 
   const save = useMutation({
     mutationFn: (d: Draft) => {
-      const body: Partial<Account> = { platform: d.platform, handle: d.handle, ad: d.ad || null, imprintAd: d.imprintAd || null,
+      const body: Partial<Account> = { platform: d.platform, handle: d.handle, ad: d.ad || undefined, imprintAd: d.imprintAd || null,
         imprintCrmId: d.imprintCrmId || null, sahip: d.sahip || null, ton: d.ton || null, renk: d.renk || null };
       return d.id ? socialApi.updateAccount(d.id, body) : socialApi.addAccount(body);
     },

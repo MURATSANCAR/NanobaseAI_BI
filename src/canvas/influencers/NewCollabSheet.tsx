@@ -81,7 +81,7 @@ export default function NewCollabSheet({ open, meta, onClose, person, book, onCr
             </select>
           </label>
         )}
-        {selected && 'minor' in selected && selected.minor && <Note tone="warn">Reşit olmayan içerik üreticisi: veli onayı gerekir (hukuka sorulacak).</Note>}
+        {selected && 'minor' in selected && Boolean(selected.minor) && <Note tone="warn">Reşit olmayan içerik üreticisi: veli onayı gerekir (hukuka sorulacak).</Note>}
         {pick ? (
           <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
             <span className="min-w-0 break-words font-bold">{pick.title}</span>

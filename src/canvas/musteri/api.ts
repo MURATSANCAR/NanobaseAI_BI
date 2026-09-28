@@ -188,7 +188,8 @@ export function levelTone(l: Level | null | undefined): 'err' | 'warn' | 'muted'
 /** Değişim oranı: +0,12 → «+%12», −0,345 → «−%35», null → «—». */
 export function fmtChange(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—';
-  const n = Math.round(v * 100);
+  // Yarım değer sıfırdan uzağa yuvarlanır (−%34,5 → −%35); 0,345×100 kayan noktada 34,4999… çıkar.
+  const n = Math.sign(v) * Math.round(Math.abs(v) * 100 + 1e-9);
   return `${n > 0 ? '+' : n < 0 ? '−' : ''}%${Math.abs(n)}`;
 }
 
