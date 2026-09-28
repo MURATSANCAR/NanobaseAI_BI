@@ -94,6 +94,11 @@ const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'))
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
 const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
+const RecruitBoard = lazy(() => import('@/canvas/hr/recruit/RecruitBoard'));
+const CandidateDrawer = lazy(() => import('@/canvas/hr/recruit/CandidateDrawer'));
+const PositionEditor = lazy(() => import('@/canvas/hr/recruit/PositionEditor'));
+const HrTemplatesScreen = lazy(() => import('@/canvas/hr/recruit/TemplatesScreen'));
+const HrRecordsScreen = lazy(() => import('@/canvas/hr/records/HrRecordsScreen'));
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
@@ -257,6 +262,12 @@ export default function App() {
             {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
             <Route path="okul-tanitim" element={<SchoolsScreen />} />
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />
+            {/* İnsan Kaynakları: M55 işe alım (/api/v1/hr/recruit) ve İK-0 çalışan/KVKK kayıtları (/api/v1/hr). */}
+            <Route path="ik/ise-alim" element={<RecruitBoard />} />
+            <Route path="ik/ise-alim/aday/:id" element={<CandidateDrawer />} />
+            <Route path="ik/pozisyonlar" element={<PositionEditor />} />
+            <Route path="ik/belgeler" element={<HrTemplatesScreen />} />
+            <Route path="ik/kayitlar" element={<HrRecordsScreen />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
             {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}

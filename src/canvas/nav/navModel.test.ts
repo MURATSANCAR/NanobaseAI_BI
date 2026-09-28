@@ -49,6 +49,7 @@ describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'ik', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -83,6 +84,22 @@ describe('rol görünürlüğü', () => {
     const g = visibleNav({ isAdmin: true, isEditor: true }, { webWatch: true });
     expect(ids(g)[1]).toBe('analiz');
     expect(ids(g)).toContain('yonetim');
+  });
+});
+
+describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
+  it('«bütün sayfalar» yöneticide İK grubunu açar, başkasında açmaz; rolde anahtar varsa görünür', () => {
+    expect(ids(visibleNav(user, { webWatch: true }))).not.toContain('ik');
+    expect(ids(visibleNav(admin, { webWatch: true }))).toContain('ik');
+    const g = visibleNav(user, {}, new Set(['sayfa:ik-ise-alim']));
+    expect(ids(g)).toEqual(['kampus', 'ik']);
+    expect(itemIds(g)).toEqual(['kampus', 'ik-ise-alim']);
+  });
+
+  it('aday kartı işe alım panosunu etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik/ise-alim/aday/aday_1')?.item.id).toBe('ik-ise-alim');
+    expect(matchActive(g, '/ik/pozisyonlar')?.item.id).toBe('ik-pozisyonlar');
   });
 });
 

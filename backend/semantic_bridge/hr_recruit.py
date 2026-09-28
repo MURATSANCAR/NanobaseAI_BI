@@ -623,6 +623,16 @@ def on_consent_withdrawn(engine: sa.engine.Engine, tenant: str, subject_type: st
     refresh_retention(engine, tenant, [subject_id])
 
 
+def on_consent_added(engine: sa.engine.Engine, tenant: str, subject_type: str, subject_id: str, purpose: str) -> None:
+    """Havuz rızası sonuçlanmış adayın saklama sınıfını hemen değiştirir (ekrandaki silinme tarihi güncel kalsın)."""
+    if subject_type == "aday" and purpose == "aday_havuzu":
+        refresh_retention(engine, tenant, [subject_id])
+
+
+def on_retention_changed(engine: sa.engine.Engine, tenant: str) -> None:
+    refresh_retention(engine, tenant)
+
+
 def due_candidates(engine: sa.engine.Engine, tenant: str, t: datetime) -> list[str]:
     refresh_retention(engine, tenant)
     with engine.connect() as c:
@@ -669,6 +679,8 @@ def register_hooks() -> None:
     H.register_purger(H.Purger("aday", "Aday verisi (ret / aday çekildi)", due_candidates, purge_candidates))
     H.register_purger(H.Purger("mulakat_notu", "Mülakat notları", due_notes, purge_notes))
     H.register_withdraw_hook(on_consent_withdrawn)
+    H.register_consent_added_hook(on_consent_added)
+    H.register_retention_hook(on_retention_changed)
     H.register_subject_check("aday", candidate_exists)
 
 

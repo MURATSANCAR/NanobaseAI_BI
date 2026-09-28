@@ -812,6 +812,49 @@ kabulü (`scripts/acceptance/m28/kabul.py`) test sunucusunda koşulacak. main'e 
 - **Açık kalan:** M49 sayfa `explicit` desteği; VM `jobs.py`'ye `/api/v1/public-affairs/run-due` (günlük) — VM kurulumunda; Uyarılar
   rozetine «onay bekleyen hediye/teklif»; etki izleme (M20/M22 verisi) ve kriz sinyali sonraki sürüm; M33 ihale → proje «fikir» bağı
   (`tender_ref` kolonu hazır); M46 hediye/proje bütçesi bağı; kitap listesinin stüdyo yaş uygunluğu raporuyla otomatik bağı.
+- **Neden:** modülün adı «Yazarla İlişki ve Gelişim Takibi» ama ekranda satış yoktu; iş tanımındaki okur duygusu, strateji önerisi ve sadakat puanı eksikti; randevu/adım için hatırlatma yoktu. İş kararları veriye bakılarak verildi (hafıza: iş kararları Claude'a bırakıldı).
+- **Gelişim** (`semantic_bridge/author_growth.py`, uç `GET /api/v1/editorial/authors/growth/{kişi}`, kart panelinde «Gelişim»): yazarın CRM'deki kitapları (yazar rolü, `new_StokKodu` + e-kitap kodu) → Logo yıllık satış görünümleri, M6 hakediş hesabıyla **aynı sorgu ve kural** (faturalı malzeme satırı, iade düşülür, 157 ile başlayan kod ve bedelsiz satır sayılmaz). Son 12 ay / önceki 12 ay veri sonundan geriye (değişim %, artış/düşüş/yatay), yıllara göre ve son 24 ay grafik + tablo, kitap kitap adet. Kendi salt okunur Logo bağlantısı; aynı anda tek yazar okunur; sonuç `semantic_author_growth`'ta 12 saat, «Yenile» beklemeden okur.
+- **Telif:** CRM telif ödeme tablosu 2014'ten beri boş → gerçek iz M6'da hesaplanıp kaydedilen hakedişler (`semantic_contract_statements`); oranla tahmin **üretilmez**, hakediş yoksa ekran «Sözleşmeler ekranında hesaplanır» der.
+- **Okur sesi:** timas.com.tr ürün yorum özeti (SEO modülü, T-soft'tan gece; metin ve kişisel veri yok) kitaba EAN-13 ile bağlanır → ortalama puan, yıldız dağılımı; açık web taramasının olumlu/nötr/olumsuz sayısı yalnız `WEB_WATCH_ENABLED` ortamında. Bot korumalı satıcı yorumları okunmaz.
+- **Sadakat puanı** (yazarın yayınevine bağlılığı, yalnız CRM, kuralı ekranda yazılı): birliktelik yıl başı 3 (≤30), kitap başı 5 (≤25), son 24 ayda yeni eser/sözleşme 20 (24–48 ay 10), yürürlükte sözleşme 15, birden çok sözleşme 10; 70+ bağlı, 40–69 düzenli, altı zayıf bağ. Isı haritasında sütun ve «en sadık / sadakati en zayıf» sırası (tek CRM sorgusu, bütün yazarlar).
+- **ZEKİ AI önerisi** (`POST /api/v1/editorial/authors/advice/{kişi}`, yetki `ozellik:yazar-iliski.oneri`): girdi ekrandaki sayılar + gizli olmayan son 5 not; çıktı özet, en çok 4 öneri (neden + ne zaman), riskler; girdisiyle birlikte `semantic_author_advice`'ta saklanır. Kabulde iki model hatası bulundu ve girdi düzeltildi: sadakat puan dökümü «30 yıllık iş birliği» diye okundu (→ yıl ve sayılar gider), yarım 2026 «tarihin en düşüğü» sayıldı (→ `kismi_yil` işareti).
+- **Sabah e-posta özeti** (`author_reminders.py`): kişi başına günde bir kez; bugün/yarınki randevular, notu girilmemiş randevular (yalnız yazana), geciken ve bugün vadesi gelen adımlar. Boşsa gitmez; gizli notun konusu gitmez; alıcı kişi rehberinden, izinli alan adı süzgeci uyarılarla aynı; yalnız yayınevi içi. Ayarlar `AUTHOR_REMINDERS_ENABLED` (varsayılan açık), `AUTHOR_REMINDER_TIME` (08:15); kişi Randevular sekmesinden kapatır. Zamanlayıcı `scripts/server/timas-author-reminders.{service,timer}` (08–19 arası 15 dk; köprü saat eşiğini ve günde bir kez kuralını uygular); müşteri VM'inde `jobs.py` döngüsü.
+- **Doğrulama (test sunucusu, yan port 8798 aday köprü, gerçek CRM .28 + Logo + katalog DB, geçici `timasai` oturumu):** ısı haritası 549 sözleşmeli yazar, hepsinde sadakat, 4–7 sn; iki yazarda gelişim: ilk okuma 117–121 sn, sonra önbellekten 0 sn, «Yenile» 87 sn ve aynı sonuç. **Bağımsız referans:** Adem Güneş'in 55 stok koduyla yıllık görünümden düz toplam 2025 = 19.032, 2026 = 7.451 — uygulamayla birebir (süzgeçsiz toplam 19.050 / 7.462; fark 157 kodları ve bedelsiz satırlar, kural gereği). Sabah özeti kuru koşu 200. nginx `/timas/api/` 600 sn (test ve VM şablonu). Test verisi: iki öneri kaydı + 2 değişiklik kaydı satırı ve oturumlar silindi. tsc temiz, vitest 71/71, köprü testleri 36/36 (yeni `test_author_growth.py` 11).
+- **Açık:** test sunucusunda site yorum özeti yalnız 67 üründe (SEO yorum okuması sürüyor); denenen iki yazarın kitaplarında yorum yoktu — eşleşme kuralı SEO modülünün EAN anahtarıyla aynı. Kurulum ve 4 genişlikte görsel kontrol `main`e girdikten sonra.
+## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-ac485f3ca53f8031a` (main `c2c8b4fd` üstünde). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON
+  doğrulaması yapıldı. pytest (`test_hr_core.py`, `test_hr_recruit.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc ve
+  gerçek CRM/AD kabulü (`scripts/acceptance/M55/kabul.py`) test sunucusunda koşturulacak.
+- **İK-0 (analiz §14.1):** çalışan ve birim kaydı (CRM ∩ AD önerisi, İK onayıyla; CRM'e yazılmaz), aydınlatma metni sürümleri, açık
+  rıza (yalnız havuz / referans / gereksiz özel nitelikli veri — başvurunun değerlendirilmesi md. 5/2-c), veri sınıfı başına saklama
+  süresi, gece imha işi ve tutanağı, erişim kaydı, arka plan işleri. M56–M58 için `HrContext` (`app.state.hr`), kanca kayıtları ve
+  `src/canvas/hr/hrApi.ts` hazır.
+- **Yetki (ortak dosyalarda en küçük değişiklik):** `access.explicit_keys()` sayfaları da kapsıyor (M49 dalındaki değişiklikle aynı
+  amaç; birleşmede tek sürüm kalmalı). Yeni `sensitive` işareti ve `access.sensitive_keys()`. `access_catalog.json`'a `ik` alanı,
+  4 sayfa, 12 özellik; `RULES`'a İK önekleri. `AccessAdmin.tsx` açıkça verilen sayfayı «ayrıca verilir» gösterir; `engine.ts`
+  katalog türü. `navModel.ts` `ik` grubu (`explicit`), `ModulesMenu.tsx` M55 + `GROUP_HOME`, `KampusPage.tsx` kutu, `App.tsx` 5 rota,
+  `admin.py` «İnsan kaynakları» ayar grubu (6 anahtar), `app.py` iki satır kayıt, `llm_queue.py` `queue_label`/`labelled`.
+- **Karar (analiz «kullanıcıya sorulur» dediği; iş kararları Claude'a bırakıldı kuralıyla):** portal yöneticisi aday kişisel
+  verisini, KVKK yönetimini, İK erişim kaydını ve İK dışa aktarmayı **kendiliğinden görmez**; rolüyle görür (bağ `semantic_audit`'e
+  düşer). Gerekçe: KVKK md. 12 (teknik hesap aday verisini görmemeli) ve analiz önerisi; geri dönüş `HR_ADMIN_SEES_PERSONAL=1`.
+  Sayfalar ve kişisel olmayan işlemler (pozisyon açma/onay, şablon, çalışan eşitleme) yöneticide açık kalır.
+- **§10 açık sorularında verilen kararlar:** (1) İK kişi sayısı/son karar: kod rolden bağımsız — pozisyon onayı ve teklif onayı ayrı
+  anahtarlar, iki göz. (2) Aday adresi: portal adaya yazmaz; mektup taslağı, gönderim İK'nın kendi kutusundan. (3) Bordro/özlük:
+  ölçülmeden bağlanmadı; çalışan kaydı CRM ∩ AD + İK girişi, ücret/T.C./sağlık tutulmaz; Logo `LG_411_EMPLOYEE` ölçümü
+  `referans.sql` sonunda. (4) Saklama süresi: varsayılan yok — girilmeyen sınıfta imha yapılmaz, ekran uyarır (sessiz varsayım
+  yok). (5) Test sunucusunda gerçek aday verisi: kabul yalnız CRM/AD yapısı ve «KABUL TESTİ» adlı uydurma adayla; temizlik betiği
+  hepsini siler.
+- **Tasarım kararları:** kanıtlı özette alıntıyı model yazmaz — satır numarası verir, metin özgeçmişin satırıdır (uydurma
+  alıntı imkânsız); özel nitelikli maske de satır numarasıyla (şüphede gizlenir). Kanıt işi arka planda (`semantic_hr_jobs`).
+  E-postadan başvuru (`/intake`) ileti kimliğinin özetiyle bir kez; konu satırı tam olarak tek açık pozisyonun adını içeriyorsa
+  pozisyona bağlanır, değilse İK atar. İK soru kutusu (analiz §13 son satır) ve yetkinlik haritası sonraki sürüm.
+- **Kabul (`scripts/acceptance/M55/`):** K1 etkin CRM kullanıcı, K1b devre dışı olmayan hesap, K2 etkin birim başına kullanıcı,
+  K3 yöneticili birim (kolon doluluğu **ölçülecek**), K4 ekip üyeliği, K5 pano pozisyon×aşama, K5b eşik üstü (eşik İK ayarı),
+  K6 imha (gerçek `run-due`), K7 model izi, K8 yetki; `--yazma` geçici rol + yapay aday + kanıt + e-posta aktarımı;
+  `temizlik.py` rol, bağ, aday, pozisyon ve bağlı bütün satırları siler.
+- **Sunucuda kalan:** köprü + arayüz kurulumu, `timas-hr-purge.timer` ve `timas-hr-recruit-reminders.timer` (önce elle
+  `systemctl start`), pytest/vitest/tsc, kabul ve temizlik; İK rolü atanana kadar ekranlar yalnız yöneticide görünür.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

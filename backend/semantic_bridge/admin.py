@@ -894,6 +894,21 @@ SPEC: list[dict[str, Any]] = [
     {"key": "NEWSLETTER_INTEREST_KEYWORDS", "group": "catalog", "label": "İlgi alanı → kitap türü sözcükleri (JSON)", "type": "text",
      "default": "", "help": "Kişi kartındaki ilgi bayrağının kitabın tür/Kitaplık/web kategorisinde aranan sözcükleri, örn. "
                             "{\"new_tarihveakademi\": [\"tarih\", \"akademi\"]}. Boşsa varsayılan eşleme"},
+    # İnsan kaynakları (İK-0 + M55)
+    {"key": "HR_RECRUIT_SLA_DAYS", "group": "hr", "label": "Aşamada bekleme eşiği (gün)", "type": "text", "default": "",
+     "help": "Aday bir aşamada bundan uzun kalırsa panoda sayılır ve İK alıcılarına aday bilgisi içermeyen özet gider. Boş: eşik yok"},
+    {"key": "HR_ALERT_RECIPIENTS", "group": "hr", "label": "İK bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Adaya hiçbir e-posta gönderilmez; mektupları İK kendisi gönderir"},
+    {"key": "HR_ADMIN_SEES_PERSONAL", "group": "hr", "label": "Yönetici aday verisini rolsüz görsün", "type": "bool", "default": "0",
+     "help": "Kapalıyken (önerilen) portal yöneticisi aday kişisel verisini, KVKK yönetimini ve İK erişim kaydını ancak kendine "
+             "rol bağlarsa görür; bağ değişiklik kaydına düşer"},
+    {"key": "HR_FILE_MAX_MB", "group": "hr", "label": "Özgeçmiş dosyası üst boyutu (MB)", "type": "int", "default": "20",
+     "help": "Bozuk ya da kötü niyetli yüklemeye karşı; aşan dosya reddedilir ve nedeni yazılır"},
+    {"key": "HR_COMPANY_NAME", "group": "hr", "label": "Mektuplarda şirket adı", "type": "text", "default": "Timaş Yayınları",
+     "help": "Şablonlardaki {{sirket}} alanı"},
+    {"key": "HR_CRM_UNIT_MANAGER_COLUMN", "group": "hr", "label": "CRM birim yöneticisi kolonu", "type": "text",
+     "default": "new_departmanyoneticisiid",
+     "help": "BusinessUnitBase'te departman yöneticisini tutan kolon. Okunamazsa eşitleme yöneticisiz sürer ve not düşer"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -981,6 +996,9 @@ GROUPS = [
     {"id": "catalog", "label": "Katalog ve bülten",
      "help": "Katalog fiyat ve stok kaynağı, uyarı eşikleri, öneri ağırlıkları ve bülten segment kuralı. Portal toplu e-posta "
              "göndermez, kişi listesi dışarı vermez; CRM'e ve T-soft'a hiçbir şey yazılmaz."},
+    {"id": "hr", "label": "İnsan kaynakları",
+     "help": "İşe alım bildirimleri ve aday verisine yönetici erişimi. Saklama süreleri ve aydınlatma metni İK ekranındadır "
+             "(Çalışan ve KVKK kayıtları). CRM'e yazılmaz; adaya portal e-posta göndermez."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},

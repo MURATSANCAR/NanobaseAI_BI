@@ -642,10 +642,34 @@ def publish_notice(engine: sa.engine.Engine, tenant: str, actor: str, body: dict
 _withdraw_hooks: list[Callable[[sa.engine.Engine, str, str, str, str], None]] = []
 
 
+_added_hooks: list[Callable[[sa.engine.Engine, str, str, str, str], None]] = []
+_retention_hooks: list[Callable[[sa.engine.Engine, str], None]] = []
+
+
 def register_withdraw_hook(fn: Callable[[sa.engine.Engine, str, str, str, str], None]) -> None:
     """Rıza geri çekilince çağrılır: fn(engine, tenant, subject_type, subject_id, purpose)."""
     if fn not in _withdraw_hooks:
         _withdraw_hooks.append(fn)
+
+
+def register_consent_added_hook(fn: Callable[[sa.engine.Engine, str, str, str, str], None]) -> None:
+    """Rıza kaydedilince çağrılır (ör. havuz rızası adayın saklama sınıfını değiştirir)."""
+    if fn not in _added_hooks:
+        _added_hooks.append(fn)
+
+
+def register_retention_hook(fn: Callable[[sa.engine.Engine, str], None]) -> None:
+    """Saklama süresi değişince çağrılır: modül kendi kayıtlarının bitiş tarihini yeniden hesaplar."""
+    if fn not in _retention_hooks:
+        _retention_hooks.append(fn)
+
+
+def _run_hooks(hooks: list[Callable[..., None]], *args: Any) -> None:
+    for hook in list(hooks):
+        try:
+            hook(*args)
+        except Exception as e:  # noqa: BLE001 — kayıt durur; kanca hatası loga
+            log.warning("hr: kanca hata verdi: %s", e)
 
 
 def _consent_out(r: Any) -> dict[str, Any]:
@@ -707,7 +731,9 @@ def add_consent(engine: sa.engine.Engine, tenant: str, actor: str, body: dict[st
         c.execute(CONSENTS.insert().values(id=cid, tenant_id=tenant, subject_type=st, subject_id=sid, purpose=purpose,
                                            notice_version=int(version), given_at=given, channel=channel,
                                            evidence=str(body.get("evidence") or "").strip()[:2000] or None, recorded_by=actor))
-        return _consent_out(c.execute(sa.select(CONSENTS).where(CONSENTS.c.id == cid)).first())
+        out = _consent_out(c.execute(sa.select(CONSENTS).where(CONSENTS.c.id == cid)).first())
+    _run_hooks(_added_hooks, engine, tenant, st, sid, purpose)
+    return out
 
 
 def withdraw_consent(engine: sa.engine.Engine, tenant: str, actor: str, consent_id: str) -> dict[str, Any]:
@@ -720,11 +746,7 @@ def withdraw_consent(engine: sa.engine.Engine, tenant: str, actor: str, consent_
             raise HrError("Bu rıza zaten geri çekilmiş.", 409)
         c.execute(CONSENTS.update().where(CONSENTS.c.id == consent_id).values(withdrawn_at=now(), withdrawn_by=actor))
         row = c.execute(sa.select(CONSENTS).where(CONSENTS.c.id == consent_id)).first()
-    for hook in list(_withdraw_hooks):
-        try:
-            hook(engine, tenant, r.subject_type, r.subject_id, r.purpose)
-        except Exception as e:  # noqa: BLE001 — geri çekme kaydı durur; kanca hatası loga
-            log.warning("hr: rıza geri çekme kancası hata verdi: %s", e)
+    _run_hooks(_withdraw_hooks, engine, tenant, r.subject_type, r.subject_id, r.purpose)
     return _consent_out(row)
 
 
@@ -783,6 +805,8 @@ def put_retention(engine: sa.engine.Engine, tenant: str, actor: str, items: list
             else:
                 c.execute(RETENTION.update().where(RETENTION.c.tenant_id == tenant, RETENTION.c.data_class == key).values(**vals))
             diff[key] = {"once": old.keep_days if old is not None else None, "sonra": days}
+    if diff:
+        _run_hooks(_retention_hooks, engine, tenant)
     return retention(engine, tenant), diff
 
 

@@ -105,6 +105,7 @@ import {
  */
 
 export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'altyapi' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'ik' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -149,6 +150,8 @@ export type NavGroup = {
   /** Kampüs gibi tek ekranlı alan: rayda doğrudan bağlantıdır, paneli yoktur. */
   to?: string;
   adminOnly?: boolean;
+  /** Sayfaları açıkça verilir (İK): «bütün sayfalar» yalnız yöneticide bu grubu açar. */
+  explicit?: boolean;
 };
 
 export const NAV: NavGroup[] = [
@@ -465,6 +468,19 @@ export const NAV: NavGroup[] = [
         keywords: ['zeki', 'kalite', 'karne', 'doğruluk', 'geri bildirim', 'yanlış cevap', 'test seti', 'sürüm', 'model'],
       },
     ],
+
+    // İnsan Kaynakları (M55–M58; İK-0 ortak kayıtlar). Sayfaları açıkça verilir, «Herkes» rolüne girmez.
+    id: 'ik',
+    label: 'İnsan Kaynakları',
+    hint: 'İşe alım, pozisyonlar, İK belgeleri ve KVKK kayıtları',
+    icon: Contact,
+    explicit: true,
+    items: [
+      { id: 'ik-ise-alim', label: 'İşe alım panosu', to: '/ik/ise-alim', icon: ClipboardList, section: 'İşe alım', hint: 'Başvurular aşamalarıyla, aday kartı, kanıtlı özgeçmiş özeti ve mülakat notları', keywords: ['aday', 'başvuru', 'özgeçmiş', 'cv', 'mülakat', 'işe alım', 'ik'] },
+      { id: 'ik-pozisyonlar', label: 'Pozisyonlar', to: '/ik/pozisyonlar', icon: BriefcaseBusiness, section: 'İşe alım', hint: 'Pozisyon kartı, yetkinlikler, ilan taslağı, mülakat soru seti ve onay', keywords: ['kadro', 'ilan', 'yetkinlik', 'pozisyon'] },
+      { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },
+      { id: 'ik-kayitlar', label: 'Çalışan ve KVKK kayıtları', to: '/ik/kayitlar', icon: ShieldCheck, section: 'Temel', hint: 'Çalışan ve birim kaydı, aydınlatma metni, açık rıza, saklama süresi, imha tutanağı, erişim kaydı', keywords: ['kvkk', 'çalışan', 'birim', 'rıza', 'imha', 'saklama'] },
+    ],
   },
   {
     id: 'yonetim',
@@ -506,8 +522,10 @@ export function visibleNav(
   pages: 'all' | ReadonlySet<string> | null = 'all',
 ): VisibleGroup[] {
   // pages: kişinin görebildiği `sayfa:<id>` anahtarları (köprü karar verir); null = henüz bilinmiyor → rol sayfaları gizli.
+  // Açıkça verilen grup (İK) «bütün sayfalar» ile yalnız yöneticide açılır: köprü yanıtı okunamayınca ('all') herkese görünmez.
   const allowed = (g: NavGroup, i: NavItem) =>
-    !needsPagePermission(g, i) || pages === 'all' || (pages !== null && pages.has(`sayfa:${i.id}`));
+    !needsPagePermission(g, i) ||
+    (pages === 'all' ? !g.explicit || role.isAdmin : pages !== null && pages.has(`sayfa:${i.id}`));
   const keep = (g: NavGroup) => (i: NavItem) =>
     (!i.adminOnly || role.isAdmin) && (!i.feature || flags[i.feature] === true) && allowed(g, i);
   const groups = NAV.filter((g) => !g.adminOnly || role.isAdmin)
@@ -516,6 +534,8 @@ export function visibleNav(
   if (!role.isEditor || role.isAdmin) return groups;
   const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi'];
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'altyapi']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'ik'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'ik']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)
