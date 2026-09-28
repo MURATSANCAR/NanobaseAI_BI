@@ -1,5 +1,5 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Alanlar (areas) menünün ana modülleridir, aynı sırada ve aynı adla; sayfanın alanı öğenin menüdeki ana modülüdür (yalnız Yetkiler ekranındaki gruplama; yetkiyi değiştirmez). Kampüs sayfası her zaman açık; Yönetim'in ayar, onay ve sözlük ekranları yalnız yöneticide, burada yok (Yönetim alanında yalnız sayfa yetkisiyle açılan Kategori ağacı var). Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu ve alan eşleşmesini denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
   "version": 2,
   "areas": [
     {
@@ -15,28 +15,40 @@
       "label": "Analiz"
     },
     {
-      "id": "finans",
-      "label": "Finans"
-    },
-    {
       "id": "editoryal",
       "label": "Editoryal"
     },
     {
-      "id": "kayitlar",
-      "label": "Kayıtlar"
+      "id": "uretim-fiyat",
+      "label": "Fiyatlama ve üretim"
+    },
+    {
+      "id": "pazarlama",
+      "label": "Pazarlama"
     },
     {
       "id": "satis",
-      "label": "Satış ve saha"
+      "label": "Saha satış ve okul"
+    },
+    {
+      "id": "dijital",
+      "label": "Dijital ve topluluk"
+    },
+    {
+      "id": "musteri",
+      "label": "Müşteri ve pazar"
+    },
+    {
+      "id": "platform",
+      "label": "Platform yönetimi"
     },
     {
       "id": "lojistik",
       "label": "Lojistik"
     },
     {
-      "id": "pazarlama",
-      "label": "Pazarlama"
+      "id": "finans",
+      "label": "Finans ve risk"
     },
     {
       "id": "altyapi",
@@ -47,14 +59,14 @@
       "label": "İnsan Kaynakları"
     },
     {
-      "id": "platform",
-      "label": "Platform"
+      "id": "yonetim",
+      "label": "Yönetim"
     }
   ],
   "pages": [
     {
       "key": "sayfa:genel-bakis",
-      "area": "analiz",
+      "area": "finans",
       "label": "Genel bakış"
     },
     {
@@ -80,17 +92,17 @@
     },
     {
       "key": "sayfa:pazar-arastirma",
-      "area": "analiz",
+      "area": "musteri",
       "label": "Pazar ve rakip"
     },
     {
       "key": "sayfa:pazar-rakipler",
-      "area": "analiz",
+      "area": "musteri",
       "label": "Rakipler ve emsal"
     },
     {
       "key": "sayfa:pazar-raporlar",
-      "area": "analiz",
+      "area": "musteri",
       "label": "Sektör raporları",
       "explicit": true
     },
@@ -106,17 +118,17 @@
     },
     {
       "key": "sayfa:baski-oneri",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "label": "Baskı önerisi"
     },
     {
       "key": "sayfa:fiyatlama",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "label": "Fiyatlama ve maliyet"
     },
     {
       "key": "sayfa:ilk-baski",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "label": "İlk baskı tahmini"
     },
     {
@@ -198,7 +210,7 @@
     },
     {
       "key": "sayfa:uretim",
-      "area": "editoryal",
+      "area": "uretim-fiyat",
       "label": "Üretim yönetimi"
     },
     {
@@ -208,50 +220,50 @@
     },
     {
       "key": "sayfa:dijital-yayin",
-      "area": "editoryal",
+      "area": "dijital",
       "label": "Dijital yayın"
     },
     {
       "key": "sayfa:dijital-satis",
-      "area": "editoryal",
+      "area": "dijital",
       "label": "Dijital satış",
       "hint": "Platform satış raporları ve dijital gelir (finans verisi); role açıkça verilir",
       "explicit": true
     },
     {
       "key": "sayfa:kisiler",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Kişiler"
     },
     {
       "key": "sayfa:yazar-iliskileri",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Yazar ilişkileri"
     },
     {
       "key": "sayfa:basin-web",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Basın ve web"
     },
     {
       "key": "sayfa:telif-sozlesme",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Sözleşmeler"
     },
     {
       "key": "sayfa:telif-donem",
-      "area": "kayitlar",
+      "area": "finans",
       "label": "Telif dönemi",
       "explicit": true
     },
     {
       "key": "sayfa:haklar",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Haklar ve lisanslar"
     },
     {
       "key": "sayfa:editor-atama",
-      "area": "kayitlar",
+      "area": "editoryal",
       "label": "Editör atama"
     },
     {
@@ -266,7 +278,7 @@
     },
     {
       "key": "sayfa:bayi-risk",
-      "area": "satis",
+      "area": "finans",
       "label": "Bayi riski"
     },
     {
@@ -301,28 +313,28 @@
     },
     {
       "key": "sayfa:okurlar",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Okurlar",
       "explicit": true
     },
     {
       "key": "sayfa:okur-toplulugu",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Okur kitlesi"
     },
     {
       "key": "sayfa:okur-segmentler",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Okur segmentleri"
     },
     {
       "key": "sayfa:okur-programlar",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Topluluk programları"
     },
     {
       "key": "sayfa:okur-yorumlar",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Yorum cevapları"
     },
     {
@@ -374,7 +386,7 @@
     },
     {
       "key": "sayfa:kategori-agaci",
-      "area": "kayitlar",
+      "area": "yonetim",
       "label": "Kategori ağacı"
     },
     {
@@ -629,7 +641,7 @@
     },
     {
       "key": "sayfa:kurumsal-eposta",
-      "area": "kayitlar",
+      "area": "musteri",
       "label": "Kurumsal e-posta"
     },
     {
@@ -657,12 +669,12 @@
     },
     {
       "key": "sayfa:musteri-iliskileri",
-      "area": "satis",
+      "area": "musteri",
       "label": "Müşteri ilişkileri"
     },
     {
       "key": "sayfa:musteri-veri-sagligi",
-      "area": "satis",
+      "area": "musteri",
       "label": "CRM veri sağlığı"
     },
     {
@@ -823,32 +835,32 @@
     },
     {
       "key": "sayfa:eticaret",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "E-ticaret: platform durumu"
     },
     {
       "key": "sayfa:eticaret-farklar",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "E-ticaret: farklar"
     },
     {
       "key": "sayfa:eticaret-huni",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "E-ticaret: huni"
     },
     {
       "key": "sayfa:eticaret-pazar-yerleri",
-      "area": "pazarlama",
+      "area": "platform",
       "label": "E-ticaret: pazar yerleri"
     },
     {
       "key": "sayfa:kampanya",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "Kampanyalar"
     },
     {
       "key": "sayfa:eticaret-musteri",
-      "area": "pazarlama",
+      "area": "dijital",
       "label": "E-ticaret müşterileri",
       "explicit": true
     },
@@ -935,35 +947,35 @@
     },
     {
       "key": "ozellik:pazar.rapor-yukle",
-      "area": "analiz",
+      "area": "musteri",
       "page": "sayfa:pazar-raporlar",
       "label": "Sektör raporu yükleme",
       "hint": "Rapor dosyası (PDF, Excel, CSV) yükleme ve silme; Zeki AI ile sayfa sayfa rakam çıkarımı (model harcar)"
     },
     {
       "key": "ozellik:pazar.rakam-onay",
-      "area": "analiz",
+      "area": "musteri",
       "page": "sayfa:pazar-raporlar",
       "label": "Rapor rakamlarını onaylama",
       "hint": "Çıkarılan rakamı sayfasına bakarak onaylama, düzeltme, reddetme; elle rakam girme"
     },
     {
       "key": "ozellik:pazar.kategori-esleme",
-      "area": "analiz",
+      "area": "musteri",
       "page": "sayfa:pazar-rakipler",
       "label": "Rakip kategori eşlemesi",
       "hint": "Rakip kategorisini TİMAŞ kategorisine eşleme kararı, Zeki AI eşleme önerisi, CRM/Logo kaynaklarını yenileme"
     },
     {
       "key": "ozellik:pazar.ozet-yaz",
-      "area": "analiz",
+      "area": "musteri",
       "page": "sayfa:pazar-arastirma",
       "label": "Pazar özeti taslağı",
       "hint": "Zeki AI ile aylık yönetim özeti taslağı, düzenleme, onaya gönderme"
     },
     {
       "key": "ozellik:pazar.ozet-onay",
-      "area": "analiz",
+      "area": "musteri",
       "page": "sayfa:pazar-arastirma",
       "label": "Pazar özetini onaylama",
       "hint": "Onaya gönderilen aylık pazar özetini onaylayıp kurul paketine (DYK) gönderme ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
@@ -992,21 +1004,21 @@
     },
     {
       "key": "ozellik:yonetim-raporu.yenile",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:yonetim-raporlari",
       "label": "Yönetim raporunu yenileme",
       "hint": "Baskı önerisi «Verileri yenile»"
     },
     {
       "key": "ozellik:ilk-baski.karar",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:ilk-baski",
       "label": "İlk baskı kararı",
       "hint": "Yeni kitap için ilk baskı adedini karar olarak kaydetme ve onaya gönderme"
     },
     {
       "key": "ozellik:ilk-baski.onay",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:ilk-baski",
       "label": "İlk baskı onayı (satış / üretim)",
       "hint": "İlk baskı kararına satış ya da üretim onayı verme; iki onay iki ayrı kişiden gelir",
@@ -1347,14 +1359,14 @@
     },
     {
       "key": "ozellik:yazar-iliski.yaz",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:yazar-iliskileri",
       "label": "Yazar kartı ve görüşme yazma",
       "hint": "Yeni yazar kartı, aşama değiştirme, havuza alma, randevu ve görüşme notu"
     },
     {
       "key": "ozellik:yazar-iliski.oneri",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:yazar-iliskileri",
       "label": "Yazar için Zeki AI önerisi",
       "hint": "Satış, sadakat, ilişki ısısı ve görüşme notlarından strateji önerisi üretme (model harcar)"
@@ -1368,7 +1380,7 @@
     },
     {
       "key": "ozellik:editor-atama.ata",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:editor-atama",
       "label": "Editör atama ve profil",
       "hint": "Projeye editör atama, başkasının görevini ve terminini değiştirme, editör kapasitesi ve izin kaydı",
@@ -1376,7 +1388,7 @@
     },
     {
       "key": "ozellik:editor-atama.kural",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:editor-atama",
       "label": "Kategori–editör kural taslağı",
       "hint": "Kural tablosunun taslağını yazma ve silme",
@@ -1384,7 +1396,7 @@
     },
     {
       "key": "ozellik:editor-atama.kural-onay",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:editor-atama",
       "label": "Kural tablosunu onaylama",
       "hint": "Taslağı yürürlüğe alma; önceki sürüm arşive geçer",
@@ -1392,21 +1404,21 @@
     },
     {
       "key": "ozellik:kategori.oneri-uret",
-      "area": "kayitlar",
+      "area": "yonetim",
       "page": "sayfa:kategori-agaci",
       "label": "Kitap profili önerisi üretme",
       "hint": "Zeki AI ile kategori, tür, yaş, tema ve etiket önerisi üretme; CRM/Logo/T-soft kaynaklarını yenileme (model harcar)"
     },
     {
       "key": "ozellik:kategori.agac-duzenle",
-      "area": "kayitlar",
+      "area": "yonetim",
       "page": "sayfa:kategori-agaci",
       "label": "Kategori ağacı taslağı",
       "hint": "Ağaç taslağı ve veriden taslak önerisi, düğüm eşlemeleri, tutarsızlık kuralları, etiket sözlüğü; onaya gönderme"
     },
     {
       "key": "ozellik:kategori.agac-onay",
-      "area": "kayitlar",
+      "area": "yonetim",
       "page": "sayfa:kategori-agaci",
       "label": "Kategori ağacını yürürlüğe alma",
       "hint": "Onaya gönderilen ağaç sürümünü yürürlüğe alma ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
@@ -1414,7 +1426,7 @@
     },
     {
       "key": "ozellik:kategori.profil-onay",
-      "area": "kayitlar",
+      "area": "yonetim",
       "page": "sayfa:kategori-agaci",
       "label": "Kitap profili onayı",
       "hint": "Kendi kitaplarında (kartın editörü ya da yayın yönetmeni) alan alan kabul, düzeltme, ret; tutarsızlık önerisini uygulama",
@@ -1422,7 +1434,7 @@
     },
     {
       "key": "ozellik:kategori.herkesinki",
-      "area": "kayitlar",
+      "area": "yonetim",
       "page": "sayfa:kategori-agaci",
       "label": "Kitap profili: herkesin kitabı",
       "hint": "Başka editörlerin kitaplarının profiline karar verme (yayın yönetmeni)",
@@ -1445,14 +1457,14 @@
     },
     {
       "key": "ozellik:uretim.yaz",
-      "area": "editoryal",
+      "area": "uretim-fiyat",
       "page": "sayfa:uretim",
       "label": "Üretim kartına kayıt",
       "hint": "Gerçekleşen tarih, hedef yayın tarihi, kalite sonucu, not ve matbaa teklifi girme"
     },
     {
       "key": "ozellik:uretim.matbaa-onay",
-      "area": "editoryal",
+      "area": "uretim-fiyat",
       "page": "sayfa:uretim",
       "label": "Matbaa seçimini onaylama",
       "hint": "Prodüksiyon müdürünün matbaa onayı; onay kaydı sipariş talebine esas olur",
@@ -1460,21 +1472,21 @@
     },
     {
       "key": "ozellik:dijital.durum-yaz",
-      "area": "editoryal",
+      "area": "dijital",
       "page": "sayfa:dijital-yayin",
       "label": "Dijital platform durumu",
       "hint": "Kitabın platformdaki durumunu (hazırlanıyor, yüklendi, yayında…) ve notunu girme, platform tanımlama, katalog okumasını yenileme"
     },
     {
       "key": "ozellik:dijital.rapor-yukle",
-      "area": "editoryal",
+      "area": "dijital",
       "page": "sayfa:dijital-satis",
       "label": "Dijital satış raporu yükleme",
       "hint": "Platform satış raporunu (Excel/CSV) yükleme, kolon ve kitap eşlemesini düzeltme, Zeki AI önerisini onaylama, raporu onaylama ya da iptal etme"
     },
     {
       "key": "ozellik:dijital.hak-karari",
-      "area": "editoryal",
+      "area": "dijital",
       "page": "sayfa:dijital-yayin",
       "label": "Dijital hak kararı",
       "hint": "Hak notu olan sözleşmede e-kitap / sesli kitap için karar ve gerekçe yazma (telif birimi)",
@@ -1482,7 +1494,7 @@
     },
     {
       "key": "ozellik:dijital.fiyat-onay",
-      "area": "editoryal",
+      "area": "dijital",
       "page": "sayfa:dijital-yayin",
       "label": "Dijital fiyat kararı",
       "hint": "Kitabın dijital fiyatını gerekçesiyle kaydetme (platformlara gönderilmez)",
@@ -1528,28 +1540,28 @@
     },
     {
       "key": "ozellik:bayi.not",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Bayi ziyaret notu",
       "hint": "Bayi kartından görüşme notu, ödeme sözü ve sonraki adım (saha ziyaret kaydıyla ortak)"
     },
     {
       "key": "ozellik:bayi.aksiyon",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Bayi aksiyonu",
       "hint": "Bayiye ziyaret, arama ya da limit aksiyonu açma ve durumunu değiştirme"
     },
     {
       "key": "ozellik:bayi.kural",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Risk kuralı taslağı",
       "hint": "Skor ağırlıkları, segment eşikleri ve kapsam kanalları için yeni sürüm taslağı hazırlama ve onaya gönderme"
     },
     {
       "key": "ozellik:bayi.herkesinki",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Bütün bayiler",
       "hint": "Bayi riski ekranında yalnız CRM'de size atanmış cariler yerine bütün bayiler (satış müdürü, tahsilat, finans)",
@@ -1557,7 +1569,7 @@
     },
     {
       "key": "ozellik:bayi.limit-onay",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Limit önerisi kararı",
       "hint": "Kuraldan çıkan kredi limiti önerisini onaylama ya da gerekçeyle reddetme; onaylanan «CRM'e işlenecek» listesine düşer",
@@ -1565,7 +1577,7 @@
     },
     {
       "key": "ozellik:bayi.kural-onay",
-      "area": "satis",
+      "area": "finans",
       "page": "sayfa:bayi-risk",
       "label": "Risk kuralı onayı",
       "hint": "Onaya gönderilen skor/segment kuralını yürürlüğe alma ya da geri çevirme (hazırlayan onaylayamaz)",
@@ -1573,14 +1585,14 @@
     },
     {
       "key": "ozellik:fiyatlama.yaz",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:fiyatlama",
       "label": "Fiyat analizi hazırlama",
       "hint": "Analiz açma, düzenleme, onaya gönderme; pazar fiyatı girme; varsayılanları ve toplu zam teklifini hazırlama"
     },
     {
       "key": "ozellik:fiyatlama.onay-mali",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:fiyatlama",
       "label": "Mali İşler adına fiyat onayı",
       "hint": "Aşama 1 ve 2 fiyat analizini ve toplu zam teklifini Mali İşler adına onaylama ya da geri gönderme (hazırlayan onaylayamaz)",
@@ -1588,7 +1600,7 @@
     },
     {
       "key": "ozellik:fiyatlama.onay-satis",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:fiyatlama",
       "label": "Satış adına fiyat onayı",
       "hint": "Aşama 1 ve 2 fiyat analizini Satış adına onaylama ya da geri gönderme (hazırlayan onaylayamaz)",
@@ -1596,7 +1608,7 @@
     },
     {
       "key": "ozellik:fiyatlama.onay-pazarlama",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:fiyatlama",
       "label": "Pazarlama adına fiyat onayı",
       "hint": "Aşama 2 (kesin fiyat) analizini Pazarlama adına onaylama (hazırlayan onaylayamaz)",
@@ -1604,7 +1616,7 @@
     },
     {
       "key": "ozellik:fiyatlama.onay-yonetim",
-      "area": "finans",
+      "area": "uretim-fiyat",
       "page": "sayfa:fiyatlama",
       "label": "Üst Yönetim adına fiyat onayı",
       "hint": "Aşama 2 (kesin fiyat) analizini Üst Yönetim adına onaylama (hazırlayan onaylayamaz)",
@@ -1634,7 +1646,7 @@
     },
     {
       "key": "ozellik:sozlesme.duzenle",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:telif-sozlesme",
       "label": "Sözleşme düzenleme",
       "hint": "Yeni sözleşme taslağı, şart ve metin düzenleme, durum, zeyilname, ödeme planı",
@@ -1642,7 +1654,7 @@
     },
     {
       "key": "ozellik:sozlesme.hakedis",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:telif-sozlesme",
       "label": "Hakediş ve ödeme",
       "hint": "Hakediş hesaplama, onaylama, iptal; ödemeyi ödendi işaretleme (Logo okur)",
@@ -1650,7 +1662,7 @@
     },
     {
       "key": "ozellik:sozlesme.sablon",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:telif-sozlesme",
       "label": "Sözleşme şablonları",
       "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
@@ -1658,14 +1670,14 @@
     },
     {
       "key": "ozellik:telif.kosu",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Telif dönemi koşusu",
       "hint": "Koşu açma, hesaplatma, istisnayı kabul etme ya da hariç tutma, onaya gönderme, iptal (Logo ve CRM okunur)"
     },
     {
       "key": "ozellik:telif.kosu-onay",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Telif koşusu onayı",
       "hint": "Onaydaki koşuyu onaylama (sözleşmelerin hakedişi ve ödeme takvimi oluşur) ya da geri gönderme; hesaplatan ve gönderen onaylayamaz",
@@ -1673,7 +1685,7 @@
     },
     {
       "key": "ozellik:telif.bildirim",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Telif beyannamesi",
       "hint": "Hak sahibi beyannamesini (Word) indirme, hak sahibinin e-postasını görme, gönderildi kaydı",
@@ -1681,7 +1693,7 @@
     },
     {
       "key": "ozellik:telif.odeme-listesi",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Telif ödeme listesi",
       "hint": "Onaylı koşunun ödeme listesi ve stopaj özeti (muhasebe); bankaya ve Logo'ya gönderim yok",
@@ -1689,7 +1701,7 @@
     },
     {
       "key": "ozellik:telif.avans",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Avans açılış bakiyesi",
       "hint": "Sözleşmenin kazanılmamış kalan avansını tarihli ve gerekçeli girme; hesap bu bakiyeden mahsup eder",
@@ -1697,21 +1709,21 @@
     },
     {
       "key": "ozellik:telif.yenileme-karar",
-      "area": "kayitlar",
+      "area": "finans",
       "page": "sayfa:telif-donem",
       "label": "Yenileme kararı",
       "hint": "Bitişi yaklaşan sözleşme için yenile / bırak / yeniden müzakere kararı (CRM'e yazılmaz)"
     },
     {
       "key": "ozellik:haklar.duzenle",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:haklar",
       "label": "Hak kartı düzenleme",
       "hint": "Dil ve ülke hak kaydı ekleme/düzeltme, hak açıklamalarını Zeki AI ile sınıflandırma ve sınıfı onaylama"
     },
     {
       "key": "ozellik:haklar.lisans",
-      "area": "kayitlar",
+      "area": "editoryal",
       "page": "sayfa:haklar",
       "label": "Verilen lisanslar",
       "hint": "Yurtdışına verilen lisans (telif satışı) kaydı ve tahsilat durumu"
@@ -1791,7 +1803,7 @@
     },
     {
       "key": "ozellik:musteri.herkesinki",
-      "area": "satis",
+      "area": "musteri",
       "page": "sayfa:musteri-iliskileri",
       "label": "Bütün carilerin değeri ve riski",
       "hint": "Yalnız kendi portföyü yerine bütün temsilcilerin carileri, aksiyonları ve temsilci süzgeci (müdür, yönetim)",
@@ -1799,21 +1811,21 @@
     },
     {
       "key": "ozellik:musteri.eylem-yaz",
-      "area": "satis",
+      "area": "musteri",
       "page": "sayfa:musteri-iliskileri",
       "label": "Müşteri aksiyonu yazma",
       "hint": "Riskli cariye arama, ziyaret, kampanya aksiyonu yazma; durum ve sonuç notu (sonuç 30/90 gün sonra Logo'dan ölçülür)"
     },
     {
       "key": "ozellik:musteri.bulgu-isaretle",
-      "area": "satis",
+      "area": "musteri",
       "page": "sayfa:musteri-veri-sagligi",
       "label": "Veri sağlığı bulgusunu işaretleme",
       "hint": "«CRM'de düzeltildi» (ertesi gece doğrulanır) ya da gerekçeyle «yok say»"
     },
     {
       "key": "ozellik:musteri.guvenlik-bulgulari",
-      "area": "satis",
+      "area": "musteri",
       "page": "sayfa:musteri-veri-sagligi",
       "label": "CRM güvenlik bulguları",
       "hint": "Şifre içeren tablo/kolon/görünüm bulgularını görme ve işaretleme (değer gösterilmez; BT)",
@@ -1920,14 +1932,14 @@
     },
     {
       "key": "ozellik:kampanya.duzenle",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:kampanya",
       "label": "Kampanya hazırlama",
       "hint": "Kampanya açma, kitap ve indirim girme, toplu hesap, onaya gönderme ve geri çekme, iptal, takvime platform dönemi ve fuar ekleme, sonuç okuma, öğrenim kaydı, veri yenileme"
     },
     {
       "key": "ozellik:kampanya.onay",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:kampanya",
       "label": "Kampanya onayı",
       "hint": "Onaya gönderilen kampanyayı (indirim, marj ve kontrollerle) onaylama ya da gerekçeyle geri gönderme; hazırlayan ve onaya gönderen onaylayamaz",
@@ -1935,7 +1947,7 @@
     },
     {
       "key": "ozellik:kampanya.metin-uret",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:kampanya",
       "label": "Kampanya metni ve sonuç özeti (Zeki AI)",
       "hint": "Zeki AI'dan kampanya başlığı, kısa açıklama ve banner metni ile kampanya sonucu özeti isteme (model harcar)"
@@ -2003,28 +2015,28 @@
     },
     {
       "key": "ozellik:eposta.ata",
-      "area": "kayitlar",
+      "area": "musteri",
       "page": "sayfa:kurumsal-eposta",
       "label": "E-posta atama ve düzeltme",
       "hint": "İletiyi kişiye/birime atama, tür ve durum düzeltme, dosya başvurusunu yazar giriş sürecine aktarma, geçmiş ileti etiketleme"
     },
     {
       "key": "ozellik:eposta.herkesinki",
-      "area": "kayitlar",
+      "area": "musteri",
       "page": "sayfa:kurumsal-eposta",
       "label": "Bütün kutu",
       "hint": "Atanmamış, emin olunmayan ve başkasına atanmış iletileri görme (yoksa yalnız kendine ve birimine atananlar)"
     },
     {
       "key": "ozellik:eposta.kural",
-      "area": "kayitlar",
+      "area": "musteri",
       "page": "sayfa:kurumsal-eposta",
       "label": "E-posta kural taslağı",
       "hint": "Tür listesi, yönlendirme tablosu, SLA saatleri ve yanıt şablonlarının taslağını yazma; bağlantı denemesi"
     },
     {
       "key": "ozellik:eposta.kural-onay",
-      "area": "kayitlar",
+      "area": "musteri",
       "page": "sayfa:kurumsal-eposta",
       "label": "E-posta kurallarını yürürlüğe alma",
       "hint": "Kural taslağını onaylama (taslağı yazan onaylayamaz)",
@@ -2032,7 +2044,7 @@
     },
     {
       "key": "ozellik:eposta.ik",
-      "area": "kayitlar",
+      "area": "musteri",
       "page": "sayfa:kurumsal-eposta",
       "label": "İş başvuruları (İK)",
       "hint": "İş başvurusu türündeki iletileri görme, İK aday kaydına aktarma. Kişisel veri: yöneticiye de kendiliğinden verilmez",
@@ -2142,7 +2154,7 @@
     },
     {
       "key": "ozellik:okur.kisisel-veri",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: kişisel veriyi görme",
       "hint": "Okur kartında ad, e-posta ve telefonu açık görme, ada göre arama, KVKK başvurusu araması, başkasının yüklemesindeki yeni kişiler. Her görüntüleme kayda geçer",
@@ -2150,21 +2162,21 @@
     },
     {
       "key": "ozellik:okur.birlestir",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: birleştirme kararı",
       "hint": "Belirsiz eşleşme kuyruğunda «aynı kişi / farklı kişi» kararı ve kaynakları yeniden okuma"
     },
     {
       "key": "ozellik:okur.segment",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: segment taslağı",
       "hint": "Kural tabanlı segment kurma, düzenleme, Zeki AI önerisi, onaya gönderme, arşivleme"
     },
     {
       "key": "ozellik:okur.segment-onay",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: segment onayı",
       "hint": "Onaya gönderilen segmenti onaylama ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
@@ -2172,7 +2184,7 @@
     },
     {
       "key": "ozellik:okur.liste-aktar",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: liste dışa aktarımı",
       "hint": "Onaylı segmentten izin denetimli iletişim listesi alma (amaç zorunlu, kayda geçer; ayrıca veri dışa aktarma yetkisi ister)",
@@ -2180,21 +2192,21 @@
     },
     {
       "key": "ozellik:okur.ice-aktar",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okurlar",
       "label": "Okur: etkinlik dosyası yükleme",
       "hint": "Fuar/etkinlik katılımcı dosyasını yükleme, kolon eşleme, eşleştirme ve yüklemeyi silme"
     },
     {
       "key": "ozellik:topluluk.segment-yaz",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okur-segmentler",
       "label": "Okur segmenti hazırlama",
       "hint": "Segment kuralı, amaç, süre ve kanal yazma; büyüklüğü ölçme (yalnız sayı), onaya gönderme ve geri çekme, ilgi alanlarını Zeki AI'a sınıflatma"
     },
     {
       "key": "ozellik:topluluk.segment-onay",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okur-segmentler",
       "label": "Okur segmenti KVKK onayı",
       "hint": "Onaya gönderilen segmenti amaç ve süreyle onaylama ya da gerekçeyle reddetme; ilgi alanının özel nitelikli çağrışım kararı (yazan ve gönderen onaylayamaz)",
@@ -2202,7 +2214,7 @@
     },
     {
       "key": "ozellik:topluluk.liste-disa-aktar",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okur-segmentler",
       "label": "Okur listesi dışa aktarımı",
       "hint": "Onaylı segmentin izinli kişi listesini gönderim için indirme (ikinci sürüm; hukuk görüşünden sonra açılır, her indirme kayda geçer)",
@@ -2210,14 +2222,14 @@
     },
     {
       "key": "ozellik:topluluk.program-yaz",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okur-programlar",
       "label": "Topluluk programı yazma",
       "hint": "Okuma kulübü, imza günü, anket ve çevrim içi etkinlik planı; Zeki AI duyuru taslağı"
     },
     {
       "key": "ozellik:topluluk.yorum-taslak",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:okur-yorumlar",
       "label": "Yorum cevap taslağı",
       "hint": "Cevapsız okur yorumuna Zeki AI cevap taslağı alma, düzenleme ve «cevaplandı» işaretleme (cevap sitede elle girilir)"
@@ -2728,21 +2740,21 @@
     },
     {
       "key": "ozellik:eticaret.fark-isaretle",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret-farklar",
       "label": "E-ticaret farkını işaretleme",
       "hint": "Farkı düzeltildi / bilinçli fark / sonra diye işaretleme, sahip atama, CRM–Logo–site okumasını yenileme"
     },
     {
       "key": "ozellik:eticaret.oneri-uret",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret",
       "label": "E-ticaret kart önerisi üretme",
       "hint": "Zeki AI'dan ürün kartı başlık, açıklama ve anahtar kelime taslağı isteme (model harcar)"
     },
     {
       "key": "ozellik:eticaret.oneri-onay",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret",
       "label": "E-ticaret kart önerisi onayı",
       "hint": "Zeki AI kart önerisini onaylama ya da gerekçeyle reddetme (öneriyi isteyen onaylayamaz); onay kayıttır, siteye gönderilmez",
@@ -2750,21 +2762,21 @@
     },
     {
       "key": "ozellik:eticaret.tetik",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret-musteri",
       "label": "E-ticaret: tetik ve kampanya",
       "hint": "Yeni kitap, geri kazanım ve ikinci sipariş tetiği yazma, önizleme, listeyi çalıştırma (kontrol grubu ayrılır), kampanya açma ve Zeki AI sonuç yorumu"
     },
     {
       "key": "ozellik:eticaret.ayar",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret-musteri",
       "label": "E-ticaret: müşteri eşikleri",
       "hint": "RFM eşikleri, kontrol grubu payı, sonuç penceresi ve uyarı eşiğini değiştirme; site siparişlerini yeniden okutma"
     },
     {
       "key": "ozellik:eticaret.liste-onay",
-      "area": "pazarlama",
+      "area": "dijital",
       "page": "sayfa:eticaret-musteri",
       "label": "E-ticaret: tetik listesi onayı",
       "hint": "Çalıştırılan tetik listesini onaylama ya da gerekçeyle geri gönderme (tetiği yazan ve listeyi çalıştıran onaylayamaz); onaysız liste dışa aktarılamaz",

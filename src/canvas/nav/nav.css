@@ -1,11 +1,14 @@
-/* Ortak menü: masaüstünde tek 84 px ray (alanlar içinde akordeon gibi açılır), telefonda alt çubuk + menü
-   sayfası. Ekranların `main`'i kabuğun sahnesine (.shell-stage) göre yerleşir; sahne rayın yanında başlar,
-   telefonda alt çubuğun üstünde biter. Böylece ekranlar menünün ölçüsünü bilmez.
+/* Ortak menü: masaüstünde tek 84 px ray, telefonda alt çubuk + menü sayfası. Ray ya ana modül listesini ya da
+   bulunulan (ya da göz atılan) ana modülün ekranlarını gösterir. Ekranların `main`'i kabuğun sahnesine
+   (.shell-stage) göre yerleşir; sahne rayın yanında başlar, telefonda alt çubuğun üstünde biter. Böylece
+   ekranlar menünün ölçüsünü bilmez.
 
-   Hareket: raydaki alan günde onlarca kez açılıp kapanır → kısa tutulur: 180 ms güçlü ease-out, yükseklik
-   (grid satırı; akordeonda transform karşılığı yok) + opacity. Telefon çekmecesi iOS eğrisi 280 ms, kaydırmayla
-   kapanır. Komut paleti hiç hareket etmez (klavyeyle günde defalarca açılır). Hover yalnız fareli
-   cihazlarda; azaltılmış harekette anlık. */
+   Hareket: ray görünümü (ana modül listesi ↔ modülün ekranları) günde onlarca kez değişir → neredeyse
+   fark edilmez tutulur: yalnız kişi tıklayınca 160 ms, 8 px kayma + opacity, güçlü ease-out; modüle girerken
+   sağdan, listeye dönerken soldan gelir (yön = nerede olduğun). Ekran değişince anlıktır. Telefon çekmecesi
+   iOS eğrisi 280 ms, kaydırmayla kapanır; içindeki liste ↔ modül geçişi aynı 160 ms kuralını izler. Komut
+   paleti hiç hareket etmez (klavyeyle günde defalarca açılır). Hover yalnız fareli cihazlarda; azaltılmış
+   harekette kayma yok, yalnız kısa opacity. */
 
 .nav-root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -65,31 +68,26 @@
   }
 }
 
-/* ------------------------------------------------------------------ raydaki alan (akordeon) */
-.nav-sub {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
+/* ------------------------------------------------------------------ ray görünümü (liste ↔ modül) */
+/* Görünüm değişince kap yeniden kurulur (React key); hareket yalnız kişinin tıklamasıyla gelen data-motion'da.
+   Keyframe burada doğru araç: kap her geçişte yeniden kurulduğundan yarıda kesilen bir geçiş yoktur. */
+.nav-view[data-motion='in'] {
+  animation: nav-view-in 160ms var(--ease-out);
 }
-.nav-sub[data-open='1'] {
-  grid-template-rows: 1fr;
-  opacity: 1;
+.nav-view[data-motion='out'] {
+  animation: nav-view-out 160ms var(--ease-out);
 }
-.nav-sub[data-open='0'] {
-  visibility: hidden;
+@keyframes nav-view-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
 }
-/* Hareket yalnız kişi alanı kendisi açıp kapattığında; kapanırken görünürlük hareket bitince düşer. */
-.nav-sub[data-anim='1'] {
-  transition: grid-template-rows 180ms var(--ease-out), opacity 180ms var(--ease-out);
-}
-.nav-sub[data-anim='1'][data-open='0'] {
-  transition: grid-template-rows 180ms var(--ease-out), opacity 120ms var(--ease-out), visibility 0s linear 180ms;
-}
-.nav-chevron {
-  transition: transform 180ms var(--ease-out);
-}
-.nav-chevron[data-open='1'] {
-  transform: rotate(180deg);
+@keyframes nav-view-out {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
 }
 .nav-row {
   transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease;
@@ -167,14 +165,6 @@
   user-select: none;
 }
 
-/* Çalışma alanı çipleri: yalnız kendi içinde kayar, sayfa taşmaz. */
-.nav-chips {
-  scrollbar-width: none;
-}
-.nav-chips::-webkit-scrollbar {
-  display: none;
-}
-
 /* ------------------------------------------------------------------ komut paleti (hareketsiz) */
 .cmdk-overlay {
   position: fixed;
@@ -237,12 +227,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav-sub[data-anim='1'],
-  .nav-sub[data-anim='1'][data-open='0'] {
-    transition: opacity 120ms ease, visibility 0s linear 120ms;
-  }
-  .nav-chevron {
-    transition: none;
+  .nav-view[data-motion='in'],
+  .nav-view[data-motion='out'] {
+    animation: nav-view-fade 120ms ease;
   }
   .nav-tile,
   .nav-row,
@@ -258,6 +245,11 @@
   .nav-sheet[data-starting-style],
   .nav-sheet[data-ending-style] {
     transform: translateY(var(--drawer-swipe-movement-y, 0px));
+    opacity: 0;
+  }
+}
+@keyframes nav-view-fade {
+  from {
     opacity: 0;
   }
 }

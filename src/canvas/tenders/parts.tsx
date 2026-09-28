@@ -18,7 +18,7 @@ export function TenderFrame({ title, lead, detail, back, aside, children }: {
   children: ReactNode;
 }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Satış ve saha', crumb: 'İhale takibi', source: 'Kaynak: portal kaydı · Logo · CRM', presence: 'İhale takibi', detail }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Saha satış ve okul', crumb: 'İhale takibi', source: 'Kaynak: portal kaydı · Logo · CRM', presence: 'İhale takibi', detail }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
@@ -30,7 +30,7 @@ export function TenderFrame({ title, lead, detail, back, aside, children }: {
                     İhale listesi
                   </Link>
                 ) : (
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Satış ve saha · Kurumsal</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Saha satış ve okul · Kurumsal</div>
                 )}
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 <p className="mt-1 max-w-[76ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>

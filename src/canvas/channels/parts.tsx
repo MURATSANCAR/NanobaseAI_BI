@@ -54,7 +54,7 @@ export function ChannelsFrame({ title, lead, detail, back, aside, children }: {
   const meta = useChannelsMeta();
   const pages = meta.data?.me.pages;
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Platform', crumb: 'Kanallar', source: 'Logo · CRM · portal kaydı', presence: 'Kanal yönetimi', detail }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Platform yönetimi', crumb: 'Kanallar', source: 'Logo · CRM · portal kaydı', presence: 'Kanal yönetimi', detail }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
@@ -66,7 +66,7 @@ export function ChannelsFrame({ title, lead, detail, back, aside, children }: {
                     Kanal karnesi
                   </Link>
                 ) : (
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Platform · Kanallar</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Platform yönetimi · Kanallar</div>
                 )}
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 <p className="mt-1 max-w-[76ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>

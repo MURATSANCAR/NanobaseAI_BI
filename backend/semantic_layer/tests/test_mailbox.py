@@ -387,4 +387,4 @@ def test_access_rules_for_mailbox_endpoints():
     assert f("POST", "/api/v1/mailbox/rules/approve") == []
     assert {"ozellik:eposta.ik", "ozellik:eposta.kural-onay"} <= A.explicit_keys()
     cat = json.loads(A.CATALOG_FILE.read_text(encoding="utf-8"))
-    assert any(p["key"] == "sayfa:kurumsal-eposta" and p["area"] == "kayitlar" for p in cat["pages"])
+    assert any(p["key"] == "sayfa:kurumsal-eposta" and p["area"] == "musteri" for p in cat["pages"])

@@ -29,7 +29,7 @@ export function FpFrame({
   children: ReactNode;
 }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans', crumb: 'İlk baskı tahmini', source, presence: source, detail: back ? crumb : undefined }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Fiyatlama ve üretim', crumb: 'İlk baskı tahmini', source, presence: source, detail: back ? crumb : undefined }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 pb-6 lg:gap-4">

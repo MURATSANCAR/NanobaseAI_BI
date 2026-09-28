@@ -8,13 +8,13 @@ import { TRACK, fmtPct, type TrackState } from './api';
 
 export function BudgetFrame({ source, presence, aside, children }: { source: string; presence: string; aside?: ReactNode; children: ReactNode }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans', crumb: 'Bütçe ve hedefler', source, presence }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans ve risk', crumb: 'Bütçe ve hedefler', source, presence }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Finans · Bütçe planlama ve kontrolü</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Finans ve risk · Bütçe planlama ve kontrolü</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Bütçe ve satış hedefleri</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
                   Kitap bazlı satış hedefi (adet, ciro, marj), yeni kitap programı ve departman bütçesi. Öneri veriden kurala göre üç senaryoyla hesaplanır, yönetim onaylar;

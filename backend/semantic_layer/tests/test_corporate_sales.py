@@ -354,4 +354,4 @@ def test_access_rules_for_corporate_endpoints():
     assert f("POST", "/api/v1/corporate/themes/L1/approve") == ["ozellik:kurumsal.tema-onay"]
     assert "ozellik:kurumsal.teklif-onay" in A.explicit_keys()
     cat = json.loads((Path(A.__file__).parent / "access_catalog.json").read_text(encoding="utf-8"))
-    assert {"id": "satis", "label": "Satış ve saha"} in cat["areas"]
+    assert {"id": "satis", "label": "Saha satış ve okul"} in cat["areas"]

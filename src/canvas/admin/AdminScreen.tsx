@@ -5,7 +5,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
 import NoAccess from '../NoAccess';
 import Overview from './Overview';
-import SettingsPanel from './SettingsPanel';
+import SettingsPanel, { SettingsCategoryNav, settingsQuery } from './SettingsPanel';
 import { AlertsAdmin, CardsAdmin, ReportsAdmin } from './Definitions';
 import People from './People';
 import AccessAdmin from './AccessAdmin';
@@ -47,6 +47,8 @@ export default function AdminScreen() {
     ? { reports: String(c.reports), alerts: String(c.alerts), cards: String(c.cards), people: String(c.users) }
     : {};
   const settingsWarn = overview.data && !overview.data.email.configured;
+  // Ayar kategorileri masaüstü menüsünde «Ayarlar»ın altında (telefonda ayar ekranının üstünde çip olarak).
+  const settings = useQuery({ ...settingsQuery, enabled: !!me.data?.isAdmin && tab === 'settings' });
 
   const body = me.isLoading ? (
     <Loading />
@@ -116,6 +118,11 @@ export default function AdminScreen() {
                         {badge[t.id] && <span className="text-[11px] font-bold tabular-nums text-canvas-muted">{badge[t.id]}</span>}
                         {t.id === 'settings' && settingsWarn && <span className="h-2 w-2 rounded-full bg-amber-500" aria-label="E-posta ayarı eksik" />}
                       </button>
+                      {t.id === 'settings' && on && settings.data && (
+                        <div className="hidden pb-1 pl-5 pt-0.5 md:block">
+                          <SettingsCategoryNav data={settings.data} variant="list" />
+                        </div>
+                      )}
                     </li>
                   );
                 })}

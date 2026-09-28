@@ -389,8 +389,10 @@ def test_access_rules_for_eticaret():
     assert "ozellik:eticaret.oneri-onay" in A.explicit_keys()
     assert {"ozellik:eticaret.fark-isaretle", "ozellik:eticaret.oneri-uret"} <= A.all_keys() - A.explicit_keys()
     cat = json.loads((BRIDGE / "access_catalog.json").read_text(encoding="utf-8"))
-    keys = {p["key"] for p in cat["pages"] if p["area"] == "pazarlama"}
-    assert {"sayfa:eticaret", "sayfa:eticaret-farklar", "sayfa:eticaret-huni", "sayfa:eticaret-pazar-yerleri"} <= keys
+    # Menü 2026-09-28: e-ticaret «Dijital ve topluluk»ta, pazar yerleri tek yerde «Platform yönetimi»nde.
+    keys = {p["key"] for p in cat["pages"] if p["area"] == "dijital"}
+    assert {"sayfa:eticaret", "sayfa:eticaret-farklar", "sayfa:eticaret-huni"} <= keys
+    assert any(p["key"] == "sayfa:eticaret-pazar-yerleri" and p["area"] == "platform" for p in cat["pages"])
 
 
 def test_no_write_to_tsoft_crm_or_logo():

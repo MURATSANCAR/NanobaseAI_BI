@@ -30,7 +30,7 @@ export function KampanyaFrame({ title, lead, back, source, presence, aside, chil
                     {back.label}
                   </Link>
                 ) : (
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Pazarlama · E-ticaret</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Dijital ve topluluk · E-ticaret</div>
                 )}
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>

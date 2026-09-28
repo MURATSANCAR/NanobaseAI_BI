@@ -1318,115 +1318,129 @@ SPEC: list[dict[str, Any]] = [
              "Boş bırakılırsa yalnız yukarıdaki liste geçerli olur"},
     {"key": "TIMAS_EDITOR_GROUP", "group": "access", "label": "Editör AD grubu", "type": "text",
      "default": "",
-     "help": "Bu Active Directory grubunun üyeleri (iç içe gruplar dahil) menüde Editoryal'i en üstte, "
-             "«Çalışma alanım» olarak açık görür; Analiz ve Finans daraltılmış gelir. Yetki vermez, yalnız "
+     "help": "Bu Active Directory grubunun üyeleri (iç içe gruplar dahil) menüde Editoryal'i Kampüs'ün hemen "
+             "altında, «Çalışma alanım» olarak görür; öbür modüller menü sırasında gelir. Yetki vermez, yalnız "
              "menü düzenidir. Boş bırakılırsa herkes aynı menüyü görür"},
 ]
 _BY_KEY = {s["key"]: s for s in SPEC}
+#: Ayar gruplarının kategorileri: Yönetim › Ayarlar ekranında ikinci düzey gezinme. Her grup tam bir kategoride
+#: (`GROUPS[*]["category"]`); kategorisi yazılmamış ya da bilinmeyen grup ekranda «Diğer» altında görünür, kaybolmaz.
+CATEGORIES = [
+    {"id": "baglanti", "label": "Bağlantılar ve giriş"},
+    {"id": "zeki", "label": "Zeki AI"},
+    {"id": "eposta", "label": "E-posta ve bildirimler"},
+    {"id": "pazarlama", "label": "Pazarlama"},
+    {"id": "seo", "label": "SEO ve GEO"},
+    {"id": "satis", "label": "Satış, dijital ve platform"},
+    {"id": "lojistik", "label": "Lojistik"},
+    {"id": "finans", "label": "Finans ve risk"},
+    {"id": "ik", "label": "İnsan kaynakları"},
+    {"id": "sistem", "label": "Sistem"},
+]
 GROUPS = [
-    {"id": "email", "label": "E-posta (SMTP)", "help": "Uyarı ve planlı rapor e-postaları bu hesapla gider."},
-    {"id": "performance", "label": "Hız ve veri tazeliği",
+    {"id": "email", "category": "eposta", "label": "E-posta (SMTP)", "help": "Uyarı ve planlı rapor e-postaları bu hesapla gider."},
+    {"id": "performance", "category": "sistem", "label": "Hız ve veri tazeliği",
      "help": "Yavaş ekranların verisi hazır tutulur ve 5 dakikada bir tazelenir; «Yenile» beklemeden kaynaktan okur."},
-    {"id": "delivery", "label": "Bildirim ve raporlar", "help": "Gönderim davranışı."},
-    {"id": "rooms", "label": "Toplantı odaları", "help": "Rezervasyon takviminin saatleri."},
-    {"id": "directory", "label": "Active Directory (giriş)",
+    {"id": "delivery", "category": "eposta", "label": "Bildirim ve raporlar", "help": "Gönderim davranışı."},
+    {"id": "rooms", "category": "ik", "label": "Toplantı odaları", "help": "Rezervasyon takviminin saatleri."},
+    {"id": "directory", "category": "baglanti", "label": "Active Directory (giriş)",
      "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
-    {"id": "database", "label": "Logo veritabanı (SQL Server)",
+    {"id": "database", "category": "baglanti", "label": "Logo veritabanı (SQL Server)",
      "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
-    {"id": "crm", "label": "CRM (Dynamics)", "help": "CRM prod sunucusu 192.168.0.28 (CRMDATBASE); kendi bağlantısıyla okunur."},
-    {"id": "people", "label": "Kişi rehberi",
+    {"id": "crm", "category": "baglanti", "label": "CRM (Dynamics)", "help": "CRM prod sunucusu 192.168.0.28 (CRMDATBASE); kendi bağlantısıyla okunur."},
+    {"id": "people", "category": "baglanti", "label": "Kişi rehberi",
      "help": "Rehber CRM'deki etkin kullanıcılardan gelir, Active Directory ile kesiştirilir: AD'de devre dışı olanlar ve "
              "süre içinde giriş yapmamış hesaplar girmez."},
-    {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
+    {"id": "llm", "category": "zeki", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
-    {"id": "chat", "label": "Zeki AI sohbeti",
+    {"id": "chat", "category": "zeki", "label": "Zeki AI sohbeti",
      "help": "Sohbet şirketin bütün modüllerinin sorularını cevaplar; kimlik ve şirket dışı sorulara kısa tanıtım "
              "verir. Burada hangi konuların verisinin sohbete bağlı olduğu seçilir."},
-    {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
+    {"id": "seo", "category": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
-    {"id": "corporate", "label": "Kurumsal satış ve B2B",
+    {"id": "corporate", "category": "satis", "label": "Kurumsal satış ve B2B",
      "help": "Teklif onay eşikleri, hacim indirimi, tema listesi ve bayi paneli. B2B sitesine, CRM'e ve Logo'ya hiçbir şey yazılmaz."},
-    {"id": "sets", "label": "Set, hediye ve promosyon",
+    {"id": "sets", "category": "pazarlama", "label": "Set, hediye ve promosyon",
      "help": "Set bileşeni, satış ve fiyat kaynağı, marj alt sınırı, birlikte alım ve kurumsal hediye kademeleri. CRM'e, Logo'ya "
              "ve T-soft'a hiçbir şey yazılmaz; onaylanan set için açılacak kart listesi verilir."},
-    {"id": "mailbox", "label": "Kurumsal e-posta",
+    {"id": "mailbox", "category": "eposta", "label": "Kurumsal e-posta",
      "help": "timas@ genel kutusu yalnız okunur (Gmail: gmail.readonly + gmail.labels). Portal dışarıya ileti göndermez, kutudan "
              "silmez, taşımaz; yanıtı kişi kutunun kendi arayüzünden gönderir. İleti gövdesi portalda saklanmaz."},
-    {"id": "relations", "label": "Kurumsal ilişkiler",
+    {"id": "relations", "category": "pazarlama", "label": "Kurumsal ilişkiler",
      "help": "Kanaat önderi ve kurum ilişkileri, hediye kitap programı, kamu projeleri. CRM'e hiçbir şey yazılmaz; kişilere ve "
              "kurumlara e-posta gitmez."},
-    {"id": "eticaret", "label": "E-ticaret ve pazar yerleri",
+    {"id": "eticaret", "category": "satis", "label": "E-ticaret ve pazar yerleri",
      "help": "Site, CRM ve Logo arasındaki fark kuralları, bildirim alıcıları ve pazar yeri kanalı. T-soft'a, CRM'e, Logo'ya ve "
              "pazar yerlerine hiçbir şey yazılmaz; düzeltmeyi kişi yapar."},
-    {"id": "dijital", "label": "Dijital yayın ve e-kitap",
+    {"id": "dijital", "category": "satis", "label": "Dijital yayın ve e-kitap",
      "help": "Fırsat eşikleri, rapor eşleme ve iç uyarı alıcıları. Platformlara, CRM'e, Logo'ya ve T-soft'a hiçbir şey gönderilmez."},
-    {"id": "kampanya", "label": "E-ticaret kampanyaları",
+    {"id": "kampanya", "category": "satis", "label": "E-ticaret kampanyaları",
      "help": "Fiyat ve maliyet kaynağı, aday süzgeci eşikleri, sonuç penceresi ve bildirim alıcıları. Kampanya hiçbir platforma, "
              "T-soft'a ya da CRM'e gönderilmez; onaydan sonra ekip elle kurar."},
-    {"id": "stock", "label": "Depo ve stok",
+    {"id": "stock", "category": "lojistik", "label": "Depo ve stok",
      "help": "Bitecek, fazla ve hareketsiz stok kuralları, baskı süresi ve sabah bülteni. Logo'ya ve CRM'e hiçbir şey yazılmaz; "
              "onaylanan güvenlik stoku portalda durur."},
-    {"id": "commerce", "label": "E-ticaret müşterileri",
+    {"id": "commerce", "category": "satis", "label": "E-ticaret müşterileri",
      "help": "Site siparişi ve üyesi T-soft'tan yalnız okunur; kişisel alan portalda yalnız tuzlu özet olarak durur. RFM "
              "eşikleri modülün kendi ekranındadır. T-soft'a, CRM'e ve Logo'ya hiçbir şey yazılmaz; portal ileti göndermez."},
-    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
-    {"id": "creative", "label": "Pazarlama görsel ve metin",
+    {"id": "studio", "category": "zeki", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
+    {"id": "creative", "category": "pazarlama", "label": "Pazarlama görsel ve metin",
      "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},
-    {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
+    {"id": "geo", "category": "seo", "label": "Yapay zekâ görünürlüğü (GEO)",
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
-    {"id": "marketing", "label": "Pazarlama planları",
+    {"id": "marketing", "category": "pazarlama", "label": "Pazarlama planları",
      "help": "Yeni kitap ve aylık pazarlama planının bildirimleri, onay eşiği, öneri kuralları ve satış föyü. CRM'e ve dış "
              "kanallara hiçbir şey kendiliğinden gönderilmez; planlar ve föyler portalda onaylanır."},
-    {"id": "kurul", "label": "Kurul (danışma ve yönetim)",
+    {"id": "kurul", "category": "finans", "label": "Kurul (danışma ve yönetim)",
      "help": "Kurul göstergeleri diğer modüllerin onaylı çıktılarından okunur. Portal kurul paketini kimseye göndermez; "
              "hatırlatmalar yalnız iç adreslere gider."},
-    {"id": "itops", "label": "Sistem durumu",
+    {"id": "itops", "category": "sistem", "label": "Sistem durumu",
      "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
              "yalnız okur, hiçbir servisi yeniden başlatmaz."},
-    {"id": "security", "label": "Veri güvenliği",
+    {"id": "security", "category": "sistem", "label": "Veri güvenliği",
      "help": "Güvenlik uyarı kuralları, hesap hijyeni ve saklama süreleri. Saklama süresi yalnız «uygula» açıkken siler; "
              "önizleme ve kanıt Veri güvenliği ekranındadır."},
-    {"id": "support", "label": "Müşteri hizmetleri",
+    {"id": "support", "category": "sistem", "label": "Müşteri hizmetleri",
      "help": "Destek masası yalnız okunur; masaya, CRM'e ve Logo'ya hiçbir şey yazılmaz. Zeki AI taslağı müşteriye gitmez, "
              "temsilci düzeltip masadan kendisi gönderir."},
-    {"id": "model_quality", "label": "Zeki AI kalitesi",
+    {"id": "model_quality", "category": "zeki", "label": "Zeki AI kalitesi",
      "help": "Kapı koşularının bildirimleri, karne penceresi ve sürüm kaydının ek dosyaları. Bildirimler yalnız iç ekibe gider."},
-    {"id": "zeki_ortak", "label": "Zeki AI ortak araçlar",
+    {"id": "zeki_ortak", "category": "zeki", "label": "Zeki AI ortak araçlar",
      "help": "Belge okuma (taranmış sayfa dahil) ve kitap benzerliği araması. Belgeler yalnız kendi GPU sunucumuzda okunur, "
              "okunan metin modele gitmeden önce maskelenir; benzerlik yalnız sıralama içindir, rakamlar SQL'den gelir."},
-    {"id": "royalty", "label": "Telif dönemi",
+    {"id": "royalty", "category": "finans", "label": "Telif dönemi",
      "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
              "beyannameyi yazara insan gönderir."},
-    {"id": "readers", "label": "Okur veri tabanı",
+    {"id": "readers", "category": "satis", "label": "Okur veri tabanı",
      "help": "Tekil okur, izin ve segment kuralları. CRM'e yazılmaz, portal ileti göndermez; liste dışa aktarımı izin "
              "denetimli ve kayıt altındadır."},
-    {"id": "ads", "label": "Dijital pazarlama ve reklam",
+    {"id": "ads", "category": "pazarlama", "label": "Dijital pazarlama ve reklam",
      "help": "Reklam harcaması platformun dışa aktarım dosyasıyla gelir; platformlara hiçbir şey gönderilmez (bütçe, teklif, "
              "durdurma yok). Eşiği boş bırakılan öneri kuralı çalışmaz."},
-    {"id": "social", "label": "Sosyal medya",
+    {"id": "social", "category": "pazarlama", "label": "Sosyal medya",
      "help": "Takvim uyarıları, fırsat kuralları ve platform sınırları. Portal hiçbir sosyal medya hesabına paylaşım yapmaz; "
              "onaylı gönderi yayına hazır paket olarak iner."},
-    {"id": "influencer", "label": "İşbirlikleri",
+    {"id": "influencer", "category": "pazarlama", "label": "İşbirlikleri",
      "help": "İçerik üreticisi işbirliklerinin hatırlatmaları, onay ve ödeme bildirimleri, aday puanı. İçerik üreticisine "
              "portaldan e-posta gitmez; hesap sayıları kazınmaz."},
-    {"id": "catalog", "label": "Katalog ve bülten",
+    {"id": "catalog", "category": "pazarlama", "label": "Katalog ve bülten",
      "help": "Katalog fiyat ve stok kaynağı, uyarı eşikleri, öneri ağırlıkları ve bülten segment kuralı. Portal toplu e-posta "
              "göndermez, kişi listesi dışarı vermez; CRM'e ve T-soft'a hiçbir şey yazılmaz."},
-    {"id": "hr", "label": "İnsan kaynakları",
+    {"id": "hr", "category": "ik", "label": "İnsan kaynakları",
      "help": "İşe alım bildirimleri ve aday verisine yönetici erişimi. Saklama süreleri ve aydınlatma metni İK ekranındadır "
              "(Çalışan ve KVKK kayıtları). CRM'e yazılmaz; adaya portal e-posta göndermez."},
-    {"id": "channels", "label": "Platform ve kanallar",
+    {"id": "channels", "category": "satis", "label": "Platform ve kanallar",
      "help": "Kanal karnesi, eşleme ve uyarı ayarları. Pazar yerlerine, T-soft'a, CRM'e ve Logo'ya hiçbir şey yazılmaz; "
              "öneriler portalda onaylanır, gönderimi insan yapar."},
-    {"id": "pazar", "label": "Pazar araştırması ve rekabet",
+    {"id": "pazar", "category": "satis", "label": "Pazar araştırması ve rekabet",
      "help": "Rakip verisi CRM'den okunur, pazar rakamları yalnız yüklenen ve onaylanan rapordan gelir; dış kaynak taraması "
              "yok. CRM'e ve Logo'ya hiçbir şey yazılmaz."},
-    {"id": "shipping", "label": "Lojistik ve kargo",
+    {"id": "shipping", "category": "lojistik", "label": "Lojistik ve kargo",
      "help": "Kargo günlük hattı, firma karnesi ve mutabakat. CRM, Logo ve kargo firmaları yalnız okunur; kargo firmasına, "
              "CRM'e ve müşteriye hiçbir şey gönderilmez. Alıcılar yalnız iç e-posta adresleridir."},
-    {"id": "access", "label": "Yetki",
+    {"id": "access", "category": "baglanti", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
 ]
@@ -1876,7 +1890,7 @@ def settings_view() -> dict[str, Any]:
         else:
             item.update(value=value, hasValue=bool(value))
         items.append(item)
-    return {"groups": GROUPS, "items": items}
+    return {"groups": GROUPS, "categories": CATEGORIES, "items": items}
 
 
 def save_settings(engine: sa.engine.Engine, actor: str, values: dict[str, Any]) -> dict[str, Any]:

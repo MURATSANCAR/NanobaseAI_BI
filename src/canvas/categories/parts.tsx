@@ -31,13 +31,13 @@ export function CategoriesFrame({ presence, aside, badges, children }: {
   const { pathname } = useLocation();
   const here = pathname.replace(/\/+$/, '');
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Kayıtlar', crumb: 'Kategori ağacı', source: 'CRM + Logo + T-soft (okuma)', presence }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Yönetim', crumb: 'Kategori ağacı', source: 'CRM + Logo + T-soft (okuma)', presence }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Kayıtlar · Kategori ağacı ve kitap profili</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Yönetim · Kategori ağacı ve kitap profili</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Kategori ağacı</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
                   CRM'deki yedi ayrı sınıflamayı ve sitenin kategori ağacını tek onaylı ağaca bağlar. Zeki AI kitap başına kategori, tür, yaş,

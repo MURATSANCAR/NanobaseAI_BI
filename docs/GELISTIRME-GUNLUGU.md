@@ -40,6 +40,46 @@
 - «ALL» kutuyu salt okunur açar: zeki@'deki okunmamışlar okundu işaretlenmez.
 - Dışarıya otomatik e-posta yok: alındı (`send_acknowledgement_email`) ve memnuniyet (`enable_email_ticket_feedback`) kurulumda açıkça 0. Temsilcinin yazdığı yanıt müşteriye zeki@'den gider.
 - Bilinen: zeki@'e gelen bildirim e-postaları (Google güvenlik, Atlassian) da kayıt açar; kalıcı çözüm ayrı destek adresi.
+## 2026-09-28 — Ana menü modül sunumuna göre yeniden düzenlendi; sol menü yalnız bulunulan modülü gösterir; Yönetim ayarları kategorilere ayrıldı (dal `worktree-agent-ae500c71c3bdc217a`; canlıya kurulmadı)
+
+**Neden:** menü 12 alanla büyümüştü, aynı ekran iki yerde görünüyordu (Pazar yerleri), «Kayıtlar» gibi iş karşılığı olmayan bir alan vardı ve akordeon rayda bir modülün ekranları öbür modüllerin arasında kayboluyordu. Kullanıcı firmanın modül sunumundaki A–L gruplamasını onayladı. Yönetim › Ayarlar 40 (main ile 41) grubu tek uzun sayfada gösteriyordu; main'de gelen «Zeki AI ortak araçlar» (`zeki_ortak`) Zeki AI kategorisine konuldu.
+
+**Ne yapıldı:**
+- `src/canvas/nav/navModel.ts`: 14 ana modül, sıra: Kampüs · Analiz · Editoryal · Fiyatlama ve üretim (`uretim-fiyat`, yeni) · Pazarlama · Saha satış ve okul (`satis`) · Dijital ve topluluk (`dijital`, yeni) · Müşteri ve pazar (`musteri`, yeni) · Platform yönetimi (`platform`) · Lojistik · Finans ve risk (`finans`) · Altyapı ve destek · İnsan Kaynakları · Yönetim. Bölüm başlıkları her modülde tek parça (Pazarlama'da «Planlama» iki kez çıkıyordu; Lansman ve Backlist yerine alındı). **Rota adresleri ve `sayfa:*`/`ozellik:*` anahtarları değişmedi**; eski bağlantıların hepsi açılır.
+- Yönetim grubu artık `adminOnly` değil: ayar/onay/sözlük öğeleri öğe düzeyinde yönetici, Kategori ağacı `sayfa:kategori-agaci` ile açılır (yönetici olmayan yetkili kişi Yönetim'de yalnız onu görür).
+- Sol menü: bir ana modülün ekranındayken ray (ve telefon menü sayfası) yalnız o modülün ekranlarını gösterir; üstte «‹ Ana menü» bütün ana modüllere döner; Kampüs'te ve menü dışı adreste ana modül listesi. Listeden modül seçmek sayfayı değiştirmez, o modülün ekranlarını açar; ekran değişince bulunulan modüle döner. Odak başlığa / gelinen modüle taşınır; görünüm değişimi yalnız tıklamada 160 ms kayar (azaltılmış harekette yalnız opacity). ⌘K bütün ekranları aramaya devam eder. Akordeon ve telefon çipleri kalktı.
+- Eski kayıtlı menü durumu: `cleanNavState` eski `open`/`collapsed` alanlarını (ör. `{ kayitlar: true }`) ve bozuk satırı düşürür; «Son açılanlar»da modül adı bugünkü menüden okunur (`recentGroupLabel`: «Kayıtlar · Kurumsal e-posta» → «Müşteri ve pazar»). Olmayan modül kimliği sessizce ana modül listesine düşer (`railView`).
+- Yetki kataloğu (`access_catalog.json`): `areas` menüyle aynı sıra ve ad (`kayitlar` çıktı; `uretim-fiyat`, `dijital`, `musteri`, `yonetim` girdi); her sayfanın alanı menüdeki modülü, 75 özelliğin alanı ekranıyla birlikte taşındı (yalnız Yetkiler ekranındaki gruplama; yetki değişmedi). Vitest eşleşmeyi denetler; beş pytest beklentisi yeni alanlara güncellendi.
+- Ekranlardaki üst başlık yazıları taşınan modüllere göre düzeltildi (ör. «Kayıtlar · Kurumsal e-posta» → «Müşteri ve pazar · Kurumsal e-posta»). «Tüm modüller»de grup bağlantıları yetkiye bağlandı; Fiyatlama & Üretim, Grafik Tasarım, Saha Satış & Okul, Platform Yönetimi grup girişleri eklendi.
+- Yönetim › Ayarlar: `admin.CATEGORIES` (10 kategori) + her `GROUPS` satırında `category`; `settings_view` kategorileri döndürür. Ekranda kategori masaüstünde Yönetim menüsünde «Ayarlar»ın altında, telefonda çip (`?bolum=settings&kategori=`); üstte ayar araması (grup adı, ayar etiketi, anahtar; Türkçe harf duyarsız); kategorisiz/bilinmeyen grup «Diğer»de; kaydet çubuğu kaydedilmemiş değişikliğin kategorilerini yazar; «Sistem tanımları» Sistem kategorisinde. Bağlantı sınama düğmeleri grup kartında aynen duruyor.
+
+**Taşıma tablosu (eski yer → yeni yer):**
+
+| Ekran | Eski | Yeni |
+| --- | --- | --- |
+| Genel bakış | Analiz | Finans ve risk (ilk öğe) |
+| Pazar ve rakip, Rakipler ve emsal, Sektör raporları | Analiz | Müşteri ve pazar › Pazar |
+| Fiyatlama ve maliyet, İlk baskı tahmini | Finans | Fiyatlama ve üretim |
+| Baskı önerisi | Finans › Yönetim raporları'nın alt öğesi | Fiyatlama ve üretim (bağımsız öğe) |
+| Üretim yönetimi | Editoryal › Üretim | Fiyatlama ve üretim › Üretim |
+| Kitap tasarım, Kapak arşivi | Editoryal › Yayına hazırlık | Editoryal › Grafik tasarım |
+| Dijital yayın, Dijital satış | Editoryal › Yayına hazırlık | Dijital ve topluluk › Dijital yayın |
+| Serbest çalışanlar | Editoryal › Yayına hazırlık | Editoryal › Yazarlar ve kişiler |
+| Kişiler, Yazar ilişkileri, Basın ve web | Kayıtlar | Editoryal › Yazarlar ve kişiler |
+| Sözleşmeler, Haklar ve lisanslar | Kayıtlar | Editoryal › Sözleşmeler |
+| Editör atama | Kayıtlar | Editoryal › Günlük |
+| Telif dönemi | Kayıtlar › Sözleşmeler'in alt öğesi | Finans ve risk (bağımsız öğe) |
+| Kurumsal e-posta | Kayıtlar | Müşteri ve pazar › Müşteri |
+| Kategori ağacı | Kayıtlar | Yönetim |
+| Müşteri ilişkileri, CRM veri sağlığı | Satış ve saha › Müşteri | Müşteri ve pazar › Müşteri |
+| Bayi riski | Satış ve saha › Saha | Finans ve risk › Risk |
+| Platform durumu, Farklar, Huni, Kampanyalar | Pazarlama › E-ticaret | Dijital ve topluluk › E-ticaret |
+| Pazar yerleri | Pazarlama › E-ticaret | Platform yönetimi › Kanallar (tek yer) |
+| Okurlar, Okur kitlesi (+ segmentler, programlar, yorum cevapları alt öğe), E-ticaret müşterileri | Pazarlama › Okur ve müşteri | Dijital ve topluluk › Okur ve topluluk |
+| «Satış ve saha» adı | — | «Saha satış ve okul»; «Finans» → «Finans ve risk»; «Platform» → «Platform yönetimi» |
+| Kayıtlar (ana menü) | var | kalktı |
+
+**Doğrulama (test sunucusu, geçici klasör `/tmp/claude-menu-dzn`, silindi; main `321f17ab` üstüne rebase sonrası):** `tsc -b` 0 hata; vitest 34 dosya / 174 test geçti (menü 38, ayar kategorileri 6); `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas vite build` geçti; pytest (yetki kataloğu/yönetim/erişim dokunan 76 dosya) 1561 geçti, 0 kaldı (rebase öncesi toplu koşuda `test_marketing_launch.py::test_endpoints_open_mark_and_explicit_decision` bir kez SQLAlchemy işletim hatası vermişti; tek başına 22/22, rebase sonrası toplu koşuda geçti — sıra bağımlı, menüyle ilgisiz). Tarayıcıda ekran denetimi yapılmadı (canlıya ve test sunucusuna kurulmadı; 320/390/768 px ve masaüstü kontrolü kurulumdan sonra yapılmalı).
 
 ## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
 

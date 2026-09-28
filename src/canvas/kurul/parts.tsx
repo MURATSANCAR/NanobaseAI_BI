@@ -13,7 +13,7 @@ export function KurulFrame({ title, lead, back, aside, children }: {
   title: string; lead: string; back?: { to: string; label: string }; aside?: ReactNode; children: ReactNode;
 }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans', crumb: 'Kurul', source: 'Kaynak: modüllerin onaylı çıktıları · portal kaydı', presence: 'Kurul' }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans ve risk', crumb: 'Kurul', source: 'Kaynak: modüllerin onaylı çıktıları · portal kaydı', presence: 'Kurul' }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
@@ -25,7 +25,7 @@ export function KurulFrame({ title, lead, back, aside, children }: {
                     {back.label}
                   </Link>
                 ) : (
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Finans · Danışma ve yönetim kurulu</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Finans ve risk · Danışma ve yönetim kurulu</div>
                 )}
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 <p className="mt-1 max-w-[76ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>

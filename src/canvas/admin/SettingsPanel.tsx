@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plug, RotateCcw, Save, Send } from 'lucide-react';
-import { adminApi, type AdminCheck, type AdminSetting } from '../engine';
+import { Loader2, Plug, RotateCcw, Save, Search, Send, X } from 'lucide-react';
+import { adminApi, type AdminCheck, type AdminSetting, type AdminSettings } from '../engine';
 import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate } from './ui';
+import { categorize, pickCategory, searchSettings } from './settingsCategories';
+
+/** Ayarlar ve Yönetim ekranının sol menüsü aynı sorguyu paylaşır (kategoriler oradan da okunur). */
+export const settingsQuery = { queryKey: ['admin', 'settings'] as const, queryFn: adminApi.settings, retry: false } as const;
 
 /** Hangi grubun altında hangi deneme düğmesi çıkar. */
 const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> = {
@@ -130,9 +135,69 @@ function Field({ s, value, onChange, onReset, resetting }: {
   );
 }
 
+/** Ayar kategorileri (ikinci düzey gezinme): masaüstünde Yönetim menüsünde «Ayarlar»ın altında, telefonda
+ *  ekranın üstünde yatay kayan çipler. Seçim adres çubuğunda (`?bolum=settings&kategori=…`). */
+export function SettingsCategoryNav({ data, variant, onPick }: { data: AdminSettings; variant: 'chips' | 'list'; onPick?: () => void }) {
+  const [params, setParams] = useSearchParams();
+  const cats = categorize(data);
+  const current = pickCategory(cats, params.get('kategori'));
+  const go = (id: string) => {
+    setParams({ bolum: 'settings', kategori: id });
+    onPick?.();
+  };
+  if (variant === 'chips') {
+    return (
+      <nav aria-label="Ayar kategorileri" className="-mx-1 md:hidden">
+        <ul className="flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+          {cats.map((c) => {
+            const on = c.id === current?.id;
+            return (
+              <li key={c.id} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => go(c.id)}
+                  aria-current={on ? 'page' : undefined}
+                  className={`min-h-11 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-bold transition-colors ${on ? 'bg-canvas-ink text-white' : 'bg-slate-100 text-canvas-ink'}`}
+                >
+                  {c.label}
+                  <span className={`ml-1.5 text-[11px] tabular-nums ${on ? 'text-white/70' : 'text-canvas-muted'}`}>{c.groups.length}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    );
+  }
+  return (
+    <ul aria-label="Ayar kategorileri" className="mt-0.5 space-y-0.5 border-l border-slate-200 pl-2">
+      {cats.map((c) => {
+        const on = c.id === current?.id;
+        return (
+          <li key={c.id}>
+            <button
+              type="button"
+              onClick={() => go(c.id)}
+              aria-current={on ? 'page' : undefined}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12px] font-semibold transition-colors ${
+                on ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:bg-white/70 hover:text-canvas-ink'
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate">{c.label}</span>
+              <span className="text-[11px] font-bold tabular-nums text-canvas-muted">{c.groups.length}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function SettingsPanel() {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['admin', 'settings'], queryFn: adminApi.settings, retry: false });
+  const q = useQuery(settingsQuery);
+  const [params] = useSearchParams();
+  const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [testTo, setTestTo] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
@@ -200,6 +265,20 @@ export default function SettingsPanel() {
   if (q.isLoading) return <Loading />;
   if (q.error || !q.data) return <Note tone="err">{errText(q.error, 'Ayarlar okunamadı.')}</Note>;
 
+  const data = q.data;
+  const cats = categorize(data);
+  const current = pickCategory(cats, params.get('kategori'));
+  const searching = query.trim().length > 0;
+  const hits = searching ? searchSettings(data, query) : [];
+  // Gösterilecek gruplar: aramada tutanlar (yalnız tutan ayarlarıyla), yoksa seçili kategorinin grupları.
+  const shown: Array<{ g: AdminSettings['groups'][number]; keys: string[] | 'all'; where?: string }> = searching
+    ? hits.map((h) => ({ g: h.group, keys: h.keys, where: h.category.label }))
+    : (current?.groups ?? []).map((g) => ({ g, keys: 'all' as const }));
+  const hitCount = hits.reduce((n, h) => n + (h.keys === 'all' ? data.items.filter((s) => s.group === h.group.id).length : h.keys.length), 0);
+  // Kaydedilmemiş değişiklik hangi kategorilerde: kaydet çubuğunda yazar (başka kategoride kalan değişiklik gözden kaçmasın).
+  const groupCat = new Map(cats.flatMap((c) => c.groups.map((g) => [g.id, c.label] as const)));
+  const dirtyCats = [...new Set(dirty.map((k) => groupCat.get(data.items.find((s) => s.key === k)?.group ?? '')).filter(Boolean))];
+
   return (
     <div className="space-y-5 pb-20">
       <Section
@@ -234,14 +313,51 @@ export default function SettingsPanel() {
           )}
         </Card>
       )}
+      <div className="space-y-2">
+        <label className="relative block">
+          <span className="sr-only">Ayar ara</span>
+          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
+            placeholder="Ayar ara: grup, ayar adı ya da anahtarı"
+            autoCapitalize="none"
+            spellCheck={false}
+            className={`${field} !pl-9 !pr-10`}
+          />
+          {searching && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Aramayı temizle"
+              className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-canvas-muted hover:text-canvas-ink"
+            >
+              <X aria-hidden className="h-4 w-4" />
+            </button>
+          )}
+        </label>
+        {!searching && <SettingsCategoryNav data={data} variant="chips" />}
+        <p className="text-[12px] text-canvas-muted" aria-live="polite">
+          {searching
+            ? hits.length
+              ? `${hits.length} grupta ${hitCount} ayar bulundu.`
+              : 'Eşleşen ayar yok. Grup adını, ayarın adını ya da anahtarını (ör. SMTP_HOST) deneyin.'
+            : current
+              ? `${current.label} · ${current.groups.length} grup`
+              : ''}
+        </p>
+      </div>
       {applyError && <Note tone="warn">{applyError}</Note>}
-      {q.data.groups.map((g) => (
+      {shown.map(({ g, keys, where }) => (
         <Card key={g.id}>
+          {where && <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{where}</div>}
           <div className="text-[14px] font-extrabold">{g.label}</div>
           <p className="text-[12px] text-canvas-muted">{g.help}</p>
           <div className="mt-1 divide-y divide-slate-100">
-            {q.data.items
-              .filter((s) => s.group === g.id)
+            {data.items
+              .filter((s) => s.group === g.id && (keys === 'all' || keys.includes(s.key)))
               .map((s) => (
                 <Field
                   key={s.key}
@@ -308,7 +424,7 @@ export default function SettingsPanel() {
         </Card>
       ))}
 
-      {system.data && (
+      {!searching && (current?.id === 'sistem' || cats.length <= 1) && system.data && (
         <Card>
           <div className="text-[14px] font-extrabold">Sistem tanımları</div>
           <p className="text-[12px] text-canvas-muted">
@@ -338,7 +454,7 @@ export default function SettingsPanel() {
           ) : saved ? (
             <span className="text-emerald-700">{saved}</span>
           ) : (
-            `${dirty.length} değişiklik kaydedilmedi`
+            `${dirty.length} değişiklik kaydedilmedi${dirtyCats.length ? ` (${dirtyCats.join(', ')})` : ''}`
           )}
         </div>
         <div className="flex gap-2">

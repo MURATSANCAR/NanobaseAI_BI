@@ -89,23 +89,23 @@ export const LIVE: Record<string, string> = {
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */
 export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
-  'Finans & Risk': { to: '/finansal-raporlar', hint: 'Gelir tablosu, kârlılık, nakit ve finansal denetim' },
-  'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Baskı önerisi ve karar raporları' },
+  'Finans & Risk': { to: '/finansal-raporlar', hint: 'Genel bakış, gelir tablosu, kârlılık, nakit, bütçe, risk ve finansal denetim' },
+  'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Karar raporları; baskı önerisi Fiyatlama ve üretim altında' },
   'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
+  'Fiyatlama & Üretim': { to: '/fiyatlama', hint: 'Fiyat ve maliyet, ilk baskı tahmini, baskı önerisi ve üretim takvimi' },
+  'Grafik Tasarım': { to: '/kitap-tasarim', hint: 'Kitap tasarımı ve kapak arşivi' },
   'SEO & GEO': { to: '/seo-geo', hint: 'Ürün denetimi, arama ve yapay zekâ görünürlüğü' },
   Pazarlama: { to: '/pazarlama/aylik-plan', hint: 'Aylık plan, föyler, lansman, backlist, sosyal medya, basın, reklam ve etkinlikler' },
+  'Saha Satış & Okul': { to: '/ilk-dagilim', hint: 'İlk dağılım, saha ve tahsilat, okul tanıtım, kurumsal satış ve ihale' },
   'Altyapı & Destek': { to: '/sistem-durumu', hint: 'Sistem durumu, olaylar ve zamanlanmış işler' },
   'Bayi & Kitapçı Risk Yönetimi': { to: '/bayi-risk', hint: 'Günlük risk skoru, alacak yaşlandırması, limit önerisi ve risk brifi' },
-  'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski ve CRM veri sağlığı' },
+  'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski, CRM veri sağlığı, kurumsal e-posta, pazar ve rakip' },
   'İnsan Kaynakları': { to: '/ik/performansim', hint: 'Performansım, anketlerim, öneri kutusu, işe alım ve KVKK kayıtları' },
-  'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni ve pazar yerleri' },
+  'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni, kampanyalar, dijital yayın ve okurlar' },
+  'Platform Yönetimi': { to: '/kanallar', hint: 'Kanal karnesi, pazar yerleri, D2C, Trendyol ve Amazon' },
   Lojistik: { to: '/stok', hint: 'Depo ve stok, kargo hattı, tedarik ve baskı yükü, tedarikçiler' },
   'DYK — Danışma & Yönetim Kurulu': { to: '/kurul', hint: 'Kurul göstergeleri, paket ve kararlar' },
-  // M38 müşteri ekranı gelince grubun girişi o olabilir; M39 grubun ikinci bağlantısı olarak kalır.
-  // M43 depo ekranı gelince grubun girişi ona dönebilir; bugün çalışan tek lojistik ekranı kargo (M44).
-  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
-  // M43 depo/stok ve M44 kargo gelince giriş yine burası kalabilir ya da ortak lojistik özetine taşınır.
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */
@@ -195,7 +195,7 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
               <div className="space-y-2.5">
                 {working.map((g) => (
                   <div key={g.title}>
-                    {GROUP_HOME[g.title] ? (
+                    {GROUP_HOME[g.title] && canOpenRoute(pages, GROUP_HOME[g.title].to) ? (
                       <Link to={GROUP_HOME[g.title].to} onClick={onClose} className="block px-1 pb-1 text-[12px] font-bold text-ink underline-offset-2">
                         {showTitle(g.title)} <span aria-hidden>→</span>
                       </Link>

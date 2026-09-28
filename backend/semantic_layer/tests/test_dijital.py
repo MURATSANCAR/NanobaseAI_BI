@@ -375,7 +375,7 @@ def test_feature_rules_for_digital():
 def test_catalog_pages_and_sales_page_is_explicit():
     cat = json.loads((BRIDGE / "access_catalog.json").read_text(encoding="utf-8"))
     pages = {p["key"]: p for p in cat["pages"]}
-    assert pages["sayfa:dijital-yayin"]["area"] == "editoryal"
+    assert pages["sayfa:dijital-yayin"]["area"] == "dijital"
     assert pages["sayfa:dijital-satis"].get("explicit") is True
 
 

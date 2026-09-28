@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Command } from 'cmdk';
 import { BookOpen, Clock3, CornerDownLeft, FolderOpen, Loader2, Search, Sparkles, User } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi, type SearchHit, type SearchKind } from '../engine';
-import { flatItems, permissionItemFor, scoreText } from './navModel';
+import { flatItems, permissionItemFor, recentGroupLabel, scoreText } from './navModel';
 import { RECENT_KEEP } from './navState';
 import { ago, type NavData } from './useNav';
 import { useCan } from '../useAdmin';
@@ -126,7 +126,7 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold">{r.label}</span>
                   <span className="block truncate text-[11.5px] text-muted">
-                    {r.group} · {ago(r.at)}
+                    {recentGroupLabel(r)} · {ago(r.at)}
                   </span>
                 </span>
                 <CornerDownLeft aria-hidden className="cmdk-go h-4 w-4 shrink-0 text-violet" />

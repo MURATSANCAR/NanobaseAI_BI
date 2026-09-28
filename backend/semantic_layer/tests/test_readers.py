@@ -420,4 +420,4 @@ def test_access_rules_for_readers():
     assert {"ozellik:okur.kisisel-veri", "ozellik:okur.segment-onay", "ozellik:okur.liste-aktar"} <= explicit
     assert "ozellik:okur.segment" not in explicit
     page = next(p for p in A.catalog()["pages"] if p["key"] == "sayfa:okurlar")
-    assert page.get("explicit") is True and page["area"] == "pazarlama"
+    assert page.get("explicit") is True and page["area"] == "dijital"

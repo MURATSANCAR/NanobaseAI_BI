@@ -483,7 +483,7 @@ def test_access_rules_for_campaigns():
 
 def test_catalog_and_settings():
     cat = json.loads((BRIDGE / "access_catalog.json").read_text(encoding="utf-8"))
-    assert any(p["key"] == "sayfa:kampanya" and p["area"] == "pazarlama" for p in cat["pages"])
+    assert any(p["key"] == "sayfa:kampanya" and p["area"] == "dijital" for p in cat["pages"])
     from semantic_bridge import admin
 
     keys = {s["key"] for s in admin.SPEC}

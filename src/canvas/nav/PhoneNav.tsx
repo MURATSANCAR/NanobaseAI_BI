@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Drawer } from '@base-ui/react/drawer';
-import { Bell, ChevronRight, Grid2x2, House, LayoutDashboard, LayoutGrid, Menu, Search, SendHorizontal, Sparkles, X } from 'lucide-react';
-import { homeGroup, type NavGroupId } from './navModel';
+import { Bell, ChevronLeft, ChevronRight, Grid2x2, House, LayoutDashboard, LayoutGrid, Menu, Search, SendHorizontal, Sparkles, X } from 'lucide-react';
+import { railView } from './navModel';
 import { NavList } from './NavList';
 import { initials, roleLabel, useNavUi, type NavData } from './useNav';
 
 /**
  * Telefon menüsü (<768 px): sol ray yok. Alt çubuk: Kampüs · Masam · ZEKİ AI · Uyarılar · Menü.
- * «Menü» alttan açılan sayfadır (arama, çalışma alanı çipleri, seçili alanın ekranları, tüm modüller,
- * profil). «ZEKİ AI» soruyu alır, cevap Genel bakış'ta açılır (Kampüs'teki kutuyla aynı yol).
+ * «Menü» alttan açılan sayfadır (arama; bir ana modülün ekranındayken yalnız o modülün ekranları ve «Ana
+ * menü» dönüşü, Kampüs'te ana modül listesi; tüm modüller, profil). Listeden modül seçmek sayfayı
+ * değiştirmez, o modülün ekranlarını gösterir. «ZEKİ AI» soruyu alır, cevap Genel bakış'ta açılır.
  */
 export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: string }) {
   const ui = useNavUi();
@@ -18,11 +19,25 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
   const [menuOpen, setMenuOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
   const [question, setQuestion] = useState('');
-  const groups = nav.groups.filter((g) => g.id !== 'kampus');
-  const [chip, setChip] = useState<NavGroupId | null>(null);
-  const activeGroup = nav.active?.group.id;
-  const chipId = chip ?? (activeGroup && activeGroup !== 'kampus' ? activeGroup : homeGroup(nav.role));
-  const shown = groups.find((g) => g.id === chipId) ?? groups[0];
+  const activeGroup = nav.active?.group.id ?? null;
+  // Menü sayfasında göz atılan görünüm; sayfa her açılışta bulunulan ekranın modülüyle başlar.
+  const [browse, setBrowse] = useState<string | null>(null);
+  const [motion, setMotion] = useState<'in' | 'out' | null>(null);
+  const focusTo = useRef<string | null>(null);
+  const view = railView(nav.groups, activeGroup, browse);
+  const viewKey = view.kind === 'module' ? view.group.id : 'modules';
+  useLayoutEffect(() => {
+    if (!focusTo.current) return;
+    document.getElementById(focusTo.current)?.focus();
+    focusTo.current = null;
+  }, [viewKey]);
+  const openMenu = (open: boolean) => {
+    if (open) {
+      setBrowse(null);
+      setMotion(null);
+    }
+    setMenuOpen(open);
+  };
 
   const at = (p: string) => loc.pathname === p;
   const ask = () => {
@@ -68,7 +83,7 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
           </span>
           Uyarılar
         </Link>
-        <button type="button" onClick={() => setMenuOpen(true)} className={`${btn} ${tone(menuOpen)}`} aria-haspopup="dialog" aria-expanded={menuOpen}>
+        <button type="button" onClick={() => openMenu(true)} className={`${btn} ${tone(menuOpen)}`} aria-haspopup="dialog" aria-expanded={menuOpen}>
           <span className="flex h-7 items-center">
             <Menu aria-hidden className="h-[22px] w-[22px]" />
           </span>
@@ -76,7 +91,7 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
         </button>
       </nav>
 
-      <Drawer.Root open={menuOpen} onOpenChange={setMenuOpen} swipeDirection="down">
+      <Drawer.Root open={menuOpen} onOpenChange={openMenu} swipeDirection="down">
         <Drawer.Portal>
           <Drawer.Backdrop className="nav-scrim" />
           <Drawer.Viewport className="nav-viewport">
@@ -104,29 +119,86 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
                   Ekran, kitap veya kişi ara
                 </button>
               </div>
-              <div role="tablist" aria-label="Çalışma alanı" className="nav-chips mt-3 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1">
-                {groups.map((g) => {
-                  const on = g.id === shown?.id;
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={on}
-                      onClick={() => setChip(g.id)}
-                      className={
-                        'nav-bar-btn min-h-11 shrink-0 rounded-full px-4 text-[14px] font-bold ' +
-                        (on ? 'bg-gradient-to-r from-coral to-violet text-white shadow-md' : 'bg-slate-100 text-ink/80')
-                      }
-                    >
-                      {g.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <Drawer.Content className="min-h-0 flex-1 touch-auto overflow-y-auto overscroll-contain px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-2">
-                {shown?.tag && <p className="px-3 pb-1 text-[12px] font-bold text-emerald-700">{shown.tag}</p>}
-                {shown && <NavList items={shown.items} activeId={nav.active?.item.id} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} onPick={() => setMenuOpen(false)} variant="sheet" />}
+              <Drawer.Content className="min-h-0 flex-1 touch-auto overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+                <div key={viewKey} className="nav-view" data-motion={motion ?? undefined}>
+                  {view.kind === 'module' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          focusTo.current = `nav-sheet-mod-${view.group.id}`;
+                          setMotion('out');
+                          setBrowse('modules');
+                        }}
+                        className="nav-row flex min-h-11 items-center gap-1 rounded-xl pl-1.5 pr-3 text-[14px] font-bold text-violet"
+                        aria-label="Ana menü: bütün ana modüller"
+                      >
+                        <ChevronLeft aria-hidden className="h-5 w-5" />
+                        Ana menü
+                      </button>
+                      <div className="flex items-center gap-2.5 px-3 pb-2 pt-1">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-coral to-violet text-white">
+                          <view.group.icon aria-hidden className="h-[18px] w-[18px]" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 id="nav-sheet-head" tabIndex={-1} className="truncate text-[17px] font-extrabold tracking-tight outline-none">
+                            {view.group.label}
+                          </h3>
+                          {view.group.tag && <p className="text-[12px] font-bold text-emerald-700">{view.group.tag}</p>}
+                        </div>
+                      </div>
+                      <NavList items={view.group.items} activeId={nav.active?.item.id} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} onPick={() => setMenuOpen(false)} variant="sheet" />
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="px-3 pb-1 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-muted/80">Ana modüller</h3>
+                      <ul className="flex flex-col gap-0.5">
+                        {nav.groups.map((g) => {
+                          const on = g.id === activeGroup;
+                          const rowCls =
+                            'nav-row flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] ' +
+                            (on ? 'bg-violet/10 font-extrabold text-ink' : 'font-semibold text-ink/80');
+                          const body = (
+                            <>
+                              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-gradient-to-tr from-coral to-violet text-white' : 'bg-slate-100 text-muted'}`}>
+                                <g.icon aria-hidden className="h-4 w-4" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate">{g.label}</span>
+                                {g.tag && <span className="block text-[12px] font-bold text-emerald-700">{g.tag}</span>}
+                              </span>
+                              <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-muted/60" />
+                            </>
+                          );
+                          return (
+                            <li key={g.id}>
+                              {g.to ? (
+                                <Link id={`nav-sheet-mod-${g.id}`} to={g.to} onClick={() => setMenuOpen(false)} aria-current={on ? 'page' : undefined} className={rowCls}>
+                                  {body}
+                                </Link>
+                              ) : (
+                                <button
+                                  id={`nav-sheet-mod-${g.id}`}
+                                  type="button"
+                                  onClick={() => {
+                                    focusTo.current = 'nav-sheet-head';
+                                    setMotion('in');
+                                    setBrowse(g.id);
+                                  }}
+                                  aria-label={`${g.label}${g.tag ? ` (${g.tag})` : ''}: ekranlarını göster`}
+                                  aria-current={on ? 'true' : undefined}
+                                  className={rowCls}
+                                >
+                                  {body}
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                </div>
                 <div className="mt-3 border-t border-slate-200/80 pt-2">
                   <button
                     type="button"

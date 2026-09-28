@@ -31,7 +31,7 @@ export function OkurFrame({ crumb, title, lead, source, aside, children }: {
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Pazarlama · Okur ve müşteri</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Dijital ve topluluk · Okur ve topluluk</div>
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 <p className="mt-1 max-w-[76ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>
               </div>

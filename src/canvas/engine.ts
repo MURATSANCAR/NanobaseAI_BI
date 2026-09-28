@@ -663,7 +663,13 @@ export type AdminSetting = {
   updatedAt: string | null;
 };
 
-export type AdminSettings = { groups: Array<{ id: string; label: string; help: string }>; items: AdminSetting[] };
+export type AdminSettings = {
+  /** Ayar grupları; `category` Yönetim › Ayarlar ekranındaki kategoridir (yoksa «Diğer»). */
+  groups: Array<{ id: string; label: string; help: string; category?: string }>;
+  /** Kategoriler ekrandaki sırayla; eski köprüde yoksa bütün gruplar «Diğer» altında görünür. */
+  categories?: Array<{ id: string; label: string }>;
+  items: AdminSetting[];
+};
 
 export type AdminUnit = {
   unit: string;
