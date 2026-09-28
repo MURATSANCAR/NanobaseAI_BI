@@ -15,6 +15,18 @@
 - **Aday (main `ee599e34`, yalnız statik dosyalar adaydan):** 23 / 31; 27 / 30.
 - **Canlı sonra:** kapı düzeltmesi 08:28'de `frontend/src`'ye main hâliyle girdi, 08:39 (`DQzJWgtz`) ve 08:46 (`xfK_xCcb`) derlemeleriyle canlıda (kurulumu başka oturumlar yaptı; bu oturum `cockpit/dist`'e yazmadı). Ölçüm: benzer kitaplar 30 / 31, alışveriş 30 / 30. Normal modda görülen 19–22 × 429 aynı sunucu IP'sinden koşan başka ölçümlerin `timas_api` bölgesini doldurmasından; ekranın kendi isteği 60 sn'de 30. Alışverişin 20 sn'si çarpan etkisiydi: iki turda da başlık ve liste açıldı.
 - **Temizlik:** 3 kısa timasai oturumu açıldı, üçü de silindi; yazma yapılmadı; sunucuda `/tmp/claude-benzer` dışında dosya bırakılmadı. VM'e kurulum bu işte yok (kod değişikliği yok; kapı düzeltmesinin VM'e gidişi main dağıtımıyla).
+## 2026-09-28 — Zeki AI fırsatları: bütün modüller ekran ekran değerlendirildi
+
+- **Neden:** kullanıcı «bütün modülleri ve ekranları eksiksiz değerlendir; kullanıcıların AI beklentilerini çıkar; AI ile
+  neler yapabileceğimizi listele». Dört paralel değerlendirme, main `f26e11d6` salt okuma; kod değişikliği yok.
+- **Çıktı:** `docs/analiz/ai-firsatlari/README.md` (birleşik özet: bugünkü durum, 10 hemen-düzelt bulgusu, sistemin
+  en değerli 20 önerisi, 10 ortak yapı taşı, 3 kullanıcı kararı, önerilen sıra) + grup belgeleri A (çekirdek/analiz/
+  yönetim/altyapı/destek masası, 57 portal + 13 masa ekranı), B (editoryal/kayıtlar/editör modülü, 49 rota), C
+  (pazarlama/platform, 137 rota), D (finans/satış/lojistik/İK, 77 rota). Menü ve rota listeleri betikle karşılaştırıldı.
+- **Öne çıkan bulgular:** destek masası metni modele maskesiz gidiyor (KVKK); üç yerde model metni sayı denetiminden
+  geçmiyor; dört ekran modelsiz olduğu halde «Zeki AI» etiketli; Kampüs'te sabit örnek kitaplar; yönetim ekranındaki
+  model denemesi LLM kapısını atlıyor; tahmin motorunun p10–p90 aralığı hiçbir ekranda görünmüyor; sohbet kataloğunda
+  9 konu veri bağlı değil; benzerlik araması ve portalda taranmış belge okuma hiç yok.
 
 ## 2026-09-28 — Sesli okumaya «İnsan kaydı yükle» (dalda; kurulmadı)
 
