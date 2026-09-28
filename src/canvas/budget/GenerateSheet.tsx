@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Calculator, Loader2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -98,7 +98,7 @@ export default function GenerateSheet({ open, year, years, onClose, onDone }: {
   });
   const choices = [...new Set([...years, year, year + 1, new Date().getFullYear() + 1])].sort();
   return (
-    <Sheet open={open} onClose={onClose} modal wide title="ZEKİ AI bütçe önerisi"
+    <Sheet open={open} onClose={onClose} modal wide title="Veriden bütçe önerisi"
       subtitle="Seçilen her senaryo için ayrı bir taslak plan kurulur. Taslaklar Senaryolar sekmesinde yan yana karşılaştırılır; biri onaya gönderilir.">
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr]">
@@ -132,7 +132,7 @@ export default function GenerateSheet({ open, year, years, onClose, onDone }: {
         )}
         <div className="flex justify-end">
           <button type="button" className={btnPrimary} onClick={() => run.mutate()} disabled={run.isPending || !text || !scenarios.length}>
-            {run.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
+            {run.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Calculator aria-hidden className="h-4 w-4" />}
             {run.isPending ? 'Hazırlanıyor…' : 'Taslakları hazırla'}
           </button>
         </div>

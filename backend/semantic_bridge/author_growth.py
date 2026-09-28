@@ -514,12 +514,137 @@ def parse_advice(text: str) -> dict[str, Any]:
             "risks": [str(x).strip()[:300] for x in (data.get("riskler") or []) if str(x).strip()][:4]}
 
 
+# ---- sayı denetimi (rakamı model üretmez; `marketing/guard.py` kalıbı)
+
+_SENT = re.compile(r"(?<=[.!?…])\s+(?=\S)")
+
+
+def _norm_num(n: str) -> str:
+    return n.lstrip("0") or "0"
+
+
+def _walk_numbers(v: Any, out: set[str]) -> None:
+    from semantic_bridge.marketing import guard
+    if isinstance(v, bool) or v is None:
+        return
+    if isinstance(v, (int, float)):
+        # Olgunun yuvarlanmışı olgudur («14,7 yıl» → «yaklaşık 15 yıl»); işaret yazıyla söylenir («%30 düşüş»).
+        for x in (v, round(v), round(v, 1), abs(v), round(abs(v)), round(abs(v), 1)):
+            out |= {_norm_num(n) for n in guard.numbers_in(str(x))}
+        return
+    if isinstance(v, dict):
+        for k, x in v.items():
+            _walk_numbers(str(k), out)      # «son12_adet», «puan_100_uzerinden»: pencere ve ölçek de olgudur
+            _walk_numbers(x, out)
+        return
+    if isinstance(v, (list, tuple)):
+        for x in v:
+            _walk_numbers(x, out)
+        return
+    out |= {_norm_num(n) for n in guard.numbers_in(str(v))}
+
+
+def advice_numbers(inp: dict[str, Any]) -> set[str]:
+    """Öneri metninde geçebilecek sayılar: girdideki her değer (tarih parçaları, notlardaki sayılar dahil) ve
+    sayısal değerlerin yuvarlanmışı."""
+    out: set[str] = set()
+    _walk_numbers(inp, out)
+    _walk_numbers(ADVICE_SYSTEM, out)       # istemin kendi söylediği pencere («son 12 ay»)
+    return out
+
+
+def _clean_text(text: str, allowed: set[str], dropped: list[dict[str, Any]]) -> str:
+    """Cümle cümle: girdide olmayan sayı ya da teknoloji adı taşıyan cümle düşer."""
+    from semantic_bridge.marketing import guard
+    kept = []
+    for sent in _SENT.split(str(text or "")):
+        s = sent.strip()
+        if not s:
+            continue
+        bad = sorted({n for n in guard.numbers_in(s) if _norm_num(n) not in allowed})
+        if bad:
+            dropped.append({"cumle": s[:600], "neden": "kaynaksiz-rakam", "sayilar": bad})
+            continue
+        if guard.has_tech_name(s):
+            dropped.append({"cumle": s[:600], "neden": "teknoloji-adi"})
+            continue
+        kept.append(s)
+    return " ".join(kept)
+
+
+def _fmt_qty(v: Any) -> str:
+    return f"{int(round(float(v))):,}".replace(",", ".")
+
+
+def rule_summary(inp: dict[str, Any]) -> str:
+    """Model özeti tutmazsa: aynı girdiden kuralla yazılan özet (her sayı girdiden)."""
+    s = inp.get("satis") or {}
+    parts = []
+    cur, prev, pct = s.get("son12_adet"), s.get("onceki12_adet"), s.get("degisim_yuzde")
+    if cur is not None:
+        t = f"Son 12 ayda {_fmt_qty(cur)} adet net satış"
+        if prev is not None:
+            t += f", önceki 12 ayda {_fmt_qty(prev)} adet"
+        if pct is not None:
+            t += f" ({'artış' if pct > 0 else 'düşüş' if pct < 0 else 'değişim'} %{str(abs(pct)).replace('.', ',')})"
+        parts.append(t + ".")
+    days = inp.get("son_gorusme_gun_once")
+    parts.append(f"Son görüşme {days} gün önce." if days is not None else "Kayıtlı görüşme yok.")
+    loy = inp.get("sadakat") or {}
+    if loy.get("puan_100_uzerinden") is not None:
+        parts.append(f"Sadakat puanı {loy['puan_100_uzerinden']}/100" + (f" ({loy['bant']})." if loy.get("bant") else "."))
+    return " ".join(parts)
+
+
+def rule_recommendations(inp: dict[str, Any]) -> list[dict[str, str]]:
+    """Model önerilerinin hiçbiri denetimden geçmezse: girdiden kuralla çıkan öneriler."""
+    s = inp.get("satis") or {}
+    loy = inp.get("sadakat") or {}
+    pct, days = s.get("degisim_yuzde"), inp.get("son_gorusme_gun_once")
+    recs = []
+    if pct is not None and pct <= -10:
+        recs.append({"title": "Satıştaki düşüşü yazarla konuşun",
+                     "why": f"Son 12 ay {_fmt_qty(s.get('son12_adet') or 0)} adet, önceki 12 ay "
+                            f"{_fmt_qty(s.get('onceki12_adet') or 0)} adet.", "when": "bu ay"})
+    if days is None or days > 90:
+        recs.append({"title": "Görüşme planlayın",
+                     "why": f"Son görüşme {days} gün önce." if days is not None else "Kayıtlı görüşme yok.",
+                     "when": "bu ay"})
+    if loy.get("yururlukte_sozlesme") == 0 and (loy.get("toplam_sozlesme") or 0) > 0:
+        recs.append({"title": "Sözleşme durumunu gözden geçirin",
+                     "why": f"Yürürlükte sözleşme yok; toplam {loy['toplam_sozlesme']} sözleşme.", "when": "bu çeyrek"})
+    if not recs:
+        recs.append({"title": "Yazar kartını bir sonraki görüşmede birlikte gözden geçirin", "why": rule_summary(inp),
+                     "when": "bu çeyrek"})
+    return recs
+
+
+def guard_advice(out: dict[str, Any], inp: dict[str, Any]) -> dict[str, Any]:
+    """Modelin önerisini girdideki olgularla denetler. Sayısı tutmayan cümle düşer; başlığı tutmayan öneri bütünüyle
+    düşer; özet ya da öneri listesi boşalırsa yerine aynı girdiden kural metni konur (işaretlenir)."""
+    allowed = advice_numbers(inp)
+    dropped: list[dict[str, Any]] = []
+    summary = _clean_text(out.get("summary") or "", allowed, dropped)
+    recs = []
+    for r in out.get("recommendations") or []:
+        before = len(dropped)
+        title = _clean_text(r["title"], allowed, dropped)
+        if len(dropped) > before or not title:
+            continue
+        recs.append({"title": title, "why": _clean_text(r.get("why") or "", allowed, dropped), "when": r.get("when") or ""})
+    risks = [x for x in (_clean_text(r, allowed, dropped) for r in out.get("risks") or []) if x]
+    rule_s, rule_r = not summary, not recs
+    return {"summary": summary or rule_summary(inp), "recommendations": recs or rule_recommendations(inp), "risks": risks,
+            "guard": {"dropped": len(dropped), "droppedSentences": dropped, "ruleSummary": rule_s,
+                      "ruleRecommendations": rule_r}}
+
+
 def make_advice(engine: sa.engine.Engine, tenant: str, user: str, contact_id: str, inp: dict[str, Any],
                 chat: Callable[[list[dict[str, str]]], str]) -> dict[str, Any]:
     cid = _guid(contact_id)
     text = chat([{"role": "system", "content": ADVICE_SYSTEM},
                  {"role": "user", "content": json.dumps(inp, ensure_ascii=False, default=str)}])
-    out = parse_advice(text)
+    out = guard_advice(parse_advice(text), inp)
     rid = uuid.uuid4().hex
     now = _now()
     with engine.begin() as c:

@@ -166,7 +166,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         items = await run_in_threadpool(call, B.generate, engine, tenant, user, body, src.read_forecast())
         for p in items:
             audit(engine, user, "create", p, {"senaryo": p["scenario"], "kitap": p["totals"]["kitap"],
-                                              "ciro": round(p["totals"]["ciro"], 2), "kaynak": "ZEKİ AI önerisi"})
+                                              "ciro": round(p["totals"]["ciro"], 2), "kaynak": "Veriden hesaplanan öneri (kural)"})
         return {"items": items}
 
     @app.get("/api/v1/budget/plans/{plan_id}")

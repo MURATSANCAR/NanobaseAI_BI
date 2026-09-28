@@ -696,8 +696,8 @@ def save_draft(engine: sa.engine.Engine, tenant: str, iid: str, text: str) -> di
     return get_incident(engine, tenant, iid)
 
 
-def draft_prompt(inc: dict[str, Any]) -> list[dict[str, str]]:
-    """Olay değerlendirmesi taslağı için mesaj. Sayılar olay tablosundan gelir; modelden yeni rakam istenmez."""
+def draft_facts(inc: dict[str, Any]) -> list[str]:
+    """Olay değerlendirmesinin olguları (olay tablosundan). Taslaktaki her sayı bunlardan birinde geçmelidir."""
     tl = inc.get("timeline") or []
     fails = sum(1 for x in tl if x["ok"] is False)
     facts = [
@@ -707,10 +707,73 @@ def draft_prompt(inc: dict[str, Any]) -> list[dict[str, str]]:
         f"İlk hata: {inc['firstError'] or '—'}", f"Son hata: {inc['lastError'] or '—'}",
         f"BT'nin kök neden notu: {inc['rootCause'] or 'yok'}",
     ]
+    if inc.get("minutes") is not None and inc["minutes"] >= 60:
+        facts.insert(5, f"Süre (dakika): {inc['minutes']}")
+    return facts
+
+
+def draft_prompt(inc: dict[str, Any]) -> list[dict[str, str]]:
+    """Olay değerlendirmesi taslağı için mesaj. Sayılar olay tablosundan gelir; modelden yeni rakam istenmez."""
     system = ("Sen bir BT olay değerlendirmesi taslağı yazıyorsun. Yalnız verilen olguları kullan; yeni sayı, tarih ya da "
-              "süre uydurma. Türkçe, sade, en çok 12 satır. Başlıklar: Ne oldu, Etki, Süre, Olası neden, Önerilen önlem. "
+              "süre uydurma, olgulardaki sayıları aynen yaz (dönüştürme, toplama). Türkçe, sade, en çok 12 satır. "
+              "Başlıklar: Ne oldu, Etki, Süre, Olası neden, Önerilen önlem; başlıkları numaralandırma. "
               "Kök neden notu yoksa «olası neden» için yalnız hata metninden çıkarılabileni yaz ve belirsiz olduğunu söyle.")
-    return [{"role": "system", "content": system}, {"role": "user", "content": "\n".join(facts)}]
+    return [{"role": "system", "content": system}, {"role": "user", "content": "\n".join(draft_facts(inc))}]
+
+
+def _num_set(texts: Iterable[str]) -> set[str]:
+    out: set[str] = set()
+    for t in texts:
+        for n in re.findall(r"\d+(?:[.,]\d+)*", str(t or "")):
+            out.add(re.sub(r"[.,]", "", n).lstrip("0") or "0")
+        out |= {n.lstrip("0") or "0" for n in re.findall(r"\d+", str(t or ""))}
+    return out
+
+
+def foreign_numbers(text: str, facts: Iterable[str]) -> list[str]:
+    """Taslakta geçip olgularda olmayan sayılar. «28.09.2026» olgusu 28, 9 ve 2026'yı da izinli kılar."""
+    allowed = _num_set(facts)
+    return sorted({n for n in re.findall(r"\d+(?:[.,]\d+)*", str(text or ""))
+                   if (re.sub(r"[.,]", "", n).lstrip("0") or "0") not in allowed})
+
+
+def rule_draft(inc: dict[str, Any]) -> str:
+    """Model yoksa ya da taslağı olgularla tutmazsa: aynı olgulardan kalıpla yazılan değerlendirme taslağı."""
+    tl = inc.get("timeline") or []
+    fails = sum(1 for x in tl if x["ok"] is False)
+    end = local_str(_aware(inc["closedAt"])) if inc.get("closedAt") else None
+    cause = (inc.get("rootCause") or "").strip()
+    err = screen_text(inc.get("lastError") or inc.get("firstError") or "")
+    lines = [
+        "Ne oldu:", f"{inc['ringLabel']} halkasında «{inc['kindLabel']}» olayı {local_str(_aware(inc['openedAt']))}'de başladı"
+        + (f", {end}'de kapandı." if end else "; olay sürüyor."),
+        "", "Etki:", f"Bu halkaya bağlı ekranlar ve işler olay boyunca etkilendi; başarısız deneme sayısı {fails}.",
+        "", "Süre:", human_minutes(inc.get("minutes")) + ("" if end else " (sürüyor)") + ".",
+        "", "Olası neden:", (f"BT'nin kök neden notu: {cause}" if cause else
+                            (f"Kök neden notu yok; son hata metni: {err} — neden belirsiz, BT doğrulamalı." if err
+                             else "Kök neden notu ve hata metni yok; neden belirsiz, BT doğrulamalı.")),
+        "", "Önerilen önlem:", "BT kök nedeni doğrulayıp nota yazmalı; aynı halkada tekrar ederse kalıcı önlem planlanmalı.",
+    ]
+    return "\n".join(lines)
+
+
+def guard_draft(text: str, inc: dict[str, Any]) -> tuple[str, str, list[str]]:
+    """(taslak, kaynak, olgu dışı sayılar). kaynak «zeki» ya da «kural»: model metnindeki tek bir olgu dışı sayı bile
+    metni bütünüyle düşürür (yarım değerlendirme yayımlanmaz), yerine kural taslağı konur. Teknoloji adı sade
+    karşılığına çevrilir."""
+    raw = re.sub(r"<think>.*?</think>", "", str(text or ""), flags=re.S).strip()
+    if not raw:
+        return rule_draft(inc), "kural", []
+    bad = foreign_numbers(raw, draft_facts(inc))
+    if bad:
+        return rule_draft(inc), "kural", bad
+    lines = []
+    for ln in raw.splitlines():
+        t = ln
+        for rx, rep in _TECH:
+            t = rx.sub(rep, t)
+        lines.append(t)
+    return "\n".join(lines), "zeki", []
 
 
 # ------------------------------------------------------------------ denetim listesi ve durum

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Calculator, Loader2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
@@ -45,7 +45,7 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
           </div>
           {canEdit && (
             <button type="button" className={btnGhost} onClick={onGenerate}>
-              <Sparkles aria-hidden className="h-4 w-4" />
+              <Calculator aria-hidden className="h-4 w-4" />
               Yeni öneri
             </button>
           )}

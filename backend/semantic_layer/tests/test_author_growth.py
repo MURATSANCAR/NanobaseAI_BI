@@ -86,6 +86,46 @@ def test_advice_is_stored_with_its_input(engine):
     assert got["id"] == a["id"] and got["input"] == inp and got["recommendations"][0]["title"] == "b"
 
 
+ADVICE_INP = {"yazar": "Deniz Yazar",
+              "satis": {"son12_adet": 1200.0, "onceki12_adet": 1600.0, "degisim_yuzde": -25.0, "veri_sonu": "2026-08-17"},
+              "sadakat": {"puan_100_uzerinden": 72, "bant": "düzenli", "birlikte_gecen_yil": 14.7, "yururlukte_sozlesme": 0,
+                          "toplam_sozlesme": 3},
+              "son_gorusme_gun_once": 120,
+              "son_notlar": [{"tarih": "2026-05-12", "not": "Yeni dosya 3 ay içinde gelecek."}]}
+
+
+def test_advice_numbers_must_come_from_the_input():
+    allowed = G.advice_numbers(ADVICE_INP)
+    assert {"1200", "1600", "25", "15", "147", "120", "3", "12", "100", "2026", "5"} <= allowed
+    out = G.guard_advice({"summary": "Son 12 ayda 1.200 adet, düşüş %25. Satış 3 kat artacak, 5.000 adete çıkar.",
+                          "recommendations": [{"title": "120 gündür görüşülmedi, arayın", "why": "Son görüşme 120 gün önce.",
+                                               "when": "bu hafta"},
+                                              {"title": "Hedef 9.999 adet", "why": "uydurma", "when": "bu ay"},
+                                              {"title": "Yeni dosyayı sorun", "why": "3 ay içinde gelecek. Yüzde 40 büyür.",
+                                               "when": "bu ay"}],
+                          "risks": ["Yürürlükte sözleşme yok.", "Satış 7.777 adede iner."]}, ADVICE_INP)
+    assert out["summary"] == "Son 12 ayda 1.200 adet, düşüş %25."               # olgu dışı sayılı cümle düştü
+    assert [r["title"] for r in out["recommendations"]] == ["120 gündür görüşülmedi, arayın", "Yeni dosyayı sorun"]
+    assert out["recommendations"][1]["why"] == "3 ay içinde gelecek."
+    assert out["risks"] == ["Yürürlükte sözleşme yok."]
+    g = out["guard"]
+    assert g["dropped"] == 4 and not g["ruleSummary"] and not g["ruleRecommendations"]
+    assert {d["neden"] for d in g["droppedSentences"]} == {"kaynaksiz-rakam"}
+
+
+def test_advice_falls_back_to_rule_text_when_nothing_survives(engine):
+    bad = '{"ozet": "Satış 9.999 adet olacak.", "oneriler": [{"baslik": "8.888 adet hedefleyin", "neden": "x"}]}'
+    a = G.make_advice(engine, T, "ayse", GUID, ADVICE_INP, lambda m: bad)
+    assert a["guard"]["ruleSummary"] and a["guard"]["ruleRecommendations"]
+    assert a["summary"].startswith("Son 12 ayda 1.200 adet net satış, önceki 12 ayda 1.600 adet (düşüş %25,0)")
+    titles = [r["title"] for r in a["recommendations"]]
+    assert titles == ["Satıştaki düşüşü yazarla konuşun", "Görüşme planlayın", "Sözleşme durumunu gözden geçirin"]
+    for text in [a["summary"]] + [r["why"] for r in a["recommendations"]]:
+        assert G.guard_advice({"summary": text, "recommendations": [{"title": "t"}], "risks": []},
+                              ADVICE_INP)["guard"]["dropped"] == 0      # kural metni de yalnız girdideki sayıyı taşır
+    assert G.latest_advice(engine, T, GUID)["guard"]["ruleSummary"] is True
+
+
 def test_advice_input_gives_years_not_score_parts():
     g = {"loyalty": G.loyalty({"ilk": "2012-01-10", "son": "2026-03-01", "eser": 7, "sozlesme": 3, "aktif": 1}, date(2026, 9, 28)),
          "sales": {}, "books": [], "readers": {}}

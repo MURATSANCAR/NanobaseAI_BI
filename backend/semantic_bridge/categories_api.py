@@ -372,7 +372,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = await run_in_threadpool(call, C.suggest_draft, engine, tenant, user, bool(body.get("replace")))
         d = out.get("draft") or {}
         audit(engine, user, "create", "category_tree", d.get("id"), f"Kategori ağacı taslağı v{d.get('version')}",
-              {"kaynak": "Zeki AI önerisi (veriden)", **(out.get("suggestion") or {})})
+              {"kaynak": f"{C.SUGGEST_LABEL} (kurala göre)", **(out.get("suggestion") or {})})
         return out
 
     @app.post("/api/v1/categories/tree/submit")

@@ -19,7 +19,7 @@ const ROWS: Array<{ key: keyof Metrics; label: string; hint: string; fmt: (v: nu
 
 function MetricsTable({ bt }: { bt: Backtest }) {
   const cols: Array<{ key: 'model' | 'naive' | 'emsal'; label: string }> = [
-    { key: 'model', label: 'ZEKİ AI emsal tahmini' },
+    { key: 'model', label: 'Emsal puanlı tahmin (kural)' },
     { key: 'emsal', label: 'Yalnız CRM emsalleri' },
     { key: 'naive', label: 'Son 12 ayın ortancası' },
   ];

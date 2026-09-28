@@ -797,6 +797,19 @@ class Service:
                           "depot": (c["actual"].get("depo") or {}).get("day"), "depotPlanned": c["plan"].get("depo")})
         return {"book": bid, "items": items}
 
+    # ---- Kampüs: matbaadan yeni çıkanlar
+    def new_prints(self, engine: Any, tenant: str, now: Optional[date] = None) -> dict[str, Any]:
+        """Kampüs açılışını bekletmez: son okuma yoksa boş döner (`ready: false`), okuma arka planda başlar."""
+        now = now or today()
+        days = self.settings()["newPrintsDays"]
+        snap = self.source.peek()
+        if snap is None:
+            return {"items": [], "days": days, "ready": False, "asOf": None}
+        entries, _ = store.load(engine, tenant)
+        cards = build_cards(snap, entries, settings=self.settings(), now=now)
+        return {"items": new_prints(cards, now, days), "days": days, "ready": True,
+                "asOf": datetime.fromtimestamp(snap["at"], TZ).isoformat(timespec="seconds")}
+
 
 def _due_within(c: dict[str, Any], now: date, days: int) -> bool:
     for k in KEYS:
@@ -931,7 +944,31 @@ def settings_from(conf: Callable[..., str]) -> dict[str, Any]:
     hist = parse_day(conf("PRODUCTION_HISTORY_FROM", "") or "") or date(now.year - 2, 1, 1)
     return {"filesDay": num("PRODUCTION_FILES_DAY", 15, 1, 28), "monthsBefore": num("PRODUCTION_FILES_MONTHS_BEFORE", 1, 0, 6),
             "escalateDays": num("PRODUCTION_ESCALATE_DAYS", 7, 1, 90), "staleDays": num("PRODUCTION_STALE_DAYS", 180, 30, 3650),
+            "newPrintsDays": num("PRODUCTION_NEW_PRINTS_DAYS", 30, 1, 365),
             "historyFrom": hist.isoformat()}
+
+
+def new_prints(cards: list[dict[str, Any]], now: date, days: int) -> list[dict[str, Any]]:
+    """Kampüs «Matbaadan yeni çıkanlar»: son `days` günde baskısı gerçekleşen kitap kartları, yeniden eskiye.
+
+    Gün = gerçekleşen baskı (Logo giriş fişi > CRM > portal kaydı; `actual`), yoksa gerçekleşen depo girişi. Planlanan
+    tarih sayılmaz; iptal kartı ve kitap dışı ürün (promosyon, set, katalog) girmez. Sayı tavanı yok: pencere ayardadır
+    (`PRODUCTION_NEW_PRINTS_DAYS`, varsayılan 30)."""
+    since = now - timedelta(days=days)
+    out = []
+    for c in cards:
+        if c.get("kindCode") != KIND_BOOK or c.get("stage") == "iptal":
+            continue
+        act = c.get("actual") or {}
+        day = parse_day((act.get("baski") or {}).get("day") or (act.get("depo") or {}).get("day"))
+        if not day or day < since or day > now:
+            continue
+        out.append({"cardId": c.get("id"), "bookId": c.get("bookId"), "title": c.get("bookTitle") or c.get("name"),
+                    "printNo": c.get("printNo"), "firstPrint": bool(c.get("firstPrint")), "day": day.isoformat(),
+                    "depot": (act.get("depo") or {}).get("day")})
+    out.sort(key=lambda x: _fold(x["title"]))
+    out.sort(key=lambda x: x["day"], reverse=True)
+    return out
 
 
 # ------------------------------------------------------------------------------------------ uçlar
@@ -1068,5 +1105,11 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         """M29 İlk dağılım ve M16 için kitabın baskı çıkış tarihleri (baskı başına plan + gerçekleşen)."""
         engine, tenant, _, _ = ctx(request)
         return call(svc.print_exit, engine, tenant, book, fresh())
+
+    @app.get(f"{P}/new-prints")
+    def production_new_prints(request: Request) -> dict[str, Any]:
+        """Kampüs «Matbaadan yeni çıkanlar» (oturum yeter): kitap adı, baskı no ve gün; adet ve maliyet yok."""
+        engine, tenant, _, _ = ctx(request)
+        return call(svc.new_prints, engine, tenant)
 
     return svc

@@ -184,6 +184,8 @@ def test_suggest_draft_from_data(engine, monkeypatch):
     assert "Timaş Yayınları > Yetişkin > Tasavvuf" in names
     assert not any("Genç" in p for p in names)
     assert st["suggestion"]["skipped"]["az"] == 1 and st["suggestion"]["placed"] == 5
+    # Model kullanmayan taslak «Zeki AI» adını taşımaz (2026-09-28 AI fırsatları, hemen-düzelt 3).
+    assert st["draft"]["note"].startswith("Veriden taslak (kurala göre)") and "Zeki" not in st["draft"]["note"]
     with pytest.raises(C.CategoryError, match="üzerine yazmak"):
         C.suggest_draft(engine, T, "ayse")
 

@@ -39,7 +39,7 @@ function Explain({ b }: { b: BookTarget }) {
   if (o.fiyat !== undefined) rows.push(['Fiyat artışı', fmtPct(Number(o.fiyat))]);
   if (o.birimFiyat !== undefined) rows.push(['Net birim fiyat', fmtMoney(Number(o.birimFiyat))]);
   if (o.marjKaynak) rows.push(['Marj kaynağı', String(o.marjKaynak)]);
-  if (o.adet !== undefined) rows.push(['ZEKİ AI önerisi', `${fmtInt(Number(o.adet))} adet · ${fmtMoney(Number(o.ciro))} · marj ${fmtPct(o.marj === null ? null : Number(o.marj))}`]);
+  if (o.adet !== undefined) rows.push(['Veriden hesaplanan öneri', `${fmtInt(Number(o.adet))} adet · ${fmtMoney(Number(o.ciro))} · marj ${fmtPct(o.marj === null ? null : Number(o.marj))}`]);
   return (
     <dl className="grid grid-cols-[minmax(120px,40%)_1fr] gap-x-3 gap-y-1.5 text-[12.5px]">
       {rows.map(([k, v]) => (

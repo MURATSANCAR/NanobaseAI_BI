@@ -212,4 +212,13 @@ export const productionApi = {
   printers: () => send<PrintersReport>('GET', `${P}/printers`, undefined, 180_000),
   calendar: (publication: string) => send<CalendarPlan>('GET', `${P}/calendar${qs({ publication })}`, undefined, 180_000),
   printExit: (book: string) => send<PrintExit>('GET', `${P}/print-exit${qs({ book })}`, undefined, 180_000),
+  newPrints: () => send<NewPrints>('GET', `${P}/new-prints`, undefined, 30_000),
+};
+
+/** Kampüs «Matbaadan yeni çıkanlar»: son `days` günde baskısı gerçekleşen kitaplar (yeniden eskiye). */
+export type NewPrints = {
+  items: Array<{ cardId: string; bookId: string | null; title: string | null; printNo: number | null; firstPrint: boolean; day: string; depot: string | null }>;
+  days: number;
+  ready: boolean;
+  asOf: string | null;
 };

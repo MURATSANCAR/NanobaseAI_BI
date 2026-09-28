@@ -630,7 +630,7 @@ def open_draft(engine: sa.engine.Engine, tenant: str, actor: str) -> dict[str, A
         raise CategoryError("Zaten bir taslak var.", 409)
     base = in_force(engine, tenant)
     if not base:
-        raise CategoryError("Yürürlükte ağaç yok; «Zeki AI önerisi» ile ya da boş taslakla başlayın.", 404)
+        raise CategoryError("Yürürlükte ağaç yok; «Veriden taslak» ile ya da boş taslakla başlayın.", 404)
     return save_draft(engine, tenant, actor, {"nodes": nodes_of(engine, base["id"]), "mappings": mappings_of(engine, base["id"]),
                                               "note": None})
 
@@ -757,6 +757,10 @@ def node_counts(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, An
     return out
 
 
+#: «Veriden taslak ağaç»ın ekrandaki ve kayıttaki adı. Model kullanmaz; «Zeki AI» adını taşımaz.
+SUGGEST_LABEL = "Veriden taslak"
+
+
 def suggest_draft(engine: sa.engine.Engine, tenant: str, actor: str, replace: bool = False) -> dict[str, Any]:
     """Veriden taslak ağaç (model yok): marka → hedef kitle → Kitaplık (yoksa web alt kategorisi) → web alt kategorisi.
     Bir düğüm en az `CATEGORY_TREE_MIN_BOOKS` aktif kitapla açılır (eşik ekranda; kesme değil, gürültü süzgeci:
@@ -851,7 +855,8 @@ def suggest_draft(engine: sa.engine.Engine, tenant: str, actor: str, replace: bo
                     maps.append({"nodeId": s_id, "system": "crm_webkategori", "externalId": sub, "externalName": sub, "source": "oneri"})
     if not nodes:
         raise CategoryError("Veriden ağaç kurulamadı: eşiği geçen kitap grubu yok.", 409)
-    note = (f"Zeki AI önerisi (veriden): {len(books)} aktif kitabın {placed}'i yerleşti; marka boş {skipped['marka']}, "
+    # Model yok: ad «veriden taslak»; «Zeki AI» adı yalnız modelin çalıştığı yerde (profil önerisi) kullanılır.
+    note = (f"{SUGGEST_LABEL} (kurala göre): {len(books)} aktif kitabın {placed}'i yerleşti; marka boş {skipped['marka']}, "
             f"hedef kitle boş {skipped['hedef']}, Kitaplık ve web kategorisi boş {skipped['alt']}, "
             f"{min_books} kitaptan az gruplarda {skipped['az']} kitap — bunlar profil önerisiyle yerleşir.")
     body = {"nodes": nodes, "mappings": maps, "note": note}

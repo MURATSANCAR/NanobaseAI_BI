@@ -6808,6 +6808,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     # Bağlantı denemeleri: hepsi kaydedilmiş ayarla gerçek bağlantıyı kurar, sonucu değişiklik
     # kaydına yazar. Ayrı uçlar, çünkü her biri kendi süresini alır ve ekranda ayrı beklenir.
+    def _llm_gate_for_test(base: str, model: str, key: str, timeout: float) -> Any:
+        """Model denemesi de LLM kapısından geçer (sıra + slot). Kayıtlı ayar çalışan istemciyle aynıysa onun «yonetim»
+        görünümü; değilse (model hiç kurulmamış ya da ayar henüz uygulanmamış) aynı sıraya bağlı geçici sarmalayıcı —
+        `_apply_settings`'in kurduğu istemciyle aynı yol, sıranın dışına çıkan çağrı yok."""
+        r = rt()
+        s = r.settings
+        same = (base.rstrip("/"), model, key) == ((s.llm_base or "").rstrip("/"), s.llm_model, s.llm_key)
+        if r.llm is not None and same:
+            return r.llm_for("yonetim", priority=0)
+        client = LlmClient(base, model, key, timeout, extra=s.llm_extra)
+        return QueuedLlm(client, r.queue, purpose="yonetim", tenant_id=s.tenant_id, datasource_id=s.datasource_id,
+                         module="yonetim", priority=0)
+
+    admin_mod.set_llm_gate(_llm_gate_for_test)
+
     _CHECK_TITLE = {"database": "Logo veritabanı denemesi", "crm": "CRM denemesi", "llm": "Model denemesi",
                     "directory": "Active Directory denemesi", "email": "E-posta ayarı denemesi",
                     "store": "Meta veritabanı denemesi"}

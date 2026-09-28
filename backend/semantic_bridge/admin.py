@@ -14,13 +14,14 @@ import hashlib
 import json
 import logging
 import os
+import re
 import smtplib
 import ssl
 import threading
 import time
 from datetime import datetime, timezone
 from email.message import EmailMessage
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import sqlalchemy as sa
 
@@ -2059,23 +2060,39 @@ def crm_test() -> tuple[bool, str]:
                 pass
 
 
+#: Model denemesinin LLM kapısı: app.py bağlar (`set_llm_gate`). İmza: fn(base, model, key, timeout) → kapıdan geçen
+#: istemci (`QueuedLlm`; `chat`, `last_wait_ms`) ya da None. Deneme de öteki modüllerle aynı sıradan ve slottan geçer:
+#: `LlmClient` burada doğrudan kurulmaz (docs/LLM-KAPISI.md).
+_llm_gate: Optional[Callable[[str, str, str, float], Any]] = None
+
+
+def set_llm_gate(fn: Optional[Callable[[str, str, str, float], Any]]) -> None:
+    global _llm_gate
+    _llm_gate = fn
+
+
 def llm_test() -> tuple[bool, str]:
-    """Modele tek kelimelik bir soru sorar. Cevabın içeriği değil, geldiği önemli."""
+    """Modele tek kelimelik bir soru sorar; cevabın içeriği değil, geldiği önemli. Kaydedilmiş ayarla, LLM kapısından
+    (sıra + slot) gider; sırada beklenen süre ayrıca yazılır."""
     base, model, key = conf("OPENAI_API_BASE"), conf("LLM_MODEL_NAME"), conf("OPENAI_API_KEY")
     if not base or not model:
         return False, "Model adresi ya da model adı girilmemiş."
+    if _llm_gate is None:
+        return False, "Model kapısı bu süreçte bağlı değil; deneme yapılamadı."
     timeout = float(os.environ.get("ADMIN_LLM_TEST_TIMEOUT", "60"))
     t0 = time.monotonic()
     try:
-        from semantic_layer.candidates.llm_client import LlmClient
-
-        client = LlmClient(base, model, key, timeout, extra={"chat_template_kwargs": {"enable_thinking": False}})
-        out = client.chat([{"role": "user", "content": "Yalnızca TAMAM yaz."}], max_tokens=8)
+        llm = _llm_gate(base, model, key, timeout)
+        if llm is None:
+            return False, "Model kapısı bu ayarla istemci kuramadı."
+        out = llm.chat([{"role": "user", "content": "Yalnızca TAMAM yaz."}], max_tokens=8)
         ms = int((time.monotonic() - t0) * 1000)
-        text = " ".join((out or "").split())[:60]
+        wait = int(getattr(llm, "last_wait_ms", 0) or 0)
+        queued = f"; {wait} ms sırada bekledi" if wait else ""
+        text = " ".join(re.sub(r"<think>.*?</think>", "", out or "", flags=re.S).split())[:60]
         if not text:
-            return False, f"Model bağlandı ({ms} ms) ama boş cevap verdi."
-        return True, f"Cevap geldi ({ms} ms). {LLM_DISPLAY} → «{text}»"
+            return False, f"Model bağlandı ({ms} ms{queued}) ama boş cevap verdi."
+        return True, f"Cevap geldi ({ms} ms{queued}). {LLM_DISPLAY} → «{text}»"
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"[:400]
 

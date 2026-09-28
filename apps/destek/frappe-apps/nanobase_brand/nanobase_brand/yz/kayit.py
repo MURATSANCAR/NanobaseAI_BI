@@ -5,6 +5,11 @@ Kurallar:
 - Sınıflama yalnız boş alanı doldurur; temsilcinin ya da müşterinin seçtiği değer ezilmez. Öncelik yalnız
   varsayılan değerdeyse değişir. Önerilen değer sistemde tanımlı değilse yazılmaz.
 - Kaydın içeriği modele kapıdan gider; model kendi GPU'muzda, veri dışarı çıkmaz.
+- Modele giden her metin (konu, ilk mesaj, yazışma, iç not, bilgi bankası parçası, benzer kayıtların çözümü, arama
+  sorgusu) önce maskelenir (`maske.py`, KVKK): e-posta, telefon, IBAN, kart, kimlik no, adres, ad ve imza kalıpları ile
+  kaydın bilinen kişi adları yer tutucuya döner. Temsilcinin ekranına dönen metinde yer tutucular gerçek değerle
+  doldurulur; bilgi bankası makalesinde numarasız yer tutucu kalır. Temsilci adı modele gitmez, taslağın altına sonra
+  eklenir.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from frappe.core.utils import html2text
 from frappe.utils import escape_html, now_datetime, strip_html
 
 from nanobase_brand.yz import bilgi, llm
+from nanobase_brand.yz.maske import Maske
 
 DUYGULAR = ("Olumlu", "Nötr", "Olumsuz", "Öfkeli")
 ACIK_DURUMLAR = ("Open", "Replied", "Paused")
@@ -59,6 +65,28 @@ def _conversation(ticket: str, limit_chars: int = MAX_METIN) -> str:
 	return text[-limit_chars:]
 
 
+def _maske(doc) -> Maske:
+	"""Kayda özgü maske: kalıplara ek olarak kaydın ilgili kişisinin ve yazışmadaki gönderenlerin adı."""
+	names: list[str] = []
+	contact = doc.get("contact")
+	if contact:
+		try:
+			row = frappe.db.get_value("Contact", contact, ["first_name", "middle_name", "last_name"], as_dict=True) or {}
+		except Exception:
+			row = {}
+		parts = [row.get("first_name"), row.get("middle_name"), row.get("last_name")]
+		names.append(" ".join(p for p in parts if p))
+		names.extend(p for p in parts if p)
+	for sender in frappe.get_all(
+		"Communication", filters={"reference_doctype": "HD Ticket", "reference_name": doc.name},
+		pluck="sender_full_name", distinct=True,
+	):
+		if sender and "@" not in sender:
+			names.append(sender)
+			names.extend(sender.split())
+	return Maske(names)
+
+
 def _options(doctype: str, field: str = "name", filters: dict | None = None) -> list[str]:
 	return frappe.get_all(doctype, filters=filters or {}, pluck=field, order_by="name asc")
 
@@ -76,7 +104,8 @@ def classify(ticket: str) -> dict:
 	types = _options("HD Ticket Type")
 	priorities = _options("HD Ticket Priority")
 	teams = _options("HD Team")
-	text = f"Konu: {doc.subject}\n\n{_text(doc.description, 6000)}"
+	m = _maske(doc)
+	text = m(f"Konu: {doc.subject}\n\n{_text(doc.description, 6000)}")
 	prompt = (
 		"Aşağıdaki destek kaydını sınıflandır. Yalnız listelerdeki değerlerden seç; uygun değer yoksa null yaz.\n"
 		f"Türler: {types}\nÖncelikler: {priorities}\nEkipler: {teams}\n"
@@ -104,7 +133,7 @@ def classify(ticket: str) -> dict:
 		doc.priority = applied["priority"] = out["priority"]
 	duygu = out.get("duygu") if out.get("duygu") in DUYGULAR else None
 	doc.nb_duygu = duygu
-	doc.nb_yz_not = str(out.get("gerekce") or "")[:500]
+	doc.nb_yz_not = m.geri(str(out.get("gerekce") or ""))[:500]
 	doc.flags.ignore_permissions = True
 	try:
 		# Tam kayıt: ekip değişince ekibin atama kuralı da çalışsın.
@@ -146,7 +175,8 @@ def panel(ticket: str) -> dict:
 @frappe.whitelist()
 def summarize(ticket: str) -> dict:
 	doc = _check(ticket)
-	conv = _conversation(ticket)
+	m = _maske(doc)
+	conv = m(_conversation(ticket))
 	replies = conv.count("[Temsilci]")
 	prompt = (
 		"Bu destek kaydını devralacak temsilci için en çok 3 satırlık Türkçe özet yaz:\n"
@@ -154,13 +184,14 @@ def summarize(ticket: str) -> dict:
 		"Her satır tek cümle. Başlık ya da giriş cümlesi yazma.\n"
 		f"Temsilci yanıtı sayısı: {replies}. Yalnız yazışmada geçen işlemi yaz; "
 		"temsilci yanıtı yoksa 2. satır «Henüz yanıt verilmedi.» olsun, yapılmamış işlemi yapılmış gibi yazma.\n\n"
-		f"Konu: {doc.subject}\nİlk mesaj: {_text(doc.description, 3000)}\n\nYazışma:\n{conv or '(yok)'}"
+		f"Konu: {m(doc.subject)}\nİlk mesaj: {m(_text(doc.description, 3000))}\n\nYazışma:\n{conv or '(yok)'}"
 	)
 	try:
 		text = llm.chat([{"role": "system", "content": KIMLIK}, {"role": "user", "content": prompt}],
 						max_tokens=400, temperature=0.1)
 	except llm.ModelUnavailable:
 		frappe.throw(_("The assistant is unavailable right now. Please try again shortly."))
+	text = m.geri(text)
 	frappe.db.set_value("HD Ticket", ticket, {"nb_yz_ozet": text[:2000], "nb_yz_ozet_zamani": now_datetime()},
 						update_modified=False)
 	return {"ozet": text, "ozet_zamani": str(now_datetime())}
@@ -171,11 +202,13 @@ def summarize(ticket: str) -> dict:
 @frappe.whitelist()
 def draft_reply(ticket: str) -> dict:
 	doc = _check(ticket, "write")
-	conv = _conversation(ticket, 8000)
-	last = conv.rsplit("[Müşteri]", 1)[-1] if "[Müşteri]" in conv else _text(doc.description, 3000)
-	hits = bilgi.search(f"{doc.subject}\n{last[:1500]}", limit=5)
+	m = _maske(doc)
+	conv = m(_conversation(ticket, 8000))
+	last = conv.rsplit("[Müşteri]", 1)[-1] if "[Müşteri]" in conv else m(_text(doc.description, 3000))
+	# Arama sorgusu da gömme modeline gider: maskeli metinle aranır.
+	hits = bilgi.search(f"{m(doc.subject)}\n{last[:1500]}", limit=5)
 	facts = "\n\n".join(
-		f"[{i + 1}] ({h.get('reference_doctype') or 'belge'} {h.get('reference_name') or ''})\n{h['content'][:1500]}"
+		f"[{i + 1}] ({h.get('reference_doctype') or 'belge'} {h.get('reference_name') or ''})\n{m(h['content'][:1500])}"
 		for i, h in enumerate(hits)
 	)
 	agent = frappe.db.get_value("User", frappe.session.user, "first_name") or ""
@@ -185,9 +218,10 @@ def draft_reply(ticket: str) -> dict:
 		"- Yalnız aşağıdaki bilgi bankası parçalarına ve yazışmaya dayan; bilgi yoksa uydurma, "
 		"netleştirmek için soru sor ya da ekibin inceleyeceğini söyle.\n"
 		"- Tarih, fiyat, iade/garanti sözü verme; bilgi bankasında açıkça yoksa yazma.\n"
-		"- Selamlama ile başla, imza olarak yalnız temsilcinin adını yaz.\n"
+		"- Köşeli parantezli yer tutucuları ([ad 1], [e-posta 1] gibi) gerekiyorsa aynen yaz, değiştirme.\n"
+		"- Selamlama ile başla; imza satırı yazma (temsilci ekler).\n"
 		"- Düz metin; paragraflar arasında boş satır.\n\n"
-		f"Temsilci adı: {agent}\nKonu: {doc.subject}\n\nYazışma:\n{conv or _text(doc.description)}\n\n"
+		f"Konu: {m(doc.subject)}\n\nYazışma:\n{conv or m(_text(doc.description))}\n\n"
 		f"Bilgi bankası:\n{facts or '(ilgili parça bulunamadı)'}"
 	)
 	try:
@@ -195,6 +229,9 @@ def draft_reply(ticket: str) -> dict:
 						max_tokens=700, temperature=0.3)
 	except llm.ModelUnavailable:
 		frappe.throw(_("The assistant is unavailable right now. Please try again shortly."))
+	text = m.geri(text).rstrip()
+	if agent:
+		text = f"{text}\n\n{agent}"
 	html = "".join(f"<p>{escape_html(p.strip()).replace(chr(10), '<br>')}</p>"
 				   for p in text.split("\n\n") if p.strip())
 	sources = []
@@ -217,28 +254,31 @@ def article_draft(ticket: str) -> dict:
 		frappe.throw(_("An article draft can be made from a resolved ticket."))
 	if not frappe.has_permission("HD Article", "create"):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
-	conv = _conversation(ticket)
+	m = _maske(doc)
+	conv = m(_conversation(ticket))
 	prompt = (
 		"Bu çözülmüş destek kaydından, başka müşterilerin de kullanabileceği bir bilgi bankası makalesi taslağı yaz.\n"
-		"- Kişisel veri yazma: müşteri adı, e-posta, telefon, sipariş/fatura numarası çıkar.\n"
+		"- Kişisel veri yazma: müşteri adı, e-posta, telefon, sipariş/fatura numarası çıkar; köşeli parantezli yer "
+		"tutucuları ([ad 1] gibi) makaleye koyma.\n"
 		"- Başlık soru ya da sorun cümlesi olsun; gövde: Sorun, Çözüm (adım adım), Not.\n"
 		"- Türkçe. Yalnız kayıtta geçen çözümü yaz, uydurma.\n"
 		'Yalnız şu JSON\'u döndür: {"title": "...", "html": "<h3>Sorun</h3><p>..</p><h3>Çözüm</h3><ol><li>..</li></ol>"}\n\n'
-		f"Konu: {doc.subject}\nÇözüm notu: {_text(doc.get('resolution_details'), 3000) or '(yok)'}\n\nYazışma:\n{conv}"
+		f"Konu: {m(doc.subject)}\nÇözüm notu: {m(_text(doc.get('resolution_details'), 3000)) or '(yok)'}\n\nYazışma:\n{conv}"
 	)
 	try:
 		out = llm.chat_json([{"role": "system", "content": KIMLIK}, {"role": "user", "content": prompt}],
 							max_tokens=1200, temperature=0.2)
 	except (llm.ModelUnavailable, ValueError):
 		frappe.throw(_("The assistant is unavailable right now. Please try again shortly."))
-	title = strip_html(str(out.get("title") or doc.subject))[:120]
+	# Makale başka müşterilere açılabilir: yer tutucular geri doldurulmaz, numarasız kalır.
+	title = strip_html(Maske.genel(str(out.get("title") or "") or m(doc.subject)))[:120]
 	category = frappe.get_all("HD Article Category", filters={"category_name": "General"}, pluck="name",
 							  order_by="creation asc", limit=1)
 	article = frappe.get_doc({
 		"doctype": "HD Article",
 		"title": title,
 		"nb_kaynak_kayit": ticket,
-		"content": str(out.get("html") or ""),
+		"content": Maske.genel(str(out.get("html") or "")),
 		"status": "Draft",
 		"author": frappe.session.user,
 		"category": category[0] if category else None,
@@ -269,7 +309,7 @@ def _applied(ticket: str, limit_chars: int = 2500) -> str:
 
 def _candidates(doc, limit: int) -> tuple[list[str], str]:
 	"""Anlamca en yakın çözülmüş kayıtlar; bilgi bankası boşsa aynı türdeki son çözülenler."""
-	query = f"{doc.subject}\n{_text(doc.description, 1500)}"
+	query = _maske(doc)(f"{doc.subject}\n{_text(doc.description, 1500)}")   # sorgu gömme modeline gider
 	names: list[str] = []
 	for hit in bilgi.search(query, limit=limit * 3):
 		name = hit.get("reference_name")
@@ -297,7 +337,8 @@ def similar(ticket: str, limit: int = 5) -> dict:
 	if not rows:
 		return {"kayitlar": [], "oneri": "", "yontem": how}
 
-	listing = "\n\n".join(f"KAYIT #{r['name']} — {r['subject']}\n{r['yapilan'] or '(çözüm kaydı yok)'}" for r in rows)
+	m = _maske(doc)
+	listing = "\n\n".join(f"KAYIT #{r['name']} — {m(r['subject'])}\n{m(r['yapilan']) or '(çözüm kaydı yok)'}" for r in rows)
 	prompt = (
 		"Yeni bir destek kaydını çözecek temsilciye, geçmişteki benzer kayıtlarda ne yapıldığını anlat.\n"
 		"- Önce eleme: geçmiş kayıtlardan yeni kayıtla GERÇEKTEN aynı ya da çok yakın sorunu olanları seç; "
@@ -307,7 +348,7 @@ def similar(ticket: str, limit: int = 5) -> dict:
 		"ilgili kayıt yoksa öneri listesini boş bırak.\n"
 		"- Türkçe. Yalnız şu JSON'u döndür: "
 		'{"ilgili": {"<kayıt no>": "uygulanan çözüm"}, "oneri": ["...", "..."]}\n\n'
-		f"YENİ KAYIT: {doc.subject}\n{_text(doc.description, 1500)}\n\nGEÇMİŞ KAYITLAR:\n{listing}"
+		f"YENİ KAYIT: {m(doc.subject)}\n{m(_text(doc.description, 1500))}\n\nGEÇMİŞ KAYITLAR:\n{listing}"
 	)
 	try:
 		out = llm.chat_json([{"role": "system", "content": KIMLIK}, {"role": "user", "content": prompt}],
@@ -319,8 +360,8 @@ def similar(ticket: str, limit: int = 5) -> dict:
 		applied = {str(r["name"]): _text(r["yapilan"], 300) or "Çözüm kaydı yok" for r in rows}
 		advice = []
 	else:
-		applied = {str(k).lstrip("#"): str(v) for k, v in (out.get("ilgili") or {}).items()}
-		advice = [str(x) for x in (out.get("oneri") or []) if str(x).strip()][:3] if applied else []
+		applied = {str(k).lstrip("#"): m.geri(str(v)) for k, v in (out.get("ilgili") or {}).items()}
+		advice = [m.geri(str(x)) for x in (out.get("oneri") or []) if str(x).strip()][:3] if applied else []
 		rows = [r for r in rows if str(r["name"]) in applied]
 	return {
 		"yontem": how,

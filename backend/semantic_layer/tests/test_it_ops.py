@@ -152,6 +152,27 @@ def test_postmortem_is_published_only_after_close(engine):
     assert "uydurma" in msgs[0]["content"] and "Süre: 9 dk" in msgs[1]["content"]
 
 
+def test_postmortem_draft_numbers_must_come_from_the_incident(engine):
+    for m in (0, 5):
+        tour(engine, [{"ring": "eposta", "ok": False}], T0 + timedelta(minutes=m))
+    tour(engine, [{"ring": "eposta", "ok": True}], T0 + timedelta(minutes=9))
+    inc = I.get_incident(engine, TENANT, I.list_incidents(engine, TENANT, state="closed")["items"][0]["id"])
+    facts = "\n".join(I.draft_facts(inc))
+    day = re.search(r"Başlangıç: (\d\d)\.(\d\d)\.(\d{4}) (\d\d):(\d\d)", facts)
+    assert day
+    good = (f"Ne oldu:\nE-posta halkası {int(day.group(1))} Eylül {day.group(3)} saat {day.group(4)}:{day.group(5)}'de düştü.\n"
+            "Süre:\n9 dk. Başarısız deneme sayısı 2.\nOlası neden:\nvLLM değil, posta sunucusu.")
+    text, src, bad = I.guard_draft(good, inc)
+    assert src == "zeki" and bad == [] and "vLLM" not in text and "Zeki AI modeli" in text   # teknoloji adı sadeleşir
+    text, src, bad = I.guard_draft("Ne oldu:\nKesinti 45 dakika sürdü, 300 kullanıcı etkilendi.", inc)
+    assert src == "kural" and bad == ["300", "45"]
+    assert text == I.rule_draft(inc) and "Süre:\n9 dk." in text and "başarısız deneme sayısı 2" in text
+    assert I.foreign_numbers(text, I.draft_facts(inc)) == []          # kural taslağı da yalnız olgudaki sayıyı taşır
+    assert I.guard_draft("  ", inc)[1] == "kural"
+    long = dict(inc, minutes=65)
+    assert "Süre (dakika): 65" in I.draft_facts(long) and I.foreign_numbers("65 dakika sürdü", I.draft_facts(long)) == []
+
+
 # ------------------------------------------------------------------ alıcılar, metin, sürüm
 
 

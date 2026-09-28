@@ -13,6 +13,7 @@ from datetime import date, datetime
 
 import pytest
 
+from semantic_bridge import access as A
 from semantic_bridge import production as P
 from semantic_bridge import production_plan as PL
 from semantic_bridge import production_store as S
@@ -281,7 +282,36 @@ def test_sql_shapes():
         P.logo_receipts_sql("411", "1;", date(2024, 1, 1))
 
 
+def test_new_prints_for_campus_are_real_recent_book_prints():
+    now = date(2026, 9, 28)
+
+    def card(cid, title, *, kind=P.KIND_BOOK, stage="tamam", first=True, no=1, **act):
+        return {"id": cid, "bookId": "b" + cid, "bookTitle": title, "name": title, "kindCode": kind, "stage": stage,
+                "firstPrint": first, "printNo": no, "actual": {k: {"day": v, "source": "logo"} for k, v in act.items()},
+                "plan": {"baski": "2026-09-27"}}
+
+    cards = [
+        card("1", "Birinci", baski="2026-09-20", depo="2026-09-22"),
+        card("2", "İkinci", first=False, no=3, depo="2026-09-25"),            # baskı kaydı yok: depo girişi sayılır
+        card("3", "Eski", baski="2026-07-01"),                                 # pencere dışı
+        card("4", "Promosyon", kind=100000005, baski="2026-09-21"),            # kitap değil
+        card("5", "İptal", stage="iptal", baski="2026-09-21"),
+        card("6", "Planlı"),                                                   # yalnız plan: gerçekleşmemiş
+        card("7", "Aynı gün", baski="2026-09-20"),
+        card("8", "Gelecek", baski="2026-10-02"),                              # ileri tarihli kayıt sayılmaz
+    ]
+    out = P.new_prints(cards, now, 30)
+    assert [x["title"] for x in out] == ["İkinci", "Aynı gün", "Birinci"]
+    assert out[0] == {"cardId": "2", "bookId": "b2", "title": "İkinci", "printNo": 3, "firstPrint": False,
+                      "day": "2026-09-25", "depot": "2026-09-25"}
+    assert [x["title"] for x in P.new_prints(cards, now, 5)] == ["İkinci"]
+    assert all("qty" not in x for x in out)                                 # herkese açık uç: adet/maliyet yok
+    assert A.rule_for("/api/v1/editorial/production/new-prints") == A.OPEN
+    assert A.rule_for("/api/v1/editorial/production/cards") != A.OPEN
+
+
 def test_settings_defaults_and_bounds():
     s = P.settings_from(lambda k, d="": {"PRODUCTION_FILES_DAY": "40", "PRODUCTION_ESCALATE_DAYS": "abc"}.get(k, d))
     assert s["filesDay"] == 28 and s["escalateDays"] == 7 and s["monthsBefore"] == 1 and s["staleDays"] == 180
+    assert s["newPrintsDays"] == 30
     assert s["historyFrom"] == date(P.today().year - 2, 1, 1).isoformat()

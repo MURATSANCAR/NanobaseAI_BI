@@ -18,6 +18,34 @@
 
 - **Sorun (kullanıcı):** sınama tuşları «yok ya da çalışmıyor». Sebep: istek hata verirse ekranda hiçbir şey çıkmıyordu (yalnız başarılı cevap gösteriliyordu); kaydedilmemiş değişiklik varken tuş açıklamasız kapalıydı; GEO grubunda tuş yoktu; SEO denemesi yalnız T-soft + Search Console'a bakıyordu.
 - **Düzeltme:** sonuç üstte «✓ Başarılı» (yeşil) ya da «✕ Hata» (kırmızı) + saat/süre; istek hatası da kırmızı yazılır. Değişiklik varken tuş «Kaydet ve sına» olur. `seo_geo/checks.py`: T-soft, Search Console, GA4, Google API anahtarı (CrUX), YouTube, Bing, IndexNow (site kökündeki anahtar dosyası), SerpAPI (hesap, arama harcamaz), Cloudflare (token + zone) satır satır; GEO: Gemini/ChatGPT/Claude model listesi (soru sormaz), Perplexity'de ücretsiz doğrulama olmadığından yalnız «girilmiş». Girilmeyen «Girilmemiş» (gri), grubun sonucu girilmiş olanların hepsi başarılıysa yeşil. Anahtar değeri hiçbir mesaja yazılmaz (test). `AdminCheck.parts`.
+## 2026-09-28 — Zeki AI hemen-düzelt 1–5 (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** `docs/analiz/ai-firsatlari/README.md` «Hemen düzeltilecekler» 1–5 (KVKK, «rakamı model üretmez», dürüst
+  etiket, demo içerik, tek LLM sırası). Mac'te yalnız `py_compile`; testler sunucuda koşulacak.
+- **1 Destek masası maskesi:** `yz/maske.py` + `kayit.py` (sınıflama, özet, yanıt taslağı, makale, benzer kayıtlar, arama
+  sorgusu) + `rapor.py` (konu başlıkları). Köprüdeki `support.mask_personal` kalıpları + adres/ad/imza + kaydın bilinen
+  kişi adları. Karar: temsilciye dönen metinde yer tutucular geri doldurulur (kaydı görme yetkisi zaten var); bilgi
+  bankası makalesinde doldurulmaz (başka müşteriye açılabilir). Tek kelimelik bilinen ad yalnız büyük harfle yazıldığı
+  yerde maskelenir («Deniz» ad, «deniz» kelime). Bilgi bankasının gömme eşitlemesi (çözülen kayıtların metni) masanın
+  kendi akış bileşeninde; ona dokunulmadı (açık kalan).
+- **2 Sayı denetimi:** destek haftalık yorumu olgularla (sayılar, önceki hafta açılan, tür/ekip/öncelik/duygu dağılımı)
+  yazılır, tek olgu dışı sayıda yorum atılıp «Kurala göre özet» konur (`yz/sayi.py`; konu listesi 300 tavanı kaldırıldı).
+  Yazar önerisi `guard_advice`: cümle düzeyi (yuvarlanmış olgu ve anahtar adındaki pencere — «son 12 ay» — izinli),
+  boşalan kısım kural metniyle, ekranda «n cümle çıkarıldı / kurala göre yazıldı». BT olay taslağı `guard_draft`:
+  olgu dışı sayı → kalıp taslak, ekranda uyarı; ≥ 60 dk olayda «Süre (dakika)» olgusu eklendi.
+- **3 Dürüst etiket:** kategori ağacı «Veriden taslak» (ikon ağaç), M46 «Veriden öneri»/«Veriden bütçe önerisi»/«Veriden
+  hesaplanan öneri» (tahmin motoru girdisi «ZEKİ AI satış tahmini» adıyla kalır), M10 «Emsal puanlı tahmin (kural)»,
+  M27 «Kurala göre öneri»; parıltı ikonları hesap makinesi oldu. Gerçek model kullanan yerlere (profil önerisi, etkinlik
+  tipi eşlemesi) dokunulmadı. 58 ekrandaki «ZEKİ AI bağlantısı bu derlemede tanımlı değil» notu (motor bağlantısı)
+  kapsam dışı bırakıldı.
+- **4 Kampüs:** iki uydurma kitap ve kapak görselleri kaldırıldı; bölüm M12 üretim kartlarının son 30 günde gerçekleşen
+  baskılarını gösterir, veri yoksa hiç görünmez. Uç Kampüs'ü bekletmez (M12 okuması yoksa boş + arka planda okuma).
+- **5 Kapı:** `admin.llm_test` artık `LlmClient` kurmaz; app.py'nin bağladığı kapıdan geçer.
+- **Sunucuda kalan:** pytest (`test_author_growth`, `test_it_ops`, `test_categories`, `test_production`,
+  `test_admin_llm_gate`, tam set), `python3 -m pytest apps/destek/frappe-apps/nanobase_brand/tests/test_yz_maske.py`,
+  vitest + tsc; destek masası imajının yeniden kurulumu; canlıda `new-prints` ucunun gerçek M12 verisiyle sayısı
+  (üretim ekranındaki «Tamamlanan» son 30 gün ile karşılaştırma); bir destek kaydında taslak/özetin maskeyle
+  anlamını koruduğunun elle denetimi.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 

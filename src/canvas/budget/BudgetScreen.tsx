@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Calculator, Download, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
@@ -144,8 +144,8 @@ export default function BudgetScreen() {
       <div className="flex flex-wrap gap-2">
         {me?.canEdit && (
           <button type="button" className={`${btnPrimary} flex-1`} onClick={() => setGen(true)} disabled={!data?.dataEnd}>
-            <Sparkles aria-hidden className="h-4 w-4" />
-            ZEKİ AI önerisi
+            <Calculator aria-hidden className="h-4 w-4" />
+            Veriden öneri
           </button>
         )}
         {plan && (
@@ -228,13 +228,13 @@ export default function BudgetScreen() {
         <section className="glass-panel flex flex-col items-start gap-2 rounded-3xl p-5 shadow-glass-float">
           <h2 className="text-lg font-extrabold">{year} için henüz plan yok</h2>
           <p className="max-w-[70ch] text-[12.5px] text-canvas-muted">
-            ZEKİ AI önerisi Logo gerçekleşmesinden (taban dönem), CRM kitap kartlarından ve baskı önerisinin satış tahmininden üç senaryolu bir taslak kurar:
+            Veriden öneri, Logo gerçekleşmesinden (taban dönem), CRM kitap kartlarından ve baskı önerisinin ZEKİ AI satış tahmininden kurala göre üç senaryolu bir taslak hesaplar:
             muhafazakâr, temel ve iyimser. Taslaklar düzenlenir, biri onaya gönderilir; onaylanınca yılın yürürlükteki planı olur.
           </p>
           {me?.canEdit ? (
             <button type="button" className={btnPrimary} onClick={() => setGen(true)} disabled={!data?.dataEnd}>
-              <Sparkles aria-hidden className="h-4 w-4" />
-              ZEKİ AI önerisi oluştur
+              <Calculator aria-hidden className="h-4 w-4" />
+              Veriden öneri oluştur
             </button>
           ) : (
             <Note tone="info">Taslak hazırlama yetkisi olan biri öneriyi oluşturabilir.</Note>

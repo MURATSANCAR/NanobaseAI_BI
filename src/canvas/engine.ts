@@ -1622,6 +1622,8 @@ export type AuthorAdvice = {
   createdBy: string;
   createdAt: string;
   input?: Record<string, unknown>;
+  /** Sayı denetimi: olgularla tutmayan cümle sayısı; boşalan özet/öneri yerine kural metni konduysa işaret. */
+  guard?: { dropped: number; ruleSummary: boolean; ruleRecommendations: boolean };
 };
 export type AuthorHeatmap = {
   months: string[];

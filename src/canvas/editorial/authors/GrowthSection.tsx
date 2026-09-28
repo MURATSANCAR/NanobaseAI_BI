@@ -288,6 +288,18 @@ function Loyalty({ g }: { g: AuthorGrowth }) {
   );
 }
 
+/** Sayı denetiminin izi: modelin metnindeki her sayı girdideki olgularla karşılaştırılır. */
+function guardNote(a: AuthorAdvice): string {
+  const g = a.guard;
+  if (!g) return '';
+  const parts: string[] = [];
+  if (g.dropped > 0) parts.push(`sayısı olgularla tutmayan ${g.dropped} cümle çıkarıldı`);
+  if (g.ruleSummary && g.ruleRecommendations) parts.push('özet ve öneriler kurala göre yazıldı');
+  else if (g.ruleSummary) parts.push('özet kurala göre yazıldı');
+  else if (g.ruleRecommendations) parts.push('öneriler kurala göre yazıldı');
+  return parts.length ? ` · ${parts.join('; ')}.` : '';
+}
+
 function AdviceView({ a }: { a: AuthorAdvice }) {
   return (
     <div className="space-y-2">
@@ -314,6 +326,7 @@ function AdviceView({ a }: { a: AuthorAdvice }) {
       )}
       <p className="text-[10.5px] text-canvas-muted">
         {a.createdBy}, {fmtDay(a.createdAt)} · ekrandaki sayılar ve gizli olmayan son görüşme notlarından; kararı editör verir.
+        {guardNote(a)}
       </p>
     </div>
   );

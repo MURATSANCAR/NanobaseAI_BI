@@ -120,7 +120,12 @@ export type SettingItem = {
   updatedAt: string | null;
 };
 
-export type IncidentDetail = Incident & { timeline: Check[] };
+export type IncidentDetail = Incident & {
+  timeline: Check[];
+  /** Yalnız taslak ucunun cevabında: «zeki» model metni, «kural» (model metni olgu dışı sayı taşıdı ya da boştu). */
+  draftSource?: 'zeki' | 'kural';
+  draftForeignNumbers?: string[];
+};
 export type Page<T, C = string> = { items: T[]; next: C | null };
 
 const B = '/api/v1/it-ops';

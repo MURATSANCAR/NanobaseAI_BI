@@ -1,7 +1,9 @@
 """Yönetici raporları: SLA riski (hafta içi her sabah) ve haftalık özet (pazartesi sabahı).
 
 Alıcılar «Agent Manager» rolündeki etkin kullanıcılar. Rapor ayrıca masaüstünde herkese açık Not olarak
-kalır (e-posta hesabı bağlı değilse de okunabilsin). Sayılar veritabanından; model yalnız yorum yazar.
+kalır (e-posta hesabı bağlı değilse de okunabilsin). Sayılar veritabanından; model yalnız yorum yazar. Konu
+başlıkları modele maskeli gider ve yorumdaki her sayı olgularla denetlenir (`sayi.py`): tutmayan yorum bütünüyle
+atılır, yerine aynı olgulardan kuralla yazılan özet konur («Kurala göre özet»).
 """
 
 from __future__ import annotations
@@ -11,8 +13,9 @@ from collections import Counter
 import frappe
 from frappe.utils import add_days, add_to_date, escape_html, format_datetime, get_datetime, now_datetime
 
-from nanobase_brand.yz import llm
+from nanobase_brand.yz import llm, sayi
 from nanobase_brand.yz.kayit import ACIK_DURUMLAR, KIMLIK
+from nanobase_brand.yz.maske import Maske
 
 URL = "/helpdesk/tickets/{}"
 
@@ -92,6 +95,7 @@ def weekly(days: int = 7) -> str:
 		fields=["name", "subject", "status", "agent_group", "ticket_type", "priority", "nb_duygu",
 				"first_responded_on", "creation", "agreement_status"],
 	)
+	previous = frappe.db.count("HD Ticket", {"creation": ["between", [add_days(since, -days), since]]})
 	resolved = frappe.db.count("HD Ticket", {"status": ["in", ["Resolved", "Closed"]], "modified": [">=", since]})
 	open_now = frappe.db.count("HD Ticket", {"status": ["in", ACIK_DURUMLAR]})
 	failed = sum(1 for t in opened if t.agreement_status == "Failed")
@@ -99,36 +103,55 @@ def weekly(days: int = 7) -> str:
 			  for t in opened if t.first_responded_on]
 	avg_first = f"{sum(firsts) / len(firsts):.1f} saat" if firsts else "—"
 
-	def dist(field, empty="(boş)"):
-		c = Counter((t.get(field) or empty) for t in opened)
-		return ", ".join(f"{escape_html(str(k))}: {v}" for k, v in c.most_common()) or "—"
+	def counts(field, empty="(boş)") -> list[tuple[str, int]]:
+		return Counter((t.get(field) or empty) for t in opened).most_common()
 
-	comment = ""
+	dagilim = {"Ekip": counts("agent_group"), "Tür": counts("ticket_type"), "Öncelik": counts("priority"),
+			   "Müşteri duygusu": counts("nb_duygu", "ölçülmedi")}
+
+	def dist(name):
+		return ", ".join(f"{escape_html(str(k))}: {v}" for k, v in dagilim[name]) or "—"
+
+	sayilar = {"Açılan kayıt": len(opened), "Önceki hafta açılan": previous, "Çözülen/kapanan": resolved,
+			   "Şu an açık": open_now, "SLA ihlali (bu hafta açılanlarda)": failed, "Ortalama ilk yanıt": avg_first}
+	olgular = sayi.haftalik_olgular(sayilar, dagilim)
+	kural = sayi.haftalik_kural_yorumu(sayilar, dagilim)
+
+	comment: list[str] = []
+	source = "kural"
 	if opened:
-		subjects = "\n".join(f"- {t.subject}" for t in opened[:300])
+		# Konu başlığını müşteri yazar: modele maskeli gider (ad, e-posta, telefon, adres, kimlik/kart/IBAN).
+		maske = Maske()
+		subjects = "\n".join(f"- {maske(t.subject)}" for t in opened)
+		raw = ""
 		try:
-			comment = llm.chat(
+			raw = llm.chat(
 				[{"role": "system", "content": KIMLIK},
 				 {"role": "user", "content": (
-					 "Destek yöneticisine bu haftanın kayıt konularından en çok 5 maddelik Türkçe yorum yaz: "
+					 "Destek yöneticisine bu haftanın kayıtlarından en çok 5 maddelik Türkçe yorum yaz: "
 					 "tekrar eden konular, dikkat çeken sorunlar, bilgi bankasına makale önerisi. "
-					 "Her madde tek cümle, '- ' ile başlasın. Sayı uydurma.\n\n"
-					 f"Konular:\n{subjects}")}],
+					 "Her madde tek cümle, '- ' ile başlasın. Sayı yazacaksan yalnız OLGULAR'daki sayıları aynen "
+					 "kullan; başka sayı, oran ya da yüzde hesaplama. Madde numarası yazma.\n\n"
+					 "OLGULAR:\n" + "\n".join(olgular) + f"\n\nKONULAR:\n{subjects}")}],
 				priority=llm.BACKGROUND, max_tokens=500, temperature=0.2)
 		except llm.ModelUnavailable:
-			comment = ""
-	comment_html = "".join(f"<li>{escape_html(line.lstrip('-• ').strip())}</li>"
-						   for line in comment.splitlines() if line.strip())
+			raw = ""
+		comment, source, foreign = sayi.yorum_sec(raw, olgular + [subjects], kural)
+		if foreign:
+			frappe.log_error(title="NanobaseAI haftalık yorumu olgularla tutmadı; kural metni kullanıldı",
+							 message="Olgu dışı sayılar: " + ", ".join(foreign))
+	comment_html = "".join(f"<li>{escape_html(line)}</li>" for line in comment)
+	heading = "NanobaseAI yorumu" if source == "model" else "Kurala göre özet"
 	risk = sla_risk(24)
 	period = f"{format_datetime(since, 'dd.MM.yyyy')} – {format_datetime(now_datetime(), 'dd.MM.yyyy')}"
 	html = (
 		f"<h3>Haftalık destek özeti ({period})</h3>"
-		f"<ul><li>Açılan kayıt: {len(opened)}</li><li>Çözülen/kapanan: {resolved}</li>"
+		f"<ul><li>Açılan kayıt: {len(opened)} (önceki hafta {previous})</li><li>Çözülen/kapanan: {resolved}</li>"
 		f"<li>Şu an açık: {open_now}</li><li>SLA ihlali (bu hafta açılanlarda): {failed}</li>"
 		f"<li>Ortalama ilk yanıt: {avg_first}</li></ul>"
-		f"<p><b>Ekip:</b> {dist('agent_group')}<br><b>Tür:</b> {dist('ticket_type')}<br>"
-		f"<b>Öncelik:</b> {dist('priority')}<br><b>Müşteri duygusu:</b> {dist('nb_duygu', 'ölçülmedi')}</p>"
-		+ (f"<h4>NanobaseAI yorumu</h4><ul>{comment_html}</ul>" if comment_html else "")
+		f"<p><b>Ekip:</b> {dist('Ekip')}<br><b>Tür:</b> {dist('Tür')}<br>"
+		f"<b>Öncelik:</b> {dist('Öncelik')}<br><b>Müşteri duygusu:</b> {dist('Müşteri duygusu')}</p>"
+		+ (f"<h4>{heading}</h4><ul>{comment_html}</ul>" if comment_html else "")
 		+ f"<h4>SLA riskindeki açık kayıtlar ({len(risk)})</h4>" + _risk_table(risk)
 	)
 	title = f"NanobaseAI haftalık destek raporu — {period}"

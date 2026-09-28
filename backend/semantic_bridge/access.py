@@ -727,6 +727,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/freelance/", frozenset({page("serbest-calisanlar")})),
     # M12 Üretim yönetimi; baskı çıkış tarihi (M29/M16 tüketir) editoryal sayfalardan da okunur.
     ("/api/v1/editorial/production/print-exit", _EDITORIAL),
+    # Kampüs «Matbaadan yeni çıkanlar»: herkese açık ana sayfa; yalnız kitap adı, baskı no, gün (adet/maliyet yok).
+    ("/api/v1/editorial/production/new-prints", OPEN),
     ("/api/v1/editorial/production/", frozenset({page("uretim")})),
     # M52 Tedarik ve baskı (Lojistik). Gelecek depo girişlerini (incoming) M43 depo ve stok da okur; sayfa anahtarını
     # o satıra ekler. Borç/maliyet/eşleşme açıkça verilen özelliklerle ucun içinde denetlenir.

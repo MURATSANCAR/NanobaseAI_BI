@@ -5,7 +5,6 @@ import {
   Download,
   ArrowRight,
   Bell,
-  BookOpen,
   Bot,
   Contact,
   HeartHandshake,
@@ -36,8 +35,7 @@ import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
-import book1Img from '@/assets/kampus/book1.jpg';
-import book2Img from '@/assets/kampus/book2.jpg';
+import NewPrintsCard from './NewPrintsCard';
 import './kampus.css';
 import OutageStrip from '../it-ops/OutageStrip';
 import { notifyExport } from '../data-security/notify';
@@ -49,7 +47,8 @@ import { notifyExport } from '../data-security/notify';
  * buradan geçilir. Rehber CRM'deki gerçek, etkin kullanıcılardan gelir (dizinle kesiştirilir). Alkış duvarı ve zil
  * sunucudaki kutlama kayıtlarını gösterir; günün modu kişinin tercihine yazılır. Tasarımdaki sesli bülten, çekiliş,
  * doğum günü, ajanda, yeni kitap ve yemekhane kartları bir kaynağa bağlanamadığı için 2026-09-17'de kaldırıldı:
- * çalışmayan düğme bırakılmaz.
+ * çalışmayan düğme bırakılmaz. «Matbaadan yeni çıkanlar» 2026-09-28'de iki sabit örnek kitaptan M12 üretim kartlarının
+ * gerçek baskılarına geçti (NewPrintsCard); veri yoksa bölüm görünmez.
  */
 
 /** Rehberde kat süzgeci: kat bilgisi CRM/dizin ya da kişinin profilinden gelir; düğmeler veriden türetilir. */
@@ -99,8 +98,6 @@ export default function KampusPage() {
 
   // ZEKİ kutusu: soru BI kanvasına gider, cevabı motor verir.
   const [zekiQ, setZekiQ] = useState('');
-  // Kitap seçme: tasarım geri geldi, gerçek katalog sonra bağlanacak.
-  const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const askZeki = (q: string) => {
     const text = q.trim();
     if (!text) return;
@@ -719,43 +716,8 @@ export default function KampusPage() {
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
           <RoomsCard />
 
-          {/* YENİ KİTAPLAR — kitap seçme (gerçek katalog sonra bağlanacak) */}
-          <Card id="yeni-kitaplar" className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-violet" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Matbaadan Yeni Çıkanlar</h3>
-              </div>
-              <span className="kp-mono shrink-0 text-[11px] font-semibold text-muted">6 Yeni Baskı</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { title: 'Gecenin Sessiz Yankısı', author: 'Selin Karahan', img: book1Img, badge: 'YENİ', badgeTone: 'bg-violet', hover: 'hover:border-violet/30' },
-                { title: 'İpek Yolunun Muhafızları', author: 'Prof. Dr. M. Yılmaz', img: book2Img, badge: '2. BASKI', badgeTone: 'bg-emerald-600', hover: 'hover:border-emerald-300' },
-              ].map((b) => {
-                const active = selectedBook === b.title;
-                return (
-                  <button
-                    key={b.title}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setSelectedBook((v) => (v === b.title ? null : b.title))}
-                    className={`kp-cover kp-press min-w-0 rounded-xl border bg-slate-50/80 p-2 text-left transition-colors ${active ? 'border-violet ring-2 ring-violet/40' : `border-slate-200/70 ${b.hover}`}`}
-                  >
-                    <div className="relative mb-1.5 aspect-[2/3] w-full overflow-hidden rounded-lg bg-slate-200">
-                      <img src={b.img} alt={b.title} className="h-full w-full object-cover" />
-                      <span className={`kp-mono absolute left-1 top-1 rounded px-1 text-[11px] font-bold text-white ${b.badgeTone}`}>{b.badge}</span>
-                    </div>
-                    <h5 className="truncate text-[11px] font-bold text-ink">{b.title}</h5>
-                    <p className="truncate text-[11px] text-muted">{b.author}</p>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2.5 text-[11px] text-muted">
-              {selectedBook ? <>Seçilen kitap: <strong className="text-ink">{selectedBook}</strong></> : 'Bir kitap seçmek için kapağa dokun.'}
-            </p>
-          </Card>
+          {/* MATBAADAN YENİ ÇIKANLAR — M12 üretim kartlarından gerçek baskılar; veri yoksa bölüm görünmez. */}
+          <NewPrintsCard canOpenProduction={canOpenRoute(pages, '/uretim')} />
         </aside>
       </div>
 

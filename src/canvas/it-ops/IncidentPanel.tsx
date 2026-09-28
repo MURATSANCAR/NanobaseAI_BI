@@ -31,7 +31,13 @@ export default function IncidentPanel({ id, canClose, onClose }: { id: string | 
   });
   const ai = useMutation({
     mutationFn: () => itOpsApi.draft(id as string),
-    onSuccess: (out) => done(out, 'Zeki AI taslağı hazır; düzeltip kaydedin.'),
+    onSuccess: (out) =>
+      done(
+        out,
+        out.draftSource === 'kural'
+          ? 'Zeki AI metni olay kaydıyla tutmayan sayı içerdi; taslak kurala göre olay kaydından yazıldı. Düzeltip kaydedin.'
+          : 'Zeki AI taslağı hazır; düzeltip kaydedin.',
+      ),
     onError: (e) => toast.error(errText(e, 'Taslak yazılamadı.') ?? ''),
   });
 
@@ -111,7 +117,7 @@ export default function IncidentPanel({ id, canClose, onClose }: { id: string | 
               <>
                 <textarea className={`${field} min-h-[140px]`} value={draft} onChange={(e) => setDraft(e.target.value)}
                   placeholder="Ne oldu · Etki · Süre · Olası neden · Önerilen önlem" />
-                <p className="text-[11.5px] text-canvas-muted">Zeki AI yalnız metni yazar; süre ve sayılar olay kaydından gelir. Yayımlamadan önce düzeltin.</p>
+                <p className="text-[11.5px] text-canvas-muted">Zeki AI yalnız metni yazar; süre ve sayılar olay kaydından gelir, kayıtta olmayan sayı içeren metin atılıp kurala göre taslak konur. Yayımlamadan önce düzeltin.</p>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className={btnGhost} disabled={ai.isPending} onClick={() => ai.mutate()}>
                     {ai.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}

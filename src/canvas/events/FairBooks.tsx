@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Search, Sparkles, Star } from 'lucide-react';
+import { Calculator, Plus, Search, Star } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { evApi, fmtDay, fmtInt, fmtPct, parseNum, type FairDetail, type Meta } from './api';
 import { Block, SourceNote } from './parts';
 
-/** Kitaplar ve adetler: Zeki AI önerisi (geçmiş fuar satışı × katsayı, yeni çıkanlar, stok) + elle planlanan adet ve
+/** Kitaplar ve adetler: kurala göre öneri (model yok; geçmiş fuar satışı × katsayı, yeni çıkanlar, stok) + elle planlanan adet ve
  *  «öne çıkar». Öneri yeniden alınınca elle girilen adet korunur. Rakamlar SQL'den; öneri kuralı gerekçe sütununda. */
 
 type Row = { stokKodu: string; ad: string | null; qtyPlanned: string; featured: boolean; isNew?: boolean };
@@ -66,8 +66,8 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
       action={edit ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnGhost} disabled={suggest.isPending} onClick={() => suggest.mutate()}>
-            <Sparkles aria-hidden className={`h-4 w-4 ${suggest.isPending ? 'animate-pulse' : ''}`} />
-            {suggest.isPending ? 'Hesaplanıyor…' : 'Zeki AI önerisi'}
+            <Calculator aria-hidden className={`h-4 w-4 ${suggest.isPending ? 'animate-pulse' : ''}`} />
+            {suggest.isPending ? 'Hesaplanıyor…' : 'Kurala göre öneri'}
           </button>
           <button type="button" className={btnPrimary} disabled={!dirty || bad || save.isPending} onClick={() => save.mutate()}>Kaydet</button>
         </div>
@@ -105,7 +105,7 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
         </div>
       )}
       {rows.length === 0 ? (
-        <p className="py-4 text-[12.5px] text-canvas-muted">Liste boş.{edit ? ' «Zeki AI önerisi» geçen yılın satışından liste çıkarır; kitapları elle de ekleyebilirsiniz.' : ''}</p>
+        <p className="py-4 text-[12.5px] text-canvas-muted">Liste boş.{edit ? ' «Kurala göre öneri» geçen yılın satışından liste çıkarır; kitapları elle de ekleyebilirsiniz.' : ''}</p>
       ) : (
         <TableWrap>
           <thead>

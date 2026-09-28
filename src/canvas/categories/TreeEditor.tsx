@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, ChevronRight, GitCompare, Loader2, Plus, Save, Send, Sparkles, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, GitCompare, ListTree, Loader2, Plus, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, fmtDate, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
@@ -140,8 +140,8 @@ export default function TreeEditor() {
             )}
             {me?.canEditTree && (!draft || draft.status === 'taslak') && (
               <button type="button" className={btnGhost} disabled={busy} onClick={() => (draft?.nodes.length ? setAsk('suggest') : suggest.mutate(false))}>
-                {suggest.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-                Zeki AI önerisi (veriden)
+                {suggest.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <ListTree aria-hidden className="h-4 w-4" />}
+                Veriden taslak
               </button>
             )}
             {draft && (
@@ -225,7 +225,7 @@ export default function TreeEditor() {
       <AskSheet open={ask === 'discard'} title="Taslağı sil" confirm="Sil" danger busy={discard.isPending}
         message="Taslak ve eşlemeleri silinir; yürürlükteki ağaç değişmez." onClose={() => setAsk(null)} onConfirm={() => discard.mutate()} />
       <AskSheet open={ask === 'suggest'} title="Taslağın üzerine yaz" confirm="Üzerine yaz" danger busy={suggest.isPending}
-        message="Zeki AI veriden yeni bir taslak ağaç kurar; bu taslaktaki düğümler ve eşlemeler silinir." onClose={() => setAsk(null)}
+        message="CRM kitap kartlarından kurala göre (marka → hedef kitle → kitaplık) yeni bir taslak ağaç kurulur; bu taslaktaki düğümler ve eşlemeler silinir." onClose={() => setAsk(null)}
         onConfirm={() => { setAsk(null); suggest.mutate(true); }} />
       {impactOpen && <ImpactSheet onClose={() => setImpactOpen(false)} />}
     </div>

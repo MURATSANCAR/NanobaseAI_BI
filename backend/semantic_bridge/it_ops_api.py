@@ -214,12 +214,16 @@ def register(app, deps: dict[str, Any]):
         except Exception as e:  # noqa: BLE001
             log.warning("itops: taslak yazılamadı: %s", e)
             raise HTTPException(status_code=503, detail={"code": "MODEL", "message": "Zeki AI şu an taslak yazamadı; birazdan yeniden deneyin."}) from e
-        text = str(text or "").strip()
-        if not text:
-            raise HTTPException(status_code=503, detail={"code": "MODEL", "message": "Zeki AI boş taslak döndü."})
+        # Rakamı model üretmez: taslaktaki her sayı olaya ait olgularda geçmeli; tutmayan taslak bütünüyle atılır,
+        # yerine aynı olgulardan kalıp taslak konur (ekranda «kurala göre» işaretiyle).
+        text, source, foreign = I.guard_draft(str(text or ""), inc)
+        if foreign:
+            log.info("itops: taslak olgu dışı sayı taşıdı (%s); kural taslağı kullanıldı", ", ".join(foreign))
         out = call(I.save_draft, engine, tenant, iid, text)
-        audit(engine, user, "run", "itops_incident", iid, f"{out['ringLabel']} · Zeki AI değerlendirme taslağı", None)
-        return out
+        title = "Zeki AI değerlendirme taslağı" if source == "zeki" else "kurala göre değerlendirme taslağı"
+        audit(engine, user, "run", "itops_incident", iid, f"{out['ringLabel']} · {title}",
+              {"kaynak": source, "olguDisiSayilar": foreign} if foreign or source != "zeki" else None)
+        return dict(out, draftSource=source, draftForeignNumbers=foreign)
 
     @app.get("/api/v1/it-ops/jobs")
     def itops_jobs(request: Request) -> dict[str, Any]:

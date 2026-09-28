@@ -1,7 +1,7 @@
 """M46 Bütçe planlama ve kontrolü: kitap bazlı satış hedefleri, yeni kitap programı, departman bütçesi, senaryolar,
 onay akışı, hedef–gerçekleşme izleme ve sapma uyarısı.
 
-**Akış (K2 — ZEKİ AI önerir, yönetim onaylar):** «ZEKİ AI önerisi» bir yıl için üç taslak plan kurar (muhafazakâr /
+**Akış (K2 — veriden kurala göre öneri, yönetim onaylar):** «Veriden öneri» (model yok; ekranda «Zeki AI» adını taşımaz) bir yıl için üç taslak plan kurar (muhafazakâr /
 temel / iyimser). Taslak düzenlenir (kitap hedefi, program, departman), onaya gönderilir, onay yetkisi olan ve taslağı
 göndermemiş biri onaylar (iki göz). Onaylanan plan o yılın **yürürlükteki** planıdır; önceki yürürlükteki plan arşive
 geçer. Yürürlükteki plan «revize et» ile yeni bir taslak sürüme kopyalanır (gerekçe zorunlu); o onaylanınca yerini alır.
@@ -732,7 +732,7 @@ def _write_lines(c: Any, plan_id: str, sug: dict[str, Any]) -> None:
 
 def generate(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, Any],
              forecast: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
-    """ZEKİ AI önerisi: seçilen senaryolar için birer taslak plan."""
+    """Veriden hesaplanan öneri (kural, model yok): seçilen senaryolar için birer taslak plan."""
     year = _check_year(body.get("year"))
     raw = body.get("scenarios")
     scenarios = [s for s in (list(SCENARIOS) if raw is None else raw) if s in SCENARIOS]
