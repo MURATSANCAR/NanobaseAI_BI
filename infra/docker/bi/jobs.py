@@ -1,27 +1,260 @@
-"""Arka plan işleri: ana ekran özeti 3 dk, uyarı kontrolü 15 dk, pano kartları 15 dk, planlı raporlar 5 dk, sistem durumu 5 dk.
+"""Arka plan işleri (müşteri yığını): test sunucusundaki zamanlayıcıların birebir aynısı, aynı saatlerde.
 
-Sunucuda bunlar systemd zamanlayıcılarıdır (timas-metrics, timas-alerts, timas-board, timas-reports). Müşteri
-yığınında aynı işler bu tek konteynerde döner; mantık yine köprüdedir, burası yalnız zamanında çağırır.
+Sunucuda işler systemd zamanlayıcılarıdır (`scripts/server/timas-*.timer` + `.service`). Müşteri yığınında systemd
+yok; bu konteyner aynı dosyaları okur (imajda `/app/jobs/schedule/`) ve her işi dosyadaki takvimle köprüye çağırır.
+Böylece iki ortamın iş düzeni tek kaynaktan gelir: sunucuya yeni zamanlayıcı eklenince VM'e ayrıca yazılmaz.
+
+Desteklenen takvim biçimi, depodaki zamanlayıcıların kullandığı systemd alt kümesidir:
+`[Gün] *-*-GG SS:DD[:ss] [Europe/Istanbul]` (gün `Mon`, `Mon..Fri`; saat/dakika `*`, sayı, `a..b`, `a/adım`,
+virgül), kısa biçim `*:0/15`, ve `OnBootSec` + `OnUnitActiveSec` aralıkları. Saatler İstanbul saatidir (test
+sunucusunun saat dilimi). `Persistent=true` işler konteyner kapalıyken kaçırdıkları son turu açılışta bir kez koşar;
+ilk kurulumda (durum dosyası yokken) geçmiş turlar koşulmaz — 1 çekirdekli VM'e onlarca iş birden binmesin.
+
+VM'de bilerek koşmayanlar `JOBS_EXCLUDE` (varsayılan: basın/web taraması — kullanıcı kararı 2026-09-25; Zeki AI
+kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ile gitmeyen servis (betik) desteklenmez, günlüğe
+yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
 """
+from __future__ import annotations
+
+import fnmatch
+import glob
 import json
 import os
+import re
 import runpy
 import threading
 import time
 import urllib.request
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Callable, Optional
+from zoneinfo import ZoneInfo
 
 BRIDGE = os.environ.get("BRIDGE", "http://bridge:8795")
 TOKEN = os.environ.get("SEMANTIC_CALLER_TOKEN", "")
 METRICS_EVERY = int(os.environ.get("METRICS_EVERY_SEC", "180"))
+SCHEDULE_DIR = os.environ.get("SCHEDULE_DIR", "/app/jobs/schedule")
+STATE_FILE = os.environ.get("JOBS_STATE", "/data/metrics/jobs-state.json")
+TZ = ZoneInfo(os.environ.get("JOBS_TZ", "Europe/Istanbul"))
+EXCLUDE = [p.strip() for p in os.environ.get("JOBS_EXCLUDE", "timas-web-watch,timas-model-quality-*").split(",") if p.strip()]
+
+DAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
 
 
-def metrics() -> None:
+# ------------------------------------------------------------------------------------------------ takvim
+def _values(expr: str, lo: int, hi: int, names: Optional[dict[str, int]] = None) -> set[int]:
+    """systemd takvim alanı → izinli değerler. `*`, `5`, `8..19`, `0/15`, `8..19/2`, virgüllü liste."""
+    out: set[int] = set()
+
+    def num(s: str) -> int:
+        return names[s.lower()] if names and s.lower() in names else int(s)
+
+    for part in expr.split(","):
+        step = 1
+        if "/" in part:
+            part, st = part.split("/", 1)
+            step = int(st)
+        if part == "*":
+            a, b = lo, hi
+        elif ".." in part:
+            x, y = part.split("..", 1)
+            a, b = num(x), num(y)
+        else:
+            a = num(part)
+            b = hi if step > 1 else a
+        if not (lo <= a <= hi and lo <= b <= hi):
+            raise ValueError(f"aralık dışı: {expr}")
+        out.update(range(a, b + 1, step))
+    return out
+
+
+@dataclass
+class Calendar:
+    text: str
+    weekdays: set[int]
+    months: set[int]
+    days: set[int]
+    hours: set[int]
+    minutes: set[int]
+    second: int = 0
+    tz: ZoneInfo = TZ
+
+    def _day_ok(self, day) -> bool:
+        return day.month in self.months and day.day in self.days and day.weekday() in self.weekdays
+
+    def next_after(self, t: datetime) -> datetime:
+        """t'den SONRAKİ ilk tetik (takvimin saat diliminde)."""
+        local = t.astimezone(self.tz)
+        day = local.date()
+        for _ in range(400):
+            if self._day_ok(day):
+                for h in sorted(self.hours):
+                    for m in sorted(self.minutes):
+                        cand = datetime(day.year, day.month, day.day, h, m, self.second, tzinfo=self.tz)
+                        if cand > local:
+                            return cand
+            day += timedelta(days=1)
+        raise ValueError(f"400 günde tetik yok: {self.text}")
+
+    def prev_at_or_before(self, t: datetime) -> Optional[datetime]:
+        local = t.astimezone(self.tz)
+        day = local.date()
+        for _ in range(400):
+            if self._day_ok(day):
+                for h in sorted(self.hours, reverse=True):
+                    for m in sorted(self.minutes, reverse=True):
+                        cand = datetime(day.year, day.month, day.day, h, m, self.second, tzinfo=self.tz)
+                        if cand <= local:
+                            return cand
+            day -= timedelta(days=1)
+        return None
+
+
+def parse_calendar(text: str) -> Calendar:
+    parts = text.split()
+    tz = TZ
+    if parts and parts[-1][0].isalpha() and "/" in parts[-1] and ":" not in parts[-1]:
+        tz = ZoneInfo(parts.pop())
+    weekdays = set(range(7))
+    if parts and parts[0][:3].lower() in DAYS:
+        weekdays = _values(parts.pop(0), 0, 6, DAYS)
+    if len(parts) == 1:          # kısa biçim: yalnız saat (`*:0/15`) → her gün
+        date, clock = "*-*-*", parts[0]
+    elif len(parts) == 2:
+        date, clock = parts
+    else:
+        raise ValueError(f"takvim çözülemedi: {text}")
+    y, mo, d = (date.split("-") + ["*", "*"])[:3]
+    if y != "*":
+        raise ValueError(f"yıl sabit takvim desteklenmez: {text}")
+    hms = clock.split(":")
+    if len(hms) not in (2, 3):
+        raise ValueError(f"saat çözülemedi: {text}")
+    sec = int(hms[2]) if len(hms) == 3 and hms[2].isdigit() else 0
+    return Calendar(text=text, weekdays=weekdays, months=_values(mo, 1, 12), days=_values(d, 1, 31),
+                    hours=_values(hms[0], 0, 23), minutes=_values(hms[1], 0, 59), second=sec, tz=tz)
+
+
+_SPAN = re.compile(r"(\d+)\s*(h|hr|hour|hours|min|m|minutes|s|sec|seconds)?", re.I)
+
+
+def parse_span(text: str) -> int:
+    """`15min`, `1h`, `90s`, `2min 30s` → saniye."""
+    total = 0
+    for n, unit in _SPAN.findall(text):
+        u = (unit or "s").lower()
+        total += int(n) * (3600 if u.startswith("h") else 60 if u.startswith("m") else 1)
+    return total
+
+
+# ------------------------------------------------------------------------------------------------ dosyalar
+@dataclass
+class Job:
+    name: str                      # zamanlayıcı adı (timas-stock)
+    label: str                     # servis açıklaması
+    path: str                      # köprü yolu (sorgu dahil)
+    timeout: int
+    calendars: list[Calendar] = field(default_factory=list)
+    boot: int = 0
+    every: int = 0
+    persistent: bool = False
+
+    def describe(self) -> str:
+        if self.calendars:
+            return " + ".join(c.text for c in self.calendars)
+        return f"{max(1, self.every // 60)} dk"
+
+    def next_after(self, t: datetime) -> datetime:
+        return min(c.next_after(t) for c in self.calendars)
+
+    def last_due(self, t: datetime) -> Optional[datetime]:
+        prev = [p for p in (c.prev_at_or_before(t) for c in self.calendars) if p]
+        return max(prev) if prev else None
+
+
+def _ini(path: str) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith(("#", ";", "[")) or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            out.setdefault(k.strip(), []).append(v.strip())
+    return out
+
+
+# Yalnız köprü (8795): başka bir servise giden çağrı VM'de köprüye yöneltilmesin.
+_CURL = re.compile(r"curl\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
+
+
+def parse_exec(line: str) -> tuple[str, int]:
+    """ExecStart satırı → (köprü yolu, zaman aşımı sn). Köprüye curl değilse ValueError."""
+    m = _CURL.search(line)
+    if not m:
+        raise ValueError("köprüye curl çağrısı değil")
+    t = re.search(r"-m\s+(\d+)", m.group("opts"))
+    return m.group("path"), int(t.group(1)) if t else 1700
+
+
+def load_jobs(directory: str, exclude: Optional[list[str]] = None) -> tuple[list[Job], list[tuple[str, str]]]:
+    """Zamanlayıcı dosyaları → işler. İkinci değer: koşulmayanlar ve nedeni."""
+    exclude = EXCLUDE if exclude is None else exclude
+    jobs: list[Job] = []
+    skipped: list[tuple[str, str]] = []
+    for tpath in sorted(glob.glob(os.path.join(directory, "*.timer"))):
+        name = os.path.basename(tpath)[:-6]
+        if any(fnmatch.fnmatch(name, p) for p in exclude):
+            skipped.append((name, "bu ortamda kapalı (JOBS_EXCLUDE)"))
+            continue
+        try:
+            t = _ini(tpath)
+            unit = (t.get("Unit") or [f"{name}.service"])[0]
+            inst = ""
+            m = re.match(r"^(.+@)(.+)\.service$", unit)
+            if m:
+                unit, inst = f"{m.group(1)}.service", m.group(2)
+            s = _ini(os.path.join(directory, unit))
+            execs = [x for x in s.get("ExecStart", []) if x]
+            if not execs:
+                raise ValueError(f"{unit}: ExecStart yok")
+            path, timeout = parse_exec(execs[-1].replace("%i", inst))
+            job = Job(name=name, label=(s.get("Description") or [name])[0], path=path, timeout=timeout,
+                      calendars=[parse_calendar(c) for c in t.get("OnCalendar", [])],
+                      boot=parse_span((t.get("OnBootSec") or ["0"])[0]),
+                      every=parse_span((t.get("OnUnitActiveSec") or ["0"])[0]),
+                      persistent=(t.get("Persistent") or ["false"])[0].lower() in ("true", "yes", "1"))
+            if not job.calendars and not job.every:
+                raise ValueError("takvim de aralık da yok")
+            jobs.append(job)
+        except (OSError, ValueError) as e:
+            skipped.append((name, str(e)))
+    return jobs, skipped
+
+
+# ------------------------------------------------------------------------------------------------ çalıştırma
+_state_lock = threading.Lock()
+
+
+def _read_state() -> dict[str, str]:
     try:
-        runpy.run_path("/app/jobs/metrics_build.py", run_name="__main__")
-    except SystemExit:
-        pass
-    except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki denenir
-        print(f"özet üretilemedi: {e}", flush=True)
+        with open(STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_state(name: str, at: datetime) -> None:
+    with _state_lock:
+        s = _read_state()
+        s[name] = at.isoformat()
+        tmp = STATE_FILE + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(s, f)
+            os.replace(tmp, STATE_FILE)
+        except OSError as e:
+            print(f"durum dosyası yazılamadı: {e}", flush=True)
 
 
 def _post(path: str, body: dict, timeout: int):
@@ -31,76 +264,85 @@ def _post(path: str, body: dict, timeout: int):
         return json.load(res)
 
 
-def report(name: str, path: str, every: int, ok: bool, detail: str = "") -> None:
-    """M48: VM'de sunucu zamanlayıcısı yok; her işin sonucu Sistem durumu'nun iş tablosuna buradan yazılır. Bu
-    bildirimlerin tazeliği aynı zamanda «Müşteri VM'i» halkasının kalp atışıdır. Bildirim düşerse iş etkilenmez."""
+def report(job: Job, ok: bool, detail: str = "") -> None:
+    """M48: her işin sonucu Sistem durumu'nun iş tablosuna; tazelik aynı zamanda «Müşteri VM'i» kalp atışıdır."""
     try:
-        _post("/api/v1/it-ops/watchdog", {"job": f"vm:{path}", "label": name, "ok": ok, "detail": detail[:500],
-                                          "every": f"{max(1, every // 60)} dk", "source": "jobs-container"}, 30)
+        _post("/api/v1/it-ops/watchdog", {"job": f"vm:{job.name}", "label": job.label, "ok": ok, "detail": detail[:500],
+                                          "every": job.describe(), "source": "jobs-container"}, 30)
     except Exception as e:  # noqa: BLE001
-        print(f"{name}: sistem durumuna bildirilemedi: {e}", flush=True)
+        print(f"{job.name}: sistem durumuna bildirilemedi: {e}", flush=True)
 
 
-def call(name: str, path: str, timeout: int, every: int = 0) -> None:
+def run(job: Job) -> None:
+    started = datetime.now(TZ)
     try:
-        out = _post(path, {}, timeout)
-        print(f"{name}:", out, flush=True)
-        report(name, path, every, True)
-    except Exception as e:  # noqa: BLE001
-        print(f"{name} başarısız: {e}", flush=True)
-        report(name, path, every, False, f"{type(e).__name__}: {e}")
+        out = _post(job.path, {}, job.timeout)
+        print(f"{job.name}: {str(out)[:300]}", flush=True)
+        report(job, True)
+    except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki denenir
+        print(f"{job.name} başarısız: {e}", flush=True)
+        report(job, False, f"{type(e).__name__}: {e}")
+    _write_state(job.name, started)
 
 
-# (ad, yol, aralık sn, zaman aşımı sn) — sunucudaki zamanlayıcıların aynısı
-JOBS = [
-    ("uyarı kontrolü", "/api/v1/alerts/check", int(os.environ.get("ALERTS_EVERY_SEC", "900")), 590),
-    ("pano kartları", "/api/v1/board/run-due", int(os.environ.get("BOARD_EVERY_SEC", "900")), 590),
-    ("planlı raporlar", "/api/v1/reports/run-due", int(os.environ.get("REPORTS_EVERY_SEC", "300")), 1700),
-    ("SEO & GEO eşitlemesi", "/api/v1/seo-geo/run-due", int(os.environ.get("SEO_EVERY_SEC", "86400")), 1700),
-    # M46 bütçe: Logo gerçekleşmesi + sapma uyarıları (sunucuda timas-budget.timer, saatte bir; geçmiş yıl okuması 3-4 dk).
-    ("bütçe", "/api/v1/budget/run-due", int(os.environ.get("BUDGET_EVERY_SEC", "3600")), 1790),
-    # M7 yazar ilişkileri sabah özeti (sunucuda timas-author-reminders.timer): köprü saat eşiğini ve günde bir kez kuralını
-    # kendisi uygular, sık çağrı zararsız.
-    ("yazar hatırlatmaları", "/api/v1/editorial/authors/reminders/run-due", int(os.environ.get("AUTHOR_REMINDERS_EVERY_SEC", "900")), 590),
-    # M48 sistem durumu: halka denetimi, olay aç/kapat, bildirim (sunucuda timas-itops.timer, 5 dk).
-    ("sistem durumu", "/api/v1/it-ops/run-due", int(os.environ.get("ITOPS_EVERY_SEC", "300")), 290),
-    # M49 veri güvenliği: giriş olayları + kurallar her 5 dk; saklama ve günlük özet SECURITY_DAILY_AT'te günde bir kez.
-    ("veri güvenliği", "/api/v1/data-security/run-due", int(os.environ.get("SECURITY_EVERY_SEC", "300")), 1700),
-    # M51 müşteri hizmetleri: destek masasındaki yeni talepleri sınıfla (sunucuda timas-support.timer 5 dk) ve gece SSS
-    # açığı listesi (timas-support-gece.timer). Masa bağlantısı ayarlanmamışsa uç «atlandı» döner.
-    ("müşteri hizmetleri sınıflama", "/api/v1/support/classify/run-due", int(os.environ.get("SUPPORT_EVERY_SEC", "300")), 290),
-    ("müşteri hizmetleri gece", "/api/v1/support/run-due", int(os.environ.get("SUPPORT_NIGHT_EVERY_SEC", "86400")), 1700),
-    # M45 finansal raporlar: Logo okuması, pazartesi nakit tablosu, vergi hatırlatması, sabah özeti (sunucuda timas-finance.timer).
-    ("finansal raporlar", "/api/v1/finance/run-due", int(os.environ.get("FINANCE_EVERY_SEC", "3600")), 1790),
-    # M54 telif dönemi: koşu hatırlatması + yenileme özeti (sunucuda timas-royalty.timer, günde bir; bildirim bir kez gider).
-    ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
-    # M47 risk ve uyum (sunucuda timas-risk.timer 06:15): yalnız sıklığı gelen göstergeyi ölçer, hatırlatma bir kez gider.
-    ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
-    # DYK kurul (sunucuda timas-kurul.timer 06:30): göstergeleri hazır çıktılardan ölçer; hatırlatma bir kez, yalnız iç adrese.
-    ("kurul", "/api/v1/kurul/run-due", int(os.environ.get("KURUL_EVERY_SEC", "86400")), 1790),
-    # H2 okur veri tabanı: CRM kişi/aday/İYS okuması ve gece işleri (sunucuda timas-readers.timer, gece 03:20).
-    ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
-    # M22 sosyal medya günlük özeti (sunucuda timas-social.timer 07:00; e-posta günde bir kez gider, paylaşım yapılmaz).
-    ("sosyal medya", "/api/v1/social/run-due", int(os.environ.get("SOCIAL_EVERY_SEC", "86400")), 1790),
-    # M44 kargo (sunucuda timas-shipping.timer, 15 dk): köprü günlük (06:45), haftalık (pazartesi 08:00) ve aylık (ayın 3'ü)
-    # işleri kendisi zamanlar, günde/haftada/ayda bir kez koşar; sık çağrı zararsız.
-    ("kargo", "/api/v1/shipping/run-due", int(os.environ.get("SHIPPING_EVERY_SEC", "900")), 1790),
-]
+def _sleep_until(at: datetime) -> None:
+    # Uzun uykuyu parçala: saat ayarı değişse de en geç bir dakikada toparlanır.
+    while True:
+        left = (at - datetime.now(TZ)).total_seconds()
+        if left <= 0:
+            return
+        time.sleep(min(left, 60))
 
 
-def loop(every: int, fn, *args) -> None:
-    # Her iş kendi iş parçacığında: uzun bir rapor turu uyarı kontrolünü bekletmez.
+def calendar_loop(job: Job, state: dict[str, str], first_deploy: bool) -> None:
+    now = datetime.now(TZ)
+    if job.persistent and not first_deploy:
+        due = job.last_due(now)
+        last = state.get(job.name)
+        if due and (last is None or datetime.fromisoformat(last) < due):
+            print(f"{job.name}: kaçırılan tur ({due:%d.%m %H:%M}) şimdi koşuyor", flush=True)
+            run(job)
+    while True:
+        _sleep_until(job.next_after(datetime.now(TZ)))
+        run(job)
+
+
+def interval_loop(job: Job) -> None:
+    time.sleep(job.boot)
     while True:
         started = time.monotonic()
-        fn(*args)
-        time.sleep(max(5.0, every - (time.monotonic() - started)))
+        run(job)
+        time.sleep(max(5.0, job.every - (time.monotonic() - started)))
+
+
+def metrics() -> None:
+    while True:
+        started = time.monotonic()
+        try:
+            runpy.run_path("/app/jobs/metrics_build.py", run_name="__main__")
+        except SystemExit:
+            pass
+        except Exception as e:  # noqa: BLE001
+            print(f"özet üretilemedi: {e}", flush=True)
+        time.sleep(max(5.0, METRICS_EVERY - (time.monotonic() - started)))
 
 
 def main() -> None:
+    jobs, skipped = load_jobs(SCHEDULE_DIR)
+    print(f"{len(jobs)} iş yüklendi ({SCHEDULE_DIR}); koşmayan {len(skipped)}:", flush=True)
+    for n, why in skipped:
+        print(f"  - {n}: {why}", flush=True)
+    for j in jobs:
+        print(f"  + {j.name}: {j.describe()} → {j.path}", flush=True)
+    state = _read_state()
+    first_deploy = not os.path.exists(STATE_FILE)
+    if first_deploy:  # ilk kurulum: bugünkü geçmiş turları koşma; bundan sonrası takvimle
+        for j in jobs:
+            _write_state(j.name, datetime.now(TZ))
     time.sleep(30)   # köprü açılsın diye kısa bekleme
-    threads = [threading.Thread(target=loop, args=(METRICS_EVERY, metrics), daemon=True)]
-    threads += [threading.Thread(target=loop, args=(every, call, name, path, timeout, every), daemon=True)
-                for name, path, every, timeout in JOBS]
+    targets: list[tuple[Callable, tuple]] = [(metrics, ())]
+    targets += [(calendar_loop, (j, state, first_deploy)) if j.calendars else (interval_loop, (j,)) for j in jobs]
+    threads = [threading.Thread(target=f, args=a, daemon=True) for f, a in targets]
     for t in threads:
         t.start()
     while all(t.is_alive() for t in threads):

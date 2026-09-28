@@ -27,6 +27,8 @@ rsync -rc --delete --exclude "._*" -e "$SSH" --exclude node_modules "$SRC/src/" 
 rsync -rc --delete --exclude "._*" -e "$SSH" --exclude __pycache__ --exclude '*.pyc' --exclude .venv "$SRC/backend/" "$VM:$DST/backend/"
 rsync -rc --delete --exclude "._*" -e "$SSH" --exclude __pycache__ "$SRC/configs/" "$VM:$DST/configs/"
 rsync -c --exclude "._*" -e "$SSH" "$SRC/scripts/server/timas-metrics-build.py" "$VM:$DST/scripts/server/"
+# İş çalıştırıcının takvimi: test sunucusundaki zamanlayıcıların aynısı (infra/docker/bi/jobs.py okur).
+rsync -c --exclude "._*" -e "$SSH" "$SRC"/scripts/server/timas-*.timer "$SRC"/scripts/server/timas-*.service "$VM:$DST/scripts/server/"
 rsync -c --exclude "._*" -e "$SSH" "$SRC"/scripts/server/portal-login/{server.py,requirements.txt} "$VM:$DST/scripts/server/portal-login/"
 # .env, secrets/ ve sunucuya özel override dosyası müşteride kalır, üzerine yazılmaz.
 rsync -rc --exclude "._*" -e "$SSH" --exclude .env --exclude 'secrets/' --exclude docker-compose.override.yml --exclude catalog.sql \

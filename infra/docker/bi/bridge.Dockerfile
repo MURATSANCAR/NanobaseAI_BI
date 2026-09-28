@@ -25,6 +25,8 @@ COPY configs /app/configs
 # Arka plan işleri (jobs servisi aynı imajı kullanır): ana ekran özeti + uyarı kontrolü
 COPY scripts/server/timas-metrics-build.py /app/jobs/metrics_build.py
 COPY infra/docker/bi/jobs.py /app/jobs/jobs.py
+# İş çalıştırıcı test sunucusunun zamanlayıcılarını okur (aynı işler, aynı saatler).
+COPY scripts/server/timas-*.timer scripts/server/timas-*.service /app/jobs/schedule/
 
 ENV PYTHONPATH=/app/backend
 EXPOSE 8795

@@ -98,7 +98,8 @@ services:
     networks: [bi_net]
     restart: unless-stopped
 
-  # Arka plan işleri: ana ekran özeti (3 dk), uyarı (15 dk), pano (15 dk), planlı rapor (5 dk). Mantık köprüde; bu yalnız çağırır.
+  # Arka plan işleri: test sunucusunun zamanlayıcılarının aynısı, aynı saatlerde (jobs.py, scripts/server/timas-*.timer).
+  # Mantık köprüde; bu yalnız çağırır. VM'de kapalı olanlar JOBS_EXCLUDE (basın/web taraması, iç kalite kapıları).
   jobs:
     image: nanobase-bi-bridge:latest
     command: ["python", "/app/jobs/jobs.py"]
@@ -106,6 +107,8 @@ services:
       BRIDGE: http://bridge:8795
       SEMANTIC_CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
       OUT: /data/metrics/cfo.json
+      JOBS_TZ: Europe/Istanbul
+      JOBS_EXCLUDE: ${JOBS_EXCLUDE:-timas-web-watch,timas-model-quality-*}
     volumes:
       - bi_metrics:/data/metrics
     depends_on: [bridge]

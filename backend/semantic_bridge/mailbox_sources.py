@@ -225,9 +225,11 @@ class GmailSource(MailSource):
         return m if m in AUTH_MODES else "hizmet-hesabi"
 
     def _service_account(self) -> dict[str, Any]:
-        raw = (self._conf("MAIL_GOOGLE_SERVICE_ACCOUNT_JSON", "") or "").strip()
+        # Kutunun kendi anahtarı yoksa SEO'nun Google servis hesabı kullanılır: tek anahtar, iki iş (2026-09-28). Yetki
+        # yine Workspace'in alan geneli devriyle sınırlı; devir verilmemişse Google belirteci reddeder, ekranda yazar.
+        raw = (self._conf("MAIL_GOOGLE_SERVICE_ACCOUNT_JSON", "") or self._conf("GOOGLE_SERVICE_ACCOUNT_JSON", "") or "").strip()
         if not raw:
-            raise NotConnected("Hizmet hesabı anahtarı girilmemiş (Yönetim → Kurumsal e-posta).")
+            raise NotConnected("Hizmet hesabı anahtarı girilmemiş (Yönetim → Kurumsal e-posta ya da SEO & GEO → Google servis hesabı).")
         try:
             info = json.loads(raw)
         except ValueError:
