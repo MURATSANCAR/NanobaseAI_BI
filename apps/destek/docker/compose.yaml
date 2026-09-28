@@ -1,4 +1,4 @@
-# NanobaseAI Destek — tek Frappe sitesi (destek ekranı + masaüstü + yapay zekâ paneli).
+# NanobaseAI Destek — tek site (destek ekranı + masaüstü + yapay zekâ paneli).
 # Sunucuda: /data/nanobaseai/destek, proje adı nanobase-destek.
 #   docker compose --env-file .env -f compose.yaml up -d
 # .env örneği: env.example. Veri volume'larda durur; kurulum/yeniden kurulum veri silmez.

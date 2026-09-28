@@ -3,7 +3,7 @@
 Kurulum betiği çağırır:
     echo '{"base_url": "...", "api_key": "..."}' | bench --site destek execute nanobase_brand.ai.ensure_model
 Anahtar depoda tutulmaz; sunucudaki anahtar dosyasından okunup buraya verilir ve
-Frappe'nin şifreli Password alanında saklanır.
+çatının şifreli Password alanında saklanır.
 """
 
 import json
