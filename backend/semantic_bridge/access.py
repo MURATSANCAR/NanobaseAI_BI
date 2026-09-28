@@ -498,6 +498,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/creative/run-due", SYSTEM),
     ("/api/v1/marketing/creative/contract/", frozenset({page("pazarlama-icerik")})),
     ("/api/v1/marketing/creative/", frozenset({page("pazarlama-icerik")})),
+    # M47 Risk ve uyum (Finans). DYK gelince summary/reports satırlarına kendi sayfa anahtarını ekler.
+    ("/api/v1/risk/run-due", SYSTEM),
+    ("/api/v1/risk/", frozenset({page("risk-uyum")})),
     # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
     # M53 Set, hediye ve promosyon (Pazarlama → Üretim).
     ("/api/v1/marketing/sets/run-due", SYSTEM),
@@ -653,6 +656,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/tenders(/(?!run-due$|watch/|documents(/|$)|[^/]+/decision/(approve|reject)$).*)?$", "ozellik:ihale.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/tenders/documents(/[^/]+)?$", "ozellik:ihale.belge"),
     (frozenset({"GET"}), r"^/api/v1/tenders/[^/]+/pricing\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Risk ve uyum: risk kaydı, gözden geçirme, aksiyon ekleme, Zeki AI önerisi/sınıflaması, brifing taslağı. Aksiyon
+    # durumu (sahibi), gösterge tanımı/onayı, brifing onayı ve KVKK maddeleri açıkça verilen yetkilerle ucun içinde.
+    (frozenset({"POST", "PATCH"}),
+     r"^/api/v1/risk/(risks(/(suggest|classify|[^/]+(/(review|actions|accept|reject))?))?|reports/(draft|[^/]+))$", "ozellik:risk.yaz"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/risk/compliance/(items(/[^/]+)?|events/[^/]+/(evidence|close))$", "ozellik:uyum.yaz"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/risk/(policies|bcp)(/[^/]+(/document)?)?$", "ozellik:risk.sigorta-bcp"),
+    (frozenset({"GET"}), r"^/api/v1/risk/reports/[^/]+/document\.docx$", "ozellik:veri.disa-aktar"),
     # Kategori ağacı: öneri üretme ve kaynak yenileme; ağaç taslağı, eşleme, kural ve etiket sözlüğü. Ağaç onayı ve
     # profil kararı açıkça verilen `kategori.agac-onay` / `kategori.profil-onay` (+ `kategori.herkesinki`) ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/categories/(books/[^/]+/propose|refresh)$", "ozellik:kategori.oneri-uret"),

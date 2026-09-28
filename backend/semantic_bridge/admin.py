@@ -101,6 +101,10 @@ SPEC: list[dict[str, Any]] = [
      "help": "CRM kitap kartında KDV oranı yoksa kullanılır; oran olarak (0,10 = %10)"},
     {"key": "DEALERS_MORNING_RECIPIENTS", "group": "delivery", "label": "Bayi riski sabah özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (satış müdürü, finans). Her sabah segmenti düşen bayiler, vadesi geçmiş ve onay bekleyen limit önerileri; bayiye gönderim yok"},
+    {"key": "RISK_ALERT_RECIPIENTS", "group": "delivery", "label": "Risk ve uyum özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle risk ve uyum koordinatörünün adresleri. Kırmızıya dönen gösterge, aksiyon termini, gözden geçirme, uyum son günü ve poliçe bitişi her sabah tek özetle gider"},
+    {"key": "RISK_CRITICAL_RECIPIENTS", "group": "delivery", "label": "Kritik risk alıcıları", "type": "text", "default": "",
+     "help": "Virgülle adresler (genel müdür). Etkisi kritik (5) bir riske bağlı gösterge kırmızıya dönünce aynı gün gider"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},

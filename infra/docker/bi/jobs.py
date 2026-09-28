@@ -74,6 +74,8 @@ JOBS = [
     ("finansal raporlar", "/api/v1/finance/run-due", int(os.environ.get("FINANCE_EVERY_SEC", "3600")), 1790),
     # M54 telif dönemi: koşu hatırlatması + yenileme özeti (sunucuda timas-royalty.timer, günde bir; bildirim bir kez gider).
     ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
+    # M47 risk ve uyum (sunucuda timas-risk.timer 06:15): yalnız sıklığı gelen göstergeyi ölçer, hatırlatma bir kez gider.
+    ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
 ]
 
 

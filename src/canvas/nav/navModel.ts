@@ -87,6 +87,7 @@ import {
   UsersRound,
   Wallet,
   type LucideIcon,
+  ShieldAlert,
 } from 'lucide-react';
 
 /**
@@ -212,6 +213,14 @@ export const NAV: NavGroup[] = [
         icon: Target,
         hint: 'Kitap bazlı satış hedefleri, departman bütçesi, senaryolar ve sapma uyarısı',
         keywords: ['bütçe', 'hedef', 'satış hedefi', 'senaryo', 'sapma', 'departman'],
+      },
+      {
+        id: 'risk-uyum',
+        label: 'Risk ve uyum',
+        to: '/risk-uyum',
+        icon: ShieldAlert,
+        hint: 'Risk kaydı ve ısı haritası, göstergeler, uyum takvimi, sigorta ve iş sürekliliği, kurul brifingi',
+        keywords: ['risk', 'uyum', 'kvkk', 'sigorta', 'poliçe', 'iş sürekliliği', 'bcp', 'gösterge', 'kri', 'ısı haritası', 'telif uyumu'],
       },
     ],
   },

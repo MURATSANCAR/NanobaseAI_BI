@@ -62,6 +62,8 @@ const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const SystemStatusScreen = lazy(() => import('@/canvas/it-ops/SystemStatusScreen'));
 const ModelQualityScreen = lazy(() => import('@/canvas/model-quality/ModelQualityScreen'));
 const FinanceScreen = lazy(() => import('@/canvas/finance/FinanceScreen'));
+const RiskScreen = lazy(() => import('@/canvas/risk/RiskScreen'));
+const RiskCard = lazy(() => import('@/canvas/risk/RiskCard'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
@@ -170,6 +172,9 @@ export default function App() {
             <Route path="zeki-kalite" element={<ModelQualityScreen />} />
             {/* M45 Finansal raporlar: gelir tablosu, bütçe–gerçekleşme, kârlılık, nakit, vergi takvimi (/api/v1/finance). */}
             <Route path="finansal-raporlar" element={<FinanceScreen />} />
+            {/* M47 Risk yönetimi ve uyum (/api/v1/risk). */}
+            <Route path="risk-uyum" element={<RiskScreen />} />
+            <Route path="risk-uyum/risk/:id" element={<RiskCard />} />
             {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
             <Route path="ihale" element={<TenderList />} />
             <Route path="ihale/:id" element={<TenderDetail />} />

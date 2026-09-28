@@ -97,6 +97,12 @@
       "label": "Bütçe ve hedefler"
     },
     {
+      "key": "sayfa:risk-uyum",
+      "area": "finans",
+      "label": "Risk ve uyum",
+      "explicit": true
+    },
+    {
       "key": "sayfa:editoryal",
       "area": "editoryal",
       "label": "Masam"
@@ -628,6 +634,67 @@
       "page": "sayfa:finansal-raporlar",
       "label": "Sapma açıklaması",
       "hint": "Bütçe sapmasına neden cümlesi yazma"
+    },
+    {
+      "key": "ozellik:risk.yaz",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Risk kaydı ve aksiyon",
+      "hint": "Risk açma, tanım ve bağlı gösterge düzeltme, gözden geçirme (puan, eğilim, not), aksiyon ekleme, Zeki AI risk önerisi ve kategori önerisi, brifing taslağı. Yalnız sahibi olunan risk"
+    },
+    {
+      "key": "ozellik:risk.herkesinki",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Bütün riskler",
+      "hint": "Sahibi olmadığı riskleri de görme ve değiştirme (risk ve uyum koordinatörü, genel müdür, CFO); kurul brifingi hazırlatma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.gosterge",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Gösterge tanımı ve eşik",
+      "hint": "Gösterge eşiği, yönü, sahibi ve sıklığı için yeni sürüm taslağı; göstergeyi şimdi ölçme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.gosterge-onay",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Gösterge onayı",
+      "hint": "Gösterge taslağını yürürlüğe alma ya da reddetme (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.rapor-onay",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Risk brifingi onayı",
+      "hint": "Çeyreklik kurul risk brifingini onaylama (taslağı hazırlatan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:uyum.yaz",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Uyum takvimi",
+      "hint": "Uyum yükümlülüğü ekleme ve düzeltme, kanıt dosyası yükleme, dönemi kapatma"
+    },
+    {
+      "key": "ozellik:uyum.kvkk",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "KVKK uyum maddeleri",
+      "hint": "KVKK alanındaki uyum yükümlülüklerini ve kanıtlarını yazma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.sigorta-bcp",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Sigorta ve iş sürekliliği",
+      "hint": "Sigorta poliçesi ve iş sürekliliği (BCP) süreç kaydı, belge yükleme, silme"
     },
     {
       "key": "ozellik:dagilim.plan",

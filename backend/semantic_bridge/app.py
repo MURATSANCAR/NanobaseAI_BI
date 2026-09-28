@@ -7181,6 +7181,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M54 Telif dönemi ve haklar (M6'nın hesap motoruyla dönem koşusu): /api/v1/royalty/*, /api/v1/rights/*.
     from semantic_bridge import royalty_api
     app.state.royalty = royalty_api.register(app, rt, _require_caller, _can)
+    # M47 Risk yönetimi ve uyum (Finans): risk kaydı, göstergeler, uyum takvimi, sigorta/BCP, brifing. /api/v1/risk/*.
+    from semantic_bridge import risk_api
+    app.state.risk = risk_api.register(app, rt, _require_caller, _can)
     return app
 
 
