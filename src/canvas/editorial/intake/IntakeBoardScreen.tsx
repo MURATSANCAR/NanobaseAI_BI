@@ -9,6 +9,8 @@ import { dateTime, stamp } from '../../format';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { ProjectCard, TodoGroups, waitingText } from './parts';
 import MailApplicationsBox from '../../mailbox/ApplicationsBox';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Yazar giriş süreci: müşterinin 9 adımı üç evrede. Her kart bir CRM projesi; sütunda en uzun bekleyen üstte. */
 
@@ -165,6 +167,14 @@ export default function IntakeBoardScreen() {
       {d?.error && <Note tone="warn">{d.error}</Note>}
       {d?.loading && <Note tone="info">CRM ilk kez okunuyor; birkaç dakika sürebilir. Ekran kendiliğinden yenilenecek.</Note>}
 
+      {d && !d.loading && (
+        <div className="flex justify-end px-1 text-[11.5px] text-canvas-muted">
+          <span className="inline-flex items-center gap-1">
+            Proje, bekleyen iş ve gecikme sayıları
+            <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar giriş panosu" />
+          </span>
+        </div>
+      )}
       {d && <TodoStrip todo={d.todo} all={d.todoScope === 'all'} />}
       <MailApplicationsBox />
 

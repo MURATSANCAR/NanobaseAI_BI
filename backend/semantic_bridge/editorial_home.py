@@ -117,10 +117,14 @@ class EditorialHomeSnapshots:
                 path = root / (name + '.json')
                 previous = self.load(path)
                 try:
-                    data = build()
+                    from semantic_bridge import sorgu_izi as IZ
+
+                    # Sorgu bilgisi: bu parçayı kuran CRM/Logo metinleri (koşan, değerleri yerinde) kayıtla saklanır.
+                    with IZ.izle_dis() as ran:
+                        data = build()
                     if isinstance(data, dict) and data.get('truncated'):
                         raise ValueError('Incomplete editorial summary')
-                    self.save(path, {'data': data, 'updatedAt': time.time(), 'error': None})
+                    self.save(path, {'data': data, 'updatedAt': time.time(), 'error': None, 'sql': ran})
                 except Exception:
                     log.exception('Editorial home refresh failed: %s; preserving last success', name)
                     self.save(path, dict(previous, error='Yeni veriler alınamadı; son başarılı kayıt korunuyor.', failedAt=time.time()))

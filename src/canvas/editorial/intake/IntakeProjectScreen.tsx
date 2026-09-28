@@ -7,6 +7,8 @@ import { Loading, Note, Pill, btnGhost, errText, nf } from '../../admin/ui';
 import { dateTime } from '../../format';
 import { ModuleFrame, Panel } from '../kit';
 import { MARK_LABEL, MarkButton, Progress, waitingSentence } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Bir projenin 9 adımı: ne bitti, ne zaman, kimde bekliyor. Kanıtı CRM'den; iki adım portaldan işaretlenir. */
 
@@ -151,7 +153,10 @@ export default function IntakeProjectScreen() {
 
             <div className="space-y-3">
               <Panel>
-                <h2 className="text-[14px] font-extrabold">Proje özeti</h2>
+                <h2 className="flex items-center gap-1 text-[14px] font-extrabold">
+                  Proje özeti
+                  <SqlInfo k={kaynakOf(p)} alan="_hepsi" label="Adım, sözleşme ve katılım sayıları" />
+                </h2>
                 {p.idea && <p className="mt-2 text-[12.5px] leading-snug">{p.idea}</p>}
                 <div className="mt-2">
                   <Fact label="CRM durumu" value={p.status} />

@@ -8,6 +8,8 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } from '../
 import { Panel } from '../kit';
 import { assignEditorsOptions, assignKeys } from '../queries';
 import { LoadMeter, Sheet, StatusPill, TaskEditor, day, todayIso } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Editör başına iş yükü: ZEKİ AI'daki açık görevler / kapasite, CRM'de iş durumundaki projeler, izinler. */
 
@@ -210,7 +212,10 @@ export default function LoadTab() {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">İş yükü</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          İş yükü
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Editör iş yükü" />
+        </h2>
         {closed > 0 && (
           <label className="flex min-h-9 items-center gap-1.5 text-[11.5px] font-bold text-canvas-muted">
             <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} className="h-4 w-4 accent-canvas-violet" />

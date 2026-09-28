@@ -469,6 +469,16 @@ class Runtime:
             self._conn_for(sql).dry_run(sql)
 
     def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
+        out = self._run_sql(sql, limit, period, scope=scope, use_cache=use_cache)
+        _trace_run(out)
+        return out
+
+    def run_complete(self, sql: str, period=None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
+        out = self._run_complete(sql, period, scope=scope, use_cache=use_cache)
+        _trace_run(out)
+        return out
+
+    def _run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         sql = strip_comments(sql or "")
         ok, why = validate_sql(sql)
         if not ok:
@@ -536,7 +546,7 @@ class Runtime:
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
                 "dbMs": int(round(duration * 1000))}, duration
 
-    def run_complete(self, sql: str, period=None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
+    def _run_complete(self, sql: str, period=None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         ok, why = validate_sql(sql)
         if not ok:
             raise ValueError(why)
@@ -1667,6 +1677,19 @@ class Runtime:
 
 
 # ---------------------------------------------------------------------- FastAPI
+
+def _trace_run(out: Any) -> None:
+    """Sorgu bilgisi: köprünün Logo/CRM'de koşturduğu fiziksel metni, izleme açıksa (`sorgu_izi.izle_dis`) bildirir.
+    Önbellekten gelen sonuçta satır ve süre ilk koşunundur. İzleme yoksa hiçbir şey yapmaz."""
+    try:
+        phys = (out or {}).get("physicalSql") if isinstance(out, dict) else None
+        if phys:
+            from semantic_bridge import sorgu_izi as IZ
+
+            IZ.dis(SK.connection_of(phys), phys, rows=out.get("totalRows"), ms=out.get("dbMs"))
+    except Exception:  # noqa: BLE001 — sorgu bilgisi okuma yolunu düşürmez
+        log.debug("sorgu izi yazılamadı", exc_info=True)
+
 
 def _variance_hint(sq: Any) -> dict[str, Any]:
     """Cevabın «Neden?» ipucu (SQL koşmaz). Hata cevabı düşürmez."""
@@ -4142,6 +4165,24 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _editorial_error(e: "editorial_mod.EditorialError") -> HTTPException:
         return HTTPException(status_code=e.status, detail={"code": "INVALID_EDITORIAL", "message": str(e)})
 
+
+    def _izle_ep(prefix: str, title: str, text: str, **kw: Any):
+        """Sorgu bilgisi süsleyicisi: uç koşarken portal ve Logo/CRM okumaları (koşan metin) yakalanır."""
+        from semantic_bridge import sorgu_izi as IZ_mod
+
+        return IZ_mod.izlenir(prefix, title, text, engine=lambda: rt().store.engine,
+                              dbs=lambda: SK.databases(rt().settings.connection_file), **kw)
+
+    def _intake_part_sql(out: Any) -> list:
+        try:
+            return list(((app.state.editorial_intake.read().get("parts") or {}).get("intake") or {}).get("sql") or [])
+        except Exception:  # noqa: BLE001
+            return []
+
+    def _home_parts_sql(out: Any) -> list:
+        return [x for part in ((out or {}).get("parts") or {}).values() if isinstance(part, dict)
+                for x in (part.get("sql") or [])]
+
     from semantic_bridge.editorial_home import EditorialHomeSnapshots
 
     def _home_scope():
@@ -4205,6 +4246,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 log.exception("editorial view registration failed")
 
     @app.get("/api/v1/editorial/home")
+    @_izle_ep('portal.editoryal.masam', 'Editoryal masam',
+               "Editoryal masam: süresi dolan sözleşmeler ve editör özeti CRM'den (5 dakikada bir önbelleğe okunur); masadaki işlerin bölüm ve imza sayıları portal eser kayıtlarından.", onceki=_home_parts_sql, skip=('refreshIntervalSeconds',))
     def editorial_home(request: Request, response: Response) -> dict[str, Any]:
         # Authenticate and filter desk records on every read; never persist them in shared snapshots.
         works = desk_works(request)
@@ -4282,6 +4325,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return datetime.now(ZoneInfo("Europe/Istanbul")).date()
 
     @app.get("/api/v1/editorial/intake")
+    @_izle_ep('portal.editoryal.giris', 'Yazar giriş panosu',
+               "Yazar giriş panosu: aşama başına proje sayısı, geciken (eşik gün aşan), sizinkiler, sizi ve editörleri bekleyen işler, kartta bekleme günü ve 9 adım ilerlemesi CRM olguları (5 dakikada bir baştan okunur, önbellek) ile portal adım işaretlerinden hesaplanır. Editoryal masamın KPI'ları (süren, bekleyen, geciken, atanmamış, kurulda) aynı hesaptır.", onceki=_intake_part_sql)
     def editorial_intake(request: Request, response: Response) -> dict[str, Any]:
         engine, tenant, user, _, is_admin = _intake_ctx(request)
         if FORCE_FRESH.get():
@@ -4294,6 +4339,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                     refreshIntervalSeconds=app.state.editorial_intake.read()["refreshIntervalSeconds"])
 
     @app.get("/api/v1/editorial/intake/meetings")
+    @_izle_ep('crm.editoryal.kurul', 'Yayın kurulu toplantıları',
+               'Yayın kurulu CRM geçmişi: toplantı başına proje sayısı CRM kurul kayıtlarından.')
     def editorial_intake_meetings(request: Request) -> dict[str, Any]:
         _intake_ctx(request)
         schema, run = _editorial(request)
@@ -4303,6 +4350,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise _intake_error(e) from e
 
     @app.get("/api/v1/editorial/intake/meetings/{day}")
+    @_izle_ep('crm.editoryal.gundem', 'Kurul gündemi',
+               'Gündem: proje, karar (kabul, red, yeniden değerlendirme, bekliyor) ve madde başına görüş sayısı CRM kurul ve görüş kayıtlarından.')
     def editorial_intake_agenda(day: str, request: Request) -> dict[str, Any]:
         _, _, user, _, _ = _intake_ctx(request)
         see = _can(user, "ozellik:yayin-kurulu.gorusler")
@@ -4318,6 +4367,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise _intake_error(e) from e
 
     @app.get("/api/v1/editorial/intake/{project_id}")
+    @_izle_ep('crm.editoryal.proje', 'Yazar giriş projesi',
+               'Proje: 9 adımın tamamlanan sayısı, sözleşme sayısı, eser katılımı ve adım bekleme günleri CRM olguları ile portal adım işaretlerinden.', onceki=_intake_part_sql)
     def editorial_intake_project(project_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, is_admin = _intake_ctx(request)
         schema, run = _editorial(request)
@@ -4512,6 +4563,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return _editorial_call(editorial_mod.search, schema, run, q, kind or None, page)
 
     @app.get("/api/v1/editorial/books/{book_id}")
+    @_izle_ep('crm.editoryal.kitap', 'Kitap künyesi',
+               'Kitap: sayfa, baskı numarası, toplam ve ilk baskı adedi CRM kitap kartından; sözleşme bitişine kalan gün = bitiş − bugün; masadaki işlerin bölüm ve imza sayıları portal eser kayıtlarından.')
     def editorial_book(book_id: str, request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
         out = _editorial_call(editorial_mod.book, schema, run, book_id)
@@ -4551,12 +4604,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return _editorial_call(editorial_mod.person_books, schema, run, contact_id, page)
 
     @app.get("/api/v1/editorial/editors")
+    @_izle_ep('crm.editoryal.editorler', 'Editörler',
+               'Editör başına proje ve durum dağılımı CRM projelerinden (seçilen yıldan beri); editörlü / editörsüz proje sayısı; editör başına ortalama = editörlü proje ÷ editör sayısı.')
     def editorial_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:
         schema, run = _editorial(request)
         year = since or (datetime.now(timezone.utc).year - 2)
         return _editorial_call(editorial_mod.editors, schema, run, year)
 
     @app.get("/api/v1/editorial/projects")
+    @_izle_ep('crm.editoryal.projeler', 'Projeler',
+               "Proje listesi: süzgece uyan proje sayısı (sayfalama toplamı) ve durum sayaçları CRM'den.", skip=('page', 'pageSize'))
     def editorial_projects(request: Request, q: str = "", editor: str = "", status: Optional[int] = None,
                            since: Optional[int] = None, page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
@@ -4630,6 +4687,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/assignments/pending")
+    @_izle_ep('crm.editoryal.atama', 'Atama bekleyen projeler',
+               'Atama bekleyen: süzgece uyan CRM projeleri (sayı ve sayfa), durum sayaçları; portalda atanmış projeler hariç tutulur (sayısı ayrıca yazılır); proje başına sayfa CRM kartından.', skip=('page', 'pageSize', 'sinceYear', 'statuses'))
     def assign_pending(request: Request, q: str = "", status: str = "", category: str = "", since: Optional[int] = None,
                        page: int = 0) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
@@ -4649,6 +4708,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "db": editorial_mod._timing(res)}
 
     @app.get("/api/v1/editorial/assignments/suggest")
+    @_izle_ep('crm.editoryal.aday', 'Atama adayları',
+               'Aday uygunluğu kural tablosunun ağırlıklarıyla hesaplanır: kategori deneyimi CRM geçmişinden, yük = açık iş ÷ kapasite (portal görevleri), izinler; kurala göre, model yok. Bütün ve atanamayan aday sayıları aynı hesaptan.', skip=('ruleVersion',))
     def assign_suggest(request: Request, project: str, start: str = "", due: str = "", since: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         proj = _asg_project(schema, run, project)
@@ -4693,6 +4754,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/assignments/editors")
+    @_izle_ep('crm.editoryal.yuk', 'Editör iş yükü',
+               "İş yükü: editör başına açık iş ÷ kapasite (portal görevleri ve profil), yük yüzdesi, gecikmiş, terminsiz, sayfa; CRM'de editörün açık proje sayısı; CRM hesabı kapalı kişi sayısı.", skip=('sinceYear',))
     def assign_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         year = _asg_since(since)
@@ -4752,6 +4815,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True}
 
     @app.get("/api/v1/editorial/assignments/calendar")
+    @_izle_ep('crm.editoryal.takvim', 'Editör takvimi',
+               'Takvim: editör başına hafta hafta açık iş ÷ kapasite ve izin günleri; çakışma = kapasiteyi aşan hafta sayısı.')
     def assign_calendar(request: Request, start: str = "", end: str = "", since: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         today = datetime.now(timezone.utc).date()
@@ -4806,6 +4871,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"items": _asg_call(assign_mod.task_history, engine, tenant, task_id)}
 
     @app.get("/api/v1/editorial/tasks/mine")
+    @_izle_ep('crm.editoryal.gorevlerim', 'Görevlerim',
+               "Görevlerim: açık, gecikmiş ve bu hafta biten görevler portal görevlerinden; kalan gün = termin − bugün; «CRM'de size yazılı» = CRM projelerinden panoda olmayanlar.", skip=('sinceYear',))
     def assign_mine(request: Request, since: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         me = _asg_me(schema, run, user)
@@ -4837,6 +4904,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/assignments/rules")
+    @_izle_ep('crm.editoryal.kurallar', 'Atama kural tablosu',
+               'Kural tablosu: kategori başına proje ve editör deneyimi sayıları CRM geçmişinden (seçilen yıldan beri); önceki sürüm sayısı portal kaydından.', skip=('sinceYear', 'version'))
     def assign_rules(request: Request, since: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         year = _asg_since(since)

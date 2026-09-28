@@ -17,6 +17,8 @@ import ReportPanel from './ReportPanel';
 import { ACTION_TEXT, DECISION_TONE, StatusPill, TallyView, errMsg, fmtBytes, invalidateApps, useAppMeta } from './shared';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Tek başvuru: dosya, editör değerlendirmesi, kurula çıkış, Yayın Kurulu Raporu, kurul kararı, yazışma, geçmiş. */
 
@@ -338,6 +340,7 @@ function Dossier({ a }: { a: AppDetail }) {
       <div className="grid gap-2.5 sm:grid-cols-3">
         {row('Hedef kitle', [a.audienceLabel, a.ageFrom != null || a.ageTo != null ? `${a.ageFrom ?? ''}–${a.ageTo ?? ''} yaş` : null].filter(Boolean).join(', ') || null)}
         {row('Sayfa tahmini', nf.format(a.pageEstimate))}
+        <div className="flex items-end"><SqlInfo k={kaynakOf(a)} alan="_hepsi" label="Başvuru dosyasının sayıları" /></div>
         {row('Tür', a.genre)}
         {row('Kategori', a.categoryName)}
         {row('Seri', a.series)}

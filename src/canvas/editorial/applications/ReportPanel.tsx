@@ -9,6 +9,8 @@ import { fmtDay } from '../authors/shared';
 import { applicationsApi, type BoardReport, type Market } from './api';
 import { errMsg, invalidateApps } from './shared';
 import { EvaluationView } from './EvaluationPanel';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Yayın Kurulu Raporu: YAZAR · KİTAP · KATEGORİ · 1 yıllık satış tahmini (kötümser / baz / iyimser) · editör
  *  değerlendirmesi · katalog örtüşmesi. Rapor üretildiği anın dondurulmuş hâlidir; «Yeniden üret» tazeler. */
@@ -289,7 +291,10 @@ export default function ReportPanel({ appId, canWrite, status }: { appId: string
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-[15px] font-extrabold">Yayın Kurulu Raporu</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+            Yayın Kurulu Raporu
+            {d?.content && <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Pazar raporunun rakamları" />}
+          </h2>
           <p className="text-[11.5px] text-canvas-muted">
             {d?.status === 'hazir' && d.finishedAt ? `Son üretim ${fmtDay(d.finishedAt)}` : early ? 'Kurula çıkarılınca kendiliğinden üretilir.' : 'Kurula çıkarılınca kendiliğinden üretilir; istenince yeniden üretilir.'}
           </p>

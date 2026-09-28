@@ -9,6 +9,8 @@ import { dateTime } from '../../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { waitingText } from './parts';
 import { BoardTabs } from '../applications/shared';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Yayın kurulu: bir toplantının gündemi ve kararları. Toplantı, CRM'de aynı güne yazılmış kurul kayıtlarıdır;
  *  ileri tarihli kayıt tutulmadığı için gelecek toplantı gösterilmez. */
@@ -124,10 +126,10 @@ export default function MeetingScreen() {
 
       {m && (
         <KpiRow>
-          <Kpi label="Kabul" value={nf.format(m.accepted)} help="Onaylanan proje" />
-          <Kpi label="Red" value={nf.format(m.rejected)} help="Uygun bulunmayan" />
-          <Kpi label="Yeniden değerlendirme" value={nf.format(m.revisit)} help="Geliştirilip tekrar gelecek" />
-          <Kpi label="Karar bekliyor" value={nf.format(m.pending)} help="Bekleme ya da karar girilmemiş" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Kabul" />} label="Kabul" value={nf.format(m.accepted)} help="Onaylanan proje" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Red" />} label="Red" value={nf.format(m.rejected)} help="Uygun bulunmayan" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Yeniden değerlendirme" />} label="Yeniden değerlendirme" value={nf.format(m.revisit)} help="Geliştirilip tekrar gelecek" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Karar bekliyor" />} label="Karar bekliyor" value={nf.format(m.pending)} help="Bekleme ya da karar girilmemiş" />
         </KpiRow>
       )}
 

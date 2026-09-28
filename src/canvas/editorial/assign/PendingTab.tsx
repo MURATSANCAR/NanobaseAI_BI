@@ -9,6 +9,8 @@ import { Pager, Panel, useDebounced } from '../kit';
 import { assignPendingOptions } from '../queries';
 import AssignSheet from './AssignSheet';
 import { day, projectMeta } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** CRM'de editörü boş ve ZEKİ AI'da açık görevi olmayan projeler. Varsayılan süzgeç iş durumundakiler
  *  (iş planı / kurul onaylı); durum çipleriyle diğerleri de açılır. */
@@ -38,7 +40,10 @@ export default function PendingTab() {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Atama bekleyen projeler</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Atama bekleyen projeler
+          <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Atama bekleyen projeler" />
+        </h2>
         {d && d.onBoard > 0 && <span className="text-[11.5px] text-canvas-muted">{nf.format(d.onBoard)} proje ZEKİ AI'da atanmış, listede yok</span>}
       </div>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">

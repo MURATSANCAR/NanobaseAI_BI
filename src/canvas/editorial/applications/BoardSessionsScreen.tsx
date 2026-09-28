@@ -10,6 +10,8 @@ import MeetingScreen from '../intake/MeetingScreen';
 import { applicationsApi, boardApi, type SessionHead } from './api';
 import SessionForm from './SessionForm';
 import { BoardTabs, useAppMeta } from './shared';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Yayın kurulu: portalda yürütülen kurul oturumları (gündem, üye oyu, karar). CRM'deki geçmiş kurul kararları
  *  `?gorunum=crm` ile aynı sayfada açılır. */
@@ -82,10 +84,10 @@ function Sessions() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       <KpiRow>
-        <Kpi label="Hazırlanan oturum" value={list.data ? nf.format(open.length) : '—'} help="Kapanmamış kurul oturumu" />
-        <Kpi label="Oyunuzu bekleyen" value={list.data ? nf.format(myTodo) : '—'} help="Üyesi olduğunuz oturumlarda" />
-        <Kpi label="Kurula çıkacak" value={waiting.data ? nf.format(waiting.data.items.length) : '—'} help="Gündem bekleyen başvuru" />
-        <Kpi label="Kapanan oturum" value={list.data ? nf.format(closed.length) : '—'} help="Kararları kayıtlı" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Hazırlanan oturum" />} label="Hazırlanan oturum" value={list.data ? nf.format(open.length) : '—'} help="Kapanmamış kurul oturumu" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Oyunuzu bekleyen" />} label="Oyunuzu bekleyen" value={list.data ? nf.format(myTodo) : '—'} help="Üyesi olduğunuz oturumlarda" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kurula çıkacak" />} label="Kurula çıkacak" value={waiting.data ? nf.format(waiting.data.items.length) : '—'} help="Gündem bekleyen başvuru" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kapanan oturum" />} label="Kapanan oturum" value={list.data ? nf.format(closed.length) : '—'} help="Kararları kayıtlı" />
       </KpiRow>
       {list.error && <Note tone="err">{errText(list.error, 'Oturumlar okunamadı.')}</Note>}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-4">

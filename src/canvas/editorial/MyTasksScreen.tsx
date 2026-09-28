@@ -9,6 +9,8 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { assignKeys, myTasksOptions } from './queries';
 import { LeaveEditor } from './assign/LoadTab';
 import { LoadMeter, STATUS_LABEL, STATUS_ORDER, Sheet, TaskEditor, day, daysBetween, projectMeta, todayIso } from './assign/parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M2 editörün kendi görev panosu. Görevler ZEKİ AI'daki atamalardır; CRM'de editörü olduğu ama panoda
  *  olmayan iş durumundaki projeler ayrı listelenir ve «Panoma al» ile panoya girer. Durum, termin ve not
@@ -119,10 +121,10 @@ export default function MyTasksScreen() {
       {d?.me && (
         <>
           <KpiRow>
-            <Kpi label="Açık görev" value={nf.format(open.length)} help="Sırada, çalışılıyor, beklemede" />
-            <Kpi label="Gecikmiş" value={nf.format(overdue)} help="Termini geçmiş açık görev" />
-            <Kpi label="Bu hafta" value={nf.format(week)} help="Termini 7 gün içinde" />
-            <Kpi label="CRM'de size yazılı" value={nf.format(d.crmOnly.length)} help="İş planı / kurul onaylı, panoda değil" />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık görev" />} label="Açık görev" value={nf.format(open.length)} help="Sırada, çalışılıyor, beklemede" />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Gecikmiş" />} label="Gecikmiş" value={nf.format(overdue)} help="Termini geçmiş açık görev" />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bu hafta" />} label="Bu hafta" value={nf.format(week)} help="Termini 7 gün içinde" />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="CRM'de size yazılı" />} label="CRM'de size yazılı" value={nf.format(d.crmOnly.length)} help="İş planı / kurul onaylı, panoda değil" />
           </KpiRow>
           {d.load && (
             <Panel>

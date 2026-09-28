@@ -6,6 +6,8 @@ import { assignApi, type AssignRule, type RuleCategory, type RuleVersion } from 
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } from '../../admin/ui';
 import { Panel } from '../kit';
 import { assignKeys, assignRulesOptions } from '../queries';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Kategori–editör kural tablosu. Kategori CRM «Kitaplık»; kitaplığı boş projede marka. Taslak yazılır, onay
  *  yetkisi olan kişi yürürlüğe alır; önceki sürüm arşive geçer. Öneri ekranı yalnız yürürlükteki sürümü kullanır. */
@@ -248,7 +250,10 @@ export default function RulesTab() {
 
       {d && editing && (
         <Panel>
-          <h2 className="px-1 text-[13px] font-extrabold">Taslak {d.draft ? `sürüm ${d.draft.version}` : '(yeni)'}</h2>
+          <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+            Taslak {d.draft ? `sürüm ${d.draft.version}` : '(yeni)'}
+            <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Kategori deneyimi sayıları" />
+          </h2>
           <p className="mb-3 mt-0.5 px-1 text-[11.5px] text-canvas-muted">Kaydedilen taslak onaylanana kadar öneriyi etkilemez.</p>
           <Editor initial={d.draft?.rules ?? d.active?.rules ?? []} categories={d.categories} editors={d.editors} names={names} onCancel={() => setEditing(false)} />
         </Panel>

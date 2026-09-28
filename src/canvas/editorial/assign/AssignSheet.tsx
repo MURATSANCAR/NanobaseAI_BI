@@ -8,6 +8,8 @@ import { crmLabel } from '../../format';
 import { useDebounced } from '../kit';
 import { assignKeys, assignSuggestOptions } from '../queries';
 import { ConflictList, LoadMeter, Sheet, addDays, day, projectMeta, todayIso } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Projeye editör atama: tarih aralığına göre adaylar (kural, geçmiş, yük, takvim) ve atama formu. */
 
@@ -152,7 +154,10 @@ export default function AssignSheet({ project, onClose, canAssign }: { project: 
 
           <section>
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-[13px] font-extrabold">Adaylar</h3>
+              <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+                Adaylar
+                <SqlInfo k={kaynakOf(data)} alan="_hepsi" label="Aday uygunluğu ve yük" />
+              </h3>
               {sugg.isFetching && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin text-canvas-muted" />}
             </div>
             <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">

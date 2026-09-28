@@ -11,6 +11,8 @@ import ApplicationForm from './ApplicationForm';
 import { StatusPill, useAppMeta } from './shared';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** M1 Başvurular: yeni kitap başvurularının kuyruğu, kabul edilenler ve arşiv (reddedilen, geri çekilen).
  *  Görünüm, süzgeç ve arama adres çubuğunda durur (?gorunum=, ?durum=, ?ara=, ?benim=1). */
@@ -135,6 +137,7 @@ export default function ApplicationsScreen() {
 
   const kpi = (s: AppStatus, help: string) => (
     <Kpi
+      info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label={statusLabel(s)} />}
       label={statusLabel(s)}
       value={counts ? nf.format(counts[s]) : '—'}
       help={help}

@@ -14,12 +14,14 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
 import { fmtDay } from './translation/parts';
 import AskBox from './AskBox';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, altında kendisine atanmış bütün dosyalar.
  *  Dosya, CRM proje kartında editörü oturumdaki kişi olan yazar giriş süreci projesidir. */
 
 /** Kişinin masasında duran iş: karar bekleyen öneri, onaylanmamış bölüm, imza bekleyen prova. */
-function Desk({ works, user }: { works: Work[]; user: string }) {
+function Desk({ works, user, k }: { works: Work[]; user: string; k?: ReturnType<typeof kaynakOf> }) {
   const mine = works.filter((w) => w.createdBy.toLowerCase() === user.toLowerCase() || w.members.includes(user.toLowerCase()) || w.signatures.total > 0);
   const openChapters = mine.reduce((a, w) => a + (w.chapters.total - w.chapters.approved), 0);
   const waitingProofs = mine.filter((w) => w.proof && w.signatures.signed < w.signatures.total);
@@ -27,7 +29,10 @@ function Desk({ works, user }: { works: Work[]; user: string }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Masanızdaki eserler</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Masanızdaki eserler
+          <SqlInfo k={k} alan="_hepsi" label="Bölüm ve imza sayıları" />
+        </h2>
         <Link to="/redaksiyon" className="text-[11.5px] font-bold text-canvas-violet underline">
           Redaksiyona git
         </Link>
@@ -75,7 +80,10 @@ function TranslationDesk() {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Çeviri işleriniz</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Çeviri işleriniz
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bekleyen segment sayıları" />
+        </h2>
         <Link to="/ceviri/masam" className="text-[11.5px] font-bold text-canvas-violet underline">
           Çeviri masam
         </Link>
@@ -110,13 +118,16 @@ function TranslationDesk() {
   );
 }
 
-function Expiring({ data }: { data?: ContractPage }) {
+function Expiring({ data, k }: { data?: ContractPage; k?: ReturnType<typeof kaynakOf> }) {
   const items = (data?.items ?? []).slice(0, 5);
   if (!items.length) return null;
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Süresi yaklaşan sözleşmeler</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Süresi yaklaşan sözleşmeler
+          <SqlInfo k={k} alan="_hepsi" label="Süresi yaklaşan sözleşmeler" />
+        </h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
           Hepsi ({nf.format(data?.total ?? 0)})
         </Link>
@@ -178,14 +189,17 @@ const FILTERS = [
   { key: 'done', label: 'Tamamlanan' },
 ] as const;
 
-function MyFiles({ running, todo, completed }: { running: IntakeCard[]; todo: IntakeCard[]; completed: IntakeCard[] }) {
+function MyFiles({ running, todo, completed, k }: { running: IntakeCard[]; todo: IntakeCard[]; completed: IntakeCard[]; k?: ReturnType<typeof kaynakOf> }) {
   const [f, setF] = useState<(typeof FILTERS)[number]['key']>('all');
   const lists = { all: [...running, ...completed], waiting: todo, board: running.filter((c) => c.phase === 2), done: completed };
   const items = lists[f];
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Tüm dosyalarım</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Tüm dosyalarım
+          <SqlInfo k={k} alan="_hepsi" label="Dosya sayaçları" />
+        </h2>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Süzgeç">
           {FILTERS.map((x) => (
             <button
@@ -235,7 +249,7 @@ const COLS = 'grid grid-cols-[minmax(0,1fr)_repeat(4,64px)] items-center gap-2 s
 
 /** Yönetici görünümü: editör başına süren, bekleyen, kuruldaki ve geciken dosya. Bekleyen işi olan satır
  *  açılır ve o editörün sırasındaki işleri gösterir; açılışta hepsi kapalıdır ki özet tek bakışta okunsun. */
-function EditorTable({ items, todo }: { items: IntakeCard[]; todo: IntakeCard[] }) {
+function EditorTable({ items, todo, k }: { items: IntakeCard[]; todo: IntakeCard[]; k?: ReturnType<typeof kaynakOf> }) {
   const [open, setOpen] = useState<string | null>(null);
   const by = new Map<string, EditorRow>();
   for (const c of items) {
@@ -251,7 +265,10 @@ function EditorTable({ items, todo }: { items: IntakeCard[]; todo: IntakeCard[] 
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Editörlere göre dosyalar</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Editörlere göre dosyalar
+          <SqlInfo k={k} alan="_hepsi" label="Editör başına süren, bekleyen, kurulda, geciken" />
+        </h2>
         <span className="text-[11.5px] text-canvas-muted">Bekleyen işleri görmek için satıra dokunun</span>
       </div>
       <div className="mt-2 overflow-x-auto">
@@ -371,7 +388,7 @@ export default function EditorialHome() {
           </li>
         </ul>
       </Panel>
-      <Expiring data={parts?.expiring.data} />
+      <Expiring data={parts?.expiring.data} k={kaynakOf(home.data)} />
       <p className="px-1 text-[11px] text-canvas-muted">
         {lastUpdated ? `Son güncelleme: ${fmtDate(new Date(lastUpdated * 1000).toISOString())}` : 'Kaydedilmiş veriler alınıyor…'}
       </p>
@@ -404,17 +421,17 @@ export default function EditorialHome() {
         <KpiRow>
           {all ? (
             <>
-              <Kpi label="Süren dosya" value={nf.format(d.items.length)} help="CRM'de açık yazar giriş projesi" />
-              <Kpi label="Editörlerde bekleyen" value={nf.format(todo.length)} help="Sırası editörde olan adım" />
-              <Kpi label="Geciken" value={nf.format(allLate)} help={`${pct(allLate, d.items.length)} · ${lateHelp}`} />
-              <Kpi label="Editör atanmamış" value={nf.format(unassigned.length)} help={`${nf.format(unassignedWaiting)} tanesinde iş bekliyor`} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosya" />} label="Süren dosya" value={nf.format(d.items.length)} help="CRM'de açık yazar giriş projesi" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editörlerde bekleyen" />} label="Editörlerde bekleyen" value={nf.format(todo.length)} help="Sırası editörde olan adım" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} label="Geciken" value={nf.format(allLate)} help={`${pct(allLate, d.items.length)} · ${lateHelp}`} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editör atanmamış" />} label="Editör atanmamış" value={nf.format(unassigned.length)} help={`${nf.format(unassignedWaiting)} tanesinde iş bekliyor`} />
             </>
           ) : (
             <>
-              <Kpi label="Süren dosyanız" value={nf.format(running.length)} help="Size atanmış açık proje" />
-              <Kpi label="Sizi bekleyen" value={nf.format(todo.length)} help="Sırası sizde olan adım" />
-              <Kpi label="Geciken" value={nf.format(lateRunning)} help={lateHelp} />
-              <Kpi label="Kurulda" value={nf.format(boardRunning)} help="Yayın kurulu evresinde" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosyanız" />} label="Süren dosyanız" value={nf.format(running.length)} help="Size atanmış açık proje" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Sizi bekleyen" />} label="Sizi bekleyen" value={nf.format(todo.length)} help="Sırası sizde olan adım" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} label="Geciken" value={nf.format(lateRunning)} help={lateHelp} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Kurulda" />} label="Kurulda" value={nf.format(boardRunning)} help="Yayın kurulu evresinde" />
             </>
           )}
         </KpiRow>
@@ -424,9 +441,9 @@ export default function EditorialHome() {
         /* Yönetici: özet tablo solda, sohbet ve takvim sağda; ikisi de ilk ekranda görünür. */
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
           <div className="space-y-3">
-            {d && <EditorTable items={d.items} todo={todo} />}
-            {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
-            {works.data && <Desk works={desk} user={works.data.user} />}
+            {d && <EditorTable items={d.items} todo={todo} k={kaynakOf(intake.data)} />}
+            {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} k={kaynakOf(intake.data)} />}
+            {works.data && <Desk works={desk} user={works.data.user} k={kaynakOf(home.data)} />}
             <TranslationDesk />
           </div>
           <div className="space-y-3">
@@ -452,8 +469,8 @@ export default function EditorialHome() {
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
             <div className="space-y-3">
-              {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
-              {works.data && <Desk works={desk} user={works.data.user} />}
+              {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} k={kaynakOf(intake.data)} />}
+              {works.data && <Desk works={desk} user={works.data.user} k={kaynakOf(home.data)} />}
               <TranslationDesk />
             </div>
             {side}

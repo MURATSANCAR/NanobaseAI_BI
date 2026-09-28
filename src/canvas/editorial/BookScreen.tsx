@@ -9,6 +9,8 @@ import { WebSection } from './web/parts';
 import Cover from './Cover';
 import ReviewPanel from './ReviewPanel';
 import BookCollabs from '../influencers/BookCollabs';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -57,7 +59,10 @@ function Facts({ b, card }: { b: BookDetail; card: BookCard | null }) {
   ].filter(([, v]) => v) as Array<[string, string, string?]>;
   return (
     <Panel>
-      <h2 className="px-1 text-[13px] font-extrabold">Künye</h2>
+      <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+        Künye
+        <SqlInfo k={kaynakOf(b)} alan="_hepsi" label="Künye: sayfa ve baskı adetleri" />
+      </h2>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
         {rows.map(([k, v, note]) => (
           <div key={k} className="min-w-0">
@@ -128,7 +133,10 @@ function Contracts({ b }: { b: BookDetail }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Sözleşmeler</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Sözleşmeler
+          <SqlInfo k={kaynakOf(b)} alan="_hepsi" label="Sözleşme bitişine kalan gün" />
+        </h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
           Telif ve sözleşmeler
         </Link>

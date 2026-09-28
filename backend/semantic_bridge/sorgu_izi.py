@@ -148,6 +148,73 @@ def dis_kaydet(k: P.Kaynaklar, got: list, prefix: str, title: str, logo_db: Opti
     return ids
 
 
+def tam_kaynak(engine: Any, ran: list, got: list, out: Any, *, prefix: str, title: str, text: str,
+               logo_db: Optional[str], crm_db: Optional[str], skip: tuple = (), dis_adi: Optional[str] = None,
+               onceki: Optional[list] = None) -> P.Kaynaklar:
+    """Uçta koşan portal okumaları (`ran`) + Logo/CRM metinleri (`got`, `onceki`: önbellek kaydından gelen, onu
+    dolduran asıl okumalar) + gerekirse SQL'siz kaynağın adı (`dis_adi`) → tek hesap; cevabın rakam taşıyan her üst
+    anahtarı ve `_hepsi` bu hesaba bağlanır."""
+    k = P.Kaynaklar()
+    ids = kaydet(k, ran, engine, prefix, title, description="Bu ekran açılırken koşan okuma.") if engine is not None else []
+    ids += dis_kaydet(k, got, f"{prefix}.kaynak", title, logo_db, crm_db)
+    if onceki:
+        ids += dis_kaydet(k, onceki, f"{prefix}.onbellek", f"{title} (önbelleği dolduran)", logo_db, crm_db,
+                          description="Önbellekteki özeti dolduran okuma; satır, süre ve zaman o okumanındır.")
+    if dis_adi:
+        ids.append(k.hesap(f"{prefix}.dis", "SQL'i olmayan kaynak.", dis=dis_adi))
+    if not ids:
+        raise P.ProvenanceError("Bu ekranın okuması yakalanamadı.")
+    ref = k.hesap(prefix, text, ids)
+    k.alan("_hepsi", ref)
+    skipped = set(skip)
+    if isinstance(out, dict):
+        k.alanlar({key: ref for key, v in out.items() if key not in skipped and P.numeric_paths({key: v})})
+    return k
+
+
+def izlenir(prefix: str, title: str, text: str, *, engine: Callable[[], Any], dbs: Callable[[], tuple],
+            skip: tuple = (), dis_adi: Optional[str] = None, onceki: Optional[Callable[[Any], list]] = None,
+            key: str = "kaynaklar"):
+    """Uç süsleyicisi (`@app.get` altına): uç koşarken portal ve Logo/CRM okumalarını yakalar, cevaba sorgu bilgisini
+    ekler. `onceki(out)`: cevabın önbellek kaydındaki asıl okumalar. Kayıt kurulamazsa rakamlar yine döner."""
+    import functools
+    import inspect
+
+    def build(out: Any, ran: list, got: list) -> Any:
+        if not isinstance(out, dict):
+            return out
+
+        def make() -> P.Kaynaklar:
+            eng = engine()
+            return tam_kaynak(eng, ran, got, out, prefix=prefix, title=title, text=text, logo_db=dbs()[0],
+                              crm_db=dbs()[1], skip=skip, dis_adi=dis_adi, onceki=onceki(out) if onceki else None)
+        if key == "kaynaklar":
+            return P.bagla(out, make)
+        try:
+            out[key] = make().to_dict()
+        except Exception:  # noqa: BLE001
+            out[key] = {"sources": {}, "formulas": {}, "fields": {},
+                        "error": "Bu ekranın sorgu bilgisi hazırlanamadı; rakamlar etkilenmedi."}
+        return out
+
+    def deco(fn):
+        if inspect.iscoroutinefunction(fn):
+            @functools.wraps(fn)
+            async def awrapper(*a, **kw):
+                with izle_dis() as got, izle(engine()) as ran:
+                    out = await fn(*a, **kw)
+                return build(out, ran, got)
+            return awrapper
+
+        @functools.wraps(fn)
+        def wrapper(*a, **kw):
+            with izle_dis() as got, izle(engine()) as ran:
+                out = fn(*a, **kw)
+            return build(out, ran, got)
+        return wrapper
+    return deco
+
+
 def kaydet(k: P.Kaynaklar, ran: list, engine: Any, prefix: str, title: str, *, description: str = "",
            origin: tuple = (), limit_chars: Optional[int] = None) -> list[str]:
     """Yakalanan ifadeleri kayda yazar; kimlikleri döndürür (`prefix.1`, `prefix.2`, …). Aynı metin bir kez."""

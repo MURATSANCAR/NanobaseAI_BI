@@ -6,6 +6,8 @@ import { Note, btnGhost, errText, nf } from '../../admin/ui';
 import { Panel } from '../kit';
 import { assignCalendarOptions } from '../queries';
 import { addDays, day, daysBetween, shortDay, todayIso } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** 12 haftalık takvim: editör başına görev çubukları (başlangıç → termin), izinler ve çakışma aralıkları.
  *  Çakışma: eşzamanlı açık görev kapasiteyi aşıyor ya da izinli günde açık görev var. Termini olmayan görev
@@ -62,7 +64,10 @@ export default function CalendarTab() {
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="min-w-0">
-          <h2 className="text-[13px] font-extrabold">Takvim ve çakışmalar</h2>
+          <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+            Takvim ve çakışmalar
+            <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Takvim ve çakışmalar" />
+          </h2>
           <p className="text-[11.5px] text-canvas-muted">
             {day(start)} – {day(end)}
             {d && ` · ${nf.format(d.items.length)} editör`}

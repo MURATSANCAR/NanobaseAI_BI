@@ -7,6 +7,8 @@ import { editorsOverviewOptions, projectsListOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { crmLabel, dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M2 Editör Atama. Sekmeler: atama bekleyen projeler (öneri + atama), iş yükü (kapasite, izin, görevler),
  *  takvim ve çakışmalar, kategori–editör kural tablosu, CRM'deki bütün projeler. Atama ve termin ZEKİ AI'da
@@ -94,10 +96,10 @@ function ProjectsTab() {
 
       {o && (
         <KpiRow>
-          <Kpi label="Editör" value={nf.format(editors.length)} help={`${o.sinceYear} ve sonrası projesi olan`} />
-          <Kpi label="Editörlü proje" value={nf.format(assigned)} help="“Editörü” alanı dolu" />
-          <Kpi label="Editörsüz proje" value={nf.format(unassigned)} help="“Editörü” alanı boş" />
-          <Kpi label="Editör başına" value={editors.length ? nf.format(Math.round(assigned / editors.length)) : '—'} help="Ortalama proje" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör" />} label="Editör" value={nf.format(editors.length)} help={`${o.sinceYear} ve sonrası projesi olan`} />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörlü proje" />} label="Editörlü proje" value={nf.format(assigned)} help="“Editörü” alanı dolu" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörsüz proje" />} label="Editörsüz proje" value={nf.format(unassigned)} help="“Editörü” alanı boş" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör başına" />} label="Editör başına" value={editors.length ? nf.format(Math.round(assigned / editors.length)) : '—'} help="Ortalama proje" />
         </KpiRow>
       )}
 

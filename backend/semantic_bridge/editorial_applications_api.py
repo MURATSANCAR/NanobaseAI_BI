@@ -377,8 +377,9 @@ def register(app, deps: dict[str, Any]) -> None:
     def board_session(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         acc, rev = thresholds()
-        return call(mod.session_detail, engine, tenant, user, sid, manager=board_manager(user), can_see_names=names(user),
-                    accept=acc, revise=rev)
+        return IZ.izli(engine, lambda: call(mod.session_detail, engine, tenant, user, sid, manager=board_manager(user),
+                                            can_see_names=names(user), accept=acc, revise=rev),
+                       prefix="portal.kurul.oturum", title="Yayın kurulu oturumu", text=T_OTURUM)
 
     @app.patch(S + "/{sid}")
     def board_session_update(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
