@@ -42,6 +42,23 @@ ZEKI_QUESTIONS = [
 ]
 
 
+SLOW_WRITE_SECONDS = 2.0
+
+
+def _slow_write(what: str, t0: float, marks: list[tuple[str, float]]) -> Optional[str]:
+    """Kişinin kaydı `SLOW_WRITE_SECONDS`'ı geçtiyse adım adım süreyi günlüğe yazar (hangi adım bekledi görünsün)."""
+    total = (marks[-1][1] if marks else time.monotonic()) - t0
+    if total < SLOW_WRITE_SECONDS:
+        return None
+    prev, parts = t0, []
+    for name, t in marks:
+        parts.append(f"{name} {t - prev:.2f} sn")
+        prev = t
+    msg = f"field: {what} yavaş ({total:.1f} sn): " + ", ".join(parts)
+    log.warning(msg)
+    return msg
+
+
 class Service:
     """Gece/hafif/haftalık turlar ve brifing. Kaynak okuması `F.Source`; tablolar `F.*`."""
 
@@ -515,7 +532,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         try:
             return fn(*a, **kw)
         except FieldError as e:
-            raise HTTPException(status_code=e.status, detail={"code": "FIELD", "message": str(e)}) from e
+            # 403 ön yüzde «oturum düştü» sanılmasın (engine.ts yalnız FORBIDDEN kodlu 403'ü yetki reddi sayar): M38 kalıbı.
+            raise HTTPException(status_code=e.status, detail={"code": "FORBIDDEN" if e.status == 403 else "FIELD",
+                                                              "message": str(e)}) from e
         except SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "DATA_SOURCE_UNAVAILABLE", "message": str(e)}) from e
         except HTTPException:
@@ -849,23 +868,36 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     @app.post(f"{P}/visits", status_code=201)
     def field_visit_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Ziyaret notu kaydı. Yazma yolu yalnız yerel tablolar: kapsam (portföy satırı, birincil anahtar), ekleme,
+        değişiklik kaydı. CRM/Logo okuması, model çağrısı, bugün sırasının yeniden hesabı YOK — sıra bir sonraki
+        «Bugün» isteğinde yalnız bu cari için yeniden puanlanır, özet gece turunda hazırlanır. Süre adım adım ölçülür;
+        2 sn'yi geçerse günlüğe yazılır (kabulde 120 sn'lik bekleme görüldü)."""
+        t0 = time.monotonic()
         engine, tenant, user, _ = ctx(request)
+        t_ctx = time.monotonic()
         tur = str(body.get("tur") or "cari")
         name = None
         if tur == "cari":
             row = call(F.in_scope, engine, tenant, user, str(body.get("hedef") or ""), all_scope(user))
             name = row.get("unvan")
+        t_scope = time.monotonic()
         out = call(F.add_visit, engine, tenant, user, body, name)
+        t_write = time.monotonic()
         audit(engine, user, "create", "saha_ziyaret", out["id"], out.get("hedefAd") or out["hedef"],
               {"tur": out["tur"], "durum": out["durum"], "planlanan": out["planlanan"], "soz": out["sozOdemeTarihi"]})
+        _slow_write("ziyaret notu", t0, [("oturum", t_ctx), ("kapsam", t_scope), ("kayıt", t_write), ("değişiklik kaydı", time.monotonic())])
         return out
 
     @app.patch(f"{P}/visits/{{vid}}")
     def field_visit_update(vid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        t0 = time.monotonic()
         engine, tenant, user, _ = ctx(request)
+        t_ctx = time.monotonic()
         out, diff = call(F.update_visit, engine, tenant, user, vid, body, is_admin(user))
+        t_write = time.monotonic()
         if diff:
             audit(engine, user, "update", "saha_ziyaret", vid, out.get("hedefAd") or out["hedef"], diff)
+        _slow_write("ziyaret düzenleme", t0, [("oturum", t_ctx), ("kayıt", t_write), ("değişiklik kaydı", time.monotonic())])
         return out
 
     @app.post(f"{P}/visits/{{vid}}/followup-draft")

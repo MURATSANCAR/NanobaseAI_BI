@@ -2041,6 +2041,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             rt.stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
+    # Bütün 403'ler FORBIDDEN koduyla: ön yüz başka kodlu 403'ü «oturum düştü» sayıyor (modül kodu `module` alanında).
+    from semantic_bridge import http_forbidden as _http_forbidden
+    _http_forbidden.install(app)
 
     @app.middleware("http")
     async def data_refresh_header(request: Request, call_next):

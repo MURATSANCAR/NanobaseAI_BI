@@ -24,10 +24,12 @@ import hashlib
 import json
 import logging
 import math
+import os
 import re
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
@@ -245,6 +247,40 @@ def _dump(v: Any) -> str:
 
 def _new_id() -> str:
     return uuid.uuid4().hex
+
+
+def write_lock_timeout_ms() -> int:
+    """Kişinin kaydı (ziyaret notu) bir tablo kilidini en çok bu kadar bekler (`FIELD_WRITE_LOCK_TIMEOUT_MS`, vars. 5000;
+    0 = sınırsız, eski davranış). Kabulde (2026-09-28) tek not 120 sn'de zaman aşımına düşmüş, kayıt oluşmamıştı: yazma
+    yolunda CRM/Logo/model yok (üç kısa yerel sorgu), bekleme ancak veritabanında olabilir — artık asılı kalmaz."""
+    try:
+        return max(0, int(os.environ.get("FIELD_WRITE_LOCK_TIMEOUT_MS", "5000") or 5000))
+    except ValueError:
+        return 5000
+
+
+def _lock_timeout_error(e: BaseException) -> bool:
+    orig = getattr(e, "orig", None)
+    code = getattr(orig, "pgcode", None) or getattr(orig, "sqlstate", None)
+    return code in ("55P03", "57014") or "lock timeout" in str(e).lower()
+
+
+@contextmanager
+def short_write(engine: sa.engine.Engine):
+    """Kısa yazma işlemi: PostgreSQL'de `SET LOCAL lock_timeout` (yalnız bu işlem); kilit süresi dolarsa kişiye 503
+    «tekrar deneyin» (istek dakikalarca asılı kalmaz, kayıt yarım kalmaz — işlem geri alınır)."""
+    ms = write_lock_timeout_ms()
+    try:
+        with engine.begin() as c:
+            if ms and c.dialect.name == "postgresql":
+                c.execute(sa.text(f"SET LOCAL lock_timeout = '{int(ms)}ms'"))
+            yield c
+    except sa.exc.OperationalError as e:
+        if _lock_timeout_error(e):
+            log.warning("field: kayıt kilit beklerken durdu (%d ms): %s", ms, e)
+            raise FieldError("Kayıt şu an yazılamadı: veritabanı meşgul. Birazdan tekrar deneyin; notunuz ekranda duruyor.",
+                             503) from e
+        raise
 
 
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
@@ -567,7 +603,8 @@ def suggest_plan(sig: dict[str, Any], max_n: int, now: date) -> dict[str, Any]:
     (yukarı yuvarlı, 1…azami); ilk taksit 15 gün sonra. Gerekçe metni şablondan."""
     overdue = round(num(sig.get("vadesi_gecmis")), 2)
     if overdue <= 0:
-        raise FieldError("Bu carinin vadesi geçmiş alacağı yok; ödeme planı önerilmez.")
+        # Gövde değil carinin durumu: 409 (köprüde durum çatışması); 422 yalnız bozuk gövdeye.
+        raise FieldError("Bu carinin vadesi geçmiş alacağı yok; ödeme planı önerilmez.", 409)
     monthly = num(sig.get("odeme_12ay")) / 12
     n = max(1, min(max_n, math.ceil(overdue / monthly))) if monthly > 0 else max_n
     start = now + timedelta(days=15)
@@ -1120,7 +1157,7 @@ def add_visit(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, 
         vals["planlanan"] = today().isoformat()
     row = {"id": _new_id(), "tenant_id": tenant, "tur": tur, "hedef_kimlik": hedef[:60], "hedef_ad": (hedef_ad or text(body.get("hedefAd")) or "")[:300] or None,
            "sahip": user, "olusturan": user, "olusturma": _now(), **vals}
-    with engine.begin() as c:
+    with short_write(engine) as c:
         c.execute(VISITS.insert().values(**row))
     return _visit_out(row, user)
 
@@ -1144,7 +1181,7 @@ def update_visit(engine: sa.engine.Engine, tenant: str, user: str, vid: str, bod
     if "notu" in vals and vals["notu"] != cur.get("notu"):
         diff["notu"] = {"degisti": True}
     vals.update(guncelleyen=user, guncelleme=_now())
-    with engine.begin() as c:
+    with short_write(engine) as c:
         c.execute(VISITS.update().where(VISITS.c.id == vid).values(**vals))
     return _visit_out({**cur, **vals}, user, admin), diff
 
@@ -1393,17 +1430,36 @@ def _clean_installments(raw: Any) -> list[dict[str, Any]]:
     return out
 
 
+MAX_INSTALLMENTS = 24
+
+
+def _installment_count(v: Any) -> Optional[int]:
+    """Öneren seçtiği taksit sayısı: boşsa None (öneri kuralı), tam sayı 1…24 değilse 422 (sessizce kırpılmaz)."""
+    if v in (None, ""):
+        return None
+    if isinstance(v, bool):
+        raise FieldError("Taksit sayısı tam sayı olmalı.", 422)
+    if isinstance(v, float) and not v.is_integer():
+        raise FieldError("Taksit sayısı tam sayı olmalı.", 422)
+    try:
+        n = int(str(v).strip()) if not isinstance(v, (int, float)) else int(v)
+    except (TypeError, ValueError):
+        raise FieldError("Taksit sayısı tam sayı olmalı.", 422) from None
+    if not 1 <= n <= MAX_INSTALLMENTS:
+        raise FieldError(f"Taksit sayısı 1 ile {MAX_INSTALLMENTS} arasında olmalı.", 422)
+    return n
+
+
 def create_plan(engine: sa.engine.Engine, tenant: str, user: str, cust: dict[str, Any], body: dict[str, Any], max_n: int,
                 now: Optional[date] = None) -> dict[str, Any]:
     now = now or today()
+    # Önce gövde doğrulanır (422), sonra carinin durumu (409). Eskiden öneri önce hesaplanıyordu: vadesi geçmişi olmayan
+    # caride bozuk gövde de «alacak yok» (400) alıyordu; kabul betiği 422 beklerken 400 gördü.
+    n = _installment_count(body.get("taksitSayisi"))
+    start_day = _day_only(body.get("baslangic"), "İlk taksit tarihi") if n is not None else None
     sug = suggest_plan(cust, max_n, now)
-    n = body.get("taksitSayisi")
-    if n not in (None, ""):
-        try:
-            n = max(1, min(24, int(n)))
-        except (TypeError, ValueError):
-            raise FieldError("Taksit sayısı tam sayı olmalı.", 422) from None
-        start = date.fromisoformat(_day_only(body.get("baslangic"), "İlk taksit tarihi") or sug["taksitler"][0]["tarih"])
+    if n is not None:
+        start = date.fromisoformat(start_day or sug["taksitler"][0]["tarih"])
         sug["taksitler"] = plan_installments(sug["tutar"], n, start)
         sug["gerekce"] += f" Taksit sayısı öneren tarafından {n} seçildi."
     row = {"id": _new_id(), "tenant_id": tenant, "logo_code": cust["logo_code"], "unvan": cust.get("unvan"),

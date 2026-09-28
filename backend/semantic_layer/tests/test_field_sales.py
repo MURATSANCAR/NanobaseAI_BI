@@ -383,3 +383,113 @@ def test_morning_brief_masks_names_and_falls_back_to_rule_text():
     empty, _, _ = F.morning_facts({"vadesiGecmis": 0}, [], [], "2026-09-28")
     assert empty == ["Bugün (2026-09-28) planlı ziyaret yok.", "Portföyde vadesi geçmiş alacak yok."]
     assert A.features_for("GET", "/api/v1/field/today/brief") == []
+# ------------------------------------------------------------------ kabul hataları (2026-09-28)
+
+
+def test_payment_plan_body_is_validated_before_the_customer_state():
+    """Bozuk gövde her caride 422; gövde sağlam ama vadesi geçmiş alacak yoksa 409 (eskiden ikisi de 400)."""
+    eng = open_store("sqlite://").engine
+    F._ready.discard(id(eng))
+    F.ensure(eng)
+    none_due = {"logo_code": "120.09", "unvan": "Z", "ad_hesap": "ayseb", "vadesi_gecmis": 0, "odeme_12ay": 0}
+    due = {**none_due, "vadesi_gecmis": 12000, "odeme_12ay": 48000}
+    for bad in ("iki", True, 2.5, 0, 25, -1, "3,5"):
+        with pytest.raises(F.FieldError) as e:
+            F.create_plan(eng, T, "ayseb", none_due, {"taksitSayisi": bad}, 6, date(2026, 9, 28))
+        assert e.value.status == 422, bad
+    with pytest.raises(F.FieldError) as e:
+        F.create_plan(eng, T, "ayseb", none_due, {"taksitSayisi": 2, "baslangic": "15.10.2026"}, 6, date(2026, 9, 28))
+    assert e.value.status == 422                                                   # tarih biçimi de önce
+    with pytest.raises(F.FieldError) as e:
+        F.create_plan(eng, T, "ayseb", none_due, {}, 6, date(2026, 9, 28))
+    assert e.value.status == 409
+    p = F.create_plan(eng, T, "ayseb", due, {"taksitSayisi": "4", "baslangic": "2026-10-15"}, 6, date(2026, 9, 28))
+    assert len(p["taksitler"]) == 4 and p["taksitler"][0]["tarih"] == "2026-10-15" and p["taksitToplam"] == 12000
+    assert len(F.create_plan(eng, T, "ayseb", due, {"taksitSayisi": 24.0}, 6, date(2026, 9, 28))["taksitler"]) == 24
+
+
+def test_short_write_turns_a_lock_wait_into_a_quick_retryable_error(engine):
+    import sqlalchemy as sa
+
+    class Orig(Exception):
+        pgcode = "55P03"
+
+    with pytest.raises(F.FieldError) as e:
+        with F.short_write(engine):
+            raise sa.exc.OperationalError("INSERT …", {}, Orig("lock timeout"))
+    assert e.value.status == 503 and "tekrar deneyin" in str(e.value)
+    with pytest.raises(sa.exc.OperationalError):                                   # kilit dışı hata olduğu gibi
+        with F.short_write(engine):
+            raise sa.exc.OperationalError("INSERT …", {}, Exception("disk dolu"))
+    with F.short_write(engine) as c:                                               # sqlite: SET LOCAL yok, yazma olur
+        c.execute(F.META.insert().values(tenant_id=T, key="k", value_json='{"a": 1}', updated_at=F._now()))
+    assert F.meta_get(engine, T, "k")["a"] == 1
+
+
+def _field_app(engine, calls):
+    from fastapi import FastAPI, HTTPException, Request
+
+    from semantic_bridge import field_sales_api
+
+    def auth(request: Request):
+        user = request.headers.get("x-test-user")
+        if not user:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."})
+        return engine, T, user, user
+
+    def source(name):
+        def connect():
+            calls.append(name)                     # yazma yolunda CRM/Logo'ya bağlanılmaz
+            raise AssertionError(f"{name} bağlantısı istenmemeli")
+        return connect
+
+    app = FastAPI()
+    field_sales_api.register(app, {
+        "auth": auth, "require_caller": lambda r: None, "can": lambda u, k: False, "is_admin": lambda u: False,
+        "audit": lambda *a, **k: calls.append("audit"), "conf": lambda k, d="": d, "fresh": lambda: False,
+        "crm_connect": source("crm"), "logo_connect": source("logo"), "llm": lambda: calls.append("llm"),
+        "engine": lambda: engine, "tenant": lambda: T})
+    return app
+
+
+def test_visit_note_write_is_local_and_403_carries_forbidden(engine):
+    """Kabul: tek geçerli not 120 sn'de zaman aşımına düşmüştü; yazma yolu yalnız yerel tablolar (CRM/Logo/model yok).
+    FieldError(403) ön yüze FIELD koduyla gidiyordu → engine.ts «oturum düştü» sanıyordu: artık FORBIDDEN."""
+    import time
+
+    from fastapi.testclient import TestClient
+
+    portfolio, signals, _ = F.build(_data(), _settings(), None, {})
+    F.write_snapshot(engine, T, portfolio, signals)
+    calls: list[str] = []
+    client = TestClient(_field_app(engine, calls))
+    me, other = {"x-test-user": "ayseb"}, {"x-test-user": "baskasi"}
+
+    t0 = time.monotonic()
+    r = client.post("/api/v1/field/visits", json={"hedef": "120.01", "notu": "kabul denemesi", "gizli": True}, headers=me)
+    assert r.status_code == 201, r.text
+    assert time.monotonic() - t0 < 5
+    assert calls == ["audit"]                                                     # CRM/Logo/model çağrısı yok
+    vid = r.json()["id"]
+    r2 = client.patch(f"/api/v1/field/visits/{vid}", json={"ton": "notr"}, headers=me)
+    assert r2.status_code == 200 and r2.json()["ton"] == "notr"
+    assert "crm" not in calls and "logo" not in calls and "llm" not in calls
+
+    for method, path, body in (("post", "/api/v1/field/visits", {"hedef": "120.01", "notu": "x"}),
+                               ("patch", f"/api/v1/field/visits/{vid}", {"notu": "başkası"}),
+                               ("post", "/api/v1/field/payment-plans", {"code": "120.01"})):
+        denied = getattr(client, method)(path, json=body, headers=other)
+        assert denied.status_code == 403, (path, denied.text)
+        assert denied.json()["detail"]["code"] == "FORBIDDEN", path
+
+    bad = client.post("/api/v1/field/payment-plans", json={"code": "120.01", "taksitSayisi": "iki"}, headers=me)
+    assert bad.status_code == 422 and bad.json()["detail"]["code"] == "FIELD"
+    assert client.post("/api/v1/field/visits", json={"hedef": "120.01", "ton": "kizgin"}, headers=me).status_code == 422
+
+
+def test_slow_write_log_names_the_waiting_step():
+    from semantic_bridge import field_sales_api as FA
+
+    assert FA._slow_write("ziyaret notu", 0.0, [("oturum", 0.1), ("kayıt", 0.5)]) is None
+    msg = FA._slow_write("ziyaret notu", 0.0, [("oturum", 0.1), ("kapsam", 0.2), ("kayıt", 121.0)])
+    assert msg and "kayıt 120.80 sn" in msg and "121.0 sn" in msg
