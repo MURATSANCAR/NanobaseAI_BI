@@ -184,3 +184,61 @@ def not_found_ok(fn: Callable[[], Any], default: Any = None) -> Any:
         return fn()
     except sa.exc.SQLAlchemyError:
         return default
+
+
+# ------------------------------------------------------------------ yenileme işlerinin kaydettiği çalışmış SQL'ler
+
+
+def recording(run: Callable[[str], Any], conn: str, out: list[dict[str, Any]]) -> Callable[[str], Any]:
+    """Koşucuyu sarar: her çalışan SQL'in metni, bağlantısı, satır sayısı, süresi ve anı `out`a yazılır. Sonuç satırı
+    yazılmaz (kişisel veri kayda girmez). Aynı metin iki kez koşarsa bir kez kaydedilir."""
+    import time as _time
+    from datetime import datetime as _dt
+
+    def run_(sql: str) -> Any:
+        t0 = _time.monotonic()
+        rows = run(sql)
+        if not any(x["sql"] == sql for x in out):
+            if isinstance(rows, list):
+                n: Optional[int] = len(rows)
+            elif isinstance(rows, dict):
+                n = len(rows.get("records") or rows.get("rows") or [])
+            else:
+                n = None
+            out.append({"conn": conn, "sql": sql, "rows": n, "dbMs": int((_time.monotonic() - t0) * 1000),
+                        "at": _dt.now().isoformat(timespec="seconds")})
+        return rows
+    return run_
+
+
+def _title_of(sql: str, conn: str, i: int) -> str:
+    import re
+
+    for line in sql.splitlines():
+        s = line.strip()
+        if s.startswith("--"):
+            t = s.lstrip("-").strip()
+            if t:
+                return t[:120]
+    m = re.search(r"(?is)\bFROM\s+([\w\.\[\]]+)", sql)
+    what = m.group(1).split(".")[-1].strip("[]") if m else str(i)
+    return f"{'CRM' if conn == 'crm' else 'Logo'} okuması · {what}"
+
+
+def kayitli(k: P.Kaynaklar, runs: Iterable[dict[str, Any]], prefix: str, logo_db_name: Optional[str], *,
+            description: str = "", match: Optional[Callable[[str], bool]] = None) -> list[str]:
+    """Yenileme işinin kaydettiği çalışmış CRM/Logo SQL'lerini kaynak olarak ekler (yer tutuculu olan atlanır).
+    `match`: yalnız metni bu koşula uyan sorgular (ör. belirli bir tabloyu okuyanlar)."""
+    ids: list[str] = []
+    for i, r in enumerate(runs or [], 1):
+        conn = r.get("conn")
+        sql = r.get("sql")
+        if conn not in ("crm", "logo") or not sql or (match is not None and not match(sql)):
+            continue
+        try:
+            ids.append(k.sorgu(f"{prefix}.{i}", _title_of(sql, conn, i), conn, sql, rows=r.get("rows"), ms=r.get("dbMs"),
+                               ran_at=r.get("at"), database=crm_db() if conn == "crm" else logo_db_name,
+                               description=description))
+        except P.ProvenanceError:
+            continue
+    return ids

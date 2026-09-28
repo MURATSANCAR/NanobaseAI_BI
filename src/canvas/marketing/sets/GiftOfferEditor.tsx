@@ -10,6 +10,7 @@ import { fmtDay, fmtInt, fmtMoney, fmtPct, parseNum } from '../../budget/api';
 import { AskSheet } from '../../budget/parts';
 import { OFFER_TONE, pctToRatio, setsApi, type Offer } from './api';
 import { BudgetGap, MarginCell, SetsFrame, Tone } from './parts';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Kurumsal hediye teklifi: seçenekler (kod), kademe indirimi, mektup (ZEKİ AI taslağı), onay (gönderen onaylayamaz), PDF.
  *  Kurumsal satış fırsatı (M32) ile bağ: fırsat numarası teklife yazılır; kalemler M32 teklif satırı biçiminde de alınabilir. */
@@ -136,7 +137,7 @@ function Terms({ o, editable, busy, onSave }: { o: Offer; editable: boolean; bus
     .filter((t): t is { adet: number; indirim: number } => Number.isFinite(t.adet) && t.adet >= 1 && t.indirim !== null);
   return (
     <Panel>
-      <h2 className="mb-2 text-[15px] font-extrabold">Koşullar</h2>
+      <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold">Koşullar<SqlInfo k={o.kaynaklar} alan="adet" label="Kişi sayısı, bütçe ve kademeler" /></h2>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kişi sayısı</span>
@@ -205,7 +206,7 @@ function Options({ o, editable, canSeeCost, busy, onSave }: { o: Offer; editable
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Seçenekler</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Seçenekler<SqlInfo k={o.kaynaklar} alan="secenekler" label="Seçenek fiyatları, indirim ve marj" /></h2>
         {editable && dirty && <button type="button" className={btnPrimary} disabled={busy || !sel.length} onClick={() => onSave({ secili: sel })}><Save aria-hidden className="h-4 w-4" /> Seçimi kaydet</button>}
       </div>
       {!o.secenekler.length && <Note tone="warn">Bu bütçeye ve kişi sayısına uyan, stoğu yeten seçenek bulunamadı. Bütçeyi ya da kademeyi değiştirip yeniden hesaplayın.</Note>}

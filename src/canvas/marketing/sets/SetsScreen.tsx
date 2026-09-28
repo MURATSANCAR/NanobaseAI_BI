@@ -13,6 +13,7 @@ import SetsTab from './SetsTab';
 import SuggestionsTab from './SuggestionsTab';
 import GiftOffersTab from './GiftOffersTab';
 import PromoItemsTab from './PromoItemsTab';
+import SqlInfo from '../../components/SqlInfo';
 
 /** M53 Hediye, set ve promosyon ürün yönetimi. Sekme adres çubuğunda (?sekme=); bağlantı paylaşılabilir. */
 
@@ -71,7 +72,7 @@ export default function SetsScreen() {
     <div className="flex flex-col gap-2 rounded-2xl bg-white/70 px-3 py-2 text-[12px] font-semibold text-canvas-muted">
       <span>
         {st?.dataEnd ? <>Logo satışı <strong className="text-canvas-ink">{fmtDay(st.dataEnd)}</strong> tarihine kadar okundu.</> : 'Veri henüz okunmadı.'}
-        {st?.basket?.asof && <> Birlikte alım: {st.basket.cift?.toLocaleString('tr-TR')} çift, {st.basket.siparis?.toLocaleString('tr-TR')} B2C siparişi.</>}
+        {st?.basket?.asof && <> Birlikte alım: {st.basket.cift?.toLocaleString('tr-TR')} çift, {st.basket.siparis?.toLocaleString('tr-TR')} B2C siparişi.<SqlInfo k={meta.data?.kaynaklar} alan="status" label="Okuma ve birlikte alım sayıları" className="ml-0.5" /></>}
         {running && <> · Okunuyor: {status.data?.step ?? st?.step ?? '…'}</>}
         {st?.last?.ok === false && !running && <span className="text-red-700"> · Son okuma: {st.last.error}</span>}
       </span>

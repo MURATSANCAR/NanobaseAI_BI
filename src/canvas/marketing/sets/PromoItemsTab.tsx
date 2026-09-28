@@ -5,6 +5,7 @@ import { Kpi, KpiRow, Pager, useDebounced } from '../../editorial/kit';
 import { fmtInt, fmtShort } from '../../budget/api';
 import { setsApi } from './api';
 import { Tone } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Promosyon ürünleri: Logo'da 157 önekli ticari ürünler + CRM promosyon / pazarlama materyali kartları; stok ve satış. */
 export default function PromoItemsTab() {
@@ -24,12 +25,12 @@ export default function PromoItemsTab() {
       {s && (
         <KpiRow>
           <Kpi label="Ürün" value={fmtInt(s.toplam)} help="157 önekli kart + CRM promosyon kartları" active={!stok && !tur}
-            onClick={() => { setStok(''); setTur(''); setPage(0); }} />
+            onClick={() => { setStok(''); setTur(''); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ürün" />} />
           <Kpi label="Stoğu yok" value={fmtInt(s.stokYok)} help="Logo stok bakiyesi sıfır ya da altı" active={stok === '0'}
-            onClick={() => { setStok('0'); setPage(0); }} />
+            onClick={() => { setStok('0'); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Stoğu yok" />} />
           <Kpi label="Ticari ürün (157)" value={fmtInt(s['157'])} help="Satış raporlarından ayrı tutulan kodlar" active={tur === '157'}
-            onClick={() => { setTur('157'); setPage(0); }} />
-          <Kpi label="157 son 12 ay ciro" value={fmtShort(s.son12Ciro)} help="Faturalı satış, iade düşülmüş" />
+            onClick={() => { setTur('157'); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ticari ürün (157)" />} />
+          <Kpi label="157 son 12 ay ciro" value={fmtShort(s.son12Ciro)} help="Faturalı satış, iade düşülmüş" info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="157 son 12 ay ciro" />} />
         </KpiRow>
       )}
       <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
@@ -65,9 +66,9 @@ export default function PromoItemsTab() {
               <tr className="border-b border-slate-100">
                 <th className={th}>Ürün</th>
                 <th className={th}>Tür</th>
-                <th className={`${th} text-right`}>Logo stoku</th>
-                <th className={`${th} text-right`}>12 ay adet</th>
-                <th className={`${th} text-right`}>12 ay ciro</th>
+                <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]">Logo stoku</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]">12 ay adet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]">12 ay ciro</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

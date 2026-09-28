@@ -11,6 +11,7 @@ import { AskSheet } from '../../budget/parts';
 import { STATUS_TONE, addItem, canEditSet, pctToRatio, setsApi, type ItemInput, type SetRow, type SetsMeta } from './api';
 import { MarginCell, SetsFrame, Tone } from './parts';
 import BookPicker from './BookPicker';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Set ekranı: bileşenler, fiyat–marj hesaplayıcı (kaydetmeden anında), ambalaj, sezon ve kanal, ZEKİ AI metinleri, onay,
  *  «CRM/Logo'ya açılacak kart» listesi ve CRM kartıyla eşleme. */
@@ -162,7 +163,7 @@ function Components({ s, editable, canSeeCost, onSaved }: { s: SetRow; editable:
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Bileşenler</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Bileşenler<SqlInfo k={s.kaynaklar} alan="bilesenler" label="Bileşenler: liste, KDV, maliyet, stok" /></h2>
         {editable && dirty && (
           <button type="button" className={btnPrimary} disabled={save.isPending || !items.length} onClick={() => save.mutate()}>
             <Save aria-hidden className="h-4 w-4" /> Bileşenleri kaydet
@@ -175,10 +176,10 @@ function Components({ s, editable, canSeeCost, onSaved }: { s: SetRow; editable:
           <tr className="border-b border-slate-100">
             <th className={th}>Kitap</th>
             <th className={`${th} text-right`}>Adet</th>
-            <th className={`${th} text-right`}>Liste (KDV dahil)</th>
+            <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="bilesenler">Liste (KDV dahil)</InfoLabel></th>
             <th className={`${th} text-right`}>KDV</th>
-            {canSeeCost && <th className={`${th} text-right`}>Birim maliyet</th>}
-            <th className={`${th} text-right`}>Logo stoku</th>
+            {canSeeCost && <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="bilesenler">Birim maliyet</InfoLabel></th>}
+            <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="bilesenler">Logo stoku</InfoLabel></th>
             {editable && <th className={th}><span className="sr-only">Çıkar</span></th>}
           </tr>
         </thead>
@@ -213,7 +214,7 @@ function Components({ s, editable, canSeeCost, onSaved }: { s: SetRow; editable:
       </TableWrap>
       {s.stokKodu && (
         <p className="mt-2 text-[11.5px] text-canvas-muted">
-          Set stoğu {fmtInt(s.stok)} · son 12 ay {fmtInt(s.son12Adet)} adet, {fmtShort(s.son12Ciro)} ₺ (setin kendi kodu; bileşenlerin tek satışına eklenmez).
+          Set stoğu {fmtInt(s.stok)} · son 12 ay {fmtInt(s.son12Adet)} adet, {fmtShort(s.son12Ciro)} ₺ (setin kendi kodu; bileşenlerin tek satışına eklenmez).<SqlInfo k={s.kaynaklar} alan="son12Adet" label="Set stoğu ve son 12 ay" className="ml-0.5" />
         </p>
       )}
     </Panel>
@@ -250,7 +251,7 @@ function PricePanel({ s, editable, meta, onSaved }: { s: SetRow; editable: boole
   const packOptions = meta.packaging;
   return (
     <Panel>
-      <h2 className="mb-2 text-[15px] font-extrabold">Fiyat ve marj</h2>
+      <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold">Fiyat ve marj<SqlInfo k={c?.kaynaklar ?? s.kaynaklar} alan="marj" label="Fiyat, indirim, net gelir ve marj" /></h2>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Set fiyatı (KDV dahil)</span>
@@ -421,7 +422,7 @@ function CardPanel({ s, canWrite, canExport, onSaved }: { s: SetRow; canWrite: b
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">CRM ve Logo'da açılacak kart</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM ve Logo'da açılacak kart<SqlInfo k={t?.kaynaklar} alan="onerilenFiyat" label="Açılacak kartın fiyatı ve bileşenleri" /></h2>
         {canExport && (
           <div className="flex gap-2">
             <a className={btnGhost} href={setsApi.cardUrl(s.id, 'csv')} download><Download aria-hidden className="h-4 w-4" /> CSV</a>
@@ -466,7 +467,7 @@ function CrmPanel({ s }: { s: SetRow }) {
     setIslemi?: { tarih?: string; islemAdet?: number } };
   return (
     <Panel>
-      <h2 className="mb-2 text-[15px] font-extrabold">CRM set kartı</h2>
+      <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold">CRM set kartı<SqlInfo k={s.kaynaklar} alan="crm" label="CRM set kartı" /></h2>
       <dl className="grid grid-cols-[160px_1fr] gap-x-3 gap-y-1 text-[12.5px]">
         <dt className="text-canvas-muted">Set tipi</dt><dd>{c.setTipi ?? '—'}</dd>
         <dt className="text-canvas-muted">Satış kanalı</dt><dd>{c.kanal ?? '—'}</dd>

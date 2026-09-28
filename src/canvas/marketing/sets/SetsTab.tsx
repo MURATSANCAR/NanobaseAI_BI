@@ -10,6 +10,7 @@ import { fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../../budget/api';
 import { STATUS_TONE, addItem, setsApi, type ItemInput, type SetsMeta } from './api';
 import { MarginCell, Tone } from './parts';
 import BookPicker from './BookPicker';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Setler sekmesi: mevcut (CRM) + önerilen + taslak setlerin tamamı, tavansız ve sayfalı. */
 export default function SetsTab({ meta }: { meta: SetsMeta }) {
@@ -33,12 +34,12 @@ export default function SetsTab({ meta }: { meta: SetsMeta }) {
       {s && (
         <KpiRow>
           <Kpi label="Set" value={fmtInt(s.toplam)} help={`${fmtInt(s.satista)} satışta · ${fmtInt(s.oneri)} taslak/öneri`}
-            active={durum === ''} onClick={() => { setDurum(''); setPage(0); }} />
+            active={durum === ''} onClick={() => { setDurum(''); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Set" />} />
           <Kpi label="Son 12 ayda satışsız" value={fmtInt(s.satissiz)} help="Satıştaki setlerden net satışı olmayanlar"
-            active={sort === 'adet' && durum === 'satista'} onClick={() => { setDurum('satista'); setSort('adet'); setPage(0); }} />
-          <Kpi label="Marj bilinmiyor" value={fmtInt(s.marjBilinmiyor)} help={meta.me.canSeeCost ? 'Bir bileşende maliyet yok' : 'Maliyeti görme yetkiniz yok'} />
+            active={sort === 'adet' && durum === 'satista'} onClick={() => { setDurum('satista'); setSort('adet'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Son 12 ayda satışsız" />} />
+          <Kpi label="Marj bilinmiyor" value={fmtInt(s.marjBilinmiyor)} help={meta.me.canSeeCost ? 'Bir bileşende maliyet yok' : 'Maliyeti görme yetkiniz yok'} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Marj bilinmiyor" />} />
           <Kpi label="Onay / kart bekleyen" value={`${fmtInt(s.onayda)} / ${fmtInt(s.kartBekliyor)}`} help="Onay bekleyen · onaylı, CRM kartı açılmamış"
-            active={durum === 'onayda,kart-bekliyor'} onClick={() => { setDurum('onayda,kart-bekliyor'); setPage(0); }} />
+            active={durum === 'onayda,kart-bekliyor'} onClick={() => { setDurum('onayda,kart-bekliyor'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Onay / kart bekleyen" />} />
         </KpiRow>
       )}
 
@@ -92,14 +93,14 @@ export default function SetsTab({ meta }: { meta: SetsMeta }) {
               <tr className="border-b border-slate-100">
                 <th className={th}>Set</th>
                 <th className={th}>Durum</th>
-                <th className={`${th} text-right`}>Bileşen</th>
-                <th className={`${th} text-right`}>Set fiyatı</th>
-                <th className={`${th} text-right`}>Liste toplamı</th>
-                <th className={`${th} text-right`}>İndirim</th>
-                {meta.me.canSeeCost && <th className={`${th} text-right`}>Marj</th>}
-                <th className={`${th} text-right`}>Stok</th>
-                <th className={`${th} text-right`}>12 ay adet</th>
-                <th className={`${th} text-right`}>12 ay ciro</th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Bileşen</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Set fiyatı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Liste toplamı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">İndirim</InfoLabel></th>
+                {meta.me.canSeeCost && <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Marj</InfoLabel></th>}
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Stok</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">12 ay adet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">12 ay ciro</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

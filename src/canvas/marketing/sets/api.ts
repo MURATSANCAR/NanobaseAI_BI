@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M53 Set, hediye ve promosyon ekranının köprü uçları: /api/v1/marketing/sets*, /gift-offers*, /promo-items.
  *  Maliyet ve marj alanları kişinin «Set maliyeti ve marjı» yetkisi yoksa köprüden hiç gelmez (alanlar undefined olur). */
@@ -67,9 +68,10 @@ export type SetRow = {
   kararNotu: string | null;
   createdAt: string | null;
   decidedAt: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export type SetsPage = Page<SetRow> & {
   summary: { toplam: number; satista: number; satissiz: number; marjBilinmiyor: number; onayda: number; kartBekliyor: number; oneri: number };
@@ -93,6 +95,7 @@ export type PriceCalc = {
   altSinir: number | null;
   setFiyati: number | null;
   bilesenler: SetItem[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Suggestion = {
@@ -159,6 +162,7 @@ export type Offer = {
   kararNotu: string | null;
   m32FirsatId: string | null;
   gunKaldi?: number | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type PromoItem = {
@@ -184,6 +188,7 @@ export type RefreshStatus = {
   dataEnd: string | null;
   last: { ok?: boolean; error?: string; warnings?: string[]; _at?: string; sn?: number };
   basket: { asof?: string; cift?: number; siparis?: number; enAz?: number; donem?: [string, string] };
+  kaynaklar?: Kaynaklar;
 };
 
 export type SetsMeta = {
@@ -203,6 +208,7 @@ export type SetsMeta = {
   discount: { indirim: number | null; n: number };
   status: RefreshStatus;
   me: { username: string; display: string; admin: boolean; canWrite: boolean; canApprove: boolean; canApproveOffer: boolean; canSeeCost: boolean; canExport: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Book = { stok: string; ad: string | null; yazar: string | null; liste: number | null; stokAdet: number | null; son12Adet: number | null; tip: string | null };
@@ -261,7 +267,7 @@ export const setsApi = {
   cardTodo: (id: string) =>
     send<{ ad: string; setTipi: string; satisKanallari: string[]; onerilenFiyat: number | null; hedefAdet: number | null; ambalaj: string | null;
       sezon: string | null; barkod: string; adimlar: string[]; bilesenler: { stok: string; ad: string | null; adet: number; kdv: number | null; stokAdet: number | null }[];
-      eslenmis: string | null }>('GET', `/sets/${enc(id)}/card-todo`),
+      eslenmis: string | null; kaynaklar?: Kaynaklar }>('GET', `/sets/${enc(id)}/card-todo`),
   cardUrl: (id: string, fmt: 'csv' | 'pdf') => `${ENGINE_BASE}${B}/sets/${enc(id)}/card-todo.${fmt}`,
   link: (id: string, stokKodu: string) => send<SetRow>('POST', `/sets/${enc(id)}/link`, { stokKodu }),
   books: (q: string) => send<Page<Book>>('GET', `/sets/books${qs({ q })}`),
@@ -276,7 +282,7 @@ export const setsApi = {
   offer: (id: string) => send<Offer>('GET', `/gift-offers/${enc(id)}`),
   accounts: (q: string) => send<Page<Account>>('GET', `/gift-offers/accounts${qs({ q })}`),
   history: (accountId: string) =>
-    send<{ items: { no: string | null; hediyeTutari: number | null; toplam: number | null; tarih: string | null; durum: string }[] }>(
+    send<{ items: { no: string | null; hediyeTutari: number | null; toplam: number | null; tarih: string | null; durum: string }[]; kaynaklar?: Kaynaklar }>(
       'GET', `/gift-offers/accounts/${enc(accountId)}/history`),
   createOffer: (b: { firmaId: string; adet: number; kisiBasiButce: number; sezon?: string }) => send<Offer>('POST', '/gift-offers', b),
   updateOffer: (id: string, b: Record<string, unknown>) => send<Offer>('PATCH', `/gift-offers/${enc(id)}`, b),

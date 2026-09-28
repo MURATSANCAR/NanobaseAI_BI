@@ -5,6 +5,7 @@ import { field } from '../../admin/ui';
 import { useDebounced } from '../../editorial/kit';
 import { fmtInt, fmtMoney } from '../../budget/api';
 import { setsApi, type Book } from './api';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Bileşen arama: ad, yazar ya da stok kodu (en az 2 harf). Sonuç tavansız, sayfalı; ilk sayfa en çok satandan. */
 export default function BookPicker({ onPick, disabled }: { onPick: (b: Book) => void; disabled?: boolean }) {
@@ -21,6 +22,7 @@ export default function BookPicker({ onPick, disabled }: { onPick: (b: Book) => 
       {dq.length >= 2 && (
         <ul className="max-h-64 overflow-y-auto overscroll-contain rounded-xl border border-slate-100 bg-white/90">
           {res.isLoading && <li className="px-3 py-2 text-[12px] text-canvas-muted">Aranıyor…</li>}
+          {res.data && res.data.items.length > 0 && res.data.total <= res.data.items.length && <li className="flex items-center gap-1 px-3 py-1 text-[11px] text-canvas-muted">Fiyat ve stok kaynağı<SqlInfo k={res.data.kaynaklar} alan="items[]" label="Kitap araması: fiyat ve stok" /></li>}
           {res.data && !res.data.items.length && <li className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</li>}
           {res.data?.items.map((b) => (
             <li key={b.stok}>
@@ -39,7 +41,7 @@ export default function BookPicker({ onPick, disabled }: { onPick: (b: Book) => 
             </li>
           ))}
           {res.data && res.data.total > res.data.items.length && (
-            <li className="px-3 py-2 text-[11px] text-canvas-muted">{res.data.total.toLocaleString('tr-TR')} sonuçtan ilk {res.data.items.length} tanesi; aramayı daraltın.</li>
+            <li className="px-3 py-2 text-[11px] text-canvas-muted">{res.data.total.toLocaleString('tr-TR')} sonuçtan ilk {res.data.items.length} tanesi; aramayı daraltın.<SqlInfo k={res.data.kaynaklar} alan="items[]" label="Kitap araması: fiyat ve stok" className="ml-0.5" /></li>
           )}
         </ul>
       )}

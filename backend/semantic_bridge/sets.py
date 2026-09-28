@@ -54,6 +54,7 @@ from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 
+from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import sets_sources as src
 from semantic_bridge.marketing import guard as mguard
 
@@ -594,12 +595,84 @@ def logo_price_incl(b: Any) -> Optional[float]:
     return b.logo_fiyat if b.logo_fiyat_kdv_dahil else b.logo_fiyat * (1 + (b.kdv or 0.0) / 100.0)
 
 
-def books_by_code(engine: sa.engine.Engine, codes: Iterable[str]) -> dict[str, Any]:
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (sets_kaynak.py). Kod
+# listeleri 500'lük parçalarla okunur; her parça ayrı ifadedir.
+CHUNK = 500
+
+
+def chunks(codes: Iterable[str]) -> list[list[str]]:
     codes = [c for c in dict.fromkeys(codes) if c]
+    return [codes[i:i + CHUNK] for i in range(0, len(codes), CHUNK)]
+
+
+def books_stmt(codes: list[str]):
+    return sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(codes))
+
+
+def items_stmt(set_ids: list[str]):
+    return sa.select(ITEMS).where(ITEMS.c.set_id.in_(set_ids)).order_by(ITEMS.c.sira, ITEMS.c.stok_kodu)
+
+
+def sales12_stmt(codes: list[str], a: str, b: str):
+    return (sa.select(SALES.c.stok_kodu, sa.func.sum(SALES.c.net_adet), sa.func.sum(SALES.c.net_ciro))
+            .where(SALES.c.stok_kodu.in_(codes), SALES.c.yil_ay >= a, SALES.c.yil_ay <= b).group_by(SALES.c.stok_kodu))
+
+
+def sets_stmt(tenant: str):
+    return sa.select(SETS).where(SETS.c.tenant_id == tenant)
+
+
+def set_stmt(tenant: str, set_id: str):
+    return sa.select(SETS).where(SETS.c.tenant_id == tenant, SETS.c.id == set_id)
+
+
+def series_stmt(codes: list[str]):
+    return sa.select(SALES).where(SALES.c.stok_kodu.in_(codes or ["-"])).order_by(SALES.c.yil_ay)
+
+
+def all_books_stmt():
+    return sa.select(BOOKS)
+
+
+def pairs_stmt():
+    return sa.select(PAIRS).order_by(PAIRS.c.siparis_sayisi.desc(), PAIRS.c.lift.desc())
+
+
+def discount_stmt():
+    return sa.select(SETS.c.set_fiyati, SETS.c.liste_toplami).where(
+        SETS.c.kaynak == "crm", SETS.c.eksik_fiyat == 0, SETS.c.set_fiyati > 0, SETS.c.liste_toplami > 0)
+
+
+def sugg_stmt():
+    return sa.select(SUGG).order_by(SUGG.c.skor.desc(), SUGG.c.id)
+
+
+def offers_stmt(tenant: str):
+    return sa.select(OFFERS).where(OFFERS.c.tenant_id == tenant).order_by(OFFERS.c.created_at.desc())
+
+
+def offer_stmt(tenant: str, oid: str):
+    return sa.select(OFFERS).where(OFFERS.c.tenant_id == tenant, OFFERS.c.id == oid)
+
+
+def promo_stmt():
+    return sa.select(PROMO).order_by(PROMO.c.son12_adet.desc(), PROMO.c.stok_kodu)
+
+
+def gift_books_stmt(qty: int):
+    return sa.select(BOOKS).where(BOOKS.c.crm_tip == 1, BOOKS.c.in_logo.is_(True), BOOKS.c.stok >= qty)
+
+
+def gift_sets_stmt(tenant: str):
+    return sa.select(SETS).where(SETS.c.tenant_id == tenant, SETS.c.durum == "satista", SETS.c.stok_kodu.isnot(None),
+                                 SETS.c.set_fiyati > 0)
+
+
+def books_by_code(engine: sa.engine.Engine, codes: Iterable[str]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     with engine.connect() as c:
-        for i in range(0, len(codes), 500):
-            for r in c.execute(sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(codes[i:i + 500]))).all():
+        for part in chunks(codes):
+            for r in c.execute(books_stmt(part)).all():
                 out[r.stok_kodu] = r
     return out
 
@@ -634,8 +707,8 @@ def enrich(engine: sa.engine.Engine, st: dict[str, Any], items: list[dict[str, A
 
 def _items_of(c: Any, set_ids: list[str]) -> dict[str, list[Any]]:
     out: dict[str, list[Any]] = {}
-    for i in range(0, len(set_ids), 500):
-        for r in c.execute(sa.select(ITEMS).where(ITEMS.c.set_id.in_(set_ids[i:i + 500])).order_by(ITEMS.c.sira, ITEMS.c.stok_kodu)).all():
+    for part in chunks(set_ids):
+        for r in c.execute(items_stmt(part)).all():
             out.setdefault(r.set_id, []).append(r)
     return out
 
@@ -643,13 +716,9 @@ def _items_of(c: Any, set_ids: list[str]) -> dict[str, list[Any]]:
 def _sales12(engine: sa.engine.Engine, codes: list[str]) -> dict[str, dict[str, float]]:
     a, b = window12(data_end(engine))
     out: dict[str, dict[str, float]] = {}
-    codes = [c for c in dict.fromkeys(codes) if c]
     with engine.connect() as c:
-        for i in range(0, len(codes), 500):
-            q = (sa.select(SALES.c.stok_kodu, sa.func.sum(SALES.c.net_adet), sa.func.sum(SALES.c.net_ciro))
-                 .where(SALES.c.stok_kodu.in_(codes[i:i + 500]), SALES.c.yil_ay >= a, SALES.c.yil_ay <= b)
-                 .group_by(SALES.c.stok_kodu))
-            for code, adet, ciro in c.execute(q).all():
+        for part in chunks(codes):
+            for code, adet, ciro in c.execute(sales12_stmt(part, a, b)).all():
                 out[code] = {"adet": float(adet or 0), "ciro": round(float(ciro or 0), 2)}
     return out
 
@@ -685,7 +754,7 @@ def _set_dict(r: Any, items: Optional[list[Any]] = None, sales: Optional[dict[st
 
 
 def _row(c: Any, tenant: str, set_id: str) -> Any:
-    r = c.execute(sa.select(SETS).where(SETS.c.tenant_id == tenant, SETS.c.id == set_id)).first()
+    r = c.execute(set_stmt(tenant, set_id)).first()
     if r is None:
         raise SetsError("Set bulunamadı.", 404)
     return r
@@ -695,7 +764,7 @@ def list_sets(engine: sa.engine.Engine, tenant: str, *, durum: str = "", tur: st
               q: str = "", sort: str = "ciro", page: int = 0) -> dict[str, Any]:
     """Bütün setler (tavansız, sayfalı). Kolonlar: bileşen sayısı, set fiyatı, liste toplamı, indirim, marj, stok, son 12 ay."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(SETS).where(SETS.c.tenant_id == tenant)).all()
+        rows = c.execute(sets_stmt(tenant)).all()
         items = _items_of(c, [r.id for r in rows])
     codes = [r.stok_kodu for r in rows if r.stok_kodu]
     sales = _sales12(engine, codes)
@@ -1062,7 +1131,7 @@ def effect(engine: sa.engine.Engine, tenant: str, set_id: str) -> dict[str, Any]
     codes = [i["stok"] for i in s["bilesenler"] or []] + ([s["stokKodu"]] if s["stokKodu"] else [])
     series: dict[str, list[dict[str, Any]]] = {}
     with engine.connect() as c:
-        for r in c.execute(sa.select(SALES).where(SALES.c.stok_kodu.in_(codes or ["-"])).order_by(SALES.c.yil_ay)).all():
+        for r in c.execute(series_stmt(codes)).all():
             series.setdefault(r.stok_kodu, []).append({"ay": r.yil_ay, "adet": r.net_adet, "ciro": r.net_ciro, "tur": r.tur})
     first = next((x["ay"] for x in series.get(s["stokKodu"] or "", []) if x["adet"] > 0), None)
     return {"hazir": False, "mesaj": "Set–bileşen etkisi yorumu sonraki sürümde; aşağıdaki seriler ayrı ayrı okunur, toplanmaz.",
@@ -1077,7 +1146,7 @@ def find_books(engine: sa.engine.Engine, st: dict[str, Any], q: str, page: int =
     if len(f) < 2:
         return {"items": [], "total": 0, "page": 0, "pageSize": PAGE_SIZE}
     with engine.connect() as c:
-        rows = c.execute(sa.select(BOOKS)).all()
+        rows = c.execute(all_books_stmt()).all()
     hits = [b for b in rows if f in fold(b.ad) or fold(b.stok_kodu).startswith(f) or f in fold(b.yazar)]
     hits.sort(key=lambda b: -(b.son12_adet or 0))
     page = max(0, page)
@@ -1093,7 +1162,7 @@ def _book_dict(b: Any, st: dict[str, Any]) -> dict[str, Any]:
 
 def basket_pairs(engine: sa.engine.Engine, *, q: str = "", page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PAIRS).order_by(PAIRS.c.siparis_sayisi.desc(), PAIRS.c.lift.desc())).all()
+        rows = c.execute(pairs_stmt()).all()
     names = {k: b.ad for k, b in books_by_code(engine, {x for r in rows for x in (r.kod_a, r.kod_b)}).items()}
     f = fold(q)
     items = [{"a": r.kod_a, "b": r.kod_b, "adA": names.get(r.kod_a), "adB": names.get(r.kod_b), "siparis": r.siparis_sayisi,
@@ -1109,8 +1178,7 @@ def basket_pairs(engine: sa.engine.Engine, *, q: str = "", page: int = 0) -> dic
 def median_discount(engine: sa.engine.Engine, st: dict[str, Any]) -> dict[str, Any]:
     """Mevcut CRM setlerinin gerçekleşen indirimi (set fiyatı ↔ bileşen liste toplamı) medyanı."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(SETS.c.set_fiyati, SETS.c.liste_toplami).where(
-            SETS.c.kaynak == "crm", SETS.c.eksik_fiyat == 0, SETS.c.set_fiyati > 0, SETS.c.liste_toplami > 0)).all()
+        rows = c.execute(discount_stmt()).all()
     vals = [1 - p / t for p, t in rows if 0 <= 1 - p / t < 0.95]
     if len(vals) < st["discountMinN"]:
         return {"indirim": None, "n": len(vals)}
@@ -1247,7 +1315,7 @@ def list_suggestions(engine: sa.engine.Engine, st: dict[str, Any], *, yas: Optio
                      butce_min: Optional[float] = None, butce_max: Optional[float] = None, tur: str = "", durum: str = "yeni",
                      page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SUGG).order_by(SUGG.c.skor.desc(), SUGG.c.id)).all()
+        rows = c.execute(sugg_stmt()).all()
     t = fold(tema)
     out = [r for r in rows
            if (not durum or r.durum == durum) and (not tur or r.tur == tur)
@@ -1299,10 +1367,8 @@ def gift_options(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, qty:
     disc = tier_for(qty, tiers)
     promo = st["promoPrefix"]
     with engine.connect() as c:
-        books = [b for b in c.execute(sa.select(BOOKS).where(BOOKS.c.crm_tip == 1, BOOKS.c.in_logo.is_(True), BOOKS.c.stok >= qty)).all()
-                 if not b.stok_kodu.startswith(promo) and list_price(b, st)]
-        sets_ = c.execute(sa.select(SETS).where(SETS.c.tenant_id == tenant, SETS.c.durum == "satista", SETS.c.stok_kodu.isnot(None),
-                                                SETS.c.set_fiyati > 0)).all()
+        books = [b for b in c.execute(gift_books_stmt(qty)).all() if not b.stok_kodu.startswith(promo) and list_price(b, st)]
+        sets_ = c.execute(gift_sets_stmt(tenant)).all()
     set_books = books_by_code(engine, [s.stok_kodu for s in sets_])
     costs = costs_for(engine, st, [b.stok_kodu for b in books])
 
@@ -1371,7 +1437,7 @@ def _offer_dict(r: Any) -> dict[str, Any]:
 
 
 def _offer_row(c: Any, tenant: str, oid: str) -> Any:
-    r = c.execute(sa.select(OFFERS).where(OFFERS.c.tenant_id == tenant, OFFERS.c.id == oid)).first()
+    r = c.execute(offer_stmt(tenant, oid)).first()
     if r is None:
         raise SetsError("Teklif bulunamadı.", 404)
     return r
@@ -1379,7 +1445,7 @@ def _offer_row(c: Any, tenant: str, oid: str) -> Any:
 
 def list_offers(engine: sa.engine.Engine, tenant: str, *, durum: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(OFFERS).where(OFFERS.c.tenant_id == tenant).order_by(OFFERS.c.created_at.desc())).all()
+        rows = c.execute(offers_stmt(tenant)).all()
     f = fold(q)
     counts = {k: sum(1 for r in rows if r.durum == k) for k in OFFER_STATUS}
     out = [_offer_dict(r) for r in rows if (not durum or r.durum == durum) and (not f or f in fold(r.firma_adi) or f in fold(r.id))]
@@ -1518,7 +1584,7 @@ def handoff(engine: sa.engine.Engine, tenant: str, oid: str) -> dict[str, Any]:
 
 def list_promo(engine: sa.engine.Engine, *, stok: Optional[str] = None, tur: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PROMO).order_by(PROMO.c.son12_adet.desc(), PROMO.c.stok_kodu)).all()
+        rows = c.execute(promo_stmt()).all()
     f = fold(q)
     allrows = [{"stok": r.stok_kodu, "ad": r.ad, "tur": r.tur, "turAdi": PROMO_TYPES.get(r.tur, r.tur), "crmTip": r.crm_tip,
                 "promosyonTipi": r.promosyon_tipi, "stokAdet": r.stok, "son12Adet": r.son12_adet, "son12Ciro": r.son12_ciro,
@@ -1802,7 +1868,8 @@ class Refresher:
         try:
             self.state.update(running=True, step="CRM set kartları", error=None)
             schema = self._schema()
-            crm = src.runner(self._crm())
+            ran: list[dict[str, Any]] = []      # çalışan CRM/Logo SQL'leri (sorgu bilgisi; sonuç satırı saklanmaz)
+            crm = PK.recording(src.runner(self._crm()), "crm", ran)
             crm_sets = src.read_crm_sets(crm, schema)
             crm_books = src.read_crm_books(crm, schema)
             crm_comp = src.read_crm_components(crm, schema) if st["componentSource"] in ("auto", "crm") else {}
@@ -1814,7 +1881,7 @@ class Refresher:
             done.update(crmSet=len(crm_sets), crmKitap=len(crm_books), crmSetIslemi=len(crm_comp))
 
             self._step("Logo dönemleri ve malzeme kartları")
-            logo = src.runner(self._logo())
+            logo = PK.recording(src.runner(self._logo()), "logo", ran)
             firms = src.firms_by_year(logo)
             end = src.read_data_end(logo, firms) or ref
             meta_set(engine, "data_end", {"date": end.isoformat()})
@@ -1876,13 +1943,14 @@ class Refresher:
                 self._step("B2C birlikte alım çiftleri")
                 try:
                     tb = time.monotonic()
+                    n_before = len(ran)
                     m = end.year * 12 + end.month - 1 - st["basketMonths"]
                     since = date(m // 12, m % 12 + 1, 1)          # veri bitiş ayından N ay önceki ayın ilk günü
                     pairs, counts, total = src.read_basket(crm, schema, since, st["b2cTypes"], st["b2cPrefix"], st["basketMinOrders"])
                     self._write_pairs(engine, pairs, counts, total, f"{since.isoformat()} – {end.isoformat()}")
                     meta_set(engine, "basket", {"asof": _now().isoformat(), "cift": len(pairs), "siparis": total,
                                                 "enAz": st["basketMinOrders"], "donem": [since.isoformat(), end.isoformat()],
-                                                "sn": round(time.monotonic() - tb, 1)})
+                                                "sn": round(time.monotonic() - tb, 1), "sql": ran[n_before:]})
                     done["sepetCifti"] = len(pairs)
                 except src.SourceError as e:
                     warnings.append(f"Birlikte alım okunamadı: {e}")
@@ -1894,6 +1962,7 @@ class Refresher:
             meta_set(engine, "alerts", {"items": alerts})
             done["uyari"] = len(alerts)
             meta_set(engine, "refresh", {"ok": True, "done": done, "warnings": warnings, "sn": round(time.monotonic() - t0, 1)})
+            meta_set(engine, "sql", {"items": ran, "firma": {str(y): f for y, f in firms.items()}})
             self.state.update(running=False, step=None, error=None, finishedAt=time.time())
             return {"ok": True, "done": done, "warnings": warnings, "dataEnd": end.isoformat(), "alerts": alerts}
         except Exception as e:  # noqa: BLE001 — eski veriler kalır, hata ekranda

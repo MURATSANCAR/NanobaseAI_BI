@@ -22,7 +22,9 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import sets as S
+from semantic_bridge import sets_kaynak as K
 from semantic_bridge import sets_docs as D
 from semantic_bridge import sets_sources as src
 
@@ -81,6 +83,25 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     def shape(user: str, obj: Any) -> Any:
         return obj if costs_ok(user) else S.strip_costs(obj)
 
+    def _no_sql(status: dict[str, Any]) -> dict[str, Any]:
+        """Yenileme durumundaki kayıtlı SQL listesi sorgu bilgisine gider, cevapta yer almaz."""
+        if isinstance(status.get("basket"), dict):
+            status = {**status, "basket": {k_: v for k_, v in status["basket"].items() if k_ != "sql"}}
+        return status
+
+    def logo_db() -> Optional[str]:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adı."""
+        try:
+            return PV.connection_database(deps["logo_file"]())
+        except Exception:  # noqa: BLE001
+            return None
+
+    def with_set(engine, tenant: str, set_id: str, out: dict[str, Any]) -> dict[str, Any]:
+        return PV.bagla(out, lambda: K.for_set(engine, tenant, set_id, out, logo_db()))
+
+    def with_offer(engine, tenant: str, out: dict[str, Any]) -> dict[str, Any]:
+        return PV.bagla(out, lambda: K.for_offer(engine, tenant, out, logo_db()))
+
     def need(user: str, key: str, what: str) -> None:
         if not has(user, key):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": f"{what} rolünüzde yok."})
@@ -125,7 +146,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         engine, _, user, display = ctx(request)
         st = settings()
         admin = is_admin(user)
-        return shape(user, {
+        return PV.bagla(shape(user, {
             "types": S.TYPES, "sources": S.SOURCES, "statuses": S.STATUSES, "itemSources": S.ITEM_SOURCES,
             "suggestionTypes": S.SUGG_TYPES, "suggestionStatuses": S.SUGG_STATUS, "offerStatuses": S.OFFER_STATUS,
             "promoTypes": S.PROMO_TYPES, "costSource": st["costSource"], "costSourceLabel": src.COST_SOURCES.get(st["costSource"], st["costSource"]),
@@ -133,15 +154,19 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
                                             "basketMonths", "basketMinOrders", "suggestSize", "suggestMaxSize", "giftOptions",
                                             "offerValidDays", "seasonLeadWeeks")},
             "giftTiers": [{"adet": a, "indirim": p} for a, p in st["giftTiers"]],
-            **S.summary(engine, st), "status": refresher.status(),
+            **S.summary(engine, st), "status": _no_sql(refresher.status()),
             "me": {"username": user, "display": display, "admin": admin, "canWrite": has(user, "ozellik:set.yaz"),
                    "canApprove": has(user, "ozellik:set.onay"), "canApproveOffer": has(user, "ozellik:set.teklif-onay"),
-                   "canSeeCost": costs_ok(user), "canExport": has(user, "ozellik:veri.disa-aktar")}})
+                   "canSeeCost": costs_ok(user), "canExport": has(user, "ozellik:veri.disa-aktar")}}),
+                        lambda: K.for_meta(engine, logo_db()))
 
     @app.get(f"{P}/sets/status")
     def sets_status(request: Request) -> dict[str, Any]:
-        ctx(request)
-        return refresher.status()
+        engine, _, _, _ = ctx(request)
+        out = refresher.status()
+        if isinstance(out.get("basket"), dict):
+            out["basket"] = {k_: v for k_, v in out["basket"].items() if k_ != "sql"}
+        return PV.bagla(out, lambda: K.for_status(engine, logo_db()))
 
     @app.post(f"{P}/sets/refresh")
     def sets_refresh(request: Request, basket: bool = False) -> dict[str, Any]:
@@ -178,26 +203,30 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     @app.get(f"{P}/sets/books")
     def sets_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return S.find_books(engine, settings(), q, page)
+        return PV.bagla(S.find_books(engine, settings(), q, page), lambda: K.for_books(engine, logo_db()))
 
     @app.get(f"{P}/sets/basket-pairs")
     def sets_basket(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return S.basket_pairs(engine, q=q, page=page)
+        out = S.basket_pairs(engine, q=q, page=page)
+        if isinstance(out.get("meta"), dict):
+            out["meta"] = {k_: v for k_, v in out["meta"].items() if k_ != "sql"}
+        return PV.bagla(out, lambda: K.for_pairs(engine, out, logo_db()))
 
     @app.get(f"{P}/sets/suggestions")
     def sets_suggestions(request: Request, yas: Optional[int] = None, tema: str = "", butce_min: Optional[float] = None,
                          butce_max: Optional[float] = None, tur: str = "", durum: str = "yeni", page: int = 0) -> dict[str, Any]:
         engine, _, user, _ = ctx(request)
-        return shape(user, call(S.list_suggestions, engine, settings(), yas=yas, tema=tema, butce_min=butce_min, butce_max=butce_max,
-                                tur=tur, durum=durum, page=page))
+        out = shape(user, call(S.list_suggestions, engine, settings(), yas=yas, tema=tema, butce_min=butce_min, butce_max=butce_max,
+                               tur=tur, durum=durum, page=page))
+        return PV.bagla(out, lambda: K.for_suggestions(engine, out, logo_db()))
 
     @app.post(f"{P}/sets/suggestions/{{sid}}/adopt", status_code=201)
     def sets_suggestion_adopt(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.adopt_suggestion, engine, settings(), tenant, user, sid)
         set_audit(engine, user, "create", out, {"oneri": sid, "kaynak": "ZEKİ AI önerisi"})
-        return shape(user, out)
+        return with_set(engine, tenant, out["id"], shape(user, out))
 
     @app.post(f"{P}/sets/suggestions/{{sid}}/dismiss")
     def sets_suggestion_dismiss(sid: str, request: Request) -> dict[str, Any]:
@@ -212,19 +241,20 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     def sets_list(request: Request, durum: str = "", tur: str = "", sezon: str = "", kanal: str = "", q: str = "",
                   sort: str = "ciro", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return shape(user, S.list_sets(engine, tenant, durum=durum, tur=tur, sezon=sezon, kanal=kanal, q=q, sort=sort, page=page))
+        out = shape(user, S.list_sets(engine, tenant, durum=durum, tur=tur, sezon=sezon, kanal=kanal, q=q, sort=sort, page=page))
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, logo_db()))
 
     @app.post(f"{P}/sets", status_code=201)
     def sets_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.create_set, engine, settings(), tenant, user, body)
         set_audit(engine, user, "create", out, {"bilesen": out["bilesenSayisi"], "fiyat": out["setFiyati"]})
-        return shape(user, out)
+        return with_set(engine, tenant, out["id"], shape(user, out))
 
     @app.get(f"{P}/sets/{{set_id}}")
     def sets_get(set_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return shape(user, call(S.get_set, engine, tenant, set_id))
+        return with_set(engine, tenant, set_id, shape(user, call(S.get_set, engine, tenant, set_id)))
 
     @app.patch(f"{P}/sets/{{set_id}}")
     def sets_update(set_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -232,7 +262,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         out, diff = call(S.update_set, engine, settings(), tenant, user, set_id, body, S.seasons(engine))
         if diff:
             set_audit(engine, user, "update", out, diff)
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.delete(f"{P}/sets/{{set_id}}")
     def sets_delete(set_id: str, request: Request) -> dict[str, Any]:
@@ -246,27 +276,27 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         engine, tenant, user, _ = ctx(request)
         out = call(S.put_items, engine, settings(), tenant, set_id, body.get("bilesenler"))
         set_audit(engine, user, "update", out, {"bilesenler": [(i["stok"], i["adet"]) for i in out["bilesenler"] or []]})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.post(f"{P}/sets/{{set_id}}/price")
     def sets_price(set_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         """Hesap (kaydetmeden): set fiyatı ya da indirim, ambalaj, bileşenler → liste toplamı, KDV ayrışması, marj."""
         engine, tenant, user, _ = ctx(request)
-        return shape(user, call(S.price_preview, engine, settings(), tenant, set_id, body))
+        return with_set(engine, tenant, set_id, shape(user, call(S.price_preview, engine, settings(), tenant, set_id, body)))
 
     @app.post(f"{P}/sets/{{set_id}}/submit")
     def sets_submit(set_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.submit_set, engine, settings(), tenant, user, set_id)
         set_audit(engine, user, "update", out, {"durum": "onayda", "marjOrani": out.get("marjOrani")})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.post(f"{P}/sets/{{set_id}}/withdraw")
     def sets_withdraw(set_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.withdraw_set, engine, tenant, user, set_id)
         set_audit(engine, user, "update", out, {"durum": "taslak", "neden": "onaydan çekildi"})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.post(f"{P}/sets/{{set_id}}/approve")
     def sets_approve(set_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -274,7 +304,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         need(user, "ozellik:set.onay", "Set onayı")
         out = call(S.decide_set, engine, tenant, user, set_id, True, body.get("note"))
         set_audit(engine, user, "approve", out, {"fiyat": out.get("setFiyati"), "not": body.get("note")})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.post(f"{P}/sets/{{set_id}}/reject")
     def sets_reject(set_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -282,7 +312,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         need(user, "ozellik:set.onay", "Set onayı")
         out = call(S.decide_set, engine, tenant, user, set_id, False, body.get("note"))
         set_audit(engine, user, "reject", out, {"not": body.get("note")})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.post(f"{P}/sets/{{set_id}}/text")
     async def sets_text(set_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -296,7 +326,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     @app.get(f"{P}/sets/{{set_id}}/card-todo")
     def sets_card_todo(set_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(S.card_todo, engine, settings(), tenant, set_id)
+        return with_set(engine, tenant, set_id, call(S.card_todo, engine, settings(), tenant, set_id))
 
     @app.get(f"{P}/sets/{{set_id}}/card-todo.csv")
     def sets_card_todo_csv(set_id: str, request: Request) -> Response:
@@ -325,19 +355,20 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         card = call(src.read_card, crm(), schema(), code)
         out = call(S.link_set, engine, tenant, set_id, code, card)
         set_audit(engine, user, "update", out, {"crmKart": code})
-        return shape(user, out)
+        return with_set(engine, tenant, set_id, shape(user, out))
 
     @app.get(f"{P}/sets/{{set_id}}/effect")
     def sets_effect(set_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(S.effect, engine, tenant, set_id)
+        out = call(S.effect, engine, tenant, set_id)
+        return PV.bagla(out, lambda: K.for_effect(engine, tenant, out, list(out.get("seriler") or {}), logo_db()))
 
     # ------------------------------------------------------------------ kurumsal hediye teklifi
 
     @app.get(f"{P}/gift-offers")
     def offers_list(request: Request, durum: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return shape(user, S.list_offers(engine, tenant, durum=durum, q=q, page=page))
+        return PV.bagla(shape(user, S.list_offers(engine, tenant, durum=durum, q=q, page=page)), lambda: K.for_offers(engine, tenant))
 
     @app.get(f"{P}/gift-offers/accounts")
     def offers_accounts(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
@@ -345,13 +376,15 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         ctx(request)
         if len(q.strip()) < 2:
             return {"items": [], "total": 0, "page": 0, "pageSize": 50}
-        return call(src.search_accounts, crm(), schema(), q.strip(), max(0, page), 50)
+        out = call(src.search_accounts, crm(), schema(), q.strip(), max(0, page), 50)
+        return PV.bagla(out, lambda: K.for_accounts(schema(), q.strip(), max(0, page)))
 
     @app.get(f"{P}/gift-offers/accounts/{{account_id}}/history")
     def offers_account_history(account_id: str, request: Request) -> dict[str, Any]:
         """Firmaya geçmiş hediye talepleri (CRM; kişi bilgisi seçilmez)."""
         ctx(request)
-        return {"items": call(src.read_gift_history, crm(), schema(), account_id)}
+        return PV.bagla({"items": call(src.read_gift_history, crm(), schema(), account_id)},
+                        lambda: K.for_history(schema(), account_id))
 
     @app.post(f"{P}/gift-offers", status_code=201)
     def offers_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -359,19 +392,19 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         account = call(src.read_account, crm(), schema(), str(body.get("firmaId") or "").strip())
         out = call(S.create_offer, engine, settings(), tenant, user, body, account)
         offer_audit(engine, user, "create", out, {"adet": out["adet"], "butce": out["kisiBasiButce"], "secenek": len(out["secenekler"])})
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.get(f"{P}/gift-offers/{{oid}}")
     def offers_get(oid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return shape(user, call(S.get_offer, engine, tenant, oid))
+        return with_offer(engine, tenant, shape(user, call(S.get_offer, engine, tenant, oid)))
 
     @app.patch(f"{P}/gift-offers/{{oid}}")
     def offers_update(oid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.update_offer, engine, settings(), tenant, user, oid, body)
         offer_audit(engine, user, "update", out, {k: body[k] for k in body if k != "mektup"} | ({"mektup": "düzenlendi"} if "mektup" in body else {}))
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.post(f"{P}/gift-offers/{{oid}}/letter")
     async def offers_letter(oid: str, request: Request) -> dict[str, Any]:
@@ -385,14 +418,14 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         engine, tenant, user, _ = ctx(request)
         out = call(S.submit_offer, engine, tenant, user, oid)
         offer_audit(engine, user, "update", out, {"durum": "onayda"})
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.post(f"{P}/gift-offers/{{oid}}/withdraw")
     def offers_withdraw(oid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(S.submit_offer, engine, tenant, user, oid, withdraw=True)
         offer_audit(engine, user, "update", out, {"durum": "taslak"})
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.post(f"{P}/gift-offers/{{oid}}/approve")
     def offers_approve(oid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -400,7 +433,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         need(user, "ozellik:set.teklif-onay", "Kurumsal teklif onayı")
         out = call(S.decide_offer, engine, tenant, user, oid, True, body.get("note"))
         offer_audit(engine, user, "approve", out, {"not": body.get("note")})
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.post(f"{P}/gift-offers/{{oid}}/reject")
     def offers_reject(oid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -408,7 +441,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         need(user, "ozellik:set.teklif-onay", "Kurumsal teklif onayı")
         out = call(S.decide_offer, engine, tenant, user, oid, False, body.get("note"))
         offer_audit(engine, user, "reject", out, {"not": body.get("note")})
-        return shape(user, out)
+        return with_offer(engine, tenant, shape(user, out))
 
     @app.get(f"{P}/gift-offers/{{oid}}/document.pdf")
     def offers_pdf(oid: str, request: Request) -> Response:
@@ -429,6 +462,6 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     @app.get(f"{P}/promo-items")
     def promo_items(request: Request, stok: str = "", tur: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return S.list_promo(engine, stok=stok, tur=tur, q=q, page=page)
+        return PV.bagla(S.list_promo(engine, stok=stok, tur=tur, q=q, page=page), lambda: K.for_promo(engine, logo_db()))
 
     return refresher

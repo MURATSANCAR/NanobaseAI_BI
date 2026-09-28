@@ -9,6 +9,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay, fmtInt, fmtMoney, parseNum } from '../../budget/api';
 import { OFFER_TONE, setsApi, type Account, type SetsMeta } from './api';
 import { Tone } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Kurumsal teklifler: firma (CRM) + kişi sayısı + kişi başı bütçe → seçenekler (kod), mektup (ZEKİ AI), onay, PDF. */
 export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
@@ -31,7 +32,7 @@ export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
             <input className={field} placeholder="Firma ya da teklif no" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Durum</span>
+            <span className={`${labelCls} inline-flex items-center gap-1`}>Durum<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Durum başına teklif" /></span>
             <select className={field} value={durum} onChange={(e) => { setDurum(e.target.value); setPage(0); }}>
               <option value="">Hepsi</option>
               {Object.entries(meta.offerStatuses).map(([k, v]) => (
@@ -58,9 +59,9 @@ export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
               <tr className="border-b border-slate-100">
                 <th className={th}>Teklif</th>
                 <th className={th}>Durum</th>
-                <th className={`${th} text-right`}>Kişi</th>
-                <th className={`${th} text-right`}>Kişi başı bütçe</th>
-                <th className={`${th} text-right`}>Seçenek</th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Kişi</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Kişi başı bütçe</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Seçenek</InfoLabel></th>
                 <th className={th}>Geçerlilik</th>
                 <th className={th}>Hazırlayan</th>
               </tr>
@@ -143,7 +144,7 @@ function NewOfferSheet({ open, meta, onClose }: { open: boolean; meta: SetsMeta;
                 ))}
                 {!found.data.items.length && <li className="px-3 py-2 text-[12px] text-canvas-muted">Firma bulunamadı.</li>}
                 {found.data.total > found.data.items.length && (
-                  <li className="px-3 py-2 text-[11px] text-canvas-muted">{found.data.total.toLocaleString('tr-TR')} firmadan ilk {found.data.items.length} tanesi; aramayı daraltın.</li>
+                  <li className="px-3 py-2 text-[11px] text-canvas-muted">{found.data.total.toLocaleString('tr-TR')} firmadan ilk {found.data.items.length} tanesi; aramayı daraltın.<SqlInfo k={found.data.kaynaklar} alan="total" label="Firma araması" className="ml-0.5" /></li>
                 )}
               </ul>
             )}
@@ -151,7 +152,7 @@ function NewOfferSheet({ open, meta, onClose }: { open: boolean; meta: SetsMeta;
         )}
         {acc && history.data && history.data.items.length > 0 && (
           <div className="rounded-xl bg-slate-50 px-3 py-2 text-[12px]">
-            <div className="font-bold">CRM'deki hediye talepleri</div>
+            <div className="flex items-center gap-1 font-bold">CRM'deki hediye talepleri<SqlInfo k={history.data.kaynaklar} alan="items[]" label="Geçmiş hediye talepleri" /></div>
             {history.data.items.map((h, i) => (
               <div key={i} className="text-canvas-muted">{h.no ?? '—'} · {fmtDay(h.tarih)} · {fmtMoney(h.toplam ?? h.hediyeTutari)} · {h.durum}</div>
             ))}

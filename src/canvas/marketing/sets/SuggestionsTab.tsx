@@ -8,6 +8,7 @@ import { Pager, useDebounced } from '../../editorial/kit';
 import { fmtInt, fmtMoney, fmtPct, parseNum } from '../../budget/api';
 import { setsApi, type SetsMeta } from './api';
 import { MarginCell, Tone } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Öneriler: B2C birlikte alım, aynı yazar ve aynı dizi kümeleri (kural), ZEKİ AI ad/tanıtım ve özel gün. Tavansız, sayfalı. */
 export default function SuggestionsTab({ meta }: { meta: SetsMeta }) {
@@ -99,6 +100,7 @@ export default function SuggestionsTab({ meta }: { meta: SetsMeta }) {
             Önerilen fiyat: {disc.indirim !== null
               ? <>mevcut {fmtInt(disc.n)} setin medyan indirimi ({fmtPct(disc.indirim)}) liste toplamına uygulanır.</>
               : <>mevcut setlerde yeterli örnek yok ({fmtInt(disc.n)}); liste toplamı önerilir, indirimi siz belirlersiniz.</>}
+            <SqlInfo k={list.data?.kaynaklar} alan="indirim" label="Medyan indirim" className="ml-0.5" />
             {' '}Ad ve tanıtım ZEKİ AI taslağıdır; gerekçedeki sayılar sistemden gelir.
           </p>
         )}
@@ -124,7 +126,7 @@ export default function SuggestionsTab({ meta }: { meta: SetsMeta }) {
                     </div>
                   </div>
                   <div className="text-right font-mono text-[12px] tabular-nums">
-                    <div className="font-bold">{fmtMoney(s.onerilenFiyat)}</div>
+                    <div className="inline-flex items-center gap-0.5 font-bold">{fmtMoney(s.onerilenFiyat)}<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Önerilen fiyat, liste, indirim, bileşenler" /></div>
                     <div className="text-canvas-muted">liste {fmtMoney(s.listeToplami)} · {fmtPct(s.indirim)}</div>
                     {meta.me.canSeeCost && <MarginCell marj={s.marj} oran={s.marjOrani} floor={meta.settings.marginMinPct} />}
                   </div>
@@ -190,8 +192,8 @@ function PairsView({ meta }: { meta: SetsMeta }) {
               <tr className="border-b border-slate-100">
                 <th className={th}>Kitap A</th>
                 <th className={th}>Kitap B</th>
-                <th className={`${th} text-right`}>Birlikte sipariş</th>
-                <th className={`${th} text-right`}>Birliktelik oranı</th>
+                <th className={`${th} text-right`}><InfoLabel k={res.data.kaynaklar} alan="items[]">Birlikte sipariş</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={res.data.kaynaklar} alan="items[]">Birliktelik oranı</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
