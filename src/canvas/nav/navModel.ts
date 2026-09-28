@@ -364,7 +364,7 @@ export const NAV: NavGroup[] = [
     // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; BT personeli yönetici olmayabilir.
     id: 'altyapi',
     label: 'Altyapı ve destek',
-    hint: 'Sistem durumu, veri güvenliği ve müşteri hizmetleri',
+    hint: 'Sistem durumu, veri güvenliği, müşteri hizmetleri ve Zeki AI kalitesi',
     icon: Server,
     items: [
       {
@@ -390,12 +390,7 @@ export const NAV: NavGroup[] = [
         icon: Headset,
         hint: 'Talep kuyruğu ve SLA, müşteri bağlamı (sipariş, kargo, fatura), bayi görünümü, konu eğilimi ve SSS açıkları',
         keywords: ['destek', 'talep', 'şikâyet', 'sla', 'kargo takip', 'sipariş durumu', 'müşteri', 'okur', 'bayi', 'sss', 'memnuniyet', 'csat'],
-    // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; model ekibi yönetici olmayabilir.
-    id: 'altyapi',
-    label: 'Altyapı ve destek',
-    hint: 'Zeki AI kalitesi, sistem durumu ve destek',
-    icon: Server,
-    items: [
+      },
       {
         id: 'zeki-kalite',
         label: 'Zeki AI kalitesi',
