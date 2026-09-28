@@ -2442,7 +2442,8 @@
       "page": "sayfa:ik-egitim",
       "label": "Eğitim kayıtlarını yönetme",
       "hint": "Katalog, oturum, katılımcı, yoklama, sertifika doğrulama ve kişi bazında zorunlu eğitim durumu",
-      "explicit": true
+      "explicit": true,
+      "sensitive": true
     },
     {
       "key": "ozellik:ik.hedef-yaz",

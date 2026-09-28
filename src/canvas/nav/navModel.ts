@@ -577,8 +577,7 @@ export const NAV: NavGroup[] = [
     // İnsan Kaynakları (M55–M58; İK-0 ortak kayıtlar). Sayfaları açıkça verilir, «Herkes» rolüne girmez.
     id: 'ik',
     label: 'İnsan Kaynakları',
-    hint: 'İşe alım, eğitim ve gelişim, İK belgeleri ve KVKK kayıtları',
-    hint: 'İşe alım, performans, çalışan deneyimi, İK belgeleri ve KVKK kayıtları',
+    hint: 'İşe alım, eğitim, performans, çalışan deneyimi, İK belgeleri ve KVKK kayıtları',
     icon: Contact,
     explicit: true,
     items: [
