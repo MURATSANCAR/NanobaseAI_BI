@@ -72,20 +72,32 @@ export function ModuleFrame({
   );
 }
 
-export function Kpi({ label, value, help, active, onClick }: { label: string; value: string; help: string; active?: boolean; onClick?: () => void }) {
+/**
+ * `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`); kartın sağ üst köşesinde, tıklanan kartın düğmesinin
+ * dışında durur (iç içe düğme olmasın diye).
+ */
+export function Kpi({ label, value, help, active, onClick, info }: { label: string; value: string; help: string; active?: boolean; onClick?: () => void; info?: ReactNode }) {
   const body = (
     <>
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className={`text-[11px] font-bold uppercase tracking-wide text-canvas-muted ${info ? 'pr-6' : ''}`}>{label}</div>
       <div className="mt-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight sm:text-[30px]">{value}</div>
       <div className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{help}</div>
     </>
   );
   const cls = `glass-panel rounded-2xl p-3.5 text-left shadow-glass-float sm:rounded-3xl sm:p-4 ${active ? 'ring-2 ring-canvas-violet' : ''}`;
-  if (!onClick) return <div className={cls}>{body}</div>;
-  return (
-    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} transition-transform duration-150 ease-out active:scale-[0.98]`}>
+  const card = !onClick ? (
+    <div className={info ? `${cls} h-full` : cls}>{body}</div>
+  ) : (
+    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} transition-transform duration-150 ease-out active:scale-[0.98] ${info ? 'h-full w-full' : ''}`}>
       {body}
     </button>
+  );
+  if (!info) return card;
+  return (
+    <div className="relative">
+      {card}
+      <span className="absolute right-3 top-3 sm:right-3.5 sm:top-3.5">{info}</span>
+    </div>
   );
 }
 

@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M46 Bütçe ekranının köprü uçları: /api/v1/budget/*. */
 
@@ -111,6 +112,8 @@ export type BookPage = {
   pageSize: number;
   yayinevleri: string[];
   izleme: { asof: string | null; esik?: number; gecenPay?: number };
+  /** Sorgu bilgisi (her rakamın SQL'i ve hesabı): `<SqlInfo k={…kaynaklar} alan="…" />`. */
+  kaynaklar?: Kaynaklar;
 };
 
 export type ProgramLine = {
@@ -189,6 +192,7 @@ export type YearEnd = {
   baslangic: string | null;
   eksikAylar: number[];
   asof: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Deviation = {
@@ -243,6 +247,7 @@ export type Compare = {
   year: number;
   items: Plan[];
   taban: { pencere: string; ciro: number; adet: number; gider: number } | null;
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/budget';
@@ -284,7 +289,7 @@ export const budgetApi = {
   meta: () => send<BudgetMeta>('GET', '/meta'),
   status: () => send<RefreshStatus>('GET', '/status'),
   refresh: () => send<RefreshStatus & { started: boolean }>('POST', '/refresh', {}),
-  plans: (year?: number) => send<{ items: Plan[]; years: number[] }>('GET', `/plans${qs({ year })}`),
+  plans: (year?: number) => send<{ items: Plan[]; years: number[]; kaynaklar?: Kaynaklar }>('GET', `/plans${qs({ year })}`),
   defaults: (year: number) => send<Defaults>('GET', `/defaults${qs({ year })}`),
   generate: (year: number, scenarios: Scenario[], params: Partial<BudgetParams>) =>
     send<{ items: Plan[] }>('POST', '/plans/generate', { year, scenarios, params }, 300_000),
@@ -304,16 +309,16 @@ export const budgetApi = {
   updateBook: (id: string, code: string, b: { adet?: number; ciro?: number; marj?: number | null; note?: string }) =>
     send<BookTarget>('PATCH', `/plans/${enc(id)}/books/${enc(code)}`, b),
   deleteBook: (id: string, code: string) => send<{ ok: boolean }>('DELETE', `/plans/${enc(id)}/books/${enc(code)}`),
-  program: (id: string) => send<{ items: ProgramLine[] }>('GET', `/plans/${enc(id)}/program`),
+  program: (id: string) => send<{ items: ProgramLine[]; kaynaklar?: Kaynaklar }>('GET', `/plans/${enc(id)}/program`),
   updateProgram: (id: string, yayinevi: string, b: { ekBaslik?: number; baslikAdet?: number; baslikCiro?: number; marj?: number | null }) =>
     send<ProgramLine>('PATCH', `/plans/${enc(id)}/program/${enc(yayinevi)}`, b),
-  departments: (id: string) => send<{ items: DeptLine[]; asof: string | null }>('GET', `/plans/${enc(id)}/departments`),
+  departments: (id: string) => send<{ items: DeptLine[]; asof: string | null; kaynaklar?: Kaynaklar }>('GET', `/plans/${enc(id)}/departments`),
   updateDept: (id: string, center: string, hesap: string, b: { yillik?: number; aylar?: number[] }) =>
     send<DeptLine>('PATCH', `/plans/${enc(id)}/departments/${enc(center)}/${enc(hesap)}`, b),
   compare: (year: number) => send<Compare>('GET', `/compare${qs({ year })}`),
   tracking: (year: number, plan?: string) => send<Tracking>('GET', `/tracking${qs({ year, plan })}`, undefined, 180_000),
   deviations: (year: number, p: { status?: string; kind?: string; page?: number } = {}) =>
-    send<{ items: Deviation[]; total: number; page: number; pageSize: number }>('GET', `/deviations${qs({ year, ...p })}`),
+    send<{ items: Deviation[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar }>('GET', `/deviations${qs({ year, ...p })}`),
   exportUrl: (id: string) => `${ENGINE_BASE}${B}/plans/${enc(id)}/export.csv`,
 };
 

@@ -6,6 +6,8 @@ import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, f
 import { Panel, useDebounced } from '../editorial/kit';
 import { STATUS_TONE, day, num, overviewKey, pct, pricingApi, tl0, tl2, type Overview, type Proposal } from './api';
 import { NumField, Stat } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /**
  * Backlist fiyat revizyonu: son baskının birim bedeli (matbaa + güncel kâğıt) kapak fiyatına göre yükselmiş kitaplar.
@@ -62,7 +64,7 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
             hint={d?.measuredTarget != null ? `Ölçülen: son 12 ayın ${num(d.freshBooks)} yeni kitabında ortanca ${pct(d.measuredTarget)}` : 'Ölçülemedi — elle girin'}
           />
           <NumField label="Son iki yılda en az satış" suffix="adet" digits={0} value={minSold} onChange={setMinSold} hint="Hiç satmayan kitaba zam önerilmez" />
-          <Stat label="Aday" value={d ? num(d.count) : '—'} note={d ? `${num(d.candidates)} kitabın son baskısı incelendi` : undefined} />
+          <Stat info={<SqlInfo k={d?.kaynaklar} alan="count" label="Fiyat revizyonu adayları" />} label="Aday" value={d ? num(d.count) : '—'} note={d ? `${num(d.candidates)} kitabın son baskısı incelendi` : undefined} />
           <Stat label="Seçilen" value={num(picked.size)} note={pickedRows.length ? `Ortalama artış ${pct(pickedRows.reduce((s, r) => s + r.increase, 0) / pickedRows.length)}` : 'Tablodan işaretleyin'} />
         </div>
       </Panel>
@@ -86,13 +88,13 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
               </th>
               <th className={th}>Kitap</th>
               <th className={th}>Son baskı</th>
-              <th className={`${th} text-right`}>Baskı / adet</th>
-              <th className={`${th} text-right`}>Kâğıt / adet</th>
-              <th className={`${th} text-right`}>Maliyet / fiyat</th>
-              <th className={`${th} text-right`}>Satış (2 yıl)</th>
-              <th className={`${th} text-right`}>Kapak fiyatı</th>
-              <th className={`${th} text-right`}>Önerilen</th>
-              <th className={`${th} text-right`}>Artış</th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].printUnit">Baskı / adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].paperUnit">Kâğıt / adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].ratio">Maliyet / fiyat</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].sold2y">Satış (2 yıl)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].price">Kapak fiyatı</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].proposed">Önerilen</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].increase">Artış</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -143,12 +145,12 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
         </Panel>
       )}
 
-      <ProposalList ov={ov} items={proposals.data?.items ?? []} />
+      <ProposalList ov={ov} items={proposals.data?.items ?? []} k={proposals.data?.kaynaklar} />
     </div>
   );
 }
 
-function ProposalList({ ov, items }: { ov: Overview; items: Proposal[] }) {
+function ProposalList({ ov, items, k }: { ov: Overview; items: Proposal[]; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -167,7 +169,7 @@ function ProposalList({ ov, items }: { ov: Overview; items: Proposal[] }) {
   const canDecide = ov.me.approve.mali && p?.status === 'onayda' && p.createdBy.toLowerCase() !== ov.me.user.toLowerCase();
   return (
     <section className="space-y-2">
-      <h3 className="px-1 text-[14px] font-extrabold">Toplu zam teklifleri</h3>
+      <h3 className="flex items-center gap-1.5 px-1 text-[14px] font-extrabold">Toplu zam teklifleri<SqlInfo k={k} alan="items[]" label="Toplu zam teklifleri" /></h3>
       <TableWrap>
         <thead>
           <tr>
@@ -205,10 +207,10 @@ function ProposalList({ ov, items }: { ov: Overview; items: Proposal[] }) {
               <thead>
                 <tr>
                   <th className={th}>Kitap</th>
-                  <th className={`${th} text-right`}>Birim bedel</th>
-                  <th className={`${th} text-right`}>Şimdiki</th>
-                  <th className={`${th} text-right`}>Önerilen</th>
-                  <th className={`${th} text-right`}>Artış</th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="items[]">Birim bedel</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="items[]">Şimdiki</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="items[]">Önerilen</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="items[]">Artış</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>

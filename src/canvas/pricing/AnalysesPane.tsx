@@ -8,6 +8,7 @@ import { Sheet } from '../editorial/assign/parts';
 import { Tabs } from '../editorial/freelance/shared';
 import { STATUS_TONE, num, overviewKey, pct, pricingApi, tl0, tl2, type Analysis, type AnalysisStatus, type ApproverRole, type Overview } from './api';
 import { Stat } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 type Filter = 'onayda' | 'taslak' | 'onaylandi' | 'reddedildi' | 'hepsi' | 'arsiv';
 
@@ -49,10 +50,10 @@ export default function AnalysesPane({ ov }: { ov: Overview }) {
               <th className={th}>Kitap</th>
               <th className={th}>Aşama</th>
               <th className={th}>Durum</th>
-              <th className={`${th} text-right`}>Adet</th>
-              <th className={`${th} text-right`}>Kapak fiyatı</th>
-              <th className={`${th} text-right`}>Birim maliyet</th>
-              <th className={`${th} text-right`}>Marj</th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Kapak fiyatı</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Birim maliyet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Marj</InfoLabel></th>
               <th className={th}>İmzalar</th>
               <th className={th}>Son değişiklik</th>
             </tr>
@@ -146,10 +147,10 @@ function AnalysisDetail({ id, ov, onClose }: { id: string; ov: Overview; onClose
 
       {s ? (
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Kapak fiyatı" value={tl0(s.price)} note={`Öneri ${tl0(s.recommended)} · alt sınır ${tl0(s.floor)}`} />
-          <Stat label="Baskı adedi" value={num(s.qty)} note={`Toplam maliyet ${tl0(s.totalCost)}`} />
-          <Stat label="Birim maliyet" value={tl2(s.unitCost)} />
-          <Stat label="Başabaş" value={s.breakeven != null ? `${num(s.breakeven)} adet` : '—'} note={`Marj ${pct(s.margin)} (hedef ${pct(s.targetMargin)})`} />
+          <Stat info={<SqlInfo k={a.kaynaklar} alan="result" label="Kapak fiyatı" />} label="Kapak fiyatı" value={tl0(s.price)} note={`Öneri ${tl0(s.recommended)} · alt sınır ${tl0(s.floor)}`} />
+          <Stat info={<SqlInfo k={a.kaynaklar} alan="result" label="Baskı adedi" />} label="Baskı adedi" value={num(s.qty)} note={`Toplam maliyet ${tl0(s.totalCost)}`} />
+          <Stat info={<SqlInfo k={a.kaynaklar} alan="result" label="Birim maliyet" />} label="Birim maliyet" value={tl2(s.unitCost)} />
+          <Stat info={<SqlInfo k={a.kaynaklar} alan="result" label="Başabaş" />} label="Başabaş" value={s.breakeven != null ? `${num(s.breakeven)} adet` : '—'} note={`Marj ${pct(s.margin)} (hedef ${pct(s.targetMargin)})`} />
         </div>
       ) : (
         <Note tone="info">

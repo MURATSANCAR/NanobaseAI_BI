@@ -8,6 +8,7 @@ import { Panel } from '../editorial/kit';
 import { financeApi, fmtDay, fmtMoney, fmtShort } from './api';
 import { Approx, DataEnd, Money } from './parts';
 import CashBandPanel from './CashBandPanel';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** 13 haftalık nakit: veri son gününün haftasından başlar. Her satırın kaynağı ve yaklaşıklığı yazılı; açık veren
  *  hafta en üstte kırmızı. Telefonda hafta listesi, masaüstünde hafta × kalem tablosu (kendi içinde kayar). */
@@ -129,7 +130,7 @@ export default function CashTab() {
         <TableWrap>
           <thead>
             <tr>
-              <th className={`${th} sticky left-0 z-10 bg-white`}>Kalem</th>
+              <th className={`${th} sticky left-0 z-10 bg-white`}><InfoLabel k={d.kaynaklar} alan="haftalar[]" label="13 haftalık nakit tablosu">Kalem</InfoLabel></th>
               {weeks.map((w) => (
                 <th key={w.hafta} className={`${th} text-right ${w.acik ? 'text-red-700' : ''}`}>
                   <div>{w.hafta}. hafta</div>
@@ -141,7 +142,7 @@ export default function CashTab() {
           </thead>
           <tbody>
             <tr className="border-t border-slate-100 bg-slate-50/70">
-              <td className={`${td} sticky left-0 z-10 bg-slate-50 font-bold`}>Açılış</td>
+              <td className={`${td} sticky left-0 z-10 bg-slate-50 font-bold`}><InfoLabel k={d.kaynaklar} alan="acilisBakiye" label="Açılış bakiyesi">Açılış</InfoLabel></td>
               {weeks.map((w) => <td key={w.hafta} className={`${td} whitespace-nowrap text-right`}><Money v={w.acilis} /></td>)}
               <td className={td} />
             </tr>
@@ -152,6 +153,7 @@ export default function CashTab() {
                     <span>{l.yon === 'giris' ? '+' : l.yon === 'cikis' ? '−' : '·'}</span>
                     <span className="truncate" title={l.kaynak}>{l.kaynak}</span>
                     {l.yaklasik && <Approx />}
+                    <SqlInfo k={d.kaynaklar} alan="kalemler[]" row={l.kalem} label={l.kaynak} />
                   </div>
                 </td>
                 {l.haftalar.map((v, i) => <td key={i} className={`${td} whitespace-nowrap text-right`}><Money v={v || null} /></td>)}
@@ -170,7 +172,7 @@ export default function CashTab() {
       </div>
 
       <Panel>
-        <h3 className="text-[15px] font-extrabold">Bakiyeler ({fmtDay(d.veriSonu)})</h3>
+        <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Bakiyeler ({fmtDay(d.veriSonu)})<SqlInfo k={d.kaynaklar} alan="pozisyon" label="Hesap grubu bakiyeleri" /></h3>
         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-5">
           {Object.entries(d.pozisyon ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => (
             <div key={k} className="rounded-xl bg-white/80 p-2.5">
@@ -182,7 +184,7 @@ export default function CashTab() {
       </Panel>
 
       <Panel>
-        <h3 className="text-[15px] font-extrabold">Geçmiş tahmin ↔ gerçekleşen</h3>
+        <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Geçmiş tahmin ↔ gerçekleşen<SqlInfo k={hist.data?.kaynaklar} alan="items[]" label="Geçmiş tahmin ↔ gerçekleşen" /></h3>
         {hist.data?.not ? <p className="text-[12.5px] text-canvas-muted">{hist.data.not}</p> : !hist.data?.items.length ? (
           <p className="text-[12.5px] text-canvas-muted">Henüz karşılaştırma yok.</p>
         ) : (

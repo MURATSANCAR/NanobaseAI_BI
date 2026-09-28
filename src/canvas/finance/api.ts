@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M45 Finansal raporlar ekranının köprü uçları: /api/v1/finance/*. Rakamların hepsi köprüden gelir; ekran hesaplamaz. */
 
@@ -10,6 +11,8 @@ export type Freshness = {
   maliyetSonu: string | null;
   muhasebeSonu: string | null;
   okundu: string | null;
+  /** Sorgu bilgisi (her rakamın SQL'i ve hesabı): `<SqlInfo k={…kaynaklar} alan="…" />`. */
+  kaynaklar?: Kaynaklar;
 };
 
 export type Line = { kod: string; ad: string; sira: number; ust: string | null; isaret: number; tur: 'gelir' | 'gider' | 'ara_toplam' | 'eslenmemis'; formul: string[] | null };
@@ -235,7 +238,7 @@ export type BudgetView = Freshness & {
 };
 
 export type TaxItem = { id: string; beyan: string; donem: string | null; sonGun: string; sorumlu: string | null; durum: TaxStatus; durumLabel: string; tutar: number | null; not: string | null; kalanGun: number; gecikti: boolean };
-export type TaxList = { items: TaxItem[]; statuses: Record<TaxStatus, string>; today: string; yaklasan: TaxItem[]; geciken: TaxItem[] };
+export type TaxList = { items: TaxItem[]; statuses: Record<TaxStatus, string>; today: string; yaklasan: TaxItem[]; geciken: TaxItem[]; kaynaklar?: Kaynaklar };
 
 const B = '/api/v1/finance';
 

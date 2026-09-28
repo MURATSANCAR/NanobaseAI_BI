@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Fiyatlama ve maliyet (M9) köprü uçları: /api/v1/pricing/*. */
 
@@ -29,7 +30,7 @@ export type Defaults = {
   updatedAt: string | null;
 };
 
-export type Overview = {
+export type Overview = { kaynaklar?: Kaynaklar;
   status: { updatedAt?: number; failedAt?: number; error?: string | null; refreshing: boolean; durationMs?: number; dataEnd?: string };
   measured: {
     dataEnd: string;
@@ -69,7 +70,7 @@ export type Comparable = {
   code: string; name: string; pages: number | null; binding: string | null; printDate: string | null; printQty: number;
   printUnit: number; printer: string | null; price: number | null; unitCost: number | null; publisher: string | null; library: string | null;
 };
-export type Comparables = {
+export type Comparables = { kaynaklar?: Kaynaklar;
   since: string; until: string; pages: number | null; binding: string | null; band: number; count: number; rows: Comparable[];
   price: { p25: number | null; median: number | null; p75: number | null; n: number };
   pricePerPage: number | null;
@@ -83,7 +84,7 @@ export type PaperCost = {
   waste: number; trimAssumed: boolean; gsmAssumed: boolean; missing: string[];
 };
 
-export type Suggested = {
+export type Suggested = { kaynaklar?: Kaynaklar;
   printPerCopy: number | null; printService: number | null; printSetup: number | null; paper: PaperCost | null;
   royaltyRate: number | null; royaltyBase: 'kapak' | 'net'; royaltyOn: 'satis' | 'baski'; advance: number | null;
   advanceForeign: { amount: number; currency: string } | null; vat: number; discount: number | null; variableRate: number | null;
@@ -92,7 +93,7 @@ export type Suggested = {
 
 export type Spec = { code?: string | null; pages?: number | null; trim?: string | null; gsm?: number | null; binding?: string | null; vat?: number | null };
 
-export type BookDetail = {
+export type BookDetail = { kaynaklar?: Kaynaklar;
   book: { id: string | null; name: string | null; code: string; pages: number | null; trim: string | null; price: number | null; vat: number | null;
     author: string | null; publisher: string | null; library: string | null; firstPub: string | null; royalty: Royalty | null };
   prints: LogoPrint[];
@@ -127,7 +128,7 @@ export type Scenario = {
   profit?: number; margin?: number | null; breakeven?: number | null; breakevenShare?: number | null; costToPrice?: number;
 };
 
-export type CalcResult = {
+export type CalcResult = { kaynaklar?: Kaynaklar;
   scenarios: Scenario[];
   floors: Array<{ qty: number; price: number | null; raw?: number; reason: string | null }>;
   recommendation: { floor: number | null; floorReason: string | null; band: [number | null, number | null]; median: number | null; price: number | null; notes: string[] };
@@ -147,7 +148,7 @@ export type AnalysisHead = {
   createdBy: string; createdAt: string; updatedBy: string | null; updatedAt: string | null; submittedBy: string | null; submittedAt: string | null;
   required: Array<{ role: ApproverRole; label: string }>; approvals: Approval[]; summary?: CalcResult['summary'] | null;
 };
-export type Analysis = AnalysisHead & { specs: Spec & { title?: string }; inputs: Inputs; result: CalcResult | null; history: Approval[]; market: MarketPrice[] };
+export type Analysis = AnalysisHead & { kaynaklar?: Kaynaklar; specs: Spec & { title?: string }; inputs: Inputs; result: CalcResult | null; history: Approval[]; market: MarketPrice[] };
 
 export type MarketPrice = { id: string; analysisId: string | null; crmBookId: string | null; title: string; publisher: string | null; channel: string | null;
   price: number; pages: number | null; url: string | null; seenOn: string | null; createdBy: string; createdAt: string };
@@ -157,20 +158,20 @@ export type ActualRow = {
   lastPrintDate: string | null; sold: number; net: number; avgNet: number | null; unitCost: number | null; cogs: number; profit: number | null;
   margin: number | null; costCoverage: number | null; discount: number | null; price: number | null; costToPrice: number | null;
 };
-export type Actuals = { rows: ActualRow[]; count: number; net: number; printCost: number; printed: number; sold: number; margin: number | null;
+export type Actuals = { kaynaklar?: Kaynaklar; rows: ActualRow[]; count: number; net: number; printCost: number; printed: number; sold: number; margin: number | null;
   sinceYear: number | null; dataEnd: string; offset: number; limit: number };
 
 export type BacklistRow = {
   code: string; name: string; publisher: string | null; price: number; vat: number; pages: number | null; lastPrintDate: string | null; lastPrintQty: number;
   printUnit: number; paperUnit: number | null; unit: number; ratio: number; sold2y: number; avgNet: number | null; proposed: number; increase: number;
 };
-export type Backlist = { rows: BacklistRow[]; count: number; target: number | null; measuredTarget: number | null; freshBooks: number; candidates: number; since: string; dataEnd: string };
+export type Backlist = { kaynaklar?: Kaynaklar; rows: BacklistRow[]; count: number; target: number | null; measuredTarget: number | null; freshBooks: number; candidates: number; since: string; dataEnd: string };
 
-export type Proposal = { id: string; title: string; status: AnalysisStatus; statusLabel: string; count: number; params: { target?: number; measuredTarget?: number; dataEnd?: string };
+export type Proposal = { kaynaklar?: Kaynaklar; id: string; title: string; status: AnalysisStatus; statusLabel: string; count: number; params: { target?: number; measuredTarget?: number; dataEnd?: string };
   createdBy: string; createdAt: string; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null;
   items?: Array<{ code: string; name: string; price: number; proposed: number; increase: number; ratio: number; unit: number; sold2y: number; lastPrintDate: string | null }> };
 
-export type Sources = { sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string; runs: number; stats: { rows: number; ms: number } | null }>;
+export type Sources = { kaynaklar?: Kaynaklar; sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string; runs: number; stats: { rows: number; ms: number } | null }>;
   copies: Array<{ firm: string; from: string; to: string; last: string }> | null; dataEnd: string | null; asOf: string | null };
 
 const BASE = '/api/v1/pricing';
@@ -215,7 +216,7 @@ export const pricingApi = {
     send<Actuals>('GET', `/actuals${qs(p)}`),
   backlist: (p: { target?: number | null; minSold?: number }) => send<Backlist>('GET', `/backlist${qs(p)}`),
   analyses: (p: { status?: string; q?: string } = {}) =>
-    send<{ items: AnalysisHead[]; total: number; counts: Record<string, number> }>('GET', `/analyses${qs(p)}`),
+    send<{ items: AnalysisHead[]; total: number; counts: Record<string, number>; kaynaklar?: Kaynaklar }>('GET', `/analyses${qs(p)}`),
   analysis: (id: string) => send<Analysis>('GET', `/analyses/${enc(id)}`),
   create: (b: Record<string, unknown>) => send<Analysis>('POST', '/analyses', b),
   update: (id: string, b: Record<string, unknown>) => send<Analysis>('PATCH', `/analyses/${enc(id)}`, b),
@@ -227,7 +228,7 @@ export const pricingApi = {
   addMarket: (b: Record<string, unknown>) => send<{ id: string }>('POST', '/market', b),
   deleteMarket: (id: string) => send<{ ok: boolean }>('DELETE', `/market/${enc(id)}`),
   saveDefaults: (b: Partial<Defaults>) => send<Defaults>('PUT', '/defaults', b),
-  proposals: () => send<{ items: Proposal[] }>('GET', '/proposals'),
+  proposals: () => send<{ items: Proposal[]; kaynaklar?: Kaynaklar }>('GET', '/proposals'),
   proposal: (id: string) => send<Proposal>('GET', `/proposals/${enc(id)}`),
   createProposal: (b: { title: string; codes: string[]; target?: number | null; minSold?: number }) => send<Proposal>('POST', '/proposals', b),
   decideProposal: (id: string, b: { decision: 'onay' | 'ret'; note: string }) => send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),

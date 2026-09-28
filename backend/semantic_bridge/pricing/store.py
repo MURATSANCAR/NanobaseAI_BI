@@ -180,7 +180,7 @@ def _num(v: Any) -> Optional[float]:
 
 def get_defaults(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(DEFAULTS).where(DEFAULTS.c.tenant_id == tenant)).mappings().first()
+        row = c.execute(defaults_stmt(tenant)).mappings().first()
     saved = _j(row["values_json"], {}) if row else {}
     return {**BASE_DEFAULTS, **{k: v for k, v in saved.items() if k in BASE_DEFAULTS},
             "updatedBy": row["updated_by"] if row else None, "updatedAt": _iso(row["updated_at"]) if row else None}
@@ -281,8 +281,10 @@ def _approvals(conn, analysis_id: str, version: Optional[int] = None) -> list[di
             for a in conn.execute(stmt).mappings()]
 
 
-def list_analyses(engine: sa.engine.Engine, tenant: str, *, status: Optional[str] = None, q: str = "",
-                  book: Optional[str] = None) -> dict[str, Any]:
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (pricing/kaynak.py).
+
+
+def analyses_stmt(tenant: str, *, status: Optional[str] = None, q: str = "", book: Optional[str] = None):
     stmt = sa.select(ANALYSES).where(ANALYSES.c.tenant_id == tenant)
     if status:
         stmt = stmt.where(ANALYSES.c.status == status)
@@ -292,8 +294,38 @@ def list_analyses(engine: sa.engine.Engine, tenant: str, *, status: Optional[str
         stmt = stmt.where(ANALYSES.c.crm_book_id == book)
     if q.strip():
         stmt = stmt.where(ANALYSES.c.title.ilike(f"%{q.strip()[:80]}%"))
+    return stmt.order_by(sa.func.coalesce(ANALYSES.c.updated_at, ANALYSES.c.created_at).desc())
+
+
+def analysis_stmt(tenant: str, analysis_id: str):
+    return sa.select(ANALYSES).where(ANALYSES.c.id == analysis_id, ANALYSES.c.tenant_id == tenant)
+
+
+def defaults_stmt(tenant: str):
+    return sa.select(DEFAULTS).where(DEFAULTS.c.tenant_id == tenant)
+
+
+def market_stmt(tenant: str, *, analysis_id: Optional[str] = None, book: Optional[str] = None):
+    stmt = sa.select(MARKET).where(MARKET.c.tenant_id == tenant)
+    if analysis_id:
+        stmt = stmt.where(MARKET.c.analysis_id == analysis_id)
+    if book:
+        stmt = stmt.where(MARKET.c.crm_book_id == book)
+    return stmt.order_by(MARKET.c.created_at.desc())
+
+
+def proposals_stmt(tenant: str):
+    return sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == tenant).order_by(PROPOSALS.c.created_at.desc())
+
+
+def proposal_stmt(tenant: str, pid: str):
+    return sa.select(PROPOSALS).where(PROPOSALS.c.id == pid, PROPOSALS.c.tenant_id == tenant)
+
+
+def list_analyses(engine: sa.engine.Engine, tenant: str, *, status: Optional[str] = None, q: str = "",
+                  book: Optional[str] = None) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(sa.func.coalesce(ANALYSES.c.updated_at, ANALYSES.c.created_at).desc())).mappings().all()
+        rows = c.execute(analyses_stmt(tenant, status=status, q=q, book=book)).mappings().all()
         items = []
         for r in rows:
             item = _analysis_row(r, _approvals(c, r["id"], r["version"]))
@@ -309,7 +341,7 @@ def list_analyses(engine: sa.engine.Engine, tenant: str, *, status: Optional[str
 
 def get_analysis(engine: sa.engine.Engine, tenant: str, analysis_id: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(ANALYSES).where(ANALYSES.c.id == analysis_id, ANALYSES.c.tenant_id == tenant)).mappings().first()
+        r = c.execute(analysis_stmt(tenant, analysis_id)).mappings().first()
         if not r:
             raise PricingError("Fiyat analizi bulunamadı.", 404)
         out = _analysis_row(r, _approvals(c, r["id"], r["version"]))
@@ -466,12 +498,7 @@ def decide(engine: sa.engine.Engine, tenant: str, user: str, analysis_id: str, r
 
 def market_list(engine: sa.engine.Engine, tenant: str, *, analysis_id: Optional[str] = None,
                 book: Optional[str] = None, conn=None) -> dict[str, Any]:
-    stmt = sa.select(MARKET).where(MARKET.c.tenant_id == tenant)
-    if analysis_id:
-        stmt = stmt.where(MARKET.c.analysis_id == analysis_id)
-    if book:
-        stmt = stmt.where(MARKET.c.crm_book_id == book)
-    stmt = stmt.order_by(MARKET.c.created_at.desc())
+    stmt = market_stmt(tenant, analysis_id=analysis_id, book=book)
 
     def run(c):
         return [{"id": m["id"], "analysisId": m["analysis_id"], "crmBookId": m["crm_book_id"], "title": m["title"],
@@ -564,14 +591,13 @@ def _proposal_row(r: Any, with_items: bool = True) -> dict[str, Any]:
 
 def proposal_list(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == tenant)
-                         .order_by(PROPOSALS.c.created_at.desc())).mappings().all()
+        rows = c.execute(proposals_stmt(tenant)).mappings().all()
     return {"items": [_proposal_row(r, False) for r in rows]}
 
 
 def proposal_get(engine: sa.engine.Engine, tenant: str, pid: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.id == pid, PROPOSALS.c.tenant_id == tenant)).mappings().first()
+        r = c.execute(proposal_stmt(tenant, pid)).mappings().first()
     if not r:
         raise PricingError("Teklif bulunamadı.", 404)
     return _proposal_row(r)

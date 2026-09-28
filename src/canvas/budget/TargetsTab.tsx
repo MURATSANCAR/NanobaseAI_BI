@@ -8,6 +8,8 @@ import { Pager, Panel, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, parseNum, type BookTarget, type Plan } from './api';
 import { NumField, RatioBar, StatePill } from './parts';
+import { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 const SORTS = [
   ['ciro', 'Hedef ciro'],
@@ -55,7 +57,7 @@ function Explain({ b }: { b: BookTarget }) {
   );
 }
 
-function BookSheet({ plan, book, editable, onClose }: { plan: Plan; book: BookTarget | null; editable: boolean; onClose: () => void }) {
+function BookSheet({ plan, book, editable, onClose, k }: { plan: Plan; book: BookTarget | null; editable: boolean; onClose: () => void; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const [adet, setAdet] = useState('');
   const [ciro, setCiro] = useState('');
@@ -101,22 +103,22 @@ function BookSheet({ plan, book, editable, onClose }: { plan: Plan; book: BookTa
           {t && (
             <section className="rounded-2xl bg-slate-50 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h4 className="text-[13px] font-extrabold">Gerçekleşme</h4>
+                <h4 className="text-[13px] font-extrabold"><InfoLabel k={k} alan="items[].izleme.gercekCiro" label="Kitabın gerçekleşmesi">Gerçekleşme</InfoLabel></h4>
                 <StatePill state={t.durum} />
               </div>
               <RatioBar ratio={book.ciro > 0 ? t.oranCiro : t.oranAdet} state={t.durum} />
               <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
-                <dt className="text-canvas-muted">Beklenen (bugüne)</dt>
+                <dt className="text-canvas-muted"><InfoLabel k={k} alan="items[].izleme.beklenenCiro">Beklenen (bugüne)</InfoLabel></dt>
                 <dd className="text-right font-mono tabular-nums">{fmtMoney(t.beklenenCiro)} · {fmtInt(t.beklenenAdet)} ad.</dd>
                 <dt className="text-canvas-muted">Gerçekleşen</dt>
                 <dd className="text-right font-mono tabular-nums">{fmtMoney(t.gercekCiro)} · {fmtInt(t.gercekAdet)} ad.</dd>
-                <dt className="text-canvas-muted">Gerçek marj</dt>
+                <dt className="text-canvas-muted"><InfoLabel k={k} alan="items[].izleme.gercekMarj">Gerçek marj</InfoLabel></dt>
                 <dd className="text-right font-mono tabular-nums">{t.gercekMarj === null ? 'maliyet kaydı yok' : fmtPct(t.gercekMarj)}</dd>
               </dl>
             </section>
           )}
           <section>
-            <h4 className="mb-2 text-[13px] font-extrabold">Hedef nasıl önerildi</h4>
+            <h4 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={k} alan="items[].oneri" label="Hedef önerisi">Hedef nasıl önerildi</InfoLabel></h4>
             <Explain b={book} />
             {book.elle && <p className="mt-2 text-[11.5px] text-canvas-muted">Elle düzeltildi: {book.editedBy}{book.editedAt ? `, ${fmtDay(book.editedAt)}` : ''}. Yeniden hesaplamada korunur.</p>}
           </section>
@@ -139,9 +141,9 @@ function BookSheet({ plan, book, editable, onClose }: { plan: Plan; book: BookTa
             </section>
           ) : (
             <section className="grid grid-cols-3 gap-2 text-center">
-              {[['Net adet', fmtInt(book.adet)], ['Net ciro', fmtMoney(book.ciro)], ['Brüt marj', fmtPct(book.marj)]].map(([k, v]) => (
-                <div key={k} className="rounded-xl bg-slate-50 p-2">
-                  <div className={labelCls}>{k}</div>
+              {[['Net adet', fmtInt(book.adet)], ['Net ciro', fmtMoney(book.ciro)], ['Brüt marj', fmtPct(book.marj)]].map(([name, v]) => (
+                <div key={name} className="rounded-xl bg-slate-50 p-2">
+                  <div className={labelCls}><InfoLabel k={k} alan="items[].ciro" label={`Hedef · ${name}`}>{name}</InfoLabel></div>
                   <div className="mt-0.5 font-mono text-[13px] font-bold tabular-nums">{v}</div>
                 </div>
               ))}
@@ -262,14 +264,14 @@ export default function TargetsTab({ plan, editable, trackable, durum, onDurum }
             <tr>
               <th className={th}>Kitap</th>
               <th className={th}>Segment</th>
-              <th className={`${th} text-right`}>Hedef adet</th>
-              <th className={`${th} text-right`}>Hedef ciro</th>
-              <th className={`${th} text-right`}>Marj</th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].adet">Hedef adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].ciro">Hedef ciro</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].marj">Marj</InfoLabel></th>
               {track && (
                 <>
-                  <th className={`${th} text-right`}>Beklenen</th>
-                  <th className={`${th} text-right`}>Gerçekleşen</th>
-                  <th className={th}>Oran</th>
+                  <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].izleme.beklenenCiro">Beklenen</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].izleme.gercekCiro">Gerçekleşen</InfoLabel></th>
+                  <th className={th}><InfoLabel k={data.kaynaklar} alan="items[].izleme.oranCiro">Oran</InfoLabel></th>
                 </>
               )}
             </tr>
@@ -308,7 +310,7 @@ export default function TargetsTab({ plan, editable, trackable, durum, onDurum }
         <Pager page={page} pageSize={data.pageSize} total={data.total} shown={data.items.length} loading={list.isLoading}
           fetching={list.isFetching} onPage={setPage} />
       )}
-      <BookSheet plan={plan} book={open} editable={editable} onClose={() => setOpen(null)} />
+      <BookSheet plan={plan} book={open} editable={editable} onClose={() => setOpen(null)} k={data?.kaynaklar} />
       <AddSheet plan={plan} open={adding} onClose={() => setAdding(false)} />
     </Panel>
   );

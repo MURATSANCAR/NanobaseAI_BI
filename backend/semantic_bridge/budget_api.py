@@ -20,7 +20,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import budget as B
+from semantic_bridge import budget_kaynak as K
 from semantic_bridge import budget_sources as src
+from semantic_bridge import provenance as P
 
 log = logging.getLogger("semantic.budget.api")
 
@@ -78,6 +80,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             raise HTTPException(status_code=e.status, detail={"code": "BUDGET", "message": str(e)}) from e
         except src.SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "BUDGET_SOURCE", "message": str(e)}) from e
+
+    def logo_db() -> str | None:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adı (bağlantı bilgisi okunmaz)."""
+        return P.connection_database(rt().settings.connection_file)
 
     def need(user: str, key: str, what: str) -> None:
         if not can(user, key):
@@ -139,7 +145,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/budget/plans")
     def budget_plans(request: Request, year: int | None = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return B.list_plans(engine, tenant, year)
+        out = B.list_plans(engine, tenant, year)
+        return P.bagla(out, lambda: K.for_plans(engine, tenant, year, out))
 
     @app.get("/api/v1/budget/defaults")
     def budget_defaults(request: Request, year: int) -> dict[str, Any]:
@@ -238,7 +245,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def budget_books(plan_id: str, request: Request, segment: str = "", q: str = "", yayinevi: str = "",
                      sort: str = "ciro", page: int = 0, durum: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.books, engine, tenant, plan_id, segment=segment, q=q, yayinevi=yayinevi, sort=sort, page=page, durum=durum)
+        out = call(B.books, engine, tenant, plan_id, segment=segment, q=q, yayinevi=yayinevi, sort=sort, page=page, durum=durum)
+        return P.bagla(out, lambda: K.for_books(engine, tenant, plan_id, out, logo_db(), segment=segment, q=q,
+                                                yayinevi=yayinevi, sort=sort))
 
     @app.post("/api/v1/budget/plans/{plan_id}/books", status_code=201)
     def budget_book_add(plan_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -266,7 +275,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/budget/plans/{plan_id}/program")
     def budget_program(plan_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.program, engine, tenant, plan_id)
+        out = call(B.program, engine, tenant, plan_id)
+        return P.bagla(out, lambda: K.for_program(engine, tenant, plan_id))
 
     @app.patch("/api/v1/budget/plans/{plan_id}/program/{yayinevi}")
     def budget_program_update(plan_id: str, yayinevi: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -279,7 +289,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/budget/plans/{plan_id}/departments")
     def budget_departments(plan_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.departments, engine, tenant, plan_id)
+        out = call(B.departments, engine, tenant, plan_id)
+        return P.bagla(out, lambda: K.for_departments(engine, tenant, plan_id, out, logo_db()))
 
     @app.patch("/api/v1/budget/plans/{plan_id}/departments/{center}/{hesap}")
     def budget_department_update(plan_id: str, center: str, hesap: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -302,12 +313,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/budget/compare")
     def budget_compare(request: Request, year: int) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.compare, engine, tenant, year)
+        out = call(B.compare, engine, tenant, year)
+        return P.bagla(out, lambda: K.for_compare(engine, tenant, year, out, logo_db()))
 
     @app.get("/api/v1/budget/tracking")
     def budget_tracking(request: Request, year: int, plan: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         return call(B.tracking, engine, tenant, year, plan or None, src.read_forecast())
+        out = call(B.tracking, engine, tenant, year, plan or None)
+        return P.bagla(out, lambda: K.for_tracking(engine, tenant, out, logo_db()))
 
     # ------------------------------------------------------------------ sözleşme (diğer modüller)
 
@@ -324,7 +338,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def budget_deviations(request: Request, year: int, status: str = "acik", kind: str = "", scope: str = "",
                           module: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.deviations, engine, tenant, year, status=status, kind=kind, scope=scope, module=module, page=page)
+        out = call(B.deviations, engine, tenant, year, status=status, kind=kind, scope=scope, module=module, page=page)
+        return P.bagla(out, lambda: K.for_deviations(engine, tenant, year, status=status, kind=kind, scope=scope,
+                                                     module=module))
 
     @app.post("/api/v1/budget/deviations/{alert_id}/neden")
     def budget_deviation_reason(alert_id: str, request: Request) -> dict[str, Any]:

@@ -7,6 +7,7 @@ import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { Tabs } from '../budget/parts';
 import { financeApi, fmtNum, fmtPct, fmtShort, type Meta, type ProfitBy, type ProfitRow } from './api';
 import { Approx, DataEnd, Money } from './parts';
+import { InfoLabel } from '../components/SqlInfo';
 
 /** Kârlılık: kitap · seri · yayınevi · kanal · cari. Kesin katkı yalnız maliyeti işlenmiş satırlardan; yaklaşık katkı
  *  M9 birim maliyeti ve sözleşme oranından telifle, kapsamıyla birlikte. */
@@ -107,17 +108,17 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
             <thead>
               <tr>
                 <th className={th}>{d.byLabel}</th>
-                <th className={`${th} text-right`}>Net adet</th>
-                <th className={`${th} text-right`}>Net satış</th>
-                <th className={`${th} text-right`}>İskonto</th>
-                <th className={`${th} text-right`}>Kesin katkı</th>
-                <th className={`${th} text-right`}>Kesin marj</th>
-                <th className={`${th} text-right`}>Maliyetsiz satış</th>
-                <th className={`${th} text-right`}>Tahmini maliyet</th>
-                {royalty && <th className={`${th} text-right`}>Telif</th>}
-                <th className={`${th} text-right`}>Yaklaşık katkı</th>
-                <th className={`${th} text-right`}>Yaklaşık marj</th>
-                <th className={`${th} text-right`}>Kapsam</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].adet">Net adet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].net">Net satış</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].iskonto">İskonto</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].katkiKesin">Kesin katkı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].marjKesin">Kesin marj</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].maliyetsizNet">Maliyetsiz satış</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].maliyetTahmini">Tahmini maliyet</InfoLabel></th>
+                {royalty && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].telif">Telif</InfoLabel></th>}
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].katkiYaklasik">Yaklaşık katkı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].marjYaklasik">Yaklaşık marj</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].kapsam">Kapsam</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

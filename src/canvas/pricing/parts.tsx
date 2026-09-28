@@ -68,11 +68,12 @@ export function Group({ title, help, children }: { title: string; help?: ReactNo
 }
 
 /** Büyük sayı + küçük açıklama. */
-export function Stat({ label, value, note, tone }: { label: string; value: ReactNode; note?: ReactNode; tone?: 'ok' | 'warn' | 'err' }) {
+/** `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`), etiketin yanında. */
+export function Stat({ label, value, note, tone, info }: { label: string; value: ReactNode; note?: ReactNode; tone?: 'ok' | 'warn' | 'err'; info?: ReactNode }) {
   const color = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : tone === 'err' ? 'text-red-600' : '';
   return (
     <div className="min-w-0 rounded-2xl border border-slate-100 bg-white/80 p-3">
-      <div className={labelCls}>{label}</div>
+      <div className={`${labelCls} flex items-center gap-1`}>{label}{info}</div>
       <div className={`mt-1 font-mono text-[20px] font-bold leading-tight tabular-nums sm:text-[22px] ${color}`}>{value}</div>
       {note && <div className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{note}</div>}
     </div>

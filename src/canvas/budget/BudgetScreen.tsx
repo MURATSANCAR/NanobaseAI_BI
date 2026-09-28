@@ -14,6 +14,7 @@ import ProgramTab from './ProgramTab';
 import DeptTab from './DeptTab';
 import ScenariosTab from './ScenariosTab';
 import GenerateSheet from './GenerateSheet';
+import SqlInfo from '../components/SqlInfo';
 
 /** M46 Bütçe planlama ve kontrolü. Yıl, plan ve sekme adres çubuğunda (?yil=, ?plan=, ?sekme=); bağlantı paylaşılabilir. */
 
@@ -216,10 +217,14 @@ export default function BudgetScreen() {
           {plan.status === 'onayda' && me?.canApprove && mine && <Note tone="info">Bu planı siz onaya gönderdiniz; onayı başka bir yetkili verir.</Note>}
 
           <KpiRow>
-            <Kpi label="Hedef net ciro" value={fmtShort(t.ciro)} help={`${t.kitap.toLocaleString('tr-TR')} kitap + ${t.program.ekBaslik.toLocaleString('tr-TR')} ek başlık`} />
-            <Kpi label="Hedef net adet" value={fmtShort(t.adet)} help={`Yeni ${fmtShort(t.segments.yeni?.adet ?? 0)} · backlist ${fmtShort(t.segments.backlist?.adet ?? 0)}`} />
-            <Kpi label="Hedef brüt marj" value={fmtPct(t.marj)} help={`Brüt kâr ${fmtShort(t.brutKar)} ₺`} />
-            <Kpi label="Departman bütçesi" value={fmtShort(t.gider)} help="Yıllık gider bütçesi (7 ile başlayan hesaplar)" active={tab === 'departman'} onClick={() => update({ sekme: 'departman' })} />
+            <Kpi label="Hedef net ciro" value={fmtShort(t.ciro)} help={`${t.kitap.toLocaleString('tr-TR')} kitap + ${t.program.ekBaslik.toLocaleString('tr-TR')} ek başlık`}
+              info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef net ciro" />} />
+            <Kpi label="Hedef net adet" value={fmtShort(t.adet)} help={`Yeni ${fmtShort(t.segments.yeni?.adet ?? 0)} · backlist ${fmtShort(t.segments.backlist?.adet ?? 0)}`}
+              info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef net adet" />} />
+            <Kpi label="Hedef brüt marj" value={fmtPct(t.marj)} help={`Brüt kâr ${fmtShort(t.brutKar)} ₺`}
+              info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef brüt marj" />} />
+            <Kpi label="Departman bütçesi" value={fmtShort(t.gider)} help="Yıllık gider bütçesi (7 ile başlayan hesaplar)" active={tab === 'departman'} onClick={() => update({ sekme: 'departman' })}
+              info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Departman bütçesi" />} />
           </KpiRow>
         </>
       )}

@@ -7,6 +7,7 @@ import { Loading, Note, TableWrap, btnGhost, errText, field, td, th } from '../a
 import { useDebounced } from '../editorial/kit';
 import { day, mn, num, pct, pricingApi, tl0, tl2 } from './api';
 import { Select, Stat } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 const PAGE = 100;
 const YEARS = ['', '2021', '2022', '2023', '2024', '2025', '2026'];
@@ -60,26 +61,26 @@ export default function ActualsPane({ ready }: { ready: boolean }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-            <Stat label="Kitap" value={num(d.count)} note={`Veri sonu ${day(d.dataEnd)}`} />
-            <Stat label="Net satış" value={mn(d.net)} note={`${num(d.sold)} adet (faturalı, iade düşülmüş)`} />
-            <Stat label="Baskı faturaları" value={mn(d.printCost)} note={`${num(d.printed)} adet basıldı (kâğıt hariç)`} />
-            <Stat label="Brüt marj" value={pct(d.margin)} note="Net satış − Logo satılan malın maliyeti; maliyetli satırlar" />
+            <Stat info={<SqlInfo k={d.kaynaklar} alan="count" label="Kitap" />} label="Kitap" value={num(d.count)} note={`Veri sonu ${day(d.dataEnd)}`} />
+            <Stat info={<SqlInfo k={d.kaynaklar} alan="net" label="Net satış" />} label="Net satış" value={mn(d.net)} note={`${num(d.sold)} adet (faturalı, iade düşülmüş)`} />
+            <Stat info={<SqlInfo k={d.kaynaklar} alan="printCost" label="Baskı faturaları" />} label="Baskı faturaları" value={mn(d.printCost)} note={`${num(d.printed)} adet basıldı (kâğıt hariç)`} />
+            <Stat info={<SqlInfo k={d.kaynaklar} alan="margin" label="Brüt marj" />} label="Brüt marj" value={pct(d.margin)} note="Net satış − Logo satılan malın maliyeti; maliyetli satırlar" />
             <Stat label="Gösterilen" value={num(d.rows.length)} note={d.rows.length < d.count ? 'Aşağıdan fazlasını açın' : 'Hepsi'} />
           </div>
           <TableWrap>
             <thead>
               <tr>
                 <th className={th}>Kitap</th>
-                <th className={`${th} text-right`}>Basılan</th>
-                <th className={`${th} text-right`}>Baskı / adet</th>
-                <th className={`${th} text-right`}>Satılan</th>
-                <th className={`${th} text-right`}>Net satış</th>
-                <th className={`${th} text-right`}>Ort. net fiyat</th>
-                <th className={`${th} text-right`}>Logo birim maliyet</th>
-                <th className={`${th} text-right`}>Brüt kâr</th>
-                <th className={`${th} text-right`}>Marj</th>
-                <th className={`${th} text-right`}>Kapak fiyatı</th>
-                <th className={`${th} text-right`}>Maliyet / fiyat</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].printed">Basılan</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].printUnit">Baskı / adet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].sold">Satılan</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].net">Net satış</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].avgNet">Ort. net fiyat</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].unitCost">Logo birim maliyet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].profit">Brüt kâr</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].margin">Marj</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].price">Kapak fiyatı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].costToPrice">Maliyet / fiyat</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

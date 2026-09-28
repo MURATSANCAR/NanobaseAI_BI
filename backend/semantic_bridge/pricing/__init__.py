@@ -20,6 +20,8 @@ from fastapi import HTTPException, Request
 
 from semantic_bridge.pricing import data as D
 from semantic_bridge.pricing import model as M
+from semantic_bridge import provenance as P
+from semantic_bridge.pricing import kaynak as K
 from semantic_bridge.pricing import sources as SRC
 from semantic_bridge.pricing import store as S
 
@@ -174,6 +176,12 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         conn.query_timeout = D.QUERY_TIMEOUT
         return conn
 
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adları (bağlantı bilgisi okunmaz)."""
+        return (P.connection_database(runtime().settings.connection_file),
+                P.connection_database(os.environ.get("SEMANTIC_CRM_CONNECTION_FILE",
+                                                     "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")))
+
     snaps = D.Store(connect)
     scheduler = {"on": False}
 
@@ -226,9 +234,10 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
                         "books": len(snap.get("books") or {}), "printedBooks": len(snap.get("prints") or {}),
                         "printInvoices": sum(len(v) for v in (snap.get("prints") or {}).values()),
                         "warnings": snap.get("warnings") or []}
-        return {"status": st, "measured": measured, "defaults": S.get_defaults(engine, tenant), "counts": counts,
-                "toApprove": len(todo), "me": mine, "stages": S.STAGES, "approvers": S.APPROVERS,
-                "required": {k: list(v) for k, v in S.REQUIRED.items()}, "fixedLabels": M.FIXED_LABELS}
+        out = {"status": st, "measured": measured, "defaults": S.get_defaults(engine, tenant), "counts": counts,
+               "toApprove": len(todo), "me": mine, "stages": S.STAGES, "approvers": S.APPROVERS,
+               "required": {k: list(v) for k, v in S.REQUIRED.items()}, "fixedLabels": M.FIXED_LABELS}
+        return P.bagla(out, lambda: K.for_overview(engine, tenant, snap, out, *dbs()))
 
     @app.post("/api/v1/pricing/refresh")
     def pricing_refresh(request: Request) -> dict[str, Any]:
@@ -243,10 +252,12 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         snap = snaps.get() or {}
         stats = snap.get("sources") or {}
         executed = snap.get("sql") or {}
-        return {"sources": [{"id": s.id, "connection": s.connection, "title": s.title, "description": s.description,
-                             "sql": (executed.get(s.id) or [s.sql])[0], "runs": len(executed.get(s.id) or []),
-                             "stats": stats.get(s.id)} for s in SRC.SOURCES],
-                "copies": snap.get("copies"), "dataEnd": snap.get("dataEnd"), "asOf": snap.get("asOf")}
+        # Çalışmış metin yoksa (görüntü henüz kurulmadı) şablon gösterilmez: yer tutucusu kalmış SQL çalıştırılamaz.
+        out = {"sources": [{"id": s.id, "connection": s.connection, "title": s.title, "description": s.description,
+                            "sql": (executed.get(s.id) or [""])[0], "runs": len(executed.get(s.id) or []),
+                            "stats": stats.get(s.id)} for s in SRC.SOURCES],
+               "copies": snap.get("copies"), "dataEnd": snap.get("dataEnd"), "asOf": snap.get("asOf")}
+        return P.bagla(out, lambda: K.for_sources(snap or None, *dbs()))
 
     @app.get("/api/v1/pricing/books")
     def pricing_books(request: Request, q: str = "") -> dict[str, Any]:
@@ -268,14 +279,16 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
             if (det["book"] or {}).get("id") else []
         det["market"] = S.market_list(engine, tenant, book=(det["book"] or {}).get("id"))["items"] \
             if (det["book"] or {}).get("id") else []
-        return det
+        return P.bagla(det, lambda: K.for_book(engine, tenant, snap, det, *dbs()))
 
     @app.post("/api/v1/pricing/suggest")
     def pricing_suggest(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         """Stok kodu olmayan (yeni) kitap için: teknik özelliklerden öneri girdileri."""
         engine, tenant, _, _ = ses(request)
         spec = {k: body.get(k) for k in ("pages", "trim", "gsm", "binding", "vat", "code")}
-        return D.suggested_inputs(need_snap(), spec, S.get_defaults(engine, tenant))
+        snap = need_snap()
+        out = D.suggested_inputs(snap, spec, S.get_defaults(engine, tenant))
+        return P.bagla(out, lambda: K.for_suggest(engine, tenant, snap, *dbs()))
 
     @app.get("/api/v1/pricing/comparables")
     def pricing_comparables(request: Request, pages: Optional[float] = None, binding: str = "", months: int = 12,
@@ -283,35 +296,43 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         ses(request)
         if months < 1 or months > 120:
             raise HTTPException(400, detail={"code": "PRICING", "message": "Ay 1 ile 120 arasında olmalı."})
-        return D.comparables(need_snap(), pages, binding or None, months, exclude or None)
+        snap = need_snap()
+        out = D.comparables(snap, pages, binding or None, months, exclude or None)
+        return P.bagla(out, lambda: K.for_comparables(snap, *dbs()))
 
     @app.post("/api/v1/pricing/calc")
     def pricing_calc(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         ses(request)
-        return call(calculate, snaps.get(), body)
+        snap = snaps.get()
+        out = call(calculate, snap, body)
+        return P.bagla(out, lambda: K.for_calc(snap, *dbs()))
 
     @app.get("/api/v1/pricing/actuals")
     def pricing_actuals(request: Request, q: str = "", since: Optional[int] = None, sort: str = "net",
                         offset: int = 0, limit: int = 100) -> dict[str, Any]:
         ses(request)
-        out = D.actuals(need_snap(), q=q, since_year=since, sort=sort)
+        snap = need_snap()
+        out = D.actuals(snap, q=q, since_year=since, sort=sort)
         offset, limit = max(0, offset), max(1, limit)
         out["offset"], out["limit"] = offset, limit
         out["rows"] = out["rows"][offset:offset + limit]
-        return out
+        return P.bagla(out, lambda: K.for_actuals(snap, *dbs()))
 
     @app.get("/api/v1/pricing/backlist")
     def pricing_backlist(request: Request, target: Optional[float] = None, minSold: float = 1.0) -> dict[str, Any]:  # noqa: N803
         ses(request)
         if target is not None and not 0 < target < 1:
             raise HTTPException(400, detail={"code": "PRICING", "message": "Hedef oran 0 ile 1 arasında olmalı."})
-        return D.backlist(need_snap(), target_ratio=target, min_sold=minSold)
+        snap = need_snap()
+        out = D.backlist(snap, target_ratio=target, min_sold=minSold)
+        return P.bagla(out, lambda: K.for_backlist(snap, *dbs()))
 
     # ---- analizler
     @app.get("/api/v1/pricing/analyses")
     def pricing_analyses(request: Request, status: str = "", q: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ses(request)
-        return S.list_analyses(engine, tenant, status=status or None, q=q)
+        out = S.list_analyses(engine, tenant, status=status or None, q=q)
+        return P.bagla(out, lambda: K.for_analyses(engine, tenant, status=status, q=q))
 
     @app.post("/api/v1/pricing/analyses", status_code=201)
     def pricing_analysis_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -323,7 +344,8 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
     @app.get("/api/v1/pricing/analyses/{aid}")
     def pricing_analysis(aid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ses(request)
-        return call(S.get_analysis, engine, tenant, aid)
+        out = call(S.get_analysis, engine, tenant, aid)
+        return P.bagla(out, lambda: K.for_analysis(engine, tenant, aid))
 
     @app.patch("/api/v1/pricing/analyses/{aid}")
     def pricing_analysis_update(aid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -402,7 +424,8 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
     @app.get("/api/v1/pricing/proposals")
     def pricing_proposals(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ses(request)
-        return S.proposal_list(engine, tenant)
+        out = S.proposal_list(engine, tenant)
+        return P.bagla(out, lambda: K.for_proposals(engine, tenant))
 
     @app.post("/api/v1/pricing/proposals", status_code=201)
     def pricing_proposal_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -422,7 +445,8 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
     @app.get("/api/v1/pricing/proposals/{pid}")
     def pricing_proposal(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ses(request)
-        return call(S.proposal_get, engine, tenant, pid)
+        out = call(S.proposal_get, engine, tenant, pid)
+        return P.bagla(out, lambda: K.for_proposals(engine, tenant, pid))
 
     @app.post("/api/v1/pricing/proposals/{pid}/decide")
     def pricing_proposal_decide(pid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:

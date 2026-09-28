@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { MAP_LABEL, SOURCE_LABEL, financeApi, fmtMoney, fmtPct, type AccountMap, type Mapping, type Meta } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Hesap → gelir tablosu satırı eşlemesi. Muhasebe onaylar (açıkça verilen yetki); Zeki AI yalnız kuralı olmayan
  *  hesaba kapalı kümeden aday önerir. Grup (3 haneli) kararı alt hesaplara geçer, alt hesapta ayrı karar önceliklidir. */
@@ -93,7 +94,7 @@ export default function AccountMapSheet({ open, meta, year, onClose }: { open: b
             {(['onayli', 'dislandi', 'oneri', 'yok'] as const).map((k) => (
               <div key={k} className="rounded-xl bg-white/80 p-2.5">
                 <div className="font-bold">{MAP_LABEL[k].label}</div>
-                <div className="font-mono tabular-nums">{d.counts[k]} hesap · {fmtMoney(d.amounts[k])}</div>
+                <div className="font-mono tabular-nums">{d.counts[k]} hesap · {fmtMoney(d.amounts[k])} <SqlInfo k={d.kaynaklar} alan="counts" label="Eşleme durumu sayıları" /></div>
               </div>
             ))}
           </div>
@@ -147,7 +148,7 @@ export default function AccountMapSheet({ open, meta, year, onClose }: { open: b
                             {r.esleme.not && <span className="block text-[11px] text-canvas-muted">{r.esleme.not}</span>}
                           </span>
                         </label>
-                        <span className="shrink-0 font-mono text-[12px] tabular-nums">{fmtMoney(r.etki)}</span>
+                        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[12px] tabular-nums">{fmtMoney(r.etki)}<SqlInfo k={d.kaynaklar} alan="items[].etki" label={`${r.hesap} · yıllık kâr etkisi`} /></span>
                         {canMap ? (
                           <div className="flex shrink-0 items-center gap-1.5">
                             <select className={`${field} min-w-[200px]`} aria-label={`${r.hesap} satırı`}

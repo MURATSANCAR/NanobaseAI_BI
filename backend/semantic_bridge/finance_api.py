@@ -20,7 +20,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import finance as F
+from semantic_bridge import finance_kaynak as K
 from semantic_bridge import finance_sources as src
+from semantic_bridge import provenance as P
 
 log = logging.getLogger("semantic.finance.api")
 
@@ -74,6 +76,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             raise HTTPException(status_code=e.status, detail={"code": "FINANCE", "message": str(e)}) from e
         except src.SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "FINANCE_SOURCE", "message": str(e)}) from e
+
+    def dbs() -> tuple[str | None, str | None]:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adları (bağlantı bilgisi okunmaz)."""
+        return P.connection_database(logo_file()), P.connection_database(crm_file())
 
     def need(user: str, key: str, what: str) -> None:
         if not can(user, key):
@@ -172,7 +178,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/summary")
     def finance_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(F.summary, engine, tenant, with_cash=can(user, "ozellik:finans.nakit"))
+        out = call(F.summary, engine, tenant, with_cash=can(user, "ozellik:finans.nakit"))
+        return P.bagla(out, lambda: K.for_summary(engine, tenant, out, *dbs()))
 
     # ------------------------------------------------------------------ aylık finansal yorum taslağı (Zeki AI → CFO onayı)
 
@@ -236,12 +243,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = ctx(request)
         y = year_or_default(engine, year)
         m = month or _last_closed_month(F.data_end(engine)) or 12
-        return call(F.pnl, engine, tenant, y, m, grain, [c for c in compare.split(",") if c])
+        out = call(F.pnl, engine, tenant, y, m, grain, [c for c in compare.split(",") if c])
+        return P.bagla(out, lambda: K.for_pnl(engine, tenant, out, dbs()[0]))
 
     @app.get("/api/v1/finance/pnl/lines/{kod}/accounts")
     def finance_pnl_line(kod: str, request: Request, year: int, month: int, grain: str = "ay") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(F.line_accounts, engine, tenant, kod, year, month, grain)
+        out = call(F.line_accounts, engine, tenant, kod, year, month, grain)
+        return P.bagla(out, lambda: K.for_line_accounts(engine, tenant, out, year, month, grain, dbs()[0]))
 
     @app.get("/api/v1/finance/pnl/accounts/{hesap}/entries")
     async def finance_entries(hesap: str, request: Request, year: int, month: int, grain: str = "ay", page: int = 0) -> dict[str, Any]:
@@ -266,8 +275,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         items = [{"tarih": src.to_day(r.get("tarih")), "fisNo": r.get("fis_no"), "fisTuru": r.get("fis_turu"), "hesap": r.get("hesap"),
                   "hesapAdi": src.clean(r.get("hesap_adi")), "aciklama": src.clean(r.get("aciklama")), "borc": src.f(r.get("borc")),
                   "alacak": src.f(r.get("alacak")), "merkez": src.clean(r.get("merkez")), "kural": r.get("kural")} for r in rows]
-        return {"hesap": hesap, "donem": F.period_label(months), "items": items, "total": total, "page": max(0, int(page)),
-                "pageSize": ENTRY_PAGE, "sql": sql, **F.freshness(engine)}
+        out = {"hesap": hesap, "donem": F.period_label(months), "items": items, "total": total, "page": max(0, int(page)),
+               "pageSize": ENTRY_PAGE, "sql": sql, **F.freshness(engine)}
+        return await run_in_threadpool(P.bagla, out, lambda: K.for_entries(engine, out, sql, dbs()[0], int(year)))
 
     @app.get("/api/v1/finance/pnl/export.xlsx")
     def finance_pnl_export(request: Request, year: int, month: int, grain: str = "ay") -> Response:
@@ -280,14 +290,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/reconciliation")
     def finance_reconciliation(request: Request, year: int, month: int, grain: str = "ay") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(F.reconciliation, engine, tenant, year, month, grain)
+        out = call(F.reconciliation, engine, tenant, year, month, grain)
+        return P.bagla(out, lambda: K.for_reconciliation(engine, tenant, out, year, month, grain, dbs()[0]))
 
     # ------------------------------------------------------------------ hesap eşlemesi
 
     @app.get("/api/v1/finance/account-map")
     def finance_map(request: Request, year: int | None = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(F.account_map, engine, tenant, year)
+        out = call(F.account_map, engine, tenant, year)
+        return P.bagla(out, lambda: K.for_account_map(engine, tenant, out, dbs()[0]))
 
     @app.patch("/api/v1/finance/account-map/{hesap}")
     def finance_map_set(hesap: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -379,9 +391,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/profitability")
     def finance_profit(request: Request, by: str = "kitap", year: int | None = None, frm: int = 1, to: int = 12,
                        q: str = "", sort: str = "net", page: int = 0) -> dict[str, Any]:
-        engine, _, _, _ = ctx(request)
-        return call(F.profitability, engine, by=by, year=year_or_default(engine, year), frm=frm, to=to, q=q, sort=sort,
-                    page=page, unit_costs=unit_costs, snapshot=snapshot())
+        engine, tenant, _, _ = ctx(request)
+        snap = snapshot()
+        out = call(F.profitability, engine, by=by, year=year_or_default(engine, year), frm=frm, to=to, q=q, sort=sort,
+                   page=page, unit_costs=unit_costs, snapshot=snap)
+        return P.bagla(out, lambda: K.for_profitability(engine, tenant, out, dbs()[0], snap))
 
     @app.get("/api/v1/finance/profitability/export.csv")
     def finance_profit_export(request: Request, by: str = "kitap", year: int | None = None, frm: int = 1, to: int = 12,
@@ -399,7 +413,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/cash")
     def finance_cash(request: Request, budget: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {**call(F.cash, engine, tenant, bool(budget)), "status": refresher.status()}
+        out = {**call(F.cash, engine, tenant, bool(budget)), "status": refresher.status()}
+        return P.bagla(out, lambda: K.for_cash(engine, tenant, out, *dbs()))
 
     @app.post("/api/v1/finance/cash/rebuild")
     def finance_cash_rebuild(request: Request) -> dict[str, Any]:
@@ -411,14 +426,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/cash/history")
     def finance_cash_history(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(F.cash_history, engine, tenant)
+        out = call(F.cash_history, engine, tenant)
+        return P.bagla(out, lambda: K.for_cash_history(engine, tenant, dbs()[0]))
 
     # ------------------------------------------------------------------ bütçe–gerçekleşme (M46)
 
     @app.get("/api/v1/finance/budget")
     def finance_budget(request: Request, year: int | None = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(F.budget_view, engine, tenant, year_or_default(engine, year))
+        out = call(F.budget_view, engine, tenant, year_or_default(engine, year))
+        return P.bagla(out, lambda: K.for_budget(engine, tenant, out, dbs()[0]))
 
     @app.post("/api/v1/finance/budget/deviations/{alert_id}/neden")
     def finance_budget_reason(alert_id: str, request: Request) -> dict[str, Any]:
@@ -450,7 +467,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/finance/tax-calendar")
     def finance_tax(request: Request, year: int | None = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return F.tax_list(engine, tenant, year)
+        out = F.tax_list(engine, tenant, year)
+        return P.bagla(out, lambda: K.for_tax(engine, tenant, year))
 
     @app.post("/api/v1/finance/tax-calendar", status_code=201)
     def finance_tax_create(body: dict[str, Any], request: Request) -> dict[str, Any]:

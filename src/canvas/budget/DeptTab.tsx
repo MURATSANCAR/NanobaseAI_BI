@@ -7,10 +7,12 @@ import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { DEPT, budgetApi, fmtMoney, fmtPct, parseNum, type DeptLine, type Plan } from './api';
 import { NumField } from './parts';
+import { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
-function EditSheet({ plan, line, editable, onClose }: { plan: Plan; line: DeptLine | null; editable: boolean; onClose: () => void }) {
+function EditSheet({ plan, line, editable, onClose, k }: { plan: Plan; line: DeptLine | null; editable: boolean; onClose: () => void; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const [months, setMonths] = useState<string[]>([]);
   const [total, setTotal] = useState('');
@@ -47,9 +49,9 @@ function EditSheet({ plan, line, editable, onClose }: { plan: Plan; line: DeptLi
             <thead>
               <tr>
                 <th className={th}>Ay</th>
-                <th className={`${th} text-right`}>Taban</th>
-                <th className={`${th} text-right`}>Bütçe</th>
-                {iz && <th className={`${th} text-right`}>Gerçekleşen</th>}
+                <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].oneri" label="Taban dönemi gideri">Taban</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].aylar" label="Aylık bütçe">Bütçe</InfoLabel></th>
+                {iz && <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].izleme.gercekAylar" label="Aylık gerçekleşen gider">Gerçekleşen</InfoLabel></th>}
               </tr>
             </thead>
             <tbody>
@@ -110,12 +112,12 @@ export default function DeptTab({ plan, editable }: { plan: Plan; editable: bool
           <thead>
             <tr>
               <th className={th}>Departman / hesap</th>
-              <th className={`${th} text-right`}>Yıllık bütçe</th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].yillik">Yıllık bütçe</InfoLabel></th>
               {track && (
                 <>
-                  <th className={`${th} text-right`}>Bugüne bütçe</th>
-                  <th className={`${th} text-right`}>Gerçekleşen</th>
-                  <th className={`${th} text-right`}>Kullanım</th>
+                  <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].izleme.butceDonem">Bugüne bütçe</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].izleme.gercek">Gerçekleşen</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].izleme.kullanim">Kullanım</InfoLabel></th>
                   <th className={th}>Durum</th>
                 </>
               )}
@@ -162,7 +164,7 @@ export default function DeptTab({ plan, editable }: { plan: Plan; editable: bool
           </tbody>
         </TableWrap>
       )}
-      <EditSheet plan={plan} line={open} editable={editable} onClose={() => setOpen(null)} />
+      <EditSheet plan={plan} line={open} editable={editable} onClose={() => setOpen(null)} k={q.data?.kaynaklar} />
     </Panel>
   );
 }

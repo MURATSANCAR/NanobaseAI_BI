@@ -7,6 +7,7 @@ import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { budgetApi, fmtInt, fmtMoney, fmtPct, parseNum, type Plan, type ProgramLine } from './api';
 import { NumField } from './parts';
+import { InfoLabel } from '../components/SqlInfo';
 
 function EditSheet({ plan, line, onClose }: { plan: Plan; line: ProgramLine | null; onClose: () => void }) {
   const qc = useQueryClient();
@@ -78,13 +79,13 @@ export default function ProgramTab({ plan, editable }: { plan: Plan; editable: b
           <thead>
             <tr>
               <th className={th}>Yayınevi</th>
-              <th className={`${th} text-right`}>Beklenen başlık</th>
-              <th className={`${th} text-right`}>CRM'de planlı</th>
-              <th className={`${th} text-right`}>Ek başlık</th>
-              <th className={`${th} text-right`}>Başlık başına adet</th>
-              <th className={`${th} text-right`}>Ek başlık adedi</th>
-              <th className={`${th} text-right`}>Ek başlık cirosu</th>
-              <th className={`${th} text-right`}>Marj</th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].baslik">Beklenen başlık</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].bilinen">CRM'de planlı</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].ekBaslik">Ek başlık</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].baslikAdet">Başlık başına adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].adet">Ek başlık adedi</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].ciro">Ek başlık cirosu</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items[].marj">Marj</InfoLabel></th>
             </tr>
           </thead>
           <tbody>

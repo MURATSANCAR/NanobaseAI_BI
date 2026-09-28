@@ -374,6 +374,66 @@ def expected_share(weights: list[float], elapsed: list[float]) -> float:
 
 
 # ------------------------------------------------------------------ gerçekleşme okuma (bizim tablolar)
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (budget_kaynak.py).
+
+
+def sales_stmt(y0: int, y1: int):
+    return sa.select(SALES).where(SALES.c.year.between(y0, y1))
+
+
+def expenses_stmt(y0: int, y1: int):
+    return sa.select(EXPENSES).where(EXPENSES.c.year.between(y0, y1))
+
+
+def month_sales_stmt(year: int):
+    """Şirket ay ay net cirosu (157 ticari ürün hariç): izleme grafiğinin gerçekleşen serisi."""
+    return (sa.select(SALES.c.year, SALES.c.month, sa.func.sum(SALES.c.ciro))
+            .where(SALES.c.year == year, ~SALES.c.stok_kodu.like("157%"))
+            .group_by(SALES.c.year, SALES.c.month))
+
+
+def plan_stmt(tenant: str, plan_id: str):
+    return sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.id == str(plan_id)[:32])
+
+
+def approved_stmt(tenant: str, year: int):
+    return sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.year == year, PLANS.c.status == "onayli")
+
+
+def plans_stmt(tenant: str, year: Optional[int] = None, *, without_archive: bool = False):
+    q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant)
+    if year:
+        q = q.where(PLANS.c.year == int(year))
+    if without_archive:
+        q = q.where(PLANS.c.status != "arsiv")
+        return q.order_by(PLANS.c.version)
+    return q.order_by(PLANS.c.year.desc(), PLANS.c.version.desc())
+
+
+def totals_stmts(plan_id: str) -> dict[str, Any]:
+    """Plan toplamlarının üç okuması: segment, program, departman."""
+    return {
+        "segment": (sa.select(BOOKS.c.segment, sa.func.count(), sa.func.sum(BOOKS.c.adet), sa.func.sum(BOOKS.c.ciro),
+                              sa.func.sum(BOOKS.c.ciro * sa.func.coalesce(BOOKS.c.marj, 0)))
+                    .where(BOOKS.c.plan_id == plan_id).group_by(BOOKS.c.segment)),
+        "program": (sa.select(sa.func.sum(PROGRAM.c.ek_baslik), sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_adet),
+                              sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_ciro),
+                              sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_ciro * sa.func.coalesce(PROGRAM.c.marj, 0)))
+                    .where(PROGRAM.c.plan_id == plan_id)),
+        "gider": sa.select(DEPTS.c.aylar_json).where(DEPTS.c.plan_id == plan_id),
+    }
+
+
+def plan_books_stmt(plan_id: str):
+    return sa.select(BOOKS).where(BOOKS.c.plan_id == plan_id)
+
+
+def program_stmt(plan_id: str):
+    return sa.select(PROGRAM).where(PROGRAM.c.plan_id == plan_id).order_by(PROGRAM.c.yayinevi)
+
+
+def depts_stmt(plan_id: str):
+    return sa.select(DEPTS).where(DEPTS.c.plan_id == plan_id).order_by(DEPTS.c.merkez_kodu, DEPTS.c.hesap)
 
 
 def _sales_by_code(engine: sa.engine.Engine, start: int, end: int) -> dict[str, dict[str, float]]:
@@ -381,7 +441,7 @@ def _sales_by_code(engine: sa.engine.Engine, start: int, end: int) -> dict[str, 
     y0, y1 = from_index(start)[0], from_index(end - 1)[0]
     out: dict[str, dict[str, Any]] = {}
     with engine.connect() as c:
-        rows = c.execute(sa.select(SALES).where(SALES.c.year.between(y0, y1))).all()
+        rows = c.execute(sales_stmt(y0, y1)).all()
     for r in rows:
         i = month_index(r.year, r.month)
         if i < start or i >= end:
@@ -401,7 +461,7 @@ def _expenses_by_line(engine: sa.engine.Engine, start: int, end: int) -> dict[tu
     y0, y1 = from_index(start)[0], from_index(end - 1)[0]
     out: dict[tuple[str, str], dict[str, Any]] = {}
     with engine.connect() as c:
-        rows = c.execute(sa.select(EXPENSES).where(EXPENSES.c.year.between(y0, y1))).all()
+        rows = c.execute(expenses_stmt(y0, y1)).all()
     for r in rows:
         i = month_index(r.year, r.month)
         if i < start or i >= end:
@@ -1060,17 +1120,12 @@ def update_dept(engine: sa.engine.Engine, tenant: str, user: str, plan_id: str, 
 
 def _totals(c: Any, plan_id: str) -> dict[str, Any]:
     seg = {}
-    for s, n, adet, ciro, kar in c.execute(
-            sa.select(BOOKS.c.segment, sa.func.count(), sa.func.sum(BOOKS.c.adet), sa.func.sum(BOOKS.c.ciro),
-                      sa.func.sum(BOOKS.c.ciro * sa.func.coalesce(BOOKS.c.marj, 0)))
-            .where(BOOKS.c.plan_id == plan_id).group_by(BOOKS.c.segment)).all():
+    st = totals_stmts(plan_id)
+    for s, n, adet, ciro, kar in c.execute(st["segment"]).all():
         seg[s] = {"kitap": int(n), "adet": float(adet or 0), "ciro": float(ciro or 0), "brutKar": float(kar or 0)}
-    prog = c.execute(sa.select(sa.func.sum(PROGRAM.c.ek_baslik), sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_adet),
-                               sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_ciro),
-                               sa.func.sum(PROGRAM.c.ek_baslik * PROGRAM.c.baslik_ciro * sa.func.coalesce(PROGRAM.c.marj, 0)))
-                     .where(PROGRAM.c.plan_id == plan_id)).first()
+    prog = c.execute(st["program"]).first()
     program_t = {"ekBaslik": int(prog[0] or 0), "adet": float(prog[1] or 0), "ciro": float(prog[2] or 0), "brutKar": float(prog[3] or 0)}
-    gider = sum(sum(_j(r.aylar_json, [])) for r in c.execute(sa.select(DEPTS.c.aylar_json).where(DEPTS.c.plan_id == plan_id)).all())
+    gider = sum(sum(_j(r.aylar_json, [])) for r in c.execute(st["gider"]).all())
     adet = sum(s["adet"] for s in seg.values()) + program_t["adet"]
     ciro = sum(s["ciro"] for s in seg.values()) + program_t["ciro"]
     kar = sum(s["brutKar"] for s in seg.values()) + program_t["brutKar"]
@@ -1100,17 +1155,14 @@ def plan_summary(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[st
 
 def list_plans(engine: sa.engine.Engine, tenant: str, year: Optional[int] = None) -> dict[str, Any]:
     with engine.connect() as c:
-        q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant)
-        if year:
-            q = q.where(PLANS.c.year == int(year))
-        rows = c.execute(q.order_by(PLANS.c.year.desc(), PLANS.c.version.desc())).all()
+        rows = c.execute(plans_stmt(tenant, year)).all()
         items = [_plan_dict(r, _totals(c, r.id)) for r in rows]
         years = sorted({r[0] for r in c.execute(sa.select(PLANS.c.year).where(PLANS.c.tenant_id == tenant).distinct()).all()})
     return {"items": items, "years": years}
 
 
 def _approved(c: Any, tenant: str, year: int) -> Any:
-    return c.execute(sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.year == year, PLANS.c.status == "onayli")).first()
+    return c.execute(approved_stmt(tenant, year)).first()
 
 
 # ------------------------------------------------------------------ izleme
@@ -1183,19 +1235,23 @@ SORTS = {
 }
 
 
+def books_stmt(plan_id: str, *, segment: str = "", q: str = "", yayinevi: str = "", sort: str = "ciro"):
+    cond = [BOOKS.c.plan_id == plan_id]
+    if segment in SEGMENTS:
+        cond.append(BOOKS.c.segment == segment)
+    if yayinevi:
+        cond.append(BOOKS.c.yayinevi == yayinevi)
+    if q.strip():
+        like = "%" + q.strip().lower().replace("%", "").replace("_", "") + "%"
+        cond.append(sa.or_(sa.func.lower(BOOKS.c.ad).like(like), sa.func.lower(BOOKS.c.stok_kodu).like(like)))
+    return sa.select(BOOKS).where(*cond).order_by(*SORTS.get(sort, SORTS["ciro"]), BOOKS.c.stok_kodu)
+
+
 def books(engine: sa.engine.Engine, tenant: str, plan_id: str, *, segment: str = "", q: str = "", yayinevi: str = "",
           sort: str = "ciro", page: int = 0, durum: str = "") -> dict[str, Any]:
     with engine.connect() as c:
         row = _plan_row(c, tenant, plan_id)
-        cond = [BOOKS.c.plan_id == row.id]
-        if segment in SEGMENTS:
-            cond.append(BOOKS.c.segment == segment)
-        if yayinevi:
-            cond.append(BOOKS.c.yayinevi == yayinevi)
-        if q.strip():
-            like = "%" + q.strip().lower().replace("%", "").replace("_", "") + "%"
-            cond.append(sa.or_(sa.func.lower(BOOKS.c.ad).like(like), sa.func.lower(BOOKS.c.stok_kodu).like(like)))
-        rows = c.execute(sa.select(BOOKS).where(*cond).order_by(*SORTS.get(sort, SORTS["ciro"]), BOOKS.c.stok_kodu)).all()
+        rows = c.execute(books_stmt(row.id, segment=segment, q=q, yayinevi=yayinevi, sort=sort)).all()
         pubs = [p for (p,) in c.execute(sa.select(BOOKS.c.yayinevi).where(BOOKS.c.plan_id == row.id).distinct()).all() if p]
     trackable = _asof(engine, row.year) is not None
     if trackable:
@@ -1229,7 +1285,7 @@ def book_row(engine: sa.engine.Engine, tenant: str, plan_id: str, code: str) -> 
 def program(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = _plan_row(c, tenant, plan_id)
-        rows = c.execute(sa.select(PROGRAM).where(PROGRAM.c.plan_id == row.id).order_by(PROGRAM.c.yayinevi)).all()
+        rows = c.execute(program_stmt(row.id)).all()
     items = [{"yayinevi": r.yayinevi, "baslik": r.baslik, "bilinen": r.bilinen, "ekBaslik": r.ek_baslik,
               "baslikAdet": r.baslik_adet, "baslikCiro": r.baslik_ciro, "marj": r.marj,
               "adet": round(r.ek_baslik * r.baslik_adet, 1), "ciro": round(r.ek_baslik * r.baslik_ciro, 2),
@@ -1241,7 +1297,7 @@ def program(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str, An
 def departments(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = _plan_row(c, tenant, plan_id)
-        rows = c.execute(sa.select(DEPTS).where(DEPTS.c.plan_id == row.id).order_by(DEPTS.c.merkez_kodu, DEPTS.c.hesap)).all()
+        rows = c.execute(depts_stmt(row.id)).all()
     asof = _asof(engine, row.year)
     elapsed = elapsed_shares(row.year, asof)
     actual = _expenses_by_line(engine, month_index(row.year, 1), month_index(row.year, 13)) if asof else {}
@@ -1334,7 +1390,7 @@ def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional
         row = _plan_row(c, tenant, plan_id) if plan_id else _approved(c, tenant, int(year))
         if row is None:
             return {"year": int(year), "plan": None}
-        rows = c.execute(sa.select(BOOKS).where(BOOKS.c.plan_id == row.id)).all()
+        rows = c.execute(plan_books_stmt(row.id)).all()
         plan = _plan_dict(row, _totals(c, row.id))
     asof = _asof(engine, row.year)
     if asof is None:
@@ -1373,9 +1429,7 @@ def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional
     series = []
     month_actual = [0.0] * 12
     with engine.connect() as c:
-        for y, m, ciro in c.execute(sa.select(SALES.c.year, SALES.c.month, sa.func.sum(SALES.c.ciro))
-                                    .where(SALES.c.year == row.year, ~SALES.c.stok_kodu.like("157%"))
-                                    .group_by(SALES.c.year, SALES.c.month)).all():
+        for y, m, ciro in c.execute(month_sales_stmt(row.year)).all():
             month_actual[m - 1] = float(ciro or 0)
     plan_ciro = plan["totals"]["ciro"]
     for i in range(12):
@@ -1422,8 +1476,7 @@ def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional
 def compare(engine: sa.engine.Engine, tenant: str, year: int) -> dict[str, Any]:
     """Aynı yılın planları yan yana (arşiv hariç): senaryo seçimi için."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.year == int(year),
-                                                PLANS.c.status != "arsiv").order_by(PLANS.c.version)).all()
+        rows = c.execute(plans_stmt(tenant, int(year), without_archive=True)).all()
         items = [_plan_dict(r, _totals(c, r.id)) for r in rows]
     end = data_end(engine)
     ref = None
@@ -1564,20 +1617,23 @@ def _alert_dict(a: Any) -> dict[str, Any]:
             "firstAt": _iso(a.first_at), "lastAt": _iso(a.last_at), "closedAt": _iso(a.closed_at), "notifiedAt": _iso(a.notified_at)}
 
 
+def deviations_stmt(tenant: str, year: int, *, status: str = "acik", kind: str = "", scope: str = "", module: str = ""):
+    cond = [ALERTS.c.tenant_id == tenant, ALERTS.c.year == int(year)]
+    if status in ("acik", "kapandi", "bilgi"):
+        cond.append(ALERTS.c.status == status)
+    if kind in ("satis", "gider", "revizyon"):
+        cond.append(ALERTS.c.kind == kind)
+    if scope:
+        cond.append(ALERTS.c.scope == scope)
+    if module:
+        cond.append(ALERTS.c.modules.like(f"%{module[:8]}%"))
+    return sa.select(ALERTS).where(*cond).order_by(sa.func.coalesce(ALERTS.c.gap, -1e18).desc(), ALERTS.c.last_at.desc())
+
+
 def deviations(engine: sa.engine.Engine, tenant: str, year: int, *, status: str = "acik", kind: str = "",
                scope: str = "", module: str = "", page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        cond = [ALERTS.c.tenant_id == tenant, ALERTS.c.year == int(year)]
-        if status in ("acik", "kapandi", "bilgi"):
-            cond.append(ALERTS.c.status == status)
-        if kind in ("satis", "gider", "revizyon"):
-            cond.append(ALERTS.c.kind == kind)
-        if scope:
-            cond.append(ALERTS.c.scope == scope)
-        if module:
-            cond.append(ALERTS.c.modules.like(f"%{module[:8]}%"))
-        rows = c.execute(sa.select(ALERTS).where(*cond).order_by(sa.func.coalesce(ALERTS.c.gap, -1e18).desc(),
-                                                                   ALERTS.c.last_at.desc())).all()
+        rows = c.execute(deviations_stmt(tenant, year, status=status, kind=kind, scope=scope, module=module)).all()
     total = len(rows)
     page = max(0, int(page))
     return {"items": [_alert_dict(a) for a in rows[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]], "total": total, "page": page,
@@ -1716,7 +1772,8 @@ class Refresher:
                     c.execute(EXPENSES.delete().where(EXPENSES.c.year == y))
                     for i in range(0, len(exp), 5000):
                         c.execute(EXPENSES.insert(), exp[i:i + 5000])
-                meta_set(engine, f"expense:{y}", {"rows": len(exp), "dbMs": ms2, "tutar": round(sum(r["tutar"] for r in exp), 2)})
+                meta_set(engine, f"expense:{y}", {"rows": len(exp), "dbMs": ms2, "firm": firms[y],
+                                                  "tutar": round(sum(r["tutar"] for r in exp), 2)})
                 done[str(y)] = {"satis": len(rows), "gider": len(exp)}
             self.state["step"] = "Kitap kartları"
             books_m = meta_get(engine, "books")

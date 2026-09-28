@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_ENABLED } from '../engine';
@@ -8,6 +8,8 @@ import { reasonApi } from '../reason/api';
 import { Panel } from '../editorial/kit';
 import { DEPT, budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type GroupTrack, type Plan, type TrackState, type YearEnd } from './api';
 import { RatioBar, StatePill } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
@@ -45,10 +47,11 @@ function YearEndPanel({ y }: { y: YearEnd }) {
 }
 
 function Summary({ title, g, help }: { title: string; g: GroupTrack; help: string }) {
+function Summary({ title, g, help, info }: { title: string; g: GroupTrack; help: string; info?: ReactNode }) {
   return (
     <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{title}</div>
+        <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{title}{info}</div>
         <StatePill state={g.durum} />
       </div>
       <div className="mt-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight">{fmtPct(g.oran, 0)}</div>
@@ -68,7 +71,8 @@ function Summary({ title, g, help }: { title: string; g: GroupTrack; help: strin
   );
 }
 
-function GroupTable({ title, rows, threshold }: { title: string; rows: GroupTrack[]; threshold: number }) {
+function GroupTable({ title, rows, threshold, k, alan }: { title: string; rows: GroupTrack[]; threshold: number; k?: Kaynaklar; alan: string }) {
+  const info = (col: string, label: string) => <SqlInfo k={k} alan={`${alan}.${col}`} label={`${title} · ${label}`} />;
   return (
     <Panel>
       <h3 className="mb-2 text-[15px] font-extrabold">{title}</h3>
@@ -76,11 +80,11 @@ function GroupTable({ title, rows, threshold }: { title: string; rows: GroupTrac
         <thead>
           <tr>
             <th className={th}>Ad</th>
-            <th className={`${th} text-right`}>Kitap</th>
-            <th className={`${th} text-right`}>Yıllık hedef</th>
-            <th className={`${th} text-right`}>Beklenen</th>
-            <th className={`${th} text-right`}>Gerçekleşen</th>
-            <th className={th}>Oran</th>
+            <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Kitap{info('kitap', 'Kitap')}</span></th>
+            <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Yıllık hedef{info('hedefCiro', 'Yıllık hedef')}</span></th>
+            <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Beklenen{info('beklenenCiro', 'Beklenen')}</span></th>
+            <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Gerçekleşen{info('gercekCiro', 'Gerçekleşen')}</span></th>
+            <th className={th}><span className="inline-flex items-center gap-1">Oran{info('oran', 'Oran')}</span></th>
             <th className={th}>Durum</th>
           </tr>
         </thead>
@@ -117,7 +121,7 @@ function Deviations({ year, planId }: { year: number; planId: string }) {
     <Panel>
       <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h3 className="text-[15px] font-extrabold">Uyarılar</h3>
+          <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Uyarılar<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Bütçe uyarıları" /></h3>
           <p className="text-[12px] text-canvas-muted">Saatlik denetimde açılır, eşiğin üstüne çıkınca kendiliğinden kapanır. Satış uyarıları pazarlama planı, dağılım ve saha modüllerine gider.</p>
         </div>
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -202,17 +206,19 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
     <div className="flex flex-col gap-3 lg:gap-4">
       {plan.status !== 'onayli' && <Note tone="info">Bu plan henüz yürürlükte değil; aşağıdaki izleme «onaylansaydı» görünümüdür, uyarı açmaz.</Note>}
       <p className="px-1 text-[12px] font-semibold text-canvas-muted">
-        {fmtDay(d.asof)} itibarıyla · yılın %{Math.round((d.gecenPay ?? 0) * 100)}'i geçti · eşik %{Math.round(esik * 100)} · beklenen, hedefin taban dönemdeki aylık satış dağılımına göre bugüne düşen payıdır.
+        {fmtDay(d.asof)} itibarıyla · yılın %{Math.round((d.gecenPay ?? 0) * 100)}'i geçti<SqlInfo k={d.kaynaklar} alan="gecenPay" label="Yılın geçen payı ve eşik" className="ml-0.5" /> · eşik %{Math.round(esik * 100)} · beklenen, hedefin taban dönemdeki aylık satış dağılımına göre bugüne düşen payıdır.
         {d.uyariKapsam && (
-          <> Kitap uyarısı hedef cirosunun %{Math.round(d.uyariKapsam.pay * 100)}'ini oluşturan {fmtInt(d.uyariKapsam.kitap)} kitap için açılır; bunların {fmtInt(d.uyariKapsam.sapma)}'i eşik altında. Diğer kitapların durumu Kitap hedefleri listesinde.</>
+          <> Kitap uyarısı hedef cirosunun %{Math.round(d.uyariKapsam.pay * 100)}'ini oluşturan {fmtInt(d.uyariKapsam.kitap)} kitap için açılır; bunların {fmtInt(d.uyariKapsam.sapma)}'i eşik altında<SqlInfo k={d.kaynaklar} alan="uyariKapsam" label="Uyarı kapsamı" className="ml-0.5" />. Diğer kitapların durumu Kitap hedefleri listesinde.</>
         )}
       </p>
       {d.yilSonu && <YearEndPanel y={d.yilSonu} />}
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-        <Summary title="Şirket satışı" g={d.sirket} help="Kitap hedefleri + yeni kitap programı; gerçekleşende planda olmayan kitapların satışı da var." />
-        <Summary title="Kitap hedefleri" g={d.kitapHedefleri} help="Yalnız planda adıyla hedefi olan kitaplar." />
+        <Summary title="Şirket satışı" g={d.sirket} help="Kitap hedefleri + yeni kitap programı; gerçekleşende planda olmayan kitapların satışı da var."
+          info={<SqlInfo k={d.kaynaklar} alan="sirket" label="Şirket satışı" />} />
+        <Summary title="Kitap hedefleri" g={d.kitapHedefleri} help="Yalnız planda adıyla hedefi olan kitaplar."
+          info={<SqlInfo k={d.kaynaklar} alan="kitapHedefleri" label="Kitap hedefleri" />} />
         <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kitap durumu</div>
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kitap durumu<SqlInfo k={d.kaynaklar} alan="durumlar" label="Kitap durumu" /></div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             {(['sapma', 'izle', 'iyi', 'baslamadi'] as TrackState[]).map((k) => (
               <button key={k} type="button" onClick={() => onFilter(k)}
@@ -224,7 +230,7 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
           </div>
         </div>
         <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Departman bütçesi</div>
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Departman bütçesi<SqlInfo k={d.kaynaklar} alan="gider" label="Departman bütçesi" /></div>
           <div className="mt-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight">{fmtPct(d.gider?.kullanim ?? null, 0)}</div>
           <div className="mt-2 grid grid-cols-2 gap-x-2 text-[11.5px] leading-snug text-canvas-muted">
             <span>Gerçekleşen</span>
@@ -242,9 +248,9 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
       </div>
 
       <Panel>
-        <h3 className="text-[15px] font-extrabold">Ay ay net ciro: hedef ve gerçekleşen</h3>
+        <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Ay ay net ciro: hedef ve gerçekleşen<SqlInfo k={d.kaynaklar} alan="aylar[]" label="Ay ay net ciro" /></h3>
         <p className="mb-2 text-[12px] text-canvas-muted">
-          Hedef, planın toplam cirosunun aylara dağılımıdır. Planda olmayan kitapların satışı gerçekleşene dahil ({fmtShort(d.hedefDisi?.ciro ?? 0)} ₺, {fmtInt(d.hedefDisi?.kitap ?? 0)} kitap).
+          Hedef, planın toplam cirosunun aylara dağılımıdır. Planda olmayan kitapların satışı gerçekleşene dahil ({fmtShort(d.hedefDisi?.ciro ?? 0)} ₺, {fmtInt(d.hedefDisi?.kitap ?? 0)} kitap<SqlInfo k={d.kaynaklar} alan="hedefDisi" label="Hedef dışı satış" className="ml-0.5" />).
           {(d.aylar ?? []).some((m) => m.gecen > 0 && m.gecen < 1) && ' Verinin bittiği ay yarımdır.'}
         </p>
         <div className="h-[260px] w-full">
@@ -263,8 +269,8 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
       </Panel>
 
       <Deviations year={plan.year} planId={plan.id} />
-      {d.segmentler && <GroupTable title="Yeni kitap ve backlist" rows={d.segmentler} threshold={esik} />}
-      {d.yayinevleri && <GroupTable title="Yayınevlerine göre" rows={d.yayinevleri} threshold={esik} />}
+      {d.segmentler && <GroupTable title="Yeni kitap ve backlist" rows={d.segmentler} threshold={esik} k={d.kaynaklar} alan="segmentler[]" />}
+      {d.yayinevleri && <GroupTable title="Yayınevlerine göre" rows={d.yayinevleri} threshold={esik} k={d.kaynaklar} alan="yayinevleri[]" />}
     </div>
   );
 }

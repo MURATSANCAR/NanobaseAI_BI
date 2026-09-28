@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLayout } from './layout';
 import { useCan } from '../useAdmin';
+import { copyText } from '../components/sqlInfo';
 
 /**
  * Kartın altındaki "SQL'i göster" şeridi ve açılan panel. Panel kartın genişliğini aşmaz:
@@ -11,35 +12,6 @@ import { useCan } from '../useAdmin';
 /** Okumak için satır kırma: ana cümlecikler yeni satıra. Yalnız ekranda; kopya özgün metindir. */
 const CLAUSE = /\s+(FROM|WHERE|GROUP BY|ORDER BY|HAVING|INNER JOIN|LEFT JOIN|RIGHT JOIN|UNION ALL|UNION)\s+/g;
 const pretty = (sql: string) => sql.trim().replace(CLAUSE, '\n$1 ');
-
-/** Pano API'si yalnız güvenli bağlamda (https/localhost) var; müşteri VM'i http üzerinden açılır.
- *  Orada gizli bir metin alanı seçilip eski kopyala komutu kullanılır. */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    /* aşağıdaki yola düş */
-  }
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.position = 'fixed';
-  ta.style.top = '-1000px';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  let ok = false;
-  try {
-    ok = document.execCommand('copy');
-  } catch {
-    ok = false;
-  }
-  document.body.removeChild(ta);
-  return ok;
-}
 
 export default function CardSql({ sql: given, right, className = '' }: { sql?: string; right?: ReactNode; className?: string }) {
   // «SQL'i göster ve kopyala» rolde yoksa şerit hiç görünmez; kartın sağ tarafındaki öğeler kalır.

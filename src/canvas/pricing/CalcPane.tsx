@@ -26,6 +26,7 @@ import {
   overviewKey,
 } from './api';
 import { Group, NumField, Select, Stat, parseQtys } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import MarketPrices from './MarketPrices';
 
 /** Ekrandaki girdiler: baskı hizmeti ve kâğıt ayrı kutularda, hesaba toplamları gider. */
@@ -452,11 +453,11 @@ function BookFacts({ b }: { b: BookDetail }) {
         <span className="text-[12px] text-canvas-muted">{[b.book.author, b.book.publisher, b.book.library, b.book.code].filter(Boolean).join(' · ')}</span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-5">
-        <Stat label="Güncel kapak fiyatı" value={tl0(b.book.price)} note="CRM kitap kartı" />
-        <Stat label="Son baskı (Logo)" value={last ? tl2(last.unit) : '—'} note={last ? `${num(last.qty)} adet · ${day(last.date)} · ${last.printer ?? ''}` : 'Matbaa faturası yok'} />
-        <Stat label="Logo birim maliyeti" value={tl2(b.total.unitCost)} note={b.total.costCoverage != null ? `Satışların ${pct(b.total.costCoverage)}'i maliyetli` : 'Satış yok'} />
-        <Stat label="Satılan (2021'den)" value={num(b.total.qty)} note={`Net ${tl0(b.total.net)} · ort. ${tl2(b.total.avgNet)}`} />
-        <Stat label="Telif" value={roy ? pct(roy.rate) : '—'} note={roy ? `${roy.kindLabel ?? ''} · ${roy.basisLabel ?? ''}${roy.advance ? ` · avans ${num(roy.advance)} ${roy.currency}` : ''}` : 'Yürürlükte sözleşme yok'} />
+        <Stat info={<SqlInfo k={b.kaynaklar} alan="book" label="Güncel kapak fiyatı" />} label="Güncel kapak fiyatı" value={tl0(b.book.price)} note="CRM kitap kartı" />
+        <Stat info={<SqlInfo k={b.kaynaklar} alan="prints[]" label="Son baskı (Logo)" />} label="Son baskı (Logo)" value={last ? tl2(last.unit) : '—'} note={last ? `${num(last.qty)} adet · ${day(last.date)} · ${last.printer ?? ''}` : 'Matbaa faturası yok'} />
+        <Stat info={<SqlInfo k={b.kaynaklar} alan="total" label="Logo birim maliyeti" />} label="Logo birim maliyeti" value={tl2(b.total.unitCost)} note={b.total.costCoverage != null ? `Satışların ${pct(b.total.costCoverage)}'i maliyetli` : 'Satış yok'} />
+        <Stat info={<SqlInfo k={b.kaynaklar} alan="total" label="Satılan (2021'den)" />} label="Satılan (2021'den)" value={num(b.total.qty)} note={`Net ${tl0(b.total.net)} · ort. ${tl2(b.total.avgNet)}`} />
+        <Stat info={<SqlInfo k={b.kaynaklar} alan="book" label="Telif" />} label="Telif" value={roy ? pct(roy.rate) : '—'} note={roy ? `${roy.kindLabel ?? ''} · ${roy.basisLabel ?? ''}${roy.advance ? ` · avans ${num(roy.advance)} ${roy.currency}` : ''}` : 'Yürürlükte sözleşme yok'} />
       </div>
       {(b.prints.length > 0 || b.crmPrints.length > 0) && (
         <details className="mt-3">
@@ -467,9 +468,9 @@ function BookFacts({ b }: { b: BookDetail }) {
                 <tr>
                   <th className={th}>Fatura tarihi</th>
                   <th className={th}>Matbaa</th>
-                  <th className={`${th} text-right`}>Adet</th>
-                  <th className={`${th} text-right`}>Tutar</th>
-                  <th className={`${th} text-right`}>Birim</th>
+                  <th className={`${th} text-right`}><InfoLabel k={b.kaynaklar} alan="prints[]">Adet</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={b.kaynaklar} alan="prints[]">Tutar</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={b.kaynaklar} alan="prints[]">Birim</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -489,8 +490,8 @@ function BookFacts({ b }: { b: BookDetail }) {
                 <tr>
                   <th className={th}>Baskı</th>
                   <th className={th}>Tarih</th>
-                  <th className={`${th} text-right`}>Adet</th>
-                  <th className={`${th} text-right`}>Kapak fiyatı</th>
+                  <th className={`${th} text-right`}><InfoLabel k={b.kaynaklar} alan="crmPrints[]">Adet</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={b.kaynaklar} alan="crmPrints[]">Kapak fiyatı</InfoLabel></th>
                   <th className={th}>Sayfa · cilt · matbaa</th>
                 </tr>
               </thead>
@@ -522,6 +523,7 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
       <Panel>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
           <Stat
+            info={<SqlInfo k={r.kaynaklar} alan="recommendation" label="Önerilen kapak fiyatı" />}
             label="Önerilen kapak fiyatı"
             value={tl0(rec.price)}
             note={
@@ -534,14 +536,16 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
               )
             }
           />
-          <Stat label="Maliyet alt sınırı" value={tl0(rec.floor)} note={`${num(s.qty)} adette hedef marj ${pct(s.targetMargin)}`} />
+          <Stat info={<SqlInfo k={r.kaynaklar} alan="recommendation" label="Maliyet alt sınırı" />} label="Maliyet alt sınırı" value={tl0(rec.floor)} note={`${num(s.qty)} adette hedef marj ${pct(s.targetMargin)}`} />
           <Stat
+            info={<SqlInfo k={r.kaynaklar} alan="comparables" label="Emsal bandı" />}
             label="Emsal bandı"
             value={rec.band[0] != null ? `${num(rec.band[0])}–${num(rec.band[1])} ₺` : '—'}
             note={comp ? `${num(comp.price.n)} emsal kitap${r.marketCount ? ` + ${num(r.marketCount)} pazar fiyatı` : ''}, ortanca ${tl0(rec.median)}` : 'Emsal yok'}
           />
-          <Stat label="Birim maliyet" value={tl2(s.unitCost)} note={`${num(s.qty)} adet, toplam ${tl0(s.totalCost)}`} />
+          <Stat info={<SqlInfo k={r.kaynaklar} alan="summary" label="Birim maliyet" />} label="Birim maliyet" value={tl2(s.unitCost)} note={`${num(s.qty)} adet, toplam ${tl0(s.totalCost)}`} />
           <Stat
+            info={<SqlInfo k={r.kaynaklar} alan="summary" label="Başabaş" />}
             label="Başabaş"
             value={s.breakeven != null ? `${num(s.breakeven)} adet` : '—'}
             tone={s.breakeven != null && s.breakeven > s.qty ? 'err' : s.margin != null && s.margin >= s.targetMargin ? 'ok' : 'warn'}
@@ -563,14 +567,14 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
           <thead>
             <tr>
               <th className={th}>Adet</th>
-              <th className={`${th} text-right`}>Baskı + kâğıt / adet</th>
-              <th className={`${th} text-right`}>Birim maliyet</th>
-              <th className={`${th} text-right`}>Toplam maliyet</th>
-              <th className={`${th} text-right`}>Net gelir / adet</th>
-              <th className={`${th} text-right`}>Başabaş</th>
-              <th className={`${th} text-right`}>Kâr</th>
-              <th className={`${th} text-right`}>Marj</th>
-              <th className={`${th} text-right`}>Hedef marja fiyat</th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Baskı + kâğıt / adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Birim maliyet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Toplam maliyet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Net gelir / adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Başabaş</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Kâr</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Marj</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="floors[]">Hedef marja fiyat</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -610,14 +614,14 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
             <thead>
               <tr>
                 <th className={th}>Müşteri grubu</th>
-                <th className={`${th} text-right`}>Satış payı</th>
-                <th className={`${th} text-right`}>İskonto</th>
-                <th className={`${th} text-right`}>Net gelir / adet</th>
-                <th className={`${th} text-right`}>Telif</th>
-                <th className={`${th} text-right`}>Dağıtım</th>
-                <th className={`${th} text-right`}>Birim maliyet</th>
-                <th className={`${th} text-right`}>Adet başı katkı</th>
-                <th className={`${th} text-right`}>Marj</th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Satış payı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">İskonto</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Net gelir / adet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Telif</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Dağıtım</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Birim maliyet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Adet başı katkı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Marj</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -654,12 +658,12 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
                 <thead>
                   <tr>
                     <th className={th}>Kitap</th>
-                    <th className={`${th} text-right`}>Sayfa</th>
+                    <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="comparables">Sayfa</InfoLabel></th>
                     <th className={th}>Son baskı</th>
-                    <th className={`${th} text-right`}>Adet</th>
-                    <th className={`${th} text-right`}>Baskı / adet</th>
-                    <th className={`${th} text-right`}>Logo birim maliyet</th>
-                    <th className={`${th} text-right`}>Kapak fiyatı</th>
+                    <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="comparables">Adet</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="comparables">Baskı / adet</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="comparables">Logo birim maliyet</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="comparables">Kapak fiyatı</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>

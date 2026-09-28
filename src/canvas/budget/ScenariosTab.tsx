@@ -7,6 +7,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th }
 import { Panel } from '../editorial/kit';
 import { STATUS_TONE, budgetApi, fmtDay, fmtMoney, fmtPct, fmtShort, type Plan } from './api';
 import { ParamsForm, fromText, toText, type ParamText } from './GenerateSheet';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 function diff(v: number, base: number | undefined) {
   if (!base) return '';
@@ -38,9 +39,9 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
       <Panel>
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h3 className="text-[15px] font-extrabold">{year} senaryoları</h3>
+            <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">{year} senaryoları<SqlInfo k={cmp.data?.kaynaklar} alan="items[].totals" label={`${year} senaryolarının toplamları`} /></h3>
             <p className="text-[12px] text-canvas-muted">
-              {base ? <>Taban dönem ({base.pencere}): net ciro {fmtShort(base.ciro)} ₺, net adet {fmtShort(base.adet)}, gider {fmtShort(base.gider)} ₺. Yüzdeler tabana göre.</> : 'Taban hesaplanıyor…'}
+              {base ? <>Taban dönem ({base.pencere}): net ciro {fmtShort(base.ciro)} ₺, net adet {fmtShort(base.adet)}, gider {fmtShort(base.gider)} ₺. Yüzdeler tabana göre.<SqlInfo k={cmp.data?.kaynaklar} alan="taban" label="Taban dönemi" className="ml-1" /></> : 'Taban hesaplanıyor…'}
             </p>
           </div>
           {canEdit && (
@@ -53,8 +54,9 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
         {cmp.isLoading ? <Loading /> : cmp.error ? <Note tone="err">{errText(cmp.error, 'Karşılaştırma okunamadı.')}</Note> : (
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
             {(cmp.data?.items ?? []).map((p) => (
-              <button key={p.id} type="button" onClick={() => onOpen(p.id)}
-                className={`flex flex-col gap-2 rounded-2xl border bg-white/80 p-3.5 text-left transition-transform duration-150 ease-out active:scale-[0.98] ${p.id === current.id ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-slate-100'}`}>
+              <div key={p.id} className="relative">
+              <button type="button" onClick={() => onOpen(p.id)}
+                className={`flex h-full w-full flex-col gap-2 rounded-2xl border bg-white/80 p-3.5 pb-9 text-left transition-transform duration-150 ease-out active:scale-[0.98] ${p.id === current.id ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-slate-100'}`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[14px] font-extrabold">{p.scenarioLabel} <span className="font-semibold text-canvas-muted">· sürüm {p.version}</span></span>
                   <Pill tone={STATUS_TONE[p.status]}>{p.statusLabel}</Pill>
@@ -96,6 +98,10 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
                   Hacim {fmtPct(p.params.hacim?.[p.scenario] ?? null)} · fiyat {fmtPct(p.params.fiyat)} · {p.createdBy}, {fmtDay(p.createdAt)}
                 </span>
               </button>
+              <span className="absolute bottom-3 right-3">
+                <SqlInfo k={cmp.data?.kaynaklar} alan="items[].totals" row={p.id} label={`${p.scenarioLabel} senaryo · sürüm ${p.version}`} />
+              </span>
+              </div>
             ))}
           </div>
         )}
@@ -130,7 +136,7 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
             <thead>
               <tr>
                 <th className={th}>Plan</th>
-                <th className={`${th} text-right`}>Net ciro</th>
+                <th className={`${th} text-right`}><InfoLabel k={history.data?.kaynaklar} alan="items[].totals">Net ciro</InfoLabel></th>
                 <th className={th}>Onaylayan</th>
                 <th className={th}>Revizyon gerekçesi</th>
               </tr>

@@ -6,6 +6,8 @@ import { Panel } from '../editorial/kit';
 import { financeApi, fmtPct, fmtShort, type Meta, type SummaryCard } from './api';
 import CommentaryPanel from './CommentaryPanel';
 import { Approx, DataEnd, pressable } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Özet: 5-6 gösterge ve «bu ay dikkat». Telefonda tam okunur (iki sütun kart, altında liste). */
 
@@ -18,12 +20,12 @@ function value(c: SummaryCard): string {
 
 const STATE_TONE: Record<string, string> = { iyi: 'text-emerald-700', izle: 'text-amber-700', sapma: 'text-red-700' };
 
-function Card({ c, onOpen }: { c: SummaryCard; onOpen: (tab: string) => void }) {
+function Card({ c, onOpen, k }: { c: SummaryCard; onOpen: (tab: string) => void; k?: Kaynaklar }) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{c.label}</div>
-        {c.yaklasik && <Approx title="Bu rakam tahmin içerir; açıklaması kartın altında." />}
+        <div className="pr-6 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{c.label}</div>
+        {c.yaklasik && <span className="mr-6"><Approx title="Bu rakam tahmin içerir; açıklaması kartın altında." /></span>}
       </div>
       <div className={`mt-1 font-mono text-[24px] font-bold leading-none tabular-nums tracking-tight sm:text-[28px] ${c.state ? STATE_TONE[c.state] ?? '' : ''}`}>
         {c.unit === 'metin' ? <span className="text-[15px] font-extrabold">{c.note}</span> : value(c)}
@@ -37,12 +39,19 @@ function Card({ c, onOpen }: { c: SummaryCard; onOpen: (tab: string) => void }) 
       {c.unit !== 'metin' && c.note && <div className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{c.note}</div>}
     </>
   );
-  const cls = 'glass-panel rounded-2xl p-3.5 text-left shadow-glass-float sm:rounded-3xl sm:p-4';
-  if (!c.sekme) return <div className={cls}>{body}</div>;
+  const cls = 'glass-panel h-full w-full rounded-2xl p-3.5 text-left shadow-glass-float sm:rounded-3xl sm:p-4';
+  // «i» kartın düğmesinin dışında (iç içe düğme olmasın): sağ üst köşe.
   return (
-    <button type="button" className={`${cls} ${pressable}`} onClick={() => onOpen(c.sekme!)}>
-      {body}
-    </button>
+    <div className="relative">
+      {!c.sekme ? <div className={cls}>{body}</div> : (
+        <button type="button" className={`${cls} ${pressable}`} onClick={() => onOpen(c.sekme!)}>
+          {body}
+        </button>
+      )}
+      <span className="absolute right-3 top-3 sm:right-3.5 sm:top-3.5">
+        <SqlInfo k={k} alan="cards[]" row={c.id} label={c.label} />
+      </span>
+    </div>
   );
 }
 
@@ -59,12 +68,13 @@ export default function SummaryTab({ onOpen, meta, year, month }: { onOpen: (tab
     <div className="flex flex-col gap-3">
       <DataEnd data={d} extra={d.donem ? <span>Dönem {d.donem}</span> : null} />
       <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 lg:grid-cols-3 lg:gap-4">
-        {d.cards.map((c) => <Card key={c.id} c={c} onOpen={onOpen} />)}
+        {d.cards.map((c) => <Card key={c.id} c={c} onOpen={onOpen} k={d.kaynaklar} />)}
       </div>
       <Panel>
         <h3 className="mb-2 flex items-center gap-2 text-[15px] font-extrabold">
           <AlertTriangle aria-hidden className="h-4 w-4 text-amber-600" />
           Bu ay dikkat
+          <SqlInfo k={d.kaynaklar} alan="dikkat[]" label="Bu ay dikkat" />
         </h3>
         {!d.dikkat.length ? (
           <p className="text-[12.5px] text-canvas-muted">Açık bütçe sapması, nakit açığı ya da yaklaşan beyan yok.</p>

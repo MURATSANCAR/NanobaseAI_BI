@@ -12,6 +12,7 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { DEPT, TRACK, type DeptState, type TrackState } from '../budget/api';
 import { financeApi, fmtDay, fmtMoney, fmtPct, fmtShort, type BudgetView, type Note as FNote } from './api';
 import { DataEnd, Money } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Bütçe–gerçekleşme: M46'nın yürürlükteki planı (aynı tanım, yeniden hesap yok). Gider kalemine sapma açıklaması
  *  yazılır; kalemin muhasebe fişleri Gelir tablosu sekmesindeki hesap satırından açılır. */
@@ -70,10 +71,14 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
     <div className="flex flex-col gap-3">
       <DataEnd data={d} extra={<span>Plan: {d.plan.title}{d.plan.decidedBy ? ` · ${d.plan.decidedBy} onayladı, ${fmtDay(d.plan.decidedAt)}` : ''}</span>} />
       <KpiRow>
-        <Kpi label="Satış (bugüne beklenen)" value={fmtPct(s?.oran)} help={`Gerçekleşen ${fmtShort(s?.gercekCiro)} / beklenen ${fmtShort(s?.beklenenCiro)}`} />
-        <Kpi label="Yıllık satış hedefi" value={fmtShort(s?.hedefCiro)} help="Kitap hedefleri + yeni kitap programı" />
-        <Kpi label="Gider bütçesi kullanımı" value={fmtPct(g?.kullanim)} help={`Gerçekleşen ${fmtShort(g?.gercek)} / bugüne düşen ${fmtShort(g?.butceDonem)}`} />
-        <Kpi label="Aşan / sınırdaki kalem" value={`${g?.asim ?? 0} / ${g?.yaklasti ?? 0}`} help={`Açık sapma uyarısı: ${d.sapmaToplam ?? 0}`} />
+        <Kpi label="Satış (bugüne beklenen)" value={fmtPct(s?.oran)} help={`Gerçekleşen ${fmtShort(s?.gercekCiro)} / beklenen ${fmtShort(s?.beklenenCiro)}`}
+          info={<SqlInfo k={d.kaynaklar} alan="sirket" label="Satış (bugüne beklenen)" />} />
+        <Kpi label="Yıllık satış hedefi" value={fmtShort(s?.hedefCiro)} help="Kitap hedefleri + yeni kitap programı"
+          info={<SqlInfo k={d.kaynaklar} alan="sirket" label="Yıllık satış hedefi" />} />
+        <Kpi label="Gider bütçesi kullanımı" value={fmtPct(g?.kullanim)} help={`Gerçekleşen ${fmtShort(g?.gercek)} / bugüne düşen ${fmtShort(g?.butceDonem)}`}
+          info={<SqlInfo k={d.kaynaklar} alan="gider" label="Gider bütçesi kullanımı" />} />
+        <Kpi label="Aşan / sınırdaki kalem" value={`${g?.asim ?? 0} / ${g?.yaklasti ?? 0}`} help={`Açık sapma uyarısı: ${d.sapmaToplam ?? 0}`}
+          info={<SqlInfo k={d.kaynaklar} alan="gider" label="Aşan / sınırdaki kalem" />} />
       </KpiRow>
 
       <Panel>
@@ -85,11 +90,11 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
           <thead>
             <tr>
               <th className={th}>Departman / hesap</th>
-              <th className={`${th} text-right`}>Yıllık bütçe</th>
-              <th className={`${th} text-right`}>Bugüne bütçe</th>
-              <th className={`${th} text-right`}>Gerçekleşen</th>
-              <th className={`${th} text-right`}>Sapma</th>
-              <th className={`${th} text-right`}>Kullanım</th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].yillik">Yıllık bütçe</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].butceDonem">Bugüne bütçe</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].gercek">Gerçekleşen</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].sapma">Sapma</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].kullanim">Kullanım</InfoLabel></th>
               <th className={th}>Durum</th>
               <th className={th}>Açıklama</th>
             </tr>
@@ -119,7 +124,7 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
       </Panel>
 
       <Panel>
-        <h3 className="text-[15px] font-extrabold">Açık sapma uyarıları ({d.sapmaToplam ?? 0})</h3>
+        <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Açık sapma uyarıları ({d.sapmaToplam ?? 0})<SqlInfo k={d.kaynaklar} alan="sapmalar[]" label="Açık sapma uyarıları" /></h3>
         {!(d.sapmalar ?? []).length ? <p className="text-[12.5px] text-canvas-muted">Açık uyarı yok.</p> : (
           <ul className="mt-2 flex flex-col gap-1.5">
             {(d.sapmalar ?? []).map((a) => (

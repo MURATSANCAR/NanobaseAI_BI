@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { InfoLabel } from '../components/SqlInfo';
 import { toast } from 'sonner';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
@@ -121,7 +122,7 @@ export default function TaxTab({ year, canEdit, statuses }: { year: number; canE
                 <th className={th}>Dönem</th>
                 <th className={th}>Sorumlu</th>
                 <th className={th}>Durum</th>
-                <th className={`${th} text-right`}>Tahmini ödeme</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].tutar">Tahmini ödeme</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

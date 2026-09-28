@@ -7,6 +7,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th }
 import { Panel, Pager } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import CardSql from '../stitch/CardSql';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { AskSheet } from '../budget/parts';
 import { MAP_LABEL, RULE_LABEL, SOURCE_LABEL, financeApi, fmtDay, fmtMoney, fmtNum, fmtPct, type Grain, type Meta, type Period, type PnlRow } from './api';
 import { Approx, DataEnd, Money, pressable } from './parts';
@@ -37,8 +38,8 @@ function EntriesSheet({ hesap, period, onClose }: { hesap: string | null; period
                 <th className={th}>Fiş</th>
                 <th className={th}>Hesap</th>
                 <th className={th}>Açıklama</th>
-                <th className={`${th} text-right`}>Borç</th>
-                <th className={`${th} text-right`}>Alacak</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]" label="Fiş satırları · borç">Borç</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]" label="Fiş satırları · alacak">Alacak</InfoLabel></th>
                 <th className={th}>Merkez</th>
                 <th className={th}>Raporda</th>
               </tr>
@@ -79,6 +80,9 @@ function LineSheet({ row, period, onClose, onAccount }: { row: PnlRow | null; pe
       {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Hesaplar okunamadı.')}</Note> : d && (
         !d.items.length ? <Note tone="info">Bu dönemde bu satıra düşen hareket yok.</Note> : (
           <ul className="flex flex-col gap-1.5">
+            <li className="flex items-center justify-end px-1 text-[11.5px] font-semibold text-canvas-muted">
+              <InfoLabel k={d.kaynaklar} alan="items[]" label={`${row?.ad ?? 'Satır'} · hesaplar`}>Hesap tutarlarının kaynağı</InfoLabel>
+            </li>
             {d.items.map((a) => (
               <li key={a.hesap}>
                 <button type="button" onClick={() => onAccount(a.hesap)}
@@ -115,17 +119,17 @@ function Reconcile({ period }: { period: Period }) {
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-xl bg-white/80 p-3">
-          <div className="text-[11px] font-bold uppercase text-canvas-muted">Muhasebe net satış</div>
+          <div className="text-[11px] font-bold uppercase text-canvas-muted"><InfoLabel k={d.kaynaklar} alan="muhasebe">Muhasebe net satış</InfoLabel></div>
           <div className="mt-1 text-[18px] font-bold"><Money v={d.muhasebe.netSatis} /></div>
           <div className="text-[11.5px] text-canvas-muted">Brüt <Money v={d.muhasebe.brutSatis} /> · indirim <Money v={d.muhasebe.satisIndirimleri} /></div>
         </div>
         <div className="rounded-xl bg-white/80 p-3">
-          <div className="text-[11px] font-bold uppercase text-canvas-muted">Fatura net satış</div>
+          <div className="text-[11px] font-bold uppercase text-canvas-muted"><InfoLabel k={d.kaynaklar} alan="fatura">Fatura net satış</InfoLabel></div>
           <div className="mt-1 text-[18px] font-bold"><Money v={d.fatura?.netSatis} /></div>
           <div className="text-[11.5px] text-canvas-muted">Satış <Money v={d.fatura?.satis} /> · iade <Money v={d.fatura?.iade} /> · iskonto <Money v={d.fatura?.iskonto} /></div>
         </div>
         <div className={`rounded-xl p-3 ${d.fark !== null && Math.abs(d.fark) >= 0.01 ? 'bg-amber-50' : 'bg-emerald-50'}`}>
-          <div className="text-[11px] font-bold uppercase text-canvas-muted">Fark (muhasebe − fatura)</div>
+          <div className="text-[11px] font-bold uppercase text-canvas-muted"><InfoLabel k={d.kaynaklar} alan="fark" label="Mutabakat farkı">Fark (muhasebe − fatura)</InfoLabel></div>
           <div className="mt-1 text-[18px] font-bold"><Money v={d.fark} /></div>
         </div>
       </div>
@@ -175,6 +179,7 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
             <Scale aria-hidden className="h-3.5 w-3.5" /> Mizan farkı {fmtMoney(d.mizan.fark)}
           </span>
         ) : <Pill tone="muted">Mizan okunmadı</Pill>}
+        <SqlInfo k={d.kaynaklar} alan="mizan" label="Mizan denkliği" />
         {grain === 'ay' && close?.durum === 'kapandi' && (
           <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[12px] font-bold">
             <Lock aria-hidden className="h-3.5 w-3.5" /> Kapandı · {close.kapatan}, {fmtDay(close.kapanisTarihi)}
@@ -206,12 +211,13 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
         <Note tone="warn">
           {d.esleme.eslenmemis > 0 && <>{d.esleme.eslenmemis} hesap eşlenmemiş ({fmtMoney(d.esleme.eslenmemisTutar)}); «Eşlenmemiş hesaplar» satırında durur ve net kâra katılır. </>}
           {(d.esleme.onaysizTutar ?? 0) > 0.005 && <>Eşlemesi muhasebece onaylanmamış hesap tutarı {fmtMoney(d.esleme.onaysizTutar)}: tablo onaylanana kadar taslaktır.</>}
+          <SqlInfo k={d.kaynaklar} alan="esleme" label="Eşleme durumu" className="ml-1" />
         </Note>
       )}
       {d.maliyet.yaklasik && (
         <Note tone="warn">
           Bu dönemin satışlarının {fmtPct(1 - (d.maliyet.maliyetliPay ?? 0))}'inde ({fmtNum(d.maliyet.maliyetsizSatir)} / {fmtNum(d.maliyet.satisSatir)} satır) maliyet işlenmemiş.
-          Satışların maliyeti ve brüt kâr eksik okunur: <strong>yaklaşık</strong>.
+          Satışların maliyeti ve brüt kâr eksik okunur: <strong>yaklaşık</strong>.<SqlInfo k={d.kaynaklar} alan="maliyet" label="Maliyet kapsamı" className="ml-1" />
         </Note>
       )}
 
@@ -223,11 +229,11 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
               <th className={th}>Gelir tablosu</th>
               {cols.map(([k, label]) => (
                 <th key={k} className={`${th} text-right`}>
-                  <div>{label}</div>
+                  <div className="inline-flex items-center gap-1">{label}<SqlInfo k={d.kaynaklar} alan={`rows[].values.${k}`} label={`Gelir tablosu · ${label} (${d.columns[k].label})`} /></div>
                   <div className="font-semibold normal-case tracking-normal">{d.columns[k].label}</div>
                 </th>
               ))}
-              {d.columns.butce && <th className={`${th} text-right`}>Bütçeden fark</th>}
+              {d.columns.butce && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].values.butce" label="Bütçeden fark (dönem − bütçe)">Bütçeden fark</InfoLabel></th>}
             </tr>
           </thead>
           <tbody>
@@ -255,6 +261,9 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
         </TableWrap>
       </div>
       <ul className="flex flex-col gap-1.5 sm:hidden">
+        <li className="flex items-center justify-end px-1 text-[11.5px] font-semibold text-canvas-muted">
+          <InfoLabel k={d.kaynaklar} alan="rows[].values.donem" label={`Gelir tablosu · ${cur.label}`}>Tutarların kaynağı</InfoLabel>
+        </li>
         {d.rows.map((r) => (
           <li key={r.kod}>
             <button type="button" onClick={() => setLine(r)}
@@ -273,8 +282,8 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
       </ul>
 
       <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Tutar = hesabın kâr etkisi (alacak − borç): gelir artı, gider eksi. Rapor dışı: dışlanan hesaplar {fmtMoney(d.dislanan)},
-        yansıtma satırları {d.kurallar.yansitma.hesap} hesap, kapanış fişi satırları {d.kurallar.kapanis.hesap} hesap (7/A'da gider 7 ile başlayan hesapta bir kez sayılır).
+        Tutar = hesabın kâr etkisi (alacak − borç): gelir artı, gider eksi. Rapor dışı: dışlanan hesaplar {fmtMoney(d.dislanan)}<SqlInfo k={d.kaynaklar} alan="dislanan" label="Dışlanan hesaplar" className="ml-0.5" />,
+        yansıtma satırları {d.kurallar.yansitma.hesap} hesap, kapanış fişi satırları {d.kurallar.kapanis.hesap} hesap<SqlInfo k={d.kaynaklar} alan="kurallar" label="Yansıtma ve kapanış satırları" className="ml-0.5" /> (7/A'da gider 7 ile başlayan hesapta bir kez sayılır).
         {d.columns.butce?.plan ? ` Bütçe: ${d.columns.butce.plan.title}.` : d.columns.butce?.note ? ` ${d.columns.butce.note}` : ''}
       </p>
 

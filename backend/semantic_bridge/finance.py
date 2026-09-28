@@ -454,6 +454,39 @@ def _loaded_years(engine: sa.engine.Engine) -> set[int]:
 
 
 # ------------------------------------------------------------------ gelir tablosu
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (finance_kaynak.py).
+
+
+def account_totals_stmt(months: list[tuple[int, int]], kural: str = "dahil"):
+    return (sa.select(ACTUALS.c.hesap_kodu, sa.func.max(ACTUALS.c.hesap_adi), sa.func.sum(ACTUALS.c.borc),
+                      sa.func.sum(ACTUALS.c.alacak), sa.func.sum(ACTUALS.c.satir))
+            .where(_months_cond(ACTUALS, months), ACTUALS.c.kural == kural)
+            .group_by(ACTUALS.c.hesap_kodu))
+
+
+def sales_totals_stmt(months: list[tuple[int, int]]):
+    cols = [*_MEASURES, "satis_net", "iade_net", "satis_satir", "maliyetsiz_satir"]
+    return sa.select(*[sa.func.sum(SALES_MONTH.c[k]) for k in cols], sa.func.count()).where(_months_cond(SALES_MONTH, months))
+
+
+def profit_stmt(by: str, months: list[tuple[int, int]]):
+    table = PROFIT_CLIENTS if by == "cari" else PROFIT_ITEMS
+    return sa.select(table).where(_months_cond(table, months))
+
+
+def cash_run_stmt(tenant: str):
+    return sa.select(CASH_RUNS).where(CASH_RUNS.c.tenant_id == tenant).order_by(CASH_RUNS.c.run_at.desc())
+
+
+def cash_lines_stmt(run_id: str):
+    return sa.select(CASH_LINES).where(CASH_LINES.c.run_id == run_id).order_by(CASH_LINES.c.kalem, CASH_LINES.c.hafta)
+
+
+def tax_stmt(tenant: str, year: Optional[int] = None):
+    stmt = sa.select(TAX).where(TAX.c.tenant_id == tenant)
+    if year:
+        stmt = stmt.where(TAX.c.son_gun >= f"{int(year)}-01-01", TAX.c.son_gun <= f"{int(year)}-12-31")
+    return stmt.order_by(TAX.c.son_gun, TAX.c.beyan)
 
 
 def account_totals(engine: sa.engine.Engine, months: list[tuple[int, int]], kural: str = "dahil") -> dict[str, dict[str, Any]]:
@@ -461,10 +494,7 @@ def account_totals(engine: sa.engine.Engine, months: list[tuple[int, int]], kura
     if not months:
         return {}
     with engine.connect() as c:
-        rows = c.execute(sa.select(ACTUALS.c.hesap_kodu, sa.func.max(ACTUALS.c.hesap_adi), sa.func.sum(ACTUALS.c.borc),
-                                   sa.func.sum(ACTUALS.c.alacak), sa.func.sum(ACTUALS.c.satir))
-                         .where(_months_cond(ACTUALS, months), ACTUALS.c.kural == kural)
-                         .group_by(ACTUALS.c.hesap_kodu)).all()
+        rows = c.execute(account_totals_stmt(months, kural)).all()
     return {r[0]: {"ad": r[1], "borc": float(r[2] or 0), "alacak": float(r[3] or 0),
                    "etki": float(r[3] or 0) - float(r[2] or 0), "satir": int(r[4] or 0)} for r in rows}
 
@@ -572,8 +602,7 @@ def _sales_totals(engine: sa.engine.Engine, months: list[tuple[int, int]]) -> di
         return {}
     cols = [*_MEASURES, "satis_net", "iade_net", "satis_satir", "maliyetsiz_satir"]
     with engine.connect() as c:
-        r = c.execute(sa.select(*[sa.func.sum(SALES_MONTH.c[k]) for k in cols], sa.func.count())
-                      .where(_months_cond(SALES_MONTH, months))).first()
+        r = c.execute(sales_totals_stmt(months)).first()
     if not r or not r[-1]:
         return {}
     return {k: float(v or 0) for k, v in zip(cols, r[:-1])}
@@ -997,7 +1026,7 @@ def profitability(engine: sa.engine.Engine, *, by: str, year: int, frm: int = 1,
     telif_status = {"var": 0, "yok": 0}
     if by == "cari":
         with engine.connect() as c:
-            rows = c.execute(sa.select(PROFIT_CLIENTS).where(_months_cond(PROFIT_CLIENTS, months))).all()
+            rows = c.execute(profit_stmt("cari", months)).all()
         for r in rows:
             g = groups.setdefault(r.cari_kodu, _acc())
             names[r.cari_kodu] = r.cari_adi or r.cari_kodu
@@ -1014,7 +1043,7 @@ def profitability(engine: sa.engine.Engine, *, by: str, year: int, frm: int = 1,
         with_royalty = False
     else:
         with engine.connect() as c:
-            rows = c.execute(sa.select(PROFIT_ITEMS).where(_months_cond(PROFIT_ITEMS, months))).all()
+            rows = c.execute(profit_stmt(by, months)).all()
         info = _book_info(engine) if by in ("kitap", "seri", "yayinevi") else {}
         codes = sorted({r.stok_kodu for r in rows if (r.maliyetsiz_adet or 0) != 0})
         costs = unit_costs(codes) if codes else {}
@@ -1326,10 +1355,10 @@ def save_cash_run(engine: sa.engine.Engine, tenant: str, user: Optional[str], re
 def cash(engine: sa.engine.Engine, tenant: str, include_budget: bool = False) -> dict[str, Any]:
     """En son kurulan 13 haftalık tablo. `include_budget`: bütçe temposu toplama katılır (satıcı borcuyla örtüşür)."""
     with engine.connect() as c:
-        run = c.execute(sa.select(CASH_RUNS).where(CASH_RUNS.c.tenant_id == tenant).order_by(CASH_RUNS.c.run_at.desc())).first()
+        run = c.execute(cash_run_stmt(tenant)).first()
         if not run:
             return {"run": None, **freshness(engine)}
-        rows = c.execute(sa.select(CASH_LINES).where(CASH_LINES.c.run_id == run.id).order_by(CASH_LINES.c.kalem, CASH_LINES.c.hafta)).all()
+        rows = c.execute(cash_lines_stmt(run.id)).all()
     params = _j(run.params_json, {})
     items: dict[str, dict[str, Any]] = {}
     n = max([r.hafta for r in rows] or [13])
@@ -1372,7 +1401,7 @@ def cash_history(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     for y in sorted(_loaded_years(engine)):
         daily.update(meta_get(engine, f"bank:{y}").get("days") or {})
     with engine.connect() as c:
-        runs = c.execute(sa.select(CASH_RUNS).where(CASH_RUNS.c.tenant_id == tenant).order_by(CASH_RUNS.c.run_at.desc())).all()
+        runs = c.execute(cash_run_stmt(tenant)).all()
     out = []
     errors = []
     for run in runs:
@@ -1413,10 +1442,7 @@ def _tax_dict(r: Any, today: date) -> dict[str, Any]:
 
 def tax_list(engine: sa.engine.Engine, tenant: str, year: Optional[int] = None) -> dict[str, Any]:
     with engine.connect() as c:
-        stmt = sa.select(TAX).where(TAX.c.tenant_id == tenant)
-        if year:
-            stmt = stmt.where(TAX.c.son_gun >= f"{int(year)}-01-01", TAX.c.son_gun <= f"{int(year)}-12-31")
-        rows = c.execute(stmt.order_by(TAX.c.son_gun, TAX.c.beyan)).all()
+        rows = c.execute(tax_stmt(tenant, year)).all()
     today = _today()
     items = [_tax_dict(r, today) for r in rows]
     return {"items": items, "statuses": TAX_STATUSES, "today": today.isoformat(),
@@ -2096,7 +2122,8 @@ class Refresher:
         if end and y == end.year:
             ps = logo(src.sales_period_sql(firms.get(y - 1, firm) if (y - 1) in firms else firm, date(y - 1, 1, 1),
                                            _same_day_last_year(end) + timedelta(days=1))) if (y - 1) in firms else []
-            meta_set(engine, f"sales_prev:{y}", {k: f((ps[0] if ps else {}).get(k)) for k in _MEASURES} if ps else {})
+            meta_set(engine, f"sales_prev:{y}", ({**{k: f((ps[0] if ps else {}).get(k)) for k in _MEASURES},
+                                                  "firm": firms.get(y - 1)} if ps else {}))
             pos = {str(r["grup"]): f(r.get("borc")) - f(r.get("alacak")) for r in logo(src.position_sql(firm, y, end))}
             meta_set(engine, f"position:{y}", {"groups": pos, "asof": end.isoformat()})
         self.state["step"] = f"{y} kârlılık"
