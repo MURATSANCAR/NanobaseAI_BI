@@ -244,8 +244,9 @@ def _fits(d: dict[str, Any], words: int, due: Optional[date], today: date) -> tu
 def _signals(d: dict[str, Any], words: int, due: Optional[date], today: date) -> dict[str, Any]:
     pair_tier = 2 if d["pairWords"] else (1 if d["tag"] else 0)
     scope = "cift" if d["reviewed"]["pair"] else ("genel" if d["reviewed"]["all"] else None)
-    reviewed = d["reviewed"][scope] if scope else 0
-    penalty = d["penalty"][scope] if scope else 0
+    key = {"cift": "pair", "genel": "all"}.get(scope or "")   # ekrana giden etiket ≠ sözlük anahtarı
+    reviewed = d["reviewed"][key] if key else 0
+    penalty = d["penalty"][key] if key else 0
     mqm = round((1 - penalty / reviewed) * 100, 2) if reviewed else None
     delivered = d["onTime"] + d["late"]
     fits, load = _fits(d, words, due, today)

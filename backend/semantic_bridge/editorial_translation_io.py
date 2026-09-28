@@ -28,6 +28,9 @@ from typing import Any, Callable, Iterable, Optional
 from xml.etree import ElementTree
 
 import sqlalchemy as sa
+# `from __future__ import annotations` altında FastAPI tip adını modül düzeyinde çözer: Request burada olmalı,
+# yoksa `request` sorgu parametresi sanılır (422).
+from fastapi import Request
 
 from semantic_bridge import editorial_translation as tr
 
