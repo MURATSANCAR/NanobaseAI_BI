@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (05:45) — Belge incelemesi canlı: test sunucusu ve müşteri VM'i
+
+- **Main:** `8b59b6a6` (ekran + yetki + günlük; dal `claude/document-review` ileri sarmayla).
+- **Test sunucusu:** kurulum kapsamındaki 62 farklı dosya (hepsi main'in eski sürümü ya da yeni dosya; başka oturumların fiyatlandırma/başvuru/sözleşme işleri dahil) main'e eşitlendi; köprü yeni modüllerle yüklendi, yeniden başladı (health 200), arayüz `index-DbyzNEhC.js`. Portal denemesi (geçici timasai oturumu, silindi): `.txt` yükleme 200 → QUEUED → DONE, beş denetim SUCCEEDED («online → çevrimiçi», 6–8 yaş özeti), kelime haritası 200, Word 200 (`.docx`), oturumsuz 401. Not: portal nginx'i yazma isteğinde `Origin` başlığı ister (tarayıcı gönderir).
+- **TT GPU nginx (kullanıcı onayı):** `kitap-eczanesi`'ne `/editor/cards/v1/documents` (GET liste + POST yükleme, `client_max_body_size 0`), `/{id}`, `/word-map`, `/export.docx`. İlk denemede `nginx -t` düştü (düzenli ifadeli location'da `proxy_pass` adresi değişken içermeli) ve komut hatayı yutup reload'u denedi — reload başarısız, nginx eski ayarla sürdü, kesinti olmadı; düzeltildi, reload yalnız test geçince.
+- **Müşteri VM'i:** başka bir oturum aynı anda `e543a122`'yi kurdu (belge incelemesini içeriyor); üstüne ikinci kurulum yapılmadı. Doğrulama: `._*` 0, köprüde belge uçları, arayüzde «Belge incele»; VM portalından `.txt` yükleme 200 → DONE, beş denetim SUCCEEDED, liste/harita/Word 200.
+
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 
 - **Neden bu sürüm:** test sunucusunda kurulup doğrulanan son `main` noktası `0e2ad1e8` (günlük 03:00: M10/M12 gerçek veriyle, 422 düzeltmeleri). Sonrası VM'e gitmedi: M29–M32 ve Zeki AI kapsam genişlemesi test sunucusunda doğrulanmadı (M32 «DOĞRULANAMADI»); **Destek** ayrı yığın (`apps/destek`), dış erişim/AD girişi/LLM kapısı açık, VM betiği onu taşımaz.
