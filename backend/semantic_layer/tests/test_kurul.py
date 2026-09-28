@@ -404,3 +404,11 @@ def test_bridge_gate_and_ownership(monkeypatch, store, settings, tmp_path):
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
     assert client.get(f"/api/v1/kurul/packages/{pid}", headers=z).json()["dagitim"][0]["kanal"] == "indirme"
     assert client.post("/api/v1/kurul/run-due", headers=a).status_code == 403
+
+
+def test_day_reads_utc_data_end_as_istanbul_day():
+    """M48 Logo veri sonunu UTC saklar; gösterge İstanbul gününü okumalı (2026-09-28 kabulü: 16.08 ↔ 17.08)."""
+    assert S._day("2026-08-16T21:00:00+00:00") == "2026-08-17"
+    assert S._day(datetime(2026, 8, 16, 21, 0, tzinfo=timezone.utc)) == "2026-08-17"
+    assert S._day("2026-08-17") == "2026-08-17" and S._day(date(2026, 8, 17)) == "2026-08-17"
+    assert S._day(None) is None and S._day("") is None

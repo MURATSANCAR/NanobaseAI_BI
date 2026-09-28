@@ -152,11 +152,21 @@ def _pct(v: Optional[float]) -> Optional[float]:
     return None if v is None else round(float(v) * 100, 4)
 
 
+_IST = timezone(timedelta(hours=3))
+
+
 def _day(v: Any) -> Optional[str]:
+    """Gün (İstanbul). Saat dilimli değer önce İstanbul'a çevrilir: M48 Logo veri sonunu UTC saklar
+    (17.08 00:00 İstanbul = 16.08 21:00 UTC); ilk on karakteri almak bir gün geri düşürüyordu (2026-09-28 kabulü R6)."""
     if v in (None, ""):
         return None
+    if isinstance(v, str) and len(v) > 10:
+        try:
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError:
+            return v[:10]
     if isinstance(v, datetime):
-        return v.date().isoformat()
+        return (v.astimezone(_IST) if v.tzinfo else v).date().isoformat()
     if isinstance(v, date):
         return v.isoformat()
     return str(v)[:10]
