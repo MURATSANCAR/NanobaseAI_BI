@@ -503,7 +503,6 @@ export function LogoMovements({ personId }: { personId: string }) {
               ))}
             </ul>
           )}
-          {d.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Son 300 hareket gösteriliyor.</p>}
         </>
       )}
     </Section>

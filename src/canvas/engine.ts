@@ -3346,7 +3346,6 @@ export type FlLogoMovements = {
   debit?: number;
   balance?: number;
   last?: string | null;
-  truncated?: boolean;
   db?: DbTiming | null;
   kaynaklar?: Kaynaklar;
 };

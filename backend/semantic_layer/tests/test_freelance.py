@@ -319,6 +319,20 @@ def test_logo_movements_sum_sides():
     assert out["lines"][0]["type"] == "Alınan serbest meslek makbuzu" and out["lines"][1]["side"] == "borc"
 
 
+def test_logo_movements_read_every_line_and_never_sum_a_cut_list():
+    """Sessiz tavan yok: yılın bütün hareketleri okunur; okuma güvenlik sınırı aşılırsa yarım toplam gösterilmez."""
+    assert "TOP" not in L.lines_sql("320.01.001")
+
+    def run(sql):
+        if "TOP 1" in sql:
+            return {"records": [{"CODE": "320.01.001", "DEFINITION_": "Ayşe Çizer", "SPECODE": "ÇİZER"}]}
+        return {"records": [{"DAY": "2026-07-01", "TRCODE": 46, "SIGN": 1, "AMOUNT": 5000}], "truncated": True}
+
+    with pytest.raises(L.LogoError) as e:
+        L.movements(run, "320.01.001")
+    assert e.value.status == 413
+
+
 def test_access_rules_for_freelance():
     page = A.page("serbest-calisanlar")
     assert A.rule_for("/api/v1/editorial/freelance/people") == frozenset({page})

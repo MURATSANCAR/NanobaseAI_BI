@@ -56,8 +56,8 @@ F_ODENECEK_GRUP = ("Kişi başına ödenecek: kabul edilmiş, hakedişe girmemi�
                    "birim ücret).")
 F_LOGO = ("Logo'daki hareketler: cari kartın 2026 hareketleri (LG_411_01_CLFLINE, iptal olmayan). Alacak = SIGN 1 satırları "
           "Σ AMOUNT (alınan hizmet faturası, serbest meslek makbuzu, açılış), borç = SIGN 0 satırları Σ AMOUNT (ödeme, "
-          "virman); bakiye = alacak − borç (pozitifse bizim borcumuz). Sorgu en son 300 hareketi okur; kart 300'den çok "
-          "hareketliyse toplamlar yalnız okunan satırlarındır ve ekranda «Son 300 hareket» yazar.")
+          "virman); bakiye = alacak − borç (pozitifse bizim borcumuz). Sorgu yılın bütün hareketlerini okur (sayı tavanı "
+          "yok); okuma güvenlik sınırı aşılırsa toplam gösterilmez, ekranda nedeni yazar.")
 
 
 def bagla_out(out: Any, build: Callable[[Any], Optional[P.Kaynaklar]]) -> Any:
@@ -284,7 +284,7 @@ def for_logo(out: dict[str, Any], log: RunLog, code: str, logo_file: Optional[st
                      description="Kişi kartındaki Logo cari kodu; özel kod (ÇİZER, MÜTERCİM, TASHİH-DİZ…) serbest çalışan "
                      "ödemesini ayırır.")
     lines = log.sorgu(k, PFX + "logo.hareketler", "Logo cari hareketleri · 2026", "logo", L.lines_sql(code), database=db,
-                      period=period, description="Cari kartın 2026 hareketleri (fatura, makbuz, ödeme); en yeni 300 hareket.")
+                      period=period, description="Cari kartın 2026 hareketlerinin tamamı (fatura, makbuz, ödeme), en yeniden eskiye.")
     ins = [s for s in (card, lines) if s]
     if ins:
         ref = k.hesap("logoHareket", F_LOGO, ins)

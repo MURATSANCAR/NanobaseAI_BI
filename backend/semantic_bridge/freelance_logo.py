@@ -78,7 +78,8 @@ def card_sql(code: str) -> str:
 
 
 def lines_sql(code: str) -> str:
-    return (f"SELECT TOP 300 L.DATE_ AS day, L.TRCODE AS trcode, L.SIGN AS sign, L.AMOUNT AS amount,"
+    """Kartın yıl içindeki BÜTÜN hareketleri (sayı tavanı yok: toplamlar okunan satırlardan, eksik okunmamalı)."""
+    return (f"SELECT L.DATE_ AS day, L.TRCODE AS trcode, L.SIGN AS sign, L.AMOUNT AS amount,"
             f" L.TRANNO AS no, L.DOCODE AS doc, L.LINEEXP AS text"
             f" FROM {_tbl('CLFLINE', True)} L JOIN {_tbl('CLCARD')} C ON C.LOGICALREF = L.CLIENTREF"
             f" WHERE C.CODE = N'{_code(code)}' AND L.CANCELLED = 0"
@@ -117,6 +118,9 @@ def movements(run: Callable[[str], dict[str, Any]], code: str) -> dict[str, Any]
     if not card:
         return {"found": False, "code": code, "year": YEAR, "lines": [], "credit": 0.0, "debit": 0.0, "balance": 0.0}
     res = run(lines_sql(code))
+    if res.get("truncated"):
+        # Okuma güvenlik sınırını aştıysa toplamlar eksik satırdan çıkardı: yarım sonuç gösterilmez.
+        raise LogoError("Cari kartın hareketleri okuma sınırını aştı; toplamlar eksik çıkmasın diye gösterilmiyor.", 413)
     lines = []
     credit = debit = 0.0
     for r in _rows(res):
@@ -135,7 +139,7 @@ def movements(run: Callable[[str], dict[str, Any]], code: str) -> dict[str, Any]
             "year": YEAR, "lines": lines, "credit": round(credit, 2), "debit": round(debit, 2),
             # Tedarikçi kartında alacak bakiyesi = bizim ona borcumuz.
             "balance": round(credit - debit, 2), "last": lines[0]["day"] if lines else None,
-            "truncated": bool(res.get("truncated")) or len(lines) >= 300, "db": _timing(res)}
+            "db": _timing(res)}
 
 
 def _timing(res: dict[str, Any]) -> dict[str, Any]:
