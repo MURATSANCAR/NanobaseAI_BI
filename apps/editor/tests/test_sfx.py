@@ -354,5 +354,7 @@ def test_rule_cue_when_model_misses_strong_sound(job):
     assert [(c["quote"], c["rule_only"], c["confidence"]) for c in rc] == [("kahkahalarla", True, 0.33)]
     model = [{"block": "b1", "words": [1, 2]}]
     assert sfx._rule_cues(u, model, hints, 3) == []                   # model aynı yeri bulduysa kural açmaz
+    other = [{"block": "b1", "words": [5, 6], "quote": "kahkaha attı"}]
+    assert sfx._rule_cues(u, other, hints, 3) == []                   # aynı ses fiili sayfada zaten ipucu
     assert sfx.strong_hints([N.Unit("b2", "para", None, "anlatici-kadin", "Top yere düştü.",
                                     N.read("Top yere düştü."))]) == []

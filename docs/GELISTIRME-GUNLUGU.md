@@ -73,6 +73,23 @@
 - **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
 - **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
 
+## 2026-09-28 (09:10) — Sesli okuma ikinci dinleme; insan kaydı yükleme GPU + test sunucusunda canlı
+
+- **İkinci dinleme** (aynı kitap, iki ses, yeni sürüm): canlı kadın seste cümle içi ≥0,55 sn durak 12 → 0, «diye» kopması ve
+  başlık bölünmesi kalktı, efekt kuyrukları tam. Erkek seste virgül hâlâ 0,7–0,8 sn: vurgu durağı öbeği bölüyordu («en,
+  korkak», «aslanın, kükremesiydi», «dönmüştü, bile») → `expression.emph_ok`: niteleyici/tamlayandan sonra ve ilgeçte durak
+  yok; uygulanmayacak ZEKİ AI vurgusu kayda da girmez.
+- **Efekt önerisi kararsızdı** (iki sayfada 3 okumanın 3'ü boş): model atlayınca güçlü ses ifadesi (`sfx.STRONG_STEMS`,
+  ikileme, «“Pat!” diye», harf uzatması) kural ipucu açar (`rule_only`, ses yine aday seçiminden geçer); aynı ses fiili
+  sayfada ikinci kez ipucu olmaz. Seçim istemi 3: gülüş/hapşırık gibi seslerde kaynak birebir aranmaz. Doğrulama (canlı iş,
+  s.7/12/13/21): s.13 kükreme + kıkırdama + kahkaha, s.21 kahkaha (kural), s.12 hapşırık ve kükreme.
+- **İnsan kaydı yükle** (commit `5516080d`, ayrıntı aşağıdaki maddede): GPU'da `editor-voice:3` + dokuz servis
+  `0.15.9-8513bfb9`, giriş kapısı `EDITOR-STUDYO-INSANKAYDI` (163 MB); test sunucusunda köprü (`access.py`,
+  `editorial_studio_narration.py`), nginx `narration/recordings` 250 MB, ön yüz. Uçtan uca: deneme işinin 25 sn'lik sayfa sesi
+  «insan kaydı» olarak yüklendi → 55 sn'de sayfa `human`, 41 kelimenin 41'i hizalı, tahmini 0; sonra `replace_human` ile
+  yapay sese geri alındı. Mac artığı 0 (GPU sürümü, test sunucusu src + dist).
+- Müşteri VM'ine kurulmadı (kullanıcı onayı bekliyor; VM web nginx'ine kayıt yolu için gövde sınırı betiği yok).
+
 ## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
 
 - **Neden:** «Dünyanın En Korkak Hayvanı» (iş `2026092803385843f032`, 17 sayfa, 1.392 kelime) iki sesle baştan sona

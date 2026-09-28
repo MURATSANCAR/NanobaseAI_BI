@@ -390,6 +390,11 @@ def _rule_cues(units, cues: list[dict], hints: list[str], reads: int) -> list[di
         b, a, z = where
         if any(c["block"] == b and not (z < c["words"][0] or a > c["words"][1]) for c in cues + out):
             continue
+        # aynı ses fiili sayfada zaten ipucuysa tekrar açılmaz: «kükremesiydi» varken «kükrememden», «hapşırdı»
+        # varken «hapşırmaydı» (2026-09-28: bir sayfada üç kükreme)
+        stem = next((s for s in STRONG_STEMS if L.tr_lower(h).startswith(s)), None)
+        if stem and any(stem in L.tr_lower(c.get("quote", "")) for c in cues + out):
+            continue
         u = next(u for u in units if u.id == b)
         quote = " ".join(w.text for w in u.words[a:z + 1]).strip(" ,.;:!?…\"'«»“”")
         typ = "yansima" if (_REDUP.search(quote) or _STRETCH.search(L.tr_lower(quote)) or len(quote.split()) == 1
