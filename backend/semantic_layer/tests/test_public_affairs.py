@@ -288,6 +288,8 @@ def test_crm_sql_is_read_only_escaped_and_skips_sensitive_columns():
         assert not re.search(r"Milliyet|FamilyStatus|Children|DogumYili|evadres|SpousesName", sql, re.I), sql
     assert "N'%O''Neil[%]%'" in sqls[0] and "OFFSET 40 ROWS" in sqls[0] and "AccountRoleCode = 1" in sqls[0]
     assert "AccountRoleCode = 1" in sqls[3] and "StateCode = 0" in sqls[3]
+    # CRM ünvan tablosunun ad kolonu new_unvanname (new_name yok; 2026-09-28 kabulünde kişi araması 207 ile düşüyordu)
+    assert "u.new_unvanname AS unvan" in sqls[0] and "u.new_name" not in sqls[0]
     assert "TRY_CONVERT(int, NULLIF(z.new_renciSays, ''))" in sqls[7] and "new_KurumTipi = 1" in sqls[7]
     # yıl sınırı İstanbul gece yarısının UTC karşılığı; iptal ve birleştirilmiş siparişler sayılmaz
     assert "'2025-12-31T21:00:00'" in sqls[9] and "'2026-12-31T21:00:00'" in sqls[9] and "100000001, 100000003" in sqls[9]

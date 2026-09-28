@@ -85,7 +85,7 @@ def _page(page: int) -> str:
 _CONTACT_COLS = (
     "k.ContactId AS id, k.FullName AS ad, k.JobTitle AS is_unvani, CAST(k.AccountRoleCode AS int) AS rol,"
     " k.ParentCustomerId AS kurum_id, a.Name AS kurum, CAST(a.new_KurumRolu AS int) AS kurum_rolu,"
-    " i.new_name AS il, u.new_name AS unvan, t.new_name AS akademik_titr, m.new_name AS meslek,"
+    " i.new_name AS il, u.new_unvanname AS unvan, t.new_name AS akademik_titr, m.new_name AS meslek,"
     " k.EMailAddress1 AS eposta, k.Telephone1 AS telefon, k.ModifiedOn AS degisti"
 )
 
