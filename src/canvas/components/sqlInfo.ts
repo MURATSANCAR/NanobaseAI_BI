@@ -19,7 +19,13 @@ export type KaynakSorgu = {
   origin: string[];
 };
 
-export type KaynakHesap = { name: string; text: string; inputs: string[] };
+export type KaynakHesap = {
+  name: string;
+  text: string;
+  inputs: string[];
+  /** Rakam veritabanı sorgusundan gelmiyorsa kaynağın işlev adı (anlık okunan kutu, yüklenen dosya, dış servis). */
+  external?: string | null;
+};
 
 export type Kaynaklar = {
   sources: Record<string, KaynakSorgu>;

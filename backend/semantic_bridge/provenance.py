@@ -250,15 +250,19 @@ class Kaynaklar:
 
     # -- hesaplar
 
-    def hesap(self, name: str, text: str, inputs: Iterable[str] = ()) -> str:
-        """Python'da yapılan hesap: okunur formül (ör. «net = Σ LINENET (7,8,9) − Σ LINENET (2,3)») ve girdileri."""
+    def hesap(self, name: str, text: str, inputs: Iterable[str] = (), *, dis: Optional[str] = None) -> str:
+        """Python'da yapılan hesap: okunur formül (ör. «net = Σ LINENET (7,8,9) − Σ LINENET (2,3)») ve girdileri.
+        `dis`: rakam hiçbir veritabanı sorgusundan gelmiyorsa (anlık okunan destek masası, posta kutusu, yüklenen
+        dosyanın ölçümü, tasarım servisi) kaynağın işlev adı; o zaman girdi boş olabilir ve pencere bunu yazar."""
         ins = [i for i in inputs if i]
         for i in ins:
             if i not in self.sources and not i.startswith("hesap:"):
                 raise ProvenanceError(f"Hesabın girdisi kayıtlı değil: {i}")
-        if _TECH.search(text):
+        if _TECH.search(text) or (dis and _TECH.search(dis)):
             raise ProvenanceError("Formül metninde teknoloji adı geçiyor.")
         self.formulas[name] = {"name": name, "text": text, "inputs": ins}
+        if dis:
+            self.formulas[name]["external"] = dis
         return f"hesap:{name}"
 
     # -- alanlar
@@ -352,7 +356,7 @@ def problems(payload: dict[str, Any]) -> list[str]:
             if o not in src:
                 out.append(f"{sid}: kökeni kayıtlı değil ({o})")
     for name, f in frm.items():
-        if not f.get("inputs"):
+        if not f.get("inputs") and not f.get("external"):
             out.append(f"hesap:{name}: girdisi yok")
         for i in f.get("inputs") or []:
             if i not in src and not (i.startswith("hesap:") and i[6:] in frm):

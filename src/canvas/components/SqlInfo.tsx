@@ -65,7 +65,9 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
               {dataEnd ? <>Veri {fmtWhen(dataEnd)} tarihine kadar. </> : null}
               {sources.length
                 ? `Bu rakam ${sources.length} sorgudan${formulas.length ? ' ve aşağıdaki hesaptan' : ''} gelir.`
-                : 'Bu rakam için kayıtlı sorgu yok.'}
+                : formulas.some((f) => f.external)
+                  ? 'Bu rakam veritabanı sorgusundan değil, aşağıda adı yazan kaynaktan gelir.'
+                  : 'Bu rakam için kayıtlı sorgu yok.'}
             </Dialog.Description>
           </div>
           <Dialog.Close
@@ -85,6 +87,7 @@ function Panel({ k, refId, label }: { k: Kaynaklar; refId: string | null; label:
                 <Sigma aria-hidden className="h-3.5 w-3.5" /> Hesap
               </div>
               <p className="mt-1 text-[12.5px] leading-relaxed text-canvas-ink">{f.text}</p>
+              {f.external && <p className="mt-1 text-[12px] font-semibold text-canvas-muted">Kaynak: {f.external}</p>}
             </section>
           ))}
 
