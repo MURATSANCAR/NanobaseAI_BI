@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (15:10) — Müşteri VM'inin arka plan işleri test sunucusuyla eşitlendi; T-soft/GA4/Merchant varsayılanları
+
+- **Sorun:** VM'de yalnız 17 iş vardı ve saat yerine konteyner açılışından itibaren aralıkla koşuyordu; stok, tedarik, pazarlama, satış, kanal, İK vb. ~50 iş VM'de hiç koşmuyordu. Bilgi kutusu da test sunucusunun saatlerini gösteriyordu.
+- **Çözüm (kullanıcı kararı «VM'i test sunucusuyla eşitle»):** `infra/docker/bi/jobs.py` artık `scripts/server/timas-*.timer` + `.service` dosyalarını okur (imajda `/app/jobs/schedule/`) ve her işi aynı takvimle (İstanbul saati) köprüye çağırır: systemd takvim alt kümesi (gün, `a..b`, `a/adım`, `*:0/15`, `*-*-02`), `OnBootSec`/`OnUnitActiveSec`, `Persistent` (kaçırılan son tur açılışta; ilk kurulumda geçmiş turlar koşulmaz). Kapalı: `JOBS_EXCLUDE` = basın/web taraması (kullanıcı kararı), Zeki AI kalite kapıları (iç ölçüm). Test sunucusunda 67 iş yüklendi, 5 bilerek kapalı. `deploy-customer-vm.sh` zamanlayıcı dosyalarını da gönderir; test `test_vm_jobs_schedule.py`.
+- **Varsayılanlar (iki ortam aynı):** `TSOFT_USER=zekiai`, `GA4_PROPERTY_ID=347043165`, `MERCHANT_ACCOUNT_ID=5411495322`. Kurumsal e-posta kendi anahtarı yoksa Google servis hesabı JSON'unu kullanır (Workspace alan geneli yetki devri gerekir).
+- **Sırlar VM'e:** kullanıcı onayı verdi; oturum izni sırrı sunucular arası yazmayı engelledi, aktarım komutu kullanıcıya verildi (değer ekrana/dosyaya düşmez, VM'de `admin.save_settings` ile değişiklik kaydına yazılır).
+- **Merchant:** ürün okuması `Google 401: GCP project … is not registered with the merchant account` — proje Merchant hesabına geliştirici olarak kaydedilmeli (Merchant hesabı ayarı; kullanıcı onayı bekleniyor).
+
 ## 2026-09-28 (14:30) — Müşteri VM'i aec8ff61 (menü yeniden düzeni dahil); Destek VM'e bu hâliyle kurulamaz
 
 - **Kullanıcı onayı:** «hadi kur». VM'deki kod 8b60d63c idi (dosya md5 eşit, 08:03 kurulumu); `merge-base --is-ancestor 8b60d63c aec8ff61` evet (arada 182 commit), çakışma işareti 0, arşiv test sunucusunda açılıp köprü yüklendi (2.276 yol). Birim `vm-deploy-aec8ff61`, günlük `/tmp/vm-deploy-aec8ff61.log`, kaynak `/tmp/bi-main-aec8ff61`.
