@@ -10,13 +10,15 @@ ROOT=$(pwd)
 mkdir -p in work lib
 chmod 777 in
 
-# 1. İmajdan şablonlar: Flow ve telephony için .pot (üretici git deposu ister), çatının tr.po'su.
+# 1. İmajdan şablonlar: Helpdesk, Flow ve telephony için güncel koddan .pot (üretici git deposu ister), çatının tr.po'su.
+#    Helpdesk'in hazır tr.po'su koddan eski; yeni eklenen metinler .pot'tan bulunur.
 docker run --rm -v "$ROOT/in:/out" --entrypoint bash "$IMAGE" -c '
   cd /home/frappe/frappe-bench
-  for a in flow telephony; do
+  for a in helpdesk flow telephony; do
     (cd apps/$a && git init -q && git add -A && git -c user.email=x@x -c user.name=x commit -qm x) >/dev/null 2>&1
     bench generate-pot-file --app $a >/dev/null 2>&1
   done
+  cp apps/helpdesk/helpdesk/locale/main.pot /out/helpdesk.pot
   cp apps/flow/flow/locale/main.pot /out/flow.pot
   cp apps/telephony/telephony/locale/main.pot /out/telephony.pot
   cp apps/frappe/frappe/locale/tr.po /out/frappe.tr.po'

@@ -285,6 +285,14 @@ export const NAV: NavGroup[] = [
         hint: 'Risk kaydı ve ısı haritası, göstergeler, uyum takvimi, sigorta ve iş sürekliliği, kurul brifingi',
         keywords: ['risk', 'uyum', 'kvkk', 'sigorta', 'poliçe', 'iş sürekliliği', 'bcp', 'gösterge', 'kri', 'ısı haritası', 'telif uyumu'],
       },
+      {
+        id: 'kurul',
+        label: 'Kurul',
+        to: '/kurul',
+        icon: Gavel,
+        hint: 'Danışma ve yönetim kurulu: tek sayfa göstergeler, toplantı, karar ve aksiyon takibi, dondurulan kurul paketi',
+        keywords: ['yönetim kurulu', 'danışma kurulu', 'kurul paketi', 'gündem', 'karar', 'aksiyon', 'tutanak', 'dyk', 'kpi', 'gösterge'],
+      },
     ],
   },
   {

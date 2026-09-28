@@ -1,5 +1,18 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
+
+- 74 worktree ve 83 yerel dal tarandı; işi main'de olmayan yalnız DYK kurul (4 commit), Zeki AI fırsatları analizi ve kapak arşivi günlük girişi çıktı → bu dala main üstüne dizildi. Saha `fmtCount` düzeltmesi (`ec51bcd2`) zaten main'deydi.
+- 70 worktree ve 78 yerel dal silindi. Korunan: helpdesk (çalışan oturum), `kurulum-kabul-0928` ve `studio-page-plan` (09:01–09:04 kaydedilmemiş değişiklik).
+- main push'u ve origin'deki 14 dalın silinmesi kullanıcıya bırakıldı (oturumda izin yok).
+
+## 2026-09-28 (09:00) — Önce/sonra ölçümü: yavaş ekran 28 → 6; istek fırtınalarının kök sebebi kabukta
+
+- **Kurulum:** main `a1e0f02f` (diske yazan hazır cevap) test sunucusuna dar kapsamla (yalnız `app.py` yaması + 3 dosya; aday ağaçta tsc 0, vitest 71/71, köprü 38/38, derleme; arada canlı değişmedi; `._*` 0). `var/response-cache` 0700, `administrator`.
+- **Ölçüm (69 ekran, iki tur; fırtına yapan Panolar, Geri bağlantılar, Benzer kitaplar dışarıda):** kendi çağrısı 2 sn üstü ekran **28 → 6**. Yeni kitap 52,8 → 0,2 sn, veri sözlüğü 13,2 → 0,2, SEO iş listesi 17,3 → 0,1, SEO ekranlarının çoğu 3–12 → 0,1, onaylar 9,9 → 0,5, finansal denetim 6,3 → 0,4, kişi rehberli ekranlar 8–10 → 0,3–0,7; editoryal ön yükleme (contracts, contributors, projects) 14–20 sn → 0–1 sn. Kalan 6 (2–5 sn): SEO sayfalar, Yazar ilişkileri ısı haritası, başvurular, son okuma, editör atama, kategori ağacı — ilk açılışta hazır cevabı henüz oluşmamış olanlar ya da 1,5 sn eşiğinin çevresinde. Ölçüm boyunca köprü başka oturumların kurulumlarıyla yine **6 kez** yeniden başladı; hazır cevaplar diskten geri geldi (`loaded` 34).
+- **İstek fırtınalarının kök sebebi (yeni bulgu):** ekrana özgü değil. Her fırtınada en çok tekrarlanan çağrı kabuğun kendi okumaları (`access/me`, `admin/me`, `me/prefs/nav:state`, `editorial/web/status`, her biri yüzlerce kez) ve her fırtına köprünün yeniden başladığı anda **502 ile başlıyor**, ardından nginx sınırından yüzlerce 429. Aynı ekran başka turda fırtına yapmıyor; köprü düştüğü anda açık olan ekran yapıyor (ilk ölçümde Panolar ve Geri bağlantılar, son turda Masam 3.975 ve Yeni kitap 3.906 istek). Yani uygulama kabuğu 5xx'te beklemeden yeniden kuruluyor ya da yeniden soruyor. Bulgu fırtına işlerini yürüten iki oturuma iletildi; düzeltme o oturumlarda yazılmıştı (`418d128a`: sayfa kapısı 502'de ekranı sökmüyor), test sunucusunda canlı (düzeltme 08:28'de kaynağa girdi, 08:39/08:46 derlemeleriyle yayında); son turumun ilk ekranları (/editoryal) büyük olasılıkla ondan önceye denk geldi. **Doğrulama** (canlı `index-xfK_xCcb.js`, 60 sn, tarayıcı içinde 502 taklidiyle): /editoryal normal 30 / 502'de 39 istek, /pazarlama/yeni-kitap 23 / 31 — fırtına yok (önce ~3.900).
+- Sunucudaki geçici çalışma klasörü (`/tmp/claude-m7gelisim`: aday ağaçlar, ölçüm, ekran görüntüleri) silindi; bütün geçici oturumlar iş sonunda silinmişti.
+
 ## 2026-09-28 (08:50) — «Benzer kitaplar» ve «Alışveriş» istek fırtınası: neden kapı döngüsü, düzeltme 418d128a; canlıda ölçüldü
 
 - **Belirti:** 08:00 ölçümünde `/seo-geo/benzer-kitaplar` 22 sn'de 8.738 istek (8.678 × 429), aynı IP'den sonra açılan ekranlar da 429 aldı; `/seo-geo/alisveris` 20 sn.
@@ -8,6 +21,18 @@
 - **Aday (main `ee599e34`, yalnız statik dosyalar adaydan):** 23 / 31; 27 / 30.
 - **Canlı sonra:** kapı düzeltmesi 08:28'de `frontend/src`'ye main hâliyle girdi, 08:39 (`DQzJWgtz`) ve 08:46 (`xfK_xCcb`) derlemeleriyle canlıda (kurulumu başka oturumlar yaptı; bu oturum `cockpit/dist`'e yazmadı). Ölçüm: benzer kitaplar 30 / 31, alışveriş 30 / 30. Normal modda görülen 19–22 × 429 aynı sunucu IP'sinden koşan başka ölçümlerin `timas_api` bölgesini doldurmasından; ekranın kendi isteği 60 sn'de 30. Alışverişin 20 sn'si çarpan etkisiydi: iki turda da başlık ve liste açıldı.
 - **Temizlik:** 3 kısa timasai oturumu açıldı, üçü de silindi; yazma yapılmadı; sunucuda `/tmp/claude-benzer` dışında dosya bırakılmadı. VM'e kurulum bu işte yok (kod değişikliği yok; kapı düzeltmesinin VM'e gidişi main dağıtımıyla).
+## 2026-09-28 — Zeki AI fırsatları: bütün modüller ekran ekran değerlendirildi
+
+- **Neden:** kullanıcı «bütün modülleri ve ekranları eksiksiz değerlendir; kullanıcıların AI beklentilerini çıkar; AI ile
+  neler yapabileceğimizi listele». Dört paralel değerlendirme, main `f26e11d6` salt okuma; kod değişikliği yok.
+- **Çıktı:** `docs/analiz/ai-firsatlari/README.md` (birleşik özet: bugünkü durum, 10 hemen-düzelt bulgusu, sistemin
+  en değerli 20 önerisi, 10 ortak yapı taşı, 3 kullanıcı kararı, önerilen sıra) + grup belgeleri A (çekirdek/analiz/
+  yönetim/altyapı/destek masası, 57 portal + 13 masa ekranı), B (editoryal/kayıtlar/editör modülü, 49 rota), C
+  (pazarlama/platform, 137 rota), D (finans/satış/lojistik/İK, 77 rota). Menü ve rota listeleri betikle karşılaştırıldı.
+- **Öne çıkan bulgular:** destek masası metni modele maskesiz gidiyor (KVKK); üç yerde model metni sayı denetiminden
+  geçmiyor; dört ekran modelsiz olduğu halde «Zeki AI» etiketli; Kampüs'te sabit örnek kitaplar; yönetim ekranındaki
+  model denemesi LLM kapısını atlıyor; tahmin motorunun p10–p90 aralığı hiçbir ekranda görünmüyor; sohbet kataloğunda
+  9 konu veri bağlı değil; benzerlik araması ve portalda taranmış belge okuma hiç yok.
 
 ## 2026-09-28 — Sesli okumaya «İnsan kaydı yükle» (dalda; kurulmadı)
 
@@ -87,6 +112,46 @@
 - **Metin PDF'i** (Türkçe teknik şartname, 115 sayfa): (1) her sayfadaki uzun üst bilgi («… Şartnamesi / 2025 23/115») ve belge kimliği şeridi 60 karakterden uzun olduğu için tekrar süzgecine girmiyor, 377 kelimelik anlamsız segment oluşuyordu → sayfaların %30'undan fazlasında geçen satır uzunluğundan bağımsız atılır; (2) sayfa sonunda yarım kalan paragraf sonraki sayfanın numaralı başlığını yutuyordu (1–4, 9, 10, 12, 13. başlıklar kaçıyordu) → başlık satırı yarım paragrafı kapatır; (3) içindekiler satırları nokta dizisiyle (çoğu kez sayfa numarası düşmüş) birbirine bağlanıyordu → içindekiler satırı tek başına kalır, nokta dizisi ve numara atılır, ardından gelen «METİN 66» satırı da içindekiler sayılır; (4) cümle bölücü «1. KISALTMALAR»daki «1.»i cümle sonu sanıyordu (58 tek kelimelik segment) → cümle başındaki liste numarası bölünmez; tek başına satıra düşmüş numara sonraki satırla birleşir; (5) sonu cümle noktalamasıyla biten numaralı madde başlık sayılmaz.
 - **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
 - **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
+## 2026-09-28 — DYK Danışma ve yönetim kurulu: panel, toplantı/karar/aksiyon, dondurulan kurul paketi
+
+**DOĞRULANAMADI — testler koordinatörde.** Ajan sunucuya bağlanmadı; yerelde yalnız `py_compile` ve JSON doğrulaması
+yapıldı. Dal `dyk` (`worktree-agent-a1cb5812695096adf` ucunun üstünde: M45/M47/M39/M59/M50/M48 orada), main'e taşınmadı.
+
+- **Ne:** Finans › Kurul (`/timas/kurul`). Panel bölüm kartları (Finans ve bütçe · Satış ve bayi · Yayın ve editörya ·
+  Stok ve üretim · Pazarlama · Risk ve uyum · İK · ZEKİ projesi), kritik şerit, sıradaki toplantı, geciken aksiyon; gösterge
+  ayrıntısı (12 dönem, eşik, kaynak ekran bağlantısı yalnız o sayfanın yetkisi olana, bölüm yorumu); toplantı sayfası
+  (gündem sırala + kural önerisi, karar/aksiyon, sekreter notu → Zeki AI karar önerisi «forma al»), paket sayfası (Zeki AI
+  yönetici özeti → genel müdür düzelt/onayla → dondur → PDF → dağıtım kaydı); gösterge kataloğu ve kurul üyeleri.
+- **Yeniden hesap yok (kullanıcı talimatı):** her gösterge kaynak modülün kendi işlevinden köprü içinde okunur
+  (`kurul_sources.PROVIDERS`: M45 `finance.summary`, M46 `budget.tracking/deviations`, M47 `risk.summary` + onaylı
+  brifing, M59 `dealers.summary`, M6 `editorial.summary`, M50 `model_quality.bi_row`, M48 `it_ops.status`, M39
+  `pazar.approved_brief`). HTTP değil: kurul üyesinin M45/M46/M47 sayfa yetkisi gerekmez; M47'nin «summary/reports
+  satırına DYK sayfa anahtarı» notuna bu yüzden gerek kalmadı (risk RULES satırı değişmedi).
+- **Kararlar (analiz §10 açık soruları; veriye/koda bakılarak):**
+  - Net satış kurulda **M45'in satır tanımıyla** (Σ LINENET, faturalı satır) gösterilir; analizdeki fatura başlığı
+    (NETTOTAL, 848.110.178,82) kabulde bilgi olarak yazılır, fark raporlanır. Gerekçe: kullanıcı «yeniden hesaplama
+    yapma, modülün servisini çağır» dedi ve bellek `net-ciro-line-formula-wrong` satır tanımını düzeltilmiş kabul ediyor.
+  - Eşikler **boş** gelir (M47 gibi): eşik kurulun/gösterge sahibinin kararıdır. Eşik yokken renk kaynak modülün kendi
+    kuralından (bütçe iyi/izle/sapma, gider kalemi aşım/yaklaştı, sistem durumu tonu), o da yoksa «eşik yok».
+  - Kaynağı hazır olmayan gösterge (plan onaylanmamış, bayi turu koşmamış, risk kaydı boş, CRM bağlantısı yok) sıfır
+    değil **gri**: «Risk kaydında canlı risk yok» sıfır kritik risk demek değildir.
+  - Stok, pazarlama, İK göstergelerinin sağlayıcısı bu sürümde yok (gri; `saglayici` bağlanınca dolar).
+  - Dağıtım **yalnız kayıt**: dış gönderim yok kararı ve `no-demo-login` (AD'siz üyeye hesap açılmaz) → AD'siz üyeye PDF'i
+    insan iletir. Her PDF indirmesi dağıtım kaydına «indirildi» diye yazılır (kimin indirdiği bilinir).
+  - «YK onayı» sözleşme adımı (CRM statü 4) göstergesi eklenmedi: yönetim kurulu mu yayın kurulu mu belirsiz (YOL-HARITASI
+    açık notu); karar gelince `kurul_sources`'a tek sağlayıcı.
+  - Tutanak önerisi kaydedilmez: sekreter «forma al» ile karar formuna alır, sahibi (portal hesabı) kendisi atar. Notlarda
+    geçmeyen sayı/tarih/kişi içeren madde atılır.
+- **Değişmezlik:** paket içeriği sha256 ile, PDF dondurmada bir kez üretilip `KURUL_DIR/packages` altında (0700/0600)
+  sha256 ile saklanır; okumada sha tutmazsa dosya verilmez (409). Donmuş paket düzenlenemez; yeniden derleme yeni sürüm.
+- **Ortak dosyalar:** `access.py` (RULES 2 satır, FEATURE_RULES PDF), `access_catalog.json` (`sayfa:kurul` explicit +
+  5 özellik), `admin.py` (Kurul grubu + 5 ayar), `app.py` (en sonda tek `register`), `App.tsx` (3 rota),
+  `navModel.ts` (Finans › Kurul), `ModulesMenu.tsx` (`LIVE.DYK`, `GROUP_HOME`), `data_security_inventory.json` (4 tablo +
+  PDF klasörü), `infra/docker/bi/jobs.py` (günlük çağrı).
+- **Ölçülecekler / sunucuda kalan:** kabul `scripts/acceptance/DYK/check.sh` → `kabul.py` (R1–R6 doğrudan SQL: net satış,
+  geçen yıl aynı dönem, brüt marj, kasa-banka, 60 günde biten sözleşme, Logo veri yaşı; uç↔uç: bütçe, bayi, risk, karne;
+  gri kural; paket değişmezliği; Zeki AI özeti; yetki) → `cleanup.py --actor timasai`; `timas-kurul.service` ilk kez elle,
+  sonra zamanlayıcı. Kurul üyeleri, gösterge sahipleri ve eşikler kullanıcıdan (rol ataması prod öncesi).
 
 ## 2026-09-28 (09:10) — Sesli okuma ikinci dinleme; insan kaydı yükleme GPU + test sunucusunda canlı
 
@@ -165,6 +230,17 @@
   Düzeltme (tur 3): kayıt anında ön hazırlık yok; yalnız istek içinden — zamanlayıcının hafif (15 dk) ve gece turundan,
   elle yenilemeden sonra — başlar. Kural: modül `register` içinde `deps["engine"]()`/`rt()` çağıran iş parçacığı açılmaz.
 - Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
+- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
+  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
+  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
+## 2026-09-28 (07:40) — Kapak arşivi: yalnız kitaplar canlıda (GPU stüdyo `4cfdafd9`, test sunucusu köprüsü); yeniden besleme
+
+- **GPU:** `releases/4cfdafd9` (`._*` 0), `editor-py(-studio):0.15.9-4cfdafd9`; editörde `ddd33e68`'den beri yalnız arşivin iki dosyası değişmişti. Koşan iş 0, `app` → `releases/4cfdafd9`, `studio` + `studio-worker` yeniden kuruldu (compose komutunu kullanıcı koştu). `EDITOR_CODE_VERSION=0.15.9-4cfdafd9`, `._*` 0, `retain` ucu kayıtlı (anahtarsız 401).
+- **Test sunucusu:** `editorial_studio_library.py` sunucuda eski main'le aynıydı → yenisi kondu, köprü yeniden başladı (health 200). Besleme elle (gece işiyle aynı kod): 6.267 kitap gönderildi, 514 kitap dışı ürün atıldı ve stüdyoda gizlendi; 6.234 görsel hazır, 21 site 404, 12 görselsiz.
+- **Portal (timasai 15 dk, yalnız GET, oturum silindi):** «en çok satan» başı artık kitap (İyilik Timi, Muhteşem Terzi…); ağaç 23 kök, kategorisiz 0. «hamuru»/«zeka oyunları» aramalarında kalanlar ISBN'li Timaş yayınları (İlk Oyun Hamuru Kitabım, kitap ve oyun setleri) — doğru.
+- **Karar (kullanıcı, 09-28):** arşiv GPU stüdyosunda kalır.
+- **Dal kazası:** worktree dalına 07:33'te çakışma işaretli bir birleştirme (`404cfdcf` «vcvxcvx», eski `3977e6fd` ile) girmişti; main'e gitmedi, kullanıcı dalı `origin/main`'e eşitledi.
+- **Sırada:** müşteri VM'i (GPU nginx `EDITOR-STUDYO-KUTUPHANE` yolları + VM köprü/arayüz; VM T-soft'suz, arşivi GPU'dan okur), sonra istem kütüphanesi.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
@@ -2431,6 +2507,7 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
 - **Destek yapay zekâsı (kullanıcı isteği, 5 özellik):** `nanobase_brand/yz/` — sınıflama (yeni kayıtta arka planda; yalnız boş/varsayılan alan ve tanımlı değer), 3 satırlık özet, yanıt taslağı (bilgi bankası + çözülen kayıtlar, yanıt kutusuna hazır yanıt yoluyla; gönderen temsilci), çözülen kayıttan kişisel verisiz makale taslağı, hafta içi SLA riski ve pazartesi haftalık rapor (Not + yönetici e-postası). Temsilci ekranında kenar çubuğuna «NanobaseAI» bölümü. Bilgi bankası gömmesi BI'ın gömme servisi: kapıya `/embeddings` aktarıcısı eklendi (kiralıksız; istemcinin `encoding_format: null`'ı servisi 500'e düşürüyordu → null alanlar atılıyor). Kabul (gerçek model, deneme kaydı): özet 1,5 sn, yanıt taslağı 5,9 sn (bilgi bankası boşken söz vermeden bilgi istedi), makale 1,6 sn (kişisel veri yok), haftalık rapor 2,2 sn (1 SLA riski). Bulunan hatalar: (1) `html2text` v16'da `frappe.core.utils`'te — kanca modülü yüklenemiyor, **yeni kayıt açılamıyordu** (kurulum `ff0313ef`–`54129d14` arası); kanca ayrı ve korumalı modüle alındı, kayıt açılışı sınıflamaya bağlı değil. (2) Sınıflama kaydı kaydederken ekibin atama kuralı boş ekipte Helpdesk'in kendi IndexError'ına düştü → alanlar kancasız yazılıyor. (3) Test sitesinde giden e-posta hesabı yok: kayıt açılışındaki alındı e-postası hata verir (testte susturuldu), rapor Not olarak kalır. İkinci kabulde sınıflama da çalıştı (tür Incident, ekip Billing, duygu Öfkeli, gerekçe + geçmiş notu). (4) Özetin 2. satırı temsilci yanıtı yokken «iletişime geçildi» diye uydurdu → istem temsilci yanıtı sayısını verir, yoksa «Henüz yanıt verilmedi.» der. Deneme verisi silindi (3 kayıt, 2 makale, 2 not, geçmiş satırları; kalan yalnız karşılama kaydı).
 - **Benzer geçmiş kayıtlar ve uygulanan çözümler (kullanıcı isteği):** `kayit.similar` — bilgi bankasında anlamca en yakın çözülmüş kayıtlar (bilgi bankası boşsa aynı türdeki son çözülenler); her birinin çözüm notu, temsilci yanıtları ve iç notları DB'den okunur, model ilgisizleri eler, kayıt başına uygulanan çözümü ve en çok 3 maddelik önerilen yolu yazar. Panelde «Benzer geçmiş kayıtlar». Kayıt çözülünce/yeniden açılınca «çözülen kayıtlar» kaynağı artımlı eşitlenir. Kabul (gerçek model): 3 çözülmüş kayıt (çift ödeme, hasarlı kitap, bayi iskontosu) + «hesabımdan para iki defa düştü» → yalnız çift ödeme kaydı, doğru çözüm ve 2 maddelik yol (6,8 sn); yeni çözülen kayıt 12 sn'de bilgi bankasında. Bulunan hata: Flow'un artımlı eşitlemesi son eşitlemeden sonra silinen adları purge ediyor, aynı adla yeniden açılmış kaydın parçası da gidiyordu (üst kaynak) → var olan adlar hariç (marka.py). İlk denemede konteyner yeniden oluşunca test dosyası silinmişti; deneme kayıtları e-postadan bulunup silindi (5 kayıt, bilgi bankası parçası 0).
 - **Giden e-posta (kullanıcı isteği):** Gmail `zeki@timas.com.tr` — BI'ın uyarı/rapor e-postasıyla aynı hesap ve Gmail uygulama şifresi (hesap şifresi SMTP'de kabul edilmez, kullanılmadı, hiçbir yere yazılmadı). Ayar köprünün yönetim ayarlarından (`semantic_settings` ALERT_SMTP_*) okunup standart girişten `nanobase_brand.eposta.ensure_outgoing`'a gider; ilk denemede betik köprünün ayar fonksiyonunu veritabanı bağlanmadan çağırdığı için boş okudu → tablo doğrudan okunuyor. Hesap «NanobaseAI Destek», `smtp.gmail.com:587`, yalnız gönderim, varsayılan giden; SMTP oturumu e-posta gönderilmeden açılıp doğrulandı. Gelen kutusu okunmuyor (zeki@ destek adresi değil; ayrı adres gelince açılır). Kuyrukta eski testlerden 2 sahipsiz alıcı satırı silindi, kuyruk 0. Kullanıcı kararı: destek altyapısının çatı adı yanıtlarda ve belgelerde geçmez; kendi yazdığımız belgelerden çıkarıldı.
+- **Son sağlık kontrolü (main `48feafdb`, test sunucusu):** uçtan uca kontrolde iki eksik bulundu ve düzeltildi: (1) yeni sitede zamanlayıcı kapalı geliyordu — e-posta kuyruğu gönderilmez, SLA/haftalık rapor ve bilgi bankası eşitlemesi çalışmazdı → kurulumda `enable-scheduler`; (2) kayıt araması Redis'in arama eklentisini (`FT.CREATE`) istiyordu, sade redis imajında yok → önbellek `redis/redis-stack-server:7.4.0-v8`. Tarayıcıdaki otomatik giriş denemesinden kalan `timasai` kullanıcısı/temsilci/kişi/oturum silindi. Sonuç: giriş sayfası 200, kök → /helpdesk, portal oturumsuz → AD formu, kapı 401/200, köprü 200, giriş servisi ayakta; site içinde marka/bölge, Türkçe, AD NTLM bağlantısı, tek oturum anahtarı, model 1,1 sn, gömme 1024, bilgi bankası kaynakları, SMTP girişi, 2 zamanlanmış iş, zamanlayıcı açık, arama dizini ve gerçek arama («hoş geldiniz» → karşılama kaydı) — hepsi tamam; test verisi 0.
 - **Açık:** müşteri VM'ine kurulmadı (VM'de giriş servisi ve Destek adresi farklı: `DESTEK_URL`); kapının yanıtındaki `model` alanı üst uçtaki adı taşıyor (panelde görünmüyor).
 ## 2026-09-28 — H1 Kategori ağacı kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
 

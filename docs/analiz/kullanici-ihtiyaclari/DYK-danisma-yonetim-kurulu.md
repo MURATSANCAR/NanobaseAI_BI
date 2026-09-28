@@ -1,6 +1,6 @@
 # DYK — Danışma ve Yönetim Kurulu: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/DYK.txt`, `specs/M45.txt`, `specs/M46.txt`,
+Durum: kodlandı (dal `dyk`, 2026-09-28; test sunucusunda doğrulanmadı — kabul `scripts/acceptance/DYK`) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/DYK.txt`, `specs/M45.txt`, `specs/M46.txt`,
 `specs/M47.txt`, `specs/M39.txt`, `specs/M50.txt`; Veri Haritası (`veri_haritasi2.txt`: «Stratejik Girdi», «Pazar
 Girdileri»); `PROJECT-MEMORY.md` (Kampüs, Yönetim Raporları, Finansal Denetim, M6, Yetki); `docs/GELISTIRME-GUNLUGU.md`;
 `src/canvas/stitch/ModulesMenu.tsx` (`LIVE`, `GROUP_HOME`), `src/canvas/modules.json`, `src/canvas/nav/navModel.ts`,

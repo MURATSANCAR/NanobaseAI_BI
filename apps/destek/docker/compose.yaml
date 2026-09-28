@@ -35,7 +35,8 @@ services:
       - db-data:/var/lib/mysql
 
   redis-cache:
-    image: redis:7-alpine
+    # Kayıt araması Redis'in arama eklentisini (FT.CREATE) ister; sade redis imajında yok.
+    image: redis/redis-stack-server:7.4.0-v8
     restart: unless-stopped
     networks: [destek]
 

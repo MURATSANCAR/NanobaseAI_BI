@@ -367,11 +367,11 @@ msgid "Both DocType and Name required"
 msgstr "Hem Belge Türü hem de Ad gerekli"
 
 msgid "CC"
-msgstr "BCC"
+msgstr "Bilgi"
 
 msgctxt "Email Recipients"
 msgid "CC"
-msgstr "BCC"
+msgstr "Bilgi"
 
 msgid "CMD"
 msgstr "CMD"
@@ -1912,7 +1912,7 @@ msgid "Failed to update Twilio call status"
 msgstr "Twilio çağrı durumu güncellenemedi"
 
 msgid "From"
-msgstr "Gönderen"
+msgstr "Kimden"
 
 msgid "General"
 msgstr "Genel"
@@ -2140,7 +2140,7 @@ msgid "Time in seconds before a generated OTP expires."
 msgstr "Oluşturulan OTP'nin süresinin dolmadan önceki saniye cinsinden süresi."
 
 msgid "To"
-msgstr "Konu"
+msgstr "Kime"
 
 msgid "Too many incorrect attempts. Please try again later."
 msgstr "Çok fazla hatalı deneme. Lütfen daha sonra tekrar deneyin."
@@ -2315,3 +2315,57 @@ msgstr "Önerilen yol"
 
 msgid "Shown by ticket type; the knowledge base has no close match yet."
 msgstr "Aynı türdeki kayıtlar gösteriliyor; bilgi bankasında yakın eşleşme henüz yok."
+
+msgid "Subject"
+msgstr "Konu"
+
+msgid "BCC"
+msgstr "Gizli"
+
+msgid "Set {0}..."
+msgstr "{0} seçin..."
+
+msgid "Due in {0}"
+msgstr "{0} içinde"
+
+msgid "Overdue by {0}"
+msgstr "{0} gecikti"
+
+msgid "Failed by {0}"
+msgstr "{0} gecikmeyle kaçırıldı"
+
+msgid "On Hold"
+msgstr "Beklemede"
+
+msgid "Due by"
+msgstr "Son tarih"
+
+msgid "On hold since"
+msgstr "Beklemede başlangıcı"
+
+msgid "Delay (working hours)"
+msgstr "Gecikme (iş saati)"
+
+msgid "Delay"
+msgstr "Gecikme"
+
+msgid "Delay (total)"
+msgstr "Gecikme (toplam)"
+
+msgid "Fulfilled in"
+msgstr "Karşılanma süresi"
+
+msgid "Calls"
+msgstr "Aramalar"
+
+msgid "Analytics"
+msgstr "Analiz"
+
+msgid "Hi John, we are looking into this issue."
+msgstr "Merhaba, konuyu inceliyoruz."
+
+msgid "via Portal"
+msgstr "portal üzerinden"
+
+msgid "via Email"
+msgstr "e-posta üzerinden"

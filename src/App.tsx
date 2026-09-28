@@ -71,6 +71,9 @@ const ModelQualityScreen = lazy(() => import('@/canvas/model-quality/ModelQualit
 const FinanceScreen = lazy(() => import('@/canvas/finance/FinanceScreen'));
 const RiskScreen = lazy(() => import('@/canvas/risk/RiskScreen'));
 const RiskCard = lazy(() => import('@/canvas/risk/RiskCard'));
+const KurulScreen = lazy(() => import('@/canvas/kurul/KurulScreen'));
+const KurulMeeting = lazy(() => import('@/canvas/kurul/MeetingPage'));
+const KurulPackage = lazy(() => import('@/canvas/kurul/PackageBuilder'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const StockHome = lazy(() => import('@/canvas/stock/StockHome'));
@@ -308,6 +311,10 @@ export default function App() {
             {/* M47 Risk yönetimi ve uyum (/api/v1/risk). */}
             <Route path="risk-uyum" element={<RiskScreen />} />
             <Route path="risk-uyum/risk/:id" element={<RiskCard />} />
+            {/* DYK Danışma ve yönetim kurulu: panel, toplantı, karar ve aksiyon, dondurulan paket (/api/v1/kurul). */}
+            <Route path="kurul" element={<KurulScreen />} />
+            <Route path="kurul/toplanti/:id" element={<KurulMeeting />} />
+            <Route path="kurul/paket/:id" element={<KurulPackage />} />
             {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
             <Route path="ihale" element={<TenderList />} />
             <Route path="ihale/:id" element={<TenderDetail />} />

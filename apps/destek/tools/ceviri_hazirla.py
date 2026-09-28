@@ -2,7 +2,7 @@
 """cevir.py için Türkçe çalışma dosyalarını hazırlar (test sunucusunda koşar).
 
 Girdi klasörü (imajdan çıkarılır, bkz. README «Türkçe»):
-    in/flow.pot, in/telephony.pot, in/frappe.tr.po
+    in/helpdesk.pot, in/flow.pot, in/telephony.pot, in/frappe.tr.po
     work/helpdesk.tr.po, work/nanobase_brand.tr.po   (depodaki hâlleri)
 Çıktı: work/flow.tr.po (şablondan), work/nanobase_brand.tr.po (çatı ve telephony'nin
 boş metinleri eklenmiş). Dolu çeviriye ve elle yazılmış marka girdilerine dokunulmaz;
@@ -38,6 +38,20 @@ def main(root: str) -> int:
 		po.append(polib.POEntry(msgid=e.msgid, msgctxt=e.msgctxt, msgstr=done.get((e.msgctxt, e.msgid), ""),
 								occurrences=e.occurrences))
 	po.save(str(flow_po))
+
+	# Helpdesk: güncel koddaki metinlerden tr.po'da olmayanlar boş olarak eklenir (hazır tr.po koddan eski).
+	hd_path = work / "helpdesk.tr.po"
+	if (inp / "helpdesk.pot").exists() and hd_path.exists():
+		hd = polib.pofile(str(hd_path), wrapwidth=0)
+		have_hd = {(e.msgctxt, e.msgid) for e in hd}
+		new_hd = 0
+		for e in polib.pofile(str(inp / "helpdesk.pot"), wrapwidth=0):
+			if e.msgid_plural or not e.msgid.strip() or (e.msgctxt, e.msgid) in have_hd:
+				continue
+			hd.append(polib.POEntry(msgid=e.msgid, msgctxt=e.msgctxt, msgstr="", occurrences=e.occurrences))
+			new_hd += 1
+		hd.save(str(hd_path))
+		print(f"helpdesk.tr.po'ya eklenen yeni metin: {new_hd}", flush=True)
 
 	brand_path = work / "nanobase_brand.tr.po"
 	brand = polib.pofile(str(brand_path), wrapwidth=0)

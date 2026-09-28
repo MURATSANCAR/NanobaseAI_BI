@@ -71,6 +71,8 @@ else
 fi
 
 say "Site ayarları"
+# Yeni sitede zamanlayıcı kapalı gelir: e-posta kuyruğu, SLA/haftalık rapor ve bilgi bankası eşitlemesi onunla çalışır.
+dc exec -T backend bench --site "$SITE" enable-scheduler
 dc exec -T backend bench --site "$SITE" set-config host_name "$PUBLIC_URL"
 dc exec -T backend bench --site "$SITE" set-config server_script_enabled 1
 dc exec -T backend bench --site "$SITE" execute nanobase_brand.install.apply

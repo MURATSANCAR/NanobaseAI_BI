@@ -710,6 +710,17 @@ SPEC: list[dict[str, Any]] = [
      "help": "Son değişiklik zamanına bakılan CRM tablosu"},
     {"key": "ITOPS_STALE_REMIND_HOURS", "group": "itops", "label": "«Veri eski» hatırlatması (saat)", "type": "int", "default": "24",
      "help": "Veri eskiliği sürerse bu kadar saatte bir yeniden bildirilir. Kopma hatırlatması uyarılarınkiyle aynı"},
+    # DYK Kurul (göstergeler, toplantı, paket). Eşik ve sahip gösterge kataloğunda (Kurul ekranı) tutulur.
+    {"key": "KURUL_COMPANY", "group": "kurul", "label": "Paketteki şirket adı", "type": "text", "default": "Timaş Yayınları",
+     "help": "Kurul paketinin ve PDF'in üst bilgisinde yazar"},
+    {"key": "KURUL_STALE_HOURS", "group": "kurul", "label": "Gösterge ölçümü eski sayılır (saat)", "type": "int", "default": "24",
+     "help": "Panel açılınca son ölçüm bundan eskiyse göstergeler arka planda yeniden okunur (hazır raporlardan; ağır sorgu yok)"},
+    {"key": "KURUL_ACTION_WARN_DAYS", "group": "kurul", "label": "Aksiyon hatırlatması (termine gün)", "type": "int", "default": "7",
+     "help": "Kurul aksiyonunun terminine bu kadar gün kala ve termin geçince sahibine bir kez iç e-posta"},
+    {"key": "KURUL_COMMENT_REMIND_DAYS", "group": "kurul", "label": "Yorum hatırlatması (toplantıya iş günü)", "type": "int", "default": "5",
+     "help": "Sıradaki toplantıya bu kadar iş günü kala, yorumu olmayan sarı/kırmızı göstergenin sahibine bir kez"},
+    {"key": "KURUL_HISTORY_MONTHS", "group": "kurul", "label": "Gösterge seyri (ay)", "type": "int", "default": "12",
+     "help": "Gösterge ayrıntısındaki geçmiş dönem sayısı"},
     {"key": "ITOPS_VPN_IFACE", "group": "itops", "label": "Şirket ağı bağlantı arayüzü", "type": "text", "default": "tun0",
      "help": "Test sunucusunda şirket ağı bağlantısının arayüz adı. Müşteri VM'inde bakılmaz"},
     {"key": "ITOPS_VPN_PROBE", "group": "itops", "label": "Şirket ağında denenecek adres", "type": "text", "default": "",
@@ -1293,6 +1304,9 @@ GROUPS = [
     {"id": "marketing", "label": "Pazarlama planları",
      "help": "Yeni kitap ve aylık pazarlama planının bildirimleri, onay eşiği, öneri kuralları ve satış föyü. CRM'e ve dış "
              "kanallara hiçbir şey kendiliğinden gönderilmez; planlar ve föyler portalda onaylanır."},
+    {"id": "kurul", "label": "Kurul (danışma ve yönetim)",
+     "help": "Kurul göstergeleri diğer modüllerin onaylı çıktılarından okunur. Portal kurul paketini kimseye göndermez; "
+             "hatırlatmalar yalnız iç adreslere gider."},
     {"id": "itops", "label": "Sistem durumu",
      "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
              "yalnız okur, hiçbir servisi yeniden başlatmaz."},

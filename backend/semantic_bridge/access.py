@@ -529,6 +529,10 @@ RULES: list[tuple[str, Any]] = [
     # M47 Risk ve uyum (Finans). DYK gelince summary/reports satırlarına kendi sayfa anahtarını ekler.
     ("/api/v1/risk/run-due", SYSTEM),
     ("/api/v1/risk/", frozenset({page("risk-uyum")})),
+    # DYK Kurul (Finans). Sayfa açıkça verilir; M45/M46/M47/M59/M50/M48/M6/M39 çıktıları köprü içinde okunur (kurul üyesinin
+    # kaynak sayfa yetkisi gerekmez). İşlem yetkileri (kurul.*) ucun içinde; zamanlayıcı yalnız run-due.
+    ("/api/v1/kurul/run-due", SYSTEM),
+    ("/api/v1/kurul/", frozenset({page("kurul")})),
     # M38 Müşteri ilişkileri (Satış ve saha). Veri sağlığı ayrı sayfa; zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/musteri/run-due", SYSTEM),
     ("/api/v1/musteri/health", frozenset({page("musteri-veri-sagligi")})),
@@ -859,6 +863,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH"}), r"^/api/v1/risk/compliance/(items(/[^/]+)?|events/[^/]+/(evidence|close))$", "ozellik:uyum.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/risk/(policies|bcp)(/[^/]+(/document)?)?$", "ozellik:risk.sigorta-bcp"),
     (frozenset({"GET"}), r"^/api/v1/risk/reports/[^/]+/document\.docx$", "ozellik:veri.disa-aktar"),
+    # DYK kurul paketi PDF'i (dondurulmuş paket; her indirme dağıtım kaydına yazılır).
+    (frozenset({"GET"}), r"^/api/v1/kurul/packages/[^/]+/document\.pdf$", "ozellik:veri.disa-aktar"),
     # Kategori ağacı: öneri üretme ve kaynak yenileme; ağaç taslağı, eşleme, kural ve etiket sözlüğü. Ağaç onayı ve
     # profil kararı açıkça verilen `kategori.agac-onay` / `kategori.profil-onay` (+ `kategori.herkesinki`) ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/categories/(books/[^/]+/propose|refresh)$", "ozellik:kategori.oneri-uret"),
