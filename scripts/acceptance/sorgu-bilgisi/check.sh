@@ -13,7 +13,9 @@ cd $W/src/backend
 echo "== pytest"
 /data/nanobaseai/bi/semantic-venv/bin/python -m pytest -q -p no:cacheprovider semantic_layer/tests/test_sorgu_bilgisi.py \
   semantic_layer/tests/test_budget.py semantic_layer/tests/test_finance.py semantic_layer/tests/test_pricing_data.py \
-  semantic_layer/tests/test_pricing_store.py semantic_layer/tests/test_access.py 2>&1 | tail -25
+  semantic_layer/tests/test_pricing_store.py semantic_layer/tests/test_access.py semantic_layer/tests/test_sorgu_bilgisi_*.py \
+  semantic_layer/tests/test_alerts.py semantic_layer/tests/test_it_ops.py semantic_layer/tests/test_pazar.py semantic_layer/tests/test_categories.py \
+  semantic_layer/tests/test_support.py semantic_layer/tests/test_mailbox.py semantic_layer/tests/test_data_security.py 2>&1 | tail -25
 cd $W/src
 ln -sfn /data/nanobaseai/bi/frontend/node_modules node_modules
 echo "== envanter denetimi (menü + rota ↔ docs/analiz/sorgu-bilgisi-envanteri.md)"
@@ -28,3 +30,4 @@ echo "== kabul (yan port köprüsü açıkken):"
 echo "   BASE=http://127.0.0.1:8798 COOKIE=... SEMANTIC_CONNECTION_FILE=... SEMANTIC_STORE_DSN=... \\"
 echo "   PYTHONPATH=$W/src/backend python scripts/acceptance/sorgu-bilgisi/kabul.py [--skip-heavy]"
 echo "== temizlik: timasai kısa oturum satırını sil; rm -rf $W"
+echo "== G1 kabul: PYTHONPATH=$W/src/backend python scripts/acceptance/sorgu-bilgisi/g1_kabul.py [--skip-heavy]"
