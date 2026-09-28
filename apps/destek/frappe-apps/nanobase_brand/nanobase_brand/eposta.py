@@ -34,7 +34,10 @@ class NanobaseEmailAccount(CustomEmailAccount):
 		start = cint(frappe.db.get_default(START_KEY + self.name))
 		if not (start and self.use_imap and self.email_sync_option == "ALL"):
 			return rule
-		return f"UID {max(start, get_max_email_uid(self.name))}:{UID_MAX}"
+		# Alt sınır: başlangıç, alınmış en büyük numara ve önceki çekmenin başında kutunun sıradaki numarası
+		# (çatı her çekmede `uidnext`e yazar). Sonuncusu olmadan son kayıt silinince e-postası yeniden alınırdı.
+		# Önceki çekmede işlenemeyen e-posta atlanmaz: çatı onu «Unhandled Email» olarak saklar.
+		return f"UID {max(start, get_max_email_uid(self.name), cint(self.uidnext))}:{UID_MAX}"
 
 
 def ensure_outgoing(config: dict | None = None) -> str:

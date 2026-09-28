@@ -25,6 +25,14 @@
 - **Düzeltmeler (dal `claude/kurulum-kabul-0928`, main'e alınmadı):** M42 kanal karnesi SQL'i · M43 tükenme tarihi taşması · M27 kitap kartı kolon yazımı · M28 ünvan kolonu · M56 LG_SLSMAN · M48 CRM veri sonu UTC · DYK veri sonu günü; kabul betikleri H2, H3, M24, M39, M40, M44, M48, M54, M56.
 - **Temizlik:** her yazma testinden sonra modülün temizlik betiği koştu; son taramada 542 `semantic_*` tablosunda test izi 0, `kabul-*` adlı değişiklik kaydı 0; benim açtığım bütün timasai oturum satırları silindi (kalan 0). timasai'nin gerçek değişiklik kayıtları kaldı (bugün 77 satır, kimlik 4087–4338; bir kısmı başka oturumların). Bazı modül temizlik betikleri timasai değişiklik kaydını da siliyor (M55 5, M57 6, M24 7…) — 09-28 kuralına aykırı, betiklerde düzeltilmeli. Sunucudaki geçici klasör silindi. **Kalan:** GPU'da M19 kabulünün stüdyo işi (`production/202609280623374e3adb`, GPU erişimi ister).
 - **Kullanıcı / sudo adımları:** M49 giriş servisi (`/opt/timas-login` hâlâ `4ce2b0e2`), `LOGIN_ADMIN_TOKEN` iki tarafa, nginx `/timas/auth/` X-Real-IP · M51 masa salt okuma API anahtarı + `nginx-destek-baglam.conf` · M56/M58 oturumsuz form nginx yolu (`add-hr-survey-public-route.py`, onay bekliyor) · H4 Gmail hizmet hesabı anahtarı · `timas-musteri-haftalik` ve `timas-model-quality-hafta` kararı · ayar değerleri (HR_RECRUIT_SLA_DAYS, HR_TRAINING_ACCOUNTS, alıcı listeleri) · M37 ↔ H2 okur çekirdeği bağı (main'de `readers_core.py` geldi, kurulmadı).
+## 2026-09-28 (13:40) — NanobaseAI Destek: zeki@ gelen kutusu test sunucusunda sınandı
+
+- 67bb1311 kuruldu (imaj, kod sürümü, `._*` 0, canlı bildirim tamam). Hesap: IMAP açık, eşitleme «ALL», başlangıç UID 48 (kullanıcının etkinleştirmeden önce attığı e-posta dahil eskiler dışarıda). Elle çekme: eski e-postadan kayıt 0, hata 0.
+- Kullanıcının etkinleştirmeden sonra attığı e-posta → kayıt 0002 (gönderen muratsancar@nanobase.ai), dışarıya e-posta 0.
+- Sınıflama ilk denemede düştü: ana köprü o sırada yeniden başlıyordu (kapı 502). Köprü kalkınca yeniden: duygu Nötr (%90), öncelik/ekip «emin değil» (ekipler hâlâ örnek Billing/Product Experts). Konu (kayıt türü) boş: M51'in `/destek-baglam/v1/` nginx parçası (`deploy/nanobase-direct/nginx-destek-baglam.conf`) sunucuya kurulmamış → 404.
+- Düzeltme: eşitleme alt sınırına önceki çekmenin `uidnext`'i eklendi; yoksa en son kayıt silinince e-postası yeniden alınırdı (işlenemeyen e-posta çatıda «Unhandled Email» olarak kalır, kaybolmaz).
+- Temizlik: 0002, iletişimi, deneme kişi kartı ve hata kaydı silindi; yeni kod kurulana dek başlangıç 49'a çekildi.
+
 ## 2026-09-28 (12:40) — NanobaseAI Destek: zeki@ gelen kutusu destek kaydı açar (kullanıcı kararı, ayrı adres gelene kadar)
 
 - **Karar:** «zekiai olsun destek maili şimdilik» → zeki@timas.com.tr hem gönderim hem gelen kutusu. `eposta.py` IMAP'i (imap.gmail.com:993, aynı uygulama şifresi) açar, INBOX → HD Ticket.
