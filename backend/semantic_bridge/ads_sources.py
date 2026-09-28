@@ -497,8 +497,11 @@ class Logo:
         except bsrc.SourceError as e:
             raise SourceError(str(e)) from None
 
-    def context(self) -> tuple[Runner, dict[int, str], Optional[date]]:
+    def context(self, wrap: Optional[Callable[[Runner], Runner]] = None) -> tuple[Runner, dict[int, str], Optional[date]]:
+        """`wrap`: koşucuyu saran işlev (ör. çalışan SQL'leri kaydeden `pazarlama_kaynak.recording`)."""
         run = self.run()
+        if wrap is not None:
+            run = wrap(run)
         try:
             firms = bsrc.firms_by_year(run)
             end = bsrc.read_data_end(run, firms) if firms else None

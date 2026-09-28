@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M21 Dijital pazarlama ve reklam: köprü uçları /api/v1/ads/*. Platformlara hiçbir şey gönderilmez. */
 
@@ -132,6 +133,7 @@ export type Overview = {
   gunluk: Array<{ gun: string; harcama: number; eticaretCiro: number | null }>;
   oneriler: Suggestion[];
   uyarilar: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Preview = {
@@ -195,6 +197,7 @@ export type Budget = {
   crm: Array<{ ay: string; tutar: number }>;
   toplam: { plan: number; harcama: number; m15: number; crm: number };
   uyarilar?: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Brief = {
@@ -222,6 +225,7 @@ export type CrmRecords = {
     donemde: Array<{ id: string; ad: string | null; tutar: number | null; bas: string | null; bit: string | null; durum: string | null; mecra: string | null; tip: string | null; kitaplar: Array<{ stokKodu: string | null; ad: string | null }> }>;
   };
   butceKayitlari: { items: Array<{ id: string; ad: string | null; tipAdi: string | null; tutar: number; baslangic: string | null; bitis: string | null; mecra: string | null; reklam: boolean }>; toplam: number; reklamToplam: number };
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/ads';
@@ -276,16 +280,16 @@ export const adsApi = {
   meta: () => send<Meta>('GET', '/meta'),
   overview: (p: Period) => send<Overview>('GET', `/overview${qs(p)}`, undefined, 180_000),
   campaigns: (p: Period & { bag?: string; q?: string }) =>
-    send<{ items: Array<Campaign>; total: number; bagSayilari: Record<LinkStatus, number> }>('GET', `/campaigns${qs(p)}`),
+    send<{ items: Array<Campaign>; total: number; bagSayilari: Record<LinkStatus, number>; kaynaklar?: Kaynaklar }>('GET', `/campaigns${qs(p)}`),
   link: (id: string, b: { stokKodu?: string; onayla?: boolean; kaldir?: boolean; seri?: string | null }) => send<Campaign>('PATCH', `/campaigns/${enc(id)}`, b),
   rematch: (id: string) => send<Campaign>('POST', `/campaigns/${enc(id)}/match`, {}, 180_000),
-  books: (q: string) => send<{ items: BookHit[]; total: number; shown: number }>('GET', `/books${qs({ q })}`, undefined, 180_000),
+  books: (q: string) => send<{ items: BookHit[]; total: number; shown: number; kaynaklar?: Kaynaklar }>('GET', `/books${qs({ q })}`, undefined, 180_000),
   accounts: () => send<{ items: Account[] }>('GET', '/accounts'),
   newAccount: (b: { platform: Platform; ad: string; paraBirimi?: string }) => send<Account>('POST', '/accounts', b),
   preview: (b: { dosyaAdi: string; icerik: string; hesapId?: string; eslem?: Record<string, string>; baslikSatiri?: number }) => send<Preview>('POST', '/imports/preview', b, 180_000),
   commit: (b: { dosyaAdi: string; icerik: string; hesapId: string; eslem: Record<string, string>; baslikSatiri: number }) =>
     send<ImportRow>('POST', '/imports', b, 300_000),
-  imports: () => send<{ items: ImportRow[]; total: number }>('GET', '/imports'),
+  imports: () => send<{ items: ImportRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', '/imports'),
   undoImport: (id: string) => send<ImportRow & { silinenKampanyaGun: number }>('DELETE', `/imports/${enc(id)}`),
   budget: (year: number) => send<Budget>('GET', `/budget${qs({ year })}`, undefined, 180_000),
   putBudget: (items: Array<{ ay: string; kanal: Platform; plan: number | null; not?: string | null }>) =>
@@ -293,7 +297,7 @@ export const adsApi = {
   suggestions: (durum = 'acik') => send<{ items: Suggestion[]; total: number }>('GET', `/suggestions${qs({ durum })}`),
   decide: (id: string, karar: 'onayla' | 'reddet' | 'uygulandi', not?: string) =>
     send<Suggestion>('POST', `/suggestions/${enc(id)}/decide`, { karar, not }),
-  briefs: () => send<{ items: Brief[]; total: number }>('GET', '/briefs'),
+  briefs: () => send<{ items: Brief[]; total: number; kaynaklar?: Kaynaklar }>('GET', '/briefs'),
   brief: (id: string) => send<Brief>('GET', `/briefs/${enc(id)}`),
   newBrief: (stokKodu: string, not?: string) => send<Brief>('POST', '/briefs', { stokKodu, not }, 180_000),
   saveBrief: (id: string, b: { metin?: string; onayla?: boolean }) => send<Brief>('PATCH', `/briefs/${enc(id)}`, b),

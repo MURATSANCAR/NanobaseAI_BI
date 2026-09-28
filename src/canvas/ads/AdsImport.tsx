@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Undo2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { Block } from '../marketing/parts';
@@ -198,7 +199,7 @@ export default function AdsImport() {
       )}
 
       <Panel>
-        <h2 className="text-[15px] font-extrabold tracking-tight">Yüklemeler</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Yüklemeler<SqlInfo k={imports.data?.kaynaklar} alan="items" label="Yüklemeler" /></h2>
         <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">Aynı kampanya-gün yeniden yüklenirse son yükleme geçerlidir. «Geri al» bu yüklemenin hâlâ geçerli satırlarını siler.</p>
         {imports.error && <Note tone="err">{errText(imports.error, 'Liste açılamadı.')}</Note>}
         <History rows={imports.data?.items ?? []} canUndo onUndo={setUndo} />

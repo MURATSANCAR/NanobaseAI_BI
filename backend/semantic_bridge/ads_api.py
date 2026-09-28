@@ -29,6 +29,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import ads as A
+from semantic_bridge import ads_kaynak as K
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge import ads_export as X
 from semantic_bridge import ads_sources as S
 from semantic_layer.runtime.llm_queue import BATCH, NORMAL
@@ -152,7 +155,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def refresh(engine, tenant: str, s: dict[str, Any], codes: Optional[list[str]] = None) -> dict[str, Any]:
         """E-ticaret günlük cirosu (pencere: veri sonundan `ADS_LOOKBACK_DAYS` geri, ilk reklam günü daha eskiyse ondan),
         bağlı kitapların günlük satışı, stok bakiyesi ve satış hızı. `codes` verilirse yalnız o kitaplar."""
-        run, firms, end = logo.context()
+        ran: list[dict[str, Any]] = []
+        run, firms, end = logo.context(lambda r: PK.recording(r, "logo", ran))
         if not firms or end is None:
             raise S.SourceError("Logo'da satış dönemi ya da satış verisi yok.")
         frm = end - timedelta(days=s["lookbackDays"])
@@ -174,6 +178,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out["kitap"] = len(want)
         if codes is None:                                   # kısmi yenileme (tek kitap) genel önbellek kaydını değiştirmez
             A.meta_set(engine, tenant, "logo", {**out, "zaman": A.iso(A.now())})
+            # Çalışan Logo sorgularının metni (sorgu bilgisi için; sonuç satırı yok). Kısmi yenileme eskileri korur.
+            keep = [] if codes is None else [x for x in (A.meta_get(engine, tenant, K.LOGO_SQL_KEY).get("runs") or [])
+                                             if not any(x.get("sql") == y["sql"] for y in ran)]
+            A.meta_set(engine, tenant, K.LOGO_SQL_KEY, {"runs": keep + ran})
         return out
 
     def refresh_job(tenant: str, user: str, codes: Optional[list[str]] = None) -> None:
@@ -270,12 +278,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out["uyarilar"] = warnings
         if not A.meta_get(engine, tenant, "logo"):
             out["uyarilar"].append("Logo satış önbelleği henüz dolmadı: «Satış verisini yenile» ile ya da gece işiyle dolar.")
-        return out
+        de = data_end(engine, tenant)
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, f, t, kanal, [b["stokKodu"] for b in out.get("kitaplar") or []],
+                                                     de, PK.logo_db(rt), codes, set(s["m15Channels"].values())))
 
     @app.get(R + "/status")
     def ads_status(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"refresh": A.meta_get(engine, tenant, "refresh") or None, "logo": A.meta_get(engine, tenant, "logo") or None}
+        out = {"refresh": A.meta_get(engine, tenant, "refresh") or None, "logo": A.meta_get(engine, tenant, "logo") or None}
+        return PV.bagla(out, lambda: K.for_status(engine, tenant, PK.logo_db(rt)))
 
     @app.post(R + "/refresh", status_code=202)
     def ads_refresh(request: Request) -> dict[str, Any]:
@@ -291,7 +302,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/accounts")
     def ads_accounts(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": A.list_accounts(engine, tenant)}
+        return PV.bagla({"items": A.list_accounts(engine, tenant)}, lambda: K.for_accounts(engine, tenant))
 
     @app.post(R + "/accounts", status_code=201)
     def ads_account_new(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -369,12 +380,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def ads_imports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = A.list_imports(engine, tenant)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_imports(engine, tenant))
 
     @app.get(R + "/imports/{iid}")
     def ads_import_get(iid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(A.import_row, engine, tenant, iid)
+        return PV.bagla(call(A.import_row, engine, tenant, iid), lambda: K.for_import(engine, tenant, iid))
 
     @app.delete(R + "/imports/{iid}")
     def ads_import_delete(iid: str, request: Request) -> dict[str, Any]:
@@ -406,7 +417,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             items.append({**c, **A.metrics(A._sum_rows(win.get(c["id"], [])))})
         items.sort(key=lambda x: (-(x["harcama"] or 0), x["ad"]))
         counts = {k: sum(1 for c in rows if c["bag"] == k) for k in A.LINK_STATUSES}
-        return {"items": items, "total": len(items), "bagSayilari": counts, "donem": {"bas": f.isoformat(), "bit": t.isoformat()}}
+        return PV.bagla({"items": items, "total": len(items), "bagSayilari": counts, "donem": {"bas": f.isoformat(), "bit": t.isoformat()}},
+                        lambda: K.for_campaigns(engine, tenant, f, t, kanal))
 
     @app.patch(R + "/campaigns/{cid}")
     def ads_campaign_update(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -454,7 +466,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             if pos >= 0:
                 hits.append((0 if b["stokKodu"].lower() == needle or (b.get("ean") or "") == needle else 1, pos, b.get("ad") or "", b))
         hits.sort(key=lambda x: (x[0], x[1], x[2]))
-        return {"items": [h[3] for h in hits[:BOOK_SEARCH_SHOWN]], "total": len(hits), "shown": min(len(hits), BOOK_SEARCH_SHOWN)}
+        return PV.bagla({"items": [h[3] for h in hits[:BOOK_SEARCH_SHOWN]], "total": len(hits), "shown": min(len(hits), BOOK_SEARCH_SHOWN)},
+                        lambda: K.for_books(q))
 
     # ------------------------------------------------------------------ bütçe
 
@@ -471,7 +484,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             warnings.append(f"CRM okunamadı; CRM pazarlama bütçesi sütunu boş ({e}).")
         out = await run_in_threadpool(A.budget, engine, tenant, y, s, crm_rows)
         out["uyarilar"] = warnings
-        return out
+        return PV.bagla(out, lambda: K.for_budget(engine, tenant, y, set(s["m15Channels"].values()), not warnings))
 
     @app.put(R + "/budget")
     def ads_budget_put(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -490,11 +503,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         plans = await run_in_threadpool(call, crm.ad_plans, yenile)
         recs = await run_in_threadpool(call, crm.budget_records, f, t, yenile)
         overlapping = [p for p in plans if (p["bas"] or "9999") <= t.isoformat() and (p["bit"] or p["bas"] or "0000") >= f.isoformat()]
-        return {"donem": {"bas": f.isoformat(), "bit": t.isoformat(), "crmBas": S._utc(f), "crmBit": S._utc(t + timedelta(days=1))},
-                "reklamPlanlari": {"toplam": len(plans), "donemde": overlapping, "onaysiz": sum(1 for p in plans if not p["onay"]),
-                                   "hepsi": plans},
-                "butceKayitlari": {"items": recs, "toplam": round(sum(r["tutar"] for r in recs), 2),
-                                   "reklamToplam": round(sum(r["tutar"] for r in recs if r["reklam"]), 2)}}
+        out = {"donem": {"bas": f.isoformat(), "bit": t.isoformat(), "crmBas": S._utc(f), "crmBit": S._utc(t + timedelta(days=1))},
+               "reklamPlanlari": {"toplam": len(plans), "donemde": overlapping, "onaysiz": sum(1 for p in plans if not p["onay"]),
+                                  "hepsi": plans},
+               "butceKayitlari": {"items": recs, "toplam": round(sum(r["tutar"] for r in recs), 2),
+                                  "reklamToplam": round(sum(r["tutar"] for r in recs if r["reklam"]), 2)}}
+        return PV.bagla(out, lambda: K.for_crm(f, t))
 
     # ------------------------------------------------------------------ öneriler
 
@@ -502,7 +516,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def ads_suggestions(request: Request, durum: str = "acik") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = A.list_suggestions(engine, tenant, durum)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_suggestions(engine, tenant, durum))
 
     @app.post(R + "/suggestions/{sid}/decide")
     def ads_decide(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -568,7 +582,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def ads_briefs(request: Request, stok: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = A.list_briefs(engine, tenant, stok)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_briefs(engine, tenant, stok=stok))
 
     @app.post(R + "/briefs", status_code=201)
     async def ads_brief_new(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -588,7 +602,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/briefs/{bid}")
     def ads_brief_get(bid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(A.get_brief, engine, tenant, bid)
+        return PV.bagla(call(A.get_brief, engine, tenant, bid), lambda: K.for_briefs(engine, tenant, bid=bid))
 
     @app.patch(R + "/briefs/{bid}")
     def ads_brief_update(bid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

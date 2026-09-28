@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Check, Link2, Search, Sparkles, Unlink } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
 import { LINK_TONE, adsApi, fmtInt, fmtMoney, fmtMoney2, fmtRatio, type Campaign, type LinkStatus } from './api';
@@ -78,6 +79,7 @@ export default function AdsCampaigns() {
         </div>
         {list.error && <Note tone="err">{errText(list.error, 'Kampanyalar açılamadı.')}</Note>}
         {list.isLoading && <Loading />}
+        {d && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Harcama, tıklama, TBM, ROAS ve bağ sayıları<SqlInfo k={d.kaynaklar} alan="items" label="Kampanyalar" /></p>}
         {d && d.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle kampanya yok.</p>}
         <ul className="flex flex-col gap-2">
           {d?.items.map((c) => (

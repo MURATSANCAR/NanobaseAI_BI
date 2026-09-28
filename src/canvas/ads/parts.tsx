@@ -7,6 +7,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { useDebounced } from '../editorial/kit';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { AskSheet } from '../budget/parts';
 import { SUGGESTION_TONE, adsApi, fmtDay, iso, type Campaign, type Meta, type Period, type Suggestion } from './api';
@@ -223,7 +224,7 @@ export function BookPicker({ campaign, title, busy, onClose, onPick }: { campaig
       {hits.error && <div className="mt-2"><Note tone="err">{errText(hits.error, 'CRM okunamadı.')}</Note></div>}
       {hits.data && (
         <p className="mt-2 text-[11px] text-canvas-muted">
-          {hits.data.total === 0 ? 'Eşleşen kitap yok.' : hits.data.total > hits.data.shown ? `${hits.data.total} eşleşme; en iyi ${hits.data.shown} gösteriliyor, aramayı daraltın.` : `${hits.data.total} eşleşme.`}
+          <SqlInfo k={hits.data.kaynaklar} alan="total" label="Kitap araması" /> {hits.data.total === 0 ? 'Eşleşen kitap yok.' : hits.data.total > hits.data.shown ? `${hits.data.total} eşleşme; en iyi ${hits.data.shown} gösteriliyor, aramayı daraltın.` : `${hits.data.total} eşleşme.`}
         </p>
       )}
       <ul className="mt-2 flex flex-col gap-1.5">

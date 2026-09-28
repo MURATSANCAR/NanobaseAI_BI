@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { FileSpreadsheet, FileText, RefreshCw, Sparkles, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { Block } from '../marketing/parts';
@@ -84,32 +85,32 @@ export default function AdsOverview() {
 
       {g && d && (
         <KpiRow>
-          <Kpi label="Harcama" value={fmtMoney(g.harcama)} help={`${fmtInt(g.tiklama)} tıklama · TBM ${fmtMoney2(g.tbm)}`} />
-          <Kpi label="Platform ROAS" value={fmtRatio(g.platformRoas)} help={`Platformun bildirdiği dönüşüm değeri ${fmtMoney(g.donusumDegeri)}; gerçek getiri değildir`} />
-          <Kpi label="E-ticaret net ciro" value={fmtMoney(g.eticaretCiro)} help={d.verimDonemi ? `Logo, ${fmtDay(d.verimDonemi.bas)} – ${fmtDay(d.verimDonemi.bit)}` : 'Bu dönemde Logo satış verisi yok'} />
-          <Kpi label="Pazarlama verimi" value={fmtRatio(g.verim)} help={d.verimDonemi ? `E-ticaret ciro ÷ aynı günlerin harcaması (${fmtMoney(g.harcamaVeriIcinde)})` : 'Satış verisi olan günlerde hesaplanır'} />
+          <Kpi label="Harcama" value={fmtMoney(g.harcama)} help={`${fmtInt(g.tiklama)} tıklama · TBM ${fmtMoney2(g.tbm)}`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Harcama, tıklama, TBM" />} />
+          <Kpi label="Platform ROAS" value={fmtRatio(g.platformRoas)} help={`Platformun bildirdiği dönüşüm değeri ${fmtMoney(g.donusumDegeri)}; gerçek getiri değildir`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Platform ROAS" />} />
+          <Kpi label="E-ticaret net ciro" value={fmtMoney(g.eticaretCiro)} help={d.verimDonemi ? `Logo, ${fmtDay(d.verimDonemi.bas)} – ${fmtDay(d.verimDonemi.bit)}` : 'Bu dönemde Logo satış verisi yok'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="E-ticaret net ciro" />} />
+          <Kpi label="Pazarlama verimi" value={fmtRatio(g.verim)} help={d.verimDonemi ? `E-ticaret ciro ÷ aynı günlerin harcaması (${fmtMoney(g.harcamaVeriIcinde)})` : 'Satış verisi olan günlerde hesaplanır'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="Pazarlama verimi" />} />
         </KpiRow>
       )}
 
       {d && (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-4">
           <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-            <Block title="Kanallar" help={`Kitaba bağlı olmayan harcama ${fmtMoney(d.bagsiz.harcama)} (${fmtPct(d.bagsiz.pay)}). Hedef: %10'un altı.`}>
+            <Block title="Kanallar" info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar ve bağsız harcama" />} help={`Kitaba bağlı olmayan harcama ${fmtMoney(d.bagsiz.harcama)} (${fmtPct(d.bagsiz.pay)}). Hedef: %10'un altı.`}>
               {Object.keys(d.digerParaBirimi).length > 0 && (
                 <Note tone="warn">TL dışı harcama toplama katılmadı: {Object.entries(d.digerParaBirimi).map(([k, v]) => `${k} ${v.toLocaleString('tr-TR')}`).join(', ')}</Note>
               )}
               <ChannelTable d={d} />
             </Block>
-            <Block title="Kitaplar" help="Kitaba bağlı kampanyaların harcaması, kitabın Logo e-ticaret cirosu (aynı günler) ve stok durumu. M15 sütunu kitabın onaylı pazarlama planındaki reklam kanalı satırlarıdır.">
+            <Block title="Kitaplar" info={<SqlInfo k={d.kaynaklar} alan="kitaplar" label="Kitaplar: harcama, e-ticaret ciro, verim, stok, M15" />} help="Kitaba bağlı kampanyaların harcaması, kitabın Logo e-ticaret cirosu (aynı günler) ve stok durumu. M15 sütunu kitabın onaylı pazarlama planındaki reklam kanalı satırlarıdır.">
               <BookTable d={d} stockDays={m?.settings.stockDays ?? null} />
             </Block>
-            <Block title="Kampanyalar" help="Harcamaya göre sıralı. Bağ ve kitap seçimi Kampanyalar ekranında." action={<Link to="/reklam/kampanyalar" className={btnGhost}>Kampanyalar</Link>}>
+            <Block title="Kampanyalar" info={<SqlInfo k={d.kaynaklar} alan="kampanyalar" label="Kampanyalar" />} help="Harcamaya göre sıralı. Bağ ve kitap seçimi Kampanyalar ekranında." action={<Link to="/reklam/kampanyalar" className={btnGhost}>Kampanyalar</Link>}>
               <CampaignTable d={d} />
             </Block>
           </div>
           <aside className="flex min-w-0 flex-col gap-3">
             <Panel>
-              <h2 className="text-[15px] font-extrabold tracking-tight">Öneriler ve uyarılar</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Öneriler ve uyarılar<SqlInfo k={d.kaynaklar} alan="oneriler" label="Öneriler" /></h2>
               <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">Kurallar her sabah çalışır; eşiği girilmeyen kural kapalıdır (Yönetim → Dijital pazarlama ve reklam).</p>
               <div className="mt-2 flex flex-col gap-2">
                 {d.oneriler.length === 0 && <p className="py-3 text-[12px] text-canvas-muted">Açık öneri yok.</p>}

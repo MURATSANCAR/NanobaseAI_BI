@@ -351,9 +351,13 @@ def settings(conf: Callable[[str], str]) -> dict[str, Any]:
 # ------------------------------------------------------------------ meta
 
 
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        row = c.execute(meta_stmt(tenant, key)).first()
     return {**loads(row.value_json, {}), "_at": iso(row.updated_at)} if row else {}
 
 
@@ -375,12 +379,19 @@ def _account(r: Any) -> dict[str, Any]:
             "olusturma": iso(r.created_at), "guncelleme": iso(r.updated_at)}
 
 
+def accounts_stmts(tenant: str) -> tuple[Any, Any]:
+    """(reklam hesapları, hesap başına son kampanya günü)."""
+    return (sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant).order_by(ACCOUNTS.c.platform, ACCOUNTS.c.account_label),
+            sa.select(CAMPAIGNS.c.account_id, sa.func.max(DAILY.c.day).label("son_gun"))
+            .select_from(DAILY.join(CAMPAIGNS, CAMPAIGNS.c.id == DAILY.c.campaign_id))
+            .where(CAMPAIGNS.c.tenant_id == tenant).group_by(CAMPAIGNS.c.account_id))
+
+
 def list_accounts(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    aq, lq = accounts_stmts(tenant)
     with engine.connect() as c:
-        rows = c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant).order_by(ACCOUNTS.c.platform, ACCOUNTS.c.account_label)).all()
-        last = dict(c.execute(sa.select(CAMPAIGNS.c.account_id, sa.func.max(DAILY.c.day))
-                              .select_from(DAILY.join(CAMPAIGNS, CAMPAIGNS.c.id == DAILY.c.campaign_id))
-                              .where(CAMPAIGNS.c.tenant_id == tenant).group_by(CAMPAIGNS.c.account_id)).all())
+        rows = c.execute(aq).all()
+        last = dict(c.execute(lq).all())
     return [{**_account(r), "sonGun": last.get(r.id)} for r in rows]
 
 
@@ -547,23 +558,38 @@ def _import(r: Any, acc: Optional[dict[str, Any]] = None, live: Optional[dict[st
             "zaman": iso(r.created_at), **({"gecerliKampanyaGun": live.get("n", 0), "gecerliHarcama": live.get("spend", 0.0)} if live is not None else {})}
 
 
+def import_stmts(tenant: str, iid: str) -> tuple[Any, Any, Any]:
+    """(yükleme, yüklemenin hâlâ geçerli kampanya-gün satırı ve harcaması, hesabı)."""
+    iid = str(iid)[:32]
+    return (sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.id == iid),
+            sa.select(sa.func.count(), sa.func.coalesce(sa.func.sum(DAILY.c.spend), 0.0)).where(DAILY.c.import_id == iid),
+            sa.select(ACCOUNTS).where(ACCOUNTS.c.id.in_(sa.select(IMPORTS.c.account_id).where(IMPORTS.c.id == iid))))
+
+
 def import_row(engine: sa.engine.Engine, tenant: str, iid: str) -> dict[str, Any]:
+    iq, lq, aq = import_stmts(tenant, iid)
     with engine.connect() as c:
-        r = c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.id == str(iid)[:32])).first()
+        r = c.execute(iq).first()
         if not r:
             raise AdsError("Yükleme bulunamadı.", 404)
-        live = c.execute(sa.select(sa.func.count(), sa.func.coalesce(sa.func.sum(DAILY.c.spend), 0.0))
-                         .where(DAILY.c.import_id == r.id)).first()
-        acc = c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.id == r.account_id)).first()
+        live = c.execute(lq).first()
+        acc = c.execute(aq).first()
     return _import(r, _account(acc) if acc else None, {"n": int(live[0] or 0), "spend": float(live[1] or 0.0)})
 
 
+def imports_stmts(tenant: str) -> tuple[Any, Any, Any]:
+    """(yüklemeler, hesaplar, yükleme başına geçerli kampanya-gün satırı ve harcama)."""
+    return (sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.created_at.desc()),
+            sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant),
+            sa.select(DAILY.c.import_id, sa.func.count(), sa.func.sum(DAILY.c.spend)).group_by(DAILY.c.import_id))
+
+
 def list_imports(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    iq, aq, lq = imports_stmts(tenant)
     with engine.connect() as c:
-        rows = c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.created_at.desc())).all()
-        accs = {r.id: _account(r) for r in c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)).all()}
-        live = {r[0]: {"n": int(r[1] or 0), "spend": float(r[2] or 0.0)} for r in c.execute(
-            sa.select(DAILY.c.import_id, sa.func.count(), sa.func.sum(DAILY.c.spend)).group_by(DAILY.c.import_id)).all()}
+        rows = c.execute(iq).all()
+        accs = {r.id: _account(r) for r in c.execute(aq).all()}
+        live = {r[0]: {"n": int(r[1] or 0), "spend": float(r[2] or 0.0)} for r in c.execute(lq).all()}
     return [_import(r, accs.get(r.account_id), live.get(r.id, {"n": 0, "spend": 0.0})) for r in rows]
 
 
@@ -590,10 +616,16 @@ def _campaign(r: Any, acc: Optional[dict[str, Any]]) -> dict[str, Any]:
             "ilkGun": r.first_seen, "sonGun": r.last_seen}
 
 
+def campaigns_stmts(tenant: str) -> tuple[Any, Any]:
+    """(hesaplar, kampanyalar ve kitap bağları)."""
+    return sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant), sa.select(CAMPAIGNS).where(CAMPAIGNS.c.tenant_id == tenant)
+
+
 def campaign_rows(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    aq, cq = campaigns_stmts(tenant)
     with engine.connect() as c:
-        accs = {r.id: _account(r) for r in c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)).all()}
-        rows = c.execute(sa.select(CAMPAIGNS).where(CAMPAIGNS.c.tenant_id == tenant)).all()
+        accs = {r.id: _account(r) for r in c.execute(aq).all()}
+        rows = c.execute(cq).all()
     return [_campaign(r, accs.get(r.account_id)) for r in rows]
 
 
@@ -784,27 +816,54 @@ def metrics(tot: dict[str, Any]) -> dict[str, Any]:
             "platformRoas": div(tot["donusumDegeri"], tot["harcama"]) if tot["harcama"] else None}
 
 
-def daily_rows(engine: sa.engine.Engine, tenant: str, frm: date, to: date, platform: str = "") -> list[Any]:
+def daily_stmt(tenant: str, frm: date, to: date, platform: str = ""):
+    """Dönemdeki kampanya-gün satırları (yüklenen reklam raporlarından), kanal ve kitap bağıyla."""
     j = DAILY.join(CAMPAIGNS, CAMPAIGNS.c.id == DAILY.c.campaign_id).join(ACCOUNTS, ACCOUNTS.c.id == CAMPAIGNS.c.account_id)
     cond = [CAMPAIGNS.c.tenant_id == tenant, DAILY.c.day >= frm.isoformat(), DAILY.c.day <= to.isoformat()]
     if platform:
         cond.append(ACCOUNTS.c.platform == platform)
+    return sa.select(DAILY, ACCOUNTS.c.platform, CAMPAIGNS.c.stok_kodu, CAMPAIGNS.c.link_status, CAMPAIGNS.c.account_id) \
+        .select_from(j).where(*cond)
+
+
+def daily_rows(engine: sa.engine.Engine, tenant: str, frm: date, to: date, platform: str = "") -> list[Any]:
     with engine.connect() as c:
-        return c.execute(sa.select(DAILY, ACCOUNTS.c.platform, CAMPAIGNS.c.stok_kodu, CAMPAIGNS.c.link_status, CAMPAIGNS.c.account_id)
-                         .select_from(j).where(*cond)).all()
+        return c.execute(daily_stmt(tenant, frm, to, platform)).all()
+
+
+def ecom_total_stmt(tenant: str, frm: date, to: date):
+    return sa.select(sa.func.sum(ECOM.c.ciro), sa.func.sum(ECOM.c.adet), sa.func.count()) \
+        .where(ECOM.c.tenant_id == tenant, ECOM.c.day >= frm.isoformat(), ECOM.c.day <= to.isoformat())
+
+
+def ecom_by_day_stmt(tenant: str, frm: date, to: date):
+    return sa.select(ECOM.c.day, ECOM.c.ciro).where(ECOM.c.tenant_id == tenant, ECOM.c.day >= frm.isoformat(),
+                                                    ECOM.c.day <= to.isoformat())
+
+
+def book_sales_stmts(tenant: str, codes: Iterable[str], frm: date, to: date) -> list[Any]:
+    """Kitap başına e-ticaret ve toplam satış (500'lük stok kodu parçaları; her parça ayrı okuma)."""
+    want = sorted({c for c in codes if c})
+    return [sa.select(ECOM_BOOK.c.stok_kodu, sa.func.sum(ECOM_BOOK.c.eticaret_ciro), sa.func.sum(ECOM_BOOK.c.eticaret_adet),
+                      sa.func.sum(ECOM_BOOK.c.toplam_ciro), sa.func.sum(ECOM_BOOK.c.toplam_adet))
+            .where(ECOM_BOOK.c.tenant_id == tenant, ECOM_BOOK.c.stok_kodu.in_(want[i:i + 500]),
+                   ECOM_BOOK.c.day >= frm.isoformat(), ECOM_BOOK.c.day <= to.isoformat())
+            .group_by(ECOM_BOOK.c.stok_kodu) for i in range(0, len(want), 500)]
+
+
+def stock_stmt(tenant: str):
+    return sa.select(STOCK).where(STOCK.c.tenant_id == tenant)
 
 
 def ecom_total(engine: sa.engine.Engine, tenant: str, frm: date, to: date) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(sa.func.sum(ECOM.c.ciro), sa.func.sum(ECOM.c.adet), sa.func.count())
-                      .where(ECOM.c.tenant_id == tenant, ECOM.c.day >= frm.isoformat(), ECOM.c.day <= to.isoformat())).first()
+        r = c.execute(ecom_total_stmt(tenant, frm, to)).first()
     return {"ciro": r2(float(r[0])) if r[0] is not None else 0.0, "adet": float(r[1] or 0.0), "gun": int(r[2] or 0)}
 
 
 def ecom_by_day(engine: sa.engine.Engine, tenant: str, frm: date, to: date) -> dict[str, float]:
     with engine.connect() as c:
-        return {r.day: float(r.ciro) for r in c.execute(sa.select(ECOM.c.day, ECOM.c.ciro).where(
-            ECOM.c.tenant_id == tenant, ECOM.c.day >= frm.isoformat(), ECOM.c.day <= to.isoformat())).all()}
+        return {r.day: float(r.ciro) for r in c.execute(ecom_by_day_stmt(tenant, frm, to)).all()}
 
 
 def book_sales(engine: sa.engine.Engine, tenant: str, codes: Iterable[str], frm: date, to: date) -> dict[str, dict[str, float]]:
@@ -813,12 +872,8 @@ def book_sales(engine: sa.engine.Engine, tenant: str, codes: Iterable[str], frm:
         return {}
     out: dict[str, dict[str, float]] = {}
     with engine.connect() as c:
-        for i in range(0, len(want), 500):
-            rows = c.execute(sa.select(ECOM_BOOK.c.stok_kodu, sa.func.sum(ECOM_BOOK.c.eticaret_ciro), sa.func.sum(ECOM_BOOK.c.eticaret_adet),
-                                       sa.func.sum(ECOM_BOOK.c.toplam_ciro), sa.func.sum(ECOM_BOOK.c.toplam_adet))
-                             .where(ECOM_BOOK.c.tenant_id == tenant, ECOM_BOOK.c.stok_kodu.in_(want[i:i + 500]),
-                                    ECOM_BOOK.c.day >= frm.isoformat(), ECOM_BOOK.c.day <= to.isoformat())
-                             .group_by(ECOM_BOOK.c.stok_kodu)).all()
+        for q in book_sales_stmts(tenant, want, frm, to):
+            rows = c.execute(q).all()
             for r in rows:
                 out[r[0]] = {"eticaretCiro": round(float(r[1] or 0), 2), "eticaretAdet": float(r[2] or 0),
                              "toplamCiro": round(float(r[3] or 0), 2), "toplamAdet": float(r[4] or 0)}
@@ -835,7 +890,7 @@ def velocity(engine: sa.engine.Engine, tenant: str, codes: Iterable[str], end: d
 
 def stock_of(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(STOCK).where(STOCK.c.tenant_id == tenant)).all()
+        rows = c.execute(stock_stmt(tenant)).all()
     return {r.stok_kodu: stock_view(r.bakiye, r.gunluk_satis, r.asof) for r in rows}
 
 
@@ -977,6 +1032,24 @@ def spread(amount: float, start: Optional[str], end: Optional[str], fallback: Op
     return out
 
 
+def m15_lines_stmt(tenant: str, channels: Iterable[str], codes: Optional[Iterable[str]] = None):
+    """M15 onaylı planların reklam kanalı satırları; kanal yoksa ya da kitap süzgeci boşsa None."""
+    from semantic_bridge.marketing import core as MC
+
+    chans = sorted(set(channels))
+    if not chans:
+        return None
+    cond = [MC.PLANS.c.tenant_id == tenant, MC.PLANS.c.durum == "onayli", MC.LINES.c.kanal.in_(chans)]
+    want = [c for c in (codes or []) if c]
+    if codes is not None:
+        if not want:
+            return None
+        cond.append(MC.PLANS.c.stok_kodu.in_(want))
+    return sa.select(MC.LINES, MC.PLANS.c.baslik, MC.PLANS.c.stok_kodu, MC.PLANS.c.yayin_tarihi,
+                     MC.PLANS.c.id.label("pid"), MC.PLANS.c.kind) \
+        .select_from(MC.LINES.join(MC.PLANS, MC.PLANS.c.id == MC.LINES.c.plan_id)).where(*cond)
+
+
 def m15_lines(engine: sa.engine.Engine, tenant: str, channels: Iterable[str], year: Optional[int] = None,
               codes: Optional[Iterable[str]] = None) -> list[dict[str, Any]]:
     """M15 onaylı planların reklam kanalı satırları (`dijital`, `sosyal-medya` …). Plan M15'te onaylanır; burada yalnız
@@ -984,19 +1057,11 @@ def m15_lines(engine: sa.engine.Engine, tenant: str, channels: Iterable[str], ye
     from semantic_bridge.marketing import core as MC
 
     MC.ensure(engine)
-    chans = sorted(set(channels))
-    if not chans:
+    q = m15_lines_stmt(tenant, channels, codes)
+    if q is None:
         return []
-    cond = [MC.PLANS.c.tenant_id == tenant, MC.PLANS.c.durum == "onayli", MC.LINES.c.kanal.in_(chans)]
-    want = [c for c in (codes or []) if c]
-    if codes is not None:
-        if not want:
-            return []
-        cond.append(MC.PLANS.c.stok_kodu.in_(want))
     with engine.connect() as c:
-        rows = c.execute(sa.select(MC.LINES, MC.PLANS.c.baslik, MC.PLANS.c.stok_kodu, MC.PLANS.c.yayin_tarihi,
-                                   MC.PLANS.c.id.label("pid"), MC.PLANS.c.kind)
-                         .select_from(MC.LINES.join(MC.PLANS, MC.PLANS.c.id == MC.LINES.c.plan_id)).where(*cond)).all()
+        rows = c.execute(q).all()
     out = []
     for r in rows:
         months = spread(float(r.tutar or 0), r.baslangic, r.bitis, r.yayin_tarihi)
@@ -1021,6 +1086,10 @@ def m15_by_book(engine: sa.engine.Engine, tenant: str, codes: Iterable[str], cha
     return out
 
 
+def budget_stmt(tenant: str, year: int):
+    return sa.select(BUDGET).where(BUDGET.c.tenant_id == tenant, BUDGET.c.month.like(f"{year}-%"))
+
+
 def budget(engine: sa.engine.Engine, tenant: str, year: int, st: dict[str, Any], crm_rows: Optional[list[dict[str, Any]]] = None,
            ref: Optional[date] = None) -> dict[str, Any]:
     """Ay × kanal: bu modülde girilen plan, harcama (yüklenen dosyalar, TL), M15 onaylı kitap planlarının reklam kanalı
@@ -1028,7 +1097,7 @@ def budget(engine: sa.engine.Engine, tenant: str, year: int, st: dict[str, Any],
     bulunulan ay için: harcama ÷ geçen gün × ayın günü."""
     months = _months(year)
     with engine.connect() as c:
-        plans = c.execute(sa.select(BUDGET).where(BUDGET.c.tenant_id == tenant, BUDGET.c.month.like(f"{year}-%"))).all()
+        plans = c.execute(budget_stmt(tenant, year)).all()
     rows = daily_rows(engine, tenant, date(year, 1, 1), date(year, 12, 31))
     actual: dict[tuple[str, str], float] = {}
     for r in rows:
@@ -1272,14 +1341,18 @@ def _suggestion(r: Any, camp: Optional[dict[str, Any]] = None) -> dict[str, Any]
             "kararZamani": iso(r.decided_at), "kararNotu": r.decision_note, "uygulayan": r.applied_by, "uygulamaZamani": iso(r.applied_at)}
 
 
-def list_suggestions(engine: sa.engine.Engine, tenant: str, status: str = "") -> list[dict[str, Any]]:
+def suggestions_stmt(tenant: str, status: str = ""):
     cond = [SUGGESTIONS.c.tenant_id == tenant]
     if status == "acik":
         cond.append(SUGGESTIONS.c.status.in_(OPEN))
     elif status:
         cond.append(SUGGESTIONS.c.status.in_([s for s in status.split(",") if s]))
+    return sa.select(SUGGESTIONS).where(*cond).order_by(SUGGESTIONS.c.created_at.desc())
+
+
+def list_suggestions(engine: sa.engine.Engine, tenant: str, status: str = "") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SUGGESTIONS).where(*cond).order_by(SUGGESTIONS.c.created_at.desc())).all()
+        rows = c.execute(suggestions_stmt(tenant, status)).all()
     camps = {x["id"]: x for x in campaign_rows(engine, tenant)}
     return [_suggestion(r, camps.get(r.campaign_id)) for r in rows]
 
@@ -1350,20 +1423,28 @@ def create_brief(engine: sa.engine.Engine, tenant: str, user: str, book: dict[st
     return get_brief(engine, tenant, bid)
 
 
+def brief_stmt(tenant: str, bid: str):
+    return sa.select(BRIEFS).where(BRIEFS.c.tenant_id == tenant, BRIEFS.c.id == str(bid)[:32])
+
+
+def briefs_stmt(tenant: str, stok: str = ""):
+    cond = [BRIEFS.c.tenant_id == tenant]
+    if stok:
+        cond.append(BRIEFS.c.stok_kodu == stok)
+    return sa.select(BRIEFS).where(*cond).order_by(BRIEFS.c.created_at.desc())
+
+
 def get_brief(engine: sa.engine.Engine, tenant: str, bid: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(BRIEFS).where(BRIEFS.c.tenant_id == tenant, BRIEFS.c.id == str(bid)[:32])).first()
+        r = c.execute(brief_stmt(tenant, bid)).first()
     if not r:
         raise AdsError("Brief bulunamadı.", 404)
     return _brief(r)
 
 
 def list_briefs(engine: sa.engine.Engine, tenant: str, stok: str = "") -> list[dict[str, Any]]:
-    cond = [BRIEFS.c.tenant_id == tenant]
-    if stok:
-        cond.append(BRIEFS.c.stok_kodu == stok)
     with engine.connect() as c:
-        rows = c.execute(sa.select(BRIEFS).where(*cond).order_by(BRIEFS.c.created_at.desc())).all()
+        rows = c.execute(briefs_stmt(tenant, stok)).all()
     return [_brief(r) for r in rows]
 
 

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, Copy, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -68,6 +69,7 @@ export default function AdsBriefs() {
       )}
       {list.error && <Note tone="err">{errText(list.error, 'Brief listesi açılamadı.')}</Note>}
       {list.isLoading && <Loading />}
+      {list.data && <p className="flex items-center gap-1 px-1 text-[11.5px] text-canvas-muted">Brief kayıtları ve denetim sayıları<SqlInfo k={list.data.kaynaklar} alan="items" label="Brief'ler" /></p>}
       {list.data && list.data.items.length === 0 && <p className="px-1 py-4 text-[12.5px] text-canvas-muted">Henüz brief yok.</p>}
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {list.data?.items.map((b) => <BriefCard key={b.id} b={b} canEdit={canEdit} />)}

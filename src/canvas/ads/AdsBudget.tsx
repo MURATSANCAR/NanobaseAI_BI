@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Save } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { Block } from '../marketing/parts';
@@ -77,12 +78,12 @@ export default function AdsBudget() {
       {b && (
         <>
           <KpiRow>
-            <Kpi label="Plan" value={fmtMoney(b.toplam.plan)} help={`${b.yil} bu ekranda girilen`} />
-            <Kpi label="Harcama" value={fmtMoney(b.toplam.harcama)} help="Yüklenen dosyalar, TL" />
-            <Kpi label="M15 reklam satırları" value={fmtMoney(b.toplam.m15)} help={`Onaylı yeni kitap planları (${Object.values(b.m15.kanalEsleme).filter((v, i, a) => a.indexOf(v) === i).join(', ')})`} />
-            <Kpi label="CRM pazarlama bütçesi" value={fmtMoney(b.toplam.crm)} help="Sosyal medya ve dijital pazarlama tipli kayıtlar" />
+            <Kpi label="Plan" value={fmtMoney(b.toplam.plan)} help={`${b.yil} bu ekranda girilen`} info={<SqlInfo k={b.kaynaklar} alan="toplam" label="Plan" />} />
+            <Kpi label="Harcama" value={fmtMoney(b.toplam.harcama)} help="Yüklenen dosyalar, TL" info={<SqlInfo k={b.kaynaklar} alan="toplam" label="Harcama" />} />
+            <Kpi label="M15 reklam satırları" value={fmtMoney(b.toplam.m15)} help={`Onaylı yeni kitap planları (${Object.values(b.m15.kanalEsleme).filter((v, i, a) => a.indexOf(v) === i).join(', ')})`} info={<SqlInfo k={b.kaynaklar} alan="m15" label="M15 reklam satırları" />} />
+            <Kpi label="CRM pazarlama bütçesi" value={fmtMoney(b.toplam.crm)} help="Sosyal medya ve dijital pazarlama tipli kayıtlar" info={<SqlInfo k={b.kaynaklar} alan="crm" label="CRM pazarlama bütçesi" />} />
           </KpiRow>
-          <Block title="Ay × kanal" help={canEdit ? 'Plan hücresine tutar yazın (boş bırakılan silinir), sonra Kaydet.' : undefined}>
+          <Block title="Ay × kanal" info={<SqlInfo k={b.kaynaklar} alan="hucreler" label="Ay × kanal" />} help={canEdit ? 'Plan hücresine tutar yazın (boş bırakılan silinir), sonra Kaydet.' : undefined}>
             <TableWrap>
               <thead>
                 <tr>
@@ -122,7 +123,7 @@ export default function AdsBudget() {
               </tbody>
             </TableWrap>
           </Block>
-          <Block title="M15 kitap planlarının reklam satırları" help="Yeni kitap pazarlama planında onaylanmış, reklam kanalına düşen satırlar; tutar başlangıç–bitiş günlerine göre aylara bölünür."
+          <Block title="M15 kitap planlarının reklam satırları" info={<SqlInfo k={b.kaynaklar} alan="m15" label="M15 reklam satırları" />} help="Yeni kitap pazarlama planında onaylanmış, reklam kanalına düşen satırlar; tutar başlangıç–bitiş günlerine göre aylara bölünür."
             action={<Link to="/pazarlama/yeni-kitap" className={btnGhost}>Yeni kitap planları</Link>}>
             {b.m15.satirlar.length === 0 ? (
               <p className="py-3 text-[12px] text-canvas-muted">Bu yıl onaylı planda reklam kanalı satırı yok.</p>
@@ -158,7 +159,7 @@ function CrmBlock({ year }: { year: number }) {
   });
   const d = q.data;
   return (
-    <Block title="CRM kayıtları" help="CRM «Reklam Planı» ve «Pazarlama Bütçe Modülü» kayıtları, yalnız okunur. Portaldaki plan CRM'e yazılmaz.">
+    <Block title="CRM kayıtları" info={<SqlInfo k={d?.kaynaklar} alan="reklamPlanlari" label="CRM reklam planları ve bütçe kayıtları" />} help="CRM «Reklam Planı» ve «Pazarlama Bütçe Modülü» kayıtları, yalnız okunur. Portaldaki plan CRM'e yazılmaz.">
       {q.error && <Note tone="err">{errText(q.error, 'CRM okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
       {d && (
