@@ -605,6 +605,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/(draft|to-redaction)$", "ozellik:ceviri.yonet"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/editorial/translation/terms(/(?!propose$)[^/]+)?$", "ozellik:ceviri.terim"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import$", "ozellik:ceviri.terim"),
+    # Çeviri işinin M8 bağı (serbest çalışan, kelime ücreti, iş paketi, hakedişe aktarım): M8 kişisini ve ücretini
+    # okumak `serbest.yonet`, yazmak ayrıca `ceviri.yonet` ister.
+    (frozenset({"PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$", "ozellik:ceviri.yonet"),
+    (frozenset({"GET", "PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$",
+     "ozellik:serbest.yonet"),
     # Serbest çalışan kaydı, paket, atama, teslim kararı, hakediş taslağı. Yazışma ve öneri (suggest) sayfayla gelir;
     # hakediş onayı/ödemesi açıkça verilen `serbest.hakedis-onay` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),

@@ -8,6 +8,7 @@ import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
+import PayoutPanel from './PayoutPanel';
 import TermBank from './TermBank';
 import Translators from './Translators';
 
@@ -336,6 +337,7 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
   const canManage = useCan('ceviri.yonet');
   const canTerm = useCan('ceviri.terim');
   const canExport = useCan('veri.disa-aktar');
+  const canFreelance = useCan('serbest.yonet');
   const q = useQuery({
     queryKey: ['translation', 'job', jobId],
     queryFn: () => translationApi.job(jobId),
@@ -432,6 +434,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
           </div>
         </Panel>
       )}
+
+      {/* Çevirmenin serbest çalışan kaydı, kelime ücreti ve hakedişe aktarım (M8 ile bağ). */}
+      {manage && canFreelance && <PayoutPanel job={j} />}
 
       <Panel>
         <h3 className="px-1 text-[13px] font-extrabold">Kaynak metin</h3>

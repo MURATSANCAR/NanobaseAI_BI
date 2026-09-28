@@ -5100,6 +5100,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "upload", "translation_terms", None, filename, {"src": src, "tgt": tgt, **out})
         return out
 
+    # M4 → M8: çeviri işinin serbest çalışanı, kelime ücreti, M8 iş paketi ve hakedişe aktarım (translation_payout.py).
+    from semantic_bridge import translation_payout as tr_payout_mod
+    tr_payout_mod.register(app, {"auth": _tr, "audit": admin_mod.audit})
+
     # ------------------------------------------------------------------ serbest çalışanlar (M8)
     # Kayıt + portfolyo, iş paketi ve toplu dağıtım, kapasite, teslim, hakediş, yazışma. Kendi tablolarımız;
     # CRM ve Logo yalnız okunur. Serbest çalışan portala giremez: ona yazılan ileti e-postayla gider.

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M4 çeviri işi → M8 serbest çalışan işi ve hakediş (dalda, sunucuda doğrulanmadı)
+
+- **Neden:** dışarıdan çalışan çevirmenin emeği M8'de ödenecek işe dönüşmüyordu; hakediş elle görev açarak yapılıyordu.
+- **Köprü `translation_payout.py`:** yeni tablolar `semantic_translation_links` (iş başına M8 kişisi, kelime ücreti, esas «onaylanan|cevrilen», paket/görev, aktarılan kelime) ve `semantic_translation_payout_moves` (her aktarım); M4/M8 tablolarına sütun eklenmedi. Uçlar `GET|PUT /api/v1/editorial/translation/jobs/{iş}/payout`, `POST …/payout/package`, `POST …/payout/transfer`; yazanlar `admin_mod.audit` ile. Yetki: sayfa çeviri sayfaları; okuma `serbest.yonet`, yazma `ceviri.yonet` + `serbest.yonet` (access.py).
+- **Akış:** «İş paketi aç» M8'de kitaba çeviri paketi + kişiye atanmış tek görev (birim kelime, miktar = kaynak kelimesi − aktarılan, termin = işin teslim tarihi, saat = kelime/250 × M8 çeviri saati); yeniden basılınca ikinci görev açılmaz, açık görev eşitlenir. «Hakedişe aktar» yalnız son aktarımdan sonraki esas kelimeyi gönderir: açık görev bölünür, aktarılan kelime ayrı görev olur ve M8'in kendi `add_tasks → assign → add_delivery (teslim tutanağı) → decide_delivery(kabul)` yoluyla ödenecek işe düşer; kalan asıl görevi karşılıyorsa asıl görev kabul edilir. Kelime önce koşullu güncellemeyle ayrılır, M8 adımı düşerse görev ve ayrılan kelime geri alınır. Hakediş hesabı M8'de kaldı.
+- **Ekran:** Çeviri › iş paneli «Serbest çalışan ve hakediş» (`translation/PayoutPanel.tsx`; yöneten + `serbest.yonet`): kişi, kelime ücreti, esas, esas/aktarılan/aktarılacak kelime ve tutar, M8 görev durumu, aktarımlar ve hangi hakedişe girdikleri, M8 paketine/hakedişe bağlantı.
+- **Test:** `test_translation_payout.py` yazıldı, yerelde koşturulmadı (kural). Sunucuda gerçek akışla denenmedi: **DOĞRULANAMADI**.
+
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
