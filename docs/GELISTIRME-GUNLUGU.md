@@ -376,6 +376,49 @@
 - **Ölçülecek (parametre/kabul):** CSCARD belge türü × durum kodları (`FINANCE_CS_*`), CRM tahsilat statü etiketi
   (`FINANCE_CRM_PENDING_LABEL`), kapanış hesapları (`FINANCE_CLOSE_ACCOUNTS`), EMFLINE bütçe satırı (BDGTLINETYPE),
   EMFICHE/EMFLINE açıklama kolonları, OUTCOST'un telifi içerip içermediği.
+## 2026-09-28 — M54 Telif dönemi ve Haklar ve lisanslar
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-adfac43e12d7edbac`, main `7aa83b6a` üstüne); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak
+(`scripts/acceptance/m54/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M54 analizi (`docs/analiz/kullanici-ihtiyaclari/M54-yazar-telif-sozlesme.md` §14). M6 tek sözleşmenin
+  defteri; satıştan ödemeli ~2.459 sözleşmenin dönem hesabı, istisna takibi, yazar başına beyanname, ödeme listesi,
+  avans portföyü ve yenileme kararı yoktu.
+- **Ne yapıldı:** köprüde `royalty.py`, `royalty_sources.py`, `royalty_api.py`; ön yüzde `/timas/telif-donem` ve
+  `/timas/haklar`; `timas-royalty.{timer,service}`, VM `jobs.py` satırı; Yönetim → «Telif dönemi» ayarları; yetki
+  kataloğu (iki sayfa, sekiz özellik). Ortak dosyalarda küçük ekler: `app.py`, `access.py`, `access_catalog.json`,
+  `admin.py`, `App.tsx`, `navModel.ts`, `ModulesMenu.tsx`, `ContractDetail.tsx` (dönem koşuları bağlantısı),
+  `infra/docker/bi/jobs.py`.
+- **M6 yeniden yazılmadı:** hesap `contracts_royalty.compute`; CRM başlığı `crm_contract_sql`'in kolonlarıyla birebir
+  (yalnız WHERE kapsamla değişir) ve `crm_contract` eşlemesi; onayda `adopt_crm` / `save_statement` / `approve_statement`.
+  M6'daki satır tavanları zaten kaldırılmıştı (main `02d293be`); M54 hiçbir listede tavan koymaz (satırlar sayfalı,
+  toplam görünür; stok kodları 500'lük gruplarla okunur, hepsi okunur; kaynak beklenenden büyükse hata, kesme yok).
+- **Kararlar (analiz §10 soruları, veriye/koda bakılarak):**
+  - *Telif dönemi:* takvim yarıyılı (Ocak–Haziran, Temmuz–Aralık), `ROYALTY_PERIOD_MONTHS` = 6. CRM sözleşmesinde dönem
+    alanı yok, M6 varsayılanı 6 ay, analizin örneği «2026 1. yarı». Sözleşmenin kendi hakediş dönemi farklıysa (portal
+    kaydında) kabul edilebilir istisna. Ödeme vadesi M6'nın `paymentDays`'i (varsayılan 30 gün).
+  - *Kapsam durum kodları:* 100000000 Aktif-Sözleşme + 100000007 Aktif-Yenileme (kabul sorgusu 1); 100000006 «Aktif
+    (Proje)» dışarıda — yayımlanmamış projenin satışı yok; ayardan eklenir, doluluk **ölçülecek**.
+  - *Son ödenen dönem ve avans bakiyesi:* hiçbir kaynakta sözleşme bazında yok (CRM ödeme 2014'te kalmış, Logo cariye
+    yazıyor) → elle açılış bakiyesi (kazanılmamış kalan, tarihli, gerekçeli, geçmişli). Portalda onaylı hakedişi olmayan
+    ve bu dönemden önce başlamış avanslı sözleşme açılış girilene kadar istisna; sıfır varsayılmaz (analiz §12 «kullanmam» 3).
+  - *Dil/ülke hakları:* CRM'de kırılım yok (yalnız `new_telifsatilanulke`, `new_orjinaldili`; doluluk **ölçülecek**) →
+    hak kartında portal kaydı (`semantic_rights_grants`); CRM bitleri SEO «Haklar ve CRM» kuralıyla yorumlanır.
+  - *Stopaj:* oran mevzuat/muhasebe kararı; statik oran konmadı. `ROYALTY_WITHHOLDING_PCT` boşsa stopaj yalnız
+    sözleşmesinde oran olanlarda; doluysa yalnız bütün tarafları kişi olan sözleşmelere (firmaya stopaj yok varsayımı,
+    satırda uyarı).
+  - *Beyanname gönderimi:* kullanıcı kararı (ilk sürümde otomatik dış gönderim yok) → Word + toplu zip + «gönderildi»
+    kaydı; analizdeki `send`/`send-all` uçları yazılmadı.
+  - *Hak sahibi payı:* hesap satırlarındaki telif payı (M6 bölüşümüyle aynı); telif sıfırsa sözleşmedeki pay.
+  - *İki göz:* hesaplatan ve gönderen onaylayamaz; kabul betiği onayı aynı süreçte işlevle dener (tek test kullanıcısı
+    `timasai`), API'nin 403 verdiğini ayrıca denetler.
+- **Sonraki sürüme kalan:** Logo ödeme mutabakatı (kişi carisi CRM'de Logo'ya bağlı değil — `AccountBase.new_logicalref`
+  yalnız firmada; eşleştirme kuralı ölçülmeli), lisans fırsat listesi, yenileme/ihlal yazışma taslakları, hak açıklaması
+  özet cümlesi, baskıdan ödemeli sözleşmelerin toplu koşusu (baskı adedi M11/üretimden).
+- **Sunucuda yapılacak:** `run.sh` (pytest `test_royalty.py`, `test_contracts.py`, `test_access.py`; kabul 8 denetim, test
+  koşusu + `cleanup.py`), vitest `navModel.test.ts` (katalog eşliği), `tsc`, ekranı 320/390/768/masaüstünde tarayıcıda
+  deneme, `timas-royalty.timer` kurulumu ve ilk `run-due`'nun elle koşturulması, ölçülecek doluluklar (`referans.sql`).
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

@@ -349,7 +349,8 @@ def test_create_run_validates_period(engine):
 def test_recover_stuck_run(engine):
     run = RY.create_run(engine, TEN, "u", {"periodStart": A_, "periodEnd": B_})
     RY.mark_computing(engine, TEN, "u", run["id"])
-    RY.recover_stuck(engine)
+    assert RY.get_run(engine, TEN, run["id"])["status"] == "hesaplaniyor"  # taze iş dokunulmaz
+    RY.recover_stuck(engine, older_than=RY.timedelta(seconds=-1))
     r = RY.get_run(engine, TEN, run["id"])
     assert r["status"] == "taslak" and "yarıda" in r["error"]
 

@@ -388,6 +388,7 @@ def _get_run(c: sa.engine.Connection, tenant: str, run_id: str, lock: bool = Fal
 
 def get_run(engine: sa.engine.Engine, tenant: str, run_id: str) -> dict[str, Any]:
     ensure(engine)
+    recover_stuck(engine)
     with engine.connect() as c:
         return _run(_get_run(c, tenant, run_id))
 
@@ -463,7 +464,7 @@ def mark_computing(engine: sa.engine.Engine, tenant: str, user: str, run_id: str
             raise RoyaltyError(f"«{RUN_STATUSES[r.durum]}» koşu hesaplanmaz.", 409)
         c.execute(RUNS.update().where(RUNS.c.id == r.id).values(
             durum="hesaplaniyor", hata=None, ilerleme_json={"step": "Kapsam okunuyor", "done": 0, "total": 0,
-                                                              "startedBy": user, "startedAt": _iso(_now())},
+                                                              "startedBy": user, "startedAt": _iso(_now()), "at": _iso(_now())},
             updated_at=_now(), surum=r.surum + 1))
     return get_run(engine, tenant, run_id)
 
@@ -479,11 +480,27 @@ def fail_run(engine: sa.engine.Engine, run_id: str, back_to: str, message: str) 
         c.execute(RUNS.update().where(RUNS.c.id == run_id).values(durum=back_to, hata=message[:2000], updated_at=_now()))
 
 
-def recover_stuck(engine: sa.engine.Engine) -> None:
-    """Köprü yeniden başlarken yarıda kalan hesap/onay: koşu önceki durumuna döner, ekranda yazar."""
+#: Hesap/onay işi ilerlemesini en çok bu aralıkla yazar (her 250/100 sözleşmede ve her adımda); bu süre boyunca hiç
+#: ilerleme yazmamış iş yarıda kalmış sayılır (köprü yeniden başladı ya da iş başka bir süreçte öldü).
+STALE_AFTER = timedelta(minutes=30)
+
+
+def recover_stuck(engine: sa.engine.Engine, older_than: timedelta = STALE_AFTER) -> None:
+    """Yarıda kalan hesap/onay: son ilerlemesi `older_than`dan eski iş önceki durumuna döner, ekranda yazar."""
+    cut = _now() - older_than
     try:
         with engine.begin() as c:
-            for r in c.execute(sa.select(RUNS.c.id, RUNS.c.durum).where(RUNS.c.durum.in_(("hesaplaniyor", "onaylaniyor")))).all():
+            for r in c.execute(sa.select(RUNS.c.id, RUNS.c.durum, RUNS.c.ilerleme_json, RUNS.c.updated_at)
+                               .where(RUNS.c.durum.in_(("hesaplaniyor", "onaylaniyor")))).all():
+                at = (r.ilerleme_json or {}).get("at")
+                try:
+                    last = datetime.fromisoformat(at) if at else r.updated_at
+                except ValueError:
+                    last = r.updated_at
+                if last is not None and last.tzinfo is None:
+                    last = last.replace(tzinfo=timezone.utc)
+                if last is not None and last > cut:
+                    continue
                 if r.durum == "hesaplaniyor":
                     has = c.execute(sa.select(LINES.c.id).where(LINES.c.run_id == r.id).limit(1)).first()
                     back, msg = ("hesaplandi" if has else "taslak"), "Hesap yarıda kaldı (hizmet yeniden başladı); yeniden hesaplatın."
