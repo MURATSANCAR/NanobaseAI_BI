@@ -250,3 +250,25 @@ def test_replies_carry_no_technology_names():
     texts = [BI_INTRO, BI_REDIRECT] + [chat_scope.not_connected_reply(t) for t in chat_scope.topics()]
     for text in texts:
         assert not _TECH.search(text), text
+
+
+def test_weak_placements_are_not_business_evidence():
+    """2026-09-28 kabulü: şirket dışı sorular tek bir zayıf yerleşimle sınıflandırıcıyı atlıyordu. Örnekler canlı çözücünün
+    o gün verdiği yerleşimler; kanıt yalnız sertifikalı (ya da açık) kavram, varsayılan filtre sayılmaz."""
+    from semantic_layer.models import Mapping, ResolvedSlot
+
+    def slot(term, stype, status):
+        return ResolvedSlot(term=term, semantic_type=stype, status=status, mapping=Mapping(concept_id="c", entity="E", table_pattern="E"))
+
+    tarif = [slot("tarifi", "COLUMN", "INFERRED")]                       # «Mercimek çorbası tarifi ver»
+    turkiye = [slot("TÜRKİYE", "DIMENSION_VALUE", "PROFILE")]            # «Türkiye'nin başkenti neresi?»
+    ask = [slot("ask", "COLUMN", "INFERRED")]                            # «Bana bir aşk şiiri yaz»
+    only_filter = [slot("stline default cancelled", "DEFAULT_FILTER", "CERTIFIED")]
+    satan = [slot("kitap", "COLUMN", "CERTIFIED"), slot("satan", "METRIC", "INFERRED"),
+             slot("stline default cancelled", "DEFAULT_FILTER", "CERTIFIED")]   # «Bu ay en çok satan 10 kitap hangisi?»
+    iade = [slot("iade orani", "METRIC", "CERTIFIED")]
+    for weak in (tarif, turkiye, ask, only_filter, []):
+        assert not chat_scope.has_business_evidence(weak)
+    for strong in (satan, iade, [slot("x", "COLUMN", "explicit")]):
+        assert chat_scope.has_business_evidence(strong)
+    assert not chat_scope.has_business_evidence([ResolvedSlot(term="y", semantic_type="METRIC", status="CERTIFIED")])  # yerleşmemiş
