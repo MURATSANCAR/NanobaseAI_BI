@@ -387,6 +387,21 @@
       "module": "Okur veri tabanı (H2)"
     },
     {
+      "object": "semantic_commerce_customers",
+      "columns": [
+        "email_hash",
+        "phone_hash",
+        "name_hash",
+        "city"
+      ],
+      "data": "Site müşterisinin e-posta/telefon/ad tuzlu özeti (geri çevrilemez), il",
+      "subjects": "site müşterisi",
+      "purpose": "Müşteri segmenti ve okur veri tabanıyla eşleşme; ad ve adres yalnız yetkiyle T-soft'tan anlık okunur",
+      "retention": null,
+      "retentionNote": "İş kaydı; siparişi kalmayan misafir müşteri gece okumasında düşer",
+      "module": "E-ticaret müşterileri (H3)"
+    },
+    {
       "object": "semantic_reader_import_rows",
       "columns": [
         "email_hash",
