@@ -86,8 +86,6 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Bayi & Kitapçı Risk Yönetimi': { to: '/bayi-risk', hint: 'Günlük risk skoru, alacak yaşlandırması, limit önerisi ve risk brifi' },
   'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski ve CRM veri sağlığı' },
   'İnsan Kaynakları': { to: '/ik/ise-alim', hint: 'İşe alım panosu, pozisyonlar ve KVKK kayıtları' },
-  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
-  Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
   'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni ve pazar yerleri' },
 };
 

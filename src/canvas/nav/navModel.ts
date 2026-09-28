@@ -38,7 +38,6 @@ import {
   Truck,
   Gavel,
   Waypoints,
-  Store,
   Grid3x3,
   Globe,
   Library,
