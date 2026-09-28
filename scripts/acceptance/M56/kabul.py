@@ -103,7 +103,7 @@ def main() -> int:
             refrows = logo(
                 "SELECT s.CODE AS kod, SUM(CASE WHEN l.TRCODE IN (7,8,9) THEN l.LINENET WHEN l.TRCODE IN (2,3) THEN -l.LINENET ELSE 0 END) AS net "
                 f"FROM LG_{firm}_01_STLINE l JOIN LG_{firm}_01_INVOICE i ON i.LOGICALREF = l.INVOICEREF "
-                f"JOIN LG_{firm}_SLSMAN s ON s.LOGICALREF = i.SALESMANREF "
+                "JOIN LG_SLSMAN s ON s.LOGICALREF = i.SALESMANREF "
                 "WHERE l.CANCELLED = 0 AND l.LINETYPE = 0 AND l.INVOICEREF <> 0 AND l.DATE_ >= '2026-01-01' AND l.DATE_ < '2026-08-18' "
                 "GROUP BY s.CODE")
             refrows.sort(key=lambda r: -abs(float(r["net"] or 0)))
@@ -123,7 +123,7 @@ def main() -> int:
         p = hr_sources.prefix(schema)
         codes = [str(r["kod"]).strip() for r in crm(f"SELECT new_KullancKoduLogoyaGnderilen AS kod FROM {p}SystemUserBase "
                                                     "WHERE IsDisabled = 0 AND new_KullancKoduLogoyaGnderilen IS NOT NULL")]
-        slsman = {str(r["CODE"]).strip() for r in logo(f"SELECT CODE FROM LG_{firm}_SLSMAN")} if logo is not None else set()
+        slsman = {str(r["CODE"]).strip() for r in logo(f"SELECT CODE FROM LG_SLSMAN WHERE FIRMNR = {int(firm)}")} if logo is not None else set()
         record("K3 CRM kişi ↔ Logo temsilcisi (ölçüm)", "ÖLÇÜM", crm_kodlu=len(codes), eslesen=len(set(codes) & slsman),
                not_="Portalda bu eşleme ekranı yok; hedefte temsilci kodu elle girilir. Karar için ölçüm")
     except Exception as e:  # noqa: BLE001

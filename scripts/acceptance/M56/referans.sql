@@ -10,14 +10,14 @@ FROM LG_411_01_INVOICE i WHERE i.CANCELLED = 0 AND i.TRCODE IN (7,8,9)
 SELECT s.CODE, SUM(CASE WHEN l.TRCODE IN (7,8,9) THEN l.LINENET WHEN l.TRCODE IN (2,3) THEN -l.LINENET ELSE 0 END) AS net
 FROM LG_411_01_STLINE l
 JOIN LG_411_01_INVOICE i ON i.LOGICALREF = l.INVOICEREF
-JOIN LG_411_SLSMAN s ON s.LOGICALREF = i.SALESMANREF
+JOIN LG_SLSMAN s ON s.LOGICALREF = i.SALESMANREF
 WHERE l.CANCELLED = 0 AND l.LINETYPE = 0 AND l.INVOICEREF <> 0
   AND l.DATE_ >= '2026-01-01' AND l.DATE_ < '2026-08-18'
 GROUP BY s.CODE;
 
 -- K3 CRM kişi ↔ Logo temsilcisi köprüsü (ölçüm; kesişim Python'da)
 SELECT COUNT(*) FROM Timas_MSCRM.dbo.SystemUserBase u WHERE u.IsDisabled = 0 AND u.new_KullancKoduLogoyaGnderilen IS NOT NULL;
-SELECT CODE FROM LG_411_SLSMAN;
+SELECT CODE FROM LG_SLSMAN WHERE FIRMNR = 411;   -- satış elemanı kartı firmadan bağımsız tek tabloda
 
 -- K4 Editör iş özeti (bi_meta Postgres)
 SELECT COUNT(*) FROM semantic_editorial_tasks

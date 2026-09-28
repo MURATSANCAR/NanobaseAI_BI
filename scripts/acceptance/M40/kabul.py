@@ -163,7 +163,10 @@ def main() -> int:
 
     # K7 · Barkod sayısı = UNITBARCODE'daki farklı dolu barkod.
     s, st = http("GET", P + "/status")
-    n7 = logo(f"SELECT COUNT(DISTINCT REPLACE(LTRIM(RTRIM(B.BARCODE)), ' ', '')) AS n FROM dbo.LG_{latest}_UNITBARCODE B "
+    # Barkoddaki bütün boşluk türleri (sekme, satır sonu, bölünmez boşluk) atılır — okuma da öyle yapar; yalnız ' '
+    # atılınca 89 barkod ayrı sayılıyordu (2026-09-28 kabul: 26.593 ↔ 26.504).
+    n7 = logo(f"SELECT COUNT(DISTINCT REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(B.BARCODE, ' ', ''), CHAR(9), ''), CHAR(10), ''), "
+              f"CHAR(13), ''), NCHAR(160), '')) AS n FROM dbo.LG_{latest}_UNITBARCODE B "
               f"JOIN dbo.LG_{latest}_ITEMS I ON I.LOGICALREF = B.ITEMREF WHERE B.BARCODE IS NOT NULL AND LTRIM(RTRIM(B.BARCODE)) <> ''")[0]["n"]
     got7 = (st.get("logo") or {}).get("barkod")
     check("K7 barkod sayısı birebir", got7 == int(n7), f"ekran {got7} / SQL {n7}")
