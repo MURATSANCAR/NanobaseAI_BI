@@ -30,7 +30,7 @@ after_migrate = ["nanobase_brand.install.apply"]
 
 # Yapay zekâ özellikleri: nanobase_brand/yz/
 doc_events = {
-	"HD Ticket": {"after_insert": "nanobase_brand.yz.kayit.on_ticket_insert"},
+	"HD Ticket": {"after_insert": "nanobase_brand.yz.kanca.on_ticket_insert"},
 }
 
 scheduler_events = {

@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
-from frappe.utils import html2text, now_datetime, strip_html
+from frappe.core.utils import html2text
+from frappe.utils import escape_html, now_datetime, strip_html
 
 from nanobase_brand.yz import bilgi, llm
 
@@ -69,12 +70,6 @@ def _activity(ticket: str, action: str) -> None:
 
 
 # ---------------------------------------------------------------- 1. sınıflama
-
-def on_ticket_insert(doc, method=None):
-	"""HD Ticket after_insert: sınıflama arka planda (kayıt açılışını bekletmez)."""
-	frappe.enqueue("nanobase_brand.yz.kayit.classify", ticket=doc.name, queue="short",
-				   enqueue_after_commit=True, job_id=f"nb-siniflama-{doc.name}", deduplicate=True)
-
 
 def classify(ticket: str) -> dict:
 	doc = frappe.get_doc("HD Ticket", ticket)
@@ -188,7 +183,7 @@ def draft_reply(ticket: str) -> dict:
 						max_tokens=700, temperature=0.3)
 	except llm.ModelUnavailable:
 		frappe.throw(_("The assistant is unavailable right now. Please try again shortly."))
-	html = "".join(f"<p>{frappe.utils.escape_html(p.strip()).replace(chr(10), '<br>')}</p>"
+	html = "".join(f"<p>{escape_html(p.strip()).replace(chr(10), '<br>')}</p>"
 				   for p in text.split("\n\n") if p.strip())
 	sources = []
 	for h in hits:
