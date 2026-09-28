@@ -32,6 +32,16 @@ Tam klonda talimat metne girerse model onu sesli okur (ölçüm: harf hatası %4
 ile verilir: aynı sesin referans cümlesini ifadeyle okuyan örnek, devam kipi onun tonunu sürdürür, kimlik referanstan.
 `measure: true` her parçaya `measure` ekler (ortanca perde, enerji, sesli oranı, tanıyıcıyla harf hatası oranı):
 ifade örneği adayları bununla seçilir.
+
+Yalnız hizalama (insan kaydı; editörün `production/narration_human.py`'si): gövdede `recording` (base64 ses dosyası,
+ffmpeg'in çözdüğü her biçim) ve `words` (kaydın okuduğu bütün okunuş kelimeleri, sırasıyla) varsa hiçbir şey
+üretilmez, `segments` boş olabilir; kayıt 16 kHz'e çevrilip kelimeler tek hizalamada yerleştirilir. Uzun kayıtta
+hizalayıcının çıktısı 30 sn'lik pencerelerle (iki yanda 1 sn bağlam) hesaplanıp birleştirilir, Viterbi yolu büyük
+tabloda işlemcide çözülür (bellek kare × jeton). `format: none` ses döndürmez.
+
+    POST /v1/audio/narrate {model, recording, words, align: true, format: none}
+         → {audio: "", format, sample_rate: 16000, duration, seconds, aligned, segments: [],
+            words: [{start, end, score} | null, …]}
 """
 
 from __future__ import annotations
@@ -131,10 +141,12 @@ class Segment(BaseModel):
 
 class Narrate(BaseModel):
     model: str = "book-voice"
-    segments: list[Segment] = Field(min_length=1)
+    segments: list[Segment] = []       # üretim kipinde en az bir parça (recording yokken)
     format: str = "mp3"
     align: bool = True
     measure: bool = False              # parça başına ölçü: perde, enerji, sesli oranı, tanıyıcıyla harf hatası
+    recording: str | None = None       # yalnız hizalama: base64 ses dosyası (insan kaydı), üretim yok
+    words: list[str] = []              # recording ile: kaydın bütün okunuş kelimeleri, sırasıyla
 
 
 
@@ -223,13 +235,46 @@ def _resample16(wav: np.ndarray) -> torch.Tensor:
     return AF.resample(t, SR, 16000)[0] if SR != 16000 else t[0]
 
 
+HOP = 320                              # hizalayıcının kare adımı (16 kHz'de 20 ms)
+WIN = 30 * 16000                       # uzun kayıtta pencere (HOP'un katı)
+CTX = 16000                            # pencerenin iki yanındaki bağlam (HOP'un katı)
+
+
+def _logprobs(x: torch.Tensor) -> torch.Tensor:
+    """Hizalayıcının kare başına log olasılıkları [1, T, V]. Kısa seste tek geçiş (eski yol); uzun kayıtta pencerelerle,
+    her pencere iki yandan bağlamla hesaplanır ve yalnız kendi karelerini verir (bellek sese göre büyümez)."""
+    proc, model = ALIGNER
+    n = x.shape[-1]
+    if n <= WIN + 2 * CTX:
+        feats = proc(x.numpy(), sampling_rate=16000, return_tensors="pt").input_values.to(DEVICE)
+        return torch.log_softmax(model(feats).logits, dim=-1)
+    outs = []
+    for a in range(0, n, WIN):
+        b = min(n, a + WIN)
+        s, e = max(0, a - CTX), min(n, b + CTX)
+        feats = proc(x[s:e].numpy(), sampling_rate=16000, return_tensors="pt").input_values.to(DEVICE)
+        lp = torch.log_softmax(model(feats).logits, dim=-1)[0]
+        off = (a - s) // HOP
+        k = (b - a) // HOP if b < n else lp.shape[0] - off
+        outs.append(lp[off:off + k].float().cpu())
+    return torch.cat(outs)[None]
+
+
 @torch.inference_mode()
 def _align(wav: np.ndarray, words: list[str]) -> list[dict | None]:
     """CTC Viterbi hizalama: her kelimenin başı/sonu (sn, segment başından) ve ortalama olasılığı."""
     if ALIGNER is None or not words:
         return [None] * len(words)
+    return _align16(_resample16(wav), words)
+
+
+@torch.inference_mode()
+def _align16(x: torch.Tensor, words: list[str]) -> list[dict | None]:
+    """`_align`'ın 16 kHz sesle çalışan gövdesi (insan kaydı doğrudan 16 kHz çözülür)."""
+    if ALIGNER is None or not words:
+        return [None] * len(words)
     import torchaudio.functional as AF
-    proc, model = ALIGNER
+    proc, _model = ALIGNER
     vocab = proc.tokenizer.get_vocab()
     sep = proc.tokenizer.word_delimiter_token or "|"
     blank = proc.tokenizer.pad_token_id
@@ -244,13 +289,12 @@ def _align(wav: np.ndarray, words: list[str]) -> list[dict | None]:
         s = len(tokens)
         tokens += [vocab[ch] for ch in clean[i]]
         spans.append((i, s, len(tokens)))
-    x = _resample16(wav)
-    feats = proc(x.numpy(), sampling_rate=16000, return_tensors="pt").input_values.to(DEVICE)
-    logits = model(feats).logits
-    lp = torch.log_softmax(logits, dim=-1)
+    lp = _logprobs(x)
     T = lp.shape[1]
     if T < len(tokens):
         return [None] * len(words)
+    if T * len(tokens) > 2e8:              # uzun kayıt: Viterbi geri izleme tablosu (kare × jeton) işlemcide
+        lp = lp.cpu()
     targets = torch.tensor([tokens], dtype=torch.int32, device=lp.device)
     path, scores = AF.forced_align(lp, targets, blank=blank)
     # CTC çöküşü (tekrar birleşir, boşluk atılır) hedefle birebir: jeton başına [ilk kare, son kare) aralığı.
@@ -326,10 +370,42 @@ def _encode(wav: np.ndarray, fmt: str) -> bytes:
     return r.stdout
 
 
+def _decode16(data: bytes, tmp: str) -> np.ndarray:
+    """Ses dosyası → 16 kHz tek kanal (ffmpeg; kapsayıcısı sona yazılan biçimler için dosyadan okunur)."""
+    src = os.path.join(tmp, "kayit")
+    with open(src, "wb") as f:
+        f.write(data)
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-i", src, "-ac", "1", "-ar", "16000",
+                        "-f", "f32le", "pipe:1"], capture_output=True)
+    if r.returncode != 0 or not r.stdout:
+        raise HTTPException(400, "kayıt çözülemedi")
+    return np.frombuffer(r.stdout, dtype="<f4").copy()
+
+
+def _recording(req: Narrate) -> dict:
+    """Yalnız hizalama: insan kaydında kelimelerin yeri. Üretim yok."""
+    if TTS is None:                        # modeller birlikte açılır; açılış bitmeden hizalayıcı da hazır değil
+        raise HTTPException(503, "model yükleniyor")
+    t0 = time.time()
+    try:
+        data = base64.b64decode(req.recording or "", validate=True)
+    except ValueError:
+        raise HTTPException(400, "recording base64 değil") from None
+    with _lock, tempfile.TemporaryDirectory() as tmp:
+        x = _decode16(data, tmp)
+        words = _align16(torch.from_numpy(x), req.words) if req.align else [None] * len(req.words)
+    return {"audio": "", "format": "none", "sample_rate": 16000, "duration": round(len(x) / 16000, 3),
+            "seconds": round(time.time() - t0, 2), "aligned": ALIGNER is not None, "segments": [], "words": words}
+
+
 @app.post("/v1/audio/narrate")
 def narrate(req: Narrate) -> dict:
+    if req.recording is not None:
+        return _recording(req)
     if TTS is None:
         raise HTTPException(503, "model yükleniyor")
+    if not req.segments:
+        raise HTTPException(400, "segments boş")
     if req.format not in ("mp3", "wav"):
         raise HTTPException(400, "format: mp3 | wav")
     t0 = time.time()

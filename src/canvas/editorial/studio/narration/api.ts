@@ -4,7 +4,7 @@ import { httpErrorText } from '../../../httpError';
 
 /** Sesli okuma uçları (köprü: /api/v1/editorial/studio/jobs/{job}/narration…). engine.ts'teki `send` ile aynı
  *  kurallar: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError. Servisin kodlu hataları
- *  (NO_PLAN, PREPARING, PLAN_FAILED, NO_VOICE, BUSY, NOTHING) `NarrationError.code` ile ekrana taşınır. Planı olmayan
+ *  (NO_PLAN, PREPARING, PLAN_FAILED, NO_VOICE, BUSY, NOTHING, HUMAN_RECORDING, RECORDING_REJECTED, TOO_LARGE) `NarrationError.code` ile ekrana taşınır. Planı olmayan
  *  işte ilk açılış sayfa düzenini kendiliğinden kurar: kurulum sürerken 409 PREPARING (`state`: preparing | waiting). */
 
 /** Ses: tarifle tasarlanmış (gerçek kişi kaydı yok) ya da ses kütüphanesine hak beyanıyla yüklenmiş (`uploaded`).
@@ -28,10 +28,25 @@ export type VoiceUpload = {
   audio: string; document: { name: string; data: string } | null; original: { name: string; data: string } | null;
 };
 export type NarrationPageStatus = 'done' | 'stale' | 'missing' | 'empty';
-export type NarrationPageRow = { id: string; no: number; status: NarrationPageStatus; duration: number | null; estimated: boolean; words: number };
+/** `human`: sayfanın sesi yüklenmiş insan kaydı (`owner` okuyan kişi); güncelliği yalnız metne bakar. */
+export type NarrationPageRow = { id: string; no: number; status: NarrationPageStatus; duration: number | null; estimated: boolean; words: number;
+  human?: boolean; owner?: string | null };
+/** `mode: 'human'`: insan kaydının işlenmesi (kelimeler kayda yerleştirilir, sayfalara bölünür). */
 export type NarrationJob = {
   id: string; kind: 'narration'; status: 'queued' | 'running' | 'done' | 'fail'; pages: string[];
   progress: [number, number]; page?: string; error?: string; by?: string; workflow?: string; updated?: string;
+  mode?: 'human'; recording?: string;
+};
+/** Yüklenmiş insan kaydı (bu kitapta). */
+export type HumanRecording = {
+  id: string; pages: string[]; owner: string | null; by: string | null; at: string | null;
+  status: 'queued' | 'running' | 'done' | 'fail'; error: string | null; file: string | null; seconds: number | null;
+  document: boolean; reference: string | null;
+  result: { pages: { page: string; no: number; duration: number; estimated: boolean }[]; aligned: [number, number] } | null;
+};
+export type HumanRecordingUpload = {
+  pages: string[]; owner: string; confirm: boolean; reference: string;
+  audio: { name: string; data: string }; document: { name: string; data: string } | null;
 };
 export type LexEntry = { word: string; say: string; by?: string; at?: string };
 export type NarrationSettings = { narrator: string; characters: Record<string, string>; source?: 'auto' | 'editor'; updated_by?: string };
@@ -42,18 +57,21 @@ export type NarrationOverview = {
   settings: NarrationSettings;
   speakers: string[];
   pages: NarrationPageRow[];
-  summary: { done: number; stale: number; missing: number; empty: number; duration: number };
+  summary: { done: number; stale: number; missing: number; empty: number; duration: number; human?: number; human_stale?: number };
   job: NarrationJob | null;
   lexicon: { job: LexEntry[]; publisher: LexEntry[] };
   /** Sayfa düzeni bu bölüm açılınca kendiliğinden kurulduysa kaydı. */
   plan_auto: { status: 'running' | 'done' | 'fail'; started: number; finished?: number; by?: string; reason?: string } | null;
+  /** İnsan kaydı yükleme: hak beyanı metni, dosya sınırı, kabul edilen uzantılar, son yüklemeler. */
+  recordings?: { rights_text: string; upload_mb: number; extensions: string[]; items: HumanRecording[] };
 };
 export type NarrationWord = { i: number; text: string; char: [number, number]; spoken: string;
   start: number | null; end: number | null; estimated?: boolean };
 export type NarrationBlock = { id: string; kind: string; speaker: string | null; voice: string; text: string;
   start: number | null; end: number | null; words: NarrationWord[] };
 export type NarrationPage = { page: string; no: number; status: NarrationPageStatus; duration: number | null;
-  blocks: NarrationBlock[]; at?: string; estimated?: boolean };
+  blocks: NarrationBlock[]; at?: string; estimated?: boolean;
+  source?: 'human'; human?: { upload: string; owner: string; file: string; range: [number, number] } };
 
 export class NarrationError extends Error {
   code: string | null;
@@ -100,8 +118,12 @@ export const narrationApi = {
     call<NarrationSettings>('PUT', `${base(job)}/settings`, s),
   saveLexicon: (job: string, scope: 'job' | 'publisher', entries: LexEntry[]) =>
     call<{ scope: string; entries: LexEntry[] }>('PUT', `${base(job)}/lexicon`, { scope, entries: entries.map(({ word, say }) => ({ word, say })) }),
-  run: (job: string, pages: string[] | null, force = false) =>
-    call<{ workflow: string; job: string; pages: number }>('POST', `${base(job)}/run`, { pages, force }),
+  /** `replaceHuman`: verilen sayfalardaki insan kaydı yapay sesle değişir (editörün açık onayıyla). */
+  run: (job: string, pages: string[] | null, force = false, replaceHuman = false) =>
+    call<{ workflow: string; job: string; pages: number }>('POST', `${base(job)}/run`, { pages, force, replace_human: replaceHuman }),
+  /** İnsan kaydı yükle (hak beyanı zorunlu); işlenmesi arka planda, durum `overview().job`'da. */
+  uploadRecording: (job: string, body: HumanRecordingUpload) =>
+    call<{ workflow: string; job: string; recording: HumanRecording }>('POST', `${base(job)}/recordings`, body, 300_000),
   read: (job: string, text: string) => call<{ spoken: string }>('POST', `${base(job)}/read`, { text }, 30_000),
   /** Kısa deneme sesi; kaydedilmez. Model kapalıysa açılması bir dakikayı bulabilir. */
   sample: async (job: string, text: string, voice: string): Promise<Blob> => {

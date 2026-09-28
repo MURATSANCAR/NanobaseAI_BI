@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Headphones, Loader2, Pause, Play, RefreshCw, Save, Volume2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Headphones, Loader2, Mic, Pause, Play, RefreshCw, Save, Volume2 } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import ExpressionEditor from './ExpressionEditor';
+import HumanRecordingUpload from './HumanRecordingUpload';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
 import SoundEffects from './SoundEffects';
@@ -20,7 +21,9 @@ import {
 /** Stüdyoda «Sesli okuma»: kitap Türkçe seslendirilir, e-kitapta okunan kelime vurgulanır. Sayfa sayfa dinleme ve
  *  okunan kelime vurgulu önizleme, anlatıcı ve karakter sesleri, telaffuz sözlüğü, yeniden üretim. Sayfalar sayfa
  *  düzeninden (plan) okunur; metin, ses ya da sözlük değişen sayfa «güncel değil» görünür ve yeniden seslendirilir.
- *  Sayfa düzeni hiç açılmamış işte bölüm açılınca düzen kendiliğinden kurulur; o sırada «hazırlanıyor» görünür. */
+ *  Sayfa düzeni hiç açılmamış işte bölüm açılınca düzen kendiliğinden kurulur; o sırada «hazırlanıyor» görünür.
+ *  «İnsan kaydı yükle»: seslendirmenin okuduğu kayıt sayfanın sesi olur («İnsan sesi» rozeti); metni değişen insan
+ *  kayıtlı sayfa «güncel değil» görünür ama «Seslendir» onu yapay sesle ezmez, yalnız «Yapay sesle değiştir» ezer. */
 
 const STATUS: Record<NarrationPageRow['status'], { dot: string; text: string }> = {
   done: { dot: 'bg-emerald-500', text: 'Hazır' },
@@ -112,7 +115,9 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   const canProduce = useCan('tasarim.uret');
   const job = d.job;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
-  const todo = d.summary.missing + d.summary.stale;
+  // insan kayıtlı güncel olmayan sayfalar yapay sesle üretilmez (yeni kayıt ya da açık «Yapay sesle değiştir»)
+  const todo = d.summary.missing + d.summary.stale - (d.summary.human_stale ?? 0);
+  const human = job?.mode === 'human';
   const player = usePlayer();
 
   // İş bitince sayfa kayıtları yenilenir (ekrandaki sayfa yeni zamanlarla gelir).
@@ -123,7 +128,8 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   }, [running, refresh]);
 
   const run = useMutation({
-    mutationFn: (v: { pages: string[] | null; force?: boolean }) => narrationApi.run(jobId, v.pages, v.force),
+    mutationFn: (v: { pages: string[] | null; force?: boolean; replaceHuman?: boolean }) =>
+      narrationApi.run(jobId, v.pages, v.force, v.replaceHuman),
     onSuccess: refresh,
   });
   const sample = useMutation({
@@ -154,7 +160,9 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
       {!d.available && (
         <Note tone="info">Seslendirme bu kurulumda henüz açık değil. Sesleri ve telaffuz sözlüğünü şimdiden hazırlayabilirsiniz; açıldığında «Seslendir» ile üretilir.</Note>
       )}
-      {job?.status === 'fail' && <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>}
+      {job?.status === 'fail' && (human
+        ? <Note tone="err">İnsan kaydı işlenemedi{job.error ? `: ${job.error}` : ''}</Note>
+        : <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>)}
       {(run.error || sample.error) && <Note tone="err">{errText(run.error || sample.error, 'İşlem yapılamadı.')}</Note>}
 
       {canProduce && <div className="flex flex-wrap items-center gap-2">
@@ -162,11 +170,11 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
           onClick={() => run.mutate({ pages: null })}
           title={todo ? 'Sesi olmayan ve güncel olmayan sayfalar seslendirilir' : 'Bütün sayfalar güncel'}>
           {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Volume2 className="h-4 w-4" aria-hidden />}
-          {running ? (job?.status === 'queued' ? 'Sırada…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
+          {running ? (job?.status === 'queued' ? 'Sırada…' : human ? 'İnsan kaydı işleniyor…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
         </button>
         {!running && d.summary.done > 0 && (
           <button type="button" className={ghostBtn} disabled={!d.available || run.isPending}
-            onClick={() => { if (window.confirm('Bütün sayfalar baştan seslendirilsin mi? Mevcut sesler yenileriyle değişir.')) run.mutate({ pages: null, force: true }); }}>
+            onClick={() => { if (window.confirm(`Bütün sayfalar baştan seslendirilsin mi? Mevcut sesler yenileriyle değişir.${d.summary.human ? ' İnsan kayıtlı sayfalara dokunulmaz.' : ''}`)) run.mutate({ pages: null, force: true }); }}>
             <RefreshCw className="h-4 w-4" aria-hidden />Tümünü yeniden üret
           </button>
         )}
@@ -175,13 +183,16 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
         <div className="flex flex-col gap-1">
           <Progress value={job.progress?.[0] ?? 0} total={job.progress?.[1] ?? 0} />
           <span className="text-[11.5px] text-canvas-muted">
-            {job.status === 'queued' ? 'Sırada; önceki stüdyo işi bitince başlar.' : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
+            {job.status === 'queued' ? 'Sırada; önceki stüdyo işi bitince başlar.'
+              : human ? ((job.progress?.[0] ?? 0) === 0 ? 'Kelimeler kayda yerleştiriliyor…' : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfanın sesi yazıldı`)
+                : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
           </span>
         </div>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-        <Listen jobId={jobId} d={d} running={running} onRegen={canProduce ? (pid) => run.mutate({ pages: [pid] }) : undefined} regenBusy={run.isPending} />
+        <Listen jobId={jobId} d={d} running={running} regenBusy={run.isPending} onUploaded={refresh}
+          onRegen={canProduce ? (pid, replaceHuman) => run.mutate({ pages: [pid], replaceHuman }) : undefined} />
         <div className="flex min-w-0 flex-col gap-4">
           <Voices jobId={jobId} d={d} onPlay={play} playing={player.playing} onSaved={refresh} />
           <div className="h-px bg-slate-200/80" />
@@ -194,14 +205,16 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
 }
 
 // ---------------------------------------------------------------- dinle
-function Listen({ jobId, d, running, onRegen, regenBusy }: {
-  jobId: string; d: NarrationOverview; running: boolean; onRegen?: (pid: string) => void; regenBusy: boolean;
+function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
+  jobId: string; d: NarrationOverview; running: boolean; onRegen?: (pid: string, replaceHuman?: boolean) => void; regenBusy: boolean;
+  onUploaded: () => void;
 }) {
   const readable = useMemo(() => d.pages.filter((p) => p.status !== 'empty'), [d.pages]);
   const [pid, setPid] = useState<string | null>(null);
   const [auto, setAuto] = useState(false);            // sayfa bitince sonraki hazır sayfaya geç
   const [isPlaying, setIsPlaying] = useState(false);
   const [t, setT] = useState(0);
+  const [upload, setUpload] = useState(false);        // «İnsan kaydı yükle» formu (seçili sayfadan başlar)
   const audio = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -242,7 +255,12 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
     <div className="flex min-w-0 flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-[13px] font-extrabold">Sayfa sayfa dinle</h3>
-        {row && <span className="text-[11.5px] text-canvas-muted">{STATUS[row.status].text}{row.estimated ? ' · bazı kelime zamanları tahmini' : ''}</span>}
+        {row && (
+          <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11.5px] text-canvas-muted">
+            {row.human && <HumanBadge owner={row.owner} />}
+            {STATUS[row.status].text}{row.estimated ? ' · bazı kelime zamanları tahmini' : ''}
+          </span>
+        )}
       </div>
       {readable.length === 0 ? (
         <p className="text-[12.5px] text-canvas-muted">Kitapta okunacak metin yok.</p>
@@ -252,9 +270,10 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
             {readable.map((p) => (
               <li key={p.id} className="shrink-0">
                 <button type="button" onClick={() => { setAuto(false); setPid(p.id); }} aria-current={p.id === pid ? 'true' : undefined}
-                  title={`Sayfa ${p.no} · ${STATUS[p.status].text}`}
+                  title={`Sayfa ${p.no} · ${STATUS[p.status].text}${p.human ? ' · İnsan sesi' : ''}`}
                   className={`flex min-h-10 items-center gap-1.5 rounded-xl border px-2.5 font-mono text-[12px] ${press} ${p.id === pid ? 'border-canvas-violet bg-violet-50/70 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/80'}`}>
                   <span className={`inline-block h-2 w-2 rounded-full ${STATUS[p.status].dot}`} aria-hidden />s. {p.no}
+                  {p.human && <Mic className="h-3.5 w-3.5 text-canvas-violet" aria-label="İnsan sesi" />}
                 </button>
               </li>
             ))}
@@ -280,29 +299,58 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
             </div>
             <span className="font-mono text-[11.5px] tabular-nums text-canvas-muted">{secs(t)} / {secs(page?.duration ?? row?.duration ?? 0)}</span>
             {row && onRegen && (
-              <button type="button" className={`${ghostBtn} ml-auto`} disabled={!d.available || running || regenBusy}
-                onClick={() => onRegen(row.id)} title="Bu sayfanın sesi yeniden üretilir">
-                <RefreshCw className="h-4 w-4" aria-hidden /><span>Yeniden üret</span>
-              </button>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <button type="button" className={ghostBtn} disabled={!d.available || running} aria-expanded={upload}
+                  onClick={() => setUpload((u) => !u)} title="Seslendirmenin okuduğu kayıt bu sayfanın sesi olur">
+                  <Mic className="h-4 w-4" aria-hidden /><span>İnsan kaydı yükle</span>
+                </button>
+                {row.human ? (
+                  <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
+                    onClick={() => { if (window.confirm('Bu sayfanın insan kaydı yapay sesle değiştirilsin mi? Kayıt dosyası saklı kalır; yeniden yükleyerek geri dönebilirsiniz.')) onRegen(row.id, true); }}
+                    title="İnsan kaydının yerine yapay ses üretilir">
+                    <RefreshCw className="h-4 w-4" aria-hidden /><span>Yapay sesle değiştir</span>
+                  </button>
+                ) : (
+                  <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
+                    onClick={() => onRegen(row.id)} title="Bu sayfanın sesi yeniden üretilir">
+                    <RefreshCw className="h-4 w-4" aria-hidden /><span>Yeniden üret</span>
+                  </button>
+                )}
+              </div>
             )}
             <audio ref={audio} src={src} preload="metadata" onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
               onEnded={() => { setIsPlaying(false); ended(); }} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} className="hidden" />
           </div>
 
+          {row && upload && onRegen && (
+            <HumanRecordingUpload key={row.id} jobId={jobId} d={d} pid={row.id} onClose={() => setUpload(false)}
+              onDone={onUploaded} />
+          )}
           {row && row.status !== 'done' && (
             <p className="text-[11.5px] text-canvas-muted">
-              {row.status === 'stale' ? 'Bu sayfanın metni, sesi ya da sözlüğü değişti; aşağıdaki metin yeni hâlidir. Yeniden üretince vurgulu dinlenir.'
-                : 'Bu sayfa henüz seslendirilmedi; metin okunacağı biçimde gösteriliyor.'}
+              {row.status === 'stale' && row.human ? 'Bu sayfanın metni insan kaydından sonra değişti; kayıt eski metne göre. Yeni kaydı yükleyin ya da «Yapay sesle değiştir»i seçin.'
+                : row.status === 'stale' ? 'Bu sayfanın metni, sesi ya da sözlüğü değişti; aşağıdaki metin yeni hâlidir. Yeniden üretince vurgulu dinlenir.'
+                  : 'Bu sayfa henüz seslendirilmedi; metin okunacağı biçimde gösteriliyor.'}
             </p>
           )}
           {pq.error ? <Note tone="err">{errText(pq.error, 'Sayfa okunamadı.')}</Note>
             : page ? <ReadAlong blocks={page.blocks} audio={audio} voices={d.voices} timed={!!done} />
               : <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {/* İFADE KATMANI: seçili sayfanın cümle cümle ifadesi (ExpressionEditor.tsx) */}
-          {row && <ExpressionEditor jobId={jobId} pid={row.id} canVoice={d.available} busy={running || regenBusy} onRegen={onRegen} />}
+          {row && (row.human
+            ? <p className="text-[11.5px] text-canvas-muted">Bu sayfanın sesi insan kaydı; cümle ifadeleri yalnız yapay seste kullanılır.</p>
+            : <ExpressionEditor jobId={jobId} pid={row.id} canVoice={d.available} busy={running || regenBusy} onRegen={onRegen ? (p) => onRegen(p) : undefined} />)}
         </>
       )}
     </div>
+  );
+}
+
+function HumanBadge({ owner }: { owner?: string | null }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 font-bold text-canvas-violet" title={owner ? `Okuyan: ${owner}` : undefined}>
+      <Mic className="h-3 w-3" aria-hidden />İnsan sesi{owner ? ` · ${owner}` : ''}
+    </span>
   );
 }
 

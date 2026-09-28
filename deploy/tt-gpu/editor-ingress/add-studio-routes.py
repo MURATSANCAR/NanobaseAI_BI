@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28; sesli okumada insan kaydı 09-28) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -380,6 +380,17 @@ if "EDITOR-STUDYO-KUTUPHANE" not in s:
            + loc(f"library/covers/({CID})(/image)?", "GET", "library/covers/$1$2$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", kut + "    # EDITOR-BITTI", 1)
     changes.append("kapak arşivi yolları")
+
+# 10) Sesli okumada insan kaydı (09-28; narration_human.py, api_narration.py): seslendirmenin kaydı sayfanın sesi olur.
+#     Yalnız POST; gövde base64 JSON (özgün ses dosyası + izin belgesi): 2 × (STUDIO_UPLOAD_MB + 1) × 4/3. Hizalama ve
+#     sayfalara bölme arka planda (Temporal); durum mevcut `GET …/narration` yolundan okunur.
+if "EDITOR-STUDYO-INSANKAYDI" not in s:
+    rec_mb = int(2 * body_mb * 4 / 3) + 1
+    insan = ("    # EDITOR-STUDYO-INSANKAYDI  (sesli okumada insan kaydi: narration_human.py)\n"
+             + loc(f"jobs/({JOB})/narration/(recordings)", "POST", "jobs/$1/narration/$2$is_args$args",
+                   f"\n        client_max_body_size {rec_mb}m;", timeout=300))
+    s = s.replace("    # EDITOR-BITTI", insan + "    # EDITOR-BITTI", 1)
+    changes.append(f"sesli okuma insan kaydı yolu (gövde {rec_mb} MB)")
 
 if s == orig:
     print("zaten var (güncel)")

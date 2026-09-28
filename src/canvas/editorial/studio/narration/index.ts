@@ -5,5 +5,5 @@ export { default as ReadAlong, wordAt } from './ReadAlong';
 export { narrationApi, useNarration, useNarrationPage, NarrationError } from './api';
 export { default as SoundEffects } from './SoundEffects';
 export { sfxApi, useSfx, SfxError } from './sfxApi';
-export type { LexEntry, NarrationBlock, NarrationJob, NarrationOverview, NarrationPage, NarrationPageRow,
+export type { HumanRecording, LexEntry, NarrationBlock, NarrationJob, NarrationOverview, NarrationPage, NarrationPageRow,
   NarrationSettings, NarrationVoice, NarrationWord } from './api';

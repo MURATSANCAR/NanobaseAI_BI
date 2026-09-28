@@ -19,7 +19,9 @@ arasından harf sayısıyla orantılı tahmin edilir (`estimated`).
     sozluk.json         iş sözlüğü [{word, say, by, at}]
     sayfa/<pid>.mp3     sayfanın sesi
     sayfa/<pid>.json    zamanlar (media_overlay'deki sayfa kaydı) + girdinin özeti (hash): metin, ses ya da sözlük
-                        değişince sayfa «güncel değil» görünür
+                        değişince sayfa «güncel değil» görünür. İnsan kaydında (`source: "human"`,
+                        narration_human.py) yalnız metnin özeti (`text_hash`) bakılır; üzerine yapay ses yazılmaz
+    insan/<yükleme>/    yüklenen insan kaydı: özgün dosya, hak beyanı, izin belgesi (narration_human.py)
 Yayınevi düzeyinde (`<storage>/production/_ses/`): sozluk.json (yayınevi sözlüğü), sesler/<ses>.wav|json (her ses bir
 kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır). Önerilen erkek anlatıcının
 referansı pakette sabittir (`production/sesler/`, PINNED; sha256 kodda), yayınevi klasörüne yazılmaz.
@@ -942,6 +944,23 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     return units, plist, h
 
 
+def text_hash(units: list[Unit]) -> str:
+    """Yalnız sayfanın metni (ekrandaki kelimeler, okuma sırasıyla): insan kaydının güncelliği buna bakar. Ses seçimi,
+    sözlük ve ifade işareti kaydın kendisini değiştirmez (narration_human.py)."""
+    return _hash({"v": VERSION, "t": [[w.text for w in u.words] for u in units]})
+
+
+def is_human(rec: dict | None) -> bool:
+    return bool(rec) and rec.get("source") == "human"
+
+
+def fresh(rec: dict | None, units: list[Unit], h: str) -> bool:
+    """Sayfa kaydı güncel mi: yapay seste girdinin tamamının özeti, insan kaydında yalnız metnin özeti."""
+    if not rec:
+        return False
+    return rec.get("text_hash") == text_hash(units) if is_human(rec) else rec.get("hash") == h
+
+
 def page_record(d: Path, pid: str) -> dict | None:
     return _read(d / DIR / "sayfa" / f"{pid}.json")
 
@@ -951,7 +970,8 @@ def audio_path(d: Path, pid: str) -> Path:
 
 
 def status(d: Path) -> list[dict]:
-    """Sayfa başına durum: done (güncel ses var) | stale (metin/ses/sözlük değişti) | missing | empty (okunacak yok)."""
+    """Sayfa başına durum: done (güncel ses var) | stale (metin/ses/sözlük değişti) | missing | empty (okunacak yok).
+    İnsan kaydında (`human`) güncellik yalnız metne bakar; `owner` kaydı okuyan kişidir."""
     from . import plan as plan_mod
     pl = plan_mod.load(d)
     if pl is None:
@@ -961,11 +981,13 @@ def status(d: Path) -> list[dict]:
     for pg in pl["pages"]:
         units, plist, h = page_input(d, pg, cfg, lex)
         rec = page_record(d, pg["id"])
-        st = "empty" if not plist else ("missing" if not rec or not audio_path(d, pg["id"]).exists()
-                                        else "done" if rec.get("hash") == h else "stale")
+        has = bool(rec) and audio_path(d, pg["id"]).exists()
+        st = "empty" if not plist else ("missing" if not has else "done" if fresh(rec, units, h) else "stale")
+        human = has and bool(plist) and is_human(rec)
         out.append({"id": pg["id"], "no": plan_mod.page_no(pl, pg["id"]), "status": st,
                     "duration": rec.get("duration") if rec else None,
-                    "estimated": bool(rec and rec.get("estimated")), "words": sum(len(u.words) for u in units)})
+                    "estimated": bool(rec and rec.get("estimated")), "words": sum(len(u.words) for u in units),
+                    "human": human, **({"owner": (rec.get("human") or {}).get("owner")} if human else {})})
     return out
 
 
@@ -978,11 +1000,12 @@ def page_view(d: Path, pid: str) -> dict:
     pg = plan_mod._page(pl, pid)
     units, plist, h = page_input(d, pg)
     rec = page_record(d, pid)
-    if rec and rec.get("hash") == h and audio_path(d, pid).exists():
+    if fresh(rec, units, h) and audio_path(d, pid).exists():
         return {**rec, "status": "done"}
     blocks = word_times(units, [], [])
     return {"page": pid, "no": plan_mod.page_no(pl, pid), "status": "stale" if rec else ("empty" if not plist else "missing"),
-            "duration": None, "blocks": blocks}
+            "duration": None, "blocks": blocks,
+            **({"source": "human", "human": rec.get("human")} if is_human(rec) and plist else {})}
 
 
 # ------------------------------------------------------------------ servis
@@ -1055,8 +1078,9 @@ async def voice_ref(vid: str) -> dict:
     return {"ref_audio": base64.b64encode(wav.read_bytes()).decode(), "ref_text": REF_TEXT}
 
 
-async def narrate_page(d: Path, pid: str, by: str) -> dict:
-    """Bir sayfayı seslendirir ve kaydeder: ses/sayfa/<pid>.mp3 + .json. Okunacak metin yoksa eski kayıt silinir."""
+async def narrate_page(d: Path, pid: str, by: str, keep_human: bool = False) -> dict:
+    """Bir sayfayı seslendirir ve kaydeder: ses/sayfa/<pid>.mp3 + .json. Okunacak metin yoksa eski kayıt silinir.
+    `keep_human`: sayfada insan kaydı varsa dokunulmaz (editör yapay sesle değiştirmeyi açıkça istemediyse)."""
     from . import plan as plan_mod
     pl = plan_mod.load(d)
     if pl is None:
@@ -1064,6 +1088,8 @@ async def narrate_page(d: Path, pid: str, by: str) -> dict:
     pg = plan_mod._page(pl, pid)
     units, plist, h = page_input(d, pg)
     sd = ses_dir(d) / "sayfa"
+    if keep_human and is_human(page_record(d, pid)) and audio_path(d, pid).exists():
+        return {"page": pid, "status": "human"}
     if not plist:
         for p in (sd / f"{pid}.json", sd / f"{pid}.mp3"):
             p.unlink(missing_ok=True)
@@ -1162,6 +1188,7 @@ def media_overlay(job) -> dict:
         raise plan_mod.NoPlan(d.name)
     rows = {r["id"]: r for r in status(d)}
     pages, missing, stale, total = [], [], [], 0.0
+    people, machine = [], False            # anlatıcılar: insan kaydını okuyanlar + (yapay sesli sayfa varsa) sesler
     for pg in pl["pages"]:
         st = rows[pg["id"]]["status"]
         if st == "missing":
@@ -1177,12 +1204,18 @@ def media_overlay(job) -> dict:
         pages.append({"page": pg["id"], "no": rec["no"], "audio": str(audio_path(d, pg["id"])), "href": rec["audio"],
                       "duration": rec["duration"], "blocks": rec["blocks"]})
         total += float(rec["duration"] or 0)
+        if is_human(rec):
+            who = ((rec.get("human") or {}).get("owner") or "").strip()
+            if who and who not in people:
+                people.append(who)
+        else:
+            machine = True
     cfg = settings_of(d)
     used = {cfg.get("narrator") or DEFAULT_NARRATOR} | set((cfg.get("characters") or {}).values())  # settings_of: güncel kimlik
     return {"version": VERSION, "job": d.name, "format": "mp3", "complete": not missing and not stale,
             "duration": round(total, 3), "missing": missing, "stale": stale,
             "narrator": cfg.get("narrator") or DEFAULT_NARRATOR,
-            "narrators": _labels(sorted(used)),
+            "narrators": people + (_labels(sorted(used)) if machine or not people else []),
             "pages": pages}
 
 

@@ -87,6 +87,7 @@ imajına ffmpeg + onnxruntime 1.30 + tokenizers 0.23 (images/studio; 1,56 → 2,
 tamamla.sh). Kapsama (390 çocuk kitabı, 2.647 benzersiz ipucu): Zeki AI seçimiyle %79,4 benzersiz / %83,2 geçiş
 (hedef %98 değil); üretim modeli MOSS-SoundEffect v2.0 (Apache-2.0, `/data/editor/models/sfx-uretim`, gateway'de
 takma adı yok, GPU 1'de yer denetimli ya da işlemcide). Kaynaklar/lisanslar/ölçüm: `docs/analiz/efekt-sesleri-kaynaklar.md`.
+**Stüdyo sesli okumada insan kaydı (2026-09-28, dalda; kurulmadı):** seslendirmenin kaydı sayfanın sesi olur (klon değil); `production/narration_human.py` (hak beyanı voices.py kuralı, ardışık sayfalar, `ses/insan/<yükleme>/`, Temporal `HumanRecording`: ses servisinde `recording`+`words` = yalnız hizalama, sayfa sınırı kelimeler arası boşluğun ortası, sayfa MP3'ü özgün dosyadan kesilir); sayfa kaydı `source: human`, güncellik yalnız metin (`text_hash`), «Seslendir» atlar, yalnız `replace_human` ezer; servis/köprü `POST …/narration/recordings`, giriş kapısı `EDITOR-STUDYO-INSANKAYDI`, test sunucusu nginx'i `add-studio-voice-size.py`; ses imajı `editor-voice:3` (kurulumda derlenmeli); ekran `studio/narration/HumanRecordingUpload.tsx`.
 
 **"Geçen yılın aynı dönemi" (2026-09-25):** yanındaki dönemin bir yıl/ay/çeyrek/hafta öncesi (`temporal.anchor_same_period`). Kuruldu (test + VM, 25.09).
 

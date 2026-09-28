@@ -1,5 +1,37 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Sesli okumaya «İnsan kaydı yükle» (dalda; kurulmadı)
+
+- **Neden:** kullanıcı «seslerimiz çok robotik, bize gerçek insan sesi lazım». Yayınevi kitabı seslendirmene okutur;
+  editör kaydı sayfa sayfa ya da ardışık sayfaları okuyan tek dosya olarak yükler, kayıt o sayfaların sesi olur.
+  Yapay ses üretilmez, ses klonlanmaz.
+- **Motor:** `production/narration_human.py` — hak beyanı ses kütüphanesiyle aynı kural (onay + kaydı okuyan kişi +
+  izin belgesi ya da belge numarası), sayfalar okuma sırasıyla ardışık olmalı; özgün dosya `ses/insan/<yükleme>/`.
+  Temporal `HumanRecording`: kayıt 16 kHz FLAC'a çevrilip ses servisine yalnız hizalama için gider, bütün sayfaların
+  okunuş kelimeleri tek hizalamada yerleşir; sayfa sınırı iki sayfanın kelimeleri arasındaki boşluğun ortası; her
+  sayfanın sesi özgün dosyadan kesilir (tek kanal MP3 96 kbit/s), kelime zamanları `narration.word_times` ile aynı yoldan
+  → okurken vurgu, sesli e-kitap medya kaplaması ve efekt karışımı değişmeden çalışır. Kaplamada `media:narrator` kaydı
+  okuyan kişi (yapay sesli sayfa da varsa yanında ses adı).
+- **Güncellik:** sayfa kaydı `source: "human"`, güncellik yalnız metne bakar (`narration.text_hash`); ses/sözlük/ifade
+  insan kaydını eskitmez. Metin değişince «güncel değil» ama «Seslendir» ve «Tümünü yeniden üret» insan kayıtlı sayfayı
+  atlar; sayfada «Yapay sesle değiştir» (`narration/run` `replace_human`, onaysız 409 `HUMAN_RECORDING`).
+- **Ses servisi:** `images/voice/server.py` gövdede `recording` + `words` → yalnız hizalama (üretim yok, `format:
+  none`); uzun kayıtta hizalayıcı çıktısı 30 sn pencere + 1 sn bağlamla, büyük Viterbi tablosu işlemcide. Gateway
+  değişmedi (aynı `audio/narrate` yolu). İmaj `editor-voice:3` (models.yaml, editorctl). GPU'da gerçek hizalayıcıyla
+  (CPU) sınandı: 72 sn kayıt, iki pencere sınırı, iç kelimelerde tek geçişe göre en çok 29 ms / ortanca 8 ms sapma.
+- **Uçlar:** servis `POST /v1/studio/jobs/{iş}/narration/recordings` (base64 JSON, STUDIO_UPLOAD_MB; ret 400
+  `RECORDING_REJECTED`), `GET narration`'a `recordings` + `summary.human/human_stale`, sayfa satırına `human/owner`;
+  köprü aynı yol (denetim kaydı: sayfalar, okuyan, beyan, belge), yetki `tasarim.uret`; GPU giriş kapısı
+  `EDITOR-STUDYO-INSANKAYDI`; test sunucusu nginx'i `add-studio-voice-size.py` bu yola da 250 MB.
+- **Ekran:** sayfa araç satırında «İnsan kaydı yükle» (seçili sayfadan başlar, son sayfa seçilir), hak beyanı kutusu,
+  yüklenen kayıtların durumu; sayfa çipinde mikrofon, başlıkta «İnsan sesi · okuyan» rozeti; iş sürerken «Kelimeler
+  kayda yerleştiriliyor…». İnsan kayıtlı sayfada ifade düzenleyicisi yerine not.
+- Testler: `tests/test_narration_human.py` (7). Editör tam set GPU'da (stüdyo imajı `0.15.9-4cfdafd9`): 605 geçti.
+  Ön yüz tip denetimi yapılmadı (Mac'te derleme yok); kurulumda test sunucusu derlemesi denetler.
+- **Kurulumda:** GPU'da `editor-voice:3` derlenmeli + gateway yeniden okumalı (eski servis `recording`'i tanımaz, kayıt
+  400 → «ses servisi insan kaydını henüz desteklemiyor» hatası), `add-studio-routes.py`, test sunucusunda
+  `add-studio-voice-size.py`; müşteri VM'inin web nginx'inde de bu yola gövde sınırı gerekir.
+
 ## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
 
 - **Neden:** «Dünyanın En Korkak Hayvanı» (iş `2026092803385843f032`, 17 sayfa, 1.392 kelime) iki sesle baştan sona

@@ -4,7 +4,13 @@
     GET  narration                       sesler, ayarlar, konuşanlar, sayfa durumları, süren iş, sözlükler
     PUT  narration/settings              {narrator, characters: {konuşan: ses}}
     PUT  narration/lexicon               {scope: job|publisher, entries: [{word, say}]}  (kapsamın tamamı)
-    POST narration/run                   {pages: [pid] | null, force: bool} → {workflow, job}  (Temporal işi)
+    POST narration/run                   {pages: [pid] | null, force: bool, replace_human: bool} → {workflow, job}
+                                         (Temporal işi; insan kayıtlı sayfalar atlanır, açıkça verilen sayfada
+                                         replace_human olmadan 409 HUMAN_RECORDING)
+    POST narration/recordings            {pages: [pid], owner, confirm, reference, audio: {name, data(b64)},
+                                          document?: {name, data(b64)}} → {workflow, job, recording}  (X-Editor;
+                                         insan kaydı: narration_human.py, Temporal HumanRecording; ret 400
+                                         RECORDING_REJECTED, dosya sınırı STUDIO_UPLOAD_MB → 413 TOO_LARGE)
     GET  narration/pages/{pid}           sayfanın blokları, kelimeleri ve (güncelse) zamanları
     GET  narration/pages/{pid}/audio     sayfanın sesi (audio/mpeg, Range destekli)
     POST narration/read                  {text} → okunuş (sözlük ve Türkçe kurallarıyla; model yok)
@@ -22,7 +28,7 @@ Yükleme reddi 400 `{"code": "VOICE_REJECTED", "detail": <Türkçe neden>}`; dos
 Hatalar gövdede `code` taşır: NO_PLAN (404: kitap henüz sayfalara yerleşmedi), PREPARING (409: sayfa düzeni
 kendiliğinden kuruluyor, `state` preparing | waiting; ekran bekler), PLAN_FAILED (409: kurulum düştü; GET `?retry=1`),
 NO_VOICE (503: seslendirme bu kurulumda açık değil), BUSY (409: bu kitapta seslendirme sürüyor), NOTHING (400:
-seslendirilecek sayfa yok).
+seslendirilecek sayfa yok), HUMAN_RECORDING (409: sayfada insan kaydı var, yapay sesle değiştirme onayı yok).
 
 Planı olmayan iş (sayfa düzeni hiç açılmamış eski iş): `GET narration` ve `POST narration/run` planı kendiliğinden
 kurar (`plan.ensure`: dondurmanın aynısı, görsel çizilmez, balonlar kuralla). Öteki uçlar ekranın ilk çağrısından
@@ -122,18 +128,24 @@ def _speakers(d: Path) -> list[str]:
 
 
 def _overview(d: Path) -> dict:
+    from . import narration_human as H
     rows = N.status(d)
     count = {k: sum(1 for r in rows if r["status"] == k) for k in ("done", "stale", "missing", "empty")}
+    human = [r for r in rows if r.get("human")]
     return {
         "voices": N.all_voices(),
         "groups": N.GROUPS,
         "settings": N.settings_of(d),
         "speakers": _speakers(d),
         "pages": rows,
-        "summary": {**count, "duration": round(sum(r["duration"] or 0 for r in rows if r["status"] == "done"), 1)},
+        "summary": {**count, "duration": round(sum(r["duration"] or 0 for r in rows if r["status"] == "done"), 1),
+                    "human": len(human), "human_stale": sum(1 for r in human if r["status"] == "stale")},
         "job": _latest(d),
         "lexicon": {"job": N.lexicon_entries(d, "job"), "publisher": N.lexicon_entries(None, "publisher")},
         "plan_auto": plan_mod.auto_state(d),              # sayfa düzeni kendiliğinden kurulduysa kaydı
+        # insan kaydı yükleme: hak beyanı metni, dosya sınırı, son yüklemeler (narration_human.py)
+        "recordings": {"rights_text": H.RIGHTS_TEXT, "upload_mb": _upload_mb(), "extensions": list(H.AUDIO_EXT),
+                       "items": [H.public(r) for r in H.uploads(d)]},
     }
 
 
@@ -184,13 +196,15 @@ async def narration_lexicon(job: str, body: LexiconBody, by: str = Depends(_edit
 class Run(BaseModel):
     pages: list[str] | None = None
     force: bool = False
+    replace_human: bool = False          # verilen sayfalardaki insan kaydı yapay sesle değişsin (editörün açık onayı)
 
 
 @router.post(P + "/run")
 @_guard
 async def narration_run(job: str, body: Run, by: str = Depends(_editor)) -> dict:
     """Seslendirme işini kuyruğa verir. `pages` verilmezse sesi olmayan ve güncel olmayan sayfalar; `force` ile
-    okunacak metni olan bütün sayfalar (verilen sayfalar her durumda yeniden üretilir)."""
+    okunacak metni olan bütün sayfalar (verilen sayfalar her durumda yeniden üretilir). İnsan kaydı olan sayfalar
+    listesiz koşuda atlanır; açıkça verilen sayfada insan kaydı varsa `replace_human` olmadan 409 HUMAN_RECORDING."""
     from .api import _temporal
     from .flow import QUEUE
     d = await _ready(job, by)
@@ -198,16 +212,23 @@ async def narration_run(job: str, body: Run, by: str = Depends(_editor)) -> dict
         raise _Err(409, "BUSY", "Bu kitapta seslendirme sürüyor.")
     rows = await asyncio.to_thread(N.status, d)
     by_id = {r["id"]: r for r in rows}
+    human = {r["id"] for r in rows if r.get("human")}
     if body.pages is not None:
         unknown = [p for p in body.pages if p not in by_id]
         if unknown:
             raise HTTPException(404, "sayfa yok: " + ", ".join(unknown))
         pids = [p for p in body.pages if by_id[p]["status"] != "empty"]
+        if not body.replace_human and any(p in human for p in pids):
+            raise _Err(409, "HUMAN_RECORDING", "Bu sayfanın sesi insan kaydı; yapay sesle değiştirmek için açıkça "
+                                               "onaylayın.")
     elif body.force:
-        pids = [r["id"] for r in rows if r["status"] != "empty"]
+        pids = [r["id"] for r in rows if r["status"] != "empty" and r["id"] not in human]
     else:
-        pids = [r["id"] for r in rows if r["status"] in ("missing", "stale")]
+        pids = [r["id"] for r in rows if r["status"] in ("missing", "stale") and r["id"] not in human]
     if not pids:
+        if any(by_id[p]["status"] == "stale" for p in human):
+            raise _Err(400, "NOTHING", "Yapay sesle üretilecek sayfa yok. Güncel olmayan sayfaların sesi insan kaydı: "
+                                       "yeni kaydı yükleyin ya da sayfada «Yapay sesle değiştir»i seçin.")
         raise _Err(400, "NOTHING", "Seslendirilecek sayfa yok; bütün sayfalar güncel.")
     if not await N.available():
         raise N.VoiceUnavailable("kapalı")
@@ -216,7 +237,8 @@ async def narration_run(job: str, body: Run, by: str = Depends(_editor)) -> dict
     plan_mod.job_record(d, jid, kind="narration", status="queued", pages=pids, progress=[0, len(pids)], by=by,
                         workflow=wf)
     try:
-        await (await _temporal()).start_workflow("BookNarration", args=[job, jid, pids, by], id=wf, task_queue=QUEUE)
+        await (await _temporal()).start_workflow("BookNarration", args=[job, jid, pids, by, body.replace_human], id=wf,
+                                                 task_queue=QUEUE)
     except Exception as e:  # noqa: BLE001
         plan_mod.job_record(d, jid, status="fail", error=f"İş kuyruğuna ulaşılamadı: {type(e).__name__}")
         raise HTTPException(503, f"İş kuyruğuna ulaşılamadı: {type(e).__name__}") from None
@@ -379,6 +401,65 @@ async def voices_remove(vid: str, by: str = Depends(_editor), x_editor_admin: st
     except KeyError:
         raise HTTPException(404, "ses yok") from None
     return {"voice": voices.as_voice(rec)}
+
+
+# ------------------------------------------------------------------ insan kaydı (narration_human.py)
+class RecordingIn(BaseModel):
+    pages: list[str] = Field(min_length=1)
+    owner: str = Field(max_length=200)
+    confirm: bool = False
+    reference: str = Field(default="", max_length=400)
+    audio: FileIn                                    # yüklenen özgün dosya (wav/mp3/m4a/ogg/flac), olduğu gibi
+    document: FileIn | None = None
+
+
+def _rejected(detail: str) -> _Err:
+    return _Err(400, "RECORDING_REJECTED", detail)
+
+
+@router.post(P + "/recordings")
+@_guard
+async def narration_recording(job: str, body: RecordingIn, by: str = Depends(_editor)) -> dict:
+    """İnsan kaydı yükler: hak beyanı ve sayfalar denetlenir, dosya iş klasörüne yazılır, hizalama ve sayfa sesleri
+    Temporal'da (HumanRecording). Durum `GET narration`'daki `job` (kind narration, mode human) ve `recordings`."""
+    from . import narration_human as H
+    from .api import _temporal
+    from .flow import QUEUE
+    d = _dir(job)
+    if _running(d):
+        raise _Err(409, "BUSY", "Bu kitapta seslendirme sürüyor; bitince kaydı yükleyin.")
+    if not await N.available():                      # kelime zamanları ses servisinin hizalayıcısıyla çıkar
+        raise N.VoiceUnavailable("kapalı")
+    for p in body.pages:
+        if not PID.match(p):
+            raise HTTPException(404, "sayfa yok")
+    try:
+        audio = _b64(body.audio.data, "Ses kaydı")
+        doc = (_b64(body.document.data, "İzin belgesi"), body.document.name) if body.document else None
+    except _Err as e:
+        if e.resp.status_code == 400:
+            raise _rejected("Dosya okunamadı.") from None
+        raise
+    try:
+        rec = await asyncio.to_thread(H.stage, d, body.pages, audio, body.audio.name, owner=body.owner,
+                                      confirm=body.confirm, by=by, reference=body.reference, document=doc)
+    except H.RecordingError as e:
+        raise _rejected(str(e)) from None
+    except KeyError:
+        raise HTTPException(404, "sayfa yok") from None
+    jid = plan_mod.new_id("j")
+    wf = f"studio-{job}-insan-{rec['id']}"
+    plan_mod.job_record(d, jid, kind="narration", mode="human", recording=rec["id"], status="queued",
+                        pages=rec["pages"], progress=[0, len(rec["pages"])], by=by, workflow=wf)
+    try:
+        await (await _temporal()).start_workflow("HumanRecording", args=[job, jid, rec["id"], by], id=wf,
+                                                 task_queue=QUEUE)
+    except Exception as e:  # noqa: BLE001
+        msg = f"İş kuyruğuna ulaşılamadı: {type(e).__name__}"
+        plan_mod.job_record(d, jid, status="fail", error=msg)
+        await asyncio.to_thread(H.mark, d, rec["id"], status="fail", error=msg)
+        raise HTTPException(503, msg) from None
+    return {"workflow": wf, "job": jid, "recording": H.public(rec)}
 
 
 # ------------------------------------------------------------------ Kampüs sesli bülteni (bulletin.py)

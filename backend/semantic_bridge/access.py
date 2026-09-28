@@ -687,7 +687,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/schools/catalogs/[^/]+\.pdf$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
-                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"
+                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run|narration/recordings"
                                r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
     # M19: talep açma; üretim (görsel dizimi, Zeki AI metni, başlık önerisi), kapak yükleme ve varlık düzeltme.
     # Tasarım/mesaj onayı ve marka kiti açıkça verilen yetkilerle ucun içinde denetlenir.

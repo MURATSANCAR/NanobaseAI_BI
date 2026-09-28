@@ -12,6 +12,11 @@ iOS Safari sesi yalnız aralık desteği olan adresten çalar, ileri/geri sarma 
 `GET/PUT …/narration/pages/{sayfa}/expression`, `POST …/expression/suggest` (ZEKİ AI önerisi, 300 sn),
 `POST …/expression/sample` (bu cümleyi dinle, audio/mpeg). Yazanlar (PUT, suggest) denetim kaydına düşer.
 
+İnsan kaydı (seslendirmenin okuduğu kayıt sayfanın sesi olur; editörde `production/narration_human.py`):
+`POST …/narration/recordings` {pages, owner, confirm, reference, audio: {name, data(b64)}, document?} — gövde base64
+JSON (ses kütüphanesiyle aynı 250 MB sınırı), hak beyanı zorunlu, denetim kaydı düşer; işlenmesi stüdyoda arka planda,
+durum `GET …/narration`'da. `POST …/narration/run` `replace_human`: insan kaydını yapay sesle değiştirme onayı.
+
 Ses kütüphanesi (yayınevi düzeyinde): `GET/POST /api/v1/editorial/studio/voices`, `GET …/voices/{ses}/document`
 (izin belgesi), `DELETE …/voices/{ses}` (yalnız yönetici). Yükleme hak beyanı ister (onay, sesin sahibi, belge ya da
 belge numarası); köprü yüklemeyi ve kaldırmayı denetim kaydına yazar (kim, ne zaman, belge).
@@ -41,6 +46,7 @@ RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 VOICE_ID = re.compile(r"^yuklenen-[0-9a-f]{8}$")
 DOC_MIME = {"application/pdf", "image/png", "image/jpeg"}
 VOICE_BODY_MAX = 250 * 1024 * 1024        # üç dosya (kayıt, özgün dosya, belge) base64; servis dosya başına STUDIO_UPLOAD_MB uygular
+                                          # (insan kaydı yüklemesi de: ses + izin belgesi)
 
 
 def voices_request(method: str, sub: str = "", *, body: dict | None = None, editor: str | None = None,
@@ -194,8 +200,48 @@ def register(app, deps: dict[str, Any] | Any) -> None:
         b = obj(body or {})
         pages = b.get("pages")
         clean = {"pages": [pid(str(p)) for p in pages] if isinstance(pages, list) else None,
-                 "force": bool(b.get("force"))}
-        return write(request, "POST", job, "/run", "seslendirme başlatıldı", clean)
+                 "force": bool(b.get("force")), "replace_human": b.get("replace_human") is True}
+        what = "seslendirme başlatıldı" + (" (insan kaydı yapay sesle değiştirildi)" if clean["replace_human"] else "")
+        return write(request, "POST", job, "/run", what, clean)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/narration/recordings")
+    async def editorial_narration_recording(job: str, request: Request):
+        # İnsan kaydı yükleme (servis: narration_human.py). Hak beyanı zorunlu; denetim kaydına kim, hangi sayfalar,
+        # kaydı okuyan kişi, beyan metni ve belge (adı ya da numarası) yazılır. Ses gövdesi kayda girmez.
+        engine, _tenant, user, _ = auth(request)
+        raw = await request.body()
+        if len(raw) > VOICE_BODY_MAX:
+            raise HTTPException(413, "Yükleme çok büyük.")
+        try:
+            import json as _json
+            b = obj(_json.loads(raw))
+        except ValueError:
+            raise HTTPException(400, "Gövde okunamadı.") from None
+
+        def f(name: str) -> dict | None:
+            v = b.get(name)
+            if not isinstance(v, dict) or not isinstance(v.get("data"), str):
+                return None
+            return {"name": str(v.get("name") or "")[:300], "data": v["data"]}
+        pages = b.get("pages") if isinstance(b.get("pages"), list) else []
+        audio = f("audio")
+        if audio is None:
+            raise HTTPException(400, "Ses dosyası gerekli.")
+        clean = {"pages": [pid(str(p)) for p in pages], "owner": str(b.get("owner") or "")[:200],
+                 "confirm": b.get("confirm") is True, "reference": str(b.get("reference") or "")[:400],
+                 "audio": audio, "document": f("document")}
+        out = call(request_fn, "POST", job, "/recordings", body=clean, editor=user, timeout=300)
+        if audit is not None and not isinstance(out, Response):
+            try:
+                rec = out.get("recording") or {}
+                audit(engine, user, "create", "studio_narration", f"{job}/recordings/{rec.get('id')}"[:120],
+                      f"insan kaydı yüklendi: {len(clean['pages'])} sayfa, okuyan {clean['owner']}"[:200],
+                      {"pages": clean["pages"], "owner": clean["owner"], "confirmed": clean["confirm"],
+                       "file": audio["name"], "document": (clean["document"] or {}).get("name"),
+                       "reference": clean["reference"] or None, "recording": rec.get("id")})
+            except Exception:  # noqa: BLE001 — denetim kaydı düşmezse işlem geri alınmaz, günlüğe yazılır
+                log.exception("studio narration recording audit failed")
+        return out
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}")
     def editorial_narration_page(job: str, page: str, request: Request):

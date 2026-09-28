@@ -1,7 +1,7 @@
 """Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
 (ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
 GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz); boyama kitabı (ColoringBook, modelsiz) ve
-çizgiyi görsel modelle yeniden çizme (ColoringRedraw); kolaj kapağın fotoğraf adayları (CollagePhotos); Kampüs sesli bülteni (BulletinNarration). Kendi kuyruğu
+çizgiyi görsel modelle yeniden çizme (ColoringRedraw); kolaj kapağın fotoğraf adayları (CollagePhotos); Kampüs sesli bülteni (BulletinNarration); sesli okumada insan kaydının hizalanması (HumanRecording). Kendi kuyruğu
 `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
@@ -199,12 +199,13 @@ NARRATION_RETRY = RetryPolicy(initial_interval=timedelta(seconds=20), maximum_at
 
 
 @activity.defn(name="production_narrate_page")
-async def narrate_page_activity(job: str, jid: str, pid: str, i: int, n: int, by: str) -> None:
+async def narrate_page_activity(job: str, jid: str, pid: str, i: int, n: int, by: str, keep_human: bool = True) -> None:
+    """`keep_human`: sayfada insan kaydı varsa dokunulmaz; yalnız editör açıkça değiştir dediyse False gelir."""
     from . import narration, plan as plan_mod, studio
     d = studio.job_dir(job)
     plan_mod.job_record(d, jid, status="running", page=pid, progress=[i, n], attempt=activity.info().attempt)
     try:
-        await _beating(narration.narrate_page(d, pid, by))
+        await _beating(narration.narrate_page(d, pid, by, keep_human=keep_human))
     except KeyError:                    # sayfa bu arada silindi
         plan_mod.job_record(d, jid, progress=[i + 1, n])
         return
@@ -219,6 +220,31 @@ async def narrate_page_activity(job: str, jid: str, pid: str, i: int, n: int, by
 async def narration_done_activity(job: str, jid: str) -> None:
     from . import plan as plan_mod, studio
     plan_mod.job_record(studio.job_dir(job), jid, status="done")
+
+
+# İnsan kaydı (narration_human.py): hizalama + sayfalara bölme tek etkinlik; ret (RecordingError) yeniden denenmez.
+HUMAN_RETRY = RetryPolicy(initial_interval=timedelta(seconds=20), maximum_attempts=3,
+                          non_retryable_error_types=["ValueError", "RecordingError", "NoPlan", "VoiceUnavailable",
+                                                     "KeyError"])
+
+
+@activity.defn(name="production_human_recording")
+async def human_recording_activity(job: str, jid: str, uid: str, by: str) -> None:
+    from . import narration_human as H, plan as plan_mod, studio
+    d = studio.job_dir(job)
+    plan_mod.job_record(d, jid, status="running", attempt=activity.info().attempt)
+    try:
+        await _beating(H.apply(d, uid, by, lambda i, n: plan_mod.job_record(d, jid, progress=[i, n])))
+    except Exception as e:
+        if _last(HUMAN_RETRY) or type(e).__name__ in HUMAN_RETRY.non_retryable_error_types:
+            msg = str(e)[:300] if isinstance(e, H.RecordingError) else f"Kayıt işlenemedi: {str(e)[:260]}"
+            plan_mod.job_record(d, jid, status="fail", error=msg)
+            try:
+                H.mark(d, uid, status="fail", error=msg)
+            except KeyError:
+                pass
+        raise
+    plan_mod.job_record(d, jid, status="done")
 
 
 @activity.defn(name="production_bulletin")
@@ -258,7 +284,7 @@ async def collage_photos_activity(job: str, count: int, direction: str, by: str)
 
 ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity,
               upscale_activity, epub_activity, coloring_activity, coloring_redraw_activity, narrate_page_activity,
-              narration_done_activity, collage_photos_activity, bulletin_activity]
+              narration_done_activity, collage_photos_activity, bulletin_activity, human_recording_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -349,13 +375,23 @@ class ColoringRedraw:
 @workflow.defn(name="BookNarration")
 class BookNarration:
     @workflow.run
-    async def run(self, job: str, jid: str, pages: list[str], by: str) -> None:
+    async def run(self, job: str, jid: str, pages: list[str], by: str, replace_human: bool = False) -> None:
         for i, pid in enumerate(pages):
-            await workflow.execute_activity("production_narrate_page", args=[job, jid, pid, i, len(pages), by],
+            await workflow.execute_activity("production_narrate_page",
+                                            args=[job, jid, pid, i, len(pages), by, not replace_human],
                                             start_to_close_timeout=timedelta(minutes=30),
                                             heartbeat_timeout=BEAT, retry_policy=NARRATION_RETRY)
         await workflow.execute_activity("production_narration_done", args=[job, jid],
                                         start_to_close_timeout=timedelta(minutes=2))
+
+
+@workflow.defn(name="HumanRecording")
+class HumanRecording:
+    @workflow.run
+    async def run(self, job: str, jid: str, uid: str, by: str) -> None:
+        await workflow.execute_activity("production_human_recording", args=[job, jid, uid, by],
+                                        start_to_close_timeout=timedelta(hours=2),
+                                        heartbeat_timeout=BEAT, retry_policy=HUMAN_RETRY)
 
 
 @workflow.defn(name="BulletinNarration")
@@ -367,7 +403,7 @@ class BulletinNarration:
 
 
 WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, EpubBuild, ColoringBook,
-             ColoringRedraw, BookNarration, CollagePhotos, BulletinNarration]
+             ColoringRedraw, BookNarration, CollagePhotos, BulletinNarration, HumanRecording]
 
 # Seri karakter kartı (characters.py): denetim (CharacterCheck) ve öneri/çeviri (CharacterCards) aynı kuyrukta.
 from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402

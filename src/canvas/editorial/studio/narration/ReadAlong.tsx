@@ -108,7 +108,8 @@ export default function ReadAlong({ blocks, audio, voices, timed }: {
     <div ref={box} className="max-h-[52vh] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/90 p-3 sm:p-4" aria-live="off">
       {blocks.map((b) => {
         const tag = KIND[b.kind] ?? '';
-        const who = b.speaker ? `${b.speaker} · ${label(b.voice)}` : tag;
+        // insan kaydında blok sesi boştur: yalnız konuşanın adı yazılır
+        const who = b.speaker ? (label(b.voice) ? `${b.speaker} · ${label(b.voice)}` : b.speaker) : tag;
         let at = 0;
         return (
           <div key={b.id} className={`mb-3 last:mb-0 ${b.kind === 'bubble' ? 'rounded-xl border border-violet-200/70 bg-violet-50/50 px-3 py-2' : ''}`}>
