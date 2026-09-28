@@ -1,5 +1,20 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (06:30) — Efekt sesleri kuruldu: GPU (dokuz editör servisi `68a1d411`) ve test sunucusu
+
+- **GPU:** `releases/68a1d411` (`._*` 0), `editor-py:0.15.9-68a1d411`, stüdyo `editor-py-studio:0.15.9-68a1d411`
+  (ffmpeg, onnxruntime 1.30, tokenizers 0.23, tam e-kitap denetimi; 2,3 GB). Önceki kurulum `032499e0` main'in içinde.
+  Dokuz servis (belge incelemesi dahil) bu sürümde; efekt havuzu `/data/editor/sfx` stüdyo ve işçisine salt okunur
+  bağlı; göçler güncel. Stüdyo imajı ilk denemede VPN düşünce yarıda kaldı → GPU'da `setsid` ile arka planda derlendi.
+  Giriş kapısı: efekt yolları eklendi (kopyada `nginx -t` geçti, ikinci koşu «zaten var»).
+- **Test sunucusu** (GPU üzerinden tek kalıcı bağlantı): köprüde yeni `editorial_studio_sfx.py`; `app.py` canlıda başka
+  oturumun sesli bülten düzeltmesini taşıdığı için main'deki hâl basılmadı, canlı dosyaya yalnız iki kayıt satırı
+  eklendi (geçici kopyada içe aktarma 907 uç). Ön yüzde 5 dosya (efekt sesleri); canlı `frontend/dist`'te root'a ait
+  dosyalar olduğu için derleme geçici klasöre alındı (`vite build --outDir`), `cockpit/dist` yedeği
+  `dist.bak-20260928-061905`, portal `index-CN8RTg_l.js`.
+- **Doğrulama (köprü → GPU):** havuz araması «ördek vaklıyor» → Freesound/Commons ördek sesleri (CC0/CC BY); deneme
+  işinde efekt ayarı «çocuk kitabı, açık»; öneri + 7. sayfa karışımı uçtan uca koşuluyor.
+
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
