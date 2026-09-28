@@ -10,6 +10,13 @@
 - **Testler (test sunucusunda, dal `3977e6fd`'nin git archive kopyasıyla):** köprü `test_access.py` + `test_studio_library_feed.py` 19/19, stüdyo `test_library.py` 8/8, `tsc --noEmit` temiz, `navModel.test.ts` 18/18 (menü ↔ yetki kataloğu).
 - **Gerçek veri (salt okuma, `build()` gönderimsiz):** 6.781 ürün, 6.763 görselli, 6.569 CRM kartlı, 6.778 kategorili; `ImageUrls[0]` anahtarları ImageUrl/Small/Medium/Big → `Big` (566×900) seçiliyor. T-soft `Categories` listesi yalnız numara taşıyor (ad yok), ağaç varsayılan yoldan. 24 kök: Çocuk 2.773, Yetişkin 2.171, Genç 874, Setler 547; ~200 ürünün varsayılan kategorisi vitrin kökü («Kampanya Ürünleri», «Çok Satan», «21 Haziran»…), ağacın altında küçük dallar olarak görünür. 75 ikinci düzey (Çocuk > Hikaye 721, Yetişkin > Tarih 526…). GPU'daki stüdyo konteyneri sitedeki kapağı indirebiliyor (K 252×400, O/B 566×900).
 - **Kurulum sırası:** main → GPU (`editor migrate`, editor-studio yeniden başlat, `sudo python3 add-studio-routes.py`) → test sunucusu köprü + ön yüz → besleme → VM.
+## 2026-09-28 — SEO & GEO 3. tur: iş listesi, kitap karnesi, biyografi, soru–cevap, benzer kitaplar ve 5 özellik daha
+
+- **Neden:** Toplanan veriyi işe dönüştürmek — 20'den fazla ekranın ürettiği işler tek listede, bir kitabın durumu tek sayfada; CRM'de duran içerik (özgeçmiş, emsal kitap, tema/yaş) SEO'ya taşındı.
+- **CRM ölçümü (salt okuma, tek SSH bağlantısı):** yazar–kitap bağı `new_kitapBase.new_yazarid` değil (satıştakilerde boş); `new_eserkatilimBase` (`new_Kitap` → kitap, `new_Katilimsaglayan` → ContactBase, `new_katilimciTipi` → `new_katilimcitipiBase` «Yazar/Çizer/Editör/Tercüme…»). Satıştaki kitaplara bağlı 2.694 kişinin 1.380'inde `new_ozgecmis` dolu (ort. 1.324 karakter). `new_new_kitap_new_emsalkitap3Base` (kitapidOne/Two) 19.441 bağ, 12.583'ünde iki kitap da satışta; `new_new_kitap_new_kitapBase` set ↔ parça (öneri için değil).
+- **Yeni modüller:** `worklist`, `scorecard`, `bios`, `faq`, `similar`, `keymap`, `qsuggest`, `youtube`, `shopping`, `monthly` (ayrıntı commit mesajında). Yeni ayarlar: `YOUTUBE_API_KEY`, `SEO_MONTHLY_REPORT_TO`.
+- **Yetki:** 2. ve 3. turun işlem uçları `access.FEATURE_RULES`'a bağlandı (öneri üret / çalıştır / dışa aktar); önceden yalnız sayfa kuralına düşüyordu.
+- **Doğrulama:** test sunucusunda SEO + yetki testleri 408/408, tsc temiz, menü testi 18/18. Ajanlar bu turda sunucuya bağlanmadı (IP engeli kuralı); CRM ölçümleri tek ControlMaster bağlantısından.
 
 ## 2026-09-28 (06:00) — Sesli bülten «Metinden üret» uçtan uca çalışıyor (test sunucusu + GPU)
 
