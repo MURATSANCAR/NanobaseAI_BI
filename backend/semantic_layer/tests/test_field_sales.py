@@ -106,8 +106,21 @@ def test_customer_targets_sum_to_plan_and_expected_share():
     t, info = F.customer_targets(prev, plan, {}, date(2026, 6, 30), 2026)
     assert info["kaynak"] == "m46" and round(t["a"]["yil"] + t["b"]["yil"], 2) == 1200.0 and "c" not in t
     assert t["a"]["yil"] == 900.0 and t["a"]["beklenen"] == 450.0              # yarı yıl, eşit aylar
-    t2, info2 = F.customer_targets(prev, None, {"a": 730.0}, date(2026, 7, 2), 2026, "auto")
-    assert info2["kaynak"] == "crm" and t2["a"]["beklenen"] == round(730 * 183 / 365, 2)
+    # Plan yoksa CRM hedefi, beklenen takvim günü oranıyla. Ölçek denetimi (f26e11d6, günlük «Hedef oranı %675»): hedef
+    # toplamı ÷ aynı carilerin önceki yıl cirosu 0,5–2 içinde olmalı. Eski veri (730 ÷ 300 = 2,43) bu kasıtlı kuralın
+    # dışında kaldığı için «crm» beklentisi eskimişti; CRM yolu ölçek içi veriyle (730 ÷ 500 = 1,46) sınanır, ölçek dışı
+    # ayrıca: auto'da kullanılmaz, açık «crm» seçiminde uyarıyla kullanılır, sınır (2,0) içeridedir.
+    ok_prev = {"a": 500.0, "b": 100.0, "c": -50.0}
+    t2, info2 = F.customer_targets(ok_prev, None, {"a": 730.0}, date(2026, 7, 2), 2026, "auto")
+    assert info2["kaynak"] == "crm" and info2["olcek"] == 1.46 and "uyari" not in info2
+    assert t2["a"]["beklenen"] == round(730 * 183 / 365, 2) and t2["a"]["yil"] == 730.0
+    t3, info3 = F.customer_targets(prev, None, {"a": 730.0}, date(2026, 7, 2), 2026, "auto")
+    assert info3["kaynak"] == "crm-tutarsiz" and t3 == {} and info3["olcek"] == 2.433 and "%243" in info3["uyari"]
+    t4, info4 = F.customer_targets(prev, None, {"a": 730.0}, date(2026, 7, 2), 2026, "crm")
+    assert info4["kaynak"] == "crm" and t4["a"]["yil"] == 730.0 and "ölçek tutarsız" in info4["uyari"]
+    t5, info5 = F.customer_targets(prev, None, {"a": 600.0}, date(2026, 7, 2), 2026, "auto")      # tam 2,0: içeride
+    assert info5["kaynak"] == "crm" and t5["a"]["yil"] == 600.0
+    assert F.customer_targets(prev, None, {"a": 140.0}, date(2026, 7, 2), 2026, "auto")[1]["kaynak"] == "crm-tutarsiz"   # 0,47
     assert F.customer_targets(prev, None, {}, date(2026, 7, 2), 2026, "m46")[0] == {}
 
 
