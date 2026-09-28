@@ -295,6 +295,40 @@
   KVKK, sınıflama isabeti; sonunda `temizlik.py`).
 - **Sunucuda kalan adımlar:** masada salt okuma API kullanıcısı açıp anahtarını Yönetim → Ayarlar'a girmek; `nginx-destek-baglam.conf`
   (kullanıcı onayıyla); iki zamanlayıcıyı kurup ilk turu elle koşturmak; masa MariaDB konteyner adını ölçmek (`DESTEK_DB_CONTAINER`).
+## 2026-09-28 — M50 Zeki AI kalitesi: kapı raporu, önce/sonra, sürüm kaydı, geri bildirim düğmesi, hata sınıfları, karne (DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** iyileştirme döngüsü (katalog, kural, eş anlamlı → kapı koşusu → karşılaştır) yalnız geliştiricinin elinde ve
+  dosyalardaydı; önce/sonra arasına başka kurulum girince fark yanlış işe yazılıyordu, model/katalog/kural sürümü tek yerde
+  değildi, son kullanıcının «bu cevap yanlış» diyeceği düğme yoktu (`validated` kolonu ve `/api/v1/feedback` duruyordu).
+  Analiz: `docs/analiz/kullanici-ihtiyaclari/M50-zeki-model-gelistirme.md` §9 ilk sürüm. İnce ayar yok.
+- **Ne yapıldı:** köprü `model_quality.py` / `_sources.py` / `_api.py` (6 tablo `semantic_mq_*`); `resolver-gate.py` ve
+  `answer-gate.py`'ye `--report` (ortak `mq_report.py`, seçenek yoksa davranış aynı); `/api/v1/feedback` Doğru/Kısmen/Yanlış
+  + not alır; cevap altındaki `AnswerFeedback` (Genel bakış — Kampüs soru kutusu dahil — ve Pano soru kutusu); ekran
+  `/timas/zeki-kalite` (Karne · Koşular · Hata sınıfları · Geri bildirim · Sürümler); zamanlayıcı birimleri ve kurulum
+  sonu sürüm kaydı; SEO onayı karar kaydına öneride değiştirilen alanları (`duzenlenen`) yazar.
+- **Kararlar (analizin açık soruları ve belirsizlikler; veriye/koda bakılarak verildi):**
+  - Sürüm kaydı M50'nin kendi tablosunda (`semantic_mq_versions`); M48 henüz main'de değil. M48'in kurulum kaydı
+    (`semantic_itops_releases`) varsa yalnız okunur (Sürümler sekmesi ve ölçüm penceresi uyarısı); iki modül aynı kurulumu
+    iki kez yazmaz: M48 kod/imaj/`._*` sayısını, M50 kod + katalog + bilgi paketi + model anlık görüntüsünü yazar.
+  - Ölçüm «önce/sonra»: aynı takım + aynı dosya etiketinin önceki bitmiş koşusu. `--only`/`--holdout` koşusu ayrı etikettir,
+    tam koşunun karşılaştırması sayılmaz. İlk koşuda karşılaştırma betiğin kendi temel çizgisine göredir.
+  - Hata sınıfı kuralları kod değil tablo satırıdır (kural = koşul listesi); 7 analiz sınıfına ek olarak «bağlantı» ve
+    «netleştirme» ayrı tutuldu — ikisi de isabetsizlik değildir, 1000 soruluk karnede «hata-netleştirme» ayrı kalemdi.
+  - Not alanı isteğe bağlı (eski çeviri metni «en az 5 karakter» diyordu): tek dokunuşla hüküm kaydedilir, Kısmen/Yanlış'ta
+    not alanı açılır. Başarı ölçütü «cevapların %2'si işaretleniyor»; sürtünme bunu düşürür.
+  - Sayfa açıkça verilir (Herkes'e girmez): kuyrukta soran kişi ve soru metni görünür. Bunun için `explicit_keys()`
+    explicit sayfaları da kapsayacak şekilde genişledi (M48'deki değişikliğin aynısı; merge'de çakışmasız birleşir).
+  - SEO «değiştirmeden onay» geçmiş kararlar için bilinmiyor (öneri alanı onayda üzerine yazılıyordu); bu sürümden
+    itibaren karar kaydında `duzenlenen` tutulur, oran yalnız bu alanı taşıyan kararlardan hesaplanır.
+  - Zamanlama: katalog taraması 02:00 → okuma kapısı her gece 05:10; cevap kapısı (~35 dk, model kapasitesi) pazar 05:30;
+    ekrandan istenen koşu 10 dk'da bir alınır, aynı anda tek kapı (flock).
+- **Arayüz:** `emil-design-eng` ölçütüyle — giriş animasyonu yok (günde onlarca kez görülen düğme), yalnız basma geri
+  bildirimi (scale 0.97, 150 ms ease-out, `motion-reduce` kapalı); telefonda 44 px dokunma alanı, geniş tablolar kendi
+  kutusunda kayar; ekranda model/teknoloji adı yok.
+- **Doğrulama:** **DOĞRULANAMADI — sunucu kapalı.** Yerelde yalnız `py_compile` ve JSON doğrulaması; pytest, tsc, vitest ve
+  gerçek DB kabulü koşulmadı. Sunucuda kalan: `scripts/acceptance/M50/check.sh` (pytest + tsc + vitest + derleme),
+  yan port köprüsüyle `kabul.py --gate` (R1–R9 doğrudan SQL, geri bildirim yazımı) + `cleanup.py`, okuma kapısının
+  `--report`'suz farksız çıkması, birimlerin elle ilk koşusu. Dal `main`e taşınmadı, kurulum yapılmadı.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
