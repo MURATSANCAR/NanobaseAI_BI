@@ -34,6 +34,8 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
      (`root:www-data 640`) → site ayarı `destek_sso_secret`.
   2. **AD kullanıcı adı + şifre:** portal oturumu yoksa `/login?sso=0` formu; NTLM ile doğrulanır (`ldap_ntlm.py`).
   Her etkin AD kişisi temsilcidir; portal yöneticileri (`TIMAS_ADMIN_USERS`/`TIMAS_ADMIN_GROUP`) yöneticidir.
+  Ekip: kişinin AD birimi (alan, yoksa OU) aynı adlı etkin destek ekibiyle eşleşirse girişte o ekibe eklenir
+  (Türkçe harf/aksan duyarsız: «Satış» = «Satis»). Birim listesi: `nanobase_brand.ldap_ntlm.ad_departments`.
   Yerel yönetici hesabı (Administrator) şifresi `/etc/nanobase/destek-admin.txt` (root, 600), `/login?sso=0`'dan.
 - Model: NanobaseAI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
   `deploy/nginx-destek-llm.conf`, Bearer anahtarı `/etc/nanobase/destek-llm.key`) → köprünün OpenAI uyumlu girişi
