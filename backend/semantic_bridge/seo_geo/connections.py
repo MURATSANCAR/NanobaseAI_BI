@@ -192,7 +192,9 @@ def tsoft_test() -> tuple[bool, str]:
 
 _GTOKEN: dict[str, Any] = {"token": None, "exp": 0.0, "key": ""}
 _glock = threading.Lock()
-SCOPES = "https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly"
+#: Merchant API'nin tek kapsamı `content`tir (salt okuma kapsamı yok); bu modül Merchant'a yalnız GET gönderir.
+SCOPES = ("https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly "
+          "https://www.googleapis.com/auth/content")
 
 
 def _b64(raw: bytes) -> str:
@@ -240,8 +242,10 @@ def _sign(key_pem: str, payload: bytes) -> bytes:
 
 def google_token() -> str:
     info = _service_account()
+    # Kapsam değişince eski belirteç kullanılmasın: anahtar hesap + kapsam.
+    cache_key = f"{info['client_email']}|{SCOPES}"
     with _glock:
-        if _GTOKEN["token"] and _GTOKEN["key"] == info["client_email"] and _GTOKEN["exp"] - 60 > time.time():
+        if _GTOKEN["token"] and _GTOKEN["key"] == cache_key and _GTOKEN["exp"] - 60 > time.time():
             return _GTOKEN["token"]
         now = int(time.time())
         head = _b64(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
@@ -257,7 +261,7 @@ def google_token() -> str:
             raise ConnectionError_(f"Google belirteci alınamadı: {resp.text[:200]}")
         body = resp.json()
         _GTOKEN.update(token=body["access_token"], exp=time.time() + int(body.get("expires_in", 3600)),
-                       key=info["client_email"])
+                       key=cache_key)
         return _GTOKEN["token"]
 
 

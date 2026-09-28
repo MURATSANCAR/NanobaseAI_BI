@@ -112,6 +112,23 @@ def _ga4() -> tuple[str, str]:
     return "ok", f"Mülk {prop} okundu: son 7 günde {sessions:,} oturum.".replace(",", ".")
 
 
+def _merchant() -> tuple[str, str]:
+    """Merchant API v1, hesabın kendisi: salt okuma (GET). Yazma çağrısı yok."""
+    acc = _conf("MERCHANT_ACCOUNT_ID").removeprefix("accounts/")
+    token = connections.google_token()
+    r, err = _get(f"https://merchantapi.googleapis.com/accounts/v1/accounts/{acc}",
+                  headers={"Authorization": f"Bearer {token}"}, secret=token)
+    if r is None:
+        return "err", err
+    if r.status_code == 403:
+        return "err", (f"Erişim yok: servis hesabı ({connections.service_account_email()}) Merchant Center'da "
+                       "kullanıcı olarak ekli değil.")
+    if r.status_code >= 400:
+        return "err", f"Merchant Center {r.status_code}: {_err_text(r)}"
+    name = r.json().get("accountName") or acc
+    return "ok", f"Merchant Center hesabı «{name}» ({acc}) okundu (yalnız okuma)."
+
+
 def _google_key() -> tuple[str, str]:
     key = _conf("GOOGLE_API_KEY")
     try:
@@ -204,8 +221,11 @@ def seo_parts() -> list[Part]:
     if _conf("GOOGLE_SERVICE_ACCOUNT_JSON"):
         out.append(_run("Search Console", _gsc))
         out.append(_run("Google Analytics 4", _ga4) if _conf("GA4_PROPERTY_ID") else _off("Google Analytics 4", "Mülk kimliği"))
+        out.append(_run("Google Merchant Center", _merchant) if _conf("MERCHANT_ACCOUNT_ID")
+                   else _off("Google Merchant Center", "Merchant Center kimliği"))
     else:
         out.append(_off("Search Console", "Google servis hesabı (JSON)"))
+        out.append(_off("Google Merchant Center", "Google servis hesabı (JSON)"))
     for label, key, fn in (("Google API anahtarı", "GOOGLE_API_KEY", _google_key),
                            ("YouTube", "YOUTUBE_API_KEY", _youtube),
                            ("Bing Webmaster", "BING_WEBMASTER_API_KEY", _bing),
