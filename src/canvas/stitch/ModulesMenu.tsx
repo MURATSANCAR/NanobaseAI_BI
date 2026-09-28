@@ -78,11 +78,9 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
   'SEO & GEO': { to: '/seo-geo', hint: 'Ürün denetimi, arama ve yapay zekâ görünürlüğü' },
-  Pazarlama: { to: '/pazarlama/aylik-plan', hint: 'Aylık plan, satış föyleri, yeni kitap planı, lansman ve backlist' },
+  Pazarlama: { to: '/pazarlama/aylik-plan', hint: 'Aylık plan, föyler, lansman, backlist, sosyal medya, basın, reklam ve etkinlikler' },
   'Altyapı & Destek': { to: '/sistem-durumu', hint: 'Sistem durumu, olaylar ve zamanlanmış işler' },
   'Bayi & Kitapçı Risk Yönetimi': { to: '/bayi-risk', hint: 'Günlük risk skoru, alacak yaşlandırması, limit önerisi ve risk brifi' },
-  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
-  Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
   'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski ve CRM veri sağlığı' },
 };
 
