@@ -15,6 +15,7 @@ import BudgetPanel from './BudgetPanel';
 import CalendarGrid from './CalendarGrid';
 import FoyTable from './FoyTable';
 import MonthNav from './MonthNav';
+import TargetGapsPanel from './TargetGapsPanel';
 
 /** M18 Aylık pazarlama planı: önceki ay şeridi, takvim (hafta × kanal, çakışmalar), bütçe ve öncelik, föyler.
  *  Adres /pazarlama/aylik-plan/:ay?sekme=takvim|butce|foy|ozet. */
@@ -171,6 +172,7 @@ export default function MonthScreen() {
                 </button>
               )}
               {p ? <BudgetPanel view={v} editable={editable && me.canSeeBudget} canSeeBudget={me.canSeeBudget} onSaved={setView} /> : <Note tone="info">Önce taslağı kurun.</Note>}
+              <TargetGapsPanel ay={v.donem} canSeeBudget={me.canSeeBudget} />
             </>
           )}
 

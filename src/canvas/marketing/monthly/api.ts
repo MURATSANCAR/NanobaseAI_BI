@@ -196,8 +196,18 @@ const q = (o: Record<string, string | boolean | undefined>) => {
   return s ? `?${s}` : '';
 };
 
+/** Hedef açığı ↔ ay planı boşluğu (öneri 17): liste kural (M46 açık kitap sapması − bu ay işi olan kitaplar). */
+export type TargetGap = { stokKodu: string; ad: string; oran: number | null; eksik: number | null };
+export type TargetGaps = {
+  donem: string; donemAdi: string; items: TargetGap[]; hedefAlti: number; planli: number; plansiz: number; kaynak: string;
+  kuralParagrafi: string; paragraf: string; paragrafKaynak: 'zeki' | 'kural'; paragrafDusen: number | null;
+  paragrafZaman: string | null; eskiParagraf: boolean; modelVar: boolean;
+};
+
 export const monthApi = {
   meta: () => send<MonthlyMeta>('GET', '/meta'),
+  targetGaps: (ay: string) => send<TargetGaps>('GET', `/months/${enc(ay)}/target-gaps`, undefined, 180_000),
+  targetGapsExplain: (ay: string) => send<TargetGaps>('POST', `/months/${enc(ay)}/target-gaps/explain`, {}, 300_000),
   month: (ay: string) => send<MonthView>('GET', `/months/${enc(ay)}`, undefined, 180_000),
   build: (ay: string) => send<MonthView>('POST', `/months/${enc(ay)}/build`, {}, 300_000),
   suggest: (ay: string) => send<MonthView>('POST', `/months/${enc(ay)}/suggest`, {}, 300_000),

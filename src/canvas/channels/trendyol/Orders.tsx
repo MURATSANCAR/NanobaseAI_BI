@@ -10,6 +10,8 @@ import { Tabs } from '../../budget/parts';
 import { BookCell, Chips, ExportLink } from '../platformKit';
 import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, tl, useTrendyolMeta } from './parts';
+import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../../signals/ReaderVoice';
+import { claimKey } from '../../signals/format';
 
 function Range({ bas, bit, onChange }: { bas: string; bit: string; onChange: (b: string, e: string) => void }) {
   return (
@@ -71,6 +73,7 @@ function ClaimsList({ bas, bit, q, canExport, canDraft }: { bas: string; bit: st
   const [sinif, setSinif] = useState('');
   const [page, setPage] = useState(0);
   const r = useQuery({ queryKey: ['trendyol', 'claims', sinif, bas, bit, q, page], queryFn: () => trendyolApi.claims({ sinif, bas, bit, q, page }), enabled: ENGINE_ENABLED, placeholderData: keepPreviousData });
+  const topics = useVoiceLabels('trendyol-iade');
   const run = useMutation({
     mutationFn: trendyolApi.classify,
     onSuccess: (o) => {
@@ -111,6 +114,7 @@ function ClaimsList({ bas, bit, q, canExport, canDraft }: { bas: string; bit: st
                     <td className={td}>
                       {x.sinif ?? <span className="text-canvas-muted">{x.yontem === 'emin-degil' ? 'Emin değil' : 'Sınıflanmadı'}</span>}
                       {x.yontem && <div className="text-[11px] text-canvas-muted">{x.yontem === 'kural' ? 'kural' : x.yontem === 'zeki' ? `Zeki AI ${fmtPct(x.olasilik, 0)}` : ''}</div>}
+                      <div className="mt-1"><TopicChip label={topics.data?.items[claimKey(x.talepId, x.barkod)]} /></div>
                     </td>
                   </tr>
                 ))}
@@ -163,6 +167,7 @@ export default function TrendyolOrders() {
       }
     >
       <TrendyolData meta={m} />
+      {tab === 'iade' && <ReaderVoicePanel sources={['trendyol-iade']} />}
       <Tabs value={tab} onChange={setTab} tabs={[{ key: 'siparis', label: 'Siparişler' }, { key: 'iade', label: 'İadeler' }]} />
       {tab === 'siparis'
         ? <OrdersList bas={bas} bit={bit} q={q} canExport={!!m?.me.canExport} />

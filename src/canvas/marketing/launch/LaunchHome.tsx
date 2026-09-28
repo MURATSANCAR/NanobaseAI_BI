@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, Rocket } from 'lucide-react';
+import { AlertTriangle, Check, Rocket } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../api';
 import { Block, MarketingFrame } from '../parts';
-import { TONE_CLASS, TONE_LABEL, dLabel, launchApi, type LaunchHead, type TodayTask } from './api';
+import { TONE_CLASS, TONE_LABEL, dLabel, launchApi, type LaunchHead, type LaunchRisk, type RiskLevel, type TodayTask } from './api';
 
 /** M16 Lansman — ilk açılış: bu hafta ve gelecek 4 haftanın lansman şeridi (yayında ve ilk ay izlemesinde olanlar da),
  *  altında bütün lansmanların bugün yapılacak ve geciken maddeleri. Telefonda şerit yatay kayar, maddeler 44 px. */
@@ -41,11 +41,40 @@ function Strip({ items }: { items: LaunchHead[] }) {
                 <Pill tone="muted">{x.durumAdi}</Pill>
                 {!!x.gecikenMadde && <Pill tone="err">{x.gecikenMadde} gecikmiş madde</Pill>}
               </div>
-              {x.uyarilar[0] && <div className="line-clamp-2 text-[11px] leading-snug text-canvas-muted">{x.uyarilar[0]}</div>}
+              {x.risk && x.risk.duzey !== 'yok' ? (
+                <RiskLine risk={x.risk} />
+              ) : (
+                x.uyarilar[0] && <div className="line-clamp-2 text-[11px] leading-snug text-canvas-muted">{x.uyarilar[0]}</div>
+              )}
             </Link>
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+const RISK_CLASS: Record<Exclude<RiskLevel, 'yok'>, string> = {
+  yuksek: 'bg-red-50 text-red-800 ring-red-200',
+  orta: 'bg-amber-50 text-amber-900 ring-amber-200',
+};
+
+/** Kural eşikli risk bayrağı + tek cümle. Bayrak kuraldır; cümleyi Zeki AI yazdıysa (gece, denetimli) öyle etiketlenir. */
+function RiskLine({ risk }: { risk: LaunchRisk }) {
+  if (risk.duzey === 'yok') return null;
+  return (
+    <div className={`rounded-xl px-2 py-1.5 ring-1 ring-inset ${RISK_CLASS[risk.duzey]}`}>
+      <div className="flex flex-wrap items-center gap-1 text-[11px] font-extrabold">
+        <AlertTriangle aria-hidden className="h-3.5 w-3.5 shrink-0" />
+        <span>{risk.duzeyAdi}</span>
+        <span className="font-semibold opacity-80">· {risk.nedenler.map((n) => n.ad).join(', ')}</span>
+      </div>
+      {risk.cumle && (
+        <p className="mt-0.5 line-clamp-3 break-words text-[11px] leading-snug">
+          {risk.cumle}
+          <span className="ml-1 whitespace-nowrap text-[10.5px] font-bold opacity-70">{risk.cumleKaynak === 'zeki' ? '· Zeki AI' : '· kurala göre'}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -161,7 +190,7 @@ export default function LaunchHome() {
 
       {list.data && (
         <>
-          <Block title="Yayında ve ilk ay izlemesinde" help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Renk: stok–talep çatışması ya da hedef payının eşik altı kırmızı; geciken madde ya da hedefin altı sarı.">
+          <Block title="Yayında ve ilk ay izlemesinde" help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Renk: stok–talep çatışması ya da hedef payının eşik altı kırmızı; geciken madde ya da hedefin altı sarı. Risk bayrağı kuraldır (stok, dağılım, hedef payı, emsal sapması, siparişsiz gün); karar sizindir.">
             {live.length ? <Strip items={live} /> : <p className="text-[12.5px] text-canvas-muted">Şu an yayında olan lansman yok.</p>}
           </Block>
           <Block title="Bu hafta ve gelecek 4 hafta" help="Yayın günü yaklaşan lansmanlar; gün sayacı yayın gününe göre.">

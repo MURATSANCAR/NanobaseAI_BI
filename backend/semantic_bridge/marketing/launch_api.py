@@ -25,6 +25,7 @@ from starlette.concurrency import run_in_threadpool
 from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import launch as L
 from semantic_bridge.marketing import launch_report as RP
+from semantic_bridge.marketing import launch_risk as LR
 from semantic_bridge.marketing import launch_track as TR
 from semantic_bridge.marketing.launch_sources import Sources
 from semantic_bridge.marketing.sources import SourceError, crm_file
@@ -170,6 +171,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def launch_list(request: Request, frm: str = "", to: str = "", durum: str = "", kim: str = "") -> dict[str, Any]:
         engine, tenant, user = ctx(request)
         items = L.list_launches(engine, tenant, frm=frm or None, to=to or None, durum=durum, sahip=user if kim == "ben" else "")
+        # Kural eşikli risk bayrağı + tek cümle (öneri 17): cümle gece yazılır, burada yalnız okunur.
+        items = LR.attach(engine, tenant, items, st()["alertRatio"], LR.settings(admin_mod.conf))
         return {"items": items, "total": len(items)}
 
     @app.get(R + "/today")
@@ -506,6 +509,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 C.meta_set(engine, tenant, "launch-digest", {"tarih": today.isoformat(), "sonuc": status, "kalem": len(items),
                                                              "sahip": len(owners)})
                 out["ozet"] = {"kalem": len(items), "sonuc": status, "sahip": len(owners)}
+        # 6 — risk bayrağının Zeki AI cümlesi (günlük okumadan sonra; BATCH). Bayrak kuraldır, cümle yalnız açıklar.
+        if logo:
+            try:
+                out["risk"] = LR.run(engine, tenant, list(heads.values()), s["alertRatio"], LR.settings(admin_mod.conf),
+                                     rt().llm_for("marketing", BATCH), s["claims"])
+            except Exception as e:  # noqa: BLE001 — cümle yazılamazsa ekranda kural cümlesi kalır
+                out["hatalar"].append(f"risk cümlesi: {e}")
         C.meta_set(engine, tenant, "launch-run-due", {k: v for k, v in out.items() if k != "okuma"}
                    | {"okuma": {k: rep.get(k) for k in ("lansman", "gun", "logo", "veriSonuLogo")}, "hataSayisi": len(rep["hatalar"])})
         return out

@@ -7161,6 +7161,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
     })
 
+    # Serbest not sinyali (AI fırsatları öneri 16): M30/M59/M38 notları + CRM ziyaret açıklaması → kapalı küme etiket ve
+    # iki cümle özet; yalnız bilgi, skora girmez. Uçlar /api/v1/not-sinyali/*; kapsam her ekranın kendi kuralıyla.
+    from semantic_bridge import note_signal_api
+    app.state.note_signal = note_signal_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("not-sinyali", priority),
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
     # M27 Fuar, etkinlik ve ödül: CRM etkinlik/sipariş + Logo fuar kanalı/stok (salt okunur) + portal kayıtları.
     # Uçlar /api/v1/events/*.
     from semantic_bridge import events_api
@@ -7328,6 +7341,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M37 Okur topluluğu (Pazarlama › Okur ve müşteri): /api/v1/okur/*; okur sayıları H2 çekirdeğinden (okur_sources.ReadersCore).
     from semantic_bridge import okur_api
     app.state.okur = okur_api.register(app, rt, _require_caller, _can)
+    # Okur sesi sınıflayıcı (AI fırsatları öneri 15): site yorumu + Trendyol soru/yorum/iade tek kapalı küme; baskı hatası
+    # kümesi üretime iç uyarı. /api/v1/okur-sesi/*; site yorumlarını yukarıdaki M37 okuyucusundan (app.state.okur) alır.
+    from semantic_bridge import reader_voice_api
+    app.state.reader_voice = reader_voice_api.register(app, rt, _require_caller, _can)
+    # Kampüs kişisel «Bugün» özeti (öneri 19): kişinin uyarı, e-posta, ajanda, onay ve SLA maddeleri, yetkiyle süzülür.
+    from semantic_bridge import today_brief_api
+    app.state.today_brief = today_brief_api.register(app, rt, _require_caller, _can)
     # M20 Basın, medya ve halkla ilişkiler (Pazarlama): PR dosyası, medya kişileri, gönderim, yansıma. /api/v1/pr/*.
     from semantic_bridge import pr_api
     app.state.pr = pr_api.register(app, rt, _require_caller, _can)

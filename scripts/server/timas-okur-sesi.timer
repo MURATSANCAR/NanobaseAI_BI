@@ -1,0 +1,10 @@
+[Unit]
+Description=Okur sesi gece turu; her gece 04:20 (M37 03:50 turundan sonra)
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+Unit=timas-okur-sesi.service
+
+[Install]
+WantedBy=timers.target

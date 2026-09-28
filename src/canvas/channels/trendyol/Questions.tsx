@@ -10,6 +10,7 @@ import { Tabs } from '../../budget/parts';
 import { BookCell, Chips, ExportLink } from '../platformKit';
 import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, useTrendyolMeta } from './parts';
+import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../../signals/ReaderVoice';
 
 /** Taslak kutusu: Zeki AI'dan al, kopyala. Gönderim yok; yanıtı kişi panelden verir. */
 function Draft({ kind, id, text, canDraft }: { kind: 'questions' | 'reviews'; id: string; text: string | null; canDraft: boolean }) {
@@ -51,6 +52,7 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
   const [only, setOnly] = useState<'cevapsiz' | ''>('cevapsiz');
   const [page, setPage] = useState(0);
   const r = useQuery({ queryKey: ['trendyol', 'questions', only, q, page], queryFn: () => trendyolApi.questions({ cevapsiz: only === 'cevapsiz', q, page }), enabled: ENGINE_ENABLED, placeholderData: keepPreviousData });
+  const topics = useVoiceLabels('trendyol-soru');
   const d = r.data;
   return (
     <>
@@ -79,6 +81,7 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
                       <div className="text-[12.5px]">{x.metin}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-canvas-muted">
                         {fmtDay(x.tarih)}
+                        <TopicChip label={topics.data?.items[x.id]} />
                         {x.cevaplandi === true ? <Pill tone="ok">Cevaplandı</Pill> : x.gecikti ? <Pill tone="err">{Math.round(x.saat ?? 0)} saat</Pill> : x.cevaplandi === false ? <Pill tone="warn">Cevapsız</Pill> : null}
                       </div>
                     </td>
@@ -100,6 +103,7 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
   const [max, setMax] = useState<'3' | ''>('3');
   const [page, setPage] = useState(0);
   const r = useQuery({ queryKey: ['trendyol', 'reviews', max, q, page], queryFn: () => trendyolApi.reviews({ maxPuan: max ? Number(max) : undefined, q, page }), enabled: ENGINE_ENABLED, placeholderData: keepPreviousData });
+  const topics = useVoiceLabels('trendyol-yorum');
   const d = r.data;
   return (
     <>
@@ -117,7 +121,7 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
                 {d.items.map((x) => (
                   <tr key={x.id} className="border-t border-slate-100">
                     <td className={`${td} font-mono text-[15px] font-bold tabular-nums`}>{x.puan ?? '—'}</td>
-                    <td className={`${td} max-w-[46ch] text-[12.5px]`}>{x.metin ?? '—'}<div className="text-[11px] text-canvas-muted">{fmtDay(x.tarih)}</div></td>
+                    <td className={`${td} max-w-[46ch] text-[12.5px]`}>{x.metin ?? '—'}<div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-canvas-muted">{fmtDay(x.tarih)}<TopicChip label={topics.data?.items[x.id]} /></div></td>
                     <td className={td}><BookCell name={x.ad} code={x.stokKodu} sub={x.barkod} /></td>
                     <td className={`${td} min-w-[220px]`}>{x.metin ? <Draft kind="reviews" id={x.id} text={x.taslak} canDraft={canDraft} /> : '—'}</td>
                   </tr>
@@ -163,6 +167,7 @@ export default function TrendyolQuestions() {
       aside={<input className={field} placeholder="Kitap, barkod ya da metin" value={text} onChange={(e) => setText(e.target.value)} />}
     >
       <TrendyolData meta={m} />
+      <ReaderVoicePanel sources={['trendyol-soru', 'trendyol-yorum']} />
       <Tabs value={tab} onChange={setTab} tabs={[{ key: 'soru', label: 'Müşteri soruları' }, { key: 'yorum', label: 'Yorumlar' }]} />
       {tab === 'soru'
         ? <QuestionList q={q} canDraft={!!m?.me.canDraft} canExport={!!m?.me.canExport} />

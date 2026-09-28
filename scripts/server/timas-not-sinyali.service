@@ -1,0 +1,10 @@
+[Unit]
+Description=Serbest not sinyali (öneri 16): ziyaret/aksiyon/CRM notu etiketi ve cari başına iki cümle özet (yalnız bilgi)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/not-sinyali/run-due); bu birim yalnız çağırır. Gizli not okunmaz; CRM'e yazılmaz. İlk kez elle:
+#   systemctl start timas-not-sinyali.service && journalctl -u timas-not-sinyali.service -n 50
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/not-sinyali/run-due'

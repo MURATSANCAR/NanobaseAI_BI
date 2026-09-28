@@ -56,6 +56,19 @@ export type LaunchHead = {
   uyarilar: string[];
   kapak: string | null;
   gecikenMadde?: number;
+  /** Kural eşikli risk bayrağı (liste ucu); cümle kuraldan ya da gece Zeki AI'dan (denetimli). */
+  risk?: LaunchRisk;
+};
+
+export type RiskLevel = 'yuksek' | 'orta' | 'yok';
+export type LaunchRisk = {
+  duzey: RiskLevel;
+  duzeyAdi: string;
+  nedenler: Array<{ kod: string; ad: string; metin: string }>;
+  notlar: string[];
+  cumle: string | null;
+  cumleKaynak: 'zeki' | 'kural';
+  kuralCumlesi: string | null;
 };
 
 export type LaunchTask = Task & { launchId?: string | null };

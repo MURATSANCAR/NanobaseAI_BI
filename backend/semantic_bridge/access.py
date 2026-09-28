@@ -643,6 +643,15 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/readers/contract/", frozenset({page("okurlar"), page("pazarlama-yeni-kitap")})),
     ("/api/v1/readers/", frozenset({page("okurlar")})),
     # M37 Okur topluluğu. Sözleşme (onaylı segment) M24/M35 gelince kendi sayfa anahtarını contract satırına ekler.
+    # Okur sesi (öneri 15): etiket ve özet okur yorumları, Trendyol soru/sipariş ve üretim sayfalarına; kaynak süzgeci ve
+    # «görüldü» yetkisi ucun içinde. Zamanlayıcı yalnız run-due.
+    ("/api/v1/okur-sesi/run-due", SYSTEM),
+    ("/api/v1/okur-sesi/", frozenset(page(x) for x in ("okur-yorumlar", "trendyol-sorular", "trendyol-siparisler", "uretim"))),
+    # Serbest not sinyali (öneri 16): üç cari ekranı; ekranın kendi kapsamı ucun içinde.
+    ("/api/v1/not-sinyali/run-due", SYSTEM),
+    ("/api/v1/not-sinyali/", frozenset(page(x) for x in ("saha", "bayi-risk", "musteri-iliskileri"))),
+    # Kampüs «Bugün» özeti (öneri 19): oturum yeter, her kaynak kişinin yetkisiyle köprüde süzülür.
+    ("/api/v1/bugun", OPEN),
     ("/api/v1/okur/run-due", SYSTEM),
     ("/api/v1/okur/segments", frozenset({page("okur-segmentler")})),
     ("/api/v1/okur/categories", frozenset({page("okur-segmentler")})),

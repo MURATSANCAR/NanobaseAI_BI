@@ -10,6 +10,7 @@ import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../field/api';
 import { INTERVAL_SOURCE, barHeights, fmtChange, fmtMonth, musteriApi, type Action } from './api';
 import { ActionItem, ActionSheet, LevelBadge } from './parts';
 import { useMusteriMeta } from './CustomersHome';
+import NoteSignalCard from '../signals/NoteSignalCard';
 
 /** Cari ayrıntısı: risk ve nedeni (2 dokunuş: liste → cari), aylık alım grafiği, aksiyon geçmişi (aksiyon yazmak 3 dokunuş),
  *  kitap dağılımı, CRM siparişleri, ziyaretler (M30 ortak kaydı), tahsilat göstergesi (M30). Arama yalnız portföy sahibine:
@@ -228,6 +229,9 @@ export default function AccountDetail() {
           </Block>
 
           <Block title="Ziyaretler" help="Saha ekranıyla ortak ziyaret kaydı.">
+            <div className="mb-2">
+              <NoteSignalCard code={kod} screen="musteri" />
+            </div>
             {a.ziyaretler.length === 0 ? (
               <Empty>Kayıtlı ziyaret yok.</Empty>
             ) : (

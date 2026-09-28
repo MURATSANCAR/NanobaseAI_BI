@@ -30,6 +30,7 @@ import { readersApi } from '../readers/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
 import AgendaCard from './AgendaCard';
+import TodayBrief from './TodayBrief';
 import LearningCard from '../hr/learning/LearningCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
@@ -277,6 +278,8 @@ export default function KampusPage() {
               </a>
             ))}
           </nav>
+          {/* Kişisel «Bugün» özeti (öneri 19): yetkili olduğun ekranların bugünkü maddeleri + üç cümle. */}
+          <TodayBrief />
           <div className="relative shrink-0">
             <button
               type="button"

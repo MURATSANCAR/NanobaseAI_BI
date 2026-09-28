@@ -26,6 +26,7 @@ from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import foy as F
 from semantic_bridge.marketing import foy_pdf as FP
 from semantic_bridge.marketing import monthly as M
+from semantic_bridge.marketing import monthly_gaps as MG
 from semantic_bridge.marketing import plans as P
 from semantic_bridge.marketing.sources import SourceError
 from semantic_layer.runtime.llm_queue import BATCH, NORMAL
@@ -263,6 +264,41 @@ def register(app, rt, H: Any) -> None:
         out = await mkt_month(d, request)
         out["uyari"] = warn
         return out
+
+    # ---- hedef açığı ↔ ay planı boşluğu (öneri 17): liste kural, paragraf Zeki AI (istenince), karar insanda
+
+    def _gaps(engine, tenant: str, d: str) -> dict[str, Any]:
+        return MG.with_paragraph(engine, tenant, MG.gaps(engine, tenant, d))
+
+    @app.get(R + "/months/{donem}/target-gaps")
+    async def mkt_month_gaps(donem: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = await run_in_threadpool(ctx, request)
+        d = donem_of(donem)
+        g = await run_in_threadpool(H.call, _gaps, engine, tenant, d)
+        g["modelVar"] = rt().llm_for("marketing", NORMAL) is not None
+        return g if can(user, F_BUDGET) else MG.redact(g)
+
+    @app.post(R + "/months/{donem}/target-gaps/explain")
+    async def mkt_month_gaps_explain(donem: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = await run_in_threadpool(ctx, request)
+        d = donem_of(donem)
+        llm = rt().llm_for("marketing", NORMAL)
+        if llm is None:
+            raise HTTPException(status_code=503, detail={"code": "MARKETING", "message": "Zeki AI bu kurulumda bağlı değil; "
+                                                                                       "kural paragrafı gösteriliyor."})
+        g = await run_in_threadpool(H.call, MG.gaps, engine, tenant, d)
+        try:
+            res = await run_in_threadpool(MG.write_paragraph, engine, tenant, g, llm, st().get("claims") or [])
+        except Exception as e:  # noqa: BLE001 — model hatası ekranda
+            log.warning("marketing monthly gaps explain failed: %s", e)
+            raise HTTPException(status_code=503, detail={"code": "MARKETING", "message": "Zeki AI şu an cevap vermedi; "
+                                                                                       "biraz sonra yeniden deneyin."}) from e
+        h = M.find_plan(engine, tenant, d)
+        if h:
+            audit(engine, user, "run", h, {"hedefAcigiParagrafi": True, "dusen": res["dusen"]})
+        out = MG.with_paragraph(engine, tenant, g)
+        out["modelVar"] = True
+        return out if can(user, F_BUDGET) else MG.redact(out)
 
     @app.get(R + "/months/{donem}/events")
     def mkt_month_events(donem: str, request: Request) -> dict[str, Any]:

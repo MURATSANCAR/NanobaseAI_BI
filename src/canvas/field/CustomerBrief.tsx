@@ -11,6 +11,7 @@ import { daysAgo, fieldApi, fmtDay, fmtMoney, fmtPct, istanbulToday, type Brief,
 import { Block, Chips, Empty, FieldFrame, KV, ScoreBadge } from './parts';
 import { PlanCard } from './PlansTab';
 import VisitNoteSheet from './VisitNoteSheet';
+import NoteSignalCard from '../signals/NoteSignalCard';
 
 /** Müşteri brifingi (telefon, tek sayfa, kaydırmalı): Özet · Ödeme · Sipariş · Hedef · Öneri · Notlar. Rakamlar Logo ve
  *  CRM'den; Zeki AI yalnız 3 cümlelik özeti yazar ve özetteki her sayı aşağıdaki olgulardan gelir. Alt çubuk: not bırak,
@@ -278,6 +279,9 @@ export default function CustomerBrief() {
           </Block>
 
           <Block id="notlar" title="Görüşme notları" help="Ziyaret ve not portalda kalır; CRM'e aktarılmaz. Gizli not yalnız yazana görünür.">
+            <div className="mb-2">
+              <NoteSignalCard code={b.code} screen="saha" />
+            </div>
             {b.ziyaretler.length === 0 ? (
               <p className="text-[12px] text-canvas-muted">Henüz not yok.</p>
             ) : (

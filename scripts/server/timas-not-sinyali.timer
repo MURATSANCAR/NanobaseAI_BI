@@ -1,0 +1,10 @@
+[Unit]
+Description=Serbest not sinyali gece turu; her gece 04:40
+
+[Timer]
+OnCalendar=*-*-* 04:40:00
+Persistent=true
+Unit=timas-not-sinyali.service
+
+[Install]
+WantedBy=timers.target

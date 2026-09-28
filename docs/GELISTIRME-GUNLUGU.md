@@ -85,6 +85,39 @@ Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağla
   `scripts/acceptance/M37` yeniden; hak notu için `POST /api/v1/rights/notes/classify` + M36 gece işi bir tur.
 - **Açık:** masa önceliği M51 aciliyetinden ayrı kalır (masanın öncelik listesi kendi SLA'sına bağlı); yönetim ekranına
   `WEB_WATCH_MIN_*` alanı eklenmedi (ortam/ayar dosyasıyla).
+## 2026-09-28 — Zeki AI fırsatları 15, 16, 17, 19 (dal `worktree-agent-a8ace58ba9b1fb1b5`; DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** `docs/analiz/ai-firsatlari/README.md` «en değerli 20» listesinin 15 (okur sesi), 16 (serbest not sinyali), 17
+  (lansman risk bayrağı + hedef açığı ↔ ay planı boşluğu) ve 19 (Kampüs «Bugün») maddeleri. Ortak yapı taşları başka
+  ajanda; burada mevcut `marketing/guard.py` ve modüllerin kendi maskeleri kullanıldı, yeni ortak modül yazılmadı.
+- **15:** `reader_voice.py` + `reader_voice_api.py`. Tek sınıflayıcı üç kaynağa bağlandı. Karar: Trendyol iadesinde M40'ın
+  kendi iade nedeni sınıfı (kural/model) konuya eşlenir — aynı iadeye ikinci model çağrısı ve çelişen ikinci sınıf olmasın
+  («hemen düzeltilecekler» 6–7'deki çift sınıflama dersi); yalnız «Diğer»/boş olanlar ortak sınıflayıcıya gider. Kural
+  sözcükleri yalnız kargo/baskı/fiyat (övgü ve içerik sözcükle ayrılmaz). Site yorumu metni saklanmaz (M37 kuralı),
+  tabloda yalnız parmak izi. Baskı hatası kümesi iç uyarısı; alıcı ayarı boşsa yalnız ekranda. Ürün anahtarı: T-soft ürün
+  kodunun Logo stok koduna eşitliği **ölçülecek** (eşleşmezse site ve Trendyol kümesi ayrı sayılır).
+- **16:** `note_signal.py` + `note_signal_api.py`. CRM ziyaret notunu cariye bağlayan kolon ölçülmediği için M30'un
+  `FIELD_CRM_VISIT_ACCOUNT_COLUMN` ayarı ortak kullanıldı; boşsa CRM kaynağı okunmaz (DOĞRULANAMADI, ölçülecek). Kapsam
+  için yeni kural yazılmadı: `ekran` parametresine göre M30/M59/M38'in kendi `in_scope`/`scoped` işlevi çağrılır. Gizli not
+  hiçbir yerde okunmaz; kaynağından düşen notun etiketi silinir. Özet guard'dan cümle kalmazsa kural özeti; kural özeti
+  model bağlanınca yeniden denenir. Kişi adı maskesi: bilinen temsilci adları (İK `mask_names`) + «Ad Bey/Hanım» kalıbı;
+  müşteri tarafındaki serbest ad her zaman yakalanamaz (açık kalan).
+- **17:** `marketing/launch_risk.py` (liste ucuna `risk`, gece turuna 6. adım) ve `marketing/monthly_gaps.py` (iki uç,
+  `TargetGapsPanel`). Bayrak ve liste kuraldır; cümle/paragraf Zeki AI (denetimli), yoksa «kurala göre». Paragrafın
+  olgularında ciro yok (bütçe görmeyen de okur); tutar yalnız `ozellik:pazarlama.butce-gor`.
+- **19:** `today_brief.py` + `today_brief_api.py`, Kampüs'te zilin yanında `TodayBrief`. Kaynaklar yetkiyle süzülür, onay
+  kuyruğunda kişinin kendi gönderdiği iş görünmez, bir kaynak okunamazsa adı yazılır, diğerleri sürer. Model yalnız panel
+  açılınca (NORMAL), gün içinde girdi aynıysa çağrılmaz. Destek masası SLA'sı bu sürümde yok (destek REST'i ağır; e-posta
+  SLA'sı var) — açık kalan.
+- **Ortak dosyalar (en küçük değişiklik):** `app.py` (üç `register` bağı), `access.py` (üç önek), `admin.py` (ayar
+  satırları), `marketing/launch_api.py`, `marketing/monthly_api.py`, ekranlar `LaunchHome.tsx`, `MonthScreen.tsx`,
+  `ReviewsScreen.tsx`, `trendyol/Questions.tsx`, `trendyol/Orders.tsx`, `CustomerBrief.tsx`, `DealerCard.tsx`,
+  `AccountDetail.tsx`, `KampusPage.tsx`.
+- **Test:** pytest `test_reader_voice.py`, `test_note_signal.py`, `test_marketing_launch_risk.py`, `test_today_brief.py`;
+  vitest `src/canvas/signals/format.test.ts`. Mac'te yalnız `py_compile` koşuldu; pytest/tsc/vitest/derleme ve gerçek DB
+  kabulü (`scripts/acceptance/zeki-15-16-17-19/check.sh`, `kabul.py --gece`, `temizlik.py`) koordinatörde.
+- **Sunucuda kalan:** kurulum; `timas-okur-sesi` ve `timas-not-sinyali` zamanlayıcıları (ilk koşu elle); kör etiketleme
+  örneğiyle eşiklerin ölçülmesi; `OKUR_SESI_URETIM_ALICI` alıcısı; CRM ziyaret–cari kolonu.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 

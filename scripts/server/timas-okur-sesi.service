@@ -1,0 +1,11 @@
+[Unit]
+Description=Okur sesi sınıflayıcı (öneri 15): site yorumu + Trendyol soru/yorum/iade konu etiketi, baskı hatası kümesi iç uyarısı
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/okur-sesi/run-due); bu birim yalnız çağırır. Metin modele maskeli gider, site yorumu metni
+# saklanmaz; iç e-posta yalnız OKUR_SESI_URETIM_ALICI doluysa. İlk kez elle koşturulur:
+#   systemctl start timas-okur-sesi.service && journalctl -u timas-okur-sesi.service -n 50
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/okur-sesi/run-due'

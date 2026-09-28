@@ -8,6 +8,8 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { REVIEW_TONE, fmtDay, fmtInt, okurApi, type OkurMeta, type Review, type ReviewState } from './api';
 import { OkurFrame } from './parts';
+import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../signals/ReaderVoice';
+import type { VoiceLabel } from '../signals/api';
 
 /** M37 «Yorum cevapları»: sitedeki okur yorumları (anlık, yorumcu adı olmadan), Zeki AI cevap taslağı, düzenleme ve
  *  «cevaplandı» işareti. Cevap sitede elle girilir; portal T-soft'a yazmaz. Yorum metni saklanmaz, taslak saklanır. */
@@ -27,6 +29,7 @@ export default function ReviewsScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['okur', 'reviews'] }),
     onError: (e) => toast.error(errText(e, 'Siteden okunamadı.') ?? ''),
   });
+  const topics = useVoiceLabels('site-yorum');
   const n = list.data?.sayilar;
   const setDurum = (d: string) => {
     const p = new URLSearchParams(params);
@@ -52,6 +55,7 @@ export default function ReviewsScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
       {list.error && <Note tone="err">{errText(list.error, 'Yorumlar okunamadı.')}</Note>}
+      <ReaderVoicePanel sources={['site-yorum']} />
       {n && (
         <KpiRow>
           <Kpi label="Cevapsız" value={fmtInt(n.cevapsiz)} help="Sitede cevabı olmayan, taslağı da yok" active={durum === 'cevapsiz'} onClick={() => setDurum('cevapsiz')} />
@@ -64,7 +68,7 @@ export default function ReviewsScreen() {
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Site yorumları okunuyor…</div>}
         {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte yorum yok.</div>}
         <div className="flex flex-col gap-2">
-          {meta.data && list.data?.items.map((r) => <ReviewCard key={r.id} r={r} meta={meta.data} />)}
+          {meta.data && list.data?.items.map((r) => <ReviewCard key={r.id} r={r} meta={meta.data} topic={topics.data?.items[r.id]} />)}
         </div>
       </Panel>
     </OkurFrame>
@@ -80,7 +84,7 @@ function Stars({ n }: { n: number | null }) {
   );
 }
 
-function ReviewCard({ r, meta }: { r: Review; meta: OkurMeta }) {
+function ReviewCard({ r, meta, topic }: { r: Review; meta: OkurMeta; topic?: VoiceLabel }) {
   const qc = useQueryClient();
   const [text, setText] = useState(r.taslak ?? '');
   const [open, setOpen] = useState(false);
@@ -106,6 +110,7 @@ function ReviewCard({ r, meta }: { r: Review; meta: OkurMeta }) {
         <Pill tone={REVIEW_TONE[r.durum]}>{r.durumAdi}</Pill>
         {!r.onayli && <Pill tone="muted">Sitede onay bekliyor</Pill>}
         <Stars n={r.puan} />
+        <TopicChip label={topic} />
         <span className="font-mono text-[11.5px] tabular-nums text-canvas-muted">{fmtDay(r.tarih)}</span>
       </div>
       <div className="mt-1 break-words text-[13.5px] font-extrabold leading-snug">{r.urun ?? `Ürün ${r.productId ?? '—'}`}</div>

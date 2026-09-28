@@ -11,6 +11,7 @@ import { Block, Empty, FieldFrame, KV } from '../field/parts';
 import { dealersApi, type Card, type DealersMeta } from './api';
 import { ActionItem } from './ActionsTab';
 import BriefSheet from './BriefSheet';
+import NoteSignalCard from '../signals/NoteSignalCard';
 import { ProposalCard } from './LimitsTab';
 import { Meter, SegmentBadge, TrendMark, approxNote } from './parts';
 
@@ -296,6 +297,9 @@ function Notes({ c, canNote, onAdd }: { c: Card; canNote: boolean; onAdd: () => 
         ) : undefined
       }
     >
+      <div className="mb-2">
+        <NoteSignalCard code={c.code} screen="bayi" />
+      </div>
       {c.ziyaretler.length === 0 ? (
         <Empty>Not yok.</Empty>
       ) : (
