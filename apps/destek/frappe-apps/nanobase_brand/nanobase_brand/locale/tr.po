@@ -2300,3 +2300,18 @@ msgstr "Makale taslağı yalnız çözülmüş kayıttan oluşturulabilir."
 
 msgid "SSO key is too short."
 msgstr "Tek oturum anahtarı çok kısa."
+
+msgid "Similar past tickets"
+msgstr "Benzer geçmiş kayıtlar"
+
+msgid "Find"
+msgstr "Bul"
+
+msgid "No similar resolved ticket yet."
+msgstr "Henüz benzer çözülmüş kayıt yok."
+
+msgid "Suggested approach"
+msgstr "Önerilen yol"
+
+msgid "Shown by ticket type; the knowledge base has no close match yet."
+msgstr "Aynı türdeki kayıtlar gösteriliyor; bilgi bankasında yakın eşleşme henüz yok."

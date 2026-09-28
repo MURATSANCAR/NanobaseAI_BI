@@ -42,6 +42,43 @@
         </div>
       </div>
 
+      <!-- Benzer geçmiş kayıtlar ve onlarda uygulanan çözüm (nanobase_brand.yz.kayit.similar) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-ink-gray-5">{{ __("Similar past tickets") }}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            :loading="similar.loading"
+            :label="similar.data ? __('Refresh') : __('Find')"
+            @click="similar.submit({ ticket: ticketId })"
+          />
+        </div>
+        <template v-if="similar.data">
+          <p v-if="!similar.data.kayitlar.length" class="text-ink-gray-5">
+            {{ __("No similar resolved ticket yet.") }}
+          </p>
+          <div v-if="similar.data.oneri.length" class="rounded-md bg-surface-gray-2 p-2">
+            <div class="mb-1 font-medium text-ink-gray-8">{{ __("Suggested approach") }}</div>
+            <ul class="list-disc space-y-0.5 ps-4 leading-5">
+              <li v-for="(line, i) in similar.data.oneri" :key="i">{{ line }}</li>
+            </ul>
+          </div>
+          <ul class="space-y-2">
+            <li v-for="t in similar.data.kayitlar" :key="t.ad" class="leading-5">
+              <a :href="`/helpdesk/tickets/${t.ad}`" target="_blank" class="font-medium text-ink-gray-8 underline">
+                #{{ t.ad }}</a>
+              <span class="text-ink-gray-8"> {{ t.konu }}</span>
+              <span class="text-ink-gray-5"> · {{ t.tarih }}</span>
+              <div v-if="t.uygulanan" class="text-ink-gray-6">{{ t.uygulanan }}</div>
+            </li>
+          </ul>
+          <p v-if="similar.data.yontem === 'tür' && similar.data.kayitlar.length" class="text-ink-gray-5">
+            {{ __("Shown by ticket type; the knowledge base has no close match yet.") }}
+          </p>
+        </template>
+      </div>
+
       <template v-if="info.cozuldu">
         <Button
           v-if="!info.makale"
@@ -131,6 +168,14 @@ const draft = createResource({
     toast.success(__("Draft added to the reply. Review it before sending."));
   },
 });
+
+const similar = createResource({
+  url: "nanobase_brand.yz.kayit.similar",
+  onError: failed,
+});
+
+// Başka kayda geçilince önceki kaydın benzerleri kalmasın.
+watch(ticketId, () => similar.reset());
 
 const article = createResource({
   url: "nanobase_brand.yz.kayit.article_draft",
