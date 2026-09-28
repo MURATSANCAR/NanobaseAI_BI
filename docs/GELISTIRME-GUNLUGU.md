@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (06:00) — Sesli bülten «Metinden üret» uçtan uca çalışıyor (test sunucusu + GPU)
+
+- **GPU:** kapı, stüdyo ve işçi başka bir oturumca `editor-py:0.15.9-032499e0` (main) ile kurulmuştu; bu imaj bülten kodunu (`bulletin.py`, `BulletinNarration`) ve kapıda `book-voice` + `audio/narrate`'i içeriyor. Eksik tek parça GPU nginx'indeki yollardı (köprünün ilk denemesi 404): `add-studio-routes.py` (main) GPU'da koştu → `EDITOR-STUDYO-BULTEN` eklendi, `nginx -t` geçti.
+- **Test sunucusu:** köprü + arayüz daha önce kuruldu; sunucudaki `app.py`/`engine.ts` main'deki M2 editör atama kodunu içermiyordu (başka oturum kurmamış) → yalnız bülten farkı yama olarak (`patch -F0`, kuru deneme temiz) uygulandı.
+- **Uçtan uca (kısa timasai oturumu):** iki cümlelik metin (99 karakter, «Erkek anlatıcı · sıcak masalcı») → iş 202 «Sırada» → ~30 sn'de «Hazır» → taslak bülten: seslendiren «ZEKİ AI», 7,8 sn, 62 KB mp3 (ID3), kaynak sunucu. Ses kullanıcıya gönderildi. Boş metin 422, ses listesi 31 ses.
+- **Temizlik (kural):** deneme bülteni API ile, iş kaydı `semantic_kampus_bulletin_jobs`'tan, GPU'daki `_ses/bulten/b26719cc4b6b6` klasörü ve oturum silindi; iki tarafta da bülten/iş sayısı 0.
+- **Dalda (main'e gitmedi):** stüdyo ucu kurulu değilken ekranda «Not Found» yerine «ZEKİ AI seslendirme bu kurulumda henüz açık değil» (köprü `_studio_bulletin_start`). Müşteri VM'ine hiçbiri kurulmadı.
+- **Bağlantı:** test sunucusu ve GPU'ya birer kalıcı ssh bağlantısı (ControlMaster), dosyalar tek akışla.
+
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
