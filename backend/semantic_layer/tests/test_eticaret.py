@@ -472,7 +472,7 @@ def test_api_mark_and_decide_rules(engine):
     r = c.post(f"/api/v1/eticaret/diffs/{did}/mark", json={"durum": "sonra", "note": "haftaya", "sahip": "Mehmet"}, headers=a)
     assert r.status_code == 200 and r.json()["durum"] == "sonra" and r.json()["sahip"] == "mehmet"
     assert c.get("/api/v1/eticaret/diffs/yok", headers=a).status_code == 404
-    assert c.get(f"/api/v1/eticaret/diffs/{did}", headers=a).json()["gunluk"][0]["kullanici"] == "ayse"
+    assert "ayse" in {g["kullanici"] for g in c.get(f"/api/v1/eticaret/diffs/{did}", headers=a).json()["gunluk"]}   # aynı saniyede sıra kimliğe kalır
     bulk = c.post("/api/v1/eticaret/diffs/mark-bulk", json={"ids": [did, "yok"], "durum": "acik"}, headers=a).json()
     assert len(bulk["items"]) == 1 and bulk["atlanan"][0]["id"] == "yok"
     # Öneri onayı: yetkisiz 403, isteyen 409, ret gerekçesiz 422, başka onaycı 200.
