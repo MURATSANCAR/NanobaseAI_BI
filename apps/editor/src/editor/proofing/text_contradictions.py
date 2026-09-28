@@ -34,6 +34,7 @@ from itertools import combinations
 
 from .. import ledger, source
 from ..llm import Llm
+from . import _continuity as C
 from . import _messages as M
 
 NAME = "text_contradictions"
@@ -124,6 +125,10 @@ def paragraphs(pages: list[dict]) -> list[dict]:
 
 def book_text(paras: list[dict]) -> str:
     return "\n".join(f"[s{x['page']} p{x['idx']}] {x['text']}" for x in paras)
+
+
+def _render_pages(pages: list[dict]) -> str:
+    return book_text(paragraphs(pages))
 
 
 def parts(paras: list[dict]) -> list[list[dict]]:
@@ -261,7 +266,11 @@ async def check(pages: list[dict], llm: Llm | None = None) -> tuple[list[dict], 
             cands[key] = {**c, "a": a, "b": b, "by": [c["by"]]}
 
     sem = asyncio.Semaphore(PARALLEL)
-    verdicts = await asyncio.gather(*(judge(llm, text, c["a"], c["b"], sem) for c in cands.values()),
+    # the whole book as context when it fits (as always); a long book: the pair's pages and their
+    # neighbours (editor.budget) — the judge used to overflow and the check came back empty
+    ctx = await C.judge_text(pages, render=_render_pages)
+    verdicts = await asyncio.gather(*(judge(llm, ctx.for_pages([c["a"]["page"], c["b"]["page"]]),
+                                            c["a"], c["b"], sem) for c in cands.values()),
                                     return_exceptions=True)
     findings = []
     judged_failed = 0
@@ -274,15 +283,16 @@ async def check(pages: list[dict], llm: Llm | None = None) -> tuple[list[dict], 
             continue
         a, b = c["a"], c["b"]
         # metin ve öneri tek yerde: _messages (details'ten kurulur)
-        findings.append(M.put(NAME, {
+        findings.append(ctx.mark(M.put(NAME, {
             "page": b["page"], "severity": "WARN", "quote": b["quote"],
             "details": {"kind": c["kind"], "a": a, "b": b, "why": c["why"], "proposed_by": c["by"],
                         "judge": {k: v[k] for k in ("forward", "reverse")},
-                        "p_contradiction": round(v["p_contradiction"], 3)}}, advice=True))
+                        "p_contradiction": round(v["p_contradiction"], 3)}}, advice=True),
+            [a["page"], b["page"]]))
     stats = {"paragraphs": len(paras), "parts": len(ps), "proposed_window": len(whole), "facts": len(facts),
              "proposed_facts": len(raw) - len(whole), "unverified_quotes": unverified,
              "candidates": len(cands), "judge_failed": judged_failed, "readers_failed": len(failed),
-             "confirmed": len(findings),
+             "confirmed": len(findings), "judge_context": ctx.stats(),
              "candidates_detail": [{"kind": c["kind"], "a": c["a"], "b": c["b"], "why": c["why"], "by": c["by"],
                                     "p": round(c["judge"]["p_contradiction"], 3) if "judge" in c else None}
                                    for c in cands.values()]}

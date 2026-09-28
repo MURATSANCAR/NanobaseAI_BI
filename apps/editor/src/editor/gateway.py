@@ -51,6 +51,13 @@ PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score
                "images/upscale",          # book-upscale (Real-ESRGAN, images/upscale/server.py)
                "audio/narrate"}           # book-voice (seslendirme + kelime zamanı, images/voice/server.py)
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
+# vLLM serves these at its root, not under /v1 (/tokenize, /detokenize). The editor counts a long
+# request with the model's own tokenizer before sending it (editor.budget).
+ROOT_PATHS = {"tokenize", "detokenize"}
+
+
+def _upstream_path(path: str) -> str:
+    return f"/{path}" if path in ROOT_PATHS else f"/v1/{path}"
 
 # Taşma (kullanıcı kararı 2026-09-21): aynı model (Qwen3.8-27B-FP8) GPU 0'da BI için de açık. Etkileşimli
 # soru, yönetici model GPU 1'de kapalıyken ve kart analizle doluyken beklemek yerine o eşe gider; iki kopya
@@ -466,10 +473,10 @@ async def proxy(path: str, req: Request):
             log.info("overflow %s → %s (gpu %s busy, client %s)", a.name, OVERFLOW_URL, a.gpu, _client_name(req))
             payload["model"] = OVERFLOW_MODEL
             body = json.dumps(payload).encode()
-            url = f"{OVERFLOW_URL}/v1/{path}"
+            url = f"{OVERFLOW_URL}{_upstream_path(path)}"
         else:
             await ensure_running(a)
-            url = f"{a.upstream}/v1/{path}"
+            url = f"{a.upstream}{_upstream_path(path)}"
         headers = {"content-type": "application/json"}
         if payload.get("stream"):
             upstream = await http.send(http.build_request("POST", url, content=body,

@@ -243,11 +243,12 @@ async def check(rows: list[dict], states: list[dict], pages: list[dict], llm) ->
              "judge_failed": 0, "confirmed": 0, "candidates_detail": []}
     findings = []
     if cands:
-        text = C.book_text(story)
+        ctx = await C.judge_text(story)
+        stats["judge_context"] = ctx.stats()
         sem = asyncio.Semaphore(PARALLEL)
 
         def body(c, x, y):
-            return C.INTRO + text + "\n\n" + JUDGE.format(name=c["character_name"], item=c["item"],
+            return C.INTRO + ctx.for_pages([x["page"], y["page"]]) + "\n\n" + JUDGE.format(name=c["character_name"], item=c["item"],
                                                           p1=x["page"], d1=describe(x), p2=y["page"], d2=describe(y))
         verdicts = await asyncio.gather(
             *(C.judge_both(llm, body(c, c["a"], c["b"]), body(c, c["b"], c["a"]), sem,
@@ -260,7 +261,7 @@ async def check(rows: list[dict], states: list[dict], pages: list[dict], llm) ->
                 continue
             stats["candidates_detail"].append({**d, "p": round(v["p"], 3)})
             if v["p"] >= JUDGE_MIN:
-                findings.append(finding_of(c, v))
+                findings.append(ctx.mark(finding_of(c, v), [c["a"]["page"], c["b"]["page"]]))
     stats["confirmed"] = len(findings)
     return findings, stats
 

@@ -182,8 +182,15 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
 
 
 # One summary call sees at most this much claim JSON (the director's context, with room for
-# the prompt, the answer and two repair rounds).
+# the prompt, the answer and two repair rounds: the messages grow with every repair). A setting
+# (EDITOR_SUMMARY_INPUT_MAX_CHARS, editor.budget); the value is the one in use since the
+# condensing was written.
 SUMMARY_INPUT_MAX = 80000
+
+
+def summary_input_max() -> int:
+    from . import budget
+    return max(1000, budget.setting("summary_input_max_chars", SUMMARY_INPUT_MAX))
 
 
 def _claim_size(c: dict) -> int:
@@ -199,11 +206,12 @@ async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bo
     of the book always stay in, so the story keeps its beginning and end. Every sentence of the
     result still cites original ledger claims."""
     parts, cur, size = [], [], 0
+    limit = summary_input_max()
     for c in claims:                      # already in page order
         n = _claim_size(c)
-        if n > SUMMARY_INPUT_MAX:
+        if n > limit:
             raise ValueError('A single claim exceeds the summary context')
-        if cur and size + n > SUMMARY_INPUT_MAX:
+        if cur and size + n > limit:
             parts.append(cur); cur, size = [], 0
         cur.append(c); size += n
     if cur:
@@ -215,7 +223,8 @@ async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bo
         calls += r.get('model_calls', [])
         ids = {cid for row in r['sentences'] for cid in row['claim_ids']}
         chosen |= ids
-        stages.append({'part': k, 'claims': len(part), 'chosen': len(ids), 'status': r['status']})
+        stages.append({'part': k, 'claims': len(part), 'chosen': len(ids), 'status': r['status'],
+                       'pages': [min(pages), max(pages)]})
     kept = [c for c in claims if c['id'] in chosen]
     if len(kept) >= len(claims):
         raise ValueError('Summary input could not be condensed below the bounded context')
@@ -235,7 +244,7 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
     reference_ids = {f'c{i}':c['id'] for i,c in enumerate(claims)}
     payload = [{'id':f'c{i}','claim':c['claim'],'kind':c['kind'],'pages':c['source_pages'],'payload':c.get('payload',{})} for i,c in enumerate(claims)]
     raw = json.dumps(payload,ensure_ascii=False)
-    if len(raw) > SUMMARY_INPUT_MAX:
+    if len(raw) > summary_input_max():
         return await _condense(snap, claims, label, plot_only=plot_only)
     messages=[{'role':'user','content':SUMMARY_PROMPT+label+'\n'+raw}]
     calls, rejected, disagreements = [], [], []

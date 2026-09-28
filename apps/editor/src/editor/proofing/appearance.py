@@ -29,6 +29,7 @@ import asyncio
 from .. import source
 from ..llm import Llm
 from . import _attributes as A
+from . import _continuity as C
 from . import _messages as M
 
 NAME = "appearance"
@@ -91,11 +92,13 @@ def _ev(r: dict) -> dict:
             "confidence": round(float(r.get("confidence") or 0), 3)}
 
 
-async def judge(llm: Llm, text: str, c: dict, sem: asyncio.Semaphore) -> dict:
+async def judge(llm: Llm, text, c: dict, sem: asyncio.Semaphore) -> dict:
+    """`text`: the book text, or a C.JudgeText that gives the text for the pair's pages."""
     label = A.KINDS[c["kind"]]["label"]
 
     async def ask(x: dict, y: dict) -> dict:
-        body = INTRO + text + "\n\n" + JUDGE.format(name=c["character_name"], label=label,
+        ctx = text.for_pages([x["page_no"], y["page_no"]]) if hasattr(text, "for_pages") else text
+        body = INTRO + ctx + "\n\n" + JUDGE.format(name=c["character_name"], label=label,
                                                      p1=x["page_no"], d1=A.describe(x),
                                                      p2=y["page_no"], d2=A.describe(y))
         async with sem:
@@ -116,7 +119,8 @@ async def check(rows: list[dict], pages: list[dict], llm: Llm) -> tuple[list[dic
              "candidates": len(cands), "judge_failed": 0, "confirmed": 0, "candidates_detail": []}
     findings: list[dict] = []
     if cands:
-        text = book_text(pages)
+        text = await C.judge_text(pages, render=book_text)
+        stats["judge_context"] = text.stats()
         sem = asyncio.Semaphore(PARALLEL)
         verdicts = await asyncio.gather(*(judge(llm, text, c, sem) for c in cands), return_exceptions=True)
         for c, v in zip(cands, verdicts):
@@ -127,7 +131,7 @@ async def check(rows: list[dict], pages: list[dict], llm: Llm) -> tuple[list[dic
                 continue
             stats["candidates_detail"].append({**detail, "p": round(v["p_contradiction"], 3)})
             if v["p_contradiction"] >= JUDGE_MIN:
-                findings.append(finding_of(c, v))
+                findings.append(text.mark(finding_of(c, v), [c["a"]["page_no"], c["b"]["page_no"]]))
     stats["confirmed"] = len(findings)
     return findings, stats
 

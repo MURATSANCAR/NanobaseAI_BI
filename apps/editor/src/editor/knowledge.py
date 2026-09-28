@@ -13,7 +13,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import db, ledger, naming, prompts, schemas, source
+from . import budget, db, ledger, naming, prompts, schemas, source
 from .config import settings
 from .document import page_text_numbered
 from .llm import Llm
@@ -400,7 +400,12 @@ async def resolve_character_identity(generation_id: str) -> dict:
     short = {str(m["id"]): f"m{i}" for i, m in enumerate(ms)}
     back = {v: k for k, v in short.items()}
     from . import identity
-    out, call_id, audit = await identity.propose(generation_id, ms, corrections_text(generation_id))
+    # any length: one call when the book fits, else window by window (identity.propose_book)
+    out, call_id, audit = await identity.propose_book(generation_id, ms, corrections_text(generation_id))
+    # a windowed audit lists every window; each claim keeps a short form and its own windows
+    claim_audit = audit if not audit.get("windowed") else {
+        k: audit[k] for k in ("policy", "windowed", "mentions_unresolved") if k in audit} | {
+        "windows": len(audit.get("windows", [])), "windows_failed": len(audit.get("failed", []))}
     by_id = {str(m['id']): m for m in ms}
     conflicted = {back[x['mention_id']] for x in out['conflicts']}
     # Proposal is an exact partition. Same surface names never override identity evidence.
@@ -488,7 +493,8 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 + f": {ch['description']}",
                 evidence=evs, confidence=conf, created_by="knowledge:identity", model_call_id=call_id,
                 payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status,
-                         "identity_audit": audit, "names_refused": verdict["dropped"]})
+                         "identity_audit": claim_audit, "names_refused": verdict["dropped"],
+                         **({"windows": ch["windows"]} if ch.get("windows") else {})})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
                 " identity_status, identity_confidence, first_page, claim_id, kind, traits) VALUES"
@@ -590,6 +596,56 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
     return stats
 
 
+# ------------------------------------------------------ text budget
+# Whole-book list calls (event merge and order, narrative roles, themes, contradictions) go
+# through one rule (editor.budget): a list that fits the model's context AND the schema's list
+# bound is sent in one call, exactly as before; a longer one is read window by window (page
+# order, cut at chapter starts where possible, neighbouring windows overlap) and merged by code.
+WINDOW_NOTE = ("\n\nNOT: Bu liste kitabın yalnız s{lo}–s{hi} sayfalarından gelen kayıtları içerir "
+               "(kitap uzun olduğu için parça parça okunuyor). Yalnız bu listedeki kimlikleri kullan; "
+               "listede olmayan bir şey hakkında karar verme.")
+
+
+def _chapter_breaks(generation_id: str, spans: list[tuple[int, int]]) -> list[int]:
+    """Indices of the page-ordered units that begin a chapter (editor chapters are proposals
+    from headings; a book without them has no breaks and is cut by budget alone)."""
+    try:
+        starts = sorted({c["page_from"] for c in chapters(generation_id)})
+    except Exception:  # noqa: BLE001 - chapters are a preference for the cut, not a requirement
+        return []
+    return [i for i in range(1, len(spans))
+            if any(spans[i - 1][0] < s <= spans[i][0] for s in starts)]
+
+
+async def list_windows(generation_id: str, render: Any, lines: list[str], spans: list[tuple[int, int]],
+                       *, max_tokens: int, cap: int | None) -> tuple[list[budget.Window], budget.Fit]:
+    """Windows for a whole-book list call. `render(lines) -> body`; `spans[i]` = pages of line i;
+    `cap` = the schema bound of the answer's per-item list (a window never holds more items
+    than the answer may list, so the bound can no longer cut a book silently)."""
+    f = await budget.fit(DIRECTOR, render(lines), max_tokens)
+    room = budget.items_room(cap)
+    if f.fits and (room is None or len(lines) <= room):
+        pf = min((s[0] for s in spans), default=None)
+        pt = max((s[1] for s in spans), default=None)
+        return [budget.Window(0, 0, len(lines), 0, pf, pt, f.tokens)], f
+    overhead = budget.estimate(render([]) + WINDOW_NOTE, f.ratio)
+    costs = [budget.estimate(x, f.ratio) + 1 for x in lines]
+    breaks = await asyncio.to_thread(_chapter_breaks, generation_id, spans)
+    # 5% under the budget: the plan counts with this text's measured characters-per-token,
+    # the request is counted by the model's tokenizer.
+    wins = budget.plan(costs, int(f.budget.input * 0.95), overhead=overhead, max_units=room,
+                       overlap=budget.overlap_items(), breaks=breaks, pages=spans)
+    return wins, f
+
+
+def window_body(body: str, w: budget.Window, windows: list[budget.Window]) -> str:
+    return body if len(windows) == 1 else body + WINDOW_NOTE.format(lo=w.page_from, hi=w.page_to)
+
+
+def _unit(key: str, prefix: str) -> int | None:
+    return int(key[len(prefix):]) if key.startswith(prefix) and key[len(prefix):].isdigit() else None
+
+
 # ------------------------------------------------------ events / timeline
 async def merge_events(generation_id: str) -> dict:
     evs = db.all_rows("SELECT e.id, e.page_from, e.page_to, e.modality, e.summary, c.model_call_id"
@@ -600,14 +656,53 @@ async def merge_events(generation_id: str) -> dict:
     short = {f"e{i}": e for i, e in enumerate(evs)}
     lines = [f"{k} | s{e['page_from']}-{e['page_to']} | {e['modality']} | {e['summary']}"
              for k, e in short.items()]
-    ref, body = prompts.render("merge_events", events="\n".join(lines))
-    out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}], prompt=ref,
-                                           schema=schemas.MERGE_EVENTS, max_tokens=16000,
-                                           temperature=0.0, thinking=True)
+
+    def render(ls: list[str]) -> str:
+        return prompts.render("merge_events", events="\n".join(ls))[1]
+
+    ref, _ = prompts.render("merge_events", events="")
+    wins, fit = await list_windows(generation_id, render, lines,
+                                   [(e["page_from"], e["page_to"]) for e in evs], max_tokens=16000,
+                                   cap=budget.list_cap(schemas.MERGE_EVENTS, "story_order"))
+
+    async def read(w: budget.Window) -> dict:
+        out, _ = await Llm(generation_id).chat(
+            DIRECTOR, [{"role": "user", "content": window_body(render(lines[w.start:w.end]), w, wins)}],
+            prompt=ref, schema=schemas.MERGE_EVENTS, max_tokens=16000, temperature=0.0, thinking=True)
+        return out
+
+    if len(wins) == 1:
+        # fits: one call, the whole list, as it always was
+        out = await read(wins[0])
+        run = budget.Run(wins, [out])
+    else:
+        run = await budget.map_windows(wins, read)
+        if all(r is None for r in run.results):
+            raise budget.BudgetError(f"merge_events: no window answered: {run.errors[:3]}")
+    hits = [h for r in run.results if r is not None for h in budget.cap_hits(r, schemas.MERGE_EVENTS)]
+    # groups: a window may only group its own events; groups sharing an event across the
+    # overlap are one group (the same window's two groups never chain into one)
+    proposed: list[tuple[int, list[int]]] = []
+    for w, r in zip(wins, run.results):
+        for g in (r or {}).get("groups", []):
+            ids = [u for u in (_unit(x, "e") for x in g["event_ids"]) if u is not None and w.start <= u < w.end]
+            if ids:
+                proposed.append((w.index, ids))
+    sets, refused = budget.union_groups(proposed)
+    # a group joined across windows lists the shared event once; a single window's group is
+    # used exactly as the model wrote it (its own guards below judge it, as before)
+    groups = [[f"e{u}" for u in (proposed[s[0]][1] if len(s) == 1 else
+                                 dict.fromkeys(u for gi in s for u in proposed[gi][1]))] for s in sets]
+    if len(wins) == 1:
+        story = run.results[0]["story_order"]
+    else:
+        story = [f"e{u}" for u in budget.merge_order(wins, [
+            [u for u in (_unit(x, "e") for x in (r or {}).get("story_order", [])) if u is not None]
+            for r in run.results])]
     merged = 0
     with db.tx() as c:
-        for g in out["groups"]:
-            members = [short[x] for x in g["event_ids"] if x in short]
+        for ids in groups:
+            members = [short[x] for x in ids if x in short]
             if len({m["modality"] for m in members}) > 1 or len(members) < 2:
                 continue  # never merge a plan with its realisation
             # The extractor listed events of one call separately on purpose: two events
@@ -627,13 +722,20 @@ async def merge_events(generation_id: str) -> dict:
                           (keep["id"], m["id"]))
                 merged += 1
         order = 0
-        for x in out["story_order"]:
+        for x in story:
             e = short.get(x)
             if e and e["modality"] in ("REALIZED", "MEMORY"):
                 order += 1
                 c.execute("UPDATE event SET story_order=%s WHERE id=%s AND merged_into IS NULL "
                           "AND modality IN ('REALIZED','MEMORY')", (order, e["id"]))
-    return {"events": len(evs), "merged": merged, "ordered": order}
+    res = {"events": len(evs), "merged": merged, "ordered": order, "cap_hits": hits}
+    if len(wins) > 1:
+        # how the list was read: every window's pages, the windows that failed (their events
+        # keep no story order), links refused across the overlap. An order across two windows
+        # is not invented: windows follow page order, each window orders its own events.
+        res["reading"] = budget.report(wins, fit=fit.as_dict(), failed=run.errors,
+                                       refused_links=refused)
+    return res
 
 
 def candidate_timeline(generation_id: str) -> list[dict]:
@@ -651,14 +753,55 @@ async def assign_narrative_roles(generation_id: str) -> dict:
     if not tl:
         return {"key_events": 0, "pages": []}
     short = {f"e{i}": e for i, e in enumerate(tl)}
-    ref, body = prompts.render("narrative_roles", events="\n".join(
-        f"{k} | s{e['page_from']}-{e['page_to']} | {e['summary']}" for k, e in short.items()))
-    out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}], prompt=ref,
-                                           schema=schemas.NARRATIVE_ROLES, max_tokens=8000,
-                                           temperature=0.0, thinking=False)
+    lines = [f"{k} | s{e['page_from']}-{e['page_to']} | {e['summary']}" for k, e in short.items()]
+
+    def render(ls: list[str]) -> str:
+        return prompts.render("narrative_roles", events="\n".join(ls))[1]
+
+    ref, _ = prompts.render("narrative_roles", events="")
+    # the timeline is in story order; its pages still say where each event is told
+    wins, fit = await list_windows(generation_id, render, lines,
+                                   [(e["page_from"], e["page_to"]) for e in tl], max_tokens=8000,
+                                   cap=budget.list_cap(schemas.NARRATIVE_ROLES, "events"))
+
+    async def read(w: budget.Window) -> dict:
+        out, _ = await Llm(generation_id).chat(
+            DIRECTOR, [{"role": "user", "content": window_body(render(lines[w.start:w.end]), w, wins)}],
+            prompt=ref, schema=schemas.NARRATIVE_ROLES, max_tokens=8000, temperature=0.0, thinking=False)
+        return out
+
+    extra: dict = {}
+    if len(wins) == 1:
+        out = await read(wins[0])
+        verdicts = out["events"]
+        extra["cap_hits"] = budget.cap_hits(out, schemas.NARRATIVE_ROLES)
+    else:
+        # Importance is relative to what a window sees: a role is read in every window that
+        # holds the event; where two windows disagree the window the event sits most centrally
+        # in decides, and the disagreement is reported.
+        run = await budget.map_windows(wins, read)
+        if all(r is None for r in run.results):
+            raise budget.BudgetError(f"narrative_roles: no window answered: {run.errors[:3]}")
+        per = []
+        for w, r in zip(wins, run.results):
+            if r is None:
+                per.append(None)
+                continue
+            got = {}
+            for v in r["events"]:
+                u = _unit(v["event_id"], "e")
+                if u is not None and w.start <= u < w.end and u not in got:
+                    got[u] = v["role"]
+            per.append(got)
+        labels, conflicts = budget.merge_labels(wins, per)
+        verdicts = [{"event_id": f"e{u}", "role": role} for u, role in sorted(labels.items())]
+        extra["cap_hits"] = [h for r in run.results if r is not None
+                             for h in budget.cap_hits(r, schemas.NARRATIVE_ROLES)]
+        extra["reading"] = budget.report(wins, fit=fit.as_dict(), failed=run.errors,
+                                         role_conflicts=conflicts)
     key = []
     with db.tx() as c:
-        for v in out["events"]:
+        for v in verdicts:
             e = short.get(v["event_id"])
             if e:
                 c.execute("UPDATE event SET narrative_role=%s WHERE id=%s", (v["role"], e["id"]))
@@ -670,7 +813,7 @@ async def assign_narrative_roles(generation_id: str) -> dict:
             " WHERE g.id=%s AND p.page_no = ANY(%s) AND coalesce(p.nontext_ink, 1) >= %s AND NOT EXISTS"
             " (SELECT 1 FROM page_scan d WHERE d.generation_id=g.id AND d.page_no=p.page_no AND"
             " d.pass='DEEP')", (generation_id, pages, settings().min_illustration_ink)).fetchall()
-    return {"key_events": len(key), "pages": [r["page_no"] for r in rows]}
+    return {"key_events": len(key), "pages": [r["page_no"] for r in rows], **extra}
 
 
 # ------------------------------------------------------- who did what
@@ -888,26 +1031,16 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
     if not th:
         return {"emotions_linked": n, "themes": 0}
     short = {f"t{i}": t for i, t in enumerate(th)}
-    ref, body = prompts.render("themes", themes="\n".join(
-        f"{k} | s{t['source_pages']} | {t['claim']} | {t['quotes']}" for k, t in short.items()))
-    body += ("\nHer girdi kimliğini en az bir tema grubunun source_ids listesinde aynen kullan. "
-             "Yeni kimlik üretme; önek ekleme; hiçbir girdiyi sessizce atlama. "
-             "Birleştirilemeyen temayı kendi kaynak kimliğiyle ayrı koru.")
-    out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                 prompt=ref, schema=schemas.THEMES, max_tokens=6000,
-                                                 temperature=0.1, thinking=False)
+    lines = [f"{k} | s{t['source_pages']} | {t['claim']} | {t['quotes']}" for k, t in short.items()]
+    spans = [(min(t["source_pages"] or [0]), max(t["source_pages"] or [0])) for t in th]
+    groups, call_id, info = await consolidate_themes(generation_id, lines, spans)
     # The contract is "every input in some group, with its exact id". A group that breaks it
     # is not used; an input no valid group covers is NOT lost and does not stop the book: its
     # chapter-level theme claim simply stays as it is, unconsolidated, and is counted.
-    valid, covered = [], set()
-    for t in out["themes"]:
-        ids = t["source_ids"]
-        if ids and len(ids) == len(set(ids)) and all(s in short for s in ids):
-            valid.append(t)
-            covered.update(ids)
-    dropped_groups = len(out["themes"]) - len(valid)
+    covered = {x for t in groups for x in t["source_ids"]}
+    dropped_groups = info["dropped_groups"]
     unconsolidated = sorted(set(short) - covered)
-    out = {**out, "themes": valid}
+    out = {"themes": groups}
     made = 0
     with db.tx() as c:
         for t in out["themes"]:
@@ -922,13 +1055,116 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
                     raise ValueError("Theme source has no evidence in this generation: " + str(s['id']))
                 for r in source_evidence:
                     evs.append((str(r["evidence_id"]), r["quote_verified"], r["page_no"]))
+            payload = {"level": "book", "theme": t["theme"]}
+            if t.get("windows"):
+                payload["windows"] = t["windows"]      # which windows (pages) the theme came from
             if ledger.save_claim(c, generation_id, kind="THEME", subject=t["theme"], claim=t["text"],
                                  evidence=list(dict.fromkeys(evs)), confidence=t["confidence"],
-                                 created_by="knowledge:themes", model_call_id=call_id,
-                                 payload={"level": "book", "theme": t["theme"]}):
+                                 created_by="knowledge:themes", model_call_id=t.get("call_id") or call_id,
+                                 payload=payload):
                 made += 1
-    return {"emotions_linked": n, "themes": made, "theme_groups_dropped": dropped_groups,
-            "themes_left_unconsolidated": len(unconsolidated)}
+    res = {"emotions_linked": n, "themes": made, "theme_groups_dropped": dropped_groups,
+           "themes_left_unconsolidated": len(unconsolidated), "cap_hits": info["cap_hits"]}
+    if info.get("reading"):
+        res["reading"] = info["reading"]
+    return res
+
+
+THEMES_CONTRACT = ("\nHer girdi kimliğini en az bir tema grubunun source_ids listesinde aynen kullan. "
+                   "Yeni kimlik üretme; önek ekleme; hiçbir girdiyi sessizce atlama. "
+                   "Birleştirilemeyen temayı kendi kaynak kimliğiyle ayrı koru.")
+
+
+def _valid_theme_groups(themes: list[dict], allowed: set[str]) -> list[dict]:
+    return [t for t in themes if t["source_ids"] and len(t["source_ids"]) == len(set(t["source_ids"]))
+            and all(x in allowed for x in t["source_ids"])]
+
+
+async def consolidate_themes(generation_id: str, lines: list[str], spans: list[tuple[int, int]],
+                             prefix: str = "t", level: int = 0) -> tuple[list[dict], int | None, dict]:
+    """Chapter-level theme candidates -> book themes (map-reduce). Fits: one call, as before.
+    Longer: every window groups its own candidates; groups that share a candidate across an
+    overlap are one; then the window groups themselves are consolidated the same way (reduce),
+    until one call sees them all. A group keeps the ids of the ORIGINAL candidates, so its
+    evidence is still their page quotes, and the windows (pages) it came from."""
+    def render(ls: list[str]) -> str:
+        return prompts.render("themes", themes="\n".join(ls))[1] + THEMES_CONTRACT
+
+    ref, _ = prompts.render("themes", themes="")
+    wins, fit = await list_windows(generation_id, render, lines, spans, max_tokens=6000,
+                                   cap=budget.list_cap(schemas.THEMES, "themes", "[]", "source_ids"))
+    keys = [f"{prefix}{i}" for i in range(len(lines))]
+
+    async def read(w: budget.Window) -> tuple[dict, int]:
+        return await Llm(generation_id).chat(
+            DIRECTOR, [{"role": "user", "content": window_body(render(lines[w.start:w.end]), w, wins)}],
+            prompt=ref, schema=schemas.THEMES, max_tokens=6000, temperature=0.1, thinking=False)
+
+    if len(wins) == 1:
+        out, call_id = await read(wins[0])
+        valid = _valid_theme_groups(out["themes"], set(keys))
+        return valid, call_id, {"dropped_groups": len(out["themes"]) - len(valid),
+                                "cap_hits": budget.cap_hits(out, schemas.THEMES)}
+    run = await budget.map_windows(wins, read)
+    if all(r is None for r in run.results):
+        raise budget.BudgetError(f"themes: no window answered: {run.errors[:3]}")
+    proposed: list[tuple[int, list[int]]] = []
+    meta: list[dict] = []
+    dropped, hits = 0, []
+    for w, r in zip(wins, run.results):
+        if r is None:
+            continue
+        out, cid = r
+        hits += budget.cap_hits(out, schemas.THEMES)
+        own = {keys[i] for i in w.units}
+        valid = _valid_theme_groups(out["themes"], own)
+        dropped += len(out["themes"]) - len(valid)
+        for t in valid:
+            proposed.append((w.index, [keys.index(x) for x in t["source_ids"]]))
+            meta.append({**t, "call_id": cid, "windows": [w.evidence()]})
+    sets, refused = budget.union_groups(proposed)
+    groups = []
+    for st in sets:
+        best = max(st, key=lambda gi: len(proposed[gi][1]))
+        src = list(dict.fromkeys(u for gi in st for u in proposed[gi][1]))
+        groups.append({"theme": meta[best]["theme"], "text": meta[best]["text"],
+                       "confidence": min(meta[gi]["confidence"] for gi in st),
+                       "source_ids": [keys[u] for u in src], "call_id": meta[best]["call_id"],
+                       "windows": [ev for gi in st for ev in meta[gi]["windows"]]})
+    reading = budget.report(wins, level=level, fit=fit.as_dict(), failed=run.errors, refused_links=refused)
+    call_id = groups[0]["call_id"] if groups else None
+    if len(groups) > 1 and (level == 0 or len(groups) < len(lines)):
+        # reduce: the window groups are candidates themselves; same prompt, same contract.
+        # Above the first level it recurses only while it still consolidates, so it ends.
+        g_lines = [f"g{j} | s{min(spans[keys.index(x)][0] for x in g['source_ids'])}-"
+                   f"{max(spans[keys.index(x)][1] for x in g['source_ids'])} | {g['theme']}: {g['text']}"
+                   for j, g in enumerate(groups)]
+        g_spans = [(min(spans[keys.index(x)][0] for x in g["source_ids"]),
+                    max(spans[keys.index(x)][1] for x in g["source_ids"])) for g in groups]
+        try:
+            top, top_call, top_info = await consolidate_themes(generation_id, g_lines, g_spans, "g", level + 1)
+        except Exception as e:  # noqa: BLE001 - the window themes stand, unreduced, and it is said
+            reading["reduce_failed"] = f"{type(e).__name__}: {str(e)[:300]}"
+        else:
+            if 0 < len(top) < len(groups):
+                merged = []
+                used: set[int] = set()
+                for t in top:
+                    js = [int(x[1:]) for x in t["source_ids"]]
+                    used.update(js)
+                    merged.append({"theme": t["theme"], "text": t["text"], "confidence": t["confidence"],
+                                   "source_ids": list(dict.fromkeys(x for j in js for x in groups[j]["source_ids"])),
+                                   "call_id": t.get("call_id") or top_call,
+                                   "windows": [ev for j in js for ev in groups[j]["windows"]]})
+                # a window group the reduce left out stays as its window wrote it
+                merged += [g for j, g in enumerate(groups) if j not in used]
+                groups, call_id = merged, top_call
+                dropped += top_info["dropped_groups"]
+                hits += top_info["cap_hits"]
+                reading["reduce"] = top_info.get("reading") or {"windowed": False}
+            else:
+                reading["reduce"] = {"skipped": "reduce did not consolidate", "groups": len(groups)}
+    return groups, call_id, {"dropped_groups": dropped, "cap_hits": hits, "reading": reading}
 
 
 # ---------------------------------------------------- contradictions
@@ -942,31 +1178,67 @@ async def detect_contradictions(generation_id: str) -> dict:
     tl = candidate_timeline(generation_id)
     if not chars and not tl:
         return {"candidates": 0, "skipped": "nothing to compare"}
-    material = (
-        "KARAKTERLER (metne göre):\n" + "\n".join(f"- {c['canonical_name']} ({', '.join(c['aliases'])}) "
-                                                   f"[{c['identity_status']}]: {c['description']}" for c in chars)
-        + "\nGERÇEKLEŞMİŞ OLAYLAR (sırayla):\n" + "\n".join(
-            f"{e['story_order']}. s{e['page_from']}-{e['page_to']}: {e['summary']}" for e in tl))
-    ref, body = prompts.render("contradictions", material=material)
-    out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                 prompt=ref, schema=schemas.CONTRADICTIONS,
-                                                 max_tokens=12000, temperature=0.0, thinking=True)
-    made = 0
+    head = ("KARAKTERLER (metne göre):\n" + "\n".join(f"- {c['canonical_name']} ({', '.join(c['aliases'])}) "
+                                                     f"[{c['identity_status']}]: {c['description']}" for c in chars)
+            + "\nGERÇEKLEŞMİŞ OLAYLAR (sırayla):\n")
+    lines = [f"{e['story_order']}. s{e['page_from']}-{e['page_to']}: {e['summary']}" for e in tl]
+
+    def render(ls: list[str]) -> str:
+        return prompts.render("contradictions", material=head + "\n".join(ls))[1]
+
+    ref, _ = prompts.render("contradictions", material="")
+    # A contradiction needs both statements in one reading: a long timeline is read window by
+    # window with the character table in every window. Two statements in windows that never
+    # meet are not compared here (reported); the final-read text check reads the text itself.
+    wins, fit = await list_windows(generation_id, render, lines,
+                                   [(e["page_from"], e["page_to"]) for e in tl], max_tokens=12000,
+                                   cap=None)
+
+    async def read(w: budget.Window) -> tuple[dict, int]:
+        return await Llm(generation_id).chat(
+            DIRECTOR, [{"role": "user", "content": window_body(render(lines[w.start:w.end]), w, wins)}],
+            prompt=ref, schema=schemas.CONTRADICTIONS, max_tokens=12000, temperature=0.0, thinking=True)
+
+    if len(wins) == 1:
+        run = budget.Run(wins, [await read(wins[0])])
+    else:
+        run = await budget.map_windows(wins, read)
+        if all(r is None for r in run.results):
+            raise budget.BudgetError(f"contradictions: no window answered: {run.errors[:3]}")
+    made, repeated, hits = 0, 0, []
+    seen: set[tuple] = set()
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, generation_id)
         pages = _valid_pages(c, generation_id)
-        for x in out["candidates"]:
-            evs = [e for e in ledger.evidence_from_model(c, generation_id, idx, x["evidence"],
-                                                         valid_pages=pages) if e[1]]
-            if len({e[0] for e in evs}) < 2:
-                continue        # a contradiction needs the two statements that conflict, verbatim
-            cid = ledger.save_claim(c, generation_id, kind="EVENT" if x["kind"] == "TIMELINE" else "CHARACTER",
-                                    subject=x["kind"], claim=x["description"], evidence=evs,
-                                    confidence=x["confidence"], created_by="knowledge:contradictions",
-                                    model_call_id=call_id, payload={"contradiction_kind": x["kind"]})
-            c.execute("INSERT INTO contradiction(generation_id, kind, description, pages, claim_ids,"
-                      " confidence) VALUES (%s,%s,%s,%s,%s,%s)",
-                      (generation_id, x["kind"], x["description"], x["pages"], [cid] if cid else [],
-                       x["confidence"]))
-            made += 1
-    return {"candidates": made}
+        for w, r in zip(wins, run.results):
+            if r is None:
+                continue
+            out, call_id = r
+            hits += budget.cap_hits(out, schemas.CONTRADICTIONS)
+            for x in out["candidates"]:
+                evs = [e for e in ledger.evidence_from_model(c, generation_id, idx, x["evidence"],
+                                                             valid_pages=pages) if e[1]]
+                if len({e[0] for e in evs}) < 2:
+                    continue        # a contradiction needs the two statements that conflict, verbatim
+                key = (x["kind"], tuple(sorted({e[0] for e in evs})))
+                if len(wins) > 1 and key in seen:     # the same pair found again in an overlap
+                    repeated += 1
+                    continue
+                seen.add(key)
+                payload = {"contradiction_kind": x["kind"]}
+                if len(wins) > 1:
+                    payload["window"] = w.evidence()
+                cid = ledger.save_claim(c, generation_id, kind="EVENT" if x["kind"] == "TIMELINE" else "CHARACTER",
+                                        subject=x["kind"], claim=x["description"], evidence=evs,
+                                        confidence=x["confidence"], created_by="knowledge:contradictions",
+                                        model_call_id=call_id, payload=payload)
+                c.execute("INSERT INTO contradiction(generation_id, kind, description, pages, claim_ids,"
+                          " confidence) VALUES (%s,%s,%s,%s,%s,%s)",
+                          (generation_id, x["kind"], x["description"], x["pages"], [cid] if cid else [],
+                           x["confidence"]))
+                made += 1
+    res = {"candidates": made, "cap_hits": hits}
+    if len(wins) > 1:
+        res["reading"] = budget.report(wins, fit=fit.as_dict(), failed=run.errors,
+                                       repeated_in_overlap=repeated)
+    return res

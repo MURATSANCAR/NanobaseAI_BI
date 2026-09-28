@@ -245,12 +245,14 @@ async def check(lines: list[dict], pages: list[dict], llm, evs: list[dict], ment
     findings = []
     if not (ca or cb):
         return findings, stats
-    text = C.book_text(story)
+    ctx = await C.judge_text(story)
+    stats["judge_context"] = ctx.stats()
     sem = asyncio.Semaphore(PARALLEL)
     jobs = []
     for c in ca:
         ln = c["line"]
         present = ", ".join(names.get(i, i) for i in c["present"]) or "-"
+        text = ctx.for_pages([ln["page"]])
         f1 = C.INTRO + text + "\n\n" + JUDGE_PRESENT.format(page=ln["page"], name=ln["speaker_name"], quote=ln["quote"], present=present)
         f2 = C.INTRO + text + "\n\n" + JUDGE_OWNER.format(page=ln["page"], name=ln["speaker_name"], quote=ln["quote"], present=present)
         jobs.append(_judge_two(llm, f1, f2, sem, [ln["page"]]))
@@ -258,7 +260,7 @@ async def check(lines: list[dict], pages: list[dict], llm, evs: list[dict], ment
         a, b = c["a"], c["b"]
 
         def body(x, y, c=c):
-            return C.INTRO + text + "\n\n" + JUDGE_ADDRESS.format(
+            return C.INTRO + ctx.for_pages([x["page"], y["page"]]) + "\n\n" + JUDGE_ADDRESS.format(
                 speaker=x["speaker_name"], addressee=x["addressee_name"], cat1=CATEGORY_TR[x["category"]],
                 p1=x["page"], q1=x["quote"], t1=x["address_term"], cat2=CATEGORY_TR[y["category"]],
                 p2=y["page"], q2=y["quote"], t2=y["address_term"])
@@ -278,10 +280,10 @@ async def check(lines: list[dict], pages: list[dict], llm, evs: list[dict], ment
             pg = c["line"]["page"]
             on_page = [{"summary": e["summary"], "pages": [e["page_from"], e["page_to"]]} for e in evs
                        if e["page_from"] <= pg <= e["page_to"]][:6]
-            findings.append(finding_attribution(c, v, names, on_page))
+            findings.append(ctx.mark(finding_attribution(c, v, names, on_page), [pg]))
             stats["confirmed_attribution"] += 1
         else:
-            findings.append(finding_address(c, v))
+            findings.append(ctx.mark(finding_address(c, v), [c["a"]["page"], c["b"]["page"]]))
             stats["confirmed_address"] += 1
     return findings, stats
 

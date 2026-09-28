@@ -129,6 +129,10 @@ dışında bölüm bölüm ana fikir), katalog kartı, arama indeksi, kitaba sor
 
 ### 6.3 Uzunluk (bütün türler)
 
+> **Durum 2026-09-28:** uygulandı (`src/editor/budget.py`, kimlik `identity.propose_book`, liste
+> adımları `knowledge`, son okuma hakemleri `proofing/_continuity.JudgeText`); sentetik testte, gerçek
+> kitapta **ölçüm bekliyor**. Tasarım, ayarlar ve ölçüm planı: [METIN-BUTCESI.md](METIN-BUTCESI.md).
+
 - Her tüm-kitap çağrısından önce geçitteki `/tokenize` ile gerçek sayım; bütçe aşılıyorsa
   pencere (ardışık tam sayfalar) + birleştirme adımı. Sığan kitap bugünkü yoldan geçer.
 - Kimlik: pencere başına bugünkü öneri/onarım/denetçi/kurtarma aynen; pencere içi `m0…`

@@ -206,10 +206,11 @@ async def check(facts: list[dict], pages: list[dict], llm, illustrated: set | No
     findings = []
     sem = asyncio.Semaphore(PARALLEL)
     if cands:
-        text = C.book_text(story)
+        ctx = await C.judge_text(story)
+        stats["judge_context"] = ctx.stats()
 
         def body(c, x, y):
-            return C.INTRO + text + "\n\n" + JUDGE.format(place=c["place"], aspect=ASPECT_TR[c["aspect"]],
+            return C.INTRO + ctx.for_pages([x["page"], y["page"]]) + "\n\n" + JUDGE.format(place=c["place"], aspect=ASPECT_TR[c["aspect"]],
                                                           p1=x["page"], q1=x["quote"], v1=x["value"],
                                                           p2=y["page"], q2=y["quote"], v2=y["value"])
         verdicts = await asyncio.gather(
@@ -223,7 +224,7 @@ async def check(facts: list[dict], pages: list[dict], llm, illustrated: set | No
                 continue
             stats["candidates_detail"].append({**d, "p": round(v["p"], 3)})
             if v["p"] >= JUDGE_MIN:
-                findings.append(finding_text(c, v))
+                findings.append(ctx.mark(finding_text(c, v), [c["a"]["page"], c["b"]["page"]]))
                 stats["confirmed_text"] += 1
     if vfacts:
         async def one(f):

@@ -72,6 +72,55 @@ def by_no(pages: list[dict]) -> dict[int, dict]:
     return {p["page_no"]: p for p in pages}
 
 
+# ------------------------------------------------------------ yargı metni (bütçe)
+class JudgeText:
+    """Bir kapalı yargı sorusunun önüne konan metin (editor.budget, analiz §6.3).
+
+    Kitabın bütün metni bağlama sığıyorsa her soruda aynı bütün metin — bugünkü davranış, sunucu
+    öneki bir kez okur. Sığmıyorsa (uzun kitap) soru, çiftin sayfaları ve komşuları üzerinden sorulur:
+    sayfalar her yanda birer birer eklenir, `EDITOR_JUDGE_CONTEXT_TOKENS` dolana kadar; atlanan
+    aralık metinde işaretlidir. Yargının gördüğü sayfalar bulguya kanıt olarak yazılır (`mark`).
+    Eskiden bağlamı aşan kitapta her yargı düşüyor, denetim sessizce boş dönüyordu."""
+
+    def __init__(self, pages: list[dict], fits: bool, limit: int, render=None):
+        self.pages = pages
+        self.render = render or book_text
+        self.whole = self.render(pages)
+        self.fits = fits
+        self.limit = limit
+        self.seen: dict[tuple, list[int]] = {}
+
+    def for_pages(self, focus) -> str:
+        if self.fits:
+            return self.whole
+        from .. import budget
+        key = tuple(sorted(set(focus)))
+        text, used = budget.around(self.pages, key, self.limit, self.render)
+        self.seen[key] = used
+        return text
+
+    def mark(self, finding: dict, focus) -> dict:
+        """Uzun kitapta bulgu, yargının hangi sayfaları görerek verildiğini taşır."""
+        used = self.seen.get(tuple(sorted(set(focus))))
+        if not self.fits and used:
+            finding.setdefault("details", {})["judge_context"] = {
+                "whole_book": False, "pages": [used[0], used[-1]], "page_count": len(used)}
+        return finding
+
+    def stats(self) -> dict:
+        return {"whole_book": self.fits, "context_tokens": None if self.fits else self.limit}
+
+
+async def judge_text(pages: list[dict], render=None, alias: str = DIRECTOR) -> JudgeText:
+    from .. import budget
+    text = (render or book_text)(pages)
+    f = await budget.fit(alias, text, 1)
+    # a long book: a neighbourhood, not the whole context, per question (every question pays
+    # its own prefill; the default keeps a judge call short next to a running analysis)
+    limit = min(f.budget.input, max(1, budget.setting("judge_context_tokens", 32768)))
+    return JudgeText(pages, f.fits, limit, render)
+
+
 # ------------------------------------------------------------------ yargı
 async def judge_both(llm, body_fwd: str, body_rev: str, sem: asyncio.Semaphore, pages: list[int],
                      choices=("C", "U", "B"), yes: str = "C", alias: str = DIRECTOR) -> dict:

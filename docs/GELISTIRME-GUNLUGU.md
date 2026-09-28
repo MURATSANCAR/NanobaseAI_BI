@@ -110,6 +110,22 @@ Mac'te yalnız `py_compile`.
   uzun; bitene kadar run-due tekrarı); kabul `scripts/acceptance/zeki-ortak-belge-benzerlik/` (R1–R10) + temizlik;
   VM için nginx location (onayla). Açık: OCR güveninin doğruluğu ölçülmedi (eşik 0,80 varsayım); küme benzerlik eşiği
   0,82 ve M39 anlam aday sayısı 30 ölçülmedi — kabulde gerçek sorularla ayarlanmalı.
+## 2026-09-28 — Editör motoru: metin bütçesi ve pencereleme (uzun ve kurgu dışı kitaplar) — DOĞRULANAMADI, testler koordinatörde
+
+- **Neden:** README «en değerli 20» #14 / B grubu öneri 4. Bütün kitabı tek istemde veren adımlar uzun kitapta bağlamı
+  aşıp düşüyor (kimlik ~200k token), şema liste sınırında (120) sessizce kırpılıyor (Böcekleri 677 olayın 102'si sıralı)
+  ya da son okuma hakemlerinde her yargı düşüp denetim boş dönüyordu (analiz §4).
+- **Ne:** `apps/editor/src/editor/budget.py` (bütçe, tahmin + geçitte gerçek sayım, pencere planı, kodla birleştirme,
+  sınır sayımı, çift çevresi bağlamı). Olay birleştirme/sıra, anlatı rolleri, tema (map-reduce), defter çelişkisi,
+  kimlik (`identity.propose_book`) ve altı son okuma hakemi bu yoldan. Sığan kitap bugünkü tek çağrıyla, aynı istemle
+  geçer. Pencereler arası kimlik birleşmesinde kod koruması (aynı pencere, tür/cinsiyet/birey↔topluluk) ve kitapta
+  birebir aranan, iki tarafın adını taşıyan alıntı şart. Geçit `tokenize`/`detokenize`'ı vLLM köküne iletir.
+  Sürümlü özetin 80 000 karakter sınırı ayara alındı. Kitaba/türe özel kural yok; eşikler `EDITOR_*`.
+- **Test:** `apps/editor/tests/test_budget_windows.py` — 600 sayfa sentetik kitap; kısa kitapta tek ve birebir aynı çağrı.
+  Mac'te yalnız `py_compile`; pytest koordinatörde (editor-py imajı).
+- **Açık:** gerçek kitapta ölçüm (plan `apps/editor/docs/METIN-BUTCESI.md` §5: sayım ucu, kısa kitap aynılığı,
+  Böcekleri zorla pencereli, Babam Abdülhamid / Rüzgârın Ardından / Osmanlı Taşra Maliyesi); GPU sunucusuna kurulum
+  (`editorctl install && editorctl up`, geçit yeniden başlar). Eski `summary.book_summary` alıntı kırpması duruyor.
 
 ## 2026-09-28 (11:55) — NanobaseAI Destek son gözden geçirme: canlı bildirim hiç çalışmıyordu, masaüstünde marka artıkları
 
