@@ -633,6 +633,28 @@ SPEC: list[dict[str, Any]] = [
      "help": "Sürüm kaydına özeti girecek ek kural klasörleri/dosyaları, virgülle (bilgi paketi zaten sayılır)"},
     {"key": "MODEL_QUALITY_PROMPT_PATHS", "group": "model_quality", "label": "İstem dosyaları", "type": "text", "default": "",
      "help": "Sürüm kaydına özeti girecek istem dosyaları, virgülle. Boşsa istem kodla birlikte sürümlenir"},
+    # M54 Telif dönemi
+    {"key": "ROYALTY_CRM_STATUSES", "group": "royalty", "label": "Kapsamdaki CRM durum kodları", "type": "text",
+     "default": "100000000,100000007",
+     "help": "Dönem koşusuna giren Telif Alış sözleşmelerinin CRM durum kodları (100000000 Aktif-Sözleşme, 100000007 "
+             "Aktif-Yenileme, 100000006 Aktif (Proje))"},
+    {"key": "ROYALTY_CRM_PAYMENT_TYPES", "group": "royalty", "label": "Kapsamdaki ödeme şekilleri", "type": "text", "default": "2,7",
+     "help": "CRM ödeme şekli kodları: 2 Satıştan, 7 Satıştan kademeli. Baskıdan ödemeli sözleşmeler (baskı adedi elle) "
+             "sözleşme sayfasında hesaplanır"},
+    {"key": "ROYALTY_PERIOD_MONTHS", "group": "royalty", "label": "Telif dönemi (ay)", "type": "int", "default": "6",
+     "help": "Yeni koşunun önerilen dönem uzunluğu ve «koşu açılmadı» hatırlatmasının takvimi (6: Ocak–Haziran, Temmuz–Aralık)"},
+    {"key": "ROYALTY_WITHHOLDING_PCT", "group": "royalty", "label": "Varsayılan stopaj oranı (%)", "type": "text", "default": "",
+     "help": "Sözleşmesinde stopaj oranı olmayan ve bütün tarafları kişi olan sözleşmelere uygulanır. Boşsa stopaj "
+             "yalnız sözleşmede oran varsa hesaplanır; oranı muhasebe belirler"},
+    {"key": "ROYALTY_RENEWAL_DAYS", "group": "royalty", "label": "Yenileme hatırlatma günleri", "type": "text", "default": "90,60,30",
+     "help": "Bitişine bu kadar gün kalan, kararı girilmemiş sözleşmeler günlük özete girer"},
+    {"key": "ROYALTY_ADVANCE_RISK_YEARS", "group": "royalty", "label": "Avans geri dönüş eşiği (yıl)", "type": "text",
+     "default": "3", "help": "Kalan avans bugünkü telif hızıyla bu kadar yılda kapanmıyorsa «geri dönmesi zor» işaretlenir"},
+    {"key": "ROYALTY_RUN_REMIND_WORKDAYS", "group": "royalty", "label": "«Koşu açılmadı» hatırlatması (iş günü)", "type": "int",
+     "default": "5", "help": "Dönem bitiminden bu kadar iş günü sonra koşu yoksa özete girer"},
+    {"key": "ROYALTY_ALERT_RECIPIENTS", "group": "royalty", "label": "Telif bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (telif birimi, muhasebe). Koşu hatırlatması, yenileme özeti ve «ödeme listesi "
+             "hazır» gider; yazara gönderim yok"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -699,6 +721,9 @@ GROUPS = [
              "temsilci düzeltip masadan kendisi gönderir."},
     {"id": "model_quality", "label": "Zeki AI kalitesi",
      "help": "Kapı koşularının bildirimleri, karne penceresi ve sürüm kaydının ek dosyaları. Bildirimler yalnız iç ekibe gider."},
+    {"id": "royalty", "label": "Telif dönemi",
+     "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
+             "beyannameyi yazara insan gönderir."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},

@@ -72,6 +72,8 @@ JOBS = [
     ("müşteri hizmetleri gece", "/api/v1/support/run-due", int(os.environ.get("SUPPORT_NIGHT_EVERY_SEC", "86400")), 1700),
     # M45 finansal raporlar: Logo okuması, pazartesi nakit tablosu, vergi hatırlatması, sabah özeti (sunucuda timas-finance.timer).
     ("finansal raporlar", "/api/v1/finance/run-due", int(os.environ.get("FINANCE_EVERY_SEC", "3600")), 1790),
+    # M54 telif dönemi: koşu hatırlatması + yenileme özeti (sunucuda timas-royalty.timer, günde bir; bildirim bir kez gider).
+    ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
 ]
 
 

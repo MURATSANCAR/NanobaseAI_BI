@@ -187,6 +187,17 @@
       "label": "Sözleşmeler"
     },
     {
+      "key": "sayfa:telif-donem",
+      "area": "kayitlar",
+      "label": "Telif dönemi",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:haklar",
+      "area": "kayitlar",
+      "label": "Haklar ve lisanslar"
+    },
+    {
       "key": "sayfa:editor-atama",
       "area": "kayitlar",
       "label": "Editör atama"
@@ -1033,6 +1044,66 @@
       "label": "Sözleşme şablonları",
       "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
       "explicit": true
+    },
+    {
+      "key": "ozellik:telif.kosu",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif dönemi koşusu",
+      "hint": "Koşu açma, hesaplatma, istisnayı kabul etme ya da hariç tutma, onaya gönderme, iptal (Logo ve CRM okunur)"
+    },
+    {
+      "key": "ozellik:telif.kosu-onay",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif koşusu onayı",
+      "hint": "Onaydaki koşuyu onaylama (sözleşmelerin hakedişi ve ödeme takvimi oluşur) ya da geri gönderme; hesaplatan ve gönderen onaylayamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.bildirim",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif beyannamesi",
+      "hint": "Hak sahibi beyannamesini (Word) indirme, hak sahibinin e-postasını görme, gönderildi kaydı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.odeme-listesi",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif ödeme listesi",
+      "hint": "Onaylı koşunun ödeme listesi ve stopaj özeti (muhasebe); bankaya ve Logo'ya gönderim yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.avans",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Avans açılış bakiyesi",
+      "hint": "Sözleşmenin kazanılmamış kalan avansını tarihli ve gerekçeli girme; hesap bu bakiyeden mahsup eder",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.yenileme-karar",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Yenileme kararı",
+      "hint": "Bitişi yaklaşan sözleşme için yenile / bırak / yeniden müzakere kararı (CRM'e yazılmaz)"
+    },
+    {
+      "key": "ozellik:haklar.duzenle",
+      "area": "kayitlar",
+      "page": "sayfa:haklar",
+      "label": "Hak kartı düzenleme",
+      "hint": "Dil ve ülke hak kaydı ekleme/düzeltme, hak açıklamalarını Zeki AI ile sınıflandırma ve sınıfı onaylama"
+    },
+    {
+      "key": "ozellik:haklar.lisans",
+      "area": "kayitlar",
+      "page": "sayfa:haklar",
+      "label": "Verilen lisanslar",
+      "hint": "Yurtdışına verilen lisans (telif satışı) kaydı ve tahsilat durumu"
     },
     {
       "key": "ozellik:okul.ziyaret",

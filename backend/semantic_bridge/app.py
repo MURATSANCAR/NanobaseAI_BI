@@ -7178,6 +7178,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
         "audit": admin_mod.audit, "conf": admin_mod.conf, "rt": rt,
     })
+    # M54 Telif dönemi ve haklar (M6'nın hesap motoruyla dönem koşusu): /api/v1/royalty/*, /api/v1/rights/*.
+    from semantic_bridge import royalty_api
+    app.state.royalty = royalty_api.register(app, rt, _require_caller, _can)
     return app
 
 

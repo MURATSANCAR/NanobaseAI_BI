@@ -583,6 +583,11 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
     ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
+    # M54 Telif dönemi ve haklar. Sözleşme sayfası (M6) bir sözleşmenin dönem koşularını okur.
+    ("/api/v1/royalty/run-due", SYSTEM),
+    ("/api/v1/royalty/contracts/", frozenset({page("telif-donem"), page("telif-sozlesme")})),
+    ("/api/v1/royalty/", frozenset({page("telif-donem")})),
+    ("/api/v1/rights/", frozenset({page("haklar")})),
     ("/api/v1/editorial/", _EDITORIAL),
     # Belge incelemesi (Son Okuma → «Belge incele»): yükleme ve sonuçlar Son Okuma ya da Redaksiyon sayfasıyla
     ("/api/v1/editorial/documents", frozenset(page(x) for x in ("son-okuma", "redaksiyon"))),
@@ -687,6 +692,16 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # SSS onayı, bütün kuyruk ve sınıf/SLA ayarı açıkça verilen anahtarlarla ucun içinde denetlenir.
     (frozenset({"POST"}), r"^/api/v1/support/(classify|draft|drafts/[^/]+/outcome)$", "ozellik:destek.oneri"),
     (frozenset({"PUT"}), r"^/api/v1/support/insights/[^/]+/class$", "ozellik:destek.oneri"),
+    # M54 Telif dönemi: koşu açma, hesaplama, seçenek, satır kararı, onaya gönderme/geri çekme, iptal. Onay/geri gönderme,
+    # beyanname, ödeme listesi ve avans açılışı açıkça verilen yetkilerle ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/royalty/runs(/[^/]+(/(compute|submit|withdraw|cancel|lines/[^/]+))?)?$",
+     "ozellik:telif.kosu"),
+    (frozenset({"PATCH"}), r"^/api/v1/royalty/renewals/[^/]+$", "ozellik:telif.yenileme-karar"),
+    (frozenset({"GET"}), r"^/api/v1/royalty/runs/[^/]+/(payments\.csv|withholding\.csv|statements\.zip"
+                         r"|parties/[^/]+/statement\.docx)$", "ozellik:veri.disa-aktar"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/rights/(grants(/[^/]+)?|notes/classify|notes/[^/]+/approve)$",
+     "ozellik:haklar.duzenle"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/rights/licenses-out(/[^/]+)?$", "ozellik:haklar.lisans"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
