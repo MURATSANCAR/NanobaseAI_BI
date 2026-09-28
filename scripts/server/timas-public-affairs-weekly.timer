@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurumsal ilişkiler haftalık özeti, pazartesi 08:00
+
+[Timer]
+OnCalendar=Mon *-*-* 08:00:00
+Persistent=true
+Unit=timas-public-affairs-weekly.service
+
+[Install]
+WantedBy=timers.target

@@ -332,6 +332,30 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle iç e-posta adresleri (satış müdürü). Boşsa bildirim gitmez; kuyruk ekranda durur. Kuruma hiçbir e-posta gitmez"},
     {"key": "CORP_B2B_REPORT_TO", "group": "corporate", "label": "Haftalık bayi özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı sipariş vermeyen bayi listesi ekiyle gider; boşsa gitmez"},
+    # M28 Kurumsal ilişkiler
+    {"key": "REL_CONTACT_DAYS", "group": "relations", "label": "Temas aralığı (gün)", "type": "int", "default": "180",
+     "help": "Normal öncelikli kişiyle son temastan bu kadar gün geçince «temas zamanı gelen» listesine girer"},
+    {"key": "REL_CRITICAL_DAYS", "group": "relations", "label": "Kritik kişi temas aralığı (gün)", "type": "int", "default": "90",
+     "help": "Kritik işaretli kişi için aynı sınır; hiç temas yazılmamış kritik kişi de listeye girer"},
+    {"key": "REL_GIFT_GAP_DAYS", "group": "relations", "label": "Hediye aralığı (gün)", "type": "int", "default": "90",
+     "help": "Son hediyesi bundan yeni olan kişi hediye önerisinde geriye düşer (gerekçede yazar)"},
+    {"key": "REL_ORDER_TYPES", "group": "relations", "label": "Sayılan CRM sipariş tipleri", "type": "text", "default": "12,15,10,11",
+     "help": "Rapordaki tanıtım/bağış toplamı: 12 Pazarlama (Tanıtım Gönderimi), 15 Deprem Bağış, 10 Okul Örneği, 11 Öğretmen Örneği"},
+    {"key": "REL_ORDER_EXCLUDED_STATUS", "group": "relations", "label": "Sayılmayan sipariş durumları", "type": "text",
+     "default": "100000001,100000003",
+     "help": "CRM sipariş durum kodları (virgülle): 100000001 İptal Edildi, 100000003 Birleştirildi (satırları yeni siparişte de durur)"},
+    {"key": "REL_SHIPPED_STATUS", "group": "relations", "label": "Sevk sayılan sipariş durumu", "type": "text", "default": "100000000",
+     "help": "Hediye satırına yazılan CRM siparişi bu durumdaysa (ya da sevk tarihi doluysa) hediye «sevk edildi» olur"},
+    {"key": "REL_BANNED_TERMS", "group": "relations", "label": "Ek yasaklı alan sözcükleri", "type": "text", "default": "",
+     "help": "Virgülle. Alan listesine ve ilgi alanlarına yazılamaz. İnanç, mezhep, cemaat, siyasi görüş, parti, etnik köken, "
+             "sendika gibi sözcükler zaten yasak; bu liste yalnız genişletir"},
+    {"key": "REL_ALERT_RECIPIENTS", "group": "relations", "label": "Haftalık özet alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı temas zamanı gelen kişiler, geciken proje adımları ve onay bekleyen "
+             "hediyeler gider; boşsa gitmez. Kişilere ve kurumlara hiçbir e-posta gitmez"},
+    {"key": "REL_LLM_MIN_PROB", "group": "relations", "label": "Alan önerisi: en düşük olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI'ın alan önerisi bu olasılığın altındaysa «emin değil» denir, alanı kullanıcı seçer"},
+    {"key": "REL_LLM_MIN_MARGIN", "group": "relations", "label": "Alan önerisi: en düşük marj", "type": "text", "default": "0.30",
+     "help": "Seçilen alanla ikinci aday arasındaki olasılık farkı bunun altındaysa öneri gösterilmez"},
     # Pazarlama (M15 yeni kitap planı; M16–M18 aynı grubu kullanır)
     {"key": "MARKETING_ALERT_RECIPIENTS", "group": "marketing", "label": "Pazarlama bildirim alıcıları", "type": "text",
      "default": "", "help": "Virgülle e-posta adresleri (pazarlama müdürü, onaycılar). Onaya gönderilen plan ve günlük özet "
@@ -916,6 +940,9 @@ GROUPS = [
     {"id": "mailbox", "label": "Kurumsal e-posta",
      "help": "timas@ genel kutusu yalnız okunur (Gmail: gmail.readonly + gmail.labels). Portal dışarıya ileti göndermez, kutudan "
              "silmez, taşımaz; yanıtı kişi kutunun kendi arayüzünden gönderir. İleti gövdesi portalda saklanmaz."},
+    {"id": "relations", "label": "Kurumsal ilişkiler",
+     "help": "Kanaat önderi ve kurum ilişkileri, hediye kitap programı, kamu projeleri. CRM'e hiçbir şey yazılmaz; kişilere ve "
+             "kurumlara e-posta gitmez."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "creative", "label": "Pazarlama görsel ve metin",
      "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},

@@ -31,12 +31,18 @@ import threading
 import uuid
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from typing import Any, Callable, Iterable, Optional
-from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 
+from semantic_bridge import relations_core as core
+# Ortak çekirdek (M7 ve M28 paylaşır): doğrulama, ısı puanı, gizli not, CRM şema/LIKE kaçışı. Adlar M7'nin eski adlarıyla
+# burada da durur; testler ve çağıranlar `author_relations.heat`, `.TZ`, `.RelationError` … diye kullanmaya devam eder.
+from semantic_bridge.relations_core import (  # noqa: F401 — yeniden dışa verilen adlar
+    CHANNELS, FREQUENCY_EACH, FREQUENCY_MAX, MONTHS, RECENCY_DAYS, RECENCY_MAX, TONE_MAX, TONE_POINTS, TONES, TZ,
+    RelationError, heat, month_keys,
+)
+
 log = logging.getLogger("semantic.author_relations")
-TZ = ZoneInfo("Europe/Istanbul")
 _md = sa.MetaData()
 
 CARDS = sa.Table(
@@ -117,33 +123,10 @@ SOURCES = {
     "ajans": "Ajans",
     "diger": "Diğer",
 }
-CHANNELS = {
-    "yuz_yuze": "Yüz yüze",
-    "telefon": "Telefon",
-    "video": "Görüntülü",
-    "eposta": "E-posta",
-    "etkinlik": "Etkinlik",
-    "diger": "Diğer",
-}
-TONES = {"olumlu": "Olumlu", "notr": "Nötr", "olumsuz": "Olumsuz"}
 STATUSES = {"planlandi": "Planlandı", "yapildi": "Yapıldı", "iptal": "İptal"}
 
-#: Isı puanı parçaları (modül başındaki tanım).
-RECENCY_MAX, RECENCY_DAYS = 50, 180
-FREQUENCY_MAX, FREQUENCY_EACH = 30, 10
-TONE_MAX = 20
-TONE_POINTS = {"olumlu": 20, "notr": 10, "olumsuz": 0, None: 10}
-
 PAGE_SIZE = 50
-MONTHS = 12
 
-_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_GUID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
-_ID = re.compile(r"^[0-9a-f]{32}$")
-_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-_PHONE = re.compile(r"^[0-9+()\-\s./]{5,60}$")
-_URL = re.compile(r"^https?://\S+$", re.I)
-_HHMM = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
 # new_projeBase.statuscode (editorial_intake ile aynı ölçüm, 2026-09-24): Red ve iptal.
 PROJECT_CLOSED = (100000012, 100000009, 100000021)
@@ -152,15 +135,6 @@ CONTRACT_ACTIVE = (100000000, 100000006, 100000007)
 
 _ready: set[int] = set()
 _lock = threading.Lock()
-
-
-class RelationError(ValueError):
-    """Kişiye gösterilecek düz Türkçe hata."""
-
-    def __init__(self, message: str, status: int = 400, **extra: Any):
-        super().__init__(message)
-        self.status = status
-        self.extra = extra
 
 
 def ensure(engine: sa.engine.Engine) -> None:
@@ -176,99 +150,17 @@ def meta() -> dict[str, Any]:
     pairs = lambda d: [{"key": k, "label": v} for k, v in d.items()]  # noqa: E731
     return {"stages": pairs(STAGES), "poolStages": list(POOL_STAGES), "sources": pairs(SOURCES),
             "channels": pairs(CHANNELS), "tones": pairs(TONES), "statuses": pairs(STATUSES),
-            "heat": {"recencyMax": RECENCY_MAX, "recencyDays": RECENCY_DAYS, "frequencyMax": FREQUENCY_MAX,
-                     "frequencyEach": FREQUENCY_EACH, "toneMax": TONE_MAX, "months": MONTHS}}
+            "heat": core.heat_meta()}
 
 
 # ------------------------------------------------------------------------------------------ yardımcılar
 
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _utc(v: Optional[datetime]) -> Optional[datetime]:
-    if v is None:
-        return None
-    return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
-
-
-def _iso(v: Optional[datetime]) -> Optional[str]:
-    v = _utc(v)
-    return v.isoformat() if v else None
-
-
-def _text(body: dict[str, Any], key: str, limit: int, label: str, *, required: bool = False) -> Optional[str]:
-    v = body.get(key)
-    t = re.sub(r"\s+", " ", str(v)).strip() if v is not None else ""
-    if required and not t:
-        raise RelationError(f"{label} gerekli.")
-    if len(t) > limit:
-        raise RelationError(f"{label} en çok {limit} karakter olabilir.")
-    return t or None
-
-
-def _long(body: dict[str, Any], key: str, limit: int, label: str) -> Optional[str]:
-    v = body.get(key)
-    t = str(v).replace("\r\n", "\n").strip() if v is not None else ""
-    if len(t) > limit:
-        raise RelationError(f"{label} en çok {limit} karakter olabilir.")
-    return t or None
-
-
-def _choice(body: dict[str, Any], key: str, options: dict[str, str], label: str, default: Optional[str] = None) -> Optional[str]:
-    v = body.get(key)
-    if v in (None, ""):
-        return default
-    if v not in options:
-        raise RelationError(f"{label} geçerli değil.")
-    return str(v)
-
-
-def _list(body: dict[str, Any], key: str, limit: int, label: str) -> list[str]:
-    v = body.get(key) or []
-    if isinstance(v, str):
-        v = [x for x in re.split(r"[,\n]", v)]
-    if not isinstance(v, list):
-        raise RelationError(f"{label} liste olmalı.")
-    out: list[str] = []
-    for x in v:
-        t = re.sub(r"\s+", " ", str(x or "")).strip()
-        if not t:
-            continue
-        if len(t) > limit:
-            raise RelationError(f"{label} içindeki her değer en çok {limit} karakter olabilir.")
-        if t.lower() not in (o.lower() for o in out):
-            out.append(t)
-    return out
-
-
-def _guid(v: Any, label: str = "CRM kişi kimliği") -> str:
-    t = str(v or "").strip().strip("{}")
-    if not _GUID.match(t):
-        raise RelationError(f"{label} geçerli değil.")
-    return t.lower()
-
-
-def _cid(v: Any, label: str = "Kayıt") -> str:
-    t = str(v or "").strip().lower()
-    if not _ID.match(t):
-        raise RelationError(f"{label} bulunamadı.", 404)
-    return t
-
-
-def _json(v: Optional[str]) -> list[Any]:
-    try:
-        out = json.loads(v or "[]")
-        return out if isinstance(out, list) else []
-    except ValueError:
-        return []
-
-
-def _norm(name: str) -> str:
-    t = (name or "").casefold().replace("ı", "i").replace("İ".casefold(), "i")
-    for a, b in (("ç", "c"), ("ğ", "g"), ("ö", "o"), ("ş", "s"), ("ü", "u"), ("â", "a"), ("î", "i"), ("û", "u")):
-        t = t.replace(a, b)
-    return re.sub(r"[^a-z0-9]+", " ", t).strip()
+_HHMM = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+_GUID = core.GUID_RE
+_EMAIL, _PHONE, _URL = core.EMAIL_RE, core.PHONE_RE, core.URL_RE
+_now, _utc, _iso = core.now, core.utc, core.iso
+_text, _long, _choice, _list = core.text_field, core.long_field, core.choice, core.str_list
+_guid, _cid, _json, _norm = core.guid, core.cid, core.json_list, core.norm
 
 
 def _local_start(body: dict[str, Any]) -> datetime:
@@ -431,9 +323,7 @@ def card_for_crm(engine: sa.engine.Engine, tenant: str, user: str, contact_id: s
 # ------------------------------------------------------------------------------------------ görüşme
 
 def _visible(r: Any, user: str, admin: bool) -> bool:
-    if not r.private or admin or r.created_by == user:
-        return True
-    return user in (str(p.get("username") or "").lower() for p in _json(r.participants_json) if isinstance(p, dict))
+    return core.can_read(bool(r.private), r.created_by, r.participants_json, user, admin)
 
 
 def _meeting(r: Any, user: str, admin: bool, now: Optional[datetime] = None) -> dict[str, Any]:
@@ -509,19 +399,7 @@ def _meeting_values(body: dict[str, Any], *, partial: bool, current: Any = None)
     if has("private"):
         out["private"] = bool(body.get("private"))
     if has("participants"):
-        ps = body.get("participants") or []
-        if not isinstance(ps, list):
-            raise RelationError("Katılımcılar liste olmalı.")
-        clean, seen = [], set()
-        for p in ps:
-            if not isinstance(p, dict):
-                continue
-            u = str(p.get("username") or "").strip().lower()[:120]
-            d = re.sub(r"\s+", " ", str(p.get("display") or u)).strip()[:200]
-            if u and u not in seen:
-                seen.add(u)
-                clean.append({"username": u, "display": d or u})
-        out["participants_json"] = json.dumps(clean, ensure_ascii=False)
+        out["participants_json"] = json.dumps(core.participants(body.get("participants") or []), ensure_ascii=False)
     return out
 
 
@@ -658,76 +536,15 @@ def delete_meeting(engine: sa.engine.Engine, tenant: str, user: str, admin: bool
 
 # ------------------------------------------------------------------------------------------ ısı
 
-def month_keys(now: Optional[datetime] = None, months: int = MONTHS) -> list[str]:
-    """Son `months` ay (İstanbul), eskiden yeniye 'YYYY-AA'."""
-    loc = (now or _now()).astimezone(TZ)
-    y, m = loc.year, loc.month
-    out = []
-    for _ in range(months):
-        out.append(f"{y:04d}-{m:02d}")
-        m -= 1
-        if m == 0:
-            y, m = y - 1, 12
-    return out[::-1]
-
-
-def heat(meetings: Iterable[Any], now: Optional[datetime] = None) -> dict[str, Any]:
-    """Kartın görüşmelerinden ısı puanı ve ay ay temas sayısı. Yalnız yapılmış görüşme sayılır."""
-    now = now or _now()
-    keys = month_keys(now)
-    by_month = {k: 0 for k in keys}
-    done = sorted((m for m in meetings if m.status == "yapildi"), key=lambda m: _utc(m.starts_at), reverse=True)
-    upcoming = sorted((m for m in meetings if m.status == "planlandi" and _utc(m.starts_at) >= now),
-                      key=lambda m: _utc(m.starts_at))
-    year_ago = now - timedelta(days=365)
-    in_year = 0
-    for m in done:
-        s = _utc(m.starts_at)
-        k = s.astimezone(TZ).strftime("%Y-%m")
-        if k in by_month:
-            by_month[k] += 1
-        if s >= year_ago:
-            in_year += 1
-    if not done:
-        score, recency, freq, tone = 0, 0, 0, 0
-        days = None
-    else:
-        days = max(0, (now - _utc(done[0].starts_at)).days)
-        recency = round(RECENCY_MAX * max(0.0, 1 - days / RECENCY_DAYS))
-        freq = min(FREQUENCY_MAX, FREQUENCY_EACH * in_year)
-        last3 = done[:3]
-        tone = round(sum(TONE_POINTS.get(m.tone, 10) for m in last3) / len(last3))
-        score = recency + freq + tone
-    band = _band(score) if done else "yok"
-    return {"score": score, "band": band, "parts": {"recency": recency, "frequency": freq, "tone": tone},
-            "lastContact": _iso(done[0].starts_at) if done else None, "daysSince": days,
-            "contactsYear": in_year, "months": [by_month[k] for k in keys],
-            "next": _iso(upcoming[0].starts_at) if upcoming else None,
-            "recencyFrom": "gorusme" if done else None, "lastTrace": None, "traceKind": None, "traceDays": None}
-
-
-def _band(score: int) -> str:
-    return "soguk" if score <= 33 else "ilik" if score <= 66 else "sicak"
+# `heat`, `month_keys` çekirdekten (relations_core); M7 görüşme tablosunun varsayılanlarıyla çalışır.
+_band = core.band
 
 
 #: CRM izleri: yazar adına açılan eser kaydı ve başlayan sözleşme. Yalnız yakınlık puanına girer.
 TRACE_LABELS = {"eser": "yeni eser kaydı", "sozlesme": "sözleşme başlangıcı"}
 
 
-def _crm_day(v: Any) -> Optional[date]:
-    """CRM tarihi (UTC saklanır) → İstanbul günü. Yalnız gün olan alanlar gece yarısından önceki UTC saatle gelir."""
-    if v is None or v == "":
-        return None
-    if isinstance(v, datetime):
-        d = v
-    elif isinstance(v, date):
-        return v
-    else:
-        try:
-            d = datetime.fromisoformat(str(v).strip().replace(" ", "T").replace("Z", "+00:00"))
-        except ValueError:
-            return None
-    return (d if d.tzinfo else d.replace(tzinfo=timezone.utc)).astimezone(TZ).date()
+_crm_day = core.crm_day
 
 
 def with_trace(h: dict[str, Any], day: Optional[date], kind: Optional[str], now: Optional[datetime] = None) -> dict[str, Any]:
@@ -771,21 +588,7 @@ def attention(h: dict[str, Any], contract_ends: Optional[str], meetings: Iterabl
 
 # ------------------------------------------------------------------------------------------ CRM (salt okuma)
 
-def _prefix(schema: str) -> str:
-    db, _, sch = (schema or "").strip().rpartition(".")
-    for part in (db, sch):
-        if part and not _NAME.match(part):
-            raise RelationError(f"CRM şeması «{schema}» geçerli bir ad değil.", 503)
-    if not sch:
-        raise RelationError("CRM şeması girilmemiş; CRM okunamıyor.", 503)
-    return (f"{db}." if db else "") + f"{sch}."
-
-
-def _like(text: str) -> str:
-    t = (text or "").strip()[:80].replace("'", "''")
-    for ch in ("[", "%", "_"):
-        t = t.replace(ch, f"[{ch}]")
-    return t
+_prefix, _like = core.crm_prefix, core.like
 
 
 def _since(value: str) -> str:

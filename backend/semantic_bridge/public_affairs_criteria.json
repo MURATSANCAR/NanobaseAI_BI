@@ -1,0 +1,26 @@
+{
+  "_note": "M28 teklif dosyasının «Mevzuata uygunluk dayanakları» bölümü. Maddeler docs/analiz/meb-uygunluk-olcutleri.md'den aynen alındı (o belge de kaynağın ifadesine yakın özettir; bağlayıcı olan kaynağın kendisidir). Kaynağı olmayan madde eklenmez. `kinds`: proje türü → teklif dosyasına girecek maddeler; Diyanet, belediye ve etkinlik projelerinin koşulları resmî kaynaktan bulunamadı, kullanıcı teklif metnine elle ekler.",
+  "sources": {
+    "OKY": {"short": "OKY", "title": "Millî Eğitim Bakanlığı Okul Kütüphaneleri Yönetmeliği, RG 23.11.2024 / 32731", "url": "https://www.lexpera.com.tr/resmi-gazete/metin/milli-egitim-bakanligi-okul-kutuphaneleri-yonetmeligi-32731"},
+    "KLV": {"short": "KLV", "title": "Okul Kütüphaneleri Yönetmeliği Uygulama Kılavuzu, MEB, Ankara 2025", "url": "https://www.meb.gov.tr/meb_iys_dosyalar/2025_10/22121751_Okul_Kutuphaneleri_Yonetmelik_Uygulama_Kilavuzu.pdf"}
+  },
+  "items": [
+    {"id": "oky-10-1-a", "source": "OKY", "ref": "m.10/1-a", "text": "Seçilen kaynaklar Türk millî eğitiminin genel amaçları ve temel ilkelerine uygun olmalıdır."},
+    {"id": "oky-10-1-b", "source": "OKY", "ref": "m.10/1-b", "text": "Seçilen kaynaklar öğrencilerin yaş ve gelişim düzeylerine uygun olmalıdır."},
+    {"id": "oky-10-1-c", "source": "OKY", "ref": "m.10/1-c", "text": "Seçilen kaynaklar millî, manevi, kültürel, ahlaki ve insani değerlere uygun olmalıdır."},
+    {"id": "oky-10-1-c2", "source": "OKY", "ref": "m.10/1-ç", "text": "Seçilen kaynaklar öğrencilerin beden, zihin, ahlak, ruh ve duygu bakımından dengeli ve sağlıklı bir kişiliğe sahip olmalarını destekleyici olmalıdır."},
+    {"id": "oky-10-1-d", "source": "OKY", "ref": "m.10/1-d", "text": "Seçilen kaynaklar Türkçenin doğru ve güzel kullanımını sağlamaya yönelik okuma, dinleme, anlama, konuşma, münazara ve yazma becerilerini destekleyici olmalıdır."},
+    {"id": "oky-10-1-e", "source": "OKY", "ref": "m.10/1-e", "text": "Seçilen kaynaklar eleştirel, analitik, özgün düşünme becerilerini ve akademik başarıyı destekleyici olmalıdır."},
+    {"id": "oky-10-1-f", "source": "OKY", "ref": "m.10/1-f", "text": "Seçilen kaynaklar görsel, dijital, medya okuryazarlığı gibi farklı okuryazarlıkları destekleyici olmalıdır."},
+    {"id": "oky-10-4", "source": "OKY", "ref": "m.10/4", "text": "Türk millî eğitiminin genel amaçları ve temel ilkelerine uygun olmayan kitaplar kütüphanelerde bulundurulamaz."},
+    {"id": "klv-1-4", "source": "KLV", "ref": "1.4", "text": "Seçilecek kitaplar öğrencilerin yaş ve gelişim düzeylerine uygun olmalıdır; seçkide okul türü ve alana göre düzenleme esastır."},
+    {"id": "klv-2-2", "source": "KLV", "ref": "2.2", "text": "Kazandırılacak kaynaklarda aranan nitelikler yönetmeliğin madde 10/1 a–f bentleriyle aynıdır; özel eğitim ihtiyacı olan öğrencilere uygun kaynakları kapsayıcılık da aranır."}
+  ],
+  "kinds": {
+    "bagis": ["oky-10-1-a", "oky-10-1-b", "oky-10-1-c", "oky-10-1-c2", "oky-10-1-d", "oky-10-1-e", "oky-10-1-f", "oky-10-4", "klv-1-4", "klv-2-2"],
+    "okuma": ["oky-10-1-a", "oky-10-1-b", "oky-10-1-d", "klv-1-4"],
+    "materyal": ["oky-10-1-a", "oky-10-1-b", "oky-10-1-c", "oky-10-1-c2", "oky-10-1-d", "oky-10-1-e", "oky-10-1-f", "klv-1-4"],
+    "etkinlik": [],
+    "diger": []
+  }
+}

@@ -306,6 +306,12 @@
       "label": "Fuar ve etkinlik"
     },
     {
+      "key": "sayfa:kurumsal-iliskiler",
+      "area": "pazarlama",
+      "label": "Kurumsal ilişkiler",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1852,6 +1858,29 @@
       "page": "sayfa:etkinlikler",
       "label": "Ödül defteri ve başvurular",
       "hint": "Ödül kaydı (son tarih, koşul), kitap başvurusu, başvuru metni ve sonuç"
+    },
+    {
+      "key": "ozellik:iliskiler.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Kişi, kurum ve proje kaydı",
+      "hint": "Kişi ve kurum kartı, temas notu, hediye önerisi ve kişisel not taslağı, proje aşaması ve teklif dosyası taslağı"
+    },
+    {
+      "key": "ozellik:iliskiler.onay",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Hediye, bütçe ve teklif onayı",
+      "hint": "Aylık hediye listesini, proje bütçesini ve teklif metnini onaylama; kamu görevlisine hediyede hukuk onayı; alan listesini yönetme (öneriyi yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:iliskiler.hassas",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Gizli notları okuma",
+      "hint": "Başkalarının «yalnız ben ve katılımcılar» işaretli temas notlarının metnini görme",
+      "explicit": true
     }
   ]
 }

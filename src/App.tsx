@@ -47,6 +47,13 @@ const MailMessage = lazy(() => import('@/canvas/mailbox/MessageDetail'));
 const MailReport = lazy(() => import('@/canvas/mailbox/MailReport'));
 const MailRules = lazy(() => import('@/canvas/mailbox/MailRules'));
 const MailLabeling = lazy(() => import('@/canvas/mailbox/Labeling'));
+const PaHome = lazy(() => import('@/canvas/public-affairs/PaHome'));
+const PaPeople = lazy(() => import('@/canvas/public-affairs/PaPeople'));
+const PaPersonCard = lazy(() => import('@/canvas/public-affairs/PaPersonCard'));
+const PaOrgs = lazy(() => import('@/canvas/public-affairs/PaOrgs'));
+const PaGifts = lazy(() => import('@/canvas/public-affairs/PaGifts'));
+const PaProjects = lazy(() => import('@/canvas/public-affairs/PaProjects'));
+const PaReport = lazy(() => import('@/canvas/public-affairs/PaReport'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const ContractDetail = lazy(() => import('@/canvas/editorial/contracts/ContractDetail'));
@@ -394,6 +401,14 @@ export default function App() {
             <Route path="kurumsal-eposta/etiketleme" element={<MailLabeling />} />
             {/* M51 Müşteri hizmetleri: kuyruk, müşteri bağlamı, bayi görünümü, kalite, SSS açıkları (/api/v1/support). */}
             <Route path="musteri-destek" element={<SupportScreen />} />
+            {/* M28 Kurumsal ilişkiler (/api/v1/public-affairs): kanaat önderi ve kurum kartı, hediye programı, kamu projeleri. */}
+            <Route path="kurumsal-iliskiler" element={<PaHome />} />
+            <Route path="kurumsal-iliskiler/kisiler" element={<PaPeople />} />
+            <Route path="kurumsal-iliskiler/kisi/:id" element={<PaPersonCard />} />
+            <Route path="kurumsal-iliskiler/kurumlar" element={<PaOrgs />} />
+            <Route path="kurumsal-iliskiler/hediye" element={<PaGifts />} />
+            <Route path="kurumsal-iliskiler/projeler" element={<PaProjects />} />
+            <Route path="kurumsal-iliskiler/rapor" element={<PaReport />} />
             <Route path="yazar-iliskileri" element={<AuthorRelationsScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}

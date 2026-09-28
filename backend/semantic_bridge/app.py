@@ -7133,6 +7133,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "require_caller": _require_caller,
     })
 
+    # M28 Kurumsal ilişkiler: kanaat önderi/kurum kartı, hediye kitap programı, kamu projeleri. Uçlar /api/v1/public-affairs/*.
+    from semantic_bridge import public_affairs_api
+    app.state.public_affairs = public_affairs_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("iliskiler", priority),
+    })
+
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
     from semantic_bridge import marketing
     app.state.marketing = marketing.register(app, rt, _require_caller, _can)

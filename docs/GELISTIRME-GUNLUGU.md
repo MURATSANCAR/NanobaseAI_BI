@@ -760,6 +760,58 @@ gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/ru
   katılım öncelik puanı.
 - **Sunucuda kalan:** kurulum sonrası `check.sh`; `kabul.py` (salt okunur) ve `--write`; `cleanup.py`; tip eşlemesi için
   «Zeki AI önerisi al» bir kez ve uzmanla karar; `timas-events.service` elle bir kez, sonra zamanlayıcı; telefon düzeni kontrolü.
+## 2026-09-28 — M28 Kurumsal ilişkiler (kanaat önderleri, kurumlar, kamu projeleri) ve ortak ilişki çekirdeği
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-a4cd1a2a630d452b1`); yalnız `py_compile` ve JSON denetimi
+yapıldı. pytest (`test_public_affairs.py`, M7 regresyonu `test_author_relations.py`, `test_access.py`), vitest, tsc ve gerçek CRM
+kabulü (`scripts/acceptance/m28/kabul.py`) test sunucusunda koşulacak. main'e taşınmadı, kurulmadı.
+
+- **Neden:** M28 analizi §14. CRM'de kişi/kurum çok (ContactBase, 68.713 ziyaret yeri) ama kime hangi kitap gitti, ne döndü, hangi
+  projede ne söz verildi hiçbir yerde tutulmuyor; hediye talebi modülü 11 kayıtla fiilen kullanılmıyor.
+- **Ön adım — `relations_core.py`:** M7'deki doğrulama yardımcıları, ısı puanı, gizli not okuma kuralı, CRM şema/LIKE kaçışı ortak
+  dosyaya çıktı. `heat` artık hangi kaydın «yapılmış temas» olduğunu ve zamanın hangi alanda durduğunu erişimciyle alır
+  (varsayılan M7 görüşme tablosu). `author_relations.py` eski adları yeniden dışa verir (`R.heat`, `R.TZ`, `R.RelationError`…);
+  davranış değişmedi, M7 testleri olduğu gibi kalır. Yeni ilişki modülleri (M15/M16/M30–M32/M37/M38) buradan alır.
+- **Köprü:** `public_affairs.py` (tablolar `semantic_rel_*`), `public_affairs_sources.py` (CRM okuma), `public_affairs_docs.py`
+  (PDF), `public_affairs_criteria.json`, `public_affairs_api.py` (`/api/v1/public-affairs/*`). `app.py`'de tek `register` bloğu.
+- **Ekran:** `src/canvas/public-affairs/` — Bugün (temas zamanı gelen, açık projeler, ayın hediye programı), Kişiler, kişi kartı
+  (temas notları, gönderilen kitaplar, CRM'deki rol/uzmanlık, Zeki AI alan önerisi), Kurumlar (CRM ziyaret yerinden bağlama, il
+  istatistiği), Hediye programı («Kime gönderelim?», toplu onay, kişisel not taslağı, CRM sipariş no), Projeler (aşama panosu,
+  kitap listesi, hedef kurumlar, bütçe/teklif onayı, teklif taslağı, CRM erişim raporu), Etki raporu (+PDF, alan listesi yönetimi).
+  Menü Pazarlama › İlişkiler; telefonda iki dokunuşla not (Bugün → «Not yaz»). Yeni animasyon yok; mevcut `Sheet` ve basma geri
+  bildirimi kullanıldı.
+- **Kararlar (uzmana sorulacak sorular yerine veriye/koda bakılarak; gerekçeli):**
+  - *Yetki anahtarları `iliskiler.*`:* analiz `kurumsal.duzenle/onay/hassas` diyordu; M32 zaten `ozellik:kurumsal.teklif`,
+    `kurumsal.teklif-onay`… kullanıyor. Rol ekranında «Kurumsal onay» ile «Kurumsal teklif onayı» yan yana karışır; önek
+    `iliskiler` seçildi. Sayfa anahtarı analizdeki gibi `sayfa:kurumsal-iliskiler`. LLM modül adı da `iliskiler` (M32 `kurumsal`).
+  - *Sayfa «Herkes»e kapalı:* kişi kartları hassas; katalogda sayfa `explicit`. Main'deki `access.explicit_keys()` yalnız özellikleri
+    kapsıyor; M49 dalı sayfaları da kapsayınca etkin olur. O güne kadar kurulumdaki «Herkes» rolü sayfayı görür — açık kalan.
+  - *Alan listesi:* hukuk onayı gelene kadar yalnız kurum türüyle başlar (Akademi, Eğitim, Medya ve yayın, Sivil toplum, Kamu
+    yönetimi, Diğer). Yeni alan `iliskiler.onay` ile eklenir; yasak sözcük kök/tam sözcük olarak yakalanır («din» evet,
+    «dinleme» hayır), ek liste `REL_BANNED_TERMS` yalnız genişletir.
+  - *Temas zamanı:* kritik kişi 90, diğerleri 180 gün (ayar). Hiç temas yazılmamış normal kişi listeye düşmez — yoksa CRM'den alınan
+    her kişi ilk gün «zamanı geldi» olur; hiç temas yazılmamış kritik kişi düşer.
+  - *Hediye → gönderim:* CRM sipariş satırında alıcı kişi alanı yok (sipariş firmaya açılıyor, bilgi paketi); bağ kişi kartı ↔
+    CRM sipariş numarası elle yazılarak kurulur, durum her sabah okunur. Sevk: sevk tarihi dolu ya da durum 100000000 «Sevk Edildi»
+    (ayar `REL_SHIPPED_STATUS`). Sayılmayan sipariş durumları 100000001 İptal Edildi ve 100000003 Birleştirildi (birleştirilen
+    siparişin satırları yeni siparişte de durur; ayar). Satır düzeyinde iptal (`new_siparissatiriBase.statuscode` 100000001)
+    düşülmüyor — kabulde ölçülecek.
+  - *Öneri puanı modelsiz:* analiz «puan kuralla, model gerekçe» diyor; ilk sürümde gerekçe de kuraldan yazılır (örtüşen kök,
+    kritik, temas zamanı, son hediye) — açıklanabilir ve her kitap/kişi için aynı hat. Model yalnız kişisel not taslağı, alan
+    önerisi (kapalı küme `choose`, eşik `REL_LLM_MIN_PROB/MARGIN`) ve teklif bölümlerinde.
+  - *Teklif dosyası:* model amaç/kapsam/fayda/takvim yazar; rakam içeren satırı atılır. Kurum/öğrenci/öğretmen sayısı CRM ziyaret
+    yerlerinden (metin kolonu, çevrilemeyen kurum ayrıca yazılır), kitap adedi proje listesinden, dağıtılan adet CRM siparişinden.
+    Mevzuat maddeleri `meb-uygunluk-olcutleri.md`'deki OKY m.10/1 a–f, m.10/4 ve KLV 1.4, 2.2'den aynen (JSON, kaynak bağlantısıyla);
+    Diyanet/belediye/etkinlik için resmî madde bulunamadı, boş.
+  - *Kamu görevlisine hediye:* onay anında «hukuk onayı alındı» işareti şart (satırda kim/ne zaman). Tanıtım/bağış ile kişisel hediye
+    ayrımı kurum politikasıdır — sorulacak.
+- **Hukuka sorulacak (KVKK):** (1) Kişi kartının işleme amacı ve aydınlatma metni; (2) «din hizmetleri kurumu» (Diyanet) ile kurum
+  bağının kendisi özel nitelikli veriye götürür mü — kurum türü olarak tutuluyor, kişiye inanç etiketi konmuyor; analizdeki «din
+  adamları» sınıflaması uygulanmadı; (3) «Sivil toplum» alanı KVKK md. 6'daki dernek/vakıf üyeliğine götürür mü (alan mesleki bağ
+  olarak tanımlı, üyelik değil); (4) «yalnız ben» notlarının saklama süresi.
+- **Açık kalan:** M49 sayfa `explicit` desteği; VM `jobs.py`'ye `/api/v1/public-affairs/run-due` (günlük) — VM kurulumunda; Uyarılar
+  rozetine «onay bekleyen hediye/teklif»; etki izleme (M20/M22 verisi) ve kriz sinyali sonraki sürüm; M33 ihale → proje «fikir» bağı
+  (`tender_ref` kolonu hazır); M46 hediye/proje bütçesi bağı; kitap listesinin stüdyo yaş uygunluğu raporuyla otomatik bağı.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

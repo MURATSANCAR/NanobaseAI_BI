@@ -619,6 +619,9 @@ RULES: list[tuple[str, Any]] = [
     # M32 Kurumsal satış ve B2B.
     ("/api/v1/corporate/run-due", SYSTEM),
     ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
+    # M28 Kurumsal ilişkiler (kanaat önderleri, kurumlar, kamu projeleri).
+    ("/api/v1/public-affairs/run-due", SYSTEM),
+    ("/api/v1/public-affairs/", frozenset({page("kurumsal-iliskiler")})),
     # M1: başvuru dosyası ve kurul oturumu iki sayfada birlikte açılır (kurul üyesi başvurunun raporunu ve dosyasını,
     # başvuru ekranı oturum listesini okur).
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
@@ -881,6 +884,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/corporate/b2b/.+$", "ozellik:kurumsal.b2b"),
     (frozenset({"GET"}), r"^/api/v1/corporate/(quotes/[^/]+/document\.(pdf|xlsx)|b2b/(dealers|highlights)\.csv)$",
      "ozellik:veri.disa-aktar"),
+    # M28 Kurumsal ilişkiler: kişi/kurum kartı, temas notu, hediye satırı ve önerisi, kişisel not taslağı, proje ve teklif
+    # taslağı. Hediye/bütçe/teklif onayı ve alan listesi açıkça verilen `iliskiler.onay`, başkasının gizli notunu okumak
+    # `iliskiler.hassas` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/public-affairs/(people(/[^/]+(/(notes|suggest-field))?)?|notes/[^/]+|orgs(/[^/]+(/notes)?)?"
+     r"|gifts(/(?!approve$)[^/]+(/draft-note)?)?|projects(/[^/]+(/draft-proposal)?)?)$", "ozellik:iliskiler.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/public-affairs/(report/export\.pdf|projects/[^/]+/proposal\.pdf)$", "ozellik:veri.disa-aktar"),
     # Fiyatlama (M9): analiz, pazar fiyatı, varsayılan ve toplu zam teklifi yazımı. Hesap (`calc`) ve okuma sayfayla
     # gelir; onay imzaları açıkça verilen `fiyatlama.onay-<rol>` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
