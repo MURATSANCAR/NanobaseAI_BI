@@ -267,7 +267,7 @@ def test_run_approve_export_and_campaign(engine):
     _h2(engine)
     st = C.settings(engine, T, conf())
     t = C.create_trigger(engine, T, "uzman", {"name": "Herkes", "kind": "geri-kazanim", "controlShare": 0.34,
-                                               "params": {"minGun": 0, "maxGun": 400}}, st)
+                                               "params": {"minGun": 1, "maxGun": 400}}, st)
     pv = C.preview(engine, T, t["id"], st, TODAY)
     assert pv["candidates"] == 4 and pv["reachable"] == 3 and pv["excluded"] == {"izin_yok": 1}
     run = C.run_trigger(engine, T, t["id"], "uzman", st, TODAY)

@@ -799,6 +799,42 @@
       "retention": null,
       "retentionNote": "İş kaydı; modül kaydı silinince gider",
       "module": "Telif dönemi (M54)"
+    },
+    {
+      "object": "semantic_supply_capacity",
+      "columns": [
+        "created_display"
+      ],
+      "data": "Kapasiteyi giren çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Matbaa kapasitesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Tedarik ve baskı (M52)"
+    },
+    {
+      "object": "semantic_supply_suggestions",
+      "columns": [
+        "karar_display"
+      ],
+      "data": "Öneriye karar veren çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Baskı önerisi kararı",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Tedarik ve baskı (M52)"
+    },
+    {
+      "object": "semantic_supply_supplier_map",
+      "columns": [
+        "created_display"
+      ],
+      "data": "Eşlemeyi yapan çalışan adı",
+      "subjects": "çalışan",
+      "purpose": "Tedarikçi eşlemesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Tedarik ve baskı (M52)"
     }
   ],
   "files": [
