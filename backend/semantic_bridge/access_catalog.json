@@ -291,6 +291,11 @@
       "label": "Sosyal medya"
     },
     {
+      "key": "sayfa:isbirlikleri",
+      "area": "pazarlama",
+      "label": "İşbirlikleri"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1761,6 +1766,29 @@
       "page": "sayfa:sosyal-medya",
       "label": "Sosyal medya yorum ve mesajları",
       "hint": "Kendi hesaplarımıza gelen yorum ve mesajları görme (yorumcu kişisel verisi). Resmî bağlantı kurulunca açılır",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:isbirligi.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği kaydı ve takibi",
+      "hint": "İçerik üreticisi ekleme ve CSV içe aktarma, hesap ölçümü, işbirliği açma ve aşama ilerletme, paylaşım bağlantısı ve sonuç, brief/iletişim taslağı, «gönderildi» kaydı"
+    },
+    {
+      "key": "ozellik:isbirligi.onay",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği onayı ve ücretler",
+      "hint": "Teklif/seçim onayı ve reddi (açan onaylayamaz), taslak onayı, ücret aralıklarını ve harcamayı görme, onaylı işin ücretini değiştirme, ödeme satırını onaylama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:isbirligi.odeme",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği ödemeleri",
+      "hint": "Ödeme listesini görme ve Excel'e alma, ödeme satırını onaylama, Logo belge numarasıyla ödendi işaretleme (muhasebe)",
       "explicit": true
     }
   ]

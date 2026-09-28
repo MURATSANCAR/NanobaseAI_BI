@@ -541,6 +541,9 @@ RULES: list[tuple[str, Any]] = [
     # M22 Sosyal medya. Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/social/run-due", SYSTEM),
     ("/api/v1/social/", frozenset({page("sosyal-medya")})),
+    # M23 İşbirlikleri (Pazarlama › İletişim). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/influencers/run-due", SYSTEM),
+    ("/api/v1/influencers/", frozenset({page("isbirlikleri")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -789,6 +792,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"|imports(/[^/]+)?|report/commentary)$",
      "ozellik:sosyal.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/social/(posts/[^/]+/package\.zip|report/export\.pdf)$", "ozellik:veri.disa-aktar"),
+    # İşbirlikleri: kayıt defteri, ölçüm, CSV, işbirliği kartı, taslak, «gönderildi» kaydı, aday gerekçesi. Teklif ve
+    # taslak onayı `isbirligi.onay`, ödeme `isbirligi.odeme` (açıkça verilen) ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}),
+     r"^/api/v1/influencers/(people(/import|/[^/]+(/suggest-topics)?)?|accounts/[^/]+/snapshots"
+     r"|books/[^/]+/candidates/explain|collabs(/[^/]+(/(draft|mail|drafts/[^/]+))?)?)$", "ozellik:isbirligi.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/influencers/(payouts|report)/export\.xlsx$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

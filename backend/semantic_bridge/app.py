@@ -7213,6 +7213,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M22 Sosyal medya: tek takvim, onay, yayına hazır paket, performans içe aktarma (otomatik yayın yok). /api/v1/social/*.
     from semantic_bridge import social_api
     app.state.social = social_api.register(app, rt, _require_caller, _can)
+    # M23 İşbirlikleri (içerik üreticisi, gönderim, yayın, ödeme): /api/v1/influencers/*.
+    from semantic_bridge import influencers_api
+    app.state.influencers = influencers_api.register(app, rt, _require_caller, _can)
     return app
 
 
