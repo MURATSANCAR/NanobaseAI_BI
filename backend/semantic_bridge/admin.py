@@ -141,6 +141,8 @@ SPEC: list[dict[str, Any]] = [
     # Yazar giriş süreci (editoryal): hangi projeler izlenir, ne zaman gecikmiş sayılır.
     {"key": "EDITORIAL_INTAKE_SINCE", "group": "crm", "label": "Yazar giriş süreci başlangıcı", "type": "text", "default": "2025-01-01",
      "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
+    {"key": "RESPONSE_CACHE_ENABLED", "group": "performance", "label": "Yavaş ekranlarda hazır cevap", "type": "bool", "default": "1",
+     "help": "Açıkken kaynağı 1,5 sn'den uzun bekleten ekran verisi hazır tutulur: ekran anında açılır, veri 5 dakikada bir ve «Yenile» ile tazelenir; bir modülde kayıt yapılınca o modülün hazır cevapları düşer"},
     {"key": "AUTHOR_REMINDERS_ENABLED", "group": "crm", "label": "Yazar ilişkileri sabah özeti", "type": "bool", "default": "1",
      "help": "Açıkken kişiye her sabah bugün/yarınki randevular, notu girilmemiş randevular ve geciken adımlar e-postayla gider (yalnız yayınevi içi; kişi kendi ekranından kapatabilir)"},
     {"key": "AUTHOR_REMINDER_TIME", "group": "crm", "label": "Sabah özeti saati", "type": "text", "default": "08:15",
@@ -424,6 +426,8 @@ SPEC: list[dict[str, Any]] = [
 _BY_KEY = {s["key"]: s for s in SPEC}
 GROUPS = [
     {"id": "email", "label": "E-posta (SMTP)", "help": "Uyarı ve planlı rapor e-postaları bu hesapla gider."},
+    {"id": "performance", "label": "Hız ve veri tazeliği",
+     "help": "Yavaş ekranların verisi hazır tutulur ve 5 dakikada bir tazelenir; «Yenile» beklemeden kaynaktan okur."},
     {"id": "delivery", "label": "Bildirim ve raporlar", "help": "Gönderim davranışı."},
     {"id": "rooms", "label": "Toplantı odaları", "help": "Rezervasyon takviminin saatleri."},
     {"id": "directory", "label": "Active Directory (giriş)",

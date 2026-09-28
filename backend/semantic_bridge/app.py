@@ -2003,6 +2003,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         finally:
             FORCE_FRESH.reset(token)
 
+    # Yavaş ekran verisi: önce hazır cevap, arkada tazele (5 dk; «Yenile» beklemeden; yazma o modülü düşürür).
+    # Sayfa kapısından önce kurulur ki kapının İÇİNDE çalışsın: hazır cevap yalnız oturumu ve sayfa yetkisi olan kişiye.
+    from semantic_bridge import response_cache as rc_mod
+    from semantic_bridge import board as _board_for_cache
+
+    app.state.response_cache = rc_mod.ResponseCache()
+    rc_mod.install(app, app.state.response_cache, _board_for_cache.user_of,
+                   lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"))
+
     def rt() -> Runtime:
         if state["rt"] is None:
             state["rt"] = build_runtime()
@@ -2075,7 +2084,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/health")
     def health() -> JSONResponse:
         r = rt()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats()})
+        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "responseCache": app.state.response_cache.view()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:
