@@ -248,6 +248,8 @@ export const NAV: NavGroup[] = [
       { id: 'yazar-iliskileri', label: 'Yazar ilişkileri', to: '/yazar-iliskileri', icon: HeartHandshake, hint: 'Yazar kartı, randevu ve görüşme notu, aday havuzu, ilişki ısısı', keywords: ['randevu', 'görüşme', 'aday', 'potansiyel yazar', 'ısı haritası'] },
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
+      { id: 'telif-donem', label: 'Telif dönemi', to: '/telif-donem', icon: Calculator, parent: 'telif-sozlesme', hint: 'Dönem telif koşusu, istisnalar, beyanname, ödeme listesi, avans ve yenilemeler', keywords: ['telif', 'hakediş', 'beyanname', 'avans', 'yenileme', 'royalty', 'ödeme listesi', 'stopaj'] },
+      { id: 'haklar', label: 'Haklar ve lisanslar', to: '/haklar', icon: Languages, parent: 'telif-sozlesme', hint: 'Kitabın hak kartı, dil/ülke hakları, verilen lisanslar', keywords: ['hak', 'lisans', 'çeviri hakkı', 'telif satış', 'yabancı hak'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
       { id: 'kategori-agaci', label: 'Kategori ağacı', to: '/kategori-agaci', icon: FolderTree, hint: 'Kitap profili, kategori mimarisi ve tutarsızlıklar', keywords: ['kategori', 'kitaplık', 'tür', 'tema', 'etiket', 'künye', 'profil', 'web kategorisi', 'tutarsızlık'] },
       {
