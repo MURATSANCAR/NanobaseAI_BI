@@ -176,6 +176,7 @@ export type Tracking = {
   gider?: { butce: number; butceDonem: number; gercek: number; kullanim: number | null; asim: number; yaklasti: number };
   /** Tahmini yıl sonu kapanışı (kitap hedefleri, ciro): gerçekleşen + kalan günlerin tahmin bandı. Tahmin yoksa null. */
   yilSonu?: YearEnd | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type YearEnd = {
@@ -192,7 +193,6 @@ export type YearEnd = {
   baslangic: string | null;
   eksikAylar: number[];
   asof: string;
-  kaynaklar?: Kaynaklar;
 };
 
 export type Deviation = {
