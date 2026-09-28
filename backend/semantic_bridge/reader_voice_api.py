@@ -17,7 +17,9 @@ from typing import Any, Callable
 from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import reader_voice as V
+from semantic_bridge import signals_kaynak as SK
 
 log = logging.getLogger("semantic.reader_voice.api")
 P = "/api/v1/okur-sesi"
@@ -94,21 +96,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             raise HTTPException(400, detail={"code": "OKUR_SESI", "message": "Bilinmeyen kaynak."})
         if not sees(user, kaynak):
             raise HTTPException(403, detail={"code": "FORBIDDEN", "message": "Bu kaynağın ekranı rolünüzde yok."})
-        return {"items": call(V.labels, engine, tenant, kaynak), "konular": V.TOPICS}
+        out = {"items": call(V.labels, engine, tenant, kaynak), "konular": V.TOPICS}
+        return PV.bagla(out, lambda: SK.for_voice_labels(engine, tenant, kaynak))
 
     @app.get(P + "/summary")
     def voice_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user = ctx(request)
         s = st()
         out = V.summary(engine, tenant, s)
-        out["kaynaklar"] = {k: v for k, v in out["kaynaklar"].items() if sees(user, k)}
-        out["toplam"] = {k: sum(v[k] for v in out["kaynaklar"].values()) for k in (*V.TOPICS, "belirsiz")}
+        out["kaynakKonu"] = {k: v for k, v in out["kaynakKonu"].items() if sees(user, k)}
+        out["toplam"] = {k: sum(v[k] for v in out["kaynakKonu"].values()) for k in (*V.TOPICS, "belirsiz")}
         out["uyarilar"] = V.alerts(engine, tenant)
         out["uretim"] = production(user)
         out["ayarlar"] = {k: s[k] for k in ("minProb", "minMargin", "defectDays", "defectMin", "windowDays")}
         out["ayarlar"]["iceAlici"] = len(s["recipients"])
         out["sonKosu"] = V.meta_get(engine, tenant, "run") or None
-        return out
+        return PV.bagla(out, lambda: SK.for_voice_summary(engine, tenant, s, out))
 
     @app.post(P + "/alerts/{key}/seen")
     def voice_alert_seen(key: str, request: Request) -> dict[str, Any]:

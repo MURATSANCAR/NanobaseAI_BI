@@ -153,17 +153,37 @@ def _day(v: Any) -> Optional[str]:
 # ------------------------------------------------------------------ notlar (yalnız okuma)
 
 
-def portal_notes(engine: sa.engine.Engine, tenant: str, codes: Optional[set[str]] = None) -> list[dict[str, Any]]:
-    """Portal notları: {kaynak, id, cari, tarih, metin, sozOdeme}. Gizli ziyaret notu ve iptal edilen kayıt hariç."""
-    out: list[dict[str, Any]] = []
+def portal_notes_stmts(engine: sa.engine.Engine, tenant: str, codes: Optional[set[str]] = None) -> dict[str, Any]:
+    """Portal not okumaları (kaynak → ifade); yalnız var olan tablolar. Gizli ziyaret notu ve iptal edilen kayıt hariç."""
+    out: dict[str, Any] = {}
     insp = sa.inspect(engine)
+    pick = sorted(codes) if codes is not None else None
     if insp.has_table("semantic_saha_ziyaret"):
         from semantic_bridge import field_sales as F
 
         q = sa.select(F.VISITS).where(F.VISITS.c.tenant_id == tenant, F.VISITS.c.tur == "cari", F.VISITS.c.durum != "iptal",
                                       sa.or_(F.VISITS.c.gizli.is_(None), F.VISITS.c.gizli == sa.false()))
-        with engine.connect() as c:
-            for r in c.execute(q):
+        out["saha-ziyaret"] = q if pick is None else q.where(F.VISITS.c.hedef_kimlik.in_(pick))
+    if insp.has_table("semantic_dealer_actions"):
+        from semantic_bridge import dealers as D
+
+        q = sa.select(D.ACTIONS).where(D.ACTIONS.c.tenant_id == tenant, D.ACTIONS.c.durum != "iptal")
+        out["bayi-aksiyon"] = q if pick is None else q.where(D.ACTIONS.c.logo_code.in_(pick))
+    if insp.has_table("semantic_musteri_actions"):
+        from semantic_bridge import musteri as M
+
+        q = sa.select(M.ACTIONS).where(M.ACTIONS.c.tenant_id == tenant, M.ACTIONS.c.durum != "iptal")
+        out["musteri-aksiyon"] = q if pick is None else q.where(M.ACTIONS.c.cari_kodu.in_(pick))
+    return out
+
+
+def portal_notes(engine: sa.engine.Engine, tenant: str, codes: Optional[set[str]] = None) -> list[dict[str, Any]]:
+    """Portal notları: {kaynak, id, cari, tarih, metin, sozOdeme}. Gizli ziyaret notu ve iptal edilen kayıt hariç."""
+    out: list[dict[str, Any]] = []
+    stmts = portal_notes_stmts(engine, tenant, codes)
+    with engine.connect() as c:
+        if "saha-ziyaret" in stmts:
+            for r in c.execute(stmts["saha-ziyaret"]):
                 if codes is not None and r.hedef_kimlik not in codes:
                     continue
                 txt = " ".join(x for x in (r.notu, r.sonraki_adim) if x and str(x).strip())
@@ -172,20 +192,14 @@ def portal_notes(engine: sa.engine.Engine, tenant: str, codes: Optional[set[str]
                 out.append({"kaynak": "saha-ziyaret", "id": r.id, "cari": r.hedef_kimlik,
                             "tarih": (r.gerceklesen or r.planlanan or _day(r.olusturma) or "")[:10] or None,
                             "metin": txt, "sozOdeme": bool(r.soz_odeme_tarihi)})
-    if insp.has_table("semantic_dealer_actions"):
-        from semantic_bridge import dealers as D
-
-        with engine.connect() as c:
-            for r in c.execute(sa.select(D.ACTIONS).where(D.ACTIONS.c.tenant_id == tenant, D.ACTIONS.c.durum != "iptal")):
+        if "bayi-aksiyon" in stmts:
+            for r in c.execute(stmts["bayi-aksiyon"]):
                 if (codes is not None and r.logo_code not in codes) or not (r.notu or "").strip():
                     continue
                 out.append({"kaynak": "bayi-aksiyon", "id": r.id, "cari": r.logo_code,
                             "tarih": _day(r.guncelleme) or _day(r.olusturma), "metin": r.notu})
-    if insp.has_table("semantic_musteri_actions"):
-        from semantic_bridge import musteri as M
-
-        with engine.connect() as c:
-            for r in c.execute(sa.select(M.ACTIONS).where(M.ACTIONS.c.tenant_id == tenant, M.ACTIONS.c.durum != "iptal")):
+        if "musteri-aksiyon" in stmts:
+            for r in c.execute(stmts["musteri-aksiyon"]):
                 if codes is not None and r.cari_kodu not in codes:
                     continue
                 txt = " ".join(x for x in (r.aciklama, r.sonuc_notu) if x and str(x).strip())
@@ -344,11 +358,23 @@ def _last(notes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(notes, key=lambda n: (n.get("tarih") or "", str(n["id"])), reverse=True)[:LAST_N]
 
 
+def signal_rows_stmt(tenant: str, code: str):
+    return sa.select(SIGNALS).where(SIGNALS.c.tenant_id == tenant, SIGNALS.c.cari_kodu == code)
+
+
+def summary_row_stmt(tenant: str, code: str):
+    return sa.select(SUMMARIES).where(SUMMARIES.c.tenant_id == tenant, SUMMARIES.c.cari_kodu == code)
+
+
+def crm_last_run_stmt(tenant: str):
+    """CRM notlarının son etiketlenme anı (gece turunun CRM sorgusunun başlangıç gününü bulmak için)."""
+    return sa.select(sa.func.max(SIGNALS.c.siniflama)).where(SIGNALS.c.tenant_id == tenant, SIGNALS.c.kaynak == "crm-etkinlik")
+
+
 def signal_rows(engine: sa.engine.Engine, tenant: str, code: str) -> dict[tuple[str, str], Any]:
     ensure(engine)
     with engine.connect() as c:
-        return {(r.kaynak, r.not_id): r for r in c.execute(
-            sa.select(SIGNALS).where(SIGNALS.c.tenant_id == tenant, SIGNALS.c.cari_kodu == code))}
+        return {(r.kaynak, r.not_id): r for r in c.execute(signal_rows_stmt(tenant, code))}
 
 
 def notes_for_view(portal: list[dict[str, Any]], rows: dict[tuple[str, str], Any], code: str) -> list[dict[str, Any]]:
@@ -411,7 +437,7 @@ def view(engine: sa.engine.Engine, tenant: str, code: str, portal: list[dict[str
     counts, belirsiz = _counts(enriched, since)
     last = _last(enriched)
     with engine.connect() as c:
-        s = c.execute(sa.select(SUMMARIES).where(SUMMARIES.c.tenant_id == tenant, SUMMARIES.c.cari_kodu == code)).first()
+        s = c.execute(summary_row_stmt(tenant, code)).first()
     girdi = summary_input(last, rows)
     return {
         "cari": code, "gun": st["windowDays"], "sayilar": counts, "belirsiz": belirsiz, "etiketler": LABELS,

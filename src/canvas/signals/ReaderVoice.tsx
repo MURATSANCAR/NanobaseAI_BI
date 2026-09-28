@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, Printer } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { btnGhost, errText } from '../admin/ui';
 import { voiceApi, type VoiceLabel, type VoiceSource, type VoiceTopic } from './api';
 import { topicHow } from './format';
@@ -54,14 +55,14 @@ export function ReaderVoicePanel({ sources }: { sources: VoiceSource[] }) {
   });
   const s = q.data;
   if (!s) return null;
-  const rows = sources.map((k) => ({ k, t: s.kaynaklar[k] })).filter((r) => r.t);
+  const rows = sources.map((k) => ({ k, t: s.kaynakKonu[k] })).filter((r) => r.t);
   const open = s.uyarilar.filter((a) => a.durum !== 'kapandi');
   const topics = Object.keys(s.konular) as VoiceTopic[];
   if (!rows.length && !open.length) return null;
   return (
     <section aria-label="Okur sesi" className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-tight">Okur sesi · son {s.gun} gün</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Okur sesi · son {s.gun} gün<SqlInfo k={s.kaynaklar} alan="kaynakKonu" label="Okur sesi: kaynak × konu" /></h2>
         <span className="text-[11px] text-canvas-muted">Konu kuralla ya da Zeki AI ile seçilir; metin maskeli, saklanmaz.</span>
       </div>
       {rows.map(({ k, t }) => (
@@ -86,6 +87,7 @@ export function ReaderVoicePanel({ sources }: { sources: VoiceSource[] }) {
           <div className="flex items-center gap-1.5 text-[12.5px] font-extrabold text-red-800">
             <Printer aria-hidden className="h-4 w-4" />
             Baskı / cilt hatası kümesi (üretime iç uyarı)
+            <SqlInfo k={s.kaynaklar} alan="uyarilar" label="Baskı / cilt hatası kümesi" />
           </div>
           <p className="mt-0.5 text-[11px] leading-snug text-canvas-muted">
             Son {s.ayarlar.defectDays} günde aynı kitapta en az {s.ayarlar.defectMin} okur metni. {s.ayarlar.iceAlici ? 'Üretim alıcılarına iç e-posta gider.' : 'İç alıcı tanımlı değil: yalnız ekranda.'}

@@ -145,8 +145,8 @@ def test_summary_counts_by_source_and_topic(engine):
                             _it("trendyol-yorum", "c", "kargo gelmedi, kurye"),
                             _it("site-yorum", "old", "kargo", day="2025-01-01")], None, _st())
     s = V.summary(engine, TN, _st(), TODAY)
-    assert s["kaynaklar"]["site-yorum"]["kargo"] == 1 and s["kaynaklar"]["site-yorum"]["fiyat"] == 1
-    assert s["toplam"]["kargo"] == 2 and s["kaynaklar"]["trendyol-soru"]["kargo"] == 0
+    assert s["kaynakKonu"]["site-yorum"]["kargo"] == 1 and s["kaynakKonu"]["site-yorum"]["fiyat"] == 1
+    assert s["toplam"]["kargo"] == 2 and s["kaynakKonu"]["trendyol-soru"]["kargo"] == 0
     with pytest.raises(V.VoiceError):
         V.labels(engine, TN, "bilinmeyen")
 

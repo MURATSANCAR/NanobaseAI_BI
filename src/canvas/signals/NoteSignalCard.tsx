@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, MessageSquareText, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { btnGhost, errText } from '../admin/ui';
 import { noteApi, type NoteLabel, type NoteScreen, type NoteSignal } from './api';
 import { activeLabels } from './format';
@@ -39,6 +40,7 @@ export default function NoteSignalCard({ code, screen }: { code: string; screen:
         <div className="flex items-center gap-1.5 text-[13px] font-extrabold">
           <MessageSquareText aria-hidden className="h-4 w-4 text-canvas-violet" />
           Notlardan sinyal
+          <SqlInfo k={v.kaynaklar} alan="sayilar" label="Not sinyali: etiket sayıları, son notlar, özet" />
         </div>
         {v.sonNotlar.length > 0 && (
           <button type="button" className={btnGhost} disabled={redo.isPending} onClick={() => redo.mutate()}>

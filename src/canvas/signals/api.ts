@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** AI fırsatları öneri 15, 16, 19'un köprü uçları: okur sesi (/api/v1/okur-sesi), serbest not sinyali
  *  (/api/v1/not-sinyali), Kampüs «Bugün» (/api/v1/bugun). Metin gelmez; yalnız etiket, sayı ve denetimli özet. */
@@ -37,7 +38,7 @@ export type VoiceAlert = {
 };
 export type VoiceSummary = {
   bas: string; bit: string; gun: number;
-  kaynaklar: Partial<Record<VoiceSource, Record<VoiceTopic | 'belirsiz', number>>>;
+  kaynakKonu: Partial<Record<VoiceSource, Record<VoiceTopic | 'belirsiz', number>>>;
   toplam: Record<VoiceTopic | 'belirsiz', number>;
   konular: Record<VoiceTopic, string>;
   kaynakAdlari: Record<VoiceSource, string>;
@@ -45,10 +46,11 @@ export type VoiceSummary = {
   uretim: boolean;
   ayarlar: { minProb: number; minMargin: number; defectDays: number; defectMin: number; windowDays: number; iceAlici: number };
   sonKosu: { _at?: string } | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export const voiceApi = {
-  labels: (kaynak: VoiceSource) => send<{ items: Record<string, VoiceLabel>; konular: Record<VoiceTopic, string> }>('GET', `/api/v1/okur-sesi/labels?kaynak=${enc(kaynak)}`),
+  labels: (kaynak: VoiceSource) => send<{ items: Record<string, VoiceLabel>; konular: Record<VoiceTopic, string>; kaynaklar?: Kaynaklar }>('GET', `/api/v1/okur-sesi/labels?kaynak=${enc(kaynak)}`),
   summary: () => send<VoiceSummary>('GET', '/api/v1/okur-sesi/summary'),
   seen: (key: string) => send<VoiceAlert>('POST', `/api/v1/okur-sesi/alerts/${enc(key)}/seen`, {}),
 };
@@ -63,6 +65,7 @@ export type NoteSignal = {
   ozet: { metin: string | null; kaynak: 'zeki' | 'kural'; dusen: number; zaman: string | null; guncel: boolean } | null;
   kuralOzeti: string;
   not: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export const noteApi = {

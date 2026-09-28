@@ -20,6 +20,8 @@ from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import note_signal as N
+from semantic_bridge import provenance as PV
+from semantic_bridge import signals_kaynak as SK
 
 log = logging.getLogger("semantic.note_signal.api")
 P = "/api/v1/not-sinyali"
@@ -105,7 +107,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         engine, tenant, user = ctx(request)
         scoped(engine, tenant, user, code, ekran)
         portal = N.portal_notes(engine, tenant, {code})
-        return N.view(engine, tenant, code, portal, st())
+        s = st()
+        return PV.bagla(N.view(engine, tenant, code, portal, s), lambda: SK.for_note_view(engine, tenant, code, s))
 
     @app.post(P + "/cari/{code}/ozet")
     async def note_signal_summary(code: str, request: Request, ekran: str = "") -> dict[str, Any]:
@@ -121,7 +124,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         if not out.get("onbellek"):
             audit(engine, user, "run", "not_sinyali_ozet", code, "Not özeti", {"kaynak": out["kaynak"], "dusen": out["dusen"]})
         portal = N.portal_notes(engine, tenant, {code})
-        return N.view(engine, tenant, code, portal, s)
+        return PV.bagla(N.view(engine, tenant, code, portal, s), lambda: SK.for_note_view(engine, tenant, code, s))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

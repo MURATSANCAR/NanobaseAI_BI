@@ -270,13 +270,43 @@ def classify(engine: sa.engine.Engine, tenant: str, items: Iterable[dict[str, An
     return out
 
 
+def labels_stmt(tenant: str, kaynak: str):
+    return sa.select(LABELS).where(LABELS.c.tenant_id == tenant, LABELS.c.kaynak == kaynak)
+
+
+def summary_since(st: dict[str, Any], today: Optional[date] = None) -> str:
+    return ((today or now().date()) - timedelta(days=st["windowDays"])).isoformat()
+
+
+def summary_stmt(tenant: str, since: str):
+    """Pencere içindeki etiketlerin kaynak × konu sayısı."""
+    return sa.select(LABELS.c.kaynak, LABELS.c.konu, sa.func.count().label("sayi")).where(
+        LABELS.c.tenant_id == tenant, LABELS.c.kayit_tarihi >= since).group_by(LABELS.c.kaynak, LABELS.c.konu)
+
+
+def clusters_stmt(tenant: str, since: str):
+    """Pencere içinde ürün anahtarı olan «baskı / cilt hatası» etiketleri."""
+    return sa.select(LABELS.c.urun_anahtar, LABELS.c.urun_adi, LABELS.c.kaynak).where(
+        LABELS.c.tenant_id == tenant, LABELS.c.konu == "baski", LABELS.c.kayit_tarihi >= since,
+        LABELS.c.urun_anahtar.isnot(None))
+
+
+def alerts_stmt(tenant: str, open_only: bool = False):
+    q = sa.select(ALERTS).where(ALERTS.c.tenant_id == tenant)
+    return q.where(ALERTS.c.durum == "acik") if open_only else q
+
+
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def labels(engine: sa.engine.Engine, tenant: str, kaynak: str) -> dict[str, dict[str, Any]]:
     """Kayıt kimliği → konu (ekrandaki çip)."""
     ensure(engine)
     if kaynak not in SOURCES:
         raise VoiceError("Bilinmeyen kaynak.")
     with engine.connect() as c:
-        rows = c.execute(sa.select(LABELS).where(LABELS.c.tenant_id == tenant, LABELS.c.kaynak == kaynak)).all()
+        rows = c.execute(labels_stmt(tenant, kaynak)).all()
     return {r.kayit_id: {"konu": r.konu, "konuAdi": TOPICS.get(r.konu or "", "Belirsiz"), "olasilik": r.olasilik,
                          "yontem": r.yontem} for r in rows}
 
@@ -288,16 +318,15 @@ def summary(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], today: Op
     """Son `windowDays` gün: kaynak × konu sayıları (belirsiz ayrı). Rakam SQL'den; model yok."""
     ensure(engine)
     today = today or now().date()
-    since = (today - timedelta(days=st["windowDays"])).isoformat()
+    since = summary_since(st, today)
     with engine.connect() as c:
-        rows = c.execute(sa.select(LABELS.c.kaynak, LABELS.c.konu, sa.func.count()).where(
-            LABELS.c.tenant_id == tenant, LABELS.c.kayit_tarihi >= since).group_by(LABELS.c.kaynak, LABELS.c.konu)).all()
+        rows = c.execute(summary_stmt(tenant, since)).all()
     table: dict[str, dict[str, int]] = {s: {**{k: 0 for k in TOPICS}, "belirsiz": 0} for s in SOURCES}
     for src, konu, n in rows:
         if src in table:
             table[src][konu or "belirsiz"] = table[src].get(konu or "belirsiz", 0) + int(n)
     total = {k: sum(v[k] for v in table.values()) for k in (*TOPICS, "belirsiz")}
-    return {"bas": since, "bit": today.isoformat(), "gun": st["windowDays"], "kaynaklar": table, "toplam": total,
+    return {"bas": since, "bit": today.isoformat(), "gun": st["windowDays"], "kaynakKonu": table, "toplam": total,
             "konular": TOPICS, "kaynakAdlari": SOURCES}
 
 
@@ -307,9 +336,7 @@ def clusters(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], today: O
     today = today or now().date()
     since = (today - timedelta(days=st["defectDays"])).isoformat()
     with engine.connect() as c:
-        rows = c.execute(sa.select(LABELS.c.urun_anahtar, LABELS.c.urun_adi, LABELS.c.kaynak).where(
-            LABELS.c.tenant_id == tenant, LABELS.c.konu == "baski", LABELS.c.kayit_tarihi >= since,
-            LABELS.c.urun_anahtar.isnot(None))).all()
+        rows = c.execute(clusters_stmt(tenant, since)).all()
     by: dict[str, dict[str, Any]] = {}
     for key, name, src in rows:
         b = by.setdefault(key, {"anahtar": key, "ad": None, "sayi": 0, "kaynaklar": defaultdict(int)})
@@ -369,11 +396,8 @@ def _alert(r: Any) -> dict[str, Any]:
 
 def alerts(engine: sa.engine.Engine, tenant: str, *, open_only: bool = False) -> list[dict[str, Any]]:
     ensure(engine)
-    q = sa.select(ALERTS).where(ALERTS.c.tenant_id == tenant)
-    if open_only:
-        q = q.where(ALERTS.c.durum == "acik")
     with engine.connect() as c:
-        rows = c.execute(q).all()
+        rows = c.execute(alerts_stmt(tenant, open_only)).all()
     order = {"acik": 0, "goruldu": 1, "kapandi": 2}
     return sorted((_alert(r) for r in rows), key=lambda a: (order.get(a["durum"], 3), -int(a["sayi"] or 0), a["anahtar"]))
 
@@ -427,7 +451,7 @@ def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
 
     ensure(engine)
     with engine.connect() as c:
-        r = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        r = c.execute(meta_stmt(tenant, key)).first()
     if r is None:
         return {}
     try:
