@@ -10,6 +10,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import PayoutPanel from './PayoutPanel';
 import MemoryBank from './MemoryBank';
+import { QeJobPanel } from './qe';
 import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
@@ -553,6 +554,8 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
           )}
         </Panel>
       )}
+
+      {j.source && <QeJobPanel jobId={j.id} />}
 
       {j.source && (
         <Panel>

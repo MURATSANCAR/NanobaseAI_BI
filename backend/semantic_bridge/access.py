@@ -621,7 +621,9 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
-    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur.
+    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
+    # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada
+    # yazılamadığı için ucun içinde denetlenir (editorial_translation_qe.may_run), bu listede kuralı yoktur.
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs$", "ozellik:ceviri.yonet"),
     (frozenset({"PATCH", "DELETE"}), r"^/api/v1/editorial/translation/jobs/[^/]+$", "ozellik:ceviri.yonet"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/jobs/[^/]+/source$", "ozellik:ceviri.yonet"),

@@ -34,6 +34,7 @@ import { useTimasSession } from '../../TimasSession';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import SegmentTools from './SegmentTools';
 import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
+import { QePill, QeSection, QeStrip, flagged, useQe, type QeItem } from './qe';
 
 /** Çeviri masam: çevirmenin ve inceleyenin kendi ekranı. Sol: bölümün segmentleri (kaynak | hedef); etkin
  *  segmentte yazılır. Sağ (telefonda segmentin altında): terimler, çeviri belleği, ZEKİ taslağı, otomatik
@@ -50,6 +51,7 @@ const FILTER_LABEL: Record<string, string> = {
   sorunlu: 'Denetim uyarısı olan',
   hatali: 'İnceleme hatası olan',
   taslakli: 'ZEKİ taslağı bekleyen',
+  zeki: 'ZEKİ şüpheli (tahmin 85 altı)',
 };
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
@@ -224,6 +226,7 @@ function Aside({
   onUse,
   onInsert,
   refresh,
+  qe,
 }: {
   d: SegmentDetail | undefined;
   job: TranslationJobDetail;
@@ -232,6 +235,7 @@ function Aside({
   onUse: (text: string) => void;
   onInsert: (text: string) => void;
   refresh: () => void;
+  qe?: QeItem;
 }) {
   const delErr = useMutation({ mutationFn: (id: string) => translationApi.deleteError(id), onSuccess: refresh });
   if (!d) return <Loading />;
@@ -318,6 +322,8 @@ function Aside({
         <p className="mt-1 text-[11px] text-canvas-muted">Kayıtlı metne bakar; kaydedince yenilenir.</p>
       </Section>
 
+      <QeSection item={qe} translated={d.status === 'cevrildi' || d.status === 'onaylandi'} />
+
       {(d.errorList.length > 0 || (mode === 'inceleme' && d.roles.review && d.status !== 'bos')) && (
         <Section title="İnceleme hataları" icon={<AlertTriangle aria-hidden className="h-4 w-4 text-rose-600" />} count={d.errorList.length}>
           <ul className="space-y-1.5">
@@ -388,6 +394,7 @@ function Editor({
   onPrev,
   asideEl,
   listKey,
+  qe,
 }: {
   row: SegmentRow;
   job: TranslationJobDetail;
@@ -400,6 +407,7 @@ function Editor({
   /** Masaüstünde yan panelin DOM kabı; yan panel buraya portal ile çizilir. */
   asideEl: HTMLElement | null;
   listKey: unknown[];
+  qe?: QeItem;
 }) {
   const qc = useQueryClient();
   const detailKey = useMemo(() => ['translation', 'segment', row.id], [row.id]);
@@ -546,7 +554,7 @@ function Editor({
     }
   };
 
-  const aside = <Aside d={d} job={job} mode={mode} canTerm={canTerm} onUse={(t) => setText(t)} onInsert={insert} refresh={refreshDetail} />;
+  const aside = <Aside d={d} job={job} mode={mode} canTerm={canTerm} onUse={(t) => setText(t)} onInsert={insert} refresh={refreshDetail} qe={qe} />;
   const err = writeErr || detail.error;
   const conflict = err && /değiştirildi/.test((err as Error).message ?? '');
   const srcDir = dirOf(job.sourceLang);
@@ -681,7 +689,7 @@ function Editor({
   );
 }
 
-function Row({ s, active, onOpen, srcDir, tgtDir, children }: { s: SegmentRow; active: boolean; onOpen: () => void; srcDir: string; tgtDir: string; children?: ReactNode }) {
+function Row({ s, active, onOpen, srcDir, tgtDir, qe, children }: { s: SegmentRow; active: boolean; onOpen: () => void; srcDir: string; tgtDir: string; qe?: QeItem; children?: ReactNode }) {
   if (active)
     return (
       <li id={`seg-${s.id}`} className="scroll-mt-24 rounded-2xl border border-canvas-violet bg-white p-3 shadow-sm">
@@ -691,6 +699,7 @@ function Row({ s, active, onOpen, srcDir, tgtDir, children }: { s: SegmentRow; a
           {s.heading && <Pill tone="muted">Başlık</Pill>}
           <span className="text-canvas-muted">{nf.format(s.words)} kelime</span>
           {s.updatedBy && <span className="text-canvas-muted">· {s.updatedBy}</span>}
+          <QePill item={qe} />
         </div>
         {children}
       </li>
@@ -711,8 +720,9 @@ function Row({ s, active, onOpen, srcDir, tgtDir, children }: { s: SegmentRow; a
         </span>
         <span dir={tgtDir} className="col-start-2 mt-1 min-w-0 break-words leading-snug md:col-start-3 md:mt-0">
           {s.target ? <span className="font-semibold">{s.target}</span> : <span className="italic text-canvas-muted">{s.hasDraft ? 'ZEKİ taslağı var' : 'Boş'}</span>}
-          {(s.issues.length > 0 || s.errors > 0 || s.edited) && (
+          {(s.issues.length > 0 || s.errors > 0 || s.edited || flagged(qe)) && (
             <span className="mt-1 flex flex-wrap gap-1">
+              <QePill item={qe} />
               {s.issues.length > 0 && <Pill tone="warn">{nf.format(s.issues.length)} uyarı</Pill>}
               {s.errors > 0 && <Pill tone="err">{nf.format(s.errors)} hata</Pill>}
               {s.edited && <Pill tone="violet">İnceleyen düzeltti</Pill>}
@@ -764,11 +774,18 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
   const listKey = useMemo(() => ['translation', 'segments', jobId, chapter ?? null, filter, q], [jobId, chapter, filter, q]);
   const list = useQuery({
     queryKey: listKey,
-    queryFn: () => translationApi.segments(jobId, { chapter, filter, q }),
+    // «ZEKİ şüpheli» süzgeci tahmin tablosundan gelir: sunucudan bölümün bütün segmentleri istenir, burada süzülür.
+    queryFn: () => translationApi.segments(jobId, { chapter, filter: filter === 'zeki' ? 'hepsi' : filter, q }),
     enabled: ENGINE_ENABLED && chapter !== undefined,
     placeholderData: (prev) => prev,
   });
-  const items = list.data?.items ?? [];
+  const qe = useQe(jobId);
+  const qeById = useMemo(() => new Map((qe.data?.items ?? []).map((i) => [i.segmentId, i])), [qe.data]);
+  const threshold = qe.data?.threshold ?? 85;
+  const items = useMemo(() => {
+    const all = list.data?.items ?? [];
+    return filter === 'zeki' ? all.filter((s) => flagged(qeById.get(s.id), threshold)) : all;
+  }, [list.data, filter, qeById, threshold]);
 
   useEffect(() => {
     if (!items.length) return;
@@ -918,6 +935,11 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
             </Note>
           </div>
         )}
+        {j.source && (
+          <div className="mt-2">
+            <QeStrip jobId={j.id} compact />
+          </div>
+        )}
       </Panel>
 
       {!j.source ? (
@@ -981,10 +1003,14 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
               </span>
             </div>
             {list.error && <Note tone="err">{errText(list.error, 'Segmentler okunamadı.')}</Note>}
-            {list.data && !items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan segment yok.</p>}
+            {list.data && !items.length && (
+              <p className="py-8 text-center text-[12.5px] text-canvas-muted">
+                {filter === 'zeki' && qe.data && !qe.data.summary.scored ? 'ZEKİ kalite tahmini bu işte henüz çalıştırılmadı.' : 'Bu süzgece uyan segment yok.'}
+              </p>
+            )}
             <ul className="mt-2 space-y-1.5">
               {items.map((s) => (
-                <Row key={s.id} s={s} active={s.id === active} onOpen={() => setActive(s.id)} srcDir={srcDir} tgtDir={tgtDir}>
+                <Row key={s.id} s={s} active={s.id === active} onOpen={() => setActive(s.id)} srcDir={srcDir} tgtDir={tgtDir} qe={qeById.get(s.id)}>
                   {s.id === active && (
                     <Editor
                       key={`${s.id}-${mode}`}
@@ -998,6 +1024,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
                       onNext={() => go(1, true)}
                       onPrev={() => go(-1, false)}
                       asideEl={asideEl}
+                      qe={qeById.get(s.id)}
                     />
                   )}
                 </Row>

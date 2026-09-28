@@ -5159,6 +5159,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "run", "translation_draft", job_id, None, {"chapter": body.get("chapter"), **out})
         return out
 
+    # ZEKİ kalite tahmini (editorial_translation_qe.py): segment başına 0–100 tahmin, MQM puanı değildir. Başlatma
+    # model harcar; işin inceleyeni/açanı ya da «ceviri.yonet» sahibi (ucun içinde, FEATURE_RULES'ta değil).
+    from semantic_bridge import editorial_translation_qe as tr_qe
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/qe")
+    def tr_qe_get(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        tr_qe.ensure(engine)
+        return _tr_call(tr_qe.job_qe, engine, tenant, user, see_all, job_id, _can(user, "ozellik:ceviri.yonet"))
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/qe")
+    def tr_qe_start(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        tr_qe.ensure(engine)
+        llm = rt().llm_for("editorial", priority=1)
+        chat = (lambda messages: llm.chat(messages, max_tokens=3072, temperature=0.0)) if llm is not None else None
+        out = _tr_call(tr_qe.start_qe, engine, tenant, user, see_all, job_id, body, chat, _can(user, "ozellik:ceviri.yonet"))
+        admin_mod.audit(engine, user, "run", "translation_qe", job_id, None,
+                        {"chapter": body.get("chapter"), "all": bool(body.get("all")), **out})
+        return out
+
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/candidates")
     def tr_candidates(job_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
