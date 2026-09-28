@@ -1234,9 +1234,78 @@ def build_cash(inputs: dict[str, Any], weeks: int = 13) -> dict[str, Any]:
             "haftalar": week_rows, "hatalar": inputs.get("errors") or {}}
 
 
+#: Olasılıklı nakit bandı (öneri 7). Vadesi belli kalemler tablodaki kuraldan gelir (işaretiyle); vadesi belirsiz
+#: tahsilat/ödeme (FIFO yaklaşımlı alacak, CRM onay bekleyen, satıcı borcu) yerine geçmiş haftalık gerçekleşen
+#: tahsilat/ödeme serisinin tahmini (p10/p50/p90) konur. «En kötü %10» kasa çizgisi = kesin kalemler + tahsilat p10 −
+#: ödeme p90; haftalık aralıklar toplanır (temkinli, geniş). Kantil yoksa bant yoktur — uydurulmaz.
+BAND_CERTAIN = {"cek-giris": 1.0, "cek-cikis": -1.0, "telif": -1.0, "vergi": -1.0}
+BAND_REPLACED = ("alacak", "crm-tahsilat", "satici")
+BAND_HISTORY_WEEKS = 104
+BAND_MIN_WEEKS = 26
+
+
+def weekly_flows(daily: dict[date, tuple[float, float]], start: date, weeks: int) -> tuple[list[float], list[float], date]:
+    """`start` haftasından önceki `weeks` tam haftanın tahsilat ve ödeme toplamı (pazartesi başlangıçlı). Verinin
+    başladığı haftadan öncesi atılır. Dönen: (tahsilat, ödeme, ilk hafta)."""
+    first_day = min(daily) if daily else start
+    first = max(start - timedelta(days=7 * weeks), monday(first_day))
+    n = max(0, (start - first).days // 7)
+    tah, od = [0.0] * n, [0.0] * n
+    for d, (t, o) in daily.items():
+        i = (d - first).days // 7
+        if 0 <= i < n:
+            tah[i] += t
+            od[i] += o
+    return tah, od, first
+
+
+def cash_band(result: dict[str, Any], forecast: dict[str, dict[str, list[float]]], history_weeks: int) -> dict[str, Any]:
+    """Saf hesap: 13 haftalık tablo + tahsilat/ödeme kantilleri → hafta hafta kapanış bandı."""
+    weeks = result.get("haftalar") or []
+    lines = {s["kalem"]: s for s in result.get("kalemler") or []}
+    opening = float(result.get("acilisBakiye") or 0)
+    tah, od = forecast["tahsilat"], forecast["odeme"]
+    lo = mid = hi = opening
+    rows = []
+    for i, w in enumerate(weeks):
+        certain = sum(sign * float((lines.get(k) or {}).get("haftalar", [0.0] * len(weeks))[i] or 0) for k, sign in BAND_CERTAIN.items())
+        t = {q: round(tah[q][i], 2) for q in ("p10", "p50", "p90")}
+        o = {q: round(od[q][i], 2) for q in ("p10", "p50", "p90")}
+        lo += certain + t["p10"] - o["p90"]
+        mid += certain + t["p50"] - o["p50"]
+        hi += certain + t["p90"] - o["p10"]
+        rows.append({"hafta": w["hafta"], "baslangic": w["baslangic"], "kesin": round(certain, 2), "tahsilat": t, "odeme": o,
+                     "kapanis": {"kotu": round(lo, 2), "orta": round(mid, 2), "iyi": round(hi, 2)}, "kuralKapanis": w["kapanis"]})
+    worst = next((r for r in rows if r["kapanis"]["kotu"] < 0), None)
+    return {"var": True, "etiket": "tahmin", "gecmisHafta": history_weeks, "haftalar": rows,
+            "enKotuAcik": {"hafta": worst["hafta"], "baslangic": worst["baslangic"], "kapanis": worst["kapanis"]["kotu"]} if worst else None,
+            "kesinKalemler": [k for k in BAND_CERTAIN if k in lines], "yerineGecen": [k for k in BAND_REPLACED if k in lines],
+            "not": ("Vadesi belli kalemler (çek/senet, sözleşme ödemesi, vergi) kuraldan; müşteri tahsilatı ve satıcı ödemesi "
+                    "geçmiş haftalık gerçekleşenin tahmininden. Haftalık aralıklar toplandı: bant temkinli (geniş) okunur.")}
+
+
+def build_band(result: dict[str, Any], daily: dict[date, tuple[float, float]],
+               forecaster: Callable[[dict[str, list[float]], int], dict[str, dict[str, list[float]]]]) -> dict[str, Any]:
+    """Geçmiş + tahmin servisi → bant; yetersiz geçmişte ya da servis yoksa {"var": False, "neden"}."""
+    start = date.fromisoformat(result["baslangic"])
+    tah, od, _first = weekly_flows(daily, start, BAND_HISTORY_WEEKS)
+    if len(tah) < BAND_MIN_WEEKS or not any(tah) or not any(od):
+        return {"var": False, "neden": f"Tahsilat/ödeme geçmişi {len(tah)} hafta; bant için en az {BAND_MIN_WEEKS} hafta gerekir."}
+    horizon = len(result.get("haftalar") or [])
+    try:
+        fc = forecaster({"tahsilat": tah, "odeme": od}, horizon)
+    except Exception as e:  # noqa: BLE001 — servis yoksa bant yok, tablo kuraldan kalır
+        log.info("finance: nakit bandı tahmini alınamadı: %s", e)
+        return {"var": False, "neden": "Tahmin servisine ulaşılamadı; olasılıklı bant bu kurulumda gösterilmiyor."}
+    if not all(len(fc.get(k, {}).get(q) or []) >= horizon for k in ("tahsilat", "odeme") for q in ("p10", "p50", "p90")):
+        return {"var": False, "neden": "Tahmin aralığı (p10–p90) dönmedi; bant gösterilmiyor."}
+    return cash_band(result, fc, len(tah))
+
+
 def save_cash_run(engine: sa.engine.Engine, tenant: str, user: Optional[str], result: dict[str, Any]) -> str:
     rid = uuid.uuid4().hex
     params = {k: result[k] for k in ("acilisBakiye", "pozisyon", "vadesiGecmis", "dovizTelif", "hatalar", "asof")}
+    params["bant"] = result.get("bant")
     params["haftalar"] = result["haftalar"]
     with engine.begin() as c:
         c.execute(CASH_RUNS.insert().values(id=rid, tenant_id=tenant, run_at=_now(), veri_son_gunu=result["asof"],
@@ -1290,7 +1359,9 @@ def cash(engine: sa.engine.Engine, tenant: str, include_budget: bool = False) ->
             "vadesiGecmis": params.get("vadesiGecmis") or {}, "dovizTelif": params.get("dovizTelif") or {},
             "hatalar": params.get("hatalar") or {}, "butceDahil": bool(include_budget),
             "kalemler": sorted(items.values(), key=lambda x: (order.get(x["yon"], 3), -abs(x["toplam"]))),
-            "haftalar": weeks, "acikHafta": next((w for w in weeks if w.get("acik")), None), **freshness(engine)}
+            "haftalar": weeks, "acikHafta": next((w for w in weeks if w.get("acik")), None),
+            "bant": params.get("bant") or {"var": False, "neden": "Bu tablo olasılıklı bant eklenmeden önce kuruldu; yeniden kurun."},
+            **freshness(engine)}
 
 
 def cash_history(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
@@ -2133,9 +2204,35 @@ class Refresher:
         budget = safe("butce", budget_rows, [])
         result = build_cash({"asof": end, "position": position, "receivables": rec, "payables": pay, "cheques": chq, "crm": crm,
                              "royalty": royalty, "tax": tax, "budget": budget, "errors": errors})
+        self.state["step"] = "Nakit bandı (tahmin)"
+        try:
+            result["bant"] = self._cash_band(logo, firms, end, result)
+        except Exception as e:  # noqa: BLE001 — bant okunamazsa tablo kuraldan kalır
+            log.warning("finance cash band failed: %s", e)
+            result["bant"] = {"var": False, "neden": f"Tahsilat/ödeme geçmişi okunamadı: {str(e)[:200]}"}
         rid = save_cash_run(engine, tenant, user, result)
         meta_set(engine, "cash_run", {"id": rid, "asof": end.isoformat(), "errors": errors})
         return {"run": rid, "hatalar": errors}
+
+    def _cash_band(self, logo: Any, firms: dict[int, str], end: date, result: dict[str, Any]) -> dict[str, Any]:
+        """Geçmiş 104 haftanın günlük tahsilat/ödemesi (her yıl kendi kopyasından, kendi tarihleriyle) → bant."""
+        from semantic_bridge import forecast_client as fc
+
+        start = date.fromisoformat(result["baslangic"])
+        h0 = start - timedelta(days=7 * BAND_HISTORY_WEEKS)
+        daily: dict[date, tuple[float, float]] = {}
+        for y in range(h0.year, start.year + 1):
+            if y not in firms:
+                continue
+            a, b = max(h0, date(y, 1, 1)), min(start, date(y + 1, 1, 1))
+            if a >= b:
+                continue
+            for r in logo(src.cash_flows_daily_sql(firms[y], a, b)):
+                d = src.day(r.get("gun"))
+                if d:
+                    t, o = daily.get(d, (0.0, 0.0))
+                    daily[d] = (t + src.f(r.get("tahsilat")), o + src.f(r.get("odeme")))
+        return build_band(result, daily, lambda series, h: fc.forecast_series(series, h, start=h0.strftime("%Y-%m")))
 
     def rebuild_cash(self, user: Optional[str] = None) -> bool:
         """Yalnız nakit tablosu (muhasebe ve satış okuması olmadan)."""

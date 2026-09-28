@@ -290,8 +290,24 @@ def save_cards(engine: sa.engine.Engine, tenant: str, ds: str, user: str, cards:
 Runner = Callable[[str], dict[str, Any]]
 
 
+def _previous(engine: sa.engine.Engine, card_id: str) -> Optional[dict[str, Any]]:
+    with engine.connect() as c:
+        row = c.execute(sa.select(CARDS.c.result_json, CARDS.c.result_at).where(CARDS.c.id == card_id)).first()
+    if not row or not row.result_json:
+        return None
+    try:
+        prev = json.loads(row.result_json)
+    except ValueError:
+        return None
+    prev["at"] = _iso(row.result_at)
+    return prev
+
+
 def _store_result(engine: sa.engine.Engine, card_id: str, result: dict[str, Any], *, auto: bool) -> dict[str, Any]:
+    from semantic_bridge import result_diff
+
     now = _now()
+    prev = _previous(engine, card_id)
     slim = {
         "columns": result.get("columns") or [],
         "records": result.get("records") or [],
@@ -302,6 +318,16 @@ def _store_result(engine: sa.engine.Engine, card_id: str, result: dict[str, Any]
         "cached": bool(result.get("cached")),
         "computedAt": result.get("computedAt"),
     }
+    # «Ne değişti»: önceki sonuçla fark kodla bulunur ve sonuçla birlikte saklanır; anlatım ayrı istekle gelir
+    # (`change_note`). Aynı sonuç yeniden geldiyse önceki farkı ezmemek için önceki sonucun farkı taşınır.
+    try:
+        d = result_diff.diff(prev, slim)
+        if prev is not None and not d.get("degisti") and not d.get("ilk") and prev.get("fark"):
+            slim["fark"] = prev["fark"]
+        else:
+            slim["fark"] = {**d, "maddeler": result_diff.bullets(d), "kaynak": "kural", "zaman": _iso(now)}
+    except Exception as e:  # noqa: BLE001 — fark hesaplanamazsa kartın sonucu yine yazılır
+        log.info("board: kart %s farkı hesaplanamadı: %s", card_id, e)
     raw = json.dumps(slim, ensure_ascii=False, default=str)
     if len(raw) > MAX_RESULT_CHARS:
         # Sığmayan sonuç kesilir ve kesildiği söylenir; sessiz kesme yok.
@@ -371,3 +397,28 @@ def run_due(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, *, n
                     c.execute(CARDS.update().where(CARDS.c.id == row["id"]).values(last_error=str(e)[:2000], last_auto_at=now))
                 summary["errors"].append({"id": row["id"], "user": row["username"], "error": str(e)[:300]})
     return summary
+
+
+def change_note(engine: sa.engine.Engine, tenant: str, ds: str, user: str, card_id: str,
+                explain: Callable[[dict[str, Any], str], dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """Kartın son farkını Zeki AI ile madde madde anlatır (bir kez; saklanır). Kart yoksa None."""
+    with engine.connect() as c:
+        row = c.execute(sa.select(CARDS.c.result_json, CARDS.c.title).where(
+            CARDS.c.id == card_id, CARDS.c.tenant_id == tenant, CARDS.c.datasource_id == ds, CARDS.c.username == user)).first()
+    if not row:
+        return None
+    try:
+        res = json.loads(row.result_json or "{}")
+    except ValueError:
+        res = {}
+    fark = res.get("fark")
+    if not fark:
+        return {"maddeler": ["Kart henüz yenilenmedi; karşılaştırılacak sonuç yok."], "kaynak": "kural", "neden": None}
+    if fark.get("anlatildi"):
+        return {k: fark.get(k) for k in ("maddeler", "kaynak", "neden")}
+    note = explain(fark, row.title)
+    fark.update(maddeler=note["maddeler"], kaynak=note["kaynak"], neden=note.get("neden"), anlatildi=True)
+    res["fark"] = fark
+    with engine.begin() as c:
+        c.execute(CARDS.update().where(CARDS.c.id == card_id).values(result_json=json.dumps(res, ensure_ascii=False, default=str)))
+    return note

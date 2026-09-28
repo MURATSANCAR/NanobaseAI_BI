@@ -38,6 +38,7 @@ import { download, fileName, toCsv } from './export';
 import { useCan } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
 import AnswerFeedback from '../components/AnswerFeedback';
+import CardInsight, { cardChange } from './CardInsight';
 import {
   fromDto,
   loadBoard,
@@ -417,6 +418,8 @@ export default function BoardScreen() {
   const [errQueryId, setErrQueryId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [comparing, setComparing] = useState<string | null>(null);
+  /** «Ne değişti / Neden?» yaprağı açık olan kart. */
+  const [insight, setInsight] = useState<string | null>(null);
   // Kolon başlıkları katalogdaki Türkçe yazımla («Satış tutarı»); harita gelince kartlar yeniden çizilir.
   const words = useQuery({ queryKey: ['display-words'], queryFn: displayWordsApi.get, enabled: ENGINE_ENABLED, staleTime: 30 * 60_000, retry: false });
   setDisplayWords(words.data?.words);
@@ -928,6 +931,19 @@ export default function BoardScreen() {
                       )}
                     </span>
                     <span className="pano-noprint flex items-center gap-0.5">
+                      {(c.question || cardChange(r?.data)) && (
+                        <button
+                          type="button"
+                          onClick={() => setInsight(c.id)}
+                          title="Önceki sonuca göre ne değişti ve rakamın nedeni (kanal, cari, kitap katkısı)"
+                          className="pano-press relative flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink"
+                        >
+                          {cardChange(r?.data)?.degisti && !cardChange(r?.data)?.ilk && (
+                            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-canvas-violet" />
+                          )}
+                          Değişim
+                        </button>
+                      )}
                       {canExport && (<>
                       <button
                         type="button"
@@ -1130,6 +1146,12 @@ export default function BoardScreen() {
           )}
         </div>
       </div>
+      {insight && (() => {
+        const i = cards.findIndex((x) => x.id === insight);
+        if (i < 0) return null;
+        const c = cards[i];
+        return <CardInsight cardId={c.id} title={c.title} question={c.question ?? ''} data={results[i]?.data} onClose={() => setInsight(null)} />;
+      })()}
     </Shell>
   );
 }

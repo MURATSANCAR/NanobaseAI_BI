@@ -7,6 +7,7 @@ import { Loading, Note, TableWrap, btnGhost, errText, td, th } from '../admin/ui
 import { Panel } from '../editorial/kit';
 import { financeApi, fmtDay, fmtMoney, fmtShort } from './api';
 import { Approx, DataEnd, Money } from './parts';
+import CashBandPanel from './CashBandPanel';
 
 /** 13 haftalık nakit: veri son gününün haftasından başlar. Her satırın kaynağı ve yaklaşıklığı yazılı; açık veren
  *  hafta en üstte kırmızı. Telefonda hafta listesi, masaüstünde hafta × kalem tablosu (kendi içinde kayar). */
@@ -108,6 +109,8 @@ export default function CashTab() {
           )}
         </div>
       </div>
+
+      <CashBandPanel band={d.bant} />
 
       {/* Telefon: hafta kartları. */}
       <ul className="flex flex-col gap-1.5 sm:hidden">

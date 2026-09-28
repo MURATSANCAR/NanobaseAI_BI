@@ -148,7 +148,7 @@ export function ReportsAdmin() {
   );
 }
 
-const COND: Record<AlertRule['condition'], string> = { gt: '>', gte: '≥', lt: '<', lte: '≤' };
+const COND: Record<AlertRule['condition'], string> = { gt: '>', gte: '≥', lt: '<', lte: '≤', olagandisi: 'olağan dışı, hassasiyet' };
 const STATE: Record<AlertRule['state'], { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' }> = {
   ok: { label: 'Normal', tone: 'ok' },
   triggered: { label: 'Tetiklendi', tone: 'warn' },

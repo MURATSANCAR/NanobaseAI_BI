@@ -503,7 +503,30 @@ FACT_KEYS: dict[str, str] = {
     "sevk_tarihi": "sevk tarihi", "kargo_firmasi": "kargo firması", "takip_no": "kargo takip numarası",
     "takip_adresi": "kargo takip bağlantısı", "teslim_tarihi": "kargo firmasının teslim tarihi",
     "fatura_no": "fatura numarası", "fatura_tarihi": "fatura tarihi", "sss_baslik": "ilgili SSS başlığı",
+    "siparis_tutari": "siparişin KDV dahil tutarı", "kargo_durumu": "kargonun son durumu (kargo kaydından)",
+    "kargo_varis_subesi": "kargonun varış şubesi", "son_fatura_no": "müşterinin son faturasının numarası",
+    "son_fatura_tarihi": "müşterinin son faturasının tarihi", "son_fatura_tutari": "müşterinin son faturasının tutarı",
 }
+
+
+def _money_text(v: Any) -> Optional[str]:
+    n = num(v)
+    if not n:
+        return None
+    s = f"{n:,.2f}".replace(",", "\0").replace(".", ",").replace("\0", ".")
+    return f"{s} TL"
+
+
+def cargo_state(c: dict[str, Any]) -> Optional[str]:
+    """Kargo kaydının alanlarından durum cümlesi (yorum değil, alanın kendisi): teslim tarihi varsa «teslim edildi»,
+    iade durumu yazılıysa o, irsaliye tarihi varsa «kargoya verildi». Hiçbiri yoksa yazılmaz."""
+    if c.get("teslimTarihi"):
+        return "teslim edildi"
+    if c.get("iadeDurumu"):
+        return str(c["iadeDurumu"])
+    if c.get("irsTarihi"):
+        return "kargoya verildi"
+    return None
 _PH = re.compile(r"\{([a-z_]+)\}")
 
 
@@ -524,6 +547,9 @@ def facts_from_context(ctx: dict[str, Any], faq: Optional[dict[str, Any]] = None
                 f[key] = str(val)
         if o.get("bekleyen") and o.get("acik"):
             f["bekleyen_adet"] = _int_text(o["bekleyen"])
+        amount = _money_text(o.get("kdvliTutar"))
+        if amount:
+            f["siparis_tutari"] = amount
         for c in ctx.get("cargo") or []:
             if o.get("id") in (c.get("orderIds") or []) or (o.get("takipNo") and c.get("takipNo") == o.get("takipNo")):
                 if c.get("firma") and "kargo_firmasi" not in f:
@@ -532,6 +558,11 @@ def facts_from_context(ctx: dict[str, Any], faq: Optional[dict[str, Any]] = None
                     f["takip_no"] = c["takipNo"]
                 if c.get("teslimTarihi"):
                     f["teslim_tarihi"] = c["teslimTarihi"]
+                state = cargo_state(c)
+                if state:
+                    f["kargo_durumu"] = state
+                if c.get("varisSube"):
+                    f["kargo_varis_subesi"] = c["varisSube"]
                 break
         for s in ctx.get("shipments") or []:
             if s.get("orderId") == o.get("id") and s.get("faturaNo"):
@@ -540,9 +571,18 @@ def facts_from_context(ctx: dict[str, Any], faq: Optional[dict[str, Any]] = None
                 if inv.get("tarih"):
                     f["fatura_tarihi"] = _tr_day(inv["tarih"])
                 break
+    # Carinin Logo'daki son satış faturası (iade değil); sipariş olmasa da «faturam nerede» taleplerine olgu.
+    last = next((i for i in ctx.get("invoices") or [] if not i.get("iade") and i.get("no")), None)
+    if last:
+        f["son_fatura_no"] = str(last["no"])
+        if last.get("tarih"):
+            f["son_fatura_tarihi"] = _tr_day(last["tarih"])
+        amount = _money_text(last.get("tutar"))
+        if amount:
+            f["son_fatura_tutari"] = amount
     if faq and faq.get("matches"):
         f["sss_baslik"] = faq["matches"][0]["title"]
-    return f
+    return {k: v for k, v in f.items() if v}
 
 
 def _tr_day(v: Any) -> Optional[str]:

@@ -199,6 +199,8 @@ export default function BiCanvasPage() {
             : undefined,
         // M50: cevabın altında «Doğru / Kısmen / Yanlış»; yalnız soru kaydı olan (motorun cevapladığı) cevapta.
         feedback: !asking && !askErr && answer?.queryId ? { queryId: answer.queryId } : undefined,
+        // «Neden?»: ayrıştırılabilir cevapta (katalog ölçüsü + dönem); farkın kanal/cari/kitap katkısı.
+        reason: !asking && !askErr && answer?.queryId && answer?.neden?.ok ? { queryId: answer.queryId } : undefined,
       },
       c5: {
         ...d.c5,

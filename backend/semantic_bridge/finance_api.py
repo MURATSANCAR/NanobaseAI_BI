@@ -420,6 +420,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = ctx(request)
         return call(F.budget_view, engine, tenant, year_or_default(engine, year))
 
+    @app.post("/api/v1/finance/budget/deviations/{alert_id}/neden")
+    def finance_budget_reason(alert_id: str, request: Request) -> dict[str, Any]:
+        """Bütçe–gerçekleşme sekmesindeki sapmanın nedeni (M46 ile aynı ayrıştırma)."""
+        from semantic_bridge import variance as V
+
+        engine, tenant, _, _ = ctx(request)
+        try:
+            res = V.budget_reason(engine, tenant, alert_id)
+        except V.VarianceError as e:
+            raise HTTPException(status_code=404, detail={"code": "FINANCE", "message": str(e)}) from None
+        res["anlatim"] = V.explain(res, rt=rt(), module="finance")
+        return res
+
     @app.get("/api/v1/finance/notes")
     def finance_notes(request: Request, year: int | None = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)

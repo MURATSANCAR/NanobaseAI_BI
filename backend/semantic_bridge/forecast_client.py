@@ -11,7 +11,9 @@ taşır; kantil dosyada yoksa aralık **uydurulmaz** — `aralik: False` ve «ar
 Birden çok ayın toplamında kantiller toplanır (aylık p10'ların toplamı). Bu, aylar arası tam bağımlılık varsayımıdır:
 gerçek dönem aralığı bundan dardır; ekranda «aylık aralıkların toplamı» diye yazılır ve temkinli (geniş) okunur.
 
-Saf okuma: ağa ve modele gitmez; dosya yoksa ya da bozuksa boş sözlük.
+Kitap tahmini saf okumadır: ağa ve modele gitmez; dosya yoksa ya da bozuksa boş sözlük. Tek istisna `forecast_series`:
+kitap dışı bir seri (13 haftalık nakitte tahsilat/ödeme) için tahmin servisine aynı sıradan gider; servis yoksa hata
+verir ve ekran aralığı göstermez.
 """
 from __future__ import annotations
 
@@ -141,6 +143,35 @@ def total(fc: dict[str, Any], code: str, quantile: str = "p50", months: int = 12
     if not s:
         return None
     return float(sum(s[:months]))
+
+
+#: Servisin 9 kantil satırındaki sıra (zeki_tahmin.KEEP_QUANTILES ile aynı).
+SERVICE_QUANTILE_INDEX = {"p10": 0, "p50": 4, "p90": 8}
+
+
+def forecast_series(series: dict[str, list[float]], horizon: int, *, start: str = "", post: Any = None,
+                    ready: Any = None) -> dict[str, dict[str, list[float]]]:
+    """Genel seri tahmini (ör. haftalık tahsilat/ödeme): tahmin servisine aynı `/forecast/batch` ucuyla, takvim ek
+    değişkeni olmadan gider. Dönen: seri → {"p10", "p50", "p90"} (her biri `horizon` uzunluğunda, eksi değer 0'a
+    kırpılır). Servis yoksa ya da kantil dönmezse hata yükselir; çağıran bandı göstermez (uydurmaz).
+    Haftalık seride servis frekans bilmez; bu kullanım kabul listesinde «ölçülecek» olarak durur."""
+    from semantic_bridge.management import zeki_tahmin as T
+
+    (ready or T.service_ready)()
+    payload = {"horizon": int(horizon), "calendar": False, "engine": "timesfm3",
+               "series": [{"id": k, "start": start, "values": [float(x or 0) for x in v]} for k, v in series.items()]}
+    out = (post or T.post_batch)(payload)
+    res: dict[str, dict[str, list[float]]] = {}
+    for r in (out or {}).get("results") or []:
+        q = r.get("quantiles") or []
+        if not q or not all(isinstance(row, list) and len(row) > max(SERVICE_QUANTILE_INDEX.values()) for row in q):
+            continue
+        res[str(r.get("id"))] = {name: [max(0.0, float(row[j] or 0)) for row in q[:horizon]]
+                                 for name, j in SERVICE_QUANTILE_INDEX.items()}
+    missing = [k for k in series if k not in res]
+    if missing:
+        raise RuntimeError(f"Tahmin servisi şu seriler için kantil döndürmedi: {', '.join(missing)}")
+    return res
 
 
 def month_offset(fc: dict[str, Any], year: int, month: int) -> Optional[int]:

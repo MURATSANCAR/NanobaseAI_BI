@@ -6,6 +6,11 @@ kontrolün yapıldığı ayı anlatır, kuralın kurulduğu günün tarihlerine 
 Bildirim kenarda gider: kural eşiği ilk aştığında. Hâlâ aşıyorsa `ALERT_REMIND_HOURS` sonra bir kez
 daha hatırlatır. Gönderim olmadıysa (e-posta ayarı yok, sunucu hata verdi) bir sonraki kontrolde yeniden
 denenir — e-posta ayarı sonradan eklense de bekleyen uyarı kaybolmaz.
+
+Beklenen aralık ve neden (öneri 4 ve 6, `variance`): kuralın sorusu ayrıştırılabilir bir satış ölçüsüyse günde bir
+kez geçmiş 24 ayın aynı penceresinden beklenen aralık hesaplanır (`expected_json`). «Olağan dışı» koşulu (`olagandisi`)
+eşik yerine bu aralığı kullanır; eşiği olan kuralda da aralık dışı değer e-postada «beklenenin dışında» diye yazılır.
+Bildirim giderken farkın kanal/cari/kitap katkısı ve 2–3 cümlelik anlatım eklenir. Rakamlar SQL'den; model yalnız anlatır.
 """
 
 from __future__ import annotations
@@ -54,6 +59,8 @@ RULES = sa.Table(
     sa.Column("last_notify", sa.String(16)),
     # Son ölçümde değerin veritabanından gelme süresi: {"dbMs", "cached", "computedAt"}.
     sa.Column("last_db_json", sa.Text),
+    # Beklenen aralık (günde bir hesaplanır): {"gun", "ok", "alt", "merkez", "ust", "yontem", "nokta", "neden"?}.
+    sa.Column("expected_json", sa.Text),
 )
 
 EVENTS = sa.Table(
@@ -67,7 +74,9 @@ EVENTS = sa.Table(
     sa.Column("error", sa.Text),
 )
 
-CONDITIONS = {"gt": ">", "gte": "≥", "lt": "<", "lte": "≤"}
+CONDITIONS = {"gt": ">", "gte": "≥", "lt": "<", "lte": "≤", "olagandisi": "beklenen aralık dışında"}
+#: «Olağan dışı» kuralda eşik kolonu aralığın genişliğidir (k: medyan ± k × yayılım).
+ANOMALY_K = (1.0, 5.0)
 _EMAIL = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$")
 
 _ready: set[int] = set()
@@ -95,9 +104,10 @@ def ensure(engine: sa.engine.Engine) -> None:
         _md.create_all(engine, checkfirst=True)
         # create_all var olan tabloya kolon eklemez; ölçüm süresi sonradan geldi.
         have = {c["name"] for c in sa.inspect(engine).get_columns(RULES.name)}
-        if "last_db_json" not in have:
-            with engine.begin() as c:
-                c.execute(sa.text(f"ALTER TABLE {RULES.name} ADD COLUMN last_db_json TEXT"))
+        for col in ("last_db_json", "expected_json"):
+            if col not in have:
+                with engine.begin() as c:
+                    c.execute(sa.text(f"ALTER TABLE {RULES.name} ADD COLUMN {col} TEXT"))
         _ready.add(id(engine))
 
 
@@ -139,7 +149,21 @@ def to_dict(row: Any) -> dict[str, Any]:
         "last_notified_at": _iso(row["last_notified_at"]),
         "last_notify": row["last_notify"],
         "last_db": _db_of(row),
+        "expected": _json_col(row, "expected_json"),
     }
+
+
+def _json_col(row: Any, col: str) -> Optional[dict[str, Any]]:
+    try:
+        raw = row[col]
+    except (KeyError, IndexError):
+        return None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
 
 
 def _db_of(row: Any) -> Optional[dict[str, Any]]:
@@ -206,10 +230,16 @@ def _clean(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
     if not partial or "condition" in body:
         c = str(body.get("condition") or "").strip().lower()
         if c not in CONDITIONS:
-            raise AlertError("Koşul büyüktür, büyük eşittir, küçüktür ya da küçük eşittir olmalı.")
+            raise AlertError("Koşul büyüktür, büyük eşittir, küçüktür, küçük eşittir ya da olağan dışı olmalı.")
         out["condition"] = c
-    if not partial or "threshold" in body:
-        out["threshold"] = _threshold(body.get("threshold"))
+    anomaly = out.get("condition") == "olagandisi"
+    if not partial or "threshold" in body or anomaly:
+        raw = body.get("threshold")
+        if anomaly and raw in (None, ""):
+            raw = 2
+        out["threshold"] = _threshold(raw)
+        if anomaly and not (ANOMALY_K[0] <= out["threshold"] <= ANOMALY_K[1]):
+            raise AlertError("Olağan dışı kuralda hassasiyet 1 ile 5 arasında olmalı (2 önerilir).")
     if not partial or "recipients" in body:
         out["recipients"] = json.dumps(_recipients(body.get("recipients")), ensure_ascii=False)
     if "column" in body:
@@ -264,7 +294,7 @@ def update_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, bo
     vals["updated_at"] = _now()
     # Eşik ya da koşul değiştiyse eski "tetiklendi" hâli yeni kuralı anlatmaz; bir sonraki kontrol karar verir.
     if {"threshold", "condition", "question", "sql"} & vals.keys():
-        vals.update(state="unknown", last_notify=None)
+        vals.update(state="unknown", last_notify=None, expected_json=None)
     with engine.begin() as c:
         n = c.execute(RULES.update().where(RULES.c.id == rule_id, *_scope(tenant, ds, owner)).values(**vals)).rowcount
     return get_rule(engine, tenant, ds, rule_id, owner) if n else None
@@ -330,18 +360,47 @@ def breached(value: float, condition: str, threshold: float) -> bool:
 
 Runner = Callable[[dict[str, Any]], dict[str, Any]]
 Notifier = Callable[[dict[str, Any], float], str]
+#: Kural → beklenen aralık ({"ok", "alt", "ust", …} ya da {"ok": False, "neden"}).
+Expecter = Callable[[dict[str, Any]], dict[str, Any]]
+#: Kural → fark ayrıştırması (bildirim anında; `variance.for_question` + anlatım).
+Reasoner = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+def outside(value: float, rng: Optional[dict[str, Any]]) -> Optional[bool]:
+    """Değer beklenen aralığın dışında mı; aralık yoksa None."""
+    if not rng or not rng.get("ok") or rng.get("alt") is None or rng.get("ust") is None:
+        return None
+    return value < float(rng["alt"]) or value > float(rng["ust"])
+
+
+def _range_for(rule: dict[str, Any], expect: Optional[Expecter], today: str) -> Optional[dict[str, Any]]:
+    """Günde bir hesap: bugünün aralığı kayıtlıysa o, değilse yeniden. Hata aralığı «yok» yapar, kuralı durdurmaz."""
+    have = rule.get("expected")
+    if have and have.get("gun") == today:
+        return have
+    if expect is None:
+        return have
+    try:
+        rng = dict(expect(rule) or {})
+    except Exception as e:  # noqa: BLE001
+        rng = {"ok": False, "neden": f"Beklenen aralık hesaplanamadı: {str(e)[:200]}"}
+    rng["gun"] = today
+    return rng
 
 
 def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifier: Notifier, *,
           only: Optional[str] = None, now: Optional[datetime] = None,
-          remind: Optional[timedelta] = None, owner: Optional[str] = None) -> dict[str, Any]:
+          remind: Optional[timedelta] = None, owner: Optional[str] = None,
+          expect: Optional[Expecter] = None, reason: Optional[Reasoner] = None) -> dict[str, Any]:
     """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir. Aynı anda tek kontrol koşar.
-    owner verilirse yalnız o kişinin kuralları; zamanlayıcı owner'sız çağırır."""
+    owner verilirse yalnız o kişinin kuralları; zamanlayıcı owner'sız çağırır. `expect` beklenen aralığı (günde bir),
+    `reason` bildirimdeki nedeni verir; ikisi de isteğe bağlıdır."""
     with _check_lock:
-        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind, owner=owner)
+        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind, owner=owner,
+                      expect=expect, reason=reason)
 
 
-def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=None) -> dict[str, Any]:
+def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=None, expect=None, reason=None) -> dict[str, Any]:
     now = now or _now()
     remind = remind if remind is not None else timedelta(hours=float(_conf("ALERT_REMIND_HOURS", "24") or 24))
     q = sa.select(RULES).where(*_scope(tenant, ds, owner))
@@ -365,11 +424,20 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=Non
             # Kuralın sahibinin veri kapsamıyla (yetki Aşama C).
             with access_mod.acting_as(rule["created_by"]):
                 answer = runner(rule)
+                rng = _range_for(rule, expect, now.astimezone(_LOCAL).date().isoformat())
+            if rng is not None and rng is not rule.get("expected"):
+                upd["expected_json"] = json.dumps(rng, ensure_ascii=False, default=str)
             if "dbMs" in answer or "cached" in answer:
                 upd["last_db_json"] = json.dumps({"dbMs": answer.get("dbMs"), "cached": bool(answer.get("cached")),
                                                   "computedAt": answer.get("computedAt")})
             value = value_of(answer, rule["column"])
-            trig = breached(value, rule["condition"], float(rule["threshold"]))
+            out_of_range = outside(value, rng)
+            if rule["condition"] == "olagandisi":
+                if out_of_range is None:
+                    raise AlertError((rng or {}).get("neden") or "Beklenen aralık hesaplanamadı; olağan dışı kural ölçülemedi.")
+                trig = out_of_range
+            else:
+                trig = breached(value, rule["condition"], float(rule["threshold"]))
             upd.update(last_value=value, state="triggered" if trig else "ok", last_error=None)
             ev.update(value=value, triggered=trig)
             if answer.get("sql") and rule["question"]:
@@ -381,7 +449,14 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=Non
                 last_sent = _aware(datetime.fromisoformat(rule["last_notified_at"])) if rule["last_notified_at"] else None
                 due = (not was) or rule["last_notify"] != "sent" or (last_sent is not None and now - last_sent >= remind)
                 if due:
-                    result = notifier(rule, value)
+                    note = dict(rule, _aralik=rng if out_of_range is not None else None, _disinda=out_of_range)
+                    if reason is not None and rule.get("question"):
+                        try:
+                            with access_mod.acting_as(rule["created_by"]):
+                                note["_neden"] = reason(rule)
+                        except Exception as e:  # noqa: BLE001 — neden yazılamazsa uyarı yine gider
+                            log.info("alert %s nedeni hesaplanamadı: %s", rule["id"], e)
+                    result = notifier(note, value)
                     upd["last_notify"] = result
                     ev["notify"] = result
                     if result == "sent":
@@ -437,19 +512,48 @@ def _tr(v: float) -> str:
 def render(rule: dict[str, Any], value: float, link: str = "", now: Optional[datetime] = None) -> tuple[str, str]:
     title = " ".join(str(rule["title"]).split())
     subject = f"ZEKİ uyarı: {title}"
-    verb = "eşiği aştı" if rule["condition"] in ("gt", "gte") else "eşiğin altına indi"
-    lines = [
-        f"«{title}» kuralı {verb}.",
-        "",
-        f"Şu anki değer: {_tr(value)}",
-        f"Koşul: değer {CONDITIONS[rule['condition']]} {_tr(float(rule['threshold']))}",
-    ]
+    rng = rule.get("_aralik")
+    if rule["condition"] == "olagandisi":
+        verb = "beklenenin dışına çıktı"
+    else:
+        verb = "eşiği aştı" if rule["condition"] in ("gt", "gte") else "eşiğin altına indi"
+    lines = [f"«{title}» kuralı {verb}.", "", f"Şu anki değer: {_tr(value)}"]
+    if rule["condition"] != "olagandisi":
+        lines.append(f"Koşul: değer {CONDITIONS[rule['condition']]} {_tr(float(rule['threshold']))}")
+    if rng and rng.get("ok"):
+        where = " (değer beklenenin dışında)" if rule.get("_disinda") else ""
+        lines.append(f"Beklenen aralık: {_tr(float(rng['alt']))} – {_tr(float(rng['ust']))}{where}")
+        lines.append("  Aralık geçmiş 24 ayın aynı döneminden hesaplandı (kurala göre)." if rng.get("yontem") == "mevsimsel"
+                     else "  Aralık son 12 ayın aynı döneminden hesaplandı (kurala göre).")
+    lines += reason_lines(rule.get("_neden"))
     if rule.get("question"):
         lines.append(f"Ölçülen: {rule['question']}")
     lines += ["", f"Kontrol zamanı: {(now or _now()).astimezone(_LOCAL).strftime('%d.%m.%Y %H:%M')}"]
     if link:
         lines += ["", f"Ayrıntı: {link}"]
     return subject, "\n".join(lines)
+
+
+def reason_lines(res: Optional[dict[str, Any]], top: int = 3) -> list[str]:
+    """E-postadaki «Neden» bölümü: anlatım (Zeki AI ya da kural metni) ve boyut başına en büyük katkılar."""
+    if not res or not res.get("ok"):
+        return []
+    from semantic_bridge import variance as V
+
+    unit = (res.get("olcu") or {}).get("birim") or ""
+    an = res.get("anlatim") or {}
+    head = "Neden (Zeki AI yorumu):" if an.get("kaynak") == "zeki" else "Neden (kurala göre):"
+    out = ["", head]
+    if an.get("metin"):
+        out.append(f"  {an['metin']}")
+    out.append(f"  Karşılaştırma: {res['donem']['etiket']} ↔ {res['karsi']['ad']} ({res['karsi']['etiket']}).")
+    for d in res.get("boyutlar") or []:
+        items = d.get("kalemler") or []
+        if not items:
+            continue
+        parts = [f"{it['ad']} {'+' if it['fark'] > 0 else '−'}{V.tr_amount(abs(it['fark']), unit)}" for it in items[:top]]
+        out.append(f"  En büyük {d['ad'].lower()} katkısı: " + "; ".join(parts))
+    return out
 
 
 def email_notifier(link: str = "") -> Notifier:

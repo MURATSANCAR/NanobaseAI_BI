@@ -136,6 +136,8 @@ export type StitchCanvasData = {
     retry?: { question: string; busy: boolean; onAsk: (question: string) => void };
     /** Cevabın soru kaydı: altında «Doğru / Kısmen / Yanlış» gösterilir (M50). */
     feedback?: { queryId: string };
+    /** «Neden?»: farkın kanal/cari/kitap katkısı; yalnız ayrıştırılabilir cevapta. */
+    reason?: { queryId: string };
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };

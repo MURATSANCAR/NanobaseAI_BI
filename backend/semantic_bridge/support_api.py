@@ -400,11 +400,17 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         audit(engine, user, "update", "support_class", ref, f"Talep {ref} sınıfı", {"klass": out.get("klass"), "urgency": out.get("urgency")})
         return {"insight": out}
 
-    def make_draft(engine: Any, tenant: str, user: str, ref: str, body: dict[str, Any], with_context: bool) -> dict[str, Any]:
+    def make_draft(engine: Any, tenant: str, user: str, ref: str, body: dict[str, Any], with_context: bool,
+                   inline: bool = False) -> dict[str, Any]:
         from semantic_layer.runtime.llm_queue import INTERACTIVE
 
         st = settings()
-        t = svc.destek().ticket(ref)
+        # Masa paneli talebin metnini gövdede getirebilir (masa REST'i ayarlı değilse de taslak çalışsın); metin
+        # köprüde saklanmaz, modele maskeli gider. Portal ucunda metin her zaman masadan okunur.
+        if inline and (str(body.get("subject") or "").strip() or str(body.get("description") or "").strip()):
+            t = {"name": ref, **{k: body.get(k) for k in ("subject", "description", "raised_by", "opening_date", "modified")}}
+        else:
+            t = svc.destek().ticket(ref)
         if not t:
             raise S.SupportError("Talep bulunamadı.", 404)
         ins = S.get_insight(engine, tenant, ref) or {}
@@ -648,7 +654,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         ref = str(body.get("ticket") or "").strip()
         if not ref:
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Talep numarası gerekli."})
-        return call(make_draft, engine, tenant, agent, ref, body, flag(agent, F_BAGLAM))
+        return call(make_draft, engine, tenant, agent, ref, body, flag(agent, F_BAGLAM), True)
 
     return svc
 

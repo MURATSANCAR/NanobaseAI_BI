@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { MessageSquareText } from 'lucide-react';
+import { HelpCircle, MessageSquareText } from 'lucide-react';
+import ReasonSheet from '../reason/ReasonSheet';
+import { reasonApi } from '../reason/api';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
@@ -41,6 +43,7 @@ function NoteSheet({ target, year, onClose }: { target: NoteTarget; year: number
 
 export default function BudgetTab({ year, canNote }: { year: number; canNote: boolean }) {
   const [target, setTarget] = useState<NoteTarget>(null);
+  const [why, setWhy] = useState<{ id: string; title: string } | null>(null);
   const q = useQuery({ queryKey: ['finance', 'budget', year], queryFn: () => financeApi.budget(year), enabled: ENGINE_ENABLED });
   if (q.isLoading) return <Loading />;
   if (q.error) return <Note tone="err">{errText(q.error, 'Bütçe okunamadı.')}</Note>;
@@ -129,6 +132,11 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
                   {a.not && <div className="mt-0.5 text-[11.5px] italic">“{a.not.metin}”</div>}
                 </div>
                 {a.kind === 'satis' && <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-bold ${TRACK['sapma' as TrackState].pill}`}>Satış</span>}
+                {(a.kind === 'satis' || a.kind === 'gider') && (
+                  <button type="button" className={`${btnGhost} !min-h-9 !px-2`} onClick={() => setWhy({ id: a.id, title: a.label ?? a.key })}>
+                    <HelpCircle aria-hidden className="h-4 w-4" />Neden?
+                  </button>
+                )}
                 {noteBtn(a.anahtar, a.label ?? a.key, a.not)}
               </li>
             ))}
@@ -136,6 +144,7 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
         )}
       </Panel>
       <NoteSheet target={target} year={year} onClose={() => setTarget(null)} />
+      <ReasonSheet target={why} load={reasonApi.finance} onClose={() => setWhy(null)} />
     </div>
   );
 }

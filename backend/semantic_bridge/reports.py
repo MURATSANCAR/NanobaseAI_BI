@@ -716,6 +716,7 @@ def delete_report(engine: sa.engine.Engine, tenant: str, ds: str, user: str, rid
     with engine.begin() as c:
         n = c.execute(REPORTS.delete().where(REPORTS.c.id == rid, *_scope(tenant, ds, user))).rowcount
     if n:
+        snapshot_path(rid).unlink(missing_ok=True)
         d = REPORT_DIR / rid
         for p in d.glob("*"):
             p.unlink(missing_ok=True)
@@ -828,6 +829,51 @@ def build_file(rid: str, title: str, fmt: str, columns: list[dict[str, Any]], ro
     return path
 
 
+# ------------------------------------------------------------------ önceki sonuç («ne değişti»)
+
+
+def snapshot_path(rid: str) -> Path:
+    """Önceki çalışmanın sonucu (kolonlar + satırlar, gzip JSON). Rapor klasörünün dışında: dosya temizliği silmesin."""
+    return REPORT_DIR / "_onceki" / f"{rid}.json.gz"
+
+
+def load_snapshot(rid: str) -> Optional[dict[str, Any]]:
+    import gzip
+
+    p = snapshot_path(rid)
+    if not p.exists():
+        return None
+    try:
+        return json.loads(gzip.decompress(p.read_bytes()).decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def save_snapshot(rid: str, columns: list[dict[str, Any]], rows: list[dict[str, Any]], now: datetime) -> None:
+    import gzip
+
+    p = snapshot_path(rid)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps({"columns": columns, "records": rows, "at": now.isoformat()}, ensure_ascii=False, default=str)
+    tmp = p.with_suffix(".tmp")
+    tmp.write_bytes(gzip.compress(data.encode("utf-8")))
+    tmp.replace(p)
+
+
+def change_of(rid: str, title: str, columns: list[dict[str, Any]], rows: list[dict[str, Any]],
+              explain: Optional[Callable[[dict[str, Any], str], dict[str, Any]]]) -> Optional[dict[str, Any]]:
+    """Önceki sonuçla fark (kodla) + anlatım (Zeki AI ya da kural maddeleri). Hesaplanamazsa None; rapor yine gider."""
+    from semantic_bridge import result_diff
+
+    try:
+        d = result_diff.diff(load_snapshot(rid), {"columns": columns, "records": rows})
+        note = explain(d, title) if explain else {"maddeler": result_diff.bullets(d), "kaynak": "kural", "neden": None}
+        return {**note, "ilk": bool(d.get("ilk")), "degisti": bool(d.get("degisti")), "oncekiZaman": d.get("oncekiZaman")}
+    except Exception as e:  # noqa: BLE001
+        log.info("reports: %s farkı hesaplanamadı: %s", rid, e)
+        return None
+
+
 # ------------------------------------------------------------------ e-posta
 
 
@@ -886,8 +932,12 @@ def _esc(s: Any) -> str:
     return html.escape(str(s), quote=True)
 
 
+def change_label(change: dict[str, Any]) -> str:
+    return "Ne değişti · Zeki AI yorumu" if change.get("kaynak") == "zeki" else "Ne değişti · önceki rapora göre"
+
+
 def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]], rows: list[dict[str, Any]],
-                 now: datetime, link: str = "") -> EmailMessage:
+                 now: datetime, link: str = "", change: Optional[dict[str, Any]] = None) -> EmailMessage:
     """Özetli HTML mail + düz metin yedeği; Excel ek olarak eklenir (ek, çağıran tarafta)."""
     local = now.astimezone(_LOCAL)
     summary = mail_summary(columns, rows)
@@ -904,6 +954,9 @@ def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]],
     if summary["total"] is not None:
         text.append(f"Toplam {summary['totalLabel']}: {compact_money(summary['total'])}")
     text.append(f"Satır: {n_rows}")
+    items = [str(x) for x in ((change or {}).get("maddeler") or [])]
+    if items:
+        text += ["", change_label(change or {}) + ":"] + [f"  - {x}" for x in items]
     if sample:
         text += ["", f"İlk {len(sample)} satır:"]
         for r in sample:
@@ -932,6 +985,12 @@ def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]],
         + ('<td width="8" style="font-size:0;">&nbsp;</td>' if i < len(cards) - 1 else "")
         for i, (k, v) in enumerate(cards)
     )
+    change_html = ""
+    if items:
+        lis = "".join(f'<li style="margin:0 0 4px;">{_esc(x)}</li>' for x in items)
+        change_html = (
+            f'<div style="{font}font-size:13px;font-weight:600;color:#1d1b2c;margin:24px 0 6px;">{_esc(change_label(change or {}))}</div>'
+            f'<ul style="{font}font-size:13px;line-height:1.5;color:#1d1b2c;margin:0;padding-left:18px;">{lis}</ul>')
     table_html = ""
     if sample:
         head = "".join(
@@ -971,6 +1030,7 @@ def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]],
 <tr><td style="padding:24px 28px;">
 <div style="{font}font-size:14px;line-height:1.55;color:#1d1b2c;">Merhaba,<br>Raporunuz hazır, {_esc(path.suffix.lstrip('.').upper())} dosyası ekte.</div>
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:20px;"><tr>{card_html}</tr></table>
+{change_html}
 {table_html}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #f0eef6;padding-top:12px;" width="100%">{meta}</table>
 {button}
@@ -982,14 +1042,14 @@ def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]],
 
 
 def send_file(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]], rows: list[dict[str, Any]],
-              now: datetime, link: str = "") -> str:
+              now: datetime, link: str = "", change: Optional[dict[str, Any]] = None) -> str:
     to = rep.get("recipients") or []
     if not to:
         return "no_recipient"
     cfg = alerts_mod.smtp_settings()
     if not cfg:
         return "no_smtp"
-    msg = compose_mail(rep, path, columns, rows, now, link)
+    msg = compose_mail(rep, path, columns, rows, now, link, change)
     msg["From"] = cfg["sender"]
     msg["To"] = ", ".join(to)
     ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -1021,8 +1081,11 @@ Asker = Callable[[str], dict[str, Any]]
 Fetcher = Callable[[str], tuple]
 
 
+Explainer = Callable[[dict[str, Any], str], dict[str, Any]]
+
+
 def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetcher, *, manual: bool,
-               now: Optional[datetime] = None, link: str = "") -> dict[str, Any]:
+               now: Optional[datetime] = None, link: str = "", explain: Optional[Explainer] = None) -> dict[str, Any]:
     """Soruyu yeniden sorar, tüm satırları dosyaya yazar, gönderir; sonucu kayda işler."""
     now = now or _now()
     base = _row(engine, rid)
@@ -1041,7 +1104,12 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
         upd["last_db_json"] = json.dumps(db) if db else None
         columns, rows, dropped = apply_columns(rep["columns"], columns, rows)
         path = build_file(rid, rep["title"], rep["fmt"], columns, rows, now)
-        status = send_file(rep, path, columns, rows, now, link)
+        change = change_of(rid, rep["title"], columns, rows, explain)
+        status = send_file(rep, path, columns, rows, now, link, change)
+        try:
+            save_snapshot(rid, columns, rows, now)
+        except OSError as e:  # noqa: BLE001 — önceki sonuç yazılamazsa bir sonraki e-postada «ilk koşu» denir
+            log.info("reports: %s önceki sonucu yazılamadı: %s", rid, e)
         # Düzendeki bir kolon artık sonuçta yoksa dosya yine üretilir ama bu kayda yazılır.
         note = f"Not: şu kolonlar bu çalışmada sonuçta yoktu: {', '.join(dropped)}" if dropped else None
         upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=note)
@@ -1059,7 +1127,7 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
 
 
 def run_due(engine: sa.engine.Engine, tenant: str, ds: str, asker: Asker, fetcher: Fetcher, *,
-            now: Optional[datetime] = None, link: str = "") -> dict[str, Any]:
+            now: Optional[datetime] = None, link: str = "", explain: Optional[Explainer] = None) -> dict[str, Any]:
     now = now or _now()
     summary: dict[str, Any] = {"due": 0, "sent": 0, "produced": 0, "errors": []}
     with _due_lock:
@@ -1073,7 +1141,7 @@ def run_due(engine: sa.engine.Engine, tenant: str, ds: str, asker: Asker, fetche
 
             # Raporun sahibinin veri kapsamıyla (yetki Aşama C): kapsam dışına düşen rapor hata verir, eski veriyi göndermez.
             with access_mod.acting_as(r["username"]):
-                out = run_report(engine, r["id"], asker, fetcher, manual=False, now=now, link=link)
+                out = run_report(engine, r["id"], asker, fetcher, manual=False, now=now, link=link, explain=explain)
             if out["lastStatus"] == "failed":
                 summary["errors"].append({"id": r["id"], "user": r["username"], "error": out["lastError"]})
             else:

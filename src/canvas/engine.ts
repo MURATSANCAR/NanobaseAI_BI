@@ -115,6 +115,8 @@ export type AskAnswer = DbTiming & {
   interpretations?: AnswerInterpretation[];
   /** Boş cevapta dönem verinin bittiği günden sonra kaldıysa: son gün ve sorunun o döneme kurulmuş hâli. */
   dataEnd?: { lastDay: string | null; note: string; suggestion: { question: string; start: string; end: string } | null } | null;
+  /** «Neden?»: ölçü katalogda toplanabilir bir satış satırı ölçüsü ve soruda dönem varsa `ok`; değilse nedeni. */
+  neden?: { ok: boolean; neden?: string; olcu?: string; birim?: string; bas?: string; bit?: string } | null;
 };
 
 /** Belirsiz bir kelimenin seçilen anlamı. */
@@ -374,7 +376,28 @@ export function annotate(tablePattern: string, column: string | null, text: stri
 /* Uyarılar — kural bir sorudur, kontrolü sunucu yapar                  */
 /* ------------------------------------------------------------------ */
 
-export type AlertCondition = 'gt' | 'gte' | 'lt' | 'lte';
+/** `olagandisi`: eşik yerine beklenen aralık (geçmiş 24 ayın aynı penceresi); eşik kolonu hassasiyettir (k). */
+export type AlertCondition = 'gt' | 'gte' | 'lt' | 'lte' | 'olagandisi';
+
+/** Beklenen aralık (kurala göre; model yok). `ok: false` ise nedeni yazılıdır, aralık uydurulmaz. */
+export type AlertRange = {
+  ok: boolean;
+  neden?: string;
+  alt?: number;
+  merkez?: number;
+  ust?: number;
+  yontem?: 'mevsimsel' | 'medyan';
+  nokta?: number;
+  deger?: number;
+  disinda?: boolean;
+  donem?: string;
+  gun?: string;
+};
+
+export type AlertSuggestion = AlertRange & {
+  oneri?: { esik: number; gerekce: string; alt: number; ust: number; etiket: string } | null;
+  kaynak?: { sql?: Array<{ ad: string; sql: string }> };
+};
 
 export type AlertRule = {
   id: string;
@@ -398,6 +421,8 @@ export type AlertRule = {
   last_notify: 'sent' | 'failed' | 'no_smtp' | 'no_recipient' | null;
   /** Son ölçümde değerin veritabanından gelme süresi. */
   last_db?: DbTiming | null;
+  /** Günde bir hesaplanan beklenen aralık. */
+  expected?: AlertRange | null;
 };
 
 export type AlertEmail = { configured: boolean; sender: string | null };
@@ -450,6 +475,9 @@ export const alertsApi = {
       `/api/v1/alerts/check${id ? `?id=${encodeURIComponent(id)}` : ''}`,
       {},
     ),
+  /** Sorunun geçmişinden beklenen aralık ve koşula göre eşik önerisi (kurala göre). */
+  suggest: (question: string, condition: AlertCondition) =>
+    send<AlertSuggestion>('POST', '/api/v1/alerts/suggest', { question, condition }, 300_000),
 };
 
 /* ------------------------------------------------------------------ pano */

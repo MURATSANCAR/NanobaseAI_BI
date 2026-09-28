@@ -278,6 +278,32 @@ WHERE L.CANCELLED = 0 AND F.CANCELLED = 0 AND F.TRCODE <> 1 AND LEFT(A.CODE, 3) 
 GROUP BY CONVERT(date, L.DATE_)""".strip()
 
 
+def cash_flows_daily_sql(firm: str, start: date, end: date) -> str:
+    """Olasılıklı nakit bandının geçmişi: kasa + banka (100, 102) gün gün **müşteri tahsilatı** (aynı fişte 120 satırı
+    olan girişler) ve **satıcı ödemesi** (aynı fişte 320 satırı olan çıkışlar). Çek/senet tahsili ve ödemesi (101/103
+    karşılıklı fişler) bu serilere girmez: onlar vadesi belli kalemdir, tabloda kuraldan gelir. Açılış fişi hariç."""
+    return f"""
+-- Nakit bandı geçmişi: 100/102 hareketi, karşı tarafı 120 (tahsilat) ya da 320 (ödeme) olan fişlerden.
+WITH K AS (
+  SELECT L.ACCFICHEREF AS ref,
+    MAX(CASE WHEN LEFT(A.CODE, 3) = '120' THEN 1 ELSE 0 END) AS musteri,
+    MAX(CASE WHEN LEFT(A.CODE, 3) = '320' THEN 1 ELSE 0 END) AS satici
+  FROM dbo.LG_{firm}_01_EMFLINE AS L
+  JOIN dbo.LG_{firm}_EMUHACC AS A ON A.LOGICALREF = L.ACCOUNTREF
+  WHERE L.CANCELLED = 0 AND L.DATE_ >= '{_ymd(start)}' AND L.DATE_ < '{_ymd(end)}' AND LEFT(A.CODE, 3) IN ('120', '320')
+  GROUP BY L.ACCFICHEREF)
+SELECT CONVERT(date, L.DATE_) AS gun,
+  SUM(CASE WHEN K.musteri = 1 THEN L.DEBIT ELSE 0 END) AS tahsilat,
+  SUM(CASE WHEN K.satici = 1 THEN L.CREDIT ELSE 0 END) AS odeme
+FROM dbo.LG_{firm}_01_EMFLINE AS L
+JOIN dbo.LG_{firm}_01_EMFICHE AS F ON F.LOGICALREF = L.ACCFICHEREF
+JOIN dbo.LG_{firm}_EMUHACC AS A ON A.LOGICALREF = L.ACCOUNTREF
+JOIN K ON K.ref = L.ACCFICHEREF
+WHERE L.CANCELLED = 0 AND F.CANCELLED = 0 AND F.TRCODE <> 1 AND LEFT(A.CODE, 3) IN ('100', '102')
+  AND L.DATE_ >= '{_ymd(start)}' AND L.DATE_ < '{_ymd(end)}'
+GROUP BY CONVERT(date, L.DATE_)""".strip()
+
+
 def fifo_due_sql(firm: str, year: int, asof: date, *, payable: bool) -> str:
     """Açık kalemlerin vadeye göre dağılımı (FIFO yaklaşımı; bilgi paketindeki yaşlandırma sorgusu, `GETDATE()`
     yerine veri son günüyle). Logo'da ödeme kapama kullanılmadığı için carinin net bakiyesi en yeni vade

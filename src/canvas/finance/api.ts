@@ -192,8 +192,25 @@ export type Cash = Freshness & {
   kalemler?: CashLine[];
   haftalar?: CashWeek[];
   acikHafta?: CashWeek | null;
+  /** Olasılıklı bant (tahmin): kesin kalemler kuraldan, tahsilat/ödeme p10–p90. Kantil yoksa `var: false`. */
+  bant?: CashBand;
   status: Status;
 };
+
+export type Quantiles = { p10: number; p50: number; p90: number };
+export type CashBand =
+  | {
+      var: true;
+      etiket: 'tahmin';
+      gecmisHafta: number;
+      not: string;
+      kesinKalemler: string[];
+      yerineGecen: string[];
+      enKotuAcik: { hafta: number; baslangic: string; kapanis: number } | null;
+      haftalar: Array<{ hafta: number; baslangic: string; kesin: number; tahsilat: Quantiles; odeme: Quantiles;
+        kapanis: { kotu: number; orta: number; iyi: number }; kuralKapanis: number }>;
+    }
+  | { var: false; neden: string };
 
 export type CashHistory = Freshness & {
   items: Array<{ run: string; runAt: string | null; hafta: number; baslangic: string; tahminNet: number; gercekNet: number; sapma: number }>;

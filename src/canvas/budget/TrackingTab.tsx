@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_ENABLED } from '../engine';
-import { Loading, Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
+import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
+import ReasonSheet from '../reason/ReasonSheet';
+import { reasonApi } from '../reason/api';
 import { Panel } from '../editorial/kit';
 import { DEPT, budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type GroupTrack, type Plan, type TrackState, type YearEnd } from './api';
 import { RatioBar, StatePill } from './parts';
@@ -103,6 +105,7 @@ function GroupTable({ title, rows, threshold }: { title: string; rows: GroupTrac
 function Deviations({ year, planId }: { year: number; planId: string }) {
   const [status, setStatus] = useState('acik');
   const [page, setPage] = useState(0);
+  const [why, setWhy] = useState<{ id: string; title: string } | null>(null);
   const q = useQuery({
     queryKey: ['budget', 'deviations', year, status, page],
     queryFn: () => budgetApi.deviations(year, { status, page }),
@@ -137,6 +140,7 @@ function Deviations({ year, planId }: { year: number; planId: string }) {
               <th className={`${th} text-right`}>Oran</th>
               <th className={th}>Kime gider</th>
               <th className={th}>İlk görülme</th>
+              <th className={th}><span className="sr-only">Neden</span></th>
             </tr>
           </thead>
           <tbody>
@@ -153,6 +157,13 @@ function Deviations({ year, planId }: { year: number; planId: string }) {
                 <td className={`${td} text-right font-mono tabular-nums`}>{fmtPct(d.ratio, 0)}</td>
                 <td className={`${td} text-[11.5px] text-canvas-muted`}>{d.modules.length ? d.modules.join(', ') : 'Bütçe sorumlusu'}</td>
                 <td className={`${td} whitespace-nowrap text-[11.5px] text-canvas-muted`}>{fmtDay(d.firstAt)}</td>
+                <td className={td}>
+                  {(d.kind === 'satis' || d.kind === 'gider') && (
+                    <button type="button" className={`${btnGhost} !min-h-9 !px-2.5`} onClick={() => setWhy({ id: d.id, title: d.label ?? d.key })}>
+                      Neden?
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -165,6 +176,7 @@ function Deviations({ year, planId }: { year: number; planId: string }) {
           <button type="button" className="min-h-9 rounded-lg bg-slate-100 px-3" disabled={(page + 1) * q.data.pageSize >= q.data.total} onClick={() => setPage(page + 1)}>Sonraki</button>
         </div>
       )}
+      <ReasonSheet target={why} load={reasonApi.budget} onClose={() => setWhy(null)} />
     </Panel>
   );
 }

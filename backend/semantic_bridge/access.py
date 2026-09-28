@@ -734,6 +734,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
+    # Fark ayrıştırma («Neden?»): sohbet cevabı, pano kartı ve uyarı ekranı aynı ucu kullanır.
+    ("/api/v1/fark/", frozenset({page("genel-bakis"), page("panolar"), page("uyarilar")})),
     ("/api/v1/board/run-due", SYSTEM),
     ("/api/v1/board", frozenset({page("panolar"), page("genel-bakis")})),
     # Kapak arşivi kendi sayfasıdır; stüdyoda kapak tarzı seçen de örneklere bakabilsin diye ikisi.

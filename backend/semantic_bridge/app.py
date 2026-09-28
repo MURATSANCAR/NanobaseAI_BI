@@ -1279,6 +1279,8 @@ class Runtime:
             "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
             # Boş cevapta dönem veriden sonra kaldıysa: son gün ve aynı sorunun o güne kurulmuş hâli.
             "dataEnd": data_end,
+            # «Neden?»: ölçü katalogda toplanabilir bir satış satırı ölçüsü ve soruda dönem varsa ayrıştırılabilir.
+            "neden": _variance_hint(sq),
             "columns": result["columns"],
             "records": shown,
             "shownRows": len(shown),
@@ -1657,6 +1659,17 @@ class Runtime:
 
 
 # ---------------------------------------------------------------------- FastAPI
+
+def _variance_hint(sq: Any) -> dict[str, Any]:
+    """Cevabın «Neden?» ipucu (SQL koşmaz). Hata cevabı düşürmez."""
+    try:
+        from semantic_bridge import variance
+
+        return variance.hint(sq)
+    except Exception as e:  # noqa: BLE001
+        log.info("variance hint failed: %s", e)
+        return {"ok": False, "neden": "Ayrıştırma ipucu hesaplanamadı."}
+
 
 def _year_slot(year: int) -> TemporalSlot:
     from datetime import date
@@ -3068,9 +3081,38 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return r.run_sql(rule["sql"], 5)
         return run
 
+    def _range_k() -> float:
+        try:
+            return min(5.0, max(1.0, float((admin_mod.conf("ALERT_RANGE_K", "2") or "2").replace(",", "."))))
+        except ValueError:
+            return 2.0
+
+    def _alert_expect(r: Runtime):
+        """Kuralın sorusu için beklenen aralık (geçmiş 24 ayın aynı penceresi; model yok)."""
+        from semantic_bridge import variance, variance_api
+
+        def expect(rule: dict[str, Any]) -> dict[str, Any]:
+            if not (rule.get("question") or "").strip():
+                return {"ok": False, "neden": "Kural soru değil SQL; beklenen aralık sorudan hesaplanır."}
+            k = float(rule["threshold"]) if rule.get("condition") == "olagandisi" else _range_k()
+            return variance.measure_range(variance_api.runner_for(r), r.resolver.resolve(rule["question"]), k=k)
+        return expect
+
+    def _alert_reason(r: Runtime):
+        """Bildirimdeki «neden»: geçen yılın aynı dönemine göre kanal/cari/kitap katkısı + 2–3 cümle (sayı denetimli)."""
+        from semantic_bridge import variance, variance_api
+        from semantic_layer.runtime.llm_queue import NORMAL
+
+        def reason(rule: dict[str, Any]) -> dict[str, Any]:
+            res = variance.for_question(variance_api.runner_for(r), r.resolver.resolve(rule["question"]))
+            res["anlatim"] = variance.explain(res, rt=r, module="fark", priority=NORMAL)
+            return res
+        return reason
+
     def _alert_check(r: Runtime, engine: Any, tenant: str, ds: str, only: Optional[str] = None) -> dict[str, Any]:
         return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
-                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=only)
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=only,
+                                expect=_alert_expect(r), reason=_alert_reason(r))
 
     def _alert_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": str(e)})
@@ -3154,7 +3196,31 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if id and owner is not None and alerts_mod.get_rule(engine, tenant, ds, id, owner) is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
         return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
-                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner)
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner,
+                                expect=_alert_expect(r), reason=_alert_reason(r))
+
+    @app.post("/api/v1/alerts/suggest")
+    def alerts_suggest(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Kural düzenlerken: sorunun geçmişinden beklenen aralık ve koşula göre eşik önerisi (kurala göre; model yok).
+        Hesaplanamazsa nedeni döner, öneri uydurulmaz."""
+        from semantic_bridge import variance, variance_api
+
+        _require_caller(request)
+        _alert_owner(request)
+        q = " ".join(str(body.get("question") or "").split())
+        if not q:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": "Önce kuralın sorusunu yazın."})
+        cond = str(body.get("condition") or "gt").strip().lower()
+        r = rt()
+        try:
+            rng = variance.measure_range(variance_api.runner_for(r), r.resolver.resolve(q[:2000]), k=_range_k())
+        except Exception as e:  # noqa: BLE001
+            from semantic_bridge import access as access_mod
+
+            if isinstance(e, access_mod.DataScopeError):
+                return {"ok": False, "neden": str(e)}
+            return {"ok": False, "neden": f"Geçmiş okunamadı: {str(e)[:200]}"}
+        return {**rng, "oneri": variance.suggest_threshold(rng, cond) if rng.get("ok") else None}
 
     @app.get("/api/v1/alerts/{rule_id}/events")
     def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
@@ -3240,6 +3306,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
         return out
 
+    @app.post("/api/v1/board/cards/{card_id}/change-note")
+    def board_change_note(card_id: str, request: Request) -> dict[str, Any]:
+        """«Ne değişti»: kartın son farkı (kodla bulunmuş) Zeki AI ile madde madde; metindeki her sayı denetlenir."""
+        from semantic_bridge import result_diff
+
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _board()
+        out = board_mod.change_note(engine, tenant, ds, user, card_id,
+                                    lambda d, title: result_diff.explain(d, title, rt=r, module="fark"))
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
+        return out
+
     @app.get("/api/v1/board/export.xlsx")
     def board_export(request: Request, ids: str = ""):
         """Kartlar tek Excel kitabında: özet + kart başına sayfa. SQL burada tam koşar, tavan yok."""
@@ -3279,6 +3359,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r, engine, tenant, ds = _board()
         return board_mod.run_due(engine, tenant, ds, _board_runner(r))
 
+    # ------------------------------------------------------------------ fark ayrıştırma («Neden?»)
+    from semantic_bridge import variance_api as variance_api_mod
+
+    variance_api_mod.register(app, rt, _require_caller, _board_user, admin_mod.is_admin, admin_mod.audit)
+
     # ------------------------------------------------------------------ planlı raporlar
     # Plan bir sorudur; dosya sunucuda üretilir, SMTP varsa gönderilir, yoksa ekrandan indirilir.
     from fastapi.responses import FileResponse
@@ -3303,6 +3388,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return fetch
 
     _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status", "columns"]
+
+    def _report_explainer(r: Runtime):
+        """E-postadaki «ne değişti» maddeleri: fark kodla; anlatım Zeki AI ile (sayı denetimli). Yönetim ekranında
+        REPORT_CHANGE_NOTE=0 ise model çağrılmaz, kural maddeleri yazılır."""
+        from semantic_bridge import result_diff
+
+        if admin_mod.conf("REPORT_CHANGE_NOTE", "1") == "0":
+            return None
+        return lambda d, title: result_diff.explain(d, title, rt=r, module="fark")
 
     def _report_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_REPORT", "message": str(e)})
@@ -3438,7 +3532,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if reports_mod.get_report(engine, tenant, ds, user, rid) is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
         out = reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
-                                     link=admin_mod.conf("ALERT_LINK"))
+                                     link=admin_mod.conf("ALERT_LINK"), explain=_report_explainer(r))
         admin_mod.audit(engine, user, "run", "report", rid, out.get("title"),
                         {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError")})
         return out
@@ -3459,7 +3553,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         r, engine, tenant, ds = _reports()
         return reports_mod.run_due(engine, tenant, ds, _report_asker(r), _report_fetcher(r),
-                                   link=admin_mod.conf("ALERT_LINK"))
+                                   link=admin_mod.conf("ALERT_LINK"), explain=_report_explainer(r))
 
     # ------------------------------------------------------------------ kişi tercihleri
     # Kişinin ekran düzeni gibi kendi alanları: AD hesabına bağlı, sunucuda. Tarayıcı yalnız önbellek tutar.

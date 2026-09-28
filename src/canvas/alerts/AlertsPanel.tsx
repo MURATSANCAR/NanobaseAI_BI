@@ -9,7 +9,9 @@ import {
   EngineAuthError,
   type AlertCondition,
   type AlertEmail,
+  type AlertRange,
   type AlertRule,
+  type AlertSuggestion,
 } from '../engine';
 
 /**
@@ -19,7 +21,7 @@ import {
  */
 
 const nf = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
-const COND: Record<AlertCondition, string> = { gt: '>', gte: '≥', lt: '<', lte: '≤' };
+const COND: Record<AlertCondition, string> = { gt: '>', gte: '≥', lt: '<', lte: '≤', olagandisi: 'olağan dışı · hassasiyet' };
 const QUERY_KEY = ['zeki-uyarilar'];
 
 export type RuleDraft = { question: string; condition: AlertCondition; threshold: number | null };
@@ -77,8 +79,14 @@ export function parseRule(text: string): RuleDraft {
   return { question: question || t, condition: below ? 'lt' : 'gt', threshold };
 }
 
-const breached = (v: number, c: AlertCondition, t: number) =>
-  c === 'gt' ? v > t : c === 'gte' ? v >= t : c === 'lt' ? v < t : v <= t;
+/** Olağan dışı kuralda karar sunucudaki beklenen aralığa göredir; önizlemede aralık yoksa «sakin» sayılmaz, null döner. */
+const breached = (v: number, c: AlertCondition, t: number, range?: AlertRange | null): boolean | null =>
+  c === 'olagandisi'
+    ? range?.ok && range.alt != null && range.ust != null ? v < range.alt || v > range.ust : null
+    : c === 'gt' ? v > t : c === 'gte' ? v >= t : c === 'lt' ? v < t : v <= t;
+
+/** «80 – 120» */
+const rangeText = (r: AlertRange) => `${nf.format(r.alt ?? 0)} – ${nf.format(r.ust ?? 0)}`;
 
 const asNumber = (v: unknown): number | null => {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
@@ -209,6 +217,26 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
   const [probe, setProbe] = useState<{ value: number; column: string; sql?: string } | null>(null);
   const [probeErr, setProbeErr] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
+  /** Beklenen aralık ve eşik önerisi (kurala göre, geçmiş 24 ayın aynı penceresi). */
+  const [sug, setSug] = useState<AlertSuggestion | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [sugErr, setSugErr] = useState<string | null>(null);
+  const anomaly = condition === 'olagandisi';
+
+  const suggest = async () => {
+    const q = question.trim();
+    if (!q) return;
+    setSuggesting(true);
+    setSug(null);
+    setSugErr(null);
+    try {
+      setSug(await alertsApi.suggest(q, condition));
+    } catch (e) {
+      setSugErr(errText(e) ?? 'Öneri alınamadı.');
+    } finally {
+      setSuggesting(false);
+    }
+  };
 
   useEffect(() => {
     if (!draft) return;
@@ -299,12 +327,12 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
       {probe && (
         <div className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
           Şu anki değer <strong className="font-mono tabular-nums">{nf.format(probe.value)}</strong>
-          {thr != null && (
+          {thr != null && breached(probe.value, condition, thr, sug) !== null && (
             <>
               {' '}
               · kural şimdi{' '}
-              <strong className={breached(probe.value, condition, thr) ? 'text-red-700' : 'text-emerald-700'}>
-                {breached(probe.value, condition, thr) ? 'tetiklenirdi' : 'sakin kalırdı'}
+              <strong className={breached(probe.value, condition, thr, sug) ? 'text-red-700' : 'text-emerald-700'}>
+                {breached(probe.value, condition, thr, sug) ? 'tetiklenirdi' : 'sakin kalırdı'}
               </strong>
             </>
           )}
@@ -312,28 +340,80 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
         </div>
       )}
 
-      <div className="grid grid-cols-[140px_1fr] gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]">
         <div>
           <label className={label} htmlFor="kural-kosul">
             Koşul
           </label>
-          <select id="kural-kosul" value={condition} onChange={(e) => setCondition(e.target.value as AlertCondition)} className={field}>
+          <select
+            id="kural-kosul"
+            value={condition}
+            onChange={(e) => {
+              const c = e.target.value as AlertCondition;
+              setCondition(c);
+              setSug(null);
+              // Olağan dışı kuralda eşik kolonu hassasiyettir: 2 önerilir.
+              if (c === 'olagandisi') setThreshold('2');
+              else if (anomaly) setThreshold('');
+            }}
+            className={field}
+          >
             <option value="gt">büyükse (&gt;)</option>
             <option value="gte">büyük ya da eşitse (≥)</option>
             <option value="lt">küçükse (&lt;)</option>
             <option value="lte">küçük ya da eşitse (≤)</option>
+            <option value="olagandisi">olağan dışıysa (beklenen aralık)</option>
           </select>
         </div>
         <div>
           <label className={label} htmlFor="kural-esik">
-            Eşik <span className="font-normal">örn. 5.000.000 ya da 5 milyon</span>
+            {anomaly ? (
+              <>Hassasiyet <span className="font-normal">1–5; aralık = medyan ± hassasiyet × yayılım (2 önerilir)</span></>
+            ) : (
+              <>Eşik <span className="font-normal">örn. 5.000.000 ya da 5 milyon</span></>
+            )}
           </label>
-          <input id="kural-esik" value={threshold} onChange={(e) => setThreshold(e.target.value)} className={field} />
+          <input id="kural-esik" inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} className={field} />
           {threshold && thr == null && <div className="mt-1 text-[11px] font-semibold text-red-600">Sayı anlaşılamadı.</div>}
+          {anomaly && thr != null && (thr < 1 || thr > 5) && <div className="mt-1 text-[11px] font-semibold text-red-600">Hassasiyet 1 ile 5 arasında olmalı.</div>}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-bold">{anomaly ? 'Beklenen aralık' : 'Önerilen eşik'}</span>
+          <button
+            type="button"
+            onClick={suggest}
+            disabled={suggesting || !question.trim()}
+            className="flex min-h-9 items-center gap-1.5 rounded-lg bg-white px-2.5 text-[12px] font-extrabold text-canvas-ink shadow-sm disabled:opacity-50"
+          >
+            {suggesting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Geçmişten hesapla
+          </button>
+        </div>
+        {sugErr && <div className="mt-1 text-amber-900">{sugErr}</div>}
+        {sug && !sug.ok && <div className="mt-1 text-canvas-muted">{sug.neden}</div>}
+        {sug?.ok && (
+          <div className="mt-1 space-y-1">
+            <div>
+              Beklenen aralık <strong className="font-mono tabular-nums">{rangeText(sug)}</strong>
+              <span className="text-canvas-muted"> · {sug.yontem === 'mevsimsel' ? 'geçmiş 24 ayın aynı penceresi, mevsim ayıklanarak' : 'son 12 ayın aynı penceresinin medyanı'} ({sug.nokta} nokta)</span>
+            </div>
+            {!anomaly && sug.oneri && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-slate-200/70 px-1.5 py-0.5 text-[11px] font-bold">{sug.oneri.etiket}</span>
+                <span>Eşik <strong className="font-mono tabular-nums">{nf.format(sug.oneri.esik)}</strong> ({sug.oneri.gerekce})</span>
+                <button type="button" className="min-h-9 rounded-lg px-2 text-[12px] font-extrabold text-canvas-violet" onClick={() => setThreshold(nf.format(sug.oneri!.esik))}>
+                  Kullan
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={label} htmlFor="kural-ad">
             Kural adı <span className="font-normal">boş kalırsa soru kullanılır</span>
@@ -362,7 +442,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
         </span>
         <button
           type="button"
-          disabled={!probe || thr == null || save.isPending}
+          disabled={!probe || thr == null || (anomaly && (thr < 1 || thr > 5)) || save.isPending}
           onClick={() => save.mutate()}
           className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-canvas-coral to-canvas-violet px-4 py-2 text-[12.5px] font-extrabold text-white shadow-md disabled:opacity-40"
         >
@@ -454,6 +534,14 @@ function RuleRow({ rule, onChanged, canEdit }: { rule: AlertRule; onChanged: () 
             <strong className="font-mono tabular-nums text-canvas-ink">{rule.last_value != null ? nf.format(rule.last_value) : '—'}</strong>{' '}
             · koşul {COND[rule.condition]} <span className="font-mono tabular-nums">{nf.format(rule.threshold)}</span>
           </span>
+          {rule.expected?.ok && (
+            <span title="Geçmiş dönemlerin aynı penceresinden, kurala göre">
+              Beklenen <span className="font-mono tabular-nums">{rangeText(rule.expected)}</span>
+              {rule.last_value != null && breached(rule.last_value, 'olagandisi', 0, rule.expected) && (
+                <strong className="ml-1 text-amber-800">beklenenin dışında</strong>
+              )}
+            </span>
+          )}
           <span>Son kontrol {relative(rule.last_checked_at)}</span>
           <span>{rule.recipients.length ? rule.recipients.join(', ') : 'alıcı yok'}</span>
           {rule.last_notify && rule.last_notify !== 'no_recipient' && <span>{NOTIFY[rule.last_notify] ?? rule.last_notify}</span>}

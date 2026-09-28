@@ -62,6 +62,47 @@
 
 - **Sorun (kullanıcı):** sınama tuşları «yok ya da çalışmıyor». Sebep: istek hata verirse ekranda hiçbir şey çıkmıyordu (yalnız başarılı cevap gösteriliyordu); kaydedilmemiş değişiklik varken tuş açıklamasız kapalıydı; GEO grubunda tuş yoktu; SEO denemesi yalnız T-soft + Search Console'a bakıyordu.
 - **Düzeltme:** sonuç üstte «✓ Başarılı» (yeşil) ya da «✕ Hata» (kırmızı) + saat/süre; istek hatası da kırmızı yazılır. Değişiklik varken tuş «Kaydet ve sına» olur. `seo_geo/checks.py`: T-soft, Search Console, GA4, Google API anahtarı (CrUX), YouTube, Bing, IndexNow (site kökündeki anahtar dosyası), SerpAPI (hesap, arama harcamaz), Cloudflare (token + zone) satır satır; GEO: Gemini/ChatGPT/Claude model listesi (soru sormaz), Perplexity'de ücretsiz doğrulama olmadığından yalnız «girilmiş». Girilmeyen «Girilmemiş» (gri), grubun sonucu girilmiş olanların hepsi başarılıysa yeşil. Anahtar değeri hiçbir mesaja yazılmaz (test). `AdminCheck.parts`.
+## 2026-09-28 — Zeki AI öneri 4–8: «Neden?», «ne değişti», beklenen aralık, nakit bandı, destek olguları (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+Dal `worktree-agent-a257ca8a45ea8d26c`, ortak yapı taşları dalının (`worktree-agent-abfd4d32d801440c7`, `9574731b`) üstünde.
+Sunucuya bağlanılmadı; Mac'te yalnız `py_compile` ve JSON.
+
+- **Neden:** `docs/analiz/ai-firsatlari/README.md` «en değerli 20» 4–8. Rakam SQL'den/koddan; model yalnız anlatır
+  (`zeki_text.interpret`, sayı denetimi; tutmazsa «Kurala göre» metin, ekranda «Zeki AI» etiketi yalnız model metninde).
+- **4 Fark ayrıştırma (`variance.py`):** ölçü sabit bir SQL değil, sorunun **katalogdaki** tanımı (formül + koşul +
+  varsayılan kapsam + değer filtreleri); böylece ayrıştırma toplamı sohbet cevabıyla aynı tanımdır. Karar: toplanamayan
+  ölçü (oran, ortalama, DISTINCT), STLINE/CLCARD/ITEMS dışına dayanan filtre, katalogsuz niteleyici ve dönemsiz soru
+  ayrıştırılmaz, neden yazılır (sessiz yaklaşık yok). Soru iki dönem anıyorsa en yeni dönem «şimdi». Karşı dönem veri
+  sonuna kırpılır (donmuş kopya/ay ortası tam ayla karşılaştırılmaz). Sohbet «Neden?»i kayıttaki çözümü (`queryId`,
+  konuşma bağlamı dahil; yalnız soran ya da yönetici) okur; pano ve uyarı soruyu bağlamsız çözer. Tavan yok: bütün
+  kırılımlar döner, ekran ilk 5'i gösterip «Tümü» açar. Bütçe sapması (M46/M45) için ayrı yol: satışta kitap katkısı
+  hedefe göre, kanal/cari katkısı geçen yılın aynı **tamamlanmış** aylarına göre M45 tablolarından (kanal bütçesi yok;
+  karşılaştırma tabanı her boyutta yazılı), giderde ay ay aşım.
+- **5 Ne değişti (`result_diff.py`):** sayı kolonu ölçü, diğerleri anahtar; tek satır KPI. Pano: fark sonuçla birlikte
+  saklanır; sonuç aynı gelirse son değişim korunur («son değişim» zamanı yazılı). Anlatım bir kez üretilip saklanır.
+  Planlı rapor: önceki sonuç rapor klasörünün dışında (`_onceki/`, dosya temizliği silmesin), e-postada «Ne değişti ·
+  Zeki AI yorumu» ya da «· önceki rapora göre»; `REPORT_CHANGE_NOTE=0` modeli kapatır.
+- **6 Beklenen aralık:** mevsim yıllık oranla ayıklanır (v_k / v_{k+12}); ≥ 12 oran yoksa son 12 ayın medyanı; o da
+  yoksa aralık yok. Günde bir hesaplanır (ilk kontrol turu kural başına bir günlük geçmiş sorgusu koşar — ölçülecek).
+  «Olağan dışı» kural aralık yoksa **hata** olur, tahmin etmez. Eşik önerisi «Kurala göre öneri» (model yok).
+  Karar: tahmin servisi (zaman serisi) ilk sürümde uyarıda kullanılmadı — kuralın penceresi (ör. ay başından bugüne)
+  servisin aylık serisine oturmuyor; mevsimsel medyan±MAD aynı pencereyle karşılaştırır.
+- **7 Nakit bandı:** vadesi belli kalemler (çek/senet, sözleşme ödemesi, vergi) kuraldan; FIFO yaklaşımlı alacak, CRM
+  onay bekleyen ve satıcı borcu yerine geçmiş 104 haftanın gerçekleşen müşteri tahsilatı (100/102 borç, fişte 120) ve
+  satıcı ödemesi (100/102 alacak, fişte 320) tahmini. Haftalık aralıklar toplanır (temkinli, ekranda yazılı). Servis
+  haftalık seride `calendar: False` ile çağrılır — **ölçülecek** (servis frekans varsaymıyorsa sorun yok). Servis ya da
+  kantil yoksa bant çizilmez.
+- **8 Destek taslağı:** M51 olgularına sipariş tutarı, kargo durumu (teslim tarihi/iade durumu/irsaliye tarihi
+  alanından; yorum değil), varış şubesi, carinin Logo'daki son satış faturası. Yer tutucu + `fill_draft` sayı denetimi
+  aynı; `apps/destek`'e dokunulmadı; masa paneli talep metnini gövdede gönderebilir.
+- **Açık / ölçülecek:** katalog net ciro formülünün kabuldeki doğrudan SQL ile birebirliği (R1; LINETYPE koşulu katalogda
+  varsayılan kapsam mı?), fiziksel yeniden yazımın CLCARD/ITEMS birleşimini yıl kopyasında doğru bağladığı (R3), tahmin
+  servisinin haftalık seri davranışı, ilk kontrol turunun süresi. Ortak «sorgu bilgisi» (`provenance`/`SqlInfo`) başka
+  ajanda; buradaki uçlar tam SQL'i `kaynak.sql`'de döndürüyor, `ReasonPanel` şimdilik kendi «Sorgu bilgisi» katlamasını
+  gösteriyor — ortak bileşen gelince ona bağlanmalı.
+- **Sunucuda kalan:** `scripts/acceptance/zeki-fark/check.sh` (pytest `test_zeki_fark.py` + etkilenen testler, tsc,
+  vitest, derleme), yan port köprüsüyle `kabul.py` (R1–R10), `temizlik.py`; nakit tablosunu yeniden kurup bandı gözle.
+
 ## 2026-09-28 — Zeki AI hemen-düzelt 1–5 (dalda; DOĞRULANAMADI — testler koordinatörde)
 
 - **Neden:** `docs/analiz/ai-firsatlari/README.md` «Hemen düzeltilecekler» 1–5 (KVKK, «rakamı model üretmez», dürüst

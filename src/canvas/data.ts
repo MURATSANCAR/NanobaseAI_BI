@@ -109,8 +109,9 @@ export function summarizeAlerts(
     proximity: active
       .filter((r) => r.state !== 'error')
       .map((r) => {
-        if (r.last_value == null || !Number.isFinite(r.threshold)) {
-          return { rule: r, pct: 0, distance: null };
+        // Olağan dışı kuralda eşik kolonu hassasiyettir (k); eşiğe uzaklık anlamsız.
+        if (r.last_value == null || !Number.isFinite(r.threshold) || r.condition === 'olagandisi') {
+          return { rule: r, pct: r.state === 'triggered' ? 100 : 0, distance: null };
         }
         const span = Math.abs(r.threshold) || 1;
         const distance = r.last_value - r.threshold;

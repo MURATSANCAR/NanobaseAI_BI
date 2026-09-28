@@ -326,4 +326,18 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = ctx(request)
         return call(B.deviations, engine, tenant, year, status=status, kind=kind, scope=scope, module=module, page=page)
 
+    @app.post("/api/v1/budget/deviations/{alert_id}/neden")
+    def budget_deviation_reason(alert_id: str, request: Request) -> dict[str, Any]:
+        """Sapma satırının nedeni: satışta kitap (hedefe göre) ve kanal/cari (geçen yılın aynı aylarına göre) katkısı,
+        giderde ay ay aşım; rakamlar bütçe/finans tablolarından, Zeki AI yalnız 2–3 cümle anlatır (sayı denetimli)."""
+        from semantic_bridge import variance as V
+
+        engine, tenant, _, _ = ctx(request)
+        try:
+            res = V.budget_reason(engine, tenant, alert_id)
+        except V.VarianceError as e:
+            raise HTTPException(status_code=404, detail={"code": "BUDGET", "message": str(e)}) from None
+        res["anlatim"] = V.explain(res, rt=rt(), module="butce")
+        return res
+
     return refresher

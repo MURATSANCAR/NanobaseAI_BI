@@ -8,6 +8,8 @@ import DbTimingBadge from '../DbTiming';
 import CardSql from './CardSql';
 import { useCan } from '../useAdmin';
 import AnswerFeedback from '../components/AnswerFeedback';
+import ReasonPanel from '../reason/ReasonPanel';
+import { reasonApi } from '../reason/api';
 import { questionParticle } from '../interpret';
 
 /**
@@ -656,6 +658,10 @@ function CanvasBody({
                 {d.main.timing && <DbTimingBadge timing={d.main.timing} className="mt-1.5" />}
                 <CardSql sql={d.main.sql} className="mt-2" />
                 {d.main.feedback && <AnswerFeedback key={d.main.feedback.queryId} queryId={d.main.feedback.queryId} className="mt-3" />}
+                {d.main.reason && (
+                  <ReasonPanel key={d.main.reason.queryId} className="mt-3" queryKey={['fark', 'cevap', d.main.reason.queryId]}
+                    load={(karsi) => reasonApi.forAnswer({ queryId: d.main.reason!.queryId, karsi })} />
+                )}
               </div>
 
               {/* Action Buttons */}
