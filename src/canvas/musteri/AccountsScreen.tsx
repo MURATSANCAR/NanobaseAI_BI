@@ -9,6 +9,7 @@ import { fmtDay, fmtShort } from '../field/api';
 import { musteriApi, type AccountQuery } from './api';
 import { AccountRow, SubNav } from './parts';
 import { RepPicker, RunNotes, useMusteriMeta } from './CustomersHome';
+import SqlInfo from '../components/SqlInfo';
 
 /** Cariler: kanal, bölge (il), temsilci, risk düzeyi, segment süzgeci ve arama; süzgeçler adres çubuğunda. Kolonlar kartta:
  *  son fatura, 12 ay net, değişim, risk ve nedeni. Sayfalama sunucuda; toplam sayı her zaman yazılır. */
@@ -149,6 +150,7 @@ export default function AccountsScreen() {
           <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[12px] text-canvas-muted">
             <span>
               {d.total.toLocaleString('tr-TR')} cari · son 12 ay {fmtShort(d.toplam.net12)} · yüksek risk ya da kayıp {d.toplam.riskli}
+              <SqlInfo k={d.kaynaklar} alan="total" label="Cari listesi" className="ml-0.5" />
             </span>
             {m?.me.canExport && (
               <a className={`${btnGhost} !min-h-9`} href={musteriApi.accountsCsvUrl(f)}>
@@ -162,7 +164,7 @@ export default function AccountsScreen() {
           ) : (
             <ul className={`grid grid-cols-1 gap-2 lg:grid-cols-2 ${list.isPlaceholderData ? 'opacity-60' : ''}`}>
               {d.items.map((a) => (
-                <AccountRow key={a.code} a={a} showRep={m?.me.canAll} />
+                <AccountRow key={a.code} a={a} showRep={m?.me.canAll} k={d.kaynaklar} />
               ))}
             </ul>
           )}

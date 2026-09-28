@@ -6,6 +6,7 @@ import { Block, Empty, FieldFrame, Stat } from '../field/parts';
 import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../field/api';
 import { musteriApi, type Meta } from './api';
 import { AccountRow, SubNav } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** M38 Müşteri ilişkileri — özet (ilk açılış). Kanal bazında aktif cari, son 12 ay değer, riskli cari, veri sağlığı puanı ve
  *  Logo kesim tarihi; altında «bu hafta bakılacak cariler» (risk × değer). Temsilci yalnız kendi portföyünü görür. */
@@ -74,12 +75,12 @@ export default function CustomersHome() {
       {o && m && (
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Stat label="Aktif cari" value={o.kpi.aktif.toLocaleString('tr-TR')} help={`${o.kpi.cari.toLocaleString('tr-TR')} cari listede`} />
-            <Stat label="Son 12 ay net" value={fmtShort(o.kpi.net12)} help={`Logo kesimine kadar`} />
-            <Stat label="Bu yıl net" value={fmtShort(o.kpi.netYil)} help={`1 Ocak – ${fmtDay(o.kesim)}`} />
-            <Stat label="Yüksek risk" value={String(o.kpi.riskli)} tone={o.kpi.riskli ? 'err' : undefined} />
-            <Stat label="Kayıp" value={String(o.kpi.kayip)} tone={o.kpi.kayip ? 'warn' : undefined} help={`Olağan aralığın ${m.rules.lostMultiple} katı, en az ${m.rules.lostMinDays} gün alımsız`} />
-            <Stat label="Veri sağlığı" value={o.kpi.saglik === null ? '—' : `${o.kpi.saglik.toLocaleString('tr-TR')} / 100`} help="Bulgusu olmayan etkin CRM carisi payı" />
+            <Stat label="Aktif cari" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Aktif cari" />} value={o.kpi.aktif.toLocaleString('tr-TR')} help={`${o.kpi.cari.toLocaleString('tr-TR')} cari listede`} />
+            <Stat label="Son 12 ay net" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Son 12 ay net" />} value={fmtShort(o.kpi.net12)} help={`Logo kesimine kadar`} />
+            <Stat label="Bu yıl net" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Bu yıl net" />} value={fmtShort(o.kpi.netYil)} help={`1 Ocak – ${fmtDay(o.kesim)}`} />
+            <Stat label="Yüksek risk" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Yüksek risk" />} value={String(o.kpi.riskli)} tone={o.kpi.riskli ? 'err' : undefined} />
+            <Stat label="Kayıp" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Kayıp" />} value={String(o.kpi.kayip)} tone={o.kpi.kayip ? 'warn' : undefined} help={`Olağan aralığın ${m.rules.lostMultiple} katı, en az ${m.rules.lostMinDays} gün alımsız`} />
+            <Stat label="Veri sağlığı" info={<SqlInfo k={o.kaynaklar} alan="kpi.saglik" label="Veri sağlığı puanı" />} value={o.kpi.saglik === null ? '—' : `${o.kpi.saglik.toLocaleString('tr-TR')} / 100`} help="Bulgusu olmayan etkin CRM carisi payı" />
           </div>
 
           <Block
@@ -87,10 +88,15 @@ export default function CustomersHome() {
             help="Yüksek risk ve kayıp düzeyindeki cariler, risk × değer sırasıyla. Nedenler kuraldan; puan bileşenleri aşağıda."
             action={
               o.bakilacakToplam > o.bakilacak.length ? (
+                <span className="flex items-center gap-1">
+                <SqlInfo k={o.kaynaklar} alan="bakilacakToplam" label="Bakılacak cariler" />
                 <Link className="text-[12px] font-extrabold text-canvas-violet hover:underline" to={`/musteri-iliskileri/cariler?risk=riskli${temsilci ? `&temsilci=${temsilci}` : ''}`}>
                   Tümü ({o.bakilacakToplam})
                 </Link>
-              ) : undefined
+                </span>
+              ) : (
+                <SqlInfo k={o.kaynaklar} alan="bakilacakToplam" label="Bakılacak cariler" />
+              )
             }
           >
             {o.bakilacak.length === 0 ? (
@@ -98,7 +104,7 @@ export default function CustomersHome() {
             ) : (
               <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {o.bakilacak.map((a) => (
-                  <AccountRow key={a.code} a={a} showRep={m.me.canAll} />
+                  <AccountRow key={a.code} a={a} showRep={m.me.canAll} k={o.kaynaklar} alan="bakilacak[]" />
                 ))}
               </ul>
             )}
@@ -110,11 +116,11 @@ export default function CustomersHome() {
                 <thead>
                   <tr>
                     <th className={th}>Kanal</th>
-                    <th className={`${th} text-right`}>Aktif cari</th>
-                    <th className={`${th} text-right`}>Son 12 ay net</th>
-                    <th className={`${th} text-right`}>Bu yıl net</th>
-                    <th className={`${th} text-right`}>Yüksek risk</th>
-                    <th className={`${th} text-right`}>Kayıp</th>
+                    <th className={`${th} text-right`}><InfoLabel k={o.kaynaklar} alan="kanallar" label="Aktif cari">Aktif cari</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={o.kaynaklar} alan="kanallar" label="Son 12 ay net">Son 12 ay net</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={o.kaynaklar} alan="kanallar" label="Bu yıl net">Bu yıl net</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={o.kaynaklar} alan="kanallar" label="Yüksek risk">Yüksek risk</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={o.kaynaklar} alan="kanallar" label="Kayıp">Kayıp</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -137,7 +143,7 @@ export default function CustomersHome() {
             </TableWrap>
           </Block>
 
-          <Block title="Aksiyonların sonucu" help="Yazılan aksiyondan sonraki 30 ve 90 günde carinin yeniden alım yapıp yapmadığı (Logo; pencere dolunca ölçülür).">
+          <Block title="Aksiyonların sonucu" action={<SqlInfo k={o.kaynaklar} alan="aksiyon" label="Aksiyon etkisi" />} help="Yazılan aksiyondan sonraki 30 ve 90 günde carinin yeniden alım yapıp yapmadığı (Logo; pencere dolunca ölçülür).">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Stat label="Aksiyon" value={String(o.aksiyon.toplam)} />
               <Stat label="30 günde alan" value={fmtPct(o.aksiyon.gun30.oran)} help={`${o.aksiyon.gun30.alan} / ${o.aksiyon.gun30.olgun} olgun`} />
@@ -147,7 +153,7 @@ export default function CustomersHome() {
           </Block>
 
           {seg.data && seg.data.items.length > 0 && (
-            <Block title="En değerli segmentler" help={seg.data.kural}>
+            <Block title="En değerli segmentler" help={seg.data.kural} action={<SqlInfo k={seg.data.kaynaklar} alan="items" label="Segmentler" />}>
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {seg.data.items.slice(0, 6).map((s) => (
                   <li key={s.id}>

@@ -8,6 +8,8 @@ import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '.
 import { Chips } from '../field/parts';
 import { fmtDay, fmtShort } from '../field/api';
 import { fmtChange, levelTone, musteriApi, type Account, type Action, type Level, type Meta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Müşteri ilişkileri ekranlarının ortak parçaları. Telefon önce (320/390 px): listeler kart, dokunma hedefleri en az
  *  44 px; hareket yalnız basma geri bildirimi (M30 kartlarıyla aynı). */
@@ -61,7 +63,7 @@ export function SubNav({ meta }: { meta: Meta | undefined }) {
 }
 
 /** Cari kartı: risk, unvan, değer ve değişim, nedenler; tamamı ayrıntıya götürür (tek dokunuş). */
-export function AccountRow({ a, showRep, trailing }: { a: Account; showRep?: boolean; trailing?: ReactNode }) {
+export function AccountRow({ a, showRep, trailing, k, alan = 'items[]' }: { a: Account; showRep?: boolean; trailing?: ReactNode; k?: Kaynaklar; alan?: string }) {
   return (
     <li className="flex items-stretch gap-2">
       <Link
@@ -90,6 +92,11 @@ export function AccountRow({ a, showRep, trailing }: { a: Account; showRep?: boo
         </div>
         <ChevronRight aria-hidden className="mt-2 h-4 w-4 shrink-0 text-canvas-muted" />
       </Link>
+      {k && (
+        <span className="flex shrink-0 items-start pt-3">
+          <SqlInfo k={k} alan={alan} row={a.code} label={`${a.ad || a.code}: değer ve risk`} />
+        </span>
+      )}
       {trailing}
     </li>
   );

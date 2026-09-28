@@ -260,6 +260,37 @@ def bayi(heavy: bool) -> None:
                 contract(f"bayi {path}", out, K.NOT_RAKAM)
 
 
+# ---------------------------------------------------------------- M38 müşteri ilişkileri
+
+@block("musteri")
+def musteri(heavy: bool) -> None:
+    from semantic_bridge import musteri_kaynak as K
+
+    st, o = http("/api/v1/musteri/overview", 600)
+    if not ok_or_skip("musteri /overview", st, o):
+        return
+    k = contract("musteri /overview", o, K.NOT_RAKAM)
+    got = run_all("musteri /overview", k, heavy)
+    rows = got.get("musteri.cariler")
+    if rows is not None:
+        total = sum(num(r.get("net_12ay")) for r in rows)
+        check("R musteri: son 12 ay net KPI = cari satırları toplamı", abs(total - num((o.get("kpi") or {}).get("net12"))) < 1,
+              f"tablo {total:,.2f} · kart {(o.get('kpi') or {}).get('net12')}")
+    for path in ("/api/v1/musteri/meta", "/api/v1/musteri/accounts", "/api/v1/musteri/actions", "/api/v1/musteri/health",
+                 "/api/v1/musteri/health/score-history", "/api/v1/musteri/segments"):
+        st, out = http(path, 600)
+        if ok_or_skip(f"musteri {path}", st, out):
+            k2 = contract(f"musteri {path}", out, K.NOT_RAKAM)
+            run_all(f"musteri {path}", {"sources": {sid: v for sid, v in (k2.get("sources") or {}).items()
+                                                    if v["connection"] == "portal"}}, heavy)
+    code = next((a["code"] for a in o.get("bakilacak") or []), None)
+    if code:
+        for path in (f"/api/v1/musteri/accounts/{code}", f"/api/v1/musteri/accounts/{code}/monthly"):
+            st, out = http(path, 300)
+            if ok_or_skip(f"musteri {path}", st, out):
+                contract(f"musteri {path}", out, K.NOT_RAKAM)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")

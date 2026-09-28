@@ -42,6 +42,17 @@ TITLES = {
     "crm.risk_gecmisi": "CRM carinin risk onay geçmişi",
     "logo.aylik_satis": "Logo cari × ay faturalı satış ve iade",
     "logo.aylik_odeme": "Logo cari × ay ödeme",
+    "crm.kullanici_eposta": "CRM kullanıcı kurum e-postası",
+    "crm.tum_kullanicilar": "CRM bütün kullanıcılar (etkin/kapalı)",
+    "crm.son_siparis": "CRM cari başına son sipariş",
+    "crm.cari_saglik": "CRM cari veri sağlığı kolonları",
+    "crm.kisiler": "CRM kişi kayıtları (izin, veri durumu)",
+    "crm.guvenlik": "CRM güvenlik taraması (yalnız kolon adı ve dolu satır sayısı)",
+    "crm.cari_sayisi": "CRM etkin cari sayısı",
+    "crm.kampanya": "CRM kampanya gönderimleri",
+    "logo.gunluk_satis": "Logo cari × gün faturalı satış ve iade",
+    "logo.aylik_cari": "Logo carinin aylık alımı",
+    "logo.cari_kodlari": "Logo bütün cari kodları",
 }
 
 F_YASLANDIRMA = ("Bakiye = yıl başından cari hareketi borç − alacak (müşteri carisi, kod 120…). Vadesi geçmiş (yaklaşık, "

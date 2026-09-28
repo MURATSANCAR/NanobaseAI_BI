@@ -25,7 +25,9 @@ from fastapi.responses import Response
 from semantic_bridge import field_sales as F
 from semantic_bridge import field_sales_sources as fs
 from semantic_bridge import musteri as M
+from semantic_bridge import musteri_kaynak as K
 from semantic_bridge import musteri_sources as src
+from semantic_bridge import provenance as PV
 from semantic_bridge.field_sales_sources import SourceError, day, guid, num, text
 from semantic_bridge.musteri import MusteriError
 
@@ -64,7 +66,9 @@ class Service:
         try:
             st = self.settings()
             t0 = time.monotonic()
-            data = M.read_all(self.source, st)
+            # Sorgu bilgisi: turda çalışan CRM/Logo metni tur kaydına yazılır (ekranda köken; cevaplardan ayıklanır).
+            with F.recording() as reads:
+                data = M.read_all(self.source, st)
             rows, info = M.build_accounts(data, st, F.last_visit_days(engine, tenant), M.previous_accounts(engine, tenant))
             M.write_accounts(engine, tenant, rows)
             M.write_segments(engine, tenant, M.segments_of(rows, info["asof"]))
@@ -73,7 +77,7 @@ class Service:
                 M.list_actions(engine, tenant), data["logo"]["daily"], kesim))
             info["health"] = self._health(engine, tenant, data, st)
             info["ms"] = int((time.monotonic() - t0) * 1000)
-            M.meta_set(engine, tenant, "run", info)
+            M.meta_set(engine, tenant, "run", {**info, "sorgular": reads})
             return {"ok": True, **{k: v for k, v in info.items() if k != "firms"}}
         finally:
             self._run.release()
@@ -381,7 +385,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         with engine.connect() as c:
             kanallar = sorted({r[0] for r in c.execute(kanal) if r[0]})
             bolgeler = sorted({r[0] for r in c.execute(bolge) if r[0]})
-        return {
+        out = {
             "me": {"username": user, "display": display, "admin": is_admin(user), "cari": my, "canAll": all_scope(user),
                    "canAction": flag(user, "ozellik:musteri.eylem-yaz"), "canMark": flag(user, "ozellik:musteri.bulgu-isaretle"),
                    "canSecurity": security(user), "canExport": flag(user, "ozellik:veri.disa-aktar"),
@@ -398,6 +402,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             "reps": M.reps(engine, tenant) if all_scope(user) else [],
             "kanallar": kanallar, "bolgeler": bolgeler, "zekiQuestions": ZEKI_QUESTIONS,
         }
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, user, st, out))
 
     @app.post(f"{P}/run-due")
     def musteri_run_due(request: Request, tur: str = "gece") -> dict[str, Any]:
@@ -432,18 +437,21 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         hist = M.score_history(engine, tenant, 400)
         run = M.meta_get(engine, tenant, "run")
         out = M.overview(rows, acts, hist[-1] if hist else None)
-        return {**out, "asof": run.get("asof"), "kesim": run.get("kesim"), "kapsam": "herkes" if owner is None else owner}
+        out = {**out, "asof": run.get("asof"), "kesim": run.get("kesim"), "kapsam": "herkes" if owner is None else owner}
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, owner, settings(), out))
 
     @app.get(f"{P}/accounts")
     def musteri_accounts(request: Request, kanal: str = "", bolge: str = "", temsilci: str = "", risk: str = "",
                          segment: str = "", q: str = "", sort: str = "oncelik", p: int = 1, size: int = 50) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        rows = M.filter_rows(M.account_rows(engine, tenant, owner_of(user, temsilci)), kanal=kanal, bolge=bolge,
+        owner = owner_of(user, temsilci)
+        rows = M.filter_rows(M.account_rows(engine, tenant, owner), kanal=kanal, bolge=bolge,
                              risk_=risk, q=q, segment=segment)
         rows.sort(key=M.SORTS.get(sort, M.SORTS["oncelik"]))
         items, pg = page([M.card(r) for r in rows], p, size)
-        return {"items": items, **pg, "toplam": {"net12": round(sum(num(r.get("net_12ay")) for r in rows), 2),
-                                                 "riskli": sum(1 for r in rows if r.get("risk_duzeyi") in ("yuksek", "kayip"))}}
+        out = {"items": items, **pg, "toplam": {"net12": round(sum(num(r.get("net_12ay")) for r in rows), 2),
+                                                "riskli": sum(1 for r in rows if r.get("risk_duzeyi") in ("yuksek", "kayip"))}}
+        return PV.bagla(out, lambda: K.for_accounts(engine, tenant, owner, settings(), out))
 
     @app.get(f"{P}/accounts/export.csv")
     def musteri_accounts_csv(request: Request, kanal: str = "", bolge: str = "", temsilci: str = "", risk: str = "",
@@ -460,13 +468,17 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/accounts/{{code}}")
     def musteri_account(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.detail, engine, tenant, user, code, all_scope(user), is_admin(user), fresh())
+        with F.recording() as reads:
+            out = call(svc.detail, engine, tenant, user, code, all_scope(user), is_admin(user), fresh())
+        return PV.bagla(out, lambda: K.for_account(engine, tenant, out["code"], settings(), out, reads))
 
     @app.get(f"{P}/accounts/{{code}}/monthly")
     def musteri_account_monthly(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         row = call(M.in_scope, engine, tenant, user, code, all_scope(user))
-        return call(svc.monthly, engine, tenant, row, fresh())
+        with F.recording() as reads:
+            out = call(svc.monthly, engine, tenant, row, fresh())
+        return PV.bagla(out, lambda: K.for_monthly(engine, tenant, out, reads))
 
     @app.post(f"{P}/accounts/{{code}}/summary")
     def musteri_account_summary(code: str, request: Request) -> dict[str, Any]:
@@ -500,7 +512,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         owner = owner_of(user, temsilci)
         codes = None if owner is None else {r["cari_kodu"] for r in M.account_rows(engine, tenant, owner)}
         rows = M.list_actions(engine, tenant, codes=codes, code=musteri, durum=durum, person=user if owner == user else "")
-        return {"items": [M._action_out(a) for a in rows], "etki": M.action_effect(rows)}
+        out = {"items": [M._action_out(a) for a in rows], "etki": M.action_effect(rows)}
+        return PV.bagla(out, lambda: K.for_actions(engine, tenant, durum, musteri, out))
 
     @app.patch(f"{P}/actions/{{aid}}")
     def musteri_action_update(aid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -519,8 +532,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         acts = M.list_actions(engine, tenant, codes={r["cari_kodu"] for r in rows}, durum="acik", person=user)
         run = M.meta_get(engine, tenant, "run")
         week = [r for r in rows if r.get("risk_duzeyi") in ("yuksek", "kayip")]
-        return {"asof": run.get("asof"), "kesim": run.get("kesim"), "count": len(rows), "buHafta": len(week),
-                "items": [M.card(r) for r in rows], "acikAksiyon": [M._action_out(a) for a in acts]}
+        out = {"asof": run.get("asof"), "kesim": run.get("kesim"), "count": len(rows), "buHafta": len(week),
+               "items": [M.card(r) for r in rows], "acikAksiyon": [M._action_out(a) for a in acts]}
+        return PV.bagla(out, lambda: K.for_my_portfolio(engine, tenant, user, settings(), out))
 
     # -------------------------------------------------------------- veri sağlığı
 
@@ -535,10 +549,11 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         items, pg = page([M._finding_out(r, st["crmUrl"]) for r in rows], p, size)
         hist = M.score_history(engine, tenant, 400)
         info = M.meta_get(engine, tenant, "health")
-        return {"items": items, **pg, "sayilar": M.finding_counts(engine, tenant, security(user)),
-                "puan": hist[-1] if hist else None, "onceki": hist[-2] if len(hist) > 1 else None,
-                "veriDurumu": info.get("veriDurumu"), "crmKanal": info.get("crmKanal"), "kisi": info.get("kisi"),
-                "zeki": info.get("zeki"), "tarih": info.get("tarih"), "warnings": (M.meta_get(engine, tenant, "run").get("warnings") or [])}
+        out = {"items": items, **pg, "sayilar": M.finding_counts(engine, tenant, security(user)),
+               "puan": hist[-1] if hist else None, "onceki": hist[-2] if len(hist) > 1 else None,
+               "veriDurumu": info.get("veriDurumu"), "crmKanal": info.get("crmKanal"), "kisi": info.get("kisi"),
+               "zeki": info.get("zeki"), "tarih": info.get("tarih"), "warnings": (M.meta_get(engine, tenant, "run").get("warnings") or [])}
+        return PV.bagla(out, lambda: K.for_health(engine, tenant, tur, durum, onem, security(user), out))
 
     @app.get(f"{P}/health/export.csv")
     def musteri_health_csv(request: Request, tur: str = "", durum: str = "acik-hepsi", onem: str = "", q: str = "") -> Response:
@@ -561,13 +576,15 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/health/score-history")
     def musteri_health_history(request: Request, gun: int = 365) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": M.score_history(engine, tenant, max(1, min(3650, int(gun))))}
+        out = {"items": M.score_history(engine, tenant, max(1, min(3650, int(gun))))}
+        return PV.bagla(out, lambda: K.for_score_history(engine, tenant, out))
 
     @app.get(f"{P}/segments")
     def musteri_segments(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": M.list_segments(engine, tenant), "kural": "Değer dilimi: son 12 ay net alıma göre sıralı carilerin "
+        out = {"items": M.list_segments(engine, tenant), "kural": "Değer dilimi: son 12 ay net alıma göre sıralı carilerin "
                 "birikimli payının ilk %80'i A, sonraki %15'i B, kalanı C. Eğilim: önceki 12 aya göre %10'dan çok artış "
                 "büyüyen, düşüş düşen; önceki 12 ayda alımı yoksa yeni."}
+        return PV.bagla(out, lambda: K.for_segments(engine, tenant, out))
 
     return svc

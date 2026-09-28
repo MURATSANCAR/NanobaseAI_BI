@@ -8,6 +8,7 @@ import { fmtDay } from '../field/api';
 import { musteriApi, type Account } from './api';
 import { AccountRow, ActionItem, ActionSheet, SubNav } from './parts';
 import { RunNotes, useMusteriMeta } from './CustomersHome';
+import SqlInfo from '../components/SqlInfo';
 
 /** Portföyüm (telefon): temsilcinin yalnız kendi carileri — yetkisi olsa da başkasınınki burada yok. Üstte «bu hafta
  *  aranacaklar» (yüksek risk ve kayıp, risk × değer sırası), altında bütün portföy; her kartta tek dokunuşla aksiyon. */
@@ -56,13 +57,17 @@ export default function PortfolioPhone() {
             <span className="sr-only">Portföyde ara</span>
             <input className={field} value={q} placeholder="Portföyde ara: unvan, cari kodu, il" enterKeyHint="search" onChange={(e) => setQ(e.target.value)} />
           </label>
-          <Block title={`Bu hafta aranacaklar (${hot.length})`} help="Yüksek risk ve kayıp düzeyindeki carileriniz, risk × değer sırasıyla.">
+          <Block
+            title={`Bu hafta aranacaklar (${hot.length})`}
+            help="Yüksek risk ve kayıp düzeyindeki carileriniz, risk × değer sırasıyla."
+            action={<SqlInfo k={d.kaynaklar} alan="buHafta" label="Bu hafta aranacaklar" />}
+          >
             {hot.length === 0 ? (
               <Empty>Riskli cariniz yok.</Empty>
             ) : (
               <ul className="flex flex-col gap-2">
                 {hot.map((a) => (
-                  <AccountRow key={a.code} a={a} trailing={quick(a)} />
+                  <AccountRow key={a.code} a={a} trailing={quick(a)} k={d.kaynaklar} />
                 ))}
               </ul>
             )}
@@ -82,7 +87,7 @@ export default function PortfolioPhone() {
             ) : (
               <ul className="flex flex-col gap-2">
                 {rest.map((a) => (
-                  <AccountRow key={a.code} a={a} trailing={quick(a)} />
+                  <AccountRow key={a.code} a={a} trailing={quick(a)} k={d.kaynaklar} />
                 ))}
               </ul>
             )}

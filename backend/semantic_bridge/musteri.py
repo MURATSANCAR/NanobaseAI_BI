@@ -224,6 +224,11 @@ def _row(r: Any) -> dict[str, Any]:
     return dict(r._mapping)
 
 
+def meta_stmt(tenant: str, key: str) -> Any:
+    """Tur kaydı (gece turu özeti ve o turda çalışan okuma sorguları)."""
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
@@ -1048,18 +1053,26 @@ def save_decision(engine: sa.engine.Engine, tenant: str, cift: str, karar: str, 
 # ------------------------------------------------------------------ okuma (ekran)
 
 
-def account_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str]) -> list[dict[str, Any]]:
-    """Cari satırları. `owner` None = herkes (yetkili); portföy süzgeci burada, köprüde uygulanır."""
+def accounts_stmt(tenant: str, owner: Optional[str] = None, code: Optional[str] = None) -> Any:
+    """Gece turunun cari satırları (değer, risk, segment); ekranların okuduğu ifade."""
     q = sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)
     if owner is not None:
         q = q.where(ACCOUNTS.c.temsilci == owner)
+    if code is not None:
+        q = q.where(ACCOUNTS.c.cari_kodu == code)
+    return q
+
+
+def account_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str]) -> list[dict[str, Any]]:
+    """Cari satırları. `owner` None = herkes (yetkili); portföy süzgeci burada, köprüde uygulanır."""
+    q = accounts_stmt(tenant, owner)
     with engine.connect() as c:
         return [_row(r) for r in c.execute(q)]
 
 
 def one(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, Any]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant, ACCOUNTS.c.cari_kodu == code)).first()
+        r = c.execute(accounts_stmt(tenant, code=code)).first()
     return _row(r) if r else None
 
 
@@ -1072,9 +1085,14 @@ def in_scope(engine: sa.engine.Engine, tenant: str, user: str, code: str, all_sc
     return row
 
 
-def reps(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
-    q = sa.select(ACCOUNTS.c.temsilci, sa.func.max(ACCOUNTS.c.temsilci_ad), sa.func.count()).where(
+def reps_stmt(tenant: str) -> Any:
+    """Temsilci başına cari sayısı."""
+    return sa.select(ACCOUNTS.c.temsilci, sa.func.max(ACCOUNTS.c.temsilci_ad).label("ad"), sa.func.count().label("cari")).where(
         ACCOUNTS.c.tenant_id == tenant, ACCOUNTS.c.temsilci.isnot(None)).group_by(ACCOUNTS.c.temsilci)
+
+
+def reps(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    q = reps_stmt(tenant)
     with engine.connect() as c:
         out = [{"hesap": a, "ad": n or a, "cari": int(k)} for a, n, k in c.execute(q)]
     return sorted(out, key=lambda x: (x["ad"] or "").lower())
@@ -1235,15 +1253,20 @@ def update_action(engine: sa.engine.Engine, tenant: str, user: str, aid: str, bo
     return _action_out(get_action(engine, tenant, aid)), diff
 
 
-def list_actions(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[str]] = None, code: str = "", durum: str = "",
-                 person: str = "") -> list[dict[str, Any]]:
+def actions_stmt(tenant: str, code: str = "", durum: str = "") -> Any:
+    """Müşteri aksiyonları (elle girilir); 30/90 gün sonucu gece turunda Logo alımından yazılır."""
     q = sa.select(ACTIONS).where(ACTIONS.c.tenant_id == tenant)
     if code:
         q = q.where(ACTIONS.c.cari_kodu == code)
     if durum:
         q = q.where(ACTIONS.c.durum == durum)
+    return q.order_by(ACTIONS.c.olusturma.desc())
+
+
+def list_actions(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[str]] = None, code: str = "", durum: str = "",
+                 person: str = "") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(q.order_by(ACTIONS.c.olusturma.desc()))]
+        rows = [_row(r) for r in c.execute(actions_stmt(tenant, code, durum))]
     if codes is not None:
         rows = [r for r in rows if r["cari_kodu"] in codes or (person and person in (r["yazan"], r["sahip"]))]
     return rows
@@ -1265,8 +1288,8 @@ def _finding_out(r: dict[str, Any], crm_url: str) -> dict[str, Any]:
             "ilk": r.get("ilk_goruldu"), "son": r.get("son_goruldu"), "kapanis": r.get("kapanis"), "crmLink": link}
 
 
-def list_findings(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: str = "", onem: str = "", q: str = "",
-                  security: bool = False) -> list[dict[str, Any]]:
+def findings_stmt(tenant: str, tur: str = "", durum: str = "", onem: str = "", security: bool = False) -> Any:
+    """Veri sağlığı bulguları (gece turunda CRM okumasından; işaretler elle)."""
     s = sa.select(FINDINGS).where(FINDINGS.c.tenant_id == tenant)
     if tur:
         s = s.where(FINDINGS.c.tur == tur)
@@ -1278,8 +1301,13 @@ def list_findings(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum
         s = s.where(FINDINGS.c.durum == durum)
     if onem:
         s = s.where(FINDINGS.c.onem == onem)
+    return s
+
+
+def list_findings(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: str = "", onem: str = "", q: str = "",
+                  security: bool = False) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(s)]
+        rows = [_row(r) for r in c.execute(findings_stmt(tenant, tur, durum, onem, security))]
     if q.strip():
         n = F.fold(q)
         rows = [r for r in rows if n in F.fold(f"{r.get('ad') or ''} {r.get('cari_kodu') or ''} {r['kayit_id']} {r.get('ozet') or ''}")]
@@ -1288,9 +1316,14 @@ def list_findings(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum
     return rows
 
 
-def finding_counts(engine: sa.engine.Engine, tenant: str, security: bool) -> dict[str, dict[str, int]]:
-    q = sa.select(FINDINGS.c.tur, FINDINGS.c.durum, sa.func.count()).where(FINDINGS.c.tenant_id == tenant) \
+def finding_counts_stmt(tenant: str) -> Any:
+    """Bulgu türü × durum sayısı."""
+    return sa.select(FINDINGS.c.tur, FINDINGS.c.durum, sa.func.count().label("adet")).where(FINDINGS.c.tenant_id == tenant) \
         .group_by(FINDINGS.c.tur, FINDINGS.c.durum)
+
+
+def finding_counts(engine: sa.engine.Engine, tenant: str, security: bool) -> dict[str, dict[str, int]]:
+    q = finding_counts_stmt(tenant)
     out: dict[str, dict[str, int]] = {}
     with engine.connect() as c:
         for t, d, n in c.execute(q):
@@ -1323,18 +1356,27 @@ def mark_finding(engine: sa.engine.Engine, tenant: str, user: str, fid: str, bod
         {"durum": {"eski": cur["durum"], "yeni": durum}, "not": note}
 
 
-def score_history(engine: sa.engine.Engine, tenant: str, days: int = 365) -> list[dict[str, Any]]:
+def scores_stmt(tenant: str, days: int = 365) -> Any:
+    """Günlük veri sağlığı puanı (gece turunda yazılır)."""
     since = (today() - timedelta(days=max(1, days))).isoformat()
+    return sa.select(SCORES).where(SCORES.c.tenant_id == tenant, SCORES.c.tarih >= since).order_by(SCORES.c.tarih)
+
+
+def score_history(engine: sa.engine.Engine, tenant: str, days: int = 365) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SCORES).where(SCORES.c.tenant_id == tenant, SCORES.c.tarih >= since)
-                         .order_by(SCORES.c.tarih)).all()
+        rows = c.execute(scores_stmt(tenant, days)).all()
     return [{"tarih": r.tarih, "puan": r.puan, "etkin": r.etkin_cari, "bulgulu": r.bulgulu_cari,
              "sayilar": _j(r.bulgu_sayilari_json, {})} for r in rows]
 
 
+def segments_stmt(tenant: str) -> Any:
+    """Değer dilimi × kanal × eğilim segmentleri (gece turunda yazılır)."""
+    return sa.select(SEGMENTS).where(SEGMENTS.c.tenant_id == tenant).order_by(SEGMENTS.c.deger.desc())
+
+
 def list_segments(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SEGMENTS).where(SEGMENTS.c.tenant_id == tenant).order_by(SEGMENTS.c.deger.desc())).all()
+        rows = c.execute(segments_stmt(tenant)).all()
     return [{"id": r.id, "ad": r.ad, "kural": _j(r.kural_json, {}), "boyut": r.boyut, "deger": r.deger, "pay": r.pay,
              "tarih": r.tarih} for r in rows]
 

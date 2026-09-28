@@ -1,4 +1,5 @@
 import { ENGINE_BASE, send } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M38 Müşteri ilişkileri köprü istemcisi (`/api/v1/musteri/*`). Cari = Logo müşteri carisi (cari kodu); değer ve kayıp
  *  riski Logo'nun faturalı satırından (iki yıl kopyası, kodla birleşir), atama M30'la aynı (CRM sahibi / BMT il), veri
@@ -70,6 +71,7 @@ type Rate = { olgun: number; alan: number; oran: number | null };
 export type Effect = { toplam: number; gun30: Rate; gun90: Rate; riskli30: Rate; riskli90: Rate };
 
 export type Meta = {
+  kaynaklar?: Kaynaklar;
   me: { username: string; display: string; admin: boolean; cari: number; canAll: boolean; canAction: boolean; canMark: boolean; canSecurity: boolean; canExport: boolean; canHealth: boolean };
   weights: Array<{ key: string; max: number; label: string }>;
   levels: Array<{ key: Level; label: string }>;
@@ -85,6 +87,7 @@ export type Meta = {
 };
 
 export type Overview = {
+  kaynaklar?: Kaynaklar;
   kpi: { cari: number; aktif: number; net12: number; netYil: number; riskli: number; kayip: number; saglik: number | null };
   kanallar: Array<{ kanal: string; aktif: number; net12: number; netYil: number; riskli: number; kayip: number }>;
   bakilacak: Account[];
@@ -95,9 +98,10 @@ export type Overview = {
   kapsam: string;
 };
 
-export type Paged<T> = { items: T[]; page: number; size: number; total: number; pages: number };
+export type Paged<T> = { kaynaklar?: Kaynaklar; items: T[]; page: number; size: number; total: number; pages: number };
 
 export type Detail = Account & {
+  kaynaklar?: Kaynaklar;
   faturalar: Array<{ tarih: string | null; no: string | null; tutar: number }>;
   kitaplar: Array<{ stok: string; ad: string | null; adet: number; ciro: number }>;
   siparisler: Array<{ no: string | null; tarih: string | null; tutar: number; durum: string; riskte: boolean }>;
@@ -163,19 +167,19 @@ export const musteriApi = {
   accounts: (p: AccountQuery) => send<Paged<Account> & { toplam: { net12: number; riskli: number } }>('GET', `${P}/accounts${qs(p)}`),
   accountsCsvUrl: (p: AccountQuery) => `${ENGINE_BASE}${P}/accounts/export.csv${qs({ ...p, p: undefined, size: undefined })}`,
   account: (code: string) => send<Detail>('GET', `${P}/accounts/${enc(code)}`, undefined, 180_000),
-  monthly: (code: string) => send<{ code: string; kesim: string; items: Array<{ ay: string; satis: number; iade: number; net: number }> }>('GET', `${P}/accounts/${enc(code)}/monthly`, undefined, 180_000),
+  monthly: (code: string) => send<{ kaynaklar?: Kaynaklar; code: string; kesim: string; items: Array<{ ay: string; satis: number; iade: number; net: number }> }>('GET', `${P}/accounts/${enc(code)}/monthly`, undefined, 180_000),
   summary: (code: string) => send<{ metin: string; kaynak: 'zeki' | 'kural'; not: string | null }>('POST', `${P}/accounts/${enc(code)}/summary`, {}, 180_000),
   phone: (code: string) => send<{ code: string; telefon: string | null }>('GET', `${P}/accounts/${enc(code)}/phone`, undefined, 60_000),
   addAction: (code: string, b: { tur: Action['tur']; aciklama: string; termin?: string | null; sahip?: string }) => send<Action>('POST', `${P}/accounts/${enc(code)}/actions`, b),
   updateAction: (id: string, b: Partial<{ durum: Action['durum']; sonucNotu: string; termin: string | null; aciklama: string; sahip: string }>) =>
     send<Action>('PATCH', `${P}/actions/${enc(id)}`, b),
-  actions: (p: { durum?: string; temsilci?: string; musteri?: string }) => send<{ items: Action[]; etki: Effect }>('GET', `${P}/actions${qs(p)}`),
-  myPortfolio: (q?: string) => send<{ asof: string | null; kesim: string | null; count: number; buHafta: number; items: Account[]; acikAksiyon: Action[] }>('GET', `${P}/my-portfolio${qs({ q })}`),
+  actions: (p: { durum?: string; temsilci?: string; musteri?: string }) => send<{ kaynaklar?: Kaynaklar; items: Action[]; etki: Effect }>('GET', `${P}/actions${qs(p)}`),
+  myPortfolio: (q?: string) => send<{ kaynaklar?: Kaynaklar; asof: string | null; kesim: string | null; count: number; buHafta: number; items: Account[]; acikAksiyon: Action[] }>('GET', `${P}/my-portfolio${qs({ q })}`),
   health: (p: { tur?: string; durum?: string; onem?: string; q?: string; p?: number; size?: number }) => send<Health>('GET', `${P}/health${qs(p)}`, undefined, 120_000),
   healthCsvUrl: (p: { tur?: string; durum?: string; onem?: string; q?: string }) => `${ENGINE_BASE}${P}/health/export.csv${qs(p)}`,
   mark: (id: string, b: { durum: 'crmde_duzeltildi' | 'yoksay' | 'acik'; not?: string }) => send<Finding>('POST', `${P}/health/${enc(id)}/mark`, b),
-  scoreHistory: (gun = 365) => send<{ items: ScorePoint[] }>('GET', `${P}/health/score-history${qs({ gun })}`),
-  segments: () => send<{ items: Array<{ id: string; ad: string; boyut: number; deger: number | null; pay: number | null; tarih: string }>; kural: string }>('GET', `${P}/segments`),
+  scoreHistory: (gun = 365) => send<{ kaynaklar?: Kaynaklar; items: ScorePoint[] }>('GET', `${P}/health/score-history${qs({ gun })}`),
+  segments: () => send<{ kaynaklar?: Kaynaklar; items: Array<{ id: string; ad: string; boyut: number; deger: number | null; pay: number | null; tarih: string }>; kural: string }>('GET', `${P}/segments`),
 };
 
 /* ------------------------------------------------------------------ biçim (saf; testli) */

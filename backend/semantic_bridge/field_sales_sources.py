@@ -468,6 +468,31 @@ def query_tag(sql: str) -> str:
     d = since.group(1) if since else ""
     if "L_CAPIPERIOD" in s:
         return "logo.donem"
+    # M38 (müşteri ilişkileri) okumaları
+    if "InternalEMailAddress AS eposta" in s:
+        return "crm.kullanici_eposta"
+    if "AS kapali" in s and "SystemUserBase" in s:
+        return "crm.tum_kullanicilar"
+    if "MAX(s.new_siparistarihi) AS son" in s:
+        return "crm.son_siparis"
+    if "new_VergiDairesi" in s:
+        return "crm.cari_saglik"
+    if "ContactBase" in s:
+        return "crm.kisiler"
+    if "INFORMATION_SCHEMA" in s or "new_webservicelogBase" in s:
+        return "crm.guvenlik"
+    if "COUNT(*) AS n FROM" in s and "AccountBase WHERE StateCode" in s:
+        return "crm.cari_sayisi"
+    if "COUNT(*) AS n FROM" in s:
+        return "crm.guvenlik"
+    if "GROUP BY k." in s:
+        return "crm.kampanya"
+    if "S.DATE_ AS gun" in s:
+        return f"logo.gunluk_satis.{f}.{d}"
+    if "YEAR(S.DATE_) AS yil" in s:
+        return f"logo.aylik_cari.{f}.{d}"
+    if "C.CODE AS code FROM" in s and "_CLCARD" in s:
+        return f"logo.cari_kodlari.{f}"
     # M59 (bayi riski) okumaları: aynı kaynak dosyasının üreticileriyle birlikte
     if "CreditOnHold" in s:
         return "crm.cari_bayrak"

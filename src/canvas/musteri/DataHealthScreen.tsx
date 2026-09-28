@@ -11,6 +11,7 @@ import { fmtDay } from '../field/api';
 import { barHeights, musteriApi, type Finding } from './api';
 import { SubNav } from './parts';
 import { RunNotes, useMusteriMeta } from './CustomersHome';
+import SqlInfo from '../components/SqlInfo';
 
 /** CRM veri sağlığı: Logo bağı olmayan, olası tekrar, kanalı eksik, sahipsiz / ortak hesaba ait cari kayıtları, izin
  *  çelişkileri ve (yalnız yetkiliye) güvenlik bulguları. Portal CRM'e yazmaz: bulgu «CRM'de düzeltildi» diye işaretlenir,
@@ -95,17 +96,18 @@ export default function DataHealthScreen() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat
               label="Veri sağlığı puanı"
+              info={<SqlInfo k={d.kaynaklar} alan="puan" label="Veri sağlığı puanı" />}
               value={d.puan ? `${d.puan.puan.toLocaleString('tr-TR')} / 100` : '—'}
               help={delta === null ? 'Bulgusu olmayan etkin cari payı' : `Önceki taramaya göre ${delta > 0 ? '+' : ''}${delta.toLocaleString('tr-TR')}`}
               tone={delta !== null && delta < 0 ? 'warn' : undefined}
             />
-            <Stat label="Etkin CRM carisi" value={(d.puan?.etkin ?? 0).toLocaleString('tr-TR')} />
-            <Stat label="Bulgulu cari" value={(d.puan?.bulgulu ?? 0).toLocaleString('tr-TR')} />
-            <Stat label="Zeki AI kararı bekleyen" value={String(d.zeki?.waiting ?? 0)} help="Olası tekrar çifti; her gece sırayla sorulur" />
+            <Stat label="Etkin CRM carisi" info={<SqlInfo k={d.kaynaklar} alan="puan" label="Etkin CRM carisi" />} value={(d.puan?.etkin ?? 0).toLocaleString('tr-TR')} />
+            <Stat label="Bulgulu cari" info={<SqlInfo k={d.kaynaklar} alan="puan" label="Bulgulu cari" />} value={(d.puan?.bulgulu ?? 0).toLocaleString('tr-TR')} />
+            <Stat label="Zeki AI kararı bekleyen" info={<SqlInfo k={d.kaynaklar} alan="zeki" label="Karar bekleyen çift" />} value={String(d.zeki?.waiting ?? 0)} help="Olası tekrar çifti; her gece sırayla sorulur" />
           </div>
 
           {points.length > 1 && (
-            <Block title="Puanın seyri" help="Her gece taramasının puanı.">
+            <Block title="Puanın seyri" help="Her gece taramasının puanı." action={<SqlInfo k={hist.data?.kaynaklar} alan="items" label="Puanın seyri" />}>
               <div role="img" aria-label={`Veri sağlığı puanı, son ${points.length} tarama`} className="flex h-16 items-end gap-[2px]">
                 {points.map((x, i) => (
                   <div key={x.tarih} title={`${fmtDay(x.tarih)}: ${x.puan}`} className="min-w-[2px] flex-1 rounded-t bg-canvas-violet/60" style={{ height: `${Math.max(4, heights[i] * 100)}%` }} />

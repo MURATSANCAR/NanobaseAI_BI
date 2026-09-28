@@ -11,6 +11,7 @@ import { INTERVAL_SOURCE, barHeights, fmtChange, fmtMonth, musteriApi, type Acti
 import { ActionItem, ActionSheet, LevelBadge } from './parts';
 import { useMusteriMeta } from './CustomersHome';
 import NoteSignalCard from '../signals/NoteSignalCard';
+import SqlInfo from '../components/SqlInfo';
 
 /** Cari ayrıntısı: risk ve nedeni (2 dokunuş: liste → cari), aylık alım grafiği, aksiyon geçmişi (aksiyon yazmak 3 dokunuş),
  *  kitap dağılımı, CRM siparişleri, ziyaretler (M30 ortak kaydı), tahsilat göstergesi (M30). Arama yalnız portföy sahibine:
@@ -111,21 +112,21 @@ export default function AccountDetail() {
               ))}
           </div>
 
-          <Block title="Değer ve alım" help={`Faturalı satır, satış − iade. Pencere Logo kesimi (${fmtDay(a.kesim)}) ile biter.`}>
-            <KV k="Son 12 ay net" v={fmtMoney(a.net12)} />
-            <KV k="Önceki 12 ay net" v={fmtMoney(a.netOnceki)} />
-            <KV k="Değişim" v={fmtChange(a.degisim)} tone={a.degisim !== null && a.degisim < -0.1 ? 'err' : undefined} />
-            <KV k="Bu yıl net" v={fmtMoney(a.netYil)} />
-            <KV k="Son 12 ay fatura" v={a.fatura12 ?? '—'} />
+          <Block title="Değer ve alım" help={`Faturalı satır, satış − iade. Pencere Logo kesimi (${fmtDay(a.kesim)}) ile biter.`} action={<SqlInfo k={a.kaynaklar} alan="net12" label="Değer ve alım" />}>
+            <KV k="Son 12 ay net" info={<SqlInfo k={a.kaynaklar} alan="net12" label="Son 12 ay net" />} v={fmtMoney(a.net12)} />
+            <KV k="Önceki 12 ay net" info={<SqlInfo k={a.kaynaklar} alan="netOnceki" label="Önceki 12 ay net" />} v={fmtMoney(a.netOnceki)} />
+            <KV k="Değişim" info={<SqlInfo k={a.kaynaklar} alan="degisim" label="Değişim" />} v={fmtChange(a.degisim)} tone={a.degisim !== null && a.degisim < -0.1 ? 'err' : undefined} />
+            <KV k="Bu yıl net" info={<SqlInfo k={a.kaynaklar} alan="netYil" label="Bu yıl net" />} v={fmtMoney(a.netYil)} />
+            <KV k="Son 12 ay fatura" info={<SqlInfo k={a.kaynaklar} alan="fatura12" label="Son 12 ay fatura" />} v={a.fatura12 ?? '—'} />
             <KV k="Son fatura" v={fmtDay(a.sonFatura)} />
-            <KV k="Son alımdan bu yana" v={a.gunSonAlim === null ? '—' : `${a.gunSonAlim} gün`} tone={a.duzey === 'kayip' ? 'err' : undefined} />
-            <KV k={`Olağan alım aralığı${a.aralikKaynagi ? ` (${INTERVAL_SOURCE[a.aralikKaynagi]})` : ''}`} v={a.aralik === null ? '—' : `${Math.round(a.aralik)} gün`} />
-            <KV k="İade oranı (12 ay / önceki)" v={`${fmtPct(a.iade12)} / ${fmtPct(a.iadeOnceki)}`} />
+            <KV k="Son alımdan bu yana" info={<SqlInfo k={a.kaynaklar} alan="gunSonAlim" label="Son alımdan bu yana" />} v={a.gunSonAlim === null ? '—' : `${a.gunSonAlim} gün`} tone={a.duzey === 'kayip' ? 'err' : undefined} />
+            <KV info={<SqlInfo k={a.kaynaklar} alan="aralik" label="Olağan alım aralığı" />} k={`Olağan alım aralığı${a.aralikKaynagi ? ` (${INTERVAL_SOURCE[a.aralikKaynagi]})` : ''}`} v={a.aralik === null ? '—' : `${Math.round(a.aralik)} gün`} />
+            <KV k="İade oranı (12 ay / önceki)" info={<SqlInfo k={a.kaynaklar} alan="iade12" label="İade oranı" />} v={`${fmtPct(a.iade12)} / ${fmtPct(a.iadeOnceki)}`} />
             <KV k="CRM son sipariş" v={fmtDay(a.sonSiparis)} />
             <KV k="Son ziyaret" v={fmtDay(a.sonZiyaret)} />
           </Block>
 
-          <Block title="Aylık net alım" help="Son 24 ay; iade fazlası olan ay boş çubuk.">
+          <Block title="Aylık net alım" help="Son 24 ay; iade fazlası olan ay boş çubuk." action={<SqlInfo k={months.data?.kaynaklar} alan="items" label="Aylık net alım" />}>
             {months.isLoading ? (
               <Loading />
             ) : series.length === 0 ? (
@@ -150,11 +151,14 @@ export default function AccountDetail() {
             title="Aksiyonlar"
             help="Yazılan aksiyon ve 30/90 gün sonra ölçülen alım."
             action={
-              m.me.canAction ? (
-                <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => setSheet({ edit: null })}>
-                  Yeni
-                </button>
-              ) : undefined
+              <span className="flex items-center gap-1">
+                <SqlInfo k={a.kaynaklar} alan="aksiyonlar" label="Aksiyonlar ve sonuçları" />
+                {m.me.canAction ? (
+                  <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => setSheet({ edit: null })}>
+                    Yeni
+                  </button>
+                ) : null}
+              </span>
             }
           >
             {a.aksiyonlar.length === 0 ? (
@@ -178,14 +182,14 @@ export default function AccountDetail() {
                 </Link>
               }
             >
-              <KV k="Bakiye" v={fmtMoney(a.tahsilat.bakiye)} />
+              <KV k="Bakiye" info={<SqlInfo k={a.kaynaklar} alan="tahsilat" label="Saha tahsilat sinyali" />} v={fmtMoney(a.tahsilat.bakiye)} />
               <KV k="Vadesi geçmiş (yaklaşık)" v={fmtMoney(a.tahsilat.vadesi_gecmis)} tone={(a.tahsilat.vadesi_gecmis ?? 0) > 0 ? 'err' : undefined} />
               <KV k="Risk limiti doluluğu" v={fmtPct(a.tahsilat.risk_doluluk)} />
               <KV k="Son ödeme" v={fmtDay(a.tahsilat.son_odeme_tarihi)} />
             </Block>
           )}
 
-          <Block title="Kitaplar (son 12 ay)" help="Kitap başına net adet ve net tutar, en çok alınan üstte.">
+          <Block title="Kitaplar (son 12 ay)" help="Kitap başına net adet ve net tutar, en çok alınan üstte." action={<SqlInfo k={a.kaynaklar} alan="kitaplar" label="Kitap başına alım" />}>
             {a.kitaplar.length === 0 ? (
               <Empty>Son 12 ayda kitap alımı yok.</Empty>
             ) : (
@@ -203,7 +207,7 @@ export default function AccountDetail() {
             )}
           </Block>
 
-          <Block title="Siparişler (CRM, son 12 ay)">
+          <Block title="Siparişler (CRM, son 12 ay)" action={<SqlInfo k={a.kaynaklar} alan="siparisler" label="CRM siparişleri" />}>
             {a.siparisler.length === 0 ? (
               <Empty>CRM'de son 12 ayda sipariş yok.</Empty>
             ) : (
@@ -220,7 +224,7 @@ export default function AccountDetail() {
             )}
           </Block>
 
-          <Block title="Son faturalar (Logo)">
+          <Block title="Son faturalar (Logo)" action={<SqlInfo k={a.kaynaklar} alan="faturalar" label="Son faturalar" />}>
             {a.faturalar.length === 0 ? (
               <Empty>Fatura yok.</Empty>
             ) : (
