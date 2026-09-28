@@ -76,6 +76,8 @@ JOBS = [
     ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
     # M47 risk ve uyum (sunucuda timas-risk.timer 06:15): yalnız sıklığı gelen göstergeyi ölçer, hatırlatma bir kez gider.
     ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
+    # DYK kurul (sunucuda timas-kurul.timer 06:30): göstergeleri hazır çıktılardan ölçer; hatırlatma bir kez, yalnız iç adrese.
+    ("kurul", "/api/v1/kurul/run-due", int(os.environ.get("KURUL_EVERY_SEC", "86400")), 1790),
     # H2 okur veri tabanı: CRM kişi/aday/İYS okuması ve gece işleri (sunucuda timas-readers.timer, gece 03:20).
     ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
     # M22 sosyal medya günlük özeti (sunucuda timas-social.timer 07:00; e-posta günde bir kez gider, paylaşım yapılmaz).

@@ -835,9 +835,72 @@
       "retention": null,
       "retentionNote": "İş kaydı; modül kaydı silinince gider",
       "module": "Tedarik ve baskı (M52)"
+    },
+    {
+      "object": "semantic_kurul_indicators",
+      "columns": [
+        "sahip",
+        "sahip_eposta"
+      ],
+      "data": "Gösterge sahibinin (bölüm yöneticisi) portal hesabı ve iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Kurul göstergesi yorumu ve hatırlatması",
+      "retention": null,
+      "retentionNote": "İş kaydı; modül kaydı silinince gider",
+      "module": "Kurul (DYK)"
+    },
+    {
+      "object": "semantic_kurul_actions",
+      "columns": [
+        "sahip",
+        "sahip_eposta"
+      ],
+      "data": "Kurul aksiyonu sahibinin portal hesabı ve iş e-postası",
+      "subjects": "çalışan",
+      "purpose": "Kurul kararlarının takibi",
+      "retention": null,
+      "retentionNote": "İş kaydı; kurul kararlarıyla birlikte saklanır",
+      "module": "Kurul (DYK)"
+    },
+    {
+      "object": "semantic_kurul_members",
+      "columns": [
+        "ad",
+        "eposta",
+        "ad_hesabi"
+      ],
+      "data": "Kurul üyesinin adı, e-postası ve varsa portal hesabı",
+      "subjects": "kurul üyesi (şirket dışı danışma kurulu üyesi olabilir)",
+      "purpose": "Kurul paketi dağıtım kaydı",
+      "retention": null,
+      "retentionNote": "Dağıtım kaydı olan üye silinmez, pasife alınır (kime gittiği bilinmeli)",
+      "module": "Kurul (DYK)"
+    },
+    {
+      "object": "semantic_kurul_distribution",
+      "columns": [
+        "alici",
+        "gonderen"
+      ],
+      "data": "Kurul paketinin alıcısı (ad) ve dağıtan/indiren hesap",
+      "subjects": "kurul üyesi; çalışan",
+      "purpose": "Kurul paketinin kime, ne zaman gittiği (erişim izi)",
+      "retention": null,
+      "retentionNote": "Denetim izi; paketle birlikte saklanır",
+      "module": "Kurul (DYK)"
     }
   ],
   "files": [
+    {
+      "object": "Kurul paketi PDF'leri",
+      "env": "KURUL_DIR",
+      "default": "/data/nanobaseai/bi/var/kurul",
+      "data": "Dondurulmuş kurul paketi: gösterge değerleri, bölüm yorumları, karar ve aksiyon sahiplerinin adı",
+      "subjects": "çalışan; kurul üyesi",
+      "purpose": "Kurul paketi (değişmez sürüm, sha256 ile)",
+      "retentionNote": "Paket kaydıyla birlikte saklanır; klasör 0700, dosya 0600",
+      "module": "Kurul (DYK)"
+    },
     {
       "object": "Planlı rapor dosyaları",
       "env": "REPORT_DIR",

@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurul göstergeleri ve aksiyon/yorum hatırlatmaları; her gün 06:30
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+Unit=timas-kurul.service
+
+[Install]
+WantedBy=timers.target

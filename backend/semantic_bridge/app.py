@@ -7362,6 +7362,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("commerce", priority), "send_mail": _ecom_send_mail,
     })
+    # DYK Danışma ve yönetim kurulu (Finans › Kurul): göstergeler M45/M46/M47/M59/M50/M48/M6/M39 çıktılarından köprü içinde
+    # okunur (yeniden hesap yok); toplantı, gündem, karar, aksiyon, dondurulan paket ve PDF. Uçlar /api/v1/kurul/*; dış gönderim yok.
+    from semantic_bridge import kurul_api
+    app.state.kurul = kurul_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "datasource": lambda: rt().settings.datasource_id,
+        "crm": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
+        "llm": lambda priority: rt().llm_for("kurul", priority), "send_mail": _ecom_send_mail,
+    })
     return app
 
 

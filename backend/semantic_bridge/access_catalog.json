@@ -131,6 +131,12 @@
       "explicit": true
     },
     {
+      "key": "sayfa:kurul",
+      "area": "finans",
+      "label": "Kurul (danışma ve yönetim)",
+      "explicit": true
+    },
+    {
       "key": "sayfa:editoryal",
       "area": "editoryal",
       "label": "Masam"
@@ -1118,6 +1124,44 @@
       "page": "sayfa:risk-uyum",
       "label": "Sigorta ve iş sürekliliği",
       "hint": "Sigorta poliçesi ve iş sürekliliği (BCP) süreç kaydı, belge yükleme, silme"
+    },
+    {
+      "key": "ozellik:kurul.hazirla",
+      "area": "finans",
+      "page": "sayfa:kurul",
+      "label": "Kurul hazırlığı (sekreter)",
+      "hint": "Toplantı, gündem, karar ve aksiyon kaydı, kurul üyeleri, paket derleme, göstergeleri şimdi ölçme, Zeki AI tutanak ve yorum taslağı; taslak paketi görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kurul.dondur",
+      "area": "finans",
+      "page": "sayfa:kurul",
+      "label": "Kurul paketini dondurma ve dağıtma",
+      "hint": "Yönetici özetini düzeltme ve onaylama, paketi dondurma (PDF), dağıtım kaydı, başkasının yazdığı gösterge yorumunu onaylama (genel müdür)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kurul.gosterge",
+      "area": "finans",
+      "page": "sayfa:kurul",
+      "label": "Kurul gösterge kataloğu",
+      "hint": "Gösterge tanımı, eşik, sahip, sıra ve etkinlik",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kurul.yorum",
+      "area": "finans",
+      "page": "sayfa:kurul",
+      "label": "Kendi göstergesine yorum",
+      "hint": "Katalogda sahibi olduğu göstergeye bölüm yorumu yazma ve Zeki AI taslağı isteme (bölüm yöneticisi)"
+    },
+    {
+      "key": "ozellik:kurul.aksiyon",
+      "area": "finans",
+      "page": "sayfa:kurul",
+      "label": "Kendi kurul aksiyonu",
+      "hint": "Kendisine atanmış kurul aksiyonunun durumunu ve notunu güncelleme"
     },
     {
       "key": "ozellik:dagilim.plan",
