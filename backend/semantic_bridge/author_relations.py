@@ -243,8 +243,47 @@ def _card(r: Any) -> dict[str, Any]:
     }
 
 
+def card_stmt(tenant: str, card_id: str):
+    return sa.select(CARDS).where(CARDS.c.id == _cid(card_id, "Yazar kartı"), CARDS.c.tenant_id == tenant)
+
+
+def card_by_crm_stmt(tenant: str, contact_id: str):
+    return sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.crm_contact_id == contact_id)
+
+
+def card_meetings_stmt(card_id: str):
+    return sa.select(MEETINGS).where(MEETINGS.c.card_id == card_id).order_by(MEETINGS.c.starts_at.desc())
+
+
+def cards_stmt(tenant: str, archived: bool = False):
+    stmt = sa.select(CARDS).where(CARDS.c.tenant_id == tenant)
+    return stmt.where(CARDS.c.archived_at.isnot(None) if archived else CARDS.c.archived_at.is_(None))
+
+
+def live_meetings_stmt(tenant: str):
+    """İptal edilmemiş bütün randevu ve görüşmeler (ısı ve sayılar bunlardan)."""
+    return sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant, MEETINGS.c.status != "iptal")
+
+
+def all_cards_stmt(tenant: str):
+    return sa.select(CARDS).where(CARDS.c.tenant_id == tenant)
+
+
+def agenda_horizon(now: datetime, days: int) -> datetime:
+    return now + timedelta(days=max(1, int(days)))
+
+
+def agenda_meetings_stmt(tenant: str, horizon: datetime):
+    """Randevular ekranı: ufka kadar planlanan randevular + kapanmamış sıradaki adımı olan görüşmeler."""
+    return sa.select(MEETINGS).where(
+        MEETINGS.c.tenant_id == tenant, MEETINGS.c.status != "iptal",
+        sa.or_(sa.and_(MEETINGS.c.status == "planlandi", MEETINGS.c.starts_at < horizon),
+               sa.and_(MEETINGS.c.next_step.isnot(None), MEETINGS.c.next_done.is_(False)))
+    ).order_by(MEETINGS.c.starts_at)
+
+
 def _get_card(c: Any, tenant: str, card_id: str, *, lock: bool = False) -> Any:
-    stmt = sa.select(CARDS).where(CARDS.c.id == _cid(card_id, "Yazar kartı"), CARDS.c.tenant_id == tenant)
+    stmt = card_stmt(tenant, card_id)
     row = c.execute(stmt.with_for_update() if lock else stmt).first()
     if not row:
         raise RelationError("Yazar kartı bulunamadı.", 404)
@@ -252,8 +291,7 @@ def _get_card(c: Any, tenant: str, card_id: str, *, lock: bool = False) -> Any:
 
 
 def _card_by_crm(c: Any, tenant: str, contact_id: str) -> Any:
-    return c.execute(sa.select(CARDS).where(CARDS.c.tenant_id == tenant,
-                                            CARDS.c.crm_contact_id == contact_id)).first()
+    return c.execute(card_by_crm_stmt(tenant, contact_id)).first()
 
 
 def create_card(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -746,10 +784,8 @@ def _timing(res: dict[str, Any]) -> dict[str, Any]:
 
 def _cards_with_meetings(engine: sa.engine.Engine, tenant: str, *, archived: bool = False) -> tuple[list[Any], dict[str, list[Any]]]:
     with engine.connect() as c:
-        stmt = sa.select(CARDS).where(CARDS.c.tenant_id == tenant)
-        stmt = stmt.where(CARDS.c.archived_at.isnot(None) if archived else CARDS.c.archived_at.is_(None))
-        cards = c.execute(stmt).fetchall()
-        rows = c.execute(sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant, MEETINGS.c.status != "iptal")).fetchall()
+        cards = c.execute(cards_stmt(tenant, archived)).fetchall()
+        rows = c.execute(live_meetings_stmt(tenant)).fetchall()
     by_card: dict[str, list[Any]] = {}
     for m in rows:
         by_card.setdefault(m.card_id, []).append(m)
@@ -791,7 +827,7 @@ def card_detail(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, c
     now = _now()
     with engine.connect() as c:
         row = _get_card(c, tenant, card_id)
-        ms = c.execute(sa.select(MEETINGS).where(MEETINGS.c.card_id == row.id).order_by(MEETINGS.c.starts_at.desc())).fetchall()
+        ms = c.execute(card_meetings_stmt(row.id)).fetchall()
     live = [m for m in ms if m.status != "iptal"]
     return dict(_card(row), heat=heat(live, now), timeline=[_meeting(m, user, admin, now) for m in ms])
 
@@ -812,14 +848,10 @@ def agenda(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, *, sco
     `benim`: yazdığım, katılımcısı olduğum ya da kartın sorumlusu olduğum."""
     now = _now()
     today = now.astimezone(TZ).date()
-    horizon = now + timedelta(days=max(1, int(days)))
+    horizon = agenda_horizon(now, days)
     with engine.connect() as c:
-        cards = {r.id: r for r in c.execute(sa.select(CARDS).where(CARDS.c.tenant_id == tenant)).fetchall()}
-        rows = c.execute(sa.select(MEETINGS).where(
-            MEETINGS.c.tenant_id == tenant, MEETINGS.c.status != "iptal",
-            sa.or_(sa.and_(MEETINGS.c.status == "planlandi", MEETINGS.c.starts_at < horizon),
-                   sa.and_(MEETINGS.c.next_step.isnot(None), MEETINGS.c.next_done.is_(False)))
-        ).order_by(MEETINGS.c.starts_at)).fetchall()
+        cards = {r.id: r for r in c.execute(all_cards_stmt(tenant)).fetchall()}
+        rows = c.execute(agenda_meetings_stmt(tenant, horizon)).fetchall()
 
     def mine(m: Any) -> bool:
         card = cards.get(m.card_id)
@@ -847,8 +879,15 @@ def agenda(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, *, sco
             steps.append(it)
     steps.sort(key=lambda x: (x["nextDue"] or "9999", x["startsAt"]))
     missing.sort(key=lambda x: x["startsAt"], reverse=True)
+    # «horizon»: randevu sorgusunun çalıştığı ufuk (sorgu bilgisi aynı ifadeyi bununla kurar).
     return {"upcoming": upcoming, "missingNotes": missing, "openSteps": steps, "days": days,
-            "today": today.isoformat(), "scope": scope}
+            "today": today.isoformat(), "scope": scope, "horizon": horizon.isoformat()}
+
+
+def cards_of_stmt(tenant: str, contact_ids: list[str]):
+    """CRM kişilerinin kartları (havuzdaki «kartı var» işareti)."""
+    return sa.select(CARDS.c.id, CARDS.c.stage, CARDS.c.crm_contact_id).where(
+        CARDS.c.tenant_id == tenant, CARDS.c.crm_contact_id.in_(contact_ids))
 
 
 def pool_crm(schema: str, run: Callable[[str], dict[str, Any]], engine: sa.engine.Engine, tenant: str, since: str,
@@ -869,8 +908,7 @@ def pool_crm(schema: str, run: Callable[[str], dict[str, Any]], engine: sa.engin
                                 "status": _s(r.get("statuscode")), "on": _s(r.get("CreatedOn")),
                                 "editor": _s(r.get("editor"))}
         with engine.connect() as c:
-            for r in c.execute(sa.select(CARDS.c.id, CARDS.c.stage, CARDS.c.crm_contact_id).where(
-                    CARDS.c.tenant_id == tenant, CARDS.c.crm_contact_id.in_(ids))).fetchall():
+            for r in c.execute(cards_of_stmt(tenant, ids)).fetchall():
                 it = by.get(r.crm_contact_id)
                 if it is not None:
                     it["cardId"], it["cardStage"] = r.id, r.stage

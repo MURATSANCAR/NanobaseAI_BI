@@ -14,6 +14,7 @@ import {
 import { CONTRIBUTOR_ROLES } from '../queries';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
 import { Panel, useDebounced } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, TASK_STATUS, TagInput, day, editNum, parseNum, pctText, roleLabel, stamp, tl, q2, useFlRefresh, type FlCtx } from './shared';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
@@ -86,6 +87,13 @@ export default function PeoplePane({ ctx }: { ctx: FlCtx }) {
         <div className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-canvas-muted">
           {list.isFetching && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />}
           <span className="font-mono tabular-nums">{list.data ? `${nf.format(list.data.total)} kişi` : 'Okunuyor…'}</span>
+          {list.data && <SqlInfo k={list.data.kaynaklar} alan="total" label="Kişi sayısı" />}
+          {list.data && items.length > 0 && (
+            <span className="inline-flex items-center gap-1 font-normal">
+              <span aria-hidden>·</span> süren ve geciken iş
+              <SqlInfo k={list.data.kaynaklar} alan="items[].stats" label="Kişi başına süren ve geciken iş" />
+            </span>
+          )}
         </div>
         {list.error && <Note tone="err">{errText(list.error, 'Kişiler okunamadı.')}</Note>}
         {list.data && !items.length && (
@@ -150,13 +158,14 @@ function PersonDetailPanel({ ctx, id, editing, onEdit, onClose }: { ctx: FlCtx; 
   return <PersonDetail ctx={ctx} p={person.data} onEdit={() => onEdit(true)} onClose={onClose} />;
 }
 
-function Section({ title, count, action, children }: { title: string; count?: number; action?: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, count, info, action, children }: { title: string; count?: number; info?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mt-4 border-t border-slate-100 pt-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold">
+        <h3 className="flex items-center gap-2 text-[12px] font-extrabold">
           {title}
           {count != null && <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>}
+          {info}
         </h3>
         {action}
       </div>
@@ -230,10 +239,10 @@ function PersonDetail({ ctx, p, onEdit, onClose }: { ctx: FlCtx; p: FlPersonDeta
         {!p.email && <p className="mt-2 text-[11.5px] text-amber-700">E-posta yok: yazışmalar ona e-postayla gidemez.</p>}
 
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Süren" value={nf.format(p.stats.active)} />
-          <Stat label="Tamamlanan" value={nf.format(p.stats.done)} />
-          <Stat label="Zamanında" value={pctText(p.stats.onTimeRate)} />
-          <Stat label="Ödenecek" value={tl(p.stats.payable)} />
+          <Stat label="Süren" value={nf.format(p.stats.active)} info={<SqlInfo k={p.kaynaklar} alan="stats.active" label="Süren iş" />} />
+          <Stat label="Tamamlanan" value={nf.format(p.stats.done)} info={<SqlInfo k={p.kaynaklar} alan="stats.done" label="Tamamlanan iş" />} />
+          <Stat label="Zamanında" value={pctText(p.stats.onTimeRate)} info={<SqlInfo k={p.kaynaklar} alan="stats.onTimeRate" label="Zamanında teslim" />} />
+          <Stat label="Ödenecek" value={tl(p.stats.payable)} info={<SqlInfo k={p.kaynaklar} alan="stats.payable" label="Ödenecek" />} />
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -253,7 +262,7 @@ function PersonDetail({ ctx, p, onEdit, onClose }: { ctx: FlCtx; p: FlPersonDeta
           )}
         </div>
 
-        <Section title="Çalışma bilgisi">
+        <Section title="Çalışma bilgisi" info={<SqlInfo k={p.kaynaklar} alan="weeklyHours" label="Haftalık kapasite ve birim ücretler" />}>
           <dl className="mt-1.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12px]">
             <dt className="text-canvas-muted">Haftalık kapasite</dt>
             <dd className="font-semibold">{q2(p.weeklyHours)} saat</dd>
@@ -293,17 +302,17 @@ function PersonDetail({ ctx, p, onEdit, onClose }: { ctx: FlCtx; p: FlPersonDeta
 
         <Portfolio ctx={ctx} p={p} />
 
-        <Section title="Süren işler" count={current.length}>
+        <Section title="Süren işler" count={current.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.suren" label="Süren işler" />}>
           {!current.length ? <p className="mt-1 text-[12px] text-canvas-muted">Elinde iş yok.</p> : <TaskList tasks={current} />}
         </Section>
         {past.length > 0 && (
-          <Section title="Geçmiş işler" count={past.length}>
-            <TaskList tasks={past.slice(0, 30)} />
+          <Section title="Geçmiş işler" count={past.length} info={<SqlInfo k={p.kaynaklar} alan="tasks[]" label="Görevler: miktar ve tutar" />}>
+            <TaskList tasks={past} />
           </Section>
         )}
 
         {p.payouts.length > 0 && (
-          <Section title="Hakedişler" count={p.payouts.length}>
+          <Section title="Hakedişler" count={p.payouts.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.hakedis" label="Hakedişler" />}>
             <ul className="mt-1.5 space-y-1">
               {p.payouts.map((h) => (
                 <li key={h.id}>
@@ -329,10 +338,13 @@ function PersonDetail({ ctx, p, onEdit, onClose }: { ctx: FlCtx; p: FlPersonDeta
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, info }: { label: string; value: string; info?: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center justify-between gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 truncate font-mono text-[14px] font-bold tabular-nums">{value}</div>
     </div>
   );
@@ -375,7 +387,7 @@ function Portfolio({ ctx, p }: { ctx: FlCtx; p: FlPersonDetail }) {
   });
 
   return (
-    <Section title="Portfolyo" count={p.portfolio.length}>
+    <Section title="Portfolyo" count={p.portfolio.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.portfolyo" label="Portfolyo" />}>
       <div className="mt-2 grid gap-2 rounded-xl bg-slate-50 p-2.5">
         {ctx.canManage && (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -452,6 +464,7 @@ export function LogoMovements({ personId }: { personId: string }) {
   return (
     <Section
       title={`Logo'daki hareketler${d ? ` (${d.year})` : ''}`}
+      info={d?.found ? <SqlInfo k={d.kaynaklar} alan="lines[]" label="Logo cari hareketleri" /> : undefined}
       action={
         !open && (
           <button type="button" className={btnGhost} onClick={() => setOpen(true)}>
@@ -469,9 +482,13 @@ export function LogoMovements({ personId }: { personId: string }) {
             {d.name} {d.specode ? `· ${d.specode}` : ''} {d.last ? `· son hareket ${day(d.last)}` : ''} · alacak: fatura, makbuz, açılış; borç: ödeme, virman
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <Stat label="Alacak" value={tl(d.credit)} />
-            <Stat label="Borç" value={tl(d.debit)} />
-            <Stat label={(d.balance ?? 0) >= 0 ? 'Borcumuz' : 'Alacağımız'} value={tl(Math.abs(d.balance ?? 0))} />
+            <Stat label="Alacak" value={tl(d.credit)} info={<SqlInfo k={d.kaynaklar} alan="credit" label="Logo alacak" />} />
+            <Stat label="Borç" value={tl(d.debit)} info={<SqlInfo k={d.kaynaklar} alan="debit" label="Logo borç" />} />
+            <Stat
+              label={(d.balance ?? 0) >= 0 ? 'Borcumuz' : 'Alacağımız'}
+              value={tl(Math.abs(d.balance ?? 0))}
+              info={<SqlInfo k={d.kaynaklar} alan="balance" label="Logo bakiye" />}
+            />
           </div>
           {!d.lines.length ? (
             <p className="mt-2 text-[12px] text-canvas-muted">Bu yıl hareket yok.</p>

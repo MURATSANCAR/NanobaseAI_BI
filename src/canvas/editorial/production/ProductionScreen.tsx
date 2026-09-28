@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../../engine';
 import { Note, errText, nf } from '../../admin/ui';
 import { Kpi, KpiRow, ModuleFrame } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import { productionApi } from './api';
 import CardsTab from './CardsTab';
 import DelaysTab from './DelaysTab';
@@ -91,7 +92,8 @@ export default function ProductionScreen() {
         <Kpi
           label="Süren üretim"
           value={o ? nf.format(o.open) : '—'}
-          help="Depoya henüz girmemiş kart"
+          help={o ? `Depoya henüz girmemiş kart · ${nf.format(o.total)} kartın` : 'Depoya henüz girmemiş kart'}
+          info={o ? <SqlInfo k={o.kaynaklar} alan="open" label="Süren üretim" /> : undefined}
           active={tab === 'takvim' && (params.get('durum') ?? 'acik') === 'acik'}
           onClick={() => update({ sekme: null, durum: null })}
         />
@@ -99,14 +101,22 @@ export default function ProductionScreen() {
           label="Gecikmede"
           value={o ? nf.format(o.late) : '—'}
           help={o ? `${nf.format(o.escalated)} tanesi yöneticiye çıktı` : 'Planı geçmiş adım'}
+          info={o ? <SqlInfo k={o.kaynaklar} alan="late" label="Gecikmede" /> : undefined}
           active={tab === 'gecikme'}
           onClick={() => update({ sekme: 'gecikme' })}
         />
-        <Kpi label="14 gün içinde" value={o ? nf.format(o.dueSoon) : '—'} help="Planlanan adımı yaklaşan kart" onClick={() => update({ sekme: null, durum: null })} />
+        <Kpi
+          label="14 gün içinde"
+          value={o ? nf.format(o.dueSoon) : '—'}
+          help="Planlanan adımı yaklaşan kart"
+          info={o ? <SqlInfo k={o.kaynaklar} alan="dueSoon" label="14 gün içinde" /> : undefined}
+          onClick={() => update({ sekme: null, durum: null })}
+        />
         <Kpi
           label="Depoya girdi"
           value={o ? nf.format(o.doneRecent) : '—'}
           help="Son 30 günde"
+          info={o ? <SqlInfo k={o.kaynaklar} alan="doneRecent" label="Depoya girdi" /> : undefined}
           active={tab === 'takvim' && params.get('durum') === 'tamam'}
           onClick={() => update({ sekme: null, durum: 'tamam' })}
         />

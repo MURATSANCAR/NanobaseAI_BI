@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '.
 import { useCan } from '../../useAdmin';
 import { Panel } from '../kit';
 import { LogoMovements } from './PeoplePane';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, day, q2, stamp, tl, todayIso, useFlRefresh, type FlCtx } from './shared';
 
 /**
@@ -41,7 +42,10 @@ export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)] lg:items-start lg:gap-4">
       <div className="grid gap-3">
         <Panel>
-          <h3 className="text-[13px] font-extrabold">Ödenecek işler</h3>
+          <h3 className="inline-flex items-center gap-1 text-[13px] font-extrabold">
+            Ödenecek işler
+            <SqlInfo k={payable.data?.kaynaklar} alan="items[]" label="Ödenecek işler" />
+          </h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Teslimi kabul edilmiş, henüz hakedişe girmemiş görevler.</p>
           {payable.error && <Note tone="err">{errText(payable.error, 'Okunamadı.')}</Note>}
           {payable.data && !payable.data.items.length && <Empty>Ödenecek iş yok.</Empty>}
@@ -71,6 +75,14 @@ export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
               ))}
             </div>
           </div>
+          {list.data && (
+            <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
+              Durum toplamları
+              <SqlInfo k={list.data.kaynaklar} alan="totals" label="Durum başına hakediş toplamı" />
+              <span aria-hidden>·</span> belge tutarları
+              <SqlInfo k={list.data.kaynaklar} alan="items[]" label="Hakedişler" />
+            </p>
+          )}
           {list.error && <Note tone="err">{errText(list.error, 'Hakedişler okunamadı.')}</Note>}
           {list.data && !list.data.items.length && <Empty>Bu durumda hakediş yok.</Empty>}
           <ul className="mt-2 space-y-1.5">
@@ -233,9 +245,15 @@ function PayoutDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: (
             <thead>
               <tr className="text-left text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
                 <th className="px-2.5 py-1.5">İş</th>
-                <th className="px-2.5 py-1.5 text-right">Miktar</th>
-                <th className="px-2.5 py-1.5 text-right">Birim</th>
-                <th className="px-2.5 py-1.5 text-right">Tutar</th>
+                <th className="px-2.5 py-1.5 text-right">
+                  <InfoLabel k={h.kaynaklar} alan="lines[].units">Miktar</InfoLabel>
+                </th>
+                <th className="px-2.5 py-1.5 text-right">
+                  <InfoLabel k={h.kaynaklar} alan="lines[].unitPrice">Birim</InfoLabel>
+                </th>
+                <th className="px-2.5 py-1.5 text-right">
+                  <InfoLabel k={h.kaynaklar} alan="lines[].amount">Tutar</InfoLabel>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +271,7 @@ function PayoutDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: (
             <tfoot>
               <tr className="border-t border-slate-200">
                 <td colSpan={3} className="px-2.5 py-2 text-right font-bold">
-                  Toplam (KDV hariç)
+                  <InfoLabel k={h.kaynaklar} alan="total">Toplam (KDV hariç)</InfoLabel>
                 </td>
                 <td className="whitespace-nowrap px-2.5 py-2 text-right font-mono text-[14px] font-extrabold tabular-nums">{tl(h.total)}</td>
               </tr>

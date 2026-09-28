@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, TableWrap, errText, nf, td, th } from '../../admin/ui';
 import { Panel } from '../kit';
+import { InfoLabel } from '../../components/SqlInfo';
 import { productionApi, type PrinterStat } from './api';
 import { fmtDay, fmtPct, fmtUnit } from './shared';
 
@@ -56,14 +57,30 @@ export default function PrintersTab({ onPick }: { onPick: (printer: string) => v
             <thead>
               <tr className="border-b border-slate-100">
                 <th className={th}>Matbaa</th>
-                <th className={th}>Puan</th>
-                <th className={`${th} text-right`}>İş</th>
-                <th className={`${th} text-right`}>Süren</th>
-                <th className={`${th} text-right`}>Zamanında</th>
-                <th className={`${th} text-right`}>Dosya → depo</th>
-                <th className={`${th} text-right`}>Birim fiyat</th>
-                <th className={`${th} text-right`}>12 ay eğilim</th>
-                <th className={`${th} text-right`}>Kalite</th>
+                <th className={th}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].score">Puan</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].jobs">İş</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].open">Süren</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].onTimeRate">Zamanında</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].leadDays">Dosya → depo</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].unitRecent">Birim fiyat</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].unitTrend">12 ay eğilim</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].qualityRate">Kalite</InfoLabel>
+                </th>
               </tr>
             </thead>
             <tbody>

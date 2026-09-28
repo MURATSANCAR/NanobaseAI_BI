@@ -103,14 +103,25 @@ class AuthorSnapshots:
         schema = self._schema()
         keys = R.month_keys()
         started = time.time()
+        # Sorgu bilgisi: hazırlıkta çalışan CRM metni, satır, süre ve an (sonuç satırı ayrıca saklanmaz).
+        queries: list[dict[str, Any]] = []
+
+        def fetch(tag: str, sql: str) -> list[dict[str, Any]]:
+            t0 = time.time()
+            rows = self._fetch_all(sql)
+            queries.append({"tag": tag, "conn": "crm", "sql": sql, "rows": len(rows),
+                            "dbMs": int((time.time() - t0) * 1000), "at": time.time()})
+            return rows
+
         out = {
-            "authors": self._fetch_all(R.contracted_authors_sql(schema)),
-            "events": self._fetch_all(R.crm_events_sql(schema, keys[0] + "-01")),
-            "loyalty": self._fetch_all(G.loyalty_sql(schema)),
-            "books": self._fetch_all(all_books_sql(schema)),
-            "pool": self._fetch_all(pool_all_sql(schema, self._pool_since())),
+            "authors": fetch("sozlesmeliYazarlar", R.contracted_authors_sql(schema)),
+            "events": fetch("olaylar", R.crm_events_sql(schema, keys[0] + "-01")),
+            "loyalty": fetch("sadakat", G.loyalty_sql(schema)),
+            "books": fetch("kitaplar", all_books_sql(schema)),
+            "pool": fetch("havuz", pool_all_sql(schema, self._pool_since())),
             "poolSince": self._pool_since(),
             "months": keys,
+            "queries": queries,
         }
         out["seconds"] = round(time.time() - started, 1)
         return out
@@ -134,9 +145,16 @@ class AuthorSnapshots:
             if y < today.year and old and time.time() - old.get("at", 0) < PAST_YEAR_SECONDS:
                 years[str(y)] = old
                 continue
-            years[str(y)] = {"at": time.time(), "rows": _compact(run(year_sales_sql(y)))}
+            t0 = time.time()
+            sql = year_sales_sql(y)
+            rows = run(sql)
+            # Sorgu bilgisi: o yılın okumasında çalışan Logo metni (yıllık görünüm), satır, süre, an.
+            years[str(y)] = {"at": time.time(), "rows": _compact(rows),
+                             "query": {"sql": sql, "rows": len(rows), "dbMs": int((time.time() - t0) * 1000), "at": time.time()}}
         end = data_end(max(wanted)) if wanted else None
+        from semantic_bridge.contracts_royalty import data_end_sql
         return {"years": years, "dataEnd": end.isoformat() if end else None,
+                "dataEndQuery": ({"sql": data_end_sql(max(wanted)), "at": time.time()} if wanted else None),
                 "missing": [y for y in range(today.year - SALES_YEARS + 1, today.year + 1) if y not in views],
                 "seconds": round(time.time() - started, 1)}
 
@@ -186,6 +204,20 @@ class AuthorSnapshots:
         self.snap.stop()
 
     # ---- hazır veriden hesap
+    def queries(self) -> dict[str, Any]:
+        """Hazır parçaları dolduran okumalarda çalışan CRM/Logo sorguları (sorgu bilgisi kökeni). Kayıt tutmayan önceki
+        sürümün parçasında boş döner."""
+        crm, sales = self.part("crm"), self.part("sales")
+        out: dict[str, Any] = {"crm": [], "sales": [], "dataEnd": None}
+        if crm is not None:
+            out["crm"] = list((crm.get("data") or {}).get("queries") or [])
+        if sales is not None:
+            data = sales.get("data") or {}
+            out["sales"] = [dict(y["query"], year=int(k)) for k, y in sorted((data.get("years") or {}).items())
+                            if isinstance(y, dict) and y.get("query")]
+            out["dataEnd"] = data.get("dataEndQuery")
+        return out
+
     def crm_for_heatmap(self) -> Optional[dict[str, Any]]:
         p = self.part("crm")
         return None if p is None else p["data"]

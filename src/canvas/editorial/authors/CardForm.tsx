@@ -6,6 +6,7 @@ import { ENGINE_ENABLED, authorsApi, type AuthorCard, type AuthorCardInput } fro
 import { Note, Pill, btnGhost, btnPrimary, field, label } from '../../admin/ui';
 import Sheet from '../studio/reader/Sheet';
 import SearchSelect from '../../components/SearchSelect';
+import SqlInfo from '../../components/SqlInfo';
 import { useDebounced } from '../kit';
 import { invalidateAuthors, useAuthorsMeta, usePeopleOptions } from './shared';
 
@@ -154,7 +155,9 @@ export default function CardForm({
             </ul>
             {(similar.data?.crmTotal ?? 0) > crm.length + (f.crmContactId ? 1 : 0) && (
               <p className="mt-1.5 text-[11px] text-amber-900">
-                CRM'de bu adla {similar.data?.crmTotal} kişi var; ilk {similar.data?.crm.length} tanesi gösteriliyor. Adı tam yazın.
+                CRM'de bu adla {similar.data?.crmTotal} kişi var
+                <SqlInfo k={similar.data?.kaynaklar} alan="crmTotal" label="Aynı adlı CRM kişisi" className="ml-0.5" />; ilk {similar.data?.crm.length} tanesi
+                gösteriliyor. Adı tam yazın.
               </p>
             )}
             {similar.data?.crmError && <p className="mt-1.5 text-[11px] text-amber-900">CRM şu an okunamadı; yalnız portal kartlarına bakıldı.</p>}

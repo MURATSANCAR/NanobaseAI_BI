@@ -4551,18 +4551,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/contributors/roles")
     def editorial_contributor_roles(request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
-        return _editorial_call(editorial_mod.role_facets, schema, run)
+        from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.role_facets, schema, r), lambda out, log: K.for_roles(out, log, schema))
 
     @app.get("/api/v1/editorial/contributors")
     def editorial_contributors(request: Request, roles: str = "", q: str = "", order: str = "son", page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
         _remember_view("contributors", page, q, roles=roles.split("|"), order=order)
-        return _editorial_call(editorial_mod.contributors_page, schema, run, roles.split("|"), page, q=q, order=order)
+        from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.contributors_page, schema, r, roles.split("|"), page, q=q, order=order), lambda out, log: K.for_contributors(out, log, schema, roles.split("|"), page, q, order))
 
     @app.get("/api/v1/editorial/contributors/{contact_id}")
     def editorial_contributor(contact_id: str, request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
-        return _editorial_call(editorial_mod.person, schema, run, contact_id)
+        from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.person, schema, r, contact_id), lambda out, log: K.for_person(out, log, schema, contact_id))
 
     @app.get("/api/v1/editorial/search")
     def editorial_search(request: Request, q: str = "", kind: Optional[str] = None, page: int = 0) -> dict[str, Any]:
@@ -5006,7 +5009,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/cards")
     def authors_cards(request: Request, stage: str = "", q: str = "", scope: str = "", archived: bool = False) -> dict[str, Any]:
         engine, tenant, user, _, _ = _rel(request)
-        return _rel_call(rel_mod.list_cards, engine, tenant, user, stage=stage, q=q, scope=scope, archived=archived)
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(_rel_call(rel_mod.list_cards, engine, tenant, user, stage=stage, q=q, scope=scope, archived=archived), lambda o: K.for_cards(engine, tenant, o, archived))
 
     @app.post("/api/v1/editorial/authors/cards", status_code=201)
     def authors_card_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5034,7 +5038,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, _, admin = _rel(request)
         out = _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
         out["heat"] = _rel_trace(request, out["heat"], out.get("crmContactId"))
-        return out
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(out, lambda o: K.for_card(engine, tenant, admin_mod.conf("CRM_SCHEMA"), o))
 
     @app.patch("/api/v1/editorial/authors/cards/{card_id}")
     def authors_card_update(card_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5049,7 +5054,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, _, admin = _rel(request)
         out = _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
         out["heat"] = _rel_trace(request, out["heat"], contact_id)
-        return out
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(out, lambda o: K.for_by_crm(engine, tenant, admin_mod.conf("CRM_SCHEMA"), contact_id, o))
 
     @app.post("/api/v1/editorial/authors/by-crm/{contact_id}/card", status_code=201)
     def authors_crm_card(contact_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5066,18 +5072,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def authors_similar(request: Request, name: str = "") -> dict[str, Any]:
         engine, tenant, _, _, _ = _rel(request)
         schema, run = _editorial(request)
-        return _rel_call(rel_mod.similar, schema, run, engine, tenant, name)
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_run(run, lambda r: _rel_call(rel_mod.similar, schema, r, engine, tenant, name), lambda out, log: K.for_similar(out, log, schema, name))
 
     @app.get("/api/v1/editorial/authors/pool/crm")
     def authors_pool_crm(request: Request, q: str = "", page: int = 0, closed: bool = False) -> dict[str, Any]:
         engine, tenant, _, _, _ = _rel(request)
         snaps = _snapshots()
         ready = _rel_call(snaps.pool_page, engine, tenant, page, q=q, closed=closed)
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
         if ready is not None:
-            return dict(ready, snapshot=snaps.status())
+            return SK.bagla_out(dict(ready, snapshot=snaps.status()), lambda o: K.for_pool_snapshot(engine, tenant, o, snaps.queries()))
         schema, run = _editorial(request)
         since = admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01"
-        return dict(_rel_call(rel_mod.pool_crm, schema, run, engine, tenant, since, page, q=q, closed=closed), snapshot=snaps.status())
+        return SK.bagla_run(run, lambda r: dict(_rel_call(rel_mod.pool_crm, schema, r, engine, tenant, since, page, q=q, closed=closed), snapshot=snaps.status()), lambda out, log: K.for_pool_live(engine, tenant, out, log, schema, since, page, q, closed))
 
     @app.get("/api/v1/editorial/authors/heatmap")
     def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
@@ -5090,7 +5098,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60), crm=crm,
                         loyalty=(lambda: growth_mod.loyalty_map(crm["loyalty"])) if crm else
                         (lambda: growth_mod.loyalty_map(_crm_fetch_all(growth_mod.loyalty_sql(schema)))))
-        return dict(out, snapshot=snaps.status())
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(dict(out, snapshot=snaps.status()), lambda o: K.for_heatmap(engine, tenant, schema, o, snaps.queries() if crm else None))
 
     # ---- M7 gelişim takibi: Logo satışı, M6 hakedişleri, okur sesi, sadakat, Zeki AI önerisi; günlük hatırlatma
     from semantic_bridge import author_growth as growth_mod
@@ -5216,19 +5225,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             out = _growth_call(growth_mod.compute, schema, run, ready["logo"], engine, tenant, contact_id,
                                web_enabled=_web_enabled(), books_rows=ready["books"], loyalty_row=ready["loyalty"],
                                prepared=True)
-            return dict(out, cached=True, preparedAt=datetime.fromtimestamp(ready["updatedAt"], timezone.utc).isoformat(),
-                        snapshot=snaps.status())
+            from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+            return SK.bagla_out(dict(out, cached=True, preparedAt=datetime.fromtimestamp(ready["updatedAt"], timezone.utc).isoformat(), snapshot=snaps.status()), lambda o: K.for_growth(engine, tenant, schema, contact_id, o, snaps.queries(), rt().settings.connection_file))
         # Hazırlık henüz bitmedi (ilk kurulum): yazar tek başına canlı okunur, 12 saat saklanır.
         build = lambda: growth_mod.compute(schema, run, _logo_sales, engine, tenant, contact_id,  # noqa: E731
                                            web_enabled=_web_enabled())
-        return dict(_growth_call(growth_mod.cached, engine, tenant, contact_id, build, refresh=refresh), snapshot=snaps.status())
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(dict(_growth_call(growth_mod.cached, engine, tenant, contact_id, build, refresh=refresh), snapshot=snaps.status()), lambda o: K.for_growth(engine, tenant, schema, contact_id, o, None, rt().settings.connection_file))
 
     @app.get("/api/v1/editorial/authors/advice/{contact_id}")
     def authors_advice(contact_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _, _ = _rel(request)
         growth_mod.ensure(engine)
-        return {"advice": _growth_call(growth_mod.latest_advice, engine, tenant, contact_id),
-                "modelReady": rt().llm_for("editorial", priority=1) is not None}
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out({"advice": _growth_call(growth_mod.latest_advice, engine, tenant, contact_id), "modelReady": rt().llm_for("editorial", priority=1) is not None}, lambda o: K.for_advice(engine, tenant, contact_id, o))
 
     @app.post("/api/v1/editorial/authors/advice/{contact_id}")
     def authors_advice_make(contact_id: str, request: Request) -> dict[str, Any]:
@@ -5250,7 +5260,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         out = _growth_call(growth_mod.make_advice, engine, tenant, user, contact_id, inp,
                            lambda messages: llm.chat(messages, max_tokens=2048, temperature=0.2))
         admin_mod.audit(engine, user, "run", "author_advice", out["id"], name, {"contact": contact_id})
-        return out
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(out, lambda o: K.for_advice(engine, tenant, contact_id, o, ""))
 
     def _directory() -> dict[str, dict[str, str]]:
         r = rt()
@@ -5279,8 +5290,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         remind_mod.ensure(engine)
         from semantic_bridge import alerts as alerts_mod
         mine = remind_mod.digests(engine, tenant).get(user.lower(), {"randevu": [], "not": [], "adim": []})
-        return {"enabled": remind_mod.enabled_for(engine, tenant, user), "smtp": bool(alerts_mod.smtp_settings()),
-                "today": {k: len(v) for k, v in mine.items()}}
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out({"enabled": remind_mod.enabled_for(engine, tenant, user), "smtp": bool(alerts_mod.smtp_settings()), "today": {k: len(v) for k, v in mine.items()}}, lambda o: K.for_reminders_me(engine, tenant, o))
 
     @app.put("/api/v1/editorial/authors/reminders/me")
     def authors_reminders_set(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5294,7 +5305,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/agenda")
     def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
-        return _rel_call(rel_mod.agenda, engine, tenant, user, admin, scope=scope, days=days)
+        from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_out(_rel_call(rel_mod.agenda, engine, tenant, user, admin, scope=scope, days=days), lambda o: K.for_agenda(engine, tenant, o))
 
     @app.post("/api/v1/editorial/authors/meetings", status_code=201)
     def authors_meeting_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5342,7 +5354,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, _, _, _ = _rel(request)
         cop_mod.ensure(engine)
         try:
-            return cop_mod.related(engine, tenant, contact_id, page)
+            from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
+            return SK.bagla_out(cop_mod.related(engine, tenant, contact_id, page), lambda o: K.for_related(engine, tenant, admin_mod.conf("CRM_SCHEMA"), contact_id, page, o))
         except cop_mod.CopurchaseError as e:
             raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e)}) from e
 
@@ -5943,12 +5956,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         out["email"] = alerts_mod.email_status()
         out["me"] = {"username": user, "canManage": _can(user, "ozellik:serbest.yonet"),
                      "canApprove": _can(user, "ozellik:serbest.hakedis-onay")}
-        return out
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(out, lambda o: K.for_overview(engine, tenant, user, o))
 
     @app.get("/api/v1/editorial/freelance/people")
     def fl_people(request: Request, q: str = "", role: str = "", status: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return fl_mod.list_people(engine, tenant, q=q, role=role, status=status)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(fl_mod.list_people(engine, tenant, q=q, role=role, status=status), lambda o: K.for_people(engine, tenant, o, status))
 
     @app.post("/api/v1/editorial/freelance/people", status_code=201)
     def fl_person_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -5960,7 +5975,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/people/{person_id}")
     def fl_person(person_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return _fl_call(fl_mod.get_person, engine, tenant, person_id)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(_fl_call(fl_mod.get_person, engine, tenant, person_id), lambda o: K.for_person(engine, tenant, person_id, o))
 
     @app.patch("/api/v1/editorial/freelance/people/{person_id}")
     def fl_person_update(person_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6010,7 +6026,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/packages")
     def fl_packages(request: Request, q: str = "", status: str = "acik") -> dict[str, Any]:
         engine, tenant, user, _ = _fl(request)
-        return fl_mod.list_packages(engine, tenant, user, q=q, status=status)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(fl_mod.list_packages(engine, tenant, user, q=q, status=status), lambda o: K.for_packages(engine, tenant, user, o, status))
 
     @app.post("/api/v1/editorial/freelance/packages", status_code=201)
     def fl_package_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6022,7 +6039,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/packages/{package_id}")
     def fl_package(package_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return _fl_call(fl_mod.get_package, engine, tenant, package_id)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(_fl_call(fl_mod.get_package, engine, tenant, package_id), lambda o: K.for_package(engine, tenant, package_id, o))
 
     @app.patch("/api/v1/editorial/freelance/packages/{package_id}")
     def fl_package_update(package_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6088,12 +6106,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/editorial/freelance/suggest")
     def fl_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return {"items": _fl_call(fl_mod.suggest, engine, tenant, [str(t) for t in body.get("taskIds") or []])}
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out({"items": _fl_call(fl_mod.suggest, engine, tenant, [str(t) for t in body.get("taskIds") or []])}, lambda o: K.for_suggest(engine, tenant, [str(t) for t in body.get("taskIds") or []], o))
 
     @app.get("/api/v1/editorial/freelance/capacity")
     def fl_capacity(request: Request, weeks: int = 8, role: str = "", start: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return _fl_call(fl_mod.capacity, engine, tenant, weeks=weeks, role=role, start=start or None)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(_fl_call(fl_mod.capacity, engine, tenant, weeks=weeks, role=role, start=start or None), lambda o: K.for_capacity(engine, tenant, o))
 
     @app.put("/api/v1/editorial/freelance/tasks/{task_id}/delivery", status_code=201)
     async def fl_delivery_file(task_id: str, request: Request, filename: str = "", note: str = "") -> dict[str, Any]:
@@ -6141,12 +6161,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/payable")
     def fl_payable(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return {"items": fl_mod.payable(engine, tenant)}
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out({"items": fl_mod.payable(engine, tenant)}, lambda o: K.for_payable(engine, tenant, o))
 
     @app.get("/api/v1/editorial/freelance/payouts")
     def fl_payouts(request: Request, status: str = "", person: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return fl_mod.list_payouts(engine, tenant, status=status, person_id=person)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(fl_mod.list_payouts(engine, tenant, status=status, person_id=person), lambda o: K.for_payouts(engine, tenant, o, status, person))
 
     @app.post("/api/v1/editorial/freelance/payouts", status_code=201)
     def fl_payout_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6166,7 +6188,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/payouts/{payout_id}")
     def fl_payout(payout_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = _fl(request)
-        return _fl_call(fl_mod.get_payout, engine, tenant, payout_id)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(_fl_call(fl_mod.get_payout, engine, tenant, payout_id), lambda o: K.for_payout(engine, tenant, payout_id, o))
 
     @app.post("/api/v1/editorial/freelance/payouts/{payout_id}/{action}")
     def fl_payout_action(payout_id: str, action: str, request: Request, body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
@@ -6182,7 +6205,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/freelance/inbox")
     def fl_inbox(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = _fl(request)
-        return fl_mod.inbox(engine, tenant, user)
+        from semantic_bridge import freelance_kaynak as K
+        return K.bagla_out(fl_mod.inbox(engine, tenant, user), lambda o: K.for_inbox(engine, tenant, user, o))
 
     @app.get("/api/v1/editorial/freelance/threads/{thread_id}")
     def fl_thread(thread_id: str, request: Request) -> dict[str, Any]:
@@ -6214,7 +6238,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not person.get("logoCard"):
             return {"found": False, "code": None, "year": fl_logo.YEAR, "lines": []}
         try:
-            return fl_logo.movements(_fl_logo_run, person["logoCard"])
+            from semantic_bridge import freelance_kaynak as K, sorgu_kaydi as SK
+            return SK.bagla_run(_fl_logo_run, lambda r: fl_logo.movements(r, person["logoCard"]), lambda out, log: K.for_logo(out, log, person["logoCard"], rt().settings.connection_file))
         except fl_logo.LogoError as e:
             raise HTTPException(e.status, detail={"code": "FREELANCE", "message": str(e)}) from e
 

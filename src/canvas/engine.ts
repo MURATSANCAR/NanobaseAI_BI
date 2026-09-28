@@ -7,6 +7,7 @@
  * diye gösterir, sahte sayı üretmez.
  */
 import type { DbTiming } from './DbTiming';
+import type { Kaynaklar } from './components/sqlInfo';
 import { httpErrorText } from './httpError';
 import type { Kaynaklar } from './components/sqlInfo';
 
@@ -1448,6 +1449,7 @@ export type ContributorPage = {
   page: number;
   pageSize: number;
   db?: DbTiming | null;
+  kaynaklar?: Kaynaklar;
 };
 export type RoleFacet = { role: string; records: number; people: number };
 export type PersonDetail = {
@@ -1459,11 +1461,12 @@ export type PersonDetail = {
   projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; on: string | null; editor: string | null }>;
   truncated: boolean;
   db?: DbTiming | null;
+  kaynaklar?: Kaynaklar;
 };
 
 /** M7 / M8 / M4: esere katkı verenler (yazar, çizer, çevirmen…), CRM eser katılım kayıtlarından. */
 export const contributorsApi = {
-  roles: () => send<{ items: RoleFacet[]; db?: DbTiming | null }>('GET', '/api/v1/editorial/contributors/roles', undefined, 60_000),
+  roles: () => send<{ items: RoleFacet[]; db?: DbTiming | null; kaynaklar?: Kaynaklar }>('GET', '/api/v1/editorial/contributors/roles', undefined, 60_000),
   list: (p: { roles: string[]; q?: string; order?: string; page?: number }) =>
     send<ContributorPage>('GET', `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page })}`, undefined, 60_000),
   person: (id: string) => send<PersonDetail>('GET', `/api/v1/editorial/contributors/${encodeURIComponent(id)}`, undefined, 60_000),
@@ -1560,8 +1563,8 @@ export type AuthorMeeting = {
   crmContactId?: string | null;
   stepLate?: boolean;
 };
-export type AuthorCardDetail = AuthorCard & { heat: AuthorHeat; timeline: AuthorMeeting[] };
-export type AuthorByCrm = { card: AuthorCard | null; heat: AuthorHeat; timeline: AuthorMeeting[] };
+export type AuthorCardDetail = AuthorCard & { heat: AuthorHeat; timeline: AuthorMeeting[]; kaynaklar?: Kaynaklar };
+export type AuthorByCrm = { card: AuthorCard | null; heat: AuthorHeat; timeline: AuthorMeeting[]; kaynaklar?: Kaynaklar };
 export type AuthorCardInput = Partial<{
   name: string;
   stage: string;
@@ -1614,6 +1617,7 @@ export type AuthorPoolCrm = {
   pageSize: number;
   since: string;
   db?: DbTiming | null;
+  kaynaklar?: Kaynaklar;
 };
 export type AuthorHeatRow = {
   key: string;
@@ -1679,6 +1683,7 @@ export type AuthorGrowth = {
   cached?: boolean;
   preparedAt?: string;
   snapshot?: AuthorSnapshot;
+  kaynaklar?: Kaynaklar;
 };
 /** Önceden hazırlanan M7 verisinin durumu (CRM + Logo parçaları, 5 dk'da bir ve «Yenile» ile). */
 export type AuthorSnapshot = {
@@ -1697,6 +1702,7 @@ export type AuthorAdvice = {
   input?: Record<string, unknown>;
   /** Sayı denetimi: olgularla tutmayan cümle sayısı; boşalan özet/öneri yerine kural metni konduysa işaret. */
   guard?: { dropped: number; ruleSummary: boolean; ruleRecommendations: boolean };
+  kaynaklar?: Kaynaklar;
 };
 export type AuthorHeatmap = {
   months: string[];
@@ -1709,8 +1715,9 @@ export type AuthorHeatmap = {
   warnDays: number;
   crmOk: boolean;
   crmError: string | null;
+  kaynaklar?: Kaynaklar;
 };
-export type AuthorAgenda = { upcoming: AuthorMeeting[]; missingNotes: AuthorMeeting[]; openSteps: AuthorMeeting[]; days: number; today: string };
+export type AuthorAgenda = { upcoming: AuthorMeeting[]; missingNotes: AuthorMeeting[]; openSteps: AuthorMeeting[]; days: number; today: string; kaynaklar?: Kaynaklar };
 /** Çapraz yazar önerisi: e-ticarette aynı siparişte birlikte alınan yazarlar (müşteri bilgisi yok). */
 export type AuthorRelated = {
   items: Array<{
@@ -1731,19 +1738,21 @@ export type AuthorRelated = {
   minOrders: number;
   minLift: number;
   run: { at: string | null; orders: number; linesMatched: number; lines: number; pairs: number } | null;
+  kaynaklar?: Kaynaklar;
 };
 export type AuthorSimilar = {
   cards: Array<{ id: string; name: string; stage: string; stageLabel: string | null; archived: boolean; crmContactId: string | null }>;
   crm: Array<{ crmContactId: string; name: string | null; author: boolean; cardId: string | null }>;
   crmTotal: number;
   crmError?: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 const A = '/api/v1/editorial/authors';
 export const authorsApi = {
   meta: () => send<AuthorsMeta>('GET', `${A}/meta`, undefined, 30_000),
   cards: (p: { stage?: string; q?: string; scope?: string; archived?: boolean } = {}) =>
-    send<{ items: AuthorCardSummary[]; total: number; stages: Record<string, number> }>(
+    send<{ items: AuthorCardSummary[]; total: number; stages: Record<string, number>; kaynaklar?: Kaynaklar }>(
       'GET',
       `${A}/cards${qs({ stage: p.stage, q: p.q, scope: p.scope, archived: p.archived ? 'true' : undefined })}`,
       undefined,
@@ -1768,12 +1777,12 @@ export const authorsApi = {
   growth: (contactId: string, refresh = false) =>
     send<AuthorGrowth>('GET', `${A}/growth/${encodeURIComponent(contactId)}${refresh ? '?refresh=true' : ''}`, undefined, 600_000),
   advice: (contactId: string) =>
-    send<{ advice: AuthorAdvice | null; modelReady: boolean }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
+    send<{ advice: AuthorAdvice | null; modelReady: boolean; kaynaklar?: Kaynaklar }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
   makeAdvice: (contactId: string) => send<AuthorAdvice>('POST', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 600_000),
   snapshot: () => send<AuthorSnapshot>('GET', `${A}/snapshot`, undefined, 30_000),
   refresh: () => send<AuthorSnapshot>('POST', `${A}/refresh`, undefined, 30_000),
   remindersMe: () =>
-    send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number } }>('GET', `${A}/reminders/me`, undefined, 30_000),
+    send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number }; kaynaklar?: Kaynaklar }>('GET', `${A}/reminders/me`, undefined, 30_000),
   setReminders: (enabled: boolean) => send<{ enabled: boolean }>('PUT', `${A}/reminders/me`, { enabled }, 30_000),
   deleteMeeting: (id: string) => send<{ ok: boolean }>('DELETE', `${A}/meetings/${encodeURIComponent(id)}`, undefined, 30_000),
 };
@@ -3233,7 +3242,7 @@ export type FlPayoutHead = {
   paidRef: string | null;
   paidBy: string | null;
 };
-export type FlPersonDetail = FlPerson & { portfolio: FlPortfolioItem[]; tasks: FlTask[]; payouts: FlPayoutHead[] };
+export type FlPersonDetail = FlPerson & { portfolio: FlPortfolioItem[]; tasks: FlTask[]; payouts: FlPayoutHead[]; kaynaklar?: Kaynaklar };
 export type FlPackageRow = {
   id: string;
   title: string;
@@ -3263,6 +3272,7 @@ export type FlPackage = {
   createdBy: string;
   createdAt: string;
   tasks: FlTask[];
+  kaynaklar?: Kaynaklar;
 };
 export type FlTaskInput = { title: string; units: number | string; unit?: string; unitPrice?: number | string; effortHours?: number | string; start?: string; due?: string; role?: string };
 export type FlCapacityCell = { week: string; capacity: number; load: number; ratio: number | null; away: boolean };
@@ -3280,6 +3290,7 @@ export type FlCapacity = {
     late: number;
     tasks: Array<{ id: string; title: string; packageId: string; packageTitle: string; start: string | null; due: string | null; effortHours: number; status: FlTaskStatus; late: boolean }>;
   }>;
+  kaynaklar?: Kaynaklar;
 };
 export type FlSuggestion = {
   taskId: string;
@@ -3293,6 +3304,7 @@ export type FlPayable = { personId: string; personName: string; total: number; t
 export type FlPayout = FlPayoutHead & {
   person: { id: string; name: string; logoCard: string | null; email: string | null };
   lines: Array<{ id: string; taskId: string; description: string; units: number; unit: string; unitPrice: number; amount: number }>;
+  kaynaklar?: Kaynaklar;
 };
 export type FlMessageKind = 'ic' | 'giden' | 'gelen' | 'sistem';
 export type FlMessage = {
@@ -3320,6 +3332,7 @@ export type FlOverview = {
   units: string[];
   email: { configured: boolean; sender: string | null };
   me: { username: string; canManage: boolean; canApprove: boolean };
+  kaynaklar?: Kaynaklar;
 };
 export type FlLogoCard = { code: string | null; name: string | null; specode: string | null; city: string | null; freelance: boolean };
 export type FlLogoMovements = {
@@ -3335,6 +3348,7 @@ export type FlLogoMovements = {
   last?: string | null;
   truncated?: boolean;
   db?: DbTiming | null;
+  kaynaklar?: Kaynaklar;
 };
 
 const FL = '/api/v1/editorial/freelance';
@@ -3364,7 +3378,7 @@ const flUpload = async <T,>(path: string, file: File, extra: Record<string, stri
 export const freelanceApi = {
   overview: () => send<FlOverview>('GET', `${FL}/overview`, undefined, 30_000),
   people: (p: { q?: string; role?: string; status?: string } = {}) =>
-    send<{ items: FlPerson[]; total: number; roles: FlRole[]; units: string[] }>('GET', `${FL}/people${qs(p)}`, undefined, 30_000),
+    send<{ items: FlPerson[]; total: number; roles: FlRole[]; units: string[]; kaynaklar?: Kaynaklar }>('GET', `${FL}/people${qs(p)}`, undefined, 30_000),
   person: (id: string) => send<FlPersonDetail>('GET', `${FL}/people/${enc(id)}`, undefined, 30_000),
   createPerson: (b: Record<string, unknown>) => send<FlPersonDetail>('POST', `${FL}/people`, b, 30_000),
   updatePerson: (id: string, b: Record<string, unknown>) => send<FlPersonDetail>('PATCH', `${FL}/people/${enc(id)}`, b, 30_000),
@@ -3374,7 +3388,7 @@ export const freelanceApi = {
   updatePortfolio: (id: string, b: { title?: string; tags?: string[]; book?: string }) => send<{ ok: boolean }>('PATCH', `${FL}/portfolio/${enc(id)}`, b, 30_000),
   deletePortfolio: (id: string) => send<{ ok: boolean }>('DELETE', `${FL}/portfolio/${enc(id)}`, undefined, 30_000),
   portfolioUrl: (id: string) => `${ENGINE_BASE}${FL}/portfolio/${enc(id)}`,
-  packages: (p: { q?: string; status?: string } = {}) => send<{ items: FlPackageRow[]; total: number }>('GET', `${FL}/packages${qs(p)}`, undefined, 30_000),
+  packages: (p: { q?: string; status?: string } = {}) => send<{ items: FlPackageRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', `${FL}/packages${qs(p)}`, undefined, 30_000),
   package: (id: string) => send<FlPackage>('GET', `${FL}/packages/${enc(id)}`, undefined, 30_000),
   createPackage: (b: { title: string; role: string; due?: string; bookTitle?: string; bookId?: string; brief?: string; tasks: FlTaskInput[] }) =>
     send<{ id: string; title: string }>('POST', `${FL}/packages`, b, 30_000),
@@ -3384,7 +3398,7 @@ export const freelanceApi = {
   deleteTask: (id: string) => send<{ ok: boolean }>('DELETE', `${FL}/tasks/${enc(id)}`, undefined, 30_000),
   assign: (items: Array<{ taskId: string; personId: string | null }>, notify: boolean) =>
     send<{ assigned: number; mail: { gonderildi: number; diger: number } | null }>('POST', `${FL}/assign`, { items, notify }, 120_000),
-  suggest: (taskIds: string[]) => send<{ items: FlSuggestion[] }>('POST', `${FL}/suggest`, { taskIds }, 30_000),
+  suggest: (taskIds: string[]) => send<{ items: FlSuggestion[]; kaynaklar?: Kaynaklar }>('POST', `${FL}/suggest`, { taskIds }, 30_000),
   capacity: (p: { weeks?: number; role?: string; start?: string } = {}) => send<FlCapacity>('GET', `${FL}/capacity${qs(p)}`, undefined, 30_000),
   deliverFile: (taskId: string, file: File, note?: string) =>
     flUpload<{ id: string; version: number }>(`${FL}/tasks/${enc(taskId)}/delivery`, file, note ? { note } : {}),
@@ -3393,16 +3407,16 @@ export const freelanceApi = {
   decide: (deliveryId: string, decision: 'kabul' | 'revizyon', note: string, notify: boolean) =>
     send<{ ok: boolean; mail: FlMessage['emailStatus'] }>('POST', `${FL}/deliveries/${enc(deliveryId)}/decision`, { decision, note, notify }, 60_000),
   deliveryUrl: (id: string) => `${ENGINE_BASE}${FL}/deliveries/${enc(id)}/file`,
-  payable: () => send<{ items: FlPayable[] }>('GET', `${FL}/payable`, undefined, 30_000),
+  payable: () => send<{ items: FlPayable[]; kaynaklar?: Kaynaklar }>('GET', `${FL}/payable`, undefined, 30_000),
   payouts: (p: { status?: string; person?: string } = {}) =>
-    send<{ items: FlPayoutHead[]; totals: Record<Exclude<FlPayoutHead['status'], 'silindi'>, number> }>('GET', `${FL}/payouts${qs(p)}`, undefined, 30_000),
+    send<{ items: FlPayoutHead[]; totals: Record<Exclude<FlPayoutHead['status'], 'silindi'>, number>; kaynaklar?: Kaynaklar }>('GET', `${FL}/payouts${qs(p)}`, undefined, 30_000),
   payout: (id: string) => send<FlPayout>('GET', `${FL}/payouts/${enc(id)}`, undefined, 30_000),
   createPayout: (b: { personId: string; taskIds?: string[]; note?: string }) =>
     send<{ id: string; no: number; total: number; personName: string }>('POST', `${FL}/payouts`, b, 30_000),
   payoutAction: (id: string, action: 'submit' | 'return' | 'approve' | 'pay' | 'delete', b: { note?: string; paidOn?: string; paidRef?: string } = {}) =>
     send<{ id: string; no: number; action: string }>('POST', `${FL}/payouts/${enc(id)}/${action}`, b, 30_000),
   payoutCsvUrl: (id: string) => `${ENGINE_BASE}${FL}/payouts/${enc(id)}/export.csv`,
-  inbox: () => send<{ items: FlInboxItem[]; unread: number }>('GET', `${FL}/inbox`, undefined, 30_000),
+  inbox: () => send<{ items: FlInboxItem[]; unread: number; kaynaklar?: Kaynaklar }>('GET', `${FL}/inbox`, undefined, 30_000),
   thread: (id: string) => send<FlThread>('GET', `${FL}/threads/${enc(id)}`, undefined, 30_000),
   post: (id: string, b: { kind: 'ic' | 'giden' | 'gelen'; body: string; personId?: string; taskId?: string }) =>
     send<{ id: string; emailStatus: FlMessage['emailStatus'] }>('POST', `${FL}/threads/${enc(id)}/messages`, b, 60_000),

@@ -6,6 +6,7 @@ import { ENGINE_ENABLED, authorsApi } from '../../engine';
 import { Note, btnPrimary, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import CardPanel, { type PanelTarget } from './CardPanel';
 import CardForm from './CardForm';
 import HeatMapTab from './HeatMapTab';
@@ -96,10 +97,36 @@ export default function AuthorRelationsScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       <KpiRow>
-        <Kpi label="Havuzdaki aday" value={pool === null ? '—' : nf.format(pool)} help="Vazgeçilenler hariç" active={tab === 'havuz'} onClick={() => update({ sekme: 'havuz' })} />
-        <Kpi label="Bu hafta randevum" value={week === null ? '—' : nf.format(week)} help="Önümüzdeki 7 gün" active={tab === 'randevu'} onClick={() => update({ sekme: 'randevu' })} />
-        <Kpi label="Notu eksik" value={mine.data ? nf.format(mine.data.missingNotes.length) : '—'} help="Tarihi geçmiş, notu girilmemiş randevum" onClick={() => update({ sekme: 'randevu' })} />
-        <Kpi label="Geciken adım" value={late === null ? '—' : nf.format(late)} help="Tarihi geçmiş sıradaki adımım" onClick={() => update({ sekme: 'randevu' })} />
+        <Kpi
+          label="Havuzdaki aday"
+          value={pool === null ? '—' : nf.format(pool)}
+          help="Vazgeçilenler hariç"
+          active={tab === 'havuz'}
+          onClick={() => update({ sekme: 'havuz' })}
+          info={cards.data ? <SqlInfo k={cards.data.kaynaklar} alan="havuzToplam" label="Havuzdaki aday" /> : undefined}
+        />
+        <Kpi
+          label="Bu hafta randevum"
+          value={week === null ? '—' : nf.format(week)}
+          help="Önümüzdeki 7 gün"
+          active={tab === 'randevu'}
+          onClick={() => update({ sekme: 'randevu' })}
+          info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.hafta" label="Bu hafta randevum" /> : undefined}
+        />
+        <Kpi
+          label="Notu eksik"
+          value={mine.data ? nf.format(mine.data.missingNotes.length) : '—'}
+          help="Tarihi geçmiş, notu girilmemiş randevum"
+          onClick={() => update({ sekme: 'randevu' })}
+          info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.notEksik" label="Notu eksik randevu" /> : undefined}
+        />
+        <Kpi
+          label="Geciken adım"
+          value={late === null ? '—' : nf.format(late)}
+          help="Tarihi geçmiş sıradaki adımım"
+          onClick={() => update({ sekme: 'randevu' })}
+          info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.gecikenAdim" label="Geciken adım" /> : undefined}
+        />
       </KpiRow>
 
       <SnapshotBar />

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { freelanceApi } from '../../engine';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../../admin/ui';
 import { Panel } from '../kit';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { Empty, TASK_STATUS, day, loadTone, q2, roleLabel, type FlCtx } from './shared';
 
 /**
@@ -72,18 +73,23 @@ export default function CapacityPane({ ctx }: { ctx: FlCtx }) {
       {d && (
         <>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-canvas-muted">
-            <span>
+            <span className="inline-flex items-center gap-1">
               <b className="text-canvas-ink">{nf.format(d.people.length)}</b> aktif kişi
+              <SqlInfo k={d.kaynaklar} alan="sayac.kisi" label="Aktif kişi" />
             </span>
             {over > 0 && (
-              <span className="font-bold text-red-700">
+              <span className="inline-flex items-center gap-1 font-bold text-red-700">
                 {nf.format(over)} kişi en az bir hafta kapasitesinin üstünde
+                <SqlInfo k={d.kaynaklar} alan="sayac.asiri" label="Kapasitesinin üstündeki kişi" />
               </span>
             )}
             {d.unassigned.tasks > 0 && (
-              <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => setParams({ bolum: 'paketler' })}>
-                {nf.format(d.unassigned.tasks)} görev ({q2(d.unassigned.hours)} saat) atanmayı bekliyor
-              </button>
+              <span className="inline-flex items-center gap-1">
+                <button type="button" className="font-bold text-canvas-violet hover:underline" onClick={() => setParams({ bolum: 'paketler' })}>
+                  {nf.format(d.unassigned.tasks)} görev ({q2(d.unassigned.hours)} saat) atanmayı bekliyor
+                </button>
+                <SqlInfo k={d.kaynaklar} alan="unassigned" label="Atanmayı bekleyen görev" />
+              </span>
             )}
             <span className="ml-auto flex flex-wrap items-center gap-2">
               <Legend cls={loadTone(0.4)} text="rahat" />
@@ -100,7 +106,9 @@ export default function CapacityPane({ ctx }: { ctx: FlCtx }) {
               <table className="w-full min-w-[640px] border-separate border-spacing-0 text-[12px]">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kişi</th>
+                    <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                      <InfoLabel k={d.kaynaklar} alan="people[]" label="Haftalık yük ve kapasite">Kişi</InfoLabel>
+                    </th>
                     {d.weeks.map((w) => (
                       <th key={w} className={`whitespace-nowrap px-1 py-2 text-center text-[11px] font-bold text-canvas-muted ${w === thisWeek ? 'text-canvas-violet' : ''}`}>
                         {w === thisWeek ? 'Bu hafta' : day(w)}

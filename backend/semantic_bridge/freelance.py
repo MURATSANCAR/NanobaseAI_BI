@@ -392,8 +392,12 @@ def _person_values(body: dict[str, Any], partial: bool) -> dict[str, Any]:
     return vals
 
 
+def person_stmt(tenant: str, person_id: str):
+    return sa.select(PEOPLE).where(PEOPLE.c.id == person_id, PEOPLE.c.tenant_id == tenant)
+
+
 def _person_row(conn: sa.Connection, tenant: str, person_id: str) -> Any:
-    row = conn.execute(sa.select(PEOPLE).where(PEOPLE.c.id == person_id, PEOPLE.c.tenant_id == tenant)).first()
+    row = conn.execute(person_stmt(tenant, person_id)).first()
     if row is None:
         raise FreelanceError("Serbest çalışan bulunamadı.", 404)
     return row
@@ -462,14 +466,22 @@ def _stats(tasks: list[Any], today: date) -> dict[str, Any]:
     }
 
 
-def list_people(engine: sa.engine.Engine, tenant: str, *, q: str = "", role: str = "", status: str = "") -> dict[str, Any]:
+def people_stmt(tenant: str, status: str = ""):
     stmt = sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant)
     if status in ("aktif", "pasif"):
         stmt = stmt.where(PEOPLE.c.status == status)
+    return stmt.order_by(PEOPLE.c.name)
+
+
+def people_tasks_stmt(tenant: str):
+    """Kişi istatistiklerinin görevleri: kişisi olan, iptal olmayan bütün görevler."""
+    return sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.person_id.is_not(None), TASKS.c.status != "iptal")
+
+
+def list_people(engine: sa.engine.Engine, tenant: str, *, q: str = "", role: str = "", status: str = "") -> dict[str, Any]:
     with engine.connect() as conn:
-        rows = conn.execute(stmt.order_by(PEOPLE.c.name)).all()
-        tasks = conn.execute(sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.person_id.is_not(None),
-                                                    TASKS.c.status != "iptal")).all()
+        rows = conn.execute(people_stmt(tenant, status)).all()
+        tasks = conn.execute(people_tasks_stmt(tenant)).all()
         thumbs = conn.execute(sa.select(PORTFOLIO.c.person_id, PORTFOLIO.c.id, PORTFOLIO.c.mime)
                               .where(PORTFOLIO.c.person_id.in_([r.id for r in rows] or [""]))
                               .order_by(PORTFOLIO.c.uploaded_at.desc())).all()
@@ -496,17 +508,28 @@ def list_people(engine: sa.engine.Engine, tenant: str, *, q: str = "", role: str
                                                             for k, v in ROLES.items()], "units": list(UNITS)}
 
 
+def person_files_stmt(person_id: str):
+    return sa.select(PORTFOLIO).where(PORTFOLIO.c.person_id == person_id).order_by(PORTFOLIO.c.uploaded_at.desc())
+
+
+def person_tasks_stmt(person_id: str):
+    return (sa.select(TASKS, PACKAGES.c.title.label("package_title"), PACKAGES.c.book_title)
+            .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
+            .where(TASKS.c.person_id == person_id, TASKS.c.status != "iptal")
+            .order_by(TASKS.c.due.desc().nulls_last(), TASKS.c.created_at.desc()))
+
+
+def person_payouts_stmt(person_id: str):
+    return (sa.select(PAYOUTS).where(PAYOUTS.c.person_id == person_id, PAYOUTS.c.status != DELETED)
+            .order_by(PAYOUTS.c.created_at.desc()))
+
+
 def get_person(engine: sa.engine.Engine, tenant: str, person_id: str) -> dict[str, Any]:
     with engine.connect() as conn:
         row = _person_row(conn, tenant, person_id)
-        files = conn.execute(sa.select(PORTFOLIO).where(PORTFOLIO.c.person_id == person_id)
-                             .order_by(PORTFOLIO.c.uploaded_at.desc())).all()
-        tasks = conn.execute(sa.select(TASKS, PACKAGES.c.title.label("package_title"), PACKAGES.c.book_title)
-                             .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
-                             .where(TASKS.c.person_id == person_id, TASKS.c.status != "iptal")
-                             .order_by(TASKS.c.due.desc().nulls_last(), TASKS.c.created_at.desc())).all()
-        payouts = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.person_id == person_id, PAYOUTS.c.status != DELETED)
-                               .order_by(PAYOUTS.c.created_at.desc())).all()
+        files = conn.execute(person_files_stmt(person_id)).all()
+        tasks = conn.execute(person_tasks_stmt(person_id)).all()
+        payouts = conn.execute(person_payouts_stmt(person_id)).all()
     out = _person_out(row)
     out["stats"] = _stats(list(tasks), _today())
     out["portfolio"] = [_portfolio_out(f) for f in files]
@@ -647,15 +670,19 @@ def _task_out(t: Any, **extra: Any) -> dict[str, Any]:
     }
 
 
+def package_stmt(tenant: str, package_id: str):
+    return sa.select(PACKAGES).where(PACKAGES.c.id == package_id, PACKAGES.c.tenant_id == tenant)
+
+
 def _package_row(conn: sa.Connection, tenant: str, package_id: str) -> Any:
-    row = conn.execute(sa.select(PACKAGES).where(PACKAGES.c.id == package_id, PACKAGES.c.tenant_id == tenant)).first()
+    row = conn.execute(package_stmt(tenant, package_id)).first()
     if row is None:
         raise FreelanceError("İş paketi bulunamadı.", 404)
     return row
 
 
 def _task_row(conn: sa.Connection, tenant: str, task_id: str) -> Any:
-    row = conn.execute(sa.select(TASKS).where(TASKS.c.id == task_id, TASKS.c.tenant_id == tenant)).first()
+    row = conn.execute(task_stmt(tenant, task_id)).first()
     if row is None:
         raise FreelanceError("Görev bulunamadı.", 404)
     return row
@@ -847,16 +874,34 @@ def assign(engine: sa.engine.Engine, tenant: str, user: str, pairs: list[dict[st
     return done
 
 
-def list_packages(engine: sa.engine.Engine, tenant: str, user: str, *, q: str = "", status: str = "acik") -> dict[str, Any]:
-    stmt = sa.select(PACKAGES).where(PACKAGES.c.tenant_id == tenant)
+def _packages_where(tenant: str, status: str) -> list[Any]:
+    where = [PACKAGES.c.tenant_id == tenant]
     if status in ("acik", "kapandi", "iptal"):
-        stmt = stmt.where(PACKAGES.c.status == status)
+        where.append(PACKAGES.c.status == status)
+    return where
+
+
+def packages_stmt(tenant: str, status: str = "acik"):
+    return (sa.select(PACKAGES).where(*_packages_where(tenant, status))
+            .order_by(PACKAGES.c.due.asc().nulls_last(), PACKAGES.c.created_at.desc()))
+
+
+def packages_tasks_stmt(tenant: str, status: str = "acik"):
+    """Süzgeçteki paketlerin bütün görevleri (paket kimlikleri alt sorguyla: listede çalışan ifade budur)."""
+    return sa.select(TASKS).where(TASKS.c.package_id.in_(sa.select(PACKAGES.c.id).where(*_packages_where(tenant, status))))
+
+
+def packages_threads(tenant: str, status: str = "acik"):
+    """Süzgeçteki paketlerin yazışma kimlikleri («p:<paket>»)."""
+    return sa.select((sa.literal("p:", sa.String) + PACKAGES.c.id).label("thread")).where(*_packages_where(tenant, status))
+
+
+def list_packages(engine: sa.engine.Engine, tenant: str, user: str, *, q: str = "", status: str = "acik") -> dict[str, Any]:
     with engine.connect() as conn:
-        pkgs = conn.execute(stmt.order_by(PACKAGES.c.due.asc().nulls_last(), PACKAGES.c.created_at.desc())).all()
-        ids = [p.id for p in pkgs] or [""]
-        tasks = conn.execute(sa.select(TASKS).where(TASKS.c.package_id.in_(ids))).all()
+        pkgs = conn.execute(packages_stmt(tenant, status)).all()
+        tasks = conn.execute(packages_tasks_stmt(tenant, status)).all() if pkgs else []
         people = {r.id: r.name for r in conn.execute(sa.select(PEOPLE.c.id, PEOPLE.c.name).where(PEOPLE.c.tenant_id == tenant))}
-        unread = _unread(conn, tenant, user, [f"p:{p.id}" for p in pkgs])
+        unread = _unread(conn, tenant, user, packages_threads(tenant, status)) if pkgs else {}
     by_pkg: dict[str, list[Any]] = {}
     for t in tasks:
         by_pkg.setdefault(t.package_id, []).append(t)
@@ -879,14 +924,23 @@ def list_packages(engine: sa.engine.Engine, tenant: str, user: str, *, q: str = 
     return {"items": items, "total": len(items)}
 
 
+def package_tasks_stmt(package_id: str):
+    return sa.select(TASKS).where(TASKS.c.package_id == package_id).order_by(TASKS.c.created_at)
+
+
+def package_deliveries_stmt(package_id: str):
+    """Paketin görevlerinin teslimleri (görev kimlikleri alt sorguyla), en yeni sürüm önce."""
+    return (sa.select(DELIVERIES).where(DELIVERIES.c.task_id.in_(sa.select(TASKS.c.id).where(TASKS.c.package_id == package_id)))
+            .order_by(DELIVERIES.c.version.desc()))
+
+
 def get_package(engine: sa.engine.Engine, tenant: str, package_id: str) -> dict[str, Any]:
     with engine.connect() as conn:
         p = _package_row(conn, tenant, package_id)
-        tasks = conn.execute(sa.select(TASKS).where(TASKS.c.package_id == package_id).order_by(TASKS.c.created_at)).all()
+        tasks = conn.execute(package_tasks_stmt(package_id)).all()
         people = {r.id: r for r in conn.execute(sa.select(PEOPLE.c.id, PEOPLE.c.name, PEOPLE.c.email).where(
             PEOPLE.c.tenant_id == tenant, PEOPLE.c.id.in_([t.person_id for t in tasks if t.person_id] or [""])))}
-        dels = conn.execute(sa.select(DELIVERIES).where(DELIVERIES.c.task_id.in_([t.id for t in tasks] or [""]))
-                            .order_by(DELIVERIES.c.version.desc())).all()
+        dels = conn.execute(package_deliveries_stmt(package_id)).all() if tasks else []
     by_task: dict[str, list[Any]] = {}
     for d in dels:
         by_task.setdefault(d.task_id, []).append(d)
@@ -938,20 +992,30 @@ def load_by_day(tasks: Iterable[Any], away: list[tuple[date, date]], today: date
     return out
 
 
+def active_people_stmt(tenant: str):
+    return sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant, PEOPLE.c.status == "aktif").order_by(PEOPLE.c.name)
+
+
+def capacity_tasks_stmt(tenant: str):
+    return (sa.select(TASKS, PACKAGES.c.title.label("package_title")).join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
+            .where(TASKS.c.tenant_id == tenant, TASKS.c.status.in_(ACTIVE)))
+
+
+def unassigned_stmt(tenant: str):
+    return (sa.select(sa.func.count(), sa.func.coalesce(sa.func.sum(TASKS.c.effort_hours), 0.0))
+            .select_from(TASKS).join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
+            .where(TASKS.c.tenant_id == tenant, TASKS.c.status == "atanmadi", PACKAGES.c.status == "acik"))
+
+
 def capacity(engine: sa.engine.Engine, tenant: str, *, weeks: int = 8, role: str = "", start: Optional[str] = None) -> dict[str, Any]:
     weeks = max(1, min(int(weeks or 8), 26))
     today = _today()
     first = _monday(_day(start, "Başlangıç") or today)
     week_starts = [first + timedelta(weeks=i) for i in range(weeks)]
     with engine.connect() as conn:
-        people = conn.execute(sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant, PEOPLE.c.status == "aktif")
-                              .order_by(PEOPLE.c.name)).all()
-        tasks = conn.execute(sa.select(TASKS, PACKAGES.c.title.label("package_title")).join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
-                             .where(TASKS.c.tenant_id == tenant, TASKS.c.status.in_(ACTIVE))).all()
-        unassigned = conn.execute(sa.select(sa.func.count(), sa.func.coalesce(sa.func.sum(TASKS.c.effort_hours), 0.0))
-                                  .select_from(TASKS).join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
-                                  .where(TASKS.c.tenant_id == tenant, TASKS.c.status == "atanmadi",
-                                         PACKAGES.c.status == "acik")).one()
+        people = conn.execute(active_people_stmt(tenant)).all()
+        tasks = conn.execute(capacity_tasks_stmt(tenant)).all()
+        unassigned = conn.execute(unassigned_stmt(tenant)).one()
     by_person: dict[str, list[Any]] = {}
     for t in tasks:
         by_person.setdefault(t.person_id, []).append(t)
@@ -981,17 +1045,28 @@ def capacity(engine: sa.engine.Engine, tenant: str, *, weeks: int = 8, role: str
             "unassigned": {"tasks": int(unassigned[0]), "hours": round(float(unassigned[1] or 0), 1)}}
 
 
+def task_stmt(tenant: str, task_id: str):
+    return sa.select(TASKS).where(TASKS.c.id == task_id, TASKS.c.tenant_id == tenant)
+
+
+def suggest_active_stmt(tenant: str):
+    return sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.status.in_(ACTIVE), TASKS.c.person_id.is_not(None))
+
+
+def suggest_history_stmt(tenant: str):
+    return sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.person_id.is_not(None),
+                                  TASKS.c.first_delivered_at.is_not(None))
+
+
 def suggest(engine: sa.engine.Engine, tenant: str, task_ids: list[str]) -> list[dict[str, Any]]:
     """Seçili atanmamış görevler için sıralı öneri. Sıra: rol uyar → görev aralığında boş saat yeter → boş saat çok
     → zamanında teslim oranı yüksek. Birden çok görevde önceki önerinin yükü sonrakine eklenir (aynı kişiye yığılmaz)."""
     today = _today()
     with engine.connect() as conn:
         tasks = [_task_row(conn, tenant, tid) for tid in task_ids[:200]]
-        people = conn.execute(sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant, PEOPLE.c.status == "aktif")).all()
-        active = conn.execute(sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.status.in_(ACTIVE),
-                                                     TASKS.c.person_id.is_not(None))).all()
-        history = conn.execute(sa.select(TASKS).where(TASKS.c.tenant_id == tenant, TASKS.c.person_id.is_not(None),
-                                                      TASKS.c.first_delivered_at.is_not(None))).all()
+        people = conn.execute(active_people_stmt(tenant)).all()
+        active = conn.execute(suggest_active_stmt(tenant)).all()
+        history = conn.execute(suggest_history_stmt(tenant)).all()
     by_person: dict[str, list[Any]] = {}
     for t in active:
         by_person.setdefault(t.person_id, []).append(t)
@@ -1132,14 +1207,18 @@ def _payout_head(p: Any, person_name: Optional[str] = None) -> dict[str, Any]:
             "paidRef": p.paid_ref, "paidBy": p.paid_by}
 
 
+def payable_stmt(tenant: str):
+    """Ödenecek iş: kabul edilmiş, hakedişe girmemiş görevler."""
+    return (sa.select(TASKS, PACKAGES.c.title.label("package_title"), PACKAGES.c.book_title, PEOPLE.c.name.label("person_name"))
+            .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
+            .join(PEOPLE, PEOPLE.c.id == TASKS.c.person_id)
+            .where(TASKS.c.tenant_id == tenant, TASKS.c.status == "onaylandi", TASKS.c.payout_id.is_(None))
+            .order_by(PEOPLE.c.name, TASKS.c.accepted_at))
+
+
 def payable(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     with engine.connect() as conn:
-        rows = conn.execute(sa.select(TASKS, PACKAGES.c.title.label("package_title"), PACKAGES.c.book_title,
-                                      PEOPLE.c.name.label("person_name"))
-                            .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
-                            .join(PEOPLE, PEOPLE.c.id == TASKS.c.person_id)
-                            .where(TASKS.c.tenant_id == tenant, TASKS.c.status == "onaylandi", TASKS.c.payout_id.is_(None))
-                            .order_by(PEOPLE.c.name, TASKS.c.accepted_at)).all()
+        rows = conn.execute(payable_stmt(tenant)).all()
     groups: dict[str, dict[str, Any]] = {}
     for r in rows:
         g = groups.setdefault(r.person_id, {"personId": r.person_id, "personName": r.person_name, "tasks": [], "total": 0.0})
@@ -1186,14 +1265,22 @@ def _tl(v: Decimal | float) -> str:
     return f"{s} ₺"
 
 
+def payout_stmt(tenant: str, payout_id: str):
+    return sa.select(PAYOUTS).where(PAYOUTS.c.id == payout_id, PAYOUTS.c.tenant_id == tenant)
+
+
+def payout_lines_stmt(payout_id: str):
+    return sa.select(PAYOUT_LINES).where(PAYOUT_LINES.c.payout_id == payout_id).order_by(PAYOUT_LINES.c.description)
+
+
 def _payout_row(conn: sa.Connection, tenant: str, payout_id: str) -> Any:
-    row = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.id == payout_id, PAYOUTS.c.tenant_id == tenant)).first()
+    row = conn.execute(payout_stmt(tenant, payout_id)).first()
     if row is None:
         raise FreelanceError("Hakediş bulunamadı.", 404)
     return row
 
 
-def list_payouts(engine: sa.engine.Engine, tenant: str, *, status: str = "", person_id: str = "") -> dict[str, Any]:
+def payouts_stmt(tenant: str, status: str = "", person_id: str = ""):
     stmt = sa.select(PAYOUTS, PEOPLE.c.name.label("person_name")).join(PEOPLE, PEOPLE.c.id == PAYOUTS.c.person_id).where(
         PAYOUTS.c.tenant_id == tenant)
     if status in PAYOUT_STATES:
@@ -1202,8 +1289,12 @@ def list_payouts(engine: sa.engine.Engine, tenant: str, *, status: str = "", per
         stmt = stmt.where(PAYOUTS.c.status != DELETED)
     if person_id:
         stmt = stmt.where(PAYOUTS.c.person_id == person_id)
+    return stmt.order_by(PAYOUTS.c.no.desc())
+
+
+def list_payouts(engine: sa.engine.Engine, tenant: str, *, status: str = "", person_id: str = "") -> dict[str, Any]:
     with engine.connect() as conn:
-        rows = conn.execute(stmt.order_by(PAYOUTS.c.no.desc())).all()
+        rows = conn.execute(payouts_stmt(tenant, status, person_id)).all()
     items = [_payout_head(r, r.person_name) for r in rows]
     totals = {s: round(sum(i["total"] for i in items if i["status"] == s), 2) for s in PAYOUT_STATES}
     return {"items": items, "totals": totals}
@@ -1213,8 +1304,7 @@ def get_payout(engine: sa.engine.Engine, tenant: str, payout_id: str) -> dict[st
     with engine.connect() as conn:
         p = _payout_row(conn, tenant, payout_id)
         person = _person_row(conn, tenant, p.person_id)
-        lines = conn.execute(sa.select(PAYOUT_LINES).where(PAYOUT_LINES.c.payout_id == payout_id)
-                             .order_by(PAYOUT_LINES.c.description)).all()
+        lines = conn.execute(payout_lines_stmt(payout_id)).all()
     out = _payout_head(p, person.name)
     out["person"] = {"id": person.id, "name": person.name, "logoCard": person.logo_card, "email": person.email}
     out["lines"] = [{"id": ln.id, "taskId": ln.task_id, "description": ln.description, "units": float(ln.units),
@@ -1322,14 +1412,27 @@ def _thread_ok(conn: sa.Connection, tenant: str, thread: str) -> tuple[Optional[
     raise FreelanceError("Yazışma bulunamadı.", 404)
 
 
-def _unread(conn: sa.Connection, tenant: str, user: str, threads: list[str]) -> dict[str, int]:
-    if not threads:
-        return {}
-    reads = {r.thread: r.read_at for r in conn.execute(sa.select(READS).where(
-        READS.c.tenant_id == tenant, READS.c.username == user.lower(), READS.c.thread.in_(threads)))}
-    rows = conn.execute(sa.select(MESSAGES.c.thread, MESSAGES.c.created_at).where(
+def unread_reads_stmt(tenant: str, user: str, threads: Any):
+    """Kişinin yazışmaları en son okuduğu an. `threads`: kimlik listesi ya da kimlik veren alt sorgu."""
+    return sa.select(READS).where(READS.c.tenant_id == tenant, READS.c.username == user.lower(), READS.c.thread.in_(threads))
+
+
+def unread_messages_stmt(tenant: str, user: str, threads: Any):
+    """Başkasının yazdığı (sistem satırı hariç) iletiler; okunma anından sonrakiler okunmamış sayılır."""
+    return sa.select(MESSAGES.c.thread, MESSAGES.c.created_at).where(
         MESSAGES.c.tenant_id == tenant, MESSAGES.c.thread.in_(threads), MESSAGES.c.kind != "sistem",
-        sa.func.lower(MESSAGES.c.author) != user.lower())).all()
+        sa.func.lower(MESSAGES.c.author) != user.lower())
+
+
+def all_threads(tenant: str):
+    return sa.select(MESSAGES.c.thread).distinct().where(MESSAGES.c.tenant_id == tenant)
+
+
+def _unread(conn: sa.Connection, tenant: str, user: str, threads: Any) -> dict[str, int]:
+    if isinstance(threads, (list, tuple)) and not threads:
+        return {}
+    reads = {r.thread: r.read_at for r in conn.execute(unread_reads_stmt(tenant, user, threads))}
+    rows = conn.execute(unread_messages_stmt(tenant, user, threads)).all()
     out: dict[str, int] = {}
     for th, at in rows:
         seen = reads.get(th)
@@ -1415,18 +1518,24 @@ def post_message(engine: sa.engine.Engine, tenant: str, user: str, display: str,
     return {"id": mid, "emailStatus": email_status}
 
 
+def inbox_stmt(tenant: str):
+    """Yazışma başına son ileti ve ileti sayısı."""
+    last = (sa.select(MESSAGES.c.thread, sa.func.max(MESSAGES.c.created_at).label("at"), sa.func.count().label("n"))
+            .where(MESSAGES.c.tenant_id == tenant).group_by(MESSAGES.c.thread).subquery())
+    return (sa.select(MESSAGES, last.c.n, last.c.at)
+            .join(last, sa.and_(MESSAGES.c.thread == last.c.thread, MESSAGES.c.created_at == last.c.at))
+            .where(MESSAGES.c.tenant_id == tenant))
+
+
 def inbox(engine: sa.engine.Engine, tenant: str, user: str) -> dict[str, Any]:
     """Yazışması olan paketler ve kişiler, son iletiye göre. Sistem satırı da son hareket sayılır."""
     with engine.connect() as conn:
-        last = (sa.select(MESSAGES.c.thread, sa.func.max(MESSAGES.c.created_at).label("at"), sa.func.count().label("n"))
-                .where(MESSAGES.c.tenant_id == tenant).group_by(MESSAGES.c.thread).subquery())
-        rows = conn.execute(sa.select(MESSAGES, last.c.n, last.c.at).join(
-            last, sa.and_(MESSAGES.c.thread == last.c.thread, MESSAGES.c.created_at == last.c.at))
-            .where(MESSAGES.c.tenant_id == tenant)).all()
+        rows = conn.execute(inbox_stmt(tenant)).all()
         latest: dict[str, Any] = {}
         for m in rows:
             latest.setdefault(m.thread, m)          # aynı anda iki ileti: biri yeter
-        unread = _unread(conn, tenant, user, list(latest))
+        # Son iletisi olan yazışmalar = kiracının bütün yazışmaları (alt sorgu: çalışan ifade budur).
+        unread = _unread(conn, tenant, user, all_threads(tenant)) if latest else {}
         pkgs = {r.id: r for r in conn.execute(sa.select(PACKAGES.c.id, PACKAGES.c.title, PACKAGES.c.book_title, PACKAGES.c.status)
                                               .where(PACKAGES.c.tenant_id == tenant))}
         people = {r.id: r for r in conn.execute(sa.select(PEOPLE.c.id, PEOPLE.c.name).where(PEOPLE.c.tenant_id == tenant))}
@@ -1448,19 +1557,29 @@ def inbox(engine: sa.engine.Engine, tenant: str, user: str) -> dict[str, Any]:
 
 # ---------------------------------------------------------------------------------------------- özet
 
+def ov_people_stmt(tenant: str):
+    return sa.select(PEOPLE.c.status, sa.func.count()).where(PEOPLE.c.tenant_id == tenant).group_by(PEOPLE.c.status)
+
+
+def ov_tasks_stmt(tenant: str):
+    """Özet sayıları ve ödenecek tutarın görevleri: iptal edilmemiş paketlerdeki bütün görevler."""
+    return (sa.select(TASKS.c.status, TASKS.c.due, TASKS.c.payout_id, TASKS.c.units, TASKS.c.unit_price)
+            .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
+            .where(TASKS.c.tenant_id == tenant, PACKAGES.c.status != "iptal"))
+
+
+def ov_payouts_stmt(tenant: str):
+    return (sa.select(PAYOUTS.c.status, sa.func.count(), sa.func.coalesce(sa.func.sum(PAYOUTS.c.total), 0))
+            .where(PAYOUTS.c.tenant_id == tenant, PAYOUTS.c.status != DELETED).group_by(PAYOUTS.c.status))
+
+
 def overview(engine: sa.engine.Engine, tenant: str, user: str) -> dict[str, Any]:
     today = _today()
     with engine.connect() as conn:
-        people = conn.execute(sa.select(PEOPLE.c.status, sa.func.count()).where(PEOPLE.c.tenant_id == tenant)
-                              .group_by(PEOPLE.c.status)).all()
-        tasks = conn.execute(sa.select(TASKS.c.status, TASKS.c.due, TASKS.c.payout_id, TASKS.c.units, TASKS.c.unit_price)
-                             .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
-                             .where(TASKS.c.tenant_id == tenant, PACKAGES.c.status != "iptal")).all()
-        pays = conn.execute(sa.select(PAYOUTS.c.status, sa.func.count(), sa.func.coalesce(sa.func.sum(PAYOUTS.c.total), 0))
-                            .where(PAYOUTS.c.tenant_id == tenant, PAYOUTS.c.status != DELETED)
-                            .group_by(PAYOUTS.c.status)).all()
-        threads = [r[0] for r in conn.execute(sa.select(MESSAGES.c.thread).distinct().where(MESSAGES.c.tenant_id == tenant))]
-        unread = sum(_unread(conn, tenant, user, threads).values())
+        people = conn.execute(ov_people_stmt(tenant)).all()
+        tasks = conn.execute(ov_tasks_stmt(tenant)).all()
+        pays = conn.execute(ov_payouts_stmt(tenant)).all()
+        unread = sum(_unread(conn, tenant, user, all_threads(tenant)).values())
     pc = dict(people)
     payable_total = sum((Decimal(t.units) * Decimal(t.unit_price) for t in tasks if t.status == "onaylandi" and t.payout_id is None),
                         Decimal("0"))

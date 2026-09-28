@@ -148,6 +148,17 @@ def crm_options_sql(schema: str) -> str:
 
 # ------------------------------------------------------------------------------------------ Logo
 
+#: Üretim emri tablosu olan Logo firmaları (dönem tanımında olup tablosu olmayan firma okunmaz).
+LOGO_TABLES_SQL = "SELECT name FROM sys.tables WHERE name LIKE 'LG[_]___[_]PRODORD'"
+
+
+def _dbname(conn: Any) -> Optional[str]:
+    """Bağlantının YALNIZ veritabanı adı (sorgu bilgisindeki «USE [..]» satırı için; sunucu, kullanıcı, parola okunmaz)."""
+    cfg = getattr(conn, "cfg", None)
+    db = str((cfg.get("database") if isinstance(cfg, dict) else "") or "").strip()
+    return db if re.fullmatch(r"[A-Za-z0-9_\-\. ]{1,128}", db) else None
+
+
 def logo_periods_sql(since: date) -> str:
     """Geçmiş penceresine düşen Logo firma/dönemleri (her yıl ayrı firma)."""
     return ("SELECT p.FIRMNR AS firma, p.NR AS donem FROM dbo.L_CAPIPERIOD p"
@@ -360,15 +371,30 @@ class Source:
                 return snap
         return self._refresh(time.time())
 
+    def last(self) -> Optional[dict[str, Any]]:
+        """Beklemeden ve okuma başlatmadan son okuma (sorgu bilgisi, uç cevabının dayandığı okuma)."""
+        return self._current()
+
     def read(self) -> dict[str, Any]:
         since = self._history_from()
         started = time.monotonic()
         crm = self._crm()
         schema = self._schema()
+        # Sorgu bilgisi: okumada ÇALIŞAN metin (firma/dönem kopyası ve tarih yerinde), satır, süre, an, veritabanı adı.
+        # Sonuç satırı saklanmaz; ekrandaki «i» penceresi bunları gösterir.
+        queries: list[dict[str, Any]] = []
+
+        def run(conn: Any, kind: str, tag: str, sql: str, limit: int, **extra: Any) -> Any:
+            t0 = time.monotonic()
+            res = conn.execute(sql, limit)
+            queries.append({"tag": tag, "conn": kind, "sql": sql, "rows": len(res[1]), "dbMs": int((time.monotonic() - t0) * 1000),
+                            "at": time.time(), "database": _dbname(conn), **extra})
+            return res
+
         try:
-            cards = _rows(crm.execute(crm_cards_sql(schema, since), 1_000_000))
+            cards = _rows(run(crm, "crm", "crm.kartlar", crm_cards_sql(schema, since), 1_000_000))
             options: dict[str, dict[int, str]] = {}
-            for r in _rows(crm.execute(crm_options_sql(schema), 10_000)):
+            for r in _rows(run(crm, "crm", "crm.secenekler", crm_options_sql(schema), 10_000)):
                 options.setdefault(str(r["attr"]).lower(), {})[int(r["code"])] = str(r["label"])
         finally:
             _close(crm)
@@ -382,17 +408,19 @@ class Source:
         try:
             logo = self._logo()
             try:
-                have = {str(r["name"]).upper() for r in _rows(logo.execute(
-                    "SELECT name FROM sys.tables WHERE name LIKE 'LG[_]___[_]PRODORD'", 1000))}
-                for r in _rows(logo.execute(logo_periods_sql(since), 1000)):
+                have = {str(r["name"]).upper() for r in _rows(run(logo, "logo", "logo.tablolar", LOGO_TABLES_SQL, 1000))}
+                for r in _rows(run(logo, "logo", "logo.donemler", logo_periods_sql(since), 1000)):
                     firm, period = f"{int(r['firma']):03d}", f"{int(r['donem']):02d}"
                     if f"LG_{firm}_PRODORD" not in have:
                         continue
                     firms.append(firm)
-                    orders += [dict(o, firma=firm) for o in _rows(logo.execute(logo_orders_sql(firm, since), 1_000_000))]
-                    receipts += [dict(x, firma=firm) for x in
-                                 _rows(logo.execute(logo_receipts_sql(firm, period, since), 1_000_000))]
-                    costs += [dict(x, firma=firm) for x in _rows(logo.execute(logo_costs_sql(firm, period, since), 1_000_000))]
+                    fp = {"firm": firm, "period": period}
+                    orders += [dict(o, firma=firm) for o in
+                               _rows(run(logo, "logo", f"logo.emirler.{firm}", logo_orders_sql(firm, since), 1_000_000, **fp))]
+                    receipts += [dict(x, firma=firm) for x in _rows(run(
+                        logo, "logo", f"logo.girisler.{firm}.{period}", logo_receipts_sql(firm, period, since), 1_000_000, **fp))]
+                    costs += [dict(x, firma=firm) for x in _rows(run(
+                        logo, "logo", f"logo.faturalar.{firm}.{period}", logo_costs_sql(firm, period, since), 1_000_000, **fp))]
             finally:
                 _close(logo)
         except Exception as e:  # noqa: BLE001 — Logo'ya ulaşılamazsa CRM ile devam; ekranda söylenir
@@ -401,7 +429,8 @@ class Source:
         logo_ms = int((time.monotonic() - t1) * 1000)
         return {"cards": cards, "options": options, "orders": orders, "receipts": receipts, "costs": costs,
                 "firms": sorted(set(firms)),
-                "since": since.isoformat(), "at": time.time(), "crmMs": crm_ms, "logoMs": logo_ms, "warnings": warnings}
+                "since": since.isoformat(), "at": time.time(), "crmMs": crm_ms, "logoMs": logo_ms, "warnings": warnings,
+                "queries": queries}
 
 
 # ------------------------------------------------------------------------------------------ birleştirme
@@ -983,6 +1012,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     source = Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"),
                     lambda: parse_day(settings()["historyFrom"]) or date(today().year - 2, 1, 1))
     svc = Service(source, settings, deps.get("studio_jobs"))
+    from semantic_bridge import production_kaynak as K
+    from semantic_bridge import provenance as PV
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -1018,7 +1049,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         snap = source.peek()   # matbaa adları: okuma yoksa beklenmez, liste sonraki açılışta dolar
         if snap is not None:
             printers = sorted(set(snap["options"].get("new_matbaa", {}).values()), key=_fold)
-        return {"milestones": [{"key": k, "label": v} for k, v in MILESTONES],
+        out = {"milestones": [{"key": k, "label": v} for k, v in MILESTONES],
                 "stages": [{"key": k, "label": v} for k, v in STAGES.items()],
                 "kinds": [{"key": k, "label": v} for k, v in store.KINDS.items()],
                 "quality": [{"key": k, "label": v} for k, v in store.QUALITY.items()],
@@ -1026,22 +1057,26 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                 "me": {"username": user, "display": display, "admin": admin,
                        "canWrite": admin or can(user, "ozellik:uretim.yaz"),
                        "canApprove": admin or can(user, "ozellik:uretim.matbaa-onay")}}
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, out, snap))
 
     @app.get(f"{P}/overview")
     def production_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.overview, engine, tenant, fresh())
+        out = call(svc.overview, engine, tenant, fresh())
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, source.last()))
 
     @app.get(f"{P}/cards")
     def production_cards(request: Request, durum: str = "", matbaa: str = "", q: str = "", tur: str = "", urun: str = "",
                          page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.list, engine, tenant, durum=durum, matbaa=matbaa, q=q, tur=tur, urun=urun, page=page, fresh=fresh())
+        out = call(svc.list, engine, tenant, durum=durum, matbaa=matbaa, q=q, tur=tur, urun=urun, page=page, fresh=fresh())
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, source.last()))
 
     @app.get(f"{P}/cards/{{card}}")
     def production_card(card: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.detail, engine, tenant, card, fresh())
+        out = call(svc.detail, engine, tenant, card, fresh())
+        return PV.bagla(out, lambda: K.for_detail(engine, tenant, out["id"], out, source.last()))
 
     @app.post(f"{P}/cards/{{card}}/entries", status_code=201)
     def production_entry(card: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -1088,17 +1123,20 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/delays")
     def production_delays(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.delays, engine, tenant, fresh())
+        out = call(svc.delays, engine, tenant, fresh())
+        return PV.bagla(out, lambda: K.for_delays(engine, tenant, out, source.last()))
 
     @app.get(f"{P}/printers")
     def production_printers(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.printers, engine, tenant, fresh())
+        out = call(svc.printers, engine, tenant, fresh())
+        return PV.bagla(out, lambda: K.for_printers(engine, tenant, out, source.last()))
 
     @app.get(f"{P}/calendar")
     def production_calendar(request: Request, publication: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.calendar, engine, tenant, publication, fresh())
+        out = call(svc.calendar, engine, tenant, publication, fresh())
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, out, source.last()))
 
     @app.get(f"{P}/print-exit")
     def production_print_exit(request: Request, book: str = "") -> dict[str, Any]:

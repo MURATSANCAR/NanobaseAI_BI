@@ -6,6 +6,7 @@ import { Loader2, Mail, MailWarning, Send, X } from 'lucide-react';
 import { freelanceApi, type FlMessage } from '../../engine';
 import { Loading, Note, btnGhost, btnPrimary, errText, field } from '../../admin/ui';
 import { Panel } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import { Empty, stamp, useFlRefresh, type FlCtx } from './shared';
 
 /**
@@ -43,7 +44,13 @@ export default function MessagesPane({ ctx }: { ctx: FlCtx }) {
         </label>
         {inbox.error && <Note tone="err">{errText(inbox.error, 'Yazışmalar okunamadı.')}</Note>}
         {inbox.data && !items.length && <Empty>Henüz yazışma yok. Bir iş paketi açıldığında akışı burada görünür.</Empty>}
-        <ul className="mt-3 space-y-1.5">
+        {inbox.data && items.length > 0 && (
+          <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
+            Okunmamış ileti sayıları
+            <SqlInfo k={inbox.data.kaynaklar} alan="items[].unread" label="Okunmamış ileti" />
+          </p>
+        )}
+        <ul className="mt-2 space-y-1.5">
           {items.map((t) => (
             <li key={t.thread}>
               <button

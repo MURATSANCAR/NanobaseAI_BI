@@ -8,6 +8,8 @@ import { ENGINE_ENABLED, authorsApi, type AuthorAdvice, type AuthorGrowth } from
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
 import { LOYALTY, SnapshotBar, fmtDay, monthLabel, monthLong } from './shared';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Yazarın gelişimi: Logo satış gidişatı (yıllık + son 24 ay + kitap kitap), M6 hakedişleri, okur sesi (sitedeki
  *  yorum puanı, açık web taramasının tonu), sadakat puanı ve Zeki AI strateji önerisi. Veri köprüde 12 saat
@@ -18,11 +20,14 @@ const money = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY
 const compact = new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: 1 });
 const qtyFmt = (n: number) => nf.format(Math.round(n));
 
-function Sub({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
+function Sub({ title, children, aside, k, alan }: { title: string; children: React.ReactNode; aside?: React.ReactNode; k?: Kaynaklar; alan?: string }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white/85 p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{title}</h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+          {title}
+          {alan && <SqlInfo k={k} alan={alan} label={title} />}
+        </h4>
         {aside}
       </div>
       <div className="mt-1.5">{children}</div>
@@ -66,6 +71,8 @@ function Sales({ g }: { g: AuthorGrowth }) {
   return (
     <Sub
       title="Satış (Logo)"
+      k={g.kaynaklar}
+      alan="sales"
       aside={<span className="text-[10.5px] text-canvas-muted">veri sonu {fmtDay(g.dataEnd)}</span>}
     >
       <div className="grid grid-cols-3 gap-2">
@@ -153,7 +160,7 @@ function Books({ g }: { g: AuthorGrowth }) {
   const [all, setAll] = useState(false);
   const list = all ? g.books : g.books.slice(0, 5);
   return (
-    <Sub title={`Kitaplar · ${g.booksTotal}`} aside={g.booksWithCode < g.booksTotal ? <span className="text-[10.5px] text-amber-800">{g.booksTotal - g.booksWithCode} kitapta stok kodu yok</span> : undefined}>
+    <Sub title={`Kitaplar · ${g.booksTotal}`} k={g.kaynaklar} alan="books[]" aside={g.booksWithCode < g.booksTotal ? <span className="text-[10.5px] text-amber-800">{g.booksTotal - g.booksWithCode} kitapta stok kodu yok</span> : undefined}>
       <ul className="space-y-1">
         {list.map((b) => (
           <li key={b.id} className="flex items-baseline justify-between gap-2 text-[12px]">
@@ -183,7 +190,7 @@ function Books({ g }: { g: AuthorGrowth }) {
 function Royalty({ g }: { g: AuthorGrowth }) {
   const st = g.royalty.statements;
   return (
-    <Sub title="Telif (hakediş)">
+    <Sub title="Telif (hakediş)" k={g.kaynaklar} alan="royalty">
       {st.length === 0 ? (
         <p className="text-[12px] text-canvas-muted">
           {g.royalty.contracts ? `${g.royalty.contracts} sözleşmesi var; ` : ''}portalda hesaplanmış hakediş yok. Hakediş sözleşme oranıyla{' '}
@@ -219,7 +226,7 @@ function Readers({ g }: { g: AuthorGrowth }) {
   const web = g.readers.web;
   const maxStar = Math.max(1, ...Object.values(site.stars));
   return (
-    <Sub title="Okur sesi">
+    <Sub title="Okur sesi" k={g.kaynaklar} alan="readers">
       {!site.available ? (
         <p className="text-[12px] text-canvas-muted">Sitedeki yorum özeti bu ortamda yok.</p>
       ) : site.comments === 0 ? (
@@ -268,7 +275,7 @@ function Loyalty({ g }: { g: AuthorGrowth }) {
     ['Yeniden imza', l.parts.returning, 10, `${l.contracts} sözleşme toplam`],
   ];
   return (
-    <Sub title="Sadakat" aside={<span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${LOYALTY[l.band].pill}`}>{LOYALTY[l.band].label} · {l.score}</span>}>
+    <Sub title="Sadakat" k={g.kaynaklar} alan="loyalty" aside={<span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${LOYALTY[l.band].pill}`}>{LOYALTY[l.band].label} · {l.score}</span>}>
       <ul className="space-y-1">
         {rows.map(([label, v, max, note]) => (
           <li key={label} className="grid grid-cols-[minmax(0,1fr)_64px_36px] items-center gap-2 text-[11.5px]">
@@ -340,6 +347,8 @@ function Advice({ contactId, ready }: { contactId: string; ready: boolean }) {
     mutationFn: () => authorsApi.makeAdvice(contactId),
     onSuccess: (a) => {
       qc.setQueryData(['authors', 'advice', contactId], { advice: a, modelReady: true });
+      // Sorgu bilgisi GET cevabında («advice» alanı): yeni öneriden sonra yeniden okunur.
+      void qc.invalidateQueries({ queryKey: ['authors', 'advice', contactId] });
       toast.success('Öneri hazır');
     },
     onError: (e) => toast.error('Öneri üretilemedi', { description: e instanceof Error ? e.message : undefined }),
@@ -348,6 +357,8 @@ function Advice({ contactId, ready }: { contactId: string; ready: boolean }) {
   return (
     <Sub
       title="ZEKİ AI önerisi"
+      k={q.data?.kaynaklar}
+      alan={a ? 'advice' : undefined}
       aside={
         can && ready && q.data?.modelReady ? (
           <button type="button" className={`${a ? btnGhost : btnPrimary} !min-h-9 !py-1`} disabled={make.isPending} onClick={() => make.mutate()}>

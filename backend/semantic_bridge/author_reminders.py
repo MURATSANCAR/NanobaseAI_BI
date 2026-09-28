@@ -61,20 +61,24 @@ def _people_of(m: Any, card: Any) -> set[str]:
     return {u for u in out if u}
 
 
+def digest_meetings_stmt(tenant: str, today: date):
+    """Özetin randevuları: planlanan randevular + tarihi bugüne gelmiş kapanmamış sıradaki adımlar."""
+    return sa.select(R.MEETINGS).where(
+        R.MEETINGS.c.tenant_id == tenant, R.MEETINGS.c.status != "iptal",
+        sa.or_(R.MEETINGS.c.status == "planlandi",
+               sa.and_(R.MEETINGS.c.next_step.isnot(None), R.MEETINGS.c.next_done.is_(False),
+                       R.MEETINGS.c.next_due.isnot(None), R.MEETINGS.c.next_due <= today))
+    ).order_by(R.MEETINGS.c.starts_at)
+
+
 def digests(engine: sa.engine.Engine, tenant: str, now: Optional[datetime] = None) -> dict[str, dict[str, list[dict[str, Any]]]]:
     """Kişi başına özet: {kullanıcı: {"randevu": [...], "not": [...], "adim": [...]}}. Salt okuma."""
     now = now or R._now()
     today = now.astimezone(R.TZ).date()
     tomorrow_end = datetime.combine(today + timedelta(days=2), datetime.min.time(), tzinfo=R.TZ).astimezone(timezone.utc)
     with engine.connect() as c:
-        cards = {r.id: r for r in c.execute(sa.select(R.CARDS).where(R.CARDS.c.tenant_id == tenant,
-                                                                     R.CARDS.c.archived_at.is_(None))).fetchall()}
-        rows = c.execute(sa.select(R.MEETINGS).where(
-            R.MEETINGS.c.tenant_id == tenant, R.MEETINGS.c.status != "iptal",
-            sa.or_(R.MEETINGS.c.status == "planlandi",
-                   sa.and_(R.MEETINGS.c.next_step.isnot(None), R.MEETINGS.c.next_done.is_(False),
-                           R.MEETINGS.c.next_due.isnot(None), R.MEETINGS.c.next_due <= today))
-        ).order_by(R.MEETINGS.c.starts_at)).fetchall()
+        cards = {r.id: r for r in c.execute(R.cards_stmt(tenant)).fetchall()}
+        rows = c.execute(digest_meetings_stmt(tenant, today)).fetchall()
     out: dict[str, dict[str, list[dict[str, Any]]]] = {}
 
     def add(user: str, kind: str, item: dict[str, Any]) -> None:

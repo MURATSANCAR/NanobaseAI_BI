@@ -1,4 +1,5 @@
 import { send } from '../../engine';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M12 Üretim Yönetimi köprü istemcisi (`/api/v1/editorial/production/*`). Kart = CRM üretim kartı (kitap + baskı no);
  *  gerçekleşen üretim ve depo girişi Logo'dan, CRM'de olmayanlar portal kaydından. */
@@ -64,6 +65,7 @@ export type ProdMeta = {
   printers: string[];
   settings: { filesDay: number; monthsBefore: number; escalateDays: number; staleDays: number; historyFrom: string };
   me: { username: string; display: string; canWrite: boolean; canApprove: boolean; admin: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type LeadTime = { from: Milestone; to: Milestone; days: number | null; p25: number | null; p75: number | null; samples: number; negative: number };
@@ -84,9 +86,10 @@ export type ProdOverview = {
   logoMatched: number;
   logo: { firms: string[]; lastReceipt: string | null; lastOrder: string | null } | null;
   warnings: string[];
+  kaynaklar?: Kaynaklar;
 };
 
-export type ProdList = { items: ProdCard[]; total: number; page: number; pageSize: number };
+export type ProdList = { items: ProdCard[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export type ProdEntry = {
   id: string;
@@ -156,9 +159,10 @@ export type ProdDetail = ProdCard & {
   logoCosts: LogoCost[];
   studio: StudioLink[];
   crmDates: Array<{ key: string; label: string; day: string | null; plan: boolean }>;
+  kaynaklar?: Kaynaklar;
 };
 
-export type PrintersReport = { items: PrinterStat[]; priceRef: number | null; historyFrom: string };
+export type PrintersReport = { items: PrinterStat[]; priceRef: number | null; historyFrom: string; kaynaklar?: Kaynaklar };
 
 export type CalendarPlan = {
   publication: string;
@@ -169,6 +173,7 @@ export type CalendarPlan = {
   risk: string[];
   leads: Record<string, LeadTime>;
   template: Record<string, TemplateOffset>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type PrintExit = {
@@ -208,7 +213,7 @@ export const productionApi = {
     send<ProdQuote>('POST', `${P}/cards/${encodeURIComponent(id)}/quotes`, b, 30_000),
   deleteQuote: (id: string) => send<{ ok: boolean }>('DELETE', `${P}/quotes/${encodeURIComponent(id)}`, undefined, 30_000),
   approve: (id: string, b: { printer: string; note?: string }) => send<ProdEntry>('POST', `${P}/cards/${encodeURIComponent(id)}/approve`, b, 30_000),
-  delays: () => send<{ items: ProdCard[]; escalateDays: number }>('GET', `${P}/delays`, undefined, 180_000),
+  delays: () => send<{ items: ProdCard[]; escalateDays: number; kaynaklar?: Kaynaklar }>('GET', `${P}/delays`, undefined, 180_000),
   printers: () => send<PrintersReport>('GET', `${P}/printers`, undefined, 180_000),
   calendar: (publication: string) => send<CalendarPlan>('GET', `${P}/calendar${qs({ publication })}`, undefined, 180_000),
   printExit: (book: string) => send<PrintExit>('GET', `${P}/print-exit${qs({ book })}`, undefined, 180_000),

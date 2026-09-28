@@ -10,6 +10,7 @@ import { dateTime, pct, crmLabel } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
 import { RelationBody } from './authors/CardPanel';
+import SqlInfo from '../components/SqlInfo';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -35,12 +36,13 @@ const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   return 'muted';
 };
 
-function Block({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function Block({ title, count, info, children }: { title: string; count: number; info?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mt-4">
-      <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold">
+      <h3 className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-extrabold">
         {title}
         <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>
+        {info}
       </h3>
       {children}
     </section>
@@ -108,7 +110,7 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
 
       {relations && <Relations p={p} />}
 
-      <Block title="Eserler" count={p.works.length}>
+      <Block title="Eserler" count={p.works.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
         {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste sunucunun satır sınırında kesildi.</p>}
         <ul className="mt-1.5 max-h-72 space-y-1 overflow-y-auto pr-1">
           {p.works.map((w, i) => (
@@ -123,7 +125,18 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
       <WebSection kind="person" id={p.id} />
 
       {p.contracts.length > 0 && (
-        <Block title="Sözleşmeler" count={p.contracts.length}>
+        <Block
+          title="Sözleşmeler"
+          count={p.contracts.length}
+          info={
+            <>
+              <SqlInfo k={p.kaynaklar} alan="sayac.sozlesme" label="Sözleşme sayısı" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+                telif oranı <SqlInfo k={p.kaynaklar} alan="contracts[]" label="Sözleşmeler ve telif oranı" />
+              </span>
+            </>
+          }
+        >
           <ul className="mt-1.5 max-h-60 space-y-1.5 overflow-y-auto pr-1">
             {p.contracts.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -140,7 +153,7 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
       )}
 
       {p.projects.length > 0 && (
-        <Block title="Projeler" count={p.projects.length}>
+        <Block title="Projeler" count={p.projects.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.proje" label="Projeler" />}>
           <ul className="mt-1.5 max-h-60 space-y-1.5 overflow-y-auto pr-1">
             {p.projects.map((j) => (
               <li key={j.id}>
@@ -208,9 +221,24 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
 
       {data && (
         <KpiRow>
-          <Kpi label={m.people} value={nf.format(data.total)} help={q || role ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'} />
-          <Kpi label="Son 12 ayda çalışan" value={nf.format(data.activePeople)} help="Bu dönemde yeni eser kaydı olan" />
-          <Kpi label="Kişi başına eser" value={data.total ? nf.format(Math.round((data.contributions / data.total) * 10) / 10) : '—'} help={`${nf.format(data.contributions)} eser katkısı`} />
+          <Kpi
+            label={m.people}
+            value={nf.format(data.total)}
+            help={q || role ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
+            info={<SqlInfo k={data.kaynaklar} alan="total" label={m.people} />}
+          />
+          <Kpi
+            label="Son 12 ayda çalışan"
+            value={nf.format(data.activePeople)}
+            help="Bu dönemde yeni eser kaydı olan"
+            info={<SqlInfo k={data.kaynaklar} alan="activePeople" label="Son 12 ayda çalışan" />}
+          />
+          <Kpi
+            label="Kişi başına eser"
+            value={data.total ? nf.format(Math.round((data.contributions / data.total) * 10) / 10) : '—'}
+            help={`${nf.format(data.contributions)} eser katkısı`}
+            info={<SqlInfo k={data.kaynaklar} alan="kisiBasinaEser" label="Kişi başına eser" />}
+          />
           <Kpi label="Kapsanan rol" value={nf.format(roles.length)} help={roles.join(', ')} />
         </KpiRow>
       )}
@@ -224,14 +252,17 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
               <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ad soyad" className={`${field} pl-9`} />
             </label>
             {m.roles.length > 1 && (
-              <select aria-label="Rol" value={role} onChange={(e) => setRole(e.target.value)} className={field}>
-                <option value="">Tüm roller</option>
-                {roleOptions.map((f) => (
-                  <option key={f.role} value={f.role}>
-                    {f.role} ({nf.format(f.people)})
-                  </option>
-                ))}
-              </select>
+              <div className="flex min-w-0 items-center gap-1">
+                <select aria-label="Rol" value={role} onChange={(e) => setRole(e.target.value)} className={`${field} min-w-0 flex-1`}>
+                  <option value="">Tüm roller</option>
+                  {roleOptions.map((f) => (
+                    <option key={f.role} value={f.role}>
+                      {f.role} ({nf.format(f.people)})
+                    </option>
+                  ))}
+                </select>
+                <SqlInfo k={facets.data?.kaynaklar} alan="items[]" label="Rol başına kişi sayısı" />
+              </div>
             )}
             <select aria-label="Sıralama" value={order} onChange={(e) => setOrder(e.target.value)} className={field}>
               <option value="son">Son çalışan</option>
@@ -241,7 +272,15 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           </div>
           <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={items.length} loading={list.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} />
           {!list.isLoading && !items.length && !err && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan kişi yok.</p>}
-          <ul className="mt-3 grid gap-2 xl:grid-cols-2">
+          {items.length > 0 && (
+            <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
+              Satırdaki eser, rol ve son 12 ay sayıları
+              <SqlInfo k={data?.kaynaklar} alan="items[]" label="Kişi listesi" />
+              <span aria-hidden>·</span> toplam
+              <SqlInfo k={data?.kaynaklar} alan="total" label="Süzgece uyan kişi" />
+            </p>
+          )}
+          <ul className="mt-2 grid gap-2 xl:grid-cols-2">
             {items.map((c) => (
               <Row key={c.id} c={c} active={open === c.id} onOpen={() => setOpen(c.id)} />
             ))}

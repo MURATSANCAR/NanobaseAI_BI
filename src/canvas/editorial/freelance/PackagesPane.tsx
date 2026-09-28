@@ -7,6 +7,8 @@ import { editorialSearchApi, freelanceApi, type FlPackage, type FlSuggestion, ty
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../../admin/ui';
 import { Panel, useDebounced } from '../kit';
 import { ThreadView } from './MessagesPane';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { ConfirmButton, Empty, FieldBox, TASK_STATUS, day, editNum, parseNum, q2, roleLabel, stamp, tl, todayIso, useFlRefresh, type FlCtx } from './shared';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
@@ -75,7 +77,17 @@ export default function PackagesPane({ ctx }: { ctx: FlCtx }) {
         {list.data && !items.length && (
           <Empty>{q || status !== 'acik' || reviewOnly ? 'Bu süzgece uyan paket yok.' : 'Açık iş paketi yok. «Yeni iş paketi» ile bir kitabın işini açıp görevlere bölün.'}</Empty>
         )}
-        <ul className="mt-3 space-y-2">
+        {list.data && items.length > 0 && (
+          <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
+            <span className="font-mono tabular-nums">{nf.format(items.length)}</span> paket
+            <SqlInfo k={list.data.kaynaklar} alan="total" label="Paket sayısı" />
+            <span aria-hidden>·</span> satırdaki görev, tutar ve sayılar
+            <SqlInfo k={list.data.kaynaklar} alan="items[]" label="İş paketleri" />
+            <span aria-hidden>·</span> okunmamış
+            <SqlInfo k={list.data.kaynaklar} alan="items[].unread" label="Okunmamış ileti" />
+          </p>
+        )}
+        <ul className="mt-2 space-y-2">
           {items.map((p) => {
             const done = p.counts.onaylandi;
             const pctDone = p.tasks ? Math.round((done / p.tasks) * 100) : 0;
@@ -382,9 +394,9 @@ function PackageDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: 
           </div>
           {p.brief && <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 leading-snug">{p.brief}</p>}
           <div className="mt-3 grid grid-cols-3 gap-2">
-            <Mini label="Görev" value={`${live.filter((t) => t.status === 'onaylandi').length}/${live.length} bitti`} />
-            <Mini label="Toplam" value={tl(total)} />
-            <Mini label="Tahmini" value={`${q2(live.reduce((a, t) => a + t.effortHours, 0))} saat`} />
+            <Mini label="Görev" value={`${live.filter((t) => t.status === 'onaylandi').length}/${live.length} bitti`} info={<SqlInfo k={p.kaynaklar} alan="toplam" label="Görev sayısı" />} />
+            <Mini label="Toplam" value={tl(total)} info={<SqlInfo k={p.kaynaklar} alan="toplam" label="Paket toplamı" />} />
+            <Mini label="Tahmini" value={`${q2(live.reduce((a, t) => a + t.effortHours, 0))} saat`} info={<SqlInfo k={p.kaynaklar} alan="toplam" label="Tahmini saat" />} />
           </div>
           {ctx.canManage && (
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -417,7 +429,10 @@ function PackageDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: 
 
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-[13px] font-extrabold">Görevler</h3>
+          <h3 className="inline-flex items-center gap-1 text-[13px] font-extrabold">
+            Görevler
+            <SqlInfo k={p.kaynaklar} alan="tasks[]" label="Görevler: miktar, ücret, tutar" />
+          </h3>
           {ctx.canManage && p.status === 'acik' && allUnassigned.length > 0 && (
             <button type="button" className={btnGhost} onClick={() => setSelected(allUnassigned)}>
               <Sparkles aria-hidden className="h-4 w-4" />
@@ -458,10 +473,13 @@ function PackageDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: 
   );
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
+function Mini({ label, value, info }: { label: string; value: string; info?: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center justify-between gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 truncate font-mono text-[13px] font-bold tabular-nums">{value}</div>
     </div>
   );
@@ -510,6 +528,7 @@ function Distribute({ ctx, p, taskIds, onDone }: { ctx: FlCtx; p: FlPackage; tas
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [notify, setNotify] = useState(true);
   const [suggestions, setSuggestions] = useState<FlSuggestion[] | null>(null);
+  const [suggestK, setSuggestK] = useState<Kaynaklar | undefined>(undefined);
   const people = useQuery({ queryKey: ['fl', 'people', '', p.role, 'aktif'], queryFn: () => freelanceApi.people({ role: p.role, status: 'aktif' }) });
   const tasks = p.tasks.filter((t) => taskIds.includes(t.id));
   const unassigned = tasks.filter((t) => t.status === 'atanmadi').map((t) => t.id);
@@ -518,6 +537,7 @@ function Distribute({ ctx, p, taskIds, onDone }: { ctx: FlCtx; p: FlPackage; tas
     mutationFn: () => freelanceApi.suggest(unassigned),
     onSuccess: (r) => {
       setSuggestions(r.items);
+      setSuggestK(r.kaynaklar);
       setPicks((cur) => {
         const next = { ...cur };
         r.items.forEach((s) => {
@@ -548,7 +568,10 @@ function Distribute({ ctx, p, taskIds, onDone }: { ctx: FlCtx; p: FlPackage; tas
     <Panel>
       <div className="text-[12.5px]">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-[13px] font-extrabold">{taskIds.length} görevi dağıt</h3>
+          <h3 className="inline-flex items-center gap-1 text-[13px] font-extrabold">
+            {taskIds.length} görevi dağıt
+            {suggestions && <SqlInfo k={suggestK} alan="items[]" label="Kapasiteye göre öneri" />}
+          </h3>
           <div className="flex flex-wrap gap-1.5">
             {unassigned.length > 0 && (
               <button type="button" className={btnGhost} onClick={() => suggest.mutate()} disabled={suggest.isPending}>
@@ -562,7 +585,8 @@ function Distribute({ ctx, p, taskIds, onDone }: { ctx: FlCtx; p: FlPackage; tas
           </div>
         </div>
         <FieldBox label="Hepsini tek kişiye" className="mt-2">
-          <select className={field} value="" onChange={(e) => e.target.value && setAll(e.target.value)}>
+          <div className="flex min-w-0 items-center gap-1">
+          <select className={`${field} min-w-0 flex-1`} value="" onChange={(e) => e.target.value && setAll(e.target.value)}>
             <option value="">Kişi seçin…</option>
             {people.data?.items.map((x) => (
               <option key={x.id} value={x.id}>
@@ -571,6 +595,8 @@ function Distribute({ ctx, p, taskIds, onDone }: { ctx: FlCtx; p: FlPackage; tas
             ))}
             <option value="-">Atamayı geri al</option>
           </select>
+          <SqlInfo k={people.data?.kaynaklar} alan="items[].stats" label="Kişi başına süren iş" />
+          </div>
         </FieldBox>
         <ul className="mt-2 space-y-1.5">
           {tasks.map((t) => {
@@ -681,6 +707,7 @@ function TaskPanel({ ctx, p, t }: { ctx: FlCtx; p: FlPackage; t: FlTask }) {
         <p className="text-[12px] text-canvas-muted">
           {q2(t.units)} {t.unit} × {tl(t.unitPrice)} = <b className="text-canvas-ink">{tl(t.amount)}</b> · {q2(t.effortHours)} saat · {day(t.start)} – {day(t.due)}
           {t.payoutId ? ' · hakedişe girdi' : ''}
+          <SqlInfo k={p.kaynaklar} alan="tasks[]" label="Görev tutarı" className="ml-0.5" />
         </p>
       )}
       {ctx.canManage && (

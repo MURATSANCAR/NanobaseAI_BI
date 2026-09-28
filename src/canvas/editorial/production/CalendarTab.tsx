@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, errText, field, label, nf } from '../../admin/ui';
 import { Panel } from '../kit';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { productionApi, type LeadTime, type ProdOverview } from './api';
 import { POINTS, defaultPublication, fmtDay } from './shared';
 
@@ -70,7 +71,9 @@ export default function CalendarTab({ overview }: { overview: ProdOverview | nul
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
       <Panel>
-        <h2 className="px-1 text-[13px] font-extrabold">Yayın tarihinden geriye</h2>
+        <h2 className="px-1 text-[13px] font-extrabold">
+          {d ? <InfoLabel k={d.kaynaklar} alan="plan">Yayın tarihinden geriye</InfoLabel> : 'Yayın tarihinden geriye'}
+        </h2>
         <label className="mt-2 block px-1">
           <span className={label}>Hedef yayın tarihi</span>
           <input type="date" className={`${field} mt-1 sm:max-w-[220px]`} value={pub} onChange={(e) => setPub(e.target.value)} />
@@ -87,6 +90,7 @@ export default function CalendarTab({ overview }: { overview: ProdOverview | nul
             </ol>
             <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
               Kural: baskı dosyaları yayın ayından {d.rule.monthsBefore} ay önce, ayın {d.rule.day}. gününe kadar matbaada olmalı; baskı yayın ayı içinde çıkar.
+              <SqlInfo k={d.kaynaklar} alan="rule" label="Takvim kuralı (ayar)" className="ml-0.5" />
               «Beklenen» tarih, dosya zamanında teslim edilirse geçmiş kartlarda ölçülen süreyle kitabın çıkacağı gündür.
             </p>
             {d.risk.map((r) => (
@@ -98,7 +102,9 @@ export default function CalendarTab({ overview }: { overview: ProdOverview | nul
         )}
       </Panel>
       <Panel>
-        <h2 className="px-1 text-[13px] font-extrabold">Ölçülen süreler</h2>
+        <h2 className="px-1 text-[13px] font-extrabold">
+          <InfoLabel k={q.data?.kaynaklar ?? overview?.kaynaklar} alan="leads">Ölçülen süreler</InfoLabel>
+        </h2>
         <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
           İki adımı da gerçekleşmiş kartlardan (baskı çıkışı ve depo girişi Logo'dan); sıra dışı giriş (sonraki adım öncekinden önce) süreye katılmaz.
         </p>

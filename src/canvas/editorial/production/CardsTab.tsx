@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, errText, field, nf } from '../../admin/ui';
 import SearchSelect from '../../components/SearchSelect';
 import { Panel, Pager, useDebounced } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import { productionApi, type ProdCard } from './api';
 import { Chain, STAGE_TONE, daysText, fmtDay, nextPoint, useProductionMeta, worstDelay } from './shared';
 
@@ -171,7 +172,15 @@ export default function CardsTab({
         </div>
       )}
       {list.data && list.data.items.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
+        <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
+          <span className="font-mono tabular-nums">{nf.format(list.data.total)}</span> kart süzgece uyuyor
+          <SqlInfo k={list.data.kaynaklar} alan="total" label="Süzgece uyan kart" />
+          <span aria-hidden>·</span> satırdaki adet, gecikme günü ve tarihler
+          <SqlInfo k={list.data.kaynaklar} alan="items[]" label="Üretim kartları" />
+        </p>
+      )}
+      {list.data && list.data.items.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
           {list.data.items.map((c) => (
             <CardRow key={c.id} c={c} onOpen={onOpen} />
           ))}

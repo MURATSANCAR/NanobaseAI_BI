@@ -74,7 +74,8 @@ export function Tabs<T extends string>({
   value,
   onChange,
 }: {
-  items: Array<{ key: T; label: string; badge?: number }>;
+  /** `info`: rozetteki sayının sorgu bilgisi; sekme düğmesinin İÇİNE değil yanına konur. */
+  items: Array<{ key: T; label: string; badge?: number; info?: ReactNode }>;
   value: T;
   onChange: (k: T) => void;
 }) {
@@ -82,8 +83,8 @@ export function Tabs<T extends string>({
     <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none]" role="tablist" aria-label="Bölüm">
       <div className="inline-flex min-w-full gap-1 rounded-2xl bg-slate-100 p-1">
         {items.map((it) => (
+          <span key={it.key} className="inline-flex flex-1 items-center">
           <button
-            key={it.key}
             type="button"
             role="tab"
             aria-selected={value === it.key}
@@ -101,6 +102,8 @@ export function Tabs<T extends string>({
               </span>
             )}
           </button>
+          {!!it.badge && it.info}
+          </span>
         ))}
       </div>
     </div>

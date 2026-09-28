@@ -8,6 +8,7 @@ import { crmLabel } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Pager, Panel, useDebounced } from '../kit';
 import { HeatPill, fmtDay, invalidateAuthors, useAuthorsMeta } from './shared';
+import SqlInfo from '../../components/SqlInfo';
 import type { PanelTarget } from './CardPanel';
 
 /** Potansiyel yazar havuzu: portalda açılan aday kartları aşama aşama, altında CRM'de bir projenin olası yazarı
@@ -73,7 +74,10 @@ function CrmCandidates({ onOpen }: { onOpen: (t: PanelTarget) => void }) {
   const err = errText(list.error, "CRM'deki olası yazarlar okunamadı.");
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold tracking-tight">CRM'de olası yazar</h2>
+      <h2 className="flex items-center gap-1.5 text-[15px] font-extrabold tracking-tight">
+        CRM'de olası yazar
+        {data && <SqlInfo k={data.kaynaklar} alan="items[]" label="CRM'de olası yazar: proje sayısı ve toplam" />}
+      </h2>
       <p className="mt-0.5 text-[12px] leading-snug text-canvas-muted">
         {fmtDay(data?.since ?? meta.data?.poolSince)} sonrası açılan projelerde «olası yazar» olarak girilmiş, henüz yazar rolüyle eser kaydı olmayan kişiler. Başlangıç tarihi Yönetim → Ayarlar'dan
         değişir.
@@ -176,6 +180,11 @@ export default function PoolTab({ onOpen }: { onOpen: (t: PanelTarget) => void }
               {s.label} <span className="font-mono tabular-nums opacity-80">{nf.format(cards.data?.stages[s.key] ?? 0)}</span>
             </button>
           ))}
+          {cards.data && (
+            <span className="inline-flex items-center">
+              <SqlInfo k={cards.data.kaynaklar} alan="stages" label="Aşama başına aday kartı" />
+            </span>
+          )}
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
           <label className="relative block">
@@ -208,9 +217,10 @@ export default function PoolTab({ onOpen }: { onOpen: (t: PanelTarget) => void }
             if (!list.length) return null;
             return (
               <section key={g.key}>
-                <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">
+                <h3 className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">
                   {g.label}
                   <span className="font-mono tabular-nums">{list.length}</span>
+                  <SqlInfo k={cards.data?.kaynaklar} alan="items[]" label={`${g.label}: görüşme, açık adım, ısı`} />
                 </h3>
                 <ul className="mt-1.5 grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
                   {list.map((c) => (

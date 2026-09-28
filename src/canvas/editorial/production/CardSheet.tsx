@@ -6,6 +6,7 @@ import { BadgeCheck, BookImage, BookOpen, CalendarPlus, ClipboardList, Trash2 } 
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } from '../../admin/ui';
 import Sheet from '../studio/reader/Sheet';
+import SqlInfo from '../../components/SqlInfo';
 import { productionApi, type Milestone, type ProdDetail, type Suggestion } from './api';
 import { Chain, POINTS, SOURCE_LABEL, STAGE_TONE, daysText, fmtDay, fmtMoney, fmtUnit, invalidateProduction, useProductionMeta } from './shared';
 
@@ -403,22 +404,27 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
             )}
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px] sm:grid-cols-3">
-            {[
-              ['Matbaa', c.printer ?? '—'],
-              ['CRM aşaması', c.crmStatus ?? '—'],
-              ['Öncelik', c.priority ?? '—'],
-              ['Sorumlu editör', c.editor ?? '—'],
-              ['Grafiker', c.designer ?? '—'],
-              ['Bandrol', c.bandrol ?? '—'],
-              ['Kesin adet', c.qty !== null ? nf.format(c.qty) : '—'],
-              ['Depoya giren', c.logoQty !== null ? `${nf.format(c.logoQty)} adet` : '—'],
-              ['Satış fiyatı', fmtMoney(c.coverPrice)],
-              ['Baskı bedeli', fmtMoney(c.price)],
-              ['Adet başı baskı', fmtUnit(c.unitPrice)],
-              ['Faturalanan adet', c.costQty !== null ? nf.format(c.costQty) : '—'],
-            ].map(([k, v]) => (
+            {(
+              [
+                ['Matbaa', c.printer ?? '—'],
+                ['CRM aşaması', c.crmStatus ?? '—'],
+                ['Öncelik', c.priority ?? '—'],
+                ['Sorumlu editör', c.editor ?? '—'],
+                ['Grafiker', c.designer ?? '—'],
+                ['Bandrol', c.bandrol ?? '—'],
+                ['Kesin adet', c.qty !== null ? nf.format(c.qty) : '—', 'qty'],
+                ['Depoya giren', c.logoQty !== null ? `${nf.format(c.logoQty)} adet` : '—', 'logoQty'],
+                ['Satış fiyatı', fmtMoney(c.coverPrice), 'coverPrice'],
+                ['Baskı bedeli', fmtMoney(c.price), 'price'],
+                ['Adet başı baskı', fmtUnit(c.unitPrice), 'unitPrice'],
+                ['Faturalanan adet', c.costQty !== null ? nf.format(c.costQty) : '—', 'costQty'],
+              ] as Array<[string, string, string?]>
+            ).map(([k, v, alan]) => (
               <div key={k} className="min-w-0">
-                <dt className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{k}</dt>
+                <dt className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+                  {k}
+                  {alan && <SqlInfo k={c.kaynaklar} alan={alan} label={k} />}
+                </dt>
                 <dd className="break-words font-semibold">{v}</dd>
               </div>
             ))}
@@ -429,11 +435,23 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
             </div>
           )}
 
-          <Block title="Üretim takvimi">
+          <Block title="Üretim takvimi" action={<SqlInfo k={c.kaynaklar} alan="delays" label="Üretim takvimi ve gecikme" />}>
             <Timeline c={c} canWrite={canWrite} />
           </Block>
 
-          <Block title="Matbaa seçim raporu">
+          <Block
+            title="Matbaa seçim raporu"
+            action={
+              <span className="inline-flex items-center gap-1 text-[11px] text-canvas-muted">
+                puan <SqlInfo k={c.kaynaklar} alan="suggestions[]" label="Matbaa seçim raporu" />
+                {c.quotes.length > 0 && (
+                  <>
+                    · teklifler <SqlInfo k={c.kaynaklar} alan="quotes[]" label="Matbaa teklifleri" />
+                  </>
+                )}
+              </span>
+            }
+          >
             <PrinterBlock c={c} canWrite={canWrite} canApprove={canApprove} />
           </Block>
 
@@ -457,7 +475,23 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
             )}
           </Block>
 
-          <Block title="Logo'da gerçekleşen">
+          <Block
+            title="Logo'da gerçekleşen"
+            action={
+              <span className="inline-flex items-center gap-1 text-[11px] text-canvas-muted">
+                {(c.logoOrders.length > 0 || c.logoReceipts.length > 0) && (
+                  <>
+                    emir ve girişler <SqlInfo k={c.kaynaklar} alan="logoOrders[]" label="Logo üretim emri ve giriş fişleri" />
+                  </>
+                )}
+                {c.logoCosts.length > 0 && (
+                  <>
+                    {' '}· faturalar <SqlInfo k={c.kaynaklar} alan="logoCosts[]" label="Logo matbaa baskı faturaları" />
+                  </>
+                )}
+              </span>
+            }
+          >
             {c.logoOrders.length === 0 && c.logoCosts.length === 0 ? (
               <p className="text-[12px] text-canvas-muted">Logo'da bu karta bağlanan üretim emri ya da baskı faturası yok.</p>
             ) : (

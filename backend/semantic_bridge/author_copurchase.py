@@ -238,15 +238,24 @@ def counted(status: Optional[str], deleted: bool) -> bool:
     return not deleted and not any(w in s for w in EXCLUDED_STATUS)
 
 
+def orders_stmt(tenant: str):
+    """Eşitlenmiş e-ticaret siparişleri (yalnız no, durum, silinme)."""
+    return sa.select(ORDERS.c.order_id, ORDERS.c.status, ORDERS.c.deleted).where(ORDERS.c.tenant_id == tenant)
+
+
+def lines_stmt(tenant: str):
+    """Sipariş satırlarının barkodu (kitap → yazar eşlemesi barkodla)."""
+    return sa.select(LINES.c.order_id, LINES.c.barcode).where(LINES.c.tenant_id == tenant)
+
+
 def compute(engine: sa.engine.Engine, tenant: str, authors: dict[str, set[str]], titles: dict[str, str],
             names: dict[str, str]) -> dict[str, Any]:
     """Bütün saklı siparişlerden yazar çiftleri; tablo baştan yazılır."""
     with engine.connect() as c:
-        orders = {r.order_id: counted(r.status, bool(r.deleted)) for r in c.execute(
-            sa.select(ORDERS.c.order_id, ORDERS.c.status, ORDERS.c.deleted).where(ORDERS.c.tenant_id == tenant))}
+        orders = {r.order_id: counted(r.status, bool(r.deleted)) for r in c.execute(orders_stmt(tenant))}
         by_order: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
         lines = matched = 0
-        for oid, bc in c.execute(sa.select(LINES.c.order_id, LINES.c.barcode).where(LINES.c.tenant_id == tenant)):
+        for oid, bc in c.execute(lines_stmt(tenant)):
             if not orders.get(oid):
                 continue
             lines += 1
@@ -324,10 +333,26 @@ def run(engine: sa.engine.Engine, tenant: str, call: Callable[[str, dict[str, An
         _running.release()
 
 
+def last_run_stmt(tenant: str):
+    return (sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.finished_at.isnot(None), RUNS.c.error.is_(None))
+            .order_by(RUNS.c.id.desc()).limit(1))
+
+
+def related_stmts(tenant: str, contact_id: str, page: int) -> dict[str, Any]:
+    """Birlikte alınan yazarlar: toplam, sayfa (beklenenden fazla ortak siparişe göre), yazarın kendi sipariş sayısı."""
+    where = [PAIRS.c.tenant_id == tenant, PAIRS.c.a == contact_id]
+    excess = PAIRS.c.orders - PAIRS.c.orders / PAIRS.c.lift
+    return {
+        "total": sa.select(sa.func.count()).select_from(PAIRS).where(*where),
+        "rows": (sa.select(PAIRS).where(*where).order_by(excess.desc(), PAIRS.c.orders.desc(), PAIRS.c.b)
+                 .offset(max(0, int(page)) * PAGE_SIZE).limit(PAGE_SIZE)),
+        "own": sa.select(PAIRS.c.a_orders).where(*where).limit(1),
+    }
+
+
 def last_run(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.finished_at.isnot(None), RUNS.c.error.is_(None))
-                      .order_by(RUNS.c.id.desc()).limit(1)).first()
+        r = c.execute(last_run_stmt(tenant)).first()
     if r is None:
         return None
     m = r._mapping
@@ -341,15 +366,13 @@ def related(engine: sa.engine.Engine, tenant: str, contact_id: str, page: int = 
     if not re.match(r"^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$", cid):
         raise CopurchaseError("CRM kişi kimliği geçerli değil.")
     p = max(0, int(page))
+    # Sıra: beklenenden fazla ortak sipariş = ortak × (1 − 1/lift). Yalnız ortak sayıya göre sıralanınca her
+    # yazarın başına aynı çok satanlar geliyordu (2026-09-28 ölçümü: lift ~1,7); bu sıra yazara özgü birlikteliği öne alır.
+    st = related_stmts(tenant, cid, p)
     with engine.connect() as c:
-        where = [PAIRS.c.tenant_id == tenant, PAIRS.c.a == cid]
-        total = c.execute(sa.select(sa.func.count()).select_from(PAIRS).where(*where)).scalar() or 0
-        # Sıra: beklenenden fazla ortak sipariş = ortak × (1 − 1/lift). Yalnız ortak sayıya göre sıralanınca her
-        # yazarın başına aynı çok satanlar geliyordu (2026-09-28 ölçümü: lift ~1,7); bu sıra yazara özgü birlikteliği öne alır.
-        excess = PAIRS.c.orders - PAIRS.c.orders / PAIRS.c.lift
-        rows = c.execute(sa.select(PAIRS).where(*where).order_by(excess.desc(), PAIRS.c.orders.desc(), PAIRS.c.b)
-                         .offset(p * PAGE_SIZE).limit(PAGE_SIZE)).fetchall()
-        own = c.execute(sa.select(PAIRS.c.a_orders).where(*where).limit(1)).scalar()
+        total = c.execute(st["total"]).scalar() or 0
+        rows = c.execute(st["rows"]).fetchall()
+        own = c.execute(st["own"]).scalar()
     items = [{"contactId": r.b, "name": r.b_name, "orders": r.orders, "theirOrders": r.b_orders, "lift": round(r.lift, 2),
               "excess": round(r.orders - r.orders / r.lift) if r.lift else 0,
               "share": round(100 * r.orders / r.a_orders, 1) if r.a_orders else None,

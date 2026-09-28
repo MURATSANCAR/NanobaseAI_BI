@@ -7,6 +7,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../../admin/
 import { useCan } from '../../useAdmin';
 import { Panel } from '../kit';
 import MeetingForm from './MeetingForm';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { downloadIcs, fmtDay, fmtWeekday, invalidateAuthors } from './shared';
 import type { PanelTarget } from './CardPanel';
 
@@ -22,12 +24,13 @@ function Who({ m, onOpen }: { m: AuthorMeeting; onOpen: (t: PanelTarget) => void
   );
 }
 
-function Section({ title, count, empty, children }: { title: string; count: number; empty: string; children: React.ReactNode }) {
+function Section({ title, count, empty, k, alan, children }: { title: string; count: number; empty: string; k?: Kaynaklar; alan: string; children: React.ReactNode }) {
   return (
     <Panel>
-      <h2 className="flex items-baseline gap-2 text-[15px] font-extrabold tracking-tight">
+      <h2 className="flex items-center gap-2 text-[15px] font-extrabold tracking-tight">
         {title}
         <span className="font-mono text-[13px] font-semibold tabular-nums text-canvas-muted">{count}</span>
+        <SqlInfo k={k} alan={alan} label={title} />
       </h2>
       {count === 0 ? <p className="mt-2 text-[12.5px] text-canvas-muted">{empty}</p> : children}
     </Panel>
@@ -61,7 +64,7 @@ function ReminderToggle() {
         />
         Sabah e-posta özeti
       </label>
-      <span className="text-[11.5px] text-canvas-muted">
+      <span className="inline-flex flex-wrap items-center gap-x-0.5 text-[11.5px] text-canvas-muted">
         {!d.smtp
           ? 'E-posta sunucusu tanımlı değil; özet gönderilemez (Yönetim → Ayarlar).'
           : d.enabled
@@ -69,6 +72,7 @@ function ReminderToggle() {
               ? `Bugünkü özette ${n} iş: ${d.today.randevu} randevu, ${d.today.not} notu eksik, ${d.today.adim} adım.`
               : 'Bugün sizi bekleyen iş yok; boş özet gönderilmez.'
             : 'Kapalı.'}
+        {d.smtp && d.enabled && n > 0 && <SqlInfo k={d.kaynaklar} alan="today" label="Bugünkü özet" className="ml-0.5" />}
       </span>
     </div>
   );
@@ -117,7 +121,7 @@ export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void
       {agenda.isLoading && <Loading />}
       {data && (
         <div className="grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-4">
-          <Section title={`Önümüzdeki ${data.days} gün`} count={data.upcoming.length} empty="Planlanmış randevu yok.">
+          <Section title={`Önümüzdeki ${data.days} gün`} count={data.upcoming.length} empty="Planlanmış randevu yok." k={data.kaynaklar} alan="sayac.onumuzdeki">
             <div className="mt-2 space-y-3">
               {[...byDay.entries()].map(([day, list]) => (
                 <section key={day}>
@@ -148,7 +152,7 @@ export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void
           </Section>
 
           <div className="grid gap-3 lg:gap-4">
-            <Section title="Notu girilmemiş randevular" count={data.missingNotes.length} empty="Tarihi geçip notu girilmemiş randevu yok.">
+            <Section title="Notu girilmemiş randevular" count={data.missingNotes.length} empty="Tarihi geçip notu girilmemiş randevu yok." k={data.kaynaklar} alan="sayac.notEksik">
               <ul className="mt-2 space-y-1.5">
                 {data.missingNotes.map((m) => (
                   <li key={m.id} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-[12.5px]">
@@ -169,7 +173,7 @@ export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void
               </ul>
             </Section>
 
-            <Section title="Açık adımlar" count={data.openSteps.length} empty="Bekleyen adım yok.">
+            <Section title="Açık adımlar" count={data.openSteps.length} empty="Bekleyen adım yok." k={data.kaynaklar} alan="sayac.adim">
               <ul className="mt-2 space-y-1.5">
                 {data.openSteps.map((m) => (
                   <li key={m.id} className="flex items-start gap-2 rounded-2xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">

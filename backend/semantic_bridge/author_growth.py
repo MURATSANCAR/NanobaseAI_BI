@@ -278,32 +278,54 @@ def trend(months: dict[str, dict[str, float]], data_end: Optional[date]) -> dict
 
 # ------------------------------------------------------------------------------------------ bir araya getirme
 
+def statements_stmts(tenant: str, crm_contract_ids: list[str]) -> dict[str, Any]:
+    """M6 hakedişleri: yazarın CRM sözleşmelerine bağlı sözleşme kayıtları ve onların iptal edilmemiş hakedişleri
+    (kayıt kimlikleri alt sorguyla: çalışan ifade budur)."""
+    from semantic_bridge import contracts as C
+    ids = [i.lower() for i in crm_contract_ids]
+    rec_where = [C.RECORDS.c.tenant_id == tenant, sa.func.lower(C.RECORDS.c.crm_id).in_(ids)]
+    return {
+        "records": sa.select(C.RECORDS.c.id, C.RECORDS.c.no, C.RECORDS.c.crm_id).where(*rec_where),
+        "statements": (sa.select(C.STATEMENTS).where(
+            C.STATEMENTS.c.tenant_id == tenant, C.STATEMENTS.c.contract_id.in_(sa.select(C.RECORDS.c.id).where(*rec_where)),
+            C.STATEMENTS.c.cancelled_at.is_(None)).order_by(C.STATEMENTS.c.period_start)),
+    }
+
+
 def _statements(engine: sa.engine.Engine, tenant: str, crm_contract_ids: list[str]) -> list[dict[str, Any]]:
     """M6'da bu yazarın sözleşmeleri için kaydedilmiş hakedişler (iptal edilmemiş)."""
     if not crm_contract_ids:
         return []
     try:
-        from semantic_bridge import contracts as C
+        st = statements_stmts(tenant, crm_contract_ids)
     except Exception:  # noqa: BLE001
         return []
-    ids = [i.lower() for i in crm_contract_ids]
     try:
         with engine.connect() as c:
-            recs = c.execute(sa.select(C.RECORDS.c.id, C.RECORDS.c.no, C.RECORDS.c.crm_id).where(
-                C.RECORDS.c.tenant_id == tenant, sa.func.lower(C.RECORDS.c.crm_id).in_(ids))).fetchall()
+            recs = c.execute(st["records"]).fetchall()
             if not recs:
                 return []
             by_id = {r.id: r for r in recs}
-            rows = c.execute(sa.select(C.STATEMENTS).where(C.STATEMENTS.c.tenant_id == tenant,
-                                                           C.STATEMENTS.c.contract_id.in_(list(by_id)),
-                                                           C.STATEMENTS.c.cancelled_at.is_(None))
-                             .order_by(C.STATEMENTS.c.period_start)).fetchall()
+            rows = c.execute(st["statements"]).fetchall()
     except sa.exc.SQLAlchemyError as e:   # M6 tabloları bu ortamda henüz kurulmamış olabilir
         log.info("author growth: hakediş okunamadı: %s", e)
         return []
     return [{"contractNo": by_id[r.contract_id].no, "periodStart": r.period_start, "periodEnd": r.period_end,
              "status": r.status, "gross": _f(r.gross), "net": _f(r.net), "currency": r.currency,
              "approved": r.approved_at is not None} for r in rows]
+
+
+def reviews_stmts(tenant: str, eans: list[str]) -> dict[str, Any]:
+    """Sitedeki yorum özeti: barkodu yazarın kitaplarından olan ürünler ve onların yorum sayaçları (ürün kimlikleri
+    alt sorguyla)."""
+    from semantic_bridge import seo_geo as S
+    from semantic_bridge.seo_geo import reviews as RV
+    pw = [S.PRODUCTS.c.tenant_id == tenant, S.EAN.in_(list(eans))]
+    return {
+        "products": sa.select(S.PRODUCTS.c.product_id, S.EAN.label("ean")).where(*pw),
+        "reviews": sa.select(RV.REVIEWS).where(RV.REVIEWS.c.tenant_id == tenant,
+                                               RV.REVIEWS.c.product_id.in_(sa.select(S.PRODUCTS.c.product_id).where(*pw))),
+    }
 
 
 def _reviews(engine: sa.engine.Engine, tenant: str, eans: dict[str, str]) -> dict[str, Any]:
@@ -313,17 +335,14 @@ def _reviews(engine: sa.engine.Engine, tenant: str, eans: dict[str, str]) -> dic
     if not eans:
         return out
     try:
-        from semantic_bridge import seo_geo as S
-        from semantic_bridge.seo_geo import reviews as RV
+        st = reviews_stmts(tenant, list(eans))
         with engine.connect() as c:
-            prods = c.execute(sa.select(S.PRODUCTS.c.product_id, S.EAN.label("ean")).where(
-                S.PRODUCTS.c.tenant_id == tenant, S.EAN.in_(list(eans)))).fetchall()
+            prods = c.execute(st["products"]).fetchall()
             if not prods:
                 out["available"] = True
                 return out
             pid_ean = {p.product_id: p.ean for p in prods}
-            rows = c.execute(sa.select(RV.REVIEWS).where(RV.REVIEWS.c.tenant_id == tenant,
-                                                         RV.REVIEWS.c.product_id.in_(list(pid_ean)))).fetchall()
+            rows = c.execute(st["reviews"]).fetchall()
     except Exception as e:  # noqa: BLE001 — SEO modülü bu ortamda yok ya da tablo kurulmamış
         log.info("author growth: yorum özeti okunamadı: %s", e)
         return out
@@ -344,13 +363,24 @@ def _reviews(engine: sa.engine.Engine, tenant: str, eans: dict[str, str]) -> dic
     return out
 
 
+def web_tone_stmt(tenant: str, contact_id: str):
+    """Basın ve web taramasında yazarın anıldığı haberler, etikete (ton) göre sayı (yalnız ekranda gösterilen etiketler)."""
+    from semantic_bridge import web_watch as W
+    return (sa.select(W.MENTIONS.c.label, sa.func.count())
+            .where(W.MENTIONS.c.tenant_id == tenant, W.MENTIONS.c.label.in_(W.SHOWN),
+                   sa.func.lower(W.MENTIONS.c.contact_id) == contact_id)
+            .group_by(W.MENTIONS.c.label))
+
+
 def _web_tone(engine: sa.engine.Engine, tenant: str, contact_id: str, enabled: bool) -> Optional[dict[str, int]]:
     if not enabled:
         return None
     try:
         from semantic_bridge import web_watch as W
         W.ensure(engine)
-        return W._tone(engine, tenant, [sa.func.lower(W.MENTIONS.c.contact_id) == contact_id])
+        with engine.connect() as c:
+            rows = c.execute(web_tone_stmt(tenant, contact_id)).all()
+        return {lab: int(n) for lab, n in rows}
     except Exception as e:  # noqa: BLE001
         log.info("author growth: web tonu okunamadı: %s", e)
         return None
@@ -365,6 +395,22 @@ def compute(schema: str, run_crm: Callable[[str], dict[str, Any]], logo: Callabl
     kişinin sözleşme listesi sorulur."""
     cid = _guid(contact_id)
     today = today or _now().date()
+    # Sorgu bilgisi: bu hesapta çalışan CRM metni (çalıştırıcının fiziksel metni), satır, süre, an. Sonuç satırı
+    # saklanmaz. Cevaba `_sorgular` olarak gider; sorgu bilgisi kurulurken cevaptan çıkarılır.
+    queries: list[dict[str, Any]] = []
+    run_plain = run_crm
+
+    def run_crm(sql: str) -> dict[str, Any]:  # noqa: F811 — kaydeden sarmalayıcı
+        t0 = datetime.now(timezone.utc)
+        res = run_plain(sql)
+        recs = res.get("records") if isinstance(res, dict) else None
+        queries.append({"conn": "crm", "asked": sql, "sql": (res.get("physicalSql") if isinstance(res, dict) else None) or sql,
+                        "rows": res.get("totalRows") if isinstance(res, dict) and res.get("totalRows") is not None
+                        else (len(recs) if isinstance(recs, list) else None),
+                        "dbMs": res.get("dbMs") if isinstance(res, dict) else None,
+                        "at": (res.get("computedAt") if isinstance(res, dict) else None) or t0.timestamp()})
+        return res
+
     books_raw = books_rows if prepared else (run_crm(books_sql(schema, cid)).get("records") or [])
     books: dict[str, dict[str, Any]] = {}
     for b in books_raw:
@@ -424,14 +470,22 @@ def compute(schema: str, run_crm: Callable[[str], dict[str, Any]], logo: Callabl
         "loyalty": loyalty(loy_rows[0] if loy_rows else None, today),
         "notes": notes,
         "computedAt": _now().isoformat(),
+        "_sorgular": {"crm": queries, "contractIds": contract_ids, "eans": sorted(eans), "prepared": prepared,
+                      "logoCodes": sorted(code_book), "logoFrom": date(max(2015, today.year - 5), 1, 1).isoformat(),
+                      "logoTo": today.isoformat()},
     }
+
+
+def growth_cache_stmt(tenant: str, contact_id: str):
+    """Hazırlık bitmeden canlı okunan yazarın 12 saatlik saklı gelişim hesabı."""
+    return sa.select(GROWTH).where(GROWTH.c.tenant_id == tenant, GROWTH.c.contact_id == _guid(contact_id))
 
 
 def cached(engine: sa.engine.Engine, tenant: str, contact_id: str, build: Callable[[], dict[str, Any]], *,
            refresh: bool = False) -> dict[str, Any]:
     cid = _guid(contact_id)
     with engine.connect() as c:
-        row = c.execute(sa.select(GROWTH).where(GROWTH.c.tenant_id == tenant, GROWTH.c.contact_id == cid)).first()
+        row = c.execute(growth_cache_stmt(tenant, cid)).first()
     if row and not refresh:
         at = row.computed_at if row.computed_at.tzinfo else row.computed_at.replace(tzinfo=timezone.utc)
         if _now() - at < timedelta(hours=FRESH_HOURS):
@@ -655,11 +709,14 @@ def make_advice(engine: sa.engine.Engine, tenant: str, user: str, contact_id: st
                 inputHash=hashlib.sha256(json.dumps(inp, sort_keys=True, default=str).encode()).hexdigest()[:12])
 
 
+def latest_advice_stmt(tenant: str, contact_id: str):
+    return (sa.select(ADVICE).where(ADVICE.c.tenant_id == tenant, ADVICE.c.contact_id == _guid(contact_id))
+            .order_by(ADVICE.c.created_at.desc()).limit(1))
+
+
 def latest_advice(engine: sa.engine.Engine, tenant: str, contact_id: str) -> Optional[dict[str, Any]]:
-    cid = _guid(contact_id)
     with engine.connect() as c:
-        r = c.execute(sa.select(ADVICE).where(ADVICE.c.tenant_id == tenant, ADVICE.c.contact_id == cid)
-                      .order_by(ADVICE.c.created_at.desc()).limit(1)).first()
+        r = c.execute(latest_advice_stmt(tenant, contact_id)).first()
     if not r:
         return None
     at = r.created_at if r.created_at.tzinfo else r.created_at.replace(tzinfo=timezone.utc)

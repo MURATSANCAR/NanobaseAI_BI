@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, errText, nf } from '../../admin/ui';
 import { Kpi, KpiRow, ModuleFrame } from '../kit';
+import SqlInfo from '../../components/SqlInfo';
 import { Tabs, flOverviewOptions, tl, type FlCtx } from './shared';
 import PeoplePane from './PeoplePane';
 import PackagesPane from './PackagesPane';
@@ -46,6 +47,7 @@ export default function FreelanceScreen() {
             label="Atanmayı bekleyen"
             value={nf.format(o.tasks.unassigned)}
             help={o.tasks.unassigned ? 'Açık paketlerde kişisi olmayan görev' : 'Bütün görevlerin kişisi var'}
+            info={<SqlInfo k={o.kaynaklar} alan="tasks.unassigned" label="Atanmayı bekleyen" />}
             active={section === 'paketler'}
             onClick={() => go('paketler')}
           />
@@ -53,6 +55,7 @@ export default function FreelanceScreen() {
             label="Süren iş"
             value={nf.format(o.tasks.active)}
             help={o.tasks.late ? `${nf.format(o.tasks.late)} görevin termini geçti` : 'Termini geçen yok'}
+            info={<SqlInfo k={o.kaynaklar} alan="tasks.active" label="Süren iş" />}
             active={section === 'kapasite'}
             onClick={() => go('kapasite')}
           />
@@ -60,12 +63,14 @@ export default function FreelanceScreen() {
             label="Teslim incelemesi"
             value={nf.format(o.tasks.review)}
             help="Kabul ya da revizyon bekleyen teslim"
+            info={<SqlInfo k={o.kaynaklar} alan="tasks.review" label="Teslim incelemesi" />}
             onClick={() => go('paketler', { durum: 'inceleme' })}
           />
           <Kpi
             label="Ödenecek"
             value={tl(o.payable)}
             help={approvals ? `${nf.format(approvals)} hakediş onay bekliyor` : 'Kabul edilmiş, hakedişe girmemiş iş'}
+            info={<SqlInfo k={o.kaynaklar} alan="payable" label="Ödenecek" />}
             active={section === 'hakedis'}
             onClick={() => go('hakedis')}
           />
@@ -77,10 +82,15 @@ export default function FreelanceScreen() {
         onChange={(s) => go(s)}
         items={[
           { key: 'kisiler', label: 'Kişiler' },
-          { key: 'paketler', label: 'İş paketleri', badge: o?.tasks.review || undefined },
+          { key: 'paketler', label: 'İş paketleri', badge: o?.tasks.review || undefined, info: <SqlInfo k={o?.kaynaklar} alan="tasks.review" label="İnceleme bekleyen teslim" /> },
           { key: 'kapasite', label: 'Kapasite' },
-          { key: 'hakedis', label: 'Hakediş', badge: (ctx?.canApprove && approvals) || undefined },
-          { key: 'mesajlar', label: 'Yazışmalar', badge: o?.unread || undefined },
+          {
+            key: 'hakedis',
+            label: 'Hakediş',
+            badge: (ctx?.canApprove && approvals) || undefined,
+            info: <SqlInfo k={o?.kaynaklar} alan="payouts" label="Onay bekleyen hakediş" />,
+          },
+          { key: 'mesajlar', label: 'Yazışmalar', badge: o?.unread || undefined, info: <SqlInfo k={o?.kaynaklar} alan="unread" label="Okunmamış ileti" /> },
         ]}
       />
 

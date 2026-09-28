@@ -17,6 +17,8 @@ import Sheet from '../studio/reader/Sheet';
 import MeetingForm, { type MeetingMode, type MeetingTarget } from './MeetingForm';
 import CardForm from './CardForm';
 import GrowthSection from './GrowthSection';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { BAND, HeatPill, TRACE, cellClass, lastMonths, daysAgo, downloadIcs, fmtDay, invalidateAuthors, monthLabel, useAuthorsMeta } from './shared';
 
 /** Bir yazarın ilişki kaydı: kart, ısı dökümü, randevu ve görüşme notları. Kartı olmayan CRM kişisi için de açılır;
@@ -24,7 +26,7 @@ import { BAND, HeatPill, TRACE, cellClass, lastMonths, daysAgo, downloadIcs, fmt
 
 export type PanelTarget = { cardId?: string | null; crm?: { id: string; name: string } | null };
 
-export function HeatBreakdown({ heat, months }: { heat: AuthorHeat; months?: string[] }) {
+export function HeatBreakdown({ heat, months, k }: { heat: AuthorHeat; months?: string[]; k?: Kaynaklar }) {
   const meta = useAuthorsMeta();
   const h = meta.data?.heat;
   const keys = months ?? lastMonths();
@@ -34,6 +36,7 @@ export function HeatBreakdown({ heat, months }: { heat: AuthorHeat; months?: str
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-[28px] font-bold leading-none tabular-nums">{heat.score}</span>
           <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">/ 100 ilişki ısısı</span>
+          <SqlInfo k={k} alan="heat" label="İlişki ısısı" className="self-center" />
         </div>
         <HeatPill heat={heat} compact />
       </div>
@@ -259,9 +262,10 @@ function RelatedAuthors({ contactId, compact }: { contactId: string; compact?: b
   const items = compact ? d.items.slice(0, 3) : d.items;
   return (
     <section>
-      <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold">
+      <h3 className="flex items-center gap-2 text-[12px] font-extrabold">
         Birlikte alınan yazarlar
         <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(d.total)}</span>
+        <SqlInfo k={d.kaynaklar} alan="items[]" label="Birlikte alınan yazarlar" />
       </h3>
       <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
         E-ticaret siparişlerinde bu yazarın kitabıyla aynı sepette alınan yazarlar; ortak etkinlik, set ve tanıtım için aday.
@@ -318,8 +322,9 @@ function RelatedAuthors({ contactId, compact }: { contactId: string; compact?: b
         </div>
       )}
       {d.run && (
-        <p className="mt-1 text-[10.5px] text-canvas-muted">
+        <p className="mt-1 flex items-center gap-1 text-[10.5px] text-canvas-muted">
           Son okuma {fmtDay(d.run.at)} · {nf.format(d.run.orders)} sipariş
+          <SqlInfo k={d.kaynaklar} alan="run" label="Son sipariş okuması" />
         </p>
       )}
     </section>
@@ -366,6 +371,7 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
 
   const timeline = detail?.timeline ?? [];
   const heat = detail?.heat ?? byCrm.data?.heat;
+  const k = target.cardId ? byCard.data?.kaynaklar : byCrm.data?.kaynaklar;
 
   return (
     <div className="space-y-3 text-[12.5px]">
@@ -390,7 +396,7 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
         </div>
       )}
 
-      {heat && <HeatBreakdown heat={heat} months={months} />}
+      {heat && <HeatBreakdown heat={heat} months={months} k={k} />}
 
       {canWrite && !detail?.archived && (
         <div className="grid grid-cols-2 gap-2">
@@ -408,9 +414,10 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
       {detail && !compact && <CardInfo card={detail} />}
 
       <section>
-        <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold">
+        <h3 className="flex items-center gap-2 text-[12px] font-extrabold">
           Görüşmeler
           <span className="font-mono font-semibold tabular-nums text-canvas-muted">{timeline.length}</span>
+          {timeline.length > 0 && <SqlInfo k={k} alan="timeline[]" label="Görüşmeler" />}
         </h3>
         {!timeline.length && (
           <p className="mt-1 text-[12px] text-canvas-muted">

@@ -6,6 +6,7 @@ import { Note, errText, field, nf } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../kit';
 import { BAND, LOYALTY, TRACE, cellClass, daysAgo, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
 import type { PanelTarget } from './CardPanel';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** İlişki ısı haritası: satır yazar, sütun son 12 ay, hücre o ay yapılan görüşme sayısı. Satırlar yürürlükte
  *  sözleşmesi olan yazarlar (CRM) ile ilişki kartı olan herkestir. Varsayılan sıra en soğuk önce: aranması gereken
@@ -141,6 +142,9 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
               <span className="font-mono tabular-nums">{nf.format(data.bands[k])}</span>
             </span>
           ))}
+          <span className="inline-flex items-center">
+            <SqlInfo k={data.kaynaklar} alan="bands" label="Isı bandı başına yazar" />
+          </span>
           {data.attention > 0 && (
             <button
               type="button"
@@ -155,6 +159,11 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
               <span className="font-mono tabular-nums">{nf.format(data.attention)}</span>
             </button>
           )}
+          {data.attention > 0 && (
+            <span className="inline-flex items-center">
+              <SqlInfo k={data.kaynaklar} alan="attention" label="İlgi bekleyen" />
+            </span>
+          )}
           <button type="button" onClick={() => setWhy((v) => !v)} aria-expanded={why} className="ml-auto text-[12px] font-extrabold text-canvas-violet underline">
             Isı ve sadakat nasıl hesaplanır
           </button>
@@ -165,7 +174,8 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
           Puan 100 üzerinden üç paydan çıkar. Yakınlık en çok {h.recencyMax} ({h.recencyDays} günde sıfırlanır): son görüşme ya da CRM'deki son iz (yazar adına yeni eser kaydı,
           başlayan sözleşme) hangisi yeniyse ondan. Sıklık: son 12 ayda her görüşme {h.frequencyEach} (en çok {h.frequencyMax}). Ton: son üç görüşme en çok {h.toneMax} (olumlu {h.toneMax}, nötr ya da
           belirtilmemiş {h.toneMax / 2}, olumsuz 0). Sıklık ve ton yalnız görüşmeden gelir; bu yüzden «sıcak» için gerçek görüşme gerekir. 0–33 soğuk, 34–66 ılık, 67–100 sıcak; son 12 ayda ne görüşme ne iz
-          varsa «temas yok». Yeşil nokta o ay CRM'deki yeni eser ya da sözleşme kaydıdır. «İlgi bekleyen»: sözleşmesi {data?.warnDays ?? 60} gün içinde biten ve 60 gündür görüşülmeyen yazar, notu
+          varsa «temas yok». Yeşil nokta o ay CRM'deki yeni eser ya da sözleşme kaydıdır. «İlgi bekleyen»: sözleşmesi {data?.warnDays ?? 60} gün
+          <SqlInfo k={data?.kaynaklar} alan="warnDays" label="Sözleşme uyarı günü (ayar)" className="ml-0.5" /> içinde biten ve 60 gündür görüşülmeyen yazar, notu
           girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım.
           <br />
           <br />
@@ -186,6 +196,12 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
       )}
 
       <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={data?.items.length ?? 0} loading={map.isLoading} fetching={map.isFetching} onPage={setPage} />
+      {data && data.items.length > 0 && (
+        <p className="mt-1 flex items-center gap-1 text-[11px] text-canvas-muted">
+          Süzgece uyan yazar sayısı
+          <SqlInfo k={data.kaynaklar} alan="total" label="Isı haritası satır sayısı" />
+        </p>
+      )}
 
       {map.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">CRM'deki sözleşmeler ve görüşmeler okunuyor…</p>}
       {data && !data.items.length && !map.isLoading && (
@@ -198,7 +214,7 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
             <thead>
               <tr>
                 <th scope="col" className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                  Yazar
+                  <InfoLabel k={data.kaynaklar} alan="items[].contracts" label="Yazar satırları: sözleşme ve bitiş">Yazar</InfoLabel>
                 </th>
                 {months.map((k) => (
                   <th key={k} scope="col" className="px-0.5 py-2 text-center text-[10.5px] font-bold text-canvas-muted">
@@ -208,12 +224,14 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
                   </th>
                 ))}
                 <th scope="col" className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                  Isı
+                  <InfoLabel k={data.kaynaklar} alan="items[].heat" label="Isı ve aylık görüşme">Isı</InfoLabel>
                 </th>
-                <th scope="col" className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                  <abbr title="Yazarın yayınevine bağlılığı (CRM): süre, kitap, süreklilik, sözleşme" className="no-underline">
-                    Sadakat
-                  </abbr>
+                <th
+                  scope="col"
+                  className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-canvas-muted"
+                  title="Yazarın yayınevine bağlılığı (CRM): süre, kitap, süreklilik, sözleşme"
+                >
+                  <InfoLabel k={data.kaynaklar} alan="items[].loyalty" label="Sadakat">Sadakat</InfoLabel>
                 </th>
               </tr>
             </thead>
@@ -243,6 +261,7 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
           <span className="inline-flex items-center gap-1">
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             CRM'de yeni eser / sözleşme
+            <SqlInfo k={data.kaynaklar} alan="items[].crm" label="CRM'de yeni eser ve sözleşme (ay ay)" />
           </span>
         </div>
       )}
