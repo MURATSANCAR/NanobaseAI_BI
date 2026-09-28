@@ -196,6 +196,11 @@
       "label": "Saha ve tahsilat"
     },
     {
+      "key": "sayfa:bayi-risk",
+      "area": "satis",
+      "label": "Bayi riski"
+    },
+    {
       "key": "sayfa:ihale",
       "area": "satis",
       "label": "İhale takibi"
@@ -837,6 +842,51 @@
       "page": "sayfa:saha",
       "label": "Temsilci karşılaştırması",
       "hint": "Haftalık saha raporunda bütün temsilcilerin satırları (kişisel performans verisi)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.not",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bayi ziyaret notu",
+      "hint": "Bayi kartından görüşme notu, ödeme sözü ve sonraki adım (saha ziyaret kaydıyla ortak)"
+    },
+    {
+      "key": "ozellik:bayi.aksiyon",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bayi aksiyonu",
+      "hint": "Bayiye ziyaret, arama ya da limit aksiyonu açma ve durumunu değiştirme"
+    },
+    {
+      "key": "ozellik:bayi.kural",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Risk kuralı taslağı",
+      "hint": "Skor ağırlıkları, segment eşikleri ve kapsam kanalları için yeni sürüm taslağı hazırlama ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:bayi.herkesinki",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bütün bayiler",
+      "hint": "Bayi riski ekranında yalnız CRM'de size atanmış cariler yerine bütün bayiler (satış müdürü, tahsilat, finans)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.limit-onay",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Limit önerisi kararı",
+      "hint": "Kuraldan çıkan kredi limiti önerisini onaylama ya da gerekçeyle reddetme; onaylanan «CRM'e işlenecek» listesine düşer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.kural-onay",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Risk kuralı onayı",
+      "hint": "Onaya gönderilen skor/segment kuralını yürürlüğe alma ya da geri çevirme (hazırlayan onaylayamaz)",
       "explicit": true
     },
     {

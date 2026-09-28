@@ -7035,6 +7035,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda: rt().llm_for("saha"), "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
     })
 
+    # M59 Kitapçı/bayi risk ve performans: M30 kaynak fonksiyonlarıyla günlük skor, segment, limit önerisi; /api/v1/dealers/*.
+    from semantic_bridge import dealers_api
+    from semantic_layer.runtime.llm_queue import BATCH as _DEALERS_BATCH
+
+    app.state.dealers = dealers_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda batch: rt().llm_for("dealers", _DEALERS_BATCH if batch else None),
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
     # M31 Okul tanıtım ve ziyaret: CRM ziyaret yerleri/etkinlik/sipariş + Logo stok/fiyat/bayi satışı (salt okunur) +
     # portal kayıtları (plan, bayi eşleşmesi, katalog, ortak ziyaret tablosu). Uçlar /api/v1/schools/*.
     from semantic_bridge import school_visits_api

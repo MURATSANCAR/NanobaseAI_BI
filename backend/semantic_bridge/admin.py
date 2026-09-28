@@ -95,6 +95,8 @@ SPEC: list[dict[str, Any]] = [
      "help": "crm = CRM KDV dahil liste fiyatı, logo = Logo geçerli satış fiyat listesi. Hangisi kullanıldığı teklif tablosunda yazar"},
     {"key": "TENDER_DEFAULT_VAT", "group": "delivery", "label": "İhale: varsayılan KDV oranı", "type": "text", "default": "0",
      "help": "CRM kitap kartında KDV oranı yoksa kullanılır; oran olarak (0,10 = %10)"},
+    {"key": "DEALERS_MORNING_RECIPIENTS", "group": "delivery", "label": "Bayi riski sabah özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (satış müdürü, finans). Her sabah segmenti düşen bayiler, vadesi geçmiş ve onay bekleyen limit önerileri; bayiye gönderim yok"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},

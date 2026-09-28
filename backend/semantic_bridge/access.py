@@ -482,6 +482,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/run-due", SYSTEM),
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
+    # M59 Bayi riski. Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/dealers/run-due", SYSTEM),
+    ("/api/v1/dealers/", frozenset({page("bayi-risk")})),
     ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
@@ -694,6 +697,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:saha.not"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/field/overrides(/[^/]+)?$", "ozellik:saha.oncelik-duzenle"),
     (frozenset({"GET"}), r"^/api/v1/field/report/weekly\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M59 Bayi riski: ziyaret notu, aksiyon, kural taslağı (önizleme okuma sayılır). Bütün bayileri görme, limit önerisi
+    # kararı ve kural onayı açıkça verilen anahtarlarla ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/dealers/[^/]+/notes$", "ozellik:bayi.not"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/dealers/actions(/[^/]+)?$", "ozellik:bayi.aksiyon"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/dealers/rules(/[^/]+(/submit)?)?$", "ozellik:bayi.kural"),
+    (frozenset({"GET"}), r"^/api/v1/dealers/list/export\.csv$", "ozellik:veri.disa-aktar"),
     # M32 Kurumsal satış: fırsat, paket, teklif, kurum segmenti, hatırlatmadan fırsat, veri yenileme. Teklif onayı/geri
     # gönderme açıkça verilen `kurumsal.teklif-onay` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
     (frozenset({"POST", "PATCH", "DELETE"}),
