@@ -104,6 +104,13 @@ const OkurReviews = lazy(() => import('@/canvas/okur/ReviewsScreen'));
 const LaunchHome = lazy(() => import('@/canvas/marketing/launch/LaunchHome'));
 const LaunchScreen = lazy(() => import('@/canvas/marketing/launch/LaunchScreen'));
 const BacklistScreen = lazy(() => import('@/canvas/marketing/backlist/BacklistScreen'));
+const PrHome = lazy(() => import('@/canvas/pr/PrHome'));
+const PrBook = lazy(() => import('@/canvas/pr/PrBook'));
+const PrKit = lazy(() => import('@/canvas/pr/PrKit'));
+const PrContacts = lazy(() => import('@/canvas/pr/PrContacts'));
+const PrContact = lazy(() => import('@/canvas/pr/PrContact'));
+const PrCoverage = lazy(() => import('@/canvas/pr/PrCoverage'));
+const PrReport = lazy(() => import('@/canvas/pr/PrReport'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -242,6 +249,14 @@ export default function App() {
             <Route path="pazarlama/lansman/:id" element={<LaunchScreen />} />
             {/* Pazarlama › Planlama: M17 backlist fırsatları ve aktivasyon planı (/api/v1/marketing/backlist). */}
             <Route path="pazarlama/backlist" element={<BacklistScreen />} />
+            {/* Pazarlama › İletişim: M20 basın ilişkileri (/api/v1/pr). */}
+            <Route path="basin-iliskileri" element={<PrHome />} />
+            <Route path="basin-iliskileri/kitap/:bookId" element={<PrBook />} />
+            <Route path="basin-iliskileri/dosya/:id" element={<PrKit />} />
+            <Route path="basin-iliskileri/kisiler" element={<PrContacts />} />
+            <Route path="basin-iliskileri/kisi/:key" element={<PrContact />} />
+            <Route path="basin-iliskileri/yansimalar" element={<PrCoverage />} />
+            <Route path="basin-iliskileri/rapor" element={<PrReport />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

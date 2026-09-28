@@ -493,6 +493,8 @@ def update_contact(engine: sa.engine.Engine, tenant: str, user: str, key: str, b
     if not vals:
         raise PrError("Değiştirilecek alan yok.")
     guid, pid = split_key(key)
+    if pid and "name" in vals and not vals["name"]:
+        raise PrError("Kişinin adı boş olamaz.")
     with engine.begin() as c:
         if guid:
             if not crm_known(guid):
