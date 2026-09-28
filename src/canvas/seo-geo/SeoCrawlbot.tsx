@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -291,7 +291,12 @@ const FILTER_LABEL: Record<Filter, string> = {
 };
 
 function IndexTab({ s }: { s: Summary['inspect'] }) {
-  const [filter, setFilter] = useState<Filter>('not_indexed');
+  // İş listesinden gelen bağlantı filtreyi seçili açar (ör. ?filtre=rich).
+  const [params] = useSearchParams();
+  const initial = params.get('filtre') as Filter | null;
+  const [filter, setFilter] = useState<Filter>(
+    initial && ['all', 'not_indexed', 'canonical', 'stale', 'errors', 'rich'].includes(initial) ? initial : 'not_indexed',
+  );
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
   const [start, setStart] = useState(0);

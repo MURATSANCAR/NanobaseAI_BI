@@ -29,7 +29,9 @@ MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "e
            "authors", "backlinks",
            # 3. tur (2026-09-28): tek iş listesi, kitap karnesi, yazar biyografisi, SSS taslağı, benzer kitaplar,
            # sorgu–sayfa eşlemesi, izlenen soru önerileri, YouTube, Google Alışveriş hazırlığı, aylık yönetim raporu
-           "worklist", "scorecard", "bios", "faq", "similar", "keymap", "qsuggest", "youtube", "shopping", "monthly")
+           "worklist", "scorecard", "bios", "faq", "similar", "keymap", "qsuggest", "youtube", "shopping", "monthly",
+           # 2026-09-28: Search Console site haritası durumu (hata/uyarı/son okuma, 6 saatte bir)
+           "gsc_sitemaps")
 
 
 @dataclass

@@ -83,6 +83,8 @@ SOURCES: dict[str, str] = {
     "sema": "Şema denetimi",
     "teknik": "Teknik sağlık",
     "google_tarama": "Google taraması",
+    "zengin_sonuc": "Zengin sonuç hataları",
+    "site_haritasi": "Site haritaları (Google)",
     "haklar": "CRM hakları",
     "crm_durum": "CRM yayın durumu",
     "takvim": "Sezon takvimi",
@@ -695,6 +697,101 @@ def src_crawlbot(env: Env) -> list[dict[str, Any]]:
     return out
 
 
+#: Google zengin sonuç sorununun önemi: ERROR sayfayı zengin sonuçtan düşürür, WARNING yalnız eksik alan.
+RICH_SEVERITY = {"ERROR": "yüksek", "WARNING": "orta"}
+
+
+def rich_groups(rows: Iterable[tuple[Any, Any, Any]]) -> dict[tuple[str, str, str], list[tuple[Any, str]]]:
+    """(url, product_id, rich_json) → (önem, sonuç türü, ileti) başına [(ürün, adres)]. Bir adres aynı iletiyi
+    birden çok öğede taşısa da bir kez sayılır."""
+    groups: dict[tuple[str, str, str], list[tuple[Any, str]]] = {}
+    for url, pid, raw in rows:
+        rich = loads(raw, None) if isinstance(raw, str) else raw
+        seen: set[tuple[str, str, str]] = set()
+        for i in (rich or {}).get("issues") or []:
+            sev = str(i.get("severity") or "").upper()
+            if sev not in RICH_SEVERITY:
+                continue
+            k = (sev, str(i.get("type") or ""), str(i.get("message") or "").strip())
+            if k[2] and k not in seen:
+                seen.add(k)
+                groups.setdefault(k, []).append((pid, url))
+    return groups
+
+
+def src_rich_results(env: Env) -> list[dict[str, Any]]:
+    """URL Denetimi'nin zengin sonuç bulguları: ileti başına tek madde (ör. «"offers" alanı eksik»)."""
+    from .crawlbot import INSPECT
+
+    if not env.has(INSPECT):
+        return []
+    with env.eng.connect() as c:
+        rows = c.execute(sa.select(INSPECT.c.url, INSPECT.c.product_id, INSPECT.c.rich_json).where(
+            INSPECT.c.tenant_id == env.tenant, INSPECT.c.error.is_(None), INSPECT.c.rich_json.isnot(None))).all()
+    out = []
+    for (sev, rtype, msg), hits in rich_groups(rows).items():
+        kind = "Hata" if sev == "ERROR" else "Uyarı"
+        out.append(make_item("zengin_sonuc", f"{sev}|{rtype}|{msg}", "tsoft",
+                             f"Zengin sonuç {kind.lower()}: {rtype or 'şema'} — {msg} — {_n(len(hits))} adres",
+                             ("Google bu sayfalarda yapılandırılmış veriyi okurken bu sorunu buldu. "
+                              + ("Hata varken sayfa zengin sonuçta (fiyat, stok, puan) gösterilmez; "
+                                 if sev == "ERROR" else "Uyarı sayfayı düşürmez ama zengin sonucu eksik gösterir; ")
+                              + "düzeltme ürün şablonundaki şemada yapılır. Adresler Google taraması ekranında."),
+                             RICH_SEVERITY[sev], "/seo-geo/google-taramasi?filtre=rich", count=len(hits),
+                             sales=_sum_sales(env, (p for p, _ in hits)),
+                             impressions=sum(env.impressions_of(u) for _, u in hits),
+                             group=(f"zengin_{sev.lower()}", f"Zengin sonuç {kind.lower()}ları")))
+    return out
+
+
+def src_gsc_sitemaps(env: Env) -> list[dict[str, Any]]:
+    """Search Console'daki site haritası durumu: hata, uyarı, Google'ın okumadığı harita."""
+    from .gsc_sitemaps import OBSOLETE_DAYS, SNAP, STALE_DOWNLOAD_DAYS
+
+    if not env.has(SNAP):
+        return []
+    with env.eng.connect() as c:
+        r = c.execute(sa.select(SNAP.c.data_json).where(SNAP.c.tenant_id == env.tenant)).first()
+    if not r:
+        return []
+    data = loads(r[0], {})
+    link = "/seo-geo/teknik?sekme=google-haritalar"
+    out = []
+    for m in data.get("sitemaps") or []:
+        path, fl = m.get("path") or "", m.get("flags") or []
+        short = path.split("://", 1)[-1]
+        if "eski" in fl:
+            out.append(make_item("site_haritasi", f"eski|{path}", "seo",
+                                 f"Search Console'da eski site haritası kayıtlı: {short}",
+                                 f"Google bu haritayı {OBSOLETE_DAYS} günden uzun süredir okumuyor; eski siteden kalmış. "
+                                 "Search Console → Site haritaları'ndan kaldırılmalı (hata/uyarısı güncel sorunları "
+                                 "gölgeliyor). Kaldırma Search Console'da elle yapılır; portal oraya yazmaz.",
+                                 "düşük", link, group=("harita_eski", "Eski site haritası kayıtları")))
+            continue
+        if "hata" in fl:
+            up = f" (+{m['errorsDelta']} son okumadan beri)" if (m.get("errorsDelta") or 0) > 0 else ""
+            out.append(make_item("site_haritasi", f"hata|{path}", "tsoft",
+                                 f"Site haritasında {_n(m['errors'])} hata: {short}{up}",
+                                 "Google haritayı okurken hata buldu (geçersiz adres, biçim, erişilemeyen dosya…). "
+                                 "Google hatanın metnini API'de vermiyor; ayrıntı Search Console → Site haritaları'nda. "
+                                 "Harita T-soft'ta üretiliyor; düzeltme orada.",
+                                 "kritik" if (m.get("errorsDelta") or 0) > 0 else "yüksek", link, count=m["errors"],
+                                 group=("harita_hata", "Site haritası hataları")))
+        if "uyari" in fl:
+            out.append(make_item("site_haritasi", f"uyari|{path}", "tsoft",
+                                 f"Site haritasında {_n(m['warnings'])} uyarı: {short}",
+                                 "Google haritayı okudu ama bazı satırları sorunlu buldu (robots engeli, yönlendiren "
+                                 "adres…). Ayrıntı Search Console → Site haritaları'nda.",
+                                 "orta", link, count=m["warnings"], group=("harita_uyari", "Site haritası uyarıları")))
+        if "okunmuyor" in fl and not m.get("parent"):
+            out.append(make_item("site_haritasi", f"okunmuyor|{path}", "bt",
+                                 f"Google site haritasını {STALE_DOWNLOAD_DAYS} günden uzun süredir okumadı: {short}",
+                                 "Harita adresi açılıyor mu, robots.txt'te bildiriliyor mu bakılmalı; gerekirse "
+                                 "Search Console'dan yeniden gönderilir.",
+                                 "orta", link, group=("harita_okunmuyor", "Okunmayan site haritaları")))
+    return out
+
+
 RIGHTS_ITEMS = {"eksik": ("yüksek", "Hak eksik"), "yok": ("orta", "Sözleşme kaydı yok"), "incele": ("orta", "Hak incelenmeli")}
 FLAG_TEXT = {"bizim_degil": "artık bizim ürünümüz değil", "cekildi": "satıştan çekildi", "geri_istendi": "geri istendi",
              "devredildi": "hakları devredildi", "iptal": "iptal edilmiş"}
@@ -1022,6 +1119,8 @@ COLLECTORS: list[tuple[str, Callable[[Env], list[dict[str, Any]]]]] = [
     ("sema", src_schema),
     ("teknik", src_tech),
     ("google_tarama", src_crawlbot),
+    ("zengin_sonuc", src_rich_results),
+    ("site_haritasi", src_gsc_sitemaps),
     ("haklar", src_rights),
     ("crm_durum", src_crm_status),
     ("takvim", src_seasons),

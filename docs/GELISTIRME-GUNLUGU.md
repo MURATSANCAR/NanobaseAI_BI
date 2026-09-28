@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (13:30) — Search Console site haritası durumu sürekli okunuyor; zengin sonuç hataları iş listesinde
+
+- **Erişim:** servis hesabı `zeki-seo@` Search Console'a «Tam», Merchant Center 5411495322'ye «Read-only + Performance and insights» olarak eklendi (kullanıcı onayıyla). GA4 mülkü 347043165 (Merchant'a bağlı) — zeki@'in GA4 erişimi yok, Timaş GA4 yöneticisi ekleyecek.
+- **Site haritası:** `seo_geo/gsc_sitemaps.py` Search Console API'den gönderilmiş haritaları (dizin haritasının alt haritaları dahil) okur: hata, uyarı, gönderilen adres, Google'ın son okuması. 6 saatte bir süreç içi, gece ve ekran açılınca bayatsa; her okuma harita başına geçmiş satırı yazar, fark ekranda. Google hata metnini API'de vermiyor (yalnız sayı) — ekranda Search Console bağlantısı.
+- **Canlı ilk okuma:** 23 harita; hataların çoğu 2020'deki eski siteden kalan kayıtlı haritalar (portfolio, post, category…). Bunlar «eski» (365 günden uzun okunmayan) ayrı sınıf: özete katılmaz, iş listesine «Search Console'dan kaldırın» (düşük) olarak düşer; güncel harita hatası yüksek, son okumaya göre arttıysa kritik.
+- **Zengin sonuç:** URL Denetimi'nin `rich_json` bulguları iş listesine ileti başına tek madde (ERROR yüksek, WARNING orta; adres başına bir kez sayılır). Bağlantı Google taraması'nı `?filtre=rich` ile açar.
+- Testler `test_seo_gsc_sitemaps.py` (6), toplam SEO testleri 33/33; tsc temiz.
+
 ## 2026-09-28 (13:10) — Test sunucusuna main `eecc1eb0` → `4f100621` (M16–M59, H1–H4, DYK, M9/M19/M53); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 
 - **Kurulum 1 (`eecc1eb0`, 08:36):** 1.089 dosya (86 farklı + 1.003 yeni; apps/outputs/artifacts dışı ağaç). Sunucuya özgü 6 dosya (app.py, access.py, access_catalog.json, admin.py, App.tsx, navModel.ts) eski main hâllerinin alt kümesiydi → main'le değişti. Klasörler `var/events|marketing-assets|pazar-raporlar|risk|stock`; köprü ortamına `READERS_HASH_SALT` (64 karakter, bir kez). Köprü 08:40:02 yeniden başladı (08:40:53 sağlıklı; başka oturum 08:35:56'da da başlatmıştı), yeni 41 uç öneki oturumsuz 401. Ön yüz `index-DQzJWgtz.js`. 93 yeni + 2 değişen systemd birimi.
@@ -17,7 +25,6 @@
 - **Düzeltmeler (dal `claude/kurulum-kabul-0928`, main'e alınmadı):** M42 kanal karnesi SQL'i · M43 tükenme tarihi taşması · M27 kitap kartı kolon yazımı · M28 ünvan kolonu · M56 LG_SLSMAN · M48 CRM veri sonu UTC · DYK veri sonu günü; kabul betikleri H2, H3, M24, M39, M40, M44, M48, M54, M56.
 - **Temizlik:** her yazma testinden sonra modülün temizlik betiği koştu; son taramada 542 `semantic_*` tablosunda test izi 0, `kabul-*` adlı değişiklik kaydı 0; benim açtığım bütün timasai oturum satırları silindi (kalan 0). timasai'nin gerçek değişiklik kayıtları kaldı (bugün 77 satır, kimlik 4087–4338; bir kısmı başka oturumların). Bazı modül temizlik betikleri timasai değişiklik kaydını da siliyor (M55 5, M57 6, M24 7…) — 09-28 kuralına aykırı, betiklerde düzeltilmeli. Sunucudaki geçici klasör silindi. **Kalan:** GPU'da M19 kabulünün stüdyo işi (`production/202609280623374e3adb`, GPU erişimi ister).
 - **Kullanıcı / sudo adımları:** M49 giriş servisi (`/opt/timas-login` hâlâ `4ce2b0e2`), `LOGIN_ADMIN_TOKEN` iki tarafa, nginx `/timas/auth/` X-Real-IP · M51 masa salt okuma API anahtarı + `nginx-destek-baglam.conf` · M56/M58 oturumsuz form nginx yolu (`add-hr-survey-public-route.py`, onay bekliyor) · H4 Gmail hizmet hesabı anahtarı · `timas-musteri-haftalik` ve `timas-model-quality-hafta` kararı · ayar değerleri (HR_RECRUIT_SLA_DAYS, HR_TRAINING_ACCOUNTS, alıcı listeleri) · M37 ↔ H2 okur çekirdeği bağı (main'de `readers_core.py` geldi, kurulmadı).
-
 ## 2026-09-28 (12:40) — NanobaseAI Destek: zeki@ gelen kutusu destek kaydı açar (kullanıcı kararı, ayrı adres gelene kadar)
 
 - **Karar:** «zekiai olsun destek maili şimdilik» → zeki@timas.com.tr hem gönderim hem gelen kutusu. `eposta.py` IMAP'i (imap.gmail.com:993, aynı uygulama şifresi) açar, INBOX → HD Ticket.

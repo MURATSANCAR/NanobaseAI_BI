@@ -102,6 +102,7 @@ const PAGE = 40;
 const TABS = [
   { id: 'sorunlar', label: 'Sayfa sorunları' },
   { id: 'sitemap', label: 'Sitemap' },
+  { id: 'google-haritalar', label: 'Google’daki haritalar' },
   { id: 'botlar', label: 'Yapay zekâ botları' },
   { id: 'gorseller', label: 'Görseller' },
   { id: 'hiz', label: 'Hız' },
@@ -156,6 +157,7 @@ export default function SeoTech() {
       {tab === 'sorunlar' && <IssuesTab group="page" />}
       {tab === 'gorseller' && <IssuesTab group="image" />}
       {tab === 'sitemap' && <SitemapTab />}
+      {tab === 'google-haritalar' && <GscSitemapsTab />}
       {tab === 'botlar' && <BotsTab />}
       {tab === 'hiz' && <SpeedTab />}
     </SeoLayout>
@@ -409,6 +411,155 @@ function ImageDetail({ it }: { it: TechItem }) {
           </div>
         ))}
     </details>
+  );
+}
+
+/* ------------------------------------------------------------------ Google'daki site haritaları */
+type GscFlag = 'eski' | 'hata' | 'uyari' | 'okunmuyor' | 'bekliyor';
+type GscSitemap = {
+  path: string;
+  parent: string | null;
+  type: string | null;
+  isIndex: boolean;
+  isPending: boolean;
+  lastSubmitted: string | null;
+  lastDownloaded: string | null;
+  errors: number;
+  warnings: number;
+  submitted: number | null;
+  errorsDelta: number | null;
+  warningsDelta: number | null;
+  flags: GscFlag[];
+};
+type GscSnap = {
+  site: string;
+  link: string;
+  summary: { sitemaps: number; errors: number; warnings: number; submitted: number; withErrors: number; withWarnings: number; notRead: number; obsolete: number };
+  sitemaps: GscSitemap[];
+  error: string | null;
+  savedAt: string;
+};
+const gscApi = {
+  get: () => call<{ configured: boolean; snapshot: GscSnap | null; state: RunState; refreshHours: number; staleDays: number }>('gsc-sitemaps'),
+  refresh: () => call<{ started: boolean }>('gsc-sitemaps/refresh', { method: 'POST' }),
+};
+const FLAG_CHIP: Record<GscFlag, [string, 'bad' | 'mid']> = {
+  eski: ['Eski kayıt — kaldırın', 'mid'],
+  hata: ['Hata', 'bad'],
+  uyari: ['Uyarı', 'mid'],
+  okunmuyor: ['Google okumuyor', 'mid'],
+  bekliyor: ['İşleniyor', 'mid'],
+};
+const delta = (d: number | null) => (d && d > 0 ? ` (+${fmt(d)})` : d && d < 0 ? ` (${fmt(d)})` : '');
+
+/** Search Console'a gönderilmiş haritaların Google tarafındaki durumu; 6 saatte bir kendiliğinden okunur. */
+function GscSitemapsTab() {
+  const qc = useQueryClient();
+  const r = useQuery({
+    queryKey: ['seo-gsc-sitemaps'],
+    queryFn: gscApi.get,
+    enabled: ENGINE_ENABLED,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.state.running ? 5000 : false),
+  });
+  const refresh = useMutation({ mutationFn: gscApi.refresh, onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-gsc-sitemaps'] }) });
+  const d = r.data;
+  const s = d?.snapshot;
+  const running = !!d?.state.running;
+  const sum = s?.summary;
+
+  return (
+    <>
+      <div className="sg-actions">
+        <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending || running || !d?.configured}>
+          {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
+          {running ? 'Search Console okunuyor…' : 'Şimdi oku'}
+        </button>
+        {s?.link && (
+          <a className="sg-button" href={s.link} target="_blank" rel="noreferrer">
+            <ExternalLink size={16} aria-hidden /> Search Console’da aç
+          </a>
+        )}
+      </div>
+      {r.isLoading && <Loading text="Site haritası durumu getiriliyor…" />}
+      {r.error && <Failed error={r.error} />}
+      {refresh.error && <Failed error={refresh.error} />}
+      {d && !d.configured && <p className="sg-banner err">Search Console mülkü girilmemiş (Yönetim → SEO &amp; GEO).</p>}
+      {(d?.state.error || s?.error) && <p className="sg-banner err">Son okuma başarısız: {d?.state.error || s?.error}</p>}
+      {d?.configured && !s && !running && (
+        <div className="sg-empty">
+          <h2>Henüz okunmadı</h2>
+          <p>“Şimdi oku”ya basın; sonra her {d.refreshHours} saatte bir kendiliğinden okunur.</p>
+        </div>
+      )}
+      {s && sum && (
+        <>
+          <section className="sg-kpis" aria-label="Özet">
+            <Kpi
+              label="Gönderilmiş harita"
+              value={fmt(sum.sitemaps)}
+              note={`${sum.obsolete ? `${fmt(sum.obsolete)} tanesi eski siteden kalma · ` : ''}son okuma ${dateTime(s.savedAt)}`}
+              tone={sum.obsolete ? 'mid' : undefined}
+            />
+            <Kpi label="Hata" value={fmt(sum.errors)} note={`${fmt(sum.withErrors)} haritada`} tone={sum.errors ? 'bad' : 'good'} />
+            <Kpi label="Uyarı" value={fmt(sum.warnings)} note={`${fmt(sum.withWarnings)} haritada`} tone={sum.warnings ? 'bad' : 'good'} />
+            <Kpi
+              label="Google’ın okumadığı"
+              value={fmt(sum.notRead)}
+              note={`${d?.staleDays} günden uzun süredir okunmayan`}
+              tone={sum.notRead ? 'bad' : 'good'}
+            />
+          </section>
+          <section className="sg-card">
+            <h2>Haritalar</h2>
+            <p className="sg-sub">
+              Google hata ve uyarının sayısını verir, metnini vermez; metin Search Console → Site haritaları’nda. Parantez içindeki sayı bir önceki okumaya göre farktır.
+              Bir yıldan uzun süredir okunmayan harita eski siteden kalmadır: sayıları özete katılmaz, Search Console’dan kaldırılması iş listesine düşer.
+            </p>
+            <div className="sg-table-wrap">
+              <table className="sg-table">
+                <thead>
+                  <tr>
+                    <th>Harita</th>
+                    <th>Gönderilen adres</th>
+                    <th>Hata</th>
+                    <th>Uyarı</th>
+                    <th>Google son okuma</th>
+                    <th>Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.sitemaps.map((m) => (
+                    <tr key={m.path}>
+                      <td className="url">
+                        {m.parent ? '↳ ' : ''}
+                        {m.path}
+                        {m.isIndex ? ' (dizin)' : ''}
+                      </td>
+                      <td className="num">{m.submitted == null ? '—' : fmt(m.submitted)}</td>
+                      <td className="num">{fmt(m.errors) + delta(m.errorsDelta)}</td>
+                      <td className="num">{fmt(m.warnings) + delta(m.warningsDelta)}</td>
+                      <td className="sg-mono" style={{ whiteSpace: 'nowrap' }}>{m.lastDownloaded ? dateTime(m.lastDownloaded) : 'hiç'}</td>
+                      <td>
+                        {m.flags.length ? (
+                          m.flags.map((f) => (
+                            <span key={f} className={`sg-chip ${FLAG_CHIP[f][1]}`} style={{ marginRight: 4 }}>
+                              {FLAG_CHIP[f][0]}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="sg-chip good">Sorunsuz</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+    </>
   );
 }
 
