@@ -6113,3 +6113,1155 @@ msgstr "{0} · Son aktif {1}"
 #: helpdesk/helpdesk/doctype/hd_ticket_comment/hd_ticket_comment.py:156
 msgid "{} people reacted to your comment"
 msgstr "{} kişi yorumunuza tepki verdi"
+
+#: desk/src/components/view-controls/Filter.vue:416
+msgid "%John%"
+msgstr "%John%"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:54 desk/src/components/tag/Tags.vue:62
+msgid "+{0} more"
+msgstr "+{0} daha"
+
+#: desk/src/components/view-controls/Filter.vue:411
+msgid "01/01/2022 to 01/31/2022"
+msgstr "01/01/2022 - 01/31/2022"
+
+#: desk/src/components/SavedRepliesSelectorModal.vue:293
+msgid "1 action"
+msgstr "1 işlem"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:143
+msgid "1 action will be applied after sending the email"
+msgstr "E-posta gönderildikten sonra 1 işlem uygulanacak"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:84
+msgid "1 time"
+msgstr "1 kez"
+
+#: helpdesk/helpdesk/workspace/helpdesk/helpdesk.json
+msgid "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">NanobaseAI destek ekranı</a></span>"
+msgstr "<span class=\"h3\" style=\"\"><a href=\"/helpdesk\">NanobaseAI destek ekranı</a></span>"
+
+#: desk/src/pages/PersonaForm.vue:218
+msgid "A friend or colleague"
+msgstr "Bir arkadaş veya meslektaşı"
+
+#: desk/src/pages/PersonaForm.vue:219
+msgid "A partner or consultant"
+msgstr "Bir ortak veya danışman"
+
+#: desk/src/components/tag/Tags.vue:38 desk/src/components/tag/Tags.vue:43
+msgid "Add"
+msgstr "Ekle"
+
+#: desk/src/components/view-controls/Filter.vue:141
+msgid "Add Filter"
+msgstr "Filtre Ekle"
+
+#: desk/src/components/Questionnaire.vue:266
+msgid "Add a few words so we can continue"
+msgstr "Devam edebilmemiz için birkaç kelime ekleyin"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionsEditor.vue:88
+msgid "Add action"
+msgstr "İşlem Ekle"
+
+#: desk/src/components/modals/ShortcutsModal.vue:92
+msgid "Add tags"
+msgstr "Etiket ekle"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:58
+msgid "Agent replies"
+msgstr "Temsilci yanıtları"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:157
+msgid "Agent reply"
+msgstr "Temsilci yanıtı"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:70
+msgid "Agents involved"
+msgstr "İlgili temsilciler"
+
+#: desk/src/pages/PersonaForm.vue:220
+msgid "An event or conference"
+msgstr "Bir etkinlik veya konferans"
+
+#: desk/src/components/ticket-agent/TicketActivityPanel.vue:110
+msgid "Analytics"
+msgstr "Analitik"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionsEditor.vue:6
+msgid "Applied to the ticket when this reply is sent"
+msgstr "Bu yanıt gönderildiğinde kayda uygulanır"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:205
+msgid "Applied {0} saved reply action(s)"
+msgstr "{0} hazır yanıt işlemi uygulandı"
+
+#: desk/src/components/SavedRepliesSelectorModal.vue:297
+msgid "Applies 1 action when sent"
+msgstr "Gönderildiğinde 1 işlem uygular"
+
+#: desk/src/components/SavedRepliesSelectorModal.vue:298
+msgid "Applies {0} actions when sent"
+msgstr "Gönderildiğinde {0} işlem uygular"
+
+#: desk/src/components/EmailEditor.vue:412
+msgid "Applying \"{0}\" discards the reply you have now, along with its {1} action(s)."
+msgstr "\"{0}\" uygulandığında, şu anki yanıtınız ve {1} işlemiyle birlikte silinir."
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:185
+msgid "Article draft created"
+msgstr "Makale taslağı oluşturuldu"
+
+#: desk/src/components/ticket-agent/BulkAssignModal.vue:2 desk/src/pages/ticket/Tickets.vue:143
+msgid "Assign"
+msgstr "Ata"
+
+#: desk/src/components/ticket-agent/BulkAssignModal.vue:13
+msgid "Assign {0} tickets"
+msgstr "{0} kaydı ata"
+
+#: desk/src/pages/home/components/RecentActivity.vue:105
+msgid "Assigned"
+msgstr "Atandı"
+
+#: desk/src/components/ticket-agent/BulkAssignModal.vue:53
+msgid "Assigned {0} tickets"
+msgstr "{0} kayıt atandı"
+
+#: desk/src/pages/PersonaForm.vue:200
+msgid "Assigning tickets"
+msgstr "Kayıtlar atanıyor"
+
+#: desk/src/components/EmailEditor.vue:163
+msgid "Attach file"
+msgstr "Dosya ekle"
+
+#: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
+msgid "Auto-set customer from contact"
+msgstr "Müşteriyi kişiden otomatik ayarla"
+
+#: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
+msgid "Automatically set the customer on a ticket based on the contact's linked customer(s)"
+msgstr "Kişinin bağlı müşterilerine göre kayıttaki müşteriyi otomatik olarak ayarlayın"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:40
+msgid "Average time the customer took to reply to an agent"
+msgstr "Bir temsilciye yanıt vermek için müşterinin ortalama harcadığı süre"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:35
+msgid "Average time to reply after a customer message"
+msgstr "Müşteri mesajından sonra yanıt verme ortalama süresi"
+
+#: desk/src/pages/home/Home.vue:305 desk/src/pages/home/components/AvgTimeMetrics.vue:5
+msgid "Avg. Time Metrics"
+msgstr "Ort. Süre Metrikleri"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:33
+msgid "Avg. agent response gap"
+msgstr "Ort. temsilci yanıt aralığı"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:38
+msgid "Avg. customer response gap"
+msgstr "Ort. müşteri yanıt aralığı"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:37
+msgid "Based on"
+msgstr "Şuna dayalı"
+
+#: desk/src/components/ticket-agent/TicketContact.vue:38
+msgid "Call contact"
+msgstr "Kişiye ara"
+
+#: desk/src/components/Settings/InviteAgents.vue:172
+msgid "Can manage all aspects of NanobaseAI."
+msgstr "NanobaseAI'nin tüm yönlerini yönetebilir."
+
+#: desk/src/components/command-palette/CommandPalette.vue:261
+msgid "Clear"
+msgstr "Temizle"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:33 desk/src/components/SavedReplyActions/SavedReplyActions.vue:35
+msgid "Clear all actions"
+msgstr "Tüm işlemleri temizle"
+
+#: desk/src/components/command-palette/CommandPalette.vue:14
+msgid "Command Palette"
+msgstr "Komut Paleti"
+
+#: desk/src/pages/home/components/RecentActivity.vue:103
+msgid "Commented"
+msgstr "Yorum yaptı"
+
+#: desk/src/components/Settings/Telephony/ExotelSettings.vue:3
+msgid "Configure your Exotel settings for NanobaseAI."
+msgstr "NanobaseAI için Exotel ayarlarınızı yapılandırın."
+
+#: desk/src/components/Settings/Telephony/TwilioSettings.vue:3
+msgid "Configure your Twilio settings for NanobaseAI."
+msgstr "NanobaseAI için Twilio ayarlarınızı yapılandırın."
+
+#: desk/src/pages/PersonaForm.vue:230
+msgid "Connect my support email"
+msgstr "Destek e-postamı bağla"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:5
+msgid "Conversation Summary"
+msgstr "Sohbet Özeti"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:225
+msgid "Could not apply actions from the saved reply."
+msgstr "Hazır yanıtta kayıtlı işlemler uygulanamadı."
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:164
+msgid "Could not open the reply box"
+msgstr "Yanıt kutusu açılamadı"
+
+#: desk/src/components/Settings/FieldDependency/FieldDependencyList.vue:13
+msgid "Create field dependencies to dynamically update options based on user selections."
+msgstr "Kullanıcı seçimlerine göre seçenekleri dinamik olarak güncellemek için alan bağımlılıkları oluşturun."
+
+#: desk/src/pages/PersonaForm.vue:232
+msgid "Create my first ticket"
+msgstr "İlk kaydımı oluştur"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:237
+msgid "Created"
+msgstr "Oluşturuldu"
+
+#: desk/src/components/ViewModal.vue:22
+msgid "Current icon"
+msgstr "Mevcut simge"
+
+#: desk/src/components/customer/NewCustomerDialog.vue:140
+msgid "Customer created · invitation sent to {0}"
+msgstr "Müşteri oluşturuldu · {0} adresine davet gönderildi"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:156 desk/src/components/ticket-agent/analytics/TicketTimeline.vue:548
+msgid "Customer message"
+msgstr "Müşteri mesajı"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:55
+msgid "Customer messages"
+msgstr "Müşteri mesajları"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:7
+msgid "Customer mood"
+msgstr "Müşteri durumu"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:4
+msgid "Customer portal permissions have changed"
+msgstr "Müşteri portalı izinleri değişti"
+
+#: desk/src/components/layouts/CustomerPortalPermissionBanner.vue:10
+msgid "Customer portal update"
+msgstr "Müşteri portalı güncellemesi"
+
+#: helpdesk/api/dashboard_tags.py:73
+msgid "Daily volume of the top {0} tags"
+msgstr "En çok kullanılan {0} etiketin günlük hacmi"
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.py:32
+msgid "Default SLA turned off"
+msgstr "Varsayılan SLA kapatıldı"
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:122
+msgid "Delay"
+msgstr "Gecikme"
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:128
+msgid "Delay (total)"
+msgstr "Gecikme (toplam)"
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:122
+msgid "Delay (working hours)"
+msgstr "Gecikme (çalışma saatleri)"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:88
+msgid "Draft a knowledge base article"
+msgstr "Bilgi bankası makalesi taslağı oluştur"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:33
+msgid "Draft a reply"
+msgstr "Yanıt taslağı oluştur"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:168
+msgid "Draft added to the reply. Review it before sending."
+msgstr "Taslak yanıta eklendi. Göndermeden önce gözden geçirin."
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:102
+msgid "Due by"
+msgstr "Son tarih"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:71
+msgid "Duplicate action: {0}"
+msgstr "Yinelenen işlem: {0}"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:10
+msgid "Earlier, every contact could see all the tickets of their company. Now, contacts only see the tickets they raised themselves."
+msgstr "Daha önce, her kişi şirketinin tüm kayıtlarını görebiliyordu. Şimdi, kişiler yalnızca kendilerinin açtığı kayıtları görüyor."
+
+#: desk/src/components/view-controls/Filter.vue:128
+msgid "Empty - Choose a field to filter by"
+msgstr "Boş - Filtrelemek için bir alan seçin"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:66
+msgid "Existing contacts are being made customer managers in the background"
+msgstr "Mevcut kişiler arka planda müşteri yöneticisi yapılıyor"
+
+#: desk/src/pages/PersonaForm.vue:234
+msgid "Explore the product first"
+msgstr "Önce ürünü keşfedin"
+
+#: desk/src/components/ticket-agent/analytics/TicketAnalyticsTab.vue:21
+msgid "Failed to load analytics"
+msgstr "Analitikler yüklenemedi"
+
+#: desk/src/components/tag/Tags.vue:291
+msgid "Failed to update tags"
+msgstr "Etiketler güncellenemedi"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:7
+msgid "Field"
+msgstr "Alan"
+
+#: desk/src/components/view-controls/Filter.vue:6
+msgid "Filter"
+msgstr "Filtre"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:53
+msgid "Find"
+msgstr "Bul"
+
+#: desk/src/pages/PersonaForm.vue:186
+msgid "Finding past conversations"
+msgstr "Geçmiş konuşmaları bulma"
+
+#: desk/src/components/Questionnaire.vue:129
+msgid "Finish"
+msgstr "Bitir"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:292
+msgid "First response"
+msgstr "İlk yanıt"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:318
+msgid "First response due"
+msgstr "İlk yanıt süresi"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:346
+msgid "First response overdue"
+msgstr "İlk yanıt gecikmeli"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:556
+msgid "Follow-up"
+msgstr "Sonraki Adım"
+
+#: desk/src/pages/PersonaForm.vue:128
+msgid "Freshdesk"
+msgstr "Freshdesk"
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:136
+msgid "Fulfilled in"
+msgstr "Karşılanan süre"
+
+#: desk/src/pages/PersonaForm.vue:212
+msgid "GitHub"
+msgstr "GitHub"
+
+#: desk/src/pages/PersonaForm.vue:213
+msgid "Google Ads"
+msgstr "Google Ads"
+
+#: desk/src/components/CommunicationArea.vue:49
+msgid "Hi John, we are looking into this issue."
+msgstr "Merhaba John, bu sorunu inceliyoruz."
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:26
+msgid "Hide actions"
+msgstr "İşlemleri gizle"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
+msgid "High"
+msgstr "Yüksek"
+
+#: desk/src/pages/PersonaForm.vue:108
+msgid "How big is your support team?"
+msgstr "Destek ekibiniz ne kadar büyük?"
+
+#: desk/src/pages/PersonaForm.vue:209
+msgid "How did you hear about NanobaseAI?"
+msgstr "NanobaseAI hakkında nereden duydunuz?"
+
+#: desk/src/pages/PersonaForm.vue:144
+msgid "How do your customers currently contact your support team?"
+msgstr "Müşterileriniz şu anda destek ekibinizle nasıl iletişim kuruyor?"
+
+#: desk/src/pages/PersonaForm.vue:162
+msgid "How would you like your customers to create support tickets in NanobaseAI?"
+msgstr "Müşterilerinizin NanobaseAI'da destek kaydı oluşturmasını nasıl istersiniz?"
+
+#: desk/src/pages/PersonaForm.vue:172
+msgid "I'm not sure yet"
+msgstr "Henüz emin değilim"
+
+#: desk/src/pages/PersonaForm.vue:155
+msgid "In person"
+msgstr "Yüz yüze"
+
+#: desk/src/pages/PersonaForm.vue:129
+msgid "Intercom"
+msgstr "Intercom"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:60
+msgid "Internal comments"
+msgstr "Dahili yorumlar"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionValue.vue:68
+msgid "Internal note. Type / for commands"
+msgstr "Dahili not. Komutlar için / yazın"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:161
+msgid "Invalid action {0}: {1} does not exist or is disabled"
+msgstr "Geçersiz işlem {0}: {1} mevcut değil veya devre dışı"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:68
+msgid "Invalid action: {0}"
+msgstr "Geçersiz işlem: {0}"
+
+#: desk/src/pages/PersonaForm.vue:233
+msgid "Invite my support team"
+msgstr "Destek ekibimi davet et"
+
+#: desk/src/pages/PersonaForm.vue:130
+msgid "Jira Service Management"
+msgstr "Jira Service Management"
+
+#: desk/src/components/view-controls/Filter.vue:425
+msgid "John Doe"
+msgstr "John Doe"
+
+#: desk/src/components/view-controls/Filter.vue:413
+msgid "John, Jane, Doe"
+msgstr "John, Jane, Doe"
+
+#: desk/src/pages/PersonaForm.vue:196
+msgid "Keeping track of customer requests"
+msgstr "Müşteri taleplerini takip etme"
+
+#: desk/src/components/layouts/CustomerPortalPermissionBanner.vue:17
+msgid "Learn more"
+msgstr "Daha fazla bilgi"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
+msgid "Level"
+msgstr "Seviye"
+
+#: desk/src/pages/PersonaForm.vue:215
+msgid "LinkedIn"
+msgstr "LinkedIn"
+
+#: desk/src/pages/PersonaForm.vue:152 desk/src/pages/PersonaForm.vue:171
+msgid "Live chat"
+msgstr "Canlı sohbet"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
+msgid "Low"
+msgstr "Düşük"
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.json
+msgid "Lower rank is applied first. 0 means unranked, and is applied last."
+msgstr "Daha düşük sıra önce uygulanır. 0 sıralanmamış anlamına gelir ve son olarak uygulanır."
+
+#: desk/src/pages/ticket/MobileTicketAgent.vue:123
+msgid "Mail"
+msgstr "E-posta"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:27
+msgid "Make all existing contacts customer managers"
+msgstr "Tüm mevcut kişileri müşteri yöneticisi yap"
+
+#: desk/src/components/ViewModal.vue:50
+msgid "Make it public"
+msgstr "Herkese açık yap"
+
+#: desk/src/pages/PersonaForm.vue:182
+msgid "Managing customer conversations across channels"
+msgstr "Kanallar arası müşteri konuşmalarını yönetme"
+
+#: desk/src/pages/PersonaForm.vue:190
+msgid "Measuring team performance"
+msgstr "Ekip performansını ölçme"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
+msgid "Medium"
+msgstr "Orta"
+
+#: desk/src/pages/PersonaForm.vue:194
+msgid "Missing or delayed responses"
+msgstr "Eksik veya gecikmiş yanıtlar"
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:83
+msgid "More Details"
+msgstr "Daha Fazla Detay"
+
+#: helpdesk/api/dashboard_tags.py:47
+msgid "Most used tags in this period"
+msgstr "Bu dönemde en çok kullanılan etiketler"
+
+#: desk/src/pages/home/Home.vue:365 desk/src/pages/home/components/RecentActivity.vue:6
+msgid "My Recent Activity"
+msgstr "Son Aktivitem"
+
+#: desk/src/components/SavedRepliesSelectorModal.vue:187 desk/src/components/Settings/SavedReplies/SavedRepliesList.vue:302
+msgid "My Team(s)"
+msgstr "Ekiplerim"
+
+#: desk/src/components/command-palette/CommandPalette.vue:146
+msgid "Navigate"
+msgstr "Gezin"
+
+#: desk/src/components/Questionnaire.vue:129
+msgid "Next"
+msgstr "Sonraki"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionsEditor.vue:77
+msgid "No actions yet. Add one to update the ticket when this reply is sent"
+msgstr "Henüz işlem yok. Bu yanıt gönderildiğinde kaydı güncellemek için bir tane ekleyin"
+
+#: desk/src/components/command-palette/CommandPalette.vue:246
+msgid "No commands found"
+msgstr "Komut bulunamadı"
+
+#: desk/src/pages/home/components/RecentActivity.vue:57
+msgid "No recent activity"
+msgstr "Son aktivite yok"
+
+#: desk/src/components/command-palette/CommandPalette.vue:244
+msgid "No results for \"{0}\""
+msgstr "\"{0}\" için sonuç yok"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:59
+msgid "No similar resolved ticket yet."
+msgstr "Henüz benzer çözülmüş kayıt yok."
+
+#: desk/src/components/tag/Tags.vue:78
+msgid "No tags yet, type to create one"
+msgstr "Henüz etiket yok, oluşturmak için yazın"
+
+#: desk/src/components/command-palette/CommandPalette.vue:245
+msgid "Nothing left in {0}"
+msgstr "{0} içinde hiçbir şey kalmadı"
+
+#: desk/src/pages/PersonaForm.vue:126
+msgid "Notion"
+msgstr "Notion"
+
+#: desk/src/components/ticket-agent/TicketSLA.vue:106
+msgid "On hold since"
+msgstr "Beklemede başlangıç"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:80
+msgid "Only one of Assign Agent or Assign to Me is allowed"
+msgstr "Sadece Temsilci Ata veya Bana Ata'dan biri izinlidir"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:16
+msgid "Only users with the role of "
+msgstr "Yalnız şu role sahip kullanıcılar: "
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:95
+msgid "Open article draft"
+msgstr "Makale taslağını aç"
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:32
+msgid "Overview"
+msgstr "Genel Bakış"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:616
+msgid "Paused {0} so far"
+msgstr "Şu ana kadar {0} duraklatıldı"
+
+#: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
+msgid "Persona Captured"
+msgstr "Persona Yakalandı"
+
+#: desk/src/pages/PersonaForm.vue:151
+msgid "Phone calls"
+msgstr "Telefon aramaları"
+
+#: desk/src/components/ViewModal.vue:43
+msgid "Pin to sidebar"
+msgstr "Kenar çubuğuna sabitle"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:229
+msgid "Please apply the actions manually"
+msgstr "Lütfen işlemleri manuel olarak uygulayın"
+
+#: desk/src/pages/ticket/MobileTicketAgent.vue:122
+msgid "Portal"
+msgstr "Portal"
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.py:95
+msgid "Priority in use"
+msgstr "Kullanımda olan öncelik"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_status/hd_ticket_status.json
+msgid "Purple"
+msgstr "Mor"
+
+#: desk/src/components/Settings/Sla/SlaPolicyView.vue:57 helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.json
+msgid "Rank"
+msgstr "Sıralama"
+
+#: desk/src/pages/PersonaForm.vue:217
+msgid "Reddit"
+msgstr "Reddit"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActionComment.vue:13
+msgid "Remove comment"
+msgstr "Yorumu kaldır"
+
+#: desk/src/components/command-palette/CommandPalette.vue:263
+msgid "Remove context"
+msgstr "Bağlamı kaldır"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActionChip.vue:46
+msgid "Remove {0}"
+msgstr "{0} kaldır"
+
+#: desk/src/components/EmailEditor.vue:419
+msgid "Replace"
+msgstr "Değiştir"
+
+#: desk/src/components/EmailEditor.vue:411
+msgid "Replace saved reply"
+msgstr "Hazır yanıtı değiştir"
+
+#: desk/src/components/ViewModal.vue:32
+msgid "Replace with an icon..."
+msgstr "Bir simgeyle değiştir..."
+
+#: desk/src/components/SavedReplyActions/SavedReplyActionComment.vue:41
+msgid "Reset to default"
+msgstr "Varsayılana sıfırla"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:429
+msgid "Resolution due"
+msgstr "Çözüm süresi"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:429
+msgid "Resolution overdue"
+msgstr "Çözüm süresi aşıldı"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:713
+msgid "Resolved late"
+msgstr "Geç çözüldü"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:292
+msgid "Responded late"
+msgstr "Geç yanıt verildi"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:228 desk/src/components/ticket-agent/analytics/TicketAnalyticsTab.vue:23
+msgid "Retry"
+msgstr "Yeniden Dene"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionsEditor.vue:67
+msgid "Row actions"
+msgstr "Satır işlemleri"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:67
+msgid "SLA changed"
+msgstr "SLA değiştirildi"
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.py:33
+msgid "SLA disabled"
+msgstr "SLA devre dışı bırakıldı"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:154
+msgid "SLA met"
+msgstr "SLA karşılandı"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:155
+msgid "SLA missed / longest wait"
+msgstr "SLA kaçırıldı / en uzun bekleme"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:619
+msgid "SLA paused"
+msgstr "SLA duraklatıldı"
+
+#: desk/src/components/Settings/Sla/SlaPolicies.vue:11
+msgid "SLAs align your team and customers with defined timelines for a reliable experience."
+msgstr "SLA'lar, güvenilir bir deneyim için ekibinizi ve müşterilerinizi tanımlanmış zaman çizelgeleriyle hizalar."
+
+#: desk/src/pages/PersonaForm.vue:132
+msgid "Salesforce Service Cloud"
+msgstr "Salesforce Service Cloud"
+
+#: desk/src/components/EmailEditor.vue:179
+msgid "Saved replies"
+msgstr "Kaydedilen yanıtlar"
+
+#: desk/src/pages/PersonaForm.vue:193
+msgid "Scaling support as we grow"
+msgstr "Büyüdükçe destek ölçeklendirme"
+
+#: desk/src/components/command-palette/CommandPalette.vue:60
+msgid "Search commands"
+msgstr "Komutları ara"
+
+#: desk/src/components/command-palette/CommandPalette.vue:59
+msgid "Search commands for {0}"
+msgstr "{0} için komutları ara"
+
+#: desk/src/components/tag/Tags.vue:15
+msgid "Search or create tags"
+msgstr "Etiketleri ara veya oluştur"
+
+#: desk/src/components/command-palette/CommandPalette.vue:266
+msgid "Search tickets or type a command…"
+msgstr "Kayıtları ara veya komut yazın…"
+
+#: desk/src/components/command-palette/CommandPalette.vue:243 desk/src/components/command-palette/CommandPalette.vue:250
+msgid "Searching…"
+msgstr "Aranıyor…"
+
+#: desk/src/components/command-palette/CommandPalette.vue:266
+msgid "Search…"
+msgstr "Ara…"
+
+#: desk/src/components/view-controls/Filter.vue:423
+msgid "Select a Value"
+msgstr "Bir Değer Seçin"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:9 desk/src/components/ticket-agent/BulkEditModal.vue:121
+msgid "Select a field"
+msgstr "Bir alan seçin"
+
+#: desk/src/components/Settings/SavedReplies/components/ActionsEditor.vue:38
+msgid "Select action"
+msgstr "İşlem seçin"
+
+#: desk/src/components/ticket-agent/AssignTo.vue:221
+msgid "Select agents"
+msgstr "Temsilcileri seçin"
+
+#: desk/src/components/view-controls/Filter.vue:424
+msgid "Select an Option"
+msgstr "Bir Seçenek Seçin"
+
+#: desk/src/components/ViewModal.vue:33
+msgid "Select an icon..."
+msgstr "Bir simge seçin..."
+
+#: desk/src/components/Settings/SavedReplies/components/ActionValue.vue:32 desk/src/components/Settings/SavedReplies/components/ActionValue.vue:56
+msgid "Select tags"
+msgstr "Etiketleri seçin"
+
+#: desk/src/pages/PersonaForm.vue:109
+msgid "Select team size"
+msgstr "Ekip boyutunu seçin"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActionChip.vue:7 desk/src/components/Settings/SavedReplies/components/ActionValue.vue:109 desk/src/components/ticket-agent/BulkEditModal.vue:115
+msgid "Select {0}"
+msgstr "{0} seçin"
+
+#: desk/src/components/ticket-agent/AssignTo.vue:45
+msgid "Set Assignee"
+msgstr "Atanan Kişiyi Ayarla"
+
+#: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
+msgid "Set once an admin completes the onboarding persona questionnaire"
+msgstr "Bir yönetici, başlangıç kişilik anketini tamamladığında ayarlayın"
+
+#: desk/src/pages/PersonaForm.vue:231
+msgid "Set up a customer portal"
+msgstr "Bir müşteri portalı kurun"
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:327
+msgid "Set {0}..."
+msgstr "{0} ayarlayın..."
+
+#: desk/src/pages/PersonaForm.vue:135
+msgid "Shared email inbox (Gmail, Outlook, etc.)"
+msgstr "Paylaşılan e-posta gelen kutusu (Gmail, Outlook vb.)"
+
+#: helpdesk/helpdesk/doctype/hd_settings/hd_settings.json
+msgid "Show Customer Portal Permission Notice"
+msgstr "Müşteri Portalı İzni Bildirimini Göster"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:26
+msgid "Show actions"
+msgstr "İşlemleri göster"
+
+#: desk/src/components/ticket-agent/TicketFeedback.vue:20
+msgid "Show less"
+msgstr "Daha az göster"
+
+#: desk/src/components/ticket-agent/TicketFeedback.vue:20
+msgid "Show more"
+msgstr "Daha fazla göster"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:77
+msgid "Shown by ticket type; the knowledge base has no close match yet."
+msgstr "Kayıt türüne göre gösterilir; bilgi bankasında henüz yakın bir eşleşme yok."
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:296
+msgid "Similar Tickets"
+msgstr "Benzer Kayıtlar"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:48
+msgid "Similar past tickets"
+msgstr "Benzer geçmiş kayıtlar"
+
+#: desk/src/components/Questionnaire.vue:138
+msgid "Skip for now"
+msgstr "Şimdilik atla"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:210
+msgid "Skipped {0} saved reply action(s) that are no longer valid"
+msgstr "Artık geçerli olmayan {0} hazır yanıt işlemi atlandı"
+
+#: desk/src/pages/PersonaForm.vue:154
+msgid "Social media"
+msgstr "Sosyal medya"
+
+#: desk/src/pages/ticket/MobileTicketAgent.vue:117
+msgid "Source"
+msgstr "Kaynak"
+
+#: desk/src/components/ticket/TicketMergeModal.vue:47
+msgid "Source and target tickets which are to be merged cannot be the same."
+msgstr "Birleştirilecek kaynak ve hedef kayıtlar aynı olamaz."
+
+#: desk/src/pages/PersonaForm.vue:125
+msgid "Spreadsheets"
+msgstr "Hesap Tabloları"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:62
+msgid "Suggested approach"
+msgstr "Önerilen yaklaşım"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:19
+msgid "Summarize"
+msgstr "Özetle"
+
+#: desk/src/pages/PersonaForm.vue:149
+msgid "Support portal"
+msgstr "Destek portalı"
+
+#: desk/src/components/erpnext-integration/ERPNextCustomerSyncButton.vue:14
+msgid "Sync Customers with ERPNext"
+msgstr "Müşterileri ERPNext ile eşitle"
+
+#: helpdesk/api/dashboard_tags.py:48
+msgid "Tag"
+msgstr "Etiket"
+
+#: helpdesk/api/dashboard_tags.py:72
+msgid "Tag Trend"
+msgstr "Etiket Trendi"
+
+#: desk/src/components/tag/Tags.vue:234 helpdesk/api/tags.py:58
+msgid "Tag cannot contain commas"
+msgstr "Etiket virgül içermemeli"
+
+#: helpdesk/api/tags.py:55
+msgid "Tag label is required"
+msgstr "Etiket etiketi zorunludur"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:121
+msgid "Tag {0} cannot be both added and removed"
+msgstr "{0} etiketi hem eklenemez hem de kaldırılamaz"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:69
+msgid "Team changed"
+msgstr "Ekip değiştirildi"
+
+#: desk/src/pages/PersonaForm.vue:101
+msgid "Tell us about your organization"
+msgstr "Organizasyonunuz hakkında bize bilgi verin"
+
+#: desk/src/components/ticket-agent/NanobaseAIPanel.vue:145
+msgid "The assistant is unavailable right now. Please try again shortly."
+msgstr "Asistan şu anda kullanılamıyor. Lütfen birazdan tekrar deneyin."
+
+#: desk/src/components/Questionnaire.vue:25
+msgid "This helps us personalize your NanobaseAI experience."
+msgstr "Bu, NanobaseAI deneyiminizi kişiselleştirmemize yardımcı olur."
+
+#: desk/src/pages/PersonaForm.vue:169
+msgid "Through a support portal"
+msgstr "Bir destek portalı üzerinden"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:7
+msgid "Ticket Timeline"
+msgstr "Kayıt Zaman Çizelgesi"
+
+#: desk/src/components/ticket/TicketMergeModal.vue:34
+msgid "Ticket must be Open or Paused."
+msgstr "Kayıt Açık veya Duraklatılmış olmalıdır."
+
+#: desk/src/components/ticket/TicketMergeModal.vue:40
+msgid "Ticket must not already be merged."
+msgstr "Kayıt zaten birleştirilmemiş olmalıdır."
+
+#: desk/src/pages/ticket/TicketCustomer.vue:298
+msgid "Ticket updated succesfully."
+msgstr "Kayıt başarıyla güncellendi."
+
+#: helpdesk/api/ticket_analytics.py:47
+msgid "Ticket {0} not found."
+msgstr "{0} kaydı bulunamadı."
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:288
+msgid "Tickets recently raised by this contact/customer"
+msgstr "Bu kişi/müşteri tarafından son zamanlarda açılan kayıtlar"
+
+#: desk/src/components/ticket-agent/TicketDetailsTab.vue:297
+msgid "Tickets with similar queries"
+msgstr "Benzer sorgulara sahip kayıtlar"
+
+#: desk/src/pages/home/components/RecentActivity.vue:58
+msgid "Tickets you act on will show up here"
+msgstr "Üzerinde işlem yaptığınız kayıtlar burada görünecektir"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:45
+msgid "Time on hold with the SLA clock paused"
+msgstr "SLA saati duraklatılmışken bekleme süresi"
+
+#: helpdesk/api/dashboard_tags.py:46
+msgid "Top Tags"
+msgstr "En Popüler Etiketler"
+
+#: desk/src/components/ticket-agent/analytics/AnalyticsMetricCards.vue:43
+msgid "Total hold time"
+msgstr "Toplam bekleme süresi"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:27
+msgid "Update {0} tickets"
+msgstr "{0} kaydı güncelle"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:155
+msgid "Updated {0} of {1} tickets"
+msgstr "{1} kayıttan {0} tanesi güncellendi"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:158 desk/src/components/ticket-agent/BulkEditModal.vue:170
+msgid "Updated {0} tickets"
+msgstr "{0} kaydı güncellendi"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:148
+msgid "Updating {0} tickets…"
+msgstr "{0} kaydı güncelleniyor…"
+
+#: helpdesk/helpdesk/doctype/hd_ticket_priority/hd_ticket_priority.json
+msgid "Urgent"
+msgstr "Acil"
+
+#: desk/src/components/Settings/SavedReplies/SavedReplyView.vue:435
+msgid "Values can't be empty"
+msgstr "Değerler boş olamaz"
+
+#: desk/src/pages/PersonaForm.vue:170
+msgid "Via WhatsApp"
+msgstr "WhatsApp üzerinden"
+
+#: desk/src/pages/PersonaForm.vue:168
+msgid "Via email"
+msgstr "E-posta üzerinden"
+
+#: desk/src/pages/home/components/RecentActivity.vue:104
+msgid "Viewed"
+msgstr "Görüntülendi"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActionComment.vue:34
+msgid "Visible to your team only, never sent to the customer."
+msgstr "Sadece ekibinize görünür, müşteriye asla gönderilmez."
+
+#: desk/src/pages/PersonaForm.vue:133
+msgid "We don't use any helpdesk yet"
+msgstr "Henüz bir yardım masası kullanmıyoruz"
+
+#: desk/src/components/layouts/CustomerPortalPermissionBanner.vue:13
+msgid "We have changed how customer portal permissions work"
+msgstr "Müşteri portalı izinlerinin çalışma şeklini değiştirdik"
+
+#: desk/src/pages/PersonaForm.vue:153
+msgid "Web form"
+msgstr "Web formu"
+
+#: desk/src/pages/PersonaForm.vue:239
+msgid "Welcome to NanobaseAI"
+msgstr "NanobaseAI'ye hoş geldiniz"
+
+#: desk/src/pages/PersonaForm.vue:122
+msgid "What do you currently use to manage customer support?"
+msgstr "Müşteri desteğini şu an nasıl yönetiyorsunuz?"
+
+#: desk/src/pages/PersonaForm.vue:103
+msgid "What is your organization's name?"
+msgstr "Kuruluşunuzun adı nedir?"
+
+#: desk/src/pages/PersonaForm.vue:205
+msgid "What makes support hard right now?"
+msgstr "Şu anda desteği zorlaştıran şey nedir?"
+
+#: desk/src/pages/PersonaForm.vue:227
+msgid "What would you like to do first in NanobaseAI?"
+msgstr "NanobaseAI'de ilk olarak ne yapmak istersiniz?"
+
+#: desk/src/pages/PersonaForm.vue:177
+msgid "What's your biggest support challenge today?"
+msgstr "Bugün en büyük destek zorluğunuz nedir?"
+
+#: desk/src/pages/PersonaForm.vue:150
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#: desk/src/components/Settings/Sla/SlaPolicyView.vue:65
+msgid "When more than one policy matches, the lower rank is applied first. 0 means unranked, and is applied last."
+msgstr "Birden fazla politika eşleşirse, daha düşük sıra önce uygulanır. 0 sıralanmamış anlamına gelir ve son olarak uygulanır."
+
+#: desk/src/pages/PersonaForm.vue:223
+msgid "Where did you hear about us?"
+msgstr "Bizi nereden duydunuz?"
+
+#: desk/src/pages/PersonaForm.vue:158
+msgid "Which channel do they use?"
+msgstr "Hangi kanalı kullanıyorlar?"
+
+#: desk/src/pages/PersonaForm.vue:140
+msgid "Which tool does your team use?"
+msgstr "Ekiniz hangi aracı kullanıyor?"
+
+#: desk/src/pages/PersonaForm.vue:216
+msgid "X (Twitter)"
+msgstr "X (Twitter)"
+
+#: desk/src/components/view-controls/Filter.vue:422
+msgid "Yes"
+msgstr "Evet"
+
+#: helpdesk/helpdesk/doctype/hd_ticket/hd_ticket.py:292
+msgid "You can only raise tickets for your own contact."
+msgstr "Sadece kendi kişi kaydınız için kayıt oluşturabilirsiniz."
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:30
+msgid "You won't see this notice again."
+msgstr "Bu bildirimi bir daha görmeyeceksiniz."
+
+#: desk/src/pages/PersonaForm.vue:214
+msgid "YouTube"
+msgstr "YouTube"
+
+#: desk/src/pages/PersonaForm.vue:127
+msgid "Zendesk"
+msgstr "Zendesk"
+
+#: desk/src/pages/PersonaForm.vue:131
+msgid "Zoho Desk"
+msgstr "Zoho Desk"
+
+#: helpdesk/helpdesk/doctype/hd_saved_reply/hd_saved_reply.py:110
+msgid "actions must be a list of objects"
+msgstr "actions bir nesne listesi olmalıdır"
+
+#: desk/src/components/layouts/CustomerPortalPermissionDialog.vue:21
+msgid "can see every ticket of their company and manage its contacts."
+msgstr "şirketlerinin tüm kayıtlarını görebilir ve kişilerini yönetebilir."
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:628
+msgid "clock resumes when the ticket reopens"
+msgstr "kayıt yeniden açıldığında saat yeniden başlar"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:610
+msgid "clock stopped"
+msgstr "saat durduruldu"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:728
+msgid "due {0}"
+msgstr "son tarih {0}"
+
+#: desk/src/pages/PersonaForm.vue:104
+msgid "e.g. Acme Inc."
+msgstr "örn. Acme Inc."
+
+#: desk/src/components/ticket/TicketMergeModal.vue:42
+msgid "is_merged === 0"
+msgstr "is_merged === 0"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:515
+msgid "next day"
+msgstr "ertesi gün"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:301 desk/src/components/ticket-agent/analytics/TicketTimeline.vue:634
+msgid "pending"
+msgstr "beklemede"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:621
+msgid "since {0}"
+msgstr "{0} tarihinden beri"
+
+#: desk/src/components/ticket/TicketMergeModal.vue:36
+msgid "status_category in ['Open', 'Paused']"
+msgstr "status_category in ['Open', 'Paused']"
+
+#: desk/src/components/ticket-agent/TicketContact.vue:33
+msgid "via Email"
+msgstr "E-posta ile"
+
+#: desk/src/components/ticket-agent/TicketContact.vue:33
+msgid "via Portal"
+msgstr "Portal üzerinden"
+
+#: desk/src/components/SavedRepliesSelectorModal.vue:293
+msgid "{0} actions"
+msgstr "{0} işlem"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:140
+msgid "{0} actions after sending"
+msgstr "gönderimden sonra {0} işlem"
+
+#: desk/src/components/SavedReplyActions/SavedReplyActions.vue:144
+msgid "{0} actions will be applied after sending the email"
+msgstr "e-posta gönderildikten sonra {0} işlem uygulanacak"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:515
+msgid "{0} days"
+msgstr "{0} gün"
+
+#: desk/src/components/ticket-agent/BulkEditModal.vue:126
+msgid "{0} is required"
+msgstr "{0} zorunludur"
+
+#: helpdesk/overrides/user_invitation.py:18
+msgid "{0} on {1}"
+msgstr "{0} {1} tarihinde"
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.py:92
+msgid "{0} open tickets use priority {1}. They lose this SLA the next time they are updated."
+msgstr "{0} açık kayıt {1} önceliğini kullanıyor. Bir sonraki güncellemede bu SLA'yı kaybedecekler."
+
+#: helpdesk/helpdesk/doctype/hd_service_level_agreement/hd_service_level_agreement.py:107
+msgid "{0} open tickets will lose this SLA the next time they are updated, unless another policy matches them."
+msgstr "{0} açık kayıt, başka bir politika eşleşmedikçe bir sonraki güncellemede bu SLA'yı kaybedecek."
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:549
+msgid "{0} replied"
+msgstr "{0} yanıt verdi"
+
+#: desk/src/components/command-palette/CommandPalette.vue:252
+msgid "{0} results"
+msgstr "{0} sonuç"
+
+#: desk/src/components/ticket-agent/analytics/ConversationSummary.vue:84
+msgid "{0} times"
+msgstr "{0} kez"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:553
+msgid "{0} wait"
+msgstr "{0} bekleme"
+
+#: desk/src/components/ticket-agent/analytics/TicketTimeline.vue:553
+msgid "{0} · longest wait"
+msgstr "{0} · en uzun bekleme"
