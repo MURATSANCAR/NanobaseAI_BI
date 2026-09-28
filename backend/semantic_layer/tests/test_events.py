@@ -494,3 +494,9 @@ def test_endpoints_agenda_and_approval(client):
     assert c.post("/api/v1/events/type-map/suggest", headers=a).status_code == 503                # model bağlı değil
     cal = c.get("/api/v1/events/calendar", headers=a).json()
     assert cal["unmappedTypes"] == 2 and cal["events"] == []
+
+
+def test_book_card_sql_uses_crm_column_spelling():
+    """CRM harmanlaması Türkçe (I → ı): new_kitapid yazımı 207 ile düşüyordu, kitap önerisi 502 (2026-09-28 kabul)."""
+    sql = S.books_sql("Timas_MSCRM.dbo")
+    assert "k.new_kitapId AS id" in sql and "k.new_StokKodu AS stok_kodu" in sql and "new_kitapid" not in sql

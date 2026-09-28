@@ -216,7 +216,8 @@ def orders_sql(schema: str, frm: date, to: date, types: Iterable[int], excluded_
 def books_sql(schema: str) -> str:
     """Kitap kartı: kimlik, ad, stok kodu, ilk yayın, yayınevi (planlılar dahil etkin kayıtlar)."""
     p = prefix(schema)
-    return (f"SELECT k.new_kitapid AS id, k.new_name AS ad, k.new_stokkodu AS stok_kodu, k.new_ilkyayintarihi AS ilk_yayin,"
+    # CRM harmanlaması Türkçe: «I» küçülünce «ı» olur, new_kitapid ≠ new_kitapId (207). Kolon adları CRM'deki yazımla.
+    return (f"SELECT k.new_kitapId AS id, k.new_name AS ad, k.new_StokKodu AS stok_kodu, k.new_ilkyayintarihi AS ilk_yayin,"
             f" k.new_yayineviidName AS yayinevi FROM {p}new_kitap k WHERE k.statecode = 0")
 
 
