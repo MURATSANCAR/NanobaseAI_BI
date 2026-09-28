@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import type { NavItem } from './navModel';
+import { badgeLabel, type NavCounts, type NavItem } from './navModel';
 
 /** Bir çalışma alanının ekranları: alt başlıklar («Günlük», «Yayına hazırlık»), etkin öğe, sayı rozeti.
  *  Telefon menü sayfasında kullanılır; satırlar yüksek ve oklu. */
@@ -9,12 +9,16 @@ export function NavList({
   items,
   activeId,
   alertCount,
+  counts,
+  mailOverdue = 0,
   onPick,
   variant = 'panel',
 }: {
   items: NavItem[];
   activeId?: string;
   alertCount: number;
+  counts?: NavCounts;
+  mailOverdue?: number;
   onPick?: () => void;
   variant?: 'panel' | 'sheet';
 }) {
@@ -25,7 +29,7 @@ export function NavList({
         const Icon = item.icon;
         const active = item.id === activeId;
         const heading = item.section && item.section !== items[i - 1]?.section ? item.section : null;
-        const count = item.badge === 'alerts' ? alertCount : 0;
+        const count = item.badge === 'alerts' ? alertCount : item.badge ? (counts?.[item.badge] ?? 0) : 0;
         return (
           <Fragment key={item.id}>
             {heading && (
@@ -53,7 +57,7 @@ export function NavList({
                 {count > 0 && (
                   <span
                     className={`shrink-0 rounded-full px-1.5 text-[11px] font-extrabold tabular-nums leading-5 ${active ? 'bg-white/25 text-white' : 'bg-amberWarn/20 text-amber-700'}`}
-                    aria-label={`${count} uyarı eşiği aşmış`}
+                    aria-label={badgeLabel(item.badge ?? 'alerts', count, mailOverdue)}
                   >
                     {count}
                   </span>

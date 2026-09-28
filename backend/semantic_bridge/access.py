@@ -539,6 +539,12 @@ RULES: list[tuple[str, Any]] = [
     # başvuru ekranı oturum listesini okur).
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
     ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
+    # H4 Kurumsal e-posta. E-postayla gelen dosya başvurularını yazar giriş süreci ekranı da okur (sözleşme ucu).
+    # M1 başvuru sayfası (`sayfa:basvurular`) main'e girince o anahtar da applications satırına eklenir.
+    ("/api/v1/mailbox/run-due", SYSTEM),
+    ("/api/v1/mailbox/sla-due", SYSTEM),
+    ("/api/v1/mailbox/applications", frozenset({page("kurumsal-eposta"), page("yazar-giris")})),
+    ("/api/v1/mailbox/", frozenset({page("kurumsal-eposta")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/authors/reminders/run-due", SYSTEM),
     ("/api/v1/editorial/authors/copurchase/run-due", SYSTEM),
@@ -689,6 +695,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # M1 başvuru: kayıt, dosya, editör raporu ve kararı, kurul raporu, yazışma. Kurul üyesinin oyu sayfa yetkisi +
     # oturum üyeliğiyle olur; oturum yönetimi açıkça verilen `yayin-kurulu.yonet` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}), r"^/api/v1/editorial/applications(/.*)?$", "ozellik:basvuru.yaz"),
+    # H4 Kurumsal e-posta: atama, tür/durum düzeltme, başvuru bilgisi ve aktarımı, etiketleme; kural taslağı. Kural onayı
+    # (`eposta.kural-onay`) ve iş başvurusu (`eposta.ik`) açıkça verilir, ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/mailbox/(messages/[^/]+/(assign|category|status|application|to-intake)|labeling/[^/]+)$",
+     "ozellik:eposta.ata"),
+    (frozenset({"PUT", "DELETE"}), r"^/api/v1/mailbox/rules(/draft)?$", "ozellik:eposta.kural"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     (frozenset({"POST"}), r"^/api/v1/editorial/authors/advice/[^/]+$", "ozellik:yazar-iliski.oneri"),

@@ -7074,6 +7074,30 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
     editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
+
+    # H4 Kurumsal e-posta (timas@ genel kutusu, Gmail yalnız okuma): tür/öncelik önerisi, atama, SLA, yanıt taslağı,
+    # başvuru aktarımı. Uçlar /api/v1/mailbox/*. İş başvurusu yetkisi (`ozellik:eposta.ik`) yöneticiye kendiliğinden gelmez.
+    from semantic_bridge import mailbox_api
+
+    def _mail_granted(user: str, key: str) -> bool:
+        try:
+            return key in access_mod.effective(rt().store.engine, rt().settings.tenant_id, user, admin_mod.is_admin).perms
+        except Exception as e:  # noqa: BLE001
+            log.warning("mailbox: %s için %s okunamadı: %s", user, key, e)
+            return False
+
+    def _mail_people() -> list[dict[str, Any]]:
+        rows, _, _ = _crm_people()
+        return people_mod.people(rt().store.engine, rt().settings.tenant_id, rows)
+
+    app.state.mailbox = mailbox_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "granted": _mail_granted,
+        "is_admin": admin_mod.is_admin, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("mailbox", priority),
+        "people": _mail_people,
+    })
     return app
 
 

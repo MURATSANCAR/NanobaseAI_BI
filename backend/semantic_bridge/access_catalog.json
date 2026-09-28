@@ -425,6 +425,11 @@
       "key": "sayfa:pazarlama-set-hediye",
       "area": "pazarlama",
       "label": "Set ve hediye"
+    },
+    {
+      "key": "sayfa:kurumsal-eposta",
+      "area": "kayitlar",
+      "label": "Kurumsal e-posta"
     }
   ],
   "features": [
@@ -1103,6 +1108,43 @@
       "page": "sayfa:pazarlama-foy",
       "label": "Föy paketini e-postayla gönderme",
       "hint": "Onaylı föy paketini Yönetim'deki föy dağıtım listesine e-postayla gönderme; kendiliğinden gönderim yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eposta.ata",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta atama ve düzeltme",
+      "hint": "İletiyi kişiye/birime atama, tür ve durum düzeltme, dosya başvurusunu yazar giriş sürecine aktarma, geçmiş ileti etiketleme"
+    },
+    {
+      "key": "ozellik:eposta.herkesinki",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "Bütün kutu",
+      "hint": "Atanmamış, emin olunmayan ve başkasına atanmış iletileri görme (yoksa yalnız kendine ve birimine atananlar)"
+    },
+    {
+      "key": "ozellik:eposta.kural",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta kural taslağı",
+      "hint": "Tür listesi, yönlendirme tablosu, SLA saatleri ve yanıt şablonlarının taslağını yazma; bağlantı denemesi"
+    },
+    {
+      "key": "ozellik:eposta.kural-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta kurallarını yürürlüğe alma",
+      "hint": "Kural taslağını onaylama (taslağı yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eposta.ik",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "İş başvuruları (İK)",
+      "hint": "İş başvurusu türündeki iletileri görme, İK aday kaydına aktarma. Kişisel veri: yöneticiye de kendiliğinden verilmez",
       "explicit": true
     }
   ]

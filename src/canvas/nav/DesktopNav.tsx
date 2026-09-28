@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Grid2x2, Search } from 'lucide-react';
-import type { NavGroupId, NavItem } from './navModel';
+import { badgeLabel, type NavCounts, type NavGroupId, type NavItem } from './navModel';
 import { initials, paletteKey, roleLabel, useNavUi, type NavData } from './useNav';
 
 /**
@@ -95,7 +95,7 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
             >
               {label}
             </button>
-            <SubList id={subId} items={g.items} open={isOpen} anim={anim} activeId={nav.active?.item.id} alertCount={nav.alertCount} />
+            <SubList id={subId} items={g.items} open={isOpen} anim={anim} activeId={nav.active?.item.id} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} />
           </Fragment>
         );
       })}
@@ -135,6 +135,8 @@ function SubList({
   anim,
   activeId,
   alertCount,
+  counts,
+  mailOverdue = 0,
 }: {
   id: string;
   items: NavItem[];
@@ -142,6 +144,8 @@ function SubList({
   anim: boolean;
   activeId?: string;
   alertCount: number;
+  counts?: NavCounts;
+  mailOverdue?: number;
 }) {
   const [el, setEl] = useState<HTMLDivElement | null>(null);
   // React 18'de `inert` özniteliği yok, doğrudan konur.
@@ -157,7 +161,7 @@ function SubList({
             const Icon = item.icon;
             const active = item.id === activeId;
             const newSection = i > 0 && item.section !== items[i - 1].section;
-            const count = item.badge === 'alerts' ? alertCount : 0;
+            const count = item.badge === 'alerts' ? alertCount : item.badge ? (counts?.[item.badge] ?? 0) : 0;
             return (
               <li key={item.id}>
                 {newSection && <div aria-hidden className="mx-auto my-1 h-px w-8 bg-slate-200" />}
@@ -176,7 +180,7 @@ function SubList({
                     {count > 0 && (
                       <span
                         className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-amberWarn px-1 text-[9px] font-extrabold tabular-nums leading-4 text-white ring-2 ring-white"
-                        aria-label={`${count} uyarı eşiği aşmış`}
+                        aria-label={badgeLabel(item.badge ?? 'alerts', count, mailOverdue)}
                       >
                         {count}
                       </span>

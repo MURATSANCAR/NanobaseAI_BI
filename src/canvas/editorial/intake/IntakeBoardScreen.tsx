@@ -8,6 +8,7 @@ import { Note, btnGhost, errText, field, nf } from '../../admin/ui';
 import { dateTime, stamp } from '../../format';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { ProjectCard, TodoGroups, waitingText } from './parts';
+import MailApplicationsBox from '../../mailbox/ApplicationsBox';
 
 /** Yazar giriş süreci: müşterinin 9 adımı üç evrede. Her kart bir CRM projesi; sütunda en uzun bekleyen üstte. */
 
@@ -165,6 +166,7 @@ export default function IntakeBoardScreen() {
       {d?.loading && <Note tone="info">CRM ilk kez okunuyor; birkaç dakika sürebilir. Ekran kendiliğinden yenilenecek.</Note>}
 
       {d && <TodoStrip todo={d.todo} all={d.todoScope === 'all'} />}
+      <MailApplicationsBox />
 
       {d && !d.loading && (
         <div className="flex flex-wrap items-center gap-2 px-1 text-[12px]">

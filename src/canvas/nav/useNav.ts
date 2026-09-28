@@ -1,9 +1,9 @@
 import { createContext, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ENGINE_ENABLED, alertsApi, webApi } from '../engine';
+import { ENGINE_ENABLED, alertsApi, send, webApi } from '../engine';
 import { canSeePage, useNavRole, usePageAccess } from '../useAdmin';
-import { matchActive, visibleNav, type NavGroup, type NavItem, type NavRole, type VisibleGroup } from './navModel';
+import { matchActive, visibleNav, type NavCounts, type NavGroup, type NavItem, type NavRole, type VisibleGroup } from './navModel';
 import { useNavState, type NavState } from './navState';
 
 export type NavData = {
@@ -11,6 +11,10 @@ export type NavData = {
   groups: VisibleGroup[];
   active: { group: NavGroup; item: NavItem } | null;
   alertCount: number;
+  /** Menü rozetleri (uyarılar, kurumsal e-posta). */
+  counts: NavCounts;
+  /** Bana atanan iletilerden süresi aşanlar (e-posta rozetinin ekran okuyucu metni). */
+  mailOverdue: number;
   state: NavState;
   update: (fn: (s: NavState) => NavState) => void;
 };
@@ -43,8 +47,18 @@ export function useNavData(): NavData {
     [role.isAdmin, role.isEditor, web.data?.enabled, pages],
   );
   const active = useMemo(() => matchActive(groups, loc.pathname, loc.search), [groups, loc.pathname, loc.search]);
+  // Kurumsal e-posta rozeti: bana atanan açık ileti; yalnız sayfayı görebilen kişi için sorulur.
+  const mail = useQuery({
+    queryKey: ['mailbox', 'badge'],
+    queryFn: () => send<{ mine: number; overdue: number }>('GET', '/api/v1/mailbox/badge'),
+    enabled: ENGINE_ENABLED && canSeePage(pages, 'kurumsal-eposta'),
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    retry: false,
+  });
   const alertCount = (alerts.data?.alerts ?? []).filter((a) => a.status === 'active' && a.state === 'triggered').length;
-  return { role, groups, active, alertCount, state, update };
+  const counts: NavCounts = { alerts: alertCount, mailbox: mail.data?.mine ?? 0 };
+  return { role, groups, active, alertCount, counts, mailOverdue: mail.data?.overdue ?? 0, state, update };
 }
 
 export type NavUi = {

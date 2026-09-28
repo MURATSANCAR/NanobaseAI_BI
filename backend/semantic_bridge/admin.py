@@ -436,6 +436,74 @@ SPEC: list[dict[str, Any]] = [
      "help": "CRM ile Logo fiyatı arasındaki fark bunu aşarsa föyde uyumsuzluk uyarısı çıkar"},
     {"key": "MARKETING_COVER_BASE_URL", "group": "marketing", "label": "Kapak görseli adresi", "type": "text", "default": "",
      "help": "CRM kapak yolunun (göreli) önüne eklenen adres, ör. https://www.timas.com.tr. Boşsa föyde kapak yerine boş kutu çıkar"},
+    # H4 Kurumsal e-posta (timas@ genel kutusu). Kutu yalnız okunur; portal dışarıya ileti göndermez.
+    {"key": "MAIL_PROVIDER", "group": "mailbox", "label": "Kutunun sistemi", "type": "text", "default": "gmail",
+     "help": "gmail: Google Workspace (bu kurulum). Microsoft 365 ve IMAP bağdaştırıcıları bu sürümde kurulmadı"},
+    {"key": "MAIL_ADDRESS", "group": "mailbox", "label": "Kutu adresi", "type": "text", "default": "timas@timas.com.tr",
+     "help": "Okunacak genel kutu. Boşsa ekran «kutu bağlı değil» der"},
+    {"key": "MAIL_GMAIL_AUTH", "group": "mailbox", "label": "Bağlantı yolu", "type": "text", "default": "hizmet-hesabi",
+     "help": "hizmet-hesabi (önerilen): Google Cloud'da hizmet hesabı + Workspace Yönetici Konsolu → Güvenlik → API denetimleri → "
+             "Alan genelinde yetki devri'nde hesabın istemci kimliğine YALNIZ şu iki kapsam: "
+             "https://www.googleapis.com/auth/gmail.readonly ve https://www.googleapis.com/auth/gmail.labels. "
+             "oauth: kutunun kendi hesabıyla bir kez onay verilir (alan geneli yetki istenmiyorsa). Gönderme kapsamı verilmez"},
+    {"key": "MAIL_GOOGLE_SERVICE_ACCOUNT_JSON", "group": "mailbox", "label": "Hizmet hesabı anahtarı (JSON)", "type": "secret",
+     "default": "",
+     "help": "BT'den istenecek: (1) Gmail API açık bir Google Cloud projesinde hizmet hesabı ve JSON anahtarı, (2) hesabın "
+             "istemci kimliğine (sayı) alan geneli yetki devri, yalnız gmail.readonly + gmail.labels, (3) kutu adresi. "
+             "SEO'nun servis hesabından ayrı tutun; bu anahtar yalnız kutuyu okur"},
+    {"key": "MAIL_OAUTH_CLIENT_ID", "group": "mailbox", "label": "OAuth istemci kimliği", "type": "text", "default": "",
+     "help": "Yalnız bağlantı yolu oauth ise. Google Cloud → API'ler → Kimlik bilgileri → OAuth istemcisi (Masaüstü)"},
+    {"key": "MAIL_OAUTH_CLIENT_SECRET", "group": "mailbox", "label": "OAuth istemci sırrı", "type": "secret", "default": "", "help": ""},
+    {"key": "MAIL_OAUTH_REFRESH_TOKEN", "group": "mailbox", "label": "OAuth yenileme belirteci", "type": "secret", "default": "",
+     "help": "Kutunun hesabıyla gmail.readonly + gmail.labels kapsamlarına onay verilerek alınır. Onay geri alınırsa okuma durur "
+             "ve bağlantı uyarısı gider"},
+    {"key": "MAIL_START_DATE", "group": "mailbox", "label": "Canlı işleme başlangıcı", "type": "text", "default": "",
+     "help": "YYYY-AA-GG. Bu tarihten önce gelen iletiler «geçmiş»tir: listeye, SLA'ya, bildirime girmez; yalnız etiketleme "
+             "ekranında görünür. Boşsa ilk okumanın anı"},
+    {"key": "MAIL_HISTORY_FROM", "group": "mailbox", "label": "Geçmiş iletiler şu tarihten", "type": "text", "default": "",
+     "help": "YYYY-AA-GG. İlk okumada bu tarihten sonraki geçmiş iletiler de okunur (doğruluk ölçümü için etiketlenir). Boşsa okunmaz"},
+    {"key": "MAIL_BUSINESS_HOURS", "group": "mailbox", "label": "İş saatleri", "type": "text", "default": "1-5 09:00-18:00",
+     "help": "Hafta günü (1 = pazartesi) ve saat; birden çok satır noktalı virgülle, örn. 1-5 09:00-18:00; 6 10:00-14:00. SLA bu saatlerle sayılır"},
+    {"key": "MAIL_HOLIDAYS", "group": "mailbox", "label": "Resmî tatiller", "type": "text", "default": "",
+     "help": "Virgülle YYYY-AA-GG. Bu günler SLA'da sayılmaz"},
+    {"key": "MAIL_SLA_REMIND_H", "group": "mailbox", "label": "Hatırlatma (iş saati)", "type": "int", "default": "24",
+     "help": "Tür için kuralda SLA yazılmamışsa: bu kadar iş saati yanıtsız kalan ileti için atanan kişiye hatırlatma"},
+    {"key": "MAIL_SLA_ESCALATE_H", "group": "mailbox", "label": "Eskalasyon (iş saati)", "type": "int", "default": "48",
+     "help": "Birim yöneticisine (yönlendirme tablosunda) bildirim"},
+    {"key": "MAIL_SLA_TOP_H", "group": "mailbox", "label": "Üst yönetici (iş saati)", "type": "int", "default": "72", "help": ""},
+    {"key": "MAIL_INBOX_OWNERS", "group": "mailbox", "label": "Genel kutu sorumluları", "type": "users", "default": "",
+     "help": "Atanmamış iletinin hatırlatması ve birim yöneticisi yazılmamış eskalasyon bunlara gider"},
+    {"key": "MAIL_TOP_MANAGERS", "group": "mailbox", "label": "Üst yöneticiler", "type": "users", "default": "",
+     "help": "Üst yönetici eşiğini aşan iletilerin bildirimi"},
+    {"key": "MAIL_NOTIFY_EMAIL", "group": "mailbox", "label": "SLA bildirimini e-postayla gönder", "type": "bool", "default": "1",
+     "help": "İç e-posta (portalın bildirim hesabından, çalışanlara). Kapalıyken bildirim yalnız ileti geçmişine yazılır"},
+    {"key": "MAIL_SUGGEST_MIN_PROB", "group": "mailbox", "label": "Öneri eşiği: olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI'ın tür olasılığı bunun altındaysa ileti «Emin olunmayan» sekmesine düşer"},
+    {"key": "MAIL_SUGGEST_MIN_MARGIN", "group": "mailbox", "label": "Öneri eşiği: fark", "type": "text", "default": "0.30",
+     "help": "Seçilen tür ile en yakın ikinci tür arasındaki olasılık farkı"},
+    {"key": "MAIL_AUTO_MIN_PROB", "group": "mailbox", "label": "Otomatik işlem eşiği: olasılık", "type": "text", "default": "0.90",
+     "help": "Tanıtım/spam arşivi ve açılmış türlerde otomatik atama yalnız bu olasılığın üstünde"},
+    {"key": "MAIL_AUTO_MIN_MARGIN", "group": "mailbox", "label": "Otomatik işlem eşiği: fark", "type": "text", "default": "0.50", "help": ""},
+    {"key": "MAIL_AUTO_ASSIGN_CATEGORIES", "group": "mailbox", "label": "Otomatik atanan türler", "type": "text", "default": "",
+     "help": "Virgülle tür anahtarları. Boş (varsayılan): hiçbir tür kendiliğinden atanmaz. Etiketlenmiş geçmişte o türün "
+             "doğruluğu %90'ı geçmeden açmayın"},
+    {"key": "MAIL_SPAM_SENDERS", "group": "mailbox", "label": "Doğrudan arşivlenen gönderenler", "type": "text", "default": "",
+     "help": "Virgülle adres ya da alan adı (örn. bulten.ornek.com). Kutunun kendi spam işaretine ek; arşiv geri alınabilir"},
+    {"key": "MAIL_ORDER_PATTERN", "group": "mailbox", "label": "Sipariş numarası deseni", "type": "text",
+     "default": r"(?:sipari[şs]|order)\s*(?:no|numaras[ıi]|#)?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-]{4,19})",
+     "help": "İleti metnindeki sipariş numarasını bulan düzenli ifade (ilk grup numara). Boşsa aranmaz"},
+    {"key": "MAIL_MODEL_BODY_CHARS", "group": "mailbox", "label": "Zeki AI'a giden metin (karakter)", "type": "int", "default": "6000",
+     "help": "Uzun iletide modelin bağlam penceresine sığacak kısım. Ekranda ileti kutudan tam okunur"},
+    {"key": "MAIL_LLM_BUDGET_SEC", "group": "mailbox", "label": "Okuma turu süresi (sn)", "type": "int", "default": "200",
+     "help": "5 dakikalık turda sınıflamaya ayrılan süre; bitmeyen iletiler sonraki tura kalır"},
+    {"key": "MAIL_READ_OVERLAP_MIN", "group": "mailbox", "label": "Okuma örtüşmesi (dk)", "type": "int", "default": "60",
+     "help": "Her okuma son iletiden bu kadar geriden başlar; aynı ileti iki kez yazılmaz"},
+    {"key": "MAIL_REPLY_CHECK_MIN", "group": "mailbox", "label": "Yanıt denetimi aralığı (dk)", "type": "int", "default": "15",
+     "help": "Açık iletinin konu zincirinde kutudan gönderilmiş yanıt bu aralıkla aranır"},
+    {"key": "MAIL_CONNECTION_ALERT_MIN", "group": "mailbox", "label": "Bağlantı uyarısı (dk)", "type": "int", "default": "30",
+     "help": "Kutu bu kadar dakikadır okunamadıysa aşağıdaki adreslere bir kez uyarı gider"},
+    {"key": "MAIL_CONNECTION_ALERT_TO", "group": "mailbox", "label": "Bağlantı uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (portal yöneticisi / BT)"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -479,6 +547,9 @@ GROUPS = [
     {"id": "sets", "label": "Set, hediye ve promosyon",
      "help": "Set bileşeni, satış ve fiyat kaynağı, marj alt sınırı, birlikte alım ve kurumsal hediye kademeleri. CRM'e, Logo'ya "
              "ve T-soft'a hiçbir şey yazılmaz; onaylanan set için açılacak kart listesi verilir."},
+    {"id": "mailbox", "label": "Kurumsal e-posta",
+     "help": "timas@ genel kutusu yalnız okunur (Gmail: gmail.readonly + gmail.labels). Portal dışarıya ileti göndermez, kutudan "
+             "silmez, taşımaz; yanıtı kişi kutunun kendi arayüzünden gönderir. İleti gövdesi portalda saklanmaz."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "creative", "label": "Pazarlama görsel ve metin",
      "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},
@@ -1223,6 +1294,16 @@ def _seo_check() -> tuple[bool, str]:
     return t_ok and g_ok, f"T-soft: {t_msg} · Google: {g_msg}"
 
 
+def mailbox_test() -> tuple[bool, str]:
+    """Kurumsal e-posta kutusu: ayar tamsa kutunun profilini ve etiket listesini okur (yalnız okuma)."""
+    from semantic_bridge import mailbox_sources as ms
+
+    state = ms.connection_state(conf)
+    if not state["connected"]:
+        return False, f"Kutu bağlı değil: {state['reason']}"
+    return ms.source(conf).test()
+
+
 #: Tek tuşla çalışan denemeler. E-posta burada yalnız ayar bütünlüğüne bakar: bir denemenin
 #: kimseye posta göndermemesi gerekir.
 CHECKS: list[dict[str, Any]] = [
@@ -1232,6 +1313,7 @@ CHECKS: list[dict[str, Any]] = [
     {"id": "directory", "group": "directory", "label": "Active Directory", "run": lambda: directory_test("")},
     {"id": "email", "group": "email", "label": "E-posta ayarı", "run": email_config_test},
     {"id": "seo", "group": "seo", "label": "T-soft ve Google", "run": lambda: _seo_check()},
+    {"id": "mailbox", "group": "mailbox", "label": "Kurumsal e-posta kutusu", "run": mailbox_test},
     {"id": "store", "group": None, "label": "Meta veritabanı", "run": store_test},
 ]
 _CHECK_BY_ID = {c["id"]: c for c in CHECKS}

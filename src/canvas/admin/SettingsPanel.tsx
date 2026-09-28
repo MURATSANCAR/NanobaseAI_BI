@@ -22,6 +22,11 @@ const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> =
     label: 'Bağlantıyı sına',
     help: 'T-soft’a kaydedilen kullanıcıyla giriş yapar, bir ürün okur; servis hesabı girildiyse Search Console’dan son 7 günü sorar. Hiçbir şey yazmaz.',
   },
+  mailbox: {
+    id: 'mailbox',
+    label: 'Kutuyu oku',
+    help: 'Kaydedilmiş bağlantıyla kutunun ileti sayısını ve etiket listesini okur. Hiçbir ileti göndermez, değiştirmez.',
+  },
 };
 
 const SOURCE: Record<AdminSetting['source'], string> = {

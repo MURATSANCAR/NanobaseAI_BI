@@ -61,6 +61,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LayoutGrid,
+  Mail,
   MapPinned,
   Megaphone,
   Newspaper,
@@ -92,7 +93,16 @@ import {
 
 export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'yonetim';
 export type NavFeature = 'webWatch';
-export type NavBadge = 'alerts';
+export type NavBadge = 'alerts' | 'mailbox';
+
+/** Rozet sayıları: uyarılar (eşiği aşmış kural) ve kurumsal e-posta (bana atanan açık ileti). */
+export type NavCounts = Partial<Record<NavBadge, number>>;
+
+/** Rozetin ekran okuyucu metni. `overdue`: süresi aşan ileti sayısı (e-posta rozetinde). */
+export function badgeLabel(badge: NavBadge, count: number, overdue = 0): string {
+  if (badge === 'mailbox') return overdue > 0 ? `${count} ileti size atanmış, ${overdue} tanesinin süresi aşmış` : `${count} ileti size atanmış`;
+  return `${count} uyarı eşiği aşmış`;
+}
 
 export type NavItem = {
   id: string;
@@ -227,6 +237,15 @@ export const NAV: NavGroup[] = [
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
       { id: 'kategori-agaci', label: 'Kategori ağacı', to: '/kategori-agaci', icon: FolderTree, hint: 'Kitap profili, kategori mimarisi ve tutarsızlıklar', keywords: ['kategori', 'kitaplık', 'tür', 'tema', 'etiket', 'künye', 'profil', 'web kategorisi', 'tutarsızlık'] },
+      {
+        id: 'kurumsal-eposta',
+        label: 'Kurumsal e-posta',
+        to: '/kurumsal-eposta',
+        icon: Mail,
+        hint: 'Genel kutuya gelen iletiler, atama ve yanıt süreleri',
+        badge: 'mailbox',
+        keywords: ['e-posta', 'eposta', 'mail', 'timas@', 'genel kutu', 'gelen kutusu', 'şikâyet', 'başvuru', 'iş başvurusu', 'sla', 'yanıt'],
+      },
     ],
   },
   {

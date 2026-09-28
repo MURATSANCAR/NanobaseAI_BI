@@ -41,6 +41,11 @@ const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/Auth
 const ProductionScreen = lazy(() => import('@/canvas/editorial/production/ProductionScreen'));
 const CorporateScreen = lazy(() => import('@/canvas/corporate/CorporateScreen'));
 const CorporateOpportunity = lazy(() => import('@/canvas/corporate/OpportunityPage'));
+const MailboxHome = lazy(() => import('@/canvas/mailbox/MailboxHome'));
+const MailMessage = lazy(() => import('@/canvas/mailbox/MessageDetail'));
+const MailReport = lazy(() => import('@/canvas/mailbox/MailReport'));
+const MailRules = lazy(() => import('@/canvas/mailbox/MailRules'));
+const MailLabeling = lazy(() => import('@/canvas/mailbox/Labeling'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const ContractDetail = lazy(() => import('@/canvas/editorial/contracts/ContractDetail'));
@@ -250,6 +255,12 @@ export default function App() {
             {/* M32 Kurumsal satış ve B2B (/api/v1/corporate): fırsat, paket, teklif, hatırlatma, bayi paneli. */}
             <Route path="kurumsal-satis" element={<CorporateScreen />} />
             <Route path="kurumsal-satis/firsat/:id" element={<CorporateOpportunity />} />
+            {/* H4 Kurumsal e-posta (/api/v1/mailbox): timas@ genel kutusu, atama, SLA, yanıt taslağı, rapor, kurallar. */}
+            <Route path="kurumsal-eposta" element={<MailboxHome />} />
+            <Route path="kurumsal-eposta/ileti/:id" element={<MailMessage />} />
+            <Route path="kurumsal-eposta/rapor" element={<MailReport />} />
+            <Route path="kurumsal-eposta/kurallar" element={<MailRules />} />
+            <Route path="kurumsal-eposta/etiketleme" element={<MailLabeling />} />
             <Route path="yazar-iliskileri" element={<AuthorRelationsScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}
