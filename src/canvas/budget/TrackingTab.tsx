@@ -4,10 +4,43 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
-import { DEPT, budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type GroupTrack, type Plan, type TrackState } from './api';
+import { DEPT, budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type GroupTrack, type Plan, type TrackState, type YearEnd } from './api';
 import { RatioBar, StatePill } from './parts';
 
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+/** Tahmini yıl sonu kapanışı: gerçekleşen + yılın kalan günleri için tahmin bandı (kitap hedefleri kapsamı). Aralık
+ *  önbellekte yoksa yalnız temel tahmin yazılır, aralık uydurulmaz. */
+function YearEndPanel({ y }: { y: YearEnd }) {
+  const share = (v: number | null) => (v === null || !y.hedefCiro ? null : Math.round((v / y.hedefCiro) * 100));
+  const cells: Array<[string, number | null]> = [['Muhafazakâr', y.p10], ['Temel', y.p50], ['İyimser', y.p90]];
+  const missing = y.eksikAylar.map((m) => AY[m - 1]).join(', ');
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-[15px] font-extrabold">Tahmini yıl sonu kapanışı</h3>
+        <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-canvas-violet">tahmin</span>
+      </div>
+      <div className="mt-2 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+        {cells.map(([k, v]) => (
+          <div key={k} className={`rounded-xl px-3 py-2 ${k === 'Temel' ? 'bg-violet-50/80' : 'bg-slate-50'}`}>
+            <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{k}</div>
+            <div className="font-mono text-[18px] font-bold tabular-nums">{v === null ? '—' : fmtShort(v) + ' ₺'}</div>
+            <div className="text-[11px] text-canvas-muted">
+              {v === null ? 'aralık yok' : share(v) === null ? '' : 'hedefin %' + share(v) + '’i'}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+        {fmtInt(y.kitap)} kitap (hedef cirosunun {y.kapsamPay === null ? '—' : '%' + Math.round(y.kapsamPay * 100)}’i): {fmtDay(y.asof)} itibarıyla
+        gerçekleşen {fmtShort(y.gercekCiro)} ₺ + yılın kalan günleri için ZEKİ AI satış tahmini, hedefteki birim fiyatla ciroya
+        çevrilir. Aralık aylık tahmin aralıklarının toplamıdır.
+        {missing ? ' Tahminin kapsamadığı aylar (' + missing + ') eklenmedi.' : ''}
+      </p>
+    </Panel>
+  );
+}
 
 function Summary({ title, g, help }: { title: string; g: GroupTrack; help: string }) {
   return (
@@ -162,6 +195,7 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
           <> Kitap uyarısı hedef cirosunun %{Math.round(d.uyariKapsam.pay * 100)}'ini oluşturan {fmtInt(d.uyariKapsam.kitap)} kitap için açılır; bunların {fmtInt(d.uyariKapsam.sapma)}'i eşik altında. Diğer kitapların durumu Kitap hedefleri listesinde.</>
         )}
       </p>
+      {d.yilSonu && <YearEndPanel y={d.yilSonu} />}
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
         <Summary title="Şirket satışı" g={d.sirket} help="Kitap hedefleri + yeni kitap programı; gerçekleşende planda olmayan kitapların satışı da var." />
         <Summary title="Kitap hedefleri" g={d.kitapHedefleri} help="Yalnız planda adıyla hedefi olan kitaplar." />

@@ -22,7 +22,6 @@ from semantic_bridge import supply_store as store
 
 log = logging.getLogger("semantic.supply.suggest")
 
-_NUM = re.compile(r"\d+(?:[.,]\d+)*")
 _TECH = re.compile(r"\b(qwen|vllm|gpt|llama|openai|anthropic|claude|model|yapay zek[aâ]|llm)\b", re.I)
 
 
@@ -39,12 +38,11 @@ def fmt_day(v: Any) -> str:
 
 
 def numbers_ok(text: str, facts: str) -> bool:
-    """Metindeki her sayı olgu metninde de geçiyor mu (binlik nokta/ondalık virgül farkı yok sayılır)."""
-    norm = lambda s: re.sub(r"[.,]", "", s)  # noqa: E731
-    parts = lambda s: [p.lstrip("0") or "0" for p in re.findall(r"\d+", s)]  # noqa: E731
-    have = {norm(x) for x in _NUM.findall(facts)} | set(parts(facts))
-    # Tarih «01.10.2026» metinde «1 Ekim 2026» diye geçebilir: sayı ya bütün hâliyle ya da bütün parçalarıyla olguda olmalı.
-    return all(norm(x) in have or all(p in have for p in parts(x)) for x in _NUM.findall(text))
+    """Metindeki her sayı olgu metninde de geçiyor mu (binlik nokta/ondalık virgül farkı yok sayılır; tarih «01.10.2026»
+    metinde «1 Ekim 2026» diye geçebilir). Denetim: `zeki_text` (tek sayı denetçisi)."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.numbers_ok(text or "", facts)
 
 
 def model_text(llm: Any, system: str, facts: str, max_chars: int = 1600) -> Optional[str]:

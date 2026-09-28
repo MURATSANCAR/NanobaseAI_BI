@@ -504,9 +504,10 @@ def numbers_in(text: str) -> set[str]:
 
 
 def safe_model_text(text: str, facts_text: str) -> bool:
-    """Model metnindeki her sayı verilen olgularda geçmeli (rakamı model üretmez)."""
-    allowed = numbers_in(facts_text)
-    return bool(text.strip()) and numbers_in(text) <= allowed
+    """Model metnindeki her sayı verilen olgularda geçmeli (rakamı model üretmez). Denetim: `zeki_text`."""
+    from semantic_bridge import zeki_text as Z
+
+    return bool((text or "").strip()) and Z.numbers_ok(text, facts_text)
 
 
 # ------------------------------------------------------------------ kaynaklar

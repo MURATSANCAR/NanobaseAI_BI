@@ -11,6 +11,7 @@ giden hiçbir şey otomatik gönderilmez (takip e-postası taslaktır, temsilci 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import threading
@@ -729,6 +730,41 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             "offset": offset,
             "events": F.events(engine, tenant, user, days=14),
         }
+
+    morning_cache: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
+
+    @app.get(f"{P}/today/brief")
+    def field_today_brief(request: Request, temsilci: str = "") -> dict[str, Any]:
+        """Sabah saha brifi: Bugün listesinin aynı kapsamı (yetkisiz kişi yalnız kendi portföyü) ve aynı sırası. Zeki AI
+        4–5 cümle yazar; sayı denetiminden geçmezse ya da model yoksa olgular kural metni olarak döner. Aynı olgular için
+        model yeniden çağrılmaz (kapsam başına son brif bellekte)."""
+        engine, tenant, user, _ = ctx(request)
+        owner = owner_of(user, temsilci)
+        st = settings()
+        now = F.today()
+        try:
+            cols = svc.source.collections(st)
+        except Exception as e:  # noqa: BLE001
+            log.info("field: brifte CRM okunamadı: %s", e)
+            cols = []
+        rank = call(today_ranked, engine, tenant, owner, cols, st, now)
+        planned = [v for v in F.list_visits(engine, tenant, user, tur="cari", owner=owner, day_=now.isoformat(), admin=is_admin(user))
+                   if v["durum"] != "iptal"]
+        at = rank["at"]
+        planned = [{**v, "musteri": rank["list"][at[v["hedef"]]] if v["hedef"] in at else None} for v in planned]
+        pending = [t for t in cols if int(num(t.get("durum"))) == src.T_PENDING]
+        if owner is not None:
+            ids = {k for k, v in svc.users_map().items() if v["hesap"] == owner} if cols else set()
+            pending = [t for t in pending if guid(t.get("owner_id")) in ids]
+        kpi = {**rank["kpi"], "onayBekleyen": len(pending)}
+        facts, plain, names = F.morning_facts(kpi, planned, rank["list"][:3], now.isoformat())
+        digest = hashlib.sha256(json.dumps([facts, names], ensure_ascii=False).encode()).hexdigest()
+        cached = morning_cache.get((tenant, owner))
+        if cached and cached["digest"] == digest:
+            return cached["out"]
+        out = {**F.morning_brief(facts, plain, names, svc.llm()), "gun": now.isoformat(), "dataEnd": F.meta_get(engine, tenant, "run").get("dataEnd")}
+        morning_cache[(tenant, owner)] = {"digest": digest, "out": out}
+        return out
 
     @app.get(f"{P}/portfolio")
     def field_portfolio(request: Request, temsilci: str = "", q: str = "") -> dict[str, Any]:

@@ -8,6 +8,7 @@ import { useDebounced } from '../editorial/kit';
 import { fieldApi, fmtCount, fmtDay, fmtMoney, fmtPct, fmtShort, type FieldMeta, type Visit } from './api';
 import { CustomerRow, Empty, Stat } from './parts';
 import VisitNoteSheet from './VisitNoteSheet';
+import MorningBrief from './MorningBrief';
 
 /** «Bugün» (telefonun ilk ekranı): üstte 3 sayı, bugün planlanan ziyaretler, sonra kural puanıyla sıralı müşteri listesi
  *  (gerekçe çipleriyle). Sıralamayı temsilci ziyaret planlayarak değiştirir; müdür önceliği gerekçesiyle üste çıkarır. */
@@ -42,6 +43,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
 
   return (
     <div className="flex flex-col gap-3">
+      {!dq && <MorningBrief temsilci={temsilci} />}
       {t.warning && <Note tone="warn">{t.warning}</Note>}
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Vadesi geçmiş" value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} tone={t.kpi.k90 > 0 ? 'err' : undefined} />

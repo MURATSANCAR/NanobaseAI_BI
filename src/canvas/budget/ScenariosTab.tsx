@@ -73,6 +73,25 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
                   <dd className="text-right font-mono tabular-nums">{fmtShort(p.totals.gider)} ₺</dd>
                   <dd className="text-right font-mono text-[11px] tabular-nums text-canvas-muted">{diff(p.totals.gider, base?.gider)}</dd>
                 </dl>
+                {p.basis.tahmin?.bant && (
+                  <div className="rounded-xl bg-violet-50/70 px-2.5 py-2 text-[11.5px] leading-snug">
+                    <div className="flex flex-wrap items-center gap-1.5 font-bold">
+                      ZEKİ AI tahmini · 12 ay
+                      <span className="rounded bg-white/80 px-1 text-[10px] font-extrabold uppercase tracking-wide text-canvas-violet">tahmin</span>
+                    </div>
+                    {p.basis.tahmin.bant.aralik ? (
+                      <div className="mt-0.5 font-mono tabular-nums">
+                        {fmtShort(p.basis.tahmin.bant.p10)} – <b>{fmtShort(p.basis.tahmin.bant.p50)}</b> – {fmtShort(p.basis.tahmin.bant.p90)} adet
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 font-mono tabular-nums">{fmtShort(p.basis.tahmin.bant.p50)} adet <span className="font-sans text-canvas-muted">(aralık yok)</span></div>
+                    )}
+                    <div className="text-canvas-muted">
+                      {p.basis.tahmin.bant.kitap} backlist kitabı · muhafazakâr – temel – iyimser
+                      {p.basis.tahmin.kantil ? ` · bu senaryonun tabanı ${p.basis.tahmin.kantil === 'p10' ? 'alt sınır' : p.basis.tahmin.kantil === 'p90' ? 'üst sınır' : 'beklenen değer'}` : ''}
+                    </div>
+                  </div>
+                )}
                 <span className="text-[11px] text-canvas-muted">
                   Hacim {fmtPct(p.params.hacim?.[p.scenario] ?? null)} · fiyat {fmtPct(p.params.fiyat)} · {p.createdBy}, {fmtDay(p.createdAt)}
                 </span>

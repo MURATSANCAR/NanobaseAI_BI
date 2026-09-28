@@ -128,7 +128,7 @@ export default function FinanceScreen() {
       <Tabs tabs={tabs} value={tab} onChange={(k) => update({ sekme: k })} />
       {meta.data && (
         <>
-          {tab === 'ozet' && <SummaryTab onOpen={(s) => update({ sekme: s })} />}
+          {tab === 'ozet' && <SummaryTab onOpen={(s) => update({ sekme: s })} meta={meta.data} year={year} month={month} />}
           {tab === 'gelir' && <PnlTab meta={meta.data} year={year} month={month} grain={grain} />}
           {tab === 'butce' && <BudgetTab year={year} canNote={!!me?.canNote} />}
           {tab === 'karlilik' && <ProfitTab meta={meta.data} year={year} />}

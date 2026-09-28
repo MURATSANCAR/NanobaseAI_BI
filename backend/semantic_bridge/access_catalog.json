@@ -1051,6 +1051,21 @@
       "explicit": true
     },
     {
+      "key": "ozellik:finans.yorum",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Aylık finansal yorum taslağı",
+      "hint": "Zeki AI ile ayın yorum taslağını hazırlatma ve metni düzeltme (onay ayrı yetkidir)"
+    },
+    {
+      "key": "ozellik:finans.yorum-onay",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Aylık finansal yorum onayı",
+      "hint": "Aylık yorum taslağını onaylama (CFO); onaylı metin kurul panelindeki finans göstergesine gider",
+      "explicit": true
+    },
+    {
       "key": "ozellik:finans.vergi-takvimi",
       "area": "finans",
       "page": "sayfa:finansal-raporlar",

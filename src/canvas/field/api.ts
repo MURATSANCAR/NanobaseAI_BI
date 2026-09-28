@@ -266,9 +266,14 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
   return s ? `?${s}` : '';
 };
 
+/** Sabah saha brifi: Bugün listesinin kapsamından 4–5 cümle. `kaynak` 'zeki' yalnız model metni sayı denetiminden
+ *  geçtiyse; 'kural' iken olgular olduğu gibi yazılır. */
+export type MorningBrief = { metin: string; kaynak: 'zeki' | 'kural'; neden: string | null; gun: string; dataEnd: string | null };
+
 export const fieldApi = {
   meta: () => send<FieldMeta>('GET', `${P}/meta`, undefined, 60_000),
   today: (p: { temsilci?: string; q?: string; limit?: number }) => send<Today>('GET', `${P}/today${qs(p)}`, undefined, 120_000),
+  todayBrief: (p: { temsilci?: string }) => send<MorningBrief>('GET', `${P}/today/brief${qs(p)}`, undefined, 180_000),
   portfolio: (p: { temsilci?: string; q?: string }) => send<{ items: Customer[]; count: number }>('GET', `${P}/portfolio${qs(p)}`),
   brief: (code: string) => send<Brief>('GET', `${P}/customers/${enc(code)}/brief`, undefined, 180_000),
   summary: (code: string) => send<{ metin: string; kaynak: 'zeki' | 'kural'; not: string | null }>('POST', `${P}/customers/${enc(code)}/brief/summary`, {}, 180_000),

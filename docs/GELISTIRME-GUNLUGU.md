@@ -143,6 +143,43 @@ Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağla
 - **Açık kalanlar:** destek masası talepleri (apps/destek, ayrı veritabanı) bağlı değil — M51'in portal tabloları bağlı;
   «ilk yanıt süresi» gibi iki tarih arası ölçü, «stok = 0» gibi sayısal koşul, «cevapsız» (boş kolon) koşulu ve
   `kod` gibi PK dışı anahtarla bağ yok; portal cevabı panoya eklenemez.
+## 2026-09-28 — Zeki AI ortak yapı taşları (1, 2, 3, 6) ve öneri 1–3 (DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** `docs/analiz/ai-firsatlari/README.md` «önce yapılacak ortak yapı taşları»; sayı denetiminin 15 kopyası, maskenin
+  5 kopyası vardı, tahmin p10–p90 üretiliyor ama ekranlara yalnız p50 gidiyordu. Dal `worktree-agent-abfd4d32d801440c7`.
+- **Tek sayı denetçisi** `backend/semantic_bridge/zeki_text.py`: değer üzerinden karşılaştırma (yazıldığı basamağa yuvarlama
+  payıyla), Türkçe binlik/ondalık, yüzde↔oran, ölçek sözcüğü (bin/milyon/Mn/milyar), tarih bütün ya da parçalarıyla; eski
+  yazım anahtarı eşleşmesi de kabul (geriye uyum). Bulunan kopyaların hepsi bağlandı: `marketing.guard` (K1'in
+  author_growth/it_ops bağlantısı bu yoldan yeni denetçiye gelir), `field_sales/dealers/musteri.numbers_ok`,
+  `risk/kurul.foreign_numbers` (≤31 serbest kaldı), `school_visits`, `shipping`, `supply_suggest`, `distribution.safe_model_text`
+  (stok bülteni dahil), `support.fill_draft`, `mailbox_classify.draft_reply`, `hr_recruit_text.soften`, `tenders` (alıntı ve
+  karar özeti, 1–5 serbest), `marketing_creative.check_text`, `pazar.unsupported_numbers` (yıllar serbest; `parse_number`
+  artık zeki_text'ten). Karar: eski davranışın kabul ettiği her yazım kabul, reddettiği her test örneği ret kalacak biçimde
+  tasarlandı; tek bilinçli genişleme yuvarlama («848,1 Mn» ↔ 848.110.179) ve tarih biçimi.
+- **Olgu yorumlayıcı** `zeki_text.interpret`: model LLM kapısından (`llm` ya da `rt.llm_for(modül, öncelik)`), sayı +
+  teknoloji adı denetimi, geçmezse kural metni ve nedeni (`model-yok`, `olgu-disi-sayi: …`, `teknoloji-adi`…).
+- **Ortak maske** `zeki_text.mask_personal`: destek (11 hane sağlamasız), okur (sıkı telefon: öneksiz 10 haneli kod
+  bozulmasın), İK `rule_mask` (sağlamalı T.C.; sayaç adları aynı), pazar yeri `platform_common.mask` (10+ hane), e-posta
+  (H4) gövdesi ve gönderen adresi artık **maskeli** modele gider (önceden maskesizdi). `apps/destek`'e dokunulmadı (K1).
+- **Tahmin istemcisi** `forecast_client.py`: önbellekten p10/p50/p80/p90; kantil yoksa `aralik: False`, «aralık yok».
+  Birden çok ayın bandı aylık kantillerin toplamıdır (tam bağımlılık varsayımı, gerçek aralık daha dar) — ekranda yazıyor.
+- **Öneri 3:** stok kartı üç pencerede p50 + p10–p90, bitecekler listesinde «Tahmin · 90 gün» kolonu; bütçe senaryo tabanı
+  kantile bağlandı (iş kararı, gerekçe: analiz D §M46 «muhafazakâr/temel/iyimser = p10/p50/p90»; hacim büyümesi
+  kullanıcının plan parametresi olarak üstüne uygulanmaya devam eder), senaryo kartında 12 aylık bant, kitap açıklamasında
+  bant; izlemede «Tahmini yıl sonu kapanışı» (gerçekleşen + kalan günlerin tahmini × hedef birim fiyatı; kapsam payı ve
+  tahminin kapsamadığı aylar yazılır).
+- **Öneri 1:** Finansal raporlar Özet'te «Aylık finansal yorum»: olgular kodla (gelir tablosu satırları, önceki ay ve geçen
+  yıl değişimi kodda hesaplanır, maliyet kapsamı, mutabakat farkı, yıl başından net satış, kanal kârlılığı ilk 3, «bu ay
+  dikkat»), Zeki AI 5–8 cümle; taslak → CFO düzeltir (olgu dışı sayı uyarısı) → açık yetkiyle onay; her yazma
+  `semantic_audit`. Onaylı son yorum DYK net satış göstergesi ayrıntısında görünür.
+- **Öneri 2:** Saha Bugün'ün üstünde sabah brifi: planlı ziyaretler, ilk üç öncelik ve kural gerekçeleri, vadesi geçmiş ve
+  90+ gün, onay bekleyen; müşteri adları modele gitmez (etiket), kapsam Bugün ucuyla aynı; aynı olgularda model tekrar
+  çağrılmaz. Öncelik: saha modülünün kapısı etkileşimli (app.py'ye dokunulmadı).
+- **Testler (yazıldı, koşulmadı):** `test_zeki_text.py`, `test_forecast_client.py`, `test_budget.py` (+3), `test_finance.py`
+  (+2), `test_field_sales.py` (+1). Mac'te yalnız py_compile, JSON ve tsc (dokunulan modüllerde hata yok).
+- **Sunucuda kalan:** `scripts/acceptance/zeki-ortak/check.sh` (pytest listesi eski çağrı yerlerinin testlerini de içerir),
+  yan port köprüsüyle `kabul.py` (önbellek dosyası ve doğrudan SQL referansları), `temizlik.py` (kabulde açılan yorum
+  satırları). Canlı önbellekte hangi kantillerin bulunduğu ölçülmeli (R0).
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 

@@ -82,7 +82,13 @@ export default function RunningOut() {
           {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
           {q.isLoading && <Loading what="Bitecekler" />}
           {d && !d.items.length && <Empty>Bu sürede bitecek kitap yok. Satış hızı ve stok kaynağı ayrı ayrı okunuyor; boş liste bir okuma hatası değilse gerçekten bitecek kitap yoktur.</Empty>}
-          {!!d?.items.length && <ItemList items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
+          {!!d?.items.length && <ItemList items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
+          {!!d?.items.some((i) => i.tahminAralik?.g90) && (
+            <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
+              «Tahmin · 90 gün»: tahmin başlangıcından sonraki üç ayın beklenen satışı (temel); altındaki aralık muhafazakâr–iyimser
+              (aylık tahmin aralıklarının toplamı). Aralığı olmayan kitapta yalnız temel tahmin yazar.
+            </p>
+          )}
           {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
         </Panel>
       )}

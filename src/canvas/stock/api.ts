@@ -18,6 +18,10 @@ export type Card = {
   tur: string | null;
 };
 
+/** Bir pencerenin tahmini: p50 temel; p10 muhafazakâr, p90 iyimser (aylık aralıkların toplamı). */
+export type ForecastBand = { p10: number | null; p50: number | null; p90: number | null; aralik: boolean; not: string | null };
+export type ForecastRange = { baslangic: string | null; aralik: boolean; not: string | null; g30: ForecastBand | null; g60: ForecastBand | null; g90: ForecastBand | null };
+
 export type Item = {
   stokKodu: string;
   ad: string | null;
@@ -58,6 +62,8 @@ export type Item = {
   farkSinif: DiffClass | null;
   farkEtiket: string | null;
   tahmin: { baslangic: string | null; g30: number; g60: number; g90: number } | null;
+  /** Aynı pencerelerin aralığı (tahmin kantilleri). `aralik` false ise önbellekte p10/p90 yok: yalnız p50 gösterilir. */
+  tahminAralik?: ForecastRange | null;
   /** Yalnız maliyet yetkisiyle gelir. */
   birimMaliyet?: number | null;
   maliyetKaynak?: string | null;

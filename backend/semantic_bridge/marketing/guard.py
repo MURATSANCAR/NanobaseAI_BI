@@ -16,26 +16,21 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
+# Teknoloji adı listesi, harf katlama ve sayı denetimi tek yerde (`semantic_bridge.zeki_text`); bu modül pazarlama
+# metnine özgü kuralları (alıntı, kanıtsız iddia) ekler. Eski içe aktarma yolları (`guard.fold`, `guard.TECH_NAMES`,
+# `guard.has_tech_name`, `guard.check`) çalışmaya devam eder.
+from semantic_bridge import zeki_text as Z
+from semantic_bridge.zeki_text import TECH_NAMES, fold, has_tech_name  # noqa: F401 — eski yol
+
 #: Kanıtsız üstünlük kalıpları (küçük harf, Türkçe harf katlanmış biçimde aranır).
 CLAIMS = (
     "en cok satan", "cok satan", "coksatan", "bir numara", "1 numara", "numara bir", "rekor", "en basarili kitap",
     "en populer", "herkesin okudugu", "tartismasiz", "essiz", "benzersiz", "piyasadaki tek", "alaninda tek",
 )
-#: Ekrana ve ekrana giden metne yazılmayan teknoloji/model/sağlayıcı adları.
-TECH_NAMES = (
-    "qwen", "vllm", "llama", "ollama", "openai", "chatgpt", "gpt-", "gpt4", "gpt 4", "gpt5", "claude", "anthropic", "gemini",
-    "mistral", "timesfm", "temporal", "real-esrgan", "typst", "ghostscript", "hugging face", "huggingface", "transformer",
-    "büyük dil modeli", "buyuk dil modeli", "dil modeli", "llm",
-)
 
-_FOLD = str.maketrans("İIıŞşĞğÜüÖöÇçÂâÎîÛû’‘`´", "iiissgguuooccaaiiuu''''")
 _QUOTE = re.compile(r"«([^»]{3,})»|“([^”]{3,})”|\"([^\"]{3,})\"")
 _NUM = re.compile(r"\d+(?:[.,]\d+)*")
 _SENT = re.compile(r"(?<=[.!?…])\s+(?=\S)")
-
-
-def fold(s: Any) -> str:
-    return " ".join(str(s or "").translate(_FOLD).lower().split())
 
 
 def _squash(s: str) -> str:
@@ -44,7 +39,8 @@ def _squash(s: str) -> str:
 
 
 def numbers_in(s: str) -> set[str]:
-    """«1.250», «1250», «12,5» aynı sayı sayılır: ayırıcılar atılır."""
+    """Eski yazım anahtarı («1.250», «1250», «12,5» → ayraçsız). Denetim artık değer üzerinden (`zeki_text`); bu işlev
+    yalnız geriye dönük uyum için kalır."""
     return {re.sub(r"[.,]", "", n) for n in _NUM.findall(s or "")}
 
 
@@ -52,9 +48,7 @@ def check(text_: str, sources: Iterable[str], facts: Iterable[str] = (), extra_c
     """Metni cümle cümle denetler. Dönen: temiz metin, düşen cümleler (neden), sayaçlar."""
     corpus = [s for s in sources if s]
     corpus_sq = " \n ".join(_squash(s) for s in corpus)
-    allowed = set()
-    for s in list(corpus) + [str(f) for f in facts]:
-        allowed |= numbers_in(s)
+    allowed = Z.Facts(list(corpus) + [f if isinstance(f, (int, float)) else str(f) for f in facts])
     claims = tuple(fold(c) for c in (*CLAIMS, *extra_claims) if str(c).strip())
     dropped: list[dict[str, str]] = []
     out_lines: list[str] = []
@@ -78,7 +72,7 @@ def check(text_: str, sources: Iterable[str], facts: Iterable[str] = (), extra_c
     return {"metin": clean, "dusen": dropped, "sayac": counts, "dusenSayisi": len(dropped)}
 
 
-def _reason(sent: str, corpus_sq: str, allowed: set[str], claims: tuple[str, ...]) -> str | None:
+def _reason(sent: str, corpus_sq: str, allowed: "Z.Facts", claims: tuple[str, ...]) -> str | None:
     f = fold(sent)
     for name in TECH_NAMES:
         if re.search(r"(?<![a-z0-9])" + re.escape(name), f):
@@ -90,12 +84,6 @@ def _reason(sent: str, corpus_sq: str, allowed: set[str], claims: tuple[str, ...
         q = _squash(next(g for g in m.groups() if g))
         if q and q not in corpus_sq:
             return "alinti-bulunamadi"
-    for n in numbers_in(sent):
-        if n not in allowed:
-            return "kaynaksiz-rakam"
+    if Z.unsupported(sent, allowed):
+        return "kaynaksiz-rakam"
     return None
-
-
-def has_tech_name(s: str) -> bool:
-    f = fold(s)
-    return any(re.search(r"(?<![a-z0-9])" + re.escape(n), f) for n in TECH_NAMES)

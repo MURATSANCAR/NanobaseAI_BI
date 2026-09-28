@@ -69,7 +69,9 @@ export function ParamsForm({ value, onChange, sources, only, forecast }: {
           <strong>Backlist tabanında ZEKİ AI satış tahminini kullan</strong>
           <span className="block text-canvas-muted">
             {forecast ? `Baskı önerisinin kitap başına 12 aylık tahmini (${forecast} başlangıçlı). ` : 'Tahmin bu kurulumda henüz yok; seçilse de geçmiş satış kullanılır. '}
-            Yalnız plan yılı Logo verisinin ötesindeyse uygulanır; tahmini olmayan kitapta taban dönemin satışı kalır.
+            Senaryo tahmin aralığına bağlanır: muhafazakâr alt sınırı (p10), temel beklenen değeri (p50), iyimser üst sınırı (p90)
+            kullanır; aralık yoksa üçü de beklenen değeri kullanır. Yalnız plan yılı Logo verisinin ötesindeyse uygulanır; tahmini
+            olmayan kitapta taban dönemin satışı kalır.
           </span>
         </span>
       </label>

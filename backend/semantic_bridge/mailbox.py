@@ -655,10 +655,10 @@ def addr_hash(addr: str) -> str:
 
 
 def mask_addr(addr: str) -> str:
-    local, _, dom = (addr or "").partition("@")
-    if not dom:
-        return "***"
-    return (local[:1] + "***@" + dom)[:200]
+    """«a***@alan.com» (ortak maske `zeki_text.mask_address`; modele giden gönderen de bu biçimdedir)."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.mask_address(addr)
 
 
 def _event(c: Any, tenant: str, message_id: str, action: str, by: str, detail: Any = None) -> None:

@@ -623,13 +623,102 @@ def rule_summary(b: dict[str, Any]) -> str:
     return " ".join(facts_of(b)[:3])
 
 
-_DIGITS = re.compile(r"\d+")
-
-
 def numbers_ok(summary: str, facts: Iterable[str]) -> bool:
-    """Özetteki her rakam dizisi olgularda da geçmeli (model yeni rakam yazmasın)."""
-    allowed = set(_DIGITS.findall(" ".join(facts)))
-    return all(n in allowed for n in _DIGITS.findall(summary or ""))
+    """Özetteki her sayı olgularda da geçmeli (model yeni rakam yazmasın). Denetim: `zeki_text` (tek sayı denetçisi)."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.numbers_ok(summary or "", list(facts))
+
+
+# ------------------------------------------------------------------ sabah saha brifi (Bugün sekmesi)
+#
+# Temsilcinin günü 4–5 cümle: planlı ziyaretler, sıradaki ilk üç öncelik ve kural gerekçeleri, vadesi geçmiş toplam.
+# Olgular Bugün ucunun aynı kapsamından (temsilci yalnız kendi portföyü) kodla kurulur; Zeki AI yalnız anlatır
+# (`zeki_text.interpret`, sayı denetimi). Müşteri adları modele gitmez: «[A]», «[B]» etiketleri gider (şahıs carisinin adı
+# da dahil hiçbir ad); denetimden geçen metinde etiketler ekranda adla değiştirilir. Gizli ziyaret notu olgulara girmez.
+
+_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+MORNING_TASK = ("Saha temsilcisine sabah telefonda okuyacağı kısa bir gün özeti yaz: önce bugünün planlı ziyaretleri, sonra "
+                "öncelik sırasındaki ilk müşteriler ve gerekçeleri, sonra vadesi geçmiş alacak. Müşterileri yalnız köşeli "
+                "parantezli etiketleriyle an ([A] gibi); ad uydurma. Verilen rakamları aynen kullan.")
+
+
+def morning_facts(kpi: dict[str, Any], planned: list[dict[str, Any]], top: list[dict[str, Any]],
+                  day: str) -> tuple[list[str], list[str], dict[str, str]]:
+    """Sabah brifinin olguları. Dönen: (modele giden olgular — adlar etiketli, kural metni için aynı olgular adlı,
+    etiket → ad). `planned`: bugünün ziyaretleri (iptal hariç); `top`: öncelik sırasının ilk kartları."""
+    names: dict[str, str] = {}
+    by_code: dict[str, str] = {}
+
+    def tag(code: str, name: Optional[str]) -> str:
+        if code not in by_code:
+            if len(by_code) >= len(_LETTERS):
+                return ""
+            by_code[code] = _LETTERS[len(by_code)]
+            names[by_code[code]] = name or code
+        return f"[{by_code[code]}]"
+
+    masked: list[str] = []
+    plain: list[str] = []
+
+    def add(m: str, p: str) -> None:
+        masked.append(m)
+        plain.append(p)
+
+    if planned:
+        pm, pp = [], []
+        for v in planned:
+            code = v.get("hedef") or ""
+            name = (v.get("musteri") or {}).get("unvan") or v.get("hedefAd") or code
+            t = tag(code, name)
+            hour = str(v.get("planlanan") or "")[11:16]
+            pm.append(f"{t or 'bir müşteri'}{' ' + hour if hour else ''}")
+            pp.append(f"{name}{' ' + hour if hour else ''}")
+        add(f"Bugün ({day}) {len(planned)} planlı ziyaret var: " + ", ".join(pm) + ".",
+            f"Bugün {len(planned)} planlı ziyaret var: " + ", ".join(pp) + ".")
+    else:
+        add(f"Bugün ({day}) planlı ziyaret yok.", "Bugün planlı ziyaret yok.")
+    for i, c in enumerate(top[:3]):
+        name = c.get("unvan") or c["code"]
+        t = tag(c["code"], name)
+        why = [str(ch.get("label")) for ch in (c.get("gerekce") or []) if ch.get("label")][:3]
+        reason = ("; ".join(why)) if why else "öncelik puanı en yüksekler arasında"
+        where = ", ".join(x for x in (c.get("il"), c.get("kanal")) if x)
+        add(f"Öncelik {i + 1}: {t}{' (' + where + ')' if where else ''} — {reason}.",
+            f"Öncelik {i + 1}: {name}{' (' + where + ')' if where else ''} — {reason}.")
+    od = num(kpi.get("vadesiGecmis"))
+    if od > 0:
+        k90 = num(kpi.get("k90"))
+        s = f"Portföyde vadesi geçmiş alacak {short_money(od)}" + (f"; 90 günü aşan {short_money(k90)}" if k90 > 0 else "") + "."
+        add(s, s)
+    else:
+        add("Portföyde vadesi geçmiş alacak yok.", "Portföyde vadesi geçmiş alacak yok.")
+    if kpi.get("onayBekleyen"):
+        s = f"{int(num(kpi['onayBekleyen']))} tahsilat kaydı finans onayı bekliyor."
+        add(s, s)
+    return masked, plain, names
+
+
+def morning_rule_text(plain: list[str]) -> str:
+    """Modelsiz brif: olgular olduğu gibi (en çok 5 cümle)."""
+    return " ".join(plain[:5])
+
+
+def morning_brief(facts: list[str], plain: list[str], names: dict[str, str], llm: Any) -> dict[str, Any]:
+    """Zeki AI brifi ya da kural metni. Model metninde bilinmeyen etiket ya da olgu dışı sayı varsa kural metni."""
+    from semantic_bridge import zeki_text as Z
+
+    rule = morning_rule_text(plain)
+    res = Z.interpret(facts, rule, llm=llm, task=MORNING_TASK, min_sentences=4, max_sentences=5, max_chars=900,
+                      max_tokens=400, check_facts=[])
+    text, kaynak, neden = res.metin, res.kaynak, res.neden
+    if kaynak == "zeki":
+        tags = set(re.findall(r"\[([A-Z])\]", text))
+        if not tags <= set(names):
+            text, kaynak, neden = rule, "kural", "bilinmeyen-etiket"
+        else:
+            text = re.sub(r"\[([A-Z])\]", lambda m: names[m.group(1)], text)
+    return {"metin": text, "kaynak": kaynak, "neden": neden}
 
 
 def summary_prompt(facts: list[str]) -> str:

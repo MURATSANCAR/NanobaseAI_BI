@@ -860,6 +860,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET", "POST"}), r"^/api/v1/finance/cash(/.*)?$", "ozellik:finans.nakit"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/finance/tax-calendar(/.*)?$", "ozellik:finans.vergi-takvimi"),
     (frozenset({"POST"}), r"^/api/v1/finance/notes$", "ozellik:finans.sapma-notu"),
+    # Aylık finansal yorum taslağı (Zeki AI) ve düzeltmesi; onay açıkça verilen `finans.yorum-onay` ile ucun içinde.
+    (frozenset({"POST", "PUT"}), r"^/api/v1/finance/commentary(/draft)?$", "ozellik:finans.yorum"),
     (frozenset({"GET"}), r"^/api/v1/finance/(pnl/export\.xlsx|profitability/export\.csv)$", "ozellik:veri.disa-aktar"),
     # İlk dağılım: öneri, düzeltme, onaya gönderme, revizyon, takip ve liste yenileme. Onay/geri gönderme açıkça
     # verilen `dagilim.onay` ile ucun içinde; sevk listesi (Excel) dışa aktarma yetkisiyle.

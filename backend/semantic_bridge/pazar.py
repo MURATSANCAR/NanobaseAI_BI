@@ -31,6 +31,9 @@ from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
+# Sayı yazımı tek yerde (`zeki_text.parse_number`): «12.345» hem TR binlik hem EN ondalık okunur.
+from semantic_bridge.zeki_text import parse_number
+
 log = logging.getLogger("semantic.pazar")
 _md = sa.MetaData()
 
@@ -355,44 +358,6 @@ _NUM = re.compile(r"(?<![\w.,])[-+]?\d{1,3}(?:[.\s]\d{3})+(?:,\d+)?(?![\d])|(?<!
 _SCALE = {"bin": 1e3, "milyon": 1e6, "mn": 1e6, "milyar": 1e9, "mlr": 1e9, "trilyon": 1e12}
 
 
-def parse_number(tok: str) -> list[tuple[float, int]]:
-    """Bir sayı yazımının olası değerleri ve ondalık basamağı. «12.345» hem 12345 (TR) hem 12,345 (EN) olabilir;
-    ikisi de döner, karar metindeki bağlamla verilir."""
-    t = tok.replace(" ", "").replace(" ", "").lstrip("+")
-    out: list[tuple[float, int]] = []
-    neg = t.startswith("-")
-    t = t.lstrip("-")
-    if not t:
-        return out
-
-    def add(s: str, dec: int) -> None:
-        try:
-            v = float(s)
-        except ValueError:
-            return
-        out.append((-v if neg else v, dec))
-
-    if "," in t and "." in t:
-        if t.rfind(",") > t.rfind("."):      # 1.234,5 (TR)
-            add(t.replace(".", "").replace(",", "."), len(t) - t.rfind(",") - 1)
-        else:                                # 1,234.5 (EN)
-            add(t.replace(",", ""), len(t) - t.rfind(".") - 1)
-    elif "," in t:
-        parts = t.split(",")
-        add(t.replace(",", "."), len(parts[-1]) if len(parts) == 2 else 0)            # 12,5 (TR ondalık)
-        if all(len(p) == 3 for p in parts[1:]):
-            add(t.replace(",", ""), 0)                                                  # 12,345 (EN binlik)
-    elif "." in t:
-        parts = t.split(".")
-        if all(len(p) == 3 for p in parts[1:]):
-            add(t.replace(".", ""), 0)                                                  # 12.345 (TR binlik)
-        if len(parts) == 2:
-            add(t, len(parts[1]))                                                       # 12.5 (EN ondalık)
-    else:
-        add(t, 0)
-    return out
-
-
 def numbers_in(text: str) -> list[dict[str, Any]]:
     """Metindeki sayılar: yazım, olası değerler, ölçek sözcüğü (bin/milyon/milyar)."""
     out = []
@@ -438,27 +403,14 @@ def value_in_text(value_text: str, text: str) -> Optional[float]:
     return None
 
 
-def _matches(n: dict[str, Any], value: float) -> bool:
-    for v, dec in n["values"]:
-        scaled = v * n["scale"]
-        tol = 0.5 * (10 ** -dec) * n["scale"]
-        if abs(scaled - value) <= tol + 1e-9 or abs(v - value) <= 0.5 * (10 ** -dec) + 1e-9:
-            return True
-    return False
-
-
-def unsupported_numbers(text: str, values: Iterable[float]) -> list[str]:
+def unsupported_numbers(text: str, values: Iterable[Any]) -> list[str]:
     """Cümledeki, bağlandığı kaynakların hiçbir değeriyle (yuvarlama payıyla) tutmayan sayılar. Yıllar (1900–2100) ve
-    kaynak kimliğindeki numara ([K3]) sayılmaz."""
+    kaynak kimliğindeki numara ([K3]) sayılmaz. Denetim: `zeki_text` (tek sayı denetçisi); değerler sayı ya da dönem
+    yazımı gibi metin olabilir."""
+    from semantic_bridge import zeki_text as Z
+
     body = re.sub(r"\[K\d+\]", " ", text or "")
-    vals = [float(v) for v in values if v is not None]
-    bad = []
-    for n in numbers_in(body):
-        if any(1900 <= v <= 2100 and dec == 0 for v, dec in n["values"]) and n["scale"] == 1.0:
-            continue
-        if not any(_matches(n, v) for v in vals):
-            bad.append(n["text"])
-    return bad
+    return Z.unsupported(body, [v for v in values if v is not None], free_years=True)
 
 
 def fmt_tr(v: Optional[float], dec: int = 0) -> str:
@@ -1667,9 +1619,9 @@ def check_sentence(text: str, cited: list[str], by_id: dict[str, dict[str, Any]]
     ids = [c for c in cited if c in by_id]
     if not ids:
         return "kaynağa bağlı değil"
-    vals: list[float] = [by_id[i]["deger"] for i in ids]
+    vals: list[Any] = [by_id[i]["deger"] for i in ids]
     for i in ids:     # dönem yazımındaki gün/ay/yıl sayıları («1 Ocak – 17.08 2026») da kaynağın parçasıdır
-        vals += [v for n in numbers_in(str(by_id[i].get("donem") or "")) for v, _ in n["values"]]
+        vals.append(str(by_id[i].get("donem") or ""))
     bad = unsupported_numbers(text, vals)
     if bad:
         return "kaynakta olmayan sayı: " + ", ".join(bad)

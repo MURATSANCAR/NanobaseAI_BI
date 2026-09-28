@@ -111,18 +111,13 @@ def _fold(s: str) -> str:
 
 
 def _tckn_ok(s: str) -> bool:
-    d = [int(ch) for ch in s]
-    if len(d) != 11 or d[0] == 0:
-        return False
-    if ((sum(d[0:9:2]) * 7 - sum(d[1:8:2])) % 10) != d[9]:
-        return False
-    return sum(d[:10]) % 10 == d[10]
+    from semantic_bridge import zeki_text as Z
+
+    return Z.tckn_valid(s)
 
 
-_TCKN = re.compile(r"(?<!\d)([1-9]\d{10})(?!\d)")
-_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_IBAN = re.compile(r"\bTR\s?\d{2}(?:\s?\d{4}){5}\s?\d{2}\b", re.I)
-_PHONE = re.compile(r"(?<![\d/.])(?:\+?90[\s.-]?)?\(?0?[2-5]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}(?![\d/.])")
+#: Ortak maskenin (`zeki_text.mask_personal`) türleri → bu modülün sayaç adları.
+_COUNT_NAMES = {"tckn": "kimlik", "iban": "IBAN", "email": "e-posta", "phone": "telefon"}
 #: Etiketli satır (satır başında «Etiket:» ya da «Etiket  değer»): bütün satır gizlenir. Katlanmış (ascii) yazılır.
 _LABELS = [
     ("dogum tarihi", "doğum tarihi"), ("dogum yeri", "doğum yeri"), ("d. tarihi", "doğum tarihi"), ("d.tarihi", "doğum tarihi"),
@@ -144,7 +139,11 @@ _SPECIAL = re.compile(r"\b(sendika\w*|sabika\w*|adli sicil\w*|hukumlu\w*|mahkum\
 
 
 def rule_mask(text: str) -> tuple[str, dict[str, int]]:
-    """Kural maskesi. Dönen: (maskeli metin, tür → gizlenen sayısı). Satır sayısı ve sırası korunur."""
+    """Kural maskesi. Dönen: (maskeli metin, tür → gizlenen sayısı). Satır sayısı ve sırası korunur. Etiketli ve özel
+    nitelikli satır bütünüyle gizlenir; satır içi iletişim/kimlik bilgisi ortak maskeyle (`zeki_text.mask_personal`,
+    kimlik no yalnız sağlaması tutuyorsa)."""
+    from semantic_bridge import zeki_text as Z
+
     counts: dict[str, int] = {}
 
     def bump(k: str, n: int = 1) -> None:
@@ -163,23 +162,11 @@ def rule_mask(text: str) -> tuple[str, dict[str, int]]:
             bump("özel nitelikli")
             out.append(MASK_SPECIAL)
             continue
-
-        def tckn(mm: re.Match) -> str:
-            if _tckn_ok(mm.group(1)):
-                bump("kimlik")
-                return "[kimlik no gizlendi]"
-            return mm.group(0)
-
-        line = _TCKN.sub(tckn, line)
-        line, n = _IBAN.subn("[IBAN gizlendi]", line)
-        if n:
-            bump("IBAN", n)
-        line, n = _EMAIL.subn("[e-posta gizlendi]", line)
-        if n:
-            bump("e-posta", n)
-        line, n = _PHONE.subn("[telefon gizlendi]", line)
-        if n:
-            bump("telefon", n)
+        found: dict[str, int] = {}
+        line = Z.mask_personal(line, kinds=("tckn", "iban", "email", "phone"), labels=Z.LABELS_HIDDEN, tckn="checksum",
+                               counts=found)
+        for kind, n in found.items():
+            bump(_COUNT_NAMES.get(kind, kind), n)
         out.append(line)
     return "\n".join(out), counts
 
@@ -454,9 +441,6 @@ SOFTEN_SYSTEM = ("Sen bir İK yazışma editörüsün. Verilen mektubu daha nazi
                  "ad, pozisyon, birim, tarih, saat, yer ve şirket adını AYNEN korursun; yeni bilgi, gerekçe, sayı ya da tarih "
                  "eklemezsin; adayın değerlendirmesi hakkında hiçbir şey yazmazsın. Yalnız mektup metnini yaz.")
 
-_DIGITS = re.compile(r"\d+")
-
-
 def soften(text: str, keep: list[str], chat: Callable[[list[dict[str, str]]], str]) -> tuple[str, Optional[str]]:
     """Model yeniden yazar; korunması gereken değer kaybolur ya da yeni sayı belirirse model çıktısı atılır.
     Dönen: (metin, not). Not doluysa şablon metni kaldı."""
@@ -466,7 +450,8 @@ def soften(text: str, keep: list[str], chat: Callable[[list[dict[str, str]]], st
     lost = [k for k in keep if k and k not in raw]
     if lost:
         return text, "Zeki AI metninde şablondaki bir bilgi kayboldu; şablon metni kaldı."
-    new_nums = set(_DIGITS.findall(raw)) - set(_DIGITS.findall(text))
-    if new_nums:
+    from semantic_bridge import zeki_text as Z
+
+    if Z.unsupported(raw, text):          # tek sayı denetçisi: şablonda olmayan sayı/tarih
         return text, "Zeki AI metnine şablonda olmayan bir sayı girdi; şablon metni kaldı."
     return raw, None

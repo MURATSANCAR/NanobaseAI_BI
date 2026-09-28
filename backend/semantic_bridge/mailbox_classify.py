@@ -113,8 +113,19 @@ def fold(s: str) -> str:
 
 
 def _clip(text: str, n: int) -> str:
-    text = re.sub(r"\n{3,}", "\n\n", (text or "").strip())
+    """Modele giden gövde: kişisel veri maskeli (`zeki_text.mask_personal`: e-posta, telefon, IBAN, kart, kimlik no)
+    ve bağlam penceresine kırpılmış. Başvuru alanlarının metinde aranması maskesiz metinde yapılır."""
+    from semantic_bridge import zeki_text as Z
+
+    text = Z.mask_personal(re.sub(r"\n{3,}", "\n\n", (text or "").strip()))
     return text if len(text) <= n else text[:n] + "\n[…metnin devamı modele verilmedi]"
+
+
+def _sender(item: Any) -> str:
+    """Modele giden gönderen: ad ve maskeli adres (alan adı sınıflamada işe yarar, kişinin adresi gitmez)."""
+    from semantic_bridge import zeki_text as Z
+
+    return f"{item.from_name or '-'} <{Z.mask_address(item.from_addr)}>"
 
 
 def choose(llm: Any, prompt: str, labels: list[str], thresholds: dict[str, float]) -> dict[str, Any]:
@@ -160,7 +171,7 @@ def classify(llm: Any, item: Any, categories: list[dict[str, Any]], crm: dict[st
     """Tür ve öncelik. Dönen: {"category": key|None, "category_prob", "category_margin", "category_method", "unsure",
     "auto", "priority", "priority_prob", "evidence"}. Geçmiş iletide (`with_priority=False`) yalnız tür sorulur."""
     body = _clip(item.text, st["bodyChars"])
-    sender = f"{item.from_name or '-'} <{item.from_addr}>"
+    sender = _sender(item)
     atts = ", ".join(a.name for a in item.attachments) or "yok"
     catalog = "\n".join(f"- {c['label']}: {c.get('description') or '-'}" for c in categories)
     r = choose(llm, CATEGORY_PROMPT.format(sender=sender, crm=_crm_text(crm), labels=", ".join(item.labels) or "-",
@@ -247,12 +258,13 @@ def draft_reply(llm: Any, item: Any, category_label: str, template: Optional[str
                                                                        body=_clip(item.text, st["bodyChars"]))}],
                      max_tokens=700, temperature=0.3) or "").strip()
     text = re.sub(r"^(yanıt taslağı\s*:\s*)", "", text, flags=re.I).strip()
-    tmpl_numbers = set(re.findall(r"\d+", template or ""))
+    from semantic_bridge import zeki_text as Z
+
+    allowed = Z.Facts(template or "")
     kept = []
     for line in text.splitlines():
-        nums = set(re.findall(r"\d+", line))
-        if nums and not nums <= tmpl_numbers:
-            continue                      # söz/tarih/rakam: yalnız şablondaki rakam kalabilir
+        if Z.unsupported(line, allowed):
+            continue                      # söz/tarih/rakam: yalnız şablondaki sayı kalabilir (tek sayı denetçisi)
         kept.append(line)
     return "\n".join(kept).strip()[:8000]
 

@@ -204,6 +204,14 @@ def m45(ctx: Ctx) -> dict[str, dict[str, Any]]:
     card("faaliyet", "faaliyet_gideri", "Bu yılın muhasebe fişleri okunmadı.")
     card("nakit", "kasa_banka", "Kasa ve banka bakiyesi okunmadı.")
     card("vadesi-gecmis", "vadesi_gecmis_alacak", "13 haftalık nakit tablosu henüz hazırlanmadı.")
+    # M45'in CFO onaylı son aylık yorumu (Zeki AI taslağı + insan onayı) net satış göstergesinin ayrıntısına eklenir.
+    try:
+        yorum = F.approved_comment(ctx.engine, ctx.tenant)
+    except Exception as e:  # noqa: BLE001 — yorum okunamazsa gösterge düşmez
+        log.info("kurul: M45 aylık yorumu okunamadı: %s", e)
+        yorum = None
+    if yorum and isinstance((out.get("net_satis") or {}).get("ayrinti"), dict):
+        out["net_satis"]["ayrinti"]["aylikYorum"] = yorum
     return out
 
 

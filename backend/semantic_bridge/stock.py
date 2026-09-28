@@ -237,11 +237,19 @@ def open_cards(cards: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 
 
 def forecast_window(fc: dict[str, Any], code: str) -> Optional[dict[str, Any]]:
-    """Zeki AI aylık tahmininden 30/60/90 gün (ilk 1/2/3 ay, tahmin başlangıcından)."""
+    """Zeki AI aylık tahmininden 30/60/90 gün (ilk 1/2/3 ay, tahmin başlangıcından), p50."""
     p50 = (fc.get("p50") or {}).get(code)
     if not p50:
         return None
     return {"baslangic": fc.get("start"), "g30": round(sum(p50[:1])), "g60": round(sum(p50[:2])), "g90": round(sum(p50[:3]))}
+
+
+def forecast_range(fc: dict[str, Any], code: str) -> Optional[dict[str, Any]]:
+    """Aynı pencerelerin aralığı (tek istemci `forecast_client`): {"g30": {"p10","p50","p90","aralik"}, …}. Önbellekte
+    p10/p90 yoksa `aralik` False ve yalnız p50 (aralık uydurulmaz)."""
+    from semantic_bridge import forecast_client
+
+    return forecast_client.window(fc, code)
 
 
 # ------------------------------------------------------------------ model
@@ -331,6 +339,7 @@ def build(raw: dict[str, Any], s: dict[str, Any], thresholds: dict[str, dict[str
             "fark": diff[1] if diff else None, "farkSinif": diff[0] if diff else None,
             "farkEtiket": DIFF_CLASSES[diff[0]] if diff else None,
             "tahmin": forecast_window(fc, k),
+            "tahminAralik": forecast_range(fc, k),
         })
     return {"items": items, "byCode": {i["stokKodu"]: i for i in items}, "dataEnd": data_end.isoformat() if data_end else None,
             "lead": lead, "leadSource": lead_src, "settings": s, "shelves": shelves_by,

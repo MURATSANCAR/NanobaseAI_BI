@@ -8,7 +8,7 @@ import { BookCell, StatePill, num } from './parts';
  *  kapsayıcısında kayar (sayfa taşmaz). */
 
 export type Col = 'bakiye' | 'crmRaf' | 'hiz' | 'gun' | 'tukenme' | 'bekleyen' | 'durum' | 'uretim' | 'fark' | 'aktarim'
-  | 'devir' | 'sonHareket' | 'net12' | 'deger' | 'kritik';
+  | 'devir' | 'sonHareket' | 'net12' | 'deger' | 'kritik' | 'tahmin90';
 
 const SPEC: Record<Col, { head: string; right?: boolean; cell: (i: Item) => ReactNode }> = {
   bakiye: { head: 'Logo stok', right: true, cell: (i) => n0(i.bakiye) },
@@ -68,11 +68,26 @@ const SPEC: Record<Col, { head: string; right?: boolean; cell: (i: Item) => Reac
   devir: { head: 'Devir hızı', right: true, cell: (i) => (i.devirHizi === null ? '—' : n1(i.devirHizi)) },
   sonHareket: { head: 'Son hareket', cell: (i) => (i.sonHareket ? fmtDay(i.sonHareket) : 'pencerede yok') },
   net12: { head: '12 ay net satış', right: true, cell: (i) => n0(i.netSatis12) },
+  tahmin90: {
+    head: 'Tahmin · 90 gün',
+    right: true,
+    cell: (i) => {
+      const b = i.tahminAralik?.g90;
+      if (!b || b.p50 === null) return <span className="text-canvas-muted">—</span>;
+      return (
+        <>
+          {n0(b.p50)}
+          {b.aralik ? <div className="text-[11px] text-canvas-muted">{n0(b.p10)}–{n0(b.p90)}</div> : null}
+        </>
+      );
+    },
+  },
   deger: { head: 'Stok değeri', right: true, cell: (i) => (i.stokDegeri === undefined ? '—' : i.stokDegeri === null ? 'maliyet yok' : tl(i.stokDegeri)) },
 };
 
 export default function ItemList({ items, cols, action }: { items: Item[]; cols: Col[]; action?: (i: Item) => ReactNode }) {
-  const shown = cols.filter((c) => c !== 'deger' || items.some((i) => i.stokDegeri !== undefined));
+  const shown = cols.filter((c) => (c !== 'deger' || items.some((i) => i.stokDegeri !== undefined))
+    && (c !== 'tahmin90' || items.some((i) => i.tahminAralik?.g90)));
   return (
     <>
       <ul className="flex flex-col gap-2 md:hidden">

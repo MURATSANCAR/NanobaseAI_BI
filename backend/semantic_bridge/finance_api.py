@@ -108,7 +108,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 "me": {"username": user, "display": display, "canCash": can(user, "ozellik:finans.nakit"),
                        "canMap": can(user, "ozellik:finans.esleme"), "canClose": can(user, "ozellik:finans.kapanis"),
                        "canTax": can(user, "ozellik:finans.vergi-takvimi"), "canNote": can(user, "ozellik:finans.sapma-notu"),
-                       "canExport": can(user, "ozellik:veri.disa-aktar")}}
+                       "canExport": can(user, "ozellik:veri.disa-aktar"),
+                       "canComment": can(user, "ozellik:finans.yorum"),
+                       "canApproveComment": can(user, "ozellik:finans.yorum-onay")}}
 
     @app.get("/api/v1/finance/status")
     def finance_status(request: Request) -> dict[str, Any]:
@@ -171,6 +173,62 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def finance_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         return call(F.summary, engine, tenant, with_cash=can(user, "ozellik:finans.nakit"))
+
+    # ------------------------------------------------------------------ aylık finansal yorum taslağı (Zeki AI → CFO onayı)
+
+    def comment_period(engine, year: int | None, month: int | None) -> tuple[int, int]:
+        end = F.data_end(engine)
+        try:
+            y = int(year) if year else (end.year if end else date.today().year)
+            m = int(month) if month else (_last_closed_month(end) or (end.month if end else 12))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail={"code": "FINANCE", "message": "Yıl ve ay sayı olmalı."}) from None
+        return y, m
+
+    @app.get("/api/v1/finance/commentary")
+    def finance_commentary(request: Request, year: int | None = None, month: int | None = None) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        y, m = comment_period(engine, year, month)
+        out = call(F.comment_get, engine, tenant, y, m)
+        out.pop("olgular", None)
+        return out
+
+    @app.post("/api/v1/finance/commentary/draft")
+    async def finance_commentary_draft(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Zeki AI taslağı (etkileşimli öncelik). Model yoksa ya da metin sayı denetiminden geçmezse kural metni yazılır;
+        `kaynak` ve `neden` bunu söyler. Yetki: `ozellik:finans.yorum` (FEATURE_RULES)."""
+        engine, tenant, user, _ = await run_in_threadpool(ctx, request)
+        y, m = comment_period(engine, body.get("year"), body.get("month"))
+        from semantic_layer.runtime.llm_queue import INTERACTIVE
+
+        llm = rt().llm_for("finance", INTERACTIVE)
+        out = await run_in_threadpool(call, F.comment_draft, engine, tenant, user, y, m, llm,
+                                      with_cash=can(user, "ozellik:finans.nakit"), unit_costs=unit_costs, snapshot=snapshot())
+        audit(engine, user, "create", "finance_commentary", out.get("id"), f"Aylık finansal yorum taslağı — {out['donem']}",
+              {"kaynak": out.get("kaynak"), "neden": out.get("neden"), "metin": (out.get("metin") or "")[:300]})
+        out.pop("olgular", None)
+        return out
+
+    @app.put("/api/v1/finance/commentary")
+    def finance_commentary_save(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        y, m = comment_period(engine, body.get("year"), body.get("month"))
+        out, diff = call(F.comment_save, engine, tenant, user, y, m, body.get("metin"))
+        audit(engine, user, "update", "finance_commentary", out.get("id"), f"Aylık finansal yorum — {out['donem']}", diff)
+        out.pop("olgular", None)
+        return out
+
+    @app.post("/api/v1/finance/commentary/approve")
+    def finance_commentary_approve(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """CFO onayı: açıkça verilen `ozellik:finans.yorum-onay` (ucun içinde denetlenir)."""
+        engine, tenant, user, _ = ctx(request)
+        need(user, "ozellik:finans.yorum-onay", "Aylık yorum onayı")
+        y, m = comment_period(engine, body.get("year"), body.get("month"))
+        out = call(F.comment_approve, engine, tenant, user, y, m)
+        audit(engine, user, "approve", "finance_commentary", out.get("id"), f"Aylık finansal yorum onaylandı — {out['donem']}",
+              {"metin": (out.get("metin") or "")[:300]})
+        out.pop("olgular", None)
+        return out
 
     @app.get("/api/v1/finance/pnl")
     def finance_pnl(request: Request, year: int | None = None, month: int | None = None, grain: str = "ay",

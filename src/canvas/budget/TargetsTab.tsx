@@ -28,7 +28,10 @@ function Explain({ b }: { b: BookTarget }) {
   const rows: Array<[string, string]> = [['Yöntem', METHOD[String(o.yontem)] ?? '—']];
   if (o.yontem === 'gecmis' || o.yontem === 'tahmin') {
     rows.push(['Taban dönem satışı', `${fmtInt(Number(o.gecmisAdet ?? 0))} adet · ${fmtMoney(Number(o.gecmisCiro ?? 0))}`]);
-    if (o.tahminAdet !== null && o.tahminAdet !== undefined) rows.push(['ZEKİ AI tahmini (12 ay)', `${fmtInt(Number(o.tahminAdet))} adet`]);
+    if (o.tahminAdet !== null && o.tahminAdet !== undefined) rows.push(['ZEKİ AI tahmini (12 ay, temel)', `${fmtInt(Number(o.tahminAdet))} adet`]);
+    const band = (b.oneri as { tahminBandi?: { p10: number | null; p50: number | null; p90: number | null; aralik: boolean } | null }).tahminBandi;
+    if (band?.aralik) rows.push(['Tahmin aralığı (12 ay)', `muhafazakâr ${fmtInt(Number(band.p10))} · temel ${fmtInt(Number(band.p50))} · iyimser ${fmtInt(Number(band.p90))} adet`]);
+    if (o.tahminKantil && o.tahminKantil !== 'p50') rows.push(['Senaryo tabanı', o.tahminKantil === 'p10' ? 'Tahminin alt sınırı (muhafazakâr)' : 'Tahminin üst sınırı (iyimser)']);
   }
   if (o.yontem === 'kohort') {
     rows.push(['Kaynak', String(o.kaynak ?? '—')]);

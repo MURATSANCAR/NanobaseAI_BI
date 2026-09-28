@@ -349,3 +349,37 @@ def test_access_rules_for_field_endpoints():
     assert f("GET", "/api/v1/field/report/weekly.xlsx") == ["ozellik:veri.disa-aktar"]
     assert {"ozellik:saha.herkesinki", "ozellik:saha.odeme-plani-onay", "ozellik:saha.performans"} <= A.explicit_keys()
     assert "sayfa:saha" in A.all_keys()
+
+
+# ------------------------------------------------------------------ sabah saha brifi
+
+
+class _BriefLlm:
+    def __init__(self, text):
+        self.text = text
+
+    def chat(self, messages, **kw):
+        return self.text
+
+
+def test_morning_brief_masks_names_and_falls_back_to_rule_text():
+    kpi = {"vadesiGecmis": 42_350.0, "k90": 12_000.0, "onayBekleyen": 2}
+    planned = [{"hedef": "120.01", "hedefAd": "Ayşe Yılmaz", "planlanan": "2026-09-28T10:30", "musteri": None}]
+    top = [{"code": "120.01", "unvan": "Ayşe Yılmaz", "il": "İstanbul", "kanal": "Kitapçı", "gerekce": [{"label": "Vadesi geçmiş 42 bin ₺"}]},
+           {"code": "120.02", "unvan": "Deniz Kitabevi", "il": "Ankara", "kanal": None, "gerekce": []}]
+    facts, plain, names = F.morning_facts(kpi, planned, top, "2026-09-28")
+    blob = " ".join(facts)
+    assert "Ayşe" not in blob and "Deniz" not in blob and "[A]" in blob and "[B]" in blob   # ad modele gitmez
+    assert names == {"A": "Ayşe Yılmaz", "B": "Deniz Kitabevi"}
+    rule = F.morning_rule_text(plain)
+    assert "Ayşe Yılmaz 10:30" in rule and "42 bin ₺" in rule and len(plain) == 5
+    ok = F.morning_brief(facts, plain, names, _BriefLlm("Bugün [A] ziyareti 10:30'da. Öncelik [B]. Vadesi geçmiş 42 bin ₺."))
+    assert ok["kaynak"] == "zeki" and "Ayşe Yılmaz" in ok["metin"] and "[A]" not in ok["metin"]
+    bad = F.morning_brief(facts, plain, names, _BriefLlm("[A] 99 bin ₺ ödeyecek."))        # uydurma rakam
+    assert bad["kaynak"] == "kural" and bad["metin"] == rule
+    unk = F.morning_brief(facts, plain, names, _BriefLlm("[C] ile görüşün."))               # bilinmeyen etiket
+    assert unk["kaynak"] == "kural" and unk["neden"] == "bilinmeyen-etiket"
+    assert F.morning_brief(facts, plain, names, None)["kaynak"] == "kural"
+    empty, _, _ = F.morning_facts({"vadesiGecmis": 0}, [], [], "2026-09-28")
+    assert empty == ["Bugün (2026-09-28) planlı ziyaret yok.", "Portföyde vadesi geçmiş alacak yok."]
+    assert A.features_for("GET", "/api/v1/field/today/brief") == []

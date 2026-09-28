@@ -122,17 +122,38 @@ export default function StockItem() {
                 {it.stokDegeri !== undefined && <Fact k="Stok değeri" v={it.stokDegeri === null ? 'maliyet yok' : tl(it.stokDegeri)} />}
               </dl>
               <div className="mt-3 rounded-xl bg-violet-50/70 p-3 text-[12px]">
-                <div className="font-extrabold">Zeki AI talep tahmini</div>
+                <div className="flex flex-wrap items-center gap-1.5 font-extrabold">
+                  Zeki AI talep tahmini
+                  <span className="rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-canvas-violet">tahmin</span>
+                </div>
                 {it.tahmin ? (
-                  <div className="mt-1 grid grid-cols-3 gap-2 font-mono tabular-nums">
-                    <span>30 gün: {n0(it.tahmin.g30)}</span>
-                    <span>60 gün: {n0(it.tahmin.g60)}</span>
-                    <span>90 gün: {n0(it.tahmin.g90)}</span>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                    {(['g30', 'g60', 'g90'] as const).map((k, idx) => {
+                      const band = it.tahminAralik?.[k];
+                      return (
+                        <div key={k} className="min-w-0 rounded-lg bg-white/70 px-2 py-1.5">
+                          <div className="text-[10.5px] font-bold text-canvas-muted">{(idx + 1) * 30} gün</div>
+                          <div className="font-mono text-[14px] font-bold tabular-nums">{n0(it.tahmin?.[k])}</div>
+                          {band?.aralik && (
+                            <div className="font-mono text-[10.5px] tabular-nums text-canvas-muted" title="Muhafazakâr (p10) – iyimser (p90)">
+                              {n0(band.p10)}–{n0(band.p90)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="mt-1 text-canvas-muted">Bu kitap için tahmin yok.</div>
                 )}
-                {it.tahmin?.baslangic && <div className="mt-1 text-[11px] text-canvas-muted">Tahmin {fmtDay(it.tahmin.baslangic)} ayından başlar; okul sezonu zirvesini eksik tahmin ettiği biliniyor.</div>}
+                {it.tahmin && (
+                  <div className="mt-1.5 text-[11px] leading-snug text-canvas-muted">
+                    {it.tahminAralik?.aralik
+                      ? 'Büyük sayı temel tahmin (p50); altındaki aralık muhafazakâr (p10) – iyimser (p90), aylık aralıkların toplamı. '
+                      : 'Bu tahminde aralık yok; yalnız temel tahmin (p50) gösteriliyor. '}
+                    {it.tahmin.baslangic ? `Tahmin ${fmtDay(it.tahmin.baslangic)} ayından başlar; okul sezonu zirvesini eksik tahmin ettiği biliniyor.` : ''}
+                  </div>
+                )}
               </div>
             </Panel>
 

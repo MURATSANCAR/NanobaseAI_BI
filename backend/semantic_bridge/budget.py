@@ -12,8 +12,9 @@ verinin bittiği aydan önceki son 12 tam ay (veri 17.08.2026'da bitiyorsa Ağus
 
 **Öneri (model yok, gerekçesi satırda):**
 - *Backlist* (ilk yayını taban penceresinin sonundan önce): taban adet = penceredeki net adet; plan yılı verinin
-  ötesindeyse ve kitap Baskı Öneri'nin ZEKİ AI 12 aylık tahmininde varsa taban = tahminin p50 toplamı (tahmin
-  pencereden sonraki 12 aydır). Hedef adet = taban × (1 + hacim büyümesi); birim fiyat = penceredeki net birim fiyat ×
+  ötesindeyse ve kitap Baskı Öneri'nin ZEKİ AI 12 aylık tahmininde varsa taban = tahminin senaryo kantili toplamı
+  (muhafazakâr p10, temel p50, iyimser p90; kantil önbellekte yoksa p50 — tek istemci `forecast_client`; tahmin
+  pencereden sonraki 12 aydır). Satırda 12 aylık bant (`tahminBandi`) ve planda toplam bant (`basis.tahmin.bant`) durur. Hedef adet = taban × (1 + hacim büyümesi); birim fiyat = penceredeki net birim fiyat ×
   (1 + fiyat artışı); marj = kitabın maliyetli satırlarındaki marj (yoksa yayınevinin, o da yoksa şirketin) + marj
   değişimi. Tabanda satışı olmayan kitap öneriye girmez (elle eklenebilir).
 - *Yeni kitap* (ilk yayını pencere sonundan plan yılı sonuna): pencerede çıkan kitapların (kohort) yayınevi bazında
@@ -503,11 +504,18 @@ def _margin(maliyet: float, maliyetli_ciro: float) -> Optional[float]:
     return 1 - maliyet / maliyetli_ciro if maliyetli_ciro > 0 else None
 
 
-def _forecast_total(fc: dict[str, Any], code: str) -> Optional[float]:
-    vals = (fc.get("p50") or {}).get(code)
-    if not vals:
-        return None
-    return float(sum(vals[:12]))
+def _forecast_total(fc: dict[str, Any], code: str, quantile: str = "p50") -> Optional[float]:
+    from semantic_bridge import forecast_client as FC
+
+    return FC.total(fc, code, quantile, 12)
+
+
+def _forecast_band(fc: dict[str, Any], code: str) -> Optional[dict[str, Any]]:
+    """Kitabın 12 aylık tahmin bandı (p10/p50/p90, yuvarlanmış); kantil yoksa `aralik: False` (uydurulmaz)."""
+    from semantic_bridge import forecast_client as FC
+
+    b = FC.band(fc, code, range(12))
+    return None if b is None else {**FC.rounded(b), **{k: b[k] for k in ("aralik", "not")}}
 
 
 def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params: dict[str, Any],
@@ -519,6 +527,11 @@ def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params:
     p = float(params.get("fiyat") or 0)
     dm = float(params.get("marjDegisim") or 0)
     use_fc = bool(params.get("tahmin")) and bool(forecast)
+    # Senaryo ↔ tahmin kantili: muhafazakâr = p10, temel = p50, iyimser = p90 (kantil önbellekte yoksa p50).
+    from semantic_bridge import forecast_client as FC
+
+    fc_q = FC.SCENARIO_QUANTILE.get(scenario, "p50")
+    band_tot = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "kitap": 0, "aralikli": 0}
     info = _book_info(engine)
     sales = _sales_by_code(engine, w["start"], w["end"])
     w_end_day = date(*from_index(w["end"]), 1)
@@ -621,7 +634,17 @@ def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params:
         if d0 and date.fromisoformat(d0) >= w_end_day:
             continue
         fc_total = _forecast_total(forecast or {}, code) if use_fc else None
-        base = fc_total if fc_total is not None else s["adet"]
+        fc_scn = _forecast_total(forecast or {}, code, fc_q) if use_fc and fc_q != "p50" else fc_total
+        fc_band = _forecast_band(forecast or {}, code) if fc_total is not None else None
+        if fc_band is not None:
+            band_tot["kitap"] += 1
+            band_tot["p50"] += fc_band["p50"] or 0
+            if fc_band["aralik"]:
+                band_tot["aralikli"] += 1
+                band_tot["p10"] += fc_band["p10"] or 0
+                band_tot["p90"] += fc_band["p90"] or 0
+        fc_base = fc_scn if fc_scn is not None else fc_total
+        base = fc_base if fc_base is not None else s["adet"]
         if base <= 0:
             continue
         adet = round(base * (1 + g))
@@ -645,6 +668,8 @@ def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params:
                       "oneri": {"yontem": "tahmin" if fc_total is not None else "gecmis", "tabanAdet": round(base, 2),
                                 "gecmisAdet": round(s["adet"], 2), "gecmisCiro": round(s["ciro"], 2),
                                 "tahminAdet": None if fc_total is None else round(fc_total, 2),
+                                "tahminKantil": (fc_q if fc_scn is not None else "p50") if fc_total is not None else None,
+                                "tahminBandi": fc_band,
                                 "birimFiyat": round(unit_p, 2), "hacim": g, "fiyat": p, "marjKaynak": mlabel}})
 
     # yeni kitap programı
@@ -679,7 +704,15 @@ def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params:
 
     basis = {"pencere": w["label"], "pencereBas": "%04d-%02d" % from_index(w["start"]),
              "pencereSon": "%04d-%02d" % from_index(w["end"] - 1), "veriSonu": end.isoformat() if end else None,
-             "tahmin": {"kullanildi": use_fc, "baslangic": (forecast or {}).get("start")},
+             "tahmin": {"kullanildi": use_fc, "baslangic": (forecast or {}).get("start"),
+                        # senaryonun tabanı hangi kantil (önbellekte o kantil yoksa p50) ve 12 aylık tahmin bandı
+                        # (tahminli backlist kitapları; aylık aralıkların toplamı). Aralık yoksa p10/p90 None.
+                        "kantil": (fc_q if FC.has_range(forecast or {}) or fc_q == "p50" else "p50") if use_fc else None,
+                        "bant": ({"kitap": band_tot["kitap"], "p50": round(band_tot["p50"]),
+                                  "p10": round(band_tot["p10"]) if band_tot["aralikli"] == band_tot["kitap"] else None,
+                                  "p90": round(band_tot["p90"]) if band_tot["aralikli"] == band_tot["kitap"] else None,
+                                  "aralik": band_tot["kitap"] > 0 and band_tot["aralikli"] == band_tot["kitap"]}
+                                 if use_fc and band_tot["kitap"] else None)},
              "dagilim": {"adet": [round(x, 6) for x in normalized(month_adet)],
                          "ciro": [round(x, 6) for x in normalized(month_ciro)]},
              "sirketMarj": None if company_margin is None else round(company_margin, 4),
@@ -1234,8 +1267,69 @@ def departments(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str
     return {"items": items, "asof": asof.isoformat() if asof else None}
 
 
-def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional[str] = None) -> dict[str, Any]:
-    """Hedef–gerçekleşme özeti: toplam, segment, yayınevi, ay ay seri, departman kullanımı."""
+def year_end_close(rows: list[Any], tr: list[dict[str, Any]], year: int, asof: Optional[date],
+                   forecast: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """Tahmini yıl sonu kapanışı (kitap hedefleri, ciro): gerçekleşen + yılın kalan günleri için tahmin bandı.
+
+    Kapsam: tahminde serisi olan ve hedefinde birim fiyatı (hedef ciro ÷ hedef adet) bulunan kitaplar; kalan ay payı =
+    1 − geçen pay (veri ayın ortasında bittiyse o ayın kalanı). Tahmin adedi hedefin birim fiyatıyla ciroya çevrilir.
+    Kantil yoksa yalnız p50 (aralık uydurulmaz); tahminin kapsamadığı ay varsa `eksikAylar` yazılır. Tahmin yoksa None."""
+    from semantic_bridge import forecast_client as FC
+
+    if not forecast or not forecast.get("p50") or asof is None:
+        return None
+    elapsed = elapsed_shares(year, asof)
+    weights: dict[int, float] = {}
+    missing = []
+    for m in range(1, 13):
+        rest = 1.0 - elapsed[m - 1]
+        if rest <= 0:
+            continue
+        off = FC.month_offset(forecast, year, m)
+        horizon = max((len(v) for v in (forecast.get("p50") or {}).values()), default=0)
+        if off is None or off < 0 or off >= horizon:
+            missing.append(m)
+            continue
+        weights[off] = rest
+    tot = {"p10": 0.0, "p50": 0.0, "p90": 0.0}
+    target = actual = 0.0
+    all_target = sum(float(r.ciro or 0) for r in rows)
+    n = ranged = 0
+    for r, t in zip(rows, tr):
+        if not r.adet or r.adet <= 0 or not r.ciro or r.ciro <= 0:
+            continue
+        b = FC.band(forecast, r.stok_kodu, weights.keys(), weights) if weights else None
+        if b is None and weights:
+            continue
+        unit = float(r.ciro) / float(r.adet)
+        n += 1
+        target += float(r.ciro)
+        actual += float(t["gercekCiro"])
+        if b is None:           # yılın kalan günü yok: kapanış = gerçekleşen
+            for q in tot:
+                tot[q] += float(t["gercekCiro"])
+            ranged += 1
+            continue
+        tot["p50"] += float(t["gercekCiro"]) + (b["p50"] or 0) * unit
+        if b["aralik"]:
+            ranged += 1
+            tot["p10"] += float(t["gercekCiro"]) + (b["p10"] or 0) * unit
+            tot["p90"] += float(t["gercekCiro"]) + (b["p90"] or 0) * unit
+    if not n:
+        return None
+    has = ranged == n
+    return {"kitap": n, "hedefCiro": round(target, 2), "gercekCiro": round(actual, 2),
+            "kapsamPay": round(target / all_target, 4) if all_target > 0 else None,
+            "p50": round(tot["p50"], 2), "p10": round(tot["p10"], 2) if has else None,
+            "p90": round(tot["p90"], 2) if has else None, "aralik": has, "not": None if has else FC.NO_RANGE,
+            "oranP50": round(tot["p50"] / target, 4) if target > 0 else None,
+            "baslangic": forecast.get("start"), "eksikAylar": missing, "asof": asof.isoformat()}
+
+
+def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional[str] = None,
+             forecast: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """Hedef–gerçekleşme özeti: toplam, segment, yayınevi, ay ay seri, departman kullanımı; tahmin verilirse tahmini
+    yıl sonu kapanışı bandı (`yilSonu`)."""
     with engine.connect() as c:
         row = _plan_row(c, tenant, plan_id) if plan_id else _approved(c, tenant, int(year))
         if row is None:
@@ -1311,6 +1405,7 @@ def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional
             float(plan["params"].get("uyariKapsam") or DEFAULT_ALERT_SCOPE),
             alert_scope(rows, float(plan["params"].get("uyariKapsam") or DEFAULT_ALERT_SCOPE))),
         "kitapHedefleri": fin(total), "sirket": fin(tot_all),
+        "yilSonu": year_end_close(rows, tr, row.year, asof, forecast),
         "program": {"hedefCiro": round(prog["ciro"], 2), "beklenenCiro": round(program_expected, 2)},
         "hedefDisi": {k: round(v, 2) if isinstance(v, float) else v for k, v in outside.items()},
         "durumlar": counts,

@@ -3,7 +3,8 @@ import { AlertTriangle, CalendarDays, TrendingDown, Wallet } from 'lucide-react'
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, errText } from '../admin/ui';
 import { Panel } from '../editorial/kit';
-import { financeApi, fmtPct, fmtShort, type SummaryCard } from './api';
+import { financeApi, fmtPct, fmtShort, type Meta, type SummaryCard } from './api';
+import CommentaryPanel from './CommentaryPanel';
 import { Approx, DataEnd, pressable } from './parts';
 
 /** Özet: 5-6 gösterge ve «bu ay dikkat». Telefonda tam okunur (iki sütun kart, altında liste). */
@@ -47,7 +48,7 @@ function Card({ c, onOpen }: { c: SummaryCard; onOpen: (tab: string) => void }) 
 
 const ICON = { sapma: TrendingDown, nakit: Wallet, vergi: CalendarDays } as const;
 
-export default function SummaryTab({ onOpen }: { onOpen: (tab: string) => void }) {
+export default function SummaryTab({ onOpen, meta, year, month }: { onOpen: (tab: string) => void; meta?: Meta; year?: number; month?: number }) {
   const q = useQuery({ queryKey: ['finance', 'summary'], queryFn: financeApi.summary, enabled: ENGINE_ENABLED });
   if (q.isLoading) return <Loading />;
   if (q.error) return <Note tone="err">{errText(q.error, 'Özet açılamadı.')}</Note>;
@@ -85,6 +86,7 @@ export default function SummaryTab({ onOpen }: { onOpen: (tab: string) => void }
           </ul>
         )}
       </Panel>
+      {meta && year && month ? <CommentaryPanel year={year} month={month} monthName={meta.months[month - 1] ?? ''} me={meta.me} /> : null}
     </div>
   );
 }

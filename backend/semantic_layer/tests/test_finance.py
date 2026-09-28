@@ -429,3 +429,44 @@ def test_finance_access_rules():
     assert {"sayfa:finansal-raporlar", "ozellik:finans.nakit", "ozellik:finans.vergi-takvimi"} <= A.all_keys()
     page = next(p for p in A.catalog()["pages"] if p["key"] == "sayfa:finansal-raporlar")
     assert page["area"] == "finans" and page.get("explicit") is True
+
+
+# ------------------------------------------------------------------ aylık finansal yorum taslağı
+
+
+class _Llm:
+    def __init__(self, text):
+        self.text = text
+
+    def chat(self, messages, **kw):
+        return self.text
+
+
+def test_monthly_commentary_is_number_checked_edited_and_approved(engine):
+    _seed(engine)
+    _seed_profit(engine)
+    facts = F.comment_facts(engine, T, 2026, 7, with_cash=False)
+    assert facts and any("Temmuz 2026" in f for f in facts)
+    bad = F.comment_draft(engine, T, "cfo", 2026, 7, _Llm("Temmuz 2026 net satış 9.999.999 ₺ oldu."), with_cash=False)
+    assert bad["kaynak"] == "kural" and bad["durum"] == "taslak" and "9.999.999" not in bad["metin"]
+    assert bad["neden"].startswith("olgu-disi-sayi") and bad["olguDisiSayilar"] == []
+    good = F.comment_draft(engine, T, "cfo", 2026, 7, _Llm(facts[0]), with_cash=False)
+    assert good["kaynak"] == "zeki" and good["metin"] == facts[0]
+    assert F.comment_draft(engine, T, "cfo", 2026, 7, None, with_cash=False)["neden"] == "model-yok"
+    edited, diff = F.comment_save(engine, T, "cfo", 2026, 7, "Temmuz ayında satış 4.321 ₺ arttı.")
+    assert edited["kaynak"] == "insan" and edited["olguDisiSayilar"] == ["4.321"] and diff["durum"]["yeni"] == "taslak"
+    ok = F.comment_approve(engine, T, "cfo", 2026, 7)
+    assert ok["durum"] == "onayli" and ok["onaylayan"] == "cfo"
+    with pytest.raises(F.FinanceError):
+        F.comment_approve(engine, T, "cfo", 2026, 7)
+    assert F.approved_comment(engine, T)["metin"].startswith("Temmuz ayında")
+    with pytest.raises(F.FinanceError):
+        F.comment_facts(engine, T, 2026, 9, with_cash=False)                      # veri 17.08.2026'da bitiyor
+    assert F.comment_get(engine, T, 2026, 6)["metin"] is None
+
+
+def test_commentary_permissions():
+    assert A.features_for("POST", "/api/v1/finance/commentary/draft") == ["ozellik:finans.yorum"]
+    assert A.features_for("PUT", "/api/v1/finance/commentary") == ["ozellik:finans.yorum"]
+    assert A.features_for("POST", "/api/v1/finance/commentary/approve") == []     # açıkça verilen, ucun içinde
+    assert "ozellik:finans.yorum-onay" in A.explicit_keys() and "ozellik:finans.yorum" not in A.explicit_keys()

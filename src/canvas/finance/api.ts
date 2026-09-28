@@ -32,7 +32,7 @@ export type Meta = {
   defaultYear: number | null;
   defaultMonth: number | null;
   data: Status;
-  me: { username: string; display: string; canCash: boolean; canMap: boolean; canClose: boolean; canTax: boolean; canNote: boolean; canExport: boolean };
+  me: { username: string; display: string; canCash: boolean; canMap: boolean; canClose: boolean; canTax: boolean; canNote: boolean; canExport: boolean; canComment?: boolean; canApproveComment?: boolean };
 };
 
 export type Grain = 'ay' | 'ceyrek' | 'ytd';
@@ -287,6 +287,28 @@ export const financeApi = {
   taxUpdate: (id: string, b: Partial<TaxItem>) => send<TaxItem>('PATCH', `/tax-calendar/${enc(id)}`, b),
   taxDelete: (id: string) => send<{ ok: boolean }>('DELETE', `/tax-calendar/${enc(id)}`),
   taxCopy: (from: number, to: number) => send<{ kopyalanan: number; atlanan: number }>('POST', '/tax-calendar/copy', { from, to }),
+  commentary: (year?: number, month?: number) => send<Commentary>('GET', `/commentary${qs({ year, month })}`),
+  commentaryDraft: (year: number, month: number) => send<Commentary>('POST', '/commentary/draft', { year, month }, 300_000),
+  commentarySave: (year: number, month: number, metin: string) => send<Commentary>('PUT', '/commentary', { year, month, metin }),
+  commentaryApprove: (year: number, month: number) => send<Commentary>('POST', '/commentary/approve', { year, month }),
+};
+
+/** Aylık finansal yorum: Zeki AI taslağı (ya da model yoksa kural metni) → CFO düzeltir → açık yetkiyle onaylar. */
+export type Commentary = {
+  year: number;
+  month: number;
+  donem: string;
+  id?: string;
+  metin: string | null;
+  durum: 'taslak' | 'onayli' | null;
+  /** zeki: model metni sayı denetiminden geçti · kural: olgular olduğu gibi · insan: CFO düzeltti. */
+  kaynak?: 'zeki' | 'kural' | 'insan' | null;
+  neden?: string | null;
+  hazirlayan?: string;
+  onaylayan?: string | null;
+  tarih?: string | null;
+  /** Metinde geçip olgularda olmayan sayılar (insan düzeltmesinde gözden geçirme). */
+  olguDisiSayilar?: string[];
 };
 
 /* ------------------------------------------------------------------ biçim */

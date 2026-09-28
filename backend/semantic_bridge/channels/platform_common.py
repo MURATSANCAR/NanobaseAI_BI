@@ -119,22 +119,14 @@ def key_hash(*parts: Any) -> str:
 
 # ------------------------------------------------------------------ kişisel veri maskesi
 
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
-_URL = re.compile(r"(https?://|www\.)\S+", re.I)
-_PHONE = re.compile(r"(\+?\d[\d\s().-]{8,}\d)")
-_LONGNUM = re.compile(r"\b\d{10,}\b")
-
-
 def mask(text: Any, n: int = 2000) -> str:
     """Soru/yorum/iade açıklamasındaki kişisel veri: e-posta, telefon, uzun numara (T.C., sipariş, IBAN parçası) ve
-    bağlantı maskelenir. Ad soyad güvenilir biçimde ayıklanamaz: dosyada ad kolonu hiç içeri alınmaz, metindeki ad ise
-    model istemine gider ama ekrana yalnız yetkili kişide gelir (analiz §8)."""
-    t = cell(text, 20000)
-    t = _EMAIL.sub("[e-posta]", t)
-    t = _URL.sub("[bağlantı]", t)
-    t = _PHONE.sub(lambda m: "[numara]" if sum(ch.isdigit() for ch in m.group(0)) >= 10 else m.group(0), t)
-    t = _LONGNUM.sub("[numara]", t)
-    return t[:n]
+    bağlantı maskelenir (ortak maske `zeki_text.mask_personal`; pazar yeri metninde 10+ haneli her numara gizlenir).
+    Ad soyad güvenilir biçimde ayıklanamaz: dosyada ad kolonu hiç içeri alınmaz, metindeki ad ise model istemine gider
+    ama ekrana yalnız yetkili kişide gelir (analiz §8)."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.mask_personal(cell(text, 20000), kinds=("email", "url", "number"))[:n]
 
 
 # ------------------------------------------------------------------ panel dosyası kolonları

@@ -47,7 +47,14 @@ export type Plan = {
   basis: {
     pencere: string;
     veriSonu: string | null;
-    tahmin?: { kullanildi: boolean; baslangic?: string | null };
+    tahmin?: {
+      kullanildi: boolean;
+      baslangic?: string | null;
+      /** Senaryonun tabanı hangi tahmin kantili (muhafazakâr p10, temel p50, iyimser p90; kantil yoksa p50). */
+      kantil?: 'p10' | 'p50' | 'p90' | null;
+      /** Tahminli backlist kitaplarının 12 aylık bandı (adet). `aralik` false ise p10/p90 yok. */
+      bant?: { kitap: number; p10: number | null; p50: number; p90: number | null; aralik: boolean } | null;
+    };
     sirketMarj?: number | null;
     dagilim?: { adet: number[]; ciro: number[] };
   };
@@ -164,6 +171,24 @@ export type Tracking = {
   yayinevleri?: GroupTrack[];
   aylar?: Array<{ ay: number; hedef: number; gercek: number | null; gecen: number }>;
   gider?: { butce: number; butceDonem: number; gercek: number; kullanim: number | null; asim: number; yaklasti: number };
+  /** Tahmini yıl sonu kapanışı (kitap hedefleri, ciro): gerçekleşen + kalan günlerin tahmin bandı. Tahmin yoksa null. */
+  yilSonu?: YearEnd | null;
+};
+
+export type YearEnd = {
+  kitap: number;
+  hedefCiro: number;
+  gercekCiro: number;
+  kapsamPay: number | null;
+  p10: number | null;
+  p50: number;
+  p90: number | null;
+  aralik: boolean;
+  not: string | null;
+  oranP50: number | null;
+  baslangic: string | null;
+  eksikAylar: number[];
+  asof: string;
 };
 
 export type Deviation = {

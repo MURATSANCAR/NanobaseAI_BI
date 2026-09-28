@@ -307,7 +307,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/budget/tracking")
     def budget_tracking(request: Request, year: int, plan: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(B.tracking, engine, tenant, year, plan or None)
+        return call(B.tracking, engine, tenant, year, plan or None, src.read_forecast())
 
     # ------------------------------------------------------------------ sözleşme (diğer modüller)
 

@@ -807,14 +807,11 @@ def classify_pending(engine: sa.engine.Engine, tenant: str, errors: list[dict[st
 # ------------------------------------------------------------------ Zeki AI: taslak ve gerekçe (olgu dışı sayı yok)
 
 
-def _numbers(text: str) -> set[str]:
-    return {str(int(m)) for m in re.findall(r"\d+", text or "")}
-
-
 def numbers_ok(text: str, facts: str) -> bool:
-    """Metindeki her rakam öbeği olgularda da geçmeli (tarih ve tutar ayraçları öbekleri ayırır; baştaki sıfır yok sayılır)."""
-    have = _numbers(facts)
-    return all(n in have for n in _numbers(text))
+    """Metindeki her sayı ve tarih olgularda da geçmeli («22.09.2026» ↔ «2026-09-22»). Denetim: `zeki_text`."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.numbers_ok(text or "", facts)
 
 
 def draft_facts(order: dict[str, Any], cargo: list[dict[str, Any]]) -> dict[str, Any]:

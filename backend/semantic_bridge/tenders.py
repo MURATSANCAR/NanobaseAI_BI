@@ -1552,7 +1552,9 @@ def _quote_ok(value: str, quote: str, text_fold: str) -> bool:
     qf = fold(quote)
     if len(qf) < 8 or qf not in text_fold:
         return False
-    return _nums(value) <= _nums(quote)
+    from semantic_bridge import zeki_text as Z
+
+    return Z.numbers_ok(value, quote)          # tek sayı denetçisi: değerdeki her sayı alıntıda
 
 
 def summarize_text(text: str, chat: Callable[[list[dict[str, str]]], str], cfg: dict[str, Any],
@@ -2240,7 +2242,7 @@ def facts_text(f: dict[str, Any]) -> tuple[str, set[str]]:
 def brief_text(f: dict[str, Any], chat: Optional[Callable[[list[dict[str, str]]], str]]) -> dict[str, Any]:
     """Müdür için 5 cümlelik karar özeti. Rakamlar yalnız verilenlerden; olgu dışı sayı içeren metin atılır ve kural
     metni kullanılır. Teklif fiyatı ya da başvuru kararı önermez (K4)."""
-    facts, allowed = facts_text(f)
+    facts, _allowed = facts_text(f)
     fallback = facts.replace("\n", ". ") + "."
     if chat is None:
         return {"metin": fallback, "kaynak": "kural"}
@@ -2252,7 +2254,10 @@ def brief_text(f: dict[str, Any], chat: Optional[Callable[[list[dict[str, str]]]
     except Exception as e:  # noqa: BLE001
         log.warning("ihale karar özeti: model cevap vermedi: %s", e)
         return {"metin": fallback, "kaynak": "kural", "not": "Zeki AI'a ulaşılamadı; rakamlar kural metniyle yazıldı."}
-    extra = _nums(text) - allowed - {"1", "2", "3", "4", "5"}
+    from semantic_bridge import zeki_text as Z
+
+    # Tek sayı denetçisi: olgu metninde (değerler biçimlenmiş hâlleriyle) olmayan sayı; 1–5 serbest (sıra, cümle).
+    extra = Z.unsupported(text, facts, free_upto=5)
     if not text or extra:
         return {"metin": fallback, "kaynak": "kural",
                 "not": "Zeki AI metni verilmeyen bir sayı içerdiği için kullanılmadı." if extra else None}

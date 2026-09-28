@@ -315,3 +315,48 @@ def test_budget_rules():
     assert A.features_for("GET", "/api/v1/budget/plans/abc/export.csv") == ["ozellik:veri.disa-aktar"]
     assert "ozellik:butce.onay" in A.explicit_keys()
     assert "ozellik:butce.duzenle" in A.all_keys() and "sayfa:butce" in A.all_keys()
+
+
+# ------------------------------------------------------------------ tahmin aralığı (ortak tahmin istemcisi)
+
+
+def test_scenarios_bind_to_forecast_quantiles_and_keep_the_band(engine):
+    _seed(engine)
+    fc = {"start": "2026-08", "p50": {"K1": [50.0] * 12}, "p10": {"K1": [30.0] * 12}, "p90": {"K1": [80.0] * 12}}
+    items = B.generate(engine, T, "u", {"year": 2027, "scenarios": ["muhafazakar", "temel", "iyimser"], "params": {"fiyat": 0}}, fc)
+    by = {p["scenario"]: p for p in items}
+    assert _books(engine, by["muhafazakar"]["id"])["K1"]["adet"] == round(360 * 1.05)       # p10 toplamı
+    assert _books(engine, by["temel"]["id"])["K1"]["adet"] == round(600 * 1.10)             # p50 toplamı
+    assert _books(engine, by["iyimser"]["id"])["K1"]["adet"] == round(960 * 1.15)           # p90 toplamı
+    o = _books(engine, by["temel"]["id"])["K1"]["oneri"]
+    assert o["tahminBandi"]["aralik"] and (o["tahminBandi"]["p10"], o["tahminBandi"]["p50"], o["tahminBandi"]["p90"]) == (360, 600, 960)
+    t = B.plan_summary(engine, T, by["muhafazakar"]["id"])["basis"]["tahmin"]
+    assert t["kantil"] == "p10" and t["bant"] == {"kitap": 1, "p50": 600, "p10": 360, "p90": 960, "aralik": True}
+
+
+def test_scenario_without_quantiles_falls_back_to_p50_and_says_no_range(engine):
+    _seed(engine)
+    fc = {"start": "2026-08", "p50": {"K1": [50.0] * 12}}
+    items = B.generate(engine, T, "u", {"year": 2027, "scenarios": ["iyimser"], "params": {"fiyat": 0}}, fc)
+    assert _books(engine, items[0]["id"])["K1"]["adet"] == round(600 * 1.15)
+    t = B.plan_summary(engine, T, items[0]["id"])["basis"]["tahmin"]
+    assert t["kantil"] == "p50" and t["bant"]["aralik"] is False and t["bant"]["p10"] is None
+
+
+def test_year_end_close_band_from_actual_plus_remaining_forecast():
+    from types import SimpleNamespace as NS
+
+    rows = [NS(stok_kodu="K1", adet=100.0, ciro=10_000.0), NS(stok_kodu="K9", adet=50.0, ciro=5_000.0)]
+    tr = [{"gercekCiro": 5_000.0}, {"gercekCiro": 1_000.0}]
+    fc = {"start": "2026-08", "p50": {"K1": [10.0] * 12}, "p10": {"K1": [5.0] * 12}, "p90": {"K1": [20.0] * 12}}
+    y = B.year_end_close(rows, tr, 2026, date(2026, 8, 17), fc)
+    rest = 10 * 14 / 31 + 40                                                  # Ağustos'un kalan 14 günü + Eyl–Ara
+    assert y["kitap"] == 1 and y["kapsamPay"] == pytest.approx(10_000 / 15_000, abs=1e-4)
+    assert y["p50"] == pytest.approx(5_000 + 100 * rest, abs=0.01)
+    assert y["p10"] == pytest.approx(5_000 + 100 * rest / 2, abs=0.01) and y["p90"] == pytest.approx(5_000 + 200 * rest, abs=0.01)
+    assert y["aralik"] and y["eksikAylar"] == []
+    no_range = B.year_end_close(rows, tr, 2026, date(2026, 8, 17), {"start": "2026-08", "p50": fc["p50"]})
+    assert no_range["aralik"] is False and no_range["p10"] is None and no_range["p90"] is None
+    late = B.year_end_close(rows, tr, 2026, date(2026, 8, 17), {**fc, "start": "2026-10"})
+    assert late["eksikAylar"] == [8, 9]
+    assert B.year_end_close(rows, tr, 2026, date(2026, 8, 17), {}) is None

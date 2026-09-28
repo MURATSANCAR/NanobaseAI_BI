@@ -1650,6 +1650,207 @@ def _tr_money(v: float) -> str:
     return f"{v:,.0f}".replace(",", ".")
 
 
+# ------------------------------------------------------------------ aylık finansal yorum taslağı (Zeki AI, CFO onayı)
+#
+# Olgular kodla hesaplanır (gelir tablosu, yıl başından net satış, maliyet kapsamı, kanal kârlılığı, «bu ay dikkat»);
+# değişim oranları da burada hesaplanır, model hesap yapmaz. Zeki AI yalnız bu olguları 5–8 cümleyle anlatır
+# (`zeki_text.interpret`: her sayı olgularda olmalı, yoksa kural metni). Metin `semantic_finance_notes`'ta
+# `tur='ozet'`, `hedef_anahtar='ozet|YYYY-AA'` satırında «taslak» durur; CFO düzeltir ve açıkça verilen
+# `ozellik:finans.yorum-onay` ile onaylar. Onaylı metin DYK kurul panelinde M45 göstergesinin ayrıntısına gider.
+
+COMMENT_LINES = (("NET_SATIS", "Net satışlar", False), ("BRUT_KAR", "Brüt satış kârı", True),
+                 ("FAALIYET", "Faaliyet giderleri", False), ("FAALIYET_KARI", "Faaliyet kârı", True),
+                 ("NET_KAR", "Dönem net kârı", True))
+
+
+def _money_tr(v: float) -> str:
+    return f"{_tr_money(abs(v))} ₺"
+
+
+def _chg(cur: Optional[float], ref: Optional[float], magnitude: bool = False) -> Optional[str]:
+    """Değişim oranı yazısı («+%12,3» / «−%4,0»). `magnitude`: gider satırında tutarın büyüklüğü karşılaştırılır
+    (gider −120 ← −100 «+%20» artış demektir)."""
+    if cur is None or ref is None or abs(ref) < 0.005:
+        return None
+    ch = (abs(cur) - abs(ref)) / abs(ref) if magnitude else (cur - ref) / abs(ref)
+    return ("+" if ch >= 0 else "−") + "%" + _pct(abs(ch))
+
+
+def comment_key(year: int, month: int) -> str:
+    return f"ozet|{int(year):04d}-{int(month):02d}"
+
+
+def comment_facts(engine: sa.engine.Engine, tenant: str, year: int, month: int, *, with_cash: bool,
+                  unit_costs: Callable[[list[str]], dict[str, dict[str, Any]]] = lambda c: {},
+                  snapshot: Optional[dict] = None) -> list[str]:
+    """Ayın yorum olguları (Türkçe cümleler, rakamlar yazılı biçimiyle). Model yalnız bunları görür."""
+    if not 1 <= int(month) <= 12:
+        raise FinanceError("Ay 1 ile 12 arasında olmalı.")
+    y, m = int(year), int(month)
+    end = data_end(engine)
+    if end is None:
+        raise FinanceError("Logo verisi henüz okunmadı; yorum taslağı hazırlanamaz.", 409)
+    facts: list[str] = []
+    label = f"{AY[m - 1]} {y}"
+    if (y, m) > (end.year, end.month):
+        raise FinanceError(f"{label} için veri yok (veri {end.isoformat()} tarihinde bitiyor).", 409)
+    if (y, m) == (end.year, end.month):
+        facts.append(f"{label} tamamlanmadı: veri {end.isoformat()} tarihine kadar.")
+    p = pnl(engine, tenant, y, m, "ay", ("onceki", "gecen-yil", "butce"))
+    rows = {r["kod"]: r for r in p["rows"]}
+    cols = p["columns"]
+    if cols.get("donem", {}).get("loaded"):
+        for kod, name, signed in COMMENT_LINES:
+            r = rows.get(kod)
+            if not r or r["values"].get("donem") is None:
+                continue
+            cur = r["values"]["donem"]
+            word = name if (not signed or cur >= 0) else name.replace("kârı", "zararı")
+            parts = [f"{label} {word.lower()}: {_money_tr(cur)}"]
+            for col, lab in (("onceki", cols.get("onceki", {}).get("label")), ("gecenYil", cols.get("gecenYil", {}).get("label"))):
+                ref = r["values"].get(col)
+                if ref is None or not cols.get(col, {}).get("loaded", True):
+                    continue
+                ch = _chg(cur, ref, magnitude=not signed)
+                parts.append(f"{lab}: {_money_tr(ref)}" + (f" ({ch})" if ch else ""))
+            b = r["values"].get("butce")
+            if b is not None and (cols.get("butce") or {}).get("plan"):
+                parts.append(f"bütçe: {_money_tr(b)}")
+            facts.append("; ".join(parts) + ".")
+            if r.get("yaklasik"):
+                facts.append(f"{name} yaklaşıktır: " + " ".join(r.get("notlar") or []))
+    else:
+        facts.append(f"{label} muhasebe fişleri henüz okunmadı; gelir tablosu satırları yok.")
+    cov = p.get("maliyet") or {}
+    if cov.get("maliyetliPay") is not None:
+        facts.append(f"{label} satışlarının %{_pct(cov['maliyetliPay'])}'inde maliyet işlenmiş.")
+    if p.get("mutabakatFarki") is not None and abs(p["mutabakatFarki"]) >= 1:
+        facts.append(f"Muhasebedeki net satış ile faturalı satış arasında {_money_tr(p['mutabakatFarki'])} fark var.")
+    ytd = _sales_totals(engine, [(y, k) for k in range(1, m + 1)])
+    if ytd.get("net") is not None:
+        prev = meta_get(engine, f"sales_prev:{y}")
+        ch = _chg(ytd["net"], prev.get("net")) if prev.get("net") and (y, m) == (end.year, end.month) else None
+        facts.append(f"Yıl başından net satış (faturalı satır): {_money_tr(ytd['net'])}"
+                     + (f"; geçen yılın aynı dönemine göre {ch}" if ch else "") + ".")
+    try:
+        k = profitability(engine, by="kanal", year=y, frm=m, to=m, unit_costs=unit_costs, snapshot=snapshot,
+                          with_royalty=False, all_rows=True)
+        top = [r for r in (k.get("items") or []) if (r.get("net") or 0) > 0][:3]
+        if top:
+            facts.append(f"{label} en yüksek net satışlı kanallar: " + "; ".join(
+                f"{r['ad']} {_money_tr(r['net'])}" + (f" (kesin marj %{_pct(r['marjKesin'])})" if r.get("marjKesin") is not None else "")
+                for r in top) + ".")
+    except FinanceError as e:
+        log.info("finance: yorum için kanal kârlılığı okunamadı: %s", e)
+    s = summary(engine, tenant, with_cash=with_cash)
+    for d in (s.get("dikkat") or [])[:4]:
+        facts.append(f"Dikkat: {d['metin']}" + (f" ({_money_tr(d['tutar'])})" if d.get("tutar") is not None else "") + ".")
+    return facts
+
+
+def comment_rule_text(facts: list[str]) -> str:
+    """Modelsiz yorum: olguların ilk sekizi, olduğu gibi (kural metni)."""
+    return " ".join(facts[:8])
+
+
+COMMENT_TASK = ("Aşağıdaki olgulardan bir yayınevinin mali işler direktörü için aylık finansal yorum taslağı yaz. Sıra: "
+                "satışlar, kârlılık, giderler, dikkat edilecekler. Olgularda yazan karşılaştırmaları kullan; neden "
+                "uydurma, tahmin yapma. «Yaklaşık» denen rakamı yaklaşık diye an.")
+
+
+def comment_draft(engine: sa.engine.Engine, tenant: str, user: str, year: int, month: int, llm: Any, *, with_cash: bool,
+                  unit_costs: Callable[[list[str]], dict[str, dict[str, Any]]] = lambda c: {},
+                  snapshot: Optional[dict] = None) -> dict[str, Any]:
+    """Taslak üretir ve «taslak» olarak yazar (onaylı metin varsa yeni taslak onu geri taslağa çevirir). Dönen:
+    `comment_get` biçimi + `kaynak`/`neden`."""
+    from semantic_bridge import zeki_text as Z
+
+    facts = comment_facts(engine, tenant, year, month, with_cash=with_cash, unit_costs=unit_costs, snapshot=snapshot)
+    res = Z.interpret(facts, comment_rule_text(facts), llm=llm, task=COMMENT_TASK, min_sentences=5, max_sentences=8,
+                      max_chars=2400, max_tokens=900)
+    _comment_write(engine, tenant, user, year, month, res.metin)
+    meta_set(engine, _comment_meta_key(tenant, year, month),
+             {"kaynak": res.kaynak, "neden": res.neden, "olgular": facts, "at": _now().isoformat(), "by": user})
+    return comment_get(engine, tenant, year, month)
+
+
+def _comment_meta_key(tenant: str, year: int, month: int) -> str:
+    return f"yorum:{tenant[:30]}:{int(year):04d}-{int(month):02d}"
+
+
+def _comment_row(c: Any, tenant: str, year: int, month: int) -> Any:
+    return c.execute(sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.tur == "ozet",
+                                            NOTES.c.hedef_anahtar == comment_key(year, month))).first()
+
+
+def _comment_write(engine: sa.engine.Engine, tenant: str, user: str, year: int, month: int, text: str) -> str:
+    with engine.begin() as c:
+        cur = _comment_row(c, tenant, year, month)
+        if cur:
+            c.execute(NOTES.update().where(NOTES.c.id == cur.id).values(metin=text, durum="taslak", hazirlayan=user,
+                                                                         onaylayan=None, tarih=_now()))
+            return cur.id
+        nid = uuid.uuid4().hex
+        c.execute(NOTES.insert().values(id=nid, tenant_id=tenant, year=int(year), month=int(month), tur="ozet",
+                                        hedef_anahtar=comment_key(year, month), metin=text, durum="taslak",
+                                        hazirlayan=user, tarih=_now()))
+        return nid
+
+
+def comment_get(engine: sa.engine.Engine, tenant: str, year: int, month: int) -> dict[str, Any]:
+    """Ayın yorumu: metin, durum (taslak | onayli), kaynak (zeki | kural | insan), hazırlayan/onaylayan, olgularda
+    olmayan sayılar (insan düzeltmesinde gözden geçirme için; engel değil)."""
+    from semantic_bridge import zeki_text as Z
+
+    with engine.connect() as c:
+        r = _comment_row(c, tenant, year, month)
+    meta = meta_get(engine, _comment_meta_key(tenant, year, month))
+    base = {"year": int(year), "month": int(month), "donem": f"{AY[int(month) - 1]} {int(year)}"}
+    if not r:
+        return {**base, "metin": None, "durum": None}
+    facts = meta.get("olgular") or []
+    return {**base, "id": r.id, "metin": r.metin, "durum": r.durum, "hazirlayan": r.hazirlayan, "onaylayan": r.onaylayan,
+            "tarih": _iso(r.tarih), "kaynak": meta.get("kaynak"), "neden": meta.get("neden"), "olgular": facts,
+            "olguDisiSayilar": Z.unsupported(r.metin, facts) if facts else []}
+
+
+def comment_save(engine: sa.engine.Engine, tenant: str, user: str, year: int, month: int, text: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """CFO düzeltmesi: metin taslak olarak kalır (onaylıysa onayı düşer). Dönen: (yorum, fark)."""
+    t = _text(text, 6000)
+    if not t:
+        raise FinanceError("Yorum metni boş olamaz.")
+    before = comment_get(engine, tenant, year, month)
+    if before.get("metin") is None:
+        raise FinanceError("Bu ay için yorum taslağı yok; önce taslak hazırlayın.", 404)
+    _comment_write(engine, tenant, user, year, month, t)
+    meta = meta_get(engine, _comment_meta_key(tenant, year, month))
+    if meta:
+        meta_set(engine, _comment_meta_key(tenant, year, month), {**meta, "kaynak": "insan", "neden": None})
+    return comment_get(engine, tenant, year, month), {"metin": {"eski": (before.get("metin") or "")[:300], "yeni": t[:300]},
+                                                      "durum": {"eski": before.get("durum"), "yeni": "taslak"}}
+
+
+def comment_approve(engine: sa.engine.Engine, tenant: str, user: str, year: int, month: int) -> dict[str, Any]:
+    with engine.begin() as c:
+        r = _comment_row(c, tenant, year, month)
+        if not r:
+            raise FinanceError("Onaylanacak yorum taslağı yok.", 404)
+        if r.durum == "onayli":
+            raise FinanceError("Yorum zaten onaylı.", 409)
+        c.execute(NOTES.update().where(NOTES.c.id == r.id).values(durum="onayli", onaylayan=user))
+    return comment_get(engine, tenant, year, month)
+
+
+def approved_comment(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
+    """En son onaylı aylık yorum (DYK kurul paneli okur)."""
+    with engine.connect() as c:
+        r = c.execute(sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.tur == "ozet", NOTES.c.durum == "onayli")
+                      .order_by(NOTES.c.year.desc(), NOTES.c.month.desc())).first()
+    if not r:
+        return None
+    return {"metin": r.metin, "donem": f"{AY[int(r.month or 1) - 1]} {r.year}", "onaylayan": r.onaylayan, "tarih": _iso(r.tarih)}
+
+
 # ------------------------------------------------------------------ Excel
 
 

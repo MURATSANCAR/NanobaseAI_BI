@@ -9,6 +9,13 @@ import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay, fmtTime, fmtValue, kurulApi, waitJob, type Comment, type KurulMeta } from './api';
 import { ColorBadge, Spark, TrendMark } from './parts';
 
+type MonthlyComment = { metin: string; donem: string; onaylayan: string | null };
+
+function monthlyComment(ayrinti: Record<string, unknown> | undefined): MonthlyComment | null {
+  const v = ayrinti?.aylikYorum as Partial<MonthlyComment> | undefined;
+  return v && typeof v.metin === 'string' && v.metin ? { metin: v.metin, donem: String(v.donem ?? ''), onaylayan: v.onaylayan ?? null } : null;
+}
+
 /** Gösterge ayrıntısı: değer, hedef, önceki, eşik, 12 dönem seyri, kaynak ekrana bağlantı (yalnız o sayfanın yetkisi
  *  olana), bölüm yorumu. Sahip kendi göstergesine yorum yazar (doğrudan onaylı); sekreterin yazdığı ya da Zeki AI'ın
  *  taslağı sahibin ya da genel müdürün onayını bekler. */
@@ -63,6 +70,8 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
   }
 
   const source = g?.ekran && canOpenRoute(pages, g.ekran) ? g.ekran : null;
+  // M45'in CFO onaylı aylık finansal yorumu (yalnız net satış göstergesinin ayrıntısında gelir).
+  const monthly = monthlyComment(g?.ayrinti);
   return (
     <Sheet open={!!kod} onClose={onClose} title={g?.ad ?? 'Gösterge'} subtitle={g ? `${g.bolumAdi} · ${q.data?.donemAdi ?? ''}` : undefined}>
       {q.isLoading && <Loading />}
@@ -91,6 +100,13 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
           </div>
 
           {g.aciklama && <p className="text-[12.5px] text-canvas-muted">{g.aciklama}</p>}
+
+          {monthly && (
+            <section className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-100">
+              <div className={labelCls}>Aylık finansal yorum · {monthly.donem} · onaylayan {monthly.onaylayan ?? '—'}</div>
+              <p className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed">{monthly.metin}</p>
+            </section>
+          )}
 
           <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 rounded-xl bg-slate-50 p-3 text-[12px] sm:grid-cols-2">
             <div><dt className={labelCls}>Veri son günü</dt><dd>{fmtDay(g.veriSonGunu)}</dd></div>

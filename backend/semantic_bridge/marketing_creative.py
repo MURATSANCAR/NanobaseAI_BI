@@ -330,8 +330,6 @@ def banned_hits(text: str, phrases: Iterable[str]) -> list[str]:
     return hits
 
 
-def _numbers(text: str) -> set[str]:
-    return {re.sub(r"[.,](?=\d{3}\b)", "", n) for n in re.findall(r"\d+(?:[.,]\d+)*", text or "")}
 
 
 def check_text(text: str, platform: str, kind: str, *, source_texts: Iterable[str], banned: Iterable[str],
@@ -347,8 +345,10 @@ def check_text(text: str, platform: str, kind: str, *, source_texts: Iterable[st
     src_norm = tr_fold("\n".join(src))
     quotes = [{"metin": q, "bulundu": in_source(q, src_norm)} for q in quotes_in(body)]
     hits = banned_hits(body, banned)
-    known = set().union(*(_numbers(s) for s in src)) if src else set()
-    foreign = sorted(x for x in _numbers(body) if x not in known and not (kind == "hashtag"))
+    # Tek sayı denetçisi (`zeki_text`): kaynak metinlerde karşılığı olmayan sayılar, yazıldığı gibi.
+    from semantic_bridge import zeki_text as Z
+
+    foreign = [] if kind == "hashtag" else sorted(Z.unsupported(body, src))
     issues: list[dict[str, str]] = []
     if hard is not None and n > hard:
         issues.append({"seviye": "hata", "kod": "sinir", "mesaj": f"{n} karakter; bu platformda sınır {hard}."})

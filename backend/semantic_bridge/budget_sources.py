@@ -21,7 +21,6 @@ katalogdaki net ciroyla aynı olsun diye doğrudan `STLINE` okunur.
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
@@ -294,18 +293,11 @@ def _num(v: Any) -> Optional[float]:
 
 
 def read_forecast() -> dict[str, Any]:
-    """Baskı Öneri'nin 12 aylık kitap tahmini (yönetim raporları önbelleği). Yoksa boş sözlük."""
-    root = Path(os.environ.get("MANAGEMENT_REPORT_CACHE_DIR", "/data/nanobaseai/bi/var/management-reports"))
-    try:
-        snap = json.loads((root / "baski-oneri-tahmin.json").read_text())
-    except (OSError, ValueError):
-        return {}
-    data = snap.get("data") or {}
-    fc = data.get("forecasts") or {}
-    if not fc or not data.get("forecastStart"):
-        return {}
-    return {"start": data["forecastStart"], "updatedAt": snap.get("updatedAt"),
-            "p50": {k: [max(0.0, float(x or 0)) for x in (v.get("p50") or [])] for k, v in fc.items()}}
+    """Baskı Öneri'nin 12 aylık kitap tahmini, kantilleriyle (p10/p50/p80/p90; tek istemci `forecast_client`). Yoksa
+    boş sözlük. `p50` anahtarı her zaman vardır; p10/p90 yalnız önbellekte varsa gelir (uydurulmaz)."""
+    from semantic_bridge import forecast_client
+
+    return forecast_client.read()
 
 
 def timed(fn: Callable[[], Any]) -> tuple[Any, int]:

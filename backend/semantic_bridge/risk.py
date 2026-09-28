@@ -1574,16 +1574,18 @@ def numbers_in(text: str) -> set[str]:
 
 
 def foreign_numbers(text: str, facts: Any) -> set[str]:
-    """Metinde geçip girdide (olgularda) olmayan sayılar. Küçük sayılar (≤ 31: tarih günü, çeyrek, sıra) serbest."""
-    allowed = numbers_in(_dump(facts))
+    """Metinde geçip girdide (olgularda) olmayan sayılar, sadeleşmiş yazımla («7500000»). Küçük sayılar (≤ 31: tarih
+    günü, çeyrek, sıra) serbest. Denetim: `zeki_text` (tek sayı denetçisi)."""
+    from semantic_bridge import zeki_text as Z
+
     extra = set()
-    for n in numbers_in(text):
-        try:
-            if float(n) <= 31:
-                continue
-        except ValueError:
-            pass
-        if n not in allowed:
+    for tok in Z.unsupported(text or "", _dump(facts), free_upto=31):
+        for n in numbers_in(tok):
+            try:
+                if float(n) <= 31:
+                    continue
+            except ValueError:
+                pass
             extra.add(n)
     return extra
 

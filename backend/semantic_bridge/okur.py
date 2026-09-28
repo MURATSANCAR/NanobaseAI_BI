@@ -34,6 +34,8 @@ from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 
+from semantic_bridge import zeki_text as Z
+
 log = logging.getLogger("semantic.okur")
 TZ = ZoneInfo("Europe/Istanbul")
 _md = sa.MetaData()
@@ -293,10 +295,10 @@ PERSONAL_KEYS = frozenset({
     "tckn", "tc_kimlik", "tckimlikno", "birthdate", "new_dogumtarihi", "dogum_tarihi",
     "customername", "customeremail", "customerphone", "membername", "memberemail", "username", "usermail",
 })
-EMAIL_RX = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-#: Türkiye telefon kalıbı: +90 / 0 ile başlayan 10–11 hane (boşluk, tire, parantezle). Yıl ve adet gibi kısa sayılara dokunmaz.
-PHONE_RX = re.compile(r"(?<!\d)(?:\+?90[\s\-.]?|0)?\(?5\d{2}\)?[\s\-.]?\d{3}[\s\-.]?\d{2}[\s\-.]?\d{2}(?!\d)"
-                      r"|(?<!\d)(?:\+?90[\s\-.]?|0)\(?[2-4]\d{2}\)?[\s\-.]?\d{3}[\s\-.]?\d{2}[\s\-.]?\d{2}(?!\d)")
+#: Kalıplar ortak maskeden (`zeki_text`): e-posta ve sıkı Türkiye telefon kalıbı (+90 / 0 ile başlayan 10–11 hane;
+#: yıl, adet ve öneksiz kodlara dokunmaz).
+EMAIL_RX = Z.EMAIL
+PHONE_RX = Z.PHONE_STRICT
 
 
 def _personal_key(k: str) -> bool:
@@ -305,9 +307,8 @@ def _personal_key(k: str) -> bool:
 
 
 def mask_text(s: str) -> str:
-    """Metindeki e-posta ve telefonu maskeler (yorum metni, model çıktısı)."""
-    s = EMAIL_RX.sub("[e-posta gizlendi]", s)
-    return PHONE_RX.sub("[telefon gizlendi]", s)
+    """Metindeki e-posta ve telefonu maskeler (yorum metni, model çıktısı). Ortak maske: `zeki_text.mask_personal`."""
+    return Z.mask_personal(s, kinds=("email", "phone"), labels=Z.LABELS_HIDDEN, phone="strict")
 
 
 def scrub(v: Any) -> Any:

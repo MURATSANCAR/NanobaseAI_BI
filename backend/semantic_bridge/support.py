@@ -328,22 +328,16 @@ def save_class(engine: sa.engine.Engine, tenant: str, actor: str, klass: str, bo
 
 # ------------------------------------------------------------------ kişisel veri koruması (modele giden metin)
 
-_IBAN = re.compile(r"\bTR\s?\d{2}(?:\s?\d{4}){5}\s?\d{2}\b", re.I)
-_MAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-_TCKN = re.compile(r"(?<!\d)[1-9]\d{10}(?!\d)")
-_PHONE = re.compile(r"(?<![\w])(?:\+?90[\s\-.]?)?\(?0?[2-5]\d{2}\)?[\s\-.]?\d{3}[\s\-.]?\d{2}[\s\-.]?\d{2}(?!\d)")
-_CARD = re.compile(r"(?<!\d)(?:\d{4}[\s\-]?){3}\d{4}(?!\d)")
 _SIGNOFF = re.compile(r"(?im)^\s*(--\s*$|saygılarımla|saygılarımızla|iyi çalışmalar|teşekkürler,?\s*$|sent from my|iphone'umdan gönderildi"
                       r"|adres\s*:|tel\s*:|gsm\s*:|telefon\s*:)")
 
 
 def mask_personal(s: str) -> str:
-    """E-posta, telefon, IBAN, kart ve 11 haneli kimlik numarası kalıplarını yer tutucuyla değiştirir."""
-    s = _IBAN.sub("[IBAN]", s or "")
-    s = _MAIL.sub("[e-posta]", s)
-    s = _CARD.sub("[kart]", s)
-    s = _TCKN.sub("[kimlik no]", s)
-    return _PHONE.sub("[telefon]", s)
+    """E-posta, telefon, IBAN, kart ve 11 haneli kimlik numarası kalıplarını yer tutucuyla değiştirir (ortak maske
+    `zeki_text.mask_personal`; talep metninde 11 hane sağlamasız da gizlenir)."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.mask_personal(s, tckn="any")
 
 
 def model_text(subject: str, body: str, limit: int) -> str:
@@ -579,16 +573,14 @@ def draft_messages(t: str, klass_label: Optional[str], facts: dict[str, str], fa
 
 
 _SENT = re.compile(r"(?<=[.!?])\s+|\n+")
-_RUN = re.compile(r"\d+")   # rakam dizisi: «48-64» talepte geçtiyse taslakta «48–64» de geçer
-
-
 def fill_draft(raw: str, facts: dict[str, str], ticket_text: str, signature: str) -> dict[str, Any]:
     """Model metnindeki yer tutucuları olgularla doldurur. Olgusu olmayan yer tutucu ya da talepte/olgularda geçmeyen
-    bir rakam içeren cümle düşer (model rakam uyduramaz). Düşen cümle sayısı ekranda yazılır."""
-    raw = re.sub(r"<think>.*?</think>", "", raw or "", flags=re.S).strip()
-    allowed = set(_RUN.findall(ticket_text or ""))
-    for v in facts.values():
-        allowed |= set(_RUN.findall(v))
+    bir sayı içeren cümle düşer (model rakam uyduramaz; «48-64» talepte geçtiyse taslakta «48–64» de geçer). Sayı
+    denetimi `zeki_text`. Düşen cümle sayısı ekranda yazılır."""
+    from semantic_bridge import zeki_text as Z
+
+    raw = Z.strip_thinking(raw)
+    allowed = Z.Facts([ticket_text or "", *[str(v) for v in facts.values()]])
     kept, dropped = [], []
     for part in [p.strip() for p in _SENT.split(raw) if p and p.strip()]:
         names = _PH.findall(part)
@@ -596,7 +588,7 @@ def fill_draft(raw: str, facts: dict[str, str], ticket_text: str, signature: str
             dropped.append(part)
             continue
         bare = _PH.sub("", part)
-        if any(d not in allowed for d in _RUN.findall(bare)):
+        if Z.unsupported(bare, allowed):
             dropped.append(part)
             continue
         kept.append(_PH.sub(lambda m: facts[m.group(1)], part))

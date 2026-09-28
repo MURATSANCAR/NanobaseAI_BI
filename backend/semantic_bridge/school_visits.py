@@ -1626,13 +1626,11 @@ def save_match(engine: sa.engine.Engine, tenant: str, key: str, sid: Optional[st
 
 # ------------------------------------------------------------------------------------------ Zeki AI (LLM kapısı)
 
-_DIGITS = re.compile(r"\d+(?:[.,]\d+)*")
-
-
 def numbers_ok(text: str, facts: str) -> bool:
-    """Model metnindeki her sayı verilen bilgide geçmeli (rakamı model üretmez)."""
-    allowed = {x.replace(".", "").replace(",", "") for x in _DIGITS.findall(facts)}
-    return all(x.replace(".", "").replace(",", "") in allowed for x in _DIGITS.findall(text))
+    """Model metnindeki her sayı verilen bilgide geçmeli (rakamı model üretmez). Denetim: `zeki_text`."""
+    from semantic_bridge import zeki_text as Z
+
+    return Z.numbers_ok(text or "", facts)
 
 
 def ask(llm: Any, system: str, user: str, max_tokens: int = 220) -> Optional[str]:
