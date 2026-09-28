@@ -446,7 +446,8 @@ SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
-                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
+                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa",
+                                   "seo-isler", "seo-karne", "seo-biyografi", "seo-sss", "seo-benzer", "seo-eslesme", "seo-soru", "seo-youtube", "seo-alisveris", "seo-aylik"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
@@ -680,6 +681,17 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",
      "ozellik:seo.calistir"),
+    # Uzman özellikleri (2.–3. tur): taslak üretme «öneri üret»; okuma/tarama/yenileme, iş listesi durumu ve soru önerisi
+    # kararı «çalıştır»; dosya indirme «dışa aktar». Onay/ret/gönderim uçları onay yetkisini kendi içinde ister.
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/(guides|bios/[^/]+/draft|faq/[^/]+/draft)$", "ozellik:seo.oneri-uret"),
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/((authors-trust|backlinks|bing|bios|entity|opportunities|qsuggest|reviews|seasons"
+                          r"|similar|sunset|youtube|tech/sitemaps)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
+                          r"|tech/crawl|monthly/build|worklist/[^/]+/status|qsuggest/[^/]+/(accept|reject))$",
+     "ozellik:seo.calistir"),
+    (frozenset({"GET"}), r"^/api/v1/seo-geo/((worklist|similar|keymap|sunset)/export\.csv|video/(sitemap\.xml|theme-request\.md)"
+                         r"|schema/theme-request\.md|(bios/drafts|guides)/[^/]+/export\.html|faq/export\.json|shopping/feed\.tsv"
+                         r"|monthly/[^/]+\.pdf|watch/report/[^/]+\.html)$",
+     "ozellik:veri.disa-aktar"),
 ]
 _FEATURE_RULES = [(m, re.compile(rx), k) for m, rx, k in FEATURE_RULES]
 

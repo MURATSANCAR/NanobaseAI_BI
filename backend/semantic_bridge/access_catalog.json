@@ -322,6 +322,56 @@
       "label": "Yazar sayfaları"
     },
     {
+      "key": "sayfa:seo-isler",
+      "area": "pazarlama",
+      "label": "İş listesi"
+    },
+    {
+      "key": "sayfa:seo-karne",
+      "area": "pazarlama",
+      "label": "Kitap karnesi"
+    },
+    {
+      "key": "sayfa:seo-biyografi",
+      "area": "pazarlama",
+      "label": "Yazar biyografileri"
+    },
+    {
+      "key": "sayfa:seo-sss",
+      "area": "pazarlama",
+      "label": "Kitap soru–cevapları"
+    },
+    {
+      "key": "sayfa:seo-benzer",
+      "area": "pazarlama",
+      "label": "Benzer kitaplar"
+    },
+    {
+      "key": "sayfa:seo-eslesme",
+      "area": "pazarlama",
+      "label": "Sorgu–sayfa eşlemesi"
+    },
+    {
+      "key": "sayfa:seo-soru",
+      "area": "pazarlama",
+      "label": "Soru önerileri"
+    },
+    {
+      "key": "sayfa:seo-youtube",
+      "area": "pazarlama",
+      "label": "YouTube"
+    },
+    {
+      "key": "sayfa:seo-alisveris",
+      "area": "pazarlama",
+      "label": "Google Alışveriş hazırlığı"
+    },
+    {
+      "key": "sayfa:seo-aylik",
+      "area": "pazarlama",
+      "label": "Aylık rapor"
+    },
+    {
       "key": "sayfa:seo-sema",
       "area": "pazarlama",
       "label": "Şema denetimi"

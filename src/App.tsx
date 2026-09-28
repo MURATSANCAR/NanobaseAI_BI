@@ -88,6 +88,16 @@ const SeoTech = lazy(() => import('@/canvas/seo-geo/SeoTech'));
 const SeoCompetitors = lazy(() => import('@/canvas/seo-geo/SeoCompetitors'));
 const SeoEntity = lazy(() => import('@/canvas/seo-geo/SeoEntity'));
 const SeoGuides = lazy(() => import('@/canvas/seo-geo/SeoGuides'));
+const SeoWorklist = lazy(() => import('@/canvas/seo-geo/SeoWorklist'));
+const SeoScorecard = lazy(() => import('@/canvas/seo-geo/SeoScorecard'));
+const SeoBios = lazy(() => import('@/canvas/seo-geo/SeoBios'));
+const SeoFaq = lazy(() => import('@/canvas/seo-geo/SeoFaq'));
+const SeoSimilar = lazy(() => import('@/canvas/seo-geo/SeoSimilar'));
+const SeoKeymap = lazy(() => import('@/canvas/seo-geo/SeoKeymap'));
+const SeoQuestionSuggest = lazy(() => import('@/canvas/seo-geo/SeoQuestionSuggest'));
+const SeoYoutube = lazy(() => import('@/canvas/seo-geo/SeoYoutube'));
+const SeoShopping = lazy(() => import('@/canvas/seo-geo/SeoShopping'));
+const SeoMonthly = lazy(() => import('@/canvas/seo-geo/SeoMonthly'));
 const SeoWatch = lazy(() => import('@/canvas/seo-geo/SeoWatch'));
 const SeoSources = lazy(() => import('@/canvas/seo-geo/SeoSources'));
 const SeoCannibal = lazy(() => import('@/canvas/seo-geo/SeoCannibal'));
@@ -184,6 +194,16 @@ export default function App() {
             <Route path="seo-geo/rakipler" element={<SeoCompetitors />} />
             <Route path="seo-geo/kimlik" element={<SeoEntity />} />
             <Route path="seo-geo/rehberler" element={<SeoGuides />} />
+            <Route path="seo-geo/is-listesi" element={<SeoWorklist />} />
+            <Route path="seo-geo/kitap" element={<SeoScorecard />} />
+            <Route path="seo-geo/yazar-biyografi" element={<SeoBios />} />
+            <Route path="seo-geo/sss" element={<SeoFaq />} />
+            <Route path="seo-geo/benzer-kitaplar" element={<SeoSimilar />} />
+            <Route path="seo-geo/sorgu-sayfa" element={<SeoKeymap />} />
+            <Route path="seo-geo/soru-onerileri" element={<SeoQuestionSuggest />} />
+            <Route path="seo-geo/youtube" element={<SeoYoutube />} />
+            <Route path="seo-geo/alisveris" element={<SeoShopping />} />
+            <Route path="seo-geo/aylik-rapor" element={<SeoMonthly />} />
             <Route path="seo-geo/izleme" element={<SeoWatch />} />
             <Route path="seo-geo/kaynaklar" element={<SeoSources />} />
             <Route path="seo-geo/yarisan" element={<SeoCannibal />} />
