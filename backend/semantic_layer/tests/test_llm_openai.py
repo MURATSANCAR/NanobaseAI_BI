@@ -140,9 +140,10 @@ def test_embeddings_pass_through_without_a_lease(monkeypatch):
     app = FastAPI()
     llm_openai.register_embeddings(app, lambda request: None)
     client = TestClient(app)
-    r = client.post("/api/v1/llm/openai/v1/embeddings", json={"model": "x", "input": ["merhaba"]})
+    r = client.post("/api/v1/llm/openai/v1/embeddings", json={"model": "x", "input": ["merhaba"], "encoding_format": None, "user": None})
     assert r.status_code == 200 and r.json()["data"][0]["embedding"] == [0.1, 0.2]
-    assert seen == {"url": "http://embed.test/v1/embeddings", "auth": "Bearer k2", "body": {"model": "x", "input": ["merhaba"]}}
+    assert seen == {"url": "http://embed.test/v1/embeddings", "auth": "Bearer k2",
+                    "body": {"model": "x", "input": ["merhaba"], "encoding_format": "float"}}
     assert client.post("/api/v1/llm/openai/v1/embeddings", json={"model": "x"}).status_code == 422
     monkeypatch.delenv("BI_EMBED_URL")
     assert client.post("/api/v1/llm/openai/v1/embeddings", json={"input": ["a"]}).status_code == 503

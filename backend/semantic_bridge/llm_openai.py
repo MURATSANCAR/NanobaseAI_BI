@@ -163,6 +163,9 @@ def register_embeddings(app: Any, require_caller: Callable[[Any], None]) -> None
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Gövde JSON değil."}) from None
         if not isinstance(body, dict) or not body.get("input"):
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "input gerekli."})
+        # OpenAI istemcileri boş alanı null gönderir (encoding_format: null); gömme servisi null'ı reddeder (500).
+        body = {k: v for k, v in body.items() if v is not None}
+        body.setdefault("encoding_format", "float")
         headers = {"Content-Type": "application/json"}
         key = os.environ.get("BI_EMBED_API_KEY", "").strip().strip('"')
         if key:
