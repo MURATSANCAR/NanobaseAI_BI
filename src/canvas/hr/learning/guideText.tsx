@@ -1,6 +1,6 @@
 /** Rehber metni ve tarih biçimleri: kabuktaki «Nasıl kullanılır» bağlantısı da kullandığı için ağır bağımlılığı yok. */
 
-type Block = { kind: 'h' | 'p'; text: string } | { kind: 'ol' | 'ul'; items: string[] };
+type Block = { kind: 'h'; text: string } | { kind: 'p'; text: string } | { kind: 'ol'; items: string[] } | { kind: 'ul'; items: string[] };
 
 /** Rehber metnini bloklara ayırır: «## başlık», numaralı ve madde listeleri, paragraflar. */
 export function parseGuide(body: string): Block[] {

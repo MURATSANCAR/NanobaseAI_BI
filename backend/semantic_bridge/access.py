@@ -624,7 +624,6 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/hr/recruit/intake", SYSTEM),
     ("/api/v1/hr/recruit/reminders/run-due", SYSTEM),
     ("/api/v1/hr/recruit/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler")})),
-    ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar")})),
     # M36 Dijital yayın ve e-kitap. Satış raporu ve gelir finans verisidir: ayrı sayfa (dijital-satis); göstergeler ve
     # platform listesi iki sayfada da açık.
     ("/api/v1/dijital/run-due", SYSTEM),

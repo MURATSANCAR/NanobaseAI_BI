@@ -233,7 +233,7 @@ def test_job_runs_in_background_and_reports(engine):
     import time
 
     j = H.start_job(engine, TN, "ayse", "deneme", "k1", lambda progress: (progress(1, 1), {"n": 1})[1])
-    for _ in range(100):
+    for _ in range(500):   # dolu sunucuda arka plan iş parçacığı 2 sn'yi aşabiliyor
         j = H.job(engine, TN, j["id"], "ayse")
         if j["state"] != "calisiyor":
             break
