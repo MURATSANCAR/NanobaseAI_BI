@@ -111,24 +111,73 @@ def test_end_to_end_on_an_unrelated_schema(retail_catalog, retail_db):
     assert rows["PERAKENDE"] == pytest.approx(100 * (1 + 2 + 4 + 5 + 7 + 8 + 10 + 11 + 13 + 14))
 
 
+def _code_lines(source: str) -> list[tuple[int, str]]:
+    """Every line of a module that is code: docstrings and comments left out, string literals kept.
+
+    The parser decides, not the look of a line. The first version skipped a line that opened with a
+    quote and cut at the first '#', so a docstring was exempt only on its first line while a string
+    literal that happened to open its line was never looked at."""
+    import ast
+    import io
+    import tokenize
+
+    docs: set[int] = set()
+    for node in ast.walk(ast.parse(source)):
+        body = getattr(node, "body", None)
+        if (isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and body
+                and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)):
+            docs.update(range(body[0].lineno, body[0].end_lineno + 1))
+    code = source.splitlines()
+    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
+        if tok.type == tokenize.COMMENT:
+            row, col = tok.start
+            code[row - 1] = code[row - 1][:col]
+    return [(i, line) for i, line in enumerate(code, 1) if i not in docs]
+
+
+_CUSTOMER_IDENTIFIERS = r"\b(TRCODE|LINETYPE|NETTOTAL|LOGICALREF|CLCARD|STLINE|ORFICHE|CLIENTREF|STOCKREF|OUTCOST|SPECODE2?)\b"
+
+
 def test_no_customer_specific_identifiers_in_engine_sources():
-    """A grep-level guard: engine modules must not name a customer's tables, columns or codes."""
+    """A grep-level guard: engine modules must not name a customer's tables, columns or codes.
+
+    Documentation is exempt, code is not. Nine docstrings written 2026-09-19…27 (audit, compiler,
+    guardrails, label_values, resolver, catalog_store) explain a measured incident by the columns it
+    happened on; the old line-shape heuristic read their continuation lines as engine code."""
     import pathlib
     import re
 
     root = pathlib.Path(__file__).resolve().parents[1]
-    banned = re.compile(r"\b(TRCODE|LINETYPE|NETTOTAL|LOGICALREF|CLCARD|STLINE|ORFICHE|CLIENTREF|STOCKREF|OUTCOST|SPECODE2?)\b")
+    banned = re.compile(_CUSTOMER_IDENTIFIERS)
     offenders = []
     for path in sorted(root.rglob("*.py")):
         if "tests" in path.parts:
             continue
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            code = line.split("#", 1)[0]
-            if code.strip().startswith(('"', "'", "*", ">>>")):
-                continue
-            if banned.search(code):
+        for i, line in _code_lines(path.read_text(encoding="utf-8")):
+            if banned.search(line):
                 offenders.append(f"{path.relative_to(root)}:{i}: {line.strip()[:90]}")
     assert not offenders, "customer-specific identifiers in engine code:\n" + "\n".join(offenders)
+
+
+def test_the_identifier_guard_reads_strings_in_code_but_not_documentation():
+    """The guard itself: a docstring may name the table an incident happened on; a string the engine
+    runs may not, whichever way its line begins, and neither may code that follows a '#' in a string."""
+    import re
+
+    sample = (
+        'def f():\n'
+        '    """Measured on the live copy:\n'
+        '    CLCARD.SPECODE2 held the channel."""\n'
+        '    sql = (\n'
+        '        "SELECT 1 "\n'
+        '        "WHERE TRCODE = 8"\n'
+        '    )\n'
+        '    tag = "#"; ref = "STOCKREF"  # LOGICALREF in a comment is fine\n'
+    )
+    banned = re.compile(_CUSTOMER_IDENTIFIERS)
+    hits = [i for i, line in _code_lines(sample) if banned.search(line)]
+    assert hits == [6, 8], hits
 
 
 def test_the_database_own_descriptions_become_catalog_evidence(store):

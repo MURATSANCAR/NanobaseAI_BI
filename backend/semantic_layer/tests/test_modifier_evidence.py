@@ -121,6 +121,9 @@ def test_bridge_returns_question_and_logs_modifier_without_calling_llm(resolver)
     runtime.store = resolver.store
     runtime.router = CompilerRouter(None, None)
     runtime.llm = None
+    # No database either. A hand-built runtime has to carry every attribute ask() reads: the
+    # same-period alignment (2026-09-21) asks for the connector before anything is compiled.
+    runtime.connector = None
     out = runtime.ask("iskonto veren müşteriler", thread_id=None, sample_size=5)
     # No model configured: the word cannot be interpreted, and the answer says so instead of widening.
     assert out["type"] != "TEXT_TO_SQL" and not out.get("sql")

@@ -133,7 +133,13 @@ def test_repaired_sql_is_checked_again_before_execution(catalog, logo_connector,
     body = TestClient(create_app(runtime)).post("/api/v1/ask", json={"question": sq.question}).json()
     assert body["type"] == "INCOMPLETE_ANSWER", body
     assert "records" not in body and "resultId" not in body
-    runtime.run_sql.assert_not_called()
+    # Nothing that computes the answer ran. Since 2026-09-21 (same-period alignment, d3644bb6) a
+    # question about a period that is still open first reads where the measure's data ends — a probe
+    # that selects the date column only, before anything is compiled, and whose failure changes
+    # nothing. That read may happen (it depends on today's date); the measure is never read.
+    executed = [str(c.args[0] if c.args else c.kwargs.get("sql", "")) for c in runtime.run_sql.call_args_list]
+    assert not any("NETTOTAL" in s.upper() for s in executed), executed
+    assert "SELECT SUM(NETTOTAL) FROM LG_411_01_INVOICE" not in executed
 
 
 def test_global_where_cannot_drop_a_period_while_cases_remain(catalog, profiles):

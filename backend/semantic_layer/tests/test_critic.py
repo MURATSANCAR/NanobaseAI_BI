@@ -316,7 +316,11 @@ def test_a_question_this_deployment_has_nothing_about_is_refused_not_guessed(
 
     r = client.post("/api/v1/ask", json={"question": "Yarın hava nasıl olacak?"}).json()
     assert r["type"] in ("NON_SQL_QUERY", "SQL_INVALID") or not r.get("sql"), r
-    assert all("yalnız niyet sınıflandır" in call[0]["content"] for call in sql_llm.calls), "scope classification must never be followed by SQL for an unrelated question"
+    # The only thing the model is asked is what kind of message this is (chat_scope, 2026-09-28: its
+    # prompt now also names a topic, so it is compared whole rather than by a phrase of the old one).
+    from semantic_bridge.chat_scope import system_prompt
+    assert sql_llm.calls, "the scope classifier was never asked"
+    assert all(call[0]["content"] == system_prompt() for call in sql_llm.calls), "scope classification must never be followed by SQL for an unrelated question"
 
 
 def test_a_question_the_catalog_can_place_is_not_refused_by_a_selector_saying_none(

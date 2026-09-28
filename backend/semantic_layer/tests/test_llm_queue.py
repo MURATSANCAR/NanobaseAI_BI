@@ -133,35 +133,48 @@ def test_catalog_answers_never_take_a_ticket(queue_store, profiles):
 def test_background_work_yields_to_anyone_waiting(store):
     """The schema reader can take all night; a person's question cannot take a minute longer because a
     batch of it happened to arrive first. Background tickets sort after interactive ones, whatever
-    time they arrived."""
+    time they arrived.
+
+    `store` is the in-memory catalog: one SQLite connection shared by every thread (StaticPool). The
+    queue serialises its own statements on such an engine — interleaved on the shared connection they
+    failed intermittently with "bad parameter or other API misuse". The arrival order is set by
+    watching the queue, not by sleeping: under load a thread could still be starting when the slot
+    was released, and the "person" then arrived after the background ticket had already been let in."""
     import threading
 
     from semantic_layer.runtime.llm_queue import LlmQueue
 
     q = LlmQueue(store.engine, slots=1, poll_seconds=0.05, lease_seconds=30)
     order: list[str] = []
+    running = threading.Event()
     gate = threading.Event()
 
-    def run(purpose: str, name: str, hold: float = 0.0):
+    def run(purpose: str, name: str, hold: bool = False):
         with q.lease(purpose=purpose):
             order.append(name)
             if hold:
-                gate.wait(timeout=5)
+                running.set()
+                gate.wait(timeout=20)
 
-    first = threading.Thread(target=run, args=("bg:nightly", "bg-1", 0.3))
+    def until_waiting(n: int) -> None:
+        deadline = time.monotonic() + 20
+        while q.status()["waiting"] != n and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert q.status()["waiting"] == n
+
+    first = threading.Thread(target=run, args=("bg:nightly", "bg-1", True))
     first.start()
-    import time as _t
-
-    _t.sleep(0.15)                      # bg-1 is running and holding the only slot
-    rest = [threading.Thread(target=run, args=("bg:nightly", "bg-2")),
-            threading.Thread(target=run, args=("nl2sql", "insan"))]
-    for t in rest:
+    assert running.wait(timeout=20)     # bg-1 is running and holding the only slot
+    rest = []
+    for purpose, name in (("bg:nightly", "bg-2"), ("nl2sql", "insan")):
+        t = threading.Thread(target=run, args=(purpose, name))
         t.start()
-        _t.sleep(0.1)                   # bg-2 arrives BEFORE the person does
+        rest.append(t)
+        until_waiting(len(rest))        # bg-2 is in line BEFORE the person arrives
     gate.set()
-    first.join(timeout=10)
+    first.join(timeout=20)
     for t in rest:
-        t.join(timeout=10)
+        t.join(timeout=20)
     assert order[0] == "bg-1"
     assert order.index("insan") < order.index("bg-2"), order
 

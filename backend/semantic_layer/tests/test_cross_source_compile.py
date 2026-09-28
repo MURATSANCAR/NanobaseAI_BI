@@ -1,8 +1,13 @@
-"""Ölçülmüş bir veritabanları arası bağ derlendiğinde geçerli T-SQL çıkmalı.
+"""Ölçülmüş bir veritabanları arası bağ.
 
-Üç şey sessizce bozuluyordu: metinde saklı sayı ile tamsayı anahtar karşılaştırması (dönüştürme hatası),
-iki farklı harmanlamanın karşılaştırılması (SQL Server reddeder) ve yıl kopyalı hedefe yalnız bir
-yılın bağlanması (öteki yılların satırları iç join'de kaybolur).
+Test ilk yazıldığında (2026-09-16, 3d2818f7) iki veritabanı tek T-SQL'de birleştiriliyordu ve üç şey
+sessizce bozuluyordu: metinde saklı sayı ile tamsayı anahtar karşılaştırması (dönüştürme hatası), iki
+farklı harmanlamanın karşılaştırılması (SQL Server reddeder) ve yıl kopyalı hedefe yalnız bir yılın
+bağlanması. Aynı gün CRM ayrı sunucuya taşındı (kullanıcı kararı: ayrı datasource, tek SQL'de
+cross-join yok) ve 2026-09-18'den beri (7921ae0a) deterministik derleyici iki veritabanına yayılan
+soruyu tek ifade olarak yazmaz — yazdığında öteki yarıyı yok sayıp daha dar bir soruyu cevaplıyordu;
+iş iki sunuculu plana kalır. Burada sınanan: bu ret, ve bağın nasıl karşılaştırılacağının (TRY_CAST,
+COLLATE, hedefin dönem anlamı) katalogdan doğru okunması — modele giden not da bundan yazılır.
 """
 
 from __future__ import annotations
@@ -12,8 +17,8 @@ from datetime import date
 
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.models import ColumnProfile, Mapping, SchemaProfile, SemanticType, TemporalSlot, utcnow
-from semantic_layer.runtime.compiler import DeterministicCompiler
-from semantic_layer.runtime.guardrails import allowed_tables
+from semantic_layer.conventions import Conventions
+from semantic_layer.runtime.compiler import DeterministicCompiler, Dialect
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.tests.conftest import DS, TENANT
 from semantic_layer.tests.test_runtime import _certify
@@ -54,29 +59,42 @@ def _world(store, profiles):
     return allp
 
 
-def test_a_reference_into_period_tables_joins_every_period_with_a_named_collation(store, profiles):
+TWO_SERVERS = "question names things on two servers"
+
+
+def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_databases(store, profiles):
+    """Sevkiyat öteki veritabanında, fatura türü Logo'nun dönem tablolarında: tek ifade yazılmaz."""
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
     sq = r.resolve("fatura turu bazında sevkiyat adedi", today=date(2026, 7, 20))
     sq.temporal = [TemporalSlot(text="2025-2026", primitive="RANGE", start=date(2025, 1, 1), end=date(2027, 1, 1))]
-    out = c.compile(sq, store)
-    assert out is not None, c.plan(sq)
-    assert "[OtherDb].[dbo].[ShipmentBase]" in out.sql
-    assert "LG_211_01_INVOICE" in out.sql and "LG_411_01_INVOICE" in out.sql and "UNION ALL" in out.sql, out.sql
-    assert "SHIPMENTBASE.[INVOICE_NO] COLLATE DATABASE_DEFAULT = INVOICE.[FICHENO]" in out.sql, out.sql
-    assert allowed_tables(out.sql, allp, {}, "tsql") == (True, "ok")
+    assert c.plan(sq) == (None, TWO_SERVERS), (c.plan(sq), sq.explanation)
+    assert c.compile(sq, store) is None
 
 
-def test_an_integer_kept_as_text_is_cast_and_a_replicated_target_is_read_once(store, profiles):
+def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statement(store, profiles):
+    """Kredi limiti öteki veritabanında, kanal Logo'nun cari kartında: öteki yarı düşürülüp tek
+    kaynaklı (daha dar) bir cevap yazılmaz."""
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
     sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
-    out = c.compile(sq, store)
-    assert out is not None, c.plan(sq)
-    assert "TRY_CAST(ACCOUNTBASE.[ERP_REF] AS int) = CLCARD.[LOGICALREF]" in out.sql, out.sql
-    assert ("LG_211_CLCARD" in out.sql) != ("LG_411_CLCARD" in out.sql), out.sql       # kopyalardan yalnız biri
+    assert c.plan(sq) == (None, TWO_SERVERS), (c.plan(sq), sq.explanation)
+    assert c.compile(sq, store) is None
+
+
+def test_a_measured_link_is_compared_with_its_cast_collation_and_period_meaning(store, profiles):
+    """Metinde saklı tamsayı TRY_CAST ile, farklı harmanlama COLLATE ile karşılaştırılır; hedefin dönem
+    anlamı (her dönem ayrı anahtar mı, kopya mı) bağla birlikte taşınır."""
+    hints = Conventions.from_profiles(_world(store, profiles)).join_hints
+    ship = hints[("SHIPMENTBASE", "INVOICE_NO", "INVOICE", "FICHENO")]
+    acc = hints[("ACCOUNTBASE", "ERP_REF", "CLCARD", "LOGICALREF")]
+    d = Dialect("tsql")
+    assert d.join_on("SHIPMENTBASE.[INVOICE_NO]", "INVOICE.[FICHENO]", ship) == "SHIPMENTBASE.[INVOICE_NO] COLLATE DATABASE_DEFAULT = INVOICE.[FICHENO]"
+    assert d.join_on("ACCOUNTBASE.[ERP_REF]", "CLCARD.[LOGICALREF]", acc) == "TRY_CAST(ACCOUNTBASE.[ERP_REF] AS int) = CLCARD.[LOGICALREF]"
+    assert ship["period_semantics"] == "periodic" and acc["period_semantics"] == "replicated"
+    assert Dialect("sqlite").join_on("A.x", "B.y", ship) == "A.x = B.y"      # harmanlama yalnız SQL Server'da
 
 
 def test_the_model_is_told_how_to_compare_a_measured_link():

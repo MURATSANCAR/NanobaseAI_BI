@@ -126,6 +126,9 @@ def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, p
     sq = resolve(catalog, profiles + [orders()], "iptal edilen sipariş sayısı")
     compiler = ExistingCompiler.__new__(ExistingCompiler)
     compiler.selector, compiler.selector_mode = _Selector(), "on"
+    # A hand-built compiler carries what `narrow` reads: since 2026-09-20 a slot's table is looked up
+    # by its profiled name (`profiled_name`), which falls back to the profiles' patterns.
+    compiler.profiles = list(profiles)
     compiler.by_entity = {p.entity: p for p in profiles}
     compiler.catalog_entities = {"CLCARD", "INVOICE", "STLINE"}
     kept = compiler.narrow(sq, ["CLCARD", "INVOICE", "STLINE"])

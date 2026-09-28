@@ -366,6 +366,11 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
                       primary_key=["C0"], context={"n0": "411", "n1": "01"})
         for i in range(40)
     ]
+    # The same question before the noise exists. Whatever the prompt carries besides the schema is
+    # the same in both — the business rules alone may take RULES_BUDGET (40.000 characters since
+    # 09-17, filled by the knowledge pack since 09-18), so the whole prompt cannot be held under that
+    # same figure any more — and the difference is exactly what forty unrelated tables cost.
+    before = Runtime(settings, store=catalog, connector=None, llm=FakeLlm([""]))
     for p in noise:
         catalog.upsert_profile(p)
     rt = Runtime(settings, store=catalog, connector=None, llm=FakeLlm([""]))
@@ -373,8 +378,13 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
     sq = r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
     prompt = rt.existing.build_messages(sq, [])[0]["content"]
     assert "INVOICE" in prompt and "NOISE7" not in prompt
-    assert "listelenmedi" in prompt, "what was left out has to be said, not silently dropped"
-    assert len(prompt) < 40_000, f"prompt is {len(prompt)} characters"
+    import re
+
+    said = re.search(r"(\d+) tablo listelenmedi", prompt)
+    assert said and int(said.group(1)) >= len(noise), "what was left out has to be said, not silently dropped"
+    baseline = before.existing.build_messages(sq, [])[0]["content"]
+    whole_schema = sum(len(c.name) + len(c.data_type) for p in noise for c in p.columns)
+    assert len(prompt) - len(baseline) < 500 < whole_schema, (len(prompt), len(baseline), whole_schema)
 
     # a source that splits one entity across periods must not spend the context twice on it
     import copy
@@ -645,15 +655,26 @@ def test_the_model_never_speaks_for_itself(catalog, profiles, logo_connector, se
         "Bugün hava çok güzel, isterseniz sohbet edelim.",
     ])
     client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=chatty)))
+    from semantic_bridge.chat_scope import BI_INTRO
 
-    for question in ("Sen kimsin, hangi modeli kullanıyorsun?", "Bugün hava nasıl?"):
+    def ask(question):
         body = client.post("/api/v1/ask", json={"question": question, "sampleSize": 5}).json()
         text = str(body.get("explanation") or "") + str(body.get("summary") or "")
-        assert body["type"] == "NON_SQL_QUERY", body
         # nothing the model wrote survives into what the person reads
         for said in ("yapay zeka modeliyim", "GPT mimarisiyle", "sohbet edelim", "her konuda yardımcı"):
             assert said not in text, text
         assert "tanımlı" in text.lower() or "veri" in text.lower(), text   # a data tool's answer, or none
+        return body
+
+    # A question about the assistant itself is answered with the fixed introduction and never reaches
+    # the model (chat_scope, 2026-09-28): no model name can leak through a reply it did not write.
+    body = ask("Sen kimsin, hangi modeli kullanıyorsun?")
+    assert body["type"] == "MODULE_INTRO" and body["explanation"] == BI_INTRO, body
+    assert chatty.calls == [], "the identity question reached the model"
+    # Anything else goes to the model only to be classified and to write SQL; a chatty reply to either
+    # is not an answer: the person is told no query came of it, in the tool's own words.
+    body = ask("Bugün hava nasıl?")
+    assert body["type"] == "NON_SQL_QUERY", body
 
 
 def test_the_catalogue_can_be_asked_for_a_page_instead_of_all_of_it(catalog, profiles, logo_connector, settings):

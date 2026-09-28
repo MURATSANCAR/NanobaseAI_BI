@@ -2346,7 +2346,14 @@ class SemanticResolver:
                       and s.semantic_type != SemanticType.DEFAULT_FILTER and s.status in ("CERTIFIED", "INFERRED")]
             column_homes = {self._source_of(s.mapping.entity) for s in placed if self._names_a_source(s)}
             elsewhere = {self._source_of(s.mapping.entity) for s in placed} - column_homes
-            if len(column_homes) == 1 and not elsewhere:
+            # The plain words are read before the shortcut, not only after it. A phrase placed on one
+            # side and a table the question names in its own word on the other are two voices of the
+            # same weight (see the vote below): "Fiyat listesinde tanımlı fiyatın altında kesilen
+            # faturalar" placed only the CRM's "fiyat listesi", and the shortcut carried a question
+            # about invoices to the database that has none, without the invoices ever being counted.
+            covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            plain_votes, plain_named = self._source_votes(qf, covered)
+            if len(column_homes) == 1 and not elsewhere and not (set(plain_votes) - column_homes):
                 homes = column_homes
                 sq.source_hint = next(iter(homes))
         if not metrics and len(homes) != 1:
@@ -2354,8 +2361,7 @@ class SemanticResolver:
             # altında kesilen faturalar" names invoices — an ERP thing — and "fiyat listesi" is a
             # word both databases use. The entities the plain words reach (outside any placed
             # phrase) say which database the question is about.
-            covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
-            votes, named = self._source_votes(qf, covered)
+            votes, named = dict(plain_votes), list(plain_named)
             plain = dict(votes)
             # A certified phrase names its database as surely as a table's own word does: "fiziki
             # arşivde emanete verilmiş" is three CRM things, and the plain "kayıtlar" beside them is

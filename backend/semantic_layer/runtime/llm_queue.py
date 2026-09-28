@@ -90,6 +90,13 @@ class LeaseCancelled(Exception):
     """The caller withdrew while waiting for its turn."""
 
 
+def _single_shared_connection(engine: sa.Engine) -> bool:
+    """Does every checkout hand out the same DBAPI connection? (StaticPool: the in-memory catalog.)"""
+    from sqlalchemy.pool import StaticPool
+
+    return isinstance(getattr(engine, "pool", None), StaticPool)
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -159,8 +166,31 @@ class LlmQueue:
         # their next poll (up to 5s later — a fifth of a 25s call, with the slot standing empty).
         # Waiters in other processes still find out by polling.
         self._freed = threading.Condition()
+        # One connection shared by every thread (an in-memory SQLite catalog: StaticPool) cannot carry
+        # two transactions at once — the waiter's poll, the holder's release and a heartbeat interleaved
+        # on it and SQLite answered "bad parameter or other API misuse", intermittently. Each ticket
+        # operation is short, so on such an engine they simply take turns; a real pool is untouched.
+        self._serial = threading.RLock() if engine is not None and _single_shared_connection(engine) else None
         if engine is not None:
             self._ensure_schema()
+
+    @contextmanager
+    def _begin(self) -> Iterator[sa.Connection]:
+        if self._serial is None:
+            with self.engine.begin() as conn:
+                yield conn
+            return
+        with self._serial, self.engine.begin() as conn:
+            yield conn
+
+    @contextmanager
+    def _connect(self) -> Iterator[sa.Connection]:
+        if self._serial is None:
+            with self.engine.connect() as conn:
+                yield conn
+            return
+        with self._serial, self.engine.connect() as conn:
+            yield conn
 
     def _ensure_schema(self) -> None:
         """The queue may be opened by a process that does not create tables (the timed scripts open
@@ -175,7 +205,7 @@ class LlmQueue:
             have = {c["name"] for c in insp.get_columns(S.sl_llm_queue.name)}
             for col in S.sl_llm_queue.columns:
                 if col.name not in have:
-                    with self.engine.begin() as conn:
+                    with self._begin() as conn:
                         conn.execute(sa.text(f"ALTER TABLE {S.sl_llm_queue.name} ADD COLUMN {col.name} {col.type.compile(dialect=self.engine.dialect)}"))
         except Exception as e:  # noqa: BLE001 — two processes adding the same column at once: the loser is fine
             log.warning("llm queue: schema check: %s", e)
@@ -223,7 +253,7 @@ class LlmQueue:
         """What the queue looks like right now — for the operator and for the waiting user."""
         if self.engine is None:
             return {"backend": "process", "slots": self.slots, "running": self.slots - self._local._value, "waiting": 0, "queue": []}
-        with self.engine.begin() as conn:
+        with self._begin() as conn:
             self._reclaim(conn)
             gate = self._gate(conn)
             rows = [dict(r._mapping) for r in conn.execute(
@@ -272,7 +302,7 @@ class LlmQueue:
         if self.engine is None:
             return
         try:
-            with self.engine.begin() as conn:
+            with self._begin() as conn:
                 self._lock(conn)
                 gate = self._gate(conn, create=True)
                 now = _now()
@@ -301,7 +331,7 @@ class LlmQueue:
         if self.engine is None or self._gate_clean:
             return
         try:
-            with self.engine.begin() as conn:
+            with self._begin() as conn:
                 self._lock(conn)
                 gate = self._gate(conn)
                 if not gate:
@@ -346,7 +376,7 @@ class LlmQueue:
         if module is None or priority is None:
             module, priority = classify(purpose)
         ticket_id = new_id("llmq")
-        with self.engine.begin() as conn:
+        with self._begin() as conn:
             conn.execute(S.sl_llm_queue.insert().values(
                 id=ticket_id, tenant_id=tenant_id, datasource_id=datasource_id, user_id=user_id,
                 purpose=purpose[:64], question=(question or "")[:500], status="WAITING",
@@ -441,7 +471,7 @@ class LlmQueue:
         while True:
             if cancel is not None and cancel.is_set():
                 raise LeaseCancelled(ticket_id)
-            with self.engine.begin() as conn:
+            with self._begin() as conn:
                 self._lock(conn)
                 self._reclaim(conn, exclude_id=ticket_id)
                 gate = self._gate(conn)
@@ -471,7 +501,7 @@ class LlmQueue:
                     raise TimeoutError("Background LLM work yielded after queue wait limit")
                 # Never fail the user's question on queueing alone: take the slot and let the model decide.
                 log.warning("llm queue wait exceeded %ss for %s — proceeding", self.max_wait_seconds, ticket_id)
-                with self.engine.begin() as conn:
+                with self._begin() as conn:
                     conn.execute(take.values(status="RUNNING", started_at=_now(), heartbeat_at=_now(), worker=self.worker))
                 return ahead_at_start
             wake_at = time.monotonic() + poll
@@ -487,7 +517,7 @@ class LlmQueue:
         """Keeps a RUNNING ticket alive for as long as the call really runs."""
         while not stop.wait(self.RUNNING_HEARTBEAT_SEC):
             try:
-                with self.engine.begin() as conn:
+                with self._begin() as conn:
                     conn.execute(S.sl_llm_queue.update()
                                  .where(S.sl_llm_queue.c.id == ticket_id, S.sl_llm_queue.c.status == "RUNNING")
                                  .values(heartbeat_at=_now()))
@@ -495,13 +525,13 @@ class LlmQueue:
                 log.warning("llm queue heartbeat failed for %s: %s", ticket_id, e)
 
     def _is_background_ticket(self, ticket_id: str) -> bool:
-        with self.engine.connect() as conn:
+        with self._connect() as conn:
             priority = conn.execute(sa.select(PRIORITY).where(S.sl_llm_queue.c.id == ticket_id)).scalar()
         return int(priority or 0) > INTERACTIVE
 
     def _finish(self, ticket_id: str) -> None:
         try:
-            with self.engine.begin() as conn:
+            with self._begin() as conn:
                 conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(status="DONE", finished_at=_now()))
         except Exception as e:  # noqa: BLE001
             log.warning("llm queue release failed for %s: %s", ticket_id, e)

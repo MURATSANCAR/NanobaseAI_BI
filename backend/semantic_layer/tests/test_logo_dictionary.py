@@ -180,8 +180,15 @@ def test_what_a_person_wrote_survives_and_a_machine_count_gets_its_labels():
 def test_the_generated_reference_does_not_ride_along_in_every_prompt():
     """The vendor dictionary is 168 KB. `_load_rules` concatenates the knowledge pack into the system
     prompt, so leaving it under a directory the prompt reads spends the whole context on the codes of
-    tables the question never mentions — and the schema, the catalog and the examples fall out."""
+    tables the question never mentions — and the schema, the catalog and the examples fall out.
+
+    What must stay inside the budget is what one prompt carries, not the pack. Until 2026-09-18 the
+    whole pack went into every prompt, so the pack itself had to fit. Since 97a99930 a document
+    declares its source (`<!-- kaynak: … -->`) and `rules_for` chooses per question — other sources'
+    documents out, then sections by relevance, anything left out counted in the prompt — so the pack
+    may outgrow the budget (it is past 50.000 characters with the CRM rules) without a prompt doing so."""
     from pathlib import Path
+    from types import SimpleNamespace
 
     pack = Path(__file__).resolve().parents[3] / "configs" / "semantic" / "knowledge" / "logo" / "knowledge"
     generated = pack / "reference" / "logo-ldds.md"
@@ -189,11 +196,24 @@ def test_the_generated_reference_does_not_ride_along_in_every_prompt():
     assert generated.stat().st_size > 100_000, "this is the file the exclusion exists for"
 
     from semantic_bridge.app import Runtime
+    from semantic_layer.models import SemanticQuery
+    from semantic_layer.runtime.compiler import RULES_BUDGET, ExistingCompiler
 
     assert "reference" in Runtime._NOT_IN_PROMPT
-    carried = sum(f.stat().st_size for f in pack.rglob("*.md") if f.parent.name not in Runtime._NOT_IN_PROMPT)
-    from semantic_layer.runtime.compiler import RULES_BUDGET
-    assert carried < RULES_BUDGET, f"the prompt would carry {carried} characters of documentation (budget {RULES_BUDGET})"
+    carried = Runtime._load_rules(SimpleNamespace(settings=SimpleNamespace(project_dir=pack.parent),
+                                                  _NOT_IN_PROMPT=Runtime._NOT_IN_PROMPT))
+    assert carried, "the knowledge pack was not read at all"
+    reference_head = generated.read_text(encoding="utf-8").splitlines()[0]
+    assert reference_head not in carried, "the generated reference reached the prompt's documentation"
+
+    compiler = ExistingCompiler(None, [], {}, rules_text=carried)
+    note = 200                                   # the one line that says how much was left out
+    for sources in ([], ["ANA"], ["TIMAS_MSCRM"], ["ANA", "TIMAS_MSCRM"]):
+        q = SemanticQuery(question="2026 net ciro kanal bazında", tenant_id="t", datasource_id="d", sources=sources)
+        rules = compiler.rules_for(q)
+        assert rules, sources
+        assert reference_head not in rules
+        assert len(rules) <= RULES_BUDGET + note, (sources, len(rules), RULES_BUDGET)
 
 
 def test_operator_documentation_cannot_outgrow_the_prompt():
