@@ -242,6 +242,7 @@ export default function BiCanvasPage() {
                 rules={alerts.data?.alerts ?? []}
                 email={alerts.data?.email ?? { configured: false, sender: null }}
                 draft={null}
+                kaynaklar={alerts.data?.kaynaklar}
               />
             </ZoomStage>
           </main>

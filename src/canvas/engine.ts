@@ -407,6 +407,8 @@ export type AlertRange = {
 export type AlertSuggestion = AlertRange & {
   oneri?: { esik: number; gerekce: string; alt: number; ust: number; etiket: string } | null;
   kaynak?: { sql?: Array<{ ad: string; sql: string }> };
+  /** Sorgu bilgisi: aralığın geçmiş okumalarının fiziksel SQL'i. */
+  kaynaklar?: Kaynaklar;
 };
 
 export type AlertRule = {
@@ -474,13 +476,19 @@ export async function send<T>(method: string, path: string, body?: unknown, time
 }
 
 export const alertsApi = {
-  list: () => send<{ user: string; alerts: AlertRule[]; email: AlertEmail }>('GET', '/api/v1/alerts'),
+  list: () => send<{ user: string; alerts: AlertRule[]; email: AlertEmail; kaynaklar?: Kaynaklar }>('GET', '/api/v1/alerts'),
   create: (b: AlertInput) => send<AlertRule>('POST', '/api/v1/alerts', b),
   update: (id: string, b: Partial<AlertInput> & { status?: 'active' | 'paused' }) =>
     send<AlertRule>('PATCH', `/api/v1/alerts/${encodeURIComponent(id)}`, b),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/alerts/${encodeURIComponent(id)}`),
   check: (id?: string) =>
-    send<{ checked: number; triggered: number; notified: number; errors: Array<{ id: string; error: string }> }>(
+    send<{
+      checked: number;
+      triggered: number;
+      notified: number;
+      errors: Array<{ id: string; error: string }>;
+      kaynaklar?: Kaynaklar;
+    }>(
       'POST',
       `/api/v1/alerts/check${id ? `?id=${encodeURIComponent(id)}` : ''}`,
       {},

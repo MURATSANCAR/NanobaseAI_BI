@@ -260,10 +260,14 @@ def _scope(tenant: str, ds: str, owner: Optional[str]) -> list[Any]:
     return conds
 
 
+def list_stmt(tenant: str, ds: str, owner: Optional[str] = None) -> Any:
+    """Kural listesi okuması (sorgu bilgisi aynı ifadeyi gösterir: gösterilen = çalışan)."""
+    return sa.select(RULES).where(*_scope(tenant, ds, owner)).order_by(RULES.c.created_at.desc())
+
+
 def list_rules(engine: sa.engine.Engine, tenant: str, ds: str, owner: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(RULES).where(*_scope(tenant, ds, owner))
-                         .order_by(RULES.c.created_at.desc())).mappings().all()
+        rows = c.execute(list_stmt(tenant, ds, owner)).mappings().all()
     return [to_dict(r) for r in rows]
 
 
@@ -427,9 +431,16 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=Non
                 rng = _range_for(rule, expect, now.astimezone(_LOCAL).date().isoformat())
             if rng is not None and rng is not rule.get("expected"):
                 upd["expected_json"] = json.dumps(rng, ensure_ascii=False, default=str)
-            if "dbMs" in answer or "cached" in answer:
+            if "dbMs" in answer or "cached" in answer or answer.get("physicalSql"):
+                # Sorgu bilgisi: değeri üreten fiziksel SQL (köprünün Logo/CRM'de koşturduğu metin), satır sayısı ve
+                # iki sunuculu cevapta parçalar. Ekrandaki «i» bunu gösterir; mantıksal metin kopyalanmaz.
+                parts = [dict(name=p.get("name"), source=p.get("source"), ms=p.get("ms"), sql=p.get("sql"))
+                         for p in (answer.get("dbParts") or []) if isinstance(p, dict) and p.get("sql")]
                 upd["last_db_json"] = json.dumps({"dbMs": answer.get("dbMs"), "cached": bool(answer.get("cached")),
-                                                  "computedAt": answer.get("computedAt")})
+                                                  "computedAt": answer.get("computedAt"),
+                                                  "physicalSql": None if parts else answer.get("physicalSql"),
+                                                  "rows": answer.get("totalRows"), "parts": parts or None},
+                                                 ensure_ascii=False, default=str)
             value = value_of(answer, rule["column"])
             out_of_range = outside(value, rng)
             if rule["condition"] == "olagandisi":

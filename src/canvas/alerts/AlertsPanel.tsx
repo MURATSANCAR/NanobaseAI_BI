@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pause, Play, RotateCw, Trash2, X } from 'lucide-react';
 import DbTimingBadge from '../DbTiming';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { useCan } from '../useAdmin';
 import {
   alertsApi,
@@ -142,6 +144,7 @@ export default function AlertsPanel({
   email,
   draft,
   inline = false,
+  kaynaklar,
 }: {
   mode: 'kurallar' | 'yeni';
   onMode: (m: 'kurallar' | 'yeni') => void;
@@ -151,6 +154,8 @@ export default function AlertsPanel({
   draft: RuleDraft | null;
   /** Uyarılar ekranının kendi gövdesi: kanvasın üstünde yüzen kart değil, sayfanın içeriği. Kapat düğmesi çıkmaz. */
   inline?: boolean;
+  /** Sorgu bilgisi (kural listesi cevabı): sayaçlar ve her kuralın son değeri. */
+  kaynaklar?: Kaynaklar;
 }) {
   // Rol: kural yazmak «Uyarı kuralı yazma» ister; yeni kural önce değeri ölçtüğü için Zeki AI sorusu da gerekir.
   const canRule = useCan('uyari.kural');
@@ -161,6 +166,7 @@ export default function AlertsPanel({
     <div className={inline ? 'flex justify-center pb-4' : 'absolute bottom-2 left-2 right-2 z-50 flex justify-center sm:left-6 sm:right-6 md:bottom-28'}>
       <div className={`${inline ? '' : 'max-h-[calc(100dvh-230px)] overflow-auto '}w-full max-w-[1040px] rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5`}>
         <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
             {(
               [
@@ -181,6 +187,9 @@ export default function AlertsPanel({
               </button>
             ))}
           </div>
+          {/* Sekmedeki kural sayısı ve menüdeki Uyarılar rozeti (eşiği aşan etkin kural) aynı okumadan. */}
+          <SqlInfo k={kaynaklar} alan="alerts" label="Kural sayıları" />
+          </div>
           {!inline && (
             <button type="button" onClick={onClose} title="Kapat" aria-label="Kapat" className="rounded-lg p-2.5 sm:p-1.5 text-canvas-muted hover:bg-slate-100">
               <X className="h-4 w-4" />
@@ -199,7 +208,7 @@ export default function AlertsPanel({
           {view === 'yeni' ? (
             <NewRule draft={draft} onSaved={() => onMode('kurallar')} />
           ) : (
-            <RuleList rules={rules} onNew={canNew ? () => onMode('yeni') : undefined} canEdit={canRule} />
+            <RuleList rules={rules} kaynaklar={kaynaklar} onNew={canNew ? () => onMode('yeni') : undefined} canEdit={canRule} />
           )}
         </div>
       </div>
@@ -214,7 +223,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
   const [threshold, setThreshold] = useState(draft?.threshold != null ? nf.format(draft.threshold) : '');
   const [title, setTitle] = useState('');
   const [recipients, setRecipients] = useState('');
-  const [probe, setProbe] = useState<{ value: number; column: string; sql?: string } | null>(null);
+  const [probe, setProbe] = useState<{ value: number; column: string; sql?: string; k?: Kaynaklar } | null>(null);
   const [probeErr, setProbeErr] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
   /** Beklenen aralık ve eşik önerisi (kurala göre, geçmiş 24 ayın aynı penceresi). */
@@ -264,7 +273,8 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
       }
       const v = singleValue(a.records as Array<Record<string, unknown>>);
       if (typeof v === 'string') setProbeErr(v);
-      else setProbe({ ...v, sql: a.sql });
+      // Gösterilen SQL köprünün Logo/CRM'de koşturduğu fiziksel metindir (kopyala-çalıştır aynı değeri verir).
+      else setProbe({ ...v, sql: a.physicalSql, k: a.kaynaklar });
     } catch (e) {
       setProbeErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
     } finally {
@@ -327,6 +337,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
       {probe && (
         <div className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
           Şu anki değer <strong className="font-mono tabular-nums">{nf.format(probe.value)}</strong>
+          <SqlInfo k={probe.k} alan="records" label="Şu anki değer" className="ml-0.5" />
           {thr != null && breached(probe.value, condition, thr, sug) !== null && (
             <>
               {' '}
@@ -398,6 +409,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
           <div className="mt-1 space-y-1">
             <div>
               Beklenen aralık <strong className="font-mono tabular-nums">{rangeText(sug)}</strong>
+              <SqlInfo k={sug.kaynaklar} alan="alt" label="Beklenen aralık ve önerilen eşik" className="ml-0.5" />
               <span className="text-canvas-muted"> · {sug.yontem === 'mevsimsel' ? 'geçmiş 24 ayın aynı penceresi, mevsim ayıklanarak' : 'son 12 ayın aynı penceresinin medyanı'} ({sug.nokta} nokta)</span>
             </div>
             {!anomaly && sug.oneri && (
@@ -454,7 +466,17 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
   );
 }
 
-function RuleList({ rules, onNew, canEdit }: { rules: AlertRule[]; onNew?: () => void; canEdit: boolean }) {
+function RuleList({
+  rules,
+  kaynaklar,
+  onNew,
+  canEdit,
+}: {
+  rules: AlertRule[];
+  kaynaklar?: Kaynaklar;
+  onNew?: () => void;
+  canEdit: boolean;
+}) {
   const qc = useQueryClient();
   const refresh = () => void qc.invalidateQueries({ queryKey: QUERY_KEY });
   const checkAll = useMutation({ mutationFn: () => alertsApi.check(), onSuccess: refresh });
@@ -483,6 +505,7 @@ function RuleList({ rules, onNew, canEdit }: { rules: AlertRule[]; onNew?: () =>
           {checkAll.data
             ? `${checkAll.data.checked} kural kontrol edildi · ${checkAll.data.triggered} tanesi eşiği aşıyor${checkAll.data.errors.length ? ` · ${checkAll.data.errors.length} ölçülemedi` : ''}`
             : 'Sunucu her 15 dakikada bir kontrol eder.'}
+          {checkAll.data && <SqlInfo k={checkAll.data.kaynaklar} alan="checked" label="Kontrol özeti" className="ml-1" />}
         </span>
         {canEdit && (
         <button
@@ -499,14 +522,24 @@ function RuleList({ rules, onNew, canEdit }: { rules: AlertRule[]; onNew?: () =>
       {checkAll.isError && <div className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">{errText(checkAll.error)}</div>}
       <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100">
         {rules.map((r) => (
-          <RuleRow key={r.id} rule={r} onChanged={refresh} canEdit={canEdit} />
+          <RuleRow key={r.id} rule={r} kaynaklar={kaynaklar} onChanged={refresh} canEdit={canEdit} />
         ))}
       </div>
     </div>
   );
 }
 
-function RuleRow({ rule, onChanged, canEdit }: { rule: AlertRule; onChanged: () => void; canEdit: boolean }) {
+function RuleRow({
+  rule,
+  kaynaklar,
+  onChanged,
+  canEdit,
+}: {
+  rule: AlertRule;
+  kaynaklar?: Kaynaklar;
+  onChanged: () => void;
+  canEdit: boolean;
+}) {
   const [confirm, setConfirm] = useState(false);
   const toggle = useMutation({
     mutationFn: () => alertsApi.update(rule.id, { status: rule.status === 'paused' ? 'active' : 'paused' }),
@@ -533,6 +566,7 @@ function RuleRow({ rule, onChanged, canEdit }: { rule: AlertRule; onChanged: () 
             Son değer{' '}
             <strong className="font-mono tabular-nums text-canvas-ink">{rule.last_value != null ? nf.format(rule.last_value) : '—'}</strong>{' '}
             · koşul {COND[rule.condition]} <span className="font-mono tabular-nums">{nf.format(rule.threshold)}</span>
+            <SqlInfo k={kaynaklar} alan="alerts[]" row={rule.id} label={rule.title} className="ml-0.5" />
           </span>
           {rule.expected?.ok && (
             <span title="Geçmiş dönemlerin aynı penceresinden, kurala göre">

@@ -3110,7 +3110,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             if not (rule.get("question") or "").strip():
                 return {"ok": False, "neden": "Kural soru değil SQL; beklenen aralık sorudan hesaplanır."}
             k = float(rule["threshold"]) if rule.get("condition") == "olagandisi" else _range_k()
-            return variance.measure_range(variance_api.runner_for(r), r.resolver.resolve(rule["question"]), k=k)
+            seen: list[dict[str, Any]] = []
+
+            def run(sql: str, period: Optional[tuple]) -> list[dict[str, Any]]:
+                # Sorgu bilgisi: aralığın geçmişini okuyan fiziksel SQL, satırı ve süresi aralıkla birlikte saklanır.
+                out = r.run_complete(sql, period)
+                seen.append({"sql": out.get("physicalSql"), "rows": out.get("totalRows"), "ms": out.get("dbMs"),
+                             "at": out.get("computedAt")})
+                return variance_api.rows_of(r, out)
+
+            rng = variance.measure_range(run, r.resolver.resolve(rule["question"]), k=k)
+            if seen and isinstance(rng, dict):
+                rng["fiziksel"] = [x for x in seen if x.get("sql")]
+            return rng
         return expect
 
     def _alert_reason(r: Runtime):
@@ -3140,8 +3152,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def alerts_list(request: Request) -> dict[str, Any]:
         _require_caller(request)
         user = _alert_owner(request)
-        _, engine, tenant, ds = _alerts()
-        return {"user": user, "alerts": alerts_mod.list_rules(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+        r, engine, tenant, ds = _alerts()
+        from semantic_bridge import alerts_kaynak as AK
+
+        out = {"user": user, "alerts": alerts_mod.list_rules(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+        return P.bagla(out, lambda: AK.for_list(engine, tenant, ds, user, out, *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/alerts")
     def alerts_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3210,9 +3225,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r, engine, tenant, ds = _alerts()
         if id and owner is not None and alerts_mod.get_rule(engine, tenant, ds, id, owner) is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
-        return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
-                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner,
-                                expect=_alert_expect(r), reason=_alert_reason(r))
+        out = alerts_mod.check(engine, tenant, ds, _alert_runner(r),
+                               alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner,
+                               expect=_alert_expect(r), reason=_alert_reason(r))
+        from semantic_bridge import alerts_kaynak as AK
+
+        return P.bagla(out, lambda: AK.for_check(engine, tenant, ds, owner, out, *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/alerts/suggest")
     def alerts_suggest(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3227,15 +3245,29 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": "Önce kuralın sorusunu yazın."})
         cond = str(body.get("condition") or "gt").strip().lower()
         r = rt()
+        seen: list[dict[str, Any]] = []
+
+        def run(sql: str, period: Optional[tuple]) -> list[dict[str, Any]]:
+            out = r.run_complete(sql, period)
+            seen.append({"sql": out.get("physicalSql"), "rows": out.get("totalRows"), "ms": out.get("dbMs"),
+                         "at": out.get("computedAt")})
+            return variance_api.rows_of(r, out)
+
         try:
-            rng = variance.measure_range(variance_api.runner_for(r), r.resolver.resolve(q[:2000]), k=_range_k())
+            rng = variance.measure_range(run, r.resolver.resolve(q[:2000]), k=_range_k())
         except Exception as e:  # noqa: BLE001
             from semantic_bridge import access as access_mod
 
             if isinstance(e, access_mod.DataScopeError):
                 return {"ok": False, "neden": str(e)}
             return {"ok": False, "neden": f"Geçmiş okunamadı: {str(e)[:200]}"}
-        return {**rng, "oneri": variance.suggest_threshold(rng, cond) if rng.get("ok") else None}
+        rng["fiziksel"] = [x for x in seen if x.get("sql")]
+        out = {**rng, "oneri": variance.suggest_threshold(rng, cond) if rng.get("ok") else None}
+        if not rng.get("ok"):
+            return out
+        from semantic_bridge import alerts_kaynak as AK
+
+        return P.bagla(out, lambda: AK.for_suggest(out, *SK.databases(r.settings.connection_file)))
 
     @app.get("/api/v1/alerts/{rule_id}/events")
     def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
