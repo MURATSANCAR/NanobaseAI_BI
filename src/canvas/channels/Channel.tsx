@@ -9,7 +9,6 @@ import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label a
 import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../budget/api';
 import { NumField, Tabs } from '../budget/parts';
-import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type YM } from './api';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
 import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type WithK, type YM } from './api';
