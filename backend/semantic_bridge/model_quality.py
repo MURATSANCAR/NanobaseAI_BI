@@ -675,17 +675,29 @@ def ingest_report(engine: sa.engine.Engine, tenant: str, body: dict[str, Any], *
     for cs in cases:
         tally[cs["status"]] = tally.get(cs["status"], 0) + 1
         cs["klass"] = None if cs["status"] == "saglam" else classify(evidence_from_case(cs), classes)
+    # Okumalar yazma işleminden önce (ayrı bağlantı açan okumalar işlemin içine girmesin).
+    if request_id:
+        with engine.connect() as c:
+            req = _run_row(c, tenant, request_id)
+        if req["status"] not in ("sirada", "calisiyor"):
+            raise QualityError("Bu koşu isteği zaten kapanmış.", 409)
+        if req["suite"] != suite:
+            raise QualityError("Rapor, istenen takımla aynı değil.", 409)
+        run_id = request_id
+        started = started or _aware(req["started_at"]) or _aware(req["requested_at"])
+    else:
+        run_id = _new_id()
+    installs = versions_between(engine, tenant, started, finished)
+    if releases_between is not None:
+        try:
+            installs += releases_between(started, finished) or []
+        except Exception as e:  # noqa: BLE001
+            log.warning("model_quality: kurulum kaydı okunamadı: %s", e)
     with engine.begin() as c:
         if request_id:
-            req = _run_row(c, tenant, request_id)
-            if req["status"] not in ("sirada", "calisiyor"):
+            # Aynı isteğe iki rapor yarışırsa ikincisi kapanmış satırı görür.
+            if c.execute(sa.select(RUNS.c.status).where(RUNS.c.id == run_id)).scalar() not in ("sirada", "calisiyor"):
                 raise QualityError("Bu koşu isteği zaten kapanmış.", 409)
-            if req["suite"] != suite:
-                raise QualityError("Rapor, istenen takımla aynı değil.", 409)
-            run_id = request_id
-            started = started or _aware(req["started_at"]) or _aware(req["requested_at"])
-        else:
-            run_id = _new_id()
         prev = c.execute(sa.select(RUNS).where(
             RUNS.c.tenant_id == tenant, RUNS.c.suite == suite, RUNS.c.label == label, RUNS.c.status == "bitti",
             RUNS.c.id != run_id).order_by(RUNS.c.finished_at.desc()).limit(1)).mappings().first()
@@ -699,12 +711,6 @@ def ingest_report(engine: sa.engine.Engine, tenant: str, body: dict[str, Any], *
         else:
             # Önceki koşu yok: temel çizgi betiğin kendi dosyasıdır; bozuk sayılan vakalar bozulan sayılır.
             broken, fixed = sorted(k for k, s in after.items() if s == "bozuk"), []
-        installs = versions_between(engine, tenant, started, finished)
-        if releases_between is not None:
-            try:
-                installs += releases_between(started, finished) or []
-            except Exception as e:  # noqa: BLE001
-                log.warning("model_quality: kurulum kaydı okunamadı: %s", e)
         start_state, end_state = state.get("start") or {}, state.get("end") or {}
         moved = sorted(k for k in set(start_state) | set(end_state)
                        if start_state.get(k) not in (None, "") and start_state.get(k) != end_state.get(k))
@@ -1020,9 +1026,9 @@ def bi_row(log_rows: list[dict[str, Any]], feedback_rows: list[dict[str, Any]], 
         reading = {"label": "Okuması değişen soru", "value": int(t.get("bozuk", 0)), "total": res.get("total"),
                    "at": res.get("finishedAt"), "runId": res.get("id")}
     measured = total > 0 or ans is not None or res is not None
-    last = max([x for x in [(_iso(max((_aware(r["created_at"]) for r in in_window), default=None)) if in_window else None),
-                            ans.get("finishedAt") if ans else None, res.get("finishedAt") if res else None] if x],
-               default=None)
+    stamps = [_aware(r["created_at"]) for r in in_window if r.get("created_at")]
+    stamps += [_parse_dt(x.get("finishedAt")) for x in (ans, res) if x and x.get("finishedAt")]
+    last = _iso(max((s for s in stamps if s), default=None))
     return {"id": "bi", "label": "Soru-cevap (Zeki AI)", "page": "genel-bakis", "measured": measured,
             "primary": primary, "reading": reading, "metrics": metrics, "byType": by_type, "trend": trend,
             "lastMeasured": last, "note": None if measured else "ölçülmedi"}
