@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (16:00) — Destek müşteri VM'ine: BI tarafı hazır, Destek işlemci ayarını bekliyor
+
+- **Kullanıcı kararı:** Destek VM'de ayrı portta (`http://192.168.0.55:8446`), e-posta açık (zeki@; test sunucusunun gelen kutusu VM canlıya geçince kapanacak, `nb_eposta_gelen_kapali`), bilgi bankası VM'de kapalı (gömme servisi yok, `nb_bilgi_bankasi_kapali`).
+- **Kod:** `install.sh` VM'de sudo'suz çalışır (COMPOSE_EXTRA, SITE_CONFIG_EXTRA, SMTP_FILE, SSO_GROUP; imaj etiketi içerik özeti — yalnız betik/compose değişince yeniden derleme ve taşıma yok). `compose.bi-net.yaml`: Destek BI'ın bi_net'ine bağlanır; ön kapı BI web kapsayıcısı :8446 (giriş hız sınırı + socket kaynak denetimi), model/bağlam iç yolu :8447. Veritabanı adı `destek-db` (bi_net'te `db` BI'ın Postgres'iydi, ilk VM denemesi buna bağlandı). Kampüs'e «Destek Masası» kartı, Müşteri hizmetleri düğmesi ayarsız da çalışır (adres = sayfanın sunucu adı:8446).
+- **Test sunucusu:** Destek 5a25436d ve 3d65c7c4 (derlemesiz, `db_host destek-db`) EXIT 0; Kampüs kartı yayında (`index-Ca59mRQx.js`).
+- **VM:** BI 5a25436d kuruldu (EXIT 0, bi_var korundu, web :8446 açık, giriş kapsayıcısı SSO anahtarını okuyor). VM sırları (model anahtarı, SSO anahtarı) VM'de üretildi; SMTP ayarı test sunucusu köprüsünden doğrudan VM'deki 600 dosyaya aktarıldı (ekrana düşmeden). Destek imajı taşındı (1,1 GB, 344 sn).
+- **Engel:** VM Hyper-V işlemci uyumluluk modunda — sanal işlemcide SSE4.2/POPCNT/AVX yok; `bench new-site` NumPy'nin x86-64-v2 şartıyla düştü. Destek yığını durduruldu (veri yok). Müşteri BT'si VM'i kapatıp uyumluluk modunu kapatınca kurulum aynı komutla tekrarlanır. Test sunucusundan VM'in web portlarına erişim yok (yalnız SSH); sınama VM içinden.
+
 ## 2026-09-28 (15:10) — Müşteri VM'inin arka plan işleri test sunucusuyla eşitlendi; T-soft/GA4/Merchant varsayılanları
 
 - **Sorun:** VM'de yalnız 17 iş vardı ve saat yerine konteyner açılışından itibaren aralıkla koşuyordu; stok, tedarik, pazarlama, satış, kanal, İK vb. ~50 iş VM'de hiç koşmuyordu. Bilgi kutusu da test sunucusunun saatlerini gösteriyordu.
