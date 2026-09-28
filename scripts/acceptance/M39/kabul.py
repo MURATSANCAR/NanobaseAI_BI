@@ -285,17 +285,17 @@ def api_checks(fr: dict, m: dict) -> None:
 
     s, j = call("GET", "/api/v1/pazar/freshness")
     record("A1 /freshness", "OK" if s == 200 and j["records"] == fr["records"] and j["lastChange"] == fr["lastChange"] else "FARK",
-           status=s, api=(j or {}).get("records"), portal=fr["records"])
+           http=s, api=(j or {}).get("records"), portal=fr["records"])
     s, j = call("GET", "/api/v1/pazar/matrix")
     ok = s == 200 and [(r["yayinevi"], r["medyan"]) for r in j["rows"][:5]] == [(r["yayinevi"], r["medyan"]) for r in m["rows"][:5]]
-    record("A2 /matrix ilk 5 yayınevi", "OK" if ok else "FARK", status=s)
+    record("A2 /matrix ilk 5 yayınevi", "OK" if ok else "FARK", http=s)
     # Geçersiz gövdeli yazma denemeleri: kayıt açmadan 400/422 dönmeli.
     for method, path, body in (("POST", "/api/v1/pazar/category-map/decision", {}),
                                ("POST", "/api/v1/pazar/briefs/draft?donem=2026-13", {}),
                                ("POST", "/api/v1/pazar/figures/yok/decision", {"karar": "uydurma"}),
                                ("POST", "/api/v1/pazar/watchlist", {"yayinevi": ""})):
         s, j = call(method, path, body)
-        record(f"A3 geçersiz yazma {path}", "OK" if s in (400, 403, 404, 422) else "FARK", status=s, cevap=j)
+        record(f"A3 geçersiz yazma {path}", "OK" if s in (400, 403, 404, 422) else "FARK", http=s, cevap=j)
 
 
 def finish(args) -> int:
