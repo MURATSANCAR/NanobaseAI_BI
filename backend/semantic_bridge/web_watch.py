@@ -7,9 +7,11 @@ Kaynaklar yalnız açık ve bu iş için yayımlanmış yollardır (2026-09-24, 
 - Wikidata'nın resmi API'si (Wikimedia kimlik başlığı kuralıyla): yazar tanıtımı, doğum yılı, ödüller.
 
 Akış: RSS kayıtları saklanır (başlık, kısa özet, bağlantı, tarih) → CRM'deki yazarların ad soyadı başlık ve
-özette aranır (en az iki kelimelik ad; Türkçe harf farkı gözetilmez) → eşleşen her kayıt yerel modele sorulur:
-"bu haber bu yazar/kitap hakkında mı, tonu ne?" Cevap olumlu / olumsuz / notr / ilgisiz. Ekrana yalnız ilk üçü
-çıkar; ilgisiz ve henüz etiketlenmemiş kayıt gösterilmez (kullanıcı kararı 2026-09-24).
+özette aranır (en az iki kelimelik ad; Türkçe harf farkı gözetilmez) → eşleşen her kayıt yerel modele kapalı küme
+seçimle sorulur (`QueuedLlm.choose`, olasılıkla): "bu haber bu yazar/kitap hakkında mı, tonu ne?" Cevap olumlu /
+olumsuz / nötr / ilgisiz; olasılık ya da marj eşiğin altındaysa «emin değil» (`WEB_WATCH_MIN_PROB`/`_MARGIN`, vars.
+0,70/0,30). Ekrana yalnız ilk üçü çıkar; ilgisiz, emin değil ve henüz etiketlenmemiş kayıt gösterilmez (kullanıcı
+kararı 2026-09-24).
 
 Kişisel veri tutulmaz: haberin yazarı (muhabir) ve okur bilgisi alınmaz. Haber metni kopyalanmaz; özet en çok
 400 karakter, bağlantı haberin kendisine gider.
@@ -527,12 +529,17 @@ PROMPT = (
     "Bir yayınevi için basını ve okur yorumlarını izliyoruz. Aşağıdaki metin (haber ya da sözlük girdisi), adı verilen yazar"
     "{books} hakkında mı? Yazarın adı yalnız benzer bir ad olarak geçiyorsa, başka biri kastediliyorsa ya da haber"
     " onunla ilgili değilse cevap: ilgisiz. İlgiliyse haberin yazara/kitaba karşı tonunu seç: olumlu, olumsuz,"
-    " notr.\n\nYazar: {author}\nBaşlık: {title}\nÖzet: {summary}\n\nYalnız tek kelime yaz: olumlu, olumsuz, notr"
-    " ya da ilgisiz."
+    " nötr.\n\nYazar: {author}\nBaşlık: {title}\nÖzet: {summary}"
 )
+#: Kapalı küme seçenekleri (ekrandaki ad) → saklanan etiket. `QueuedLlm.choose` yalnız bunlardan birini seçer.
+CHOICES = {"olumlu": "olumlu", "olumsuz": "olumsuz", "nötr": "notr", "ilgisiz": "ilgisiz"}
+#: Eşik altı cevap: saklanır (yeniden sorulmaz), ekranda gösterilmez (yalnız SHOWN gösterilir).
+UNSURE = "emin_degil"
+MIN_PROB, MIN_MARGIN = 0.70, 0.30
 
 
 def label_of(answer: str) -> Optional[str]:
+    """Eski serbest metin cevabın ayrıştırıcısı; yalnız geriye dönük okuma için (yeni etiket `ask` ile)."""
     t = fold(answer or "")
     for word in re.findall(r"[a-z]+", t):
         if word in ("olumlu", "olumsuz", "ilgisiz"):
@@ -542,11 +549,31 @@ def label_of(answer: str) -> Optional[str]:
     return None
 
 
-def ask(llm: Any, author: str, books: list[dict[str, Any]], title: str, summary: Optional[str]) -> Optional[str]:
+def thresholds(conf: Callable[..., str]) -> tuple[float, float]:
+    """`WEB_WATCH_MIN_PROB` / `WEB_WATCH_MIN_MARGIN` (ekran/ortam); geçersizse varsayılan."""
+    def f(key: str, default: float) -> float:
+        try:
+            return max(0.0, min(1.0, float(str(conf(key) or default).replace(",", "."))))
+        except (TypeError, ValueError):
+            return default
+    return f("WEB_WATCH_MIN_PROB", MIN_PROB), f("WEB_WATCH_MIN_MARGIN", MIN_MARGIN)
+
+
+def ask(llm: Any, author: str, books: list[dict[str, Any]], title: str, summary: Optional[str],
+        min_prob: float = MIN_PROB, min_margin: float = MIN_MARGIN) -> tuple[str, str]:
+    """İlgililik + ton: kapalı küme seçim (`QueuedLlm.choose`, tek token + olasılık). Olasılık eşiğin ya da marj
+    eşiğin altındaysa, olasılık okunamadıysa (yedek yol) ya da cevap eşlenemediyse etiket «emin değil» olur ve ekranda
+    gösterilmez. Döner: (etiket, not) — not olasılık/marj/yöntem özeti. Model cevap veremezse istisna (sonra sorulur)."""
     names = ", ".join(f"«{b['title']}»" for b in books)
     prompt = PROMPT.format(author=author, title=title, summary=summary or "-",
                            books=f" ya da kitabı ({names})" if names else "")
-    return label_of(llm.chat([{"role": "user", "content": prompt}], max_tokens=8, temperature=0.0))
+    ch = llm.choose(prompt, list(CHOICES))
+    p, m = ch.probability, ch.margin
+    note = f"p={p:.2f} marj={m:.2f} {ch.method}" if p is not None and m is not None else f"olasılık yok ({ch.method})"
+    if ch.choice is None or p is None or m is None or p < min_prob or m < min_margin:
+        guess = CHOICES.get(ch.choice or "")
+        return UNSURE, (f"{note}; en olası {guess}" if guess else note)[:200]
+    return CHOICES[ch.choice], note[:200]
 
 
 # ------------------------------------------------------------------------------------------- Wikidata
@@ -639,7 +666,7 @@ def wikidata_author(name: str, books: dict[str, str]) -> dict[str, Any]:
 # ------------------------------------------------------------------------------------------- tur
 
 def run_due(engine: sa.engine.Engine, tenant: str, fetch_all: Callable[[str], list[dict[str, Any]]], schema: str,
-            llm: Any, budget_seconds: int = 480) -> dict[str, Any]:
+            llm: Any, budget_seconds: int = 480, min_prob: float = MIN_PROB, min_margin: float = MIN_MARGIN) -> dict[str, Any]:
     """Bir tur: akışları oku, yeni kayıtları yazarlarla eşle, bekleyen eşleşmeleri modele sor, sıradaki
     yazarların Wikidata bilgisini tazele. Süre bütçesi dolunca kalan iş bir sonraki tura kalır (sessiz tavan
     değil: sıra kalıcıdır, her tur kaldığı yerden devam eder)."""
@@ -754,7 +781,7 @@ def run_due(engine: sa.engine.Engine, tenant: str, fetch_all: Callable[[str], li
             report["errors"].append("uludag: robots.txt kapalı")
 
         # 2) model etiketi (en eski bekleyen önce)
-        if llm is not None:
+        if llm is not None and callable(getattr(llm, "choose", None)):
             with engine.connect() as c:
                 pending = c.execute(sa.select(MENTIONS.c.id, MENTIONS.c.author, MENTIONS.c.books_json, ITEMS.c.title, ITEMS.c.summary)
                                     .select_from(MENTIONS.join(ITEMS, ITEMS.c.id == MENTIONS.c.item_id))
@@ -764,15 +791,15 @@ def run_due(engine: sa.engine.Engine, tenant: str, fetch_all: Callable[[str], li
                 if time.monotonic() > deadline:
                     break
                 try:
-                    label = ask(llm, p.author, json.loads(p.books_json or "[]"), p.title, p.summary)
+                    label, note = ask(llm, p.author, json.loads(p.books_json or "[]"), p.title, p.summary, min_prob, min_margin)
                 except Exception as e:  # noqa: BLE001 — model yoksa eşleşme bekler, bir sonraki turda sorulur
                     report["errors"].append(f"model: {type(e).__name__}")
                     break
-                if label is None:
-                    continue
                 with engine.begin() as c:
-                    c.execute(MENTIONS.update().where(MENTIONS.c.id == p.id).values(label=label, labelled_at=_now()))
+                    c.execute(MENTIONS.update().where(MENTIONS.c.id == p.id).values(label=label, label_note=note, labelled_at=_now()))
                 report["labelled"] += 1
+                if label == UNSURE:
+                    report["unsure"] = report.get("unsure", 0) + 1
 
         # 3) Wikidata: haberi çıkan yazarlar önce, sonra hiç bakılmamış ya da bilgisi eskimiş olanlar.
         # robots.txt Wikimedia'nın viki sayfaları içindir; API programla erişim için sunulur, kimlik başlığı

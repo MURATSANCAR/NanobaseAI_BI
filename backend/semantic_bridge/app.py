@@ -4109,8 +4109,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
 
         from semantic_layer.runtime.llm_queue import BATCH
+        min_p, min_m = web_mod.thresholds(admin_mod.conf)
         return web_mod.run_due(r.store.engine, r.settings.tenant_id, fetch_all, schema, r.llm_for("web", BATCH),
-                               budget_seconds=max(60, min(int(budget), 6 * 3600)))
+                               budget_seconds=max(60, min(int(budget), 6 * 3600)), min_prob=min_p, min_margin=min_m)
 
     @app.get("/api/v1/editorial/web/status")
     def editorial_web_status(request: Request) -> dict[str, Any]:
