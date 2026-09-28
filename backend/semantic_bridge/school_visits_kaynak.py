@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Iterable, Optional
 
+from semantic_bridge import kaynak_ayar as KA
 from semantic_bridge import provenance as P
 from semantic_bridge import school_visits as SV
 
@@ -129,10 +130,15 @@ class _Ctx:
                             self.reads("kitaplar", "stok"))
 
     def ayar(self) -> str:
+        if "ayar" in self.k.formulas:
+            return "hesap:ayar"
         st = (self.m.settings if self.m else {}) or {}
         keys = ("planSize", "catalogSize", "revisitDays", "dealerMonths", "conversionMonths", "historyFrom")
+        src = KA.ayar(self.k, self.engine, "okul.ayar", ["SCHOOLS_WEEKLY_PLAN_SIZE", "SCHOOLS_CATALOG_SIZE",
+                      "SCHOOLS_REVISIT_DAYS", "SCHOOLS_DEALER_MONTHS", "SCHOOLS_CONVERSION_MONTHS", "SCHOOLS_HISTORY_FROM",
+                      "SCHOOLS_PRIORITY_WEIGHTS"], "okul tanıtım")
         return self.k.hesap("ayar", "Ayarlar (Yönetim ekranı > ortam > varsayılan): " + ", ".join(
-            f"{k} {st.get(k)}" for k in keys) + "; öncelik ağırlıkları SCHOOLS_PRIORITY_WEIGHTS.", [])
+            f"{k} {st.get(k)}" for k in keys) + "; öncelik ağırlıkları SCHOOLS_PRIORITY_WEIGHTS.", [src])
 
 
 def _snap_ok(x: _Ctx) -> None:
@@ -149,8 +155,10 @@ def for_meta(engine: Any, tenant: str, model: Optional[SV.Model], out: dict[str,
     x = _Ctx(engine, tenant, model, crm_db, logo_db)
     ayar = x.ayar()
     f = {"weights": ayar, "settings": ayar, "uploads": x.context()}
-    f["status"] = x.k.hesap("okul_sayisi", "Okul sayısı = CRM ziyaret yerleri okumasında etkin, kurum tipi ayardaki "
-                            "(SCHOOLS_KURUM_TIPLERI) ve adı/ili okunabilen kayıt sayısı.", x.read("okullar"))
+    okul = x.read("okullar")
+    if okul:  # okuma kaydı yoksa (eski okuma) okul sayısı bağlanmaz; girdisiz hesap kurulmaz
+        f["status"] = x.k.hesap("okul_sayisi", "Okul sayısı = CRM ziyaret yerleri okumasında etkin, kurum tipi ayardaki "
+                                "(SCHOOLS_KURUM_TIPLERI) ve adı/ili okunabilen kayıt sayısı.", okul)
     x.k.alanlar(f)
     return x.k
 

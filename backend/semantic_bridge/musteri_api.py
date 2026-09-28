@@ -69,7 +69,9 @@ class Service:
             # Sorgu bilgisi: turda çalışan CRM/Logo metni tur kaydına yazılır (ekranda köken; cevaplardan ayıklanır).
             with F.recording() as reads:
                 data = M.read_all(self.source, st)
-            rows, info = M.build_accounts(data, st, F.last_visit_days(engine, tenant), M.previous_accounts(engine, tenant))
+            # Son ziyaret günü M30/M31 ortak ziyaret tablosundan: saha modülü bu kurulumda hiç açılmadıysa tablo yoktur.
+            visits = F.last_visit_days(engine, tenant) if self._field_ready(engine) else {}
+            rows, info = M.build_accounts(data, st, visits, M.previous_accounts(engine, tenant))
             M.write_accounts(engine, tenant, rows)
             M.write_segments(engine, tenant, M.segments_of(rows, info["asof"]))
             kesim = date.fromisoformat(info["kesim"])

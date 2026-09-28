@@ -13,6 +13,7 @@ from typing import Any, Iterable, Optional
 
 from semantic_bridge import field_sales as F
 from semantic_bridge import field_sales_sources as src
+from semantic_bridge import kaynak_ayar as KA
 from semantic_bridge import provenance as P
 
 TITLES = {
@@ -178,10 +179,19 @@ class _Ctx:
                 f"{prefix}.hedefAcigi": hed, f"{prefix}.riskDoluluk": rsk, f"{prefix}.siparisRiskte": rsk,
                 f"{prefix}.cekOlay": cek, f"{prefix}.puan": puan, f"{prefix}.gerekce": puan}
 
+    def ayar_kaydi(self, sid: str, keys: list[str], what: str) -> str:
+        """Ayar kaydı okuması (`admin.settings_stmt`, çalışan ifade); ayardan gelen rakamların kaynağı."""
+        if sid in self.k.sources:
+            return sid
+        return KA.ayar(self.k, self.engine, sid, keys, what)
+
     def ayar(self) -> str:
+        src_ = self.ayar_kaydi("saha.ayar", ["FIELD_VISIT_CYCLE_DAYS", "FIELD_COLLECTION_DAYS", "FIELD_PENDING_WARN_HOURS",
+                                             "FIELD_PLAN_MAX_INSTALLMENTS", "FIELD_SIMILAR_MIN", "FIELD_NEW_BOOK_DAYS",
+                                             "FIELD_AGING_ASOF", "FIELD_CUSTOMER_TARGET_SOURCE"], "saha")
         return self.h("ayar", "Ayarlar (Yönetim ekranı > ortam > varsayılan): ziyaret döngüsü, tahsilat penceresi, onay bekleme "
                       "uyarı saati, en çok taksit, benzer cari eşiği, yeni kitap penceresi, yaşlandırma günü, hedef kaynağı; "
-                      "öncelik ağırlıkları kodda sabit (ekranda yazılı).", [])
+                      "öncelik ağırlıkları kodda sabit (ekranda yazılı).", [src_])
 
 
 def _ok(x: _Ctx) -> None:

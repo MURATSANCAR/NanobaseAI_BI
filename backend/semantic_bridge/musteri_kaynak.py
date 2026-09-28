@@ -95,11 +95,13 @@ def _ok(x: _Ctx) -> None:
 
 def for_meta(engine: Any, tenant: str, user: str, st: dict[str, Any], out: dict[str, Any]) -> P.Kaynaklar:
     x = _Ctx(engine, tenant, st)
+    ay = x.ayar_kaydi("musteri.ayar", ["MUSTERI_RISK_HIGH", "MUSTERI_RISK_MID", "MUSTERI_LOST_MIN_DAYS", "MUSTERI_LOST_MULTIPLE",
+                                       "MUSTERI_MIN_PURCHASE_DAYS", "MUSTERI_ORDER_FLOOR_DAYS", "MUSTERI_DEFAULT_INTERVAL_DAYS"], "müşteri riski")
     mine = sa.select(sa.func.count()).select_from(M.ACCOUNTS).where(M.ACCOUNTS.c.tenant_id == tenant, M.ACCOUNTS.c.temsilci == user)
     x.k.alanlar({"me": x.portal("musteri.benim", "Portföyümdeki cari", mine, "Size atanmış cari sayısı (gece turu ataması).",
                                 origin=x.g("crm.cariler", "crm.kullanicilar")),
-                 "weights": x.h("risk", _risk_text(st), []), "rules": x.h("ayar_risk", "Ayarlar (Yönetim ekranı > ortam > "
-                 "varsayılan): yüksek/orta risk eşiği, kayıp için en az gün ve aralık katı, en az alım günü, CRM sipariş eşiği.", []),
+                 "weights": x.h("risk", _risk_text(st), [ay]), "rules": x.h("ayar_risk", "Ayarlar (Yönetim ekranı > ortam > "
+                 "varsayılan): yüksek/orta risk eşiği, kayıp için en az gün ve aralık katı, en az alım günü, CRM sipariş eşiği.", [ay]),
                  "run": x.portal("musteri.tur", "Gece turu kaydı", M.meta_stmt(tenant, "run"),
                                  "Tur özeti: cari, atanmış, düzey sayıları, kesim ve o turda çalışan okuma sorguları.",
                                  origin=x.g("logo.donem", "logo.verisonu", "logo.cariler", "crm.cariler")),
