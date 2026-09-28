@@ -7,7 +7,9 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtLeft, tendersApi, type DocRow, type TenderMeta } from './api';
-import { AskSheet, FilePick } from './parts';
+import { AskSheet } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB, titleFromFilename } from '../components/fileDropRules';
 
 /** Şirket belge arşivi: vergi/SGK yazıları, imza sirküleri, teminat mektubu… Geçerlilik tarihi yaklaşan ve dolan
  *  belge işaretlidir; ihale kontrol listesi bu belgelere bağlanır. Yazma `ozellik:ihale.belge` ister. */
@@ -19,6 +21,7 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
   const qc = useQueryClient();
   const docs = useQuery({ queryKey: ['tenders', 'documents'], queryFn: tendersApi.documents, enabled: ENGINE_ENABLED });
   const [adding, setAdding] = useState(false);
+  const [dropped, setDropped] = useState<File | null>(null);
   const [editing, setEditing] = useState<DocRow | null>(null);
   const [removing, setRemoving] = useState<DocRow | null>(null);
   const can = meta.me.canDocs;
@@ -50,9 +53,24 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
           </button>
         )}
       </div>
+      {/* Birincil eylem: belgeyi bırak → ad dosya adından gelir, tür ve geçerlilik tarihi sayfada sorulur. */}
+      <div className="mt-3">
+        <FileDrop
+          title="Belge yükle"
+          hint="Belge adı dosya adından gelir; türünü ve geçerlilik bitişini açılan pencerede seçip kaydedersiniz."
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+          maxBytes={meta.ayarlar.fileMaxMb ? meta.ayarlar.fileMaxMb * MB : undefined}
+          feature="ihale.belge"
+          allowed={can}
+          onPick={(f) => {
+            setDropped(f);
+            setAdding(true);
+          }}
+        />
+      </div>
       {docs.error && <div className="mt-3"><Note tone="err">{errText(docs.error, 'Belgeler okunamadı.')}</Note></div>}
       {docs.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
-      {docs.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Arşivde belge yok.</div>}
+      {docs.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Arşivde belge yok. Yukarıdaki alana belge bırakın.</div>}
       <ul className="mt-3 flex flex-col gap-1.5">
         {items.map((d) => (
           <li key={d.id} className="grid grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-white/80 px-3 py-2 md:grid-cols-[minmax(0,1fr)_200px_auto] md:items-center">
@@ -85,7 +103,15 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
           </li>
         ))}
       </ul>
-      <DocSheet open={adding} meta={meta} onClose={() => setAdding(false)} />
+      <DocSheet
+        open={adding}
+        meta={meta}
+        initialFile={dropped}
+        onClose={() => {
+          setAdding(false);
+          setDropped(null);
+        }}
+      />
       <DocSheet open={!!editing} meta={meta} doc={editing ?? undefined} onClose={() => setEditing(null)} />
       <AskSheet
         open={!!removing}
@@ -101,7 +127,7 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
   );
 }
 
-function DocSheet({ open, meta, doc, onClose }: { open: boolean; meta: TenderMeta; doc?: DocRow; onClose: () => void }) {
+function DocSheet({ open, meta, doc, initialFile, onClose }: { open: boolean; meta: TenderMeta; doc?: DocRow; initialFile?: File | null; onClose: () => void }) {
   const qc = useQueryClient();
   const [ad, setAd] = useState('');
   const [tur, setTur] = useState('vergi');
@@ -112,11 +138,11 @@ function DocSheet({ open, meta, doc, onClose }: { open: boolean; meta: TenderMet
   const key = doc?.id ?? (open ? 'yeni' : null);
   if (key !== seen) {
     setSeen(key);
-    setAd(doc?.ad ?? '');
+    setAd(doc?.ad ?? (initialFile ? titleFromFilename(initialFile.name) : ''));
     setTur(doc?.tur ?? 'vergi');
     setGecerlilik(doc?.gecerlilik ?? '');
     setNote(doc?.not ?? '');
-    setFile(null);
+    setFile(doc ? null : initialFile ?? null);
   }
   const save = useMutation({
     mutationFn: () =>
@@ -154,10 +180,18 @@ function DocSheet({ open, meta, doc, onClose }: { open: boolean; meta: TenderMet
           <input className={field} value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
         {!doc && (
-          <div className="flex flex-wrap items-center gap-2">
-            <FilePick label={file ? 'Başka dosya seç' : 'Dosya seç'} accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" onPick={setFile} />
-            <span className="min-w-0 break-all text-[12px] text-canvas-muted">{file ? file.name : 'Dosyasız da kaydedilebilir (yalnız tarih takibi).'}</span>
-          </div>
+          <FileDrop
+            size="sm"
+            title={file ? 'Başka dosya seç' : 'Dosya seç'}
+            hint={file ? undefined : 'Dosyasız da kaydedilebilir (yalnız tarih takibi).'}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+            maxBytes={meta.ayarlar.fileMaxMb ? meta.ayarlar.fileMaxMb * MB : undefined}
+            picked={file}
+            onPick={(f) => {
+              setFile(f);
+              if (!ad.trim()) setAd(titleFromFilename(f.name));
+            }}
+          />
         )}
         <div className="flex flex-wrap justify-end gap-2">
           <button type="button" className={btnPrimary} disabled={!ad.trim() || save.isPending} onClick={() => save.mutate()}>

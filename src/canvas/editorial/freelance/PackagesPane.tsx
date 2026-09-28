@@ -1,13 +1,15 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, ChevronDown, Download, ExternalLink, FolderPlus, Link2, Loader2, Plus, Search, Sparkles, Trash2, Upload, Wand2, X } from 'lucide-react';
 import { editorialSearchApi, freelanceApi, type FlPackage, type FlSuggestion, type FlTask, type FlTaskInput } from '../../engine';
-import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
+import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../../admin/ui';
 import { Panel, useDebounced } from '../kit';
 import { ThreadView } from './MessagesPane';
 import { ConfirmButton, Empty, FieldBox, TASK_STATUS, day, editNum, parseNum, q2, roleLabel, stamp, tl, todayIso, useFlRefresh, type FlCtx } from './shared';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** İş paketleri: bir kitabın bir işi (ör. 24 iç illüstrasyon), görevlere bölünür, görevler kişilere dağıtılır. */
 
@@ -758,7 +760,6 @@ function TaskPanel({ ctx, p, t }: { ctx: FlCtx; p: FlPackage; t: FlTask }) {
 
 function DeliveryForm({ taskId }: { taskId: string }) {
   const refresh = useFlRefresh();
-  const input = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<'dosya' | 'baglanti'>('dosya');
   const [link, setLink] = useState('');
   const [note, setNote] = useState('');
@@ -800,11 +801,14 @@ function DeliveryForm({ taskId }: { taskId: string }) {
       </div>
       {mode === 'dosya' ? (
         <>
-          <input ref={input} type="file" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <button type="button" className={btnGhost} onClick={() => input.current?.click()}>
-            <Upload aria-hidden className="h-4 w-4" />
-            {file ? `${file.name} (${nf.format(Math.round(file.size / 1024))} KB)` : 'Dosya seç (en çok 200 MB; büyükse bağlantı verin)'}
-          </button>
+          <FileDrop
+            size="sm"
+            title={file ? 'Başka dosya seç' : 'Teslim dosyasını seç'}
+            hint="Daha büyük dosya için «Bağlantı» ile paylaşım adresi verin."
+            maxBytes={200 * MB}
+            picked={file}
+            onPick={setFile}
+          />
         </>
       ) : (
         <input value={link} onChange={(e) => setLink(e.target.value)} className={field} inputMode="url" placeholder="https://… (WeTransfer, Drive…)" />

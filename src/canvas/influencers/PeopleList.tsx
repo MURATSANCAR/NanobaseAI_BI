@@ -2,12 +2,13 @@ import { useCallback, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, inflApi, type Meta, type PersonRow } from './api';
 import PersonForm from './PersonForm';
+import { FilePick } from '../components/FileDrop';
 import { InflFrame, RelationBadge, TopicPills, useMeta } from './parts';
 
 /** Kayıt defteri: süzgeçler adreste (?q=, ?platform=, ?konu=, ?yas=, ?bos=gün). Liste tavansız. */
@@ -41,10 +42,11 @@ export default function PeopleList() {
     <InflFrame
       title="İçerik üreticileri"
       lead="Kim, hangi platformda, hangi konuda; hangi kitapları aldı, ne paylaştı. Sayılar elle ya da CSV ile girilir; resmî API bağlantısı ikinci sürümde."
-      aside={me?.canEdit ? (
-        <div className="flex flex-wrap gap-2 lg:justify-end">
-          {meta.data && <CsvImport />}
-          <button type="button" className={btnPrimary} onClick={() => setCreating(true)}><Plus aria-hidden className="h-4 w-4" /> Yeni içerik üreticisi</button>
+      aside={m ? (
+        <div className="flex flex-wrap items-start gap-2 lg:justify-end">
+          {/* CSV içe aktarma yetkisizde de görünür (kilitli, gereken yetki yazılı). */}
+          <CsvImport allowed={!!me?.canEdit} />
+          {me?.canEdit && <button type="button" className={btnPrimary} onClick={() => setCreating(true)}><Plus aria-hidden className="h-4 w-4" /> Yeni içerik üreticisi</button>}
         </div>
       ) : undefined}
     >
@@ -119,7 +121,7 @@ function PersonRowCard({ p, meta }: { p: PersonRow; meta: Meta }) {
   );
 }
 
-function CsvImport() {
+function CsvImport({ allowed }: { allowed: boolean }) {
   const qc = useQueryClient();
   const imp = useMutation({
     mutationFn: async (f: File) => inflApi.importCsv(await f.text(), f.name),
@@ -131,14 +133,14 @@ function CsvImport() {
     onError: (e) => toast.error(errText(e, 'Dosya okunamadı.') ?? ''),
   });
   return (
-    <label className={`${btnGhost} cursor-pointer ${imp.isPending ? 'pointer-events-none opacity-60' : ''}`}
-      title="Başlıklar: Ad; Platform; Kullanıcı adı; Bağlantı; Konu; Yaş grubu; Takipçi; E-posta; Telefon; Şehir; Not">
-      <input type="file" accept=".csv,text/csv,text/plain" className="sr-only" onChange={(e) => {
-        const f = e.target.files?.[0];
-        e.target.value = '';
-        if (f) imp.mutate(f);
-      }} />
-      <Upload aria-hidden className="h-4 w-4" /> CSV içe aktar
-    </label>
+    <FilePick
+      label="CSV içe aktar"
+      accept=".csv,text/csv,text/plain"
+      hint="Başlıklar: Ad; Platform; Kullanıcı adı; Bağlantı; Konu; Yaş grubu; Takipçi; E-posta; Telefon; Şehir; Not"
+      feature="isbirligi.duzenle"
+      allowed={allowed}
+      busy={imp.isPending}
+      onPick={(f) => imp.mutate(f)}
+    />
   );
 }

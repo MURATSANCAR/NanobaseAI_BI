@@ -1,13 +1,15 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowRight, Download, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
+import { ArrowRight, Download, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, fmtDate, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, pazarApi, type Report } from './api';
 import { ROOT, useMeta } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Sektör raporları: yükleme (PDF, Excel, CSV), Zeki AI ile sayfa sayfa rakam çıkarımı, onay. Dosya yalnız bu sayfanın
  *  yetkisiyle iner; raporun kendisi portalda yayımlanmaz. */
@@ -39,7 +41,7 @@ export default function ReportsScreen() {
   });
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
-      {me?.canUpload && <UploadForm maxMb={meta.data?.settings.fileMaxMb ?? 50} />}
+      {meta.data && <UploadForm maxMb={meta.data.settings.fileMaxMb ?? 50} canUpload={!!me?.canUpload} />}
       <Panel>
         <h2 className="text-[15px] font-extrabold">Yüklenen raporlar</h2>
         <p className="mt-1 text-[12px] leading-snug text-canvas-muted">
@@ -125,42 +127,29 @@ function ReportItem({ r, canUpload, busy, onExtract, onDelete }: { r: Report; ca
   );
 }
 
-function UploadForm({ maxMb }: { maxMb: number }) {
+/** Sektör raporu yükleme: kaynak (zorunlu), yıl ve başlık dosyadan önce yazılır; dosya bırakılınca hemen yüklenir.
+ *  Yetkisi olmayan kişi alanı kilitli görür ve gereken yetkiyi okur. */
+function UploadForm({ maxMb, canUpload }: { maxMb: number; canUpload?: boolean }) {
   const qc = useQueryClient();
-  const input = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [kaynak, setKaynak] = useState('');
   const [yil, setYil] = useState('');
   const [baslik, setBaslik] = useState('');
   const up = useMutation({
-    mutationFn: () => pazarApi.uploadReport(file!, { kaynak: kaynak.trim(), yil: yil.trim(), baslik: baslik.trim() }),
+    mutationFn: (file: File) => pazarApi.uploadReport(file, { kaynak: kaynak.trim(), yil: yil.trim(), baslik: baslik.trim() }),
     onSuccess: (r) => {
       toast.success(`«${r.baslik}» yüklendi (${fmtInt(r.sayfaSayisi)} sayfa).`);
-      setFile(null);
       setBaslik('');
-      if (input.current) input.current.value = '';
       qc.invalidateQueries({ queryKey: ['pazar', 'reports'] });
     },
     onError: (e) => toast.error(errText(e, 'Rapor yüklenemedi.') ?? ''),
   });
-  const tooBig = !!file && file.size > maxMb * 1024 * 1024;
   return (
     <Panel>
       <h2 className="text-[15px] font-extrabold">Rapor yükle</h2>
-      <form
-        className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.5fr)_minmax(0,1fr)_auto] lg:items-end"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (file && kaynak.trim() && !tooBig) up.mutate();
-        }}
-      >
+      <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,0.5fr)_minmax(0,1fr)] sm:items-end">
         <label className="flex min-w-0 flex-col gap-1">
-          <span className={labelCls}>Dosya (PDF, Excel, CSV · en çok {maxMb} MB)</span>
-          <input ref={input} type="file" accept=".pdf,.xlsx,.csv,.txt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={`${field} file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-[12px] file:font-bold`} />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={labelCls}>Kaynak (yayımlayan)</span>
-          <input value={kaynak} onChange={(e) => setKaynak(e.target.value)} className={field} placeholder="örn. Türkiye Yayıncılar Birliği" required />
+          <span className={labelCls}>Kaynak (yayımlayan) *</span>
+          <input value={kaynak} onChange={(e) => setKaynak(e.target.value)} className={field} placeholder="örn. Türkiye Yayıncılar Birliği" />
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className={labelCls}>Yıl</span>
@@ -170,12 +159,21 @@ function UploadForm({ maxMb }: { maxMb: number }) {
           <span className={labelCls}>Başlık</span>
           <input value={baslik} onChange={(e) => setBaslik(e.target.value)} className={field} placeholder="Boşsa dosya adı" />
         </label>
-        <button type="submit" className={btnPrimary} disabled={!file || !kaynak.trim() || tooBig || up.isPending}>
-          {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Upload aria-hidden className="h-4 w-4" />}
-          Yükle
-        </button>
-      </form>
-      {tooBig && <Note tone="err">Dosya {maxMb} MB sınırını aşıyor.</Note>}
+      </div>
+      <div className="mt-2.5">
+        <FileDrop
+          title="Sektör raporunu yükle"
+          hint="Rakamlar sayfa numarasıyla çıkarılır; onaydan önce hiçbir rakam kullanılmaz."
+          accept=".pdf,.xlsx,.csv,.txt"
+          maxBytes={maxMb * MB}
+          feature="pazar.rapor-yukle"
+          allowed={canUpload}
+          disabled={!kaynak.trim()}
+          disabledReason="Önce raporun kaynağını (yayımlayan kurum) yazın."
+          busy={up.isPending}
+          onPick={(f) => up.mutate(f)}
+        />
+      </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
         Sektör raporları telifli olabilir: dosya yalnız bu sayfaya yetkisi olanlara iner, özetlere uzun alıntı girmez; rakam sayfa numarasıyla atıflanır.
       </p>

@@ -7,7 +7,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { NAV } from '../../nav/navModel';
 import { canSeePage, usePageAccess } from '../../useAdmin';
 import { Block, FilePick, HrFrame } from '../parts';
-import { fmtSize } from '../hrApi';
+import { MB } from '../../components/fileDropRules';
 import GuideSheet from './GuideSheet';
 import { learningApi, type Me, type Question, type Team } from './learningApi';
 import { StatusPill, fmtDay, fmtWhen } from './parts';
@@ -324,8 +324,7 @@ function Certificates({ d }: { d: Me }) {
               <input type="date" className={field} value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} />
             </label>
           </div>
-          <FilePick label={up.isPending ? 'Yükleniyor…' : 'Dosya seç ve yükle'} accept=".pdf,.jpg,.jpeg,.png" disabled={up.isPending || (!courseId && !title.trim())} onPick={(f) => up.mutate(f)} />
-          {d.fileMaxMb ? <p className="text-[11px] text-canvas-muted">Üst boyut {d.fileMaxMb} MB ({fmtSize(d.fileMaxMb * 1024 * 1024)}).</p> : null}
+          <FilePick label="Dosya seç ve yükle" accept=".pdf,.jpg,.jpeg,.png" maxBytes={d.fileMaxMb ? d.fileMaxMb * MB : undefined} busy={up.isPending} disabled={!courseId && !title.trim()} disabledReason="Önce eğitimi seçin ya da belgenin adını yazın." onPick={(f) => up.mutate(f)} />
         </div>
       </Sheet>
     </Block>

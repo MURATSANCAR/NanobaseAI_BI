@@ -5,7 +5,7 @@ import { ChevronLeft, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
-import { FilePick } from '../tenders/parts';
+import { FileDrop } from '../components/FileDrop';
 import { dijitalApi, fmtInt, fmtMoney, lastMonth, type ImportDetail, type SaleRow } from './api';
 
 /** Satış raporu yükleme: dosya → önizleme (kolon eşlemesi, kurallı eşleşme, atılan kişisel kolonlar) → Zeki AI önerisi ve
@@ -28,12 +28,14 @@ export default function ImportWizard({ id, canImport, onDone, onClose }: {
           Rapor listesi
         </button>
       </div>
-      {id ? <Preview id={id} canImport={canImport} /> : canImport ? <UploadStep onDone={onDone} /> : <Note tone="warn">Rapor yükleme rolünüzde yok.</Note>}
+      {id ? <Preview id={id} canImport={canImport} /> : <UploadStep onDone={onDone} canImport={canImport} />}
     </div>
   );
 }
 
-function UploadStep({ onDone }: { onDone: (id: string) => void }) {
+/** Rapor yükleme adımı: platform ve dönem yanında, dosya alanı her zaman görünür. Yetki yoksa alan kilitli ve gereken
+ *  yetki yazılı (gizlenmez); platform/dönem eksikse pasif ve eksik olan yazılı. Rapor listesinin üstünde de kullanılır. */
+export function UploadStep({ onDone, canImport }: { onDone: (id: string) => void; canImport: boolean }) {
   const qc = useQueryClient();
   const plats = useQuery({ queryKey: ['dijital', 'platforms'], queryFn: dijitalApi.platforms, enabled: ENGINE_ENABLED });
   const [platform, setPlatform] = useState(0);
@@ -57,7 +59,7 @@ function UploadStep({ onDone }: { onDone: (id: string) => void }) {
         Okur adı, e-posta, telefon, adres gibi kişisel veri kolonları yüklemede atılır ve saklanmaz.
       </p>
       {plats.data && !active.length && <Note tone="warn">Önce Katalog → Platformlar'da platform tanımlanmalı.</Note>}
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,260px)_160px_auto] sm:items-end">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,260px)_160px] sm:items-end">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Platform</span>
           <select className={field} value={platform} onChange={(e) => setPlatform(Number(e.target.value))}>
@@ -69,10 +71,19 @@ function UploadStep({ onDone }: { onDone: (id: string) => void }) {
           <span className={labelCls}>Dönem (YYYY-AA)</span>
           <input className={field} value={donem} onChange={(e) => setDonem(e.target.value.trim())} />
         </label>
-        <div className="flex items-center gap-2">
-          <FilePick label={up.isPending ? 'Okunuyor…' : 'Dosya seç ve yükle'} accept=".xlsx,.csv,.txt" disabled={!ok || up.isPending} onPick={(f) => up.mutate(f)} />
-          {up.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-        </div>
+      </div>
+      <div className="mt-2.5">
+        <FileDrop
+          title="Satış raporunu yükle"
+          hint="Kolonlar adlarından tanınır; önizlemede düzeltirsiniz. Kişisel veri kolonları yüklemede atılır."
+          accept=".xlsx,.csv,.txt"
+          feature="dijital.rapor-yukle"
+          allowed={canImport}
+          disabled={!ok}
+          disabledReason={platform > 0 ? 'Dönemi YYYY-AA biçiminde yazın (ör. 2026-08).' : 'Önce platformu seçin.'}
+          busy={up.isPending}
+          onPick={(f) => up.mutate(f)}
+        />
       </div>
     </Panel>
   );

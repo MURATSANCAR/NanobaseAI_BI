@@ -5192,6 +5192,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "upload", f"editorial_{kind}", work_id, filename, {"version": out.get("version"), "bytes": len(data)})
         return out
 
+    # Dosyadan yeni eser (M3 metin / M5 prova): eser adı dosya adından, tek istekte eser + ilk sürüm. Liste boşken
+    # ekranın üstündeki yükleme alanı bunu çağırır; ayrı «önce eser aç» adımı yoktur. Yükleme reddedilirse eser geri alınır.
+    @app.put("/api/v1/editorial/works-from-file")
+    async def desk_work_from_file(request: Request, kind: str = "manuscript", filename: str = "") -> dict[str, Any]:
+        engine, tenant, user, is_admin = await run_in_threadpool(_desk, request)
+        length = int(request.headers.get("content-length") or 0)
+        if length > desk_mod.MAX_BYTES:
+            raise HTTPException(status_code=413, detail={"code": "EDITORIAL_DESK", "message": "Dosya 120 MB sınırını aşıyor."})
+        data = await request.body()
+        out = await run_in_threadpool(_desk_call, desk_mod.create_from_file, engine, tenant, user, is_admin, kind, filename, data)
+        admin_mod.audit(engine, user, "create", "editorial_work", out["workId"], out["title"], {"fromFile": filename})
+        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", out["workId"], filename, {"version": out.get("version"), "bytes": len(data)})
+        return out
+
     @app.put("/api/v1/editorial/works/{work_id}/manuscript")
     async def desk_manuscript(work_id: str, request: Request, filename: str = "") -> dict[str, Any]:
         return await _desk_upload(request, work_id, filename, desk_mod.upload_manuscript, "manuscript")
@@ -5333,6 +5347,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if length > limit:
             raise HTTPException(status_code=413, detail={"code": "TRANSLATION", "message": "Dosya 120 MB sınırını aşıyor."})
         return await request.body()
+
+    # Dosyadan yeni çeviri işi: iş adı dosya adından, dil çifti yükleme alanından; tek istekte iş + kaynak v1.
+    @app.put("/api/v1/editorial/translation/jobs-from-file")
+    async def tr_job_from_file(request: Request, filename: str = "", sourceLang: str = "en", targetLang: str = "tr") -> dict[str, Any]:
+        engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
+        data = await _tr_body(request, tr_mod.MAX_BYTES)
+        out = await run_in_threadpool(_tr_call, tr_mod.create_from_file, engine, tenant, user, see_all, filename, data,
+                                      sourceLang, targetLang)
+        admin_mod.audit(engine, user, "create", "translation_job", out["jobId"], out["title"],
+                        {"sourceLang": sourceLang, "targetLang": targetLang, "fromFile": filename})
+        admin_mod.audit(engine, user, "upload", "translation_source", out["jobId"], filename, {**out, "bytes": len(data)})
+        return out
 
     @app.put("/api/v1/editorial/translation/jobs/{job_id}/source")
     async def tr_job_source(job_id: str, request: Request, filename: str = "") -> dict[str, Any]:

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { FileDrop } from '../components/FileDrop';
 import { useNavigate, useParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, Download, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager } from '../editorial/kit';
@@ -328,6 +329,18 @@ function Results({ d, canEdit }: { d: Newsletter; canEdit: boolean }) {
   const toNum = (v: string) => (v.trim() === '' ? null : Number(v.replace(/\./g, '')));
   return (
     <Block title="Gönderim ve sonuç" help="Sonuç e-posta aracının dışa aktarım dosyasından (yalnız toplamlar alınır; kişi satırlı dosyada satırlar sayılır, adresler okunmaz ve saklanmaz), bağlı CRM kampanyasından ya da elle girilir.">
+      {/* Araç dosyası yükleme yetkisizde de görünür (kilitli, gereken yetki yazılı). */}
+      <div className="mb-2">
+        <FileDrop
+          size="sm"
+          title="E-posta aracının sonuç dosyasını yükle (CSV)"
+          accept=".csv,.txt,text/csv"
+          feature="bulten.duzenle"
+          allowed={canEdit}
+          busy={add.isPending}
+          onPick={(f) => void f.text().then((dosya) => add.mutate({ kaynak: 'dosya', dosya }))}
+        />
+      </div>
       {canEdit && (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1 sm:col-span-2"><span className={labelCls}>CRM kampanya kimliği (isteğe bağlı)</span>
@@ -338,14 +351,6 @@ function Results({ d, canEdit }: { d: Newsletter; canEdit: boolean }) {
             <button type="button" className={btnGhost} disabled={link.isPending} onClick={() => link.mutate()}>Kaydet</button>
             <button type="button" className={btnGhost} disabled={add.isPending || !d.crmKampanya} onClick={() => add.mutate({ kaynak: 'crm' })}>CRM'den oku</button>
           </div>
-          <label className={`${btnGhost} cursor-pointer sm:col-span-2`}>
-            <Upload aria-hidden className="h-4 w-4" />Araç dosyasından (CSV)
-            <input type="file" accept=".csv,.txt,text/csv" className="sr-only" onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) add.mutate({ kaynak: 'dosya', dosya: await f.text() });
-            }} />
-          </label>
           <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-4 lg:grid-cols-6">
             {([['sent', 'Gönderilen'], ['opened', 'Açılan'], ['clicked', 'Tıklanan'], ['unsubscribed', 'Abonelikten çıkan'], ['bounced', 'Geri dönen']] as const).map(([k, l]) => (
               <label key={k} className="flex flex-col gap-1"><span className={labelCls}>{l}</span>

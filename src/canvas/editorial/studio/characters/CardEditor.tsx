@@ -1,12 +1,13 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, ImagePlus, Languages, Loader2, Palette, Plus, Star, Trash2, Upload, X } from 'lucide-react';
+import { Check, ImagePlus, Languages, Loader2, Palette, Plus, Star, Trash2, X } from 'lucide-react';
 import { studioApi } from '../../../engine';
 import { Note, errText, field } from '../../../admin/ui';
 import { ConfirmDialog } from '../dialogs';
 import { Img, ghostBtn, gradientBtn, press } from '../shared';
 import { ColorChips, Section } from '../elements/controls';
 import { CardsError, blankCard, cardsApi, cardsKey, toInput, type Candidate, type Card, type CardInput, type CardsView, type Part } from './api';
+import { FileDrop } from '../../../components/FileDrop';
 
 /** Kart düzenleyici: ad, tür, yaş, görünüş (Türkçe + modele giden), sabit renkler, kitap paletindeki rengi,
  *  kıyafetler, referans görseller, onay. Kaydedilen kart taslağa döner; resimlerde yalnız onaylı kart kullanılır.
@@ -59,7 +60,6 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
   const [aliases, setAliases] = useState((card?.aliases ?? []).join(', '));
   const [confirmDel, setConfirmDel] = useState(false);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'warn' | 'err'; text: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const live = card ? view.cards.find((c) => c.id === card.id) ?? card : null;
   const input = (): CardInput => ({ ...draft, aliases: aliases.split(',').map((a) => a.trim()).filter(Boolean) });
   const dirty = !baseline || JSON.stringify(input()) !== JSON.stringify(baseline);
@@ -249,13 +249,14 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
       </Section>
 
       {card && live && (
-        <Section title="Referans görseller" aside={
-          <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} disabled={busyAct} onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4" aria-hidden />Yükle
-          </button>
-        }>
-          <input ref={fileRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-hidden
-            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) act.mutate(() => cardsApi.upload(jobId, card.id, f)); }} />
+        <Section title="Referans görseller">
+          <FileDrop
+            size="sm"
+            title="Referans görsel yükle"
+            accept="image/*"
+            busy={busyAct}
+            onPick={(f) => act.mutate(() => cardsApi.upload(jobId, card.id, f))}
+          />
           <p className="-mt-1 text-[11.5px] text-canvas-muted">Yıldızlı görsel her resimde karakterin referansı olarak kullanılır; tercihen düz zeminde, bütün beden.</p>
           {live.refs.length === 0 && <Note tone="warn">Referans görsel yok: karakter yalnız tarif ve renklerle çizilir, resimler karta karşı denetlenemez.</Note>}
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">

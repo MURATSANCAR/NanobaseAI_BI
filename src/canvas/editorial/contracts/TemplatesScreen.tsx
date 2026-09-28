@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ChevronLeft, Download, Eye, FileUp, Loader2, Plus, RotateCcw } from 'lucide-react';
+import { Archive, ChevronLeft, Download, Eye, Loader2, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, downloadDocx, metaOptions, type Template } from './api';
 import { Field, Sheet, errMsg, stamp } from './ui';
+import { FileDrop, FilePick } from '../../components/FileDrop';
+import { MB, titleFromFilename } from '../../components/fileDropRules';
 
 /** Şablon kütüphanesi: sözleşme, zeyilname ve hakediş bildirimi metinleri. Metin portalda yazılır ya da
  *  hukuk biriminin Word dosyası yüklenir; ikisinde de `{{alan}}` yer tutucuları doldurulur. */
@@ -141,7 +143,6 @@ function Preview({ t, onClose }: { t: Template; onClose: () => void }) {
 
 function Card({ t, can, onEdit, onPreview }: { t: Template; can: boolean; onEdit: () => void; onPreview: () => void }) {
   const qc = useQueryClient();
-  const file = useRef<HTMLInputElement>(null);
   const done = () => qc.invalidateQueries({ queryKey: ['contracts', 'templates'] });
   const upload = useMutation({ mutationFn: (f: File) => contractApi.templateDocx(t.id, f), onSuccess: (r) => { toast.success(`Word şablonu yüklendi (${r.fields.length} alan).`); done(); }, onError: (e) => toast.error(errMsg(e) ?? 'Yüklenemedi.') });
   const removeDocx = useMutation({ mutationFn: () => contractApi.templateDocxRemove(t.id), onSuccess: done, onError: (e) => toast.error(errMsg(e) ?? 'Kaldırılamadı.') });
@@ -169,18 +170,18 @@ function Card({ t, can, onEdit, onPreview }: { t: Template; can: boolean; onEdit
             Word şablonu
           </button>
         )}
+        <FilePick
+          label={t.hasDocx ? 'Word dosyasını değiştir' : 'Word yükle'}
+          accept=".docx"
+          maxBytes={TEMPLATE_DOCX_MAX}
+          feature="sozlesme.sablon"
+          allowed={can}
+          busy={upload.isPending}
+          onPick={(f) => upload.mutate(f)}
+        />
         {can && (
           <>
             <button type="button" className={btnGhost} onClick={onEdit}>Düzenle</button>
-            <input ref={file} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload.mutate(f);
-              e.target.value = '';
-            }} />
-            <button type="button" className={btnGhost} disabled={upload.isPending} onClick={() => file.current?.click()}>
-              {upload.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileUp aria-hidden className="h-4 w-4" />}
-              {t.hasDocx ? 'Word dosyasını değiştir' : 'Word yükle'}
-            </button>
             {t.hasDocx && <button type="button" className={btnGhost} onClick={() => window.confirm('Word dosyası kaldırılsın mı? Belge metin şablonundan üretilir.') && removeDocx.mutate()}>Word'ü kaldır</button>}
             <button type="button" className={btnGhost} onClick={() => archive.mutate()}>
               {t.active ? <Archive aria-hidden className="h-4 w-4" /> : <RotateCcw aria-hidden className="h-4 w-4" />}
@@ -190,6 +191,55 @@ function Card({ t, can, onEdit, onPreview }: { t: Template; can: boolean; onEdit
         )}
       </div>
     </li>
+  );
+}
+
+/** Köprüdeki sınır (contracts_docs.MAX_DOCX). */
+const TEMPLATE_DOCX_MAX = 15 * MB;
+
+/** Birincil yükleme: Word şablonunu bırak → şablon dosya adıyla açılır ve Word dosyası yüklenir (ad, açıklama ve
+ *  sözleşme türü sonra «Düzenle»den). Word yüklenemezse açılan şablon arşive alınır; yarım kayıt listede kalmaz. */
+function NewFromDocx({ targets, can }: { targets: Record<string, string>; can: boolean }) {
+  const qc = useQueryClient();
+  const keys = Object.keys(targets);
+  const [target, setTarget] = useState<Template['target']>((keys[0] ?? 'sozlesme') as Template['target']);
+  const run = async (f: File) => {
+    const t = await contractApi.templateSave({ name: titleFromFilename(f.name), target });
+    try {
+      return await contractApi.templateDocx(t.id, f);
+    } catch (e) {
+      await contractApi.templateSave({ active: false, version: t.version }, t.id).catch(() => undefined);
+      throw e;
+    }
+  };
+  return (
+    <Panel>
+      <div className="grid gap-2.5 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)] md:items-start">
+        <label className="block min-w-0">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Şablon türü</span>
+          <select value={target} onChange={(e) => setTarget(e.target.value as Template['target'])} className={`${field} mt-1`}>
+            {keys.map((k) => (
+              <option key={k} value={k}>
+                {targets[k]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <FileDrop<Template>
+          title="Word şablonu yükle (yeni şablon)"
+          hint="Şablon dosya adıyla açılır; {{alan}} yer tutucuları tanınır. Adı ve sözleşme türünü sonra «Düzenle»den değiştirirsiniz."
+          accept=".docx"
+          maxBytes={TEMPLATE_DOCX_MAX}
+          feature="sozlesme.sablon"
+          allowed={can}
+          run={run}
+          onDone={async (t) => {
+            toast.success(`«${t.name}» şablonu açıldı (${t.fields.length} alan).`);
+            await qc.invalidateQueries({ queryKey: ['contracts', 'templates'] });
+          }}
+        />
+      </div>
+    </Panel>
   );
 }
 
@@ -223,11 +273,12 @@ export default function TemplatesScreen() {
         </div>
       </div>
       {q.error && <Note tone="err">{errMsg(q.error)}</Note>}
+      {data && <NewFromDocx targets={data.targets} can={can} />}
       {q.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
       {groups.map((g) => (
         <Panel key={g.k}>
           <h2 className="mb-2 text-[14px] font-extrabold">{g.v}</h2>
-          {!g.items.length && <p className="text-[12px] text-canvas-muted">Şablon yok.</p>}
+          {!g.items.length && <p className="text-[12px] text-canvas-muted">Şablon yok. Word şablonunu yukarıdaki alana bırakın.</p>}
           <ul className="space-y-2">
             {g.items.map((t) => (
               <Card key={t.id} t={t} can={can} onEdit={() => setEdit(t)} onPreview={() => setPreview(t)} />

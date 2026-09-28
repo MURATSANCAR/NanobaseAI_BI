@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, Loader2, PenLine, X } from 'lucide-react';
-import { ENGINE_ENABLED, bookCatalogApi, deskApi, findCatalogCard, proofingApi, readableBooksApi, type BookCard, type DeskCheck, type DeskFile, type ProofState } from '../engine';
+import { ENGINE_ENABLED, bookCatalogApi, deskApi, findCatalogCard, proofingApi, readableBooksApi, type BookCard, type DeskCheck, type DeskFile, type ProofState, type Work } from '../engine';
 import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../admin/ui';
 import { dateTime, num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
-import { UploadButton, WorkList, fmtBytes, useWorks } from './WorkPicker';
+import { WorkList, WorkUpload, fmtBytes, useWorks } from './WorkPicker';
 import { ProofFindings, seriousCount } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
-import { DocumentPicker, DocumentResult } from './DocumentReview';
+import { DocumentPicker, DocumentResult, DocumentUpload } from './DocumentReview';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -180,6 +180,55 @@ function BookChips({ books, cards, picked, onPick }: { books: string[]; cards?: 
   );
 }
 
+const UPLOAD_MODES = { belge: 'Belge incele', prova: 'Baskı provası' } as const;
+type UploadMode = keyof typeof UPLOAD_MODES;
+
+/** Son okumanın birincil yükleme alanı: sayfanın üstünde, hiçbir şey seçmeden görünür. «Belge incele»: Word/PDF/metin
+ *  belgesi Zeki AI incelemesine girer. «Baskı provası»: prova PDF'i eser dosyasına yüklenir; eser yoksa dosya adından açılır. */
+function ProofUploads({
+  works,
+  workId,
+  onWork,
+  onDoc,
+}: {
+  works: Work[];
+  workId: string | null;
+  onWork: (id: string) => void;
+  onDoc: (id: string) => void;
+}) {
+  const [mode, setMode] = useState<UploadMode>('belge');
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="px-1 text-[13px] font-extrabold">Dosya yükle</h2>
+        <div className="grid w-full grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:w-auto" role="tablist" aria-label="Ne yüklenecek">
+          {(Object.keys(UPLOAD_MODES) as UploadMode[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={mode === k}
+              onClick={() => setMode(k)}
+              className={`min-h-11 rounded-xl px-3 text-[12px] font-extrabold transition-colors duration-150 sm:min-h-9 ${
+                mode === k ? 'bg-canvas-violet text-white shadow-md' : 'text-canvas-ink hover:bg-white/70'
+              }`}
+            >
+              {UPLOAD_MODES[k]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-2.5">
+        {mode === 'belge' ? (
+          <DocumentUpload onUploaded={onDoc} />
+        ) : (
+          <WorkUpload bare kind="proof" works={works} selected={workId} onUploaded={onWork} />
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 export default function ProofScreen() {
   const qc = useQueryClient();
   const works = useWorks();
@@ -262,6 +311,17 @@ export default function ProofScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
+      {/* Birincil eylem: belge ya da prova yükleme. Liste boşken de burada; seçim beklemez. */}
+      <ProofUploads
+        works={items}
+        workId={workId}
+        onWork={(id) => {
+          setWorkId(id);
+          pickDoc(null);
+        }}
+        onDoc={pickDoc}
+      />
+
       {((s?.versions.length ?? 0) > 0 || hasProofing) && (
         <KpiRow>
           {s && (
@@ -298,12 +358,9 @@ export default function ProofScreen() {
           {s && (
             <Panel>
               <h2 className="px-1 text-[13px] font-extrabold">Prova dosyası</h2>
-              <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">Baskıya giden PDF. Yeni yükleme yeni sürüm açar, kontrolleri yeniden ölçer ve imzaları sıfırlar.</p>
-              <div className="mt-2">
-                <UploadButton workId={s.work.id} kind="proof" accept=".pdf" onDone={refresh}>
-                  Prova yükle
-                </UploadButton>
-              </div>
+              <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
+                Baskıya giden PDF. Yeni sürüm için üstteki alanda «Baskı provası»nı seçip dosyayı bırakın; kontroller yeniden ölçülür, imzalar sıfırlanır.
+              </p>
               <form
                 className="mt-3"
                 onSubmit={(e) => {
@@ -365,7 +422,7 @@ export default function ProofScreen() {
             )
           ) : !s.versions.length ? (
             <Panel>
-              <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">Bu eserde henüz prova yok. Soldan baskıya giden PDF'i yükleyin.</p>
+              <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">Bu eserde henüz prova yok. Üstteki alanda «Baskı provası»nı seçip baskıya giden PDF'i bırakın.</p>
             </Panel>
           ) : (
             <>

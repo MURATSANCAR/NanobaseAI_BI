@@ -12,7 +12,9 @@ import {
   STATUS_TONE, fmtDay, fmtMoney, fmtPct, parseNum, tendersApi,
   type Job, type Quote, type Summary, type TenderDetail as Detail, type TenderInput, type TenderMeta,
 } from './api';
-import { AskSheet, Fact, FilePick, LeftPill, ScoreBadge, Tabs, TenderFrame } from './parts';
+import { AskSheet, Fact, LeftPill, ScoreBadge, Tabs, TenderFrame } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 import TenderItems from './TenderItems';
 import TenderChecklist from './TenderChecklist';
 import TenderDecision from './TenderDecision';
@@ -209,21 +211,31 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
             <h2 className="text-[16px] font-extrabold tracking-tight">Şartname ve ekler</h2>
-            <p className="text-[12px] text-canvas-muted">En çok {meta.ayarlar.fileMaxMb} MB. Şartnameden Zeki AI özeti çıkarılır; kalem listesi «Kalemler» sekmesinden bu dosyadan alınır.</p>
+            <p className="text-[12px] text-canvas-muted">Şartnameden Zeki AI özeti çıkarılır; kalem listesi «Kalemler» sekmesinden bu dosyadan alınır.</p>
           </div>
-          {can && (
-            <div className="flex flex-wrap items-center gap-2">
-              <select className={`${field} w-auto`} value={fileTur} onChange={(e) => setFileTur(e.target.value as typeof fileTur)} aria-label="Dosya türü">
-                <option value="sartname">Şartname</option>
-                <option value="ek">Ek / kalem listesi</option>
-                <option value="belge">İhaleye özel belge</option>
-              </select>
-              <FilePick label={upload.isPending ? 'Yükleniyor…' : 'Dosya yükle'} accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png" disabled={upload.isPending} onPick={(f) => upload.mutate(f)} />
-            </div>
-          )}
+        </div>
+        {/* Birincil eylem: şartname/ek yükleme. Yetkisi olmayan kişi de görür (kilitli, gereken yetki yazılı). */}
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-[minmax(0,200px)_minmax(0,1fr)] sm:items-start">
+          <label className="block min-w-0">
+            <span className={labelCls}>Dosya türü</span>
+            <select className={`${field} mt-1`} value={fileTur} onChange={(e) => setFileTur(e.target.value as typeof fileTur)}>
+              <option value="sartname">Şartname</option>
+              <option value="ek">Ek / kalem listesi</option>
+              <option value="belge">İhaleye özel belge</option>
+            </select>
+          </label>
+          <FileDrop
+            title={fileTur === 'sartname' ? 'Şartname yükle' : fileTur === 'ek' ? 'Ek / kalem listesi yükle' : 'İhaleye özel belge yükle'}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
+            maxBytes={meta.ayarlar.fileMaxMb ? meta.ayarlar.fileMaxMb * MB : undefined}
+            feature="ihale.duzenle"
+            allowed={can}
+            busy={upload.isPending}
+            onPick={(f) => upload.mutate(f)}
+          />
         </div>
         <ul className="mt-3 flex flex-col gap-1.5">
-          {!d.dosyalar.length && <li className="text-[12.5px] text-canvas-muted">Dosya yok.</li>}
+          {!d.dosyalar.length && <li className="text-[12.5px] text-canvas-muted">Dosya yok. Şartnameyi yukarıdaki alana bırakın.</li>}
           {d.dosyalar.map((f) => (
             <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-white/80 px-3 py-2">
               <FileText aria-hidden className="h-4 w-4 shrink-0 text-canvas-muted" />

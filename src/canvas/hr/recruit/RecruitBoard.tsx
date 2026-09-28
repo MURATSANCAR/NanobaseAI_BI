@@ -8,7 +8,9 @@ import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../..
 import { Kpi, KpiRow, Panel } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { STAGE_ORDER, daysText, recruitApi, type Card, type Pipeline, type RecruitMeta, type Stage } from '../hrApi';
-import { FilePick, HrFrame, Tabs } from '../parts';
+import { HrFrame, Tabs } from '../parts';
+import { FileDrop } from '../../components/FileDrop';
+import { MB, titleFromFilename } from '../../components/fileDropRules';
 
 /** M55 işe alım panosu: dört sayaç ve pozisyon başına aşama sütunları. Telefonda sütunlar sekmeye döner; aşama değişikliği
  *  kartın seçicisinden (sürükleme zorunlu değil). Kartta yalnız ad, pozisyon ve aşamadaki gün — puan ya da sıra yok. */
@@ -18,6 +20,7 @@ export default function RecruitBoard() {
   const position = params.get('pozisyon') ?? '';
   const [stageTab, setStageTab] = useState<Stage>('basvurdu');
   const [creating, setCreating] = useState(false);
+  const [cv, setCv] = useState<File | null>(null);
   const meta = useQuery({ queryKey: ['hr', 'recruit', 'meta'], queryFn: recruitApi.meta, enabled: ENGINE_ENABLED, staleTime: 60_000 });
   const board = useQuery({ queryKey: ['hr', 'recruit', 'pipeline', position], queryFn: () => recruitApi.pipeline(position), enabled: ENGINE_ENABLED });
   const can = meta.data?.me.can;
@@ -49,6 +52,21 @@ export default function RecruitBoard() {
       {meta.data && !can?.all && !can?.see && (
         <Note tone="info">Rolünüzde aday görme yetkisi yok; pozisyonlar ve sayaçlar görünür, aday kartları görünmez.</Note>
       )}
+      {/* Birincil eylem: özgeçmişi bırak → yeni aday penceresi dosya ekli ve ad dosya adından dolu açılır. */}
+      <Panel>
+        <FileDrop
+          title="Özgeçmiş yükle (yeni aday)"
+          hint="Aday penceresi özgeçmiş ekli açılır; ad soyadı dosya adından gelir, düzeltip pozisyonu seçersiniz. Kimlik ve iletişim bilgileri maskelenir."
+          accept=".pdf,.docx,.odt,.txt"
+          maxBytes={meta.data?.fileMaxMb ? meta.data.fileMaxMb * MB : undefined}
+          feature="ik.aday-hepsi"
+          allowed={meta.data ? !!can?.all : undefined}
+          onPick={(f) => {
+            setCv(f);
+            setCreating(true);
+          }}
+        />
+      </Panel>
       {board.data && <Counters data={board.data} />}
       {board.data && (
         <Panel>
@@ -90,7 +108,16 @@ export default function RecruitBoard() {
       )}
       {board.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {meta.data && board.data && (
-        <NewCandidateSheet open={creating} meta={meta.data} positions={board.data.positions} onClose={() => setCreating(false)} />
+        <NewCandidateSheet
+          open={creating}
+          meta={meta.data}
+          positions={board.data.positions}
+          initialFile={cv}
+          onClose={() => {
+            setCreating(false);
+            setCv(null);
+          }}
+        />
       )}
     </HrFrame>
   );
@@ -169,13 +196,20 @@ function CandidateCard({ c, data, canDecide }: { c: Card; data: Pipeline; canDec
 
 const EMPTY = { fullName: '', email: '', phone: '', positionId: '', source: 'elle' };
 
-function NewCandidateSheet({ open, meta, positions, onClose }: {
-  open: boolean; meta: RecruitMeta; positions: Pipeline['positions']; onClose: () => void;
+function NewCandidateSheet({ open, meta, positions, initialFile, onClose }: {
+  open: boolean; meta: RecruitMeta; positions: Pipeline['positions']; initialFile?: File | null; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [f, setF] = useState(EMPTY);
   const [file, setFile] = useState<File | null>(null);
+  // Sayfanın üstündeki alana bırakılan özgeçmiş: pencere dosya ekli, ad dosya adından dolu açılır.
+  const [seenFile, setSeenFile] = useState<File | null>(null);
+  if (open && initialFile && initialFile !== seenFile) {
+    setSeenFile(initialFile);
+    setFile(initialFile);
+    setF((x) => (x.fullName.trim() ? x : { ...x, fullName: titleFromFilename(initialFile.name) }));
+  }
   const set = (k: keyof typeof EMPTY) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const openPositions = useMemo(() => positions.filter((p) => p.state === 'acik' || p.state === 'beklemede'), [positions]);
   const create = useMutation({
@@ -235,10 +269,14 @@ function NewCandidateSheet({ open, meta, positions, onClose }: {
             </select>
           </label>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FilePick label={file ? 'Özgeçmişi değiştir' : 'Özgeçmiş ekle'} accept=".pdf,.docx,.odt,.txt" onPick={setFile} />
-          <span className="min-w-0 break-all text-[12px] text-canvas-muted">{file ? file.name : `PDF, Word, ODT ya da metin · en çok ${meta.fileMaxMb} MB`}</span>
-        </div>
+        <FileDrop
+          size="sm"
+          title={file ? 'Özgeçmişi değiştir' : 'Özgeçmiş ekle'}
+          accept=".pdf,.docx,.odt,.txt"
+          maxBytes={meta.fileMaxMb ? meta.fileMaxMb * MB : undefined}
+          picked={file}
+          onPick={setFile}
+        />
         <Note tone="info">
           Özgeçmişteki kimlik no, telefon, adres, doğum tarihi, medeni hal ve özel nitelikli bilgiler maskelenir; Zeki AI yalnız maskeli metni görür.
         </Note>

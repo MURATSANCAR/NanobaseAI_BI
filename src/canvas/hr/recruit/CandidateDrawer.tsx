@@ -11,6 +11,7 @@ import {
   type Candidate, type Message, type Outcome, type RecruitMeta, type Stage,
 } from '../hrApi';
 import { AskSheet, Block, Fact, FilePick, HrFrame, splitUsers } from '../parts';
+import { MB } from '../../components/fileDropRules';
 
 /** M55 aday kartı (/ik/ise-alim/aday/:id). Görünen her şey yetkiye göre köprüden gelir: e-posta, telefon ve özgün
  *  özgeçmiş yalnız bütün adayları görme yetkisinde; görüşmeci maskeli metni görür. Her açılış erişim kaydına yazılır. */
@@ -303,9 +304,9 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
     <Block
       title="Özgeçmiş"
       help={c.can.downloadOriginal ? 'Maskeli metin Zeki AI\'a giden metindir; özgün dosya yalnız İK yetkisiyle iner ve indirme erişim kaydına yazılır.' : 'Yalnız maskeli metni görürsünüz; kimlik, iletişim ve özel nitelikli bilgiler gizlidir.'}
-      action={c.can.files ? <FilePick label={add.isPending ? 'Yükleniyor…' : 'Dosya ekle'} accept=".pdf,.docx,.odt,.txt" disabled={add.isPending} onPick={(f) => add.mutate(f)} /> : undefined}
+      action={<FilePick label="Dosya ekle" accept=".pdf,.docx,.odt,.txt" maxBytes={meta.fileMaxMb ? meta.fileMaxMb * MB : undefined} busy={add.isPending} allowed={c.can.files} deniedText="Bu işlem için yetkiniz yok: aday dosyasını pozisyonun sahibi ya da İK ekler." onPick={(f) => add.mutate(f)} />}
     >
-      {!c.files.length && <div className="py-4 text-center text-[12px] text-canvas-muted">Dosya yok. En çok {meta.fileMaxMb} MB; PDF, Word, ODT ya da metin.</div>}
+      {!c.files.length && <div className="py-4 text-center text-[12px] text-canvas-muted">Dosya yok. Özgeçmişi yukarıdaki «Dosya ekle» alanına bırakın.</div>}
       <ul className="flex flex-col gap-2">
         {c.files.map((f) => {
           const masked = Object.entries(f.maskCounts).filter(([, n]) => n > 0);

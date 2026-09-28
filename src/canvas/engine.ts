@@ -2074,6 +2074,9 @@ export const deskApi = {
   updateWork: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `/api/v1/editorial/works/${encodeURIComponent(id)}`, b, 30_000),
   uploadManuscript: (id: string, file: File) => upload(`/api/v1/editorial/works/${encodeURIComponent(id)}/manuscript`, file),
   uploadProof: (id: string, file: File) => upload(`/api/v1/editorial/works/${encodeURIComponent(id)}/proof`, file),
+  /** Dosyadan yeni eser: ad dosya adından, tek istekte eser + ilk metin/prova sürümü (liste boşken yükleme alanı). */
+  createFromFile: (kind: 'manuscript' | 'proof', file: File) =>
+    upload(`/api/v1/editorial/works-from-file?kind=${kind}`, file) as Promise<{ fileId: string; version: number; workId: string; title: string }>,
   chapters: (id: string) => send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[] }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
   chapter: (id: string) => send<ChapterDetail>('GET', `/api/v1/editorial/chapters/${encodeURIComponent(id)}`, undefined, 60_000),
   review: (id: string) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/review`, {}, 60_000),
@@ -2251,6 +2254,12 @@ export const translationApi = {
   uploadSource: (id: string, file: File) =>
     putFile<{ version: number; segments: number; chapters: number; words: number; carried: number }>(`${TR}/jobs/${enc(id)}/source`, file),
   sourceUrl: (id: string) => `${ENGINE_BASE}${TR}/jobs/${enc(id)}/source`,
+  /** Dosyadan yeni çeviri işi: ad dosya adından, dil çifti yükleme alanından; iş + kaynak v1 tek istekte. */
+  createFromFile: (file: File, sourceLang: string, targetLang: string) =>
+    putFile<{ jobId: string; title: string; version: number; segments: number; chapters: number; words: number; carried: number }>(
+      `${TR}/jobs-from-file${qs({ sourceLang, targetLang })}`,
+      file,
+    ),
   segments: (id: string, p: { chapter?: number | null; filter?: string; q?: string }) =>
     send<{ items: SegmentRow[]; total: number; roles: TranslationJob['roles'] }>(
       'GET',

@@ -95,11 +95,14 @@ export default function MemoryBank() {
           </div>
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          {canManage && (
+          <div className="w-full">
             <FileButton
-              tone="ghost"
+              tone="hero"
+              feature="ceviri.yonet"
               accept=".tmx,.xml"
               disabled={same}
+              disabledReason="Kaynak ve hedef dil aynı olamaz; üstten dil çiftini düzeltin."
+              hint="Seçili dil çiftinin birimleri çeviri belleğine eklenir; bellekte zaten olan birim atlanır."
               run={(f) => translationIoApi.importTmx(src, tgt, f)}
               onDone={(r) => {
                 setNotice(
@@ -111,9 +114,9 @@ export default function MemoryBank() {
                 changed();
               }}
             >
-              TMX içe aktar
+              TMX dosyası yükle (çeviri belleği)
             </FileButton>
-          )}
+          </div>
           {canExport && !same && (
             <a href={translationIoApi.tmxUrl(src, tgt, external)} className={btnGhost}>
               <Download aria-hidden className="h-4 w-4" />

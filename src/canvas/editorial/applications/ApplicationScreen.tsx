@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowRight, Download, Pencil, Trash2, Upload, UserCheck } from 'lucide-react';
+import { ArrowRight, Download, Pencil, Trash2, UserCheck } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } from '../../admin/ui';
 import SearchSelect from '../../components/SearchSelect';
@@ -15,6 +15,8 @@ import LettersPanel from './LettersPanel';
 import NoteSheet from './NoteSheet';
 import ReportPanel from './ReportPanel';
 import { ACTION_TEXT, DECISION_TONE, StatusPill, TallyView, errMsg, fmtBytes, invalidateApps, useAppMeta } from './shared';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** Tek başvuru: dosya, editör değerlendirmesi, kurula çıkış, Yayın Kurulu Raporu, kurul kararı, yazışma, geçmiş. */
 
@@ -252,16 +254,6 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
   const qc = useQueryClient();
   const meta = useAppMeta();
   const [kind, setKind] = useState(a.status === 'revizyon' || a.round > 1 ? 'revizyon' : 'dosya');
-  const up = useMutation({
-    mutationFn: async (files: File[]) => {
-      for (const f of files) await applicationsApi.upload(a.id, kind, f);
-    },
-    onSuccess: async () => {
-      await invalidateApps(qc);
-      toast.success('Dosya yüklendi');
-    },
-    onError: (e) => toast.error(errMsg(e, 'Dosya yüklenemedi.')),
-  });
   const del = useMutation({
     mutationFn: (id: string) => applicationsApi.deleteFile(id),
     onSuccess: async () => {
@@ -273,7 +265,7 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
   const open = !['kabul', 'red', 'geri_cekildi'].includes(a.status);
   return (
     <div className="space-y-2">
-      {a.files.length === 0 && <p className="text-[12.5px] text-canvas-muted">Dosya yüklenmedi.</p>}
+      {a.files.length === 0 && <p className="text-[12.5px] text-canvas-muted">Dosya yüklenmedi. Eser dosyasını aşağıdaki alana bırakın.</p>}
       <ul className="space-y-1.5">
         {a.files.map((f) => (
           <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
@@ -299,34 +291,35 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
           </li>
         ))}
       </ul>
-      {canWrite && open && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select aria-label="Dosya türü" value={kind} onChange={(e) => setKind(e.target.value)} className={field}>
+      {/* Dosya ekleme her zaman görünür; yetki yoksa kilitli, başvuru kapandıysa pasif (nedeni yazılı). */}
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,200px)_minmax(0,1fr)] sm:items-start">
+        <label className="block min-w-0">
+          <span className={label}>Dosya türü</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value)} className={`${field} mt-1`}>
             {(meta.data?.fileKinds ?? []).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
           </select>
-          <label className={`${btnGhost} cursor-pointer`}>
-            <Upload aria-hidden className="h-4 w-4" />
-            {up.isPending ? 'Yükleniyor…' : 'Dosya ekle'}
-            <input
-              type="file"
-              multiple
-              className="sr-only"
-              accept=".pdf,.docx,.doc"
-              disabled={up.isPending}
-              onChange={(e) => {
-                const files = Array.from(e.target.files ?? []);
-                e.target.value = '';
-                if (files.length) up.mutate(files);
-              }}
-            />
-          </label>
-          <span className="text-[11px] text-canvas-muted">PDF, DOCX, DOC · en çok {meta.data?.fileMaxMb ?? 10} MB</span>
-        </div>
-      )}
+        </label>
+        <FileDrop
+          size="sm"
+          multiple
+          title="Eser dosyası ekle"
+          accept=".pdf,.docx,.doc"
+          maxBytes={(meta.data?.fileMaxMb ?? 10) * MB}
+          feature="basvuru.yaz"
+          allowed={canWrite}
+          disabled={!open}
+          disabledReason="Başvuru sonuçlandı; yeni dosya eklenmez."
+          run={(f) => applicationsApi.upload(a.id, kind, f)}
+          onDone={async () => {
+            await invalidateApps(qc);
+            toast.success('Dosya yüklendi');
+          }}
+        />
+      </div>
     </div>
   );
 }

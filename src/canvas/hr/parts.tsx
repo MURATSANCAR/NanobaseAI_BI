@@ -55,25 +55,8 @@ export function Fact({ label, value, help }: { label: string; value: ReactNode; 
   );
 }
 
-/** Dosya seçme düğmesi (gizli input + etiket; telefonda dokunulabilir boy). */
-export function FilePick({ label, accept, disabled, onPick }: { label: string; accept: string; disabled?: boolean; onPick: (f: File) => void }) {
-  return (
-    <label className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-[12.5px] font-extrabold text-canvas-ink transition-transform duration-150 ease-out hover:bg-slate-200 active:scale-[0.97] sm:min-h-0 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
-      <input
-        type="file"
-        accept={accept}
-        className="sr-only"
-        disabled={disabled}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          if (f) onPick(f);
-        }}
-      />
-      {label}
-    </label>
-  );
-}
+/** Dosya seçme düğmesi: ortak yükleme alanının düğme boyu (sürükle-bırak, tür/sınır yazılı, yetki kilidi). */
+export { FilePick } from '../components/FileDrop';
 
 /** Başlıklı bölüm (kart içinde). */
 export function Block({ title, help, action, children }: { title: string; help?: ReactNode; action?: ReactNode; children: ReactNode }) {

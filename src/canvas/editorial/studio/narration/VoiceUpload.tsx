@@ -4,6 +4,7 @@ import { FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { useVoiceLibrary, voicesApi, type NarrationVoice, type VoiceLibrary } from './api';
+import { FileDrop } from '../../../components/FileDrop';
 
 /** «Ses yükle»: yayınevinin kendi seslendirmeninin kaydını, kullanım hakkı belgesiyle ses kütüphanesine ekler.
  *  Hak beyanı zorunlu (onay kutusu, sesin sahibi, izin belgesi dosyası ya da belge numarası). Kayıt tarayıcıda çözülür
@@ -179,14 +180,13 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
           ortamda, müziksiz. Yalnız kullanım hakkı yayınevinize ait sesler yüklenir.
         </p>
       </div>
-      <label htmlFor={`${f}-audio`} className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         <span className={labelCls}>Ses kaydı</span>
-        <input id={`${f}-audio`} type="file" accept={AUDIO_ACCEPT} onChange={(e) => void pickAudio(e.target.files?.[0])}
-          className="min-h-10 w-full min-w-0 text-[12.5px] file:mr-2 file:min-h-10 file:rounded-xl file:border-0 file:bg-slate-100 file:px-3 file:font-bold" />
-        {decoding && <span className="text-[11.5px] text-canvas-muted">Kayıt okunuyor…</span>}
+        <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding}
+          picked={audio?.file} onPick={(file) => void pickAudio(file)} />
         {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ' — kısa görünüyor; en az 30 sn konuşma gerekir' : long ? ' — uzun görünüyor; en çok 60 sn konuşma kabul edilir' : ''}</span>}
         {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
-      </label>
+      </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <label htmlFor={`${f}-label`} className="flex flex-col gap-1">
           <span className={labelCls}>Sesin adı</span>
@@ -209,12 +209,11 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
           <span className={labelCls}>Sesin sahibi</span>
           <input id={`${f}-owner`} className={inputCls} value={owner} maxLength={120} onChange={(e) => setOwner(e.target.value)} placeholder="Ad soyad" />
         </label>
-        <label htmlFor={`${f}-doc`} className="flex flex-col gap-1">
-          <span className={labelCls}>İzin belgesi (PDF, PNG, JPEG)</span>
-          <input id={`${f}-doc`} type="file" accept={DOC_ACCEPT} onChange={(e) => setDoc(e.target.files?.[0] ?? null)}
-            className="min-h-10 w-full min-w-0 text-[12.5px] file:mr-2 file:min-h-10 file:rounded-xl file:border-0 file:bg-white file:px-3 file:font-bold" />
+        <div className="flex flex-col gap-1">
+          <span className={labelCls}>İzin belgesi</span>
+          <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
           {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
-        </label>
+        </div>
         <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">
           <span className={labelCls}>ya da belge numarası / açıklaması</span>
           <input id={`${f}-ref`} className={inputCls} value={reference} maxLength={300} onChange={(e) => setReference(e.target.value)} placeholder="ör. Seslendirme sözleşmesi 2026/114, madde 3" />

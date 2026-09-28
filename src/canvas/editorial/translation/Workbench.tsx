@@ -881,19 +881,19 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
             <Download aria-hidden className="h-4 w-4" />
             XLIFF indir
           </a>
-          {j.roles.translate && (
-            <FileButton
-              tone="ghost"
-              accept=".xlf,.xliff,.sdlxliff,.mqxliff"
-              run={(f) => translationApi.importXliff(j.id, f)}
-              onDone={async (r) => {
-                setNotice(`XLIFF: ${nf.format(r.updated)} segment güncellendi (${nf.format(r.confirmed)} çevrildi olarak)${r.locked ? `, ${nf.format(r.locked)} onaylı segmente dokunulmadı` : ''}${r.unknown ? `, ${nf.format(r.unknown)} segment bu işe ait değil` : ''}.`);
-                await refreshAll();
-              }}
-            >
-              XLIFF yükle
-            </FileButton>
-          )}
+          <FileButton
+            tone="ghost"
+            accept=".xlf,.xliff,.sdlxliff,.mqxliff"
+            disabled={!j.roles.translate}
+            disabledReason="XLIFF'i bu işin çevirmeni ya da işi yöneten yükler."
+            run={(f) => translationApi.importXliff(j.id, f)}
+            onDone={async (r) => {
+              setNotice(`XLIFF: ${nf.format(r.updated)} segment güncellendi (${nf.format(r.confirmed)} çevrildi olarak)${r.locked ? `, ${nf.format(r.locked)} onaylı segmente dokunulmadı` : ''}${r.unknown ? `, ${nf.format(r.unknown)} segment bu işe ait değil` : ''}.`);
+              await refreshAll();
+            }}
+          >
+            XLIFF yükle
+          </FileButton>
           {mode === 'ceviri' && j.roles.translate && items.some((s) => s.hasDraft && s.status === 'bos') && (
             <button type="button" disabled={placeDrafts.isPending} onClick={() => placeDrafts.mutate()} className={btnGhost}>
               <Sparkles aria-hidden className="h-4 w-4" />

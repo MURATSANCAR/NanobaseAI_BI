@@ -1,13 +1,15 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Camera, Check, Receipt, Trash2, TriangleAlert } from 'lucide-react';
+import { Check, Receipt, Trash2, TriangleAlert } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { evApi, fileToBase64, fmtMoney, fmtShort, fmtSlot, parseNum, type FairDetail, type Meta } from './api';
 import { Block, DaysLeft } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Fuar kartının iş sekmeleri: görevler (telefonda tek dokunuşla işaret), gider (tür + tutar + fiş fotoğrafı) ve yazar
  *  programı (CRM yazarı + saat; başka kartta aynı yazarın çakışan saati uyarılır). */
@@ -97,7 +99,6 @@ export function FairCosts({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const edit = m.me.canEdit && f.status !== 'iptal';
   const n = parseNum(amount);
   const tooBig = !!file && file.size > m.settings.receiptMaxMb * 1024 * 1024;
@@ -118,7 +119,6 @@ export function FairCosts({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
         setAmount('');
         setNote('');
         setFile(null);
-        if (fileRef.current) fileRef.current.value = '';
         toast.success('Gider eklendi.');
       },
     });
@@ -178,13 +178,16 @@ export function FairCosts({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
                 <span className={labelCls}>Not</span>
                 <input className={field} value={note} onChange={(e) => setNote(e.target.value)} />
               </label>
-              <label className={`${btnGhost} cursor-pointer`}>
-                <Camera aria-hidden className="h-4 w-4" />
-                {file ? file.name : 'Fiş fotoğrafı (isteğe bağlı)'}
-                <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" className="sr-only"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              </label>
-              {tooBig && <Note tone="err">Fiş {m.settings.receiptMaxMb} MB'tan büyük.</Note>}
+              <FileDrop
+                size="sm"
+                title={file ? 'Başka fiş seç' : 'Fiş fotoğrafı ya da PDF (isteğe bağlı)'}
+                hint="Telefonda dokununca kamera açılır."
+                accept="image/*,application/pdf"
+                capture="environment"
+                maxBytes={m.settings.receiptMaxMb * MB}
+                picked={file}
+                onPick={setFile}
+              />
               {amount.trim() !== '' && (n === null || n <= 0) && <Note tone="err">Tutar sıfırdan büyük bir sayı olmalı.</Note>}
               <button type="submit" className={btnPrimary} disabled={!n || n <= 0 || tooBig || run.isPending}>Gideri ekle</button>
             </form>

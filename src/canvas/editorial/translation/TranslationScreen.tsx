@@ -139,7 +139,9 @@ function JobList({ jobs, selected, onSelect, canManage }: { jobs: TranslationJob
       )}
       {!jobs.length && (
         <p className="mt-3 px-1 text-[12px] leading-snug text-canvas-muted">
-          {canManage ? 'Henüz çeviri işi yok. Yeni bir iş açıp kaynak metni yükleyin.' : 'Size açık bir çeviri işi yok.'}
+          {canManage
+            ? 'Henüz çeviri işi yok. Yukarıdaki alana kaynak metni bırakın; iş dosya adından açılır.'
+            : 'Size açık bir çeviri işi yok.'}
         </p>
       )}
       <ul className="mt-2 space-y-1.5">
@@ -472,12 +474,14 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
         ) : (
           <p className="mt-1 px-1 text-[12px] leading-snug text-canvas-muted">Henüz kaynak yüklenmedi.</p>
         )}
-        {manage && (
-          <div className="mt-2.5 flex flex-wrap items-start gap-2">
+          <div className="mt-2.5">
             <FileButton
               accept=".docx,.txt,.md,.pdf"
+              feature="ceviri.yonet"
               run={(f) => translationApi.uploadSource(j.id, f)}
-              disabled={drafting}
+              disabled={drafting || !manage}
+              disabledReason={drafting ? 'Zeki AI taslağı sürerken kaynak değiştirilemez.' : 'Kaynağı işi açan kişi ya da yetkili yönetici yükler.'}
+              hint="Metin paragraflara, paragraflar cümle segmentlerine bölünür; bölüm başlıkları ayrı segmenttir. Yeni sürümde aynı kalan cümlelerin çevirisi korunur."
               onDone={async (r) => {
                 setNotice(
                   `Kaynak v${r.version}: ${nf.format(r.chapters)} bölüm, ${nf.format(r.segments)} segment, ${nf.format(r.words)} kelime.` +
@@ -486,13 +490,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
                 await refresh();
               }}
             >
-              {j.source ? 'Yeni kaynak sürümü' : 'Kaynak yükle'}
+              {j.source ? 'Yeni kaynak sürümü yükle' : 'Kaynak metni yükle'}
             </FileButton>
-            <p className="min-w-0 flex-1 basis-60 text-[11.5px] leading-snug text-canvas-muted">
-              DOCX, TXT, MD ya da PDF. Metin paragraflara, paragraflar cümle segmentlerine bölünür; bölüm başlıkları ayrı segmenttir. Yeni sürümde aynı kalan cümlelerin çevirisi korunur.
-            </p>
           </div>
-        )}
       </Panel>
 
       {j.chapters.length > 0 && (
@@ -565,10 +565,11 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
               <Download aria-hidden className="h-4 w-4" />
               XLIFF indir
             </a>
-            {j.roles.translate && (
               <FileButton
                 tone="ghost"
                 accept=".xlf,.xliff,.sdlxliff,.mqxliff"
+                disabled={!j.roles.translate}
+                disabledReason="XLIFF'i bu işin çevirmeni ya da işi yöneten yükler."
                 run={(f) => translationApi.importXliff(j.id, f)}
                 onDone={async (r) => {
                   setNotice(
@@ -582,7 +583,6 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
               >
                 XLIFF yükle
               </FileButton>
-            )}
             {canExport && (
               <a href={translationApi.docxUrl(j.id)} className={btnGhost}>
                 <Download aria-hidden className="h-4 w-4" />
@@ -645,6 +645,104 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
   );
 }
 
+/** Çeviri işlerinin birincil yükleme alanı: kaynak metin bırakılınca iş dosya adından açılır (köprü
+ *  `jobs-from-file`, kaynak reddedilirse iş silinir), dil çifti yanındaki seçimden. Çevirmen ve teslim sonra atanır. */
+function TranslationDrop({ onCreated }: { onCreated: (id: string) => void }) {
+  const qc = useQueryClient();
+  const [src, setSrc] = useState('en');
+  const [tgt, setTgt] = useState('tr');
+  const [created, setCreated] = useState<{ id: string; title: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const same = src === tgt;
+  return (
+    <Panel>
+      <div className="grid gap-2.5 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] md:items-start">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block min-w-0">
+            <span className={label}>Kaynak dil</span>
+            <select value={src} onChange={(e) => setSrc(e.target.value)} className={`${field} mt-1`}>
+              {Object.entries(LANGS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0">
+            <span className={label}>Hedef dil</span>
+            <select value={tgt} onChange={(e) => setTgt(e.target.value)} className={`${field} mt-1`}>
+              {Object.entries(LANGS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <FileButton
+          tone="hero"
+          accept=".docx,.txt,.md,.pdf"
+          feature="ceviri.yonet"
+          disabled={same}
+          disabledReason="Kaynak ve hedef dil aynı olamaz."
+          hint="Yeni çeviri işi dosya adından açılır, metin cümle segmentlerine bölünür; adı, çevirmeni ve teslim tarihini sonra düzeltirsiniz."
+          run={(f) => translationApi.createFromFile(f, src, tgt)}
+          onDone={async (r) => {
+            setCreated({ id: r.jobId, title: r.title });
+            setNotice(`«${r.title}» çeviri işi açıldı: ${nf.format(r.chapters)} bölüm, ${nf.format(r.segments)} segment, ${nf.format(r.words)} kelime.`);
+            await qc.invalidateQueries({ queryKey: ['translation', 'jobs'] });
+            onCreated(r.jobId);
+          }}
+        >
+          Kaynak metni yükle (yeni çeviri işi)
+        </FileButton>
+      </div>
+      {notice && (
+        <div className="mt-2.5">
+          <Note tone="ok">{notice}</Note>
+        </div>
+      )}
+      {created && <RenameJob key={created.id} job={created} onSaved={(t) => setCreated({ id: created.id, title: t })} />}
+    </Panel>
+  );
+}
+
+/** Dosya adından açılan işin adını hemen düzeltme. */
+function RenameJob({ job, onSaved }: { job: { id: string; title: string }; onSaved: (title: string) => void }) {
+  const qc = useQueryClient();
+  const [title, setTitle] = useState(job.title);
+  const save = useMutation({
+    mutationFn: () => translationApi.updateJob(job.id, { title: title.trim() }),
+    onSuccess: async () => {
+      onSaved(title.trim());
+      await qc.invalidateQueries({ queryKey: ['translation'] });
+    },
+  });
+  const dirty = !!title.trim() && title.trim() !== job.title;
+  return (
+    <form
+      className="mt-2 flex flex-wrap items-end gap-1.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (dirty && !save.isPending) save.mutate();
+      }}
+    >
+      <label className="block min-w-0 flex-1 basis-56">
+        <span className={label}>Eser adı (dosya adından geldi)</span>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${field} mt-1`} />
+      </label>
+      <button type="submit" disabled={!dirty || save.isPending} className={btnGhost}>
+        {save.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : 'Adı kaydet'}
+      </button>
+      {save.error && (
+        <div className="w-full">
+          <Note tone="err">{errText(save.error, 'Ad kaydedilemedi.')}</Note>
+        </div>
+      )}
+    </form>
+  );
+}
+
 function Jobs() {
   const [params, setParams] = useSearchParams();
   const canManage = useCan('ceviri.yonet');
@@ -674,6 +772,8 @@ function Jobs() {
   return (
     <>
       {jobs.error && <Note tone="err">{errText(jobs.error, 'Çeviri işleri okunamadı.')}</Note>}
+      {/* Birincil eylem: kaynak metin yükleme; liste boşken de burada, önce iş açmayı beklemez. */}
+      <TranslationDrop onCreated={setSelected} />
       {jobs.data && items.length > 0 && (
         <KpiRow>
           <Kpi label="Süren iş" value={nf.format(active.length)} help={`${nf.format(items.length - active.length)} iş bitti ya da kaynak bekliyor`} />
@@ -689,7 +789,7 @@ function Jobs() {
         ) : (
           <Panel>
             <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">
-              {canManage ? 'Soldan bir çeviri işi seçin ya da yeni bir tane açın.' : 'Soldan bir çeviri işi seçin.'}
+              {canManage ? 'Soldan bir çeviri işi seçin ya da üstteki alana kaynak metni bırakın.' : 'Soldan bir çeviri işi seçin.'}
             </p>
           </Panel>
         )}

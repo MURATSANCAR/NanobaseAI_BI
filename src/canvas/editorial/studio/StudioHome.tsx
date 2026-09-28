@@ -1,13 +1,29 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { BookOpen, FileUp, Images, Play, Search, X } from 'lucide-react';
+import { BookOpen, Images, Play, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi, type StudioArtMode } from '../../engine';
 import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
 import { useCan } from '../../useAdmin';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
+
+/** Kitabın Word dosyasıyla yeni tasarım (köprü sınırı editorial_studio.DOCX_MAX = 20 MB). */
+function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
+  return (
+    <FileDrop
+      title="Kitabın Word dosyasını yükle"
+      hint="Yükleyince tasarım işi açılır; aşağıdaki resim kullanımı seçimi geçerlidir. Okunmuş bir kitabı aşağıdan da seçebilirsiniz."
+      accept=".docx"
+      maxBytes={20 * MB}
+      feature="tasarim.uret"
+      run={run}
+    />
+  );
+}
 
 /** Kitap Tasarım Stüdyosu girişi: okunmuş bir kitaptan ya da Word dosyasından yeni tasarım başlatır,
  *  önceki işleri listeler. Kitap bilgisi CRM'den, resimler Qwen-Image-2.1'den, dizgi Typst'ten gelir. */
@@ -18,7 +34,6 @@ export default function StudioHome() {
   const [q, setQ] = useState('');
   // Kitaba tıklamak işi başlatmaz: ~40 dk GPU işi, önce onay (2026-09-25: yanlış tıklamayla kopya iş açılmıştı).
   const [pick, setPick] = useState<{ id: string; title: string } | null>(null);
-  const file = useRef<HTMLInputElement>(null);
   const catalog = useQuery({ queryKey: ['editorial', 'catalog'], queryFn: bookCatalogApi.list, enabled: ENGINE_ENABLED });
   const jobs = useQuery({ queryKey: ['studio', 'jobs'], queryFn: studioApi.list, enabled: ENGINE_ENABLED, refetchInterval: 8000 });
   const [artMode, setArtMode] = useState<StudioArtMode>('auto');
@@ -55,13 +70,10 @@ export default function StudioHome() {
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr] lg:gap-4">
         {canProduce ? (
         <Panel>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Yeni tasarım</h2>
-            <button type="button" className={ghostBtn} onClick={() => file.current?.click()} disabled={upload.isPending}>
-              <FileUp className="h-4 w-4" aria-hidden /> {upload.isPending ? 'Yükleniyor…' : 'Word dosyası yükle'}
-            </button>
-            <input ref={file} type="file" accept=".docx" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); e.target.value = ''; }} />
+          <h2 className="text-[15px] font-extrabold">Yeni tasarım</h2>
+          {/* Birincil eylem: kitabın Word dosyasını bırak → tasarım işi açılır. */}
+          <div className="mt-2">
+            <StudioDrop run={(f) => upload.mutateAsync(f)} />
           </div>
           <div className="mt-2">
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Resim kullanımı</div>
@@ -125,7 +137,11 @@ export default function StudioHome() {
         ) : (
           <Panel>
             <h2 className="text-[15px] font-extrabold">Yeni tasarım</h2>
-            <p className="mt-2 text-[12.5px] text-canvas-muted">Yeni tasarım başlatmak rolünüzde yok. Var olan tasarımları yandan açabilirsiniz.</p>
+            {/* Yükleme gizlenmez: kilitli görünür ve gereken yetkiyi yazar. */}
+            <div className="mt-2">
+              <StudioDrop run={(f) => upload.mutateAsync(f)} />
+            </div>
+            <p className="mt-2 text-[12.5px] text-canvas-muted">Var olan tasarımları yandan açabilirsiniz.</p>
           </Panel>
         )}
 

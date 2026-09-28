@@ -4,6 +4,7 @@ import { Loader2, Mic, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { narrationApi, type HumanRecording, type NarrationOverview } from './api';
+import { FileDrop } from '../../../components/FileDrop';
 
 /** «İnsan kaydı yükle»: yayınevinin seslendirmenine okuttuğu kayıt sayfanın sesi olur. Yapay ses üretilmez; kelime
  *  zamanları kayıttan çıkarılır (okurken vurgu, sesli e-kitap, efekt karışımı aynen çalışır). Bir dosya bir sayfayı ya
@@ -14,7 +15,6 @@ const AUDIO_ACCEPT = '.wav,.mp3,.m4a,.ogg,.flac,audio/wav,audio/x-wav,audio/mpeg
 const DOC_ACCEPT = '.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg';
 const inputCls = 'min-h-10 w-full min-w-0 rounded-xl border border-slate-200 bg-white/90 px-3 text-base outline-none focus:border-canvas-violet sm:text-[13px]';
 const labelCls = 'text-[11px] font-bold uppercase tracking-wide text-canvas-muted';
-const fileCls = 'min-h-10 w-full min-w-0 text-[12.5px] file:mr-2 file:min-h-10 file:rounded-xl file:border-0 file:bg-slate-100 file:px-3 file:font-bold';
 
 const b64 = (blob: Blob) => new Promise<string>((ok, bad) => {
   const r = new FileReader();
@@ -23,7 +23,6 @@ const b64 = (blob: Blob) => new Promise<string>((ok, bad) => {
   r.readAsDataURL(blob);
 });
 
-const mb = (n: number) => `${(n / 1024 / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} MB`;
 
 export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }: {
   jobId: string; d: NarrationOverview; pid: string; onClose: () => void; onDone: () => void;
@@ -78,13 +77,12 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
         </button>
       </div>
       <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
-        <label htmlFor={`${f}-audio`} className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className={labelCls}>Ses kaydı</span>
-          <input id={`${f}-audio`} type="file" accept={AUDIO_ACCEPT} className={fileCls}
-            onChange={(e) => { setOk(null); setAudio(e.target.files?.[0] ?? null); }} />
-          {audio && <span className="text-[11.5px] text-canvas-muted">{audio.name} · {mb(audio.size)}</span>}
+          <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} picked={audio}
+            onPick={(file) => { setOk(null); setAudio(file); }} />
           {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
-        </label>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <span className={labelCls}>İlk sayfa</span>
@@ -112,12 +110,11 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
             <span className={labelCls}>Kaydı okuyan kişi</span>
             <input id={`${f}-owner`} className={inputCls} value={owner} maxLength={120} onChange={(e) => setOwner(e.target.value)} placeholder="Ad soyad" />
           </label>
-          <label htmlFor={`${f}-doc`} className="flex flex-col gap-1">
-            <span className={labelCls}>İzin belgesi (PDF, PNG, JPEG)</span>
-            <input id={`${f}-doc`} type="file" accept={DOC_ACCEPT} onChange={(e) => setDoc(e.target.files?.[0] ?? null)}
-              className="min-h-10 w-full min-w-0 text-[12.5px] file:mr-2 file:min-h-10 file:rounded-xl file:border-0 file:bg-white file:px-3 file:font-bold" />
+          <div className="flex flex-col gap-1">
+            <span className={labelCls}>İzin belgesi</span>
+            <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
             {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
-          </label>
+          </div>
           <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">
             <span className={labelCls}>ya da belge numarası / açıklaması</span>
             <input id={`${f}-ref`} className={inputCls} value={reference} maxLength={300} onChange={(e) => setReference(e.target.value)} placeholder="ör. Seslendirme sözleşmesi 2026/114, madde 3" />

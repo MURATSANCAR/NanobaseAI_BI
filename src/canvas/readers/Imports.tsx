@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, Loader2, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, btnPrimary, errText, field, label, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, readersApi, type ImportDetail } from './api';
 import { ROOT, useMeta } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Etkinlik/fuar katılımcı dosyası: yükle → kolon eşle → eşleştir (eşleşti / yeni / geçersiz / izin eksik). */
 export default function Imports() {
@@ -20,7 +22,6 @@ function ImportList() {
   const meta = useMeta();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const input = useRef<HTMLInputElement>(null);
   const q = useQuery({ queryKey: ['readers', 'imports'], queryFn: readersApi.imports, enabled: ENGINE_ENABLED });
   const up = useMutation({
     mutationFn: (f: File) => readersApi.upload(f),
@@ -35,19 +36,23 @@ function ImportList() {
     <Section
       title="Etkinlik ve fuar yüklemeleri"
       help={`CSV ya da Excel (en çok ${s?.fileMaxMb ?? 20} MB). Kişi satırları ${s?.importRetentionDays ?? 30} gün sonra silinir; sayılar kalır. Dosyadaki izin kolonu bilgi amaçlıdır, İYS izni yerine geçmez.`}
-      action={meta.data?.me.canImport ? (
-        <>
-          <input ref={input} type="file" accept=".csv,.txt,.xlsx" className="sr-only" aria-label="Dosya seç"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) up.mutate(f); e.target.value = ''; }} />
-          <button type="button" className={btnPrimary} disabled={up.isPending} onClick={() => input.current?.click()}>
-            {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Upload aria-hidden className="h-4 w-4" />}Dosya yükle
-          </button>
-        </>
-      ) : undefined}
     >
+      {/* Birincil eylem: katılımcı dosyasını bırak → kolon eşleme ekranı açılır. Yetkisiz kişi kilitli alanı görür. */}
+      <div className="mb-3">
+        <FileDrop
+          title="Katılımcı dosyası yükle"
+          hint="Yüklenince kolon eşleme ekranı açılır; kişiler okur kayıtlarıyla eşleştirilir."
+          accept=".csv,.txt,.xlsx"
+          maxBytes={(s?.fileMaxMb ?? 20) * MB}
+          feature="okur.ice-aktar"
+          allowed={meta.data ? !!meta.data.me.canImport : undefined}
+          busy={up.isPending}
+          onPick={(f) => up.mutate(f)}
+        />
+      </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Yüklemeler açılamadı.')}</Note>}
-      {q.data && q.data.items.length === 0 && <Note tone="info">Henüz yükleme yok.</Note>}
+      {q.data && q.data.items.length === 0 && <Note tone="info">Henüz yükleme yok. Etkinlik ya da fuar katılımcı listesini yukarıdaki alana bırakın.</Note>}
       <ul className="flex flex-col gap-2">
         {q.data?.items.map((i) => (
           <li key={i.id}>

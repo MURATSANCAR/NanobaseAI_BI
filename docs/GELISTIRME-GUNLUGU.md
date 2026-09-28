@@ -59,6 +59,36 @@
 - Sınıflama ilk denemede düştü: ana köprü o sırada yeniden başlıyordu (kapı 502). Köprü kalkınca yeniden: duygu Nötr (%90), öncelik/ekip «emin değil» (ekipler hâlâ örnek Billing/Product Experts). Konu (kayıt türü) boş: M51'in `/destek-baglam/v1/` nginx parçası (`deploy/nanobase-direct/nginx-destek-baglam.conf`) sunucuya kurulmamış → 404.
 - Düzeltme: eşitleme alt sınırına önceki çekmenin `uidnext`'i eklendi; yoksa en son kayıt silinince e-postası yeniden alınırdı (işlenemeyen e-posta çatıda «Unhandled Email» olarak kalır, kaybolmaz).
 - Temizlik: 0002, iletişimi, deneme kişi kartı ve hata kaydı silindi; yeni kod kurulana dek başlangıç 49'a çekildi.
+## 2026-09-28 (13:30) — Yükleme her ekranda birincil eylem: ortak FileDrop, dosyadan eser/iş açma, yetkisizde kilitli görünüm
+
+**DOĞRULANAMADI — testler koordinatörde** (Mac'te yalnız `py_compile` + JSON). Dal `worktree-agent-ad18eb70613c0c744`, main `67bb1311` üstünde.
+
+- **Kullanıcı:** «okuma yaptığımız ekranlarda upload da olacaktır ama sunucuda göremedim redaksiyon çeviri vs». **Neden:** yükleme kodda
+  vardı ama redaksiyon/son okumada yalnız soldan eser seçilince, çeviride yalnız iş açılıp seçilince görünüyordu; test sunucusunda liste
+  boş olduğu için kişi yalnız «Henüz eser dosyası yok» gördü. Başka ekranlarda da yükleme ya kayıt seçimine bağlıydı ya da yetkisiz
+  kişide hiç çizilmiyordu («rolünüzde yok» notu).
+- **Envanter (37 dosya girişi → hepsi ortak alan):** redaksiyon (M3), son okuma prova + belge incele (M5), çeviri kaynak/XLIFF/TMX/TBX/CSV
+  (M4), başvuru (M1, liste + başvuru sayfası + form), sözleşme şablonu (Word), serbest çalışan portfolyo/teslim, stüdyo (Word ile yeni
+  tasarım, fotoğraf/kamera, kapak kolajı, karakter referansı, ses/izin belgesi ×2), ihale şartnamesi + şirket belge arşivi (M33), sektör
+  raporu (M39), İK özgeçmiş (pano + aday) ve sertifika, risk kanıt/poliçe, reklam, kanal/Amazon/Trendyol panel dosyası, dijital satış
+  raporu, okur etkinlik dosyası, sosyal içgörü, işbirliği CSV, bülten sonuç CSV, okul bağlamı, fuar fişi, kreatif marka kiti + kapak,
+  profil fotoğrafı, sesli bülten. Ekran ekran «önce/sonra»: son rapor (koordinatöre).
+- **Ortak bileşen:** `components/FileDrop.tsx` + `fileDropRules.ts`. Sürükleme vurgusu yalnız renk (kenar/zemin 150 ms ease-out) ve ikonun
+  2 px yükselmesi (200 ms, güçlü ease-out); azaltılmış harekette ikon kıpırdamaz. Sayaçla (dragenter/leave) iç öğeye geçişte vurgu sönmez.
+- **Dosyadan kayıt:** eser/iş adı dosya adından (`Kayip_Zaman-son.docx` → «Kayip Zaman son»), açılınca hemen altında «Adı kaydet».
+  Köprüde tek istek, reddedilen yüklemede kayıt geri alınır (yarım eser/iş kalmaz). Başvuru, İK aday, ihale belgesi ve sözleşme şablonunda
+  bırakılan dosya ilgili formu dosya ekli ve adı dolu açar (şablon Word'ü yüklenemezse açılan şablon arşive alınır).
+- **Yetki:** yükleme gizlenmez; `feature` (rol) ya da `allowed` (köprünün `can*` bayrağı, kayıt sahipliği) yoksa kilitli ve «Gereken
+  yetki: «…»» yazılı. Eksik seçim (hesap, platform, kaynak, dil çifti) varsa pasif ve nedeni yazılı.
+- **Testler:** pytest `test_upload_from_file.py` (ad kuralı, eser/iş açma, ret → geri alma, yetki kuralları); vitest `fileDropRules.test.ts`
+  (tür/boyut reddi, sürükleme sayacı, kilit metni, etiketler katalogla birebir), `FileDrop.test.ts` (sunucu tarafı çizim: kurallar yazılı,
+  vurgu, bekleme, yetkisiz görünüm), `uploadScreens.test.ts` (redaksiyon/son okuma/çeviri liste boşken yükleme alanını çizer — kabuk
+  taklit edilir; `src`'de çıplak dosya girişi yok; eski «rolünüzde yok» notları yok; kullanılan her yetkinin adı tanımlı).
+- **Kabul (sunucuda):** `scripts/acceptance/yukleme/kabul.py` — timasai kısa oturumuyla Y1–Y13 (eser/iş dosyadan açma, ret, prova sürümü,
+  kanal/Trendyol/okur/pazar/dijital/sosyal yüklemesi ve silme); açılan eser/işleri `temizlik.py` ile siler ve kalmadığını ölçer. Belge
+  incelemenin silme ucu olmadığı için motora gerçek belge yüklenmez, yalnız ret denenir.
+- **Açık:** belge incelemenin (motor) ayrı boyut sınırı yok; ekranda eser dosyasıyla aynı 120 MB yazılı (ölçülecek: nginx gövde sınırı).
+  Kanal/Trendyol örnek CSV kolonları kurulumun beklediğinden farklıysa kabul «REDDEDİLDİ» yazar (uç çalışıyor, kayıt açılmadı).
 
 ## 2026-09-28 (12:40) — NanobaseAI Destek: zeki@ gelen kutusu destek kaydı açar (kullanıcı kararı, ayrı adres gelene kadar)
 

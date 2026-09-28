@@ -108,13 +108,15 @@ function EventRow({ e, canEdit }: { e: CompEvent; canEdit: boolean }) {
         {e.kanitVar && (e.alan !== 'kvkk' || canEdit) && (
           <a className={btnGhost} href={riskApi.eventEvidenceUrl(e.id)}><Download aria-hidden className="h-4 w-4" />{e.kanitAd}</a>
         )}
-        {canEdit && e.durum !== 'kapandi' && (
-          <>
-            <FilePick label={up.isPending ? 'Yükleniyor…' : e.kanitVar ? 'Kanıtı değiştir' : 'Kanıt yükle'} accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png"
-              disabled={up.isPending} onPick={(f) => up.mutate(f)} />
-            <button type="button" className={btnGhost} onClick={() => setClosing(true)}>Kapat</button>
-          </>
+        {e.durum !== 'kapandi' && (
+          // Yetkisi olmayan kişi de kanıt yüklemeyi görür (kilitli, gereken yetki yazılı); KVKK maddesi ayrıca KVKK yetkisi ister.
+          <FilePick label={up.isPending ? 'Yükleniyor…' : e.kanitVar ? 'Kanıtı değiştir' : 'Kanıt yükle'} accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png"
+            allowed={canEdit}
+            deniedText={e.alan === 'kvkk' ? 'Bu işlem için yetkiniz yok: KVKK maddesinin kanıtını uyum ve KVKK yetkisi olan kişi yükler.' : undefined}
+            feature={e.alan === 'kvkk' ? undefined : 'uyum.yaz'}
+            disabled={up.isPending} onPick={(f) => up.mutate(f)} />
         )}
+        {canEdit && e.durum !== 'kapandi' && <button type="button" className={btnGhost} onClick={() => setClosing(true)}>Kapat</button>}
         {e.durum === 'kapandi' && <span className="text-[11px] text-canvas-muted">{e.kapatan} kapattı{e.not ? ` — ${e.not}` : ''}</span>}
       </div>
       <AskSheet open={closing} title="Dönemi kapat" busy={close.isPending}

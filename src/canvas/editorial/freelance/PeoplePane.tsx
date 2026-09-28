@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ExternalLink, FileText, ImagePlus, Loader2, Mail, MessageSquareText, Pencil, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, Mail, MessageSquareText, Pencil, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
 import {
   contributorsApi,
   freelanceApi,
@@ -15,6 +15,8 @@ import { CONTRIBUTOR_ROLES } from '../queries';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
 import { Panel, useDebounced } from '../kit';
 import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, TASK_STATUS, TagInput, day, editNum, parseNum, pctText, roleLabel, stamp, tl, q2, useFlRefresh, type FlCtx } from './shared';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 // ------------------------------------------------------------------ liste
 
@@ -361,27 +363,8 @@ function TaskList({ tasks }: { tasks: FlPersonDetail['tasks'] }) {
 
 function Portfolio({ ctx, p }: { ctx: FlCtx; p: FlPersonDetail }) {
   const refresh = useFlRefresh();
-  const input = useRef<HTMLInputElement>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [book, setBook] = useState('');
-  const [busy, setBusy] = useState(0);
-  const upload = async (files: FileList | null) => {
-    if (!files?.length) return;
-    setBusy(files.length);
-    let ok = 0;
-    for (const f of Array.from(files)) {
-      try {
-        await freelanceApi.addPortfolio(p.id, f, { tags: tags.join(','), book });
-        ok += 1;
-      } catch (e) {
-        toast.error(`${f.name}: ${errText(e, 'yüklenemedi')}`);
-      }
-      setBusy((n) => n - 1);
-    }
-    if (ok) toast.success(`${ok} dosya portfolyoya eklendi.`);
-    if (input.current) input.current.value = '';
-    refresh();
-  };
   const remove = useMutation({
     mutationFn: (id: string) => freelanceApi.deletePortfolio(id),
     onSuccess: () => {
@@ -393,8 +376,8 @@ function Portfolio({ ctx, p }: { ctx: FlCtx; p: FlPersonDetail }) {
 
   return (
     <Section title="Portfolyo" count={p.portfolio.length}>
-      {ctx.canManage && (
-        <div className="mt-2 grid gap-2 rounded-xl bg-slate-50 p-2.5">
+      <div className="mt-2 grid gap-2 rounded-xl bg-slate-50 p-2.5">
+        {ctx.canManage && (
           <div className="grid gap-2 sm:grid-cols-2">
             <FieldBox label="Etiketler">
               <TagInput value={tags} onChange={setTags} placeholder="kapak, suluboya…" max={10} />
@@ -403,13 +386,23 @@ function Portfolio({ ctx, p }: { ctx: FlCtx; p: FlPersonDetail }) {
               <input value={book} onChange={(e) => setBook(e.target.value)} className={field} placeholder="Hangi işten" />
             </FieldBox>
           </div>
-          <input ref={input} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.pdf" className="sr-only" onChange={(e) => upload(e.target.files)} />
-          <button type="button" className={btnGhost} onClick={() => input.current?.click()} disabled={busy > 0}>
-            {busy > 0 ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <ImagePlus aria-hidden className="h-4 w-4" />}
-            {busy > 0 ? `${busy} dosya yükleniyor…` : 'Görsel ya da PDF ekle (en çok 40 MB)'}
-          </button>
-        </div>
-      )}
+        )}
+        {/* Yetkisizde de görünür: kilitli, gereken yetki yazılı. */}
+        <FileDrop
+          size="sm"
+          multiple
+          title="Görsel ya da PDF ekle"
+          accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
+          maxBytes={40 * MB}
+          feature="serbest.yonet"
+          allowed={ctx.canManage}
+          run={(f) => freelanceApi.addPortfolio(p.id, f, { tags: tags.join(','), book })}
+          onDone={(_r, f) => {
+            toast.success(`${f.name} portfolyoya eklendi.`);
+            refresh();
+          }}
+        />
+      </div>
       {!p.portfolio.length ? (
         <p className="mt-2 text-[12px] text-canvas-muted">Portfolyo boş.</p>
       ) : (

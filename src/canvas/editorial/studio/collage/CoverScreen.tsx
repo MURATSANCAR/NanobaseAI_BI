@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, ImageIcon, Layers, Loader2, Plus, Shuffle, Sparkles, Type, Upload, X } from 'lucide-react';
+import { ArrowLeft, Download, ImageIcon, Layers, Loader2, Plus, Shuffle, Sparkles, Type, X } from 'lucide-react';
 import { studioApi } from '../../../engine';
 import { Loading, Note, errText } from '../../../admin/ui';
 import { ModuleFrame, Panel } from '../../kit';
@@ -9,6 +9,8 @@ import { Img, ghostBtn, gradientBtn, press } from '../shared';
 import { revision, useStudioJob } from '../StudioFlow';
 import { collageApi, collageKey, useCollage, type CollageView, type CoverStyle } from './api';
 import { useCan } from '../../../useAdmin';
+import { FileDrop } from '../../../components/FileDrop';
+import { MB } from '../../../components/fileDropRules';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
  *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
@@ -141,7 +143,6 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
   // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
   const canProduce = useCan('tasarim.uret');
   const [direction, setDirection] = useState('');
-  const file = useRef<HTMLInputElement>(null);
   const running = !!v.job && (v.job.status === 'queued' || v.job.status === 'running');
   const otherBusy = !!v.busy && !v.busy.error && v.busy.key !== 'kolaj';
   const sel = v.photos.find((p) => p.id === v.selected);
@@ -182,16 +183,16 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
             {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {running ? (v.job?.status === 'queued' ? 'Sırada…' : `Hazırlanıyor… ${v.job?.done ?? 0}/${v.job?.total ?? 3}`) : '3 aday üret'}
           </button>}
-          <button type="button" className={ghostBtn} disabled={uploading} onClick={() => file.current?.click()}>
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
-            {uploading ? 'Yükleniyor…' : 'Fotoğraf yükle'}
-          </button>
-          <input ref={file} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="sr-only" tabIndex={-1}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ''; }} />
+          <FileDrop
+            size="sm"
+            title="Fotoğraf yükle"
+            hint="Yüklediğiniz fotoğraf taslak sayılmaz."
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+            maxBytes={uploadMb ? uploadMb * MB : undefined}
+            busy={uploading}
+            onPick={onUpload}
+          />
         </div>
-        <p className="mt-1.5 text-[11px] text-canvas-muted">
-          JPEG, PNG, WebP ya da HEIC{uploadMb ? `, en çok ${uploadMb} MB` : ''}. Yüklediğiniz fotoğraf taslak sayılmaz.
-        </p>
         {otherBusy && <p className="mt-1 text-[11.5px] text-canvas-muted">Bu kitapta başka bir resim çiziliyor; bitince aday üretimi açılır.</p>}
         {v.job?.status === 'fail' && v.job.error && <Note tone="err">Aday üretilemedi: {v.job.error}</Note>}
         {v.scene?.why && <p className="mt-2 text-[11.5px] italic leading-snug text-canvas-muted">Konu seçimi: {v.scene.why}</p>}

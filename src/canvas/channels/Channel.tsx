@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Download, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Download, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../budget/api';
 import { NumField, Tabs } from '../budget/parts';
 import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type YM } from './api';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 import { ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signedPct, useChannelsMeta, usePeriod } from './parts';
 
 /** M42 kanal detayı (/kanallar/:platform): aylık eğri, cariler, kitap ve iade listeleri, hedef ↔ gerçekleşen, iskonto
@@ -262,7 +264,6 @@ function ExtraCost({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
 
 function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
   const qc = useQueryClient();
-  const input = useRef<HTMLInputElement>(null);
   const [bas, setBas] = useState('');
   const [bit, setBit] = useState('');
   const [open, setOpen] = useState<string | null>(d.imports[0]?.id ?? null);
@@ -290,20 +291,22 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
         Platform panelinden indirilen satış raporu (Excel/CSV): kanalın son tüketiciye sattığı adet ve kanal stoğu, TİMAŞ'ın aynı dönemde kanala sattığıyla yan yana.
         Yalnız ürün, adet, tutar ve stok kolonları alınır; müşteri adı, adres gibi kolonlar içeri alınmaz.
       </p>
-      {meta.me.canImport && (
-        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <label className="flex flex-col gap-1"><span className={labelCls}>Dönem başı</span><input type="date" className={field} value={bas} onChange={(e) => setBas(e.target.value)} /></label>
-          <label className="flex flex-col gap-1"><span className={labelCls}>Dönem sonu</span><input type="date" className={field} value={bit} onChange={(e) => setBit(e.target.value)} /></label>
-          <div>
-            <input ref={input} type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) up.mutate(f); e.target.value = ''; }} />
-            <button type="button" className={btnPrimary} onClick={() => input.current?.click()} disabled={up.isPending}>
-              {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Upload aria-hidden className="h-4 w-4" />}
-              Dosya yükle
-            </button>
-          </div>
-        </div>
-      )}
-      {!d.imports.length ? <Note tone="info">Bu platform için yüklenmiş panel dosyası yok.</Note> : (
+      {/* Yükleme her zaman görünür; yetkisi olmayan kişi kilitli alanı ve gereken yetkiyi görür. */}
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,180px)_minmax(0,180px)_minmax(0,1fr)] sm:items-start">
+        <label className="flex flex-col gap-1"><span className={labelCls}>Dönem başı (isteğe bağlı)</span><input type="date" className={field} value={bas} onChange={(e) => setBas(e.target.value)} /></label>
+        <label className="flex flex-col gap-1"><span className={labelCls}>Dönem sonu (isteğe bağlı)</span><input type="date" className={field} value={bit} onChange={(e) => setBit(e.target.value)} /></label>
+        <FileDrop
+          size="sm"
+          title="Panel dosyası yükle"
+          accept=".xlsx,.csv"
+          maxBytes={25 * MB}
+          feature="kanal.yukle"
+          allowed={meta.me.canImport}
+          busy={up.isPending}
+          onPick={(f) => up.mutate(f)}
+        />
+      </div>
+      {!d.imports.length ? <Note tone="info">Bu platform için yüklenmiş panel dosyası yok. Platform panelinden indirdiğiniz satış raporunu yukarıdaki alana bırakın.</Note> : (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-1.5">
             {d.imports.map((r) => (

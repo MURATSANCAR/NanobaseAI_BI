@@ -8,7 +8,7 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, fmtDate, l
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { dijitalApi, fmtInt, fmtMoney, fmtPct, type ImportSummary, type Sales } from './api';
 import { AskSheet, DigitalFrame, Tabs } from './parts';
-import ImportWizard from './ImportWizard';
+import ImportWizard, { UploadStep } from './ImportWizard';
 
 /** Dijital satış (finans verisi, ayrı sayfa yetkisi): onaylı platform raporlarından aylık gelir, platform ve kitap kırılımı,
  *  eşleşmeyen açık satırlar, Logo'daki e-kitap faturaları (ayrı sütun; iki kaynak toplanmaz), dijital/basılı oranı;
@@ -43,7 +43,7 @@ export default function DigitalSalesScreen() {
       title="Dijital satış"
       lead="Platformların aylık satış raporları kitaplara eşlenir; eşleşmeyen satır atılmaz, açık iş olarak kalır. Döviz kuru onayda sizden alınır, modül kur varsaymaz. Logo'da e-kitap stok koduyla kesilen faturalar ayrı gösterilir."
       aside={
-        me?.canImport ? (
+        me ? (
           <div className="flex justify-start lg:justify-end">
             <button type="button" className={btnPrimary} onClick={() => update({ sekme: 'raporlar', yukle: '1' })}>
               <Upload aria-hidden className="h-4 w-4" />
@@ -182,11 +182,14 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
     return <ImportWizard id={open} canImport={canImport} onDone={(id) => update({ yukle: null, rapor: id })} onClose={() => update({ yukle: null, rapor: null })} />;
   }
   return (
+    <div className="flex flex-col gap-3">
+    {/* Birincil eylem: rapor yükleme; liste boşken de burada, ayrı sihirbaz adımı beklemez. */}
+    <UploadStep canImport={canImport} onDone={(id) => update({ yukle: null, rapor: id })} />
     <Panel>
       <h2 className="text-[15px] font-extrabold">Yüklenen raporlar</h2>
       {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
       <div className="mt-2 flex flex-col gap-2">
-        {list.data && !list.data.items.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Henüz rapor yüklenmedi.</div>}
+        {list.data && !list.data.items.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Henüz rapor yüklenmedi. Yukarıdaki alana platformun aylık raporunu bırakın.</div>}
         {list.data?.items.map((r) => (
           <div key={r.id} className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-100 bg-white/80 p-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center">
             <div className="min-w-0">
@@ -212,5 +215,6 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
         confirm={asking?.durum === 'onizleme' ? 'Sil' : 'İptal et'} danger busy={remove.isPending}
         onClose={() => setAsking(null)} onConfirm={() => asking && remove.mutate(asking.id)} />
     </Panel>
+    </div>
   );
 }

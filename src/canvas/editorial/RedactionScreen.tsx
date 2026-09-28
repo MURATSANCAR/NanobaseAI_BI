@@ -5,7 +5,7 @@ import { ENGINE_ENABLED, deskApi, type ChapterDetail, type ChapterRow, type Sugg
 import { Loading, Note, Pill, btn, btnGhost, errText, nf } from '../admin/ui';
 import { num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
-import { UploadButton, WorkList, useWorks } from './WorkPicker';
+import { WorkList, WorkUpload, useWorks } from './WorkPicker';
 
 /** M3 Metin İşleme ve Redaksiyon. Metin dosyası yüklenir, bölümlere ayrılır, ölçülür; model yazım ve üslup
  *  önerisi çıkarır, editör kabul/ret eder. Kabul edilen öneri metne işlenir ve ilk hâle göre farkta görünür. */
@@ -246,6 +246,17 @@ export default function RedactionScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
+      {/* Birincil eylem: metin yükleme. Liste boşken de burada; bırakılan dosya eser dosyasını adından açar. */}
+      <WorkUpload
+        kind="manuscript"
+        works={items}
+        selected={workId}
+        onUploaded={(id) => {
+          setWorkId(id);
+          setChapterId(null);
+        }}
+      />
+
       {w && chapters.length > 0 && (
         <KpiRow>
           <Kpi label="Bölüm" value={nf.format(chapters.length)} help={detail.data?.versions.length ? `Metin sürümü ${detail.data.versions[0].version}` : ''} />
@@ -271,13 +282,8 @@ export default function RedactionScreen() {
             <Panel>
               <h2 className="px-1 text-[13px] font-extrabold">Metin dosyası</h2>
               <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-                DOCX, PDF ya da TXT. Yeni yükleme yeni sürüm açar ve bölümleri baştan kurar.
+                Yeni sürüm için dosyayı sayfanın üstündeki yükleme alanına bırakın; yeni yükleme bölümleri baştan kurar.
               </p>
-              <div className="mt-2">
-                <UploadButton workId={w.id} kind="manuscript" accept=".docx,.pdf,.txt,.md" onDone={refresh}>
-                  Metin yükle
-                </UploadButton>
-              </div>
               {detail.data?.versions.length ? (
                 <ul className="mt-2.5 space-y-1 text-[11.5px]">
                   {detail.data.versions.map((v) => (
@@ -332,7 +338,9 @@ export default function RedactionScreen() {
         ) : (
           <Panel>
             <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">
-              {w ? 'Bu eserde henüz metin yok. Soldan bir DOCX, PDF ya da TXT yükleyin.' : 'Soldan bir eser dosyası seçin ya da yeni bir tane açın.'}
+              {w
+                ? 'Bu eserde henüz metin yok. Üstteki yükleme alanına DOCX, PDF ya da TXT bırakın.'
+                : 'Üstteki yükleme alanına metin dosyasını bırakın; eser dosyası adından açılır. Var olan bir eser için soldan seçin.'}
             </p>
           </Panel>
         )}

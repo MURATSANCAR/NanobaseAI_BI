@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import threading
 import uuid
 import zipfile
@@ -328,6 +329,47 @@ def create_work(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str
     with engine.begin() as conn:
         conn.execute(sa.insert(WORKS).values(**row))
     return {"id": row["id"], "title": row["title"]}
+
+
+def title_from_filename(filename: str) -> str:
+    """Dosya adından okunur eser adı: uzantı düşer, alt çizgi/tire boşluğa döner. Arayüzdeki
+    `titleFromFilename` (src/canvas/components/fileDropRules.ts) ile aynı kural."""
+    base = re.split(r"[\\/]", str(filename or ""))[-1]
+    stem = base[: base.rfind(".")] if "." in base else base
+    t = re.sub(r"\s+", " ", re.sub(r"\s+-\s+|-+", " ", re.sub(r"_+", " ", stem))).strip()
+    return (t or base.strip())[:300]
+
+
+def delete_empty_work(engine: sa.engine.Engine, tenant: str, work_id: str) -> None:
+    """Dosyadan açılıp yüklemesi başarısız olan eseri geri alır; yalnız hiç dosyası olmayan eser silinir."""
+    with engine.begin() as conn:
+        if conn.execute(sa.select(FILES.c.id).where(FILES.c.work_id == work_id).limit(1)).first() is not None:
+            return
+        conn.execute(sa.delete(SIGNATURES).where(SIGNATURES.c.work_id == work_id))
+        conn.execute(sa.delete(WORKS).where(WORKS.c.id == work_id, WORKS.c.tenant_id == tenant))
+    shutil.rmtree(os.path.join(_root(), work_id), ignore_errors=True)
+
+
+def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, kind: str,
+                     filename: str, data: bytes) -> dict[str, Any]:
+    """Tek adımda yeni eser + ilk dosya: eser adı dosya adından gelir (sonra düzeltilir). Yükleme reddedilirse
+    (okunamayan metin, PDF olmayan prova, boş dosya) açılan eser geri alınır; yarım kayıt kalmaz."""
+    if kind not in ("manuscript", "proof"):
+        raise DeskError("Dosya türü manuscript ya da proof olmalı.")
+    if not str(filename or "").strip():
+        raise DeskError("Dosya adı gerekli.")
+    if not data:
+        raise DeskError("Dosya boş.")
+    if len(data) > MAX_BYTES:
+        raise DeskError("Dosya 120 MB sınırını aşıyor.", 413)
+    work = create_work(engine, tenant, user, {"title": title_from_filename(filename)})
+    try:
+        fn = upload_manuscript if kind == "manuscript" else upload_proof
+        out = fn(engine, tenant, user, admin, work["id"], filename, data)
+    except Exception:
+        delete_empty_work(engine, tenant, work["id"])
+        raise
+    return {**out, "workId": work["id"], "title": work["title"]}
 
 
 def update_work(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, work_id: str, body: dict[str, Any]) -> None:

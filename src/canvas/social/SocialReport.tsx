@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Download, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
+import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { fmtInt, fmtMonth, fmtPct, fmtStamp, socialApi, todayIso, type ImportRow, type PostStatus } from './api';
 import { Block, SocialFrame } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Aylık rapor: içerik türü × etkileşim, hesap bazında erişim/takipçi, onay süresi medyanı; platform dışa aktarım
  *  dosyasının içe aktarılması. Portal platformlara bağlanmaz; sayılar dosyadan ya da elle girilir. */
@@ -29,7 +31,6 @@ export default function SocialReport() {
   const [acc, setAcc] = useState('');
   const [day, setDay] = useState('');
   const [removing, setRemoving] = useState<ImportRow | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!acc && accounts.data?.items.length) setAcc(accounts.data.items[0].id);
   }, [accounts.data, acc]);
@@ -40,7 +41,6 @@ export default function SocialReport() {
       qc.invalidateQueries({ queryKey: ['social'] });
       toast.success(`${fmtInt(r.satir)} satır içe aktarıldı; ${fmtInt(r.eslesen)} tanesi gönderiyle eşleşti.`);
       if (r.atlananKolonlar?.length) toast.message(`Tanınmayan kolonlar atlandı: ${r.atlananKolonlar.slice(0, 8).join(', ')}`);
-      if (fileRef.current) fileRef.current.value = '';
     },
     onError: (e) => toast.error(errText(e, 'Dosya içe aktarılamadı.') ?? ''),
   });
@@ -155,8 +155,8 @@ export default function SocialReport() {
 
       <Block title="İçgörü dosyası içe aktar"
         help="Platformun dışa aktarım dosyası (.csv ya da .xlsx). Tanınan kolonlar: tarih, bağlantı, gösterim, erişim, beğeni, yorum, paylaşım, kaydetme, takipçi (Türkçe ya da İngilizce başlık). Bağlantısı yayınlanmış gönderiyle aynı olan satır o gönderiye bağlanır. Dosyada tarih yoksa gün girin.">
-        {m?.me.canEdit ? (
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end">
+        {/* Yükleme her zaman görünür: yetkisi olmayan kişi kilitli alanı ve gereken yetkiyi görür. */}
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Hesap</span>
               <select className={field} value={acc} onChange={(e) => setAcc(e.target.value)}>
@@ -167,14 +167,21 @@ export default function SocialReport() {
               <span className={labelCls}>Gün (dosyada yoksa)</span>
               <input type="date" className={field} value={day} onChange={(e) => setDay(e.target.value)} />
             </label>
-            <label className={`${btnPrimary} cursor-pointer ${!acc || upload.isPending ? 'pointer-events-none opacity-50' : ''}`}>
-              <Upload aria-hidden className="h-4 w-4" />
-              {upload.isPending ? 'Yükleniyor…' : 'Dosya seç'}
-              <input ref={fileRef} type="file" accept=".csv,.xlsx,.txt" className="sr-only" disabled={!acc || upload.isPending}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} />
-            </label>
-          </div>
-        ) : <p className="text-[12px] text-canvas-muted">İçe aktarma yetkiniz yok.</p>}
+        </div>
+        <div className="mt-2">
+          <FileDrop
+            size="sm"
+            title="İçgörü dosyası yükle"
+            accept=".csv,.xlsx,.txt"
+            maxBytes={25 * MB}
+            feature="sosyal.duzenle"
+            allowed={m ? !!m.me.canEdit : undefined}
+            disabled={!acc}
+            disabledReason="Önce hesabı seçin; hesap yoksa Sosyal medya → Hesaplar'dan ekleyin."
+            busy={upload.isPending}
+            onPick={(f) => upload.mutate(f)}
+          />
+        </div>
         {(imports.data?.items ?? []).length > 0 && (
           <div className="mt-3">
             <TableWrap>

@@ -222,31 +222,36 @@ export default function TermBank() {
           </label>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {canEdit && (
+          <div className="w-full">
             <FileButton
-              tone="ghost"
+              tone="hero"
+              feature="ceviri.terim"
               accept=".csv,.tsv,.txt"
               disabled={src === tgt}
+              disabledReason="Kaynak ve hedef dil aynı olamaz; üstten dil çiftini düzeltin."
+              hint="Seçili dil çiftine yazılır; var olan terim güncellenir."
               run={(f) => translationApi.importTerms(src, tgt, f)}
               onDone={(r) => {
                 setNotice(`CSV: ${nf.format(r.added)} terim eklendi, ${nf.format(r.updated)} güncellendi${r.skipped ? `, ${nf.format(r.skipped)} satır boş olduğu için atlandı` : ''}.`);
                 changed();
               }}
             >
-              CSV içe aktar
+              Terim listesi yükle (CSV)
             </FileButton>
-          )}
+          </div>
           {canExport && (
             <a href={translationApi.termsCsvUrl(src, tgt)} className={btnGhost}>
               <Download aria-hidden className="h-4 w-4" />
               CSV indir
             </a>
           )}
-          {canEdit && (
+          <div className="w-full">
             <FileButton
-              tone="ghost"
+              tone="primary"
+              feature="ceviri.terim"
               accept=".tbx,.xml"
               disabled={src === tgt}
+              disabledReason="Kaynak ve hedef dil aynı olamaz."
               run={(f) => translationIoApi.importTbx(src, tgt, f)}
               onDone={(r) => {
                 setNotice(
@@ -258,9 +263,9 @@ export default function TermBank() {
                 changed();
               }}
             >
-              TBX içe aktar
+              TBX dosyası yükle
             </FileButton>
-          )}
+          </div>
           {canExport && src !== tgt && (
             <a href={translationIoApi.tbxUrl(src, tgt)} className={btnGhost}>
               <Download aria-hidden className="h-4 w-4" />

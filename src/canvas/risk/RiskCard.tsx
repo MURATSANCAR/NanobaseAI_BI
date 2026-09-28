@@ -257,8 +257,9 @@ function ActionRow({ a, r, meta }: { a: Action; r: RiskDetail; meta: RiskMeta })
         {can && a.durum === 'acik' && <button type="button" className={btnGhost} disabled={set.isPending} onClick={() => set.mutate('devam')}>Sürüyor</button>}
         {can && done && <button type="button" className={btnGhost} disabled={set.isPending} onClick={() => set.mutate('acik')}>Yeniden aç</button>}
         {a.kanitVar && <a className={btnGhost} href={riskApi.actionEvidenceUrl(a.id)}><Download aria-hidden className="h-4 w-4" />{a.kanitAd}</a>}
-        {can && <FilePick label={up.isPending ? 'Yükleniyor…' : a.kanitVar ? 'Kanıtı değiştir' : 'Kanıt ekle'} accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png"
-          disabled={up.isPending} onPick={(file) => up.mutate(file)} />}
+        <FilePick label={up.isPending ? 'Yükleniyor…' : a.kanitVar ? 'Kanıtı değiştir' : 'Kanıt ekle'} accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png"
+          allowed={can} deniedText="Bu işlem için yetkiniz yok: kanıtı aksiyonun sahibi ya da «Risk kaydı ve aksiyon» yetkisi olan kişi yükler."
+          disabled={up.isPending} onPick={(file) => up.mutate(file)} />
       </div>
     </li>
   );

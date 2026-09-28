@@ -750,6 +750,28 @@ def create_job(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str,
     return {"id": row["id"], "title": row["title"]}
 
 
+def create_from_file(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, filename: str, data: bytes,
+                     source_lang: str, target_lang: str) -> dict[str, Any]:
+    """Tek adımda yeni çeviri işi + kaynak metin: iş adı dosya adından gelir (sonra düzeltilir), dil çifti
+    yükleme alanındaki seçimden. Kaynak reddedilirse (boş, okunamayan metin, büyük dosya) açılan iş silinir."""
+    from semantic_bridge.editorial_desk import title_from_filename
+
+    if not str(filename or "").strip():
+        raise TranslationError("Dosya adı gerekli.")
+    if not data:
+        raise TranslationError("Dosya boş.")
+    if len(data) > MAX_BYTES:
+        raise TranslationError("Dosya 120 MB sınırını aşıyor.", 413)
+    job = create_job(engine, tenant, user, {"title": title_from_filename(filename),
+                                            "sourceLang": source_lang, "targetLang": target_lang})
+    try:
+        out = upload_source(engine, tenant, user, see_all, job["id"], filename, data)
+    except Exception:
+        delete_job(engine, tenant, user, see_all, job["id"])
+        raise
+    return {**out, "jobId": job["id"], "title": job["title"]}
+
+
 def update_job(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, job_id: str, body: dict[str, Any]) -> dict[str, Any]:
     with engine.begin() as conn:
         job = _job(conn, tenant, job_id, user, see_all)

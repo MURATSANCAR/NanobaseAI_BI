@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Radio, Trash2, Upload, Wand2 } from 'lucide-react';
+import { Loader2, Radio, Trash2, Wand2 } from 'lucide-react';
 import { bulletinAudioUrl, bulletinsApi, type Bulletin, type BulletinJob, type BulletinPatch } from '../engine';
 import { clock } from '../kampus/BulletinCard';
 import { Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
+import { FilePick } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Dosyanın süresini tarayıcı ölçer (sunucuda ses çözümleyici yok); ölçemezse null, ses yine çalar. */
 function measure(file: File): Promise<number | null> {
@@ -232,7 +234,6 @@ function GeneratePanel() {
 export default function BulletinsAdmin() {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ['admin', 'bulletins'], queryFn: bulletinsApi.adminList, retry: false });
-  const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<{ name: string; sent: number; total: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const maxMb = list.data?.maxMb ?? 60;
@@ -253,7 +254,6 @@ export default function BulletinsAdmin() {
       setErr(errText(e, 'Yüklenemedi.'));
     } finally {
       setProgress(null);
-      if (input.current) input.current.value = '';
     }
   };
 
@@ -264,15 +264,7 @@ export default function BulletinsAdmin() {
     <Section
       title="Sesli bülten"
       help={`Kampüs'teki «Haftanın Sesli Bülteni» en son yayınlanan kaydı çalar. Eklenen ses önce taslaktır; başlığını yazıp yayınlayın. mp3, m4a, ogg ya da wav, en çok ${maxMb} MB. Sunucuda üretilen ses sunucuda tek komutla da eklenir: sudo scripts/server/kampus-bulletin.sh add dosya.mp3 --title "…" --publish`}
-      action={
-        <>
-          <input ref={input} type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
-          <button type="button" disabled={!!progress} onClick={() => input.current?.click()} className={btnPrimary}>
-            {progress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Ses yükle
-          </button>
-        </>
-      }
+      action={<FilePick label="Ses yükle" accept="audio/*,.mp3,.m4a,.ogg,.wav" maxBytes={maxMb * MB} busy={!!progress} onPick={(f) => void pick(f)} />}
     >
       <GeneratePanel />
       {progress && (

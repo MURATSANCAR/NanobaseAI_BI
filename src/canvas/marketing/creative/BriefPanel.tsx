@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AlertTriangle, ImageUp, Pencil } from 'lucide-react';
+import { AlertTriangle, Pencil } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Note, btnGhost, btnPrimary, errText, field, label } from '../../admin/ui';
 import { Img } from '../../editorial/studio/shared';
 import { creativeApi, fmtDay, type Meta, type RequestDetail } from './api';
 import { Block } from './parts';
 import { invalidateCreative } from './useMeta';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** Sol sütun: brief (talep alanları), kitabın CRM metinleri ve kapak. CRM yalnız okunur; kapak dosyası portalda saklanır. */
 
@@ -112,12 +114,18 @@ export default function BriefPanel({ r, meta }: { r: RequestDetail; meta: Meta |
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />Kapak düşük çözünürlüklü; büyük biçimlerde bulanık görünebilir. Yüksek çözünürlüklü dosya yükleyin.
           </p>
         )}
-        {me?.uret && r.studioKind !== 'kitap' && (
-          <label className={`${btnGhost} cursor-pointer`}>
-            <ImageUp className="h-4 w-4" aria-hidden />{upload.isPending ? 'Yükleniyor…' : 'Kapak yükle (PNG, JPEG, WebP)'}
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only"
-              onChange={(e) => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = ''; }} />
-          </label>
+        {r.studioKind !== 'kitap' && (
+          // Yetkisizde de görünür: kilitli, gereken yetki yazılı.
+          <FileDrop
+            size="sm"
+            title="Yüksek çözünürlüklü kapak yükle"
+            accept="image/png,image/jpeg,image/webp"
+            maxBytes={25 * MB}
+            feature="icerik.uret"
+            allowed={meta ? !!me?.uret : undefined}
+            busy={upload.isPending}
+            onPick={(file) => upload.mutate(file)}
+          />
         )}
         {upload.error && <Note tone="err">{errText(upload.error, 'Yüklenemedi.')}</Note>}
       </Block>

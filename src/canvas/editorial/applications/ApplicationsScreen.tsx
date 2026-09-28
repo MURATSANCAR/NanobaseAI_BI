@@ -9,6 +9,8 @@ import { fmtDay } from '../authors/shared';
 import { applicationsApi, type AppListItem, type AppStatus, type AppView } from './api';
 import ApplicationForm from './ApplicationForm';
 import { StatusPill, useAppMeta } from './shared';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** M1 Başvurular: yeni kitap başvurularının kuyruğu, kabul edilenler ve arşiv (reddedilen, geri çekilen).
  *  Görünüm, süzgeç ve arama adres çubuğunda durur (?gorunum=, ?durum=, ?ara=, ?benim=1). */
@@ -77,6 +79,7 @@ export default function ApplicationsScreen() {
   const [text, setText] = useState(params.get('ara') ?? '');
   const q = useDebounced(text.trim(), 300);
   const [creating, setCreating] = useState(false);
+  const [dropped, setDropped] = useState<File | null>(null);
 
   const update = useCallback(
     (next: Record<string, string | null>) => {
@@ -151,6 +154,21 @@ export default function ApplicationsScreen() {
       aside={aside}
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {/* Birincil eylem: eser dosyasını bırak → yeni başvuru formu dosya ekli ve eser adı dosya adından dolu açılır. */}
+      <Panel>
+        <FileDrop
+          title="Eser dosyasını yükle (yeni başvuru)"
+          hint="Başvuru formu dosya ekli açılır; eser adı dosya adından gelir, yazar bilgisini tamamlayıp kaydedersiniz."
+          accept=".pdf,.docx,.doc"
+          maxBytes={(meta.data?.fileMaxMb ?? 10) * MB}
+          feature="basvuru.yaz"
+          allowed={meta.data ? canWrite : undefined}
+          onPick={(f) => {
+            setDropped(f);
+            setCreating(true);
+          }}
+        />
+      </Panel>
       <KpiRow>
         {kpi('yeni', 'Editör atanmayı bekliyor')}
         {kpi('degerlendirmede', 'Editör raporu yazılıyor')}
@@ -208,9 +226,14 @@ export default function ApplicationsScreen() {
 
       <ApplicationForm
         open={creating}
-        onClose={() => setCreating(false)}
+        initialFile={dropped}
+        onClose={() => {
+          setCreating(false);
+          setDropped(null);
+        }}
         onSaved={(a) => {
           setCreating(false);
+          setDropped(null);
           navigate(`/basvurular/${a.id}`);
         }}
       />

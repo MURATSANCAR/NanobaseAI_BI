@@ -92,10 +92,10 @@ function PolicyRow({ p, can, onEdit }: { p: Policy; can: boolean; onEdit: () => 
       </div>
       <div className="flex flex-wrap gap-2">
         {p.belgeVar && <a className={btnGhost} href={riskApi.policyDocumentUrl(p.id)}><Download aria-hidden className="h-4 w-4" />{p.belgeAd}</a>}
+        <FilePick label={up.isPending ? 'Yükleniyor…' : p.belgeVar ? 'Belgeyi değiştir' : 'Poliçe belgesi yükle'} accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
+          allowed={can} feature="risk.sigorta-bcp" disabled={up.isPending} onPick={(f) => up.mutate(f)} />
         {can && (
           <>
-            <FilePick label={up.isPending ? 'Yükleniyor…' : p.belgeVar ? 'Belgeyi değiştir' : 'Poliçe belgesi'} accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
-              disabled={up.isPending} onPick={(f) => up.mutate(f)} />
             <button type="button" className={btnGhost} onClick={onEdit}>Düzenle</button>
             <button type="button" className={btnGhost} aria-label="Sil" onClick={() => setDel(true)}><Trash2 aria-hidden className="h-4 w-4" /></button>
           </>

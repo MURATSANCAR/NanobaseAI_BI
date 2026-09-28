@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
-import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../../admin/ui';
+import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, td, th } from '../../admin/ui';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../../editorial/kit';
 import { fmtInt, fmtPct, fmtShort } from '../../budget/api';
 import { channelsApi } from '../api';
@@ -121,7 +122,6 @@ function Books({ canExport }: { canExport: boolean }) {
 /** Amazon satıcı panelinden indirilen satış raporu: M42'nin panel dosyası yüklemesiyle (platform = amazon). */
 function SalesReport({ canImport }: { canImport: boolean }) {
   const qc = useQueryClient();
-  const input = useRef<HTMLInputElement>(null);
   const list = useQuery({ queryKey: ['channels', 'imports', 'amazon'], queryFn: () => channelsApi.imports('amazon'), enabled: ENGINE_ENABLED, retry: false });
   const up = useMutation({
     mutationFn: (f: File) => channelsApi.importFile('amazon', f),
@@ -138,18 +138,19 @@ function SalesReport({ canImport }: { canImport: boolean }) {
         Satıcı panelinden indirilen satış raporu (Excel/CSV): Amazon'un son tüketiciye sattığı adet ve kanal stoğu. Karşılaştırma kanal karnesinin Amazon sayfasında.
         Müşteri kolonları içeri alınmaz.
       </p>
-      {canImport && (
-        <>
-          <input ref={input} type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) up.mutate(f); e.target.value = ''; }} />
-          <button type="button" className={btnPrimary} onClick={() => input.current?.click()} disabled={up.isPending}>
-            {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Upload aria-hidden className="h-4 w-4" />}
-            Rapor yükle
-          </button>
-        </>
-      )}
+      <FileDrop
+        size="sm"
+        title="Amazon satış raporunu yükle"
+        accept=".xlsx,.csv"
+        maxBytes={25 * MB}
+        feature="kanal.yukle"
+        allowed={canImport}
+        busy={up.isPending}
+        onPick={(f) => up.mutate(f)}
+      />
       {list.data && (
         <p className="mt-2 text-[12px] text-canvas-muted">
-          {list.data.items.length ? `${list.data.items.length} yükleme; son: ${list.data.items[0].dosya ?? '—'}.` : 'Henüz yükleme yok.'}{' '}
+          {list.data.items.length ? `${list.data.items.length} yükleme; son: ${list.data.items[0].dosya ?? '—'}.` : 'Henüz yükleme yok; satıcı panelinden indirdiğiniz raporu yukarıdaki alana bırakın.'}{' '}
           <Link to="/kanallar/amazon" className="font-bold text-canvas-violet hover:underline">Kanal sayfasında aç</Link>
         </p>
       )}
@@ -172,6 +173,8 @@ export default function AmazonHome() {
       {m && <Note tone="info">{m.api.neden}</Note>}
       {q.error && <Note tone="err">{errText(q.error, 'Özet açılamadı.')}</Note>}
       {q.isLoading && <Loading />}
+      {/* Panel raporu yükleme özet okunmadan da görünür (özet hata verse de rapor yüklenebilir). */}
+      {m && <SalesReport canImport={!!m.me.canImport} />}
       {d && (
         <>
           <KpiRow>
@@ -193,7 +196,6 @@ export default function AmazonHome() {
           {d.crm.ulkeHatasi && <Note tone="warn">{d.crm.ulkeHatasi}</Note>}
           <Accounts canMap={!!m?.me.canMap} />
           <Books canExport={!!m?.me.canExport} />
-          <SalesReport canImport={!!m?.me.canImport} />
         </>
       )}
     </AmazonFrame>

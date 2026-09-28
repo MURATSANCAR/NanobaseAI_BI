@@ -1,8 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { FileUp, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { peopleApi, type JobStage, type SegmentStatus, type TranslationJob, type TranslationPace } from '../../engine';
-import { Note, Pill, btn, errText, field, nf } from '../../admin/ui';
+import { Pill, field, nf } from '../../admin/ui';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** M4 Çeviri ekranlarının ortak parçaları: etiketler, ilerleme çubuğu, kişi seçici, dosya düğmesi. */
 
@@ -157,7 +158,11 @@ export function PersonField({ value, onChange, placeholder }: { value: PersonPic
   );
 }
 
-/** Dosya seçip yükleyen düğme; sonucu `onDone`'a verir, hatayı altında gösterir. */
+/** Köprüdeki sınır (editorial_translation.MAX_BYTES). */
+export const TRANSLATION_MAX_BYTES = 120 * MB;
+
+/** Panel içi yükleme: ortak FileDrop'un ince sarmalayıcısı (sürükle-bırak, tür/boyut reddi, yetki kilidi orada).
+ *  `hero` sekmenin birincil alanı, `primary` panel içi yükleme alanı, `ghost` dosya satırındaki düğme boyu. */
 export function FileButton<T>({
   accept,
   children,
@@ -165,51 +170,36 @@ export function FileButton<T>({
   onDone,
   tone = 'primary',
   disabled,
+  disabledReason,
+  feature,
+  maxBytes = TRANSLATION_MAX_BYTES,
+  hint,
 }: {
   accept: string;
   children: ReactNode;
   run: (f: File) => Promise<T>;
-  onDone: (r: T) => void;
-  tone?: 'primary' | 'ghost';
+  onDone: (r: T) => void | Promise<void>;
+  tone?: 'hero' | 'primary' | 'ghost';
   disabled?: boolean;
+  disabledReason?: ReactNode;
+  /** Gereken işlem yetkisi (`ozellik:` öneksiz); yoksa alan kilitli görünür, gizlenmez. */
+  feature?: string;
+  maxBytes?: number;
+  hint?: ReactNode;
 }) {
-  const [err, setErr] = useState<string | null>(null);
-  const up = useMutation({
-    mutationFn: run,
-    onSuccess: (r) => {
-      setErr(null);
-      onDone(r);
-    },
-    onError: (e) => setErr(errText(e, 'Dosya yüklenemedi.')),
-  });
-  const cls =
-    tone === 'primary'
-      ? `${btn} bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md`
-      : `${btn} bg-slate-100 text-canvas-ink hover:bg-slate-200`;
-  const off = up.isPending || disabled;
   return (
-    <div className="min-w-0">
-      <label className={`${cls} cursor-pointer ${off ? 'pointer-events-none opacity-60' : ''}`}>
-        {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileUp aria-hidden className="h-4 w-4" />}
-        {up.isPending ? 'Yükleniyor…' : children}
-        <input
-          type="file"
-          accept={accept}
-          className="sr-only"
-          disabled={off}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) up.mutate(f);
-          }}
-        />
-      </label>
-      {err && (
-        <div className="mt-2">
-          <Note tone="err">{err}</Note>
-        </div>
-      )}
-    </div>
+    <FileDrop<T>
+      size={tone === 'hero' ? 'lg' : tone === 'primary' ? 'sm' : 'button'}
+      accept={accept}
+      maxBytes={maxBytes}
+      title={children}
+      hint={hint}
+      feature={feature}
+      disabled={disabled}
+      disabledReason={disabledReason}
+      run={run}
+      onDone={(r) => onDone(r)}
+    />
   );
 }
 

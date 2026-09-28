@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, Loader2, Trash2, X } from 'lucide-react';
+import { Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { peopleApi, type MyProfile, type ProfileFields } from '../engine';
 import PersonAvatar from './PersonAvatar';
 import DbTimingBadge from '../DbTiming';
 import PhotoCropper, { decode, type Decoded } from './PhotoCropper';
+import { FilePick } from '../components/FileDrop';
 import './profile.css';
 
 /**
@@ -34,7 +35,6 @@ export function useMyProfile(enabled: boolean) {
 
 export default function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
   const qc = useQueryClient();
@@ -188,28 +188,17 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
                   <p className="truncate text-sm font-bold">{p.displayName}</p>
                   <p className="truncate text-xs text-muted">{[crm?.title, crm?.unit].filter(Boolean).join(' • ') || p.username}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <input
-                      ref={fileRef}
-                      type="file"
+                    {/* Kaynak fotoğrafın boyutu serbest: kırpılıp küçültülerek gönderilir. */}
+                    <FilePick
+                      label={hasPhoto ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
                       accept="image/jpeg,image/png,image/webp"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        e.target.value = '';
-                        if (f)
-                          decode(f).then(setCropping, (err: unknown) =>
-                            toast.error('Fotoğraf açılamadı', { description: err instanceof Error ? err.message : undefined }),
-                          );
-                      }}
+                      busy={busyPhoto}
+                      onPick={(f) =>
+                        decode(f).then(setCropping, (err: unknown) =>
+                          toast.error('Fotoğraf açılamadı', { description: err instanceof Error ? err.message : undefined }),
+                        )
+                      }
                     />
-                    <button
-                      type="button"
-                      disabled={busyPhoto}
-                      onClick={() => fileRef.current?.click()}
-                      className="kp-press flex min-h-11 items-center gap-1.5 rounded-lg bg-violet/10 px-2.5 text-xs font-semibold text-violet hover:bg-violet/15 disabled:opacity-60 sm:min-h-8"
-                    >
-                      <Camera className="h-3.5 w-3.5" /> {hasPhoto ? 'Değiştir' : 'Fotoğraf ekle'}
-                    </button>
                     {hasPhoto && (
                       <button
                         type="button"

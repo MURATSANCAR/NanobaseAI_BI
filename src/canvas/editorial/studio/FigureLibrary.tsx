@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Camera, ImagePlus, Loader2, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
+import { Loader2, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import { studioPlanApi, type PlanAsset, type PlanJob } from '../../engine';
 import { btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Progress } from './shared';
@@ -8,6 +8,8 @@ import { Label, characterNames, type EditorCtx } from './InspectorPanel';
 import { PHOTO_TYPES, type UploadItem } from './uploads';
 import { ConfirmDialog } from './dialogs';
 import { useCan } from '../../useAdmin';
+import { FileDrop, FilePick } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 
 /** Kütüphane sekmesi: fotoğraf yükleme (dosya seç, tuvale bırak, telefonda kamera/galeri), figür üretme,
  *  süren işler ve iş başına figür/fotoğraf kütüphanesi. Kütüphanedeki öge tuvale sürüklenir (masaüstü)
@@ -42,8 +44,6 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
 }) {
   // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
   const canProduce = useCan('tasarim.uret');
-  const pick = useRef<HTMLInputElement | null>(null);
-  const cam = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState('');
   const [chars, setChars] = useState<string[]>([]);
   const [toPage, setToPage] = useState(true);
@@ -65,21 +65,23 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
       setPrompt('');
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
-  const files = (l: FileList | null) => { if (l?.length) onUpload(Array.from(l)); };
 
   return (
     <div className="flex flex-col gap-4">
       {/* Fotoğraf yükleme */}
       <section className="flex flex-col gap-2">
         <Label>Fotoğraf yükle</Label>
-        <div className="flex flex-wrap gap-1.5">
-          <button type="button" className={btnPrimary} onClick={() => pick.current?.click()}><ImagePlus className="h-4 w-4" aria-hidden />Dosya seç</button>
-          <button type="button" className={`${btnGhost} sm:hidden`} onClick={() => cam.current?.click()}><Camera className="h-4 w-4" aria-hidden />Kamera</button>
+        <FileDrop
+          size="sm"
+          multiple
+          title="Fotoğraf yükle"
+          accept={[...PHOTO_TYPES, '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].join(',')}
+          maxBytes={uploadLimit ? uploadLimit * MB : undefined}
+          onPick={(f) => onUpload([f])}
+        />
+        <div className="sm:hidden">
+          <FilePick label="Kamerayla çek" accept="image/*" capture="environment" maxBytes={uploadLimit ? uploadLimit * MB : undefined} onPick={(f) => onUpload([f])} />
         </div>
-        <input ref={pick} type="file" multiple accept={[...PHOTO_TYPES, '.heic', '.heif'].join(',')} className="sr-only" tabIndex={-1}
-          onChange={(e) => { files(e.target.files); e.target.value = ''; }} />
-        <input ref={cam} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1}
-          onChange={(e) => { files(e.target.files); e.target.value = ''; }} />
         <p className="text-[11.5px] leading-snug text-canvas-muted">
           JPEG, PNG, WebP ya da HEIC{uploadLimit ? ` · fotoğraf başına en çok ${uploadLimit} MB` : ''}. Masaüstünde fotoğrafı doğrudan sayfanın
           üstüne de bırakabilirsiniz. Yükleme bitene kadar dosya bu cihazda saklanır; bağlantı koparsa kendiliğinden yeniden denenir.

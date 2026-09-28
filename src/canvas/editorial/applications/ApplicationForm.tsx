@@ -10,6 +10,8 @@ import { useDebounced } from '../kit';
 import { nowLocal } from '../authors/shared';
 import { applicationsApi, type AppDetail, type AppInput } from './api';
 import { errMsg, invalidateApps, useAppMeta, useCategories } from './shared';
+import { FileDrop } from '../../components/FileDrop';
+import { MB, titleFromFilename } from '../../components/fileDropRules';
 
 /** Yeni başvuru ve başvuru bilgilerini düzeltme. İş tanımındaki başvuru dosyası: yazar/ajans bilgisi ve biyografi,
  *  eser özeti, hedef kitle, sayfa tahmini, seri bilgisi ve yayınevi notu. Yazar adı yazılırken CRM'deki aynı adlı
@@ -84,9 +86,12 @@ export default function ApplicationForm({
   onClose,
   app,
   onSaved,
+  initialFile,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Başvuru listesinin üstündeki alana bırakılan eser dosyası: form bu dosya ekli ve eser adı dosya adından dolu açılır. */
+  initialFile?: File | null;
   /** Düzenlenen başvuru; yoksa yeni başvuru. */
   app?: AppDetail | null;
   onSaved: (a: AppDetail) => void;
@@ -100,11 +105,11 @@ export default function ApplicationForm({
 
   useEffect(() => {
     if (open) {
-      setF(app ? fromApp(app) : empty());
-      setFiles([]);
+      setF(app ? fromApp(app) : initialFile ? { ...empty(), title: titleFromFilename(initialFile.name) } : empty());
+      setFiles(!app && initialFile ? [initialFile] : []);
       setErr(null);
     }
-  }, [open, app]);
+  }, [open, app, initialFile]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const name = useDebounced(f.authorName.trim(), 400);
@@ -295,16 +300,28 @@ export default function ApplicationForm({
 
         {!app && (
           <Group title="Dosyalar">
-            <Field title="Eser dosyası" hint={`PDF, DOCX ya da DOC; her biri en çok ${max} MB. Sonradan başvuru sayfasından da eklenir.`}>
-              <input
-                type="file"
+            <Field title="Eser dosyası" hint="Sonradan başvuru sayfasından da eklenir.">
+              <FileDrop
+                size="sm"
                 multiple
-                accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
-                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-                className="block w-full text-[12px] file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-slate-100 file:px-3 file:font-bold sm:file:min-h-9"
+                title="Eser dosyalarını ekle"
+                accept=".pdf,.docx,.doc"
+                maxBytes={max * MB}
+                onPick={(f) => setFiles((xs) => (xs.some((x) => x.name === f.name && x.size === f.size) ? xs : [...xs, f]))}
               />
             </Field>
-            {files.some((x) => x.size > max * 1024 * 1024) && <Note tone="warn">{max} MB'tan büyük dosya yüklenmez.</Note>}
+            {files.length > 0 && (
+              <ul className="flex flex-col gap-1 text-[12px]">
+                {files.map((x) => (
+                  <li key={`${x.name}-${x.size}`} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-1.5">
+                    <span className="min-w-0 truncate font-semibold">{x.name}</span>
+                    <button type="button" className={`${btnGhost} !min-h-9 !py-1`} aria-label={`${x.name} çıkar`} onClick={() => setFiles((xs) => xs.filter((y) => y !== x))}>
+                      <X aria-hidden className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Group>
         )}
 

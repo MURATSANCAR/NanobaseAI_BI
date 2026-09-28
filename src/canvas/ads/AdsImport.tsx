@@ -1,7 +1,7 @@
-import { useRef, useState, type DragEvent } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { FileUp, Plus, Undo2 } from 'lucide-react';
+import { Plus, Undo2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
@@ -9,6 +9,8 @@ import { Block } from '../marketing/parts';
 import { AskSheet } from '../budget/parts';
 import { RowsError, adsApi, fileToBase64, fmtDay, fmtMoney2, type ImportRow, type Platform, type Preview } from './api';
 import { AdsFrame, useAdsMeta } from './parts';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 
 /** Harcama verisinin içe aktarılması: hesap seç → dosyayı bırak → kolon eşlemesini onayla → yükle. Eşleme hesaba kaydedilir;
  *  aynı platformun sonraki dosyası tek tıkla girer. Okunamayan satır varsa dosya yüklenmez (toplam eksik kalmasın). */
@@ -21,9 +23,7 @@ export default function AdsImport() {
   const [file, setFile] = useState<{ name: string; b64: string } | null>(null);
   const [pv, setPv] = useState<Preview | null>(null);
   const [rowsErr, setRowsErr] = useState<RowsError | null>(null);
-  const [drag, setDrag] = useState(false);
   const [undo, setUndo] = useState<ImportRow | null>(null);
-  const input = useRef<HTMLInputElement>(null);
   const imports = useQuery({ queryKey: ['ads', 'imports'], queryFn: adsApi.imports, enabled: ENGINE_ENABLED });
   const acc = m?.accounts.find((a) => a.id === accountId) ?? (m?.accounts.length === 1 ? m.accounts[0] : undefined);
 
@@ -63,21 +63,13 @@ export default function AdsImport() {
     onError: (e) => toast.error(errText(e, 'Geri alınamadı.') ?? ''),
   });
 
-  const take = async (f: File | undefined) => {
-    if (!f) return;
-    if (m && f.size > m.settings.maxUploadMb * 1024 * 1024) {
-      toast.error(`Dosya ${m.settings.maxUploadMb} MB sınırını aşıyor.`);
-      return;
-    }
+  // Tür ve boyut ortak yükleme alanında denetlenir (sınır: Yönetim → ADS_IMPORT_MAX_MB).
+  const take = async (f: File) => {
     const b64 = await fileToBase64(f);
     setFile({ name: f.name, b64 });
     preview.mutate({ name: f.name, b64 });
   };
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setDrag(false);
-    void take(e.dataTransfer.files?.[0]);
-  };
+  const maxBytes = m ? m.settings.maxUploadMb * MB : undefined;
   const remap = (field_: string, col: string) => {
     if (!pv || !file) return;
     const eslem = { ...pv.eslem };
@@ -91,7 +83,10 @@ export default function AdsImport() {
   if (m && !m.me.canEdit) {
     return (
       <AdsFrame title="Harcama verisi yükle" meta={m}>
-        <Note tone="info">Dosya yükleme rolünüzde yok (Reklam verisi ve bağlar).</Note>
+        {/* Yükleme gizlenmez: kilitli görünür ve gereken yetkiyi yazar. */}
+        <Block title="Dosya" help="Reklam platformunun günlük kırılımlı raporu (CSV ya da Excel).">
+          <FileDrop title="Reklam raporu yükle" accept=".csv,.tsv,.txt,.xlsx,.xlsm" maxBytes={maxBytes} feature="reklam.duzenle" allowed={false} onPick={() => undefined} />
+        </Block>
         <History rows={imports.data?.items ?? []} canUndo={false} onUndo={() => undefined} />
       </AdsFrame>
     );
@@ -134,21 +129,19 @@ export default function AdsImport() {
         </Block>
       )}
 
-      {acc && (
-        <Block title="2 · Dosya" help={`CSV (virgül, noktalı virgül ya da sekme) ya da Excel (.xlsx). Satır başına bir kampanya-gün. En çok ${m?.settings.maxUploadMb ?? ''} MB.`}>
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={onDrop}
-            className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors duration-150 ${drag ? 'border-canvas-violet bg-canvas-violet/5' : 'border-slate-200 bg-white/60'}`}
-          >
-            <FileUp aria-hidden className="h-6 w-6 text-canvas-muted" />
-            <p className="text-[12.5px] font-semibold">{file ? file.name : 'Dosyayı buraya bırakın'}</p>
-            <button type="button" className={btnGhost} onClick={() => input.current?.click()} disabled={preview.isPending}>
-              {preview.isPending ? 'Okunuyor…' : 'Dosya seç'}
-            </button>
-            <input ref={input} type="file" accept=".csv,.tsv,.txt,.xlsx,.xlsm" className="hidden" onChange={(e) => { void take(e.target.files?.[0]); e.target.value = ''; }} />
-          </div>
+      {/* Dosya alanı hesap seçilmeden de görünür; hesap yoksa pasif ve neyin eksik olduğunu yazar. */}
+      {m && (
+        <Block title="2 · Dosya" help="CSV (virgül, noktalı virgül ya da sekme) ya da Excel (.xlsx). Satır başına bir kampanya-gün.">
+          <FileDrop
+            title={file ? `Seçilen: ${file.name} — başka dosya bırakın` : 'Reklam raporu yükle'}
+            accept=".csv,.tsv,.txt,.xlsx,.xlsm"
+            maxBytes={maxBytes}
+            feature="reklam.duzenle"
+            disabled={!acc}
+            disabledReason="Önce yukarıdan reklam hesabını seçin ya da «Yeni hesap» ile ekleyin; kolon eşlemesi hesaba kaydedilir."
+            busy={preview.isPending}
+            onPick={(f) => void take(f)}
+          />
         </Block>
       )}
 

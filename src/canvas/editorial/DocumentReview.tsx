@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, FileUp, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileText, Loader2 } from 'lucide-react';
 import { DOCUMENT_ACCEPT, ENGINE_ENABLED, EngineAuthError, documentApi, type DocumentItem, type DocumentStatus, type ProofingReport } from '../engine';
-import { Note, Pill, btn, errText, field, label, nf } from '../admin/ui';
+import { Note, Pill, errText, field, label, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { download } from '../board/export';
 import { useCan } from '../useAdmin';
+import { FileDrop } from '../components/FileDrop';
+import { MB } from '../components/fileDropRules';
 import { Panel } from './kit';
 import { ProofFindings } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
@@ -29,63 +31,41 @@ const AUDIENCE: Array<[string, string]> = [
 ];
 const busy = (xs: DocumentItem[] | undefined) => (xs ?? []).some((d) => d.status === 'QUEUED' || d.status === 'RUNNING');
 
-/** Sol sütun: yükleme + belgelerim. Seçim URL'de (?belge=) taşınır. */
-export function DocumentPicker({ selected, onSelect }: { selected: string | null; onSelect: (id: string | null) => void }) {
+/** Köprüde belge için ayrı sınır yok; eser dosyasıyla aynı gövde sınırı (120 MB) yazılır ve uygulanır. */
+export const DOCUMENT_MAX_BYTES = 120 * MB;
+
+/** Belge incelemesinin yükleme alanı (son okuma sayfasının üstünde). Başlık, okur kitlesi ve yaş isteğe bağlı ve
+ *  dosyadan ÖNCE doldurulur; dosya bırakılınca hemen yüklenir ve incelemeye girer — ayrı «gönder» adımı yok. Yetki
+ *  (`son-okuma.belge`) yoksa alan gizlenmez, kilitli görünür ve gereken yetkiyi yazar. */
+export function DocumentUpload({ onUploaded }: { onUploaded: (id: string) => void }) {
   const qc = useQueryClient();
-  const canUpload = useCan('son-okuma.belge');
-  const input = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [audience, setAudience] = useState('');
   const [ageFrom, setAgeFrom] = useState('');
   const [ageTo, setAgeTo] = useState('');
-  const list = useQuery({
-    queryKey: ['editorial', 'documents'],
-    queryFn: documentApi.list,
-    enabled: ENGINE_ENABLED,
-    // incelenen belge varken durum kendiliğinden tazelenir
-    refetchInterval: (q) => (busy(q.state.data?.items) ? 8000 : false),
-  });
-  const up = useMutation({
-    mutationFn: () => documentApi.upload(file as File, { title, audience, ageFrom, ageTo }),
-    onSuccess: (d) => {
-      setFile(null);
-      setTitle('');
-      if (input.current) input.current.value = '';
-      void qc.invalidateQueries({ queryKey: ['editorial', 'documents'] });
-      onSelect(d.id);
-    },
-  });
   const young = audience === 'CHILD' || audience === 'YOUNG';
-  const items = list.data?.items ?? [];
-
   return (
-    <Panel>
-      <h2 className="px-1 text-[13px] font-extrabold">Belge incele</h2>
-      <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Word, PDF, ODT, RTF ya da metin dosyası yükleyin; ZEKİ AI metinde kelime tekrarı, yazar tikleri, cümle başı, kalıp ifade ve yabancı sözcükleri inceler. Okur kitlesi çocuk ya da gençse yaşa ağır sözcükler de aranır. Resim ve olay okunmaz.
-      </p>
-      {canUpload ? (
-        <form
-          className="mt-2 space-y-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (file && !up.isPending) up.mutate();
-          }}
-        >
+    <div className="space-y-2.5">
+      <FileDrop<DocumentItem>
+        accept={DOCUMENT_ACCEPT}
+        maxBytes={DOCUMENT_MAX_BYTES}
+        feature="son-okuma.belge"
+        title="Belge yükle ve incelet"
+        hint="Zeki AI metinde kelime tekrarı, yazar tikleri, cümle başı, kalıp ifade ve yabancı sözcükleri inceler; çocuk/genç kitlede yaşa ağır sözcükleri de arar. Resim ve olay okunmaz."
+        errorFallback="Belge yüklenemedi."
+        run={(f) => documentApi.upload(f, { title, audience, ageFrom, ageTo })}
+        onDone={async (d) => {
+          setTitle('');
+          await qc.invalidateQueries({ queryKey: ['editorial', 'documents'] });
+          onUploaded(d.id);
+        }}
+      />
+      <details className="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2">
+        <summary className="cursor-pointer select-none text-[12px] font-bold text-canvas-ink">İsteğe bağlı: başlık ve okur kitlesi</summary>
+        <div className="mt-2 space-y-2">
           <label className="block">
-            <span className={label}>Dosya</span>
-            <input
-              ref={input}
-              type="file"
-              accept={DOCUMENT_ACCEPT}
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className={`${field} mt-1 file:mr-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-[12px] file:font-bold`}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Başlık (isteğe bağlı)</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={file?.name.replace(/\.[^.]+$/, '') ?? 'Dosya adından'} className={`${field} mt-1`} />
+            <span className={label}>Başlık</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Boşsa dosya adından" className={`${field} mt-1`} />
           </label>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-1.5">
             <label className="block min-w-0">
@@ -111,14 +91,30 @@ export function DocumentPicker({ selected, onSelect }: { selected: string | null
               </>
             )}
           </div>
-          {up.error && <Note tone="err">{up.error instanceof EngineAuthError ? 'Oturum gerekli.' : errText(up.error, 'Belge yüklenemedi.')}</Note>}
-          <button type="submit" disabled={!file || up.isPending} className={`${btn} w-full justify-center bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md disabled:opacity-60`}>
-            {up.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileUp aria-hidden className="h-4 w-4" />}
-            {up.isPending ? 'Yükleniyor…' : 'Yükle ve incele'}
-          </button>
-        </form>
-      ) : (
-        <p className="mt-2 px-1 text-[11.5px] text-canvas-muted">Belge yükleme yetkiniz yok.</p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+/** Sol sütun: belgelerim. Seçim URL'de (?belge=) taşınır; yükleme sayfanın üstündeki alandadır. */
+export function DocumentPicker({ selected, onSelect }: { selected: string | null; onSelect: (id: string | null) => void }) {
+  const list = useQuery({
+    queryKey: ['editorial', 'documents'],
+    queryFn: documentApi.list,
+    enabled: ENGINE_ENABLED,
+    // incelenen belge varken durum kendiliğinden tazelenir
+    refetchInterval: (q) => (busy(q.state.data?.items) ? 8000 : false),
+  });
+  const items = list.data?.items ?? [];
+
+  return (
+    <Panel>
+      <h2 className="px-1 text-[13px] font-extrabold">Belgelerim</h2>
+      {!items.length && !list.error && (
+        <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
+          Henüz incelenen belge yok. Üstteki yükleme alanında «Belge incele»yi seçip Word, PDF, ODT, RTF ya da metin dosyası bırakın.
+        </p>
       )}
 
       {list.error && (

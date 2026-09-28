@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, btnGhost, btnPrimary, errText, field, label } from '../../admin/ui';
 import { Panel } from '../../editorial/kit';
 import { creativeApi, fmtDay, type Banned } from './api';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
+
+/** Köprüdeki sınır (marketing_creative.BRAND_FILE_MAX). */
+const BRAND_MAX = 20 * MB;
 
 /** Marka kiti (sürümlü): palet (kitapsız işlerde zemin rengi seçeneklerinin başına eklenir), logo ve yazı tipi
  *  dosyaları (yazı tipinde sunucuda kullanım lisansı notu zorunlu), marka kuralları (Zeki AI metin istemine girer)
@@ -96,13 +101,16 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
               ))}
               {b && b.logolar.length === 0 && <li className="text-[12px] text-canvas-muted">Logo yüklenmedi.</li>}
             </ul>
-            {canEdit && (
-              <label className={`${btnGhost} cursor-pointer self-start`}>
-                <Upload className="h-4 w-4" aria-hidden />Logo yükle (PNG, SVG, JPEG, WebP)
-                <input type="file" className="sr-only" accept=".png,.svg,.jpg,.jpeg,.webp"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate({ tur: 'logo', f }); e.target.value = ''; }} />
-              </label>
-            )}
+            {/* Yetkisizde de görünür: kilitli, gereken yetki yazılı. */}
+            <FileDrop
+              size="sm"
+              title="Logo yükle"
+              accept=".png,.svg,.jpg,.jpeg,.webp"
+              maxBytes={BRAND_MAX}
+              feature="icerik.marka"
+              allowed={canEdit}
+              run={(f) => upload.mutateAsync({ tur: 'logo', f })}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -116,17 +124,23 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
               ))}
               {b && b.yaziTipleri.length === 0 && <li className="text-[12px] text-canvas-muted">Kurum yazı tipi yüklenmedi; dizimde stüdyonun açık lisanslı yazı tipleri kullanılır.</li>}
             </ul>
-            {canEdit && (
-              <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
+              {canEdit && (
                 <input className={field} value={fontLicense} onChange={(e) => setFontLicense(e.target.value)} maxLength={400}
                   placeholder="Lisans notu (zorunlu): sunucuda kullanım izni, kaynak, sözleşme" />
-                <label className={`${btnGhost} self-start ${fontLicense.trim() ? 'cursor-pointer' : 'pointer-events-none opacity-50'}`}>
-                  <Upload className="h-4 w-4" aria-hidden />Yazı tipi yükle (TTF, OTF, WOFF)
-                  <input type="file" className="sr-only" accept=".ttf,.otf,.woff,.woff2" disabled={!fontLicense.trim()}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate({ tur: 'font', f }); e.target.value = ''; }} />
-                </label>
-              </div>
-            )}
+              )}
+              <FileDrop
+                size="sm"
+                title="Yazı tipi yükle"
+                accept=".ttf,.otf,.woff,.woff2"
+                maxBytes={BRAND_MAX}
+                feature="icerik.marka"
+                allowed={canEdit}
+                disabled={!fontLicense.trim()}
+                disabledReason="Önce lisans notunu yazın (sunucuda kullanım izni, kaynak, sözleşme)."
+                run={(f) => upload.mutateAsync({ tur: 'font', f })}
+              />
+            </div>
           </div>
         </div>
       </Panel>

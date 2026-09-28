@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Loading, Note, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import { Loading, Note, errText, field, label as labelCls } from '../admin/ui';
+import { FileDrop } from '../components/FileDrop';
 import { schoolsApi, type UploadResult } from './api';
 import { fmtDay, fmtNum, invalidateSchools, useSchoolsMeta } from './parts';
 
@@ -43,7 +43,6 @@ export default function ContextUpload() {
   const c = ctx.data;
   return (
     <div className="flex flex-col gap-3">
-      {!can && <Note tone="info">Yükleme yetkisi rolünüzde yok; yüklenmiş veriyi görebilirsiniz.</Note>}
       {ctx.error && <Note tone="err">{errText(ctx.error, 'Yüklenen veri okunamadı.')}</Note>}
       {ctx.isLoading && <Loading />}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -58,7 +57,8 @@ export default function ContextUpload() {
                   ? `Yüklü: ${fmtNum(up.rows)} satır · kaynak «${up.source ?? '—'}» (${fmtDay(up.sourceDay)}) · ${up.by}, ${fmtDay(up.at?.slice(0, 10))}`
                   : 'Henüz yüklenmedi.'}
               </p>
-              {can && <UploadForm kind={k.key} example={k.example} />}
+              {/* Yükleme yetkisizde de görünür: alan kilitli, gereken yetki yazılı. */}
+              {meta.data && <UploadForm kind={k.key} example={k.example} can={can} />}
             </section>
           );
         })}
@@ -87,15 +87,14 @@ export default function ContextUpload() {
   );
 }
 
-function UploadForm({ kind, example }: { kind: string; example: string }) {
+function UploadForm({ kind, example, can }: { kind: string; example: string; can: boolean }) {
   const qc = useQueryClient();
   const [source, setSource] = useState('');
   const [day, setDay] = useState('');
-  const [file, setFile] = useState<File | null>(null);
   const [res, setRes] = useState<UploadResult | null>(null);
   const run = useMutation({
-    mutationFn: async () => {
-      const body = await readFile(file!);
+    mutationFn: async (file: File) => {
+      const body = await readFile(file);
       return schoolsApi.upload({ tur: kind, kaynak: source, kaynakTarihi: day || undefined, ...body });
     },
     onSuccess: (r) => {
@@ -115,18 +114,22 @@ function UploadForm({ kind, example }: { kind: string; example: string }) {
         <span className={labelCls}>Kaynağın tarihi</span>
         <input type="date" className={field} value={day} onChange={(e) => setDay(e.target.value)} />
       </label>
-      <label className="flex flex-col gap-1">
-        <span className={labelCls}>Dosya (CSV ya da Excel)</span>
-        <input type="file" accept=".csv,.txt,.xlsx" className={field} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-      </label>
       <details>
         <summary className="min-h-11 cursor-pointer text-[12px] font-bold text-canvas-violet sm:min-h-0">Örnek dosya</summary>
         <pre className="mt-1 overflow-x-auto rounded-xl bg-slate-50 p-2 text-[11.5px]">{example}</pre>
       </details>
-      <button type="button" className={`${btnPrimary} self-start`} disabled={!file || !source.trim() || run.isPending} onClick={() => run.mutate()}>
-        <Upload aria-hidden className="h-4 w-4" />
-        {run.isPending ? 'Yükleniyor…' : 'Yükle'}
-      </button>
+      <FileDrop
+        size="sm"
+        title="Dosyayı yükle"
+        hint="Yeni yükleme öncekinin yerine geçer; eskisi silinmez."
+        accept=".csv,.txt,.xlsx"
+        feature="okul.baglam-yukle"
+        allowed={can}
+        disabled={!source.trim()}
+        disabledReason="Önce kaynağın adını yazın (ör. MEB çalışma takvimi)."
+        busy={run.isPending}
+        onPick={(f) => run.mutate(f)}
+      />
       {res && (
         <div className="text-[12px]">
           {res.read} satır okundu, {res.saved} satır kaydedildi.
