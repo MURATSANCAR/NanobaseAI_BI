@@ -248,3 +248,16 @@ def test_draft_review_and_repair_passes_with_evidence_rule():
     assert st["reviewed"] == 0 and st["repaired"] >= 1
     assert "okuma" not in calls and calls[0] == "taslak"
     assert out["a"] == "1.000 sikke ödedi." and out["b"] == "Neden, Ak Tavşan'dı!"
+
+
+def test_delete_job_cleans_companion_tables(engine):
+    """Yan modül tabloları (hakediş bağı, kalite tahmini) iş silinince yetim kalmaz."""
+    import sqlalchemy as _sa
+    jid = _job(engine)
+    with engine.begin() as c:
+        c.execute(_sa.text("CREATE TABLE semantic_translation_links (job_id VARCHAR(32) PRIMARY KEY, person_id VARCHAR(32))"))
+        c.execute(_sa.text("INSERT INTO semantic_translation_links VALUES (:j, 'p')"), {"j": jid})
+        c.execute(_sa.text("INSERT INTO semantic_translation_links VALUES ('baska', 'p')"))
+    T.delete_job(engine, TENANT, "editor", False, jid)
+    with engine.connect() as c:
+        assert [r[0] for r in c.execute(_sa.text("SELECT job_id FROM semantic_translation_links"))] == ["baska"]

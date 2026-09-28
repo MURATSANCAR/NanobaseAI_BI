@@ -664,6 +664,11 @@ def update_job(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, 
         return {k: (_iso(x) if isinstance(x, (date, datetime)) else x) for k, x in v.items()}
 
 
+#: İş silinirken `job_id` ile temizlenen yan modül tabloları (sabit adlar; SQL'e kullanıcı girdisi girmez).
+COMPANION_TABLES = ("semantic_translation_links", "semantic_translation_payout_moves", "semantic_translation_qe",
+                    "semantic_translation_qe_runs")
+
+
 def delete_job(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, job_id: str) -> str:
     with engine.begin() as conn:
         job = _job(conn, tenant, job_id, user, see_all)
@@ -674,6 +679,12 @@ def delete_job(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, 
         for t in (SEGMENTS, ERRORS, EVENTS):
             conn.execute(sa.delete(t).where(t.c.job_id == job_id))
         conn.execute(sa.delete(TERMS).where(TERMS.c.job_id == job_id))
+        # Yan modüllerin işe bağlı kayıtları (M8 hakediş bağı ve aktarım geçmişi, ZEKİ kalite tahmini) yetim kalmasın.
+        # M8'deki iş paketi ve hakediş silinmez: ödenmiş/ödenecek iş M8'in kaydıdır.
+        existing = set(sa.inspect(conn).get_table_names())
+        for name in COMPANION_TABLES:
+            if name in existing:
+                conn.execute(sa.text(f"DELETE FROM {name} WHERE job_id = :j"), {"j": job_id})
         conn.execute(sa.delete(JOBS).where(JOBS.c.id == job_id))
         title = job.title
     shutil.rmtree(os.path.join(_root(), job_id), ignore_errors=True)
