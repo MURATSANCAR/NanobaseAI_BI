@@ -176,6 +176,8 @@ async def _pipeline(d: Path, resume: bool = False) -> None:
 async def jobs() -> dict:
     out = []
     for j in await asyncio.to_thread(studio.list_jobs):
+        if j.get("kind") == "marketing":       # kitapsız pazarlama işi (M19): yalnız pazarlama ekranında
+            continue
         out.append({**j, "busy": await _busy(studio.root() / j["id"])})
     return {"jobs": out}
 
@@ -941,6 +943,8 @@ async def plan_jobs(job: str) -> dict:
 
 from .api_marketing import router as marketing_router  # noqa: E402 - pazarlama kiti (api_marketing.py)
 app.include_router(marketing_router)
+from .api_marketing import jobs_router as marketing_jobs_router  # noqa: E402 - kitapsız pazarlama işi (M19)
+app.include_router(marketing_jobs_router)
 
 # Seri karakter kartı uçları (api_characters.py)
 from .api_characters import router as _characters_router  # noqa: E402

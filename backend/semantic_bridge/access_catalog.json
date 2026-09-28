@@ -197,6 +197,11 @@
       "label": "Yeni kitap planı"
     },
     {
+      "key": "sayfa:pazarlama-icerik",
+      "area": "pazarlama",
+      "label": "Görsel ve metin"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -966,6 +971,44 @@
       "page": "sayfa:pazarlama-set-hediye",
       "label": "Set maliyeti ve marjı",
       "hint": "Bileşen birim maliyeti, ambalaj maliyeti ve marjı görme; yoksa yalnız fiyat ve indirim görünür"
+    },
+    {
+      "key": "ozellik:icerik.talep",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Görsel/metin talebi açma",
+      "hint": "Kitap, kanal, biçim, metin türü ve brief ile içerik talebi açma ve düzenleme"
+    },
+    {
+      "key": "ozellik:icerik.uret",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Görsel ve metin üretme",
+      "hint": "Görsel dizimi (bütün biçimler), Zeki AI metin varyantları, kapak yükleme, varlık düzeltme"
+    },
+    {
+      "key": "ozellik:icerik.tasarim-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Tasarım onayı",
+      "hint": "Grafik ekibinin görsel kalite onayı; aynı kişi mesaj onayını veremez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:icerik.mesaj-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Mesaj onayı",
+      "hint": "Pazarlama müdürünün metin/mesaj onayı; onaylanan varlık arşive ve yayına hazır pakete girer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:icerik.marka",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Marka kiti ve yasaklı kalıplar",
+      "hint": "Marka paleti, logo ve yazı tipi dosyaları (lisans notuyla), marka kuralları, yasaklı kalıp listesi",
+      "explicit": true
     }
   ]
 }

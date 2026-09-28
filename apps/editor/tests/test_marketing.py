@@ -203,6 +203,10 @@ def test_social_templates_draft_flag_quote_and_zip(tmp_path):
     made = []
     for tpl, (w, h) in mk.TEMPLATES.items():
         for visual, source in (("cover", "kapak"), ("page", art), ("quote", None)):
+            if visual == "quote" and not mk.quote_fits(tpl):      # şerit reklamda alıntı kartı okunmaz
+                with pytest.raises(ValueError):
+                    mk.add_social(d, {"template": tpl, "visual": "quote", "quote": quote, "color": pal[1]}, "editör")
+                continue
             for effect in ("plain", "burst") if visual != "quote" else ("plain",):
                 it = mk.add_social(d, {"template": tpl, "visual": visual, "source": source, "effect": effect,
                                        "headline": "Yeni kitap çıktı!", "color": pal[1], "quote": quote}, "editör")
@@ -286,3 +290,56 @@ def test_api_generate_runs_in_background_and_codes(tmp_path, monkeypatch):
         assert c.get(f"{base}/guide/pdf", headers=h).status_code == 409
         ev = c.get(base, headers=h).json()["events"]
         assert ev[0]["by"] == "sinama"
+
+
+@typeset_only
+def test_bookless_marketing_job_all_formats(tmp_path, monkeypatch):
+    """M19 üretim yolu B: el yazması olmayan kitap. Kapak görseli + CRM metinleri; alıntı yalnız CRM metninden;
+    bütün biçimler tam piksel ölçüsünde; model görseli yok → taslak değil; stüdyo iş listesinde görünmez."""
+    import base64
+    from PIL import Image
+    from editor.production import marketing_job as mj
+    monkeypatch.setattr(studio, "root", lambda: tmp_path)
+    cover = Image.new("RGB", (800, 1200), "#8A2BE2")
+    for y in range(600, 1200):
+        for x in range(0, 800, 4):
+            cover.putpixel((x, y), (240, 200, 40))
+    buf = io.BytesIO()
+    cover.save(buf, "PNG")
+    body = {"stok_kodu": "15201.01.0001", "baslik": "Deneme Kitabı", "yazar": "Yazar", "tur": "Roman",
+            "metinler": {"ozet": "Kısa bir özet.", "onemli_cumle": "Okumak insanı büyütür.",
+                         "alinti": ["«Her kitap bir kapıdır.»"], "hashtag": "#kitap"},
+            "kapak_b64": base64.b64encode(buf.getvalue()).decode(), "kapak_kaynak": "yukleme",
+            "marka_paleti": ["#112233"]}
+    v = mj.upsert(body, "sinama")
+    assert v["created"] and v["cover"]["w"] == 800 and len(v["cover"]["sha256"]) == 64
+    assert v["palette"][0] == "#112233"
+    d = studio.job_dir(v["id"])
+    assert mj.upsert({**body, "yazar": "Yazar İki"}, "sinama")["id"] == v["id"]      # aynı stok kodu: güncelle
+    assert studio.read(d, "manuscript.json")["author"] == "Yazar İki"
+    made = 0
+    for tpl, (w, h) in mk.TEMPLATES.items():
+        it = mk.add_social(d, {"template": tpl, "visual": "cover", "source": "kapak", "headline": "Yeni baskı!",
+                               "effect": "plain", "color": "#112233"}, "sinama")
+        assert Image.open(mk.social_path(d, it["id"])).size == (w, h) and not it["draft"]
+        made += 1
+        if mk.quote_fits(tpl):
+            it = mk.add_social(d, {"template": tpl, "visual": "quote", "quote": "Her kitap bir kapıdır.",
+                                   "color": "#112233"}, "sinama")
+            assert Image.open(mk.social_path(d, it["id"])).size == (w, h)
+    with pytest.raises(ValueError):
+        mk.add_social(d, {"template": "kare", "visual": "quote", "quote": "CRM'de olmayan cümle."}, "sinama")
+    with pytest.raises(ValueError):
+        mk.add_social(d, {"template": "kare", "visual": "page", "source": "1"}, "sinama")    # iç sayfa yok
+    with pytest.raises(mj.JobError):
+        mj.upsert({**body, "stok_kodu": "bad code!"}, "sinama")
+    assert made == len(mk.TEMPLATES)
+    assert all(j.get("kind") == "marketing" for j in studio.list_jobs())
+
+
+def test_shape_classes():
+    assert mk.shape(1080, 1080) == "square" and mk.shape(1080, 1350) == "square"
+    assert mk.shape(1080, 1920) == "tall" and mk.shape(1200, 628) == "wide"
+    assert mk.shape(728, 90) == "strip" and mk.shape(1920, 600) == "strip" and mk.shape(600, 200) == "strip"
+    assert mk.shape(300, 250) == "stack" and mk.shape(160, 600) == "stack"
+    assert not mk.quote_fits("banner-320x50") and mk.quote_fits("banner-300x250")

@@ -6759,6 +6759,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("marketing", priority),
     })
+
+    # M19 Pazarlama görsel ve metin: talep kuyruğu, üretim (stüdyonun pazarlama kiti + Zeki AI metin varyantları),
+    # iki aşamalı onay, arşiv. Uçlar /api/v1/marketing/creative/*; tablolar semantic_mkt_creative_* / semantic_mkt_*.
+    from semantic_bridge import marketing_creative_api
+    from semantic_bridge.budget_api import _send_mail as _mkt_send_mail
+    marketing_creative_api.register(app, {
+        "auth": _greetings, "crm": _editorial, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "llm": lambda priority: rt().llm_for("marketing", priority),
+        "seo": app.state.seo_geo, "require_caller": _require_caller,
+        "runtime": lambda: (rt().store.engine, rt().settings.tenant_id), "send_mail": _mkt_send_mail,
+    })
     return app
 
 

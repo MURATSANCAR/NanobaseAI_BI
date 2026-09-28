@@ -690,6 +690,54 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
   `timas-distribution.service` elle bir kez → zamanlayıcı → 320/390/768/masaüstü. VM'e ancak bundan sonra.
 - **Açık:** rezerv kuralı ve CRM dağılım listesinin tamlığı (soru 1–3, 5) iş tarafına; yeniden sipariş önerisi, M12
   planlanan çıkışla ön plan, CRM'e aktarım sonraki sürüm; canlı Logo (.25) yokken takip 17.08.2026'da durur.
+## 2026-09-28 — M19 Pazarlama görsel ve metin: talep kuyruğu, stüdyo pazarlama kitiyle bütün biçimler, Zeki AI metin varyantları, iki aşamalı onay, arşiv
+
+- **DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-a33d3243b046f4fec`); main'e taşınmadı, test sunucusuna,
+  GPU stüdyosuna ve müşteri VM'ine kurulmadı. Yerelde yalnız `py_compile` ve JSON doğrulaması yapıldı (kural); pytest,
+  vitest, `tsc -b` ve kabul betiği sunucuda koşulacak.
+- **Neden:** analiz `docs/analiz/kullanici-ihtiyaclari/M19-pazarlama-gorsel-icerik.md` §14. Grafik ekibi her kampanya
+  görselini elle çoğaltıyor, metinler dağınık, onaylı son sürümün yeri belirsiz; stüdyonun pazarlama kiti yalnız stüdyo
+  işi olan kitaplarda ve üç biçimde çalışıyordu.
+- **Stüdyo (GPU, `apps/editor`):** pazarlama kiti yeniden yazılmadı, genişletildi. `marketing.TEMPLATES` 3 → 11 biçim
+  (analizdeki öneri listesi; `EDITOR_MARKETING_EXTRA_FORMATS` ile kurulum ek biçim tanımlar); yerleşim biçim adına değil
+  oranına göre (`shape`: square/tall/wide mevcut dizim birebir aynı, strip/stack yeni `_render_compact`); alıntı kartı
+  kısa kenarı 200 px'ten küçük biçimde (şerit reklamlar) dizilmez. Kitapsız pazarlama işi `marketing_job.py`
+  (`POST /v1/studio/marketing-jobs`, `studio.new_job(extra={"kind": "marketing"})` — boyama kitabıyla aynı kanca): el
+  yazması yerine CRM metinleri tek bölüm (alıntı doğrulaması bu metinde), kapak `girdi/kapak.png` (özeti `job.json`'da),
+  palet marka + kapaktan (`palette.extract`); aynı stok kodu aynı işi günceller; stüdyonun iş listesinde görünmez; GPU
+  model çağrısı yok. GPU nginx'e `EDITOR-STUDYO-PAZARLAMA-IS` bloğu (`add-studio-routes.py`, gövde 36 MB). Stüdyo
+  ekranındaki Sosyal sekmesi yeni biçimleri oranlı simgeyle gösterir.
+- **Köprü:** `marketing_creative.py` (tablolar, denetimler, onay, sürüm, arşiv, zip, marka kiti, yasaklı kalıp),
+  `marketing_creative_sources.py` (CRM kitap kartı `run_sql` ile salt okunur; kapak indirme iç ağa gitmez — yalnız ayardaki
+  kök ya da genel adres), `marketing_creative_api.py` (uçlar, arka plan işleri, Zeki AI). `app.py`'de tek `register`.
+  M15 çekirdeği main'de olmadığı için talep kuyruğu kendi tablolarında; plan bağı `plan_id`/`materyal_id` + serbest
+  `kampanya`, M15 plan onayında `open_from_material()` çağıracak (aynı materyale ikinci talep açılmaz).
+- **Kararlar (§10 açık sorular; sormadan, gerekçeli):**
+  1. Marka kılavuzu depoda yok → «Marka kiti» sekmesi (palet, logo, yazı tipi + zorunlu lisans notu, kurallar metni;
+     sürümlü). Palet kitapsız işlerde zemin rengi seçeneklerinin başına girer; kurallar metin istemine girer. Kurum yazı
+     tipi dizimde henüz kullanılmıyor (sunucuda kullanım lisansı doğrulanmadı) — stüdyonun açık lisanslı yazı tipleri sürer.
+  2. Boyut listesi: analizdeki 8 öneri + mevcut 3; kanal başına önerilen biçimler talep formunda ön seçili, kişi değiştirir.
+  3. Yüksek çözünürlüklü kapak: kişinin yüklediği dosya önce; CRM `new_resimurl` göreli olduğu için kökü ayar
+     (`MKT_CREATIVE_COVER_BASE_URL`, **ölçülecek**); sonra SEO modülünün T-soft kaydındaki görsel (T-soft'a istek yok).
+     Kısa kenar 800 px altında ekran uyarır (`MKT_CREATIVE_COVER_MIN_PX`).
+  4. Onay: tasarım ve mesaj ayrı açık yetki; aynı kişi aynı varlıkta ikisini veremez; tek kişi yetmez (analizdeki iş tanımı).
+  5. Metin yazarı ayrı rol değil: `icerik.uret` yetkisi kimdeyse yazar.
+  6. Platform karakter sınırları kodda (platformların yayımladığı değerler, varsayım) ve Yönetim'den JSON ile değişir.
+- **Yetki / menü:** `sayfa:pazarlama-icerik` (Pazarlama › yeni «Üretim» bölümü), `icerik.talep`, `icerik.uret`, açık
+  `icerik.tasarim-onay`, `icerik.mesaj-onay`, `icerik.marka`; Kampüs `LIVE.M19`. Ayar grubu «Pazarlama görsel ve metin».
+- **Kurulum parçaları:** portal nginx `deploy/nanobase-direct/add-marketing-creative-routes.py` (önizleme görselleri
+  stüdyo görsel bölgesinde, kapak/marka dosyası 26 MB), VM `web.default.conf.template` aynı iki konum, köprü dağıtımında
+  `marketing-assets` klasörü, `scripts/server/timas-marketing-creative.{service,timer}` (ilk kez elle koşturulmalı).
+- **Testler:** `backend/semantic_layer/tests/test_marketing_creative.py` (denetimler, onay kuralları, durum, sürüm, zip,
+  arşiv, tohum, iş kilidi, yetki; sahte CRM/stüdyo/modelle uçlar), `apps/editor/tests/test_marketing.py` (+ kitapsız iş ve
+  bütün biçimler tam piksel, şekil sınıfları), `src/canvas/marketing/creative/api.test.ts`. Kabul
+  `scripts/acceptance/marketing-creative/accept.py` (6 doğrudan-SQL referansı R1–R6 + piksel, sınır, 409, audit,
+  teknoloji adı) ve `cleanup.py`.
+- **Açık:** sohbetten (Zeki AI) bu uçlara yönlendirme yok (örnek sorular ekranda karşılanıyor); çok kitaplı influencer
+  brief'i (analiz soru 4) tek talepte değil; nav rozeti (talep kuyruğu sayısı) yok, sayılar ekranın KPI'larında; logo
+  yerleşimi ve kurum yazı tipiyle dizim (kılavuz bekleniyor); rolsüz hesapla 403 kabulü (yalnız timasai var); CRM kapak
+  kökü ölçümü.
+
 ## 2026-09-28 — NanobaseAI Destek: Helpdesk + Flow ayrı modül, marka, tema, Türkçe, test sunucusu kurulumu
 
 - **Neden:** kullanıcı frappe/helpdesk ve frappe/flow_client'ı kendi kodumuzda ayrı çalışan bir modül olarak istedi; ekranda, hata/bilgi mesajlarında ve e-postada ürün/marka adı NanobaseAI, logo ve renkler portal şablonuyla uyumlu; eksik Türkçe çeviriler tamamlanacak (kullanıcı ek talebi).

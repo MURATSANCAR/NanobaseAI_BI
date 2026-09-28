@@ -353,6 +353,24 @@ if "EDITOR-STUDYO-EFEKT" not in s:
     s = s.replace("    # EDITOR-BITTI", efekt + "    # EDITOR-BITTI", 1)
     changes.append("efekt sesleri yolları")
 
+# 8) Kitapsız pazarlama işi (M19; production/marketing_job.py, api_marketing.jobs_router): stüdyo işi olmayan kitap
+#    için kapak + CRM metinleriyle iş açma/güncelleme. Gövde base64 kapak taşır (≤ 25 MB → JSON ≤ 35 MB).
+#    Görsel dizimi aynı işin mevcut `marketing/social…` yollarından gider (EDITOR-STUDYO-PAZARLAMA).
+if "EDITOR-STUDYO-PAZARLAMA-IS" not in s:
+    mis = ("    # EDITOR-STUDYO-PAZARLAMA-IS  (kitapsiz pazarlama isi: marketing_job.py)\n"
+           + f'''    location = /editor/studio/v1/studio/marketing-jobs {{
+{guard}
+        if ($request_method != POST) {{ return 405; }}
+        client_max_body_size 36m;
+        proxy_pass {UP}/marketing-jobs;
+        proxy_set_header Host $host;
+        proxy_read_timeout 120s;
+    }}
+'''
+           + loc(f"marketing-jobs/({JOB})", "GET", "marketing-jobs/$1", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", mis + "    # EDITOR-BITTI", 1)
+    changes.append("kitapsız pazarlama işi yolları (gövde 36 MB)")
+
 if s == orig:
     print("zaten var (güncel)")
     sys.exit(0)

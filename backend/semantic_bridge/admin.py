@@ -380,6 +380,23 @@ SPEC: list[dict[str, Any]] = [
      "help": "Özel güne bu kadar kala o sezonun seti CRM'de açılmamışsa uyarı"},
     {"key": "SETS_ALERT_RECIPIENTS", "group": "sets", "label": "Uyarı özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (set sorumlusu, depo, satın alma). Boşsa e-posta gitmez; uyarılar ekranda durur"},
+    # M19 Pazarlama görsel ve metin
+    {"key": "MKT_CREATIVE_COVER_BASE_URL", "group": "creative", "label": "CRM kapak adresi kökü", "type": "text",
+     "default": "",
+     "help": "CRM kitap kartındaki kapak adresi (new_resimurl) göreli yol; önüne bu kök eklenerek indirilir. Boşsa bu "
+             "yol denenmez, kapak yüklenen dosyadan ya da e-ticaret ürün görselinden gelir"},
+    {"key": "MKT_CREATIVE_COVER_MIN_PX", "group": "creative", "label": "Kapak için en küçük kısa kenar (px)", "type": "int",
+     "default": "800", "help": "Bundan küçük kapakta ekran «düşük çözünürlük» uyarır"},
+    {"key": "MKT_CREATIVE_DIGEST_TO", "group": "creative", "label": "Günlük özet alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri (grafik ve pazarlama ekibi). Her iş günü 08:30'da tek özet; boşsa gönderilmez"},
+    {"key": "MKT_CREATIVE_CLAIM_MIN_P", "group": "creative", "label": "Kanıtsız iddia uyarısı: en düşük olasılık",
+     "type": "text", "default": "0.70", "help": "Zeki AI «iddia var» dediğinde bu olasılığın altındaysa uyarı verilmez"},
+    {"key": "MKT_CREATIVE_CLAIM_MIN_MARGIN", "group": "creative", "label": "Kanıtsız iddia uyarısı: en düşük fark",
+     "type": "text", "default": "0.30", "help": "İki seçenek arasındaki olasılık farkı bundan küçükse uyarı verilmez"},
+    {"key": "MKT_CREATIVE_LIMITS_JSON", "group": "creative", "label": "Platform karakter sınırları (JSON)", "type": "text",
+     "default": "",
+     "help": "Kodda platformların yayımladığı sınırlar var; farklıysa buraya {\"platform\": {\"tür\": [sınır, önerilen]}} "
+             "biçiminde yazılır (ör. {\"meta-ads\": {\"baslik\": [40, 27]}})"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -422,6 +439,8 @@ GROUPS = [
      "help": "Set bileşeni, satış ve fiyat kaynağı, marj alt sınırı, birlikte alım ve kurumsal hediye kademeleri. CRM'e, Logo'ya "
              "ve T-soft'a hiçbir şey yazılmaz; onaylanan set için açılacak kart listesi verilir."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
+    {"id": "creative", "label": "Pazarlama görsel ve metin",
+     "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},
     {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},

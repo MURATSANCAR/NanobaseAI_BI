@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazarlama görsel ve metin (M19): günlük özet e-postası (yeni talepler, onay kuyrukları, terminine 2 gün kalanlar)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/marketing/creative/run-due); alıcılar MKT_CREATIVE_DIGEST_TO. M15 pazarlama zamanlayıcısı
+# (timas-marketing.timer) gelince bu çağrı ona taşınır ve bu birim kaldırılır.
+ExecStart=/bin/sh -c 'curl -fsS -m 120 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/marketing/creative/run-due'

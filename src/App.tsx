@@ -68,6 +68,8 @@ const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
 const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
 const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
+const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
+const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -162,6 +164,8 @@ export default function App() {
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
             <Route path="pazarlama/set-hediye/set/:id" element={<SetEditor />} />
             <Route path="pazarlama/set-hediye/teklif/:id" element={<GiftOfferEditor />} />
+            <Route path="pazarlama/icerik" element={<CreativeHome />} />
+            <Route path="pazarlama/icerik/:id" element={<CreativeRequest />} />
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
             <Route path="seo-geo/anahtar-kelimeler" element={<SeoSearch />} />

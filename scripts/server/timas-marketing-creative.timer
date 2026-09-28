@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazarlama görsel ve metin günlük özeti, her iş günü 08:30
+
+[Timer]
+OnCalendar=Mon..Fri 08:30 Europe/Istanbul
+Persistent=true
+Unit=timas-marketing-creative.service
+
+[Install]
+WantedBy=timers.target

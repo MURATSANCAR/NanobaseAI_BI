@@ -497,6 +497,11 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/categories/", frozenset({page("kategori-agaci")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
+    # M19 Pazarlama görsel ve metin. Onaylı varlık sözleşmesini (contract/assets) okuyacak modül (M21/M22/M24) kendi
+    # sayfa anahtarını o satıra ekler.
+    ("/api/v1/marketing/creative/run-due", SYSTEM),
+    ("/api/v1/marketing/creative/contract/", frozenset({page("pazarlama-icerik")})),
+    ("/api/v1/marketing/creative/", frozenset({page("pazarlama-icerik")})),
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
@@ -663,6 +668,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
                                r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"
                                r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
+    # M19: talep açma; üretim (görsel dizimi, Zeki AI metni, başlık önerisi), kapak yükleme ve varlık düzeltme.
+    # Tasarım/mesaj onayı ve marka kiti açıkça verilen yetkilerle ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests$", "ozellik:icerik.talep"),
+    (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests/[^/]+/(produce|copy|headlines)$", "ozellik:icerik.uret"),
+    (frozenset({"PUT"}), r"^/api/v1/marketing/creative/(requests/[^/]+/cover|assets/[^/]+)$", "ozellik:icerik.uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",
