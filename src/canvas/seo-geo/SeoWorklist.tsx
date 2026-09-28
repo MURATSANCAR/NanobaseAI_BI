@@ -45,8 +45,11 @@ type Resp = {
   sources: Record<string, string>;
   errors: Record<string, string>;
   errorLabels: Record<string, string>;
-  builtAt: string;
+  builtAt: string | null;
   cacheSeconds: number;
+  ready: boolean;
+  building: boolean;
+  buildError: string | null;
 };
 type LogResp = {
   total: number;
@@ -94,10 +97,12 @@ export default function SeoWorklist() {
     enabled: ENGINE_ENABLED,
     retry: false,
     placeholderData: (p) => p,
+    // Liste arka planda toplanırken ekran bekletilmez; bitince kendiliğinden gelir.
+    refetchInterval: (s) => (s.state.data && (s.state.data.building || !s.state.data.ready) ? 10_000 : false),
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ['seo-worklist'] });
   const rebuild = useMutation({
-    mutationFn: () => call<Resp>(`worklist?${qs({ ...filters, start: 0, limit: PAGE, refresh: 1 })}`, { timeout: 300_000 }),
+    mutationFn: () => call<Resp>(`worklist?${qs({ ...filters, start: 0, limit: PAGE, refresh: 1 })}`),
     onSuccess: refresh,
   });
   const d = list.data;
@@ -201,10 +206,19 @@ export default function SeoWorklist() {
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="İş, kitap ya da kişi ara" aria-label="Ara" />
               </label>
               <p className="sg-banner">
-                Etki puanı = önem derecesi + satış adedi + Google gösterimi + tahmini ek tıklama (+ gruplu işlerde kayıt sayısı), her biri logaritmik. Liste {dateTime(d.builtAt)} tarihinde toplandı; {fmt(d.cacheSeconds)} saniyede bir yenilenir.
+                Etki puanı = önem derecesi + satış adedi + Google gösterimi + tahmini ek tıklama (+ gruplu işlerde kayıt sayısı), her biri logaritmik.{' '}
+                {d.builtAt ? `Liste ${dateTime(d.builtAt)} tarihinde toplandı; ${fmt(Math.round(d.cacheSeconds / 60))} dakikadan eskiyse arka planda yenilenir.` : ''}
+                {d.building ? ' Yeni liste şu an toplanıyor.' : ''}
               </p>
 
-              {!d.items.length && (
+              {!d.ready && (
+                <div className="sg-empty">
+                  <h2>Liste hazırlanıyor</h2>
+                  <p>Bütün ekranların işleri ilk kez toplanıyor; birkaç dakika sürebilir. Bu sayfa açık kalırsa liste hazır olunca kendiliğinden gelir.</p>
+                </div>
+              )}
+              {d.buildError && <p className="sg-banner err">Son toplama tamamlanamadı: {d.buildError}</p>}
+              {d.ready && !d.items.length && (
                 <div className="sg-empty">
                   <h2>İş yok</h2>
                   <p>Bu süzgece uyan açık iş kalmadı.</p>

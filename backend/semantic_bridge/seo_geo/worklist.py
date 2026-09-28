@@ -31,7 +31,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .store import CRM_BOOKS, LINKS, PRODUCTS, PROPOSALS, REDIRECTS, RUNS, SCHEMA, _md, iso, loads, now
+from .store import CRM_BOOKS, LINKS, PRODUCTS, PROPOSALS, REDIRECTS, RUNS, SCHEMA, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -56,8 +56,10 @@ IMPRESSION_POINTS = 8.0
 CLICK_POINTS = 12.0
 COUNT_POINTS = 4.0
 
-#: Toplanan liste bellekte bu kadar saniye tutulur (kaynaklar ağır).
-CACHE_SECONDS = 60
+#: Toplama ağırdır (canlıda ilk tur ~5 dk, 2026-09-28): ekran hiçbir zaman toplamayı beklemez. Son liste veritabanında
+#: saklanır (köprü yeniden başlasa da kalır) ve anında döner; bu yaştan eskiyse yenisi arka planda toplanır.
+STALE_SECONDS = 30 * 60
+CACHE_SECONDS = STALE_SECONDS  # eski ad: ekrandaki "şu kadar saniyede bir yenilenir" metni
 #: Gece işi: öteki gece işlerinin (eşitleme, tarama, ölçüm) yazması için bekleme; sonra liste yeniden kurulur.
 NIGHTLY_DELAY_S = 3 * 3600
 #: Yazar güven puanı bunun altındaysa yazar iş listesine girer.
@@ -130,6 +132,12 @@ LOG = sa.Table(
     sa.Column("at", sa.DateTime(timezone=True), nullable=False, index=True),
     sa.Column("closed_at", sa.DateTime(timezone=True)),
 )
+CACHE = sa.Table(
+    "semantic_seo_worklist_cache", _md,  # son toplanan liste (kaynak maddeleri); durumlar STATE'te
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("data_json", sa.Text, nullable=False),
+    sa.Column("built_at", sa.DateTime(timezone=True), nullable=False),
+)
 EVENT_LABEL = {"kapandi": "Kendiliğinden kapandı", "yeniden_acildi": "Yeniden açıldı", "durum": "Durum değişti"}
 
 _ready_lock = threading.Lock()
@@ -142,6 +150,7 @@ def ensure_tables(eng: sa.engine.Engine) -> None:
             return
         STATE.create(eng, checkfirst=True)
         LOG.create(eng, checkfirst=True)
+        CACHE.create(eng, checkfirst=True)
         _ready.add(id(eng))
 
 
@@ -1051,30 +1060,82 @@ def _err(status: int, message: str) -> HTTPException:
 
 # ------------------------------------------------------------------------------------------------ önbellek
 class Worklist:
+    """Son liste bellekte ve veritabanında; istek hiçbir zaman toplamayı beklemez (``wait=True`` yalnız gece işi,
+    dışa aktarma ve testler için). Aynı anda tek toplama."""
+
     def __init__(self, seo, clock: Callable[[], float] = time.monotonic) -> None:
         self.seo = seo
         self.clock = clock
-        self._lock = threading.Lock()          # aynı anda tek toplama
-        self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._lock = threading.Lock()                      # aynı anda tek toplama
+        self._mem: dict[str, tuple[float, dict[str, Any]]] = {}
+        self.state: dict[str, Any] = {"building": False, "startedAt": None, "finishedAt": None, "error": None}
 
-    def build(self, force: bool = False) -> dict[str, Any]:
+    # -------------------------------------------------------------- saklama
+    def _load(self, tenant: str) -> Optional[tuple[float, dict[str, Any]]]:
+        hit = self._mem.get(tenant)
+        if hit:
+            return hit
+        eng = self.seo.engine()
+        ensure_tables(eng)
+        with eng.connect() as c:
+            row = c.execute(sa.select(CACHE.c.data_json, CACHE.c.built_at).where(CACHE.c.tenant_id == tenant)).first()
+        if not row:
+            return None
+        built = row[1] if row[1].tzinfo else row[1].replace(tzinfo=timezone.utc)
+        age = max(0.0, (now() - built).total_seconds())
+        hit = (self.clock() - age, loads(row[0], {}))
+        self._mem[tenant] = hit
+        return hit
+
+    def rebuild(self) -> dict[str, Any]:
+        """Toplar, durum tablosunu günceller, sonucu saklar. Çağıran bekler."""
         tenant = self.seo.tenant()
-        hit = self._cache.get(tenant)
-        if not force and hit and self.clock() - hit[0] < CACHE_SECONDS:
-            return hit[1]
         with self._lock:
-            hit = self._cache.get(tenant)
-            if not force and hit and self.clock() - hit[0] < CACHE_SECONDS:
-                return hit[1]
-            env = Env(self.seo)
-            items, ran, errors = collect(env)
-            changes = sync_states(env.eng, tenant, items, ran)
-            data = {"items": list(items.values()), "errors": errors, "builtAt": iso(now()), "changes": changes}
-            self._cache[tenant] = (self.clock(), data)
-            return data
+            self.state.update(building=True, startedAt=iso(now()), error=None)
+            try:
+                env = Env(self.seo)
+                items, ran, errors = collect(env)
+                changes = sync_states(env.eng, tenant, items, ran)
+                data = {"items": list(items.values()), "errors": errors, "builtAt": iso(now()), "changes": changes}
+                with env.eng.begin() as c:
+                    c.execute(CACHE.delete().where(CACHE.c.tenant_id == tenant))
+                    c.execute(CACHE.insert().values(tenant_id=tenant, data_json=dumps(data), built_at=now()))
+                self._mem[tenant] = (self.clock(), data)
+                return data
+            except Exception as e:  # noqa: BLE001
+                self.state["error"] = str(e)[:300]
+                raise
+            finally:
+                self.state.update(building=False, finishedAt=iso(now()))
 
-    def view(self, force: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        data = self.build(force)
+    def start_rebuild(self) -> bool:
+        if self.state["building"] or self._lock.locked():
+            return False
+
+        def run() -> None:
+            try:
+                self.rebuild()
+            except Exception:  # noqa: BLE001
+                log.exception("seo worklist rebuild failed")
+
+        self.state.update(building=True, startedAt=iso(now()), error=None)
+        threading.Thread(target=run, name="seo-worklist-build", daemon=True).start()
+        return True
+
+    def build(self, force: bool = False, wait: bool = False) -> Optional[dict[str, Any]]:
+        """Eldeki liste (yoksa None). Eskiyse ya da ``force`` ise yenisi arka planda (``wait`` ise burada) toplanır."""
+        hit = self._load(self.seo.tenant())
+        stale = hit is None or force or self.clock() - hit[0] >= STALE_SECONDS
+        if stale:
+            if wait:
+                return self.rebuild()
+            self.start_rebuild()
+        return hit[1] if hit else None
+
+    def view(self, force: bool = False, wait: bool = False) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
+        data = self.build(force, wait)
+        if data is None:
+            return [], None
         eng = self.seo.engine()
         states = load_states(eng, self.seo.tenant())
         return merge(data["items"], states), data
@@ -1108,11 +1169,13 @@ def register(app, ctx) -> None:
         items, data = wl.view(force=bool(refresh))
         chosen = select(items, owner, status, source, q)
         s, n = max(0, start), max(1, limit)
+        errors = (data or {}).get("errors") or {}
         return {"total": len(chosen), "start": s, "items": chosen[s:s + n],
                 "counts": counts(items, owner, status, source, q), "summary": summary(items),
-                "owners": OWNERS, "statuses": STATUSES, "sources": SOURCES, "errors": data["errors"],
-                "errorLabels": {k: SOURCES.get(k, k) for k in data["errors"]},
-                "builtAt": data["builtAt"], "cacheSeconds": CACHE_SECONDS}
+                "owners": OWNERS, "statuses": STATUSES, "sources": SOURCES, "errors": errors,
+                "errorLabels": {k: SOURCES.get(k, k) for k in errors},
+                "ready": data is not None, "building": wl.state["building"], "buildError": wl.state["error"],
+                "builtAt": (data or {}).get("builtAt"), "cacheSeconds": STALE_SECONDS}
 
     @app.post("/api/v1/seo-geo/worklist/{key}/status")
     def seo_worklist_status(key: str, body: WorklistStatus, request: Request) -> dict[str, Any]:
@@ -1145,7 +1208,7 @@ def register(app, ctx) -> None:
 
         ctx.gate(request)
         _check_filters(owner, status, source)
-        items, _ = wl.view()
+        items, _ = wl.view(wait=True)
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";")
         w.writerow(["Etki", "Sorumlu", "Kaynak", "İş", "Ayrıntı", "Önem", "Kayıt sayısı", "Durum", "Atanan", "Not",
@@ -1162,7 +1225,7 @@ def register(app, ctx) -> None:
         def later() -> None:
             time.sleep(NIGHTLY_DELAY_S)
             try:
-                wl.build(force=True)
+                wl.rebuild()
             except Exception:  # noqa: BLE001
                 log.exception("seo worklist nightly failed")
 

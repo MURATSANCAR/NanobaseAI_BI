@@ -279,11 +279,24 @@ def test_worklist_cache_reuses_build_within_window():
     orig = wl.COLLECTORS
     wl.COLLECTORS = [("sema", fake)]
     try:
-        items, _ = w.view()
-        w.view()
+        items, _ = w.view(wait=True)
+        w.view(wait=True)
         assert calls["n"] == 1 and items[0]["status"] == "yeni"
-        clock["t"] = wl.CACHE_SECONDS + 1
-        w.view()
+        clock["t"] = wl.STALE_SECONDS + 1
+        w.view(wait=True)
         assert calls["n"] == 2
+        # köprü yeniden başladı: bellek boş, liste veritabanından anında gelir, toplama yok
+        w2 = wl.Worklist(_Seo(eng), clock=lambda: clock["t"])
+        items2, data2 = w2.view()
+        assert calls["n"] == 2 and data2 is not None and [i["ref"] for i in items2] == [i["ref"] for i in items]
     finally:
         wl.COLLECTORS = orig
+
+
+def test_worklist_request_never_waits_when_nothing_saved():
+    eng, _ = _seeded()
+    w = wl.Worklist(_Seo(eng))
+    started = []
+    w.start_rebuild = lambda: started.append(1) or True
+    items, data = w.view()
+    assert items == [] and data is None and started == [1]
