@@ -1,0 +1,12 @@
+[Unit]
+Description=Dijital yayın ve e-kitap (M36): CRM hak/kitap/üretim okuması, Logo son 12 ay satış, stüdyo e-kitap durumu, fırsat puanı, hak notu ön okuması, iç uyarılar
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/dijital/run-due); bu birim yalnız çağırır. Platformlara, CRM'e, Logo'ya ve T-soft'a hiçbir şey
+# gönderilmez; e-posta yalnız iç alıcılara (DIJITAL_*_RECIPIENTS). Hak notu ön okuması DIJITAL_NOTE_BUDGET_SEC ile sınırlı
+# sürer, kalan sonraki geceye kalır.
+# İlk kez elle koşturulur: systemctl start timas-dijital.service (bellek: run-it-before-it-runs-itself).
+ExecStart=/bin/sh -c 'curl -fsS -m 7190 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/dijital/run-due'

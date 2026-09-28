@@ -213,6 +213,42 @@
   kapsamı, aynı EAN'lı çift CRM kartı sayısı, fiyat nedeni eşiklerinin isabeti.
 - **Açık:** platform satıcı raporu yüklemesi (sell-through, M40–M42 ile), GA4 sepet hunisi, CRM Web API yetkisi gelince onaylı
   metnin CRM'e yazılması, M35 kampanya bağı (bu modülün `items`/`diffs` tabloları okunur), M43 stok bağı.
+## 2026-09-28 — M36 Dijital yayın ve e-kitap kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** `docs/analiz/kullanici-ihtiyaclari/M36-dijital-yayin-ekitap.md` §14'ün ilk sürümü. Köprü `dijital.py`,
+  `dijital_sources.py`, `dijital_api.py` (`/api/v1/dijital/*`), tablolar `semantic_dijital_*`; ekranlar `src/canvas/dijital/`
+  (Katalog, Hak riski, CRM'e işlenecek, Platformlar, Fırsatlar, Satış + rapor yükleme sihirbazı, kitap yan paneli); zamanlayıcı
+  `scripts/server/timas-dijital.{service,timer}` (04:00); kabul `scripts/acceptance/M36/` (kabul.py K1–K8 + ölçüm, referans.sql,
+  temizlik.py); testler `test_dijital.py`, `dijital.test.ts`.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (kayıt bloğu), `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (2 sayfa,
+  4 özellik), `admin.py` (ayar grubu `dijital`, 14 ayar, değişiklik kaydı adları), `App.tsx` (4 rota), `navModel.ts` (2 menü öğesi),
+  `ModulesMenu.tsx` (`M36`).
+- **Açık sorulara verilen kararlar (§10; veriye/koda bakıldı, kullanıcıya sorulmadı):**
+  - *Platform ve dağıtıcı bilinmiyor:* platformlar portalda tanımlanır (tür, doğrudan/dağıtıcı, rapor para birimi, raporun ay
+    kapanışından kaç gün sonra beklendiği). Platform durumu yalnız kullanıcının girdiği bilgidir; bilinmeyen «bilinmiyor».
+  - *Rapor biçimi bilinmiyor:* kolon adları Türkçe/İngilizce eş anlamlılarla tanınır, kullanıcı düzeltir; dönem satırdaki tarihten
+    ya da yüklemedeki dönemden. Kur kullanıcıdan (modül kur varsaymaz). Logo'daki e-kitap faturası ayrı sütun, platform raporuyla
+    toplanmaz (aynı satış iki yerde olabilir).
+  - *Bölge/platform kısıtı:* serbest metin notu olan sözleşme «incele»; telif birimi `uygun / kısıtlı / uygun değil` yazar, karar
+    notun metin özetine bağlanır (not değişirse yeniden sorulur). «Kısıtlı» fırsat listesine girer ama rozetle görünür.
+  - *EPUB kim hazırlıyor:* bilinmiyor; CRM `new_EPubDurumu`, üretim kartının e-kitap aşamaları ve (varsa) stüdyo e-kitap durumu
+    yan yana gösterilir; stüdyo kapalıysa bir önceki okuma kalır.
+  - *Sesli kitap anlaşması:* sesli sürüm = aynı adlı `SesliKitap` (Tip 9) kartı ya da sesli platformda kayıt; adaylar tür süzgeciyle
+    (`DIJITAL_AUDIO_GENRES`, boşsa hepsi).
+  - *Basılı satış:* analizdeki `V_SatisRaporu_411/211` yerine doğrudan `STLINE` faturalı satır (bütçe/kokpitle aynı tanım; görünüm
+    plan tuzağı yok). Pencere: Logo veri sonunun ayı dahil son 12 takvim ayı (`Yıl*12+Ay`), .155'in 17.08.2026 donması ekranda yazılı.
+  - *Fırsat eşiği:* 1.000 adet varsayılan, yönetim ekranından; ölçülmedi.
+  - *`sayfa:dijital-satis`:* finans verisi → katalogda `explicit: true`. `access.explicit_keys()` bugün yalnız özellikleri kapsıyor;
+    M49 (sayfa explicit desteği) main'e girince bu sayfa Herkes rolüne kapanır. O zamana kadar Herkes'e açıktır.
+- **Kapsam dışı (ikinci sürüm):** ONIX dışa aktarma, stüdyo dışı EPUB yükleme ve denetimi, dijital fiyat önerisi (şimdilik yalnız
+  açık yetkiyle fiyat kararı kaydı), abonelik/sesli kitap senaryosu, M6/M54 hakedişine otomatik akış, platform API'leri. Zeki AI
+  sohbeti bu tabloları henüz okumuyor (katalog veri alanı yok); `chat_topics.json` «yayin» konusu M36'yı zaten içeriyor.
+- **M54 bağlantı noktası:** `dijital_sources.register_rights_provider(fn)`; `fn(kitap_idleri, bicim) → {kitap_id: (karar, gerekçe)}`.
+  Telif modülü main'e girince `app.py`'deki yorum satırı açılır; o zaman hak kararı ekranda «telif hak haritası» kaynağıyla görünür.
+- **Doğrulama:** yalnız `py_compile` ve JSON; birim testleri, `tsc`, vitest ve gerçek CRM/Logo kabulü test sunucusunda koordinatörce
+  koşulacak (**DOĞRULANAMADI**). Ölçülecekler kabul betiğinde: sesli kitap hakkı sayısı, Tip 8/9 ve dijital kimlik doluluğu, e-kitap
+  üretim aşaması sayısı, Logo'da e-kitap stok koduyla fatura olup olmadığı (boşsa 2021–2025 kopyasında da bakılır), iletim ↔ e-kitap
+  kararı çelişkisi.
 
 ## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 

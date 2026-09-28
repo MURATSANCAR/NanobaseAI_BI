@@ -181,6 +181,18 @@
       "label": "Kapak arşivi"
     },
     {
+      "key": "sayfa:dijital-yayin",
+      "area": "editoryal",
+      "label": "Dijital yayın"
+    },
+    {
+      "key": "sayfa:dijital-satis",
+      "area": "editoryal",
+      "label": "Dijital satış",
+      "hint": "Platform satış raporları ve dijital gelir (finans verisi); role açıkça verilir",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
@@ -1097,6 +1109,36 @@
       "page": "sayfa:uretim",
       "label": "Matbaa seçimini onaylama",
       "hint": "Prodüksiyon müdürünün matbaa onayı; onay kaydı sipariş talebine esas olur",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dijital.durum-yaz",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital platform durumu",
+      "hint": "Kitabın platformdaki durumunu (hazırlanıyor, yüklendi, yayında…) ve notunu girme, platform tanımlama, katalog okumasını yenileme"
+    },
+    {
+      "key": "ozellik:dijital.rapor-yukle",
+      "area": "editoryal",
+      "page": "sayfa:dijital-satis",
+      "label": "Dijital satış raporu yükleme",
+      "hint": "Platform satış raporunu (Excel/CSV) yükleme, kolon ve kitap eşlemesini düzeltme, Zeki AI önerisini onaylama, raporu onaylama ya da iptal etme"
+    },
+    {
+      "key": "ozellik:dijital.hak-karari",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital hak kararı",
+      "hint": "Hak notu olan sözleşmede e-kitap / sesli kitap için karar ve gerekçe yazma (telif birimi)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dijital.fiyat-onay",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital fiyat kararı",
+      "hint": "Kitabın dijital fiyatını gerekçesiyle kaydetme (platformlara gönderilmez)",
       "explicit": true
     },
     {

@@ -446,6 +446,37 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle (müdür, pazar yeri sorumlusu). Pazartesi sabahı: açık farklar, kapanma hızı, pazar yeri carileri, tükenme riski"},
     {"key": "ECOM_STOCKOUT_DAYS", "group": "eticaret", "label": "Tükenme riski (gün)", "type": "int", "default": "30",
      "help": "Logo stoğu son 12 ayın satış hızıyla bu kadar günden az yetecekse pazar yeri listesinde işaretlenir"},
+    # M36 Dijital yayın ve e-kitap
+    {"key": "DIJITAL_OPP_MIN_QTY", "group": "dijital", "label": "E-kitap fırsatı: son 12 ay en az basılı satış", "type": "int",
+     "default": "1000",
+     "help": "Hakkı olup e-kitabı olmayan kitap, son 12 ayda (Logo faturalı net adet) en az bu kadar sattıysa fırsat listesine girer"},
+    {"key": "DIJITAL_AUDIO_MIN_QTY", "group": "dijital", "label": "Sesli kitap adayı: son 12 ay en az basılı satış", "type": "int",
+     "default": "1000", "help": "Sesli kitap hakkı olup sesli sürümü olmayan kitaplar için aynı eşik"},
+    {"key": "DIJITAL_AUDIO_GENRES", "group": "dijital", "label": "Sesli kitap adayı: türler", "type": "text", "default": "",
+     "help": "Virgülle tür ya da hedef kitle kelimeleri (örn. roman, kişisel gelişim, masal, çocuk). Boşsa bütün türler"},
+    {"key": "DIJITAL_BOOK_TYPES", "group": "dijital", "label": "Kitap sayılan CRM tipleri", "type": "text", "default": "1",
+     "help": "Virgülle CRM kitap kartı «Tip» kodları (1 = Kitap). Fırsat ve katalog göstergeleri bu tiplerden"},
+    {"key": "DIJITAL_AUDIO_TYPES", "group": "dijital", "label": "Sesli kitap CRM tipleri", "type": "text", "default": "9",
+     "help": "Virgülle CRM «Tip» kodları (9 = SesliKitap). Aynı adlı basılı kitabın sesli sürümü var sayılır"},
+    {"key": "DIJITAL_MATCH_MIN_PROB", "group": "dijital", "label": "Rapor eşleme: güçlü öneri olasılığı", "type": "text",
+     "default": "0.6",
+     "help": "Zeki AI önerisinin «güçlü» sayılacağı olasılık (0–1). Güçlü öneriler tek düğmeyle onaylanabilir; hiçbiri kendiliğinden onaylanmaz"},
+    {"key": "DIJITAL_MATCH_CANDIDATES", "group": "dijital", "label": "Rapor eşleme: aday kitap sayısı", "type": "int", "default": "8",
+     "help": "Eşleşmeyen satır için ad/yazar benzerliğiyle Zeki AI'a sunulan aday sayısı"},
+    {"key": "DIJITAL_EDITION_DAYS", "group": "dijital", "label": "Yeni baskı / kapak değişikliği penceresi (gün)", "type": "int",
+     "default": "90", "help": "Dijital sürümü olan kitapta bu süre içindeki yeni baskı ya da kapak değişikliği işaretlenir"},
+    {"key": "DIJITAL_WEEKLY_DAY", "group": "dijital", "label": "Haftalık yeni baskı e-postası günü", "type": "int", "default": "1",
+     "help": "1 Pazartesi … 7 Pazar"},
+    {"key": "DIJITAL_NOTE_BUDGET_SEC", "group": "dijital", "label": "Hak notu ön okuması: gece süre bütçesi (sn)", "type": "int",
+     "default": "1800", "help": "Bitmeyen notlar sonraki geceye kalır; kalan sayı gece raporunda yazılır"},
+    {"key": "DIJITAL_RIGHTS_RECIPIENTS", "group": "dijital", "label": "Hak riski e-postası alıcıları (telif)", "type": "text",
+     "default": "", "help": "Virgülle. Hak riski listesine yeni kitap girdiğinde. Boşsa e-posta gitmez, liste ekranda durur"},
+    {"key": "DIJITAL_ALERT_RECIPIENTS", "group": "dijital", "label": "Yeni baskı e-postası alıcıları (dijital yayın)", "type": "text",
+     "default": "", "help": "Virgülle. Dijital sürümü olan kitapta yeni baskı ya da kapak değişikliği (haftalık)"},
+    {"key": "DIJITAL_FINANCE_RECIPIENTS", "group": "dijital", "label": "Rapor hatırlatması alıcıları (finans)", "type": "text",
+     "default": "", "help": "Virgülle. Platformun aylık satış raporu beklenen günde yüklenmediyse"},
+    {"key": "DIJITAL_IMPORT_MAX_MB", "group": "dijital", "label": "Satış raporu dosya sınırı (MB)", "type": "int", "default": "40",
+     "help": "Yüklenen Excel/CSV dosyasının en büyük boyutu"},
     # M19 Pazarlama görsel ve metin
     {"key": "MKT_CREATIVE_COVER_BASE_URL", "group": "creative", "label": "CRM kapak adresi kökü", "type": "text",
      "default": "",
@@ -1007,6 +1038,8 @@ GROUPS = [
     {"id": "eticaret", "label": "E-ticaret ve pazar yerleri",
      "help": "Site, CRM ve Logo arasındaki fark kuralları, bildirim alıcıları ve pazar yeri kanalı. T-soft'a, CRM'e, Logo'ya ve "
              "pazar yerlerine hiçbir şey yazılmaz; düzeltmeyi kişi yapar."},
+    {"id": "dijital", "label": "Dijital yayın ve e-kitap",
+     "help": "Fırsat eşikleri, rapor eşleme ve iç uyarı alıcıları. Platformlara, CRM'e, Logo'ya ve T-soft'a hiçbir şey gönderilmez."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "creative", "label": "Pazarlama görsel ve metin",
      "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},
@@ -1095,7 +1128,10 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "social_post": "Sosyal medya gönderisi", "social_account": "Sosyal medya hesabı",
               "social_import": "Sosyal medya içe aktarma", "social_metric": "Sosyal medya içgörüsü",
               "social_report": "Sosyal medya raporu",
-              "catalog": "Katalog", "catalog_item": "Katalog kitabı", "newsletter": "E-bülten"}
+              "catalog": "Katalog", "catalog_item": "Katalog kitabı", "newsletter": "E-bülten",
+              "dijital_listing": "Dijital platform durumu", "dijital_rights": "Dijital hak kararı",
+              "dijital_price": "Dijital fiyat kararı", "dijital_platform": "Dijital platform",
+              "dijital_import": "Dijital satış raporu"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()

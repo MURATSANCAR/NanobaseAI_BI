@@ -1,0 +1,10 @@
+[Unit]
+Description=Dijital yayın ve e-kitap gece okuması; her gece 04:00
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=timas-dijital.service
+
+[Install]
+WantedBy=timers.target

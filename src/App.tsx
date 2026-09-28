@@ -108,6 +108,9 @@ const EticaretFunnel = lazy(() => import('@/canvas/eticaret/FunnelScreen'));
 const EticaretMarkets = lazy(() => import('@/canvas/eticaret/MarketplacesScreen'));
 const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
 const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
+const DigitalCatalog = lazy(() => import('@/canvas/dijital/DigitalCatalog'));
+const DigitalOpportunities = lazy(() => import('@/canvas/dijital/OpportunitiesScreen'));
+const DigitalSales = lazy(() => import('@/canvas/dijital/DigitalSalesScreen'));
 const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
 const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestScreen'));
 const MarketingMonth = lazy(() => import('@/canvas/marketing/monthly/MonthScreen'));
@@ -460,6 +463,10 @@ export default function App() {
             <Route path="kitap-tasarim/:jobId/studyo" element={<StudioEditor />} />
             <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />
             <Route path="kitap-tasarim/:jobId/kapak" element={<CoverScreen />} />
+            <Route path="dijital-yayin" element={<DigitalCatalog />} />
+            <Route path="dijital-yayin/kitap/:id" element={<DigitalCatalog />} />
+            <Route path="dijital-yayin/firsatlar" element={<DigitalOpportunities />} />
+            <Route path="dijital-yayin/satis" element={<DigitalSales />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
             <Route path="telif-sozlesme/yeni" element={<NewContract />} />
             <Route path="telif-sozlesme/odemeler" element={<ContractPayments />} />

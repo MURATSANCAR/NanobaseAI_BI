@@ -610,6 +610,15 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/hr/recruit/reminders/run-due", SYSTEM),
     ("/api/v1/hr/recruit/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler")})),
     ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar")})),
+    # M36 Dijital yayın ve e-kitap. Satış raporu ve gelir finans verisidir: ayrı sayfa (dijital-satis); göstergeler ve
+    # platform listesi iki sayfada da açık.
+    ("/api/v1/dijital/run-due", SYSTEM),
+    ("/api/v1/dijital/imports", frozenset({page("dijital-satis")})),
+    ("/api/v1/dijital/sales", frozenset({page("dijital-satis")})),
+    ("/api/v1/dijital/meta", frozenset({page("dijital-yayin"), page("dijital-satis")})),
+    ("/api/v1/dijital/overview", frozenset({page("dijital-yayin"), page("dijital-satis")})),
+    ("/api/v1/dijital/platforms", frozenset({page("dijital-yayin"), page("dijital-satis")})),
+    ("/api/v1/dijital/", frozenset({page("dijital-yayin")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     # M34 E-ticaret: ortak uçlar (meta, kitap çekmecesi, öneri) dört ekranda; liste uçları kendi ekranı + platform durumu.
@@ -866,6 +875,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/imports(/[^/]+)?$", "ozellik:kanal.yukle"),
     (frozenset({"POST"}), r"^/api/v1/channels/(suggestions|d2c/suggest)$", "ozellik:kanal.oneri-yaz"),
     (frozenset({"GET"}), r"^/api/v1/channels/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M36 Dijital yayın: platform durumu, platform tanımı, katalog okuması; satış raporu yükleme/eşleme/onay. Hak kararı
+    # (`dijital.hak-karari`) ve dijital fiyat kararı (`dijital.fiyat-onay`) açıkça verilir, ucun içinde denetlenir.
+    (frozenset({"PUT"}), r"^/api/v1/dijital/titles/[^/]+/listings/[^/]+$", "ozellik:dijital.durum-yaz"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/dijital/(platforms(/[^/]+)?|refresh)$", "ozellik:dijital.durum-yaz"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/dijital/imports(/[^/]+(/(match|rows|accept-strong|commit))?)?$",
+     "ozellik:dijital.rapor-yukle"),
+    (frozenset({"GET"}), r"^/api/v1/dijital/(opportunities|sales)/export\.csv$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

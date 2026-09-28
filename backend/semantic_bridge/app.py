@@ -7173,6 +7173,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_system": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
     })
 
+    # M36 Dijital yayın ve e-kitap: katalog, hak kararı, fırsat, platform durumu, satış raporu yükleme. Uçlar
+    # /api/v1/dijital/*; tablolar semantic_dijital_*. CRM/Logo/stüdyo yalnız okunur; platformlara hiçbir şey gönderilmez.
+    from semantic_bridge import dijital_api
+    from semantic_bridge import editorial_studio_epub as _dijital_epub
+    app.state.dijital = dijital_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("dijital", priority),
+        "studio_jobs": _production_studio.jobs, "studio_view": _dijital_epub.view, "send_mail": _mkt_send_mail,
+    })
+    # M54 hak haritası main'e girince: dijital_sources.register_rights_provider(<kitap × biçim hak kararı işlevi>).
+
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
     editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
 
