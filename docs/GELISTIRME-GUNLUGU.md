@@ -62,7 +62,17 @@
 - **Doğrulama (test sunucusu, `/tmp/claude-lehmann`):** pytest sözleşme/yetki/SEO-CRM 51/51, `tsc` 0 hata, vitest 55/55.
   Gerçek CRM (.28, salt okuma, doğrudan bağlantı): sayfalı sorgunun toplamı sayfalamasız referansla eş (taraf «ahmet»
   1.479, «can» 3.240; kitap «aşk» 135, «tarih» 349), ilk üç sayfa referans sırasıyla birebir ve çakışmasız; bağlı sözleşme
-  243 = 243. Ekran tarayıcıda denenmedi (dal kurulu değil). Dal `main`e taşınmadı, kurulum yapılmadı.
+  243 = 243.
+- **main ve test sunucusu (03:17–03:40):** `main` = `c327661c` (4 commit; rebase'de günlük çakışması iki kez, iki taraf
+  korunarak çözüldü). Kurulum: 7 dosyanın sunucu hâli eski `main`le eşti; başka bir oturum aynı dakikalarda `main`in
+  tamamını kurdu (dosyalar 03:17, köprü 03:20 yeniden başladı, ön yüz 03:30), dosyalarım onunla geldi — ikinci kurulum /
+  yeniden başlatma yapılmadı. Canlı md5 7/7 `main`le eş.
+- **Canlı kabul (portal, kısa ömürlü `timasai` oturumu, yalnız okuma uçları, CRM referansı doğrudan bağlantıdan):** 6/6 —
+  taraf seçicisi toplamı 1.479 = CRM, 2. sayfa 40 tekil kayıt; kitap seçicisi 349 = CRM; en kalabalık grup sözleşmesinin
+  bağlı kaydı uçta 243 = CRM (eski tavan 200); portal kayıtları ve ödeme takvimi uçları yanıt veriyor (test sunucusunda
+  ikisi de 0 satır — tavansızlık gerçek veriyle değil birim testiyle sınanmış durumda); sunulan `index-D-kcwDXJ.js` →
+  `TermsForm-D1cddLI9.js` sayaç ve «Daha fazla göster» metnini içeriyor. Test oturumu silindi (kalan 0), test verisi
+  yazılmadı. Görsel denetim yapılamadı: oturum çerezi HttpOnly, tarayıcı panesine konamıyor. Müşteri VM'ine kurulmadı.
 
 ## 2026-09-28 — M6 Sözleşmeler: listelerdeki sessiz satır tavanı kaldırıldı
 
