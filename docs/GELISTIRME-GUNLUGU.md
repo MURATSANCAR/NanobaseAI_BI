@@ -306,6 +306,21 @@
   platform raporu yükleme, set/çapraz satış önerisi, müşteri VM'inde zamanlayıcı (jobs döngüsü) kaydı, kanal cari kodlarının ölçülmesi
   (`KAMPANYA_KANAL_CARI`), Zeki AI sohbetinin `semantic_kampanya_*` tablolarını okuması.
 
+## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
+
+- **Kurulum:** önce `8ba10c01` (75 dosya), sonra `935080d5` (82 dosya; sunucuya özgü her satır main geçmişinde vardı). Kaynak ağaç main'le fark 0, `._*` 0, ön yüz `index-BsMX52H7.js`, köprü restart. Klasörler `var/applications`, `var/pricing`, `var/tenders` açıldı. `scripts/server/deploy-customer-vm.sh` sunucuda hiçbir commit'le eşleşmiyor; bu tur VM dışı olduğu için dokunulmadı. VM'e kurulmadı. Bağlantı: tek ControlMaster ssh (yeni kural).
+- **İlk koşular ve zamanlayıcılar (14 zamanlayıcı birimi):** M29 dağılım 118 sn · M30 gece 193 sn (CRM kolon uyarısı yok; portföy 248.351, atanan 31.209) · M31 okul 178 sn · M32 kurumsal 1.295 sn (ilk iki deneme başka oturumların köprü restart'ıyla kesildi) · M33 ihale 84 sn · M15 pazarlama 4 sn → hepsi başarılı, zamanlayıcıları açık.
+- **Kabul (gerçek oturum `timasai`, gerçek Logo .155 + CRM .28; referanslar doğrudan SQL):**
+  - **M29 İlk dağılım 34/34.** Stok bakiyesi 869 kitap, ilk 56 gün net adet ve müşteri sayısı 5 kitapta, cari × sevk/fatura/iade birebir; iki göz ve stok kuralları 409.
+  - **M30 Saha:** okuma 6/6 (FIFO kovaları, YTD net ciro, portföy, CRM tahsilat, karşılıksız olay, risk doluluğu); hedef dağıtımı (onaylı M46 planı yok) ve kapsam 403 (temsilci oturumu yok) doğrulanamadı. Yazma: geçersiz gövdeler doğru; `POST /payment-plans` 422 yerine 400; tek geçerli ziyaret notu 120 sn'de zaman aşımına düştü (kayıt oluşmadı).
+  - **M31 Okul:** 2 geçti (il × kademe dağılımı 65.478 = 65.478; bayi eşleşmesi), **3 kaldı**: öğrenci sayısı temizliği (bir kartta ham 210 → SQL 210, API 502), okul kartında geçmiş ziyaret 0 okul, dönem raporu sipariş tipleri API'de boş (SQL 181/116/475); 2 doğrulanamadı.
+  - **M32 Kurumsal:** 28/40 OK, **fark 0** (KURUM net ciro 17.209.779,45; fatura, B2B sipariş, fiyat, stok, sessiz bayi 754, hacim indirimi, kurum carisi 403 birebir); «teklif için kitap» doğrulanamadı, kalan adımlara gelinmedi.
+  - **M33 İhale:** kamu net ciro 17.209.779,45 ve 33 cari birebir, ISBN eşleşmesi, stok, fiyat, ara toplam ve KDV kuruşu kuruşuna; **1 kaldı:** adla verilen 4 kalemin 3'ü doğru kitaba. İlan içe alma kapalı (409).
+  - **M15 Pazarlama 10/11;** **kalan:** plan PDF'i 500 — `marketing/export.py:186 plan_pdf` `'str' object has no attribute 'get'`.
+  - **M1 Başvuru:** deneme başvurusu → rapor 120 sn → pazar (Tarih Kitaplığı) referansla **birebir**: 81 kitap, 71 satışlı, ilk yıl p25/p50/p75 602/850/1.291, son 36 ay 139.076 ve kanal dağılımı. Referans betiği (`m1/market_ref.py`) iki hatayla koşmuyor: çok komutlu sorguda `SET NOCOUNT ON` yok, tarih metin dönünce `.year` yok — geçici kopyayla koşturuldu, depo dosyası değişmedi.
+  - **M9 Fiyatlama: doğrulanamadı** — ilk veri hazırlığı (Logo 211 beş yıl) köprü her yeniden başladığında sıfırlanıyor; 05:40–06:37 arasında köprü başka oturumlarca 7 kez yeniden başlatıldı, `books`/`actuals` hep 503 «hazırlanıyor».
+  - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
+- **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
 ## 2026-09-28 (06:30) — Efekt sesleri kuruldu: GPU (dokuz editör servisi `68a1d411`) ve test sunucusu
 
 - **GPU:** `releases/68a1d411` (`._*` 0), `editor-py:0.15.9-68a1d411`, stüdyo `editor-py-studio:0.15.9-68a1d411`
