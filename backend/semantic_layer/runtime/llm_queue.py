@@ -513,12 +513,15 @@ class QueuedLlm:
     """Wraps any LLM client so every call goes through the queue. The wrapped client is unaware."""
 
     def __init__(self, llm: Any, queue: LlmQueue, *, purpose: str = "nl2sql", tenant_id: str = "default", datasource_id: str = "default",
-                 module: Optional[str] = None, priority: Optional[int] = None):
+                 module: Optional[str] = None, priority: Optional[int] = None, queue_label: Optional[str] = None):
         self.llm = llm
         self.queue = queue
         self.purpose = purpose
         self.module = module
         self.priority = priority
+        # Verilirse sıra kaydına (sl_llm_queue.question) mesaj yerine bu etiket yazılır: kişisel veri taşıyan
+        # modüller (İK) kayıtta metin bırakmaz.
+        self.queue_label = queue_label
         self.tenant_id = tenant_id
         self.datasource_id = datasource_id
         self.model = getattr(llm, "model", "")
@@ -537,11 +540,17 @@ class QueuedLlm:
     def last_ahead(self) -> int:
         return getattr(self._last, "ahead", 0)
 
-    def for_module(self, module: str, *, priority: Optional[int] = None, purpose: Optional[str] = None) -> "QueuedLlm":
+    def for_module(self, module: str, *, priority: Optional[int] = None, purpose: Optional[str] = None,
+                   queue_label: Optional[str] = None) -> "QueuedLlm":
         """The same model and the same line, asked on behalf of another part of the product."""
         prefix = {BATCH: "bg:", NORMAL: "std:"}.get(priority if priority is not None else INTERACTIVE, "")
         return QueuedLlm(self.llm, self.queue, purpose=purpose or f"{prefix}{clean_module(module)}", tenant_id=self.tenant_id,
-                         datasource_id=self.datasource_id, module=module, priority=priority)
+                         datasource_id=self.datasource_id, module=module, priority=priority, queue_label=queue_label)
+
+    def labelled(self, label: str) -> "QueuedLlm":
+        """Aynı sarmalayıcı; sıra kaydına mesajın ilk 500 karakteri yerine yalnız `label` yazılır."""
+        return QueuedLlm(self.llm, self.queue, purpose=self.purpose, tenant_id=self.tenant_id, datasource_id=self.datasource_id,
+                         module=self.module, priority=self.priority, queue_label=str(label)[:120])
 
     def chat(self, messages: list[dict[str, str]], **kwargs: Any) -> str:
         cancel = kwargs.get("cancel")
@@ -632,7 +641,8 @@ class QueuedLlm:
               on_admitted: Optional[Any]) -> Iterator[Ticket]:
         """One ticket: wait for the slot, remember what the wait was, tell the caller it is admitted."""
         with self.queue.lease(purpose=self.purpose, tenant_id=self.tenant_id, datasource_id=self.datasource_id,
-                              user_id=user_id, question=_first_user_message(messages),
+                              user_id=user_id,
+                              question=self.queue_label if self.queue_label is not None else _first_user_message(messages),
                               module=self.module, priority=self.priority, cancel=cancel) as ticket:
             self._last.wait_ms, self._last.ahead = ticket.waited_ms, ticket.ahead
             if on_admitted is not None:

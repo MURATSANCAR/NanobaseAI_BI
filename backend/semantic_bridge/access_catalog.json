@@ -37,6 +37,10 @@
     {
       "id": "altyapi",
       "label": "Altyapı ve destek"
+    },
+    {
+      "id": "ik",
+      "label": "İnsan Kaynakları"
     }
   ],
   "pages": [
@@ -568,6 +572,30 @@
       "key": "sayfa:musteri-veri-sagligi",
       "area": "satis",
       "label": "CRM veri sağlığı"
+    },
+    {
+      "key": "sayfa:ik-ise-alim",
+      "area": "ik",
+      "label": "İşe alım panosu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-pozisyonlar",
+      "area": "ik",
+      "label": "Pozisyonlar",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-belgeler",
+      "area": "ik",
+      "label": "İK belgeleri (şablonlar)",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-kayitlar",
+      "area": "ik",
+      "label": "Çalışan ve KVKK kayıtları",
+      "explicit": true
     }
   ],
   "features": [
@@ -1880,6 +1908,106 @@
       "page": "sayfa:kurumsal-iliskiler",
       "label": "Gizli notları okuma",
       "hint": "Başkalarının «yalnız ben ve katılımcılar» işaretli temas notlarının metnini görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.calisan-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "Çalışan ve birim kaydını düzenleme",
+      "hint": "CRM ∩ AD eşitlemesini onaylama, çalışan ve birim ekleme/düzeltme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.kvkk-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "KVKK yönetimi",
+      "hint": "Aydınlatma metni, açık rıza kaydı, saklama süreleri, imha önizlemesi ve talep üzerine aday verisini silme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.erisim-kaydi",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "İK erişim kaydını görme",
+      "hint": "Kim hangi aday/çalışan kaydını ne zaman gördü, indirdi ya da dışa aktardı",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.disa-aktar",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "İK verisini dışa aktarma",
+      "hint": "İlgili kişi başvurusu (KVKK md. 11) için adayın bütün kaydını dışa verme; genel dışa aktarma yetkisinden ayrı",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.pozisyon-ac",
+      "area": "ik",
+      "page": "sayfa:ik-pozisyonlar",
+      "label": "Pozisyon açma",
+      "hint": "Pozisyon kartı, yetkinlik listesi, ilan taslağı ve mülakat seti; onaya gönderme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.pozisyon-onay",
+      "area": "ik",
+      "page": "sayfa:ik-pozisyonlar",
+      "label": "Pozisyon onayı",
+      "hint": "Onaya gönderilen pozisyonu açma ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.aday-gor",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Adayları görme (kendi pozisyonları)",
+      "hint": "Yalnız işe alan yöneticisi ya da görüşmecisi olduğu pozisyonların adayları; özgeçmiş maskeli metin olarak",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.aday-hepsi",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Bütün adayları görme",
+      "hint": "Bütün pozisyonların adayları, özgün özgeçmiş dosyası, aday ekleme ve düzenleme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.aday-karar",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Aday aşama kararı",
+      "hint": "Adayı ön elemeye, mülakata, teklife alma ya da sonuçlandırma (kendi pozisyonlarında ya da bütün adaylarda)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.yazisma-gonder",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Adaya yazışma",
+      "hint": "Davet, teklif ve ret mektubu taslağı hazırlama ve gönderildiğini kaydetme (gönderimi insan yapar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.teklif-onay",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Teklif mektubu onayı",
+      "hint": "Teklif mektubunu adaya gönderilmeden önce onaylama (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.sablon",
+      "area": "ik",
+      "page": "sayfa:ik-belgeler",
+      "label": "İK şablonlarını düzenleme",
+      "hint": "İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları",
       "explicit": true
     }
   ]

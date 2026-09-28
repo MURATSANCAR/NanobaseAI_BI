@@ -582,6 +582,14 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/okur/events-summary", frozenset({page("okur-programlar"), page("okur-toplulugu")})),
     ("/api/v1/okur/reviews", frozenset({page("okur-yorumlar")})),
     ("/api/v1/okur/", _OKUR),
+    # İnsan kaynakları (İK-0 + M55; M56–M58 kendi sayfa anahtarını _HR'a ekler). Sayfalar açıkça verilir; işlem ve
+    # kişisel veri anahtarları (hepsi explicit) ucun içinde denetlenir. E-posta modülünün başvuru aktarımı SYSTEM.
+    ("/api/v1/hr/me", OPEN),
+    ("/api/v1/hr/purge/run-due", SYSTEM),
+    ("/api/v1/hr/recruit/intake", SYSTEM),
+    ("/api/v1/hr/recruit/reminders/run-due", SYSTEM),
+    ("/api/v1/hr/recruit/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler")})),
+    ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),

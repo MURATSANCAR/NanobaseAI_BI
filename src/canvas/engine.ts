@@ -834,8 +834,10 @@ export type AccessMe = {
 
 /** `explicit`: kişisel veri gösteren sayfa (güvenlik, İK); «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
 export type AccessPage = { key: string; area: string; label: string; explicit?: boolean };
+/** `explicit`: «Bütün sayfalar» ile gelmez (İK ekranları); `sensitive`: kişisel veri, yöneticiye de rolüyle verilir. */
+export type AccessPage = { key: string; area: string; label: string; explicit?: boolean; sensitive?: boolean };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
-export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };
+export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean; sensitive?: boolean };
 /** ZEKİ AI veri alanı (yetki Aşama C). `always`: herkese açık ortak başvuru, rolle kapatılmaz. */
 export type AccessDataDomain = { id: string; key: string; label: string; hint: string; always?: boolean };
 export type AccessCatalog = {

@@ -7243,6 +7243,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M24 Katalog ve bülten (Pazarlama › Kampanya). Uçlar /api/v1/catalog-newsletter/*.
     from semantic_bridge import catalogs_api
     app.state.catalogs = catalogs_api.register(app, rt, _require_caller, _can)
+    # İnsan kaynakları: İK-0 ortak temel (/api/v1/hr/*; app.state.hr M56–M58'in de bağlandığı bağlam) ve M55 işe alım.
+    from semantic_bridge import hr_api, hr_recruit_api
+    app.state.hr = hr_api.register(app, rt, _require_caller)
+    hr_recruit_api.register(app, app.state.hr)
     return app
 
 

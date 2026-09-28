@@ -268,6 +268,7 @@ function RoleEditor({
                       disabled={covered && !p.explicit}
                       onChange={(on) => toggle([p.key], on)}
                     >
+                    <TriCheck key={p.key} checked={p.explicit ? perms.has(p.key) : covered || perms.has(p.key)} disabled={covered && !p.explicit} onChange={(on) => toggle([p.key], on)}>
                       <span className="min-w-0 flex-1 break-words text-[12.5px] font-semibold">{p.label}</span>
                       {p.explicit && <Pill tone="warn">ayrıca verilir</Pill>}
                     </TriCheck>
