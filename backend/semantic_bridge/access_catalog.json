@@ -192,6 +192,11 @@
       "label": "İhale takibi"
     },
     {
+      "key": "sayfa:pazarlama-yeni-kitap",
+      "area": "pazarlama",
+      "label": "Yeni kitap planı"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -845,6 +850,44 @@
       "page": "sayfa:kurumsal-satis",
       "label": "Kitap teması onayı",
       "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
+    },
+    {
+      "key": "ozellik:pazarlama.plan-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama planı hazırlama",
+      "hint": "Plan taslağı, kanal ve bütçe satırı, takvim, Zeki AI önerisi ve materyal taslağı, onaya gönderme, revizyon"
+    },
+    {
+      "key": "ozellik:pazarlama.butce-gor",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama bütçesini görme",
+      "hint": "Plan ve karnedeki bütçe tutarları, hedef ciro ve CRM'deki proje bütçesi; yetkisi olmayan kişi planı tutarsız görür"
+    },
+    {
+      "key": "ozellik:pazarlama.plan-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama planı onayı",
+      "hint": "Onaya gönderilen planı onaylama ya da gerekçeyle geri gönderme, materyale pazarlama onayı (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.butce-ust-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama bütçesi üst onayı",
+      "hint": "Bütçesi Yönetim ayarındaki eşiği aşan planın ikinci onayı (genel müdür)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.materyal-editoryal-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Materyal editoryal onayı",
+      "hint": "Föy, basın bülteni, sosyal medya metni gibi materyallerin kitabın içeriğine uygunluğunu onaylama",
+      "explicit": true
     }
   ]
 }

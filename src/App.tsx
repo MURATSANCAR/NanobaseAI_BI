@@ -61,6 +61,8 @@ const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'))
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
 const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
+const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
+const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -147,6 +149,9 @@ export default function App() {
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
+            {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}
+            <Route path="pazarlama/yeni-kitap" element={<MarketingHome />} />
+            <Route path="pazarlama/plan/:id" element={<MarketingPlan />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

@@ -1,0 +1,23 @@
+"""Pazarlama çekirdeği ve modülleri (M15 yeni kitap planı; M16 lansman, M17 backlist, M18 aylık plan aynı çekirdeğe
+dosya ekleyerek gelir).
+
+- `core.py`    — tablolar (`semantic_mkt_*`), plan durum makinesi, satır/takvim/materyal, geçmiş, iş kuyruğu, sözleşme.
+- `sources.py` — CRM okuma (yalnız okuma); Logo rakamları M46 ve M10 önbelleğinden.
+- `plans.py`   — M15: plan bekleyen yeni kitaplar, karne, bütçe/kanal önerisi, takvim, Zeki AI metinleri, CRM listesi.
+- `guard.py`   — Zeki AI metin denetimi (alıntı birebir, rakam kaynaklı, kanıtsız iddia yok, teknoloji adı yok).
+- `export.py`  — PDF, CSV, yayına hazır paket.
+- `api.py`     — uçlar `/api/v1/marketing/*`.
+
+app.py'de iki satır:
+    from semantic_bridge import marketing
+    app.state.marketing = marketing.register(app, rt, _require_caller, _can)
+"""
+from __future__ import annotations
+
+from typing import Any, Callable
+
+
+def register(app, rt: Callable[[], Any], require_caller: Callable[..., None], can: Callable[[str, str], bool]) -> dict[str, Any]:
+    from semantic_bridge.marketing import api
+
+    return api.register(app, rt, require_caller, can)

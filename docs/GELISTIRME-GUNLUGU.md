@@ -68,6 +68,87 @@
 - **Açık kalan (ayrı iş):** aynı modülde başka tavanlar var — CRM bağlı sözleşmeler `TOP 200` (`related_sql`),
   kitap/taraf aramada `TOP 20`, `contracts_terms.py`'de taraf/kitap/kademe `[:50]/[:200]/[:20]`, hakediş dönemi 400.
   Bunlara bu işte dokunulmadı. Dal `main`e taşınmadı, kurulum yapılmadı.
+## 2026-09-28 — Pazarlama çekirdeği (`marketing/`, `semantic_mkt_*`) ve M15 Yeni kitap pazarlama planı
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-ac1505bd78bc75e7e`); yalnız `py_compile` ve JSON denetimi
+yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m15/run.sh`).
+main'e taşınmadı, kurulmadı.
+
+- **Neden:** M15 analizi (`docs/analiz/kullanici-ihtiyaclari/M15-yeni-kitap-pazarlama.md` §14) ve M16–M18'in ortak
+  çekirdeği. Plan parçaları CRM'de dağınık (proje bütçesi, kitap metinleri, pazarlama bütçe modülü), emsal satışı Logo'da,
+  hedef M46'da; plan–hedef–emsal tek ekranda yoktu.
+- **Çekirdek** `backend/semantic_bridge/marketing/` (SEO'daki `seo_geo/` paketi gibi): `core.py` (tablolar
+  `semantic_mkt_plans|plan_lines|tasks|materials|book_cards|events|jobs|meta`, plan kimliği `MP-<yıl>-<sıra>`, durum
+  makinesi taslak → onayda → onaylı | geri, revizyon = yeni sürüm + onayda eskisi arşiv, geçmiş, iş kuyruğu, sözleşme),
+  `sources.py` (CRM okuma), `plans.py` (M15), `guard.py` (Zeki AI metin denetimi), `export.py` (PDF/CSV/paket), `api.py`
+  (uçlar `/api/v1/marketing/*`). `app.py`'de iki satır. `kind` yeni|backlist|aylik, `donem` M18 için; `tasks.launch_id`
+  M16 için şimdiden kolon. M17'nin istediği `semantic_mkt_plan_books` M17 ile gelecek (bu turda kullanan yok).
+- **Uçlar:** `meta`, `new-books` (tavansız, sayfalı; «bana düşenler» = CRM pazarlama sorumlusu ya da plan sahibi ya da
+  onayımı bekleyen), `books/{stok}/card` (önbellek + `?yenile=1`), `plans` (POST/GET/PATCH/DELETE), `lines`, `tasks`,
+  `suggest` (kanal/bütçe hemen; gerekçe, emsal kontrolü, materyal taslağı arka planda — `jobs`), `materials`,
+  `materials/{id}/approve` (editoryal → pazarlama), `submit|withdraw|approve|upper-approve|reject|revise`, `events`,
+  `export.pdf|export.csv|package.zip|crm-todo|crm-todo.csv`, sözleşme `contract/plans` (yalnız onaylı plan ve onaylı
+  materyal), `run-due` (SYSTEM).
+- **Rakamı model üretmez.** Emsal ilk 3/6/12 ay: M10 İlk baskı tahmininin bellekteki veri kümesi (CRM emsal bağı + M10'un
+  benzerlik puanıyla seçtiği emsaller; yeniden yazılmadı, `app.state.management_reports.first_print` okunur). Yazarın
+  yıllık satışı: M46'nın Logo önbelleği (`semantic_budget_sales_actuals`, faturalı satır, LINENET). Hedef: köprü içi
+  `budget.approved_targets`. Bu modül Logo'ya hiç gitmez.
+- **Zeki AI** yalnız LLM kapısından: `rt.llm_for("marketing", NORMAL)`. Kanal gerekçesi, hedef okur/konumlama, materyal
+  taslakları (föy, basın bülteni, 3 platform sosyal, e-bülten konu satırı, video senaryosu; istenirse arka kapak, kapak ve
+  influencer brief'i). CRM'de emsal girilmemişse M10'un her adayı için `choose` (evet/hayır/belirsiz + olasılık; eşik
+  p ≥ 0,70 ve marj ≥ 0,30 — llm-choose belgesinin «öneri» eşiği, ayarla değişir). `guard.py` cümle cümle düşürür: kaynakta
+  birebir olmayan alıntı, kaynakta/olgu listesinde olmayan sayı, kanıtsız üstünlük iddiası («en çok satan», «rekor»…,
+  ek liste ayarda), teknoloji adı. Düşen cümle ve nedeni materyalde görünür.
+- **Dış gönderim yok** (kullanıcı kararı): onaylı materyaller «yayına hazır paket» (zip) olur; takvimdeki gönderim/yayın
+  işini ekip yapar, sistem yalnız kaydeder. **CRM'e yazma yok:** «CRM'e işlenecek» listesi (kitap kartı alanı farkı,
+  pazarlama bütçe modülüne girilecek satırlar, proje toplam bütçe farkı; kopyala / CSV).
+- **Kararlar (uzmana sorulacak sorular yerine veriye/koda bakılarak; gerekçeli):**
+  - *Yayın günü:* kitap kartı ilk baskı tarihi → proje yayın tarihi → ilk baskının üretim kartı (depo girişi, yoksa
+    dağılım planı). M46 hedefi, M10 tahmini ve Baskı Öneri kitap kartı ilk yayınını okuyor; plan hedefle aynı günü görsün
+    diye önce o. Sıra `MARKETING_PUBLISH_DATE_ORDER` ile değişir; üç tarih karnede kaynağıyla görünür, plan sahibi elle
+    girebilir (kaynak «elle», şablon işleri kayar). M12 `print-exit` yerine CRM üretim kartı doğrudan okundu: M12 servisi
+    her okumada Logo üretim emirlerini de çeker, liste yüzlerce kitap için ağır.
+  - *Kitap bazlı pazarlama bütçesi çerçevesi* (M46'da yok): (1) plan sahibinin elle girdiği; yoksa (2) CRM proje kartı
+    «Toplam pazarlama bütçesi» (önce kurul sonucu alanı — kurulda insanın verdiği karar, çift giriş istemiyoruz); yoksa
+    (3) oran × kitabın M46 hedef cirosu. **Oranın varsayılanı veriden:** son tam yılda adında «Pazarlama» geçen Logo
+    masraf merkezlerinin gideri ÷ aynı yılın şirket net cirosu (M46 gider ve satış önbelleği). Statik yüzde koymadık
+    (no-static-solutions); sabit oran isteyen `MARKETING_BUDGET_RATE` (%) girer. Risk: merkezin 7'li giderlerinde personel
+    de var, oran yüksek çıkabilir → `MARKETING_BUDGET_ACCOUNTS` (ör. 760) ve `MARKETING_DEPT_CENTERS` ile daraltılır;
+    gerçek oran **ölçülecek**. Hiçbiri yoksa çerçeve boş, ekranda «çerçeve yok» (sayı uydurulmaz).
+  - *Kanal payı:* emsal kitapların CRM «Pazarlama Bütçe Modülü» harcamasının tip dağılımı (seçenek 1 Basın … 6 Satış
+    Kampanyası, tablo sözlüğü); emsalde kayıt yoksa son 3 yıl şirket geneli (`MARKETING_CHANNEL_LOOKBACK_YEARS`); o da
+    yoksa kanal önerilmez. 2026'da modülün hâlâ doldurulup doldurulmadığı **ölçülecek** (435 kayıt, 2026-09-09 dökümü).
+  - *Üst onay eşiği:* `MARKETING_UPPER_APPROVAL_THRESHOLD` boşsa ikinci onay yok (analiz: sayı uydurulmaz). Doluysa
+    pazarlama onayı + üst onay, iki ayrı kişi, ikisi de gönderen değil.
+  - *Zorunlu materyal:* föy, basın bülteni, sosyal medya metni (CRM kitap kartındaki üç pazarlama alanı ve analizdeki iş
+    günü örneği); `MARKETING_REQUIRED_MATERIALS` ile değişir. Hatırlatma 60/30/14 gün (plan), 21 gün (materyal), liste
+    penceresi 120 gün, «planı yok» kartı 60 gün — analizin sayıları, hepsi Yönetim → «Pazarlama planları»nda.
+  - *Takvim:* yayın gününden geri sayan 12 işlik şablon (D−60 … D+30) + kitaba bağlı özel günler (SEO sezon takviminin
+    tarih yöntemi). `MARKETING_TASK_TEMPLATE` (JSON) ile değişir.
+- **Yetki:** sayfa `sayfa:pazarlama-yeni-kitap`; `ozellik:pazarlama.plan-yaz`, `pazarlama.butce-gor` (tutarsız görünüm:
+  satış/grafik), açıkça verilen `pazarlama.plan-onay`, `pazarlama.butce-ust-onay`, `pazarlama.materyal-editoryal-onay`.
+  M46 `targets`/`deviations` satırlarına bu sayfa eklendi. Dışa aktarım `veri.disa-aktar`.
+- **Ekran:** menü Pazarlama › yeni bölüm «Planlama» › «Yeni kitap planı» (`/pazarlama/yeni-kitap`, plan
+  `/pazarlama/plan/:id` `also` ile), alan ipucu «Plan, içerik, SEO & GEO»; Kampüs `LIVE.M15`, `GROUP_HOME.Pazarlama`.
+  `src/canvas/marketing/` (liste telefonda kart, masaüstünde tablo; plan sekmeleri Karne · Kanal ve bütçe · Takvim ·
+  Materyaller · Onay ve geçmiş; sağda Zeki AI önerisi ve «Zeki AI'a sor» örnekleri). Düğmeler telefonda 44 px; yeni
+  animasyon eklenmedi (mevcut 150 ms renk/basma geçişleri).
+- **Zamanlayıcı:** `scripts/server/timas-marketing.{service,timer}` her gün 07:30 `run-due`: tek özet e-posta
+  (`MARKETING_ALERT_RECIPIENTS`; SMTP/alıcı yoksa ekranda «gönderilemedi»), onaylı olmayan planların karnesi tazelenir.
+  İlk kurulumda elle bir kez koşturulmalı.
+- **Testler:** `backend/semantic_layer/tests/test_marketing.py` (durum makinesi, iki göz, eşik, revizyon, elle düzeltmenin
+  korunması, materyal onay sırası, denetim kuralları, yayın günü sırası, hedef değişimi, çerçeve/kanal kuralları, liste
+  süzgeçleri, CRM listesi, dışa aktarım, yetki, köprü uçları), `navModel.test.ts` (+2 satır). **Koşulmadı.**
+- **Kabul (sunucuda):** `scripts/acceptance/m15/` — `run.sh` (pytest + kabul + temizlik), `accept.py` (7 denetim,
+  5'i doğrudan SQL referanslı: liste kapsamı CRM, yazar yılı Logo STLINE, emsal kümesi CRM + ilk 12 ay STLINE, hedef
+  `semantic_budget_approved_targets`, CRM proje/kitap alanları; `--write` ile toplam = DB = CSV ve gönderen onaylayamaz),
+  `cleanup.py` (kabulün plan/karne/değişiklik kaydı satırları). `--write` bildirim alıcısı tanımlıyken e-posta atmasın
+  diye durur.
+- **Açık kalanlar:** stüdyo işi olan kitapta alıntının kitabın tam metninde doğrulanması (analiz kabul 8; bu sürümde
+  kaynak CRM metinleri); plan ↔ gerçekleşen harcama (sonraki sürüm); M20/M23 bağları; iş kuyruğu köprü içi iş parçacığı
+  (tek süreç varsayımı; yeniden başlayınca yarım işler «hata» olur); plan onay/geri bildirimi sahibin CRM
+  e-postasına (bulunamazsa ayar listesine) gider.
+
 ## 2026-09-28 — M33 Okul, kütüphane ve kamu ihale takibi (ilk sürüm) — DOĞRULANAMADI, sunucu kapalı
 
 - **Neden:** yol haritası «Satış ve saha» bloku. Kamu kurumlarının kitap alımları (ihale, doğrudan temin, yayın alımı)

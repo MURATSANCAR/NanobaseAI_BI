@@ -35,6 +35,7 @@ export const LIVE: Record<string, string> = {
   M12: '/uretim',
   M13: '/kitap-tasarim',
   M14: '/kitap-tasarim',
+  M15: '/pazarlama/yeni-kitap',
   M25: '/seo-geo',
   M26: '/seo-geo/ai-gorunurluk',
   M29: '/ilk-dagilim',
@@ -52,6 +53,8 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
   'SEO & GEO': { to: '/seo-geo', hint: 'Ürün denetimi, arama ve yapay zekâ görünürlüğü' },
+  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
+  Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */

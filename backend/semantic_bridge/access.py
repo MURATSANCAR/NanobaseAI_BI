@@ -462,8 +462,8 @@ RULES: list[tuple[str, Any]] = [
     # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
-    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
-    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
+    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
@@ -477,6 +477,10 @@ RULES: list[tuple[str, Any]] = [
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
+    # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
+    ("/api/v1/marketing/run-due", SYSTEM),
+    ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
+    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -567,6 +571,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/tenders/[^/]+/pricing\.xlsx$", "ozellik:veri.disa-aktar"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
+    # Pazarlama planı: taslak, düzenleme, Zeki AI önerisi, materyal taslağı, onaya gönderme, revizyon. Plan onayı, üst
+    # bütçe onayı ve materyalin editoryal onayı açıkça verilen yetkilerle ucun içinde denetlenir; bu kural onlara uymaz.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/(plans(/[^/]+(/(lines|tasks|suggest|materials|submit|withdraw|revise))?)?|materials/[^/]+)$",
+     "ozellik:pazarlama.plan-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/plans/[^/]+/(export\.(pdf|csv)|package\.zip|crm-todo\.csv)$",
+     "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

@@ -6734,6 +6734,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("kurumsal", priority),
     })
+
+    # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
+    from semantic_bridge import marketing
+    app.state.marketing = marketing.register(app, rt, _require_caller, _can)
     return app
 
 
