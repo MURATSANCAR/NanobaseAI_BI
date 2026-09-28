@@ -20,6 +20,30 @@
 - Testler: editör tam set 598 geçti (GPU, stüdyo imajı). main `ae0277a2`; GPU'da dokuz servis `0.15.9-ae0277a2`.
 - **Gerçek insan sesi:** kayıt rehberi + okuma metni `docs/analiz/izinli-ses-kayit-rehberi.md` (izin belgesi, kayıt
   koşulları, ilk 12 sn'nin tarzı belirlediği).
+## 2026-09-28 (08:10) — Ölçümde düşen üç ekran: /saha 109 MB liste, /uretim 43 sn soğuk okuma, kapak görselleri 429
+
+- **Ölçüm:** 72 menü ekranının Playwright taraması (06:44–06:48) üç ekranda istek düşürdü. Test sunucusunda gerçek `timasai`
+  kısa oturumuyla portal üzerinden yeniden üretildi; nginx erişim günlüğü ve köprü günlüğü okundu.
+- **/saha — `field/today`:** hata değil boyut. Yönetici (herkesinki) kapsamında portföy bütün Logo carisi (248.351); uç hepsini
+  sıralayıp tek JSON'da gönderiyordu: 200, **109,5 MB, 22,7 sn** (ölçüm ~29 sn'de vazgeçti → nginx 499). Süre: DB okuma 5,4 ·
+  puan 5,2 · kart 3,2 · JSON kodlama 17 sn. Ekran zaten 40'ar gösterip tarayıcıda arıyordu. Düzeltme: sıralama kapsam başına
+  bellekte (anahtar: gece turu `_at`, gün, ziyaret/söz/öncelik/red girdilerinin özeti — biri değişirse yeniden hesaplanır,
+  kapsam başına ayrı kilit); `q`/`offset`/`limit` ile arama ve sayfa sunucuda, `total` hepsini sayar, «daha göster» sonrakini
+  getirir (tavan yok). KPI yine bütün portföyden. Önbellek tüm kapsam için ~280 MB.
+- **/uretim — `production/meta|cards|overview`:** üçü de 200 ama **43–45 sn** (meta 1,7 KB). CRM+Logo anlık görüntüsü
+  (CRM 10 sn, Logo 33 sn) 5 dk bellekte tutuluyordu; boşken üç uç aynı kilitte bekliyor, köprü 06:33–07:27 arasında başka
+  oturumlarca 8 kez yeniden başlatıldığı için önbellek sürekli boşalıyordu. Düzeltme: son okuma diskte
+  (`PRODUCTION_CACHE_DIR`, vars. `/data/nanobaseai/bi/var/production/snapshot.pkl`; VM'de `bi_var` biriminde), istek onu
+  hemen alır, 5 dk'dan eskiyse yenisi arka planda tek iş parçacığıyla okunur; kayıt okuma sorgularının özetiyle (`SHAPE`)
+  ve geçmiş penceresiyle eşleşmezse okunmaz. `meta` matbaa listesi için hiç beklemez. Yalnız ilk kurulumda ve «Verileri
+  yenile»de istek kaynağı bekler (ön yüz 180 sn tanıyor).
+- **Kapak arşivi görselleri:** tek açılışta 40 görsel **429** (genel `/timas/api/` sınırı 120/dk, 30 anlık; sayfa 60 kapak
+  istiyor), kalan 19'u ölçüm sayfadan çıkınca 499. Köprü tarafı sağlam (hepsi 200). Düzeltme: `deploy/nanobase-direct/
+  add-cover-image-limit.py` kapak görsel ucunu stüdyo görsel bölgesine (`timas_studio_img`, 600/dk, 120 anlık) alır; VM
+  şablonu `infra/docker/bi/web.default.conf.template` aynı blokla.
+- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
+  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
+  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
@@ -148,7 +172,11 @@
 - **TMX/TBX** (`editorial_translation_io.py`, `MemoryBank.tsx`, «Çeviri belleği» sekmesi): TMX 1.4b içe/dışa (bölgesel dil kodu temel koda iner, çift yazılmaz, `semantic_translation_tm`), çeviri belleği araması dış belleği «Dış bellek: <dosya>» etiketiyle gösterir; TBX v2/v3 içe/dışa (tercih edilen + kabul edilenler «|», kullanımdan kalkan → yasak). Güvenlik kararı: iç tanımlı DOCTYPE ve her ENTITY reddedilir; iç tanımsız `<!DOCTYPE tmx SYSTEM "tmx14.dtd">` satırı okunmadan atılır (dış DTD açılmaz; tam red OmegaT dosyalarını kullanılamaz yapardı).
 - **ZEKİ kalite tahmini** (`editorial_translation_qe.py`, `qe.tsx`): çevrilmiş segmente 0–100 puan, 85 altıysa kategori + çeviriden birebir alıntılı gerekçe (alıntı çeviride yoksa gerekçe atılır, puan kalır); kaynak+hedef değişince puan «eski». Satırda rozet, «ZEKİ şüpheli» süzgeci, kalite raporunda dağılım; her yerde «Tahmin · MQM değil». Başlatma: inceleyen, işi açan ya da `ceviri.yonet`.
 - **Sunucuda bulunan ve düzeltilen:** TMX/TBX uçlarında `Request` fonksiyon içinde içe aktarılıyordu (`from __future__ import annotations` → `request` sorgu parametresi sanıldı, 6 uç); çevirmen önerisinde ekran etiketi sözlük anahtarı olarak kullanılıyordu (`KeyError`).
-- **Doğrulama (test sunucusu, `/tmp/claude-m4` sahnesi, tek bağlantı):** arka uç 58/58 (çeviri, böl/birleştir, öneri, hakediş, TMX/TBX, kalite tahmini, yetki), `tsc` temiz, vitest 77/77, `vite build` temiz. Gerçek veritabanı ve gerçek modelle ekran kabulü `main`'e girip kurulunca yapılacak.
+- **Doğrulama (test sunucusu, `/tmp/claude-m4` sahnesi, tek bağlantı):** arka uç 58/58 (çeviri, böl/birleştir, öneri, hakediş, TMX/TBX, kalite tahmini, yetki), `tsc` temiz, vitest 77/77, `vite build` temiz. Gerçek veritabanı ve gerçek modelle ekran kabulü aşağıda.
+- **Kurulum (test sunucusu, main `e29b5e3e`):** 21 dosya md5 denetimiyle; ortak 4 dosya (`app.py`, `access.py`, `access_catalog.json`, `engine.ts`) sunucuda son 60 main commit'inin hiçbiriyle eşleşmiyordu (main'e girmemiş başka iş kurulu) → üstüne yazılmadı, M4 farkı üç yollu birleştirmeyle eklendi (çakışma 0). Köprüyü ben yeniden başlatmadım: M2'den pencere alındı ama başka bir oturum 07:40 ve 07:46'da zaten yeniden başlattı, M4 kodu o sırada yüklendi (yeni uçlar 401, olmayan 404). Ön yüz canlı ağaçtan derlendi (`index-DiH9weOx.js`).
+- **Kabul (kullanıcının açtığı AD oturumu `timasai`, gerçek PostgreSQL, gerçek model):** böl/birleştir — bölünmüş diyalog birleşti ve doğru yerden yeniden bölündü, numaralar bitişik (17→15→16), başlık ve paragraf sınırında gerekçeli red. Çevirmen önerisi 200, tek aday (M8'de «Çeviri» rolünde kimse yok), 5 sinyal + sıralama cümlesi. TMX: `en-US`/`tr-TR` → `en`/`tr`, ikinci yükleme 2 çift, iç DOCTYPE/ENTITY 400, çeviri belleği «Dış bellek: m4-kabul.tmx» %100; TBX: tercih edilen karşılık + kullanımdan kalkan → yasak; iki dışa aktarım 200. ZEKİ kalite tahmini 6 segment 3 sn: bilerek alakasız yazılan çeviri 0 / anlam / kritik; ayrıca kabul sırasında numara kayması yüzünden yanlış cümleye düşen 3 çeviriyi de 0 ile yakaladı; doğru 2 çeviri 85–100; alıntılar çeviride birebir. Çeviri masasında «ZEKİ 0» rozeti, böl/birleştir düğmeleri, 390–511 px'te taşma yok. Hakediş: okuma ucu 200, panel çiziliyor.
+- **DOĞRULANAMADI:** hakedişin yazma akışı (iş paketi açma, hakedişe aktarma) gerçek veritabanında denenmedi — M8'de kişi/paket silme ucu yok, test kişisi ve paketi kalıcı kalırdı (test verisi bırakılmaz kuralı); mantık birim testlerinde.
+- **Temizlik:** iş, TBX terimi ve TMX kayıtları uygulamanın uçlarıyla silindi; doğrudan DB'de iş, segment, hata, olay, kalite tahmini, bağ, aktarım, dış bellek ve terim 0 (yan tabloları iş silme temizledi). Sunucudaki `/tmp/claude-m4*` klasörleri silindi. `timasai`'nin değişiklik kaydı satırları kural gereği kaldı.
 
 ## 2026-09-28 — M4 ZEKİ taslak kalitesi: ölçüm, üç geçişli hat, ikinci okuma kapalı
 

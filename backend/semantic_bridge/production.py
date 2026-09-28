@@ -20,16 +20,22 @@ kalıyor (2025-06 sonrası 2.393 tekrar kartının 33'ünde depo, 100'ünde bask
 eski). Kart açılışından 30 günden eski «gerçekleşen» tarih önceki baskınındır, bu karta sayılmaz.
 
 CRM ve Logo yalnız okunur, köprünün kendi salt okunur bağlantılarıyla (yönetim raporları ve SEO/GEO'daki gibi).
-Okuma 5 dakika bellekte tutulur; «Verileri yenile» (X-Data-Refresh) kaynağı yeniden okur.
+Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`) ve istek onu
+hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
+değişti) ya da «Verileri yenile»de (X-Data-Refresh) kaynağı bekler.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
+import pickle
 import re
 import statistics
 import threading
 import time
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo
 
@@ -252,27 +258,107 @@ def _close(conn: Any) -> None:
         pass
 
 
+def _cache_dir() -> Path:
+    return Path(os.environ.get("PRODUCTION_CACHE_DIR", "/data/nanobaseai/bi/var/production"))
+
+
+#: Diskteki okumanın biçimi okuma sorgularına bağlıdır: sorgu değişince eski kayıt okunmaz.
+SHAPE = hashlib.sha256("|".join((
+    crm_cards_sql("s", date(2000, 1, 1)), crm_options_sql("s"), logo_periods_sql(date(2000, 1, 1)),
+    logo_orders_sql("001", date(2000, 1, 1)), logo_receipts_sql("001", "01", date(2000, 1, 1)),
+    logo_costs_sql("001", "01", date(2000, 1, 1)))).encode()).hexdigest()[:16]
+
+
 class Source:
     """CRM + Logo okuması. Bağlantılar okuma başına açılıp kapanır (pyodbc bağlantısı iş parçacıkları arasında
-    paylaşılamaz); aynı anda tek okuma yapılır, sonuç 5 dakika bellekte kalır."""
+    paylaşılamaz); aynı anda tek okuma yapılır. Son okuma bellekte ve diskte kalır, istek onu beklemeden alır; 5 dakikadan
+    eskiyse yenisi arka planda okunur."""
 
     def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any], schema: Callable[[], str],
-                 history_from: Callable[[], date]):
+                 history_from: Callable[[], date], cache_dir: Callable[[], Path] = _cache_dir):
         self._crm = crm_connect
         self._logo = logo_connect
         self._schema = schema
         self._history_from = history_from
-        self._lock = threading.Lock()
+        self._cache_dir = cache_dir
+        self._lock = threading.Lock()        # _snap/_at
+        self._reading = threading.Lock()     # aynı anda tek okuma
         self._snap: Optional[dict[str, Any]] = None
         self._at = 0.0
+        self._disk_tried = False
+
+    def _file(self) -> Path:
+        return self._cache_dir() / "snapshot.pkl"
+
+    def _current(self) -> Optional[dict[str, Any]]:
+        """Bellekteki ya da (köprü yeni kalktıysa) diskteki son okuma; geçmiş penceresi değiştiyse yok sayılır."""
+        with self._lock:
+            if self._snap is None and not self._disk_tried:
+                self._disk_tried = True
+                try:
+                    with self._file().open("rb") as f:
+                        saved = pickle.load(f)
+                    if saved.get("shape") == SHAPE:
+                        self._snap, self._at = saved["snap"], float(saved["at"])
+                except FileNotFoundError:
+                    pass
+                except Exception as e:  # noqa: BLE001 — bozuk kayıt: kaynaktan okunur
+                    log.warning("production: diskteki okuma açılamadı: %s", e)
+            snap = self._snap
+        if snap is not None and snap.get("since") != self._history_from().isoformat():
+            return None
+        return snap
+
+    def _save(self, snap: dict[str, Any], at: float) -> None:
+        path = self._file()
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tmp.open("wb") as f:
+                pickle.dump({"shape": SHAPE, "at": at, "snap": snap}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, path)
+        except OSError as e:
+            log.warning("production: okuma diske yazılamadı (%s): %s", path, e)
+            tmp.unlink(missing_ok=True)
+
+    def _refresh(self, asked: float) -> dict[str, Any]:
+        """Kaynağı okur; bu istekten sonra başlamış bir okuma bittiyse onu kullanır."""
+        with self._reading:
+            with self._lock:
+                if self._snap is not None and self._at >= asked:
+                    return self._snap
+            snap = self.read()
+            at = time.time()
+            with self._lock:
+                self._snap, self._at = snap, at
+            self._save(snap, at)
+            return snap
+
+    def _refresh_later(self) -> None:
+        if self._reading.locked():
+            return
+
+        def run() -> None:
+            try:
+                self._refresh(time.time())
+            except Exception as e:  # noqa: BLE001 — eski okuma gösterilmeye devam eder
+                log.warning("production: arka plan okuması başarısız: %s", e)
+
+        threading.Thread(target=run, name="production-refresh", daemon=True).start()
+
+    def peek(self) -> Optional[dict[str, Any]]:
+        """Beklemeden: son okuma ya da None (okuma arka planda başlar)."""
+        snap = self._current()
+        if snap is None or time.time() - self._at >= TTL:
+            self._refresh_later()
+        return snap
 
     def snapshot(self, fresh: bool = False) -> dict[str, Any]:
-        with self._lock:
-            if not fresh and self._snap is not None and time.time() - self._at < TTL:
-                return self._snap
-            snap = self.read()
-            self._snap, self._at = snap, time.time()
-            return snap
+        if not fresh:
+            snap = self.peek()
+            if snap is not None:
+                return snap
+        return self._refresh(time.time())
 
     def read(self) -> dict[str, Any]:
         since = self._history_from()
@@ -892,11 +978,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, display = ctx(request)
         admin = is_admin(user)
         printers: list[str] = []
-        try:
-            snap = source.snapshot(False)
+        snap = source.peek()   # matbaa adları: okuma yoksa beklenmez, liste sonraki açılışta dolar
+        if snap is not None:
             printers = sorted(set(snap["options"].get("new_matbaa", {}).values()), key=_fold)
-        except Exception as e:  # noqa: BLE001
-            log.info("production meta: matbaa listesi okunamadı: %s", e)
         return {"milestones": [{"key": k, "label": v} for k, v in MILESTONES],
                 "stages": [{"key": k, "label": v} for k, v in STAGES.items()],
                 "kinds": [{"key": k, "label": v} for k, v in store.KINDS.items()],

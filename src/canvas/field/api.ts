@@ -114,7 +114,10 @@ export type Today = {
   warning: string | null;
   kpi: { vadesiGecmis: number; k90: number; onayBekleyen: number; onayBekleyenTutar: number; hedefOrani: number | null; cari: number };
   planned: Array<Visit & { musteri: Customer | null }>;
+  /** Sıralı listenin istenen sayfası; `total` aramaya uyan müşterilerin hepsi. */
   items: Customer[];
+  total: number;
+  offset: number;
   events: FieldEvent[];
 };
 
@@ -257,7 +260,7 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
 
 export const fieldApi = {
   meta: () => send<FieldMeta>('GET', `${P}/meta`, undefined, 60_000),
-  today: (temsilci?: string) => send<Today>('GET', `${P}/today${qs({ temsilci })}`, undefined, 120_000),
+  today: (p: { temsilci?: string; q?: string; limit?: number }) => send<Today>('GET', `${P}/today${qs(p)}`, undefined, 120_000),
   portfolio: (p: { temsilci?: string; q?: string }) => send<{ items: Customer[]; count: number }>('GET', `${P}/portfolio${qs(p)}`),
   brief: (code: string) => send<Brief>('GET', `${P}/customers/${enc(code)}/brief`, undefined, 180_000),
   summary: (code: string) => send<{ metin: string; kaynak: 'zeki' | 'kural'; not: string | null }>('POST', `${P}/customers/${enc(code)}/brief/summary`, {}, 180_000),

@@ -11,6 +11,7 @@ giden hiçbir şey otomatik gönderilmez (takip e-postası taslaktır, temsilci 
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -603,41 +604,87 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     # -------------------------------------------------------------- liste ekranları
 
+    # «Bugün» sıralaması. Yönetici kapsamında portföy bütün Logo carisidir (2026-09-28: 248.351); okuma + puan ≈ 11 sn,
+    # bütün liste JSON'da 109 MB ve ≈ 20 sn tutuyordu. Sıralama gece turu, gün ve ziyaret/söz/öncelik/red girdileri
+    # değişmedikçe aynıdır: kapsam başına son sıralama bellekte kalır, ekran arar ve sayfa sayfa alır.
+    today_cache: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
+    today_locks: dict[tuple[str, Optional[str]], threading.Lock] = {}
+    today_guard = threading.Lock()
+
+    def today_ranked(engine: Any, tenant: str, owner: Optional[str], cols: list[dict[str, Any]],
+                     st: dict[str, Any], now: date) -> dict[str, Any]:
+        run_at = F.meta_get(engine, tenant, "run").get("_at")
+        with today_guard:
+            lock = today_locks.setdefault((tenant, owner), threading.Lock())
+        with lock:
+            hit = today_cache.get((tenant, owner))
+            if hit and (hit["run"], hit["day"]) == (run_at, now):
+                pay_after = hit["payAfter"]
+            else:
+                hit, pay_after = None, None
+            rejected = F.rejected_by_account(cols, now)
+            boosts = F.overrides(engine, tenant, now)
+            last_visits = F.last_visit_days(engine, tenant)
+            rows = None
+            if pay_after is None:
+                rows = F.portfolio_rows(engine, tenant, owner)
+                pay_after = {r["logo_code"]: r.get("son_odeme_tarihi") for r in rows}
+            promises = F.broken_promises(engine, tenant, pay_after, now)
+            inputs = json.dumps([promises, rejected, boosts, last_visits, st["visitCycleDays"]], sort_keys=True, default=str)
+            if hit and hit["inputs"] == inputs:
+                return hit
+            if rows is None:
+                rows = F.portfolio_rows(engine, tenant, owner)
+            cards = [F.customer_card(r) for r in F.ranked(rows, promises=promises, rejected=rejected, boosts=boosts,
+                                                           last_visits=last_visits, cycle=st["visitCycleDays"], now=now)]
+            exp = sum(num(r.get("hedef_beklenen")) for r in rows if r.get("hedef_beklenen"))
+            ytd_t = sum(num(r.get("ytd_net_ciro")) for r in rows if r.get("hedef_beklenen"))
+            entry = {
+                "run": run_at, "day": now, "inputs": inputs, "payAfter": pay_after, "cards": cards,
+                "keys": [F.fold(f"{c.get('unvan') or ''} {c['code']} {c.get('il') or ''}") for c in cards],
+                "at": {c["code"]: i for i, c in enumerate(cards)},
+                "kpi": {"vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
+                        "k90": round(sum(num(r.get("k_90p")) for r in rows), 2),
+                        "hedefOrani": round(ytd_t / exp, 4) if exp > 0 else None, "cari": len(rows)},
+            }
+            today_cache[(tenant, owner)] = entry
+            return entry
+
     @app.get(f"{P}/today")
-    def field_today(request: Request, temsilci: str = "") -> dict[str, Any]:
+    def field_today(request: Request, temsilci: str = "", q: str = "", offset: int = 0, limit: int = 40) -> dict[str, Any]:
+        """Öncelik listesi sayfa sayfa: `items` sıralı listenin `offset`'ten `limit` kadarı, `total` aramaya uyan hepsi.
+        KPI'lar bütün portföyden."""
         engine, tenant, user, _ = ctx(request)
         owner = owner_of(user, temsilci)
         st = settings()
         now = F.today()
-        rows = F.portfolio_rows(engine, tenant, owner)
         try:
             cols = svc.source.collections(st)
             warn = None
         except Exception as e:  # noqa: BLE001
             log.warning("field: bugün listesinde CRM okunamadı: %s", e)
             cols, warn = [], "CRM'e ulaşılamadı; reddedilen tahsilat sinyali bu listede yok."
-        promises = F.broken_promises(engine, tenant, {r["logo_code"]: r.get("son_odeme_tarihi") for r in rows}, now)
-        ranked = F.ranked(rows, promises=promises, rejected=F.rejected_by_account(cols, now),
-                          boosts=F.overrides(engine, tenant, now), last_visits=F.last_visit_days(engine, tenant),
-                          cycle=st["visitCycleDays"], now=now)
+        rank = today_ranked(engine, tenant, owner, cols, st, now)
+        cards = rank["cards"]
+        needle = F.fold(q.strip())
+        if needle:
+            cards = [c for c, k in zip(cards, rank["keys"]) if needle in k]
+        offset, limit = max(0, offset), max(1, limit)
         planned = [v for v in F.list_visits(engine, tenant, user, tur="cari", owner=owner, day_=now.isoformat(), admin=is_admin(user))
                    if v["durum"] != "iptal"]
-        by = {r["logo_code"]: r for r in ranked}
         pending = [t for t in cols if int(num(t.get("durum"))) == src.T_PENDING]
         if owner is not None:
             ids = {k for k, v in svc.users_map().items() if v["hesap"] == owner} if cols else set()
             pending = [t for t in pending if guid(t.get("owner_id")) in ids]
-        exp = sum(num(r.get("hedef_beklenen")) for r in rows if r.get("hedef_beklenen"))
-        ytd_t = sum(num(r.get("ytd_net_ciro")) for r in rows if r.get("hedef_beklenen"))
         run = F.meta_get(engine, tenant, "run")
+        at = rank["at"]
         return {
             "asof": run.get("asof"), "dataEnd": run.get("dataEnd"), "warning": warn,
-            "kpi": {"vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
-                    "k90": round(sum(num(r.get("k_90p")) for r in rows), 2),
-                    "onayBekleyen": len(pending), "onayBekleyenTutar": round(sum(num(t.get("tutar")) for t in pending), 2),
-                    "hedefOrani": round(ytd_t / exp, 4) if exp > 0 else None, "cari": len(rows)},
-            "planned": [{**v, "musteri": F.customer_card(by[v["hedef"]]) if v["hedef"] in by else None} for v in planned],
-            "items": [F.customer_card(r) for r in ranked],
+            "kpi": {**rank["kpi"], "onayBekleyen": len(pending), "onayBekleyenTutar": round(sum(num(t.get("tutar")) for t in pending), 2)},
+            "planned": [{**v, "musteri": rank["cards"][at[v["hedef"]]] if v["hedef"] in at else None} for v in planned],
+            "items": cards[offset:offset + limit],
+            "total": len(cards),
+            "offset": offset,
             "events": F.events(engine, tenant, user, days=14),
         }
 
