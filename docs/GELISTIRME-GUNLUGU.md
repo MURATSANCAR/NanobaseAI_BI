@@ -83,7 +83,7 @@
 - **Ölçüm (gerçek model, LLM kapısı `bg:editorial`, kayıtlar geçici SQLite; Alice 1. bölüm, 796 kelime, 37 segment):** MQM'i işaretleyen Claude (bağımsız çevirmen değil), aynı ölçüt: eski hat 2 büyük + 15 küçük = ceza 25 → **96,9**; yeni hat 1 büyük + 14 küçük = ceza 19 → **97,6**. Kalkan: kaynakta olmayan ekleme («kimse bilmiyor ki?»), bölünmüş diyaloğun yeri, yanlış kapanan tırnak, «Görelim». Kalan: «Why,» → «Neden ki,» (büyük), «waistcoat» → «ceket», «tüneller gibi». İkinci okuma **0**, onarım **0** düzeltme (4 noktalama uyarısı Türkçe söz dizimi kaynaklı yanlış alarm).
 - **Karar (`18dd1ffa`):** ikinci okuma varsayılan kapalı (`TRANSLATION_SECOND_READ=1` ile açılır) — kazancı yok, her parçada ek çağrı; onarım turu kalır (yalnız uyarı varsa çalışır).
 - **Model yükü:** aynı 5 cümlelik istek 2,7–44 sn arası (başka modüllerin işi); iki ölçüm ilk çağrıda 900 sn'de kesildi. Sorun istekte değil, paylaşılan modelde.
-- **Temizlik:** sunucudaki ölçüm klasörleri silindi (0). M4 kabul denemesinden kalan 13 değişiklik kaydı satırı (id 3977–4015, `timasai`, `translation_*`) silinmedi: silme izin denetiminde «kayıt/iz kurcalama» sayıldı; karar kullanıcıda.
+- **Temizlik:** sunucudaki ölçüm klasörleri silindi (0). M4 kabul denemesinden kalan 13 değişiklik kaydı satırı (id 3977–4015, `timasai`, `translation_*`) silinmedi: silme izin denetiminde «kayıt/iz kurcalama» sayıldı; kullanıcı kararı «kalsın» (gerçek hesap, kişi listesinde yeni ad doğurmuyor; kural `AGENTS.md`'de buna göre netleştirildi).
 - **Kural uyumu:** bu oturum sunucuya çok sayıda ayrı ssh ve `nc -z` yoklaması açmıştı; 2026-09-28 kuralından sonra tek ControlMaster bağlantısı / TT GPU atlaması, yoklama yok.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
