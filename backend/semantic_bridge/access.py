@@ -651,6 +651,14 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/pazar/reports", frozenset({page("pazar-raporlar")})),
     ("/api/v1/pazar/figures/", frozenset({page("pazar-raporlar")})),
     ("/api/v1/pazar/", frozenset({page("pazar-arastirma")})),
+    # M57 Eğitim: Eğitimlerim, ekibim, anket ve rehber okuma oturumla (uç yalnız kişinin kendi kaydını döner); ekran
+    # ziyaret sayacı yalnız kendi hesabına yazar.
+    ("/api/v1/hr/visit", OPEN),
+    ("/api/v1/hr/learning/me/", OPEN),
+    ("/api/v1/hr/learning/reminders/run-due", SYSTEM),
+    ("/api/v1/hr/learning/", frozenset({page("ik-egitim")})),
+    ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar"),
+                               page("ik-egitim")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     # M34 E-ticaret: ortak uçlar (meta, kitap çekmecesi, öneri) dört ekranda; liste uçları kendi ekranı + platform durumu.

@@ -684,6 +684,18 @@
       "explicit": true
     },
     {
+      "key": "sayfa:ik-egitimlerim",
+      "area": "ik",
+      "label": "Eğitimlerim",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-egitim",
+      "area": "ik",
+      "label": "Eğitim ve gelişim",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kanallar",
       "area": "platform",
       "label": "Kanal karnesi"
@@ -2289,6 +2301,47 @@
       "page": "sayfa:ik-belgeler",
       "label": "İK şablonlarını düzenleme",
       "hint": "İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.egitim-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim kayıtlarını yönetme",
+      "hint": "Katalog, oturum, katılımcı, yoklama, sertifika doğrulama ve kişi bazında zorunlu eğitim durumu",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.egitim-onay",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim katılım onayı",
+      "hint": "Kendi ekibinin (doğrudan bağlılar ve yöneticisi olduğu birim) katılım taleplerini onaylama ve ekibin eğitim durumunu görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.egitim-butce",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim bütçesi ve gideri",
+      "hint": "Yıllık eğitim bütçesi ve Logo'daki gerçekleşen eğitim gideri",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.kullanim-haritasi",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Portal kullanım haritası",
+      "hint": "Birim × ekran kullanım sayıları (kişi adı yok); kişi bazında kullanım yalnız kişinin kendisine açıktır",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.rehber-yaz",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Modül rehberi yazma",
+      "hint": "Ekran rehberlerini Zeki AI taslağıyla yazma, düzeltme ve yayımlama",
       "explicit": true
     },
     {

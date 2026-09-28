@@ -37,7 +37,8 @@ def is_admin(u: str) -> bool:
 
 def test_hr_pages_are_explicit_and_everyone_does_not_see_them():
     ik_pages = {p["key"] for p in A.catalog()["pages"] if p["area"] == "ik"}
-    assert ik_pages == {"sayfa:ik-ise-alim", "sayfa:ik-pozisyonlar", "sayfa:ik-belgeler", "sayfa:ik-kayitlar"}
+    # M56–M58 kendi sayfalarını ekler; İK-0/M55 sayfaları her zaman var ve hepsi açıkça verilir.
+    assert ik_pages >= {"sayfa:ik-ise-alim", "sayfa:ik-pozisyonlar", "sayfa:ik-belgeler", "sayfa:ik-kayitlar"}
     assert ik_pages <= A.explicit_keys()
     ik_features = {f["key"] for f in A.catalog()["features"] if f["area"] == "ik"}
     assert ik_features <= A.explicit_keys()

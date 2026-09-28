@@ -1024,6 +1024,14 @@ SPEC: list[dict[str, Any]] = [
     {"key": "HR_CRM_UNIT_MANAGER_COLUMN", "group": "hr", "label": "CRM birim yöneticisi kolonu", "type": "text",
      "default": "new_departmanyoneticisiid",
      "help": "BusinessUnitBase'te departman yöneticisini tutan kolon. Okunamazsa eşitleme yöneticisiz sürer ve not düşer"},
+    # M57 Eğitim ve gelişim
+    {"key": "HR_LEARNING_ALERT_DAYS", "group": "hr", "label": "Zorunlu eğitim uyarısı (gün önce)", "type": "text", "default": "",
+     "help": "Sertifika geçerliliği bitmeden kaç gün önce «dolacak» sayılsın ve sabah özetine girsin. Boş: yalnız süresi dolmuş olanlar"},
+    {"key": "HR_PRIVACY_MIN_GROUP", "group": "hr", "label": "Gizlilik eşiği (kişi)", "type": "text", "default": "",
+     "help": "Kullanım haritasında bu sayıdan az çalışanı olan birimler birleştirilir; anket sonucu bu sayıdan az yanıtta "
+             "gösterilmez. Boş: birleştirme yok, ekran uyarır"},
+    {"key": "HR_TRAINING_ACCOUNTS", "group": "hr", "label": "Eğitim gider hesapları (Logo)", "type": "text", "default": "",
+     "help": "Virgülle 7'li gider hesap kodları; alt hesaplar dahil sayılır. Adayları Eğitim → Gider ekranı listeler (Mali İşler seçer)"},
     # Platform ve kanallar (M42; M40/M41 bağlantı anahtarlarını aynı gruba ekler)
     {"key": "CHANNEL_SPECODES", "group": "channels", "label": "E-ticaret kanal kodları", "type": "text", "default": "E-TICARET",
      "help": "Logo cari kartındaki özel kod 2 değerleri (virgülle). Bu kodlu cariler eşleme listesine ve kanal karnesine girer"},
