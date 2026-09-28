@@ -103,6 +103,7 @@ const OkurPrograms = lazy(() => import('@/canvas/okur/ProgramsScreen'));
 const OkurReviews = lazy(() => import('@/canvas/okur/ReviewsScreen'));
 const LaunchHome = lazy(() => import('@/canvas/marketing/launch/LaunchHome'));
 const LaunchScreen = lazy(() => import('@/canvas/marketing/launch/LaunchScreen'));
+const BacklistScreen = lazy(() => import('@/canvas/marketing/backlist/BacklistScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -239,6 +240,8 @@ export default function App() {
             {/* Pazarlama › Planlama: M16 lansman (/api/v1/marketing/launches). */}
             <Route path="pazarlama/lansman" element={<LaunchHome />} />
             <Route path="pazarlama/lansman/:id" element={<LaunchScreen />} />
+            {/* Pazarlama › Planlama: M17 backlist fırsatları ve aktivasyon planı (/api/v1/marketing/backlist). */}
+            <Route path="pazarlama/backlist" element={<BacklistScreen />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

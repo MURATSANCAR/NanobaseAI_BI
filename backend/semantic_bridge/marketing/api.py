@@ -313,6 +313,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         s = st()
         plan = call(C.plan_full, engine, tenant, plan_id)
+        if plan["kind"] != "yeni":
+            raise HTTPException(status_code=409, detail={"code": "MARKETING", "message": "Bu öneri yeni kitap planı içindir; "
+                                                         "backlist planının taslakları Backlist ekranından istenir."})
         card_ = await run_in_threadpool(call, P.card, engine, tenant, crm, m10(), plan["stokKodu"], s)
         sug = None
         if plan["durum"] in C.EDITABLE:
@@ -341,6 +344,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             m = call(C.add_material, engine, tenant, user, plan_id, tur, body["metin"], "kullanici")
             audit(engine, user, "create", {"id": m["id"], "baslik": m["turAdi"]}, {"plan": plan_id, "kaynak": "kullanici"}, "marketing_material")
             return {"material": m}
+        if tur not in P.MATERIAL_PROMPTS or call(C.plan_full, engine, tenant, plan_id)["kind"] != "yeni":
+            raise HTTPException(status_code=409, detail={"code": "MARKETING", "message": "Bu tür için Zeki AI taslağı bu ekrandan "
+                                                         "yazılmaz; backlist planında Backlist ekranını kullanın ya da metni elle yazın."})
         job = call(C.job_create, engine, tenant, user, plan_id, "material", {"materyaller": [tur]})
         pool.submit(run_job, job["id"], tenant, user, plan_id, [tur], None)
         return {"job": job}

@@ -472,9 +472,11 @@ RULES: list[tuple[str, Any]] = [
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
     ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap"),
-                                          page("pazarlama-aylik")})),
+                                          page("pazarlama-aylik"),
+                                          page("pazarlama-backlist")})),
     ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap"),
-                                             page("pazarlama-aylik")})),
+                                             page("pazarlama-aylik"),
+                                          page("pazarlama-backlist")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
@@ -524,8 +526,11 @@ RULES: list[tuple[str, Any]] = [
     # M16 Lansman (Pazarlama › Planlama). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/marketing/launches/run-due", SYSTEM),
     ("/api/v1/marketing/launches", frozenset({page("pazarlama-lansman")})),
+    # M17 Backlist. Aktivasyon planı çekirdeğin plan uçlarıyla açılır/onaylanır: genel satırda backlist sayfası da var.
+    ("/api/v1/marketing/backlist/run-due", SYSTEM),
+    ("/api/v1/marketing/backlist", frozenset({page("pazarlama-backlist")})),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
-    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
+    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap"), page("pazarlama-backlist")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -749,6 +754,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
      r"^/api/v1/marketing/launches(?!/run-due$)(?!/[^/]+/reviews/[^/]+/decide$)(/.*)?$", "ozellik:pazarlama.lansman-yaz"),
     (frozenset({"GET"}), r"^/api/v1/marketing/launches/[^/]+/export\.pdf$", "ozellik:veri.disa-aktar"),
+    # M17 Backlist: aktivasyon planı açma, kitap listesi, içerik taslağı, konu eşleşmesi kararı (plan yazma ile aynı iş);
+    # ekip ağırlığı ayrı yetki; liste CSV'si dışa aktarım.
+    (frozenset({"POST", "PUT"}), r"^/api/v1/marketing/backlist/(plans(/[^/]+/(books|materials))?|matches/[^/]+/decide)$",
+     "ozellik:pazarlama.plan-yaz"),
+    (frozenset({"PUT"}), r"^/api/v1/marketing/backlist/weights$", "ozellik:pazarlama.backlist-ayar"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/backlist/export\.csv$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

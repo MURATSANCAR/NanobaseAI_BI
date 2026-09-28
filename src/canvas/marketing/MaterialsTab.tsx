@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { DROP_REASON, MATERIAL_TONE, SOURCE_LABEL, fmtStamp, mktApi, type Material, type Meta, type Plan } from './api';
 import { Block } from './parts';
+import { BACKLIST_MATERIALS, blApi } from './backlist/api';
 
 /** Materyaller: CRM'den kaynağıyla alınanlar, Zeki AI taslakları, elle yazılanlar. Akış taslak → editoryal onay →
  *  pazarlama onayı; metin değişince onay düşer. Onaylılar «yayına hazır paket»e girer, hiçbir yere gönderilmez. */
@@ -12,7 +13,10 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
   const qc = useQueryClient();
   const me = meta.me;
   const open = plan.durum !== 'arsiv';
-  const [tur, setTur] = useState(Object.keys(meta.materials)[0] ?? 'foy');
+  // Backlist planında yalnız backlist türleri (taslak Backlist ucundan); yeni kitap planında onlar görünmez.
+  const bl = plan.kind === 'backlist';
+  const kinds = Object.entries(meta.materials).filter(([k]) => BACKLIST_MATERIALS.includes(k) === bl);
+  const [tur, setTur] = useState(kinds[0]?.[0] ?? 'foy');
   const [manual, setManual] = useState<string | null>(null);
 
   const refresh = () => {
@@ -20,7 +24,7 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
     qc.invalidateQueries({ queryKey: ['mkt', 'jobs', plan.id] });
   };
   const create = useMutation({
-    mutationFn: (metin?: string) => mktApi.newMaterial(plan.id, tur, metin),
+    mutationFn: (metin?: string) => (bl ? blApi.newMaterial(plan.id, tur, metin) : mktApi.newMaterial(plan.id, tur, metin)),
     onSuccess: (out) => {
       setManual(null);
       refresh();
@@ -39,7 +43,7 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
             <label className="flex flex-col gap-1 sm:w-[260px]">
               <span className={labelCls}>Tür</span>
               <select className={field} value={tur} onChange={(e) => setTur(e.target.value)}>
-                {Object.entries(meta.materials).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {kinds.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </label>
             <button type="button" className={btnPrimary} disabled={running || create.isPending || !meta.modelReady} onClick={() => create.mutate(undefined)}>

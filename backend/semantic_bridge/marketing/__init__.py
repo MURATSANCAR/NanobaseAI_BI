@@ -27,4 +27,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[..., None], ca
 
     out = api.register(app, rt, require_caller, can)
     out["launch"] = launch_api.register(app, rt, require_caller, can, out)  # M16
+    from semantic_bridge.marketing import api, backlist_api
+
+    out = api.register(app, rt, require_caller, can)
+    # M17 Backlist (`backlist*.py`, `books.py`): /api/v1/marketing/backlist*, çekirdeğin CRM okuyucusu ve iş havuzuyla.
+    out["backlist"] = backlist_api.register(app, rt, require_caller, can, out)
     return out

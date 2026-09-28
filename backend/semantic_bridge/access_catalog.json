@@ -270,6 +270,11 @@
       "label": "Lansman"
     },
     {
+      "key": "sayfa:pazarlama-backlist",
+      "area": "pazarlama",
+      "label": "Backlist"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1672,6 +1677,14 @@
       "page": "sayfa:pazarlama-lansman",
       "label": "Lansman yönetme",
       "hint": "Onaylı plandan lansman açma, kontrol listesi, etkinlik ve medya kaydı, veri yenileme, değerlendirme raporu taslağı"
+    },
+    {
+      "key": "ozellik:pazarlama.backlist-ayar",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-backlist",
+      "label": "Backlist ekip ağırlığı",
+      "hint": "Uyku endeksi bileşen ağırlıklarını ekibin varsayılanı olarak kaydetme (kişisel ağırlık herkesin kendi tercihidir)",
+      "explicit": true
     }
   ]
 }

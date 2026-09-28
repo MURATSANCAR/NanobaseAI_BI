@@ -707,6 +707,15 @@ SPEC: list[dict[str, Any]] = [
      "help": "Logo satış ve depo okuması, D+7/D+30 raporu ve günlük özet bu saatten sonraki ilk koşuda yapılır; sipariş saatte bir okunur"},
     {"key": "MARKETING_LAUNCH_TASKS", "group": "marketing", "label": "Lansman kontrol listesi (JSON)", "type": "text", "default": "",
      "help": "Planın takvimine eklenen lansman maddeleri. Boşsa varsayılan. Biçim: [[gün, \"iş\", \"kanal\", \"materyal\"], …]"},
+    # M17 Backlist (backlist kümesi M46'nın backlist segmentidir; aşağıdaki yaş eşiği yalnız o yıl onaylı bütçe planı yoksa)
+    {"key": "MARKETING_BACKLIST_MIN_MONTHS", "group": "marketing", "label": "Backlist yaşı (ay)", "type": "int", "default": "12",
+     "help": "Onaylı bütçe planı olmayan yılda backlist: ilk yayını veri sonundan en az bu kadar ay önce olan kitaplar"},
+    {"key": "MARKETING_BACKLIST_AGENDA_WEEKS", "group": "marketing", "label": "Backlist gündem penceresi (hafta)", "type": "int",
+     "default": "8", "help": "Gündem sekmesi ve fırsat listesindeki «yakın özel gün» süzgeci"},
+    {"key": "MARKETING_BACKLIST_REMIND_WEEKS", "group": "marketing", "label": "Özel gün hatırlatması (hafta)", "type": "int",
+     "default": "6", "help": "Özel güne bu kadar hafta kala bağlı, stoklu ve aktivasyonu olmayan kitaplar e-postayla bildirilir"},
+    {"key": "MARKETING_BACKLIST_DIGEST_MIN", "group": "marketing", "label": "Aylık özet endeks eşiği", "type": "int", "default": "70",
+     "help": "Ayın ilk iş günü özetinde sayılan kitapların en düşük uyku endeksi (0–100)"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
