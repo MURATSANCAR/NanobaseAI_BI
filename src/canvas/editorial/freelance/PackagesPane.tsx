@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, ChevronDown, Download, ExternalLink, FolderPlus, Link2, Loader2, Plus, Search, Sparkles, Trash2, Upload, Wand2, X } from 'lucide-react';
 import { editorialSearchApi, freelanceApi, type FlPackage, type FlSuggestion, type FlTask, type FlTaskInput } from '../../engine';
-import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../../admin/ui';
+import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
 import { Panel, useDebounced } from '../kit';
 import { ThreadView } from './MessagesPane';
 import SqlInfo from '../../components/SqlInfo';

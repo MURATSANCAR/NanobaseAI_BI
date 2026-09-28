@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Download, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, td, th, btnPrimary } from '../admin/ui';
+import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import SqlInfo from '../components/SqlInfo';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';

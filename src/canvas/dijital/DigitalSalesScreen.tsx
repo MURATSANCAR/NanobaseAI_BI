@@ -9,7 +9,6 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { dijitalApi, fmtInt, fmtMoney, fmtPct, type ImportSummary, type Sales } from './api';
 import { AskSheet, DigitalFrame, Tabs } from './parts';
 import ImportWizard, { UploadStep } from './ImportWizard';
-import ImportWizard from './ImportWizard';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Dijital satış (finans verisi, ayrı sayfa yetkisi): onaylı platform raporlarından aylık gelir, platform ve kitap kırılımı,

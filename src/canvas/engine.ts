@@ -9,7 +9,6 @@
 import type { DbTiming } from './DbTiming';
 import type { Kaynaklar } from './components/sqlInfo';
 import { httpErrorText } from './httpError';
-import type { Kaynaklar } from './components/sqlInfo';
 
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');

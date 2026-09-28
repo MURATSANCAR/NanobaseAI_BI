@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, Receipt, Trash2, TriangleAlert } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Note, Pill, btnPrimary, errText, field, label as labelCls, btnGhost } from '../admin/ui';
+import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import SqlInfo from '../components/SqlInfo';
 import { useDebounced } from '../editorial/kit';
 import { evApi, fileToBase64, fmtMoney, fmtShort, fmtSlot, parseNum, type FairDetail, type Meta } from './api';

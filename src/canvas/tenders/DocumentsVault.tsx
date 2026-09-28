@@ -9,7 +9,7 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtLeft, tendersApi, type DocRow, type TenderMeta } from './api';
 import { FileDrop } from '../components/FileDrop';
 import { MB, titleFromFilename } from '../components/fileDropRules';
-import { AskSheet, FilePick } from './parts';
+import { AskSheet } from './parts';
 import SqlInfo from '../components/SqlInfo';
 
 /** Şirket belge arşivi: vergi/SGK yazıları, imza sirküleri, teminat mektubu… Geçerlilik tarihi yaklaşan ve dolan
