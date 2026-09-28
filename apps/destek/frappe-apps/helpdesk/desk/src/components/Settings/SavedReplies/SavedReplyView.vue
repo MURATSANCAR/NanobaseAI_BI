@@ -88,9 +88,6 @@
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <FormLabel :label="__('Response')" required size="md" />
-            <DocumentationButton
-              url="https://docs.frappe.io/helpdesk/saved-replies"
-            />
           </div>
           <PreviewDialog v-model="previewDialog" />
           <CompactEditor

@@ -35,12 +35,12 @@
                 <div class="text-wrap text-xs text-ink-gray-7">
                   {{ selectedService.info }}
                   <a
+                    v-if="selectedService.link"
                     :href="selectedService.link"
                     target="_blank"
                     class="text-ink-blue-5 underline"
                     >here</a
                   >
-                  .
                 </div>
               </div>
             </div>

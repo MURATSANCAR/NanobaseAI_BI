@@ -66,17 +66,6 @@
             />
             <div class="flex gap-x-1 items-start justify-between">
               <p class="text-sm text-ink-gray-7 leading-5">
-                {{
-                  __(
-                    "Find out all of the variables that can be used in the content"
-                  )
-                }}
-                <a
-                  :href="props.documentationLink"
-                  target="_blank"
-                  class="underline font-semibold"
-                  >{{ __("here") }}</a
-                >
               </p>
               <Button
                 :disabled="content === defaultContent"
