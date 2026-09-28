@@ -37,6 +37,7 @@ import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
 import NewPrintsCard from './NewPrintsCard';
+import DestekCard from './DestekCard';
 import './kampus.css';
 import OutageStrip from '../it-ops/OutageStrip';
 import { notifyExport } from '../data-security/notify';
@@ -717,6 +718,8 @@ export default function KampusPage() {
 
         {/* SAĞ SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
+          {/* DESTEK MASASI — talep aç / izle (NanobaseAI Destek, aynı sunucu adında 8446). */}
+          <DestekCard />
           <RoomsCard />
 
           {/* MATBAADAN YENİ ÇIKANLAR — M12 üretim kartlarından gerçek baskılar; veri yoksa bölüm görünmez. */}

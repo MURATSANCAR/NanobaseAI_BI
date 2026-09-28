@@ -13,6 +13,7 @@ import QualityTab from './QualityTab';
 import QueueTab from './QueueTab';
 import { SupportFrame } from './parts';
 import { fmtDay, supportApi } from './api';
+import { destekUrl } from '../kampus/DestekCard';
 
 /** M51 Müşteri hizmetleri. Sekme adres çubuğunda (?sekme=). Müşteri bağlamı ve bayi görünümü «Müşteri bağlamı ve bayi
  *  görünümü» yetkisiyle görünür; sınıf ayarı «Konu sınıfları ve SLA» yetkisiyle düzenlenir. */
@@ -48,9 +49,10 @@ export default function SupportScreen() {
       source="Destek masası · CRM · Logo"
       presence={run?._at ? `Son sınıflama ${fmtDay(run._at)}` : 'Henüz sınıflama turu yok'}
       aside={
-        m?.destek.link ? (
+        // Ayar boşsa masa portalla aynı sunucu adında 8446'dadır (Kampüs kartıyla aynı kural).
+        m ? (
           <div className="flex flex-col items-stretch gap-1 lg:items-end">
-            <a href={`${m.destek.link}/helpdesk`} target="_blank" rel="noreferrer" className={btnGhost}>
+            <a href={m.destek.link ? `${m.destek.link}/helpdesk` : destekUrl()} target="_blank" rel="noreferrer" className={btnGhost}>
               Talep masasını aç <ExternalLink aria-hidden className="h-4 w-4" />
             </a>
             <span className="text-[11px] text-canvas-muted lg:text-right">Talepler masada açılır, cevaplanır ve kapanır.</span>

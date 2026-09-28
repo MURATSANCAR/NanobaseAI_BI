@@ -5,6 +5,8 @@ limit_req_zone $binary_remote_addr zone=timas_login:10m rate=20r/m;
 limit_req_zone $binary_remote_addr zone=timas_ask:10m rate=6r/m;
 limit_req_zone $binary_remote_addr zone=timas_api:10m rate=120r/m;
 limit_req_zone $binary_remote_addr zone=timas_studio_img:10m rate=600r/m;
+# NanobaseAI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
+limit_req_zone $binary_remote_addr zone=destek_login:10m rate=10r/m;
 
 server {
     listen 80;
@@ -274,5 +276,117 @@ server {
         alias /usr/share/nginx/html/;
         add_header Cache-Control "no-store, must-revalidate" always;
         try_files $uri $uri/ /timas/index.html;
+    }
+}
+
+# ---------------------------------------------------------------------------------------------------------------
+# NanobaseAI Destek (apps/destek) — müşteri VM'inde ön kapı :8446 (HTTP, iç ağ). Destek kapsayıcısı bi_net'e
+# `destek-frontend` adıyla bağlanır (apps/destek/docker/compose.bi-net.yaml). Ad istek anında çözülür: Destek kurulu
+# değilse yalnız bu port 502 verir, BI etkilenmez. Test sunucusunda bu işi nginx vhost'u yapar
+# (apps/destek/deploy/nginx-destek-8446.conf); iki yer aynı kuralları taşır.
+server {
+    listen 8446;
+    server_name _;
+    client_max_body_size 50m;
+    resolver 127.0.0.11 valid=30s ipv6=off;
+    set $destek http://destek-frontend:8080;
+
+    location = / { return 302 /helpdesk; }
+
+    # Şifre alan giriş uçları: hız sınırı.
+    location ~ ^/api/method/(login|frappe\.integrations\.doctype\.ldap_settings\.ldap_settings\.login)$ {
+        limit_req zone=destek_login burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass $destek;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    # Tek oturum dönüşü: 60 sn'lik tek kullanımlık jeton adreste taşınır; günlüğe yazılmaz.
+    location = /api/method/nanobase_brand.sso.login {
+        access_log off;
+        limit_req zone=destek_login burst=10 nodelay;
+        limit_req_status 429;
+        proxy_pass $destek;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    # Canlı bildirim yalnız bu sitenin sayfalarından: başka site kullanıcının çereziyle bağlanamaz (Destek'in iç
+    # sunucusu kaynak adresini kendisi yazar). Aynı kaynaktan GET'te tarayıcı Origin göndermez: boş geçer.
+    location /socket.io {
+        set $destek_origin_ok 0;
+        if ($http_origin = "") { set $destek_origin_ok 1; }
+        if ($http_origin = "${DESTEK_PUBLIC_ORIGIN}") { set $destek_origin_ok 1; }
+        if ($destek_origin_ok = 0) { return 403; }
+        proxy_pass $destek;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+    }
+
+    location / {
+        proxy_pass $destek;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        # Yapay zekâ panelinin akışlı yanıtı tamponlanmaz.
+        proxy_buffering off;
+    }
+}
+
+# Destek → Zeki AI modeli ve müşteri bağlamı (M51): yalnız bi_net içinde (8447 dışa açılmaz). Test sunucusundaki
+# /destek-llm ve /destek-baglam nginx parçalarının aynısı; anahtar .env DESTEK_LLM_KEY (boşsa 503, kapı kapalı).
+server {
+    listen 8447;
+    server_name _;
+    set $destek_llm_key "${DESTEK_LLM_KEY}";
+
+    location ^~ /destek-llm/v1/ {
+        if ($destek_llm_key = "") { return 503; }
+        if ($http_authorization != "Bearer ${DESTEK_LLM_KEY}") { return 401; }
+        proxy_pass http://bridge:8795/api/v1/llm/openai/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "";
+        proxy_set_header Cookie "";
+        proxy_set_header X-LLM-Module "destek";
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        client_max_body_size 32m;
+    }
+
+    location ^~ /destek-baglam/v1/ {
+        if ($destek_llm_key = "") { return 503; }
+        if ($http_authorization != "Bearer ${DESTEK_LLM_KEY}") { return 401; }
+        limit_except GET POST { deny all; }
+        proxy_pass http://bridge:8795/api/v1/support/panel/;
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "";
+        proxy_set_header Cookie "";
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 180s;
+        client_max_body_size 1m;
     }
 }
