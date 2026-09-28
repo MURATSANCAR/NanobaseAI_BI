@@ -1,5 +1,26 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
+
+- **Neden:** «Dünyanın En Korkak Hayvanı» (iş `2026092803385843f032`, 17 sayfa, 1.392 kelime) iki sesle baştan sona
+  okutulup dinlendi; kullanıcı «seslerimiz çok robotik» dedi. Sorunların bir kısmı modelden değil bizim kurallarımızdandı.
+- **Vurgu:** kelimeden önceki işaret «...» → virgül (durak 0,8–1,5 sn'ye uzuyor, 45 yerde takılma gibi duyuluyordu);
+  birleşik fiilin yardımcısı («yardım etmedi») ve BÜYÜK HARF başlık («BİLİM VOMBATI AŞKINA») vurgulanmaz; ZEKİ AI
+  önerisinde cümle başına tek vurgu (editör işareti sınırsız).
+- **Cümle sınırı:** ardından küçük harfle süren kelime cümleyi bitirmez (`narration.sentence_mark`: «“Pat!” diye»,
+  «“Farece…” dedi» kopmuyor); «…fısıldıyordu: “Kaç!”» → anlatıcı girişi ile konuşma ayrı parça (`PAUSE[":"]` 300 ms).
+  İfade işaretleri cümle anahtarına bağlı: bu sınır değişikliği olan birimlerde eski işaret düşer (nötr), öneri yeniden koşar.
+- **İfade:** konuşmalı cümlede ifade yalnız tırnak içine (`expression._quoted`; fısıltı anlatıcıya geçiyordu); 5
+  kelimeden kısa parçada hızlandırma yok («O da ne!» 0,46 sn'de bitiyordu).
+- **Efekt:** kısma anahtarı (anlatım) efekt sonuna kadar sessizlikle uzatılır (`apad`); kükreme/kahkaha ~2,1 sn erken
+  kesiliyordu (karışım sürümü 2 → eski karışımlar yeniden yapılır). İpucu: tırnak + «diye/dedi» ve harf uzatması
+  («Güüüümmmm»); seçim istemi (`sfx.pick` 2) kaynak + eylem birlikte tutmalı (gülen aslana kedi mırlaması seçilmişti).
+- **Ses tahmini:** `guess_voice` karşılaştırma öbeğini atar («larger than the father»), tarifteki cinsiyete uyar;
+  dişi vombat «Annesi» erkek sesi alıyordu.
+- Testler: editör tam set 598 geçti (GPU, stüdyo imajı). main `ae0277a2`; GPU'da dokuz servis `0.15.9-ae0277a2`.
+- **Gerçek insan sesi:** kayıt rehberi + okuma metni `docs/analiz/izinli-ses-kayit-rehberi.md` (izin belgesi, kayıt
+  koşulları, ilk 12 sn'nin tarzı belirlediği).
+
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
 - **Durum:** VM'de `e543a122` (başka oturumun 05:38 kurulumu) M29–M32'yi ve sohbet kapsamını zaten içeriyordu; test sunucusunda
