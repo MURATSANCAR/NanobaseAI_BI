@@ -666,6 +666,10 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/eticaret/funnel", frozenset({page("eticaret"), page("eticaret-huni")})),
     ("/api/v1/eticaret/marketplaces", frozenset({page("eticaret"), page("eticaret-pazar-yerleri")})),
     ("/api/v1/eticaret/", frozenset(page(x) for x in ("eticaret", "eticaret-farklar", "eticaret-huni", "eticaret-pazar-yerleri"))),
+    # H3 E-ticaret müşteri yönetimi. Sözleşme ucunu (segment sayıları) M35 kampanya, M42 D2C ve M18 aylık plan da okur.
+    ("/api/v1/commerce/run-due", SYSTEM),
+    ("/api/v1/commerce/segments/summary", frozenset(page(x) for x in ("eticaret-musteri", "kampanya", "kanal-d2c", "pazarlama-aylik"))),
+    ("/api/v1/commerce/", frozenset({page("eticaret-musteri")})),
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
@@ -1064,6 +1068,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/eticaret/(refresh|diffs/mark-bulk|diffs/[^/]+/mark)$", "ozellik:eticaret.fark-isaretle"),
     (frozenset({"POST"}), r"^/api/v1/eticaret/items/[^/]+/propose$", "ozellik:eticaret.oneri-uret"),
     (frozenset({"GET"}), r"^/api/v1/eticaret/(diffs/export\.csv|export/content-pack)$", "ozellik:veri.disa-aktar"),
+    # H3 E-ticaret müşteri: tetik yazma/önizleme/çalıştırma ve kampanya açma; eşikler ve T-soft okuması; liste dosyası.
+    # Liste onayı (`eticaret.liste-onay`), dışa aktarım (`okur.liste-aktar`) ve kişisel veri (`okur.kisisel-veri`) açıkça
+    # verilir, ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/commerce/(triggers(/[^/]+(/(preview|run))?)?|campaigns(/[^/]+/comment)?)$",
+     "ozellik:eticaret.tetik"),
+    (frozenset({"POST", "PUT"}), r"^/api/v1/commerce/(refresh|settings)$", "ozellik:eticaret.ayar"),
+    (frozenset({"POST"}), r"^/api/v1/commerce/runs/[^/]+/export$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",

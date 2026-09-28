@@ -7325,6 +7325,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("eticaret", priority), "seo": app.state.seo_geo, "send_mail": _ecom_send_mail,
     })
+    # H3 E-ticaret müşteri yönetimi (Pazarlama › Okur ve müşteri): T-soft siparişinden müşteri tablosu, RFM, tetik listesi,
+    # kontrol gruplu sonuç. /api/v1/commerce/*; tablolar semantic_commerce_*. H2'ye `tsoft_member` kaynağı ve segment
+    # alanları, M42 D2C'ye site özeti bağlanır. T-soft'a/CRM'e/Logo'ya yazma yok.
+    from semantic_bridge import commerce_api
+    app.state.commerce = commerce_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("commerce", priority), "send_mail": _ecom_send_mail,
+    })
     return app
 
 

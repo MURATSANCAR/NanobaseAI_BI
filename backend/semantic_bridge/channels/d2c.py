@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import sqlalchemy as sa
 
@@ -47,15 +47,30 @@ def _connected(engine: sa.engine.Engine) -> dict[str, Any]:
         return {"bagli": False, "neden": f"Site verisi okunamadı: {str(e)[:160]}"}
 
 
+#: H3 bağlantı noktası: işlev(engine, tenant, başlangıç «AAAA-AA-GG», bitiş «AAAA-AA-GG» dahil) → site özeti (aşağıdaki
+#: anahtarlarla). H3 kaydolunca iptal/iade edilmiş siparişler dışarıda kalır ve hesap veritabanında yapılır.
+_SITE_PROVIDER: Optional[Callable[[sa.engine.Engine, str, str, str], dict[str, Any]]] = None
+
+
+def register_site_provider(fn: Callable[[sa.engine.Engine, str, str, str], dict[str, Any]]) -> None:
+    global _SITE_PROVIDER
+    _SITE_PROVIDER = fn
+
+
 def _site(engine: sa.engine.Engine, tenant: str, p: dict[str, Any]) -> dict[str, Any]:
     info = _connected(engine)
     if not info["bagli"]:
         return info
-    md = sa.MetaData()
-    orders = sa.Table(H3_ORDERS, md, autoload_with=engine)
     y = p["yil"]
     # Metin karşılaştırması: «AAAA-AA-31» ayın son gününden büyük ya da eşittir, dönemin son ayını bütünüyle alır.
     start, end = f"{y}-01-01", f"{y}-{p['ay']:02d}-31"
+    if _SITE_PROVIDER is not None:
+        try:
+            return {"bagli": True, **_SITE_PROVIDER(engine, tenant, start, end)}
+        except Exception as e:  # noqa: BLE001
+            return {"bagli": False, "neden": f"Site verisi okunamadı: {str(e)[:160]}"}
+    md = sa.MetaData()
+    orders = sa.Table(H3_ORDERS, md, autoload_with=engine)
     with engine.connect() as c:
         rows = c.execute(sa.select(orders.c.ordered_at, orders.c.total, orders.c.customer_key)
                          .where(orders.c.tenant_id == tenant)).all()

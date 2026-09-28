@@ -100,7 +100,8 @@ def ensure_tables(engine: sa.engine.Engine) -> None:
 STATUS_LABELS = {"taslak": "Taslak", "onay-bekliyor": "Onay bekliyor", "onayli": "Onaylı", "arsiv": "Arşiv"}
 EXCLUDE_LABELS = {"ret": "Ret vermiş", "izin_yok": "İzin bilinmiyor (İYS kaydı yok)", "kvkk_yok": "KVKK açık rızası yok",
                   "cocuk": "18 yaş altı (ebeveyn rızası bilinmiyor)", "adres_yok": "Adresi CRM'de yok",
-                  "canli_ret": "CRM'de az önce ret işaretlenmiş"}
+                  "canli_ret": "CRM'de az önce ret işaretlenmiş",
+                  "okur_yok": "Okur veri tabanında henüz eşleşmedi (site müşterisi)"}
 
 # ------------------------------------------------------------------ alanlar
 
@@ -671,6 +672,22 @@ def export(engine: sa.engine.Engine, tenant: str, sid: str, user: str, channel: 
     rec = {"id": eid, "count": len(exported), "excluded": dict(why), "excludedTotal": excluded, "segment": seg["name"],
            "channel": channel, "purpose": purpose, "fileName": fname}
     return fname, data, rec
+
+
+def record_export(engine: sa.engine.Engine, tenant: str, *, list_id: str, list_name: str, version: Optional[int],
+                  user: str, channel: str, purpose: str, reader_ids: list[str], excluded: dict[str, int]) -> str:
+    """Başka modülün (H3 tetik listesi) izin denetimli dışa aktarımını aynı deftere yazar: KVKK başvurusunda «bu kişi
+    hangi listelere girdi» sorusu tek yerden cevaplanır. `list_id` segment kimliği yerine modülün liste kimliğidir."""
+    R.ensure(engine)
+    eid = uuid.uuid4().hex
+    with engine.begin() as c:
+        c.execute(EXPORTS.insert().values(id=eid, tenant_id=tenant, segment_id=list_id[:32], segment_name=list_name[:200],
+                                          segment_version=version, user=user, at=_now(), purpose=purpose[:500],
+                                          channel=channel, count=len(reader_ids), excluded_no_consent=sum(excluded.values()),
+                                          excluded_json=R._dump(dict(excluded))))
+        for i in range(0, len(reader_ids), 2000):
+            c.execute(EXPORT_MEMBERS.insert(), [{"export_id": eid, "reader_id": r} for r in reader_ids[i:i + 2000]])
+    return eid
 
 
 def list_exports(engine: sa.engine.Engine, tenant: str, page: int = 0, size: int = 50) -> dict[str, Any]:

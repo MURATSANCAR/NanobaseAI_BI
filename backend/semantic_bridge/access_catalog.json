@@ -739,6 +739,12 @@
       "key": "sayfa:kampanya",
       "area": "pazarlama",
       "label": "Kampanyalar"
+    },
+    {
+      "key": "sayfa:eticaret-musteri",
+      "area": "pazarlama",
+      "label": "E-ticaret müşterileri",
+      "explicit": true
     }
   ],
   "features": [
@@ -2401,6 +2407,28 @@
       "page": "sayfa:eticaret",
       "label": "E-ticaret kart önerisi onayı",
       "hint": "Zeki AI kart önerisini onaylama ya da gerekçeyle reddetme (öneriyi isteyen onaylayamaz); onay kayıttır, siteye gönderilmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eticaret.tetik",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: tetik ve kampanya",
+      "hint": "Yeni kitap, geri kazanım ve ikinci sipariş tetiği yazma, önizleme, listeyi çalıştırma (kontrol grubu ayrılır), kampanya açma ve Zeki AI sonuç yorumu"
+    },
+    {
+      "key": "ozellik:eticaret.ayar",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: müşteri eşikleri",
+      "hint": "RFM eşikleri, kontrol grubu payı, sonuç penceresi ve uyarı eşiğini değiştirme; site siparişlerini yeniden okutma"
+    },
+    {
+      "key": "ozellik:eticaret.liste-onay",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: tetik listesi onayı",
+      "hint": "Çalıştırılan tetik listesini onaylama ya da gerekçeyle geri gönderme (tetiği yazan ve listeyi çalıştıran onaylayamaz); onaysız liste dışa aktarılamaz",
       "explicit": true
     }
   ]

@@ -431,11 +431,18 @@ def record(source: str, source_id: str, *, emails: Iterable[Any] = (), phones: I
 
 #: Diğer modüllerin kaynak sağlayıcıları (H3 site üyesi vb.): ad → işlev(engine, tenant) → [SourceRecord].
 _PROVIDERS: dict[str, Callable[[sa.engine.Engine, str], list[SourceRecord]]] = {}
+#: Dışa aktarımda iletişim adresi kaynaktan anlık okunabilen kaynaklar: CRM + `register_source(..., address=True)` ile
+#: kaydolanlar (H3 site üyesi adresini T-soft'tan okur). Yalnız bu kaynaklardan birine bağlı okur listeye girebilir.
+ADDRESS_SOURCES: set[str] = {"crm_contact", "crm_lead", "crm_account"}
 
 
-def register_source(name: str, provider: Callable[[sa.engine.Engine, str], list[SourceRecord]]) -> None:
-    """Başka bir modülün kaynağını kimlik birleştirmeye ekler (örn. H3 `tsoft_member`). Her okuma turunda çağrılır."""
+def register_source(name: str, provider: Callable[[sa.engine.Engine, str], list[SourceRecord]], *,
+                    address: bool = False) -> None:
+    """Başka bir modülün kaynağını kimlik birleştirmeye ekler (örn. H3 `tsoft_member`). Her okuma turunda çağrılır.
+    `address=True`: o modül dışa aktarımda adresi kendi kaynağından okur (H2'nin segment dışa aktarımı yalnız CRM okur)."""
     _PROVIDERS[name] = provider
+    if address:
+        ADDRESS_SOURCES.add(name)
 
 
 def _label(labels: dict[str, dict[str, str]], attr: str, code: Any) -> Optional[str]:
@@ -783,7 +790,7 @@ def exportable(profile: dict[str, Any], channel: str, cfg: dict[str, Any]) -> tu
         return False, "kvkk_yok"
     if profile["minor"] and not cfg["minorExport"]:
         return False, "cocuk"
-    if not any(s.startswith("crm_") for s in profile["sources"]):
+    if not any(s in ADDRESS_SOURCES for s in profile["sources"]):
         return False, "adres_yok"
     return True, None
 
