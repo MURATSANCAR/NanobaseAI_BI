@@ -461,4 +461,6 @@ def test_api_produce_copy_approve_zip(engine, monkeypatch, tmp_path):
     assert c.get(f"{P}/books?q=Kitap").json()["total"] == 1
     assert c.get(f"{P}/meta").json()["me"]["admin"] is True
     assert c.post(f"{P}/run-due").json()["eposta"] in ("no_recipients", "zamani-degil")
-    assert c.get(f"{P}/materials/pending").json() == {"items": []}
+    pend = c.get(f"{P}/materials/pending").json()
+    assert pend.pop("kaynaklar", None) is not None      # sorgu bilgisi eklenir; kalan cevap değişmez
+    assert pend == {"items": []}
