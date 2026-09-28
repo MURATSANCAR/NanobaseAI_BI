@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, ExternalLink, Loader2, Mail, Sparkles } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
 import Sheet from '../editorial/studio/reader/Sheet';
 import {
   STAGE_TONE, fmtDay, fmtInt, fmtLeft, fmtMoney, inflApi, parseNum,
@@ -82,6 +83,7 @@ function Body({ c, meta }: { c: CollabDetail; meta: Meta }) {
         {c.approvedBy && <Pill tone="ok">Onaylayan: {c.approvedBy}</Pill>}
         {c.linkLate && <Pill tone="err">Bağlantı gecikti</Pill>}
         {c.person.minor && <Pill tone="warn">Reşit değil — veli onayı</Pill>}
+        <SqlInfo k={c.kaynaklar} alan="fee" label="Ücret, erişim, etkileşim ve ödeme" />
         <Link to={`/isbirlikleri/kisi/${c.personId}`} className="text-[12px] font-bold text-canvas-violet hover:underline">Kişi kartı</Link>
         {c.crmBookId && <Link to={`/kitap/${c.crmBookId}`} className="text-[12px] font-bold text-canvas-violet hover:underline">Kitap</Link>}
       </div>

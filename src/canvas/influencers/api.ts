@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M23 İşbirlikleri ekranlarının köprü uçları: /api/v1/influencers/*. Ücret alanları yetkisi olmayana `null` gelir. */
 
@@ -68,6 +69,7 @@ export type PersonDetail = PersonRow & {
   orderNos: string[];
   totals: { collabs: number; published: number; engagement: number; spend: number | null; cpe: number | null };
   crmOrders: null | { hata: string } | { siparisler: Array<{ siparisNo: string; tarih: string | null; adet: number }>; toplamAdet: number; bulunamayan: string[] };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Draft = {
@@ -81,6 +83,7 @@ export type CollabDetail = Collab & {
   events: Array<{ at: string | null; user: string; action: string; note: string | null }>;
   drafts: Draft[];
   payout: PayoutBrief | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Reminder = { key: string; kind: string; collabId: string | null; personId?: string; to: string; text: string };
@@ -90,6 +93,7 @@ export type Board = {
   open: number; closedRecent: Collab[]; waitingApproval: number; linkLate: number; publishSoon: number;
   month: { from: string; to: string; collabs: number; spend: number | null; budget: number | null };
   reminders: Reminder[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Candidate = {
@@ -107,6 +111,7 @@ export type Candidates = {
   total: number;
   collabs: Collab[];
   modelVar: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Agg = { collabs: number; published: number; reach: number; engagement: number; spend: number | null; cpe: number | null; disclosureMissing: number };
@@ -116,6 +121,7 @@ export type Report = {
   books: Array<Agg & { crmBookId: string | null; bookTitle: string | null }>;
   items: Array<Collab & { periodDay: string }>;
   crm: null | { hata: string } | { kayit: number; toplam: number; items: Array<{ id: string; ad: string | null; tutar: number; hesap: string | null; baslangic: string | null }> };
+  kaynaklar?: Kaynaklar;
 };
 
 export type PayoutRow = {
@@ -124,7 +130,7 @@ export type PayoutRow = {
   statusLabel: string; logoDocNo: string | null; note: string | null; createdBy: string; createdAt: string | null;
   approvedBy: string | null; approvedAt: string | null; paidAt: string | null; paidBy: string | null; owner: string;
 };
-export type Payouts = { month: string; items: PayoutRow[]; totals: Record<'hazir' | 'onayli' | 'odendi', number>; me: { canApprove: boolean; canPay: boolean; canExport: boolean } };
+export type Payouts = { month: string; items: PayoutRow[]; totals: Record<'hazir' | 'onayli' | 'odendi', number>; me: { canApprove: boolean; canPay: boolean; canExport: boolean }; kaynaklar?: Kaynaklar };
 
 export type PersonInput = Partial<{
   name: string; email: string; phone: string; city: string; notes: string; topics: string[]; ageGroups: string[];
@@ -175,7 +181,7 @@ export const inflApi = {
   meta: () => send<Meta>('GET', '/meta'),
   board: (mine = false) => send<Board>('GET', `/board${qs({ mine: mine || undefined })}`),
   people: (p: { q?: string; platform?: string; topic?: string; age?: string; idle?: number | null }) =>
-    send<{ items: PersonRow[]; total: number }>('GET', `/people${qs(p)}`),
+    send<{ items: PersonRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', `/people${qs(p)}`),
   person: (id: string) => send<PersonDetail>('GET', `/people/${enc(id)}`, undefined, 180_000),
   createPerson: (b: PersonInput) => send<{ id: string; name: string }>('POST', '/people', b),
   updatePerson: (id: string, b: PersonInput) => send<{ id: string; name: string }>('PATCH', `/people/${enc(id)}`, b),
@@ -190,7 +196,7 @@ export const inflApi = {
   candidates: (kitap: string, butce?: number | null) => send<Candidates>('GET', `/books/${enc(kitap)}/candidates${qs({ butce: butce ?? undefined })}`, undefined, 300_000),
   explain: (kitap: string, personIds: string[]) =>
     send<{ items: Array<{ personId: string; text: string; source: 'zeki' | 'kural'; dropped: number }> }>('POST', `/books/${enc(kitap)}/candidates/explain`, { personIds }, 600_000),
-  bookCollabs: (kitap: string) => send<{ items: Collab[]; published: number; engagement: number; reach: number }>('GET', `/books/${enc(kitap)}/collabs`),
+  bookCollabs: (kitap: string) => send<{ items: Collab[]; published: number; engagement: number; reach: number; kaynaklar?: Kaynaklar }>('GET', `/books/${enc(kitap)}/collabs`),
   collab: (id: string) => send<CollabDetail>('GET', `/collabs/${enc(id)}`),
   createCollab: (b: CollabInput) => send<{ id: string; no: number; personName: string; waitingApproval: boolean }>('POST', '/collabs', b),
   updateCollab: (id: string, b: CollabInput) => send<Collab>('PATCH', `/collabs/${enc(id)}`, b),

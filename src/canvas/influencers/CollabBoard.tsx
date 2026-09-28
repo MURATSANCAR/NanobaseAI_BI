@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Bell, Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { STAGE_TONE, fmtMoney, inflApi, type Board, type Collab, type Meta, type Stage } from './api';
@@ -42,17 +43,17 @@ export default function CollabBoard() {
         <>
           <KpiRow>
             <Kpi label="Açık işbirliği" value={String(board.data.open)} help={mine ? 'Açtıklarım' : 'Hepsi'} active={!mine}
-              onClick={() => setParams(mine ? {} : { benim: '1' }, { replace: true })} />
-            <Kpi label="Onay bekleyen teklif" value={String(board.data.waitingApproval)} help="Seçim ve ücret onayı" />
-            <Kpi label="Bağlantısı geciken" value={String(board.data.linkLate)} help={`Yayın tarihinden ${meta.data.ayarlar.linkGraceDays} gün sonra bağlantı yok`} />
+              onClick={() => setParams(mine ? {} : { benim: '1' }, { replace: true })} info={<SqlInfo k={board.data.kaynaklar} alan="open" label="Açık işbirliği" />} />
+            <Kpi label="Onay bekleyen teklif" value={String(board.data.waitingApproval)} help="Seçim ve ücret onayı" info={<SqlInfo k={board.data.kaynaklar} alan="waitingApproval" label="Onay bekleyen teklif" />} />
+            <Kpi label="Bağlantısı geciken" value={String(board.data.linkLate)} help={`Yayın tarihinden ${meta.data.ayarlar.linkGraceDays} gün sonra bağlantı yok`} info={<SqlInfo k={board.data.kaynaklar} alan="linkLate" label="Bağlantısı geciken" />} />
             <Kpi label="Bu ay" value={board.data.month.spend !== null ? fmtMoney(board.data.month.spend) : String(board.data.month.collabs)}
-              help={board.data.month.spend !== null ? `${board.data.month.collabs} işbirliği${board.data.month.budget ? ` · bütçe ${fmtMoney(board.data.month.budget)}` : ''}` : 'işbirliği (ücretler yetkiyle görünür)'} />
+              help={board.data.month.spend !== null ? `${board.data.month.collabs} işbirliği${board.data.month.budget ? ` · bütçe ${fmtMoney(board.data.month.budget)}` : ''}` : 'işbirliği (ücretler yetkiyle görünür)'} info={<SqlInfo k={board.data.kaynaklar} alan="month" label="Bu ay" />} />
           </KpiRow>
           <Reminders board={board.data} onOpen={setOpen} />
           <Columns board={board.data} meta={meta.data} onOpen={setOpen} />
           {board.data.closedRecent.length > 0 && (
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Son 30 günde kapanan</h2>
+              <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Son 30 günde kapanan<SqlInfo k={board.data.kaynaklar} alan="closedRecent" label="Son 30 günde kapanan" /></h2>
               <div className="flex flex-col gap-1">
                 {board.data.closedRecent.map((c) => (
                   <button key={c.id} type="button" onClick={() => setOpen(c.id)}
@@ -78,7 +79,7 @@ function Reminders({ board, onOpen }: { board: Board; onOpen: (id: string) => vo
   if (!board.reminders.length) return null;
   return (
     <Panel>
-      <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-extrabold"><Bell aria-hidden className="h-4 w-4" /> Bugün</h2>
+      <h2 className="mb-2 flex items-center gap-1.5 text-[13px] font-extrabold"><Bell aria-hidden className="h-4 w-4" /> Bugün<SqlInfo k={board.kaynaklar} alan="reminders" label="Hatırlatmalar" /></h2>
       <ul className="flex flex-col gap-1">
         {board.reminders.map((r) => (
           <li key={r.key}>
@@ -115,6 +116,7 @@ function Columns({ board, meta, onOpen }: { board: Board; meta: Meta; onOpen: (i
     <>
       {/* Telefon: tek sütun, aşama seçici. */}
       <div className="flex flex-col gap-2 lg:hidden">
+        <div className="flex items-center gap-1 px-1 text-[11px] text-canvas-muted">Aşama başına işbirliği sayısı<SqlInfo k={board.kaynaklar} alan="columns" label="Aşama başına işbirliği" /></div>
         <label className="flex flex-col gap-1 px-1">
           <span className={labelCls}>Aşama</span>
           <select className={field} value={phoneStage} onChange={(e) => setPhoneStage(e.target.value as Stage)}>
@@ -133,7 +135,7 @@ function Columns({ board, meta, onOpen }: { board: Board; meta: Meta; onOpen: (i
             <section key={x.stage} className="flex min-w-0 flex-col gap-2 rounded-2xl bg-slate-50/80 p-2">
               <h2 className="flex items-center justify-between px-1 text-[12px] font-extrabold">
                 {x.label}
-                <span className="font-mono text-[11px] text-canvas-muted">{x.items.length}</span>
+                <span className="inline-flex items-center gap-1 font-mono text-[11px] text-canvas-muted">{x.items.length}<SqlInfo k={board.kaynaklar} alan="columns" label={`${x.label}: işbirliği sayısı`} /></span>
               </h2>
               {x.items.map(card)}
             </section>

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Search, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
 import { PART_LABEL, STAGE_TONE, fmtDay, fmtInt, fmtMoney, inflApi, parseNum, type Candidate, type Candidates as Data, type Meta } from './api';
@@ -79,7 +80,7 @@ function Ranking({ kitap, meta }: { kitap: string; meta: Meta }) {
           <BookHead d={d} meta={meta} budget={budget} setBudget={setBudget} />
           <Panel>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[13px] font-extrabold">{d.total} aday</h2>
+              <h2 className="flex items-center gap-1 text-[13px] font-extrabold">{d.total} aday<SqlInfo k={d.kaynaklar} alan="items" label="Aday sırası ve puanlar" /></h2>
               {d.modelVar && meta.me.canEdit && (
                 <button type="button" className={btnGhost} disabled={!picked.length || explain.isPending} onClick={() => explain.mutate()}>
                   {explain.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
@@ -123,7 +124,7 @@ function Ranking({ kitap, meta }: { kitap: string; meta: Meta }) {
           </Panel>
           {d.excluded.length > 0 && (
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Sıraya girmeyenler ({d.excluded.length})</h2>
+              <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Sıraya girmeyenler ({d.excluded.length})<SqlInfo k={d.kaynaklar} alan="excluded" label="Sıraya girmeyenler" /></h2>
               <ul className="flex flex-col gap-1 text-[12.5px]">
                 {d.excluded.map((e) => (
                   <li key={e.personId}><Link to={`/isbirlikleri/kisi/${e.personId}`} className="font-bold hover:underline">{e.name}</Link> <span className="text-canvas-muted">— {e.reason}</span></li>
@@ -145,7 +146,7 @@ function BookHead({ d, meta, budget, setBudget }: { d: Data; meta: Meta; budget:
     <Panel>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h2 className="break-words text-[16px] font-extrabold">{d.book.ad}</h2>
+          <h2 className="flex items-center gap-1 break-words text-[16px] font-extrabold">{d.book.ad}<SqlInfo k={d.kaynaklar} alan="profile" label="Kitap kartı ve profili" /></h2>
           <div className="text-[12px] text-canvas-muted">{[d.book.yazar, d.book.turler, d.book.raf, d.book.hedefKitle].filter(Boolean).join(' · ')}</div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <TopicPills keys={d.profile.topics} meta={meta} />

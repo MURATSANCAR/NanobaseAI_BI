@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -50,11 +51,12 @@ function List({ d }: { d: Data }) {
   return (
     <>
       <KpiRow>
-        <Kpi label="Hazır" value={fmtMoney(d.totals.hazir)} help="Onay bekliyor" />
-        <Kpi label="Onaylı" value={fmtMoney(d.totals.onayli)} help="Ödeme bekliyor" />
-        <Kpi label="Ödenen" value={fmtMoney(d.totals.odendi)} help={`${d.month} ayında`} />
+        <Kpi label="Hazır" value={fmtMoney(d.totals.hazir)} help="Onay bekliyor" info={<SqlInfo k={d.kaynaklar} alan="totals" label="Hazır" />} />
+        <Kpi label="Onaylı" value={fmtMoney(d.totals.onayli)} help="Ödeme bekliyor" info={<SqlInfo k={d.kaynaklar} alan="totals" label="Onaylı" />} />
+        <Kpi label="Ödenen" value={fmtMoney(d.totals.odendi)} help={`${d.month} ayında`} info={<SqlInfo k={d.kaynaklar} alan="totals" label="Ödenen" />} />
       </KpiRow>
       <Panel>
+        <div className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Ödeme satırları<SqlInfo k={d.kaynaklar} alan="items" label="Ödeme satırları" /></div>
         {d.items.length === 0 && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu ay ödeme satırı yok.</div>}
         <div className="flex flex-col gap-2">
           {d.items.map((r) => (

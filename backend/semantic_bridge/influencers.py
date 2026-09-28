@@ -553,26 +553,36 @@ def relation(collabs: Iterable[Any], today: date) -> dict[str, Any]:
             "daysSince": days, "published": len(done), "dropped": dropped}
 
 
+def people_stmts(tenant: str, ids: Optional[list[str]] = None) -> tuple[Any, Any, Any, Any]:
+    """Kayıt defteri okumaları: (kişiler, hesapları, hesap ölçümleri, işbirlikleri); kişi süzgeci alt sorguyla."""
+    who = sa.select(PEOPLE.c.id).where(PEOPLE.c.tenant_id == tenant)
+    people = sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant)
+    if ids is not None:
+        who = who.where(PEOPLE.c.id.in_(ids))
+        people = people.where(PEOPLE.c.id.in_(ids))
+    accs = sa.select(ACCOUNTS).where(ACCOUNTS.c.person_id.in_(who)).order_by(ACCOUNTS.c.platform)
+    snaps = sa.select(SNAPSHOTS).where(SNAPSHOTS.c.account_id.in_(sa.select(ACCOUNTS.c.id).where(ACCOUNTS.c.person_id.in_(who))))
+    cols = sa.select(COLLABS).where(COLLABS.c.tenant_id == tenant, COLLABS.c.person_id.in_(who))
+    return people.order_by(PEOPLE.c.name), accs, snaps, cols
+
+
 def _load_people(conn: sa.Connection, tenant: str, ids: Optional[list[str]] = None) -> tuple[list[Any], dict[str, list[Any]],
                                                                                               dict[str, list[Any]], dict[str, list[Any]]]:
-    stmt = sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant)
-    if ids is not None:
-        stmt = stmt.where(PEOPLE.c.id.in_(ids))
-    people = conn.execute(stmt.order_by(PEOPLE.c.name)).all()
-    pids = [p.id for p in people]
+    pq, aq, sq, cq = people_stmts(tenant, ids)
+    people = conn.execute(pq).all()
     accs: dict[str, list[Any]] = {}
     snaps: dict[str, list[Any]] = {}
     cols: dict[str, list[Any]] = {}
-    if pids:
-        acc_rows = conn.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.person_id.in_(pids)).order_by(ACCOUNTS.c.platform)).all()
+    if people:
         owner = {}
-        for a in acc_rows:
+        for a in conn.execute(aq).all():
             accs.setdefault(a.person_id, []).append(a)
             owner[a.id] = a.person_id
         if owner:
-            for s in conn.execute(sa.select(SNAPSHOTS).where(SNAPSHOTS.c.account_id.in_(list(owner)))):
-                snaps.setdefault(owner[s.account_id], []).append(s)
-        for c in conn.execute(sa.select(COLLABS).where(COLLABS.c.tenant_id == tenant, COLLABS.c.person_id.in_(pids))):
+            for s in conn.execute(sq):
+                if s.account_id in owner:
+                    snaps.setdefault(owner[s.account_id], []).append(s)
+        for c in conn.execute(cq):
             cols.setdefault(c.person_id, []).append(c)
     return people, accs, snaps, cols
 
@@ -619,13 +629,18 @@ def list_people(engine: sa.engine.Engine, tenant: str, *, can_fee: bool, q: str 
     return {"items": items, "total": len(items)}
 
 
+def person_payouts_stmt(tenant: str, person_id: str):
+    return sa.select(PAYOUTS).where(PAYOUTS.c.collab_id.in_(
+        sa.select(COLLABS.c.id).where(COLLABS.c.tenant_id == tenant, COLLABS.c.person_id == person_id)))
+
+
 def get_person(engine: sa.engine.Engine, tenant: str, person_id: str, can_fee: bool) -> dict[str, Any]:
     today = _today()
     cfg = settings()
     with engine.connect() as conn:
         _person_row(conn, tenant, person_id)
         people, accs, snaps, cols = _load_people(conn, tenant, [person_id])
-        pays = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.collab_id.in_([c.id for c in cols.get(person_id, [])] or [""]))).all()
+        pays = conn.execute(person_payouts_stmt(tenant, person_id)).all()
     p = people[0]
     mine = sorted(cols.get(person_id, []), key=lambda c: c.created_at, reverse=True)
     paid = {x.collab_id: x for x in pays if x.status != "iptal"}
@@ -753,8 +768,16 @@ def import_csv(engine: sa.engine.Engine, tenant: str, user: str, text: str) -> d
 # ------------------------------------------------------------------ işbirliği
 
 
+def collab_stmts(tenant: str, collab_id: str) -> tuple[Any, Any, Any, Any]:
+    """İşbirliği kartı: (işbirliği, olaylar, taslaklar, ödeme satırı)."""
+    return (sa.select(COLLABS).where(COLLABS.c.id == collab_id, COLLABS.c.tenant_id == tenant),
+            sa.select(EVENTS).where(EVENTS.c.collab_id == collab_id).order_by(EVENTS.c.at, EVENTS.c.id),
+            sa.select(DRAFTS).where(DRAFTS.c.collab_id == collab_id).order_by(DRAFTS.c.created_at.desc()),
+            sa.select(PAYOUTS).where(PAYOUTS.c.collab_id == collab_id, PAYOUTS.c.status != "iptal"))
+
+
 def _collab_row(conn: sa.Connection, tenant: str, collab_id: str) -> Any:
-    row = conn.execute(sa.select(COLLABS).where(COLLABS.c.id == collab_id, COLLABS.c.tenant_id == tenant)).first()
+    row = conn.execute(collab_stmts(tenant, collab_id)[0]).first()
     if row is None:
         raise InfluencerError("İşbirliği bulunamadı.", 404)
     return row
@@ -977,13 +1000,19 @@ def get_collab(engine: sa.engine.Engine, tenant: str, collab_id: str, can_fee: b
     with engine.connect() as conn:
         c = _collab_row(conn, tenant, collab_id)
         person = _person_row(conn, tenant, c.person_id)
-        events = conn.execute(sa.select(EVENTS).where(EVENTS.c.collab_id == collab_id).order_by(EVENTS.c.at, EVENTS.c.id)).all()
-        drafts = conn.execute(sa.select(DRAFTS).where(DRAFTS.c.collab_id == collab_id).order_by(DRAFTS.c.created_at.desc())).all()
-        pay = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.collab_id == collab_id, PAYOUTS.c.status != "iptal")).first()
+        _cq, eq, dq, pq = collab_stmts(tenant, collab_id)
+        events = conn.execute(eq).all()
+        drafts = conn.execute(dq).all()
+        pay = conn.execute(pq).first()
     return {**_collab_out(c, person.name, can_fee), "person": {"id": person.id, "name": person.name, "email": person.email,
                                                                 "doNotContact": bool(person.do_not_contact), "minor": bool(person.minor)},
             "events": [{"at": _iso(e.at), "user": e.user, "action": e.action, "note": e.note} for e in events],
             "drafts": [_draft_out(d) for d in drafts], "payout": _payout_brief(pay, can_fee)}
+
+
+def book_collabs_stmt(tenant: str, bid: str):
+    return sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id) \
+        .where(COLLABS.c.tenant_id == tenant, sa.func.lower(COLLABS.c.crm_book_id) == bid).order_by(COLLABS.c.no.desc())
 
 
 def book_collabs(engine: sa.engine.Engine, tenant: str, crm_book_id: str, can_fee: bool) -> dict[str, Any]:
@@ -993,9 +1022,7 @@ def book_collabs(engine: sa.engine.Engine, tenant: str, crm_book_id: str, can_fe
         raise InfluencerError("CRM kitap kimliği geçerli değil.")
     cfg = settings()
     with engine.connect() as conn:
-        rows = conn.execute(sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
-                            .where(COLLABS.c.tenant_id == tenant, sa.func.lower(COLLABS.c.crm_book_id) == bid)
-                            .order_by(COLLABS.c.no.desc())).all()
+        rows = conn.execute(book_collabs_stmt(tenant, bid)).all()
     items = [_collab_out(c, c.pname, can_fee, cfg) for c in rows]
     live = [c for c in rows if c.stage != "vazgecildi"]
     return {"items": items, "published": sum(1 for c in live if FLOW.index(c.stage) >= FLOW.index("yayinda")),
@@ -1011,21 +1038,29 @@ def _month_bounds(d: date) -> tuple[date, date]:
     return start, nxt - timedelta(days=1)
 
 
+def reminders_stmts(tenant: str, today: date) -> tuple[Any, Any, Any, Any]:
+    """Hatırlatma okumaları: açık işbirlikleri, açık ödeme sayısı, onaylı harcama satırları, son 60 gün ölçümleri."""
+    return (sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
+            .where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage.notin_(CLOSED)),
+            sa.select(sa.func.count()).select_from(PAYOUTS).where(PAYOUTS.c.tenant_id == tenant,
+                                                                  PAYOUTS.c.status.in_(("hazir", "onayli"))),
+            sa.select(COLLABS).where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage != "vazgecildi", COLLABS.c.approved_by.isnot(None)),
+            sa.select(SNAPSHOTS, ACCOUNTS.c.person_id, ACCOUNTS.c.handle, ACCOUNTS.c.platform)
+            .join(ACCOUNTS, ACCOUNTS.c.id == SNAPSHOTS.c.account_id)
+            .where(ACCOUNTS.c.tenant_id == tenant, SNAPSHOTS.c.day >= today - timedelta(days=60)))
+
+
 def reminders(engine: sa.engine.Engine, tenant: str, cfg: dict[str, Any], today: Optional[date] = None) -> list[dict[str, Any]]:
     """Bugünün hatırlatmaları (anahtar bir kez gönderilir). Sorumlu = işbirliğini açan kişi."""
     today = today or _today()
     out: list[dict[str, Any]] = []
+    rq, oq, sq, nq = reminders_stmts(tenant, today)
     with engine.connect() as conn:
-        rows = conn.execute(sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
-                            .where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage.notin_(CLOSED))).all()
-        open_pays = conn.execute(sa.select(sa.func.count()).select_from(PAYOUTS).where(
-            PAYOUTS.c.tenant_id == tenant, PAYOUTS.c.status.in_(("hazir", "onayli")))).scalar() or 0
+        rows = conn.execute(rq).all()
+        open_pays = conn.execute(oq).scalar() or 0
         m0, m1 = _month_bounds(today)
-        spend_rows = conn.execute(sa.select(COLLABS).where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage != "vazgecildi",
-                                                            COLLABS.c.approved_by.isnot(None))).all()
-        snaps = conn.execute(sa.select(SNAPSHOTS, ACCOUNTS.c.person_id, ACCOUNTS.c.handle, ACCOUNTS.c.platform)
-                             .join(ACCOUNTS, ACCOUNTS.c.id == SNAPSHOTS.c.account_id)
-                             .where(ACCOUNTS.c.tenant_id == tenant, SNAPSHOTS.c.day >= today - timedelta(days=60))).all()
+        spend_rows = conn.execute(sq).all()
+        snaps = conn.execute(nq).all()
     for c in rows:
         who, label = c.created_by, f"İŞB-{c.no} {c.pname} · {c.book_title or 'kitap'}"
         idx = FLOW.index(c.stage)
@@ -1086,13 +1121,17 @@ def reminder_text(items: list[dict[str, Any]], link: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def board_stmt(tenant: str):
+    return sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id) \
+        .where(COLLABS.c.tenant_id == tenant).order_by(COLLABS.c.due_publish, COLLABS.c.no)
+
+
 def board(engine: sa.engine.Engine, tenant: str, user: str, can_fee: bool, *, mine: bool = False) -> dict[str, Any]:
     cfg = settings()
     today = _today()
     m0, m1 = _month_bounds(today)
     with engine.connect() as conn:
-        rows = conn.execute(sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
-                            .where(COLLABS.c.tenant_id == tenant).order_by(COLLABS.c.due_publish, COLLABS.c.no)).all()
+        rows = conn.execute(board_stmt(tenant)).all()
     cards = [_collab_out(c, c.pname, can_fee, cfg) for c in rows
              if c.stage not in CLOSED and (not mine or (c.created_by or "").lower() == user.lower())]
     columns = [{"stage": s, "label": STAGES[s], "items": [x for x in cards if x["stage"] == s]} for s in BOARD]
@@ -1397,6 +1436,26 @@ def _payout_brief(p: Any, can_fee: bool) -> Optional[dict[str, Any]]:
             "amount": _fee(p.amount, can_fee), "logoDocNo": p.logo_doc_no, "paidAt": _iso(p.paid_at)}
 
 
+def payout_month(month: str = "") -> tuple[date, date]:
+    try:
+        m = datetime.strptime(month, "%Y-%m").date() if month else _today().replace(day=1)
+    except ValueError as e:
+        raise InfluencerError("Ay YYYY-AA biçiminde olmalı.") from e
+    return _month_bounds(m)
+
+
+def payouts_stmt(tenant: str, m0: date, m1: date):
+    """Açık ödeme satırları (hazır, onaylı) + ödeme günü ayda olan ödenenler."""
+    return sa.select(PAYOUTS, COLLABS.c.no.label("cno"), COLLABS.c.book_title, COLLABS.c.kind, COLLABS.c.stage,
+                     COLLABS.c.published_url, COLLABS.c.created_by.label("owner"), PEOPLE.c.name.label("pname"),
+                     PEOPLE.c.id.label("pid"), PEOPLE.c.email) \
+        .join(COLLABS, COLLABS.c.id == PAYOUTS.c.collab_id).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id) \
+        .where(PAYOUTS.c.tenant_id == tenant, sa.or_(PAYOUTS.c.status.in_(("hazir", "onayli")),
+                                                     sa.and_(PAYOUTS.c.status == "odendi", PAYOUTS.c.paid_at >= m0,
+                                                             PAYOUTS.c.paid_at <= m1))) \
+        .order_by(PAYOUTS.c.status, PAYOUTS.c.no)
+
+
 def list_payouts(engine: sa.engine.Engine, tenant: str, month: str = "") -> dict[str, Any]:
     """Açık satırlar (hazır, onaylı) her zaman; ödenenler ödeme günü `month` (YYYY-AA, boşsa bu ay) içinde olanlar."""
     try:
@@ -1405,15 +1464,7 @@ def list_payouts(engine: sa.engine.Engine, tenant: str, month: str = "") -> dict
         raise InfluencerError("Ay YYYY-AA biçiminde olmalı.") from e
     m0, m1 = _month_bounds(m)
     with engine.connect() as conn:
-        rows = conn.execute(
-            sa.select(PAYOUTS, COLLABS.c.no.label("cno"), COLLABS.c.book_title, COLLABS.c.kind, COLLABS.c.stage,
-                      COLLABS.c.published_url, COLLABS.c.created_by.label("owner"), PEOPLE.c.name.label("pname"),
-                      PEOPLE.c.id.label("pid"), PEOPLE.c.email)
-            .join(COLLABS, COLLABS.c.id == PAYOUTS.c.collab_id).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
-            .where(PAYOUTS.c.tenant_id == tenant, sa.or_(PAYOUTS.c.status.in_(("hazir", "onayli")),
-                                                        sa.and_(PAYOUTS.c.status == "odendi", PAYOUTS.c.paid_at >= m0,
-                                                                PAYOUTS.c.paid_at <= m1)))
-            .order_by(PAYOUTS.c.status, PAYOUTS.c.no)).all()
+        rows = conn.execute(payouts_stmt(tenant, m0, m1)).all()
     items = [{"id": r.id, "no": r.no, "collabId": r.collab_id, "collabCode": f"İŞB-{r.cno}", "personId": r.pid,
               "personName": r.pname, "email": r.email, "bookTitle": r.book_title, "kindLabel": KINDS.get(r.kind, r.kind),
               "stage": r.stage, "publishedUrl": r.published_url, "amount": float(r.amount), "status": r.status,
@@ -1489,6 +1540,12 @@ def decide_payout(engine: sa.engine.Engine, tenant: str, user: str, payout_id: s
 # ------------------------------------------------------------------ rapor
 
 
+def report_stmt(tenant: str):
+    """Vazgeçilmemiş işbirlikleri (dönem süzgeci yayın / plan / kayıt gününe göre hesapta)."""
+    return sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id) \
+        .where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage != "vazgecildi")
+
+
 def report(engine: sa.engine.Engine, tenant: str, frm: date, to: date, can_fee: bool) -> dict[str, Any]:
     """Dönem (yayın günü, yoksa planlanan yayın, yoksa kayıt günü) içindeki vazgeçilmemiş işbirlikleri. Harcama =
     işbirliği ücreti toplamı; CPE = harcama ÷ etkileşim toplamı (etkileşim 0 ise yok). Ücret görünmeyen kullanıcıda
@@ -1496,8 +1553,7 @@ def report(engine: sa.engine.Engine, tenant: str, frm: date, to: date, can_fee: 
     if to < frm:
         raise InfluencerError("Dönem sonu başlangıçtan önce olamaz.")
     with engine.connect() as conn:
-        rows = conn.execute(sa.select(COLLABS, PEOPLE.c.name.label("pname")).join(PEOPLE, PEOPLE.c.id == COLLABS.c.person_id)
-                            .where(COLLABS.c.tenant_id == tenant, COLLABS.c.stage != "vazgecildi")).all()
+        rows = conn.execute(report_stmt(tenant)).all()
     rows = [r for r in rows if frm <= period_day(r) <= to]
 
     def agg(group: list[Any]) -> dict[str, Any]:

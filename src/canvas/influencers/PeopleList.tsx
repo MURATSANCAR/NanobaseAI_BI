@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Plus, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
+import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, inflApi, type Meta, type PersonRow } from './api';
 import PersonForm from './PersonForm';
@@ -73,7 +75,7 @@ export default function PeopleList() {
             {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kayıt yok.</div>}
             {list.data?.items.map((p) => <PersonRowCard key={p.id} p={p} meta={m} />)}
           </div>
-          {list.data && <div className="mt-2 text-right font-mono text-[11.5px] text-canvas-muted">{list.data.total} kişi</div>}
+          {list.data && <div className="mt-2 flex items-center justify-end gap-1 font-mono text-[11.5px] text-canvas-muted">{list.data.total} kişi<SqlInfo k={list.data.kaynaklar} alan="items" label="Kişiler, takipçi ve işbirliği sayıları" /></div>}
         </Panel>
       )}
       {meta.data && <PersonForm open={creating} meta={meta.data} onClose={() => setCreating(false)} onSaved={(id) => nav(`/isbirlikleri/kisi/${id}`)} />}

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Pill } from '../admin/ui';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Panel } from '../editorial/kit';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { STAGE_TONE, fmtDay, fmtInt, inflApi } from './api';
@@ -16,7 +17,7 @@ export default function BookCollabs({ bookId }: { bookId: string }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[13px] font-extrabold">İşbirlikleri</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">İşbirlikleri<SqlInfo k={d.kaynaklar} alan="items" label="Kitabın işbirlikleri" /></h2>
         <Link to={`/isbirlikleri/aday/${bookId}`} className="text-[12px] font-bold text-canvas-violet hover:underline">Aday içerik üreticileri</Link>
       </div>
       {d.items.length === 0 ? (

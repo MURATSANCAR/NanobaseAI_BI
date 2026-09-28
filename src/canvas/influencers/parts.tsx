@@ -108,10 +108,10 @@ export function TopicPills({ keys, meta }: { keys: string[]; meta?: Meta }) {
 }
 
 /** Kısa etiketli değer (özet kutuları). */
-export function Fact({ label, value, help }: { label: string; value: ReactNode; help?: ReactNode }) {
+export function Fact({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}{info}</div>
       <div className="mt-0.5 break-words text-[13.5px] font-bold">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>

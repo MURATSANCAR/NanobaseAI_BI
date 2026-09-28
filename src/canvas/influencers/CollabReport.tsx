@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { KpiRow, Kpi, Panel } from '../editorial/kit';
 import { STAGE_TONE, fmtDay, fmtInt, fmtMoney, inflApi, today, type Agg, type Meta, type Report } from './api';
@@ -43,14 +44,15 @@ export default function CollabReport() {
       {r && m && (
         <>
           <KpiRow>
-            <Kpi label="İşbirliği" value={fmtInt(r.total.collabs)} help={`${r.total.published} yayında`} />
-            <Kpi label="Etkileşim" value={fmtInt(r.total.engagement)} help={`erişim ${fmtInt(r.total.reach)}`} />
-            <Kpi label="Harcama" value={r.total.spend !== null ? fmtMoney(r.total.spend) : '—'} help={r.total.spend !== null ? 'KDV hariç ücret toplamı' : 'ücretler yetkiyle görünür'} />
-            <Kpi label="Etkileşim başı maliyet" value={r.total.cpe !== null ? fmtMoney(r.total.cpe) : '—'} help={r.total.disclosureMissing ? `${r.total.disclosureMissing} yayında yasal etiket işaretlenmedi` : 'yasal etiket eksiği yok'} />
+            <Kpi label="İşbirliği" value={fmtInt(r.total.collabs)} help={`${r.total.published} yayında`} info={<SqlInfo k={r.kaynaklar} alan="total" label="İşbirliği" />} />
+            <Kpi label="Etkileşim" value={fmtInt(r.total.engagement)} help={`erişim ${fmtInt(r.total.reach)}`} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim" />} />
+            <Kpi label="Harcama" value={r.total.spend !== null ? fmtMoney(r.total.spend) : '—'} help={r.total.spend !== null ? 'KDV hariç ücret toplamı' : 'ücretler yetkiyle görünür'} info={<SqlInfo k={r.kaynaklar} alan="total" label="Harcama" />} />
+            <Kpi label="Etkileşim başı maliyet" value={r.total.cpe !== null ? fmtMoney(r.total.cpe) : '—'} help={r.total.disclosureMissing ? `${r.total.disclosureMissing} yayında yasal etiket işaretlenmedi` : 'yasal etiket eksiği yok'} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim başı maliyet" />} />
           </KpiRow>
           <CrmSpend r={r} />
           <Panel>
-            <div className="mb-2 flex gap-1">
+            <div className="mb-2 flex items-center gap-1">
+              <SqlInfo k={r.kaynaklar} alan={by} label={by === 'people' ? 'Kişi bazında' : 'Kitap bazında'} />
               {(['people', 'books'] as const).map((k) => (
                 <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k)}
                   className={`min-h-10 rounded-xl px-3 text-[12.5px] font-extrabold sm:min-h-8 ${by === k ? 'bg-canvas-violet text-white' : 'bg-slate-100'}`}>
@@ -63,7 +65,7 @@ export default function CollabReport() {
               fee={m.me.canSeeFee} />
           </Panel>
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">İşbirlikleri</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">İşbirlikleri<SqlInfo k={r.kaynaklar} alan="items" label="İşbirlikleri" /></h2>
             <Items r={r} meta={m} />
           </Panel>
         </>
@@ -77,7 +79,7 @@ function CrmSpend({ r }: { r: Report }) {
   if ('hata' in r.crm) return <Note tone="warn">CRM pazarlama bütçe modülü okunamadı: {r.crm.hata}</Note>;
   return (
     <Note tone="info">
-      CRM pazarlama bütçe modülünde bu dönemde «Influencer» mecrasına {r.crm.kayit} kayıt, toplam {fmtMoney(r.crm.toplam)} var. Ayrı kaynaktır; aynı iş iki yerde kayıtlı olabileceği için portal harcamasıyla toplanmaz.
+      <SqlInfo k={r.kaynaklar} alan="crm" label="CRM influencer harcaması" /> CRM pazarlama bütçe modülünde bu dönemde «Influencer» mecrasına {r.crm.kayit} kayıt, toplam {fmtMoney(r.crm.toplam)} var. Ayrı kaynaktır; aynı iş iki yerde kayıtlı olabileceği için portal harcamasıyla toplanmaz.
     </Note>
   );
 }

@@ -25,6 +25,8 @@ from fastapi.responses import Response
 
 from semantic_bridge import freelance as fl
 from semantic_bridge import influencers as I
+from semantic_bridge import influencers_kaynak as K
+from semantic_bridge import provenance as PV
 from semantic_bridge import influencers_sources as src
 
 log = logging.getLogger("semantic.influencers.api")
@@ -131,7 +133,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/board")
     def infl_board(request: Request, mine: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(I.board, engine, tenant, user, fee_ok(user), mine=mine)
+        return PV.bagla(call(I.board, engine, tenant, user, fee_ok(user), mine=mine), lambda: K.for_board(engine, tenant))
 
     # ------------------------------------------------------------------ kayıt defteri
 
@@ -139,8 +141,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def infl_people(request: Request, q: str = "", platform: str = "", topic: str = "", age: str = "",
                     idle: Optional[int] = None, dnc: bool = True) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(I.list_people, engine, tenant, can_fee=fee_ok(user), q=q, platform=platform, topic=topic, age=age,
-                    idle_days=idle, include_dnc=dnc)
+        out = call(I.list_people, engine, tenant, can_fee=fee_ok(user), q=q, platform=platform, topic=topic, age=age,
+                   idle_days=idle, include_dnc=dnc)
+        return PV.bagla(out, lambda: K.for_people(engine, tenant))
 
     @app.post(P + "/people", status_code=201)
     def infl_people_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -171,7 +174,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 out["crmOrders"] = crm().promo_orders(out["orderNos"])
             except src.SourceError as e:
                 out["crmOrders"] = {"hata": str(e)}
-        return out
+        return PV.bagla(out, lambda: K.for_person(engine, tenant, pid, out["orderNos"]))
 
     @app.patch(P + "/people/{pid}")
     def infl_person_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -221,7 +224,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/crm/summary")
     def infl_crm_summary(request: Request) -> dict[str, Any]:
         ctx(request)
-        return call(crm().social_summary)
+        return PV.bagla(call(crm().social_summary), K.for_crm_summary)
 
     # ------------------------------------------------------------------ aday sırası
 
@@ -233,7 +236,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                    can_fee=fee_ok(user))
         out["collabs"] = call(I.book_collabs, engine, tenant, book["kitapId"], fee_ok(user))["items"] if book.get("kitapId") else []
         out["modelVar"] = llm() is not None
-        return out
+        return PV.bagla(out, lambda: K.for_candidates(engine, tenant, kitap, book.get("kitapId")))
 
     @app.post(P + "/books/{kitap}/candidates/explain")
     def infl_candidates_explain(kitap: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -277,7 +280,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/books/{kitap}/collabs")
     def infl_book_collabs(kitap: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(I.book_collabs, engine, tenant, kitap, fee_ok(user))
+        return PV.bagla(call(I.book_collabs, engine, tenant, kitap, fee_ok(user)), lambda: K.for_book_collabs(engine, tenant, kitap))
 
     # ------------------------------------------------------------------ işbirliği
 
@@ -300,7 +303,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/collabs/{cid}")
     def infl_collab(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(I.get_collab, engine, tenant, cid, fee_ok(user))
+        return PV.bagla(call(I.get_collab, engine, tenant, cid, fee_ok(user)), lambda: K.for_collab(engine, tenant, cid))
 
     @app.patch(P + "/collabs/{cid}")
     def infl_collab_update(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -370,7 +373,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = call(I.list_payouts, engine, tenant, month)
         out["me"] = {"canApprove": can(user, FEATURE_APPROVE), "canPay": can(user, FEATURE_PAY),
                      "canExport": can(user, FEATURE_EXPORT)}
-        return out
+        return PV.bagla(out, lambda: K.for_payouts(engine, tenant, month))
 
     @app.post(P + "/payouts/{pid}/decide")
     def infl_payout_decide(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -415,7 +418,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 out["crm"] = crm().crm_spend(a, b)
             except src.SourceError as e:
                 out["crm"] = {"hata": str(e)}
-        return out
+        return PV.bagla(out, lambda: K.for_report(engine, tenant, a, b, bool(crm_spend and fee_ok(user))))
 
     @app.get(P + "/report/export.xlsx")
     def infl_report_export(request: Request, frm: str = "", to: str = "") -> Response:

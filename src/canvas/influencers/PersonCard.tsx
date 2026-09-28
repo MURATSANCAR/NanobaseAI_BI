@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ChevronLeft, ExternalLink, Pencil, Plus, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -54,15 +55,15 @@ export default function PersonCard() {
             {p.ageGroups.map((a) => <Pill key={a} tone="muted">{m.yasGruplari[a] ?? a}</Pill>)}
           </div>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
-            <Fact label="İşbirliği" value={fmtInt(p.totals.collabs)} help={`${p.totals.published} yayında`} />
-            <Fact label="Etkileşim" value={fmtInt(p.totals.engagement)} />
-            <Fact label="Harcama" value={p.totals.spend !== null ? fmtMoney(p.totals.spend) : 'yetkiyle görünür'} />
-            <Fact label="Etkileşim başı maliyet" value={p.totals.cpe !== null ? fmtMoney(p.totals.cpe) : '—'} />
+            <Fact label="İşbirliği" value={fmtInt(p.totals.collabs)} help={`${p.totals.published} yayında`} info={<SqlInfo k={p.kaynaklar} alan="totals" label="İşbirliği" />} />
+            <Fact label="Etkileşim" value={fmtInt(p.totals.engagement)} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Etkileşim" />} />
+            <Fact label="Harcama" value={p.totals.spend !== null ? fmtMoney(p.totals.spend) : 'yetkiyle görünür'} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Harcama" />} />
+            <Fact label="Etkileşim başı maliyet" value={p.totals.cpe !== null ? fmtMoney(p.totals.cpe) : '—'} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Etkileşim başı maliyet" />} />
             <Fact label="Ücret aralığı" value={m.me.canSeeFee ? (p.feeMin !== null || p.feeMax !== null ? `${fmtMoney(p.feeMin)} – ${fmtMoney(p.feeMax)}` : '—') : p.feeSet ? 'girildi' : '—'} />
-            <Fact label="İlişki puanı" value={<RelationBadge rel={p.relation} />} help={p.relation.last ? `son yayın ${fmtDay(p.relation.last)}` : undefined} />
+            <Fact label="İlişki puanı" info={<SqlInfo k={p.kaynaklar} alan="relation" label="İlişki puanı" />} value={<RelationBadge rel={p.relation} />} help={p.relation.last ? `son yayın ${fmtDay(p.relation.last)}` : undefined} />
           </div>
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">Hesaplar ve ölçümler</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Hesaplar ve ölçümler<SqlInfo k={p.kaynaklar} alan="accounts" label="Hesaplar ve ölçümler" /></h2>
             {p.jumps.length > 0 && (
               <Note tone="warn">
                 Takipçi sıçraması (kendi ölçümlerimiz): {p.jumps.map((j) => `${fmtDay(j.from)} → ${fmtDay(j.to)} %${j.pct}`).join(' · ')}. Sahte takipçi puanı değildir; hesabı elle inceleyin.
@@ -82,7 +83,7 @@ export default function PersonCard() {
             </div>
           </Panel>
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">İşbirlikleri</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">İşbirlikleri<SqlInfo k={p.kaynaklar} alan="collabs" label="İşbirlikleri" /></h2>
             {p.collabs.length === 0 ? <div className="text-[12.5px] text-canvas-muted">Henüz işbirliği yok.</div> : (
               <TableWrap>
                 <table className="w-full min-w-[720px] text-[12.5px]">
@@ -123,7 +124,7 @@ function CrmOrders({ p }: { p: PersonDetail }) {
   const o = p.crmOrders;
   return (
     <Panel>
-      <h2 className="mb-1 text-[13px] font-extrabold">Tanıtım gönderimi (CRM)</h2>
+      <h2 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Tanıtım gönderimi (CRM)<SqlInfo k={p.kaynaklar} alan="crmOrders" label="Tanıtım gönderimi" /></h2>
       <p className="mb-2 text-[11.5px] text-canvas-muted">İşbirliklerine yazılan «Pazarlama (Tanıtım Gönderimi)» sipariş numaralarından, yalnız okuma.</p>
       {o === null ? null : 'hata' in o ? <Note tone="warn">CRM okunamadı: {o.hata}</Note> : (
         <div className="flex flex-col gap-1 text-[12.5px]">
