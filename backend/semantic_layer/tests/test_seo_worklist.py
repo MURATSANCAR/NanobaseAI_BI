@@ -300,3 +300,20 @@ def test_worklist_request_never_waits_when_nothing_saved():
     w.start_rebuild = lambda: started.append(1) or True
     items, data = w.view()
     assert items == [] and data is None and started == [1]
+
+
+
+def test_grouping_collapses_members_and_keeps_singletons():
+    def it(key, gid, impact, status="yeni", title="İş: X"):
+        return {"key": key, "ref": key, "source": "haklar", "sourceLabel": "CRM hakları", "owner": "telif",
+                "ownerLabel": "Telif", "title": title, "detail": "d", "severity": "orta", "impact": impact,
+                "impactBasis": "", "link": "/seo-geo/crm-haklar?urun=1", "productId": "1", "count": None,
+                "group": [gid, "Hak eksik — Timaş"] if gid else None, "status": status, "statusLabel": "",
+                "assignee": None, "firstSeen": None}
+    rows = wl.grouped([it("a", "g1", 50), it("b", "g1", 40, status="yapiliyor"), it("c", "g2", 30), it("d", None, 45)])
+    assert [r["key"] for r in rows][:1] == [wl.group_key("g1")]
+    g = rows[0]
+    assert g["isGroup"] and g["count"] == 2 and g["children"] == ["a", "b"] and g["status"] == "karisik"
+    assert g["statusCounts"] == {"yeni": 1, "yapiliyor": 1} and g["impact"] > 50 and g["link"] == "/seo-geo/crm-haklar"
+    assert {r["key"] for r in rows[1:]} == {"c", "d"}      # tek üyeli grup ve grupsuz iş olduğu gibi
+    assert wl.group_key("x")[0] == "g" and not any(ch in "g" for ch in wl.item_key("s", "r"))

@@ -10,6 +10,7 @@ import { useCan } from '../useAdmin';
 const PAGE = 40;
 type Owner = 'tsoft' | 'telif' | 'icerik' | 'bt' | 'yayin' | 'seo';
 type Status = 'yeni' | 'yapiliyor' | 'bitti' | 'yoksay';
+type View = 'gruplu' | 'tek';
 type StatusFilter = Status | 'acik' | '';
 type Item = {
   key: string;
@@ -26,8 +27,11 @@ type Item = {
   link: string;
   productId: string | null;
   count: number | null;
-  status: Status;
+  status: Status | 'karisik';
   statusLabel: string;
+  /** Gruplu görünüm: ürün/kişi başına çoğalan işler tek satırda (ör. «Hak eksik — Timaş Çocuk»). */
+  isGroup?: boolean;
+  statusCounts?: Partial<Record<Status, number>>;
   assignee: string | null;
   note: string | null;
   updatedBy: string | null;
@@ -36,6 +40,8 @@ type Item = {
 };
 type Resp = {
   total: number;
+  itemTotal: number;
+  view: View;
   start: number;
   items: Item[];
   counts: { owner: Partial<Record<Owner, number>>; status: Partial<Record<Status, number>>; source: Record<string, number> };
@@ -68,7 +74,7 @@ const STATUS_FILTERS: Array<{ id: StatusFilter; label: string }> = [
   { id: '', label: 'Hepsi' },
 ];
 const SEV_TONE: Record<Item['severity'], string> = { kritik: 'bad', yüksek: 'mid', orta: '', düşük: 'good' };
-const STATUS_TONE: Record<Status, string> = { yeni: 'violet', yapiliyor: 'mid', bitti: 'good', yoksay: '' };
+const STATUS_TONE: Record<Status | 'karisik', string> = { yeni: 'violet', yapiliyor: 'mid', bitti: 'good', yoksay: '', karisik: '' };
 const impactText = (n: number) => fmt(n, 1);
 
 /** Tek iş listesi: bütün SEO & GEO ekranlarının ürettiği işler, sorumluya göre ve etkiye göre sıralı. Kaynak bir işi artık
@@ -79,6 +85,7 @@ export default function SeoWorklist() {
   const qc = useQueryClient();
   const [owner, setOwner] = useState<Owner | ''>('');
   const [status, setStatus] = useState<StatusFilter>('acik');
+  const [view, setView] = useState<View>('gruplu');
   const [source, setSource] = useState('');
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -88,12 +95,12 @@ export default function SeoWorklist() {
     const t = setTimeout(() => setQuery(q), 300);
     return () => clearTimeout(t);
   }, [q]);
-  useEffect(() => setStart(0), [owner, status, source, query]);
+  useEffect(() => setStart(0), [owner, status, source, query, view]);
 
   const filters = { owner, status, source, q: query };
   const list = useQuery({
-    queryKey: ['seo-worklist', owner, status, source, query, start],
-    queryFn: () => call<Resp>(`worklist?${qs({ ...filters, start, limit: PAGE })}`, { timeout: 180_000 }),
+    queryKey: ['seo-worklist', owner, status, source, query, start, view],
+    queryFn: () => call<Resp>(`worklist?${qs({ ...filters, view, start, limit: PAGE })}`, { timeout: 180_000 }),
     enabled: ENGINE_ENABLED,
     retry: false,
     placeholderData: (p) => p,
@@ -192,6 +199,14 @@ export default function SeoWorklist() {
                     </button>
                   ))}
                 </div>
+                <div className="sg-filters" role="radiogroup" aria-label="Görünüm">
+                  <button className="sg-filter" role="radio" aria-checked={view === 'gruplu'} aria-pressed={view === 'gruplu'} onClick={() => setView('gruplu')}>
+                    Gruplu
+                  </button>
+                  <button className="sg-filter" role="radio" aria-checked={view === 'tek'} aria-pressed={view === 'tek'} onClick={() => setView('tek')}>
+                    Tek tek
+                  </button>
+                </div>
                 <select className="sg-search" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Kaynak ekran" style={{ flex: '0 1 280px', fontSize: 13, color: 'var(--sg-ink)' }}>
                   <option value="">Bütün kaynaklar</option>
                   {Object.entries(d.sources).map(([k, label]) => (
@@ -224,9 +239,14 @@ export default function SeoWorklist() {
                   <p>Bu süzgece uyan açık iş kalmadı.</p>
                 </div>
               )}
+              {d.ready && d.items.length > 0 && (
+                <p style={{ margin: '0 0 8px', fontSize: 12.5, color: 'var(--sg-muted)' }}>
+                  {d.view === 'gruplu' ? `${fmt(d.total)} satır; içinde ${fmt(d.itemTotal)} iş. Aynı türden ürün ya da kişi işleri tek satırda toplandı.` : `${fmt(d.total)} iş.`}
+                </p>
+              )}
               <div className="sg-list">
                 {d.items.map((it) => (
-                  <WorkRow key={it.key} it={it} canEdit={canRun} statuses={d.statuses} onDone={refresh} />
+                  <WorkRow key={it.key} it={it} canEdit={canRun} statuses={d.statuses} onDone={refresh} statusFilter={status} />
                 ))}
               </div>
               {total > PAGE && (
@@ -250,7 +270,8 @@ export default function SeoWorklist() {
   );
 }
 
-function WorkRow({ it, canEdit, statuses, onDone }: { it: Item; canEdit: boolean; statuses: Record<Status, string>; onDone: () => void }) {
+function WorkRow({ it, canEdit, statuses, onDone, statusFilter = '' }: { it: Item; canEdit: boolean; statuses: Record<Status, string>; onDone: () => void; statusFilter?: StatusFilter }) {
+  const [open, setOpen] = useState(false);
   const [assignee, setAssignee] = useState(it.assignee ?? '');
   const [note, setNote] = useState(it.note ?? '');
   useEffect(() => {
@@ -273,6 +294,12 @@ function WorkRow({ it, canEdit, statuses, onDone }: { it: Item; canEdit: boolean
             <span className="sg-chip">{it.sourceLabel}</span>
             <span className={`sg-chip ${SEV_TONE[it.severity]}`}>{it.severity}</span>
             <span className={`sg-chip ${STATUS_TONE[it.status]}`}>{it.statusLabel}</span>
+            {it.isGroup &&
+              Object.entries(it.statusCounts ?? {}).map(([k, n]) => (
+                <span key={k} className="sg-chip">
+                  {statuses[k as Status] ?? k} {fmt(n ?? 0)}
+                </span>
+              ))}
           </div>
         </div>
         <div style={{ textAlign: 'right' }} title={it.impactBasis}>
@@ -288,16 +315,30 @@ function WorkRow({ it, canEdit, statuses, onDone }: { it: Item; canEdit: boolean
         <Link className="sg-button" to={it.link}>
           Ekrana git <ArrowRight size={14} aria-hidden />
         </Link>
+        {it.isGroup && (
+          <button className="sg-button" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+            {open ? 'İşleri gizle' : `İşleri göster (${fmt(it.count ?? 0)})`}
+          </button>
+        )}
         {canEdit ? (
           <>
             <select
               className="sg-search"
               value={it.status}
-              onChange={(e) => save.mutate(e.target.value as Status)}
+              onChange={(e) => {
+                const next = e.target.value as Status;
+                if (it.isGroup && !window.confirm(`Bu durum gruptaki ${fmt(it.count ?? 0)} işin hepsine yazılacak. Devam edilsin mi?`)) return;
+                save.mutate(next);
+              }}
               disabled={save.isPending}
               aria-label="Durum"
               style={{ flex: '0 1 160px', fontSize: 13, color: 'var(--sg-ink)' }}
             >
+              {it.status === 'karisik' && (
+                <option value="karisik" disabled>
+                  Karışık
+                </option>
+              )}
               {(Object.keys(statuses) as Status[]).map((s) => (
                 <option key={s} value={s}>
                   {statuses[s]}
@@ -311,14 +352,14 @@ function WorkRow({ it, canEdit, statuses, onDone }: { it: Item; canEdit: boolean
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && dirty && save.mutate(it.status)}
+                onKeyDown={(e) => e.key === 'Enter' && dirty && it.status !== 'karisik' && save.mutate(it.status)}
                 placeholder="Not"
                 aria-label="Not"
                 maxLength={1000}
               />
             </label>
             {dirty && (
-              <button className="sg-button primary" onClick={() => save.mutate(it.status)} disabled={save.isPending}>
+              <button className="sg-button primary" onClick={() => it.status !== 'karisik' && save.mutate(it.status)} disabled={save.isPending || it.status === 'karisik'}>
                 {save.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : null} Kaydet
               </button>
             )}
@@ -336,7 +377,49 @@ function WorkRow({ it, canEdit, statuses, onDone }: { it: Item; canEdit: boolean
         {it.updatedBy ? ` · son değişiklik ${it.updatedBy}, ${dateTime(it.updatedAt)}` : ''}
       </p>
       {save.error && <div style={{ marginTop: 8 }}><Failed error={save.error} /></div>}
+      {it.isGroup && open && <GroupItems gkey={it.key} canEdit={canEdit} statuses={statuses} onDone={onDone} statusFilter={statusFilter} />}
     </article>
+  );
+}
+
+/** Grubun içindeki işler: süzgeçteki duruma göre, etkiye göre sıralı, sayfalı. */
+function GroupItems({ gkey, canEdit, statuses, onDone, statusFilter }: { gkey: string; canEdit: boolean; statuses: Record<Status, string>; onDone: () => void; statusFilter: StatusFilter }) {
+  const [start, setStart] = useState(0);
+  const qc = useQueryClient();
+  const g = useQuery({
+    queryKey: ['seo-worklist-group', gkey, statusFilter, start],
+    queryFn: () => call<{ total: number; start: number; items: Item[] }>(`worklist/group/${encodeURIComponent(gkey)}?${qs({ status: statusFilter, start, limit: 20 })}`),
+    enabled: ENGINE_ENABLED,
+    retry: false,
+    placeholderData: (p) => p,
+  });
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ['seo-worklist-group', gkey] });
+    onDone();
+  };
+  if (g.isLoading) return <Loading text="İşler getiriliyor…" />;
+  if (g.error) return <Failed error={g.error} />;
+  const d = g.data;
+  if (!d) return null;
+  return (
+    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      {d.items.map((c) => (
+        <WorkRow key={c.key} it={c} canEdit={canEdit} statuses={statuses} onDone={done} />
+      ))}
+      {d.total > 20 && (
+        <div className="sg-pager">
+          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 20))} aria-label="Önceki sayfa">
+            <ChevronLeft size={16} aria-hidden />
+          </button>
+          <span className="sg-mono">
+            {fmt(start + 1)}–{fmt(Math.min(d.total, start + 20))} / {fmt(d.total)}
+          </span>
+          <button className="sg-button" disabled={start + 20 >= d.total} onClick={() => setStart(start + 20)} aria-label="Sonraki sayfa">
+            <ChevronRight size={16} aria-hidden />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
