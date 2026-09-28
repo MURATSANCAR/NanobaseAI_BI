@@ -8,6 +8,7 @@ import AskBox from './AskBox';
 import { WebSection } from './web/parts';
 import Cover from './Cover';
 import ReviewPanel from './ReviewPanel';
+import BookCollabs from '../influencers/BookCollabs';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -316,6 +317,7 @@ export default function BookScreen() {
           <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
           <WebSection kind="book" id={b.id} framed />
+          <BookCollabs bookId={b.id} />
           {b.editorBook && <ReviewPanel bookId={b.editorBook.id} />}
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">

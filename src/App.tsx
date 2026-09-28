@@ -121,6 +121,12 @@ const SocialPost = lazy(() => import('@/canvas/social/SocialPost'));
 const SocialOpportunities = lazy(() => import('@/canvas/social/SocialOpportunities'));
 const SocialReport = lazy(() => import('@/canvas/social/SocialReport'));
 const SocialAccounts = lazy(() => import('@/canvas/social/SocialAccounts'));
+const CollabBoard = lazy(() => import('@/canvas/influencers/CollabBoard'));
+const InfluencerPeople = lazy(() => import('@/canvas/influencers/PeopleList'));
+const InfluencerPerson = lazy(() => import('@/canvas/influencers/PersonCard'));
+const InfluencerCandidates = lazy(() => import('@/canvas/influencers/Candidates'));
+const CollabReport = lazy(() => import('@/canvas/influencers/CollabReport'));
+const InfluencerPayouts = lazy(() => import('@/canvas/influencers/Payouts'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -279,6 +285,14 @@ export default function App() {
             <Route path="sosyal-medya/firsatlar" element={<SocialOpportunities />} />
             <Route path="sosyal-medya/rapor" element={<SocialReport />} />
             <Route path="sosyal-medya/hesaplar" element={<SocialAccounts />} />
+            {/* Pazarlama › İletişim: M23 İşbirlikleri (/api/v1/influencers). */}
+            <Route path="isbirlikleri" element={<CollabBoard />} />
+            <Route path="isbirlikleri/kisiler" element={<InfluencerPeople />} />
+            <Route path="isbirlikleri/kisi/:id" element={<InfluencerPerson />} />
+            <Route path="isbirlikleri/aday" element={<InfluencerCandidates />} />
+            <Route path="isbirlikleri/aday/:kitap" element={<InfluencerCandidates />} />
+            <Route path="isbirlikleri/rapor" element={<CollabReport />} />
+            <Route path="isbirlikleri/odemeler" element={<InfluencerPayouts />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

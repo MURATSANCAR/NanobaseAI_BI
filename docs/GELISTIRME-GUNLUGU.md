@@ -679,6 +679,24 @@ gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/ru
 - **Açık kalanlar:** kitap sayfasına «Sosyal» sekmesi (BookScreen ortak dosya, dokunulmadı); resmî API ile içgörü/yorum
   ve kriz sınıflaması (sonraki sürüm); M51'e şikâyet aktarımı; Uyarılar rozetine onay bekleyen sayısı; M20 elle haber kaydı
   (M20 yok); zamanlayıcının ilk kurulumda elle bir kez koşturulması.
+## 2026-09-28 — M23 İnfluencer ve İşbirliği Yönetimi kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** ekran `/timas/isbirlikleri` (menü Pazarlama › İletişim › İşbirlikleri, Kampüs M23): Pano (teklif → kitap gönderildi → içerik bekleniyor → içerik onayda → yayında → rapor → ödeme; telefonda tek sütun + aşama seçici), İçerik üreticileri (`/kisiler`, CSV içe aktarma), kişi kartı (`/kisi/:id`), kitaba aday (`/aday/:kitap`), Rapor (`/rapor`, Excel), Ödemeler (`/odemeler`, Excel); kitap sayfasına «İşbirlikleri» bölümü. Köprü `influencers.py` (tablolar `semantic_infl_people|accounts|snapshots|collabs|events|payouts|drafts|reminders`), `influencers_sources.py` (CRM yalnız okuma), `influencers_api.py` (`/api/v1/influencers/*`, `app.py`'de iki satır), zamanlayıcı `timas-influencers.timer` 08:00.
+- **Kararlar (analiz §10 açık soruları; veriye bakılamadı, kod parametreli):**
+  - *CRM'de influencer varlığı yok* → kayıt defteri köprüde; CRM kişisi yalnız isteğe bağlı bağ (`crm_contact_id`) ve sosyal kullanıcı adı eşleşme önerisi (`GET crm/contacts`).
+  - *Tanıtım gönderiminin alıcısı kişi mi cari mi* ölçülmedi → bağ sipariş numarasıyla (kartta elle), kişi kartı adedi `new_siparistipi = 12` satırlarından.
+  - *Hesap sayıları:* resmî API ile keşif/sahte takipçi yapılamıyor, kazıma yok → ilk sürüm elle/CSV; `INFLUENCER_API_ENABLED` ikinci sürüm bayrağı (açık olsa bile yalnız durum döner). «Ani sıçrama» yalnız kendi iki ölçümümüzden (varsayılan %30, 45 gün).
+  - *Otomatik dış gönderim yok* (kullanıcı kararı) → brief/iletişim/sadakat taslağı onaylanır, insan kendi e-postasıyla gönderir, portal «Gönderdim» kaydını tutar (`mailto:` bağlantısı). SMTP yalnız iç ekip hatırlatması için.
+  - *Yasal etiket* (Reklam Kurulu kılavuzu): brief'te sabit madde (modele yazdırılmaz; maddesi silinen brief onaylanmaz); «rapor»a geçiş `disclosure_ok = true` ister (türler `INFLUENCER_DISCLOSURE_KINDS`, varsayılan hediye dahil hepsi — hukuka doğrulatılacak).
+  - *Onay:* ücretli/karşılıklı teklif her zaman, hediye `INFLUENCER_GIFT_NEEDS_APPROVAL` (varsayılan açık) ile müdür onayı olmadan ilerlemez; açan onaylayamaz. Ret nedenli, işi «vazgeçildi» yapar.
+  - *Ödeme:* M8 hakediş deseni (iki göz, Logo belge no ile ödendi, tutar dondurulur) işbirliği başına satır olarak; ortak yardımcılar `freelance.py`'den (`_money`, `_day`, `_tl`…), `InfluencerError` `FreelanceError`'dan türer. «ödeme» aşaması satırı açar, ödendi işi kapatır, iptal işi rapora döndürür.
+  - *Ücret görünürlüğü (KVKK):* ücret aralığı, işbirliği ücreti, harcama ve CPE yalnız `ozellik:isbirligi.onay` ya da `.odeme` sahibine; diğerleri ücret girebilir ama göremez.
+  - *Aday puanı:* kural (konu 35, yaş 15, geçmiş etkileşim 20, ilişki 10, tazelik 10, bütçe 10; `INFLUENCER_RANK_WEIGHTS`). Kitap konusu CRM tür/raf/hedef kitle metninden kelime kuralıyla (`INFLUENCER_TOPIC_WORDS` ile genişler; ≤3 harfli kelime tam kelime), çıkmazsa Zeki AI `choose` (p ≥ 0,70). Zeki AI yalnız seçilen adaylara gerekçe cümlesi yazar (`marketing.guard` denetimi; olgu dışı sayı → kural gerekçesi). Tavan yok; «iletişim kurulmasın» ve aynı kitabı almış kişiler ayrı listede nedeniyle.
+  - *Durum anahtarları ASCII:* `teklif, gonderildi, icerik-bekleniyor, onayda, yayinda, rapor, odeme, kapali, vazgecildi`; ödeme `hazir, onayli, odendi, iptal` (analizdeki kabul SQL'i Türkçe harfliydi; referans.sql buna göre).
+- **Yetki:** `sayfa:isbirlikleri`; `ozellik:isbirligi.duzenle`; açık `ozellik:isbirligi.onay`, `ozellik:isbirligi.odeme`; Excel `veri.disa-aktar`. Sayfa «Herkes»e kapalı değil (pazarlama işi; ücretler özellikle korunur).
+- **Ayarlar:** Yönetim → «İşbirlikleri» (`INFLUENCER_*`: alıcılar, ödeme günü 25, aylık bütçe, bütçe eşiği %90, bekleme/gecikme günleri, ağırlıklar, konu kelimeleri, yasal etiket türleri, hediye onayı, API bayrağı).
+- **Testler:** `backend/semantic_layer/tests/test_influencers.py` (25 test; yerelde koşulmadı, yalnız `py_compile`). Kabul: `scripts/acceptance/M23/` (`check.sh`, `kabul.py` R1–R5 doğrudan SQL + kapı/yetki denemeleri, `cleanup.py`, `referans.sql`). **DOĞRULANAMADI — testler, tsc/vitest ve gerçek CRM kabulü koordinatörde.**
+- **Açık:** Kampüs zilinde «onay bekleyen teklif» rozeti yok (e-posta + pano sayacı var); kabul için onay yetkili ikinci oturum (COOKIE2) ve yetkisiz oturum (COOKIE3) gerekir; tanıtım siparişinin alıcı bağı, Logo'da influencer ödemesinin kartı/özel kodu ve mutabakat ölçülecek; resmî API istemcisi, UTM/indirim kodu satış bağı ikinci sürüm.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
