@@ -7,6 +7,8 @@ import { useCan } from '../../useAdmin';
 import { useDebounced, Panel } from '../kit';
 import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi } from './ioApi';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Terim bankası: dil çifti başına genel terimler ve işe özel terimler. Onaylı terimi «Terim bankası düzenleme»
  *  yetkisi olan yazar; çevirmenin önerisi «aday» olarak gelir, burada onaylanır. */
@@ -293,6 +295,7 @@ export default function TermBank() {
           </h2>
           <span className="font-mono text-[11px] tabular-nums text-canvas-muted">
             {nf.format(items.length)} terim{candidates ? ` · ${nf.format(candidates)} aday` : ''}
+            <SqlInfo k={kaynakOf(terms.data)} alan="_hepsi" label="Terim sayıları" className="ml-1" />
           </span>
         </div>
         {canEdit && (

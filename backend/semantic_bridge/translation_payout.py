@@ -34,6 +34,8 @@ from fastapi import HTTPException, Request
 
 from semantic_bridge import editorial_translation as tr
 from semantic_bridge import freelance as fl
+from semantic_bridge import sorgu_izi as _IZ  # noqa: E402 — sorgu bilgisi
+from semantic_bridge.soru_kaynak import databases as _sk_dbs  # noqa: E402
 
 log = logging.getLogger("semantic.translation_payout")
 _md = sa.MetaData()
@@ -499,6 +501,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
             raise HTTPException(status_code=e.status, detail={"code": code, "message": str(e)}) from e
 
     @app.get(base)
+    @_IZ.izlenir('portal.ceviri.hakedis', 'Hakediş', 'Hakediş: esas kelime = işin onaylı (ya da seçilen esasa göre çevrilen) kelimesi; aktarılan = daha önce hakedişe taşınan kelime; bekleyen = esas − aktarılan; tutar = kelime × kelime ücreti (ondalık hesap); iş paketi kelime sayısı ve taşıma geçmişi taşıma kayıtlarından.', engine=None, dbs=_sk_dbs)
     def tr_payout(job_id: str, request: Request) -> dict[str, Any]:
         return call(request, status, job_id)[2]
 

@@ -14,6 +14,8 @@ import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '.
 import { canSeePage, usePageAccess } from '../../useAdmin';
 import { Panel } from '../kit';
 import { PAYOUT_STATUS, TASK_STATUS, day, editNum, parseNum, stamp, tl } from '../freelance/shared';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Çeviri işinin serbest çalışan tarafı (M4 → M8): çevirmenin M8 kaydı, kelime ücreti ve hakediş esası; M8'de iş
  *  paketi ve hakedişe aktarım. Aktarım yalnız son aktarımdan sonra onaylanan (ya da çevrilen) kelimeyi gönderir;
@@ -95,7 +97,10 @@ export default function PayoutPanel({ job }: { job: TranslationJobDetail }) {
 
   return (
     <Panel>
-      <h3 className="px-1 text-[13px] font-extrabold">Serbest çalışan ve hakediş</h3>
+      <h3 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+        Serbest çalışan ve hakediş
+        {d && <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Hakediş kelimesi ve tutarı" />}
+      </h3>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
         Dışarıdan çalışan çevirmenin emeği Serbest çalışanlar ekranında iş paketi ve hakediş olur. Ödenecek kelime inceleyenin onayladığı (ya da
         çevrilen) segmentlerden hesaplanır; her aktarımda yalnız son aktarımdan sonraki kelimeler gider. Tutarlar brüt, KDV hariçtir.

@@ -17,6 +17,7 @@ import {
   NarrationError, narrationApi, useNarration, useNarrationPage,
   type NarrationOverview, type NarrationPageRow,
 } from './api';
+import { StudioInfo } from '../shared';
 
 /** Stüdyoda «Sesli okuma»: kitap Türkçe seslendirilir, e-kitapta okunan kelime vurgulanır. Sayfa sayfa dinleme ve
  *  okunan kelime vurgulu önizleme, anlatıcı ve karakter sesleri, telaffuz sözlüğü, yeniden üretim. Sayfalar sayfa
@@ -64,7 +65,10 @@ export default function NarrationSection({ jobId }: { jobId: string }) {
           <Headphones className="h-[18px] w-[18px]" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[15px] font-extrabold leading-tight">Sesli okuma</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold leading-tight">
+            Sesli okuma
+            <StudioInfo label="Sesli okuma" what="Sayfa ve ses sayıları seslendirme kaydından." />
+          </h2>
           <p className="text-[11.5px] text-canvas-muted">Kitap Türkçe seslendirilir; e-kitapta okunan kelime vurgulanır.</p>
         </div>
         {d && <Summary d={d} />}

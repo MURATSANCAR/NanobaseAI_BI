@@ -14,6 +14,8 @@ import { QeJobPanel } from './qe';
 import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** M4 Çeviri Yönetimi: çeviri işleri (kaynak, segmentler, atama, ilerleme, ZEKİ ham taslak, dosyalar),
  *  terim bankası ve çevirmen karneleri. Çevirmenin kendi ekranı /ceviri/masam, kalite raporu /ceviri/:iş/kalite. */
@@ -109,14 +111,17 @@ function JobForm({ onDone, onCancel }: { onDone: (id: string) => void; onCancel:
   );
 }
 
-function JobList({ jobs, selected, onSelect, canManage }: { jobs: TranslationJob[]; selected: string | null; onSelect: (id: string) => void; canManage: boolean }) {
+function JobList({ jobs, selected, onSelect, canManage, k }: { jobs: TranslationJob[]; selected: string | null; onSelect: (id: string) => void; canManage: boolean; k?: ReturnType<typeof kaynakOf> }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   return (
     <Panel>
       <div className="flex items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Çeviri işleri</h2>
-        <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(jobs.length)}</span>
+        <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-canvas-muted">
+          {nf.format(jobs.length)}
+          <SqlInfo k={k} alan="_hepsi" label="İş sayısı ve iş başına oranlar" />
+        </span>
       </div>
       {canManage && (
         <div className="mt-2">
@@ -294,6 +299,7 @@ function Candidates({ job, canTerm }: { job: TranslationJobDetail; canTerm: bool
     <details className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <summary className="cursor-pointer select-none text-[12.5px] font-extrabold">
         Terim adayları {q.data ? <span className="font-mono text-[11px] font-bold text-canvas-muted">({nf.format(items.length)})</span> : null}
+        {q.data && <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Terim adayları ve geçiş sayıları" />}
       </summary>
       <p className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">
         Kaynakta cümle ortasında büyük harfle en az üç kez geçen ve bankada olmayan adlar. Çeviri boyunca aynı yazılması gerekir; karşılığını girip bankaya ekleyin.
@@ -388,7 +394,10 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
       <Panel>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="break-words text-[18px] font-extrabold leading-tight tracking-tight">{j.title}</h2>
+            <h2 className="break-words text-[18px] font-extrabold leading-tight tracking-tight">
+              {j.title}
+              <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="İşin kelime ve segment sayıları" className="ml-1" />
+            </h2>
             <p className="mt-0.5 text-[12px] text-canvas-muted">
               {j.author ? `${j.author} · ` : ''}
               {pair(j)} · açan {j.createdBy}, {dateTime(j.createdAt)}
@@ -776,14 +785,14 @@ function Jobs() {
       <TranslationDrop onCreated={setSelected} />
       {jobs.data && items.length > 0 && (
         <KpiRow>
-          <Kpi label="Süren iş" value={nf.format(active.length)} help={`${nf.format(items.length - active.length)} iş bitti ya da kaynak bekliyor`} />
-          <Kpi label="Çevrilen kelime" value={`%${pct(done, words)}`} help={`${nf.format(done)} / ${nf.format(words)} (süren işler)`} />
-          <Kpi label="Gecikme riski" value={nf.format(late)} help="Son 14 günün hızıyla teslime yetişmeyen" />
-          <Kpi label="İnceleme bekleyen" value={nf.format(waiting)} help="Çevrildi, onay bekleyen segment" />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Süren iş" />} label="Süren iş" value={nf.format(active.length)} help={`${nf.format(items.length - active.length)} iş bitti ya da kaynak bekliyor`} />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Çevrilen kelime" />} label="Çevrilen kelime" value={`%${pct(done, words)}`} help={`${nf.format(done)} / ${nf.format(words)} (süren işler)`} />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Gecikme riski" />} label="Gecikme riski" value={nf.format(late)} help="Son 14 günün hızıyla teslime yetişmeyen" />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="İnceleme bekleyen" />} label="İnceleme bekleyen" value={nf.format(waiting)} help="Çevrildi, onay bekleyen segment" />
         </KpiRow>
       )}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-4">
-        {jobs.isLoading ? <Panel><Loading /></Panel> : <JobList jobs={items} selected={selected} onSelect={setSelected} canManage={canManage} />}
+        {jobs.isLoading ? <Panel><Loading /></Panel> : <JobList jobs={items} selected={selected} onSelect={setSelected} canManage={canManage} k={kaynakOf(jobs.data)} />}
         {selected ? (
           <JobPanel key={selected} jobId={selected} onDeleted={() => setSelected(null)} />
         ) : (

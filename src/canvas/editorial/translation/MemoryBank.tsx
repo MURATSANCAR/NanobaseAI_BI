@@ -8,6 +8,8 @@ import { useCan } from '../../useAdmin';
 import { Panel } from '../kit';
 import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi, type MemoryFile, type MemoryPair } from './ioApi';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Çeviri belleği: işlerde çevrilmiş/onaylı segmentler ve dışarıdan (TMX) alınan bellek. Çevirmen ekranındaki
  *  benzer cümle önerisi ikisine birden bakar; dış bellekten gelen öneri «Dış bellek: <dosya>» diye görünür. */
@@ -144,7 +146,10 @@ export default function MemoryBank() {
       <Panel>
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2 className="text-[13px] font-extrabold">Bellekteki dil çiftleri</h2>
-          <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(pairs.length)}</span>
+          <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-canvas-muted">
+            {nf.format(pairs.length)}
+            <SqlInfo k={kaynakOf(memory.data)} alan="_hepsi" label="Bellek kayıt sayıları" />
+          </span>
         </div>
         {memory.error && <Note tone="err">{errText(memory.error, 'Çeviri belleği okunamadı.')}</Note>}
         {memory.isLoading ? (

@@ -10,6 +10,8 @@ import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
 import { useCan } from '../../useAdmin';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import { StudioInfo } from './shared';
+
 
 /** Kitabın Word dosyasıyla yeni tasarım (köprü sınırı editorial_studio.DOCX_MAX = 20 MB). */
 function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
@@ -146,7 +148,10 @@ export default function StudioHome() {
         )}
 
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Tasarımlar</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+            Tasarımlar
+            <StudioInfo label="Tasarım işleri" what="İş başına tamamlanan adım ÷ bütün adımlar; «bu kitabın N tasarımı» aynı kitap adıyla açılmış iş sayısı." />
+          </h2>
           {jobs.isLoading ? <Loading /> : (
             <ul className="mt-3 flex flex-col gap-2">
               {(jobs.data?.jobs ?? []).map((j) => {

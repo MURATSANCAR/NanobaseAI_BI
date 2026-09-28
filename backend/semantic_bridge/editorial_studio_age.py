@@ -19,6 +19,8 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
 from semantic_bridge import editorial_studio
+from semantic_bridge import sorgu_izi as _IZ  # noqa: E402 — sorgu bilgisi
+from semantic_bridge.soru_kaynak import databases as _sk_dbs  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +101,7 @@ def register(app, deps: dict[str, Any] | Any) -> None:
         return out
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/age")
+    @_IZ.izlenir('portal.studyo.yas', 'Yaş uygunluğu', 'Yaş uygunluğu: oranlar, seyrek kelime ve çözümlenemeyen biçim sayıları servisin metin ölçümünden; kıyas kümesi aynı yaş grubundaki kitaplar.', engine=None, dbs=_sk_dbs, dis_adi='Kitap tasarım servisi (işin kendi kaydı)')
     def editorial_studio_age_view(job: str, request: Request):
         auth(request)
         return call(view, job)

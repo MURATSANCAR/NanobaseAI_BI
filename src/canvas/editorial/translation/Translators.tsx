@@ -5,6 +5,8 @@ import { Loading, Note, Pill, errText, nf } from '../../admin/ui';
 import { num } from '../../format';
 import { Panel } from '../kit';
 import { LANGS, pct } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Çevirmen karnesi: çeviri işlerimize atanmış kişiler; iş, kelime, inceleme puanı ve teslim. Kayıtlar yalnız
  *  bu modülün işlerinden gelir; CRM'deki çevirmen listesi Kişiler ekranındadır. */
@@ -21,7 +23,10 @@ export default function Translators() {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">Çevirmen karnesi</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Çevirmen karnesi
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Çevirmen karnesi" />
+        </h2>
         <Link to="/kisiler?rol=cevirmen" className="text-[11.5px] font-bold text-canvas-violet underline">
           CRM'deki çevirmenler
         </Link>

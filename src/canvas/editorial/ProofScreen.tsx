@@ -10,6 +10,9 @@ import { WorkList, WorkUpload, fmtBytes, useWorks } from './WorkPicker';
 import { ProofFindings, seriousCount } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
 import { DocumentPicker, DocumentResult, DocumentUpload } from './DocumentReview';
+import { DocumentPicker, DocumentResult } from './DocumentReview';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -326,13 +329,13 @@ export default function ProofScreen() {
         <KpiRow>
           {s && (
             <>
-              <Kpi label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
-              <Kpi label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
-              <Kpi label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
-              <Kpi label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Prova sürümü" />} label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Dosyadan geçen" />} label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Elle işaretlenen" />} label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="İmza" />} label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
             </>
           )}
-          {hasProofing && <Kpi label="ZEKİ AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
+          {hasProofing && <Kpi info={<SqlInfo k={kaynakOf(pr)} alan="_hepsi" label="Zeki AI bulguları" />} label="ZEKİ AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
         </KpiRow>
       )}
 
@@ -427,7 +430,10 @@ export default function ProofScreen() {
           ) : (
             <>
               <Panel>
-                <h2 className="px-1 text-[13px] font-extrabold">Dosyadan okunanlar</h2>
+                <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+                  Dosyadan okunanlar
+                  <SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Prova dosyasının ölçüleri" />
+                </h2>
                 <div className="mt-2 space-y-2">
                   {s.versions.map((f) => (
                     <Report key={f.id} f={f} />

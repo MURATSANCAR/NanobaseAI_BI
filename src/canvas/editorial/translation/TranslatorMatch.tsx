@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED, send } from '../../engine';
 import { Note, Pill, errText, label, nf } from '../../admin/ui';
 import type { PersonPick } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Çevirmen eşleştirme önerisi: iş açılırken ve atanırken çevirmen alanının altında sıralı adaylar. Her sinyal ayrı
  *  satırda yazılır (dil çifti, yük, inceleme puanı, zamanında teslim, izin); tek bir gizli puan yok. Adaya dokununca
@@ -100,7 +102,12 @@ export function SuggestedTranslators({
     <section aria-label="Önerilen çevirmenler" className="mt-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <span className={label}>Önerilen çevirmenler</span>
-        {q.data && <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(q.data.total)} aday</span>}
+        {q.data && (
+          <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-canvas-muted">
+            {nf.format(q.data.total)} aday
+            <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Aday, yük ve hız" />
+          </span>
+        )}
       </div>
       {q.isLoading && <p className="mt-1.5 text-[11.5px] text-canvas-muted">Adaylar sıralanıyor…</p>}
       {q.error && (

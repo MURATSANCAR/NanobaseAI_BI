@@ -30,6 +30,8 @@ from fastapi import HTTPException, Query, Request
 from fastapi.responses import Response
 
 from semantic_bridge import editorial_studio
+from semantic_bridge import sorgu_izi as _IZ  # noqa: E402 — sorgu bilgisi
+from semantic_bridge.soru_kaynak import databases as _sk_dbs  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -258,6 +260,7 @@ def register(app, deps: dict[str, Any]) -> None:
             raise HTTPException(502, "Kapak arşivi şu an açılamıyor.") from None
 
     @app.get("/api/v1/editorial/studio/library")
+    @_IZ.izlenir('portal.studyo.arsiv', 'Kapak arşivi', 'Kapak arşivi: kapak, gelen ve indirilen kitap kaydı, hazır/sırada sayıları ve kategori/kitle sayaçları tasarım servisinin arşiv kaydından; arşivi site ürün listesi ve CRM etiketleri besler.', engine=None, dbs=_sk_dbs, dis_adi='Kitap tasarım servisi (işin kendi kaydı)')
     def editorial_studio_library_stats(request: Request) -> dict[str, Any]:
         auth(request)
         return {**call(_get, ""), "feed": dict(feed_state)}

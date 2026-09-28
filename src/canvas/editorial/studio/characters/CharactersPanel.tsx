@@ -7,6 +7,7 @@ import { Img, ghostBtn, gradientBtn, press } from '../shared';
 import { Section } from '../elements/controls';
 import CardEditor from './CardEditor';
 import { cardsApi, cardsKey, useCardsView, type Card, type CardsView, type CheckItem } from './api';
+import { StudioInfo } from '../shared';
 
 /** «Karakterler» paneli: dizinin karakter kartları (görünüş ve renkler bir kez kaydedilir, dizinin her kitabında
  *  kullanılır), bu kitabın karakterleri ve karta uymayan resimler. Liste ile kart düzenleyici arasında geçiş
@@ -164,6 +165,7 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
       <SeriesBox key={v.series?.id ?? 'yok'} jobId={jobId} view={v} />
       {run.error && <Note tone="err">{errText(run.error, 'İşlem başlatılamadı.')}</Note>}
 
+      {v.series && <div className="-mb-2 flex justify-end"><StudioInfo label="Karakter kartları" what="Kart sayısı ve onaylı kart sayısı karakter kaydından." /></div>}
       {v.series && (
         <Section title={`Dizinin kartları · ${v.cards.length}${v.cards.length ? ` (${approved} onaylı)` : ''}`} aside={
           <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} onClick={() => setOpen({ card: null })}>

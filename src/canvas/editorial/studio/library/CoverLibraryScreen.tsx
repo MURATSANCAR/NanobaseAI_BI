@@ -15,6 +15,7 @@ import { ModuleFrame, Pager, Panel, useDebounced } from '../../kit';
 import { Img, ghostBtn, press } from '../shared';
 import { Modal } from '../dialogs';
 import { useIsAdmin } from '../../../useAdmin';
+import { StudioInfo } from '../shared';
 
 /** Kapak arşivi: Timaş'ın yayımlanmış kapakları, sitedeki kategori ve alt kategorilere göre. Kapaklar stüdyoda
  *  durur (gece T-soft + CRM'den beslenir); ekran yalnız okur. Seçimler adres çubuğunda: kategori (kat), arama (q),
@@ -224,6 +225,7 @@ export default function CoverLibraryScreen() {
                 <nav aria-label="Kategoriler" className="lg:sticky lg:top-0">
                   <h2 className="mb-2 flex items-center gap-2 text-[13px] font-extrabold">
                     <FolderTree className="h-4 w-4 text-canvas-violet" aria-hidden /> Kategoriler
+                    <StudioInfo label="Kapak arşivi sayıları" what="Kapak, gelen ve indirilen kitap kaydı, hazır ve sıradaki kapak ile kategori/kitle sayaçları arşiv kaydından; arşivi site ürün listesi ve CRM etiketleri besler." />
                   </h2>
                   <TreeRow label="Bütün kapaklar" count={tree.data?.total} active={cat === null} depth={0} onPick={() => pickCat(null)} />
                   <ul className="mt-0.5" role="tree">

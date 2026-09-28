@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Check, CircleDashed, Loader2, MinusCircle, X } from 'lucide-react';
 import type { StudioStepStatus } from '../../engine';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Kitap Tasarım Stüdyosu'nun ortak parçaları. Hareket yalnız durum değişimini anlatmak için:
  *  basışta 0,97 küçülme, ilerleme çubuğu genişliği; ikisi de 160–240 ms ease-out. */
@@ -53,3 +55,16 @@ export const secs = (s: number | null | undefined) => {
 };
 
 export const ago = (t: number) => new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(t * 1000));
+
+/**
+ * Kitap tasarım stüdyosundaki sayılar (adım, sayfa, resim, kelime, kart, efekt…) tasarım servisinin iş kaydından gelir;
+ * hiçbir veritabanı sorgusu yoktur. Köprü de uçlarında aynı kaynağı adıyla yazar. «i» bu kaynağı ve hesabı gösterir.
+ */
+export function StudioInfo({ label, what, className = '' }: { label: string; what: string; className?: string }) {
+  const k: Kaynaklar = {
+    sources: {},
+    formulas: { servis: { name: 'servis', text: what, inputs: [], external: 'Kitap tasarım servisi (işin kendi kaydı)' } },
+    fields: { _hepsi: 'hesap:servis' },
+  };
+  return <SqlInfo k={k} alan="_hepsi" label={label} className={className} />;
+}

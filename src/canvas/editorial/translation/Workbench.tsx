@@ -35,6 +35,8 @@ import { ModuleFrame, Panel, useDebounced } from '../kit';
 import SegmentTools from './SegmentTools';
 import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
 import { QePill, QeSection, QeStrip, flagged, useQe, type QeItem } from './qe';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Çeviri masam: çevirmenin ve inceleyenin kendi ekranı. Sol: bölümün segmentleri (kaynak | hedef); etkin
  *  segmentte yazılır. Sağ (telefonda segmentin altında): terimler, çeviri belleği, ZEKİ taslağı, otomatik
@@ -61,7 +63,10 @@ function MyJobs({ me }: { me: string }) {
   const items = q.data?.items ?? [];
   return (
     <Panel>
-      <h2 className="px-1 text-[13px] font-extrabold">Size atanmış çeviri işleri</h2>
+      <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+        Size atanmış çeviri işleri
+        <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bekleyen segment sayıları" />
+      </h2>
       {q.error && <Note tone="err">{errText(q.error, 'İşler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
       {q.data && !items.length && (
@@ -838,7 +843,10 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
       <Panel>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="break-words text-[18px] font-extrabold leading-tight tracking-tight">{j.title}</h2>
+            <h2 className="break-words text-[18px] font-extrabold leading-tight tracking-tight">
+              {j.title}
+              <SqlInfo k={kaynakOf(list.data) ?? kaynakOf(job.data)} alan="_hepsi" label="Segment, kelime, uyarı ve hata sayıları" className="ml-1" />
+            </h2>
             <p className="mt-0.5 text-[12px] text-canvas-muted">
               {pair(j)}
               {j.translator ? ` · çevirmen ${j.translatorName || j.translator}` : ''}

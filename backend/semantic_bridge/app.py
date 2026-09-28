@@ -5383,6 +5383,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=e.status, detail={"code": "EDITORIAL_DESK", "message": str(e)}) from e
 
     @app.get("/api/v1/editorial/works")
+    @_izle_ep('portal.masa.eserler', 'Masadaki eserler',
+               'Eser listesi: eser başına bölüm sayısı ve onaylı bölüm, prova sürümü ve imza sayısı eser, bölüm ve imza kayıtlarından.')
     def desk_works(request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _desk(request)
         return {"items": _desk_call(desk_mod.list_works, engine, tenant, user, is_admin), "user": user}
@@ -5434,11 +5436,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return await _desk_upload(request, work_id, filename, desk_mod.upload_proof, "proof")
 
     @app.get("/api/v1/editorial/works/{work_id}/chapters")
+    @_izle_ep('portal.masa.bolumler', 'Eserin bölümleri',
+               'Redaksiyon: bölüm sayısı ve metin sürümü, onaylanan ve süren bölüm, karar bekleyen öneri sayısı ve kelime sayısı bölüm ve öneri kayıtlarından; kelime/cümle ölçüleri bölüm metninden sayılır.')
     def desk_chapters(work_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _desk(request)
         return _desk_call(desk_mod.chapters, engine, tenant, user, is_admin, work_id)
 
     @app.get("/api/v1/editorial/chapters/{chapter_id}")
+    @_izle_ep('portal.masa.bolum', 'Bölüm',
+               'Bölüm: kelime, cümle, paragraf ve diğer metin ölçüleri bölüm metninden sayılır (uzun cümle = eşik kelimeyi aşan cümle); karar bekleyen öneri sayısı öneri kayıtlarından.')
     def desk_chapter(chapter_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _desk(request)
         return _desk_call(desk_mod.chapter, engine, tenant, user, is_admin, chapter_id)
@@ -5467,6 +5473,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True}
 
     @app.get("/api/v1/editorial/works/{work_id}/proof")
+    @_izle_ep('portal.masa.prova', 'Son okuma',
+               'Son okuma: prova sürümü, dosyadan geçen ve elle işaretlenen kontrol maddeleri, imza sayıları kontrol ve imza kayıtlarından; sayfa, forma, yazı tipi, görsel ve önceki sürüme göre değişen sayfa sayısı yüklenen prova dosyasının ölçümünden.', dis_adi='Yüklenen prova dosyasının ölçümü (sayfa, forma, yazı tipi, görsel)')
     def desk_proof_state(work_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _desk(request)
         return _desk_call(desk_mod.proof_state, engine, tenant, user, is_admin, work_id)
@@ -5529,6 +5537,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{_url_quote(name)}"})
 
     @app.get("/api/v1/editorial/translation/jobs")
+    @_izle_ep('portal.ceviri.isler', 'Çeviri işleri',
+               'Çeviri işleri: süren/biten iş sayısı, çevrilen kelime = çevrildi ya da onaylı segmentlerin kelimesi ÷ toplam kelime, onaylı oranı, inceleme bekleyen ve bekleyen segment sayıları segment kayıtlarından; gecikme riski son 14 günün çeviri hızıyla termine yetişip yetişmeyeceği.')
     def tr_jobs(request: Request, mine: int = 0) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         return {"items": _tr_call(tr_mod.list_jobs, engine, tenant, user, see_all, bool(mine)), "user": user,
@@ -5543,6 +5553,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}")
+    @_izle_ep('portal.ceviri.is', 'Çeviri işi',
+               'İş ayrıntısı: segment durum sayıları (boş, taslak, çevrildi, onaylı), bölüm başına segment/kelime/oran ve taslak ilerlemesi segment kayıtlarından.')
     def tr_job(job_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         return _tr_call(tr_mod.job_detail, engine, tenant, user, see_all, job_id)
@@ -5595,6 +5607,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return FileResponse(path, filename=name)
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/segments")
+    @_izle_ep('portal.ceviri.segmentler', 'Segmentler',
+               'Çalışma tezgâhı: segment başına kelime, uyarı ve hata sayısı (modelsiz denetimler) segment ve hata kayıtlarından; bölüm başına oran.')
     def tr_segments(job_id: str, request: Request, chapter: Optional[int] = None, filter: str = "hepsi", q: str = "") -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         return _tr_call(tr_mod.segments, engine, tenant, user, see_all, job_id, chapter, filter, q)
@@ -5675,6 +5689,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import editorial_translation_qe as tr_qe
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/qe")
+    @_izle_ep('portal.ceviri.kalitetahmini', 'Kalite tahmini',
+               'Kalite tahmini: puanlanan, şüpheli ve eksik segment sayıları, bölüm ortalaması ve dağılım puan kayıtlarından; puan modelin seçim ölçüsüdür, metin üretmez.')
     def tr_qe_get(job_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         tr_qe.ensure(engine)
@@ -5692,11 +5708,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/candidates")
+    @_izle_ep('portal.ceviri.adaylar', 'Terim adayları',
+               'Terim adayı: kaynak metinde geçen tekrarlı ifadeler; «N kez» geçiş sayısı segment metninden sayılır.')
     def tr_candidates(job_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         return {"items": _tr_call(tr_mod.term_candidates, engine, tenant, user, see_all, job_id)}
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/quality")
+    @_izle_ep('portal.ceviri.kalite', 'Kalite raporu',
+               'Kalite raporu: MQM ceza puanı = Σ (hata ağırlığı) ÷ incelenen kelime × 1000; kategori × önem hata sayıları hata kayıtlarından; modelsiz kural sayıları; terim tablosu (geçtiği / uyan) segment metninden; bölüm ve gün tabloları segment ve olay kayıtlarından.')
     def tr_quality(job_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
         return _tr_call(tr_mod.quality, engine, tenant, user, see_all, job_id)
@@ -5735,11 +5755,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/translation/translators")
+    @_izle_ep('portal.ceviri.cevirmenler', 'Çevirmenler',
+               'Çevirmen başına süren iş, iş sayısı, tamamlanma oranı, kelime ve incelenen kelime, zamanında/geç biten iş sayısı iş ve segment kayıtlarından.')
     def tr_translators(request: Request) -> dict[str, Any]:
         engine, tenant, _user, _ = _tr(request)
         return {"items": tr_mod.translators(engine, tenant)}
 
     @app.get("/api/v1/editorial/translation/match")
+    @_izle_ep('portal.ceviri.eslesme', 'Önerilen çevirmenler',
+               'Önerilen çevirmenler: aday sayısı; yük = süren işlerin kalan kelimesi, hız = son işlerin günlük kelimesi (kurala göre, model yok).')
     def tr_match(request: Request, src: str = "", tgt: str = "", words: str = "0", due: str = "", job: str = "") -> dict[str, Any]:
         # Çevirmen eşleştirme önerisi (editorial_translation_match.py): yalnız okur. Rehber yalnız e-postalı
         # serbest çalışan kartı varsa okunur (kart ↔ portal kullanıcısı bağı); okunamazsa kayıtlar ayrı kalır.
@@ -5753,6 +5777,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return _tr_call(match_mod.match, engine, tenant, src, tgt, words, due or None, exclude_job=job or None, directory=directory)
 
     @app.get("/api/v1/editorial/translation/terms")
+    @_izle_ep('portal.ceviri.terimler', 'Terim bankası',
+               'Terim bankası: terim sayıları terim kayıtlarından.')
     def tr_terms(request: Request, src: str = "", tgt: str = "", q: str = "", status: str = "", job: str = "") -> dict[str, Any]:
         engine, tenant, _user, _ = _tr(request)
         return tr_mod.list_terms(engine, tenant, src or None, tgt or None, q, status or None, job or None)
@@ -6250,6 +6276,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                     "loading": not bool(part.get("error")), "error": part.get("error")}
 
     @app.get("/api/v1/editorial/proofing")
+    @_izle_ep('portal.masa.bulgular', 'Son okuma bulguları',
+               'Zeki AI bulguları: uyarı ve hata sayısı denetim servisinin raporundan (bulgu başına bir satır); sayılar raporun kendisidir, model sayı üretmez.', dis_adi='Son okuma denetim servisi (kitap başına rapor)')
     def editorial_proofing(request: Request, book: str = "") -> dict[str, Any]:
         """M5 Son Okuma: motorun (ZEKİ AI) eser üstünde koşturduğu son okuma denetimleri ve bulguları.
         Salt okuma; denetim başlatmaz. Motor ulaşılamazsa 502 (ekran hatayı gösterir, uydurma yok)."""
@@ -6510,6 +6538,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return Response(content=data, media_type=mime, headers={"Cache-Control": f"private, max-age={age}"})
 
     @app.get("/api/v1/editorial/studio/jobs")
+    @_izle_ep('portal.studyo.isler', 'Kitap tasarım işleri',
+               'Tasarım işleri: iş başına adım ilerlemesi ve kitabın tasarım sayısı servisin iş kaydından.', dis_adi='Kitap tasarım servisi (işler, sayfalar ve görseller servisin kendi kaydında)')
     def editorial_studio_jobs(request: Request) -> dict[str, Any]:
         _books(request)
         from semantic_bridge import editorial_studio
@@ -6540,6 +6570,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/studio/jobs/{job}")
+    @_izle_ep('portal.studyo.is', 'Kitap tasarım işi',
+               'İş akışı: bölüm, kelime ve sayfa sayısı, onaylı/bekleyen resim sayıları servisin iş kaydından.', dis_adi='Kitap tasarım servisi (işler, sayfalar ve görseller servisin kendi kaydında)')
     def editorial_studio_job(job: str, request: Request) -> dict[str, Any]:
         _books(request)
         from semantic_bridge import editorial_studio
@@ -6697,6 +6729,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"upload_mb": _upload_mb()}
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/plan")
+    @_izle_ep('portal.studyo.plan', 'Sayfa planı',
+               'Sayfa planı: iç sayfa sayısı, sayfa ölçüsü ve taşma servisin sayfa planından.', dis_adi='Kitap tasarım servisi (işler, sayfalar ve görseller servisin kendi kaydında)')
     def editorial_plan_get(job: str, request: Request):
         _books(request)
         from semantic_bridge import editorial_studio

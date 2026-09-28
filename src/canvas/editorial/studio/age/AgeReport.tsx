@@ -7,6 +7,7 @@ import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, press, Progress } from '../shared';
 import { ageApi, type AgeCheck, type AgeFinding, type AgeLevel, type AgeView, type AgeWord, type Decision, type PageRef } from './api';
 import './age.css';
+import { StudioInfo } from '../shared';
 
 /** Yaş uygunluğu raporu (sözleşme: apps/editor/src/editor/production/age_report.py). Sayfa stüdyosunun üst
  *  şeridinde tek düğme; rapor yan sayfada açılır. Kelime düzeyi, cümle uzunluğu, hassas içerik ve okul/MEB
@@ -107,7 +108,10 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
     <>
       <header className="flex items-start gap-3 border-b border-slate-200/80 px-4 pb-3 pt-4 sm:px-5">
         <div className="min-w-0 flex-1">
-          <Dialog.Title className="text-[17px] font-extrabold tracking-tight">Yaş uygunluğu raporu</Dialog.Title>
+          <Dialog.Title className="flex items-center gap-1 text-[17px] font-extrabold tracking-tight">
+            Yaş uygunluğu raporu
+            <StudioInfo label="Yaş uygunluğu" what="Oranlar, seyrek kelime ve çözümlenemeyen biçim sayıları kitap metninin ölçümünden; kıyas aynı yaş grubundaki kitaplar." />
+          </Dialog.Title>
           <p className="mt-0.5 text-[12px] leading-snug text-canvas-muted">
             {rep ? <>Hedef yaş: <b className="text-canvas-ink">{rep.band ? `${rep.band[0]}–${rep.band[1]}` : 'belirtilmemiş'}</b>{rep.band_source !== 'yok' && ` · ${rep.band_source}`} · {when(rep.at)} · {rep.by}</>
               : 'Kelime düzeyi, cümle uzunluğu, hassas içerik ve okul/MEB ölçütleri.'}

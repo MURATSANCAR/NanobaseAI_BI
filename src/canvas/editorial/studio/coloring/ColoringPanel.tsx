@@ -8,6 +8,7 @@ import { Panel } from '../../kit';
 import { Img, Progress, ghostBtn, gradientBtn, press } from '../shared';
 import { coloringApi, useColoring, type ColoringDerived, type ColoringKind, type ColoringMode, type ColoringSource } from './api';
 import { useCan } from '../../../useAdmin';
+import { StudioInfo } from '../shared';
 
 /** Boyama / etkinlik kitabı: kaynak kitabın stüdyo sayfasında «üret» kartı ve türetilmiş işlerin ilerlemesi;
  *  boyama işinin kendi sayfasında kısa cümle onayı, çizgilerin yöntemi ve «ZEKİ AI ile yeniden çiz».
@@ -215,7 +216,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
     <Panel>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><Palette className="h-4 w-4 text-canvas-violet" aria-hidden />Boyama kitabı</h2>
+          <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><Palette className="h-4 w-4 text-canvas-violet" aria-hidden />Boyama kitabı<StudioInfo label="Boyama" what="Onaylı cümle ÷ bütün kısa cümleler, boyama kaydından." /></h2>
           <p className="mt-0.5 text-[12px] text-canvas-muted">
             Kaynak: <Link className="font-bold underline" to={`/kitap-tasarim/${v.derived_from}/studyo`}>özgün kitap</Link>
             {v.filler > 0 && ` · forma katı için ${v.filler} «kendi resmini çiz» sayfası eklendi`}

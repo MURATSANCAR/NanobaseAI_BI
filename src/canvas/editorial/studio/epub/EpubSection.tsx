@@ -8,6 +8,7 @@ import { narrationApi } from '../narration/api';
 import AltTextList from './AltTextList';
 import EpubPreview from './EpubPreview';
 import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubView, type EpubWant } from './api';
+import { StudioInfo } from '../shared';
 
 /** Stüdyonun «E-kitap» bölümü: aynı sayfa planından e-kitap. Biçim (otomatik öneriyle), ses (sesli e-kitap: okurken
  *  dinle, okunan kelime vurgulu — yalnız bütün sayfaların sesi hazırken; değilse uyarı ve eksik sesleri üretme), e-ISBN,
@@ -174,7 +175,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><BookOpen className="h-4 w-4 text-canvas-violet" aria-hidden />E-kitap</h2>
+            <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><BookOpen className="h-4 w-4 text-canvas-violet" aria-hidden />E-kitap<StudioInfo label="E-kitap sayıları" what="Görsel, gözden geçirilecek görsel, sayfa ve bölüm sayıları e-kitap kaydından." /></h2>
             <p className="mt-0.5 text-[12px] leading-snug text-canvas-muted">
               Aynı sayfa planından; metin gerçek metin (seçilebilir, sesli okunur), görsellerin alt metni, yazı tipleri gömülü.
             </p>

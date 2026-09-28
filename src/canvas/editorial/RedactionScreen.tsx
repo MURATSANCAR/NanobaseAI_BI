@@ -6,6 +6,9 @@ import { Loading, Note, Pill, btn, btnGhost, errText, nf } from '../admin/ui';
 import { num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { WorkList, WorkUpload, useWorks } from './WorkPicker';
+import { UploadButton, WorkList, useWorks } from './WorkPicker';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M3 Metin İşleme ve Redaksiyon. Metin dosyası yüklenir, bölümlere ayrılır, ölçülür; model yazım ve üslup
  *  önerisi çıkarır, editör kabul/ret eder. Kabul edilen öneri metne işlenir ve ilk hâle göre farkta görünür. */
@@ -119,6 +122,7 @@ function ChapterPane({ chapterId, onChanged }: { chapterId: string; onChanged: (
         <div className="min-w-0">
           <h2 className="break-words text-[17px] font-extrabold leading-tight tracking-tight">
             {d.no}. {d.title}
+            <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bölümün metin ölçüleri ve öneriler" className="ml-1" />
           </h2>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
             {STATUS[d.status].label}
@@ -259,10 +263,10 @@ export default function RedactionScreen() {
 
       {w && chapters.length > 0 && (
         <KpiRow>
-          <Kpi label="Bölüm" value={nf.format(chapters.length)} help={detail.data?.versions.length ? `Metin sürümü ${detail.data.versions[0].version}` : ''} />
-          <Kpi label="Onaylanan" value={nf.format(approved)} help={`${nf.format(chapters.length - approved)} bölüm sürüyor`} />
-          <Kpi label="Karar bekleyen öneri" value={nf.format(pending)} help="Kabul ya da ret bekliyor" />
-          <Kpi label="Kelime" value={nf.format(chapters.reduce((a, c) => a + c.words, 0))} help="Güncel metin" />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Bölüm" />} label="Bölüm" value={nf.format(chapters.length)} help={detail.data?.versions.length ? `Metin sürümü ${detail.data.versions[0].version}` : ''} />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Onaylanan" />} label="Onaylanan" value={nf.format(approved)} help={`${nf.format(chapters.length - approved)} bölüm sürüyor`} />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Karar bekleyen öneri" />} label="Karar bekleyen öneri" value={nf.format(pending)} help="Kabul ya da ret bekliyor" />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Kelime" />} label="Kelime" value={nf.format(chapters.reduce((a, c) => a + c.words, 0))} help="Güncel metin" />
         </KpiRow>
       )}
 

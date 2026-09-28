@@ -19,6 +19,8 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import editorial_studio
+from semantic_bridge import sorgu_izi as _IZ  # noqa: E402 — sorgu bilgisi
+from semantic_bridge.soru_kaynak import databases as _sk_dbs  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -140,6 +142,7 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     P = "/api/v1/editorial/studio/jobs/{job}/epub"
 
     @app.get(P)
+    @_IZ.izlenir('portal.studyo.ekitap', 'E-kitap', 'E-kitap: görsel, gözden geçirilecek, sayfa ve bölüm sayıları servisin e-kitap kaydından.', engine=None, dbs=_sk_dbs, dis_adi='Kitap tasarım servisi (işin kendi kaydı)')
     def editorial_studio_epub_view(job: str, request: Request):
         auth(request)
         return call(view, job)

@@ -9,6 +9,7 @@ import {
   PLACE_LABEL, SfxError, TYPE_LABEL, sfxApi, useSfx, useSfxPage,
   type SfxAmbience, type SfxCue, type SfxOverview, type SfxPage, type SfxSound,
 } from './sfxApi';
+import { StudioInfo } from '../shared';
 
 /** Sesli okumada efekt sesleri: Zeki AI sayfa metninden yansıma sözcükleri («vak vak», «güm»), sesi olan olayları
  *  («kapı gıcırdadı») ve sahne ortamını bulur; her ipucu havuzdan en uygun sesle eşleşir. Editör her ipucunda sesi
@@ -39,7 +40,10 @@ export default function SoundEffects({ jobId, narrationReady }: { jobId: string;
           <AudioLines className="h-[18px] w-[18px]" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 id="sfx-title" className="text-[13.5px] font-extrabold leading-tight">Efekt sesleri</h3>
+          <h3 id="sfx-title" className="flex items-center gap-1 text-[13.5px] font-extrabold leading-tight">
+            Efekt sesleri
+            <StudioInfo label="Efekt sesleri" what="Efekt sayısı sayfalara yerleşmiş efektler; kütüphanedeki ses sayısı efekt kütüphanesinden." />
+          </h3>
           <p className="text-[11.5px] text-canvas-muted">Patlama, vak vak, rüzgâr, ateş… Anlatımın altına, kelimenin yanına yerleşir.</p>
         </div>
         {d && <Toggle jobId={jobId} d={d} onDone={refresh} />}

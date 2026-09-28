@@ -6,6 +6,8 @@ import { Note, Pill, TableWrap, btn, btnGhost, errText, nf, td, th } from '../..
 import { dateTime, num } from '../../format';
 import { Panel } from '../kit';
 import { CATEGORY, ProgressBar, SEVERITY, pct } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** ZEKİ kalite tahmini (M4): çevrilmiş segment başına 0–100 puan. Bir TAHMİNDİR, inceleyenin MQM puanı değildir.
  *  85 altı «şüpheli»; gerekçe yalnız alıntısı çeviride birebir geçiyorsa gösterilir. Hedef değişince puan «eski»
@@ -228,7 +230,10 @@ export function QePanel({ jobId }: { jobId: string }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">ZEKİ kalite tahmini</h2>
+        <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+          ZEKİ kalite tahmini
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Kalite tahmini sayıları" />
+        </h2>
         <Pill tone="violet">Tahmin · MQM değil</Pill>
       </div>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">

@@ -8,6 +8,8 @@ import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { CATEGORY, ProgressBar, SEVERITY, StagePill, fmtDay, pair, paceText, pct } from './parts';
 import { QePanel } from './qe';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Kalite raporu (M4): işin gerçek kayıtlarından. MQM inceleme puanı (onaylanan kelimelere göre hata ağırlığı),
  *  inceleyenin düzeltme oranı, otomatik denetim bulguları, terim uyumu, bölüm ve gün gün ilerleme. */
@@ -310,17 +312,19 @@ export default function QualityReport() {
         <>
           <KpiRow>
             <Kpi
+              info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="İnceleme puanı (MQM)" />}
               label="İnceleme puanı (MQM)"
               value={r.mqm.score == null ? '—' : num(r.mqm.score, 1)}
               help={r.mqm.reviewedWords ? `${nf.format(r.mqm.reviewedWords)} kelime incelendi · ${nf.format(r.mqm.errors)} hata` : 'Henüz onaylanan segment yok'}
             />
             <Kpi
+              info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="İnceleyen düzeltmesi" />}
               label="İnceleyen düzeltmesi"
               value={r.edits.rate == null ? '—' : `%${num(r.edits.rate, r.edits.rate < 1 ? 2 : 1)}`}
               help={r.edits.reviewed ? `${nf.format(r.edits.segments)} / ${nf.format(r.edits.reviewed)} onaylı segment değişti` : 'Henüz onaylanan segment yok'}
             />
-            <Kpi label="Otomatik uyarı" value={nf.format(r.checks.segments)} help={`${nf.format(r.segments.cevrildi + r.segments.onaylandi + r.segments.taslak)} yazılı segmentte`} />
-            <Kpi label="Terim uyumu" value={termPct == null ? '—' : `%${termPct}`} help={r.terms.uses ? `${nf.format(r.terms.ok)} / ${nf.format(r.terms.uses)} kullanım` : 'Onaylı terim geçmedi'} />
+            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Otomatik uyarı" />} label="Otomatik uyarı" value={nf.format(r.checks.segments)} help={`${nf.format(r.segments.cevrildi + r.segments.onaylandi + r.segments.taslak)} yazılı segmentte`} />
+            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Terim uyumu" />} label="Terim uyumu" value={termPct == null ? '—' : `%${termPct}`} help={r.terms.uses ? `${nf.format(r.terms.ok)} / ${nf.format(r.terms.uses)} kullanım` : 'Onaylı terim geçmedi'} />
           </KpiRow>
 
           <Panel>

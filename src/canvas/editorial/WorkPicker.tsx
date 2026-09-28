@@ -7,6 +7,8 @@ import { dateTime } from '../format';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
 import { Panel } from './kit';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M3 ve M5'in ortak eser seçicisi: sayfanın üstündeki yükleme alanı (dosyadan eser açar), eser listesi, boş eser. */
 
@@ -197,11 +199,16 @@ export function WorkList({
   onSelect: (id: string) => void;
   progress: (w: Work) => string;
 }) {
+  // Sorgu bilgisi: liste önbellekteki eser okumasından (satırdaki bölüm/imza sayıları dahil).
+  const listing = useWorks();
   return (
     <Panel>
       <div className="flex items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Eser dosyaları</h2>
-        <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(works.length)}</span>
+        <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-canvas-muted">
+          {nf.format(works.length)}
+          <SqlInfo k={kaynakOf(listing.data)} alan="_hepsi" label="Eserlerin bölüm ve imza sayıları" />
+        </span>
       </div>
       {!works.length && (
         <p className="mt-2 px-1 text-[12px] leading-snug text-canvas-muted">

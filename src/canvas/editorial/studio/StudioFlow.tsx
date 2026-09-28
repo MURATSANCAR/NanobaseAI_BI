@@ -9,6 +9,7 @@ import { Img, Progress, STATUS_TEXT, StepIcon, ghostBtn, gradientBtn, secs } fro
 import KunyePanel from './KunyePanel';
 import { ArtModeCard } from './ArtMode';
 import { useCan } from '../../useAdmin';
+import { StudioInfo } from './shared';
 
 /** Yeni tasarımın akışı: içerik, CRM proje bilgisi, sistemin kararları ve canlı üretim adımları.
  *  Sayfa şeridi dizilmiş iç sayfalardan gelir (PDF'in kendisi); her karar gerekçesiyle görünür. */
@@ -120,7 +121,7 @@ export default function StudioFlow() {
           <div className="grid gap-3 lg:grid-cols-[1.45fr_1fr] lg:gap-4">
             <div className="flex flex-col gap-3 lg:gap-4">
               <Panel>
-                <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><FileText className="h-4 w-4 text-canvas-violet" aria-hidden />Kaynak metin</h2>
+                <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><FileText className="h-4 w-4 text-canvas-violet" aria-hidden />Kaynak metin<StudioInfo label="Bölüm ve kelime" what="Bölüm ve kelime sayısı yüklenen kitap metninden sayılır." /></h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12.5px]">
                   <span className="font-bold">{d.job.source.file_name || 'Editörün okuduğu kitap'}</span>
                   {d.book && <span className="font-mono text-[11.5px] text-canvas-muted">{d.book.chapters.length} bölüm · {d.book.words.toLocaleString('tr-TR')} kelime</span>}
@@ -204,7 +205,10 @@ export default function StudioFlow() {
           <Panel>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-[15px] font-extrabold">Sayfalar{pages.length ? ` (${pages.length})` : ''}</h2>
+                <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+                  Sayfalar{pages.length ? ` (${pages.length})` : ''}
+                  <StudioInfo label="Sayfa ve resim sayıları" what="Sayfa sayısı dizilmiş iç sayfalar; resim = boyanmış ÷ resimli sayfa." />
+                </h2>
                 {d.spec && <p className="text-[11.5px] text-canvas-muted">{d.spec.trim_w / 10}×{d.spec.trim_h / 10} cm · {d.spec.body_font} {d.layout?.body_size ?? d.spec.body_size} pt · resim {painted}/{artPages}</p>}
               </div>
               <div className="flex gap-2">

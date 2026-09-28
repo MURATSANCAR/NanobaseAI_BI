@@ -26,6 +26,7 @@ import StudioReaderEntry from './reader';
 import { ConfirmDialog, Modal } from './dialogs';
 import type { AssetJobKind } from './AssetTools';
 import './plan.css';
+import { StudioInfo } from './shared';
 
 /** Sayfa düzeni (sözleşme: docs/analiz/studyo-sayfa-plani-sozlesme.md). Sayfa planı donduktan sonra iç
  *  sayfalar burada düzenlenir: sayfa ekle/sil/sırala, yerleşim, resim ve yazı kutusunu sürükle/boyutlandır,
@@ -476,6 +477,7 @@ export default function PlanEditor() {
                 <button type="button" className={ghostBtn} disabled={index <= 0} onClick={() => setPageId(plan.pages[index - 1].id)} aria-label="Önceki sayfa"><ChevronLeft className="h-4 w-4" aria-hidden /></button>
                 <div className="min-w-0 text-center text-[12px] font-bold">
                   Sayfa {index + 1} / {plan.pages.length}
+                  <StudioInfo label="Sayfa planı" what="İç sayfa sayısı, sayfa ölçüsü (taşma payı düşülerek) ve taşan metin sayfa planından." className="ml-1" />
                   {page?.overflow && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800">metin taşıyor</span>}
                 </div>
                 <button type="button" className={ghostBtn} disabled={index >= plan.pages.length - 1} onClick={() => setPageId(plan.pages[index + 1].id)} aria-label="Sonraki sayfa"><ChevronRight className="h-4 w-4" aria-hidden /></button>

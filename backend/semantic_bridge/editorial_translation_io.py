@@ -33,6 +33,8 @@ import sqlalchemy as sa
 from fastapi import Request
 
 from semantic_bridge import editorial_translation as tr
+from semantic_bridge import sorgu_izi as _IZ  # noqa: E402 — sorgu bilgisi
+from semantic_bridge.soru_kaynak import databases as _sk_dbs  # noqa: E402
 
 TranslationError = tr.TranslationError
 
@@ -522,6 +524,7 @@ def register(app: Any, ctx: Callable[[Any], tuple[Any, str, str, bool]], call: C
         return await request.body()
 
     @app.get(f"{base}/memory")
+    @_IZ.izlenir('portal.ceviri.bellek', 'Çeviri belleği', 'Çeviri belleği: dosya başına kayıt, dil çifti sayısı, çift başına iş segmenti ve dış kayıt sayısı bellek ve segment kayıtlarından (dış kayıtlar yüklenen bellek dosyasından alınmıştır).', engine=None, dbs=_sk_dbs)
     def tr_memory(request: Request) -> dict[str, Any]:
         engine, tenant, _user, _ = _ctx(request)
         return memory_summary(engine, tenant)

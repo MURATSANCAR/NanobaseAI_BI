@@ -43,7 +43,7 @@ def _hook(engine: Any) -> None:
             rec = _REC.get()
             if rec is not None and isinstance(clauseelement, (Select, CompoundSelect)) and not multiparams \
                     and not params:
-                rec.append(clauseelement)
+                rec.append((clauseelement, conn.dialect))
 
         _hooked.add(id(target))
 
@@ -157,7 +157,7 @@ def tam_kaynak(engine: Any, ran: list, got: list, out: Any, *, prefix: str, titl
     dolduran asıl okumalar) + gerekirse SQL'siz kaynağın adı (`dis_adi`) → tek hesap; cevabın rakam taşıyan her üst
     anahtarı ve `_hepsi` bu hesaba bağlanır."""
     k = P.Kaynaklar()
-    ids = kaydet(k, ran, engine, prefix, title, description="Bu ekran açılırken koşan okuma.") if engine is not None else []
+    ids = kaydet(k, ran, engine, prefix, title, description="Bu ekran açılırken koşan okuma.")
     ids += dis_kaydet(k, got, f"{prefix}.kaynak", title, logo_db, crm_db)
     if onceki:
         ids += dis_kaydet(k, onceki, f"{prefix}.onbellek", f"{title} (önbelleği dolduran)", logo_db, crm_db,
@@ -188,7 +188,7 @@ def izlenir(prefix: str, title: str, text: str, *, engine: Callable[[], Any], db
 
         def make() -> P.Kaynaklar:
             eng = engine() if engine is not None else None
-            return tam_kaynak(eng, ran if eng is not None else [], got, out, prefix=prefix, title=title, text=text, logo_db=dbs()[0],
+            return tam_kaynak(eng, ran, got, out, prefix=prefix, title=title, text=text, logo_db=dbs()[0],
                               crm_db=dbs()[1], skip=skip, dis_adi=dis_adi, onceki=onceki(out) if onceki else None)
         if key == "kaynaklar":
             return P.bagla(out, make)
@@ -199,7 +199,30 @@ def izlenir(prefix: str, title: str, text: str, *, engine: Callable[[], Any], db
                         "error": "Bu ekranın sorgu bilgisi hazırlanamadı; rakamlar etkilenmedi."}
         return out
 
+    def resolved(fn) -> Optional[inspect.Signature]:
+        """Uç çerçevesi parametre türlerini sarmalayıcının modülünde çözmeye çalışır; `from __future__ import
+        annotations` ile metin kalan tür (ör. «Request») burada çözülmezse parametre sorgu parametresi sanılır ve
+        her istek 422'ye düşer. Türler asıl fonksiyonun modülünde çözülüp imzaya yazılır."""
+        sig = inspect.signature(fn)
+        ns = getattr(fn, "__globals__", {})
+
+        def ev(a: Any) -> Any:
+            if isinstance(a, str):
+                try:
+                    return eval(a, ns)  # noqa: S307 — yalnız kaynak koddaki tür metni
+                except Exception:  # noqa: BLE001
+                    return a
+            return a
+        return sig.replace(parameters=[p.replace(annotation=ev(p.annotation)) for p in sig.parameters.values()],
+                           return_annotation=ev(sig.return_annotation))
+
     def deco(fn):
+        sig = resolved(fn)
+        out_fn = _deco(fn)
+        out_fn.__signature__ = sig
+        return out_fn
+
+    def _deco(fn):
         if inspect.iscoroutinefunction(fn):
             @functools.wraps(fn)
             async def awrapper(*a, **kw):
@@ -222,9 +245,10 @@ def kaydet(k: P.Kaynaklar, ran: list, engine: Any, prefix: str, title: str, *, d
     """Yakalanan ifadeleri kayda yazar; kimlikleri döndürür (`prefix.1`, `prefix.2`, …). Aynı metin bir kez."""
     seen: dict[str, str] = {}
     ids: list[str] = []
-    for stmt in ran:
+    for item in ran:
+        stmt, dia = item if isinstance(item, tuple) else (item, engine)
         try:
-            text = P.portal_sql(stmt, engine)
+            text = P.portal_sql(stmt, dia)
         except Exception:  # noqa: BLE001 — metne çevrilemeyen ifade (ör. bağlı olmayan tür) kayda yazılamaz
             continue
         if limit_chars and len(text) > limit_chars:
