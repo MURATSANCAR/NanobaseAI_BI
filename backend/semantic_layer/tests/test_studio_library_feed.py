@@ -65,3 +65,12 @@ def test_editor_header_is_ascii():
     assert F.header_name("Şükrü Öztürk") == "Sukru Ozturk"
     assert F.header_name("") == "zamanlayici"
     assert F.header_name("timas\\murat.sancar").isascii()
+
+
+def test_only_books_by_isbn_barcode():
+    assert F.is_book(product(Barcode="9786050000000"))
+    assert F.is_book(product(Barcode="9791000000000"))
+    assert F.is_book(product(Barcode="19786256767331"))          # set: «1» + ISBN
+    assert not F.is_book(product(Barcode="8682815950163"))       # kutu oyunu
+    assert not F.is_book(product(Barcode=""))
+    assert not F.is_book(product(Barcode="L8440"))
