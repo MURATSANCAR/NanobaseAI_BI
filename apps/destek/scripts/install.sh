@@ -101,6 +101,29 @@ fi
 sudo chown root:www-data "$SSO_FILE" && sudo chmod 640 "$SSO_FILE"
 sudo cat "$SSO_FILE" | dc exec -T backend bench --site "$SITE" execute nanobase_brand.sso.set_secret >/dev/null
 
+say "Giden e-posta (Gmail, zeki@)"
+# SMTP ayarı köprünün yönetim ayarlarından (ALERT_SMTP_*): şifre ekrana, komut satırına ve depoya düşmez.
+BRIDGE_PY=${BRIDGE_PY:-/data/nanobaseai/bi/semantic-venv/bin/python}
+BRIDGE_SRC=${BRIDGE_SRC:-/data/nanobaseai/bi/frontend/backend}
+if [ -x "$BRIDGE_PY" ] && sudo test -f "$BRIDGE_ENV"; then
+  sudo env PYTHONPATH="$BRIDGE_SRC" "$BRIDGE_PY" -c '
+import json, os, sys
+for line in open(sys.argv[1], encoding="utf-8"):
+    line = line.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, v = line.split("=", 1); v = v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"\x27": v = v[1:-1]
+        os.environ.setdefault(k.strip(), v)
+from semantic_bridge import admin as a
+c = {k: a.conf("ALERT_SMTP_" + k.upper()) for k in ("host", "port", "user", "password")}
+if not (c["user"] and c["password"]): sys.exit(3)
+print(json.dumps(c))' "$BRIDGE_ENV" \
+    | dc exec -T backend bench --site "$SITE" execute nanobase_brand.eposta.ensure_outgoing >/dev/null \
+    && echo "giden e-posta hesabı hazır" || echo "UYARI: giden e-posta ayarlanamadı (köprüde ALERT_SMTP_* yok ya da SMTP girişi reddetti)"
+else
+  echo "UYARI: köprü ayarı yok; giden e-posta ayarlanmadı"
+fi
+
 dc exec -T backend bench --site "$SITE" clear-cache
 dc restart backend websocket queue-short queue-long scheduler frontend >/dev/null
 
