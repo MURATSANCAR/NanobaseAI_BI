@@ -401,6 +401,42 @@
 - **Kurulum:** `git archive 0e2ad1e8` → `/tmp/bi-main-0e2ad1e8` → `systemd-run --unit=vm-deploy-0e2ad1e8`, günlük `/tmp/vm-deploy-0e2ad1e8.log`, EXIT 0; `c6699f5d`'nin devamı (geriye sarma yok); `bi_var` korundu (rapor önbelleği 4 → 5). Kontroller: `._*` kaynakta 0, köprü konteynerinde 0; köprü/web imajı 02:58, konteynerler bu imajda; köprüde `app.py` ve `production.py` md5 = `0e2ad1e8`; web `index-CVv5-QTM.js` = test sunucusu.
 - **VM kabulü** (dış kapı, giriş konteynerinde 15 dk'lık `timasai` oturumları, her biri sonra silindi; yalnız okuma): 38 uç/sayfa; M8, M4, M2, M7, M6, M46, Yetki, bülten, M10 (`summary`, `decisions`), M12 (`overview` ilk açılış 60 sn, `cards`, `delays`, `printers`) ve 9 sayfa 200. M10 `options` ilk açılışta 503 «hazırlanıyor» (beklenen): ilk rapor VM'de 721 sn'de hazırlandı, sonra `hasData: true`, yayınevi seçenekleri doldu.
 - **Temizlik:** test sunucusu ve VM'deki geçici betikler/klasörler silindi; test kaydı yazılmadı.
+## 2026-09-28 — M48 IT altyapı ve sistem durumu kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** `/timas/sistem-durumu` ekranı (Durum · Olaylar · Zamanlanmış işler · Sürümler · Kapasite · Ayarlar), yeni menü alanı
+  «Altyapı ve destek» (`altyapi`, M48–M51 ortak), Kampüs'te kopukluk şeridi. Köprü `it_ops.py`, `it_ops_sources.py`,
+  `it_ops_api.py`; `app.py`'de yalnız `register`. Analiz `docs/analiz/kullanici-ihtiyaclari/M48-it-altyapi.md` §14.
+- **Yeniden kullanılan:** bağlantı denemeleri `admin.run_check` (Logo, CRM, dizin), zamanlayıcı durumu `admin.system_status` /
+  `_unit` / `_timer_times`, SMTP ayarı `alerts.smtp_settings`, yıl→firma `budget_sources.firms_by_year`, rapor/pano/uyarı
+  listeleri `admin.all_reports` / `all_cards` / `alerts.list_rules`. Bekçi betiği yeniden yazılmadı; sonuna yalnız bildirim eklendi.
+- **Kararlar (analizin açık noktaları, gerekçeyle):**
+  - Logo «veri eski» eşiği **3 gün** (analiz 2 diyordu): cuma akşamı son faturalı bir haftada pazartesi 08:00 turu 2 günle
+    her hafta yanlış alarm verirdi. Ekrandan değişir (`ITOPS_LOGO_STALE_DAYS`).
+  - Tazelik ayrı olay türü (`tazelik`): bağlantı yeşil, veri donmuşken (.155, 2026-08-17) de BT bilsin; kopma sayısına ve
+    kesinti dakikasına girmez.
+  - Model halkası kapıdan geçer; süre dolduğunda deneme hâlâ sıradaysa sonuç «ölçülemedi» (kopma değil), modelin kendi süresi
+    ve sırada bekleme ayrı yazılır.
+  - E-posta **yalnız iç alıcıya**: `ITOPS_INTERNAL_DOMAINS` (varsayılan `timas.com.tr`) dışındaki adres gönderilmez, ekranda
+    «gönderilmeyen» diye listelenir; alan adı listesi boşsa kimseye gitmez. Aynı turdaki olaylar tek e-postada.
+  - Zamanlanmış iş hatası tek tek değil, günde bir özetle (`ITOPS_REPORT_HOUR` sonrası); haftalık sağlık özeti
+    `ITOPS_WEEKLY_DAY`. İşin sahibine ayrı e-posta ilk sürümde yok (sahip bilgisi her modülde farklı).
+  - VPN halkası müşteri VM'inde uygulanmaz (VM şirket ağının içinde; kapsayıcıda arayüz görünmez); VM'de «Müşteri VM'i»
+    halkası iş kapsayıcısının bildirim tazeliğidir (`ITOPS_VM_HEARTBEAT_SEC`), test sunucusunda `ITOPS_VM_URL` denemesi.
+  - Açıkça verilen sayfa: `access.explicit_keys()` sayfaları da kapsar (M55 §14.1'deki gerekli değişiklik); «Herkes» ve
+    «Bütün sayfalar» Sistem durumu'nu açmaz. İşlem yetkileri FEATURE_RULES'a değil, açıkça verilen anahtar olduğu için ucun içine.
+  - Ekrana/e-postaya giden hata metninden teknoloji adları ayıklanır (`it_ops.screen_text`); iç günlükte ham metin kalır.
+  - Kapasite sekmesi ilk sürümde anlık okuma (disk, modül başına model ortancası, soru süresi); projeksiyon ve CRM iş akışı
+    hataları sonraki sürüm. Olay değerlendirmesi taslağı (K2) Zeki AI'dan, sayılar olay tablosundan; yayım olay kapanınca.
+- **Ortak dosyalar:** `access.py` (explicit sayfa, RULES), `access_catalog.json`, `admin.py` (SPEC `itops`, KIND_LABEL), `app.py`,
+  `navModel.ts` (+test), `ModulesMenu.tsx`, `App.tsx`, `AccessAdmin.tsx`, `engine.ts` (`AccessPage.explicit`), `Overview.tsx`
+  (Sistem durumu bağlantısı), `KampusPage.tsx` (şerit), `infra/docker/bi/jobs.py`, `semantic-watchdog.sh` + birimi,
+  `deploy-customer-vm.sh`, `deploy-semantic-bridge.sh`. Yeni: `scripts/server/timas-itops.{service,timer}`, `itops-report-release.sh`.
+- **Doğrulama:** yerelde yalnız `py_compile`, JSON ve `bash -n` (kural). pytest/vitest/tsc koşturulmadı. **DOĞRULANAMADI —
+  sunucu kapalı.** Sunucuda sıra: main'e merge → test sunucusu tam kurulum → `scripts/acceptance/M48/calistir.sh` (birim testleri,
+  zamanlayıcı kurulumu + ilk tur elle, `kabul.py` K1–K9; API ile `--api --dene`) → `temizlik.py` → VM (`--vm`).
+- **Açık:** SMTP ve `ITOPS_RECIPIENTS` girilmeden bildirim gitmez; `ITOPS_VPN_PROBE` ve `ITOPS_VM_URL` test sunucusunda
+  girilmeli (ölçülecek); watchdog birimine `EnvironmentFile` eklendi (jetonla bildirim için) — kurulumda birim yeniden yüklenmeli;
+  VM'de ilk turdan sonra halkaların «bilinmiyor» kalmadığı ölçülecek (kabul 7).
 
 ## 2026-09-28 (01:20) — Sesli okuma yenilikleri + son okuma (sade metin, karar taşıma) kuruldu: GPU ve test sunucusu (main `3e1a408c`)
 

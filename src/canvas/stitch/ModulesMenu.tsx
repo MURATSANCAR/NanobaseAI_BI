@@ -49,6 +49,7 @@ export const LIVE: Record<string, string> = {
   categories: '/kategori-agaci',
   M53: '/pazarlama/set-hediye',
   email: '/kurumsal-eposta',
+  M48: '/sistem-durumu',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */
@@ -59,6 +60,7 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
   'SEO & GEO': { to: '/seo-geo', hint: 'Ürün denetimi, arama ve yapay zekâ görünürlüğü' },
   Pazarlama: { to: '/pazarlama/aylik-plan', hint: 'Aylık plan, satış föyleri, yeni kitap planı, lansman ve backlist' },
+  'Altyapı & Destek': { to: '/sistem-durumu', hint: 'Sistem durumu, olaylar ve zamanlanmış işler' },
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */

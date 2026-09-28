@@ -1,5 +1,5 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olanlar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
   "version": 2,
   "areas": [
     {
@@ -33,6 +33,10 @@
     {
       "id": "pazarlama",
       "label": "Pazarlama"
+    },
+    {
+      "id": "altyapi",
+      "label": "Altyapı ve destek"
     }
   ],
   "pages": [
@@ -430,6 +434,12 @@
       "key": "sayfa:kurumsal-eposta",
       "area": "kayitlar",
       "label": "Kurumsal e-posta"
+    },
+    {
+      "key": "sayfa:sistem-durumu",
+      "area": "altyapi",
+      "label": "Sistem durumu",
+      "explicit": true
     }
   ],
   "features": [
@@ -1145,6 +1155,30 @@
       "page": "sayfa:kurumsal-eposta",
       "label": "İş başvuruları (İK)",
       "hint": "İş başvurusu türündeki iletileri görme, İK aday kaydına aktarma. Kişisel veri: yöneticiye de kendiliğinden verilmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.dene",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Bağlantıyı şimdi dene",
+      "hint": "Halka denetimini zamanlayıcıyı beklemeden yeniden koşturur (yalnız okur, servis başlatmaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.olay-kapat",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Olay değerlendirmesi",
+      "hint": "Kök neden notu, «gerçek değil» işareti, Zeki AI değerlendirme taslağı ve yayımı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.ayar",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Sistem durumu ayarları",
+      "hint": "Eşikler ve bildirim alıcıları (yalnız iç adresler)",
       "explicit": true
     }
   ]

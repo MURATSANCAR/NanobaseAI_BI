@@ -9,4 +9,6 @@ User=administrator
 # when it was last healthy, and /run is not writable by a non-root unit.
 RuntimeDirectory=nanobase-semantic
 RuntimeDirectoryPreserve=yes
+# M48: sonucu köprüye bildirmek için çağıran jetonu (SEMANTIC_CALLER_TOKEN) buradan okunur; dosya yoksa atlanır.
+EnvironmentFile=-/etc/nanobase/semantic-bridge.env
 ExecStart=/data/nanobaseai/bi/frontend/scripts/server/semantic-watchdog.sh

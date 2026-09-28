@@ -1,4 +1,6 @@
 import {
+  Activity,
+  Server,
   HeartHandshake,
   Inbox,
   ArrowLeftRight,
@@ -91,7 +93,7 @@ import {
  * öğe olarak girmez, `also` ile en yakın menü öğesine bağlanır ki doğru öğe etkin görünsün.
  */
 
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'altyapi' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -356,6 +358,23 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; BT personeli yönetici olmayabilir.
+    id: 'altyapi',
+    label: 'Altyapı ve destek',
+    hint: 'Sistem durumu, olaylar ve zamanlanmış işler',
+    icon: Server,
+    items: [
+      {
+        id: 'sistem-durumu',
+        label: 'Sistem durumu',
+        to: '/sistem-durumu',
+        icon: Activity,
+        hint: 'Logo, CRM, giriş, Zeki AI, e-posta ve ağ bağlantısının durumu; olaylar ve zamanlanmış işler',
+        keywords: ['bt', 'altyapı', 'kesinti', 'bağlantı', 'olay', 'veri sonu', 'sürüm', 'zamanlanmış iş'],
+      },
+    ],
+  },
+  {
     id: 'yonetim',
     label: 'Yönetim',
     hint: 'Yalnız yöneticiler',
@@ -403,8 +422,8 @@ export function visibleNav(
     .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'altyapi']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

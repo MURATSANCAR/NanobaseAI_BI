@@ -504,6 +504,40 @@ SPEC: list[dict[str, Any]] = [
      "help": "Kutu bu kadar dakikadır okunamadıysa aşağıdaki adreslere bir kez uyarı gider"},
     {"key": "MAIL_CONNECTION_ALERT_TO", "group": "mailbox", "label": "Bağlantı uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (portal yöneticisi / BT)"},
+    # M48 Sistem durumu (halka denetimleri, olaylar). Bu grup Sistem durumu ekranından da `ozellik:sistem.ayar` ile düzenlenir.
+    {"key": "ITOPS_RECIPIENTS", "group": "itops", "label": "Kopma ve düzelme bildirimi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle BT ve işletim ekibinin e-posta adresleri. Yalnız aşağıdaki iç alan adlarındaki adreslere gönderilir"},
+    {"key": "ITOPS_INTERNAL_DOMAINS", "group": "itops", "label": "İç alan adları", "type": "text", "default": "timas.com.tr",
+     "help": "Virgülle. Sistem durumu e-postası yalnız bu alan adlarına gider; boşsa izinli alıcı alan adları kullanılır"},
+    {"key": "ITOPS_WEEKLY_TO", "group": "itops", "label": "Haftalık sağlık özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle; boşsa bildirim alıcılarına gider. Kesinti dakikası ve en çok bozulan halka"},
+    {"key": "ITOPS_WEEKLY_DAY", "group": "itops", "label": "Haftalık özet günü (1=Pazartesi … 7=Pazar)", "type": "int", "default": "1", "help": ""},
+    {"key": "ITOPS_REPORT_HOUR", "group": "itops", "label": "Özet saati", "type": "int", "default": "8",
+     "help": "Haftalık özet ve günlük «hata veren zamanlanmış işler» e-postası bu saatten sonraki ilk turda gider (0–23)"},
+    {"key": "ITOPS_FAILS_TO_OPEN", "group": "itops", "label": "Olay açmak için art arda başarısız deneme", "type": "int", "default": "2",
+     "help": "Tek başarısız deneme olay açmaz (yanlış alarm); 5 dk'lık turda 2 deneme ≈ 10 dk içinde bildirim"},
+    {"key": "ITOPS_LOGO_STALE_DAYS", "group": "itops", "label": "Logo verisi eski sayılır (gün)", "type": "int", "default": "3",
+     "help": "Son fatura bu kadar günden eskiyse «veri eski» olayı açılır. 0: bakılmaz. Hafta sonu yanlış alarm vermesin diye 3"},
+    {"key": "ITOPS_CRM_STALE_HOURS", "group": "itops", "label": "CRM verisi eski sayılır (saat)", "type": "int", "default": "24",
+     "help": "Kitap kartlarında son değişiklik bu kadar saatten eskiyse «veri eski» olayı açılır. 0: bakılmaz"},
+    {"key": "ITOPS_CRM_FRESH_TABLE", "group": "itops", "label": "CRM tazelik tablosu", "type": "text", "default": "new_kitapBase",
+     "help": "Son değişiklik zamanına bakılan CRM tablosu"},
+    {"key": "ITOPS_STALE_REMIND_HOURS", "group": "itops", "label": "«Veri eski» hatırlatması (saat)", "type": "int", "default": "24",
+     "help": "Veri eskiliği sürerse bu kadar saatte bir yeniden bildirilir. Kopma hatırlatması uyarılarınkiyle aynı"},
+    {"key": "ITOPS_VPN_IFACE", "group": "itops", "label": "Şirket ağı bağlantı arayüzü", "type": "text", "default": "tun0",
+     "help": "Test sunucusunda şirket ağı bağlantısının arayüz adı. Müşteri VM'inde bakılmaz"},
+    {"key": "ITOPS_VPN_PROBE", "group": "itops", "label": "Şirket ağında denenecek adres", "type": "text", "default": "",
+     "help": "sunucu:port, örn. 192.168.0.155:1433. Yerel tünel ağzı değil, ağın içindeki gerçek adres"},
+    {"key": "ITOPS_VM_URL", "group": "itops", "label": "Müşteri VM'i adresi", "type": "text", "default": "",
+     "help": "Test sunucusundan denenecek portal adresi, örn. http://192.168.0.55/timas/. Boşsa bu halka ölçülmez"},
+    {"key": "ITOPS_VM_HEARTBEAT_SEC", "group": "itops", "label": "VM iş bildirimi beklenen en uzun süre (sn)", "type": "int",
+     "default": "1200", "help": "Müşteri VM'inde zamanlanmış işlerden bu süre bildirim gelmezse halka kopuk sayılır"},
+    {"key": "ITOPS_MODEL_TIMEOUT_SEC", "group": "itops", "label": "Zeki AI deneme süresi (sn)", "type": "int", "default": "240",
+     "help": "Sırada bekleyip cevap alamayan deneme kopma sayılmaz, «meşgul» yazar"},
+    {"key": "ITOPS_RING_TIMEOUT_SEC", "group": "itops", "label": "Bağlantı denemesi süresi (sn)", "type": "int", "default": "90", "help": ""},
+    {"key": "ITOPS_QUERY_TIMEOUT_SEC", "group": "itops", "label": "Veri sonu sorgusu süresi (sn)", "type": "int", "default": "60", "help": ""},
+    {"key": "ITOPS_DISK_PATHS", "group": "itops", "label": "İzlenen disk klasörleri", "type": "text", "default": "",
+     "help": "Virgülle; boşsa uygulama veri klasörü"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -559,6 +593,9 @@ GROUPS = [
     {"id": "marketing", "label": "Pazarlama planları",
      "help": "Yeni kitap ve aylık pazarlama planının bildirimleri, onay eşiği, öneri kuralları ve satış föyü. CRM'e ve dış "
              "kanallara hiçbir şey kendiliğinden gönderilmez; planlar ve föyler portalda onaylanır."},
+    {"id": "itops", "label": "Sistem durumu",
+     "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
+             "yalnız okur, hiçbir servisi yeniden başlatmaz."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -592,7 +629,8 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
               "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
               "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
-              "marketing_foy": "Satış föyü"}
+              "marketing_foy": "Satış föyü",
+              "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()

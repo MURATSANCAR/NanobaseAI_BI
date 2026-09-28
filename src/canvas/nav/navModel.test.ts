@@ -16,6 +16,13 @@ describe('sayfa yetkisi', () => {
     expect(itemIds(g)).toEqual(['kampus', 'finansal-denetim', 'seo-geo']);
   });
 
+  it('Sistem durumu yönetici alanında değil; sayfa yetkisi olan BT personeli görür, olmayan görmez', () => {
+    const bt = visibleNav(user, {}, new Set(['sayfa:sistem-durumu']));
+    expect(ids(bt)).toEqual(['kampus', 'altyapi']);
+    expect(itemIds(bt)).toEqual(['kampus', 'sistem-durumu']);
+    expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
+  });
+
   it('yetki henüz bilinmiyorken rol sayfaları gizli, yönetici ekranları yine role bağlı', () => {
     expect(ids(visibleNav(user, {}, null))).toEqual(['kampus']);
     expect(ids(visibleNav(admin, {}, null))).toEqual(['kampus', 'yonetim']);
@@ -32,7 +39,7 @@ describe('sayfa yetkisi', () => {
 describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -45,7 +52,7 @@ describe('rol görünürlüğü', () => {
 
   it('ayar boşsa (editör değil) gruplar normal sırada ve hepsi açık gelir', () => {
     const g = visibleNav(user, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -53,7 +60,7 @@ describe('rol görünürlüğü', () => {
 
   it('editör: Editoryal en üstte «Çalışma alanım», Analiz ve Finans kapalı ama görünür, Yönetim yok', () => {
     const g = visibleNav(editor, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);

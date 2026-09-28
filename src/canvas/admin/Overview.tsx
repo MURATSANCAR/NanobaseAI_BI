@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { adminApi, type AdminUnit } from '../engine';
 import { AuditRow } from './AuditLog';
 import { Card, Loading, Note, Pill, Section, btnGhost, errText, fmtUnitTime, nf } from './ui';
@@ -31,7 +32,15 @@ export default function Overview({ go }: { go: (t: AdminTab) => void }) {
 
   return (
     <div className="space-y-6">
-      <Section title="Genel durum" help="Sistemde tanımlı her şeyin özeti ve servislerin durumu.">
+      <Section
+        title="Genel durum"
+        help="Sistemde tanımlı her şeyin özeti ve servislerin durumu."
+        action={
+          <Link to="/sistem-durumu" className={btnGhost}>
+            Ayrıntı için Sistem durumu
+          </Link>
+        }
+      >
         {!email.configured && (
           <Note tone="warn">
             <div className="flex flex-wrap items-center justify-between gap-2">

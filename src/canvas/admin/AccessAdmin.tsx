@@ -242,7 +242,7 @@ function RoleEditor({
             const pages = catalog.pages.filter((p) => p.area === area.id);
             const features = catalog.features.filter((f) => f.area === area.id);
             // Alan başlığı sayfaları ve olağan işlemleri birlikte seçer; açıkça verilen işlemler toplu seçilmez.
-            const bulk = [...pages.map((p) => p.key), ...features.filter((f) => !f.explicit).map((f) => f.key)];
+            const bulk = [...pages.filter((p) => !p.explicit).map((p) => p.key), ...features.filter((f) => !f.explicit).map((f) => f.key)];
             const n = bulk.filter((k) => perms.has(k)).length;
             const covered = draft.allPerms;
             return (
@@ -262,8 +262,14 @@ function RoleEditor({
                 {bulk.length === 0 && <div className="border-b border-slate-100 px-1 pb-1.5 text-[12.5px] font-extrabold">{area.label}</div>}
                 <div className="mt-1 space-y-0.5">
                   {pages.map((p) => (
-                    <TriCheck key={p.key} checked={covered || perms.has(p.key)} disabled={covered} onChange={(on) => toggle([p.key], on)}>
-                      <span className="min-w-0 break-words text-[12.5px] font-semibold">{p.label}</span>
+                    <TriCheck
+                      key={p.key}
+                      checked={p.explicit ? perms.has(p.key) : covered || perms.has(p.key)}
+                      disabled={covered && !p.explicit}
+                      onChange={(on) => toggle([p.key], on)}
+                    >
+                      <span className="min-w-0 flex-1 break-words text-[12.5px] font-semibold">{p.label}</span>
+                      {p.explicit && <Pill tone="warn">ayrıca verilir</Pill>}
                     </TriCheck>
                   ))}
                 </div>

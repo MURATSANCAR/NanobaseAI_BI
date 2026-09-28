@@ -56,6 +56,7 @@ const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudi
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
+const SystemStatusScreen = lazy(() => import('@/canvas/it-ops/SystemStatusScreen'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
@@ -160,6 +161,8 @@ export default function App() {
             {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
             <Route path="ihale" element={<TenderList />} />
             <Route path="ihale/:id" element={<TenderDetail />} />
+            {/* M48 IT altyapı ve sistem durumu: halkalar, olaylar, zamanlanmış işler, sürümler, kapasite (/api/v1/it-ops). */}
+            <Route path="sistem-durumu" element={<SystemStatusScreen />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />

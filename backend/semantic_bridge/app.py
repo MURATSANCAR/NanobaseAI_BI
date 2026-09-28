@@ -7098,6 +7098,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda priority: rt().llm_for("mailbox", priority),
         "people": _mail_people,
     })
+
+    # M48 IT altyapı ve sistem durumu: halka denetimleri, olaylar, zamanlanmış işler, sürüm kaydı. Uçlar /api/v1/it-ops/*.
+    from semantic_bridge import it_ops_api
+    app.state.it_ops = it_ops_api.register(app, {
+        "require_caller": _require_caller, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "datasource": lambda: rt().settings.datasource_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("sistem", priority),
+        "run_check": admin_mod.run_check,
+    })
     return app
 
 

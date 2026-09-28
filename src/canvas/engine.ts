@@ -830,7 +830,8 @@ export type AccessMe = {
   roles: Array<{ id: string; name: string; via: string[] }>;
 };
 
-export type AccessPage = { key: string; area: string; label: string };
+/** Sayfa. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (ör. Sistem durumu). */
+export type AccessPage = { key: string; area: string; label: string; explicit?: boolean };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
 export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };
 /** ZEKİ AI veri alanı (yetki Aşama C). `always`: herkese açık ortak başvuru, rolle kapatılmaz. */

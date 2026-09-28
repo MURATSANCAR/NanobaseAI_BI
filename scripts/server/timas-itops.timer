@@ -1,0 +1,10 @@
+[Unit]
+Description=Sistem durumu denetimi, 5 dakikada bir
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=timas-itops.service
+
+[Install]
+WantedBy=timers.target

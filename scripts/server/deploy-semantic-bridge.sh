@@ -270,6 +270,10 @@ if [[ -f "$API_ENV" ]] && ! grep -q '^SEMANTIC_STORE_DSN=' "$API_ENV"; then
   } >> "$API_ENV"
 fi
 
+# M48 sürüm kaydı: kurulan kod sürümü ve kaynak ağaçtaki Mac artığı (._*) sayısı Sistem durumu'na (CODE_SHA verilmezse
+# ağaç git ise HEAD, değilse ROOT/.code-sha). Kayıt düşerse kurulum durmaz.
+ENV=test ROOT="$ROOT" BRIDGE="http://127.0.0.1:${PORT}" bash "${ROOT}/scripts/server/itops-report-release.sh" || true
+
 log "bridge is up on :${PORT}; traffic is NOT switched yet"
 log "next: verification gates in docs/architecture/semantic-bridge-runbook.md, then ./scripts/server/switch-timas-api.sh semantic"
 log "the portal page needs the API to reload the new router: sudo systemctl restart nanobase-bi-api  (production API restart — do it deliberately)"

@@ -136,9 +136,12 @@ def all_keys() -> frozenset[str]:
 
 
 def explicit_keys() -> frozenset[str]:
-    """«Bütün sayfalar ve işlemler» ile gelmeyen, role tek tek verilen özellikler (bugüne kadar yalnız yöneticinin
-    yaptığı işler). Kurulumda Herkes bütün yetkilerle açılırken kimsenin eski yetkisi bu yolla genişlemez."""
-    return frozenset(f["key"] for f in catalog().get("features", []) if f.get("explicit"))
+    """«Bütün sayfalar ve işlemler» ile gelmeyen, role tek tek verilen anahtarlar: özellikler (bugüne kadar yalnız
+    yöneticinin yaptığı işler) ve sayfalar (ör. Sistem durumu, İK ekranları). Kurulumda Herkes bütün yetkilerle
+    açılırken kimsenin eski yetkisi bu yolla genişlemez, açıkça verilen sayfa da «Herkes»e açılmaz."""
+    cat = catalog()
+    return (frozenset(f["key"] for f in cat.get("features", []) if f.get("explicit"))
+            | frozenset(p["key"] for p in cat.get("pages", []) if p.get("explicit")))
 
 
 # ------------------------------------------------------------------ veri alanları (Aşama C)
@@ -532,6 +535,13 @@ RULES: list[tuple[str, Any]] = [
     # sayfasına açılır; o satır M30'da yazılır.
     ("/api/v1/schools/run-due", SYSTEM),
     ("/api/v1/schools/", frozenset({page("okul-tanitim")})),
+    # M48 Sistem durumu. Sayfa açıkça verilir (Herkes'e girmez); işlem yetkileri (dene, olay, ayar) de açıkça verilir ve
+    # ucun içinde denetlenir. Zamanlayıcı, bekçi ve kurulum betiği çerezsiz jetonla gelir; üst bant herkese açık.
+    ("/api/v1/it-ops/run-due", SYSTEM),
+    ("/api/v1/it-ops/watchdog", SYSTEM),
+    ("/api/v1/it-ops/report-release", SYSTEM),
+    ("/api/v1/it-ops/banner", OPEN),
+    ("/api/v1/it-ops/", frozenset({page("sistem-durumu")})),
     # M32 Kurumsal satış ve B2B.
     ("/api/v1/corporate/run-due", SYSTEM),
     ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),

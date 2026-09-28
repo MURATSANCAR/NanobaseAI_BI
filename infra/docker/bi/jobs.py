@@ -1,4 +1,4 @@
-"""Arka plan işleri: ana ekran özeti 3 dk, uyarı kontrolü 15 dk, pano kartları 15 dk, planlı raporlar 5 dk.
+"""Arka plan işleri: ana ekran özeti 3 dk, uyarı kontrolü 15 dk, pano kartları 15 dk, planlı raporlar 5 dk, sistem durumu 5 dk.
 
 Sunucuda bunlar systemd zamanlayıcılarıdır (timas-metrics, timas-alerts, timas-board, timas-reports). Müşteri
 yığınında aynı işler bu tek konteynerde döner; mantık yine köprüdedir, burası yalnız zamanında çağırır.
@@ -24,14 +24,31 @@ def metrics() -> None:
         print(f"özet üretilemedi: {e}", flush=True)
 
 
-def call(name: str, path: str, timeout: int) -> None:
-    req = urllib.request.Request(f"{BRIDGE}{path}", data=b"{}", method="POST",
+def _post(path: str, body: dict, timeout: int):
+    req = urllib.request.Request(f"{BRIDGE}{path}", data=json.dumps(body).encode(), method="POST",
                                  headers={"Content-Type": "application/json", "X-Semantic-Caller": TOKEN})
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        return json.load(res)
+
+
+def report(name: str, path: str, every: int, ok: bool, detail: str = "") -> None:
+    """M48: VM'de sunucu zamanlayıcısı yok; her işin sonucu Sistem durumu'nun iş tablosuna buradan yazılır. Bu
+    bildirimlerin tazeliği aynı zamanda «Müşteri VM'i» halkasının kalp atışıdır. Bildirim düşerse iş etkilenmez."""
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as res:
-            print(f"{name}:", json.load(res), flush=True)
+        _post("/api/v1/it-ops/watchdog", {"job": f"vm:{path}", "label": name, "ok": ok, "detail": detail[:500],
+                                          "every": f"{max(1, every // 60)} dk", "source": "jobs-container"}, 30)
+    except Exception as e:  # noqa: BLE001
+        print(f"{name}: sistem durumuna bildirilemedi: {e}", flush=True)
+
+
+def call(name: str, path: str, timeout: int, every: int = 0) -> None:
+    try:
+        out = _post(path, {}, timeout)
+        print(f"{name}:", out, flush=True)
+        report(name, path, every, True)
     except Exception as e:  # noqa: BLE001
         print(f"{name} başarısız: {e}", flush=True)
+        report(name, path, every, False, f"{type(e).__name__}: {e}")
 
 
 # (ad, yol, aralık sn, zaman aşımı sn) — sunucudaki zamanlayıcıların aynısı
@@ -45,6 +62,8 @@ JOBS = [
     # M7 yazar ilişkileri sabah özeti (sunucuda timas-author-reminders.timer): köprü saat eşiğini ve günde bir kez kuralını
     # kendisi uygular, sık çağrı zararsız.
     ("yazar hatırlatmaları", "/api/v1/editorial/authors/reminders/run-due", int(os.environ.get("AUTHOR_REMINDERS_EVERY_SEC", "900")), 590),
+    # M48 sistem durumu: halka denetimi, olay aç/kapat, bildirim (sunucuda timas-itops.timer, 5 dk).
+    ("sistem durumu", "/api/v1/it-ops/run-due", int(os.environ.get("ITOPS_EVERY_SEC", "300")), 290),
 ]
 
 
@@ -59,7 +78,7 @@ def loop(every: int, fn, *args) -> None:
 def main() -> None:
     time.sleep(30)   # köprü açılsın diye kısa bekleme
     threads = [threading.Thread(target=loop, args=(METRICS_EVERY, metrics), daemon=True)]
-    threads += [threading.Thread(target=loop, args=(every, call, name, path, timeout), daemon=True)
+    threads += [threading.Thread(target=loop, args=(every, call, name, path, timeout, every), daemon=True)
                 for name, path, every, timeout in JOBS]
     for t in threads:
         t.start()
