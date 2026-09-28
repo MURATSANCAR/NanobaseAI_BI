@@ -177,7 +177,7 @@ def test_worklist_source_one_item_per_code_skips_info():
     eng = _db()
     m.save(eng, "t", "1", [_product("p1", approved=(), disapproved=("TR",), issues=[GTIN_BAD, INFO]),
                            _product("K2", approved=(), disapproved=("TR",), issues=[GTIN_BAD, IMG_SMALL]),
-                           _product("zzz", issues=[IMG_SMALL])], AT)
+                           _product("zzz", issues=[IMG_SMALL], gtins=("0000000000000",))], AT)
     items = {i["ref"]: i for i in w.src_merchant(_Env(eng))}
     assert set(items) == {"merchant:invalid_gtin", "merchant:image_too_small"}
     gtin = items["merchant:invalid_gtin"]

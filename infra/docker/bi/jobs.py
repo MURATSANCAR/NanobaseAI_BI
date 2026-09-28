@@ -202,7 +202,7 @@ def load_jobs(directory: str, exclude: Optional[list[str]] = None) -> tuple[list
     exclude = EXCLUDE if exclude is None else exclude
     jobs: list[Job] = []
     skipped: list[tuple[str, str]] = []
-    for tpath in sorted(glob.glob(os.path.join(directory, "*.timer"))):
+    for tpath in sorted(glob.glob(os.path.join(directory, "timas-*.timer"))):
         name = os.path.basename(tpath)[:-6]
         if any(fnmatch.fnmatch(name, p) for p in exclude):
             skipped.append((name, "bu ortamda kapalı (JOBS_EXCLUDE)"))
