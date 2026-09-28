@@ -336,8 +336,10 @@ def read_priority(run: Runner, months: int) -> dict[str, Any]:
             code = str(r.get("stok_kodu") or "").strip()
             if code:
                 out[code] = out.get(code, 0.0) + float(r.get("adet") or 0)
+    years = sorted(y for y in range(start.year, end.year + 1) if firms.get(y))
+    # `firms`: okunan yılların firma kopyası (sorgu bilgisi aynı SQL'i yıl ve pencereyle yeniden kurar).
     return {"byCode": out, "start": start.isoformat(), "end": end.isoformat(), "months": months,
-            "years": sorted(y for y in range(start.year, end.year + 1) if firms.get(y))}
+            "years": years, "firms": {str(y): firms[y] for y in years}}
 
 
 # ------------------------------------------------------------------ T-soft (SEO deposundan, yalnız okuma)

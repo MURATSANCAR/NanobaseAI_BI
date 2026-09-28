@@ -7,6 +7,8 @@ import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { categoriesApi, fmtInt, STATUS_TONE } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Onay kuyruğu: bütün katalog, satış önceliğiyle sıralı (kesme yok). Süzgeçler adres çubuğunda. */
 export default function ProfileQueue() {
@@ -141,6 +143,13 @@ export default function ProfileQueue() {
         ))}
       </ul>
       {list.data && list.data.total === 0 && !list.isFetching && <p className="mt-3 text-[12.5px] text-canvas-muted">Süzgece uyan kitap yok.</p>}
+      {/* Satır bağlantı olduğu için «i» listenin altında: öncelik (son N ay net adet) ve toplam. */}
+      {list.data && list.data.total > 0 && (
+        <p className="mt-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">
+          Öncelik = son dönem net satış adedi
+          <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kitap önceliği ve toplam" />
+        </p>
+      )}
       <Pager
         page={f.page}
         pageSize={list.data?.pageSize ?? 50}

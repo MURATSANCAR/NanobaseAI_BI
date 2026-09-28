@@ -6,6 +6,8 @@ import { Note, btnGhost, btnPrimary, errText, field, fmtDate, label as labelCls 
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { categoriesApi, fmtInt } from './api';
 import { useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Etiket sözlüğü: CRM anahtar kelimeleri (CRM'de yönetilir) + editörlerin yazdığı yeni etiket önerileri (burada
  *  onaylanır, reddedilir ya da var olan etikete birleştirilir). Zeki AI sözlük dışı etiket üretmez. */
@@ -36,7 +38,8 @@ export default function TagsTab() {
     <Panel>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="-mx-1 overflow-x-auto px-1">
-          <div className="flex w-max gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Etiket durumu">
+          <div className="flex w-max items-center gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Etiket durumu">
+            <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Etiket sayıları" />
             {STATUS.map((s) => (
               <button key={s.key} type="button" role="tab" aria-selected={status === s.key} onClick={() => { setStatus(s.key); setPage(0); }}
                 className={`inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-[12.5px] font-extrabold transition-colors duration-150 sm:min-h-9 ${status === s.key ? 'bg-canvas-violet text-white' : 'hover:bg-white/70'}`}>

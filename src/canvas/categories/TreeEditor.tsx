@@ -10,6 +10,8 @@ import { AskSheet } from '../budget/parts';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { categoriesApi, fmtInt, TREE_TONE, type Impact, type Level, type Options, type TreeNode } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Kategori ağacı: yürürlükteki sürüm (salt okunur, düğüm başına kitap/satış) ve taslak (düzenlenir, eşlenir,
  *  onaya gönderilir). Onay açıkça verilen yetkiyle ve gönderenden başka biri tarafından verilir. */
@@ -187,7 +189,10 @@ export default function TreeEditor() {
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-4">
           <Panel>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-[15px] font-extrabold">Düğümler ({fmtInt(nodes.length)})</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+                Düğümler ({fmtInt(nodes.length)})
+                <SqlInfo k={kaynakOf(tree.data)} alan="_hepsi" label="Düğüm ve kitap sayıları" />
+              </h2>
               {editable && <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => addChild(null)}><Plus aria-hidden className="h-4 w-4" /> Yayınevi düğümü</button>}
             </div>
             <ul className="mt-2 flex flex-col">
@@ -400,6 +405,7 @@ function ImpactSheet({ onClose }: { onClose: () => void }) {
       {q.error && <Note tone="err">{errText(q.error, 'Etki hesaplanamadı.')}</Note>}
       {d && (
         <div className="flex flex-col gap-3 text-[12.5px]">
+          <div className="flex justify-end"><SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Etki önizlemesi" /></div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat k="Yeri değişen kitap" v={d.books.moved} />
             <Stat k="Yeni yerleşen" v={d.books.newlyPlaced} />

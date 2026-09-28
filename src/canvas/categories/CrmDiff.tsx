@@ -7,6 +7,8 @@ import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labe
 import { Panel, useDebounced } from '../editorial/kit';
 import { ACTION_TEXT, categoriesApi, fmtDay, fmtInt } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** CRM'e işlenecek fark: onaylı profil ile CRM'in bugünkü değeri. Portal CRM'e yazmaz; liste CRM'de elle işlenir,
  *  bir sonraki okumada CRM aynı değeri gösterince satır kendiliğinden düşer. */
@@ -42,6 +44,7 @@ export default function CrmDiff() {
       </div>
       {d && (
         <p className="mt-2 text-[12px] font-semibold text-canvas-muted">
+          <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="CRM farkı" className="mr-1" />
           {fmtInt(d.books)} kitapta {fmtInt(d.total)} satır{d.stale ? <>; <span className="text-red-700">{fmtInt(d.stale)} satır {d.staleDays} günden uzun süredir bekliyor</span></> : ''}.
           Portal CRM'e yazmaz; bu değerler CRM'de elle işlenir.
         </p>

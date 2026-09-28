@@ -28,6 +28,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import categories as C
+from semantic_bridge import categories_kaynak as CK
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_izi as IZ
 from semantic_bridge import categories_propose as CP
 from semantic_bridge import categories_sources as src
 
@@ -65,6 +68,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def crm_file() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", CRM_FILE_DEFAULT)
+
+    def izli(engine, tenant: str, fn, *, prefix: str, title: str, text: str, skip: tuple = (), crm: bool = True,
+             logo: bool = True):
+        """Sorgu bilgisi: uçta koşan portal okumaları + tabloları dolduran gece eşitlemesinin CRM/Logo sorguları."""
+        with IZ.izle(engine) as ran:
+            out = fn()
+        if not isinstance(out, dict):
+            return out
+        dbs = (PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_file()))
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix=prefix, title=title, text=text, skip=skip,
+                                               origin=lambda k: CK.origin(k, engine, tenant, *dbs, crm=crm, logo=logo)))
 
     def schema() -> str:
         s = (admin_mod.conf("CRM_SCHEMA") or "").strip()
@@ -127,7 +141,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         info: dict[str, Any] = {"startedAt": C.iso(C.now()), "previousAt": prev.get("at"), "by": actor}
         job.step("CRM kitap kartları okunuyor")
         crm = src.read_crm(schema(), src.runner(crm_file()))
-        info["crm"] = {"books": len(crm["books"]), "ms": int((time.monotonic() - t0) * 1000)}
+        info["crm"] = {"books": len(crm["books"]), "ms": int((time.monotonic() - t0) * 1000), "schema": schema()}
         priority = None
         job.step("Logo satışları okunuyor (öncelik puanı)")
         try:
@@ -257,9 +271,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/overview")
     def categories_overview(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        out = C.overview(engine, tenant, me_crm(user))
-        out["job"] = job.status()
-        return out
+
+        def read() -> dict[str, Any]:
+            out = C.overview(engine, tenant, me_crm(user))
+            out["job"] = job.status()
+            return out
+        return izli(engine, tenant, read, prefix="portal.kategori.ozet", title="Kategori ağacı özeti", text=CK.F_OZET,
+                    skip=("job",))
 
     @app.get("/api/v1/categories/status")
     def categories_status(request: Request) -> dict[str, Any]:
@@ -329,7 +347,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/tree")
     def categories_tree(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.tree_state(engine, tenant)
+        return izli(engine, tenant, lambda: C.tree_state(engine, tenant), prefix="portal.kategori.agac", title="Ağaç",
+                    text=CK.F_AGAC)
 
     @app.get("/api/v1/categories/tree/versions")
     def categories_tree_versions(request: Request) -> dict[str, Any]:
@@ -419,7 +438,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/tree/impact")
     async def categories_tree_impact(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, C.impact, engine, tenant)
+        return await run_in_threadpool(lambda: izli(engine, tenant, lambda: call(C.impact, engine, tenant),
+                                                    prefix="portal.kategori.etki", title="Etki önizlemesi", text=CK.F_AGAC))
 
     @app.get("/api/v1/categories/mappings")
     def categories_mappings(request: Request, tree: str = "draft") -> dict[str, Any]:
@@ -447,16 +467,21 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if owner == "me" and not mine:
             return {"items": [], "total": 0, "page": 0, "pageSize": 50,
                     "note": "CRM'de hesabınıza bağlı kullanıcı bulunamadı; «benim kitaplarım» boş."}
-        return call(C.list_books, engine, tenant, q=q, owner=mine, status=status, brand=brand, kitaplik=kitaplik,
-                    selling=selling, finding=finding, node=node, order=order, page=max(0, page))
+        return izli(engine, tenant, lambda: call(C.list_books, engine, tenant, q=q, owner=mine, status=status, brand=brand,
+                                                 kitaplik=kitaplik, selling=selling, finding=finding, node=node,
+                                                 order=order, page=max(0, page)),
+                    prefix="portal.kategori.kuyruk", title="Kitap kuyruğu", text=CK.F_KUYRUK, skip=("page", "pageSize"))
 
     @app.get("/api/v1/categories/books/{book_id}")
     def categories_book(book_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        out = call(C.book_detail, engine, tenant, book_id)
-        row = C.get_profile(engine, tenant, book_id)
-        out["canDecide"] = can(user, "ozellik:kategori.profil-onay") and C.can_decide(row, me_crm(user), everyone(user))
-        return out
+
+        def read() -> dict[str, Any]:
+            out = call(C.book_detail, engine, tenant, book_id)
+            row = C.get_profile(engine, tenant, book_id)
+            out["canDecide"] = can(user, "ozellik:kategori.profil-onay") and C.can_decide(row, me_crm(user), everyone(user))
+            return out
+        return izli(engine, tenant, read, prefix="portal.kategori.kitap", title="Kitap profili", text=CK.F_KITAP)
 
     @app.get("/api/v1/categories/books/{book_id}/text")
     def categories_book_text(book_id: str, request: Request) -> dict[str, Any]:
@@ -499,7 +524,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                             page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         mine = me_crm(user) if owner == "me" else None
-        return call(C.list_findings, engine, tenant, rule=rule, status=status, owner=mine, q=q, page=max(0, page))
+        return izli(engine, tenant, lambda: call(C.list_findings, engine, tenant, rule=rule, status=status, owner=mine, q=q,
+                                                 page=max(0, page)),
+                    prefix="portal.kategori.bulgular", title="Tutarsızlıklar", text=CK.F_BULGU, skip=("page", "pageSize"))
 
     @app.post("/api/v1/categories/findings/apply")
     def categories_findings_apply(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -542,7 +569,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def categories_crm_diff(request: Request, owner: str = "", q: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         mine = me_crm(user) if owner == "me" else None
-        return call(C.crm_diff, engine, tenant, owner=mine, q=q)
+        return izli(engine, tenant, lambda: call(C.crm_diff, engine, tenant, owner=mine, q=q),
+                    prefix="portal.kategori.crmfarki", title="CRM farkı", text=CK.F_FARK, logo=False)
 
     @app.get("/api/v1/categories/crm-diff/export.xlsx")
     def categories_crm_diff_export(request: Request, owner: str = "") -> Response:
@@ -559,7 +587,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/tags")
     def categories_tags(request: Request, status: str = "oneri", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.list_tags(engine, tenant, status=status, q=q, page=max(0, page))
+        return izli(engine, tenant, lambda: C.list_tags(engine, tenant, status=status, q=q, page=max(0, page)),
+                    prefix="portal.kategori.etiketler", title="Etiketler", text=CK.F_ETIKET, logo=False,
+                    skip=("page", "pageSize"))
 
     @app.post("/api/v1/categories/tags/decision")
     def categories_tag_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:

@@ -4,6 +4,8 @@ import { Loading, Note, Pill, errText } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtPct, STATUS_TONE, TREE_TONE, type Overview, type ProfileStatus } from './api';
 import { FillBar, ROOT } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Özet: katalog sayacı, profil durumu, alan doluluğu, tutarsızlıklar, bana düşenler, ağaç ve CRM farkı. */
 export default function CategoriesHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -24,16 +26,16 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
-        <Kpi label="Aktif kitap" value={fmtInt(o.activeBooks)} help={`CRM'de etkin kitap kartı · ${fmtInt(o.placed)} kitabın ağaçta yeri var`} />
-        <Kpi label="Onaylı profil" value={fmtInt(approved)} help={`${fmtPct(approved, o.activeBooks)} · taslak ${fmtInt(o.status.taslak)}, kısmi ${fmtInt(o.status.kismi)}`} />
-        <Kpi label="Satıştaki kitap" value={fmtPct(o.sellingApproved, o.selling)} help={`${fmtInt(o.selling)} satıştaki kitabın onaylı kategorisi olanı (hedef: tamamı)`} />
-        <Kpi label="Açık tutarsızlık" value={fmtInt(o.findings.open)} help={`${rules.length} kuralda · CRM'e işlenecek ${fmtInt(o.crmDiff.rows)} satır`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Aktif kitap" />} label="Aktif kitap" value={fmtInt(o.activeBooks)} help={`CRM'de etkin kitap kartı · ${fmtInt(o.placed)} kitabın ağaçta yeri var`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı profil" />} label="Onaylı profil" value={fmtInt(approved)} help={`${fmtPct(approved, o.activeBooks)} · taslak ${fmtInt(o.status.taslak)}, kısmi ${fmtInt(o.status.kismi)}`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Satıştaki kitap" />} label="Satıştaki kitap" value={fmtPct(o.sellingApproved, o.selling)} help={`${fmtInt(o.selling)} satıştaki kitabın onaylı kategorisi olanı (hedef: tamamı)`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Açık tutarsızlık" />} label="Açık tutarsızlık" value={fmtInt(o.findings.open)} help={`${rules.length} kuralda · CRM'e işlenecek ${fmtInt(o.crmDiff.rows)} satır`} />
       </KpiRow>
 
       <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr] lg:gap-4">
         <Panel>
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Alan doluluğu (CRM)</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Alan doluluğu (CRM)<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Alan doluluğu (CRM)" /></h2>
             <span className="text-[11.5px] font-semibold text-canvas-muted">{fmtInt(o.activeBooks)} aktif kitapta</span>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -48,7 +50,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
 
         <div className="flex flex-col gap-3 lg:gap-4">
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Bana düşenler</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Bana düşenler<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Bana düşenler" /></h2>
             <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
               {o.mine.pending
                 ? <>Editörü ya da yayın yönetmeni olduğunuz <strong className="text-canvas-ink">{fmtInt(o.mine.pending)}</strong> kitapta karar bekleyen öneri var.</>
@@ -60,7 +62,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
           </Panel>
           <Panel>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[15px] font-extrabold">Kategori ağacı</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kategori ağacı<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Kategori ağacı" /></h2>
               {o.tree.inForce ? <Pill tone={TREE_TONE.yururlukte}>Yürürlükte v{o.tree.inForce.version}</Pill> : <Pill tone="warn">Yürürlükte ağaç yok</Pill>}
               {o.tree.draft && <Pill tone={TREE_TONE[o.tree.draft.status]}>{o.tree.draft.statusLabel} v{o.tree.draft.version}</Pill>}
             </div>
@@ -74,7 +76,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
             </Link>
           </Panel>
           <Panel>
-            <h2 className="text-[15px] font-extrabold">CRM'e işlenecek fark</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM'e işlenecek fark<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="CRM'e işlenecek fark" /></h2>
             <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
               {fmtInt(o.crmDiff.books)} kitapta {fmtInt(o.crmDiff.rows)} satır{o.crmDiff.stale ? <>, <strong className="text-red-700">{fmtInt(o.crmDiff.stale)}'i bekliyor</strong></> : ''}.
             </p>
@@ -87,7 +89,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
 
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Profil durumu</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Profil durumu<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Profil durumu" /></h2>
           <ul className="mt-2 flex flex-wrap gap-2">
             {(Object.keys(o.statusLabels) as ProfileStatus[]).map((s) => (
               <li key={s}>
@@ -100,7 +102,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
           </ul>
         </Panel>
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Tutarsızlıklar</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Tutarsızlıklar<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Tutarsızlıklar" /></h2>
           {rules.length === 0 ? (
             <p className="mt-1 text-[12.5px] text-canvas-muted">Açık tutarsızlık yok.</p>
           ) : (

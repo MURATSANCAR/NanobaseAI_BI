@@ -8,6 +8,8 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { categoriesApi, fmtInt, STATUS_TONE, type Finding, type Rule } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Tutarsızlıklar: deterministik kurallar (ekrandan açılıp kapanır), kitap listesi, toplu «öneriyi uygula». */
 
@@ -150,7 +152,10 @@ export default function Findings() {
       </Panel>
 
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Kurallar</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          Kurallar
+          <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kural başına açık bulgu ve öncelik" />
+        </h2>
         <p className="mt-0.5 text-[12px] text-canvas-muted">Kurallar yalnız liste üretir; CRM'e ya da siteye dokunmaz. Kapatılan kuralın açık bulguları kapanır.</p>
         <ul className="mt-2 flex flex-col divide-y divide-slate-100">
           {rules.map((r) => (
