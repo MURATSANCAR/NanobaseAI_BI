@@ -1,0 +1,50 @@
+# TT GPU: Zeki AI sesli not servisi (konuşma → Türkçe metin). Yalnız 127.0.0.1:8797.
+# Test sunucusu ters tünelle (voice-note-tunnel.service → nanobase-direct 127.0.0.1:18892), müşteri VM'i GPU genel
+# nginx'iyle (add-voice-route.py — kullanıcı onayıyla) gelir. Kurulum: install.sh. GPU'da derleme yok: imaj BI
+# modelinin kullandığı hazır vLLM imajı (torch + transformers + ffmpeg içinde), kod ve model salt okunur bağlanır.
+name: voice-note
+services:
+  voice-note:
+    image: vllm/vllm-openai:v0.27.1
+    container_name: voice-note
+    restart: unless-stopped
+    entrypoint: ["python3", "-m", "voice_note_service.app"]
+    ports:
+      - "127.0.0.1:8797:8797"
+    env_file:
+      - /data/voice-note/voice-note.env        # VOICE_TOKEN (0600, depoda yok)
+    environment:
+      PYTHONPATH: /app
+      VOICE_MODEL_DIR: /models/asr
+      VOICE_DEVICE: cuda
+      VOICE_MEM_FRACTION: "0.11"              # ≈ 10 GB; kart BI modeliyle paylaşılıyor, aşan kendisi OOM olur
+      VOICE_BATCH: "8"
+      VOICE_BEAMS: "1"
+      VOICE_CONCURRENCY: "1"                  # GPU'ya aynı anda tek kayıt; gerisi geliş sırasıyla bekler
+      VOICE_QUEUE_WAIT_SEC: "300"
+      VOICE_MAX_SECONDS: "1800"
+      VOICE_MAX_BYTES: "67108864"
+      VOICE_MODEL_LABEL: zeki-ses
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HOME: /tmp
+    # Ses diske yazılmasın: kök dosya sistemi salt okunur, /tmp bellekte.
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m
+    volumes:
+      - /data/voice-note/app:/app:ro
+      - /data/voice-note/models/current:/models/asr:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,json,sys; sys.exit(0 if json.load(urllib.request.urlopen('http://127.0.0.1:8797/health'))['ready'] else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]   # GPU 0 BI'ın (model + tahmin); GPU 1 editörün
+              capabilities: [gpu]

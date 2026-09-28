@@ -7268,6 +7268,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "require_caller": _require_caller,
     })
 
+    # Zeki AI sesli not (M30 saha / M31 okul ziyaret notu): ses → GPU'daki sesli not servisi → isteğe bağlı Zeki AI
+    # düzeltmesi (sayı denetimli). Ses ve metin saklanmaz. Uçlar /api/v1/voice-note.
+    from semantic_bridge import voice_note_api
+    app.state.voice_note = voice_note_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "conf": admin_mod.conf,
+        "llm": lambda: rt().llm_for("sesli-not"),
+    })
+
     # M32 Kurumsal satış ve B2B: kurum listesi, paket, teklif, fırsat, hatırlatma, bayi paneli. Uçlar /api/v1/corporate/*.
     from semantic_bridge import corporate_sales_api
     app.state.corporate = corporate_sales_api.register(app, {

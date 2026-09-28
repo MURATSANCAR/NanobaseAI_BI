@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import VoiceNoteButton from '../voice/VoiceNoteButton';
+import { appendNote } from '../voice/api';
 import { fieldApi, istanbulToday, parseTr, TONE_LABEL, type Visit, type VisitInput } from './api';
 
 /** Ziyaret notu / ziyaret planı. Telefonda alttan açılır; en sık iş «not bırak»: metin + ton + (isteğe bağlı) sonraki adım ve
@@ -38,6 +40,7 @@ export default function VisitNoteSheet({
   const [promiseAmt, setPromiseAmt] = useState('');
   const [secret, setSecret] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const noteId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -105,9 +108,15 @@ export default function VisitNoteSheet({
           </div>
         ) : (
           <>
-            <label className="flex flex-col gap-1">
-              <span className={labelCls}>Ne konuşuldu</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-start justify-between gap-2">
+                <label htmlFor={noteId} className={`${labelCls} pt-2.5`}>
+                  Ne konuşuldu
+                </label>
+                <VoiceNoteButton context={{ baglam: 'saha', ad: unvan }} onText={(t) => setText((cur) => appendNote(cur, t))} disabled={save.isPending} />
+              </div>
               <textarea
+                id={noteId}
                 autoFocus
                 className={`${field} min-h-[120px]`}
                 value={text}
@@ -115,7 +124,7 @@ export default function VisitNoteSheet({
                 placeholder="Örn. Kalanı 15 Ekim'de çekle ödeyecek; çocuk kitaplarından yeni sipariş verecek."
                 onChange={(e) => setText(e.target.value)}
               />
-            </label>
+            </div>
             <fieldset className="flex flex-col gap-1">
               <legend className={labelCls}>Görüşmenin tonu</legend>
               <div className="mt-1 grid grid-cols-3 gap-1 rounded-2xl bg-slate-100 p-1">

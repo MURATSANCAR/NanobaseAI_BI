@@ -721,6 +721,24 @@ SPEC: list[dict[str, Any]] = [
      "help": "Kutu bu kadar dakikadır okunamadıysa aşağıdaki adreslere bir kez uyarı gider"},
     {"key": "MAIL_CONNECTION_ALERT_TO", "group": "mailbox", "label": "Bağlantı uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (portal yöneticisi / BT)"},
+    # Zeki AI sesli not (M30/M31 ziyaret notu mikrofonu). Servis adresi ve anahtarı yalnız ortamda (VOICE_NOTE_URL,
+    # VOICE_NOTE_TOKEN, VOICE_NOTE_EXTRA_HEADER, VOICE_NOTE_CA_FILE).
+    {"key": "VOICE_NOTE_ENABLED", "group": "voice", "label": "Sesli not açık", "type": "bool", "default": "0",
+     "help": "Açıkken saha ve okul ziyaret notunda mikrofon düğmesi görünür. Servis bağlantısı tanımlı değilse düğme yine görünmez"},
+    {"key": "VOICE_NOTE_MAX_SECONDS", "group": "voice", "label": "En uzun kayıt (saniye)", "type": "int", "default": "300",
+     "help": "Telefonda kayıt bu sürede kendiliğinden durur; daha uzun ses kabul edilmez"},
+    {"key": "VOICE_NOTE_MAX_MB", "group": "voice", "label": "En büyük ses (MB)", "type": "int", "default": "20",
+     "help": "Portal kaydı 16 kHz WAV'a çevirir: 5 dakika ≈ 9,6 MB"},
+    {"key": "VOICE_NOTE_AI_FIX", "group": "voice", "label": "Zeki AI düzeltmesi", "type": "bool", "default": "1",
+     "help": "Noktalama, büyük harf ve özel adları düzeltir. Sayıları ya da anlamı değiştiren düzeltme kullanılmaz; o zaman konuşmanın kendi metni gelir"},
+    {"key": "VOICE_NOTE_SLOTS", "group": "voice", "label": "Aynı anda servise giden kayıt", "type": "int", "default": "2",
+     "help": "Fazlası geliş sırasıyla bekler. Servis kendi içinde de tek sıra tutar"},
+    {"key": "VOICE_NOTE_WAIT_SEC", "group": "voice", "label": "Sırada en uzun bekleme (saniye)", "type": "int", "default": "180",
+     "help": "Aşılırsa kişiye «yoğun, yeniden deneyin» denir; kayıt telefonda durur, yeniden gönderilebilir"},
+    {"key": "VOICE_NOTE_CONTEXT", "group": "voice", "label": "Ad ipucu gönder", "type": "bool", "default": "0",
+     "help": "Müşteri/okul adı ve aşağıdaki sözlük yazıya dökme sırasında ipucu olarak verilir. Etkisi sahada ölçülene kadar kapalı"},
+    {"key": "VOICE_NOTE_VOCABULARY", "group": "voice", "label": "Sözlük ipucu", "type": "text", "default": "",
+     "help": "Virgülle sık geçen terimler ve adlar (ör. iskonto, vade, sevk, irsaliye). Yalnız «Ad ipucu gönder» açıkken kullanılır"},
     # M48 Sistem durumu (halka denetimleri, olaylar). Bu grup Sistem durumu ekranından da `ozellik:sistem.ayar` ile düzenlenir.
     {"key": "ITOPS_RECIPIENTS", "group": "itops", "label": "Kopma ve düzelme bildirimi alıcıları", "type": "text", "default": "",
      "help": "Virgülle BT ve işletim ekibinin e-posta adresleri. Yalnız aşağıdaki iç alan adlarındaki adreslere gönderilir"},
@@ -1399,6 +1417,9 @@ GROUPS = [
     {"id": "itops", "category": "sistem", "label": "Sistem durumu",
      "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
              "yalnız okur, hiçbir servisi yeniden başlatmaz."},
+    {"id": "voice", "category": "zeki", "label": "Zeki AI sesli not",
+     "help": "Saha ve okul ziyaret notunu konuşarak yazdırma. Ses hiçbir yerde saklanmaz; metin not alanına düşer, kişi "
+             "düzeltip kendisi kaydeder."},
     {"id": "security", "category": "sistem", "label": "Veri güvenliği",
      "help": "Güvenlik uyarı kuralları, hesap hijyeni ve saklama süreleri. Saklama süresi yalnız «uygula» açıkken siler; "
              "önizleme ve kanıt Veri güvenliği ekranındadır."},

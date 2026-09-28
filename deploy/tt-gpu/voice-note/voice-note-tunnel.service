@@ -1,0 +1,21 @@
+[Unit]
+Description=Zeki AI voice note service tunnel to test host (127.0.0.1:18892 -> GPU 8797)
+After=network-online.target
+Wants=network-online.target
+
+# Önkoşul (test sunucusu): /etc/ssh/sshd_config.d/60-editor-gpu-tunnel.conf → PermitListen'e 127.0.0.1:18892
+# eklenir, `sshd -t` sonra reload. Mevcut tünellere (18885 BI modeli!) dokunulmaz; bu ayrı bir süreçtir.
+[Service]
+Type=simple
+User=gpuubuntu
+EnvironmentFile=/etc/editor-gpu-tunnel.env
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o UserKnownHostsFile=${TUNNEL_KNOWN_HOSTS} -i ${TUNNEL_KEY_FILE} -R 127.0.0.1:18892:127.0.0.1:8797 ${TUNNEL_DESTINATION}
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

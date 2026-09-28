@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
+import VoiceNoteButton from '../voice/VoiceNoteButton';
+import { appendNote } from '../voice/api';
 import { schoolsApi, type BookRef, type VisitInput } from './api';
 import { invalidateSchools, useSchoolsMeta } from './parts';
 
@@ -43,6 +45,7 @@ export default function VisitReportSheet({
   const [nextDay, setNextDay] = useState('');
   const [note, setNote] = useState('');
   const [secret, setSecret] = useState(false);
+  const noteId = useId();
 
   const catalog = useQuery({
     queryKey: ['schools', 'catalog-preview', schoolId],
@@ -196,10 +199,15 @@ export default function VisitReportSheet({
           </label>
         </div>
 
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>Not</span>
-          <textarea className={`${field} min-h-24`} value={note} maxLength={4000} onChange={(e) => setNote(e.target.value)} placeholder="Kısa not; öğrenci adı yazmayın." />
-        </label>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-start justify-between gap-2">
+            <label htmlFor={noteId} className={`${labelCls} pt-2.5`}>
+              Not
+            </label>
+            <VoiceNoteButton context={{ baglam: 'okul', ad: schoolName }} onText={(t) => setNote((cur) => appendNote(cur, t))} disabled={save.isPending} />
+          </div>
+          <textarea id={noteId} className={`${field} min-h-24`} value={note} maxLength={4000} onChange={(e) => setNote(e.target.value)} placeholder="Kısa not; öğrenci adı yazmayın." />
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button type="button" className={btnGhost} disabled={!note.trim() || suggest.isPending} onClick={() => suggest.mutate()}>
             <Sparkles aria-hidden className="h-4 w-4" />

@@ -484,6 +484,40 @@ Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağla
   eşlemesi yok, İK rakamları çoğunlukla portal hesabı.
 - **Sunucuda kalan:** `scripts/acceptance/sorgu-bilgisi/check.sh` (pytest, tsc, vitest, derleme) + `kabul.py` (her
   kaynağın SQL'i gerçek Logo/CRM/portalda koşar; R1–R6 doğrudan SQL karşılaştırması). Mac'te yalnız `py_compile` yapıldı.
+## 2026-09-28 (13:45) — Zeki AI sesli not: model ölçümü, GPU servisi, köprü ucu, M30/M31 mikrofonu
+
+Kullanıcı kararı: «kuralım ama çok kaliteli Türkçe notları tutabilmeliyiz». Dal `worktree-agent-adfdbaf568c13013c`;
+main'e taşınmadı, test sunucusuna/GPU'ya/VM'e kurulmadı. **DOĞRULANAMADI — testler (pytest `test_voice_note.py`, vitest
+`voice.test.ts`) ve arayüz derlemesi koordinatörde**; yerelde yalnız `py_compile`.
+
+- **Ölçüm (TT GPU, GPU 0, süreç başına 10 GB tavan, geçici `/data/voice-olcum-claude` — iş bitince silindi, hiçbir
+  servis durdurulmadı):** FLEURS tr test (CC-BY-4.0, 743 kayıt, 156,3 dk) üç koşulda. WER/CER — whisper-large-v3
+  temiz %4,80/%1,25, telefon %5,83/%1,66, kalabalık %10,12/%4,83; turbo %5,20 / %6,20 / %14,53 (kalabalıkta 184
+  kelimelik döngü); Türkçe ince ayarlı large-v3 %5,52 / %6,38 / %10,52; Qwen3-ASR-1.7B %7,57 / %9,03 / %12,19.
+  1 dk ses GPU'da large-v3 1,49 sn, turbo 0,32, Qwen 2,12; CPU (32 çekirdek) large-v3 10,4 sn. Beam 5 temizde 0,2 puan
+  iyi, kalabalıkta kötü ve belleği ikiye katlıyor → beam 1. Kalite eşiği (temiz ≤ %6, telefon ≤ %8, kalabalık ≤ %12)
+  yalnız large-v3 ve Türkçe ince ayarlıda tutuyor; seçim **large-v3**. Ayrıntı ve örnekler `deploy/tt-gpu/voice-note/OLCUM.md`.
+- **Alan dili ölçülmedi:** açık Türkçe veride satış/okul ziyareti dili yok, seslendiremedim. 20 cümlelik sınama metni
+  (`olcum/alan-cumleleri.tsv`) sahada telefonla okunup `kabul.py` ile ölçülmeli; bu yüzden ekran ayarla kapalı gelir
+  (`VOICE_NOTE_ENABLED=0`), açma kararı kullanıcıda.
+- **Servis denemesi (gerçek model, geçici konteyner, kurulacak düzende):** 3 dk WAV/AAC/Opus 200, 3 eşzamanlı istek
+  sırayla (bekleme 0 / 2,4 / 3,3 sn), sessizlik boş, sınır 413, bozuk 400, günlükte metin yok, konteynerde ses dosyası yok;
+  tepe bellek 5,5 GB. **Bulunup düzeltilen hata:** sabit konuşma eşiği (RMS 0,008) kısık okunmuş iki gerçek cümleyi
+  sessiz sayıp atıyordu (3 dk'da WER %24); eşik kaydın kendi gürültü tabanına göre ve −40 dBFS üstü her zaman modele →
+  %11,39, aynı 15 cümlenin tek tek ölçümüyle birebir (parçalama kayıpsız). Tekrar süzgeci en uzun öbekten başlayıp döngüyü
+  yarım bırakıyordu → en kısa periyottan, 4+ tekrar tek kopyaya.
+- **Kod:** GPU servisi `apps/voice-note/voice_note_service` (ses bellekte, ffmpeg boruyla; `X-Voice-Token`; tek FIFO
+  sıra); köprü `voice_note.py` + `voice_note_api.py` (`/api/v1/voice-note`, `/meta`; `app.py`'de M31 kaydının altında tek
+  `register`; `access.RULES` satırı; Yönetim › «Zeki AI sesli not» grubu); Zeki AI düzeltmesi LLM kapısından
+  (`sesli-not`), sayı değerleri çoklu küme denetimi (Türkçe sayı sözcükleri, ekli biçimler, «buçuk», tarih/saat).
+  Ön yüz `src/canvas/voice/` ve iki not alanı. Animasyon öz denetimi (review-animations ölçütü): basış 0.97 / 150 ms
+  güçlü ease-out, ses düzeyi çubuğu doğrudan `transform` (rAF), kayıt noktası ve dönen gösterge `motion-safe`.
+- **Kurulum dosyaları (uygulanmadı):** `deploy/tt-gpu/voice-note/` (compose — derleme yok, hazır vLLM imajı, kök salt
+  okunur; `install.sh`; `voice-note-tunnel.service` 18892 — test sunucusu sshd `PermitListen`'e eklenmeli;
+  `add-voice-route.py` GPU üretim nginx'i için **kullanıcı onayı bekliyor**), `deploy/nanobase-direct/add-voice-note-route.py`
+  (genel API sınırı 10 MB, 5 dk WAV 9,6 MB), VM web şablonuna aynı konum (VM genel sınırı 8 MB idi).
+- **Not:** GPU 0'daki boş bellek o an koşan işlere göre değişiyor (ölçüm başında 13 GB; sonunda başka bir oturumun
+  `laya-egit.py` eğitimi 8 GB tutuyordu → 5 GB). Kurulumda `nvidia-smi` bakılmalı; yer yoksa CPU yolu.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 

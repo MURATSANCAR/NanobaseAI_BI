@@ -506,6 +506,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/run-due", SYSTEM),
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
+    # Zeki AI sesli not: M30 saha ve M31 okul ziyaret notunun mikrofonu. Not yazma yetkisi (saha.not / okul.ziyaret) uçta.
+    ("/api/v1/voice-note", frozenset({page("saha"), page("okul-tanitim")})),
     # M59 Bayi riski. Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/dealers/run-due", SYSTEM),
     ("/api/v1/dealers/", frozenset({page("bayi-risk")})),
