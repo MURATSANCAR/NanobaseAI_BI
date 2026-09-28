@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FileDown } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { fmtInt, paApi } from './api';
@@ -50,13 +51,13 @@ export default function PaReport() {
       {r && (
         <>
           <KpiRow>
-            <Kpi label="Kişi kartı" value={fmtInt(r.people.total)} help={`Kritik ${fmtInt(r.people.critical)} · kamu görevlisi ${fmtInt(r.people.publicOfficials)}`} />
-            <Kpi label="Temas notu" value={fmtInt(r.contacts.notes)} help={`${fmtInt(r.contacts.people)} kişi · ${fmtInt(r.contacts.orgs)} kurum`} />
-            <Kpi label="Gönderilen kitap" value={fmtInt(r.gifts.sentBooks)} help={`${fmtInt(r.gifts.sentPeople)} kişi · ${fmtInt(r.gifts.feedback)} geri dönüş`} />
-            <Kpi label="Proje erişimi" value={fmtInt(r.projects.reach.students)} help={`öğrenci · ${fmtInt(r.projects.reach.schools)} okul · ${fmtInt(r.projects.reach.books)} kitap`} />
+            <Kpi label="Kişi kartı" value={fmtInt(r.people.total)} help={`Kritik ${fmtInt(r.people.critical)} · kamu görevlisi ${fmtInt(r.people.publicOfficials)}`} info={<SqlInfo k={r.kaynaklar} alan="people" label="Kişi kartı" />} />
+            <Kpi label="Temas notu" value={fmtInt(r.contacts.notes)} help={`${fmtInt(r.contacts.people)} kişi · ${fmtInt(r.contacts.orgs)} kurum`} info={<SqlInfo k={r.kaynaklar} alan="contacts" label="Temas notu" />} />
+            <Kpi label="Gönderilen kitap" value={fmtInt(r.gifts.sentBooks)} help={`${fmtInt(r.gifts.sentPeople)} kişi · ${fmtInt(r.gifts.feedback)} geri dönüş`} info={<SqlInfo k={r.kaynaklar} alan="gifts" label="Gönderilen kitap" />} />
+            <Kpi label="Proje erişimi" value={fmtInt(r.projects.reach.students)} help={`öğrenci · ${fmtInt(r.projects.reach.schools)} okul · ${fmtInt(r.projects.reach.books)} kitap`} info={<SqlInfo k={r.kaynaklar} alan="projects" label="Proje erişimi" />} />
           </KpiRow>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-            <Block title="CRM tanıtım ve bağış siparişleri" help="Yıl içinde CRM'de açılan siparişler; iptal ve birleştirilen siparişler sayılmaz (ayar).">
+            <Block title="CRM tanıtım ve bağış siparişleri" info={<SqlInfo k={r.kaynaklar} alan="crm" label="CRM tanıtım ve bağış siparişleri" />} help="Yıl içinde CRM'de açılan siparişler; iptal ve birleştirilen siparişler sayılmaz (ayar).">
               {r.crm.error ? (
                 <Note tone="warn">{r.crm.error}</Note>
               ) : r.crm.types.length === 0 ? (
@@ -82,7 +83,7 @@ export default function PaReport() {
                 </table>
               )}
             </Block>
-            <Block title="Hediye programı" help={r.gifts.duplicates ? `Aynı kişiye aynı kitap tekrarı: ${r.gifts.duplicates}` : 'Aynı kişiye aynı kitap tekrarı yok.'}>
+            <Block title="Hediye programı" info={<SqlInfo k={r.kaynaklar} alan="gifts" label="Hediye programı" />} help={r.gifts.duplicates ? `Aynı kişiye aynı kitap tekrarı: ${r.gifts.duplicates}` : 'Aynı kişiye aynı kitap tekrarı yok.'}>
               <div className="flex flex-wrap gap-1.5">
                 {Object.entries(r.gifts.byStatus)
                   .filter(([, n]) => n)
@@ -94,7 +95,7 @@ export default function PaReport() {
                 {!Object.values(r.gifts.byStatus).some(Boolean) && <span className="text-[12px] text-canvas-muted">Kayıt yok.</span>}
               </div>
             </Block>
-            <Block title="Kişiler alana göre">
+            <Block title="Kişiler alana göre" info={<SqlInfo k={r.kaynaklar} alan="people" label="Kişiler alana göre" />}>
               <ul className="space-y-1">
                 {r.people.byField.map((x) => (
                   <li key={x.label} className="flex justify-between gap-2 text-[12.5px]">
@@ -104,7 +105,7 @@ export default function PaReport() {
                 ))}
               </ul>
             </Block>
-            <Block title="Projeler" help={Object.entries(r.projects.byStage).filter(([, n]) => n).map(([k, n]) => `${stageLabel(k)} ${n}`).join(' · ') || 'Proje yok.'}>
+            <Block title="Projeler" info={<SqlInfo k={r.kaynaklar} alan="projects" label="Projeler" />} help={Object.entries(r.projects.byStage).filter(([, n]) => n).map(([k, n]) => `${stageLabel(k)} ${n}`).join(' · ') || 'Proje yok.'}>
               <ul className="divide-y divide-slate-100">
                 {r.projects.items.map((p) => (
                   <li key={p.id} className="py-1.5">
@@ -117,7 +118,7 @@ export default function PaReport() {
                 ))}
               </ul>
             </Block>
-            <Block title="CRM'de kişi rolleri" help="Kanaat önderi diye ayrı bir rol var mı — CRM'deki roller ve kaç kişide kullanıldığı (yalnız okuma).">
+            <Block title="CRM'de kişi rolleri" info={<SqlInfo k={roles.data?.kaynaklar} alan="personRoles" label="CRM kişi rolleri" />} help="Kanaat önderi diye ayrı bir rol var mı — CRM'deki roller ve kaç kişide kullanıldığı (yalnız okuma).">
               {roles.error && <Note tone="warn">{errText(roles.error, 'CRM okunamadı.')}</Note>}
               {roles.data && (
                 <>

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Check, FileDown, FolderPlus, Loader2, Wand2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import SearchSelect from '../components/SearchSelect';
@@ -67,7 +68,7 @@ export default function PaProjects() {
                   <section key={s} className="flex min-w-0 flex-col gap-2 rounded-2xl bg-slate-100/80 p-2">
                     <h2 className="flex items-center justify-between px-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">
                       {stageLabel(s)}
-                      <span className="font-mono tabular-nums">{items.length}</span>
+                      <span className="inline-flex items-center gap-1 font-mono tabular-nums">{items.length}<SqlInfo k={list.data?.kaynaklar} alan="stages" label={`${stageLabel(s)}: proje sayısı`} /></span>
                     </h2>
                     {items.map((p) => (
                       <button key={p.id} type="button" onClick={() => setOpen(p.id)} className="rounded-xl bg-white p-2.5 text-left shadow-sm transition-transform duration-150 ease-out active:scale-[0.98]">
@@ -488,7 +489,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
 
         <aside className="min-w-0 space-y-3">
           <section className="rounded-2xl border border-slate-100 bg-white/80 p-3">
-            <h3 className="text-[13px] font-extrabold">Onaylar</h3>
+            <h3 className="flex items-center gap-1 text-[13px] font-extrabold">Onaylar<SqlInfo k={p.kaynaklar} alan="budget" label="Bütçe" /></h3>
             <dl className="mt-1 space-y-1.5">
               <div className="flex justify-between gap-2">
                 <dt className="text-canvas-muted">Bütçe</dt>
@@ -517,7 +518,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
 
           <section className="rounded-2xl border border-slate-100 bg-white/80 p-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-[13px] font-extrabold">Erişim (CRM)</h3>
+              <h3 className="flex items-center gap-1 text-[13px] font-extrabold">Erişim (CRM)<SqlInfo k={report.data?.kaynaklar} alan="facts" label="Proje erişimi" /></h3>
               {!showReport && !report.data && (
                 <button type="button" className={`${btnGhost} !min-h-9 !py-1`} onClick={() => setShowReport(true)}>
                   CRM'den oku

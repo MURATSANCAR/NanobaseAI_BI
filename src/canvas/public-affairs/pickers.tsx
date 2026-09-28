@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { Note, btnGhost, errText, field, label } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { fmtInt, paApi, type Book, type Place } from './api';
@@ -9,12 +11,13 @@ import { usePaMeta } from './parts';
 
 /** CRM kitap ve ziyaret yeri seçicileri (salt okuma, sayfalı; toplam görünür, sessiz kesme yok). */
 
-function Pager({ page, total, size, onPage }: { page: number; total: number; size: number; onPage: (p: number) => void }) {
+function Pager({ page, total, size, onPage, k, label: what }: { page: number; total: number; size: number; onPage: (p: number) => void; k?: Kaynaklar; label: string }) {
   if (total <= size) return null;
   return (
     <div className="flex items-center justify-between gap-2 text-[11.5px] text-canvas-muted">
-      <span>
+      <span className="inline-flex items-center gap-1">
         {fmtInt(page * size + 1)}–{fmtInt(Math.min(total, (page + 1) * size))} / {fmtInt(total)}
+        <SqlInfo k={k} alan="total" label={what} />
       </span>
       <div className="flex gap-1.5">
         <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={page === 0} onClick={() => onPage(page - 1)}>
@@ -65,7 +68,7 @@ export function BookPicker({ onPick, picked = [], action = 'Seç' }: { onPick: (
             ))}
             {books.data.items.length === 0 && <li className="px-3 py-3 text-canvas-muted">Eşleşen kitap yok.</li>}
           </ul>
-          <Pager page={page} total={books.data.total} size={books.data.pageSize} onPage={setPage} />
+          <Pager page={page} total={books.data.total} size={books.data.pageSize} onPage={setPage} k={books.data.kaynaklar} label="CRM kitap araması" />
         </>
       )}
     </div>
@@ -136,7 +139,7 @@ export function PlacePicker({ onPick, picked = [] }: { onPick: (p: Place) => voi
             ))}
             {places.data.items.length === 0 && <li className="px-3 py-3 text-canvas-muted">Eşleşen kurum yok.</li>}
           </ul>
-          <Pager page={page} total={places.data.total} size={places.data.pageSize} onPage={setPage} />
+          <Pager page={page} total={places.data.total} size={places.data.pageSize} onPage={setPage} k={places.data.kaynaklar} label="CRM ziyaret yeri araması" />
         </>
       )}
     </div>

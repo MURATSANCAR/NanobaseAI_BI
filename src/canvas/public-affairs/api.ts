@@ -1,4 +1,5 @@
 import { ENGINE_BASE, send, type AuthorHeat } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M28 Kurumsal ilişkiler köprü istemcisi (`/api/v1/public-affairs/*`). Kişi/kurum kartı, temas notu, hediye programı ve
  *  kamu projeleri portal kaydıdır; CRM kişi, ziyaret yeri, kitap ve sipariş bilgisi yalnız okunur. Kişiye ve kuruma hiçbir
@@ -148,7 +149,7 @@ export type Gift = {
   createdAt: string | null;
 };
 
-export type PersonDetail = PersonRow & {
+export type PersonDetail = PersonRow & { kaynaklar?: Kaynaklar } & {
   timeline: Note[];
   gifts: Gift[];
   crm: null | { contact?: CrmContact | null; tags?: string[]; error?: string };
@@ -188,7 +189,7 @@ export type Place = {
   orgId?: string | null;
 };
 
-export type OrgDetail = Org & {
+export type OrgDetail = Org & { kaynaklar?: Kaynaklar } & {
   people: PersonRow[];
   projects: Project[];
   timeline: Note[];
@@ -265,7 +266,7 @@ export type ProjectEvent = {
   docRef: string | null;
 };
 
-export type ProjectDetail = Project & { events: ProjectEvent[] };
+export type ProjectDetail = Project & { events: ProjectEvent[]; kaynaklar?: Kaynaklar };
 
 export type ReachFacts = {
   places: number;
@@ -295,6 +296,7 @@ export type Suggestion = {
 };
 
 export type Home = {
+  kaynaklar?: Kaynaklar;
   due: PersonRow[];
   dueTotal: number;
   peopleCounts: { toplam: number; zamani: number; kritik: number };
@@ -311,6 +313,7 @@ export type Home = {
 };
 
 export type Report = {
+  kaynaklar?: Kaynaklar;
   year: number;
   people: { total: number; critical: number; publicOfficials: number; byField: Array<{ label: string; count: number }> };
   contacts: { notes: number; people: number; orgs: number };
@@ -323,13 +326,13 @@ export type Report = {
   crm: { types: Array<{ type: number; label: string; orders: number; books: number }>; excludedStatus?: number[]; error: string | null };
 };
 
-type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export const paApi = {
   meta: () => send<Meta>('GET', `${B}/meta`),
   home: () => send<Home>('GET', `${B}/home`),
   people: (p: { q?: string; field?: string; priority?: string; scope?: string; org?: string; archived?: boolean; order?: string } = {}) =>
-    send<{ items: PersonRow[]; total: number; counts: Home['peopleCounts'] }>('GET', `${B}/people${qs(p)}`),
+    send<{ items: PersonRow[]; total: number; counts: Home['peopleCounts']; kaynaklar?: Kaynaklar }>('GET', `${B}/people${qs(p)}`),
   person: (id: string) => send<PersonDetail>('GET', `${B}/people/${enc(id)}`),
   addPerson: (b: Record<string, unknown>) => send<Person & { created: boolean }>('POST', `${B}/people`, b),
   updatePerson: (id: string, b: Record<string, unknown>) => send<Person>('PATCH', `${B}/people/${enc(id)}`, b),
@@ -344,7 +347,7 @@ export const paApi = {
   addOrgNote: (id: string, b: Record<string, unknown>) => send<Note>('POST', `${B}/orgs/${enc(id)}/notes`, b),
   updateNote: (id: string, b: Record<string, unknown>) => send<Note>('PATCH', `${B}/notes/${enc(id)}`, b),
   deleteNote: (id: string) => send<{ ok: boolean }>('DELETE', `${B}/notes/${enc(id)}`),
-  orgs: (p: { q?: string; kind?: string; archived?: boolean } = {}) => send<{ items: Org[]; total: number }>('GET', `${B}/orgs${qs(p)}`),
+  orgs: (p: { q?: string; kind?: string; archived?: boolean } = {}) => send<{ items: Org[]; total: number; kaynaklar?: Kaynaklar }>('GET', `${B}/orgs${qs(p)}`),
   org: (id: string) => send<OrgDetail>('GET', `${B}/orgs/${enc(id)}`),
   addOrg: (b: Record<string, unknown>) => send<Org & { created: boolean }>('POST', `${B}/orgs`, b),
   updateOrg: (id: string, b: Record<string, unknown>) => send<Org>('PATCH', `${B}/orgs/${enc(id)}`, b),
@@ -352,17 +355,17 @@ export const paApi = {
   crmPlaces: (p: { q?: string; kurumTipi?: number | ''; il?: string; page?: number }) => send<Page<Place>>('GET', `${B}/crm/places${qs(p)}`),
   crmCities: () => send<{ items: Array<{ id: string; name: string }> }>('GET', `${B}/crm/cities`),
   cityStats: (il: string, kurumTipi: number) =>
-    send<{ places: number; students: number; studentsUnknown: number; kurumTipiLabel: string | null }>('GET', `${B}/crm/city-stats${qs({ il, kurumTipi })}`),
-  crmRoles: () => send<{ personRoles: Array<{ id: string; name: string; people: number }>; decisionMakers: number }>('GET', `${B}/crm/roles`),
+    send<{ places: number; students: number; studentsUnknown: number; kurumTipiLabel: string | null; kaynaklar?: Kaynaklar }>('GET', `${B}/crm/city-stats${qs({ il, kurumTipi })}`),
+  crmRoles: () => send<{ personRoles: Array<{ id: string; name: string; people: number }>; decisionMakers: number; kaynaklar?: Kaynaklar }>('GET', `${B}/crm/roles`),
   crmBooks: (p: { q?: string; page?: number; month?: string }) => send<Page<Book>>('GET', `${B}/crm/books${qs(p)}`),
   gifts: (p: { month?: string; status?: string; person?: string } = {}) =>
-    send<{ items: Gift[]; total: number; counts: Record<GiftStatus, number>; books: number; people: number }>('GET', `${B}/gifts${qs(p)}`),
+    send<{ items: Gift[]; total: number; counts: Record<GiftStatus, number>; books: number; people: number; kaynaklar?: Kaynaklar }>('GET', `${B}/gifts${qs(p)}`),
   addGift: (b: Record<string, unknown>) => send<Gift>('POST', `${B}/gifts`, b),
   updateGift: (id: string, b: Record<string, unknown>) => send<Gift>('PATCH', `${B}/gifts/${enc(id)}`, b),
   approveGifts: (b: { ids: string[]; decision?: 'onay' | 'geri'; legalOk?: string[] }) =>
     send<{ done: string[]; skipped: Array<{ id: string; reason: string }> }>('POST', `${B}/gifts/approve`, b),
   suggest: (b: { bookIds?: string[]; month?: string; all?: boolean }) =>
-    send<{ items: Suggestion[]; total: number; books: Array<{ id: string; name: string | null; author: string | null; stockCode: string | null }>; people: number }>(
+    send<{ items: Suggestion[]; total: number; books: Array<{ id: string; name: string | null; author: string | null; stockCode: string | null }>; people: number; kaynaklar?: Kaynaklar }>(
       'POST',
       `${B}/gifts/suggest`,
       b,
@@ -370,7 +373,7 @@ export const paApi = {
     ),
   draftNote: (id: string) => send<Gift>('POST', `${B}/gifts/${enc(id)}/draft-note`, {}, 120_000),
   projects: (p: { stage?: string; kind?: string; org?: string; q?: string; scope?: string; closed?: boolean } = {}) =>
-    send<{ items: Project[]; total: number; stages: Record<string, number> }>('GET', `${B}/projects${qs(p)}`),
+    send<{ items: Project[]; total: number; stages: Record<string, number>; kaynaklar?: Kaynaklar }>('GET', `${B}/projects${qs(p)}`),
   project: (id: string) => send<ProjectDetail>('GET', `${B}/projects/${enc(id)}`),
   addProject: (b: Record<string, unknown>) => send<Project>('POST', `${B}/projects`, b),
   updateProject: (id: string, b: Record<string, unknown>) => send<ProjectDetail>('PATCH', `${B}/projects/${enc(id)}`, b),
@@ -378,7 +381,7 @@ export const paApi = {
     send<ProjectDetail>('POST', `${B}/projects/${enc(id)}/approve`, { what, decision }),
   draftProposal: (id: string) => send<ProjectDetail & { started: boolean }>('POST', `${B}/projects/${enc(id)}/draft-proposal`, {}),
   projectReport: (id: string) =>
-    send<{ project: ProjectDetail; facts: ReachFacts | null; places: Place[]; missingOrders?: string[]; crmError: string | null }>(
+    send<{ project: ProjectDetail; facts: ReachFacts | null; places: Place[]; missingOrders?: string[]; crmError: string | null; kaynaklar?: Kaynaklar }>(
       'GET',
       `${B}/projects/${enc(id)}/report`,
       undefined,

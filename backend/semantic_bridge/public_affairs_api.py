@@ -22,7 +22,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge import public_affairs as PA
+from semantic_bridge import public_affairs_kaynak as K
 from semantic_bridge import public_affairs_docs as D
 from semantic_bridge import public_affairs_sources as src
 from semantic_bridge import relations_core as core
@@ -169,7 +172,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/home")
     def pa_home(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(PA.home, engine, tenant, user, settings())
+        return PV.bagla(call(PA.home, engine, tenant, user, settings()), lambda: K.for_home(engine, tenant))
 
     @app.post(f"{P}/run-due")
     async def pa_run_due(request: Request, weekly: bool = False) -> dict[str, Any]:
@@ -228,8 +231,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     def pa_people(request: Request, q: str = "", field: str = "", priority: str = "", scope: str = "", org: str = "",
                   archived: bool = False, order: str = "zaman") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(PA.list_people, engine, tenant, user, settings(), q=q, field=field, priority=priority, scope=scope,
-                    org_id=org, archived=archived, order=order)
+        out = call(PA.list_people, engine, tenant, user, settings(), q=q, field=field, priority=priority, scope=scope,
+                   org_id=org, archived=archived, order=order)
+        return PV.bagla(out, lambda: K.for_people(engine, tenant, archived))
 
     @app.post(f"{P}/people")
     async def pa_person_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -270,7 +274,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                 out["crm"] = await run_in_threadpool(read)
             except Exception as e:  # noqa: BLE001 — CRM kapalıyken kart yine açılır
                 out["crm"] = {"error": "CRM şu an okunamıyor; kart portal kaydıyla gösteriliyor.", "detail": str(e)[:200]}
-        return out
+        return PV.bagla(out, lambda: K.for_person(engine, tenant, out["id"], out.get("crmContactId")))
 
     @app.patch(f"{P}/people/{{pid}}")
     def pa_person_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -348,24 +352,16 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/orgs")
     def pa_orgs(request: Request, q: str = "", kind: str = "", archived: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
+        oq, pq, jq = PA.orgs_list_stmts(tenant, archived)
         with engine.connect() as c:
-            stmt = sa.select(PA.ORGS).where(PA.ORGS.c.tenant_id == tenant)
-            stmt = stmt.where(PA.ORGS.c.archived_at.isnot(None) if archived else PA.ORGS.c.archived_at.is_(None))
-            rows = c.execute(stmt).fetchall()
-            people = {}
-            for r in c.execute(sa.select(PA.PEOPLE.c.org_id, sa.func.count().label("n")).where(
-                    PA.PEOPLE.c.tenant_id == tenant, PA.PEOPLE.c.archived_at.is_(None), PA.PEOPLE.c.org_id.isnot(None))
-                    .group_by(PA.PEOPLE.c.org_id)).fetchall():
-                people[r.org_id] = int(r.n)
-            projects = {}
-            for r in c.execute(sa.select(PA.PROJECTS.c.org_id, sa.func.count().label("n")).where(
-                    PA.PROJECTS.c.tenant_id == tenant, PA.PROJECTS.c.stage.in_(PA.OPEN_STAGES)).group_by(PA.PROJECTS.c.org_id)).fetchall():
-                projects[r.org_id] = int(r.n)
+            rows = c.execute(oq).fetchall()
+            people = {r.org_id: int(r.n) for r in c.execute(pq).fetchall()}
+            projects = {r.org_id: int(r.n) for r in c.execute(jq).fetchall()}
         nq = core.norm(q)
         items = [dict(PA._org(r), people=people.get(r.id, 0), openProjects=projects.get(r.id, 0)) for r in rows
                  if (not kind or r.kind == kind) and (not nq or nq in core.norm(f"{r.name} {r.city or ''}"))]
         items.sort(key=lambda x: x["name"].casefold())
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_orgs(engine, tenant, archived))
 
     @app.post(f"{P}/orgs")
     async def pa_org_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -392,8 +388,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         r = rights(user)
         with engine.connect() as c:
             row = call(PA._get_org, c, tenant, oid)
-            notes = c.execute(sa.select(PA.NOTES).where(PA.NOTES.c.tenant_id == tenant, PA.NOTES.c.org_id == row.id,
-                                                        PA.NOTES.c.person_id.is_(None)).order_by(PA.NOTES.c.at.desc())).fetchall()
+            notes = c.execute(PA.org_notes_stmt(tenant, row.id)).fetchall()
         out = PA._org(row)
         out["people"] = PA.list_people(engine, tenant, user, settings(), org_id=row.id, order="ad")["items"]
         out["projects"] = PA.list_projects(engine, tenant, user, org_id=row.id, closed=True)["items"]
@@ -405,7 +400,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                 out["crm"] = {"place": place_view(rows[0]) if rows else None}
             except Exception as e:  # noqa: BLE001
                 out["crm"] = {"error": "CRM şu an okunamıyor.", "detail": str(e)[:200]}
-        return out
+        return PV.bagla(out, lambda: K.for_org(engine, tenant, row.id, row.crm_visit_place_id))
 
     @app.patch(f"{P}/orgs/{{oid}}")
     def pa_org_update(oid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -439,7 +434,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                     PA.PEOPLE.c.tenant_id == tenant, PA.PEOPLE.c.crm_contact_id.in_(ids))).fetchall()}
         for i in items:
             i["personId"] = linked.get(i["crmContactId"])
-        return {"items": items, "total": src.ival(rows[0].get("toplam")) if rows else 0, "page": max(0, page), "pageSize": src.PAGE_SIZE}
+        return PV.bagla({"items": items, "total": src.ival(rows[0].get("toplam")) if rows else 0, "page": max(0, page),
+                         "pageSize": src.PAGE_SIZE}, lambda: K.for_crm_contacts(q, role, page))
 
     @app.get(f"{P}/crm/places")
     async def pa_crm_places(request: Request, q: str = "", kurumTipi: Optional[int] = None, il: str = "", page: int = 0) -> dict[str, Any]:
@@ -454,7 +450,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                     PA.ORGS.c.tenant_id == tenant, PA.ORGS.c.crm_visit_place_id.in_(ids))).fetchall()}
         for i in items:
             i["orgId"] = linked.get(i["id"])
-        return {"items": items, "total": src.ival(rows[0].get("toplam")) if rows else 0, "page": max(0, page), "pageSize": src.PAGE_SIZE}
+        return PV.bagla({"items": items, "total": src.ival(rows[0].get("toplam")) if rows else 0, "page": max(0, page),
+                         "pageSize": src.PAGE_SIZE}, lambda: K.for_crm_places(q, kurumTipi, il, page))
 
     @app.get(f"{P}/crm/cities")
     async def pa_crm_cities(request: Request) -> dict[str, Any]:
@@ -468,8 +465,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         ctx(request)
         rows = await run_in_threadpool(lambda: call(lambda: crm()(src.city_stats_sql(schema(), il, kurumTipi))))
         r = rows[0] if rows else {}
-        return {"il": il, "kurumTipi": kurumTipi, "kurumTipiLabel": src.KURUM_TIPI.get(kurumTipi), "places": src.ival(r.get("kurum")) or 0,
-                "students": src.ival(r.get("ogrenci")) or 0, "studentsUnknown": src.ival(r.get("sayisiz")) or 0}
+        out = {"il": il, "kurumTipi": kurumTipi, "kurumTipiLabel": src.KURUM_TIPI.get(kurumTipi), "places": src.ival(r.get("kurum")) or 0,
+               "students": src.ival(r.get("ogrenci")) or 0, "studentsUnknown": src.ival(r.get("sayisiz")) or 0}
+        return PV.bagla(out, lambda: K.for_city_stats(il, kurumTipi))
 
     @app.get(f"{P}/crm/roles")
     async def pa_crm_roles(request: Request) -> dict[str, Any]:
@@ -482,7 +480,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                      for r in run(src.person_roles_sql(schema()))]
             n = run(src.decision_makers_sql(schema()))
             return {"personRoles": roles, "decisionMakers": src.ival(n[0].get("n")) if n else 0}
-        return await run_in_threadpool(lambda: call(cached, "roles", read))
+        return PV.bagla(await run_in_threadpool(lambda: call(cached, "roles", read)), K.for_roles)
 
     @app.get(f"{P}/crm/books")
     async def pa_crm_books(request: Request, q: str = "", page: int = 0, month: str = "") -> dict[str, Any]:
@@ -494,17 +492,19 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
             y, m = (int(x) for x in month.split("-"))
             first, until = date(y, m, 1), date(y + (m == 12), m % 12 + 1, 1)
             rows = await run_in_threadpool(lambda: call(lambda: crm()(src.books_published_sql(schema(), first, until))))
-            return {"items": [book_view(r) for r in rows], "total": len(rows), "page": 0, "pageSize": len(rows) or src.PAGE_SIZE}
+            return PV.bagla({"items": [book_view(r) for r in rows], "total": len(rows), "page": 0, "pageSize": len(rows) or src.PAGE_SIZE},
+                            lambda: K.for_crm_books(q, page, month))
         rows = await run_in_threadpool(lambda: call(lambda: crm()(src.books_sql(schema(), q, page))))
-        return {"items": [book_view(r) for r in rows], "total": src.ival(rows[0].get("toplam")) if rows else 0,
-                "page": max(0, page), "pageSize": src.PAGE_SIZE}
+        return PV.bagla({"items": [book_view(r) for r in rows], "total": src.ival(rows[0].get("toplam")) if rows else 0,
+                         "page": max(0, page), "pageSize": src.PAGE_SIZE}, lambda: K.for_crm_books(q, page, ""))
 
     # ------------------------------------------------------------------ hediye programı
 
     @app.get(f"{P}/gifts")
     def pa_gifts(request: Request, month: str = "", status: str = "", person: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(PA.list_gifts, engine, tenant, month=month, status=status, person_id=person)
+        out = call(PA.list_gifts, engine, tenant, month=month, status=status, person_id=person)
+        return PV.bagla(out, lambda: K.for_gifts(engine, tenant, month, status, person))
 
     @app.post(f"{P}/gifts")
     def pa_gift_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -523,8 +523,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         ids = [call(core.guid, x, "CRM kitap kimliği") for x in (body.get("bookIds") or [])]
         month = str(body.get("month") or "")
 
+        ran: list[dict[str, Any]] = []
+
         def read() -> dict[str, Any]:
-            run = crm()
+            run = PK.recording(crm(), "crm", ran)
             if ids:
                 books = run(src.books_by_id_sql(schema(), ids, summary=True))
             elif month and PA._MONTH.match(month):
@@ -540,15 +542,19 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                 b["ad"], b["yazar"], b["stok_kodu"] = src.s(b.get("ad")), src.s(b.get("yazar")), src.s(b.get("stok_kodu"))
             people = PA.list_people(engine, tenant, user, st)["items"]
             linked = sorted({p["crmContactId"] for p in people if p.get("crmContactId")})
-            tags = crm_tags(linked) if linked else {}
+            tags: dict[str, list[str]] = {}
+            if linked:
+                for r in run(src.contact_tags_sql(schema(), linked)):
+                    tags.setdefault(src.lid(r.get("kisi")) or "", []).append(src.s(r.get("ad")) or "")
             return {"books": books, "people": people, "tags": tags}
 
         data = await run_in_threadpool(lambda: call(read))
         items = PA.suggest(data["people"], data["books"], data["tags"], PA.gifts_by_person(engine, tenant), st,
                            include_all=bool(body.get("all")))
-        return {"items": items, "total": len(items),
-                "books": [{"id": b["id"], "name": b.get("ad"), "author": b.get("yazar"), "stockCode": b.get("stok_kodu")} for b in data["books"]],
-                "people": len(data["people"])}
+        out = {"items": items, "total": len(items),
+               "books": [{"id": b["id"], "name": b.get("ad"), "author": b.get("yazar"), "stockCode": b.get("stok_kodu")} for b in data["books"]],
+               "people": len(data["people"])}
+        return PV.bagla(out, lambda: K.for_gift_suggest(engine, tenant, ran))
 
     @app.patch(f"{P}/gifts/{{gid}}")
     def pa_gift_update(gid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -615,7 +621,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     def pa_projects(request: Request, stage: str = "", kind: str = "", org: str = "", q: str = "", scope: str = "",
                     closed: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(PA.list_projects, engine, tenant, user, stage=stage, kind=kind, org_id=org, q=q, scope=scope, closed=closed)
+        out = call(PA.list_projects, engine, tenant, user, stage=stage, kind=kind, org_id=org, q=q, scope=scope, closed=closed)
+        return PV.bagla(out, lambda: K.for_projects(engine, tenant))
 
     @app.post(f"{P}/projects")
     def pa_project_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -627,7 +634,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/projects/{{pid}}")
     def pa_project(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(PA.project_detail, engine, tenant, pid)
+        out = call(PA.project_detail, engine, tenant, pid)
+        return PV.bagla(out, lambda: K.for_project(engine, tenant, out["id"]))
 
     @app.patch(f"{P}/projects/{{pid}}")
     def pa_project_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -647,9 +655,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         audit(engine, user, "approve" if decision == "onay" else "reject", "rel_project", pid, out["title"], {"what": what})
         return call(PA.project_detail, engine, tenant, pid)
 
-    def project_crm(project: dict[str, Any]) -> dict[str, Any]:
-        """Projenin CRM tarafı: hedef kurumlar (ziyaret yeri satırları), kitap bilgisi, siparişlerle dağıtılan adet."""
-        run = crm()
+    def project_crm(project: dict[str, Any], ran: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
+        """Projenin CRM tarafı: hedef kurumlar (ziyaret yeri satırları), kitap bilgisi, siparişlerle dağıtılan adet.
+        `ran` verilirse çalışan sorguların metni oraya yazılır (sorgu bilgisi)."""
+        run = crm() if ran is None else PK.recording(crm(), "crm", ran)
         places = run(src.places_by_id_sql(schema(), project["places"])) if project["places"] else []
         book_ids = [b["id"] for b in project["books"]]
         books = {src.lid(r.get("id")): r for r in run(src.books_by_id_sql(schema(), book_ids))} if book_ids else {}
@@ -667,15 +676,17 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         """Proje erişim raporu: CRM'den hedef kurum/öğrenci ve siparişlerle dağıtılan kitap; elle girilen katılım."""
         engine, tenant, _, _ = ctx(request)
         project = call(PA.project_detail, engine, tenant, pid)
+        ran: list[dict[str, Any]] = []
         try:
-            data = await run_in_threadpool(lambda: call(project_crm, project))
+            data = await run_in_threadpool(lambda: call(project_crm, project, ran))
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
             return {"project": project, "crmError": str(e)[:300], "facts": None, "places": []}
         facts = PA.reach_facts(project, data["places"], data["delivered"])
-        return {"project": project, "facts": facts, "places": [place_view(r) for r in data["places"]],
-                "missingOrders": data["missingOrders"], "crmError": None}
+        out = {"project": project, "facts": facts, "places": [place_view(r) for r in data["places"]],
+               "missingOrders": data["missingOrders"], "crmError": None}
+        return PV.bagla(out, lambda: K.for_project_report(engine, tenant, project["id"], ran))
 
     def build_proposal(engine: Any, tenant: str, pid: str, user: str) -> None:
         """Arka plan işi: CRM bağlamı → Zeki AI bölümleri → koddan tablo ve dayanak maddeleriyle teklif dosyası."""
@@ -754,7 +765,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     async def pa_report(request: Request, year: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         y = year or datetime.now(core.TZ).year
-        return await run_in_threadpool(full_report, engine, tenant, user, y)
+        st = settings()
+        rep = await run_in_threadpool(full_report, engine, tenant, user, y)
+        return PV.bagla(rep, lambda: K.for_report(engine, tenant, y, st["orderTypes"], st["excludedStatus"]))
 
     @app.get(f"{P}/report/export.pdf")
     async def pa_report_pdf(request: Request, year: Optional[int] = None) -> Response:

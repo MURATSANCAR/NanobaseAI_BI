@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Check, ChevronLeft, ChevronRight, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay } from '../editorial/authors/shared';
@@ -88,6 +89,7 @@ export default function PaGifts() {
             <ChevronRight aria-hidden className="h-4 w-4" />
           </button>
         </div>
+        <SqlInfo k={list.data?.kaynaklar} alan="counts" label="Hediye programı: durum, kitap ve kişi sayıları" />
         <select aria-label="Durum" value={status} onChange={(e) => setParam('durum', e.target.value)} className={`${field} w-auto`}>
           <option value="">Bütün durumlar</option>
           {(meta.data?.giftStatus ?? []).map((s) => (
@@ -353,8 +355,9 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
         </div>
         {run.data && (
           <>
-            <p className="text-canvas-muted">
+            <p className="flex flex-wrap items-center gap-1 text-canvas-muted">
               {fmtInt(run.data.books.length)} kitap × {fmtInt(run.data.people)} kişi kartı → {fmtInt(run.data.total)} öneri. Kitabı daha önce almış kişi listede yok.
+              <SqlInfo k={run.data.kaynaklar} alan="items" label="Hediye önerisi" />
             </p>
             {groups.length === 0 && <Empty title="Öneri yok">{run.data.books.length === 0 ? 'Bu ay ilk baskısı yapılan kitap yok; «Kitap seç» ile seçin.' : 'Kişi kartlarında konu örtüşmesi yok; «örtüşmesi olmayanları da göster»i açın.'}</Empty>}
             {groups.map(([bookId, rows]) => (

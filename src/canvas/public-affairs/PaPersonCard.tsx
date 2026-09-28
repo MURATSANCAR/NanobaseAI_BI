@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Archive, ArchiveRestore, Check, Gift as GiftIcon, Lock, NotebookPen, Pencil, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { HeatPill, cellClass, daysAgo, fmtDay, lastMonths, monthLabel } from '../editorial/authors/shared';
@@ -99,6 +100,7 @@ export default function PaPersonCard() {
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <Block
             title="Temas notları"
+            info={<SqlInfo k={p.kaynaklar} alan="timeline" label="Temas notları" />}
             help="Görüşme, telefon, e-posta ve etkinlik temasları; «yalnız ben ve katılımcılar» notunun metni başkasına gösterilmez."
           >
             {p.timeline.length === 0 ? (
@@ -158,7 +160,7 @@ export default function PaPersonCard() {
             )}
           </Block>
 
-          <Block title="Gönderilen kitaplar" help="Hediye programındaki bütün satırlar; aynı kitap aynı kişiye ikinci kez yazılamaz.">
+          <Block title="Gönderilen kitaplar" info={<SqlInfo k={p.kaynaklar} alan="gifts" label="Gönderilen kitaplar" />} help="Hediye programındaki bütün satırlar; aynı kitap aynı kişiye ikinci kez yazılamaz.">
             {p.gifts.length === 0 ? (
               <Empty title="Hediye yok" />
             ) : (
@@ -184,7 +186,7 @@ export default function PaPersonCard() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-          <Block title="İlişki">
+          <Block title="İlişki" info={<SqlInfo k={p.kaynaklar} alan="heat" label="İlişki ısısı ve temas zamanı" />}>
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="font-mono text-[28px] font-bold leading-none tabular-nums">{p.heat.score}</span>
               <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">/ 100 ilişki ısısı</span>
@@ -247,7 +249,7 @@ export default function PaPersonCard() {
           </Block>
 
           {p.crmContactId && (
-            <Block title="CRM'de" help="Yalnız okunur; değişiklik CRM'de yapılır.">
+            <Block title="CRM'de" info={<SqlInfo k={p.kaynaklar} alan="crm" label="CRM kişi kartı" />} help="Yalnız okunur; değişiklik CRM'de yapılır.">
               {crm?.error ? (
                 <Note tone="warn">{crm.error}</Note>
               ) : crm?.contact ? (

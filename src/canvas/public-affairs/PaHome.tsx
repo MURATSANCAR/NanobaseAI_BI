@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { NotebookPen, UserPlus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { HeatPill, daysAgo } from '../editorial/authors/shared';
@@ -40,16 +41,16 @@ export default function PaHome() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {home.error && <Note tone="err">{errText(home.error, 'Özet okunamadı.')}</Note>}
       <KpiRow>
-        <Kpi label="Temas zamanı gelen" value={h ? fmtInt(h.dueTotal) : '—'} help={st ? `Kritik ${st.criticalDays} gün, diğer ${st.contactDays} gün` : 'Son temastan bu yana'} onClick={() => navigate(`${BASE}/kisiler?kapsam=zamani`)} />
-        <Kpi label="Açık proje" value={h ? fmtInt(h.projects.length) : '—'} help={h ? `${fmtInt(h.lateProjects)} adımı gecikmiş · ${fmtInt(h.quietProjects)} 30 gündür hareketsiz` : 'Fikir → rapor'} onClick={() => navigate(`${BASE}/projeler`)} />
-        <Kpi label="Bu ay hediye" value={h ? fmtInt(h.giftBooks) : '—'} help={h ? `${fmtMonth(h.month)} · ${fmtInt(h.giftPeople)} kişi · ${fmtInt(h.waitingApproval)} onay bekliyor` : 'Aylık program'} onClick={() => navigate(`${BASE}/hediye`)} />
-        <Kpi label="Geciken adım" value={h ? fmtInt(h.lateSteps) : '—'} help="Tarihi geçmiş, kapanmamış sıradaki adım" />
+        <Kpi label="Temas zamanı gelen" value={h ? fmtInt(h.dueTotal) : '—'} help={st ? `Kritik ${st.criticalDays} gün, diğer ${st.contactDays} gün` : 'Son temastan bu yana'} onClick={() => navigate(`${BASE}/kisiler?kapsam=zamani`)} info={<SqlInfo k={h?.kaynaklar} alan="dueTotal" label="Temas zamanı gelen" />} />
+        <Kpi label="Açık proje" value={h ? fmtInt(h.projects.length) : '—'} help={h ? `${fmtInt(h.lateProjects)} adımı gecikmiş · ${fmtInt(h.quietProjects)} 30 gündür hareketsiz` : 'Fikir → rapor'} onClick={() => navigate(`${BASE}/projeler`)} info={<SqlInfo k={h?.kaynaklar} alan="projects" label="Açık proje" />} />
+        <Kpi label="Bu ay hediye" value={h ? fmtInt(h.giftBooks) : '—'} help={h ? `${fmtMonth(h.month)} · ${fmtInt(h.giftPeople)} kişi · ${fmtInt(h.waitingApproval)} onay bekliyor` : 'Aylık program'} onClick={() => navigate(`${BASE}/hediye`)} info={<SqlInfo k={h?.kaynaklar} alan="giftBooks" label="Bu ay hediye" />} />
+        <Kpi label="Geciken adım" value={h ? fmtInt(h.lateSteps) : '—'} help="Tarihi geçmiş, kapanmamış sıradaki adım" info={<SqlInfo k={h?.kaynaklar} alan="lateSteps" label="Geciken adım" />} />
       </KpiRow>
       {home.isLoading && <Loading />}
 
       {h && (
         <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-          <Block title="Temas zamanı gelen kişiler" help="En uzun süredir aranmayan ve kritik kişiler önce." action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/kisiler?kapsam=zamani`}>Tümü</Link>}>
+          <Block title="Temas zamanı gelen kişiler" info={<SqlInfo k={h.kaynaklar} alan="due" label="Temas zamanı gelen kişiler" />} help="En uzun süredir aranmayan ve kritik kişiler önce." action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/kisiler?kapsam=zamani`}>Tümü</Link>}>
             {h.due.length === 0 ? (
               <Empty title="Zamanı gelen kişi yok">Kritik kişilerle temas sınırın içinde.</Empty>
             ) : (
@@ -79,7 +80,7 @@ export default function PaHome() {
             {h.due.length > 8 && <p className="mt-2 text-[11.5px] text-canvas-muted">ve {fmtInt(h.due.length - 8)} kişi daha — «Tümü».</p>}
           </Block>
 
-          <Block title="Açık projeler" help="Adımı gecikenler önce." action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/projeler`}>Pano</Link>}>
+          <Block title="Açık projeler" info={<SqlInfo k={h.kaynaklar} alan="projects" label="Açık projeler" />} help="Adımı gecikenler önce." action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/projeler`}>Pano</Link>}>
             {h.projects.length === 0 ? (
               <Empty title="Açık proje yok">Okuma kampanyası, kütüphane bağışı ya da eğitim materyali projesini «Projeler»den açın.</Empty>
             ) : (
@@ -103,7 +104,7 @@ export default function PaHome() {
             )}
           </Block>
 
-          <Block title={`${fmtMonth(h.month)} hediye programı`} help="Onay durumu" action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/hediye`}>Programı aç</Link>}>
+          <Block title={`${fmtMonth(h.month)} hediye programı`} info={<SqlInfo k={h.kaynaklar} alan="gifts" label="Hediye programı" />} help="Onay durumu" action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/hediye`}>Programı aç</Link>}>
             <dl className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
               {(meta.data?.giftStatus ?? []).map((s) => (
                 <div key={s.key} className="rounded-xl bg-white/70 px-2 py-2">

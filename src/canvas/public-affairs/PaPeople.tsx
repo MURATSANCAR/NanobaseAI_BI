@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search, UserPlus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnPrimary, errText, field } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { HeatPill, daysAgo } from '../editorial/authors/shared';
@@ -114,8 +115,9 @@ export default function PaPeople() {
       {list.isLoading && <Loading />}
       {d && (
         <>
-          <p className="px-1 text-[12px] text-canvas-muted">
+          <p className="flex flex-wrap items-center gap-1 px-1 text-[12px] text-canvas-muted">
             {fmtInt(d.total)} kişi gösteriliyor · temas zamanı gelen {fmtInt(d.counts.zamani)} · kritik {fmtInt(d.counts.kritik)}
+            <SqlInfo k={d.kaynaklar} alan="items" label="Kişiler, ısı ve temas zamanı" />
           </p>
           {d.items.length === 0 ? (
             <Empty title="Kişi yok">{scope || fieldKey || priority || dq ? 'Süzgeçleri değiştirin.' : '«Yeni kişi» ile CRM\'deki kişiyi alın ya da elle açın.'}</Empty>

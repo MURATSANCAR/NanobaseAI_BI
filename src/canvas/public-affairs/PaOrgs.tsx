@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Building2, NotebookPen, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { useDebounced } from '../editorial/kit';
@@ -67,6 +68,7 @@ export default function PaOrgs() {
               <Empty title="Kurum kartı yok">«Yeni kurum» ile CRM ziyaret yerlerinden bir kurum alın.</Empty>
             ) : (
               <ul className="grid gap-2 md:grid-cols-2">
+                <li className="flex items-center gap-1 text-[11.5px] text-canvas-muted md:col-span-2">Kurum başına kişi ve açık proje<SqlInfo k={list.data.kaynaklar} alan="items" label="Kurumlar" /></li>
                 {list.data.items.map((o) => (
                   <li key={o.id}>
                     <button type="button" onClick={() => setOpen(o.id)} className="glass-panel flex h-full w-full flex-col gap-1 rounded-2xl p-3 text-left shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.98]">
@@ -100,7 +102,7 @@ function CityStats() {
   const cities = useQuery({ queryKey: ['pa', 'crm-cities'], queryFn: paApi.crmCities, enabled: ENGINE_ENABLED, staleTime: 30 * 60_000 });
   const stats = useQuery({ queryKey: ['pa', 'city-stats', il, tip], queryFn: () => paApi.cityStats(il, tip), enabled: ENGINE_ENABLED && !!il });
   return (
-    <Block title="İl istatistiği" help="CRM ziyaret yerlerinden (yalnız okuma). Proje teklifinde hedef okul ve öğrenci sayısı buradan gelir.">
+    <Block title="İl istatistiği" info={<SqlInfo k={stats.data?.kaynaklar} alan="places" label="İl istatistiği" />} help="CRM ziyaret yerlerinden (yalnız okuma). Proje teklifinde hedef okul ve öğrenci sayısı buradan gelir.">
       <div className="grid gap-2 text-[12.5px]">
         <label className="block">
           <span className={label}>İl</span>
@@ -166,6 +168,7 @@ function OrgSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
             </button>
           )}
           {o.crm?.error && <Note tone="warn">{o.crm.error}</Note>}
+          {place && <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">CRM ziyaret yeri sayıları<SqlInfo k={o.kaynaklar} alan="crm" label="CRM ziyaret yeri" /></p>}
           {place && (
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
@@ -183,7 +186,7 @@ function OrgSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
           )}
           {o.note && <p className="whitespace-pre-wrap break-words">{o.note}</p>}
           <section>
-            <h3 className="mb-1 text-[13px] font-extrabold">Kişiler</h3>
+            <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Kişiler<SqlInfo k={o.kaynaklar} alan="people" label="Kurumun kişileri" /></h3>
             {o.people.length === 0 ? (
               <p className="text-canvas-muted">Bu kuruma bağlı kişi kartı yok.</p>
             ) : (
@@ -204,7 +207,7 @@ function OrgSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
             )}
           </section>
           <section>
-            <h3 className="mb-1 text-[13px] font-extrabold">Projeler</h3>
+            <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Projeler<SqlInfo k={o.kaynaklar} alan="projects" label="Kurumun projeleri" /></h3>
             {o.projects.length === 0 ? (
               <p className="text-canvas-muted">Proje yok.</p>
             ) : (

@@ -5,6 +5,7 @@ import { Loader2, Search, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import SearchSelect from '../components/SearchSelect';
+import SqlInfo from '../components/SqlInfo';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { useDebounced } from '../editorial/kit';
 import { nowLocal, usePeopleOptions } from '../editorial/authors/shared';
@@ -295,8 +296,9 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
           {crm.error && <Note tone="err">{errText(crm.error, 'CRM okunamadı.')}</Note>}
           {crm.data && (
             <>
-              <p className="text-[11.5px] text-canvas-muted">
+              <p className="flex flex-wrap items-center gap-1 text-[11.5px] text-canvas-muted">
                 CRM'de {fmtInt(crm.data.total)} kişi · {crm.data.items.length ? `${fmtInt(page * crm.data.pageSize + 1)}–${fmtInt(page * crm.data.pageSize + crm.data.items.length)}` : 'eşleşme yok'}
+                <SqlInfo k={crm.data.kaynaklar} alan="total" label="CRM kişi araması" />
               </p>
               <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/80">
                 {crm.data.items.map((c) => (
@@ -512,7 +514,7 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
           {places.error && <Note tone="err">{errText(places.error, 'CRM okunamadı.')}</Note>}
           {places.data && (
             <>
-              <p className="text-[11.5px] text-canvas-muted">CRM'de {fmtInt(places.data.total)} kurum</p>
+              <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">CRM'de {fmtInt(places.data.total)} kurum<SqlInfo k={places.data.kaynaklar} alan="total" label="CRM ziyaret yeri araması" /></p>
               <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/80">
                 {places.data.items.map((p) => (
                   <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">

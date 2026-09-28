@@ -402,9 +402,13 @@ def update_field(engine: sa.engine.Engine, tenant: str, user: str, key: str, bod
     return {"key": row.key, "label": row.label, "active": bool(row.active)}
 
 
+def fields_stmt(tenant: str):
+    return sa.select(FIELDS).where(FIELDS.c.tenant_id == tenant)
+
+
 def _field_keys(c: Any, tenant: str) -> dict[str, str]:
     _seed_fields(c, tenant)
-    return {r.key: r.label for r in c.execute(sa.select(FIELDS).where(FIELDS.c.tenant_id == tenant)).fetchall()}
+    return {r.key: r.label for r in c.execute(fields_stmt(tenant)).fetchall()}
 
 
 # ------------------------------------------------------------------------------------------ yardımcılar
@@ -837,14 +841,30 @@ def is_due(p: Any, h: dict[str, Any], st: dict[str, Any]) -> bool:
     return h["daysSince"] >= due_days(p.priority, st)
 
 
+def people_stmts(tenant: str, archived: bool = False) -> tuple[Any, Any, Any, Any]:
+    """Kişi listesi: (kişi kartları, kişi notları — ısı ve temas için, alanlar, kurumlar)."""
+    stmt = sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant)
+    stmt = stmt.where(PEOPLE.c.archived_at.isnot(None) if archived else PEOPLE.c.archived_at.is_(None))
+    return (stmt, sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.person_id.isnot(None)), fields_stmt(tenant),
+            orgs_stmt(tenant))
+
+
+def orgs_stmt(tenant: str):
+    return sa.select(ORGS).where(ORGS.c.tenant_id == tenant)
+
+
+def last_gifts_stmt(tenant: str):
+    return sa.select(GIFTS.c.person_id, GIFTS.c.book_name, GIFTS.c.month, GIFTS.c.status) \
+        .where(GIFTS.c.tenant_id == tenant, GIFTS.c.status != "iptal").order_by(GIFTS.c.month)
+
+
 def _people_with_notes(engine: sa.engine.Engine, tenant: str, *, archived: bool = False) -> tuple[list[Any], dict[str, list[Any]], dict[str, str], dict[str, Any]]:
+    pq, nq, _fq, oq = people_stmts(tenant, archived)
     with engine.begin() as c:
-        stmt = sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant)
-        stmt = stmt.where(PEOPLE.c.archived_at.isnot(None) if archived else PEOPLE.c.archived_at.is_(None))
-        people = c.execute(stmt).fetchall()
-        notes = c.execute(sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.person_id.isnot(None))).fetchall()
+        people = c.execute(pq).fetchall()
+        notes = c.execute(nq).fetchall()
         fields = _field_keys(c, tenant)
-        orgs = {r.id: r for r in c.execute(sa.select(ORGS).where(ORGS.c.tenant_id == tenant)).fetchall()}
+        orgs = {r.id: r for r in c.execute(oq).fetchall()}
     by: dict[str, list[Any]] = {}
     for n in notes:
         by.setdefault(n.person_id, []).append(n)
@@ -855,9 +875,7 @@ def _last_gifts(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, An
     """Kişi → son hediye (iptal dışı): kitap adı ve ay."""
     out: dict[str, dict[str, Any]] = {}
     with engine.connect() as c:
-        for g in c.execute(sa.select(GIFTS.c.person_id, GIFTS.c.book_name, GIFTS.c.month, GIFTS.c.status)
-                           .where(GIFTS.c.tenant_id == tenant, GIFTS.c.status != "iptal")
-                           .order_by(GIFTS.c.month)).fetchall():
+        for g in c.execute(last_gifts_stmt(tenant)).fetchall():
             out[g.person_id] = {"book": g.book_name, "month": g.month, "status": g.status}
     return out
 
@@ -907,16 +925,23 @@ def list_people(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, 
     return {"items": items, "total": len(items), "counts": counts}
 
 
+def person_stmts(tenant: str, pid: str) -> tuple[Any, Any, Any, Any]:
+    """Kişi kartı: (kart, kurumlar, notları, hediyeleri)."""
+    return (sa.select(PEOPLE).where(PEOPLE.c.id == pid, PEOPLE.c.tenant_id == tenant), orgs_stmt(tenant),
+            sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.person_id == pid).order_by(NOTES.c.at.desc()),
+            sa.select(GIFTS).where(GIFTS.c.tenant_id == tenant, GIFTS.c.person_id == pid)
+            .order_by(GIFTS.c.month.desc(), GIFTS.c.created_at.desc()))
+
+
 def person_detail(engine: sa.engine.Engine, tenant: str, user: str, privileged: bool, pid: str, st: dict[str, Any]) -> dict[str, Any]:
     now = core.now()
     with engine.begin() as c:
         row = _get_person(c, tenant, pid)
         fields = _field_keys(c, tenant)
-        orgs = {r.id: r for r in c.execute(sa.select(ORGS).where(ORGS.c.tenant_id == tenant)).fetchall()}
-        ns = c.execute(sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.person_id == row.id)
-                       .order_by(NOTES.c.at.desc())).fetchall()
-        gs = c.execute(sa.select(GIFTS).where(GIFTS.c.tenant_id == tenant, GIFTS.c.person_id == row.id)
-                       .order_by(GIFTS.c.month.desc(), GIFTS.c.created_at.desc())).fetchall()
+        _pq, oq, nq, gq = person_stmts(tenant, row.id)
+        orgs = {r.id: r for r in c.execute(oq).fetchall()}
+        ns = c.execute(nq).fetchall()
+        gs = c.execute(gq).fetchall()
     h = person_heat(ns, now)
     return dict(_person(row, fields, orgs), heat=h, due=is_due(row, h, st), dueDays=due_days(row.priority, st),
                 timeline=[_note(n, user, privileged) for n in ns], gifts=[_gift(g, {row.id: row}) for g in gs])
@@ -1081,20 +1106,26 @@ def approve_gifts(engine: sa.engine.Engine, tenant: str, user: str, admin: bool,
     return {"done": done, "skipped": skipped}
 
 
+def gifts_stmts(tenant: str, month: str = "", status: str = "", person_id: str = "") -> tuple[Any, Any]:
+    """Hediye programı: (hediye satırları, satırlardaki kişiler)."""
+    cond = [GIFTS.c.tenant_id == tenant]
+    if month:
+        cond.append(GIFTS.c.month == month)
+    if status:
+        cond.append(GIFTS.c.status == status)
+    if person_id:
+        cond.append(GIFTS.c.person_id == person_id)
+    return (sa.select(GIFTS).where(*cond).order_by(GIFTS.c.month.desc(), GIFTS.c.created_at),
+            sa.select(PEOPLE).where(PEOPLE.c.id.in_(sa.select(GIFTS.c.person_id).where(*cond))))
+
+
 def list_gifts(engine: sa.engine.Engine, tenant: str, *, month: str = "", status: str = "", person_id: str = "") -> dict[str, Any]:
     if month and not _MONTH.match(month):
         raise RelationError("Ay YYYY-AA biçiminde olmalı.")
+    gq, pq = gifts_stmts(tenant, month, status, person_id)
     with engine.connect() as c:
-        stmt = sa.select(GIFTS).where(GIFTS.c.tenant_id == tenant)
-        if month:
-            stmt = stmt.where(GIFTS.c.month == month)
-        if status:
-            stmt = stmt.where(GIFTS.c.status == status)
-        if person_id:
-            stmt = stmt.where(GIFTS.c.person_id == person_id)
-        rows = c.execute(stmt.order_by(GIFTS.c.month.desc(), GIFTS.c.created_at)).fetchall()
-        pids = sorted({r.person_id for r in rows})
-        people = {p.id: p for p in c.execute(sa.select(PEOPLE).where(PEOPLE.c.id.in_(pids))).fetchall()} if pids else {}
+        rows = c.execute(gq).fetchall()
+        people = {p.id: p for p in c.execute(pq).fetchall()} if rows else {}
     items = [_gift(r, people) for r in rows]
     counts = {k: 0 for k in GIFT_STATUS}
     for r in rows:
@@ -1341,7 +1372,36 @@ def _get_project(c: Any, tenant: str, pid: str, *, lock: bool = False) -> Any:
 
 
 def _orgs(c: Any, tenant: str) -> dict[str, Any]:
-    return {r.id: r for r in c.execute(sa.select(ORGS).where(ORGS.c.tenant_id == tenant)).fetchall()}
+    return {r.id: r for r in c.execute(orgs_stmt(tenant)).fetchall()}
+
+
+def projects_stmts(tenant: str) -> tuple[Any, Any, Any]:
+    """Projeler: (projeler, kurumlar, proje başına son olay)."""
+    return (sa.select(PROJECTS).where(PROJECTS.c.tenant_id == tenant), orgs_stmt(tenant),
+            sa.select(EVENTS.c.project_id, sa.func.max(EVENTS.c.at).label("at")).where(EVENTS.c.tenant_id == tenant)
+            .group_by(EVENTS.c.project_id))
+
+
+def project_stmts(tenant: str, pid: str) -> tuple[Any, Any, Any]:
+    """Proje kartı: (proje, olayları, kurumlar)."""
+    return (sa.select(PROJECTS).where(PROJECTS.c.id == pid, PROJECTS.c.tenant_id == tenant),
+            sa.select(EVENTS).where(EVENTS.c.project_id == pid).order_by(EVENTS.c.at.desc()), orgs_stmt(tenant))
+
+
+def orgs_list_stmts(tenant: str, archived: bool = False) -> tuple[Any, Any, Any]:
+    """Kurum listesi: (kurum kartları, kurum başına etkin kişi, kurum başına açık proje)."""
+    stmt = sa.select(ORGS).where(ORGS.c.tenant_id == tenant)
+    stmt = stmt.where(ORGS.c.archived_at.isnot(None) if archived else ORGS.c.archived_at.is_(None))
+    return (stmt,
+            sa.select(PEOPLE.c.org_id, sa.func.count().label("n")).where(
+                PEOPLE.c.tenant_id == tenant, PEOPLE.c.archived_at.is_(None), PEOPLE.c.org_id.isnot(None)).group_by(PEOPLE.c.org_id),
+            sa.select(PROJECTS.c.org_id, sa.func.count().label("n")).where(
+                PROJECTS.c.tenant_id == tenant, PROJECTS.c.stage.in_(OPEN_STAGES)).group_by(PROJECTS.c.org_id))
+
+
+def org_notes_stmt(tenant: str, oid: str):
+    return sa.select(NOTES).where(NOTES.c.tenant_id == tenant, NOTES.c.org_id == oid, NOTES.c.person_id.is_(None)) \
+        .order_by(NOTES.c.at.desc())
 
 
 def create_project(engine: sa.engine.Engine, tenant: str, user: str, display: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -1428,12 +1488,12 @@ def approve_project(engine: sa.engine.Engine, tenant: str, user: str, admin: boo
 def list_projects(engine: sa.engine.Engine, tenant: str, user: str, *, stage: str = "", kind: str = "", org_id: str = "",
                   q: str = "", scope: str = "", closed: bool = False) -> dict[str, Any]:
     now = core.now()
+    pq, _oq, eq = projects_stmts(tenant)
     with engine.connect() as c:
-        rows = c.execute(sa.select(PROJECTS).where(PROJECTS.c.tenant_id == tenant)).fetchall()
+        rows = c.execute(pq).fetchall()
         orgs = _orgs(c, tenant)
         last = {}
-        for e in c.execute(sa.select(EVENTS.c.project_id, sa.func.max(EVENTS.c.at).label("at"))
-                           .where(EVENTS.c.tenant_id == tenant).group_by(EVENTS.c.project_id)).fetchall():
+        for e in c.execute(eq).fetchall():
             last[e.project_id] = e.at
     nq = core.norm(q)
     month_ago = now - timedelta(days=30)
@@ -1464,7 +1524,7 @@ def list_projects(engine: sa.engine.Engine, tenant: str, user: str, *, stage: st
 def project_detail(engine: sa.engine.Engine, tenant: str, pid: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = _get_project(c, tenant, pid)
-        evs = c.execute(sa.select(EVENTS).where(EVENTS.c.project_id == row.id).order_by(EVENTS.c.at.desc())).fetchall()
+        evs = c.execute(project_stmts(tenant, row.id)[1]).fetchall()
         out = _project(row, _orgs(c, tenant))
     out["events"] = [{"id": e.id, "at": core.iso(e.at), "user": e.user, "userDisplay": e.user_display,
                       "stageFrom": e.stage_from, "stageTo": e.stage_to, "stageFromLabel": STAGES.get(e.stage_from or ""),
@@ -1598,6 +1658,13 @@ def proposal_document(project: dict[str, Any], org: Optional[dict[str, Any]], mo
 # ------------------------------------------------------------------------------------------ ana sayfa ve rapor
 
 
+def late_steps_stmt(tenant: str, now: datetime):
+    """Günü geçmiş, yapılmamış «sıradaki adım» sayısı."""
+    return sa.select(sa.func.count()).select_from(NOTES).where(
+        NOTES.c.tenant_id == tenant, NOTES.c.next_step.isnot(None), NOTES.c.next_done.is_(False),
+        NOTES.c.next_on.isnot(None), NOTES.c.next_on < now.astimezone(TZ).date())
+
+
 def home(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, Any], *, now: Optional[datetime] = None) -> dict[str, Any]:
     """İlk açılış: temas zamanı gelen kişiler, açık projeler, bu ayın hediye programı (yalnız portal kaydı; CRM beklemez)."""
     now = now or core.now()
@@ -1606,9 +1673,7 @@ def home(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, Any], *
     month = month_of(now)
     gifts = list_gifts(engine, tenant, month=month)
     with engine.connect() as c:
-        steps = c.execute(sa.select(sa.func.count()).select_from(NOTES).where(
-            NOTES.c.tenant_id == tenant, NOTES.c.next_step.isnot(None), NOTES.c.next_done.is_(False),
-            NOTES.c.next_on.isnot(None), NOTES.c.next_on < now.astimezone(TZ).date())).scalar() or 0
+        steps = c.execute(late_steps_stmt(tenant, now)).scalar() or 0
     return {"due": people["items"], "dueTotal": people["total"], "peopleCounts": people["counts"],
             "projects": projects["items"], "projectStages": projects["stages"],
             "lateProjects": sum(1 for p in projects["items"] if p["late"]),
@@ -1617,18 +1682,25 @@ def home(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, Any], *
             "waitingApproval": gifts["counts"].get("oneri", 0), "lateSteps": int(steps)}
 
 
-def report(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, Any], year: int) -> dict[str, Any]:
-    """Etki raporu (portal kısmı): temas, hediye, projeler ve erişim. CRM tanıtım toplamları API'de eklenir."""
+def report_stmts(tenant: str, year: int) -> tuple[Any, Any, Any, Any]:
+    """Etki raporu: (etkin kişiler, yıldaki temas notları, yıldaki hediyeler, projeler)."""
     a = datetime(year, 1, 1, tzinfo=TZ).astimezone(timezone.utc)
     b = datetime(year + 1, 1, 1, tzinfo=TZ).astimezone(timezone.utc)
+    return (sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant, PEOPLE.c.archived_at.is_(None)),
+            sa.select(NOTES.c.person_id, NOTES.c.org_id).where(NOTES.c.tenant_id == tenant, NOTES.c.at >= a, NOTES.c.at < b),
+            sa.select(GIFTS).where(GIFTS.c.tenant_id == tenant, GIFTS.c.month >= f"{year}-01", GIFTS.c.month <= f"{year}-12"),
+            sa.select(PROJECTS).where(PROJECTS.c.tenant_id == tenant))
+
+
+def report(engine: sa.engine.Engine, tenant: str, user: str, st: dict[str, Any], year: int) -> dict[str, Any]:
+    """Etki raporu (portal kısmı): temas, hediye, projeler ve erişim. CRM tanıtım toplamları API'de eklenir."""
+    pq, nq, gq, jq = report_stmts(tenant, year)
     with engine.connect() as c:
         fields = _field_keys(c, tenant)
-        people = c.execute(sa.select(PEOPLE).where(PEOPLE.c.tenant_id == tenant, PEOPLE.c.archived_at.is_(None))).fetchall()
-        notes = c.execute(sa.select(NOTES.c.person_id, NOTES.c.org_id).where(NOTES.c.tenant_id == tenant, NOTES.c.at >= a,
-                                                                             NOTES.c.at < b)).fetchall()
-        gifts = c.execute(sa.select(GIFTS).where(GIFTS.c.tenant_id == tenant, GIFTS.c.month >= f"{year}-01",
-                                                 GIFTS.c.month <= f"{year}-12")).fetchall()
-        projects = c.execute(sa.select(PROJECTS).where(PROJECTS.c.tenant_id == tenant)).fetchall()
+        people = c.execute(pq).fetchall()
+        notes = c.execute(nq).fetchall()
+        gifts = c.execute(gq).fetchall()
+        projects = c.execute(jq).fetchall()
         orgs = _orgs(c, tenant)
     by_field: dict[str, int] = {}
     for p in people:
