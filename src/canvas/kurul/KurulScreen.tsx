@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import {
   fmtDay, fmtLeft, fmtTime, fmtValue, kurulApi, parseNum,
   type Action, type IndicatorDef, type KurulMeta, type Meeting, type Member,
@@ -102,7 +104,9 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
           )}
           <span>
             {p.sayilar.toplam} göstergeden {p.sayilar.hazir} hazır, {p.sayilar.gri} kaynak yok{p.sayilar.hata ? `, ${p.sayilar.hata} okunamadı` : ''}
+            <SqlInfo k={p.kaynaklar} alan="sayilar" label="Gösterge sayıları" className="ml-0.5" />
             {p.olcum ? ` · son ölçüm ${fmtTime(p.olcum.at)}` : ''}
+            {p.olcum && <SqlInfo k={p.kaynaklar} alan="olcum" label="Son ölçüm" className="ml-0.5" />}
           </span>
           {p.olcumSuruyor && <span className="inline-flex items-center gap-1 font-bold text-canvas-violet"><Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> okunuyor</span>}
         </div>
@@ -118,20 +122,23 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Dikkat isteyenler</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Dikkat isteyenler <SqlInfo k={p.kaynaklar} alan="kritik[]" label="Dikkat isteyenler" />
+          </h2>
           {p.kritik.length === 0 ? (
             <Empty>Kırmızı gösterge yok.</Empty>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {p.kritik.map((g) => (
-                <li key={g.kod}>
-                  <button type="button" onClick={() => setOpen(g.kod)} className="flex min-h-11 w-full flex-col gap-0.5 rounded-xl bg-white/80 px-3 py-2 text-left transition-transform duration-150 ease-out hover:bg-white active:scale-[0.98]">
+                <li key={g.kod} className="flex items-start gap-1">
+                  <button type="button" onClick={() => setOpen(g.kod)} className="flex min-h-11 min-w-0 flex-1 flex-col gap-0.5 rounded-xl bg-white/80 px-3 py-2 text-left transition-transform duration-150 ease-out hover:bg-white active:scale-[0.98]">
                     <span className="flex items-center justify-between gap-2">
                       <span className="min-w-0 break-words text-[12.5px] font-bold">{g.ad}</span>
                       <span className="shrink-0 font-mono text-[12.5px] font-bold tabular-nums">{g.degerKisa}</span>
                     </span>
                     <span className="text-[11.5px] leading-snug text-canvas-muted">{g.yorum ? g.yorum.metin : 'Sahibinin yorumu bekleniyor.'}</span>
                   </button>
+                  <SqlInfo k={p.kaynaklar} alan="kritik[]" row={g.kod} label={g.ad} className="mt-2.5" />
                 </li>
               ))}
             </ul>
@@ -140,19 +147,24 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
         <Panel>
           <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Sıradaki toplantı</h2>
           {next ? (
-            <Link to={`/kurul/toplanti/${next.id}`} className="flex min-h-11 items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 hover:bg-white">
-              <span className="min-w-0">
-                <span className="block break-words text-[13px] font-bold">{next.baslik}</span>
-                <span className="block text-[11.5px] text-canvas-muted">{fmtDay(next.tarih)} · {fmtLeft(next.kalanGun)}{next.paketDondu ? ' · paket donduruldu' : ''}</span>
-              </span>
-              <ArrowRight aria-hidden className="h-4 w-4 shrink-0" />
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link to={`/kurul/toplanti/${next.id}`} className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 hover:bg-white">
+                <span className="min-w-0">
+                  <span className="block break-words text-[13px] font-bold">{next.baslik}</span>
+                  <span className="block text-[11.5px] text-canvas-muted">{fmtDay(next.tarih)} · {fmtLeft(next.kalanGun)}{next.paketDondu ? ' · paket donduruldu' : ''}</span>
+                </span>
+                <ArrowRight aria-hidden className="h-4 w-4 shrink-0" />
+              </Link>
+              <SqlInfo k={meetings.data?.kaynaklar} alan="siradaki" label="Sıradaki toplantı" />
+            </div>
           ) : (
             <Empty>Planlanmış toplantı yok.</Empty>
           )}
         </Panel>
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Geciken kurul aksiyonu</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Geciken kurul aksiyonu <SqlInfo k={late.data?.kaynaklar} alan="total" label="Geciken kurul aksiyonu" />
+          </h2>
           <div className="font-mono text-[28px] font-bold tabular-nums">{late.data ? late.data.total : '—'}</div>
           <p className="text-[11.5px] text-canvas-muted">Termini geçmiş, kapanmamış aksiyonlar (Kararlar ve aksiyonlar sekmesi).</p>
         </Panel>
@@ -163,7 +175,7 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
           <Panel key={b.id}>
             <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">{b.ad}</h2>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {b.gostergeler.map((g) => <IndicatorTile key={g.kod} g={g} onOpen={setOpen} />)}
+              {b.gostergeler.map((g) => <IndicatorTile key={g.kod} g={g} k={p.kaynaklar} onOpen={setOpen} />)}
             </div>
           </Panel>
         ))}
@@ -196,8 +208,8 @@ function MeetingsTab({ meta }: { meta: KurulMeta }) {
       ) : (
         <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {items.map((m) => (
-            <li key={m.id}>
-              <Link to={`/kurul/toplanti/${m.id}`} className="glass-panel flex min-h-11 flex-col gap-1 rounded-2xl p-3 shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.99]">
+            <li key={m.id} className="relative">
+              <Link to={`/kurul/toplanti/${m.id}`} className="glass-panel flex h-full min-h-11 flex-col gap-1 rounded-2xl p-3 shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.99]">
                 <span className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 break-words text-[14px] font-extrabold">{m.baslik}</span>
                   <Pill tone={m.durum === 'yapildi' ? 'ok' : m.durum === 'iptal' ? 'muted' : 'violet'}>{m.durumAdi}</Pill>
@@ -206,10 +218,13 @@ function MeetingsTab({ meta }: { meta: KurulMeta }) {
                   {m.turAdi} · {fmtDay(m.tarih)}{m.saat ? ` ${m.saat}` : ''}{m.yer ? ` · ${m.yer}` : ''}
                   {m.durum === 'planlandi' && m.kalanGun !== undefined ? ` · ${fmtLeft(m.kalanGun)}` : ''}
                 </span>
-                <span className="text-[11.5px] text-canvas-muted">
-                  {m.kararSayisi ? `${m.kararSayisi} karar` : 'karar yok'} · {m.paketSurum ? `paket v${m.paketSurum}${m.paketDondu ? ' (donduruldu)' : ''}` : 'paket yok'}
+                <span className="pr-7 text-[11.5px] text-canvas-muted">
+                  {m.kararSayisi ?`${m.kararSayisi} karar` : 'karar yok'} · {m.paketSurum ? `paket v${m.paketSurum}${m.paketDondu ? ' (donduruldu)' : ''}` : 'paket yok'}
                 </span>
               </Link>
+              <span className="absolute bottom-2.5 right-2.5">
+                <SqlInfo k={q.data?.kaynaklar} alan="items[]" label={`${m.baslik}: kalan gün ve karar sayısı`} />
+              </span>
             </li>
           ))}
         </ul>
@@ -283,14 +298,14 @@ function ActionsTab({ meta }: { meta: KurulMeta }) {
       {q.error && <Note tone="err">{errText(q.error, 'Aksiyonlar okunamadı.')}</Note>}
       {q.data && (q.data.items.length === 0 ? <Empty>Bu süzgeçte aksiyon yok.</Empty> : (
         <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-          {q.data.items.map((a) => <li key={a.id}><ActionCard a={a} meta={meta} /></li>)}
+          {q.data.items.map((a) => <li key={a.id}><ActionCard a={a} meta={meta} k={q.data?.kaynaklar} alan="items[]" /></li>)}
         </ul>
       ))}
     </>
   );
 }
 
-export function ActionCard({ a, meta }: { a: Action; meta: KurulMeta }) {
+export function ActionCard({ a, meta, k, alan }: { a: Action; meta: KurulMeta; k?: Kaynaklar; alan?: string }) {
   const qc = useQueryClient();
   const [note, setNote] = useState('');
   const mine = !!a.sahip && a.sahip.toLowerCase() === meta.me.username.toLowerCase();
@@ -308,7 +323,10 @@ export function ActionCard({ a, meta }: { a: Action; meta: KurulMeta }) {
     <div className="glass-panel flex h-full flex-col gap-1.5 rounded-2xl p-3 shadow-glass-float">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Pill tone={a.gecikti ? 'err' : a.durum === 'tamamlandi' ? 'ok' : a.durum === 'iptal' ? 'muted' : 'violet'}>{a.durumAdi}</Pill>
-        <span className={`text-[11.5px] font-bold ${a.gecikti ? 'text-red-700' : 'text-canvas-muted'}`}>{a.termin ? `${fmtDay(a.termin)} · ${fmtLeft(a.kalanGun)}` : 'termin yok'}</span>
+        <span className={`inline-flex items-center gap-0.5 text-[11.5px] font-bold ${a.gecikti ? 'text-red-700' : 'text-canvas-muted'}`}>
+          {a.termin ? `${fmtDay(a.termin)} · ${fmtLeft(a.kalanGun)}` : 'termin yok'}
+          {a.termin && k && alan && <SqlInfo k={k} alan={alan} label={`${a.eylem}: kalan gün`} className="ml-0.5" />}
+        </span>
       </div>
       <p className="break-words text-[13px] font-bold leading-snug">{a.eylem}</p>
       <p className="text-[11.5px] text-canvas-muted">
@@ -372,7 +390,7 @@ function CatalogTab({ meta }: { meta: KurulMeta }) {
       <Note tone="info">Rakam kaynağı (sağlayıcı) kodla bağlıdır ve burada değişmez. Eşik girilmeyen göstergenin rengi kaynak modülün kendi kuralından gelir ya da «eşik yok» kalır.</Note>
       <TableWrap>
         <thead>
-          <tr><th className={th}>Gösterge</th><th className={th}>Bölüm</th><th className={th}>Kaynak</th><th className={th}>Eşik (sarı / kırmızı)</th><th className={th}>Sahip</th><th className={th}>Durum</th><th className={th} /></tr>
+          <tr><th className={th}>Gösterge</th><th className={th}>Bölüm</th><th className={th}>Kaynak</th><th className={th}><InfoLabel k={q.data?.kaynaklar} alan="items[]" label="Eşikler (sarı / kırmızı)">Eşik (sarı / kırmızı)</InfoLabel></th><th className={th}>Sahip</th><th className={th}>Durum</th><th className={th} /></tr>
         </thead>
         <tbody>
           {(q.data?.items ?? []).map((g) => (

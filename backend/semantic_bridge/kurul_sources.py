@@ -10,7 +10,9 @@ Sağlayıcı sözleşmesi: `PROVIDERS[ad](ctx) -> {gösterge_kodu: sonuç}`; bir
 doldurur (ör. M45 özet kartları). Sonuç alanları:
 `durum` ok | kaynak_yok | hata, `deger`, `hedef`, `onceki`, `oncekiEtiket`, `veriSonGunu` (ISO gün), `kaynak` (ekranda
 okunan modül adı), `ekran` (kaynak rota), `renk` (kaynak modülün kendi eşiğiyle verdiği renk; yoksa None), `not`,
-`ayrinti` (küçük sözlük). «Kaynak yok» göstergesi sayı taşımaz (`deger` None) ve renksizdir.
+`ayrinti` (küçük sözlük). «Kaynak yok» göstergesi sayı taşımaz (`deger` None) ve renksizdir. Hazır sonuç ayrıca `_sorgu`
+taşır: ölçümde kaynak modülde ÇALIŞAN sorguların zinciri (sorgu bilgisi, `kurul_kaynak`); değer satırıyla saklanır,
+ekrana giden ayrıntıya girmez.
 
 Sağlayıcısı olmayan gösterge (`saglayici` None) her ölçümde `kaynak_yok` olur: modül geldikçe buraya bir sağlayıcı
 eklenir, kataloğun `saglayici` alanı güncellenir.
@@ -222,6 +224,13 @@ def m45(ctx: Ctx) -> dict[str, dict[str, Any]]:
         yorum = None
     if yorum and isinstance((out.get("net_satis") or {}).get("ayrinti"), dict):
         out["net_satis"]["ayrinti"]["aylikYorum"] = yorum
+    # Sorgu bilgisi: kartların M45'teki zinciri (portal SQL'i + tabloyu dolduran Logo sorgusu) ölçümle saklanır.
+    from semantic_bridge import finance_kaynak as FK
+    from semantic_bridge import kurul_kaynak as KK
+
+    KK.attach(out, "m45", lambda: KK.from_kaynak("m45", FK.for_summary(ctx.engine, ctx.tenant, s, KK.logo_db(), KK.crm_db()), {
+        "net_satis": ["cards[]:net-satis"], "brut_kar_marji": ["cards[]:brut-kar"], "faaliyet_gideri": ["cards[]:faaliyet"],
+        "kasa_banka": ["cards[]:nakit"], "vadesi_gecmis_alacak": ["cards[]:vadesi-gecmis"]}))
     return out
 
 
@@ -263,6 +272,16 @@ def m46(ctx: Ctx) -> dict[str, dict[str, Any]]:
     out["butce_sapma"] = _ok("m46", float(dev.get("total") or 0), veriSonGunu=asof,
                              ayrinti={"ilk": [{"ad": a.get("label"), "tur": a.get("kind"), "oran": a.get("ratio")}
                                              for a in (dev.get("items") or [])[:5]]})
+    from semantic_bridge import budget_kaynak as BK
+    from semantic_bridge import kurul_kaynak as KK
+
+    def recs() -> dict[str, dict[str, Any]]:
+        got = KK.from_kaynak("m46", BK.for_tracking(ctx.engine, ctx.tenant, tr, KK.logo_db()),
+                             {"butce_satis": ["sirket"], "butce_gider": ["gider"]})
+        got.update(KK.from_kaynak("m46", BK.for_deviations(ctx.engine, ctx.tenant, year, status="acik"), {"butce_sapma": ["items[]"]}))
+        return got
+
+    KK.attach(out, "m46", recs)
     return out
 
 
@@ -281,6 +300,17 @@ def _risk_summary(ctx: Ctx) -> dict[str, Any]:
 
 
 def m47(ctx: Ctx) -> dict[str, dict[str, Any]]:
+    out = _m47(ctx)
+    from semantic_bridge import kurul_kaynak as KK
+    from semantic_bridge import risk_kaynak as RK
+
+    sm, ind = _risk_summary(ctx)
+    KK.attach(out, "m47", lambda: KK.from_kaynak("m47", RK.for_summary(ctx.engine, ctx.tenant, sm, KK.logo_db(), KK.crm_db(), ind), {
+        "risk_kritik": ["sayilar"], "risk_kirmizi_gosterge": ["sayilar.kirmizi"], "risk_geciken_aksiyon": ["gecikenAksiyon"]}))
+    return out
+
+
+def _m47(ctx: Ctx) -> dict[str, dict[str, Any]]:
     sm, _ind = _risk_summary(ctx)
     n = sm.get("sayilar") or {}
     today = ctx.today.isoformat()
@@ -379,6 +409,12 @@ def m59(ctx: Ctx) -> dict[str, dict[str, Any]]:
         out["bayi_yogunlasma"] = _ok("m59", _pct(s["yogunlasma10"]),
                                      onceki=_pct((prev or {}).get("yogunlasma10")) if prev else None, oncekiEtiket=label,
                                      veriSonGunu=end, ayrinti={"gun": gun})
+    from semantic_bridge import dealers_kaynak as DK
+    from semantic_bridge import kurul_kaynak as KK
+
+    KK.attach(out, "m59", lambda: KK.from_kaynak("m59", DK.for_summary(ctx.engine, ctx.tenant, None, g30, s), {
+        "bayi_vadesi_gecmis": ["vadesiGecmis", "segment30"], "bayi_yogunlasma": ["yogunlasma10", "segment30"],
+        "bayi_d_segment": ["segment", "segment30"]}))
     return out
 
 
@@ -395,10 +431,23 @@ def m6(ctx: Ctx) -> dict[str, dict[str, Any]]:
         warn = int(str(ctx.conf("EDITORIAL_CONTRACT_WARN_DAYS", "60") or "60"))
     except ValueError:
         warn = 60
-    s = E.summary(schema, run, warn)
-    return {"sozlesme_bitecek": _ok("m6", float(s.get("expiring") or 0), veriSonGunu=ctx.today.isoformat(),
-                                    ayrinti={"gun": warn, "yururlukte": s.get("active"), "yenilemede": s.get("renewal"),
-                                                        "toplam": s.get("total")})}
+    from semantic_bridge import kurul_kaynak as KK
+
+    logged = KK.RunLog(run)             # sorgu bilgisi: ölçümde CRM'de ÇALIŞAN metin, satır ve süre
+    s = E.summary(schema, logged, warn)
+    out = {"sozlesme_bitecek": _ok("m6", float(s.get("expiring") or 0), veriSonGunu=ctx.today.isoformat(),
+                                   ayrinti={"gun": warn, "yururlukte": s.get("active"), "yenilemede": s.get("renewal"),
+                                                       "toplam": s.get("total")})}
+
+    def recs() -> dict[str, dict[str, Any]]:
+        it = logged.find(E.summary_sql(schema, warn))
+        return {"sozlesme_bitecek": KK.from_items(
+            "m6", "crm.sozlesme.ozet", "CRM sözleşme özeti", "crm", [it] if it else [], database=KK.crm_db_of(schema),
+            description=f"Uyarı günü {warn} ile çalıştı; tarih koşulu sorgunun çalıştığı günün tarihidir (GETDATE). "
+                        "Kurul yalnız «yaklasan» kolonunu okur.")}
+
+    KK.attach(out, "m6", recs)
+    return out
 
 
 # ------------------------------------------------------------------ M50 Zeki AI kalitesi
@@ -413,11 +462,17 @@ def m50(ctx: Ctx) -> dict[str, dict[str, Any]]:
         days = max(1, min(3650, int(str(ctx.conf("MODEL_QUALITY_WINDOW_DAYS", "30") or "30"))))
     except ValueError:
         days = 30
+    from semantic_bridge import kurul_kaynak as KK
+
     now, since = MS.window(days)
     trend_since = min(since, now - timedelta(days=28))
-    runs = MS.last_finished(ctx.engine, ctx.tenant)
-    row = MQ.bi_row(MS.query_rows(ctx.engine, ctx.tenant, ctx.datasource(), trend_since),
-                    MS.feedback_rows(ctx.engine, ctx.tenant, trend_since), runs, now=now, since=since)
+    # Sorgu bilgisi: modülün okuma işlevleri portalda çalışırken çalışan ifadeler yakalanır (değerleri yerinde).
+    with KK.capture(ctx.engine) as cap_runs:
+        runs = MS.last_finished(ctx.engine, ctx.tenant)
+    with KK.capture(ctx.engine) as cap_q:
+        qrows = MS.query_rows(ctx.engine, ctx.tenant, ctx.datasource(), trend_since)
+        fb = MS.feedback_rows(ctx.engine, ctx.tenant, trend_since)
+    row = MQ.bi_row(qrows, fb, runs, now=now, since=since)
     last = _day(row.get("lastMeasured"))
     out: dict[str, dict[str, Any]] = {}
     metrics = {m["key"]: m for m in row.get("metrics") or []}
@@ -434,6 +489,14 @@ def m50(ctx: Ctx) -> dict[str, dict[str, Any]]:
     else:
         out["zeki_saglam"] = _ok("m50", _pct(p["value"]), veriSonGunu=_day(p.get("at")),
                                  ayrinti={"oran": p.get("detail"), "bozulan": p.get("broken"), "duzelen": p.get("fixed")})
+    KK.attach(out, "m50", lambda: {
+        "zeki_cevaplama": KK.from_items("m50", "zeki.sorular", "Soru kaydı ve geri bildirim", "portal", cap_q.sqls(),
+                                        description=f"Kurul ölçümünde çalıştı: son {days} gün (eğilim için en az 28 gün) "
+                                                    "sorular ve kullanıcı geri bildirimi; cevaplanan = veriyle cevap alan soru."),
+        "zeki_saglam": KK.from_items("m50", "zeki.kosular", "Kalite koşuları", "portal", cap_runs.sqls(),
+                                     description="Kurul ölçümünde çalıştı: takım başına son bitmiş kalite koşusu (sağlam oranı "
+                                                 "koşu kaydındadır)."),
+    })
     return out
 
 
@@ -444,9 +507,11 @@ _TONE_COLOR = {"ok": "yesil", "warn": "sari", "err": "kirmizi"}
 
 def m48(ctx: Ctx) -> dict[str, dict[str, Any]]:
     from semantic_bridge import it_ops as I
+    from semantic_bridge import kurul_kaynak as KK
 
     I.ensure(ctx.engine)
-    st = I.status(ctx.engine, ctx.tenant, I.settings(ctx.conf))
+    with KK.capture(ctx.engine) as cap:     # sorgu bilgisi: sistem durumunun portalda çalışan okumaları
+        st = I.status(ctx.engine, ctx.tenant, I.settings(ctx.conf))
     tone = (st.get("summary") or {}).get("tone")
     out: dict[str, dict[str, Any]] = {}
     if tone == "unknown":
@@ -461,6 +526,16 @@ def m48(ctx: Ctx) -> dict[str, dict[str, Any]]:
     else:
         out["logo_veri_gecikmesi"] = _ok("m48", float((ctx.today - date.fromisoformat(end)).days), veriSonGunu=end,
                                          ayrinti={"halka": (ring or {}).get("state")})
+    KK.attach(out, "m48", lambda: {
+        "sistem_acik_olay": KK.from_items("m48", "sistem.olaylar", "Açık sistem olayları", "portal",
+                                          cap.sqls([I.INCIDENTS.name]),
+                                          description="Kurul ölçümünde çalıştı: kapanmamış kopma ve veri eskiliği olayları; "
+                                                      "ton son denetimlerden."),
+        "logo_veri_gecikmesi": KK.from_items("m48", "sistem.logo", "Logo halkası denetimleri", "portal",
+                                             cap.sqls([I.CHECKS.name, "'logo'"]),
+                                             description="Kurul ölçümünde çalıştı: Logo halkasının son denetimi ve veri son günü "
+                                                         "(denetim turu Logo'daki son fatura gününü bu tabloya yazar)."),
+    })
     return out
 
 

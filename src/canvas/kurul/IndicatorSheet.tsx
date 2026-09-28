@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowRight, Check, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay, fmtTime, fmtValue, kurulApi, waitJob, type Comment, type KurulMeta } from './api';
@@ -72,6 +73,7 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
   const source = g?.ekran && canOpenRoute(pages, g.ekran) ? g.ekran : null;
   // M45'in CFO onaylı aylık finansal yorumu (yalnız net satış göstergesinin ayrıntısında gelir).
   const monthly = monthlyComment(g?.ayrinti);
+  const k = q.data?.kaynaklar;
   return (
     <Sheet open={!!kod} onClose={onClose} title={g?.ad ?? 'Gösterge'} subtitle={g ? `${g.bolumAdi} · ${q.data?.donemAdi ?? ''}` : undefined}>
       {q.isLoading && <Loading />}
@@ -82,15 +84,24 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
             <ColorBadge durum={g.durum} renk={g.renk} size="md" />
             {g.durum === 'ok' ? (
               <>
-                <div className="font-mono text-[30px] font-bold leading-none tabular-nums tracking-tight">{g.degerMetin}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[30px] font-bold leading-none tabular-nums tracking-tight">{g.degerMetin}</span>
+                  <SqlInfo k={k} alan="gosterge" label={g.ad} />
+                </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-canvas-muted">
                   {g.onceki !== null && (
                     <span className="inline-flex items-center gap-1.5">
                       {g.oncekiEtiket ?? 'Önceki'}: <b className="font-mono tabular-nums text-canvas-ink">{fmtValue(g.onceki, g.birim)}</b>
                       <TrendMark t={g.egilim} />
+                      <SqlInfo k={k} alan="gosterge.onceki" label={`${g.ad}: önceki ve eğilim`} />
                     </span>
                   )}
-                  {g.hedef !== null && <span>Hedef: <b className="font-mono tabular-nums text-canvas-ink">{fmtValue(g.hedef, g.birim)}</b></span>}
+                  {g.hedef !== null && (
+                    <span className="inline-flex items-center gap-1">
+                      Hedef: <b className="font-mono tabular-nums text-canvas-ink">{fmtValue(g.hedef, g.birim)}</b>
+                      <SqlInfo k={k} alan="gosterge.hedef" label={`${g.ad}: hedef`} />
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
@@ -114,7 +125,10 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
             <div><dt className={labelCls}>Kaynak</dt><dd>{g.kaynak ?? '—'}</dd></div>
             <div><dt className={labelCls}>Sahip</dt><dd>{g.sahip ?? 'atanmadı'}</dd></div>
             <div className="sm:col-span-2">
-              <dt className={labelCls}>Renk kuralı</dt>
+              <dt className={`${labelCls} flex items-center gap-1`}>
+                Renk kuralı
+                {(g.esikSari !== null || g.esikKirmizi !== null) && <SqlInfo k={k} alan="gosterge.esikSari" label={`${g.ad}: eşikler`} />}
+              </dt>
               <dd>
                 {g.esikSari !== null || g.esikKirmizi !== null
                   ? `${g.yonAdi}: sarı ${fmtValue(g.esikSari, g.birim)}, kırmızı ${fmtValue(g.esikKirmizi, g.birim)}`
@@ -126,7 +140,9 @@ export default function IndicatorSheet({ kod, donem, meta, onClose }: { kod: str
           </dl>
 
           <div>
-            <div className={labelCls}>Son {q.data.seri.length} dönem</div>
+            <div className={`${labelCls} flex items-center gap-1`}>
+              Son {q.data.seri.length} dönem <SqlInfo k={k} alan="seri" label={`${g.ad}: son dönemler`} />
+            </div>
             <Spark points={q.data.seri} />
           </div>
 

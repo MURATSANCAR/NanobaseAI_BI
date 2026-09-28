@@ -6,6 +6,8 @@ import { ArrowDown, ArrowRight, ArrowUp, FileStack, Lightbulb, Loader2, Pencil, 
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { fmtDay, fmtTime, kurulApi, waitJob, type AgendaItem, type Decision, type KurulMeta, type Meeting, type MinuteSuggestion } from './api';
 import { AskSheet, Empty, KurulFrame, SelectInput, TextInput } from './parts';
 import { ActionCard, MeetingSheet } from './KurulScreen';
@@ -92,7 +94,9 @@ function AgendaPanel({ m, meta }: { m: Meeting; meta: KurulMeta }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-tight">Gündem</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+          Gündem {items.some((x) => x.sureDk) && <SqlInfo k={m.kaynaklar} alan="gundem[]" label="Gündem (süre)" />}
+        </h2>
         {prep && (
           <span className="flex flex-wrap gap-2">
             <button type="button" className={btnGhost} onClick={() => suggest.refetch()} disabled={suggest.isFetching}>
@@ -108,11 +112,14 @@ function AgendaPanel({ m, meta }: { m: Meeting; meta: KurulMeta }) {
         <div className="mb-2 flex flex-col gap-1.5 rounded-xl bg-slate-50 p-2">
           <span className={labelCls}>Geciken aksiyon ve kırmızı göstergelerden öneri</span>
           {suggest.data.items.map((s, i) => (
-            <button key={i} type="button" className="flex min-h-11 items-center justify-between gap-2 rounded-lg bg-white px-2 py-1.5 text-left text-[12.5px] hover:bg-white/70 sm:min-h-0"
-              onClick={() => set([...items, { baslik: s.baslik, tur: s.tur, sunan: s.sunan ?? null, sureDk: null, ekRef: null }])}>
-              <span className="min-w-0 break-words font-bold">{s.baslik}</span>
-              <Plus aria-hidden className="h-4 w-4 shrink-0" />
-            </button>
+            <div key={i} className="flex items-center gap-1">
+              <button type="button" className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg bg-white px-2 py-1.5 text-left text-[12.5px] hover:bg-white/70 sm:min-h-0"
+                onClick={() => set([...items, { baslik: s.baslik, tur: s.tur, sunan: s.sunan ?? null, sureDk: null, ekRef: null }])}>
+                <span className="min-w-0 break-words font-bold">{s.baslik}</span>
+                <Plus aria-hidden className="h-4 w-4 shrink-0" />
+              </button>
+              <SqlInfo k={suggest.data?.kaynaklar} alan="items[]" row={s.kod ?? s.neden} label={s.baslik} />
+            </div>
           ))}
         </div>
       )}
@@ -217,14 +224,14 @@ function Decisions({ m, meta }: { m: Meeting; meta: KurulMeta }) {
       <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Kararlar ve aksiyonlar</h2>
       {decs.length === 0 ? <Empty>Bu toplantıda karar kaydı yok.</Empty> : (
         <ol className="flex flex-col gap-3">
-          {decs.map((d, i) => <li key={d.id}><DecisionBlock d={d} n={i + 1} meta={meta} /></li>)}
+          {decs.map((d, i) => <li key={d.id}><DecisionBlock d={d} n={i + 1} meta={meta} k={m.kaynaklar} /></li>)}
         </ol>
       )}
     </Panel>
   );
 }
 
-function DecisionBlock({ d, n, meta }: { d: Decision; n: number; meta: KurulMeta }) {
+function DecisionBlock({ d, n, meta, k }: { d: Decision; n: number; meta: KurulMeta; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const prep = meta.me.canPrepare;
   const [adding, setAdding] = useState(false);
@@ -262,7 +269,7 @@ function DecisionBlock({ d, n, meta }: { d: Decision; n: number; meta: KurulMeta
       </div>
       {d.aksiyonlar.length > 0 && (
         <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-          {d.aksiyonlar.map((x) => <ActionCard key={x.id} a={x} meta={meta} />)}
+          {d.aksiyonlar.map((x) => <ActionCard key={x.id} a={x} meta={meta} k={k} alan="kararlar[].aksiyonlar[]" />)}
         </div>
       )}
       {prep && (adding ? (
@@ -341,7 +348,7 @@ function MinutesPanel({ m, meta, onUse }: { m: Meeting; meta: KurulMeta; onUse: 
   const qc = useQueryClient();
   const [notes, setNotes] = useState(m.notlar ?? '');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ oneriler: MinuteSuggestion[]; dusenler: string[] } | null>(null);
+  const [result, setResult] = useState<{ oneriler: MinuteSuggestion[]; dusenler: string[]; kaynaklar?: Kaynaklar } | null>(null);
   const saveNotes = useMutation({
     mutationFn: () => kurulApi.updateMeeting(m.id, { notlar: notes }),
     onSuccess: () => {
@@ -356,7 +363,7 @@ function MinutesPanel({ m, meta, onUse }: { m: Meeting; meta: KurulMeta; onUse: 
       const j = await kurulApi.draftMinutes(m.id, notes);
       const done = await waitJob(j.id);
       if (done.durum === 'hata') toast.error(done.hata || 'Öneri hazırlanamadı.');
-      else setResult(done.sonuc as { oneriler: MinuteSuggestion[]; dusenler: string[] });
+      else setResult({ ...(done.sonuc as { oneriler: MinuteSuggestion[]; dusenler: string[] }), kaynaklar: done.kaynaklar });
     } catch (e) {
       toast.error(errText(e, 'Öneri istenemedi.'));
     } finally {
@@ -387,7 +394,12 @@ function MinutesPanel({ m, meta, onUse }: { m: Meeting; meta: KurulMeta; onUse: 
               <button type="button" className={`${btnGhost} mt-1`} onClick={() => onUse(s)}>Forma al</button>
             </div>
           ))}
-          {result.dusenler.length > 0 && <Note tone="warn">{result.dusenler.length} öneri notlarda olmayan bilgi içerdiği için atıldı.</Note>}
+          {result.dusenler.length > 0 && (
+            <Note tone="warn">
+              {result.dusenler.length} öneri notlarda olmayan bilgi içerdiği için atıldı.
+              <SqlInfo k={result.kaynaklar} alan="sonuc.dusenler" label="Atılan öneri sayısı" className="ml-0.5" />
+            </Note>
+          )}
         </div>
       )}
     </Panel>

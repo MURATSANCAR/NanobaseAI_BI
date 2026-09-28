@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** DYK Danışma ve yönetim kurulu ekranlarının köprü uçları: /api/v1/kurul/*. Rakamların hepsi köprüden gelir;
  *  ön yüz hiçbir göstergeyi hesaplamaz, yalnız biçimler. */
@@ -47,6 +48,8 @@ export type Panel = {
   kritik: Indicator[];
   sayilar: { toplam: number; hazir: number; gri: number; hata: number; kirmizi: number; sari: number; yorumsuzRenkli: number };
   enEskiVeri: string | null; olcum: { at: string; donem: string; sayi: number; gri: number; hata: number } | null; olcumSuruyor: boolean;
+  /** Sorgu bilgisi: her kutunun ölçüm zinciri (`bolumler[].gostergeler[]:<kod>`), sayaçlar, son ölçüm. */
+  kaynaklar?: Kaynaklar;
 };
 
 export type Comment = {
@@ -58,6 +61,7 @@ export type IndicatorDetail = {
   gosterge: Indicator; donem: string; donemAdi: string;
   seri: Array<{ donem: string; deger: number | null; renk: Color | null; hedef: number | null; durum: IndState }>;
   yorumlar: Comment[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type AgendaItem = { sira?: number; baslik: string; tur: 'karar' | 'bilgi'; turAdi?: string; sunan: string | null; sureDk: number | null; ekRef: string | null };
@@ -87,6 +91,7 @@ export type Meeting = {
   olusturma: string | null; guncelleyen: string | null; guncelleme: string | null;
   paketSurum?: number | null; paketDondu?: boolean; kararSayisi?: number; kalanGun?: number;
   gundem?: AgendaItem[]; kararlar?: Decision[]; paketler?: PackageBrief[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type PackageIndicator = {
@@ -116,6 +121,7 @@ export type Package = PackageBrief & {
   ozetOnaylayan: string | null; ozetOnay: string | null;
   dagitim: Array<{ id: string; alici: string; uyeId: string | null; kanal: string; kanalAdi: string; gonderen: string; zaman: string | null; sonuc: string | null }>;
   olguDisiSayilar?: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Member = {
@@ -123,7 +129,9 @@ export type Member = {
   gorev: string | null; aktif: boolean; guncelleyen: string | null; guncelleme: string | null;
 };
 
-export type Job = { id: string; tur: string; durum: 'calisiyor' | 'bitti' | 'hata'; sonuc: Record<string, unknown>; hata: string | null };
+export type Job = { id: string; tur: string; durum: 'calisiyor' | 'bitti' | 'hata'; sonuc: Record<string, unknown>; hata: string | null; kaynaklar?: Kaynaklar };
+
+export type AgendaSuggestion = { baslik: string; tur: 'karar' | 'bilgi'; neden: string; kod?: string; sunan?: string | null; ayrinti: string[] };
 
 export type MinuteSuggestion = { gundemSira: number | null; metin: string; aksiyonlar: Array<{ eylem: string; sahipAdayi: string | null; terminAdayi: string | null }> };
 
@@ -164,7 +172,7 @@ export const kurulApi = {
   meta: () => send<KurulMeta>('GET', '/meta'),
   panel: (donem?: string) => send<Panel>('GET', `/panel${qs({ donem })}`, undefined, 180_000),
   refresh: () => send<{ started: boolean }>('POST', '/refresh'),
-  indicators: () => send<{ items: IndicatorDef[] }>('GET', '/indicators'),
+  indicators: () => send<{ items: IndicatorDef[]; kaynaklar?: Kaynaklar }>('GET', '/indicators'),
   indicator: (kod: string, donem?: string) => send<IndicatorDetail>('GET', `/indicators/${enc(kod)}${qs({ donem })}`),
   updateIndicator: (kod: string, b: Partial<Pick<IndicatorDef, 'ad' | 'aciklama' | 'esikSari' | 'esikKirmizi' | 'sahip' | 'sahipEposta' | 'sira' | 'aktif' | 'yon' | 'hedefKaynagi'>>) =>
     send<IndicatorDef>('PATCH', `/indicators/${enc(kod)}`, b),
@@ -173,23 +181,23 @@ export const kurulApi = {
   editComment: (id: string, metin: string) => send<Comment>('PATCH', `/comments/${enc(id)}`, { metin }),
   approveComment: (id: string) => send<Comment>('POST', `/comments/${enc(id)}/approve`),
   deleteComment: (id: string) => send<{ ok: boolean }>('DELETE', `/comments/${enc(id)}`),
-  meetings: () => send<{ items: Meeting[]; siradaki: Meeting | null }>('GET', '/meetings'),
+  meetings: () => send<{ items: Meeting[]; siradaki: Meeting | null; kaynaklar?: Kaynaklar }>('GET', '/meetings'),
   meeting: (id: string) => send<Meeting>('GET', `/meetings/${enc(id)}`),
   createMeeting: (b: Partial<Meeting>) => send<Meeting>('POST', '/meetings', b),
   updateMeeting: (id: string, b: Partial<Meeting>) => send<Meeting>('PATCH', `/meetings/${enc(id)}`, b),
   setAgenda: (id: string, items: AgendaItem[]) => send<{ items: AgendaItem[] }>('PUT', `/meetings/${enc(id)}/agenda`, { items }),
-  suggestAgenda: (id: string) => send<{ items: Array<{ baslik: string; tur: 'karar' | 'bilgi'; neden: string; sunan?: string | null; ayrinti: string[] }> }>('GET', `/meetings/${enc(id)}/agenda/suggest`),
+  suggestAgenda: (id: string) => send<{ items: AgendaSuggestion[]; kaynaklar?: Kaynaklar }>('GET', `/meetings/${enc(id)}/agenda/suggest`),
   addDecision: (id: string, b: { metin: string; gundemSira?: number | null; oyOzeti?: string; aksiyonlar?: Array<{ eylem: string; sahip?: string; sahipEposta?: string; termin?: string }> }) =>
     send<Decision>('POST', `/meetings/${enc(id)}/decisions`, b),
   updateDecision: (id: string, b: { metin?: string; oyOzeti?: string; gundemSira?: number | null }) => send<Decision>('PATCH', `/decisions/${enc(id)}`, b),
   deleteDecision: (id: string) => send<{ ok: boolean }>('DELETE', `/decisions/${enc(id)}`),
   addAction: (did: string, b: { eylem: string; sahip?: string; sahipEposta?: string; termin?: string }) => send<Action>('POST', `/decisions/${enc(did)}/actions`, b),
-  actions: (p: { durum?: string; mine?: boolean }) => send<{ items: Action[]; total: number; geciken: number }>('GET', `/actions${qs(p)}`),
+  actions: (p: { durum?: string; mine?: boolean }) => send<{ items: Action[]; total: number; geciken: number; kaynaklar?: Kaynaklar }>('GET', `/actions${qs(p)}`),
   updateAction: (id: string, b: Partial<{ durum: string; sonNot: string; eylem: string; sahip: string; sahipEposta: string; termin: string }>) =>
     send<Action>('PATCH', `/actions/${enc(id)}`, b),
   draftMinutes: (id: string, notlar?: string) => send<Job>('POST', `/meetings/${enc(id)}/minutes/draft`, notlar === undefined ? {} : { notlar }),
   compile: (id: string) => send<Package>('POST', `/meetings/${enc(id)}/packages`, undefined, 300_000),
-  packages: () => send<{ items: PackageBrief[] }>('GET', '/packages'),
+  packages: () => send<{ items: PackageBrief[]; kaynaklar?: Kaynaklar }>('GET', '/packages'),
   pkg: (id: string) => send<Package>('GET', `/packages/${enc(id)}`),
   draftSummary: (id: string) => send<Job>('POST', `/packages/${enc(id)}/summary/draft`),
   editSummary: (id: string, ozetMetin: string) => send<Package>('PATCH', `/packages/${enc(id)}`, { ozetMetin }),

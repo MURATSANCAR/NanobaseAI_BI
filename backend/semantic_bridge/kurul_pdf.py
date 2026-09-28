@@ -163,6 +163,8 @@ def render(content: dict[str, Any], summary: Optional[str], stamp: dict[str, Any
     p.ln(1.5)
     para(f"{n.get('toplam', 0)} göstergeden {n.get('hazir', 0)} hazır, {n.get('gri', 0)} kaynak yok, {n.get('hata', 0)} okunamadı; "
          f"{n.get('kirmizi', 0)} dikkat, {n.get('sari', 0)} izlenmeli.", 10.5)
+    para("Her rakamın hesabı ve çalışan sorgusu portalda bu paket sürümünün ekranında, rakamın yanındaki «i» düğmesinde "
+         "kopyalanabilir (derleme anında dondurulan kayıt).", 8.8, MUTED)
 
     # ---- yönetici özeti
     h2("Yönetici özeti")

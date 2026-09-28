@@ -413,9 +413,14 @@ def donem_label(donem: str) -> str:
     return f"{ay[int(m) - 1]} {y}"
 
 
+def meta_stmt(tenant: str, key: str) -> Any:
+    """Kurulun durum kaydı (son ölçüm, son koşu). Okumada ve sorgu bilgisinde aynı ifade."""
+    return sa.select(META.c.value_json, META.c.updated_at).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> Optional[dict[str, Any]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(META.c.value_json).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        r = c.execute(meta_stmt(tenant, key)).first()
     return _j(r[0], None) if r else None
 
 
@@ -537,9 +542,14 @@ def _bolum_order(b: str) -> int:
     return keys.index(b) if b in keys else len(keys)
 
 
+def indicators_stmt(tenant: str) -> Any:
+    """Gösterge kataloğu (tanım, eşik, sahip, sıra). Eşikler ve sahip kataloğa elle girilir."""
+    return sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant)
+
+
 def indicators(engine: sa.engine.Engine, tenant: str, *, only_active: bool = False) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant)).all()
+        rows = c.execute(indicators_stmt(tenant)).all()
     items = [_ind_out(r) for r in rows]
     if only_active:
         items = [g for g in items if g["aktif"]]
@@ -627,11 +637,26 @@ def create_indicator(engine: sa.engine.Engine, tenant: str, user: str, body: dic
 
 
 def _value_out(r: Any) -> dict[str, Any]:
+    """Dönem değeri. Ölçümde çalışan sorguların kaydı (`_sorgu`, sorgu bilgisi için) ayrıntıdan ayrılır; ekrana giden
+    alanlara (`_item`, seri) kopyalanmaz."""
     d = dict(r._mapping)
+    ayr = _j(d["ayrinti_json"], {})
+    sorgu = ayr.pop("_sorgu", None) if isinstance(ayr, dict) else None
     return {"donem": d["donem"], "olcum": _iso(d["olcum_at"]), "deger": d["deger"], "hedef": d["hedef"], "onceki": d["onceki"],
             "oncekiEtiket": d["onceki_etiket"], "renk": d["renk"], "renkKaynagi": d["renk_kaynagi"], "durum": d["durum"],
             "veriSonGunu": d["veri_son_gunu"], "kaynak": d["kaynak"], "ekran": d["ekran"], "not": d["not_"],
-            "ayrinti": _j(d["ayrinti_json"], {}), "oncekiRenk": d["onceki_renk"], "renkDegisti": _iso(d["renk_degisti_at"])}
+            "ayrinti": ayr, "oncekiRenk": d["onceki_renk"], "renkDegisti": _iso(d["renk_degisti_at"]), "_sorgu": sorgu}
+
+
+def values_stmt(tenant: str, donem: str) -> Any:
+    """Bir dönemin gösterge değerleri (günlük ölçümün yazdığı satırlar). Panel, paket derlemesi ve sorgu bilgisi aynı ifade."""
+    return sa.select(VALUES).where(VALUES.c.tenant_id == tenant, VALUES.c.donem == donem)
+
+
+def series_stmt(tenant: str, kod: str, months: int) -> Any:
+    """Göstergenin son `months` dönemi (ayar KURUL_HISTORY_MONTHS)."""
+    return (sa.select(VALUES).where(VALUES.c.tenant_id == tenant, VALUES.c.kod == kod)
+            .order_by(VALUES.c.donem.desc()).limit(months))
 
 
 def _last_value_before(c: Any, tenant: str, kod: str, donem: str) -> Optional[Any]:
@@ -659,9 +684,13 @@ def record(engine: sa.engine.Engine, tenant: str, donem: str, results: dict[str,
                 onceki, etiket = prev_row.deger, f"{donem_label(prev_row.donem)} ölçümü"
             old_color = cur.renk if cur is not None else (prev_row.renk if prev_row is not None else None)
             changed = renk is not None and old_color is not None and renk != old_color and renk != "esik_yok"
+            ayr = dict(res.get("ayrinti") or {})
+            if res.get("_sorgu"):
+                # Ölçümde çalışan sorgular (sorgu bilgisi): değerle aynı satırda saklanır, ekrana giden ayrıntıdan ayrılır.
+                ayr["_sorgu"] = res["_sorgu"]
             vals = dict(olcum_at=now, deger=res.get("deger"), hedef=res.get("hedef"), onceki=onceki, onceki_etiket=etiket, renk=renk,
                         renk_kaynagi=src, durum=res.get("durum") or "hata", veri_son_gunu=res.get("veriSonGunu"),
-                        kaynak=res.get("kaynak"), ekran=res.get("ekran"), not_=res.get("not"), ayrinti_json=_dump(res.get("ayrinti") or {}))
+                        kaynak=res.get("kaynak"), ekran=res.get("ekran"), not_=res.get("not"), ayrinti_json=_dump(ayr))
             if changed:
                 vals.update(onceki_renk=old_color, renk_degisti_at=now)
                 changes.append({"kod": kod, "ad": ind["ad"], "eski": old_color, "yeni": renk, "sahip": ind.get("sahip"),
@@ -696,7 +725,13 @@ def donemler(engine: sa.engine.Engine, tenant: str) -> list[str]:
 
 def _values_for(engine: sa.engine.Engine, tenant: str, donem: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
-        return {r.kod: _value_out(r) for r in c.execute(sa.select(VALUES).where(VALUES.c.tenant_id == tenant, VALUES.c.donem == donem))}
+        return {r.kod: _value_out(r) for r in c.execute(values_stmt(tenant, donem))}
+
+
+def measured_queries(engine: sa.engine.Engine, tenant: str, donem: str) -> dict[str, dict[str, Any]]:
+    """Dönemin her göstergesi için ölçümde çalışan sorguların kaydı (kod → `_sorgu`); kaydı olmayan gösterge sözlükte yer
+    almaz (kayıt tutulmadan önce ölçülmüş dönem)."""
+    return {kod: v["_sorgu"] for kod, v in _values_for(engine, tenant, donem).items() if v.get("_sorgu")}
 
 
 # ------------------------------------------------------------------ yorumlar
@@ -709,14 +744,18 @@ def _comment_out(r: Any) -> dict[str, Any]:
             "yazildi": _iso(d["yazildi_at"]), "onaylayan": d["onaylayan"], "onaylandi": _iso(d["onaylandi_at"]), "hata": d["hata"]}
 
 
-def comments(engine: sa.engine.Engine, tenant: str, kod: Optional[str] = None, donem: Optional[str] = None) -> list[dict[str, Any]]:
+def comments_stmt(tenant: str, kod: Optional[str] = None, donem: Optional[str] = None) -> Any:
     cond = [COMMENTS.c.tenant_id == tenant]
     if kod:
         cond.append(COMMENTS.c.kod == kod)
     if donem:
         cond.append(COMMENTS.c.donem == donem)
+    return sa.select(COMMENTS).where(*cond).order_by(COMMENTS.c.yazildi_at.desc())
+
+
+def comments(engine: sa.engine.Engine, tenant: str, kod: Optional[str] = None, donem: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(COMMENTS).where(*cond).order_by(COMMENTS.c.yazildi_at.desc())).all()
+        rows = c.execute(comments_stmt(tenant, kod, donem)).all()
     return [_comment_out(r) for r in rows]
 
 
@@ -837,8 +876,7 @@ def indicator_detail(engine: sa.engine.Engine, tenant: str, kod: str, donem: Opt
     ind = indicator(engine, tenant, kod)
     months = settings()["historyMonths"]
     with engine.connect() as c:
-        rows = c.execute(sa.select(VALUES).where(VALUES.c.tenant_id == tenant, VALUES.c.kod == kod)
-                         .order_by(VALUES.c.donem.desc()).limit(months)).all()
+        rows = c.execute(series_stmt(tenant, kod, months)).all()
     seri = [_value_out(r) for r in reversed(rows)]
     d = valid_donem(donem) if donem else (seri[-1]["donem"] if seri else current_donem())
     cur = next((v for v in seri if v["donem"] == d), None)
@@ -1003,8 +1041,12 @@ def _meeting_out(r: Any) -> dict[str, Any]:
             "olusturma": _iso(d["olusturma"]), "guncelleyen": d["guncelleyen"], "guncelleme": _iso(d["guncelleme"])}
 
 
+def meeting_stmt(tenant: str, mid: str) -> Any:
+    return sa.select(MEETINGS).where(MEETINGS.c.id == mid, MEETINGS.c.tenant_id == tenant)
+
+
 def _meeting_row(c: Any, tenant: str, mid: str) -> Any:
-    r = c.execute(sa.select(MEETINGS).where(MEETINGS.c.id == mid, MEETINGS.c.tenant_id == tenant)).first()
+    r = c.execute(meeting_stmt(tenant, mid)).first()
     if r is None:
         raise KurulError("Toplantı bulunamadı.", 404)
     return r
@@ -1066,15 +1108,32 @@ def update_meeting(engine: sa.engine.Engine, tenant: str, user: str, mid: str, b
     return meeting(engine, tenant, mid), {"once": {k: cur.get(k) for k in diff}, "alanlar": sorted(diff)}
 
 
+def meetings_stmt(tenant: str) -> Any:
+    return sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant).order_by(MEETINGS.c.tarih.desc())
+
+
+def package_versions_stmt(tenant: str) -> Any:
+    """Toplantı başına son paket sürümü."""
+    return (sa.select(PACKAGES.c.meeting_id, sa.func.max(PACKAGES.c.surum))
+            .where(PACKAGES.c.tenant_id == tenant).group_by(PACKAGES.c.meeting_id))
+
+
+def frozen_packages_stmt(tenant: str) -> Any:
+    return sa.select(PACKAGES.c.meeting_id).where(PACKAGES.c.tenant_id == tenant, PACKAGES.c.durum.in_(("donduruldu", "dagitildi")))
+
+
+def decision_counts_stmt(tenant: str) -> Any:
+    """Toplantı başına karar sayısı."""
+    return (sa.select(DECISIONS.c.meeting_id, sa.func.count()).where(DECISIONS.c.tenant_id == tenant)
+            .group_by(DECISIONS.c.meeting_id))
+
+
 def list_meetings(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant).order_by(MEETINGS.c.tarih.desc())).all()
-        pk = c.execute(sa.select(PACKAGES.c.meeting_id, sa.func.max(PACKAGES.c.surum))
-                       .where(PACKAGES.c.tenant_id == tenant).group_by(PACKAGES.c.meeting_id)).all()
-        frozen = {r[0] for r in c.execute(sa.select(PACKAGES.c.meeting_id).where(
-            PACKAGES.c.tenant_id == tenant, PACKAGES.c.durum.in_(("donduruldu", "dagitildi"))))}
-        dec = dict(c.execute(sa.select(DECISIONS.c.meeting_id, sa.func.count()).where(DECISIONS.c.tenant_id == tenant)
-                             .group_by(DECISIONS.c.meeting_id)).all())
+        rows = c.execute(meetings_stmt(tenant)).all()
+        pk = c.execute(package_versions_stmt(tenant)).all()
+        frozen = {r[0] for r in c.execute(frozen_packages_stmt(tenant))}
+        dec = dict(c.execute(decision_counts_stmt(tenant)).all())
     last = {m: s for m, s in pk}
     t = today().isoformat()
     items = []
@@ -1088,10 +1147,15 @@ def list_meetings(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     return {"items": items, "siradaki": upcoming[0] if upcoming else None}
 
 
+def agenda_stmt(mid: str) -> Any:
+    """Gündem maddeleri (başlık, tür, sunan, süre dakikası sekreterce elle girilir)."""
+    return sa.select(AGENDA).where(AGENDA.c.meeting_id == mid).order_by(AGENDA.c.sira)
+
+
 def _agenda(c: Any, mid: str) -> list[dict[str, Any]]:
     return [{"sira": r.sira, "baslik": r.baslik, "tur": r.tur, "turAdi": AGENDA_TYPES.get(r.tur, r.tur), "sunan": r.sunan,
              "sureDk": r.sure_dk, "ekRef": r.ek_ref}
-            for r in c.execute(sa.select(AGENDA).where(AGENDA.c.meeting_id == mid).order_by(AGENDA.c.sira))]
+            for r in c.execute(agenda_stmt(mid))]
 
 
 def set_agenda(engine: sa.engine.Engine, tenant: str, mid: str, items: Any) -> list[dict[str, Any]]:
@@ -1133,14 +1197,27 @@ def _decision_out(r: Any, acts: list[dict[str, Any]]) -> dict[str, Any]:
             "aksiyonlar": acts}
 
 
-def _decisions(c: Any, tenant: str, meeting_ids: Optional[list[str]] = None) -> list[dict[str, Any]]:
+def _decision_cond(tenant: str, meeting_ids: Optional[list[str]]) -> list[Any]:
     cond = [DECISIONS.c.tenant_id == tenant]
     if meeting_ids is not None:
         cond.append(DECISIONS.c.meeting_id.in_(meeting_ids or [""]))
-    decs = c.execute(sa.select(DECISIONS).where(*cond).order_by(DECISIONS.c.gundem_sira, DECISIONS.c.tarih)).all()
-    ids = [d.id for d in decs]
+    return cond
+
+
+def decisions_stmt(tenant: str, meeting_ids: Optional[list[str]] = None) -> Any:
+    return sa.select(DECISIONS).where(*_decision_cond(tenant, meeting_ids)).order_by(DECISIONS.c.gundem_sira, DECISIONS.c.tarih)
+
+
+def decision_actions_stmt(tenant: str, meeting_ids: Optional[list[str]] = None) -> Any:
+    """Kararların aksiyonları (termin, durum). Karar kümesi alt sorguyla verilir: gösterilen ifade çalışan ifadedir."""
+    ids = sa.select(DECISIONS.c.id).where(*_decision_cond(tenant, meeting_ids)).scalar_subquery()
+    return sa.select(ACTIONS).where(ACTIONS.c.decision_id.in_(ids)).order_by(ACTIONS.c.termin)
+
+
+def _decisions(c: Any, tenant: str, meeting_ids: Optional[list[str]] = None) -> list[dict[str, Any]]:
+    decs = c.execute(decisions_stmt(tenant, meeting_ids)).all()
     acts: dict[str, list[dict[str, Any]]] = {}
-    for a in c.execute(sa.select(ACTIONS).where(ACTIONS.c.decision_id.in_(ids or [""])).order_by(ACTIONS.c.termin)):
+    for a in c.execute(decision_actions_stmt(tenant, meeting_ids)):
         acts.setdefault(a.decision_id, []).append(_action_out(a))
     return [_decision_out(d, acts.get(d.id, [])) for d in decs]
 
@@ -1150,9 +1227,12 @@ def meeting(engine: sa.engine.Engine, tenant: str, mid: str) -> dict[str, Any]:
         m = _meeting_out(_meeting_row(c, tenant, mid))
         m["gundem"] = _agenda(c, mid)
         m["kararlar"] = _decisions(c, tenant, [mid])
-        m["paketler"] = [_package_brief(r) for r in c.execute(sa.select(PACKAGES).where(PACKAGES.c.meeting_id == mid)
-                                                               .order_by(PACKAGES.c.surum.desc()))]
+        m["paketler"] = [_package_brief(r) for r in c.execute(meeting_packages_stmt(mid))]
     return m
+
+
+def meeting_packages_stmt(mid: str) -> Any:
+    return sa.select(PACKAGES).where(PACKAGES.c.meeting_id == mid).order_by(PACKAGES.c.surum.desc())
 
 
 def _action_values(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
@@ -1264,7 +1344,8 @@ def update_action(engine: sa.engine.Engine, tenant: str, user: str, aid: str, bo
     return out, diff
 
 
-def list_actions(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", sahip: Optional[str] = None) -> dict[str, Any]:
+def actions_stmt(tenant: str, durum: str = "acik", sahip: Optional[str] = None) -> Any:
+    """Kurul aksiyonları, kararı ve toplantısıyla. «Geciken» süzgeci açıkları okur; gecikme (termin < bugün) hesaptır."""
     cond = [ACTIONS.c.tenant_id == tenant]
     if durum in ("acik", "geciken"):
         cond.append(ACTIONS.c.durum == "acik")
@@ -1272,12 +1353,16 @@ def list_actions(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", 
         cond.append(ACTIONS.c.durum == durum)
     if sahip:
         cond.append(sa.func.lower(ACTIONS.c.sahip) == sahip.lower())
+    return (sa.select(ACTIONS, DECISIONS.c.metin.label("karar"), MEETINGS.c.baslik.label("toplanti"),
+                      MEETINGS.c.tarih.label("toplanti_tarih"))
+            .join(DECISIONS, DECISIONS.c.id == ACTIONS.c.decision_id)
+            .join(MEETINGS, MEETINGS.c.id == ACTIONS.c.meeting_id)
+            .where(*cond).order_by(ACTIONS.c.termin))
+
+
+def list_actions(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", sahip: Optional[str] = None) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(ACTIONS, DECISIONS.c.metin.label("karar"), MEETINGS.c.baslik.label("toplanti"),
-                                   MEETINGS.c.tarih.label("toplanti_tarih"))
-                         .join(DECISIONS, DECISIONS.c.id == ACTIONS.c.decision_id)
-                         .join(MEETINGS, MEETINGS.c.id == ACTIONS.c.meeting_id)
-                         .where(*cond).order_by(ACTIONS.c.termin)).all()
+        rows = c.execute(actions_stmt(tenant, durum, sahip)).all()
     items = []
     for r in rows:
         a = _action_out(r)
@@ -1299,7 +1384,7 @@ def agenda_suggestions(engine: sa.engine.Engine, tenant: str, mid: str) -> list[
         out.append({"baslik": f"Geciken kurul aksiyonları ({len(late)})", "tur": "bilgi", "neden": "aksiyon",
                     "ayrinti": [a["eylem"][:120] for a in late[:10]]})
     for g in panel(engine, tenant)["kritik"]:
-        out.append({"baslik": f"{g['ad']}: {g['degerMetin']}", "tur": "karar", "neden": "gosterge", "sunan": g.get("sahip"),
+        out.append({"baslik": f"{g['ad']}: {g['degerMetin']}", "tur": "karar", "neden": "gosterge", "kod": g["kod"], "sunan": g.get("sahip"),
                     "ayrinti": [g["yorum"]["metin"]] if g.get("yorum") else []})
     return out
 
@@ -1316,11 +1401,32 @@ def _package_brief(r: Any) -> dict[str, Any]:
             "pdfVar": bool(d["pdf_yol"]), "pdfSha256": d["pdf_sha256"], "icerikSha256": d["icerik_sha256"]}
 
 
+def package_stmt(tenant: str, pid: str) -> Any:
+    """Paket kaydı: derleme anında dondurulan içerik (icerik_json) ve durumu."""
+    return sa.select(PACKAGES).where(PACKAGES.c.id == pid, PACKAGES.c.tenant_id == tenant)
+
+
+def distribution_stmt(pid: str) -> Any:
+    return sa.select(DISTRIBUTION).where(DISTRIBUTION.c.package_id == pid).order_by(DISTRIBUTION.c.gonderim_at)
+
+
 def _package_row(c: Any, tenant: str, pid: str) -> Any:
-    r = c.execute(sa.select(PACKAGES).where(PACKAGES.c.id == pid, PACKAGES.c.tenant_id == tenant)).first()
+    r = c.execute(package_stmt(tenant, pid)).first()
     if r is None:
         raise KurulError("Paket bulunamadı.", 404)
     return r
+
+
+#: Derleme anında çalışan sorguların kaydı içerikte bu anahtarla saklanır (sorgu bilgisi); ekrana giden içerikten ayrılır.
+QUERY_KEY = "_kaynaklar"
+
+
+def package_queries(engine: sa.engine.Engine, tenant: str, pid: str) -> Optional[dict[str, Any]]:
+    """Paketin derlenirken kaydedilen sorgu bilgisi (yoksa None: kayıt tutulmadan önce derlenmiş sürüm)."""
+    with engine.connect() as c:
+        r = _package_row(c, tenant, pid)
+    rec = _j(r.icerik_json, {}).get(QUERY_KEY)
+    return rec if isinstance(rec, dict) else None
 
 
 def package(engine: sa.engine.Engine, tenant: str, pid: str) -> dict[str, Any]:
@@ -1328,9 +1434,11 @@ def package(engine: sa.engine.Engine, tenant: str, pid: str) -> dict[str, Any]:
         r = _package_row(c, tenant, pid)
         dist = [{"id": x.id, "alici": x.alici, "uyeId": x.uye_id, "kanal": x.kanal, "kanalAdi": CHANNELS.get(x.kanal, x.kanal),
                  "gonderen": x.gonderen, "zaman": _iso(x.gonderim_at), "sonuc": x.sonuc}
-                for x in c.execute(sa.select(DISTRIBUTION).where(DISTRIBUTION.c.package_id == pid).order_by(DISTRIBUTION.c.gonderim_at))]
+                for x in c.execute(distribution_stmt(pid))]
     d = dict(r._mapping)
-    return {**_package_brief(r), "icerik": _j(d["icerik_json"], {}), "ozetMetin": d["ozet_metin"], "ozetKaynak": d["ozet_kaynak"],
+    icerik = _j(d["icerik_json"], {})
+    icerik.pop(QUERY_KEY, None)
+    return {**_package_brief(r), "icerik": icerik, "ozetMetin": d["ozet_metin"], "ozetKaynak": d["ozet_kaynak"],
             "ozetNot": d["ozet_not"], "ozetOnaylayan": d["ozet_onaylayan"], "ozetOnay": _iso(d["ozet_onay_at"]), "dagitim": dist}
 
 
@@ -1338,12 +1446,17 @@ def canonical_hash(content: Any) -> str:
     return hashlib.sha256(_dump(content).encode("utf-8")).hexdigest()
 
 
+def previous_meetings_stmt(tenant: str, tarih: str) -> Any:
+    """Bu toplantıdan önceki (iptal olmayan) toplantılar."""
+    return (sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant, MEETINGS.c.tarih < tarih, MEETINGS.c.durum != "iptal")
+            .order_by(MEETINGS.c.tarih.desc()))
+
+
 def previous_decisions(engine: sa.engine.Engine, tenant: str, mid: str) -> list[dict[str, Any]]:
     """Bu toplantıdan önceki toplantıların kararları: aksiyonu açık olanlar ve son toplantıdan beri kapananlar."""
     with engine.connect() as c:
         m = _meeting_row(c, tenant, mid)
-        prev = c.execute(sa.select(MEETINGS).where(MEETINGS.c.tenant_id == tenant, MEETINGS.c.tarih < m.tarih,
-                                                   MEETINGS.c.durum != "iptal").order_by(MEETINGS.c.tarih.desc())).all()
+        prev = c.execute(previous_meetings_stmt(tenant, m.tarih)).all()
         if not prev:
             return []
         since = prev[0].tarih
@@ -1603,10 +1716,14 @@ def distribution_rows(engine: sa.engine.Engine, tenant: str, member_ids: Any) ->
     return rows
 
 
+def packages_stmt(tenant: str) -> Any:
+    return (sa.select(PACKAGES, MEETINGS.c.baslik, MEETINGS.c.tarih).join(MEETINGS, MEETINGS.c.id == PACKAGES.c.meeting_id)
+            .where(PACKAGES.c.tenant_id == tenant).order_by(MEETINGS.c.tarih.desc(), PACKAGES.c.surum.desc()))
+
+
 def list_packages(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PACKAGES, MEETINGS.c.baslik, MEETINGS.c.tarih).join(MEETINGS, MEETINGS.c.id == PACKAGES.c.meeting_id)
-                         .where(PACKAGES.c.tenant_id == tenant).order_by(MEETINGS.c.tarih.desc(), PACKAGES.c.surum.desc())).all()
+        rows = c.execute(packages_stmt(tenant)).all()
     return {"items": [{**_package_brief(r), "toplanti": r.baslik, "toplantiTarihi": r.tarih} for r in rows]}
 
 
@@ -1641,9 +1758,13 @@ def start_job(engine: sa.engine.Engine, tenant: str, user: str, kind: str, work:
     return {"id": jid, "tur": kind, "durum": "calisiyor"}
 
 
+def job_stmt(tenant: str, jid: str) -> Any:
+    return sa.select(JOBS).where(JOBS.c.id == jid, JOBS.c.tenant_id == tenant)
+
+
 def job(engine: sa.engine.Engine, tenant: str, jid: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(JOBS).where(JOBS.c.id == jid, JOBS.c.tenant_id == tenant)).first()
+        r = c.execute(job_stmt(tenant, jid)).first()
     if r is None:
         raise KurulError("İş bulunamadı.", 404)
     st, err = r.durum, r.hata

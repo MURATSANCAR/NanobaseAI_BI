@@ -6,6 +6,8 @@ import { Check, Download, Loader2, Lock, Send, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { fmtDay, fmtTime, kurulApi, waitJob, type KurulMeta, type Package } from './api';
 import { AskSheet, ColorBadge, Empty, KurulFrame } from './parts';
 
@@ -98,7 +100,10 @@ function StatusBar({ p, meta }: { p: Package; meta: KurulMeta }) {
       </div>
       {draft && p.ozetDurum === 'taslak' && meta.me.canFreeze && <p className="mt-2 text-[11.5px] text-canvas-muted">Dondurmadan önce yönetici özetini onaylayın ya da boşaltın.</p>}
       {draft && missing.length > 0 && (
-        <Note tone="warn">Yorumu olmayan {missing.length} renkli gösterge: {missing.map((m) => `${m.ad}${m.sahip ? ` (${m.sahip})` : ''}`).join(', ')}. Yorum gelince yeniden derleyin.</Note>
+        <Note tone="warn">
+          Yorumu olmayan {missing.length} renkli gösterge
+          <SqlInfo k={p.kaynaklar} alan="icerik.eksikYorum" label="Yorumu olmayan renkli gösterge" className="ml-0.5" />: {missing.map((m) => `${m.ad}${m.sahip ? ` (${m.sahip})` : ''}`).join(', ')}. Yorum gelince yeniden derleyin.
+        </Note>
       )}
       {!draft && <p className="mt-2 text-[11.5px] text-canvas-muted">Dondurulan paket değişmez; kaynak rakamlar sonradan değişse de bu sürüm aynı kalır. Düzeltme için toplantı sayfasından yeniden derleyin (yeni sürüm).</p>}
       <AskSheet open={asking} title="Paketi dondur" confirm="Dondur" busy={freeze.isPending} onClose={() => setAsking(false)} onConfirm={() => freeze.mutate()}
@@ -114,11 +119,13 @@ function SummaryPanel({ p, meta }: { p: Package; meta: KurulMeta }) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [foreign, setForeign] = useState<string[]>([]);
+  const [foreignK, setForeignK] = useState<Kaynaklar | undefined>(undefined);
   const refresh = () => qc.invalidateQueries({ queryKey: ['kurul', 'package', p.id] });
   const save = useMutation({
     mutationFn: () => kurulApi.editSummary(p.id, text),
     onSuccess: (out) => {
       setForeign(out.olguDisiSayilar ?? []);
+      setForeignK(out.kaynaklar);
       setEditing(false);
       toast.success('Özet kaydedildi; onay bekliyor.');
       refresh();
@@ -151,7 +158,9 @@ function SummaryPanel({ p, meta }: { p: Package; meta: KurulMeta }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-tight">Yönetici özeti</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+          Yönetici özeti {p.ozetMetin && <SqlInfo k={p.kaynaklar} alan="ozetMetin" label="Yönetici özetinin olguları" />}
+        </h2>
         <span className="flex flex-wrap items-center gap-1.5">
           <Pill tone={p.ozetDurum === 'onayli' ? 'ok' : p.ozetDurum === 'hata' ? 'err' : p.ozetDurum === 'yok' ? 'muted' : 'warn'}>{p.ozetDurumAdi}</Pill>
           {p.ozetKaynak && <Pill tone="violet">{p.ozetKaynak === 'zeki' ? 'Zeki AI taslağı' : 'Elle yazıldı'}</Pill>}
@@ -172,7 +181,12 @@ function SummaryPanel({ p, meta }: { p: Package; meta: KurulMeta }) {
       ) : (
         p.ozetDurum !== 'hazirlaniyor' && <Empty>Özet yok.{draft ? ' Zeki AI taslağı isteyin ya da elle yazın.' : ''}</Empty>
       )}
-      {foreign.length > 0 && <Note tone="warn">Metinde paket olgularında olmayan sayı var: {foreign.join(', ')}. Onaylamadan önce kontrol edin.</Note>}
+      {foreign.length > 0 && (
+        <Note tone="warn">
+          Metinde paket olgularında olmayan sayı var: {foreign.join(', ')}
+          <SqlInfo k={foreignK ?? p.kaynaklar} alan="olguDisiSayilar" label="Olgu dışı sayılar" className="ml-0.5" />. Onaylamadan önce kontrol edin.
+        </Note>
+      )}
       {p.ozetOnaylayan && <p className="mt-1 text-[11.5px] text-canvas-muted">Onaylayan {p.ozetOnaylayan} · {fmtTime(p.ozetOnay)}</p>}
       {draft && !editing && (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -246,7 +260,12 @@ function ContentView({ p }: { p: Package }) {
           <div><dt className={labelCls}>Toplantı</dt><dd>{c.kapak.toplanti.baslik} · {fmtDay(c.kapak.toplanti.tarih)}</dd></div>
           <div><dt className={labelCls}>Gösterge dönemi</dt><dd>{c.kapak.donemAdi}</dd></div>
           <div className="sm:col-span-2"><dt className={labelCls}>Durum</dt>
-            <dd>{c.sayilar.toplam} göstergeden {c.sayilar.hazir} hazır, {c.sayilar.gri} kaynak yok; {c.sayilar.kirmizi} dikkat, {c.sayilar.sari} izlenmeli. Açık kurul aksiyonu {c.aksiyonOzeti.acik}, geciken {c.aksiyonOzeti.geciken}.</dd>
+            <dd>
+              {c.sayilar.toplam} göstergeden {c.sayilar.hazir} hazır, {c.sayilar.gri} kaynak yok; {c.sayilar.kirmizi} dikkat, {c.sayilar.sari} izlenmeli.
+              <SqlInfo k={p.kaynaklar} alan="icerik.sayilar" label="Gösterge sayıları" className="ml-0.5" />
+              {' '}Açık kurul aksiyonu {c.aksiyonOzeti.acik}, geciken {c.aksiyonOzeti.geciken}.
+              <SqlInfo k={p.kaynaklar} alan="icerik.aksiyonOzeti" label="Kurul aksiyonları" className="ml-0.5" />
+            </dd>
           </div>
           {ends.length > 0 && (
             <div className="sm:col-span-2"><dt className={labelCls}>Verinin son günü</dt>
@@ -269,6 +288,7 @@ function ContentView({ p }: { p: Package }) {
                       <span className="flex items-center gap-2">
                         {g.durum === 'ok' && <span className="font-mono text-[12.5px] font-bold tabular-nums">{g.degerMetin}</span>}
                         <ColorBadge durum={g.durum} renk={g.renk} />
+                        <SqlInfo k={p.kaynaklar} alan="icerik.gostergeler[].gostergeler[]" row={g.kod} label={g.ad} />
                       </span>
                     </div>
                     <p className="text-[11px] text-canvas-muted">
@@ -311,7 +331,9 @@ function ContentView({ p }: { p: Package }) {
         )}
       </Panel>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Risk brifingi</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+          Risk brifingi {c.risk.brifing?.metin && <SqlInfo k={p.kaynaklar} alan="icerik.risk.brifing" label="Risk brifinginin dayandığı kayıt" />}
+        </h2>
         {c.risk.brifing?.metin ? (
           <>
             <p className="mb-1 text-[11px] text-canvas-muted">Dönem {c.risk.brifing.donem} · onaylayan {c.risk.brifing.onaylayan ?? '—'}</p>
@@ -320,7 +342,9 @@ function ContentView({ p }: { p: Package }) {
         ) : <Empty>Onaylı risk brifingi yok.</Empty>}
       </Panel>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Pazar ve rekabet özeti</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+          Pazar ve rekabet özeti {c.pazar?.metin && <SqlInfo k={p.kaynaklar} alan="icerik.pazar" label="Pazar özetinin dayandığı kayıt" />}
+        </h2>
         {c.pazar?.metin ? (
           <>
             <p className="mb-1 text-[11px] text-canvas-muted">{c.pazar.donemAd ?? c.pazar.donem} · onaylayan {c.pazar.onaylayan ?? '—'}</p>

@@ -26,8 +26,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import kurul as K
+from semantic_bridge import kurul_kaynak as KK
 from semantic_bridge import kurul_pdf
 from semantic_bridge import kurul_sources as S
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic.kurul.api")
 P = "/api/v1/kurul"
@@ -183,13 +185,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         started = False
         if not donem and K.is_stale(engine, tenant):
             started = measure_background(engine, tenant)
-        out = call(K.panel, engine, tenant, donem or None)
-        return {**out, "olcumSuruyor": state["running"] or started}
+        out = {**call(K.panel, engine, tenant, donem or None), "olcumSuruyor": state["running"] or started}
+        return PV.bagla(out, lambda: KK.for_panel(engine, tenant, out))
 
     @app.get(P + "/indicators")
     def kurul_indicators(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": K.indicators(engine, tenant)}
+        out = {"items": K.indicators(engine, tenant)}
+        return PV.bagla(out, lambda: KK.for_indicators(engine, tenant, out))
 
     @app.post(P + "/indicators", status_code=201)
     def kurul_indicator_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -202,7 +205,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(P + "/indicators/{kod}")
     def kurul_indicator(kod: str, request: Request, donem: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(K.indicator_detail, engine, tenant, kod, donem or None)
+        out = call(K.indicator_detail, engine, tenant, kod, donem or None)
+        return PV.bagla(out, lambda: KK.for_indicator(engine, tenant, kod, out))
 
     @app.patch(P + "/indicators/{kod}")
     def kurul_indicator_update(kod: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -282,7 +286,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(P + "/meetings")
     def kurul_meetings(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return K.list_meetings(engine, tenant)
+        out = K.list_meetings(engine, tenant)
+        return PV.bagla(out, lambda: KK.for_meetings(engine, tenant, out))
 
     @app.post(P + "/meetings", status_code=201)
     def kurul_meeting_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -300,7 +305,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         m["paketler"] = [p for p in m["paketler"] if K.visible_package(p, prep)]
         if not prep:
             m["notlar"] = None          # sekreterin çalışma notu kurul üyesine açılmaz
-        return m
+        return PV.bagla(m, lambda: KK.for_meeting(engine, tenant, mid, m))
 
     @app.patch(P + "/meetings/{mid}")
     def kurul_meeting_update(mid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -322,7 +327,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def kurul_agenda_suggest(mid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         need(user, F_PREP, "Gündem hazırlama")
-        return {"items": call(K.agenda_suggestions, engine, tenant, mid)}
+        out = {"items": call(K.agenda_suggestions, engine, tenant, mid)}
+        return PV.bagla(out, lambda: KK.for_agenda_suggest(engine, tenant, mid, out))
 
     @app.post(P + "/meetings/{mid}/decisions", status_code=201)
     def kurul_decision_add(mid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -359,7 +365,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(P + "/actions")
     def kurul_actions(request: Request, durum: str = "acik", mine: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return K.list_actions(engine, tenant, durum=durum, sahip=user if mine else None)
+        out = K.list_actions(engine, tenant, durum=durum, sahip=user if mine else None)
+        return PV.bagla(out, lambda: KK.for_actions(engine, tenant, out, durum, user if mine else None))
 
     @app.patch(P + "/actions/{aid}")
     def kurul_action_update(aid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -414,19 +421,28 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                 log.warning("kurul: paket bölümü okunamadı (%s): %s", getattr(fn, "__name__", fn), e)
                 return None
 
-        content = call(K.build_content, engine, tenant, mid, risk=safe(S.risk_briefing), risk_numbers=safe(S.risk_numbers),
-                       market=safe(S.market_brief))
+        with KK.capture(engine) as risk_log:        # sorgu bilgisi: derleme anında çalışan okumalar
+            risk = safe(S.risk_briefing)
+        with KK.capture(engine) as market_log:
+            market = safe(S.market_brief)
+        content = call(K.build_content, engine, tenant, mid, risk=risk, risk_numbers=safe(S.risk_numbers), market=market)
+        try:
+            content[K.QUERY_KEY] = KK.for_compile(engine, tenant, content, risk_log=risk_log, market_log=market_log, risk_ctx=sc)
+        except Exception as e:  # noqa: BLE001 — sorgu bilgisi paketi düşürmez; neden kayda yazılır
+            log.warning("kurul: paketin sorgu bilgisi kurulamadı: %s", e)
+            content[K.QUERY_KEY] = {"hata": f"Sorgu bilgisi kurulamadı: {str(e)[:200]}"}
         out = call(K.compile_package, engine, tenant, user, mid, content)
         audit(engine, user, "create", "kurul_package", out["id"], f"Kurul paketi v{out['surum']}",
               {"toplanti": mid, "icerikSha256": out["icerikSha256"], "eksikYorum": len(content["eksikYorum"])})
-        return out
+        return PV.bagla(out, lambda: KK.for_package(engine, tenant, out["id"], out))
 
     @app.get(P + "/packages")
     def kurul_packages(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         prep = can(user, F_PREP)
         items = [p for p in K.list_packages(engine, tenant)["items"] if K.visible_package(p, prep)]
-        return {"items": items}
+        out = {"items": items}
+        return PV.bagla(out, lambda: KK.for_packages(engine, tenant, out))
 
     @app.get(P + "/packages/{pid}")
     def kurul_package(pid: str, request: Request) -> dict[str, Any]:
@@ -434,7 +450,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         pkg = package_for(engine, tenant, user, pid)
         if not (can(user, F_PREP) or can(user, F_FREEZE)):
             pkg["dagitim"] = []        # kime gittiği hazırlayan ve genel müdürün bilgisidir
-        return pkg
+        return PV.bagla(pkg, lambda: KK.for_package(engine, tenant, pid, pkg))
 
     @app.post(P + "/packages/{pid}/summary/draft", status_code=202)
     def kurul_summary_draft(pid: str, request: Request) -> dict[str, Any]:
@@ -462,7 +478,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(K.edit_summary, engine, tenant, pid, body.get("ozetMetin"))
         audit(engine, user, "update", "kurul_package", pid, f"Kurul paketi v{out['surum']} özeti",
               {"karakter": len(out.get("ozetMetin") or ""), "olguDisiSayi": out.get("olguDisiSayilar")})
-        return out
+        return PV.bagla(out, lambda: KK.for_package(engine, tenant, pid, out))
 
     @app.post(P + "/packages/{pid}/summary/approve")
     def kurul_summary_approve(pid: str, request: Request) -> dict[str, Any]:
@@ -539,7 +555,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(P + "/jobs/{jid}")
     def kurul_job(jid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(K.job, engine, tenant, jid)
+        out = call(K.job, engine, tenant, jid)
+        return PV.bagla(out, lambda: KK.for_job(engine, tenant, jid, out))
 
     # ------------------------------------------------------------------ zamanlayıcı
 
