@@ -370,9 +370,14 @@ def _mails(raw: str) -> list[str]:
     return [x.strip() for x in re.split(r"[,;\s]+", raw or "") if "@" in x]
 
 
+def meta_stmt(tenant: str, key: str) -> sa.Select:
+    """Okuma meta kaydı (refresh, logo, crm_counts, sorgular): uçta çalışan ve sorgu bilgisinde gösterilen ifade."""
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        row = c.execute(meta_stmt(tenant, key)).first()
     if not row:
         return {}
     return {**_j(row.value_json, {}), "_at": _iso(row.updated_at)}
@@ -434,11 +439,16 @@ def rights_for(contracts: list[dict[str, Any]], ref: date, bicim: str,
     return "var", f"Yürürlükteki bütün telif alış sözleşmelerinde {what} hakkı var.", False
 
 
+def decisions_stmt(tenant: str) -> sa.Select:
+    """Telif biriminin hak kararları (elle girilir), eskiden yeniye: her sözleşme × biçim için son satır geçerlidir."""
+    return sa.select(DECISIONS).where(DECISIONS.c.tenant_id == tenant).order_by(DECISIONS.c.id)
+
+
 def decisions_map(engine: sa.engine.Engine, tenant: str) -> dict[tuple[str, str], dict[str, Any]]:
     """(sozlesme_id, bicim) → son karar."""
     out: dict[tuple[str, str], dict[str, Any]] = {}
     with engine.connect() as c:
-        rows = c.execute(sa.select(DECISIONS).where(DECISIONS.c.tenant_id == tenant).order_by(DECISIONS.c.id)).all()
+        rows = c.execute(decisions_stmt(tenant)).all()
     for r in rows:
         out[(r.sozlesme_id, r.bicim)] = {"karar": r.karar, "gerekce": r.gerekce, "not_ozeti": r.not_ozeti, "yazan": r.yazan,
                                          "tarih": _iso(r.created_at), "kitap_id": r.kitap_id}
@@ -532,10 +542,20 @@ def edition_change(history: list[dict[str, Any]], since: date, after: Optional[s
 # ------------------------------------------------------------------ gece okuması
 
 
+def listings_stmt(tenant: str) -> sa.Select:
+    """Platform durum kayıtları (elle ya da onaylı rapordan), eskiden yeniye: (kitap, platform) başına son satır geçerli."""
+    return sa.select(LISTINGS).where(LISTINGS.c.tenant_id == tenant).order_by(LISTINGS.c.id)
+
+
+def platforms_stmt(tenant: str) -> sa.Select:
+    """Platform tanımları (elle girilir)."""
+    return sa.select(PLATFORMS).where(PLATFORMS.c.tenant_id == tenant)
+
+
 def _listing_state(engine: sa.engine.Engine, tenant: str) -> dict[tuple[str, int], Any]:
     """(kitap, platform) → son platform kaydı."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(LISTINGS).where(LISTINGS.c.tenant_id == tenant).order_by(LISTINGS.c.id)).all()
+        rows = c.execute(listings_stmt(tenant)).all()
     out = {}
     for r in rows:
         out[(r.kitap_id, r.platform_id)] = r
@@ -544,7 +564,7 @@ def _listing_state(engine: sa.engine.Engine, tenant: str) -> dict[tuple[str, int
 
 def _platforms(engine: sa.engine.Engine, tenant: str) -> dict[int, Any]:
     with engine.connect() as c:
-        return {r.id: r for r in c.execute(sa.select(PLATFORMS).where(PLATFORMS.c.tenant_id == tenant)).all()}
+        return {r.id: r for r in c.execute(platforms_stmt(tenant)).all()}
 
 
 def live_formats(engine: sa.engine.Engine, tenant: str) -> dict[str, set[str]]:
@@ -738,6 +758,31 @@ def sales_by_code(rows: list[dict[str, Any]]) -> tuple[dict[str, dict[str, float
     return total, monthly
 
 
+def logged(run: src.Runner, conn: str, sink: list[dict[str, Any]]) -> src.Runner:
+    """Okuma sırasında ÇALIŞAN her SQL'i (değerleri yerinde), satır sayısı, süre ve anıyla kaydeder. Sonuç satırı
+    kaydedilmez (kişisel veri); kayıt `semantic_dijital_meta` «sorgular»a yazılır ve ekrandaki sorgu bilgisinde tabloyu
+    dolduran asıl sorgu olarak gösterilir."""
+    def go(sql: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
+        rows = run(sql)
+        sink.append({"conn": conn, "tag": src.query_tag(sql), "sql": sql, "rows": len(rows),
+                     "dbMs": int((time.monotonic() - t) * 1000), "at": _iso(_now())})
+        return rows
+    return go
+
+
+#: Okunamayan kaynağın kolonları bir önceki okumadan kalır (`merge_previous`); o kolonları dolduran sorgu da öncekidir.
+MISSING_TAGS = {"sales": ("logo.",), "history": ("crm.gecmis",), "studio": ()}
+
+
+def kept_queries(ran: list[dict[str, Any]], prev: dict[str, Any], missing: Iterable[str]) -> list[dict[str, Any]]:
+    keep = tuple(p for m in missing for p in MISSING_TAGS.get(m, ()))
+    if not keep:
+        return ran
+    old = [q for q in prev.get("items") or [] if str(q.get("tag") or "").startswith(keep)]
+    return [q for q in ran if not str(q.get("tag") or "").startswith(keep)] + old
+
+
 class Refresher:
     """Gece okuması (ve «Yenile» düğmesi): kaynakları okur, `semantic_dijital_titles`'ı ve CRM'e işlenecekleri yazar.
     Aynı anda tek okuma; ikinci istek «sürüyor» döner."""
@@ -777,9 +822,10 @@ class Refresher:
         st = self.settings()
         t0 = time.monotonic()
         notes: list[str] = []
+        ran: list[dict[str, Any]] = []
         try:
             try:
-                crm_run = self.crm()
+                crm_run = logged(self.crm(), "crm", ran)
                 data = src.read_crm(crm_run, st["schema"])
             except src.SourceError as e:
                 info = {"ok": False, "error": f"CRM okunamadı: {e}", "at": _iso(_now())}
@@ -796,7 +842,7 @@ class Refresher:
             sales12 = None
             logo_meta: dict[str, Any] = {}
             try:
-                run = self.logo()
+                run = logged(self.logo(), "logo", ran)
                 firms = src.firms_by_year(run)
                 end = src.data_end(run, firms)
                 if end is None:
@@ -829,6 +875,7 @@ class Refresher:
             if logo_meta:
                 meta_set(engine, tenant, "logo", logo_meta)
             meta_set(engine, tenant, "crm_counts", {**data["counts"], "okundu": _iso(_now())})
+            meta_set(engine, tenant, "sorgular", {"items": kept_queries(ran, meta_get(engine, tenant, "sorgular"), missing)})
             info = {"ok": True, "at": _iso(_now()), "sure": round(time.monotonic() - t0, 1), "kitap": len(titles),
                     "yazilan": written, "crmIslenecek": pend, "notlar": notes,
                     "hakKaynagi": "telif hak haritası" if external is not None else "CRM sözleşmeleri"}
@@ -858,10 +905,20 @@ def read_notes(engine: sa.engine.Engine, tenant: str, llm: Any, budget_sec: int)
     return {"okunan": out["okunan"], "kalan": out["kalan"], "model": True}
 
 
+def note_reads_stmt(tenant: str) -> sa.Select:
+    """Ortak hak notu sınıflaması (M54 telif ile tek tablo): sözleşme anahtarı, not metni, sınıf, olasılık, durum."""
+    n = RN.RY.NOTES.c
+    return sa.select(n.contract_key, n.metin, n.sinif, n.olasilik, n.durum).where(n.tenant_id == tenant)
+
+
 def note_reads(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
-    """Ortak sınıflamadan dijital okuma; `ozet` bu modülün not özetiyle karşılaştırılır (metin değiştiyse eşleşmez)."""
-    return {k.upper(): {"sonuc": v["dijital"], "olasilik": v["olasilik"], "ozet": note_hash(v["metin"]), "sinif": v["sinif"],
-                        "durum": v["durum"]} for k, v in RN.reads(engine, tenant).items()}
+    """Ortak sınıflamadan dijital okuma; `ozet` bu modülün not özetiyle karşılaştırılır (metin değiştiyse eşleşmez).
+    Okuma `rights_notes.reads` ile aynıdır; ifade burada durur ki sorgu bilgisinde çalışan ifadenin kendisi gösterilsin."""
+    RN.RY.ensure(engine)
+    with engine.connect() as c:
+        rows = c.execute(note_reads_stmt(tenant)).all()
+    return {str(r.contract_key).upper(): {"sonuc": RN.digital_effect(r.sinif, r.durum), "olasilik": r.olasilik,
+                                          "ozet": note_hash(r.metin), "sinif": r.sinif, "durum": r.durum} for r in rows}
 
 
 # ------------------------------------------------------------------ okuma uçları
@@ -910,11 +967,10 @@ def _book_filter(tur: str, st: dict[str, Any]):
     return TITLES.c.tip.in_(st["bookTypes"])
 
 
-def list_titles(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, hak: str = "", durum: str = "", q: str = "",
-                tur: str = "kitap", platform: int = 0, page: int = 0) -> dict[str, Any]:
-    """Dijital katalog. `hak`: e-kitap hak kararı; `durum`: dijitalde|dijitalde-yok|risk|firsat|epub-hazir|crm-islenecek|
-    yeni-baski; `platform`: o platformdaki durum süzgeci için (durum ile birlikte `platform-<durum>`). Sayfa 50 satır;
-    toplam ayrıca döner (tavan değil, sayfalama)."""
+def titles_stmts(tenant: str, st: dict[str, Any], *, hak: str = "", durum: str = "", q: str = "", tur: str = "kitap",
+                 platform_ids: Optional[list[str]] = None, page: int = 0) -> tuple[sa.Select, sa.Select]:
+    """(toplam sayım, sayfa satırları) ifadeleri. `platform_ids`: platform süzgecinde o platformda yüklendi/yayında olan
+    kitaplar (platform kayıtlarından; None = süzgeç yok)."""
     cond = [TITLES.c.tenant_id == tenant, _book_filter(tur, st)]
     if hak:
         cond.append(TITLES.c.hak_ekitap == hak)
@@ -938,23 +994,56 @@ def list_titles(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, ha
     elif durum == "crm-islenecek":
         sub = sa.select(PENDING.c.kitap_id).where(PENDING.c.tenant_id == tenant, PENDING.c.durum == "acik")
         cond.append(TITLES.c.kitap_id.in_(sub))
-    listings = _listing_state(engine, tenant)
-    if platform:
-        ids = [k for (k, p), r in listings.items() if p == platform and r.durum in LIVE_STATES]
-        cond.append(TITLES.c.kitap_id.in_(ids or ["-"]))
+    if platform_ids is not None:
+        cond.append(TITLES.c.kitap_id.in_(platform_ids or ["-"]))
     page = max(0, int(page))
+    total = sa.select(sa.func.count()).select_from(TITLES).where(*cond)
+    rows = (sa.select(TITLES).where(*cond).order_by(sa.desc(sa.func.coalesce(TITLES.c.basili_12ay_adet, 0)), TITLES.c.ad)
+            .offset(page * PAGE).limit(PAGE))
+    return total, rows
+
+
+def titles_query(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, hak: str = "", durum: str = "", q: str = "",
+                 tur: str = "kitap", platform: int = 0, page: int = 0) -> tuple[sa.Select, sa.Select, dict[tuple[str, int], Any]]:
+    """Katalog ucunun ifadeleri (uç ve sorgu bilgisi aynı ifadeyi kullanır) ve platform durum kayıtları."""
+    listings = _listing_state(engine, tenant)
+    ids = [k for (k, p), r in listings.items() if p == platform and r.durum in LIVE_STATES] if platform else None
+    total, rows = titles_stmts(tenant, st, hak=hak, durum=durum, q=q, tur=tur, platform_ids=ids, page=page)
+    return total, rows, listings
+
+
+def list_titles(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, hak: str = "", durum: str = "", q: str = "",
+                tur: str = "kitap", platform: int = 0, page: int = 0) -> dict[str, Any]:
+    """Dijital katalog. `hak`: e-kitap hak kararı; `durum`: dijitalde|dijitalde-yok|risk|firsat|epub-hazir|crm-islenecek|
+    yeni-baski; `platform`: o platformdaki durum süzgeci için (durum ile birlikte `platform-<durum>`). Sayfa 50 satır;
+    toplam ayrıca döner (tavan değil, sayfalama)."""
+    page = max(0, int(page))
+    total_stmt, rows_stmt, listings = titles_query(engine, tenant, st, hak=hak, durum=durum, q=q, tur=tur, platform=platform, page=page)
     with engine.connect() as c:
-        total = c.execute(sa.select(sa.func.count()).select_from(TITLES).where(*cond)).scalar() or 0
-        rows = c.execute(sa.select(TITLES).where(*cond)
-                         .order_by(sa.desc(sa.func.coalesce(TITLES.c.basili_12ay_adet, 0)), TITLES.c.ad)
-                         .offset(page * PAGE).limit(PAGE)).all()
+        total = c.execute(total_stmt).scalar() or 0
+        rows = c.execute(rows_stmt).all()
     plats = _platforms(engine, tenant)
     return {"items": [_title_dict(r, plats, listings) for r in rows], "total": total, "page": page, "pageSize": PAGE}
 
 
+def title_stmt(tenant: str, kitap_id: str) -> sa.Select:
+    return sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id == str(kitap_id).upper())
+
+
+def listing_history_stmt(tenant: str, kitap_id: str) -> sa.Select:
+    """Kitabın bütün platform durum kayıtları (yeniden eskiye)."""
+    return (sa.select(LISTINGS).where(LISTINGS.c.tenant_id == tenant, LISTINGS.c.kitap_id == str(kitap_id).upper())
+            .order_by(sa.desc(LISTINGS.c.id)))
+
+
+def title_pending_stmt(tenant: str, kitap_id: str) -> sa.Select:
+    return (sa.select(PENDING).where(PENDING.c.tenant_id == tenant, PENDING.c.kitap_id == str(kitap_id).upper())
+            .order_by(sa.desc(PENDING.c.id)))
+
+
 def _title_row(engine: sa.engine.Engine, tenant: str, kitap_id: str) -> Any:
     with engine.connect() as c:
-        r = c.execute(sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id == str(kitap_id).upper())).first()
+        r = c.execute(title_stmt(tenant, kitap_id)).first()
     if r is None:
         raise DigitalError("Kitap dijital katalogda yok (CRM'de etkin değil ya da henüz okunmadı).", 404)
     return r
@@ -978,10 +1067,8 @@ def get_title(engine: sa.engine.Engine, tenant: str, kitap_id: str, *, with_sale
     out["kararlar"] = [{"sozlesmeId": k[0], "bicim": k[1], "bicimAdi": FORMATS[k[1]], **v, "kararAdi": DECISIONS_KINDS.get(v["karar"])}
                        for k, v in decisions.items() if v.get("kitap_id") == r.kitap_id]
     with engine.connect() as c:
-        hist = c.execute(sa.select(LISTINGS).where(LISTINGS.c.tenant_id == tenant, LISTINGS.c.kitap_id == r.kitap_id)
-                         .order_by(sa.desc(LISTINGS.c.id))).all()
-        pend = c.execute(sa.select(PENDING).where(PENDING.c.tenant_id == tenant, PENDING.c.kitap_id == r.kitap_id)
-                         .order_by(sa.desc(PENDING.c.id))).all()
+        hist = c.execute(listing_history_stmt(tenant, r.kitap_id)).all()
+        pend = c.execute(title_pending_stmt(tenant, r.kitap_id)).all()
     out["platformGecmisi"] = [{"platform": plats[h.platform_id].ad if h.platform_id in plats else str(h.platform_id),
                                "durum": h.durum, "durumAdi": LISTING_STATES.get(h.durum), "tarih": h.tarih, "kaynak": h.kaynak,
                                "not": h.notlar, "fiyat": h.fiyat, "yazan": h.yazan, "zaman": _iso(h.created_at)} for h in hist]
@@ -1173,36 +1260,50 @@ def update_platform(engine: sa.engine.Engine, tenant: str, pid: int, body: dict[
 # ------------------------------------------------------------------ göstergeler, fırsat, risk, CRM'e işlenecek
 
 
-def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]) -> dict[str, Any]:
+def overview_stmts(tenant: str, st: dict[str, Any]) -> dict[str, sa.Select]:
+    """Gösterge kartlarının sayım ifadeleri (anahtar → ifade); uçta bunlar çalışır, sorgu bilgisinde bunlar gösterilir."""
     books = TITLES.c.tip.in_(st["bookTypes"])
     t = TITLES.c
-    with engine.connect() as c:
-        def n(*cond) -> int:
-            return int(c.execute(sa.select(sa.func.count()).select_from(TITLES).where(t.tenant_id == tenant, *cond)).scalar() or 0)
 
-        kpi = {
-            "kitap": n(books),
-            "dijitalde": n(books, t.ekitap_var.is_(True)),
-            "hakliDijitalYok": n(books, t.hak_ekitap.in_(OK_RIGHTS), sa.or_(t.ekitap_var.is_(False), t.ekitap_var.is_(None))),
-            "firsat": n(t.firsat_puani.is_not(None)),
-            "sesliFirsat": n(t.sesli_firsat_puani.is_not(None)),
-            "hakRiski": n(sa.or_(sa.and_(t.hak_ekitap.in_(RISK_RIGHTS), sa.or_(t.ekitap_var.is_(True), t.logo_dijital_12ay_adet > 0)),
-                                 sa.and_(t.hak_sesli.in_(RISK_RIGHTS), t.sesli_var.is_(True)))),
-            "incele": n(sa.or_(t.hak_ekitap == "incele", t.hak_sesli == "incele")),
-            "ekitapKaydi": n(t.tip == EBOOK_TYPE),
-            "sesliKaydi": n(t.tip.in_(st["audioTypes"])),
-            "epubCrmEvet": n(t.epub_durumu_crm == 1),
-            "epubStudyoHazir": n(t.studio_epub_durumu == "hazir"),
-            "yeniBaski": n(t.baski_degisim_tarih.is_not(None)),
-            "crmIslenecek": int(c.execute(sa.select(sa.func.count()).select_from(PENDING)
-                                          .where(PENDING.c.tenant_id == tenant, PENDING.c.durum == "acik")).scalar() or 0),
-        }
-        hak = {k: v for k, v in c.execute(sa.select(t.hak_ekitap, sa.func.count()).where(t.tenant_id == tenant, books)
-                                          .group_by(t.hak_ekitap)).all() if k}
-        hak_s = {k: v for k, v in c.execute(sa.select(t.hak_sesli, sa.func.count()).where(t.tenant_id == tenant, books)
-                                            .group_by(t.hak_sesli)).all() if k}
-        last = c.execute(sa.select(IMPORTS.c.donem, IMPORTS.c.platform_id).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.durum == "onaylandi")
-                         .order_by(sa.desc(IMPORTS.c.donem))).first()
+    def n(*cond) -> sa.Select:
+        return sa.select(sa.func.count()).select_from(TITLES).where(t.tenant_id == tenant, *cond)
+
+    return {
+        "kitap": n(books),
+        "dijitalde": n(books, t.ekitap_var.is_(True)),
+        "hakliDijitalYok": n(books, t.hak_ekitap.in_(OK_RIGHTS), sa.or_(t.ekitap_var.is_(False), t.ekitap_var.is_(None))),
+        "firsat": n(t.firsat_puani.is_not(None)),
+        "sesliFirsat": n(t.sesli_firsat_puani.is_not(None)),
+        "hakRiski": n(sa.or_(sa.and_(t.hak_ekitap.in_(RISK_RIGHTS), sa.or_(t.ekitap_var.is_(True), t.logo_dijital_12ay_adet > 0)),
+                             sa.and_(t.hak_sesli.in_(RISK_RIGHTS), t.sesli_var.is_(True)))),
+        "incele": n(sa.or_(t.hak_ekitap == "incele", t.hak_sesli == "incele")),
+        "ekitapKaydi": n(t.tip == EBOOK_TYPE),
+        "sesliKaydi": n(t.tip.in_(st["audioTypes"])),
+        "epubCrmEvet": n(t.epub_durumu_crm == 1),
+        "epubStudyoHazir": n(t.studio_epub_durumu == "hazir"),
+        "yeniBaski": n(t.baski_degisim_tarih.is_not(None)),
+        "crmIslenecek": sa.select(sa.func.count()).select_from(PENDING).where(PENDING.c.tenant_id == tenant, PENDING.c.durum == "acik"),
+    }
+
+
+def rights_dist_stmt(tenant: str, st: dict[str, Any], bicim: str) -> sa.Select:
+    """Kitap tipli kartlarda hak kararı dağılımı (e-kitap ya da sesli)."""
+    col = TITLES.c.hak_ekitap if bicim == "ekitap" else TITLES.c.hak_sesli
+    return sa.select(col, sa.func.count()).where(TITLES.c.tenant_id == tenant, TITLES.c.tip.in_(st["bookTypes"])).group_by(col)
+
+
+def last_report_stmt(tenant: str) -> sa.Select:
+    """En son dönemli onaylı platform satış raporu."""
+    return (sa.select(IMPORTS.c.donem, IMPORTS.c.platform_id).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.durum == "onaylandi")
+            .order_by(sa.desc(IMPORTS.c.donem)))
+
+
+def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]) -> dict[str, Any]:
+    with engine.connect() as c:
+        kpi = {key: int(c.execute(stmt).scalar() or 0) for key, stmt in overview_stmts(tenant, st).items()}
+        hak = {k: v for k, v in c.execute(rights_dist_stmt(tenant, st, "ekitap")).all() if k}
+        hak_s = {k: v for k, v in c.execute(rights_dist_stmt(tenant, st, "sesli")).all() if k}
+        last = c.execute(last_report_stmt(tenant)).first()
     plats = _platforms(engine, tenant)
     return {
         "kpi": kpi, "hakDagilimi": {"ekitap": hak, "sesli": hak_s}, "hakAdlari": RIGHTS,
@@ -1213,19 +1314,27 @@ def overview(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]) -> dict[
     }
 
 
-def opportunities(engine: sa.engine.Engine, tenant: str, *, tur: str = "ekitap", q: str = "", page: int = 0,
-                  all_rows: bool = False) -> dict[str, Any]:
+def opportunities_stmts(tenant: str, *, tur: str = "ekitap", q: str = "", page: int = 0,
+                        all_rows: bool = False) -> tuple[sa.Select, sa.Select]:
+    """(toplam sayım, satırlar): fırsat puanı dolu kitaplar, son 12 ay basılı adede göre."""
     col = TITLES.c.firsat_puani if tur != "sesli" else TITLES.c.sesli_firsat_puani
     why = TITLES.c.firsat_gerekcesi if tur != "sesli" else TITLES.c.sesli_firsat_gerekcesi
     cond = [TITLES.c.tenant_id == tenant, col.is_not(None)]
     if q.strip():
         like = f"%{q.strip()}%"
         cond.append(sa.or_(TITLES.c.ad.ilike(like), TITLES.c.yazar.ilike(like), TITLES.c.stok_kodu.ilike(like)))
+    total = sa.select(sa.func.count()).select_from(TITLES).where(*cond)
+    stmt = sa.select(TITLES, why.label("sec_gerekce")).where(*cond).order_by(sa.desc(TITLES.c.basili_12ay_adet), TITLES.c.ad)
+    if not all_rows:
+        stmt = stmt.offset(max(0, page) * PAGE).limit(PAGE)
+    return total, stmt
+
+
+def opportunities(engine: sa.engine.Engine, tenant: str, *, tur: str = "ekitap", q: str = "", page: int = 0,
+                  all_rows: bool = False) -> dict[str, Any]:
+    total_stmt, stmt = opportunities_stmts(tenant, tur=tur, q=q, page=page, all_rows=all_rows)
     with engine.connect() as c:
-        total = int(c.execute(sa.select(sa.func.count()).select_from(TITLES).where(*cond)).scalar() or 0)
-        stmt = sa.select(TITLES, why.label("sec_gerekce")).where(*cond).order_by(sa.desc(TITLES.c.basili_12ay_adet), TITLES.c.ad)
-        if not all_rows:
-            stmt = stmt.offset(max(0, page) * PAGE).limit(PAGE)
+        total = int(c.execute(total_stmt).scalar() or 0)
         rows = c.execute(stmt).all()
     plats = _platforms(engine, tenant)
     listings = _listing_state(engine, tenant)
@@ -1255,13 +1364,18 @@ def _tr(v: Any, d: int) -> str:
     return f"{float(v):,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def risk_rows_stmt(tenant: str) -> sa.Select:
+    """E-kitap ya da sesli hakkı eksik/yok/incele olan kitaplar (risk ve karar bekleyen ayrımı satırda yapılır)."""
+    t = TITLES.c
+    return sa.select(TITLES).where(t.tenant_id == tenant, sa.or_(t.hak_ekitap.in_(RISK_RIGHTS), t.hak_sesli.in_(RISK_RIGHTS)))
+
+
 def rights_risks(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     """Dijitalde görünüp hakkı eksik/yok/incele olan kitaplar + dijitalde olmayan «incele» kayıtları (karar bekleyen).
     Model ön okuması «kısıtlıyor» diyenler önce."""
     reads = note_reads(engine, tenant)
-    t = TITLES.c
     with engine.connect() as c:
-        rows = c.execute(sa.select(TITLES).where(t.tenant_id == tenant, sa.or_(t.hak_ekitap.in_(RISK_RIGHTS), t.hak_sesli.in_(RISK_RIGHTS)))).all()
+        rows = c.execute(risk_rows_stmt(tenant)).all()
     plats = _platforms(engine, tenant)
     listings = _listing_state(engine, tenant)
     maps = RM.for_keys(engine, tenant, [ct["id"] for r in rows for ct in _j(r.sozlesme_json, []) if ct.get("not")])
@@ -1301,16 +1415,28 @@ def _pending_dict(p: Any, titles: Optional[dict[str, Any]]) -> dict[str, Any]:
             "durum": p.durum, "acildi": _iso(p.created_at), "kapandi": _iso(p.closed_at)}
 
 
+def _pending_cond(tenant: str, durum: str) -> list[Any]:
+    cond = [PENDING.c.tenant_id == tenant]
+    if durum in ("acik", "kapandi"):
+        cond.append(PENDING.c.durum == durum)
+    return cond
+
+
+def pending_stmt(tenant: str, durum: str = "acik") -> sa.Select:
+    """CRM'e işlenecek kayıtlar (açık / kapanmış / hepsi), yeniden eskiye."""
+    return sa.select(PENDING).where(*_pending_cond(tenant, durum)).order_by(sa.desc(PENDING.c.id))
+
+
+def pending_titles_stmt(tenant: str, durum: str = "acik") -> sa.Select:
+    """Listelenen kayıtların kitap adı ve stok kodu (aynı süzgeçteki kitaplar)."""
+    ids = sa.select(PENDING.c.kitap_id).where(*_pending_cond(tenant, durum))
+    return sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(ids))
+
+
 def crm_pending(engine: sa.engine.Engine, tenant: str, durum: str = "acik") -> dict[str, Any]:
     with engine.connect() as c:
-        cond = [PENDING.c.tenant_id == tenant]
-        if durum in ("acik", "kapandi"):
-            cond.append(PENDING.c.durum == durum)
-        rows = c.execute(sa.select(PENDING).where(*cond).order_by(sa.desc(PENDING.c.id))).all()
-        ids = sorted({r.kitap_id for r in rows})
-        titles = {}
-        for part in _chunks(ids, 500):
-            titles.update({t.kitap_id: t for t in c.execute(sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(part))).all()})
+        rows = c.execute(pending_stmt(tenant, durum)).all()
+        titles = {t.kitap_id: t for t in c.execute(pending_titles_stmt(tenant, durum)).all()}
     return {"items": [_pending_dict(p, titles) for p in rows], "alanlar": PENDING_FIELDS}
 
 
@@ -1595,9 +1721,30 @@ def _count(c: Any, iid: str) -> None:
         satir=len(rows), eslesen=sum(1 for r in data if r.kitap_id), eslesmeyen=sum(1 for r in data if not r.kitap_id)))
 
 
+def import_stmt(tenant: str, iid: str) -> sa.Select:
+    """Rapor yüklemesinin kaydı: platform, dönem, dosya adı, satır sayaçları, kurlar, eşleme işi."""
+    return sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.id == iid)
+
+
+def import_rows_stmt(iid: str) -> sa.Select:
+    """Raporun bütün satırları (dosyadaki sırayla; toplam satırı dahil, işaretli)."""
+    return sa.select(SALES).where(SALES.c.import_id == iid).order_by(SALES.c.sira)
+
+
+def import_titles_stmt(tenant: str, iid: str) -> sa.Select:
+    """Raporda eşlenmiş kitapların adı ve stok kodu."""
+    ids = sa.select(SALES.c.kitap_id).where(SALES.c.import_id == iid, SALES.c.kitap_id.is_not(None))
+    return sa.select(TITLES.c.kitap_id, TITLES.c.ad, TITLES.c.stok_kodu).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(ids))
+
+
+def imports_stmt(tenant: str) -> sa.Select:
+    """Yüklenen raporlar, yeniden eskiye."""
+    return sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(sa.desc(IMPORTS.c.created_at))
+
+
 def _import_row(engine: sa.engine.Engine, tenant: str, iid: str) -> Any:
     with engine.connect() as c:
-        r = c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.id == iid)).first()
+        r = c.execute(import_stmt(tenant, iid)).first()
     if r is None:
         raise DigitalError("Rapor yüklemesi bulunamadı.", 404)
     return r
@@ -1622,12 +1769,8 @@ def get_import(engine: sa.engine.Engine, tenant: str, iid: str) -> dict[str, Any
     r = _import_row(engine, tenant, iid)
     plats = _platforms(engine, tenant)
     with engine.connect() as c:
-        sales = c.execute(sa.select(SALES).where(SALES.c.import_id == iid).order_by(SALES.c.sira)).all()
-        ids = sorted({s.kitap_id for s in sales if s.kitap_id})
-        books = {}
-        for part in _chunks(ids, 500):
-            books.update({b.kitap_id: b for b in c.execute(sa.select(TITLES.c.kitap_id, TITLES.c.ad, TITLES.c.stok_kodu)
-                                                           .where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(part))).all()})
+        sales = c.execute(import_rows_stmt(iid)).all()
+        books = {b.kitap_id: b for b in c.execute(import_titles_stmt(tenant, iid)).all()}
     data = [s for s in sales if s.tur == "satir"]
     totals: dict[str, dict[str, float]] = {}
     for s in data:
@@ -1810,7 +1953,7 @@ def delete_import(engine: sa.engine.Engine, tenant: str, iid: str) -> dict[str, 
 def list_imports(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     plats = _platforms(engine, tenant)
     with engine.connect() as c:
-        rows = c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(sa.desc(IMPORTS.c.created_at))).all()
+        rows = c.execute(imports_stmt(tenant)).all()
     return {"items": [_import_dict(r, plats) for r in rows]}
 
 
@@ -1826,26 +1969,43 @@ def _committed(tenant: str):
     return sa.select(IMPORTS.c.id).where(IMPORTS.c.tenant_id == tenant, IMPORTS.c.durum == "onaylandi")
 
 
-def sales(engine: sa.engine.Engine, tenant: str, *, donem: str = "", platform: int = 0, st: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-    """Onaylı raporlardan aylık dijital gelir (platform kırılımı), kitap kırılımı, eşleşmeyen açık satırlar; Logo'daki
-    e-kitap stok kodu faturaları ayrı sütun (iki kaynak toplanmaz: aynı satış iki yerde olabilir)."""
+def sales_stmts(tenant: str, donem: str = "", platform: int = 0) -> dict[str, sa.Select]:
+    """Satış panosunun ifadeleri (uç ve sorgu bilgisi aynısını kullanır): onaylı raporların veri satırları, süzgeçle."""
     cond = [SALES.c.import_id.in_(_committed(tenant)), SALES.c.tur == "satir"]
     if re.fullmatch(r"\d{4}(-\d{2})?", donem or ""):
         cond.append(SALES.c.donem_ay.like(donem + "%"))
     if platform:
         cond.append(SALES.c.platform_id == int(platform))
+    booked = sa.select(SALES.c.kitap_id).where(*cond, SALES.c.kitap_id.is_not(None))
+    return {
+        "aylik": (sa.select(SALES.c.donem_ay, SALES.c.platform_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl),
+                            sa.func.count()).where(*cond).group_by(SALES.c.donem_ay, SALES.c.platform_id).order_by(SALES.c.donem_ay)),
+        "kitaplar": (sa.select(SALES.c.kitap_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl))
+                     .where(*cond, SALES.c.kitap_id.is_not(None)).group_by(SALES.c.kitap_id)),
+        "eslesmeyen": sa.select(SALES).where(*cond, SALES.c.kitap_id.is_(None)).order_by(SALES.c.import_id, SALES.c.sira),
+        "kitapKartlari": sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(booked)),
+    }
+
+
+def committed_imports_stmt(tenant: str, platform: int = 0) -> sa.Select:
+    """Onaylı raporlar (satış panosunun satırlarını taşıyan dosyalar): platform, dönem, dosya adı, onaylayan, kur."""
+    cond = [IMPORTS.c.tenant_id == tenant, IMPORTS.c.durum == "onaylandi"]
+    if platform:
+        cond.append(IMPORTS.c.platform_id == int(platform))
+    return (sa.select(IMPORTS.c.id, IMPORTS.c.platform_id, IMPORTS.c.donem, IMPORTS.c.dosya_adi, IMPORTS.c.onaylayan,
+                      IMPORTS.c.committed_at, IMPORTS.c.kur_json).where(*cond).order_by(IMPORTS.c.donem))
+
+
+def sales(engine: sa.engine.Engine, tenant: str, *, donem: str = "", platform: int = 0, st: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """Onaylı raporlardan aylık dijital gelir (platform kırılımı), kitap kırılımı, eşleşmeyen açık satırlar; Logo'daki
+    e-kitap stok kodu faturaları ayrı sütun (iki kaynak toplanmaz: aynı satış iki yerde olabilir)."""
+    q = sales_stmts(tenant, donem, platform)
     plats = _platforms(engine, tenant)
     with engine.connect() as c:
-        monthly = c.execute(sa.select(SALES.c.donem_ay, SALES.c.platform_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl),
-                                      sa.func.count()).where(*cond).group_by(SALES.c.donem_ay, SALES.c.platform_id)
-                            .order_by(SALES.c.donem_ay)).all()
-        by_book = c.execute(sa.select(SALES.c.kitap_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl))
-                            .where(*cond, SALES.c.kitap_id.is_not(None)).group_by(SALES.c.kitap_id)).all()
-        open_rows = c.execute(sa.select(SALES).where(*cond, SALES.c.kitap_id.is_(None)).order_by(SALES.c.import_id, SALES.c.sira)).all()
-        ids = sorted({r[0] for r in by_book})
-        titles = {}
-        for part in _chunks(ids, 500):
-            titles.update({t.kitap_id: t for t in c.execute(sa.select(TITLES).where(TITLES.c.tenant_id == tenant, TITLES.c.kitap_id.in_(part))).all()})
+        monthly = c.execute(q["aylik"]).all()
+        by_book = c.execute(q["kitaplar"]).all()
+        open_rows = c.execute(q["eslesmeyen"]).all()
+        titles = {t.kitap_id: t for t in c.execute(q["kitapKartlari"]).all()}
     books = []
     for kid, adet, net in by_book:
         t = titles.get(kid)
@@ -1896,12 +2056,17 @@ def sales_csv(data: dict[str, Any]) -> str:
     return "\ufeff" + buf.getvalue()
 
 
+def title_sales_stmt(tenant: str, kitap_id: str) -> sa.Select:
+    """Kitabın onaylı rapor satırları, dönem × platform Σ adet ve Σ net TL."""
+    return (sa.select(SALES.c.donem_ay, SALES.c.platform_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl))
+            .where(SALES.c.import_id.in_(_committed(tenant)), SALES.c.tur == "satir", SALES.c.kitap_id == kitap_id)
+            .group_by(SALES.c.donem_ay, SALES.c.platform_id).order_by(SALES.c.donem_ay))
+
+
 def title_sales(engine: sa.engine.Engine, tenant: str, kitap_id: str) -> dict[str, Any]:
     plats = _platforms(engine, tenant)
     with engine.connect() as c:
-        rows = c.execute(sa.select(SALES.c.donem_ay, SALES.c.platform_id, sa.func.sum(SALES.c.adet), sa.func.sum(SALES.c.net_tl))
-                         .where(SALES.c.import_id.in_(_committed(tenant)), SALES.c.tur == "satir", SALES.c.kitap_id == kitap_id)
-                         .group_by(SALES.c.donem_ay, SALES.c.platform_id).order_by(SALES.c.donem_ay)).all()
+        rows = c.execute(title_sales_stmt(tenant, kitap_id)).all()
     logo = meta_get(engine, tenant, "logo")
     lm = next((v["aylar"] for v in (logo.get("ekitapSatis") or {}).values() if v.get("kitap_id") == kitap_id), {})
     return {"platform": [{"donem": m, "platform": plats[p].ad if p in plats else str(p), "adet": a or 0, "netTl": n} for m, p, a, n in rows],

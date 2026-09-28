@@ -6,7 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { dijitalApi, fmtInt, type Format, type Opportunity } from './api';
-import { Chips, DigitalFrame, RightPill, Tabs } from './parts';
+import { Chips, DigitalFrame, ListHead, RightPill, Tabs } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import DigitalTitleDrawer from './DigitalTitleDrawer';
 
 /** Fırsatlar: hakkı olan, basılıda iyi satan, dijital sürümü olmayan kitaplar (e-kitap) ve sesli kitap adayları.
@@ -68,6 +69,7 @@ export default function OpportunitiesScreen() {
           Eşik: son 12 ayda en az {fmtInt(tur === 'sesli' ? st.audioMinQty : st.oppMinQty)} adet basılı satış
           {tur === 'sesli' && (st.audioGenres.length ? `; türler: ${st.audioGenres.join(', ')}` : '; bütün türler')}. Puan, kitabın basılı
           satışta kaçıncı yüzdelikte olduğudur. Eşik ve türler yönetim ekranında (Dijital yayın ve e-kitap) değişir.
+          <SqlInfo k={list.data?.kaynaklar} alan="esik" label="Fırsat eşiği" className="ml-0.5" />
         </Note>
       )}
       <Panel>
@@ -79,7 +81,14 @@ export default function OpportunitiesScreen() {
               onChange={(e) => { setQ(e.target.value); update({ q: e.target.value || null, sayfa: null }); }} />
           </span>
         </label>
-        <div className="mt-3 flex flex-col gap-2">
+        {list.data && (
+          <ListHead>
+            <InfoLabel k={list.data.kaynaklar} alan="total" label="Fırsat sayısı">{`${fmtInt(list.data.total)} kitap`}</InfoLabel>
+            <InfoLabel k={list.data.kaynaklar} alan="items[].basili12Adet" label="Basılı adet, son 12 ay">Sağdaki sayı: basılı adet, 12 ay</InfoLabel>
+            <InfoLabel k={list.data.kaynaklar} alan="items[].puan" label="Fırsat puanı">Puan</InfoLabel>
+          </ListHead>
+        )}
+        <div className="mt-2 flex flex-col gap-2">
           {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
           {list.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu eşikte fırsat yok.</div>}

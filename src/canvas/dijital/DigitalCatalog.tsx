@@ -7,7 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, errText, field, fmtDate, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import { dijitalApi, fmtInt, type Meta, type Overview, type RiskRow, type TitleRow } from './api';
-import { Chips, DigitalFrame, RightPill, Tabs } from './parts';
+import { Chips, DigitalFrame, ListHead, RightPill, Tabs } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import DigitalTitleDrawer from './DigitalTitleDrawer';
 import PlatformsTab from './PlatformsTab';
 
@@ -62,6 +63,7 @@ export default function DigitalCatalog() {
   });
   const me = meta.data?.me;
   const k = ov.data?.kpi;
+  const src = ov.data?.kaynaklar;
   const okuma = meta.data?.okuma;
   return (
     <DigitalFrame
@@ -85,12 +87,16 @@ export default function DigitalCatalog() {
       <ReadingNote ov={ov.data} />
       <KpiRow>
         <Kpi label="Dijitalde" value={fmtInt(k?.dijitalde)} help={`${fmtInt(k?.kitap)} kitaptan; e-kitap stok kodu ya da platformda`}
-          active={params.get('durum') === 'dijitalde'} onClick={() => update({ sekme: null, durum: 'dijitalde' })} />
+          active={params.get('durum') === 'dijitalde'} onClick={() => update({ sekme: null, durum: 'dijitalde' })}
+          info={<SqlInfo k={src} alan="kart.dijitalde" label="Dijitalde" />} />
         <Kpi label="Hakkı var, dijitalde yok" value={fmtInt(k?.hakliDijitalYok)} help={`${fmtInt(k?.firsat)} tanesi fırsat listesinde`}
-          active={params.get('durum') === 'dijitalde-yok'} onClick={() => update({ sekme: null, durum: 'dijitalde-yok' })} />
+          active={params.get('durum') === 'dijitalde-yok'} onClick={() => update({ sekme: null, durum: 'dijitalde-yok' })}
+          info={<SqlInfo k={src} alan="kart.hakliDijitalYok" label="Hakkı var, dijitalde yok" />} />
         <Kpi label="Hak riski" value={fmtInt(k?.hakRiski)} help={`Dijitalde ama hakkı eksik/yok/incele · ${fmtInt(k?.incele)} kitap karar bekliyor`}
-          active={tab === 'risk'} onClick={() => update({ sekme: 'risk' })} />
-        <Kpi label="Son satış raporu" value={ov.data?.sonRapor?.donem ?? '—'} help={ov.data?.sonRapor?.platform ?? 'Henüz onaylı rapor yok'} />
+          active={tab === 'risk'} onClick={() => update({ sekme: 'risk' })}
+          info={<SqlInfo k={src} alan="kart.hakRiski" label="Hak riski" />} />
+        <Kpi label="Son satış raporu" value={ov.data?.sonRapor?.donem ?? '—'} help={ov.data?.sonRapor?.platform ?? 'Henüz onaylı rapor yok'}
+          info={<SqlInfo k={src} alan="sonRapor" label="Son satış raporu" />} />
       </KpiRow>
       <Tabs tabs={TABS.map((t) => ({ ...t, badge: t.key === 'risk' ? k?.hakRiski : t.key === 'crm' ? k?.crmIslenecek : null }))} value={tab}
         onChange={(t) => update({ sekme: t === 'katalog' ? null : t })} />
@@ -117,6 +123,7 @@ function ReadingNote({ ov }: { ov?: Overview }) {
     <Note tone={o.notlar?.length ? 'warn' : 'info'}>
       Son okuma {fmtDate(o.at ?? o._at)} · hak kaynağı {o.hakKaynagi ?? 'CRM sözleşmeleri'}
       {w ? ` · basılı satış penceresi ${w[0]} – ${w[1]} (Logo faturalı satır, son veri ${ov.logo.veriSonu})` : ''}.
+      <SqlInfo k={ov.kaynaklar} alan={w ? 'logo' : 'okuma'} label={w ? 'Basılı satış penceresi' : 'Son okuma'} className="ml-0.5" />
       {o.notlar?.map((n) => <span key={n} className="mt-1 block">{n}</span>)}
     </Note>
   );
@@ -171,7 +178,13 @@ function CatalogList({ meta, params, update, onOpen }: {
           </select>
         </label>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
+      {list.data && (
+        <ListHead>
+          <InfoLabel k={list.data.kaynaklar} alan="total" label="Süzgeçteki kitap sayısı">{`${fmtInt(list.data.total)} kitap`}</InfoLabel>
+          <InfoLabel k={list.data.kaynaklar} alan="items[].basili12Adet" label="Basılı adet, son 12 ay">Sağdaki sayı: basılı adet, son 12 ay</InfoLabel>
+        </ListHead>
+      )}
+      <div className="mt-2 flex flex-col gap-2">
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
         {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
         {list.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kitap yok.</div>}
@@ -237,7 +250,10 @@ function RiskTab({ meta, onOpen }: { meta: Meta; onOpen: (id: string) => void })
       </Note>
       {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Dijitalde, hakkı sorunlu ({fmtInt(q.data?.risk.length)})</h2>
+        <h2 className="flex flex-wrap items-center gap-1 text-[15px] font-extrabold">
+          Dijitalde, hakkı sorunlu ({fmtInt(q.data?.risk.length)})
+          <SqlInfo k={q.data?.kaynaklar} alan="sayac.risk" label="Dijitalde, hakkı sorunlu" />
+        </h2>
         <div className="mt-2 flex flex-col gap-2">
           {q.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {q.data && !q.data.risk.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Hak riski olan kitap yok.</div>}
@@ -245,7 +261,10 @@ function RiskTab({ meta, onOpen }: { meta: Meta; onOpen: (id: string) => void })
         </div>
       </Panel>
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Telif kararı bekleyen hak notları ({fmtInt(q.data?.incele.length)})</h2>
+        <h2 className="flex flex-wrap items-center gap-1 text-[15px] font-extrabold">
+          Telif kararı bekleyen hak notları ({fmtInt(q.data?.incele.length)})
+          <SqlInfo k={q.data?.kaynaklar} alan="sayac.incele" label="Telif kararı bekleyen hak notları" />
+        </h2>
         <p className="mt-0.5 text-[12px] text-canvas-muted">Dijitalde olmayan ama hak notu yüzünden «incelenmeli» kalan kitaplar; karar verilince fırsat listesine girebilir.</p>
         <div className="mt-2 flex flex-col gap-2">
           {q.data?.incele.map((r) => <RiskCard key={r.kitapId} r={r} meta={meta} onOpen={onOpen} />)}
@@ -294,7 +313,10 @@ function PendingTab({ onOpen }: { onOpen: (id: string) => void }) {
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold">CRM'e işlenecek alanlar</h2>
+          <h2 className="flex flex-wrap items-center gap-1 text-[15px] font-extrabold">
+            CRM'e işlenecek alanlar{q.data ? ` (${fmtInt(q.data.items.length)})` : ''}
+            <SqlInfo k={q.data?.kaynaklar} alan="sayac" label="CRM'e işlenecek alanlar" />
+          </h2>
           <p className="mt-0.5 max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
             Portal CRM'e yazmaz. Stüdyoda üretilen e-kitabın e-ISBN'i, hazır e-kitap için «E-Pub Durumu» ve platformda yayında olup
             e-kitap stok kodu açılmamış kitaplar burada listelenir; CRM'e işlendiğinde gece okumasında kendiliğinden kapanır.

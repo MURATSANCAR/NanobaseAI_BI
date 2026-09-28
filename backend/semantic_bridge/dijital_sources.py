@@ -146,6 +146,39 @@ WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (
 GROUP BY I.CODE, YEAR(S.DATE_), MONTH(S.DATE_)""".strip()
 
 
+# ------------------------------------------------------------------ çalışan sorgunun etiketi (sorgu bilgisi)
+
+
+def query_tag(sql: str) -> str:
+    """Okumada çalışan SQL'in hangi okuma olduğu (yukarıdaki üreticilerin ayırt edici parçalarından). Logo satışında
+    firma ve pencere başı da etikete girer: `logo.satis.<firma>.<YYYY-AA-GG>`."""
+    s = sql or ""
+    if "L_CAPIPERIOD" in s:
+        return "logo.donem"
+    if "MAX(DATE_)" in s:
+        return "logo.verisonu"
+    m = re.search(r"LG_(\d+)_01_STLINE", s)
+    if m:
+        d = re.search(r"DATE_ >= '(\d{4}-\d{2}-\d{2})'", s)
+        return f"logo.satis.{m.group(1)}.{d.group(1) if d else ''}".rstrip(".")
+    if "StringMap" in s:
+        a = re.search(r"AttributeName = '(\w+)'", s)
+        return f"crm.etiket.{a.group(1) if a else ''}".rstrip(".")
+    if "new_kitapgecmisiBase" in s:
+        return "crm.gecmis"
+    if "new_UretimBase" in s:
+        return "crm.uretim"
+    if "new_sozlesmetarafiBase" in s:
+        return "crm.taraflar"
+    if "AS yururlukte" in s:
+        return "crm.sozlesmeSayilari"
+    if "new_new_sozlesme_new_kitapBase" in s:
+        return "crm.sozlesmeler"
+    if "new_kitapBase" in s:
+        return "crm.kitaplar"
+    return "diger"
+
+
 # ------------------------------------------------------------------ okuma: CRM
 
 

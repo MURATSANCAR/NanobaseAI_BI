@@ -78,11 +78,20 @@ export function Chips({ items, empty = 'Platform tanımlı değil' }: { items: C
   );
 }
 
-/** Kısa etiketli değer (ayrıntı kutuları). */
-export function Fact({ label, value, help }: { label: string; value: ReactNode; help?: ReactNode }) {
+/** Tıklanan kart listesinin üstündeki satır: kartlardaki rakamların sorgu bilgisi burada (iç içe düğme olmasın diye «i»
+ *  kartın içine konmaz; tablo başlığındaki `InfoLabel`'ın karşılığı). */
+export function ListHead({ children }: { children: ReactNode }) {
+  return <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">{children}</div>;
+}
+
+/** Kısa etiketli değer (ayrıntı kutuları). `info`: rakamın sorgu bilgisi («i»), etiketin yanında. */
+export function Fact({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 break-words text-[13.5px] font-bold">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>

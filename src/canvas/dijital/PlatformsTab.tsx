@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { dijitalApi, type Meta, type Platform } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Platform tanımları: e-kitap / sesli / abonelik platformu, dağıtım biçimi, rapor para birimi ve raporun ay kapanışından
  *  kaç gün sonra beklendiği (finans hatırlatması). Portal platformlara bağlanmaz; yalnız kayıt. */
@@ -41,7 +42,10 @@ export default function PlatformsTab({ meta }: { meta: Meta }) {
   return (
     <>
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Platformlar</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          Platformlar
+          <SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Platform tanımları (rapor günü)" />
+        </h2>
         <p className="mt-0.5 max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
           Kitapların durumunu işaretlediğiniz ve satış raporunu yüklediğiniz platformlar. Yükleme platformun kendi panelinden ya da
           dağıtıcıdan yapılır; portal hiçbir platforma bağlanmaz.

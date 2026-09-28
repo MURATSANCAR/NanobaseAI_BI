@@ -9,6 +9,8 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { dijitalApi, fmtInt, fmtMoney, fmtPct, type ImportSummary, type Sales } from './api';
 import { AskSheet, DigitalFrame, Tabs } from './parts';
 import ImportWizard, { UploadStep } from './ImportWizard';
+import ImportWizard from './ImportWizard';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Dijital satış (finans verisi, ayrı sayfa yetkisi): onaylı platform raporlarından aylık gelir, platform ve kitap kırılımı,
  *  eşleşmeyen açık satırlar, Logo'daki e-kitap faturaları (ayrı sütun; iki kaynak toplanmaz), dijital/basılı oranı;
@@ -68,6 +70,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
   const plats = useQuery({ queryKey: ['dijital', 'platforms'], queryFn: dijitalApi.platforms, enabled: ENGINE_ENABLED });
   const q = useQuery({ queryKey: ['dijital', 'sales', donem, platform], queryFn: () => dijitalApi.sales({ donem, platform }), enabled: ENGINE_ENABLED });
   const s = q.data;
+  const k = s?.kaynaklar;
   const totals = useMemo(() => summarize(s), [s]);
   return (
     <>
@@ -94,16 +97,20 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
       </Panel>
       {q.error && <Note tone="err">{errText(q.error, 'Satış okunamadı.')}</Note>}
       <KpiRow>
-        <Kpi label="Dijital gelir" value={fmtMoney(totals.net)} help="Onaylı platform raporları, TL (onaydaki kurla)" />
-        <Kpi label="Dijital adet" value={fmtInt(totals.adet)} help={`${fmtInt(s?.kitaplar.length)} kitap`} />
-        <Kpi label="Eşleşmeyen satır" value={fmtInt(s?.eslesmeyen.length)} help="Açık iş; Raporlar sekmesinde eşlenir" />
-        <Kpi label="Logo e-kitap faturası" value={fmtInt(totals.logoAdet)} help={s?.logoPencere ? `${s.logoPencere[0]} – ${s.logoPencere[1]}` : 'Logo okuması yok'} />
+        <Kpi label="Dijital gelir" value={fmtMoney(totals.net)} help="Onaylı platform raporları, TL (onaydaki kurla)"
+          info={<SqlInfo k={k} alan="toplam.net" label="Dijital gelir" />} />
+        <Kpi label="Dijital adet" value={fmtInt(totals.adet)} help={`${fmtInt(s?.kitaplar.length)} kitap`}
+          info={<SqlInfo k={k} alan="kart.adet" label="Dijital adet" />} />
+        <Kpi label="Eşleşmeyen satır" value={fmtInt(s?.eslesmeyen.length)} help="Açık iş; Raporlar sekmesinde eşlenir"
+          info={<SqlInfo k={k} alan="sayac.eslesmeyen" label="Eşleşmeyen satır" />} />
+        <Kpi label="Logo e-kitap faturası" value={fmtInt(totals.logoAdet)} help={s?.logoPencere ? `${s.logoPencere[0]} – ${s.logoPencere[1]}` : 'Logo okuması yok'}
+          info={<SqlInfo k={k} alan="toplam.logoAdet" label="Logo e-kitap faturası" />} />
       </KpiRow>
       <Panel>
         <h2 className="text-[15px] font-extrabold">Aylık gelir, platforma göre</h2>
         {!s?.aylik.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Onaylı rapor yok.</p> : (
           <div className="mt-2"><TableWrap>
-            <thead><tr><th className={th}>Dönem</th><th className={th}>Platform</th><th className={`${th} text-right`}>Satır</th><th className={`${th} text-right`}>Adet</th><th className={`${th} text-right`}>Net (TL)</th></tr></thead>
+            <thead><tr><th className={th}>Dönem</th><th className={th}>Platform</th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].satir">Satır</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].adet">Adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].netTl">Net (TL)</InfoLabel></th></tr></thead>
             <tbody>{s.aylik.map((r) => (
               <tr key={`${r.donem}-${r.platformId}`} className="border-t border-slate-100"><td className={`${td} font-mono`}>{r.donem}</td><td className={td}>{r.platform}</td>
                 <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(r.satir)}</td><td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(r.adet)}</td>
@@ -117,7 +124,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
         <p className="mt-0.5 text-[12px] text-canvas-muted">E-kitap telifi için kitap bazında dijital satış (onaylı raporlar).</p>
         {!s?.kitaplar.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Eşlenmiş satış yok.</p> : (
           <div className="mt-2"><TableWrap>
-            <thead><tr><th className={th}>Stok kodu</th><th className={th}>Kitap</th><th className={`${th} text-right`}>Dijital adet</th><th className={`${th} text-right`}>Net (TL)</th><th className={`${th} text-right`}>Basılı 12 ay</th></tr></thead>
+            <thead><tr><th className={th}>Stok kodu</th><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].adet">Dijital adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].netTl">Net (TL)</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].basili12Adet">Basılı 12 ay</InfoLabel></th></tr></thead>
             <tbody>{s.kitaplar.map((b) => (
               <tr key={b.kitapId} className="border-t border-slate-100"><td className={`${td} font-mono`}>{b.stokKodu}</td><td className={td}>{b.ad}</td>
                 <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(b.adet)}</td><td className={`${td} text-right font-mono tabular-nums`}>{fmtMoney(b.netTl)}</td>
@@ -131,7 +138,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
         <p className="mt-0.5 text-[12px] text-canvas-muted">Dijital: seçili dönemdeki onaylı rapor adedi; basılı: aynı kitapların son 12 ay Logo faturalı net adedi.</p>
         {!s?.dijitalBasiliOran.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Veri yok.</p> : (
           <div className="mt-2"><TableWrap>
-            <thead><tr><th className={th}>Hedef kitle</th><th className={`${th} text-right`}>Dijital adet</th><th className={`${th} text-right`}>Basılı adet</th><th className={`${th} text-right`}>Oran</th></tr></thead>
+            <thead><tr><th className={th}>Hedef kitle</th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].dijitalAdet">Dijital adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].basiliAdet">Basılı adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].oran">Oran</InfoLabel></th></tr></thead>
             <tbody>{s.dijitalBasiliOran.map((r) => (
               <tr key={r.hedefKitle} className="border-t border-slate-100"><td className={td}>{r.hedefKitle}</td><td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(r.dijitalAdet)}</td>
                 <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(r.basiliAdet)}</td><td className={`${td} text-right font-mono tabular-nums`}>{fmtPct(r.oran)}</td></tr>
@@ -141,7 +148,10 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
       </Panel>
       {!!s?.logoEkitap.length && (
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Logo'da e-kitap stok koduyla faturalar</h2>
+          <h2 className="flex flex-wrap items-center gap-1 text-[15px] font-extrabold">
+            Logo'da e-kitap stok koduyla faturalar
+            <SqlInfo k={k} alan="logoEkitap[]" label="Logo'da e-kitap faturaları" />
+          </h2>
           <p className="mt-0.5 text-[12px] text-canvas-muted">Platform raporlarıyla toplanmaz: aynı satış iki kaynakta da olabilir.</p>
           <ul className="mt-2 flex flex-wrap gap-2 text-[12px]">
             {s.logoEkitap.map((m) => <li key={m.donem} className="rounded-xl bg-white/80 px-2.5 py-1.5"><span className="font-mono">{m.donem}</span> · {fmtInt(m.adet)} adet · {fmtMoney(m.ciro)}</li>)}
@@ -200,7 +210,10 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
               <div className="mt-1 break-words text-[13.5px] font-extrabold">{r.platform} · {r.donem}</div>
               <div className="truncate text-[11.5px] text-canvas-muted">{r.dosya} · {r.yukleyen}, {fmtDate(r.olusturma)}</div>
             </div>
-            <div className="text-[12px]">{fmtInt(r.satir)} satır · {fmtInt(r.eslesen)} eşleşti · <b>{fmtInt(r.eslesmeyen)} açık</b></div>
+            <div className="text-[12px]">
+              {fmtInt(r.satir)} satır · {fmtInt(r.eslesen)} eşleşti · <b>{fmtInt(r.eslesmeyen)} açık</b>
+              <SqlInfo k={list.data?.kaynaklar} alan="items[]" row={r.id} label={`${r.platform ?? 'Rapor'} · ${r.donem}`} className="ml-0.5" />
+            </div>
             <div className="flex flex-wrap gap-1.5">
               <button type="button" className={btnGhost} onClick={() => update({ rapor: r.id })}>Aç</button>
               {canImport && r.durum !== 'iptal' && (

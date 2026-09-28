@@ -7,6 +7,7 @@ import { Note, Pill, btnPrimary, errText, field, fmtDate, label as labelCls } fr
 import Sheet from '../editorial/studio/reader/Sheet';
 import { LISTING_TONE, dijitalApi, fmtInt, fmtMoney, type Contract, type Format, type ListingState, type Meta, type TitleDetail } from './api';
 import { Fact, RightPill } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Kitap ayrıntısı (yan panel; /dijital-yayin/kitap/:id): kimlik alanları, sözleşmeler ve hak bayrakları, telif kararı,
  *  e-kitap dosyası (CRM + stüdyo), platform durumu ve geçmişi, dijital fiyat kararı, CRM'e işlenecekler, dijital satış. */
@@ -35,7 +36,8 @@ function Body({ t, meta }: { t: TitleDetail; meta: Meta }) {
           <Fact label="E-kitap stok kodu / barkod" value={t.ekitapStokKodu ?? 'yok'} help={t.ekitapBarkod ?? undefined} />
           <Fact label="CRM E-Pub durumu" value={t.epubCrm ? 'Evet' : 'Hayır'} help={t.uretimDurumu ? `Üretim: ${t.uretimDurumu} (${t.uretimTarih ?? '—'})` : undefined} />
           <Fact label="Stüdyo e-kitabı" value={t.studioDurumuAdi} help={t.studioDenetim ? `Denetim: ${t.studioDenetim === 'OK' ? 'temiz' : t.studioDenetim === 'WARN' ? 'uyarılı' : 'hatalı'}` : undefined} />
-          <Fact label="Basılı son 12 ay" value={`${fmtInt(t.basili12Adet)} adet`} help={t.basili12Ciro !== null ? fmtMoney(t.basili12Ciro) : undefined} />
+          <Fact label="Basılı son 12 ay" value={`${fmtInt(t.basili12Adet)} adet`} help={t.basili12Ciro !== null ? fmtMoney(t.basili12Ciro) : undefined}
+            info={<SqlInfo k={t.kaynaklar} alan="basili12Adet" label="Basılı son 12 ay" />} />
         </div>
         {t.baskiDegisim && <Note tone="warn">{t.baskiDegisim.tarih}: {t.baskiDegisim.tur}. Dijital sürümün güncellenmesi gerekip gerekmediğine bakın.</Note>}
         {(t.firsatGerekcesi || t.sesliFirsatGerekcesi) && (
@@ -59,7 +61,10 @@ function Body({ t, meta }: { t: TitleDetail; meta: Meta }) {
       </section>
 
       <section>
-        <h3 className="text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">Platformlar</h3>
+        <h3 className="flex items-center gap-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">
+          Platformlar
+          <SqlInfo k={t.kaynaklar} alan="platformGecmisi" label="Platform durumu ve geçmişi" />
+        </h3>
         <div className="mt-1.5 flex flex-col gap-2">
           {!t.platformlar.length && <div className="text-[12px] text-canvas-muted">Platform tanımlı değil (Katalog → Platformlar).</div>}
           {t.platformlar.map((c) => <ListingRow key={c.platformId} t={t} chip={c} meta={meta} />)}
@@ -94,7 +99,10 @@ function Body({ t, meta }: { t: TitleDetail; meta: Meta }) {
 
       {t.satis && (
         <section>
-          <h3 className="text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">Dijital satış</h3>
+          <h3 className="flex items-center gap-1 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">
+            Dijital satış
+            <SqlInfo k={t.kaynaklar} alan="satis.platform" label="Dijital satış (onaylı platform raporları)" />
+          </h3>
           {!t.satis.platform.length && !t.satis.logo.length && <div className="mt-1 text-[12px] text-canvas-muted">Onaylı raporda ya da Logo'da bu kitabın dijital satışı yok.</div>}
           {!!t.satis.platform.length && (
             <ul className="mt-1.5 flex flex-col gap-0.5 text-[12px]">
@@ -102,7 +110,10 @@ function Body({ t, meta }: { t: TitleDetail; meta: Meta }) {
             </ul>
           )}
           {!!t.satis.logo.length && (
-            <p className="mt-1 text-[12px] text-canvas-muted">Logo'da e-kitap stok koduyla fatura: {t.satis.logo.map((s) => `${s.donem} ${fmtInt(s.adet)} adet`).join(' · ')}</p>
+            <p className="mt-1 text-[12px] text-canvas-muted">
+              Logo'da e-kitap stok koduyla fatura: {t.satis.logo.map((s) => `${s.donem} ${fmtInt(s.adet)} adet`).join(' · ')}
+              <SqlInfo k={t.kaynaklar} alan="satis.logo" label="Logo'da e-kitap faturası" className="ml-0.5" />
+            </p>
           )}
         </section>
       )}
@@ -128,7 +139,12 @@ function ContractRow({ c, t, meta }: { c: Contract; t: TitleDetail; meta: Meta }
       {c.not && (
         <blockquote className="mt-1.5 break-words rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] leading-snug">
           <span className="font-bold">Hak notu: </span>{c.not}
-          {c.notOkuma && <span className="mt-0.5 block text-[11px] text-canvas-muted">Zeki AI ön okuması: {c.notOkuma.sonucAdi}{c.notOkuma.olasilik !== null ? ` (olasılık %${Math.round((c.notOkuma.olasilik ?? 0) * 100)})` : ''} — karar telif biriminin.</span>}
+          {c.notOkuma && (
+            <span className="mt-0.5 block text-[11px] text-canvas-muted">
+              Zeki AI ön okuması: {c.notOkuma.sonucAdi}{c.notOkuma.olasilik !== null ? ` (olasılık %${Math.round((c.notOkuma.olasilik ?? 0) * 100)})` : ''} — karar telif biriminin.
+              {c.notOkuma.olasilik !== null && <SqlInfo k={t.kaynaklar} alan="sozlesmeler" label="Hak notu ön okuması" className="ml-0.5" />}
+            </span>
+          )}
           {c.hakHaritasi && c.hakHaritasi.durum !== 'reddedildi' && c.hakHaritasi.ozet && (
             <span className="mt-0.5 block text-[11px]">
               <span className="font-bold">Hak haritası</span>{' '}
@@ -260,10 +276,13 @@ function PriceBox({ t, meta }: { t: TitleDetail; meta: Meta }) {
     <section>
       <h3 className="text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">Fiyat</h3>
       <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Fact label="Basılı liste fiyatı (CRM, KDV dahil)" value={fmtMoney(t.basiliFiyat)} />
+        <Fact label="Basılı liste fiyatı (CRM, KDV dahil)" value={fmtMoney(t.basiliFiyat)}
+          info={<SqlInfo k={t.kaynaklar} alan="basiliFiyat" label="Basılı liste fiyatı" />} />
         <Fact label="Dijital fiyat kararı" value={fmtMoney(t.dijitalFiyat)}
-          help={t.fiyatOnaylayan ? `${t.fiyatOnaylayan}, ${fmtDate(t.fiyatTarih)}${t.fiyatGerekce ? ` — ${t.fiyatGerekce}` : ''}` : 'Karar yok'} />
-        <Fact label="Dijital / basılı" value={ratio !== null ? `%${Math.round(ratio * 100)}` : '—'} />
+          help={t.fiyatOnaylayan ? `${t.fiyatOnaylayan}, ${fmtDate(t.fiyatTarih)}${t.fiyatGerekce ? ` — ${t.fiyatGerekce}` : ''}` : 'Karar yok'}
+          info={<SqlInfo k={t.kaynaklar} alan="dijitalFiyat" label="Dijital fiyat kararı" />} />
+        <Fact label="Dijital / basılı" value={ratio !== null ? `%${Math.round(ratio * 100)}` : '—'}
+          info={<SqlInfo k={t.kaynaklar} alan="oran" label="Dijital / basılı fiyat" />} />
       </div>
       {meta.me.canPrice && (
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[160px_minmax(0,1fr)_auto] sm:items-end">

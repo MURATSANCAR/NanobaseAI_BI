@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ChevronLeft, Loader2, Sparkles } from 'lucide-react';
@@ -7,6 +7,8 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel } from '../editorial/kit';
 import { FileDrop } from '../components/FileDrop';
 import { dijitalApi, fmtInt, fmtMoney, lastMonth, type ImportDetail, type SaleRow } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Satış raporu yükleme: dosya → önizleme (kolon eşlemesi, kurallı eşleşme, atılan kişisel kolonlar) → Zeki AI önerisi ve
  *  elle eşleme → kurla onay. Hiçbir satır atılmaz; eşleşmeyen satır onaydan sonra da açık iş olarak eşlenebilir. */
@@ -140,10 +142,14 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
         <h2 className="mt-1 break-words text-[16px] font-extrabold">{d.platform} · {d.donem}</h2>
         <p className="text-[12px] text-canvas-muted">{d.dosya} · {d.yukleyen}</p>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Satır" value={fmtInt(d.satir)} help={`${d.ozetSatir} toplam satırı (toplama girmez) · ${d.bosSatir} boş satır`} />
-          <Stat label="Eşleşen" value={fmtInt(d.eslesen)} />
-          <Stat label="Açık" value={fmtInt(d.eslesmeyen)} />
-          {Object.entries(d.toplamlar).map(([cur, t]) => <Stat key={cur} label={`Net (${cur})`} value={fmtMoney(t.net, cur)} help={`${fmtInt(t.adet)} adet`} />)}
+          <Stat label="Satır" value={fmtInt(d.satir)} help={`${d.ozetSatir} toplam satırı (toplama girmez) · ${d.bosSatir} boş satır`}
+            info={<SqlInfo k={d.kaynaklar} alan="satir" label="Satır" />} />
+          <Stat label="Eşleşen" value={fmtInt(d.eslesen)} info={<SqlInfo k={d.kaynaklar} alan="eslesen" label="Eşleşen" />} />
+          <Stat label="Açık" value={fmtInt(d.eslesmeyen)} info={<SqlInfo k={d.kaynaklar} alan="eslesmeyen" label="Açık" />} />
+          {Object.entries(d.toplamlar).map(([cur, t]) => (
+            <Stat key={cur} label={`Net (${cur})`} value={fmtMoney(t.net, cur)} help={`${fmtInt(t.adet)} adet`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplamlar" label={`Net (${cur})`} />} />
+          ))}
         </div>
         {!!d.atilanKolonlar.length && <Note tone="info">Kişisel veri olduğu için atılan kolonlar: {d.atilanKolonlar.join(', ')}. Bu kolonlar saklanmadı.</Note>}
       </Panel>
@@ -170,7 +176,9 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
       <Panel>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-extrabold">{preview ? '3. Eşleme' : 'Satırlar'}</h2>
+            <h2 className="text-[15px] font-extrabold">
+              <InfoLabel k={d.kaynaklar} alan="satirlar[]" label="Rapor satırları (adet, tutar, TL)">{preview ? '3. Eşleme' : 'Satırlar'}</InfoLabel>
+            </h2>
             <p className="mt-0.5 max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
               Kurallı eşleme: e-ISBN, e-kitap barkodu, ISBN, barkod, e-kitap stok kodu, stok kodu. Kalan satırlar için Zeki AI aday
               önerir; hiçbir öneri kendiliğinden onaylanmaz.
@@ -200,7 +208,7 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
         </div>
         <div className="mt-2 flex flex-col gap-2">
           {!shown.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte satır yok.</div>}
-          {shown.map((r) => <RowCard key={r.id} r={r} editable={editable} busy={rows.isPending} onPick={(kitapId, kaynak) => rows.mutate([{ id: r.id, kitapId, kaynak }])} />)}
+          {shown.map((r) => <RowCard key={r.id} r={r} k={d.kaynaklar} editable={editable} busy={rows.isPending} onPick={(kitapId, kaynak) => rows.mutate([{ id: r.id, kitapId, kaynak }])} />)}
         </div>
       </Panel>
 
@@ -208,7 +216,8 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
         <Panel>
           <h2 className="text-[15px] font-extrabold">4. Onay</h2>
           <p className="mt-0.5 max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
-            Onaydan sonra satırlar satış panosuna girer. Eşleşmeyen {fmtInt(d.eslesmeyen)} satır atılmaz; açık iş olarak kalır ve sonra
+            Onaydan sonra satırlar satış panosuna girer. Eşleşmeyen {fmtInt(d.eslesmeyen)}
+            <SqlInfo k={d.kaynaklar} alan="eslesmeyen" label="Eşleşmeyen satır" className="ml-0.5" /> satır atılmaz; açık iş olarak kalır ve sonra
             eşlenebilir. Aynı platformun aynı dönemi zaten onaylıysa önce o iptal edilmeli.
           </p>
           {!!foreign.length && (
@@ -230,23 +239,31 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
         </Panel>
       )}
       {!preview && !!Object.keys(d.kurlar).length && (
-        <Note tone="info">Onaylayan {d.onaylayan}; kurlar: {Object.entries(d.kurlar).map(([c, k]) => `${c} ${k}`).join(' · ')}.</Note>
+        <Note tone="info">
+          Onaylayan {d.onaylayan}; kurlar: {Object.entries(d.kurlar).map(([c, k]) => `${c} ${k}`).join(' · ')}.
+          <SqlInfo k={d.kaynaklar} alan="kurlar" label="Kurlar" className="ml-0.5" />
+        </Note>
       )}
     </>
   );
 }
 
-function Stat({ label, value, help }: { label: string; value: string; help?: string }) {
+function Stat({ label, value, help, info }: { label: string; value: string; help?: string; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>
   );
 }
 
-function RowCard({ r, editable, busy, onPick }: { r: SaleRow; editable: boolean; busy: boolean; onPick: (kitapId: string | null, kaynak: 'zeki' | 'elle') => void }) {
+function RowCard({ r, k, editable, busy, onPick }: {
+  r: SaleRow; k?: Kaynaklar; editable: boolean; busy: boolean; onPick: (kitapId: string | null, kaynak: 'zeki' | 'elle') => void;
+}) {
   const best = r.adaylar.find((a) => a.oneri);
   return (
     <div className={`rounded-2xl border p-3 ${r.tur === 'ozet' ? 'border-dashed border-slate-200 bg-slate-50' : 'border-slate-100 bg-white/80'}`}>
@@ -272,7 +289,12 @@ function RowCard({ r, editable, busy, onPick }: { r: SaleRow; editable: boolean;
           ) : r.tur === 'satir' ? (
             r.adaylar.length ? (
               <div className="flex flex-col gap-1">
-                {best && r.olasilik !== null && <span className="text-[11.5px] text-canvas-muted">Zeki AI önerisi: olasılık %{Math.round(r.olasilik * 100)}</span>}
+                {best && r.olasilik !== null && (
+                  <span className="text-[11.5px] text-canvas-muted">
+                    Zeki AI önerisi: olasılık %{Math.round(r.olasilik * 100)}
+                    <SqlInfo k={k} alan="satirlar[].olasilik" label="Eşleme olasılığı" className="ml-0.5" />
+                  </span>
+                )}
                 <select className={field} disabled={!editable || busy} value=""
                   onChange={(e) => e.target.value && onPick(e.target.value, best && e.target.value === best.kitapId ? 'zeki' : 'elle')}>
                   <option value="">Kitap seçin…</option>

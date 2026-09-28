@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M36 Dijital yayın ve e-kitap ekranlarının köprü uçları: /api/v1/dijital/*. */
 
@@ -31,6 +32,7 @@ export type Meta = {
   okuma: RefreshInfo;
   modelVar: boolean;
   me: Me;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Chip = { platformId: number; platform: string; tur: string; durum: ListingState; durumAdi: string; tarih: string | null };
@@ -69,6 +71,7 @@ export type TitleDetail = TitleRow & {
   crmIslenecek: Pending[];
   satis?: { platform: Array<{ donem: string; platform: string; adet: number; netTl: number | null }>; logo: Array<{ donem: string; adet: number; ciro: number }> };
   uyari?: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Pending = {
@@ -86,9 +89,10 @@ export type Overview = {
   logo: { veriSonu?: string; pencere?: [string, string] };
   okuma: RefreshInfo;
   ayarlar: { oppMinQty: number; audioMinQty: number; audioGenres: string[] };
+  kaynaklar?: Kaynaklar;
 };
 
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 export type Opportunity = TitleRow & { gerekce: string | null; puan: number | null };
 export type RiskRow = TitleRow & {
   hakEkitapGerekce: string | null; hakSesliGerekce: string | null; notOkuma: string | null; riskBicim: Format[];
@@ -116,7 +120,7 @@ export type ImportDetail = ImportSummary & {
   kolonlar: Record<string, number | null>; baslik: string[]; atilanKolonlar: string[]; bosSatir: number; ozetSatir: number;
   toplamlar: Record<string, { satir: number; adet: number; net: number; brut: number }>; paraBirimleri: string[];
   eslestirme: { durum: 'suruyor' | 'bitti' | 'hata'; bitti?: number; toplam?: number; satir?: number; modelSorulan?: number; model?: boolean; mesaj?: string } | null;
-  roller: string[]; satirlar: SaleRow[];
+  roller: string[]; satirlar: SaleRow[]; kaynaklar?: Kaynaklar;
 };
 
 export type Sales = {
@@ -127,6 +131,7 @@ export type Sales = {
   logoPencere: [string, string] | null;
   logoVeriSonu: string | null;
   dijitalBasiliOran: Array<{ hedefKitle: string; dijitalAdet: number; basiliAdet: number; oran: number | null }>;
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/dijital';
@@ -172,13 +177,13 @@ export const dijitalApi = {
   setPrice: (id: string, b: { fiyat: string | null; gerekce?: string }) => send<TitleDetail>('PUT', `/titles/${enc(id)}/price`, b),
   opportunities: (p: { tur: Format; q?: string; page?: number }) => send<Page<Opportunity> & { tur: Format }>('GET', `/opportunities${qs(p)}`),
   opportunitiesCsv: (tur: Format, q = '') => `${ENGINE_BASE}${B}/opportunities/export.csv${qs({ tur, q })}`,
-  risks: () => send<{ risk: RiskRow[]; incele: RiskRow[]; kararlar: Record<string, string>; notAdlari: Record<string, string> }>('GET', '/rights-risks'),
+  risks: () => send<{ risk: RiskRow[]; incele: RiskRow[]; kararlar: Record<string, string>; notAdlari: Record<string, string>; kaynaklar?: Kaynaklar }>('GET', '/rights-risks'),
   decide: (b: { kitapId: string; sozlesmeId: string; bicim: Format; karar: string; gerekce: string }) => send<TitleDetail>('POST', '/rights-decisions', b),
-  pending: (durum = 'acik') => send<{ items: Pending[]; alanlar: Record<string, string> }>('GET', `/crm-pending${qs({ durum })}`),
-  platforms: () => send<{ items: Platform[] }>('GET', '/platforms'),
+  pending: (durum = 'acik') => send<{ items: Pending[]; alanlar: Record<string, string>; kaynaklar?: Kaynaklar }>('GET', `/crm-pending${qs({ durum })}`),
+  platforms: () => send<{ items: Platform[]; kaynaklar?: Kaynaklar }>('GET', '/platforms'),
   createPlatform: (b: Partial<Platform>) => send<Platform>('POST', '/platforms', b),
   updatePlatform: (id: number, b: Partial<Platform>) => send<Platform>('PATCH', `/platforms/${id}`, b),
-  imports: () => send<{ items: ImportSummary[] }>('GET', '/imports'),
+  imports: () => send<{ items: ImportSummary[]; kaynaklar?: Kaynaklar }>('GET', '/imports'),
   importDetail: (id: string) => send<ImportDetail>('GET', `/imports/${enc(id)}`),
   upload: async (file: File, platform: number, donem: string): Promise<ImportDetail> => {
     if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');

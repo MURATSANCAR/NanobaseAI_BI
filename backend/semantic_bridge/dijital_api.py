@@ -24,7 +24,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import dijital as D
+from semantic_bridge import dijital_kaynak as K
 from semantic_bridge import dijital_sources as src
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic.dijital.api")
 P = "/api/v1/dijital"
@@ -52,6 +54,10 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
         engine, tenant, user, display = auth(request)
         D.ensure(engine)
         return engine, tenant, user, display
+
+    def dbs() -> dict[str, Any]:
+        """Sorgu bilgisinde Logo/CRM metninin başına yazılacak veritabanı adları (bağlantı dosyasından yalnız ad)."""
+        return {"logo_db": PV.connection_database(deps["logo_file"]()), "crm_db": PV.connection_database(deps["crm_file"]())}
 
     def has(user: str, key: str) -> bool:
         return is_admin(user) or can(user, key)
@@ -86,9 +92,9 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
 
     @app.get(P + "/meta")
     def dijital_meta(request: Request) -> dict[str, Any]:
-        _, _, user, display = ctx(request)
+        engine, tenant, user, display = ctx(request)
         st = settings()
-        return {
+        out = {
             "haklar": D.RIGHTS, "bicimler": D.FORMATS, "platformDurumlari": D.LISTING_STATES, "platformTurleri": D.PLATFORM_KINDS,
             "dagitim": D.DISTRIBUTION, "studyo": D.STUDIO_STATES, "kararlar": D.DECISIONS_KINDS, "notAdlari": D.NOTE_CHOICES,
             "crmAlanlari": D.PENDING_FIELDS,
@@ -98,11 +104,14 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
                    "canImport": has(user, F_IMPORT), "canRights": has(user, F_RIGHTS), "canPrice": has(user, F_PRICE),
                    "canExport": has(user, F_EXPORT), "canSales": has(user, PAGE_SALES)},
         }
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, st, out))
 
     @app.get(P + "/overview")
     def dijital_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.overview(engine, tenant, settings())
+        st = settings()
+        out = D.overview(engine, tenant, st)
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, st, out, **dbs()))
 
     @app.post(P + "/refresh", status_code=202)
     def dijital_refresh(request: Request) -> dict[str, Any]:
@@ -118,12 +127,16 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     def dijital_titles(request: Request, hak: str = "", durum: str = "", q: str = "", tur: str = "kitap", platform: int = 0,
                        page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.list_titles(engine, tenant, settings(), hak=hak, durum=durum, q=q, tur=tur, platform=platform, page=page)
+        st = settings()
+        out = D.list_titles(engine, tenant, st, hak=hak, durum=durum, q=q, tur=tur, platform=platform, page=page)
+        return PV.bagla(out, lambda: K.for_titles(engine, tenant, st, out, hak=hak, durum=durum, q=q, tur=tur, platform=platform,
+                                                  page=page, **dbs()))
 
     @app.get(P + "/titles/{kitap_id}")
     def dijital_title(kitap_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(D.get_title, engine, tenant, kitap_id, with_sales=has(user, PAGE_SALES))
+        out = call(D.get_title, engine, tenant, kitap_id, with_sales=has(user, PAGE_SALES))
+        return PV.bagla(out, lambda: K.for_title(engine, tenant, kitap_id, out, **dbs()))
 
     @app.put(P + "/titles/{kitap_id}/listings/{platform_id}")
     def dijital_listing(kitap_id: str, platform_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -145,7 +158,9 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/opportunities")
     def dijital_opportunities(request: Request, tur: str = "ekitap", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.opportunities(engine, tenant, tur="sesli" if tur == "sesli" else "ekitap", q=q, page=page)
+        kind = "sesli" if tur == "sesli" else "ekitap"
+        out = D.opportunities(engine, tenant, tur=kind, q=q, page=page)
+        return PV.bagla(out, lambda: K.for_opportunities(engine, tenant, settings(), out, tur=kind, q=q, page=page, **dbs()))
 
     @app.get(P + "/opportunities/export.csv")
     def dijital_opportunities_csv(request: Request, tur: str = "ekitap", q: str = "") -> Response:
@@ -159,7 +174,8 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/rights-risks")
     def dijital_rights_risks(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.rights_risks(engine, tenant)
+        out = D.rights_risks(engine, tenant)
+        return PV.bagla(out, lambda: K.for_rights_risks(engine, tenant, settings(), out, **dbs()))
 
     @app.post(P + "/rights-decisions", status_code=201)
     def dijital_rights_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -173,14 +189,16 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/crm-pending")
     def dijital_crm_pending(request: Request, durum: str = "acik") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.crm_pending(engine, tenant, durum)
+        out = D.crm_pending(engine, tenant, durum)
+        return PV.bagla(out, lambda: K.for_pending(engine, tenant, settings(), durum, out))
 
     # ------------------------------------------------------------------ platformlar
 
     @app.get(P + "/platforms")
     def dijital_platforms(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.list_platforms(engine, tenant)
+        out = D.list_platforms(engine, tenant)
+        return PV.bagla(out, lambda: K.for_platforms(engine, tenant, out))
 
     @app.post(P + "/platforms", status_code=201)
     def dijital_platform_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -201,7 +219,8 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/imports")
     def dijital_imports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.list_imports(engine, tenant)
+        out = D.list_imports(engine, tenant)
+        return PV.bagla(out, lambda: K.for_imports(engine, tenant, out))
 
     @app.post(P + "/imports", status_code=201)
     async def dijital_import_create(request: Request, platform: int = 0, donem: str = "", filename: str = "") -> dict[str, Any]:
@@ -218,14 +237,15 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/imports/{iid}")
     def dijital_import(iid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(D.get_import, engine, tenant, iid)
+        out = call(D.get_import, engine, tenant, iid)
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, out))
 
     @app.patch(P + "/imports/{iid}")
     def dijital_import_remap(iid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(D.remap_import, engine, tenant, iid, body.get("kolonlar") or {})
         audit(engine, user, "update", "dijital_import", iid, f"{out['platform']} {out['donem']}", {"kolonlar": out["kolonlar"]})
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, out))
 
     @app.post(P + "/imports/{iid}/match", status_code=202)
     def dijital_import_match(iid: str, request: Request) -> dict[str, Any]:
@@ -267,7 +287,7 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
         out = call(D.decide_rows, engine, tenant, iid, rows, settings())
         audit(engine, user, "update", "dijital_import", iid, f"{out['platform']} {out['donem']}",
               {"satir": len(rows), "eslesen": out["eslesen"], "eslesmeyen": out["eslesmeyen"]})
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, out))
 
     @app.post(P + "/imports/{iid}/accept-strong")
     def dijital_import_accept(iid: str, request: Request) -> dict[str, Any]:
@@ -275,7 +295,7 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
         out = call(D.accept_strong, engine, tenant, iid, settings())
         audit(engine, user, "update", "dijital_import", iid, "Güçlü Zeki AI önerileri onaylandı",
               {"eslesen": out["eslesen"], "eslesmeyen": out["eslesmeyen"]})
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, out))
 
     @app.post(P + "/imports/{iid}/commit")
     def dijital_import_commit(iid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -283,7 +303,7 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
         out = call(D.commit_import, engine, tenant, user, iid, body)
         audit(engine, user, "approve", "dijital_import", iid, f"{out['platform']} {out['donem']}",
               {"satir": out["satir"], "eslesen": out["eslesen"], "eslesmeyen": out["eslesmeyen"], "kurlar": out["kurlar"]})
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, out))
 
     @app.delete(P + "/imports/{iid}")
     def dijital_import_delete(iid: str, request: Request) -> dict[str, Any]:
@@ -297,7 +317,8 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
     @app.get(P + "/sales")
     def dijital_sales(request: Request, donem: str = "", platform: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return D.sales(engine, tenant, donem=donem, platform=platform)
+        out = D.sales(engine, tenant, donem=donem, platform=platform)
+        return PV.bagla(out, lambda: K.for_sales(engine, tenant, out, donem=donem, platform=platform, **dbs()))
 
     @app.get(P + "/sales/export.csv")
     def dijital_sales_csv(request: Request, donem: str = "", platform: int = 0) -> Response:
