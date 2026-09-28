@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Note, btnPrimary, errText, nf } from '../../admin/ui';
 import { Kpi, KpiRow } from '../../editorial/kit';
 import Frame from './Frame';
+import SqlInfo from '../../components/SqlInfo';
 import { creativeApi } from './api';
 import RequestsBoard from './RequestsBoard';
 import AssetLibrary from './AssetLibrary';
@@ -74,12 +75,16 @@ export default function CreativeHome() {
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       <KpiRow>
-        <Kpi label="Yeni talep" value={s ? nf.format(s.yeniTalep) : '—'} help="Son 24 saatte açılan" onClick={() => update({ sekme: null, durum: 'talep' })} />
+        <Kpi label="Yeni talep" value={s ? nf.format(s.yeniTalep) : '—'} help="Son 24 saatte açılan" onClick={() => update({ sekme: null, durum: 'talep' })}
+          info={<SqlInfo k={s?.kaynaklar} alan="yeniTalep" label="Yeni talep" />} />
         <Kpi label="Tasarım onayı" value={s?.tasarimBekleyen != null ? nf.format(s.tasarimBekleyen) : '—'}
-          help={s?.tasarimBekleyen == null ? 'Rolünüzde tasarım onayı yok' : 'Onay bekleyen görsel'} onClick={() => update({ sekme: null, durum: 'tasarim-onayi' })} />
+          help={s?.tasarimBekleyen == null ? 'Rolünüzde tasarım onayı yok' : 'Onay bekleyen görsel'} onClick={() => update({ sekme: null, durum: 'tasarim-onayi' })}
+          info={<SqlInfo k={s?.kaynaklar} alan="tasarimBekleyen" label="Tasarım onayı" />} />
         <Kpi label="Mesaj onayı" value={s?.mesajBekleyen != null ? nf.format(s.mesajBekleyen) : '—'}
-          help={s?.mesajBekleyen == null ? 'Rolünüzde mesaj onayı yok' : 'Onay bekleyen görsel ve metin'} onClick={() => update({ sekme: null, durum: 'mesaj-onayi' })} />
-        <Kpi label="Termini yakın" value={s ? nf.format(s.terminiYaklasan.length) : '—'} help="2 gün ya da daha az kalan, onaysız" onClick={() => update({ sekme: null, durum: null })} />
+          help={s?.mesajBekleyen == null ? 'Rolünüzde mesaj onayı yok' : 'Onay bekleyen görsel ve metin'} onClick={() => update({ sekme: null, durum: 'mesaj-onayi' })}
+          info={<SqlInfo k={s?.kaynaklar} alan="mesajBekleyen" label="Mesaj onayı" />} />
+        <Kpi label="Termini yakın" value={s ? nf.format(s.terminiYaklasan.length) : '—'} help="2 gün ya da daha az kalan, onaysız" onClick={() => update({ sekme: null, durum: null })}
+          info={<SqlInfo k={s?.kaynaklar} alan="terminiYaklasan" label="Termini yakın" />} />
       </KpiRow>
 
       {tab === 'talepler' && <RequestsBoard params={params} update={update} due={s?.terminiYaklasan ?? []} />}

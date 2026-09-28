@@ -9,6 +9,7 @@ import { useDebounced } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { creativeApi, type BookHit, type Channel, type TextKind } from './api';
 import { useCreativeMeta } from './useMeta';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Elle talep: kitap (CRM kitap kartı, stok kodu), kanal, biçimler, metin türleri, brief, termin. M15 planından gelen
  *  talepler bu formu atlar (plan satırı brief'i taşır). Üç alan yeter: kitap, kanal, biçim ya da metin türü. */
@@ -94,7 +95,7 @@ export default function NewRequestSheet({ open, onClose }: { open: boolean; onCl
                   ))}
                   {hits.data.items.length === 0 && <li className="text-[12px] text-canvas-muted">Eşleşen kitap yok.</li>}
                   {hits.data.total > hits.data.items.length && (
-                    <li className="text-[11.5px] text-canvas-muted">{hits.data.total} eşleşmenin ilk {hits.data.items.length} tanesi; aramayı daraltın.</li>
+                    <li className="text-[11.5px] text-canvas-muted">{hits.data.total} eşleşmenin ilk {hits.data.items.length} tanesi; aramayı daraltın.<SqlInfo k={hits.data.kaynaklar} alan="total" label="Kitap araması" className="ml-0.5" /></li>
                   )}
                 </ul>
               )}

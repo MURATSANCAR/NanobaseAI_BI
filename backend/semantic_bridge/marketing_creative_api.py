@@ -34,6 +34,8 @@ from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
 from semantic_bridge import marketing_creative as store
+from semantic_bridge import marketing_creative_kaynak as K
+from semantic_bridge import provenance as PV
 from semantic_bridge import marketing_creative_sources as src
 from semantic_bridge.marketing_creative import CreativeError
 from semantic_bridge.marketing_creative_sources import SourceError
@@ -247,14 +249,17 @@ def register(app: Any, deps: dict[str, Any]) -> None:
     @app.get(f"{P}/summary")
     def creative_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(store.summary, engine, tenant, user, has(user, "icerik.tasarim-onay"),
-                    has(user, "icerik.mesaj-onay"), today())
+        trace: dict[str, Any] = {}
+        out = call(store.summary, engine, tenant, user, has(user, "icerik.tasarim-onay"),
+                   has(user, "icerik.mesaj-onay"), today(), trace)
+        return PV.bagla(out, lambda: K.for_summary(engine, tenant, user, trace))
 
     @app.get(f"{P}/books")
     def creative_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         ctx(request)
         schema, run = crm(request)
-        return call(src.search, schema, run, q, page)
+        out = call(src.search, schema, run, q, page)
+        return PV.bagla(out, lambda: K.for_books(schema, q, page))
 
     @app.get(f"{P}/books/{{stok}}")
     def creative_book(stok: str, request: Request) -> dict[str, Any]:
@@ -275,8 +280,10 @@ def register(app: Any, deps: dict[str, Any]) -> None:
     def creative_requests(request: Request, durum: str = "", kanal: str = "", stok: str = "", atanan: str = "",
                           q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(store.list_requests, engine, tenant, durum=durum, kanal=kanal, stok=stok, atanan=atanan, q=q,
-                    page=page)
+        out = call(store.list_requests, engine, tenant, durum=durum, kanal=kanal, stok=stok, atanan=atanan, q=q,
+                   page=page)
+        return PV.bagla(out, lambda: K.for_requests(engine, tenant, out, page, durum=durum, kanal=kanal, stok=stok,
+                                                    atanan=atanan, q=q))
 
     @app.post(f"{P}/requests", status_code=201)
     def creative_request_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -293,7 +300,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
     def creative_pending(request: Request) -> dict[str, Any]:
         """Onaylı pazarlama planlarında henüz talebe dönüşmemiş görsel/metin materyalleri."""
         engine, tenant, _, _ = ctx(request)
-        return {"items": call(store.pending_materials, engine, tenant)}
+        return PV.bagla({"items": call(store.pending_materials, engine, tenant)}, lambda: K.for_pending(engine, tenant))
 
     @app.post(f"{P}/from-material/{{mid}}", status_code=201)
     def creative_from_material(mid: str, request: Request) -> dict[str, Any]:
@@ -320,7 +327,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
         out = call(store.get_request, engine, tenant, rid)
         out["varliklar"] = call(store.request_assets, engine, tenant, rid, gecmis)
         out["isler"] = call(store.jobs_of, engine, tenant, rid)
-        return out
+        return PV.bagla(out, lambda: K.for_request(engine, tenant, out["id"], gecmis))
 
     @app.patch(f"{P}/requests/{{rid}}")
     def creative_request_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -667,8 +674,10 @@ def register(app: Any, deps: dict[str, Any]) -> None:
                          tur: str = "", durum: str = "onayli", q: str = "", baslangic: str = "", bitis: str = "",
                          page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(store.archive, engine, tenant, stok=stok, etiket=etiket, kanal=kanal, fmt=format, tur=tur,
-                    durum=durum, q=q, since=baslangic, until=bitis, page=page)
+        out = call(store.archive, engine, tenant, stok=stok, etiket=etiket, kanal=kanal, fmt=format, tur=tur,
+                   durum=durum, q=q, since=baslangic, until=bitis, page=page)
+        return PV.bagla(out, lambda: K.for_archive(engine, tenant, page, stok=stok, etiket=etiket, kanal=kanal, fmt=format,
+                                                   tur=tur, durum=durum, q=q, since=baslangic, until=bitis))
 
     @app.get(f"{P}/assets/{{aid}}")
     def creative_asset(aid: str, request: Request) -> dict[str, Any]:

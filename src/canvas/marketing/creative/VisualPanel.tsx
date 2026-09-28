@@ -194,7 +194,7 @@ export default function VisualPanel({ r, meta, onVersions }: { r: RequestDetail;
         </div>
       )}
       {produce.error && <Note tone="err">{errText(produce.error, 'Dizim başlatılamadı.')}</Note>}
-      <JobBar job={job} what="Görsel dizimi" />
+      <JobBar job={job} what="Görsel dizimi" k={r.kaynaklar} />
 
       {groups.length === 0 && !running && (
         <p className="text-[12.5px] text-canvas-muted">Henüz görsel yok. Biçimleri seçip «Görselleri diz»e basın; her biçim tam piksel ölçüsünde gelir.</p>

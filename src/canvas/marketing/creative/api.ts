@@ -1,5 +1,6 @@
 import { ENGINE_BASE, send } from '../../engine';
 import { httpErrorText } from '../../httpError';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M19 Pazarlama görsel ve metin köprü istemcisi (`/api/v1/marketing/creative/*`). Talep → üretim (görsel: stüdyonun
  *  pazarlama kiti; metin: Zeki AI) → tasarım onayı → mesaj onayı → arşiv. Dış kanala hiçbir şey gönderilmez; onaylı
@@ -124,8 +125,8 @@ export type Job = {
   bitis: string | null;
 };
 
-export type RequestDetail = CreativeRequest & { varliklar: Asset[]; isler: Job[] };
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type RequestDetail = CreativeRequest & { varliklar: Asset[]; isler: Job[]; kaynaklar?: Kaynaklar };
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export type Book = {
   kitap_id: string | null;
@@ -158,6 +159,7 @@ export type Summary = {
   mesajBekleyen: number | null;
   bana: number;
   terminiYaklasan: Array<{ id: string; kitapAdi: string; termin: string; isteyen: string; atanan: string | null; durum: ReqState }>;
+  kaynaklar?: Kaynaklar;
 };
 
 /** Onaylı M15 planında henüz talebe dönüşmemiş görsel/metin materyali. */
@@ -214,7 +216,7 @@ export const creativeApi = {
   requests: (f: { durum?: string; kanal?: string; stok?: string; atanan?: string; q?: string; page?: number }) =>
     send<Page<CreativeRequest>>('GET', `${P}/requests${qs(f)}`, undefined, 60_000),
   create: (b: NewRequest) => send<CreativeRequest>('POST', `${P}/requests`, b, 60_000),
-  pending: () => send<{ items: PendingMaterial[] }>('GET', `${P}/materials/pending`, undefined, 60_000),
+  pending: () => send<{ items: PendingMaterial[]; kaynaklar?: Kaynaklar }>('GET', `${P}/materials/pending`, undefined, 60_000),
   fromMaterial: (mid: string) => send<CreativeRequest>('POST', `${P}/from-material/${id(mid)}`, {}, 60_000),
   request: (rid: string, history = false) => send<RequestDetail>('GET', `${P}/requests/${id(rid)}${qs({ gecmis: history })}`, undefined, 60_000),
   update: (rid: string, b: Partial<NewRequest> & { durum?: string; not?: string }) => send<CreativeRequest>('PATCH', `${P}/requests/${id(rid)}`, b, 30_000),

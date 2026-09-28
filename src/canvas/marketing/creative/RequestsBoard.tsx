@@ -8,6 +8,7 @@ import { Loading, Note, Pill, errText, field, nf } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../../editorial/kit';
 import { BOARD, STATE_TONE, creativeApi, daysLeft, fmtDay, type CreativeRequest, type ReqState, type Summary } from './api';
 import { invalidateCreative, useCreativeMeta } from './useMeta';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Talep panosu. Masaüstünde beş sütun (Talep → Üretimde → Tasarım onayı → Mesaj onayı → Onaylı); telefonda durum
  *  çipleri ve tek sütun liste. Kart termine göre sıralı gelir (terminsizler sonda). */
@@ -71,6 +72,7 @@ function PendingFromPlans() {
     <section className="mt-3 flex flex-col gap-2 rounded-2xl bg-violet-50/50 p-2.5" aria-label="Plandan bekleyen materyaller">
       <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold text-canvas-violet">
         <ClipboardList className="h-4 w-4" aria-hidden />Onaylı planlardan bekleyen materyal ({nf.format(items.length)})
+        <SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Bekleyen materyal" />
       </h3>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((m) => (
@@ -118,7 +120,8 @@ export default function RequestsBoard({ params, update, due }: {
   return (
     <Panel>
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Durum">
+        <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Durum">
+          <SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Talep panosu ve sayılar" />
           {chips.map((c) => (
             <button key={c.label} type="button" role="radio" aria-checked={durum === c.key}
               onClick={() => update({ durum: c.key, sayfa: null })}

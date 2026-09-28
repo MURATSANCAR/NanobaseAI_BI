@@ -10,6 +10,7 @@ import { copyText } from '../../editorial/studio/marketing/parts';
 import { creativeApi, fmtDay } from './api';
 import { ApprovalLine, DraftBadge, smallBtn } from './parts';
 import { useCreativeMeta } from './useMeta';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Arşiv: onaylı (ya da süzgeçle bekleyen/reddedilen) güncel varlıklar; kitap, kampanya/etiket, kanal, biçim, tür ve
  *  tarih süzgeci. Tavansız, sayfalı. «Bu kitabın bütün görselleri» tek aramada. */
@@ -102,6 +103,9 @@ export default function AssetLibrary({ params, update }: { params: URLSearchPara
           </li>
         ))}
       </ul>
+      {list.data && list.data.total > 0 && (
+        <div className="mt-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Arşiv sayısı<SqlInfo k={list.data.kaynaklar} alan="total" label="Arşiv" /></div>
+      )}
       {list.data && list.data.total > 0 && (
         <Pager page={f.page} pageSize={list.data.pageSize} total={list.data.total} shown={items.length} loading={list.isLoading}
           fetching={list.isFetching} onPage={(p) => update({ sayfa: p ? String(p) : null })} />

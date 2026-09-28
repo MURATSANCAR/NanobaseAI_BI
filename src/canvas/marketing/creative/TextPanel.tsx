@@ -132,7 +132,7 @@ export default function TextPanel({ r, meta, onVersions }: { r: RequestDetail; m
         </div>
       )}
       {write.error && <Note tone="err">{errText(write.error, 'Başlatılamadı.')}</Note>}
-      <JobBar job={job} what="Metin üretimi" />
+      <JobBar job={job} what="Metin üretimi" k={r.kaynaklar} />
       {byKind.length === 0 && !running && (
         <p className="text-[12.5px] text-canvas-muted">Henüz metin yok. Tür ve platform seçip «Zeki AI ile yaz»a basın; sınırı aşan ya da alıntısı kaynakta olmayan varyant kaydedilmez.</p>
       )}

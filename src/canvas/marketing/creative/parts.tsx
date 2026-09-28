@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, BadgeCheck, CircleDashed, Loader2, XCircle } from 'lucide-react';
 import { Progress } from '../../editorial/studio/shared';
 import { fmtDay, type Asset, type Check, type Job } from './api';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Talep ekranının ortak parçaları. Hareket: yalnız mevcut basış küçülmesi ve ilerleme çubuğu. */
 
@@ -78,7 +80,7 @@ export function Checks({ c }: { c: Check | null }) {
 }
 
 /** Süren ya da son biten arka plan işi. */
-export function JobBar({ job, what }: { job: Job | undefined; what: string }) {
+export function JobBar({ job, what, k }: { job: Job | undefined; what: string; k?: Kaynaklar }) {
   if (!job) return null;
   const [n, t, step]: [number, number, string?] = job.ilerleme ?? [0, 0];
   if (job.durum === 'suruyor') {
@@ -101,6 +103,7 @@ export function JobBar({ job, what }: { job: Job | undefined; what: string }) {
         Son {what.toLocaleLowerCase('tr')} · {fmtDay(job.bitis ?? job.baslangic)} · {job.olusturan}
         {job.durum === 'hata' ? ` — ${job.hata}` : ` — ${r.uretilen ?? 0} üretildi`}
         {r.uyari ? `, ${r.uyari} uyarılı` : ''}
+        <SqlInfo k={k} alan="isler[]" label={`${what} sonucu`} className="ml-0.5" />
       </span>
       {skipped.length > 0 && (
         <details>

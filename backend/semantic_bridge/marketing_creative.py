@@ -592,17 +592,22 @@ def open_from_material(engine, tenant: str, user: str, material_id: str,
     return out
 
 
+def pending_stmt(tenant: str):
+    """Onaylı planların görsel/metin materyalleri (aynı ifade sorgu bilgisinde gösterilir)."""
+    mc = _m15()
+    return (sa.select(mc.MATERIALS, mc.PLANS.c.baslik, mc.PLANS.c.onceki_id, mc.PLANS.c.yayin_tarihi,
+                      mc.PLANS.c.stok_kodu.label("plan_stok"))
+            .join(mc.PLANS, mc.PLANS.c.id == mc.MATERIALS.c.plan_id)
+            .where(mc.PLANS.c.tenant_id == tenant, mc.PLANS.c.durum == "onayli", mc.MATERIALS.c.tur.in_(list(MATERIAL_MAP))))
+
+
 def pending_materials(engine, tenant: str) -> list[dict[str, Any]]:
     """Onaylı M15 planlarında henüz talebe dönüşmemiş görsel/metin materyalleri (termine göre)."""
     mc = _m15()
     mc.ensure(engine)
     out = []
     with engine.connect() as c:
-        rows = c.execute(sa.select(mc.MATERIALS, mc.PLANS.c.baslik, mc.PLANS.c.onceki_id, mc.PLANS.c.yayin_tarihi,
-                                   mc.PLANS.c.stok_kodu.label("plan_stok"))
-                         .join(mc.PLANS, mc.PLANS.c.id == mc.MATERIALS.c.plan_id)
-                         .where(mc.PLANS.c.tenant_id == tenant, mc.PLANS.c.durum == "onayli",
-                                mc.MATERIALS.c.tur.in_(list(MATERIAL_MAP)))).mappings().all()
+        rows = c.execute(pending_stmt(tenant)).mappings().all()
         for r in rows:
             plan = {"id": r["plan_id"], "baslik": r["baslik"], "oncekiId": r["onceki_id"], "yayinTarihi": r["yayin_tarihi"]}
             mat = {"id": r["id"], "tur": r["tur"]}
@@ -630,13 +635,17 @@ def _request_view(r: dict[str, Any], counts: Optional[dict[str, int]] = None) ->
             "olusturma": _iso(r["olusturma"]), "guncelleme": _iso(r["guncelleme"]), "sayilar": counts or {}}
 
 
+def counts_stmt(tenant: str, ids: list[str]):
+    """Taleplerin güncel varlıkları: görsel / metin, onaylı, bekleyen, reddedilen, taslak lisanslı sayısı buradan."""
+    return (sa.select(ASSETS.c.request_id, ASSETS.c.tur, ASSETS.c.tasarim_onay, ASSETS.c.mesaj_onay,
+                      ASSETS.c.red_zaman, ASSETS.c.taslak_lisans)
+            .where(ASSETS.c.tenant_id == tenant, ASSETS.c.request_id.in_(ids), ASSETS.c.guncel.is_(True)))
+
+
 def _counts(conn, tenant: str, ids: list[str]) -> dict[str, dict[str, int]]:
     if not ids:
         return {}
-    rows = conn.execute(sa.select(ASSETS.c.request_id, ASSETS.c.tur, ASSETS.c.tasarim_onay, ASSETS.c.mesaj_onay,
-                                  ASSETS.c.red_zaman, ASSETS.c.taslak_lisans)
-                        .where(ASSETS.c.tenant_id == tenant, ASSETS.c.request_id.in_(ids), ASSETS.c.guncel.is_(True))
-                        ).mappings().all()
+    rows = conn.execute(counts_stmt(tenant, ids)).mappings().all()
     out: dict[str, dict[str, int]] = {}
     for a in rows:
         c = out.setdefault(a["request_id"], {"gorsel": 0, "metin": 0, "onayli": 0, "bekleyen": 0, "reddedilen": 0,
@@ -653,8 +662,8 @@ def _counts(conn, tenant: str, ids: list[str]) -> dict[str, dict[str, int]]:
     return out
 
 
-def list_requests(engine, tenant: str, *, durum: str = "", kanal: str = "", stok: str = "", atanan: str = "",
-                  q: str = "", page: int = 0) -> dict[str, Any]:
+def requests_stmt(tenant: str, *, durum: str = "", kanal: str = "", stok: str = "", atanan: str = "", q: str = ""):
+    """Talep listesinin süzgeçli okuması (sayfa ve sıra `list_requests`'te eklenir)."""
     st = sa.select(REQUESTS).where(REQUESTS.c.tenant_id == tenant)
     if durum:
         st = st.where(REQUESTS.c.durum.in_([d for d in durum.split(",") if d in STATES]))
@@ -668,18 +677,32 @@ def list_requests(engine, tenant: str, *, durum: str = "", kanal: str = "", stok
         like = f"%{q.strip()}%"
         st = st.where(sa.or_(REQUESTS.c.kitap_adi.ilike(like), REQUESTS.c.stok_kodu.ilike(like),
                              REQUESTS.c.kampanya.ilike(like), REQUESTS.c.id.ilike(like)))
+    return st
+
+
+def requests_page_stmt(st: Any, page: int):
+    return (st.order_by(REQUESTS.c.termin.is_(None), REQUESTS.c.termin, REQUESTS.c.olusturma.desc())
+            .offset(max(0, int(page)) * PAGE_SIZE).limit(PAGE_SIZE))
+
+
+def list_requests(engine, tenant: str, *, durum: str = "", kanal: str = "", stok: str = "", atanan: str = "",
+                  q: str = "", page: int = 0) -> dict[str, Any]:
+    st = requests_stmt(tenant, durum=durum, kanal=kanal, stok=stok, atanan=atanan, q=q)
     page = max(0, int(page))
     with engine.connect() as c:
         total = c.execute(sa.select(sa.func.count()).select_from(st.subquery())).scalar() or 0
-        rows = c.execute(st.order_by(REQUESTS.c.termin.is_(None), REQUESTS.c.termin, REQUESTS.c.olusturma.desc())
-                         .offset(page * PAGE_SIZE).limit(PAGE_SIZE)).mappings().all()
+        rows = c.execute(requests_page_stmt(st, page)).mappings().all()
         counts = _counts(c, tenant, [r["id"] for r in rows])
     return {"items": [_request_view(dict(r), counts.get(r["id"])) for r in rows], "total": int(total), "page": page,
             "pageSize": PAGE_SIZE}
 
 
+def request_stmt(tenant: str, rid: str):
+    return sa.select(REQUESTS).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.id == rid)
+
+
 def _row(conn, tenant: str, rid: str) -> dict[str, Any]:
-    r = conn.execute(sa.select(REQUESTS).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.id == rid)).mappings().first()
+    r = conn.execute(request_stmt(tenant, rid)).mappings().first()
     if r is None:
         raise CreativeError("Talep bulunamadı.", 404)
     return dict(r)
@@ -919,14 +942,22 @@ def asset_row(engine, tenant: str, aid: str) -> dict[str, Any]:
         return _asset(c, tenant, aid)
 
 
+def assets_stmt(tenant: str, rid: str, history: bool = False):
+    st = sa.select(ASSETS).where(ASSETS.c.tenant_id == tenant, ASSETS.c.request_id == rid)
+    if not history:
+        st = st.where(ASSETS.c.guncel.is_(True))
+    return st.order_by(ASSETS.c.tur, ASSETS.c.varyant, ASSETS.c.format, ASSETS.c.surum.desc())
+
+
+def jobs_stmt(tenant: str, rid: str):
+    return sa.select(JOBS).where(JOBS.c.tenant_id == tenant, JOBS.c.request_id == rid).order_by(JOBS.c.baslangic.desc())
+
+
 def request_assets(engine, tenant: str, rid: str, history: bool = False) -> list[dict[str, Any]]:
     rid = _rid(rid)
     with engine.connect() as c:
         title = _row(c, tenant, rid)["kitap_adi"]
-        st = sa.select(ASSETS).where(ASSETS.c.tenant_id == tenant, ASSETS.c.request_id == rid)
-        if not history:
-            st = st.where(ASSETS.c.guncel.is_(True))
-        rows = c.execute(st.order_by(ASSETS.c.tur, ASSETS.c.varyant, ASSETS.c.format, ASSETS.c.surum.desc())).mappings().all()
+        rows = c.execute(assets_stmt(tenant, rid, history)).mappings().all()
     return [_asset_view(dict(a), title) for a in rows]
 
 
@@ -1042,9 +1073,9 @@ def mark_used(engine, tenant: str, aid: str, kanal: str, when: Optional[str], by
     return get_asset(engine, tenant, aid)
 
 
-def archive(engine, tenant: str, *, stok: str = "", etiket: str = "", kanal: str = "", fmt: str = "", tur: str = "",
-            durum: str = "onayli", q: str = "", since: str = "", until: str = "", page: int = 0) -> dict[str, Any]:
-    """Arşiv (tavansız, sayfalı). `durum`: onayli | bekleyen | reddedilen | hepsi (yalnız güncel sürümler)."""
+def archive_stmt(tenant: str, *, stok: str = "", etiket: str = "", kanal: str = "", fmt: str = "", tur: str = "",
+                 durum: str = "onayli", q: str = "", since: str = "", until: str = "") -> tuple[Any, Any]:
+    """Arşivin süzgeçli okuması ve sıralama kolonu (aynı ifade sorgu bilgisinde gösterilir)."""
     st = (sa.select(ASSETS, REQUESTS.c.kitap_adi, REQUESTS.c.yazar, REQUESTS.c.kampanya)
           .join(REQUESTS, sa.and_(REQUESTS.c.id == ASSETS.c.request_id, REQUESTS.c.tenant_id == ASSETS.c.tenant_id))
           .where(ASSETS.c.tenant_id == tenant, ASSETS.c.guncel.is_(True)))
@@ -1076,6 +1107,14 @@ def archive(engine, tenant: str, *, stok: str = "", etiket: str = "", kanal: str
     if until:
         d = _day(until, "Bitiş") + timedelta(days=1)
         st = st.where(col < datetime(d.year, d.month, d.day, tzinfo=timezone.utc) - timedelta(hours=3))
+    return st, col
+
+
+def archive(engine, tenant: str, *, stok: str = "", etiket: str = "", kanal: str = "", fmt: str = "", tur: str = "",
+            durum: str = "onayli", q: str = "", since: str = "", until: str = "", page: int = 0) -> dict[str, Any]:
+    """Arşiv (tavansız, sayfalı). `durum`: onayli | bekleyen | reddedilen | hepsi (yalnız güncel sürümler)."""
+    st, col = archive_stmt(tenant, stok=stok, etiket=etiket, kanal=kanal, fmt=fmt, tur=tur, durum=durum, q=q,
+                           since=since, until=until)
     page = max(0, int(page))
     with engine.connect() as c:
         total = c.execute(sa.select(sa.func.count()).select_from(st.subquery())).scalar() or 0
@@ -1171,8 +1210,7 @@ def finish_job(engine, tenant: str, jid: str, result: Optional[dict] = None, err
 def jobs_of(engine, tenant: str, rid: str) -> list[dict[str, Any]]:
     rid = _rid(rid)
     with engine.connect() as c:
-        rows = c.execute(sa.select(JOBS).where(JOBS.c.tenant_id == tenant, JOBS.c.request_id == rid)
-                         .order_by(JOBS.c.baslangic.desc())).mappings().all()
+        rows = c.execute(jobs_stmt(tenant, rid)).mappings().all()
     out = []
     for j in rows:
         running = j["durum"] == "suruyor" and j["surec"] != PROCESS
@@ -1323,26 +1361,39 @@ def meta_set(engine, tenant: str, key: str, value: str) -> None:
 
 
 # ------------------------------------------------------------------ özet ve günlük bildirim
-def summary(engine, tenant: str, user: str, can_design: bool, can_message: bool, today: date) -> dict[str, Any]:
-    """Rozet ve günlük özet: kişinin onay kuyruğu, yeni talepler (son 24 saat), terminine 2 gün kalan onaysız talepler."""
+def summary_stmts(tenant: str, user: str, since: datetime, soon: date) -> dict[str, Any]:
+    """Özet sayaçlarının okumaları (aynı ifadeler sorgu bilgisinde gösterilir)."""
+    base = sa.select(sa.func.count()).select_from(ASSETS).where(
+        ASSETS.c.tenant_id == tenant, ASSETS.c.guncel.is_(True), ASSETS.c.red_zaman.is_(None))
+    return {
+        "yeni": sa.select(sa.func.count()).select_from(REQUESTS).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.olusturma >= since),
+        "termin": sa.select(REQUESTS.c.id, REQUESTS.c.kitap_adi, REQUESTS.c.termin, REQUESTS.c.isteyen, REQUESTS.c.atanan,
+                            REQUESTS.c.durum).where(
+            REQUESTS.c.tenant_id == tenant, REQUESTS.c.termin.is_not(None), REQUESTS.c.termin <= soon,
+            REQUESTS.c.durum.not_in(["onayli", "reddedildi", "arsiv"])).order_by(REQUESTS.c.termin),
+        "tasarim": base.where(ASSETS.c.tur == "gorsel", ASSETS.c.tasarim_onay.is_(None)),
+        "mesaj": base.where(ASSETS.c.mesaj_onay.is_(None), sa.or_(ASSETS.c.tur == "metin", ASSETS.c.tasarim_onay.is_not(None)),
+                            sa.or_(ASSETS.c.tasarim_onaylayan.is_(None), ASSETS.c.tasarim_onaylayan != user)),
+        "bana": sa.select(sa.func.count()).select_from(REQUESTS).where(
+            REQUESTS.c.tenant_id == tenant, REQUESTS.c.atanan == user, REQUESTS.c.durum.not_in(["onayli", "reddedildi", "arsiv"])),
+    }
+
+
+def summary(engine, tenant: str, user: str, can_design: bool, can_message: bool, today: date,
+            trace: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """Rozet ve günlük özet: kişinin onay kuyruğu, yeni talepler (son 24 saat), terminine 2 gün kalan onaysız talepler.
+    `trace` verilirse kullanılan an ve gün (sorgu bilgisinde aynı ifade için) yazılır."""
     since = _now() - timedelta(days=1)
     soon = today + timedelta(days=2)
+    if trace is not None:
+        trace.update(since=since, soon=soon)
+    q = summary_stmts(tenant, user, since, soon)
     with engine.connect() as c:
-        new = c.execute(sa.select(sa.func.count()).select_from(REQUESTS).where(
-            REQUESTS.c.tenant_id == tenant, REQUESTS.c.olusturma >= since)).scalar() or 0
-        due = c.execute(sa.select(REQUESTS.c.id, REQUESTS.c.kitap_adi, REQUESTS.c.termin, REQUESTS.c.isteyen,
-                                  REQUESTS.c.atanan, REQUESTS.c.durum).where(
-            REQUESTS.c.tenant_id == tenant, REQUESTS.c.termin.is_not(None), REQUESTS.c.termin <= soon,
-            REQUESTS.c.durum.not_in(["onayli", "reddedildi", "arsiv"])).order_by(REQUESTS.c.termin)).mappings().all()
-        base = sa.select(sa.func.count()).select_from(ASSETS).where(
-            ASSETS.c.tenant_id == tenant, ASSETS.c.guncel.is_(True), ASSETS.c.red_zaman.is_(None))
-        design = c.execute(base.where(ASSETS.c.tur == "gorsel", ASSETS.c.tasarim_onay.is_(None))).scalar() or 0
-        message = c.execute(base.where(ASSETS.c.mesaj_onay.is_(None), sa.or_(
-            ASSETS.c.tur == "metin", ASSETS.c.tasarim_onay.is_not(None)),
-            sa.or_(ASSETS.c.tasarim_onaylayan.is_(None), ASSETS.c.tasarim_onaylayan != user))).scalar() or 0
-        mine = c.execute(sa.select(sa.func.count()).select_from(REQUESTS).where(
-            REQUESTS.c.tenant_id == tenant, REQUESTS.c.atanan == user,
-            REQUESTS.c.durum.not_in(["onayli", "reddedildi", "arsiv"]))).scalar() or 0
+        new = c.execute(q["yeni"]).scalar() or 0
+        due = c.execute(q["termin"]).mappings().all()
+        design = c.execute(q["tasarim"]).scalar() or 0
+        message = c.execute(q["mesaj"]).scalar() or 0
+        mine = c.execute(q["bana"]).scalar() or 0
     return {"yeniTalep": int(new), "tasarimBekleyen": int(design) if can_design else None,
             "mesajBekleyen": int(message) if can_message else None, "bana": int(mine),
             "terminiYaklasan": [{"id": r["id"], "kitapAdi": r["kitap_adi"], "termin": _iso(r["termin"]),
