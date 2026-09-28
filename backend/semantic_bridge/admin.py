@@ -837,6 +837,39 @@ SPEC: list[dict[str, Any]] = [
      "help": "Açıkken hediye kitap gönderimi de müdür onayı olmadan ilerlemez; ücretli ve karşılıklı her zaman onaylı"},
     {"key": "INFLUENCER_API_ENABLED", "group": "influencer", "label": "Resmî API ile hesap sayıları", "type": "bool", "default": "0",
      "help": "İkinci sürüm. Kapalıyken sayılar elle ya da dosyayla girilir; müşteri ortamında kullanıcı kararı olmadan açılmaz"},
+    # Katalog ve bülten (M24)
+    {"key": "CATALOG_PRICE_SOURCE", "group": "catalog", "label": "Katalog fiyatı kaynağı", "type": "text", "default": "crm",
+     "help": "crm = CRM kitap kartı KDV dahil fiyat (varsayılan; kayıtlı liste fiyatı, ihale tablosuyla aynı alan), crm-perakende "
+             "= CRM perakende birim fiyat, crm-uzeri = kitabın üzerindeki fiyat (Baskı önerisi raporu), logo = son B2B/CRM satış "
+             "faturasının birim fiyatı, tsoft = web sitesi satış fiyatı. Yeni katalog bunu alır; katalog başına değiştirilir"},
+    {"key": "CATALOG_STOCK_SOURCE", "group": "catalog", "label": "Stok kaynağı", "type": "text", "default": "crm",
+     "help": "crm = CRM stok adedi (Baskı önerisi «Tükenme süresi» ile aynı), logo = Logo depo stoku. Stok ay sayısı = stok ÷ "
+             "ağırlıklı aylık satış hızı"},
+    {"key": "CATALOG_BOOK_TYPES", "group": "catalog", "label": "Katalog havuzundaki ürün tipleri", "type": "text", "default": "1,4",
+     "help": "CRM kitap kartı tipi, virgülle: 1 Kitap, 4 Set, 5 Dergi, 8 E-kitap, 9 Sesli kitap"},
+    {"key": "CATALOG_CRITICAL_STOCK_MONTHS", "group": "catalog", "label": "Kritik stok (ay)", "type": "text", "default": "1",
+     "help": "Katalogdaki kitabın stoku bu kadar aydan az yetiyorsa kritik uyarı"},
+    {"key": "CATALOG_TARGET_STOCK_MONTHS", "group": "catalog", "label": "Öneride yeterli stok (ay)", "type": "text", "default": "6",
+     "help": "Öneri puanında stok parçası bu aya ulaşınca tam puan alır"},
+    {"key": "CATALOG_NEW_MONTHS", "group": "catalog", "label": "Yeni kitap penceresi (ay)", "type": "int", "default": "12",
+     "help": "İlk baskısı bu kadar ay içinde olan kitap «yeni» sayılır ve yenilik puanı alır"},
+    {"key": "CATALOG_SCORE_WEIGHTS", "group": "catalog", "label": "Öneri puanı ağırlıkları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa {\"hiz\": 40, \"stok\": 20, \"yenilik\": 20, \"ozelgun\": 20}. Ölçülemeyen parça dışarıda kalır"},
+    {"key": "CATALOG_TEXT_WORDS", "group": "catalog", "label": "Katalog metni (kelime)", "type": "int", "default": "60",
+     "help": "Zeki AI tanıtım metnini en çok bu kadar kelimeye kısaltır"},
+    {"key": "CATALOG_PDF_PER_PAGE", "group": "catalog", "label": "PDF önizlemede sayfa başına kitap", "type": "int", "default": "6",
+     "help": "1–12; ekranda indirirken değiştirilir"},
+    {"key": "CATALOG_ALERT_RECIPIENTS", "group": "catalog", "label": "Katalog uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (katalog sorumlusu, pazarlama müdürü). Kritik fiyat/stok uyarısı ve onay bekleyen "
+             "katalog/bülten her sabah tek özetle gider; okura ya da bayiye hiçbir gönderim yok"},
+    {"key": "NEWSLETTER_REQUIRE_KVKK", "group": "catalog", "label": "Segmentte KVKK onayı şart", "type": "bool", "default": "0",
+     "help": "Açıksa segment sayısına yalnız KVKK onayı da olan kişi girer. İYS onayı, e-posta izni ve toplu e-posta izni her "
+             "durumda şarttır"},
+    {"key": "NEWSLETTER_SUBJECT_OPTIONS", "group": "catalog", "label": "Konu satırı seçeneği", "type": "int", "default": "5",
+     "help": "Zeki AI'ın bülten için önereceği konu satırı sayısı"},
+    {"key": "NEWSLETTER_INTEREST_KEYWORDS", "group": "catalog", "label": "İlgi alanı → kitap türü sözcükleri (JSON)", "type": "text",
+     "default": "", "help": "Kişi kartındaki ilgi bayrağının kitabın tür/Kitaplık/web kategorisinde aranan sözcükleri, örn. "
+                            "{\"new_tarihveakademi\": [\"tarih\", \"akademi\"]}. Boşsa varsayılan eşleme"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -918,6 +951,9 @@ GROUPS = [
     {"id": "influencer", "label": "İşbirlikleri",
      "help": "İçerik üreticisi işbirliklerinin hatırlatmaları, onay ve ödeme bildirimleri, aday puanı. İçerik üreticisine "
              "portaldan e-posta gitmez; hesap sayıları kazınmaz."},
+    {"id": "catalog", "label": "Katalog ve bülten",
+     "help": "Katalog fiyat ve stok kaynağı, uyarı eşikleri, öneri ağırlıkları ve bülten segment kuralı. Portal toplu e-posta "
+             "göndermez, kişi listesi dışarı vermez; CRM'e ve T-soft'a hiçbir şey yazılmaz."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -961,7 +997,8 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "ads_report": "Reklam raporu", "ads_refresh": "Reklam satış verisi", "ads_run_due": "Reklam günlük işi",
               "social_post": "Sosyal medya gönderisi", "social_account": "Sosyal medya hesabı",
               "social_import": "Sosyal medya içe aktarma", "social_metric": "Sosyal medya içgörüsü",
-              "social_report": "Sosyal medya raporu"}
+              "social_report": "Sosyal medya raporu",
+              "catalog": "Katalog", "catalog_item": "Katalog kitabı", "newsletter": "E-bülten"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -1304,6 +1341,18 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
             ok = False
         if not ok:
             raise AdminError("«Platform sınırları» {\"x\": 280, \"instagram:etiket\": 30} biçiminde JSON olmalı.")
+    if spec["key"] in ("CATALOG_PRICE_SOURCE", "CATALOG_STOCK_SOURCE") and v:
+        allowed = (("crm", "crm-perakende", "crm-uzeri", "logo", "tsoft") if spec["key"] == "CATALOG_PRICE_SOURCE" else ("crm", "logo"))
+        if v.lower() not in allowed:
+            raise AdminError(f"«{spec['label']}» şunlardan biri olmalı: {', '.join(allowed)}.")
+        return v.lower()
+    if spec["key"] in ("CATALOG_SCORE_WEIGHTS", "NEWSLETTER_INTEREST_KEYWORDS") and v:
+        try:
+            obj = json.loads(v)
+        except ValueError:
+            obj = None
+        if not isinstance(obj, dict):
+            raise AdminError(f"«{spec['label']}» JSON nesnesi olmalı.")
         return v
     if t == "bool":
         return "1" if v in ("1", "true", "True", "on", "evet") else "0"

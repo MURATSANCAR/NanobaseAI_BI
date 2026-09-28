@@ -296,6 +296,11 @@
       "label": "İşbirlikleri"
     },
     {
+      "key": "sayfa:katalog-bulten",
+      "area": "pazarlama",
+      "label": "Katalog ve bülten"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1789,6 +1794,36 @@
       "page": "sayfa:isbirlikleri",
       "label": "İşbirliği ödemeleri",
       "hint": "Ödeme listesini görme ve Excel'e alma, ödeme satırını onaylama, Logo belge numarasıyla ödendi işaretleme (muhasebe)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:katalog.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Katalog hazırlama",
+      "hint": "Katalog açma, kitap önerisi ve seçimi, sıralama, öne çıkarma, fiyat/stok uyarısını kabul, Zeki AI metni, onaya gönderme, yayına alma"
+    },
+    {
+      "key": "ozellik:bulten.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Bülten hazırlama",
+      "hint": "E-bülten taslağı, kitap önerisi, Zeki AI gövde ve konu satırı, onaya gönderme, gönderildi işareti, sonuç girişi"
+    },
+    {
+      "key": "ozellik:katalog-bulten.onay",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Katalog ve bülten onayı",
+      "hint": "Onaya gönderilen kataloğu ya da bülteni onaylama veya gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bulten.segment",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Bülten segment sayacı",
+      "hint": "CRM'deki izinli kişi sayısını ve izin dağılımını görme (yalnız sayı; kişi listesi portalda hiç gösterilmez)",
       "explicit": true
     }
   ]

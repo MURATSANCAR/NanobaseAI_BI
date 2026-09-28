@@ -697,6 +697,44 @@ gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/ru
 - **Ayarlar:** Yönetim → «İşbirlikleri» (`INFLUENCER_*`: alıcılar, ödeme günü 25, aylık bütçe, bütçe eşiği %90, bekleme/gecikme günleri, ağırlıklar, konu kelimeleri, yasal etiket türleri, hediye onayı, API bayrağı).
 - **Testler:** `backend/semantic_layer/tests/test_influencers.py` (25 test; yerelde koşulmadı, yalnız `py_compile`). Kabul: `scripts/acceptance/M23/` (`check.sh`, `kabul.py` R1–R5 doğrudan SQL + kapı/yetki denemeleri, `cleanup.py`, `referans.sql`). **DOĞRULANAMADI — testler, tsc/vitest ve gerçek CRM kabulü koordinatörde.**
 - **Açık:** Kampüs zilinde «onay bekleyen teklif» rozeti yok (e-posta + pano sayacı var); kabul için onay yetkili ikinci oturum (COOKIE2) ve yetkisiz oturum (COOKIE3) gerekir; tanıtım siparişinin alıcı bağı, Logo'da influencer ödemesinin kartı/özel kodu ve mutabakat ölçülecek; resmî API istemcisi, UTM/indirim kodu satış bağı ikinci sürüm.
+## 2026-09-28 — M24 Katalog ve bülten kodlandı (dal `worktree-agent-ac2e6d2c2fb3a1d34`; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** analiz belgesinin 14. bölümü (`docs/analiz/kullanici-ihtiyaclari/M24-katalog-bulten.md`). Köprü `catalogs.py`,
+  `newsletters.py`, `catalogs_sources.py`, `catalogs_api.py`; ekran `src/canvas/catalog-newsletter/` (liste, katalog
+  düzenleme, bülten düzenleme, segment sayacı, rapor); zamanlayıcı `timas-catalog.timer` (07:15); testler
+  `test_catalogs.py`; kabul `scripts/acceptance/M24/` (R1 stok ay × doğrudan SQL ve Baskı önerisi ekranı, R2 fiyat,
+  R3/R3b segment ve izinsizler, R4 özel gün, R5 CRM kampanya, R6 satıştan kalkan, R7 Logo veri sonu, R8 yanıtlarda «@» yok;
+  `cleanup.py`). Ortak dosyalara en küçük ekleme: `app.py` (2 satır), `access.py` (2 sayfa kuralı + 3 özellik kuralı),
+  `access_catalog.json` (1 sayfa, 4 özellik; 2'si açık), `admin.py` (grup «Katalog ve bülten», 13 ayar, 2 doğrulama,
+  3 kayıt türü adı), `App.tsx` (4 rota), `navModel.ts` (1 öğe, bölüm «Kampanya»), `ModulesMenu.tsx` (M24), `navModel.test.ts` (2 satır).
+- **Kararlar (analiz 10. bölüm soruları; veriye/koda bakılarak, sorulmadan):**
+  - *Katalog fiyatı kaynağı* belirsiz → ayar `CATALOG_PRICE_SOURCE`, varsayılan **CRM `new_kdvdahilfiyat`**: kitabın kayıtlı
+    liste fiyatı tek alanda; ihale teklif tablosu da aynı alanı kullanıyor. Logo `logo_fiyat.sql` son B2B/CRM faturasının birim
+    fiyatıdır (bayi iskontosu içerebilir), T-soft fiyatı kampanyalı olabilir. Diğer kaynaklar (perakende birim fiyat, kitabın
+    üzerindeki fiyat, Logo, web) seçilebilir; katalog başına değişir; kaynaklar arası farklı fiyatlı kitap sayısı havuzda ölçülüp
+    ekranda/kabulde yazar. CRM fiyat listesi (`new_fiyatlistesiogesiBase`) kaynak yapılmadı: `new_StokId` bağının hedefi belgede
+    yok (**ölçülecek**).
+  - *Stok ay sayısı* → Baskı önerisinin tanımı ve **aynı SQL dosyaları** (CRM `powerbikitap.StokAdedi` ÷ `logo_satis_hizi`
+    ağırlıklı hız = «Tükenme süresi»). Kabul maddesi Logo depo stokunu da anıyordu; o `CATALOG_STOCK_SOURCE=logo` ile seçilir.
+    Hızı olmayan stoklu kitap «son 12 ayda satış yok» yazar, ay sayısı uydurulmaz.
+  - *Havuz* → etkin kart ve tip 1 (Kitap) + 4 (Set) (`CATALOG_BOOK_TYPES`); satış durumu boşsa açık sayılır (doluluk ölçülecek).
+  - *Bülten aracı ve abone listesi bilinmiyor* → portal göndermez; sonuç ya bağlı CRM kampanyasının sayaçlarından (her sabah) ya da
+    aracın CSV dışa aktarımından alınır: özet dosyada sayılar, kişi satırlı dosyada satırlar sayılır, adres okunmaz/saklanmaz.
+  - *İzin kuralı* → kabul maddesindeki SQL'in birebiri (`permit_sql`, tek yer); KVKK onayı ayarla şart yapılır
+    (`NEWSLETTER_REQUIRE_KVKK`, varsayılan kapalı — kabul SQL'i KVKK istemiyor). «Son alışveriş» segmenti yok: okur–sipariş bağı
+    ölçülmedi.
+  - *İlgi alanı → kitap* eşlemesi modelsiz: kişi bayrağı için sözcük listesi (ayar `NEWSLETTER_INTEREST_KEYWORDS`), CRM ilgi
+    alanı için adının sözcükleri; kitabın tür/Kitaplık/web kategorisi metninde aranır, gerekçesi satırda yazar.
+  - Sıralama sürükle-bırak yerine yukarı/aşağı düğmeleriyle (telefonda ve klavyede güvenilir). PDF önizlemede kapak görseli
+    basılmaz (bağlantılar pakette); baskıya hazır PDF sonraki sürüm.
+- **Açık kalan:** rapor için Zeki AI 3 cümle yorum yazılmadı; «Uyarılar» rozetine bağlanmadı (onay bekleyen sayısı sekmede ve
+  sabah e-postasında); VM iş döngüsüne (`infra/docker/bi/jobs.py`) `catalog-newsletter/run-due` eklenmedi; bülten → satış bağı
+  (UTM) sonraki sürüm.
+- **Ölçülecek (kabul listesinde):** `new_satisdurumu`, `new_resimurl` ve İYS/KVKK alanlarının doluluğu; `CampaignBase`'in son
+  kullanım tarihi; `powerbikitap.StokAdedi`'nin güncelliği; T-soft `SellingPriceVatIncluded` alanının varlığı; ilgi sözcük
+  eşlemesinin isabeti.
+- **DOĞRULANAMADI:** sunucuya bağlanılmadı; yalnız `py_compile` ve JSON denetimi yapıldı. pytest/tsc/vitest ve gerçek DB kabulü
+  koordinatörde (`scripts/acceptance/M24/check.sh`, `kabul.py`, `cleanup.py`). Test verisi yazılmadı.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

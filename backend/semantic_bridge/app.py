@@ -7216,6 +7216,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M23 İşbirlikleri (içerik üreticisi, gönderim, yayın, ödeme): /api/v1/influencers/*.
     from semantic_bridge import influencers_api
     app.state.influencers = influencers_api.register(app, rt, _require_caller, _can)
+    # M24 Katalog ve bülten (Pazarlama › Kampanya). Uçlar /api/v1/catalog-newsletter/*.
+    from semantic_bridge import catalogs_api
+    app.state.catalogs = catalogs_api.register(app, rt, _require_caller, _can)
     return app
 
 

@@ -544,6 +544,9 @@ RULES: list[tuple[str, Any]] = [
     # M23 İşbirlikleri (Pazarlama › İletişim). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/influencers/run-due", SYSTEM),
     ("/api/v1/influencers/", frozenset({page("isbirlikleri")})),
+    # M24 Katalog ve bülten. Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/catalog-newsletter/run-due", SYSTEM),
+    ("/api/v1/catalog-newsletter/", frozenset({page("katalog-bulten")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -798,6 +801,16 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/influencers/(people(/import|/[^/]+(/suggest-topics)?)?|accounts/[^/]+/snapshots"
      r"|books/[^/]+/candidates/explain|collabs(/[^/]+(/(draft|mail|drafts/[^/]+))?)?)$", "ozellik:isbirligi.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/influencers/(payouts|report)/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Katalog ve bülten: katalog/bülten kaydı, kitap listesi, öneri, Zeki AI metni, onaya gönderme, yayın/gönderim işareti,
+    # sonuç. Onay/geri gönderme açıkça verilen `katalog-bulten.onay`, segment sayacı `bulten.segment` ile ucun içinde.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/catalog-newsletter/(pool/refresh|catalogs(/[^/]+(/(items(/[^/]+/accept)?|suggest|zeki|submit|withdraw|publish"
+     r"|archive|reopen))?)?)$", "ozellik:katalog.duzenle"),
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/catalog-newsletter/newsletters(/[^/]+(/(items|suggest|draft|submit|withdraw|mark-sent|archive|reopen"
+     r"|results(/[^/]+)?))?)?$", "ozellik:bulten.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/catalog-newsletter/(catalogs/[^/]+/(export\.xlsx|package\.zip|preview\.pdf)"
+                         r"|newsletters/[^/]+/html)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

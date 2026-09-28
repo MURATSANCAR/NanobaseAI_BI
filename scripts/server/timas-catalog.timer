@@ -1,0 +1,10 @@
+[Unit]
+Description=Katalog ve bülten: kitap havuzu, katalog fiyat/stok uyarıları ve CRM kampanya sonuçları; her gün 07:15
+
+[Timer]
+OnCalendar=*-*-* 07:15:00
+Persistent=true
+Unit=timas-catalog.service
+
+[Install]
+WantedBy=timers.target

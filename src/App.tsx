@@ -127,6 +127,9 @@ const InfluencerPerson = lazy(() => import('@/canvas/influencers/PersonCard'));
 const InfluencerCandidates = lazy(() => import('@/canvas/influencers/Candidates'));
 const CollabReport = lazy(() => import('@/canvas/influencers/CollabReport'));
 const InfluencerPayouts = lazy(() => import('@/canvas/influencers/Payouts'));
+const CatalogNewsletterHome = lazy(() => import('@/canvas/catalog-newsletter/CatalogNewsletterHome'));
+const CatalogEditor = lazy(() => import('@/canvas/catalog-newsletter/CatalogEditor'));
+const NewsletterEditor = lazy(() => import('@/canvas/catalog-newsletter/NewsletterEditor'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -293,6 +296,11 @@ export default function App() {
             <Route path="isbirlikleri/aday/:kitap" element={<InfluencerCandidates />} />
             <Route path="isbirlikleri/rapor" element={<CollabReport />} />
             <Route path="isbirlikleri/odemeler" element={<InfluencerPayouts />} />
+            {/* Pazarlama › Kampanya: M24 katalog ve e-bülten (/api/v1/catalog-newsletter). */}
+            <Route path="katalog-bulten" element={<CatalogNewsletterHome />} />
+            <Route path="katalog-bulten/rapor" element={<CatalogNewsletterHome initial="rapor" />} />
+            <Route path="katalog-bulten/katalog/:id" element={<CatalogEditor />} />
+            <Route path="katalog-bulten/bulten/:id" element={<NewsletterEditor />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
