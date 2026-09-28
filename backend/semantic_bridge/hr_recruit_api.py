@@ -18,12 +18,28 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import hr_core as H
+from semantic_bridge import hr_kaynak as HK
 from semantic_bridge import hr_recruit as R
 from semantic_bridge import hr_recruit_text as X
 from semantic_bridge.hr_api import HrContext
 
 log = logging.getLogger("semantic_bridge.hr.recruit.api")
 P = "/api/v1/hr/recruit"
+
+
+# Sorgu bilgisi formülleri (hr_kaynak): kural metni; aday adı, puan ya da sayı içermez.
+F_ACIK_POZ = "Açık pozisyon = durumu «açık» olan pozisyon kaydı sayısı."
+F_HAFTA = "Bu hafta gelen = son 7 günde oluşturulan aday kaydı (görme yetkinizin kapsadığı adaylar, seçili pozisyonda)."
+F_SLA = ("Aşamasında bekleyen = sonuç aşamasında olmayan ve aşamada geçen gün (bugün − aşamaya giriş) aşama süresini "
+         "(ayar, N gün) aşan aday sayısı.")
+F_CEVAP = ("Cevap bekleyen = sonucu ret ya da işe alındı olup ret / teklif mesajı gönderilmemiş aday; 30 günü aşan açık "
+           "başvuru = sonuçlanmamış ve kaydı 30 günden eski aday.")
+F_ASAMA = "Aşama sütunu = o aşamadaki aday sayısı; aşamada gün = bugün − aşamaya giriş tarihi; toplam = listelenen aday."
+F_POZ = "Pozisyon satırındaki sayılar = o pozisyona bağlı adayların aşamaya ve sonuca göre sayısı."
+F_ADAY = ("Aday kartı: aşamada gün = bugün − aşamaya giriş; yetkinlik sayısı = pozisyonun yetkinlik listesi; kanıt bulunan = "
+          "özgeçmişte kanıt satırı bulunan yetkinlik (kanıtı Zeki AI özgeçmiş metninden alıntılar, puan vermez); görüşme notu "
+          "puanı (1–5) görüşmecinin girdiği değerdir.")
+F_SABLON = "Şablon ve mesaj kayıtları: sürüm ve sayılar portal kaydındandır."
 
 
 def register(app, hr: HrContext) -> None:
@@ -60,17 +76,28 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/pipeline")
     def recruit_pipeline(request: Request, position: str = "") -> dict[str, Any]:
         engine, tenant, who = engine_ready(request)
-        out = R.pipeline(engine, tenant, who, position, hr.settings()["slaDays"])
-        out["positions"] = [{"id": p["id"], "title": p["title"], "state": p["state"], "counts": p["counts"]}
-                            for p in R.list_positions(engine, tenant, who)]
-        return out
+        with HK.capture(engine) as got:
+            out = R.pipeline(engine, tenant, who, position, hr.settings()["slaDays"])
+            out["positions"] = [{"id": p["id"], "title": p["title"], "state": p["state"], "counts": p["counts"]}
+                                for p in R.list_positions(engine, tenant, who)]
+        c, a = "semantic_hr_candidates", "semantic_hr_positions"
+        return hr.kaynak(out, got, "iseAlim", {
+            "counters.openPositions": ("acikPoz", F_ACIK_POZ, [a]),
+            "counters.thisWeek": ("buHafta", F_HAFTA, [c]),
+            "counters.overSla": ("sla", F_SLA, [c]), "counters.slaDays": "hesap:sla",
+            "counters.waitingReply": ("cevap", F_CEVAP, [c, "semantic_hr_messages"]), "counters.unanswered30": "hesap:cevap",
+            "columns": ("asama", F_ASAMA, [c]), "total": "hesap:asama",
+            "positions": ("poz", F_POZ, [a, c]),
+        }, rest=("asama", F_ASAMA))
 
     # ------------------------------------------------------------------ pozisyonlar
 
     @app.get(P + "/positions")
     def recruit_positions(request: Request, state: str = "") -> dict[str, Any]:
         engine, tenant, who = engine_ready(request)
-        return {"items": R.list_positions(engine, tenant, who, state)}
+        with HK.capture(engine) as got:
+            out = {"items": R.list_positions(engine, tenant, who, state)}
+        return hr.kaynak(out, got, "pozisyon", {"items[]": ("poz", F_POZ)})
 
     @app.post(P + "/positions", status_code=201)
     def recruit_position_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -83,7 +110,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/positions/{pid}")
     def recruit_position(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = engine_ready(request)
-        return call(R.get_position, engine, tenant, who, pid)
+        with HK.capture(engine) as got:
+            out = call(R.get_position, engine, tenant, who, pid)
+        return hr.kaynak(out, got, "pozisyon", {}, rest=("poz", F_POZ))
 
     @app.patch(P + "/positions/{pid}")
     def recruit_position_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -169,11 +198,14 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/candidates/{cid}")
     def recruit_candidate(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = engine_ready(request)
-        out = call(R.detail, engine, tenant, who, cid, hr.settings()["slaDays"])
+        with HK.capture(engine) as got:
+            out = call(R.detail, engine, tenant, who, cid, hr.settings()["slaDays"])
         H.log_access(engine, tenant, who.user, "aday", cid, "goruntule", "aday kartı")
         if out["can"]["consents"]:
-            out["consents"] = H.list_consents(engine, tenant, "aday", cid)
-        return out
+            with HK.capture(engine) as got2:
+                out["consents"] = H.list_consents(engine, tenant, "aday", cid)
+            got += got2
+        return hr.kaynak(out, got, "aday", {}, rest=("aday", F_ADAY))
 
     @app.patch(P + "/candidates/{cid}")
     def recruit_candidate_update(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -277,7 +309,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/templates")
     def recruit_templates(request: Request, kind: str = "") -> dict[str, Any]:
         engine, tenant, _ = engine_ready(request)
-        return {"items": R.list_templates(engine, tenant, kind), "kinds": X.TEMPLATE_KINDS, "fields": X.FIELDS}
+        with HK.capture(engine) as got:
+            out = {"items": R.list_templates(engine, tenant, kind), "kinds": X.TEMPLATE_KINDS, "fields": X.FIELDS}
+        return hr.kaynak(out, got, "sablon", {}, rest=("sablon", F_SABLON))
 
     @app.get(P + "/templates/starters")
     def recruit_template_starters(request: Request) -> dict[str, Any]:

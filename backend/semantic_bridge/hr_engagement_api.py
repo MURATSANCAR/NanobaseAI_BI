@@ -23,12 +23,30 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import hr_core as H
 from semantic_bridge import hr_engagement as E
+from semantic_bridge import hr_kaynak as HK
 from semantic_bridge import hr_engagement_text as T
 from semantic_bridge.hr_api import HrContext
 
 log = logging.getLogger("semantic_bridge.hr.engagement.api")
 B = "/api/v1/hr/engagement"
 PUB = "/api/v1/hr/survey-public"
+
+
+# Sorgu bilgisi formülleri (hr_kaynak). Anket yanıtı sorgularında satır sayısı yazılmaz; eşik altı grup «gizli».
+F_SORU = "Soru sayısı = anketin (ya da şablonun) madde listesindeki soru sayısı."
+F_ANKET = ("Anket kaydı: gösterim eşiği (en az yanıt), soru sayısı, açılış/kapanış; sayılar portal kaydındandır. Kapanmış "
+           "ankette davet ve yanıt sayıları kapanış anında dondurulur.")
+F_ILERLEME = ("İlerleme: davet = gönderilen e-posta daveti, cevaplayan = yanıt veren davet; basılı kod = dağıtılan / kullanılan "
+              "kod; yanıt oranı = (cevaplayan + kullanılan basılı kod) ÷ (davet + basılı kod). Yanıtlar kimliksiz saklanır.")
+F_SONUC = ("Sonuç (anket kapanınca ve gösterim eşiği girilince): madde ortalaması = yanıtların 1–5 ortalaması, olumlu % = 4 ve 5 "
+           "verenlerin payı, n = yanıt; eNPS = (9–10 verenler − 0–6 verenler) ÷ yanıt × 100; bağlılık endeksi = bağlılık "
+           "maddelerinin olumlu payı. Birim, alt birimleriyle; yanıtı eşiğin altındaki ya da ayrı gösterilmesi başka birimi ele "
+           "verecek birim üst birimle birleştirilir ve «gizli» kalır.")
+F_TEMA = ("Tema: yorumların konusunu Zeki AI atar (kapalı küme); tema başına sayı = o temadaki yorum; eşik altı grupta tema "
+          "gösterilmez. Yorum metinleri maskelenmiştir.")
+F_EGILIM = ("Eğilim: her kapanmış anketin kapanışta saklanan şirket sonucu (yanıt oranı, eNPS, endeks); öneri sayacı = öneri "
+            "kutusuna gelen, cevaplanan ve ortalama cevap süresi (gün).")
+F_ONERI = "Öneri konusu: Zeki AI kapalı kümeden seçer; yüzde = modelin seçime verdiği olasılık. Öneri sahibi gösterilmez (anonim)."
 
 
 def register(app, hr: HrContext) -> None:
@@ -78,7 +96,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/me/surveys")
     def eng_my_surveys(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
-        return {"items": E.my_surveys(engine, tenant, who.user)}
+        with HK.capture(engine) as got:
+            out = {"items": E.my_surveys(engine, tenant, who.user)}
+        return hr.kaynak(out, got, "anketim", {"items[]": ("soru", F_SORU)})
 
     @app.post(B + "/me/surveys/{sid}/link")
     def eng_my_link(sid: str, request: Request) -> dict[str, Any]:
@@ -107,7 +127,9 @@ def register(app, hr: HrContext) -> None:
     def eng_templates(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         need(who, E.F_SURVEY_ADMIN, what="Anket yönetimi")
-        return {"items": E.list_templates(engine, tenant), "starters": T.STARTERS}
+        with HK.capture(engine) as got:
+            out = {"items": E.list_templates(engine, tenant), "starters": T.STARTERS}
+        return hr.kaynak(out, got, "sablon", {"items[]": ("soru", F_SORU)}, rest=("soru", F_SORU))
 
     @app.post(B + "/templates", status_code=201)
     def eng_template_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -144,7 +166,9 @@ def register(app, hr: HrContext) -> None:
     def eng_surveys(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         dashboard(who)
-        return {"items": E.list_surveys(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": E.list_surveys(engine, tenant)}
+        return hr.kaynak(out, got, "anketler", {"items[]": ("anket", F_ANKET)})
 
     @app.post(B + "/surveys", status_code=201)
     def eng_survey_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -158,7 +182,9 @@ def register(app, hr: HrContext) -> None:
     def eng_survey(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         dashboard(who)
-        return call(E.get_survey, engine, tenant, sid)
+        with HK.capture(engine) as got:
+            out = call(E.get_survey, engine, tenant, sid)
+        return hr.kaynak(out, got, "anket", {}, rest=("anket", F_ANKET))
 
     @app.patch(B + "/surveys/{sid}")
     def eng_survey_update(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -198,13 +224,23 @@ def register(app, hr: HrContext) -> None:
     def eng_progress(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         dashboard(who)
-        return call(E.progress, engine, tenant, sid)
+        with HK.capture(engine) as got:
+            out = call(E.progress, engine, tenant, sid)
+        return hr.kaynak(out, got, "ilerleme", {}, rest=("ilerleme", F_ILERLEME))
+
+    def sonuc(out: dict[str, Any], got: list) -> dict[str, Any]:
+        """Anket sonucu: gösterilen rakamlar sonuç formülüne; eşik altı birim satırı «gizli»ye (sayı sızmaz)."""
+        hidden = [f"units[]:{u['unitId']}" for u in (out.get("units") or []) if not u.get("shown")]
+        return hr.kaynak(out, got, "sonuc", {"survey": ("anket", F_ANKET), "units": ("sonuc", F_SONUC)},
+                         rest=("sonuc", F_SONUC), hidden=hidden)
 
     @app.get(B + "/surveys/{sid}/results")
     def eng_results(sid: str, request: Request, scope: str = "sirket") -> dict[str, Any]:
         engine, tenant, who = ready(request)
         if who.can(E.PAGE_DASHBOARD, E.F_SURVEY_ADMIN):
-            return call(E.results, engine, tenant, sid, scope)
+            with HK.capture(engine) as got:
+                out = call(E.results, engine, tenant, sid, scope)
+            return sonuc(out, got)
         # Birim yöneticisi: yalnız paylaşılmış ankette, yöneticisi olduğu birimler.
         need(who, E.F_UNIT_RESULT, what="Birim sonucu")
         s = call(E.get_survey, engine, tenant, sid)
@@ -213,7 +249,9 @@ def register(app, hr: HrContext) -> None:
         managed = E.Org(engine, tenant).managed(who.user)
         if scope == "sirket" or scope not in managed:
             raise HTTPException(403, detail={"code": "FORBIDDEN", "message": "Yalnız yöneticisi olduğunuz birimin sonucunu görürsünüz."})
-        return call(E.results, engine, tenant, sid, scope, allowed_units=managed)
+        with HK.capture(engine) as got:
+            out = call(E.results, engine, tenant, sid, scope, allowed_units=managed)
+        return sonuc(out, got)
 
     @app.get(B + "/surveys/{sid}/themes")
     def eng_themes(sid: str, request: Request, raw: int = 0) -> dict[str, Any]:
@@ -222,7 +260,9 @@ def register(app, hr: HrContext) -> None:
         if raw:
             need(who, E.F_COMMENTS, what="Yorum metinleri")
             H.log_access(engine, tenant, who.user, "anket", sid, "goruntule", "maskeli anket yorumları")
-        return call(E.themes, engine, tenant, sid, raw=bool(raw))
+        with HK.capture(engine) as got:
+            out = call(E.themes, engine, tenant, sid, raw=bool(raw))
+        return hr.kaynak(out, got, "tema", {}, rest=("tema", F_TEMA))
 
     @app.post(B + "/surveys/{sid}/themes/refresh")
     async def eng_themes_refresh(sid: str, request: Request) -> dict[str, Any]:
@@ -261,13 +301,19 @@ def register(app, hr: HrContext) -> None:
     def eng_trend(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         dashboard(who)
-        return {"items": E.trend(engine, tenant), "suggestions": E.suggestion_stats(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": E.trend(engine, tenant), "suggestions": E.suggestion_stats(engine, tenant)}
+        return hr.kaynak(out, got, "egilim", {"items[]": ("egilim", F_EGILIM, ["semantic_hr_survey_results", "semantic_hr_surveys"]),
+                                              "suggestions": ("oneriSay", F_EGILIM, ["semantic_hr_suggestions"])})
 
     @app.get(B + "/my-units")
     def eng_my_units(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         need(who, E.F_UNIT_RESULT, what="Birim sonucu")
-        return call(E.my_unit_results, engine, tenant, who.user)
+        with HK.capture(engine) as got:
+            out = call(E.my_unit_results, engine, tenant, who.user)
+        hidden = [f"results[]:{r['survey']['id']}:{r.get('scope')}" for r in out.get("results") or [] if r.get("suppressed")]
+        return hr.kaynak(out, got, "birimim", {"results": ("sonuc", F_SONUC)}, hidden=hidden)
 
     # ------------------------------------------------------------------ öneriler
 
@@ -282,12 +328,16 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/suggestions")
     def eng_suggestions(request: Request, state: str = "") -> dict[str, Any]:
         engine, tenant, who = ready(request)
-        return {"items": call(E.list_suggestions, engine, tenant, who, state=state), "topics": st()["topics"]}
+        with HK.capture(engine) as got:
+            out = {"items": call(E.list_suggestions, engine, tenant, who, state=state), "topics": st()["topics"]}
+        return hr.kaynak(out, got, "oneri", {"items[]": ("oneri", F_ONERI)})
 
     @app.get(B + "/suggestions/mine")
     def eng_suggestions_mine(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
-        return {"items": E.my_suggestions(engine, tenant, who.user)}
+        with HK.capture(engine) as got:
+            out = {"items": E.my_suggestions(engine, tenant, who.user)}
+        return hr.kaynak(out, got, "onerim", {"items[]": ("oneri", F_ONERI)})
 
     @app.get(B + "/suggestions/track/{code}")
     def eng_suggestion_track(code: str, request: Request) -> dict[str, Any]:

@@ -19,7 +19,9 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 
 from semantic_bridge import hr_core as H
+from semantic_bridge import hr_kaynak as HK
 from semantic_bridge import hr_sources as S
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic_bridge.hr.api")
 P = "/api/v1/hr"
@@ -28,6 +30,23 @@ F_EMPLOYEES = "ozellik:ik.calisan-yonet"
 F_KVKK = "ozellik:ik.kvkk-yonet"
 F_ACCESS_LOG = "ozellik:ik.erisim-kaydi"
 F_EXPORT = "ozellik:ik.disa-aktar"
+
+# Sorgu bilgisi formülleri (hr_kaynak): kural metni, kişi adı ya da sayı içermez.
+F_CALISAN = ("Çalışan listesi = portal çalışan kaydı (CRM ∩ Active Directory eşitlemesiyle ya da İK'nın elle girdiği), "
+             "seçili durum, birim ve arama süzgeciyle; sayı = listedeki kayıt.")
+F_ESITLEME = ("Eşitleme önizlemesi: CRM'de devre dışı olmayan kullanıcılar (etkin), bunlardan erişim türü okuma-yazma ya da "
+              "yönetici ve alan adı olanlar (etkileşimli); Active Directory eşitlemesinde etkin hesabı olanlar eşleşen. Yeni / "
+              "değişen = portal çalışan kaydıyla karşılaştırma; ayrılan = kayıtta etkin ama eşleşmede olmayan. Hiçbir şey yazılmaz.")
+F_ESITLEME_BIRIM = ("Birim satırı: CRM iş birimi; etkin kullanıcı = o birimde devre dışı olmayan CRM kullanıcısı, çalışan = "
+                    "eşleşen (Active Directory'de etkin) kişi sayısı; yönetici kolonu ayardan.")
+F_ESITLEME_EKIP = "Ekip üye sayısı = CRM ekip üyeliği, devre dışı olmayan kullanıcılar."
+F_BIRIM = "Birimler = portal birim kaydı (CRM iş biriminden eşitlenen ya da elle); sayılar birimin kayıtlı çalışanlarıdır."
+F_AYDINLATMA = "Aydınlatma metinleri = portal kaydı; sürüm numarası her yayında bir artar."
+F_SAKLAMA = ("Saklama: veri sınıfı başına saklama süresi (gün, ayar kaydı) ve bu süreyi dolduran kayıt sayısı (kaydın "
+             "tarihi + süre < bugün).")
+F_IMHA = "İmha önizlemesi: saklama süresi dolan kayıtların veri sınıfı başına sayısı; hiçbir şey silinmez."
+F_IMHA_KAYIT = "İmha tutanakları = gece imha işinin veri sınıfı başına yazdığı silinen kayıt sayısı (portal kaydı)."
+F_ERISIM = "Erişim kaydı = kişisel kayıt görüntüleme ve değişiklik satırları (portal kaydı)."
 
 
 class HrContext:
@@ -86,6 +105,14 @@ class HrContext:
     def llm(self, label: str, priority: Optional[int] = None) -> Any:
         return H.hr_llm(self.rt(), label, priority)
 
+    def kaynak(self, out: Any, got: list, prefix: str, mapping: dict[str, Any], rest: Optional[tuple[str, str]] = None,
+               hidden: Any = (), ignore: Any = ()) -> Any:
+        """Sorgu bilgisi (hr_kaynak): isteğin çalıştırdığı sorgular + alan → formül. Kurulamazsa rakam yine döner."""
+        if not isinstance(out, dict):
+            return out
+        return PV.bagla(out, lambda: HK.build(got, prefix, mapping, out=out, rest=rest, hidden=hidden, ignore=ignore,
+                                              **HK.db_names(self.rt)))
+
 
 def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], None]) -> HrContext:
     from semantic_bridge import admin as admin_mod
@@ -134,8 +161,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/employees")
     def hr_employees(request: Request, status: str = "aktif", q: str = "", unit: str = "") -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        items = H.list_employees(engine, tenant, status=status, q=q, unit_id=unit)
-        return {"items": items, "total": len(items)}
+        with HK.capture(engine) as got:
+            items = H.list_employees(engine, tenant, status=status, q=q, unit_id=unit)
+        out = {"items": items, "total": len(items)}
+        return hr.kaynak(out, got, "calisan", {"total": ("calisanSay", F_CALISAN), "items[]": ("calisan", F_CALISAN)})
 
     @app.post(P + "/employees", status_code=201)
     def hr_employee_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -166,7 +195,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         """CRM ∩ AD'den öneri; hiçbir şey yazmaz."""
         engine, tenant, who = ctx(request)
         need(who, F_EMPLOYEES, what="Çalışan eşitlemesi")
-        return call(preview, engine, tenant)
+        with HK.capture(engine) as got:
+            out = call(preview, engine, tenant)
+        return hr.kaynak(out, got, "esitleme", {"stats": ("esitleme", F_ESITLEME), "units": ("esitlemeBirim", F_ESITLEME_BIRIM),
+                                                 "teams": ("esitlemeEkip", F_ESITLEME_EKIP, ["crm"])},
+                         rest=("esitleme", F_ESITLEME))
 
     @app.post(P + "/employees/sync-apply")
     def hr_sync_apply(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -185,7 +218,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/units")
     def hr_units(request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return {"items": H.list_units(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": H.list_units(engine, tenant)}
+        return hr.kaynak(out, got, "birim", {"items[]": ("birim", F_BIRIM)})
 
     @app.post(P + "/units", status_code=201)
     def hr_unit_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -209,7 +244,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/notices")
     def hr_notices(request: Request, audience: str = "") -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return {"items": H.list_notices(engine, tenant, audience)}
+        with HK.capture(engine) as got:
+            out = {"items": H.list_notices(engine, tenant, audience)}
+        return hr.kaynak(out, got, "aydinlatma", {"items[]": ("aydinlatma", F_AYDINLATMA)})
 
     @app.post(P + "/notices", status_code=201)
     def hr_notice_publish(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -255,7 +292,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/retention")
     def hr_retention(request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return {"items": H.retention(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": H.retention(engine, tenant)}
+        return hr.kaynak(out, got, "saklama", {"items[]": ("saklama", F_SAKLAMA)})
 
     @app.put(P + "/retention")
     def hr_retention_put(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -270,13 +309,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def hr_purge_preview(request: Request) -> dict[str, Any]:
         engine, tenant, who = ctx(request)
         need(who, F_KVKK, what="İmha önizlemesi")
-        return {"items": H.purge_preview(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": H.purge_preview(engine, tenant)}
+        return hr.kaynak(out, got, "imha", {"items[]": ("imha", F_IMHA)})
 
     @app.get(P + "/purge/runs")
     def hr_purge_runs(request: Request, before: int = 0, limit: int = 200) -> dict[str, Any]:
         engine, tenant, who = ctx(request)
         need(who, F_KVKK, F_ACCESS_LOG, what="İmha tutanakları")
-        return H.purge_runs(engine, tenant, before=before or None, limit=limit)
+        with HK.capture(engine) as got:
+            out = H.purge_runs(engine, tenant, before=before or None, limit=limit)
+        return hr.kaynak(out, got, "imhaKayit", {}, rest=("imhaKayit", F_IMHA_KAYIT), ignore=("next", "limit", "before"))
 
     @app.post(P + "/purge/run-due")
     def hr_purge_run_due(request: Request) -> dict[str, Any]:
@@ -292,6 +335,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def hr_access_log(request: Request, subjectId: str = "", user: str = "", before: int = 0, limit: int = 200) -> dict[str, Any]:
         engine, tenant, who = ctx(request)
         need(who, F_ACCESS_LOG, what="İK erişim kaydı")
-        return H.access_log(engine, tenant, subject_id=subjectId, username=user, before=before or None, limit=limit)
+        with HK.capture(engine) as got:
+            out = H.access_log(engine, tenant, subject_id=subjectId, username=user, before=before or None, limit=limit)
+        return hr.kaynak(out, got, "erisim", {}, rest=("erisim", F_ERISIM), ignore=("next", "limit", "before"))
 
     return hr

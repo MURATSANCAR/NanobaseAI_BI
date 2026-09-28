@@ -28,12 +28,40 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import hr_core as H
+from semantic_bridge import hr_kaynak as HK
 from semantic_bridge import hr_learning as L
 from semantic_bridge import hr_learning_sources as S
 from semantic_bridge.hr_api import HrContext
 
 log = logging.getLogger("semantic_bridge.hr.learning.api")
 P = "/api/v1/hr/learning"
+
+
+# Sorgu bilgisi formülleri (hr_kaynak): kural metni; kişi adı ya da sayı içermez.
+F_BENIM = ("Eğitimlerim: zorunlu eğitim durumu = eğitimin geçerlilik süresi ile son tamamlanan katılım (ya da doğrulanmış "
+           "sertifika) tarihinden hesaplanır (geçerli / dolacak: uyarı günü içinde / dolmuş / hiç almamış); geçmiş = "
+           "tamamlanan katılımlar; bekleyen anket = yanıtlanmamış eğitim anketi daveti.")
+F_KULLANIM_BEN = ("Kullanımım: menü öğesi başına ziyaret günü (gün × ekran sayacı, yalnız sizin hesabınız) ve Zeki AI'a "
+                  "sorduğunuz soru sayısı (soru kaydı), seçili gün penceresinde.")
+F_EKIP = "Ekibim: ekip üyesi başına zorunlu eğitim durumu (yukarıdaki kural) ve onay bekleyen katılım talebi sayısı."
+F_PANO = ("Eğitim panosu: süresi dolmuş = geçerliliği geçmiş + zorunlu olup hiç almamış; dolacak = uyarı günü içinde "
+          "dolacak; bu ay oturum = bu ay başlayan oturum (yoklaması kapatılmamış ayrıca); tamamlanma = tamamlanan ÷ katılım. "
+          "Birim × eğitim tablosu aynı kuralla birim bazında.")
+F_DOLACAK = "Süresi dolanlar: zorunlu eğitimlerde durumu geçerli olmayan kişi × eğitim satırları; toplam = satır sayısı."
+F_KATALOG = "Eğitim kataloğu = portal kaydı; kişi başı maliyet ve geçerlilik günü İK'nın girdiği değerdir; sayılar kayıttan."
+F_OTURUM = ("Oturum: katılımcı = onaylı katılım (kontenjan oturum kaydından); yoklama = katıldı / gelmedi işaretli; anket = "
+            "yanıtlanan ÷ gönderilen davet; reddedilen talep = reddedilen katılım.")
+F_ANKET_OZET = ("Eğitim anketi özeti: soru başına ortalama = 1–5 yanıtların ortalaması, n = yanıt; yorumlar kural maskesiyle; "
+                "temaları Zeki AI özetler. Yanıt gizlilik eşiğinin altındaysa ortalama ve tema gösterilmez.")
+F_SERTIFIKA = "Sertifikalar = portal kaydı (dosya ve doğrulama durumu); toplam = satır sayısı."
+F_IHTIYAC = "Eğitim ihtiyaçları: eğitim başına ihtiyaç kaydı sayısı, önceliğe göre (yüksek / orta / düşük) ve toplam."
+F_HARITA = ("Kullanım haritası: birim × ekran = pencerede o ekranı en az bir gün açan farklı kişi sayısı (çalışan kaydındaki "
+            "birimiyle); gizlilik eşiğinden küçük birimler ve kayıtsız hesaplar tek satırda birleştirilir, hesap adı yoktur. "
+            "Toplam = ekranı açan farklı kişi.")
+F_REHBER = "Ekran rehberleri: ekran başına yayındaki rehber sayısı ve oy sayıları (portal kaydı)."
+F_GIDER = ("Eğitim gideri: Logo muhasebe fiş satırlarında ayardaki eğitim gider hesapları (ve alt hesapları) için borç − "
+           "alacak, iptal ve dönem sonu kapanış fişleri hariç; ay ve hesap kırılımı; toplam = Σ. Bütçe = İK'nın girdiği yıllık "
+           "tutar; kullanım = gerçekleşen ÷ bütçe.")
 
 
 def register(app, hr: HrContext) -> None:
@@ -96,19 +124,14 @@ def register(app, hr: HrContext) -> None:
     def learning_me(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         s = st()
-        from semantic_bridge import kampus_kaynak as KK
-        from semantic_bridge import sorgu_izi as IZ
-
-        with IZ.izle(engine) as ran:
+        with HK.capture(engine) as got:
             out = L.me(engine, tenant, who.user, s["alertDays"])
-        out.update(can=can_flags(who), alertDays=s["alertDays"], questions=L.QUESTIONS,
-                   catalog=[{"id": k["id"], "title": k["title"], "kind": k["kind"], "validityDays": k["validityDays"]}
-                            for k in L.list_courses(engine, tenant, active_only=True)],
-                   fileMaxMb=hr.settings()["fileMaxMb"])
-        from semantic_bridge import provenance as PV
-
-        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.kampus.egitim", title="Eğitimlerim",
-                                               text=KK.F_EGITIM, skip=("alertDays", "fileMaxMb", "catalog", "questions")))
+            out.update(can=can_flags(who), alertDays=s["alertDays"], questions=L.QUESTIONS,
+                       catalog=[{"id": k["id"], "title": k["title"], "kind": k["kind"], "validityDays": k["validityDays"]}
+                                for k in L.list_courses(engine, tenant, active_only=True)],
+                       fileMaxMb=hr.settings()["fileMaxMb"])
+        return hr.kaynak(out, got, "egitimim", {"catalog": ("katalog", F_KATALOG, ["semantic_hr_courses"])},
+                         rest=("egitimim", F_BENIM), ignore=("alertDays", "fileMaxMb", "questions"))
 
     @app.get(P + "/me/usage")
     def learning_my_usage(request: Request, days: int = 30, user: str = "") -> dict[str, Any]:
@@ -118,7 +141,9 @@ def register(app, hr: HrContext) -> None:
             raise HTTPException(403, detail={"code": "FORBIDDEN", "message": "Kişi bazında kullanım yalnız kişinin kendisine gösterilir."})
         if not 1 <= days <= 366:
             raise HTTPException(400, detail={"code": "HR", "message": "Gün 1–366 arasında olmalı."})
-        return S.my_usage(engine, tenant, who.user, days)
+        with HK.capture(engine) as got:
+            out = S.my_usage(engine, tenant, who.user, days)
+        return hr.kaynak(out, got, "kullanimim", {}, rest=("kullanimim", F_KULLANIM_BEN), ignore=("days",))
 
     @app.post(P + "/me/certificates", status_code=201)
     async def learning_my_cert_upload(request: Request, filename: str = "", courseId: str = "", title: str = "",
@@ -200,7 +225,9 @@ def register(app, hr: HrContext) -> None:
     def learning_team(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         need(who, L.F_APPROVE, what="Ekibin eğitim durumu")
-        return L.team(engine, tenant, who.user, st()["alertDays"])
+        with HK.capture(engine) as got:
+            out = L.team(engine, tenant, who.user, st()["alertDays"])
+        return hr.kaynak(out, got, "ekip", {}, rest=("ekip", F_EKIP))
 
     @app.post(P + "/me/team/enrollments/{eid}/decide")
     def learning_team_decide(eid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -228,7 +255,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/me/guides")
     def learning_guide_index(request: Request) -> dict[str, Any]:
         engine, tenant, _ = ready(request)
-        return {"items": L.published_index(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": L.published_index(engine, tenant)}
+        return hr.kaynak(out, got, "rehberim", {"items[]": ("rehber", F_REHBER)})
 
     @app.get(P + "/me/guides/{gid}")
     def learning_guide_read(gid: str, request: Request) -> dict[str, Any]:
@@ -258,10 +287,11 @@ def register(app, hr: HrContext) -> None:
     def learning_dashboard(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         people = who.can(L.F_MANAGE)
-        out = L.dashboard(engine, tenant, alert_days=st()["alertDays"], people=people)
+        with HK.capture(engine) as got:
+            out = L.dashboard(engine, tenant, alert_days=st()["alertDays"], people=people)
         if people:
             H.log_access(engine, tenant, who.user, "calisan", "egitim-pano", "goruntule", "zorunlu eğitim durumu")
-        return out
+        return hr.kaynak(out, got, "egitimPano", {}, rest=("pano", F_PANO), ignore=("alertDays",))
 
     @app.get(P + "/expiring")
     def learning_expiring(request: Request, days: Optional[int] = None) -> dict[str, Any]:
@@ -271,9 +301,11 @@ def register(app, hr: HrContext) -> None:
         d = st()["alertDays"] if days is None else days
         if d is not None and not 0 <= d <= 3650:
             raise HTTPException(400, detail={"code": "HR", "message": "Gün 0–3650 arasında olmalı."})
-        items = [x for x in L.mandatory_status(engine, tenant, days=d or 0) if x["status"] != "gecerli"]
+        with HK.capture(engine) as got:
+            items = [x for x in L.mandatory_status(engine, tenant, days=d or 0) if x["status"] != "gecerli"]
         H.log_access(engine, tenant, who.user, "calisan", "egitim-dolacak", "goruntule", "zorunlu eğitim listesi")
-        return {"days": d, "items": items, "total": len(items)}
+        out = {"days": d, "items": items, "total": len(items)}
+        return hr.kaynak(out, got, "dolacak", {"items[]": ("dolacak", F_DOLACAK), "total": "hesap:dolacak"}, ignore=("days",))
 
     @app.get(P + "/export/expiring.csv")
     def learning_expiring_csv(request: Request, days: Optional[int] = None) -> Response:
@@ -298,7 +330,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/courses")
     def learning_courses(request: Request, active: bool = False) -> dict[str, Any]:
         engine, tenant, _ = ready(request)
-        return {"items": L.list_courses(engine, tenant, active_only=active)}
+        with HK.capture(engine) as got:
+            out = {"items": L.list_courses(engine, tenant, active_only=active)}
+        return hr.kaynak(out, got, "katalog", {"items[]": ("katalog", F_KATALOG)})
 
     @app.post(P + "/courses", status_code=201)
     def learning_course_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -322,7 +356,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(P + "/sessions")
     def learning_sessions(request: Request, state: str = "", course: str = "") -> dict[str, Any]:
         engine, tenant, _ = ready(request)
-        return {"items": L.list_sessions(engine, tenant, state=state, course_id=course)}
+        with HK.capture(engine) as got:
+            out = {"items": L.list_sessions(engine, tenant, state=state, course_id=course)}
+        return hr.kaynak(out, got, "oturumlar", {"items[]": ("oturum", F_OTURUM)})
 
     @app.post(P + "/sessions", status_code=201)
     def learning_session_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -337,10 +373,11 @@ def register(app, hr: HrContext) -> None:
     def learning_session(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         people = who.can(L.F_MANAGE)
-        out = call(L.get_session, engine, tenant, sid, people=people)
+        with HK.capture(engine) as got:
+            out = call(L.get_session, engine, tenant, sid, people=people)
         if people:
             H.log_access(engine, tenant, who.user, "calisan", f"oturum:{sid}"[:40], "goruntule", "katılımcı listesi")
-        return out
+        return hr.kaynak(out, got, "oturum", {}, rest=("oturum", F_OTURUM))
 
     @app.patch(P + "/sessions/{sid}")
     def learning_session_update(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -397,7 +434,12 @@ def register(app, hr: HrContext) -> None:
     def learning_feedback_summary(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         need(who, L.F_MANAGE, what="Geri bildirim sonuçları")
-        return call(L.feedback_summary, engine, tenant, sid, st()["minGroup"])
+        with HK.capture(engine) as got:
+            out = call(L.feedback_summary, engine, tenant, sid, st()["minGroup"])
+        hidden = ["averages", "themes"] if out.get("hidden") else []
+        return hr.kaynak(out, got, "egitimAnket", {"responses": ("anketSay", F_ANKET_OZET), "invited": "hesap:anketSay",
+                                                   "minGroup": "hesap:anketSay"},
+                         rest=("anketOzet", F_ANKET_OZET), hidden=hidden)
 
     @app.post(P + "/sessions/{sid}/feedback-themes", status_code=202)
     def learning_feedback_themes(sid: str, request: Request) -> dict[str, Any]:
@@ -426,9 +468,11 @@ def register(app, hr: HrContext) -> None:
     def learning_certificates(request: Request, employeeId: str = "", unverified: bool = False) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         need(who, L.F_MANAGE, what="Sertifika kayıtları")
-        items = L.list_certificates(engine, tenant, employee_id=employeeId, unverified=unverified)
+        with HK.capture(engine) as got:
+            items = L.list_certificates(engine, tenant, employee_id=employeeId, unverified=unverified)
         H.log_access(engine, tenant, who.user, "calisan", employeeId or "egitim-sertifika", "goruntule", "sertifika kayıtları")
-        return {"items": items, "total": len(items)}
+        out = {"items": items, "total": len(items)}
+        return hr.kaynak(out, got, "sertifika", {"items[]": ("sertifika", F_SERTIFIKA), "total": "hesap:sertifika"})
 
     @app.post(P + "/certificates", status_code=201)
     def learning_certificate_record(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -478,7 +522,9 @@ def register(app, hr: HrContext) -> None:
     def learning_needs(request: Request, state: str = "") -> dict[str, Any]:
         engine, tenant, who = ready(request)
         people = who.can(L.F_MANAGE)
-        return L.list_needs(engine, tenant, state=state, people=people)
+        with HK.capture(engine) as got:
+            out = L.list_needs(engine, tenant, state=state, people=people)
+        return hr.kaynak(out, got, "ihtiyac", {}, rest=("ihtiyac", F_IHTIYAC))
 
     @app.post(P + "/needs", status_code=201)
     def learning_need_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -533,14 +579,18 @@ def register(app, hr: HrContext) -> None:
         need(who, L.F_USAGE, what="Portal kullanım haritası")
         if not 1 <= days <= 366:
             raise HTTPException(400, detail={"code": "HR", "message": "Gün 1–366 arasında olmalı."})
-        return S.usage_map(engine, tenant, days, st()["minGroup"])
+        with HK.capture(engine) as got:
+            out = S.usage_map(engine, tenant, days, st()["minGroup"])
+        return hr.kaynak(out, got, "harita", {}, rest=("harita", F_HARITA), ignore=("days", "minGroup"))
 
     # ------------------------------------------------------------------ rehberler
 
     @app.get(P + "/guides")
     def learning_guides(request: Request) -> dict[str, Any]:
         engine, tenant, _ = ready(request)
-        return {"items": L.list_guides(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": L.list_guides(engine, tenant)}
+        return hr.kaynak(out, got, "rehber", {"items[]": ("rehber", F_REHBER)})
 
     @app.post(P + "/guides", status_code=201)
     def learning_guide_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -608,10 +658,17 @@ def register(app, hr: HrContext) -> None:
         if s.get("accountsError"):
             raise HTTPException(422, detail={"code": "HR", "message": "Eğitim gider hesapları ayarı geçersiz (Portal ayarları → İnsan kaynakları)."})
         conn = hr.rt().settings.connection_file
-        spend = await run_in_threadpool(call, S.read_spend, conn, y, s["accounts"])
-        b = L.budget(engine, tenant, y)
+
+        def work() -> tuple[dict[str, Any], Any, list]:
+            with HK.capture(engine) as got:      # iş parçacığında: Logo metni + bütçe okuması yakalanır
+                sp = call(S.read_spend, conn, y, s["accounts"])
+                bb = L.budget(engine, tenant, y)
+            return sp, bb, got
+
+        spend, b, got = await run_in_threadpool(work)
         ratio = round(spend["total"] / b["amount"], 4) if spend.get("total") is not None and b and b["amount"] else None
-        return {**spend, "budget": b, "ratio": ratio, "accountCodes": s["accounts"]}
+        out = {**spend, "budget": b, "ratio": ratio, "accountCodes": s["accounts"]}
+        return await run_in_threadpool(hr.kaynak, out, got, "gider", {}, ("gider", F_GIDER), (), ("year", "months[].month", "budget.year"))
 
     @app.get(P + "/spend/accounts")
     async def learning_spend_accounts(request: Request, year: int = 0) -> dict[str, Any]:

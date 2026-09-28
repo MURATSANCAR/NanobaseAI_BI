@@ -189,7 +189,9 @@ def read_preview(crm_file: str, schema: str, manager_column: str, ad_conf: dict[
                  stored_employees: list[dict[str, Any]], stored_units: list[dict[str, Any]],
                  ad_reader: Optional[Callable[[dict[str, str]], Optional[dict[str, dict[str, Any]]]]] = None) -> dict[str, Any]:
     """CRM + AD'yi okuyup öneriyi kurar. CRM okunamazsa SourceError; AD okunamazsa not düşülür, CRM ile devam edilir."""
-    run = runner(crm_file)
+    from semantic_bridge import hr_kaynak
+
+    run = hr_kaynak.recording("crm", "CRM kullanıcı, birim ve ekip okuması", runner(crm_file))   # sorgu bilgisi
     p = prefix(schema)
     users = crm_users(run, p)
     units, note = crm_units(run, p, manager_column)

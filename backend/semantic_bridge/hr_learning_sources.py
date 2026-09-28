@@ -241,7 +241,12 @@ def read_spend(connection_file: str, year: int, accounts: list[str]) -> dict[str
     firm = firms.get(year)
     if not firm:
         raise SourceError(f"Logo'da {year} yılının dönemi yok.")
-    rows = run(spend_sql(firm, year, accounts))
+    from semantic_bridge import hr_kaynak
+
+    text = spend_sql(firm, year, accounts)
+    rows = run(text)
+    hr_kaynak.record("logo", f"Logo muhasebe · eğitim gider hesapları · {year}", text,
+                     description="Ay × hesap: borç − alacak; iptal ve dönem sonu kapanış fişleri hariç. Hesaplar ayardan.")
     months: dict[int, float] = {}
     by_acc: dict[str, dict[str, Any]] = {}
     total = 0.0
@@ -254,6 +259,7 @@ def read_spend(connection_file: str, year: int, accounts: list[str]) -> dict[str
         a["amount"] += v
         total += v
     end_rows = run(data_end_sql(firm))
+    hr_kaynak.record("logo", "Logo muhasebe veri sonu", data_end_sql(firm), description="Son muhasebe satırının tarihi.")
     end = end_rows[0].get("son") if end_rows else None
     return {"year": year, "configured": True, "firm": firm, "total": round(total, 2),
             "months": [{"month": m, "amount": round(v, 2)} for m, v in sorted(months.items())],
