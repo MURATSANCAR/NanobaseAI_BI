@@ -330,6 +330,66 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		  '		deleted -= set(frappe.get_all(ref, filters={"name": ["in", list(deleted)]}, pluck="name"))\n'
 		  '	to_remove = exits | deleted\n')],
 	),
+	# ── Türkçe: üst kaynakta çeviriden geçmeyen kayıt ekranı metinleri (__ ile sarılır; Türkçesi tr.po'da) ──
+	(
+		'helpdesk/desk/src/components/ticket-agent/TicketActivityPanel.vue',
+		[
+		 ('import CommunicationArea from "@/components/CommunicationArea.vue";\n', 'import CommunicationArea from "@/components/CommunicationArea.vue";\nimport { __ } from "@/translation";\n'),
+		 ('      label: "Activity",\n', '      label: __("Activity"),\n'),
+		 ('      label: "Emails",\n', '      label: __("Emails"),\n'),
+		 ('      label: "Comments",\n', '      label: __("Comments"),\n'),
+		 ('      label: "Calls",\n', '      label: __("Calls"),\n'),
+		 ('    label: "Analytics",\n', '    label: __("Analytics"),\n'),
+		],
+	),
+	(
+		'helpdesk/desk/src/components/ticket-agent/TicketDetailsTab.vue',
+		[
+		 ('      `Set ${fieldMeta?.label || fieldTemplate.fieldname}...`,\n', '      __("Set {0}...", [__(fieldMeta?.label || fieldTemplate.fieldname)]),\n'),
+		],
+	),
+	(
+		'helpdesk/desk/src/components/ticket-agent/TicketSLA.vue',
+		[
+		 ('rows.push({ label: "Due by", value:', 'rows.push({ label: __("Due by"), value:'),
+		 ('      label: "On hold since",\n', '      label: __("On hold since"),\n'),
+		 ('      label: metric.delayInWorkingHours ? "Delay (working hours)" : "Delay",\n', '      label: metric.delayInWorkingHours ? __("Delay (working hours)") : __("Delay"),\n'),
+		 ('        label: "Delay (total)",\n', '        label: __("Delay (total)"),\n'),
+		 ('      label: "Fulfilled in",\n', '      label: __("Fulfilled in"),\n'),
+		],
+	),
+	(
+		'helpdesk/desk/src/composables/useSLA.ts',
+		[
+		 ('import { dayjs } from "frappe-ui";\n', 'import { dayjs } from "frappe-ui";\nimport { __ } from "@/translation";\n'),
+		 ('        `Due in ${coarseDuration(d.response_by)}`,\n', '        __("Due in {0}", [coarseDuration(d.response_by)]),\n'),
+		 ('        `Due in ${coarseDuration(d.resolution_by)}`,\n', '        __("Due in {0}", [coarseDuration(d.resolution_by)]),\n'),
+		 ('metric("overdue", `Overdue by ${overdue}`, "red", {', 'metric("overdue", __("Overdue by {0}", [overdue]), "red", {'),
+		 ('metric("hold", "On Hold", "blue", {', 'metric("hold", __("On Hold"), "blue", {'),
+		 ('metric("failed", `Failed by ${failed}`, "red", {', 'metric("failed", __("Failed by {0}", [failed]), "red", {'),
+		],
+	),
+	(
+		'helpdesk/desk/src/components/CommunicationArea.vue',
+		[
+		 ('          label="Reply"\n', '          :label="__(\'Reply\')"\n'),
+		 ('          label="Comment"\n', '          :label="__(\'Comment\')"\n'),
+		 ("              isMobileView ? 'Send' : isMac ? 'Send (⌘ + ⏎)' : 'Send (Ctrl + ⏎)'\n", "              isMobileView ? __('Send') : isMac ? __('Send') + ' (⌘ + ⏎)' : __('Send') + ' (Ctrl + ⏎)'\n"),
+		 ('            placeholder="Hi John, we are looking into this issue."\n', '            :placeholder="__(\'Hi John, we are looking into this issue.\')"\n'),
+		],
+	),
+	(
+		'helpdesk/desk/src/components/EmailEditor.vue',
+		[
+		 ('            <Button label="Discard" @click="handleDiscard" />\n', '            <Button :label="__(\'Discard\')" @click="handleDiscard" />\n'),
+		],
+	),
+	(
+		'helpdesk/desk/src/components/CommentTextEditor.vue',
+		[
+		 ('                label="Discard"\n', '                :label="__(\'Discard\')"\n'),
+		],
+	),
 	# ── Flow ──────────────────────────────────────────────────────────────
 	(
 		"flow/flow/hooks.py",

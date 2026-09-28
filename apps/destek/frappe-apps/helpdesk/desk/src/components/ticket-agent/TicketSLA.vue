@@ -99,11 +99,11 @@ function cardDetails(card: SLACard) {
   const metric = card.metric;
   const rows = [];
   if (metric.dueBy) {
-    rows.push({ label: "Due by", value: fmt(metric.dueBy), danger: false });
+    rows.push({ label: __("Due by"), value: fmt(metric.dueBy), danger: false });
   }
   if (metric.state === "hold") {
     rows.push({
-      label: "On hold since",
+      label: __("On hold since"),
       value: fmt(ticket.value.doc.on_hold_since as string),
       danger: false,
     });
@@ -119,13 +119,13 @@ function cardDetails(card: SLACard) {
   }
   if (metric.delay) {
     rows.push({
-      label: metric.delayInWorkingHours ? "Delay (working hours)" : "Delay",
+      label: metric.delayInWorkingHours ? __("Delay (working hours)") : __("Delay"),
       value: metric.delay,
       danger: true,
     });
     if (metric.calendarDelay) {
       rows.push({
-        label: "Delay (total)",
+        label: __("Delay (total)"),
         value: `+${metric.calendarDelay}`,
         danger: true,
       });
@@ -133,7 +133,7 @@ function cardDetails(card: SLACard) {
   }
   if (metric.fulfilledIn) {
     rows.push({
-      label: "Fulfilled in",
+      label: __("Fulfilled in"),
       value: metric.fulfilledIn,
       danger: false,
     });
