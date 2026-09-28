@@ -89,18 +89,18 @@ def test_male_narrator_candidates_are_selectable_not_default():
         assert not re.search(r"\b(clone|voice of|sounds like|imitat)", v["design"], re.I)   # tarif, kişi değil
 
 
-def test_default_male_narrator_is_the_warm_storyteller(tmp_path, monkeypatch):
-    """Kullanıcı kararı 2026-09-27: erkek anlatıcı = «sıcak masalcı». Eski «Erkek anlatıcı» kimliği ona yönlenir,
-    listede ayrı satır yoktur; ekranda anlatıcı grubunda erkeklerin en üstünde, «önerilen»."""
-    assert N.DEFAULT_MALE_NARRATOR == "anlatici-erkek-masalci"
+def test_default_male_narrator_is_the_radio_actor(tmp_path, monkeypatch):
+    """Kullanıcı kararı 2026-09-28: erkek anlatıcı = «radyo oyuncusu» (önceki «sıcak masalcı» listede kalır). Eski
+    «Erkek anlatıcı» kimliği ona yönlenir, listede ayrı satır yoktur; ekranda kendi grubunda «önerilen»."""
+    assert N.DEFAULT_MALE_NARRATOR == "canli-erkek-radyo"
     assert N.canonical("anlatici-erkek") == N.DEFAULT_MALE_NARRATOR and N.canonical("anlatici-kadin") == "anlatici-kadin"
     assert N.is_voice("anlatici-erkek") and N.voice("anlatici-erkek")["id"] == N.DEFAULT_MALE_NARRATOR
     listed = N.all_voices()
     assert "anlatici-erkek" not in {v["id"] for v in listed}
+    rec = [v for v in listed if v.get("recommended")]
+    assert [v["id"] for v in rec] == [N.DEFAULT_MALE_NARRATOR] and rec[0]["group"] == "canli"
     grp = [v for v in listed if v["group"] == "anlatici"]
-    males = [v for v in grp if "Erkek" in v["label"]]
-    assert males[0]["id"] == N.DEFAULT_MALE_NARRATOR and males[0]["recommended"] is True
-    assert grp[0]["id"] == N.DEFAULT_NARRATOR and grp[1]["id"] == N.DEFAULT_MALE_NARRATOR
+    assert grp[0]["id"] == N.DEFAULT_NARRATOR and "anlatici-erkek-masalci" in {v["id"] for v in grp}
     assert sum(bool(v.get("recommended")) for v in listed) == 1
     # kayıtlı ayar ve API isteği: eski kimlik güncel sese çevrilir
     monkeypatch.setattr(studio, "root", lambda: tmp_path)

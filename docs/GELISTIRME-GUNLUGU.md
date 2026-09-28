@@ -153,6 +153,19 @@ yapıldı. Dal `dyk` (`worktree-agent-a1cb5812695096adf` ucunun üstünde: M45/M
   gri kural; paket değişmezliği; Zeki AI özeti; yetki) → `cleanup.py --actor timasai`; `timas-kurul.service` ilk kez elle,
   sonra zamanlayıcı. Kurul üyeleri, gösterge sahipleri ve eşikler kullanıcıdan (rol ataması prod öncesi).
 
+## 2026-09-28 (10:30) — Varsayılan erkek anlatıcı «radyo oyuncusu»; kısa ünlem en az süre; kısa fısıltı ölçüldü
+
+- **Erkek anlatıcı:** 12 erkek ses aynı 10 cümleyle ölçüldü; eski varsayılan «sıcak masalcı» ünlemli cümlede 4,8 yarım ton
+  (en düz ikinci). Kullanıcı üç sesi dinleyip **radyo oyuncusu**nu (`canli-erkek-radyo`, 8,4 yt, harf hatası %2,6) seçti.
+  `DEFAULT_MALE_NARRATOR` ve `anlatici-erkek` takma adı ona gider; referansı pakete sabitlendi (`production/sesler/`,
+  sha256 PINNED'de). Sıcak masalcı listede kalır, onu seçmiş kitaplar değişmez. Heyecan ifade örneği yine kapalı (perde
+  +%26…+%41 ortanca, en çok +%145). Belge: `docs/analiz/sesli-okuma-erkek-anlatici-ve-kisa-fisilti.md`.
+- **Kısa ünlem:** en çok 3 kelimelik «!» parçasına hece başına 0,28 sn en az süre (`narration.excl_min_sec`); ses servisi
+  daha kısa üretirse perdeyi koruyarak esnetir (`min_sec`, en çok %40; `editor-voice:4`). Yalnız bu parçaları içeren
+  sayfalar güncel değil olur. Servis düzenlemesinde üretim satırı silinmişti; ölçüm sırasında kurulmadan yakalandı.
+- **Kısa fısıltı:** 1–3 kelimede talimat yolu harf hatasını 3–10 kat artırıyor (kelime yutuluyor): `MIN_STYLE_WORDS = 5`
+  kalır. 5+ kelimede de gerçek fısıltı 11/42 parçada; çoğu «alçak ses» (enerji −5…−6,5 dB).
+
 ## 2026-09-28 (09:10) — Sesli okuma ikinci dinleme; insan kaydı yükleme GPU + test sunucusunda canlı
 
 - **İkinci dinleme** (aynı kitap, iki ses, yeni sürüm): canlı kadın seste cümle içi ≥0,55 sn durak 12 → 0, «diye» kopması ve

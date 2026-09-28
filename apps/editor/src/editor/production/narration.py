@@ -64,7 +64,7 @@ def _v(vid: str, label: str, note: str, group: str, design: str) -> dict:
 VOICES: list[dict] = [
     _v("anlatici-kadin", "Kadın anlatıcı", "sıcak, sakin", "anlatici",
        "A warm, calm middle-aged woman storyteller, clear gentle diction, unhurried pace"),
-    # Önerilen erkek anlatıcı (DEFAULT_MALE_NARRATOR): referansı sabit kayıttır (PINNED), tariften yeniden üretilmez.
+    # 2026-09-27–28 arası önerilen erkek anlatıcıydı; referansı sabit kayıttır (PINNED), tariften yeniden üretilmez.
     _v("anlatici-erkek-masalci", "Erkek anlatıcı · sıcak masalcı", "olgun, kadifemsi, yavaş", "anlatici",
        "A warm, mature man in his late forties telling a bedtime story to small children: deep, velvety, gentle voice "
        "with a soft smile in it, slow calm pace, very clear Turkish diction, natural pauses at commas and full stops, "
@@ -133,9 +133,12 @@ VOICES: list[dict] = [
 from .voices_lively import extend as _lively; GROUPS, VOICES = _lively(GROUPS, VOICES)  # noqa: E402,E702 — CANLI MASAL ANLATICISI kancası (voices_lively.py)
 VOICE_IDS = {v["id"] for v in VOICES}
 DEFAULT_NARRATOR = "anlatici-kadin"
-# Erkek anlatıcı istendiğinde kullanılan ses (kullanıcı kararı 2026-09-27: «sıcak masalcı»). Eski «Erkek anlatıcı»
-# (`anlatici-erkek`) bu sese yönlenir: kayıtlı ayar ve API isteği çalışır, ekranda ayrı satır olarak görünmez.
-DEFAULT_MALE_NARRATOR = "anlatici-erkek-masalci"
+# Erkek anlatıcı istendiğinde kullanılan ses. Kullanıcı kararı 2026-09-28: «radyo oyuncusu» (12 erkek ses dinlenip
+# ölçüldü: ünlemli cümlede perde aralığı 8,4 yarım ton, önceki varsayılan «sıcak masalcı» 4,8; harf hatası %2,6 —
+# docs/analiz/sesli-okuma-erkek-anlatici-ve-kisa-fisilti.md). 2026-09-27'deki «sıcak masalcı» kararının yerine; o ses
+# listede kalır, seçmiş kitaplar değişmez. Eski «Erkek anlatıcı» (`anlatici-erkek`) bu sese yönlenir: kayıtlı ayar ve API
+# isteği çalışır, ekranda ayrı satır olarak görünmez.
+DEFAULT_MALE_NARRATOR = "canli-erkek-radyo"
 ALIASES = {"anlatici-erkek": DEFAULT_MALE_NARRATOR}
 RECOMMENDED = {DEFAULT_MALE_NARRATOR}
 # Referans cümle: Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez bununla üretilir, sonra klonlanır.
@@ -150,6 +153,10 @@ PINNED_DIR = Path(__file__).with_name("sesler")
 PINNED = {
     "anlatici-erkek-masalci": {"file": "anlatici-erkek-masalci.wav", "text": REF_TEXT,
                                "sha256": "41c9a3b283e3ceaed33a5e93ce8ef7b21ef3ae12210ff007399ceeecdcffc785"},
+    # radyo oyuncusu: 2026-09-27'de dinlenip sabitlenen referans (tohum 20260926, 48 kHz tek kanal, 8,0 sn), yayınevi
+    # klasöründeki `_ses/sesler/canli-erkek-radyo.wav` ile birebir aynı
+    "canli-erkek-radyo": {"file": "canli-erkek-radyo.wav", "text": REF_TEXT,
+                          "sha256": "afe289c508e43fb19becc8e80249d3f4018a103047909bf7e882f546fae02b3c"},
 }
 _pinned_ok: dict[str, tuple[float, int]] = {}
 
