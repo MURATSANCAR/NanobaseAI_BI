@@ -213,8 +213,9 @@ def main() -> int:
 
     # 4 --------------------------------------------------------------- koşu toplamı
     with engine.connect() as c:
-        sums = {r.para: round(float(r.t or 0), 2) for r in c.execute(sa.text(
-            "SELECT para, SUM(net) AS t FROM semantic_royalty_run_lines WHERE run_id = :r AND durum = 'hesaplandi' GROUP BY para"),
+        # «t» takma adı SQLAlchemy 2 Row.t (demet) özniteliğiyle çakışıyordu: toplam «toplam» adıyla okunur.
+        sums = {r.para: round(float(r.toplam or 0), 2) for r in c.execute(sa.text(
+            "SELECT para, SUM(net) AS toplam FROM semantic_royalty_run_lines WHERE run_id = :r AND durum = 'hesaplandi' GROUP BY para"),
             {"r": run["id"]}).all()}
     api_sums: dict[str, float] = {}
     for ln in lines:
