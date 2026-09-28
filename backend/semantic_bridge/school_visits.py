@@ -45,29 +45,11 @@ PAGE_SIZE = 50
 
 # ------------------------------------------------------------------------------------------ tablolar
 
-#: M30 ile ortak ziyaret tablosu kendi MetaData'sında: hangi modül önce kurarsa o açar (checkfirst), öteki dokunmaz.
-_shared_md = sa.MetaData()
-SAHA_ZIYARET = sa.Table(
-    "semantic_saha_ziyaret", _shared_md,
-    sa.Column("id", sa.String(32), primary_key=True),
-    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
-    sa.Column("tur", sa.String(10), nullable=False),                  # cari | okul | kurum
-    sa.Column("hedef_kimlik", sa.String(60), nullable=False, index=True),  # logo_clientref / ziyaret_yeri_id / crm_account_id
-    sa.Column("sahip", sa.String(120), nullable=False, index=True),   # AD hesabı
-    sa.Column("planlanan", sa.DateTime(timezone=True)),
-    sa.Column("gerceklesen", sa.DateTime(timezone=True)),
-    sa.Column("durum", sa.String(12), nullable=False),                # planlandi | yapildi | iptal
-    sa.Column("not", sa.Text),
-    sa.Column("ton", sa.String(12)),                                  # olumlu | notr | olumsuz
-    sa.Column("sonraki_adim", sa.String(300)),
-    sa.Column("sonraki_tarih", sa.Date),
-    sa.Column("soz_odeme_tarihi", sa.Date),
-    sa.Column("soz_odeme_tutari", sa.Numeric(18, 2)),
-    sa.Column("gizli", sa.Boolean, nullable=False, default=False),
-    sa.Column("eslik_eden_bayi", sa.String(40)),                      # logo_clientref
-    sa.Column("olusturma", sa.DateTime(timezone=True), nullable=False),
-    sa.Column("guncelleme", sa.DateTime(timezone=True)),
-)
+#: M30 ile ortak ziyaret tablosu. Tek tanım M30'da (`field_sales.VISITS`; tabloyu M30 açtı): not kolonu `notu`,
+#: zamanlar İstanbul saatiyle metin (`YYYY-MM-DD` ya da `YYYY-MM-DDTHH:MM`), `olusturan` zorunlu. M31'in kendi kopya
+#: tanımı (`not`, tarih tipleri) canlıdaki tabloyla uyuşmuyordu; okul kartı ve dönem raporu 502 veriyordu (2026-09-28).
+#: M31 içinde zamanlar datetime/date olarak dolaşır; tabloya yazarken ve okurken aşağıdaki çeviricilerden geçer.
+from semantic_bridge.field_sales import VISITS as SAHA_ZIYARET  # noqa: E402
 
 _md = sa.MetaData()
 PROFILES = sa.Table(
@@ -207,7 +189,7 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _shared_md.create_all(engine, checkfirst=True)   # CREATE TABLE IF NOT EXISTS (M30 önce kurduysa dokunmaz)
+        SAHA_ZIYARET.metadata.create_all(engine, tables=[SAHA_ZIYARET], checkfirst=True)   # M30 önce kurduysa dokunmaz
         _md.create_all(engine, checkfirst=True)
         _ready.add(id(engine))
 
@@ -250,6 +232,39 @@ def local_day(v: Any) -> Optional[str]:
     if isinstance(v, date):
         return v.isoformat()
     return None
+
+
+def _to_shared(v: Any) -> Optional[str]:
+    """datetime/date → ortak ziyaret tablosunun biçimi (İstanbul saatiyle metin)."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, datetime):
+        return (v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v).astimezone(TZ).strftime("%Y-%m-%dT%H:%M")
+    if isinstance(v, date):
+        return v.isoformat()
+    return str(v)[:19]
+
+
+def _from_shared(v: Any) -> Optional[datetime]:
+    """Ortak tablodaki metin zaman → İstanbul saat dilimli datetime (yalnız gün yazılmışsa gün başı)."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, datetime):
+        return v if v.tzinfo else v.replace(tzinfo=TZ)
+    try:
+        d = datetime.fromisoformat(str(v)[:16])
+    except ValueError:
+        return None
+    return d.replace(tzinfo=TZ) if d.tzinfo is None else d
+
+
+def _shared_row(r: dict[str, Any]) -> dict[str, Any]:
+    r["gerceklesen"] = _from_shared(r.get("gerceklesen"))
+    r["planlanan"] = _from_shared(r.get("planlanan"))
+    nd = r.get("sonraki_tarih")
+    r["sonraki_tarih"] = date.fromisoformat(str(nd)[:10]) if nd and not isinstance(nd, date) else nd
+    r["not"] = r.get("notu")
+    return r
 
 
 def _dstr(v: Any) -> Optional[str]:
@@ -1123,8 +1138,11 @@ def add_visit(engine: sa.engine.Engine, tenant: str, user: str, display: str, si
     vid = uuid.uuid4().hex
     at = now_utc()
     with engine.begin() as c:
+        row = {**vals, "notu": vals.pop("not", None), "gerceklesen": _to_shared(vals.get("gerceklesen")),
+               "planlanan": _to_shared(vals.get("planlanan")), "sonraki_tarih": _to_shared(vals.get("sonraki_tarih"))}
+        row.pop("not", None)
         c.execute(SAHA_ZIYARET.insert().values(id=vid, tenant_id=tenant, tur="okul", hedef_kimlik=sid, sahip=user,
-                                               olusturma=at, **vals))
+                                               olusturan=user, olusturma=at, **row))
         c.execute(VISIT_DETAILS.insert().values(ziyaret_id=vid, tenant_id=tenant, sahip_ad=display, **details))
     bump()
     return vid
@@ -1144,9 +1162,11 @@ def load_visits(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] 
     if vid:
         q = q.where(SAHA_ZIYARET.c.id == vid)
     if since:
-        q = q.where(sa.or_(SAHA_ZIYARET.c.gerceklesen >= since, SAHA_ZIYARET.c.planlanan >= since))
+        # Metin zamanlar aynı biçimde (İstanbul, YYYY-AA-GG[THH:MM]); sözlük sırası zaman sırasıdır.
+        edge = _to_shared(since)
+        q = q.where(sa.or_(SAHA_ZIYARET.c.gerceklesen >= edge, SAHA_ZIYARET.c.planlanan >= edge))
     with engine.connect() as c:
-        return [dict(r) for r in c.execute(q.order_by(SAHA_ZIYARET.c.olusturma.desc())).mappings()]
+        return [_shared_row(dict(r)) for r in c.execute(q.order_by(SAHA_ZIYARET.c.olusturma.desc())).mappings()]
 
 
 def visit_view(r: dict[str, Any], *, viewer: str, can_all: bool) -> dict[str, Any]:
@@ -1178,7 +1198,7 @@ def last_visits(engine: sa.engine.Engine, tenant: str) -> dict[str, str]:
     out = {}
     with engine.connect() as c:
         for sid, at in c.execute(q):
-            day = local_day(at)
+            day = local_day(_from_shared(at))
             if day:
                 out[sid] = day
     return out

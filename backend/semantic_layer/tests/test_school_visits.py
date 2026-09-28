@@ -302,3 +302,28 @@ def test_dealer_pick_and_note_fields():
     out = SV.ai_note_fields(llm, "Müdürle görüştüm, çok ilgili. Minik Kaşif istendi.", m.books, 0.7, 0.3)
     assert out["ilgi"] == "yuksek" and out["kisiRolu"] == "mudur"
     assert out["istenenKitaplar"] == [{"code": "15201001", "title": "Minik Kaşif"}] and out["bayiYonlendirildi"] is True
+
+
+def test_shared_visit_table_is_the_one_m30_created():
+    """Canlıda tabloyu M30 açtı (`notu`, metin zamanlar, `olusturan` zorunlu); M31'in kopya tanımı `not` kolonunu arıyor,
+    okul kartı ve dönem raporu 502 veriyordu (2026-09-28). Tek tanım: M31 ziyareti M30'un tablosuna yazar ve geri okur."""
+    import sqlalchemy as sa
+    from semantic_bridge import field_sales as FS
+
+    assert SV.SAHA_ZIYARET is FS.VISITS
+    e = open_store("sqlite://").engine
+    FS.VISITS.metadata.create_all(e, tables=[FS.VISITS])              # önce M30 (canlıdaki sıra)
+    SV._ready.discard(id(e))
+    SV.ensure(e)
+    vals = SV.visit_values({"durum": "yapildi", "gerceklesen": "2026-09-20", "ilgi": "orta", "not": "Kütüphane için liste",
+                            "sonrakiAdim": "Katalog bırak", "sonrakiTarih": "2026-10-05"}, None, date(2026, 9, 28))
+    SV.add_visit(e, T, "ayse", "Ayşe", S1, vals)
+    with e.connect() as c:
+        raw = dict(c.execute(sa.select(FS.VISITS)).mappings().one())
+    assert raw["notu"] == "Kütüphane için liste" and raw["olusturan"] == "ayse"
+    assert raw["gerceklesen"].startswith("2026-09-20") and raw["sonraki_tarih"] == "2026-10-05"
+    [row] = SV.load_visits(e, T, school=S1, since=datetime(2026, 9, 1, tzinfo=SV.TZ))
+    view = SV.visit_view(row, viewer="ayse", can_all=False)
+    assert view["note"] == "Kütüphane için liste" and view["day"] == "2026-09-20" and view["nextDay"] == "2026-10-05"
+    assert SV.load_visits(e, T, school=S1, since=datetime(2026, 9, 21, tzinfo=SV.TZ)) == []
+    assert SV.last_visits(e, T) == {S1: "2026-09-20"}
