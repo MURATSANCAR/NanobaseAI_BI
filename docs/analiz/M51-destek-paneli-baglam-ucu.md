@@ -27,6 +27,7 @@ portal oturumunu taşımaz; masanın **sunucusu** köprüyü çağırır. Bu yü
 | `GET /destek-baglam/v1/context?email=…` / `phone=` / `order=` / `account=<CRM cari GUID>` | aynı | Aynı, ölçütle |
 | `GET /destek-baglam/v1/insight?ticket=HD-123` | `/api/v1/support/panel/insight` | Zeki AI konu, aciliyet, SSS eşleşmesi, son taslak |
 | `POST /destek-baglam/v1/draft` `{"ticket":"HD-123","order":"TS-1"?,"account":"…"?}` | `/api/v1/support/panel/draft` | Cevap taslağı (gönderilmez) |
+| `POST /destek-baglam/v1/classify` `{"ticket":"HD-123","subject":…,"description":…}` (temsilcisiz, masanın arka plan işi) | `/api/v1/support/panel/classify` | Tek konu kararı: M51 sınıfı + olasılık + aciliyet ve etkin sınıf listesi; bir kez sorulur, kaydedilir. Masa türü bundan alınır (`yz/sinif.py`, 2026-09-28) |
 
 Örnek (masanın sunucusundan):
 
