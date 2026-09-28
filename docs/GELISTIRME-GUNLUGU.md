@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (14:20) — Menü yeniden düzeni ve Destek c80862be test sunucusunda; nginx tam yeniden başlatıldı
+
+- **nginx:** kullanıcı `systemctl restart nginx`'i kendisi çalıştırdı (11:32'den beri reload `timas_api` bölge anahtarı yüzünden reddediliyordu). Sonra: `/destek-baglam/v1/` anahtarsız 401 (köprüde `panel/classify|context|insight|draft` var), Destek giriş hız sınırı 6. denemede 429. Destek vhost'u 067718bc hâlinden (md5 eşit) e9fa4a3f hâline güncellendi, reload temiz: başka kaynaktan socket.io 403, aynı site 200.
+- **Destek c80862be** (talep edenin birimi) kuruldu: imaj/kod sürümü doğru, `._*` 0, canlı bildirim tamam. AD'de 6 rastgele kişi: birim Grafik, Cocuk Editorya ×2, genel, Satis, Pazarlama (~2 sn, sonrası önbellek); dış adres boş.
+- **Menü (0efb7997):** 45 kod dosyası sunucuda önceki main hâlindeydi (md5), tek tek yerleştirildi (45/45 yeni md5); belgeler gönderilmedi. Sunucu ağacında `tsc -b` 0 hata, menü+ayar vitest 44/44, derleme geçici klasöre; `cockpit/dist`'e önce parçalar sonra `index.html` kopyalandı (eski parçalar silinmedi), dışarıdan `index-BnRVM6Di.js`. Köprü yeniden başlatıldı (5 sn'de 200), 41 ayar grubu 10 kategoride, kategorisiz yok.
+- **Ekran (görünmez tarayıcı, timasai 15 dk oturum, iş sonunda silindi):** Genel bakış'ta sol ray yalnız Finans ve risk (Raporlar · Denetim ve bütçe · Risk · Telif ve kurul) + «‹ Ana menü»; Kampüs'te 14 ana modül; Yönetim → Ayarlar'da 10 kategori alt menü + arama; telefon (390) çekmecede aynı süzme, yatay taşma 0, sayfa hatası 0.
+- VM'e kurulmadı (onay bekliyor).
+
 ## 2026-09-28 (13:55) — NanobaseAI Destek: talep edenin AD birimi otomatik; kayıt türü bağlantısı sunucuda bekliyor
 
 - **Karar (kullanıcı):** ekipler şimdilik olduğu gibi; «maili atan kişinin departmanını otomatik tespit et, ona göre». `yz/birim.py`: kaydı açanın adresi AD'de aranır (mail, userPrincipalName, proxyAddresses; iç alan adında hesap adı), birim = department, boşsa en yakın OU (Timaş'ta OU). Kayda `nb_talep_birimi` («Talep edenin birimi») yazılır, temsilci panelinde görünür; aynı adlı etkin ekip varsa ve ekip boşsa kayıt o ekibe gider (yapay zekânın ekip önerisinden önce). Eşleşen ekip yoksa yalnız birim görünür; ekip birim adıyla açıldığı gün yönlendirme kendiliğinden başlar. Sonuç 24 saat önbellekte; AD'ye ulaşılamazsa önbelleğe yazılmaz. Birden çok kişi eşleşirse (paylaşılan adres) birim yazılmaz.
