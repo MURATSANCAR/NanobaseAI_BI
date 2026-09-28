@@ -379,7 +379,7 @@ function MerchantSection() {
           <div className="sg-kpis" style={{ marginTop: 12 }}>
             <Kpi label="Onaylı" value={fmt(sum.approved)} note={`${fmt(sum.total)} üründen`} tone="good" onClick={() => pickStatus('onayli')} active={status === 'onayli'} />
             <Kpi label="Onaylanmayan" value={fmt(sum.disapproved)} note="Google’da görünmüyor" tone={sum.disapproved ? 'bad' : undefined} onClick={() => pickStatus('onaylanmayan')} active={status === 'onaylanmayan'} />
-            <Kpi label="Sınırlı" value={fmt(sum.limited)} note="Görünüyor ama bir yerde reddedilmiş ya da az gösteriliyor" onClick={() => pickStatus('sinirli')} active={status === 'sinirli'} />
+            <Kpi label="Sınırlı" value={fmt(sum.limited)} note="Aynı yerde bazı ülkelerde onaylı, bazılarında reddedilmiş" onClick={() => pickStatus('sinirli')} active={status === 'sinirli'} />
             <Kpi label="Bekleyen" value={fmt(sum.pending)} note="Google inceliyor" onClick={() => pickStatus('bekleyen')} active={status === 'bekleyen'} />
           </div>
           {sum.unmatched > 0 && (
