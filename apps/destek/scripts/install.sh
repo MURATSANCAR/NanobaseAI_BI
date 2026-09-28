@@ -35,7 +35,11 @@ SITE_CONFIG_EXTRA=${SITE_CONFIG_EXTRA:-}
 # E-posta ayarı: köprünün ayarından (test sunucusu) ya da {"host","port","user","password"} dosyasından (VM).
 SMTP_FILE=${SMTP_FILE:-}
 VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$SRC/frappe-apps/nanobase_brand/nanobase_brand/__init__.py")
-IMAGE="nanobase-destek:${VERSION}-${SHORT}"
+# İmaj etiketi içeriğe göre (imaja giren dosyaların özeti): yalnız kurulum betiği ya da compose değişince imaj yeniden
+# derlenmez, VM'e yeniden taşınmaz. İmajın içindeki DESTEK_CODE_VERSION, imajın derlendiği commit'tir.
+IMG_HASH=$(cd "$SRC" && find docker/Containerfile docker/resources frappe-apps -type f -print0 | LC_ALL=C sort -z \
+  | xargs -0 sha256sum | sha256sum | cut -c1-12)
+IMAGE="nanobase-destek:${VERSION}-${IMG_HASH}"
 
 # Sır dosyası: okunabiliyorsa doğrudan, değilse parolasız sudo ile (test sunucusunda /etc/nanobase root'ta).
 readable() { [ -r "$1" ] || sudo -n test -r "$1" 2>/dev/null; }

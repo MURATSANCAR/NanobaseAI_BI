@@ -18,7 +18,11 @@ services:
   db:
     image: mariadb:11.8
     restart: unless-stopped
-    networks: [destek]
+    # Destek'in veritabanı `destek-db` adıyla bağlanır: müşteri VM'inde Destek BI'ın bi_net ağına da bağlı ve orada
+    # `db` BI'ın Postgres'idir (compose.bi-net.yaml); aynı ad iki ağda iki makineye çözülüyordu.
+    networks:
+      destek:
+        aliases: [destek-db]
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       start_period: 10s
@@ -54,7 +58,7 @@ services:
     command:
       - >
         ls -1 apps > sites/apps.txt;
-        bench set-config -g db_host db;
+        bench set-config -g db_host destek-db;
         bench set-config -gp db_port 3306;
         bench set-config -g redis_cache redis://redis-cache:6379;
         bench set-config -g redis_queue redis://redis-queue:6379;
