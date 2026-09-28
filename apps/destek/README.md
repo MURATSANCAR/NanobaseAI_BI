@@ -49,6 +49,7 @@ Model çağrılarının hepsi LLM kapısından (`/destek-llm/v1`, modül `destek
 | Sınıflama | yeni kayıt (arka plan, `yz/kanca.py` → `kayit.classify`) | tür, öncelik, ekip, müşteri duygusu; yalnız boş ya da sistem varsayılanındaki alan, yalnız tanımlı değer; kayıt geçmişine not. Atama kuralı çalışamazsa alanlar yine yazılır |
 | Özet | temsilci ekranı → «NanobaseAI» → Özetle | 3 satır: istek, yapılan, sıradaki adım |
 | Yanıt taslağı | «Yanıt taslağı hazırla» | bilgi bankası + çözülen kayıtlardan; yanıt kutusuna eklenir, temsilci gönderir; dayanak bağlantıları |
+| Benzer geçmiş kayıtlar | «Benzer geçmiş kayıtlar» → Bul | bilgi bankasında anlamca en yakın çözülmüş kayıtlar (yoksa aynı türden); her biri için DB'deki çözüm notu + temsilci yanıtlarından «uygulanan çözüm», ilgisizler elenir, en çok 3 maddelik önerilen yol. Kayıt çözülünce bilgi bankasına hemen girer |
 | Makale taslağı | çözülen kayıtta | kişisel verisiz taslak makale (`HD Article`, Taslak, `nb_kaynak_kayit`) |
 | SLA riski | hafta içi 08:30 | riskteki açık kayıtlar → Not + «Agent Manager» e-postası |
 | Haftalık rapor | pazartesi 08:00 (elle `yz.rapor.weekly_now`) | sayılar veritabanından, 5 maddelik yorum modelden |
