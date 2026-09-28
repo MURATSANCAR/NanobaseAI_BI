@@ -22,12 +22,35 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import hr_core as H
 from semantic_bridge import hr_engagement_text as T
+from semantic_bridge import hr_kaynak as HK
 from semantic_bridge import hr_performance as P
 from semantic_bridge import hr_performance_sources as S
 from semantic_bridge.hr_api import HrContext
 
 log = logging.getLogger("semantic_bridge.hr.performance.api")
 B = "/api/v1/hr/performance"
+
+
+# Sorgu bilgisi formülleri (hr_kaynak): kural metni; kişi adı, puan ya da sayı içermez.
+F_BENIM = ("Performansım: hedef değeri ve birimi hedef kaydından; ilerleme = son ilerleme kaydı (beyan) ya da sistem ölçüsünde "
+           "Logo'dan okunan değer ÷ hedef; değerlendirme durumu dönem ve değerlendirme kaydından.")
+F_EKIP = ("Ekibim: kişi başına hedef sayısı ve değerlendirme durumu (dönem kaydı); yöneticisi kayıtlı olmayan = çalışan "
+          "kaydında yöneticisi boş olan kişi sayısı.")
+F_HEDEF = "Hedefler: hedef değeri, birimi ve ağırlığı hedef kaydından; alt hedefler aynı kayıttan; ilerleme son ilerleme kaydı."
+F_ILERLEME_BEYAN = "Beyan edilen hedef: değer = son ilerleme kaydındaki değer; ilerleme % = kişinin girdiği oran."
+F_ILERLEME_SISTEM = ("Sistem ölçüsü: temsilcinin dönemdeki faturalı net satışı = Σ LINENET (7, 8, 9) − Σ LINENET (2, 3), "
+                     "fatura temsilcisi = ölçü kodu, her yıl kendi Logo firmasından okunur; ilerleme % = değer ÷ hedef × 100.")
+F_DOLULUK = "Temsilci alanı doluluğu = temsilcisi dolu satış faturası ÷ bütün satış faturaları (7, 8, 9), iptaller hariç."
+F_DONEM = ("Değerlendirme dönemi durumu: katılımcı = dönemdeki değerlendirme; öz / yönetici değerlendirmesi tamamlanan sayı "
+           "ve payı; paylaşılan, onaylanan, itiraz = değerlendirme durumu sayıları; birim tablosu aynı kuralla birim bazında.")
+F_KALIBRASYON = ("Kalibrasyon: genel puan = değerlendirmenin yönetici genel puanı; şirket ve birim ortalaması = puanların "
+                 "ortalaması, n = puanlı değerlendirme; dağılım = puan başına değerlendirme sayısı.")
+F_FORM = ("Değerlendirme formu: madde puanı = çalışan ve yöneticinin seçtiği değer (ölçek formdan); iş özeti rakamları özetin "
+          "yazıldığı andaki olgulardır (editör görev kayıtları ve CRM sahiplik sayıları); özet metnini Zeki AI yazar, sayı "
+          "üretmez.")
+F_IS_OZETI = ("İş kayıtları özeti: dönemde tamamlanan editör görevi, son tarihi olan / zamanında tamamlanan, dönem içinde "
+              "geciken açık görev (editör görev kaydı) ve dönemde oluşturulan proje ve sözleşme sayısı (CRM, sahibi çalışan).")
+F_DONEMLER = "Dönemler: dönem kaydı (tarihler ve durum); sayılar kayıttan."
 
 
 def register(app, hr: HrContext) -> None:
@@ -77,15 +100,20 @@ def register(app, hr: HrContext) -> None:
 
     @app.get(B + "/me")
     def perf_me(request: Request) -> dict[str, Any]:
-        engine, tenant, sc = scoped(request)
-        return call(P.me_view, engine, tenant, sc)
+        with HK.capture(hr.system()[0]) as got:
+            engine, tenant, sc = scoped(request)
+            out = call(P.me_view, engine, tenant, sc)
+        return hr.kaynak(out, got, "performansim", {}, rest=("performansim", F_BENIM))
 
     @app.get(B + "/team")
     def perf_team(request: Request, direct: bool = False) -> dict[str, Any]:
-        engine, tenant, sc = scoped(request)
-        if not sc.me_id:
-            return {"me": None, "people": [], "gaps": P.hierarchy_gaps(sc) if sc.cycle_admin else None}
-        return call(P.team_view, engine, tenant, sc, direct_only=direct)
+        with HK.capture(hr.system()[0]) as got:
+            engine, tenant, sc = scoped(request)
+            if not sc.me_id:
+                out = {"me": None, "people": [], "gaps": P.hierarchy_gaps(sc) if sc.cycle_admin else None}
+            else:
+                out = call(P.team_view, engine, tenant, sc, direct_only=direct)
+        return hr.kaynak(out, got, "ekibim", {}, rest=("ekibim", F_EKIP))
 
     @app.get(B + "/team/{eid}")
     def perf_team_person(eid: str, request: Request) -> dict[str, Any]:
@@ -97,16 +125,20 @@ def register(app, hr: HrContext) -> None:
         if e is None:
             raise HTTPException(404, detail={"code": "HR", "message": "Çalışan bulunamadı."})
         H.log_access(engine, tenant, sc.who.user, "calisan", eid, "goruntule", "performans kişi kartı")
-        with engine.connect() as c:
-            revs = c.execute(sa.select(P.REVIEWS, P.CYCLES.c.name).join(P.CYCLES, P.CYCLES.c.id == P.REVIEWS.c.cycle_id)
-                             .where(P.REVIEWS.c.employee_id == eid).order_by(P.CYCLES.c.starts_on.desc())).all()
-            works = c.execute(sa.select(P.WORK).where(P.WORK.c.employee_id == eid).order_by(P.WORK.c.generated_at.desc())).all()
-        return {"employee": {"id": eid, "name": e.display_name, "title": e.title or "", "unitName": sc.unit_name(e.unit_id),
-                             "managerName": sc.name(e.manager_id)},
-                "goals": P.list_goals(engine, tenant, sc, owner=eid),
-                "reviews": [{"id": r.id, "cycleName": r.name, "state": P.review_state(r), "stateLabel": P.REVIEW_STATES[P.review_state(r)],
-                             "mine": r.manager_id == sc.me_id} for r in revs],
-                "workSummaries": [P._work_out(w) for w in works] if sc.who.can(P.F_WORK) else None}
+        with HK.capture(engine) as got:
+            with engine.connect() as c:
+                revs = c.execute(sa.select(P.REVIEWS, P.CYCLES.c.name).join(P.CYCLES, P.CYCLES.c.id == P.REVIEWS.c.cycle_id)
+                                 .where(P.REVIEWS.c.employee_id == eid).order_by(P.CYCLES.c.starts_on.desc())).all()
+                works = c.execute(sa.select(P.WORK).where(P.WORK.c.employee_id == eid).order_by(P.WORK.c.generated_at.desc())).all()
+            out = {"employee": {"id": eid, "name": e.display_name, "title": e.title or "", "unitName": sc.unit_name(e.unit_id),
+                                "managerName": sc.name(e.manager_id)},
+                   "goals": P.list_goals(engine, tenant, sc, owner=eid),
+                   "reviews": [{"id": r.id, "cycleName": r.name, "state": P.review_state(r), "stateLabel": P.REVIEW_STATES[P.review_state(r)],
+                                "mine": r.manager_id == sc.me_id} for r in revs],
+                   "workSummaries": [P._work_out(w) for w in works] if sc.who.can(P.F_WORK) else None}
+        return hr.kaynak(out, got, "ekipKisi", {"goals": ("hedef", F_HEDEF, ["semantic_hr_goals", "semantic_hr_goal_checkins"]),
+                                                "workSummaries": ("isOzeti", F_IS_OZETI, ["semantic_hr_work_summaries"])},
+                         rest=("ekibim", F_EKIP))
 
     # ------------------------------------------------------------------ hedefler
 
@@ -115,7 +147,9 @@ def register(app, hr: HrContext) -> None:
         engine, tenant, sc = scoped(request)
         if owner and not sc.sees_person(owner) and not sc.cycle_admin:
             raise HTTPException(403, detail={"code": "HR", "message": str(P.deny(engine, tenant, sc, owner, "hedef listesi"))})
-        return {"items": call(P.list_goals, engine, tenant, sc, period=period, year=year, owner=owner, level=level)}
+        with HK.capture(engine) as got:
+            out = {"items": call(P.list_goals, engine, tenant, sc, period=period, year=year, owner=owner, level=level)}
+        return hr.kaynak(out, got, "hedefler", {"items[]": ("hedef", F_HEDEF)})
 
     @app.post(B + "/goals", status_code=201)
     def perf_goal_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -127,7 +161,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/goals/{gid}")
     def perf_goal(gid: str, request: Request) -> dict[str, Any]:
         engine, tenant, sc = scoped(request)
-        return call(P.get_goal, engine, tenant, sc, gid)
+        with HK.capture(engine) as got:
+            out = call(P.get_goal, engine, tenant, sc, gid)
+        return hr.kaynak(out, got, "hedef", {}, rest=("hedef", F_HEDEF))
 
     @app.patch(B + "/goals/{gid}")
     def perf_goal_update(gid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -175,27 +211,46 @@ def register(app, hr: HrContext) -> None:
     async def perf_goal_progress(gid: str, request: Request) -> dict[str, Any]:
         """Sistem ölçüsü: Logo'dan temsilcinin faturalı net satışı (rakam SQL'den). Beyan hedefte son check-in."""
         engine, tenant, sc = await run_in_threadpool(scoped, request)
-        g = await run_in_threadpool(call, P.get_goal, engine, tenant, sc, gid)
+        got: list = []
+
+        def cap(fn):
+            def inner():
+                with HK.capture(engine) as g_:
+                    r = fn()
+                got.extend(g_)
+                return r
+            return inner
+
+        g = await run_in_threadpool(cap(lambda: call(P.get_goal, engine, tenant, sc, gid)))
         start, end = P.period_range(g["period"])
         if g["measureKind"] != "sistem":
             last = g["lastCheckin"]
-            return {"kind": "beyan", "periodStart": start.isoformat(), "periodEnd": end.isoformat(), "target": g["targetValue"],
-                    "value": last["value"] if last else None, "progressPct": last["progressPct"] if last else None}
+            out = {"kind": "beyan", "periodStart": start.isoformat(), "periodEnd": end.isoformat(), "target": g["targetValue"],
+                   "value": last["value"] if last else None, "progressPct": last["progressPct"] if last else None}
+            return hr.kaynak(out, got, "ilerleme", {}, rest=("beyan", F_ILERLEME_BEYAN))
         if not perf_settings()["logoSales"]:
             raise HTTPException(409, detail={"code": "HR", "message": "Sistem ölçüsü bu kurulumda kapalı."})
-        res = await run_in_threadpool(call, lambda: S.salesman_net(logo_run(), g["measureRef"], start, end))
+        res = await run_in_threadpool(cap(lambda: call(lambda: S.salesman_net(logo_run(), g["measureRef"], start, end))))
         tgt = g["targetValue"]
-        return {"kind": "sistem", "measure": g["systemMeasure"], "code": g["measureRef"], "periodStart": start.isoformat(),
-                "periodEnd": end.isoformat(), "target": tgt, **res,
-                "progressPct": round(100 * res["value"] / tgt, 1) if tgt else None,
-                "note": "Logo kopyası donmuşsa son fatura tarihi dönem sonundan önce kalır; oran o tarihe kadardır."}
+        out = {"kind": "sistem", "measure": g["systemMeasure"], "code": g["measureRef"], "periodStart": start.isoformat(),
+               "periodEnd": end.isoformat(), "target": tgt, **res,
+               "progressPct": round(100 * res["value"] / tgt, 1) if tgt else None,
+               "note": "Logo kopyası donmuşsa son fatura tarihi dönem sonundan önce kalır; oran o tarihe kadardır."}
+        return await run_in_threadpool(hr.kaynak, out, got, "ilerleme", {"target": ("hedef", F_HEDEF, ["semantic_hr_goals"])},
+                                       ("sistem", F_ILERLEME_SISTEM), (), ("years[].year",))
 
     @app.get(B + "/logo-salesman-fill")
     async def perf_salesman_fill(request: Request, year: int = 0) -> dict[str, Any]:
         """Kabul 1 ölçümü: satış faturalarında temsilci alanı doluluğu (sistem ölçüsünü açma kararı için)."""
         engine, tenant, sc = await run_in_threadpool(scoped, request)
         need(sc.who, P.F_CYCLE, P.F_GOAL_APPROVE, what="Temsilci alanı ölçümü")
-        return await run_in_threadpool(call, lambda: S.salesman_fill(logo_run(), year or date.today().year))
+
+        def work():
+            with HK.capture(engine) as got:
+                r = call(lambda: S.salesman_fill(logo_run(), year or date.today().year))
+            return hr.kaynak(r, got, "doluluk", {}, rest=("doluluk", F_DOLULUK), ignore=("year",))
+
+        return await run_in_threadpool(work)
 
     @app.post(B + "/goals/draft")
     async def perf_goal_draft(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -261,7 +316,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/cycles")
     def perf_cycles(request: Request) -> dict[str, Any]:
         engine, tenant, sc = scoped(request)
-        return {"items": P.list_cycles(engine, tenant)}
+        with HK.capture(engine) as got:
+            out = {"items": P.list_cycles(engine, tenant)}
+        return hr.kaynak(out, got, "donemler", {"items[]": ("donem", F_DONEMLER)})
 
     @app.post(B + "/cycles", status_code=201)
     def perf_cycle_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -305,10 +362,11 @@ def register(app, hr: HrContext) -> None:
     def perf_cycle_status(cid: str, request: Request) -> dict[str, Any]:
         """Tamamlanma panosu. Kişi listesi yalnız dönem yönetimi (İK) yetkisinde; diğerlerine yalnız sayılar."""
         engine, tenant, sc = scoped(request)
-        out = call(P.cycle_status, engine, tenant, sc, cid)
+        with HK.capture(engine) as got:
+            out = call(P.cycle_status, engine, tenant, sc, cid)
         if not sc.cycle_admin and not sc.all:
             out["people"] = [p for p in out["people"] if p["employeeId"] in sc.team]
-        return out
+        return hr.kaynak(out, got, "donemDurum", {}, rest=("donemDurum", F_DONEM))
 
     @app.post(B + "/cycles/{cid}/remind")
     async def perf_cycle_remind(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -358,9 +416,10 @@ def register(app, hr: HrContext) -> None:
     def perf_calibration(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, sc = scoped(request)
         need(sc.who, P.F_CALIBRATION, what="Kalibrasyon görünümü")
-        out = call(P.calibration, engine, tenant, sc, cid)
+        with HK.capture(engine) as got:
+            out = call(P.calibration, engine, tenant, sc, cid)
         H.log_access(engine, tenant, sc.who.user, "calisan", f"donem:{cid}"[:40], "goruntule", "kalibrasyon")
-        return out
+        return hr.kaynak(out, got, "kalibrasyon", {}, rest=("kalibrasyon", F_KALIBRASYON))
 
     @app.get(B + "/cycles/{cid}/export.csv")
     def perf_export(cid: str, request: Request) -> Response:
@@ -380,7 +439,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/reviews/{rid}")
     def perf_review(rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, sc = scoped(request)
-        return call(P.get_review, engine, tenant, sc, rid)
+        with HK.capture(engine) as got:
+            out = call(P.get_review, engine, tenant, sc, rid)
+        return hr.kaynak(out, got, "degerlendirme", {}, rest=("degerlendirme", F_FORM))
 
     @app.patch(B + "/reviews/{rid}")
     def perf_review_save(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -440,6 +501,16 @@ def register(app, hr: HrContext) -> None:
     async def perf_work_summary(rid: str, request: Request) -> dict[str, Any]:
         """İş kayıtları özeti (bilgi amaçlı): M2 görev sayıları + CRM sahiplik sayıları, dönem aralığında. Çalışan da görür."""
         engine, tenant, sc = await run_in_threadpool(scoped, request)
+        got: list = []
+
+        def cap(fn, *a, **kw):
+            def inner():
+                with HK.capture(engine) as g_:
+                    r = fn(*a, **kw)
+                got.extend(g_)
+                return r
+            return inner
+
         rv = await run_in_threadpool(call, P.get_review, engine, tenant, sc, rid, log_view=False)
         if not rv["can"]["workSummary"]:
             raise HTTPException(403, detail={"code": "FORBIDDEN", "message": "İş kayıtları özeti yalnız yöneticisi ve İK içindir."})
@@ -447,14 +518,14 @@ def register(app, hr: HrContext) -> None:
         start, end = H.parse_date(rv["cycle"]["periodStart"], "Dönem"), H.parse_date(rv["cycle"]["periodEnd"], "Dönem")
         crm_id = (e.crm_systemuser_id if e else None) or None
         facts: dict[str, Any] = {"periodStart": start.isoformat(), "periodEnd": end.isoformat(),
-                                 "editorial": await run_in_threadpool(S.editorial_facts, engine, tenant, crm_id, start, end)}
+                                 "editorial": await run_in_threadpool(cap(S.editorial_facts, engine, tenant, crm_id, start, end))}
         if crm_id:
             try:
                 from semantic_bridge import admin as admin_mod
                 from semantic_bridge import hr_sources
 
                 prefix = hr_sources.prefix(admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo")
-                counts = await run_in_threadpool(lambda: S.crm_ownership(crm_run(), prefix, crm_id, start, end))
+                counts = await run_in_threadpool(cap(lambda: S.crm_ownership(crm_run(), prefix, crm_id, start, end)))
                 facts["crm"] = {"available": True, **counts, "source": "new_projeBase/new_sozlesmeBase OwnerId"}
             except S.SourceError as ex:
                 facts["crm"] = {"available": False, "reason": str(ex)}
@@ -463,7 +534,7 @@ def register(app, hr: HrContext) -> None:
         out = await run_in_threadpool(P.save_work_summary, engine, tenant, sc.who.user, rv["employeeId"], rv["cycle"]["id"], start, end, facts)
         H.log_access(engine, tenant, sc.who.user, "calisan", rv["employeeId"], "goruntule", "iş kayıtları özeti")
         hr.audit(engine, sc.who.user, "create", "hr_work_summary", out["id"], "İş kayıtları özeti", {"calisan": rv["employeeId"]})
-        return out
+        return await run_in_threadpool(hr.kaynak, out, got, "isOzeti", {}, ("isOzeti", F_IS_OZETI))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

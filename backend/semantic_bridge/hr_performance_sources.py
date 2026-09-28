@@ -40,6 +40,13 @@ def _lit(code: str) -> str:
     return "N'" + code.replace("'", "''") + "'"
 
 
+def _record(conn: str, title: str, text: str, desc: str) -> None:
+    """Sorgu bilgisi: çalışan metin açık yakalayıcıya (hr_kaynak) yazılır; yakalayıcı yoksa iş yapmaz."""
+    from semantic_bridge import hr_kaynak
+
+    hr_kaynak.record(conn, title, text, description=desc)
+
+
 def salesman_net_sql(firm: str, code: str, start: date, end: date) -> str:
     return f"""
 SELECT SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE -S.LINENET END) AS net, COUNT(DISTINCT S.INVOICEREF) AS fatura,
@@ -69,7 +76,10 @@ def salesman_net(run: bsrc.Runner, code: str, start: date, end: date) -> dict[st
             years.append({"year": y, "firm": None, "note": "Logo'da bu yılın dönemi yok"})
             continue
         ys, ye = max(start, date(y, 1, 1)), min(end, date(y, 12, 31))
-        row = (run(salesman_net_sql(firm, code, ys, ye)) or [{}])[0]
+        text = salesman_net_sql(firm, code, ys, ye)
+        row = (run(text) or [{}])[0]
+        _record("logo", f"Logo temsilci net satışı · {y}", text,
+                "Faturalı satış satırları (7, 8, 9) − iadeler (2, 3), fatura temsilcisi = hedefin ölçü kodu.")
         net = float(row.get("net") or 0)
         total += net
         invoices += int(row.get("fatura") or 0)
@@ -82,7 +92,9 @@ def salesman_net(run: bsrc.Runner, code: str, start: date, end: date) -> dict[st
 
 def salesman_fill(run: bsrc.Runner, year: int) -> dict[str, Any]:
     firm = bsrc._firm(bsrc.firms_by_year(run), year)
-    row = (run(salesman_fill_sql(firm, year)) or [{}])[0]
+    text = salesman_fill_sql(firm, year)
+    row = (run(text) or [{}])[0]
+    _record("logo", f"Logo satış faturası temsilci alanı · {year}", text, "Satış faturalarında temsilci alanı doluluğu.")
     n, k = int(row.get("satir") or 0), int(row.get("temsilcili") or 0)
     return {"year": year, "firm": firm, "invoices": n, "withSalesman": k, "rate": (k / n) if n else None}
 
@@ -93,7 +105,9 @@ def crm_ownership(run: bsrc.Runner, prefix: str, systemuser_id: str, start: date
     rng = f"CreatedOn >= '{start.isoformat()}' AND CreatedOn < '{(end + timedelta(days=1)).isoformat()}'"
     out = {}
     for key, table in (("projects", "new_projeBase"), ("contracts", "new_sozlesmeBase")):
-        rows = run(f"SELECT COUNT(*) AS n FROM {prefix}{table} WHERE OwnerId = '{systemuser_id}' AND {rng}")
+        text = f"SELECT COUNT(*) AS n FROM {prefix}{table} WHERE OwnerId = '{systemuser_id}' AND {rng}"
+        rows = run(text)
+        _record("crm", f"CRM sahiplik sayısı · {table}", text, "Dönemde oluşturulan ve sahibi çalışan olan kayıtlar.")
         out[key] = int((rows or [{}])[0].get("n") or 0)
     return out
 
