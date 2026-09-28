@@ -112,6 +112,8 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kurumsal-satis/firsat/abc')).toBe('kurumsal-satis'); // M32 fırsat sayfası → Kurumsal ve B2B
     expect(at('/pazarlama/yeni-kitap')).toBe('pazarlama-yeni-kitap');
     expect(at('/pazarlama/plan/MP-2026-0001')).toBe('pazarlama-yeni-kitap'); // plan ekranı → Yeni kitap planı
+    expect(at('/pazarlama/set-hediye/set/MS-2026-0001')).toBe('pazarlama-set-hediye'); // M53 set ekranı → Set ve hediye
+    expect(at('/pazarlama/set-hediye/teklif/KT-2026-0001')).toBe('pazarlama-set-hediye');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

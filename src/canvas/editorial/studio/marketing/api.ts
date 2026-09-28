@@ -43,7 +43,8 @@ export type Product = {
   generated_at?: number | null;
 };
 
-export type SocialTemplate = 'kare' | 'dikey' | 'yatay';
+/** Biçim anahtarı (stüdyonun `marketing.TEMPLATES`'i): kare, dikey, yatay ve M19 reklam/site/e-bülten biçimleri. */
+export type SocialTemplate = string;
 export type SocialVisual = 'cover' | 'page' | 'quote';
 export type SocialEffect = 'plain' | 'shadow' | 'outline' | 'burst' | 'rainbow';
 export type SocialItem = { id: string; template: SocialTemplate; visual: SocialVisual; source: string | null; headline: string;
@@ -51,7 +52,7 @@ export type SocialItem = { id: string; template: SocialTemplate; visual: SocialV
   approved: Signed | null };
 export type SocialSource = { key: string; label: string; kind: 'cover' | 'art' | 'photo' | 'figure'; draft: boolean };
 export type Social = { items: SocialItem[]; sources: SocialSource[]; palette: string[];
-  templates: { key: SocialTemplate; label: string; w: number; h: number }[]; effects: SocialEffect[]; draft_note: string };
+  templates: { key: SocialTemplate; label: string; w: number; h: number; group?: string; quote?: boolean }[]; effects: SocialEffect[]; draft_note: string };
 
 export type GuideSection = { title: string; before: string[]; during: string[]; after: string[] };
 export type GuideBody = { summary: string[]; values: string[]; outcomes: string[];

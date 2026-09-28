@@ -1,0 +1,10 @@
+[Unit]
+Description=Yazar ilişkileri sabah özeti: 08–19 arası 15 dk'da bir (köprü saat eşiğini ve kişi başına günde bir kez kuralını uygular; gönderilemeyen sonraki turda denenir)
+
+[Timer]
+OnCalendar=*-*-* 08..19:00/15:00 Europe/Istanbul
+Persistent=true
+Unit=timas-author-reminders.service
+
+[Install]
+WantedBy=timers.target

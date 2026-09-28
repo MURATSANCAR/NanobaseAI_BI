@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -352,6 +352,34 @@ if "EDITOR-STUDYO-EFEKT" not in s:
              + loc(f"sfx/library/({SID})/preview", "GET", "sfx/library/$1/preview$is_args$args", timeout=120))
     s = s.replace("    # EDITOR-BITTI", efekt + "    # EDITOR-BITTI", 1)
     changes.append("efekt sesleri yolları")
+
+# 8) Kitapsız pazarlama işi (M19; production/marketing_job.py, api_marketing.jobs_router): stüdyo işi olmayan kitap
+#    için kapak + CRM metinleriyle iş açma/güncelleme. Gövde base64 kapak taşır (≤ 25 MB → JSON ≤ 35 MB).
+#    Görsel dizimi aynı işin mevcut `marketing/social…` yollarından gider (EDITOR-STUDYO-PAZARLAMA).
+if "EDITOR-STUDYO-PAZARLAMA-IS" not in s:
+    mis = ("    # EDITOR-STUDYO-PAZARLAMA-IS  (kitapsiz pazarlama isi: marketing_job.py)\n"
+           + f'''    location = /editor/studio/v1/studio/marketing-jobs {{
+{guard}
+        if ($request_method != POST) {{ return 405; }}
+        client_max_body_size 36m;
+        proxy_pass {UP}/marketing-jobs;
+        proxy_set_header Host $host;
+        proxy_read_timeout 120s;
+    }}
+'''
+           + loc(f"marketing-jobs/({JOB})", "GET", "marketing-jobs/$1", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", mis + "    # EDITOR-BITTI", 1)
+    changes.append("kitapsız pazarlama işi yolları (gövde 36 MB)")
+
+# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur; besleme (POST items/fetch) test sunucusundan tünelle
+# gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle, sıra, sayfa, genişlik) sorgu parametresidir.
+if "EDITOR-STUDYO-KUTUPHANE" not in s:
+    CID = "[a-z]{2,10}-[A-Za-z0-9_.-]{1,60}"
+    kut = ("    # EDITOR-STUDYO-KUTUPHANE  (kapak arsivi: kategori agaci, liste, gorsel)\n"
+           + loc("library(/categories|/covers)?", "GET", "library$1$is_args$args", timeout=60)
+           + loc(f"library/covers/({CID})(/image)?", "GET", "library/covers/$1$2$is_args$args", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", kut + "    # EDITOR-BITTI", 1)
+    changes.append("kapak arşivi yolları")
 
 if s == orig:
     print("zaten var (güncel)")

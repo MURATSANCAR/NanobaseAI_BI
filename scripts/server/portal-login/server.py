@@ -3,7 +3,9 @@
 No API keys or passwords are placed in browser storage. There is no local or demo account:
 every session belongs to an enabled directory user who proved their own password.
 """
+import base64
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -30,6 +32,12 @@ TTL = 8 * 3600
 # Zeki AI chat: internal URL of the chat container, service account token and token secret. Root-owned, never committed.
 # {"url": "http://127.0.0.1:4000", "user_id": "...", "token": "...", "sso_secret": "...", "email_domain": "timas.local"}
 CHAT_FILE = os.environ.get('CHAT_CONFIG_FILE', '/etc/nanobase/zeki-chat.json')
+# NanobaseAI Destek (ayrı Frappe sitesi, ayrı port): portal oturumu olan kişi orada da otomatik girer.
+# Çerez Path=/timas/ olduğu için Destek onu göremez; tarayıcı buraya gelir, 60 sn'lik tek kullanımlık imzalı
+# jetonla Destek'e döner. Anahtar Destek sitesiyle ortak (site_config destek_sso_secret). Root-owned, never committed.
+DESTEK_URL = os.environ.get('DESTEK_URL', 'https://portal.nanobase.ai:8446').rstrip('/')
+DESTEK_SSO_FILE = os.environ.get('DESTEK_SSO_FILE', '/etc/nanobase/destek-sso.key')
+DESTEK_TOKEN_TTL = 60
 # sAMAccountName characters only: nothing here can widen the LDAP filter.
 ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
 ACTIVE_PERSON = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={})(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
@@ -215,6 +223,23 @@ def chat_login_token(account, display):
     return token
 
 
+def b64url(raw):
+    return base64.urlsafe_b64encode(raw).rstrip(b'=').decode()
+
+
+def destek_token(username, display):
+    with open(DESTEK_SSO_FILE) as f:
+        secret = f.read().strip().encode()
+    payload = b64url(json.dumps({'u': username, 'd': display, 'exp': int(time.time()) + DESTEK_TOKEN_TTL,
+                                 'n': secrets.token_urlsafe(12)}, separators=(',', ':')).encode())
+    return payload + '.' + b64url(hmac.new(secret, payload.encode(), hashlib.sha256).digest())
+
+
+def safe_next(value):
+    # Yalnız Destek içindeki bir yol: açık yönlendirme olmasın.
+    return value if value.startswith('/') and not value.startswith('//') and '\\' not in value else '/helpdesk'
+
+
 def session(cookie):
     try:
         cookies = SimpleCookie(cookie)
@@ -240,7 +265,29 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def redirect(self, location):
+        self.send_response(302)
+        self.send_header('Location', location)
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
     def do_GET(self):
+        url = urllib.parse.urlsplit(self.path)
+        if url.path == '/destek-sso':
+            # Destek'in giriş sayfası tarayıcıyı buraya yollar; portal oturumu varsa imzalı jetonla geri döner,
+            # yoksa Destek'in kendi AD giriş formuna (sso=0: döngü olmasın).
+            nxt = safe_next(urllib.parse.parse_qs(url.query).get('next', ['/helpdesk'])[0])
+            row = session(self.headers.get('Cookie', ''))
+            if not row:
+                return self.redirect(f"{DESTEK_URL}/login?sso=0&redirect-to={urllib.parse.quote(nxt, safe='/')}")
+            try:
+                token = destek_token(row[0], row[1] or row[0])
+            except OSError as exc:
+                print(f'timas-login: destek sso key unavailable ({exc})', file=sys.stderr, flush=True)
+                return self.redirect(f"{DESTEK_URL}/login?sso=0&redirect-to={urllib.parse.quote(nxt, safe='/')}")
+            return self.redirect(f"{DESTEK_URL}/api/method/nanobase_brand.sso.login?"
+                                 + urllib.parse.urlencode({'t': token, 'next': nxt}))
         if self.path == '/check':
             # Browser sessions require the same origin on mutations, including nginx subrequests.
             if self.headers.get('X-Original-Method', 'GET') not in ('GET', 'HEAD', 'OPTIONS') and self.headers.get('Origin') != ORIGIN:

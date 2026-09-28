@@ -118,7 +118,7 @@ index 8363502..07f4551 100644
  
      onKeyDown(props: SuggestionKeyDownProps): boolean {
 diff --git a/node_modules/frappe-ui/frappe/Help/HelpModal.vue b/node_modules/frappe-ui/frappe/Help/HelpModal.vue
-index 3e17c76..062fe98 100644
+index 3e17c76..6d12dd5 100644
 --- a/node_modules/frappe-ui/frappe/Help/HelpModal.vue
 +++ b/node_modules/frappe-ui/frappe/Help/HelpModal.vue
 @@ -36,7 +36,7 @@
@@ -130,7 +130,28 @@ index 3e17c76..062fe98 100644
          v-model="articles"
          :docsLink="docsLink"
        />
-@@ -139,7 +139,7 @@ const footerItems = computed(() => {
+@@ -111,9 +111,9 @@ const articles = defineModel('articles')
+ 
+ const headingTitle = computed(() => {
+   if (!isOnboardingStepsCompleted.value && !showHelpCenter.value) {
+-    return 'Getting started'
++    return 'Başlarken'
+   } else if (showHelpCenter.value) {
+-    return 'Help center'
++    return 'Yardım'
+   }
+ })
+ 
+@@ -121,7 +121,7 @@ const options = computed(() => {
+   let items = [
+     {
+       icon: StepsIcon,
+-      label: 'Reset onboarding steps',
++      label: 'Adımları sıfırla',
+       onClick: resetOnboardingSteps,
+       condition: () => showHelpCenter.value && isOnboardingStepsCompleted.value,
+     },
+@@ -139,11 +139,11 @@ const footerItems = computed(() => {
          syncStatus()
          showHelpCenter.value = true
        },
@@ -139,3 +160,125 @@ index 3e17c76..062fe98 100644
      },
      {
        icon: StepsIcon,
+-      label: 'Getting started',
++      label: 'Başlarken',
+       onClick: () => (showHelpCenter.value = false),
+       condition: showHelpCenter.value && !isOnboardingStepsCompleted.value,
+     },
+diff --git a/node_modules/frappe-ui/frappe/Onboarding/OnboardingSteps.vue b/node_modules/frappe-ui/frappe/Onboarding/OnboardingSteps.vue
+index 5f4b847..61212af 100644
+--- a/node_modules/frappe-ui/frappe/Onboarding/OnboardingSteps.vue
++++ b/node_modules/frappe-ui/frappe/Onboarding/OnboardingSteps.vue
+@@ -2,16 +2,16 @@
+   <div class="flex flex-col justify-center items-center gap-1 mt-4 mb-7">
+     <component :is="logo" class="size-10 shrink-0 rounded mb-4" />
+     <div class="text-base font-medium">
+-      {{ 'Welcome to ' + title }}
++      {{ title + "'ye hoş geldiniz" }}
+     </div>
+     <div class="text-p-base font-normal">
+-      {{ `${stepsCompleted}/${totalSteps} steps completed` }}
++      {{ `${stepsCompleted}/${totalSteps} adım tamamlandı` }}
+     </div>
+   </div>
+   <div class="flex flex-col gap-2.5 overflow-hidden">
+     <div class="flex justify-between items-center py-0.5">
+       <Badge
+-        :label="`${completedPercentage}% completed`"
++        :label="`%${completedPercentage} tamamlandı`"
+         :theme="completedPercentage == 100 ? 'green' : 'orange'"
+         size="lg"
+       />
+@@ -19,13 +19,13 @@
+         <Button
+           v-if="completedPercentage != 0"
+           variant="ghost"
+-          :label="'Reset all'"
++          :label="'Tümünü sıfırla'"
+           @click="() => resetAll(afterResetAll)"
+         />
+         <Button
+           v-if="completedPercentage != 100"
+           variant="ghost"
+-          :label="'Skip all'"
++          :label="'Tümünü atla'"
+           @click="() => skipAll(afterSkipAll)"
+         />
+       </div>
+@@ -61,13 +61,13 @@
+         </component>
+         <Button
+           v-if="!step.completed && !isDependent(step)"
+-          :label="'Skip'"
++          :label="'Atla'"
+           class="!h-4 text-xs !text-ink-gray-6 hidden group-hover:flex"
+           @click="() => skip(step.name, afterSkip)"
+         />
+         <Button
+           v-else-if="!isDependent(step)"
+-          :label="'Reset'"
++          :label="'Sıfırla'"
+           class="!h-4 text-xs !text-ink-gray-6 hidden group-hover:flex"
+           @click.stop="() => reset(step.name, afterReset)"
+         />
+@@ -126,7 +126,7 @@ function dependsOnTooltip(step) {
+   if (step.dependsOn && !step.completed) {
+     const dependsOnStep = steps.find((s) => s.name === step.dependsOn)
+     if (dependsOnStep && !dependsOnStep.completed) {
+-      return `You need to complete "${dependsOnStep.title}" first.`
++      return `Önce «${dependsOnStep.title}» adımını tamamlayın.`
+     }
+   }
+   return ''
+diff --git a/node_modules/frappe-ui/frappe/Onboarding/GettingStartedBanner.vue b/node_modules/frappe-ui/frappe/Onboarding/GettingStartedBanner.vue
+index 425d1ee..3843317 100644
+--- a/node_modules/frappe-ui/frappe/Onboarding/GettingStartedBanner.vue
++++ b/node_modules/frappe-ui/frappe/Onboarding/GettingStartedBanner.vue
+@@ -10,10 +10,10 @@
+       <StepsIcon class="h-4 my-0.5 shrink-0" />
+       <div class="flex flex-col text-p-sm gap-0.5">
+         <div class="font-medium">
+-          {{ 'Getting started' }}
++          {{ 'Başlarken' }}
+         </div>
+         <div class="text-ink-gray-7">
+-          {{ `${stepsCompleted}/${totalSteps} steps` }}
++          {{ `${stepsCompleted}/${totalSteps} adım` }}
+         </div>
+       </div>
+     </div>
+@@ -22,7 +22,7 @@
+         <div class="flex items-center gap-2 shrink-0">
+           <StepsIcon class="h-4 my-0.5" />
+           <div class="text-ink-gray-9 font-medium">
+-            {{ 'You are all set' }}
++            {{ 'Her şey hazır' }}
+           </div>
+         </div>
+         <FeatherIcon
+@@ -37,12 +37,12 @@
+         />
+       </div>
+       <div class="text-p-sm text-ink-gray-7">
+-        {{ 'All steps are completed successfully' }}
++        {{ 'Bütün adımlar tamamlandı' }}
+       </div>
+     </div>
+     <Button
+       v-if="stepsCompleted != totalSteps"
+-      :label="stepsCompleted == 0 ? 'Start now' : 'Continue'"
++      :label="stepsCompleted == 0 ? 'Başla' : 'Devam et'"
+       theme="blue"
+       @click="openOnboarding"
+     >
+diff --git a/node_modules/frappe-ui/src/components/Sidebar/SidebarCollapseToggle.vue b/node_modules/frappe-ui/src/components/Sidebar/SidebarCollapseToggle.vue
+index d4e2a29..39fe506 100644
+--- a/node_modules/frappe-ui/src/components/Sidebar/SidebarCollapseToggle.vue
++++ b/node_modules/frappe-ui/src/components/Sidebar/SidebarCollapseToggle.vue
+@@ -1,5 +1,5 @@
+ <template>
+-  <SidebarItem :label="isCollapsed ? 'Expand' : 'Collapse'" @click="toggle">
++  <SidebarItem :label="isCollapsed ? 'Genişlet' : 'Daralt'" @click="toggle">
+     <template #prefix>
+       <span
+         class="lucide-panel-right-open size-4 text-ink-gray-6 transition-transform duration-300 ease-in-out"

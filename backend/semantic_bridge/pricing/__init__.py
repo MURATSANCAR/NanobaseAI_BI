@@ -4,6 +4,7 @@
 - `model`: saf hesap (birim maliyetin tek sahibi; M10/M12/M46 buradan çağırır).
 - `sources` + `data`: Logo/CRM'den salt okunur anlık görüntü ve üstündeki hesaplar.
 - `store`: analizler, onaylar, elle girilen pazar fiyatları, varsayılanlar, toplu zam teklifleri (kendi tablolarımız).
+- `cost_provider`: öbür modüllere (M32, M33, M53) kitap birim maliyeti — onaylı analiz → Logo gerçekleşen → yok.
 
 CRM'e, Logo'ya, e-ticarete yazılmaz. Uçlar `/api/v1/pricing/*`; sayfa `sayfa:fiyatlama`, yazma `ozellik:fiyatlama.yaz`,
 imzalar açıkça verilen `ozellik:fiyatlama.onay-<rol>`.

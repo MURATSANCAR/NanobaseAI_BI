@@ -8,6 +8,9 @@ import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
+import PayoutPanel from './PayoutPanel';
+import MemoryBank from './MemoryBank';
+import { QeJobPanel } from './qe';
 import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
@@ -15,7 +18,7 @@ import { SuggestedTranslators } from './TranslatorMatch';
 /** M4 Çeviri Yönetimi: çeviri işleri (kaynak, segmentler, atama, ilerleme, ZEKİ ham taslak, dosyalar),
  *  terim bankası ve çevirmen karneleri. Çevirmenin kendi ekranı /ceviri/masam, kalite raporu /ceviri/:iş/kalite. */
 
-const TABS = { isler: 'Çeviri işleri', terimler: 'Terim bankası', cevirmenler: 'Çevirmenler' } as const;
+const TABS = { isler: 'Çeviri işleri', terimler: 'Terim bankası', bellek: 'Çeviri belleği', cevirmenler: 'Çevirmenler' } as const;
 type TabKey = keyof typeof TABS;
 
 function JobForm({ onDone, onCancel }: { onDone: (id: string) => void; onCancel: () => void }) {
@@ -354,6 +357,7 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
   const canManage = useCan('ceviri.yonet');
   const canTerm = useCan('ceviri.terim');
   const canExport = useCan('veri.disa-aktar');
+  const canFreelance = useCan('serbest.yonet');
   const q = useQuery({
     queryKey: ['translation', 'job', jobId],
     queryFn: () => translationApi.job(jobId),
@@ -451,6 +455,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
         </Panel>
       )}
 
+      {/* Çevirmenin serbest çalışan kaydı, kelime ücreti ve hakedişe aktarım (M8 ile bağ). */}
+      {manage && canFreelance && <PayoutPanel job={j} />}
+
       <Panel>
         <h3 className="px-1 text-[13px] font-extrabold">Kaynak metin</h3>
         {j.source ? (
@@ -518,12 +525,12 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
         <Panel>
           <h3 className="px-1 text-[13px] font-extrabold">ZEKİ ham taslak</h3>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Boş segmentler için terim bankasına uyan ham çeviri. ZEKİ önce çevirir, sonra kendi çevirisini kaynakla karşılaştırıp düzeltir, otomatik denetimin bulduğu sorunları giderir. Taslak hedef metne kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
+            Boş segmentler için terim bankasına uyan ham çeviri. ZEKİ çevirir; otomatik denetim sayı, terim, yasak karşılık ya da noktalama sorunu bulursa o cümleleri sorunun adıyla yeniden düzelttirir. Taslak hedef metne kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
           </p>
           {drafting && (
             <div className="mt-2">
               <Note tone="info">
-                Taslak hazırlanıyor: %{pct(j.draft.done, j.draft.total)} (çeviri, sonra ikinci okuma ve otomatik denetimle düzeltme).
+                Taslak hazırlanıyor: %{pct(j.draft.done, j.draft.total)} (çeviri, sonra otomatik denetimin bulduğu sorunların düzeltilmesi).
               </Note>
             </div>
           )}
@@ -547,6 +554,8 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
           )}
         </Panel>
       )}
+
+      {j.source && <QeJobPanel jobId={j.id} />}
 
       {j.source && (
         <Panel>
@@ -705,6 +714,7 @@ export default function TranslationScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {tab === 'isler' && <Jobs />}
       {tab === 'terimler' && <TermBank />}
+      {tab === 'bellek' && <MemoryBank />}
       {tab === 'cevirmenler' && <Translators />}
       {tab === 'isler' && (
         <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">

@@ -22,6 +22,14 @@ bağlanır (`app.include_router`); yetki api.py'nin uygulama düzeyindeki Bearer
     GET    marketing/guide/pdf                             (onaylıysa)
 
 Metin üretimi arka planda (bu süreçte) koşar; ekran `tasks`'tan izler. T-soft'a buradan hiçbir şey gitmez.
+
+Kitapsız pazarlama işi (M19, marketing_job.py; `jobs_router`, api.py'de ikinci satırla bağlanır):
+
+    POST   /v1/studio/marketing-jobs            {stok_kodu, baslik, yazar, tur, yas_ust, metinler{…}, kapak_b64,
+                                                 kapak_kaynak, kapak_url, marka_paleti[]} → iş (aynı stok kodu = güncelle)
+    GET    /v1/studio/marketing-jobs/{job}      işin özeti (kapak özeti, palet)
+
+Bu işte de sosyal görsel uçları yukarıdaki `marketing/social…` yollarıdır (iş kimliği aynı biçimde).
 """
 
 from __future__ import annotations
@@ -37,9 +45,11 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from . import marketing as mk
+from . import marketing_job as mj
 from . import studio
 
 router = APIRouter(prefix="/v1/studio/jobs/{job}/marketing")
+jobs_router = APIRouter(prefix="/v1/studio/marketing-jobs")
 KEY = re.compile(r"^(?:kapak|[0-9]{1,4}|a_[0-9a-f]{8}|[A-Za-z0-9][A-Za-z0-9_-]{0,63})$")
 
 
@@ -153,7 +163,7 @@ async def product_export(job: str, format: Literal["html", "txt", "json"] = Quer
 
 
 class Social(BaseModel):
-    template: Literal["kare", "dikey", "yatay"]
+    template: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,39}$")      # biçim anahtarı (mk.TEMPLATES)
     visual: Literal["cover", "page", "quote"]
     source: str | None = Field(default=None, max_length=64)
     headline: str = Field(default="", max_length=300)
@@ -239,3 +249,38 @@ async def guide_pdf(job: str) -> Response:
     title = re.sub(r"[^\w\-]+", "-", studio._manuscript(d).title).strip("-") or job
     return FileResponse(path, media_type="application/pdf", filename=f"{title}-ogretmen-kilavuzu.pdf",
                         headers={"Cache-Control": "no-store"})
+
+
+# ------------------------------------------------------------------ kitapsız pazarlama işi (M19)
+class MarketingJob(BaseModel):
+    stok_kodu: str = Field(min_length=1, max_length=40)
+    baslik: str = Field(min_length=1, max_length=300)
+    yazar: str | None = Field(default=None, max_length=300)
+    tur: str | None = Field(default=None, max_length=300)
+    yas_ust: int | None = Field(default=None, ge=1, le=99)
+    yayinevi: str | None = Field(default=None, max_length=300)
+    isbn: str | None = Field(default=None, max_length=40)
+    metinler: dict = Field(default_factory=dict)
+    kapak_b64: str | None = Field(default=None, max_length=36 * 1024 * 1024)
+    kapak_kaynak: Literal["crm", "eticaret", "yukleme"] | None = None
+    kapak_url: str | None = Field(default=None, max_length=500)
+    marka_paleti: list[str] = Field(default_factory=list)
+
+
+@jobs_router.post("")
+async def marketing_job_upsert(body: MarketingJob, by: str = Depends(_editor)) -> dict:
+    try:
+        return await asyncio.to_thread(mj.upsert, body.model_dump(), by)
+    except mj.JobError as e:
+        raise HTTPException(400, str(e)) from None
+
+
+@jobs_router.get("/{job}")
+async def marketing_job_view(job: str) -> dict:
+    try:
+        d = studio.job_dir(job)
+    except (ValueError, FileNotFoundError):
+        raise HTTPException(404, "iş yok") from None
+    if not mj.is_marketing(d):
+        raise HTTPException(404, "iş yok")
+    return await asyncio.to_thread(mj.view, d)

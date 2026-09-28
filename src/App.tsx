@@ -31,6 +31,7 @@ const StudioFlow = lazy(() => import('@/canvas/editorial/studio/StudioFlow'));
 const StudioEditor = lazy(() => import('@/canvas/editorial/studio/StudioEditor'));
 const PlanEditor = lazy(() => import('@/canvas/editorial/studio/PlanEditor'));
 const CoverScreen = lazy(() => import('@/canvas/editorial/studio/collage/CoverScreen'));
+const CoverLibraryScreen = lazy(() => import('@/canvas/editorial/studio/library/CoverLibraryScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
@@ -65,6 +66,11 @@ const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
 const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
+const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
+const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
+const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
+const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
+const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -82,6 +88,16 @@ const SeoTech = lazy(() => import('@/canvas/seo-geo/SeoTech'));
 const SeoCompetitors = lazy(() => import('@/canvas/seo-geo/SeoCompetitors'));
 const SeoEntity = lazy(() => import('@/canvas/seo-geo/SeoEntity'));
 const SeoGuides = lazy(() => import('@/canvas/seo-geo/SeoGuides'));
+const SeoWorklist = lazy(() => import('@/canvas/seo-geo/SeoWorklist'));
+const SeoScorecard = lazy(() => import('@/canvas/seo-geo/SeoScorecard'));
+const SeoBios = lazy(() => import('@/canvas/seo-geo/SeoBios'));
+const SeoFaq = lazy(() => import('@/canvas/seo-geo/SeoFaq'));
+const SeoSimilar = lazy(() => import('@/canvas/seo-geo/SeoSimilar'));
+const SeoKeymap = lazy(() => import('@/canvas/seo-geo/SeoKeymap'));
+const SeoQuestionSuggest = lazy(() => import('@/canvas/seo-geo/SeoQuestionSuggest'));
+const SeoYoutube = lazy(() => import('@/canvas/seo-geo/SeoYoutube'));
+const SeoShopping = lazy(() => import('@/canvas/seo-geo/SeoShopping'));
+const SeoMonthly = lazy(() => import('@/canvas/seo-geo/SeoMonthly'));
 const SeoWatch = lazy(() => import('@/canvas/seo-geo/SeoWatch'));
 const SeoSources = lazy(() => import('@/canvas/seo-geo/SeoSources'));
 const SeoCannibal = lazy(() => import('@/canvas/seo-geo/SeoCannibal'));
@@ -155,6 +171,12 @@ export default function App() {
             <Route path="pazarlama/yeni-kitap" element={<MarketingHome />} />
             <Route path="pazarlama/plan/:id" element={<MarketingPlan />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
+            {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
+            <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
+            <Route path="pazarlama/set-hediye/set/:id" element={<SetEditor />} />
+            <Route path="pazarlama/set-hediye/teklif/:id" element={<GiftOfferEditor />} />
+            <Route path="pazarlama/icerik" element={<CreativeHome />} />
+            <Route path="pazarlama/icerik/:id" element={<CreativeRequest />} />
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
             <Route path="seo-geo/anahtar-kelimeler" element={<SeoSearch />} />
@@ -172,6 +194,16 @@ export default function App() {
             <Route path="seo-geo/rakipler" element={<SeoCompetitors />} />
             <Route path="seo-geo/kimlik" element={<SeoEntity />} />
             <Route path="seo-geo/rehberler" element={<SeoGuides />} />
+            <Route path="seo-geo/is-listesi" element={<SeoWorklist />} />
+            <Route path="seo-geo/kitap" element={<SeoScorecard />} />
+            <Route path="seo-geo/yazar-biyografi" element={<SeoBios />} />
+            <Route path="seo-geo/sss" element={<SeoFaq />} />
+            <Route path="seo-geo/benzer-kitaplar" element={<SeoSimilar />} />
+            <Route path="seo-geo/sorgu-sayfa" element={<SeoKeymap />} />
+            <Route path="seo-geo/soru-onerileri" element={<SeoQuestionSuggest />} />
+            <Route path="seo-geo/youtube" element={<SeoYoutube />} />
+            <Route path="seo-geo/alisveris" element={<SeoShopping />} />
+            <Route path="seo-geo/aylik-rapor" element={<SeoMonthly />} />
             <Route path="seo-geo/izleme" element={<SeoWatch />} />
             <Route path="seo-geo/kaynaklar" element={<SeoSources />} />
             <Route path="seo-geo/yarisan" element={<SeoCannibal />} />
@@ -225,6 +257,7 @@ export default function App() {
             <Route path="ceviri/masam/:jobId" element={<TranslationWorkbench />} />
             <Route path="ceviri/:jobId/kalite" element={<TranslationQuality />} />
             <Route path="kitap-tasarim" element={<StudioHome />} />
+            <Route path="kitap-tasarim/kapak-arsivi" element={<CoverLibraryScreen />} />
             <Route path="kitap-tasarim/:jobId" element={<StudioFlow />} />
             <Route path="kitap-tasarim/:jobId/studyo" element={<StudioEditor />} />
             <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />

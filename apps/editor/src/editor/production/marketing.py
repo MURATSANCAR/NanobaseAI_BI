@@ -45,8 +45,57 @@ DIR = "pazarlama"
 ALIAS = "book-director"
 WINDOW_CHARS = 12000          # tek model çağrısına giden metin penceresi; kitap pencere pencere, bütünüyle okunur
 KINDS = ("back-cover", "product", "guide")
-TEMPLATES = {"kare": (1080, 1080), "dikey": (1080, 1920), "yatay": (1200, 628)}
-TEMPLATE_LABEL = {"kare": "Kare 1080×1080", "dikey": "Dikey 1080×1920", "yatay": "Yatay 1200×628"}
+#: Biçimler (M19): sosyal medya, reklam, site ve e-bülten. Kesin liste grafik ekibiyle belirlenir (M19 §10);
+#: kurulum `EDITOR_MARKETING_EXTRA_FORMATS` ile ek biçim tanımlayabilir: {"anahtar": [genişlik, yükseklik, "ad"]}.
+TEMPLATES = {"kare": (1080, 1080), "dikey": (1080, 1920), "yatay": (1200, 628),
+             "dikey-gonderi": (1080, 1350), "kare-1200": (1200, 1200),
+             "banner-300x250": (300, 250), "banner-728x90": (728, 90), "banner-160x600": (160, 600),
+             "banner-320x50": (320, 50), "site-bandi": (1920, 600), "e-bulten": (600, 200)}
+TEMPLATE_LABEL = {"kare": "Kare 1080×1080", "dikey": "Dikey 1080×1920", "yatay": "Yatay 1200×628",
+                  "dikey-gonderi": "Dikey gönderi 1080×1350", "kare-1200": "Kare 1200×1200",
+                  "banner-300x250": "Reklam kutusu 300×250", "banner-728x90": "Yatay reklam 728×90",
+                  "banner-160x600": "Dikey reklam 160×600", "banner-320x50": "Mobil reklam 320×50",
+                  "site-bandi": "Site bandı 1920×600", "e-bulten": "E-bülten başlığı 600×200"}
+TEMPLATE_GROUP = {"kare": "sosyal", "dikey": "sosyal", "yatay": "sosyal", "dikey-gonderi": "sosyal",
+                  "kare-1200": "sosyal", "banner-300x250": "reklam", "banner-728x90": "reklam",
+                  "banner-160x600": "reklam", "banner-320x50": "reklam", "site-bandi": "site", "e-bulten": "e-bulten"}
+#: Alıntı kartı bu kısa kenardan küçük biçimde okunmaz (şerit reklamlar); o biçimlerde yalnız kapak/iç sayfa.
+QUOTE_MIN = 200
+_FORMAT_KEY = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
+
+
+def _extra_formats() -> None:
+    import os
+    raw = os.environ.get("EDITOR_MARKETING_EXTRA_FORMATS", "").strip()
+    if not raw:
+        return
+    try:
+        extra = json.loads(raw)
+        for k, v in extra.items():
+            w, h, name = int(v[0]), int(v[1]), str(v[2])[:60]
+            if _FORMAT_KEY.match(k) and 40 <= w <= 4000 and 40 <= h <= 4000:
+                TEMPLATES[k], TEMPLATE_LABEL[k] = (w, h), name
+                TEMPLATE_GROUP.setdefault(k, "diger")
+    except (ValueError, TypeError, IndexError, AttributeError):
+        logging.getLogger(__name__).warning("EDITOR_MARKETING_EXTRA_FORMATS okunamadı; ek biçim yok")
+
+
+def shape(w: int, h: int) -> str:
+    """Yerleşim türü: square | tall | wide (büyük sosyal görseller) · strip (şerit: reklam/site/e-bülten bandı) ·
+    stack (küçük reklam kutusu ve dikey reklam: üstte yazı, ortada görsel, altta künye)."""
+    r = w / h
+    if r >= 2.4:
+        return "strip"
+    if min(w, h) < 400 or r <= 0.45:
+        return "stack"
+    if r >= 1.4:
+        return "wide"
+    return "square" if h / w < 1.3 else "tall"
+
+
+def quote_fits(template: str) -> bool:
+    w, h = TEMPLATES[template]
+    return min(w, h) >= QUOTE_MIN
 VISUALS = ("cover", "page", "quote")
 EFFECTS = ("plain", "shadow", "outline", "burst", "rainbow")
 DRAFT_NOTE = "Taslak — ticari kullanım izni bekleniyor"
@@ -58,6 +107,7 @@ FICTION = {"RESIMLI_OYKU", "ILK_OKUMA", "COCUK_ROMANI", "GENCLIK_ROMANI", "YETIS
 PAPER_TR = {"kuse_130": "130 g mat kuşe", "hamur_70": "70 g 2. hamur"}
 BINDING_TR = {"tel_dikis": "Tel dikiş", "amerikan_cilt": "Amerikan cilt"}
 
+_extra_formats()
 _io_lock = threading.Lock()
 _running: dict[str, asyncio.Task] = {}
 _digest_locks: dict[str, asyncio.Lock] = {}
@@ -910,18 +960,32 @@ def palette_colors(d: Path) -> list[str]:
     from . import plan as plan_mod
     pl = plan_mod.load(d) or {}
     ap = studio.read(d, "artplan.json") or {}
-    cols = [c["hex"] for c in (pl.get("palette") or {}).get("colors", []) if c.get("hex")]
+    # Kitapsız pazarlama işinde (marketing_job.py) palet iş kaydındadır: marka paleti + kapaktan çıkan renkler.
+    cols = [str(c) for c in (studio.read(d, "job.json") or {}).get("palette") or []]
+    cols += [c["hex"] for c in (pl.get("palette") or {}).get("colors", []) if c.get("hex")]
     cols += list((ap.get("style") or {}).get("palette") or [])
     cols += [(ap.get("style") or {}).get("accent") or "#1F3B73", "#2C2C2A", "#FBF7EE"]
     return [c.upper() for c in dict.fromkeys(c.upper() for c in cols if re.fullmatch(r"#[0-9A-Fa-f]{6}", c or ""))]
 
 
+#: Kitapsız pazarlama işinin ön kapak görseli (CRM/e-ticaret görseli ya da kullanıcının yüklediği dosya).
+COVER_FILE = ("girdi", "kapak.png")
+
+
+def cover_file(d: Path) -> Path:
+    return d.joinpath(*COVER_FILE)
+
+
 def _cover_front(d: Path, height: int):
-    """Kapak açılımının ön kapağı (kesim kutusu), yazısıyla birlikte, PDF'ten dizildiği gibi."""
+    """Kapak açılımının ön kapağı (kesim kutusu), yazısıyla birlikte, PDF'ten dizildiği gibi. Kitapsız pazarlama
+    işinde (dizilmiş kapak yok) iş klasöründeki kapak görseli."""
     import pymupdf
     from PIL import Image
     pdf = d / "kapak" / "kapak.pdf"
     info = studio.read(d, "cover.json")
+    if not pdf.exists() and cover_file(d).exists():
+        im = Image.open(cover_file(d)).convert("RGB")
+        return im.resize((max(1, round(im.width * height / im.height)), height), Image.Resampling.LANCZOS)
     if not pdf.exists() or not info:
         raise FileNotFoundError("Kapak henüz dizilmedi.")
     sp = studio._spec(d)
@@ -940,7 +1004,7 @@ def social_sources(d: Path) -> list[dict]:
     from . import plan as plan_mod
     out = []
     art = studio.selected_art(d)
-    if (d / "kapak" / "kapak.pdf").exists():
+    if (d / "kapak" / "kapak.pdf").exists() or cover_file(d).exists():
         out.append({"key": "kapak", "label": "Ön kapak", "kind": "cover", "draft": "kapak" in art})
     pl = plan_mod.load(d)
     if pl is not None:
@@ -1026,20 +1090,22 @@ def _ink_on(bg: str) -> str:
 
 def _faces(d: Path) -> tuple[ct.Style, ct.Face]:
     prof, ms = _profile(d), studio._manuscript(d)
-    style = ct.STYLES[ct.style_for(prof.get("age_max"), ms.meta.get("GENRE"))]
-    body = ct.Face("Andika-Regular.ttf", 400) if (prof.get("age_max") or 99) <= 12 else ct.Face("NotoSerif[wdth,wght].ttf", 500)
+    age_max = prof.get("age_max") or ms.meta.get("AGE_MAX")      # kitapsız pazarlama işinde yaş CRM'den (meta)
+    style = ct.STYLES[ct.style_for(age_max, ms.meta.get("GENRE"))]
+    body = ct.Face("Andika-Regular.ttf", 400) if (age_max or 99) <= 12 else ct.Face("NotoSerif[wdth,wght].ttf", 500)
     return style, body
 
 
 def _draw_headline(img, text: str, face: ct.Face, box: tuple[int, int, int, int], effect: str, colors: list[str],
-                   color: str, max_size: int) -> None:
-    """Başlık yazısı efektle: plain | shadow | outline | burst | rainbow. Harfler fonttan (Türkçe doğru)."""
+                   color: str, max_size: int, min_size: int = 18) -> None:
+    """Başlık yazısı efektle: plain | shadow | outline | burst | rainbow. Harfler fonttan (Türkçe doğru).
+    `min_size`: küçük reklam biçimlerinde (şerit, 300×250) daha küçük punto kabul edilir."""
     from PIL import ImageDraw, ImageFilter
     from PIL import Image
     x0, y0, x1, y1 = box
     bw, bh = x1 - x0, y1 - y0
     pad = int(bh * 0.12) if effect == "burst" else 0
-    size, lines = _fit(text, face, bw - 2 * pad, bh - 2 * pad, 1.08, max_size, 18)
+    size, lines = _fit(text, face, bw - 2 * pad, bh - 2 * pad, 1.08, max(max_size, min_size), min_size)
     f = _font(face, size)
     lh = int(size * 1.08)
     top = y0 + (bh - lh * len(lines)) // 2
@@ -1079,6 +1145,108 @@ def _draw_headline(img, text: str, face: ct.Face, box: tuple[int, int, int, int]
         dr.text((x, y), ln, font=f, fill=_rgb(color), stroke_width=stroke, stroke_fill=stroke_fill)
 
 
+def _scaled(pic, max_w, max_h):
+    from PIL import Image
+    k = min(max_w / pic.width, max_h / pic.height)
+    return pic.resize((max(1, int(pic.width * k)), max(1, int(pic.height * k))), Image.Resampling.LANCZOS)
+
+
+def _text_block(img, text: str, face: ct.Face, box: tuple[int, int, int, int], color: str, max_size: int,
+                min_size: int = 8, leading: float = 1.15) -> bool:
+    """Kutuya ortalanmış düz yazı; sığmazsa hiçbir şey çizmez ve False döner."""
+    from PIL import ImageDraw
+    x0, y0, x1, y1 = box
+    if x1 - x0 < 10 or y1 - y0 < min_size:
+        return False
+    try:
+        size, lines = _fit(text, face, x1 - x0, y1 - y0, leading, max(max_size, min_size), min_size)
+    except ValueError:
+        return False
+    f = _font(face, size)
+    dr = ImageDraw.Draw(img)
+    lh = int(size * leading)
+    top = y0 + (y1 - y0 - lh * len(lines)) // 2
+    for i, ln in enumerate(lines):
+        dr.text((x0 + (x1 - x0 - ct._width(f, ln)) // 2 - f.getbbox(ln)[0], top + i * lh), ln, font=f, fill=_rgb(color))
+    return True
+
+
+def _render_compact(d: Path, img, sh: str, visual: str, source: str | None, headline: str, effect: str, ink: str,
+                    accents: list[str], srcs: dict, style, body: ct.Face, byline: str, quote: str | None):
+    """Küçük ve şerit biçimler (reklam kutuları, site bandı, e-bülten başlığı). Şerit: görsel solda, yazı sağda
+    (alçak şeritte künye sığmazsa yalnız başlık). Yığın: üstte yazı, ortada görsel, altta künye."""
+    W, H = img.size
+    m = max(4, int(min(W, H) * 0.08))
+    if visual == "quote":
+        if min(W, H) < QUOTE_MIN:
+            raise ValueError("Alıntı kartı bu boyutta okunmaz; kapak ya da iç sayfa görseli seçin.")
+        q = clean_quote(quote or "")
+        if not q:
+            raise ValueError("Alıntı boş olamaz.")
+        if not in_book(q, norm("\n".join(s.text for s in sections(d)))):
+            raise ValueError("Bu alıntı kitabın metninde birebir geçmiyor; kitaptan aynen alın.")
+        pic = _cover_front(d, 1200) if "kapak" in srcs else None
+        draft = bool(srcs["kapak"]["draft"]) if pic is not None else False
+        text, fill = f"“{q}”", False
+    else:
+        key = source or ("kapak" if visual == "cover" else None)
+        if not key or key not in srcs:
+            raise ValueError("Görsel seçin (kapak ya da iç sayfa resmi).")
+        draft = bool(srcs[key]["draft"])
+        pic = source_image(d, key, 1200)
+        text, fill = headline, visual == "page"
+
+    def write(box, max_size):
+        if visual == "quote":
+            if not _text_block(img, text, style.subtitle, box, ink, max_size, 8, 1.2):
+                raise ValueError("Alıntı bu boyuta sığmıyor; daha kısa bir alıntı seçin.")
+        else:
+            _draw_headline(img, text, style.title, box, effect, accents, ink, max_size, 8)
+
+    if sh == "strip":
+        if pic is not None and fill:
+            pw = int(W * 0.4)
+            img.paste(_cover_fit(pic, pw, H), (0, 0))
+            x0 = pw + m
+        elif pic is not None:
+            cv = _scaled(pic, W * 0.3, H - 2 * m)
+            img.paste(cv, (m, (H - cv.height) // 2))
+            x0 = m + cv.width + m
+        else:
+            x0 = m
+        bh = H - 2 * m
+        if text:
+            head_h = int(bh * 0.64) if bh >= 60 else bh
+            write((x0, m, W - m, m + head_h), int(head_h * 0.8))
+            if head_h < bh:
+                low = (x0, m + head_h, W - m, H - m)
+                if not _text_block(img, byline, body, low, ink, int((bh - head_h) * 0.7)):
+                    _text_block(img, byline.split(" · ")[0], body, low, ink, int((bh - head_h) * 0.7))
+        elif not _text_block(img, byline, body, (x0, m, W - m, H - m), ink, int(bh * 0.45)):
+            _text_block(img, byline.split(" · ")[0], body, (x0, m, W - m, H - m), ink, int(bh * 0.6))
+        return img, draft
+
+    # stack
+    inner = H - 2 * m
+    head_h = int(inner * (0.24 if H > W * 1.5 else 0.30)) if text else 0
+    by_h = int(inner * (0.12 if H > W * 1.5 else 0.16))
+    gap = m // 2 if text else 0
+    room = inner - head_h - by_h - gap * 2
+    if text:
+        write((m, m, W - m, m + head_h), int(min(head_h * 0.45, W * 0.16)))
+    if pic is not None and room > 8:
+        y = m + head_h + gap
+        if fill:
+            img.paste(_cover_fit(pic, W, room), (0, y))
+        else:
+            cv = _scaled(pic, W - 2 * m, room)
+            img.paste(cv, ((W - cv.width) // 2, y + (room - cv.height) // 2))
+    box = (m, H - m - by_h, W - m, H - m)
+    if not _text_block(img, byline, body, box, ink, int(by_h * 0.45)):
+        _text_block(img, byline.split(" · ")[0], body, box, ink, int(by_h * 0.6))
+    return img, draft
+
+
 def _cover_fit(im, w: int, h: int):
     from PIL import ImageOps
     return ImageOps.fit(im, (w, h), method=3, centering=(0.5, 0.45))
@@ -1086,11 +1254,12 @@ def _cover_fit(im, w: int, h: int):
 
 def render_social(d: Path, template: str, visual: str, source: str | None, headline: str, effect: str,
                   color: str | None, quote: str | None):
-    """Tek görsel (PNG, RGB). Dönen: (Image, draft). Yerleşim şablona göre: kare ve dikeyde üstte başlık, ortada
-    görsel, altta kitap adı/yazar; yatayda görsel solda (alıntıda kapak sağda), yazı öbür yarıda."""
+    """Tek görsel (PNG, RGB). Dönen: (Image, draft). Yerleşim biçimin oranına göre (`shape`): kare ve dikeyde üstte
+    başlık, ortada görsel, altta kitap adı/yazar; yatayda görsel solda (alıntıda kapak sağda), yazı öbür yarıda;
+    şerit ve küçük reklam biçimleri `_render_compact`."""
     from PIL import Image, ImageDraw, ImageFilter
     if template not in TEMPLATES:
-        raise ValueError("Şablon: kare, dikey ya da yatay.")
+        raise ValueError("Bilinmeyen biçim.")
     if visual not in VISUALS:
         raise ValueError("Görsel türü: kapak, sayfa ya da alıntı.")
     if effect not in EFFECTS:
@@ -1100,7 +1269,8 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
     if bg not in cols:
         raise ValueError("Renk kitabın paletinden seçilmeli.")
     W, H = TEMPLATES[template]
-    wide = template == "yatay"
+    lay = shape(W, H)
+    wide = lay == "wide"
     ms = studio._manuscript(d)
     style, body = _faces(d)
     headline = re.sub(r"\s+", " ", headline or "").strip()
@@ -1129,9 +1299,10 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
         img.paste(Image.new("RGB", img.size, (15, 12, 10)), (0, 0), sh)
         img.paste(pic, (x, y))
 
-    def scaled(pic, max_w, max_h):
-        k = min(max_w / pic.width, max_h / pic.height)
-        return pic.resize((max(1, int(pic.width * k)), max(1, int(pic.height * k))), Image.Resampling.LANCZOS)
+    scaled = _scaled
+    if lay in ("strip", "stack"):
+        return _render_compact(d, img, lay, visual, source, headline, effect, ink, accents, srcs, style, body, byline,
+                               quote)
 
     if visual == "quote":
         q = clean_quote(quote or "")
@@ -1151,7 +1322,7 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
             if cv:
                 shadowed(cv, W - m - cv.width, (H - cv.height) // 2)
         else:
-            cv = scaled(cover, W * 0.5, H * (0.2 if template == "kare" else 0.22)) if cover else None
+            cv = scaled(cover, W * 0.5, H * (0.2 if lay == "square" else 0.22)) if cover else None
             low = H - m - (cv.height + m // 2 if cv else 0) - by_h
             qbox = (m * 2, int(H * 0.14), W - m * 2, low - m // 2)
             if cv:
@@ -1185,7 +1356,7 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
             else:
                 small(byline, x0, W - m, (H - by_h) // 2)
         else:
-            head_h = int(H * (0.22 if template == "dikey" else 0.24)) if headline else 0
+            head_h = int(H * (0.22 if lay == "tall" else 0.24)) if headline else 0
             room = H - 2 * m - head_h - by_h - m
             cv = scaled(pic, W - 2 * m, room)
             y = m + head_h + (room - cv.height) // 2 + (m // 2 if headline else 0)
@@ -1205,7 +1376,7 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
                            ink, int(H * 0.14))
         small(byline, pw + m, W - m, H - m - by_h if headline else (H - by_h) // 2)
     else:
-        band = int(H * (0.30 if template == "kare" else 0.24)) if headline else by_h + 2 * m
+        band = int(H * (0.30 if lay == "square" else 0.24)) if headline else by_h + 2 * m
         img.paste(_cover_fit(pic, W, H - band), (0, 0))
         if headline:
             _draw_headline(img, headline, style.title, (m, H - band + m // 2, W - m, H - m - by_h - m // 3), effect,
@@ -1217,7 +1388,8 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
 def social_view(d: Path) -> dict:
     st = _read(d, "sosyal.json", {"items": []})
     return {"items": st["items"], "sources": social_sources(d), "palette": palette_colors(d),
-            "templates": [{"key": k, "label": TEMPLATE_LABEL[k], "w": v[0], "h": v[1]} for k, v in TEMPLATES.items()],
+            "templates": [{"key": k, "label": TEMPLATE_LABEL[k], "w": v[0], "h": v[1],
+                           "group": TEMPLATE_GROUP.get(k, "diger"), "quote": quote_fits(k)} for k, v in TEMPLATES.items()],
             "effects": list(EFFECTS), "draft_note": DRAFT_NOTE}
 
 

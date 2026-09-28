@@ -124,7 +124,10 @@ for r in top:
     got = card.get("crmDoneLinked") if st == 200 else st
     if got != int(r["n"]):
         diff.append({"id": str(r["id"]), "sql": int(r["n"]), "api": got})
-check("3 okul kartındaki geçmiş ziyaret", bool(top) and not diff, f"{len(top)} okul, fark {diff}")
+# CRM'de okul bağlı tamamlanmış ziyaret yoksa karşılaştıracak veri yoktur: geçti/kaldı değil, doğrulanamadı
+# (2026-09-28 ölçümü: new_etkinlikBase 57 bin kayıt, hiçbirinde new_ZiyaretYeri ya da new_ziyarettipi dolu değil).
+check("3 okul kartındaki geçmiş ziyaret", (not diff) if top else None,
+      f"{len(top)} okul, fark {diff}" if top else "CRM'de okula bağlı tamamlanmış ziyaret kaydı yok")
 
 # 4. dönem siparişleri
 term = meta["term"]
@@ -144,7 +147,7 @@ st, lst = api("GET", "/api/v1/schools?kapsam=hepsi&kademe=3&sirala=ogrenci", ADM
 sid = lst["items"][0]["id"] if st == 200 and lst["items"] else None
 if sid:
     st, cat = api("POST", f"/api/v1/schools/{sid}/catalog", ADMIN, {"adet": "hepsi", "onizleme": True})
-    codes = [b["code"] for b in cat.get("items", [])] if st == 200 else []
+    codes = [b["code"] for b in cat.get("items", [])] if st in (200, 201) else []   # uç 201 döner; önizleme kayıt yazmaz
     if codes:
         inl = ", ".join("N'%s'" % c.replace("'", "''") for c in codes)
         stock = {r["CODE"]: float(r["bakiye"]) for r in q(logo, f"SELECT I.CODE, SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT ELSE -S.AMOUNT END) AS bakiye "

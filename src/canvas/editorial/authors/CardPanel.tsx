@@ -16,6 +16,7 @@ import { useCan } from '../../useAdmin';
 import Sheet from '../studio/reader/Sheet';
 import MeetingForm, { type MeetingMode, type MeetingTarget } from './MeetingForm';
 import CardForm from './CardForm';
+import GrowthSection from './GrowthSection';
 import { BAND, HeatPill, TRACE, cellClass, lastMonths, daysAgo, downloadIcs, fmtDay, invalidateAuthors, monthLabel, useAuthorsMeta } from './shared';
 
 /** Bir yazarın ilişki kaydı: kart, ısı dökümü, randevu ve görüşme notları. Kartı olmayan CRM kişisi için de açılır;
@@ -434,6 +435,16 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
           </button>
         )}
       </section>
+
+      {!compact && (detail?.crmContactId || target.crm?.id) && <GrowthSection contactId={(detail?.crmContactId || target.crm?.id) as string} />}
+      {compact && (detail?.crmContactId || target.crm?.id) && (
+        <Link
+          to={`/yazar-iliskileri?kisi=${encodeURIComponent((detail?.crmContactId || target.crm?.id) as string)}&ad=${encodeURIComponent(name)}`}
+          className="inline-block text-[12px] font-extrabold text-canvas-violet underline"
+        >
+          Satış gelişimi, sadakat ve ZEKİ AI önerisi
+        </Link>
+      )}
 
       {(detail?.crmContactId || target.crm?.id) && (
         <RelatedAuthors contactId={(detail?.crmContactId || target.crm?.id) as string} compact={compact} />

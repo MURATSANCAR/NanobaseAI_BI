@@ -12,8 +12,13 @@ const VISUALS: [SocialVisual, string, string][] = [
   ['quote', 'Alıntı kartı', 'Kitaptan kısa alıntı, paletten zemin'],
 ];
 const EFFECTS: Record<SocialEffect, string> = { plain: 'Düz', shadow: 'Gölge', outline: 'Dış çizgi', burst: 'Patlama', rainbow: 'Renkli harf' };
-const ICON: Record<SocialTemplate, { width: number; height: number }> = { kare: { width: 24, height: 24 }, dikey: { width: 17, height: 30 }, yatay: { width: 32, height: 17 } };
-const TEMPLATE_TEXT: Record<SocialTemplate, string> = { kare: 'Kare', dikey: 'Dikey (hikâye)', yatay: 'Yatay (bağlantı)' };
+const TEMPLATE_TEXT: Record<string, string> = { kare: 'Kare', dikey: 'Dikey (hikâye)', yatay: 'Yatay (bağlantı)' };
+/** Biçim simgesi: oranı koruyan küçük çerçeve (en uzun kenar 30 px; reklam şeritleri en az 4 px yükseklikte). */
+const iconOf = (w: number, h: number) => {
+  const k = 30 / Math.max(w, h);
+  return { width: Math.max(4, Math.round(w * k)), height: Math.max(4, Math.round(h * k)) };
+};
+const textOf = (t: { key: SocialTemplate; label: string }) => TEMPLATE_TEXT[t.key] ?? t.label.replace(/\s+\d+×\d+$/, '');
 
 export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: MarketingView; refresh: () => void }) {
   const s = v.social;
@@ -48,14 +53,14 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
       <div className="flex min-w-0 flex-col gap-3">
         <Section title="Yeni görsel">
-          <div role="radiogroup" aria-label="Şablon" className="grid grid-cols-3 gap-2">
+          <div role="radiogroup" aria-label="Şablon" className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1">
             {s.templates.map((t) => (
               <button key={t.key} type="button" role="radio" aria-checked={template === t.key} onClick={() => setTemplate(t.key)}
                 className={`flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border p-2 ${press} ${template === t.key ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
                 <span className="flex h-10 items-center" aria-hidden>
-                  <span className="block rounded-[3px] border-2 border-canvas-violet/70" style={ICON[t.key]} />
+                  <span className="block rounded-[3px] border-2 border-canvas-violet/70" style={iconOf(t.w, t.h)} />
                 </span>
-                <span className="text-[12px] font-extrabold">{TEMPLATE_TEXT[t.key]}</span>
+                <span className="text-center text-[12px] font-extrabold leading-tight">{textOf(t)}</span>
                 <span className="font-mono text-[10.5px] text-canvas-muted">{t.w}×{t.h}</span>
               </button>
             ))}
@@ -160,11 +165,11 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
             {s.items.map((it) => (
               <li key={it.id} className="flex min-w-0 flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-2">
                 <a href={marketingApi.socialUrl(jobId, it.id)} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl bg-slate-100">
-                  <Img src={marketingApi.socialUrl(jobId, it.id, 520)} alt={`${TEMPLATE_TEXT[it.template]} ${VISUALS.find((x) => x[0] === it.visual)?.[1] ?? ''}`}
+                  <Img src={marketingApi.socialUrl(jobId, it.id, 520)} alt={`${TEMPLATE_TEXT[it.template] ?? it.template} ${VISUALS.find((x) => x[0] === it.visual)?.[1] ?? ''}`}
                     fallback="görsel" className="mx-auto max-h-72 w-auto object-contain" />
                 </a>
                 <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <span className="text-[11.5px] font-bold">{TEMPLATE_TEXT[it.template]} · {VISUALS.find((x) => x[0] === it.visual)?.[1]}</span>
+                  <span className="text-[11.5px] font-bold">{TEMPLATE_TEXT[it.template] ?? `${it.w}×${it.h}`} · {VISUALS.find((x) => x[0] === it.visual)?.[1]}</span>
                   <Approval approved={it.approved} />
                 </div>
                 {it.draft && (

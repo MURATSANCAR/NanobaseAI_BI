@@ -26,7 +26,10 @@ MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "e
            # site içi bağlantılar, Google taraması (URL Denetimi + Cloudflare bot analitiği), okur yorumları, video,
            # satıştan kalkan kitap sayfaları, yazar sayfası güven sinyalleri, Bing'den gelen bağlantılar
            "watch", "ai_sources", "cannibal", "seasons", "links", "crawlbot", "reviews", "video", "sunset",
-           "authors", "backlinks")
+           "authors", "backlinks",
+           # 3. tur (2026-09-28): tek iş listesi, kitap karnesi, yazar biyografisi, SSS taslağı, benzer kitaplar,
+           # sorgu–sayfa eşlemesi, izlenen soru önerileri, YouTube, Google Alışveriş hazırlığı, aylık yönetim raporu
+           "worklist", "scorecard", "bios", "faq", "similar", "keymap", "qsuggest", "youtube", "shopping", "monthly")
 
 
 @dataclass

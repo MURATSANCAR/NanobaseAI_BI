@@ -152,6 +152,11 @@
       "label": "Üretim yönetimi"
     },
     {
+      "key": "sayfa:kapak-arsivi",
+      "area": "editoryal",
+      "label": "Kapak arşivi"
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
@@ -195,6 +200,11 @@
       "key": "sayfa:pazarlama-yeni-kitap",
       "area": "pazarlama",
       "label": "Yeni kitap planı"
+    },
+    {
+      "key": "sayfa:pazarlama-icerik",
+      "area": "pazarlama",
+      "label": "Görsel ve metin"
     },
     {
       "key": "sayfa:kategori-agaci",
@@ -312,6 +322,56 @@
       "label": "Yazar sayfaları"
     },
     {
+      "key": "sayfa:seo-isler",
+      "area": "pazarlama",
+      "label": "İş listesi"
+    },
+    {
+      "key": "sayfa:seo-karne",
+      "area": "pazarlama",
+      "label": "Kitap karnesi"
+    },
+    {
+      "key": "sayfa:seo-biyografi",
+      "area": "pazarlama",
+      "label": "Yazar biyografileri"
+    },
+    {
+      "key": "sayfa:seo-sss",
+      "area": "pazarlama",
+      "label": "Kitap soru–cevapları"
+    },
+    {
+      "key": "sayfa:seo-benzer",
+      "area": "pazarlama",
+      "label": "Benzer kitaplar"
+    },
+    {
+      "key": "sayfa:seo-eslesme",
+      "area": "pazarlama",
+      "label": "Sorgu–sayfa eşlemesi"
+    },
+    {
+      "key": "sayfa:seo-soru",
+      "area": "pazarlama",
+      "label": "Soru önerileri"
+    },
+    {
+      "key": "sayfa:seo-youtube",
+      "area": "pazarlama",
+      "label": "YouTube"
+    },
+    {
+      "key": "sayfa:seo-alisveris",
+      "area": "pazarlama",
+      "label": "Google Alışveriş hazırlığı"
+    },
+    {
+      "key": "sayfa:seo-aylik",
+      "area": "pazarlama",
+      "label": "Aylık rapor"
+    },
+    {
       "key": "sayfa:seo-sema",
       "area": "pazarlama",
       "label": "Şema denetimi"
@@ -350,6 +410,11 @@
       "key": "sayfa:kurumsal-satis",
       "area": "satis",
       "label": "Kurumsal ve B2B"
+    },
+    {
+      "key": "sayfa:pazarlama-set-hediye",
+      "area": "pazarlama",
+      "label": "Set ve hediye"
     }
   ],
   "features": [
@@ -569,7 +634,7 @@
       "area": "editoryal",
       "page": "sayfa:ceviri",
       "label": "Çeviri işi yönetme",
-      "hint": "İş açma, çevirmen/inceleyen atama, kaynak yükleme, ZEKİ ham taslağı (model harcar), redaksiyona aktarma, silme"
+      "hint": "İş açma, çevirmen/inceleyen atama, kaynak yükleme, ZEKİ ham taslağı ve ZEKİ kalite tahmini (model harcar; tahmini işin inceleyeni de başlatır), redaksiyona aktarma, silme"
     },
     {
       "key": "ozellik:ceviri.terim",
@@ -598,6 +663,13 @@
       "page": "sayfa:yazar-iliskileri",
       "label": "Yazar kartı ve görüşme yazma",
       "hint": "Yeni yazar kartı, aşama değiştirme, havuza alma, randevu ve görüşme notu"
+    },
+    {
+      "key": "ozellik:yazar-iliski.oneri",
+      "area": "kayitlar",
+      "page": "sayfa:yazar-iliskileri",
+      "label": "Yazar için Zeki AI önerisi",
+      "hint": "Satış, sadakat, ilişki ısısı ve görüşme notlarından strateji önerisi üretme (model harcar)"
     },
     {
       "key": "ozellik:tasarim.uret",
@@ -930,6 +1002,74 @@
       "page": "sayfa:pazarlama-yeni-kitap",
       "label": "Materyal editoryal onayı",
       "hint": "Föy, basın bülteni, sosyal medya metni gibi materyallerin kitabın içeriğine uygunluğunu onaylama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:set.yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set, öneri ve kurumsal teklif hazırlama",
+      "hint": "Set taslağı ve bileşenleri, öneriyi taslağa alma/reddetme, onaya gönderme, CRM kartıyla eşleme, ZEKİ AI metinleri, kurumsal hediye teklifi, veri yenileme"
+    },
+    {
+      "key": "ozellik:set.onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set onayı (fiyat dahil)",
+      "hint": "Onaya gönderilen seti ve fiyatını onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:set.teklif-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Kurumsal hediye teklifi onayı",
+      "hint": "Kurumsal hediye teklifini gönderilebilir yapma ya da geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:set.maliyet-gor",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set maliyeti ve marjı",
+      "hint": "Bileşen birim maliyeti, ambalaj maliyeti ve marjı görme; yoksa yalnız fiyat ve indirim görünür"
+    },
+    {
+      "key": "ozellik:icerik.talep",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Görsel/metin talebi açma",
+      "hint": "Kitap, kanal, biçim, metin türü ve brief ile içerik talebi açma ve düzenleme"
+    },
+    {
+      "key": "ozellik:icerik.uret",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Görsel ve metin üretme",
+      "hint": "Görsel dizimi (bütün biçimler), Zeki AI metin varyantları, kapak yükleme, varlık düzeltme"
+    },
+    {
+      "key": "ozellik:icerik.tasarim-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Tasarım onayı",
+      "hint": "Grafik ekibinin görsel kalite onayı; aynı kişi mesaj onayını veremez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:icerik.mesaj-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Mesaj onayı",
+      "hint": "Pazarlama müdürünün metin/mesaj onayı; onaylanan varlık arşive ve yayına hazır pakete girer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:icerik.marka",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-icerik",
+      "label": "Marka kiti ve yasaklı kalıplar",
+      "hint": "Marka paleti, logo ve yazı tipi dosyaları (lisans notuyla), marka kuralları, yasaklı kalıp listesi",
       "explicit": true
     }
   ]

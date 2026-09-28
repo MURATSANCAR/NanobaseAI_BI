@@ -25,6 +25,8 @@
           />
         </div>
 
+        <NanobaseAIPanel />
+
         <!-- Key Info (core fields) -->
         <Section
           :label="__('Overview')"
@@ -173,6 +175,7 @@ import AssignTo from "./AssignTo.vue";
 import TicketContact from "./TicketContact.vue";
 import TicketFeedback from "./TicketFeedback.vue";
 import TicketSLA from "./TicketSLA.vue";
+import NanobaseAIPanel from "./NanobaseAIPanel.vue";
 
 const ticket = inject(TicketSymbol)!;
 const assignees = inject(AssigneeSymbol)!;
