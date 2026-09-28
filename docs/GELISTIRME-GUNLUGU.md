@@ -488,6 +488,67 @@
   test sunucusunda koordinatörde (`scripts/acceptance/M37/check.sh`, `kabul.py`, `temizlik.py`). Ölçülecekler: CRM
   `new_contact_new_kitapilgialanBase` kolon adları (R5), H2 izin sağlığı tür anahtarı (R3, `M37_CELISKI_TUR`), T-soft yorum
   cevap alanı, okur etkinliği tipleri.
+## 2026-09-28 — M16 Lansman / yayın ayı pazarlama: lansman paketi, kontrol listesi, ilk 7/30 gün izleme, D+7/D+30 raporu
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-afc093dde6b836ee0`); yalnız `py_compile` ve JSON denetimi
+yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m16/run.sh`). main'e
+taşınmadı, kurulmadı.
+
+- **Neden:** M16 analizi (`docs/analiz/kullanici-ihtiyaclari/M16-lansman-yayin-ayi.md` §14). Yayın haftasının bilgisi dört yerde
+  (üretim kartı, dağılım siparişi, açık sipariş, Logo faturası); «kitap rafa ulaştı mı, ilk hafta hedefe göre nerede» tek ekranda yoktu.
+- **Çekirdeğe en küçük değişiklik:** M15 dosyalarına dokunulmadı; `marketing/__init__.py`'de `launch_api.register` bir satır.
+  Yeni dosyalar `launch.py`, `launch_sources.py`, `launch_track.py`, `launch_report.py`, `launch_api.py`. Kontrol listesi yeni tablo
+  değil, çekirdeğin `semantic_mkt_tasks`'ı (`launch_id` hazırdı): planın takvimi lansmana bağlanır, üstüne 8 lansman maddesi
+  (`kaynak='lansman'`). Lansmanda işaretlenen madde planın takviminde de yapılmış görünür. Tablolar `semantic_mkt_launches`,
+  `semantic_mkt_launch_daily|events|media|reviews` (kendi `ensure`'ı; çekirdeğin şeması değişmedi).
+- **Akış:** lansman yalnız onaylı yeni kitap planından (409 değilse); elle ya da zamanlayıcıyla yayına 14 gün kala (K1). Durum
+  yayın gününe göre yürür: hazırlık → yayın haftası (D0…D+6) → ilk ay izleme → kapandı (D+30 raporundan sonra ya da elle).
+- **İzleme (rakamı model üretmez):** CRM sipariş sinyali saatte bir (gün = sipariş tarihinin İstanbul günü, sipariş satış değildir,
+  ayrı etiket), dağılım (tip 2) adet ve bayi sayısı, Baskı Öneri'nin açık sipariş ve depo SQL'i dosyadan (tanım yeniden yazılmadı),
+  CRM «Bekleyen Ürün» ayrı satır, Logo faturalı net adet/ciro M46 satır tanımıyla günde bir, M46 hedefinin günlük payı. Emsal:
+  M15 karnesindeki emsallerin ilk satış gününden 7/30 gün (Logo, tamamlanan sonuç önbellekte). Okunamayan kaynak sıfır yazılmaz;
+  özet «okunamadı» der.
+- **Kararlar (uzmana sorulacak sorular yerine veriye/koda bakılarak):**
+  - *Yayın günü:* onaylı planın yayın günü esas (M15 sırası: kitap kartı → proje → üretim; M46 hedefi ve M10 aynı alanı okur).
+    M12 `print_exit`'in gerçekleşen depo girişi ve CRM kitap/proje/üretim tarihleri «aday» olarak başlıkta; çelişki uyarı
+    («kitap depoya yayından N gün sonra girdi», «yayın geçti, depo girişi yok»), biri «esas al»ınır ya da elle girilir; bekleyen
+    şablon maddeleri kayar. Depo girişini kendiliğinden yayın günü yapmadık: depo girişi rafa ulaşmanın koşulu, yayın günü değil.
+  - *Ön sipariş:* iki ayrı ölçü — açık sipariş (Baskı Öneri tanımı) ve CRM «Bekleyen Ürün»; ayrıca yayından önceki sipariş
+    (`MARKETING_LAUNCH_PRE_DAYS`, 14 gün) raporda «yayından önceki sipariş».
+  - *Başarı ölçüsü:* birikmiş hedef payına oran; esas Logo faturası (veri sonuna kadar), Logo yayından önce bitmişse CRM siparişi
+    (etiketli). Eşik M46 sapma kuralı (%80, `MARKETING_LAUNCH_ALERT_RATIO`). Hedef payı yayın gününden itibaren sayılır (yayın ayının
+    yayından önceki günlerinin payı gösterilmez — M46 aylık izlemesinden bu kadar farklı).
+  - *Stok–talep:* açık sipariş > depo stoku ya da yayından sonra dağılım siparişi yok → kırmızı ve anında e-posta (satış alıcıları
+    `MARKETING_LAUNCH_STOCK_RECIPIENTS` + sahip, kitap başına günde bir). Depo stoku Logo verisi sipariş anındaki CRM stokundan eskiyse
+    CRM değeri (kaynağı yazılı) — .155 17.08.2026'da donmuşken tek güncel sinyal.
+  - *Canlı Logo:* BT kararı; kodda bağlantı değişikliği yok, her ekranda veri sonu tarihi.
+  - *Kontrol listesi:* planın takvimi + 8 lansman maddesi (depo/dağılım teyidi, e-ticaret sayfası kontrolü, basın/etkinlik takvimi,
+    yayın günü kontrolü, gönderi kanıtı, basın yansıması, etkinlik sonucu); `MARKETING_LAUNCH_TASKS` (JSON) ile değişir.
+  - *Sipariş durumları:* 1 Taslak ve 100000001 İptal hariç (analizin kabul SQL'i); «Birleştirildi» (100000003) çift sayıyorsa
+    `MARKETING_LAUNCH_ORDER_EXCLUDE`'e eklenir — **ölçülecek**.
+- **D+7 / D+30:** günlük okumadan sonra rakam tablosu (sipariş, ön sipariş, dağılım, faturalı adet/ciro, kapsanan gün, hedef payı ve
+  oranlar, emsal ortalaması, açık sipariş, depo, etkinlik, medya tonu, yapılan madde) ve SQL'leri; Zeki AI (`llm_for("marketing",
+  BATCH)`, ekrandan NORMAL) iki paragraf + en çok 3 öneri, `guard.check` tabloda olmayan sayıyı içeren cümleyi düşürür; ciro modele hiç
+  verilmez. Karar artır/koru/kes/diğer + gerekçe (`pazarlama.plan-onay`), plan geçmişine `lansman-karar`; karardan sonra rakam donar.
+  PDF `export.pdf`.
+- **Etkinlik ve medya:** CRM `new_etkinlik` (ilgili kitap) okunur; sonuç (katılımcı, satılan, gelir, gider) portalda girilir, elle
+  etkinlik eklenir; medya test sunucusunda «Basın ve web» kayıtları (açıksa) + elle kayıt. Hepsi «CRM'e işlenecek» listesinde (CRM'e
+  yazma yok). Katılımcı kişisel verisi alınmaz.
+- **Bildirim:** günlük tek özet (D−7 açık madde, D0 depo/dağılım/açık sipariş, ilk hafta hedef altı, hazır rapor) pazarlama
+  alıcılarına ve sahibine; stok uyarısı anında. Dış kanala gönderim yok (hatırlatma + «yapıldı» + kanıt bağlantısı).
+- **Yetki:** `sayfa:pazarlama-lansman`, `ozellik:pazarlama.lansman-yaz` (Bütün ile gelir); karar açıkça verilen `plan-onay`; ciro
+  `butce-gor`; PDF `veri.disa-aktar`. `access.py` RULES iki satır + FEATURE_RULES iki satır.
+- **Ortak dosyalar:** `access.py`, `access_catalog.json`, `admin.py` (7 ayar), `marketing/__init__.py`, `App.tsx` (2 rota),
+  `navModel.ts` (+ `Rocket`), `navModel.test.ts` (+2), `ModulesMenu.tsx` (`LIVE.M16`).
+- **Ekran:** telefon düzeni öncelikli (şerit yatay kayar, madde düğmeleri 44 px, tablolar kendi kabında kayar); grafik recharts
+  (2B), animasyon eklenmedi (mevcut 150 ms basma/renk geçişleri).
+- **Zamanlayıcı:** `scripts/server/timas-marketing-launch.{service,timer}` saatte bir (`*:05`); ilk kurulumda elle bir kez.
+- **Ölçülecek (kabulde):** sipariş satırı sorgusunun süresi (9,7 Mn satır, `new_StokKodu` indeksi), `new_etkinlik` görünümünde
+  `new_etkinliktipiidName`/`new_sehirName`/`new_lgiliYazarName` kolonları, satır düzeyinde iptal (`new_siparissatiri.statuscode`)
+  siparişe dahil mi, «Birleştirildi» çift sayımı, `EOS_DEPO_STOK_KONTROL_211`'in güncelliği, M12 `print_exit` süresi.
+- **Açık kalanlar:** Uyarılar rozeti ve telefon alt çubuğu sayacına bağlanmadı (e-posta + ekran rengi var); panoya «lansman izleme»
+  kartı ve Zeki AI sohbetine lansman soruları sonraki tur; M19 onaylı görseller bağlanınca kontrol listesinde görünür; plan revize
+  edilip yeni sürüm onaylanırsa lansman eski plan kimliğinde kalır (maddeler kopyalanmaz); iş kuyruğu köprü içi iş parçacığı.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

@@ -101,6 +101,8 @@ const OkurAudience = lazy(() => import('@/canvas/okur/AudienceScreen'));
 const OkurSegments = lazy(() => import('@/canvas/okur/SegmentsScreen'));
 const OkurPrograms = lazy(() => import('@/canvas/okur/ProgramsScreen'));
 const OkurReviews = lazy(() => import('@/canvas/okur/ReviewsScreen'));
+const LaunchHome = lazy(() => import('@/canvas/marketing/launch/LaunchHome'));
+const LaunchScreen = lazy(() => import('@/canvas/marketing/launch/LaunchScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -234,6 +236,9 @@ export default function App() {
             <Route path="okur-toplulugu/segmentler" element={<OkurSegments />} />
             <Route path="okur-toplulugu/programlar" element={<OkurPrograms />} />
             <Route path="okur-toplulugu/yorumlar" element={<OkurReviews />} />
+            {/* Pazarlama › Planlama: M16 lansman (/api/v1/marketing/launches). */}
+            <Route path="pazarlama/lansman" element={<LaunchHome />} />
+            <Route path="pazarlama/lansman/:id" element={<LaunchScreen />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

@@ -689,6 +689,24 @@ SPEC: list[dict[str, Any]] = [
      "default": "0",
      "help": "Kapalıyken din/inanç gibi özel nitelikli çağrışım taşıyan ilgi alanları segmentte kullanılamaz (KVKK md. 6). "
              "Yalnız hukuk birimi yazılı karar verirse açılır; açıkken de ayrı açık rıza gerekir"},
+    # M16 Lansman
+    {"key": "MARKETING_LAUNCH_OPEN_DAYS", "group": "marketing", "label": "Lansmanın açılması (gün)", "type": "int", "default": "14",
+     "help": "Onaylı pazarlama planı olan kitabın lansman paketi yayına bu kadar gün kala kendiliğinden açılır (elle her zaman açılır)"},
+    {"key": "MARKETING_LAUNCH_PRE_DAYS", "group": "marketing", "label": "Lansman izlemesi yayından önce (gün)", "type": "int",
+     "default": "14", "help": "İzleme grafiği ve ön sipariş sayımı yayın gününden bu kadar gün önce başlar"},
+    {"key": "MARKETING_LAUNCH_ALERT_RATIO", "group": "marketing", "label": "Lansman hedef eşiği (%)", "type": "int", "default": "80",
+     "help": "İlk günlerde satış (Logo verisi yoksa sipariş) hedefin o güne düşen payının bu oranının altındaysa lansman kırmızı "
+             "olur ve sahibine günlük özette yazılır (bütçe modülünün sapma kuralıyla aynı varsayılan)"},
+    {"key": "MARKETING_LAUNCH_ORDER_EXCLUDE", "group": "marketing", "label": "Sayılmayan sipariş durumları", "type": "text",
+     "default": "1,100000001", "help": "CRM sipariş durum kodları (virgülle): 1 Taslak, 100000001 İptal Edildi. Birleştirilen "
+                                       "siparişler (100000003) çift sayılıyorsa buraya eklenir"},
+    {"key": "MARKETING_LAUNCH_STOCK_RECIPIENTS", "group": "marketing", "label": "Stok uyarısı alıcıları (satış)", "type": "text",
+     "default": "", "help": "Açık sipariş depo stokunu aşınca ya da yayından sonra dağılım siparişi yoksa anında giden e-postanın "
+                            "alıcıları (virgülle); lansman sahibine de gider. Kitap başına günde en çok bir kez"},
+    {"key": "MARKETING_LAUNCH_DAILY_HOUR", "group": "marketing", "label": "Lansman günlük okuma saati", "type": "int", "default": "7",
+     "help": "Logo satış ve depo okuması, D+7/D+30 raporu ve günlük özet bu saatten sonraki ilk koşuda yapılır; sipariş saatte bir okunur"},
+    {"key": "MARKETING_LAUNCH_TASKS", "group": "marketing", "label": "Lansman kontrol listesi (JSON)", "type": "text", "default": "",
+     "help": "Planın takvimine eklenen lansman maddeleri. Boşsa varsayılan. Biçim: [[gün, \"iş\", \"kanal\", \"materyal\"], …]"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",

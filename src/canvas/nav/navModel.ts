@@ -49,6 +49,7 @@ import {
   ChartColumn,
   ClipboardCheck,
   ClipboardList,
+  Rocket,
   Factory,
   Contact,
   CornerDownRight,
@@ -367,6 +368,8 @@ export const NAV: NavGroup[] = [
       { id: 'okur-segmentler', label: 'Okur segmentleri', to: '/okur-toplulugu/segmentler', icon: SlidersHorizontal, section: 'Okur ve müşteri', hint: 'Segment kuralı, büyüklük, amaç ve KVKK onayı', keywords: ['segment', 'hedef kitle', 'kvkk onayı', 'ilgi alanı'] },
       { id: 'okur-programlar', label: 'Topluluk programları', to: '/okur-toplulugu/programlar', icon: CalendarHeart, section: 'Okur ve müşteri', hint: 'Okuma kulübü, imza günü, anket takvimi ve geçmiş etkinlikler', keywords: ['okuma kulübü', 'imza günü', 'etkinlik', 'anket', 'duyuru'] },
       { id: 'okur-yorumlar', label: 'Yorum cevapları', to: '/okur-toplulugu/yorumlar', icon: MessageSquareReply, section: 'Okur ve müşteri', hint: 'Cevapsız okur yorumları ve Zeki AI cevap taslağı', keywords: ['yorum', 'cevap', 'okur yorumu', 'puan'] },
+      // Lansman ekranı (/pazarlama/lansman/:id) alt yol olarak «Lansman» öğesini etkin gösterir.
+      { id: 'pazarlama-lansman', label: 'Lansman', to: '/pazarlama/lansman', icon: Rocket, section: 'Planlama', hint: 'Yayın haftası ve ilk ay: kontrol listesi, sipariş ve satış izleme, stok uyarısı, D+7 ve D+30 raporu', keywords: ['lansman', 'yayın günü', 'yayın ayı', 'ilk hafta', 'imza günü', 'etkinlik', 'medya yansıması', 'stok uyarısı'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },

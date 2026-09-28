@@ -521,6 +521,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/foy", frozenset({page("pazarlama-foy"), page("pazarlama-aylik")})),
     ("/api/v1/marketing/meta", frozenset({page("pazarlama-yeni-kitap"), page("pazarlama-aylik"), page("pazarlama-foy")})),
     ("/api/v1/marketing/contract/month/", frozenset({page("pazarlama-aylik"), page("pazarlama-yeni-kitap")})),
+    # M16 Lansman (Pazarlama › Planlama). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/marketing/launches/run-due", SYSTEM),
+    ("/api/v1/marketing/launches", frozenset({page("pazarlama-lansman")})),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
@@ -741,6 +744,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "DELETE"}), r"^/api/v1/readers/imports(/[^/]+(/confirm)?)?$", "ozellik:okur.ice-aktar"),
     (frozenset({"POST"}), r"^/api/v1/readers/segments/[^/]+/export$", "ozellik:veri.disa-aktar"),
     (frozenset({"GET"}), r"^/api/v1/readers/imports/[^/]+/crm\.csv$", "ozellik:veri.disa-aktar"),
+    # Lansman: paket açma, kontrol listesi, etkinlik/medya kaydı, veri yenileme, rapor taslağı. Değerlendirme kararı açıkça
+    # verilen `pazarlama.plan-onay` ile ucun içinde denetlenir; bu kural ona uymaz.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/launches(?!/run-due$)(?!/[^/]+/reviews/[^/]+/decide$)(/.*)?$", "ozellik:pazarlama.lansman-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/launches/[^/]+/export\.pdf$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

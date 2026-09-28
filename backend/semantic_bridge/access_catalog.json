@@ -265,6 +265,11 @@
       "label": "Yorum cevapları"
     },
     {
+      "key": "sayfa:pazarlama-lansman",
+      "area": "pazarlama",
+      "label": "Lansman"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1660,6 +1665,13 @@
       "page": "sayfa:okur-yorumlar",
       "label": "Yorum cevap taslağı",
       "hint": "Cevapsız okur yorumuna Zeki AI cevap taslağı alma, düzenleme ve «cevaplandı» işaretleme (cevap sitede elle girilir)"
+    },
+    {
+      "key": "ozellik:pazarlama.lansman-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-lansman",
+      "label": "Lansman yönetme",
+      "hint": "Onaylı plandan lansman açma, kontrol listesi, etkinlik ve medya kaydı, veri yenileme, değerlendirme raporu taslağı"
     }
   ]
 }

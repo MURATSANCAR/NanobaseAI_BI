@@ -10,6 +10,7 @@ dosya ekleyerek gelir).
 - `monthly.py` — M18: aylık plan (takvim, çakışma, yeni kitap / backlist bütçe dağılımı, önceki ay özeti).
 - `foy.py`, `foy_pdf.py` — M18: satış föyü (CRM alanları, fiyat/barkod uyumsuzluğu, onay, paket PDF/zip).
 - `monthly_api.py` — M18 uçları (`/months/*`, `/foy*`), api.register içinden bağlanır.
+- `launch*.py` — M16 lansman: paket, kontrol listesi, ilk 7/30 gün izleme, D+7/D+30 raporu (`/api/v1/marketing/launches*`).
 
 app.py'de iki satır:
     from semantic_bridge import marketing
@@ -22,5 +23,8 @@ from typing import Any, Callable
 
 def register(app, rt: Callable[[], Any], require_caller: Callable[..., None], can: Callable[[str, str], bool]) -> dict[str, Any]:
     from semantic_bridge.marketing import api
+    from semantic_bridge.marketing import launch_api
 
-    return api.register(app, rt, require_caller, can)
+    out = api.register(app, rt, require_caller, can)
+    out["launch"] = launch_api.register(app, rt, require_caller, can, out)  # M16
+    return out
