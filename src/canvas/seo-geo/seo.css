@@ -86,7 +86,8 @@
 .sg-filter[aria-pressed="true"] { background: var(--sg-ink); color: #fff; border-color: var(--sg-ink) }
 .sg-filter .sg-mono { font-size: 11px; opacity: .7 }
 
-.sg-search { display: flex; align-items: center; gap: 8px; min-height: 44px; flex: 1 1 240px; padding: 0 12px; border: 1px solid var(--sg-line); border-radius: 13px; background: #fff; color: var(--sg-muted) }
+.sg-search { display: flex; align-items: center; gap: 8px; min-height: 44px; max-height: 44px; box-sizing: border-box; flex: 1 1 240px; padding: 0 12px; border: 1px solid var(--sg-line); border-radius: 13px; background: #fff; color: var(--sg-muted) }
+/* flex-basis 240px alt alta dizilen kapsayıcıda yüksekliğe dönüşüyordu (iş listesi, satıştan kalkan): kutu 44 px'te kalır. */
 .sg-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: var(--sg-ink) }
 .sg-search:focus-within { border-color: #c9b8ef; box-shadow: 0 0 0 3px #aa87e833 }
 
