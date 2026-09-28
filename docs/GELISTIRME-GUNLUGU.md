@@ -796,6 +796,13 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
 - AGENTS.md'ye kural eklendi: test için açılan hesap/oturum/kayıt aynı iş içinde silinir, yeni kullanıcı adı uydurulmaz (yalnız `timasai` kısa oturumu), yazma uçları önce geçersiz gövdeyle denenir, kabul sonunda Kişiler listesi kontrol edilir.
 - Mevcut `claude` kaydının hangi tablodan geldiği ve silinmesi: test sunucusuna SSH erişimi o anda kapalıydı (IP geçici engelli); açık iş.
 
+## 2026-09-28 — Sohbet K5: yazım hatası (bitişik yazım, tek harf kayması)
+
+- Müşteri VM'inde "2026 şuabt ayında toplamkaç adet satış gerçekleşmiştir", "… faturalarının saysıı ve toplam tutatrları", "antikyayınları 2026 …", "… 2025 yılı tutarınedir?" doğru kurulmuş sorular olduğu hâlde "katalogda tanımlı değil" reddi aldı.
+- **`semantic_layer/runtime/spelling.py`** (`Speller`, Damerau mesafesi): yalnız çözülmeyen kelime; bitişik yazım (iki parça da aynen bilinen kelime, ilk parça ≥4 harf), tek harf kayması (önce kelimenin tamamı katalogdaki yazılmış biçimlerle, sonra kök + ek). Tek aday yoksa tahmin yok; cümle içindeki büyük harfli kelime ad sayılır. `resolve()` düzeltilmiş okumayı **yalnız soru tamamen çözülüyorsa** kullanır, açıklamaya "yazım: 'şuabt' → 'subat' olarak okundu" yazar, `sq.question` özgün kalır.
+- **Tam set neyi yakaladı:** ilk sürüm 91 soruyu değiştirdi — doğru ama katalogda olmayan kelimeleri "düzeltiyordu" ("yazarların" → YAZARLAR müşteri grubu filtresi, "zararına" → "kararı", "girişlerimiz" → "gir işlerimiz"). Kurallar: ilk harf aynı, fark kelimenin içinde (biri ötekinin başıysa ek farkıdır), en çok 1 harf, düzeltme soruyu tamamen çözmeli. 91 → 31 → 8 (hepsi hedeflenen ya da doğru: "dağıtımcılar" → DAGITICI); hata 0.
+- **Doğrulama:** `test_spelling_k5.py` 3/3 (ilgili setlerle 26/26). Gerçek Logo: "şuabt … toplamkaç adet" 1.139.669 = referans; "son üç aylık … saysıı" Tem 9.601 / Ağu 4.635 = referans; "antikyayınları 2026" 21.120,92 = referans.
+- **İşletim notu:** test sunucusu iki kez bizim IP'mize (31.223.101.118) tüm TCP'de kapandı; sunucuda fail2ban yok, ufw açık — engel barındırma firmasının ağında, aynı Mac'ten 5–6 oturumun eşzamanlı SSH bağlantılarıyla tetikleniyor. Geçici yol `ssh -J tt-gpu nanobase-direct`.
 
 ## 2026-09-27 (gece) — M6 Sözleşmeler: düzenleme, yeni taslak, zeyilname, ödeme takvimi, hakediş, şablon kütüphanesi
 
