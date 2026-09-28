@@ -1,0 +1,10 @@
+[Unit]
+Description=Lojistik ve kargo zamanlayıcısı, 15 dakikada bir (günlük/haftalık/aylık işleri köprü seçer)
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=timas-shipping.service
+
+[Install]
+WantedBy=timers.target

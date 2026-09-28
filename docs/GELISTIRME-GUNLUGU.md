@@ -249,6 +249,37 @@
   koşulacak (**DOĞRULANAMADI**). Ölçülecekler kabul betiğinde: sesli kitap hakkı sayısı, Tip 8/9 ve dijital kimlik doluluğu, e-kitap
   üretim aşaması sayısı, Logo'da e-kitap stok koduyla fatura olup olmadığı (boşsa 2021–2025 kopyasında da bakılır), iletim ↔ e-kitap
   kararı çelişkisi.
+## 2026-09-28 — M44 Lojistik ve kargo: günlük hat, gönderi kartı, firma karnesi, mutabakat, Zeki AI taslak ve karar kaydı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** analiz §14 kodlama planı. Köprü `shipping.py` + `shipping_sources.py` + `shipping_api.py`, SQL `backend/semantic_bridge/shipping_sql/`
+  (14 dosya), tablolar `semantic_shipping_classes|decisions|drafts|settings`, uçlar `/api/v1/shipping/*`; ekranlar `src/canvas/shipping/`
+  (`/kargo`, `/kargo/gonderi/:id`, `/kargo/hatalar`, `/kargo/bekleyen`, `/kargo/firmalar`, `/kargo/mutabakat`); menü yeni **Lojistik** alanı;
+  zamanlayıcı `timas-shipping.timer` (15 dk; köprü günlük/haftalık/aylık işleri kendisi zamanlar), VM `jobs.py` satırı.
+- **Güvenlik (kullanıcı kararı):** CRM `new_kargofirmasi` kullanıcı adı/şifre/token/client id-secret ve UPS gönderici kolonları hiçbir sorguda
+  yok; kolonlar adıyla seçilir, `guard()` yasak kolon ya da `SELECT *` geçen SQL'i çalıştırmaz; test hem SQL dosyalarını hem üretilen SQL'i tarar.
+  Kargo firmasına, CRM'e, Logo'ya, T-soft'a yazma yok; müşteriye mesaj gitmez (taslak + «kullanıldı» işareti, gönderimi insan yapar).
+- **Kararlar (açık sorular §10; veriye/koda bakılarak, kullanıcıya sorulmadan):**
+  - Termin yok (2026-09-20) → «geç teslim» oranı yok; teslim süresi (ortanca/ortalama/%90), bekleyen yaşı ve **kullanıcının il hedefi** varsa
+    hedefi aşan pay. Hedef verilmeyen ilde oran hesaplanmaz.
+  - Entegrasyon hatası = takip no boş + dört firmadan birinin sonuç/mesaj alanı dolu ve «başarılı» değerlerinden biri değil; değer kümesi
+    ölçülmediği için `SHIPPING_INTEGRATION_OK_VALUES` ayarı, `kabul.py --olcum` dağılımı döker.
+  - Kargo kaydının bütün kolonları metin: sayılar Kural C19 ile (`replace(',', '.')`, SQL `TRY_CAST` ile aynı anlam), tarihler
+    `SHIPPING_CARGO_DATE_FORMATS` biçimleriyle; okunamayan her değer sayılır ve ekranda yazılır. 13.242 kayıt tek sorguda okunup 5 dk bellekte
+    tutulur (dönem süzgeci metin tarihte SQL'de güvenilir değil).
+  - Kargo kaydı ↔ sipariş: yalnız takip numarasıyla doğrudan eşleme. M51'in `SUPPORT_CARGO_MATCH` mantığı kopyalanmadı; bağlantı noktası
+    `shipping_sources.register_cargo_matcher(fn, label)` — M51 main'e girince app.py'de bağlanır, ekranda eşleme yolu yazılır.
+  - Kargo faturası carileri Logo'da bilinmiyor → `SHIPPING_LOGO_CARRIER_CODES` (insan onaylı), mutabakat ekranında «aday cariler» (son 12 ay TRCODE 4,
+    ünvanda ipucu sözcüğü ya da CRM kargo firması adı). Kargo kaydı tutarının KDV durumu bilinmiyor → Logo hem KDV hariç hem dahil verilir.
+  - Haftalık karne `timas-reports` yerine aynı `run-due` içinde (karne bir soru değil, hesap); alıcılar `SHIPPING_WEEKLY_TO`.
+  - Sonraki sürüme: birleştirme fırsatı, «bu kural geçen çeyrek uygulansaydı» benzetimi, kargo firması API'sinden canlı durum, M51 şikâyet bağı,
+    pazar yeri/D2C gönderileri.
+- **Zeki AI:** hata mesajı sınıfı `QueuedLlm.choose` (kapalı küme 7 sınıf, mesaj başına bir kez, eşik altı «Belirsiz»; modele giden mesajda e-posta
+  ve 5+ haneli sayı silinir); taslak/karar/mutabakat özeti `chat`, müşteri adı/adres modele gitmez, olgularda olmayan rakam öbeği varsa model metni
+  atılıp kural metni kullanılır. Model `rt.llm_for("kargo", …)`.
+- **Ortak dosyalar:** `app.py` (tek register), `admin.py` («Lojistik ve kargo» grubu + `SHIPPING_*`), `access.py` (RULES + FEATURE_RULES),
+  `access_catalog.json` (alan `lojistik`, 3 sayfa, 4 özellik), `navModel.ts` (+ test), `ModulesMenu.tsx` (M44, Lojistik grubu), `App.tsx`, `jobs.py`.
+- **Doğrulama:** yalnız `py_compile` ve JSON (kural: Mac'te test yok). **DOĞRULANAMADI — testler koordinatörde:** `test_shipping.py`, `test_access.py`,
+  `navModel.test.ts`, `shipping/api.test.ts`, tsc, derleme ve `scripts/acceptance/M44/calistir.sh` → `kabul.py --olcum` → `kabul.py` (R1–R8) → `temizlik.py`.
 
 ## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 

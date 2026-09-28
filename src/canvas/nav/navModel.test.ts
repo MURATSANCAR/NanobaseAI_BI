@@ -49,6 +49,7 @@ describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'lojistik', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -62,6 +63,7 @@ describe('rol görünürlüğü', () => {
   it('ayar boşsa (editör değil) gruplar normal sırada ve hepsi açık gelir', () => {
     const g = visibleNav(user, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'platform']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'lojistik']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -70,6 +72,7 @@ describe('rol görünürlüğü', () => {
   it('editör: Editoryal en üstte «Çalışma alanım», Analiz ve Finans kapalı ama görünür, Yönetim yok', () => {
     const g = visibleNav(editor, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'platform']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'lojistik']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);
@@ -163,6 +166,11 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/e-ticaret')).toBe('eticaret'); // M34 platform durumu
     expect(at('/e-ticaret/farklar')).toBe('eticaret-farklar');
     expect(at('/e-ticaret/pazar-yerleri')).toBe('eticaret-pazar-yerleri');
+    expect(at('/kargo')).toBe('kargo'); // M44
+    expect(at('/kargo/gonderi/0f1e2d3c-0000-0000-0000-000000000000')).toBe('kargo');
+    expect(at('/kargo/hatalar')).toBe('kargo');
+    expect(at('/kargo/firmalar')).toBe('kargo-firmalar');
+    expect(at('/kargo/mutabakat')).toBe('kargo-mutabakat');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

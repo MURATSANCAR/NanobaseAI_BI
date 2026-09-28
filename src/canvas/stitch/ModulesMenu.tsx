@@ -61,6 +61,7 @@ export const LIVE: Record<string, string> = {
   M36: '/dijital-yayin',
   M35: '/kampanyalar',
   M39: '/pazar-arastirma',
+  M44: '/kargo',
   M46: '/butce',
   M59: '/bayi-risk',
   M50: '/zeki-kalite',
@@ -92,6 +93,9 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni ve pazar yerleri' },
   // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
   // M38 müşteri ekranı gelince grubun girişi o olabilir; M39 grubun ikinci bağlantısı olarak kalır.
+  Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
+  // M43 depo ekranı gelince grubun girişi ona dönebilir; bugün çalışan tek lojistik ekranı kargo (M44).
+  Lojistik: { to: '/kargo', hint: 'Kargo günlük hattı, gönderi takibi, firma karnesi ve mutabakat' },
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */

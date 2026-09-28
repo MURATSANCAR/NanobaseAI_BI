@@ -45,6 +45,10 @@
     {
       "id": "platform",
       "label": "Platform"
+    },
+    {
+      "id": "lojistik",
+      "label": "Lojistik"
     }
   ],
   "pages": [
@@ -263,6 +267,21 @@
       "key": "sayfa:ihale",
       "area": "satis",
       "label": "İhale takibi"
+    },
+    {
+      "key": "sayfa:kargo",
+      "area": "lojistik",
+      "label": "Kargo: günlük hat ve gönderi arama"
+    },
+    {
+      "key": "sayfa:kargo-firmalar",
+      "area": "lojistik",
+      "label": "Kargo firma karnesi"
+    },
+    {
+      "key": "sayfa:kargo-mutabakat",
+      "area": "lojistik",
+      "label": "Kargo mutabakatı"
     },
     {
       "key": "sayfa:pazarlama-yeni-kitap",
@@ -972,6 +991,37 @@
       "label": "İhale ilanı kaynağı",
       "hint": "Resmî kaynaktan ilan içe almayı çalıştırma (ikinci sürüm; ortamda kapalıyken etkisiz)",
       "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:kargo-firmalar",
+      "label": "Kargo maliyetini görme",
+      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.alici",
+      "area": "lojistik",
+      "page": "sayfa:kargo",
+      "label": "Alıcı adını görme (KVKK)",
+      "hint": "Gönderi kartında alıcı ve teslim alan adı; listelerde ve dışa aktarmada hiç yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.karar",
+      "area": "lojistik",
+      "page": "sayfa:kargo-firmalar",
+      "label": "Kurye ve bölge kararı",
+      "hint": "Kurye firması, bölge kuralı ve sözleşme kararını gerekçesiyle kaydetme; teslim bekleyen ve il hedef süresi eşikleri",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.taslak",
+      "area": "lojistik",
+      "page": "sayfa:kargo",
+      "label": "Müşteri mesajı taslağı",
+      "hint": "Zeki AI ile gecikme, özür ve iade yönlendirme mesajı taslağı; gönderimi kişi kendi e-postasından yapar"
     },
     {
       "key": "ozellik:masa.herkesinki",

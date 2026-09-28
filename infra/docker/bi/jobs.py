@@ -80,6 +80,9 @@ JOBS = [
     ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
     # M22 sosyal medya günlük özeti (sunucuda timas-social.timer 07:00; e-posta günde bir kez gider, paylaşım yapılmaz).
     ("sosyal medya", "/api/v1/social/run-due", int(os.environ.get("SOCIAL_EVERY_SEC", "86400")), 1790),
+    # M44 kargo (sunucuda timas-shipping.timer, 15 dk): köprü günlük (06:45), haftalık (pazartesi 08:00) ve aylık (ayın 3'ü)
+    # işleri kendisi zamanlar, günde/haftada/ayda bir kez koşar; sık çağrı zararsız.
+    ("kargo", "/api/v1/shipping/run-due", int(os.environ.get("SHIPPING_EVERY_SEC", "900")), 1790),
 ]
 
 

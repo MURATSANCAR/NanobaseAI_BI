@@ -7208,6 +7208,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "send_mail": _kampanya_send_mail, "directory": _directory,
     })
 
+    # M44 Lojistik ve kargo: günlük hat, gönderi kartı, firma karnesi, mutabakat, taslak ve karar kaydı. Uçlar
+    # /api/v1/shipping/*; tablolar semantic_shipping_*; CRM/Logo yalnız okunur, kargo firmasına hiçbir şey gitmez.
+    from semantic_bridge import shipping_api
+    from semantic_bridge.corporate_sales_api import send_mail as _shipping_send_mail
+    app.state.shipping = shipping_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kargo", priority), "send_mail": _shipping_send_mail,
+    })
+
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
     editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
 

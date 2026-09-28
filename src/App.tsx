@@ -75,6 +75,12 @@ const DistributionScreen = lazy(() => import('@/canvas/distribution/Distribution
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
 const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
+const ShippingHome = lazy(() => import('@/canvas/shipping/ShippingHome'));
+const ShippingShipment = lazy(() => import('@/canvas/shipping/Shipment'));
+const ShippingErrors = lazy(() => import('@/canvas/shipping/Errors'));
+const ShippingWaiting = lazy(() => import('@/canvas/shipping/Waiting'));
+const ShippingCarriers = lazy(() => import('@/canvas/shipping/Carriers'));
+const ShippingReconcile = lazy(() => import('@/canvas/shipping/Reconcile'));
 const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
 const ReadersScreen = lazy(() => import('@/canvas/readers/ReadersScreen'));
 const ReaderCard = lazy(() => import('@/canvas/readers/ReaderCard'));
@@ -255,6 +261,13 @@ export default function App() {
             <Route path="sistem-durumu" element={<SystemStatusScreen />} />
             {/* M49 Veri güvenliği (Altyapı ve destek): giriş/erişim kaydı, uyarılar, hijyen, envanter, saklama (/api/v1/data-security). */}
             <Route path="veri-guvenligi" element={<DataSecurityScreen />} />
+            {/* M44 Lojistik ve kargo: günlük hat, gönderi kartı, hatalar, teslim bekleyen, firma karnesi, mutabakat (/api/v1/shipping). */}
+            <Route path="kargo" element={<ShippingHome />} />
+            <Route path="kargo/gonderi/:id" element={<ShippingShipment />} />
+            <Route path="kargo/hatalar" element={<ShippingErrors />} />
+            <Route path="kargo/bekleyen" element={<ShippingWaiting />} />
+            <Route path="kargo/firmalar" element={<ShippingCarriers />} />
+            <Route path="kargo/mutabakat" element={<ShippingReconcile />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />
