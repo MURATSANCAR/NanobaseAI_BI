@@ -1,6 +1,6 @@
 # M55 — İşe Alım ve Yetkinlik Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M55.txt` ve `specs/Kurumsal_E_posta_Yönetimi.txt`
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M55.txt` ve `specs/Kurumsal_E_posta_Yönetimi.txt`
 (ZEKİ_Moduller3.html'den), `ZEKİ_Veri_Haritasi2.html` (İnsan Kaynakları ve öteki kategoriler), `PROJECT-MEMORY.md`,
 `docs/analiz/kampus-kisisel-ekran-crm-2026-09-15.md`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/audits/crm-kullanici-bilgileri-2026-09-14.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`,

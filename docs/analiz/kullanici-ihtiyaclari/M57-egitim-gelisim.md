@@ -1,6 +1,6 @@
 # M57 — Eğitim ve Gelişim Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M57.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M57.txt` (ZEKİ_Moduller3.html'den),
 `ZEKİ_Veri_Haritasi2.html`, `PROJECT-MEMORY.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`,
 `docs/audits/crm-kullanici-bilgileri-2026-09-14.md`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `backend/semantic_bridge/access_catalog.json`, `access.py`, `admin.py` (`semantic_audit`), `alerts.py`, `reports.py`,

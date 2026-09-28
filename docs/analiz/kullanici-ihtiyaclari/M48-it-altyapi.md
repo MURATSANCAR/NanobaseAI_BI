@@ -1,6 +1,6 @@
 # M48 — IT Altyapı ve Sistem Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok; parçaları Yönetim → Genel durum'da var) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M48.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M48.txt`,
 Veri Haritası (`veri_haritasi2.txt`: «IT Girdileri», «Planlama Girdileri»), `PROJECT-MEMORY.md` (sunucu/port, VPN, GPU,
 kurulum kuralları), `backend/semantic_bridge/admin.py` (`SERVICES`, `TIMERS`, `system_status`, `run_checks`),
 `src/canvas/admin/Overview.tsx`, `scripts/server/semantic-watchdog.sh`, `infra/docker/bi/jobs.py`,

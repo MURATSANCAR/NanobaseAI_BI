@@ -1,6 +1,6 @@
 # M34 — E-Ticaret ve Platform Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M34.txt` (ZEKİ_Moduller3.html'den
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M34.txt` (ZEKİ_Moduller3.html'den
 çıkarıldı), `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, sınır için `specs/M40.txt`, `M41.txt`, `M42.txt`;
 depoda `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`, `docs/analiz/seo-geo-modul-2026-09-25.md`,
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `PROJECT-MEMORY.md`,

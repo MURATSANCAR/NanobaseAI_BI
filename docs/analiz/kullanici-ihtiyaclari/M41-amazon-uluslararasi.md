@@ -1,6 +1,6 @@
 # M41 — Amazon ve Uluslararası Platform Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: ilk sürüm kodlandı (yalnız okuma + panel dosyası; kullanıcı kararı 2026-09-28), test sunucusunda doğrulanmadı · Tarih: 2026-09-28 · Kaynaklar: `specs/M41.txt`, `specs/M36.txt` (e-kitap/Kindle sınırı), `specs/M4.txt`,
+Durum: kod var (main) — ilk sürüm: yalnız okuma + panel dosyası (kullanıcı kararı 2026-09-28); test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M41.txt`, `specs/M36.txt` (e-kitap/Kindle sınırı), `specs/M4.txt`,
 `specs/M6.txt`, `specs/M42.txt`, `ZEKİ_Veri_Haritasi2.html` (M41 satırları: "Amazon Seller/KDP API", "Çevrilmiş içerik ve telif
 yönetimi", "Uluslararası dağıtım anlaşmaları", "Amazon kategori bestseller", "Uluslararası rakip fiyat"), `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md` (§4),
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md` (sözleşme tipi Telif Satış, sipariş tipi Amazon Konsinye),

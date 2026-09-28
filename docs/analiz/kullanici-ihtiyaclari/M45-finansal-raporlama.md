@@ -1,6 +1,6 @@
 # M45 — Finansal Raporlama ve Analiz: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok; modülün bir kısmı başka ekranlarda var) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M45.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M45.txt`,
 `specs/M46.txt`, `specs/DYK.txt`; Veri Haritası (`veri_haritasi2.txt`: «Finansal Girdiler», «Analitik Girdiler»);
 `PROJECT-MEMORY.md` (Finansal Denetim, Yönetim Raporları, Vade/yaşlandırma, M6); `docs/analiz/finansal-denetim-2026-09-21.md`;
 `docs/analiz/yetki-mekanizmasi-2026-09-27.md`; `configs/semantic/knowledge/logo/knowledge/{caveats,metrics,glossary}/logo-timas.md`;

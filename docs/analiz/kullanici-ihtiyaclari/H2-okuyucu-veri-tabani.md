@@ -1,6 +1,6 @@
 # H2 — Okuyucu Veri Tabanı Entegrasyonu: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Modül kimliği `readers` (`src/canvas/modules.json`, «Hazırlıklar» grubu)
+Durum: kod var (main) — test sunucusunda kabul bekliyor; M37'nin okuduğu çekirdek sözleşmesi (`readers_core.py`) 2026-09-28'de eklendi · Analiz tarihi: 2026-09-28 · Modül kimliği `readers` (`src/canvas/modules.json`, «Hazırlıklar» grubu)
 
 Kaynaklar: iş tanımı `specs/Okuyucu_Veri_Tabanı_Entegrasyo.txt`, `ZEKİ_Veri_Haritasi2.html` (M37/M38/M24 girdileri),
 ilgili modül tanımları `specs/M24.txt`, `M37.txt`, `M38.txt`, `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`,

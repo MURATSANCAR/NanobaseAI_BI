@@ -1,6 +1,6 @@
 # M38 — Müşteri İlişkileri ve CRM Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M38.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M38.txt` (ZEKİ_Moduller3.html'den),
 `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, sınır için `specs/M30.txt`, `M32.txt`, `M51.txt`, `M59.txt`, `M15.txt`
 (M38/M39 analizine atıf), `specs/ANALIZ-EK.md`; depoda `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `PROJECT-MEMORY.md`,

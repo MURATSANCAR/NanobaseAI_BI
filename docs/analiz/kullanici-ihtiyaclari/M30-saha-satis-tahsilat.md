@@ -1,6 +1,6 @@
 # M30 — Saha Satış Yönetimi ve Tahsilat (BMT): kullanıcı ihtiyaç analizi
 
-Durum: kodlandı, dalda (2026-09-28; sunucuda doğrulanmadı — kararlar ve plandan sapmalar günlükte) · Tarih: 2026-09-28 · Kaynaklar: `specs/M30.txt`, `specs/M46.txt`, `specs/M59.txt`, `specs/M18.txt`, `veri_haritasi2.txt`,
+Durum: kod var (main) — test sunucusunda kabul: okuma 6/6; hedef dağıtımı ve kapsam 403 doğrulanamadı (2026-09-28 06:40 ve 08:00) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M30.txt`, `specs/M46.txt`, `specs/M59.txt`, `specs/M18.txt`, `veri_haritasi2.txt`,
 `configs/semantic/knowledge/logo/knowledge/{rules/logo-erp.md, metrics, caveats, sql/vadesi-gecmis-*.md, sql/ortalama-tahsilat-suresi-dso.md}`,
 `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md` + `table_descriptions.json`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/analiz/kampus-kisisel-ekran-crm-2026-09-15.md`, `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md` (§4: Mobilmax `MMX_*`),

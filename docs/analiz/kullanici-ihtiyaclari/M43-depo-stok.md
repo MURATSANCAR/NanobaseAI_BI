@@ -1,6 +1,6 @@
 # M43 — Depo ve Stok Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M43.txt`, `specs/M11.txt`, `specs/M12.txt`, `specs/M29.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M43.txt`, `specs/M11.txt`, `specs/M12.txt`, `specs/M29.txt`,
 `ZEKİ_Veri_Haritasi2.html` (M43/M11 satırları), `configs/semantic/knowledge/logo/knowledge/{rules/logo-erp.md, metrics/logo-timas.md,
 caveats/logo-timas.md, rules/crm-timas.md}`, `configs/semantic/knowledge/crm/{OKUNUR-TABLOLAR.md, table_descriptions.json}`,
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, `docs/analiz/pbit-yeni-baski-oneri/README.md`,

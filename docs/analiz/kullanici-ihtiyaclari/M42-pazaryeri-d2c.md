@@ -1,6 +1,6 @@
 # M42 — Diğer Pazar Yerleri ve D2C Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M42.txt`, `specs/M34.txt`, `specs/M35.txt`, `specs/M40.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M42.txt`, `specs/M34.txt`, `specs/M35.txt`, `specs/M40.txt`,
 `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, `ZEKİ_Veri_Haritasi2.html` (M42, M34 satırları), `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`,
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, kardeş analizler `docs/analiz/kullanici-ihtiyaclari/{M34-eticaret-platform.md, H3-eticaret-musteri-yonetimi.md, M35-eticaret-kampanya.md}`
 (sınır için), `configs/semantic/knowledge/logo/knowledge/{rules/logo-erp.md, rules/conventions.md, metrics/logo-timas.md, sql/2026-y-l-nda-kitapci-e-ticaret-ve-dagitici-kanallar-i-in-ay.md}`,

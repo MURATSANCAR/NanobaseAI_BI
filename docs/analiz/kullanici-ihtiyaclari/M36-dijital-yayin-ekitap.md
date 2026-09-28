@@ -1,6 +1,6 @@
 # M36 — Dijital Yayın ve e-Kitap Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M36.txt` (ZEKİ_Moduller3.html'den; girdi kaynağı
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M36.txt` (ZEKİ_Moduller3.html'den; girdi kaynağı
 M14), `specs/M14.txt` başlığı, `specs/M41.txt`, `specs/ANALIZ-EK.md`; depoda `docs/analiz/seo-geo-modul-2026-09-25.md`
 («CRM kitap kartı ve dijital haklar»), `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`, `PROJECT-MEMORY.md` (Kitap Tasarım Stüdyosu, sesli e-kitap),

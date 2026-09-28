@@ -1,6 +1,6 @@
 # M54 — Yazar Telif ve Sözleşme Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok; M6 bitti, M54 onun üstüne kurulur) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M54.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M54.txt`,
 `specs/M6.txt`; Veri Haritası (`veri_haritasi2.txt`: «Telif Girdileri», «Sözleşme Girdileri», «Telif Ödeme Takvimi»);
 `PROJECT-MEMORY.md` (M6 Sözleşmeler — yazma tarafı); `docs/GELISTIRME-GUNLUGU.md` (2026-09-27 gece ve 2026-09-28 M6 girişleri);
 `backend/semantic_bridge/contracts*.py`, `src/canvas/editorial/contracts/`, `src/canvas/editorial/ContractsScreen.tsx`;

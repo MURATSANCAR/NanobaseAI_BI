@@ -1,6 +1,6 @@
 # M33 — Okul, Kütüphane ve Kamu İhale Takibi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M33.txt`, `specs/M28.txt` (veri: «Kamu ihale ve proje portalleri»), `specs/M31.txt`, `specs/M32.txt`,
+Durum: kod var (main) — test sunucusunda kabul koştu, 1 madde kaldı (adla verilen kalemin kitaba eşlenmesi; 2026-09-28 06:40) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M33.txt`, `specs/M28.txt` (veri: «Kamu ihale ve proje portalleri»), `specs/M31.txt`, `specs/M32.txt`,
 `veri_haritasi2.txt`, `docs/analiz/meb-uygunluk-olcutleri.md` (OKY m.10: Seçim ve Ayıklama Komisyonu), `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md`
 + `table_descriptions.json` (`AccountBase.new_KurumRolu`, `new_ziyaretyerleriBase.new_KurumTipi`, `OpportunityBase`), `configs/semantic/knowledge/logo/knowledge/*`
 (Kural 3, 8, stok bakiyesi), `backend/semantic_bridge/{web_watch.py, access.py, contracts_docs.py}`, `apps/editor/src/editor/production/age_report.py`,

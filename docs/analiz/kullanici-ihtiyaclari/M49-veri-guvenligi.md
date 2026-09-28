@@ -1,7 +1,6 @@
 # M49 — Veri Yönetimi ve Güvenlik: kullanıcı ihtiyaç analizi
 
-Durum: ilk sürüm kodlandı (2026-09-28, dalda; sunucuda doğrulanmadı — günlük «M49»). Önceden kodlu: yetki Aşama A/B/C, Yönetim ekranı, değişiklik kaydı, kişisel veri sütunu tespiti — eksikler
-bu belgede) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M49.txt`, Veri Haritası (`veri_haritasi2.txt`: «Güvenlik
+Durum: kod var (main) — ilk sürüm; test sunucusunda kabul bekliyor (testler koordinatörde). Önceden kodlu: yetki Aşama A/B/C, Yönetim ekranı, değişiklik kaydı, kişisel veri sütunu tespiti — eksikler bu belgede · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M49.txt`, Veri Haritası (`veri_haritasi2.txt`: «Güvenlik
 Girdileri», «Risk Girdileri»), `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `main`'deki `backend/semantic_bridge/access.py`,
 `access_catalog.json`, `data_domains.json` (Aşama C), `backend/semantic_bridge/admin.py` (`semantic_audit`,
 `semantic_admin_group`), `scripts/server/portal-login/server.py`, `backend/semantic_layer/profiler/sensitivity.py`,

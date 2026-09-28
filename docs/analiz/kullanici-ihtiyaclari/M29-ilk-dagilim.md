@@ -1,6 +1,6 @@
 # M29 — İlk Dağılım Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M29.txt`, `specs/M46.txt`, `specs/M12.txt`, `specs/M18.txt`,
+Durum: kod var (main) — test sunucusunda kabul 34/34 (2026-09-28 06:40 ve 08:00) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M29.txt`, `specs/M46.txt`, `specs/M12.txt`, `specs/M18.txt`,
 `specs/M59.txt`, `ZEKİ_Veri_Haritasi2` (scratchpad `veri_haritasi2.txt`), `configs/semantic/knowledge/logo/knowledge/{rules,metrics,caveats,glossary}/*`,
 `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md` + `table_descriptions.json`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `docs/GELISTIRME-GUNLUGU.md` (M46 girişi, main),

@@ -1,6 +1,6 @@
 # M56 — Performans Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M56.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M56.txt` (ZEKİ_Moduller3.html'den),
 `specs/DYK.txt`, `ZEKİ_Veri_Haritasi2.html`, `PROJECT-MEMORY.md`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/audits/crm-kullanici-bilgileri-2026-09-14.md`, `docs/analiz/kampus-kisisel-ekran-crm-2026-09-15.md`,
 `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `backend/semantic_bridge/access_catalog.json`, `access.py`,

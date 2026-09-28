@@ -1,6 +1,6 @@
 # M31 — Okul Tanıtım ve Ziyaret Yönetimi (Bayi Eşleştirme Dahil): kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M31.txt`, `specs/M59.txt`, `specs/M30.txt`, `veri_haritasi2.txt`,
+Durum: kod var (main) — test sunucusunda kabul 5 geçti, 2 doğrulanamadı (2026-09-28 08:00, okul kartı düzeltmesi `0a405e24` sonrası) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M31.txt`, `specs/M59.txt`, `specs/M30.txt`, `veri_haritasi2.txt`,
 `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md` + `table_descriptions.json` (`new_ziyaretyerleriBase`, `new_etkinlikBase`, `new_siparisBase`,
 `LeadBase`, `ContactBase`, `new_kitapBase`, `new_projeBase`), `docs/analiz/meb-uygunluk-olcutleri.md`, `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `configs/semantic/knowledge/logo/knowledge/*`, `apps/editor/src/editor/production/age_report.py`, `backend/semantic_bridge/{author_relations.py, access.py, people.py}`,

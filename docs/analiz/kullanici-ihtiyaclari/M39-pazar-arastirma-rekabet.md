@@ -1,6 +1,6 @@
 # M39 — Pazar Araştırması ve Rekabet Analizi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M39.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M39.txt` (ZEKİ_Moduller3.html'den),
 `specs/DYK.txt` (M39 → kurul özeti), `specs/M15.txt` (M38/M39 analizine atıf), `specs/Kategori_Ağacı_Modülü.txt` (rakip
 emsal), `specs/M9.txt` (emsal ve pazar fiyatı), `specs/ANALIZ-EK.md`; depoda `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `docs/analiz/seo-geo-modul-2026-09-25.md`, `docs/analiz/kitap-yazar-web-taramasi-2026-09-24.md` (başlık düzeyinde),

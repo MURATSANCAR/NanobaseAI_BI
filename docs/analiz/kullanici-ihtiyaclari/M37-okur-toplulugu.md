@@ -1,6 +1,6 @@
 # M37 — Okuyucu Topluluğu ve Topluluk Yönetimi (CRM Katmanı): kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M37.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusu kabulünde «Okur çekirdeği bağlı değil» bulundu (H2 bağdaştırıcısı yoktu); düzeltme 2026-09-28 (eksik tamamlama turu), yeniden kabul bekliyor · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M37.txt` (ZEKİ_Moduller3.html'den),
 `specs/Okuyucu_Veri_Tabanı_Entegrasyo.txt`, `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, sınır için `specs/M24.txt`,
 `M27.txt`, `M38.txt`, `M51.txt`, `specs/ANALIZ-EK.md`; depoda `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`,
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, `docs/analiz/seo-geo-modul-2026-09-25.md`, `PROJECT-MEMORY.md`,

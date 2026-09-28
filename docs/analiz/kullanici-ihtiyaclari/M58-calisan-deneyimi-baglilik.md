@@ -1,6 +1,6 @@
 # M58 — Çalışan Deneyimi ve Bağlılık: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M58.txt` (ZEKİ_Moduller3.html'den),
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M58.txt` (ZEKİ_Moduller3.html'den),
 `specs/DYK.txt`, `ZEKİ_Veri_Haritasi2.html` (İnsan Kaynakları kategorisi), `PROJECT-MEMORY.md` (Kampüs, kutlamalar,
 sesli bülten, rehber), `docs/analiz/kampus-kisisel-ekran-crm-2026-09-15.md`, `docs/audits/crm-kullanici-bilgileri-2026-09-14.md`,
 `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, `docs/analiz/yetki-mekanizmasi-2026-09-27.md`,

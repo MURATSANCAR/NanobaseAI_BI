@@ -1,6 +1,6 @@
 # M44 — Lojistik ve Kargo Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M44.txt`, `specs/M29.txt`, `specs/M40.txt`, `specs/M42.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M44.txt`, `specs/M29.txt`, `specs/M40.txt`, `specs/M42.txt`,
 `ZEKİ_Veri_Haritasi2.html` (M44 satırları), `configs/semantic/knowledge/logo/knowledge/rules/{logo-erp.md, crm-timas.md}`
 (Kural 10, 18, 19, C13, C19), `configs/semantic/knowledge/crm/{OKUNUR-TABLOLAR.md, table_descriptions.json}`
 (`new_siparis`, `new_sevkiyat`, `new_kargobilgisi`, `new_kargotakipbilgisi`, `new_kargofirmasi`, `new_sipariskutusu`,

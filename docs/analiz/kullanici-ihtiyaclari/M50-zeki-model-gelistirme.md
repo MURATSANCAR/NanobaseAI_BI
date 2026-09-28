@@ -1,7 +1,6 @@
 # M50 — ZEKİ Model Eğitim ve Geliştirme: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kısmen kodlu: eş anlamlı hattı, kavram onayları, kural madencisi, kalite kapısı, golden set, soru izleme,
-son okuma isabeti — hepsi dağınık; birleşik kalite ekranı ve sürüm kaydı yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı
+Durum: kod var (main) — kalite ekranı, sürüm kaydı, geri bildirim ve karne 2026-09-28'de kodlandı (günlük «M50»); test sunucusunda kabul bekliyor (testler koordinatörde). Önceden dağınık kodlu: eş anlamlı hattı, kavram onayları, kural madencisi, kalite kapısı, golden set, soru izleme, son okuma isabeti · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı
 `specs/M50.txt`, Veri Haritası (`veri_haritasi2.txt`: «Model Girdileri», «Benchmark Girdileri»), `PROJECT-MEMORY.md`
 (kalite kapısı durumu, soru hattı kararları, LLM kapısı, eş anlamlı hattı, kural madencisi, son okuma), `tests/text2sql/`
 (`quality-gate.py`, `golden-timas.json`, `resolver-gate.py`, `answer-gate.py`, `answers-set100.json`, `set100.jsonl`,

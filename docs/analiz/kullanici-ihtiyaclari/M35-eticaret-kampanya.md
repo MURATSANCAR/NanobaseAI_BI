@@ -1,6 +1,6 @@
 # M35 — E-Ticaret Kampanya ve Promosyon Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M35.txt` (ZEKİ_Moduller3.html'den), sınır için
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: iş tanımı `specs/M35.txt` (ZEKİ_Moduller3.html'den), sınır için
 `specs/M32.txt` başlığı, `M40.txt`, `M53.txt`, `M9.txt`, `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, `specs/ANALIZ-EK.md`;
 depoda `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`, `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`,
 `docs/analiz/seo-geo-modul-2026-09-25.md`, `docs/analiz/timesfm-baski-oneri/README.md`, `PROJECT-MEMORY.md`,

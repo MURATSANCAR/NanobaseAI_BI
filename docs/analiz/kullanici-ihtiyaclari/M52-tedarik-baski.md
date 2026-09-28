@@ -1,6 +1,6 @@
 # M52 — Tedarik Zinciri ve Baskı Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M52.txt`, `specs/M12.txt`, `specs/M11.txt`, `specs/M10.txt`,
+Durum: kod var (main) — test sunucusunda kabul bekliyor (testler koordinatörde) · Analiz tarihi: 2026-09-28 · Kaynaklar: `specs/M52.txt`, `specs/M12.txt`, `specs/M11.txt`, `specs/M10.txt`,
 `ZEKİ_Veri_Haritasi2.html` (M52, M12 satırları), M12 kodu (başka ajan, dalda: `.claude/worktrees/agent-a83583b6e0e83abe9/backend/semantic_bridge/{production.py, production_plan.py, production_store.py}`),
 `configs/semantic/knowledge/logo/knowledge/{rules/logo-erp.md (Kural 20), metrics/logo-timas.md, caveats/logo-timas.md, rules/crm-timas.md (C17)}`,
 `configs/semantic/knowledge/crm/{OKUNUR-TABLOLAR.md, table_descriptions.json}` (`new_Uretim`, `new_baski`, `new_baskiislem`,

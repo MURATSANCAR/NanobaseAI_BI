@@ -1,6 +1,6 @@
 # M51 — Müşteri Hizmetleri ve Destek Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (portalda kod yok; talep kaydı çekirdeği başka bir dalda yazılıyor — §7 ve §14'te örtüşme) · Tarih:
+Durum: kod var (main) — köprü katmanı (main), talep kaydı TİMAŞ destek masası (`apps/destek`); test sunucusunda kabul bekliyor · Analiz tarihi:
 2026-09-28 · Kaynaklar: iş tanımı `specs/M51.txt`, ilgili iş tanımları `specs/Kurumsal_E_posta_Yönetimi.txt`,
 `E_Ticaret_Müşteri_Yönetimi_Ent.txt`, `Okuyucu_Veri_Tabanı_Entegrasyo.txt`, Veri Haritası (`veri_haritasi2.txt`: «Destek
 Girdileri», «Kalite Girdileri»), `scratchpad/crm_tables.txt` (CRM tablo satır sayıları; çağıran oturumun dökümü, ölçüm
