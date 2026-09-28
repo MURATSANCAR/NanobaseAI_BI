@@ -85,6 +85,7 @@ SOURCES: dict[str, str] = {
     "google_tarama": "Google taraması",
     "zengin_sonuc": "Zengin sonuç hataları",
     "site_haritasi": "Site haritaları (Google)",
+    "merchant": "Google Merchant ürün sorunları",
     "haklar": "CRM hakları",
     "crm_durum": "CRM yayın durumu",
     "takvim": "Sezon takvimi",
@@ -792,6 +793,69 @@ def src_gsc_sitemaps(env: Env) -> list[dict[str, Any]]:
     return out
 
 
+#: Merchant sorununun önemi: DISAPPROVED ürünü yayından düşürür, DEMOTED gösterimi azaltır; NOT_IMPACTED iş değildir.
+MERCHANT_SEVERITY = {"DISAPPROVED": "yüksek", "DEMOTED": "orta"}
+
+
+def merchant_groups(rows: Iterable[tuple[Any, Any]]) -> dict[str, dict[str, Any]]:
+    """(issues_json, T-soft ürünü) → sorun kodu başına {sorun, ürün sayısı, eşlenen ürünler}. Bilgi düzeyi atlanır."""
+    from .merchant import SEV_RANK
+
+    out: dict[str, dict[str, Any]] = {}
+    for raw, pid in rows:
+        for i in loads(raw, []) if isinstance(raw, str) else raw or []:
+            sev = str(i.get("severity") or "").upper()
+            if sev not in MERCHANT_SEVERITY:
+                continue
+            g = out.get(i["code"])
+            if g is None:
+                g = out[i["code"]] = {"issue": dict(i), "count": 0, "pids": []}
+            elif SEV_RANK.get(sev, 0) > SEV_RANK.get(g["issue"].get("severity"), 0):
+                g["issue"]["severity"] = sev
+            g["count"] += 1
+            if pid:
+                g["pids"].append(str(pid))
+    return out
+
+
+def src_merchant(env: Env) -> list[dict[str, Any]]:
+    """Google Merchant Center'ın ürün sorunları: sorun kodu başına tek madde (ör. «Invalid GTIN — 6 ürün»)."""
+    from .merchant import ATTRIBUTE_LABEL, ITEMS, RESOLUTION_LABEL
+
+    if not env.has(ITEMS):
+        return []
+    with env.eng.connect() as c:
+        rows = c.execute(sa.select(ITEMS.c.issues_json, ITEMS.c.product_id).where(
+            ITEMS.c.tenant_id == env.tenant, ITEMS.c.issue_codes != "")).all()
+    out = []
+    for code, g in merchant_groups(rows).items():
+        i, sev = g["issue"], g["issue"]["severity"]
+        text = (i.get("description") or code).strip()
+        parts = ["Google Merchant Center bu sorunu " + ("ürünü onaylamayarak (reklamda ve ücretsiz listelerde görünmez)"
+                                                      if sev == "DISAPPROVED" else "ürünün gösterimini azaltarak")
+                 + " bildiriyor."]
+        if i.get("detail"):
+            parts.append(f"Google'ın açıklaması: {i['detail']}")
+        if i.get("attribute"):
+            parts.append(f"İlgili alan: {ATTRIBUTE_LABEL.get(i['attribute'], i['attribute'])}.")
+        if i.get("resolution"):
+            parts.append(f"Çözüm: {RESOLUTION_LABEL.get(i['resolution'], i['resolution'])}.")
+        if i.get("documentation"):
+            parts.append(f"Nasıl düzeltilir: {i['documentation']}")
+        unmatched = g["count"] - len(g["pids"])
+        if unmatched:
+            parts.append(f"{_n(unmatched)} ürün T-soft ürünüyle eşlenemedi.")
+        pids = g["pids"]
+        out.append(make_item("merchant", code, "tsoft", f"Google Merchant: {text} — {_n(g['count'])} ürün",
+                             " ".join(parts), MERCHANT_SEVERITY[sev], f"/seo-geo/alisveris?merchant={code}",
+                             count=g["count"], sales=_sum_sales(env, pids),
+                             impressions=sum(env.product_impressions(p) for p in set(pids)),
+                             group=(f"merchant_{sev.lower()}",
+                                    "Google Merchant: onaylanmayan ürünler" if sev == "DISAPPROVED"
+                                    else "Google Merchant: gösterimi sınırlı ürünler")))
+    return out
+
+
 RIGHTS_ITEMS = {"eksik": ("yüksek", "Hak eksik"), "yok": ("orta", "Sözleşme kaydı yok"), "incele": ("orta", "Hak incelenmeli")}
 FLAG_TEXT = {"bizim_degil": "artık bizim ürünümüz değil", "cekildi": "satıştan çekildi", "geri_istendi": "geri istendi",
              "devredildi": "hakları devredildi", "iptal": "iptal edilmiş"}
@@ -1121,6 +1185,7 @@ COLLECTORS: list[tuple[str, Callable[[Env], list[dict[str, Any]]]]] = [
     ("google_tarama", src_crawlbot),
     ("zengin_sonuc", src_rich_results),
     ("site_haritasi", src_gsc_sitemaps),
+    ("merchant", src_merchant),
     ("haklar", src_rights),
     ("crm_durum", src_crm_status),
     ("takvim", src_seasons),

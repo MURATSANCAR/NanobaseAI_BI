@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
@@ -122,11 +122,13 @@ export default function SeoShopping() {
           </section>
           {!d.merchant && (
             <p className="sg-banner" style={{ marginTop: 12 }}>
-              Google Alışveriş hesabı bağlı değil; bu ekran yalnız hazırlık içindir. Dosyada fiyat KDV dahil ve Türk lirasıdır, kitaplar Google kategorisi {d.bookCategory} (Medya › Kitaplar) ile işaretlenir.
+              Google Merchant Center’dan henüz ürün durumu okunmadı; aşağıdaki denetim yalnız hazırlık içindir. Dosyada fiyat KDV dahil ve Türk lirasıdır, kitaplar Google kategorisi {d.bookCategory} (Medya › Kitaplar) ile işaretlenir.
             </p>
           )}
         </>
       )}
+
+      <MerchantSection />
 
       {s && (
         <section className="sg-card" aria-label="Sorun türleri" style={{ marginTop: 16 }}>
@@ -258,5 +260,249 @@ function Kpi({ label, value, note, tone, small, onClick, active }: { label: stri
     <button type="button" className="sg-kpi" onClick={onClick} aria-pressed={!!active} style={{ textAlign: 'left', border: active ? '2px solid #aa87e8' : '2px solid transparent', cursor: 'pointer', font: 'inherit' }}>
       {body}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ Google Merchant'taki durum (yalnız okunur) */
+
+type MStatus = 'onaylanmayan' | 'sinirli' | 'bekleyen' | 'onayli';
+type MSev = 'DISAPPROVED' | 'DEMOTED' | 'NOT_IMPACTED';
+type MIssueType = {
+  code: string;
+  severity: MSev;
+  severityLabel: string;
+  description: string | null;
+  detail: string | null;
+  documentation: string | null;
+  attributeLabel: string | null;
+  resolutionLabel: string | null;
+  products: number;
+};
+type MItemIssue = { code: string; severity: MSev; severityLabel: string; description: string | null; detail: string | null; attributeLabel: string | null; contextLabels: string[] };
+type MItem = { name: string; offerId: string; title: string | null; gtin: string | null; status: MStatus; statusLabel: string; issues: MItemIssue[]; productId: string | null };
+type MSummary = { total: number; approved: number; disapproved: number; limited: number; pending: number; matched: number; unmatched: number; issues: MIssueType[] };
+type MPage = {
+  configured: boolean;
+  snapshot: { account?: string; link?: string; summary?: MSummary; error: string | null; savedAt: string | null } | null;
+  state: { running: boolean; error: string | null };
+  refreshHours: number;
+  total: number;
+  start: number;
+  items: MItem[];
+  statusLabels: Record<MStatus, string>;
+};
+
+const merchantApi = {
+  get: (p: { status: string; issue: string; start: number; limit: number }) => call<MPage>(`merchant?${qs(p)}`),
+  refresh: () => call<{ started: boolean }>('merchant/refresh', { method: 'POST' }),
+};
+const M_TONE: Record<MStatus, 'bad' | 'mid' | 'good' | 'violet'> = { onaylanmayan: 'bad', sinirli: 'mid', bekleyen: 'violet', onayli: 'good' };
+const M_SEV_TONE: Record<MSev, 'bad' | 'mid' | 'violet'> = { DISAPPROVED: 'bad', DEMOTED: 'mid', NOT_IMPACTED: 'violet' };
+const M_PAGE = 25;
+
+/** Merchant Center'daki gerçek ürün durumu: 6 saatte bir, ekran açıldığında da eskiyse yalnız okunarak alınır. */
+function MerchantSection() {
+  const qc = useQueryClient();
+  const [params] = useSearchParams();
+  const initialIssue = params.get('merchant') ?? '';
+  const [status, setStatus] = useState<string>(initialIssue ? '' : 'sorunlu');
+  const [issue, setIssue] = useState(initialIssue);
+  const [start, setStart] = useState(0);
+  useEffect(() => setStart(0), [status, issue]);
+
+  const r = useQuery({
+    queryKey: ['seo-merchant', status, issue, start],
+    queryFn: () => merchantApi.get({ status, issue, start, limit: M_PAGE }),
+    enabled: ENGINE_ENABLED,
+    retry: false,
+    placeholderData: (prev) => prev,
+    refetchInterval: (q) => (q.state.data?.state.running ? 5000 : false),
+  });
+  const refresh = useMutation({ mutationFn: merchantApi.refresh, onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-merchant'] }) });
+  const d = r.data;
+  const snap = d?.snapshot;
+  const sum = snap?.summary;
+  const running = !!d?.state.running;
+  const pickStatus = (v: string) => {
+    setIssue('');
+    setStatus(status === v ? 'sorunlu' : v);
+  };
+  const pickIssue = (code: string) => {
+    if (issue === code) {
+      setIssue('');
+      setStatus('sorunlu');
+    } else {
+      setIssue(code);
+      setStatus('');
+    }
+  };
+  const listTitle = issue
+    ? 'Bu sorunu taşıyan ürünler'
+    : status === 'sorunlu'
+      ? 'Onaylanmayan ve sınırlı ürünler'
+      : `${d?.statusLabels?.[status as MStatus] ?? ''} ürünler`;
+
+  if (d && !d.configured) return null;
+
+  return (
+    <section className="sg-card" aria-label="Google Merchant’taki durum" style={{ marginTop: 16 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0 }}>Google Merchant’taki durum</h2>
+        <div className="sg-actions">
+          <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending || running}>
+            {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
+            {running ? 'Okunuyor…' : 'Şimdi oku'}
+          </button>
+          {snap?.link && (
+            <a className="sg-button" href={snap.link} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} aria-hidden /> Merchant Center’da aç
+            </a>
+          )}
+        </div>
+      </div>
+      <p className="sg-sub">
+        Google’ın ürünlerimiz için verdiği karar: onaylı, onaylanmayan, gösterimi sınırlı ya da incelemede. Her {d?.refreshHours ?? 6} saatte bir yalnız okunur; Google’a hiçbir şey gönderilmez.
+        {snap?.savedAt ? ` Son okuma: ${dateTime(snap.savedAt)}.` : ''}
+      </p>
+      {r.isLoading && <Loading text="Google’daki ürün durumu getiriliyor…" />}
+      {r.error && <Failed error={r.error} />}
+      {refresh.error && <Failed error={refresh.error} />}
+      {(d?.state.error || snap?.error) && <p className="sg-banner err">Son okuma başarısız: {d?.state.error || snap?.error}</p>}
+      {d && !sum && !running && (
+        <div className="sg-empty">
+          <h2>Henüz okunmadı</h2>
+          <p>“Şimdi oku”ya basın; sonra kendiliğinden okunur.</p>
+        </div>
+      )}
+      {d && sum && (
+        <>
+          <div className="sg-kpis" style={{ marginTop: 12 }}>
+            <Kpi label="Onaylı" value={fmt(sum.approved)} note={`${fmt(sum.total)} üründen`} tone="good" onClick={() => pickStatus('onayli')} active={status === 'onayli'} />
+            <Kpi label="Onaylanmayan" value={fmt(sum.disapproved)} note="Google’da görünmüyor" tone={sum.disapproved ? 'bad' : undefined} onClick={() => pickStatus('onaylanmayan')} active={status === 'onaylanmayan'} />
+            <Kpi label="Sınırlı" value={fmt(sum.limited)} note="Görünüyor ama bir yerde reddedilmiş ya da az gösteriliyor" onClick={() => pickStatus('sinirli')} active={status === 'sinirli'} />
+            <Kpi label="Bekleyen" value={fmt(sum.pending)} note="Google inceliyor" onClick={() => pickStatus('bekleyen')} active={status === 'bekleyen'} />
+          </div>
+          {sum.unmatched > 0 && (
+            <p className="sg-kpi-note" style={{ marginTop: 8 }}>
+              {fmt(sum.unmatched)} ürün sitedeki bir ürünle eşlenemedi (ürün kodu ya da barkod tutmadı); satış etkisi hesabına girmez.
+            </p>
+          )}
+
+          <h3 style={{ margin: '18px 0 8px' }}>Sorun türleri</h3>
+          {sum.issues.length ? (
+            <div className="sg-table-wrap">
+              <table className="sg-table">
+                <thead>
+                  <tr>
+                    <th>Sorun</th>
+                    <th>Önem</th>
+                    <th>Ürün</th>
+                    <th>Ne yapılmalı</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sum.issues.map((i) => (
+                    <tr key={i.code}>
+                      <td style={{ minWidth: 200 }}>
+                        <button type="button" className="sg-filter" aria-pressed={issue === i.code} onClick={() => pickIssue(i.code)} title={i.detail ?? undefined}>
+                          {i.description || i.code}
+                        </button>
+                        {i.attributeLabel && <div className="sg-kpi-note">Alan: {i.attributeLabel}</div>}
+                      </td>
+                      <td>
+                        <span className={`sg-chip ${M_SEV_TONE[i.severity] ?? 'violet'}`}>{i.severityLabel}</span>
+                      </td>
+                      <td className="num">{fmt(i.products)}</td>
+                      <td style={{ minWidth: 200 }}>
+                        {i.resolutionLabel && <div className="sg-kpi-note">{i.resolutionLabel}</div>}
+                        {i.documentation && (
+                          <a href={i.documentation} target="_blank" rel="noreferrer" className="sg-kpi-note" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                            Google’ın açıklaması <ExternalLink size={12} aria-hidden />
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="sg-banner ok">Google hiçbir üründe sorun bildirmiyor.</p>
+          )}
+
+          <h3 style={{ margin: '18px 0 8px' }}>
+            {listTitle} <span className="sg-mono" style={{ fontSize: 13, color: 'var(--sg-muted)' }}>{fmt(d.total)}</span>
+          </h3>
+          {!d.items.length ? (
+            <p className="sg-kpi-note">Bu süzgeçle ürün yok.</p>
+          ) : (
+            <div className="sg-table-wrap">
+              <table className="sg-table">
+                <thead>
+                  <tr>
+                    <th>Ürün</th>
+                    <th>Durum</th>
+                    <th>Sorunlar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.items.map((it) => (
+                    <tr key={it.name}>
+                      <td style={{ minWidth: 200 }}>
+                        {it.productId ? (
+                          <Link to={`/seo-geo/urun-denetimi?urun=${encodeURIComponent(it.productId)}`} style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+                            {it.title || it.offerId}
+                          </Link>
+                        ) : (
+                          <span style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{it.title || it.offerId}</span>
+                        )}
+                        <div className="sg-kpi-note">
+                          Kod {it.offerId}
+                          {it.gtin ? ` · barkod ${it.gtin}` : ''}
+                          {!it.productId ? ' · sitede eşlenemedi' : ''}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`sg-chip ${M_TONE[it.status]}`}>{it.statusLabel}</span>
+                      </td>
+                      <td style={{ minWidth: 220 }}>
+                        {it.issues.length ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {it.issues.map((i) => (
+                              <span
+                                key={i.code}
+                                className={`sg-chip ${M_SEV_TONE[i.severity] ?? 'violet'}`}
+                                title={[i.detail, i.contextLabels.join(', ')].filter(Boolean).join(' — ') || undefined}
+                              >
+                                {i.description || i.code}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="sg-kpi-note">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {d.total > M_PAGE && (
+            <div className="sg-pager" style={{ marginTop: 12 }}>
+              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - M_PAGE))} aria-label="Önceki sayfa">
+                <ChevronLeft size={16} aria-hidden />
+              </button>
+              <span className="sg-mono">
+                {fmt(start + 1)}–{fmt(Math.min(d.total, start + M_PAGE))} / {fmt(d.total)}
+              </span>
+              <button className="sg-button" disabled={start + M_PAGE >= d.total} onClick={() => setStart(start + M_PAGE)} aria-label="Sonraki sayfa">
+                <ChevronRight size={16} aria-hidden />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }

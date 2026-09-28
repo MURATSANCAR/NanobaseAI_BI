@@ -1178,7 +1178,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # kararı «çalıştır»; dosya indirme «dışa aktar». Onay/ret/gönderim uçları onay yetkisini kendi içinde ister.
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(guides|bios/[^/]+/draft|faq/[^/]+/draft)$", "ozellik:seo.oneri-uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/((authors-trust|backlinks|bing|bios|entity|opportunities|qsuggest|reviews|seasons"
-                          r"|similar|sunset|youtube|tech/sitemaps|gsc-sitemaps)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
+                          r"|similar|sunset|youtube|tech/sitemaps|gsc-sitemaps|merchant)/refresh|(competitors|crawlbot|impact|watch)/run|speed/run"
                           r"|tech/crawl|monthly/build|worklist/[^/]+/status|qsuggest/[^/]+/(accept|reject))$",
      "ozellik:seo.calistir"),
     (frozenset({"GET"}), r"^/api/v1/seo-geo/((worklist|similar|keymap|sunset)/export\.csv|video/(sitemap\.xml|theme-request\.md)"

@@ -505,11 +505,18 @@ const CONTENT: ScreenInfoMap = {
     how: [
       'Her ürün Google’ın ürün verisi kurallarına göre denetlenir; sorunlar «engelleyici», «sorun» ve «bilgi» diye ayrılır.',
       'CRM’de satıştan çekildi ya da bizim değil diye işaretli olup satışta görünen ürünler ve aynı barkodu taşıyan ürünler de yakalanır.',
+      '«Google Merchant’taki durum» bölümü Google’ın ürünlerimiz için verdiği kararı gösterir: onaylı, onaylanmayan, sınırlı, bekleyen ve sorun türleri. Bu bilgi yalnız okunur; Google’a hiçbir şey gönderilmez.',
+      'Onaylanmayan ve gösterimi sınırlanan sorunlar iş listesine sorun türü başına bir madde olarak düşer.',
       'Hiçbir yere gönderilmez; besleme dosyası Google’a elle yüklenmek içindir.',
     ],
-    data: 'T-soft ürünleri ve CRM yayın durumu',
-    refresh: 'Her gece 03:00 eşitlemesiyle',
-    actions: ['Sorun türüne tıklayıp ilgili ürünleri süzün.', '«Besleme dosyasını indir» ile Google’a yüklenecek dosyayı alın.'],
+    data: 'T-soft ürünleri, CRM yayın durumu ve Google Merchant Center ürün durumu',
+    refresh: 'Denetim her gece 03:00 eşitlemesiyle; Merchant durumu 6 saatte bir (ekran açılınca eskiyse hemen)',
+    actions: [
+      'Merchant özet kartlarına ya da sorun türüne tıklayıp ilgili ürünleri süzün.',
+      '«Şimdi oku» ile Merchant durumunu hemen yenileyin.',
+      'Sorun türüne tıklayıp ilgili ürünleri süzün.',
+      '«Besleme dosyasını indir» ile Google’a yüklenecek dosyayı alın.',
+    ],
   },
 
   'seo-sema': {

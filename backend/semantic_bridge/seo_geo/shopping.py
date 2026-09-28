@@ -1,7 +1,8 @@
 """Google Alışveriş hazırlığı: T-soft'taki etkin ürünler Merchant Center ürün verisi kurallarına göre denetlenir.
 
-Hiçbir yere gönderilmez. Merchant Center hesabı bağlı değil; ekran sorunları gösterir, besleme dosyası (TSV) bir
-insanın elle yüklemesi içindir. Kaynak `semantic_seo_products.data_json` (T-soft product/get kaydı); alan adları
+Hiçbir yere gönderilmez; besleme dosyası (TSV) bir insanın elle yüklemesi içindir. Merchant Center'daki gerçek ürün
+durumu (onaylı / onaylanmayan / sınırlı) yalnız okunarak `merchant.py`'de tutulur; `merchant` bayrağı en az bir
+başarılı okuma olduğunu söyler. Kaynak `semantic_seo_products.data_json` (T-soft product/get kaydı); alan adları
 T-soft sürümüne göre değişebildiği için her alan birkaç adla ve büyük/küçük harf duyarsız aranır.
 
 Merchant Center kuralları (Google ürün verisi belirtimi, 2026 itibarıyla):
@@ -528,6 +529,17 @@ def register(app, ctx) -> None:
     seo = ctx.seo
     shop = Shopping(seo)
 
+    def _merchant_connected() -> bool:
+        from . import merchant
+
+        if not merchant.account_id(seo.conf("MERCHANT_ACCOUNT_ID")):
+            return False
+        try:
+            return merchant.connected(seo.engine(), seo.tenant())
+        except Exception as e:  # noqa: BLE001 — bayrak okunamazsa ekran «bağlı değil» der, liste düşmez
+            log.warning("merchant bayrağı: %s", e)
+            return False
+
     @app.get("/api/v1/seo-geo/shopping")
     def seo_shopping(request: Request, issue: str = "", status: str = "", q: str = "", start: int = 0,
                      limit: int = 50) -> dict[str, Any]:
@@ -551,7 +563,7 @@ def register(app, ctx) -> None:
                              .order_by(RUNS.c.started_at.desc()).limit(1)).scalar()
         start = max(0, start)
         return {"total": len(items), "start": start, "items": items[start:start + max(1, limit)], "summary": summ,
-                "lastSync": iso(last), "merchant": bool(seo.conf("MERCHANT_ACCOUNT_ID")),
+                "lastSync": iso(last), "merchant": _merchant_connected(),
                 "scopes": FEED_SCOPES, "limits": {"title": TITLE_MAX, "description": DESC_MAX},
                 "bookCategory": BOOK_CATEGORY}
 
