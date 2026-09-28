@@ -1,5 +1,6 @@
 import {
   HeartHandshake,
+  Inbox,
   ArrowLeftRight,
   Archive,
   BellRing,
@@ -23,6 +24,7 @@ import {
   Radar,
   Bell,
   BookA,
+  Calculator,
   BookImage,
   BookOpen,
   BookPlus,
@@ -152,6 +154,14 @@ export const NAV: NavGroup[] = [
         keywords: ['yeni baskı öneri', 'baskı', 'tahmin'],
       },
       {
+        id: 'fiyatlama',
+        label: 'Fiyatlama ve maliyet',
+        to: '/fiyatlama',
+        icon: Calculator,
+        hint: 'Kitap maliyeti, başabaş, kapak fiyatı önerisi ve gerçekleşen marj',
+        keywords: ['fiyat', 'maliyet', 'başabaş', 'kapak fiyatı', 'marj', 'birim maliyet', 'zam'],
+      },
+      {
         id: 'ilk-baski',
         label: 'İlk baskı tahmini',
         to: '/ilk-baski',
@@ -177,8 +187,9 @@ export const NAV: NavGroup[] = [
     items: [
       // Kitap 360 (/kitap/:id) Masam'daki aramadan açılır; orada Masam etkin görünür.
       { id: 'editoryal', label: 'Masam', to: '/editoryal', icon: LayoutDashboard, section: 'Günlük', hint: 'Editoryal akış ve dosya takibi', also: ['/kitap'], keywords: ['editoryal süreç', 'kitap ara'] },
+      { id: 'basvurular', label: 'Başvurular', to: '/basvurular', icon: Inbox, section: 'Günlük', hint: 'Yeni kitap başvuruları, editör raporu, kurul kararı ve arşiv', keywords: ['başvuru', 'dosya', 'kuyruk', 'red', 'arşiv', 'kurul raporu', 'editör raporu'] },
       { id: 'yazar-giris', label: 'Yazar giriş süreci', to: '/yazar-giris', icon: Route, section: 'Günlük', hint: 'Yeni kitap başvuruları ve projeler', keywords: ['başvuru', 'proje', 'dosya'] },
-      { id: 'yayin-kurulu', label: 'Yayın kurulu', to: '/yayin-kurulu', icon: UsersRound, section: 'Günlük', hint: 'Kurul gündemi ve kararları', keywords: ['kurul', 'toplantı'] },
+      { id: 'yayin-kurulu', label: 'Yayın kurulu', to: '/yayin-kurulu', icon: UsersRound, section: 'Günlük', hint: 'Kurul oturumları, üye oyu ve kararlar', keywords: ['kurul', 'toplantı', 'oy', 'oturum'] },
       { id: 'gorevlerim', label: 'Görevlerim', to: '/gorevlerim', icon: ListChecks, section: 'Günlük', hint: 'Size atanan editörlük işleri ve terminleri', keywords: ['görev', 'termin', 'pano', 'iş listesi'] },
       { id: 'redaksiyon', label: 'Redaksiyon', to: '/redaksiyon', icon: PenLine, section: 'Yayına hazırlık', hint: 'Metin işleme ve üsluplandırma', keywords: ['redaksiyon', 'metin'] },
       { id: 'ceviri', label: 'Çeviri', to: '/ceviri', icon: Languages, section: 'Yayına hazırlık', hint: 'Çeviri işleri, terim bankası ve kalite raporu', keywords: ['çeviri', 'tercüme', 'terim', 'segment', 'kalite'] },

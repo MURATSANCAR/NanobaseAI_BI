@@ -72,6 +72,11 @@
       "label": "Baskı önerisi"
     },
     {
+      "key": "sayfa:fiyatlama",
+      "area": "finans",
+      "label": "Fiyatlama ve maliyet"
+    },
+    {
       "key": "sayfa:ilk-baski",
       "area": "finans",
       "label": "İlk baskı tahmini"
@@ -90,6 +95,11 @@
       "key": "sayfa:yazar-giris",
       "area": "editoryal",
       "label": "Yazar giriş süreci"
+    },
+    {
+      "key": "sayfa:basvurular",
+      "area": "editoryal",
+      "label": "Başvurular"
     },
     {
       "key": "sayfa:yayin-kurulu",
@@ -483,7 +493,30 @@
       "area": "editoryal",
       "page": "sayfa:yayin-kurulu",
       "label": "Yayın kurulu: üye görüşleri",
-      "hint": "Kurul üyelerinin görüşlerini adıyla görme",
+      "hint": "Kurul üyelerinin görüşlerini ve oylarını adıyla görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:basvuru.yaz",
+      "area": "editoryal",
+      "page": "sayfa:basvurular",
+      "label": "Başvuru kaydı ve editör raporu",
+      "hint": "Yeni başvuru, dosya yükleme, başvuruyu kendine alma, editör raporu ve kararı, kurul raporu üretme, yazışma"
+    },
+    {
+      "key": "ozellik:basvuru.yonet",
+      "area": "editoryal",
+      "page": "sayfa:basvurular",
+      "label": "Başvuru yönetimi",
+      "hint": "Başvuruyu editöre atama, başkasının başvurusunda rapor ve karar, arşivdeki başvuruyu yeniden açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:yayin-kurulu.yonet",
+      "area": "editoryal",
+      "page": "sayfa:yayin-kurulu",
+      "label": "Yayın kurulu yönetimi",
+      "hint": "Kurul oturumu açma, üyeleri ve gündemi belirleme, kurul kararını kaydetme, oturumu kapatma (başkan kendi oturumunu yetkisiz yönetir)",
       "explicit": true
     },
     {
@@ -611,6 +644,45 @@
       "page": "sayfa:saha",
       "label": "Temsilci karşılaştırması",
       "hint": "Haftalık saha raporunda bütün temsilcilerin satırları (kişisel performans verisi)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:fiyatlama.yaz",
+      "area": "finans",
+      "page": "sayfa:fiyatlama",
+      "label": "Fiyat analizi hazırlama",
+      "hint": "Analiz açma, düzenleme, onaya gönderme; pazar fiyatı girme; varsayılanları ve toplu zam teklifini hazırlama"
+    },
+    {
+      "key": "ozellik:fiyatlama.onay-mali",
+      "area": "finans",
+      "page": "sayfa:fiyatlama",
+      "label": "Mali İşler adına fiyat onayı",
+      "hint": "Aşama 1 ve 2 fiyat analizini ve toplu zam teklifini Mali İşler adına onaylama ya da geri gönderme (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:fiyatlama.onay-satis",
+      "area": "finans",
+      "page": "sayfa:fiyatlama",
+      "label": "Satış adına fiyat onayı",
+      "hint": "Aşama 1 ve 2 fiyat analizini Satış adına onaylama ya da geri gönderme (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:fiyatlama.onay-pazarlama",
+      "area": "finans",
+      "page": "sayfa:fiyatlama",
+      "label": "Pazarlama adına fiyat onayı",
+      "hint": "Aşama 2 (kesin fiyat) analizini Pazarlama adına onaylama (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:fiyatlama.onay-yonetim",
+      "area": "finans",
+      "page": "sayfa:fiyatlama",
+      "label": "Üst Yönetim adına fiyat onayı",
+      "hint": "Aşama 2 (kesin fiyat) analizini Üst Yönetim adına onaylama (hazırlayan onaylayamaz)",
       "explicit": true
     },
     {

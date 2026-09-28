@@ -1568,6 +1568,27 @@ export type AuthorHeatmap = {
   crmError: string | null;
 };
 export type AuthorAgenda = { upcoming: AuthorMeeting[]; missingNotes: AuthorMeeting[]; openSteps: AuthorMeeting[]; days: number; today: string };
+/** Çapraz yazar önerisi: e-ticarette aynı siparişte birlikte alınan yazarlar (müşteri bilgisi yok). */
+export type AuthorRelated = {
+  items: Array<{
+    contactId: string;
+    name: string | null;
+    orders: number;
+    theirOrders: number;
+    lift: number;
+    /** Beklenenden fazla ortak sipariş (sıralama buna göre). */
+    excess: number;
+    share: number | null;
+    books: Array<{ a: string | null; b: string | null; orders: number }>;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+  authorOrders: number | null;
+  minOrders: number;
+  minLift: number;
+  run: { at: string | null; orders: number; linesMatched: number; lines: number; pairs: number } | null;
+};
 export type AuthorSimilar = {
   cards: Array<{ id: string; name: string; stage: string; stageLabel: string | null; archived: boolean; crmContactId: string | null }>;
   crm: Array<{ crmContactId: string; name: string | null; author: boolean; cardId: string | null }>;
@@ -1596,6 +1617,8 @@ export const authorsApi = {
     send<AuthorPoolCrm>('GET', `${A}/pool/crm${qs({ q: p.q, page: p.page, closed: p.closed ? 'true' : undefined })}`, undefined, 120_000),
   heatmap: (p: { scope?: string; q?: string; order?: string; page?: number }) =>
     send<AuthorHeatmap>('GET', `${A}/heatmap${qs({ scope: p.scope, q: p.q, order: p.order, page: p.page })}`, undefined, 180_000),
+  related: (contactId: string, page = 0) =>
+    send<AuthorRelated>('GET', `${A}/related/${encodeURIComponent(contactId)}${qs({ page })}`, undefined, 30_000),
   agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
   createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
   updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),
@@ -2075,7 +2098,7 @@ export type QualityReport = TranslationJob & {
   severityLabels: Record<string, string>;
 };
 
-async function putFile<T>(path: string, file: File): Promise<T> {
+export async function putFile<T>(path: string, file: File): Promise<T> {
   const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
     method: 'PUT',
     credentials: 'include',

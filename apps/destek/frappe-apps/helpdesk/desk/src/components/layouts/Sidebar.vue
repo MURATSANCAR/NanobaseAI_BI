@@ -22,7 +22,7 @@
         />
       </div>
       <SidebarItem
-        v-if="isOnboardingStepsCompleted && !isCustomerPortal"
+        v-if="false"
         :label="__('Help')"
         :icon="HelpIcon"
         :on-click="
@@ -336,82 +336,7 @@ const steps = [
   },
 ];
 
-const articles = ref([
-  {
-    title: __("Introduction"),
-    opened: false,
-    subArticles: [
-      { name: "introduction", title: __("Introduction") },
-      { name: "setting-up", title: __("Setting up") },
-    ],
-  },
-  {
-    title: __("Getting Started"),
-    opened: false,
-    subArticles: [
-      {
-        name: "lesson-1-your-first-ticket",
-        title: __("Creating a ticket"),
-      },
-      {
-        name: "lesson-2understanding-ticket-view",
-        title: __("Understanding ticket view"),
-      },
-      {
-        name: "lesson-3-agents-teams",
-        title: __("Agents & Teams"),
-      },
-      {
-        name: "customers-contacts",
-        title: __("Customers & Contacts"),
-      },
-      {
-        name: "lesson-4-knowledge-base",
-        title: __("Knowledge Base"),
-      },
-      {
-        name: "customer-portal",
-        title: __("Customer Portal"),
-      },
-    ],
-  },
-  {
-    title: __("Masters"),
-    opened: false,
-    subArticles: [
-      { name: "ticket", title: __("Ticket") },
-      { name: "agent", title: __("Agent") },
-      { name: "team", title: __("Team") },
-      { name: "contact", title: __("Contact") },
-      { name: "customer", title: __("Customer") },
-      { name: "knowledge-base", title: __("Knowledge Base") },
-      { name: "saved-replies", title: __("Saved Replies") },
-      { name: "service-level-agreement", title: __("Service Level Agreement") },
-      { name: "ticket-type", title: __("Ticket Type") },
-      { name: "ticket-priority", title: __("Ticket Priority") },
-    ],
-  },
-  {
-    title: __("Customizations"),
-    opened: false,
-    subArticles: [
-      { name: "custom-actions", title: __("Custom Actions") },
-      { name: "field-dependency", title: __("Field Dependency") },
-      { name: "custom-views", title: __("Custom Views") },
-      {
-        name: "settings",
-        title: __("Settings"),
-      },
-    ],
-  },
-  {
-    title: __("NanobaseAI Mobile"),
-    opened: false,
-    subArticles: [
-      { name: "pwa-installation", title: __("Mobile App Installation") },
-    ],
-  },
-]);
+const articles = ref([]);
 
 const showIntermediateModal = ref(false);
 const currentStep = ref({});

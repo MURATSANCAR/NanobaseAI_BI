@@ -4685,12 +4685,60 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             admin_mod.audit(engine, user, "update", "author_meeting", out["id"], out["topic"], diff)
         return out
 
+    # Çapraz yazar önerisi: e-ticarette (T-soft, yalnız okuma) aynı siparişte birlikte alınan yazarlar. Gece turu
+    # zamanlayıcıdan (timas-copurchase.timer); müşteri verisi (ad, adres, telefon) okunmaz.
+    from semantic_bridge import author_copurchase as cop_mod
+
+    @app.post("/api/v1/editorial/authors/copurchase/run-due")
+    def authors_copurchase_run(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        from semantic_bridge.seo_geo import connections as tsoft_conn
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        if not tsoft_conn.tsoft.configured():
+            return {"skipped": "T-soft bağlantısı bu ortamda tanımlı değil."}
+        engine, tenant, schema = r.store.engine, r.settings.tenant_id, admin_mod.conf("CRM_SCHEMA")
+        cop_mod.ensure(engine)
+
+        def job() -> None:
+            try:
+                out = cop_mod.run(engine, tenant, tsoft_conn.tsoft.call, _crm_fetch_all, schema)
+                log.info("author copurchase: %s", out)
+            except Exception:  # noqa: BLE001 — hata tur kaydına yazıldı
+                log.exception("author copurchase failed")
+
+        threading.Thread(target=job, name="author-copurchase", daemon=True).start()
+        return {"started": True}
+
+    @app.get("/api/v1/editorial/authors/related/{contact_id}")
+    def authors_related(contact_id: str, request: Request, page: int = 0) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        cop_mod.ensure(engine)
+        try:
+            return cop_mod.related(engine, tenant, contact_id, page)
+        except cop_mod.CopurchaseError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e)}) from e
+
     @app.delete("/api/v1/editorial/authors/meetings/{meeting_id}")
     def authors_meeting_delete(meeting_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
         out = _rel_call(rel_mod.delete_meeting, engine, tenant, user, admin, meeting_id, rooms_mod)
         admin_mod.audit(engine, user, "delete", "author_meeting", out["id"], out["topic"], {"date": out["date"]})
         return {"ok": True}
+
+    # ------------------------------------------------------------------ M1 başvuru, editör değerlendirmesi, yayın kurulu
+    # Başvuru, editör raporu, kurul oturumu, üye oyları, karar ve yazışma köprünün tablolarında
+    # (editorial_applications.py); CRM ve Logo yalnız okunur (kategori, benzer kitap satışı, yazar geçmişi).
+    from semantic_bridge import editorial_applications_api
+
+    editorial_applications_api.register(app, {
+        "session": _greetings, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "connection_files": lambda: {
+            "logo": rt().settings.connection_file,
+            "crm": os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")},
+        "run": lambda sql: rt().run_sql(sql, rt().settings.max_rows),
+        "person": editorial_mod.person,
+    })
 
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
@@ -6608,6 +6656,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.budget = budget_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import distribution_api
     app.state.distribution = distribution_api.register(app, rt, _require_caller, _can)
+
+    # Fiyatlama ve maliyet (M9): kendi paketi (`semantic_bridge/pricing`), uçlar /api/v1/pricing/*.
+    from semantic_bridge import pricing
+    app.state.pricing = pricing.register(app, rt, {"session": _greetings, "can": _can, "audit": admin_mod.audit,
+                                                   "is_admin": admin_mod.is_admin})
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

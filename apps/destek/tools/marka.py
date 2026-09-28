@@ -161,7 +161,6 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 			 '  {\n    icon: "lucide-book-open",\n    label: __("Docs"),\n    onClick: () => window.open("https://docs.frappe.io/helpdesk"),\n  },\n'
 			 '  {\n    label: __("Login to Frappe Cloud"),\n    icon: FrappeCloudIcon,\n    onClick: () => confirmLoginToFrappeCloud(),\n    condition: () => !isMobileView.value && window.is_fc_site,\n  },\n',
 			 ''),
-			('title: __("Frappe Helpdesk Mobile"),', f'title: __("{BRAND} Mobile"),'),
 		],
 	),
 	(
@@ -203,6 +202,105 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		[('          component: markRaw(ERPNextIntegrationSettings),\n          condition: () => auth.isAdmin || auth.isManager,',
 		  '          component: markRaw(ERPNextIntegrationSettings),\n          condition: () => false,')],
 	),
+	# ── Dış bağlantılar: üretici belgeleri, sağlayıcı yardım sayfaları (kullanıcı kararı 2026-09-28: tamamen silinir) ──
+	(
+		"helpdesk/desk/src/components/Settings/Sla/SlaPolicies.vue",
+		[('            "SLAs align your team and customers with defined timelines for a reliable experience. Learn more about SLA "\n'
+		  '          )\n        }}\n        <a\n          href="https://docs.frappe.io/helpdesk/service-level-agreement"\n'
+		  '          target="_blank"\n          class="underline"\n          >{{ __("here.") }}\n        </a>',
+		  '            "SLAs align your team and customers with defined timelines for a reliable experience."\n'
+		  '          )\n        }}')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/FieldDependency/FieldDependencyList.vue",
+		[('            "Create field dependencies to dynamically update options based on user selections. Learn more about field dependencies"\n'
+		  '          )\n        }}\n        <a\n          href="https://docs.frappe.io/helpdesk/field-dependency"\n'
+		  '          target="_blank"\n          class="underline"\n          >{{ __("here.") }}</a\n        >',
+		  '            "Create field dependencies to dynamically update options based on user selections."\n'
+		  '          )\n        }}')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/Assignment Rules/AssignmentRuleView.vue",
+		[('                <a\n                  class="font-medium underline"\n                  href="https://docs.frappe.io/helpdesk/assignment-rule"\n'
+		  '                  target="_blank"\n                  >{{ __("Learn about conditions") }}</a\n                >\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/General/components/TicketSettings.vue",
+		[('            {{\n              __(\n                "Find out all of the variables that can be used in the content"\n              )\n            }}\n'
+		  '            <a\n              href="https://docs.frappe.io/helpdesk/helpdesk/customization/outside-working-hours-banner"\n'
+		  '              target="_blank"\n              class="underline font-semibold"\n              >{{ __("here") }}</a\n            >\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailNotifications/Notification.vue",
+		[('                {{\n                  __(\n                    "Find out all of the variables that can be used in the content"\n                  )\n                }}\n'
+		  '                <a\n                  :href="props.documentationLink"\n                  target="_blank"\n                  class="underline font-semibold"\n'
+		  '                  >{{ __("here") }}</a\n                >\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/layouts/CustomerPortalPermissionDialog.vue",
+		[('          {{ __("Learn more in the") }}\n          <a\n            href="https://docs.frappe.io/helpdesk/customers-contacts#update-on-permissions"\n'
+		  '            target="_blank"\n            class="underline"\n            >{{ __("documentation") }}</a\n          >.\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/SavedReplies/SavedReplyView.vue",
+		[('            <DocumentationButton\n              url="https://docs.frappe.io/helpdesk/saved-replies"\n            />\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/FieldDependency/FieldDependencyCriteria.vue",
+		[('            <DocumentationButton\n              url="https://docs.frappe.io/helpdesk/field-dependency#handling-visibility-of-child-field"\n'
+		  '              color="!text-ink-gray-6"\n            />\n', ''),
+		 ('            <DocumentationButton\n              url="https://docs.frappe.io/helpdesk/field-dependency#handling-if-the-child-field-is-mandatory"\n'
+		  '              color="!text-ink-gray-6"\n            />\n', '')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailEdit.vue",
+		[('              <span>\n                {{ info.description }}\n                <a\n                  :href="info.link"\n'
+		  '                  target="_blank"\n                  class="text-ink-blue-5 underline"\n                  >here</a\n                >.\n              </span>\n', ''),
+		 ('  link: "https://docs.frappe.io/erpnext/user/manual/en/email-domain",\n', '  link: "",\n')],
+	),
+	(
+		# Sağlayıcı yardım sayfaları: bağlantı boşaltılır, «Read more» metinden çıkar, bağlantı yalnız iç adreste görünür.
+		"helpdesk/desk/src/components/Settings/EmailAdd.vue",
+		[('                  {{ selectedService.info }}\n                  <a\n                    :href="selectedService.link"\n',
+		  '                  {{ selectedService.info }}\n                  <a\n                    v-if="selectedService.link"\n                    :href="selectedService.link"\n'),
+		 ('                    >here</a\n                  >\n                  .\n', '                    >here</a\n                  >\n')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/emailConfig.ts",
+		[(' Read more`),\n    link: "https://support.google.com/accounts/answer/185833",', '`),\n    link: "",'),
+		 (' Read more`),\n    link: "https://support.microsoft.com/en-us/account-billing/how-to-get-and-use-app-passwords-5896ed9b-4263-e681-128a-a6f2979a7944",', '`),\n    link: "",'),
+		 (' Read more`),\n    link: "https://sendgrid.com/docs/ui/account-and-settings/two-factor-authentication/",', '`),\n    link: "",'),
+		 (' Read more`),\n    link: "https://support.sparkpost.com/docs/my-account-and-profile/enabling-two-factor-authentication",', '`),\n    link: "",'),
+		 (' Read more`),\n    link: "https://help.yahoo.com/kb/SLN15241.html",', '`),\n    link: "",'),
+		 (' Read more`),\n    link: "https://yandex.com/support/id/authorization/app-passwords.html",', '`),\n    link: "",'),
+		 ('placeholder: "https://frappemail.com",', 'placeholder: "https://posta.ornek.com.tr",')],
+	),
+	(
+		# Kurulum rehberindeki yardım merkezi yalnız üretici belge makalelerini açıyordu: menü satırı ve makale listesi çıkar.
+		"helpdesk/desk/src/components/layouts/Sidebar.vue",
+		[('      <SidebarItem\n        v-if="isOnboardingStepsCompleted && !isCustomerPortal"\n        :label="__(\'Help\')"\n',
+		  '      <SidebarItem\n        v-if="false"\n        :label="__(\'Help\')"\n')],
+	),
+	(
+		"helpdesk/desk/src/components/erpnext-integration/ERPNextIntegrationSettings.vue",
+		[('              href="https://frappe.io/cloud/install"', '              href="#"')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailNotifications/Acknowledgement.vue",
+		[('documentationLink="https://docs.frappe.io/helpdesk/email-notifications#available-variables-acknowledgement"', 'documentationLink=""')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailNotifications/ReplyToAgents.vue",
+		[('documentationLink="https://docs.frappe.io/helpdesk/email-notifications#available-variables-reply-from-contact"', 'documentationLink=""')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailNotifications/ReplyViaAgent.vue",
+		[('documentationLink="https://docs.frappe.io/helpdesk/email-notifications#available-variables-reply-from-agent"', 'documentationLink=""')],
+	),
+	(
+		"helpdesk/desk/src/components/Settings/EmailNotifications/ShareFeedback.vue",
+		[('documentationLink="https://docs.frappe.io/helpdesk/email-notifications#available-variables-share-feedback"', 'documentationLink=""')],
+	),
 	# ── Flow ──────────────────────────────────────────────────────────────
 	(
 		"flow/flow/hooks.py",
@@ -242,6 +340,7 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 
 # Tüm metni değiştirilen bloklar: (dosya, desen, yeni metin)
 BLOCKS: list[tuple[str, str, str]] = [
+	("helpdesk/desk/src/components/layouts/Sidebar.vue", r"const articles = ref\(\[\n  \{.*?\n\]\);", "const articles = ref([]);"),
 	("helpdesk/helpdesk/setup/welcome_ticket.py", r'CONTENT = """.*?"""', 'CONTENT = """' + WELCOME + '"""'),
 ]
 
@@ -299,9 +398,9 @@ REMOVE = [
 ]
 
 # Denetim: bu desenler ekrana çıkan dosyalarda kalmamalı.
-AUDIT_PATTERNS = [r"Frappe Helpdesk", r"\bTeam Frappe\b", r'"Helpdesk"', r"t\.me/frappedesk", r"Frappe Cloud\b(?!Icon)"]
+AUDIT_PATTERNS = [r"https?://(?!localhost|www\.w3\.org|flagcdn\.com|fonts\.googleapis\.com|fonts\.gstatic\.com|posta\.ornek)[a-z0-9.-]+\.[a-z]{2,}", r"Frappe Helpdesk", r"\bTeam Frappe\b", r'"Helpdesk"', r"t\.me/frappedesk", r"Frappe Cloud\b(?!Icon)"]
 # Ekrana çıkmayan satırlar: önbellek anahtarı ve menüden kaldırılan bulut girişinin ölü kodu.
-AUDIT_SKIP = [r"cache: \[", r"composables/fc\.ts"]
+AUDIT_SKIP = [r"cache: \[", r"composables/fc\.ts", r"^[^:]*:\d+:\s*(\*|//)", r"xmlns="]
 AUDIT_GLOBS = ["helpdesk/desk/src/**/*.vue", "helpdesk/desk/src/**/*.ts", "helpdesk/desk/index.html", "flow/frontend/src/**/*.vue"]
 
 
@@ -311,15 +410,17 @@ def apply() -> int:
 		path = APPS / rel
 		text = path.read_text()
 		for old, new in pairs:
+			# Önce yeni metne bak: yeni metin eskisini içerebilir (ekleme), ikinci koşu tekrar eklemesin.
+			if new and new in text:
+				continue
 			if old in text:
 				text = text.replace(old, new)
-			elif new and new in text:
-				continue
 			elif not new:
 				# Silme: yeni metin boş; eski yoksa zaten silinmiştir ya da üst kaynak değişmiştir.
-				anchor = max(old.strip().splitlines(), key=len).strip()
-				if anchor in text:
-					problems.append(f"{rel}: silinecek blok değişmiş: {anchor[:80]}")
+				# Bloğun ilk yarısı duruyor ama tamamı yoksa üst kaynak bloğu değiştirmiştir.
+				head = old[: max(len(old) // 2, 1)]
+				if head.strip() and head in text:
+					problems.append(f"{rel}: silinecek blok değişmiş: {head.strip().splitlines()[0][:80]}")
 			else:
 				problems.append(f"{rel}: bulunamadı: {old[:80]!r}")
 		path.write_text(text)
@@ -327,7 +428,7 @@ def apply() -> int:
 		path = APPS / rel
 		text = path.read_text()
 		updated, n = re.subn(pattern, lambda _m: new, text, count=1, flags=re.S)
-		if n == 0:
+		if n == 0 and new not in text:
 			problems.append(f"{rel}: blok deseni bulunamadı: {pattern}")
 		path.write_text(updated)
 	for rel, content in WRITES:

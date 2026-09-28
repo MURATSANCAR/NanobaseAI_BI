@@ -14,10 +14,6 @@
               >Show {{ selections.childField }} if
               {{ selections.parentField }} is set to</span
             >
-            <DocumentationButton
-              url="https://docs.frappe.io/helpdesk/field-dependency#handling-visibility-of-child-field"
-              color="!text-ink-gray-6"
-            />
           </div>
         </div>
         <MultiSelectCombobox
@@ -40,10 +36,6 @@
               >Make {{ selections.childField }} mandatory if
               {{ selections.parentField }} is set to</span
             >
-            <DocumentationButton
-              url="https://docs.frappe.io/helpdesk/field-dependency#handling-if-the-child-field-is-mandatory"
-              color="!text-ink-gray-6"
-            />
           </div>
         </div>
         <MultiSelectCombobox

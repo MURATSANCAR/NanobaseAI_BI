@@ -128,12 +128,6 @@
                     "Choose which tickets are affected by this assignment rule."
                   )
                 }}
-                <a
-                  class="font-medium underline"
-                  href="https://docs.frappe.io/helpdesk/assignment-rule"
-                  target="_blank"
-                  >{{ __("Learn about conditions") }}</a
-                >
               </span>
               <div
                 v-if="isAssignConditionOld && assignmentRulesActiveScreen.data"
@@ -205,12 +199,6 @@
                     "Choose which tickets are affected by this un-assignment rule."
                   )
                 }}
-                <a
-                  class="font-medium underline"
-                  href="https://docs.frappe.io/helpdesk/assignment-rule"
-                  target="_blank"
-                  >{{ __("Learn about conditions") }}</a
-                >
               </span>
               <div
                 v-if="

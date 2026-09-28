@@ -1,0 +1,10 @@
+[Unit]
+Description=Çapraz yazar önerisi, her gece 04:30
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+Unit=timas-copurchase.service
+
+[Install]
+WantedBy=timers.target

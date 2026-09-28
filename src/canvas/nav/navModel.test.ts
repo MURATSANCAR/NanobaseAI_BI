@@ -98,6 +98,8 @@ describe('etkin öğe (alt rotalar)', () => {
 
   it('detay sayfaları en yakın menü öğesine bağlanır', () => {
     expect(at('/yazar-giris/42')).toBe('yazar-giris');
+    expect(at('/basvurular/ab12')).toBe('basvurular');
+    expect(at('/yayin-kurulu/oturum/ab12')).toBe('yayin-kurulu');
     expect(at('/kitap/9f')).toBe('editoryal'); // Kitap 360 → Masam
     expect(at('/yonetim-raporlari/baski-oneri')).toBe('baski-oneri');
     expect(at('/yonetim-raporlari')).toBe('yonetim-raporlari');

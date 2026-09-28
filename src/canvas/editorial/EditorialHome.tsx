@@ -357,7 +357,7 @@ export default function EditorialHome() {
           <li className="flex items-start gap-2 rounded-xl border border-slate-100 bg-white/85 px-3 py-2">
             <CalendarClock aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-canvas-violet" />
             <span className="min-w-0">
-              <Link to="/yayin-kurulu" className="font-semibold hover:underline">
+              <Link to="/yayin-kurulu?gorunum=crm" className="font-semibold hover:underline">
                 {d?.lastBoard ? `Son yayın kurulu ${dateTime(d.lastBoard)}` : 'Yayın kurulu'}
               </Link>
               <span className="block text-[11px] text-canvas-muted">

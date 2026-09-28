@@ -447,7 +447,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
-_EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
+_EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
@@ -473,6 +473,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/run-due", SYSTEM),
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
+    ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -495,7 +496,12 @@ RULES: list[tuple[str, Any]] = [
     # M32 Kurumsal satış ve B2B.
     ("/api/v1/corporate/run-due", SYSTEM),
     ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
+    # M1: başvuru dosyası ve kurul oturumu iki sayfada birlikte açılır (kurul üyesi başvurunun raporunu ve dosyasını,
+    # başvuru ekranı oturum listesini okur).
+    ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
+    ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
+    ("/api/v1/editorial/authors/copurchase/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
     ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
@@ -582,6 +588,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/corporate/b2b/.+$", "ozellik:kurumsal.b2b"),
     (frozenset({"GET"}), r"^/api/v1/corporate/(quotes/[^/]+/document\.(pdf|xlsx)|b2b/(dealers|highlights)\.csv)$",
      "ozellik:veri.disa-aktar"),
+    # Fiyatlama (M9): analiz, pazar fiyatı, varsayılan ve toplu zam teklifi yazımı. Hesap (`calc`) ve okuma sayfayla
+    # gelir; onay imzaları açıkça verilen `fiyatlama.onay-<rol>` ile ucun içinde denetlenir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/pricing/(analyses(/[^/]+(/(submit|withdraw|archive))?)?|market(/[^/]+)?|defaults|proposals|refresh)$",
+     "ozellik:fiyatlama.yaz"),
+    # M1 başvuru: kayıt, dosya, editör raporu ve kararı, kurul raporu, yazışma. Kurul üyesinin oyu sayfa yetkisi +
+    # oturum üyeliğiyle olur; oturum yönetimi açıkça verilen `yayin-kurulu.yonet` ile ucun içinde denetlenir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}), r"^/api/v1/editorial/applications(/.*)?$", "ozellik:basvuru.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.

@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../../admin/u
 import { dateTime } from '../../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { waitingText } from './parts';
+import { BoardTabs } from '../applications/shared';
 
 /** Yayın kurulu: bir toplantının gündemi ve kararları. Toplantı, CRM'de aynı güne yazılmış kurul kayıtlarıdır;
  *  ileri tarihli kayıt tutulmadığı için gelecek toplantı gösterilmez. */
@@ -92,11 +93,13 @@ export default function MeetingScreen() {
     <ModuleFrame
       route="/yayin-kurulu"
       crumb="Yayın kurulu"
-      title={m ? `Yayın kurulu · ${dayLabel(m.date)}` : 'Yayın kurulu'}
+      title={m ? `Geçmiş kurul · ${dayLabel(m.date)}` : 'Geçmiş kurul kararları'}
       lead={m ? `Gündemde ${nf.format(m.total)} proje · ${nf.format(m.total - m.pending)} karar verildi · ${nf.format(m.pending)} bekliyor` : 'Kurul toplantıları ve kararları, CRM kurul kayıtlarından.'}
       source="Kaynak: CRM kurul kayıtları"
       aside={
-        list.length > 0 ? (
+        <div className="flex flex-col gap-2">
+        <BoardTabs active="crm" />
+        {list.length > 0 ? (
           <div className="flex items-center gap-1.5">
             <button type="button" className={`${btnGhost} px-2.5`} aria-label="Önceki toplantı" disabled={at < 0 || at >= list.length - 1} onClick={() => { setDay(list[at + 1].date); setOpen(null); }}>
               <ChevronLeft aria-hidden className="h-4 w-4" />
@@ -112,7 +115,8 @@ export default function MeetingScreen() {
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
           </div>
-        ) : undefined
+        ) : null}
+        </div>
       }
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}

@@ -139,6 +139,11 @@ SPEC: list[dict[str, Any]] = [
      "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve açık bilgi tabanında her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
+    # Yayın kurulu: toplam karar skoru (misyon, yayıncılık, ticari puanların ortalaması) → skor önerisi.
+    {"key": "EDITORIAL_BOARD_ACCEPT_SCORE", "group": "crm", "label": "Kurul: kabul skoru", "type": "int", "default": "70",
+     "help": "Üyelerin ortalama toplam karar skoru bu değer ve üstündeyse skor önerisi «Kabul» olur (0–100)"},
+    {"key": "EDITORIAL_BOARD_REVISE_SCORE", "group": "crm", "label": "Kurul: revizyon skoru", "type": "int", "default": "50",
+     "help": "Kabul skorunun altında, bu değer ve üstündeyse öneri «Revizyon», altındaysa «Red» olur (0–100)"},
     # Kişi rehberi
     {"key": "PEOPLE_MAX_IDLE_DAYS", "group": "people", "label": "Son giriş süresi (gün)", "type": "int", "default": "365",
      "help": "Rehbere yalnız bu kadar gün içinde etki alanına giriş yapmış kişiler girer; ortak ve kullanılmayan "

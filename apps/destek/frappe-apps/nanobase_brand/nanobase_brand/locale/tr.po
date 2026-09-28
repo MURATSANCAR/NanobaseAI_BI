@@ -2204,3 +2204,42 @@ msgstr "{0}, bağlı Twilio hesabında bir telefon numarası değil."
 
 msgid "{0} is not a supported OTP channel. Use one of: {1}."
 msgstr "{0}, desteklenen bir OTP kanalı değil. Şunlardan birini kullanın: {1}."
+
+msgid "SLAs align your team and customers with defined timelines for a reliable experience."
+msgstr "SLA'lar, tanımlı sürelerle ekibinizi ve müşterilerinizi güvenilir bir hizmet için aynı çizgide tutar."
+
+msgid "Create field dependencies to dynamically update options based on user selections."
+msgstr "Kullanıcının seçimine göre seçenekleri kendiliğinden güncellemek için alan bağımlılıkları oluşturun."
+
+msgid ""
+"Setting up GMail requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "GMail kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid ""
+"Setting up Outlook requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "Outlook kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid ""
+"Setting up Sendgrid requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "Sendgrid kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid ""
+"Setting up SparkPost requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "SparkPost kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid ""
+"Setting up Yahoo requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "Yahoo kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid ""
+"Setting up Yandex requires you to enable two factor authentication\n"
+"\t\t  and app specific passwords."
+msgstr "Yandex kurulumu için iki adımlı doğrulamayı ve uygulamaya özel şifreyi açmanız gerekir."
+
+msgid "Use your own IMAP/SMTP settings. Open in Desk"
+msgstr "Kendi IMAP/SMTP ayarlarınızı kullanın. Masaüstünde açın"

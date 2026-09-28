@@ -13,7 +13,10 @@ const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
-const MeetingScreen = lazy(() => import('@/canvas/editorial/intake/MeetingScreen'));
+const BoardSessionsScreen = lazy(() => import('@/canvas/editorial/applications/BoardSessionsScreen'));
+const SessionScreen = lazy(() => import('@/canvas/editorial/applications/SessionScreen'));
+const ApplicationsScreen = lazy(() => import('@/canvas/editorial/applications/ApplicationsScreen'));
+const ApplicationScreen = lazy(() => import('@/canvas/editorial/applications/ApplicationScreen'));
 const IntakeBoardScreen = lazy(() => import('@/canvas/editorial/intake/IntakeBoardScreen'));
 const IntakeProjectScreen = lazy(() => import('@/canvas/editorial/intake/IntakeProjectScreen'));
 const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
@@ -32,6 +35,7 @@ const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const FreelanceScreen = lazy(() => import('@/canvas/editorial/freelance/FreelanceScreen'));
+const PricingScreen = lazy(() => import('@/canvas/pricing/PricingScreen'));
 const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/AuthorRelationsScreen'));
 const ProductionScreen = lazy(() => import('@/canvas/editorial/production/ProductionScreen'));
 const CorporateScreen = lazy(() => import('@/canvas/corporate/CorporateScreen'));
@@ -136,6 +140,8 @@ export default function App() {
             {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
             <Route path="okul-tanitim" element={<SchoolsScreen />} />
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />
+            {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
+            <Route path="fiyatlama" element={<PricingScreen />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
@@ -172,10 +178,14 @@ export default function App() {
             <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="yonetim" element={<AdminScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
-            {/* Editoryal Süreç: Günlük (Masam, Yazar giriş süreci, Yayın kurulu) · Yayına hazırlık · Kayıtlar. */}
+            {/* Editoryal Süreç: Günlük (Masam, Başvurular, Yazar giriş süreci, Yayın kurulu) · Yayına hazırlık · Kayıtlar. */}
             <Route path="yazar-giris" element={<IntakeBoardScreen />} />
             <Route path="yazar-giris/:id" element={<IntakeProjectScreen />} />
-            <Route path="yayin-kurulu" element={<MeetingScreen />} />
+            {/* M1: başvuru kuyruğu ve dosyası; yayın kurulu oturumları (CRM geçmişi ?gorunum=crm). */}
+            <Route path="basvurular" element={<ApplicationsScreen />} />
+            <Route path="basvurular/:id" element={<ApplicationScreen />} />
+            <Route path="yayin-kurulu" element={<BoardSessionsScreen />} />
+            <Route path="yayin-kurulu/oturum/:id" element={<SessionScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />

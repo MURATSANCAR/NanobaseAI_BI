@@ -40,6 +40,8 @@ JOBS = [
     ("pano kartları", "/api/v1/board/run-due", int(os.environ.get("BOARD_EVERY_SEC", "900")), 590),
     ("planlı raporlar", "/api/v1/reports/run-due", int(os.environ.get("REPORTS_EVERY_SEC", "300")), 1700),
     ("SEO & GEO eşitlemesi", "/api/v1/seo-geo/run-due", int(os.environ.get("SEO_EVERY_SEC", "86400")), 1700),
+    # M46 bütçe: Logo gerçekleşmesi + sapma uyarıları (sunucuda timas-budget.timer, saatte bir; geçmiş yıl okuması 3-4 dk).
+    ("bütçe", "/api/v1/budget/run-due", int(os.environ.get("BUDGET_EVERY_SEC", "3600")), 1790),
 ]
 
 
