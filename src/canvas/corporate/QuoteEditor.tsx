@@ -5,6 +5,8 @@ import { Download, FileSpreadsheet, Loader2, Plus, Sparkles, Trash2 } from 'luci
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { AskSheet } from '../budget/parts';
 import { useDebounced } from '../editorial/kit';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import {
   QUOTE_TONE,
@@ -54,7 +56,10 @@ export function BookAdder({ onAdd, taken }: { onAdd: (d: Draft) => void; taken: 
   const res = useQuery({ queryKey: ['corporate', 'books', dq], queryFn: () => corporateApi.books(dq), enabled: ENGINE_ENABLED && dq.trim().length >= 2 });
   return (
     <div className="flex flex-col gap-1">
-      <label className={labelCls} htmlFor="corp-book-add">Kitap ekle</label>
+      <div className="flex items-center gap-1">
+        <label className={labelCls} htmlFor="corp-book-add">Kitap ekle</label>
+        <SqlInfo k={res.data?.kaynaklar} alan="items[]" label="Kitap aramasındaki stok ve liste fiyatı" />
+      </div>
       <input id="corp-book-add" className={field} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı, stok kodu ya da yazar" autoComplete="off" />
       {res.data && res.data.items.length > 0 && (
         <ul className="max-h-60 overflow-y-auto rounded-xl border border-slate-100 bg-white">
@@ -88,7 +93,8 @@ export function BookAdder({ onAdd, taken }: { onAdd: (d: Draft) => void; taken: 
   );
 }
 
-export default function QuoteEditor({ quote, meta, oppOpen }: { quote: Quote; meta: Meta; oppOpen: boolean }) {
+/** `k`: teklifin geldiği fırsat cevabının sorgu bilgisi (`teklifler[]` kalemleri, `teklifler[].taslak` ekran hesabı). */
+export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote; meta: Meta; oppOpen: boolean; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const editable = quote.durum === 'taslak' && meta.me.canQuote;
   const [lines, setLines] = useState<Draft[]>(() => quote.kalemler.map(lineOf));
@@ -158,6 +164,8 @@ export default function QuoteEditor({ quote, meta, oppOpen }: { quote: Quote; me
   const mine = (quote.gonderen ?? '').toLowerCase() === meta.me.username.toLowerCase();
   const busy = act.isPending || save.isPending;
   const canLetter = meta.me.canQuote && (quote.durum === 'taslak' || quote.durum === 'hazir');
+  // Kaydedilmemiş değişiklikte toplamlar ekranda hesaplanır: kaynağı o hesabın formülü.
+  const totalsPath = dirtyLines ? 'teklifler[].taslak' : 'teklifler[].toplamNet';
 
   return (
     <div className="flex flex-col gap-3">
@@ -175,12 +183,12 @@ export default function QuoteEditor({ quote, meta, oppOpen }: { quote: Quote; me
         <thead>
           <tr>
             <th className={th}>Kitap</th>
-            <th className={`${th} text-right`}>Stok</th>
-            <th className={`${th} text-right`}>Adet</th>
-            <th className={`${th} text-right`}>Liste fiyatı</th>
-            <th className={`${th} text-right`}>İndirim %</th>
-            <th className={`${th} text-right`}>Tutar</th>
-            <th className={`${th} text-right`}>Birim maliyet</th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].kalemler[].stokMiktar">Stok</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].kalemler[].adet">Adet</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].kalemler[].listeFiyati">Liste fiyatı</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].kalemler[].indirim">İndirim %</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].taslak">Tutar</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan="teklifler[].kalemler[].maliyetBirim">Birim maliyet</InfoLabel></th>
             {editable && <th className={th}><span className="sr-only">Sil</span></th>}
           </tr>
         </thead>
@@ -241,16 +249,29 @@ export default function QuoteEditor({ quote, meta, oppOpen }: { quote: Quote; me
             </div>
             <span className="text-[11px] text-canvas-muted">
               Onay eşiği: indirim %{meta.settings.discountApprovalPct ?? '—'}{meta.settings.marginMinPct !== null ? `, marj en az %${meta.settings.marginMinPct}` : ''}.
+              <SqlInfo k={meta.kaynaklar} alan="settings" label="Teklif onay eşikleri (ayar)" className="ml-0.5" />
             </span>
           </div>
         </div>
       )}
 
       <div className="grid gap-2 rounded-2xl bg-slate-50 p-3 text-[12.5px] sm:grid-cols-4">
-        <div><div className={labelCls}>Liste fiyatıyla</div><div className="font-mono font-bold tabular-nums">{fmtMoney(dirtyLines ? local.liste : quote.toplamListe)}</div></div>
-        <div><div className={labelCls}>İndirim</div><div className="font-mono font-bold tabular-nums">{fmtPct(dirtyLines ? (local.liste ? 1 - local.net / local.liste : null) : quote.indirimOrani)}</div></div>
-        <div><div className={labelCls}>Teklif tutarı</div><div className="font-mono text-[15px] font-extrabold tabular-nums">{fmtMoney(dirtyLines ? local.net : quote.toplamNet)}</div></div>
-        <div><div className={labelCls}>Marj</div><div className="font-bold">{dirtyLines ? 'kaydedince hesaplanır' : marginText(quote)}</div></div>
+        <div>
+          <div className={`${labelCls} inline-flex items-center gap-1`}>Liste fiyatıyla<SqlInfo k={k} alan={totalsPath} label="Liste fiyatıyla toplam" /></div>
+          <div className="font-mono font-bold tabular-nums">{fmtMoney(dirtyLines ? local.liste : quote.toplamListe)}</div>
+        </div>
+        <div>
+          <div className={`${labelCls} inline-flex items-center gap-1`}>İndirim<SqlInfo k={k} alan={totalsPath} label="Teklifin indirim oranı" /></div>
+          <div className="font-mono font-bold tabular-nums">{fmtPct(dirtyLines ? (local.liste ? 1 - local.net / local.liste : null) : quote.indirimOrani)}</div>
+        </div>
+        <div>
+          <div className={`${labelCls} inline-flex items-center gap-1`}>Teklif tutarı<SqlInfo k={k} alan={totalsPath} label="Teklif tutarı" /></div>
+          <div className="font-mono text-[15px] font-extrabold tabular-nums">{fmtMoney(dirtyLines ? local.net : quote.toplamNet)}</div>
+        </div>
+        <div>
+          <div className={`${labelCls} inline-flex items-center gap-1`}>Marj<SqlInfo k={k} alan="teklifler[].marj" label="Teklif marjı ve maliyet kapsamı" /></div>
+          <div className="font-bold">{dirtyLines ? 'kaydedince hesaplanır' : marginText(quote)}</div>
+        </div>
       </div>
       {!dirtyLines && quote.marj === null && <p className="text-[11.5px] text-canvas-muted">Birim maliyet kaynağı: {meta.costSourceLabel}. Maliyet gelmeden marj uydurulmaz; onay yalnız indirim eşiğine bakar.</p>}
       {!dirtyLines && quote.onayNedenleri.length > 0 && (

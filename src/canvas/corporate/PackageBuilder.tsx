@@ -5,17 +5,20 @@ import { toast } from 'sonner';
 import { FileText, Loader2, Sparkles } from 'lucide-react';
 import { Note, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { NewOpportunitySheet } from './OppForm';
 import { Empty } from './parts';
 import { corporateApi, fmtInt, fmtMoney, fmtPct, marginText, parseNum, toItems, type Meta, type OppInput, type PackageAlt, type PackageRequest } from './api';
 
-function AltCard({ alt, kisi, canQuote, busy, onQuote }: { alt: PackageAlt; kisi: number; canQuote: boolean; busy: boolean; onQuote: (a: PackageAlt) => void }) {
+function AltCard({ alt, kisi, canQuote, busy, onQuote, k }: { alt: PackageAlt; kisi: number; canQuote: boolean; busy: boolean; onQuote: (a: PackageAlt) => void; k?: Kaynaklar }) {
+  const info = (label: string) => <SqlInfo k={k} alan="alternatifler[]" row={alt.no} label={`Alternatif ${alt.no}: ${label}`} className="ml-0.5" />;
   return (
     <li className="flex min-w-0 flex-col gap-2 rounded-2xl border border-slate-100 bg-white/90 p-3">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-[14px] font-extrabold">Alternatif {alt.no}</h3>
-        <span className="font-mono text-[13px] font-bold tabular-nums">{fmtMoney(alt.paketNet, true)} / paket</span>
+        <span className="inline-flex items-center font-mono text-[13px] font-bold tabular-nums">{fmtMoney(alt.paketNet, true)} / paket{info('paket net ve kalemler')}</span>
       </div>
       <ol className="flex flex-col gap-1.5">
         {alt.kalemler.map((l) => (
@@ -34,11 +37,11 @@ function AltCard({ alt, kisi, canQuote, busy, onQuote }: { alt: PackageAlt; kisi
       {alt.eksik > 0 && <Note tone="warn">Bütçeye {alt.eksik} kitap daha sığmadı.</Note>}
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
         <dt className="text-canvas-muted">{fmtInt(kisi)} paket toplamı</dt>
-        <dd className="text-right font-mono font-bold tabular-nums">{fmtMoney(alt.toplamNet)}</dd>
+        <dd className="inline-flex items-center justify-end font-mono font-bold tabular-nums">{fmtMoney(alt.toplamNet)}{info('paket toplamı')}</dd>
         <dt className="text-canvas-muted">Liste fiyatıyla</dt>
-        <dd className="text-right font-mono tabular-nums">{fmtMoney(alt.toplamListe)}</dd>
+        <dd className="inline-flex items-center justify-end font-mono tabular-nums">{fmtMoney(alt.toplamListe)}{info('liste fiyatıyla toplam')}</dd>
         <dt className="text-canvas-muted">Marj</dt>
-        <dd className="text-right">{marginText(alt)}</dd>
+        <dd className="inline-flex items-center justify-end text-right">{marginText(alt)}{info('marj')}</dd>
       </dl>
       {alt.onayNedenleri.length > 0 && <Note tone="warn">Onay gerekecek: {alt.onayNedenleri.map((r) => r.metin).join(' · ')}</Note>}
       {!alt.butceyeUygun && <Note tone="warn">Paket başı bütçeyi aşıyor.</Note>}
@@ -185,13 +188,21 @@ export default function PackageBuilder({ meta }: { meta: Meta }) {
             <Panel>
               <div className="flex flex-col gap-1 text-[12.5px]">
                 <div>
-                  <b>{fmtInt(r.adaySayisi)}</b> aday kitap · indirim <b>{fmtPct(r.indirim)}</b>
-                  {r.paketBasiButce ? <> · paket başı bütçe <b>{fmtMoney(r.paketBasiButce, true)}</b></> : null}
+                  <b>{fmtInt(r.adaySayisi)}</b> aday kitap
+                  <SqlInfo k={r.kaynaklar} alan="adaySayisi" label="Aday kitap sayısı" className="ml-0.5" /> · indirim <b>{fmtPct(r.indirim)}</b>
+                  <SqlInfo k={r.kaynaklar} alan="indirim" label="Önerilen indirim ve dayanağı" className="ml-0.5" />
+                  {r.paketBasiButce ? (
+                    <>
+                      {' '}· paket başı bütçe <b>{fmtMoney(r.paketBasiButce, true)}</b>
+                      <SqlInfo k={r.kaynaklar} alan="paketBasiButce" label="Paket başı bütçe" className="ml-0.5" />
+                    </>
+                  ) : null}
                 </div>
                 <div className="text-[11.5px] text-canvas-muted">İndirimin dayanağı: {r.indirimDayanak.aciklama}.</div>
                 {(r.elenen.stokYetersiz > 0 || r.elenen.fiyatYok > 0 || r.elenen.yasUymuyor > 0) && (
                   <div className="text-[11.5px] text-canvas-muted">
                     Temaya uyup elenen: stoğu yetmeyen {fmtInt(r.elenen.stokYetersiz)}, geçerli fiyatı olmayan {fmtInt(r.elenen.fiyatYok)}, yaşı uymayan ya da yaş bilgisi olmayan {fmtInt(r.elenen.yasUymuyor)}.
+                    <SqlInfo k={r.kaynaklar} alan="elenen" label="Temaya uyup elenen kitaplar" className="ml-0.5" />
                   </div>
                 )}
               </div>
@@ -199,7 +210,7 @@ export default function PackageBuilder({ meta }: { meta: Meta }) {
             {r.not && <Note tone="warn">{r.not}</Note>}
             <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
               {r.alternatifler.map((a) => (
-                <AltCard key={a.no} alt={a} kisi={r.kisi} canQuote={meta.me.canQuote} busy={toQuote.isPending} onQuote={onQuote} />
+                <AltCard key={a.no} alt={a} kisi={r.kisi} canQuote={meta.me.canQuote} busy={toQuote.isPending} onQuote={onQuote} k={r.kaynaklar} />
               ))}
             </ul>
           </>

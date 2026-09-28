@@ -4,6 +4,7 @@ import { Download, Search } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty } from './parts';
 import { corporateApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type Meta } from './api';
@@ -22,7 +23,10 @@ function DealerSheet({ kod, onClose }: { kod: string | null; onClose: () => void
       {x && (
         <div className="flex flex-col gap-4">
           <section>
-            <h3 className="text-[14px] font-extrabold">Son 12 ayda aldığı kitaplıklar</h3>
+            <h3 className="inline-flex items-center gap-1 text-[14px] font-extrabold">
+              Son 12 ayda aldığı kitaplıklar
+              <SqlInfo k={x.kaynaklar} alan="kitaplik[]" label="Kitaplık başına kitap, adet ve net ciro" />
+            </h3>
             <p className="text-[11.5px] text-canvas-muted">Logo faturalı satış, {fmtDay(x.dataEnd)} tarihine kadar.</p>
             <ul className="mt-2 flex flex-col gap-1">
               {x.kitaplik.map((k) => (
@@ -35,7 +39,10 @@ function DealerSheet({ kod, onClose }: { kod: string | null; onClose: () => void
             </ul>
           </section>
           <section>
-            <h3 className="text-[14px] font-extrabold">Eksik tamamla</h3>
+            <h3 className="inline-flex items-center gap-1 text-[14px] font-extrabold">
+              Eksik tamamla
+              <SqlInfo k={x.kaynaklar} alan="eksik[]" label="Eksik tamamla: kitap sayısı ve bayi kanalı adedi" />
+            </h3>
             <p className="text-[11.5px] text-canvas-muted">Bayi kanalında son dönemde satan, stokta olan ve bu bayinin 12 ayda almadığı kitaplar ({fmtInt(x.eksik.length)}).</p>
             <ul className="mt-2 flex flex-col gap-1">
               {(all ? x.eksik : x.eksik.slice(0, SHOW)).map((b) => (
@@ -102,6 +109,7 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
                 </button>
               ))}
             </div>
+            <SqlInfo k={list.data?.kaynaklar} alan="counts" label="Sipariş vermeyen ve aktif bayi sayısı" className="self-center" />
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Gün</span>
               <input className={`${field} w-20 font-mono tabular-nums`} inputMode="numeric" value={gun}
@@ -126,6 +134,7 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
             <p className="mt-2 text-[11.5px] text-canvas-muted">
               Gün sayısı Logo verisinin bittiği güne ({fmtDay(list.data.dataEnd)}) göre; önceki 12 ayda satış faturası olan bayiler.
               {list.data.b2b.crm ? ` B2B siparişi CRM'den, son ${list.data.b2b.b2bGun} gün.` : ' CRM okunamadı; B2B sütunları boş.'}
+              <SqlInfo k={list.data.kaynaklar} alan="b2b" label="Bayi okuması: B2B penceresi" className="ml-0.5" />
             </p>
           )}
           {list.error && <Note tone="err">{errText(list.error, 'Bayiler okunamadı.')}</Note>}
@@ -138,11 +147,11 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
                   <tr>
                     <th className={th}>Bayi</th>
                     <th className={th}>Son fatura</th>
-                    <th className={`${th} text-right`}>Gün</th>
-                    <th className={`${th} text-right`}>12 ay fatura</th>
-                    <th className={`${th} text-right`}>12 ay net ciro</th>
-                    <th className={th}>Sınıf</th>
-                    <th className={`${th} text-right`}>B2B sipariş</th>
+                    <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].gun">Gün</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].fatura12ay">12 ay fatura</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ciro12ay">12 ay net ciro</InfoLabel></th>
+                    <th className={th}><InfoLabel k={list.data?.kaynaklar} alan="items[].sinif">Sınıf</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].b2bSiparis">B2B sipariş</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -163,7 +172,10 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
                 </tbody>
               </TableWrap>
               {!allRows && rows.length > shown.length && (
-                <button type="button" className={`${btnGhost} mt-2`} onClick={() => setAllRows(true)}>Tümünü göster ({fmtInt(rows.length)})</button>
+                <div className="mt-2 flex items-center gap-1">
+                  <button type="button" className={btnGhost} onClick={() => setAllRows(true)}>Tümünü göster ({fmtInt(rows.length)})</button>
+                  <SqlInfo k={list.data?.kaynaklar} alan="total" label="Süzgece uyan bayi sayısı" />
+                </div>
               )}
             </div>
           )}
@@ -177,17 +189,18 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
           {hl.data && (
             <>
               <p className="text-[11.5px] text-canvas-muted">
-                Stokta olan ve bayi kanalında son {hl.data.gun} günde satan {fmtInt(hl.data.total)} kitap; önceki {hl.data.gun} günle kıyas. Logo {fmtDay(hl.data.dataEnd)} tarihine kadar.
+                Stokta olan ve bayi kanalında son {hl.data.gun} günde satan {fmtInt(hl.data.total)} kitap
+                <SqlInfo k={hl.data.kaynaklar} alan="total" label="Öne çıkarılacak kitap sayısı" className="ml-0.5" />; önceki {hl.data.gun} günle kıyas. Logo {fmtDay(hl.data.dataEnd)} tarihine kadar.
               </p>
               <div className="mt-2">
                 <TableWrap>
                   <thead>
                     <tr>
                       <th className={th}>Kitap</th>
-                      <th className={`${th} text-right`}>Son {hl.data.gun} gün</th>
-                      <th className={`${th} text-right`}>Değişim</th>
-                      <th className={`${th} text-right`}>Stok</th>
-                      <th className={`${th} text-right`}>Liste fiyatı</th>
+                      <th className={`${th} text-right`}><InfoLabel k={hl.data.kaynaklar} alan="items[].bayiSon">{`Son ${hl.data.gun} gün`}</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={hl.data.kaynaklar} alan="items[].degisim">Değişim</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={hl.data.kaynaklar} alan="items[].stok">Stok</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={hl.data.kaynaklar} alan="items[].fiyat">Liste fiyatı</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>

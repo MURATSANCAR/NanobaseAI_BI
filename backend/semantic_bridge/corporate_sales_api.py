@@ -23,7 +23,9 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import corporate_sales as C
 from semantic_bridge import corporate_sales_docs as D
+from semantic_bridge import corporate_sales_kaynak as K
 from semantic_bridge import corporate_sales_sources as src
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic.corporate.api")
 P = "/api/v1/corporate"
@@ -87,6 +89,13 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
         except src.SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "CORPORATE_SOURCE", "retryable": True, "message": str(e)}) from e
 
+    def logo_db() -> Optional[str]:
+        """Sorgu bilgisi için yalnız Logo veritabanı adı (bağlantı dosyasından başka alan okunmaz)."""
+        return PV.connection_database(deps["logo_file"]())
+
+    def crm_db() -> Optional[str]:
+        return PV.connection_database(deps["crm_file"]())
+
     def logo():
         """Anlık okuma (bayi ayrıntısı) için Logo bağlantısı ve yıl → firma eşlemesi (10 dk bellekte)."""
         run = src.runner(deps["logo_file"]())
@@ -112,7 +121,7 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
         st = settings()
         see_all, approver = rights(user)
         admin = is_admin(user)
-        return {"stages": C.STAGES, "openStages": list(C.OPEN_STAGES), "segments": C.SEGMENTS, "segmentSources": C.SEGMENT_SOURCES,
+        out = {"stages": C.STAGES, "openStages": list(C.OPEN_STAGES), "segments": C.SEGMENTS, "segmentSources": C.SEGMENT_SOURCES,
                 "loss": C.LOSS, "quoteStatus": C.QUOTE_STATUS, "themeStatus": C.THEME_STATUS, "reminderStatus": C.REMINDER_STATUS,
                 "vocabulary": C.vocabulary(engine, st), "costSource": st["costSource"],
                 "costSourceLabel": src.COST_SOURCES.get(st["costSource"], st["costSource"]),
@@ -123,12 +132,15 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
                        "canQuote": admin or can(user, "ozellik:kurumsal.teklif"), "canB2b": admin or can(user, "ozellik:kurumsal.b2b"),
                        "canTheme": admin or can(user, "ozellik:kurumsal.tema-onay"),
                        "canExport": admin or can(user, "ozellik:veri.disa-aktar")}}
+        return PV.bagla(out, lambda: K.for_meta(engine, st, out, logo_db(), crm_db()))
 
     @app.get(f"{P}/summary")
     def corporate_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         see_all, _ = rights(user)
-        return call(C.summary, engine, tenant, user, see_all, settings())
+        st = settings()
+        out = call(C.summary, engine, tenant, user, see_all, st)
+        return PV.bagla(out, lambda: K.for_summary(engine, tenant, st, out, logo_db(), crm_db()))
 
     @app.get(f"{P}/status")
     def corporate_status(request: Request) -> dict[str, Any]:
@@ -181,12 +193,15 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
     def corporate_accounts(request: Request, q: str = "", segment: str = "", temsilci: str = "", sort: str = "ciro",
                            page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.list_accounts, engine, tenant, q=q, segment=segment, temsilci=temsilci, sort=sort, page=max(0, page))
+        out = call(C.list_accounts, engine, tenant, q=q, segment=segment, temsilci=temsilci, sort=sort, page=max(0, page))
+        return PV.bagla(out, lambda: K.for_accounts(engine, tenant, out, q=q, segment=segment, temsilci=temsilci,
+                                                    logo_db=logo_db(), crm_db=crm_db()))
 
     @app.get(f"{P}/accounts/{{ref}}")
     def corporate_account(ref: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.account_detail, engine, tenant, ref)
+        out = call(C.account_detail, engine, tenant, ref)
+        return PV.bagla(out, lambda: K.for_account(engine, tenant, ref, out, logo_db(), crm_db()))
 
     @app.patch(f"{P}/accounts/{{ref}}")
     def corporate_account_update(ref: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -200,12 +215,16 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
     @app.get(f"{P}/books")
     def corporate_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return call(C.find_books, engine, q, limit_page=max(0, page))
+        out = call(C.find_books, engine, q, limit_page=max(0, page))
+        return PV.bagla(out, lambda: K.for_books(engine, q, max(0, page), out, logo_db(), crm_db()))
 
     @app.get(f"{P}/themes")
     def corporate_themes(request: Request, durum: str = "onerildi", q: str = "", tema: str = "", page: int = 0) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return call(C.list_themes, engine, settings(), durum=durum, q=q, tema=tema, page=max(0, page))
+        st = settings()
+        out = call(C.list_themes, engine, st, durum=durum, q=q, tema=tema, page=max(0, page))
+        return PV.bagla(out, lambda: K.for_themes(engine, st, out, durum=durum, q=q, tema=tema, logo_db=logo_db(),
+                                                  crm_db=crm_db()))
 
     @app.post(f"{P}/themes/{{stok}}/approve")
     def corporate_theme_decide(stok: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -217,8 +236,14 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
 
     @app.post(f"{P}/packages/suggest")
     async def corporate_packages(body: dict[str, Any], request: Request) -> dict[str, Any]:
-        engine, _, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, C.suggest_packages, engine, settings(), body)
+        engine, tenant, _, _ = await run_in_threadpool(ctx, request)
+        st = settings()
+
+        def work() -> dict[str, Any]:
+            out = call(C.suggest_packages, engine, st, body)
+            return PV.bagla(out, lambda: K.for_packages(engine, tenant, st, out, logo_db(), crm_db()))
+
+        return await run_in_threadpool(work)
 
     # ------------------------------------------------------------------ fırsatlar
 
@@ -226,13 +251,15 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
     def corporate_opps(request: Request, asama: str = "", sahip: str = "", q: str = "", acik: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         see_all, approver = rights(user)
-        return call(C.list_opportunities, engine, tenant, user, see_all, approver, asama=asama, sahip=sahip, q=q, acik=acik)
+        out = call(C.list_opportunities, engine, tenant, user, see_all, approver, asama=asama, sahip=sahip, q=q, acik=acik)
+        return PV.bagla(out, lambda: K.for_opportunities(engine, tenant, out, asama=asama, sahip=sahip, q=q, acik=acik))
 
     @app.get(f"{P}/pipeline/summary")
     def corporate_pipeline_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         see_all, _ = rights(user)
-        return call(C.pipeline_summary, engine, tenant, user, see_all)
+        out = call(C.pipeline_summary, engine, tenant, user, see_all)
+        return PV.bagla(out, lambda: K.for_pipeline_summary(engine, tenant, out))
 
     @app.post(f"{P}/opportunities", status_code=201)
     def corporate_opp_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -245,7 +272,8 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
     def corporate_opp(opp_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         see_all, approver = rights(user)
-        return call(C.opportunity, engine, tenant, user, see_all, approver, opp_id)
+        out = call(C.opportunity, engine, tenant, user, see_all, approver, opp_id)
+        return PV.bagla(out, lambda: K.for_opportunity(engine, tenant, settings(), opp_id, out, logo_db(), crm_db()))
 
     @app.patch(f"{P}/opportunities/{{opp_id}}")
     def corporate_opp_update(opp_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -272,13 +300,15 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
         _, approver = rights(user)
         if not approver:
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Teklif onayı rolünüzde yok."})
-        return {"items": C.approval_queue(engine, tenant)}
+        out = {"items": C.approval_queue(engine, tenant)}
+        return PV.bagla(out, lambda: K.for_approvals(engine, tenant, out))
 
     @app.get(f"{P}/quotes/{{qid}}")
     def corporate_quote(qid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         see_all, approver = rights(user)
-        return call(C.quote, engine, tenant, user, see_all, approver, qid)
+        out = call(C.quote, engine, tenant, user, see_all, approver, qid)
+        return PV.bagla(out, lambda: K.for_quote(engine, tenant, settings(), qid, out, logo_db(), crm_db()))
 
     @app.patch(f"{P}/quotes/{{qid}}")
     def corporate_quote_update(qid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -401,7 +431,9 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
     @app.get(f"{P}/reminders")
     def corporate_reminders(request: Request, ay: str = "", durum: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.list_reminders, engine, tenant, settings(), ay=ay, durum=durum)
+        st = settings()
+        out = call(C.list_reminders, engine, tenant, st, ay=ay, durum=durum)
+        return PV.bagla(out, lambda: K.for_reminders(engine, tenant, st, out, durum))
 
     @app.patch(f"{P}/reminders/{{rid}}")
     def corporate_reminder_update(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -424,7 +456,8 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
                           q: str = "") -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
         st = settings()
-        return call(C.dealer_rows, engine, gun=gun if gun > 0 else st["silentDays"], durum=durum, sinif=sinif, kanal=kanal, q=q)
+        out = call(C.dealer_rows, engine, gun=gun if gun > 0 else st["silentDays"], durum=durum, sinif=sinif, kanal=kanal, q=q)
+        return PV.bagla(out, lambda: K.for_dealers(engine, st, out, logo_db(), crm_db()))
 
     @app.get(f"{P}/b2b/dealers.csv")
     def corporate_dealers_csv(request: Request, durum: str = "sessiz", gun: int = 0, sinif: str = "", kanal: str = "",
@@ -441,14 +474,18 @@ def register(app: Any, deps: dict[str, Any]) -> C.Refresher:
 
         def work():
             run, firms = logo()
-            return C.dealer_detail(engine, run, firms, kod)
+            ran: list[dict[str, Any]] = []   # sorgu bilgisi: bu istekte çalışan Logo SQL'i (sonuç satırı değil)
+            out = C.dealer_detail(engine, C.logged(run, "logo", ran, {"p": "bayiAyrinti"}), firms, kod)
+            return PV.bagla(out, lambda: K.for_dealer(engine, settings(), kod, out, ran, logo_db(), crm_db()))
 
         return await run_in_threadpool(call, work)
 
     @app.get(f"{P}/b2b/highlights")
     def corporate_highlights(request: Request) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return call(C.highlights, engine, settings())
+        st = settings()
+        out = call(C.highlights, engine, st)
+        return PV.bagla(out, lambda: K.for_highlights(engine, st, out, logo_db(), crm_db()))
 
     @app.get(f"{P}/b2b/highlights.csv")
     def corporate_highlights_csv(request: Request) -> Response:

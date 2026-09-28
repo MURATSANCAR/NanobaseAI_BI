@@ -428,9 +428,15 @@ def parse_tiers(raw: str) -> list[tuple[int, float]]:
 # ------------------------------------------------------------------------------------------ meta
 
 
+def meta_stmt(key: str) -> sa.Select:
+    """Okuma meta kaydı (data_end, volume, dealers, refresh, crm_themes, sorgular): uçta çalışan ve sorgu bilgisinde
+    gösterilen ifade."""
+    return sa.select(META).where(META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, key: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(META).where(META.c.key == key)).first()
+        row = c.execute(meta_stmt(key)).first()
     if not row:
         return {}
     return {**_j(row.value_json, {}), "_at": _iso(row.updated_at)}
@@ -500,12 +506,11 @@ def _book_dict(r: Any, themes: Optional[list[dict[str, Any]]] = None) -> dict[st
 
 
 def themes_by_book(engine: sa.engine.Engine, codes: Optional[Iterable[str]] = None) -> dict[str, list[dict[str, Any]]]:
-    q = sa.select(THEMES)
     if codes is not None:
         codes = list(codes)
         if not codes:
             return {}
-        q = q.where(THEMES.c.stok_kodu.in_(codes))
+    q = themes_stmt(codes)
     out: dict[str, list[dict[str, Any]]] = {}
     with engine.connect() as c:
         for r in c.execute(q).all():
@@ -535,26 +540,48 @@ def match_theme(name: Any, vocab: list[str]) -> Optional[str]:
     return None
 
 
-def list_themes(engine: sa.engine.Engine, st: dict[str, Any], *, durum: str = "onerildi", q: str = "", tema: str = "",
-                page: int = 0) -> dict[str, Any]:
-    if durum and durum not in THEME_STATUS:
-        raise CorporateError("Geçersiz durum.")
+def books_stmt(codes: Optional[Iterable[str]] = None) -> sa.Select:
+    """Kitap kartları (gece okumasının yazdığı semantic_corp_books); `codes` verilirse yalnız o stok kodları."""
+    q = sa.select(BOOKS)
+    return q if codes is None else q.where(BOOKS.c.stok_kodu.in_(list(codes)))
+
+
+def themes_stmt(codes: Optional[Iterable[str]] = None) -> sa.Select:
+    """Kitap × tema etiketleri (CRM bağı, Zeki AI önerisi, elle); `codes` verilirse yalnız o kitaplar."""
+    q = sa.select(THEMES)
+    return q if codes is None else q.where(THEMES.c.stok_kodu.in_(list(codes)))
+
+
+def theme_codes_stmt(durum: str = "", q: str = "", tema: str = "") -> sa.Select:
+    """Tema sekmesi: seçilen durumda (ve temada) etiketi olan kitapların stok kodları (arama kitap kartında)."""
     cond = []
     if durum:
         cond.append(THEMES.c.durum == durum)
     if tema:
         cond.append(THEMES.c.tema == tema)
+    base = sa.select(THEMES.c.stok_kodu).where(*cond).distinct()
+    if q:
+        like = f"%{q.strip()}%"
+        base = base.join(BOOKS, BOOKS.c.stok_kodu == THEMES.c.stok_kodu).where(
+            sa.or_(BOOKS.c.ad.ilike(like), BOOKS.c.stok_kodu.ilike(like), BOOKS.c.yazar.ilike(like)))
+    return base
+
+
+def theme_counts_stmt() -> sa.Select:
+    """Tema etiketi sayıları, duruma göre (öneri / onaylı / reddedildi)."""
+    return sa.select(THEMES.c.durum, sa.func.count().label("sayi")).group_by(THEMES.c.durum)
+
+
+def list_themes(engine: sa.engine.Engine, st: dict[str, Any], *, durum: str = "onerildi", q: str = "", tema: str = "",
+                page: int = 0) -> dict[str, Any]:
+    if durum and durum not in THEME_STATUS:
+        raise CorporateError("Geçersiz durum.")
     with engine.connect() as c:
-        base = sa.select(THEMES.c.stok_kodu).where(*cond).distinct()
-        if q:
-            like = f"%{q.strip()}%"
-            base = base.join(BOOKS, BOOKS.c.stok_kodu == THEMES.c.stok_kodu).where(
-                sa.or_(BOOKS.c.ad.ilike(like), BOOKS.c.stok_kodu.ilike(like), BOOKS.c.yazar.ilike(like)))
-        codes = sorted(r[0] for r in c.execute(base).all())
+        codes = sorted(r[0] for r in c.execute(theme_codes_stmt(durum, q, tema)).all())
         total = len(codes)
         page_codes = codes[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]
-        books = {r.stok_kodu: r for r in c.execute(sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(page_codes))).all()} if page_codes else {}
-        counts = {k: v for k, v in c.execute(sa.select(THEMES.c.durum, sa.func.count()).group_by(THEMES.c.durum)).all()}
+        books = {r.stok_kodu: r for r in c.execute(books_stmt(page_codes)).all()} if page_codes else {}
+        counts = {k: v for k, v in c.execute(theme_counts_stmt()).all()}
     th = themes_by_book(engine, page_codes)
     items = []
     for code in page_codes:
@@ -601,17 +628,25 @@ def set_theme(engine: sa.engine.Engine, st: dict[str, Any], user: str, code: str
     return {"stokKodu": code, "tema": t, "karar": decision, "temalar": themes_by_book(engine, [code]).get(code, [])}
 
 
+def book_search_stmts(q: str, page: int = 0) -> tuple[sa.Select, sa.Select]:
+    """Teklife kitap arama: (toplam sayım, sayfa satırları) ifadeleri — uç ve sorgu bilgisi aynı ifadeyi kullanır."""
+    like = f"%{(q or '').strip()}%"
+    cond = sa.or_(BOOKS.c.ad.ilike(like), BOOKS.c.stok_kodu.ilike(like), BOOKS.c.yazar.ilike(like))
+    total = sa.select(sa.func.count().label("sayi")).select_from(BOOKS).where(cond)
+    rows = (sa.select(BOOKS).where(cond).order_by(BOOKS.c.yil_adet.desc(), BOOKS.c.stok_kodu)
+            .offset(max(0, page) * PAGE_SIZE).limit(PAGE_SIZE))
+    return total, rows
+
+
 def find_books(engine: sa.engine.Engine, q: str, *, limit_page: int = 0) -> dict[str, Any]:
     """Teklife kitap eklemek için arama (ad, stok kodu, yazar)."""
     q = (q or "").strip()
     if len(q) < 2:
         return {"items": [], "total": 0}
-    like = f"%{q}%"
+    total_stmt, rows_stmt = book_search_stmts(q, limit_page)
     with engine.connect() as c:
-        cond = sa.or_(BOOKS.c.ad.ilike(like), BOOKS.c.stok_kodu.ilike(like), BOOKS.c.yazar.ilike(like))
-        total = c.execute(sa.select(sa.func.count()).select_from(BOOKS).where(cond)).scalar() or 0
-        rows = c.execute(sa.select(BOOKS).where(cond).order_by(BOOKS.c.yil_adet.desc(), BOOKS.c.stok_kodu)
-                         .offset(limit_page * PAGE_SIZE).limit(PAGE_SIZE)).all()
+        total = c.execute(total_stmt).scalar() or 0
+        rows = c.execute(rows_stmt).all()
     th = themes_by_book(engine, [r.stok_kodu for r in rows])
     return {"items": [_book_dict(r, th.get(r.stok_kodu)) for r in rows], "total": total, "page": limit_page,
             "pageSize": PAGE_SIZE}
@@ -620,14 +655,19 @@ def find_books(engine: sa.engine.Engine, q: str, *, limit_page: int = 0) -> dict
 # ------------------------------------------------------------------------------------------ maliyet ve teklif hesabı
 
 
+def logo_costs_stmt(codes: Iterable[str]) -> sa.Select:
+    """CORP_COST_SOURCE=logo: gece okumasında kitap kartına yazılan Logo son maliyeti (tahmini)."""
+    return (sa.select(BOOKS.c.stok_kodu, BOOKS.c.maliyet_logo, BOOKS.c.maliyet_logo_tarih)
+            .where(BOOKS.c.stok_kodu.in_(list(codes))))
+
+
 def costs_for(engine: sa.engine.Engine, st: dict[str, Any], codes: Iterable[str]) -> dict[str, dict[str, Any]]:
     codes = list(dict.fromkeys(codes))
     logo = None
     if st.get("costSource") == "logo" and codes:
         with engine.connect() as c:
             logo = {r.stok_kodu: {"birim": r.maliyet_logo, "tarih": r.maliyet_logo_tarih}
-                    for r in c.execute(sa.select(BOOKS.c.stok_kodu, BOOKS.c.maliyet_logo, BOOKS.c.maliyet_logo_tarih)
-                                       .where(BOOKS.c.stok_kodu.in_(codes))).all() if r.maliyet_logo}
+                    for r in c.execute(logo_costs_stmt(codes)).all() if r.maliyet_logo}
     return src.unit_costs(codes, st.get("costSource") or "m9", logo)
 
 
@@ -644,7 +684,7 @@ def price_lines(engine: sa.engine.Engine, st: dict[str, Any], items: list[dict[s
     if len(set(codes)) != len(codes):
         raise CorporateError("Aynı kitap teklifte iki kez var; adedi tek satırda artırın.")
     with engine.connect() as c:
-        books = {r.stok_kodu: r for r in c.execute(sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(codes))).all()}
+        books = {r.stok_kodu: r for r in c.execute(books_stmt(codes)).all()}
     costs = costs_for(engine, st, codes)
     out = []
     for it, code in zip(items, codes):
@@ -708,6 +748,17 @@ def _pct(v: float) -> str:
 # ------------------------------------------------------------------------------------------ paket önerisi
 
 
+def approved_themes_stmt() -> sa.Select:
+    """Paket önerisi: onaylı tema etiketleri (CRM bağı ya da onaylanmış öneri/elle); temaya uyum Türkçe harf katlamasıyla
+    uçta süzülür."""
+    return sa.select(THEMES.c.stok_kodu, THEMES.c.tema, THEMES.c.kaynak).where(THEMES.c.durum == "onayli")
+
+
+def approved_books_stmt() -> sa.Select:
+    """Paket önerisi: onaylı en az bir tema etiketi olan kitapların kartı (stok, fiyat, bu yıl adet, yaş)."""
+    return sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(sa.select(THEMES.c.stok_kodu).where(THEMES.c.durum == "onayli")))
+
+
 def suggest_packages(engine: sa.engine.Engine, st: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]:
     vocab = vocabulary(engine, st)
     raw = body.get("temalar") if isinstance(body.get("temalar"), list) else ([body["tema"]] if body.get("tema") else [])
@@ -730,13 +781,12 @@ def suggest_packages(engine: sa.engine.Engine, st: dict[str, Any], body: dict[st
 
     theme_keys = {fold(t) for t in themes}
     with engine.connect() as c:
-        rows = c.execute(sa.select(THEMES.c.stok_kodu, THEMES.c.tema, THEMES.c.kaynak)
-                         .where(THEMES.c.durum == "onayli")).all()
+        rows = c.execute(approved_themes_stmt()).all()
         tagged: dict[str, list[str]] = {}
         for r in rows:
             if fold(r.tema) in theme_keys:
                 tagged.setdefault(r.stok_kodu, []).append(f"{r.tema} ({'CRM' if r.kaynak == 'crm' else 'onaylı'})")
-        books = {r.stok_kodu: r for r in c.execute(sa.select(BOOKS).where(BOOKS.c.stok_kodu.in_(list(tagged)))).all()} if tagged else {}
+        books = {r.stok_kodu: r for r in c.execute(approved_books_stmt()).all() if r.stok_kodu in tagged} if tagged else {}
     dropped = {"stokYetersiz": 0, "fiyatYok": 0, "yasUymuyor": 0}
     cands = []
     for code, tags in tagged.items():
@@ -842,26 +892,35 @@ def ytd_window(end: Optional[date]) -> Optional[dict[str, Any]]:
     return {"year": end.year, "months": last, "label": f"Ocak–{months[last - 1]}" if last > 1 else "Ocak"}
 
 
-def _sales_summary(engine: sa.engine.Engine, end: Optional[date]) -> dict[str, dict[str, Any]]:
-    w = ytd_window(end)
+def sales_stmt(code: Optional[str] = None) -> sa.Select:
+    """Kurum alım tablosu (semantic_corp_sales: cari kodu × yıl × ay net ciro, adet, fatura); `code` verilirse tek kurum."""
+    q = sa.select(SALES)
+    return q if code is None else q.where(SALES.c.logo_code == code).order_by(SALES.c.year, SALES.c.month)
+
+
+def _summarize(rows: Iterable[Any], w: Optional[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
-    with engine.connect() as c:
-        for r in c.execute(sa.select(SALES)).all():
-            d = out.setdefault(r.logo_code, {"buYil": 0.0, "gecenYilAyni": 0.0, "gecenYil": 0.0, "toplamCiro": 0.0, "fatura": 0})
-            d["toplamCiro"] += r.ciro
-            d["fatura"] += r.fatura
-            if w:
-                if r.year == w["year"] and r.month <= w["months"]:
-                    d["buYil"] += r.ciro
-                if r.year == w["year"] - 1:
-                    d["gecenYil"] += r.ciro
-                    if r.month <= w["months"]:
-                        d["gecenYilAyni"] += r.ciro
+    for r in rows:
+        d = out.setdefault(r.logo_code, {"buYil": 0.0, "gecenYilAyni": 0.0, "gecenYil": 0.0, "toplamCiro": 0.0, "fatura": 0})
+        d["toplamCiro"] += r.ciro
+        d["fatura"] += r.fatura
+        if w:
+            if r.year == w["year"] and r.month <= w["months"]:
+                d["buYil"] += r.ciro
+            if r.year == w["year"] - 1:
+                d["gecenYil"] += r.ciro
+                if r.month <= w["months"]:
+                    d["gecenYilAyni"] += r.ciro
     return out
 
 
-def list_accounts(engine: sa.engine.Engine, tenant: str, *, q: str = "", segment: str = "", temsilci: str = "",
-                  sort: str = "ciro", page: int = 0) -> dict[str, Any]:
+def _sales_summary(engine: sa.engine.Engine, end: Optional[date]) -> dict[str, dict[str, Any]]:
+    with engine.connect() as c:
+        return _summarize(c.execute(sales_stmt()).all(), ytd_window(end))
+
+
+def accounts_stmt(tenant: str, *, q: str = "", segment: str = "", temsilci: str = "") -> sa.Select:
+    """Kurum kartları (semantic_corp_accounts), ekrandaki arama ve segment süzgeciyle."""
     cond = [ACCOUNTS.c.tenant_id == tenant]
     if q:
         like = f"%{q.strip()}%"
@@ -874,10 +933,20 @@ def list_accounts(engine: sa.engine.Engine, tenant: str, *, q: str = "", segment
         cond.append(ACCOUNTS.c.segment == segment)
     if temsilci:
         cond.append(ACCOUNTS.c.temsilci_hesap == temsilci)
+    return sa.select(ACCOUNTS).where(*cond)
+
+
+def segment_counts_stmt(tenant: str) -> sa.Select:
+    """Segment başına kurum sayısı (süzgeç kutusundaki sayılar)."""
+    return (sa.select(ACCOUNTS.c.segment, sa.func.count().label("sayi"))
+            .where(ACCOUNTS.c.tenant_id == tenant).group_by(ACCOUNTS.c.segment))
+
+
+def list_accounts(engine: sa.engine.Engine, tenant: str, *, q: str = "", segment: str = "", temsilci: str = "",
+                  sort: str = "ciro", page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(ACCOUNTS).where(*cond)).all()
-        seg_counts = {k: v for k, v in c.execute(sa.select(ACCOUNTS.c.segment, sa.func.count())
-                                                   .where(ACCOUNTS.c.tenant_id == tenant).group_by(ACCOUNTS.c.segment)).all()}
+        rows = c.execute(accounts_stmt(tenant, q=q, segment=segment, temsilci=temsilci)).all()
+        seg_counts = {k: v for k, v in c.execute(segment_counts_stmt(tenant)).all()}
     end = data_end(engine)
     sales = _sales_summary(engine, end)
     items = [_account_dict(r, sales.get(r.logo_code or "", {"buYil": 0.0, "gecenYilAyni": 0.0, "gecenYil": 0.0,
@@ -898,17 +967,30 @@ def list_accounts(engine: sa.engine.Engine, tenant: str, *, q: str = "", segment
             "dataEnd": end.isoformat() if end else None}
 
 
+def account_stmt(tenant: str, ref: str) -> sa.Select:
+    return sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant, ACCOUNTS.c.ref == ref)
+
+
+def account_opps_stmt(tenant: str, ref: str) -> sa.Select:
+    """Kurumun fırsatları (elle girilir)."""
+    return sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.account_ref == ref).order_by(OPPS.c.created_at.desc())
+
+
+def account_reminders_stmt(tenant: str, code: str) -> sa.Select:
+    """Kurumun dönemsel hatırlatmaları."""
+    return (sa.select(REMINDERS).where(REMINDERS.c.tenant_id == tenant, REMINDERS.c.logo_code == code)
+            .order_by(REMINDERS.c.donem_ayi.desc()))
+
+
 def account_detail(engine: sa.engine.Engine, tenant: str, ref: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant, ACCOUNTS.c.ref == ref)).first()
+        r = c.execute(account_stmt(tenant, ref)).first()
         if not r:
             raise CorporateError("Kurum bulunamadı.", 404)
-        months = [dict(x._mapping) for x in c.execute(sa.select(SALES).where(SALES.c.logo_code == (r.logo_code or ""))
-                                                       .order_by(SALES.c.year, SALES.c.month)).all()]
-        opps = c.execute(sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.account_ref == ref)
-                         .order_by(OPPS.c.created_at.desc())).all()
-        rems = c.execute(sa.select(REMINDERS).where(REMINDERS.c.tenant_id == tenant, REMINDERS.c.logo_code == (r.logo_code or ""))
-                         .order_by(REMINDERS.c.donem_ayi.desc())).all()
+        sale_rows = c.execute(sales_stmt(r.logo_code or "")).all()
+        months = [dict(x._mapping) for x in sale_rows]
+        opps = c.execute(account_opps_stmt(tenant, ref)).all()
+        rems = c.execute(account_reminders_stmt(tenant, r.logo_code or "")).all()
     end = data_end(engine)
     years: dict[int, dict[str, Any]] = {}
     for m in months:
@@ -922,7 +1004,7 @@ def account_detail(engine: sa.engine.Engine, tenant: str, ref: str) -> dict[str,
     for m in months:
         by_month[m["month"] - 1] += max(0.0, m["ciro"])
     peak = max(range(12), key=lambda i: by_month[i]) + 1 if any(by_month) else None
-    return {**_account_dict(r, _sales_summary(engine, end).get(r.logo_code or "")),
+    return {**_account_dict(r, _summarize(sale_rows, ytd_window(end)).get(r.logo_code or "")),
             "yillar": sorted(years.values(), key=lambda x: x["yil"]), "enCokAy": peak,
             "firsatlar": [_opp_dict(o) for o in opps], "hatirlatmalar": [_rem_dict(x) for x in rems],
             "window": ytd_window(end), "dataEnd": end.isoformat() if end else None}
@@ -964,7 +1046,7 @@ def _visible(user: str, see_all: bool, approver: bool, opp: Any, has_pending: bo
 
 
 def _opp_row(c: Any, tenant: str, opp_id: str) -> Any:
-    r = c.execute(sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.id == opp_id)).first()
+    r = c.execute(opp_stmt(tenant, opp_id)).first()
     if not r:
         raise CorporateError("Fırsat bulunamadı.", 404)
     return r
@@ -975,12 +1057,10 @@ def _check_owner(r: Any, user: str, see_all: bool) -> None:
         raise CorporateError("Bu fırsat başka bir temsilcinin; bütün ekibin fırsatlarını görme yetkiniz yok.", 403)
 
 
-def list_opportunities(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, approver: bool, *,
-                       asama: str = "", sahip: str = "", q: str = "", acik: bool = False) -> dict[str, Any]:
+def opps_stmt(tenant: str, *, asama: str = "", sahip: str = "", q: str = "", acik: bool = False) -> sa.Select:
+    """Fırsatlar (elle girilir; ekranın aşama, sahip ve arama süzgeciyle). Görme yetkisi (sahip) uçta süzülür."""
     cond = [OPPS.c.tenant_id == tenant]
     if asama:
-        if asama not in STAGES:
-            raise CorporateError("Geçersiz aşama.")
         cond.append(OPPS.c.asama == asama)
     if acik:
         cond.append(OPPS.c.asama.in_(OPEN_STAGES))
@@ -989,14 +1069,28 @@ def list_opportunities(engine: sa.engine.Engine, tenant: str, user: str, see_all
     if q:
         like = f"%{q.strip()}%"
         cond.append(sa.or_(OPPS.c.kurum.ilike(like), OPPS.c.ad.ilike(like), OPPS.c.tema.ilike(like)))
+    return sa.select(OPPS).where(*cond).order_by(OPPS.c.karar_tarihi.is_(None), OPPS.c.karar_tarihi, OPPS.c.created_at.desc())
+
+
+def pending_opps_stmt(tenant: str) -> sa.Select:
+    """Onay bekleyen teklifi olan fırsatlar."""
+    return sa.select(QUOTES.c.firsat_id).where(QUOTES.c.tenant_id == tenant, QUOTES.c.durum == "onayda")
+
+
+def quote_heads_stmt(tenant: str) -> sa.Select:
+    """Bütün teklif sürümlerinin başlığı (fırsat, sürüm, durum, teklif tutarı); fırsat başına son sürüm uçta seçilir."""
+    return sa.select(QUOTES.c.firsat_id, QUOTES.c.surum, QUOTES.c.durum, QUOTES.c.toplam_net).where(QUOTES.c.tenant_id == tenant)
+
+
+def list_opportunities(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, approver: bool, *,
+                       asama: str = "", sahip: str = "", q: str = "", acik: bool = False) -> dict[str, Any]:
+    if asama and asama not in STAGES:
+        raise CorporateError("Geçersiz aşama.")
     with engine.connect() as c:
-        rows = c.execute(sa.select(OPPS).where(*cond).order_by(OPPS.c.karar_tarihi.is_(None), OPPS.c.karar_tarihi,
-                                                               OPPS.c.created_at.desc())).all()
-        pending = {r[0] for r in c.execute(sa.select(QUOTES.c.firsat_id).where(QUOTES.c.tenant_id == tenant,
-                                                                               QUOTES.c.durum == "onayda")).all()}
+        rows = c.execute(opps_stmt(tenant, asama=asama, sahip=sahip, q=q, acik=acik)).all()
+        pending = {r[0] for r in c.execute(pending_opps_stmt(tenant)).all()}
         last_quote: dict[str, Any] = {}
-        for qr in c.execute(sa.select(QUOTES.c.firsat_id, QUOTES.c.surum, QUOTES.c.durum, QUOTES.c.toplam_net)
-                            .where(QUOTES.c.tenant_id == tenant)).all():
+        for qr in c.execute(quote_heads_stmt(tenant)).all():
             cur = last_quote.get(qr.firsat_id)
             if cur is None or qr.surum > cur.surum:
                 last_quote[qr.firsat_id] = qr
@@ -1070,11 +1164,20 @@ def create_opportunity(engine: sa.engine.Engine, tenant: str, user: str, body: d
     return opportunity(engine, tenant, user, True, False, oid)
 
 
+def opp_stmt(tenant: str, opp_id: str) -> sa.Select:
+    return sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.id == opp_id)
+
+
+def opp_quotes_stmt(tenant: str, opp_id: str) -> sa.Select:
+    """Fırsatın teklif sürümleri (kalemler, tutarlar ve onay nedenleri kaydedildiği andaki hesapla saklı)."""
+    return (sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.firsat_id == opp_id)
+            .order_by(QUOTES.c.surum.desc()))
+
+
 def opportunity(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, approver: bool, opp_id: str) -> dict[str, Any]:
     with engine.connect() as c:
         r = _opp_row(c, tenant, opp_id)
-        qs = c.execute(sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.firsat_id == opp_id)
-                       .order_by(QUOTES.c.surum.desc())).all()
+        qs = c.execute(opp_quotes_stmt(tenant, opp_id)).all()
     pending = any(q.durum == "onayda" for q in qs)
     if not _visible(user, see_all, approver, r, pending):
         raise CorporateError("Bu fırsat başka bir temsilcinin; bütün ekibin fırsatlarını görme yetkiniz yok.", 403)
@@ -1123,10 +1226,15 @@ def update_opportunity(engine: sa.engine.Engine, tenant: str, user: str, see_all
     return opportunity(engine, tenant, user, True, False, opp_id), diff
 
 
+def closed_opps_stmt(tenant: str) -> sa.Select:
+    """Kapanmış fırsatlar (Kazanıldı, Kaybedildi)."""
+    return sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.asama.in_(("kazanildi", "kaybedildi")))
+
+
 def pipeline_summary(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool) -> dict[str, Any]:
     """Kazanma oranı ve kaybetme nedenleri (K3): kapanmış fırsatlar."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(OPPS).where(OPPS.c.tenant_id == tenant, OPPS.c.asama.in_(("kazanildi", "kaybedildi")))).all()
+        rows = c.execute(closed_opps_stmt(tenant)).all()
     rows = [r for r in rows if see_all or (r.sahip or "").lower() == user.lower()]
     won = [r for r in rows if r.asama == "kazanildi"]
     lost = [r for r in rows if r.asama == "kaybedildi"]
@@ -1155,8 +1263,12 @@ def _quote_dict(q: Any) -> dict[str, Any]:
             "updatedBy": q.updated_by, "updatedAt": _iso(q.updated_at)}
 
 
+def quote_stmt(tenant: str, qid: str) -> sa.Select:
+    return sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.id == qid)
+
+
 def _quote_row(c: Any, tenant: str, qid: str) -> Any:
-    q = c.execute(sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.id == qid)).first()
+    q = c.execute(quote_stmt(tenant, qid)).first()
     if not q:
         raise CorporateError("Teklif bulunamadı.", 404)
     return q
@@ -1332,11 +1444,16 @@ def record_result(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
     return quote(engine, tenant, user, True, True, qid)
 
 
+def approval_queue_stmt(tenant: str) -> sa.Select:
+    """Onay bekleyen teklifler, fırsatın kurumu ve sahibiyle (gönderim sırasıyla)."""
+    return (sa.select(QUOTES, OPPS.c.kurum, OPPS.c.ad.label("firsat_ad"), OPPS.c.sahip)
+            .join(OPPS, OPPS.c.id == QUOTES.c.firsat_id)
+            .where(QUOTES.c.tenant_id == tenant, QUOTES.c.durum == "onayda").order_by(QUOTES.c.gonderim_at))
+
+
 def approval_queue(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(QUOTES, OPPS.c.kurum, OPPS.c.ad.label("firsat_ad"), OPPS.c.sahip)
-                         .join(OPPS, OPPS.c.id == QUOTES.c.firsat_id)
-                         .where(QUOTES.c.tenant_id == tenant, QUOTES.c.durum == "onayda").order_by(QUOTES.c.gonderim_at)).all()
+        rows = c.execute(approval_queue_stmt(tenant)).all()
     return [{**_quote_dict(r), "kurum": r.kurum, "firsatAd": r.firsat_ad, "sahip": r.sahip} for r in rows]
 
 
@@ -1362,6 +1479,25 @@ def reminder_months(now: date, lead_days: int) -> list[str]:
     return out
 
 
+def reminder_sales_stmt(year: int, month: int) -> sa.Select:
+    """Hatırlatmayı üreten okuma: geçen yılın o ayında net alımı (> 0) olan kurumlar (kurum alım tablosundan)."""
+    return (sa.select(SALES.c.logo_code, SALES.c.ciro, SALES.c.adet)
+            .where(SALES.c.year == year, SALES.c.month == month, SALES.c.ciro > 0))
+
+
+def reminders_stmt(tenant: str, months: list[str], durum: str = "") -> sa.Select:
+    """Hatırlatma listesi: ayların hatırlatmaları (ekranın durum süzgeciyle)."""
+    cond = [REMINDERS.c.tenant_id == tenant, REMINDERS.c.donem_ayi.in_(months)]
+    if durum:
+        cond.append(REMINDERS.c.durum == durum)
+    return sa.select(REMINDERS).where(*cond).order_by(REMINDERS.c.donem_ayi, REMINDERS.c.gecen_yil_tutar.desc())
+
+
+def reminder_reps_stmt(tenant: str) -> sa.Select:
+    """Hatırlatma satırındaki temsilci ve kurum bağı (kurum kartından)."""
+    return sa.select(ACCOUNTS.c.logo_code, ACCOUNTS.c.temsilci, ACCOUNTS.c.ref).where(ACCOUNTS.c.tenant_id == tenant)
+
+
 def generate_reminders(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], now: Optional[date] = None) -> dict[str, Any]:
     now = now or today()
     months = reminder_months(now, st["reminderLeadDays"])
@@ -1371,8 +1507,7 @@ def generate_reminders(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]
                                                           .where(ACCOUNTS.c.tenant_id == tenant)).all() if r.logo_code}
         for ym in months:
             y, m = int(ym[:4]), int(ym[5:])
-            rows = c.execute(sa.select(SALES.c.logo_code, SALES.c.ciro, SALES.c.adet)
-                             .where(SALES.c.year == y - 1, SALES.c.month == m, SALES.c.ciro > 0)).all()
+            rows = c.execute(reminder_sales_stmt(y - 1, m)).all()
             have = {r[0] for r in c.execute(sa.select(REMINDERS.c.logo_code).where(REMINDERS.c.tenant_id == tenant,
                                                                                    REMINDERS.c.donem_ayi == ym)).all()}
             for r in rows:
@@ -1390,15 +1525,11 @@ def list_reminders(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *,
     for m in months:
         if not re.match(r"^\d{4}-\d{2}$", m):
             raise CorporateError("Ay YYYY-AA biçiminde olmalı.")
-    cond = [REMINDERS.c.tenant_id == tenant, REMINDERS.c.donem_ayi.in_(months)]
-    if durum:
-        if durum not in REMINDER_STATUS:
-            raise CorporateError("Geçersiz durum.")
-        cond.append(REMINDERS.c.durum == durum)
+    if durum and durum not in REMINDER_STATUS:
+        raise CorporateError("Geçersiz durum.")
     with engine.connect() as c:
-        rows = c.execute(sa.select(REMINDERS).where(*cond).order_by(REMINDERS.c.donem_ayi, REMINDERS.c.gecen_yil_tutar.desc())).all()
-        reps = {r.logo_code: (r.temsilci, r.ref) for r in c.execute(sa.select(ACCOUNTS.c.logo_code, ACCOUNTS.c.temsilci, ACCOUNTS.c.ref)
-                                                                   .where(ACCOUNTS.c.tenant_id == tenant)).all() if r.logo_code}
+        rows = c.execute(reminders_stmt(tenant, months, durum)).all()
+        reps = {r.logo_code: (r.temsilci, r.ref) for r in c.execute(reminder_reps_stmt(tenant)).all() if r.logo_code}
     items = []
     for r in rows:
         d = _rem_dict(r)
@@ -1446,10 +1577,16 @@ def opportunity_from_reminder(engine: sa.engine.Engine, tenant: str, user: str, 
 # ------------------------------------------------------------------------------------------ bayi paneli
 
 
+def dealers_stmt(code: Optional[str] = None) -> sa.Select:
+    """Bayi tablosu (semantic_corp_dealers: gece okumasında son 12 ay satış faturası olan bayi kanalı carileri)."""
+    q = sa.select(DEALERS)
+    return q if code is None else q.where(DEALERS.c.logo_code == code)
+
+
 def dealer_rows(engine: sa.engine.Engine, *, gun: int, durum: str = "", sinif: str = "", q: str = "", kanal: str = "") -> dict[str, Any]:
     ref = data_end(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(DEALERS)).all()
+        rows = c.execute(dealers_stmt()).all()
     items = []
     counts = {"aktif": 0, "sessiz": 0}
     for r in rows:
@@ -1491,12 +1628,17 @@ def _n(v: Any, d: int = 2) -> str:
     return "" if v is None else f"{float(v):.{d}f}".replace(".", ",")
 
 
+def highlights_stmt() -> sa.Select:
+    """Öne çıkarılacak kitaplar: stokta ve bayi kanalında son dönemde satan kitap kartları."""
+    return (sa.select(BOOKS).where(BOOKS.c.stok > 0, BOOKS.c.bayi_son > 0)
+            .order_by(BOOKS.c.bayi_son.desc(), BOOKS.c.stok_kodu))
+
+
 def highlights(engine: sa.engine.Engine, st: dict[str, Any]) -> dict[str, Any]:
     """Bayilere öne çıkarılacak kitaplar: stokta, bayi kanalında son dönemde satan; değişim ve yeni çıkan işaretiyle."""
     end = data_end(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(BOOKS).where(BOOKS.c.stok > 0, BOOKS.c.bayi_son > 0)
-                         .order_by(BOOKS.c.bayi_son.desc(), BOOKS.c.stok_kodu)).all()
+        rows = c.execute(highlights_stmt()).all()
     new_from = (end - timedelta(days=120)).isoformat() if end else None
     items = []
     for r in rows:
@@ -1719,6 +1861,26 @@ def run_model_tasks(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], l
 # ------------------------------------------------------------------------------------------ okuma (Logo + CRM → köprü)
 
 
+def logged(run: src.Runner, conn: str, sink: list[dict[str, Any]], purpose: dict[str, str]) -> src.Runner:
+    """Okumada ÇALIŞAN her SQL'i (değerleri yerinde) amaç etiketi, satır sayısı, süre ve anıyla kaydeder. Sonuç satırı
+    kaydedilmez (kişisel veri); kayıt `semantic_corp_meta` «sorgular»a yazılır ve ekrandaki sorgu bilgisinde tabloyu
+    dolduran asıl sorgu (köken) olarak gösterilir. `purpose["p"]` okumayı yapan adımın etiketidir (ör. «kurumSatis»)."""
+    def go(sql: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
+        rows = run(sql)
+        sink.append({"conn": conn, "tag": purpose.get("p") or "diger", "sql": sql, "rows": len(rows),
+                     "dbMs": int((time.monotonic() - t) * 1000), "at": _iso(_now())})
+        return rows
+    return go
+
+
+def merge_queries(ran: list[dict[str, Any]], prev: dict[str, Any]) -> list[dict[str, Any]]:
+    """Yarıda kalan okumada: bu turda çalışan etiketlerin sorguları yenisiyle, hiç çalışmayan etiketlerinki öncekiyle
+    kalır (o tabloları önceki okuma doldurmuştur)."""
+    tags = {q["tag"] for q in ran}
+    return ran + [q for q in prev.get("items") or [] if q.get("tag") not in tags]
+
+
 class Refresher:
     """Logo/CRM okumasını arka planda yapar; aynı anda tek okuma."""
 
@@ -1756,19 +1918,24 @@ class Refresher:
         done: dict[str, Any] = {}
         warnings: list[str] = []
         t0 = time.monotonic()
+        ran: list[dict[str, Any]] = []      # sorgu bilgisi: bu turda çalışan her Logo/CRM SQL'i (sonuç satırı değil)
+        why = {"p": "donem"}
         try:
             self.state.update(running=True, step="Logo dönemleri", error=None)
             channel = src.channel_list(st["channel"])[0]
             dealers_ch = src.channel_list(",".join(st["dealerChannels"]))
-            logo = src.runner(self._logo())
+            logo = logged(src.runner(self._logo()), "logo", ran, why)
             firms = src.firms_by_year(logo)
+            why["p"] = "veriSonu"
             end = src.read_data_end(logo, firms) or today()
             meta_set(engine, "data_end", {"date": end.isoformat()})
 
             self._step("Kurum carileri")
+            why["p"] = "kurumCari"
             logo_accs = src.read_accounts(logo, firms, channel)
             since = date(end.year - st["historyYears"] + 1, 1, 1)
             self._step("Kurum alım geçmişi")
+            why["p"] = "kurumSatis"
             sales = src.read_channel_sales(logo, firms, [channel], since, end + timedelta(days=1))
             with engine.begin() as c:
                 c.execute(SALES.delete())
@@ -1783,7 +1950,8 @@ class Refresher:
             crm_run = None
             try:
                 self._step("CRM kurum kartları")
-                crm_run = src.runner(self._crm())
+                why["p"] = "crmKurum"
+                crm_run = logged(src.runner(self._crm()), "crm", ran, why)
                 crm_accs = src.read_crm_accounts(crm_run, schema)
             except src.SourceError as e:
                 warnings.append(f"CRM okunamadı: {e}")
@@ -1791,22 +1959,30 @@ class Refresher:
             done["kurum"] = len(logo_accs)
 
             self._step("Hacim indirimi geçmişi")
+            why["p"] = "hacim"
             inv = src.read_invoice_discounts(logo, firms, [channel], end - timedelta(days=365), end + timedelta(days=1))
             meta_set(engine, "volume", {"buckets": measured_discounts(inv, st["volumeBuckets"], st["volumeMinN"]),
                                         "faturalar": len(inv), "pencere": [(end - timedelta(days=365)).isoformat(), end.isoformat()]})
 
             self._step("Kitaplar: stok, fiyat")
+            why["p"] = "stok"
             stock = src.read_stock(logo, firms)
+            why["p"] = "fiyat"
             prices = src.read_prices(logo, firms, today())
+            why["p"] = "bayiKitap"
             ch_items = src.read_channel_items(logo, firms, dealers_ch, end, st["highlightDays"])
+            why["p"] = "maliyet"
             costs = src.read_last_costs(logo, firms) if st["costSource"] == "logo" else {}
             crm_books: dict[str, dict[str, Any]] = {}
             crm_themes: dict[str, list[str]] = {}
             if crm_run is not None:
                 try:
                     self._step("CRM kitap kartları ve temalar")
+                    why["p"] = "crmKitap"
                     crm_books = src.read_crm_books(crm_run, schema)
+                    why["p"] = "crmTema"
                     crm_themes = src.read_crm_book_themes(crm_run, schema)
+                    why["p"] = "crmTemaAdlari"
                     meta_set(engine, "crm_themes", {"names": src.read_crm_theme_names(crm_run, schema)})
                 except src.SourceError as e:
                     warnings.append(f"CRM kitap kartı okunamadı: {e}")
@@ -1816,12 +1992,16 @@ class Refresher:
 
             self._step("Bayiler")
             win_a, win_b = end - timedelta(days=365), end + timedelta(days=1)
+            why["p"] = "bayiFatura"
             dinv = src.read_dealer_invoices(logo, firms, dealers_ch, win_a, win_b)
+            why["p"] = "bayiSatis"
             dsales = src.read_channel_sales(logo, firms, dealers_ch, win_a, win_b, invoices=False)
             b2b, users = ({}, {}), ({}, {})
             if crm_run is not None:
                 try:
+                    why["p"] = "crmB2b"
                     b2b = src.read_crm_b2b(crm_run, schema, st["b2bDays"])
+                    why["p"] = "crmWeb"
                     users = src.read_crm_webusers(crm_run, schema)
                 except src.SourceError as e:
                     warnings.append(f"CRM B2B siparişleri okunamadı: {e}")
@@ -1831,12 +2011,15 @@ class Refresher:
 
             self._step("Dönemsel hatırlatmalar")
             done["hatirlatma"] = generate_reminders(engine, tenant, st)
+            meta_set(engine, "sorgular", {"items": ran})
             meta_set(engine, "refresh", {"ok": True, "done": done, "warnings": warnings, "sn": round(time.monotonic() - t0, 1)})
             self.state.update(running=False, step=None, error=None, finishedAt=time.time())
             return {"ok": True, "done": done, "warnings": warnings, "dataEnd": end.isoformat()}
         except Exception as e:  # noqa: BLE001 — eski veriler kalır, hata ekranda
             log.warning("corporate refresh failed: %s", e)
             msg = str(e) if isinstance(e, (src.SourceError, CorporateError)) else f"Okuma hata verdi: {str(e)[:200]}"
+            if ran:
+                meta_set(engine, "sorgular", {"items": merge_queries(ran, meta_get(engine, "sorgular"))})
             meta_set(engine, "refresh", {"ok": False, "error": msg, "done": done, "warnings": warnings})
             self.state.update(running=False, step=None, error=msg, finishedAt=time.time())
             return {"ok": False, "error": msg, "done": done}
@@ -1974,10 +2157,10 @@ def dealer_detail(engine: sa.engine.Engine, run: src.Runner, firms: dict[int, st
     if not end:
         raise CorporateError("Veriler henüz okunmadı.", 409)
     with engine.connect() as c:
-        d = c.execute(sa.select(DEALERS).where(DEALERS.c.logo_code == code)).first()
+        d = c.execute(dealers_stmt(code)).first()
         if not d:
             raise CorporateError("Bayi bulunamadı.", 404)
-        books = {r.stok_kodu: r for r in c.execute(sa.select(BOOKS)).all()}
+        books = {r.stok_kodu: r for r in c.execute(books_stmt()).all()}
     items = src.read_client_items(run, firms, code, end - timedelta(days=365), end + timedelta(days=1))
     mix: dict[str, dict[str, Any]] = {}
     bought = []
@@ -2000,24 +2183,45 @@ def dealer_detail(engine: sa.engine.Engine, run: src.Runner, firms: dict[int, st
 # ------------------------------------------------------------------------------------------ özet
 
 
+def ytd_sales_stmt(w: dict[str, Any]) -> sa.Select:
+    """Kurum cirosu kartı: bu yıl ve geçen yılın aynı aylarındaki kurum alım satırları (yıl, ay, net ciro)."""
+    return (sa.select(SALES.c.year, SALES.c.month, SALES.c.ciro)
+            .where(SALES.c.year.in_((w["year"], w["year"] - 1)), SALES.c.month <= w["months"]))
+
+
+def accounts_count_stmt(tenant: str) -> sa.Select:
+    return sa.select(sa.func.count().label("sayi")).select_from(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)
+
+
+def open_opps_stmt(tenant: str) -> sa.Select:
+    """Açık fırsatlar (Aday, Görüşüldü, Teklif, Karar): sahip ve tahmini değer."""
+    return sa.select(OPPS.c.sahip, OPPS.c.deger, OPPS.c.asama).where(OPPS.c.tenant_id == tenant, OPPS.c.asama.in_(OPEN_STAGES))
+
+
+def pending_quotes_count_stmt(tenant: str) -> sa.Select:
+    return (sa.select(sa.func.count().label("sayi")).select_from(QUOTES)
+            .where(QUOTES.c.tenant_id == tenant, QUOTES.c.durum == "onayda"))
+
+
+def theme_suggestions_count_stmt() -> sa.Select:
+    return sa.select(sa.func.count().label("sayi")).select_from(THEMES).where(THEMES.c.durum == "onerildi")
+
+
 def summary(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, st: dict[str, Any]) -> dict[str, Any]:
     end = data_end(engine)
     w = ytd_window(end)
     cur = prev = 0.0
     with engine.connect() as c:
         if w:
-            for r in c.execute(sa.select(SALES.c.year, SALES.c.month, SALES.c.ciro).where(SALES.c.year.in_((w["year"], w["year"] - 1)),
-                                                                                          SALES.c.month <= w["months"])).all():
+            for r in c.execute(ytd_sales_stmt(w)).all():
                 if r.year == w["year"]:
                     cur += r.ciro
                 else:
                     prev += r.ciro
-        n_acc = c.execute(sa.select(sa.func.count()).select_from(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)).scalar() or 0
-        opps = c.execute(sa.select(OPPS.c.sahip, OPPS.c.deger, OPPS.c.asama).where(OPPS.c.tenant_id == tenant,
-                                                                                  OPPS.c.asama.in_(OPEN_STAGES))).all()
-        pending = c.execute(sa.select(sa.func.count()).select_from(QUOTES).where(QUOTES.c.tenant_id == tenant,
-                                                                                 QUOTES.c.durum == "onayda")).scalar() or 0
-        pend_themes = c.execute(sa.select(sa.func.count()).select_from(THEMES).where(THEMES.c.durum == "onerildi")).scalar() or 0
+        n_acc = c.execute(accounts_count_stmt(tenant)).scalar() or 0
+        opps = c.execute(open_opps_stmt(tenant)).all()
+        pending = c.execute(pending_quotes_count_stmt(tenant)).scalar() or 0
+        pend_themes = c.execute(theme_suggestions_count_stmt()).scalar() or 0
     mine = [o for o in opps if see_all or (o.sahip or "").lower() == user.lower()]
     rem = list_reminders(engine, tenant, st, durum="acik")
     dealers = dealer_rows(engine, gun=st["silentDays"])

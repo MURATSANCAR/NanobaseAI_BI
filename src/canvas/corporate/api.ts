@@ -1,3 +1,4 @@
+import type { Kaynaklar } from '../components/sqlInfo';
 import { ENGINE_BASE, send } from '../engine';
 
 /** M32 Kurumsal satış ve B2B köprü istemcisi (`/api/v1/corporate/*`). Kurum listesi ve alım geçmişi Logo'dan, kurum
@@ -60,6 +61,7 @@ export type Meta = {
   volume: { buckets?: VolumeBucket[]; faturalar?: number; pencere?: [string, string] };
   volumeTiers: Array<[number, number]>;
   status: RefreshStatus;
+  kaynaklar?: Kaynaklar;
   me: { username: string; display: string; admin: boolean; seeAll: boolean; canApprove: boolean; canQuote: boolean; canB2b: boolean; canTheme: boolean; canExport: boolean };
 };
 
@@ -77,6 +79,7 @@ export type Summary = {
   hatirlatmaTutar: number;
   sessizBayi: number;
   bayi: number;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Account = {
@@ -111,6 +114,7 @@ export type AccountDetail = Account & {
   hatirlatmalar: Reminder[];
   window: Summary['window'];
   dataEnd: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type ThemeTag = { tema: string; kaynak: 'crm' | 'oneri' | 'elle'; durum: 'onerildi' | 'onayli' | 'reddedildi'; olasilik: number | null; onaylayan: string | null };
@@ -198,6 +202,7 @@ export type Quote = {
   kurum?: string;
   firsatAd?: string;
   sahip?: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Opportunity = {
@@ -226,6 +231,7 @@ export type Opportunity = {
   teklifler?: Quote[];
   sonTeklif?: { surum: number; durum: QuoteStatus; durumLabel: string; toplamNet: number } | null;
   onayBekliyor?: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type OppInput = Partial<{
@@ -248,6 +254,7 @@ export type Pipeline = {
   items: Opportunity[];
   columns: Array<{ asama: Stage; label: string; sayi: number; deger: number }>;
   yaklasan: Opportunity[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Reminder = {
@@ -304,6 +311,7 @@ export type PackageResult = {
   elenen: { stokYetersiz: number; fiyatYok: number; yasUymuyor: number };
   alternatifler: PackageAlt[];
   not: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Dealer = {
@@ -332,6 +340,7 @@ export type DealerDetail = {
   alinan: Array<{ stokKodu: string; ad: string | null; kitaplik: string; adet: number; ciro: number; son: string | null }>;
   eksik: Book[];
   dataEnd: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export const corporateApi = {
@@ -340,21 +349,21 @@ export const corporateApi = {
   status: () => send<RefreshStatus>('GET', `${B}/status`),
   refresh: () => send<RefreshStatus & { started: boolean }>('POST', `${B}/refresh`, {}),
   accounts: (p: { q?: string; segment?: string; sort?: string; page?: number }) =>
-    send<{ items: Account[]; total: number; page: number; pageSize: number; segments: Record<string, number>; window: Summary['window']; dataEnd: string | null }>(
+    send<{ items: Account[]; total: number; page: number; pageSize: number; segments: Record<string, number>; window: Summary['window']; dataEnd: string | null; kaynaklar?: Kaynaklar }>(
       'GET',
       `${B}/accounts${qs(p)}`,
     ),
   account: (ref: string) => send<AccountDetail>('GET', `${B}/accounts/${enc(ref)}`),
   setSegment: (ref: string, segment: string | null) => send<AccountDetail>('PATCH', `${B}/accounts/${enc(ref)}`, { segment }),
-  books: (q: string) => send<{ items: Book[]; total: number }>('GET', `${B}/books${qs({ q })}`),
+  books: (q: string) => send<{ items: Book[]; total: number; kaynaklar?: Kaynaklar }>('GET', `${B}/books${qs({ q })}`),
   themes: (p: { durum?: string; q?: string; page?: number }) =>
-    send<{ items: Book[]; total: number; page: number; pageSize: number; counts: Record<string, number>; vocabulary: string[] }>('GET', `${B}/themes${qs(p)}`),
+    send<{ items: Book[]; total: number; page: number; pageSize: number; counts: Record<string, number>; vocabulary: string[]; kaynaklar?: Kaynaklar }>('GET', `${B}/themes${qs(p)}`),
   decideTheme: (stok: string, tema: string, karar: 'onayla' | 'reddet' | 'ekle' | 'kaldir') =>
     send<{ temalar: ThemeTag[] }>('POST', `${B}/themes/${enc(stok)}/approve`, { tema, karar }),
   suggest: (b: PackageRequest) => send<PackageResult>('POST', `${B}/packages/suggest`, b, 120_000),
   opportunities: (p: { asama?: string; q?: string; acik?: boolean } = {}) => send<Pipeline>('GET', `${B}/opportunities${qs(p)}`),
   pipelineSummary: () =>
-    send<{ kapanan: number; kazanilan: number; kaybedilen: number; kazanmaOrani: number | null; kazanilanDeger: number; nedenler: Array<{ kod: string; label: string; sayi: number }> }>(
+    send<{ kapanan: number; kazanilan: number; kaybedilen: number; kazanmaOrani: number | null; kazanilanDeger: number; nedenler: Array<{ kod: string; label: string; sayi: number }>; kaynaklar?: Kaynaklar }>(
       'GET',
       `${B}/pipeline/summary`,
     ),
@@ -374,18 +383,18 @@ export const corporateApi = {
   sent: (id: string) => send<Quote>('POST', `${B}/quotes/${enc(id)}/sent`, {}),
   result: (id: string, sonuc: 'kabul' | 'ret', neden?: string) => send<Quote>('POST', `${B}/quotes/${enc(id)}/result`, { sonuc, neden }),
   letter: (id: string) => send<{ mektup: string }>('POST', `${B}/quotes/${enc(id)}/letter`, {}, 240_000),
-  approvals: () => send<{ items: Quote[] }>('GET', `${B}/approvals`),
+  approvals: () => send<{ items: Quote[]; kaynaklar?: Kaynaklar }>('GET', `${B}/approvals`),
   reminders: (p: { ay?: string; durum?: string } = {}) =>
-    send<{ items: Reminder[]; aylar: string[]; leadDays: number; toplamGecenYil: number }>('GET', `${B}/reminders${qs(p)}`),
+    send<{ items: Reminder[]; aylar: string[]; leadDays: number; toplamGecenYil: number; kaynaklar?: Kaynaklar }>('GET', `${B}/reminders${qs(p)}`),
   updateReminder: (id: string, durum: 'acik' | 'kapandi') => send<Reminder>('PATCH', `${B}/reminders/${enc(id)}`, { durum }),
   reminderToOpportunity: (id: string) => send<Opportunity>('POST', `${B}/reminders/${enc(id)}/opportunity`, {}),
   dealers: (p: { durum?: string; gun?: number; sinif?: string; q?: string }) =>
-    send<{ items: Dealer[]; total: number; counts: { aktif: number; sessiz: number }; gun: number; dataEnd: string | null; b2b: { b2bGun?: number; crm?: boolean } }>(
+    send<{ items: Dealer[]; total: number; counts: { aktif: number; sessiz: number }; gun: number; dataEnd: string | null; b2b: { b2bGun?: number; crm?: boolean }; kaynaklar?: Kaynaklar }>(
       'GET',
       `${B}/b2b/dealers${qs(p)}`,
     ),
   dealer: (kod: string) => send<DealerDetail>('GET', `${B}/b2b/dealers/${enc(kod)}`, undefined, 180_000),
-  highlights: () => send<{ items: Book[]; total: number; gun: number; dataEnd: string | null }>('GET', `${B}/b2b/highlights`),
+  highlights: () => send<{ items: Book[]; total: number; gun: number; dataEnd: string | null; kaynaklar?: Kaynaklar }>('GET', `${B}/b2b/highlights`),
   pdfUrl: (id: string) => `${ENGINE_BASE}${B}/quotes/${enc(id)}/document.pdf`,
   xlsxUrl: (id: string) => `${ENGINE_BASE}${B}/quotes/${enc(id)}/document.xlsx`,
   dealersCsvUrl: (p: { durum?: string; gun?: number; sinif?: string; q?: string }) => `${ENGINE_BASE}${B}/b2b/dealers.csv${qs(p)}`,

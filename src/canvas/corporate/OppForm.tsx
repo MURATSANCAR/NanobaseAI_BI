@@ -4,6 +4,7 @@ import { Building2, Check } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { btnGhost, btnPrimary, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { corporateApi, fmtShort, parseNum, type Account, type OppInput } from './api';
 
 /** Kurum seçici: Logo KURUM carileri + CRM kurum kartları; listede yoksa ad elle yazılır (fırsat kurum kartsız da açılır). */
@@ -18,7 +19,13 @@ export function AccountPicker({ value, onChange }: { value: { ref: string | null
   });
   return (
     <div className="flex flex-col gap-1">
-      <label className={labelCls} htmlFor="corp-acc">Kurum</label>
+      <div className="flex items-center gap-1">
+        <label className={labelCls} htmlFor="corp-acc">Kurum</label>
+        {/* Seçenek satırı düğme olduğundan «bu yıl» tutarının «i»si başlıkta. */}
+        {!value.ref && list.data?.items.length ? (
+          <SqlInfo k={list.data.kaynaklar} alan="items[].buYil" label="Kurum listesinde bu yıl alım" />
+        ) : null}
+      </div>
       <input
         id="corp-acc"
         className={field}

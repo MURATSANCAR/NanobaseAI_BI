@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -6,6 +6,7 @@ import { PackageSearch, Plus } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { LostSheet } from './Pipeline';
 import QuoteEditor, { BookAdder } from './QuoteEditor';
@@ -37,9 +38,9 @@ function Fields({ o, canEdit, seeAll, vocabulary, onSave, busy }: {
   const [f, setF] = useState(init);
   useEffect(() => setF(init()), [o]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = JSON.stringify(f) !== JSON.stringify(init());
-  const input = (k: keyof typeof f, lbl: string, type = 'text', mode?: 'decimal') => (
+  const input = (k: keyof typeof f, lbl: string, type = 'text', mode?: 'decimal', info?: ReactNode) => (
     <label className="flex flex-col gap-1">
-      <span className={labelCls}>{lbl}</span>
+      <span className={`${labelCls} inline-flex items-center gap-1`}>{lbl}{info}</span>
       <input className={`${field} ${mode ? 'font-mono tabular-nums' : ''}`} type={type} inputMode={mode} value={f[k]} readOnly={!canEdit}
         onChange={(e) => setF({ ...f, [k]: e.target.value })} />
     </label>
@@ -64,7 +65,7 @@ function Fields({ o, canEdit, seeAll, vocabulary, onSave, busy }: {
             {[...new Set([...(f.tema ? [f.tema] : []), ...vocabulary])].map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
-        {input('deger', 'Tahmini değer (₺)', 'text', 'decimal')}
+        {input('deger', 'Tahmini değer (₺)', 'text', 'decimal', <SqlInfo k={o.kaynaklar} alan="deger" label="Fırsatın tahmini değeri" />)}
         {input('karar', 'Karar tarihi', 'date')}
         {input('adim', 'Sonraki adım')}
         {input('adimTarih', 'Sonraki adım tarihi', 'date')}
@@ -146,7 +147,12 @@ export default function OpportunityPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <StagePill stage={o.asama} label={o.asamaLabel} />
-                  {o.kararTarihi && isOpen && <span className="text-[12px] font-bold text-canvas-muted">Karar {dueText(o.kararTarihi)}</span>}
+                  {o.kararTarihi && isOpen && (
+                    <span className="inline-flex items-center text-[12px] font-bold text-canvas-muted">
+                      Karar {dueText(o.kararTarihi)}
+                      <SqlInfo k={o.kaynaklar} alan="kalanGun" label="Karara kalan gün" className="ml-0.5" />
+                    </span>
+                  )}
                   {o.kayipSinifLabel && (
                     <Pill tone="err">{o.kayipSinifLabel}{o.kayipSinifKaynak === 'oneri' ? ' (ZEKİ AI önerisi)' : ''}</Pill>
                   )}
@@ -207,7 +213,7 @@ export default function OpportunityPage() {
               )}
               <div className="mt-3">
                 {selected ? (
-                  <QuoteEditor key={selected.id} quote={selected} meta={m} oppOpen={isOpen} />
+                  <QuoteEditor key={selected.id} quote={selected} meta={m} oppOpen={isOpen} k={o.kaynaklar} />
                 ) : (
                   <p className="text-[12.5px] text-canvas-muted">Henüz teklif yok. Paket önerisiyle ya da boş bir teklifle başlayın.</p>
                 )}
@@ -217,6 +223,7 @@ export default function OpportunityPage() {
                   {quotes.map((q) => (
                     <li key={q.id} className="inline-flex items-center gap-1">
                       v{q.surum} <Pill tone={QUOTE_TONE[q.durum]}>{q.durumLabel}</Pill> {fmtMoney(q.toplamNet)}
+                      <SqlInfo k={o.kaynaklar} alan="teklifler[].toplamNet" label={`Teklif v${q.surum}: teklif tutarı`} />
                     </li>
                   ))}
                 </ul>
@@ -237,13 +244,25 @@ export default function OpportunityPage() {
                   {a.window && (
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <div className={labelCls}>{a.window.year} {a.window.label}</div>
+                        <div className={`${labelCls} inline-flex items-center gap-1`}>
+                          {a.window.year} {a.window.label}
+                          <SqlInfo k={a.kaynaklar} alan="buYil" label="Kurumun dönem cirosu" />
+                        </div>
                         <div className="font-mono font-bold tabular-nums">{fmtShort(a.buYil)}</div>
                       </div>
                       <div>
-                        <div className={labelCls}>Geçen yıl aynı dönem</div>
+                        <div className={`${labelCls} inline-flex items-center gap-1`}>
+                          Geçen yıl aynı dönem
+                          <SqlInfo k={a.kaynaklar} alan="buyume" label="Geçen yıl aynı dönem ve büyüme" />
+                        </div>
                         <div className="font-mono font-bold tabular-nums">{fmtShort(a.gecenYilAyni)}{g !== null ? ` (${g >= 0 ? '+' : ''}${fmtPct(g)})` : ''}</div>
                       </div>
+                    </div>
+                  )}
+                  {a.yillar.length > 0 && (
+                    <div className={`${labelCls} inline-flex items-center gap-1`}>
+                      Yıl başına ciro ve fatura
+                      <SqlInfo k={a.kaynaklar} alan="yillar[]" label="Yıl başına net ciro ve satış faturası" />
                     </div>
                   )}
                   <ul className="flex flex-col gap-1">
@@ -254,7 +273,12 @@ export default function OpportunityPage() {
                       </li>
                     ))}
                   </ul>
-                  {a.enCokAy && <p className="text-[11.5px] text-canvas-muted">En çok alım yaptığı ay: {monthName(a.enCokAy)}.</p>}
+                  {a.enCokAy && (
+                    <p className="text-[11.5px] text-canvas-muted">
+                      En çok alım yaptığı ay: {monthName(a.enCokAy)}.
+                      <SqlInfo k={a.kaynaklar} alan="enCokAy" label="En çok alım yapılan ay" className="ml-0.5" />
+                    </p>
+                  )}
                   {a.epostaIzni === false && <Note tone="warn">Kurumun e-posta izni yok (İYS); toplu e-postaya eklenmez.</Note>}
                 </div>
               )}

@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Loading, Note, Pill, TableWrap, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { StagePill } from './parts';
 import { corporateApi, fmtDay, fmtMonth, fmtPct, fmtShort, growth, monthName, type Meta } from './api';
@@ -45,13 +46,15 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
             {x.window && (
               <p className="text-[11.5px] text-canvas-muted">
                 {x.window.year} {x.window.label}: {fmtShort(x.buYil)} · geçen yıl aynı dönem {fmtShort(x.gecenYilAyni)}
-                {growth(x.buYil, x.gecenYilAyni) !== null ? ` (${fmtPct(growth(x.buYil, x.gecenYilAyni))})` : ''}. Veri {fmtDay(x.dataEnd)} tarihine kadar.
+                {growth(x.buYil, x.gecenYilAyni) !== null ? ` (${fmtPct(growth(x.buYil, x.gecenYilAyni))})` : ''}
+                <SqlInfo k={x.kaynaklar} alan="buyume" label="Kurumun dönem cirosu, geçen yıl aynı dönem ve büyüme" className="ml-0.5" />
+                . Veri {fmtDay(x.dataEnd)} tarihine kadar.
               </p>
             )}
             <div className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[520px] text-[11.5px]">
                 <thead>
-                  <tr><th className={th}>Yıl</th>{Array.from({ length: 12 }, (_, i) => <th key={i} className={`${th} text-right`}>{monthName(i + 1).slice(0, 3)}</th>)}<th className={`${th} text-right`}>Toplam</th></tr>
+                  <tr><th className={th}>Yıl</th>{Array.from({ length: 12 }, (_, i) => <th key={i} className={`${th} text-right`}>{monthName(i + 1).slice(0, 3)}</th>)}<th className={`${th} text-right`}><InfoLabel k={x.kaynaklar} alan="yillar[]" label="Yıl × ay alım tablosu">Toplam</InfoLabel></th></tr>
                 </thead>
                 <tbody>
                   {x.yillar.map((y) => (
@@ -64,7 +67,12 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
                 </tbody>
               </table>
             </div>
-            {x.enCokAy && <p className="mt-1 text-[11.5px] text-canvas-muted">En çok alım yaptığı ay: {monthName(x.enCokAy)}.</p>}
+            {x.enCokAy && (
+              <p className="mt-1 text-[11.5px] text-canvas-muted">
+                En çok alım yaptığı ay: {monthName(x.enCokAy)}.
+                <SqlInfo k={x.kaynaklar} alan="enCokAy" label="En çok alım yapılan ay" className="ml-0.5" />
+              </p>
+            )}
             {x.yillar.length === 0 && <p className="text-[12px] text-canvas-muted">Bu kurumun KURUM kanalında faturalı alımı yok.</p>}
           </section>
           <section>
@@ -83,7 +91,10 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
           </section>
           {x.hatirlatmalar.length > 0 && (
             <section>
-              <h3 className="text-[14px] font-extrabold">Dönemsel hatırlatmalar</h3>
+              <h3 className="inline-flex items-center gap-1 text-[14px] font-extrabold">
+                Dönemsel hatırlatmalar
+                <SqlInfo k={x.kaynaklar} alan="hatirlatmalar[]" label="Kurumun hatırlatmaları (geçen yıl tutarı)" />
+              </h3>
               <ul className="mt-1 flex flex-col gap-1">
                 {x.hatirlatmalar.map((r) => (
                   <li key={r.id} className="flex items-center justify-between">
@@ -123,7 +134,10 @@ export default function AccountsTab({ meta }: { meta: Meta }) {
           <input className={`${field} pl-9`} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Unvan, cari kodu ya da il" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Segment</span>
+          <span className={`${labelCls} inline-flex items-center gap-1`}>
+            Segment
+            <SqlInfo k={d?.kaynaklar} alan="segments" label="Segment başına kurum sayısı" />
+          </span>
           <select className={field} value={segment} onChange={(e) => { setSegment(e.target.value); setPage(0); }}>
             <option value="">Hepsi</option>
             {Object.entries(meta.segments).map(([k, v]) => <option key={k} value={k}>{v}{d?.segments[k] ? ` (${d.segments[k]})` : ''}</option>)}
@@ -153,8 +167,10 @@ export default function AccountsTab({ meta }: { meta: Meta }) {
               <tr>
                 <th className={th}>Kurum</th>
                 <th className={th}>Segment</th>
-                <th className={`${th} text-right`}>{d.window ? `${d.window.year} ${d.window.label}` : 'Bu yıl'}</th>
-                <th className={`${th} text-right`}>Geçen yıl aynı dönem</th>
+                <th className={`${th} text-right`}>
+                  <InfoLabel k={d.kaynaklar} alan="items[].buYil">{d.window ? `${d.window.year} ${d.window.label}` : 'Bu yıl'}</InfoLabel>
+                </th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].gecenYilAyni">Geçen yıl aynı dönem</InfoLabel></th>
                 <th className={th}>Son alım</th>
                 <th className={th}>Temsilci</th>
               </tr>
@@ -177,7 +193,12 @@ export default function AccountsTab({ meta }: { meta: Meta }) {
               ))}
             </tbody>
           </TableWrap>
-          <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+          <div className="flex items-start gap-1.5">
+            <SqlInfo k={d.kaynaklar} alan="total" label="Kurum sayısı (sayfalama toplamı)" className="mt-3.5" />
+            <div className="min-w-0 flex-1">
+              <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+            </div>
+          </div>
         </div>
       )}
       <AccountSheet refId={open} meta={meta} onClose={() => setOpen(null)} />

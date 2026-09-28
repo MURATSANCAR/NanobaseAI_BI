@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Check, Plus, X } from 'lucide-react';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty } from './parts';
 import { corporateApi, fmtDay, fmtInt, fmtMoney, fmtMonth, fmtShort, type Meta } from './api';
@@ -39,10 +40,16 @@ export function RemindersTab({ meta }: { meta: Meta }) {
               className={`min-h-11 rounded-lg px-2.5 text-[12px] font-bold sm:min-h-9 ${durum === k ? 'bg-white shadow-sm' : ''}`}>{l}</button>
           ))}
         </div>
-        {d && <span className="text-[12px] text-canvas-muted">{d.aylar.map(fmtMonth).join(', ')} · geçen yıl toplam {fmtShort(d.toplamGecenYil)}</span>}
+        {d && (
+          <span className="inline-flex items-center text-[12px] text-canvas-muted">
+            {d.aylar.map(fmtMonth).join(', ')} · geçen yıl toplam {fmtShort(d.toplamGecenYil)}
+            <SqlInfo k={d.kaynaklar} alan="toplamGecenYil" label="Hatırlatmaların geçen yıl toplamı" className="ml-0.5" />
+          </span>
+        )}
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-        Bu ay ve başlangıcı {meta.settings.reminderLeadDays} gün içinde olan aylar için, geçen yıl aynı ayda net alımı olan kurumlar. Liste her gece Logo'dan yenilenir;
+        Bu ay ve başlangıcı {meta.settings.reminderLeadDays} gün
+        <SqlInfo k={d?.kaynaklar} alan="leadDays" label="Hatırlatma günü (ayar)" className="ml-0.5" /> içinde olan aylar için, geçen yıl aynı ayda net alımı olan kurumlar. Liste her gece Logo'dan yenilenir;
         e-posta ya da arama otomatik yapılmaz, temsilci arar.
       </p>
       {list.error && <Note tone="err">{errText(list.error, 'Hatırlatmalar okunamadı.')}</Note>}
@@ -60,6 +67,7 @@ export function RemindersTab({ meta }: { meta: Meta }) {
             </div>
             <div className="text-[12px]">
               Geçen yıl bu ay: <b className="font-mono tabular-nums">{fmtMoney(r.gecenYilTutar)}</b>{r.gecenYilAdet ? ` · ${fmtInt(r.gecenYilAdet)} adet` : ''}
+              <SqlInfo k={d?.kaynaklar} alan="items[]" label={`${r.unvan ?? r.logoKod}: geçen yıl bu ay`} className="ml-0.5" />
             </div>
             {meta.me.canQuote && (
               <div className="flex flex-wrap gap-2">
@@ -94,15 +102,16 @@ export function ApprovalsTab() {
       {list.data && list.data.items.length === 0 && <Empty title="Onay bekleyen teklif yok" />}
       <ul className="flex flex-col gap-2">
         {(list.data?.items ?? []).map((q) => (
-          <li key={q.id}>
+          <li key={q.id} className="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-white/90 p-3">
             <Link to={`/kurumsal-satis/firsat/${q.firsatId}?teklif=${q.id}`}
-              className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white/90 p-3 transition-transform duration-150 ease-out active:scale-[0.99] sm:flex-row sm:items-center sm:justify-between">
-              <span className="min-w-0">
-                <span className="block break-words text-[13px] font-extrabold">{q.kurum} · {q.firsatAd}</span>
-                <span className="block text-[11.5px] text-canvas-muted">v{q.surum} · gönderen {q.gonderen} · {fmtDay(q.gonderimAt)} · {q.onayNedenleri.map((r) => r.metin).join(' · ')}</span>
-              </span>
-              <span className="shrink-0 font-mono text-[13px] font-bold tabular-nums">{fmtMoney(q.toplamNet)}</span>
+              className="block min-w-0 flex-1 transition-transform duration-150 ease-out active:scale-[0.99]">
+              <span className="block break-words text-[13px] font-extrabold">{q.kurum} · {q.firsatAd}</span>
+              <span className="block text-[11.5px] text-canvas-muted">v{q.surum} · gönderen {q.gonderen} · {fmtDay(q.gonderimAt)} · {q.onayNedenleri.map((r) => r.metin).join(' · ')}</span>
             </Link>
+            <span className="inline-flex shrink-0 items-center font-mono text-[13px] font-bold tabular-nums">
+              {fmtMoney(q.toplamNet)}
+              <SqlInfo k={list.data?.kaynaklar} alan="items[]" label={`${q.kurum}: teklif tutarı`} className="ml-0.5" />
+            </span>
           </li>
         ))}
       </ul>
@@ -144,13 +153,15 @@ export function ThemesTab({ meta }: { meta: Meta }) {
             </button>
           ))}
         </div>
+        <SqlInfo k={d?.kaynaklar} alan="counts" label="Tema etiketi sayıları (duruma göre)" className="self-center" />
         <label className="min-w-[200px] flex-1">
           <span className="sr-only">Ara</span>
           <input className={field} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Kitap, stok kodu ya da yazar" />
         </label>
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-        CRM'deki tema bağları doğrudan onaylıdır. ZEKİ AI stoktaki etiketsiz kitaplara her gece kapalı listeden ({meta.vocabulary.length} tema) öneri yapar; öneri onaylanana kadar paket önerisine girmez.
+        CRM'deki tema bağları doğrudan onaylıdır. ZEKİ AI stoktaki etiketsiz kitaplara her gece kapalı listeden ({meta.vocabulary.length} tema
+        <SqlInfo k={meta.kaynaklar} alan="vocabularyCount" label="Tema listesindeki tema sayısı" className="ml-0.5" />) öneri yapar; öneri onaylanana kadar paket önerisine girmez.
       </p>
       {list.error && <Note tone="err">{errText(list.error, 'Temalar okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
@@ -159,7 +170,10 @@ export function ThemesTab({ meta }: { meta: Meta }) {
         {(d?.items ?? []).map((b) => (
           <li key={b.stokKodu} className="rounded-xl border border-slate-100 bg-white/90 p-3">
             <div className="text-[13px] font-extrabold">{b.ad ?? b.stokKodu}</div>
-            <div className="text-[11.5px] text-canvas-muted">{[b.stokKodu, b.yazar, b.turler ?? b.kitaplik, b.yaslar, b.stok !== undefined ? `stok ${fmtInt(b.stok)}` : null].filter(Boolean).join(' · ')}</div>
+            <div className="text-[11.5px] text-canvas-muted">
+              {[b.stokKodu, b.yazar, b.turler ?? b.kitaplik, b.yaslar, b.stok !== undefined ? `stok ${fmtInt(b.stok)}` : null].filter(Boolean).join(' · ')}
+              {b.stok !== undefined && <SqlInfo k={d?.kaynaklar} alan="items[]" label={`${b.ad ?? b.stokKodu}: stok`} className="ml-0.5" />}
+            </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {b.temalar.map((t) => (
                 <span key={t.tema} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-bold ${t.durum === 'onayli' ? 'bg-emerald-50 text-emerald-800' : t.durum === 'reddedildi' ? 'bg-slate-100 text-canvas-muted line-through' : 'bg-amber-50 text-amber-900'}`}>
@@ -197,7 +211,14 @@ export function ThemesTab({ meta }: { meta: Meta }) {
           </li>
         ))}
       </ul>
-      {d && <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />}
+      {d && (
+        <div className="flex items-start gap-1.5">
+          <SqlInfo k={d.kaynaklar} alan="total" label="Kitap sayısı (sayfalama toplamı)" className="mt-3.5" />
+          <div className="min-w-0 flex-1">
+            <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+          </div>
+        </div>
+      )}
     </Panel>
   );
 }

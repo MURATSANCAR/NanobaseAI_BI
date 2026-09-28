@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { Loading, Note, btnGhost, errText } from '../admin/ui';
 import { Tabs } from '../budget/parts';
 import { Kpi, KpiRow } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import AccountsTab from './AccountsTab';
 import DealerPanel from './DealerPanel';
@@ -108,6 +109,7 @@ export default function CorporateScreen() {
           help={s ? `Geçen yıl aynı dönem ${fmtShort(s.kurumCiroGecenYil)}${g !== null ? ` · ${g >= 0 ? '+' : ''}${fmtPct(g)}` : ''}` : 'KURUM kanalı net ciro'}
           active={tab === 'kurum'}
           onClick={() => go('kurum')}
+          info={<SqlInfo k={s?.kaynaklar} alan="kurumCiroBuyume" label="Kurum cirosu, geçen yıl aynı dönem ve büyüme" />}
         />
         <Kpi
           label="Açık fırsat"
@@ -115,6 +117,7 @@ export default function CorporateScreen() {
           help={s ? `Tahmini ${fmtShort(s.acikFirsatDeger)}${m && !m.me.seeAll ? ' · sizin' : ''}` : 'Aday → Karar'}
           active={tab === 'firsat'}
           onClick={() => go('firsat')}
+          info={<SqlInfo k={s?.kaynaklar} alan="acikFirsat" label="Açık fırsat ve tahmini değer" />}
         />
         <Kpi
           label="Hatırlatma"
@@ -122,6 +125,7 @@ export default function CorporateScreen() {
           help={s ? `Geçen yıl bu dönemde ${fmtShort(s.hatirlatmaTutar)} alan kurumlar` : 'Dönemsel alım'}
           active={tab === 'hatirlatma'}
           onClick={() => go('hatirlatma')}
+          info={<SqlInfo k={s?.kaynaklar} alan="hatirlatma" label="Hatırlatma ve geçen yıl tutarı" />}
         />
         {m?.me.canB2b ? (
           <Kpi
@@ -130,13 +134,32 @@ export default function CorporateScreen() {
             help={s && m ? `${m.settings.silentDays} gündür faturası yok · ${fmtInt(s.bayi)} bayiden` : 'Bayi kanalı'}
             active={tab === 'bayi'}
             onClick={() => go('bayi')}
+            info={<SqlInfo k={s?.kaynaklar} alan="sessizBayi" label="Sipariş vermeyen bayi ve bayi sayısı" />}
           />
         ) : (
-          <Kpi label="Onay bekleyen" value={s ? fmtInt(s.onayBekleyen) : '—'} help="İndirim/marj eşiğini aşan teklif" />
+          <Kpi label="Onay bekleyen" value={s ? fmtInt(s.onayBekleyen) : '—'} help="İndirim/marj eşiğini aşan teklif"
+            info={<SqlInfo k={s?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen teklif" />} />
         )}
       </KpiRow>
 
       <Tabs tabs={tabs} value={tab} onChange={go} />
+      {/* Sekme rozetlerindeki sayıların kaynağı: rozet düğmenin içinde olduğundan «i» burada, sekme şeridinin altında. */}
+      {s && tabs.some((t) => t.badge) && (
+        <div className="-mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-[11px] text-canvas-muted">
+          <span>Sekme rozetleri:</span>
+          {tabs.filter((t) => t.badge).map((t) => (
+            <span key={t.key} className="inline-flex items-center">
+              {t.label} <span className="ml-1 font-mono tabular-nums">{fmtInt(t.badge)}</span>
+              <SqlInfo
+                k={s.kaynaklar}
+                alan={t.key === 'hatirlatma' ? 'hatirlatma' : t.key === 'onay' ? 'onayBekleyen' : 'temaOnerisi'}
+                label={`${t.label} rozeti`}
+                className="ml-0.5"
+              />
+            </span>
+          ))}
+        </div>
+      )}
       {meta.isLoading && <Loading />}
       {m && tab === 'firsat' && <Pipeline meta={m} onReminders={() => go('hatirlatma')} />}
       {m && tab === 'paket' && <PackageBuilder meta={m} />}
