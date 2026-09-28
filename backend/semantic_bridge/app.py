@@ -7076,6 +7076,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda priority: rt().llm_for("kurumsal", priority),
     })
 
+    # M51 Müşteri hizmetleri: destek masası (apps/destek) REST ile salt okunur; CRM sipariş/kargo + Logo fatura bağlamı,
+    # bayi görünümü, Zeki AI sınıflama/SSS/taslak, kalite panosu. Uçlar /api/v1/support/*.
+    from semantic_bridge import support_api
+    app.state.support = support_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority=None: rt().llm_for("destek", priority),
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
     from semantic_bridge import marketing
     app.state.marketing = marketing.register(app, rt, _require_caller, _can)

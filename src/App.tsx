@@ -40,6 +40,7 @@ const PricingScreen = lazy(() => import('@/canvas/pricing/PricingScreen'));
 const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/AuthorRelationsScreen'));
 const ProductionScreen = lazy(() => import('@/canvas/editorial/production/ProductionScreen'));
 const CorporateScreen = lazy(() => import('@/canvas/corporate/CorporateScreen'));
+const SupportScreen = lazy(() => import('@/canvas/support/SupportScreen'));
 const CorporateOpportunity = lazy(() => import('@/canvas/corporate/OpportunityPage'));
 const MailboxHome = lazy(() => import('@/canvas/mailbox/MailboxHome'));
 const MailMessage = lazy(() => import('@/canvas/mailbox/MessageDetail'));
@@ -272,6 +273,8 @@ export default function App() {
             <Route path="kurumsal-eposta/rapor" element={<MailReport />} />
             <Route path="kurumsal-eposta/kurallar" element={<MailRules />} />
             <Route path="kurumsal-eposta/etiketleme" element={<MailLabeling />} />
+            {/* M51 Müşteri hizmetleri: kuyruk, müşteri bağlamı, bayi görünümü, kalite, SSS açıkları (/api/v1/support). */}
+            <Route path="musteri-destek" element={<SupportScreen />} />
             <Route path="yazar-iliskileri" element={<AuthorRelationsScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}

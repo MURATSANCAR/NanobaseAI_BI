@@ -66,6 +66,10 @@ JOBS = [
     ("sistem durumu", "/api/v1/it-ops/run-due", int(os.environ.get("ITOPS_EVERY_SEC", "300")), 290),
     # M49 veri güvenliği: giriş olayları + kurallar her 5 dk; saklama ve günlük özet SECURITY_DAILY_AT'te günde bir kez.
     ("veri güvenliği", "/api/v1/data-security/run-due", int(os.environ.get("SECURITY_EVERY_SEC", "300")), 1700),
+    # M51 müşteri hizmetleri: destek masasındaki yeni talepleri sınıfla (sunucuda timas-support.timer 5 dk) ve gece SSS
+    # açığı listesi (timas-support-gece.timer). Masa bağlantısı ayarlanmamışsa uç «atlandı» döner.
+    ("müşteri hizmetleri sınıflama", "/api/v1/support/classify/run-due", int(os.environ.get("SUPPORT_EVERY_SEC", "300")), 290),
+    ("müşteri hizmetleri gece", "/api/v1/support/run-due", int(os.environ.get("SUPPORT_NIGHT_EVERY_SEC", "86400")), 1700),
 ]
 
 

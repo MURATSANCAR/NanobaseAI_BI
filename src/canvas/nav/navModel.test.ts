@@ -22,6 +22,7 @@ describe('sayfa yetkisi', () => {
     expect(itemIds(bt)).toEqual(['kampus', 'sistem-durumu']);
     expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:veri-guvenligi'])))).toEqual(['kampus', 'veri-guvenligi']);
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:musteri-destek'])))).toEqual(['kampus', 'musteri-destek']);
   });
 
   it('yetki henüz bilinmiyorken rol sayfaları gizli, yönetici ekranları yine role bağlı', () => {

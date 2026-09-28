@@ -1,5 +1,6 @@
 import {
   Activity,
+  Headset,
   Server,
   HeartHandshake,
   Inbox,
@@ -363,7 +364,7 @@ export const NAV: NavGroup[] = [
     // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; BT personeli yönetici olmayabilir.
     id: 'altyapi',
     label: 'Altyapı ve destek',
-    hint: 'Sistem durumu, olaylar ve zamanlanmış işler',
+    hint: 'Sistem durumu, veri güvenliği ve müşteri hizmetleri',
     icon: Server,
     items: [
       {
@@ -381,6 +382,14 @@ export const NAV: NavGroup[] = [
         icon: LockKeyhole,
         hint: 'Giriş ve erişim kaydı, güvenlik uyarıları, hesap hijyeni, kişisel veri envanteri ve saklama süreleri',
         keywords: ['güvenlik', 'kvkk', 'giriş kaydı', 'oturum', 'erişim', 'dışa aktarma', 'kişisel veri', 'saklama', 'hesap', 'denetim izi'],
+      },
+      {
+        id: 'musteri-destek',
+        label: 'Müşteri hizmetleri',
+        to: '/musteri-destek',
+        icon: Headset,
+        hint: 'Talep kuyruğu ve SLA, müşteri bağlamı (sipariş, kargo, fatura), bayi görünümü, konu eğilimi ve SSS açıkları',
+        keywords: ['destek', 'talep', 'şikâyet', 'sla', 'kargo takip', 'sipariş durumu', 'müşteri', 'okur', 'bayi', 'sss', 'memnuniyet', 'csat'],
       },
     ],
   },

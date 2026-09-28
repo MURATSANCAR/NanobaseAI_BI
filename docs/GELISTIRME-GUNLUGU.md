@@ -267,6 +267,34 @@
   `test_dealers.py` ve vitest `src/canvas/dealers/api.test.ts` yazıldı, **koşturulmadı**; tsc koşturulmadı.
   **DOĞRULANAMADI** — test sunucusunda: `scripts/acceptance/M59/run_tests.sh`, ilk günlük tur elle, `reference_check.py
   --rerun`, `write_check.py --write` + `cleanup.py`, 320/390/768 px ekran kontrolü.
+## 2026-09-28 — M51 Müşteri hizmetleri: destek masasına bağlam, Zeki AI ve kalite katmanı (DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** analiz `docs/analiz/kullanici-ihtiyaclari/M51-musteri-hizmetleri.md` §14 A seçeneği (kullanıcı kararı: `apps/destek`
+  TİMAŞ'ın destek masası). Köprü `support_sources.py` + `support.py` + `support_api.py`, ekran `/musteri-destek`
+  (`src/canvas/support/`), zamanlayıcılar `timas-support{,-gece}`, VM `jobs.py`, masa paneli için nginx konumu ve sözleşme
+  belgesi `docs/analiz/M51-destek-paneli-baglam-ucu.md`. `apps/destek` altında hiçbir dosya değişmedi.
+- **Kararlar (analiz §10 açık sorular, veriye/koda bakarak):**
+  - `ozellik:destek.baglam` **açıkça verilir** (analizde değildi): Herkes rolü kurulumda bütün yetkilerle açılıyor; bağlam
+    herhangi bir okurun sipariş, kargo ve fatura geçmişini açar (KVKK). Ayrıca kimlik eşleşmesi `cari`, sipariş/kargo/fatura
+    `satis` veri alanı ister — hazır uçlar SQL kapısından geçmediği için uç içinde `access.allowed_for` ile.
+  - Müşteri eşleşmesinde e-posta ve telefon **hiç seçilmez**, yalnız koşulda; yanıtta ad, cari ve bağlı kayıtlar döner.
+  - Birden çok cari eşleşirse yanıt yalnız adayları verir (`needsChoice`), temsilci seçer; model karar vermez.
+  - Kargo gönderi kaydının siparişe bağı ölçülmedi: takip no ve müşteri irsaliye no ikisi de denenir, `SUPPORT_CARGO_MATCH` ile daraltılır.
+  - Sipariş penceresi 365 gün (`SUPPORT_ORDER_DAYS`), açık sipariş tarihten bağımsız hep gelir; Logo 12 ay (`SUPPORT_LOGO_MONTHS`) ve her yanıtta veri sonu.
+  - Temsilci ↔ masa kullanıcısı: masada AD girişi `username` = `sAMAccountName`; köprü masanın User listesinden eşler, okunamazsa e-postanın @ öncesi (**ölçülecek**).
+  - Tekrarlayan talep için gönderen adresin kendisi değil SHA-256 özetinin ilk 32 hanesi saklanır; taslak sonucu için son metin değil yalnız düzeltme oranı.
+  - SSS cevabını Zeki AI'a yazdırma (K2 SSS taslağı) ve kural dışı işlem onayı (`destek.kural-disi`) bu sürüme girmedi (analiz §9 «sonraki sürüm»); anahtar kataloğa eklenmedi (kullanılmayan yetki olmasın).
+  - Zeki AI sohbet kapsamı genişlediği için ekrana destek örnek soruları kondu (`ZEKI_QUESTIONS`).
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (register), `access.py` (4 RULES + 2 FEATURE_RULES), `access_catalog.json`
+  (alan `altyapi`, sayfa, 5 özellik), `admin.py` (grup «Müşteri hizmetleri», 16 ayar, değişiklik kaydı türleri), `App.tsx`,
+  `navModel.ts` (+ test; alan `altyapi` M48 dalındakiyle aynı id/etiket/simge — merge'de tekilleşir), `ModulesMenu.tsx`,
+  `infra/docker/bi/jobs.py`.
+- **Doğrulama:** yalnız `py_compile` ve JSON; pytest `test_support.py` ve vitest yazıldı, yerelde koşturulmadı (kural).
+  **DOĞRULANAMADI — sunucu kapalı.** Sunucuda: `scripts/acceptance/M51/calistir.sh` (birim testleri, masa MariaDB
+  referansı, 8 kontrol: sipariş durumu/bekleyen, kargo, bayi açık/bekleyen/risk, Logo fatura + veri sonu, kalite, güvenlik,
+  KVKK, sınıflama isabeti; sonunda `temizlik.py`).
+- **Sunucuda kalan adımlar:** masada salt okuma API kullanıcısı açıp anahtarını Yönetim → Ayarlar'a girmek; `nginx-destek-baglam.conf`
+  (kullanıcı onayıyla); iki zamanlayıcıyı kurup ilk turu elle koşturmak; masa MariaDB konteyner adını ölçmek (`DESTEK_DB_CONTAINER`).
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

@@ -451,6 +451,11 @@
       "area": "altyapi",
       "label": "Veri güvenliği",
       "explicit": true
+    },
+    {
+      "key": "sayfa:musteri-destek",
+      "area": "altyapi",
+      "label": "Müşteri hizmetleri"
     }
   ],
   "features": [
@@ -1258,6 +1263,45 @@
       "page": "sayfa:veri-guvenligi",
       "label": "Saklama süresi politikası",
       "hint": "Soru sonucu, giriş ve erişim kaydı gibi kayıtların saklama süresini değiştirme ve süresi dolanı silme işini açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.baglam",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Müşteri bağlamı ve bayi görünümü",
+      "hint": "E-posta, telefon, sipariş no ya da cariyle müşterinin CRM siparişleri, sevkiyat, kargo takibi ve Logo faturaları; bayinin açık siparişleri ve risk onayı. Kişisel veri: rol «Satış ve sipariş» ile «Cari ve tahsilat» veri alanlarını da taşımalı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.oneri",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Zeki AI önerisi ve cevap taslağı",
+      "hint": "Talebin konusunu ve aciliyetini sınıflama, sınıfı düzeltme, cevap taslağı üretme ve taslağın gönderilip gönderilmediğini işaretleme (taslak hiçbir yere gönderilmez)"
+    },
+    {
+      "key": "ozellik:destek.sss",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "SSS maddesi onayı",
+      "hint": "Bilgi bankası açığı listesindeki SSS sorusunu ve cevabını düzeltme, onaylama, siteye elle girildi diye işaretleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.herkesinki",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Bütün talep kuyruğu",
+      "hint": "Başka temsilcilere atanmış açık talepler ve kalite panosunda temsilci başına açık talep sayısı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.ayar",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Konu sınıfları ve SLA",
+      "hint": "Zeki AI'ın seçtiği konu listesini, portal SLA uyarı sürelerini ve yükseltme kişisini düzenleme",
       "explicit": true
     }
   ]

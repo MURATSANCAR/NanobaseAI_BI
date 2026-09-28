@@ -521,6 +521,12 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/data-security/run-due", SYSTEM),
     ("/api/v1/data-security/export-notice", OPEN),
     ("/api/v1/data-security/", frozenset({page("veri-guvenligi")})),
+    # M51 Müşteri hizmetleri. Zamanlayıcı run-due uçlarını, destek masası paneli (çerezsiz, sunucudan sunucuya) panel/
+    # uçlarını çağırır; panel ucu temsilcinin portal yetkisini kendi içinde uygular.
+    ("/api/v1/support/classify/run-due", SYSTEM),
+    ("/api/v1/support/run-due", SYSTEM),
+    ("/api/v1/support/panel/", SYSTEM),
+    ("/api/v1/support/", frozenset({page("musteri-destek")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -660,6 +666,10 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # gönderme (`foy-gonder`) açık yetkilerle ucun içinde. Föy PDF'i ve paketi `veri.disa-aktar` istemez (saha işi).
     (frozenset({"PUT"}), r"^/api/v1/marketing/foy/[^/]+$", "ozellik:pazarlama.foy-yaz"),
     (frozenset({"POST"}), r"^/api/v1/marketing/foy/[^/]+/(refresh|submit|draft-args)$", "ozellik:pazarlama.foy-yaz"),
+    # M51 Müşteri hizmetleri: Zeki AI sınıflama, cevap taslağı ve sonucu, sınıf düzeltme (model harcar). Müşteri bağlamı,
+    # SSS onayı, bütün kuyruk ve sınıf/SLA ayarı açıkça verilen anahtarlarla ucun içinde denetlenir.
+    (frozenset({"POST"}), r"^/api/v1/support/(classify|draft|drafts/[^/]+/outcome)$", "ozellik:destek.oneri"),
+    (frozenset({"PUT"}), r"^/api/v1/support/insights/[^/]+/class$", "ozellik:destek.oneri"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

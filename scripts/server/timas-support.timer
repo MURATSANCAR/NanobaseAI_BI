@@ -1,0 +1,11 @@
+[Unit]
+Description=Müşteri hizmetleri talep sınıflaması, 5 dakikada bir
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=timas-support.service
+
+[Install]
+WantedBy=timers.target

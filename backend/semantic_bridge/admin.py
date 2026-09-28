@@ -574,6 +574,41 @@ SPEC: list[dict[str, Any]] = [
      "help": "Açık uyarı silinmez. 0 = süresiz"},
     {"key": "SECURITY_RETENTION_AUDIT_DAYS", "group": "security", "label": "Değişiklik kaydı saklama (gün)", "type": "int", "default": "0",
      "help": "0 = süresiz (yetki değişikliklerinin kanıtı)"},
+    # M51 Müşteri hizmetleri: destek masası (NanobaseAI Destek) salt okuma bağlantısı ve Zeki AI eşikleri.
+    {"key": "DESTEK_API_BASE", "group": "support", "label": "Destek masası adresi", "type": "text", "default": "",
+     "help": "Masanın köprüden erişilen adresi, örn. http://127.0.0.1:8447. Masaya yalnız okuma çağrısı yapılır"},
+    {"key": "DESTEK_API_KEY", "group": "support", "label": "Masa okuma anahtarı", "type": "secret", "default": "",
+     "help": "Masada açılan salt okuma API kullanıcısının anahtarı (API Key)"},
+    {"key": "DESTEK_API_SECRET", "group": "support", "label": "Masa okuma parolası", "type": "secret", "default": "",
+     "help": "Aynı kullanıcının API Secret değeri"},
+    {"key": "DESTEK_PUBLIC_URL", "group": "support", "label": "Masanın kullanıcı adresi", "type": "text", "default": "",
+     "help": "Ekrandaki «Masada aç» bağlantıları için, örn. https://portal.nanobase.ai:8446"},
+    {"key": "DESTEK_API_VERIFY_TLS", "group": "support", "label": "Masa sertifikasını doğrula", "type": "bool", "default": "1",
+     "help": "Masa adresi https ve iç sertifikalıysa kapatılabilir"},
+    {"key": "DESTEK_PANEL_TOKEN", "group": "support", "label": "Masa paneli anahtarı", "type": "secret", "default": "",
+     "help": "Doluysa masa panelinin bağlam isteği X-Destek-Panel-Key başlığında bu değeri taşımalı (nginx anahtarına ek)"},
+    {"key": "SUPPORT_CLASSIFY_MIN_PROB", "group": "support", "label": "Konu sınıflaması: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI bu olasılığın altında kalırsa talep «sınıflanamadı» olur, temsilci seçer (0–1)"},
+    {"key": "SUPPORT_CLASSIFY_MIN_MARGIN", "group": "support", "label": "Konu sınıflaması: en düşük fark", "type": "text",
+     "default": "0.30", "help": "Seçilen konu ile ikinci konu arasındaki olasılık farkı bunun altındaysa «sınıflanamadı» (0–1)"},
+    {"key": "SUPPORT_ORDER_DAYS", "group": "support", "label": "Bağlamda sipariş penceresi (gün)", "type": "int", "default": "365",
+     "help": "Müşteri bağlamında bu kadar günlük sipariş gösterilir; açık (bekleyen) siparişler tarihten bağımsız hep gelir"},
+    {"key": "SUPPORT_LOGO_MONTHS", "group": "support", "label": "Bağlamda fatura penceresi (ay)", "type": "int", "default": "12",
+     "help": "Logo'dan son bu kadar ayın satış ve iade faturaları (veri sonu tarihiyle)"},
+    {"key": "SUPPORT_CARGO_MATCH", "group": "support", "label": "Kargo kaydı eşleme yolu", "type": "text", "default": "takip,irsaliye",
+     "help": "Kargo firmasının gönderi kaydını siparişe bağlayan alan: takip (takip numarası), irsaliye (müşteri irsaliye no) ya da ikisi"},
+    {"key": "SUPPORT_SLA_WARN_RATIO", "group": "support", "label": "SLA uyarı payı", "type": "text", "default": "0.80",
+     "help": "Sürenin bu payı dolan açık talep «yaklaşıyor» sayılır (0–1)"},
+    {"key": "SUPPORT_REPEAT_DAYS", "group": "support", "label": "Tekrarlayan talep penceresi (gün)", "type": "int", "default": "7",
+     "help": "Aynı kişiden aynı konuda bu kadar gün içinde ikinci talep «tekrar» sayılır"},
+    {"key": "SUPPORT_GAP_DAYS", "group": "support", "label": "SSS açığı penceresi (gün)", "type": "int", "default": "30",
+     "help": "SSS eşleşmesi bulunamayan talepler bu kadar günlük pencerede konuya göre sayılır"},
+    {"key": "SUPPORT_GAP_MIN_TICKETS", "group": "support", "label": "SSS açığı için en az talep", "type": "int", "default": "3",
+     "help": "Bir konu en az bu kadar eşleşmesiz talepte SSS adayı olur"},
+    {"key": "SUPPORT_DEALER_CHANNELS", "group": "support", "label": "Bayi aramasında kanal", "type": "text", "default": "",
+     "help": "Boşsa bütün etkin cariler aranır; doluysa CRM firma kanalı kodları (virgülle, örn. 100000008 bayi, 100000001 kitapçı)"},
+    {"key": "SUPPORT_DRAFT_SIGNATURE", "group": "support", "label": "Taslak imzası", "type": "text",
+     "default": "Timaş Yayınları Müşteri Hizmetleri", "help": "Cevap taslağının sonuna eklenen satır"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -635,6 +670,9 @@ GROUPS = [
     {"id": "security", "label": "Veri güvenliği",
      "help": "Güvenlik uyarı kuralları, hesap hijyeni ve saklama süreleri. Saklama süresi yalnız «uygula» açıkken siler; "
              "önizleme ve kanıt Veri güvenliği ekranındadır."},
+    {"id": "support", "label": "Müşteri hizmetleri",
+     "help": "Destek masası yalnız okunur; masaya, CRM'e ve Logo'ya hiçbir şey yazılmaz. Zeki AI taslağı müşteriye gitmez, "
+             "temsilci düzeltip masadan kendisi gönderir."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -670,7 +708,9 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
               "marketing_foy": "Satış föyü",
               "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı",
-              "security_alert": "Güvenlik uyarısı"}
+              "security_alert": "Güvenlik uyarısı",
+              "support_context": "Müşteri bağlamı", "support_dealer": "Bayi görünümü", "support_draft": "Cevap taslağı",
+              "support_class": "Talep sınıfı", "support_class_def": "Destek sınıfı", "support_faq": "SSS maddesi"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
