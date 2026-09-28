@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (17:05) — Müşteri VM'ine `04105220` kuruldu: 67 zamanlanmış iş, T-soft/Google bağlı
+
+- **Ön denetim:** çakışma işareti 0; VM'deki son kurulum `5a25436d` kurulacak sürümün atası; arşiv (`/tmp/bi-main-04105220`) test sunucusunda köprü yükledi (2.294 uç), `._*` 0. Kurulum `systemd-run --unit=vm-deploy-04105220`, günlük `/tmp/vm-deploy-04105220.log`, EXIT 0; `bi_var` korundu (7 → 7).
+- **İşler:** jobs konteyneri 67 iş yükledi, 5 bilerek kapalı (Zeki AI kalite kapıları ×4, basın/web taraması). İlk 10 dakikada aralıklı işlerin hepsi koştu, başarısız 0. Saatli işler İstanbul saatiyle (konteyner saati UTC; hesap `JOBS_TZ`).
+- **Bağlantılar (VM sınaması):** Logo, CRM, Zeki AI, AD, e-posta ✓; T-soft + Search Console + Merchant + Google API anahtarı ✓ (anahtarları kullanıcı test ortamından aktardı). GA4 ✗ (Timaş GA4 yöneticisi servis hesabını eklemeli), kurumsal e-posta ✗ (Workspace alan geneli yetki devri: `gmail.readonly`, `gmail.labels`), GEO anahtarı girilmedi.
+- **Not:** kurulum betiğinin test sunucusu köprüsüne sürüm kaydı 401 aldı (betik `administrator` ile koştu, env dosyasını okuyamadı); VM'in kendi kaydı yazıldı.
+
 ## 2026-09-28 (16:00) — Destek müşteri VM'ine: BI tarafı hazır, Destek işlemci ayarını bekliyor
 
 - **Kullanıcı kararı:** Destek VM'de ayrı portta (`http://192.168.0.55:8446`), e-posta açık (zeki@; test sunucusunun gelen kutusu VM canlıya geçince kapanacak, `nb_eposta_gelen_kapali`), bilgi bankası VM'de kapalı (gömme servisi yok, `nb_bilgi_bankasi_kapali`).
