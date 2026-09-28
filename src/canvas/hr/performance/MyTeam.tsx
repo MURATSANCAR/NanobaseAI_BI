@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
+import SqlInfo from '../../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../../admin/ui';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay, fmtDateTime } from '../hrApi';
@@ -36,6 +37,11 @@ export default function MyTeam() {
       {d && !d.me && <Note tone="info">Çalışan kaydınız yok; ekip kayıttaki yönetici bağından kurulur.</Note>}
       {d?.me && !d.people.length && <Note tone="info">Kayıtta size bağlı çalışan yok. Yönetici bağları İK'nın «Çalışan ve KVKK kayıtları» ekranından girilir.</Note>}
       {d && d.people.length > 0 && (
+        <div className="flex items-center gap-1 px-1 text-[11px] font-semibold text-canvas-muted">
+          Hedef, ilerleme ve değerlendirme sayıları <SqlInfo k={d.kaynaklar} alan="people" label="Ekip sayıları" />
+        </div>
+      )}
+      {d && d.people.length > 0 && (
         <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
           {d.people.map((p) => (
             <li key={p.id}>
@@ -58,7 +64,7 @@ export default function MyTeam() {
         </ul>
       )}
       {d?.gaps && d.gaps.length > 0 && (
-        <Block title={`Yöneticisi kayıtlı olmayan ${d.gaps.length} çalışan`} help="Bu kişiler hiçbir yöneticinin «Ekibim»inde görünmez ve değerlendirme dönemine yöneticisiz girer. Yönetici bağını «Çalışan ve KVKK kayıtları»ndan girin.">
+        <Block title={`Yöneticisi kayıtlı olmayan ${d.gaps.length} çalışan`} info={<SqlInfo k={d.kaynaklar} alan="gaps" label="Yöneticisi kayıtlı olmayan çalışan" />} help="Bu kişiler hiçbir yöneticinin «Ekibim»inde görünmez ve değerlendirme dönemine yöneticisiz girer. Yönetici bağını «Çalışan ve KVKK kayıtları»ndan girin.">
           <ul className="grid grid-cols-1 gap-1 text-[12.5px] sm:grid-cols-2 lg:grid-cols-3">
             {d.gaps.map((x) => <li key={x.id} className="break-words">{x.name} <span className="text-canvas-muted">· {x.unitName ?? 'Birimsiz'}</span></li>)}
           </ul>
@@ -82,7 +88,7 @@ function PersonSheet({ p, canWrite, meta, onClose }: { p: TeamPerson; canWrite: 
         <div className="flex flex-col gap-4">
           <div>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <div className="text-[13px] font-extrabold">Hedefler</div>
+              <div className="flex items-center gap-1 text-[13px] font-extrabold">Hedefler<SqlInfo k={d.kaynaklar} alan="goals" label="Hedef değeri ve ilerleme" /></div>
               {canWrite && <button type="button" className={btnGhost} onClick={() => setGoal('new')}><Plus aria-hidden className="h-4 w-4" />Hedef ekle</button>}
             </div>
             {!d.goals.length && <div className="text-[12px] text-canvas-muted">Hedef yok.</div>}
@@ -105,7 +111,7 @@ function PersonSheet({ p, canWrite, meta, onClose }: { p: TeamPerson; canWrite: 
           </div>
           {d.workSummaries && d.workSummaries.length > 0 && (
             <div>
-              <div className="mb-1 text-[13px] font-extrabold">İş kayıtları özetleri</div>
+              <div className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">İş kayıtları özetleri<SqlInfo k={d.kaynaklar} alan="workSummaries" label="İş kayıtları özeti" /></div>
               <ul className="flex flex-col gap-1.5">
                 {d.workSummaries.map((w) => (
                   <li key={w.id} className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">

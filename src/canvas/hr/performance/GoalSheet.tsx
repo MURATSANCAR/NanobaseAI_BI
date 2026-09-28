@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls, nf } from '../../admin/ui';
+import SqlInfo from '../../components/SqlInfo';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDateTime } from '../hrApi';
 import { perfApi, STATE_TONE, type Goal, type GoalDetail, type Level, type PerfMeta } from './perfApi';
@@ -36,7 +37,7 @@ export default function GoalSheet({ goalId, init, meta, parents, onClose }: {
           {g && g.level !== 'sirket' && (g.can.edit || g.can.revise) && meta.modelVar && <AlignBox g={g} />}
           {g && g.checkins.length > 0 && (
             <div>
-              <div className={labelCls}>Check-in geçmişi</div>
+              <div className={`${labelCls} flex items-center gap-1`}>Check-in geçmişi<SqlInfo k={g.kaynaklar} alan="checkins" label="İlerleme kayıtları" /></div>
               <ul className="mt-1 flex flex-col gap-1.5">
                 {g.checkins.map((c, i) => (
                   <li key={c.id ?? i} className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
@@ -76,7 +77,7 @@ function Summary({ g }: { g: GoalDetail }) {
     <div className="grid grid-cols-1 gap-2 text-[12.5px] sm:grid-cols-2">
       <div><span className={labelCls}>Sahibi</span><div className="font-semibold">{g.ownerName ?? g.unitName ?? 'Şirket'}</div></div>
       <div><span className={labelCls}>Bağlı olduğu hedef</span><div className="font-semibold">{g.parentTitle ?? (g.level === 'sirket' ? '—' : 'Bağlanmamış')}</div></div>
-      <div><span className={labelCls}>Hedef değer</span><div className="font-semibold tabular-nums">{g.targetValue !== null ? `${nf.format(g.targetValue)} ${g.unitLabel}` : '—'}</div></div>
+      <div><span className={`${labelCls} inline-flex items-center gap-1`}>Hedef değer<SqlInfo k={g.kaynaklar} alan="targetValue" label="Hedef değer" /></span><div className="font-semibold tabular-nums">{g.targetValue !== null ? `${nf.format(g.targetValue)} ${g.unitLabel}` : '—'}</div></div>
       <div><span className={labelCls}>Ağırlık</span><div className="font-semibold">{g.weight !== null ? `%${g.weight}` : '—'}</div></div>
       {g.description && <div className="sm:col-span-2"><span className={labelCls}>Açıklama</span><div className="whitespace-pre-wrap break-words">{g.description}</div></div>}
       {g.reviewNote && <div className="sm:col-span-2"><Note tone="warn">Onaylayanın notu: {g.reviewNote}</Note></div>}
@@ -228,7 +229,7 @@ function SystemProgress({ id }: { id: string }) {
   const d = q.data;
   return (
     <div className="rounded-2xl bg-emerald-50/60 p-3 text-[12.5px]">
-      <div className={labelCls}>Logo faturalı net satış · {d.code}</div>
+      <div className={`${labelCls} flex items-center gap-1`}>Logo faturalı net satış · {d.code}<SqlInfo k={d.kaynaklar} alan="value" label="Logo faturalı net satış ve hedef oranı" /></div>
       <div className="mt-0.5 text-[18px] font-extrabold tabular-nums">{d.value !== null ? `${nf.format(d.value)} ₺` : '—'}
         {d.progressPct !== null && <span className="ml-2 text-[13px] text-emerald-700">hedefin %{nf.format(d.progressPct)}</span>}</div>
       <div className="text-canvas-muted">{d.invoices ?? 0} fatura · son fatura {d.lastDate ?? '—'} · {d.periodStart} – {d.periodEnd}</div>

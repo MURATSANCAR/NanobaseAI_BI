@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
+import SqlInfo from '../../components/SqlInfo';
 import { Loading, Note, Pill, btnPrimary, errText } from '../../admin/ui';
 import { fmtDay, fmtDateTime } from '../hrApi';
 import { Block, HrFrame } from '../parts';
@@ -57,7 +58,7 @@ export default function MyPerformance() {
               </ul>
             </Block>
           )}
-          <Block title="Hedeflerim" help="Hedefe dokunarak ayrıntı, check-in ve revizyon talebi. Taslak hedef onaya gönderilince yöneticinize düşer.">
+          <Block title="Hedeflerim" help="Hedefe dokunarak ayrıntı, check-in ve revizyon talebi. Taslak hedef onaya gönderilince yöneticinize düşer." info={<SqlInfo k={d.kaynaklar} alan="goals" label="Hedef değeri ve ilerleme" />}>
             {!d.goals.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Henüz hedefiniz yok.</div>}
             <ul className="flex flex-col gap-1.5">
               {d.goals.map((g) => <li key={g.id}><GoalRow g={g} onOpen={() => setOpen(g.id)} /></li>)}
@@ -77,7 +78,7 @@ export default function MyPerformance() {
                 ))}
               </ul>
             </Block>
-            <Block title="Hakkımdaki iş kayıtları özeti" help="Yöneticiniz ya da İK değerlendirme için bilgi amaçlı özet hazırladığında burada görünür. Puan değildir.">
+            <Block title="Hakkımdaki iş kayıtları özeti" help="Yöneticiniz ya da İK değerlendirme için bilgi amaçlı özet hazırladığında burada görünür. Puan değildir." info={<SqlInfo k={d.kaynaklar} alan="workSummaries" label="İş kayıtları özeti" />}>
               {!d.workSummaries.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Hazırlanmış özet yok.</div>}
               <ul className="flex flex-col gap-1.5">
                 {d.workSummaries.map((w) => (

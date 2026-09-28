@@ -5,6 +5,8 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../hrApi';
 import { Block, HrFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { engApi, type EngMeta, type Suggestion } from './engApi';
 
 /** M58 Öneri kutusu: herkes adlı ya da adsız öneri verir ve durumunu izler (adsızda takip koduyla). İK konu düzeltir, birime
@@ -51,26 +53,28 @@ function Mine() {
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
       <Block title="Adlı önerilerim">
         {!mine.data?.items.length && <div className="text-[12px] text-canvas-muted">Adlı öneriniz yok.</div>}
-        <ul className="flex flex-col gap-1.5">{(mine.data?.items ?? []).map((s) => <li key={s.id}><Card s={s} /></li>)}</ul>
+        <ul className="flex flex-col gap-1.5">{(mine.data?.items ?? []).map((s) => <li key={s.id}><Card s={s} k={mine.data?.kaynaklar} /></li>)}</ul>
       </Block>
       <Block title="Adsız önerimi izle">
         <div className="flex gap-2">
           <input className={field} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABCDE-FGHJK" />
           <button type="button" className={btnGhost} disabled={track.isPending || code.replace(/[^A-Z0-9]/g, '').length !== 10} onClick={() => track.mutate()}>Bak</button>
         </div>
-        {track.data && <div className="mt-2"><Card s={track.data} /></div>}
+        {track.data && <div className="mt-2"><Card s={track.data} k={track.data.kaynaklar} alan="topicProb" /></div>}
       </Block>
     </div>
   );
 }
 
-function Card({ s, children }: { s: Suggestion; children?: ReactNode }) {
+/** `k` + `alan`: sorgu bilgisi (liste cevabında «items[]», takip kodu cevabında satırın kendisi). */
+function Card({ s, children, k, alan = 'items[]' }: { s: Suggestion; children?: ReactNode; k?: Kaynaklar; alan?: string }) {
   return (
     <div className="rounded-xl bg-white/80 p-2.5 text-[12.5px]">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[11.5px] text-canvas-muted">{fmtDay(s.createdDay)}</span>
         <Pill tone={s.state === 'cevaplandi' ? 'ok' : s.state === 'kapandi' ? 'muted' : 'warn'}>{s.stateLabel}</Pill>
         {s.topic && <Pill tone={s.personal ? 'err' : 'violet'}>{s.topic}{s.topicSource === 'zeki' && s.topicProb !== null ? ` · Zeki AI %${Math.round(s.topicProb * 100)}` : ''}</Pill>}
+        {s.topic && s.topicSource === 'zeki' && s.topicProb !== null && k && <SqlInfo k={k} alan={alan} label="Öneri konusu olasılığı (Zeki AI)" />}
         {s.routedUnitName && <Pill tone="muted">→ {s.routedUnitName}</Pill>}
         {s.author && <span className="text-[11.5px] font-bold">{s.author}</span>}
         {s.anonymous && <span className="text-[11.5px] text-canvas-muted">adsız</span>}
@@ -104,7 +108,7 @@ function Inbox({ meta }: { meta: EngMeta }) {
       <ul className="flex flex-col gap-2">
         {(q.data?.items ?? []).map((s) => (
           <li key={s.id}>
-            <Card s={s}><Handle s={s} admin={admin} meta={meta} topics={q.data?.topics ?? meta.topics} busy={act.isPending} onAct={(a, b) => act.mutate({ id: s.id, a, b })} /></Card>
+            <Card s={s} k={q.data?.kaynaklar}><Handle s={s} admin={admin} meta={meta} topics={q.data?.topics ?? meta.topics} busy={act.isPending} onAct={(a, b) => act.mutate({ id: s.id, a, b })} /></Card>
           </li>
         ))}
       </ul>

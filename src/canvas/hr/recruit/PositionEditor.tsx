@@ -6,6 +6,7 @@ import { Loader2, Plus, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { POSITION_TONE, fmtDay, hrApi, recruitApi, type Position, type RecruitMeta, type Warning } from '../hrApi';
+import SqlInfo from '../../components/SqlInfo';
 import { AskSheet, Block, HrFrame, splitUsers } from '../parts';
 
 /** M55 pozisyonlar: pozisyon kartı (birim, yetkinlikler, işe alan yönetici, görüşmeciler), Zeki AI ilan taslağı ve
@@ -60,6 +61,11 @@ export default function PositionEditor() {
         }>
           {list.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {list.data && !items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Pozisyon yok.</div>}
+          {!!items.length && (
+            <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+              Aday sayıları <SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Pozisyon başına aday sayısı" />
+            </div>
+          )}
           <ul className="flex flex-col gap-1.5">
             {items.map((p) => {
               const n = Object.values(p.counts).reduce((a, b) => a + (b ?? 0), 0);

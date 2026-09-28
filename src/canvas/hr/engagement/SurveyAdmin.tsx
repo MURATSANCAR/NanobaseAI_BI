@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as lab
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay, fmtDateTime } from '../hrApi';
 import { HrFrame, Tabs } from '../parts';
+import { InfoLabel } from '../../components/SqlInfo';
 import { SURVEY_TONE, engApi, type EngMeta, type Survey, type Template } from './engApi';
 
 /** M58 Anket yönetimi (İK): şablonlar (ikinci kişi onaylar), anket açma, gösterim eşiği (kendiliğinden konmaz, İK girer;
@@ -173,6 +174,7 @@ function Templates({ meta }: { meta: EngMeta }) {
     <div className="flex flex-col gap-2">
       <div className="flex justify-start"><button type="button" className={btnPrimary} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Yeni şablon</button></div>
       {q.error && <Note tone="err">{errText(q.error, 'Şablonlar okunamadı.')}</Note>}
+      {!!q.data?.items.length && <div className="text-[11px] font-semibold text-canvas-muted"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Şablon soru sayısı">Soru sayıları</InfoLabel></div>}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {(q.data?.items ?? []).map((t) => (
           <li key={t.id}>

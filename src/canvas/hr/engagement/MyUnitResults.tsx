@@ -22,7 +22,7 @@ export default function MyUnitResults() {
       {d && d.units.length > 0 && !d.results.length && <Note tone="info">Birim sonuçları henüz paylaşılmadı.</Note>}
       {d?.results.map((r, i) => (
         <Block key={`${r.survey.id}-${r.scope}-${i}`} title={`${r.survey.title} · ${r.unitName ?? ''}`} help={`Kapanış ${fmtDay(r.survey.closesAt)}`}>
-          <ResultView r={r} />
+          <ResultView r={r} k={d.kaynaklar} base="results[]" row={`${r.survey.id}:${r.scope}`} />
         </Block>
       ))}
     </HrFrame>

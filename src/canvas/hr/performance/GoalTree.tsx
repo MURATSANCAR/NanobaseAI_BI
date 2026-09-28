@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
+import SqlInfo from '../../components/SqlInfo';
 import { Loading, Note, btnGhost, errText, field } from '../../admin/ui';
 import { Block, HrFrame } from '../parts';
 import GoalSheet from './GoalSheet';
@@ -64,12 +65,12 @@ export default function GoalTree() {
       {q.isLoading && <Loading />}
       {q.data && !goals.length && <Note tone="info">{year} için hedef yok.</Note>}
       {roots.length > 0 && (
-        <Block title="Şirket hedefleri">
+        <Block title="Şirket hedefleri" info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Hedef değerleri" />}>
           <ul className="flex flex-col gap-2">{roots.map((g) => <Node key={g.id} g={g} depth={0} />)}</ul>
         </Block>
       )}
       {loose.length > 0 && (
-        <Block title="Üst hedefe bağlanmamış" help="Bu hedefler şirket hedefine bağlanmamış (ya da bağlı olduğu hedef sizin görebileceğiniz bir hedef değil). Hedef kartından Zeki AI hizalama önerisi alabilirsiniz.">
+        <Block title="Üst hedefe bağlanmamış" info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Hedef değerleri" />} help="Bu hedefler şirket hedefine bağlanmamış (ya da bağlı olduğu hedef sizin görebileceğiniz bir hedef değil). Hedef kartından Zeki AI hizalama önerisi alabilirsiniz.">
           <ul className="flex flex-col gap-2">{loose.map((g) => <Node key={g.id} g={g} depth={0} />)}</ul>
         </Block>
       )}

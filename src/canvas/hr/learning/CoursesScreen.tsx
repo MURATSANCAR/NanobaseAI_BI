@@ -8,6 +8,7 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as l
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { NAV } from '../../nav/navModel';
 import { Block, Tabs } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { hrApi } from '../hrApi';
 import { fmtMoney, learningApi, localToIso, type Course, type Delivery, type Info, type Kind, type SessionState } from './learningApi';
 import { EmployeePicker, LearningFrame, fmtWhen, useLearningInfo } from './parts';
@@ -48,13 +49,13 @@ function CourseList({ onEdit }: { onEdit?: (c: Course) => void }) {
   if (q.error) return <Note tone="err">{errText(q.error, 'Katalog okunamadı.')}</Note>;
   const items = q.data?.items ?? [];
   return (
-    <Block title="Eğitim kataloğu" help={`${items.length} eğitim`}>
+    <Block title="Eğitim kataloğu" help={`${items.length} eğitim`} info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Eğitim kataloğu" />}>
       {q.isLoading && <p className="text-[12px] text-canvas-muted">Yükleniyor…</p>}
       {q.data && items.length === 0 && <p className="text-[12px] text-canvas-muted">Katalog boş. İlk kartı «Eğitim kartı» ile ekleyin.</p>}
       {items.length > 0 && (
         <TableWrap>
           <thead>
-            <tr><th className={th}>Eğitim</th><th className={th}>Tür</th><th className={th}>Biçim</th><th className={th}>Geçerlilik</th><th className={th}>Kişi başı</th><th className={th}>Kapsam</th><th className={th} /></tr>
+            <tr><th className={th}>Eğitim</th><th className={th}>Tür</th><th className={th}>Biçim</th><th className={th}>Geçerlilik</th><th className={th}><InfoLabel k={q.data?.kaynaklar} alan="items[]" label="Kişi başı maliyet">Kişi başı</InfoLabel></th><th className={th}>Kapsam</th><th className={th} /></tr>
           </thead>
           <tbody>
             {items.map((c) => (
@@ -82,6 +83,7 @@ function SessionList({ info }: { info?: Info }) {
   return (
     <Block
       title="Oturumlar"
+      info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Oturum katılım sayıları" />}
       action={
         <select className={`${field} w-auto`} value={state} onChange={(e) => setState(e.target.value as SessionState | '')} aria-label="Durum">
           <option value="">Hepsi</option>

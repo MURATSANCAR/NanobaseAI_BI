@@ -7,6 +7,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, label as labelCls } from '..
 import { Kpi, KpiRow } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { AskSheet, Block, Fact } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { waitJob } from '../hrApi';
 import { learningApi, type Attendance, type Enrollment, type SessionDetail } from './learningApi';
 import { EmployeePicker, LearningFrame, fmtWhen, useLearningInfo } from './parts';
@@ -33,9 +34,9 @@ export default function SessionScreen() {
         <>
           <KpiRow>
             <Kpi label="Durum" value={s.stateLabel} help={s.closedAt ? `Kapatıldı ${fmtWhen(s.closedAt)}` : s.course?.deliveryLabel ?? ''} />
-            <Kpi label="Katılımcı" value={String(s.counts.approved)} help={s.capacity ? `Kontenjan ${s.capacity} (bilgi)` : 'Onaylı'} />
-            <Kpi label="Yoklama" value={`${s.counts.attended + s.counts.absent} / ${s.counts.approved}`} help={`${s.counts.attended} katıldı · ${s.counts.absent} gelmedi`} />
-            <Kpi label="Anket" value={`${s.feedback.answered} / ${s.feedback.invited}`} help="Yanıtlanan / gönderilen" />
+            <Kpi label="Katılımcı" value={String(s.counts.approved)} help={s.capacity ? `Kontenjan ${s.capacity} (bilgi)` : 'Onaylı'} info={<SqlInfo k={s.kaynaklar} alan="counts" label="Katılımcı" />} />
+            <Kpi label="Yoklama" value={`${s.counts.attended + s.counts.absent} / ${s.counts.approved}`} help={`${s.counts.attended} katıldı · ${s.counts.absent} gelmedi`} info={<SqlInfo k={s.kaynaklar} alan="counts" label="Yoklama" />} />
+            <Kpi label="Anket" value={`${s.feedback.answered} / ${s.feedback.invited}`} help="Yanıtlanan / gönderilen" info={<SqlInfo k={s.kaynaklar} alan="feedback" label="Anket yanıtı" />} />
           </KpiRow>
           {manage && s.enrollments && <People s={s} />}
           {!manage && <Note tone="info">Katılımcı listesi eğitim yönetimi yetkisiyle görünür.</Note>}
@@ -245,12 +246,17 @@ function FeedbackResult({ id, modelVar }: { id: string; modelVar: boolean }) {
       }
     >
       {q.error && <Note tone="err">{errText(q.error, 'Sonuç okunamadı.')}</Note>}
-      {d?.hidden && <Note tone="info">Yanıt sayısı ({d.responses}) gizlilik eşiğinin ({d.minGroup}) altında; kimseyi ele vermemek için sonuç gösterilmiyor.</Note>}
+      {d?.hidden && (
+        <Note tone="info">
+          Yanıt sayısı ({d.responses}) gizlilik eşiğinin ({d.minGroup}) altında; kimseyi ele vermemek için sonuç gösterilmiyor.
+          <SqlInfo k={d.kaynaklar} alan="averages" label="Gizli sonuç (eşik)" className="ml-0.5" />
+        </Note>
+      )}
       {d && !d.hidden && (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {d.questions.map((qq) => (
-              <Fact key={qq.key} label={qq.label} value={d.averages[qq.key] ? `${d.averages[qq.key].avg.toLocaleString('tr-TR')} / 5` : '—'}
+              <Fact key={qq.key} label={qq.label} info={<SqlInfo k={d.kaynaklar} alan="averages" label={`${qq.label} · ortalama`} />} value={d.averages[qq.key] ? `${d.averages[qq.key].avg.toLocaleString('tr-TR')} / 5` : '—'}
                 help={d.averages[qq.key] ? `${d.averages[qq.key].n} yanıt` : 'Yanıt yok'} />
             ))}
           </div>
@@ -258,7 +264,7 @@ function FeedbackResult({ id, modelVar }: { id: string; modelVar: boolean }) {
             <ul className="flex flex-col gap-2">
               {d.themes.themes.map((t) => (
                 <li key={t.theme} className="rounded-xl bg-white/80 px-3 py-2">
-                  <div className="flex items-center gap-2 text-[12.5px] font-bold">{t.theme} <Pill tone="muted">{t.count}</Pill></div>
+                  <div className="flex items-center gap-2 text-[12.5px] font-bold">{t.theme} <Pill tone="muted">{t.count}</Pill><SqlInfo k={d.kaynaklar} alan="themes" label={`${t.theme} · yorum sayısı`} /></div>
                   <p className="mt-0.5 text-[12px] leading-snug">{t.summary}</p>
                 </li>
               ))}

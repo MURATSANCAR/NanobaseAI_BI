@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../../admin/ui';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { hrApi, waitJob } from '../hrApi';
 import { learningApi, type Info, type Need, type NeedState, type Priority } from './learningApi';
 import { EmployeePicker, LearningFrame, fmtDay, useLearningInfo } from './parts';
@@ -58,7 +59,7 @@ export default function NeedsScreen() {
     >
       {q.error && <Note tone="err">{errText(q.error, 'İhtiyaçlar okunamadı.')}</Note>}
       {d && d.summary.length > 0 && (
-        <Block title="Öncelik sırası" help="Açık ve onaylı ihtiyaçlar, eğitim başına: önce yüksek öncelikli sayısı, sonra toplam.">
+        <Block title="Öncelik sırası" help="Açık ve onaylı ihtiyaçlar, eğitim başına: önce yüksek öncelikli sayısı, sonra toplam." info={<SqlInfo k={d.kaynaklar} alan="summary" label="İhtiyaç sayıları" />}>
           <TableWrap>
             <thead>
               <tr><th className={th}>Eğitim</th><th className={`${th} text-right`}>Toplam</th><th className={`${th} text-right`}>Yüksek</th><th className={`${th} text-right`}>Orta</th><th className={`${th} text-right`}>Düşük</th><th className={`${th} text-right`}>Belirsiz</th></tr>

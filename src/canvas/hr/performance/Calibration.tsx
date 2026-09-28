@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loading, Note, errText, nf } from '../../admin/ui';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { perfApi } from './perfApi';
 
 /** M56 Kalibrasyon: birim × yöneticinin verdiği genel puan dağılımı. Sistem puan üretmez; bir birimin herkese en yüksek
@@ -25,6 +26,7 @@ export default function Calibration({ cycleId }: { cycleId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <Block title={`Şirket geneli · ${nf.format(d.n)} değerlendirme${d.mean !== null ? ` · ortalama ${nf.format(d.mean)}` : ''}`}
+        info={<SqlInfo k={d.kaynaklar} alan="overall" label="Şirket geneli dağılım ve ortalama" />}
         action={<label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold sm:min-h-0"><input type="checkbox" checked={names} onChange={(e) => setNames(e.target.checked)} />Adları göster</label>}>
         <Bars counts={d.overall} />
         <div className="mt-1 grid grid-cols-5 gap-1 text-center text-[10.5px] leading-tight text-canvas-muted">
@@ -33,7 +35,7 @@ export default function Calibration({ cycleId }: { cycleId: string }) {
       </Block>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {d.units.map((u) => (
-          <Block key={u.unitName} title={u.unitName} help={`${u.n} değerlendirme${u.mean !== null ? ` · ortalama ${nf.format(u.mean)}` : ''}`}>
+          <Block key={u.unitName} title={u.unitName} help={`${u.n} değerlendirme${u.mean !== null ? ` · ortalama ${nf.format(u.mean)}` : ''}`} info={<SqlInfo k={d.kaynaklar} alan="units" label={`${u.unitName} · dağılım`} />}>
             <Bars counts={u.counts} />
             <table className="sr-only"><tbody>{u.counts.map((c, i) => <tr key={i}><td>{d.labels[i]}</td><td>{c}</td></tr>)}</tbody></table>
             {names && (

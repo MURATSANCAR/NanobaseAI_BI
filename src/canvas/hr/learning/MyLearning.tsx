@@ -8,6 +8,8 @@ import { NAV } from '../../nav/navModel';
 import { canSeePage, usePageAccess } from '../../useAdmin';
 import { Block, FilePick, HrFrame } from '../parts';
 import { MB } from '../../components/fileDropRules';
+import { fmtSize, type WithK } from '../hrApi';
+import SqlInfo from '../../components/SqlInfo';
 import GuideSheet from './GuideSheet';
 import { learningApi, type Me, type Question, type Team } from './learningApi';
 import { StatusPill, fmtDay, fmtWhen } from './parts';
@@ -53,10 +55,11 @@ export default function MyLearning() {
   );
 }
 
-function Mandatory({ d }: { d: Me }) {
+function Mandatory({ d }: { d: Me & WithK }) {
   return (
     <Block
       title="Zorunlu eğitimlerim"
+      info={<SqlInfo k={d.kaynaklar} alan="mandatory" label="Zorunlu eğitim durumu" />}
       help={d.alertDays ? `Geçerliliği ${d.alertDays} gün içinde bitecek olanlar «dolacak» görünür.` : 'Süresi dolmuş ya da hiç alınmamış zorunlu eğitimler kırmızı görünür.'}
     >
       {d.mandatory.length === 0 ? (
@@ -81,11 +84,11 @@ function Mandatory({ d }: { d: Me }) {
   );
 }
 
-function Feedback({ d }: { d: Me }) {
+function Feedback({ d }: { d: Me & WithK }) {
   const [token, setToken] = useState<string | null>(null);
   if (!d.feedback.length) return null;
   return (
-    <Block title="Bekleyen anketler" help="Yanıtınız adınız olmadan kaydedilir; İK yalnız ortalamaları ve yorumların özetini görür.">
+    <Block title="Bekleyen anketler" help="Yanıtınız adınız olmadan kaydedilir; İK yalnız ortalamaları ve yorumların özetini görür." info={<SqlInfo k={d.kaynaklar} alan="feedback" label="Bekleyen anket" />}>
       <ul className="flex flex-col gap-2">
         {d.feedback.map((f) => (
           <li key={f.token} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2">
@@ -155,7 +158,7 @@ function FeedbackSheet({ token, questions, onClose }: { token: string | null; qu
   );
 }
 
-function Sessions({ d }: { d: Me }) {
+function Sessions({ d }: { d: Me & WithK }) {
   const qc = useQueryClient();
   const refresh = () => void qc.invalidateQueries({ queryKey: ['hr', 'learning', 'me'] });
   const ask = useMutation({
@@ -177,7 +180,7 @@ function Sessions({ d }: { d: Me }) {
   const upcoming = d.enrollments.filter((e) => e.sessionState === 'planli' && e.approval !== 'reddedildi');
   const past = d.enrollments.filter((e) => e.sessionState !== 'planli' || e.approval === 'reddedildi');
   return (
-    <Block title="Oturumlarım" help="Katılım talebi yöneticinizin onayına gider; dış eğitimde ardından İK onaylar.">
+    <Block title="Oturumlarım" help="Katılım talebi yöneticinizin onayına gider; dış eğitimde ardından İK onaylar." info={<SqlInfo k={d.kaynaklar} alan="enrollments" label="Oturumlarım ve geçmiş" />}>
       {upcoming.length === 0 && past.length === 0 && <p className="text-[12px] text-canvas-muted">Henüz bir oturum kaydınız yok.</p>}
       {upcoming.length > 0 && (
         <ul className="flex flex-col gap-2">
@@ -381,9 +384,10 @@ function MyUsage() {
       {usage.error && <Note tone="err">{errText(usage.error, 'Okunamadı.')}</Note>}
       {usage.data && (
         <div className="flex flex-col gap-2 text-[12px]">
-          <div>Zeki AI'a sorduğunuz soru: <b className="font-mono tabular-nums">{usage.data.questions}</b></div>
+          <div className="flex items-center gap-1">Zeki AI'a sorduğunuz soru: <b className="font-mono tabular-nums">{usage.data.questions}</b><SqlInfo k={usage.data.kaynaklar} alan="questions" label="Soru sayısı" /></div>
           {usage.data.screens.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SqlInfo k={usage.data.kaynaklar} alan="screens" label="Ekran başına kullanım günü" />
               {usage.data.screens
                 .slice()
                 .sort((a, b) => b.days - a.days)
@@ -424,7 +428,7 @@ function TeamPanel() {
   });
   const t: Team | undefined = team.data;
   return (
-    <Block title="Ekibim" help="Doğrudan bağlılarınız ve yöneticisi olduğunuz birimin çalışanları. Portal kullanımı burada yoktur.">
+    <Block title="Ekibim" help="Doğrudan bağlılarınız ve yöneticisi olduğunuz birimin çalışanları. Portal kullanımı burada yoktur." info={<SqlInfo k={team.data?.kaynaklar} alan="members" label="Ekibin eğitim durumu" />}>
       {team.error && <Note tone="err">{errText(team.error, 'Ekip bilgisi okunamadı.')}</Note>}
       {t && !t.managerKnown && <Note tone="info">Çalışan kaydınızda ekip bağı yok; İK birim yöneticisini ya da yöneticisi alanını girince ekibiniz görünür.</Note>}
       {t && t.pending.length > 0 && (

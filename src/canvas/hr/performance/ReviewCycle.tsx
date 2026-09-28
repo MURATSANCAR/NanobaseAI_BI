@@ -8,6 +8,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, l
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay } from '../hrApi';
 import { Block, Fact, HrFrame, Tabs } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import Calibration from './Calibration';
 import { REVIEW_TONE, perfApi, pct, type Cycle, type Form, type PerfMeta, type Section } from './perfApi';
 
@@ -91,14 +92,14 @@ function StatusTab({ cycle, meta }: { cycle: Cycle; meta?: PerfMeta }) {
       {d && (
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Fact label="Katılımcı" value={nf.format(d.total)} />
-            <Fact label="Öz değerlendirme" value={`${d.selfDone} · ${pct(d.selfRate)}`} help={cycle.selfDue ? `son ${fmtDay(cycle.selfDue)}` : undefined} />
-            <Fact label="Yönetici" value={`${d.managerDone} · ${pct(d.managerRate)}`} help={cycle.managerDue ? `son ${fmtDay(cycle.managerDue)}` : undefined} />
-            <Fact label="Paylaşılan" value={nf.format(d.shared)} />
-            <Fact label="Onaylanan" value={nf.format(d.approved)} />
-            <Fact label="İtiraz" value={nf.format(d.objections)} help={d.noManager ? `${d.noManager} kişinin yöneticisi yok` : undefined} />
+            <Fact label="Katılımcı" value={nf.format(d.total)} info={<SqlInfo k={d.kaynaklar} alan="total" label="Katılımcı" />} />
+            <Fact label="Öz değerlendirme" value={`${d.selfDone} · ${pct(d.selfRate)}`} help={cycle.selfDue ? `son ${fmtDay(cycle.selfDue)}` : undefined} info={<SqlInfo k={d.kaynaklar} alan="selfDone" label="Öz değerlendirme" />} />
+            <Fact label="Yönetici" value={`${d.managerDone} · ${pct(d.managerRate)}`} help={cycle.managerDue ? `son ${fmtDay(cycle.managerDue)}` : undefined} info={<SqlInfo k={d.kaynaklar} alan="managerDone" label="Yönetici değerlendirmesi" />} />
+            <Fact label="Paylaşılan" value={nf.format(d.shared)} info={<SqlInfo k={d.kaynaklar} alan="shared" label="Paylaşılan" />} />
+            <Fact label="Onaylanan" value={nf.format(d.approved)} info={<SqlInfo k={d.kaynaklar} alan="approved" label="Onaylanan" />} />
+            <Fact label="İtiraz" value={nf.format(d.objections)} help={d.noManager ? `${d.noManager} kişinin yöneticisi yok` : undefined} info={<SqlInfo k={d.kaynaklar} alan="objections" label="İtiraz" />} />
           </div>
-          <Block title="Birimler">
+          <Block title="Birimler" info={<SqlInfo k={d.kaynaklar} alan="units" label="Birim tamamlanma" />}>
             <TableWrap>
               <thead><tr><th className={th}>Birim</th><th className={th}>Kişi</th><th className={th}>Öz</th><th className={th}>Yönetici</th><th className={th}>Onay</th></tr></thead>
               <tbody>
@@ -147,7 +148,8 @@ function SalesmanFill({ logoOn }: { logoOn: boolean }) {
         </div>
       }>
       {run.data && (
-        <div className="text-[13px]">{nf.format(run.data.invoices)} satış faturasının {nf.format(run.data.withSalesman)} tanesinde temsilci var · <b>{pct(run.data.rate)}</b></div>
+        <div className="text-[13px]">{nf.format(run.data.invoices)} satış faturasının {nf.format(run.data.withSalesman)} tanesinde temsilci var · <b>{pct(run.data.rate)}</b>
+          <SqlInfo k={run.data.kaynaklar} alan="rate" label="Temsilci alanı doluluğu" className="ml-0.5" /></div>
       )}
     </Block>
   );

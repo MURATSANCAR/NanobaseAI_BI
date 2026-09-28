@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../../admin/ui';
 import { fmtDay } from '../hrApi';
 import { Block, HrFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { engApi } from './engApi';
 
 /** M58 Anketlerim: açık anketlerim. «Cevapla» her seferinde yeni bir tek kullanımlık bağlantı üretir; cevap bu bağlantıyla,
@@ -31,7 +32,7 @@ export default function MySurveys() {
               <span className="min-w-0 flex-1 break-words text-[15px] font-extrabold">{s.title}</span>
               {s.responded ? <Pill tone="ok">Cevapladınız</Pill> : <Pill tone="warn">{fmtDay(s.closesAt)} kapanır</Pill>}
             </div>
-            <div className="text-[12px] text-canvas-muted">{s.kindLabel} · {s.questions} soru · yaklaşık iki dakika</div>
+            <div className="flex items-center gap-1 text-[12px] text-canvas-muted">{s.kindLabel} · {s.questions} soru · yaklaşık iki dakika<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Soru sayısı" /></div>
             {!s.responded && (
               <button type="button" className={btnPrimary} disabled={link.isPending} onClick={() => link.mutate(s.id)}>Cevapla</button>
             )}

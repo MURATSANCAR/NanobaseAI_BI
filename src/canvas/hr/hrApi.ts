@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Her İK cevabı sorgu bilgisini taşıyabilir (köprü `hr_kaynak.py`): rakamın çalışan sorgusu ve hesabı. */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** İnsan Kaynakları ekranlarının köprü uçları: İK-0 (/api/v1/hr/*) ve M55 işe alım (/api/v1/hr/recruit/*).
  *  M56–M58 aynı istemciyi kullanır; kendi uçlarını `hrSend` ile çağırır. */
@@ -14,7 +18,7 @@ async function fail(res: Response): Promise<never> {
   throw new Error(msg || httpErrorText(res.status));
 }
 
-export async function hrSend<T>(method: string, path: string, body?: unknown, timeoutMs = 120_000): Promise<T> {
+export async function hrSend<T>(method: string, path: string, body?: unknown, timeoutMs = 120_000): Promise<T & WithK> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
   const res = await fetch(`${ENGINE_BASE}${B}${path}`, {
     method,
@@ -24,7 +28,7 @@ export async function hrSend<T>(method: string, path: string, body?: unknown, ti
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) return fail(res);
-  return (await res.json()) as T;
+  return (await res.json()) as T & WithK;
 }
 
 async function upload<T>(path: string, file: File): Promise<T> {
@@ -90,6 +94,7 @@ export type SyncPreview = {
   stats: { crmEnabled: number; crmInteractive: number; adChecked: boolean; matched: number; units: number; unitsWithManager: number;
     new: number; changed: number; departed: number; unitsNew: number };
   notes: string[];
+  kaynaklar?: Kaynaklar;
 };
 export type Notice = { id: string; audience: 'aday' | 'calisan'; version: number; title: string; body: string; publishedAt: string; publishedBy: string | null };
 export type Consent = {
@@ -168,6 +173,7 @@ export type Pipeline = {
   counters: { openPositions: number; thisWeek: number; overSla: number | null; slaDays: number | null; waitingReply: number; unanswered30: number };
   total: number;
   positions: Array<{ id: string; title: string; state: PositionState; counts: Partial<Record<Stage, number>> }>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type RecruitMeta = {

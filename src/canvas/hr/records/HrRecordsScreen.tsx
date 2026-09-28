@@ -9,6 +9,7 @@ import { useDebounced } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDateTime, fmtDay, hrApi, type Employee, type HrMeta, type SyncPreview, type Unit } from '../hrApi';
 import { Block, HrFrame, Tabs } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** İK-0 ortak kayıtlar: çalışan ve birim (CRM ∩ AD'den öneri, İK onayıyla), aydınlatma metni sürümleri, saklama süreleri,
  *  imha tutanakları ve erişim kaydı. CRM'e hiçbir şey yazılmaz. M56–M58 bu kayıtları kullanır. */
@@ -132,7 +133,9 @@ function Employees({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
             </table>
           </TableWrap>
           {!list.data.items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Kayıt yok.{canEdit ? ' «CRM ve AD\'den eşitle» ile başlayın.' : ''}</div>}
-          <div className="mt-1 text-right font-mono text-[11.5px] text-canvas-muted">{list.data.total} çalışan</div>
+          <div className="mt-1 flex items-center justify-end gap-1 font-mono text-[11.5px] text-canvas-muted">
+            {list.data.total} çalışan <SqlInfo k={list.data.kaynaklar} alan="total" label="Çalışan sayısı" />
+          </div>
         </div>
       )}
       {editing !== null && (
@@ -231,6 +234,9 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
       {pv.error && <Note tone="err">{errText(pv.error, 'CRM okunamadı.')}</Note>}
       {d && (
         <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+            Sayıların kaynağı <SqlInfo k={d.kaynaklar} alan="stats" label="Eşitleme önizlemesi sayıları" />
+          </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               ['CRM etkin kullanıcı', d.stats.crmInteractive], ['AD ile eşleşen', d.stats.adChecked ? d.stats.matched : '—'],
@@ -273,7 +279,7 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
             <summary className="cursor-pointer text-[12.5px] font-bold">Birim ve ekip dağılımı (CRM)</summary>
             <TableWrap>
               <table className="w-full min-w-[420px] text-[12px]">
-                <thead><tr><th className={th}>Birim</th><th className={th}>Devre dışı olmayan hesap</th><th className={th}>Önerilen çalışan</th></tr></thead>
+                <thead><tr><th className={th}>Birim</th><th className={th}><InfoLabel k={d.kaynaklar} alan="units">Devre dışı olmayan hesap</InfoLabel></th><th className={th}><InfoLabel k={d.kaynaklar} alan="units">Önerilen çalışan</InfoLabel></th></tr></thead>
                 <tbody>
                   {d.units.map((u) => (
                     <tr key={u.crmBusinessUnitId} className="border-t border-slate-100">
@@ -283,7 +289,7 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
                 </tbody>
               </table>
             </TableWrap>
-            <div className="mt-2 text-[12px] font-bold">Ekipler</div>
+            <div className="mt-2 text-[12px] font-bold"><InfoLabel k={d.kaynaklar} alan="teams" label="Ekip üye sayıları">Ekipler</InfoLabel></div>
             <ul className="text-[12px]">{d.teams.map((t) => <li key={t.teamId}>{t.team} · <span className="font-mono">{t.members}</span></li>)}</ul>
           </details>
           <div className="flex justify-end gap-2">
@@ -330,7 +336,7 @@ function Units({ canEdit }: { canEdit: boolean }) {
       )}
       <TableWrap>
         <table className="w-full min-w-[640px] text-[12.5px]">
-          <thead><tr><th className={th}>Birim</th><th className={th}>Üst birim</th><th className={th}>Yönetici</th><th className={th}>Çalışan</th><th className={th}>Kaynak</th></tr></thead>
+          <thead><tr><th className={th}>Birim</th><th className={th}>Üst birim</th><th className={th}>Yönetici</th><th className={th}><InfoLabel k={units.data?.kaynaklar} alan="items[]" label="Birim çalışan sayısı">Çalışan</InfoLabel></th><th className={th}>Kaynak</th></tr></thead>
           <tbody>
             {items.map((u) => (
               <tr key={u.id} className="border-t border-slate-100">
@@ -467,7 +473,7 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
                 {r.keepDays === null && <Pill tone="warn">Süre girilmedi</Pill>}
               </div>
               <label className="flex flex-col gap-1">
-                <span className={labelCls}>Gün</span>
+                <span className={labelCls}><InfoLabel k={list.data?.kaynaklar} alan="items[]" label="Saklama süresi (gün)">Gün</InfoLabel></span>
                 <input className={`${field} font-mono tabular-nums`} inputMode="numeric" disabled={!canEdit}
                   value={val(r.dataClass, 'keepDays', r.keepDays === null ? '' : String(r.keepDays))}
                   onChange={(e) => setDraft({ ...draft, [r.dataClass]: { keepDays: e.target.value, legalBasis: val(r.dataClass, 'legalBasis', r.legalBasis) } })} />
@@ -488,7 +494,7 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
         )}
       </Block>
       {canEdit && (
-        <Block title="Bu gece silinecek" help="Kayıt sayısı; ad ve kimlik gösterilmez.">
+        <Block title="Bu gece silinecek" help="Kayıt sayısı; ad ve kimlik gösterilmez." info={<SqlInfo k={preview.data?.kaynaklar} alan="items[]" label="Bu gece silinecek kayıt sayısı" />}>
           <ul className="flex flex-col gap-1 text-[12.5px]">
             {(preview.data?.items ?? []).map((p) => (
               <li key={p.key} className="flex items-center justify-between rounded-lg bg-white/80 px-2 py-1.5">
@@ -503,7 +509,7 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
         <Block title="İmha tutanakları" help="Her gece her veri sınıfı için bir satır (sıfır da olsa); talep üzerine silmeler «talep» sınıfıyla.">
           <TableWrap>
             <table className="w-full min-w-[560px] text-[12.5px]">
-              <thead><tr><th className={th}>Zaman</th><th className={th}>Sınıf</th><th className={th}>Silinen</th><th className={th}>Kim</th><th className={th}>Hata</th></tr></thead>
+              <thead><tr><th className={th}>Zaman</th><th className={th}>Sınıf</th><th className={th}><InfoLabel k={runs.data?.pages[0]?.kaynaklar} alan="items">Silinen</InfoLabel></th><th className={th}>Kim</th><th className={th}>Hata</th></tr></thead>
               <tbody>
                 {(runs.data?.pages ?? []).flatMap((pg) => pg.items).map((r) => (
                   <tr key={r.id} className="border-t border-slate-100">

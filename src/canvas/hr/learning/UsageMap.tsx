@@ -4,6 +4,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Note, TableWrap, errText, field, td, th } from '../../admin/ui';
 import { NAV } from '../../nav/navModel';
 import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { learningApi } from './learningApi';
 import { LearningFrame, fmtDay } from './parts';
 
@@ -46,6 +47,7 @@ export default function UsageMap() {
       <Block
         title="Ekran × birim"
         help={d ? `${fmtDay(d.since)} ve sonrası · ${d.days} gün` : undefined}
+        info={<SqlInfo k={d?.kaynaklar} alan="rows" label="Ekran × birim kullanıcı sayısı" />}
         action={
           <>
             <select className={`${field} w-auto`} value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Çalışma alanı">
@@ -65,7 +67,7 @@ export default function UsageMap() {
             <thead>
               <tr>
                 <th className={`${th} sticky left-0 bg-white`}>Ekran</th>
-                <th className={`${th} text-right`}>Toplam</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="totals" label="Ekranı açan farklı kişi">Toplam</InfoLabel></th>
                 {d.rows.map((r) => (
                   <th key={r.key} className={`${th} text-right`} title={r.unitName}>
                     <span className="block max-w-[140px] truncate">{r.unitName}</span>

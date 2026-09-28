@@ -7,6 +7,8 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as l
 import { Kpi, KpiRow } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { fmtMoney, learningApi, localToIso, pct, type CertCheck, type Info, type StatusRow } from './learningApi';
 import { ReadingBadge, ReadingNote } from '../../components/ReadingBadge';
 import { LearningFrame, StatusPill, fmtDay, fmtWhen, useLearningInfo } from './parts';
@@ -30,13 +32,14 @@ export default function LearningDashboard() {
       {c && (
         <>
           <KpiRow>
-            <Kpi label="Süresi dolmuş" value={String(c.overdue + c.never)} help={`Dolmuş ${c.overdue} · hiç almamış ${c.never}`} />
+            <Kpi label="Süresi dolmuş" value={String(c.overdue + c.never)} help={`Dolmuş ${c.overdue} · hiç almamış ${c.never}`} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Süresi dolmuş" />} />
             <Kpi label="Dolacak" value={c.expiring === null ? '—' : String(c.expiring)}
-              help={c.alertDays ? `${c.alertDays} gün içinde` : 'Uyarı günü ayarlanmadı (Portal ayarları → İnsan kaynakları)'} />
-            <Kpi label="Bu ay oturum" value={String(c.sessionsThisMonth)} help={c.awaitingClose ? `${c.awaitingClose} oturumun yoklaması kapatılmadı` : 'Planlı oturumlar'} />
-            <Kpi label="Tamamlanma" value={pct(c.completionRate)} help={`${c.completed} / ${c.enrolled} onaylı katılım`} />
+              help={c.alertDays ? `${c.alertDays} gün içinde` : 'Uyarı günü ayarlanmadı (Portal ayarları → İnsan kaynakları)'} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Dolacak" />} />
+            <Kpi label="Bu ay oturum" value={String(c.sessionsThisMonth)} help={c.awaitingClose ? `${c.awaitingClose} oturumun yoklaması kapatılmadı` : 'Planlı oturumlar'} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Bu ay oturum" />} />
+            <Kpi label="Tamamlanma" value={pct(c.completionRate)} help={`${c.completed} / ${c.enrolled} onaylı katılım`} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Tamamlanma" />} />
           </KpiRow>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Bekleyen onay, belge, anket ve ihtiyaç" />
             <Pill tone={c.pendingApprovals ? 'warn' : 'muted'}>Onay bekleyen katılım {c.pendingApprovals}</Pill>
             <Pill tone={c.unverifiedCertificates ? 'warn' : 'muted'}>Doğrulama bekleyen belge {c.unverifiedCertificates}</Pill>
             <Pill tone="muted">Yanıtlanmamış anket {c.pendingFeedback}</Pill>
@@ -44,9 +47,9 @@ export default function LearningDashboard() {
           </div>
         </>
       )}
-      {dash.data && info.data && (can?.manage && dash.data.attention ? <Attention rows={dash.data.attention} info={info.data} /> : <ByUnit rows={dash.data.attentionByUnit} />)}
+      {dash.data && info.data && (can?.manage && dash.data.attention ? <Attention rows={dash.data.attention} info={info.data} k={dash.data.kaynaklar} /> : <ByUnit rows={dash.data.attentionByUnit} k={dash.data.kaynaklar} />)}
       {dash.data && (
-        <Block title="Birim × eğitim tamamlanma" help="İptal edilmemiş oturumlardaki onaylı katılımlardan tamamlananların payı.">
+        <Block title="Birim × eğitim tamamlanma" help="İptal edilmemiş oturumlardaki onaylı katılımlardan tamamlananların payı." info={<SqlInfo k={dash.data.kaynaklar} alan="matrix" label="Birim × eğitim tamamlanma" />}>
           {dash.data.matrix.length === 0 ? (
             <p className="text-[12px] text-canvas-muted">Henüz oturum kaydı yok.</p>
           ) : (
@@ -75,10 +78,10 @@ export default function LearningDashboard() {
   );
 }
 
-function ByUnit({ rows }: { rows: { unitName: string; doldu: number; hic_yok: number; dolacak: number }[] }) {
+function ByUnit({ rows, k }: { rows: { unitName: string; doldu: number; hic_yok: number; dolacak: number }[]; k?: Kaynaklar }) {
   if (!rows.length) return null;
   return (
-    <Block title="Zorunlu eğitim — birim özeti" help="Kişi listesi eğitim yönetimi yetkisiyle görünür.">
+    <Block title="Zorunlu eğitim — birim özeti" help="Kişi listesi eğitim yönetimi yetkisiyle görünür." info={<SqlInfo k={k} alan="attentionByUnit" label="Birim özeti" />}>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((r) => (
           <li key={r.unitName} className="rounded-xl bg-white/80 px-3 py-2">
@@ -95,7 +98,7 @@ function ByUnit({ rows }: { rows: { unitName: string; doldu: number; hic_yok: nu
   );
 }
 
-function Attention({ rows, info }: { rows: StatusRow[]; info: Info }) {
+function Attention({ rows, info, k }: { rows: StatusRow[]; info: Info; k?: Kaynaklar }) {
   const navigate = useNavigate();
   const [course, setCourse] = useState('');
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -116,6 +119,7 @@ function Attention({ rows, info }: { rows: StatusRow[]; info: Info }) {
     <Block
       title="Dolmuş ve dolacak zorunlu eğitimler"
       help="Kişileri seçip tek adımda oturum açın. Planlı oturumu olan kişi işaretlidir."
+      info={<SqlInfo k={k} alan="attention" label="Dolmuş ve dolacak eğitimler" />}
       action={
         <>
           {info.can.export && (
@@ -350,11 +354,12 @@ function SpendPanel({ info }: { info?: Info }) {
       {s && s.configured && (
         <div className="mt-2 flex flex-col gap-3">
           <KpiRow>
-            <Kpi label="Gerçekleşen" value={fmtMoney(s.total)} help={s.dataEnd ? `Veri ${fmtDay(s.dataEnd)} tarihine kadar` : 'Logo muhasebe'} />
-            <Kpi label="Bütçe" value={fmtMoney(s.budget?.amount)} help={s.budget ? `${s.budget.updatedBy ?? ''} · ${fmtDay(s.budget.updatedAt)}` : 'Girilmedi'} />
-            <Kpi label="Kullanım" value={pct(s.ratio)} help="Gerçekleşen ÷ bütçe" />
-            <Kpi label="Hesap" value={String(s.accountCodes.length)} help={s.accountCodes.join(', ')} />
+            <Kpi label="Gerçekleşen" value={fmtMoney(s.total)} help={s.dataEnd ? `Veri ${fmtDay(s.dataEnd)} tarihine kadar` : 'Logo muhasebe'} info={<SqlInfo k={s.kaynaklar} alan="total" label="Gerçekleşen eğitim gideri" />} />
+            <Kpi label="Bütçe" value={fmtMoney(s.budget?.amount)} help={s.budget ? `${s.budget.updatedBy ?? ''} · ${fmtDay(s.budget.updatedAt)}` : 'Girilmedi'} info={<SqlInfo k={s.kaynaklar} alan="budget" label="Eğitim bütçesi" />} />
+            <Kpi label="Kullanım" value={pct(s.ratio)} help="Gerçekleşen ÷ bütçe" info={<SqlInfo k={s.kaynaklar} alan="ratio" label="Bütçe kullanımı" />} />
+            <Kpi label="Hesap" value={String(s.accountCodes.length)} help={s.accountCodes.join(', ')} info={<SqlInfo k={s.kaynaklar} alan="accountCodes" label="Gider hesapları (ayar)" />} />
           </KpiRow>
+          {s.months.length > 0 && <div className="text-[11px] font-semibold text-canvas-muted"><InfoLabel k={s.kaynaklar} alan="months" label="Ay ve hesap kırılımı">Ay ve hesap kırılımı</InfoLabel></div>}
           {s.months.length > 0 && (
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-12">
               {s.months.map((m) => (

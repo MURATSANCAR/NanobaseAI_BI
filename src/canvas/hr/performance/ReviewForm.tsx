@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay, fmtDateTime } from '../hrApi';
 import { Block, HrFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { GoalRow } from './parts';
 import { REVIEW_TONE, perfApi, type Answers, type Review, type Section } from './perfApi';
 
@@ -60,7 +61,7 @@ function Body({ r, onChange }: { r: Review; onChange: (x: Review) => void }) {
         <SectionBlock key={s.key} s={s} r={r} self={self} mgr={mgr} setSelf={setSelf} setMgr={setMgr} />
       ))}
       {(r.can.editManager || (r.manager && r.manager.overall)) && (
-        <Block title="Genel değerlendirme (yönetici)" help="Kalibrasyonda birim dağılımı bu puandan çıkar. Sistem puan vermez.">
+        <Block title="Genel değerlendirme (yönetici)" help="Kalibrasyonda birim dağılımı bu puandan çıkar. Sistem puan vermez." info={<SqlInfo k={r.kaynaklar} alan="manager" label="Genel değerlendirme" />}>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-5">
             {labels.map((l, i) => (
               <label key={l} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-semibold ${mgr.overall === i + 1 ? 'bg-canvas-violet text-white' : 'bg-white/80'}`}>
@@ -90,7 +91,7 @@ function SectionBlock({ s, r, self, mgr, setSelf, setMgr }: {
 }) {
   const showMgr = r.manager !== null;
   return (
-    <Block title={s.title} help={s.help}>
+    <Block title={s.title} help={s.help} info={<SqlInfo k={r.kaynaklar} alan="self" label={`${s.title} · puanlar`} />}>
       {s.kind === 'hedef' && (
         <ul className="mb-2 flex flex-col gap-1.5">
           {!r.goals.length && <li className="text-[12px] text-canvas-muted">Bu dönemde yürürlükte hedef yok.</li>}
@@ -220,7 +221,7 @@ function WorkBox({ r, onChange }: { r: Review; onChange: (x: Review) => void }) 
     onError: (e) => toast.error(errText(e, 'Özet hazırlanamadı.')),
   });
   return (
-    <Block title="İş kayıtları özeti" help="Portal görevleri ve CRM sahiplik kayıtlarının sayıları; bilgi amaçlıdır, puan değildir. Portal kullanım kayıtları kullanılmaz."
+    <Block title="İş kayıtları özeti" info={<SqlInfo k={r.kaynaklar} alan="workSummaries" label="İş kayıtları özeti" />} help="Portal görevleri ve CRM sahiplik kayıtlarının sayıları; bilgi amaçlıdır, puan değildir. Portal kullanım kayıtları kullanılmaz."
       action={r.can.workSummary ? <button type="button" className={btnGhost} disabled={gen.isPending} onClick={() => gen.mutate()}>{gen.isPending ? 'Hazırlanıyor…' : 'Özet hazırla'}</button> : undefined}>
       {!r.workSummaries.length && <div className="text-[12px] text-canvas-muted">Özet yok.</div>}
       <ul className="flex flex-col gap-1.5">

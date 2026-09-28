@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { Kpi, KpiRow, Panel } from '../../editorial/kit';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { STAGE_ORDER, daysText, recruitApi, type Card, type Pipeline, type RecruitMeta, type Stage } from '../hrApi';
 import { HrFrame, Tabs } from '../parts';
@@ -83,7 +84,10 @@ export default function RecruitBoard() {
                 ))}
               </select>
             </label>
-            <div className="font-mono text-[11.5px] text-canvas-muted">{board.data.total} aday</div>
+            <div className="flex items-center gap-2 font-mono text-[11.5px] text-canvas-muted">
+              {board.data.total} aday
+              <SqlInfo k={board.data.kaynaklar} alan="columns" label="Aşama sayıları ve aşamada geçen gün" />
+            </div>
           </div>
           <div className="mt-3 lg:hidden">
             <Tabs
@@ -97,7 +101,7 @@ export default function RecruitBoard() {
             {STAGE_ORDER.map((s) => (
               <div key={s} className="min-w-0 rounded-2xl bg-slate-50/80 p-2">
                 <div className="mb-1.5 flex items-center justify-between px-1">
-                  <h3 className="text-[12.5px] font-extrabold">{board.data.stages[s]}</h3>
+                  <h3 className="text-[12.5px] font-extrabold"><InfoLabel k={board.data.kaynaklar} alan="columns" label={`${board.data.stages[s]} · aday sayısı`}>{board.data.stages[s]}</InfoLabel></h3>
                   <span className="font-mono text-[11px] font-bold tabular-nums text-canvas-muted">{board.data.columns[s].length}</span>
                 </div>
                 <Column stage={s} data={board.data} meta={meta.data} />
@@ -127,14 +131,15 @@ function Counters({ data }: { data: Pipeline }) {
   const c = data.counters;
   return (
     <KpiRow>
-      <Kpi label="Açık pozisyon" value={String(c.openPositions)} help="Onaylanmış, başvuru alan" />
-      <Kpi label="Bu hafta gelen" value={String(c.thisWeek)} help="Son 7 günde açılan aday kaydı" />
+      <Kpi label="Açık pozisyon" value={String(c.openPositions)} help="Onaylanmış, başvuru alan" info={<SqlInfo k={data.kaynaklar} alan="counters.openPositions" label="Açık pozisyon" />} />
+      <Kpi label="Bu hafta gelen" value={String(c.thisWeek)} help="Son 7 günde açılan aday kaydı" info={<SqlInfo k={data.kaynaklar} alan="counters.thisWeek" label="Bu hafta gelen" />} />
       <Kpi
         label="Aşamasında bekleyen"
         value={c.overSla === null ? '—' : String(c.overSla)}
         help={c.slaDays === null ? 'Bekleme eşiği ayarlanmadı (Portal ayarları)' : `${c.slaDays} günden uzun aynı aşamada`}
+        info={<SqlInfo k={data.kaynaklar} alan="counters.overSla" label="Aşamasında bekleyen" />}
       />
-      <Kpi label="Cevap bekleyen" value={String(c.waitingReply)} help={`Sonuçlandı, adaya yazılmadı · 30 günü aşan açık başvuru ${c.unanswered30}`} />
+      <Kpi label="Cevap bekleyen" value={String(c.waitingReply)} help={`Sonuçlandı, adaya yazılmadı · 30 günü aşan açık başvuru ${c.unanswered30}`} info={<SqlInfo k={data.kaynaklar} alan="counters.waitingReply" label="Cevap bekleyen" />} />
     </KpiRow>
   );
 }

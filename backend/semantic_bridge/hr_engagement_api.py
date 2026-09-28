@@ -342,7 +342,9 @@ def register(app, hr: HrContext) -> None:
     @app.get(B + "/suggestions/track/{code}")
     def eng_suggestion_track(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, _ = ready(request)
-        return call(E.track_suggestion, engine, tenant, code)
+        with HK.capture(engine) as got:
+            out = call(E.track_suggestion, engine, tenant, code)
+        return hr.kaynak(out, got, "oneriTakip", {}, rest=("oneri", F_ONERI))
 
     for action in ("route", "topic", "answer", "close"):
         def make_s(act: str):

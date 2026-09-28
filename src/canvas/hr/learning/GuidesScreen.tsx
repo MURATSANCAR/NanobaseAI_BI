@@ -6,6 +6,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { NAV, trFold } from '../../nav/navModel';
 import { Block, Tabs } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { learningApi, type Guide, type Info } from './learningApi';
 import { GuideText, LearningFrame, fmtDay, useLearningInfo } from './parts';
 
@@ -34,7 +35,7 @@ export default function GuidesScreen() {
       lead="Her ekran için kısa, göreve dayalı rehber. Yayımlanan rehber o ekranın üst şeridindeki «Nasıl kullanılır» düğmesinden açılır."
     >
       {q.error && <Note tone="err">{errText(q.error, 'Rehberler okunamadı.')}</Note>}
-      <Block title="Ekranlar" help={`${ITEMS.length} ekran · ${published} rehber yayında`}
+      <Block title="Ekranlar" help={`${ITEMS.length} ekran · ${published} rehber yayında`} info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Yayındaki rehber sayısı" />}
         action={<input className={`${field} sm:w-[260px]`} placeholder="Ekran ara" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Ekran ara" />}>
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((i) => {

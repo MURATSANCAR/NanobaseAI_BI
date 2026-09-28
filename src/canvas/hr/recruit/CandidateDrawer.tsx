@@ -8,8 +8,9 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import Sheet from '../../editorial/studio/reader/Sheet';
 import {
   STAGE_ORDER, daysText, fmtDateTime, fmtDay, fmtSize, hrApi, recruitApi, waitJob,
-  type Candidate, type Message, type Outcome, type RecruitMeta, type Stage,
+  type Candidate, type Message, type Outcome, type RecruitMeta, type Stage, type WithK,
 } from '../hrApi';
+import SqlInfo from '../../components/SqlInfo';
 import { AskSheet, Block, Fact, FilePick, HrFrame, splitUsers } from '../parts';
 import { MB } from '../../components/fileDropRules';
 
@@ -44,7 +45,7 @@ function useRefresh(id: string) {
   };
 }
 
-function Body({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
+function Body({ c, meta }: { c: Candidate & WithK; meta: RecruitMeta }) {
   return (
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-4">
       <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
@@ -64,7 +65,7 @@ function Body({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
 
 /* ------------------------------------------------------------------ özet ve aşama kararı */
 
-function Summary({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
+function Summary({ c, meta }: { c: Candidate & WithK; meta: RecruitMeta }) {
   const [deciding, setDeciding] = useState(false);
   const [editing, setEditing] = useState(false);
   return (
@@ -79,7 +80,8 @@ function Summary({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
     >
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Fact label="Aşama" value={<span className="inline-flex flex-wrap items-center gap-1">{c.stageLabel}{c.outcomeLabel && <Pill tone={c.outcome === 'ise_alindi' ? 'ok' : 'muted'}>{c.outcomeLabel}</Pill>}</span>} />
-        <Fact label="Bu aşamada" value={daysText(c.daysInStage)} help={c.overSla ? 'Bekleme eşiğini aştı' : undefined} />
+        <Fact label="Bu aşamada" value={daysText(c.daysInStage)} help={c.overSla ? 'Bekleme eşiğini aştı' : undefined}
+          info={<SqlInfo k={c.kaynaklar} alan="daysInStage" label="Bu aşamada geçen gün" />} />
         <Fact label="E-posta" value={c.email ?? (c.can.edit ? '—' : 'yetkiyle görünür')} />
         <Fact label="Telefon" value={c.phone ?? (c.can.edit ? '—' : 'yetkiyle görünür')} />
       </div>
@@ -212,7 +214,7 @@ function EditSheet({ open, c, meta, onClose }: { open: boolean; c: Candidate; me
 
 /* ------------------------------------------------------------------ kanıtlı özet */
 
-function Evidence({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
+function Evidence({ c, meta }: { c: Candidate & WithK; meta: RecruitMeta }) {
   const refresh = useRefresh(c.id);
   const [progress, setProgress] = useState<string | null>(null);
   const run = useMutation({
@@ -250,6 +252,7 @@ function Evidence({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
       {c.evidence.length > 0 && (
         <>
           <div className="mb-2 text-[11.5px] text-canvas-muted">
+            <SqlInfo k={c.kaynaklar} alan="evidence" label="Yetkinlik ve kanıt sayısı" className="mr-1" />
             Yetkinlik {c.evidence.length} · kanıt bulunan {found} · {fmtDateTime(c.evidenceAt)}
           </div>
           <ul className="flex flex-col gap-2">
@@ -362,7 +365,7 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
 
 /* ------------------------------------------------------------------ mülakat */
 
-function Interviews({ c }: { c: Candidate }) {
+function Interviews({ c }: { c: Candidate & WithK }) {
   const refresh = useRefresh(c.id);
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ startsAt: '', location: '', interviewers: '' });
@@ -439,6 +442,7 @@ function Interviews({ c }: { c: Candidate }) {
                 <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-bold">
                   {n.mine ? 'Notunuz' : n.author}
                   <Pill tone={n.submittedAt ? 'ok' : 'warn'}>{n.submittedAt ? 'Teslim edildi' : 'Taslak'}</Pill>
+                  {Object.keys(n.scores).length > 0 && <SqlInfo k={c.kaynaklar} alan="interviews" label="Görüşme notu puanları" />}
                 </div>
                 {Object.keys(n.scores).length > 0 && (
                   <div className="mt-0.5 flex flex-wrap gap-1">

@@ -1,4 +1,5 @@
 import { hrDownload, hrSend, qs } from '../hrApi';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M56 Performans yönetimi uçları (/api/v1/hr/performance/*). Kapsam köprüde: kendi kaydım, ekip zincirim, İK/GM. */
 
@@ -24,7 +25,7 @@ export type GoalDetail = Goal & {
   checkins: Checkin[]; revisions: Revision[];
   children: { id: string; title: string; level: Level; ownerName: string | null; unitName: string | null; state: GoalState }[];
   can: { edit: boolean; submit: boolean; withdraw: boolean; approve: boolean; checkin: boolean; revise: boolean; close: boolean };
-};
+ kaynaklar?: Kaynaklar; };
 export type Section = { key: string; title: string; kind: 'yetkinlik' | 'hedef' | 'acik'; items: { key: string; label: string }[]; help?: string };
 export type Form = { id: string; name: string; version: number; sections: Section[]; overallLabels: string[]; state: 'taslak' | 'yururlukte' | 'arsiv'; stateLabel: string; updatedBy: string | null; updatedAt: string | null };
 export type CycleState = 'hazirlik' | 'acik' | 'kalibrasyon' | 'kapandi';
@@ -46,29 +47,29 @@ export type Review = {
   meetingAt: string | null; employeeComment: string; objection: boolean; commentedAt: string | null; hrApprovedBy: string | null;
   hrApprovedAt: string | null; hrNote: string; goals: Goal[]; workSummaries: WorkSummary[];
   can: { editSelf: boolean; editManager: boolean; share: boolean; comment: boolean; approve: boolean; reassign: boolean; workSummary: boolean; rewrite: boolean };
-};
+ kaynaklar?: Kaynaklar; };
 export type Task = { kind: 'oz' | 'yorum' | 'checkin'; reviewId?: string; goalId?: string; label: string; due: string | null; daysLeft: number | null };
 export type Me = {
   employee: { id: string; displayName: string; unitName: string | null; managerName: string | null; title: string } | null;
   goals: Goal[]; reviews: { id: string; cycleName: string; cycleState: CycleState; state: ReviewState; stateLabel: string; selfDue: string | null; sharedAt: string | null }[];
   workSummaries: WorkSummary[]; tasks: Task[];
-};
+ kaynaklar?: Kaynaklar; };
 export type TeamPerson = {
   id: string; name: string; title: string; unitName: string | null; direct: boolean; managerName: string | null; goals: number;
   pendingApproval: number; openRevisions: number; noCheckin: number; avgProgress: number | null;
   reviews: { id: string; cycleName: string; state: ReviewState; stateLabel: string; mine: boolean }[];
 };
-export type Team = { me: { id: string | null; name: string | null } | null; people: TeamPerson[]; gaps: { id: string; name: string; unitName: string | null }[] | null };
+export type Team = { me: { id: string | null; name: string | null } | null; people: TeamPerson[]; gaps: { id: string; name: string; unitName: string | null }[] | null; kaynaklar?: Kaynaklar };
 export type Status = {
   cycle: Cycle; total: number; selfDone: number; managerDone: number; selfRate: number | null; managerRate: number | null; shared: number;
   approved: number; objections: number; noManager: number;
   units: { unitId: string | null; unitName: string; total: number; self: number; manager: number; approved: number }[];
   people: { reviewId: string; employeeId: string; name: string | null; unitName: string | null; managerId: string | null; managerName: string | null; state: ReviewState; stateLabel: string; objection: boolean }[];
-};
+ kaynaklar?: Kaynaklar; };
 export type Calibration = {
   cycle: Cycle; labels: string[]; overall: number[]; n: number; mean: number | null;
   units: { unitId: string | null; unitName: string; counts: number[]; n: number; mean: number | null; people: { reviewId: string; name: string | null; score: number; managerName: string | null }[] }[];
-};
+ kaynaklar?: Kaynaklar; };
 export type PerfMeta = {
   levels: Record<Level, string>; goalStates: Record<GoalState, string>; measureKinds: Record<string, string>;
   systemMeasures: Record<string, { label: string; unit: string; hint: string }>; sectionKinds: Record<string, string>;
@@ -80,7 +81,7 @@ export type PerfMeta = {
 export type Progress = {
   kind: 'beyan' | 'sistem'; periodStart: string; periodEnd: string; target: number | null; value: number | null; progressPct: number | null;
   invoices?: number; lastDate?: string | null; code?: string; note?: string;
-};
+ kaynaklar?: Kaynaklar; };
 
 export const perfApi = {
   meta: () => hrSend<PerfMeta>('GET', `${P}/meta`),

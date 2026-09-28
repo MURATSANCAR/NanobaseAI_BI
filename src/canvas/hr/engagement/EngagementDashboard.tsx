@@ -8,6 +8,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, td, th } from
 import { fmtDay } from '../hrApi';
 import { Block, Fact, HrFrame } from '../parts';
 import ResultView from './ResultView';
+import SqlInfo from '../../components/SqlInfo';
 import { engApi, fmtNum } from './engApi';
 
 /** M58 Bağlılık panosu (İK/GM): eNPS ve endeks eğilimi, yanıt oranı, madde sonuçları, eşiğe tabi birim kırılımı, Zeki AI
@@ -39,7 +40,7 @@ export default function EngagementDashboard() {
       {surveys.error && <Note tone="err">{errText(surveys.error, 'Anketler okunamadı.')}</Note>}
       {surveys.data && !surveys.data.items.length && <Note tone="info">Henüz anket yok. <Link className="font-bold text-canvas-violet underline" to="/ik/anket-yonetimi">Anket yönetimi</Link>nden başlatın.</Note>}
       {t && t.items.length > 0 && (
-        <Block title="Eğilim" help="Kapanmış anketler; gösterim eşiği altındakiler boş.">
+        <Block title="Eğilim" help="Kapanmış anketler; gösterim eşiği altındakiler boş." info={<SqlInfo k={trend.data?.kaynaklar} alan="items[]" label="Anket eğilimi" />}>
           <TableWrap>
             <thead><tr><th className={th}>Anket</th><th className={th}>Kapanış</th><th className={th}>Yanıt oranı</th><th className={th}>eNPS</th><th className={th}>Endeks</th></tr></thead>
             <tbody>
@@ -67,11 +68,11 @@ export default function EngagementDashboard() {
             }>
             {res.error && <Note tone="err">{errText(res.error, 'Sonuç okunamadı.')}</Note>}
             {res.isLoading && <Loading />}
-            {res.data && <ResultView r={res.data} onUnit={(u) => setScope(u)} />}
+            {res.data && <ResultView r={res.data} k={res.data.kaynaklar} onUnit={(u) => setScope(u)} />}
           </Block>
           <div className="flex flex-col gap-3">
             {prog.data && (
-              <Block title="Katılım" help={prog.data.note}>
+              <Block title="Katılım" help={prog.data.note} info={<SqlInfo k={prog.data.kaynaklar} alan="rate" label="Katılım ve yanıt oranı" />}>
                 <div className="grid grid-cols-2 gap-2">
                   <Fact label="Davet" value={prog.data.invited} />
                   <Fact label="Cevaplayan" value={prog.data.responded} />
@@ -82,7 +83,7 @@ export default function EngagementDashboard() {
               </Block>
             )}
             {t && (
-              <Block title="Öneri kutusu">
+              <Block title="Öneri kutusu" info={<SqlInfo k={t.kaynaklar} alan="suggestions" label="Öneri kutusu sayıları" />}>
                 <div className="grid grid-cols-2 gap-2">
                   <Fact label="Öneri" value={t.suggestions.total} />
                   <Fact label="Cevaplanan" value={t.suggestions.answered} help={t.suggestions.avgDays !== null ? `ortalama ${fmtNum(t.suggestions.avgDays)} gün` : undefined} />
@@ -117,7 +118,7 @@ function ThemesBlock({ sid, data, error, canRaw, canRefresh, onRefreshed }: {
         <ul className="flex flex-col gap-1.5">
           {data.themes.map((t) => (
             <li key={t.theme} className="rounded-xl bg-white/80 p-2.5 text-[12.5px]">
-              <div className="flex items-center gap-2"><span className="min-w-0 flex-1 font-bold">{t.theme}</span><Pill tone="violet">{t.count}</Pill></div>
+              <div className="flex items-center gap-2"><span className="min-w-0 flex-1 font-bold">{t.theme}</span><Pill tone="violet">{t.count}</Pill><SqlInfo k={data.kaynaklar} alan="themes" label={`${t.theme} · yorum sayısı`} /></div>
               {t.summary ? <div className="mt-0.5 break-words">{t.summary}</div> : t.note && <div className="text-canvas-muted">{t.note}</div>}
             </li>
           ))}
@@ -129,7 +130,7 @@ function ThemesBlock({ sid, data, error, canRaw, canRefresh, onRefreshed }: {
           {raw.data.comments.map((c, i) => (
             <li key={i} className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
               <div className="whitespace-pre-wrap break-words">{c.text}</div>
-              <div className="text-[11px] text-canvas-muted">{c.theme ?? 'sınıflanmadı'}{c.probability !== null ? ` · %${Math.round(c.probability * 100)}` : ''}</div>
+              <div className="flex items-center gap-1 text-[11px] text-canvas-muted">{c.theme ?? 'sınıflanmadı'}{c.probability !== null ? ` · %${Math.round(c.probability * 100)}` : ''}{c.probability !== null && <SqlInfo k={raw.data?.kaynaklar} alan="comments" label="Tema olasılığı (Zeki AI)" />}</div>
             </li>
           ))}
         </ul>
