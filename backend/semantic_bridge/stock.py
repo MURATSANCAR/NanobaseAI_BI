@@ -157,6 +157,18 @@ def fold(s: Any) -> str:
     return re.sub(r"\s+", " ", str(s or "").translate(_TR).lower()).strip()
 
 
+def runout_date(data_end: Optional[date], gun: Optional[float]) -> Optional[str]:
+    """Veri sonuna yeterlilik günü eklenmiş tarih. Hız çok küçükken gün takvimin taşıyabileceğinden büyük olabilir
+    (ör. 13 milyar gün): o zaman tarih yok, gün sayısı ekranda kalır. 2026-09-28 gece işi bu yüzden bütünüyle düşüyordu
+    («Python int too large to convert to C int»)."""
+    if gun is None or not data_end:
+        return None
+    try:
+        return (data_end + timedelta(days=int(gun))).isoformat()
+    except (OverflowError, ValueError):
+        return None
+
+
 def days_of_cover(bakiye: Optional[float], hiz: Optional[float]) -> Optional[float]:
     """Gün cinsinden yeterlilik: bakiye ÷ (aylık hız ÷ 30). Satış yoksa boş, stok yoksa 0."""
     if hiz is None or hiz <= 0:
@@ -320,7 +332,7 @@ def build(raw: dict[str, Any], s: dict[str, Any], thresholds: dict[str, dict[str
             "crmRaf": crm, "rafSayisi": len(sh or []),
             "satisHizi": hiz, "yillikSatis": _f(sp.get("yillik_toplam")) if sp else None,
             "gun": None if gun is None else round(gun, 1),
-            "tukenmeTarihi": (data_end + timedelta(days=int(gun))).isoformat() if (gun is not None and data_end) else None,
+            "tukenmeTarihi": runout_date(data_end, gun),
             "tukenmeAy": tuk, "baskiOneri": oneri,
             "durum": durum, "durumEtiket": STATES[durum],
             "kritikGun": kritik, "baskiUyarisi": gun is not None and hz > 0 and gun <= kritik,

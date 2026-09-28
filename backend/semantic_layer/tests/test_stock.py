@@ -435,3 +435,12 @@ def test_access_rules_for_stock():
     assert f("GET", "/api/v1/stock/items") == [] and f("POST", "/api/v1/stock/items/K1/notes") == []
     assert {"ozellik:stok.esik-onay", "ozellik:stok.maliyet", "ozellik:stok.depo-hatti"} <= A.explicit_keys()
     assert "ozellik:stok.oneri-karar" not in A.explicit_keys()
+
+
+def test_runout_date_survives_a_tiny_sales_speed():
+    """Hız çok küçükken yeterlilik günü takvimi aşar; gece işi düşmemeli, tarih boş kalmalı (2026-09-28 kabul)."""
+    gun = S.days_of_cover(200000.0, 1e-6)
+    assert gun is not None and gun > 1e9
+    assert S.runout_date(date(2026, 8, 17), gun) is None
+    assert S.runout_date(date(2026, 8, 17), 10.4) == "2026-08-27"
+    assert S.runout_date(None, 10.0) is None and S.runout_date(date(2026, 8, 17), None) is None

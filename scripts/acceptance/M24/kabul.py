@@ -126,7 +126,8 @@ def main() -> int:
     for r in logo("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1"):
         if int(r["FIRMNR"]) in skip:
             continue
-        for y in range(r["BEGDATE"].year, r["ENDDATE"].year + 1):
+        # Bağlantı tarihleri metin olarak da dönebilir ('2026-01-01T00:00:00'); yıl ilk dört karakterden okunur.
+        for y in range(int(str(r["BEGDATE"])[:4]), int(str(r["ENDDATE"])[:4]) + 1):
             by_year[y] = max(by_year.get(y, 0), int(r["FIRMNR"]))
     firm = f"{by_year[max(by_year)]:03d}"
     son = logo(f"SELECT MAX(DATE_) AS son FROM dbo.LG_{firm}_01_STLINE WHERE CANCELLED = 0 AND LINETYPE = 0 AND INVOICEREF <> 0 AND TRCODE IN (7,8,9)")[0]["son"]
