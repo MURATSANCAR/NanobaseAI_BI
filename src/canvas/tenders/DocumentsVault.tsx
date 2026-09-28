@@ -7,7 +7,6 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtLeft, tendersApi, type DocRow, type TenderMeta } from './api';
-import { AskSheet } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB, titleFromFilename } from '../components/fileDropRules';
 import { AskSheet, FilePick } from './parts';
