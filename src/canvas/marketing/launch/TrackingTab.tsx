@@ -4,7 +4,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, TableWrap, errText, td, th } from '../../admin/ui';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../api';
 import { Block, SourceNote } from '../parts';
-import { dLabel, launchApi, type Launch, type LaunchMeta } from './api';
+import { dLabel, launchApi, type Depot, type Launch, type LaunchMeta } from './api';
 
 /** İzleme (ilk 7 / 30 gün): birikimli sipariş (CRM, canlı), faturalı satış (Logo, veri sonuna kadar), hedef payı ve emsal
  *  ortalaması aynı grafikte; rafa ulaşma (dağılım, açık sipariş, bekleyen ürün, depo) ayrı kutularda. Sipariş satış
@@ -25,6 +25,14 @@ function Stat({ label, value, help }: { label: string; value: string; help: stri
       <div className="mt-1 text-[11px] leading-snug text-canvas-muted">{help}</div>
     </div>
   );
+}
+
+/** Depo stokunun kaynağı ve tarihi; CRM sinyali seçildiyse Logo görünümünün son okuması da yazılır. */
+function depotHelp(p: Depot | null | undefined): string {
+  if (!p?.kaynakAdi) return 'Okunmadı';
+  const base = `${p.kaynakAdi}${p.tarih ? ` · ${fmtDay(p.tarih)}` : ''}`;
+  if (p.kaynak !== 'crm' || p.logo == null) return base;
+  return `${base} · Logo depo görünümü ${fmtInt(p.logo)}${p.logoGun ? ` (${fmtDay(p.logoGun)})` : ''}`;
 }
 
 export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Launch; meta: LaunchMeta; gun: 7 | 30; onGun: (g: 7 | 30) => void }) {
@@ -98,8 +106,8 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
           <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <Stat label="Dağılım" value={fmtInt(d.dagilim?.adet)} help={d.dagilim ? `${fmtInt(d.dagilim.bayi)} bayi · ${fmtInt(d.dagilim.siparis)} sipariş · ${fmtDay(d.dagilim.bas)}–${fmtDay(d.dagilim.bit)}` : 'Okunmadı'} />
             <Stat label="Açık sipariş" value={fmtInt(sig?.bekleyen)} help="Kapanmamış sipariş satırları (Baskı Öneri tanımı)" />
-            <Stat label="Bekleyen ürün" value={fmtInt([...d.seri].reverse().find((r) => r.bekleyenUrun != null)?.bekleyenUrun)} help="CRM «Bekleyen Ürün» (stok yokken açılan)" />
-            <Stat label="Depo stoku" value={fmtInt(d.depo?.deger)} help={d.depo?.kaynakAdi ? `${d.depo.kaynakAdi}${d.depo.tarih ? ` · ${fmtDay(d.depo.tarih)}` : ''}` : 'Okunmadı'} />
+            <Stat label="Bekleyen ürün" value={fmtInt(sig?.bekleyenUrun ?? [...d.seri].reverse().find((r) => r.bekleyenUrun != null)?.bekleyenUrun)} help="CRM «Bekleyen Ürün» (stok yokken açılan)" />
+            <Stat label="Depo stoku" value={fmtInt(d.depo?.deger)} help={depotHelp(d.depo)} />
           </div>
         </Block>
       )}

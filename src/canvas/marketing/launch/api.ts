@@ -7,7 +7,15 @@ import type { Task } from '../api';
 export type LaunchStatus = 'hazirlik' | 'yayinda' | 'izleme' | 'kapandi';
 export type Tone = 'kirmizi' | 'sari' | 'yesil';
 
-export type Depot = { deger: number | null; kaynak: 'crm' | 'logo' | null; kaynakAdi: string | null; tarih: string | null };
+export type Depot = {
+  deger: number | null;
+  kaynak: 'crm' | 'logo' | null;
+  kaynakAdi: string | null;
+  tarih: string | null;
+  /** Logo depo görünümünün son okuması (lansman penceresi bittiyse de her gün okunur). */
+  logo?: number | null;
+  logoGun?: string | null;
+};
 export type Signal = {
   gun: number;
   siparis: number | null;
@@ -18,6 +26,8 @@ export type Signal = {
   oranEsas: 'fatura' | 'siparis';
   oran: number | null;
   bekleyen: number | null;
+  /** CRM «Bekleyen Ürün» son okuması (eski özetlerde yok). */
+  bekleyenUrun?: number | null;
   depo: Depot;
   dagilim: { adet: number; bayi: number; siparis: number } | null;
   stokCatismasi: boolean;

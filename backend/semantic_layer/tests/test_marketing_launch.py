@@ -233,6 +233,10 @@ def test_depot_snapshot_is_written_after_the_window_without_touching_totals(engi
     assert snap["siparis_adet"] is None and snap["hedef_payi_adet"] is None and snap["fatura_net_adet"] is None
     h = L.get(engine, T, lid)
     assert h["sinyal"]["depo"]["deger"] == 686 and h["sinyal"]["depo"]["kaynak"] == "logo"
+    assert h["sinyal"]["depo"]["logo"] == 686 and h["sinyal"]["depo"]["logoGun"] == today.isoformat()
+    assert h["sinyal"]["bekleyenUrun"] == 12
+    tr = L.tracking(engine, T, lid, 30, False)
+    assert tr["depo"]["logo"] == 686 and all(r["depo"] is None for r in tr["seri"])   # seri pencereyle sınırlı
     assert h["sinyal"]["siparis"] == 70          # yalnız pencere içindeki iki sipariş günü
 
 

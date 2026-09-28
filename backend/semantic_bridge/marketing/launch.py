@@ -594,8 +594,10 @@ def evaluate(pub: str, days: list[dict[str, Any]], tasks: list[dict[str, Any]], 
     basis = "fatura" if covered else "siparis"
     ratio = r_fat if basis == "fatura" else r_sip
     bekleyen, bek_gun = last_snapshot(days, "bekleyen_adet")
-    depo_logo, _ = last_snapshot(days, "depo_stok")
-    depo = depot_choice(depo_logo, logo_end, ozet.get("crmStok"))
+    depo_logo, depo_logo_gun = last_snapshot(days, "depo_stok")
+    bekleyen_urun, _ = last_snapshot(days, "bekleyen_urun_adet")
+    # Seçilen değerin yanında Logo görünümünün son okuması da döner (CRM sinyali seçildiğinde karşılaştırma için).
+    depo = {**depot_choice(depo_logo, logo_end, ozet.get("crmStok")), "logo": depo_logo, "logoGun": depo_logo_gun}
     dist = (ozet.get("dagilim") or {}).get("adet")
     conflict = bool(bekleyen is not None and depo["deger"] is not None and bekleyen > depo["deger"])
     no_dist = g >= 0 and dist is not None and dist <= 0
@@ -619,7 +621,7 @@ def evaluate(pub: str, days: list[dict[str, Any]], tasks: list[dict[str, Any]], 
         "renk": renk, "uyarilar": warn,
         "sinyal": {"gun": g, "siparis": siparis, "fatura": fatura, "hedef": hedef_all, "hedefKapsanan": hedef_cov,
                    "oranFatura": r_fat, "oranSiparis": r_sip, "oranEsas": basis, "oran": ratio, "bekleyen": bekleyen,
-                   "bekleyenGun": bek_gun, "depo": depo, "dagilim": ozet.get("dagilim"), "stokCatismasi": conflict,
+                   "bekleyenGun": bek_gun, "bekleyenUrun": bekleyen_urun, "depo": depo, "dagilim": ozet.get("dagilim"), "stokCatismasi": conflict,
                    "dagilimYok": no_dist, "hedefAltinda": below, "gecikenMadde": len(overdue), "veriSonuLogo": logo_end},
     }
 
