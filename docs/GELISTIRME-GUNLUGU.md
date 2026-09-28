@@ -149,6 +149,17 @@
 - **Ölçümde bulunan üç hata, düzeltildi:** «İptal Edildi» büyük İ yüzünden `casefold` ile «iptal» olmuyordu (iptal sayılacaktı); CRM'de mükerrer kişi kaydı yazarı kendine öneriyordu (aynı adlı çift elendi); lift iki haneye yuvarlanıp saklandığı için fazla sipariş 1 sapıyordu (tam saklanıyor).
 - **Ekran:** yazar panelinde «Birlikte alınan yazarlar» (ortak sipariş, pay, kaç kat sık, birlikte alınan kitaplar, sayfalı; bağlantı `/yazar-iliskileri?kisi=`). Ekranda sağlayıcı adı yok, «e-ticaret siparişleri».
 - **Zamanlayıcı:** `scripts/server/timas-copurchase.{service,timer}` her gece 04:30 → `POST /api/v1/editorial/authors/copurchase/run-due` (yetki kataloğunda SYSTEM; T-soft tanımlı değilse atlar). Testler 29/29 (sunucuda), `tsc -b` temiz.
+## 2026-09-28 — Belge incelemesi: Son Okuma'da doc/docx/pdf/odt/rtf/txt/md yükleyip metin denetimleri
+
+- **İstek:** «analiz yaptığımız ekranlarda belge yüklemeye izin verelim (doc, docx, pdf…)» — seçenek: yüklenen belge analiz edilsin (kitabın tam okuması değil, metin denetimleri).
+- **Editör (main `93e354d6`):** `029_document_review` (belge, koşu, bulgu — son okuma tabloları kitap nesline bağlı olduğundan ayrı); `editor.document_review` (pdf basılı sayfa; docx+tablo, doc antiword, odt XML, rtf striprtf, txt/md; sayfasız belgede paragraf bölünmeden ~250 sözcüklük yaklaşık sayfa; kuyruk tüketicisi compose `document-review`); `proofing/_doc_context` — beş metin denetimi (kelime tekrarı, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük, yazar tikleri) belge bağlamında aynı kodla; kart servisi `/v1/documents*` (yükleme, liste, rapor, kelime haritası, Word'e aktarım). Dosya boyutuna sınır yok.
+- **Köprü (main `c6699f5d`):** `/api/v1/editorial/documents*` — belgeyi yalnız yükleyen ve yönetici görür.
+- **Ekran + yetki (dal `claude/document-review`):** Son Okuma sol sütunda «Belge incele» (dosya, başlık, okur kitlesi, yaş; belgelerim, durum kendiliğinden tazelenir); seçilince sağ sütunda bulgular (ProofFindings belge kipi), kelime haritası, Word'e aktar. Yetki: sayfa son-okuma|redaksiyon, yükleme `ozellik:son-okuma.belge`, Word `veri.disa-aktar`. İlk tip denetimi `document` prop'unun genel `document`'ı gölgelediğini yakaladı (→ `docMode`); son hâli tsc temiz.
+- **Doğrulama:** birim 6/6 (gerçek `.doc` denenmedi). Uçtan uca: Dilek Ağacı metni `.docx` (4.243 sözcük, 18 yaklaşık sayfa, okur 7–9): beş denetim 443 sn'de SUCCEEDED — tekrar 98, kalıp 18, sözcük seçimi 38 (yaşa ağır 35 özet), cümle başı 5, tik 4 («demek» 3 kat); Word'e aktarım 200.
+- **Kurulum (GPU, main `032499e0`):** editör + stüdyo imajı (`editor-py-studio`, EPUBCheck), dokuz servis + yeni `editor-document-review`; Temporal'da koşan iş 0, kod sürümü doğru, `._*` 0; kart `/v1/documents` 200, stüdyo 200.
+- **Kullanıcı kararı (09-28):** web ve uygulama kendi sunucumuzda, GPU model ve LLM (analiz motoru) işi; arayüz derlemesi/tip denetimi GPU'da yapılmaz.
+- **Kalan:** dalın main'e alınması → test sunucusu (arayüz + yetki) → VM (TT GPU nginx'ine `/v1/documents*` yolları, onayla). Test sunucusu aşırı yükte (yük 47, SSH zaman zaman düşüyor).
+- **Olay:** ana klasördeki commit'lenmemiş dosyaları dala taşırken zsh değişken bölmemesi yüzünden yedeksiz geri alındı; sunucudaki geçici kopyadan ve düzenleme adımlarından geri getirildi, main'e hiç girmemişlerdi. Ders: dosya listesi dizi (`files=(…)`, `for f in $files`), taşımadan önce yedeği doğrula.
 
 ## 2026-09-28 — M32 B2B web sitesi ve kurumsal satış yönetimi (dalda; DOĞRULANAMADI — sunucu kapalı)
 
