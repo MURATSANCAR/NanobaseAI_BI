@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (11:55) — NanobaseAI Destek son gözden geçirme: canlı bildirim hiç çalışmıyordu, masaüstünde marka artıkları
+
+- **Canlı bildirim (en önemli bulgu):** kayıt ekranları kendiliğinden yenilenmiyordu. Bildirim servisi bağlantıyı «Invalid origin» ile reddediyordu: iç nginx şablonu kaynak adresini site adından (`https://destek`) yazıyor, servis bunu gelen alan adıyla karşılaştırıyor ve oturumu doğrulamak için o adrese istek atıyor (ağda yok). Containerfile şablonda `Origin http://frontend:${NGINX_LISTEN_PORT}` ve `Host frontend` yapar (bildirim kapsayıcısından `http://frontend:8080` çağrısı sınandı: site çözülüyor). İç sunucu kaynağı ezdiği için başka siteden bağlanma denetimi dış vhost'a taşındı (`location /socket.io`, `map $http_origin`). `install.sh` ayarı denetler.
+- Destek ekranı ikinci, fazlalık bir bildirim bağlantısını `http://…:9000`a açıyordu (karışık içerik, tarayıcı engelliyor): arayüz kütüphanesinin eklentisi `socketio: false` (marka.py → `main.js`).
+- Masaüstü: yardım menüsündeki üretici destek bağlantısı ve çatı adı gizlendi (`install.py` → Navbar Settings, dış rotalı satırlar `hidden`; göçte geri gelmez). «Hakkında» penceresi yalnız NanobaseAI + kod sürümü (`nanobase_desk.js`, `boot.py`). Kenar çubuğu başlığında «H» baş harfi yerine NanobaseAI simgesi (CSS).
+- Çatının Türkçesinde adı geçen 15 metin marka çevirisiyle ezildi (tema, karşılama, telif, destek, e-posta…); «arama» → «Ara». Yapay zekâ paneli adım etiketleri Türkçe (değişkenle çağrıldıkları için metin çıkarıcı görmüyordu); asistan yönergesine «kullanıcıya DocType/alan/araç adı yazma» eklendi. Durum/tür/öncelik masaüstü listede çeviriyle görünür (`translated_doctype` özellik ayarı); tür adları Arıza/Soru/Hata/Belirtilmemiş.
+- Sınananlar: panel gerçek modelle doğru cevap verdi (1 açık kayıt); telefon genişliğinde (375) taşma yok; kilit mesajının Türkçesi çatıda var. `/desk` kökünün destek ekranına gitmesi bilinçli (varsayılan uygulama), alt adresler korunuyor.
+- **Açık:** main'e ittirme bu oturumda izinli değil → kurulum yapılmadı. Test kullanıcısı (destek tarafı) silindi; portalda timasai'nin 3 kısa oturumu kaldı (kime ait olduğu ayırt edilemedi, en geç 14:00'te düşer). nginx yeniden yükleme başka oturumun `timas_api` bölge değişikliği yüzünden reddediliyor; 8446 vhost'undaki giriş sınırı ve socket kaynağı denetimi tam restart'la etkinleşir.
+
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 
 - 74 worktree ve 83 yerel dal tarandı; işi main'de olmayan yalnız DYK kurul (4 commit), Zeki AI fırsatları analizi ve kapak arşivi günlük girişi çıktı → bu dala main üstüne dizildi. Saha `fmtCount` düzeltmesi (`ec51bcd2`) zaten main'deydi.

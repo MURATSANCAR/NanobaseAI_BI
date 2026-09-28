@@ -314,6 +314,12 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		 ('import { socketio_port } from "../../../../sites/common_site_config.json";\n', '')],
 	),
 	(
+		# Arayüz kütüphanesi de kendi bildirim bağlantısını aynı :9000 kuralıyla açıyordu; $socket'i
+		# hemen ardından socket.ts'in bağlantısı ezdiği için fazlalık, kapatılır.
+		"helpdesk/desk/src/main.js",
+		[("app.use(FrappeUI);", "app.use(FrappeUI, { socketio: false });")],
+	),
+	(
 		# Temsilci ekranı: «NanobaseAI» bölümü (sınıflama, özet, yanıt taslağı, makale taslağı) — bileşen bizim:
 		# helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue, arka uç nanobase_brand/yz/kayit.py.
 		"helpdesk/desk/src/components/ticket-agent/TicketDetailsTab.vue",

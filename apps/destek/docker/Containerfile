@@ -66,6 +66,17 @@ RUN cp -r sites/assets assets && rm -rf sites/assets
 VOLUME ["/home/frappe/frappe-bench/sites", "/home/frappe/frappe-bench/logs"]
 
 USER root
+# Canlı bildirim (socket.io): iç web sunucusu kaynak adresini site adından kuruyordu (https://destek).
+# Bildirim servisi bu adresi hem gelen alan adıyla karşılaştırır (uyuşmaz → "Invalid origin") hem de
+# oturumu doğrulamak için ona istek atar (ağda böyle bir ad yok). İkisi de compose ağındaki frontend
+# servisine çevrilir; site adı X-Frappe-Site-Name ile gider. Başka sitenin sayfasından bağlanma
+# denetimi dış vekilde: deploy/nginx-destek-8446.conf → location /socket.io.
+RUN sed -i \
+      -e 's|proxy_set_header Origin $proxy_x_forwarded_proto://${FRAPPE_SITE_NAME_HEADER};|proxy_set_header Origin http://frontend:${NGINX_LISTEN_PORT};|' \
+      -e '/location \/socket.io/,/^[[:space:]]*}[[:space:]]*$/ s|proxy_set_header Host $host;|proxy_set_header Host frontend;|' \
+      /templates/nginx/frappe.conf.template \
+ && grep -q 'proxy_set_header Origin http://frontend:' /templates/nginx/frappe.conf.template \
+ && grep -q 'proxy_set_header Host frontend;' /templates/nginx/frappe.conf.template
 COPY docker/resources/main-entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/resources/start.sh /usr/local/bin/start.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/start.sh

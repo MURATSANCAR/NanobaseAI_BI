@@ -143,3 +143,6 @@ echo "imaj: $(docker inspect "${PROJECT}-backend-1" --format '{{.Config.Image}}'
 echo "kod sürümü: $(dc exec -T backend printenv DESTEK_CODE_VERSION)"
 echo "._* (hedef): $(find "$DEST" -name '._*' -type f | wc -l)"
 echo "._* (konteyner): $(dc exec -T backend bash -c "find apps -name '._*' -type f | wc -l")"
+# Canlı bildirim: bildirim servisi oturumu iç web sunucusu üzerinden doğrular (Containerfile'daki socket.io ayarı).
+dc exec -T frontend grep -q 'Origin http://frontend:' /etc/nginx/conf.d/frappe.conf \
+  && echo "canlı bildirim ayarı: tamam" || echo "UYARI: canlı bildirim ayarı eksik (kayıt ekranları kendiliğinden yenilenmez)"

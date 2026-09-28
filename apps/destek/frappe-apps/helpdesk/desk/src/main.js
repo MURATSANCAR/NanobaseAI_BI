@@ -63,7 +63,7 @@ setConfig("fallbackErrorHandler", (error) => {
 const pinia = createPinia();
 const app = createApp(App);
 
-app.use(FrappeUI);
+app.use(FrappeUI, { socketio: false });
 app.use(spritePlugin);
 app.use(pinia);
 app.use(router);
