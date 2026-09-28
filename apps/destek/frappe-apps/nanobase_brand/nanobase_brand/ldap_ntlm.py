@@ -122,6 +122,7 @@ class NtlmLDAPSettings(LDAPSettings):
 			user = self.create_or_update_user(self.convert_ldap_entry_to_dict(entry), groups=groups)
 			ensure_agent(user)
 			ensure_admin(user, sam)
+			ensure_team(user, _department(entry))
 			return user
 		finally:
 			conn.unbind()
@@ -146,9 +147,15 @@ class NtlmLDAPSettings(LDAPSettings):
 			user = self.create_or_update_user(self.convert_ldap_entry_to_dict(entry), groups=groups)
 			ensure_agent(user)
 			ensure_admin(user, str(entry[self.ldap_username_field].value))
+			ensure_team(user, _department(entry))
 			return user
 		finally:
 			conn.unbind()
+
+	def get_ldap_attributes(self):
+		# Birim (department): aynı adlı destek ekibine üyelik için.
+		attrs = super().get_ldap_attributes()
+		return attrs + [a for a in ("department",) if a not in attrs]
 
 	def convert_ldap_entry_to_dict(self, user_entry):
 		def value(field):
@@ -191,3 +198,76 @@ def ensure_agent(user) -> None:
 			"is_active": 1,
 		}
 	).insert(ignore_permissions=True)
+
+
+def _department(entry) -> str:
+	"""AD «department» alanı; boşsa kişiye en yakın OU (Timaş'ta birim alanı boş, birim OU'dadır —
+	portal kişi rehberiyle aynı kural, backend/semantic_bridge/people.py `_ou`)."""
+	try:
+		v = entry["department"].value if "department" in entry.entry_attributes else None
+	except Exception:
+		v = None
+	if v and str(v).strip():
+		return str(v).strip()
+	for part in str(getattr(entry, "entry_dn", "") or "").split(","):
+		key, _sep, val = part.partition("=")
+		if key.strip().upper() == "OU" and val.strip():
+			return val.strip()
+	return ""
+
+
+_TR = str.maketrans({"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u", "â": "a", "î": "i", "û": "u"})
+
+
+def _fold(text: str) -> str:
+	"""Türkçe harf ve aksan duyarsız: «Satış» = «SATIŞ» = «Satis»; «Çocuk Editörya» = «Cocuk Editorya»."""
+	return " ".join(text.replace("I", "ı").replace("İ", "i").lower().translate(_TR).replace("_", " ").split())
+
+
+def ensure_team(user, department: str) -> str | None:
+	"""AD birimiyle aynı adlı (etkin) destek ekibi varsa kişi o ekibe eklenir; ekip kaydedilince atama kuralı
+	üyeleri de güncellenir. Eşleşen ekip yoksa bir şey yapılmaz — ekipleri yönetici AD birim adlarıyla açar
+	(birimleri görmek için: nanobase_brand.ldap_ntlm.ad_departments). Kişi başka ekiplerden çıkarılmaz."""
+	if not department or not frappe.db.exists("DocType", "HD Team"):
+		return None
+	want = _fold(department)
+	for team in frappe.get_all("HD Team", filters={"disabled": 0}, pluck="name"):
+		if _fold(team) != want:
+			continue
+		doc = frappe.get_doc("HD Team", team)
+		if user.name not in {m.user for m in doc.users}:
+			doc.append("users", {"user": user.name})
+			doc.save(ignore_permissions=True)
+		return team
+	return None
+
+
+@frappe.whitelist()
+def ad_departments() -> list[dict]:
+	"""Etkin AD kişilerinin birimleri (birim alanı, yoksa OU) ve kişi sayıları — ekipler bu adlarla açılır."""
+	frappe.only_for(("System Manager", "Agent Manager"))
+	from collections import Counter
+
+	ldap = frappe.get_doc("LDAP Settings")
+	conn = ldap.connect_to_ldap(ldap.base_dn, ldap.get_password(raise_exception=False))
+	try:
+		entries = conn.extend.standard.paged_search(
+			search_base=ldap.ldap_search_path_user,
+			search_filter="(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+			attributes=["department"], paged_size=500, generator=True,
+		)
+		counts = Counter()
+		for e in entries:
+			if e.get("type") != "searchResEntry":
+				continue
+			dep = (e.get("attributes") or {}).get("department")
+			if isinstance(dep, list):
+				dep = dep[0] if dep else None
+			if not dep:
+				ous = [p.split("=", 1)[1] for p in e["dn"].split(",") if p.strip().upper().startswith("OU=")]
+				dep = ous[0] if ous else None
+			if dep:
+				counts[str(dep).strip()] += 1
+	finally:
+		conn.unbind()
+	return [{"birim": k, "kisi": v} for k, v in counts.most_common()]
