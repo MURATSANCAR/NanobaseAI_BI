@@ -61,6 +61,16 @@
 - **İçerik:** 6 dosya (`content/analiz-finans|editoryal|satis-lojistik|pazarlama|seo-geo|altyapi-ik-platform.ts`), anahtar menü öğesi kimliği; menüde olmayan adresler `path:` kalıbıyla (kalıp menü öğesinden önce gelir: `/kitap/:id` kendi metnini gösterir). Metinler koddan (ekran, köprü modülü, zamanlayıcılar, gece işleri) çıkarıldı; teknoloji adı yok.
 - **Test:** `screenInfo.test.ts` — menüdeki her ekranın içeriği var (istisnasız), fazladan anahtar yok, yasaklı teknoloji adı yok, uzunluk sınırları.
 - **Açık nokta:** iş saatleri test sunucusunun zamanlayıcılarından; müşteri VM'inde işler `infra/docker/bi/jobs.py` ile koşar, saat farkı olan ekran kurulumdan önce karşılaştırılmalı.
+## 2026-09-28 — Sorgu bilgisi Grup 3 (Lojistik ve İK): 44 rakamlı ekranın her kalemi çalışan SQL'e bağlı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** kullanıcı «tüm hesaplama ve rakam verdiğimiz ekranlarda çalıştırdığımız sorguları info olarak her kalemde ver ve kopyalanabilir olsun ama eksiksiz hepsinde istiyorum»; G3 = depo ve stok, tedarik, kargo, İK (49 ekran).
+- **Stok:** okuma her Logo/CRM sorgusunun çalışan metnini, satır, süre ve anını tutar (`raw["runs"]`, yıl kopyası başına); 11 uç `stock_kaynak.py` ile bağlı; «Nasıl hesaplandı» paneli okunmamış kaynakta şablon göstermez. Stok değeri M9 onaylı analiz okuması + fiyatlama görüntüsünün Logo satış sorgusu.
+- **Tedarik:** `Recorder` firma kopyası başına kayıt; **`/sources` şablon SQL döndürüyordu, artık son okumada çalışan metni döndürür** (envanterdeki açık madde). FIFO borç formül metninde.
+- **Kargo:** çağrı anında toplanan metin; önbellekten dönen okumada da dolduran sorgu kayıtta; alıcı/teslim alan okuyan sorgu listelenmez, kargo firması kimlik kolonları hiçbir sorguda yok.
+- **İK:** `hr_kaynak.capture` isteğin iş parçacığında çalışan portal SELECT'lerini değerleriyle yakalar (bir uç ~20 farklı sorgu çalıştırdığı için tek tek `_stmt` ayırmak yerine çalışanın kendisi); Logo (eğitim gideri, temsilci satışı) ve CRM (eşitleme, sahiplik) metinleri kaydedilir. **Kişisel veri kuralı:** İK kaynaklarında satır sayısı hiç yazılmaz (sayı bir kişiyi/grubu ele verebilir); anket birim sonucu ve eğitim anketi eşik altındaysa alan «gizli» hesabına bağlı, hesap sayı içermez. Ön yüz: `hrSend` cevabı `WithK`; 28 ekranın KPI/kart/tablo başlıkları «i».
+- **Karar:** ayar ya da istek parametresi olan sayılar (eşik günü, pencere, uyarı günü) «rakam değil» sayılıp atlanmadı; ayar kaydı okumasına ve formüle bağlandı.
+- **Olay:** ortak scratchpad'deki düzenleme betiğini başka bir ajan üzerine yazdı ve bu worktree'de iki dağıtım dosyasını değiştirdi; geri alındı, commit'e girmedi. G3 yardımcı betikleri artık `scratchpad/g3-a4d956/` altında.
+- **Doğrulama:** Mac'te yalnız `py_compile` ve tsc (büyük/küçük harf çakışması için kopyada; hata yok). Sunucuda: `pytest test_sorgu_bilgisi_{stock,supply,shipping,hr}.py` + ilgili modül testleri, `python scripts/analiz/sorgu_bilgisi_envanter.py`, yan port köprüsünde `cd scripts/acceptance/sorgu-bilgisi && python g3.py`.
 
 ## 2026-09-28 (13:30) — Search Console site haritası durumu sürekli okunuyor; zengin sonuç hataları iş listesinde
 
