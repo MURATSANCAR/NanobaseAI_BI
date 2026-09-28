@@ -220,6 +220,7 @@ def _speak(seg: Segment, tmp: str) -> np.ndarray:
     elif ref:
         # Yalnız referans sesi (VoxCPM2 "controllable cloning"): ses referanstan, ton talimattan.
         kw.update(reference_wav_path=ref)
+    wav = TTS.generate(**kw)
     wav = _trim(_stretch(np.asarray(wav, dtype=np.float32), seg.rate))
     if seg.min_sec and len(wav) and len(wav) / SR < seg.min_sec:
         # Kısa ünlem yutulmasın («Tüh!» 0,2 sn, «O da ne!» 0,45 sn çıkıyordu): perdeyi koruyarak en az süreye esnetilir,
