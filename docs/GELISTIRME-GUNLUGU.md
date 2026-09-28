@@ -89,6 +89,22 @@
 - **Yetki / menü:** access.py'de M19 satırları M15'in genel `/api/v1/marketing/` satırından önce; menüde tek Pazarlama grubu,
   «Üretim» bölümü «Planlama»nın hemen altında.
 - **DOĞRULANAMADI — sunucu kapalı.** Yalnız `py_compile` ve JSON; testleri koordinatör koşturacak.
+## 2026-09-28 — M9 birim maliyeti M32 ve M33'e bağlandı (tek sağlayıcı); M53 bağı sonraya
+
+**DOĞRULANAMADI — sunucu kapalı.** Dal `worktree-agent-a8033dcbcb74f9983` (main `935080d5` üstünde), main'e taşınmadı; yalnız `py_compile` koşturuldu (kural: Mac'te pytest/sorgu yok).
+
+- **Neden:** M32 (kurumsal satış), M33 (ihale) ve M53 (set) birim maliyet için sağlayıcı bekliyor, «maliyet bilinmiyor» gösteriyordu; M9 main'de ama hiçbirine bağlı değildi. Birim maliyetin sahibi M9 (`model.unit_cost`) olduğu için öbür modüller kendi maliyetini üretmesin diye tek bir sağlayıcı yazıldı.
+- **Ne yapıldı:** `backend/semantic_bridge/pricing/cost_provider.py` — `unit_costs(stok_kodlari)` → `{kod: {"maliyet": Decimal|None, "kaynak": "onayli-analiz"|"gerceklesen"|"yok", "tarih"}}`; `Provider` (bağlam çağrı anında: `rt().store.engine`, kiracı, `app.state.pricing.get` görüntüsü), `.birim` (M32/M53 biçimi) ve `.labelled()` (M33 biçimi, okunur kaynak cümlesi). `app.py`'de M9 kaydından hemen sonra yalnız bağlantı: M32 `register_cost_provider`, M33 `app.state.unit_cost`. Üç modülün koduna dokunulmadı.
+- **Kararlar (veriye/koda bakılarak):**
+  - Onaylı analizden alınan sayı `result_json.summary.unitCost`: onaya gönderilirken sunucuda yeniden hesaplanıp dondurulan, seçilen baskı adedinde basılan adet başı baskı + sabit gider payı (`model.unit_cost`). Telif ve dağıtım fiyata/satışa bağlı olduğu için birim maliyete girmez — M9'un kendi tanımı; yeniden hesaplanmadı.
+  - Birden çok onaylı analiz: Aşama 2 (kesin: kesin sayfa ve teknik özellik) Aşama 1'in önüne geçer; aynı aşamada son onay imzası en yeni olan. Tarih = son imza günü (`decide` `updated_at`'i değiştirmediği için imzadan okunur).
+  - Gerçekleşen: M9 görüntüsündeki satış satırı maliyeti (`OUTCOST`, `data.sales_summary` tanımı) — M9 ekranı bütün yılları toplar; sağlayıcı **en son maliyetli yılı** alır (bugünkü teklif/marj için eski yılların enflasyonlu ortalaması yanıltır). Maliyeti girilmemiş yıl atlanır; hiç yoksa «yok».
+  - Sağlayıcı Logo'ya gitmez, M9 zamanlayıcısını başlatmaz: görüntü (diskte) yoksa gerçekleşen adımı boş geçer. Kayıt tablosu okunamazsa gerçekleşene düşer; hiçbir hata modülün ekranını düşürmez.
+  - Sıfır/eksi maliyet «bilinmiyor» sayılır; hiçbir yolda varsayılan rakam yok.
+- **M53:** `sets_sources` main'de yok (yalnız `worktree-agent-a9ebb473f22bc58dc` dalında, `6ab278d7`). Bağ sonraya bırakıldı: M53 main'e girince `app.py`'deki yorum satırı açılır (`sets_sources.register_cost_provider(app.state.pricing_costs.birim)`, biçim M32 ile aynı). Test (`importorskip`) ve kabul K5 M53 gelince kendiliğinden koşar.
+- **Testler:** `backend/semantic_layer/tests/test_pricing_cost_provider.py` — öncelik (onaylı > gerçekleşen > yok), kesin > tahmini, aynı aşamada en yeni, onaysız/başka kiracı/sıfır maliyetli analiz yok sayılır, maliyetsiz yıl atlanır, bozuk kayıt/görüntü, M32 ve M33 sağlayıcıyı kendi biçiminde alır, `create_app` bağı (sahte kayıt + sahte `snapshot.json`).
+- **Kabul (sunucuda koşulacak):** `scripts/acceptance/M9-maliyet/kabul.py` (K1 onaylı analiz = kayıt, K2 ≥5 kitapta gerçekleşen = Logo'da aynı yıl/kopya bağımsız SQL, K3 maliyetsiz kitap = Logo'da maliyetli satır 0, K4 olmayan kod, K5 M32/M33(/M53) biçimleri aynı sayı), `referans.sql` R1–R3, `temizlik.py` (kabul yalnız okur; «KABUL» adlı artık analiz denetimi).
+- **Açık kalanlar:** M33'ün «Maliyet bilinmiyor: birim maliyet kaynağı bu kurulumda bağlı değil.» notu ve M32/M33 modül belgelerindeki «M9 henüz main'de değil» cümleleri artık eski — modül kodu olduğu için dokunulmadı (M33 sahibi düzeltmeli: not «bu kitapların maliyeti bilinmiyor» olmalı). Onaylı analizi olmayan ve M9 görüntüsü hiç kurulmamış kurulumda (M9 ekranı hiç açılmamış) gerçekleşen adımı boştur; görüntü ilk M9 isteğiyle kurulur.
 
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 

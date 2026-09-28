@@ -6672,6 +6672,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.pricing = pricing.register(app, rt, {"session": _greetings, "can": _can, "audit": admin_mod.audit,
                                                    "is_admin": admin_mod.is_admin})
 
+    # M9 birim maliyeti öbür modüllere: onaylı analiz → Logo gerçekleşen → «maliyet bilinmiyor» (pricing/cost_provider.py).
+    # Yalnız bağlantı; maliyeti görme yetkisi olmayandan alanı çıkarmak her modülün kendi kuralı.
+    from semantic_bridge import corporate_sales_sources
+    from semantic_bridge.pricing import cost_provider as pricing_costs
+    app.state.pricing_costs = pricing_costs.Provider(engine=lambda: rt().store.engine,
+                                                     tenant=lambda: rt().settings.tenant_id,
+                                                     snapshot=app.state.pricing.get)
+    corporate_sales_sources.register_cost_provider(app.state.pricing_costs.birim)   # M32 (CORP_COST_SOURCE=m9)
+    app.state.unit_cost = app.state.pricing_costs.labelled()                        # M33 (tenders_api okur)
+    # M53 set/hediye main'e girince: sets_sources.register_cost_provider(app.state.pricing_costs.birim)
+
     # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
     from semantic_bridge import tenders_api
     app.state.tenders = tenders_api.register(app, rt, _require_caller, _can)
