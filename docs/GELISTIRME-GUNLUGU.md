@@ -14,6 +14,15 @@
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
 - **16 kitaplık yeni denetim turu bitti:** `word_variety`, `word_overuse`, `sentence_starts`, `phrase_repeats` 16/16; `word_choice` bir kitapta geçici ad çözümü hatasıyla düşmüştü, yeniden koşturuldu (13 bulgu) → 16/16.
 - **Git:** `claude/document-review` worktree'si, yerel ve uzak dalı silindi; uzak daldaki üç commit yeniden dizilmeden önceki kopyalardı (`git cherry` hepsi main'de).
+## 2026-09-28 — M6: grup sözleşmesi listesi sayı sırasına göre; tavansız ekranların görsel kontrolü
+
+- **Görsel kontrol (test portalı, kullanıcının kendi AD oturumu, tarayıcı panesi, mobil genişlik; hiçbir şey
+  kaydedilmedi):** yeni sözleşme formunda taraf seçicisi «ahmet» → 20 kayıt + altta yapışık «1.479 kişi ve firma içinden
+  20 tanesi gösteriliyor · Daha fazla göster»; düğmeyle 40 kayıt ve sayaç 40. 2024007186-1 grup sözleşmesinde «Grup
+  sözleşmesi» bölümü 243 bağlı kaydın hepsini listeliyor. Ödeme takvimi açılıyor (test sunucusunda ödeme 0).
+- **Görülen kusur ve düzeltme:** bağlı kayıtlar yazı sırasıyla diziliyordu (-10, -100, -101 … -11). `contracts.related`
+  artık sayıyı sayı olarak sıralar (`_natural`: -1, -2 … -10 … -100; ana kayıt yine en üstte). Test:
+  `test_related_contracts_sort_by_number`.
 
 ## 2026-09-28 — Test izi temizliği 2 ve CRM mükerrer yazar kaydı
 
