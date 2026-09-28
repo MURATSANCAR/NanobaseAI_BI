@@ -1113,7 +1113,8 @@ def similar(schema: str, run: Optional[Callable[[str], dict[str, Any]]], engine:
 def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engine: sa.engine.Engine, tenant: str,
             user: str, *, scope: str = "hepsi", q: str = "", order: str = "soguk", page_no: int = 0,
             now: Optional[datetime] = None, warn_days: int = 60,
-            loyalty: Optional[Callable[[], dict[str, dict[str, Any]]]] = None) -> dict[str, Any]:
+            loyalty: Optional[Callable[[], dict[str, dict[str, Any]]]] = None,
+            crm: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Satırlar: yürürlükte sözleşmesi olan yazarlar (CRM) ∪ kartı olan herkes (arşiv hariç). Hücre: o ayda
     yapılan görüşme sayısı; CRM olayları (yeni eser, yeni sözleşme) ayrı sayı ve ısının yakınlık payına son iz olarak
     girer (`with_trace`). «İlgi bekleyen» nedenleri satırda (`attention`). Tamamı hesaplanır, sayfa sayfa döner."""
@@ -1130,8 +1131,9 @@ def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engin
 
     crm_ok, crm_error = True, None
     try:
-        authors = fetch_all(contracted_authors_sql(schema))
-        events = fetch_all(crm_events_sql(schema, since))
+        # Önceden hazırlanmış CRM parçası varsa kaynak beklenmez (author_snapshots); yoksa canlı okunur.
+        authors = crm["authors"] if crm else fetch_all(contracted_authors_sql(schema))
+        events = crm["events"] if crm else fetch_all(crm_events_sql(schema, since))
     except Exception as e:  # noqa: BLE001 — CRM okunamazsa yalnız kartlarla çizilir, ekran bunu söyler
         log.warning("author heatmap: CRM okunamadı: %s", e)
         authors, events, crm_ok, crm_error = [], [], False, str(e)[:300]

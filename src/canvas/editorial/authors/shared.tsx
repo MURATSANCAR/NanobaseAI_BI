@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query';
-import { ENGINE_ENABLED, authorsApi, peopleApi, type AuthorHeat, type AuthorMeeting, type HeatBand, type LoyaltyBand } from '../../engine';
+import { useEffect, useMemo, useRef } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { queryOptions, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { ENGINE_ENABLED, authorsApi, peopleApi, type AuthorSnapshot, type AuthorHeat, type AuthorMeeting, type HeatBand, type LoyaltyBand } from '../../engine';
 import type { SearchOption } from '../../components/SearchSelect';
 
 /** M7 Yazar ilişkileri ekranlarının ortak parçaları: ısı bantları, tarih biçimi, takvim dosyası, sorgu anahtarları. */
@@ -150,4 +151,59 @@ export function usePeopleOptions(): { options: SearchOption[]; byUser: Map<strin
 /** Bir kayıt değişince ilişkili bütün görünümler yeniden okunur (kart, liste, ısı, ajanda, Kişiler bölümü). */
 export function invalidateAuthors(qc: QueryClient): Promise<void> {
   return qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'authors' });
+}
+
+const clock = new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
+
+/** Önceden hazırlanan verinin durumu ve «Yenile». Tur sürerken 3 sn'de bir, yoksa dakikada bir sorar; tur bitince
+ *  ekrandaki bütün yazar verileri yeniden okunur (hazır veriden, anında). */
+export function useAuthorsSnapshot() {
+  const qc = useQueryClient();
+  const status = useQuery({
+    queryKey: ['authors-snapshot'],
+    queryFn: authorsApi.snapshot,
+    enabled: ENGINE_ENABLED,
+    refetchInterval: (q) => (q.state.data?.refreshing ? 3000 : 60_000),
+  });
+  const was = useRef(false);
+  const refreshing = !!status.data?.refreshing;
+  useEffect(() => {
+    if (was.current && !refreshing) void invalidateAuthors(qc);
+    was.current = refreshing;
+  }, [refreshing, qc]);
+  const start = useMutation({
+    mutationFn: authorsApi.refresh,
+    onSuccess: (s) => qc.setQueryData(['authors-snapshot'], s),
+  });
+  return { status: status.data, start: () => start.mutate(), busy: refreshing || start.isPending };
+}
+
+function preparedAt(s: AuthorSnapshot | undefined): string | null {
+  const times = [s?.crm?.updatedAt, s?.sales?.updatedAt].filter(Boolean) as string[];
+  if (!times.length) return null;
+  return clock.format(new Date(times.sort()[0]));
+}
+
+export function SnapshotBar({ compact }: { compact?: boolean }) {
+  const { status, start, busy } = useAuthorsSnapshot();
+  const at = preparedAt(status);
+  const err = status?.crm?.error || status?.sales?.error;
+  return (
+    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${compact ? 'text-[11px]' : 'text-[11.5px]'} text-canvas-muted`}>
+      <span>
+        {busy ? 'Veriler tazeleniyor…' : at ? `Veriler ${at}'te hazırlandı` : 'Veriler ilk kez hazırlanıyor…'}
+        {!compact && ` · ${Math.round((status?.intervalSeconds ?? 300) / 60)} dk'da bir kendiliğinden yenilenir`}
+      </span>
+      {err && <span className="text-amber-800">· {err}</span>}
+      <button
+        type="button"
+        onClick={start}
+        disabled={busy}
+        className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-slate-100 px-2.5 font-extrabold text-canvas-ink transition-transform duration-150 ease-out hover:bg-slate-200 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100"
+      >
+        <RefreshCw aria-hidden className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
+        Yenile
+      </button>
+    </div>
+  );
 }

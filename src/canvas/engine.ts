@@ -1599,6 +1599,15 @@ export type AuthorGrowth = {
   notes: string[];
   computedAt: string;
   cached?: boolean;
+  preparedAt?: string;
+  snapshot?: AuthorSnapshot;
+};
+/** Önceden hazırlanan M7 verisinin durumu (CRM + Logo parçaları, 5 dk'da bir ve «Yenile» ile). */
+export type AuthorSnapshot = {
+  intervalSeconds: number;
+  refreshing: boolean;
+  crm: { updatedAt: string; error: string | null; seconds: number | null } | null;
+  sales: { updatedAt: string; error: string | null; seconds: number | null } | null;
 };
 export type AuthorAdvice = {
   id: string;
@@ -1681,6 +1690,8 @@ export const authorsApi = {
   advice: (contactId: string) =>
     send<{ advice: AuthorAdvice | null; modelReady: boolean }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
   makeAdvice: (contactId: string) => send<AuthorAdvice>('POST', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 600_000),
+  snapshot: () => send<AuthorSnapshot>('GET', `${A}/snapshot`, undefined, 30_000),
+  refresh: () => send<AuthorSnapshot>('POST', `${A}/refresh`, undefined, 30_000),
   remindersMe: () =>
     send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number } }>('GET', `${A}/reminders/me`, undefined, 30_000),
   setReminders: (enabled: boolean) => send<{ enabled: boolean }>('PUT', `${A}/reminders/me`, { enabled }, 30_000),

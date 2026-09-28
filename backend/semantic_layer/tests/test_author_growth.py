@@ -181,3 +181,74 @@ def test_access_rules_for_the_new_endpoints():
     assert A.features_for("GET", "/api/v1/editorial/authors/advice/x") == []
     assert A.features_for("PUT", "/api/v1/editorial/authors/reminders/me") == []
     assert "ozellik:yazar-iliski.oneri" in A.all_keys() - A.explicit_keys()
+
+
+# ------------------------------------------------------------------ önceden hazırlanan veri (author_snapshots)
+
+
+def _snaps(tmp_path, monkeypatch, crm, sales_by_year, views=None, calls=None):
+    from semantic_bridge import author_snapshots as S
+    monkeypatch.setenv("EDITORIAL_HOME_CACHE_DIR", str(tmp_path))
+    calls = calls if calls is not None else []
+
+    def fetch_all(sql):
+        calls.append(sql)
+        if "FROM Timas_MSCRM.dbo.new_projeBase j JOIN" in sql and "kapali" in sql:
+            return crm["pool"]
+        if "UNION ALL" in sql and "tur" in sql:
+            return crm["events"]
+        if "ilk" in sql and "aktif" in sql:
+            return crm["loyalty"]
+        if "new_EKitapStokKodu" in sql:
+            return crm["books"]
+        return crm["authors"]
+
+    def logo():
+        def run(sql):
+            y = int(sql.split("V_SatisRaporu_")[1][:4])
+            calls.append(f"logo {y}")
+            return sales_by_year.get(y, [])
+        return set(views or sales_by_year), run, lambda y: date(y, 8, 17), lambda: None
+
+    return S.AuthorSnapshots(lambda: ["t"], lambda: "Timas_MSCRM.dbo", lambda: "2024-01-01", fetch_all, logo), calls
+
+
+def test_prepared_growth_and_pool_answer_without_the_source(tmp_path, monkeypatch, engine):
+    this = date.today().year
+    crm = {"authors": [], "events": [], "loyalty": [{"kisi": GUID, "ilk": "2015-01-01", "son": f"{this}-01-01", "eser": 2, "sozlesme": 1, "aktif": 1}],
+           "books": [{"kisi": GUID.upper(), "new_kitapId": "b1", "new_name": "Kitap", "new_StokKodu": "K1", "new_EKitapStokKodu": None,
+                      "new_ean13": None, "new_ilkyayintarihi": "2020-01-01", "CreatedOn": "2020-01-01"}],
+           "pool": [{"ContactId": "p1", "FullName": "Aday Bir", "new_projeId": "j1", "new_name": "Proje", "statuscode": "Açık",
+                     "CreatedOn": "2026-09-01T10:00:00", "editor": "E", "kapali": 0},
+                    {"ContactId": "p2", "FullName": "Reddedilen", "new_projeId": "j2", "new_name": "Proje 2", "statuscode": "Red",
+                     "CreatedOn": "2026-09-02T10:00:00", "editor": "E", "kapali": 1}]}
+    sales = {this: [{"kod": "K1", "ay": 1, "tur": "Satış", "miktar": 10, "net": 100}, {"kod": "K1", "ay": 1, "tur": "İade", "miktar": 2, "net": 20}],
+             this - 1: [{"kod": "K1", "ay": 5, "tur": "Satış", "miktar": 4, "net": 40}]}
+    snaps, calls = _snaps(tmp_path, monkeypatch, crm, sales)
+    assert snaps.growth_inputs(GUID) is None            # hazırlık yok: ekran canlı yola düşer
+    snaps.snap.refresh(force=True)
+    ready = snaps.growth_inputs(GUID)
+    rows, end, missing = ready["logo"](["K1"], date(this - 5, 1, 1), date.today())
+    assert end == date(this, 8, 17) and missing == []
+    assert sorted((r["yil"], r["tur"], r["miktar"]) for r in rows) == [(this - 1, "Satış", 4), (this, "Satış", 10), (this, "İade", 2)]
+    g = G.compute("Timas_MSCRM.dbo", lambda sql: {"records": []}, ready["logo"], engine, T, GUID, web_enabled=False,
+                  books_rows=ready["books"], loyalty_row=ready["loyalty"], prepared=True)
+    assert g["books"][0]["qty"] == 12.0 and g["loyalty"]["activeContracts"] == 1
+    pool = snaps.pool_page(engine, T, 0)
+    assert [i["name"] for i in pool["items"]] == ["Aday Bir"] and pool["total"] == 1
+    assert snaps.pool_page(engine, T, 0, closed=True)["total"] == 2
+    assert snaps.pool_page(engine, T, 0, q="aday")["total"] == 1
+    assert snaps.status()["crm"] is not None and snaps.status()["sales"] is not None
+
+
+def test_past_years_are_not_reread_every_round(tmp_path, monkeypatch):
+    this = date.today().year
+    crm = {"authors": [], "events": [], "loyalty": [], "books": [], "pool": []}
+    sales = {this: [], this - 1: [], this - 2: []}
+    snaps, calls = _snaps(tmp_path, monkeypatch, crm, sales)
+    snaps.snap.refresh(force=True)
+    first = [c for c in calls if c.startswith("logo")]
+    assert sorted(first) == sorted(f"logo {y}" for y in (this, this - 1, this - 2))
+    calls.clear()
+    snaps.snap.refresh(force=True)
+    assert [c for c in calls if c.startswith("logo")] == [f"logo {this}"]   # geçmiş yıllar günde bir
