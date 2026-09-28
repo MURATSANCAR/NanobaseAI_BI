@@ -17,7 +17,11 @@ app_include_js = ["/assets/nanobase_brand/js/nanobase_desk.js"]
 extend_bootinfo = ["nanobase_brand.boot.extend"]
 
 # AD girişi portal girişiyle aynı yöntemle (NTLM): nanobase_brand/ldap_ntlm.py
-override_doctype_class = {"LDAP Settings": "nanobase_brand.ldap_ntlm.NtlmLDAPSettings"}
+override_doctype_class = {
+	"LDAP Settings": "nanobase_brand.ldap_ntlm.NtlmLDAPSettings",
+	# Destek gelen kutusu yalnız hesabın açıldığı andan sonra geleni alır: nanobase_brand/eposta.py
+	"Email Account": "nanobase_brand.eposta.NanobaseEmailAccount",
+}
 
 app_logo_url = "/assets/nanobase_brand/images/logo-mark.svg"
 

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (12:40) — NanobaseAI Destek: zeki@ gelen kutusu destek kaydı açar (kullanıcı kararı, ayrı adres gelene kadar)
+
+- **Karar:** «zekiai olsun destek maili şimdilik» → zeki@timas.com.tr hem gönderim hem gelen kutusu. `eposta.py` IMAP'i (imap.gmail.com:993, aynı uygulama şifresi) açar, INBOX → HD Ticket.
+- **Eski e-postalar alınmaz:** kutuda 45 e-posta (29 okunmamış; çoğu Google/Atlassian bildirimi) vardı. Çatının iki eşitleme seçeneği de ilk bağlantıda eskileri alıyor («ALL» → UID 1'den 100 tane, «UNSEEN» → okunmamış 29'u, üstelik okundu işaretler). Hesap ilk açıldığında kutunun UIDNEXT'i bir kez site varsayılanına yazılır (`nb_eposta_baslangic_uid::…`), UIDVALIDITY klasör satırına önceden yazılır (yoksa ilk eşitleme «yeniden dizinlendi» sayıp son 100'ü alır); `NanobaseEmailAccount.build_email_sync_rule` yalnız o numaradan sonrasını ister. Üst sınır sayıyla (`UID n:4294967295`): Gmail'de salt okuma sınandı, `UID 46:*` boş kutuda son eski e-postayı (45) döndürüyor, sayılı aralık boş.
+- «ALL» kutuyu salt okunur açar: zeki@'deki okunmamışlar okundu işaretlenmez.
+- Dışarıya otomatik e-posta yok: alındı (`send_acknowledgement_email`) ve memnuniyet (`enable_email_ticket_feedback`) kurulumda açıkça 0. Temsilcinin yazdığı yanıt müşteriye zeki@'den gider.
+- Bilinen: zeki@'e gelen bildirim e-postaları (Google güvenlik, Atlassian) da kayıt açar; kalıcı çözüm ayrı destek adresi.
+
 ## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
 
 - Kurulum: imaj `nanobase-destek:0.1.0-e9fa4a3f`, kod sürümü e9fa4a3f, `._*` hedef/kapsayıcı 0, «canlı bildirim ayarı: tamam».

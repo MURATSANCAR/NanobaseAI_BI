@@ -103,7 +103,7 @@ fi
 sudo chown root:www-data "$SSO_FILE" && sudo chmod 640 "$SSO_FILE"
 sudo cat "$SSO_FILE" | dc exec -T backend bench --site "$SITE" execute nanobase_brand.sso.set_secret >/dev/null
 
-say "Giden e-posta (Gmail, zeki@)"
+say "Destek e-postası (Gmail, zeki@: gönderim + gelen kutusu)"
 # SMTP ayarı köprünün yönetim ayarlarından (ALERT_SMTP_*): şifre ekrana, komut satırına ve depoya düşmez.
 BRIDGE_PY=${BRIDGE_PY:-/data/nanobaseai/bi/semantic-venv/bin/python}
 BRIDGE_SRC=${BRIDGE_SRC:-/data/nanobaseai/bi/frontend/backend}
@@ -125,7 +125,7 @@ c = {k: stored.get("ALERT_SMTP_" + k.upper()) or os.environ.get("ALERT_SMTP_" + 
 if not (c["user"] and c["password"]): sys.exit(3)
 print(json.dumps(c))' "$BRIDGE_ENV" \
     | dc exec -T backend bench --site "$SITE" execute nanobase_brand.eposta.ensure_outgoing >/dev/null \
-    && echo "giden e-posta hesabı hazır" || echo "UYARI: giden e-posta ayarlanamadı (köprüde ALERT_SMTP_* yok ya da SMTP girişi reddetti)"
+    && echo "e-posta hesabı hazır (gönderim + gelen kutusu)" || echo "UYARI: e-posta hesabı ayarlanamadı (köprüde ALERT_SMTP_* yok ya da SMTP/IMAP girişi reddetti)"
 else
   echo "UYARI: köprü ayarı yok; giden e-posta ayarlanmadı"
 fi

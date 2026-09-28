@@ -45,6 +45,9 @@ SETTINGS = [
 		"app_logo": MARK,
 	}),
 	("HD Settings", {
+		# Dışarıya otomatik e-posta yok: kayıt açılınca alındı, çözülünce memnuniyet e-postası gitmez.
+		"send_acknowledgement_email": 0,
+		"enable_email_ticket_feedback": 0,
 		"brand_name": BRAND,
 		"brand_logo": MARK,
 		"favicon": FAVICON,
