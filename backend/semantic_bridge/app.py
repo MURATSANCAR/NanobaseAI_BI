@@ -2011,7 +2011,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import response_cache as rc_mod
     from semantic_bridge import board as _board_for_cache
 
-    app.state.response_cache = rc_mod.ResponseCache()
+    app.state.response_cache = rc_mod.ResponseCache(
+        os.environ.get("RESPONSE_CACHE_DIR", "/data/nanobaseai/bi/var/response-cache"))
     rc_mod.install(app, app.state.response_cache, _board_for_cache.user_of,
                    lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"))
 

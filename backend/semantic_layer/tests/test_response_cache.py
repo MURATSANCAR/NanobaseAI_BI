@@ -132,3 +132,19 @@ def test_forgotten_entries_leave_and_due_skips_fresh():
     assert len(cache.due()) == 1
     e.asked -= RC.KEEP_SECONDS + 1
     assert cache.due() == [] and cache.view()["entries"] == 0
+
+
+def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
+    key = ("ayse", "/api/v1/mod/slow", "a=1")
+    first = RC.ResponseCache(str(tmp_path))
+    first.put(key, b'{"n": 1}', [("content-type", "application/json")], 200, 2.0, {"cookie": "timas_session=a"})
+    import os
+    assert all(oct(os.stat(p).st_mode)[-3:] == "600" for p in tmp_path.iterdir())
+    assert not any(b"timas_session" in p.read_bytes() for p in tmp_path.iterdir())       # çerez diske gitmez
+    again = RC.ResponseCache(str(tmp_path))                                              # yeniden başlatma
+    e = again.get(key)
+    assert e is not None and e.body == b'{"n": 1}' and e.replay == {} and again.view()["loaded"] == 1
+    e.at -= RC.FRESH_SECONDS + 1
+    assert again.due() == []              # çerezsiz kayıt arkada değil, kişinin açılışında tazelenir
+    again.invalidate("/api/v1/mod")
+    assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
