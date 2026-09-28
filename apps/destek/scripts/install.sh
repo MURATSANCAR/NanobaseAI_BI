@@ -15,8 +15,9 @@ DEST=${DESTEK_DIR:-/data/nanobaseai/destek}
 PROJECT=nanobase-destek
 SITE=${SITE_NAME:-destek}
 PUBLIC_URL=${PUBLIC_URL:-https://portal.nanobase.ai:8446}
-LLM_BASE=${LLM_BASE:-https://portal.nanobase.ai/gpu-llm/v1}
-LLM_KEY_FILE=${LLM_KEY_FILE:-/etc/nanobase/timas-vm-gpu-llm.key}
+# Panel modele LLM kapısından gider (köprünün OpenAI uyumlu girişi; nginx deploy/nginx-destek-llm.conf).
+LLM_BASE=${LLM_BASE:-https://portal.nanobase.ai/destek-llm/v1}
+LLM_KEY_FILE=${LLM_KEY_FILE:-/etc/nanobase/destek-llm.key}
 ADMIN_FILE=${ADMIN_FILE:-/etc/nanobase/destek-admin.txt}
 VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$SRC/frappe-apps/nanobase_brand/nanobase_brand/__init__.py")
 IMAGE="nanobase-destek:${VERSION}-${SHORT}"

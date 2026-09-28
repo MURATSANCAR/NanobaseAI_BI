@@ -1,4 +1,4 @@
-"""Yapay zekâ panelinin modelini kurar: NanobaseAI modeli (OpenAI uyumlu uç).
+"""Yapay zekâ panelinin modelini kurar: NanobaseAI modeli, LLM kapısının OpenAI uyumlu girişi.
 
 Kurulum betiği çağırır:
     bench --site destek execute nanobase_brand.ai.ensure_model \
@@ -14,8 +14,9 @@ import frappe
 PROVIDER = "openai"
 TITLE = "NanobaseAI"
 MODEL = "nanobaseAI"
-# Düşünme kapalı: köprünün LLM_EXTRA_BODY_JSON değeriyle aynı.
-PARAMS = {"extra_body": {"chat_template_kwargs": {"enable_thinking": False}}}
+# Uç LLM kapısıdır: model adı ve düşünme ayarı köprüden gelir. Başlık, sırada modülün adıyla
+# görünmesi için (nginx de aynı başlığı koyar).
+PARAMS = {"extra_headers": {"X-LLM-Module": "destek"}}
 
 
 def ensure_model(base_url: str, api_key: str, model: str = MODEL) -> str:

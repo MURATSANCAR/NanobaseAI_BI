@@ -2361,6 +2361,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _job_for(job_id, request)
         return rt().jobs.cancel(job_id) or {}
 
+    # OpenAI istemcisiyle konuşan ayrı servisler (NanobaseAI Destek paneli) aynı sıradan geçer.
+    from semantic_bridge import llm_openai as llm_openai_mod
+
+    llm_openai_mod.register(app, rt, _require_caller)
+
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:
         """What the shadow compilers produced next to the answers this process served."""
