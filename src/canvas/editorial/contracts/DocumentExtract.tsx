@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, FileSearch, FileText, Loader2, Sparkles } from 'lucide-react';
+import { Check, FileSearch, Sparkles } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary } from '../../admin/ui';
 import SqlInfo from '../../components/SqlInfo';
+import { FileDrop } from '../../components/FileDrop';
+import { MB } from '../../components/fileDropRules';
 import QuoteEvidence from '../QuoteEvidence';
 import type { Meta, Terms } from './api';
 import { ACCEPT_FILES, applySuggestion, conflicts, extractApi, suggestionRows, type Suggestion } from './extract';
@@ -26,7 +28,6 @@ export default function DocumentExtract({
   contractKey?: string;
   lock?: boolean;
 }) {
-  const input = useRef<HTMLInputElement>(null);
   const [id, setId] = useState<string | null>(null);
   const [applied, setApplied] = useState<string[]>([]);
   const prior = useQuery({
@@ -77,21 +78,17 @@ export default function DocumentExtract({
             İmzalı ya da gelen sözleşmeyi yükleyin (PDF, Word, taranmış görüntü). Oran, avans, süre ve haklar belgedeki cümlesiyle önerilir; forma siz aktarırsınız. CRM'e yazılmaz.
           </p>
         </div>
-        <input
-          ref={input}
-          type="file"
-          accept={ACCEPT_FILES}
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) upload.mutate(f);
-          }}
-        />
-        <button type="button" className={`${btnGhost} w-full sm:w-auto`} disabled={lock || running} onClick={() => input.current?.click()}>
-          {upload.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileText aria-hidden className="h-4 w-4" />}
-          {item ? 'Başka belge oku' : 'Belge yükle'}
-        </button>
+        <div className="w-full sm:w-auto">
+          <FileDrop
+            size="button"
+            title={item ? 'Başka belge oku' : 'Belge yükle'}
+            accept={ACCEPT_FILES}
+            maxBytes={10 * MB}
+            disabled={lock || running}
+            busy={upload.isPending}
+            onPick={(f) => upload.mutate(f)}
+          />
+        </div>
       </div>
 
       {upload.error && <div className="mt-2"><Note tone="err">{errMsg(upload.error)}</Note></div>}
