@@ -153,6 +153,53 @@
   `manager_employee_id`'si. `ik.egitim-yonet` duyarlı (kişi bazında eğitim verisi): portal yöneticisi rolsüz görmez.
   Oda rezervasyonu bağı yok (yer serbest metin, `room_booking_id` kolonu hazır). İK soru kutusu ve M55/M56 otomatik ihtiyaç
   beslemesi, etki raporu, bilgisayarsız çalışan yoklaması sonraki sürüm.
+## 2026-09-28 — H3 E-ticaret müşteri yönetimi kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a72f01f147d657553`, H2/M37/M38/M34/M35/M42'yi taşıyan `worktree-agent-ad24fa5ef7c8ee6a7` ucunun
+  üstünde. Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_commerce.py`, `test_readers.py`,
+  `test_access.py`), vitest (`src/canvas/commerce/api.test.ts`, menü–katalog eşliği), tsc ve gerçek T-soft/Logo/CRM kabulü
+  (`scripts/acceptance/H3/kabul.py`) test sunucusunda koşturulacak.
+- **Ne:** T-soft sipariş (+ satır) ve üye okuması (`seo_geo.connections.tsoft`, yalnız `*/get*`; sonuna kadar sayfalı, tavan yok),
+  kişisel alanların bellekte H2'nin tuzlu özetine çevrilmesi (e-posta/telefon/ad portalda düz metin durmaz), müşteri anahtarı
+  (e-posta özeti → üye no → telefon özeti; misafir ve üye siparişi aynı e-postayla tek müşteri), RFM segmenti (ilk alıcı / aktif /
+  sadık / kayıp / üye-siparişsiz) ve geçiş kaydı, ürün görüntülenme farkı (SEO eşitlemesinin `StatViews` sayacından), özet
+  (dün / 7 gün / bu ay; önceki döneme göre; dört haftalık aynı gün düşüş uyarısı), Logo uzlaşması, tetik listeleri, kontrol
+  gruplu kampanya sonucu, huni, müşteri kartı, sözleşme ucu. Köprü `commerce.py`, `commerce_sources.py`, `commerce_api.py`;
+  tablolar `semantic_commerce_orders|order_lines|customers|segment_moves|product_stats|triggers|trigger_runs|run_members|
+  campaigns|settings|meta`; ekranlar `src/canvas/commerce/`, rota `/timas/eticaret-musteri`.
+- **H2 ile bağ (kopya yok):** `readers.register_source("tsoft_member", …, address=True)` — site müşterisi tekil okura bağlanır,
+  T-soft üye izni «Site» kanıtı olur (ret kazanır; izinli ancak `READERS_CONSENT_SOURCES` «tsoft» içerirse sayılır). H2'ye iki
+  küçük ek: `ADDRESS_SOURCES` (dışa aktarımda adresi kendi kaynağından okuyan modül; önce yalnız `crm_*`) ve
+  `readers_segments.record_export` (başka modülün listesini aynı KVKK defterine yazar) + «okur_yok» dışlama etiketi. H2 segment
+  motoruna altı alan (E-ticaret segmenti, site siparişi sayısı, site cirosu, son/ilk site siparişi, sitede aldığı kategori).
+- **M42 D2C bağlantısı:** `channels/d2c.py`'ye `register_site_provider`; H3 kaydolunca D2C sekmesi site özetini iptal/iade hariç,
+  veritabanında sayar (önce tablo yoksa «bağlı değil» diyordu; tablo varken iptalleri de sayacaktı).
+- **Kararlar (§10 açık soruları; iş kararları Claude'a bırakıldı kuralıyla):** (1) Site analitiği/GA4 yok → terk sepeti tetiği
+  kurulamaz (409, «sepet verisi okunmuyor»), %15 dönüşüm hedefi ölçülemez diye ekranda yazar. (2) Öneri kutusu/mevcut e-posta
+  aracı bilinmiyor → portal yalnız liste verir, gönderim yok. (3) T-soft siparişinin Logo'daki carisi ölçülmedi → Logo tarafı
+  M42'nin onaylı `timas.com.tr` eşlemesinden (cari ya da kanal kodu) alınır; eşleme yoksa özet nedenini yazar. Logo aylık
+  (M42 karnesi ay kırılımlı); veri sonu seçilen aydan önceyse (donmuş .155) kıyas Logo'nun son ayıyla yapılır. (4) T-soft izni
+  ile İYS ilişkisi bilinmiyor → sitede izin **kapalı** ise ret (`COMMERCE_TSOFT_FALSE_IS_RET=1`, en temkinli), **açık** izin ancak
+  yönetici «tsoft»u izinli kaynaklara eklerse sayılır. (5) Kontrol grubu varsayılan %10, tetik başına değişir; kontrol grubu
+  yalnız dışa aktarılabilir (ulaşılabilir) kümeden ayrılır — ulaşılamayan kişi kontrol grubunu şişirmesin. Kontrol grubu hiçbir
+  zaman indirilmez; sonuç niyet edilen hedef grup üzerinden (dışa aktarımda düşen kişi hedefte kalır, ekranda yazar).
+- **Tasarım kararları:** T-soft alan adları ölçülmediği için her rolün aday adları kodda, `COMMERCE_TSOFT_FIELDS` ile
+  değişir; okuma hangi rolün hangi alandan geldiğini ve bulunamayanları kaydeder («Veri ve eşikler» ekranı). İptal/iade ayrımı
+  durum adıyla (`\b(iptal|iade|…)`, «Kredi kartı…» iptal sayılmaz) ya da `COMMERCE_CANCEL_STATUSES`. Tarih süzgeci yok sayılırsa
+  okuma yine doğrudur, yalnız uzun sürer (sayfalama aynı sayfayı ikinci kez verirse durur). Kişi bilgisi (kart ve dışa aktarım)
+  T-soft'tan o an okunur; dönen kaydın kimliği ve e-posta özeti beklenenle aynı değilse gösterilmez (süzgeç yok sayılırsa başkası
+  gösterilmesin). Zeki AI yalnız kampanya sonucuna rakamsız yorum yazar (`llm_for("commerce")`, istem kişisel veri denetimli).
+  Segment başına kitap önerisi ve bülten metni sonraki sürüm (analiz §9).
+- **Yetki:** `sayfa:eticaret-musteri` (explicit — maskeli de olsa müşteri listesi), `ozellik:eticaret.tetik`, `ozellik:eticaret.ayar`,
+  `ozellik:eticaret.liste-onay` (explicit; tetiği yazan ve listeyi çalıştıran onaylayamaz); H2'nin `okur.liste-aktar` ve
+  `okur.kisisel-veri` anahtarları. Sözleşme ucu `segments/summary` M35/M42 D2C/M18 sayfalarına açık.
+- **Kabul (`scripts/acceptance/H3/`):** K1 T-soft ↔ portal gün sipariş sayısı, K2 Logo `STLINE` timas.com.tr net ciro ↔ özet, K3 CRM
+  B2C sipariş = 0, K4 barkod ↔ CRM `new_ean13`, K5 RFM iki yol + API, K6 kişisel veri taraması, K7 aday/kontrol payı, K8 dün, K9 D2C,
+  K10 sözleşme; `temizlik.py` tetik/liste/kampanya/değişiklik kaydını siler. **Ölçülecek:** T-soft sipariş/üye alan adları, tarih
+  süzgeci parametresi, üye yöntemi, iptal durum adları, `StatViews` toplam mı dönemsel mi.
+- **Sunucuda kalan:** köprü + arayüz kurulumu (`VITE_BASE=/timas/`), `timas-commerce.timer` (önce elle `systemctl start
+  timas-commerce.service`; ilk tur bütün siparişleri okur), sonra H2 okur turu (`timas-readers`, site müşterileri okur olur),
+  pytest/vitest/tsc, kabul ve temizlik; `READERS_HASH_SALT` tanımlı olmalı (yoksa okuma 503).
 
 ## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
 
