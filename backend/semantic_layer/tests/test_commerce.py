@@ -326,6 +326,9 @@ def test_prompt_guard():
 def test_access_rules_for_commerce():
     assert A.rule_for("/api/v1/commerce/overview") == {"sayfa:eticaret-musteri"}
     assert A.rule_for("/api/v1/commerce/run-due") == A.SYSTEM
+    # Tek huni ekranı (E-ticaret › Huni): H3 sipariş hunisi o sayfayla da okunur; öbür H3 uçları yalnız H3 sayfasıyla.
+    assert A.rule_for("/api/v1/commerce/products/funnel") == {"sayfa:eticaret-musteri", "sayfa:eticaret-huni"}
+    assert A.rule_for("/api/v1/commerce/customers") == {"sayfa:eticaret-musteri"}
     assert {"sayfa:kampanya", "sayfa:kanal-d2c"} <= set(A.rule_for("/api/v1/commerce/segments/summary"))
     f = A.features_for
     assert f("POST", "/api/v1/commerce/triggers") == ["ozellik:eticaret.tetik"]

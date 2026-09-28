@@ -1,6 +1,8 @@
-import { useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import { canOpenRoute, usePageAccess } from '../useAdmin';
+import { FUNNEL_PATH, UNIFIED_FUNNEL } from '../eticaret/funnelTabs';
 import { Note, errText } from '../admin/ui';
 import { commerceApi } from './api';
 import { CommerceFrame, ROOT, useMeta } from './parts';
@@ -11,10 +13,12 @@ import Campaigns from './Campaigns';
 import Funnel from './Funnel';
 import DataSettings from './DataSettings';
 
-/** H3 E-ticaret müşterileri. Bölüm adres çubuğunda (/eticaret-musteri/musteriler, /tetikler, /kampanyalar, /huni, /veri). */
+/** H3 E-ticaret müşterileri. Bölüm adres çubuğunda (/eticaret-musteri/musteriler, /tetikler, /kampanyalar, /veri);
+ *  /huni artık E-ticaret › Huni ekranına yönlenir (o sayfa rolde yoksa sipariş hunisi burada açılır, erişim kaybolmaz). */
 export default function CommerceScreen() {
   const { pathname } = useLocation();
   const here = pathname.replace(/\/+$/, '');
+  const pages = usePageAccess();
   const meta = useMeta();
   const runs = useQuery({
     queryKey: ['commerce', 'runs', 'onay-bekliyor'],
@@ -23,11 +27,14 @@ export default function CommerceScreen() {
     staleTime: 60_000,
   });
   const fr = meta.data?.freshness;
+  const onFunnel = here.startsWith(`${ROOT}/huni`);
+  if (onFunnel && pages === null) return null;
+  if (onFunnel && canOpenRoute(pages, FUNNEL_PATH)) return <Navigate to={UNIFIED_FUNNEL} replace />;
 
   const section = here.startsWith(`${ROOT}/musteriler`) ? <Customers />
     : here.startsWith(`${ROOT}/tetikler`) ? <Triggers />
     : here.startsWith(`${ROOT}/kampanyalar`) ? <Campaigns />
-    : here.startsWith(`${ROOT}/huni`) ? <Funnel />
+    : onFunnel ? <Funnel />
     : here.startsWith(`${ROOT}/veri`) ? <DataSettings />
     : <CommerceHome />;
 

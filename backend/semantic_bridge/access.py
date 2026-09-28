@@ -712,6 +712,8 @@ RULES: list[tuple[str, Any]] = [
     # H3 E-ticaret müşteri yönetimi. Sözleşme ucunu (segment sayıları) M35 kampanya, M42 D2C ve M18 aylık plan da okur.
     ("/api/v1/commerce/run-due", SYSTEM),
     ("/api/v1/commerce/segments/summary", frozenset(page(x) for x in ("eticaret-musteri", "kampanya", "kanal-d2c", "pazarlama-aylik"))),
+    # Huni tek ekranda (E-ticaret › Huni, «Sipariş hunisi» sekmesi): H3 sipariş hunisi o sayfayla da okunur.
+    ("/api/v1/commerce/products/funnel", frozenset({page("eticaret-musteri"), page("eticaret-huni")})),
     ("/api/v1/commerce/", frozenset({page("eticaret-musteri")})),
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),

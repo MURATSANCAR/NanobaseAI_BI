@@ -5,23 +5,57 @@ import { Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
+import OrderFunnel from '../commerce/Funnel';
 import { ecomApi, fmtInt, fmtPct, type Item, type Meta } from './api';
 import { EticaretFrame } from './parts';
 import ItemDrawer from './ItemDrawer';
+import { FUNNEL_TABS, funnelTab, type FunnelTab } from './funnelTabs';
 
-/** M34 Huni: sitedeki görüntülenme → satış. «Düşük dönüşüm» çok bakılıp az satan kitaplardır; kartı iyileştirilecek ilk
- *  kitaplar bunlar. Olası nedenler veriden kurallı okunur (kart doluluğu, yorum, stok, fiyat). */
+const LEADS: Record<FunnelTab, { lead: string; source: string }> = {
+  sayac: {
+    lead: "Sitedeki ürün sayaçları (tüm zamanlar) ve Logo'daki son dönem satışı. Çok görüntülenip az satan kitabın kartı önce iyileştirilir: kitabı açın, eksik alanlara bakın, Zeki AI'dan kart önerisi isteyin.",
+    source: 'Kaynak: site ürün sayaçları · Logo (kesim tarihiyle)',
+  },
+  siparis: {
+    lead: 'Seçilen günlerde sitedeki görüntülenme artışı (gece okumaları arasındaki fark) ve aynı günlerin geçerli site siparişleri. Çok görüntülenip az satan kitaplar üstte.',
+    source: 'Kaynak: site ürün sayaçları (gece farkı) · site siparişleri',
+  },
+};
+
+/** Tek huni ekranı (README «hemen düzeltilecekler» 9): M34 ürün sayaçları (sitedeki görüntülenme ↔ satış, tüm zamanlar,
+ *  Logo son dönem) ve H3 sipariş hunisi (gece görüntülenme farkı ↔ geçerli site siparişi, son 7/30/90 gün) aynı ekranda
+ *  iki sekme. Eski H3 adresi `/eticaret-musteri/huni` buraya `?sekme=siparis` ile yönlenir. Sekme adres çubuğunda. */
 export default function FunnelScreen() {
-  const meta = useQuery({ queryKey: ['eticaret', 'meta'], queryFn: ecomApi.meta, enabled: ENGINE_ENABLED, staleTime: 60_000 });
+  const [params, setParams] = useSearchParams();
+  const tab = funnelTab(params.get('sekme'));
+  const meta = useQuery({ queryKey: ['eticaret', 'meta'], queryFn: ecomApi.meta, enabled: ENGINE_ENABLED && tab === 'sayac', staleTime: 60_000 });
+  const pick = (k: FunnelTab) => {
+    if (k === tab) return;
+    // Sekmeye özgü süzgeçler (arama, sıra, düşük dönüşüm) öbür sekmeye taşınmaz.
+    setParams(k === 'sayac' ? {} : { sekme: k }, { replace: true });
+  };
   return (
-    <EticaretFrame
-      title="Huni: görüntülenme → satış"
-      lead="Sitedeki ürün sayaçları (tüm zamanlar) ve Logo'daki son dönem satışı. Çok görüntülenip az satan kitabın kartı önce iyileştirilir: kitabı açın, eksik alanlara bakın, Zeki AI'dan kart önerisi isteyin."
-      source="Kaynak: site ürün sayaçları · Logo (kesim tarihiyle)"
-    >
+    <EticaretFrame title="Huni: görüntülenme → satış" lead={LEADS[tab].lead} source={LEADS[tab].source}>
+      <div role="tablist" aria-label="Huni verisi" className="flex w-full gap-1 rounded-2xl bg-slate-100 p-1 sm:w-max">
+        {FUNNEL_TABS.map((t) => {
+          const on = t.key === tab;
+          return (
+            <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => pick(t.key)}
+              className={`flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center rounded-xl px-3 py-1 text-left transition-colors duration-150 sm:min-h-9 sm:flex-none ${
+                on ? 'bg-canvas-violet text-white shadow-md' : 'text-canvas-ink hover:bg-white/70'}`}>
+              <span className="text-[12.5px] font-extrabold leading-tight">{t.label}</span>
+              <span className={`text-[10.5px] leading-tight ${on ? 'text-white/80' : 'text-canvas-muted'}`}>{t.hint}</span>
+            </button>
+          );
+        })}
+      </div>
       {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
-      {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
-      {meta.data && <Body meta={meta.data} />}
+      {tab === 'siparis' ? <OrderFunnel /> : (
+        <>
+          {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
+          {meta.data && <Body meta={meta.data} />}
+        </>
+      )}
     </EticaretFrame>
   );
 }

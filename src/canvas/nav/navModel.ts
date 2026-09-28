@@ -489,7 +489,7 @@ export const NAV: NavGroup[] = [
       // M34 E-ticaret: site ↔ CRM ↔ Logo farkları, huni, pazar yeri carileri (portal hiçbir sisteme yazmaz).
       { id: 'eticaret', label: 'Platform durumu', to: '/e-ticaret', icon: Store, section: 'E-ticaret', hint: 'Sitedeki ürün, CRM kartı ve Logo kaydı: açık fark, eksik kart, satışta olmaması gereken kitap', keywords: ['e-ticaret', 'site', 't-soft', 'platform', 'tsoft aktif', 'satışta olmaması gereken'] },
       { id: 'eticaret-farklar', label: 'Farklar', to: '/e-ticaret/farklar', icon: GitCompareArrows, section: 'E-ticaret', hint: 'Fiyat, stok, aktiflik, barkod ve kart farkları; işaretleme ve içerik paketi', keywords: ['fark', 'eşitleme', 'fiyat farkı', 'stok', 'barkod', 'içerik paketi'] },
-      { id: 'eticaret-huni', label: 'Huni', to: '/e-ticaret/huni', icon: Filter, section: 'E-ticaret', hint: 'Sitede görüntülenme → satış; çok bakılıp az satan kitaplar', keywords: ['huni', 'dönüşüm', 'görüntülenme'] },
+      { id: 'eticaret-huni', label: 'Huni', to: '/e-ticaret/huni', icon: Filter, section: 'E-ticaret', hint: 'Sitede görüntülenme → satış: ürün sayaçları ve son günlerin sipariş hunisi; çok bakılıp az satan kitaplar', keywords: ['huni', 'dönüşüm', 'görüntülenme', 'ürün hunisi', 'sipariş hunisi'] },
       { id: 'eticaret-pazar-yerleri', label: 'Pazar yerleri', to: '/e-ticaret/pazar-yerleri', icon: ShoppingBag, section: 'E-ticaret', hint: 'Pazar yeri carilerine Logo satışı, iade, tükenme riski', keywords: ['pazar yeri', 'kitapyurdu', 'hepsiburada', 'amazon', 'trendyol', 'sell-in', 'iade'] },
       {
         id: 'kampanya',
