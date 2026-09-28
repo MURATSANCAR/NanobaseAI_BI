@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
+
+- **Neden bu sürüm:** test sunucusunda kurulup doğrulanan son `main` noktası `0e2ad1e8` (günlük 03:00: M10/M12 gerçek veriyle, 422 düzeltmeleri). Sonrası VM'e gitmedi: M29–M32 ve Zeki AI kapsam genişlemesi test sunucusunda doğrulanmadı (M32 «DOĞRULANAMADI»); **Destek** ayrı yığın (`apps/destek`), dış erişim/AD girişi/LLM kapısı açık, VM betiği onu taşımaz.
+- **Bulunan eksik:** VM'de bütçe (M46) yenilemesi yoktu — sunucuda `timas-budget.timer`, VM jobs konteynerinde karşılığı yok; VM'deki bütçe ekranı Logo gerçekleşmesini hiç okumuyordu. `jobs.py`'ye saatlik `/api/v1/budget/run-due` eklendi (`8ba10c01`, sonraki VM kurulumunda gelir); bu kurulumdan sonra VM'de bir kez elle koşturuldu: 3 dk 28 sn, 2025 61.499 satış + 990 gider, 2026 39.856 + 581 (test sunucusuyla aynı), kitap 13.593, veri sonu 17.08.2026.
+- **Kurulum:** `git archive 0e2ad1e8` → `/tmp/bi-main-0e2ad1e8` → `systemd-run --unit=vm-deploy-0e2ad1e8`, günlük `/tmp/vm-deploy-0e2ad1e8.log`, EXIT 0; `c6699f5d`'nin devamı (geriye sarma yok); `bi_var` korundu (rapor önbelleği 4 → 5). Kontroller: `._*` kaynakta 0, köprü konteynerinde 0; köprü/web imajı 02:58, konteynerler bu imajda; köprüde `app.py` ve `production.py` md5 = `0e2ad1e8`; web `index-CVv5-QTM.js` = test sunucusu.
+- **VM kabulü** (dış kapı, giriş konteynerinde 15 dk'lık `timasai` oturumları, her biri sonra silindi; yalnız okuma): 38 uç/sayfa; M8, M4, M2, M7, M6, M46, Yetki, bülten, M10 (`summary`, `decisions`), M12 (`overview` ilk açılış 60 sn, `cards`, `delays`, `printers`) ve 9 sayfa 200. M10 `options` ilk açılışta 503 «hazırlanıyor» (beklenen): ilk rapor VM'de 721 sn'de hazırlandı, sonra `hasData: true`, yayınevi seçenekleri doldu.
+- **Temizlik:** test sunucusu ve VM'deki geçici betikler/klasörler silindi; test kaydı yazılmadı.
+
 ## 2026-09-28 (01:20) — Sesli okuma yenilikleri + son okuma (sade metin, karar taşıma) kuruldu: GPU ve test sunucusu (main `3e1a408c`)
 
 - **GPU:** `releases/3e1a408c` (`._*` 0); `editor-py:0.15.9-3e1a408c`, stüdyo `editor-py-studio:0.15.9-3e1a408c` (tam
