@@ -2365,6 +2365,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import llm_openai as llm_openai_mod
 
     llm_openai_mod.register(app, rt, _require_caller)
+    llm_openai_mod.register_embeddings(app, _require_caller)
 
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:

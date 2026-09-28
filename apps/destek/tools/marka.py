@@ -313,6 +313,13 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		  '  const url = `${window.location.origin}/${siteName}`;\n'),
 		 ('import { socketio_port } from "../../../../sites/common_site_config.json";\n', '')],
 	),
+	(
+		# Temsilci ekranı: «NanobaseAI» bölümü (sınıflama, özet, yanıt taslağı, makale taslağı) — bileşen bizim:
+		# helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue, arka uç nanobase_brand/yz/kayit.py.
+		"helpdesk/desk/src/components/ticket-agent/TicketDetailsTab.vue",
+		[('        <!-- Key Info (core fields) -->\n', '        <NanobaseAIPanel />\n\n        <!-- Key Info (core fields) -->\n'),
+		 ('import TicketSLA from "./TicketSLA.vue";\n', 'import TicketSLA from "./TicketSLA.vue";\nimport NanobaseAIPanel from "./NanobaseAIPanel.vue";\n')],
+	),
 	# ── Flow ──────────────────────────────────────────────────────────────
 	(
 		"flow/flow/hooks.py",

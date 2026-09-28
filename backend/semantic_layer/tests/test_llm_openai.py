@@ -122,3 +122,27 @@ def test_bad_body_and_no_model(setup):
 def test_models_lists_the_bridge_model(setup):
     client, *_ = setup
     assert client.get("/api/v1/llm/openai/v1/models").json()["data"][0]["id"] == "nanobaseAI"
+
+
+def test_embeddings_pass_through_without_a_lease(monkeypatch):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["auth"] = request.headers.get("authorization")
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"object": "list", "data": [{"embedding": [0.1, 0.2], "index": 0}]})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(llm_openai.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setenv("BI_EMBED_URL", "http://embed.test/v1/embeddings")
+    monkeypatch.setenv("BI_EMBED_API_KEY", '"k2"')
+    app = FastAPI()
+    llm_openai.register_embeddings(app, lambda request: None)
+    client = TestClient(app)
+    r = client.post("/api/v1/llm/openai/v1/embeddings", json={"model": "x", "input": ["merhaba"]})
+    assert r.status_code == 200 and r.json()["data"][0]["embedding"] == [0.1, 0.2]
+    assert seen == {"url": "http://embed.test/v1/embeddings", "auth": "Bearer k2", "body": {"model": "x", "input": ["merhaba"]}}
+    assert client.post("/api/v1/llm/openai/v1/embeddings", json={"model": "x"}).status_code == 422
+    monkeypatch.delenv("BI_EMBED_URL")
+    assert client.post("/api/v1/llm/openai/v1/embeddings", json={"input": ["a"]}).status_code == 503

@@ -2261,3 +2261,42 @@ msgstr "Son Atanan Kayıtlar"
 
 msgid "My Feedback"
 msgstr "Geri Bildirimlerim"
+
+msgid "Customer mood"
+msgstr "Müşteri duygusu"
+
+msgid "Summary"
+msgstr "Özet"
+
+msgid "Refresh"
+msgstr "Yenile"
+
+msgid "Summarize"
+msgstr "Özetle"
+
+msgid "Draft a reply"
+msgstr "Yanıt taslağı hazırla"
+
+msgid "Based on"
+msgstr "Dayanak"
+
+msgid "Draft a knowledge base article"
+msgstr "Bilgi bankası makalesi taslağı"
+
+msgid "Open article draft"
+msgstr "Makale taslağını aç"
+
+msgid "The assistant is unavailable right now. Please try again shortly."
+msgstr "Asistan şu an yanıt veremiyor. Lütfen biraz sonra yeniden deneyin."
+
+msgid "Draft added to the reply. Review it before sending."
+msgstr "Taslak yanıta eklendi. Göndermeden önce gözden geçirin."
+
+msgid "Article draft created"
+msgstr "Makale taslağı oluşturuldu"
+
+msgid "An article draft can be made from a resolved ticket."
+msgstr "Makale taslağı yalnız çözülmüş kayıttan oluşturulabilir."
+
+msgid "SSO key is too short."
+msgstr "Tek oturum anahtarı çok kısa."
