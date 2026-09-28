@@ -386,6 +386,12 @@ WRITES: list[tuple[str, str]] = [
 	("flow/frontend/src/components/BrandMark.vue", FLOW_BRAND_MARK_VUE),
 ]
 
+# Dosyanın sonuna eklenenler (zaten varsa atlanır). frappe-ui yardım merkezi yalnız üretici
+# belge makalelerini açar: patch-package yamasıyla kapatılır (sürüm yama dosyasının adında).
+APPENDS: list[tuple[str, Path]] = [
+	("helpdesk/desk/patches/frappe-ui+1.0.0-beta.24.patch", MARKA / "yamalar" / "frappe-ui-yardim-merkezi.patch"),
+]
+
 COPIES: list[tuple[Path, str]] = [
 	(MARKA / "favicon.svg", "helpdesk/desk/public/favicon.svg"),
 ]
@@ -433,6 +439,14 @@ def apply() -> int:
 		path.write_text(updated)
 	for rel, content in WRITES:
 		(APPS / rel).write_text(content)
+	for rel, src in APPENDS:
+		path = APPS / rel
+		if not path.exists():
+			problems.append(f"{rel}: yama dosyası yok (frappe-ui sürümü değişmiş olabilir)")
+			continue
+		text, extra = path.read_text(), src.read_text()
+		if extra not in text:
+			path.write_text(text.rstrip("\n") + "\n" + extra)
 	for src, rel in COPIES:
 		shutil.copyfile(src, APPS / rel)
 	for rel in REMOVE:
