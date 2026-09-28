@@ -23,6 +23,9 @@
 - **Görülen kusur ve düzeltme:** bağlı kayıtlar yazı sırasıyla diziliyordu (-10, -100, -101 … -11). `contracts.related`
   artık sayıyı sayı olarak sıralar (`_natural`: -1, -2 … -10 … -100; ana kayıt yine en üstte). Test:
   `test_related_contracts_sort_by_number`.
+- **Kurulum ve doğrulama:** `main` `1997b82d`; test sunucusunda yalnız `contracts.py` + `test_contracts.py` (canlı hâl
+  önceki `main`le eşti), köprü 06:06'da yeniden başladı, health 200, pytest sözleşme 34/34. Panede 2024007186-1: bağlı
+  kayıtlar -2, -3 … -10, -11 … -244 (243 kayıt). Müşteri VM'ine kurulmadı.
 
 ## 2026-09-28 — Test izi temizliği 2 ve CRM mükerrer yazar kaydı
 
