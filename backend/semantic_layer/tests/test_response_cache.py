@@ -125,7 +125,7 @@ def _stale(cl, cache, c):
 
 def test_forgotten_entries_leave_and_due_skips_fresh():
     cache = RC.ResponseCache()
-    cache.put(("u", "/api/v1/x", ""), b"{}", [], 200, 2.0, {})
+    cache.put(("u", "/api/v1/x", ""), b"{}", [], 200, 2.0, {"cookie": "timas_session=u"})
     assert cache.due() == []
     e = cache._items[("u", "/api/v1/x", "")]
     e.at -= RC.FRESH_SECONDS + 1
