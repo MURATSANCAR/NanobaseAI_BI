@@ -106,7 +106,16 @@ def classify(ticket: str) -> dict:
 	doc.nb_duygu = duygu
 	doc.nb_yz_not = str(out.get("gerekce") or "")[:500]
 	doc.flags.ignore_permissions = True
-	doc.save()
+	try:
+		# Tam kayıt: ekip değişince ekibin atama kuralı da çalışsın.
+		doc.save()
+	except Exception:
+		# Atama kuralı çalışamazsa (ör. ekipte temsilci yok, üst kaynakta boş listede IndexError) sınıflama
+		# kaybolmasın: alanlar kancasız yazılır, atama yapılmaz.
+		frappe.db.rollback()
+		frappe.log_error(title=f"NanobaseAI sınıflama: atama kuralı çalışmadı ({ticket})")
+		frappe.db.set_value("HD Ticket", ticket, {
+			**applied, "nb_duygu": doc.nb_duygu, "nb_yz_not": doc.nb_yz_not}, update_modified=False)
 	names = {"ticket_type": "tür", "priority": "öncelik", "agent_group": "ekip"}
 	parts = [f"{names[k]}: {v}" for k, v in applied.items()]
 	if duygu:

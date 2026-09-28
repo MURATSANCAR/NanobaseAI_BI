@@ -65,8 +65,12 @@ def _publish(title: str, html: str, subject: str) -> str:
 	note = frappe.get_doc({"doctype": "Note", "title": title, "content": html, "public": 1}).insert(ignore_permissions=True)
 	recipients = _managers()
 	if recipients:
-		frappe.sendmail(recipients=recipients, subject=subject, message=html, reference_doctype="Note",
-						reference_name=note.name)
+		# Giden e-posta hesabı yoksa rapor yine Not olarak kalır.
+		try:
+			frappe.sendmail(recipients=recipients, subject=subject, message=html, reference_doctype="Note",
+							reference_name=note.name)
+		except frappe.OutgoingEmailError:
+			frappe.log_error(title="NanobaseAI raporu e-postayla gönderilemedi (giden e-posta hesabı yok)")
 	frappe.db.commit()
 	return note.name
 
