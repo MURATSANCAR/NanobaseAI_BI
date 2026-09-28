@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, errText, field, label as labelCls } from '../admin/ui';
 import { Tabs } from '../budget/parts';
-import { fieldApi, fmtDay } from './api';
+import { fieldApi, fmtCount, fmtDay } from './api';
 import { FieldFrame } from './parts';
 import TodayTab from './TodayScreen';
 import CollectionsTab from './CollectionsTab';
@@ -50,7 +50,7 @@ export default function FieldScreen() {
         <option value="">Bütün temsilciler</option>
         {m.reps.map((r) => (
           <option key={r.hesap} value={r.hesap}>
-            {r.ad} ({r.cari})
+            {r.ad} ({fmtCount(r.cari)})
           </option>
         ))}
       </select>
@@ -62,7 +62,7 @@ export default function FieldScreen() {
       crumb="Saha ve tahsilat"
       title="Saha ve tahsilat"
       lead="Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onay durumu. Atama CRM'den (cari sahibi, BMT il), bakiye ve satış Logo'dan okunur; tahsilat CRM'de girilir, burada yeniden girilmez."
-      source={run?.asof ? `${run.portfolio ?? 0} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar` : 'CRM + Logo'}
+      source={run?.asof ? `${fmtCount(run.portfolio ?? 0)} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar` : 'CRM + Logo'}
       presence={run?.asof ? `Veri ${fmtDay(run.asof)}` : 'Hazırlanmadı'}
       aside={aside}
     >

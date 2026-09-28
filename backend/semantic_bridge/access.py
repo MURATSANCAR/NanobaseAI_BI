@@ -466,6 +466,8 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
 _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
 _SUPPLY = frozenset(page(x) for x in ("tedarik", "tedarik-yuk", "tedarik-kagit", "tedarik-tedarikciler", "tedarik-maliyet"))
+_TRENDYOL = frozenset(page(x) for x in ("trendyol", "trendyol-urunler", "trendyol-siparisler", "trendyol-sorular"))
+_AMAZON = frozenset(page(x) for x in ("amazon", "amazon-konsinye", "amazon-yurtdisi", "amazon-taslaklar"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
@@ -587,6 +589,34 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/channels/accounts", frozenset({page("kanal-eslesme")})),
     ("/api/v1/channels/suggestions", frozenset({page("kanallar"), page("kanal-d2c")})),
     ("/api/v1/channels/", frozenset({page("kanallar")})),
+    # M40 Trendyol (yalnız okuma + panel dosyası). Ortak uçlar (meta, durum, yenileme, dışa aktarma) dört sayfada;
+    # dışa aktarılan listenin sayfası ucun içinde ayrıca denetlenir.
+    ("/api/v1/channels/trendyol/run-due", SYSTEM),
+    ("/api/v1/channels/trendyol/meta", _TRENDYOL),
+    ("/api/v1/channels/trendyol/status", _TRENDYOL),
+    ("/api/v1/channels/trendyol/refresh", _TRENDYOL),
+    ("/api/v1/channels/trendyol/export/", _TRENDYOL),
+    ("/api/v1/channels/trendyol/products", frozenset({page("trendyol-urunler")})),
+    ("/api/v1/channels/trendyol/stock-diff", frozenset({page("trendyol-urunler")})),
+    ("/api/v1/channels/trendyol/price-diff", frozenset({page("trendyol-urunler")})),
+    ("/api/v1/channels/trendyol/orders", frozenset({page("trendyol-siparisler")})),
+    ("/api/v1/channels/trendyol/claims", frozenset({page("trendyol-siparisler")})),
+    ("/api/v1/channels/trendyol/questions", frozenset({page("trendyol-sorular")})),
+    ("/api/v1/channels/trendyol/reviews", frozenset({page("trendyol-sorular")})),
+    ("/api/v1/channels/trendyol/", frozenset({page("trendyol")})),
+    # M41 Amazon ve yurtdışı (Logo + CRM, yalnız okuma).
+    ("/api/v1/channels/amazon/run-due", SYSTEM),
+    ("/api/v1/channels/amazon/meta", _AMAZON),
+    ("/api/v1/channels/amazon/status", _AMAZON),
+    ("/api/v1/channels/amazon/refresh", _AMAZON),
+    ("/api/v1/channels/amazon/export/", _AMAZON),
+    ("/api/v1/channels/amazon/consignment", frozenset({page("amazon-konsinye")})),
+    ("/api/v1/channels/amazon/international", frozenset({page("amazon-yurtdisi")})),
+    ("/api/v1/channels/amazon/rights", frozenset({page("amazon-yurtdisi")})),
+    ("/api/v1/channels/amazon/params", frozenset({page("amazon-yurtdisi")})),
+    ("/api/v1/channels/amazon/market-cards", frozenset({page("amazon-yurtdisi")})),
+    ("/api/v1/channels/amazon/drafts", frozenset({page("amazon-taslaklar")})),
+    ("/api/v1/channels/amazon/", frozenset({page("amazon")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -625,6 +655,14 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/hr/recruit/intake", SYSTEM),
     ("/api/v1/hr/recruit/reminders/run-due", SYSTEM),
     ("/api/v1/hr/recruit/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler")})),
+    # M56 performans: Performansım (bütün çalışanlara bağlanır), Ekibim, Hedefler, Değerlendirme; kişi kapsamı ucun içinde.
+    ("/api/v1/hr/performance/reminders/run-due", SYSTEM),
+    ("/api/v1/hr/performance/", frozenset(page(x) for x in ("ik-performansim", "ik-ekibim", "ik-hedefler", "ik-degerlendirme"))),
+    # M58 bağlılık. Anket formu oturumsuz da çalışır (çerezsiz istek kapıdan geçer, uç jetonu/kodu doğrular); oturumla gelirse OPEN.
+    ("/api/v1/hr/survey-public/", OPEN),
+    ("/api/v1/hr/engagement/run-due", SYSTEM),
+    ("/api/v1/hr/engagement/", frozenset(page(x) for x in ("ik-anketlerim", "ik-oneriler", "ik-baglilik", "ik-birimim",
+                                                          "ik-anket-yonetimi", "ik-aksiyonlar"))),
     # M36 Dijital yayın ve e-kitap. Satış raporu ve gelir finans verisidir: ayrı sayfa (dijital-satis); göstergeler ve
     # platform listesi iki sayfada da açık.
     ("/api/v1/dijital/run-due", SYSTEM),
@@ -950,6 +988,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/imports(/[^/]+)?$", "ozellik:kanal.yukle"),
     (frozenset({"POST"}), r"^/api/v1/channels/(suggestions|d2c/suggest)$", "ozellik:kanal.oneri-yaz"),
     (frozenset({"GET"}), r"^/api/v1/channels/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M40/M41: panel dosyası, Zeki AI taslağı/sınıflama/vitrin önerisi, pazar kartı, eşleme listesine ekleme, Excel.
+    # Öneri/pazar kararı ve finans parametresi açıkça verilen anahtarla ucun içinde.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/trendyol/imports(/[^/]+)?$", "ozellik:trendyol.yukle"),
+    (frozenset({"POST"}), r"^/api/v1/channels/trendyol/((questions|reviews)/[^/]+/draft|claims/classify|showcase/suggest)$",
+     "ozellik:trendyol.taslak"),
+    (frozenset({"POST", "PUT"}), r"^/api/v1/channels/amazon/(drafts(/[^/]+)?|market-cards)$", "ozellik:amazon.taslak"),
+    (frozenset({"POST"}), r"^/api/v1/channels/(trendyol|amazon)/cariler/ekle$", "ozellik:kanal.eslesme"),
+    (frozenset({"GET"}), r"^/api/v1/channels/(trendyol|amazon)/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # M36 Dijital yayın: platform durumu, platform tanımı, katalog okuması; satış raporu yükleme/eşleme/onay. Hak kararı
     # (`dijital.hak-karari`) ve dijital fiyat kararı (`dijital.fiyat-onay`) açıkça verilir, ucun içinde denetlenir.
     (frozenset({"PUT"}), r"^/api/v1/dijital/titles/[^/]+/listings/[^/]+$", "ozellik:dijital.durum-yaz"),

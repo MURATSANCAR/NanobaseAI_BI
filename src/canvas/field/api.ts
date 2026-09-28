@@ -99,7 +99,15 @@ export type FieldMeta = {
     portfolio: number | null;
     assigned: number | null;
     warnings: string[] | null;
-    target: { kaynak: 'm46' | 'crm' | null; plan: { title?: string } | null; toplamHedef: number | null; pay: number | null } | null;
+    target: {
+      kaynak: 'm46' | 'crm' | 'crm-tutarsiz' | null;
+      plan: { title?: string } | null;
+      toplamHedef: number | null;
+      pay: number | null;
+      /** CRM hedef toplamı ÷ aynı carilerin geçen yıl cirosu. */
+      olcek?: number | null;
+      uyari?: string | null;
+    } | null;
     mmx: boolean | null;
     _at?: string;
   };
@@ -295,6 +303,7 @@ export const fieldApi = {
 
 const money0 = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const pct0 = new Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 0 });
+const int0 = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const dayYearFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
@@ -308,6 +317,9 @@ export function fmtShort(v: number | null | undefined): string {
   if (a >= 1_000) return `${Math.round(v / 1_000).toLocaleString('tr-TR')} bin ₺`;
   return `${Math.round(v).toLocaleString('tr-TR')} ₺`;
 }
+
+/** Adet (cari, kayıt): binlik ayraçlı, «248.351». */
+export const fmtCount = (v: number | null | undefined) => (v === null || v === undefined ? '—' : int0.format(v));
 
 export const fmtPct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : pct0.format(v));
 

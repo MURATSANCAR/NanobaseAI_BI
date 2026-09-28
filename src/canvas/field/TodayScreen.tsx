@@ -5,7 +5,7 @@ import { Bell, CalendarPlus, NotebookPen, Search, Sparkles } from 'lucide-react'
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
-import { fieldApi, fmtDay, fmtMoney, fmtPct, fmtShort, type FieldMeta, type Visit } from './api';
+import { fieldApi, fmtCount, fmtDay, fmtMoney, fmtPct, fmtShort, type FieldMeta, type Visit } from './api';
 import { CustomerRow, Empty, Stat } from './parts';
 import VisitNoteSheet from './VisitNoteSheet';
 
@@ -45,8 +45,12 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       {t.warning && <Note tone="warn">{t.warning}</Note>}
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Vadesi geçmiş" value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} tone={t.kpi.k90 > 0 ? 'err' : undefined} />
-        <Stat label="Onay bekleyen" value={String(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
-        <Stat label="Hedef oranı" value={fmtPct(t.kpi.hedefOrani)} help="Yıl başından, beklenene göre" />
+        <Stat label="Onay bekleyen" value={fmtCount(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
+        <Stat
+          label="Hedef oranı"
+          value={fmtPct(t.kpi.hedefOrani)}
+          help={meta.run.target?.kaynak === 'crm-tutarsiz' ? 'CRM hedefleri tutarsız; ayrıntı aşağıda' : 'Yıl başından, beklenene göre'}
+        />
       </div>
 
       {unseen.length > 0 && (
@@ -116,7 +120,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       <section aria-label="Öncelik listesi" className="flex flex-col gap-2">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
-            <h2 className="text-[15px] font-extrabold tracking-tight">Öncelik sırası ({total})</h2>
+            <h2 className="text-[15px] font-extrabold tracking-tight">Öncelik sırası ({fmtCount(total)})</h2>
             <p className="text-[11.5px] text-canvas-muted">
               Veri {fmtDay(t.asof)} sabahı · Logo {fmtDay(t.dataEnd)} tarihine kadar
             </p>
@@ -166,7 +170,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
             disabled={today.isFetching}
             onClick={() => setShown(items.length + STEP)}
           >
-            {today.isFetching ? 'Yükleniyor…' : `${Math.min(STEP, total - items.length)} müşteri daha göster (kalan ${total - items.length})`}
+            {today.isFetching ? 'Yükleniyor…' : `${fmtCount(Math.min(STEP, total - items.length))} müşteri daha göster (kalan ${fmtCount(total - items.length)})`}
           </button>
         )}
       </section>
@@ -190,7 +194,10 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           <p className="mt-2 leading-snug text-canvas-muted">
             Hedef: {meta.run.target.kaynak === 'm46'
               ? `yürürlükteki bütçe planı (${fmtMoney(meta.run.target.toplamHedef)}) carilere önceki yılın net alım payıyla dağıtılır; cari hedeflerinin toplamı planın toplamına eşittir.`
-              : 'CRM\'deki cari yıl hedefi; beklenen takvim günü oranıyla.'}
+              : meta.run.target.kaynak === 'crm-tutarsiz'
+                ? 'kullanılmıyor.'
+                : 'CRM\'deki cari yıl hedefi; beklenen takvim günü oranıyla.'}
+            {meta.run.target.uyari ? ` ${meta.run.target.uyari}` : ''}
           </p>
         )}
       </details>

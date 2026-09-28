@@ -1,0 +1,11 @@
+[Unit]
+Description=Çalışan deneyimi (M58): planlı anketi açar, tarihi geçeni kapatır, oryantasyon davetleri, yorum teması ve öneri konusu, tema özeti
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/hr/engagement/run-due). Kapanan anket için İK alıcılarına yalnız toplamlar (HR_ALERT_RECIPIENTS).
+# Çalışana e-posta gitmez. İlk kez elle koşturulur (açılış, kapanış ve sınıflama aynı çağrıda sınanır):
+# systemctl start timas-hr-engagement.service
+ExecStart=/bin/sh -c 'curl -fsS -m 890 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/hr/engagement/run-due'

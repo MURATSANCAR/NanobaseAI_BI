@@ -1,6 +1,6 @@
 # M40 — Trendyol Mağaza Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M40.txt`, `specs/M34.txt`, `specs/M35.txt`, `specs/M42.txt`,
+Durum: ilk sürüm kodlandı (yalnız okuma + panel dosyası; kullanıcı kararı 2026-09-28), test sunucusunda doğrulanmadı · Tarih: 2026-09-28 · Kaynaklar: `specs/M40.txt`, `specs/M34.txt`, `specs/M35.txt`, `specs/M42.txt`,
 `ZEKİ_Veri_Haritasi2.html` (M40 satırları: "Trendyol Seller Panel API", "Stok ve fiyat verileri (LOGO)", "Mağaza puanı ve müşteri
 yorumları", "Sponsorlu kampanya ROAS"), `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md` (§4), `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md`,
 `configs/semantic/knowledge/logo/knowledge/rules/logo-erp.md`, `backend/semantic_bridge/seo_geo/connections.py`, bellek: `tsoft-no-write`,

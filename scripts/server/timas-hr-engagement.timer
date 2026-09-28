@@ -1,0 +1,10 @@
+[Unit]
+Description=Çalışan anketi açılış/kapanış ve yorum sınıflama; 15 dakikada bir
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=timas-hr-engagement.service
+
+[Install]
+WantedBy=timers.target

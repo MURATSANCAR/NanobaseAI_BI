@@ -278,6 +278,7 @@ def test_pdf_running_heads_toc_headings_and_numbered_items():
     lines = T.pdf_lines(pages)
     assert not any("KURUM / BİRİM" in ln or "3595163294" in ln for ln in lines)
     assert sum("satırı sürüyor" in ln for ln in lines) == 5          # gövde satırı üst bilgi sanılmaz
+    assert lines.count(T.PAGE_BREAK) == 5
     paras = T._join_lines(lines)
     heads = [p for p, h in paras if h]
     assert heads == [f"{i}. BÖLÜM BAŞLIĞI {w.upper()}" for i, w in enumerate(words, 1)]
@@ -292,3 +293,34 @@ def test_pdf_running_heads_toc_headings_and_numbered_items():
                     ("1. KISALTMALAR VE TANIMLAR", True), ("Metin burada başlar.", False)]
     assert not T._is_heading_line("2. Kablolar test edilecektir.")
     assert T._is_heading_line("9. FİBER VE UTP PATCH PANEL ÖZELLİKLERİ VE MONTAJI")
+
+
+def test_book_pdf_patterns_hyphen_dialogue_imprint_dropcap():
+    """Gerçek Timaş kitap PDF'lerindeki kalıplar (2026-09-28): boşluklu satır sonu tirelemesi, diyaloğun ardından gelen
+    «dedi…», künye bloğu, tireyle biten satır, süslü ilk harf."""
+    j = T._join_lines
+    assert j(["izledim. Ge -", "minin yanları metaldi."]) == [("izledim. Gemi" + "nin yanları metaldi.", False)]
+    assert j(["taklide dayanması-", "na bağlar."]) == [("taklide dayanmasına bağlar.", False)]
+    assert j(["“Hayır!”", "dedi yumuşak bir sesle.", "Sonra gitti."]) == [
+        ("“Hayır!” dedi yumuşak bir sesle.", False), ("Sonra gitti.", False)]
+    imprint = j(["TİMAŞ YAYINLARI | 3179", "EDİTÖR", "KAPAK TASARIM", "", "6. BASKI", "ISBN", T.PAGE_BREAK,
+                 "BİRİNCİ BÖLÜM", "", "Metin başlar."])
+    assert [p for p, h in imprint if h] == ["BİRİNCİ BÖLÜM"]
+    assert j(["II. Nefs-i emmareyi, nefs-i mutmainneye boyun eğ -", "dirmek, üçüncüsü."]) == [
+        ("II. Nefs-i emmareyi, nefs-i mutmainneye boyun eğdirmek, üçüncüsü.", False)]
+    assert j(["T ekrar içeri girip anlattı."]) == [("Tekrar içeri girip anlattı.", False)]
+    kunye = j(["BÖCEKLERİ SEVEN KADIN", T.PAGE_BREAK, "PROJE EDİTÖRÜ", "Ayşe Yılmaz", "EDİTÖR", "Mehmet Kaya", "ISBN: 978-605-08-4883-0",
+               T.PAGE_BREAK, "BİRİNCİ BÖLÜM", "Deniz göründü."])
+    assert [p for p, h in kunye if h] == ["BÖCEKLERİ SEVEN KADIN", "BİRİNCİ BÖLÜM"]
+    assert [p for p, h in j(["ısbn 978-605", "1. baskı", "YAYIN HAKLARI"]) if h] == []        # noktasız ı ile ISBN
+    assert not T._is_heading_line("1- Başikbal Müşfika Hanım")
+    assert not T._is_heading_line("4) Su, 5) Salep, 6) Safran")
+    assert T._is_heading_line("1. Bölüm") and T._is_heading_line("IV. BÖLÜM")
+    assert j(["O gün geldi."]) == [("O gün geldi.", False)]          # tek harfli kelime birleşmez
+
+
+def test_consecutive_heading_lines_are_one_chapter():
+    segs = T.segment([("BİRİNCİ BÖLÜM", True), ("BABAM VE YILDIZ SARAYI", True), ("Metin başlar.", False),
+                      ("İKİNCİ BÖLÜM", True), ("Devam.", False)])
+    assert [(s["chapter"], s["heading"]) for s in segs] == [(1, True), (1, True), (1, False), (2, True), (2, False)]
+    assert segs[0]["chapter_title"] == "BİRİNCİ BÖLÜM — BABAM VE YILDIZ SARAYI" == segs[2]["chapter_title"]

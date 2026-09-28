@@ -229,7 +229,17 @@ def _is_heading_line(text: str) -> bool:
         return False
     if desk._HEADING.match(t) or _EN_HEAD.match(t):
         # «2. Kablolar test edilecektir.» madde/cümledir; başlık cümle noktalamasıyla bitmez.
-        return t[-1] not in ".!?…,;"
+        if t[-1] in ".!?…,;":
+            return False
+        # Numaralı satır: adı büyük harfse («3. KAPSAM») ya da kısa ve virgülsüzse («1. Bölüm», «IV) Dönüş») başlık;
+        # «1- Başikbal Müşfika Hanım», «4) Su, 5) Salep…» liste maddesidir.
+        m = re.match(r"^\s*(?:\d{1,3}|[IVXLC]{1,7})\s*([.)\-–:])\s+(.+)$", t)
+        if m:
+            sep, rest = m.group(1), m.group(2)
+            letters = [ch for ch in rest if ch.isalpha()]
+            caps = bool(letters) and all(ch == ch.upper() for ch in letters)
+            return caps or (sep in ".):" and len(rest.split()) <= 4 and "," not in rest)
+        return True
     words = t.split()
     letters = [ch for ch in t if ch.isalpha()]
     # Tamamı büyük harfli kısa satır (ÖNSÖZ, THE BEGINNING) ve cümle sonu noktalaması yok.
@@ -242,21 +252,82 @@ def _is_heading_line(text: str) -> bool:
 _TOC = re.compile(r"^(?P<t>.*?\S)\s*(?:\.\s?){4,}\.?\s*(?P<n>\d{1,4})?\s*$|^(?P<t2>.*?\S)\s*…{2,}\s*(?P<n2>\d{1,4})?\s*$")
 
 
+#: Satır sonu tirelemesi: harften sonra (araya boşluk girmiş olabilir) tire — «Ge -», «dayanması-».
+_HYPH = re.compile(r"(?<=[^\W\d_])\s?-\s*$")
+#: Süslü ilk harf (büyük basılan ilk harf) ayrı okunur: «T ekrar» → «Tekrar». Tek harfli kelime olabilen harfler hariç.
+_DROPCAP = re.compile(r"^([B-DF-HJ-NP-ZÇĞŞÖÜ]) ([a-zçğıöşüâîû]{2,})")
+
+
+#: Sayfa sınırı işareti (pdf_lines): paragrafı bölmez, büyük harfli bloğu (künye) keser.
+PAGE_BREAK = "\u2063sayfa\u2063"
+
+
+def _caps_line(t: str) -> bool:
+    """Numarasız, tamamı büyük harfli kısa satır (başlık adayı ya da künye/kapak satırı)."""
+    t = t.strip()
+    letters = [ch for ch in t if ch.isalpha()]
+    return (0 < len(t) <= 90 and len(t.split()) <= 8 and len(letters) >= 2 and all(ch == ch.upper() for ch in letters)
+            and any(ch != ch.lower() for ch in letters))
+
+
 def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
-    """PDF satırlarını paragrafa çevirir: satır cümle sonuyla bitiyorsa ve sonraki satır kısa değilse paragraf
-    orada biter; satır sonu tirelemesi birleştirilir. Başlık satırı, önceki sayfadan yarım kalan paragrafı kapatıp
-    kendi paragrafını açar. İçindekiler satırı tek başına kalır; nokta dizisi ve sayfa numarası atılır (dizgide
-    yeniden üretilir)."""
+    """PDF satırlarını paragrafa çevirir.
+
+    - Satır cümle sonuyla biten kısa satırsa paragraf biter — sonraki satır küçük harfle başlamıyorsa (diyaloğun
+      ardından gelen «dedi…» aynı paragrafta kalır).
+    - Satır sonu tirelemesi (tireden önce boşluk olsa da) sonraki satır küçük harfle başlıyorsa birleşir.
+    - Başlık satırı, önceki sayfadan yarım kalan paragrafı kapatıp kendi paragrafını açar; tireyle biten satır, art
+      arda en az 3 büyük harfli kısa satırdan oluşan blok (kapak) ve ISBN geçen sayfadaki satırlar (künye) başlık sayılmaz.
+    - Bilinen sınır: sayfa sonunda bölünen kelimenin arasına dipnot/alt bilgi girerse tireleme birleşmez (yazı boyutu
+      okunmadan dipnot ayrılamaz).
+    - İçindekiler satırı tek başına kalır; nokta dizisi ve sayfa numarası atılır (dizgide yeniden üretilir).
+    - Paragraf başındaki süslü ilk harf kelimesine birleşir."""
+    items = [raw if raw == PAGE_BREAK else raw.strip() for raw in lines]
+    # Büyük harfli kısa satır blokları (boş satırlar blok içinde sayılmaz): 3+ satırlık blok başlık değildir.
+    block = [False] * len(items)
+    toc_like = lambda x: bool(_TOC.match(x) or re.search(r"\S\s+\d{1,4}$", x))   # noqa: E731
+    i = 0
+    while i < len(items):
+        if items[i] and items[i] != PAGE_BREAK and _caps_line(items[i]) and not toc_like(items[i]):
+            j, run = i, []
+            while (j < len(items) and items[j] != PAGE_BREAK
+                   and (not items[j] or (_caps_line(items[j]) and not toc_like(items[j])))):
+                if items[j]:
+                    run.append(j)
+                j += 1
+            if len(run) >= 3:
+                for k in run:
+                    block[k] = True
+            i = j
+        else:
+            i += 1
+
+    # Künye sayfası (ISBN geçen sayfa): etiket/ad satırları sırayla gelir, blok kuralı yakalamaz; o sayfada başlık aranmaz.
+    page_of, page, isbn_pages = [], 0, set()
+    for ln in items:
+        if ln == PAGE_BREAK:
+            page += 1
+        page_of.append(page)
+        if ln != PAGE_BREAK and re.search(r"\b[iı]sbn\b", fold(ln)):
+            isbn_pages.add(page)
+
     out: list[tuple[str, bool]] = []
     cur = ""
+    pending = False   # kısa, noktalamalı satır geldi: sonraki satır küçük harfle başlamıyorsa paragraf biter
     num = ""          # tek başına kalan liste numarası («1.») sonraki satırın başına eklenir
     in_toc = False    # içindekiler bloğunda: «METİN 66» satırı da içindekiler sayılır
-    for raw in lines:
-        ln = raw.strip()
+
+    def flush() -> None:
+        nonlocal cur, pending
+        if cur:
+            out.append((_DROPCAP.sub(r"\1\2", cur), False))
+        cur, pending = "", False
+
+    for idx, ln in enumerate(items):
+        if ln == PAGE_BREAK:
+            continue
         if not ln:
-            if cur:
-                out.append((cur, False))
-                cur = ""
+            flush()
             continue
         if re.fullmatch(r"(?:\d{1,3}|[IVXLC]{1,7})[.)]", ln):
             num = f"{num} {ln}".strip()
@@ -269,26 +340,23 @@ def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
             toc = m if m and _is_heading_line(m.group("t")) else None
         in_toc = bool(toc)
         if toc:
-            if cur:
-                out.append((cur, False))
-                cur = ""
+            flush()
             out.append(((toc.groupdict().get("t") or toc.groupdict().get("t2")).strip(), False))
             continue
-        if _is_heading_line(ln):
-            if cur:
-                out.append((cur, False))
-                cur = ""
+        if pending and not ln[:1].islower():
+            flush()
+        heading = (not block[idx] and page_of[idx] not in isbn_pages and not _HYPH.search(ln) and _is_heading_line(ln)
+                   and not (cur and _HYPH.search(cur) and ln[:1].islower()))
+        if heading:
+            flush()
             out.append((ln, True))
             continue
-        if cur.endswith("-") and ln[:1].islower():
-            cur = cur[:-1] + ln
+        if cur and _HYPH.search(cur) and ln[:1].islower():
+            cur = _HYPH.sub("", cur) + ln
         else:
             cur = f"{cur} {ln}" if cur else ln
-        if ln[-1] in ".!?…”\"»" and len(ln) < 60:
-            out.append((cur, False))
-            cur = ""
-    if cur:
-        out.append((cur, False))
+        pending = ln[-1] in ".!?…”\"»" and len(ln) < 60
+    flush()
     return out
 
 
@@ -304,6 +372,7 @@ def pdf_lines(pages: list[list[str]]) -> list[str]:
     for pg in pages:
         lines.extend(ln for ln in pg if not re.fullmatch(r"[\divxlcIVXLC]{1,5}", ln or "x")
                      and not (ln and seen[key(ln)] >= limit))
+        lines.append(PAGE_BREAK)
     # Sayfa sonu paragrafı bitirmez: sayfa arasında bölünen cümle tek segment kalır.
     return lines
 
@@ -398,18 +467,29 @@ def split_sentences(text: str) -> list[str]:
 
 
 def segment(paras: list[tuple[str, bool]]) -> list[dict[str, Any]]:
-    """Paragraflardan segment listesi. Başlık tek segmenttir ve yeni bölümü açar; başlık yoksa tek bölüm."""
+    """Paragraflardan segment listesi. Başlık tek segmenttir ve yeni bölümü açar; başlık yoksa tek bölüm. Art arda
+    gelen başlık satırları («BİRİNCİ BÖLÜM» / «BABAM VE YILDIZ SARAYI», iki satıra bölünmüş ad) aynı bölümdür: her
+    satır kendi segmenti kalır, bölüm adı « — » ile birleşir."""
     segs: list[dict[str, Any]] = []
     chapter, title = 0, "Metin"
+    prev_heading = False
     for p_no, (text, heading) in enumerate(paras, 1):
         text = re.sub(r"\s+", " ", text).strip()
         if not text:
             continue
         if heading:
-            chapter += 1
-            title = text[:300]
+            if prev_heading:
+                title = f"{title} — {text}"[:300]
+                for sg in segs:
+                    if sg["chapter"] == chapter:
+                        sg["chapter_title"] = title
+            else:
+                chapter += 1
+                title = text[:300]
             segs.append({"para": p_no, "chapter": chapter, "chapter_title": title, "heading": True, "source": text})
+            prev_heading = True
             continue
+        prev_heading = False
         if chapter == 0:
             chapter = 1
         for s in split_sentences(text):

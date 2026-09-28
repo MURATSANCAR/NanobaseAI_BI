@@ -31,6 +31,40 @@
 - **Kurulumda:** GPU'da `editor-voice:3` derlenmeli + gateway yeniden okumalı (eski servis `recording`'i tanımaz, kayıt
   400 → «ses servisi insan kaydını henüz desteklemiyor» hatası), `add-studio-routes.py`, test sunucusunda
   `add-studio-voice-size.py`; müşteri VM'inin web nginx'inde de bu yola gövde sınırı gerekir.
+## 2026-09-28 (08:30) — Hazır cevap katmanı test sunucusunda; köprü yeniden başlamalarına karşı diske yazılıyor
+
+- **Kurulum (main `204ef246`, 07:32):** dar kapsam — `admin.py`, `app.py`, `engine.ts` sunucu hâlinin üstüne yama (sunucuda M2 ve başka oturumların ara hâlleri duruyor), 9 dosya `main`den; aday ağaçta tsc 0, vitest 71/71, köprü testleri 38/38, derleme; arada canlı değişmedi; `._*` 0; derleme `index-LTWIrNUo.js`. Sabah özeti servisi elle koşturuldu: 08:15'ten önce olduğu için göndermeden döndü (beklenen).
+- **Kendi hatam, düzeltildi:** yan port köprü kopyaları root ile koşmuştu; M7 hazırlık klasörü (`var/editorial-home/c4244…`) root'a geçti, canlı köprü `PermissionError` ile yazamadı. `chown administrator` ile 07:34'te düzeldi; Masam ve diğerleri etkilenmedi. Kural hafızada: yan port `--uid=administrator`.
+- **Önce/sonra ölçümü (72 ekran, iki tur):** kendi çağrısı 2 sn üstü ekran 28 → 19; anında açılanlar: SEO iş listesi 17 → 0,1 sn, SEO özeti 12 → 0,1, üretim 25 → 0,1, kişi rehberli ekranlar 8–10 → 0,1–0,3, editör atama 9 → 1,1, finansal denetim 6 → 0,4, yeni kitap 53 → 3,5 (ilk turda 0,1). Ölçüm kararlı durumu gösteremedi: ölçüm sürerken köprü başka oturumların kurulumlarıyla **35 dakikada 6 kez** yeniden başladı (07:34–08:04) — bellekteki hazır cevaplar her seferinde silindi, başlatma anlarında 243 adet 502; ayrıca «Benzer kitaplar» ekranı 8.738 istekle nginx sınırını doldurdu (8.678 adet 429) ve sonraki ekranları bozdu (ayrı iş olarak önerildi; «Geri bağlantılar» ve «Panolar» fırtınası ile «Saha»/«Üretim» düşen çağrıları için açılan işler sürüyor).
+- **Düzeltme:** hazır cevaplar artık diske de yazılır (`RESPONSE_CACHE_DIR`, varsayılan `/data/nanobaseai/bi/var/response-cache`, klasör 0700, dosya 0600; VM'de aynı yol `bi_var` hacminde). Diske yalnız gövde + başlık gider, çerez gitmez; yeniden başlatmadan sonra bayat kayıt kişinin ilk açılışında hazır döner ve arkada o isteğin çereziyle tazelenir. Test: yeniden başlatmada kayıt geri gelir, çerez dosyada yok, yazma dosyaları siler.
+- Sabah özetinin «erken» mesajı ekten bağımsız («özet saati (08:15) gelmedi»).
+## 2026-09-28 — M4 kaynak okuma gerçek Timaş kitap PDF'leriyle: tireleme, diyalog, künye, liste maddesi, bölüm adı
+
+- **Nasıl:** GPU'daki editör deposundan üç kitap PDF'i (İbn Sînâ «Ahlakın Elifbesi» 160 s., «Böcekleri Seven Kadın» 336 s., «Babam Sultan Abdülhamid» 320 s.) test sunucusunda geçici klasöre alındı, okuyucu bellekte koşturuldu (DB'ye yazılmadı), kopyalar iş sonunda silindi. GPU'da PDF okuyucu kurulu değil, kurulmadı.
+- **Doğru çalışan:** her sayfadaki yazar/kitap adı üst bilgisi ve sayfa numaraları atılıyor (ör. «AYŞE OSMANOĞLU» 140, «BABAM SULTAN ABDÜLHAMİD» 133 sayfadan).
+- **Düzeltilen (genel kurallar, kitaba özel değil):** (1) tireden önce boşluk olan satır sonu tirelemesi birleşmiyordu («Ge - minin» → «Geminin»); (2) kısa diyalog satırından sonraki «dedi…» ayrı paragrafa düşüyordu — sonraki satır küçük harfle başlıyorsa paragraf sürer (küçük harfle başlayan segment 75/13/132 → 0/0/11); (3) künye satırları başlık/bölüm açıyordu — ISBN (noktasız «ısbn» dahil) geçen sayfada başlık aranmaz, art arda 3+ büyük harfli kısa satır (kapak) blok sayılır, sayfa sınırı işareti (`PAGE_BREAK`) bloğu keser; (4) numaralı liste maddeleri («1- Başikbal Müşfika Hanım», «4) Su, 5) Salep») başlık sayılıyordu — numaralı satır adı büyük harfse ya da kısa/virgülsüzse başlıktır; tireyle biten satır başlık değildir; (5) süslü ilk harf «T ekrar» → «Tekrar» (tek harfli kelime olabilen A/I/O/E hariç); (6) iki satıra bölünmüş bölüm adı iki bölüm oluyordu — art arda başlık satırları tek bölüm, ad « — » ile birleşir.
+- **Sonuç (bölüm sayısı):** 79 → 35, 28 → 11, 135 → 20; bölüm adları kitaptakiyle aynı (ör. «İKİNCİ SULTAN ABDÜLHAMİD — HAN'IN ZEVCELERİ VE ÇOCUKLARI»).
+- **Bilinen sınır:** sayfa sonunda bölünen kelimenin arasına dipnot/alt bilgi girerse tireleme birleşmez (70 bin kelimelik kitapta 72 yer); dipnotu ayırmak yazı boyutunu okumayı ister, kullanılan PDF okuyucu vermez. Küçük harfli (small caps) içindekiler satırları harf büyüklüğü karışık okunur.
+- **Doğrulama:** sunucu sahnesinde çeviri + yetki testleri 61/61.
+## 2026-09-28 (08:35) — /saha görsel kontrolü ve iki veri sorunu: 1 ₺ yer tutucu limit, ölçeği tutarsız CRM hedefi
+
+- **Görsel kontrol:** test sunucusunda başsız Chromium (`mobile-qa` Playwright) + kısa `timasai` oturumu; 320/390/768/1440 px'de
+  yatay taşma yok, «daha göster» 40 → 80 (0,3–0,9 sn), arama «kitapçıbaşı» 2 sonuç (0,9 sn), sayfa hatası yok. 768/1440'ta
+  ilk `today` 429 aldı, ekran yeniden deneyip 200 aldı (dört pencere art arda aynı sunucu IP'sinden; `66a8b50f` muafiyeti
+  sunucuda kurulu değildi).
+- **Görünüm:** sayılar binlik ayraçsızdı («248351») → `fmtCount` (Bugün başlığı, «daha göster», onay bekleyen, temsilci
+  seçimi, üst şerit, müdür raporu). 320 px'de «Vadesi geçmiş» tutarı «137,4 …» kesiliyordu (kutu içi ~66 px) → `Stat`
+  rakamı büyük, birimi küçük yazar, birim sığmazsa alt satıra iner.
+- **Risk limiti doluluğu «%47.799.611»:** CRM'de 44.322 etkin carinin 6.086'sında toplam limit tam **1 ₺** (yer tutucu;
+  yurt dışı dağıtıcılar dahil, riski milyonlarca ₺), 22'sinde 2–10 ₺, 10–1.000 ₺ arası yalnız 15. Karar: 10 ₺'ye kadar limit
+  «tanımlanmamış», doluluk hesaplanmaz (`field_sales_sources.MIN_REAL_LIMIT`; M59 bayi de aynı `risk_of`'u kullanır).
+  Yüzdeler binlik ayraçlı (`_pct`). Gerçek aşımlar (%570, %411) aynen kalır.
+- **Hedef oranı %675:** CRM `new_CariYilHedef` (CRM'de float; limit/risk money). 512 caride hedef ÷ 2025 cirosu medyan
+  0,18, çeyrekler 0,08–0,40; hedef ÷ 2025 adedi medyan 18 (adet de değil); hedef toplamı 131,7 Mn ₺, aynı carilerin 2025
+  cirosu 760 Mn ₺ — kimi TL, kimi bin TL girilmiş. Karar: hedef toplamı ÷ önceki yıl cirosu 0,5–2 dışındaysa CRM hedefi
+  tutarsız; `auto`da kullanılmaz (oran «—», hedef açığı çipi ve puanı yok, ekranda nedeni yazılı), açıkça `crm` seçildiyse
+  kullanılır ama uyarı yazılır. Onaylı M46 bütçe planı varsa hedef oradan (değişmedi).
+
 ## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
 
 - **Neden:** kullanıcı «çeviri için PDF, DOCX yükleyebilecek miyim» diye sordu; gerçek sunucuda yalnız TXT denenmişti. Test sunucusundaki gerçek belgelerle (Timaş kitabı yok; kitap PDF'leri yalnız GPU'daki editör deposunda) okuyucu bellekte koşturuldu, DB'ye yazılmadı.
@@ -231,6 +265,80 @@
 - **Sunucuda kalan:** köprü + arayüz kurulumu (`VITE_BASE=/timas/`), `timas-commerce.timer` (önce elle `systemctl start
   timas-commerce.service`; ilk tur bütün siparişleri okur), sonra H2 okur turu (`timas-readers`, site müşterileri okur olur),
   pytest/vitest/tsc, kabul ve temizlik; `READERS_HASH_SALT` tanımlı olmalı (yoksa okuma 503).
+## 2026-09-28 — M40 Trendyol ve M41 Amazon/yurtdışı kodlandı (yalnız okuma + panel dosyası) — DOĞRULANAMADI, testler koordinatörde
+
+- **Dal:** `worktree-agent-a0a0f4ecc9f569b74`, M42'nin bulunduğu `worktree-agent-ad24fa5ef7c8ee6a7` ucundan (main `54129d14` onun
+  atası). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması yapıldı. pytest (`test_trendyol.py`, `test_amazon.py`,
+  `test_channels.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc, derleme ve gerçek Logo/CRM kabulü
+  (`scripts/acceptance/M40|M41/kabul.py`) test sunucusunda koşturulacak.
+- **Neden bu kapsam:** kullanıcı kararı (2026-09-28) Trendyol/Amazon satış modelini sonraya bıraktı; M40–M42 yalnız okuma + Excel
+  yükleme. Bu yüzden analiz §14'teki `POST test` (API'ye salt okunur deneme) ve `ozellik:*.baglanti` anahtarları **yazılmadı**:
+  bağlanılmayan bir anahtar ekranda istenmez. İstemciler izin listeleriyle hazır ve testle kilitli (yazma yolu ağa çıkmadan
+  `ReadOnlyViolation`, okuma da `PlatformError`); açılış tek bayrak (`NETWORK`) ve kullanıcı kararıyla.
+- **M42'yi yeniden yazmadan:** `platforms.ReadOnlyClient`, eşleme (`semantic_channel_accounts`), öneri tablosu, `report.xlsx`,
+  kanal karnesi (`scorecard.channel/books/sell_in_books`) ve genel panel yüklemesi (Amazon satış raporu) kullanıldı. M42
+  dosyalarındaki değişiklik: `channels/__init__.py` (iki alt kayıt), `timas-channels.service` (iki `ExecStart=-`).
+- **§10 açık sorularında verilen kararlar (iş kararları Claude'a bırakıldı):** (1) Trendyol ilişkisi bilinmediği için iki yol
+  birlikte: Logo'da adla bulunan cari (`TRENDYOL_CARI_ADLARI`) M42 eşlemesine «aday» düşer, toptan satır karnede; mağaza verisi
+  panel dosyasından. Boş sonuç «satış yok» diye sunulmaz. (2) Mağazaya yazma yok, öneri + fark listesi. (4) Fiyat kıyası liste
+  fiyatı (Logo `PRCLIST`) ve site fiyatı ikisi birden; KDV hariç liste fiyatı ayarla brütlenir, 0 ise ekranda yazar. M41: (1) Amazon
+  modeli bilinmediği için konsinye (faturalanmamış irsaliye) ve faturalı satış ayrı gösterilir; (3) yurtdışı = kanal kodu
+  (yazımı ölçülecek, varsayılan `YURTDIŞI,YURTDISI`); (5) parametreleri finans girer, açık anahtarla.
+- **Tasarım kararları:** ürün listesi yüklemesi mağazanın tamamı sayılır (eskisinin yerine geçer); sipariş/iade/soru/yorum
+  anahtarla güncellenir, yükleme silinince yalnız hâlâ ona ait satırlar gider. İade sınıfında önce kural (tek sınıf), sonra Zeki AI
+  kapalı küme; emin değilse sınıf boş kalır, uydurulmaz. Yanıt taslağı ve listeleme taslağı `marketing.guard`'dan geçer (kaynaksız
+  rakam, kanıtsız iddia, teknoloji adı düşer). Vitrin kuralı: son `TRENDYOL_VITRIN_GUN` gün Trendyol siparişi × depo stoğunun
+  karşıladığı hafta (26 haftada doyar). Konsinye cari kodla süzülür (yıl kopyasında LOGICALREF değişebilir).
+- **Ölçülecekler (kabul listesinde):** Trendyol barkodunun EAN-13 olup olmadığı, kitap KDV'si / `PRCLIST.INCVAT`, yıl devrinde açık
+  irsaliyenin taşınması (`AMAZON_KONSINYE_YIL`), yurtdışı kanal kodu yazımı, `CLCARD.COUNTRY` doluluğu, Logo döviz kodu listesi
+  (1 USD, 20 EUR, 17 GBP varsayımı), «Telif Satılan Ülke» aramasının varlığı (`AMAZON_ULKE_TABLOSU`), panel dışa aktarımı kolon adları.
+- **Kabul:** M40 K1 adla cari, K2 Trendyol carisi net ciro, K3 gerçek ürün dosyası (isteğe bağlı, sonunda silinir), K4 depo stoğu,
+  K5 yazma koruması, K6 liste fiyatı, K7 barkod sayısı. M41 K1 Amazon carileri, K2 net ciro, K3 konsinye kalan, K4 CRM konsinye
+  siparişi, K5 yurtdışı cari bazında, K6 döviz faturası, K7 Telif Satış sözleşmesi, K8 yazma koruması. Temizlik betikleri
+  değişiklik kaydını, yüklemeyi, taslağı ve kartı kimlikle siler.
+- **Sunucuda kalan:** köprü + arayüz kurulumu, pytest/vitest/tsc, M42 kabulünden sonra M40/M41 kabulü ve temizlik,
+  `timas-channels.service` bir kez elle; Trendyol panel dosyası örneği ve Amazon carilerinin onayı iş biriminden.
+## 2026-09-28 — M56 Performans yönetimi ve M58 Çalışan deneyimi ve bağlılık kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-af1a77eaacce7cba1`, İK-0 + M55 dalı `worktree-agent-ad24fa5ef7c8ee6a7` (`6a2087ea`) üstünde. Sunucuya
+  bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_hr_performance.py`, `test_hr_engagement.py`, `test_hr_core.py`,
+  `test_access.py`), vitest (`navModel.test.ts` menü–katalog eşliği), tsc ve kabul (`scripts/acceptance/M56|M58/kabul.py` +
+  `temizlik.py`) test sunucusunda koşturulacak.
+- **M56:** hedef ağacı (şirket → birim → kişi, ağırlık, dönem `2026` / `2026-Q4`), onaya gönderme ve onay (gönderen onaylayamaz; kişi
+  hedefini yalnız zincirdeki yönetici; şirket hedefi üst yönetimin kararı olarak tek adım), check-in, revizyon talebi/kararı, Zeki AI
+  OKR taslağı (kişi adı gitmez) ve hizalama önerisi (`QueuedLlm.choose`, olasılıkla), form şablonu (sürümlü; açık dönem kendi kopyasını
+  taşır), dönem (hazırlık → açık → kalibrasyon → kapandı; katılımcı eşitleme sonradan girilen yöneticiyi de bağlar), değerlendirme akışı,
+  tamamlanma panosu, İK'nın tek tıkla hatırlatması (içeriksiz, bağlantılı e-posta AD iş adresine — düğmeyle, otomatik değil),
+  kalibrasyon, iş kayıtları özeti, dışa aktarma (CSV, yorum metni yok), imha (`performans_kaydi`, ayrılış tarihinden).
+- **M58:** anket şablonu (ikinci kişi onaylar), anket (taslak → planlı → açık → kapandı), davet jetonu, basılı kod, oturumsuz form,
+  sonuç (eNPS, endeks, madde, seçenek), eşik ve birim kırılımı, eğilim, tema sınıflama ve alıntısız tema özeti, maskeli yorum
+  (yalnız `ik.anket-yorum`), oryantasyon 30./90. gün davetleri (İK-0 `start_date`), öneri kutusu, aksiyon planı, imha
+  (`anket_yorum`, `oneri`).
+- **§10 açık sorularında verilen kararlar (iş kararları Claude'a bırakıldı):**
+  - *Gösterim eşiği:* kullanıcı kuralı gereği kendiliğinden sayı konmadı. Karar: eşik anket başına İK'nın girdiği alan; **girilmeden
+    hiçbir kapsamda sonuç gösterilmez** (koordinatör kuralı «eşik altında gösterilmez» ile «varsayılan konmaz»ın ikisini de sağlar).
+    Eşik yalnız yükseltilir (düşürmek önceki gizlemeyi deler). Birim kırılımı eşik şart ve açılıştan sonra değişmez (birim cevaba
+    açılışta yazılır).
+  - *Fark saldırısı:* analizde yoktu; üst birimde gösterilen alt birimlerin dışında kalan yanıt 0 ya da ≥ eşik değilse en küçük alt
+    birim de gizlenir. Eşik altı birimin yanıt sayısı da gösterilmez (katılım izi).
+  - *Açık ankette sonuç:* gösterilmez (tek tek değişimi izleyip kişiyi bulmayı engeller); açıkken yalnız toplam katılım.
+  - *Katılım izi:* kapanışta davet ve kod satırları silinir, sayılar ankette kalır. Anket cevabı ve bağlantı alma değişiklik kaydına
+    yazılmaz; adsız öneride kayıtta yazan «anonim».
+  - *Ayrılma niyeti:* kişi bazında sinyal yok (analiz §8 önerisi); yalnız «bir yıl sonra burada olacağım» maddesinin toplu sonucu.
+  - *Değerlendirme ücret/terfiye bağlı mı:* bilinmiyor; itiraz akışı her durumda var, karar kaydı tutulmaz.
+  - *Kim kimin yöneticisi:* `manager_id` (İK-0 kaydı); boş olanlar Ekibim'de İK'ya listelenir, dönem yöneticisiz açılır, İK sonradan
+    bağlar ve «katılımcıları eşitle» değerlendirmeyi yeni yöneticiye bağlar.
+  - *İş kayıtlarının değerlendirmede gösterilmesi (hukuk onayı):* bilgi amaçlı, çalışan da görür, puan değil; özetin ilk
+    görüntülenme anı yazılır. Hukuk onayı açık kalan.
+  - *Satış temsilcisi alanı:* ölçülmeden sistem ölçüsü kapalı (`HR_PERF_LOGO_SALES=0`); Değerlendirme dönemi ekranında «Ölç» düğmesi.
+- **Sapma (analizden):** sayfa anahtarı eklenenler `sayfa:ik-birimim`, `sayfa:ik-aksiyonlar` (analiz rotaları vardı, anahtarı yoktu;
+  yönetici bu ekranlara bağlılık panosu olmadan girebilmeli). `OPEN_NO_SESSION` yeni türü yerine `OPEN`: çerezsiz istek kapıdan zaten
+  geçiyor, uç jetonu doğruluyor — kapı kodunda değişiklik gerekmedi. Kampüs «Açık anketiniz var / Performansım» kartları eklenmedi
+  (Kampüs düzeni kullanıcı onayıyla; nabız kartı 09-18'de kullanıcı isteğiyle kaldırılmıştı). Anket davetleri ve çalışan hatırlatmaları
+  otomatik e-postayla gitmez (dış/toplu gönderim yok kararı); çalışan Anketlerim/Performansım'da görür.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (RULES 5 satır), `access_catalog.json` (10 sayfa, 13 özellik), `admin.py` (5 ayar),
+  `app.py` (4 satır), `App.tsx` (12 lazy + 16 rota), `navModel.ts` (3 ikon, 10 öğe, grup ipucu), `ModulesMenu.tsx` (M56, M58, İK kutusu
+  `/ik/performansim`), `test_hr_core.py` (İK sayfa kümesi eşitlik yerine kapsama — M56–M58 ekledikçe kırılmasın).
 
 ## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
 
@@ -2289,6 +2397,7 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
 - **Portal oturumuyla otomatik giriş (kullanıcı isteği):** portal çerezi `Path=/timas/`, Destek `:8446` kökünde → çerezi göremez. Akış: Destek giriş sayfası → portal `/timas/auth/destek-sso?next=` (çerez gider; `:8446` ve `:443` aynı site sayılır, SameSite=Strict engel değil) → giriş servisi 60 sn'lik tek kullanımlık HMAC jeton → `nanobase_brand.sso.login` imza/süre/tek kullanım denetimi, kişi yoksa AD'den şifresiz açılır (`provision`) → oturum. Portal oturumu yoksa `/login?sso=0` (AD formu). Giriş servisi `/opt/timas-login/server.py` main ile eş (md5 `877758b9`), yeniden başlatıldı; 12/12 test. Uçtan uca (gerçek portal girişi `timasai`): jeton → `/helpdesk/tickets` 200, kullanıcı `timasai@timas.local`; aynı jeton ikinci kez, portal oturumsuz ve bozuk imza → AD formu. Temizlik: Destek'te kullanıcı/temsilci/kişi silindi (ilk denemede kullanıcı silme arka plandaki kişi işiyle çakıştı, ikinci denemede sırayla silindi), portal oturumum çıkışla kapandı. Tarayıcıda da doğrulandı (bölmede açık portal oturumu vardı → Destek kendiliğinden «Merhaba, timasai»).
 - **Canlı bildirim:** Helpdesk'in `socket.ts`'i standart dışı portta `http://…:9000`'e gidiyordu (karışık içerik, engelleniyordu) → sayfanın kökü (masaüstü gibi). Kurulum rehberi, «Başlarken», «Atla», «Daralt» gibi sabit İngilizce kütüphane metinleri frappe-ui yamasıyla Türkçe; «Recently Assigned Tickets», «My Feedback» görünüm adları çevrildi.
 - **Destek yapay zekâsı (kullanıcı isteği, 5 özellik):** `nanobase_brand/yz/` — sınıflama (yeni kayıtta arka planda; yalnız boş/varsayılan alan ve tanımlı değer), 3 satırlık özet, yanıt taslağı (bilgi bankası + çözülen kayıtlar, yanıt kutusuna hazır yanıt yoluyla; gönderen temsilci), çözülen kayıttan kişisel verisiz makale taslağı, hafta içi SLA riski ve pazartesi haftalık rapor (Not + yönetici e-postası). Temsilci ekranında kenar çubuğuna «NanobaseAI» bölümü. Bilgi bankası gömmesi BI'ın gömme servisi: kapıya `/embeddings` aktarıcısı eklendi (kiralıksız; istemcinin `encoding_format: null`'ı servisi 500'e düşürüyordu → null alanlar atılıyor). Kabul (gerçek model, deneme kaydı): özet 1,5 sn, yanıt taslağı 5,9 sn (bilgi bankası boşken söz vermeden bilgi istedi), makale 1,6 sn (kişisel veri yok), haftalık rapor 2,2 sn (1 SLA riski). Bulunan hatalar: (1) `html2text` v16'da `frappe.core.utils`'te — kanca modülü yüklenemiyor, **yeni kayıt açılamıyordu** (kurulum `ff0313ef`–`54129d14` arası); kanca ayrı ve korumalı modüle alındı, kayıt açılışı sınıflamaya bağlı değil. (2) Sınıflama kaydı kaydederken ekibin atama kuralı boş ekipte Helpdesk'in kendi IndexError'ına düştü → alanlar kancasız yazılıyor. (3) Test sitesinde giden e-posta hesabı yok: kayıt açılışındaki alındı e-postası hata verir (testte susturuldu), rapor Not olarak kalır. İkinci kabulde sınıflama da çalıştı (tür Incident, ekip Billing, duygu Öfkeli, gerekçe + geçmiş notu). (4) Özetin 2. satırı temsilci yanıtı yokken «iletişime geçildi» diye uydurdu → istem temsilci yanıtı sayısını verir, yoksa «Henüz yanıt verilmedi.» der. Deneme verisi silindi (3 kayıt, 2 makale, 2 not, geçmiş satırları; kalan yalnız karşılama kaydı).
+- **Benzer geçmiş kayıtlar ve uygulanan çözümler (kullanıcı isteği):** `kayit.similar` — bilgi bankasında anlamca en yakın çözülmüş kayıtlar (bilgi bankası boşsa aynı türdeki son çözülenler); her birinin çözüm notu, temsilci yanıtları ve iç notları DB'den okunur, model ilgisizleri eler, kayıt başına uygulanan çözümü ve en çok 3 maddelik önerilen yolu yazar. Panelde «Benzer geçmiş kayıtlar». Kayıt çözülünce/yeniden açılınca «çözülen kayıtlar» kaynağı artımlı eşitlenir. Kabul (gerçek model): 3 çözülmüş kayıt (çift ödeme, hasarlı kitap, bayi iskontosu) + «hesabımdan para iki defa düştü» → yalnız çift ödeme kaydı, doğru çözüm ve 2 maddelik yol (6,8 sn); yeni çözülen kayıt 12 sn'de bilgi bankasında. Bulunan hata: Flow'un artımlı eşitlemesi son eşitlemeden sonra silinen adları purge ediyor, aynı adla yeniden açılmış kaydın parçası da gidiyordu (üst kaynak) → var olan adlar hariç (marka.py). İlk denemede konteyner yeniden oluşunca test dosyası silinmişti; deneme kayıtları e-postadan bulunup silindi (5 kayıt, bilgi bankası parçası 0).
 - **Açık:** müşteri VM'ine kurulmadı (VM'de giriş servisi ve Destek adresi farklı: `DESTEK_URL`); kapının yanıtındaki `model` alanı üst uçtaki adı taşıyor (panelde görünmüyor).
 ## 2026-09-28 — H1 Kategori ağacı kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
 

@@ -214,6 +214,11 @@ def _iso(v: Any) -> Optional[str]:
     return str(v)
 
 
+def _pct(v: float) -> str:
+    """0,57 → «%57», 57,2 → «%5.720» (binlik ayraçlı)."""
+    return "%" + f"{round(v * 100):,}".replace(",", ".")
+
+
 def fold(s: Optional[str]) -> str:
     """Türkçe harf duyarsız arama anahtarı."""
     t = (s or "").replace("İ", "i").replace("I", "ı").lower()
@@ -364,7 +369,7 @@ def score(sig: dict[str, Any], ctx: dict[str, Any]) -> tuple[float, list[dict[st
         add("cek", 1, "Çek/senet: " + ", ".join(kinds))
     fill = opt_num(sig.get("risk_doluluk"))
     if fill is not None and fill >= 0.5:
-        add("risk", (fill - 0.5) / 0.5, f"Risk limiti %{round(fill * 100)} dolu")
+        add("risk", (fill - 0.5) / 0.5, f"Risk limiti {_pct(fill)} dolu")
     if int(num(sig.get("siparis_riskte"))):
         why = sig.get("siparis_riskte_sebep")
         add("siparis", 1, "Sipariş riske takıldı" + (f" ({why})" if why else ""))
@@ -473,12 +478,21 @@ def elapsed_fraction(monthly: list[float], asof: date, year: int) -> float:
     return min(1.0, done + w[asof.month - 1] * asof.day / dim)
 
 
+#: CRM hedef toplamı ÷ aynı carilerin önceki yıl cirosu bu aralıkta değilse CRM hedefi ölçek olarak tutarsızdır.
+CRM_TARGET_SCALE = (0.5, 2.0)
+
+
 def customer_targets(prev_full: dict[str, float], plan: Optional[dict[str, Any]], crm_targets: dict[str, float],
                      asof: date, year: int, source: str = "auto") -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     """Cari yıllık hedefi. **M46 dağıtım kuralı (ekranda yazılı):** carinin önceki yıl net cirosunun bütün müşteri
     carilerinin önceki yıl net cirosuna payı × yürürlükteki planın toplam hedef cirosu; payların toplamı 1 olduğu için
     cari hedeflerinin toplamı planın toplamına eşittir. Beklenen = yıllık hedef × planın aylık dağılımıyla geçen pay.
-    Plan yoksa (ya da `crm` seçiliyse) CRM `new_CariYilHedef` (doluysa), beklenen takvim günü oranıyla."""
+    Plan yoksa (ya da `crm` seçiliyse) CRM `new_CariYilHedef` (doluysa), beklenen takvim günü oranıyla.
+
+    CRM hedefinin ölçeği denetlenir: hedefi ve önceki yıl cirosu olan carilerde hedef toplamı önceki yıl ciro toplamının
+    `CRM_TARGET_SCALE` aralığı dışındaysa alan tutarsızdır (2026-09-28: 512 caride hedef ÷ 2025 cirosu medyan 0,18, çeyrekler
+    0,08–0,40; kimi TL, kimi bin TL girilmiş; alan CRM'de para değil float). `auto`da o zaman hedef kullanılmaz (oran «—»,
+    ekranda neden yazılı); açıkça `crm` seçildiyse kullanılır, uyarı yine yazılır."""
     out: dict[str, dict[str, Any]] = {}
     info: dict[str, Any] = {"kaynak": None, "plan": None, "toplamHedef": None, "pay": None}
     use_m46 = source in ("auto", "m46") and plan and plan.get("items")
@@ -502,6 +516,18 @@ def customer_targets(prev_full: dict[str, float], plan: Optional[dict[str, Any]]
         days = 366 if calendar.isleap(year) else 365
         frac = 0.0 if asof.year < year else 1.0 if asof.year > year else asof.timetuple().tm_yday / days
         info.update({"kaynak": "crm", "pay": round(frac, 4)})
+        both = [(t, prev_full[c]) for c, t in crm_targets.items() if t and t > 0 and prev_full.get(c, 0.0) > 0]
+        if both:
+            scale = sum(t for t, _ in both) / sum(p for _, p in both)
+            info["olcek"] = round(scale, 3)
+            lo, hi = CRM_TARGET_SCALE
+            if not lo <= scale <= hi:
+                info["uyari"] = (f"CRM'deki cari yıl hedeflerinin toplamı, aynı carilerin geçen yıl cirosunun %{round(scale * 100)} "
+                                 "kadarı; ölçek tutarsız (kimi TL, kimi bin TL girilmiş).")
+                if source == "auto":
+                    info["kaynak"] = "crm-tutarsiz"
+                    info["uyari"] += " Hedef oranı ve hedef açığı hesaplanmadı; bütçe planı onaylanınca ondan hesaplanır."
+                    return out, info
         for code, t in crm_targets.items():
             if t and t > 0:
                 out[code] = {"yil": round(t, 2), "beklenen": round(t * frac, 2), "kaynak": "crm"}
@@ -572,7 +598,7 @@ def facts_of(b: dict[str, Any]) -> list[str]:
     if ev:
         f.append(f"Son 12 ayda {ev} karşılıksız çek/senet olayı.")
     if s.get("risk_doluluk") is not None:
-        f.append(f"Risk limiti doluluğu %{round(num(s.get('risk_doluluk')) * 100)}.")
+        f.append(f"Risk limiti doluluğu {_pct(num(s.get('risk_doluluk')))}.")
     if int(num(s.get("siparis_riskte"))):
         f.append(f"{int(num(s.get('siparis_riskte')))} sipariş risk onayı bekliyor.")
     gaps = [g for g in (b.get("hedefKitaplar") or [])[:3]]

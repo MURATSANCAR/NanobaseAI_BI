@@ -2011,7 +2011,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import response_cache as rc_mod
     from semantic_bridge import board as _board_for_cache
 
-    app.state.response_cache = rc_mod.ResponseCache()
+    app.state.response_cache = rc_mod.ResponseCache(
+        os.environ.get("RESPONSE_CACHE_DIR", "/data/nanobaseai/bi/var/response-cache"))
     rc_mod.install(app, app.state.response_cache, _board_for_cache.user_of,
                    lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"))
 
@@ -7332,6 +7333,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     hr_recruit_api.register(app, app.state.hr)
     from semantic_bridge import hr_learning_api  # M57 eğitim ve gelişim (/api/v1/hr/learning/*, /api/v1/hr/visit)
     hr_learning_api.register(app, app.state.hr)
+    # M56 performans ve M58 bağlılık aynı İK bağlamına bağlanır.
+    from semantic_bridge import hr_engagement_api, hr_performance_api
+    hr_performance_api.register(app, app.state.hr)
+    hr_engagement_api.register(app, app.state.hr)
     # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
     from semantic_bridge import channels
     app.state.channels = channels.register(app, rt, _require_caller, _can)

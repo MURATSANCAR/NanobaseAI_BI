@@ -16,19 +16,25 @@ Kural:
   kaydedilen şey eski cevapla görünmez.
 - Hiç saklanmayanlar: sohbet/soru, SQL, sonuç dosyası, model, yetki, yönetim, kişisel tercih/profil, kutlama, oda,
   zamanlayıcı uçları, durum/ilerleme yoklamaları, dosya/görsel/PDF/dışa aktarma.
-Kayıtlar yalnız bellekte (süreç yeniden başlayınca boşalır, ilk açılış bir kez kaynağı bekler); disk ya da başka bir
-kişiyle paylaşım yoktur.
+Kayıtlar bellekte ve diskte (`RESPONSE_CACHE_DIR`, klasör 0700, köprü kullanıcısının): köprü yeniden başlayınca
+(test sunucusunda günde onlarca kez) hazır cevaplar kaybolmaz. Diske yalnız cevap gövdesi ve başlıkları yazılır; isteğin
+çerezi (arkada yeniden üretmek için gereken) yalnız bellekte durur — yeniden başlatmadan sonra bayat kayıt ilk açılışta,
+o kişinin kendi isteğiyle arkada tazelenir.
 """
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
+import os
 import re
 import secrets
 import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import parse_qsl, urlencode
 
@@ -86,12 +92,72 @@ class Entry:
 
 
 class ResponseCache:
-    def __init__(self) -> None:
+    def __init__(self, directory: Optional[str] = None) -> None:
         self._items: "OrderedDict[tuple[str, str, str], Entry]" = OrderedDict()
         self._lock = threading.Lock()
         self.secret = secrets.token_hex(16)
         self.enabled = True
-        self.stats = {"hit": 0, "stale": 0, "miss": 0, "stored": 0, "revalidated": 0, "dropped": 0, "invalidated": 0}
+        self.stats = {"hit": 0, "stale": 0, "miss": 0, "stored": 0, "revalidated": 0, "dropped": 0, "invalidated": 0,
+                      "loaded": 0}
+        self.dir: Optional[Path] = None
+        if directory:
+            try:
+                self.dir = Path(directory)
+                self.dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+                self._load()
+            except OSError as e:          # disk yoksa yalnız bellekte çalışır
+                log.warning("response cache: disk kullanılamıyor (%s): %s", directory, e)
+                self.dir = None
+
+    # ---- disk (yeniden başlatmada hazır cevap kaybolmasın)
+    @staticmethod
+    def _name(key: tuple[str, str, str]) -> str:
+        return hashlib.sha256(json.dumps(list(key), ensure_ascii=False).encode()).hexdigest()
+
+    def _write(self, key: tuple[str, str, str], e: "Entry") -> None:
+        if self.dir is None:
+            return
+        base = self.dir / self._name(key)
+        meta = {"key": list(key), "headers": e.headers, "status": e.status, "at": e.at, "seconds": e.seconds, "asked": e.asked}
+        try:
+            for suffix, data in ((".body", e.body), (".meta.json", json.dumps(meta, ensure_ascii=False).encode())):
+                tmp = base.with_name(base.name + suffix + f".{secrets.token_hex(4)}.tmp")
+                with open(tmp, "wb") as f:
+                    f.write(data)
+                os.chmod(tmp, 0o600)
+                os.replace(tmp, base.with_name(base.name + suffix))
+        except OSError as err:
+            log.info("response cache: diske yazılamadı: %s", err)
+
+    def _unlink(self, key: tuple[str, str, str]) -> None:
+        if self.dir is None:
+            return
+        base = self.dir / self._name(key)
+        for suffix in (".body", ".meta.json"):
+            try:
+                base.with_name(base.name + suffix).unlink()
+            except OSError:
+                pass
+
+    def _load(self) -> None:
+        now = time.time()
+        rows = []
+        for meta_path in self.dir.glob("*.meta.json"):
+            try:
+                meta = json.loads(meta_path.read_text())
+                key = tuple(meta["key"])
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
+                    self._unlink(key)
+                    continue
+                body = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body").read_bytes()
+                rows.append((float(meta.get("asked", 0)), key, Entry(body, [tuple(h) for h in meta["headers"]], int(meta["status"]),
+                                                                     float(meta["at"]), float(meta.get("seconds", 0)),
+                                                                     float(meta.get("asked", 0)))))
+            except (OSError, ValueError, KeyError):
+                continue
+        for _, key, e in sorted(rows, key=lambda r: r[0]):
+            self._items[key] = e
+        self.stats["loaded"] = len(rows)
 
     # ---- kayıtlar
     def get(self, key: tuple[str, str, str]) -> Optional[Entry]:
@@ -105,20 +171,27 @@ class ResponseCache:
     def put(self, key: tuple[str, str, str], body: bytes, headers: list[tuple[str, str]], status: int, seconds: float,
             replay: dict[str, str]) -> None:
         now = time.time()
+        gone_keys = []
         with self._lock:
             old = self._items.get(key)
-            self._items[key] = Entry(body, headers, status, now, seconds, old.asked if old else now, replay)
+            entry = Entry(body, headers, status, now, seconds, old.asked if old else now, replay)
+            self._items[key] = entry
             self._items.move_to_end(key)
             total = sum(len(e.body) for e in self._items.values())
             while total > MAX_TOTAL and len(self._items) > 1:      # en uzun süredir istenmeyen düşer
-                _, gone = self._items.popitem(last=False)
+                k, gone = self._items.popitem(last=False)
                 total -= len(gone.body)
+                gone_keys.append(k)
             self.stats["stored"] += 1
+        for k in gone_keys:
+            self._unlink(k)
+        self._write(key, entry)
 
     def drop(self, key: tuple[str, str, str]) -> None:
         with self._lock:
             if self._items.pop(key, None) is not None:
                 self.stats["dropped"] += 1
+        self._unlink(key)
 
     def invalidate(self, prefix: str) -> int:
         with self._lock:
@@ -126,20 +199,26 @@ class ResponseCache:
             for k in gone:
                 del self._items[k]
             self.stats["invalidated"] += len(gone)
-            return len(gone)
+        for k in gone:
+            self._unlink(k)
+        return len(gone)
 
     def due(self, now: Optional[float] = None) -> list[tuple[tuple[str, str, str], Entry]]:
         """Arkada tazelenecekler: bayat ve son 24 saatte istenmiş, şu an üretilmiyor. Uzun süredir istenmeyen düşer."""
         now = now or time.time()
-        out = []
+        out, forgotten = [], []
         with self._lock:
             for k in list(self._items):
                 e = self._items[k]
                 if now - e.asked > KEEP_SECONDS:
                     del self._items[k]
+                    forgotten.append(k)
                     continue
-                if not e.busy and now - e.at >= FRESH_SECONDS:
+                # Çerezi olmayan (yeniden başlatmadan diskten gelen) kayıt kişinin bir sonraki açılışında tazelenir.
+                if e.replay and not e.busy and now - e.at >= FRESH_SECONDS:
                     out.append((k, e))
+        for k in forgotten:
+            self._unlink(k)
         return out
 
     def mark(self, key: tuple[str, str, str], busy: bool) -> bool:

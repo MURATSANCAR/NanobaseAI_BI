@@ -696,6 +696,66 @@
       "explicit": true
     },
     {
+      "key": "sayfa:ik-performansim",
+      "area": "ik",
+      "label": "Performansım",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-ekibim",
+      "area": "ik",
+      "label": "Ekibim (performans)",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-hedefler",
+      "area": "ik",
+      "label": "Hedef ağacı",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-degerlendirme",
+      "area": "ik",
+      "label": "Değerlendirme dönemi",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-anketlerim",
+      "area": "ik",
+      "label": "Anketlerim",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-oneriler",
+      "area": "ik",
+      "label": "Öneri kutusu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-baglilik",
+      "area": "ik",
+      "label": "Bağlılık panosu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-birimim",
+      "area": "ik",
+      "label": "Birimimin anket sonucu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-anket-yonetimi",
+      "area": "ik",
+      "label": "Anket yönetimi",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-aksiyonlar",
+      "area": "ik",
+      "label": "Aksiyon planı",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kanallar",
       "area": "platform",
       "label": "Kanal karnesi"
@@ -714,6 +774,46 @@
       "key": "sayfa:kanal-eslesme",
       "area": "platform",
       "label": "Cari eşleme"
+    },
+    {
+      "key": "sayfa:trendyol",
+      "area": "platform",
+      "label": "Trendyol: mağaza özeti"
+    },
+    {
+      "key": "sayfa:trendyol-urunler",
+      "area": "platform",
+      "label": "Trendyol: ürün, stok ve fiyat farkı"
+    },
+    {
+      "key": "sayfa:trendyol-siparisler",
+      "area": "platform",
+      "label": "Trendyol: sipariş ve iade"
+    },
+    {
+      "key": "sayfa:trendyol-sorular",
+      "area": "platform",
+      "label": "Trendyol: soru ve yorum"
+    },
+    {
+      "key": "sayfa:amazon",
+      "area": "platform",
+      "label": "Amazon ve yurtdışı: özet"
+    },
+    {
+      "key": "sayfa:amazon-konsinye",
+      "area": "platform",
+      "label": "Amazon konsinye"
+    },
+    {
+      "key": "sayfa:amazon-yurtdisi",
+      "area": "platform",
+      "label": "Yurtdışı satış, haklar ve pazarlar"
+    },
+    {
+      "key": "sayfa:amazon-taslaklar",
+      "area": "platform",
+      "label": "Listeleme ve brief taslakları"
     },
     {
       "key": "sayfa:eticaret",
@@ -2346,6 +2446,47 @@
       "sensitive": true
     },
     {
+      "key": "ozellik:ik.hedef-yaz",
+      "area": "ik",
+      "page": "sayfa:ik-hedefler",
+      "label": "Hedef yazma",
+      "hint": "Kendi ekibinin kişi hedeflerini ve yöneticisi olduğu birimin hedeflerini yazma, onaya gönderme; check-in ve revizyon isteme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.hedef-onay",
+      "area": "ik",
+      "page": "sayfa:ik-hedefler",
+      "label": "Hedef onayı",
+      "hint": "Onaya gelen hedefi ve revizyonu onaylama (gönderen onaylayamaz; kişi hedefinde yalnız zincirdeki yönetici); şirket hedefi yazma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.donem-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-degerlendirme",
+      "label": "Değerlendirme dönemi yönetimi",
+      "hint": "Form şablonu, dönem açma/kapama, katılımcı eşitleme, tamamlanma panosu ve hatırlatma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.degerlendirme-yaz",
+      "area": "ik",
+      "page": "sayfa:ik-ekibim",
+      "label": "Değerlendirme yazma",
+      "hint": "Kayıtlı yöneticisi olduğu çalışanın değerlendirmesini yazma, teslim ve paylaşma; Zeki AI yorum yardımı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.degerlendirme-onay",
+      "area": "ik",
+      "page": "sayfa:ik-degerlendirme",
+      "label": "Değerlendirme onayı (İK)",
+      "hint": "Paylaşılmış değerlendirmeyi onaylama, değerlendiren yöneticiyi değiştirme; bütün değerlendirmeleri görme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
       "key": "ozellik:ik.egitim-onay",
       "area": "ik",
       "page": "sayfa:ik-egitim",
@@ -2375,6 +2516,72 @@
       "page": "sayfa:ik-egitim",
       "label": "Modül rehberi yazma",
       "hint": "Ekran rehberlerini Zeki AI taslağıyla yazma, düzeltme ve yayımlama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.kalibrasyon",
+      "area": "ik",
+      "page": "sayfa:ik-degerlendirme",
+      "label": "Kalibrasyon görünümü",
+      "hint": "Birim × yöneticinin verdiği genel puan dağılımı ve kişi adları (İK ve genel müdür)",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.is-ozeti",
+      "area": "ik",
+      "page": "sayfa:ik-ekibim",
+      "label": "İş kayıtları özeti",
+      "hint": "Ekibindeki kişinin M2 görev ve CRM sahiplik sayılarından bilgi amaçlı özet üretme (çalışan da görür)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.anket-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-anket-yonetimi",
+      "label": "Anket yönetimi",
+      "hint": "Anket şablonu (ikinci kişi onaylar), anket açma/kapama, gösterim eşiği, basılı kod, birim sonucunu paylaşma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.birim-sonuc",
+      "area": "ik",
+      "page": "sayfa:ik-birimim",
+      "label": "Birimimin anket sonucu",
+      "hint": "Yöneticisi olduğu birimin paylaşılmış anket sonucu (gösterim eşiği kuralıyla)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.anket-yorum",
+      "area": "ik",
+      "page": "sayfa:ik-baglilik",
+      "label": "Anket yorum metinleri",
+      "hint": "Açık uçlu yorumların maskeli metni (karışık sırada; kişiye bağlanamaz)",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.oneri-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-oneriler",
+      "label": "Öneri kutusu yönetimi",
+      "hint": "Bütün önerileri görme, konu düzeltme, birime yönlendirme, cevaplama ve kapatma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.oneri-cevapla",
+      "area": "ik",
+      "page": "sayfa:ik-oneriler",
+      "label": "Öneri cevaplama (birim)",
+      "hint": "Yöneticisi olduğu birime yönlendirilen önerileri görme ve cevaplama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.aksiyon",
+      "area": "ik",
+      "page": "sayfa:ik-aksiyonlar",
+      "label": "Aksiyon planı",
+      "hint": "Anket sonrası aksiyon ekleme ve düzenleme; birim yöneticisi kendi biriminin aksiyonunda durum ve not yazar",
       "explicit": true
     },
     {
@@ -2413,6 +2620,51 @@
       "page": "sayfa:kanallar",
       "label": "Kanal önerisi taslağı",
       "hint": "Simülasyondan iskonto önerisi ve D2C'ye özel set önerisi taslağı açma (Zeki AI gerekçe yazar)"
+    },
+    {
+      "key": "ozellik:trendyol.yukle",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol panel dosyası yükleme",
+      "hint": "Ürün listesi, sipariş, iade, soru ve yorum dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
+    },
+    {
+      "key": "ozellik:trendyol.taslak",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol Zeki AI taslakları",
+      "hint": "Soru ve yorum yanıt taslağı, iade nedeni sınıflama ve vitrin önerisi taslağı (Zeki AI; hiçbir şey Trendyol'a gönderilmez)"
+    },
+    {
+      "key": "ozellik:trendyol.oneri-karar",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol önerisi kararı",
+      "hint": "Vitrin önerisini onaylama ya da gerekçeyle reddetme (hazırlayan onaylayamaz; onay portal kaydıdır, mağazaya gönderilmez)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:amazon.taslak",
+      "area": "platform",
+      "page": "sayfa:amazon-taslaklar",
+      "label": "Listeleme ve pazar kartı taslağı",
+      "hint": "Tek kitap için hedef pazara listeleme, A+ ve çeviri brief'i taslağı; pazar değerlendirme kartı açma (Zeki AI; Amazon hesabına gönderilmez)"
+    },
+    {
+      "key": "ozellik:amazon.parametre",
+      "area": "platform",
+      "page": "sayfa:amazon-yurtdisi",
+      "label": "Uluslararası fiyat parametreleri",
+      "hint": "Pazar başına kur kaynağı, KDV, kargo birim maliyeti ve komisyon oranı (finans)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:amazon.pazar-karar",
+      "area": "platform",
+      "page": "sayfa:amazon-yurtdisi",
+      "label": "Yeni pazar kararı",
+      "hint": "Pazar değerlendirme kartına «girilsin / bekle / girilmesin» kararı (kartı hazırlayan karar veremez)",
+      "explicit": true
     },
     {
       "key": "ozellik:eticaret.fark-isaretle",
