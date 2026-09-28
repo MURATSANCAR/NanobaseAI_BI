@@ -555,6 +555,42 @@ taşınmadı, kurulmadı.
 - **Kararlar (analiz §10 açık sorular, veriye/koda bakılarak):** (1) Backlist tanımı M46 segmenti — tek tanım; onaylı plan yoksa CRM ilk yayın + 12 ay yedek, ekranda hangisi olduğu yazar. (2) 12/12 ay **tam ay** üzerinden (veri sonu 17.08.2026 → son tam ay Temmuz): yarım ay önceki yılın tam ayıyla karşılaştırılınca sahte düşüş verirdi. (3) Tükenme süresi = Logo depo stoku ÷ (son 12 ay net adet ÷ 12); Baskı Öneri'nin CRM stoklu formülü yerine Logo depo stoku (kabul 3 aynı sorguyla). (4) Kampanya etkisi ay düzeyi (M46 önbelleği aylık); nedensellik iddiası yok. (5) Konu eşleşmesi aday çifti: özel gün adının anahtar kelimesi kitabın CRM anahtar kelime/tema/tür metninde iki yönlü önekle (öğretmen ↔ öğretmenler); model kapalı küme «İlgili/İlgisiz/Belirsiz», eşik altı onaya düşer, emin «İlgisiz» bir daha sorulmaz. (6) Backlist sosyal gönderisi `sosyal` değil `yeniden-kesfet` türü: `sosyal` CRM kitap alanına eşli, çok kitaplı planda «CRM'e işlenecek» listesini yanıltırdı. (7) Ekip ağırlığı explicit yetki (ekip ayarı). (8) Arama ilgisi ve haber yok (kazıma yok, müşteride web taraması kapalı) — sonraki sürüm. (9) Aktivasyon planı çekirdeğin `POST /plans`'ı yerine `POST /backlist/plans` ile açılır (çekirdek ucu yalnız yeni kitap planı açıyor; M18 dalıyla çakışmasın diye dokunulmadı); onay, bütçe, takvim ve materyal onayı çekirdeğin uçları.
 - **Ortak dosyalar (en küçük ekleme):** `access.py` (backlist satırları; genel marketing ve M46 targets/deviations satırlarına backlist sayfası; özellik kuralları), `access_catalog.json` (sayfa + `pazarlama.backlist-ayar`), `admin.py` (4 ayar), `App.tsx` (rota), `navModel.ts` (menü), `ModulesMenu.tsx` (M17), `marketing/core.py` (M18'in `register_plan_table` hunk'ı birebir), `marketing/api.py` (backlist planında M15 önerisi/taslağı 409), `marketing/__init__.py` (register), M15 ekranları `PlanScreen.tsx`/`MaterialsTab.tsx`/`HistoryTab.tsx` (backlist planı dalı), `test_marketing.py` (genel satır artık iki sayfa).
 - **Sunucuda kalan:** pytest (`test_backlist.py` + marketing/access/budget) ve vitest (menü–katalog); köprü + ön yüz kurulumu; `timas-marketing-backlist*.{service,timer}` kurulup ilk gece koşusu elle (`BUILD=1 sh scripts/acceptance/m17/run.sh`, süre ölçülür — ilk koşuda 2022–2024 Logo'dan okunur); canlı kabul `accept.py --write`, `cleanup.py`. **Ölçülecek:** M46 segmenti ile CRM ilk yayın tanımının farkı, e-kitap alanlarının doluluğu, kampanya ürünlerinin `ProductNumber` = stok kodu eşleşme oranı, gece koşusu süresi.
+## 2026-09-28 — M20 Basın, medya ve halkla ilişkiler (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-a4231a76a4d0facdc`); yalnız `py_compile` ve JSON
+denetimi yapıldı. pytest (`test_pr.py`, `test_access.py`), vitest, tsc ve gerçek CRM kabulü test sunucusunda
+(`scripts/acceptance/m20/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M20 analizi (`docs/analiz/kullanici-ihtiyaclari/M20-basin-medya-halkla-iliskiler.md` §14). CRM Haber modülü
+  2025-06'dan beri boş; bülten, gönderim, cevap ve yansıma birbirine bağlı değildi.
+- **Ne yapıldı:** köprü `pr.py`, `pr_sources.py`, `pr_api.py`, `pr_export.py` (`/api/v1/pr/*`, tablolar `semantic_pr_*`);
+  ekranlar `src/canvas/pr/` (Bugün, kitap, PR dosyası, gönderim listesi + öneri, medya kişileri + kart, yansımalar +
+  ekleme, rapor); menü Pazarlama › İletişim, Kampüs M20, yetki (`sayfa:basin-iliskileri` explicit, `pr.duzenle`,
+  `pr.onay`/`pr.gonder` explicit), Yönetim ayarları `PR_*`, `timas-pr.timer`, testler ve kabul betikleri.
+- **Mevcut kod yeniden yazılmadı:** «Basın ve web» (`web_watch.py`) yansıma kaynağı olarak okunur (yalnız `WEB_WATCH_ENABLED`
+  açıkken; VM'de elle giriş); M15'in onaylı basın bülteni materyali (`semantic_mkt_materials`) dosyanın ilk bülteni;
+  `marketing.guard` Zeki AI metin denetimi; `QueuedLlm.choose` ton kararı; `budget_api._send_mail` iç bildirimler.
+- **Açık sorularda verilen kararlar (analiz §10):**
+  1. *PR'ı kim yürütüyor:* veride yok (AD/CRM unvan boş). Rol eşlemesi Yetki ekranında; sayfa explicit, çünkü medya
+     kişilerinin e-posta/telefonu kişisel veri — kurulumda herkese açılmamalı.
+  2. *Gazeteci listesi nerede:* CRM'de «Basın medya Mecrası» dolu kişiler + Haber kayıtlarında haberi yapan/basında
+     görüşülen kişiler; CRM «Kişi Rolü»nde gazeteci rolü varsa adı `PR_CRM_MEDIA_ROLES`'a girilir (ölçülecek). Excel
+     aktarımı bu sürümde yok; kişi portalda tek tek eklenir.
+  3. *CRM Haber modülü:* yalnız okunur, arşiv olarak yansıma listesine ve öneri puanına katılır. «Haberi Yapan Kişi»
+     alanının Contact'a mı SystemUser'a mı baktığı ölçülmedi: kabul 3 ikisini sayar; kod ikisini de dener (temel tablo
+     yolunda). Mecra adları CRM görünümünden; görünüm okunamazsa temel tablo yolu (`new_HaberMecra` → Mecra varsayımı).
+  4. *Tanıtım gönderimi:* tip 12 siparişin alıcısı cari (gazeteci kişi bağı yok); kitap ekranında adet ve cari olarak
+     gösterilir, gönderim satırına sipariş numarası elle yazılır.
+  5. *İYS/6563:* hukuka sorulacak. Bu sürümde toplu gönderim yok, her e-posta tek kişiye ve onaylı satırdan; CRM'deki
+     «E-postaya izin verme» ve portaldaki «haberdar olmak istemiyor» e-postayı engeller; İYS onayı kart üzerinde görünür.
+- **Diğer kararlar:** haftalık özet pazartesi (analizdeki «pazartesi 09:00» ile zamanlayıcının 08:30 turu; gün ayardan);
+  takip süresi 5 gün (ayar); erişim/tiraj rakamı yok (hiçbir kaynakta tutulmuyor); öneri puanı modelsiz kural (analizde
+  sonraki sürüm, gerekçesi satırda); yansıma bağlantısı yalnız ortamda web okuma açıksa okunur, iç ağ adresine gidilmez.
+- **Kabul listesinde ölçülecek:** Haber görünümünün `…Name` kolonları; `new_HaberinYazari` hedefi; medya kişisi havuzu
+  büyüklüğü; tip 12 hacmi; model tonu eşiği (`PR_TONE_MIN_PROB` 0.6 varsayım).
+- **Açık kalan:** Kitap sayfasına (`/kitap/:id`) «Basın» sekmesi eklenmedi (editoryal ortak ekran; şimdilik
+  `/basin-iliskileri/kitap/:id` bağlantısı); röportaj soru seti, satış etkisi (canlı Logo), Excel ile kişi aktarımı,
+  lisanslı medya takip verisi sonraki sürüm.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

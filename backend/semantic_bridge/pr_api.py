@@ -629,7 +629,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         counts = {"kayitli": 0, "aday": 0, "reddedildi": 0}
         for r in PR.list_coverage(engine, tenant, state=""):
             counts[r["state"]] = counts.get(r["state"], 0) + 1
-        return {**PR.page_of(out, page), "note": note, "counts": counts, "webWatch": st()["webWatch"]}
+        return {**PR.page_of(out, page), "note": note, "counts": counts, "webWatch": st()["webWatch"], "archivePath": crm.archive_path}
 
     @app.post(R + "/coverage/preview")
     async def pr_coverage_preview(body: dict[str, Any], request: Request) -> dict[str, Any]:

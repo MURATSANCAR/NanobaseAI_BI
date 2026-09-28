@@ -220,15 +220,20 @@ SELECT new_kitapId AS id FROM {p}new_kitapBase WHERE statecode = 0 AND new_Tip =
             check("7b-run-due-atlar", st3 == 200 and "atlandi" in (rd.get("web") or {}), ekran=rd)
     else:
         check("7a-web-kapali", True, atlandi=True, not_="Bu ortamda tarama açık (test sunucusu); VM'de tekrar koşulur.")
+    # Ekrandaki metin: ön yüz dosyalarının metin parçaları + bu turda köprünün ekrana verdiği cevaplar.
     hits = []
-    for f in list((ROOT / "src" / "canvas" / "pr").glob("*.ts*")) + [ROOT / "backend" / "semantic_bridge" / n
-                                                                  for n in ("pr.py", "pr_api.py", "pr_export.py")]:
+    for f in (ROOT / "src" / "canvas" / "pr").glob("*.ts*"):
         for lit in re.findall(r"'([^'\n]{3,})'|\"([^\"\n]{3,})\"|>([^<>{}\n]{3,})<", f.read_text(encoding="utf-8")):
             t = next(x for x in lit if x)
-            if G.has_tech_name(t) and "TECH_NAMES" not in t:
-                hits.append({"dosya": f.name, "metin": t[:120]})
-    # pr.py'deki model istemi «teknoloji adı yazma» der; o cümle ekrana gitmez.
-    hits = [h for h in hits if "teknoloji, model ya da yazılım adı" not in h["metin"]]
+            if G.has_tech_name(t):
+                hits.append({"kaynak": f.name, "metin": t[:120]})
+    for path in ("/api/v1/pr/meta", f"/api/v1/pr/home?ay={args.ay}", "/api/v1/pr/coverage?page=0", "/api/v1/pr/report",
+                 "/api/v1/pr/contacts?page=0"):
+        st, body = api("GET", path)
+        if st == 200:
+            for t in re.findall(r'"([^"]{3,})"', json.dumps(body, ensure_ascii=False)):
+                if G.has_tech_name(t):
+                    hits.append({"kaynak": path, "metin": t[:120]})
     check("7c-teknoloji-adi", not hits, bulunan=hits)
 
     # 8 ---------------------------------------------------------------- (--write) onay kuralı

@@ -203,6 +203,34 @@ FROM {p}new_haberler AS h
 WHERE h.statecode = 0""".strip()
 
 
+def archive_base_sql(schema: str) -> str:
+    """Yedek yol: CRM görünümü (`new_haberler`) okunamazsa temel tablo. Mecra alanlarının hedef varlığı metaveride
+    yazmıyor; `new_habermecrasi` → Haber Mecrası (4 kayıt), `new_HaberMecra` → Mecra (230 kayıt), `new_mecratipi` →
+    Mecra Tipi kabul edildi (**ölçülecek**, kabul 1'de görünüm yolu tutarsa bu yol hiç kullanılmaz). Haberi yapan kişi
+    önce ContactBase'de, yoksa SystemUserBase'de aranır."""
+    p = prefix(schema)
+    return f"""
+-- M20: CRM Haber arşivi, temel tablo yolu (yalnız okuma).
+SELECT h.new_haberlerId AS id, COALESCE(NULLIF(LTRIM(h.new_HaberBasligi), ''), h.new_name) AS baslik,
+       NULLIF(LTRIM(h.new_HaberLinki), '') AS link, NULLIF(LTRIM(h.new_YoutubeLinki), '') AS youtube,
+       CAST(DATEADD(HOUR, 3, h.new_HaberTarihi) AS DATE) AS tarih, CAST(ISNULL(h.new_haberyayinlandi, 0) AS int) AS yayinlandi,
+       CAST(ISNULL(h.new_kitapgonderimi, 0) AS int) AS kitap_gonderimi, CAST(ISNULL(h.new_basinziyareti, 0) AS int) AS basin_ziyareti,
+       m1.new_name AS mecra1, m2.new_name AS mecra2, NULL AS mecra3, mt.new_name AS mecra_tipi,
+       h.new_HaberinYazari AS muhabir_id, COALESCE(c1.FullName, u1.FullName) AS muhabir,
+       h.new_basindagorusulenkisi AS gorusulen_id, COALESCE(c2.FullName, u2.FullName) AS gorusulen,
+       cy.FullName AS yazar, h.new_yazartext AS yazar_text, h.new_kitaptext AS kitap_text
+FROM {p}new_haberlerBase AS h
+LEFT JOIN {p}new_mecraBase AS m1 ON m1.new_mecraId = h.new_HaberMecra
+LEFT JOIN {p}new_habermecrasiBase AS m2 ON m2.new_habermecrasiId = h.new_habermecrasi
+LEFT JOIN {p}new_mecratipiBase AS mt ON mt.new_mecratipiId = h.new_mecratipi
+LEFT JOIN {p}ContactBase AS c1 ON c1.ContactId = h.new_HaberinYazari
+LEFT JOIN {p}SystemUserBase AS u1 ON u1.SystemUserId = h.new_HaberinYazari
+LEFT JOIN {p}ContactBase AS c2 ON c2.ContactId = h.new_basindagorusulenkisi
+LEFT JOIN {p}SystemUserBase AS u2 ON u2.SystemUserId = h.new_basindagorusulenkisi
+LEFT JOIN {p}ContactBase AS cy ON cy.ContactId = h.new_Yazarid
+WHERE h.statecode = 0""".strip()
+
+
 def archive_books_sql(schema: str) -> str:
     p = prefix(schema)
     return f"""
@@ -385,8 +413,16 @@ class Crm:
 
     def archive(self, fresh: bool = False) -> list[dict[str, Any]]:
         def load() -> list[dict[str, Any]]:
-            return archive_rows(self._run(archive_sql(self.schema())), self._run(archive_books_sql(self.schema())))
+            try:
+                heads = self._run(archive_sql(self.schema()))
+                self.archive_path = "gorunum"
+            except SourceError:
+                heads = self._run(archive_base_sql(self.schema()))
+                self.archive_path = "temel-tablo"
+            return archive_rows(heads, self._run(archive_books_sql(self.schema())))
         return self._cached(("archive",), fresh, load)
+
+    archive_path: Optional[str] = None
 
     def promo_orders(self, stok: str) -> list[dict[str, Any]]:
         return [{"siparisNo": _s(r.get("siparis_no")), "tarih": _d(r.get("tarih")), "cari": _s(r.get("cari")),

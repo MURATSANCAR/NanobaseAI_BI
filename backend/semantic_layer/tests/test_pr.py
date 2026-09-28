@@ -402,12 +402,12 @@ def test_settings_defaults():
 def test_crm_sql_is_read_only_and_validates_input():
     sqls = [S.month_books_sql("Timas_MSCRM.dbo", date(2026, 9, 1), date(2026, 9, 30)), S.book_sql("Timas_MSCRM.dbo", BOOK),
             S.book_authors_sql("Timas_MSCRM.dbo", BOOK), S.media_contacts_sql("Timas_MSCRM.dbo", ["Gazeteci", "O'Brien"]),
-            S.archive_sql("Timas_MSCRM.dbo"), S.archive_books_sql("Timas_MSCRM.dbo"), S.promo_orders_sql("Timas_MSCRM.dbo", "15201.0001"),
+            S.archive_sql("Timas_MSCRM.dbo"), S.archive_base_sql("Timas_MSCRM.dbo"), S.archive_books_sql("Timas_MSCRM.dbo"), S.promo_orders_sql("Timas_MSCRM.dbo", "15201.0001"),
             *S.book_search_sql("Timas_MSCRM.dbo", "fener'; drop", 0)]
     for q in sqls:
         body = "\n".join(line for line in q.splitlines() if not line.strip().startswith("--")).upper()
         assert not any(w in body.split() for w in ("INSERT", "UPDATE", "DELETE", "MERGE", "EXEC", "DROP"))
-    assert "N'O''Brien'" in sqls[3] and "new_siparistipi = 12" in sqls[6]
+    assert "N'O''Brien'" in sqls[3] and "new_siparistipi = 12" in sqls[7]
     assert "'2026-08-31 21:00:00'" in sqls[0] and "'2026-09-30 21:00:00'" in sqls[0]
     with pytest.raises(S.SourceError):
         S.book_sql("Timas_MSCRM.dbo", "x' OR 1=1 --")
