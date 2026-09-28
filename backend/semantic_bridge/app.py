@@ -33,6 +33,8 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
+from semantic_bridge import provenance as P
+from semantic_bridge import soru_kaynak as SK
 from semantic_layer import SEMANTIC_LAYER_VERSION
 from semantic_layer.candidates.generator import CandidateGenerator
 from semantic_layer.conventions import Conventions
@@ -1327,8 +1329,9 @@ class Runtime:
                     yield cols, rows
         finally:
             if timing is not None:
+                # Parçanın koşan metni de gider: sorgu bilgisi her parçayı kendi veritabanında kopyala-çalıştır verir.
                 timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
-                               "ms": int(round(box[0] * 1000))})
+                               "ms": int(round(box[0] * 1000)), "sql": phys})
 
     def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
                      sample_size, scope_args, report, execute):
@@ -2214,7 +2217,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             # both false, and both send people looking for a fault that is not there.
             raise _sql_failure(e) from e
         r.attach_widget(result, body.question or "")
-        return result
+        # Sorgu bilgisi: gösterilen/kopyalanan metin köprünün koşturduğu fiziksel SQL (genel bakış kartları bunu okur).
+        return P.bagla(result, lambda: SK.for_run(result, *SK.databases(r.settings.connection_file)))
+
+    def _answer_kaynak(answer: Any) -> Any:
+        """Soru cevabına sorgu bilgisi: rakamlar köprünün Logo/CRM'de koşturduğu fiziksel SQL'den (mantıksal değil)."""
+        if not isinstance(answer, dict) or answer.get("type") != "TEXT_TO_SQL":
+            return answer
+        dbs = SK.databases(rt().settings.connection_file)
+        return P.bagla(answer, lambda: SK.for_answer(answer, *dbs))
 
     @app.get("/api/v1/result/{result_id}")
     def stored_result(result_id: str, request: Request):
@@ -2272,7 +2283,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not q:
             raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
         try:
-            return rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request))
+            answer = rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request))
+            return _answer_kaynak(answer)
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
@@ -2298,7 +2310,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
                         execute=bool(body.execute if body.execute is not None else True), progress=progress,
                         username=asker)
-                    await queue.put({"event": "result", "result": answer})
+                    await queue.put({"event": "result", "result": _answer_kaynak(answer)})
                 except Exception:
                     log.exception("stream ask failed")
                     await queue.put({"event": "error", "message": "Sorgu tamamlanamadı. Lütfen tekrar deneyin."})
