@@ -1,9 +1,15 @@
 import { useMemo } from 'react';
 import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query';
-import { ENGINE_ENABLED, authorsApi, peopleApi, type AuthorHeat, type AuthorMeeting, type HeatBand } from '../../engine';
+import { ENGINE_ENABLED, authorsApi, peopleApi, type AuthorHeat, type AuthorMeeting, type HeatBand, type LoyaltyBand } from '../../engine';
 import type { SearchOption } from '../../components/SearchSelect';
 
 /** M7 Yazar ilişkileri ekranlarının ortak parçaları: ısı bantları, tarih biçimi, takvim dosyası, sorgu anahtarları. */
+
+export const LOYALTY: Record<LoyaltyBand, { label: string; pill: string }> = {
+  bagli: { label: 'Bağlı', pill: 'bg-emerald-50 text-emerald-800' },
+  duzenli: { label: 'Düzenli', pill: 'bg-slate-100 text-canvas-ink' },
+  zayif: { label: 'Zayıf bağ', pill: 'bg-amber-50 text-amber-900' },
+};
 
 export const BAND: Record<HeatBand, { label: string; pill: string; dot: string }> = {
   sicak: { label: 'Sıcak', pill: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500' },

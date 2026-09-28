@@ -162,6 +162,43 @@ server {
         client_max_body_size 201M;
     }
 
+    # M19 Pazarlama görsel ve metin: varlık önizlemeleri ve dosyaları (talep ekranı ve arşiv bir açılışta onlarca görsel ister).
+    location ~ "^/timas/api/v1/marketing/creative/(assets/[0-9a-f]{32}/file|requests/MC-[0-9]{4}-[0-9]{4,}/cover|brand/files/[0-9a-f]{32})$" {
+        if ($request_method != GET) { return 405; }
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_studio_img burst=120 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 120s;
+    }
+
+    # M19 kapak (25 MB) ve marka kiti dosyası (20 MB) yüklemesi; genel API gövde sınırı 10 MB.
+    location ~ "^/timas/api/v1/marketing/creative/(requests/MC-[0-9]{4}-[0-9]{4,}/cover|brand/files)$" {
+        if ($request_method != PUT) { return 405; }
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        client_max_body_size 26M;
+    }
+
     # Motor: aynı docker ağındaki bridge konteynerine ada göre.
     location /timas/api/ {
         set $timas_original_method $request_method;

@@ -33,6 +33,8 @@ Sayfa planı (plan.py; sözleşme docs/analiz/studyo-sayfa-plani-sozlesme.md), h
     GET plan/elements/catalog · GET plan/elements/{kind}/preview?w=&style= · GET plan/effects/{style}/preview?w=&text=
         (öğeler ve efekt yazı: katalog ve kitabın paleti/fontlarıyla küçük saydam PNG; elements.py)
 3B kitap ve baskı provası (api_proof.py, yalnız okuma): GET proof · GET proof/pages/{n}|cover[/report]?paper=&w=&layer=
+Kapak arşivi (api_library.py, library.py): GET library · GET library/categories · GET library/covers[/{id}[/image]]
+    · POST library/items (köprünün beslemesi) · POST library/fetch
 Hatalar gövdede `code` taşır: NO_PLAN (404), STALE (409, güncel `rev`), BUSY (409), IN_USE (409, sayfalar),
 TOO_LARGE (413), INVALID (400, doğrulama: sayfa nesnesi, şekil, efekt, önizleme parametresi), NOT_FOUND (404, öğe
 türü ya da efekt stili yok). Plan düzenlemeleri süren GPU işini beklemez; yalnız GPU isteyen yazımlar (resim, figür, kaliteyi
@@ -176,6 +178,8 @@ async def _pipeline(d: Path, resume: bool = False) -> None:
 async def jobs() -> dict:
     out = []
     for j in await asyncio.to_thread(studio.list_jobs):
+        if j.get("kind") == "marketing":       # kitapsız pazarlama işi (M19): yalnız pazarlama ekranında
+            continue
         out.append({**j, "busy": await _busy(studio.root() / j["id"])})
     return {"jobs": out}
 
@@ -941,6 +945,8 @@ async def plan_jobs(job: str) -> dict:
 
 from .api_marketing import router as marketing_router  # noqa: E402 - pazarlama kiti (api_marketing.py)
 app.include_router(marketing_router)
+from .api_marketing import jobs_router as marketing_jobs_router  # noqa: E402 - kitapsız pazarlama işi (M19)
+app.include_router(marketing_jobs_router)
 
 # Seri karakter kartı uçları (api_characters.py)
 from .api_characters import router as _characters_router  # noqa: E402
@@ -968,3 +974,6 @@ app.include_router(_collage_router)
 # ------------------------------------------------------------------ 3B kitap ve baskı provası (api_proof.py)
 from .api_proof import router as proof_router  # noqa: E402
 app.include_router(proof_router)
+# Kapak arşivi (api_library.py): /v1/studio/library…
+from .api_library import router as _library_router  # noqa: E402
+app.include_router(_library_router)

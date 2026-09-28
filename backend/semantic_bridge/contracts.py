@@ -1222,6 +1222,11 @@ def parent_of(head: dict[str, Any]) -> Optional[str]:
     return t if is_crm_id(t) else None
 
 
+def _natural(text: str) -> tuple:
+    """Sayıyı sayı olarak sıralar: «2024007186-2» «-10»dan önce gelir (yazı sıralaması -10, -100, -11… verir)."""
+    return tuple(int(p) if p.isdecimal() else p.casefold() for p in re.split(r"(\d+)", text))
+
+
 def related(rows: list[dict[str, Any]], parent: Optional[str]) -> list[dict[str, Any]]:
     out = []
     for r in rows:
@@ -1231,7 +1236,7 @@ def related(rows: list[dict[str, Any]], parent: Optional[str]) -> list[dict[str,
                     "status": T.STATUS_FROM_CRM.get(_i(r.get("durum_kod")), "sona-erdi"),
                     "start": str(r.get("new_SozlesmeBaslangicTarihi") or "")[:10] or None,
                     "end": str(r.get("new_SozlesmeBitisTarihi") or "")[:10] or None})
-    out.sort(key=lambda x: (x["relation"] != "ana", x["no"] or ""))
+    out.sort(key=lambda x: (x["relation"] != "ana", _natural(x["no"] or "")))
     return out
 
 

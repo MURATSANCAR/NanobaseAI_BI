@@ -53,6 +53,41 @@ class Sessions(unittest.TestCase):
         self.assertEqual(self.request('/logout', 'POST', headers=headers)[0], 200)
         self.assertEqual(self.request('/session', headers=headers)[0], 401)
 
+    def raw(self, path, headers=None):
+        conn = http.client.HTTPConnection(*self.server.server_address)
+        conn.request('GET', path, None, headers or {})
+        response = conn.getresponse()
+        response.read()
+        conn.close()
+        return response.status, dict(response.getheaders())
+
+    def test_destek_sso_signs_the_portal_user_into_destek(self):
+        import base64, hashlib, hmac, urllib.parse
+        key = pathlib.Path(self.tmp.name) / 'destek-sso.key'
+        key.write_text('gizli-anahtar\n')
+        login.DESTEK_SSO_FILE = str(key)
+        # Portal oturumu yok: Destek'in kendi AD girişine, döngüsüz (sso=0).
+        status, headers = self.raw('/destek-sso?next=/helpdesk/tickets')
+        self.assertEqual(status, 302)
+        self.assertEqual(headers['Location'], login.DESTEK_URL + '/login?sso=0&redirect-to=/helpdesk/tickets')
+        cookie = self.login()[1]['Set-Cookie'].split(';')[0]
+        status, headers = self.raw('/destek-sso?next=/helpdesk/tickets', {'Cookie': cookie})
+        self.assertEqual(status, 302)
+        loc = urllib.parse.urlsplit(headers['Location'])
+        self.assertEqual(f'{loc.scheme}://{loc.netloc}{loc.path}', login.DESTEK_URL + '/api/method/nanobase_brand.sso.login')
+        q = urllib.parse.parse_qs(loc.query)
+        self.assertEqual(q['next'], ['/helpdesk/tickets'])
+        payload, sig = q['t'][0].split('.')
+        good = base64.urlsafe_b64encode(hmac.new(b'gizli-anahtar', payload.encode(), hashlib.sha256).digest()).rstrip(b'=').decode()
+        self.assertEqual(sig, good)
+        data = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+        self.assertEqual((data['u'], data['d']), ('muratsancar', 'Murat Sancar'))
+        self.assertTrue(0 < data['exp'] - time.time() <= 60)
+        # Açık yönlendirme yok: dış adres ve // Destek ana sayfasına döner.
+        for bad in ('https://evil.invalid/x', '//evil.invalid', '/\\evil'):
+            _, headers = self.raw('/destek-sso?' + urllib.parse.urlencode({'next': bad}), {'Cookie': cookie})
+            self.assertEqual(urllib.parse.parse_qs(urllib.parse.urlsplit(headers['Location']).query)['next'], ['/helpdesk'])
+
     def test_invalid_credentials_no_session(self):
         status, headers, _ = self.login(found=None, username='bad')
         self.assertEqual(status, 401)

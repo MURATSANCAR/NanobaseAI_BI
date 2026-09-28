@@ -126,6 +126,30 @@ class NtlmLDAPSettings(LDAPSettings):
 		finally:
 			conn.unbind()
 
+	def provision(self, account: str):
+		"""Portal oturumuyla gelen kişiyi şifresiz bulur ve açar (kimliği portal girişi AD'ye karşı doğruladı).
+		Yalnız etkin AD kişisi; bulunamazsa None."""
+		from ldap3.utils.conv import escape_filter_chars
+
+		conn = self.connect_to_ldap(self.base_dn, self.get_password(raise_exception=False))
+		try:
+			conn.search(
+				search_base=self.ldap_search_path_user,
+				search_filter=self.ldap_search_string.format(escape_filter_chars(account)),
+				attributes=self.get_ldap_attributes() + ["userPrincipalName"],
+				size_limit=2,
+			)
+			if len(conn.entries) != 1:
+				return None
+			entry = conn.entries[0]
+			groups = self.fetch_ldap_groups(entry, conn)
+			user = self.create_or_update_user(self.convert_ldap_entry_to_dict(entry), groups=groups)
+			ensure_agent(user)
+			ensure_admin(user, str(entry[self.ldap_username_field].value))
+			return user
+		finally:
+			conn.unbind()
+
 	def convert_ldap_entry_to_dict(self, user_entry):
 		def value(field):
 			if not field or field not in user_entry.entry_attributes:

@@ -4,7 +4,7 @@ import { AlertTriangle, Search } from 'lucide-react';
 import { ENGINE_ENABLED, authorsApi, type AuthorHeatRow, type HeatBand } from '../../engine';
 import { Note, errText, field, nf } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../kit';
-import { BAND, TRACE, cellClass, daysAgo, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
+import { BAND, LOYALTY, TRACE, cellClass, daysAgo, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
 import type { PanelTarget } from './CardPanel';
 
 /** İlişki ısı haritası: satır yazar, sütun son 12 ay, hücre o ay yapılan görüşme sayısı. Satırlar yürürlükte
@@ -23,6 +23,8 @@ const ORDERS = [
   { key: 'soguk', label: 'En soğuk önce' },
   { key: 'sicak', label: 'En sıcak önce' },
   { key: 'ad', label: 'Ada göre' },
+  { key: 'zayif', label: 'Sadakati en zayıf' },
+  { key: 'sadik', label: 'En sadık önce' },
 ];
 
 function Row({ r, months, onOpen }: { r: AuthorHeatRow; months: string[]; onOpen: () => void }) {
@@ -67,6 +69,16 @@ function Row({ r, months, onOpen }: { r: AuthorHeatRow; months: string[]; onOpen
           <span className="font-mono tabular-nums">{r.heat.score}</span>
         </span>
         {trace && <span className="mt-0.5 block text-[10.5px] font-semibold text-canvas-muted">CRM izi</span>}
+      </td>
+      <td className="whitespace-nowrap px-3 py-2 text-right">
+        {r.loyalty ? (
+          <span className="inline-flex flex-col items-end" title={`${LOYALTY[r.loyalty.band].label}: ${r.loyalty.books} kitap, ${r.loyalty.contracts} sözleşme`}>
+            <span className="font-mono text-[12px] font-bold tabular-nums">{r.loyalty.score}</span>
+            <span className="text-[10.5px] font-semibold text-canvas-muted">{LOYALTY[r.loyalty.band].label}</span>
+          </span>
+        ) : (
+          <span className="text-[11px] text-canvas-muted">—</span>
+        )}
       </td>
     </tr>
   );
@@ -144,7 +156,7 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
             </button>
           )}
           <button type="button" onClick={() => setWhy((v) => !v)} aria-expanded={why} className="ml-auto text-[12px] font-extrabold text-canvas-violet underline">
-            Isı nasıl hesaplanır
+            Isı ve sadakat nasıl hesaplanır
           </button>
         </div>
       )}
@@ -155,6 +167,10 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
           belirtilmemiş {h.toneMax / 2}, olumsuz 0). Sıklık ve ton yalnız görüşmeden gelir; bu yüzden «sıcak» için gerçek görüşme gerekir. 0–33 soğuk, 34–66 ılık, 67–100 sıcak; son 12 ayda ne görüşme ne iz
           varsa «temas yok». Yeşil nokta o ay CRM'deki yeni eser ya da sözleşme kaydıdır. «İlgi bekleyen»: sözleşmesi {data?.warnDays ?? 60} gün içinde biten ve 60 gündür görüşülmeyen yazar, notu
           girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım.
+          <br />
+          <br />
+          <b>Sadakat</b> yazarın yayınevine bağlılığıdır, yalnız CRM'den (100 üzerinden): birlikte geçen her yıl 3 (en çok 30), yazar olarak her kitap 5 (en çok 25), son 24 ayda yeni
+          eser ya da sözleşme 20 (24–48 ay 10), yürürlükte sözleşme 15, birden çok sözleşme (geri dönüp yeniden imzalamış) 10. 70 ve üstü bağlı, 40–69 düzenli, altı zayıf bağ.
         </div>
       )}
 
@@ -193,6 +209,11 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
                 ))}
                 <th scope="col" className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                   Isı
+                </th>
+                <th scope="col" className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                  <abbr title="Yazarın yayınevine bağlılığı (CRM): süre, kitap, süreklilik, sözleşme" className="no-underline">
+                    Sadakat
+                  </abbr>
                 </th>
               </tr>
             </thead>

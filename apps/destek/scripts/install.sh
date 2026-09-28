@@ -20,6 +20,8 @@ LLM_BASE=${LLM_BASE:-https://portal.nanobase.ai/destek-llm/v1}
 LLM_KEY_FILE=${LLM_KEY_FILE:-/etc/nanobase/destek-llm.key}
 ADMIN_FILE=${ADMIN_FILE:-/etc/nanobase/destek-admin.txt}
 AD_FILE=${AD_FILE:-/etc/nanobase/timas-ad.json}
+# Portal oturumuyla otomatik giriş: portal giriş servisi (www-data) ile Destek sitesinin ortak imza anahtarı.
+SSO_FILE=${SSO_FILE:-/etc/nanobase/destek-sso.key}
 BRIDGE_ENV=${BRIDGE_ENV:-/etc/nanobase/semantic-bridge.env}
 VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$SRC/frappe-apps/nanobase_brand/nanobase_brand/__init__.py")
 IMAGE="nanobase-destek:${VERSION}-${SHORT}"
@@ -92,6 +94,13 @@ if sudo test -f "$AD_FILE"; then
 else
   echo "UYARI: $AD_FILE yok; AD girişi kapalı"
 fi
+say "Portal oturumuyla giriş (SSO anahtarı)"
+if ! sudo test -f "$SSO_FILE"; then
+  openssl rand -hex 32 | sudo tee "$SSO_FILE" >/dev/null
+fi
+sudo chown root:www-data "$SSO_FILE" && sudo chmod 640 "$SSO_FILE"
+sudo cat "$SSO_FILE" | dc exec -T backend bench --site "$SITE" execute nanobase_brand.sso.set_secret >/dev/null
+
 dc exec -T backend bench --site "$SITE" clear-cache
 dc restart backend websocket queue-short queue-long scheduler frontend >/dev/null
 
