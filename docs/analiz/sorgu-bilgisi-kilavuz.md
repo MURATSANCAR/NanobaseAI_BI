@@ -131,3 +131,15 @@ tamamı ve «Kopyala» (birden çok sorguda «Hepsini kopyala»). SQL metni yaln
 | `USE [..]` satırını kaynağa elle yazmak | `database=` ver; satırı `sorgu()` ekler |
 | Rakam olmayan sayıyı (yıl, sürüm) kaynaksız bırakıp testi geçirmek için alan uydurmak | `NOT_RAKAM`'a yaz |
 | Kaynak kurulamayınca sessiz geçmek | `P.bagla` hata metnini `kaynaklar.error`'a yazar; pencere gösterir |
+
+## Ek araçlar (Grup 1, 2026-09-28)
+
+- `backend/semantic_bridge/sorgu_izi.py`: `izle(engine)` uç çalışırken koşan portal SELECT ifadelerini (nesnenin kendisi)
+  yakalar; `izle_dis()` + `dis(conn, sql, rows, ms)` Logo/CRM'de koşan metni (köprünün `run_sql/run_complete` koşuları
+  kendiliğinden bildirir); `izli(engine, fn, prefix=, title=, text=)` tek satırda bağlar; `izlenir(...)` uç süsleyicisi
+  (`@app.get` altına; türleri asıl modülde çözer — `from __future__ import annotations` ile 422 olmasın). Genel «i» için
+  alan `_hepsi`.
+- `backend/semantic_bridge/soru_kaynak.py`: soru cevabı ve saklı soru SQL'i için fiziksel metin kaydı (`calisan`,
+  `for_answer`, `for_run`).
+- `P.Kaynaklar.hesap(..., dis="…")`: SQL'i olmayan rakam kaynağının adı (pencere «veritabanı sorgusundan değil» yazar).
+- Ön yüz: `components/kaynakOf.ts` (tip değiştirmeden cevaptaki `kaynaklar`).

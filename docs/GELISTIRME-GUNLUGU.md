@@ -213,6 +213,31 @@ ortak altyapı dalı `worktree-agent-a65b65aa8cd2dd1cb` üstünde.
   dalında sözdizimi hatası (TS1005, satır 277) — G5 değil, tam `tsc` bunu gösterir.
 - **Sunucuda kalan:** pytest (6 yeni dosya + mevcut modül testleri), vitest, tam tsc/derleme; run-due'ları elle koşturup
   `kabul_g5.py`.
+## 2026-09-28 (17:30) — Sorgu bilgisi Grup 1: 48 ekranın her rakamı «i» ile kaynağına bağlandı; genel bakış ve sohbette fiziksel SQL
+
+**DOĞRULANAMADI — testler koordinatörde** (Mac'te yalnız `py_compile` ve `tsc`; tsc tabana göre yeni hata yok). Dal
+`worktree-agent-a3031a22ef82e3b70`, a65b65 tabanı (`b489d730`) üstünde.
+
+- Kullanıcı isteği: «tüm hesaplama ve rakam verdiğimiz ekranlarda çalıştırdığımız sorguları info olarak her kalemde ver ve
+  kopyalanabilir olsun ama eksiksiz hepsinde». Grup 1: Kampüs, genel bakış, uyarılar, panolar, planlı raporlar, Zeki kalite,
+  pazar araştırması, yönetim, sistem durumu, veri güvenliği, veri sözlüğü/onaylar/eş anlamlılar, kategori ağacı, görevlerim,
+  kurumsal e-posta, müşteri hizmetleri, basın-web, yazar giriş, başvurular, yayın kurulu, editör atama, kitap, editoryal
+  masam, redaksiyon, son okuma, çeviri, kitap tasarım stüdyosu.
+- **Genel bakış kartı mantıksal SQL gösteriyordu** (bilinen özel durum): canlı yedek yol `LIVE_SQL` (katalog adları) ve sohbet
+  cevabı `answer.sql` SSMS'te aynı sonucu vermiyordu. Artık gösterilen/kopyalanan metin köprünün koşturduğu fiziksel SQL
+  (`physicalSql`); iki sunuculu cevapta her parça kendi veritabanında. Pano kartı, planlı rapor, uyarı değeri de aynı yoldan.
+- Neden `sorgu_izi`: okumaları onlarca modülde `*_stmt()`'e tek tek ayırmak yerine uç çalışırken koşan SELECT nesnesinin
+  kendisi yakalanır (gösterilen = çalışan güvencesi aynı). Logo/CRM okuyan bağlantılar koşan metni bildirir; önbellek ve anlık
+  görüntü (editoryal masa, yazar giriş, pazar, kategori ağacı, kurul raporu) asıl okumayı kayıtla saklar.
+- Karar: SQL'i olmayan rakam (destek masası talepleri, posta kutusu, AD, yüklenen prova ölçümü, tasarım servisi, sunucu
+  zamanlayıcıları) uydurma SQL ile değil `hesap(dis=…)` ile kaynağın adıyla gösterilir.
+- Karar: bir kartta çok rakam varsa tek «i» ve hesap metni her rakamı adlandırır; menü rozeti sayısı ekrandaki sayacın «i»sinde
+  (bağlantının içine düğme konmaz).
+- Risk ve önlem: süslenen uçta `from __future__ import annotations` türü metin kalır, FastAPI «Request»i sorgu parametresi
+  sanar (422); `izlenir` türleri asıl modülde çözüp imzaya yazar, `test_sorgu_bilgisi_izlenir.py` bunu sınar.
+- Sunucuda: pytest (`test_sorgu_bilgisi_*.py` + ilgili modül testleri), tsc, vitest, yan port köprüsüyle
+  `scripts/acceptance/sorgu-bilgisi/g1_kabul.py`; `semantic_itops_checks.sql_text` kolonu ilk açılışta eklenir. Eski
+  kart/plan/kural/rapor kayıtlarında fiziksel metin bir sonraki koşuda dolar (pencere bunu yazar).
 
 ## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
 
