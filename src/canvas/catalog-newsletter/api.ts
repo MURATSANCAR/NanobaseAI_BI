@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M24 Katalog ve bülten: /api/v1/catalog-newsletter/*. Portal toplu e-posta göndermez; segment ucu yalnız sayı döner. */
 
@@ -49,6 +50,7 @@ export type Meta = {
   sonKosu: { zaman?: string; kritik?: number; eposta?: string; havuzHata?: string } | null;
   modelVar: boolean;
   me: { username: string; display: string; canCatalog: boolean; canNewsletter: boolean; canApprove: boolean; canSegment: boolean; canExport: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Filters = {
@@ -123,6 +125,7 @@ export type Catalog = Omit<CatalogRow, 'kitap' | 'kritik' | 'bilgi' | 'oneCikan'
   kitaplar: CatalogItem[];
   ozet: { kitap: number; oneCikan: number; kritik: number; uyariliKitap: number; bilgi: number; fiyatsiz: number; kapaksiz: number };
   havuz: { okuma: string | null; logoSon: string | null; notlar: string[] } | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Candidate = {
@@ -151,6 +154,7 @@ export type Suggestions = {
   page: number;
   pageSize: number;
   ilgiEslesen?: number | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Job = { id: string; tur: string; durum: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata'; adim: string | null; sonuc: Record<string, number> | null; hata: string | null };
@@ -166,6 +170,7 @@ export type SegmentCount = {
   kvkkSart: boolean;
   tanim: string;
   zaman: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Result = {
@@ -228,6 +233,7 @@ export type Newsletter = Omit<NewsletterRow, 'kitap' | 'sonuc'> & {
   kitaplar: NewsletterItem[];
   html: string | null;
   sonuclar: Result[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type CrmCampaign = {
@@ -251,6 +257,7 @@ export type Report = {
   toplam: { gonderilen: number; acilan: number; tiklanan: number; acilmaOrani: number | null; tiklamaOrani: number | null; bulten: number };
   crm: CrmCampaign[] | null;
   crmHata?: string;
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/catalog-newsletter';
@@ -277,7 +284,7 @@ const enc = encodeURIComponent;
 export const cnApi = {
   meta: () => send<Meta>('GET', '/meta'),
   refreshPool: () => send<{ started: boolean }>('POST', '/pool/refresh', {}),
-  catalogs: (durum: string) => send<{ items: CatalogRow[]; total: number }>('GET', `/catalogs?durum=${enc(durum)}`),
+  catalogs: (durum: string) => send<{ items: CatalogRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', `/catalogs?durum=${enc(durum)}`),
   createCatalog: (b: { tur: string; baslik: string; donem?: string; tema?: string; fiyatKaynagi?: string; suzgec?: Partial<Filters> }) =>
     send<Catalog>('POST', '/catalogs', b),
   catalog: (id: string) => send<Catalog>('GET', `/catalogs/${enc(id)}`),
@@ -295,7 +302,7 @@ export const cnApi = {
   packageUrl: (id: string) => `${ENGINE_BASE}${B}/catalogs/${enc(id)}/package.zip`,
   pdfUrl: (id: string, perPage: number) => `${ENGINE_BASE}${B}/catalogs/${enc(id)}/preview.pdf?perPage=${perPage}`,
 
-  newsletters: (durum: string) => send<{ items: NewsletterRow[]; total: number }>('GET', `/newsletters?durum=${enc(durum)}`),
+  newsletters: (durum: string) => send<{ items: NewsletterRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', `/newsletters?durum=${enc(durum)}`),
   createNewsletter: (b: { baslik: string; ozelGun?: string | null; planlanan?: string | null; segment?: Segment }) => send<Newsletter>('POST', '/newsletters', b),
   newsletter: (id: string) => send<Newsletter>('GET', `/newsletters/${enc(id)}`),
   updateNewsletter: (id: string, b: Partial<{ baslik: string; segment: Segment; ozelGun: string | null; planlanan: string | null; konu: string; giris: string; crmKampanya: string; gonderimTarihi: string }>) =>

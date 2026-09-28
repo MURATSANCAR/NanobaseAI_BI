@@ -220,8 +220,47 @@ def describe(seg: dict[str, Any], interests: dict[str, str]) -> str:
 # ------------------------------------------------------------------ bülten kayıtları
 
 
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (catalogs_kaynak.py).
+
+
+def newsletter_stmt(tenant: str, nid: str):
+    return sa.select(NEWSLETTERS).where(NEWSLETTERS.c.id == nid, NEWSLETTERS.c.tenant_id == tenant)
+
+
+def newsletters_stmt(tenant: str, durum: str = ""):
+    q = sa.select(NEWSLETTERS).where(NEWSLETTERS.c.tenant_id == tenant)
+    if durum == "acik":
+        q = q.where(NEWSLETTERS.c.status != "arsiv")
+    elif durum:
+        q = q.where(NEWSLETTERS.c.status == durum)
+    return q.order_by(NEWSLETTERS.c.updated_at.desc())
+
+
+def item_counts_stmt(ids: list[str]):
+    return (sa.select(NL_ITEMS.c.newsletter_id, sa.func.count()).where(NL_ITEMS.c.newsletter_id.in_(ids or [""]))
+            .group_by(NL_ITEMS.c.newsletter_id))
+
+
+def results_stmt(ids: list[str]):
+    return sa.select(RESULTS).where(RESULTS.c.newsletter_id.in_(ids or [""])).order_by(RESULTS.c.imported_at)
+
+
+def own_results_stmt(nid: str):
+    return sa.select(RESULTS).where(RESULTS.c.newsletter_id == nid).order_by(RESULTS.c.imported_at.desc())
+
+
+def nl_items_stmt(nid: str):
+    return sa.select(NL_ITEMS).where(NL_ITEMS.c.newsletter_id == nid).order_by(NL_ITEMS.c.position)
+
+
+def report_stmt(tenant: str):
+    return (sa.select(NEWSLETTERS).where(NEWSLETTERS.c.tenant_id == tenant,
+                                         NEWSLETTERS.c.status.in_(("onayli", "gonderildi", "arsiv")))
+            .order_by(NEWSLETTERS.c.sent_at.desc(), NEWSLETTERS.c.updated_at.desc()))
+
+
 def _row(c, tenant: str, nid: str):
-    r = c.execute(sa.select(NEWSLETTERS).where(NEWSLETTERS.c.id == nid, NEWSLETTERS.c.tenant_id == tenant)).mappings().first()
+    r = c.execute(newsletter_stmt(tenant, nid)).mappings().first()
     if not r:
         raise C.CatalogError("Bülten bulunamadı.", 404)
     return r
@@ -267,15 +306,9 @@ def get(engine, tenant: str, nid: str) -> dict[str, Any]:
 
 def list_newsletters(engine, tenant: str, durum: str = "") -> dict[str, Any]:
     with engine.connect() as c:
-        q = sa.select(NEWSLETTERS).where(NEWSLETTERS.c.tenant_id == tenant)
-        if durum == "acik":
-            q = q.where(NEWSLETTERS.c.status != "arsiv")
-        elif durum:
-            q = q.where(NEWSLETTERS.c.status == durum)
-        rows = c.execute(q.order_by(NEWSLETTERS.c.updated_at.desc())).mappings().all()
+        rows = c.execute(newsletters_stmt(tenant, durum)).mappings().all()
         ids = [r["id"] for r in rows] or [""]
-        n_items = dict(c.execute(sa.select(NL_ITEMS.c.newsletter_id, sa.func.count()).where(NL_ITEMS.c.newsletter_id.in_(ids))
-                                 .group_by(NL_ITEMS.c.newsletter_id)).all())
+        n_items = dict(c.execute(item_counts_stmt(ids)).all())
         res = _latest_results(c, ids)
     items = []
     for r in rows:
@@ -287,7 +320,7 @@ def list_newsletters(engine, tenant: str, durum: str = "") -> dict[str, Any]:
 
 def _latest_results(c, ids: list[str]) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
-    for r in c.execute(sa.select(RESULTS).where(RESULTS.c.newsletter_id.in_(ids)).order_by(RESULTS.c.imported_at)).mappings():
+    for r in c.execute(results_stmt(ids)).mappings():
         out[r["newsletter_id"]] = _result_view(r)
     return out
 
@@ -372,7 +405,7 @@ def set_segment_count(engine, tenant: str, nid: str, seg: dict[str, Any], res: d
 
 
 def _items(c, nid: str) -> list[dict[str, Any]]:
-    return [dict(r) for r in c.execute(sa.select(NL_ITEMS).where(NL_ITEMS.c.newsletter_id == nid).order_by(NL_ITEMS.c.position)).mappings()]
+    return [dict(r) for r in c.execute(nl_items_stmt(nid)).mappings()]
 
 
 def set_items(engine, tenant: str, nid: str, items: list[dict[str, Any]], pool: dict[str, Any], price_source: str) -> dict[str, Any]:
@@ -406,8 +439,7 @@ def detail(engine, tenant: str, nid: str, pool: Optional[dict[str, Any]], price_
     with engine.connect() as c:
         r = _row(c, tenant, nid)
         rows = _items(c, nid)
-        results = [_result_view(x) for x in c.execute(sa.select(RESULTS).where(RESULTS.c.newsletter_id == nid)
-                                                      .order_by(RESULTS.c.imported_at.desc())).mappings()]
+        results = [_result_view(x) for x in c.execute(own_results_stmt(nid)).mappings()]
     out = _view(r)
     out["kitaplar"] = []
     for it in rows:
@@ -458,10 +490,13 @@ def transition(engine, tenant: str, user: str, nid: str, action: str, note: Opti
     return get(engine, tenant, nid)
 
 
+def pending_stmt(tenant: str):
+    return sa.select(sa.func.count()).select_from(NEWSLETTERS).where(NEWSLETTERS.c.tenant_id == tenant, NEWSLETTERS.c.status == "onayda")
+
+
 def pending_counts(engine, tenant: str) -> dict[str, int]:
     with engine.connect() as c:
-        n = c.execute(sa.select(sa.func.count()).select_from(NEWSLETTERS)
-                      .where(NEWSLETTERS.c.tenant_id == tenant, NEWSLETTERS.c.status == "onayda")).scalar() or 0
+        n = c.execute(pending_stmt(tenant)).scalar() or 0
     return {"bultenOnayda": int(n)}
 
 
@@ -757,9 +792,7 @@ def record_crm_result(engine, tenant: str, nid: str, counts: dict[str, Any]) -> 
 
 def report(engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(NEWSLETTERS).where(NEWSLETTERS.c.tenant_id == tenant,
-                                                      NEWSLETTERS.c.status.in_(("onayli", "gonderildi", "arsiv")))
-                         .order_by(NEWSLETTERS.c.sent_at.desc(), NEWSLETTERS.c.updated_at.desc())).mappings().all()
+        rows = c.execute(report_stmt(tenant)).mappings().all()
         res = _latest_results(c, [r["id"] for r in rows] or [""])
     items = [{"id": r["id"], "baslik": r["title"], "durum": r["status"], "durumAdi": STATUSES.get(r["status"]),
               "gonderimTarihi": r["sent_at"], "segmentBuyuklugu": r["segment_size"], "konu": r["subject_chosen"],

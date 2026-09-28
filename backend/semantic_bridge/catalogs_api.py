@@ -26,6 +26,9 @@ from fastapi.responses import HTMLResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import catalogs as C
+from semantic_bridge import catalogs_kaynak as K
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge import catalogs_sources as S
 from semantic_bridge import newsletters as N
 
@@ -37,6 +40,7 @@ FEATURE_APPROVE = "ozellik:katalog-bulten.onay"
 FEATURE_SEGMENT = "ozellik:bulten.segment"
 FEATURE_EXPORT = "ozellik:veri.disa-aktar"
 POOL_KEY = "pool"
+POOL_SQL_KEY = "pool_sql"
 
 
 def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], None], can: Callable[[str, str], bool]):
@@ -102,11 +106,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def build_pool(engine, tenant: str) -> dict[str, Any]:
         cfg = C.settings()
         today = C.today()
-        crm_r = crm()
+        ran: list[dict[str, Any]] = []      # çalışan CRM/Logo SQL'leri (sorgu bilgisi; sonuç satırı saklanmaz)
+        crm_r = PK.recording(crm(), "crm", ran)
         notes: list[str] = []
         crm_part = S.read_pool_crm(crm_r, schema(), cfg["bookTypes"])
         try:
-            logo_r = logo()
+            logo_r = PK.recording(logo(), "logo", ran)
         except S.SourceError as e:
             logo_r = None
             notes.append(f"Logo bağlantısı yok ({e}); stok, satış hızı ve Logo fiyatı boş.")
@@ -139,6 +144,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         pool["ilgiAlanlari"] = interests
         pool["tsoftUrun"] = len(tsoft)
         C.meta_set(engine, tenant, POOL_KEY, pool)
+        C.meta_set(engine, tenant, POOL_SQL_KEY, {"items": ran})
         state["pools"][tenant] = pool
         return pool
 
@@ -179,6 +185,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 "notlar": (pool or {}).get("notes") or [], "fiyatFarkli": (pool or {}).get("fiyatFarkli"),
                 "tsoftUrun": (pool or {}).get("tsoftUrun"), "yenileniyor": state["running"], "hata": state["error"]}
 
+    def logo_db() -> Optional[str]:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adı."""
+        return PK.logo_db(rt)
+
     def interests_of(pool: dict[str, Any]) -> dict[str, str]:
         return {i["id"]: i["ad"] for i in pool.get("ilgiAlanlari") or []}
 
@@ -195,7 +205,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             start_refresh(engine, tenant)
         cfg, ncfg = C.settings(), N.settings()
         last, _ = C.meta_get(engine, tenant, "last_run")
-        return {
+        return PV.bagla({
             "turler": C.KINDS, "durumlar": C.STATUSES, "bultenDurumlari": N.STATUSES, "fiyatKaynaklari": C.PRICE_SOURCES,
             "stokKaynaklari": C.STOCK_SOURCES, "uyariTurleri": {k: {"seviye": v[0], "ad": v[1]} for k, v in C.ALERT_KINDS.items()},
             "ayarlar": {"fiyatKaynagi": cfg["priceSource"], "fiyatGerekce": C.PRICE_SOURCE_WHY, "stokKaynagi": cfg["stockSource"],
@@ -213,7 +223,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             "me": {"username": user, "display": display, "canCatalog": can(user, FEATURE_CATALOG),
                    "canNewsletter": can(user, FEATURE_NEWSLETTER), "canApprove": can(user, FEATURE_APPROVE),
                    "canSegment": can(user, FEATURE_SEGMENT), "canExport": can(user, FEATURE_EXPORT)},
-        }
+        }, lambda: K.for_meta(engine, tenant, logo_db()))
 
     @app.post(P + "/pool/refresh", status_code=202)
     def cn_pool_refresh(request: Request) -> dict[str, Any]:
@@ -227,7 +237,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/catalogs")
     def cn_catalogs(request: Request, durum: str = "acik") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.list_catalogs(engine, tenant, durum)
+        out = C.list_catalogs(engine, tenant, durum)
+        return PV.bagla(out, lambda: K.for_catalogs(engine, tenant, out, durum))
 
     @app.post(P + "/catalogs", status_code=201)
     def cn_catalog_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -240,7 +251,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def cn_catalog(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         pool = pool_of(engine, tenant, required=False)
-        return await run_in_threadpool(call, C.detail, engine, tenant, cid, pool, C.settings())
+        out = await run_in_threadpool(call, C.detail, engine, tenant, cid, pool, C.settings())
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_catalog(engine, tenant, cid, logo_db()))
 
     @app.patch(P + "/catalogs/{cid}")
     def cn_catalog_update(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -267,8 +279,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         res = await run_in_threadpool(C.candidates, pool, filters, C.settings(), [k["crmKitapId"] for k in cat["kitaplar"]],
                                       None, None, cat["fiyatKaynagi"])
         page, size = max(0, int(body.get("page") or 0)), min(200, max(10, int(body.get("pageSize") or 50)))
-        return {**{k: v for k, v in res.items() if k != "items"}, "items": res["items"][page * size:(page + 1) * size],
-                "page": page, "pageSize": size, "havuz": pool_status(pool)}
+        out = {**{k: v for k, v in res.items() if k != "items"}, "items": res["items"][page * size:(page + 1) * size],
+               "page": page, "pageSize": size, "havuz": pool_status(pool)}
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_candidates(engine, tenant, logo_db()))
 
     @app.put(P + "/catalogs/{cid}/items")
     async def cn_catalog_items(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -277,7 +290,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out, diff = await run_in_threadpool(call, C.set_items, engine, tenant, user, cid, body.get("items"), pool, C.settings())
         if diff["eklenen"] or diff["cikan"]:
             audit(engine, user, "update", "catalog_item", cid, out["baslik"], diff)
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_catalog(engine, tenant, cid, logo_db()))
 
     @app.post(P + "/catalogs/{cid}/items/{bid}/accept")
     def cn_catalog_accept(cid: str, bid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -285,7 +298,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         pool = pool_of(engine, tenant)
         out = call(C.accept, engine, tenant, cid, bid, str(body.get("tur") or ""), pool, C.settings())
         audit(engine, user, "update", "catalog_item", f"{cid}:{bid}", out["ad"], {"uyariKabul": out["tur"], "deger": out["deger"]})
-        return call(C.detail, engine, tenant, cid, pool, C.settings())
+        d = call(C.detail, engine, tenant, cid, pool, C.settings())
+        return PV.bagla(d, lambda: K.for_catalog(engine, tenant, cid, logo_db()))
 
     @app.post(P + "/catalogs/{cid}/zeki", status_code=202)
     def cn_catalog_zeki(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -369,7 +383,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/newsletters")
     def cn_newsletters(request: Request, durum: str = "acik") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return N.list_newsletters(engine, tenant, durum)
+        out = N.list_newsletters(engine, tenant, durum)
+        return PV.bagla(out, lambda: K.for_newsletters(engine, tenant, out, durum))
 
     @app.post(P + "/newsletters", status_code=201)
     def cn_newsletter_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -382,7 +397,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def cn_newsletter(nid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         pool = pool_of(engine, tenant, required=False)
-        return await run_in_threadpool(call, N.detail, engine, tenant, nid, pool, price_source())
+        out = await run_in_threadpool(call, N.detail, engine, tenant, nid, pool, price_source())
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_newsletter(engine, tenant, nid, out, schema(), logo_db()))
 
     @app.patch(P + "/newsletters/{nid}")
     async def cn_newsletter_update(nid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -392,7 +408,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             await run_in_threadpool(N.rebuild_html, engine, tenant, nid, pool_of(engine, tenant, required=False), price_source())
         if diff:
             audit(engine, user, "update", "newsletter", nid, out["baslik"], diff)
-        return await run_in_threadpool(call, N.detail, engine, tenant, nid, pool_of(engine, tenant, required=False), price_source())
+        d = await run_in_threadpool(call, N.detail, engine, tenant, nid, pool_of(engine, tenant, required=False), price_source())
+        return await run_in_threadpool(PV.bagla, d, lambda: K.for_newsletter(engine, tenant, nid, d, schema(), logo_db()))
 
     @app.delete(P + "/newsletters/{nid}")
     def cn_newsletter_delete(nid: str, request: Request) -> dict[str, Any]:
@@ -418,7 +435,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         res["tanim"] = N.describe(seg, interests_of(pool or {}))
         res["zaman"] = C.iso(C.now())
         audit(engine, user, "run", "newsletter_segment", nid or None, res["tanim"][:300], {"izinli": res["izinli"], "segment": seg})
-        return res
+        return PV.bagla(res, lambda: K.for_segment(schema(), seg))
 
     @app.post(P + "/newsletters/{nid}/suggest")
     async def cn_newsletter_suggest(nid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -428,8 +445,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         res = await run_in_threadpool(N.suggest, pool, d["segment"], d.get("ozelGun"), interests_of(pool), C.settings(), N.settings(),
                                       [k["crmKitapId"] for k in d["kitaplar"]], price_source())
         page, size = max(0, int(body.get("page") or 0)), min(200, max(10, int(body.get("pageSize") or 30)))
-        return {**{k: v for k, v in res.items() if k != "items"}, "items": res["items"][page * size:(page + 1) * size],
-                "page": page, "pageSize": size}
+        out = {**{k: v for k, v in res.items() if k != "items"}, "items": res["items"][page * size:(page + 1) * size],
+               "page": page, "pageSize": size}
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_suggest_nl(engine, tenant, logo_db()))
 
     @app.put(P + "/newsletters/{nid}/items")
     async def cn_newsletter_items(nid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -437,7 +455,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         pool = await run_in_threadpool(pool_of, engine, tenant)
         out = await run_in_threadpool(call, N.set_items, engine, tenant, nid, body.get("items"), pool, price_source())
         audit(engine, user, "update", "newsletter_item", nid, out["baslik"], {"kitap": len(out["kitaplar"])})
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_newsletter(engine, tenant, nid, out, schema(), logo_db()))
 
     @app.post(P + "/newsletters/{nid}/draft", status_code=202)
     def cn_newsletter_draft(nid: str, request: Request) -> dict[str, Any]:
@@ -529,7 +547,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 out["crm"] = await run_in_threadpool(S.read_campaigns, crm(), schema())
             except Exception as e:  # noqa: BLE001 — CRM okunamazsa portal sonuçları yine görünür
                 out["crmHata"] = str(e)[:200]
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_report(engine, tenant, out, schema()))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

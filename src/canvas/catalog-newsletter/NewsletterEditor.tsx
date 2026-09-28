@@ -14,6 +14,7 @@ import {
 } from './api';
 import { Block, CnFrame } from './parts';
 import SegmentBuilder from './SegmentBuilder';
+import SqlInfo from '../components/SqlInfo';
 
 type ItemEdit = { crmKitapId: string; gerekce?: string; metin?: string | null };
 const SOURCE: Record<string, string> = { crm: 'CRM kampanyası', dosya: 'Araç dosyası', elle: 'Elle' };
@@ -158,12 +159,12 @@ export default function NewsletterEditor() {
           <Block title="Okur segmenti" help="Seçilen ilgi alanlarından biri olan, izin kuralını sağlayan kişi sayılır."
             action={editable && segDirty ? <button type="button" className={btnGhost} disabled={update.isPending} onClick={() => update.mutate({ segment: seg })}>Segmenti kaydet</button> : undefined}>
             <SegmentBuilder meta={m} value={seg} editable={editable} newsletterId={id}
-              stored={{ size: d.segmentBuyuklugu, at: d.segmentZamani }} onChange={setSeg}
+              stored={{ size: d.segmentBuyuklugu, at: d.segmentZamani }} k={d.kaynaklar} onChange={setSeg}
               beforeCount={editable && segDirty ? async () => { put(await cnApi.updateNewsletter(id, { segment: seg })); } : undefined}
               onCounted={() => qc.invalidateQueries({ queryKey: ['cn', 'newsletter', id] })} />
           </Block>
 
-          <Block title="Bültendeki kitaplar"
+          <Block title="Bültendeki kitaplar" info={<SqlInfo k={d.kaynaklar} alan="kitaplar[]" label="Kitap fiyatı" />}
             action={editable && m.modelVar && list.length > 0 ? (
               <button type="button" className={btnPrimary} disabled={draft.isPending || running} onClick={() => draft.mutate()}>
                 <Sparkles aria-hidden className="h-4 w-4" />
@@ -277,7 +278,7 @@ function NlSuggest({ id, busy, onAdd }: { id: string; busy: boolean; onAdd: (add
   const q = useQuery({ queryKey: ['cn', 'nl-suggest', id, page], queryFn: () => cnApi.suggestNl(id, page), enabled: on, placeholderData: keepPreviousData });
   const d = q.data;
   return (
-    <Block title="Segment için önerilen kitaplar" help="Segmentin ilgi alanı kitabın tür ve kategori metninde aranır; satış hızı, stok, yenilik ve özel gün bağı puana eklenir."
+    <Block title="Segment için önerilen kitaplar" info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Aday puanı, ilgi eşleşmesi ve fiyat" />} help="Segmentin ilgi alanı kitabın tür ve kategori metninde aranır; satış hızı, stok, yenilik ve özel gün bağı puana eklenir."
       action={!on ? <button type="button" className={btnPrimary} onClick={() => setOn(true)}>Önerileri getir</button> : undefined}>
       {q.error && <Note tone="err">{errText(q.error, 'Öneri listesi hazırlanamadı.')}</Note>}
       {on && q.isLoading && <Loading />}
@@ -328,7 +329,7 @@ function Results({ d, canEdit }: { d: Newsletter; canEdit: boolean }) {
   const del = useMutation({ mutationFn: (rid: string) => cnApi.deleteResult(d.id, rid), onSuccess: done });
   const toNum = (v: string) => (v.trim() === '' ? null : Number(v.replace(/\./g, '')));
   return (
-    <Block title="Gönderim ve sonuç" help="Sonuç e-posta aracının dışa aktarım dosyasından (yalnız toplamlar alınır; kişi satırlı dosyada satırlar sayılır, adresler okunmaz ve saklanmaz), bağlı CRM kampanyasından ya da elle girilir.">
+    <Block title="Gönderim ve sonuç" info={<SqlInfo k={d.kaynaklar} alan="sonuclar[]" label="Gönderim sonuçları" />} help="Sonuç e-posta aracının dışa aktarım dosyasından (yalnız toplamlar alınır; kişi satırlı dosyada satırlar sayılır, adresler okunmaz ve saklanmaz), bağlı CRM kampanyasından ya da elle girilir.">
       {/* Araç dosyası yükleme yetkisizde de görünür (kilitli, gereken yetki yazılı). */}
       <div className="mb-2">
         <FileDrop

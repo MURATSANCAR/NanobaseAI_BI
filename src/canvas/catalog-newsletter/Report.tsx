@@ -4,6 +4,7 @@ import { Loading, Note, TableWrap, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { cnApi, fmtDay, fmtInt, fmtPct } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const SOURCE: Record<string, string> = { crm: 'CRM kampanyası', dosya: 'Araç dosyası', elle: 'Elle' };
 
@@ -18,12 +19,12 @@ export default function Report() {
       {r && (
         <>
           <KpiRow>
-            <Kpi label="Sonucu olan bülten" value={fmtInt(r.toplam.bulten)} help="Gönderim sayısı girilmiş bültenler" />
-            <Kpi label="Gönderilen" value={fmtInt(r.toplam.gonderilen)} help="Bültenlerin son sonuçlarının toplamı" />
-            <Kpi label="Açılma oranı" value={fmtPct(r.toplam.acilmaOrani)} help="Açılan ÷ gönderilen" />
-            <Kpi label="Tıklama oranı" value={fmtPct(r.toplam.tiklamaOrani)} help="Tıklanan ÷ gönderilen" />
+            <Kpi label="Sonucu olan bülten" value={fmtInt(r.toplam.bulten)} help="Gönderim sayısı girilmiş bültenler" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Sonucu olan bülten" />} />
+            <Kpi label="Gönderilen" value={fmtInt(r.toplam.gonderilen)} help="Bültenlerin son sonuçlarının toplamı" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Gönderilen" />} />
+            <Kpi label="Açılma oranı" value={fmtPct(r.toplam.acilmaOrani)} help="Açılan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Açılma oranı" />} />
+            <Kpi label="Tıklama oranı" value={fmtPct(r.toplam.tiklamaOrani)} help="Tıklanan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Tıklama oranı" />} />
           </KpiRow>
-          <Block title="Portalda hazırlanan bültenler" help="Sonuç, bağlı CRM kampanyasından her sabah okunur ya da e-posta aracının dışa aktarım dosyasından alınır (yalnız toplamlar).">
+          <Block title="Portalda hazırlanan bültenler" info={<SqlInfo k={r.kaynaklar} alan="items[]" label="Bülten sonuçları" />} help="Sonuç, bağlı CRM kampanyasından her sabah okunur ya da e-posta aracının dışa aktarım dosyasından alınır (yalnız toplamlar).">
             {r.items.length === 0 ? (
               <p className="py-4 text-[12.5px] text-canvas-muted">Henüz onaylanmış bülten yok.</p>
             ) : (
@@ -50,7 +51,7 @@ export default function Report() {
               </TableWrap>
             )}
           </Block>
-          <Block title="CRM e-posta ve SMS kampanyaları" help="CRM'deki kampanya kayıtlarının sayaçları (yalnız okuma). Kayıt sayısı küçükse bugün başka bir gönderim aracı kullanılıyor olabilir.">
+          <Block title="CRM e-posta ve SMS kampanyaları" info={<SqlInfo k={r.kaynaklar} alan="crm[]" label="CRM kampanya sayaçları" />} help="CRM'deki kampanya kayıtlarının sayaçları (yalnız okuma). Kayıt sayısı küçükse bugün başka bir gönderim aracı kullanılıyor olabilir.">
             {r.crmHata && <Note tone="warn">CRM okunamadı: {r.crmHata}</Note>}
             {r.crm && r.crm.length === 0 && <p className="py-4 text-[12.5px] text-canvas-muted">CRM'de kampanya kaydı yok.</p>}
             {r.crm && r.crm.length > 0 && (

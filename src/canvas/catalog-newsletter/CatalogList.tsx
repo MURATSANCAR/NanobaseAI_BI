@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { STATUS_TONE, cnApi, fmtDay, fmtStamp, type Meta } from './api';
 import { AlertBadge, Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const DURUM = [
   ['acik', 'Arşiv dışı'],
@@ -37,6 +38,7 @@ export default function CatalogList({ meta }: { meta: Meta }) {
   return (
     <Block
       title="Kataloglar"
+      info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Kitap, öne çıkan ve kritik uyarı sayıları" />}
       help="Rozet, kitabın bugünkü fiyatı ya da stoku kataloğa eklendiği andan farklıysa, stok kritikse ya da kitap satıştan kalktıysa kırmızıdır. Uyarılar her sabah ve katalog açıldığında yeniden hesaplanır."
       action={
         <div className="flex flex-wrap gap-2">
@@ -109,7 +111,7 @@ export default function CatalogList({ meta }: { meta: Meta }) {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-3 text-[12px]">
-                <span className="font-mono tabular-nums">{c.kitap} kitap{c.oneCikan ? ` · ${c.oneCikan} öne çıkan` : ''}</span>
+                <span className="inline-flex items-center gap-0.5 font-mono tabular-nums">{c.kitap} kitap{c.oneCikan ? ` · ${c.oneCikan} öne çıkan` : ''}</span>
                 <AlertBadge n={c.kritik} />
                 <span className="text-[11px] text-canvas-muted">{c.stokTarihi ? `stok ${fmtDay(c.stokTarihi)}` : fmtStamp(c.guncelleme)}</span>
               </div>

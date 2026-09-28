@@ -10,6 +10,7 @@ import { CnFrame, DataAge } from './parts';
 import CatalogList from './CatalogList';
 import NewsletterList from './NewsletterList';
 import Report from './Report';
+import SqlInfo from '../components/SqlInfo';
 
 type Tab = 'katalog' | 'bulten' | 'rapor';
 
@@ -50,6 +51,7 @@ export default function CatalogNewsletterHome({ initial = 'katalog' }: { initial
       aside={
         m?.me.canCatalog ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-canvas-muted">{m.havuz.kitap.toLocaleString('tr-TR')} kitap<SqlInfo k={m.kaynaklar} alan="havuz" label="Kitap havuzu" /></span>
             <button type="button" className={btnGhost} disabled={refresh.isPending || m.havuz.yenileniyor} onClick={() => refresh.mutate()}>
               <RefreshCw aria-hidden className={`h-4 w-4 ${m.havuz.yenileniyor ? 'animate-spin' : ''}`} />
               {m.havuz.yenileniyor ? 'Kaynak okunuyor…' : 'Kaynaktan yenile'}

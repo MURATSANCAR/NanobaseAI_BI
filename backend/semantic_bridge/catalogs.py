@@ -494,8 +494,36 @@ def critical_count(alerts: Iterable[dict[str, Any]]) -> int:
 # ------------------------------------------------------------------ katalog kayıtları
 
 
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (catalogs_kaynak.py).
+
+
+def catalog_stmt(tenant: str, cid: str):
+    return sa.select(CATALOGS).where(CATALOGS.c.id == cid, CATALOGS.c.tenant_id == tenant)
+
+
+def catalogs_stmt(tenant: str, durum: str = ""):
+    q = sa.select(CATALOGS).where(CATALOGS.c.tenant_id == tenant)
+    if durum == "acik":
+        q = q.where(CATALOGS.c.status != "arsiv")
+    elif durum:
+        q = q.where(CATALOGS.c.status == durum)
+    return q.order_by(CATALOGS.c.updated_at.desc())
+
+
+def item_counts_stmt(ids: list[str]):
+    return sa.select(ITEMS.c.catalog_id, ITEMS.c.alert_json, ITEMS.c.featured).where(ITEMS.c.catalog_id.in_(ids or [""]))
+
+
+def items_stmt(cid: str):
+    return sa.select(ITEMS).where(ITEMS.c.catalog_id == cid).order_by(ITEMS.c.position)
+
+
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def _row(c, tenant: str, cid: str):
-    r = c.execute(sa.select(CATALOGS).where(CATALOGS.c.id == cid, CATALOGS.c.tenant_id == tenant)).mappings().first()
+    r = c.execute(catalog_stmt(tenant, cid)).mappings().first()
     if not r:
         raise CatalogError("Katalog bulunamadı.", 404)
     return r
@@ -536,15 +564,9 @@ def get(engine, tenant: str, cid: str) -> dict[str, Any]:
 
 def list_catalogs(engine, tenant: str, durum: str = "") -> dict[str, Any]:
     with engine.connect() as c:
-        q = sa.select(CATALOGS).where(CATALOGS.c.tenant_id == tenant)
-        if durum == "acik":
-            q = q.where(CATALOGS.c.status != "arsiv")
-        elif durum:
-            q = q.where(CATALOGS.c.status == durum)
-        rows = c.execute(q.order_by(CATALOGS.c.updated_at.desc())).mappings().all()
+        rows = c.execute(catalogs_stmt(tenant, durum)).mappings().all()
         counts: dict[str, dict[str, int]] = {}
-        for it in c.execute(sa.select(ITEMS.c.catalog_id, ITEMS.c.alert_json, ITEMS.c.featured)
-                            .where(ITEMS.c.catalog_id.in_([r["id"] for r in rows] or [""]))).mappings():
+        for it in c.execute(item_counts_stmt([r["id"] for r in rows])).mappings():
             d = counts.setdefault(it["catalog_id"], {"kitap": 0, "kritik": 0, "bilgi": 0, "oneCikan": 0})
             d["kitap"] += 1
             d["oneCikan"] += 1 if it["featured"] else 0
@@ -598,7 +620,7 @@ def delete(engine, tenant: str, cid: str) -> dict[str, Any]:
 
 
 def _items(c, cid: str) -> list[dict[str, Any]]:
-    rows = c.execute(sa.select(ITEMS).where(ITEMS.c.catalog_id == cid).order_by(ITEMS.c.position)).mappings().all()
+    rows = c.execute(items_stmt(cid)).mappings().all()
     return [dict(r) for r in rows]
 
 
@@ -768,10 +790,13 @@ def transition(engine, tenant: str, user: str, cid: str, action: str, note: Opti
     return get(engine, tenant, cid)
 
 
+def pending_stmt(tenant: str):
+    return sa.select(sa.func.count()).select_from(CATALOGS).where(CATALOGS.c.tenant_id == tenant, CATALOGS.c.status == "onayda")
+
+
 def pending_counts(engine, tenant: str) -> dict[str, int]:
     with engine.connect() as c:
-        n = c.execute(sa.select(sa.func.count()).select_from(CATALOGS)
-                      .where(CATALOGS.c.tenant_id == tenant, CATALOGS.c.status == "onayda")).scalar() or 0
+        n = c.execute(pending_stmt(tenant)).scalar() or 0
     return {"katalogOnayda": int(n)}
 
 
@@ -780,7 +805,7 @@ def pending_counts(engine, tenant: str) -> dict[str, int]:
 
 def meta_get(engine, tenant: str, key: str) -> tuple[Any, Optional[str]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).mappings().first()
+        r = c.execute(meta_stmt(tenant, key)).mappings().first()
     return (load(r["value_json"], None), iso(r["updated_at"])) if r else (None, None)
 
 

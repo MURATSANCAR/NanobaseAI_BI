@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { STATUS_TONE, cnApi, fmtDay, fmtInt, fmtPct, type Meta } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const DURUM = [
   ['acik', 'Arşiv dışı'],
@@ -38,6 +39,7 @@ export default function NewsletterList({ meta }: { meta: Meta }) {
   return (
     <Block
       title="E-bültenler"
+      info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Kitap, izinli okur ve sonuç oranları" />}
       help="Portal bülteni göndermez: onaylanan bültenin HTML'i indirilir ve şirketin izin yönetimi olan e-posta aracından gönderilir. Segment sayısı yalnız izinli kişiyi sayar; kişi listesi portalda hiç görünmez."
       action={
         <div className="flex flex-wrap gap-2">

@@ -293,17 +293,25 @@ def logo_data_end(logo: Runner) -> Optional[str]:
 # ------------------------------------------------------------------ T-soft (SEO deposundan)
 
 
+def tsoft_stmt(tenant: str):
+    """SEO modülünün T-soft ürün eşitlemesi okuması (barkod, fiyat, görsel, bağlantı); aynı ifade sorgu bilgisinde."""
+    import sqlalchemy as sa
+
+    return (sa.select(sa.column("data_json")).select_from(sa.table("semantic_seo_products"))
+            .where(sa.column("tenant_id") == tenant))
+
+
 def read_tsoft(engine, tenant: str, site: str = "") -> dict[str, dict[str, Any]]:
     """Barkod → {fiyat (KDV dahil), gorsel, url}. SEO modülü kurulu değilse boş."""
     import sqlalchemy as sa
 
     try:
-        t = sa.Table("semantic_seo_products", sa.MetaData(), autoload_with=engine)
+        sa.Table("semantic_seo_products", sa.MetaData(), autoload_with=engine)
     except Exception:  # noqa: BLE001 — tablo yok
         return {}
     out: dict[str, dict[str, Any]] = {}
     with engine.connect() as c:
-        for r in c.execute(sa.select(t.c.data_json).where(t.c.tenant_id == tenant)):
+        for r in c.execute(tsoft_stmt(tenant)):
             try:
                 d = json.loads(r.data_json or "{}")
             except ValueError:

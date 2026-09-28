@@ -12,6 +12,7 @@ import {
   type Catalog, type CatalogItem, type Filters, type Job, type Meta,
 } from './api';
 import { AlertList, Block, CnFrame, DataAge } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 type ItemEdit = { crmKitapId: string; oneCikan?: boolean; sayfa?: string | null; gerekce?: string; metin?: string | null };
 const toEdit = (k: CatalogItem): ItemEdit => ({ crmKitapId: k.crmKitapId, oneCikan: k.oneCikan, sayfa: k.sayfa });
@@ -129,10 +130,10 @@ export default function CatalogEditor() {
           {!c.havuz && <Note tone="info">Kitap havuzu okunuyor; uyarılar son kayıtlı hâliyle gösteriliyor.</Note>}
           <DataAge pool={c.havuz} />
           <KpiRow>
-            <Kpi label="Kitap" value={fmtInt(c.ozet.kitap)} help={`${c.ozet.oneCikan} öne çıkan`} />
-            <Kpi label="Kritik uyarılı kitap" value={fmtInt(c.ozet.uyariliKitap)} help="Fiyat değişti, stok kritik, satıştan kalktı ya da CRM'de kart yok" />
-            <Kpi label="Fiyatı olmayan" value={fmtInt(c.ozet.fiyatsiz)} help="Seçilen fiyat kaynağında fiyat yok" />
-            <Kpi label="Kapağı eksik" value={fmtInt(c.ozet.kapaksiz)} help="CRM'de ve web sitesinde kapak bağlantısı yok" />
+            <Kpi label="Kitap" value={fmtInt(c.ozet.kitap)} help={`${c.ozet.oneCikan} öne çıkan`} info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kitap" />} />
+            <Kpi label="Kritik uyarılı kitap" value={fmtInt(c.ozet.uyariliKitap)} help="Fiyat değişti, stok kritik, satıştan kalktı ya da CRM'de kart yok" info={<SqlInfo k={c.kaynaklar} alan="kitaplar[].uyarilar" label="Kritik uyarılı kitap" />} />
+            <Kpi label="Fiyatı olmayan" value={fmtInt(c.ozet.fiyatsiz)} help="Seçilen fiyat kaynağında fiyat yok" info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Fiyatı olmayan" />} />
+            <Kpi label="Kapağı eksik" value={fmtInt(c.ozet.kapaksiz)} help="CRM'de ve web sitesinde kapak bağlantısı yok" info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kapağı eksik" />} />
           </KpiRow>
 
           {m?.me.canExport && (
@@ -154,6 +155,7 @@ export default function CatalogEditor() {
           {editable && m && <Settings c={c} meta={m} />}
 
           <Block
+            info={<SqlInfo k={c.kaynaklar} alan="kitaplar[]" label="Fiyat, stok ve satış hızı" />}
             title="Katalogdaki kitaplar"
             help="Fiyat ve stok bugünkü veriyle hesaplanır; kitabın eklendiği andaki fiyat dayanaktır. «Yeni fiyatı kabul et» dayanağı günceller."
             action={editable && m?.modelVar && list.length > 0 ? (
@@ -338,6 +340,7 @@ function SuggestPanel({ id, c, onAdd, busy }: { id: string; c: Catalog; onAdd: (
   const w = Object.entries(c.suzgec).some(([, v]) => (Array.isArray(v) ? v.length : !!v));
   return (
     <Block
+      info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Aday puanı, fiyat ve stok" />}
       title="Önerilen kitaplar"
       help="Puan: satış hızı, stok ay sayısı, yenilik ve (seçildiyse) özel gün bağı; her satırda gerekçe yazar. Satıştan kalkmış ve stoku olmayan kitap önerilmez, sayısı aşağıda."
       action={!on ? <button type="button" className={btnPrimary} onClick={() => setOn(true)}>Önerileri getir</button> : undefined}

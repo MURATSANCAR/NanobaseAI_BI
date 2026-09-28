@@ -4,15 +4,19 @@ import { toast } from 'sonner';
 import { Users } from 'lucide-react';
 import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { cnApi, fmtInt, fmtStamp, type Meta, type Segment, type SegmentCount } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Segment tanımı ve sayacı. Sayaç YALNIZ sayı ve izin dağılımı gösterir; kişi listesi portalda hiç yoktur. İzin kuralı
  *  (etkin kişi, toplu e-posta ve e-posta izni, İYS onayı, adres dolu) köprüde tek yerde; süzgeçler onu gevşetemez. */
-export default function SegmentBuilder({ meta, value, editable, newsletterId, stored, onChange, beforeCount, onCounted }: {
+export default function SegmentBuilder({ meta, value, editable, newsletterId, stored, k, onChange, beforeCount, onCounted }: {
   meta: Meta;
   value: Segment;
   editable: boolean;
   newsletterId?: string;
   stored?: { size: number | null; at: string | null };
+  /** Bültenin sorgu bilgisi (kayıtlı son sayım için); yeni sayımın kendi sorgu bilgisi cevabında gelir. */
+  k?: Kaynaklar;
   onChange: (s: Segment) => void;
   /** Sayımdan önce (ör. değişen segmenti kaydet): sayı yalnız kayıtlı segmente yazılır. */
   beforeCount?: () => Promise<void>;
@@ -73,6 +77,7 @@ export default function SegmentBuilder({ meta, value, editable, newsletterId, st
             <div className="font-mono text-[26px] font-bold leading-none tabular-nums">
               {shown ? fmtInt(shown.izinli) : stored?.size !== null && stored?.size !== undefined ? fmtInt(stored.size) : '—'}
               <span className="ml-2 font-sans text-[12px] font-semibold text-canvas-muted">izinli okur</span>
+              <SqlInfo k={shown?.kaynaklar ?? k} alan={shown ? 'izinli' : 'segmentBuyuklugu'} label="İzinli okur (segment sayımı)" className="ml-1" />
             </div>
             <div className="mt-1 text-[11px] text-canvas-muted">
               {shown ? `Şimdi sayıldı · ${fmtStamp(shown.zaman)}` : stored?.at ? `Son sayım ${fmtStamp(stored.at)}` : 'Henüz sayılmadı'}
