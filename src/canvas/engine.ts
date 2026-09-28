@@ -2243,6 +2243,57 @@ export const translationApi = {
   termsCsvUrl: (src?: string, tgt?: string) => `${ENGINE_BASE}${TR}/terms/export.csv${qs({ src: src || undefined, tgt: tgt || undefined })}`,
 };
 
+// ------------------------------------------------------ çeviri işi → serbest çalışan işi ve hakediş (M4 → M8)
+
+export type PayoutBasis = 'onaylanan' | 'cevrilen';
+export type TranslationPayout = {
+  jobId: string;
+  words: { total: number; approved: number; translated: number };
+  bases: Record<PayoutBasis, string>;
+  unit: string;
+  wordsPerPage: number;
+  /** M8'de çeviri rolündeki aktif kişiler; kartında kelime ücreti yazılıysa `rate`. */
+  people: Array<{ id: string; name: string; city: string | null; email: string | null; rate: number | null }>;
+  link: {
+    personId: string;
+    personName: string | null;
+    personActive: boolean;
+    rate: number;
+    basis: PayoutBasis;
+    basisWords: number;
+    transferred: number;
+    pending: number;
+    pendingAmount: number;
+    transferredAmount: number;
+    ahead: number;
+    updatedBy: string;
+    updatedAt: string | null;
+  } | null;
+  task: { id: string; title: string; status: string; units: number; unitPrice: number; due: string | null; open: boolean } | null;
+  package: { id: string; title: string; status: 'acik' | 'kapandi' | 'iptal' } | null;
+  moves: Array<{
+    id: string;
+    taskId: string;
+    words: number;
+    basis: PayoutBasis;
+    rate: number;
+    amount: number;
+    by: string;
+    at: string;
+    payout: { id: string; no: number; status: string } | null;
+  }>;
+};
+
+export const translationPayoutApi = {
+  get: (jobId: string) => send<TranslationPayout>('GET', `${TR}/jobs/${enc(jobId)}/payout`, undefined, 30_000),
+  save: (jobId: string, b: { personId: string; rate: string; basis: PayoutBasis }) =>
+    send<{ personId: string; personName: string; rate: number; basis: PayoutBasis }>('PUT', `${TR}/jobs/${enc(jobId)}/payout`, b, 30_000),
+  openPackage: (jobId: string) =>
+    send<{ packageId: string; taskId: string; created: boolean; units: number }>('POST', `${TR}/jobs/${enc(jobId)}/payout/package`, {}, 60_000),
+  transfer: (jobId: string) =>
+    send<{ moved: number; transferred: number; amount: number; taskId: string | null }>('POST', `${TR}/jobs/${enc(jobId)}/payout/transfer`, {}, 60_000),
+};
+
 // ------------------------------------------------------ editoryal arama ve kitap 360 (ana ekran)
 
 export type SearchHit = { kind: 'kitap' | 'proje' | 'kisi'; id: string; title: string | null; note: string | null; extra: string | null; status: string | null; date: string | null };
