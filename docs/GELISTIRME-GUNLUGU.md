@@ -41,9 +41,19 @@
   istiyor), kalan 19'u ölçüm sayfadan çıkınca 499. Köprü tarafı sağlam (hepsi 200). Düzeltme: `deploy/nanobase-direct/
   add-cover-image-limit.py` kapak görsel ucunu stüdyo görsel bölgesine (`timas_studio_img`, 600/dk, 120 anlık) alır; VM
   şablonu `infra/docker/bi/web.default.conf.template` aynı blokla.
-- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
-  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
-  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
+- **Kurulum 1 (main `2207978b`, test sunucusu 07:47):** köprüye 2 dosya (sunucu md5'i eski main'le aynıydı), ön yüze 2 dosya
+  (sunucu `src` ağacı main'in gerisinde — başka oturumların kurulmamış işi — o yüzden yalnız bu dosyalar; kendi çıktı
+  klasörüne derlenip `cockpit/dist`e), nginx betiği uygulandı, köprü yeniden başlatıldı; `._*` 0. Gerçek oturumla portal:
+  üretim soğuk 31 sn → sonra **0,07 sn**, `meta` soğukken 0,4 sn, disk kaydı 7,9 MB, sayılar tutarlı (5.599 / 589 açık /
+  186 geciken). Saha: sayfa 32 KB (109 MB yerine), sıcak **0,05 sn**, arama 0,4 sn, `offset` sayfaları ardışık, KPI eskisiyle
+  birebir; ama soğuk ilk istek hâlâ 22 sn.
+- **Tur 2 (saha soğuk yol):** sıra iki katmana ayrıldı. Temel (gece turu + gün) girdisiz puanlanır; ziyaret/söz/öncelik/red
+  değişince yalnız girdisi olan cariler DB'den okunup yeniden puanlanır (`F.overdue_ranks`, `F.scored`, `F.card_order`,
+  `portfolio_rows(codes=…)`). Yönetici kapsamı köprü açılışında (20 sn sonra) ve gece turu / elle yenilemeden sonra arka
+  planda hazırlanır. Eşdeğerlik gerçek DB'de sınandı (200 + 50 gerçek CRM hesabına red girdisi): eski `F.ranked` ile
+  kartlar ve sıra birebir; girdi değişiminde 15 sn → 1,3 sn. Sınarken bulunan: eşit anahtarlı (puan, gecikme, unvan) 15.473
+  satırın sırası okumadan okumaya değişiyordu (sorguda ORDER BY yok) → son anahtar cari kodu.
+- Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
