@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
-import { RefreshCw, Sparkles, Star, TrendingDown, TrendingUp } from 'lucide-react';
+import { Sparkles, Star, TrendingDown, TrendingUp } from 'lucide-react';
 import { ENGINE_ENABLED, authorsApi, type AuthorAdvice, type AuthorGrowth } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
-import { LOYALTY, fmtDay, monthLabel, monthLong } from './shared';
+import { LOYALTY, SnapshotBar, fmtDay, monthLabel, monthLong } from './shared';
 
 /** Yazarın gelişimi: Logo satış gidişatı (yıllık + son 24 ay + kitap kitap), M6 hakedişleri, okur sesi (sitedeki
  *  yorum puanı, açık web taramasının tonu), sadakat puanı ve Zeki AI strateji önerisi. Veri köprüde 12 saat
@@ -358,18 +358,14 @@ function Advice({ contactId, ready }: { contactId: string; ready: boolean }) {
 }
 
 export default function GrowthSection({ contactId }: { contactId: string }) {
-  const qc = useQueryClient();
+  // Hazır veriden anında gelir; ekran açıkken 5 dk'da bir yeniden okunur (hazırlık da 5 dk'da bir tazelenir).
   const q = useQuery({
     queryKey: ['authors', 'growth', contactId],
     queryFn: () => authorsApi.growth(contactId),
     enabled: ENGINE_ENABLED && !!contactId,
-    staleTime: 10 * 60_000,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
     retry: 0,
-  });
-  const refresh = useMutation({
-    mutationFn: () => authorsApi.growth(contactId, true),
-    onSuccess: (g) => qc.setQueryData(['authors', 'growth', contactId], g),
-    onError: (e) => toast.error('Yenilenemedi', { description: e instanceof Error ? e.message : undefined }),
   });
   const g = q.data;
   const err = errText(q.error, 'Gelişim okunamadı.');
@@ -377,14 +373,9 @@ export default function GrowthSection({ contactId }: { contactId: string }) {
     <section className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-[12px] font-extrabold">Gelişim</h3>
-        {g && (
-          <button type="button" className={`${btnGhost} !min-h-9 !py-1 text-[11.5px]`} disabled={refresh.isPending} onClick={() => refresh.mutate()}>
-            <RefreshCw aria-hidden className={`h-3.5 w-3.5 ${refresh.isPending ? 'animate-spin' : ''}`} />
-            {refresh.isPending ? 'Logo okunuyor…' : `Yenile · ${fmtDay(g.computedAt)}`}
-          </button>
-        )}
+        <SnapshotBar compact />
       </div>
-      {q.isLoading && <p className="py-4 text-center text-[12px] text-canvas-muted">Logo satışları ve CRM okunuyor; ilk açılış 1–2 dakika sürer, sonra 12 saat hazır bekler…</p>}
+      {q.isLoading && <p className="py-4 text-center text-[12px] text-canvas-muted">Veriler hazırlanıyor; hazırlık bitene kadar bu yazar tek başına Logo'dan okunur (1–2 dakika)…</p>}
       {err && <Note tone="err">{err}</Note>}
       {g && (
         <>

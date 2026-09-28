@@ -4,7 +4,8 @@ Arşiv stüdyo servisinde durur (apps/editor/src/editor/production/library.py): 
 aynı arşivi görür. Köprü iki iş yapar:
 
 1. **Besleme** (`feed`): SEO modülünün T-soft ürün tablosu (ad, yazar = `Model`, barkod, sitedeki kategori yolu,
-   kapak görselinin adresi, satış) ile barkodla bağlı CRM kitap kartı (çizer, okur kitlesi, yaş, tür) birleşir,
+   kapak görselinin adresi, satış) ile barkodla bağlı CRM kitap kartı (çizer, okur kitlesi, yaş, tür) birleşir;
+   yalnız kitaplar (barkodu ISBN) girer, beslemenin tam listesinde olmayan eski kayıtlar stüdyoda gizlenir;
    stüdyoya 1000'erli gönderilir; görselleri stüdyo kendisi indirir. SEO gece işinin sonunda (T-soft eşitlemesi
    bittikten sonra) kendiliğinden koşar; yönetici ekrandan da başlatabilir. T-soft tanımlı olmayan ortamda (müşteri
    VM'i) ürün tablosu boştur, besleme hiçbir şey göndermez.
@@ -21,6 +22,7 @@ import json
 import logging
 import re
 import threading
+import unicodedata
 from typing import Any, Callable
 from urllib.parse import urlencode
 
@@ -117,6 +119,15 @@ def all_categories(p: dict[str, Any]) -> list[list[str]]:
     return out
 
 
+ISBN_TAIL = re.compile(r"97[89]\d{10}$")
+
+
+def is_book(p: dict[str, Any]) -> bool:
+    """Kitap = barkodu ISBN (978/979 ile başlayan 13 hane) ya da ISBN'le biten set barkodu («1» + ISBN). Sitede
+    oyun, oyuncak, kırtasiye de satılıyor ve CRM'de stok kartları var; kapak arşivine yalnız kitaplar girer."""
+    return bool(ISBN_TAIL.search(re.sub(r"\D", "", str(p.get("Barcode") or ""))))
+
+
 def item(p: dict[str, Any], crm_book: dict[str, Any] | None, site: str) -> dict[str, Any] | None:
     pid = str(p.get("ProductId") or "").strip()
     title = str(p.get("ProductName") or "").strip()
@@ -143,8 +154,8 @@ def item(p: dict[str, Any], crm_book: dict[str, Any] | None, site: str) -> dict[
     }
 
 
-def build(seo) -> list[dict[str, Any]]:
-    """SEO modülünün tablolarından arşiv kayıtları (T-soft ürünü + barkodla CRM kartı)."""
+def build(seo) -> tuple[list[dict[str, Any]], int]:
+    """SEO modülünün tablolarından arşiv kayıtları (T-soft ürünü + barkodla CRM kartı) ve atılan kitap dışı ürün sayısı."""
     import sqlalchemy as sa
 
     from semantic_bridge.seo_geo import crm as crm_mod
@@ -157,15 +168,24 @@ def build(seo) -> list[dict[str, Any]]:
                  c.execute(sa.select(CRM_BOOKS.c.ean, CRM_BOOKS.c.data_json).where(CRM_BOOKS.c.tenant_id == tenant))}
         products = [json.loads(r.data_json) for r in
                     c.execute(sa.select(PRODUCTS.c.data_json).where(PRODUCTS.c.tenant_id == tenant))]
-    out = []
+    out, not_books = [], 0
     for p in products:
+        if not is_book(p):
+            not_books += 1
+            continue
         it = item(p, books.get(crm_mod.ean_key(p.get("Barcode"))), site)
         if it:
             out.append(it)
-    return out
+    return out, not_books
 
 
-def feed(seo, editor: str = "zamanlayıcı") -> dict[str, Any]:
+def header_name(name: str) -> str:
+    """X-Editor HTTP başlığıdır; başlık yalnız ASCII taşır («zamanlayıcı» → «zamanlayici»)."""
+    s = unicodedata.normalize("NFKD", str(name or "").translate(str.maketrans("ıİ", "iI")))
+    return "".join(ch for ch in s if ord(ch) < 128 and not unicodedata.combining(ch)).strip()[:200] or "zamanlayici"
+
+
+def feed(seo, editor: str = "zamanlayici") -> dict[str, Any]:
     """Arşivi besler. Aynı anda ikinci besleme başlamaz; ürün yoksa (T-soft tanımlı değil) hiçbir şey göndermez."""
     from datetime import datetime, timezone
 
@@ -174,20 +194,25 @@ def feed(seo, editor: str = "zamanlayıcı") -> dict[str, Any]:
     feed_state.update(running=True, sent=0, startedAt=datetime.now(timezone.utc).isoformat(), finishedAt=None,
                       error=None, result=None)
     try:
-        items = build(seo)
+        items, not_books = build(seo)
         if not items:
             feed_state["result"] = {"items": 0, "note": "T-soft ürünü yok"}
             return {"started": True, "items": 0}
         total = {"stored": 0, "new": 0, "skipped": 0}
         for i in range(0, len(items), BATCH):
-            r = editorial_studio.post_json("/v1/studio/library/items", {"items": items[i:i + BATCH]}, editor,
+            r = editorial_studio.post_json("/v1/studio/library/items", {"items": items[i:i + BATCH]}, header_name(editor),
                                            timeout=300)
             for k in total:
                 total[k] += int(r.get(k) or 0)
             feed_state["sent"] = min(len(items), i + BATCH)
+        # Tam liste: listede olmayan eski kayıtlar (kitap olmayan ürün, T-soft'tan silinen ürün) stüdyoda gizlenir.
+        kept = editorial_studio.post_json("/v1/studio/library/retain", {"source": "tsoft", "ids": [x["id"] for x in items]},
+                                          header_name(editor), timeout=300)
         with_image = sum(1 for x in items if x["image_url"])
         with_crm = sum(1 for x in items if x["audience"] or x["illustrators"] or x["genres"])
-        feed_state["result"] = {"items": len(items), "withImage": with_image, "withCrm": with_crm, **total}
+        feed_state["result"] = {"items": len(items), "notBooks": not_books, "withImage": with_image, "withCrm": with_crm,
+                                **total, "hidden": kept.get("hidden", 0), **({"retainSkipped": kept["skipped"]}
+                                                                              if kept.get("skipped") else {})}
         log.info("kapak arşivi beslendi: %s", feed_state["result"])
         return {"started": True, **feed_state["result"]}
     except Exception as e:  # noqa: BLE001

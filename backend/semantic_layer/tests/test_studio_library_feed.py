@@ -57,3 +57,20 @@ def test_all_categories_reads_known_list_shapes():
     p = product(Categories=[{"CategoryPath": "Çocuk", "CategoryName": "Masal"}, "Çok Satanlar", {"Name": ""}])
     assert F.all_categories(p) == [["Çocuk", "Masal"], ["Çok Satanlar"]]
     assert F.all_categories(product()) == []
+
+
+def test_editor_header_is_ascii():
+    # X-Editor bir HTTP başlığı: «zamanlayıcı» ASCII değil, gece beslemesi ilk elle koşuda bu yüzden düştü (09-28).
+    assert F.header_name("zamanlayıcı") == "zamanlayici"
+    assert F.header_name("Şükrü Öztürk") == "Sukru Ozturk"
+    assert F.header_name("") == "zamanlayici"
+    assert F.header_name("timas\\murat.sancar").isascii()
+
+
+def test_only_books_by_isbn_barcode():
+    assert F.is_book(product(Barcode="9786050000000"))
+    assert F.is_book(product(Barcode="9791000000000"))
+    assert F.is_book(product(Barcode="19786256767331"))          # set: «1» + ISBN
+    assert not F.is_book(product(Barcode="8682815950163"))       # kutu oyunu
+    assert not F.is_book(product(Barcode=""))
+    assert not F.is_book(product(Barcode="L8440"))

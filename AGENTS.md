@@ -90,7 +90,11 @@ Portal Yönetim → Kişiler'de `claude` adlı bir hesap kalmıştı. Kişi list
 - **Yeni kullanıcı adı uydurulmaz** (`claude`, `test`, `deneme`…). Giriş isteyen doğrulama mevcut `timasai` hesabının
   kısa ömürlü (15 dk) oturumuyla yapılır ve oturum satırı bitince silinir.
 - **Yazma uçları gerçek veriyle denenmez;** önce boş/geçersiz gövdeyle (400/422) denenir. Yazma şartsa kaydın kimliği
-  not edilir ve test sonunda o kimlikle silinir (değişiklik kaydındaki satırı dahil).
+  not edilir ve test sonunda o kimlikle silinir.
+- **Değişiklik kaydı (`semantic_audit`) satırları:** uydurma bir hesap adına yazılmışsa (kişi listesinde yeni ad
+  doğurur) silinir. Gerçek hesabın (`timasai`) test izleri **silinmez**: kayıt doğru geçmişi (açıldı → silindi)
+  anlatır ve denetim kaydından satır silmek kaydın güvenilirliğini bozar. Bu satırların kimlik aralığı günlüğe yazılır
+  (kullanıcı kararı 2026-09-28).
 - **Yan port / geçici köprü kopyası** canlı katalog veritabanına yazıyorsa aynı kural geçerlidir.
 - **Kabul sonunda kontrol:** Yönetim → Kişiler listesinde gerçek olmayan hesap yok; varsa silinip günlüğe yazılır.
 

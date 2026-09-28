@@ -31,7 +31,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from .store import CRM_BOOKS, LINKS, PRODUCTS, PROPOSALS, REDIRECTS, RUNS, SCHEMA, _md, iso, loads, now
+from .store import CRM_BOOKS, LINKS, PRODUCTS, PROPOSALS, REDIRECTS, RUNS, SCHEMA, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -56,8 +56,10 @@ IMPRESSION_POINTS = 8.0
 CLICK_POINTS = 12.0
 COUNT_POINTS = 4.0
 
-#: Toplanan liste bellekte bu kadar saniye tutulur (kaynaklar ağır).
-CACHE_SECONDS = 60
+#: Toplama ağırdır (canlıda ilk tur ~5 dk, 2026-09-28): ekran hiçbir zaman toplamayı beklemez. Son liste veritabanında
+#: saklanır (köprü yeniden başlasa da kalır) ve anında döner; bu yaştan eskiyse yenisi arka planda toplanır.
+STALE_SECONDS = 30 * 60
+CACHE_SECONDS = STALE_SECONDS  # eski ad: ekrandaki "şu kadar saniyede bir yenilenir" metni
 #: Gece işi: öteki gece işlerinin (eşitleme, tarama, ölçüm) yazması için bekleme; sonra liste yeniden kurulur.
 NIGHTLY_DELAY_S = 3 * 3600
 #: Yazar güven puanı bunun altındaysa yazar iş listesine girer.
@@ -130,6 +132,12 @@ LOG = sa.Table(
     sa.Column("at", sa.DateTime(timezone=True), nullable=False, index=True),
     sa.Column("closed_at", sa.DateTime(timezone=True)),
 )
+CACHE = sa.Table(
+    "semantic_seo_worklist_cache", _md,  # son toplanan liste (kaynak maddeleri); durumlar STATE'te
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("data_json", sa.Text, nullable=False),
+    sa.Column("built_at", sa.DateTime(timezone=True), nullable=False),
+)
 EVENT_LABEL = {"kapandi": "Kendiliğinden kapandı", "yeniden_acildi": "Yeniden açıldı", "durum": "Durum değişti"}
 
 _ready_lock = threading.Lock()
@@ -142,6 +150,7 @@ def ensure_tables(eng: sa.engine.Engine) -> None:
             return
         STATE.create(eng, checkfirst=True)
         LOG.create(eng, checkfirst=True)
+        CACHE.create(eng, checkfirst=True)
         _ready.add(id(eng))
 
 
@@ -189,11 +198,14 @@ def item_key(source: str, ref: str) -> str:
 
 def make_item(source: str, ref: str, owner: str, title: str, detail: str, severity: str, link: str, *,
               product_id: Optional[str] = None, count: Optional[int] = None, sales: Optional[float] = None,
-              impressions: Optional[float] = None, clicks: Optional[float] = None) -> dict[str, Any]:
+              impressions: Optional[float] = None, clicks: Optional[float] = None,
+              group: Optional[tuple[str, str]] = None) -> dict[str, Any]:
+    """`group`: (grup kimliği, grup başlığı) — ürün/kişi başına çoğalan işler gruplu görünümde tek satırda toplanır."""
     score, basis = impact_score(severity, sales=sales, impressions=impressions, clicks=clicks, count=count)
     return {"key": item_key(source, ref), "ref": f"{source}:{ref}"[:800], "source": source, "owner": owner,
             "title": title[:500], "detail": detail, "severity": severity if severity in SEVERITY_POINTS else "orta",
-            "impact": score, "impactBasis": basis, "link": link, "productId": product_id, "count": count}
+            "impact": score, "impactBasis": basis, "link": link, "productId": product_id, "count": count,
+            "group": list(group) if group else None}
 
 
 def dedupe(items: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -234,6 +246,57 @@ def merge(items: Iterable[dict[str, Any]], states: dict[str, dict[str, Any]]) ->
                     "statusLabel": STATUSES.get(status, status), "assignee": st.get("assignee"), "note": st.get("note"),
                     "updatedBy": st.get("updated_by"), "updatedAt": iso(st.get("updated_at")),
                     "firstSeen": iso(st.get("first_seen"))})
+    return out
+
+
+#: Gruplu görünümde bir grubun detayında örnek olarak adı geçen iş sayısı (grubun içi ayrıca sayfalı açılır).
+GROUP_EXAMPLES = 3
+
+
+def group_key(gid: str) -> str:
+    return "g" + hashlib.sha1(gid.encode("utf-8")).hexdigest()[:23]
+
+
+def grouped(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Grubu olan işler tek satırda toplanır: etki = en etkili işin etkisi + kayıt sayısı puanı; durum ortak değilse
+    "karışık". Grubu tek işten ibaretse iş olduğu gibi kalır. Sıra yine etkiye göre."""
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    out: list[dict[str, Any]] = []
+    for it in items:
+        g = it.get("group")
+        if g:
+            buckets.setdefault(g[0], []).append(it)
+        else:
+            out.append(it)
+    for gid, members in buckets.items():
+        if len(members) == 1:
+            out.append(members[0])
+            continue
+        members.sort(key=lambda i: -i["impact"])
+        top = members[0]
+        n = len(members)
+        statuses = {m["status"] for m in members}
+        status = statuses.pop() if len(statuses) == 1 else "karisik"
+        by_status: dict[str, int] = {}
+        for m in members:
+            by_status[m["status"]] = by_status.get(m["status"], 0) + 1
+        sev = max((m["severity"] for m in members), key=lambda v: SEVERITY_POINTS.get(v, 0))
+        impact = round(top["impact"] + _log_points(n, COUNT_POINTS), 1)
+        names = ", ".join(m["title"].split(": ", 1)[-1] for m in members[:GROUP_EXAMPLES])
+        out.append({
+            "key": group_key(gid), "ref": f"grup:{gid}", "source": top["source"], "sourceLabel": top.get("sourceLabel"),
+            "owner": top["owner"], "ownerLabel": top.get("ownerLabel"), "title": f"{top['group'][1]} — {_n(n)} iş",
+            "detail": f"En etkilileri: {names}{'…' if n > GROUP_EXAMPLES else ''}. {top['detail']}",
+            "severity": sev, "impact": impact,
+            "impactBasis": f"en etkili işin puanı {_p(top['impact'])} + {_n(n)} kayıt ({_p(_log_points(n, COUNT_POINTS))})",
+            "link": top["link"].split("?")[0] if top.get("productId") else top["link"], "productId": None, "count": n,
+            "status": status, "statusLabel": STATUSES.get(status, "Karışık"), "statusCounts": by_status,
+            "assignee": top.get("assignee") if all(m.get("assignee") == top.get("assignee") for m in members) else None,
+            "note": None, "updatedBy": None, "updatedAt": None,
+            "firstSeen": min((m.get("firstSeen") or "" for m in members), default=None) or None,
+            "group": [gid, top["group"][1]], "isGroup": True, "children": [m["key"] for m in members],
+        })
+    out.sort(key=lambda i: -i["impact"])
     return out
 
 
@@ -327,19 +390,20 @@ class Env:
 
                 data = sa.cast(PRODUCTS.c.data_json, sa.JSON)
                 rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.active, SALES, VIEWS,
-                                           data["SeoLink"].as_string(), data["Barcode"].as_string())
+                                           data["SeoLink"].as_string(), data["Barcode"].as_string(), PRODUCTS.c.brand)
                                  .where(PRODUCTS.c.tenant_id == self.tenant)).all()
             else:  # sqlite (birim testi): JSON Python'da çözülür
                 rows = []
-                for pid, name, active, raw in c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.active,
-                                                                  PRODUCTS.c.data_json).where(PRODUCTS.c.tenant_id == self.tenant)):
+                for pid, name, active, raw, brand in c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name,
+                                                                         PRODUCTS.c.active, PRODUCTS.c.data_json, PRODUCTS.c.brand)
+                                                               .where(PRODUCTS.c.tenant_id == self.tenant)):
                     p = loads(raw, {})
                     rows.append((pid, name, active, _num(p.get("CountTotalSales")), _num(p.get("StatViews")),
-                                 p.get("SeoLink"), p.get("Barcode")))
-        for pid, name, active, sales, views, link, barcode in rows:
+                                 p.get("SeoLink"), p.get("Barcode"), brand))
+        for pid, name, active, sales, views, link, barcode, brand in rows:
             out[str(pid)] = {"name": name or str(pid), "active": bool(active), "sales": float(sales or 0),
                              "views": float(views or 0), "link": str(link or "").strip().strip("/") or None,
-                             "ean": _ean(barcode)}
+                             "ean": _ean(barcode), "brand": (brand or "").strip() or "Yayınevi belirsiz"}
         self._products = out
         return out
 
@@ -403,13 +467,16 @@ def src_proposals_waiting(env: Env) -> list[dict[str, Any]]:
             name = pages.get(pid) or pid
             out.append(make_item("oneri_onay", f"hazir:{pid}", "seo", f"Sayfa önerisi onay bekliyor: {name}",
                                  f"ZEKİ AI'ın sayfa başlığı/açıklaması önerisi hazır{score}. Onaylanırsa metin T-soft "
-                                 "panelinde elle girilir; sistem hiçbir yere göndermez.", "orta", "/seo-geo/sayfalar"))
+                                 "panelinde elle girilir; sistem hiçbir yere göndermez.", "orta", "/seo-geo/sayfalar",
+                                 group=("oneri_onay:sayfa", "Onay bekleyen yazar/kategori/yayınevi sayfası önerileri")))
             continue
         p = prods.get(pid) or {}
+        brand = p.get("brand") or "Yayınevi belirsiz"
         out.append(make_item("oneri_onay", f"hazir:{pid}", "seo", f"Öneri onay bekliyor: {p.get('name') or pid}",
                              f"ZEKİ AI'ın SEO önerisi hazır{score}. Onaylanan metin CRM kitap kartına / T-soft paneline "
                              "elle girilir; sistem hiçbir yere göndermez.", "orta", _plink(pid), product_id=pid,
-                             sales=p.get("sales"), impressions=env.product_impressions(pid)))
+                             sales=p.get("sales"), impressions=env.product_impressions(pid),
+                             group=(f"oneri_onay:{_fold(brand)}", f"Onay bekleyen ürün önerileri — {brand}")))
     return out
 
 
@@ -525,14 +592,18 @@ def src_sunset(env: Env) -> list[dict[str, Any]]:
             out.append(make_item("satistan_kalkan", f"bekliyor:{r['id']}", "seo", f"Satıştan kalkan sayfa kararı: {name}",
                                  f"{reason}. Öneri: {ACTIONS.get(r['action'], r['action'])}. {r['why'] or ''}".strip(),
                                  "orta", "/seo-geo/satistan-kalkan", product_id=r["product_id"], sales=sales,
-                                 impressions=r["impressions"]))
+                                 impressions=r["impressions"],
+                                 group=(f"satistan_kalkan:bekliyor:{r['reason']}:{r['action']}",
+                                        f"Satıştan kalkan sayfa kararı — {reason}, öneri: {ACTIONS.get(r['action'], r['action'])}")))
         elif r["status"] == "onaylandi" and r["synced_at"] == last:
             act = ACTIONS.get(r["chosen_action"] or r["action"], r["chosen_action"])
             tgt = f" → /{r['chosen_target']}" if r["chosen_target"] else ""
             out.append(make_item("satistan_kalkan", f"onayli:{r['id']}", "tsoft", f"Satıştan kalkan sayfa: {name}",
                                  f"Onaylanan karar T-soft panelinde uygulanmalı: {act}{tgt} (/{r['link']}). {reason}.",
                                  "yüksek" if r["impressions"] else "orta", "/seo-geo/satistan-kalkan",
-                                 product_id=r["product_id"], sales=sales, impressions=r["impressions"]))
+                                 product_id=r["product_id"], sales=sales, impressions=r["impressions"],
+                                 group=(f"satistan_kalkan:onayli:{r['chosen_action'] or r['action']}",
+                                        f"Satıştan kalkan sayfa — T-soft'ta uygulanacak: {act}")))
     return out
 
 
@@ -637,10 +708,12 @@ def src_rights(env: Env) -> list[dict[str, Any]]:
             continue
         sev, label = RIGHTS_ITEMS[b["rights"]]
         why = (b["data"] or {}).get("rightsWhy") or ""
+        brand = p.get("brand") or "Yayınevi belirsiz"
         out.append(make_item("haklar", f"{b['rights']}:{pid}", "telif", f"{label}: {p['name']}",
                              f"{why} Kitaptan alıntı, önizleme ve tanıtım metni hak netleşmeden kullanılmaz.".strip(),
                              sev, f"/seo-geo/crm-haklar?suzgec={b['rights']}&urun={pid}", product_id=pid,
-                             sales=p["sales"], impressions=env.product_impressions(pid)))
+                             sales=p["sales"], impressions=env.product_impressions(pid),
+                             group=(f"haklar:{b['rights']}:{_fold(brand)}", f"{label} — {brand}")))
     return out
 
 
@@ -749,13 +822,15 @@ def src_authors(env: Env) -> list[dict[str, Any]]:
         missing = {i["id"]: i for i in a["checks"] if i["state"] in ("eksik", "kismi")}
         if "page" in missing:
             out.append(make_item("yazarlar", f"sayfa:{a['key']}", "tsoft", f"Yazar sayfası yok: {a['name']}",
-                                 missing["page"]["action"] or "", "yüksek", "/seo-geo/yazar-sayfalari", sales=a["sales"]))
+                                 missing["page"]["action"] or "", "yüksek", "/seo-geo/yazar-sayfalari", sales=a["sales"],
+                                 group=("yazarlar:sayfa", "Yazar sayfası yok")))
         content = [i for k, i in missing.items() if k not in ("page", "sameas") and i["action"]]
         if content:
             out.append(make_item("yazarlar", f"icerik:{a['key']}", "icerik",
                                  f"Yazar güven sinyalleri eksik: {a['name']} (puan {a['score']})",
                                  " ".join(f"{i['title']}: {i['action']}" for i in content), "orta",
-                                 "/seo-geo/yazar-sayfalari", sales=a["sales"]))
+                                 "/seo-geo/yazar-sayfalari", sales=a["sales"],
+                                 group=("yazarlar:icerik", "Yazar güven sinyalleri eksik (biyografi, kimlik, künye)")))
     return out
 
 
@@ -1051,30 +1126,82 @@ def _err(status: int, message: str) -> HTTPException:
 
 # ------------------------------------------------------------------------------------------------ önbellek
 class Worklist:
+    """Son liste bellekte ve veritabanında; istek hiçbir zaman toplamayı beklemez (``wait=True`` yalnız gece işi,
+    dışa aktarma ve testler için). Aynı anda tek toplama."""
+
     def __init__(self, seo, clock: Callable[[], float] = time.monotonic) -> None:
         self.seo = seo
         self.clock = clock
-        self._lock = threading.Lock()          # aynı anda tek toplama
-        self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._lock = threading.Lock()                      # aynı anda tek toplama
+        self._mem: dict[str, tuple[float, dict[str, Any]]] = {}
+        self.state: dict[str, Any] = {"building": False, "startedAt": None, "finishedAt": None, "error": None}
 
-    def build(self, force: bool = False) -> dict[str, Any]:
+    # -------------------------------------------------------------- saklama
+    def _load(self, tenant: str) -> Optional[tuple[float, dict[str, Any]]]:
+        hit = self._mem.get(tenant)
+        if hit:
+            return hit
+        eng = self.seo.engine()
+        ensure_tables(eng)
+        with eng.connect() as c:
+            row = c.execute(sa.select(CACHE.c.data_json, CACHE.c.built_at).where(CACHE.c.tenant_id == tenant)).first()
+        if not row:
+            return None
+        built = row[1] if row[1].tzinfo else row[1].replace(tzinfo=timezone.utc)
+        age = max(0.0, (now() - built).total_seconds())
+        hit = (self.clock() - age, loads(row[0], {}))
+        self._mem[tenant] = hit
+        return hit
+
+    def rebuild(self) -> dict[str, Any]:
+        """Toplar, durum tablosunu günceller, sonucu saklar. Çağıran bekler."""
         tenant = self.seo.tenant()
-        hit = self._cache.get(tenant)
-        if not force and hit and self.clock() - hit[0] < CACHE_SECONDS:
-            return hit[1]
         with self._lock:
-            hit = self._cache.get(tenant)
-            if not force and hit and self.clock() - hit[0] < CACHE_SECONDS:
-                return hit[1]
-            env = Env(self.seo)
-            items, ran, errors = collect(env)
-            changes = sync_states(env.eng, tenant, items, ran)
-            data = {"items": list(items.values()), "errors": errors, "builtAt": iso(now()), "changes": changes}
-            self._cache[tenant] = (self.clock(), data)
-            return data
+            self.state.update(building=True, startedAt=iso(now()), error=None)
+            try:
+                env = Env(self.seo)
+                items, ran, errors = collect(env)
+                changes = sync_states(env.eng, tenant, items, ran)
+                data = {"items": list(items.values()), "errors": errors, "builtAt": iso(now()), "changes": changes}
+                with env.eng.begin() as c:
+                    c.execute(CACHE.delete().where(CACHE.c.tenant_id == tenant))
+                    c.execute(CACHE.insert().values(tenant_id=tenant, data_json=dumps(data), built_at=now()))
+                self._mem[tenant] = (self.clock(), data)
+                return data
+            except Exception as e:  # noqa: BLE001
+                self.state["error"] = str(e)[:300]
+                raise
+            finally:
+                self.state.update(building=False, finishedAt=iso(now()))
 
-    def view(self, force: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        data = self.build(force)
+    def start_rebuild(self) -> bool:
+        if self.state["building"] or self._lock.locked():
+            return False
+
+        def run() -> None:
+            try:
+                self.rebuild()
+            except Exception:  # noqa: BLE001
+                log.exception("seo worklist rebuild failed")
+
+        self.state.update(building=True, startedAt=iso(now()), error=None)
+        threading.Thread(target=run, name="seo-worklist-build", daemon=True).start()
+        return True
+
+    def build(self, force: bool = False, wait: bool = False) -> Optional[dict[str, Any]]:
+        """Eldeki liste (yoksa None). Eskiyse ya da ``force`` ise yenisi arka planda (``wait`` ise burada) toplanır."""
+        hit = self._load(self.seo.tenant())
+        stale = hit is None or force or self.clock() - hit[0] >= STALE_SECONDS
+        if stale:
+            if wait:
+                return self.rebuild()
+            self.start_rebuild()
+        return hit[1] if hit else None
+
+    def view(self, force: bool = False, wait: bool = False) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
+        data = self.build(force, wait)
+        if data is None:
+            return [], None
         eng = self.seo.engine()
         states = load_states(eng, self.seo.tenant())
         return merge(data["items"], states), data
@@ -1102,21 +1229,52 @@ def register(app, ctx) -> None:
 
     @app.get("/api/v1/seo-geo/worklist")
     def seo_worklist(request: Request, owner: str = "", status: str = "", source: str = "", q: str = "", start: int = 0,
-                     limit: int = 50, refresh: int = 0) -> dict[str, Any]:
+                     limit: int = 50, refresh: int = 0, view: str = "gruplu") -> dict[str, Any]:
         ctx.gate(request)
         _check_filters(owner, status, source)
         items, data = wl.view(force=bool(refresh))
         chosen = select(items, owner, status, source, q)
+        # Süzgeç önce tek tek işlere, gruplama sonra: grup yalnız süzgece uyan işleri sayar.
+        rows = chosen if view == "tek" else grouped(chosen)
         s, n = max(0, start), max(1, limit)
-        return {"total": len(chosen), "start": s, "items": chosen[s:s + n],
+        errors = (data or {}).get("errors") or {}
+        return {"total": len(rows), "itemTotal": len(chosen), "view": "tek" if view == "tek" else "gruplu",
+                "start": s, "items": rows[s:s + n],
                 "counts": counts(items, owner, status, source, q), "summary": summary(items),
-                "owners": OWNERS, "statuses": STATUSES, "sources": SOURCES, "errors": data["errors"],
-                "errorLabels": {k: SOURCES.get(k, k) for k in data["errors"]},
-                "builtAt": data["builtAt"], "cacheSeconds": CACHE_SECONDS}
+                "owners": OWNERS, "statuses": STATUSES, "sources": SOURCES, "errors": errors,
+                "errorLabels": {k: SOURCES.get(k, k) for k in errors},
+                "ready": data is not None, "building": wl.state["building"], "buildError": wl.state["error"],
+                "builtAt": (data or {}).get("builtAt"), "cacheSeconds": STALE_SECONDS}
+
+    def _group_members(gkey: str, status: str = "", q: str = "") -> list[dict[str, Any]]:
+        items, _ = wl.view()
+        members = [i for i in items if i.get("group") and group_key(i["group"][0]) == gkey]
+        if not members:
+            raise _err(404, "Grup bulunamadı; liste yenilenmiş olabilir.")
+        return select(members, "", status, "", q)
+
+    @app.get("/api/v1/seo-geo/worklist/group/{gkey}")
+    def seo_worklist_group(gkey: str, request: Request, status: str = "", q: str = "", start: int = 0,
+                           limit: int = 50) -> dict[str, Any]:
+        ctx.gate(request)
+        _check_filters("", status, "")
+        members = _group_members(gkey, status, q)
+        s, n = max(0, start), max(1, limit)
+        return {"key": gkey, "title": members[0]["group"][1] if members else None, "total": len(members), "start": s,
+                "items": members[s:s + n]}
 
     @app.post("/api/v1/seo-geo/worklist/{key}/status")
     def seo_worklist_status(key: str, body: WorklistStatus, request: Request) -> dict[str, Any]:
         user = ctx.gate(request)
+        if key.startswith("g"):
+            # Grup: durum, atanan ve not gruptaki bütün işlere yazılır (her biri kendi geçmiş satırıyla).
+            members = _group_members(key)
+            for m in members:
+                set_status(seo.engine(), seo.tenant(), m["key"], body.status, body.assignee, body.note, user)
+            seo.audit(user, "status", key, members[0]["group"][1], {"kind": "worklist-group", "status": body.status,
+                                                                    "count": len(members), "assignee": body.assignee or None})
+            return {"key": key, "updated": len(members), "status": body.status, "statusLabel": STATUSES[body.status],
+                    "assignee": body.assignee or None, "note": body.note or None}
         row = set_status(seo.engine(), seo.tenant(), key, body.status, body.assignee, body.note, user)
         seo.audit(user, "status", key, row["title"], {"kind": "worklist", "status": body.status,
                                                      "assignee": row.get("assignee"), "source": row["source"]})
@@ -1145,7 +1303,7 @@ def register(app, ctx) -> None:
 
         ctx.gate(request)
         _check_filters(owner, status, source)
-        items, _ = wl.view()
+        items, _ = wl.view(wait=True)
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";")
         w.writerow(["Etki", "Sorumlu", "Kaynak", "İş", "Ayrıntı", "Önem", "Kayıt sayısı", "Durum", "Atanan", "Not",
@@ -1162,7 +1320,7 @@ def register(app, ctx) -> None:
         def later() -> None:
             time.sleep(NIGHTLY_DELAY_S)
             try:
-                wl.build(force=True)
+                wl.rebuild()
             except Exception:  # noqa: BLE001
                 log.exception("seo worklist nightly failed")
 

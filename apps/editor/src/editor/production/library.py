@@ -10,7 +10,9 @@ olduğu öteki yollar (`categories`) saklanır ama ağaca girmez: «Çok Satanla
 kategorileri her kitabı ikinci kez sayar ve ağacı tür yerine kampanyaya böler.
 
 Ekran binlerce kaydı süzer ve sayfalar; bütün arşiv bellekte tutulur (on binlerce küçük kayıt) ve tablonun son
-değişikliği değişince yeniden okunur. Kayıt silinmez: satıştan kalkan kitabın kapağı da arşivin parçasıdır.
+değişikliği değişince yeniden okunur. Kayıt silinmez: satıştan kalkan kitabın kapağı da arşivin parçasıdır (T-soft
+satıştan kalkan ürünü de verir). Beslemenin son tam listesinde olmayan kayıt (kitap olmayan ürün, T-soft'tan silinen
+ürün) `retain` ile `hidden` olur, görseli diskte kalır; yeniden gelirse görünür.
 """
 from __future__ import annotations
 
@@ -138,8 +140,11 @@ ON CONFLICT (id) DO UPDATE SET
   brand=EXCLUDED.brand, category=EXCLUDED.category, categories=EXCLUDED.categories, audience=EXCLUDED.audience,
   age_from=EXCLUDED.age_from, age_to=EXCLUDED.age_to, genres=EXCLUDED.genres, on_sale=EXCLUDED.on_sale,
   sales=EXCLUDED.sales, page_url=EXCLUDED.page_url, image_url=EXCLUDED.image_url, source_seen=now(),
-  status = CASE WHEN cover_library.image_url IS NOT DISTINCT FROM EXCLUDED.image_url THEN cover_library.status
-                WHEN EXCLUDED.image_url IS NULL THEN 'none' ELSE 'pending' END,
+  status = CASE WHEN EXCLUDED.image_url IS NULL THEN 'none'
+                WHEN cover_library.image_url IS DISTINCT FROM EXCLUDED.image_url THEN 'pending'
+                WHEN cover_library.status = 'hidden' THEN CASE WHEN cover_library.image_file IS NOT NULL THEN 'ok'
+                                                               ELSE 'pending' END
+                ELSE cover_library.status END,
   updated_at = now()
 RETURNING (xmax = 0) AS inserted
 """
@@ -155,6 +160,22 @@ def upsert(items: list[dict]) -> dict:
             if c.execute(UPSERT, p).fetchone()["inserted"]:
                 new += 1
     return {"received": len(items), "stored": len(rows), "new": new, "skipped": len(items) - len(rows)}
+
+
+RETAIN_MIN_SHARE = 0.5   # tam listenin görünen kayıtların yarısından azı olması eksik besleme sayılır
+
+
+def retain(source: str, ids: list[str]) -> dict:
+    """Beslemenin tam listesi: kaynağın bu listede olmayan kayıtları gizlenir. Liste görünen kayıtların yarısından
+    kısaysa (kaynak eşitlemesi yarım kalmış olabilir) hiçbir şey gizlenmez."""
+    keep = sorted({i for i in ids if ID.match(str(i)) and str(i).startswith(source + "-")})
+    shown = db.one("SELECT count(*) AS n FROM cover_library WHERE source=%s AND status <> 'hidden'", source)["n"]
+    if shown and len(keep) < shown * RETAIN_MIN_SHARE:
+        return {"hidden": 0, "kept": len(keep), "skipped": f"liste kısa ({len(keep)} / {shown})"}
+    with db.tx() as c:
+        n = c.execute("UPDATE cover_library SET status='hidden', updated_at=now() WHERE source=%s "
+                      "AND status <> 'hidden' AND NOT (id = ANY(%s))", (source, keep)).rowcount
+    return {"hidden": n, "kept": len(keep)}
 
 
 # ------------------------------------------------------------------ görsel indirme
@@ -267,7 +288,8 @@ def _rows() -> list[dict]:
 def stats() -> dict:
     counts = {r["status"]: r["n"] for r in db.all_rows("SELECT status, count(*) AS n FROM cover_library GROUP BY 1")}
     last = db.one("SELECT max(source_seen) AS fed FROM cover_library")
-    return {"total": sum(counts.values()), "ok": counts.get("ok", 0), "pending": counts.get("pending", 0),
+    hidden = counts.pop("hidden", 0)
+    return {"total": sum(counts.values()), "hidden": hidden, "ok": counts.get("ok", 0), "pending": counts.get("pending", 0),
             "failed": counts.get("failed", 0), "none": counts.get("none", 0),
             "lastFeed": last["fed"].isoformat() if last and last["fed"] else None, "fetch": fetch_state()}
 

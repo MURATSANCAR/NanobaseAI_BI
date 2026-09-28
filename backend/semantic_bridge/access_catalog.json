@@ -634,7 +634,7 @@
       "area": "editoryal",
       "page": "sayfa:ceviri",
       "label": "Çeviri işi yönetme",
-      "hint": "İş açma, çevirmen/inceleyen atama, kaynak yükleme, ZEKİ ham taslağı (model harcar), redaksiyona aktarma, silme"
+      "hint": "İş açma, çevirmen/inceleyen atama, kaynak yükleme, ZEKİ ham taslağı ve ZEKİ kalite tahmini (model harcar; tahmini işin inceleyeni de başlatır), redaksiyona aktarma, silme"
     },
     {
       "key": "ozellik:ceviri.terim",

@@ -11,6 +11,7 @@ Hepsi /v1/studio/library altında:
     GET  library/covers/{id}/image?w=     görsel (WebP, genişlik 64–2400)
     POST library/items    {items: [...]}  köprünün beslemesi (T-soft + CRM); bekleyen görseller indirilir
     POST library/fetch    {retry_failed}  bekleyen (istenirse hatalı) görselleri yeniden indir
+    POST library/retain   {source, ids}   beslemenin tam listesi: listede olmayan kayıtlar gizlenir
 """
 
 from __future__ import annotations
@@ -85,6 +86,16 @@ class Items(BaseModel):
 async def library_items(body: Items, by: str = Depends(_editor)) -> dict:
     out = await asyncio.to_thread(library.upsert, body.items)
     return {**out, "fetching": _start() or library.fetch_state()["running"]}
+
+
+class Retain(BaseModel):
+    source: str = Field(pattern=r"^[a-z]{2,10}$")
+    ids: list[str] = Field(default_factory=list)
+
+
+@router.post("/retain")
+async def library_retain(body: Retain, by: str = Depends(_editor)) -> dict:
+    return await asyncio.to_thread(library.retain, body.source, body.ids)
 
 
 class Fetch(BaseModel):

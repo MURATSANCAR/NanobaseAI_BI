@@ -621,13 +621,28 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
-    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur.
+    # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur. ZEKİ kalite tahmini
+    # (POST …/jobs/{iş}/qe) da model harcar ama işin inceleyenine de açıktır: «ceviri.yonet YA DA inceleyen» burada
+    # yazılamadığı için ucun içinde denetlenir (editorial_translation_qe.may_run), bu listede kuralı yoktur.
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs$", "ozellik:ceviri.yonet"),
     (frozenset({"PATCH", "DELETE"}), r"^/api/v1/editorial/translation/jobs/[^/]+$", "ozellik:ceviri.yonet"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/jobs/[^/]+/source$", "ozellik:ceviri.yonet"),
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/(draft|to-redaction)$", "ozellik:ceviri.yonet"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/editorial/translation/terms(/(?!propose$)[^/]+)?$", "ozellik:ceviri.terim"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import$", "ozellik:ceviri.terim"),
+    # Çeviri işinin M8 bağı (serbest çalışan, kelime ücreti, iş paketi, hakedişe aktarım): M8 kişisini ve ücretini
+    # okumak `serbest.yonet`, yazmak ayrıca `ceviri.yonet` ister.
+    (frozenset({"PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$", "ozellik:ceviri.yonet"),
+    (frozenset({"GET", "PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$",
+     "ozellik:serbest.yonet"),
+<<<<<<< HEAD
+=======
+    # Terim bankası TBX ve dış çeviri belleği (TMX): içe aktarma terim/yönetim yetkisiyle, dışa aktarma veri yetkisiyle.
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import\.tbx$", "ozellik:ceviri.terim"),
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/memory/import$", "ozellik:ceviri.yonet"),
+    (frozenset({"DELETE"}), r"^/api/v1/editorial/translation/memory$", "ozellik:ceviri.yonet"),
+    (frozenset({"GET"}), r"^/api/v1/editorial/translation/(terms/export\.tbx|memory/export\.tmx)$", "ozellik:veri.disa-aktar"),
+>>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
     # Serbest çalışan kaydı, paket, atama, teslim kararı, hakediş taslağı. Yazışma ve öneri (suggest) sayfayla gelir;
     # hakediş onayı/ödemesi açıkça verilen `serbest.hakedis-onay` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),

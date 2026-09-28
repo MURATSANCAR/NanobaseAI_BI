@@ -49,4 +49,9 @@ def ensure_model(base_url: str | None = None, api_key: str | None = None, model:
 
 	sync_builtin_assistant(doc.name)
 	frappe.db.commit()
+	# Bilgi bankası (yanıt taslağı) aynı uçtan gömme modeliyle.
+	from nanobase_brand.yz import bilgi
+
+	bilgi.ensure()
+	frappe.db.commit()
 	return doc.name

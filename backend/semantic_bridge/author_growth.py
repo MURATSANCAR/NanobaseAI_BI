@@ -358,11 +358,14 @@ def _web_tone(engine: sa.engine.Engine, tenant: str, contact_id: str, enabled: b
 
 def compute(schema: str, run_crm: Callable[[str], dict[str, Any]], logo: Callable[[list[str], date, date], tuple[list[dict[str, Any]], Optional[date], list[int]]],
             engine: sa.engine.Engine, tenant: str, contact_id: str, *, web_enabled: bool,
-            today: Optional[date] = None) -> dict[str, Any]:
-    """Yazarın gelişim özeti. `logo(kodlar, başlangıç, bitiş)` → (satır grupları, veri sonu günü, eksik yıllar)."""
+            today: Optional[date] = None, books_rows: Optional[list[dict[str, Any]]] = None,
+            loyalty_row: Optional[dict[str, Any]] = None, prepared: bool = False) -> dict[str, Any]:
+    """Yazarın gelişim özeti. `logo(kodlar, başlangıç, bitiş)` → (satır grupları, veri sonu günü, eksik yıllar).
+    `prepared`: kitaplar, sadakat izi ve satış önceden hazırlanmış parçadan gelir (author_snapshots); CRM'e yalnız
+    kişinin sözleşme listesi sorulur."""
     cid = _guid(contact_id)
     today = today or _now().date()
-    books_raw = run_crm(books_sql(schema, cid)).get("records") or []
+    books_raw = books_rows if prepared else (run_crm(books_sql(schema, cid)).get("records") or [])
     books: dict[str, dict[str, Any]] = {}
     for b in books_raw:
         bid = str(b.get("new_kitapId") or "").lower()
@@ -409,7 +412,7 @@ def compute(schema: str, run_crm: Callable[[str], dict[str, Any]], logo: Callabl
 
     contracts = run_crm(contracts_sql(schema, cid)).get("records") or []
     contract_ids = [str(r.get("new_sozlesmeId") or "") for r in contracts if r.get("new_sozlesmeId")]
-    loy_rows = run_crm(loyalty_sql(schema, cid)).get("records") or []
+    loy_rows = ([loyalty_row] if loyalty_row else []) if prepared else (run_crm(loyalty_sql(schema, cid)).get("records") or [])
     eans = {b["ean"]: b["title"] for b in books.values() if len(b["ean"]) >= 8}
     return {
         "contactId": cid,

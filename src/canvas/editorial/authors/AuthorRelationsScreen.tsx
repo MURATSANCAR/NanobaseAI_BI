@@ -11,6 +11,7 @@ import CardForm from './CardForm';
 import HeatMapTab from './HeatMapTab';
 import PoolTab from './PoolTab';
 import AgendaTab from './AgendaTab';
+import { SnapshotBar } from './shared';
 
 /** M7 Yazar ilişkileri: ısı haritası, potansiyel yazar havuzu, randevular; yeni yazar kartı. Sekme ve açık kart adres
  *  çubuğunda durur (?sekme=, ?kart= ya da ?kisi= CRM kimliği), bağlantı paylaşılabilir. */
@@ -101,6 +102,7 @@ export default function AuthorRelationsScreen() {
         <Kpi label="Geciken adım" value={late === null ? '—' : nf.format(late)} help="Tarihi geçmiş sıradaki adımım" onClick={() => update({ sekme: 'randevu' })} />
       </KpiRow>
 
+      <SnapshotBar />
       {tab === 'isi' && <HeatMapTab onOpen={open} onMonths={setMonths} />}
       {tab === 'havuz' && <PoolTab onOpen={open} />}
       {tab === 'randevu' && <AgendaTab onOpen={open} />}

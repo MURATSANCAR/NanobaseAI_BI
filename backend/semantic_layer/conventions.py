@@ -20,6 +20,8 @@ FLAG_MAX_DISTINCT = 2
 # Any other low-cardinality enum is a business *type* code: it scopes a metric, never a default.
 SCOPE_MAX_DISTINCT = 64
 _TIME_TYPES = ("date", "time", "timestamp", "datetime", "smalldatetime")
+#: How a time of day is stored beside a date. logo_packed: hour*2^24 + minute*2^16 + second*2^8 (Logo TIME_/FTIME).
+TIME_ENCODINGS = {"logo_packed": lambda h, m, s: h * 16777216 + m * 65536 + s * 256}
 _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money", "bigint", "smallint", "tinyint")
 
 
@@ -133,6 +135,7 @@ class Conventions:
         """
         import yaml
         self.time_equivalences = []
+        self.times_of_day = {}
         self.filter_equivalences = []
         if not path.exists():
             return
@@ -158,6 +161,12 @@ class Conventions:
             if not all(self.time_column(side["entity"]) == side["column"].upper() for side in (left, right)):
                 continue
             self.time_equivalences.append(rule)
+        for rule in declarations.get("time_of_day", []):
+            if not rule.get("reason") or rule.get("encoding") not in TIME_ENCODINGS:
+                raise ValueError("time of day requires a known encoding and a reason")
+            entity = rule["entity"]
+            if self.has(entity, rule["column"]) and self.time_column(entity) == rule["date"].upper():
+                self.times_of_day[entity] = {"column": rule["column"].upper(), "encoding": rule["encoding"], "reason": rule["reason"]}
         for rule in declarations.get("equivalent_filters", []):
             left, right = rule["left"], rule["right"]
             if not rule.get("reason") or not rule.get("values"):
@@ -181,6 +190,10 @@ class Conventions:
                                 "join": list(rule["join"]), "source": "declared_business_filter", "reason": rule["reason"]})
         return out
 
+
+    def time_of_day(self, entity: str) -> Optional[dict]:
+        """The declared time-of-day column beside this entity's business date, or None: {column, encoding, reason}."""
+        return getattr(self, "times_of_day", {}).get(entity)
 
     def temporal_binding(self, entity: str) -> Optional[dict]:
         column = self.time_column(entity)

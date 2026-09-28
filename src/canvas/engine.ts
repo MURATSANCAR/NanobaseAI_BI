@@ -1599,6 +1599,15 @@ export type AuthorGrowth = {
   notes: string[];
   computedAt: string;
   cached?: boolean;
+  preparedAt?: string;
+  snapshot?: AuthorSnapshot;
+};
+/** Önceden hazırlanan M7 verisinin durumu (CRM + Logo parçaları, 5 dk'da bir ve «Yenile» ile). */
+export type AuthorSnapshot = {
+  intervalSeconds: number;
+  refreshing: boolean;
+  crm: { updatedAt: string; error: string | null; seconds: number | null } | null;
+  sales: { updatedAt: string; error: string | null; seconds: number | null } | null;
 };
 export type AuthorAdvice = {
   id: string;
@@ -1681,6 +1690,8 @@ export const authorsApi = {
   advice: (contactId: string) =>
     send<{ advice: AuthorAdvice | null; modelReady: boolean }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
   makeAdvice: (contactId: string) => send<AuthorAdvice>('POST', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 600_000),
+  snapshot: () => send<AuthorSnapshot>('GET', `${A}/snapshot`, undefined, 30_000),
+  refresh: () => send<AuthorSnapshot>('POST', `${A}/refresh`, undefined, 30_000),
   remindersMe: () =>
     send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number } }>('GET', `${A}/reminders/me`, undefined, 30_000),
   setReminders: (enabled: boolean) => send<{ enabled: boolean }>('PUT', `${A}/reminders/me`, { enabled }, 30_000),
@@ -2211,6 +2222,13 @@ export const translationApi = {
     send<{ status: SegmentStatus; updatedAt: string; repeatsFilled: number }>('PUT', `${TR}/segments/${enc(id)}`, b, 30_000),
   review: (id: string, b: { action: 'onayla' | 'geri'; target?: string; toTranslator?: boolean; note?: string }) =>
     send<{ updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/review`, b, 30_000),
+  /** İşteki bir sonraki segment (süzgeçten bağımsız) ve birleştirilebilir mi; birleştir/böl: çevirmen ya da işi yöneten. */
+  segmentNext: (id: string) =>
+    send<{ next: { id: string; no: number; para: number; source: string; target: string; status: SegmentStatus; updatedAt: string | null } | null; mergeable: boolean; reason: string | null }>('GET', `${TR}/segments/${enc(id)}/next`, undefined, 30_000),
+  mergeNext: (id: string, b: { nextId: string; updatedAt?: string | null; nextUpdatedAt?: string | null }) =>
+    send<{ id: string; removed: string; source: string; target: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/merge`, b, 30_000),
+  split: (id: string, b: { at: number; source: string; updatedAt?: string | null }) =>
+    send<{ id: string; newId: string; source: string; newSource: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/split`, b, 30_000),
   addError: (id: string, b: { category: string; severity: string; note?: string }) => send<{ id: string }>('POST', `${TR}/segments/${enc(id)}/errors`, b, 30_000),
   deleteError: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/errors/${enc(id)}`, undefined, 30_000),
   approveMany: (id: string, chapter: number | null) => send<{ approved: number }>('POST', `${TR}/jobs/${enc(id)}/approve`, { chapter }, 60_000),
@@ -2234,6 +2252,57 @@ export const translationApi = {
   importTerms: (src: string, tgt: string, file: File) =>
     putFile<{ added: number; updated: number; skipped: number }>(`${TR}/terms/import?src=${enc(src)}&tgt=${enc(tgt)}`, file),
   termsCsvUrl: (src?: string, tgt?: string) => `${ENGINE_BASE}${TR}/terms/export.csv${qs({ src: src || undefined, tgt: tgt || undefined })}`,
+};
+
+// ------------------------------------------------------ çeviri işi → serbest çalışan işi ve hakediş (M4 → M8)
+
+export type PayoutBasis = 'onaylanan' | 'cevrilen';
+export type TranslationPayout = {
+  jobId: string;
+  words: { total: number; approved: number; translated: number };
+  bases: Record<PayoutBasis, string>;
+  unit: string;
+  wordsPerPage: number;
+  /** M8'de çeviri rolündeki aktif kişiler; kartında kelime ücreti yazılıysa `rate`. */
+  people: Array<{ id: string; name: string; city: string | null; email: string | null; rate: number | null }>;
+  link: {
+    personId: string;
+    personName: string | null;
+    personActive: boolean;
+    rate: number;
+    basis: PayoutBasis;
+    basisWords: number;
+    transferred: number;
+    pending: number;
+    pendingAmount: number;
+    transferredAmount: number;
+    ahead: number;
+    updatedBy: string;
+    updatedAt: string | null;
+  } | null;
+  task: { id: string; title: string; status: string; units: number; unitPrice: number; due: string | null; open: boolean } | null;
+  package: { id: string; title: string; status: 'acik' | 'kapandi' | 'iptal' } | null;
+  moves: Array<{
+    id: string;
+    taskId: string;
+    words: number;
+    basis: PayoutBasis;
+    rate: number;
+    amount: number;
+    by: string;
+    at: string;
+    payout: { id: string; no: number; status: string } | null;
+  }>;
+};
+
+export const translationPayoutApi = {
+  get: (jobId: string) => send<TranslationPayout>('GET', `${TR}/jobs/${enc(jobId)}/payout`, undefined, 30_000),
+  save: (jobId: string, b: { personId: string; rate: string; basis: PayoutBasis }) =>
+    send<{ personId: string; personName: string; rate: number; basis: PayoutBasis }>('PUT', `${TR}/jobs/${enc(jobId)}/payout`, b, 30_000),
+  openPackage: (jobId: string) =>
+    send<{ packageId: string; taskId: string; created: boolean; units: number }>('POST', `${TR}/jobs/${enc(jobId)}/payout/package`, {}, 60_000),
+  transfer: (jobId: string) =>
+    send<{ moved: number; transferred: number; amount: number; taskId: string | null }>('POST', `${TR}/jobs/${enc(jobId)}/payout/transfer`, {}, 60_000),
 };
 
 // ------------------------------------------------------ editoryal arama ve kitap 360 (ana ekran)

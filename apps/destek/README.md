@@ -25,11 +25,38 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
   Frappe kök yolda çalışır (`/helpdesk`, `/app`, `/api`, `/assets`), o yüzden `/timas/` altına değil ayrı porta konur.
 - Ekranlar: `/helpdesk` temsilci ekranı ve müşteri portalı (`/helpdesk/my-tickets`), `/app` masaüstü;
   masaüstünde `Ctrl+I` yapay zekâ panelini açar.
-- Giriş Frappe'nin kendi kullanıcılarıyla. Yönetici şifresi sunucuda `/etc/nanobase/destek-admin.txt` (root, 600).
+- Giriş Timaş Active Directory ile, iki yol:
+  1. **Portal oturumuyla otomatik (tek oturum):** portala girmiş kişi Destek'e gelince giriş sayfası tarayıcıyı
+     portalın `/timas/auth/destek-sso` adresine yollar (portal çerezi `Path=/timas/` olduğu için Destek onu doğrudan
+     göremez). Portal giriş servisi (`scripts/server/portal-login/server.py`) oturumu okur, 60 sn'lik tek kullanımlık
+     HMAC jetonla Destek'e döner; Destek imzayı, süreyi, tek kullanımı denetler, kişiyi AD'den bulur ve oturum açar
+     (`nanobase_brand/sso.py`, `public/js/portal_sso.js`). Ortak anahtar `/etc/nanobase/destek-sso.key`
+     (`root:www-data 640`) → site ayarı `destek_sso_secret`.
+  2. **AD kullanıcı adı + şifre:** portal oturumu yoksa `/login?sso=0` formu; NTLM ile doğrulanır (`ldap_ntlm.py`).
+  Her etkin AD kişisi temsilcidir; portal yöneticileri (`TIMAS_ADMIN_USERS`/`TIMAS_ADMIN_GROUP`) yöneticidir.
+  Yerel yönetici hesabı (Administrator) şifresi `/etc/nanobase/destek-admin.txt` (root, 600), `/login?sso=0`'dan.
 - Model: NanobaseAI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
   `deploy/nginx-destek-llm.conf`, Bearer anahtarı `/etc/nanobase/destek-llm.key`) → köprünün OpenAI uyumlu girişi
   `/api/v1/llm/openai/v1/chat/completions` (`backend/semantic_bridge/llm_openai.py`). Her çağrı `sl_llm_queue`
   sırasından kiralık alır (modül `destek`, etkileşimli öncelik); BI soruları ve gece işleriyle aynı slotları paylaşır.
+
+## Yapay zekâ özellikleri (`nanobase_brand/yz/`)
+
+Model çağrılarının hepsi LLM kapısından (`/destek-llm/v1`, modül `destek`); model hiçbir şeyi müşteriye göndermez.
+
+| Özellik | Nerede | Davranış |
+|---|---|---|
+| Sınıflama | yeni kayıt (arka plan, `yz/kanca.py` → `kayit.classify`) | tür, öncelik, ekip, müşteri duygusu; yalnız boş ya da sistem varsayılanındaki alan, yalnız tanımlı değer; kayıt geçmişine not. Atama kuralı çalışamazsa alanlar yine yazılır |
+| Özet | temsilci ekranı → «NanobaseAI» → Özetle | 3 satır: istek, yapılan, sıradaki adım |
+| Yanıt taslağı | «Yanıt taslağı hazırla» | bilgi bankası + çözülen kayıtlardan; yanıt kutusuna eklenir, temsilci gönderir; dayanak bağlantıları |
+| Makale taslağı | çözülen kayıtta | kişisel verisiz taslak makale (`HD Article`, Taslak, `nb_kaynak_kayit`) |
+| SLA riski | hafta içi 08:30 | riskteki açık kayıtlar → Not + «Agent Manager» e-postası |
+| Haftalık rapor | pazartesi 08:00 (elle `yz.rapor.weekly_now`) | sayılar veritabanından, 5 maddelik yorum modelden |
+
+Bilgi bankası «NanobaseAI Destek Bilgisi»: yayımlanmış makaleler + çözülen kayıtlar (Flow günlük eşitleme); gömme BI'ın
+gömme servisi (`bge-m3`, 1024 boyut) — kapının `/embeddings` aktarıcısı. Temsilci paneli
+`helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue` (marka.py ile kenar çubuğuna eklenir).
+Giden e-posta hesabı tanımlı değilse raporlar yalnız Not olarak kalır.
 
 ## Kurulum / güncelleme
 
@@ -75,5 +102,4 @@ HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Açık işler
 
-- Portalın AD girişiyle ortak oturum yok; Frappe'nin LDAP ayarıyla AD'ye bağlanabilir.
 - Müşteri VM'ine kurulmadı.

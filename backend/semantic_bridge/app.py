@@ -534,7 +534,7 @@ class Runtime:
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
                 "dbMs": int(round(duration * 1000))}, duration
 
-    def run_complete(self, sql: str, period=None, *, scope=None) -> dict[str, Any]:
+    def run_complete(self, sql: str, period=None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         ok, why = validate_sql(sql)
         if not ok:
             raise ValueError(why)
@@ -552,7 +552,7 @@ class Runtime:
             with self._engine_lock:
                 key = hashlib.sha256(phys.encode()).hexdigest()
                 cached = self._complete_cache.get(key)
-                if cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
+                if use_cache and cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
                     return dict(self._served(cached[1], cached[0]), cached=True)
                 with self._results_lock:
                     for rid, snap in list(self._results.items()):
@@ -928,7 +928,8 @@ class Runtime:
         # 2026-09-28: kapsam şirketin bütün modülleri. Sınıflandırıcı ret yalnız kimlik ve şirket dışı
         # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
         # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
-        if not any(slot.mapping is not None for slot in sq.slots):
+        # Güçlü kanıt = sertifikalı kavram; kelime içi tahmin ya da veride geçen bir değer tek başına iş sorusu saymaz.
+        if not chat_scope.has_business_evidence(sq.slots):
             scope = chat_scope.classify(question, self.llm_for("chat"),
                                         has_context=bool(self.thread_plans.get(thread_id)))
             if scope.is_intro:
@@ -1962,6 +1963,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         app.state.financial_audit.start()
         app.state.editorial_home.start()
         app.state.editorial_intake.start()
+        app.state.author_snapshots.start()
         app.state.management_reports.start()
         # Label dictionary (every value of the certified text columns, every table copy): built on its own
         # connections when missing or a day old, then daily. The resolver only reads the file.
@@ -1985,6 +1987,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             label_stop.set()
             app.state.editorial_home.stop()
             app.state.editorial_intake.stop()
+            app.state.author_snapshots.stop()
             app.state.management_reports.stop()
             app.state.financial_audit.stop()
             rt.jobs.stop()
@@ -2000,6 +2003,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return await call_next(request)
         finally:
             FORCE_FRESH.reset(token)
+
+    # Yavaş ekran verisi: önce hazır cevap, arkada tazele (5 dk; «Yenile» beklemeden; yazma o modülü düşürür).
+    # Sayfa kapısından önce kurulur ki kapının İÇİNDE çalışsın: hazır cevap yalnız oturumu ve sayfa yetkisi olan kişiye.
+    from semantic_bridge import response_cache as rc_mod
+    from semantic_bridge import board as _board_for_cache
+
+    app.state.response_cache = rc_mod.ResponseCache()
+    rc_mod.install(app, app.state.response_cache, _board_for_cache.user_of,
+                   lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"))
 
     def rt() -> Runtime:
         if state["rt"] is None:
@@ -2073,7 +2085,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/health")
     def health() -> JSONResponse:
         r = rt()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats()})
+        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "responseCache": app.state.response_cache.view()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:
@@ -2365,6 +2377,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import llm_openai as llm_openai_mod
 
     llm_openai_mod.register(app, rt, _require_caller)
+    llm_openai_mod.register_embeddings(app, _require_caller)
 
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:
@@ -4661,18 +4674,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/pool/crm")
     def authors_pool_crm(request: Request, q: str = "", page: int = 0, closed: bool = False) -> dict[str, Any]:
         engine, tenant, _, _, _ = _rel(request)
+        snaps = _snapshots()
+        ready = _rel_call(snaps.pool_page, engine, tenant, page, q=q, closed=closed)
+        if ready is not None:
+            return dict(ready, snapshot=snaps.status())
         schema, run = _editorial(request)
         since = admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01"
-        return _rel_call(rel_mod.pool_crm, schema, run, engine, tenant, since, page, q=q, closed=closed)
+        return dict(_rel_call(rel_mod.pool_crm, schema, run, engine, tenant, since, page, q=q, closed=closed), snapshot=snaps.status())
 
     @app.get("/api/v1/editorial/authors/heatmap")
     def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _, _ = _rel(request)
         schema = admin_mod.conf("CRM_SCHEMA")
-        return _rel_call(rel_mod.heatmap, schema, _crm_fetch_all, engine, tenant, user,
-                         scope=scope, q=q, order=order, page_no=page,
-                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60),
-                         loyalty=lambda: growth_mod.loyalty_map(_crm_fetch_all(growth_mod.loyalty_sql(schema))))
+        snaps = _snapshots()
+        crm = snaps.crm_for_heatmap()
+        out = _rel_call(rel_mod.heatmap, schema, _crm_fetch_all, engine, tenant, user,
+                        scope=scope, q=q, order=order, page_no=page,
+                        warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60), crm=crm,
+                        loyalty=(lambda: growth_mod.loyalty_map(crm["loyalty"])) if crm else
+                        (lambda: growth_mod.loyalty_map(_crm_fetch_all(growth_mod.loyalty_sql(schema)))))
+        return dict(out, snapshot=snaps.status())
 
     # ---- M7 gelişim takibi: Logo satışı, M6 hakedişleri, okur sesi, sadakat, Zeki AI önerisi; günlük hatırlatma
     from semantic_bridge import author_growth as growth_mod
@@ -4721,14 +4742,89 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _web_enabled() -> bool:
         return (admin_mod.conf("WEB_WATCH_ENABLED") or "0").strip().lower() in ("1", "true", "evet", "on")
 
+    # Ağır CRM ve Logo okumaları önceden hazırlanır (5 dk'da bir, «Yenile» ile hemen); ekran hazır veriden anında hesaplanır.
+    from semantic_bridge import author_snapshots as snap_mod
+
+    def _crm_fetch_fresh(sql: str) -> list[dict[str, Any]]:
+        r = rt()
+        out = r.run_complete(sql, use_cache=False)
+        path = out.get("_result_file")
+        rows = r.result_files.read(path) if path else list(out.get("records") or [])
+        cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+        return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+    def _logo_reader():
+        from datetime import date
+        from semantic_bridge import contracts_royalty as royalty_mod
+        from semantic_layer.profiler.connectors import connector_from_file
+        conn = connector_from_file(rt().settings.connection_file)
+        conn.query_timeout = 900
+        views = {int(r["name"][-4:]) for r in conn.execute(
+            "SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'", 1000)[1]}
+
+        def run(sql: str) -> list[dict[str, Any]]:
+            _, rows, truncated = conn.execute(sql, 2_000_000)
+            if truncated:
+                raise RuntimeError("Logo satış sonucu satır sınırını aştı; hazırlık eksik kalırdı.")
+            return list(rows)
+
+        def data_end(year: int) -> Optional["date"]:
+            last = list(conn.execute(royalty_mod.data_end_sql(year), 1)[1])
+            return growth_mod._day(last[0].get("son")) if last else None
+
+        def close() -> None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+        return views, run, data_end, close
+
+    def _pool_since() -> str:
+        return admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01"
+
+    def _snap_scope():
+        r = rt()
+        return [r.settings.tenant_id, r.settings.datasource_id, admin_mod.conf("CRM_SCHEMA"), _pool_since()]
+
+    app.state.author_snapshots = snap_mod.AuthorSnapshots(
+        _snap_scope, lambda: admin_mod.conf("CRM_SCHEMA"), _pool_since, _crm_fetch_fresh, _logo_reader)
+
+    def _snapshots() -> "snap_mod.AuthorSnapshots":
+        snaps = app.state.author_snapshots
+        if FORCE_FRESH.get():   # üst şeritteki «Verileri yenile»
+            snaps.refresh_now()
+        return snaps
+
+    @app.get("/api/v1/editorial/authors/snapshot")
+    def authors_snapshot(request: Request) -> dict[str, Any]:
+        _rel(request)
+        return app.state.author_snapshots.status()
+
+    @app.post("/api/v1/editorial/authors/refresh")
+    def authors_refresh(request: Request) -> dict[str, Any]:
+        _rel(request)
+        return app.state.author_snapshots.refresh_now()
+
     @app.get("/api/v1/editorial/authors/growth/{contact_id}")
     def authors_growth(contact_id: str, request: Request, refresh: bool = False) -> dict[str, Any]:
         engine, tenant, _, _, _ = _rel(request)
         growth_mod.ensure(engine)
         schema, run = _editorial(request)
+        snaps = _snapshots()
+        if refresh:
+            snaps.refresh_now()
+        ready = _growth_call(snaps.growth_inputs, contact_id)
+        if ready is not None:
+            out = _growth_call(growth_mod.compute, schema, run, ready["logo"], engine, tenant, contact_id,
+                               web_enabled=_web_enabled(), books_rows=ready["books"], loyalty_row=ready["loyalty"],
+                               prepared=True)
+            return dict(out, cached=True, preparedAt=datetime.fromtimestamp(ready["updatedAt"], timezone.utc).isoformat(),
+                        snapshot=snaps.status())
+        # Hazırlık henüz bitmedi (ilk kurulum): yazar tek başına canlı okunur, 12 saat saklanır.
         build = lambda: growth_mod.compute(schema, run, _logo_sales, engine, tenant, contact_id,  # noqa: E731
                                            web_enabled=_web_enabled())
-        return _growth_call(growth_mod.cached, engine, tenant, contact_id, build, refresh=refresh)
+        return dict(_growth_call(growth_mod.cached, engine, tenant, contact_id, build, refresh=refresh), snapshot=snaps.status())
 
     @app.get("/api/v1/editorial/authors/advice/{contact_id}")
     def authors_advice(contact_id: str, request: Request) -> dict[str, Any]:
@@ -5102,6 +5198,30 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, see_all = _tr(request)
         return _tr_call(tr_mod.review_segment, engine, tenant, user, see_all, seg_id, body)
 
+    # Segment birleştir / böl (editorial_translation_segments.py); çevirmen ya da işi yöneten.
+    from semantic_bridge import editorial_translation_segments as tr_seg
+
+    @app.get("/api/v1/editorial/translation/segments/{seg_id}/next")
+    def tr_segment_next(seg_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_seg.next_segment, engine, tenant, user, see_all, seg_id)
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/merge")
+    def tr_segment_merge(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_seg.merge_next, engine, tenant, user, see_all, seg_id, body)
+        admin_mod.audit(engine, user, "update", "translation_segment_merge", seg_id, None,
+                        {k: out[k] for k in ("jobId", "removed", "status", "errorsMoved", "demoted")})
+        return out
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/split")
+    def tr_segment_split(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_seg.split_segment, engine, tenant, user, see_all, seg_id, body)
+        admin_mod.audit(engine, user, "update", "translation_segment_split", seg_id, None,
+                        {**{k: out[k] for k in ("jobId", "newId", "status", "demoted")}, "at": body.get("at")})
+        return out
+
     @app.post("/api/v1/editorial/translation/segments/{seg_id}/errors")
     def tr_error_add(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)
@@ -5132,6 +5252,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         chat = (lambda messages: llm.chat(messages, max_tokens=4096, temperature=0.2)) if llm is not None else None
         out = _tr_call(tr_mod.start_draft, engine, tenant, user, see_all, job_id, body, chat)
         admin_mod.audit(engine, user, "run", "translation_draft", job_id, None, {"chapter": body.get("chapter"), **out})
+        return out
+
+    # ZEKİ kalite tahmini (editorial_translation_qe.py): segment başına 0–100 tahmin, MQM puanı değildir. Başlatma
+    # model harcar; işin inceleyeni/açanı ya da «ceviri.yonet» sahibi (ucun içinde, FEATURE_RULES'ta değil).
+    from semantic_bridge import editorial_translation_qe as tr_qe
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/qe")
+    def tr_qe_get(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        tr_qe.ensure(engine)
+        return _tr_call(tr_qe.job_qe, engine, tenant, user, see_all, job_id, _can(user, "ozellik:ceviri.yonet"))
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/qe")
+    def tr_qe_start(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        tr_qe.ensure(engine)
+        llm = rt().llm_for("editorial", priority=1)
+        chat = (lambda messages: llm.chat(messages, max_tokens=3072, temperature=0.0)) if llm is not None else None
+        out = _tr_call(tr_qe.start_qe, engine, tenant, user, see_all, job_id, body, chat, _can(user, "ozellik:ceviri.yonet"))
+        admin_mod.audit(engine, user, "run", "translation_qe", job_id, None,
+                        {"chapter": body.get("chapter"), "all": bool(body.get("all")), **out})
         return out
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/candidates")
@@ -5182,6 +5323,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, _user, _ = _tr(request)
         return {"items": tr_mod.translators(engine, tenant)}
 
+    @app.get("/api/v1/editorial/translation/match")
+    def tr_match(request: Request, src: str = "", tgt: str = "", words: str = "0", due: str = "", job: str = "") -> dict[str, Any]:
+        # Çevirmen eşleştirme önerisi (editorial_translation_match.py): yalnız okur. Rehber yalnız e-postalı
+        # serbest çalışan kartı varsa okunur (kart ↔ portal kullanıcısı bağı); okunamazsa kayıtlar ayrı kalır.
+        from semantic_bridge import editorial_translation_match as match_mod
+        engine, tenant, _user, _ = _tr(request)
+
+        def directory() -> dict[str, str]:
+            rows, _, _ = _crm_people()
+            return {str(p.get("username") or "").lower(): str(p.get("email") or "").lower() for p in rows if p.get("username")}
+
+        return _tr_call(match_mod.match, engine, tenant, src, tgt, words, due or None, exclude_job=job or None, directory=directory)
+
     @app.get("/api/v1/editorial/translation/terms")
     def tr_terms(request: Request, src: str = "", tgt: str = "", q: str = "", status: str = "", job: str = "") -> dict[str, Any]:
         engine, tenant, _user, _ = _tr(request)
@@ -5228,6 +5382,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         out = await run_in_threadpool(_tr_call, tr_mod.import_terms, engine, tenant, user, src, tgt, data)
         admin_mod.audit(engine, user, "upload", "translation_terms", None, filename, {"src": src, "tgt": tgt, **out})
         return out
+
+    # M4 → M8: çeviri işinin serbest çalışanı, kelime ücreti, M8 iş paketi ve hakedişe aktarım (translation_payout.py).
+    from semantic_bridge import translation_payout as tr_payout_mod
+    tr_payout_mod.register(app, {"auth": _tr, "audit": admin_mod.audit})
+<<<<<<< HEAD
+=======
+    # Dış çeviri belleği (TMX) ve terim bankası TBX içe/dışa aktarımı: uçlar editorial_translation_io.py'de.
+    from semantic_bridge import editorial_translation_io as tr_io
+    tr_io.register(app, _tr, _tr_call, _attachment, admin_mod.audit)
+>>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
 
     # ------------------------------------------------------------------ serbest çalışanlar (M8)
     # Kayıt + portfolyo, iş paketi ve toplu dağıtım, kapasite, teslim, hakediş, yazışma. Kendi tablolarımız;

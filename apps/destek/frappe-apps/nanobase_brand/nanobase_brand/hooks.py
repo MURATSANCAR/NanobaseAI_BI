@@ -27,3 +27,16 @@ website_context = {
 # bir sonraki kurulumda NanobaseAI'ye döner (bilinçli: marka tek yerden gelir).
 after_install = "nanobase_brand.install.apply"
 after_migrate = ["nanobase_brand.install.apply"]
+
+# Yapay zekâ özellikleri: nanobase_brand/yz/
+doc_events = {
+	"HD Ticket": {"after_insert": "nanobase_brand.yz.kanca.on_ticket_insert"},
+}
+
+scheduler_events = {
+	"cron": {
+		# Hafta içi 08:30: SLA riskindeki kayıtlar; pazartesi 08:00: haftalık rapor
+		"30 8 * * 1-5": ["nanobase_brand.yz.rapor.daily_sla_risk"],
+		"0 8 * * 1": ["nanobase_brand.yz.rapor.weekly"],
+	},
+}

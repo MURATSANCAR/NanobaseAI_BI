@@ -118,14 +118,16 @@ export function paceText(job: Pick<TranslationJob, 'dueDate' | 'words'>, p: Tran
 }
 
 export type PersonPick = { username: string; name: string };
+/** Alandaki metin. Serbest çalışan önerisinde kullanıcı adı yoktur (portala giremez): yalnız adı görünür. */
+const shownPerson = (v: PersonPick) => (v.name && v.username ? `${v.name} (${v.username})` : v.name || v.username);
 
 /** AD kişi rehberinden kullanıcı adı seçimi (yazarak arama). Rehberde olmayan kullanıcı adı da yazılabilir. */
 export function PersonField({ value, onChange, placeholder }: { value: PersonPick; onChange: (v: PersonPick) => void; placeholder?: string }) {
   const id = useId();
   const people = useQuery({ queryKey: ['people', 'list'], queryFn: peopleApi.list, staleTime: 10 * 60_000 });
-  const [text, setText] = useState(value.name ? `${value.name} (${value.username})` : value.username);
+  const [text, setText] = useState(shownPerson(value));
   useEffect(() => {
-    setText(value.name ? `${value.name} (${value.username})` : value.username);
+    setText(shownPerson({ username: value.username, name: value.name }));
   }, [value.username, value.name]);
   const items = people.data?.items ?? [];
   return (
@@ -228,7 +230,13 @@ export function useWide(query = '(min-width: 1024px)') {
 export function Tabs<K extends string>({ tabs, value, onChange, label }: { tabs: Record<K, string>; value: K; onChange: (k: K) => void; label: string }) {
   const keys = Object.keys(tabs) as K[];
   return (
-    <div className="grid gap-1 rounded-2xl bg-slate-100 p-1" style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }} role="tablist" aria-label={label}>
+    // Dört sekme telefonda 2×2 dizilir (320 px'te tek satırda sığmaz); daha azı tek satır.
+    <div
+      className={`grid gap-1 rounded-2xl bg-slate-100 p-1 ${keys.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : ''}`}
+      style={keys.length === 4 ? undefined : { gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }}
+      role="tablist"
+      aria-label={label}
+    >
       {keys.map((k) => (
         <button
           key={k}

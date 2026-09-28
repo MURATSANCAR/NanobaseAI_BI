@@ -7,6 +7,7 @@ import { dateTime, num } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { CATEGORY, ProgressBar, SEVERITY, StagePill, fmtDay, pair, paceText, pct } from './parts';
+import { QePanel } from './qe';
 
 /** Kalite raporu (M4): işin gerçek kayıtlarından. MQM inceleme puanı (onaylanan kelimelere göre hata ağırlığı),
  *  inceleyenin düzeltme oranı, otomatik denetim bulguları, terim uyumu, bölüm ve gün gün ilerleme. */
@@ -277,7 +278,7 @@ export default function QualityReport() {
       route="/ceviri"
       crumb="Kalite raporu"
       title={r ? r.title : 'Kalite raporu'}
-      lead="İşin segment, inceleme ve ilerleme kayıtlarından hesaplanır; tahmin ya da örnek veri yoktur. Segment numarasına tıklayınca çeviri masasında o segment açılır."
+      lead="İşin segment, inceleme ve ilerleme kayıtlarından hesaplanır; örnek veri yoktur. Tek tahmin «ZEKİ kalite tahmini» panelidir ve öyle işaretlidir. Segment numarasına tıklayınca çeviri masasında o segment açılır."
       source={r ? pair(r) : 'Çeviri masası'}
       presence="Kaynak: çeviri kayıtları"
       aside={
@@ -348,6 +349,7 @@ export default function QualityReport() {
             <Mqm r={r} />
             <Checks r={r} />
           </div>
+          <QePanel jobId={r.id} />
           <Chapters r={r} />
           <Terms r={r} />
           <Daily r={r} />
