@@ -212,9 +212,13 @@ WHERE ss.new_StokKodu = N'{code}' AND s.statuscode NOT IN ({excl}) AND s.new_sip
 
     # 5 ---------------------------------------------------------------- depo stoku
     dep = logo(sql_text("baski-oneri", "logo_depo_stok"))
-    ref5 = sum(float(r["depo_stok"] or 0) for r in dep if str(r.get("stok_kodu") or "").strip() == args.stok)
+    key = lambda v: "".join(str(v or "").split()).upper()  # noqa: E731 — köprüdeki launch_sources.stock_key ile aynı
+    ref5 = sum(float(r["depo_stok"] or 0) for r in dep if key(r.get("stok_kodu")) == key(args.stok))
+    # Logo görünümünün son okuması sinyalde (`depo.logo`); pencere (D+30) bittiyse seride görünmez. Eski köprüde seri.
+    dp = tr30.get("depo") or {}
     depo_row = next((r for r in reversed(tr30["seri"]) if r.get("depo") is not None), {})
-    check("5-depo", near(ref5, depo_row.get("depo")), sql=ref5, ekran=depo_row.get("depo"), ekranKaynak=(tr30.get("depo") or {}).get("kaynakAdi"))
+    ekran5 = dp.get("logo") if dp.get("logo") is not None else depo_row.get("depo")
+    check("5-depo", near(ref5, ekran5), sql=ref5, ekran=ekran5, ekranSecilen=dp.get("deger"), ekranKaynak=dp.get("kaynakAdi"))
 
     # 6 ---------------------------------------------------------------- hedef payı (D..D+6)
     st_, tg = api("GET", f"/api/v1/budget/targets?year={pub.year}&stok={args.stok}&actuals=false")
