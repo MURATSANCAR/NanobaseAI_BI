@@ -112,7 +112,8 @@ def main() -> int:
         firm = f"{years.get(datetime.now().year) or years[max(years)]:03d}"
         ref = direct(logo_file, f"SELECT MAX(DATE_) AS son FROM LG_{firm}_01_INVOICE WHERE CANCELLED = 0 AND DATE_ <= CAST(GETDATE() AS date)")[0]["son"]
         raw = direct(logo_file, f"SELECT MAX(DATE_) AS son FROM LG_{firm}_01_INVOICE WHERE CANCELLED = 0")[0]["son"]
-        ref_d = (ref.date() if isinstance(ref, datetime) else ref)
+        # Bağlantı tarihi metin de dönebilir ('2026-08-17T00:00:00'): gün ilk on karakterden.
+        ref_d = ref.date() if isinstance(ref, datetime) else (ref if isinstance(ref, date) or ref is None else date.fromisoformat(str(ref)[:10]))
         row = last_check(engine, tenant, "logo")
         app_d = I._aware(row["data_end"]).astimezone(timezone(timedelta(hours=3))).date() if row and row["data_end"] else None
         api_d = ring_api.get("logo", {}).get("dataEnd")
@@ -127,6 +128,8 @@ def main() -> int:
     try:
         schema = admin_mod.conf("CRM_SCHEMA", "Timas_MSCRM.dbo")
         ref = direct(crm_file, f"SELECT MAX(ModifiedOn) AS son FROM {S.crm_prefix(schema)}new_kitapBase WHERE ModifiedOn <= GETUTCDATE()")[0]["son"]
+        if ref is not None and not isinstance(ref, datetime):
+            ref = datetime.fromisoformat(str(ref)[:19])
         ref = ref.replace(tzinfo=timezone.utc) if isinstance(ref, datetime) and ref.tzinfo is None else ref
         row = last_check(engine, tenant, "crm")
         app = I._aware(row["data_end"]) if row and row["data_end"] else None

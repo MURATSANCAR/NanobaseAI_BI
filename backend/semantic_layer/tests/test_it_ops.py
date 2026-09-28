@@ -358,3 +358,12 @@ def test_screens_have_no_technology_names():
     assert hits == []
     for r in I.RINGS:
         assert not banned.search(r["label"] + r["hint"] + r["recipe"])
+
+
+def test_crm_data_end_text_is_utc():
+    """Bağlantı CRM tarihini metin verirse de UTC sayılır (İstanbul sayılınca 3 saat erken görünüyordu)."""
+    from datetime import datetime as _D, timezone as _Z
+    from semantic_bridge import it_ops_sources as _S
+    assert _S.crm_utc("2026-09-28T09:09:15") == _D(2026, 9, 28, 9, 9, 15, tzinfo=_Z.utc)
+    assert _S.crm_utc(_D(2026, 9, 28, 9, 9, 15)) == _D(2026, 9, 28, 9, 9, 15, tzinfo=_Z.utc)
+    assert _S.crm_utc(None) is None and _S.crm_utc("x") is None

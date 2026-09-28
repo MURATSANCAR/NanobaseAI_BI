@@ -105,6 +105,19 @@ def _dt(v: Any) -> Optional[datetime]:
         return None
 
 
+def crm_utc(v: Any) -> Optional[datetime]:
+    """CRM `ModifiedOn` UTC'dir. Bağlantı değeri metin de döndürebilir ('2026-09-28T09:09:15'); metin de UTC okunur —
+    `_dt` onu İstanbul sayıp 3 saat geri kaydırıyordu (2026-09-28 kabulü K2: 180 dk fark)."""
+    if v is None or v == "":
+        return None
+    if not isinstance(v, datetime):
+        try:
+            v = datetime.fromisoformat(str(v)[:19])
+        except ValueError:
+            return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
 # ------------------------------------------------------------------ veri sonu sorguları (kabulde birebir kullanılır)
 
 
@@ -185,7 +198,7 @@ def check_crm(ctx: Ctx) -> dict[str, Any]:
                                ctx.conf("ITOPS_CRM_FRESH_TABLE", "new_kitapBase") or "new_kitapBase")
         rows = _one(ctx.crm_file(), sql, _num(ctx, "ITOPS_QUERY_TIMEOUT_SEC", 60))
         raw = rows[0].get("son") if rows else None
-        end = raw.replace(tzinfo=timezone.utc) if isinstance(raw, datetime) and raw.tzinfo is None else _dt(raw)  # CRM ModifiedOn UTC
+        end = crm_utc(raw)
     except Exception as e:  # noqa: BLE001
         log.warning("itops: CRM veri sonu okunamadı: %s", e)
         return _res(False, f"Bağlandı ama son değişiklik okunamadı: {str(e)[:300]}", ms=r.get("ms"))
