@@ -44,7 +44,6 @@ import {
   Swords,
   Target,
   Truck,
-  Container,
   PackageSearch,
   ReceiptText,
   Scale,
@@ -124,9 +123,7 @@ import {
  */
 
 export type NavGroupId =
-  | 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'platform' | 'ik' | 'altyapi' | 'yonetim';
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'lojistik' | 'yonetim';
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'yonetim';
+  | 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'platform' | 'ik' | 'altyapi' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -402,7 +399,7 @@ export const NAV: NavGroup[] = [
     // M43 depo ve stok; M44 lojistik/kargo ve M52 tedarik aynı alana eklenir.
     id: 'lojistik',
     label: 'Lojistik',
-    hint: 'Depo ve stok, bitecekler, Logo–CRM farkı, depo hattı',
+    hint: 'Depo ve stok, kargo, bitecekler, Logo–CRM farkı ve kargo mutabakatı',
     icon: Warehouse,
     items: [
       { id: 'stok', label: 'Stok', to: '/stok', icon: Boxes, section: 'Stok', hint: 'Kitap başına Logo stoğu, raf dağılımı, satış hızı ve kaç gün yeteceği', keywords: ['stok', 'depo', 'raf', 'kaç gün yeter', 'tükenme', 'stokta var mı', 'bekleyen sipariş', 'ambar'] },
@@ -412,6 +409,18 @@ export const NAV: NavGroup[] = [
       { id: 'stok-fark', label: 'Logo–CRM farkı', to: '/stok/fark', icon: GitCompareArrows, section: 'Depo', hint: 'Logo stoğu ile CRM raf stoğu farkı ve kök nedeni', keywords: ['fark', 'sayım', 'mutabakat', 'raf stoğu'] },
       { id: 'stok-aktarim', label: 'Aktarım hataları', to: '/stok/aktarim', icon: TriangleAlert, section: 'Depo', hint: 'Logo’ya aktarılamayan depo hareketleri ve hata nedeni', keywords: ['aktarım', 'logo mesajı', 'hata', 'depolar arası sevk'] },
       { id: 'stok-depo-hatti', label: 'Depo hattı', to: '/stok/depo-hatti', icon: ListOrdered, section: 'Depo', hint: 'Sipariş hazırlık aşamaları, bekleme ve toplama süreleri', keywords: ['toplama', 'pusula', 'kutulama', 'sevk', 'sipariş hazırlık'] },
+      // Gönderi kartı, hata/bekleyen listeleri (/kargo/gonderi/:id, /kargo/hatalar, /kargo/bekleyen) menüde yok; «Kargo» etkin görünür.
+      {
+        id: 'kargo',
+        label: 'Kargo',
+        to: '/kargo',
+        icon: PackageSearch,
+        section: 'Kargo',
+        hint: 'Günün sevki, entegrasyon hatası, takip numarasız sevk, teslim bekleyenler; sipariş, fatura ya da takip no ile gönderi arama',
+        keywords: ['kargo', 'gönderi', 'takip no', 'sevk', 'etiket', 'entegrasyon hatası', 'teslim', 'aras', 'mng', 'ups', 'kargom nerede'],
+      },
+      { id: 'kargo-firmalar', label: 'Firma karnesi', to: '/kargo/firmalar', icon: Scale, section: 'Kargo', hint: 'Kargo firmalarının gönderi, teslim süresi, iade ve desi başı maliyeti; şehir kırılımı ve karar kaydı', keywords: ['kargo firması', 'karne', 'desi', 'teslim süresi', 'iade oranı', 'kurye', 'bölge'] },
+      { id: 'kargo-mutabakat', label: 'Kargo mutabakatı', to: '/kargo/mutabakat', icon: ReceiptText, section: 'Kargo', hint: 'Logo kargo faturası ile kargo kaydı toplamı, mükerrer takip no, Logo sevk ↔ CRM sevkiyat eşleşmesi', keywords: ['mutabakat', 'kargo faturası', 'fark', 'mükerrer'] },
     ],
   },
   {
@@ -576,26 +585,6 @@ export const NAV: NavGroup[] = [
       { id: 'kanal-d2c', label: 'D2C büyüme', to: '/kanallar/d2c', icon: Globe, section: 'Kanallar', hint: 'timas.com.tr payı, sitede güçlü kitaplar ve D2C\'ye özel set önerisi', keywords: ['d2c', 'site', 'timas.com.tr', 'sadakat', 'set'] },
       { id: 'kanal-eslesme', label: 'Cari eşleme', to: '/kanallar/eslesme', icon: Link2, section: 'Kanallar', hint: 'Logo carisi, kanal kodu ve CRM hedef bölgesi ↔ platform', keywords: ['eşleme', 'cari', 'platform', 'bölge'] },
     ],
-
-    // M43–M44 ortak çalışma alanı (depo ve stok, kargo); ilk açan M44.
-    id: 'lojistik',
-    label: 'Lojistik',
-    hint: 'Kargo günlük hattı, gönderi takibi, firma karnesi ve mutabakat',
-    icon: Container,
-    items: [
-      // Gönderi kartı, hata/bekleyen listeleri (/kargo/gonderi/:id, /kargo/hatalar, /kargo/bekleyen) menüde yok; «Kargo» etkin görünür.
-      {
-        id: 'kargo',
-        label: 'Kargo',
-        to: '/kargo',
-        icon: PackageSearch,
-        section: 'Kargo',
-        hint: 'Günün sevki, entegrasyon hatası, takip numarasız sevk, teslim bekleyenler; sipariş, fatura ya da takip no ile gönderi arama',
-        keywords: ['kargo', 'gönderi', 'takip no', 'sevk', 'etiket', 'entegrasyon hatası', 'teslim', 'aras', 'mng', 'ups', 'kargom nerede'],
-      },
-      { id: 'kargo-firmalar', label: 'Firma karnesi', to: '/kargo/firmalar', icon: Scale, section: 'Kargo', hint: 'Kargo firmalarının gönderi, teslim süresi, iade ve desi başı maliyeti; şehir kırılımı ve karar kaydı', keywords: ['kargo firması', 'karne', 'desi', 'teslim süresi', 'iade oranı', 'kurye', 'bölge'] },
-      { id: 'kargo-mutabakat', label: 'Kargo mutabakatı', to: '/kargo/mutabakat', icon: ReceiptText, section: 'Kargo', hint: 'Logo kargo faturası ile kargo kaydı toplamı, mükerrer takip no, Logo sevk ↔ CRM sevkiyat eşleşmesi', keywords: ['mutabakat', 'kargo faturası', 'fark', 'mükerrer'] },
-    ],
   },
   {
     id: 'yonetim',
@@ -647,12 +636,8 @@ export function visibleNav(
     .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform']);
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'lojistik'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'lojistik']);
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

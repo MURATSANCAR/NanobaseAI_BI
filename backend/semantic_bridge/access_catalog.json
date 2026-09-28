@@ -49,10 +49,6 @@
     {
       "id": "platform",
       "label": "Platform"
-    },
-    {
-      "id": "lojistik",
-      "label": "Lojistik"
     }
   ],
   "pages": [
