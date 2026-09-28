@@ -12,6 +12,7 @@ import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, tl, useTrendyolMeta } from './parts';
 import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../../signals/ReaderVoice';
 import { claimKey } from '../../signals/format';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 function Range({ bas, bit, onChange }: { bas: string; bit: string; onChange: (b: string, e: string) => void }) {
   return (
@@ -31,23 +32,28 @@ function OrdersList({ bas, bit, q, canExport }: { bas: string; bit: string; q: s
     <>
       {d && (
         <KpiRow>
-          <Kpi label="Paket" value={fmtInt(d.paketSayisi)} help={d.aralik.bas ? `${fmtDay(d.aralik.bas)} – ${fmtDay(d.aralik.bit)}` : 'Sipariş dosyası yok'} />
-          <Kpi label="Adet" value={fmtInt(d.adet)} help="Paket satırlarının toplamı" />
-          <Kpi label="Tutar" value={tl(d.tutar)} help="Dosyadaki faturalanacak tutar" />
-          <Kpi label="Geciken" value={fmtInt(d.geciken)} help="Termin geçti, kargoya verilmedi" />
+          <Kpi label="Paket" value={fmtInt(d.paketSayisi)} help={d.aralik.bas ? `${fmtDay(d.aralik.bas)} – ${fmtDay(d.aralik.bit)}` : 'Sipariş dosyası yok'}
+            info={<SqlInfo k={d?.kaynaklar} alan="paketSayisi" label="Paket" />} />
+          <Kpi label="Adet" value={fmtInt(d.adet)} help="Paket satırlarının toplamı"
+            info={<SqlInfo k={d?.kaynaklar} alan="adet" label="Adet" />} />
+          <Kpi label="Tutar" value={tl(d.tutar)} help="Dosyadaki faturalanacak tutar"
+            info={<SqlInfo k={d?.kaynaklar} alan="tutar" label="Tutar" />} />
+          <Kpi label="Geciken" value={fmtInt(d.geciken)} help="Termin geçti, kargoya verilmedi"
+            info={<SqlInfo k={d?.kaynaklar} alan="geciken" label="Geciken" />} />
         </KpiRow>
       )}
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <Chips value={durum} onChange={(v) => { setDurum(v); setPage(0); }}
+          <div className="flex min-w-0 items-center gap-1"><Chips value={durum} onChange={(v) => { setDurum(v); setPage(0); }}
             items={[{ key: '', label: 'Hepsi' }, { key: 'geciken', label: 'Geciken', count: d?.geciken }, ...Object.entries(d?.durumlar ?? {}).map(([k, v]) => ({ key: k, label: k, count: v.paket }))]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
           <ExportLink show={canExport} href={trendyolApi.exportUrl('siparisler', { durum, bas, bit, q })} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Siparişler açılamadı.')}</Note>}
         {r.isLoading ? <Loading /> : d && (
           <>
             <TableWrap>
-              <thead><tr><th className={th}>Paket</th><th className={th}>Kitap</th><th className={`${th} text-right`}>Adet</th><th className={th}>Durum</th><th className={th}>Termin</th></tr></thead>
+              <thead><tr><th className={th}>Paket</th><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Adet</InfoLabel></th><th className={th}>Durum</th><th className={th}>Termin</th></tr></thead>
               <tbody>
                 {d.items.map((x) => (
                   <tr key={`${x.paketId}-${x.barkod}`} className="border-t border-slate-100">
@@ -87,8 +93,9 @@ function ClaimsList({ bas, bit, q, canExport, canDraft }: { bas: string; bit: st
     <>
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <Chips value={sinif} onChange={(v) => { setSinif(v); setPage(0); }}
+          <div className="flex min-w-0 items-center gap-1"><Chips value={sinif} onChange={(v) => { setSinif(v); setPage(0); }}
             items={[{ key: '', label: 'Hepsi' }, ...Object.entries(d?.siniflar ?? {}).map(([k, v]) => ({ key: k, label: k, count: v.talep }))]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
           <div className="flex gap-2">
             {canDraft && !!d?.sinifsiz && (
               <button type="button" className={btnGhost} onClick={() => run.mutate()} disabled={run.isPending}>
@@ -126,10 +133,10 @@ function ClaimsList({ bas, bit, q, canExport, canDraft }: { bas: string; bit: st
       </Panel>
       {d && d.kitaplar.length > 0 && (
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Kitap bazında iade</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kitap bazında iade <SqlInfo k={d?.kaynaklar} alan="items" label="Kitap bazında iade" /></h2>
           <p className="mb-2 text-[12px] text-canvas-muted">Oran = iade adedi ÷ aynı aralıkta sipariş dosyasındaki adet (sipariş dosyası yoksa boş).</p>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>İade</th><th className={`${th} text-right`}>Sipariş</th><th className={`${th} text-right`}>Oran</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">İade</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Sipariş</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Oran</InfoLabel></th></tr></thead>
             <tbody>
               {d.kitaplar.map((b) => (
                 <tr key={b.barkod} className="border-t border-slate-100">

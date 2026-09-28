@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/links*) */
 type View = 'orphans' | 'deep' | 'author' | 'weak' | 'anchors';
@@ -158,17 +158,16 @@ function ViewTab({ view, onUrl }: { view: View; onUrl: (u: string) => void }) {
       {s && d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bağlantısı okunan sayfa" value={fmt(s.crawledPages)} note={`${fmt(s.followedEdges)} izlenen bağlantı · son tarama ${dateTime(s.lastCrawl)}`} />
+            <Kpi label="Bağlantısı okunan sayfa" value={fmt(s.crawledPages)} note={`${fmt(s.followedEdges)} izlenen bağlantı · son tarama ${dateTime(s.lastCrawl)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantısı okunan sayfa" />} />
             <Kpi
               label="Kapsam"
               value={pct(s.coverage.share)}
               note={(['product', 'author', 'category', 'brand'] as Kind[])
                 .filter((k) => s.coverage.byKind[k])
                 .map((k) => `${KIND_LABEL[k]} ${fmt(s.coverage.byKind[k]!.crawled)}/${fmt(s.coverage.byKind[k]!.of)}`)
-                .join(' · ')}
-            />
-            <Kpi label="Bağlantı almayan kitap" value={fmt(s.counts.orphanProducts)} note={`Bütün türlerde ${fmt(s.counts.orphans)} sayfa`} />
-            <Kpi label="Yazar ↔ kitap sorunu" value={fmt(s.counts.author)} note={`${fmt(s.authorsWithoutPage)} yazarın sitede yazar sayfası yok`} />
+                .join(' · ')} info={<SeoInfo k={r.data?.kaynaklar} label="Kapsam" />} />
+            <Kpi label="Bağlantı almayan kitap" value={fmt(s.counts.orphanProducts)} note={`Bütün türlerde ${fmt(s.counts.orphans)} sayfa`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantı almayan kitap" />} />
+            <Kpi label="Yazar ↔ kitap sorunu" value={fmt(s.counts.author)} note={`${fmt(s.authorsWithoutPage)} yazarın sitede yazar sayfası yok`} info={<SeoInfo k={r.data?.kaynaklar} label="Yazar ↔ kitap sorunu" />} />
           </section>
 
           <CoverageNote s={s} running={!!d.crawl?.running} />
@@ -465,7 +464,7 @@ function UrlLookup({ value, onChange }: { value: string; onChange: (u: string) =
   const d = r.data;
   return (
     <section className="sg-card">
-      <h2>Bir sayfanın bağlantıları</h2>
+      <h2>Bir sayfanın bağlantıları <SeoInfo k={r.data?.kaynaklar} label="Bir sayfanın bağlantıları" /></h2>
       <form onSubmit={submit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
         <label className="sg-search" style={{ flex: '1 1 260px' }}>
           <Search size={16} aria-hidden />
@@ -550,10 +549,10 @@ function LinkList({ title, items, empty, onPick }: { title: string; items: LinkI
 }
 
 /* ------------------------------------------------------------------ küçük parçalar */
-function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note?: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       {note && <div className="sg-kpi-note">{note}</div>}
     </div>

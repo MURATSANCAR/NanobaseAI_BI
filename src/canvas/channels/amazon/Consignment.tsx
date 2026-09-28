@@ -7,6 +7,7 @@ import { fmtDay, fmtInt } from '../../budget/api';
 import { BookCell, ExportLink } from '../platformKit';
 import { amazonApi } from './api';
 import { AmazonData, AmazonFrame, tl, useAmazonMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 export default function AmazonConsignment() {
   const meta = useAmazonMeta();
@@ -29,9 +30,12 @@ export default function AmazonConsignment() {
         <>
           {!d.eslenenCariler.length && <Note tone="warn">Amazon'a onaylanmış cari yok; konsinye hesaplanamaz. Özet sayfasındaki Amazon carilerini eşleyin.</Note>}
           <KpiRow>
-            <Kpi label="Konsinyede kalan" value={fmtInt(d.toplam?.kalan ?? 0)} help={`${fmtInt(d.toplam?.kitap ?? 0)} kitap`} />
-            <Kpi label="Faturalanmamış sevk" value={fmtInt(d.toplam?.sevk ?? 0)} help={`İrsaliye tutarı ${tl(d.toplam?.sevkTutar ?? 0)}`} />
-            <Kpi label="Faturalanmamış iade" value={fmtInt(d.toplam?.iade ?? 0)} help="Satış iade irsaliyesi (ayrıca gösterilir)" />
+            <Kpi label="Konsinyede kalan" value={fmtInt(d.toplam?.kalan ?? 0)} help={`${fmtInt(d.toplam?.kitap ?? 0)} kitap`}
+            info={<SqlInfo k={d?.kaynaklar} alan="toplam" label="Konsinyede kalan" />} />
+            <Kpi label="Faturalanmamış sevk" value={fmtInt(d.toplam?.sevk ?? 0)} help={`İrsaliye tutarı ${tl(d.toplam?.sevkTutar ?? 0)}`}
+            info={<SqlInfo k={d?.kaynaklar} alan="toplam" label="Faturalanmamış sevk" />} />
+            <Kpi label="Faturalanmamış iade" value={fmtInt(d.toplam?.iade ?? 0)} help="Satış iade irsaliyesi (ayrıca gösterilir)"
+            info={<SqlInfo k={d?.kaynaklar} alan="toplam" label="Faturalanmamış iade" />} />
             <Kpi label="Kapsam" value={(d.yillar ?? []).join(', ') || '—'} help={`Onaylı cari: ${d.eslenenCariler.join(', ') || '—'}`} />
           </KpiRow>
           <Panel>
@@ -40,7 +44,7 @@ export default function AmazonConsignment() {
               <ExportLink show={!!m?.me.canExport} href={amazonApi.exportUrl('konsinye', { q })} />
             </div>
             <TableWrap>
-              <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Sevk</th><th className={`${th} text-right`}>İade</th><th className={`${th} text-right`}>Kalan</th><th className={`${th} text-right`}>Bu yıl faturalanan</th><th className={th}>İrsaliye aralığı</th></tr></thead>
+              <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Sevk</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">İade</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Kalan</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Bu yıl faturalanan</InfoLabel></th><th className={th}>İrsaliye aralığı</th></tr></thead>
               <tbody>
                 {d.items.map((x) => (
                   <tr key={x.stokKodu} className="border-t border-slate-100">

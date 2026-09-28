@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, call, dateTime, fmt, qs, seoApi, type ProductDetail } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /* ------------------------------------------------------------------ uçlar: /api/v1/seo-geo/guides/* */
 type GuideStatus = 'hazir' | 'onaylandi' | 'reddedildi';
@@ -123,7 +123,7 @@ export default function SeoGuides() {
   const run = topics.data?.run;
 
   return (
-    <SeoLayout
+    <SeoLayout k={drafts.data?.kaynaklar}
       path="/seo-geo/rehberler"
       crumb="Rehber içerikler"
       eyebrow="SEO & GEO · rehber içerikler"
@@ -312,9 +312,9 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
               <thead>
                 <tr>
                   <th>Sorgu</th>
-                  <th>Gösterim</th>
-                  <th>Tıklama</th>
-                  <th>Sıra</th>
+                  <th>Gösterim <SeoInfo k={books.data?.kaynaklar} label="Gösterim" /></th>
+                  <th>Tıklama <SeoInfo k={books.data?.kaynaklar} label="Tıklama" /></th>
+                  <th>Sıra <SeoInfo k={books.data?.kaynaklar} label="Sıra" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -335,7 +335,7 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
       <div className="sg-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
           <div>
-            <h2>Uygun kitaplar</h2>
+            <h2>Uygun kitaplar <SeoInfo k={books.data?.kaynaklar} label="Uygun kitaplar" /></h2>
             <p className="sg-sub" style={{ margin: 0 }}>
               {fmt(tot)} kitap eşleşti · {fmt(selected.length)} seçili. Tür, web kategorisi, anahtar kelime, hedef kitle ve yaşa göre; eşitlikte çok satan önde. CRM’de satıştan çekilmiş ya da bizim olmayan kitap alınmaz.
             </p>

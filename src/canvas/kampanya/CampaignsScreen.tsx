@@ -12,6 +12,7 @@ import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../budget/api';
 import { isoPlus, kampanyaApi, pctToRatio, type Kanal, type Overview } from './api';
 import { CalendarStrip, KampanyaFrame, StatusPill } from './parts';
 import CandidatesPanel from './CandidatesPanel';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** M35 E-ticaret kampanyaları: kayıt defteri, takvim, aday kitaplar, CRM bayi kampanyaları, öğrenimler. */
 
@@ -79,6 +80,7 @@ export default function CampaignsScreen({ initial = 'liste' }: { initial?: 'list
       </span>
       <span>
         Site fiyat kaydı: {st?.fiyatKaydi?.gun ? `${fmtInt(st.fiyatKaydi.gun)} gün (${fmtDay(st.fiyatKaydi.ilkGun ?? null)}'den beri)` : 'henüz yok'}.
+        <SqlInfo k={d.kaynaklar} alan="status.fiyatKaydi" label="Site fiyat kaydı" className="ml-0.5" />
         {' '}Birim maliyet: {d.maliyetSaglayici ? 'fiyatlama modülü' : 'fiyatlama modülü bağlı değil'}{d.ayarlar.costSource.includes('logo') ? ', yoksa Logo gerçekleşen' : ''}.
       </span>
       {d.me.canEdit && (
@@ -102,21 +104,29 @@ export default function CampaignsScreen({ initial = 'liste' }: { initial?: 'list
       {ov.error && <Note tone="err">{errText(ov.error, 'Kampanya bilgisi açılamadı.')}</Note>}
       {d && (
         <KpiRow>
-          <Kpi label="Taslak" value={fmtInt(d.sayilar.taslak)} help="Hazırlanan kampanyalar" />
-          <Kpi label="Onay bekliyor" value={fmtInt(d.sayilar.onay_bekliyor)} help={d.me.canApprove ? 'Onayınızı bekleyenler aşağıda' : 'Onaycıda'} />
-          <Kpi label="Yürütülüyor" value={fmtInt(d.sayilar.yurutuluyor + d.sayilar.onaylandi)} help="Onaylı ve süren kampanyalar" />
-          <Kpi label="Biten" value={fmtInt(d.sayilar.bitti)} help="Sonucu ve öğrenimi yazılabilir" />
+          <Kpi label="Taslak" value={fmtInt(d.sayilar.taslak)} help="Hazırlanan kampanyalar"
+            info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Taslak kampanya" />} />
+          <Kpi label="Onay bekliyor" value={fmtInt(d.sayilar.onay_bekliyor)} help={d.me.canApprove ? 'Onayınızı bekleyenler aşağıda' : 'Onaycıda'}
+            info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Onay bekleyen kampanya" />} />
+          <Kpi label="Yürütülüyor" value={fmtInt(d.sayilar.yurutuluyor + d.sayilar.onaylandi)} help="Onaylı ve süren kampanyalar"
+            info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Yürütülen kampanya" />} />
+          <Kpi label="Biten" value={fmtInt(d.sayilar.bitti)} help="Sonucu ve öğrenimi yazılabilir"
+            info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Biten kampanya" />} />
         </KpiRow>
       )}
       {d && tab === 'liste' && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Önümüzdeki {d.ayarlar.takvimGun} gün</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Önümüzdeki {d.ayarlar.takvimGun} gün <SqlInfo k={d.kaynaklar} alan="takvim" label="Takvim" />
+          </h2>
           <CalendarStrip cal={d.takvim} onOpen={(id) => nav(`/kampanyalar/${id}`)} />
         </Panel>
       )}
       {d && tab === 'liste' && d.onayBekleyen.some((c) => c.yetki.karar) && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Onayınızı bekleyen</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Onayınızı bekleyen <SqlInfo k={d.kaynaklar} alan="onayBekleyen[].ozet" label="Onay bekleyen: kitap, marj, kırmızı kontrol" />
+          </h2>
           <ul className="flex flex-col gap-1.5">
             {d.onayBekleyen.filter((c) => c.yetki.karar).map((c) => (
               <li key={c.id}>
@@ -133,6 +143,7 @@ export default function CampaignsScreen({ initial = 'liste' }: { initial?: 'list
         <section aria-label="Stok uyarıları" className="flex flex-col gap-1.5">
           {d.yurutulen.filter((c) => c.uyarilar.length).map((c) => (
             <Note key={c.id} tone="warn">
+              <SqlInfo k={d.kaynaklar} alan="yurutulen[].uyarilar" label="Stok uyarısı (tükenme tahmini)" className="mr-1" />
               <Link to={`/kampanyalar/${c.id}`} className="underline">{c.ad}</Link>: {c.uyarilar.length} kitapta stok kampanya bitmeden tükenebilir
               ({c.uyarilar.slice(0, 3).map((u) => `${u.ad ?? u.stok} ${fmtDay(u.tukenme)}`).join(', ')}{c.uyarilar.length > 3 ? '…' : ''}).
             </Note>
@@ -201,10 +212,10 @@ function ListTab({ ov }: { ov: Overview }) {
               <th className={th}>Kanal</th>
               <th className={th}>Tarih</th>
               <th className={th}>Durum</th>
-              <th className={`${th} text-right`}>Kitap</th>
-              <th className={`${th} text-right`}>Ort. indirim</th>
-              <th className={`${th} text-right`}>Kampanyalı marj</th>
-              <th className={`${th} text-right`}>Uyarı</th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Kitap</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Ort. indirim</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Kampanyalı marj</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Uyarı</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -233,6 +244,7 @@ function ListTab({ ov }: { ov: Overview }) {
         </TableWrap>
         <Pager page={page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
           loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+        {list.data && <div className="mt-1 text-right"><InfoLabel k={list.data.kaynaklar} alan="total" label="Kampanya sayısı (süzgece uyan)">{`${fmtInt(list.data.total)} kampanya`}</InfoLabel></div>}
       </div>
       <NewCampaignSheet open={creating} onClose={() => setCreating(false)} ov={ov} />
     </Panel>
@@ -350,7 +362,9 @@ function CalendarTab({ ov }: { ov: Overview }) {
       </Panel>
       {cal.data && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Dönemler ve günler</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Dönemler ve günler <SqlInfo k={cal.data.kaynaklar} alan="items" label="Dönemler ve günler (bağlı kitap sayısı)" />
+          </h2>
           <TableWrap>
             <thead>
               <tr>
@@ -449,11 +463,11 @@ function CrmTab() {
               <th className={th}>Kampanya</th>
               <th className={th}>Tarih</th>
               <th className={th}>Tür</th>
-              <th className={`${th} text-right`}>Net iskonto</th>
-              <th className={`${th} text-right`}>Sipariş</th>
-              <th className={`${th} text-right`}>Adet</th>
-              <th className={`${th} text-right`}>Kampanya indirimi</th>
-              <th className={`${th} text-right`}>İndirimli tutar</th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Net iskonto</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Sipariş</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Kampanya indirimi</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">İndirimli tutar</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -505,7 +519,8 @@ function LearningsTab({ ov }: { ov: Overview }) {
           <li key={l.id} className="rounded-xl bg-white/80 px-3 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] font-semibold text-canvas-muted">
               <Link to={`/kampanyalar/${l.kampanyaId}`} className="font-extrabold text-canvas-ink hover:underline">{l.kampanya ?? l.kampanyaId}</Link>
-              <span>
+              <span className="inline-flex flex-wrap items-center gap-1">
+                <SqlInfo k={list.data?.kaynaklar} alan="items" label="Öğrenim rakamları" />
                 {l.kanal ? ov.kanallar[l.kanal] : ''} · indirim {fmtPct(l.indirim, 0)} · satış {l.satisDegisimi !== null ? `${l.satisDegisimi.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} kat` : '—'}
                 {l.tur ? ` · ${l.tur}` : ''} · {l.yazan}
               </span>

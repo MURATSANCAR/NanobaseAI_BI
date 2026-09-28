@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** Yapay zekânın kaynakları: /api/v1/seo-geo/ai-sources, /ai-sources/{alan}, /ai-source-questions. Yalnız okunur. */
 
@@ -180,15 +181,15 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
           ) : (
             <>
               <section className="sg-kpis" aria-label="Özet">
-                <Kpi label="Kaynak gösterilen site" value={fmt(s.domains)} note={`${fmt(s.citations)} kaynak, ${fmt(s.answersWithSources)} cevapta`} />
-                <Kpi label="Sitemiz kaynak" value={pct(s.oursShare)} note={`${fmt(s.oursCited)} / ${fmt(s.answers)} cevap · ${d.our}`} />
-                <Kpi label="Timaş anılıyor" value={pct(s.mentionShare)} note={`${fmt(s.mentioned)} / ${fmt(s.answers)} cevap`} />
-                <Kpi label="Hedef site" value={fmt(s.targets)} note={`En az ${fmt(t!.targetMinQuestions)} soruda kaynak, Timaş cevapların en çok ${pct(t!.targetMaxMentionShare)}’inde`} />
+                <Kpi label="Kaynak gösterilen site" value={fmt(s.domains)} note={`${fmt(s.citations)} kaynak, ${fmt(s.answersWithSources)} cevapta`} info={<SeoInfo k={r.data?.kaynaklar} label="Kaynak gösterilen site" />} />
+                <Kpi label="Sitemiz kaynak" value={pct(s.oursShare)} note={`${fmt(s.oursCited)} / ${fmt(s.answers)} cevap · ${d.our}`} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemiz kaynak" />} />
+                <Kpi label="Timaş anılıyor" value={pct(s.mentionShare)} note={`${fmt(s.mentioned)} / ${fmt(s.answers)} cevap`} info={<SeoInfo k={r.data?.kaynaklar} label="Timaş anılıyor" />} />
+                <Kpi label="Hedef site" value={fmt(s.targets)} note={`En az ${fmt(t!.targetMinQuestions)} soruda kaynak, Timaş cevapların en çok ${pct(t!.targetMaxMentionShare)}’inde`} info={<SeoInfo k={r.data?.kaynaklar} label="Hedef site" />} />
               </section>
 
               <div className="sg-grid">
                 <section className="sg-card sg-span-4">
-                  <h2>Kaynak türleri</h2>
+                  <h2>Kaynak türleri <SeoInfo k={r.data?.kaynaklar} label="Kaynak türleri" /></h2>
                   <p className="sg-sub">Türe göre, o türden en az bir kaynak gösterilen cevap sayısı.</p>
                   <div className="sg-bars">
                     {d.types
@@ -220,17 +221,17 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
                 </section>
 
                 <section className="sg-card sg-span-8">
-                  <h2>Ölçüm günlerine göre</h2>
+                  <h2>Ölçüm günlerine göre <SeoInfo k={r.data?.kaynaklar} label="Ölçüm günlerine göre" /></h2>
                   <p className="sg-sub">Her ölçüm gününde cevap sayısı, sitemizin kaynak gösterildiği ve Timaş’ın anıldığı cevaplar.</p>
                   <div className="sg-table-wrap">
                     <table className="sg-table">
                       <thead>
                         <tr>
-                          <th>Gün</th>
-                          <th>Cevap</th>
-                          <th>Kaynaklı</th>
-                          <th>Farklı site</th>
-                          <th>Sitemiz kaynak</th>
+                          <th>Gün <SeoInfo k={r.data?.kaynaklar} label="Gün" /></th>
+                          <th>Cevap <SeoInfo k={r.data?.kaynaklar} label="Cevap" /></th>
+                          <th>Kaynaklı <SeoInfo k={r.data?.kaynaklar} label="Kaynaklı" /></th>
+                          <th>Farklı site <SeoInfo k={r.data?.kaynaklar} label="Farklı site" /></th>
+                          <th>Sitemiz kaynak <SeoInfo k={r.data?.kaynaklar} label="Sitemiz kaynak" /></th>
                           <th>Timaş anılıyor</th>
                         </tr>
                       </thead>
@@ -281,10 +282,10 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
                       <thead>
                         <tr>
                           <th>Site</th>
-                          <th>Cevap</th>
-                          <th>Cevap payı</th>
+                          <th>Cevap <SeoInfo k={r.data?.kaynaklar} label="Cevap" /></th>
+                          <th>Cevap payı <SeoInfo k={r.data?.kaynaklar} label="Cevap payı" /></th>
                           <th>Soru</th>
-                          <th>Motor</th>
+                          <th>Motor <SeoInfo k={r.data?.kaynaklar} label="Motor" /></th>
                           <th>Timaş anılıyor</th>
                           <th>Örnek</th>
                         </tr>
@@ -381,9 +382,9 @@ function DomainPanel({ domain, engine, labels, onClose }: { domain: string; engi
         <>
           {x.action && <p className="sg-banner" style={{ marginTop: 12 }}>Öneri: {x.action}</p>}
           <section className="sg-kpis" style={{ marginTop: 12 }}>
-            <Kpi label="Cevap" value={fmt(x.answers)} note={`${fmt(x.citations)} kaynak · cevapların ${pct(x.share, 1)}’i`} />
-            <Kpi label="Soru" value={fmt(x.questions)} note={`İlk ${dateTime(x.firstSeen)} · son ${dateTime(x.lastSeen)}`} />
-            <Kpi label="Timaş anılıyor" value={pct(x.mentionShare)} note={`${fmt(x.mentionedAnswers)} / ${fmt(x.answers)} cevap`} />
+            <Kpi label="Cevap" value={fmt(x.answers)} note={`${fmt(x.citations)} kaynak · cevapların ${pct(x.share, 1)}’i`} info={<SeoInfo k={r.data?.kaynaklar} label="Cevap" />} />
+            <Kpi label="Soru" value={fmt(x.questions)} note={`İlk ${dateTime(x.firstSeen)} · son ${dateTime(x.lastSeen)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Soru" />} />
+            <Kpi label="Timaş anılıyor" value={pct(x.mentionShare)} note={`${fmt(x.mentionedAnswers)} / ${fmt(x.answers)} cevap`} info={<SeoInfo k={r.data?.kaynaklar} label="Timaş anılıyor" />} />
           </section>
           <div className="sg-grid" style={{ marginTop: 12 }}>
             <div className="sg-span-7">
@@ -393,9 +394,9 @@ function DomainPanel({ domain, engine, labels, onClose }: { domain: string; engi
                   <thead>
                     <tr>
                       <th>Soru</th>
-                      <th>Cevap</th>
+                      <th>Cevap <SeoInfo k={r.data?.kaynaklar} label="Cevap" /></th>
                       <th>Timaş anıldı</th>
-                      <th>Motor</th>
+                      <th>Motor <SeoInfo k={r.data?.kaynaklar} label="Motor" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -419,9 +420,9 @@ function DomainPanel({ domain, engine, labels, onClose }: { domain: string; engi
                 <table className="sg-table">
                   <thead>
                     <tr>
-                      <th>Gün</th>
-                      <th>Kaynak olduğu cevap</th>
-                      <th>Pay</th>
+                      <th>Gün <SeoInfo k={r.data?.kaynaklar} label="Gün" /></th>
+                      <th>Kaynak olduğu cevap <SeoInfo k={r.data?.kaynaklar} label="Kaynak olduğu cevap" /></th>
+                      <th>Pay <SeoInfo k={r.data?.kaynaklar} label="Pay" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -498,7 +499,7 @@ function Questions({ engine, setEngine }: { engine: string; setEngine: (v: strin
             </div>
           ) : (
             <section className="sg-card">
-              <h2>Her motorun son cevabındaki kaynaklar</h2>
+              <h2>Her motorun son cevabındaki kaynaklar <SeoInfo k={r.data?.kaynaklar} label="Her motorun son cevabındaki kaynaklar" /></h2>
               <p className="sg-sub">Sorunun her motordaki son başarılı ölçümü. Yeşil: sitemiz; kırmızı: rakip kitapçı.</p>
               <div className="sg-list">
                 {d.items.map((q) => (
@@ -579,10 +580,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

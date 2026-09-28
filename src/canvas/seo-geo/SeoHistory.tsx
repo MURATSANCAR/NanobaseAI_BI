@@ -14,7 +14,7 @@ export default function SeoHistory() {
   const total = h.data?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={h.data?.kaynaklar}
       path="/seo-geo/gecmis"
       crumb="Karar geçmişi"
       eyebrow="SEO & GEO · kararlar"

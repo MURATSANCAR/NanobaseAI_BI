@@ -7,6 +7,7 @@ import { fmtDay, fmtInt } from '../../budget/api';
 import { BookCell, Chips, ExportLink } from '../platformKit';
 import { amazonApi } from './api';
 import { AmazonData, AmazonFrame, useAmazonMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 export default function AmazonRights() {
   const meta = useAmazonMeta();
@@ -31,14 +32,15 @@ export default function AmazonRights() {
       {d && (
         <Panel>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <Chips value={ulke} onChange={(v) => { setUlke(v); setPage(0); }}
+            <div className="flex min-w-0 items-center gap-1"><Chips value={ulke} onChange={(v) => { setUlke(v); setPage(0); }}
               items={[{ key: '', label: `Hepsi · ${fmtInt(d.sozlesme)} sözleşme` }, ...Object.entries(d.ulkeler).map(([k, v]) => ({ key: k, label: k, count: v }))]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
             <ExportLink show={!!m?.me.canExport} href={amazonApi.exportUrl('haklar', { ulke, q })} />
           </div>
           {!d.total ? <Note tone="info">Telif Satış sözleşmesi bulunmadı ya da CRM henüz okunmadı.</Note> : (
             <>
               <TableWrap>
-                <thead><tr><th className={th}>Kitap</th><th className={th}>Hak satılan ülke</th><th className={th}>Yayınevi / ajans</th><th className={th}>Sözleşme</th><th className={`${th} text-right`}>Yurtdışı net adet</th></tr></thead>
+                <thead><tr><th className={th}>Kitap</th><th className={th}>Hak satılan ülke</th><th className={th}>Yayınevi / ajans</th><th className={th}>Sözleşme</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Yurtdışı net adet</InfoLabel></th></tr></thead>
                 <tbody>
                   {d.items.map((x, i) => (
                     <tr key={`${x.stokKodu ?? x.kitap}-${i}`} className="border-t border-slate-100">

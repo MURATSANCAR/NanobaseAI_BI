@@ -1,3 +1,5 @@
+import type { Kaynaklar } from '../components/sqlInfo';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +7,7 @@ import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAx
 import { Download, FileText, Loader2, Send } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 /** Aylık yönetim raporu: önceki takvim ayının SEO & GEO özeti, PDF olarak; gece kendiliğinden hazırlanır, alıcı
@@ -91,7 +93,7 @@ export default function SeoMonthly() {
           : null;
 
   return (
-    <SeoLayout
+    <SeoLayout k={page.data?.kaynaklar}
       path="/seo-geo/aylik-rapor"
       crumb="Aylık rapor"
       eyebrow="SEO & GEO · yönetim"
@@ -147,20 +149,20 @@ export default function SeoMonthly() {
             {send.error && <div style={{ marginTop: 8 }}><Failed error={send.error} /></div>}
             {send.data && <p className="sg-banner ok" role="status" style={{ marginTop: 8 }}>Rapor {fmt(d.settings.recipients)} alıcıya gönderildi.</p>}
           </section>
-          <ReportView s={sel.summary} />
+          <ReportView s={sel.summary} k={page.data?.kaynaklar} />
         </>
       )}
 
       {d && d.items.length > 0 && (
         <section className="sg-card" aria-label="Geçmiş raporlar" style={{ marginTop: 16 }}>
-          <h2>Raporlar</h2>
+          <h2>Raporlar <SeoInfo k={page.data?.kaynaklar} label="Raporlar" /></h2>
           <div className="sg-table-wrap">
             <table className="sg-table">
               <thead>
                 <tr>
                   <th>Ay</th>
-                  <th>Tıklama</th>
-                  <th>Puanı 80+ (çok satan)</th>
+                  <th>Tıklama <SeoInfo k={page.data?.kaynaklar} label="Tıklama" /></th>
+                  <th>Puanı 80+ (çok satan) <SeoInfo k={page.data?.kaynaklar} label="Puanı 80+ (çok satan)" /></th>
                   <th>Gönderim</th>
                   <th />
                 </tr>
@@ -190,7 +192,7 @@ export default function SeoMonthly() {
   );
 }
 
-function ReportView({ s }: { s: Summary }) {
+function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
   const g = s.google;
   const cur = g.current;
   const trend = s.trend ?? [];
@@ -199,10 +201,10 @@ function ReportView({ s }: { s: Summary }) {
       <section className="sg-kpis" aria-label="Google arama" style={{ marginTop: 16 }}>
         {cur.available ? (
           <>
-            <Kpi label="Tıklama" value={fmt(cur.clicks)} cur={cur.clicks} prev={g.previous} ly={g.lastYear} k="clicks" />
-            <Kpi label="Gösterim" value={fmt(cur.impressions)} cur={cur.impressions} prev={g.previous} ly={g.lastYear} k="impressions" />
-            <Kpi label="Tıklama oranı" value={pct(cur.ctr, 2)} cur={cur.ctr} prev={g.previous} ly={g.lastYear} k="ctr" />
-            <Kpi label="Ortalama sıra" value={cur.position == null ? '—' : fmt(cur.position, 1)} cur={cur.position} prev={g.previous} ly={g.lastYear} k="position" lowerBetter />
+            <Kpi label="Tıklama" value={fmt(cur.clicks)} cur={cur.clicks} prev={g.previous} ly={g.lastYear} k="clicks" info={<SeoInfo k={k} label="Tıklama" />} />
+            <Kpi label="Gösterim" value={fmt(cur.impressions)} cur={cur.impressions} prev={g.previous} ly={g.lastYear} k="impressions" info={<SeoInfo k={k} label="Gösterim" />} />
+            <Kpi label="Tıklama oranı" value={pct(cur.ctr, 2)} cur={cur.ctr} prev={g.previous} ly={g.lastYear} k="ctr" info={<SeoInfo k={k} label="Tıklama oranı" />} />
+            <Kpi label="Ortalama sıra" value={cur.position == null ? '—' : fmt(cur.position, 1)} cur={cur.position} prev={g.previous} ly={g.lastYear} k="position" lowerBetter info={<SeoInfo k={k} label="Ortalama sıra" />} />
           </>
         ) : (
           <div className="sg-kpi">
@@ -215,7 +217,7 @@ function ReportView({ s }: { s: Summary }) {
 
       <div className="sg-grid" style={{ marginTop: 16 }}>
         <section className="sg-card sg-span-7">
-          <h2>Günlük tıklama</h2>
+          <h2>Günlük tıklama <SeoInfo k={k} label="Günlük tıklama" /></h2>
           <p className="sg-sub">{s.label}</p>
           {g.daily?.length > 1 ? (
             <div className="sg-chart">
@@ -239,22 +241,22 @@ function ReportView({ s }: { s: Summary }) {
           )}
         </section>
         <section className="sg-card sg-span-5">
-          <h2>Aylara göre tıklama</h2>
+          <h2>Aylara göre tıklama <SeoInfo k={k} label="Aylara göre tıklama" /></h2>
           <p className="sg-sub">Kayıtlı raporlardan, son {fmt(trend.length)} ay</p>
           <TrendBars data={trend.map((t) => ({ m: shortMonth(t.month), v: t.clicks ?? null }))} format={(v) => fmt(v)} name="Tıklama" />
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Tıklaması en çok değişen sorgular</h2>
-          <MoversView mv={s.queries} label="Sorgu" />
+          <h2>Tıklaması en çok değişen sorgular <SeoInfo k={k} label="Tıklaması en çok değişen sorgular" /></h2>
+          <MoversView mv={s.queries} label="Sorgu" k={k} />
         </section>
         <section className="sg-card sg-span-6">
-          <h2>Tıklaması en çok değişen sayfalar</h2>
-          <MoversView mv={s.pages} label="Sayfa" />
+          <h2>Tıklaması en çok değişen sayfalar <SeoInfo k={k} label="Tıklaması en çok değişen sayfalar" /></h2>
+          <MoversView mv={s.pages} label="Sayfa" k={k} />
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Kitap sayfalarının durumu</h2>
+          <h2>Kitap sayfalarının durumu <SeoInfo k={k} label="Kitap sayfalarının durumu" /></h2>
           <p className="sg-sub">Ürün puanı {s.books.threshold} ve üstü olanların payı; puan rapor anındaki durumdur.</p>
           {s.books.counted ? (
             <div className="sg-bars">
@@ -272,7 +274,7 @@ function ReportView({ s }: { s: Summary }) {
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Öneri kararları</h2>
+          <h2>Öneri kararları <SeoInfo k={k} label="Öneri kararları" /></h2>
           <p className="sg-sub">Bu ay hazırlanan ve karar verilen öneriler</p>
           <dl className="sg-facts">
             <Fact k="Hazırlanan" v={fmt(s.proposals.created)} />
@@ -295,7 +297,7 @@ function ReportView({ s }: { s: Summary }) {
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Teknik sorunlar</h2>
+          <h2>Teknik sorunlar <SeoInfo k={k} label="Teknik sorunlar" /></h2>
           {s.tech.available ? (
             <>
               <p className="sg-sub">{fmt(s.tech.checked)} sayfa tarandı; fark bir önceki ayın raporuna göre.</p>
@@ -304,9 +306,9 @@ function ReportView({ s }: { s: Summary }) {
                   <table className="sg-table">
                     <thead>
                       <tr>
-                        <th>Sorun</th>
+                        <th>Sorun <SeoInfo k={k} label="Sorun" /></th>
                         <th>Sayfa</th>
-                        <th>Fark</th>
+                        <th>Fark <SeoInfo k={k} label="Fark" /></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -338,7 +340,7 @@ function ReportView({ s }: { s: Summary }) {
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Yapay zekâ cevaplarında anılma</h2>
+          <h2>Yapay zekâ cevaplarında anılma <SeoInfo k={k} label="Yapay zekâ cevaplarında anılma" /></h2>
           <p className="sg-sub">İzlenen sorularda Timaş’ın anılma oranı, bu ay</p>
           {s.geo.engines.some((e) => e.measured) ? (
             <div className="sg-bars">
@@ -362,7 +364,7 @@ function ReportView({ s }: { s: Summary }) {
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Haklar ve yayın durumu</h2>
+          <h2>Haklar ve yayın durumu <SeoInfo k={k} label="Haklar ve yayın durumu" /></h2>
           <p className="sg-sub">Satıştaki kitaplar, rapor anında</p>
           {s.crm.available ? (
             <dl className="sg-facts">
@@ -379,7 +381,7 @@ function ReportView({ s }: { s: Summary }) {
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Uyarılar</h2>
+          <h2>Uyarılar <SeoInfo k={k} label="Uyarılar" /></h2>
           {s.alerts.available ? (
             <>
               <p className="sg-sub">
@@ -407,7 +409,7 @@ function ReportView({ s }: { s: Summary }) {
   );
 }
 
-function Kpi({ label, value, cur, prev, ly, k, lowerBetter }: { label: string; value: string; cur?: number | null; prev: Period; ly: Period; k: 'clicks' | 'impressions' | 'ctr' | 'position'; lowerBetter?: boolean }) {
+function Kpi({ label, value, cur, prev, ly, k, lowerBetter, info }: { label: string; value: string; cur?: number | null; prev: Period; ly: Period; k: 'clicks' | 'impressions' | 'ctr' | 'position'; lowerBetter?: boolean; info?: ReactNode }) {
   const line = (name: string, ref: Period) => {
     if (!ref.available) return <div className="sg-kpi-note">{name}: veri yok</div>;
     const ch = change(cur, ref[k] ?? null);
@@ -420,7 +422,7 @@ function Kpi({ label, value, cur, prev, ly, k, lowerBetter }: { label: string; v
   };
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       {line('Önceki ay', prev)}
       {line('Geçen yıl', ly)}
@@ -448,7 +450,7 @@ function TrendBars({ data, format, name, small }: { data: Array<{ m: string; v: 
   );
 }
 
-function MoversView({ mv, label }: { mv: Movers; label: string }) {
+function MoversView({ mv, label, k }: { mv: Movers; label: string; k?: Kaynaklar | null }) {
   if (!mv.available) return <p className="sg-kpi-note">{mv.reason ?? 'Veri yok.'}</p>;
   const part = (title: string, rows: Mover[], total?: number) => (
     <>
@@ -461,9 +463,9 @@ function MoversView({ mv, label }: { mv: Movers; label: string }) {
             <thead>
               <tr>
                 <th>{label}</th>
-                <th>Önceki ay</th>
-                <th>Bu ay</th>
-                <th>Fark</th>
+                <th>Önceki ay <SeoInfo k={k} label="Önceki ay" /></th>
+                <th>Bu ay <SeoInfo k={k} label="Bu ay" /></th>
+                <th>Fark <SeoInfo k={k} label="Fark" /></th>
               </tr>
             </thead>
             <tbody>

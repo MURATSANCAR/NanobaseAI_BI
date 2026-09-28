@@ -23,10 +23,12 @@ export function useMeta() {
   return useQuery({ queryKey: ['commerce', 'meta'], queryFn: commerceApi.meta, enabled: ENGINE_ENABLED, staleTime: 60_000 });
 }
 
-export function CommerceFrame({ presence, aside, badges, children }: {
+export function CommerceFrame({ presence, aside, badges, badgeInfo, children }: {
   presence: string;
   aside?: ReactNode;
   badges?: Record<string, number | null>;
+  /** Sekme rozetindeki sayının sorgu bilgisi (rozet bağlantının içinde olduğundan «i» sekmelerin sonunda). */
+  badgeInfo?: ReactNode;
   children: ReactNode;
 }) {
   const { pathname } = useLocation();
@@ -68,6 +70,7 @@ export function CommerceFrame({ presence, aside, badges, children }: {
                     </Link>
                   );
                 })}
+                {badgeInfo && <span className="flex shrink-0 items-center px-1">{badgeInfo}</span>}
               </div>
             </nav>
             {children}

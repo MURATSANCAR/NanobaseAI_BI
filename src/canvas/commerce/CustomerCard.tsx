@@ -7,6 +7,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../ad
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { commerceApi, fmtDay, fmtInt, fmtTl } from './api';
 import { CommerceFrame, ROOT, SegmentPill, useMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 const CONSENT: Record<string, { label: string; tone: 'ok' | 'err' | 'muted' }> = {
   izinli: { label: 'İzinli', tone: 'ok' }, ret: { label: 'Ret', tone: 'err' }, bilinmiyor: { label: 'Bilinmiyor', tone: 'muted' },
@@ -34,8 +35,8 @@ export default function CustomerCard() {
             {c.il && <Pill tone="muted">{c.il}</Pill>}
           </div>
           <KpiRow>
-            <Kpi label="Geçerli sipariş" value={fmtInt(c.siparis)} help={`İptal/iade ${fmtInt(c.iadeIptal)}`} />
-            <Kpi label="Site cirosu" value={fmtTl(c.ciro)} help={`R ${c.r ?? '—'} · F ${c.f ?? '—'} · M ${c.m ?? '—'}`} />
+            <Kpi label="Geçerli sipariş" value={fmtInt(c.siparis)} help={`İptal/iade ${fmtInt(c.iadeIptal)}`} info={<SqlInfo k={c.kaynaklar} alan="siparis" label="Geçerli sipariş" />} />
+            <Kpi label="Site cirosu" value={fmtTl(c.ciro)} help={`R ${c.r ?? '—'} · F ${c.f ?? '—'} · M ${c.m ?? '—'}`} info={<SqlInfo k={c.kaynaklar} alan="ciro" label="Site cirosu ve RFM puanı" />} />
             <Kpi label="İlk sipariş" value={fmtDay(c.ilkSiparis)} help="Geçerli sipariş" />
             <Kpi label="Son sipariş" value={fmtDay(c.sonSiparis)} help={`Segmentte ${fmtDay(c.segmentTarihi)} tarihinden beri`} />
           </KpiRow>
@@ -78,7 +79,7 @@ export default function CustomerCard() {
                 )}
               </Panel>
               <Panel>
-                <h3 className="text-[15px] font-extrabold">Aldığı kategoriler</h3>
+                <h3 className="flex items-center gap-1 text-[15px] font-extrabold">Aldığı kategoriler <SqlInfo k={c.kaynaklar} alan="kategoriler" label="Aldığı kategoriler" /></h3>
                 {c.kategoriler.length ? (
                   <ul className="mt-2 space-y-0.5 text-[12.5px]">
                     {c.kategoriler.map((k) => <li key={k.id} className="flex justify-between gap-2"><span>{k.ad}</span><span className="font-mono tabular-nums">{fmtInt(k.adet)}</span></li>)}
@@ -95,10 +96,10 @@ export default function CustomerCard() {
               )}
             </div>
             <Panel>
-              <h3 className="text-[15px] font-extrabold">Siparişler</h3>
+              <h3 className="flex items-center gap-1 text-[15px] font-extrabold">Siparişler <SqlInfo k={c.kaynaklar} alan="siparisler" label="Siparişler" /></h3>
               <div className="mt-2">
                 <TableWrap>
-                  <thead><tr><th className={th}>Tarih</th><th className={th}>Sipariş</th><th className={th}>Durum</th><th className={th}>Kitaplar</th><th className={`${th} text-right`}>Tutar</th></tr></thead>
+                  <thead><tr><th className={th}>Tarih</th><th className={th}>Sipariş</th><th className={th}>Durum</th><th className={th}>Kitaplar</th><th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="siparisler">Tutar</InfoLabel></th></tr></thead>
                   <tbody>
                     {c.siparisler.map((o) => (
                       <tr key={o.no} className={`border-t border-slate-100 ${o.gecerli ? '' : 'text-canvas-muted'}`}>

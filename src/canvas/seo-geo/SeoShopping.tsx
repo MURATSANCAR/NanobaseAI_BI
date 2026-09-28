@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useDeferredValue, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 /** Google Alışveriş hazırlığı: satıştaki ürünler Google'ın ürün verisi kurallarına göre denetlenir. Hiçbir yere
@@ -83,7 +84,7 @@ export default function SeoShopping() {
   const shownIssues = (s?.issues ?? []).filter((i) => i.count > 0);
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/alisveris"
       crumb="Google Alışveriş hazırlığı"
       eyebrow="SEO & GEO · Google Alışveriş"
@@ -115,10 +116,10 @@ export default function SeoShopping() {
       {d && s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Hazır" value={fmt(s.ready)} note={`${fmt(s.products)} satıştaki üründen`} tone="good" onClick={() => setStatus(status === 'hazir' ? '' : 'hazir')} active={status === 'hazir'} />
-            <Kpi label="Sorunlu" value={fmt(s.problem)} note="Geçer ama uyarı alır ya da az gösterilir" onClick={() => setStatus(status === 'sorunlu' ? '' : 'sorunlu')} active={status === 'sorunlu'} />
-            <Kpi label="Engelleyici" value={fmt(s.blocked)} note="Google reddeder ya da reklama çıkmamalı" tone={s.blocked ? 'bad' : undefined} onClick={() => setStatus(status === 'engelleyici' ? '' : 'engelleyici')} active={status === 'engelleyici'} />
-            <Kpi label="Son T-soft okuması" value={dateTime(d.lastSync)} note="Denetim bu veriden yapılır" small />
+            <Kpi label="Hazır" value={fmt(s.ready)} note={`${fmt(s.products)} satıştaki üründen`} tone="good" onClick={() => setStatus(status === 'hazir' ? '' : 'hazir')} active={status === 'hazir'} info={<SeoInfo k={list.data?.kaynaklar} label="Hazır" />} />
+            <Kpi label="Sorunlu" value={fmt(s.problem)} note="Geçer ama uyarı alır ya da az gösterilir" onClick={() => setStatus(status === 'sorunlu' ? '' : 'sorunlu')} active={status === 'sorunlu'} info={<SeoInfo k={list.data?.kaynaklar} label="Sorunlu" />} />
+            <Kpi label="Engelleyici" value={fmt(s.blocked)} note="Google reddeder ya da reklama çıkmamalı" tone={s.blocked ? 'bad' : undefined} onClick={() => setStatus(status === 'engelleyici' ? '' : 'engelleyici')} active={status === 'engelleyici'} info={<SeoInfo k={list.data?.kaynaklar} label="Engelleyici" />} />
+            <Kpi label="Son T-soft okuması" value={dateTime(d.lastSync)} note="Denetim bu veriden yapılır" small info={<SeoInfo k={list.data?.kaynaklar} label="Son T-soft okuması" />} />
           </section>
           {!d.merchant && (
             <p className="sg-banner" style={{ marginTop: 12 }}>
@@ -132,7 +133,7 @@ export default function SeoShopping() {
 
       {s && (
         <section className="sg-card" aria-label="Sorun türleri" style={{ marginTop: 16 }}>
-          <h2>Sorun türleri</h2>
+          <h2>Sorun türleri <SeoInfo k={list.data?.kaynaklar} label="Sorun türleri" /></h2>
           <p className="sg-sub">Bir türe dokunarak yalnız o sorunu taşıyan ürünleri listeleyin.</p>
           {shownIssues.length ? (
             <div className="sg-filters" role="group" aria-label="Sorun süzgeci">
@@ -177,10 +178,10 @@ export default function SeoShopping() {
                   <tr>
                     <th>Kitap</th>
                     <th>Durum</th>
-                    <th>Fiyat</th>
-                    <th>Stok</th>
+                    <th>Fiyat <SeoInfo k={list.data?.kaynaklar} label="Fiyat" /></th>
+                    <th>Stok <SeoInfo k={list.data?.kaynaklar} label="Stok" /></th>
                     <th>Barkod</th>
-                    <th>Sorunlar</th>
+                    <th>Sorunlar <SeoInfo k={list.data?.kaynaklar} label="Sorunlar" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -247,10 +248,10 @@ export default function SeoShopping() {
   );
 }
 
-function Kpi({ label, value, note, tone, small, onClick, active }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean; onClick?: () => void; active?: boolean }) {
+function Kpi({ label, value, note, tone, small, onClick, active, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean; onClick?: () => void; active?: boolean; info?: ReactNode }) {
   const body = (
     <>
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ ...(tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : {}), ...(small ? { fontSize: 18 } : {}) }}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </>

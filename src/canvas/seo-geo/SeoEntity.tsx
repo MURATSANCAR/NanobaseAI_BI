@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, CircleHelp, Copy, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { RIGHTS_LABEL, call, dateTime, fmt, qs, type CrmRights } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 type AuthorStatus = 'wikipedia' | 'wikidata' | 'yok' | 'belirsiz' | 'bekliyor';
 type GbCheck = 'isbn' | 'rights' | 'status' | 'cover' | 'pdf';
@@ -126,7 +127,7 @@ export default function SeoEntity() {
   const phase = o?.state.phase;
 
   return (
-    <SeoLayout
+    <SeoLayout k={overview.data?.kaynaklar}
       path="/seo-geo/kimlik"
       crumb="Kimlik ve bilgi paneli"
       eyebrow="SEO & GEO · kimlik"
@@ -150,16 +151,14 @@ export default function SeoEntity() {
             <Kpi
               label="Kurum kontrolleri"
               value={o.organization ? `${o.organization.checks.filter((c) => c.ok).length} / ${o.organization.checks.length}` : '—'}
-              note={o.organization ? `Son bakış ${dateTime(o.organization.checkedAt)}` : 'Henüz bakılmadı'}
-            />
-            <Kpi label="Wikipedia’sı olan yazar" value={fmt(o.authors.counts.wikipedia)} note={`${fmt(o.authors.total)} yazar · yalnız Wikidata ${fmt(o.authors.counts.wikidata)}`} tone="good" />
-            <Kpi label="Kaydı olmayan yazar" value={fmt(o.authors.counts.yok)} note={`Belirsiz ${fmt(o.authors.counts.belirsiz)} · bakılmadı ${fmt(o.authors.counts.bekliyor)}`} tone={o.authors.counts.yok ? 'bad' : undefined} />
+              note={o.organization ? `Son bakış ${dateTime(o.organization.checkedAt)}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Kurum kontrolleri" />} />
+            <Kpi label="Wikipedia’sı olan yazar" value={fmt(o.authors.counts.wikipedia)} note={`${fmt(o.authors.total)} yazar · yalnız Wikidata ${fmt(o.authors.counts.wikidata)}`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Wikipedia’sı olan yazar" />} />
+            <Kpi label="Kaydı olmayan yazar" value={fmt(o.authors.counts.yok)} note={`Belirsiz ${fmt(o.authors.counts.belirsiz)} · bakılmadı ${fmt(o.authors.counts.bekliyor)}`} tone={o.authors.counts.yok ? 'bad' : undefined} info={<SeoInfo k={overview.data?.kaynaklar} label="Kaydı olmayan yazar" />} />
             <Kpi
               label="Wikidata’da kitap"
               value={o.books.isbn ? fmt(o.books.isbn.found) : '—'}
-              note={o.books.isbn ? `${fmt(o.books.isbn.active)} aktif ISBN içinde${o.books.isbn.complete ? '' : ` · ${fmt(o.books.isbn.checked)} tanesine bakıldı`}` : 'Henüz bakılmadı'}
-            />
-            <Kpi label="Google Kitaplar’a hazır" value={fmt(o.books.googleBooks.ready)} note={`${fmt(o.books.googleBooks.total)} aktif kitap içinde`} tone="good" />
+              note={o.books.isbn ? `${fmt(o.books.isbn.active)} aktif ISBN içinde${o.books.isbn.complete ? '' : ` · ${fmt(o.books.isbn.checked)} tanesine bakıldı`}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Wikidata’da kitap" />} />
+            <Kpi label="Google Kitaplar’a hazır" value={fmt(o.books.googleBooks.ready)} note={`${fmt(o.books.googleBooks.total)} aktif kitap içinde`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Google Kitaplar’a hazır" />} />
           </section>
 
           <div className="sg-filters" role="tablist" aria-label="Bölüm">
@@ -521,10 +520,10 @@ function Pager({ start, total, setStart }: { start: number; total: number; setSt
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

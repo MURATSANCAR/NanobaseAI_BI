@@ -1417,4 +1417,11 @@ def register(app, runtime, authorize, session_user):
     from . import features
 
     features.register(app, features.Ctx(seo=seo, gate=gate, approver=approver, authorize=authorize))
+    # Sorgu bilgisi (2026-09-28): SEO & GEO okuma uçlarının cevabına «kaynaklar» (çalışan SQL + hesap) eklenir.
+    from . import kaynak as sorgu_kaynak
+
+    try:
+        sorgu_kaynak.install(app, seo)
+    except RuntimeError as e:  # uygulama başladıktan sonra kayıt: ara katman eklenemez, rakamlar etkilenmez
+        log.warning("seo sorgu bilgisi ara katmanı eklenemedi: %s", e)
     return seo

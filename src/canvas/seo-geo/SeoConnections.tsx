@@ -14,7 +14,7 @@ export default function SeoConnections() {
   const c = o.data?.connections;
 
   return (
-    <SeoLayout
+    <SeoLayout k={o.data?.kaynaklar}
       path="/seo-geo/baglantilar"
       crumb="Bağlantılar"
       eyebrow="SEO & GEO · kaynaklar"

@@ -8,7 +8,7 @@ import {
   type Fields, type ProductDetail, type Proposal, type SeoField,
 } from './api';
 import CrmPanel from './CrmPanel';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -51,7 +51,7 @@ export default function SeoAudit() {
   const total = list.data?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/urun-denetimi"
       crumb="Ürün denetimi"
       eyebrow="SEO & GEO · T-soft ürünleri"
@@ -199,7 +199,7 @@ function Detail({ id }: { id: string }) {
             )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="sg-kpi-label">Puan</div>
+            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /></div>
             <div className="sg-kpi-value sg-mono" style={{ color: p.score >= 80 ? '#0f7a51' : p.score >= 50 ? '#9a5b00' : '#c2361b' }}>
               {p.score}
               <small>/100</small>

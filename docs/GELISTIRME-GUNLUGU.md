@@ -186,6 +186,33 @@
 - **Sunucuda kalan:** `scripts/acceptance/zeki-eksik/check.sh` (pytest 12 dosya, tsc, vitest, build), yan port köprüsüyle
   `kabul.py` (R1–R9; `ZE_IHALE` şartnamesi yüklü ihale), `temizlik.py`. İlk koşuda: `POST /api/v1/rights/map/extract` (bütün notlar;
   süre model hızına bağlı, ölçülecek), M36 gece işi sonrası `hakHaritasi` sayacı.
+## 2026-09-28 (15:30) — Sorgu bilgisi G5: e-ticaret, kampanya, e-ticaret müşteri, kanallar, Trendyol, Amazon, SEO & GEO
+
+**DOĞRULANAMADI — testler koordinatörde** (Mac'te yalnız `py_compile`, JSON ve kopya ağaçta `tsc`). Dal `worktree-agent-af1f7a06e84509b08`,
+ortak altyapı dalı `worktree-agent-a65b65aa8cd2dd1cb` üstünde.
+
+- **Neden yakalama:** G5'te ~110 okuma ucu var; her okumayı `*_stmt()`'e ayırmak yerine `sorgu_yakala.py` uç çalışırken koşan
+  SQL'i değerleriyle kaydeder (kılavuzdaki «gösterilen = çalışan» güvencesi aynı; `?`/`%(ad)s` sürücü parametreleri yerine konur,
+  tablo kurma/sistem kataloğu okumaları atılır). Logo/CRM metni sarılmış çalıştırıcıdan gelir; e-ticaret pazar yeri gibi
+  önbellekli Logo okumalarında yükleme anındaki sorgular önbellekle saklanır.
+- **Asıl sorgu (köken):** yenileme işleri (`eticaret.Refresher`, `kampanya.Refresher` + sonuç okuması, `channels.refresh`
+  yıl başına, `trendyol.refresh_logo`, `amazon.refresh`) okumada koşan Logo/CRM sorgularını `semantic_query_origin`'e yazar.
+  Karar: ilk gece okumasına kadar yalnız portal SQL'i gösterilir (kabulden önce run-due elle koşturulmalı).
+- **SEO & GEO:** 38 ekran ~60 uç; paket kaydında saf ASGI ara katman (BaseHTTPMiddleware değil — akış/indirme uçlarına
+  dokunmasın diye) yalnız `/api/v1/seo-geo/*` GET'lerine `kaynaklar` ekler. Yeni SEO uçu `SPECS`'e yazılmazsa
+  `test_every_seo_read_endpoint_has_a_spec` düşer. Dış servis rakamları (Search Console, Bing, YouTube, T-soft) SQL'siz:
+  saklandıkları tablonun SQL'i + hesapta kaynak adı. CRM tabloları (kitap kartı, yazar, biyografi kaynağı, özel gün) CRM
+  sorgusu kökenli (şema ayardan). Bu istekte okuma olmayan uçta pencere nedenini yazar.
+- **Ön yüz:** e-ticaret, kampanya, commerce, kanallar: kart `info`, tablo başlığı `InfoLabel`, sekme rozeti ve telefon
+  listesi için ayrı «i» (tıklanan kartın/bağlantının dışında). Trendyol/Amazon ve SEO ekranlarında aynı kalıp dönüştürücüyle
+  uygulandı; SEO başlığında ekranın bütün sorguları. Kampanya ayrıntısında değişiklik cevabından sonra kayıt yeniden okunur
+  (kaynak bilgisi okuma ucundan gelir).
+- **Envanter:** Grup 5 satırları dolduruldu (123 kalem); denetim betiği «TAMAM».
+- **Ortak dosyalar:** `provenance.py`, `SqlInfo.tsx`, `sqlInfo.ts`, `kit.tsx` değişmedi; kılavuza «yakalama» seçeneği paragrafı,
+  envanterde yalnız Grup 5 ve «Açık kalanlar»daki Grup 5 cümlesi. Not: `src/canvas/budget/TrackingTab.tsx` ortak altyapı
+  dalında sözdizimi hatası (TS1005, satır 277) — G5 değil, tam `tsc` bunu gösterir.
+- **Sunucuda kalan:** pytest (6 yeni dosya + mevcut modül testleri), vitest, tam tsc/derleme; run-due'ları elle koşturup
+  `kabul_g5.py`.
 
 ## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
 

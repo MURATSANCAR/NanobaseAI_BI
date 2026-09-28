@@ -11,6 +11,7 @@ import { fmtDay, fmtMoney, fmtPct } from '../budget/api';
 import { Tabs } from '../budget/parts';
 import { channelsApi, platformName, type Account, type ChannelsMeta } from './api';
 import { ChannelsFrame, DataBar, useChannelsMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** M42 cari ↔ platform eşlemesi (/kanallar/eslesme). Zeki AI ya da unvan eşleşmesi aday önerir, kullanıcı onaylar; kanal
  * kodu ve CRM hedef bölgesi de burada platforma bağlanır. Eşleme portal kaydıdır; CRM'e ve Logo'ya yazılmaz. */
@@ -110,7 +111,7 @@ function Cariler({ meta }: { meta: ChannelsMeta }) {
     <Panel>
       <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold">E-ticaret carileri</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">E-ticaret carileri <SqlInfo k={r.data?.kaynaklar} alan="items" label="E-ticaret carileri: durum sayıları, olasılık" /></h2>
           <p className="text-[12px] text-canvas-muted">
             Logo kanal kodu {r.data?.specodes.join(', ') ?? '…'} olan cariler (her gece güncellenir) ve elle eşlenenler. Aday ya unvanda platform/işletmeci adı geçtiği için ya da Zeki AI'ın kapalı listeden seçimidir; onay gerekir.
           </p>
@@ -167,14 +168,14 @@ function KanalCodes({ meta }: { meta: ChannelsMeta }) {
   });
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Kanal kodu ile eşleme</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanal kodu ile eşleme <SqlInfo k={r.data?.kaynaklar} alan="items" label="Kanal kodu net cirosu" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">
         Tek tek eşlenemeyecek kadar çok carisi olan kanal (ör. sitenin bireysel müşterileri) bütünüyle bir platforma bağlanır; o koddaki bütün cariler tek satırda toplanır.
         Tek tek eşlenen cari kanal kodu eşlemesinin önüne geçer. Net ciro {r.data?.yil ?? '—'} yılı.
       </p>
       {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Kanal kodları okunamadı.')}</Note> : (
         <TableWrap>
-          <thead><tr><th className={th}>Kanal kodu</th><th className={`${th} text-right`}>Net ciro</th><th className={th}>Platform</th></tr></thead>
+          <thead><tr><th className={th}>Kanal kodu</th><th className={`${th} text-right`}><InfoLabel k={r.data?.kaynaklar} alan="items">Net ciro</InfoLabel></th><th className={th}>Platform</th></tr></thead>
           <tbody>
             {(r.data?.items ?? []).map((k) => (
               <tr key={k.kod} className="border-t border-slate-100">
@@ -208,14 +209,14 @@ function Regions({ meta }: { meta: ChannelsMeta }) {
   });
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">CRM satış hedefi bölgeleri</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM satış hedefi bölgeleri <SqlInfo k={r.data?.kaynaklar} alan="items" label="CRM satış hedefi bölgeleri" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">CRM'deki satış hedefi bölgesi (D&amp;R, Hepsiburada, Kitapyurdu, B2C …) hangi platformun hedefi? Karnede «CRM hedef gerçekleşme» bu eşlemeyle hesaplanır.</p>
       {r.data?.crmError && <Note tone="warn">CRM okunamadı: {r.data.crmError}</Note>}
       {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Bölgeler okunamadı.')}</Note> : !r.data?.items.length ? (
         <Note tone="info">CRM satış hedefleri henüz okunmadı; «Veriyi yenile».</Note>
       ) : (
         <TableWrap>
-          <thead><tr><th className={th}>Bölge</th><th className={`${th} text-right`}>Yıllık hedef (adet)</th><th className={th}>Platform</th></tr></thead>
+          <thead><tr><th className={th}>Bölge</th><th className={`${th} text-right`}><InfoLabel k={r.data?.kaynaklar} alan="items">Yıllık hedef (adet)</InfoLabel></th><th className={th}>Platform</th></tr></thead>
           <tbody>
             {r.data.items.map((b) => (
               <tr key={b.kod} className="border-t border-slate-100">

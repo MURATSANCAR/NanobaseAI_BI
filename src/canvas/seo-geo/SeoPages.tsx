@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Search, Sparkles, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, dateTime, fmt, scoreTone, seoApi, type PageDetail, type PageField, type PageKind } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -50,7 +50,7 @@ export default function SeoPages() {
   const total = list.data?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/sayfalar"
       crumb="Yazar ve kategori"
       eyebrow="SEO & GEO · sayfalar"
@@ -163,7 +163,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
             </a>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="sg-kpi-label">Puan</div>
+            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /></div>
             <div className="sg-kpi-value sg-mono">
               {p.score}
               <small>/100</small>

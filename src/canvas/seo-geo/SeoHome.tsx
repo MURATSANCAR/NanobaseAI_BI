@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_ENABLED } from '../engine';
-import { dateTime, fmt, seoApi, type Overview } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { dateTime, fmt, seoApi, type Overview, type WithK } from './api';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 /** Genel bakış: ürün puanları, kural dağılımı, onay bekleyenler, Search Console özeti, bağlantılar. Veri yoksa
@@ -27,7 +28,7 @@ export default function SeoHome() {
   const o = q.data;
 
   return (
-    <SeoLayout
+    <SeoLayout k={q.data?.kaynaklar}
       path="/seo-geo"
       crumb="SEO özeti"
       eyebrow="SEO & GEO · TIMAS.COM.TR"
@@ -51,7 +52,7 @@ export default function SeoHome() {
   );
 }
 
-function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void; batchPending: boolean }) {
+function Body({ o, onBatch, batchPending }: { o: Overview & WithK; onBatch?: () => void; batchPending: boolean }) {
   const waiting = o.proposals.hazir ?? 0;
   const daily = o.search?.rows ?? [];
   const clicks = daily.reduce((a, r) => a + r.clicks, 0);
@@ -70,20 +71,19 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
       {o.sync.error && !o.lastSync?.error && <p className="sg-banner err">{o.sync.error}</p>}
 
       <section className="sg-kpis" aria-label="Özet">
-        <Kpi label="T-soft ürünü" value={fmt(o.products)} note={o.lastSync ? `Son okuma ${dateTime(o.lastSync.finishedAt || o.lastSync.startedAt)}` : 'Henüz okunmadı'} />
-        <Kpi label="Ortalama puan" value={o.activeAverage == null ? '—' : fmt(o.activeAverage, 1)} unit="/100" note="Aktif ürünler" />
-        <Kpi label="Düzeltilmesi gereken" value={fmt(o.failing)} note={`Puanı ${o.failingThreshold}’in altında`} />
-        <Kpi label="Onay bekleyen öneri" value={fmt(waiting)} note={`Bu hafta onaylanan ${fmt(o.approvedThisWeek)}`} />
+        <Kpi label="T-soft ürünü" value={fmt(o.products)} note={o.lastSync ? `Son okuma ${dateTime(o.lastSync.finishedAt || o.lastSync.startedAt)}` : 'Henüz okunmadı'} info={<SeoInfo k={o.kaynaklar} label="T-soft ürünü" />} />
+        <Kpi label="Ortalama puan" value={o.activeAverage == null ? '—' : fmt(o.activeAverage, 1)} unit="/100" note="Aktif ürünler" info={<SeoInfo k={o.kaynaklar} label="Ortalama puan" />} />
+        <Kpi label="Düzeltilmesi gereken" value={fmt(o.failing)} note={`Puanı ${o.failingThreshold}’in altında`} info={<SeoInfo k={o.kaynaklar} label="Düzeltilmesi gereken" />} />
+        <Kpi label="Onay bekleyen öneri" value={fmt(waiting)} note={`Bu hafta onaylanan ${fmt(o.approvedThisWeek)}`} info={<SeoInfo k={o.kaynaklar} label="Onay bekleyen öneri" />} />
         <Kpi
           label="Google tıklaması"
           value={o.search ? fmt(clicks) : '—'}
-          note={o.search ? `${o.search.start} – ${o.search.end} · ort. sıra ${fmt(position, 1)}` : 'Search Console bağlı değil'}
-        />
+          note={o.search ? `${o.search.start} – ${o.search.end} · ort. sıra ${fmt(position, 1)}` : 'Search Console bağlı değil'} info={<SeoInfo k={o.kaynaklar} label="Google tıklaması" />} />
       </section>
 
       <div className="sg-grid">
         <section className="sg-card sg-span-7">
-          <h2>Google’dan gelen tıklama</h2>
+          <h2>Google’dan gelen tıklama <SeoInfo k={o.kaynaklar} label="Google’dan gelen tıklama" /></h2>
           <p className="sg-sub">Search Console, günlük; son 3 gün Google’da henüz kesinleşmediği için dahil değil.</p>
           {daily.length ? (
             <div className="sg-chart">
@@ -110,7 +110,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
         </section>
 
         <section className="sg-card sg-span-5">
-          <h2>Sorunlar kurala göre</h2>
+          <h2>Sorunlar kurala göre <SeoInfo k={o.kaynaklar} label="Sorunlar kurala göre" /></h2>
           <p className="sg-sub">Aktif ürünlerde kaç ürünün o sorunu taşıdığı. Tıklayınca ürünler süzülür.</p>
           {o.products ? (
             <div className="sg-bars">
@@ -136,7 +136,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
         </section>
 
         <section className="sg-card sg-span-12">
-          <h2>Önce düzeltilecek kitaplar</h2>
+          <h2>Önce düzeltilecek kitaplar <SeoInfo k={o.kaynaklar} label="Önce düzeltilecek kitaplar" /></h2>
           <p className="sg-sub">Puanı 70’in altındaki kitaplardan en çok satan 10’u; düzeltme en çok okura buradan ulaşır.</p>
           {o.priority.length ? (
             <div className="sg-table-wrap">
@@ -169,7 +169,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>İş listesi</h2>
+          <h2>İş listesi <SeoInfo k={o.kaynaklar} label="İş listesi" /></h2>
           <p className="sg-sub">Karar bekleyen işler.</p>
           <div className="sg-bars">
             <Todo to="/seo-geo/urun-denetimi?durum=hazir" label="Onay bekleyen model önerisi" n={waiting} />
@@ -196,7 +196,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
         </section>
 
         <section className="sg-card sg-span-6">
-          <h2>Bağlantı durumu</h2>
+          <h2>Bağlantı durumu <SeoInfo k={o.kaynaklar} label="Bağlantı durumu" /></h2>
           <p className="sg-sub">Ayrıntı ve kurulum adımları Bağlantılar ekranında.</p>
           <div className="sg-bars">
             <Conn label="T-soft mağazası" ok={o.connections.tsoft} />
@@ -211,10 +211,10 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
   );
 }
 
-function Kpi({ label, value, unit, note }: { label: string; value: string; unit?: string; note: string }) {
+function Kpi({ label, value, unit, note, info }: { label: string; value: string; unit?: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">
         {value}
         {unit && <small>{unit}</small>}

@@ -36,7 +36,7 @@ Toplam 275 rota + kök (`/`) = 275 satır başlığı (yönlendirme rotaları da
 
 ## Açık kalanlar (2026-09-28, iş koordinatör kararıyla durduruldu)
 
-- **Envanter:** Grup 5'in kalemleri hiç çıkarılmadı; Grup 2'de telif, haklar, dijital yayın, üretim, serbest çalışan,
+- **Envanter:** Grup 5 tamamlandı (2026-09-28); Grup 2'de telif, haklar, dijital yayın, üretim, serbest çalışan,
   kişiler, yazar ilişkileri rotaları «envanter bekliyor». Rota listesi tam (denetim betiği «TAMAM»), kalem satırları eksik.
 - **Örnek modüllerde bağlanmamış kalemler** (salt okuma denetimi): `/finansal-raporlar` kârlılık ve nakit özet kartları,
   açık hafta uyarısı, telefon hafta kartları, vergi «N gün kaldı»/geciken sayısı, eşleme önerisi olasılığı ve öneri işi
@@ -699,74 +699,136 @@ Toplam 275 rota + kök (`/`) = 275 satır başlığı (yönlendirme rotaları da
 
 ## Grup 5 — E-ticaret, SEO ve platform
 
-Özet: bu grubun kalem kalem envanteri çıkarılmadı (**açık kalan**). Aşağıda grubun bütün rotaları var; yayılım ajanı kalemleri `docs/analiz/ai-firsatlari/C-pazarlama-platform.md` (SEO, M34, M35, H3, M42, M40, M41) ve koddan çıkarıp satırları doldurur.
+Özet (2026-09-28, G5 yayılımı): 67 ekran, 123 kalem satırı — 111 kalem «bağlandı», 12 kalem gerekçeli
+«rakam değil / rakam yok»; açık kalan yok. Uygulama: `sorgu_yakala.py` (uç çalışırken koşan portal SQL'i değerleriyle ve
+Logo/CRM çalıştırıcısına giden metni yakalar; gösterilen = çalışan) + modül kaynak dosyaları (`eticaret_kaynak.py`,
+`kampanya_kaynak.py`, `commerce_kaynak.py`, `channels/kaynak.py`, `channels/kaynak_pazaryeri.py`) + SEO & GEO için ara
+katman (`seo_geo/kaynak.py`: bütün `/api/v1/seo-geo/*` okumaları; yeni uç tanımsız kalırsa test düşer). Tabloyu gece
+dolduran Logo/CRM sorgusu `semantic_query_origin`'e yazılır ve «asıl sorgu» (`origin`) olarak görünür; ilk gece okumasından
+önce yalnız portal SQL'i görünür. Kabul: `scripts/acceptance/sorgu-bilgisi/kabul_g5.py`.
 
 | Rota | Ekran · sekme | Kalem | Uç | Fonksiyon · SQL (dosya:satır) | Kaynak | Bugün SQL |
 |---|---|---|---|---|---|---|
-| `/eticaret-musteri` | CommerceScreen | envanter bekliyor | — | — | — | açık kalan |
-| `/eticaret-musteri/musteri/:key` | CommerceCustomer | envanter bekliyor | — | — | — | açık kalan |
-| `/eticaret-musteri/:section/*` | CommerceScreen | envanter bekliyor | — | — | — | açık kalan |
-| `/kanallar` | ChannelsHome | envanter bekliyor | — | — | — | açık kalan |
-| `/kanallar/matris` | ChannelsMatrix | envanter bekliyor | — | — | — | açık kalan |
-| `/kanallar/d2c` | ChannelsD2C | envanter bekliyor | — | — | — | açık kalan |
-| `/kanallar/eslesme` | ChannelsAccounts | envanter bekliyor | — | — | — | açık kalan |
-| `/kanallar/:platform` | ChannelDetail | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol` | TrendyolHome | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/urunler` | TrendyolProducts | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/siparisler` | TrendyolOrders | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/sorular` | TrendyolQuestions | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/vitrin` | TrendyolShowcase | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/haftalik` | TrendyolWeekly | envanter bekliyor | — | — | — | açık kalan |
-| `/trendyol/yukle` | TrendyolImports | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon` | AmazonHome | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon/konsinye` | AmazonConsignment | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon/yurtdisi` | AmazonInternational | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon/haklar` | AmazonRights | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon/pazarlar` | AmazonMarketCards | envanter bekliyor | — | — | — | açık kalan |
-| `/amazon/taslaklar` | AmazonDrafts | envanter bekliyor | — | — | — | açık kalan |
-| `/e-ticaret` | EticaretHome | envanter bekliyor | — | — | — | açık kalan |
-| `/e-ticaret/farklar` | EticaretDiffs | envanter bekliyor | — | — | — | açık kalan |
-| `/e-ticaret/huni` | EticaretFunnel | envanter bekliyor | — | — | — | açık kalan |
-| `/e-ticaret/pazar-yerleri` | EticaretMarkets | envanter bekliyor | — | — | — | açık kalan |
-| `/kampanyalar` | CampaignsScreen | envanter bekliyor | — | — | — | açık kalan |
-| `/kampanyalar/takvim` | CampaignsScreen | envanter bekliyor | — | — | — | açık kalan |
-| `/kampanyalar/adaylar` | CampaignsScreen | envanter bekliyor | — | — | — | açık kalan |
-| `/kampanyalar/:id` | CampaignDetail | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo` | SeoHome | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/urun-denetimi` | SeoAudit | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/anahtar-kelimeler` | SeoSearch | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/ai-gorunurluk` | SeoVisibility | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/gecmis` | SeoHistory | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/baglantilar` | SeoConnections | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/llms` | SeoLlms | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/yonlendirmeler` | SeoRedirects | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/sayfalar` | SeoPages | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/sema` | SeoSchema | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/crm-haklar` | SeoRights | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/firsatlar` | SeoOpportunities | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/bing` | SeoBing | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/teknik` | SeoTech | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/rakipler` | SeoCompetitors | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/kimlik` | SeoEntity | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/rehberler` | SeoGuides | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/is-listesi` | SeoWorklist | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/kitap` | SeoScorecard | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/yazar-biyografi` | SeoBios | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/sss` | SeoFaq | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/benzer-kitaplar` | SeoSimilar | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/sorgu-sayfa` | SeoKeymap | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/soru-onerileri` | SeoQuestionSuggest | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/youtube` | SeoYoutube | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/alisveris` | SeoShopping | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/aylik-rapor` | SeoMonthly | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/izleme` | SeoWatch | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/kaynaklar` | SeoSources | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/yarisan` | SeoCannibal | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/google-taramasi` | SeoCrawlbot | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/geri-baglantilar` | SeoBacklinks | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/takvim` | SeoSeasons | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/ic-baglantilar` | SeoLinks | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/yorumlar` | SeoReviews | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/video` | SeoVideo | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/satistan-kalkan` | SeoSunset | envanter bekliyor | — | — | — | açık kalan |
-| `/seo-geo/yazar-sayfalari` | SeoAuthors | envanter bekliyor | — | — | — | açık kalan |
+| `/e-ticaret` | Platform durumu · KPI | Sitede satışta, CRM «TSOFT Aktif», Açık fark, Eksik ürün kartı, Satışta olmaması gereken | `GET /api/v1/eticaret/overview` | `eticaret.py overview()` · `eticaret_kaynak.for_overview` | portal (semantic_eticaret_items, _diffs) + köken gece okuması (CRM + Logo + site tablosu) | bağlandı |
+| `/e-ticaret` | Platform durumu · Bugün bakılacaklar | Fark kartı: CRM/Logo/site değerleri, «Son dönem Logo satışı N adet» (etki), Zeki AI neden olasılığı %, «İlk N · M açık fark» | `GET /api/v1/eticaret/overview` | `overview()` `bugun` · `DiffCard` | portal + hesap | bağlandı |
+| `/e-ticaret` | Platform durumu · Türe göre açık farklar, Son 7 gün | Tür sayıları; kapanan, ortalama kapanma günü; bilinçli / doğrulama bekleyen / sonraya | `GET /api/v1/eticaret/overview` | `overview()` `turSayilari`, `haftalik`, `durumSayilari` | portal + hesap | bağlandı |
+| `/e-ticaret` | Platform durumu · Onay bekleyen Zeki AI önerileri | «N öneri» | `GET /api/v1/eticaret/proposals` | `eticaret_api.eticaret_proposals` · `for_proposals` | portal (semantic_seo_proposals, semantic_eticaret_items) | bağlandı |
+| `/e-ticaret` | Kitap çekmecesi (her ekrandan) | Üç kaynak: fiyat (CRM/Logo/site, indirimli), stok (Logo/site), Logo son dönem adet, görüntülenme, site satışı, dönüşüm, kart doluluğu %; farklar; öneri SEO puanı önce→sonra | `GET /api/v1/eticaret/items/{key}` | `item_detail()` + `proposals_for` · `for_item` | portal + köken gece okuması + hesap | bağlandı |
+| `/e-ticaret/farklar` | Farklar · tür sekmeleri | Sekme rozetleri «Hepsi · N», «Tür · N» | `GET /api/v1/eticaret/diffs` | `list_diffs()` `turSayilari` · `for_diffs` | portal | bağlandı |
+| `/e-ticaret/farklar` | Farklar · liste | Fark kartı değerleri, etki, neden olasılığı; sayfa toplamı | `GET /api/v1/eticaret/diffs`, `GET /diffs/{id}` | `list_diffs()`, `get_diff()` · `for_diffs`, `for_diff` | portal + hesap | bağlandı |
+| `/e-ticaret/farklar` | Farklar · seçim/işaret düğmeleri | «Seçilenleri işaretle (N)», «İçerik paketi (N kitap)» | — | ön yüzdeki seçim sayısı | — | — rakam değil (kullanıcının seçtiği satır sayısı) |
+| `/e-ticaret/huni` | Huni · Ürün sayaçları KPI | Görüntülenme, Site satışı, Ortanca dönüşüm, Düşük dönüşüm (N) | `GET /api/v1/eticaret/funnel` | `funnel()` · `for_funnel` | portal (semantic_eticaret_items; site sayaçları SEO eşitlemesinden) + hesap | bağlandı |
+| `/e-ticaret/huni` | Huni · kitap satırları | Görüntülenme, site satışı, dönüşüm %, Logo son dönem adet; «N kitap» | `GET /api/v1/eticaret/funnel` | `funnel()` `items`, `total` | portal + hesap | bağlandı |
+| `/e-ticaret/huni` | Huni · Sipariş hunisi sekmesi | (H3 bileşeni `commerce/Funnel`) | `GET /api/v1/commerce/funnel` | H3 satırlarında | — | bağlandı (H3 satırı) |
+| `/e-ticaret/pazar-yerleri` | Pazar yerleri · KPI | Net ciro (geçen yıl, değişim), Satış (adet), İade (adet, oran), Cari sayısı | `GET /api/v1/eticaret/marketplaces` | `eticaret_sources.marketplace_sql` (yıl firması başına) → `marketplace_summary()` · `for_marketplaces` | Logo (önbellekli; gösterilen metin o yüklemede koşan metin) + hesap | bağlandı |
+| `/e-ticaret/pazar-yerleri` | Pazar yerleri · Cariler tablosu | Net ciro, Değişim, İade oranı (önceki), Aylık net çubukları | `GET /api/v1/eticaret/marketplaces` | aynı | Logo + hesap | bağlandı |
+| `/e-ticaret/pazar-yerleri` | Pazar yerleri · Tükenme riski | Net adet, ciro, Logo stok, kalan gün | `GET /api/v1/eticaret/marketplaces/stock-risk` | `channel_books_sql` → `marketplace_books()` · `for_stock_risk` | Logo + portal (kitap satırı) + hesap | bağlandı |
+| `/e-ticaret/pazar-yerleri` | Pazar yerleri · Cari kitap kırılımı (çekmece) | «N kitap», net adet, ciro, stok, kalan gün | `GET /api/v1/eticaret/marketplaces/{kod}/books` | `marketplace_books_sql` → `marketplace_books()` · `for_marketplace_books` | Logo + portal + hesap | bağlandı |
+| `/e-ticaret/pazar-yerleri` | Pazar yerleri · dipnot | «son N ayın satış hızıyla N günden az», kanal adı | `GET /marketplaces/stock-risk` `esikGun`, `satisAyi` | ayar (Yönetim → E-ticaret) | ayar | — rakam değil (ayar değeri) |
+| `/kampanyalar` | Kampanyalar · KPI | Taslak, Onay bekliyor, Yürütülüyor, Biten | `GET /api/v1/kampanya/overview` | `kampanya.summary()` · `kampanya_kaynak.for_overview` | portal (semantic_kampanya_campaigns, _books) | bağlandı |
+| `/kampanyalar` | Kampanyalar · üst bilgi | «Site fiyat kaydı: N gün» | `GET /api/v1/kampanya/overview` `status.fiyatKaydi` | `Refresher.status()` → `semantic_kampanya_meta` | portal + köken gece okuması | bağlandı |
+| `/kampanyalar` | Kampanyalar · Onayınızı bekleyen, stok uyarıları | «N kitap · marj % · N kırmızı»; «N kitapta stok tükenebilir» | `GET /api/v1/kampanya/overview` | `all_campaigns()` → `totals()` | portal + hesap | bağlandı |
+| `/kampanyalar` | Kampanyalar · Önümüzdeki N gün (takvim şeridi) | tarih çubukları (rakam yok; «N gün» ayar) | `GET /api/v1/kampanya/overview` `takvim` | `calendar()` | portal | bağlandı (başlıkta «i») |
+| `/kampanyalar` | Kampanyalar · Liste tablosu | Kitap, Ort. indirim, Kampanyalı marj (N kitapta maliyet yok), Uyarı (kırmızı · sarı); toplam | `GET /api/v1/kampanya/campaigns` | `list_campaigns()` · `for_list` | portal + hesap | bağlandı |
+| `/kampanyalar` | Kampanyalar · CRM bayi kampanyaları sekmesi | Net iskonto, Sipariş, Adet, Kampanya indirimi, İndirimli tutar | `GET /api/v1/kampanya/crm-campaigns` | `kampanya_sources.read_crm_campaigns`, `read_campaign_effect` · `for_crm` | CRM (canlı; gösterilen metin koşan metin) + portal (tür) | bağlandı |
+| `/kampanyalar` | Kampanyalar · Öğrenimler sekmesi | indirim %, satış «N kat» | `GET /api/v1/kampanya/learnings` | `learnings()` · `for_learnings` | portal | bağlandı |
+| `/kampanyalar/takvim` | Takvim · Dönemler ve günler | «N bağlı kitap» | `GET /api/v1/kampanya/calendar` | `calendar()` · `for_calendar` | portal (kampanya takvimi + SEO özel günleri) | bağlandı |
+| `/kampanyalar/adaylar` | Aday kitaplar tablosu | Stok, Stok yeter (ay), Satış (son / önceki), Liste, Marj, Neden aday; toplam aday | `GET /api/v1/kampanya/candidates` | `candidates()` · `for_candidates` | portal (semantic_kampanya_books) + köken gece okuması + hesap | bağlandı |
+| `/kampanyalar/adaylar` | Aday kitaplar · dipnot | eşikler (stok ayı, düşüş %, hız ayı, marj %) | `candidates` `esikler` | ayar (Yönetim → Kampanyalar) | ayar | — rakam değil (ayar değeri) |
+| `/kampanyalar/:id` | Kampanya · KPI | Kitap (ortalama indirim), Marj önce → kampanya (N kitapta), Kırmızı kontrol (N kitap, sarı), Maliyeti eksik / stok riski | `GET /api/v1/kampanya/campaigns/{id}` | `get_campaign()` → `totals()` · `for_campaign` | portal (semantic_kampanya_items) + köken + hesap | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Kitaplar sekme rozeti | kırmızı kontrollü kitap sayısı | `GET /campaigns/{id}` `ozet.kirmiziKitap` | aynı | hesap | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Kitaplar ve kontroller tablosu | Liste, İndirim, Kampanya fiyatı, Stok / tükenme, Birim maliyet, Telif önce → kampanya, Marj önce → kampanya | `GET /campaigns/{id}`, `POST /campaigns/{id}/simulate` | `simulate_item()` sonucu `semantic_kampanya_items` | portal + köken (Logo/CRM kitap verisi, fiyatlama birim maliyeti) + hesap | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Kitap ekle araması | stok, liste fiyatı; «N kitap» | `GET /api/v1/kampanya/books` | `kampanya_api.kampanya_books` · `for_books` | portal | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Sonuç sekmesi KPI | Günlük satış (önceki, «N kat»), Kampanya satışı (net tutar, gün okundu), İade oranı (puan), Gerçekleşen marj (kapsam) | `GET /campaigns/{id}/results` | `results()` · `for_results` | portal (semantic_kampanya_results) + köken (sonucu dolduran Logo sorgusu) + hesap | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Sonuç: günlük grafik, Dönemler, Kitap kitap, CRM etkisi, öğrenim | seri adet; dönem gün/satış/günlük/iade/net/marj; kitap önce/kampanya/sonra/iade/değişim; CRM sipariş/adet/indirim | `GET /campaigns/{id}/results` | aynı | portal + Logo köken + CRM (canlı) + hesap | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Zeki AI özeti | metindeki rakamlar | `GET /campaigns/{id}/results` `ozet` | `draft_summary()` (olgular `summary_facts`) | model metni; «i» dayandığı dönem rakamlarının sorgusu | bağlandı |
+| `/kampanyalar/:id` | Kampanya · Zeki AI metni | «en çok N karakter» | overview `metinTurleri` | sabit | — | — rakam değil (karakter sınırı) |
+| `/eticaret-musteri` | Özet · KPI | Sipariş (değişim, iptal/iade), Site cirosu, Sepet ortalaması, Müşteri (yeni, tekrar, misafir) | `GET /api/v1/commerce/overview` | `commerce.overview()` · `_window_stats` · `commerce_kaynak.for_overview` | portal (semantic_commerce_orders; site sipariş servisinden gece okuma — SQL'i yok, hesap metninde adı) + hesap | bağlandı |
+| `/eticaret-musteri` | Özet · düşüş uyarısı, önceki dönem cümlesi, veri tarihi | «N sipariş; ortalama N (%)»; önceki dönem sipariş/ciro | `GET /api/v1/commerce/overview` `drop`, `prev`, `freshness` | `drop_alert()`, `freshness()` | portal + hesap | bağlandı |
+| `/eticaret-musteri` | Özet · Site cirosu ve Logo | Site, Logo net, Fark, fark oranı | `GET /api/v1/commerce/overview` `logo` | `logo_d2c()` → kanal karnesi | portal (semantic_channel_*) + köken kanal okuması (Logo) + portal sipariş | bağlandı |
+| `/eticaret-musteri` | Özet · Müşteri segmentleri, En çok satan 10 kitap | segment müşteri · pay · ciro; kitap adet/sipariş/tutar | `GET /api/v1/commerce/overview` | `segment_counts()`, `top_books()` | portal + hesap | bağlandı |
+| `/eticaret-musteri/:section/*` | Müşteriler (`musteriler`) · RFM, segmentler, geçişler | hücre müşteri/ciro; segment rozetleri; geçiş sayıları; «sadık N kaybetti»; segment payları | `GET /api/v1/commerce/customers/rfm` | `rfm()` · `for_rfm` | portal + hesap | bağlandı |
+| `/eticaret-musteri/:section/*` | Müşteriler · liste | Sipariş, Ciro | `GET /api/v1/commerce/customers` | `customers()` · `for_customers` | portal (kişisel veri yok; anahtar maskeli) | bağlandı |
+| `/eticaret-musteri/:section/*` | Müşteriler · kural cümlesi | aktif gün, sadık sipariş/ciro eşiği | `rfm` `rules` | ayar | ayar | — rakam değil (ayar değeri) |
+| `/eticaret-musteri/:section/*` | Tetikler (`tetikler`) · sekme rozeti | onay bekleyen liste sayısı | `GET /api/v1/commerce/runs?durum=onay-bekliyor` | `list_runs()` · `for_runs` | portal | bağlandı |
+| `/eticaret-musteri/:section/*` | Tetikler · ön izleme ve listeler | Aday, Okura bağlı, Ulaşılabilir, Hedef/kontrol, Dışarıda (neden başına), indirilen | `POST /triggers/{id}/preview`, `GET /runs` | `preview()`, `list_runs()` · `for_run`, `for_runs` | portal + hesap | bağlandı |
+| `/eticaret-musteri/:section/*` | Tetikler · kontrol payı, parametreler | kontrol payı %, gün/adet parametreleri | `GET /triggers` | kullanıcının girdiği tetik değerleri | — | — rakam değil (girilen parametre) |
+| `/eticaret-musteri/:section/*` | Kampanyalar (`kampanyalar`) · sonuç | Kişi, Alışveriş yapan, Oran, Sipariş, Ciro, Kişi başına; dönüşüm farkı, %95 aralık, ek alan, ek ciro | `GET /api/v1/commerce/campaigns` | `compute_result()` · `for_campaigns` | portal + hesap | bağlandı |
+| `/eticaret-musteri/:section/*` | Huni (`huni`, e-ticaret hunisindeki «Sipariş» sekmesi dahil) | Görüntülenme, Adet, Adet/görüntülenme, Tutar; az satan sayısı; kapsanan gün | `GET /api/v1/commerce/products/funnel` | `funnel()` · `for_funnel` | portal (ürün sayacı + sipariş satırları) + hesap | bağlandı |
+| `/eticaret-musteri/:section/*` | Veri ve ayarlar (`veri`) | Okunan sipariş (iptal/iade, anahtarsız), Okunan üye | `GET /api/v1/commerce/meta` `freshness` | `freshness()` · `for_meta` | portal (okuma kaydı) | bağlandı |
+| `/eticaret-musteri/:section/*` | Veri ve ayarlar · Eşikler formu | ayar değerleri | `GET /api/v1/commerce/settings` | ayar | ayar | — rakam değil (ayar formu) |
+| `/eticaret-musteri/musteri/:key` | Müşteri kartı · KPI | Geçerli sipariş (iptal/iade), Site cirosu (R/F/M) | `GET /api/v1/commerce/customers/{key}` | `customer_card()` · `for_customer` | portal + hesap (kişisel alanlar yalnız yetkiyle, kayda girmez) | bağlandı |
+| `/eticaret-musteri/musteri/:key` | Müşteri kartı · kategoriler, siparişler | kategori adet; sipariş tutarı, satır adetleri | `GET /api/v1/commerce/customers/{key}` | aynı | portal | bağlandı |
+| `/kanallar` | Kanal karnesi · KPI | E-ticaret net ciro (geçen yıla göre), Şirket içindeki pay, D2C payı, brüt marj / iade oranı | `GET /api/v1/channels/scorecard` | `channels/scorecard.scorecard()` · `channels/kaynak.for_scorecard` | portal (semantic_channel_cari_months, _kanal_months) + köken yıl okuması (Logo `channels/sql`, `refresh.koken_yil`) + hesap | bağlandı |
+| `/kanallar` | Kanal karnesi · platform kartları | net ciro, değişim, e-ticaret payı, iskonto/iade oranı, marj, CRM hedef gerçekleşme | `GET /api/v1/channels/scorecard` | `scorecard()` `platforms[]` | portal + köken + hesap | bağlandı |
+| `/kanallar` | Kanal karnesi · dönem, platform dışı, kanallar arası kıyas | dönem/veri sonu; platform dışı cari sayısı ve ciro; kanal kodu net ciro, pay, iskonto, iade, marj, maliyetli ciro payı | `GET /api/v1/channels/scorecard` | `period()`, `platformDisi`, `kanallar` | portal + hesap | bağlandı |
+| `/kanallar` | Kanal karnesi · uyarılar, karar bekleyen öneriler | uyarı metinleri; öneri başlığındaki puan | `GET /api/v1/channels/meta` `alerts`, `GET /suggestions` | `report.weekly` kaydı, `store.suggestions()` · `for_meta`, `for_suggestions` | portal | bağlandı |
+| `/kanallar/matris` | Kitap × kanal matrisi | kolon toplamı, satır toplamı, hücre net / alım − iade, «N kitap» | `GET /api/v1/channels/matrix` | `scorecard.matrix()` · `for_matrix` | portal (semantic_channel_book_months) + köken + hesap | bağlandı |
+| `/kanallar/d2c` | D2C · KPI | D2C net ciro, e-ticaret içindeki pay, şirket içindeki pay, adette D2C payı | `GET /api/v1/channels/d2c` | `channels/d2c.overview()` · `for_d2c` | portal + köken + hesap | bağlandı |
+| `/kanallar/d2c` | D2C · Site müşterisi | sipariş, site cirosu, müşteri, tekrar alan, müşteri başına, sepet, aylık | `GET /api/v1/channels/d2c` `site` | `d2c._site()` | portal (semantic_commerce_orders; site servisi) + hesap | bağlandı |
+| `/kanallar/d2c` | D2C · güçlü kitaplar, öneriler | site net adet, pazar yeri net adet, site payı, genel payın katı | `GET /api/v1/channels/d2c` `kitaplar`, `oneriler` | `strong_books()`, `store.suggestions()` | portal + hesap | bağlandı |
+| `/kanallar/d2c` | D2C · eşik cümlesi | indeks katı, en az adet | `d2c` `esik` | ayar | ayar | — rakam değil (ayar değeri) |
+| `/kanallar/eslesme` | Cari eşleme · E-ticaret carileri | durum sayıları (sekme), olasılık %, Zeki AI aday olasılıkları | `GET /api/v1/channels/accounts` | `store.accounts()` · `for_accounts` | portal (eşleme kaydı; kart Logo'dan, köken genel okuma) | bağlandı |
+| `/kanallar/eslesme` | Cari eşleme · Kanal kodu ile eşleme | kanal kodu net ciro | `GET /api/v1/channels/accounts/kanal-kodlari` | `kanal_months` Σ · `for_kanal_codes` | portal + köken yıl okuması | bağlandı |
+| `/kanallar/eslesme` | Cari eşleme · CRM hedef bölgeleri | yıllık hedef (adet) | `GET /api/v1/channels/accounts/bolgeler` | `semantic_channel_crm_targets` · `for_regions` | portal + köken CRM hedef okuması | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · KPI ve maliyet notu | Net ciro, İskonto oranı, İade oranı, Brüt marj / Net adet, maliyetsiz ciro, birim maliyet tamamlama | `GET /api/v1/channels/channel/{platform}` | `scorecard.channel()` (+ `m9_fill`) · `for_channel` | portal + köken + hesap | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · Ay ay net ciro, Cariler | aylık bu yıl/geçen yıl; cari net ciro, iade oranı, CRM sipariş | `GET /channel/{platform}` | aynı | portal + köken + hesap | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · Kitaplar / Son 3 ayda iade | kanala satış, iade, net adet, net ciro, iade oranı, marj, maliyetsiz adet | `GET /channel/{platform}/books`, `/returns` | `books()`, `returns()` · `for_books`, `for_returns` | portal + köken + hesap | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · Hedef ↔ gerçekleşen | oran, yıllık hedef, bugüne beklenen, gerçekleşen (CRM ve bütçe) | `GET /api/v1/channels/targets` | `targets()` · `for_targets` | portal (CRM hedef + bütçe onaylı hedef) + hesap | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · İskonto simülasyonu | iskonto oranı, net satış, net ciro, brüt kâr, marj (bugün/senaryo), fark, maliyetli ciro payı | `POST /api/v1/channels/simulate` | `simulate()` · `for_simulate` | portal + hesap (kurala göre) | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · Panel dosyası | kanalın sattığı, TİMAŞ'ın kanala sattığı, oran, kanal stoğu, satır/eşleşmeyen | `GET /api/v1/channels/imports/{id}` | `imports.sell_through()` · `for_import` | portal (yüklenen dosya satırları + kitap ay tablosu) + hesap | bağlandı |
+| `/kanallar/:platform` | Kanal detayı · Ek kanal maliyeti formu, simülasyon girdileri | oran, puan, % | — | kullanıcı girdisi | — | — rakam değil (girdi) |
+| `/trendyol` | Trendyol mağazası · KPI | Stok farkı (türler), Cevapsız soru (geciken), Düşük puanlı yorum (ortalama, toplam), Geciken paket (paket) | `GET /api/v1/channels/trendyol/overview` | `channels/trendyol.overview()` · `kaynak_pazaryeri.ty_overview` | portal (panel dosyası satırları `semantic_trendyol_*`; dosyanın SQL'i yok, hesapta adı) + köken Logo okuması (`trendyol.KOKEN_LOGO`) | bağlandı |
+| `/trendyol` | Trendyol mağazası · toptan, yüklenen dosyalar, Logo'da Trendyol adlı cariler | net ciro, adet, iade oranı, değişim; dosya satır sayısı | `GET /overview`, `GET /accounts` | kanal karnesi `channel()`, `last_imports()`, `candidates_view()` · `ty_accounts` | portal + köken kanal yıl okuması | bağlandı |
+| `/trendyol/urunler` | Ürünler · Stok farkı / Fiyat farkı / Hepsi | sekme sayıları; Trendyol stoğu, depo stoğu; Trendyol, liste, site fiyatı, indirim, birim maliyet | `GET /stock-diff`, `/price-diff`, `/products` | `stock_diff()`, `price_diff()`, `products()` · `ty_list` | portal (panel dosyası + Logo tablosu) + köken Logo okuması + hesap | bağlandı |
+| `/trendyol/siparisler` | Siparişler · KPI ve tablo; İadeler | Paket, Adet, Tutar, Geciken; durum sekmeleri; iade sınıf sayıları, kitap bazında iade/sipariş/oran | `GET /orders`, `/claims` | `orders()`, `claims()` · `ty_list` | portal (panel dosyası) + hesap | bağlandı |
+| `/trendyol/sorular` | Sorular · KPI; Yorumlar | Cevapsız, Geciken, Durumu bilinmeyen, Liste; puan sekmeleri, kitap bazında yorum/ortalama/3 ve altı | `GET /questions`, `/reviews` | `questions()`, `reviews()` · `ty_list` | portal (panel dosyası) + hesap | bağlandı |
+| `/trendyol/vitrin` | Vitrin · adaylar, öneriler | haftalık hız, depo, kaç hafta | `GET /showcase`, `/suggestions` | `showcase()`, `store.suggestions()` · `ty_list` | portal + köken Logo okuması + hesap | bağlandı |
+| `/trendyol/haftalik` | Haftalık rapor | Paket (adet, tutar), İade talebi (sınıflar), Cevapsız soru, Düşük puanlı yorum; en çok sipariş/iade alan kitaplar | `GET /weekly` | `weekly()` · `ty_list("hafta")` | portal + hesap (Zeki AI özeti yalnız bu olgular) | bağlandı |
+| `/trendyol/yukle` | Dosya yükle · Yüklemeler | satır, kitaba bağlanan | `GET /imports` | `trendyol_import.list_imports()` · `ty_list("dosya")` | portal | bağlandı |
+| `/amazon` | Amazon ve yurtdışı · KPI | Amazon net ciro, Konsinyede kalan, Yurtdışı net ciro, Satılmış yabancı hak | `GET /api/v1/channels/amazon/overview` | `channels/amazon.overview()` · `am_overview` | portal (`semantic_intl_*`) + köken gece okuması (Logo + CRM, `amazon.KOKEN_OKUMA`) + kanal karnesi | bağlandı |
+| `/amazon` | Amazon · cariler, faturalı satış, faturalanan kitaplar, panel raporu | cari net ciro/adet; kitap sevk/iade/net adet/net ciro; panel dosyası | `GET /accounts`, `/books`, `GET /api/v1/channels/imports?platform=amazon` | `candidates_view`, `scorecard.books()`, `imports.list_imports()` | portal + köken | bağlandı |
+| `/amazon/konsinye` | Konsinye · KPI ve tablo | Konsinyede kalan, Faturalanmamış sevk (tutar), Faturalanmamış iade; kitap sevk/iade/kalan/bu yıl faturalanan | `GET /consignment` | `consignment()` · `am_list("konsinye")` | portal + köken Logo | bağlandı |
+| `/amazon/konsinye` | Konsinye · «Kapsam» kartı | yıl listesi | `consignment` `yillar` | okuma kapsamı | — | — rakam değil (yıl listesi) |
+| `/amazon/yurtdisi` | Yurtdışı · KPI, aylık, cariler, kitaplar | Net ciro, Net adet (ülke), Döviz toplamı, Döviz faturası; aylık seyir; cari/ülke/döviz tablosu; kitap net adet/ciro | `GET /international`, `/international/books` | `international()`, `intl_books()` · `am_list` | portal + köken Logo | bağlandı |
+| `/amazon/haklar` | Haklar | ülke sekmeleri, yurtdışı net adet | `GET /rights` | `rights()` · `am_list("hak")` | portal + köken CRM | bağlandı |
+| `/amazon/pazarlar` | Pazar kartları, pazar parametreleri | KDV, kargo, komisyon (girilen); kart göstergeleri | `GET /params`, `/market-cards` | `params()`, `cards()` · `am_list` | portal (girilen parametre) | bağlandı |
+| `/amazon/taslaklar` | Taslaklar | metin taslakları | `GET /drafts` | `drafts()` | portal | — rakam yok (metin) |
+| `/seo-geo` | SEO özeti · KPI, tıklama grafiği, kural sorunları, öncelik listesi, iş listesi | T-soft ürünü, Ortalama puan, Düzeltilmesi gereken, Onay bekleyen öneri, Google tıklaması; günlük tıklama; kural başına ürün; öncelik (puan, satış, görüntülenme) | `GET /api/v1/seo-geo/overview` | `seo_geo/__init__.seo_overview` · ara katman `seo_geo/kaynak.py` (`SPECS` «ozet») | portal (`semantic_seo_products`, `_proposals`, `_runs`, `_gsc`, `_crm_books`; T-soft/Search Console gece okuması — SQL'i yok, hesapta adı) + köken CRM sorgusu | bağlandı |
+| `/seo-geo/urun-denetimi` | Ürün denetimi · liste, ürün ayrıntısı, kartlar | puan, kural, satış/görüntülenme; toplam; öneri puanı önce/sonra | `GET /products`, `/products/{pid}` | `seo_products`, `seo_product` · «urunler», «urun» | portal + hesap | bağlandı |
+| `/seo-geo/anahtar-kelimeler` | Arama raporu | satır, tıklama, gösterim, oran, sıra; toplamlar | `GET /search/{kind}` | `SeoGeo.gsc()` · «arama» | portal (`semantic_seo_gsc`; Search Console gece okuması) | bağlandı (ekran başlığında ve özet satırında «i») |
+| `/seo-geo/ai-gorunurluk` | Yapay zekâ görünürlüğü | soru × motor anılma/kaynak, tur ilerlemesi | `GET /questions` | `seo_questions` · «gorunurluk» | portal (`_questions`, `_geo_results`) | bağlandı |
+| `/seo-geo/gecmis` | Karar geçmişi | kayıt sayısı, puan önce/sonra | `GET /history` | «gecmis» | portal | bağlandı |
+| `/seo-geo/baglantilar` | Bağlantılar | bağlantı durumu (tanımlı mı) | `GET /overview` `connections` | — | ayar | — rakam yok (bağlantı durumu) |
+| `/seo-geo/llms` | Dosya önerisi | kitap, yayınevi, yazar, satıcı sayıları | `GET /llms` | «llms» | portal | bağlandı |
+| `/seo-geo/yonlendirmeler` | Yönlendirmeler | güven düzeyi kartları (toplam, bekliyor, onaylandı), onay düğmesi sayıları, sayfa toplamı | `GET /redirects` | «yonlendirme» | portal | bağlandı (ekran başlığında «i») |
+| `/seo-geo/sayfalar` | Yazar/kategori/yayınevi sayfaları | kitap sayısı, satış, puan; ayrıntı kartları | `GET /pages`, `/pages/{type}/{tid}` | «sayfalar», «sayfa» | portal | bağlandı |
+| `/seo-geo/sema` | Şema denetimi | sorun başına sayfa, taranan sayfa; kartlar | `GET /schema` | «sema» | portal | bağlandı |
+| `/seo-geo/crm-haklar` | CRM hakları | hak kararı ve yayın durumu sayıları, sözleşme sayısı | `GET /crm` | «crm» | portal (`_crm_books`) + köken CRM sorguları (kitap, sözleşme, taraf, etiketler) | bağlandı |
+| `/seo-geo/firsatlar` | Fırsatlar · Değişikliğin etkisi | sorgu gösterim/tıklama/oran/sıra, tahmini ek tıklama, tipik oran eğrisi; etki önce/sonra | `GET /opportunities`, `/impact` | «firsat», «etki» | portal (`_opps`, `_impact`; Search Console) + hesap | bağlandı |
+| `/seo-geo/bing` | Bing · IndexNow | sorgu/sayfa tıklama, gösterim, sıra, Google ile fark; tarama; bildirim sayıları | `GET /bing`, `/bing/list/{kind}`, `/indexnow` | «bing», «bingListe», «indexnow» | portal (`_bing`, `_indexnow_*`; Bing gece okuması) | bağlandı |
+| `/seo-geo/teknik` | Teknik SEO · hız · robots · sitemap | taranan/sorunlu sayfa, tür, zincir; Core Web Vitals; sitemap adres sayıları | `GET /tech`, `/speed`, `/tech/robots`, `/tech/sitemaps` | «teknik», «hiz», «robots», «sitemap» | portal (`_tech`, `_tech_snap`, `_speed`) | bağlandı |
+| `/seo-geo/rakipler` | Rakipler | kitap × alan adı sırası, ilk 3/ilk 10 | `GET /competitors`, `/competitors/summary` | «rakip», «rakipOzet» | portal (`_serp`) | bağlandı |
+| `/seo-geo/kimlik` | Kimlik | geçti/kaldı, yazar/kitap kayıt sayıları | `GET /entity`, `/entity/authors`, `/entity/google-books` | «kimlik»… | portal (`_entity`) | bağlandı |
+| `/seo-geo/rehberler` | Rehberler | konu gösterim/tıklama/sıra, kitap satış, taslak durumları | `GET /guides`, `/guides/topics`, `/guides/topics/{key}/books` | «rehber»… | portal | bağlandı |
+| `/seo-geo/is-listesi` | İş listesi | etki puanı, kaynak/sorumlu sayıları | `GET /worklist`, `/worklist/group/{g}`, `/worklist/log` | «isListesi»… | portal (`_worklist_*`) | bağlandı |
+| `/seo-geo/kitap` | Kitap karnesi | genel not, bölüm olguları | `GET /scorecard`, `/scorecard/{pid}` | «karneListe», «karne» | portal (öteki modüllerin tabloları) | bağlandı |
+| `/seo-geo/yazar-biyografi` | Yazar biyografileri | yazar başına kitap sayısı, özgeçmiş uzunluğu, taslak durumları | `GET /bios`, `/bios/{key}` | «biyografiler», «biyografi» | portal (`_bios`, `_bios_src`) + köken CRM | bağlandı (ekran başlığında «i») |
+| `/seo-geo/sss` | Soru–cevap | taslak durum sayıları | `GET /faq`, `/faq/{pid}` | «sssListe», «sss» | portal | bağlandı (ekran başlığında «i») |
+| `/seo-geo/benzer-kitaplar` | Benzer kitaplar | öneri ve karar sayıları | `GET /similar`, `/similar/{pid}` | «benzerListe», «benzer» | portal (`_similar_*`) | bağlandı |
+| `/seo-geo/sorgu-sayfa` | Sorgu–sayfa | arama gösterim/tıklama, uyumsuzluk | `GET /keymap` | «sorguSayfa» | portal (`_opps`, `_keymap_decisions`) | bağlandı |
+| `/seo-geo/soru-onerileri` | Soru önerileri | kaynak başına öneri, gösterim, kitap sayısı | `GET /qsuggest` | «soruOneri» | portal (`_qsuggest*`) | bağlandı |
+| `/seo-geo/youtube` | YouTube | izlenme, beğeni, yorum, sorun sayıları | `GET /youtube` | «youtube» | portal (`_youtube`; YouTube gece okuması) | bağlandı |
+| `/seo-geo/alisveris` | Alışveriş hazırlığı | sorun sayıları, fiyat, stok | `GET /shopping` | «alisveris» | portal (`_products`) | bağlandı |
+| `/seo-geo/aylik-rapor` | Aylık rapor | tıklama/gösterim/oran/sıra (önceki ay, geçen yıl), değişen sorgular/sayfalar, puan 80+ payı | `GET /monthly` | «aylik» | portal (`_monthly`) | bağlandı |
+| `/seo-geo/izleme` | İzleme ve haftalık rapor | olaylar, haftalık tıklama/gösterim farkı, motor anılma | `GET /watch`, `/watch/report` | «izleme», «haftalik» | portal (`_watch_*`) | bağlandı |
+| `/seo-geo/kaynaklar` | Yapay zekânın kaynakları | alan adı cevap sayısı/payı, Timaş anılma, soru başına | `GET /ai-sources`, `/ai-source-questions`, `/ai-sources/{domain}` | «yzKaynak»… | portal (`_geo_results`; önbellekten dönerse son hesaplamanın sorgusu) | bağlandı |
+| `/seo-geo/yarisan` | Yarışan sayfalar | gösterim payı, tıklama, sıra | `GET /cannibal` | «yarisan» | portal (`_opps`; önbellek) | bağlandı |
+| `/seo-geo/google-taramasi` | Google taraması | karar/kapsam dağılımı, kota, bot istekleri | `GET /crawlbot`, `/crawlbot/bots`, `/crawlbot/urls` | «tarama», «bot», «denetimAdres» | portal (`_inspect*`, `_botstats`) | bağlandı |
+| `/seo-geo/geri-baglantilar` | Gelen bağlantılar | sayfa başına bağlantı, alan adı, yeni/kaybolan | `GET /backlinks` | «geriBaglanti» | portal (`_backlink*`; Bing) | bağlandı |
+| `/seo-geo/takvim` | Sezon takvimi | bağlı kitap, hazır sayfa, geçen yıl arama artışı | `GET /seasons`, `/seasons/{id}` | «sezon», «sezonGun» | portal (`_seasons_*`) + köken CRM (özel gün, kitap bağı) | bağlandı |
+| `/seo-geo/ic-baglantilar` | Site içi bağlantılar | gelen bağlantı, yetim sayfa | `GET /links`, `/links/url` | «baglanti», «baglantiAdres» | portal (`_links_*`) | bağlandı |
+| `/seo-geo/yorumlar` | Okur yorumları | yorum sayısı, ortalama, yıldız dağılımı | `GET /reviews` | «yorum» | portal (`_reviews`, `_products`) | bağlandı |
+| `/seo-geo/video` | Kitap videoları | video olan kitap, şemada VideoObject | `GET /video` | «video» | portal (`_crm_books`, `_schema`) + köken CRM | bağlandı |
+| `/seo-geo/satistan-kalkan` | Satıştan kalkan | öneri türü sayıları, gösterim/tıklama, neden sayıları | `GET /sunset` | «satistanKalkan» | portal (`_sunset`) | bağlandı |
+| `/seo-geo/yazar-sayfalari` | Yazar güven sinyalleri | sinyal var/yok, puan | `GET /authors-trust` | «yazarGuven» | portal (`_author_crm`, `_entity`, `_schema`) + köken CRM | bağlandı |

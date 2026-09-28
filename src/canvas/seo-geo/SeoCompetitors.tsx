@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 type Verdict = 'geride' | 'onde' | 'yok';
 type RunState = { running: boolean; done: number; failed: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -85,7 +86,7 @@ export default function SeoCompetitors() {
   const running = !!s?.state.running;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/rakipler"
       crumb="Rakipler"
       eyebrow="SEO & GEO · Google sırası"
@@ -107,7 +108,7 @@ export default function SeoCompetitors() {
 
       {s && !s.configured && (
         <div className="sg-empty">
-          <h2>Google arama sonucu anahtarı girilmemiş</h2>
+          <h2>Google arama sonucu anahtarı girilmemiş <SeoInfo k={list.data?.kaynaklar} label="Google arama sonucu anahtarı girilmemiş" /></h2>
           <p>Yönetim → SEO & GEO ekranında arama sonucu anahtarı, aylık arama kotası ve rakip alan adları girildiğinde her gece kotanın o güne düşen payı kadar kitap aranır.</p>
         </div>
       )}
@@ -126,16 +127,16 @@ export default function SeoCompetitors() {
       {s && s.tracked > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Aranan kitap" value={fmt(s.tracked)} note={`Son arama ${dateTime(s.lastSearched)}`} />
-            <Kpi label="Rakiplerden öndeyiz" value={s.firstShare == null ? '—' : `%${fmt(s.firstShare, 1)}`} note={`${fmt(s.first)} kitapta takip edilen siteler içinde ilk biz`} tone="good" />
-            <Kpi label="Rakip önde" value={fmt(s.counts.geride)} note="Bizden üstte en az bir rakip var" tone={s.counts.geride ? 'bad' : undefined} />
-            <Kpi label="İlk 20’de yokuz" value={fmt(s.counts.yok)} note="Kitap adı + yazar aramasında sitemiz çıkmıyor" tone={s.counts.yok ? 'bad' : undefined} />
-            <Kpi label="Aylık kota" value={`${fmt(s.quota.used)} / ${fmt(s.quota.monthly)}`} note={`Kalan ${fmt(s.quota.remaining)} · günlük pay ${fmt(s.quota.dailySlice)}`} />
+            <Kpi label="Aranan kitap" value={fmt(s.tracked)} note={`Son arama ${dateTime(s.lastSearched)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Aranan kitap" />} />
+            <Kpi label="Rakiplerden öndeyiz" value={s.firstShare == null ? '—' : `%${fmt(s.firstShare, 1)}`} note={`${fmt(s.first)} kitapta takip edilen siteler içinde ilk biz`} tone="good" info={<SeoInfo k={list.data?.kaynaklar} label="Rakiplerden öndeyiz" />} />
+            <Kpi label="Rakip önde" value={fmt(s.counts.geride)} note="Bizden üstte en az bir rakip var" tone={s.counts.geride ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Rakip önde" />} />
+            <Kpi label="İlk 20’de yokuz" value={fmt(s.counts.yok)} note="Kitap adı + yazar aramasında sitemiz çıkmıyor" tone={s.counts.yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="İlk 20’de yokuz" />} />
+            <Kpi label="Aylık kota" value={`${fmt(s.quota.used)} / ${fmt(s.quota.monthly)}`} note={`Kalan ${fmt(s.quota.remaining)} · günlük pay ${fmt(s.quota.dailySlice)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Aylık kota" />} />
           </section>
 
           <div className="sg-grid">
             <section className="sg-card sg-span-7" aria-label="Siteler">
-              <h2>Siteler</h2>
+              <h2>Siteler <SeoInfo k={list.data?.kaynaklar} label="Siteler" /></h2>
               <p className="sg-sub">Ortalama sıra yalnız sitenin ilk 20’de çıktığı aramalardan. “Bizi geçtiği”: site bizden üstte ya da biz hiç yokken o çıkmış.</p>
               <div className="sg-table-wrap">
                 <table className="sg-table">
@@ -163,7 +164,7 @@ export default function SeoCompetitors() {
               </div>
             </section>
             <section className="sg-card sg-span-5" aria-label="Sayfa öğeleri">
-              <h2>Arama sayfasındaki öğeler</h2>
+              <h2>Arama sayfasındaki öğeler <SeoInfo k={list.data?.kaynaklar} label="Arama sayfasındaki öğeler" /></h2>
               <p className="sg-sub">Kaç aramada göründü; parantez içinde bizim sitemizin içinde yer aldığı arama sayısı.</p>
               <div className="sg-bars">
                 <Bar label="Alışveriş sonuçları" n={s.features.shopping} of={s.tracked} note={`biz ${fmt(s.features.shoppingUs)}`} />
@@ -292,10 +293,10 @@ function Bar({ label, n, of, note }: { label: string; n: number; of: number; not
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

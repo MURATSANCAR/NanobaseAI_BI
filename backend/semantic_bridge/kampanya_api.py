@@ -21,7 +21,10 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import kampanya as K
+from semantic_bridge import kampanya_kaynak as KK
 from semantic_bridge import kampanya_sources as src
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_yakala as Y
 
 log = logging.getLogger("semantic.kampanya.api")
 P = "/api/v1/kampanya"
@@ -121,6 +124,11 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
         st = settings()
         advance(engine, tenant)
         ref = K.today()
+        with Y.yakala(engine) as q:
+            out = overview_body(engine, tenant, user, display, st, ref)
+        return PV.bagla(out, lambda: KK.for_overview(engine, tenant, out, q))
+
+    def overview_body(engine, tenant: str, user: str, display: str, st: dict[str, Any], ref) -> dict[str, Any]:
         waiting = K.all_campaigns(engine, tenant, "onay_bekliyor")
         running = K.all_campaigns(engine, tenant, "yurutuluyor,onaylandi")
         return {
@@ -260,7 +268,9 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
         b = K._d(to) or (a + timedelta(days=settings()["takvimGun"]))
         if b < a or (b - a).days > 800:
             raise HTTPException(status_code=422, detail={"code": "KAMPANYA", "message": "Tarih aralığı geçersiz (en çok 800 gün)."})
-        return K.calendar(engine, tenant, a, b)
+        with Y.yakala(engine) as yq:
+            out = K.calendar(engine, tenant, a, b)
+        return PV.bagla(out, lambda: KK.for_calendar(engine, tenant, out, yq))
 
     @app.post(f"{P}/calendar", status_code=201)
     def kampanya_calendar_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -281,12 +291,14 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
     @app.get(f"{P}/candidates")
     def kampanya_candidates(request: Request, campaign_id: str = "", kurallar: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(K.candidates, engine, settings(), tenant, cid=campaign_id or None, rules=kurallar, q=q, page=page)
+        with Y.yakala(engine) as yq:
+            out = call(K.candidates, engine, settings(), tenant, cid=campaign_id or None, rules=kurallar, q=q, page=page)
+        return PV.bagla(out, lambda: KK.for_candidates(engine, tenant, out, yq))
 
     @app.get(f"{P}/books")
     def kampanya_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         """Elle ekleme için kitap araması (ad, stok kodu, yazar, barkod); stoklu olanlar önce."""
-        engine, _, _, _ = ctx(request)
+        engine, tenant, _, _ = ctx(request)
         qq = q.strip()
         if len(qq) < 2:
             return {"items": [], "total": 0, "page": 0, "pageSize": K.PAGE_SIZE}
@@ -294,7 +306,7 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
         cond = [K.BOOKS.c.in_crm.is_(True), sa.or_(K.BOOKS.c.ad.ilike(like), K.BOOKS.c.stok_kodu.ilike(like),
                                                      K.BOOKS.c.yazar.ilike(like), K.BOOKS.c.ean.ilike(like))]
         page = max(0, page)
-        with engine.connect() as c:
+        with Y.yakala(engine) as yq, engine.connect() as c:
             total = c.execute(sa.select(sa.func.count()).select_from(K.BOOKS).where(*cond)).scalar() or 0
             rows = c.execute(sa.select(K.BOOKS).where(*cond).order_by(K.BOOKS.c.stok.desc(), K.BOOKS.c.ad)
                              .offset(page * K.PAGE_SIZE).limit(K.PAGE_SIZE)).all()
@@ -304,30 +316,33 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
             b = K.book_dict(r)
             items.append({"stok": b["stok"], "ad": b["ad"], "yazar": b["yazar"], "ean": b["ean"], "stokAdet": b["stokAdet"],
                           "liste": K.list_price(b, st)[0], "adet12": b["adet12"]})
-        return {"items": items, "total": total, "page": page, "pageSize": K.PAGE_SIZE}
+        out = {"items": items, "total": total, "page": page, "pageSize": K.PAGE_SIZE}
+        return PV.bagla(out, lambda: KK.for_books(engine, tenant, out, yq))
 
     @app.get(f"{P}/crm-campaigns")
     def kampanya_crm(request: Request, page: int = 0, etkin: bool = True) -> dict[str, Any]:
         """CRM bayi kampanyaları (salt okunur, sayfalı) ve bağlı sipariş satırlarının etkisi; türü gece sınıflanır."""
-        engine, _, _, _ = ctx(request)
-        crm = call(refresher.crm)
-        got = call(src.read_crm_campaigns, crm, schema(), max(0, page), K.PAGE_SIZE, etkin)
-        ids = [x["id"] for x in got["items"]]
-        eff = call(src.read_campaign_effect, crm, schema(), ids) if ids else {}
-        types = K.crm_types(engine, ids)
+        engine, tenant, _, _ = ctx(request)
+        with Y.yakala(engine) as yq:
+            crm = call(refresher.crm)
+            got = call(src.read_crm_campaigns, crm, schema(), max(0, page), K.PAGE_SIZE, etkin)
+            ids = [x["id"] for x in got["items"]]
+            eff = call(src.read_campaign_effect, crm, schema(), ids) if ids else {}
+            types = K.crm_types(engine, ids)
         for x in got["items"]:
             x["etki"] = eff.get(x["id"])
             x["tur"] = types.get(x["id"])
-        return got
+        return PV.bagla(got, lambda: KK.for_crm(engine, tenant, got, yq))
 
     # ------------------------------------------------------------------ kampanyalar
 
     @app.get(f"{P}/campaigns")
     def kampanya_list(request: Request, durum: str = "", kanal: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        out = K.list_campaigns(engine, tenant, durum=durum, kanal=kanal, q=q, page=page)
+        with Y.yakala(engine) as yq:
+            out = K.list_campaigns(engine, tenant, durum=durum, kanal=kanal, q=q, page=page)
         out["items"] = [shape(user, c) for c in out["items"]]
-        return out
+        return PV.bagla(out, lambda: KK.for_list(engine, tenant, out, yq))
 
     @app.post(f"{P}/campaigns", status_code=201)
     def kampanya_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -339,7 +354,9 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
     @app.get(f"{P}/campaigns/{{cid}}")
     def kampanya_get(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return shape(user, call(K.get_campaign, engine, tenant, cid))
+        with Y.yakala(engine) as q:
+            out = shape(user, call(K.get_campaign, engine, tenant, cid))
+        return PV.bagla(out, lambda: KK.for_campaign(engine, tenant, out, q))
 
     @app.patch(f"{P}/campaigns/{{cid}}")
     def kampanya_update(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -390,10 +407,12 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
         engine, tenant, user, _ = ctx(request)
         bulk = call(K.ratio, body.get("indirim"), "Toplu indirim") if body.get("indirim") not in (None, "") else None
         save = body.get("kaydet", True) is not False
-        out = call(K.simulate, engine, settings(), tenant, cid, bulk=bulk, save=save)
+        with Y.yakala(engine) as q:
+            out = call(K.simulate, engine, settings(), tenant, cid, bulk=bulk, save=save)
         if save and bulk is not None:
             camp_audit(engine, user, "update", out, {"topluIndirim": bulk})
-        return shape(user, out) if save else out
+        out = shape(user, out) if save else out
+        return PV.bagla(out, lambda: KK.for_campaign(engine, tenant, out, q))
 
     @app.post(f"{P}/campaigns/{{cid}}/submit")
     def kampanya_submit(cid: str, request: Request) -> dict[str, Any]:
@@ -458,14 +477,15 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
     @app.get(f"{P}/campaigns/{{cid}}/results")
     def kampanya_results(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        out = call(K.results, engine, settings(), tenant, cid)
-        camp = call(K.get_campaign, engine, tenant, cid)
-        if camp["kanal"] == "bayi" and camp.get("crmKampanyaId"):
-            try:
-                out["crmEtki"] = src.read_campaign_effect(refresher.crm(), schema(), [camp["crmKampanyaId"]]).get(camp["crmKampanyaId"])
-            except src.SourceError as e:
-                out["crmEtkiHata"] = str(e)
-        return out
+        with Y.yakala(engine) as q:
+            out = call(K.results, engine, settings(), tenant, cid)
+            camp = call(K.get_campaign, engine, tenant, cid)
+            if camp["kanal"] == "bayi" and camp.get("crmKampanyaId"):
+                try:
+                    out["crmEtki"] = src.read_campaign_effect(refresher.crm(), schema(), [camp["crmKampanyaId"]]).get(camp["crmKampanyaId"])
+                except src.SourceError as e:
+                    out["crmEtkiHata"] = str(e)
+        return PV.bagla(out, lambda: KK.for_results(engine, tenant, cid, out, q))
 
     @app.post(f"{P}/campaigns/{{cid}}/results/refresh")
     async def kampanya_results_refresh(cid: str, request: Request) -> dict[str, Any]:
@@ -477,7 +497,9 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
 
         out = await run_in_threadpool(call, work)
         audit(engine, user, "run", "kampanya_sonuc", cid, None, out)
-        return await run_in_threadpool(call, K.results, engine, settings(), tenant, cid)
+        with Y.yakala(engine) as q:
+            res = await run_in_threadpool(call, K.results, engine, settings(), tenant, cid)
+        return PV.bagla(res, lambda: KK.for_results(engine, tenant, cid, res, q))
 
     @app.post(f"{P}/campaigns/{{cid}}/summary")
     async def kampanya_summary(cid: str, request: Request) -> dict[str, Any]:
@@ -489,7 +511,9 @@ def register(app: Any, deps: dict[str, Any]) -> K.Refresher:
     @app.get(f"{P}/learnings")
     def kampanya_learnings(request: Request, kanal: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return K.learnings(engine, tenant, kanal=kanal, page=page)
+        with Y.yakala(engine) as q:
+            out = K.learnings(engine, tenant, kanal=kanal, page=page)
+        return PV.bagla(out, lambda: KK.for_learnings(engine, tenant, out, q))
 
     @app.post(f"{P}/campaigns/{{cid}}/learnings", status_code=201)
     def kampanya_learning_add(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

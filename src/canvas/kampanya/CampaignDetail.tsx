@@ -12,6 +12,7 @@ import { kampanyaApi, parseMoney, pctToRatio, worst, type Campaign, type Item, t
 import { Checks, KampanyaFrame, Margin, StatusPill } from './parts';
 import CandidatesPanel from './CandidatesPanel';
 import ResultsScreen from './ResultsScreen';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Kampanya ayrıntısı: kitaplar ve simülasyon, adaylar, Zeki AI metni, sonuç; onay akışı ve «elle kurdum» işareti. */
 
@@ -38,7 +39,9 @@ export default function CampaignDetail() {
     setParams(p, { replace: true });
   };
   const put = (next: Campaign) => {
-    qc.setQueryData(['kampanya', 'campaign', id], next);
+    // Değişiklik cevabı hemen görünür; sorgu bilgisi (kaynaklar) okuma ucundan gelir, bu yüzden kayıt yeniden okunur.
+    qc.setQueryData(['kampanya', 'campaign', id], (prev: Campaign | undefined) => ({ ...next, kaynaklar: next.kaynaklar ?? prev?.kaynaklar }));
+    if (!next.kaynaklar) qc.invalidateQueries({ queryKey: ['kampanya', 'campaign', id] });
     qc.invalidateQueries({ queryKey: ['kampanya', 'list'] });
     qc.invalidateQueries({ queryKey: ['kampanya', 'overview'] });
   };
@@ -56,18 +59,30 @@ export default function CampaignDetail() {
       {c && ov.data && (
         <>
           <KpiRow>
-            <Kpi label="Kitap" value={fmtInt(c.ozet.kitap)} help={`Ortalama indirim ${fmtPct(c.ozet.ortalamaIndirim, 0)}`} />
+            <Kpi label="Kitap" value={fmtInt(c.ozet.kitap)} help={`Ortalama indirim ${fmtPct(c.ozet.ortalamaIndirim, 0)}`}
+              info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kitap ve ortalama indirim" />} />
             <Kpi label="Marj (önce → kampanya)" value={c.ozet.marjOraniSonra === null ? '—' : fmtPct(c.ozet.marjOraniSonra)}
-              help={`Kampanyasız ${fmtPct(c.ozet.marjOraniOnce)} · ${fmtInt(c.ozet.marjBilinen)} kitapta hesaplandı`} />
-            <Kpi label="Kırmızı kontrol" value={fmtInt(c.ozet.kirmizi)} help={`${fmtInt(c.ozet.kirmiziKitap)} kitapta · sarı ${fmtInt(c.ozet.sari)}`} />
-            <Kpi label="Maliyeti eksik / stok riski" value={`${fmtInt(c.ozet.maliyetEksik)} / ${fmtInt(c.ozet.stokRiski)}`} help="Maliyetsiz kitapta marj hesaplanmaz" />
+              help={`Kampanyasız ${fmtPct(c.ozet.marjOraniOnce)} · ${fmtInt(c.ozet.marjBilinen)} kitapta hesaplandı`}
+              info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Marj (önce → kampanya)" />} />
+            <Kpi label="Kırmızı kontrol" value={fmtInt(c.ozet.kirmizi)} help={`${fmtInt(c.ozet.kirmiziKitap)} kitapta · sarı ${fmtInt(c.ozet.sari)}`}
+              info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kırmızı kontrol" />} />
+            <Kpi label="Maliyeti eksik / stok riski" value={`${fmtInt(c.ozet.maliyetEksik)} / ${fmtInt(c.ozet.stokRiski)}`} help="Maliyetsiz kitapta marj hesaplanmaz"
+              info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Maliyeti eksik / stok riski" />} />
           </KpiRow>
           {c.onayNotu && <Note tone={c.durum === 'taslak' ? 'warn' : 'info'}>{c.durum === 'taslak' ? 'Geri gönderildi' : 'Onay notu'} ({c.onaylayan}): {c.onayNotu}</Note>}
           {c.crmIslenecek && <Note tone="warn">Bayi kampanyası CRM’e işlenecek: CRM’de tanımlayıp kimliğini aşağıya girin. Portal CRM’e yazmaz.</Note>}
           {c.uyarilar.length > 0 && (
-            <Note tone="warn">Stok kampanya bitmeden tükenebilir: {c.uyarilar.map((u) => `${u.ad ?? u.stok} (${fmtDay(u.tukenme)})`).join(', ')}.</Note>
+            <Note tone="warn">
+              <SqlInfo k={c.kaynaklar} alan="kitaplar" label="Stok uyarısı (tükenme tahmini)" className="mr-1" />
+              Stok kampanya bitmeden tükenebilir: {c.uyarilar.map((u) => `${u.ad ?? u.stok} (${fmtDay(u.tukenme)})`).join(', ')}.
+            </Note>
           )}
-          <Tabs tabs={TABS.map((t) => (t.key === 'kitaplar' ? { ...t, badge: c.ozet.kirmiziKitap || null } : t))} value={tab} onChange={setTab} />
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <Tabs tabs={TABS.map((t) => (t.key === 'kitaplar' ? { ...t, badge: c.ozet.kirmiziKitap || null } : t))} value={tab} onChange={setTab} />
+            </div>
+            {!!c.ozet.kirmiziKitap && <SqlInfo k={c.kaynaklar} alan="ozet" label="Sekme rozeti: kırmızı kontrollü kitap" />}
+          </div>
           {tab === 'kitaplar' && <BooksTab c={c} ov={ov.data} onChange={put} />}
           {tab === 'adaylar' && (c.yetki.duzenle ? <CandidatesPanel ov={ov.data} campaignId={c.id} onAdded={() => { camp.refetch(); setTab('kitaplar'); }} />
             : <Note tone="info">Aday eklemek için kampanya taslak olmalı ve hazırlama yetkiniz olmalı.</Note>)}
@@ -190,7 +205,9 @@ function BooksTab({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c
       {edit && <BookSearch have={new Set(items.map((i) => i.stok))} onAdd={(stok) => mutate.mutate(() => kampanyaApi.addItems(c.id, [{ stok }]))} />}
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-extrabold tracking-tight">Kitaplar ve kontroller</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            Kitaplar ve kontroller <SqlInfo k={c.kaynaklar} alan="kitaplar" label="Kitap hesabı" />
+          </h2>
           {mutate.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin text-canvas-muted" />}
         </div>
         {!items.length ? (
@@ -200,13 +217,13 @@ function BooksTab({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c
             <thead>
               <tr>
                 <th className={th}>Kitap</th>
-                <th className={`${th} text-right`}>Liste</th>
-                <th className={`${th} text-right`}>İndirim</th>
-                <th className={`${th} text-right`}>Kampanya fiyatı</th>
-                <th className={`${th} text-right`}>Stok / tükenme</th>
-                <th className={`${th} text-right`}>Birim maliyet</th>
-                <th className={`${th} text-right`}>Telif (önce → kamp.)</th>
-                <th className={`${th} text-right`}>Marj (önce → kamp.)</th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Liste</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">İndirim</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Kampanya fiyatı</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Stok / tükenme</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Birim maliyet</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Telif (önce → kamp.)</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="kitaplar">Marj (önce → kamp.)</InfoLabel></th>
                 <th className={th}>Kontroller</th>
                 {edit && <th className={th}><span className="sr-only">Çıkar</span></th>}
               </tr>
@@ -298,6 +315,11 @@ function BookSearch({ have, onAdd }: { have: Set<string>; onAdd: (stok: string) 
         </div>
       </label>
       {hits.error && <div className="mt-2"><Note tone="err">{errText(hits.error, 'Arama yapılamadı.')}</Note></div>}
+      {dq.length >= 2 && hits.data && (
+        <div className="mt-2 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+          <InfoLabel k={hits.data.kaynaklar} alan="items" label="Kitap araması: stok, liste fiyatı">{`${fmtInt(hits.data.total)} kitap`}</InfoLabel>
+        </div>
+      )}
       {dq.length >= 2 && hits.data && (
         <ul className="mt-2 flex max-h-72 flex-col gap-1 overflow-y-auto">
           {hits.data.items.map((b) => (

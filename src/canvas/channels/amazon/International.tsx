@@ -8,6 +8,7 @@ import { Tabs } from '../../budget/parts';
 import { BookCell, ExportLink } from '../platformKit';
 import { amazonApi } from './api';
 import { AmazonData, AmazonFrame, money, tl, useAmazonMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
@@ -27,7 +28,7 @@ function BooksTab({ yil, ulke, canExport }: { yil?: number; ulke: string; canExp
       {r.isLoading ? <Loading /> : d && (
         <>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Net adet</th><th className={`${th} text-right`}>Net ciro</th><th className={th}>Ülkeler</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th><th className={th}>Ülkeler</th></tr></thead>
             <tbody>
               {d.items.map((x) => (
                 <tr key={x.stokKodu} className="border-t border-slate-100">
@@ -85,13 +86,17 @@ export default function AmazonInternational() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Net ciro" value={`${fmtShort(d.toplam.netCiro)} ₺`} help={`${d.yil} Ocak–${AY[d.sonAy - 1]} · geçen yıl aynı dönem ${fmtShort(d.toplam.gecenYilAyniDonem)} ₺`} />
-            <Kpi label="Net adet" value={fmtInt(d.toplam.netAdet)} help={`${fmtInt(d.ulkeler.length)} ülke · kanal kodu ${(d.kodlar ?? []).join(', ')}`} />
-            <Kpi label="Döviz" value={Object.keys(d.dovizToplam).length ? Object.entries(d.dovizToplam).map(([k, v]) => money(v, k)).join(' · ') : '—'} help="Fatura kuruyla, döviz faturalarında" />
-            <Kpi label="Döviz faturası" value={fmtInt(d.dovizFatura.toplam ?? 0)} help={`Satış faturası ${fmtInt(d.dovizFatura.satis ?? 0)} · bütün türler`} />
+            <Kpi label="Net ciro" value={`${fmtShort(d.toplam.netCiro)} ₺`} help={`${d.yil} Ocak–${AY[d.sonAy - 1]} · geçen yıl aynı dönem ${fmtShort(d.toplam.gecenYilAyniDonem)} ₺`}
+            info={<SqlInfo k={d?.kaynaklar} alan="toplam" label="Net ciro" />} />
+            <Kpi label="Net adet" value={fmtInt(d.toplam.netAdet)} help={`${fmtInt(d.ulkeler.length)} ülke · kanal kodu ${(d.kodlar ?? []).join(', ')}`}
+            info={<SqlInfo k={d?.kaynaklar} alan="toplam" label="Net adet" />} />
+            <Kpi label="Döviz" value={Object.keys(d.dovizToplam).length ? Object.entries(d.dovizToplam).map(([k, v]) => money(v, k)).join(' · ') : '—'} help="Fatura kuruyla, döviz faturalarında"
+            info={<SqlInfo k={d?.kaynaklar} alan="dovizToplam" label="Döviz" />} />
+            <Kpi label="Döviz faturası" value={fmtInt(d.dovizFatura.toplam ?? 0)} help={`Satış faturası ${fmtInt(d.dovizFatura.satis ?? 0)} · bütün türler`}
+            info={<SqlInfo k={d?.kaynaklar} alan="dovizFatura" label="Döviz faturası" />} />
           </KpiRow>
           <Panel>
-            <h2 className="mb-2 text-[15px] font-extrabold">Aylık seyir</h2>
+            <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Aylık seyir <SqlInfo k={d?.kaynaklar} alan="aylik" label="Aylık seyir" /></h2>
             <div className="flex h-32 items-end gap-1.5" role="img" aria-label="Aylık yurtdışı net ciro, bu yıl ve geçen yıl">
               {d.aylik.map((x) => (
                 <div key={x.ay} className="flex flex-1 flex-col items-center gap-1">
@@ -110,7 +115,7 @@ export default function AmazonInternational() {
             <Panel>
               <div className="mb-2 flex justify-end"><ExportLink show={!!m?.me.canExport} href={amazonApi.exportUrl('yurtdisi', { yil: d.yil, ulke })} /></div>
               <TableWrap>
-                <thead><tr><th className={th}>Cari</th><th className={th}>Ülke</th><th className={`${th} text-right`}>Net ciro</th><th className={`${th} text-right`}>Döviz</th><th className={`${th} text-right`}>Net adet</th><th className={`${th} text-right`}>Geçen yıl</th></tr></thead>
+                <thead><tr><th className={th}>Cari</th><th className={th}>Ülke</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Döviz</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Geçen yıl</InfoLabel></th></tr></thead>
                 <tbody>
                   {d.items.map((x) => (
                     <tr key={`${x.cari}-${x.ulke}-${x.doviz}`} className="border-t border-slate-100">

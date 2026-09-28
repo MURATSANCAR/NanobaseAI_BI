@@ -1,3 +1,4 @@
+import type { Kaynaklar } from '../components/sqlInfo';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Search } from 'luc
 import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmBook, type CrmFlag, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/scorecard*) */
 type Status = 'iyi' | 'dikkat' | 'sorun' | 'bilinmiyor';
@@ -231,7 +232,7 @@ function Card({ id }: { id: string }) {
             </p>
           </div>
           <div style={{ textAlign: 'center', flex: 'none', minWidth: 110 }} aria-label={`Genel not ${g.letter ?? 'yok'}, ${g.score ?? '—'} puan`}>
-            <div className="sg-kpi-label">Genel not</div>
+            <div className="sg-kpi-label">Genel not <SeoInfo k={card.data?.kaynaklar} label="Genel not" /></div>
             <div
               className={`sg-chip ${GRADE_TONE(g.letter)}`}
               style={{ fontSize: 30, fontWeight: 800, padding: '8px 22px', marginTop: 6, borderRadius: 18 }}
@@ -280,14 +281,14 @@ function Card({ id }: { id: string }) {
 
       <div className="sg-grid">
         {d.sections.map((s) => (
-          <SectionCard key={s.id} s={s} crm={s.id === 'crm' ? d.crm : undefined} />
+          <SectionCard key={s.id} s={s} crm={s.id === 'crm' ? d.crm : undefined} k={d.kaynaklar} />
         ))}
       </div>
     </div>
   );
 }
 
-function SectionCard({ s, crm }: { s: Section; crm?: CrmBook | null }) {
+function SectionCard({ s, crm, k }: { s: Section; crm?: CrmBook | null; k?: Kaynaklar | null }) {
   return (
     <section className="sg-card sg-span-6" aria-label={s.title} style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -318,7 +319,7 @@ function SectionCard({ s, crm }: { s: Section; crm?: CrmBook | null }) {
             <table className="sg-table">
               <thead>
                 <tr>
-                  <th>Arama</th>
+                  <th>Arama <SeoInfo k={k} label="Arama" /></th>
                   <th style={{ textAlign: 'right' }}>Tıklama</th>
                   <th style={{ textAlign: 'right' }}>Gösterim</th>
                   <th style={{ textAlign: 'right' }}>Sıra</th>

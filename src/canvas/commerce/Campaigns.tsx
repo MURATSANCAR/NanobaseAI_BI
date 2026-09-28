@@ -4,6 +4,8 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { commerceApi, fmtChange, fmtDay, fmtInt, fmtRatio, fmtTl, type Campaign } from './api';
 import { useMeta } from './parts';
 
@@ -16,10 +18,10 @@ export default function Campaigns() {
   if (!items.length) {
     return <Note tone="info">Henüz kampanya yok. Onaylı bir tetik listesinden «Kampanya sonucu için aç» ile açılır; kontrol grubu olmayan liste ölçülmez.</Note>;
   }
-  return <div className="flex flex-col gap-3 lg:gap-4">{items.map((c) => <CampaignCard key={c.id} c={c} />)}</div>;
+  return <div className="flex flex-col gap-3 lg:gap-4">{items.map((c) => <CampaignCard key={c.id} c={c} k={q.data?.kaynaklar} />)}</div>;
 }
 
-function CampaignCard({ c }: { c: Campaign }) {
+function CampaignCard({ c, k }: { c: Campaign; k?: Kaynaklar }) {
   const meta = useMeta();
   const qc = useQueryClient();
   const comment = useMutation({
@@ -32,7 +34,7 @@ function CampaignCard({ c }: { c: Campaign }) {
     <Panel>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-[15px] font-extrabold">{c.name}</h3>
+          <h3 className="flex items-center gap-1 text-[15px] font-extrabold">{c.name} <SqlInfo k={k} alan="items" label={`Kampanya sonucu: ${c.name}`} /></h3>
           <p className="text-[11.5px] text-canvas-muted">{fmtDay(c.start)} – {fmtDay(c.end)} · {c.createdBy}</p>
         </div>
         {r && <Pill tone={r.kesin ? 'ok' : 'warn'}>{r.kesin ? 'Kesin' : 'Kesinleşmedi'}</Pill>}

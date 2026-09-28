@@ -1513,6 +1513,14 @@ def results(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, cid: str)
             "ozet": r.sonuc_ozet, "ozetAt": _iso(r.sonuc_at), "ogrenimler": learnings(engine, tenant, campaign_id=cid)["items"]}
 
 
+#: Sorgu bilgisi: gece okumasının Logo/CRM sorguları ve kampanya sonucunu dolduran Logo sorgusu (`semantic_query_origin`).
+KOKEN_OKUMA = "kampanya.okuma"
+
+
+def koken_sonuc(cid: str) -> str:
+    return f"kampanya.sonuc.{cid}"
+
+
 def refresh_results(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, cid: str, run: src.Runner,
                     firms: dict[int, str], end: Optional[date]) -> dict[str, Any]:
     with engine.connect() as c:
@@ -1528,7 +1536,11 @@ def refresh_results(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, c
     if end:
         b = min(b, end)
     cari = st["kanalCari"].get(r.kanal)
-    rows = src.read_daily(run, firms, codes, a, b + timedelta(days=1), cari) if b >= a else []
+    from semantic_bridge import sorgu_yakala as Y
+
+    with Y.yakala() as q:   # sorgu bilgisi: sonuç tablosunu dolduran Logo sorgusu (asıl SQL) saklanır
+        rows = src.read_daily(run, firms, codes, a, b + timedelta(days=1), cari) if b >= a else []
+    Y.koken_yaz(engine, tenant, koken_sonuc(cid), q)
     n = store_results(engine, cid, rows, wins, end, "logo-kanal" if cari else "logo")
     return {"satir": n, "logoKesim": end.isoformat() if end else None}
 
@@ -1858,11 +1870,15 @@ class Refresher:
         self.state["step"] = name
 
     def logo(self) -> tuple[src.Runner, dict[int, str]]:
-        run = src.runner(self._logo())
+        from semantic_bridge import sorgu_yakala as Y
+
+        run = Y.izle(src.runner(self._logo()), "logo", Y.db_of(self._logo()))
         return run, src.firms_by_year(run)
 
     def crm(self) -> src.Runner:
-        return src.runner(self._crm())
+        from semantic_bridge import sorgu_yakala as Y
+
+        return Y.izle(src.runner(self._crm()), "crm", Y.db_of(self._crm()))
 
     def run(self) -> dict[str, Any]:
         engine, tenant, st = self._engine(), self._tenant(), self._settings()
@@ -1871,6 +1887,9 @@ class Refresher:
         warnings: list[str] = []
         t0 = time.monotonic()
         ref = today()
+        from semantic_bridge import sorgu_yakala as Y
+
+        q, token = Y.baslat(engine)   # sorgu bilgisi: kitap tablosunu dolduran CRM/Logo sorguları
         try:
             self.state.update(running=True, step="CRM kitap kartları", error=None)
             schema = self._schema()
@@ -1919,6 +1938,8 @@ class Refresher:
 
             self._step("Sezon bağları ve haklar")
             seasons_by_ean, rights = self._seo_links(engine, tenant)
+            Y.bitir(token)
+            Y.koken_yaz(engine, tenant, KOKEN_OKUMA, q, portal_tables=("semantic_seo_seasons_books", "semantic_seo_crm_books"))
             self._step("Köprü tablosuna yazılıyor")
             done["kitap"] = self._write_books(engine, items, stock, prices, agg, win_days, margins, end.year, crm_books, contracts,
                                               seasons_by_ean, rights)
@@ -1933,6 +1954,7 @@ class Refresher:
             return {"ok": True, "done": done, "warnings": warnings, "dataEnd": end.isoformat()}
         except Exception as e:  # noqa: BLE001 — eski veriler kalır, hata ekranda
             log.warning("kampanya refresh failed: %s", e)
+            Y.bitir(token)
             msg = str(e) if isinstance(e, (src.SourceError, KampanyaError)) else f"Okuma hata verdi: {str(e)[:200]}"
             meta_set(engine, "refresh", {"ok": False, "error": msg, "done": done, "warnings": warnings})
             self.state.update(running=False, step=None, error=msg, finishedAt=time.time())

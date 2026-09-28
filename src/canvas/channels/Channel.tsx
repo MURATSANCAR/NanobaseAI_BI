@@ -12,18 +12,21 @@ import { NumField, Tabs } from '../budget/parts';
 import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type YM } from './api';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
+import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type WithK, type YM } from './api';
 import { ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signedPct, useChannelsMeta, usePeriod } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M42 kanal detayı (/kanallar/:platform): aylık eğri, cariler, kitap ve iade listeleri, hedef ↔ gerçekleşen, iskonto
  * simülasyonu (marj yetkisi), panel dosyası (kanalın sattığı adet). */
 
 const CRM_ORDER_TYPES: Record<string, string> = { '9': 'Pazaryeri', '14': 'Amazon konsinye', '8': 'B2C', '1': 'B2B', '3': 'Standart' };
 
-function MonthlyChart({ d }: { d: ChannelDetail }) {
+function MonthlyChart({ d, k }: { d: ChannelDetail; k?: Kaynaklar }) {
   const data = d.aylik.map((m) => ({ ay: m.ayAdi.slice(0, 3), [String(d.period.yil)]: m.buYil ? Math.round(m.buYil.netCiro) : null, [String(d.period.yil - 1)]: m.gecenYil ? Math.round(m.gecenYil.netCiro) : null }));
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Ay ay net ciro (kanala satış − iade)</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Ay ay net ciro (kanala satış − iade) <SqlInfo k={k} alan="aylik" label="Ay ay net ciro" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">{d.period.kismiAy ? `Son ay ${fmtDay(d.period.veriSonu)} tarihine kadar.` : 'Seçilen aya kadar.'}</p>
       <div className="h-[240px] w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -94,14 +97,14 @@ function BookLists({ platform, p, meta }: { platform: string; p: YM; meta: Chann
         <TableWrap>
           <thead>
             <tr>
-              <th className={th}>Kitap</th>
-              <th className={`${th} text-right`}>Kanala satış</th>
-              <th className={`${th} text-right`}>İade</th>
-              <th className={`${th} text-right`}>Net adet</th>
-              <th className={`${th} text-right`}>Net ciro</th>
-              <th className={`${th} text-right`}>İade oranı</th>
-              {margin && <th className={`${th} text-right`}>Brüt marj</th>}
-              {margin && <th className={`${th} text-right`}>Maliyetsiz adet</th>}
+              <th className={th}><InfoLabel k={data.kaynaklar} alan="items" label={tab === 'kitaplar' ? 'Kanalın kitapları' : 'Son 3 ayda iade'}>Kitap</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Kanala satış</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">İade</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Net adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Net ciro</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">İade oranı</InfoLabel></th>
+              {margin && <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Brüt marj</InfoLabel></th>}
+              {margin && <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Maliyetsiz adet</InfoLabel></th>}
             </tr>
           </thead>
           <tbody>
@@ -136,7 +139,7 @@ function TargetsBlock({ d, yil }: { d: ChannelDetail; yil?: number }) {
   const m46 = q.data?.m46?.platformlar?.[d.platform];
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Hedef ↔ gerçekleşen</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Hedef ↔ gerçekleşen <SqlInfo k={q.data?.kaynaklar} alan="crm" label="Hedef ↔ gerçekleşen" /></h2>
       <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="rounded-xl bg-white/70 p-3">
           <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">CRM satış hedefi (adet)</div>
@@ -170,7 +173,7 @@ function Simulator({ d, p, meta }: { d: ChannelDetail; p: YM; meta: ChannelsMeta
   const qc = useQueryClient();
   const [puan, setPuan] = useState('2');
   const [hacim, setHacim] = useState('0');
-  const [res, setRes] = useState<Simulation | null>(null);
+  const [res, setRes] = useState<(Simulation & WithK) | null>(null);
   const sim = useMutation({
     mutationFn: (yorum: boolean) => channelsApi.simulate({ platform: d.platform, ...p, iskontoPuan: parseNum(puan) ?? 0, hacimYuzde: parseNum(hacim) ?? 0, yorum }),
     onSuccess: setRes,
@@ -189,7 +192,7 @@ function Simulator({ d, p, meta }: { d: ChannelDetail; p: YM; meta: ChannelsMeta
   );
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">İskonto simülasyonu</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">İskonto simülasyonu {res && <SqlInfo k={res.kaynaklar} alan="once" label="İskonto simülasyonu" />}</h2>
       <p className="mb-2 text-[12px] text-canvas-muted">«İskontoyu şu kadar puan değiştirirsem marj ne olur?» Dönem ortalamasıyla hesaplanır; hiçbir yere yazılmaz. Marj yalnız maliyeti girilmiş satırlardan.</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <NumField id="sim-puan" label="İskonto değişimi" suffix="puan" value={puan} onChange={setPuan} help="Artı: kanala daha çok iskonto" />
@@ -210,7 +213,7 @@ function Simulator({ d, p, meta }: { d: ChannelDetail; p: YM; meta: ChannelsMeta
       {res && (
         <div className="mt-3 flex flex-col gap-2">
           <TableWrap>
-            <thead><tr><th className={th}></th><th className={`${th} text-right`}>Bugün</th><th className={`${th} text-right`}>Senaryo</th></tr></thead>
+            <thead><tr><th className={th}></th><th className={`${th} text-right`}><InfoLabel k={res.kaynaklar} alan="once">Bugün</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={res.kaynaklar} alan="sonra">Senaryo</InfoLabel></th></tr></thead>
             <tbody>
               {row('İskonto oranı', fmtPct(res.once.iskontoOrani), fmtPct(res.sonra.iskontoOrani))}
               {row('Net satış', fmtMoney(res.once.netSatis), fmtMoney(res.sonra.netSatis))}
@@ -322,9 +325,10 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
                 {detail.data.donemBas ?? '—'} – {detail.data.donemBit ?? '—'} · {detail.data.satir} satır, {detail.data.eslesmeyen} satır kitaba bağlanamadı
                 {detail.data.kolonlar.kisiselOlabilir?.length ? ` · içeri alınmayan kolonlar: ${detail.data.kolonlar.kisiselOlabilir.join(', ')}` : ''}
                 · kanala satış ayları {detail.data.kanalaSatisAylari.join(', ') || '—'}
+                <SqlInfo k={detail.data.kaynaklar} alan="satir" label="Panel dosyası satırları" className="ml-1" />
               </p>
               <TableWrap>
-                <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Kanalın sattığı</th><th className={`${th} text-right`}>TİMAŞ'ın kanala sattığı</th><th className={`${th} text-right`}>Oran</th><th className={`${th} text-right`}>Kanal stoğu</th></tr></thead>
+                <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanalın sattığı</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">TİMAŞ'ın kanala sattığı</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Oran</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanal stoğu</InfoLabel></th></tr></thead>
                 <tbody>
                   {detail.data.items.map((x) => (
                     <tr key={x.stokKodu} className="border-t border-slate-100">
@@ -381,27 +385,33 @@ export default function Channel() {
       {d && m && (
         <>
           <KpiRow>
-            <Kpi label="Net ciro" value={`${fmtShort(d.donem.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(d.degisim)} · ${d.period.yil} Ocak–${d.period.ayAdi}`} />
-            <Kpi label="İskonto oranı" value={fmtPct(d.donem.iskontoOrani)} help={`Geçen yıl ${fmtPct(d.gecenYil?.iskontoOrani ?? null)}`} />
-            <Kpi label="İade oranı" value={fmtPct(d.donem.iadeOrani)} help={`Adette ${fmtPct(d.donem.iadeAdetOrani)} · geçen yıl ${fmtPct(d.gecenYil?.iadeOrani ?? null)}`} />
+            <Kpi label="Net ciro" value={`${fmtShort(d.donem.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(d.degisim)} · ${d.period.yil} Ocak–${d.period.ayAdi}`}
+              info={<SqlInfo k={d.kaynaklar} alan="donem" label="Net ciro" />} />
+            <Kpi label="İskonto oranı" value={fmtPct(d.donem.iskontoOrani)} help={`Geçen yıl ${fmtPct(d.gecenYil?.iskontoOrani ?? null)}`}
+              info={<SqlInfo k={d.kaynaklar} alan="donem" label="İskonto oranı" />} />
+            <Kpi label="İade oranı" value={fmtPct(d.donem.iadeOrani)} help={`Adette ${fmtPct(d.donem.iadeAdetOrani)} · geçen yıl ${fmtPct(d.gecenYil?.iadeOrani ?? null)}`}
+              info={<SqlInfo k={d.kaynaklar} alan="donem" label="İade oranı" />} />
             {canMargin ? (
-              <Kpi label="Brüt marj" value={fmtPct(d.donem.marj ?? null)} help={`İade sonrası ${fmtPct(d.donem.iadeSonrasiMarj ?? null)}${d.donem.katkiMarj !== undefined ? ` · ek maliyet sonrası ${fmtPct(d.donem.katkiMarj ?? null)}` : ''}`} />
+              <Kpi label="Brüt marj" value={fmtPct(d.donem.marj ?? null)} help={`İade sonrası ${fmtPct(d.donem.iadeSonrasiMarj ?? null)}${d.donem.katkiMarj !== undefined ? ` · ek maliyet sonrası ${fmtPct(d.donem.katkiMarj ?? null)}` : ''}`}
+                info={<SqlInfo k={d.kaynaklar} alan="donem" label="Brüt marj" />} />
             ) : (
-              <Kpi label="Net adet" value={fmtShort(d.donem.netAdet)} help={`Kanala satış ${fmtShort(d.donem.satisAdet)} · iade ${fmtShort(d.donem.iadeAdet)}`} />
+              <Kpi label="Net adet" value={fmtShort(d.donem.netAdet)} help={`Kanala satış ${fmtShort(d.donem.satisAdet)} · iade ${fmtShort(d.donem.iadeAdet)}`}
+                info={<SqlInfo k={d.kaynaklar} alan="donem" label="Net adet" />} />
             )}
           </KpiRow>
           {canMargin && (
             <Note tone="info">
+              <SqlInfo k={d.kaynaklar} alan="donem" label="Maliyet kapsamı" className="mr-1" />
               {coverageText(d.donem)} (maliyetsiz ciro {fmtMoney(d.donem.maliyetsizCiro)}).
               {d.donem.m9 ? <> Birim maliyet modülüyle tamamlanınca marj {fmtPct(d.donem.m9.marj)} (kapsam {fmtPct(d.donem.m9.kapsam, 0)}); {d.donem.m9.bilinmeyenKitap} kitabın birim maliyeti bilinmiyor ({fmtMoney(d.donem.m9.bilinmeyenCiro)}).</> : !d.m9Bagli ? ' Birim maliyet modülü bu kurulumda bağlı değil.' : ''}
             </Note>
           )}
-          <MonthlyChart d={d} />
+          <MonthlyChart d={d} k={d.kaynaklar} />
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Cariler</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Cariler <SqlInfo k={d.kaynaklar} alan="cariler" label="Platformun carileri" /></h2>
             <p className="mb-2 text-[12px] text-canvas-muted">Bu platforma eşlenen Logo carileri ve kanal kodları. CRM sipariş sayısı son {d.crmSiparisGun ?? '—'} gün.</p>
             <TableWrap>
-              <thead><tr><th className={th}>Cari</th><th className={th}>Kanal kodu</th><th className={`${th} text-right`}>Net ciro</th><th className={`${th} text-right`}>İade oranı</th><th className={th}>CRM siparişi</th></tr></thead>
+              <thead><tr><th className={th}>Cari</th><th className={th}>Kanal kodu</th><th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">İade oranı</InfoLabel></th><th className={th}><InfoLabel k={d.kaynaklar} alan="cariler">CRM siparişi</InfoLabel></th></tr></thead>
               <tbody>
                 {d.cariler.map((c) => (
                   <tr key={c.grup} className="border-t border-slate-100">

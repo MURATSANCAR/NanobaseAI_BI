@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search, Send } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 const PAGE = 40;
 
@@ -148,7 +148,7 @@ export default function SeoBing() {
   const errorKinds = Object.entries(d?.errors ?? {});
 
   return (
-    <SeoLayout
+    <SeoLayout k={ix.data?.kaynaklar}
       path="/seo-geo/bing"
       crumb="Bing ve IndexNow"
       eyebrow="SEO & GEO · Bing"
@@ -169,7 +169,7 @@ export default function SeoBing() {
 
       {d && !configured && (
         <section className="sg-card">
-          <h2>Bing bağlantısı kurulmamış</h2>
+          <h2>Bing bağlantısı kurulmamış <SeoInfo k={ix.data?.kaynaklar} label="Bing bağlantısı kurulmamış" /></h2>
           <p className="sg-sub">Bing verisi okunabilmesi için bir kez yapılır; yalnız okuma izni kullanılır.</p>
           <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7 }}>
             <li>
@@ -192,31 +192,31 @@ export default function SeoBing() {
           )}
           <section className="sg-kpis" aria-label="Özet">
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bing tıklaması (28 gün)</div>
+              <div className="sg-kpi-label">Bing tıklaması (28 gün) <SeoInfo k={ix.data?.kaynaklar} label="Bing tıklaması (28 gün)" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.totals.clicks)}</div>
               <div className="sg-kpi-note">{change(d.totals.clicks, d.totals.prevClicks)}</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bing gösterimi (28 gün)</div>
+              <div className="sg-kpi-label">Bing gösterimi (28 gün) <SeoInfo k={ix.data?.kaynaklar} label="Bing gösterimi (28 gün)" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.totals.impressions)}</div>
               <div className="sg-kpi-note">{change(d.totals.impressions, d.totals.prevImpressions)}</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Tıklama oranı</div>
+              <div className="sg-kpi-label">Tıklama oranı <SeoInfo k={ix.data?.kaynaklar} label="Tıklama oranı" /></div>
               <div className="sg-kpi-value sg-mono">{pct(d.totals.ctr)}</div>
               <div className="sg-kpi-note">
                 {d.totals.start ? `${d.totals.start} – ${d.totals.end}` : 'Veri yok'} · son okuma {dateTime(d.lastRefresh)}
               </div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bing dizinindeki sayfa</div>
+              <div className="sg-kpi-label">Bing dizinindeki sayfa <SeoInfo k={ix.data?.kaynaklar} label="Bing dizinindeki sayfa" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.crawlLatest?.inIndex)}</div>
               <div className="sg-kpi-note">
                 {d.crawlLatest ? `${d.crawlLatest.date} taraması: ${fmt(d.crawlLatest.crawled)} sayfa, ${fmt(d.crawlLatest.errors)} hata` : 'Tarama verisi yok'}
               </div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bing'de çok geride</div>
+              <div className="sg-kpi-label">Bing'de çok geride <SeoInfo k={ix.data?.kaynaklar} label="Bing'de çok geride" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.counts.worse)}</div>
               <div className="sg-kpi-note">
                 İki motorda da görünen {fmt(d.counts.compared)} sorgudan · yalnız Google'da {fmt(d.counts.onlyGoogle)}
@@ -267,11 +267,11 @@ export default function SeoBing() {
                     <thead>
                       <tr>
                         <th>Sorgu</th>
-                        <th>Google sırası</th>
-                        <th>Bing sırası</th>
-                        <th>Fark</th>
-                        <th>Google gösterim / tık</th>
-                        <th>Bing gösterim / tık</th>
+                        <th>Google sırası <SeoInfo k={ix.data?.kaynaklar} label="Google sırası" /></th>
+                        <th>Bing sırası <SeoInfo k={ix.data?.kaynaklar} label="Bing sırası" /></th>
+                        <th>Fark <SeoInfo k={ix.data?.kaynaklar} label="Fark" /></th>
+                        <th>Google gösterim / tık <SeoInfo k={ix.data?.kaynaklar} label="Google gösterim / tık" /></th>
+                        <th>Bing gösterim / tık <SeoInfo k={ix.data?.kaynaklar} label="Bing gösterim / tık" /></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -298,10 +298,10 @@ export default function SeoBing() {
                     <thead>
                       <tr>
                         <th>{tab === 'pages' ? 'Sayfa' : 'Sorgu'}</th>
-                        <th>Tıklama</th>
-                        <th>Gösterim</th>
-                        <th>Oran</th>
-                        <th>Ort. sıra</th>
+                        <th>Tıklama <SeoInfo k={ix.data?.kaynaklar} label="Tıklama" /></th>
+                        <th>Gösterim <SeoInfo k={ix.data?.kaynaklar} label="Gösterim" /></th>
+                        <th>Oran <SeoInfo k={ix.data?.kaynaklar} label="Oran" /></th>
+                        <th>Ort. sıra <SeoInfo k={ix.data?.kaynaklar} label="Ort. sıra" /></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -331,7 +331,7 @@ export default function SeoBing() {
           </section>
 
           <section className="sg-card">
-            <h2>Bing tarama sorunları</h2>
+            <h2>Bing tarama sorunları <SeoInfo k={ix.data?.kaynaklar} label="Bing tarama sorunları" /></h2>
             <p className="sg-sub">Bing'in sitede karşılaştığı hatalar ve engeller. Düzeltmesi site yönetiminden yapılır.</p>
             {issues.error && <Failed error={issues.error} />}
             {issues.data && issues.data.total === 0 && <p className="sg-sub">{d.errors.issues ? 'Bing bu bölümü vermedi.' : 'Bing bir tarama sorunu bildirmiyor.'}</p>}
@@ -341,9 +341,9 @@ export default function SeoBing() {
                   <thead>
                     <tr>
                       <th>Adres</th>
-                      <th>Sorun</th>
+                      <th>Sorun <SeoInfo k={ix.data?.kaynaklar} label="Sorun" /></th>
                       <th>Yanıt</th>
-                      <th>Gelen bağlantı</th>
+                      <th>Gelen bağlantı <SeoInfo k={ix.data?.kaynaklar} label="Gelen bağlantı" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -377,7 +377,7 @@ export default function SeoBing() {
       )}
 
       <section className="sg-card">
-        <h2>IndexNow bildirimi</h2>
+        <h2>IndexNow bildirimi <SeoInfo k={ix.data?.kaynaklar} label="IndexNow bildirimi" /></h2>
         <p className="sg-sub">
           Fiyatı, stoku, adı ya da SEO metni değişen, yeni eklenen ya da satıştan kalkan kitap sayfaları her gece Bing'e ve IndexNow'u destekleyen öteki arama motorlarına bildirilir; sayfa haftalar yerine günler içinde yeniden taranır. İlk gece yalnız mevcut durum kaydedilir, bildirim gitmez.
         </p>

@@ -64,6 +64,17 @@ Tek kalıp vardır; her modül aynısını uygular. Örnek uygulamalar: M46 büt
    `logo_db()` = `P.connection_database(bağlantı dosyası)` — dosyadan **yalnız** veritabanı adı okunur; Logo/CRM SQL'inin
    başına `USE [VT];` yazılır (SSMS'te kopyala-çalıştır). Kayıt kurulamazsa rakamlar yine döner, pencere nedeni yazar.
 
+### Seçenek: yakalama (çok uçlu modüller, G5)
+
+Okumaları tek tek `*_stmt()`'e ayırmak yerine `backend/semantic_bridge/sorgu_yakala.py`: `with Y.yakala(engine) as q:` bloğunda
+portal veritabanına giden her `SELECT` sürücü düzeyinde değerleriyle, `Y.izle(run, "logo"|"crm", db)` ile sarılmış
+çalıştırıcıya giden her Logo/CRM metni kaydedilir (gösterilen = o istekte koşan). `Y.Kurucu(engine, tenant, q, prefix=…,
+tablolar={tablo: (başlık, açıklama)}, koken={tablo: [anahtar]})` kaynakları kurar; `b.hesap(ad, formül, *tablolar)` ve
+`b.alanlar({...})`. Tabloyu gece dolduran sorgular yenileme işinde `Y.baslat`/`Y.bitir` + `Y.koken_yaz(engine, tenant,
+anahtar, q)` ile `semantic_query_origin`'e yazılır, kaynakta `origin` olur. Önbellekten dönen uçta yükleme anındaki sorgular
+saklanıp yeniden verilir. Örnekler: `eticaret_kaynak.py`, `kampanya_kaynak.py`, `channels/kaynak.py`; bütün bir paket için
+ara katman: `seo_geo/kaynak.py` (saf ASGI, yalnız kendi yolları).
+
 ## Ön yüz: 2 adım
 
 1. Cevap tipine `kaynaklar?: Kaynaklar` ekle (`import type { Kaynaklar } from '../components/sqlInfo'`).

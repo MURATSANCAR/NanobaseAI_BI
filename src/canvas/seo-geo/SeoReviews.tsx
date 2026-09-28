@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search, Star } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -74,7 +75,7 @@ export default function SeoReviews() {
   const starMax = Math.max(1, ...Object.values(stars ?? {}));
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/yorumlar"
       crumb="Okur yorumları"
       eyebrow="SEO & GEO · Okur yorumları"
@@ -97,15 +98,15 @@ export default function SeoReviews() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Yorumlu kitap" value={`${fmt(s.withReviews)} / ${fmt(s.activeBooks)}`} note={`Toplam ${fmt(s.reviews)} yorum · son okuma ${dateTime(s.lastRead)}`} />
-            <Kpi label="Ortalama puan" value={s.average == null ? '—' : fmt(s.average, 1)} note="Yorum sayısıyla ağırlıklı, 5 üzerinden" />
-            <Kpi label="Çok satan, yorumsuz" value={fmt(s.zeroTopSelling)} note={`${fmt(s.prioritySales)} ve üstü satış, hiç yorum yok`} tone={s.zeroTopSelling ? 'bad' : undefined} />
-            <Kpi label="Şemada puan yok" value={fmt(s.schemaMissing)} note={`Yorumlu ama sayfada puan görünmüyor · taranmamış ${fmt(s.schemaUnchecked)}`} tone={s.schemaMissing ? 'bad' : undefined} />
+            <Kpi label="Yorumlu kitap" value={`${fmt(s.withReviews)} / ${fmt(s.activeBooks)}`} note={`Toplam ${fmt(s.reviews)} yorum · son okuma ${dateTime(s.lastRead)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Yorumlu kitap" />} />
+            <Kpi label="Ortalama puan" value={s.average == null ? '—' : fmt(s.average, 1)} note="Yorum sayısıyla ağırlıklı, 5 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama puan" />} />
+            <Kpi label="Çok satan, yorumsuz" value={fmt(s.zeroTopSelling)} note={`${fmt(s.prioritySales)} ve üstü satış, hiç yorum yok`} tone={s.zeroTopSelling ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Çok satan, yorumsuz" />} />
+            <Kpi label="Şemada puan yok" value={fmt(s.schemaMissing)} note={`Yorumlu ama sayfada puan görünmüyor · taranmamış ${fmt(s.schemaUnchecked)}`} tone={s.schemaMissing ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Şemada puan yok" />} />
           </section>
 
           <div className="sg-grid">
             <section className="sg-card sg-span-5" aria-label="Puan dağılımı">
-              <h2>Puan dağılımı</h2>
+              <h2>Puan dağılımı <SeoInfo k={list.data?.kaynaklar} label="Puan dağılımı" /></h2>
               <p className="sg-sub">{s.reviewStars ? 'Onaylı yorumların yıldızları.' : 'Kitap ortalamaları (yorum ayrıntısı henüz okunmadı).'}</p>
               <div className="sg-bars">
                 {['5', '4', '3', '2', '1'].map((k) => (
@@ -122,7 +123,7 @@ export default function SeoReviews() {
               </div>
             </section>
             <section className="sg-card sg-span-7" aria-label="Öneriler">
-              <h2>Ne yapılmalı</h2>
+              <h2>Ne yapılmalı <SeoInfo k={list.data?.kaynaklar} label="Ne yapılmalı" /></h2>
               <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
                 {list.data?.recommendations.map((r) => <li key={r}>{r}</li>)}
               </ul>
@@ -200,10 +201,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

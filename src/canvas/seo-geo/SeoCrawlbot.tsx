@@ -6,7 +6,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 const PAGE = 40;
 
@@ -187,7 +187,7 @@ export default function SeoCrawlbot() {
   }, [busy, botsBusy, wasBusy, qc]);
 
   return (
-    <SeoLayout
+    <SeoLayout k={summary.data?.kaynaklar}
       path="/seo-geo/google-taramasi"
       crumb="Google taraması"
       eyebrow="SEO & GEO · Google taraması"
@@ -210,7 +210,7 @@ export default function SeoCrawlbot() {
         <>
           {!ins.configured && (
             <section className="sg-card">
-              <h2>Search Console bağlantısı eksik</h2>
+              <h2>Search Console bağlantısı eksik <SeoInfo k={summary.data?.kaynaklar} label="Search Console bağlantısı eksik" /></h2>
               <p className="sg-sub">URL Denetimi, Google'ın her sayfa için verdiği kararı okur; yalnız okuma yapılır.</p>
               <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7 }}>
                 <li>
@@ -236,7 +236,7 @@ export default function SeoCrawlbot() {
 
           <section className="sg-kpis" aria-label="Özet">
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Dizinde oranı</div>
+              <div className="sg-kpi-label">Dizinde oranı <SeoInfo k={summary.data?.kaynaklar} label="Dizinde oranı" /></div>
               <div className="sg-kpi-value sg-mono">{pct(ins.indexedShare)}</div>
               <div className="sg-kpi-note">
                 Denetlenen {fmt(ins.inspected)} adresten {fmt(ins.indexed)} · tarandı ama dizinde değil {fmt(ins.crawledNotIndexed)} · keşfedildi ama taranmadı {fmt(ins.discoveredNotCrawled)}
@@ -248,12 +248,12 @@ export default function SeoCrawlbot() {
               <div className="sg-kpi-note">Satışı olan ve Google'ın {ins.staleDays} günden uzun süredir (ya da hiç) taramadığı kitap sayfaları</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Canonical uyuşmazlığı</div>
+              <div className="sg-kpi-label">Canonical uyuşmazlığı <SeoInfo k={summary.data?.kaynaklar} label="Canonical uyuşmazlığı" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(ins.canonicalMismatch)}</div>
               <div className="sg-kpi-note">Google'ın sitenin gösterdiğinden başka bir adresi asıl saydığı sayfa</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bot istekleri (14 gün)</div>
+              <div className="sg-kpi-label">Bot istekleri (14 gün) <SeoInfo k={summary.data?.kaynaklar} label="Bot istekleri (14 gün)" /></div>
               <div className="sg-kpi-value sg-mono">{d.bots.configured ? fmt(d.bots.requests14) : '—'}</div>
               <div className="sg-kpi-note">{d.bots.configured ? `Googlebot ${fmt(d.bots.googlebot14)} · yapay zekâ botları ${fmt((d.bots.byGroup['yapay zekâ araması'] ?? 0) + (d.bots.byGroup['yapay zekâ eğitimi'] ?? 0))}` : 'Site ağ geçidi bağlı değil'}</div>
             </div>
@@ -334,17 +334,17 @@ function IndexTab({ s }: { s: Summary['inspect'] }) {
     <>
       <div className="sg-grid">
         <section className="sg-card sg-span-4">
-          <h2>Google'ın kararı</h2>
+          <h2>Google'ın kararı <SeoInfo k={list.data?.kaynaklar} label="Google'ın kararı" /></h2>
           <p className="sg-sub">Denetlenen {fmt(s.total)} adres, Google'ın son hâline göre.</p>
           <Bars rows={s.byStatus.map((b) => ({ key: b.status, label: b.label, count: b.count, tone: b.tone }))} total={s.total} />
         </section>
         <section className="sg-card sg-span-4">
-          <h2>Son taramadan bu yana</h2>
+          <h2>Son taramadan bu yana <SeoInfo k={list.data?.kaynaklar} label="Son taramadan bu yana" /></h2>
           <p className="sg-sub">Googlebot'un sayfayı en son ne zaman açtığı.</p>
           <Bars rows={s.crawlAge.map((a) => ({ key: a.label, label: a.label, count: a.count }))} total={s.inspected} />
         </section>
         <section className="sg-card sg-span-4">
-          <h2>Hangi tarayıcıyla</h2>
+          <h2>Hangi tarayıcıyla <SeoInfo k={list.data?.kaynaklar} label="Hangi tarayıcıyla" /></h2>
           <p className="sg-sub">Google siteyi çoğunlukla akıllı telefon tarayıcısıyla değerlendirir; masaüstü payı yüksekse mobil sürümde sorun olabilir.</p>
           <Bars
             rows={[
@@ -389,7 +389,7 @@ function IndexTab({ s }: { s: Summary['inspect'] }) {
                 <tr>
                   <th>Sayfa</th>
                   <th>Google'ın kararı</th>
-                  <th>Son tarama</th>
+                  <th>Son tarama <SeoInfo k={list.data?.kaynaklar} label="Son tarama" /></th>
                   <th>Tarayıcı</th>
                   <th>Canonical</th>
                   <th>Zengin sonuç</th>
@@ -494,7 +494,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
   if (!configured) {
     return (
       <section className="sg-card">
-        <h2>Site ağ geçidi (CDN) bağlı değil</h2>
+        <h2>Site ağ geçidi (CDN) bağlı değil <SeoInfo k={q.data?.kaynaklar} label="Site ağ geçidi (CDN) bağlı değil" /></h2>
         <p className="sg-sub">Googlebot'un ve yapay zekâ botlarının siteye kaç istek attığı, hangi yanıtları aldığı ve en çok hangi sayfaları istediği sunucu günlüğü olmadan buradan okunur. Yalnız okuma izni kullanılır.</p>
         <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7 }}>
           <li>Site ağ geçidi (CDN) panelinde bir API belirteci oluşturun; yalnız bu site için “Analytics: Read” (analitik okuma) izni yeterlidir.</li>
@@ -538,7 +538,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
       <section className="sg-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
-            <h2>Günlük bot istekleri</h2>
+            <h2>Günlük bot istekleri <SeoInfo k={q.data?.kaynaklar} label="Günlük bot istekleri" /></h2>
             <p className="sg-sub" style={{ margin: 0, fontSize: 12, color: 'var(--sg-muted)' }}>
               Gün (UTC) başına istek · son okuma {dateTime(b.lastFetch)}
             </p>
@@ -598,7 +598,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
       {b.bots.length > 0 && (
         <div className="sg-grid">
           <section className="sg-card sg-span-8">
-            <h2>Bot başına yanıtlar</h2>
+            <h2>Bot başına yanıtlar <SeoInfo k={q.data?.kaynaklar} label="Bot başına yanıtlar" /></h2>
             <p className="sg-sub">Son {days} gün. 4xx ve 5xx yanıtları botun boşa harcadığı taramadır; 3xx çoksa bağlantılar eski adresleri gösteriyor olabilir.</p>
             <div className="sg-table-wrap">
               <table className="sg-table">
@@ -606,12 +606,12 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
                   <tr>
                     <th>Bot</th>
                     <th>Tür</th>
-                    <th>İstek</th>
-                    <th>Doğrulanmış</th>
-                    <th>2xx</th>
-                    <th>3xx</th>
-                    <th>4xx</th>
-                    <th>5xx</th>
+                    <th>İstek <SeoInfo k={q.data?.kaynaklar} label="İstek" /></th>
+                    <th>Doğrulanmış <SeoInfo k={q.data?.kaynaklar} label="Doğrulanmış" /></th>
+                    <th>2xx <SeoInfo k={q.data?.kaynaklar} label="2xx" /></th>
+                    <th>3xx <SeoInfo k={q.data?.kaynaklar} label="3xx" /></th>
+                    <th>4xx <SeoInfo k={q.data?.kaynaklar} label="4xx" /></th>
+                    <th>5xx <SeoInfo k={q.data?.kaynaklar} label="5xx" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -632,7 +632,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
             </div>
           </section>
           <section className="sg-card sg-span-4">
-            <h2>Yanıt kodu dağılımı</h2>
+            <h2>Yanıt kodu dağılımı <SeoInfo k={q.data?.kaynaklar} label="Yanıt kodu dağılımı" /></h2>
             <p className="sg-sub">Bütün botların istekleri, son {days} gün.</p>
             <Bars
               rows={Object.entries(b.statusClass)
@@ -646,7 +646,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
 
       {b.bots.length > 0 && (
         <section className="sg-card">
-          <h2>En çok istenen yollar</h2>
+          <h2>En çok istenen yollar <SeoInfo k={q.data?.kaynaklar} label="En çok istenen yollar" /></h2>
           <p className="sg-sub">Her bot için günde en çok istenen {fmt(b.topPathsLimit)} yol saklanır; burada seçilen dönemde toplanmış hâli, en çoktan aza.</p>
           <div className="sg-filters" role="group" aria-label="Bot" style={{ marginBottom: 12 }}>
             <button className="sg-filter" aria-pressed={pathBot === ''} onClick={() => setPathBot('')}>
@@ -666,7 +666,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
                 <thead>
                   <tr>
                     <th>Yol</th>
-                    <th>İstek</th>
+                    <th>İstek <SeoInfo k={q.data?.kaynaklar} label="İstek" /></th>
                   </tr>
                 </thead>
                 <tbody>

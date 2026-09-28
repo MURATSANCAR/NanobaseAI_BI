@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 50;
@@ -62,7 +63,7 @@ export default function SeoBacklinks() {
   const total = d?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/geri-baglantilar"
       crumb="Gelen bağlantılar"
       eyebrow="SEO & GEO · Gelen bağlantılar"
@@ -84,7 +85,7 @@ export default function SeoBacklinks() {
 
       {d && !d.configured && (
         <div className="sg-empty">
-          <h2>Bing bağlantısı kurulmamış</h2>
+          <h2>Bing bağlantısı kurulmamış <SeoInfo k={list.data?.kaynaklar} label="Bing bağlantısı kurulmamış" /></h2>
           <p>{d.setup}</p>
         </div>
       )}
@@ -98,10 +99,10 @@ export default function SeoBacklinks() {
       {d && s && d.snapshot && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bağlantı alan sayfa" value={fmt(s.pages)} note={`Toplam ${fmt(s.inbound)} gelen bağlantı · ${dateTime(d.snapshot.taken_at)}`} />
-            <Kpi label="Bağlantı veren site" value={fmt(s.domains)} note={`Ayrıntısı okunan ${fmt(s.detailed)} sayfadan`} />
-            <Kpi label="Yeni" value={d.previous ? fmt(s.new) : '—'} note={d.previous ? `Önceki okuma ${dateTime(d.previous.taken_at)}` : 'Karşılaştırma için ikinci okuma gerekiyor'} tone={s.new ? 'good' : undefined} />
-            <Kpi label="Kaybolan" value={d.previous ? fmt(s.lost) : '—'} note="Yalnız iki okumada da ayrıntısı okunan sayfalar" tone={s.lost ? 'bad' : undefined} />
+            <Kpi label="Bağlantı alan sayfa" value={fmt(s.pages)} note={`Toplam ${fmt(s.inbound)} gelen bağlantı · ${dateTime(d.snapshot.taken_at)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı alan sayfa" />} />
+            <Kpi label="Bağlantı veren site" value={fmt(s.domains)} note={`Ayrıntısı okunan ${fmt(s.detailed)} sayfadan`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı veren site" />} />
+            <Kpi label="Yeni" value={d.previous ? fmt(s.new) : '—'} note={d.previous ? `Önceki okuma ${dateTime(d.previous.taken_at)}` : 'Karşılaştırma için ikinci okuma gerekiyor'} tone={s.new ? 'good' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yeni" />} />
+            <Kpi label="Kaybolan" value={d.previous ? fmt(s.lost) : '—'} note="Yalnız iki okumada da ayrıntısı okunan sayfalar" tone={s.lost ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kaybolan" />} />
           </section>
           {!d.snapshot.complete && (
             <p className="sg-banner">
@@ -233,10 +234,10 @@ function Line({ view, r }: { view: View; r: Record<string, unknown> }) {
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

@@ -13,6 +13,7 @@ import { signedPct } from '../parts';
 import { BookCell, ExportLink } from '../platformKit';
 import { amazonApi, type Candidate } from './api';
 import { AmazonData, AmazonFrame, money, tl, useAmazonMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 const CRM_TYPES: Record<string, string> = { '14': 'Amazon Konsinye' };
 const CAND: Record<Candidate['durum'], { label: string; tone: 'ok' | 'warn' | 'muted' | 'violet' | 'err' }> = {
@@ -37,7 +38,7 @@ function Accounts({ canMap }: { canMap: boolean }) {
   const d = q.data;
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Amazon carileri</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon carileri <SqlInfo k={d?.kaynaklar} alan="adayCariler" label="Amazon carileri" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">Logo'da unvanında {d?.desenler?.join(', ') ?? '—'} geçen cariler ve eşleme durumu. Karne ve konsinye yalnız onaylı carileri sayar.</p>
       {q.isLoading ? <Loading /> : !d?.adayCariler.length ? <Note tone="info">{d?.okundu ? 'Bu adla cari bulunmadı.' : '«Veriyi yenile» Logo carilerini okur.'}</Note> : (
         <TableWrap>
@@ -63,7 +64,7 @@ function Accounts({ canMap }: { canMap: boolean }) {
         <div className="mt-3">
           <h3 className="mb-1 text-[13px] font-extrabold">Onaylı carilerde faturalı satış ({d.toptan.period?.yil} Ocak–{d.toptan.period?.ayAdi})</h3>
           <TableWrap>
-            <thead><tr><th className={th}>Cari</th><th className={`${th} text-right`}>Net ciro</th><th className={`${th} text-right`}>Net adet</th><th className={th}>CRM siparişi (son {d.toptan.crmSiparisGun ?? '—'} gün)</th></tr></thead>
+            <thead><tr><th className={th}>Cari</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="toptan">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="toptan">Net adet</InfoLabel></th><th className={th}>CRM siparişi (son {d.toptan.crmSiparisGun ?? '—'} gün)</th></tr></thead>
             <tbody>
               {d.toptan.cariSatirlari.map((c) => (
                 <tr key={c.grup} className="border-t border-slate-100">
@@ -90,7 +91,7 @@ function Books({ canExport }: { canExport: boolean }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Amazon'a faturalanan kitaplar</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon'a faturalanan kitaplar <SqlInfo k={d?.kaynaklar} alan="items" label="Amazon'a faturalanan kitaplar" /></h2>
         <div className="flex gap-2">
           <input className={`${field} sm:w-64`} placeholder="Kitap ya da stok kodu" value={text} onChange={(e) => setText(e.target.value)} />
           <ExportLink show={canExport} href={amazonApi.exportUrl('kitaplar', { q })} />
@@ -99,7 +100,7 @@ function Books({ canExport }: { canExport: boolean }) {
       {r.error ? <Note tone="info">{errText(r.error, 'Liste açılamadı.')}</Note> : r.isLoading ? <Loading /> : d && (
         <>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Sevk (faturalı)</th><th className={`${th} text-right`}>İade</th><th className={`${th} text-right`}>Net adet</th><th className={`${th} text-right`}>Net ciro</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Sevk (faturalı)</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">İade</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th></tr></thead>
             <tbody>
               {d.items.map((x) => (
                 <tr key={x.stokKodu} className="border-t border-slate-100">
@@ -133,7 +134,7 @@ function SalesReport({ canImport }: { canImport: boolean }) {
   });
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Amazon'un sattığı (panel raporu)</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon'un sattığı (panel raporu) <SqlInfo k={list.data?.kaynaklar} alan="items" label="Amazon'un sattığı (panel raporu)" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">
         Satıcı panelinden indirilen satış raporu (Excel/CSV): Amazon'un son tüketiciye sattığı adet ve kanal stoğu. Karşılaştırma kanal karnesinin Amazon sayfasında.
         Müşteri kolonları içeri alınmaz.
@@ -179,11 +180,15 @@ export default function AmazonHome() {
         <>
           <KpiRow>
             <Kpi label="Amazon net ciro" value={d.toptan.donem ? `${fmtShort(d.toptan.donem.netCiro)} ₺` : '—'}
-              help={d.toptan.donem ? `${d.toptan.period?.yil} · geçen yıla göre ${signedPct(d.toptan.degisim)} · iade ${fmtPct(d.toptan.donem.iadeOrani)}` : (d.toptan.neden ?? '—')} />
-            <Kpi label="Konsinyede kalan" value={d.konsinye ? fmtInt(d.konsinye.kalan) : '—'} help={d.konsinye ? `${fmtInt(d.konsinye.kitap)} kitap · faturalanmamış sevk ${fmtInt(d.konsinye.sevk)} − iade ${fmtInt(d.konsinye.iade)}` : 'Henüz okunmadı'} />
+              help={d.toptan.donem ? `${d.toptan.period?.yil} · geçen yıla göre ${signedPct(d.toptan.degisim)} · iade ${fmtPct(d.toptan.donem.iadeOrani)}` : (d.toptan.neden ?? '—')}
+            info={<SqlInfo k={d?.kaynaklar} alan="toptan" label="Amazon net ciro" />} />
+            <Kpi label="Konsinyede kalan" value={d.konsinye ? fmtInt(d.konsinye.kalan) : '—'} help={d.konsinye ? `${fmtInt(d.konsinye.kitap)} kitap · faturalanmamış sevk ${fmtInt(d.konsinye.sevk)} − iade ${fmtInt(d.konsinye.iade)}` : 'Henüz okunmadı'}
+            info={<SqlInfo k={d?.kaynaklar} alan="konsinye" label="Konsinyede kalan" />} />
             <Kpi label="Yurtdışı net ciro" value={y?.netCiro !== undefined ? `${fmtShort(y.netCiro)} ₺` : '—'}
-              help={y?.hata ?? (y?.yil ? `${y.yil} · ${fmtInt(y.ulkeSayisi ?? 0)} ülke · geçen yıl aynı dönem ${fmtShort(y.gecenYilAyniDonem ?? 0)} ₺` : 'Henüz okunmadı')} />
-            <Kpi label="Satılmış yabancı hak" value={d.haklar ? fmtInt(d.haklar.kitap) : '—'} help={d.haklar ? `${fmtInt(d.haklar.sozlesme)} Telif Satış sözleşmesi` : 'CRM okunmadı'} />
+              help={y?.hata ?? (y?.yil ? `${y.yil} · ${fmtInt(y.ulkeSayisi ?? 0)} ülke · geçen yıl aynı dönem ${fmtShort(y.gecenYilAyniDonem ?? 0)} ₺` : 'Henüz okunmadı')}
+            info={<SqlInfo k={d?.kaynaklar} alan="yurtdisi" label="Yurtdışı net ciro" />} />
+            <Kpi label="Satılmış yabancı hak" value={d.haklar ? fmtInt(d.haklar.kitap) : '—'} help={d.haklar ? `${fmtInt(d.haklar.sozlesme)} Telif Satış sözleşmesi` : 'CRM okunmadı'}
+            info={<SqlInfo k={d?.kaynaklar} alan="haklar" label="Satılmış yabancı hak" />} />
           </KpiRow>
           {y?.dovizToplam && Object.keys(y.dovizToplam).length > 0 && (
             <Note tone="info">

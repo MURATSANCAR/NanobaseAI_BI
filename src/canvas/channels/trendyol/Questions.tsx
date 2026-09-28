@@ -11,6 +11,7 @@ import { BookCell, Chips, ExportLink } from '../platformKit';
 import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, useTrendyolMeta } from './parts';
 import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../../signals/ReaderVoice';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Taslak kutusu: Zeki AI'dan al, kopyala. Gönderim yok; yanıtı kişi panelden verir. */
 function Draft({ kind, id, text, canDraft }: { kind: 'questions' | 'reviews'; id: string; text: string | null; canDraft: boolean }) {
@@ -58,15 +59,20 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
     <>
       {d && (
         <KpiRow>
-          <Kpi label="Cevapsız" value={fmtInt(d.cevapsiz)} help={`${fmtInt(d.toplam)} sorudan`} />
-          <Kpi label="Geciken" value={fmtInt(d.geciken)} help={`${d.esikSaat} saati geçen cevapsız`} />
-          <Kpi label="Durumu bilinmeyen" value={fmtInt(d.bilinmeyen)} help="Dosyada cevap ya da durum kolonu yok" />
-          <Kpi label="Liste" value={fmtInt(d.total)} help={only ? 'Cevapsızlar' : 'Bütün sorular'} />
+          <Kpi label="Cevapsız" value={fmtInt(d.cevapsiz)} help={`${fmtInt(d.toplam)} sorudan`}
+            info={<SqlInfo k={d?.kaynaklar} alan="cevapsiz" label="Cevapsız" />} />
+          <Kpi label="Geciken" value={fmtInt(d.geciken)} help={`${d.esikSaat} saati geçen cevapsız`}
+            info={<SqlInfo k={d?.kaynaklar} alan="geciken" label="Geciken" />} />
+          <Kpi label="Durumu bilinmeyen" value={fmtInt(d.bilinmeyen)} help="Dosyada cevap ya da durum kolonu yok"
+            info={<SqlInfo k={d?.kaynaklar} alan="bilinmeyen" label="Durumu bilinmeyen" />} />
+          <Kpi label="Liste" value={fmtInt(d.total)} help={only ? 'Cevapsızlar' : 'Bütün sorular'}
+            info={<SqlInfo k={d?.kaynaklar} alan="total" label="Liste" />} />
         </KpiRow>
       )}
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <Chips value={only} onChange={(v) => { setOnly(v); setPage(0); }} items={[{ key: 'cevapsiz', label: 'Cevapsız' }, { key: '', label: 'Hepsi' }]} />
+          <div className="flex min-w-0 items-center gap-1"><Chips value={only} onChange={(v) => { setOnly(v); setPage(0); }} items={[{ key: 'cevapsiz', label: 'Cevapsız' }, { key: '', label: 'Hepsi' }]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
           <ExportLink show={canExport} href={trendyolApi.exportUrl('sorular', { cevapsiz: only === 'cevapsiz', q })} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Sorular açılamadı.')}</Note>}
@@ -109,7 +115,8 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
     <>
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <Chips value={max} onChange={(v) => { setMax(v); setPage(0); }} items={[{ key: '3', label: '3 ve altı', count: d?.dusuk }, { key: '', label: 'Hepsi', count: d?.toplam }]} />
+          <div className="flex min-w-0 items-center gap-1"><Chips value={max} onChange={(v) => { setMax(v); setPage(0); }} items={[{ key: '3', label: '3 ve altı', count: d?.dusuk }, { key: '', label: 'Hepsi', count: d?.toplam }]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
           <ExportLink show={canExport} href={trendyolApi.exportUrl('yorumlar', { maxPuan: max || undefined, q })} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Yorumlar açılamadı.')}</Note>}
@@ -134,9 +141,9 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
       </Panel>
       {d && d.kitaplar.length > 0 && (
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Kitap bazında puan</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kitap bazında puan <SqlInfo k={d?.kaynaklar} alan="items" label="Kitap bazında puan" /></h2>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Yorum</th><th className={`${th} text-right`}>Ortalama</th><th className={`${th} text-right`}>3 ve altı</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Yorum</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Ortalama</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">3 ve altı</InfoLabel></th></tr></thead>
             <tbody>
               {d.kitaplar.map((b, i) => (
                 <tr key={`${b.stokKodu ?? b.ad}-${i}`} className="border-t border-slate-100">

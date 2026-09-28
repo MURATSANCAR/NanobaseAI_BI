@@ -1,10 +1,12 @@
+import type { Kaynaklar } from '../components/sqlInfo';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** Yarışan sayfalar: /api/v1/seo-geo/cannibal. Search Console'un sorgu+sayfa kırılımından; yalnız okunur. */
 
@@ -122,10 +124,10 @@ export function CannibalList() {
         d && (
           <>
             <section className="sg-kpis" aria-label="Özet">
-              <Kpi label="Zararlı bölünme" value={fmt(d.totals.severity.zararli.nonBrand)} note={`Marka dışı arama · ${fmt(d.totals.severity.zararli.impressions)} gösterim`} />
-              <Kpi label="İzlenmeli" value={fmt(d.totals.severity.izle.nonBrand)} note={`Baskın sayfa yok ama biri ilk ${fmt(t!.harmPosition)} sırada`} />
-              <Kpi label="Adres kopyası" value={fmt(d.totals.types.kopya)} note="Parametreli ya da yazım farklı aynı sayfa" />
-              <Kpi label="Aynı kitabın iki ürünü" value={fmt(d.totals.types.baski)} note="Eski/yeni baskı ya da ikinci kayıt" />
+              <Kpi label="Zararlı bölünme" value={fmt(d.totals.severity.zararli.nonBrand)} note={`Marka dışı arama · ${fmt(d.totals.severity.zararli.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Zararlı bölünme" />} />
+              <Kpi label="İzlenmeli" value={fmt(d.totals.severity.izle.nonBrand)} note={`Baskın sayfa yok ama biri ilk ${fmt(t!.harmPosition)} sırada`} info={<SeoInfo k={r.data?.kaynaklar} label="İzlenmeli" />} />
+              <Kpi label="Adres kopyası" value={fmt(d.totals.types.kopya)} note="Parametreli ya da yazım farklı aynı sayfa" info={<SeoInfo k={r.data?.kaynaklar} label="Adres kopyası" />} />
+              <Kpi label="Aynı kitabın iki ürünü" value={fmt(d.totals.types.baski)} note="Eski/yeni baskı ya da ikinci kayıt" info={<SeoInfo k={r.data?.kaynaklar} label="Aynı kitabın iki ürünü" />} />
             </section>
 
             <div className="sg-filters" role="toolbar" aria-label="Önem">
@@ -162,7 +164,7 @@ export function CannibalList() {
               ) : (
                 <div className="sg-list">
                   {d.items.map((i) => (
-                    <Group key={i.query} i={i} />
+                    <Group key={i.query} i={i} k={d.kaynaklar} />
                   ))}
                 </div>
               )}
@@ -175,7 +177,7 @@ export function CannibalList() {
   );
 }
 
-function Group({ i }: { i: Item }) {
+function Group({ i, k }: { i: Item; k?: Kaynaklar | null }) {
   const typeLabel: Record<PairType, string> = {
     kopya: 'Adres kopyası',
     baski: 'Aynı kitap, iki ürün',
@@ -203,9 +205,9 @@ function Group({ i }: { i: Item }) {
           <thead>
             <tr>
               <th>Adres</th>
-              <th>Gösterim payı</th>
-              <th>Tıklama</th>
-              <th>Sıra</th>
+              <th>Gösterim payı <SeoInfo k={k} label="Gösterim payı" /></th>
+              <th>Tıklama <SeoInfo k={k} label="Tıklama" /></th>
+              <th>Sıra <SeoInfo k={k} label="Sıra" /></th>
             </tr>
           </thead>
           <tbody>
@@ -277,10 +279,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

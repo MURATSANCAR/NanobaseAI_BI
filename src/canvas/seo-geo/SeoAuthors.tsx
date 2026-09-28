@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, scoreTone } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -79,7 +80,7 @@ export default function SeoAuthors() {
   const running = !!s?.state.running;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/yazar-sayfalari"
       crumb="Yazar sayfaları"
       eyebrow="SEO & GEO · Yazar güven sinyalleri"
@@ -102,10 +103,10 @@ export default function SeoAuthors() {
       {d && s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Yazar" value={fmt(s.authors)} note="Satıştaki kitaplardan" />
-            <Kpi label="Ortalama güven puanı" value={s.average == null ? '—' : fmt(s.average)} note="Bilinen maddelerin ağırlıklı oranı, 100 üzerinden" />
-            <Kpi label="Yazar sayfası yok" value={fmt(s.missing.page)} note="Sitede sayfası bulunamayan yazar" tone={s.missing.page ? 'bad' : undefined} />
-            <Kpi label="Kimlik kaydı eksik" value={fmt(s.missing.wikidata)} note="Wikidata/Wikipedia’da kaydı yok ya da belirsiz" tone={s.missing.wikidata ? 'bad' : undefined} />
+            <Kpi label="Yazar" value={fmt(s.authors)} note="Satıştaki kitaplardan" info={<SeoInfo k={list.data?.kaynaklar} label="Yazar" />} />
+            <Kpi label="Ortalama güven puanı" value={s.average == null ? '—' : fmt(s.average)} note="Bilinen maddelerin ağırlıklı oranı, 100 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama güven puanı" />} />
+            <Kpi label="Yazar sayfası yok" value={fmt(s.missing.page)} note="Sitede sayfası bulunamayan yazar" tone={s.missing.page ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yazar sayfası yok" />} />
+            <Kpi label="Kimlik kaydı eksik" value={fmt(s.missing.wikidata)} note="Wikidata/Wikipedia’da kaydı yok ya da belirsiz" tone={s.missing.wikidata ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kimlik kaydı eksik" />} />
           </section>
           <p className="sg-banner">
             {s.crmRead
@@ -233,10 +234,10 @@ export default function SeoAuthors() {
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

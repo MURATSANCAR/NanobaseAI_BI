@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnPrimary, errText, field, label } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { commerceApi, fmtDay, fmtInt, type Settings } from './api';
 import { useMeta } from './parts';
 
@@ -18,7 +19,7 @@ export default function DataSettings() {
   return (
     <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Site verisi</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Site verisi <SqlInfo k={meta.data?.kaynaklar} alan="freshness" label="Site verisi okuması" /></h2>
         {!meta.data?.tsoftConfigured && <div className="mt-2"><Note tone="warn">T-soft kullanıcısı girilmemiş (Yönetim → SEO & GEO).</Note></div>}
         {fr && (
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">

@@ -6,6 +6,8 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { Pill, btnGhost, btnPrimary, field, label as labelCls } from '../admin/ui';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { KIND_TONE, STATE_TONE, fmtDay, fmtPct, type Diff, type MarkState, type Meta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** E-ticaret ekranlarının ortak kabuğu: başlık, dört ekran arası geçiş (yalnız rolünde olanlar) ve «yazma yok» notu. */
 
@@ -84,8 +86,11 @@ export function ThreeValues({ crm, logo, site }: { crm: ReactNode; logo: ReactNo
 }
 
 /** Bir fark satırı (kart). Tıklanınca kitabın çekmecesi açılır; seçim kutusu toplu işaret içindir. */
-export function DiffCard({ d, onOpen, selected, onSelect, onMark }: {
+export function DiffCard({ d, onOpen, selected, onSelect, onMark, k, alan = 'items' }: {
   d: Diff;
+  /** Sorgu bilgisi: kartın CRM/Logo/site değerleri, etki ve neden olasılığı hangi sorgudan. */
+  k?: Kaynaklar | null;
+  alan?: string;
   onOpen?: (key: string) => void;
   selected?: boolean;
   onSelect?: (on: boolean) => void;
@@ -121,6 +126,7 @@ export function DiffCard({ d, onOpen, selected, onSelect, onMark }: {
           </div>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-canvas-muted">
+          {k && <SqlInfo k={k} alan={alan} label={`Fark: ${d.ad || d.productKey}`} />}
           <span>İlk görüldü {fmtDay(d.ilkGoruldu)}</span>
           {d.etki > 0 && <span>Son dönem Logo satışı {Math.round(d.etki).toLocaleString('tr-TR')} adet</span>}
           {d.neden && (

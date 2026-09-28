@@ -6,6 +6,8 @@ import { Loader2, Play, Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import {
   RUN_TONE, commerceApi, fmtDay, fmtInt, fmtRatio, paramText,
   type Channel, type Preview, type Run, type Trigger, type TriggerKind,
@@ -76,7 +78,7 @@ export default function Triggers() {
         <p className="text-[12.5px] text-canvas-muted">Henüz çalıştırılmış liste yok.</p>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-          {(runs.data?.items ?? []).map((r) => <RunCard key={r.id} r={r} excl={excl} onChange={refresh} />)}
+          {(runs.data?.items ?? []).map((r) => <RunCard key={r.id} r={r} excl={excl} onChange={refresh} k={runs.data?.kaynaklar} />)}
         </div>
       )}
     </div>
@@ -100,6 +102,9 @@ function TriggerCard({ t, p, excl, canTrigger, busy, running, onPreview, onRun, 
       {p && (
         <div className="mt-2 rounded-xl bg-slate-50 p-2.5 text-[12px]">
           {p.info.aciklama && <p className="mb-1 text-canvas-muted">{p.info.aciklama}</p>}
+          <div className="mb-1 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Ön izleme <SqlInfo k={p.kaynaklar} alan="candidates" label={`Ön izleme: ${t.name}`} />
+          </div>
           <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
             <span>Aday <strong className="font-mono tabular-nums">{fmtInt(p.candidates)}</strong></span>
             <span>Okura bağlı <strong className="font-mono tabular-nums">{fmtInt(p.linked)}</strong></span>
@@ -213,7 +218,7 @@ function TriggerForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function RunCard({ r, excl, onChange }: { r: Run; excl: Record<string, string>; onChange: () => void }) {
+function RunCard({ r, excl, onChange, k }: { r: Run; excl: Record<string, string>; onChange: () => void; k?: Kaynaklar }) {
   const meta = useMeta();
   const me = meta.data?.me;
   const [note, setNote] = useState('');
@@ -241,6 +246,9 @@ function RunCard({ r, excl, onChange }: { r: Run; excl: Record<string, string>; 
         <Pill tone={RUN_TONE[r.status]}>{r.statusLabel}</Pill>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-1 text-[12px] sm:grid-cols-4">
+        <span className="col-span-2 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted sm:col-span-4">
+          Liste sayıları <SqlInfo k={k} alan="items" label={`Liste: ${r.triggerName}`} />
+        </span>
         <span>Aday <strong className="font-mono tabular-nums">{fmtInt(r.candidates)}</strong></span>
         <span>Ulaşılabilir <strong className="font-mono tabular-nums">{fmtInt(r.reachable)}</strong></span>
         <span>Hedef <strong className="font-mono tabular-nums">{fmtInt(r.target)}</strong></span>

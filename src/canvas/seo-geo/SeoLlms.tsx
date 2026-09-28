@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Copy, Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fmt, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** llms.txt: yapay zekâ motorlarına sitenin ne olduğunu anlatan dosya. Öneri eşitlenmiş veriden, modelsiz kurulur.
  *  T-soft'a gönderilmez; buradan kopyalanır ya da indirilir ve T-soft paneline elle yüklenir. */
@@ -15,7 +16,7 @@ export default function SeoLlms() {
   const curText = (cur?.text ?? '').trim();
 
   return (
-    <SeoLayout
+    <SeoLayout k={q.data?.kaynaklar}
       path="/seo-geo/llms"
       crumb="Yapay zekâ tarama dosyası"
       eyebrow="SEO & GEO · yapay zekâ dosyası"
@@ -27,10 +28,10 @@ export default function SeoLlms() {
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitedeki llms.txt" value={cur?.status === 200 ? (curText.length > 20 ? `${fmt(curText.length)} karakter` : 'Boş') : cur?.status ? `HTTP ${cur.status}` : 'Okunamadı'} />
-            <Kpi label="Sitedeki llms-full.txt" value={d.current['llms-full.txt']?.status === 200 ? 'Var' : 'Yok'} />
-            <Kpi label="Öneride kitap" value={fmt(d.books)} />
-            <Kpi label="Yayınevi / yazar" value={`${fmt(d.brands)} / ${fmt(d.authors)}`} />
+            <Kpi label="Sitedeki llms.txt" value={cur?.status === 200 ? (curText.length > 20 ? `${fmt(curText.length)} karakter` : 'Boş') : cur?.status ? `HTTP ${cur.status}` : 'Okunamadı'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms.txt" />} />
+            <Kpi label="Sitedeki llms-full.txt" value={d.current['llms-full.txt']?.status === 200 ? 'Var' : 'Yok'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms-full.txt" />} />
+            <Kpi label="Öneride kitap" value={fmt(d.books)} info={<SeoInfo k={q.data?.kaynaklar} label="Öneride kitap" />} />
+            <Kpi label="Yayınevi / yazar" value={`${fmt(d.brands)} / ${fmt(d.authors)}`} info={<SeoInfo k={q.data?.kaynaklar} label="Yayınevi / yazar" />} />
           </section>
 
           {cur?.status === 200 && curText.length <= 20 && (
@@ -70,10 +71,10 @@ export default function SeoLlms() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, info }: { label: string; value: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ fontSize: 20 }}>{value}</div>
     </div>
   );

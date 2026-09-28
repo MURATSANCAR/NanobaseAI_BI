@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { ArrowRight, Check, ChevronLeft, ChevronRight, Download, ExternalLink, S
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** Sorgu–sayfa eşlemesi: /api/v1/seo-geo/keymap. Search Console'un sorgu+sayfa kırılımından; her önemli arama için
  *  hedef sayfa, yanlış sıralanan sayfa ve sayfamızın olmadığı aramalar. Karar yalnız kaydedilir. */
@@ -93,7 +94,7 @@ export default function SeoKeymap() {
   };
 
   return (
-    <SeoLayout
+    <SeoLayout k={r.data?.kaynaklar}
       path="/seo-geo/sorgu-sayfa"
       crumb="Sorgu–sayfa eşlemesi"
       eyebrow="SEO & GEO · Search Console"
@@ -122,10 +123,10 @@ export default function SeoKeymap() {
         d && (
           <>
             <section className="sg-kpis" aria-label="Özet">
-              <Kpi label="Yanlış sayfa sıralanıyor" value={fmt(d.totals.yanlis.nonBrand)} note={`Marka dışı · ${fmt(d.totals.yanlis.impressions)} gösterim`} />
-              <Kpi label="Sayfamız yok" value={fmt(d.totals.bosluk.nonBrand)} note={`Marka dışı · ${fmt(d.totals.bosluk.impressions)} gösterim`} />
-              <Kpi label="Doğru sayfa" value={fmt(d.totals.eslesme.nonBrand)} note="Aramaya uyan sayfa öne çıkıyor" />
-              <Kpi label="Karar verilen" value={fmt(d.decided.onaylandi + d.decided.reddedildi)} note={`${fmt(d.decided.onaylandi)} onay · ${fmt(d.decided.reddedildi)} ret`} />
+              <Kpi label="Yanlış sayfa sıralanıyor" value={fmt(d.totals.yanlis.nonBrand)} note={`Marka dışı · ${fmt(d.totals.yanlis.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Yanlış sayfa sıralanıyor" />} />
+              <Kpi label="Sayfamız yok" value={fmt(d.totals.bosluk.nonBrand)} note={`Marka dışı · ${fmt(d.totals.bosluk.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Sayfamız yok" />} />
+              <Kpi label="Doğru sayfa" value={fmt(d.totals.eslesme.nonBrand)} note="Aramaya uyan sayfa öne çıkıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Doğru sayfa" />} />
+              <Kpi label="Karar verilen" value={fmt(d.decided.onaylandi + d.decided.reddedildi)} note={`${fmt(d.decided.onaylandi)} onay · ${fmt(d.decided.reddedildi)} ret`} info={<SeoInfo k={r.data?.kaynaklar} label="Karar verilen" />} />
             </section>
 
             <div className="sg-filters" role="toolbar" aria-label="Durum">
@@ -305,10 +306,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

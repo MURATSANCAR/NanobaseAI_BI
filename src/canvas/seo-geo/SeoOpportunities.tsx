@@ -1,3 +1,4 @@
+import type { Kaynaklar } from '../components/sqlInfo';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles }
 import { ENGINE_ENABLED } from '../engine';
 import { FIELD_LABEL, dateTime, fmt, seoApi } from './api';
 import { oppsApi, type Delta, type ImpactItem, type ImpactStatus, type Metrics, type OppItem, type OppKind } from './api-opps';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 const PAGE = 50;
 
@@ -123,15 +124,13 @@ function Opportunities() {
             <Kpi
               label="Yakın sıradaki arama"
               value={fmt(d.totals.yakin.nonBrand)}
-              note={`${fmt(t!.nearMin)}–${fmt(t!.nearMax)}. sıra · marka araması ayrıca ${fmt(d.totals.yakin.brand)}`}
-            />
-            <Kpi label="İlk üçe çıkınca ek tıklama" value={fmt(d.totals.yakin.clicks)} note="28 günde, marka dışı aramalarda tahmini" />
+              note={`${fmt(t!.nearMin)}–${fmt(t!.nearMax)}. sıra · marka araması ayrıca ${fmt(d.totals.yakin.brand)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Yakın sıradaki arama" />} />
+            <Kpi label="İlk üçe çıkınca ek tıklama" value={fmt(d.totals.yakin.clicks)} note="28 günde, marka dışı aramalarda tahmini" info={<SeoInfo k={r.data?.kaynaklar} label="İlk üçe çıkınca ek tıklama" />} />
             <Kpi
               label="Az tıklanan arama"
               value={fmt(d.totals.dusuk_tiklama.nonBrand)}
-              note={`Aynı sıranın tipik oranının yarısından az · en az ${fmt(t!.lowMinImpressions)} gösterim`}
-            />
-            <Kpi label="Kaçan tıklama" value={fmt(d.totals.dusuk_tiklama.clicks)} note="Tipik orana ulaşsa gelecek, marka dışı" />
+              note={`Aynı sıranın tipik oranının yarısından az · en az ${fmt(t!.lowMinImpressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Az tıklanan arama" />} />
+            <Kpi label="Kaçan tıklama" value={fmt(d.totals.dusuk_tiklama.clicks)} note="Tipik orana ulaşsa gelecek, marka dışı" info={<SeoInfo k={r.data?.kaynaklar} label="Kaçan tıklama" />} />
           </section>
 
           <div className="sg-filters" role="toolbar" aria-label="Fırsat türü">
@@ -166,7 +165,7 @@ function Opportunities() {
                   <p>Marka araması süzgecini değiştirmeyi deneyin.</p>
                 </div>
               ) : (
-                <OppTable items={d.items} kind={kind} />
+                <OppTable items={d.items} kind={kind} k={d.kaynaklar} />
               )}
               <Pager start={start} total={d.total} onChange={setStart} />
               {d.curve.length > 0 && (
@@ -180,9 +179,9 @@ function Opportunities() {
                     <table className="sg-table">
                       <thead>
                         <tr>
-                          <th>Sıra</th>
-                          <th>Tipik oran</th>
-                          <th>Arama sayısı</th>
+                          <th>Sıra <SeoInfo k={r.data?.kaynaklar} label="Sıra" /></th>
+                          <th>Tipik oran <SeoInfo k={r.data?.kaynaklar} label="Tipik oran" /></th>
+                          <th>Arama sayısı <SeoInfo k={r.data?.kaynaklar} label="Arama sayısı" /></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -206,18 +205,18 @@ function Opportunities() {
   );
 }
 
-function OppTable({ items, kind }: { items: OppItem[]; kind: OppKind }) {
+function OppTable({ items, kind, k }: { items: OppItem[]; kind: OppKind; k?: Kaynaklar | null }) {
   return (
     <div className="sg-table-wrap">
       <table className="sg-table">
         <thead>
           <tr>
-            <th>Arama</th>
+            <th>Arama <SeoInfo k={k} label="Arama" /></th>
             <th>Sayfa</th>
-            <th>Gösterim</th>
-            <th>Tıklama</th>
-            <th>Oran</th>
-            <th>Sıra</th>
+            <th>Gösterim <SeoInfo k={k} label="Gösterim" /></th>
+            <th>Tıklama <SeoInfo k={k} label="Tıklama" /></th>
+            <th>Oran <SeoInfo k={k} label="Oran" /></th>
+            <th>Sıra <SeoInfo k={k} label="Sıra" /></th>
             <th>{kind === 'yakin' ? 'İlk üçte ek tıklama' : 'Kaçan tıklama'}</th>
             <th>Öneri</th>
           </tr>
@@ -335,10 +334,10 @@ function ImpactList() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitede bekleniyor" value={fmt(s.counts.bekliyor)} note="Onaylı; metin sitede henüz görünmüyor" />
-            <Kpi label="Ölçülüyor" value={fmt(s.counts.olculuyor)} note={`Yayında; ${s.windowDays}+${s.lagDays} gün dolunca ölçülür`} />
-            <Kpi label="Ölçüldü" value={fmt(s.counts.tamam)} note="Önce/sonra karşılaştırması hazır" />
-            <Kpi label="Arama verisi yok" value={fmt(s.counts.veri_yok)} note="İki dönemde de Google’da gösterim yok" />
+            <Kpi label="Sitede bekleniyor" value={fmt(s.counts.bekliyor)} note="Onaylı; metin sitede henüz görünmüyor" info={<SeoInfo k={r.data?.kaynaklar} label="Sitede bekleniyor" />} />
+            <Kpi label="Ölçülüyor" value={fmt(s.counts.olculuyor)} note={`Yayında; ${s.windowDays}+${s.lagDays} gün dolunca ölçülür`} info={<SeoInfo k={r.data?.kaynaklar} label="Ölçülüyor" />} />
+            <Kpi label="Ölçüldü" value={fmt(s.counts.tamam)} note="Önce/sonra karşılaştırması hazır" info={<SeoInfo k={r.data?.kaynaklar} label="Ölçüldü" />} />
+            <Kpi label="Arama verisi yok" value={fmt(s.counts.veri_yok)} note="İki dönemde de Google’da gösterim yok" info={<SeoInfo k={r.data?.kaynaklar} label="Arama verisi yok" />} />
           </section>
 
           <div className="sg-filters" role="toolbar" aria-label="Durum">
@@ -365,7 +364,7 @@ function ImpactList() {
             </div>
           ) : (
             <section className="sg-card">
-              <h2>Onaylanan değişiklikler</h2>
+              <h2>Onaylanan değişiklikler <SeoInfo k={r.data?.kaynaklar} label="Onaylanan değişiklikler" /></h2>
               <p className="sg-sub">
                 Oklar önceki 28 günden sonraki 28 güne değişimi gösterir. “Siteye göre” sütunu, kitabın tıklama değişiminden site genelindeki değişimin
                 çıkarılmış hâlidir: mevsim ve genel trafik etkisini ayırmak için.
@@ -377,10 +376,10 @@ function ImpactList() {
                       <th>Kitap</th>
                       <th>Değişen alan</th>
                       <th>Onay / yayın</th>
-                      <th>Tıklama</th>
-                      <th>Gösterim</th>
-                      <th>Oran</th>
-                      <th>Sıra</th>
+                      <th>Tıklama <SeoInfo k={r.data?.kaynaklar} label="Tıklama" /></th>
+                      <th>Gösterim <SeoInfo k={r.data?.kaynaklar} label="Gösterim" /></th>
+                      <th>Oran <SeoInfo k={r.data?.kaynaklar} label="Oran" /></th>
+                      <th>Sıra <SeoInfo k={r.data?.kaynaklar} label="Sıra" /></th>
                       <th>Site geneli</th>
                       <th>Siteye göre</th>
                       <th>Durum</th>
@@ -501,10 +500,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

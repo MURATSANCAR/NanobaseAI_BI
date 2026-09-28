@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useState, type CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, Loader2, RefreshCw 
 import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmRights } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** Sezon takvimi: /api/v1/seo-geo/seasons. Yaklaşan özel günler (CRM + hareketli günler), bağlı kitaplar ve
  *  sayfalarının hazırlığı; geçen yılın arama artışı Search Console'dan. Hiçbir yere yazılmaz. */
@@ -148,7 +149,7 @@ export default function SeoSeasons() {
   };
 
   return (
-    <SeoLayout
+    <SeoLayout k={cal.data?.kaynaklar}
       path="/seo-geo/takvim"
       crumb="Sezon takvimi"
       eyebrow="SEO & GEO · CRM özel günleri"
@@ -193,14 +194,13 @@ export default function SeoSeasons() {
           {c && (
             <>
               <section className="sg-kpis" aria-label="Özet">
-                <Kpi label="Yaklaşan gün" value={fmt(c.days.length)} note={`Önümüzdeki ${weeks === 52 ? 'bir yıl' : `${weeks} hafta`}`} />
-                <Kpi label="Hazırlık zamanı" value={fmt(c.days.filter((x) => x.phase === 'hazirlik').length)} note={`Güne ${c.leadDays} günden az kaldı`} />
+                <Kpi label="Yaklaşan gün" value={fmt(c.days.length)} note={`Önümüzdeki ${weeks === 52 ? 'bir yıl' : `${weeks} hafta`}`} info={<SeoInfo k={cal.data?.kaynaklar} label="Yaklaşan gün" />} />
+                <Kpi label="Hazırlık zamanı" value={fmt(c.days.filter((x) => x.phase === 'hazirlik').length)} note={`Güne ${c.leadDays} günden az kaldı`} info={<SeoInfo k={cal.data?.kaynaklar} label="Hazırlık zamanı" />} />
                 <Kpi
                   label="Düzeltilecek sayfa"
                   value={fmt(c.days.filter((x) => x.phase !== 'yaklasiyor').reduce((a, x) => a + (x.counts?.duzelt ?? 0), 0))}
-                  note="Hazırlık zamanındaki günlerin kitapları"
-                />
-                <Kpi label="Rehber sayfası eksik" value={c.guidesAvailable ? fmt(c.actions.filter((a) => a.kind === 'rehber').length) : '—'} note="Hazırlık zamanındaki günler" />
+                  note="Hazırlık zamanındaki günlerin kitapları" info={<SeoInfo k={cal.data?.kaynaklar} label="Düzeltilecek sayfa" />} />
+                <Kpi label="Rehber sayfası eksik" value={c.guidesAvailable ? fmt(c.actions.filter((a) => a.kind === 'rehber').length) : '—'} note="Hazırlık zamanındaki günler" info={<SeoInfo k={cal.data?.kaynaklar} label="Rehber sayfası eksik" />} />
               </section>
 
               {c.actions.length > 0 && <Actions actions={c.actions} onOpen={select} />}
@@ -425,7 +425,7 @@ function DayBooks({ id, onBack }: { id: string; onBack: () => void }) {
           </section>
 
           <section className="sg-card">
-            <h2>Bağlı kitaplar</h2>
+            <h2>Bağlı kitaplar <SeoInfo k={r.data?.kaynaklar} label="Bağlı kitaplar" /></h2>
             <p className="sg-sub">
               Sitede satışta olan, CRM'de durum işareti (çekildi, bizim değil …) olmayan kitaplar; çok satandan aza. Hazır sayılmak için SEO puanı en az{' '}
               {x.readyScore} ve kritik/yüksek sorun olmamalı.
@@ -442,10 +442,10 @@ function DayBooks({ id, onBack }: { id: string; onBack: () => void }) {
                     <tr>
                       <th>Kitap</th>
                       <th>Hazırlık</th>
-                      <th>SEO puanı</th>
-                      <th>Açık sorun</th>
+                      <th>SEO puanı <SeoInfo k={r.data?.kaynaklar} label="SEO puanı" /></th>
+                      <th>Açık sorun <SeoInfo k={r.data?.kaynaklar} label="Açık sorun" /></th>
                       <th>Hak</th>
-                      <th>Geçen yıl arama</th>
+                      <th>Geçen yıl arama <SeoInfo k={r.data?.kaynaklar} label="Geçen yıl arama" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -510,10 +510,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

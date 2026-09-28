@@ -6,6 +6,7 @@ import { FUNNEL_PATH, UNIFIED_FUNNEL } from '../eticaret/funnelTabs';
 import { Note, errText } from '../admin/ui';
 import { commerceApi } from './api';
 import { CommerceFrame, ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 import CommerceHome from './CommerceHome';
 import Customers from './Customers';
 import Triggers from './Triggers';
@@ -42,6 +43,7 @@ export default function CommerceScreen() {
     <CommerceFrame
       presence={fr?.okAt ? 'Site siparişleri' : 'Henüz okunmadı'}
       badges={{ [`${ROOT}/tetikler`]: runs.data?.total || null, [`${ROOT}/veri`]: fr && (fr.error || fr.missing.length) ? 1 : null }}
+      badgeInfo={runs.data?.total ? <SqlInfo k={runs.data.kaynaklar} alan="total" label="Onay bekleyen liste sayısı (Tetikler rozeti)" /> : undefined}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'E-ticaret müşteri ekranı açılamadı.')}</Note>}

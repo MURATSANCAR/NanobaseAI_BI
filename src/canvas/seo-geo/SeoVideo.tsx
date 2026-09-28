@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileText } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -51,7 +52,7 @@ export default function SeoVideo() {
   const total = list.data?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/video"
       crumb="Video"
       eyebrow="SEO & GEO · Kitap videoları"
@@ -83,10 +84,10 @@ export default function SeoVideo() {
       {s && s.withVideo > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Videolu kitap" value={fmt(s.withVideo)} note={`Geçerli video bağlantısı ${fmt(s.valid)}`} />
-            <Kpi label="Sayfada video şeması var" value={fmt(s.schema.var)} note="Şema taramasına göre" tone="good" />
-            <Kpi label="Video şeması yok" value={fmt(s.schema.yok)} note="Videonun sayfada gömülü olup olmadığı bilinmiyor" tone={s.schema.yok ? 'bad' : undefined} />
-            <Kpi label="Bağlantı geçersiz" value={fmt(s.invalid)} note="Kanal ya da liste bağlantısı; CRM’de video adresi düzeltilmeli" tone={s.invalid ? 'bad' : undefined} />
+            <Kpi label="Videolu kitap" value={fmt(s.withVideo)} note={`Geçerli video bağlantısı ${fmt(s.valid)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Videolu kitap" />} />
+            <Kpi label="Sayfada video şeması var" value={fmt(s.schema.var)} note="Şema taramasına göre" tone="good" info={<SeoInfo k={list.data?.kaynaklar} label="Sayfada video şeması var" />} />
+            <Kpi label="Video şeması yok" value={fmt(s.schema.yok)} note="Videonun sayfada gömülü olup olmadığı bilinmiyor" tone={s.schema.yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Video şeması yok" />} />
+            <Kpi label="Bağlantı geçersiz" value={fmt(s.invalid)} note="Kanal ya da liste bağlantısı; CRM’de video adresi düzeltilmeli" tone={s.invalid ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı geçersiz" />} />
           </section>
 
           <div className="sg-filters" role="radiogroup" aria-label="Süzgeç">
@@ -188,10 +189,10 @@ function JsonBlock({ text }: { text: string }) {
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

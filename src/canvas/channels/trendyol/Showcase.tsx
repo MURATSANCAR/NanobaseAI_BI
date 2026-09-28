@@ -10,6 +10,7 @@ import { AskSheet } from '../../budget/parts';
 import { BookCell, ExportLink, yesNo } from '../platformKit';
 import { trendyolApi, type Suggestion } from './api';
 import { TrendyolData, TrendyolFrame, useTrendyolMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 const STATE: Record<Suggestion['durum'], { label: string; tone: 'violet' | 'ok' | 'err' }> = {
   taslak: { label: 'Karar bekliyor', tone: 'violet' },
@@ -33,7 +34,7 @@ function Suggestions({ canDecide, me }: { canDecide: boolean; me: string }) {
   const items = q.data?.items ?? [];
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Öneriler</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Öneriler <SqlInfo k={q.data?.kaynaklar} alan="items" label="Öneriler" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">Onay portal kaydıdır; Trendyol'a gönderilmez. Öneriyi hazırlayan onaylayamaz.</p>
       {q.isLoading ? <Loading /> : !items.length ? <Note tone="info">Henüz vitrin önerisi yok.</Note> : (
         <div className="flex flex-col gap-2">
@@ -105,7 +106,7 @@ export default function TrendyolShowcase() {
         {r.isLoading ? <Loading /> : d && (!d.total ? <Note tone="info">Aday yok: sipariş dosyası yüklenmemiş ya da eşiği geçen kitap yok.</Note> : (
           <>
             <TableWrap>
-              <thead><tr>{m?.me.canDraft && <th className={th}><span className="sr-only">Seç</span></th>}<th className={th}>Kitap</th><th className={`${th} text-right`}>Haftalık</th><th className={`${th} text-right`}>Depo</th><th className={`${th} text-right`}>Kaç hafta</th><th className={th}>Trendyol'da açık</th></tr></thead>
+              <thead><tr>{m?.me.canDraft && <th className={th}><span className="sr-only">Seç</span></th>}<th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Haftalık</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Depo</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Kaç hafta</InfoLabel></th><th className={th}>Trendyol'da açık</th></tr></thead>
               <tbody>
                 {d.items.map((x) => (
                   <tr key={x.stokKodu} className="border-t border-slate-100">

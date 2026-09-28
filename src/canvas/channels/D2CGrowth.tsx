@@ -8,6 +8,7 @@ import { Loading, Note, Pill, TableWrap, btnPrimary, errText, td, th } from '../
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort } from '../budget/api';
 import { channelsApi } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ChannelsFrame, DataBar, PeriodPicker, signedPct, useChannelsMeta, usePeriod } from './parts';
 
 /** M42 D2C büyüme (/kanallar/d2c): timas.com.tr'nin payı, sitede pazar yerlerine göre oransal güçlü kitaplar, site
@@ -66,14 +67,18 @@ export default function D2CGrowth() {
             </Note>
           )}
           <KpiRow>
-            <Kpi label="D2C net ciro" value={`${fmtShort(d.d2c?.donem.netCiro ?? 0)} ₺`} help={`Geçen yıla göre ${signedPct(d.d2c?.degisim ?? null)} · Logo faturalı satır`} />
-            <Kpi label="E-ticaret içindeki pay" value={fmtPct(d.d2c?.payEticaret ?? null)} help={`E-ticaret ${fmtShort(d.toplam.eticaret.netCiro)} ₺`} />
-            <Kpi label="Şirket içindeki pay" value={fmtPct(d.d2c?.paySirket ?? null)} help={`Şirket ${fmtShort(d.toplam.sirket.netCiro)} ₺`} />
-            <Kpi label="Adette D2C payı" value={fmtPct(d.genelD2cPay ?? null)} help="Site ÷ (site + pazar yerleri), net adet" />
+            <Kpi label="D2C net ciro" value={`${fmtShort(d.d2c?.donem.netCiro ?? 0)} ₺`} help={`Geçen yıla göre ${signedPct(d.d2c?.degisim ?? null)} · Logo faturalı satır`}
+              info={<SqlInfo k={d.kaynaklar} alan="d2c" label="D2C net ciro" />} />
+            <Kpi label="E-ticaret içindeki pay" value={fmtPct(d.d2c?.payEticaret ?? null)} help={`E-ticaret ${fmtShort(d.toplam.eticaret.netCiro)} ₺`}
+              info={<SqlInfo k={d.kaynaklar} alan="d2c" label="E-ticaret içindeki pay" />} />
+            <Kpi label="Şirket içindeki pay" value={fmtPct(d.d2c?.paySirket ?? null)} help={`Şirket ${fmtShort(d.toplam.sirket.netCiro)} ₺`}
+              info={<SqlInfo k={d.kaynaklar} alan="d2c" label="Şirket içindeki pay" />} />
+            <Kpi label="Adette D2C payı" value={fmtPct(d.genelD2cPay ?? null)} help="Site ÷ (site + pazar yerleri), net adet"
+              info={<SqlInfo k={d.kaynaklar} alan="genelD2cPay" label="Adette D2C payı" />} />
           </KpiRow>
 
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Site müşterisi</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Site müşterisi <SqlInfo k={d.kaynaklar} alan="site" label="Site müşterisi özeti" /></h2>
             {!s?.bagli ? (
               <p className="mt-1 text-[12px] text-canvas-muted">{s?.neden ?? 'Site sipariş verisi bağlı değil.'} Bağlanınca tekrar alım oranı, müşteri başına ciro ve sepet ortalaması burada görünür (müşteri kimliği anahtarlıdır, kişisel alan okunmaz).</p>
             ) : (
@@ -101,7 +106,7 @@ export default function D2CGrowth() {
             <Panel>
               <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-[15px] font-extrabold">Sitede oransal güçlü kitaplar</h2>
+                  <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Sitede oransal güçlü kitaplar <SqlInfo k={d.kaynaklar} alan="kitaplar" label="Sitede oransal güçlü kitaplar" /></h2>
                   <p className="text-[12px] text-canvas-muted">
                     Kitabın site payı, bütün kitaplardaki site payının en az {String(d.esik.indeks).replace('.', ',')} katı ve sitede en az {fmtInt(d.esik.minAdet)} net adet (Yönetim ayarı).
                   </p>
@@ -119,10 +124,10 @@ export default function D2CGrowth() {
                     <tr>
                       {m?.me.canSuggest && <th className={th}><span className="sr-only">Seç</span></th>}
                       <th className={th}>Kitap</th>
-                      <th className={`${th} text-right`}>Site net adet</th>
-                      <th className={`${th} text-right`}>Pazar yeri net adet</th>
-                      <th className={`${th} text-right`}>Site payı</th>
-                      <th className={`${th} text-right`}>Genel payın katı</th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kitaplar">Site net adet</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kitaplar">Pazar yeri net adet</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kitaplar">Site payı</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kitaplar">Genel payın katı</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -148,7 +153,7 @@ export default function D2CGrowth() {
 
           {!!d.oneriler?.length && (
             <Panel>
-              <h2 className="text-[15px] font-extrabold">D2C önerileri</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">D2C önerileri <SqlInfo k={d.kaynaklar} alan="oneriler" label="D2C önerileri" /></h2>
               <p className="mb-2 text-[12px] text-canvas-muted">Karar Kanal karnesi ekranında verilir; onay portal kaydıdır, siteye gönderilmez.</p>
               <ul className="flex flex-col gap-2">
                 {d.oneriler.map((o) => (

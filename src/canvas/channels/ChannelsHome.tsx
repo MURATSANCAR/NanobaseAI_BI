@@ -6,6 +6,8 @@ import { ChevronRight, Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../budget/api';
 import { channelsApi, coverageText, platformName, type ChannelsMeta, type PlatformCard, type Suggestion } from './api';
 import { AskSheet, ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signedPct, useChannelsMeta, usePeriod } from './parts';
@@ -13,18 +15,20 @@ import { AskSheet, ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signe
 /** M42 kanal karnesi (/kanallar): platform kartları (kanala satış, iskonto, iade, marj, hedef), kanallar arası kıyas,
  * uyarılar ve karar bekleyen öneriler. */
 
-function PlatformTile({ c, canMargin }: { c: PlatformCard; canMargin: boolean }) {
+function PlatformTile({ c, canMargin, k }: { c: PlatformCard; canMargin: boolean; k?: Kaynaklar }) {
   const d = c.donem;
   const unmapped = c.platform === 'eslenmemis';
   const to = unmapped ? '/kanallar/eslesme' : `/kanallar/${encodeURIComponent(c.platform)}`;
+  // «i» kartın bağlantısının dışında (iç içe etkileşim olmasın): kart göreli kutuda, «i» sağ üstte okun solunda.
   return (
+    <div className="relative">
     <Link
       to={to}
-      className="glass-panel group flex flex-col gap-2 rounded-2xl p-3.5 text-left shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.98] sm:rounded-3xl sm:p-4"
+      className="glass-panel group flex h-full flex-col gap-2 rounded-2xl p-3.5 text-left shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.98] sm:rounded-3xl sm:p-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-[15px] font-extrabold">{c.label}</div>
+          <div className="truncate pr-6 text-[15px] font-extrabold">{c.label}</div>
           <div className="text-[11px] font-semibold text-canvas-muted">
             {unmapped ? 'Platforma bağlanmamış e-ticaret carileri' : `${c.grupSayisi} cari / kanal kodu`}
           </div>
@@ -48,6 +52,8 @@ function PlatformTile({ c, canMargin }: { c: PlatformCard; canMargin: boolean })
       />
       {canMargin && d.maliyetsizSatir > 0 && <p className="text-[11px] leading-snug text-canvas-muted">{coverageText(d)}</p>}
     </Link>
+    <span className="absolute right-9 top-3.5 sm:top-4"><SqlInfo k={k} alan="platforms" label={`${c.label}: kanal ölçüleri`} /></span>
+    </div>
   );
 }
 
@@ -68,7 +74,7 @@ function Suggestions({ meta }: { meta: ChannelsMeta }) {
   if (!q.isLoading && !items.length) return null;
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Karar bekleyen öneriler</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Karar bekleyen öneriler <SqlInfo k={q.data?.kaynaklar} alan="items" label="Karar bekleyen öneriler" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">İskonto ve D2C önerileri. Onay portal kaydıdır; pazar yerine, siteye ya da CRM'e gönderilmez, uygulamayı ekip yapar.</p>
       {q.isLoading ? <Loading /> : (
         <ul className="flex flex-col gap-2">
@@ -149,6 +155,7 @@ export default function ChannelsHome() {
       {q.error && <Note tone="err">{errText(q.error, 'Karne hesaplanamadı.')}</Note>}
       {m?.alerts.items && m.alerts.items.length > 0 && (
         <Note tone="warn">
+          <SqlInfo k={m.kaynaklar} alan="alerts" label="Kanal uyarıları" className="mr-1" />
           <strong>Uyarılar ({fmtDay(m.alerts.tarih)}):</strong> {m.alerts.items.map((a) => a.metin).join(' · ')}
         </Note>
       )}
@@ -156,43 +163,49 @@ export default function ChannelsHome() {
       {d && t && (
         <>
           <p className="px-1 text-[12px] font-semibold text-canvas-muted">
+            <SqlInfo k={d.kaynaklar} alan="period" label="Dönem ve veri sonu" className="mr-1" />
             {d.period.yil} Ocak–{d.period.ayAdi}
             {d.period.kismiAy && <> · son ay {fmtDay(d.period.veriSonu)} tarihine kadar; geçen yılın aynı ayı gün oranıyla kıyaslanır</>}
             {!d.gecenYilOkundu && <> · geçen yıl okunmadı, kıyas yok</>}
           </p>
           <KpiRow>
-            <Kpi label="E-ticaret net ciro" value={`${fmtShort(t.eticaret.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(eticDelta)} · kanala satış − iade`} />
-            <Kpi label="Şirket içindeki pay" value={fmtPct(t.eticaretPay)} help={`Şirket net cirosu ${fmtShort(t.sirket.netCiro)} ₺`} />
-            <Kpi label="D2C payı" value={fmtPct(t.d2cPay)} help="timas.com.tr'nin e-ticaret içindeki payı" />
+            <Kpi label="E-ticaret net ciro" value={`${fmtShort(t.eticaret.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(eticDelta)} · kanala satış − iade`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="E-ticaret net ciro" />} />
+            <Kpi label="Şirket içindeki pay" value={fmtPct(t.eticaretPay)} help={`Şirket net cirosu ${fmtShort(t.sirket.netCiro)} ₺`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Şirket içindeki pay" />} />
+            <Kpi label="D2C payı" value={fmtPct(t.d2cPay)} help="timas.com.tr'nin e-ticaret içindeki payı"
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="D2C payı" />} />
             <Kpi
               label={canMargin ? 'E-ticaret brüt marjı' : 'E-ticaret iade oranı'}
               value={canMargin ? fmtPct(t.eticaret.marj ?? null) : fmtPct(t.eticaret.iadeOrani)}
               help={canMargin ? coverageText(t.eticaret) : `İskonto oranı ${fmtPct(t.eticaret.iskontoOrani)}`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label={canMargin ? 'E-ticaret brüt marjı' : 'E-ticaret iade oranı'} />}
             />
           </KpiRow>
 
           <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 2xl:grid-cols-4">
-            {d.platforms.map((c) => <PlatformTile key={c.platform} c={c} canMargin={canMargin} />)}
+            {d.platforms.map((c) => <PlatformTile key={c.platform} c={c} canMargin={canMargin} k={d.kaynaklar} />)}
           </section>
           {d.platformDisi.donem && (
             <p className="px-1 text-[12px] text-canvas-muted">
               «Platform değil» işaretlenen {d.platformDisi.grupSayisi} e-ticaret kodlu carinin net cirosu ({fmtMoney(d.platformDisi.donem.netCiro)}) karneye ve e-ticaret toplamına girmez.
+              <SqlInfo k={d.kaynaklar} alan="platformDisi" label="Platform dışı cariler" className="ml-1" />
             </p>
           )}
 
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Kanallar arası kıyas</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanallar arası kıyas <SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar arası kıyas" /></h2>
             <p className="mb-2 text-[12px] text-canvas-muted">Logo cari kartındaki kanal koduna göre bütün satış (kitapçı, dağıtıcı, e-ticaret …). Platform kartlarıyla aynı tanım.</p>
             <TableWrap>
               <thead>
                 <tr>
                   <th className={th}>Kanal kodu</th>
-                  <th className={`${th} text-right`}>Net ciro</th>
-                  <th className={`${th} text-right`}>Şirket payı</th>
-                  <th className={`${th} text-right`}>İskonto oranı</th>
-                  <th className={`${th} text-right`}>İade oranı</th>
-                  {canMargin && <th className={`${th} text-right`}>Brüt marj</th>}
-                  {canMargin && <th className={`${th} text-right`}>Maliyetli ciro payı</th>}
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Net ciro</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Şirket payı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">İskonto oranı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">İade oranı</InfoLabel></th>
+                  {canMargin && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Brüt marj</InfoLabel></th>}
+                  {canMargin && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Maliyetli ciro payı</InfoLabel></th>}
                 </tr>
               </thead>
               <tbody>

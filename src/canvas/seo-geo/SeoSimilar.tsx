@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Se
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /** Benzer kitaplar: /api/v1/seo-geo/similar. CRM emsal bağları + tema/yaş + yazar/dizi → kitap sayfasından verilecek
  *  «ilgili ürünler» bağlantıları. Karar yalnız kaydedilir; onaylananlar CSV ile T-soft'a elle girilir. */
@@ -135,7 +136,7 @@ export default function SeoSimilar() {
   const s = d?.summary;
 
   return (
-    <SeoLayout
+    <SeoLayout k={r.data?.kaynaklar}
       path="/seo-geo/benzer-kitaplar"
       crumb="Benzer kitaplar"
       eyebrow="SEO & GEO · Site içi bağlantılar"
@@ -169,10 +170,10 @@ export default function SeoSimilar() {
       {d && s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Öneri çıkan kitap" value={fmt(s.withSuggestions)} note={`Satıştaki ${fmt(s.eligible)} kitaptan`} />
-            <Kpi label="Eklenecek bağlantı" value={fmt(s.toAdd)} note={s.graphKnown ? `${fmt(s.alreadyLinked)} öneri sayfada zaten var` : 'Site taraması yok; sayfada olup olmadığı bilinmiyor'} />
-            <Kpi label="Yetim kitaba giden" value={fmt(s.orphanTargets)} note="Hiçbir sayfadan bağlantı almayan hedef kitap" />
-            <Kpi label="CRM emsal bağı" value={fmt(s.emsalLinks)} note={`${fmt(s.emsalOnSale)} bağda iki kitap da satışta`} />
+            <Kpi label="Öneri çıkan kitap" value={fmt(s.withSuggestions)} note={`Satıştaki ${fmt(s.eligible)} kitaptan`} info={<SeoInfo k={r.data?.kaynaklar} label="Öneri çıkan kitap" />} />
+            <Kpi label="Eklenecek bağlantı" value={fmt(s.toAdd)} note={s.graphKnown ? `${fmt(s.alreadyLinked)} öneri sayfada zaten var` : 'Site taraması yok; sayfada olup olmadığı bilinmiyor'} info={<SeoInfo k={r.data?.kaynaklar} label="Eklenecek bağlantı" />} />
+            <Kpi label="Yetim kitaba giden" value={fmt(s.orphanTargets)} note="Hiçbir sayfadan bağlantı almayan hedef kitap" info={<SeoInfo k={r.data?.kaynaklar} label="Yetim kitaba giden" />} />
+            <Kpi label="CRM emsal bağı" value={fmt(s.emsalLinks)} note={`${fmt(s.emsalOnSale)} bağda iki kitap da satışta`} info={<SeoInfo k={r.data?.kaynaklar} label="CRM emsal bağı" />} />
           </section>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -415,10 +416,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

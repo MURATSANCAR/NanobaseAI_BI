@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Loader2, Play, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type GeoResult, type Question } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 /** AI görünürlük (GEO): izlenen sorular yapay zekâ motorlarına resmî API'leriyle sorulur; Timaş anıldı mı, site kaynak
@@ -37,7 +37,7 @@ export default function SeoVisibility() {
   };
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/ai-gorunurluk"
       crumb="Yapay zekâ görünürlüğü"
       eyebrow="SEO & GEO · yapay zekâ cevapları"
@@ -82,7 +82,7 @@ export default function SeoVisibility() {
       {run?.error && <p className="sg-banner err">Son ölçüm: {run.error}</p>}
 
       <section className="sg-card">
-        <h2>İzlenen sorular</h2>
+        <h2>İzlenen sorular <SeoInfo k={list.data?.kaynaklar} label="İzlenen sorular" /></h2>
         <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”. Her soru her motorda haftada bir sorulur.</p>
         {canRun && <form
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}

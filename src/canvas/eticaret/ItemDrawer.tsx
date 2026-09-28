@@ -10,6 +10,8 @@ import {
   type Diff, type Item, type Meta, type Proposal,
 } from './api';
 import { DiffCard, MarkSheet, ThreeValues } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Kitabın üç kaynaktaki değerleri, farkları, fark günlüğü ve Zeki AI kart önerileri. 2 tıkla açılır (liste → kitap). */
 export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string | null; meta: Meta; onClose: () => void }) {
@@ -36,15 +38,15 @@ export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string
       {q.error && <Note tone="err">{errText(q.error, 'Kitap okunamadı.')}</Note>}
       {k && q.data && (
         <div className="flex flex-col gap-4 text-[13px]">
-          <Sources k={k} />
+          <Sources k={k} kk={q.data.kaynaklar} />
           <section className="flex flex-col gap-2">
             <h3 className="text-[14px] font-extrabold">Farklar</h3>
             {!q.data.farklar.length && <p className="text-[12px] text-canvas-muted">Bu kitapta kayıtlı fark yok.</p>}
             {q.data.farklar.map((d) => (
-              <DiffCard key={d.id} d={d} onMark={meta.me.canMark ? setMarking : undefined} />
+              <DiffCard key={d.id} d={d} onMark={meta.me.canMark ? setMarking : undefined} k={q.data.kaynaklar} alan="farklar" />
             ))}
           </section>
-          <Proposals k={k} items={q.data.oneriler} meta={meta} busy={propose.isPending} onPropose={() => propose.mutate()} onDone={refresh} />
+          <Proposals k={k} kk={q.data.kaynaklar} items={q.data.oneriler} meta={meta} busy={propose.isPending} onPropose={() => propose.mutate()} onDone={refresh} />
           {meta.me.canExport && isEan(k.productKey) && (
             <div className="flex flex-wrap gap-2">
               <a className={btnGhost} href={ecomApi.contentPackUrl([k.productKey])}>
@@ -76,7 +78,7 @@ export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string
   );
 }
 
-function Sources({ k }: { k: Item }) {
+function Sources({ k, kk }: { k: Item; kk?: Kaynaklar }) {
   const yesNo = (v: boolean) => (v ? 'Evet' : 'Hayır');
   const row = (label: string, crm: ReactNode, logo: ReactNode, site: ReactNode) => (
     <div className="grid grid-cols-1 gap-1 border-b border-slate-100 py-1.5 sm:grid-cols-[150px_1fr]">
@@ -86,7 +88,9 @@ function Sources({ k }: { k: Item }) {
   );
   return (
     <section className="flex flex-col">
-      <h3 className="mb-1 text-[14px] font-extrabold">Üç kaynak</h3>
+      <h3 className="mb-1 inline-flex items-center gap-1 text-[14px] font-extrabold">
+        Üç kaynak <SqlInfo k={kk} alan="kitap" label="Üç kaynak: fiyat, stok, satış, doluluk" />
+      </h3>
       {row('Satışta / aktif', k.crmVar ? `TSOFT Aktif: ${yesNo(k.crmTsoftAktif)}${k.crmEtkin ? '' : ' (kart pasif)'}` : 'Kart yok', null,
         k.sitede ? (k.siteAktif ? 'Satışta' : 'Pasif') : 'Ürün yok')}
       {row('Ad', k.ad, null, k.adSite)}
@@ -113,8 +117,8 @@ function Sources({ k }: { k: Item }) {
 
 const FIELD_NAME: Record<string, string> = { SeoTitle: 'Başlık', SeoDescription: 'Meta açıklama', SearchKeywords: 'Anahtar kelimeler', Details: 'Açıklama' };
 
-function Proposals({ k, items, meta, busy, onPropose, onDone }: {
-  k: Item; items: Proposal[]; meta: Meta; busy: boolean; onPropose: () => void; onDone: () => void;
+function Proposals({ k, kk, items, meta, busy, onPropose, onDone }: {
+  k: Item; kk?: Kaynaklar; items: Proposal[]; meta: Meta; busy: boolean; onPropose: () => void; onDone: () => void;
 }) {
   const [rejecting, setRejecting] = useState<Proposal | null>(null);
   const decide = useMutation({
@@ -145,7 +149,11 @@ function Proposals({ k, items, meta, busy, onPropose, onDone }: {
               {p.status === 'hazir' ? 'Onay bekliyor' : p.status === 'onaylandi' ? 'Onaylandı' : 'Reddedildi'}
             </Pill>
             <span>{p.createdBy} · {fmtWhen(p.createdAt)}</span>
-            {p.scoreBefore !== null && p.scoreAfter !== null && <span>SEO puanı {p.scoreBefore} → {p.scoreAfter}</span>}
+            {p.scoreBefore !== null && p.scoreAfter !== null && (
+              <span className="inline-flex items-center gap-1">SEO puanı {p.scoreBefore} → {p.scoreAfter}
+                <SqlInfo k={kk} alan="oneriler" label="SEO puanı (önce → sonra)" />
+              </span>
+            )}
             {p.decidedBy && <span>Karar: {p.decidedBy}</span>}
           </div>
           <dl className="mt-2 flex flex-col gap-1.5">

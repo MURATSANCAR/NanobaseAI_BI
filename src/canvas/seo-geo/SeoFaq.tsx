@@ -109,7 +109,7 @@ export default function SeoFaq() {
   const total = d?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/sss"
       crumb="Kitap soru–cevapları"
       eyebrow="SEO & GEO · kitap soru–cevapları"

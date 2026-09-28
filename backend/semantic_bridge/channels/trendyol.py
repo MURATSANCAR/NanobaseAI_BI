@@ -240,16 +240,33 @@ def all_barcodes(engine: sa.engine.Engine, tenant: str) -> set[str]:
     return out
 
 
+#: Sorgu bilgisi: Trendyol Logo tablosunu (stok, liste fiyatı, barkod) dolduran sorgular (`semantic_query_origin`).
+KOKEN_LOGO = "trendyol.logo"
+
+
 def refresh_logo(engine: sa.engine.Engine, tenant: str, logo_file: str, conf: Callable[[str], str],
                  step: Callable[[str], None] = lambda s: None, today: Optional[date] = None) -> dict[str, Any]:
-    """Logo'dan barkod, depo stoğu, liste fiyatı; SEO kopyasından site fiyatı. Yalnız Trendyol dosyalarında geçen kitaplar."""
-    from semantic_bridge import eticaret_sources as E
+    """Logo'dan barkod, depo stoğu, liste fiyatı; SEO kopyasından site fiyatı. Yalnız Trendyol dosyalarında geçen kitaplar.
+    Okumada koşan Logo sorguları ve site tablosu okuması «asıl sorgu» olarak saklanır (sorgu bilgisi)."""
+    from semantic_bridge import sorgu_yakala as Y
 
     ensure(engine)
+    q, token = Y.baslat(engine)
+    try:
+        out = _refresh_logo(engine, tenant, Y.izle(src.runner(logo_file), "logo", Y.db_of(logo_file)), conf, step, today)
+    finally:
+        Y.bitir(token)
+    Y.koken_yaz(engine, tenant, KOKEN_LOGO, q, portal_tables=("semantic_seo_products",))
+    return out
+
+
+def _refresh_logo(engine: sa.engine.Engine, tenant: str, run: Any, conf: Callable[[str], str],
+                  step: Callable[[str], None], today: Optional[date]) -> dict[str, Any]:
+    from semantic_bridge import eticaret_sources as E
+
     today = today or date.today()
     st = settings(conf)
     step("Logo dönemleri")
-    run = src.runner(logo_file)
     firms = src.firms_by_year(run)
     latest = firms[max(firms)]
     end = E.read_data_end(run, firms)

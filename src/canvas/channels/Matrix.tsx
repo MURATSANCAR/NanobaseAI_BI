@@ -7,6 +7,7 @@ import { Loading, Note, btnGhost, errText, field, td, th } from '../admin/ui';
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtInt } from '../budget/api';
 import { channelsApi } from './api';
+import SqlInfo from '../components/SqlInfo';
 import { ChannelsFrame, DataBar, PeriodPicker, useChannelsMeta, usePeriod } from './parts';
 
 /** M42 kitap × kanal matrisi (/kanallar/matris): satır kitap, sütun platform; hücrede net adet (kanala satış − iade), altında
@@ -45,6 +46,11 @@ export default function Matrix() {
     >
       <DataBar meta={m} yil={yil} />
       <Panel>
+        {d && (
+          <div className="mb-2 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Kitap × kanal net adet · {fmtInt(d.total)} kitap <SqlInfo k={d.kaynaklar} alan="items" label="Kitap × kanal matrisi" />
+          </div>
+        )}
         <input className={`${field} mb-3`} placeholder="Kitap adı ya da stok kodu" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} aria-label="Kitap ara" />
         {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Matris hesaplanamadı.')}</Note> : !d?.items.length ? (
           <Note tone="info">Kayıt yok.</Note>

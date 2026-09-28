@@ -19,6 +19,9 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge.channels import amazon as A
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_yakala as Y
+from semantic_bridge.channels import kaynak_pazaryeri as KP
 from semantic_bridge.channels import mapping as M
 from semantic_bridge.channels import platform_common as PC
 from semantic_bridge.channels import report as RP
@@ -110,13 +113,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def am_meta(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = ctx(request)
         s = A.settings(conf)
-        return {"draftTypes": A.DRAFT_TYPES, "decisions": A.DECISIONS, "api": AmazonClient(conf).status(), "job": job.status(),
-                "read": S.meta_get(engine, tenant, "amazon:read"),
+        with Y.yakala(engine) as q:
+            read = S.meta_get(engine, tenant, "amazon:read")
+        out = {"draftTypes": A.DRAFT_TYPES, "decisions": A.DECISIONS, "api": AmazonClient(conf).status(), "job": job.status(),
+                "read": read,
                 "settings": {k: s[k] for k in ("yurtdisiKodlari", "yil", "konsinyeYil", "konsinyeTipi", "cariAdlari")},
                 "modelReady": getattr(rt(), "llm", None) is not None,
                 "me": {"username": user, "display": display, "canDraft": can(user, F_DRAFT), "canParam": can(user, F_PARAM),
                        "canDecide": can(user, F_DECIDE), "canMap": can(user, F_MAP), "canExport": can(user, F_EXPORT),
                        "canImport": can(user, "ozellik:kanal.yukle"), "pages": {k: can(user, v) for k, v in PAGES.items()}}}
+        return PV.bagla(out, lambda: KP.am_list("okuma")(engine, tenant, out, q))
 
     @app.get(R + "/status")
     def am_status(request: Request) -> dict[str, Any]:
@@ -145,14 +151,18 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/overview")
     async def am_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(lambda: call(A.overview, engine, tenant, wholesale(engine, tenant)))
+        with Y.yakala(engine) as q:
+            out = await run_in_threadpool(lambda: call(A.overview, engine, tenant, wholesale(engine, tenant)))
+        return PV.bagla(out, lambda: KP.am_overview(engine, tenant, out, q))
 
     @app.get(R + "/accounts")
     def am_accounts(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        m = S.meta_get(engine, tenant, "amazon:cariler")
-        return {"adayCariler": PC.candidates_view(engine, tenant, A.PLATFORM, m.get("items") or []), "desenler": m.get("desenler"),
-                "okundu": m.get("_at"), "onayli": PC.approved_codes(engine, tenant, A.PLATFORM), "toptan": wholesale(engine, tenant)}
+        with Y.yakala(engine) as q:
+            m = S.meta_get(engine, tenant, "amazon:cariler")
+            out = {"adayCariler": PC.candidates_view(engine, tenant, A.PLATFORM, m.get("items") or []), "desenler": m.get("desenler"),
+                   "okundu": m.get("_at"), "onayli": PC.approved_codes(engine, tenant, A.PLATFORM), "toptan": wholesale(engine, tenant)}
+        return PV.bagla(out, lambda: KP.am_list("cari")(engine, tenant, out, q))
 
     @app.post(R + "/cariler/ekle")
     def am_add_account(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -169,8 +179,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/books")
     async def am_books(request: Request, yil: Optional[int] = None, ay: Optional[int] = None, q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        out = await run_in_threadpool(call, SC.books, engine, tenant, A.PLATFORM, yil, ay, q, "netCiro", page)
-        return SC.redact(out)
+        with Y.yakala(engine) as yq:
+            out = SC.redact(await run_in_threadpool(call, SC.books, engine, tenant, A.PLATFORM, yil, ay, q, "netCiro", page))
+        return PV.bagla(out, lambda: KP.am_list("kitap")(engine, tenant, out, yq))
 
     # ------------------------------------------------------------------ konsinye ve yurtdışı
 
@@ -188,30 +199,40 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/consignment")
     async def am_consignment(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        billed = await run_in_threadpool(billed_this_year, engine, tenant)
-        return await run_in_threadpool(call, A.consignment, engine, tenant, q, page, billed)
+        with Y.yakala(engine) as yq:
+            billed = await run_in_threadpool(billed_this_year, engine, tenant)
+            out = await run_in_threadpool(call, A.consignment, engine, tenant, q, page, billed)
+        return PV.bagla(out, lambda: KP.am_list("konsinye")(engine, tenant, out, yq))
 
     @app.get(R + "/international")
     async def am_international(request: Request, yil: Optional[int] = None, ulke: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, A.international, engine, tenant, yil, ulke)
+        with Y.yakala(engine) as yq:
+            out = await run_in_threadpool(call, A.international, engine, tenant, yil, ulke)
+        return PV.bagla(out, lambda: KP.am_list("yurtdisi")(engine, tenant, out, yq))
 
     @app.get(R + "/international/books")
     async def am_intl_books(request: Request, yil: Optional[int] = None, ulke: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, A.intl_books, engine, tenant, yil, ulke, q, page)
+        with Y.yakala(engine) as yq:
+            out = await run_in_threadpool(call, A.intl_books, engine, tenant, yil, ulke, q, page)
+        return PV.bagla(out, lambda: KP.am_list("yurtdisiKitap")(engine, tenant, out, yq))
 
     @app.get(R + "/rights")
     async def am_rights(request: Request, q: str = "", ulke: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, A.rights, engine, tenant, q, ulke, page)
+        with Y.yakala(engine) as yq:
+            out = await run_in_threadpool(call, A.rights, engine, tenant, q, ulke, page)
+        return PV.bagla(out, lambda: KP.am_list("hak")(engine, tenant, out, yq))
 
     # ------------------------------------------------------------------ parametreler
 
     @app.get(R + "/params")
     def am_params(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": A.params(engine, tenant)}
+        with Y.yakala(engine) as q:
+            out = {"items": A.params(engine, tenant)}
+        return PV.bagla(out, lambda: KP.am_list("param")(engine, tenant, out, q))
 
     @app.put(R + "/params/{pazar}")
     def am_params_set(pazar: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -234,7 +255,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/drafts")
     def am_drafts(request: Request, stok: str = "", pazar: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return A.drafts(engine, tenant, stok, pazar, page)
+        with Y.yakala(engine) as q:
+            out = A.drafts(engine, tenant, stok, pazar, page)
+        return PV.bagla(out, lambda: KP.am_list("taslak")(engine, tenant, out, q))
 
     @app.post(R + "/drafts", status_code=201)
     async def am_draft_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -260,7 +283,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/market-cards")
     def am_cards(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": A.cards(engine, tenant), "decisions": A.DECISIONS}
+        with Y.yakala(engine) as q:
+            out = {"items": A.cards(engine, tenant), "decisions": A.DECISIONS}
+        return PV.bagla(out, lambda: KP.am_list("kart")(engine, tenant, out, q))
 
     @app.post(R + "/market-cards", status_code=201)
     async def am_card_create(body: dict[str, Any], request: Request) -> dict[str, Any]:

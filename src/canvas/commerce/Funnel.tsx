@@ -4,6 +4,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, errText, td, th } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { commerceApi, fmtInt, fmtRatio, fmtTl } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 const DAYS = [7, 30, 90];
 
@@ -25,7 +26,8 @@ export default function Funnel() {
   return (
     <Panel>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-[15px] font-extrabold">{weak ? `Çok görüntülenip az satan (en az ${fmtInt(f.minViews)} görüntülenme)` : 'Bütün ürünler'}</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">{weak ? `Çok görüntülenip az satan (en az ${fmtInt(f.minViews)} görüntülenme)` : 'Bütün ürünler'}
+          <SqlInfo k={f.kaynaklar} alan="weakCount" label="Ürün hunisi: az satan sayısı ve toplam" /></h2>
         <div className="flex flex-wrap gap-1.5">
           {DAYS.map((d) => (
             <button key={d} type="button" aria-pressed={days === d} onClick={() => { setDays(d); setPage(0); }}
@@ -41,10 +43,11 @@ export default function Funnel() {
       </div>
       <p className="mt-1 text-[11.5px] text-canvas-muted">
         {f.not} Seçilen {f.days} günün {fmtInt(f.coveredDays)} gününde görüntülenme farkı var.
+        <SqlInfo k={f.kaynaklar} alan="coveredDays" label="Kapsanan gün" className="ml-1" />
       </p>
       <div className="mt-2">
         <TableWrap>
-          <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Görüntülenme</th><th className={`${th} text-right`}>Adet</th><th className={`${th} text-right`}>Adet / görüntülenme</th><th className={`${th} text-right`}>Tutar</th></tr></thead>
+          <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Adet / görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Tutar</InfoLabel></th></tr></thead>
           <tbody>
             {f.items.map((r) => (
               <tr key={r.barkod} className="border-t border-slate-100">

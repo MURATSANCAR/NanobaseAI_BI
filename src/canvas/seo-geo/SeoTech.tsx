@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Gauge, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, type Severity } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/tech*, /speed*) */
 type RunState = { running: boolean; done?: number; failed?: number; queue?: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -205,22 +205,20 @@ function IssuesTab({ group }: { group: 'page' | 'image' }) {
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Taranan sayfa" value={fmt(d.checked)} note={`Son tarama ${dateTime(d.lastChecked)} · her gece kaldığı yerden sürer`} />
-            <Kpi label="Sorunlu sayfa" value={fmt(d.withIssues)} note="En az bir teknik sorunu olan" />
+            <Kpi label="Taranan sayfa" value={fmt(d.checked)} note={`Son tarama ${dateTime(d.lastChecked)} · her gece kaldığı yerden sürer`} info={<SeoInfo k={r.data?.kaynaklar} label="Taranan sayfa" />} />
+            <Kpi label="Sorunlu sayfa" value={fmt(d.withIssues)} note="En az bir teknik sorunu olan" info={<SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" />} />
             {group === 'page' ? (
               <Kpi
                 label="Açılmayan / yönlenen"
                 value={fmt(['not_found', 'server_error', 'fetch_error', 'redirect_loop'].reduce((a, k) => a + (d.checks.find((c) => c.id === k)?.count ?? 0), 0))}
-                note={`Yönlendirilen ${fmt((d.checks.find((c) => c.id === 'redirected')?.count ?? 0) + (d.checks.find((c) => c.id === 'redirect_chain')?.count ?? 0))}`}
-              />
+                note={`Yönlendirilen ${fmt((d.checks.find((c) => c.id === 'redirected')?.count ?? 0) + (d.checks.find((c) => c.id === 'redirect_chain')?.count ?? 0))}`} info={<SeoInfo k={r.data?.kaynaklar} label="Açılmayan / yönlenen" />} />
             ) : (
-              <Kpi label="Kapak alt metni sorunlu" value={fmt(d.checks.find((c) => c.id === 'main_img_alt')?.count)} note="Ana ürün görselinin alt metni kitap adını taşımıyor" />
+              <Kpi label="Kapak alt metni sorunlu" value={fmt(d.checks.find((c) => c.id === 'main_img_alt')?.count)} note="Ana ürün görselinin alt metni kitap adını taşımıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Kapak alt metni sorunlu" />} />
             )}
             <Kpi
               label="Türe göre"
               value={fmt(d.byKind.product)}
-              note={(Object.keys(KIND_LABEL) as Kind[]).filter((k) => d.byKind[k]).map((k) => `${KIND_LABEL[k]} ${fmt(d.byKind[k])}`).join(' · ') || '—'}
-            />
+              note={(Object.keys(KIND_LABEL) as Kind[]).filter((k) => d.byKind[k]).map((k) => `${KIND_LABEL[k]} ${fmt(d.byKind[k])}`).join(' · ') || '—'} info={<SeoInfo k={r.data?.kaynaklar} label="Türe göre" />} />
           </section>
 
           {!d.checked && (
@@ -295,7 +293,7 @@ function IssuesTab({ group }: { group: 'page' | 'image' }) {
                         <tr>
                           <th>Sayfa</th>
                           <th>Tür</th>
-                          <th>Sorunlar</th>
+                          <th>Sorunlar <SeoInfo k={r.data?.kaynaklar} label="Sorunlar" /></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -606,19 +604,18 @@ function SitemapTab() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitemap dosyası" value={fmt(s.sitemaps.length)} note={s.fallback ? 'robots.txt’te Sitemap satırı yok; /sitemap.xml denendi' : `robots.txt’te ${fmt(s.declared.length)} adres`} tone={s.fallback ? 'bad' : undefined} />
-            <Kpi label="Sitemaplerdeki adres" value={fmt(s.totalUrls)} note={`Son okuma ${dateTime(s.checkedAt)}${s.partial ? ' · süre doldu, eksik okundu' : ''}`} />
-            <Kpi label="Sitemapte olmayan ürün" value={fmt(s.missingCount)} note={`Satıştaki ${fmt(s.activeProducts)} üründen`} tone={s.missingCount ? 'bad' : 'good'} />
+            <Kpi label="Sitemap dosyası" value={fmt(s.sitemaps.length)} note={s.fallback ? 'robots.txt’te Sitemap satırı yok; /sitemap.xml denendi' : `robots.txt’te ${fmt(s.declared.length)} adres`} tone={s.fallback ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemap dosyası" />} />
+            <Kpi label="Sitemaplerdeki adres" value={fmt(s.totalUrls)} note={`Son okuma ${dateTime(s.checkedAt)}${s.partial ? ' · süre doldu, eksik okundu' : ''}`} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemaplerdeki adres" />} />
+            <Kpi label="Sitemapte olmayan ürün" value={fmt(s.missingCount)} note={`Satıştaki ${fmt(s.activeProducts)} üründen`} tone={s.missingCount ? 'bad' : 'good'} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemapte olmayan ürün" />} />
             <Kpi
               label="Örneklem denetimi"
               value={`${fmt(s.sample.ok)} / ${fmt(s.sample.checked)}`}
               note={`Rastgele ${fmt(s.sample.checked)} adres (toplam ${fmt(s.sample.of)}) · yönlenen ${fmt(s.sample.redirect)} · açılmayan ${fmt(s.sample.error)}`}
-              tone={s.sample.checked && s.sample.ok < s.sample.checked ? 'bad' : undefined}
-            />
+              tone={s.sample.checked && s.sample.ok < s.sample.checked ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Örneklem denetimi" />} />
           </section>
 
           <section className="sg-card">
-            <h2>Sitemap dosyaları</h2>
+            <h2>Sitemap dosyaları <SeoInfo k={r.data?.kaynaklar} label="Sitemap dosyaları" /></h2>
             <p className="sg-sub">En yeni lastmod {fmt(s.staleDays)} günden eskiyse ya da dosya açılmıyorsa işaretlenir: arama motoru yeni kitapları geç görür.</p>
             <div className="sg-table-wrap">
               <table className="sg-table">
@@ -658,7 +655,7 @@ function SitemapTab() {
 
           <div className="sg-grid">
             <section className="sg-card sg-span-6">
-              <h2>Örneklemde sorunlu adresler</h2>
+              <h2>Örneklemde sorunlu adresler <SeoInfo k={r.data?.kaynaklar} label="Örneklemde sorunlu adresler" /></h2>
               <p className="sg-sub">Sitemapteki adresler 200 dönmeli ve yönlenmemeli. Bu bir örneklemdir; bütün adresler taranmadı.</p>
               {!s.sample.items.length ? (
                 <p className="sg-banner ok">Örneklemdeki bütün adresler doğrudan açıldı.</p>
@@ -692,7 +689,7 @@ function SitemapTab() {
               )}
             </section>
             <section className="sg-card sg-span-6">
-              <h2>Sitemapte olmayan ürünler</h2>
+              <h2>Sitemapte olmayan ürünler <SeoInfo k={r.data?.kaynaklar} label="Sitemapte olmayan ürünler" /></h2>
               <p className="sg-sub">Satıştaki ürünün adresi hiçbir sitemapte yok. Çok satandan aza.</p>
               {!s.missingCount ? (
                 <p className="sg-banner ok">{s.totalUrls ? 'Satıştaki bütün ürünler sitemapte.' : 'Sitemap okunamadığı için karşılaştırma yapılmadı.'}</p>
@@ -746,7 +743,7 @@ function BotsTab() {
             {s.status !== 200 ? ` · robots.txt ${s.status ?? 'açılamadı'} döndü (dosya yoksa her şey açık sayılır)` : ''}. Yenilemek için Sitemap sekmesindeki düğme kullanılır.
           </p>
           <section className="sg-card">
-            <h2>Bot × yol</h2>
+            <h2>Bot × yol <SeoInfo k={r.data?.kaynaklar} label="Bot × yol" /></h2>
             <p className="sg-sub">Her bot için temsilî sayfalar. Kural RFC 9309’a göre: en uzun eşleşen kural geçerli, eşitlikte izin kazanır; botun kendi bölümü yoksa genel (*) bölüm uygulanır.</p>
             <div className="sg-table-wrap">
               <table className="sg-table">
@@ -822,7 +819,7 @@ function SpeedTab() {
     return (
       <div className="sg-empty">
         <Gauge size={22} aria-hidden />
-        <h2>Google API anahtarı girilmemiş</h2>
+        <h2>Google API anahtarı girilmemiş <SeoInfo k={r.data?.kaynaklar} label="Google API anahtarı girilmemiş" /></h2>
         <p>Sayfa hızı ve gerçek kullanıcı ölçümleri (Core Web Vitals) Google’ın PageSpeed ve CrUX servislerinden okunur. Anahtarı Yönetim → SEO & GEO → Google API anahtarı alanına girin; anahtar yalnız bu iki servisle kısıtlı olmalı.</p>
       </div>
     );
@@ -840,7 +837,7 @@ function SpeedTab() {
       {d.state.error && <p className="sg-banner err">Son ölçüm durdu: {d.state.error}</p>}
 
       <section className="sg-card">
-        <h2>Gerçek kullanıcılar: bütün site (son 28 gün, p75)</h2>
+        <h2>Gerçek kullanıcılar: bütün site (son 28 gün, p75) <SeoInfo k={r.data?.kaynaklar} label="Gerçek kullanıcılar: bütün site (son 28 gün, p75)" /></h2>
         <p className="sg-sub">Chrome kullanıcılarının yaşadığı hız; Google sıralamada bunu kullanır. Ziyaretlerin %75’i bu değerden iyi.</p>
         {!d.origin.phone && !d.origin.desktop ? (
           <p className="sg-banner">Henüz ölçüm yok. “Hızı şimdi ölç”e basın ya da gece işini bekleyin.</p>
@@ -861,7 +858,7 @@ function SpeedTab() {
                     <div className="sg-kpis">
                       {(['lcp', 'inp', 'cls'] as const).map((m) => {
                         const v = o.metrics[m];
-                        return <Kpi key={m} label={METRIC_LABEL[m]} value={metricText(m, v?.p75)} note={thresholdText(m, d.thresholds[m])} tone={v?.category ? CAT_TONE[v.category] : undefined} chip={v?.category ? CAT_LABEL[v.category] : undefined} />;
+                        return <Kpi key={m} label={METRIC_LABEL[m]} value={metricText(m, v?.p75)} note={thresholdText(m, d.thresholds[m])} tone={v?.category ? CAT_TONE[v.category] : undefined} chip={v?.category ? CAT_LABEL[v.category] : undefined} info={<SeoInfo k={r.data?.kaynaklar} label={METRIC_LABEL[m]} />} />;
                       })}
                     </div>
                   )}
@@ -874,7 +871,7 @@ function SpeedTab() {
       </section>
 
       <section className="sg-card">
-        <h2>Örnek sayfalar</h2>
+        <h2>Örnek sayfalar <SeoInfo k={r.data?.kaynaklar} label="Örnek sayfalar" /></h2>
         <p className="sg-sub">
           Anasayfa, en çok satan {fmt(d.state.sample?.products ?? 10)} ürün, en çok satan {fmt(d.state.sample?.pages ?? 5)} kategori ve yazar sayfası. Puan laboratuvar ölçümüdür (0–100); sağdaki üç değer o sayfanın gerçek kullanıcı ölçümü (telefon), trafik azsa boş kalır.
         </p>
@@ -886,13 +883,13 @@ function SpeedTab() {
               <thead>
                 <tr>
                   <th>Sayfa</th>
-                  <th>Puan (telefon)</th>
-                  <th>Puan (masaüstü)</th>
-                  <th>LCP (lab)</th>
-                  <th>CLS (lab)</th>
-                  <th>LCP</th>
-                  <th>INP</th>
-                  <th>CLS</th>
+                  <th>Puan (telefon) <SeoInfo k={r.data?.kaynaklar} label="Puan (telefon)" /></th>
+                  <th>Puan (masaüstü) <SeoInfo k={r.data?.kaynaklar} label="Puan (masaüstü)" /></th>
+                  <th>LCP (lab) <SeoInfo k={r.data?.kaynaklar} label="LCP (lab)" /></th>
+                  <th>CLS (lab) <SeoInfo k={r.data?.kaynaklar} label="CLS (lab)" /></th>
+                  <th>LCP <SeoInfo k={r.data?.kaynaklar} label="LCP" /></th>
+                  <th>INP <SeoInfo k={r.data?.kaynaklar} label="INP" /></th>
+                  <th>CLS <SeoInfo k={r.data?.kaynaklar} label="CLS" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -938,7 +935,7 @@ function SpeedTab() {
 
       <div className="sg-grid">
         <section className="sg-card sg-span-6">
-          <h2>Eğilim: bütün site (telefon, p75)</h2>
+          <h2>Eğilim: bütün site (telefon, p75) <SeoInfo k={r.data?.kaynaklar} label="Eğilim: bütün site (telefon, p75)" /></h2>
           <p className="sg-sub">Son {fmt(d.days)} günün her ölçümü.</p>
           {!phoneTrend.length ? (
             <p className="sg-sub">Henüz yeterli ölçüm yok.</p>
@@ -948,9 +945,9 @@ function SpeedTab() {
                 <thead>
                   <tr>
                     <th>Tarih</th>
-                    <th>LCP</th>
-                    <th>INP</th>
-                    <th>CLS</th>
+                    <th>LCP <SeoInfo k={r.data?.kaynaklar} label="LCP" /></th>
+                    <th>INP <SeoInfo k={r.data?.kaynaklar} label="INP" /></th>
+                    <th>CLS <SeoInfo k={r.data?.kaynaklar} label="CLS" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -968,7 +965,7 @@ function SpeedTab() {
           )}
         </section>
         <section className="sg-card sg-span-6">
-          <h2>Eğilim: örnek sayfaların ortalama puanı</h2>
+          <h2>Eğilim: örnek sayfaların ortalama puanı <SeoInfo k={r.data?.kaynaklar} label="Eğilim: örnek sayfaların ortalama puanı" /></h2>
           <p className="sg-sub">Gün başına laboratuvar puanı ortalaması.</p>
           {!d.trend.psi.length ? (
             <p className="sg-sub">Henüz yeterli ölçüm yok.</p>
@@ -979,7 +976,7 @@ function SpeedTab() {
                   <tr>
                     <th>Tarih</th>
                     <th>Cihaz</th>
-                    <th>Ortalama puan</th>
+                    <th>Ortalama puan <SeoInfo k={r.data?.kaynaklar} label="Ortalama puan" /></th>
                     <th>Sayfa</th>
                   </tr>
                 </thead>
@@ -1005,10 +1002,10 @@ function SpeedTab() {
 }
 
 /* ------------------------------------------------------------------ küçük parçalar */
-function Kpi({ label, value, note, tone, chip }: { label: string; value: string; note?: string; tone?: 'good' | 'mid' | 'bad'; chip?: string }) {
+function Kpi({ label, value, note, tone, chip, info }: { label: string; value: string; note?: string; tone?: 'good' | 'mid' | 'bad'; chip?: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {value}
         {tone && <span className={`sg-chip ${tone}`}>{chip ?? (tone === 'good' ? 'İyi' : tone === 'mid' ? 'Orta' : 'Dikkat')}</span>}

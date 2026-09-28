@@ -6,6 +6,7 @@ import { Loading, Note, TableWrap, errText, td, th } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { cellShade, commerceApi, fmtDay, fmtInt, fmtRatio, fmtTl, type Segment } from './api';
 import { ROOT, SegmentPill, useMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** RFM matrisi (yenilik × sıklık), segment büyüklüğü ve geçişleri; tıklanınca maskeli müşteri listesi. */
 export default function Customers() {
@@ -42,7 +43,7 @@ export default function Customers() {
     <div className="flex flex-col gap-3 lg:gap-4">
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr] lg:gap-4">
         <Panel>
-          <h2 className="text-[15px] font-extrabold">Yenilik × sıklık</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Yenilik × sıklık <SqlInfo k={r.kaynaklar} alan="matrix" label="Yenilik × sıklık (RFM)" /></h2>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Satır: son geçerli siparişten bu yana geçen gün. Sütun: geçerli sipariş sayısı. Hücrede müşteri sayısı.</p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full min-w-[520px] border-separate border-spacing-1 text-[12px]">
@@ -75,7 +76,7 @@ export default function Customers() {
         </Panel>
         <div className="flex flex-col gap-3 lg:gap-4">
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Segmentler</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Segmentler <SqlInfo k={r.kaynaklar} alan="segments" label="Segmentler" /></h2>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <button type="button" onClick={() => pick('')} aria-pressed={!segment}
                 className={`min-h-11 rounded-xl px-3 text-[12px] font-extrabold transition-colors duration-150 sm:min-h-8 ${!segment ? 'bg-canvas-violet text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
@@ -90,7 +91,7 @@ export default function Customers() {
             </div>
           </Panel>
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Son {r.moves.days} günde segment geçişleri</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Son {r.moves.days} günde segment geçişleri <SqlInfo k={r.kaynaklar} alan="moves" label="Segment geçişleri" /></h2>
             {r.moves.items.length === 0 ? (
               <p className="mt-1 text-[12.5px] text-canvas-muted">Geçiş yok.</p>
             ) : (
@@ -112,7 +113,7 @@ export default function Customers() {
 
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-extrabold">{segment && labels ? `${labels[segment]} müşteriler` : 'Bütün müşteriler'}</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">{segment && labels ? `${labels[segment]} müşteriler` : 'Bütün müşteriler'} <SqlInfo k={list.data?.kaynaklar} alan="items" label="Müşteri listesi" /></h2>
           <label className="flex items-center gap-2 text-[12px] font-bold text-canvas-muted">
             Sırala
             <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(0); }}
@@ -128,7 +129,7 @@ export default function Customers() {
         <div className="mt-2">
           <TableWrap>
             <thead>
-              <tr><th className={th}>Müşteri</th><th className={th}>Segment</th><th className={`${th} text-right`}>Sipariş</th><th className={`${th} text-right`}>Ciro</th><th className={th}>Son sipariş</th><th className={th}>İl</th></tr>
+              <tr><th className={th}>Müşteri</th><th className={th}>Segment</th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Sipariş</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Ciro</InfoLabel></th><th className={th}>Son sipariş</th><th className={th}>İl</th></tr>
             </thead>
             <tbody>
               {(list.data?.items ?? []).map((c) => (

@@ -1,4 +1,5 @@
 import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** SEO & GEO modülünün köprü uçları: /api/v1/seo-geo/*. */
 
@@ -216,7 +217,10 @@ export type GeoResult = { ok: boolean; mentioned: boolean | null; cited: boolean
 export type GeoEngine = { id: string; label: string; configured: boolean; free: boolean; daily: number; usedToday: number; model: string };
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string; results?: Record<string, GeoResult> };
 
-export async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
+/** Okuma cevaplarında sorgu bilgisi (köprünün SEO ara katmanı ekler): `<SqlInfo k={d.kaynaklar} …/>`. */
+export type WithK = { kaynaklar?: Kaynaklar };
+
+export async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T & WithK> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
   const method = init.method ?? 'GET';
   const response = await fetch(`${ENGINE_BASE}/api/v1/seo-geo/${path}`, {

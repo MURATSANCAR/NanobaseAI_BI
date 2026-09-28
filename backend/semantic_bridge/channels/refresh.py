@@ -26,6 +26,15 @@ from semantic_bridge.channels import store as S
 log = logging.getLogger("semantic.channels.refresh")
 
 
+#: Sorgu bilgisi: kanal tablolarını dolduran Logo/CRM sorguları (`semantic_query_origin`). Yıl okumaları yıl anahtarıyla
+#: (`kanal.okuma.2026`), kart/CRM/ad/barkod okumaları genel anahtarla saklanır; ekrandaki rakamın «asıl SQL»i budur.
+KOKEN_OKUMA = "kanal.okuma"
+
+
+def koken_yil(y: int) -> str:
+    return f"{KOKEN_OKUMA}.{int(y)}"
+
+
 def scope(engine: sa.engine.Engine, tenant: str, st: dict[str, Any]) -> dict[str, Any]:
     """Okuma kapsamı: kanal kodları, tek tek eşlenmiş (kapsam kodları dışında kalan) cari kodları ve SQL parçaları."""
     kmap = M.kanal_map(engine, tenant)
@@ -130,13 +139,17 @@ class Refresher:
 
     def run(self, years: Optional[list[int]] = None) -> dict[str, Any]:
         """`years` None = gereken bütün yıllar."""
+        from semantic_bridge import sorgu_yakala as Y
+
         engine, tenant = self._engine(), self._tenant()
         S.ensure(engine)
         st = M.settings(self._conf)
         done: dict[str, Any] = {}
+        q_all, token = Y.baslat(engine)
+        year_sql: set[str] = set()
         try:
             self.state.update(running=True, step="Logo dönemleri")
-            logo = src.runner(self._logo())
+            logo = Y.izle(src.runner(self._logo()), "logo", Y.db_of(self._logo()))
             firms = src.firms_by_year(logo)
             end = src.bsrc.read_data_end(logo, firms)
             if end:
@@ -151,7 +164,7 @@ class Refresher:
             crm_err = None
             crm_info: dict[int, dict[str, Any]] = {}
             try:
-                crm_run = src.runner(self._crm())
+                crm_run = Y.izle(src.runner(self._crm()), "crm", Y.db_of(self._crm()))
                 crm_info = src.read_crm_accounts(crm_run, self._schema(), [c["ref"] for c in cards if c.get("ref") is not None])
             except src.SourceError as e:
                 crm_run, crm_err = None, str(e)
@@ -160,12 +173,15 @@ class Refresher:
 
             codes: set[str] = set()
             for y in want:
-                self.state["step"] = f"{y} kanal karnesi"
-                kan, ms1 = self._timed(lambda y=y: src.read_kanal(logo, firms, y))
-                self.state["step"] = f"{y} cari satışları"
-                car, ms2 = self._timed(lambda y=y: src.read_cari(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
-                self.state["step"] = f"{y} kitap × kanal"
-                bok, ms3 = self._timed(lambda y=y: src.read_books(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
+                with Y.yakala() as qy:
+                    self.state["step"] = f"{y} kanal karnesi"
+                    kan, ms1 = self._timed(lambda y=y: src.read_kanal(logo, firms, y))
+                    self.state["step"] = f"{y} cari satışları"
+                    car, ms2 = self._timed(lambda y=y: src.read_cari(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
+                    self.state["step"] = f"{y} kitap × kanal"
+                    bok, ms3 = self._timed(lambda y=y: src.read_books(logo, firms, y, sc["scopeSql"], sc["grupSql"]))
+                Y.koken_yaz(engine, tenant, koken_yil(y), qy)
+                year_sql |= {x["sql"] for x in qy.queries}
                 S.replace_year(engine, tenant, S.KANAL_MONTHS, y, kan)
                 S.replace_year(engine, tenant, S.CARI_MONTHS, y, car)
                 S.replace_year(engine, tenant, S.BOOK_MONTHS, y, bok)
@@ -200,13 +216,19 @@ class Refresher:
                         yc = codes_by_year.get(y)
                         if yc is None:
                             continue
-                        rows = src.read_targets(crm_run, self._schema(), yc)
+                        with Y.yakala() as qt:
+                            rows = src.read_targets(crm_run, self._schema(), yc)
+                        Y.koken_yaz(engine, tenant, f"{KOKEN_OKUMA}.hedef.{y}", qt)
+                        year_sql |= {x["sql"] for x in qt.queries}
                         S.replace_year(engine, tenant, S.TARGETS, y, [
                             {"yil": y, "bolge": r["bolge"], "bolge_ad": labels["regions"].get(r["bolge"]), "satir": r["satir"],
                              "toplam": r["toplam"], "aylar_json": _json(r["aylar"])} for r in rows])
                 except src.SourceError as e:
                     crm_meta["error"] = str(e)
             S.meta_set(engine, tenant, "crm", crm_meta)
+            rest = Y.Yakalanan()
+            rest.extend(x for x in q_all.queries if x["sql"] not in year_sql)
+            Y.koken_yaz(engine, tenant, KOKEN_OKUMA, rest)
             self.state.update(step=None, error=None)
             return {"ok": True, "years": done}
         except src.SourceError as e:
@@ -217,6 +239,7 @@ class Refresher:
             self.state.update(step=None, error=f"Okuma yarıda kaldı: {str(e)[:200]}")
             return {"ok": False, "error": self.state["error"], "years": done}
         finally:
+            Y.bitir(token)
             self.state["running"] = False
 
     @staticmethod

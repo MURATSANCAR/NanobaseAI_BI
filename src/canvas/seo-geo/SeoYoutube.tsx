@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -83,7 +84,7 @@ export default function SeoYoutube() {
   const closed = s ? s.flags.yok + s.flags.gizli + s.flags.gomulemez : 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/youtube"
       crumb="YouTube"
       eyebrow="SEO & GEO · Kitap videoları"
@@ -105,7 +106,7 @@ export default function SeoYoutube() {
 
       {d && !d.configured && (
         <section className="sg-card">
-          <h2>YouTube bağlantısı kurulmamış</h2>
+          <h2>YouTube bağlantısı kurulmamış <SeoInfo k={list.data?.kaynaklar} label="YouTube bağlantısı kurulmamış" /></h2>
           <p className="sg-sub">Video bilgisini okumak için ücretsiz bir YouTube Data API v3 anahtarı gerekir. Anahtar yalnız okuma içindir.</p>
           <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7 }}>
             {(d.setup ?? []).map((t) => (
@@ -125,16 +126,16 @@ export default function SeoYoutube() {
       {s && s.videos > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Video" value={fmt(s.videos)} note={`${fmt(s.books)} kitapta · ${fmt(s.checked)} denetlendi`} />
-            <Kpi label="Toplam izlenme" value={fmt(s.totalViews)} note={s.lastChecked ? `Son okuma ${dateTime(s.lastChecked)}` : 'Henüz okunmadı'} />
-            <Kpi label="Kitap sayfası yok" value={fmt(s.flags.kitap_linki_yok)} note={`Hiç timas.com.tr bağlantısı yok: ${fmt(s.flags.link_yok)}`} tone={s.flags.kitap_linki_yok ? 'bad' : undefined} />
-            <Kpi label="Başlıkta kitap adı yok" value={fmt(s.flags.baslik)} note="Aramada kitap adıyla bulunmaz" tone={s.flags.baslik ? 'bad' : undefined} />
-            <Kpi label="Erişilemeyen" value={fmt(closed)} note="Silinmiş, gizli ya da gömülemez" tone={closed ? 'bad' : undefined} />
+            <Kpi label="Video" value={fmt(s.videos)} note={`${fmt(s.books)} kitapta · ${fmt(s.checked)} denetlendi`} info={<SeoInfo k={list.data?.kaynaklar} label="Video" />} />
+            <Kpi label="Toplam izlenme" value={fmt(s.totalViews)} note={s.lastChecked ? `Son okuma ${dateTime(s.lastChecked)}` : 'Henüz okunmadı'} info={<SeoInfo k={list.data?.kaynaklar} label="Toplam izlenme" />} />
+            <Kpi label="Kitap sayfası yok" value={fmt(s.flags.kitap_linki_yok)} note={`Hiç timas.com.tr bağlantısı yok: ${fmt(s.flags.link_yok)}`} tone={s.flags.kitap_linki_yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kitap sayfası yok" />} />
+            <Kpi label="Başlıkta kitap adı yok" value={fmt(s.flags.baslik)} note="Aramada kitap adıyla bulunmaz" tone={s.flags.baslik ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Başlıkta kitap adı yok" />} />
+            <Kpi label="Erişilemeyen" value={fmt(closed)} note="Silinmiş, gizli ya da gömülemez" tone={closed ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Erişilemeyen" />} />
           </section>
 
           {s.channels.length > 0 && (
             <section className="sg-card">
-              <h2>Kanallar</h2>
+              <h2>Kanallar <SeoInfo k={list.data?.kaynaklar} label="Kanallar" /></h2>
               <p className="sg-sub">
                 Videoların yayınlandığı kanallar. Bir okuma {fmt(s.callsPerRefresh)} birim harcar; günlük ücretsiz kota {fmt(s.dailyQuota)} birim.
               </p>
@@ -286,10 +287,10 @@ function CopyLine({ text }: { text: string }) {
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

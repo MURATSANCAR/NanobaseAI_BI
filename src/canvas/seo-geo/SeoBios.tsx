@@ -114,7 +114,7 @@ export default function SeoBios() {
   const total = d?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/yazar-biyografi"
       crumb="Yazar biyografileri"
       eyebrow="SEO & GEO · yazar biyografileri"

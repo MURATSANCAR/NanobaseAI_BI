@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -31,7 +31,7 @@ export default function SeoSchema() {
   const title = (id: string) => d?.checks.find((c) => c.id === id)?.title ?? id;
 
   return (
-    <SeoLayout
+    <SeoLayout k={r.data?.kaynaklar}
       path="/seo-geo/sema"
       crumb="Şema denetimi"
       eyebrow="SEO & GEO · yapılandırılmış veri"
@@ -56,17 +56,17 @@ export default function SeoSchema() {
         <>
           <section className="sg-kpis" aria-label="Özet">
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Taranan kitap sayfası</div>
+              <div className="sg-kpi-label">Taranan kitap sayfası <SeoInfo k={r.data?.kaynaklar} label="Taranan kitap sayfası" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.checked)}</div>
               <div className="sg-kpi-note">Son tarama {dateTime(d.lastChecked)} · her gece sürer</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Sorunlu sayfa</div>
+              <div className="sg-kpi-label">Sorunlu sayfa <SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.total)}</div>
               <div className="sg-kpi-note">{issue ? `Süzgeç: ${title(issue)}` : 'En az bir eksiği olan'}</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Kurum şeması adı</div>
+              <div className="sg-kpi-label">Kurum şeması adı <SeoInfo k={r.data?.kaynaklar} label="Kurum şeması adı" /></div>
               <div className="sg-kpi-value" style={{ fontSize: 18 }}>{d.organization?.name ?? '—'}</div>
               <div className="sg-kpi-note">{d.organization?.name === 'Timaş Yayınları' ? 'Doğru' : 'Olması gereken: Timaş Yayınları'}</div>
             </div>
@@ -82,7 +82,7 @@ export default function SeoSchema() {
           {d.checked > 0 && (
             <div className="sg-grid">
               <section className="sg-card sg-span-5">
-                <h2>Eksikler</h2>
+                <h2>Eksikler <SeoInfo k={r.data?.kaynaklar} label="Eksikler" /></h2>
                 <p className="sg-sub">Taranan sayfalarda kaç tanesinde var. Tıklayınca sayfalar süzülür.</p>
                 <div className="sg-bars">
                   {d.checks

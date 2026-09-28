@@ -6,6 +6,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../budget/api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kampanyaApi, type Campaign, type Donem, type Overview } from './api';
 
 /** Kampanya sonucu: önce / kampanya / sonra dönemleri (Logo, günlük), kitap kitap satış, Zeki AI özeti ve öğrenim kaydı. */
@@ -61,19 +62,23 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
       {r.notlar.map((n, i) => <Note key={i} tone="info">{n}</Note>)}
       <KpiRow>
         <Kpi label="Günlük satış (kampanya)" value={k?.gunlukAdet === null || k?.gunlukAdet === undefined ? '—' : fmtInt(k.gunlukAdet)}
-          help={`Önceki dönem ${o?.gunlukAdet === null || o?.gunlukAdet === undefined ? '—' : fmtInt(o.gunlukAdet)} · ${r.degisim.satis === null ? 'değişim yok' : `${r.degisim.satis.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} kat`}`} />
-        <Kpi label="Kampanya satışı" value={fmtInt(k?.adet)} help={`${fmtMoney(k?.tutar)} net · ${k ? `${k.gun}/${k.gunToplam} gün okundu` : ''}`} />
-        <Kpi label="İade oranı" value={fmtPct(k?.iadeOrani)} help={`Önceki ${fmtPct(o?.iadeOrani)}${r.degisim.iadePuan !== null ? ` · ${r.degisim.iadePuan >= 0 ? '+' : ''}${(r.degisim.iadePuan * 100).toFixed(1).replace('.', ',')} puan` : ''}`} />
+          help={`Önceki dönem ${o?.gunlukAdet === null || o?.gunlukAdet === undefined ? '—' : fmtInt(o.gunlukAdet)} · ${r.degisim.satis === null ? 'değişim yok' : `${r.degisim.satis.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} kat`}`}
+          info={<SqlInfo k={r.kaynaklar} alan="degisim" label="Günlük satış (kampanya)" />} />
+        <Kpi label="Kampanya satışı" value={fmtInt(k?.adet)} help={`${fmtMoney(k?.tutar)} net · ${k ? `${k.gun}/${k.gunToplam} gün okundu` : ''}`}
+          info={<SqlInfo k={r.kaynaklar} alan="donemler" label="Kampanya satışı" />} />
+        <Kpi label="İade oranı" value={fmtPct(k?.iadeOrani)} help={`Önceki ${fmtPct(o?.iadeOrani)}${r.degisim.iadePuan !== null ? ` · ${r.degisim.iadePuan >= 0 ? '+' : ''}${(r.degisim.iadePuan * 100).toFixed(1).replace('.', ',')} puan` : ''}`}
+          info={<SqlInfo k={r.kaynaklar} alan="donemler" label="İade oranı" />} />
         <Kpi label="Gerçekleşen marj" value={k?.marjOrani === null || k?.marjOrani === undefined ? '—' : fmtPct(k.marjOrani)}
-          help={`Maliyeti girilmiş satışlardan (${fmtPct(k?.maliyetKapsami)} kapsam) · önceki ${fmtPct(o?.marjOrani)}`} />
+          help={`Maliyeti girilmiş satışlardan (${fmtPct(k?.maliyetKapsami)} kapsam) · önceki ${fmtPct(o?.marjOrani)}`}
+          info={<SqlInfo k={r.kaynaklar} alan="donemler" label="Gerçekleşen marj" />} />
       </KpiRow>
       {r.crmEtki && (
-        <Note tone="info">CRM’de bu bayi kampanyasına bağlı {fmtInt(r.crmEtki.siparis)} sipariş, {fmtInt(r.crmEtki.adet)} adet, kampanya indirimi {fmtMoney(r.crmEtki.indirim)}.</Note>
+        <Note tone="info"><SqlInfo k={r.kaynaklar} alan="crmEtki" label="CRM bayi kampanyası etkisi" className="mr-1" />CRM’de bu bayi kampanyasına bağlı {fmtInt(r.crmEtki.siparis)} sipariş, {fmtInt(r.crmEtki.adet)} adet, kampanya indirimi {fmtMoney(r.crmEtki.indirim)}.</Note>
       )}
       {r.crmEtkiHata && <Note tone="warn">CRM etkisi okunamadı: {r.crmEtkiHata}</Note>}
       {r.seri.length > 0 && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Günlük satış (adet)</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Günlük satış (adet) <SqlInfo k={r.kaynaklar} alan="seri" label="Günlük satış serisi" /></h2>
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={r.seri.map((x) => ({ ...x, [x.donem]: x.adet }))} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
@@ -90,17 +95,17 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
         </Panel>
       )}
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Dönemler</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Dönemler <SqlInfo k={r.kaynaklar} alan="donemler" label="Dönemler" /></h2>
         <TableWrap>
           <thead>
             <tr>
               <th className={th}>Dönem</th>
-              <th className={`${th} text-right`}>Gün (okunan)</th>
-              <th className={`${th} text-right`}>Satış</th>
-              <th className={`${th} text-right`}>Günlük</th>
-              <th className={`${th} text-right`}>İade</th>
-              <th className={`${th} text-right`}>Net tutar</th>
-              <th className={`${th} text-right`}>Marj</th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">Gün (okunan)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">Satış</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">Günlük</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">İade</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">Net tutar</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="donemler">Marj</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -124,17 +129,17 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
       </Panel>
       {r.kitaplar.length > 0 && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Kitap kitap</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Kitap kitap <SqlInfo k={r.kaynaklar} alan="kitaplar" label="Kitap kitap sonuç" /></h2>
           <TableWrap>
             <thead>
               <tr>
                 <th className={th}>Kitap</th>
-                <th className={`${th} text-right`}>İndirim</th>
-                <th className={`${th} text-right`}>Önce</th>
-                <th className={`${th} text-right`}>Kampanya</th>
-                <th className={`${th} text-right`}>Sonra</th>
-                <th className={`${th} text-right`}>İade</th>
-                <th className={`${th} text-right`}>Değişim</th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">İndirim</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">Önce</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">Kampanya</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">Sonra</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">İade</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="kitaplar">Değişim</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -155,7 +160,7 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
       )}
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-extrabold tracking-tight">Zeki AI özeti</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Zeki AI özeti <SqlInfo k={r.kaynaklar} alan="donemler" label="Özetin dayandığı rakamlar" /></h2>
           {ov.me.canCopy && r.seri.length > 0 && (
             <button type="button" className={btnGhost} disabled={summary.isPending} onClick={() => summary.mutate()}>
               {summary.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
@@ -173,7 +178,7 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
         )}
       </Panel>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Öğrenim</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Öğrenim <SqlInfo k={r.kaynaklar} alan="ogrenimler" label="Öğrenim rakamları" /></h2>
         <ul className="flex flex-col gap-2">
           {r.ogrenimler.map((l) => (
             <li key={l.id} className="rounded-xl bg-white/80 px-3 py-2.5">

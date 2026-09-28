@@ -8,6 +8,7 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ecomApi, fmtDay, fmtInt, fmtMoney0, fmtPct, isEan, type Account, type MarketBook, type Meta } from './api';
 import { EticaretFrame, Stamp } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
 
 /** M34 Pazar yerleri: Logo'da pazar yeri kanalındaki carilere satış (sell-in), iade ve geçen yılın aynı dönemiyle karşılaştırma;
@@ -83,13 +84,19 @@ function Body({ meta }: { meta: Meta }) {
       {d && t && (
         <>
           <KpiRow>
-            <Kpi label="Net ciro" value={fmtMoney0(t.net)} help={`Geçen yılın aynı dönemi ${fmtMoney0(t.oncekiNet)}${t.degisim !== null ? ` · ${signed(t.degisim)}` : ''}`} />
-            <Kpi label="Satış" value={fmtMoney0(t.satis)} help={`${fmtInt(t.satisAdet)} adet`} />
-            <Kpi label="İade" value={fmtMoney0(t.iade)} help={`${fmtInt(t.iadeAdet)} adet · iade oranı ${fmtPct(t.iadeOrani)}`} />
-            <Kpi label="Cari" value={fmtInt(d.cariler.length)} help="Bu dönemde faturası olan pazar yeri carisi" />
+            <Kpi label="Net ciro" value={fmtMoney0(t.net)} help={`Geçen yılın aynı dönemi ${fmtMoney0(t.oncekiNet)}${t.degisim !== null ? ` · ${signed(t.degisim)}` : ''}`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri net ciro" />} />
+            <Kpi label="Satış" value={fmtMoney0(t.satis)} help={`${fmtInt(t.satisAdet)} adet`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri satış" />} />
+            <Kpi label="İade" value={fmtMoney0(t.iade)} help={`${fmtInt(t.iadeAdet)} adet · iade oranı ${fmtPct(t.iadeOrani)}`}
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri iade" />} />
+            <Kpi label="Cari" value={fmtInt(d.cariler.length)} help="Bu dönemde faturası olan pazar yeri carisi"
+              info={<SqlInfo k={d.kaynaklar} alan="cariler" label="Pazar yeri cari sayısı" />} />
           </KpiRow>
           <Panel>
-            <h2 className="text-[16px] font-extrabold">Cariler</h2>
+            <h2 className="inline-flex items-center gap-1 text-[16px] font-extrabold">
+              Cariler <SqlInfo k={d.kaynaklar} alan="cariler" label="Pazar yeri carileri" />
+            </h2>
             {!d.cariler.length && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bu dönemde pazar yeri carisine fatura yok.</p>}
             {!!d.cariler.length && (
               <div className="mt-2">
@@ -97,10 +104,10 @@ function Body({ meta }: { meta: Meta }) {
                   <thead>
                     <tr className="border-b border-slate-100">
                       <th className={th}>Cari</th>
-                      <th className={`${th} text-right`}>Net ciro</th>
-                      <th className={`${th} text-right`}>Değişim</th>
-                      <th className={`${th} text-right`}>İade oranı</th>
-                      <th className={th}>Aylık net</th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Net ciro</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Değişim</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">İade oranı</InfoLabel></th>
+                      <th className={th}><InfoLabel k={d.kaynaklar} alan="cariler">Aylık net</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -130,7 +137,10 @@ function Body({ meta }: { meta: Meta }) {
       )}
       <Panel>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-[16px] font-extrabold">Pazar yerlerinde satan, stoğu tükenmek üzere</h2>
+          <h2 className="inline-flex items-center gap-1 text-[16px] font-extrabold">
+            Pazar yerlerinde satan, stoğu tükenmek üzere
+            <SqlInfo k={risk.data?.kaynaklar} alan="items" label="Tükenme riski: net adet, ciro, stok, kalan gün" />
+          </h2>
           {risk.data && <Stamp>Logo stoğu son {risk.data.satisAyi} ayın satış hızıyla {risk.data.esikGun} günden az yetiyor · kesim {fmtDay(risk.data.kesim)}</Stamp>}
         </div>
         {risk.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Okunuyor…</div>}
@@ -224,7 +234,12 @@ function CariSheet({ cari, yil, meta, onClose, onOpen }: {
               </button>
             </div>
           )}
-          <Stamp>{fmtInt(q.data.total)} kitap · ciroya göre</Stamp>
+          <Stamp>
+            <span className="inline-flex items-center gap-1">
+              {fmtInt(q.data.total)} kitap · ciroya göre
+              <SqlInfo k={q.data.kaynaklar} alan="items" label="Kitap kırılımı: net adet, ciro, stok, kalan gün" />
+            </span>
+          </Stamp>
           <Books items={q.data.items} meta={meta} onOpen={onOpen} picked={picked}
             onPick={(k, on) => setPicked((p) => { const n = new Set(p); if (on) n.add(k); else n.delete(k); return n; })} />
         </div>

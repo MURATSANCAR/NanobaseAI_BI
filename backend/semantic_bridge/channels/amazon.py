@@ -258,8 +258,27 @@ def _country(v: Any) -> str:
 # ------------------------------------------------------------------ okuma
 
 
+#: Sorgu bilgisi: konsinye, yurtdışı ve hak tablolarını dolduran Logo/CRM sorguları (`semantic_query_origin`).
+KOKEN_OKUMA = "amazon.okuma"
+
+
 def refresh(engine: sa.engine.Engine, tenant: str, logo_file: str, crm_file: str, crm_schema: str, conf: Callable[[str], str],
             step: Callable[[str], None] = lambda s: None) -> dict[str, Any]:
+    """Okuma (aşağıda) + sorgu bilgisi: okumada koşan Logo/CRM sorguları «asıl sorgu» olarak saklanır."""
+    from semantic_bridge import sorgu_yakala as Y
+
+    ensure(engine)
+    q, token = Y.baslat(engine)
+    try:
+        out = _refresh(engine, tenant, logo_file, crm_file, crm_schema, conf, step)
+    finally:
+        Y.bitir(token)
+    Y.koken_yaz(engine, tenant, KOKEN_OKUMA, q)
+    return out
+
+
+def _refresh(engine: sa.engine.Engine, tenant: str, logo_file: str, crm_file: str, crm_schema: str, conf: Callable[[str], str],
+             step: Callable[[str], None] = lambda s: None) -> dict[str, Any]:
     """Logo: adla Amazon carileri, konsinye, yurtdışı satış ve kitaplar, döviz faturası sayısı. CRM: Amazon Konsinye
     siparişleri ve Telif Satış sözleşmeleri. Logo hatası okumayı durdurur (eski önbellek kalır); CRM hatası kayda düşer."""
     from semantic_bridge import eticaret_sources as E
@@ -267,7 +286,9 @@ def refresh(engine: sa.engine.Engine, tenant: str, logo_file: str, crm_file: str
     ensure(engine)
     st = settings(conf)
     step("Logo dönemleri")
-    run = src.runner(logo_file)
+    from semantic_bridge import sorgu_yakala as Y
+
+    run = Y.izle(src.runner(logo_file), "logo", Y.db_of(logo_file))
     firms = src.firms_by_year(run)
     latest = firms[max(firms)]
     end = E.read_data_end(run, firms)
@@ -319,7 +340,7 @@ def refresh(engine: sa.engine.Engine, tenant: str, logo_file: str, crm_file: str
 
     crm_meta: dict[str, Any] = {"error": None}
     try:
-        crm = src.runner(crm_file)
+        crm = Y.izle(src.runner(crm_file), "crm", Y.db_of(crm_file))
         p = E.prefix(crm_schema)
         step("CRM Amazon siparişleri")
         crm_meta["siparis"] = {str(int(r["yil"])): int(r.get("sayi") or 0)

@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Rakam uçlarının cevabında sorgu bilgisi (`<SqlInfo k={d.kaynaklar} …/>`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M42 Platform ve kanallar: /api/v1/channels/*. Marj alanları `ozellik:kanal.marj` yoksa cevapta hiç gelmez (isteğe bağlı). */
 
@@ -299,36 +303,36 @@ const enc = encodeURIComponent;
 export type YM = { yil?: number; ay?: number };
 
 export const channelsApi = {
-  meta: () => send<ChannelsMeta>('GET', '/meta'),
+  meta: () => send<ChannelsMeta & WithK>('GET', '/meta'),
   status: () => send<ReadStatus>('GET', '/status'),
   refresh: (yil?: number) => send<ReadStatus & { started: boolean }>('POST', `/refresh${qs({ yil })}`),
-  scorecard: (p: YM) => send<Scorecard>('GET', `/scorecard${qs(p)}`),
-  channel: (platform: string, p: YM) => send<ChannelDetail>('GET', `/channel/${enc(platform)}${qs(p)}`),
+  scorecard: (p: YM) => send<Scorecard & WithK>('GET', `/scorecard${qs(p)}`),
+  channel: (platform: string, p: YM) => send<ChannelDetail & WithK>('GET', `/channel/${enc(platform)}${qs(p)}`),
   books: (platform: string, p: YM & { q?: string; sort?: string; page?: number }) =>
-    send<Page<BookRow> & { sort: string }>('GET', `/channel/${enc(platform)}/books${qs(p)}`),
+    send<Page<BookRow> & { sort: string } & WithK>('GET', `/channel/${enc(platform)}/books${qs(p)}`),
   returns: (platform: string, p: YM & { aylar?: number; page?: number }) =>
-    send<Page<BookRow> & { aralik: { bas: string; bit: string; ay: number } }>('GET', `/channel/${enc(platform)}/returns${qs(p)}`),
-  matrix: (p: YM & { q?: string; page?: number; sort?: string }) => send<MatrixPage>('GET', `/matrix${qs(p)}`),
-  targets: (yil?: number) => send<Targets>('GET', `/targets${qs({ yil })}`),
+    send<Page<BookRow> & { aralik: { bas: string; bit: string; ay: number } } & WithK>('GET', `/channel/${enc(platform)}/returns${qs(p)}`),
+  matrix: (p: YM & { q?: string; page?: number; sort?: string }) => send<MatrixPage & WithK>('GET', `/matrix${qs(p)}`),
+  targets: (yil?: number) => send<Targets & WithK>('GET', `/targets${qs({ yil })}`),
   simulate: (b: { platform: string; yil?: number; ay?: number; iskontoPuan: number; hacimYuzde?: number; yorum?: boolean }) =>
-    send<Simulation>('POST', '/simulate', b, 180_000),
+    send<Simulation & WithK>('POST', '/simulate', b, 180_000),
   setExtraCost: (platform: string, oran: number | null) => send<{ oran: number | null }>('PUT', `/settings/ek-maliyet/${enc(platform)}`, { oran }),
-  accounts: () => send<{ items: Account[]; counts: Record<string, number>; cards: ReadStatus['cards']; specodes: string[] }>('GET', '/accounts'),
+  accounts: () => send<{ items: Account[]; counts: Record<string, number>; cards: ReadStatus['cards']; specodes: string[] } & WithK>('GET', '/accounts'),
   setAccount: (code: string, b: { platform?: string | null; onay?: boolean; not?: string }) =>
     send<Account & { okumaBasladi: boolean }>('PUT', `/accounts/${enc(code)}`, b),
   propose: (cariler?: string[]) => send<{ ad: number; zeki: number; eminDegil: number; kalan: number; atlandi: string | null }>('POST', '/accounts/propose', { cariler }, 300_000),
-  kanalCodes: () => send<{ yil: number | null; items: Array<{ kod: string; netCiro: number; platform: string | null; eticaret: boolean }> }>('GET', '/accounts/kanal-kodlari'),
+  kanalCodes: () => send<{ yil: number | null; items: Array<{ kod: string; netCiro: number; platform: string | null; eticaret: boolean }> } & WithK>('GET', '/accounts/kanal-kodlari'),
   setKanalCode: (kod: string, platform: string | null) => send<{ okumaBasladi: boolean }>('PUT', `/accounts/kanal-kodlari/${enc(kod)}`, { platform }),
   regions: () =>
-    send<{ items: Array<{ kod: string; ad: string; yil: number | null; yillik: number; platform: string | null; aday: string | null }>; crmError: string | null }>('GET', '/accounts/bolgeler'),
+    send<{ items: Array<{ kod: string; ad: string; yil: number | null; yillik: number; platform: string | null; aday: string | null }>; crmError: string | null } & WithK>('GET', '/accounts/bolgeler'),
   setRegion: (kod: string, platform: string | null) => send<{ platform: string | null }>('PUT', `/accounts/bolgeler/${enc(kod)}`, { platform }),
-  d2c: (p: YM) => send<D2C>('GET', `/d2c${qs(p)}`),
+  d2c: (p: YM) => send<D2C & WithK>('GET', `/d2c${qs(p)}`),
   suggestSet: (kitaplar: string[], p: YM) => send<Suggestion>('POST', '/d2c/suggest', { kitaplar, ...p }, 180_000),
-  suggestions: (p: { platform?: string; tur?: string; durum?: string }) => send<{ items: Suggestion[]; types: Record<string, string> }>('GET', `/suggestions${qs(p)}`),
+  suggestions: (p: { platform?: string; tur?: string; durum?: string }) => send<{ items: Suggestion[]; types: Record<string, string> } & WithK>('GET', `/suggestions${qs(p)}`),
   addDiscountSuggestion: (b: { platform: string; yil?: number; ay?: number; iskontoPuan: number; hacimYuzde?: number; not?: string; yorum?: string | null }) =>
     send<Suggestion>('POST', '/suggestions', { tur: 'iskonto', ...b }),
   decide: (id: string, karar: 'onayli' | 'red', not?: string) => send<Suggestion>('POST', `/suggestions/${enc(id)}/decision`, { karar, not }),
-  imports: (platform?: string) => send<{ items: ImportRow[] }>('GET', `/imports${qs({ platform })}`),
+  imports: (platform?: string) => send<{ items: ImportRow[] } & WithK>('GET', `/imports${qs({ platform })}`),
   importFile: async (platform: string, file: File, donemBas?: string, donemBit?: string): Promise<ImportRow> => {
     if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
     const res = await fetch(`${ENGINE_BASE}${B}/imports${qs({ platform, filename: file.name, donem_bas: donemBas, donem_bit: donemBit })}`, {
@@ -341,7 +345,7 @@ export const channelsApi = {
     if (!res.ok) return fail(res);
     return (await res.json()) as ImportRow;
   },
-  importDetail: (id: string) => send<SellThrough>('GET', `/imports/${enc(id)}`),
+  importDetail: (id: string) => send<SellThrough & WithK>('GET', `/imports/${enc(id)}`),
   deleteImport: (id: string) => send<{ ok: boolean }>('DELETE', `/imports/${enc(id)}`),
   exportUrl: (liste: 'karne' | 'kitaplar' | 'iadeler' | 'matris' | 'eslesme', p: YM & { platform?: string; q?: string; aylar?: number } = {}) =>
     `${ENGINE_BASE}${B}/export/${liste}.xlsx${qs(p)}`,

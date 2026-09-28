@@ -1,10 +1,12 @@
+import type { Kaynaklar } from '../components/sqlInfo';
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Send } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 /** İzleme ve rapor: öteki ekranların sakladığı veriden gece çıkarılan olaylar (tıklama düşüşü, 404 artışı, robots.txt,
@@ -100,7 +102,7 @@ export default function SeoWatch() {
   const s = summary.data;
 
   return (
-    <SeoLayout
+    <SeoLayout k={summary.data?.kaynaklar}
       path="/seo-geo/izleme"
       crumb="İzleme ve rapor"
       eyebrow="SEO & GEO · izleme"
@@ -128,10 +130,10 @@ export default function SeoWatch() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Açık olay" value={fmt(s.counts.open)} note={`Kritik ${fmt(s.counts.bySeverity.kritik)} · yüksek ${fmt(s.counts.bySeverity.yüksek)} · orta ${fmt(s.counts.bySeverity.orta)}`} tone={s.counts.bySeverity.kritik ? 'bad' : undefined} />
-            <Kpi label="E-posta bekleyen" value={fmt(s.counts.unnotified)} note="Açık olup henüz bildirilmemiş olaylar" />
-            <Kpi label="Kapanan" value={fmt(s.counts.resolved)} note="Koşulu kalkan olaylar" />
-            <Kpi label="Son denetim" value={s.state.finishedAt ? dateTime(s.state.finishedAt) : '—'} note="Gece işiyle ya da düğmeyle" small />
+            <Kpi label="Açık olay" value={fmt(s.counts.open)} note={`Kritik ${fmt(s.counts.bySeverity.kritik)} · yüksek ${fmt(s.counts.bySeverity.yüksek)} · orta ${fmt(s.counts.bySeverity.orta)}`} tone={s.counts.bySeverity.kritik ? 'bad' : undefined} info={<SeoInfo k={summary.data?.kaynaklar} label="Açık olay" />} />
+            <Kpi label="E-posta bekleyen" value={fmt(s.counts.unnotified)} note="Açık olup henüz bildirilmemiş olaylar" info={<SeoInfo k={summary.data?.kaynaklar} label="E-posta bekleyen" />} />
+            <Kpi label="Kapanan" value={fmt(s.counts.resolved)} note="Koşulu kalkan olaylar" info={<SeoInfo k={summary.data?.kaynaklar} label="Kapanan" />} />
+            <Kpi label="Son denetim" value={s.state.finishedAt ? dateTime(s.state.finishedAt) : '—'} note="Gece işiyle ya da düğmeyle" small info={<SeoInfo k={summary.data?.kaynaklar} label="Son denetim" />} />
           </section>
           <DeliveryBanner settings={s.settings} />
         </>
@@ -296,7 +298,7 @@ function ReportTab() {
         )}
       </section>
 
-      <ReportView s={shown} />
+      <ReportView s={shown} k={rep.data?.kaynaklar} />
 
       {history.length > 1 && (
         <section className="sg-card" aria-label="Geçmiş raporlar">
@@ -325,7 +327,7 @@ function ReportTab() {
   );
 }
 
-function ReportView({ s }: { s: Summary }) {
+function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
   const g = s.google;
   const q = s.queries;
   return (
@@ -333,25 +335,25 @@ function ReportView({ s }: { s: Summary }) {
       <section className="sg-kpis" aria-label="Haftanın özeti">
         {g.available && g.current && g.previous ? (
           <>
-            <Kpi label="Google tıklaması" value={fmt(g.current.clicks)} note={`${pct(g.clicksPct)} · önceki 7 gün ${fmt(g.previous.clicks)} (${day(g.current.start)}–${day(g.current.end)})`} tone={g.clicksPct != null && g.clicksPct < 0 ? 'bad' : g.clicksPct ? 'good' : undefined} />
-            <Kpi label="Google gösterimi" value={fmt(g.current.impressions)} note={`${pct(g.impressionsPct)} · önceki 7 gün ${fmt(g.previous.impressions)}`} tone={g.impressionsPct != null && g.impressionsPct < 0 ? 'bad' : g.impressionsPct ? 'good' : undefined} />
+            <Kpi label="Google tıklaması" value={fmt(g.current.clicks)} note={`${pct(g.clicksPct)} · önceki 7 gün ${fmt(g.previous.clicks)} (${day(g.current.start)}–${day(g.current.end)})`} tone={g.clicksPct != null && g.clicksPct < 0 ? 'bad' : g.clicksPct ? 'good' : undefined} info={<SeoInfo k={k} label="Google tıklaması" />} />
+            <Kpi label="Google gösterimi" value={fmt(g.current.impressions)} note={`${pct(g.impressionsPct)} · önceki 7 gün ${fmt(g.previous.impressions)}`} tone={g.impressionsPct != null && g.impressionsPct < 0 ? 'bad' : g.impressionsPct ? 'good' : undefined} info={<SeoInfo k={k} label="Google gösterimi" />} />
           </>
         ) : (
-          <Kpi label="Google" value="—" note={g.reason ?? 'Veri yok.'} small />
+          <Kpi label="Google" value="—" note={g.reason ?? 'Veri yok.'} small info={<SeoInfo k={k} label="Google" />} />
         )}
-        <Kpi label="Bu hafta onaylanan öneri" value={fmt(s.proposals.approvedThisWeek)} note={`Onay bekleyen ${fmt(s.proposals.pending)}`} />
-        <Kpi label="Açık uyarı" value={fmt(s.alerts.open)} note="Rapor anında" tone={s.alerts.open ? 'bad' : undefined} />
+        <Kpi label="Bu hafta onaylanan öneri" value={fmt(s.proposals.approvedThisWeek)} note={`Onay bekleyen ${fmt(s.proposals.pending)}`} info={<SeoInfo k={k} label="Bu hafta onaylanan öneri" />} />
+        <Kpi label="Açık uyarı" value={fmt(s.alerts.open)} note="Rapor anında" tone={s.alerts.open ? 'bad' : undefined} info={<SeoInfo k={k} label="Açık uyarı" />} />
       </section>
       {g.available && <p className="sg-kpi-note" style={{ margin: 0 }}>Search Console verisi 2–3 gün geç geldiği için Google karşılaştırması eldeki son 7 günle önceki 7 gündür; takvim haftası değildir.</p>}
 
       <div className="sg-grid">
         <section className="sg-card sg-span-6" aria-label="Kazanan sorgular">
           <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Tıklaması en çok artan sorgular</h2>
-          {q.available ? <MoversTable rows={q.gainers ?? []} note={`İlk ${fmt(q.top)} / ${fmt(q.gainersTotal)}`} /> : <p className="sg-kpi-note">{q.reason ?? 'İki dönemin sorgu verisi yok.'}</p>}
+          {q.available ? <MoversTable k={k} rows={q.gainers ?? []} note={`İlk ${fmt(q.top)} / ${fmt(q.gainersTotal)}`} /> : <p className="sg-kpi-note">{q.reason ?? 'İki dönemin sorgu verisi yok.'}</p>}
         </section>
         <section className="sg-card sg-span-6" aria-label="Kaybeden sorgular">
           <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Tıklaması en çok azalan sorgular</h2>
-          {q.available ? <MoversTable rows={q.losers ?? []} note={`İlk ${fmt(q.top)} / ${fmt(q.losersTotal)}`} /> : <p className="sg-kpi-note">{q.reason ?? 'İki dönemin sorgu verisi yok.'}</p>}
+          {q.available ? <MoversTable k={k} rows={q.losers ?? []} note={`İlk ${fmt(q.top)} / ${fmt(q.losersTotal)}`} /> : <p className="sg-kpi-note">{q.reason ?? 'İki dönemin sorgu verisi yok.'}</p>}
         </section>
 
         <section className="sg-card sg-span-6" aria-label="Yapay zekâ cevapları">
@@ -360,7 +362,7 @@ function ReportView({ s }: { s: Summary }) {
             <div className="sg-table-wrap">
               <table className="sg-table">
                 <thead>
-                  <tr><th>Motor</th><th>Ölçüm</th><th>Anılma</th><th>Kaynak</th></tr>
+                  <tr><th>Motor <SeoInfo k={k} label="Motor" /></th><th>Ölçüm <SeoInfo k={k} label="Ölçüm" /></th><th>Anılma <SeoInfo k={k} label="Anılma" /></th><th>Kaynak <SeoInfo k={k} label="Kaynak" /></th></tr>
                 </thead>
                 <tbody>
                   {s.geo.engines.map((e) => (
@@ -443,14 +445,14 @@ function ReportView({ s }: { s: Summary }) {
   );
 }
 
-function MoversTable({ rows, note }: { rows: Movers[]; note: string }) {
+function MoversTable({ rows, note, k }: { rows: Movers[]; note: string; k?: Kaynaklar | null }) {
   if (!rows.length) return <p className="sg-kpi-note">Yok.</p>;
   return (
     <>
       <div className="sg-table-wrap">
         <table className="sg-table">
           <thead>
-            <tr><th>Sorgu</th><th>Önceki</th><th>Bu dönem</th><th>Fark</th></tr>
+            <tr><th>Sorgu</th><th>Önceki <SeoInfo k={k} label="Önceki" /></th><th>Bu dönem <SeoInfo k={k} label="Bu dönem" /></th><th>Fark <SeoInfo k={k} label="Fark" /></th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -487,10 +489,10 @@ function ThresholdsTab({ thresholds }: { thresholds: WatchList['thresholds'] }) 
   );
 }
 
-function Kpi({ label, value, note, tone, small }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean }) {
+function Kpi({ label, value, note, tone, small, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ ...(tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : {}), ...(small ? { fontSize: 18 } : {}) }}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

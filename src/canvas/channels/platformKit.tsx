@@ -6,6 +6,7 @@ import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, fre
 import { httpErrorText } from '../httpError';
 import { Note, btnGhost } from '../admin/ui';
 import { fmtDay } from '../budget/api';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M40 Trendyol ve M41 Amazon ekranlarının ortak parçaları: istek, kabuk, bölüm bağlantıları, veri şeridi. */
 
@@ -20,8 +21,11 @@ async function fail(res: Response): Promise<never> {
 }
 
 /** `/api/v1/channels/<platform>` altındaki uçlara istek. Dosya gövdesi (yükleme) ham gider. */
+/** Her okuma cevabında sorgu bilgisi olabilir (`<SqlInfo k={d.kaynaklar} …/>`); köprü `kaynaklar` alanını ekler. */
+export type WithK = { kaynaklar?: Kaynaklar };
+
 export function platformClient(base: string) {
-  async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
+  async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T & WithK> {
     if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
     const raw = body instanceof Blob;
     const res = await fetch(`${ENGINE_BASE}${base}${path}`, {
@@ -35,7 +39,7 @@ export function platformClient(base: string) {
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return fail(res);
-    return (await res.json()) as T;
+    return (await res.json()) as T & WithK;
   }
   const url = (path: string) => `${ENGINE_BASE}${base}${path}`;
   return { send, url };

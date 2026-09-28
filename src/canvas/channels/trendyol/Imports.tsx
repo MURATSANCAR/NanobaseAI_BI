@@ -12,6 +12,7 @@ import { AskSheet } from '../../budget/parts';
 import { Chips } from '../platformKit';
 import { trendyolApi, type ImportType } from './api';
 import { TrendyolFrame, useTrendyolMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 const HELP: Record<ImportType, string> = {
   urun: 'Mağazanın bütün ürünleri: barkod, satıcı stok kodu, durum, stok, Trendyol satış fiyatı. Yeni liste eskisinin yerine geçer.',
@@ -66,11 +67,11 @@ export default function TrendyolImports() {
         />
       </Panel>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold">Yüklemeler</h2>
+        <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Yüklemeler <SqlInfo k={list.data?.kaynaklar} alan="items" label="Yüklemeler" /></h2>
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
         {list.isLoading ? <Loading /> : !list.data?.items.length ? <Note tone="info">Henüz dosya yüklenmedi. Trendyol panelinden indirdiğiniz dosyayı yukarıdaki alana bırakın.</Note> : (
           <TableWrap>
-            <thead><tr><th className={th}>Tür</th><th className={th}>Dosya</th><th className={`${th} text-right`}>Satır</th><th className={`${th} text-right`}>Kitaba bağlanan</th><th className={th}>İçeri alınmayan kolonlar</th><th className={th}>Yükleyen</th><th className={th} /></tr></thead>
+            <thead><tr><th className={th}>Tür</th><th className={th}>Dosya</th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Satır</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Kitaba bağlanan</InfoLabel></th><th className={th}>İçeri alınmayan kolonlar</th><th className={th}>Yükleyen</th><th className={th} /></tr></thead>
             <tbody>
               {list.data.items.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">

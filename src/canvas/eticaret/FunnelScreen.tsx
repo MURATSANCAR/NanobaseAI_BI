@@ -8,6 +8,7 @@ import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import OrderFunnel from '../commerce/Funnel';
 import { ecomApi, fmtInt, fmtPct, type Item, type Meta } from './api';
 import { EticaretFrame } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
 import { FUNNEL_TABS, funnelTab, type FunnelTab } from './funnelTabs';
 
@@ -93,11 +94,15 @@ function Body({ meta }: { meta: Meta }) {
     <>
       {d && (
         <KpiRow>
-          <Kpi label="Görüntülenme" value={fmtInt(d.toplam.goruntulenme)} help="Sitede satıştaki ürünler, tüm zamanlar" />
-          <Kpi label="Site satışı" value={fmtInt(d.toplam.satis)} help="Ürün sayacındaki toplam satış adedi" />
-          <Kpi label="Ortanca dönüşüm" value={fmtPct(d.ortancaDonusum)} help="Satış ÷ görüntülenme, ürünlerin ortancası" />
+          <Kpi label="Görüntülenme" value={fmtInt(d.toplam.goruntulenme)} help="Sitede satıştaki ürünler, tüm zamanlar"
+            info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Görüntülenme" />} />
+          <Kpi label="Site satışı" value={fmtInt(d.toplam.satis)} help="Ürün sayacındaki toplam satış adedi"
+            info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Site satışı" />} />
+          <Kpi label="Ortanca dönüşüm" value={fmtPct(d.ortancaDonusum)} help="Satış ÷ görüntülenme, ürünlerin ortancası"
+            info={<SqlInfo k={d.kaynaklar} alan="ortancaDonusum" label="Ortanca dönüşüm" />} />
           <Kpi label="Düşük dönüşüm" value={dusuk ? fmtInt(d.total) : '—'} active={dusuk} onClick={() => set('dusuk', dusuk ? null : '1')}
-            help={`En az ${fmtInt(d.dusukEsik.enAzGoruntulenme)} görüntülenme, dönüşümü ortancanın %${Math.round(d.dusukEsik.oran * 100)}'inden az`} />
+            help={`En az ${fmtInt(d.dusukEsik.enAzGoruntulenme)} görüntülenme, dönüşümü ortancanın %${Math.round(d.dusukEsik.oran * 100)}'inden az`}
+            info={<SqlInfo k={d.kaynaklar} alan="dusukEsik" label="Düşük dönüşüm" />} />
         </KpiRow>
       )}
       <Panel>
@@ -126,6 +131,12 @@ function Body({ meta }: { meta: Meta }) {
       <Panel>
         {f.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
         {f.error && <Note tone="err">{errText(f.error, 'Huni okunamadı.')}</Note>}
+        {d && !!d.items.length && (
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            <InfoLabel k={d.kaynaklar} alan="items" label="Kitap satırları: görüntülenme, site satışı, dönüşüm, Logo son dönem">Kitaplar</InfoLabel>
+            <InfoLabel k={d.kaynaklar} alan="total" label="Süzgece uyan kitap sayısı">{`${fmtInt(d.total)} kitap`}</InfoLabel>
+          </div>
+        )}
         {d && !d.items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kitap yok.</p>}
         <div className="flex flex-col gap-2">
           {d?.items.map((x) => <Row key={x.productKey} x={x} median={d.ortancaDonusum} onOpen={setOpen} />)}

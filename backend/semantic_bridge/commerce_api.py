@@ -29,7 +29,10 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import commerce as C
+from semantic_bridge import commerce_kaynak as CK
 from semantic_bridge import commerce_sources as src
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_yakala as Y
 from semantic_bridge import readers as R
 from semantic_bridge import readers_segments as seg
 
@@ -183,7 +186,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         rcfg = R.settings()
         with _job_lock:
             job = dict(_job)
-        return {
+        with Y.yakala(engine) as q:
+            fresh = C.freshness(engine, tenant, s)
+        out = {
             "me": {"username": user, "display": display, "canTrigger": can(user, F_TRIGGER), "canSettings": can(user, F_SETTINGS),
                    "canApprove": can(user, F_APPROVE), "canList": can(user, F_LIST) and can(user, F_EXPORT),
                    "canPersonal": can(user, F_PERSONAL)},
@@ -191,9 +196,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
             "excludeLabels": seg.EXCLUDE_LABELS,
             "settings": {k: s[k] for k in C.SCREEN_DEFAULTS}, "settingLabels": C.SCREEN_LABELS,
             "exportEnabled": rcfg["exportEnabled"], "requireKvkk": rcfg["requireKvkk"], "okSources": rcfg["okSources"],
-            "freshness": C.freshness(engine, tenant, s), "job": job, "modelVar": llm() is not None,
+            "freshness": fresh, "job": job, "modelVar": llm() is not None,
             "tsoftConfigured": _tsoft_configured(),
         }
+        return PV.bagla(out, lambda: CK.for_meta(engine, tenant, out, q))
 
     def _tsoft_configured() -> bool:
         try:
@@ -204,7 +210,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/overview")
     def commerce_overview(request: Request, period: str = "dun") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.overview, engine, tenant, st(engine, tenant), period)
+        s = st(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = call(C.overview, engine, tenant, s, period)
+        return PV.bagla(out, lambda: CK.for_overview(engine, tenant, out, q))
 
     @app.get(P + "/status")
     def commerce_status(request: Request) -> dict[str, Any]:
@@ -236,22 +245,31 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/customers/rfm")
     def commerce_rfm(request: Request, days: int = 30) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.rfm, engine, tenant, st(engine, tenant), None, days)
+        s = st(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = call(C.rfm, engine, tenant, s, None, days)
+        return PV.bagla(out, lambda: CK.for_rfm(engine, tenant, out, q))
 
     @app.get(P + "/customers/moves")
     def commerce_moves(request: Request, days: int = 30) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.moves(engine, tenant, days)
+        with Y.yakala(engine) as q:
+            out = C.moves(engine, tenant, days)
+        return PV.bagla(out, lambda: CK.for_moves(engine, tenant, out, q))
 
     @app.get(P + "/customers")
     def commerce_customers(request: Request, segment: str = "", page: int = 0, sort: str = "son") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.customers, engine, tenant, segment, page, 50, sort)
+        with Y.yakala(engine) as q:
+            out = call(C.customers, engine, tenant, segment, page, 50, sort)
+        return PV.bagla(out, lambda: CK.for_customers(engine, tenant, out, q))
 
     @app.get(P + "/customers/{key}")
     async def commerce_customer(key: str, request: Request, kisisel: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        out = await run_in_threadpool(call, C.customer_card, engine, tenant, key)
+        with Y.yakala(engine) as q:
+            out = await run_in_threadpool(call, C.customer_card, engine, tenant, key)
+        out = PV.bagla(out, lambda: CK.for_customer(engine, tenant, out, q))
         out["kisisel"] = None
         if kisisel:
             need(user, F_PERSONAL, "Kişisel veriyi görme yetkisi")
@@ -268,19 +286,27 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/products/funnel")
     def commerce_funnel(request: Request, days: int = 30, page: int = 0, zayif: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.funnel, engine, tenant, st(engine, tenant), days, page, 100, zayif)
+        s = st(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = call(C.funnel, engine, tenant, s, days, page, 100, zayif)
+        return PV.bagla(out, lambda: CK.for_funnel(engine, tenant, out, q))
 
     # ------------------------------------------------------------------ tetikler
 
     @app.get(P + "/triggers/new-books")
     def commerce_new_books(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.new_books(engine, tenant, st(engine, tenant))
+        s = st(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = C.new_books(engine, tenant, s)
+        return PV.bagla(out, lambda: CK.for_new_books(engine, tenant, out, q))
 
     @app.get(P + "/triggers")
     def commerce_triggers(request: Request, arsiv: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": C.list_triggers(engine, tenant, arsiv)}
+        with Y.yakala(engine) as q:
+            out = {"items": C.list_triggers(engine, tenant, arsiv)}
+        return PV.bagla(out, lambda: CK.for_triggers(engine, tenant, out, q))
 
     @app.post(P + "/triggers", status_code=201)
     def commerce_trigger_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -300,7 +326,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.post(P + "/triggers/{tid}/preview")
     async def commerce_trigger_preview(tid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, C.preview, engine, tenant, tid, st(engine, tenant))
+        s = await run_in_threadpool(st, engine, tenant)
+        with Y.yakala(engine) as q:
+            out = await run_in_threadpool(call, C.preview, engine, tenant, tid, s)
+        return PV.bagla(out, lambda: CK.for_run(engine, tenant, out, q))
 
     @app.post(P + "/triggers/{tid}/run", status_code=201)
     async def commerce_trigger_run(tid: str, request: Request) -> dict[str, Any]:
@@ -315,12 +344,16 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/runs")
     def commerce_runs(request: Request, durum: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.list_runs(engine, tenant, durum, page)
+        with Y.yakala(engine) as q:
+            out = C.list_runs(engine, tenant, durum, page)
+        return PV.bagla(out, lambda: CK.for_runs(engine, tenant, out, q))
 
     @app.get(P + "/runs/{rid}")
     def commerce_run(rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C._run_view(call(C.run_row, engine, tenant, rid))
+        with Y.yakala(engine) as q:
+            out = C._run_view(call(C.run_row, engine, tenant, rid))
+        return PV.bagla(out, lambda: CK.for_run(engine, tenant, out, q))
 
     @app.post(P + "/runs/{rid}/approve")
     def commerce_run_approve(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -356,7 +389,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/campaigns")
     def commerce_campaigns(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": C.list_campaigns(engine, tenant)}
+        with Y.yakala(engine) as q:
+            out = {"items": C.list_campaigns(engine, tenant)}
+        return PV.bagla(out, lambda: CK.for_campaigns(engine, tenant, out, q))
 
     @app.post(P + "/campaigns", status_code=201)
     def commerce_campaign_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -369,7 +404,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/campaigns/{cid}")
     def commerce_campaign(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(C.campaign, engine, tenant, cid, st(engine, tenant))
+        s = st(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = call(C.campaign, engine, tenant, cid, s)
+        return PV.bagla(out, lambda: CK.for_campaign(engine, tenant, out, q))
 
     @app.post(P + "/campaigns/{cid}/comment")
     async def commerce_campaign_comment(cid: str, request: Request) -> dict[str, Any]:
@@ -398,7 +436,9 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(P + "/segments/summary")
     def commerce_segments_summary(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return C.segments_summary(engine, tenant)
+        with Y.yakala(engine) as q:
+            out = C.segments_summary(engine, tenant)
+        return PV.bagla(out, lambda: CK.for_segments_summary(engine, tenant, out, q))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

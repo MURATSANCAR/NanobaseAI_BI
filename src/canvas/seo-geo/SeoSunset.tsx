@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -81,7 +81,7 @@ export default function SeoSunset() {
   const canApprove = !!me.data?.canApprove;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/satistan-kalkan"
       crumb="Satıştan kalkan kitaplar"
       eyebrow="SEO & GEO · Satıştan kalkan kitaplar"
@@ -121,6 +121,7 @@ export default function SeoSunset() {
             “Aranıyor”: son 28 günde en az {fmt(d.searchedMin)} Google gösterimi
             {d.gsc ? ` (${d.gsc.start} – ${d.gsc.end})` : ' — Search Console verisi yok, bütün sayfalar aranmıyor sayıldı'}. Son hesap {dateTime(d.lastBuilt)}.
             {' '}Nedenler: {Object.entries(d.counts.reason).map(([k, n]) => `${d.reasons[k] ?? k} ${fmt(n)}`).join(' · ') || '—'}
+          <SeoInfo k={list.data?.kaynaklar} label="Neden sayıları" className="ml-1" />
           </p>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

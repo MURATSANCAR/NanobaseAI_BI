@@ -19,8 +19,11 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_yakala as Y
 from semantic_bridge.channels import d2c as D
 from semantic_bridge.channels import imports as I
+from semantic_bridge.channels import kaynak as K
 from semantic_bridge.channels import mapping as M
 from semantic_bridge.channels import refresh as RF
 from semantic_bridge.channels import report as RP
@@ -115,6 +118,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def ch_meta(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = ctx(request)
         s = st()
+        with Y.yakala(engine) as q:
+            out = meta_body(engine, tenant, user, display, s)
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, out, q))
+
+    def meta_body(engine, tenant: str, user: str, display: str, s: dict[str, Any]) -> dict[str, Any]:
         status = refresher.status()
         end = RF.data_end(engine, tenant)
         years = sorted(int(y) for y in status["years"])
@@ -182,16 +190,20 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/scorecard")
     async def ch_scorecard(request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        return view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay))
+        with Y.yakala(engine) as q:
+            out = view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay))
+        return PV.bagla(out, lambda: K.for_scorecard(engine, tenant, out, q))
 
     @app.get(R + "/channel/{platform}")
     async def ch_channel(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         uc = unit_costs() if can(user, F_MARGIN) else None
-        out = await run_in_threadpool(call, SC.channel, engine, tenant, platform, yil, ay, uc)
-        out["imports"] = I.list_imports(engine, tenant, platform)[:5]
+        with Y.yakala(engine) as q:
+            out = await run_in_threadpool(call, SC.channel, engine, tenant, platform, yil, ay, uc)
+            out["imports"] = I.list_imports(engine, tenant, platform)[:5]
         out["m9Bagli"] = uc is not None
-        return view(user, out)
+        out = view(user, out)
+        return PV.bagla(out, lambda: K.for_channel(engine, tenant, out, q))
 
     @app.get(R + "/channel/{platform}/books")
     async def ch_books(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None, q: str = "",
@@ -199,34 +211,43 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         if sort == "marj" and not can(user, F_MARGIN):
             sort = "netCiro"
-        return view(user, await run_in_threadpool(call, SC.books, engine, tenant, platform, yil, ay, q, sort, page))
+        with Y.yakala(engine) as yq:
+            out = view(user, await run_in_threadpool(call, SC.books, engine, tenant, platform, yil, ay, q, sort, page))
+        return PV.bagla(out, lambda: K.for_books(engine, tenant, out, yq))
 
     @app.get(R + "/channel/{platform}/returns")
     async def ch_returns(platform: str, request: Request, yil: Optional[int] = None, ay: Optional[int] = None,
                          aylar: int = 3, page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        return view(user, await run_in_threadpool(call, SC.returns, engine, tenant, platform, yil, ay, aylar, page))
+        with Y.yakala(engine) as q:
+            out = view(user, await run_in_threadpool(call, SC.returns, engine, tenant, platform, yil, ay, aylar, page))
+        return PV.bagla(out, lambda: K.for_returns(engine, tenant, out, q))
 
     @app.get(R + "/matrix")
     async def ch_matrix(request: Request, yil: Optional[int] = None, ay: Optional[int] = None, q: str = "", page: int = 0,
                         sort: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, SC.matrix, engine, tenant, yil, ay, q, page, sort)
+        with Y.yakala(engine) as yq:
+            out = await run_in_threadpool(call, SC.matrix, engine, tenant, yil, ay, q, page, sort)
+        return PV.bagla(out, lambda: K.for_matrix(engine, tenant, out, yq))
 
     @app.get(R + "/targets")
     async def ch_targets(request: Request, yil: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        return view(user, await run_in_threadpool(call, SC.targets, engine, tenant, yil, m46(engine, tenant)))
+        with Y.yakala(engine) as q:
+            out = view(user, await run_in_threadpool(call, SC.targets, engine, tenant, yil, m46(engine, tenant)))
+        return PV.bagla(out, lambda: K.for_targets(engine, tenant, out, q))
 
     @app.post(R + "/simulate")
     async def ch_simulate(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         need(user, F_MARGIN, "Kanal marjı ve simülasyon")
-        out = await run_in_threadpool(call, SC.simulate, engine, tenant, body)
+        with Y.yakala(engine) as q:
+            out = await run_in_threadpool(call, SC.simulate, engine, tenant, body)
         if body.get("yorum"):
             model = llm()
             out["yorum"] = await run_in_threadpool(_comment, model, out) if model is not None else None
-        return out
+        return PV.bagla(out, lambda: K.for_simulate(engine, tenant, out, q))
 
     @app.put(R + "/settings/ek-maliyet/{platform}")
     def ch_extra_cost(platform: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -251,19 +272,23 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/accounts")
     def ch_accounts(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        items = S.accounts(engine, tenant)
+        with Y.yakala(engine) as q:
+            items = S.accounts(engine, tenant)
+            cards = S.meta_get(engine, tenant, "cards")
         counts: dict[str, int] = {}
         for a in items:
             counts[a["durum"]] = counts.get(a["durum"], 0) + 1
-        return {"items": items, "counts": counts, "cards": S.meta_get(engine, tenant, "cards"), "specodes": st()["specodes"]}
+        out = {"items": items, "counts": counts, "cards": cards, "specodes": st()["specodes"]}
+        return PV.bagla(out, lambda: K.for_accounts(engine, tenant, out, q))
 
     @app.get(R + "/accounts/kanal-kodlari")
     def ch_kanal_codes(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        kmap = M.kanal_map(engine, tenant)
-        end = RF.data_end(engine, tenant)
-        year = end.year if end else None
-        rows = SC._months(engine, tenant, S.KANAL_MONTHS, [year]) if year else []
+        with Y.yakala(engine) as q:
+            kmap = M.kanal_map(engine, tenant)
+            end = RF.data_end(engine, tenant)
+            year = end.year if end else None
+            rows = SC._months(engine, tenant, S.KANAL_MONTHS, [year]) if year else []
         tot: dict[str, float] = {}
         for r in rows:
             tot[r.kanal] = tot.get(r.kanal, 0.0) + float(r.satis_ciro or 0) - float(r.iade_ciro or 0)
@@ -272,7 +297,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         for k, v in kmap.items():
             if k not in tot:
                 items.append({"kod": k, "netCiro": 0.0, "platform": v, "eticaret": k in st()["specodes"]})
-        return {"yil": year, "items": items}
+        out = {"yil": year, "items": items}
+        return PV.bagla(out, lambda: K.for_kanal_codes(engine, tenant, out, q))
 
     @app.put(R + "/accounts/kanal-kodlari/{kod}")
     def ch_kanal_code_set(kod: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -284,14 +310,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/accounts/bolgeler")
     def ch_regions(request: Request, yil: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        rmap = M.region_map(engine, tenant)
-        labels = S.meta_get(engine, tenant, "target_labels")
-        out = []
-        seen = set()
         import sqlalchemy as sa
 
-        with engine.connect() as c:
-            rows = c.execute(sa.select(S.TARGETS).where(S.TARGETS.c.tenant_id == tenant)).all()
+        with Y.yakala(engine) as yq:
+            rmap = M.region_map(engine, tenant)
+            labels = S.meta_get(engine, tenant, "target_labels")
+            with engine.connect() as c:
+                rows = c.execute(sa.select(S.TARGETS).where(S.TARGETS.c.tenant_id == tenant)).all()
+        out = []
+        seen = set()
         for r in sorted(rows, key=lambda x: (-x.yil, -x.toplam)):
             if yil and r.yil != yil:
                 continue
@@ -305,7 +332,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         for k, v in (labels.get("regions") or {}).items():
             if k not in seen:
                 out.append({"kod": k, "ad": v, "yil": None, "yillik": 0.0, "platform": rmap.get(k), "aday": M.region_candidate(v, st()["hints"])})
-        return {"items": out, "crmError": (S.meta_get(engine, tenant, "crm") or {}).get("error")}
+        res = {"items": out, "crmError": (S.meta_get(engine, tenant, "crm") or {}).get("error")}
+        return PV.bagla(res, lambda: K.for_regions(engine, tenant, res, yq))
 
     @app.put(R + "/accounts/bolgeler/{kod}")
     def ch_region_set(kod: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -336,7 +364,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/d2c")
     async def ch_d2c(request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        return view(user, await run_in_threadpool(call, D.overview, engine, tenant, st(), yil, ay))
+        with Y.yakala(engine) as q:
+            out = view(user, await run_in_threadpool(call, D.overview, engine, tenant, st(), yil, ay))
+        return PV.bagla(out, lambda: K.for_d2c(engine, tenant, out, q))
 
     @app.post(R + "/d2c/suggest", status_code=201)
     async def ch_d2c_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -351,7 +381,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/suggestions")
     def ch_suggestions(request: Request, platform: str = "", tur: str = "", durum: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {"items": view(user, S.suggestions(engine, tenant, platform=platform, tur=tur, durum=durum)), "types": SUGGESTION_TYPES}
+        with Y.yakala(engine) as q:
+            out = {"items": view(user, S.suggestions(engine, tenant, platform=platform, tur=tur, durum=durum)), "types": SUGGESTION_TYPES}
+        return PV.bagla(out, lambda: K.for_suggestions(engine, tenant, out, q))
 
     @app.post(R + "/suggestions", status_code=201)
     async def ch_suggestion_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -394,7 +426,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/imports")
     def ch_imports(request: Request, platform: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": I.list_imports(engine, tenant, platform)}
+        with Y.yakala(engine) as q:
+            out = {"items": I.list_imports(engine, tenant, platform)}
+        return PV.bagla(out, lambda: K.for_imports(engine, tenant, out, q))
 
     @app.post(R + "/imports", status_code=201)
     async def ch_import(request: Request, platform: str = "", filename: str = "", donem_bas: str = "", donem_bit: str = "") -> dict[str, Any]:
@@ -411,15 +445,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/imports/{iid}")
     async def ch_import_get(iid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        head = call(I.get, engine, tenant, iid)
-        end = RF.data_end(engine, tenant)
-        bas = head["donemBas"] or (f"{end.year}-01-01" if end else None)
-        bit = head["donemBit"] or (end.isoformat() if end else None)
-        months = SC.months_between(bas, bit) if bas and bit else []
-        sell_in = await run_in_threadpool(SC.sell_in_books, engine, tenant, head["platform"], months) if months else {}
-        out = await run_in_threadpool(call, I.sell_through, engine, tenant, iid, sell_in)
+        with Y.yakala(engine) as q:
+            head = call(I.get, engine, tenant, iid)
+            end = RF.data_end(engine, tenant)
+            bas = head["donemBas"] or (f"{end.year}-01-01" if end else None)
+            bit = head["donemBit"] or (end.isoformat() if end else None)
+            months = SC.months_between(bas, bit) if bas and bit else []
+            sell_in = await run_in_threadpool(SC.sell_in_books, engine, tenant, head["platform"], months) if months else {}
+            out = await run_in_threadpool(call, I.sell_through, engine, tenant, iid, sell_in)
         out["kanalaSatisAylari"] = [f"{y}-{m:02d}" for y, m in months]
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, out, q))
 
     @app.delete(R + "/imports/{iid}")
     def ch_import_delete(iid: str, request: Request) -> dict[str, Any]:

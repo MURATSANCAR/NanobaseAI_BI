@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Loader2, Plus, RefreshCw, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -97,7 +98,7 @@ export default function SeoQuestionSuggest() {
   const pending = d ? SOURCES.reduce((a, [s]) => a + (d.counts[s]?.['öneri'] ?? 0), 0) : 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/soru-onerileri"
       crumb="Soru önerileri"
       eyebrow="SEO & GEO · Yapay zekâ görünürlüğü"
@@ -127,9 +128,9 @@ export default function SeoQuestionSuggest() {
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bekleyen öneri" value={fmt(pending)} note={d.lastRefresh ? `Son yenileme ${dateTime(d.lastRefresh)}` : 'Henüz yenilenmedi'} />
+            <Kpi label="Bekleyen öneri" value={fmt(pending)} note={d.lastRefresh ? `Son yenileme ${dateTime(d.lastRefresh)}` : 'Henüz yenilenmedi'} info={<SeoInfo k={list.data?.kaynaklar} label="Bekleyen öneri" />} />
             {SOURCES.map(([s, label]) => (
-              <Kpi key={s} label={label} value={fmt(d.counts[s]?.['öneri'] ?? 0)} note={`${fmt(d.counts[s]?.eklendi ?? 0)} eklendi · ${fmt(d.counts[s]?.reddedildi ?? 0)} reddedildi`} />
+              <Kpi key={s} label={label} value={fmt(d.counts[s]?.['öneri'] ?? 0)} note={`${fmt(d.counts[s]?.eklendi ?? 0)} eklendi · ${fmt(d.counts[s]?.reddedildi ?? 0)} reddedildi`} info={<SeoInfo k={list.data?.kaynaklar} label={label} />} />
             ))}
           </section>
           {!d.gsc && <p className="sg-banner">Search Console verisi henüz okunmadı; arama kaynaklı öneri çıkmaz.</p>}
@@ -248,10 +249,10 @@ function dateOnly(iso: string) {
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
+function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

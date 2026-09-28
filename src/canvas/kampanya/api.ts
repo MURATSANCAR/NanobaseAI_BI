@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M35 E-ticaret kampanya yönetimi: köprü uçları /api/v1/kampanya/*. Kampanya hiçbir platforma, T-soft'a ya da CRM'e
  *  gönderilmez; onaydan sonra ekip elle kurar ve «Elle kurdum» diye işaretler. */
@@ -59,6 +60,8 @@ export type Ozet = {
 export type Metin = { baslik?: string[]; aciklama?: string[]; banner?: string[]; secili?: Partial<Record<'baslik' | 'aciklama' | 'banner', string | null>>; at?: string };
 
 export type Campaign = {
+  /** Sorgu bilgisi (`<SqlInfo k={{…kaynaklar}} …/>`). */
+  kaynaklar?: Kaynaklar;
   id: string;
   ad: string;
   kanal: Kanal;
@@ -97,7 +100,7 @@ export type Campaign = {
   bildirim?: string;
 };
 
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export type CalItem = {
   id: string;
@@ -114,6 +117,8 @@ export type CalItem = {
   silinir: boolean;
 };
 export type Calendar = {
+  /** Sorgu bilgisi (`<SqlInfo k={{…kaynaklar}} …/>`). */
+  kaynaklar?: Kaynaklar;
   from: string;
   to: string;
   items: CalItem[];
@@ -131,6 +136,8 @@ export type RefreshStatus = {
 };
 
 export type Overview = {
+  /** Sorgu bilgisi (`<SqlInfo k={{…kaynaklar}} …/>`). */
+  kaynaklar?: Kaynaklar;
   sayilar: Record<Durum, number>;
   kitapSayisi: number;
   status: RefreshStatus;
@@ -207,6 +214,8 @@ export type Learning = {
   tarih: string | null;
 };
 export type Results = {
+  /** Sorgu bilgisi (`<SqlInfo k={{…kaynaklar}} …/>`). */
+  kaynaklar?: Kaynaklar;
   id: string;
   durum: Durum;
   logoKesim: string | null;

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search } from 'lucide-re
 import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, dateTime, fmt, seoApi, type CrmFilter, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -61,7 +62,7 @@ export default function SeoRights() {
   const running = !!s?.state.running;
 
   return (
-    <SeoLayout
+    <SeoLayout k={detail.data?.kaynaklar}
       path="/seo-geo/crm-haklar"
       crumb="Haklar ve CRM"
       eyebrow="SEO & GEO · CRM kitap kartı"
@@ -89,11 +90,11 @@ export default function SeoRights() {
       {s && s.books > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Satıştaki kitap" value={fmt(s.products)} note={`CRM kartıyla eşleşmeyen ${fmt(s.unmatched)} · son okuma ${dateTime(s.lastRead)}`} />
-            <Kpi label="Hak var" value={fmt(s.rights?.var)} note="Bütün telif alış sözleşmelerinde internet hakkı" tone="good" />
-            <Kpi label="Hak eksik ya da incelenmeli" value={fmt((s.rights?.eksik ?? 0) + (s.rights?.incele ?? 0))} note={`Eksik ${fmt(s.rights?.eksik)} · hak notu var ${fmt(s.rights?.incele)}`} tone="bad" />
-            <Kpi label="Sözleşme kaydı yok" value={fmt(s.rights?.yok)} note="CRM’de yürürlükte telif alış sözleşmesi bağlı değil" />
-            <Kpi label="Bizim değil / çekildi" value={fmt(flagged)} note="CRM yayın durumu; sitede hâlâ satışta" tone={flagged ? 'bad' : undefined} />
+            <Kpi label="Satıştaki kitap" value={fmt(s.products)} note={`CRM kartıyla eşleşmeyen ${fmt(s.unmatched)} · son okuma ${dateTime(s.lastRead)}`} info={<SeoInfo k={detail.data?.kaynaklar} label="Satıştaki kitap" />} />
+            <Kpi label="Hak var" value={fmt(s.rights?.var)} note="Bütün telif alış sözleşmelerinde internet hakkı" tone="good" info={<SeoInfo k={detail.data?.kaynaklar} label="Hak var" />} />
+            <Kpi label="Hak eksik ya da incelenmeli" value={fmt((s.rights?.eksik ?? 0) + (s.rights?.incele ?? 0))} note={`Eksik ${fmt(s.rights?.eksik)} · hak notu var ${fmt(s.rights?.incele)}`} tone="bad" info={<SeoInfo k={detail.data?.kaynaklar} label="Hak eksik ya da incelenmeli" />} />
+            <Kpi label="Sözleşme kaydı yok" value={fmt(s.rights?.yok)} note="CRM’de yürürlükte telif alış sözleşmesi bağlı değil" info={<SeoInfo k={detail.data?.kaynaklar} label="Sözleşme kaydı yok" />} />
+            <Kpi label="Bizim değil / çekildi" value={fmt(flagged)} note="CRM yayın durumu; sitede hâlâ satışta" tone={flagged ? 'bad' : undefined} info={<SeoInfo k={detail.data?.kaynaklar} label="Bizim değil / çekildi" />} />
           </section>
 
           <div className="sg-filters" role="toolbar" aria-label="Süzgeç">
@@ -180,10 +181,10 @@ export default function SeoRights() {
   );
 }
 
-function Kpi({ label, value, note, tone }: { label: string; value: string; note: string; tone?: 'good' | 'bad' }) {
+function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

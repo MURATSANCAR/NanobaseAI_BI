@@ -27,7 +27,10 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import eticaret as E
+from semantic_bridge import eticaret_kaynak as K
 from semantic_bridge import eticaret_sources as src
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_yakala as Y
 
 log = logging.getLogger("semantic.eticaret.api")
 P = "/api/v1/eticaret"
@@ -107,11 +110,23 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
             raise HTTPException(status_code=503, detail={"code": "ETICARET_SOURCE", "retryable": True, "message": str(e)}) from e
 
     def logo():
-        run = src.runner(deps["logo_file"]())
+        # Sorgu bilgisi: Logo'ya giden her metin açık yakalamaya yazılır; firma/kesim okuması önbellekle saklanır.
+        run = Y.izle(src.runner(deps["logo_file"]()), "logo", Y.db_of(deps["logo_file"]()))
         if not firms_cache["firms"] or time.time() - firms_cache["at"] > 600:
-            firms = src.firms_by_year(run)
-            firms_cache.update(firms=firms, cut=src.read_data_end(run, firms), at=time.time())
+            with Y.yakala() as fq:
+                firms = src.firms_by_year(run)
+                cut = src.read_data_end(run, firms)
+            firms_cache.update(firms=firms, cut=cut, at=time.time(), q=fq.queries)
         return run, firms_cache["firms"], firms_cache["cut"]
+
+    #: Önbellekten dönen Logo rakamının sorgusu: önbellek anahtarı → o yüklemede koşan sorgular.
+    cache_q: dict[Any, list[dict[str, Any]]] = {}
+
+    def cached_queries(key: Any) -> Y.Yakalanan:
+        y = Y.Yakalanan()
+        y.extend(firms_cache.get("q") or [])
+        y.extend(cache_q.get(key) or [])
+        return y
 
     def llm(priority_name: str) -> Any:
         from semantic_layer.runtime import llm_queue
@@ -126,24 +141,33 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
         return (conf("ALERT_LINK", "") or "").split("/uyarilar")[0]
 
     def markets(year: int, fresh: bool = False) -> dict[str, Any]:
+        key = ("m", year, tuple(settings()["channels"]))
+
         def load() -> dict[str, Any]:
-            run, firms, cut = logo()
-            this, prev = E.marketplace_windows(year, cut)
-            rows = src.read_marketplaces(run, firms, settings()["channels"], *prev) + src.read_marketplaces(run, firms, settings()["channels"], *this)
+            with Y.yakala() as mq:
+                run, firms, cut = logo()
+                this, prev = E.marketplace_windows(year, cut)
+                rows = src.read_marketplaces(run, firms, settings()["channels"], *prev) + src.read_marketplaces(run, firms, settings()["channels"], *this)
+            cache_q[key] = mq.queries
             out = E.marketplace_summary(rows, year, cut)
             out["kanallar"] = settings()["channels"]
             out["yillar"] = sorted(firms)
             return out
-        return call(cache.get, ("m", year, tuple(settings()["channels"])), load, fresh)
+        return call(cache.get, key, load, fresh)
 
     def stock_risk(engine, tenant: str, year: int, fresh: bool = False) -> list[dict[str, Any]]:
         st = settings()
 
+        key = ("r", year, tuple(st["channels"]))
+
         def load() -> list[dict[str, Any]]:
-            run, firms, cut = logo()
-            this, _ = E.marketplace_windows(year, cut)
-            return src.read_channel_books(run, firms, st["channels"], *this)
-        rows = call(cache.get, ("r", year, tuple(st["channels"])), load, fresh)
+            with Y.yakala() as rq:
+                run, firms, cut = logo()
+                this, _ = E.marketplace_windows(year, cut)
+                rows = src.read_channel_books(run, firms, st["channels"], *this)
+            cache_q[key] = rq.queries
+            return rows
+        rows = call(cache.get, key, load, fresh)
         books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), st)
         return [b for b in books if b["tukenmeRiski"]]
 
@@ -172,7 +196,9 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     @app.get(f"{P}/overview")
     def eticaret_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return E.overview(engine, tenant, refresher.status())
+        with Y.yakala(engine) as q:
+            out = E.overview(engine, tenant, refresher.status())
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, q))
 
     @app.get(f"{P}/status")
     def eticaret_status(request: Request) -> dict[str, Any]:
@@ -229,7 +255,9 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     @app.get(f"{P}/diffs")
     def eticaret_diffs(request: Request, tur: str = "", durum: str = "", q: str = "", sahip: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(E.list_diffs, engine, tenant, tur=tur, durum=durum, q=q, sahip=sahip, page=page)
+        with Y.yakala(engine) as yq:
+            out = call(E.list_diffs, engine, tenant, tur=tur, durum=durum, q=q, sahip=sahip, page=page)
+        return PV.bagla(out, lambda: K.for_diffs(engine, tenant, out, yq))
 
     @app.get(f"{P}/diffs/export.csv")
     def eticaret_diffs_csv(request: Request, tur: str = "", durum: str = "", q: str = "", sahip: str = "") -> Response:
@@ -258,7 +286,9 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     @app.get(f"{P}/diffs/{{did}}")
     def eticaret_diff(did: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(E.get_diff, engine, tenant, did)
+        with Y.yakala(engine) as q:
+            out = call(E.get_diff, engine, tenant, did)
+        return PV.bagla(out, lambda: K.for_diff(engine, tenant, out, q))
 
     @app.post(f"{P}/diffs/{{did}}/mark")
     def eticaret_mark(did: str, body: Mark, request: Request) -> dict[str, Any]:
@@ -273,13 +303,14 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     @app.get(f"{P}/items/{{key}}")
     def eticaret_item(key: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        out = call(E.item_detail, engine, tenant, key)
-        site = (conf("SEO_SITE_URL", "") or "").rstrip("/")
-        url = out["kitap"].get("url")
-        if url and not str(url).startswith("http"):
-            out["kitap"]["url"] = f"{site}/{str(url).lstrip('/')}" if site else None
-        out["oneriler"] = proposals_for(engine, tenant, out["kitap"].get("tsoftUrunId"))
-        return out
+        with Y.yakala(engine) as q:
+            out = call(E.item_detail, engine, tenant, key)
+            site = (conf("SEO_SITE_URL", "") or "").rstrip("/")
+            url = out["kitap"].get("url")
+            if url and not str(url).startswith("http"):
+                out["kitap"]["url"] = f"{site}/{str(url).lstrip('/')}" if site else None
+            out["oneriler"] = proposals_for(engine, tenant, out["kitap"].get("tsoftUrunId"))
+        return PV.bagla(out, lambda: K.for_item(engine, tenant, out, q))
 
     @app.post(f"{P}/items/{{key}}/propose")
     async def eticaret_propose(key: str, request: Request) -> dict[str, Any]:
@@ -340,15 +371,17 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
         engine, tenant, user, _ = ctx(request)
         if durum not in ("", "hazir", "onaylandi", "reddedildi"):
             raise HTTPException(status_code=422, detail={"code": "ETICARET", "message": "Bilinmeyen durum."})
-        items = proposals_for(engine, tenant, None, durum)
-        with engine.connect() as c:
-            ids = [p["productId"] for p in items]
-            by_pid = {}
-            for i in range(0, len(ids), 500):
-                for r in c.execute(sa.select(E.ITEMS.c.tsoft_product_id, E.ITEMS.c.product_key, E.ITEMS.c.ad).where(
-                        E.ITEMS.c.tenant_id == tenant, E.ITEMS.c.tsoft_product_id.in_(ids[i:i + 500]))).all():
-                    by_pid[r[0]] = {"productKey": r[1], "ad": r[2]}
-        return {"items": [{**p, **by_pid.get(p["productId"], {})} for p in items], "canApprove": has(user, FEATURE_APPROVE)}
+        with Y.yakala(engine) as q:
+            items = proposals_for(engine, tenant, None, durum)
+            with engine.connect() as c:
+                ids = [p["productId"] for p in items]
+                by_pid = {}
+                for i in range(0, len(ids), 500):
+                    for r in c.execute(sa.select(E.ITEMS.c.tsoft_product_id, E.ITEMS.c.product_key, E.ITEMS.c.ad).where(
+                            E.ITEMS.c.tenant_id == tenant, E.ITEMS.c.tsoft_product_id.in_(ids[i:i + 500]))).all():
+                        by_pid[r[0]] = {"productKey": r[1], "ad": r[2]}
+        out = {"items": [{**p, **by_pid.get(p["productId"], {})} for p in items], "canApprove": has(user, FEATURE_APPROVE)}
+        return PV.bagla(out, lambda: K.for_proposals(engine, tenant, out, q))
 
     @app.post(f"{P}/proposals/{{proposal_id}}/decide")
     def eticaret_decide(proposal_id: str, body: Decide, request: Request) -> dict[str, Any]:
@@ -387,17 +420,21 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     @app.get(f"{P}/funnel")
     def eticaret_funnel(request: Request, dusuk: bool = False, q: str = "", sort: str = "goruntulenme", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return E.funnel(engine, tenant, settings(), dusuk=dusuk, q=q, sort=sort, page=page)
+        with Y.yakala(engine) as yq:
+            out = E.funnel(engine, tenant, settings(), dusuk=dusuk, q=q, sort=sort, page=page)
+        return PV.bagla(out, lambda: K.for_funnel(engine, tenant, out, yq))
 
     # ------------------------------------------------------------------ pazar yerleri (Logo)
 
     @app.get(f"{P}/marketplaces")
     async def eticaret_marketplaces(request: Request, yil: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
-        await run_in_threadpool(ctx, request)
+        engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         if yil is None:
             await run_in_threadpool(call, logo)
         year = yil or this_year()
-        return await run_in_threadpool(markets, year, yenile)
+        out = dict(await run_in_threadpool(markets, year, yenile))
+        q = cached_queries(("m", year, tuple(settings()["channels"])))
+        return PV.bagla(out, lambda: K.for_marketplaces(engine, tenant, out, q))
 
     @app.get(f"{P}/marketplaces/stock-risk")
     async def eticaret_stock_risk(request: Request, yil: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
@@ -405,9 +442,12 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
         if yil is None:
             await run_in_threadpool(call, logo)
         year = yil or this_year()
-        items = await run_in_threadpool(stock_risk, engine, tenant, year, yenile)
-        return {"items": items, "yil": year, "kesim": firms_cache["cut"].isoformat() if firms_cache.get("cut") else None,
-                "esikGun": settings()["stockoutDays"], "satisAyi": settings()["salesMonths"]}
+        with Y.yakala(engine) as q:
+            items = await run_in_threadpool(stock_risk, engine, tenant, year, yenile)
+        q.extend(cached_queries(("r", year, tuple(settings()["channels"]))).queries)
+        out = {"items": items, "yil": year, "kesim": firms_cache["cut"].isoformat() if firms_cache.get("cut") else None,
+               "esikGun": settings()["stockoutDays"], "satisAyi": settings()["salesMonths"]}
+        return PV.bagla(out, lambda: K.for_stock_risk(engine, tenant, out, q))
 
     @app.get(f"{P}/marketplaces/{{code}}/books")
     async def eticaret_marketplace_books(code: str, request: Request, yil: Optional[int] = None) -> dict[str, Any]:
@@ -416,14 +456,17 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
             raise HTTPException(status_code=400, detail={"code": "ETICARET", "message": "Cari kodu geçersiz."})
 
         def load() -> dict[str, Any]:
-            run, firms, cut = logo()
-            year = yil or (cut.year if cut else date.today().year)
-            this, _ = E.marketplace_windows(year, cut)
-            rows = src.read_marketplace_books(run, firms, code, *this)
-            books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), settings())
-            return {"kod": code, "yil": year, "donem": {"bas": this[0].isoformat(), "son": (this[1] - timedelta(days=1)).isoformat()},
-                    "kesim": cut.isoformat() if cut else None,
-                    "items": books, "total": len(books)}
+            with Y.yakala(engine) as q:
+                run, firms, cut = logo()
+                year = yil or (cut.year if cut else date.today().year)
+                this, _ = E.marketplace_windows(year, cut)
+                rows = src.read_marketplace_books(run, firms, code, *this)
+                books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), settings())
+            q.extend(firms_cache.get("q") or [])
+            out = {"kod": code, "yil": year, "donem": {"bas": this[0].isoformat(), "son": (this[1] - timedelta(days=1)).isoformat()},
+                   "kesim": cut.isoformat() if cut else None,
+                   "items": books, "total": len(books)}
+            return PV.bagla(out, lambda: K.for_marketplace_books(engine, tenant, out, q))
         return await run_in_threadpool(call, load)
 
     # ------------------------------------------------------------------ içerik paketi

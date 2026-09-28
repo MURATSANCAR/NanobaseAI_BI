@@ -8,6 +8,7 @@ import { Tabs } from '../../budget/parts';
 import { BookCell, Chips, ExportLink, yesNo } from '../platformKit';
 import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, tl, useTrendyolMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 type Tab = 'stok' | 'fiyat' | 'hepsi';
 
@@ -19,15 +20,16 @@ function StockDiff({ q, canExport }: { q: string; canExport: boolean }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Chips value={fark} onChange={(v) => { setFark(v); setPage(0); }}
+        <div className="flex min-w-0 items-center gap-1"><Chips value={fark} onChange={(v) => { setFark(v); setPage(0); }}
           items={[{ key: '', label: 'Bütün farklar' }, ...Object.entries(d?.labels ?? {}).map(([k, v]) => ({ key: k, label: v, count: d?.counts[k] }))]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
         <ExportLink show={canExport} href={trendyolApi.exportUrl('stok-farki', { fark, q })} />
       </div>
       {r.error && <Note tone="err">{errText(r.error, 'Liste açılamadı.')}</Note>}
       {r.isLoading ? <Loading /> : d && (d.urunSayisi === 0 ? <Note tone="info">Ürün listesi yüklenmedi (Dosya yükle → Ürün listesi).</Note> : (
         <>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={th}>Fark</th><th className={`${th} text-right`}>Trendyol stoğu</th><th className={`${th} text-right`}>Depo stoğu</th><th className={th}>Trendyol durumu</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={th}>Fark</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Trendyol stoğu</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Depo stoğu</InfoLabel></th><th className={th}>Trendyol durumu</th></tr></thead>
             <tbody>
               {d.items.map((x) => (
                 <tr key={x.barkod} className="border-t border-slate-100">
@@ -56,8 +58,9 @@ function PriceDiff({ q, canExport }: { q: string; canExport: boolean }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Chips value={isaret} onChange={(v) => { setIsaret(v); setPage(0); }}
+        <div className="flex min-w-0 items-center gap-1"><Chips value={isaret} onChange={(v) => { setIsaret(v); setPage(0); }}
           items={[{ key: '', label: 'Bütün işaretliler' }, ...labels.map(([k, v]) => ({ key: k, label: v, count: d?.counts[k] }))]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
         <ExportLink show={canExport} href={trendyolApi.exportUrl('fiyat-farki', { isaret, q })} />
       </div>
       {d && (
@@ -71,7 +74,7 @@ function PriceDiff({ q, canExport }: { q: string; canExport: boolean }) {
       {r.isLoading ? <Loading /> : d && (
         <>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}>Trendyol</th><th className={`${th} text-right`}>Liste</th><th className={`${th} text-right`}>Site</th><th className={`${th} text-right`}>İndirim</th>{d.maliyetBagli && <th className={`${th} text-right`}>Birim maliyet</th>}<th className={th}>İşaret</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Trendyol</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Liste</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Site</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">İndirim</InfoLabel></th>{d.maliyetBagli && <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Birim maliyet</InfoLabel></th>}<th className={th}>İşaret</th></tr></thead>
             <tbody>
               {d.items.map((x) => (
                 <tr key={x.barkod} className="border-t border-slate-100">
@@ -101,13 +104,14 @@ function AllProducts({ q, canExport }: { q: string; canExport: boolean }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Chips value={durum} onChange={(v) => { setDurum(v); setPage(0); }} items={[{ key: '', label: 'Hepsi' }, { key: 'acik', label: 'Satışta' }, { key: 'kapali', label: 'Kapalı' }]} />
+        <div className="flex min-w-0 items-center gap-1"><Chips value={durum} onChange={(v) => { setDurum(v); setPage(0); }} items={[{ key: '', label: 'Hepsi' }, { key: 'acik', label: 'Satışta' }, { key: 'kapali', label: 'Kapalı' }]} />
+          <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
         <ExportLink show={canExport} href={trendyolApi.exportUrl('urunler', { durum, q })} />
       </div>
       {r.isLoading ? <Loading /> : d && (
         <>
           <TableWrap>
-            <thead><tr><th className={th}>Kitap</th><th className={th}>Satışta</th><th className={`${th} text-right`}>Trendyol stoğu</th><th className={`${th} text-right`}>Depo stoğu</th></tr></thead>
+            <thead><tr><th className={th}>Kitap</th><th className={th}>Satışta</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Trendyol stoğu</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Depo stoğu</InfoLabel></th></tr></thead>
             <tbody>
               {d.items.map((x) => (
                 <tr key={x.barkod} className="border-t border-slate-100">

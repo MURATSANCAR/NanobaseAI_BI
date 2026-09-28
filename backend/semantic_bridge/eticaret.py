@@ -1189,6 +1189,10 @@ def record_run(engine: sa.engine.Engine, tenant: str, tur: str, user: str, start
 # ------------------------------------------------------------------ gece okuması
 
 
+#: Sorgu bilgisi: gece okumasında çalışan CRM/Logo/site sorgularının `semantic_query_origin` anahtarı.
+KOKEN_OKUMA = "eticaret.okuma"
+
+
 class Refresher:
     """Kaynak okuması ve fark hesabı. Aynı anda tek okuma (arka plan iş parçacığı ya da zamanlayıcı)."""
 
@@ -1226,10 +1230,14 @@ class Refresher:
 
     def _run(self, user: str) -> dict[str, Any]:
         from semantic_bridge import eticaret_sources as src
+        from semantic_bridge import sorgu_yakala as Y
         from semantic_bridge.seo_geo import _image
 
         engine, tenant, st = self.engine(), self.tenant(), self.settings()
         ensure(engine)
+        # Sorgu bilgisi: bu okumada koşan CRM/Logo sorguları ve site tablosu okuması «tabloyu dolduran asıl sorgu» olarak
+        # saklanır (ekrandaki rakamın «i» penceresinde `origin`).
+        q, token = Y.baslat(engine)
         started = now()
         self.state.update(running=True, startedAt=iso(started), finishedAt=None, error=None, step="site")
         summary: dict[str, Any] = {"kaynaklar": {}}
@@ -1247,14 +1255,14 @@ class Refresher:
             cut = None
             self.state["step"] = "crm"
             try:
-                crm_cards = src.read_crm_books(src.runner(self.crm_file()), self.schema())
+                crm_cards = src.read_crm_books(Y.izle(src.runner(self.crm_file()), "crm", Y.db_of(self.crm_file())), self.schema())
                 sources["crm"] = True
                 summary["kaynaklar"]["crm"] = {"kart": len(crm_cards), "tsoftAktif": sum(1 for c in crm_cards if c["tsoft"])}
             except Exception as e:  # noqa: BLE001 — okunamayan kaynak turu durdurmaz, türü hesaplanmaz
                 summary["kaynaklar"]["crm"] = {"hata": str(e)[:300]}
             self.state["step"] = "logo"
             try:
-                run = src.runner(self.logo_file())
+                run = Y.izle(src.runner(self.logo_file()), "logo", Y.db_of(self.logo_file()))
                 firms = src.firms_by_year(run)
                 cut = src.read_data_end(run, firms)
                 stock = src.read_stock(run, firms)
@@ -1266,6 +1274,8 @@ class Refresher:
                                                 "fiyat": len(prices), "satisPenceresi": [a.isoformat(), b.isoformat()]}
             except Exception as e:  # noqa: BLE001
                 summary["kaynaklar"]["logo"] = {"hata": str(e)[:300]}
+            Y.bitir(token)
+            Y.koken_yaz(engine, tenant, KOKEN_OKUMA, q, portal_tables=("semantic_seo_products", "semantic_seo_crm_books"))
             self.state["step"] = "fark"
             site_url = ""
             try:
@@ -1281,6 +1291,7 @@ class Refresher:
             error = str(e)[:1000]
             log.warning("eticaret okuması başarısız: %s", error)
         finally:
+            Y.bitir(token)
             summary["kaynakDurumu"] = sources
             record_run(engine, tenant, "okuma", user, started, summary, error)
             self.state.update(running=False, finishedAt=iso(now()), error=error, step=None)

@@ -27,7 +27,7 @@ export default function SeoSearch() {
   });
 
   return (
-    <SeoLayout
+    <SeoLayout k={r.data?.kaynaklar}
       path="/seo-geo/anahtar-kelimeler"
       crumb="Arama ve kelimeler"
       eyebrow="SEO & GEO · Google Search Console"

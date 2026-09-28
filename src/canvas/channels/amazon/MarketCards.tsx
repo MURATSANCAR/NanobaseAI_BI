@@ -9,6 +9,7 @@ import { fmtInt, fmtPct, parseNum } from '../../budget/api';
 import { AskSheet } from '../../budget/parts';
 import { amazonApi, type MarketCard, type Params } from './api';
 import { AmazonData, AmazonFrame, tl, useAmazonMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 const EMPTY = { pazar: '', ad: '', ulkeler: '', doviz: '', kurKaynagi: '', kdvOrani: '', kargoBirim: '', komisyonOrani: '', not: '' };
 const pct = (v: string) => { const n = parseNum(v); return n === null ? null : n / 100; };
@@ -39,11 +40,11 @@ function ParamsPanel({ canParam }: { canParam: boolean }) {
   );
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Pazar parametreleri (finans)</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Pazar parametreleri (finans) <SqlInfo k={q.data?.kaynaklar} alan="items" label="Pazar parametreleri (finans)" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">Kur kaynağı, KDV, kargo ve komisyon varsayımları; kartta olduğu gibi yazılır, gizlenmez. Ülkeler Logo cari kartındaki yazımla.</p>
       {q.isLoading ? <Loading /> : (
         <TableWrap>
-          <thead><tr><th className={th}>Pazar</th><th className={th}>Ülkeler</th><th className={th}>Kur</th><th className={`${th} text-right`}>KDV</th><th className={`${th} text-right`}>Kargo</th><th className={`${th} text-right`}>Komisyon</th><th className={th} /></tr></thead>
+          <thead><tr><th className={th}>Pazar</th><th className={th}>Ülkeler</th><th className={th}>Kur</th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">KDV</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Kargo</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Komisyon</InfoLabel></th><th className={th} /></tr></thead>
           <tbody>
             {(q.data?.items ?? []).map((p) => (
               <tr key={p.pazar} className="border-t border-slate-100">
@@ -155,7 +156,7 @@ export default function AmazonMarketCards() {
       <AmazonData meta={m} />
       {m?.me.canDraft && (
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold">Yeni kart</h2>
+          <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Yeni kart</h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[0.6fr_1.4fr_1.4fr_auto] sm:items-end">
             <label className="flex flex-col gap-1"><span className={labelCls}>Pazar</span><input className={field} value={form.pazar} placeholder="DE" onChange={(e) => setForm((f) => ({ ...f, pazar: e.target.value }))} /></label>
             <label className="flex flex-col gap-1"><span className={labelCls}>Ülkeler (Logo yazımı)</span><input className={field} value={form.ulkeler} placeholder="ALMANYA" onChange={(e) => setForm((f) => ({ ...f, ulkeler: e.target.value }))} /></label>
@@ -167,7 +168,7 @@ export default function AmazonMarketCards() {
         </Panel>
       )}
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold">Kartlar</h2>
+        <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Kartlar <SqlInfo k={cards.data?.kaynaklar} alan="items" label="Kartlar" /></h2>
         {cards.error && <Note tone="err">{errText(cards.error, 'Kartlar açılamadı.')}</Note>}
         {cards.isLoading ? <Loading /> : !cards.data?.items.length ? <Note tone="info">Henüz kart yok.</Note> : (
           <div className="flex flex-col gap-2">

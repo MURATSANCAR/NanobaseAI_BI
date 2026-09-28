@@ -5,6 +5,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { Note, TableWrap, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../budget/api';
+import { InfoLabel } from '../components/SqlInfo';
 import { kampanyaApi, type Overview } from './api';
 
 /** Aday kitaplar: kural süzgeci (stok fazlası, yavaşlama, sezon; hak, maliyet, marj koşulları) ve rakamlı gerekçe.
@@ -96,12 +97,12 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
               <tr>
                 {ov.me.canEdit && <th className={th}><span className="sr-only">Seç</span></th>}
                 <th className={th}>Kitap</th>
-                <th className={`${th} text-right`}>Stok</th>
-                <th className={`${th} text-right`}>Stok yeter</th>
-                <th className={`${th} text-right`}>Satış (son / önceki)</th>
-                <th className={`${th} text-right`}>Liste</th>
-                {rules.includes('marj') && <th className={`${th} text-right`}>Marj</th>}
-                <th className={th}>Neden aday</th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok yeter</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Satış (son / önceki)</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Liste</InfoLabel></th>
+                {rules.includes('marj') && <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Marj</InfoLabel></th>}
+                <th className={th}><InfoLabel k={d?.kaynaklar} alan="items">Neden aday</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -137,6 +138,7 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
           </TableWrap>
           <Pager page={page} pageSize={d?.pageSize ?? 50} total={d?.total ?? 0} shown={d?.items.length ?? 0}
             loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+          {d && <div className="mt-1 text-right"><InfoLabel k={d.kaynaklar} alan="total" label="Aday kitap sayısı">{`${fmtInt(d.total)} aday`}</InfoLabel></div>}
         </div>
       </div>
     </Panel>

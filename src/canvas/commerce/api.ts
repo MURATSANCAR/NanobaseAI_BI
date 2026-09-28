@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Rakam uçlarının cevabında sorgu bilgisi (`<SqlInfo k={d.kaynaklar} …/>`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /**
  * H3 E-ticaret müşteri yönetimi ekranlarının köprü uçları: /api/v1/commerce/*.
@@ -115,7 +119,7 @@ export type Trigger = {
 
 export type Preview = {
   candidates: number; linked: number; reachable: number; target: number; control: number; excluded: Record<string, number>;
-  info: { aciklama?: string; kitap?: string; dugumAdi?: string }; channel: Channel;
+  info: { aciklama?: string; kitap?: string; dugumAdi?: string }; channel: Channel; kaynaklar?: Kaynaklar;
 };
 
 export type NewBook = { barkod: string; ad: string | null; kitap: string; acilis: string | null; dugum: string | null; dugumAdi: string | null };
@@ -192,28 +196,28 @@ export const qs = (o: Record<string, string | number | boolean | undefined | nul
 const enc = encodeURIComponent;
 
 export const commerceApi = {
-  meta: () => send<Meta>('GET', '/meta'),
-  overview: (period: Period) => send<Overview>('GET', `/overview${qs({ period })}`),
+  meta: () => send<Meta & WithK>('GET', '/meta'),
+  overview: (period: Period) => send<Overview & WithK>('GET', `/overview${qs({ period })}`),
   status: () => send<Job>('GET', '/status'),
   refresh: (full = false) => send<Job & { started: boolean }>('POST', '/refresh', { full }),
-  rfm: (days = 30) => send<Rfm>('GET', `/customers/rfm${qs({ days })}`),
-  customers: (segment: string, page = 0, sort = 'son') => send<Paged<CustomerRow>>('GET', `/customers${qs({ segment, page, sort })}`),
-  customer: (key: string, personal = false) => send<CustomerCard>('GET', `/customers/${enc(key)}${qs({ kisisel: personal })}`, undefined, 300_000),
-  funnel: (days: number, page = 0, weak = false) => send<Funnel>('GET', `/products/funnel${qs({ days, page, zayif: weak })}`),
-  newBooks: () => send<{ items: NewBook[]; kaynak: string; not: string | null; gun: number }>('GET', '/triggers/new-books'),
-  triggers: () => send<{ items: Trigger[] }>('GET', '/triggers'),
+  rfm: (days = 30) => send<Rfm & WithK>('GET', `/customers/rfm${qs({ days })}`),
+  customers: (segment: string, page = 0, sort = 'son') => send<Paged<CustomerRow> & WithK>('GET', `/customers${qs({ segment, page, sort })}`),
+  customer: (key: string, personal = false) => send<CustomerCard & WithK>('GET', `/customers/${enc(key)}${qs({ kisisel: personal })}`, undefined, 300_000),
+  funnel: (days: number, page = 0, weak = false) => send<Funnel & WithK>('GET', `/products/funnel${qs({ days, page, zayif: weak })}`),
+  newBooks: () => send<{ items: NewBook[]; kaynak: string; not: string | null; gun: number } & WithK>('GET', '/triggers/new-books'),
+  triggers: () => send<{ items: Trigger[] } & WithK>('GET', '/triggers'),
   createTrigger: (b: { name: string; kind: TriggerKind; params: Record<string, unknown>; channel: Channel; controlShare: number }) =>
     send<Trigger>('POST', '/triggers', b),
   archiveTrigger: (id: string) => send<Trigger>('PATCH', `/triggers/${enc(id)}`, { archive: true }),
-  preview: (id: string) => send<Preview>('POST', `/triggers/${enc(id)}/preview`, {}, 300_000),
+  preview: (id: string) => send<Preview & WithK>('POST', `/triggers/${enc(id)}/preview`, {}, 300_000),
   run: (id: string) => send<Run>('POST', `/triggers/${enc(id)}/run`, {}, 300_000),
-  runs: (durum = '', page = 0) => send<Paged<Run>>('GET', `/runs${qs({ durum, page })}`),
+  runs: (durum = '', page = 0) => send<Paged<Run> & WithK>('GET', `/runs${qs({ durum, page })}`),
   approve: (id: string, note?: string) => send<Run>('POST', `/runs/${enc(id)}/approve`, { note }),
   reject: (id: string, note: string) => send<Run>('POST', `/runs/${enc(id)}/reject`, { note }),
   exportRun: (id: string, purpose: string) => download(`/runs/${enc(id)}/export`, { purpose }),
-  campaigns: () => send<{ items: Campaign[] }>('GET', '/campaigns'),
+  campaigns: () => send<{ items: Campaign[] } & WithK>('GET', '/campaigns'),
   createCampaign: (b: { runId: string; name: string; start?: string; end?: string }) => send<Campaign>('POST', '/campaigns', b),
-  campaign: (id: string) => send<Campaign>('GET', `/campaigns/${enc(id)}`),
+  campaign: (id: string) => send<Campaign & WithK>('GET', `/campaigns/${enc(id)}`),
   comment: (id: string) => send<Campaign>('POST', `/campaigns/${enc(id)}/comment`, {}, 180_000),
   settings: () => send<{ values: Settings; labels: Record<keyof Settings, string>; defaults: Settings; limits: Record<keyof Settings, [number, number]> }>('GET', '/settings'),
   saveSettings: (b: Partial<Record<keyof Settings, number | null>>) => send<{ values: Settings }>('PUT', '/settings', b),

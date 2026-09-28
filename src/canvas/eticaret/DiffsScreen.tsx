@@ -8,6 +8,7 @@ import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '.
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { ecomApi, isEan, type Diff, type DiffKind, type Meta } from './api';
 import { DiffCard, EticaretFrame, MarkSheet } from './parts';
+import SqlInfo from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
 
 /** M34 Farklar (eşitleme raporu): her satır bir kitabın bir farkı; CRM, Logo ve site değerleri yan yana. Süzgeçler adres
@@ -87,6 +88,7 @@ function Listing({ meta }: { meta: Meta }) {
                 {meta.turler[k]}{counts ? ` · ${counts[k]}` : ''}
               </Chip>
             ))}
+            {counts && <span className="flex items-center"><SqlInfo k={list.data?.kaynaklar} alan="turSayilari" label="Türe göre fark sayıları" /></span>}
           </div>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
@@ -147,7 +149,7 @@ function Listing({ meta }: { meta: Meta }) {
         {list.data && !items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte fark yok.</p>}
         <div className="flex flex-col gap-2">
           {items.map((d) => (
-            <DiffCard key={d.id} d={d} onOpen={setOpen}
+            <DiffCard key={d.id} d={d} onOpen={setOpen} k={list.data?.kaynaklar}
               selected={!!picked[d.id]}
               onSelect={meta.me.canMark || meta.me.canExport ? (on) => setPicked((p) => {
                 const n = { ...p };
@@ -159,8 +161,13 @@ function Listing({ meta }: { meta: Meta }) {
           ))}
         </div>
         {list.data && (
-          <Pager page={page} pageSize={list.data.pageSize} total={list.data.total} shown={items.length}
-            loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1">
+              <Pager page={page} pageSize={list.data.pageSize} total={list.data.total} shown={items.length}
+                loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
+            </div>
+            <SqlInfo k={list.data.kaynaklar} alan="total" label="Fark sayısı (süzgece uyan)" className="mt-2" />
+          </div>
         )}
       </Panel>
       {marking && (

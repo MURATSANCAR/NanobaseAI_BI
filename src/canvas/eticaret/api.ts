@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Her rakam ucunun cevabında sorgu bilgisi (`<SqlInfo k={d.kaynaklar} …/>`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M34 E-ticaret ve platform yönetimi ekranlarının köprü uçları: /api/v1/eticaret/*. Portal hiçbir sisteme yazmaz. */
 
@@ -86,14 +90,16 @@ export type Overview = {
   logoKesim: string | null;
   durum: RefreshState;
   gonderim: false;
+  kaynaklar?: Kaynaklar;
 };
 
-export type DiffList = { items: Diff[]; total: number; page: number; pageSize: number; turSayilari: Record<DiffKind, number> };
+export type DiffList = { items: Diff[]; total: number; page: number; pageSize: number; turSayilari: Record<DiffKind, number>; kaynaklar?: Kaynaklar };
 
 export type Funnel = {
   items: Item[]; total: number; page: number; pageSize: number; ortancaDonusum: number | null;
   dusukEsik: { enAzGoruntulenme: number; oran: number; donusum: number | null };
   toplam: { goruntulenme: number; satis: number; yorum: number }; not: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Account = {
@@ -104,6 +110,7 @@ export type Markets = {
   yil: number; donem: { bas: string; son: string; oncekiBas: string; oncekiSon: string }; cariler: Account[];
   toplam: { satis: number; iade: number; net: number; oncekiNet: number; satisAdet: number; iadeAdet: number; iadeOrani: number | null; degisim: number | null };
   kesim: string | null; kanallar: string[]; yillar: number[];
+  kaynaklar?: Kaynaklar;
 };
 export type MarketBook = {
   stok: string; ad: string | null; satisAdet: number; iadeAdet: number; ciro: number; son: string | null; net: number;
@@ -151,22 +158,22 @@ export const ecomApi = {
   status: () => send<RefreshState>('GET', '/status'),
   refresh: () => send<RefreshState & { started: boolean }>('POST', '/refresh'),
   diffs: (f: DiffFilter & { page?: number }) => send<DiffList>('GET', `/diffs${qs(f)}`),
-  diff: (id: string) => send<Diff & { gunluk: LogRow[] }>('GET', `/diffs/${enc(id)}`),
+  diff: (id: string) => send<Diff & { gunluk: LogRow[] } & WithK>('GET', `/diffs/${enc(id)}`),
   mark: (id: string, b: { durum: MarkState; note?: string; sahip?: string | null }) => send<Diff & { gunluk: LogRow[] }>('POST', `/diffs/${enc(id)}/mark`, b),
   markBulk: (b: { ids: string[]; durum: MarkState; note?: string; sahip?: string | null }) =>
     send<{ items: Diff[]; atlanan: Array<{ id: string; neden: string }> }>('POST', '/diffs/mark-bulk', b),
   diffsCsvUrl: (f: DiffFilter) => `${ENGINE_BASE}${B}/diffs/export.csv${qs(f)}`,
-  item: (key: string) => send<{ kitap: Item; farklar: Diff[]; gunluk: LogRow[]; oneriler: Proposal[] }>('GET', `/items/${enc(key)}`),
+  item: (key: string) => send<{ kitap: Item; farklar: Diff[]; gunluk: LogRow[]; oneriler: Proposal[] } & WithK>('GET', `/items/${enc(key)}`),
   propose: (key: string) => send<Proposal>('POST', `/items/${enc(key)}/propose`, {}, 300_000),
-  proposals: (durum = 'hazir') => send<{ items: Proposal[]; canApprove: boolean }>('GET', `/proposals${qs({ durum })}`),
+  proposals: (durum = 'hazir') => send<{ items: Proposal[]; canApprove: boolean } & WithK>('GET', `/proposals${qs({ durum })}`),
   decide: (id: string, b: { action: 'approve' | 'reject'; note?: string; fields?: Record<string, string> }) =>
     send<Proposal>('POST', `/proposals/${enc(id)}/decide`, b),
   funnel: (p: { dusuk?: boolean; q?: string; sort?: string; page?: number }) => send<Funnel>('GET', `/funnel${qs(p)}`),
   markets: (yil?: number, yenile = false) => send<Markets>('GET', `/marketplaces${qs({ yil, yenile })}`, undefined, 600_000),
   stockRisk: (yil?: number) =>
-    send<{ items: MarketBook[]; yil: number; kesim: string | null; esikGun: number; satisAyi: number }>('GET', `/marketplaces/stock-risk${qs({ yil })}`, undefined, 600_000),
+    send<{ items: MarketBook[]; yil: number; kesim: string | null; esikGun: number; satisAyi: number } & WithK>('GET', `/marketplaces/stock-risk${qs({ yil })}`, undefined, 600_000),
   marketBooks: (code: string, yil?: number) =>
-    send<{ kod: string; yil: number; donem: { bas: string; son: string }; kesim: string | null; items: MarketBook[]; total: number }>(
+    send<{ kod: string; yil: number; donem: { bas: string; son: string }; kesim: string | null; items: MarketBook[]; total: number } & WithK>(
       'GET', `/marketplaces/${enc(code)}/books${qs({ yil })}`, undefined, 600_000),
   contentPackUrl: (keys: string[], bicim: 'xlsx' | 'csv' = 'xlsx') => `${ENGINE_BASE}${B}/export/content-pack${qs({ keys: keys.join(','), bicim })}`,
 };

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ChevronLeft, ChevronRight, Download, History, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
-import SeoLayout, { Failed, Loading } from './SeoLayout';
+import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
@@ -116,7 +116,7 @@ export default function SeoWorklist() {
   const total = d?.total ?? 0;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/is-listesi"
       crumb="İş listesi"
       eyebrow="SEO & GEO · İş listesi"
@@ -228,7 +228,7 @@ export default function SeoWorklist() {
 
               {!d.ready && (
                 <div className="sg-empty">
-                  <h2>Liste hazırlanıyor</h2>
+                  <h2>Liste hazırlanıyor <SeoInfo k={list.data?.kaynaklar} label="Liste hazırlanıyor" /></h2>
                   <p>Bütün ekranların işleri ilk kez toplanıyor; birkaç dakika sürebilir. Bu sayfa açık kalırsa liste hazır olunca kendiliğinden gelir.</p>
                 </div>
               )}
@@ -439,7 +439,7 @@ function WorklistLog() {
       {log.error && <Failed error={log.error} />}
       {d && !d.items.length && (
         <div className="sg-empty">
-          <h2>Geçmiş boş</h2>
+          <h2>Geçmiş boş <SeoInfo k={log.data?.kaynaklar} label="Geçmiş boş" /></h2>
           <p>Henüz kapanan ya da durumu değişen iş yok.</p>
         </div>
       )}

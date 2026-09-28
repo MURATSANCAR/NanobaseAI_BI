@@ -50,7 +50,7 @@ export default function SeoRedirects() {
   const canApprove = !!me.data?.canApprove;
 
   return (
-    <SeoLayout
+    <SeoLayout k={list.data?.kaynaklar}
       path="/seo-geo/yonlendirmeler"
       crumb="Yönlendirmeler"
       eyebrow="SEO & GEO · 301 yönlendirmeleri"
