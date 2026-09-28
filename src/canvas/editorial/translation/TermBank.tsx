@@ -6,6 +6,7 @@ import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '.
 import { useCan } from '../../useAdmin';
 import { useDebounced, Panel } from '../kit';
 import { FileButton, LANGS, langName } from './parts';
+import { translationIoApi } from './ioApi';
 
 /** Terim bankası: dil çifti başına genel terimler ve işe özel terimler. Onaylı terimi «Terim bankası düzenleme»
  *  yetkisi olan yazar; çevirmenin önerisi «aday» olarak gelir, burada onaylanır. */
@@ -241,9 +242,37 @@ export default function TermBank() {
               CSV indir
             </a>
           )}
+          {canEdit && (
+            <FileButton
+              tone="ghost"
+              accept=".tbx,.xml"
+              disabled={src === tgt}
+              run={(f) => translationIoApi.importTbx(src, tgt, f)}
+              onDone={(r) => {
+                setNotice(
+                  `TBX: ${nf.format(r.added)} terim eklendi, ${nf.format(r.updated)} güncellendi` +
+                    (r.unchanged ? `, ${nf.format(r.unchanged)} terim zaten aynıydı` : '') +
+                    (r.skipped ? `, ${nf.format(r.skipped)} kayıtta bu dil çifti yoktu` : '') +
+                    '.',
+                );
+                changed();
+              }}
+            >
+              TBX içe aktar
+            </FileButton>
+          )}
+          {canExport && src !== tgt && (
+            <a href={translationIoApi.tbxUrl(src, tgt)} className={btnGhost}>
+              <Download aria-hidden className="h-4 w-4" />
+              TBX indir
+            </a>
+          )}
         </div>
         <p className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
           CSV sütunları: kaynak; hedef; kullanılmayacak karşılıklar (; ile); not. İçe aktarım seçili dil çiftine yazılır, var olan terimi günceller.
+        </p>
+        <p className="mt-1 px-1 text-[11px] leading-snug text-canvas-muted">
+          TBX (MultiTerm, memoQ, Phrase): tercih edilen karşılık ilk, kabul edilenler «|» ile eklenir; kullanımdan kalkmış terim kullanılmayacak karşılık olur. TBX indir yalnız onaylı terimleri verir.
         </p>
         {notice && (
           <div className="mt-2">

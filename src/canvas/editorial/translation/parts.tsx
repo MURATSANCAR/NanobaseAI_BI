@@ -230,7 +230,13 @@ export function useWide(query = '(min-width: 1024px)') {
 export function Tabs<K extends string>({ tabs, value, onChange, label }: { tabs: Record<K, string>; value: K; onChange: (k: K) => void; label: string }) {
   const keys = Object.keys(tabs) as K[];
   return (
-    <div className="grid gap-1 rounded-2xl bg-slate-100 p-1" style={{ gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }} role="tablist" aria-label={label}>
+    // Dört sekme telefonda 2×2 dizilir (320 px'te tek satırda sığmaz); daha azı tek satır.
+    <div
+      className={`grid gap-1 rounded-2xl bg-slate-100 p-1 ${keys.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : ''}`}
+      style={keys.length === 4 ? undefined : { gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }}
+      role="tablist"
+      aria-label={label}
+    >
       {keys.map((k) => (
         <button
           key={k}

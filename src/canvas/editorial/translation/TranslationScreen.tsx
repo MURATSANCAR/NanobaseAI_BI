@@ -9,6 +9,7 @@ import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import PayoutPanel from './PayoutPanel';
+import MemoryBank from './MemoryBank';
 import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
@@ -16,7 +17,7 @@ import { SuggestedTranslators } from './TranslatorMatch';
 /** M4 Çeviri Yönetimi: çeviri işleri (kaynak, segmentler, atama, ilerleme, ZEKİ ham taslak, dosyalar),
  *  terim bankası ve çevirmen karneleri. Çevirmenin kendi ekranı /ceviri/masam, kalite raporu /ceviri/:iş/kalite. */
 
-const TABS = { isler: 'Çeviri işleri', terimler: 'Terim bankası', cevirmenler: 'Çevirmenler' } as const;
+const TABS = { isler: 'Çeviri işleri', terimler: 'Terim bankası', bellek: 'Çeviri belleği', cevirmenler: 'Çevirmenler' } as const;
 type TabKey = keyof typeof TABS;
 
 function JobForm({ onDone, onCancel }: { onDone: (id: string) => void; onCancel: () => void }) {
@@ -710,6 +711,7 @@ export default function TranslationScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {tab === 'isler' && <Jobs />}
       {tab === 'terimler' && <TermBank />}
+      {tab === 'bellek' && <MemoryBank />}
       {tab === 'cevirmenler' && <Translators />}
       {tab === 'isler' && (
         <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">

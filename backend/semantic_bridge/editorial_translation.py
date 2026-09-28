@@ -923,6 +923,14 @@ def _tm(conn: sa.Connection, tenant: str, job: Any, seg: Any) -> list[dict[str, 
         if best is None or ratio > best["score"]:
             seen[k] = {"source": r.source, "target": r.target, "score": round(ratio * 100),
                        "status": r.status, "job": r.title, "sameJob": r.jid == job.id}
+    # ---- dış çeviri belleği (TMX içe aktarımı, editorial_translation_io): aynı ön süzgeç ve difflib ölçüsü,
+    # etiket «Dış bellek: <dosya>». Aynı hedef eşit puanla iş segmentinde de varsa iş segmenti kalır.
+    from semantic_bridge import editorial_translation_io as tio   # döngüsel içe aktarım olmasın diye burada
+    for m in tio.tm_matches(conn, tenant, job.source_lang, job.target_lang, seg.source):
+        k = " ".join(m["target"].split())
+        if k not in seen or m["score"] > seen[k]["score"]:
+            seen[k] = m
+    # ---- dış çeviri belleği sonu
     return sorted(seen.values(), key=lambda x: (-x["score"], not x["sameJob"]))
 
 

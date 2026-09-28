@@ -633,6 +633,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$", "ozellik:ceviri.yonet"),
     (frozenset({"GET", "PUT", "POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/payout(/(package|transfer))?$",
      "ozellik:serbest.yonet"),
+    # Terim bankası TBX ve dış çeviri belleği (TMX): içe aktarma terim/yönetim yetkisiyle, dışa aktarma veri yetkisiyle.
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import\.tbx$", "ozellik:ceviri.terim"),
+    (frozenset({"PUT"}), r"^/api/v1/editorial/translation/memory/import$", "ozellik:ceviri.yonet"),
+    (frozenset({"DELETE"}), r"^/api/v1/editorial/translation/memory$", "ozellik:ceviri.yonet"),
+    (frozenset({"GET"}), r"^/api/v1/editorial/translation/(terms/export\.tbx|memory/export\.tmx)$", "ozellik:veri.disa-aktar"),
     # Serbest çalışan kaydı, paket, atama, teslim kararı, hakediş taslağı. Yazışma ve öneri (suggest) sayfayla gelir;
     # hakediş onayı/ödemesi açıkça verilen `serbest.hakedis-onay` ile ucun içinde denetlenir.
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
