@@ -1,0 +1,11 @@
+[Unit]
+Description=Depo ve stok (M43): Logo/CRM stok okuması, gece fotoğrafı, Zeki AI sınıflama ve öneriler, sabah bülteni
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/stock/run-due); bu birim yalnız çağırır. Okuma (Logo bakiye, satış hızı, devir, hareket
+# penceresi, CRM raf/aktarım/depo hattı) ölçülmedi; model sırası STOCK_MODEL_BUDGET_SEC (varsayılan 20 dk) ile sınırlı,
+# kalan iş sonraki geceye kalır. İlk kez elle koşturulur: systemctl start timas-stock.service (bellek: run-it-before-it-runs-itself).
+ExecStart=/bin/sh -c 'curl -fsS -m 3500 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/stock/run-due'

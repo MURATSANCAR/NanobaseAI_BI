@@ -31,6 +31,10 @@
       "label": "Satış ve saha"
     },
     {
+      "id": "lojistik",
+      "label": "Lojistik"
+    },
+    {
       "id": "pazarlama",
       "label": "Pazarlama"
     },
@@ -580,6 +584,41 @@
       "key": "sayfa:kurumsal-satis",
       "area": "satis",
       "label": "Kurumsal ve B2B"
+    },
+    {
+      "key": "sayfa:stok",
+      "area": "lojistik",
+      "label": "Stok"
+    },
+    {
+      "key": "sayfa:stok-bitecekler",
+      "area": "lojistik",
+      "label": "Bitecekler"
+    },
+    {
+      "key": "sayfa:stok-fazla",
+      "area": "lojistik",
+      "label": "Fazla stok"
+    },
+    {
+      "key": "sayfa:stok-esikler",
+      "area": "lojistik",
+      "label": "Güvenlik stoku"
+    },
+    {
+      "key": "sayfa:stok-fark",
+      "area": "lojistik",
+      "label": "Logo–CRM farkı"
+    },
+    {
+      "key": "sayfa:stok-aktarim",
+      "area": "lojistik",
+      "label": "Aktarım hataları"
+    },
+    {
+      "key": "sayfa:stok-depo-hatti",
+      "area": "lojistik",
+      "label": "Depo hattı"
     },
     {
       "key": "sayfa:pazarlama-set-hediye",
@@ -1577,6 +1616,37 @@
       "page": "sayfa:musteri-veri-sagligi",
       "label": "CRM güvenlik bulguları",
       "hint": "Şifre içeren tablo/kolon/görünüm bulgularını görme ve işaretleme (değer gösterilmez; BT)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.oneri-karar",
+      "area": "lojistik",
+      "page": "sayfa:stok",
+      "label": "Stok önerisine karar ve güvenlik stoku taslağı",
+      "hint": "Bitecek ve fazla stok önerisini kabul/ret (üretim, kampanya, set modülüne not), kitap için güvenlik günü ve yeniden sipariş adedi taslağı"
+    },
+    {
+      "key": "ozellik:stok.esik-onay",
+      "area": "lojistik",
+      "page": "sayfa:stok-esikler",
+      "label": "Güvenlik stoku onayı",
+      "hint": "Güvenlik stoku / yeniden sipariş noktası taslağını onaylama ya da gerekçeyle reddetme (stok planlama, depo müdürü). Logo'ya yazılmaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:stok",
+      "label": "Stok değeri ve birim maliyet",
+      "hint": "Kitap birim maliyeti (fiyatlama modülünden) ve stok değeri; yoksa bu alanlar hiçbir stok ekranında ve Excel'de görünmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.depo-hatti",
+      "area": "lojistik",
+      "page": "sayfa:stok-depo-hatti",
+      "label": "Depo hattı: kişi bazlı süreler",
+      "hint": "Sipariş hazırlık hattında toplayıcı adı ve kişi başına toplama süresi (hassas veri)",
       "explicit": true
     },
     {

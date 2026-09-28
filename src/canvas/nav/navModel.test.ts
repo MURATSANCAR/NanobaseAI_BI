@@ -50,6 +50,7 @@ describe('rol görünürlüğü', () => {
     const g = visibleNav(admin, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform', 'yonetim']);
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'lojistik', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'lojistik', 'pazarlama', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -64,6 +65,7 @@ describe('rol görünürlüğü', () => {
     const g = visibleNav(user, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'platform']);
     expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'lojistik']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'lojistik', 'pazarlama']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -73,6 +75,7 @@ describe('rol görünürlüğü', () => {
     const g = visibleNav(editor, { webWatch: true });
     expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'platform']);
     expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'lojistik']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);
@@ -171,6 +174,9 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kargo/hatalar')).toBe('kargo');
     expect(at('/kargo/firmalar')).toBe('kargo-firmalar');
     expect(at('/kargo/mutabakat')).toBe('kargo-mutabakat');
+    expect(at('/stok/15201.01.0001')).toBe('stok'); // M43 kitap stok kartı → Stok
+    expect(at('/stok/bitecekler')).toBe('stok-bitecekler');
+    expect(at('/stok/depo-hatti')).toBe('stok-depo-hatti');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

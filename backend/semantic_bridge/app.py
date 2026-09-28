@@ -7146,6 +7146,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda priority: rt().llm_for("iliskiler", priority),
     })
 
+    # M43 Depo ve stok (Lojistik): Logo bakiye/ambar, satış hızı (Baskı Öneri'nin SQL'i), CRM raf/aktarım/depo hattı,
+    # M12 açık üretim kartı, M9 birim maliyeti; eşik ve öneri portalda. Uçlar /api/v1/stock/*.
+    from semantic_bridge import stock_api
+    app.state.stock = stock_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("stok", priority),
+        "m12": lambda: getattr(app.state, "production", None), "costs": lambda: getattr(app.state, "pricing_costs", None),
+    })
+
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
     from semantic_bridge import marketing
     app.state.marketing = marketing.register(app, rt, _require_caller, _can)

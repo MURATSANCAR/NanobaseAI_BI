@@ -73,6 +73,14 @@ const RiskScreen = lazy(() => import('@/canvas/risk/RiskScreen'));
 const RiskCard = lazy(() => import('@/canvas/risk/RiskCard'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
+const StockHome = lazy(() => import('@/canvas/stock/StockHome'));
+const StockItem = lazy(() => import('@/canvas/stock/StockItem'));
+const StockRunningOut = lazy(() => import('@/canvas/stock/RunningOut'));
+const StockExcess = lazy(() => import('@/canvas/stock/Excess'));
+const StockDiff = lazy(() => import('@/canvas/stock/StockDiff'));
+const StockTransfers = lazy(() => import('@/canvas/stock/TransferErrors'));
+const StockPickLine = lazy(() => import('@/canvas/stock/PickLine'));
+const StockThresholds = lazy(() => import('@/canvas/stock/Thresholds'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
 const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
 const ShippingHome = lazy(() => import('@/canvas/shipping/ShippingHome'));
@@ -296,6 +304,16 @@ export default function App() {
             <Route path="ik/pozisyonlar" element={<PositionEditor />} />
             <Route path="ik/belgeler" element={<HrTemplatesScreen />} />
             <Route path="ik/kayitlar" element={<HrRecordsScreen />} />
+            {/* M43 Depo ve stok (Lojistik): stok, kitap stok kartı, bitecekler, fazla stok, güvenlik stoku, Logo–CRM farkı,
+                aktarım hataları, depo hattı (/api/v1/stock). */}
+            <Route path="stok" element={<StockHome />} />
+            <Route path="stok/bitecekler" element={<StockRunningOut />} />
+            <Route path="stok/fazla" element={<StockExcess />} />
+            <Route path="stok/esikler" element={<StockThresholds />} />
+            <Route path="stok/fark" element={<StockDiff />} />
+            <Route path="stok/aktarim" element={<StockTransfers />} />
+            <Route path="stok/depo-hatti" element={<StockPickLine />} />
+            <Route path="stok/:stokKodu" element={<StockItem />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
             {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}

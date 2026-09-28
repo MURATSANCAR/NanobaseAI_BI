@@ -503,6 +503,17 @@ RULES: list[tuple[str, Any]] = [
     # M45 Finansal raporlar. Bütçe sekmesi M46'yı köprü içinde okur (ayrı bütçe ucu açılmaz). Zamanlayıcı yalnız run-due.
     ("/api/v1/finance/run-due", SYSTEM),
     ("/api/v1/finance/", frozenset({page("finansal-raporlar")})),
+    # M43 Depo ve stok (Lojistik). Ortak uçlar (meta, kitap listesi/kartı, öneriler, Excel) bütün stok sayfalarına; liste
+    # uçları kendi sayfasına ve açılış ekranına. Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/stock/run-due", SYSTEM),
+    ("/api/v1/stock/running-out", frozenset({page("stok"), page("stok-bitecekler")})),
+    ("/api/v1/stock/excess", frozenset({page("stok"), page("stok-fazla")})),
+    ("/api/v1/stock/diff", frozenset({page("stok"), page("stok-fark")})),
+    ("/api/v1/stock/transfer-errors", frozenset({page("stok"), page("stok-aktarim")})),
+    ("/api/v1/stock/pick-line", frozenset({page("stok-depo-hatti")})),
+    ("/api/v1/stock/thresholds", frozenset({page("stok"), page("stok-esikler")})),
+    ("/api/v1/stock/", frozenset(page(x) for x in ("stok", "stok-bitecekler", "stok-fazla", "stok-esikler", "stok-fark",
+                                                    "stok-aktarim", "stok-depo-hatti"))),
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
@@ -776,6 +787,10 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/distribution/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|books/refresh)$",
      "ozellik:dagilim.plan"),
     (frozenset({"GET"}), r"^/api/v1/distribution/plans/[^/]+/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M43 Depo ve stok: öneri kararı ve güvenlik stoku taslağı; eşik onayı/reddi açıkça verilen `stok.esik-onay` ile ucun
+    # içinde; Excel dışa aktarma yetkisiyle. Sayım/düzeltme notu sayfa yetkisiyle gelir.
+    (frozenset({"POST"}), r"^/api/v1/stock/(suggestions/[^/]+/decision|thresholds)$", "ozellik:stok.oneri-karar"),
+    (frozenset({"GET"}), r"^/api/v1/stock/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # İhale: kayıt, dosya, kalem, eşleştirme, kontrol listesi, karar önerisi, sonuç. Karar onayı/geri gönderme açıkça
     # verilen `ihale.karar` ile, ilan kaynağı `ihale.kaynak-yonet` ile ucun içinde; şirket belge arşivi `ihale.belge`.
     (frozenset({"POST", "PATCH", "DELETE"}),

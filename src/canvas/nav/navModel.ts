@@ -7,6 +7,13 @@ import {
   GitCompareArrows,
   Store,
   BadgePercent,
+  Boxes,
+  Hourglass,
+  ListOrdered,
+  PackageMinus,
+  ShieldHalf,
+  TriangleAlert,
+  Warehouse,
   HeartHandshake,
   CalendarHeart,
   MessageSquareReply,
@@ -119,6 +126,7 @@ import {
 export type NavGroupId =
   | 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'platform' | 'ik' | 'altyapi' | 'yonetim';
 export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'lojistik' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -391,6 +399,22 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // M43 depo ve stok; M44 lojistik/kargo ve M52 tedarik aynı alana eklenir.
+    id: 'lojistik',
+    label: 'Lojistik',
+    hint: 'Depo ve stok, bitecekler, Logo–CRM farkı, depo hattı',
+    icon: Warehouse,
+    items: [
+      { id: 'stok', label: 'Stok', to: '/stok', icon: Boxes, section: 'Stok', hint: 'Kitap başına Logo stoğu, raf dağılımı, satış hızı ve kaç gün yeteceği', keywords: ['stok', 'depo', 'raf', 'kaç gün yeter', 'tükenme', 'stokta var mı', 'bekleyen sipariş', 'ambar'] },
+      { id: 'stok-bitecekler', label: 'Bitecekler', to: '/stok/bitecekler', icon: Hourglass, section: 'Stok', hint: 'Stoğu yakında bitecek kitaplar, açık üretim kartı ve baskı tekrarı önerisi', keywords: ['bitecek', 'baskı tekrarı', 'kritik stok', 'yeniden baskı'] },
+      { id: 'stok-fazla', label: 'Fazla stok', to: '/stok/fazla', icon: PackageMinus, section: 'Stok', hint: 'Fazla, hareketsiz ve satışı olmayan stok; eritme önerisi', keywords: ['ölü stok', 'hareketsiz', 'fazla stok', 'devir hızı', 'eritme'] },
+      { id: 'stok-esikler', label: 'Güvenlik stoku', to: '/stok/esikler', icon: ShieldHalf, section: 'Stok', hint: 'Güvenlik günü ve yeniden sipariş noktası önerisi ve onayı', keywords: ['eşik', 'asgari stok', 'minimum stok', 'yeniden sipariş'] },
+      { id: 'stok-fark', label: 'Logo–CRM farkı', to: '/stok/fark', icon: GitCompareArrows, section: 'Depo', hint: 'Logo stoğu ile CRM raf stoğu farkı ve kök nedeni', keywords: ['fark', 'sayım', 'mutabakat', 'raf stoğu'] },
+      { id: 'stok-aktarim', label: 'Aktarım hataları', to: '/stok/aktarim', icon: TriangleAlert, section: 'Depo', hint: 'Logo’ya aktarılamayan depo hareketleri ve hata nedeni', keywords: ['aktarım', 'logo mesajı', 'hata', 'depolar arası sevk'] },
+      { id: 'stok-depo-hatti', label: 'Depo hattı', to: '/stok/depo-hatti', icon: ListOrdered, section: 'Depo', hint: 'Sipariş hazırlık aşamaları, bekleme ve toplama süreleri', keywords: ['toplama', 'pusula', 'kutulama', 'sevk', 'sipariş hazırlık'] },
+    ],
+  },
+  {
     id: 'pazarlama',
     label: 'Pazarlama',
     hint: 'Plan, içerik, e-ticaret, SEO & GEO, set ve hediye',
@@ -627,6 +651,8 @@ export function visibleNav(
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform']);
   const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'lojistik'];
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'lojistik']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

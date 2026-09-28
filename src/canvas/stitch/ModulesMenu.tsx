@@ -62,6 +62,7 @@ export const LIVE: Record<string, string> = {
   M35: '/kampanyalar',
   M39: '/pazar-arastirma',
   M44: '/kargo',
+  M43: '/stok',
   M46: '/butce',
   M59: '/bayi-risk',
   M50: '/zeki-kalite',
@@ -91,6 +92,7 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Müşteri & Pazar': { to: '/musteri-iliskileri', hint: 'Cari değeri, kayıp riski ve CRM veri sağlığı' },
   'İnsan Kaynakları': { to: '/ik/ise-alim', hint: 'İşe alım panosu, pozisyonlar ve KVKK kayıtları' },
   'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni ve pazar yerleri' },
+  Lojistik: { to: '/stok', hint: 'Depo ve stok, bitecekler, Logo–CRM farkı, depo hattı' },
   // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
   // M38 müşteri ekranı gelince grubun girişi o olabilir; M39 grubun ikinci bağlantısı olarak kalır.
   Pazarlama: { to: '/pazarlama/yeni-kitap', hint: 'Yeni kitap planı, lansman, backlist ve aylık plan' },
