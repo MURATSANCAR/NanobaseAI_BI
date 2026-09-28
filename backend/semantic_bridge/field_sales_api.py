@@ -586,10 +586,12 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         F.ensure(engine)
         if tur == "gece":
             out = call(svc.run_night, engine, tenant)
-            warm_today(0)
+            warm_today()
             return out
         if tur == "hafif":
-            return call(svc.run_light, engine, tenant)
+            out = call(svc.run_light, engine, tenant)
+            warm_today()
+            return out
         if tur == "haftalik":
             return call(svc.run_weekly, engine, tenant)
         raise HTTPException(status_code=422, detail={"code": "FIELD", "message": "tur gece, hafif ya da haftalik olmalı."})
@@ -601,7 +603,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if not is_admin(user):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Saha verisini yenilemek yönetici işidir."})
         out = call(svc.run_night, engine, tenant)
-        warm_today(0)
+        warm_today()
         audit(engine, user, "run", "saha_tur", None, "Saha verisi yenilendi", {k: out.get(k) for k in ("portfolio", "assigned", "ms")})
         return out
 
@@ -612,7 +614,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     # - temel: gece turu (`run._at`) ve gün değişmedikçe aynı; ziyaret/söz/öncelik/red girdisi olmadan puanlanmış kartlar.
     # - sıra: girdilerden biri değişince yalnız girdisi olan cariler yeniden puanlanır (satırları DB'den), liste yeniden
     #   sıralanır. Girdisi olmayan carinin puanı girdisizle aynıdır, sonuç `F.ranked` ile birebir.
-    # Ekran arar ve sayfa sayfa alır. Yönetici kapsamı köprü açılışında ve gece turundan sonra arka planda hazırlanır.
+    # Ekran arar ve sayfa sayfa alır. Yönetici kapsamı zamanlayıcı turlarından (hafif 15 dk, gece) ve elle yenilemeden
+    # sonra arka planda hazırlanır. Kayıt anında (modül yüklenirken) hazırlanmaz: `deps["engine"]()` çalışma ortamı henüz
+    # yokken onu ikinci kez kurar (2026-09-28'de açılışı 40 sn'den 110 sn'ye çıkardı).
     today_cache: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
     today_locks: dict[tuple[str, Optional[str]], threading.Lock] = {}
     today_guard = threading.Lock()
@@ -669,10 +673,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                              "listKeys": [base["keys"][c["code"]] for c in ordered]}
             return {**base, **base["order"]}
 
-    def warm_today(delay: float) -> None:
-        """Yönetici kapsamının sırası arka planda hazırlanır (ilk açılış beklemesin)."""
+    def warm_today() -> None:
+        """Yönetici kapsamının sırası arka planda hazırlanır (ilk açılış beklemesin). Yalnız istek içinden çağrılır."""
         def run() -> None:
-            time.sleep(delay)
             try:
                 engine, tenant = deps["engine"](), deps["tenant"]()
                 F.ensure(engine)
@@ -688,8 +691,6 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                 log.info("field: bugün sırası önceden hazırlanamadı: %s", e)
 
         threading.Thread(target=run, name="field-today-warm", daemon=True).start()
-
-    warm_today(20)
 
     @app.get(f"{P}/today")
     def field_today(request: Request, temsilci: str = "", q: str = "", offset: int = 0, limit: int = 40) -> dict[str, Any]:

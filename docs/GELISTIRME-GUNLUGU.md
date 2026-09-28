@@ -61,6 +61,12 @@
   planda hazırlanır. Eşdeğerlik gerçek DB'de sınandı (200 + 50 gerçek CRM hesabına red girdisi): eski `F.ranked` ile
   kartlar ve sıra birebir; girdi değişiminde 15 sn → 1,3 sn. Sınarken bulunan: eşit anahtarlı (puan, gecikme, unvan) 15.473
   satırın sırası okumadan okumaya değişiyordu (sorguda ORDER BY yok) → son anahtar cari kodu.
+- **Kurulum 2 (main `afd2b99d`, 08:00) ve bulunan hata:** tur 2'nin «açılışta 20 sn sonra ön hazırlık» adımı
+  `deps["engine"]()` → `rt()` çağırıyordu; çalışma ortamı henüz kurulmamışken `rt()` onu **ikinci kez kurdu** (günlükte iki
+  «knowledge pack» uyarısı, 07:58:54 ve 07:59:42; açılış 40 → 110 sn). Aynı anda istek ve ön hazırlık CRM tahsilat okumasını
+  ayrı ayrı yaptı, ilk saha isteği 34,6 sn sürdü; açılıştaki yük yüzünden üretim de disk kaydından 4–11 sn'de döndü.
+  Düzeltme (tur 3): kayıt anında ön hazırlık yok; yalnız istek içinden — zamanlayıcının hafif (15 dk) ve gece turundan,
+  elle yenilemeden sonra — başlar. Kural: modül `register` içinde `deps["engine"]()`/`rt()` çağıran iş parçacığı açılmaz.
 - Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
