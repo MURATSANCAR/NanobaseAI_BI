@@ -358,6 +358,7 @@ def build(raw: dict[str, Any], s: dict[str, Any], thresholds: dict[str, dict[str
             "warehouses": [{"no": n, "ad": v.get("ad") or f"Ambar {n}"} for n, v in sorted(wh_names.items())],
             "depots": raw.get("depots") or [], "transfers": raw.get("transfers") or [], "pick": raw.get("pick") or [],
             "warnings": list(raw.get("warnings") or []), "readAt": raw.get("at"), "readMs": raw.get("readMs"),
+            "runs": raw.get("runs") or {},
             "forecastStart": fc.get("start")}
 
 
@@ -714,6 +715,7 @@ class Service:
         raw["movementWindow"] = [a.isoformat(), (b - timedelta(days=1)).isoformat()]
         raw["ordersLogo"] = step("logo_orfline_bekleyen", logo.open_orders, "Logo bekleyen sipariş") or {}
         crm_sql: dict[str, str] = {}
+        crm_runs: dict[str, dict[str, Any]] = {}
         try:
             crm = src.Crm(self.crm_run(), self.schema())
             raw["books"] = step("crm_kitap", crm.books, "CRM kitap kartı") or {}
@@ -725,7 +727,7 @@ class Service:
             raw["waiting"] = step("crm_bekleyen_urun", crm.waiting_products, "Bekleyen ürün") or {}
             raw["pick"] = step("crm_depo_hatti", lambda: crm.pick_line(today() - timedelta(days=s["pickDays"])),
                                "Sipariş hazırlık hattı") or []
-            crm_sql = crm.sql
+            crm_sql, crm_runs = crm.sql, crm.runs
         except Exception as e:  # noqa: BLE001
             log.warning("stock: CRM okunamadı: %s", e)
             warnings.append("CRM'e şu an ulaşılamıyor; raf stoğu, aktarım ve depo hattı boş.")
@@ -735,6 +737,7 @@ class Service:
                             "«bugünkü stok» değildir.")
         raw["warnings"], raw["errors"] = warnings, errors
         raw["sql"] = {**logo.sql, **crm_sql}
+        raw["runs"] = {**logo.runs, **crm_runs}   # sorgu bilgisi: çalışan metin + satır/süre/an (stock_kaynak.py)
         raw["readMs"] = int((time.monotonic() - started) * 1000)
         return raw
 

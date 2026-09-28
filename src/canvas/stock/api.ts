@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M43 Depo ve stok ekranlarının köprü uçları: /api/v1/stock/*. */
 
@@ -71,7 +72,8 @@ export type Item = {
   oneri?: { id: string; hedef: string | null; hedefEtiket: string | null; gerekce: string | null } | null;
 };
 
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+/** `kaynaklar`: ekrandaki her rakamın sorgu bilgisi (köprü `stock_kaynak.py`). */
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 export type Value = { toplam: number; maliyetli: number; maliyetsiz: number } | null;
 
 export type Meta = {
@@ -110,6 +112,7 @@ export type Overview = {
   uyarilar: string[];
   yenileniyor: boolean;
   deger?: Value;
+  kaynaklar?: Kaynaklar;
 };
 
 export type ItemPage = Page<Item> & { yayinevleri: string[]; ambarlar: Array<{ no: number; ad: string }>; veriSonu: string | null };
@@ -188,6 +191,7 @@ export type ItemDetail = Item & {
   baskiSuresiKaynak: string;
   hareketPenceresi: [string, string] | null;
   tahminBaslangic: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Transfer = {
@@ -217,6 +221,7 @@ export type PickLine = {
   kisiler?: Array<{ toplayan: string; siparis: number; ortancaSaat: number | null }>;
   kisiGorunur: boolean;
   pencereGun: number;
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/stock';

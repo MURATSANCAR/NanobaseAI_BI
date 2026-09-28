@@ -63,21 +63,31 @@ def _day(v: Any) -> Optional[str]:
     return v.date().isoformat() if hasattr(v, "date") and callable(v.date) else str(v)[:10]
 
 
+def approved_costs_stmt(tenant: str, codes: list[str]) -> Any:
+    """Onaylı analiz okuması (sağlayıcı ve başka modüllerin sorgu bilgisi aynı ifadeyi kullanır)."""
+    A = S.ANALYSES
+    return (sa.select(A.c.id, A.c.stock_code, A.c.stage, A.c.version, A.c.title, A.c.result_json)
+            .where(A.c.tenant_id == tenant, A.c.status == "onaylandi", A.c.stock_code.in_(codes)))
+
+
+def approval_times_stmt(ids: list[str]) -> Any:
+    """Onaylı analiz sürümlerinin son onay imzası anı."""
+    P = S.APPROVALS
+    return (sa.select(P.c.analysis_id, P.c.version, sa.func.max(P.c.at))
+            .where(P.c.analysis_id.in_(ids), P.c.decision == "onay").group_by(P.c.analysis_id, P.c.version))
+
+
 def approved_costs(engine: Any, tenant: str, codes: list[str]) -> dict[str, dict[str, Any]]:
     """Stok kodu → onaylı M9 analizindeki birim maliyet. Tablo yoksa ya da okunamazsa boş (sonraki adıma geçilir)."""
     if not codes or engine is None:
         return {}
-    A, P = S.ANALYSES, S.APPROVALS
     S.ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(A.c.id, A.c.stock_code, A.c.stage, A.c.version, A.c.title, A.c.result_json)
-                         .where(A.c.tenant_id == tenant, A.c.status == "onaylandi", A.c.stock_code.in_(codes))).mappings().all()
+        rows = c.execute(approved_costs_stmt(tenant, codes)).mappings().all()
         signed: dict[tuple[str, int], Any] = {}
         ids = [r["id"] for r in rows]
         if ids:
-            for aid, ver, at in c.execute(sa.select(P.c.analysis_id, P.c.version, sa.func.max(P.c.at))
-                                          .where(P.c.analysis_id.in_(ids), P.c.decision == "onay")
-                                          .group_by(P.c.analysis_id, P.c.version)).all():
+            for aid, ver, at in c.execute(approval_times_stmt(ids)).all():
                 signed[(aid, ver)] = at
     best: dict[str, tuple[tuple, dict[str, Any]]] = {}
     for r in rows:

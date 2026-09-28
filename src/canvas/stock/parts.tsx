@@ -129,9 +129,10 @@ export function ExportLink({ href, show }: { href: string; show: boolean }) {
   );
 }
 
-/** Satır içi süzgeç çipleri (yatay kaydırılır, sayfa taşmaz). */
+/** Satır içi süzgeç çipleri (yatay kaydırılır, sayfa taşmaz). `info`: rozetteki sayının sorgu bilgisi düğmesi, çipin
+ *  yanında (düğmenin içinde değil — iç içe düğme olmasın). */
 export function Chips<T extends string>({ items, value, onChange, label }: {
-  items: ReadonlyArray<{ key: T; label: string; count?: number | null }>;
+  items: ReadonlyArray<{ key: T; label: string; count?: number | null; info?: ReactNode }>;
   value: T;
   onChange: (k: T) => void;
   label: string;
@@ -140,8 +141,8 @@ export function Chips<T extends string>({ items, value, onChange, label }: {
     <div className="-mx-1 overflow-x-auto px-1" role="group" aria-label={label}>
       <div className="flex w-max gap-1.5">
         {items.map((f) => (
+          <span key={f.key || 'hepsi'} className="inline-flex items-center gap-0.5">
           <button
-            key={f.key || 'hepsi'}
             type="button"
             aria-pressed={value === f.key}
             onClick={() => onChange(f.key)}
@@ -152,6 +153,8 @@ export function Chips<T extends string>({ items, value, onChange, label }: {
             {f.label}
             {f.count !== undefined && f.count !== null && <span className="font-mono text-[11px] tabular-nums opacity-70">{n0(f.count)}</span>}
           </button>
+          {f.info}
+          </span>
         ))}
       </div>
     </div>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
@@ -65,16 +67,21 @@ export default function StockItem() {
             {it.rspAltinda && <Pill tone="warn">Yeniden sipariş noktasının altında</Pill>}
           </div>
           <KpiRow>
-            <Kpi label="Logo stok" value={n0(it.bakiye)} help={it.logoVar ? `${it.ambarlar.length} ambarda` : 'Bu yıl Logo’da hareketi yok'} />
-            <Kpi label="CRM raf" value={n0(it.crmRaf)} help={it.fark ? `Fark ${it.fark > 0 ? '+' : ''}${n0(it.fark)} · ${it.farkEtiket}` : `${it.rafSayisi} raf`} />
-            <Kpi label="Kaç gün yeter" value={gunText(it.gun)} help={it.tukenmeTarihi ? `Tahmini tükenme ${fmtDay(it.tukenmeTarihi)}` : 'Satış hızı yok'} />
-            <Kpi label="Aylık satış hızı" value={n1(it.satisHizi)} help={`Kritik: ${it.kritikGun} gün (baskı ${it.baskiSuresi} + güvenlik)`} />
+            <Kpi label="Logo stok" value={n0(it.bakiye)} help={it.logoVar ? `${it.ambarlar.length} ambarda` : 'Bu yıl Logo’da hareketi yok'}
+              info={<SqlInfo k={it.kaynaklar} alan="bakiye" label="Logo stok" />} />
+            <Kpi label="CRM raf" value={n0(it.crmRaf)} help={it.fark ? `Fark ${it.fark > 0 ? '+' : ''}${n0(it.fark)} · ${it.farkEtiket}` : `${it.rafSayisi} raf`}
+              info={<SqlInfo k={it.kaynaklar} alan={it.fark ? 'fark' : 'crmRaf'} label={it.fark ? 'CRM raf ve Logo–CRM farkı' : 'CRM raf'} />} />
+            <Kpi label="Kaç gün yeter" value={gunText(it.gun)} help={it.tukenmeTarihi ? `Tahmini tükenme ${fmtDay(it.tukenmeTarihi)}` : 'Satış hızı yok'}
+              info={<SqlInfo k={it.kaynaklar} alan="gun" label="Kaç gün yeter" />} />
+            <Kpi label="Aylık satış hızı" value={n1(it.satisHizi)} help={`Kritik: ${it.kritikGun} gün (baskı ${it.baskiSuresi} + güvenlik)`}
+              info={<SqlInfo k={it.kaynaklar} alan="satisHizi" label="Aylık satış hızı" />} />
           </KpiRow>
 
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Depo ve raf</h2>
-              <div className="mb-3 flex flex-wrap gap-2">
+              <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="raflar" label="Depo ve raf adetleri">Depo ve raf</InfoLabel></h2>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <SqlInfo k={it.kaynaklar} alan="ambarlar" label="Logo ambar adetleri" />
                 {it.ambarlar.length ? it.ambarlar.map((a) => (
                   <span key={a.no} className="rounded-xl bg-slate-100 px-3 py-1.5 text-[12px] font-semibold">
                     {a.ad}: <span className="font-mono tabular-nums">{n0(a.adet)}</span>
@@ -88,7 +95,7 @@ export default function StockItem() {
                       <th className={th}>Depo</th>
                       <th className={th}>Raf</th>
                       <th className={th}>Tür</th>
-                      <th className={`${th} text-right`}>Adet</th>
+                      <th className={`${th} text-right`}><InfoLabel k={it.kaynaklar} alan="raflar">Adet</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -108,22 +115,23 @@ export default function StockItem() {
             </Panel>
 
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Talep ve hareket</h2>
+              <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="bekleyenCrm">Talep ve hareket</InfoLabel></h2>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px]">
-                <Fact k="Bekleyen sipariş (CRM)" v={n0(it.bekleyenCrm)} />
-                <Fact k="Bekleyen sipariş (Logo)" v={n0(it.bekleyenLogo)} />
-                <Fact k="Bekleyen ürün talebi" v={n0(it.bekleyenUrun)} />
-                <Fact k="Son 12 ay net satış" v={n0(it.netSatis12)} />
-                <Fact k="Stok devir hızı" v={it.devirHizi === null ? '—' : n1(it.devirHizi)} />
+                <Fact k="Bekleyen sipariş (CRM)" v={n0(it.bekleyenCrm)} ks={it.kaynaklar} a="bekleyenCrm" />
+                <Fact k="Bekleyen sipariş (Logo)" v={n0(it.bekleyenLogo)} ks={it.kaynaklar} a="bekleyenLogo" />
+                <Fact k="Bekleyen ürün talebi" v={n0(it.bekleyenUrun)} ks={it.kaynaklar} a="bekleyenUrun" />
+                <Fact k="Son 12 ay net satış" v={n0(it.netSatis12)} ks={it.kaynaklar} a="netSatis12" />
+                <Fact k="Stok devir hızı" v={it.devirHizi === null ? '—' : n1(it.devirHizi)} ks={it.kaynaklar} a="devirHizi" />
                 <Fact k="Son hareket" v={it.sonHareket ? fmtDay(it.sonHareket) : 'pencerede yok'} />
-                <Fact k="Mevcut rapordaki depo stoku" v={n0(it.eosStok)} />
-                <Fact k="Logo’ya geçmemiş (net)" v={it.aktarimBekleyen ? `${n0(it.aktarimBekleyen)} · ${it.aktarimFis} fiş` : '—'} />
-                {it.stokDegeri !== undefined && <Fact k="Birim maliyet" v={it.birimMaliyet ? tl(it.birimMaliyet) : 'bilinmiyor'} />}
-                {it.stokDegeri !== undefined && <Fact k="Stok değeri" v={it.stokDegeri === null ? 'maliyet yok' : tl(it.stokDegeri)} />}
+                <Fact k="Mevcut rapordaki depo stoku" v={n0(it.eosStok)} ks={it.kaynaklar} a="eosStok" />
+                <Fact k="Logo’ya geçmemiş (net)" v={it.aktarimBekleyen ? `${n0(it.aktarimBekleyen)} · ${it.aktarimFis} fiş` : '—'} ks={it.kaynaklar} a="aktarimBekleyen" />
+                {it.stokDegeri !== undefined && <Fact k="Birim maliyet" v={it.birimMaliyet ? tl(it.birimMaliyet) : 'bilinmiyor'} ks={it.kaynaklar} a="birimMaliyet" />}
+                {it.stokDegeri !== undefined && <Fact k="Stok değeri" v={it.stokDegeri === null ? 'maliyet yok' : tl(it.stokDegeri)} ks={it.kaynaklar} a="stokDegeri" />}
               </dl>
               <div className="mt-3 rounded-xl bg-violet-50/70 p-3 text-[12px]">
                 <div className="flex flex-wrap items-center gap-1.5 font-extrabold">
                   Zeki AI talep tahmini
+                  <SqlInfo k={it.kaynaklar} alan="tahmin" label="Talep tahmini" />
                   <span className="rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-canvas-violet">tahmin</span>
                 </div>
                 {it.tahmin ? (
@@ -158,7 +166,7 @@ export default function StockItem() {
             </Panel>
 
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Üretim (baskı tekrarı)</h2>
+              <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="uretimKartlari" label="Açık üretim kartları">Üretim (baskı tekrarı)</InfoLabel></h2>
               {it.uretimKartlari.length ? (
                 <ul className="flex flex-col gap-2">
                   {it.uretimKartlari.map((c) => (
@@ -174,11 +182,14 @@ export default function StockItem() {
               {canOpenRoute(pages, '/uretim') && (
                 <Link to="/uretim" className="mt-2 inline-flex min-h-11 items-center text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">Üretim yönetimini aç</Link>
               )}
-              <div className="mt-1 text-[11px] text-canvas-muted">Baskı süresi: {it.baskiSuresi} gün ({it.baskiSuresiKaynak}).</div>
+              <div className="mt-1 flex items-center gap-1 text-[11px] text-canvas-muted">
+                Baskı süresi: {it.baskiSuresi} gün ({it.baskiSuresiKaynak}).
+                <SqlInfo k={it.kaynaklar} alan="baskiSuresi" label="Baskı süresi" />
+              </div>
             </Panel>
 
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Güvenlik stoku</h2>
+              <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="esik" label="Onaylı eşik">Güvenlik stoku</InfoLabel></h2>
               {it.esik ? (
                 <p className="text-[12.5px]">
                   Onaylı: <strong>{it.esik.guvenlikGun} gün</strong>
@@ -188,7 +199,12 @@ export default function StockItem() {
               ) : (
                 <p className="text-[12.5px] text-canvas-muted">Onaylı eşik yok; varsayılan güvenlik günü kullanılıyor. Logo’da asgari seviye girilmemiş.</p>
               )}
-              {it.esikOnerisi && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-[12px]">Öneri: {it.esikOnerisi.gerekce}</p>}
+              {it.esikOnerisi && (
+                <p className="mt-2 rounded-xl bg-slate-50 p-2 text-[12px]">
+                  Öneri: {it.esikOnerisi.gerekce}
+                  <SqlInfo k={it.kaynaklar} alan="esikOnerisi" label="Eşik önerisi" className="ml-0.5" />
+                </p>
+              )}
               {me?.canDecide && (
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   <label className="flex flex-col gap-1">
@@ -213,6 +229,7 @@ export default function StockItem() {
               )}
               {!!it.esikler.length && (
                 <ul className="mt-3 divide-y divide-slate-100 text-[12px]">
+                  <li className="py-1 text-[11px] font-semibold text-canvas-muted"><InfoLabel k={it.kaynaklar} alan="esikler">Eşik kayıtları</InfoLabel></li>
                   {it.esikler.map((t) => (
                     <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
                       <span>
@@ -230,7 +247,7 @@ export default function StockItem() {
           </div>
 
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">Öneriler</h2>
+            <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="oneriler" label="Öneri rakamları">Öneriler</InfoLabel></h2>
             {it.oneriler.length ? (
               <ul className="flex flex-col gap-2">
                 {it.oneriler.map((s: Suggestion) => (
@@ -279,7 +296,7 @@ export default function StockItem() {
               )}
             </Panel>
             <Panel>
-              <h2 className="mb-2 text-[13px] font-extrabold">Gece fotoğrafı</h2>
+              <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="gecmis">Gece fotoğrafı</InfoLabel></h2>
               {it.gecmis.length ? (
                 <TableWrap>
                   <thead>
@@ -312,10 +329,11 @@ export default function StockItem() {
   );
 }
 
-function Fact({ k, v }: { k: string; v: string }) {
+/** `ks` + `a`: sorgu bilgisi (cevabın `kaynaklar`ı ve alan adı); yoksa rakam değil. */
+function Fact({ k, v, ks, a }: { k: string; v: string; ks?: Kaynaklar; a?: string }) {
   return (
     <div className="min-w-0">
-      <dt className={labelCls}>{k}</dt>
+      <dt className={labelCls}>{a ? <InfoLabel k={ks} alan={a}>{k}</InfoLabel> : k}</dt>
       <dd className="font-mono tabular-nums">{v}</dd>
     </div>
   );

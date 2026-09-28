@@ -44,11 +44,14 @@ export function HrFrame({ crumb, title, lead, detail, back, aside, children }: {
   );
 }
 
-/** Kısa etiketli değer (özet kutuları). */
-export function Fact({ label, value, help }: { label: string; value: ReactNode; help?: ReactNode }) {
+/** Kısa etiketli değer (özet kutuları). `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`), etiketin yanında. */
+export function Fact({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 break-words text-[13.5px] font-bold">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>
@@ -58,13 +61,16 @@ export function Fact({ label, value, help }: { label: string; value: ReactNode; 
 /** Dosya seçme düğmesi: ortak yükleme alanının düğme boyu (sürükle-bırak, tür/sınır yazılı, yetki kilidi). */
 export { FilePick } from '../components/FileDrop';
 
-/** Başlıklı bölüm (kart içinde). */
-export function Block({ title, help, action, children }: { title: string; help?: ReactNode; action?: ReactNode; children: ReactNode }) {
+/** Başlıklı bölüm (kart içinde). `info`: bölümdeki rakamların sorgu bilgisi düğmesi, başlığın yanında. */
+export function Block({ title, help, action, info, children }: { title: string; help?: ReactNode; action?: ReactNode; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[14.5px] font-extrabold tracking-tight">{title}</h2>
+          <h2 className="flex items-center gap-1 text-[14.5px] font-extrabold tracking-tight">
+            <span className="min-w-0">{title}</span>
+            {info}
+          </h2>
           {help && <p className="mt-0.5 max-w-[80ch] text-[11.5px] leading-snug text-canvas-muted">{help}</p>}
         </div>
         {action && <div className="flex flex-wrap gap-2">{action}</div>}

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -115,6 +116,15 @@ def clean(v: Any) -> Optional[str]:
     return bsrc._clean(v)
 
 
+def _timed(run: Runner, runs: dict[str, dict[str, Any]], run_id: str, text: str) -> list[dict[str, Any]]:
+    """Sorguyu çalıştırır ve sorgu bilgisi için çalışan metni, satır sayısını, süreyi ve anı saklar
+    (`runs[run_id]`; ekrandaki «i» bu kaydı gösterir — şablon değil, çalışmış metin)."""
+    t = time.monotonic()
+    rows = run(text)
+    runs[run_id] = {"sql": text, "rows": len(rows), "ms": int((time.monotonic() - t) * 1000), "at": time.time()}
+    return rows
+
+
 class Logo:
     """Logo okuması; yıl → firma eşlemesi bir kez okunur."""
 
@@ -123,6 +133,8 @@ class Logo:
         self.exclude_planned = exclude_planned
         self._firms: Optional[dict[int, str]] = None
         self.sql: dict[str, str] = {}
+        #: Sorgu bilgisi: çalıştırma kimliği → {sql, rows, ms, at}. Yıl kopyası başına okunan kaynakta kimlik `ad:yıl`.
+        self.runs: dict[str, dict[str, Any]] = {}
 
     @property
     def firms(self) -> dict[int, str]:
@@ -136,13 +148,13 @@ class Logo:
     def current(self) -> str:
         return self.firms[max(self.firms)]
 
-    def _q(self, source_id: str, **kw: Any) -> list[dict[str, Any]]:
+    def _q(self, source_id: str, run_id: str = "", **kw: Any) -> list[dict[str, Any]]:
         text = render(source_id, exclude_planned=self.exclude_planned, **kw)
         self.sql[source_id] = text
-        return self.run(text)
+        return _timed(self.run, self.runs, run_id or source_id, text)
 
     def data_end(self) -> Optional[date]:
-        rows = self.run(bsrc.data_end_sql(self.current))
+        rows = _timed(self.run, self.runs, "logo_veri_sonu", bsrc.data_end_sql(self.current))
         return day(rows[0].get("son")) if rows else None
 
     def balances(self) -> tuple[dict[str, dict[str, Any]], dict[str, dict[int, float]]]:
@@ -170,7 +182,8 @@ class Logo:
         """Mevcut rapordaki (Power BI) depo stoku, Baskı Öneri'nin dosyasıyla."""
         text = sql_text("baski-oneri:logo_depo_stok")
         self.sql["baski-oneri:logo_depo_stok"] = text
-        return {key(r["stok_kodu"]): num(r.get("depo_stok")) or 0.0 for r in self.run(text) if key(r.get("stok_kodu"))}
+        return {key(r["stok_kodu"]): num(r.get("depo_stok")) or 0.0
+                for r in _timed(self.run, self.runs, "baski-oneri:logo_depo_stok", text) if key(r.get("stok_kodu"))}
 
     def speeds(self, today: date) -> dict[str, dict[str, Any]]:
         """Baskı Öneri'nin satış hızı sorgusu, aynı dosya ve aynı yıllık görünüm açılımıyla."""
@@ -182,7 +195,8 @@ class Logo:
         self.sql["baski-oneri:logo_satis_hizi"] = text
         if missing:
             log.warning("stock: satış görünümü eksik yıllar %s", missing)
-        return {key(r["stok_kodu"]): r for r in self.run(text) if key(r.get("stok_kodu"))}
+        return {key(r["stok_kodu"]): r for r in _timed(self.run, self.runs, "baski-oneri:logo_satis_hizi", text)
+                if key(r.get("stok_kodu"))}
 
     def turnover(self) -> dict[str, Optional[float]]:
         return {key(r["stok_kodu"]): num(r.get("devir_hizi")) for r in self._q("logo_devir", firm=self.current)
@@ -198,7 +212,7 @@ class Logo:
             a, b = max(start, date(y, 1, 1)), min(end, date(y + 1, 1, 1))
             if a >= b:
                 continue
-            for r in self._q("logo_hareket", firm=f, start=a, end=b):
+            for r in self._q("logo_hareket", f"logo_hareket:{y}", firm=f, start=a, end=b):
                 k = key(r.get("stok_kodu"))
                 if not k:
                     continue
@@ -221,11 +235,12 @@ class Crm:
         self.run = run
         self.schema = schema
         self.sql: dict[str, str] = {}
+        self.runs: dict[str, dict[str, Any]] = {}
 
     def _q(self, source_id: str, **kw: Any) -> list[dict[str, Any]]:
         text = render(source_id, schema=self.schema, **kw)
         self.sql[source_id] = text
-        return self.run(text)
+        return _timed(self.run, self.runs, source_id, text)
 
     def books(self) -> dict[str, dict[str, Any]]:
         return bsrc.read_books(self.run, self.schema.rstrip("."))
@@ -234,7 +249,8 @@ class Crm:
         """Baskı Öneri'nin CRM bekleyen sipariş dosyası (B2C ve iki iç cari hariç)."""
         text = sql_text("baski-oneri:crm_bekleyen_siparis")
         self.sql["baski-oneri:crm_bekleyen_siparis"] = text
-        return {key(r["stok_kodu"]): num(r.get("bekleyen_siparis")) or 0.0 for r in self.run(text) if key(r.get("stok_kodu"))}
+        return {key(r["stok_kodu"]): num(r.get("bekleyen_siparis")) or 0.0
+                for r in _timed(self.run, self.runs, "baski-oneri:crm_bekleyen_siparis", text) if key(r.get("stok_kodu"))}
 
     def shelves(self) -> list[dict[str, Any]]:
         out = []

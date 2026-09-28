@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { fmtDay } from '../budget/api';
+import SqlInfo from '../components/SqlInfo';
 import { n0, stockApi } from './api';
 import ItemList from './ItemList';
 import { Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
@@ -59,10 +60,18 @@ export default function RunningOut() {
         </>
       }
     >
-      <DataDay day={d?.veriSonu} extra={d ? `Baskı süresi ${d.baskiSuresi} gün (${d.baskiSuresiKaynak}); varsayılan güvenlik ${d.guvenlikGun} gün.` : undefined} />
+      <DataDay day={d?.veriSonu} extra={d ? (
+        <>
+          Baskı süresi {d.baskiSuresi} gün ({d.baskiSuresiKaynak}); varsayılan güvenlik {d.guvenlikGun} gün.
+          <SqlInfo k={d.kaynaklar} alan="baskiSuresi" label="Baskı süresi ve güvenlik günü" className="ml-0.5" />
+        </>
+      ) : undefined} />
       <Chips<Tab>
         label="Bölüm"
-        items={[{ key: 'liste', label: 'Liste', count: d?.total ?? null }, { key: 'oneri', label: 'Üretime öneriler', count: sug.data?.total ?? null }]}
+        items={[
+          { key: 'liste', label: 'Liste', count: d?.total ?? null, info: <SqlInfo k={d?.kaynaklar} alan="total" label="Bitecek kitap sayısı" /> },
+          { key: 'oneri', label: 'Üretime öneriler', count: sug.data?.total ?? null, info: <SqlInfo k={sug.data?.kaynaklar} alan="total" label="Açık üretim önerisi sayısı" /> },
+        ]}
         value={tab}
         onChange={(k) => set('sekme', k === 'liste' ? null : k)}
       />
@@ -82,7 +91,7 @@ export default function RunningOut() {
           {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
           {q.isLoading && <Loading what="Bitecekler" />}
           {d && !d.items.length && <Empty>Bu sürede bitecek kitap yok. Satış hızı ve stok kaynağı ayrı ayrı okunuyor; boş liste bir okuma hatası değilse gerçekten bitecek kitap yoktur.</Empty>}
-          {!!d?.items.length && <ItemList items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
+          {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
           {!!d?.items.some((i) => i.tahminAralik?.g90) && (
             <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
               «Tahmin · 90 gün»: tahmin başlangıcından sonraki üç ayın beklenen satışı (temel); altındaki aralık muhafazakâr–iyimser
@@ -103,7 +112,10 @@ export default function RunningOut() {
                   <Link to={`/stok/${encodeURIComponent(s.stokKodu)}`} className="font-bold hover:text-canvas-violet hover:underline">
                     {(s.veri.ad as string | null) ?? s.stokKodu}
                   </Link>
-                  <span className="font-mono text-[11px] text-canvas-muted">{s.stokKodu} · {s.hedefEtiket ?? '—'}</span>
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-canvas-muted">
+                    {s.stokKodu} · {s.hedefEtiket ?? '—'}
+                    <SqlInfo k={sug.data?.kaynaklar} alan="items[]" label="Öneri gerekçesindeki rakamlar" />
+                  </span>
                 </div>
                 <p className="mt-1 text-canvas-muted">{s.gerekce}</p>
                 <SuggestionActions s={s} canDecide={!!me?.canDecide} />

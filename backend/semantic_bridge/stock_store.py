@@ -173,9 +173,13 @@ def _qty(v: Any, label: str) -> Optional[float]:
 # ------------------------------------------------------------------ meta
 
 
+def meta_stmt(tenant: str, key: str) -> Any:
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
-        row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
+        row = c.execute(meta_stmt(tenant, key)).first()
     return {**_j(row.value_json, {}), "_at": iso(row.updated_at)} if row else {}
 
 
@@ -200,17 +204,23 @@ def _threshold(r: Any) -> dict[str, Any]:
             "onaylayan": r.onaylayan, "onayTarihi": iso(r.onay_tarihi), "olusturma": iso(r.created_at)}
 
 
-def thresholds(engine: sa.engine.Engine, tenant: str, durum: str = "", codes: Optional[Iterable[str]] = None) -> list[dict[str, Any]]:
+def thresholds_stmt(tenant: str, durum: str = "", codes: Optional[list[str]] = None) -> Any:
+    """Eşik kayıtları okuması (uç ve sorgu bilgisi aynı ifadeyi kullanır)."""
     q = sa.select(THRESHOLDS).where(THRESHOLDS.c.tenant_id == tenant)
     if durum:
         q = q.where(THRESHOLDS.c.durum == durum)
     if codes is not None:
+        q = q.where(THRESHOLDS.c.stok_kodu.in_(codes))
+    return q.order_by(THRESHOLDS.c.created_at.desc())
+
+
+def thresholds(engine: sa.engine.Engine, tenant: str, durum: str = "", codes: Optional[Iterable[str]] = None) -> list[dict[str, Any]]:
+    if codes is not None:
         codes = list(codes)
         if not codes:
             return []
-        q = q.where(THRESHOLDS.c.stok_kodu.in_(codes))
     with engine.connect() as c:
-        rows = c.execute(q.order_by(THRESHOLDS.c.created_at.desc())).all()
+        rows = c.execute(thresholds_stmt(tenant, durum, codes)).all()
     return [_threshold(r) for r in rows]
 
 
@@ -321,8 +331,8 @@ def expire_suggestions(engine: sa.engine.Engine, tenant: str, tur: str, keep: se
         return int(res.rowcount or 0)
 
 
-def list_suggestions(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: str = "acik", hedef: str = "",
-                     stok: str = "", page: int = 0) -> dict[str, Any]:
+def suggestions_stmt(tenant: str, *, tur: str = "", durum: str = "acik", hedef: str = "", stok: str = "") -> Any:
+    """Öneri listesi okuması (sayfasız; uç sayfayı ekler, sorgu bilgisi aynı ifadeyi gösterir)."""
     q = sa.select(SUGGESTIONS).where(SUGGESTIONS.c.tenant_id == tenant)
     if tur:
         q = q.where(SUGGESTIONS.c.tur == tur)
@@ -332,6 +342,12 @@ def list_suggestions(engine: sa.engine.Engine, tenant: str, *, tur: str = "", du
         q = q.where(SUGGESTIONS.c.hedef_modul == hedef)
     if stok:
         q = q.where(SUGGESTIONS.c.stok_kodu == stok)
+    return q
+
+
+def list_suggestions(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: str = "acik", hedef: str = "",
+                     stok: str = "", page: int = 0) -> dict[str, Any]:
+    q = suggestions_stmt(tenant, tur=tur, durum=durum, hedef=hedef, stok=stok)
     page = max(0, int(page or 0))
     with engine.connect() as c:
         total = c.execute(sa.select(sa.func.count()).select_from(q.subquery())).scalar() or 0
@@ -376,10 +392,13 @@ def write_snapshot(engine: sa.engine.Engine, tenant: str, day: date, rows: list[
     return len(rows)
 
 
+def snapshots_stmt(tenant: str, stok: str) -> Any:
+    return sa.select(SNAPSHOTS).where(SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.stok_kodu == stok).order_by(SNAPSHOTS.c.gun)
+
+
 def snapshots(engine: sa.engine.Engine, tenant: str, stok: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SNAPSHOTS).where(SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.stok_kodu == stok)
-                         .order_by(SNAPSHOTS.c.gun)).all()
+        rows = c.execute(snapshots_stmt(tenant, stok)).all()
     return [{"gun": r.gun, "bakiye": r.logo_bakiye, "crmRaf": r.crm_raf, "satisHizi": r.satis_hizi} for r in rows]
 
 

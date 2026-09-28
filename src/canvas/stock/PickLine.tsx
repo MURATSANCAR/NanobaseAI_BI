@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, TableWrap, errText, td, th } from '../admin/ui';
@@ -33,17 +34,21 @@ export default function PickLine() {
         <>
           <KpiRow>
             {d.asamalar.map((a) => (
-              <Kpi key={a.key} label={a.label} value={n0(a.adet)} help={`Aşamada ortanca ${hours(a.ortancaSaat)} · en eski ${hours(a.enEskiSaat)}`} />
+              <Kpi key={a.key} label={a.label} value={n0(a.adet)} help={`Aşamada ortanca ${hours(a.ortancaSaat)} · en eski ${hours(a.enEskiSaat)}`}
+                info={<SqlInfo k={d.kaynaklar} alan="asamalar" label={`${a.label} · sipariş ve süre`} />} />
             ))}
           </KpiRow>
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">Aşama süreleri — son {d.pencereGun} günde sevk edilenler</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">
+              Aşama süreleri — son {d.pencereGun} günde sevk edilenler
+              <SqlInfo k={d.kaynaklar} alan="pencereGun" label="Pencere (gün)" />
+            </h2>
             <TableWrap>
               <thead>
                 <tr>
                   <th className={th}>Aşama</th>
-                  <th className={`${th} text-right`}>Ortanca</th>
-                  <th className={`${th} text-right`}>Sipariş</th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="sureler">Ortanca</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="sureler">Sipariş</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -58,7 +63,10 @@ export default function PickLine() {
             </TableWrap>
           </Panel>
           <Panel>
-            <h2 className="mb-2 text-[13px] font-extrabold">Depodaki siparişler (en uzun bekleyen üstte)</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">
+              Depodaki siparişler (en uzun bekleyen üstte)
+              <SqlInfo k={d.kaynaklar} alan="acik.total" label="Depodaki sipariş sayısı" />
+            </h2>
             {!d.acik.items.length && <Empty>Depo aşamasında sipariş yok.</Empty>}
             {!!d.acik.items.length && (
               <TableWrap>
@@ -67,7 +75,7 @@ export default function PickLine() {
                     <th className={th}>Sipariş</th>
                     <th className={th}>Aşama</th>
                     <th className={th}>Depo</th>
-                    <th className={`${th} text-right`}>Aşamada</th>
+                    <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="acik.items[].asamaSaat">Aşamada</InfoLabel></th>
                     <th className={th}>Öncelik</th>
                     {d.kisiGorunur && <th className={th}>Toplayan</th>}
                   </tr>
@@ -98,8 +106,8 @@ export default function PickLine() {
                   <thead>
                     <tr>
                       <th className={th}>Toplayan</th>
-                      <th className={`${th} text-right`}>Sipariş</th>
-                      <th className={`${th} text-right`}>Ortanca süre</th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kisiler">Sipariş</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kisiler">Ortanca süre</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>

@@ -1563,6 +1563,11 @@ def ensure(engine: sa.engine.Engine) -> None:
 # ------------------------------------------------------------------ ayarlar
 
 
+def settings_stmt() -> Any:
+    """Ayar kaydı okuması (sorgu bilgisi aynı ifadeyi gösterir: `kaynak_ayar.py`)."""
+    return sa.select(SETTINGS.c.key, SETTINGS.c.value)
+
+
 def _stored() -> dict[str, str]:
     if _engine is None:
         return {}
@@ -1570,7 +1575,7 @@ def _stored() -> dict[str, str]:
         return _cache["values"]
     try:
         with _engine.connect() as c:
-            rows = c.execute(sa.select(SETTINGS.c.key, SETTINGS.c.value)).all()
+            rows = c.execute(settings_stmt()).all()
         _cache.update(at=time.monotonic(), values={k: v for k, v in rows})
     except Exception as e:  # noqa: BLE001
         log.warning("admin: ayarlar okunamadı, ortam değerleri kullanılıyor: %s", e)

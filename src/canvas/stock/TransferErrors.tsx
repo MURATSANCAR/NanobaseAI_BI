@@ -1,4 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, errText, label as labelCls, td, th } from '../admin/ui';
@@ -46,14 +48,18 @@ export default function TransferErrors() {
         <div className="mb-3 flex flex-col gap-2">
           <Chips<Tur>
             label="Tür"
-            items={[{ key: 'hata', label: 'Hata mesajlı', count: d?.hata ?? null }, { key: 'bekliyor', label: 'Mesajsız bekleyen', count: d?.bekliyor ?? null }, { key: '', label: 'Hepsi' }]}
+            items={[
+              { key: 'hata', label: 'Hata mesajlı', count: d?.hata ?? null, info: <SqlInfo k={d?.kaynaklar} alan="hata" label="Hata mesajlı hareket sayısı" /> },
+              { key: 'bekliyor', label: 'Mesajsız bekleyen', count: d?.bekliyor ?? null, info: <SqlInfo k={d?.kaynaklar} alan="bekliyor" label="Mesajsız bekleyen hareket sayısı" /> },
+              { key: '', label: 'Hepsi' },
+            ]}
             value={tur}
             onChange={(k) => set('tur', k)}
           />
           {tur !== 'bekliyor' && !!d?.siniflar.length && (
             <Chips<string>
               label="Neden"
-              items={[{ key: '', label: 'Bütün nedenler' }, ...d.siniflar.map((s) => ({ key: s.key, label: s.key, count: s.adet }))]}
+              items={[{ key: '', label: 'Bütün nedenler', info: <SqlInfo k={d.kaynaklar} alan="siniflar" label="Neden sayaçları (Zeki AI sınıfı)" /> }, ...d.siniflar.map((s) => ({ key: s.key, label: s.key, count: s.adet }))]}
               value={sinif}
               onChange={(k) => set('sinif', k || null)}
             />
@@ -62,16 +68,20 @@ export default function TransferErrors() {
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Aktarım kayıtları" />}
         {d && !d.items.length && <Empty>Kayıt yok.</Empty>}
-        {!!d?.items.length && <Rows items={d.items} />}
+        {!!d?.items.length && <Rows items={d.items} k={d.kaynaklar} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>
     </StockFrame>
   );
 }
 
-function Rows({ items }: { items: Transfer[] }) {
+function Rows({ items, k }: { items: Transfer[]; k?: Kaynaklar }) {
   return (
     <>
+      <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-canvas-muted md:hidden" aria-label="Rakamların sorgu bilgisi">
+        <InfoLabel k={k} alan="items[].yasGun">Yaş</InfoLabel>
+        <InfoLabel k={k} alan="items[].satir">Satır ve miktar</InfoLabel>
+      </div>
       <ul className="flex flex-col gap-2 md:hidden">
         {items.map((t) => (
           <li key={t.id} className="rounded-2xl border border-slate-100 bg-white/80 p-3 text-[12px]">
@@ -98,8 +108,8 @@ function Rows({ items }: { items: Transfer[] }) {
               <th className={th}>Fiş</th>
               <th className={th}>İşlem</th>
               <th className={th}>Depo</th>
-              <th className={`${th} text-right`}>Yaş</th>
-              <th className={`${th} text-right`}>Miktar</th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].yasGun">Yaş</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].miktar">Miktar</InfoLabel></th>
               <th className={th}>Neden (Zeki AI)</th>
               <th className={th}>Logo mesajı</th>
             </tr>

@@ -22,7 +22,9 @@ from typing import Any, Optional
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import stock as S
+from semantic_bridge import stock_kaynak as K
 from semantic_bridge import stock_sources as src
 from semantic_bridge import stock_store as store
 from semantic_bridge.stock_store import StockError
@@ -91,6 +93,13 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     def model(engine: Any, tenant: str) -> dict[str, Any]:
         return call(svc.model, engine, tenant, bool(fresh()))
 
+    def kdeps(user: str) -> dict[str, Any]:
+        """Sorgu bilgisi bağlamı: yalnız veritabanı adları (bağlantı bilgisi okunmaz), üretim ve maliyet sağlayıcısı."""
+        return {"logo_db": PV.connection_database(deps["logo_file"]() or None),
+                "crm_db": PV.connection_database(deps["crm_file"]() or None),
+                "m12": (deps.get("m12") or (lambda: None))(),
+                "costs": (deps.get("costs") or (lambda: None))() if ok(user, FEATURE_COST) else None}
+
     def with_cost(user: str, rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]]]:
         """Maliyet yetkisi varsa birim maliyet (M9 sağlayıcısı) ve stok değeri eklenir; yoksa alan hiç yoktur."""
         if not ok(user, FEATURE_COST):
@@ -136,14 +145,12 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
 
     @app.get(f"{P}/sources")
     def stock_sources(request: Request) -> dict[str, Any]:
-        """Ekrandaki ⓘ paneli: çalışan SQL'in kendisi (son okumadaki metin; okunmadıysa dosya)."""
+        """«Nasıl hesaplandı» paneli: çalışan SQL'in kendisi (son okumadaki metin). Okunmamış kaynakta metin yok —
+        şablon (yer tutuculu dosya) gösterilmez."""
         ctx(request)
         out = []
         for sid, conn, title, desc in src.SOURCES:
-            try:
-                text = svc.sql.get(sid) or src.sql_text(sid)
-            except OSError:
-                text = None
+            text = svc.sql.get(sid)
             out.append({"id": sid, "baglanti": "Logo" if conn == "logo" else "CRM", "baslik": title, "aciklama": desc, "sql": text})
         return {"sources": out}
 
@@ -156,7 +163,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         ov["yenileniyor"] = svc.refreshing()
         if ok(user, FEATURE_COST):
             _, ov["deger"] = with_cost(user, [i for i in m["items"] if i["bakiye"] > 0])
-        return ov
+        return PV.bagla(ov, lambda: K.for_overview(engine, tenant, m, ov, kdeps(user)))
 
     @app.get(f"{P}/names")
     def stock_names(request: Request) -> dict[str, Any]:
@@ -178,7 +185,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         pg["yayinevleri"] = sorted({i["yayinevi"] for i in m["items"] if i["yayinevi"]}, key=S.fold)
         pg["ambarlar"] = m["warehouses"]
         pg["veriSonu"] = m["dataEnd"]
-        return pg
+        return PV.bagla(pg, lambda: K.for_items(engine, tenant, m, pg, kdeps(user)))
 
     @app.get(f"{P}/items/{{stok_kodu}}")
     def stock_item(stok_kodu: str, request: Request) -> dict[str, Any]:
@@ -195,13 +202,14 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         except Exception as e:  # noqa: BLE001
             log.info("stock: üretim kartları okunamadı: %s", e)
         prop = S.threshold_proposal(it, m["lead"], m["settings"]["safetyDays"])
-        return {**it, "raflar": sorted(m["shelves"].get(k, []), key=lambda r: (-r["adet"], r["depo"] or "", r["raf"] or "")),
+        out = {**it, "raflar": sorted(m["shelves"].get(k, []), key=lambda r: (-r["adet"], r["depo"] or "", r["raf"] or "")),
                 "uretimKartlari": cards, "notlar": store.notes(engine, tenant, k),
                 "esikler": store.thresholds(engine, tenant, codes=[k]), "esikOnerisi": prop,
                 "oneriler": store.list_suggestions(engine, tenant, stok=k, durum="")["items"],
                 "gecmis": store.snapshots(engine, tenant, k), "veriSonu": m["dataEnd"], "baskiSuresi": m["lead"],
                 "baskiSuresiKaynak": m["leadSource"], "hareketPenceresi": m.get("movementWindow"),
                 "tahminBaslangic": m.get("forecastStart")}
+        return PV.bagla(out, lambda: K.for_item(engine, tenant, m, out, kdeps(user)))
 
     @app.post(f"{P}/items/{{stok_kodu}}/notes", status_code=201)
     def stock_note_add(stok_kodu: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -229,8 +237,9 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             rows = [i for i in rows if not i["uretim"]]
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
-        return {**pg, "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
-                "guvenlikGun": m["settings"]["safetyDays"], "veriSonu": m["dataEnd"]}
+        out = {**pg, "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
+               "guvenlikGun": m["settings"]["safetyDays"], "veriSonu": m["dataEnd"]}
+        return PV.bagla(out, lambda: K.for_running_out(engine, tenant, m, out, kdeps(user)))
 
     @app.get(f"{P}/excess")
     def stock_excess(request: Request, tur: str = "", sayfa: int = 0) -> dict[str, Any]:
@@ -245,12 +254,13 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         for i in pg["items"]:
             o = sug.get(i["stokKodu"])
             i["oneri"] = {"id": o["id"], "hedef": o["hedef"], "hedefEtiket": o["hedefEtiket"], "gerekce": o["gerekce"]} if o else None
-        return {**pg, "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value, "fazlaGun": m["settings"]["excessDays"],
-                "hareketPenceresi": m.get("movementWindow"), "veriSonu": m["dataEnd"]}
+        out = {**pg, "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value, "fazlaGun": m["settings"]["excessDays"],
+               "hareketPenceresi": m.get("movementWindow"), "veriSonu": m["dataEnd"]}
+        return PV.bagla(out, lambda: K.for_excess(engine, tenant, m, out, kdeps(user)))
 
     @app.get(f"{P}/diff")
     def stock_diff(request: Request, sinif: str = "", sayfa: int = 0) -> dict[str, Any]:
-        engine, tenant, _, _ = ctx(request)
+        engine, tenant, user, _ = ctx(request)
         m = model(engine, tenant)
         if sinif and sinif not in S.DIFF_CLASSES:
             raise HTTPException(status_code=400, detail={"code": "STOCK", "message": "Fark sınıfı geçersiz."})
@@ -258,13 +268,14 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         counts = {k: 0 for k in S.DIFF_CLASSES}
         for i in S.diff_rows(m):
             counts[i["farkSinif"]] += 1
-        return {**S.page_of(rows, sayfa), "siniflar": [{"key": k, "label": v, "adet": counts[k]} for k, v in S.DIFF_CLASSES.items()],
-                "veriSonu": m["dataEnd"], "not": "Fark = CRM raf kalanı − Logo bakiyesi. Logo kopyası donmuşsa sonraki "
-                "hareketler yalnız CRM'dedir; fark bu yüzden de büyür."}
+        out = {**S.page_of(rows, sayfa), "siniflar": [{"key": k, "label": v, "adet": counts[k]} for k, v in S.DIFF_CLASSES.items()],
+               "veriSonu": m["dataEnd"], "not": "Fark = CRM raf kalanı − Logo bakiyesi. Logo kopyası donmuşsa sonraki "
+               "hareketler yalnız CRM'dedir; fark bu yüzden de büyür."}
+        return PV.bagla(out, lambda: K.for_diff(engine, tenant, m, out, kdeps(user)))
 
     @app.get(f"{P}/transfer-errors")
     def stock_transfer_errors(request: Request, tur: str = "hata", sinif: str = "", sayfa: int = 0) -> dict[str, Any]:
-        engine, tenant, _, _ = ctx(request)
+        engine, tenant, user, _ = ctx(request)
         m = model(engine, tenant)
         if tur not in ("", "hata", "bekliyor"):
             raise HTTPException(status_code=400, detail={"code": "STOCK", "message": "Tür hata ya da bekliyor olmalı."})
@@ -276,8 +287,9 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         counts: dict[str, int] = {}
         for r in all_err:
             counts[r["sinif"] or "Sınıflanmadı"] = counts.get(r["sinif"] or "Sınıflanmadı", 0) + 1
-        return {**S.page_of(rows, sayfa), "siniflar": [{"key": k, "adet": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])],
-                "hata": len(all_err), "bekliyor": len(m["transfers"]) - len(all_err)}
+        out = {**S.page_of(rows, sayfa), "siniflar": [{"key": k, "adet": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])],
+               "hata": len(all_err), "bekliyor": len(m["transfers"]) - len(all_err)}
+        return PV.bagla(out, lambda: K.for_transfer_errors(engine, tenant, m, out, kdeps(user)))
 
     @app.get(f"{P}/pick-line")
     def stock_pick_line(request: Request, sayfa: int = 0) -> dict[str, Any]:
@@ -285,14 +297,24 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         m = model(engine, tenant)
         out = S.pick_line(m, m["settings"], ok(user, FEATURE_PICK))
         pg = S.page_of(out.pop("acik"), sayfa)
-        return {**out, "acik": pg, "kisiGorunur": ok(user, FEATURE_PICK)}
+        res = {**out, "acik": pg, "kisiGorunur": ok(user, FEATURE_PICK)}
+        return PV.bagla(res, lambda: K.for_pick_line(engine, tenant, m, res, kdeps(user)))
 
     # ------------------------------------------------------------------ öneri ve eşik
 
     @app.get(f"{P}/suggestions")
     def stock_suggestions(request: Request, tur: str = "", durum: str = "acik", hedef: str = "", sayfa: int = 0) -> dict[str, Any]:
-        engine, tenant, _, _ = ctx(request)
-        return store.list_suggestions(engine, tenant, tur=tur[:10], durum=durum[:10], hedef=hedef[:8], page=sayfa)
+        engine, tenant, user, _ = ctx(request)
+        out = store.list_suggestions(engine, tenant, tur=tur[:10], durum=durum[:10], hedef=hedef[:8], page=sayfa)
+
+        def build() -> Any:
+            try:
+                m = svc.model(engine, tenant)
+            except Exception:  # noqa: BLE001 — okuma yoksa yalnız portal kaydı gösterilir
+                m = None
+            return K.for_suggestions(engine, tenant, out, tur=tur[:10], durum=durum[:10], hedef=hedef[:8], runs_m=m,
+                                     deps=kdeps(user))
+        return PV.bagla(out, build)
 
     @app.post(f"{P}/suggestions/{{sid}}/decision")
     def stock_suggestion_decide(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -305,14 +327,15 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     @app.get(f"{P}/thresholds")
     def stock_thresholds(request: Request, durum: str = "onayli", sayfa: int = 0) -> dict[str, Any]:
         """durum = onayli | taslak | red | arsiv (kayıtlar) ya da oneri (eşiği olmayan satışlı kitaplara hesaplanan öneri)."""
-        engine, tenant, _, _ = ctx(request)
+        engine, tenant, user, _ = ctx(request)
         if durum == "oneri":
             m = model(engine, tenant)
             have = {t["stokKodu"] for t in store.thresholds(engine, tenant) if t["durum"] in ("onayli", "taslak")}
             props = [p for p in (S.threshold_proposal(i, m["lead"], m["settings"]["safetyDays"]) for i in m["items"]
                                  if i["stokKodu"] not in have) if p]
             props.sort(key=lambda p: (p["gun"] is None, p["gun"] if p["gun"] is not None else 0))
-            return {**S.page_of(props, sayfa), "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"]}
+            out = {**S.page_of(props, sayfa), "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"]}
+            return PV.bagla(out, lambda: K.for_thresholds(engine, tenant, m, out, "oneri", kdeps(user)))
         if durum not in store.THRESHOLD_STATES:
             raise HTTPException(status_code=400, detail={"code": "STOCK", "message": "Durum geçersiz."})
         rows = store.thresholds(engine, tenant, durum)
@@ -322,7 +345,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             names = {}
         for r in rows:
             r["ad"] = names.get(r["stokKodu"])
-        return S.page_of(rows, sayfa)
+        out = S.page_of(rows, sayfa)
+        return PV.bagla(out, lambda: K.for_thresholds(engine, tenant, None, out, durum, kdeps(user)))
 
     @app.post(f"{P}/thresholds", status_code=201)
     def stock_threshold_save(body: dict[str, Any], request: Request) -> dict[str, Any]:

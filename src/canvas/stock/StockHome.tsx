@@ -8,6 +8,8 @@ import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../editorial/kit';
 import SearchSelect from '../components/SearchSelect';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay } from '../budget/api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { gunText, n0, stockApi, tl, type StockState } from './api';
 import ItemList from './ItemList';
 import { BookCell, Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
@@ -95,10 +97,14 @@ export default function StockHome() {
             <Note key={w} tone="warn">{w}</Note>
           ))}
           <KpiRow>
-            <Kpi label="Toplam stok" value={n0(o.toplamStok)} help={`${n0(o.stokluKitap)} kitapta, adet${o.deger ? ` · değeri ${tl(o.deger.toplam)}` : ''}`} />
-            <Kpi label="Stokta yok" value={n0(o.stoksuzAktif)} help="Satışı olan ama Logo stoğu bitmiş kitap" onClick={() => update({ durum: 'stoksuz' })} active={durum === 'stoksuz'} />
-            <Kpi label={`${o.bitecekGun} günde bitecek`} value={n0(o.bitecek)} help={`${n0(o.kartsizKritik)} tanesinin açık üretim kartı yok · baskı süresi ${o.baskiSuresi} gün`} onClick={go('/stok/bitecekler')} />
-            <Kpi label="Logo’ya geçmemiş" value={n0(o.aktarimHatasi)} help={`Hata mesajlı hareket; mesajsız bekleyen ${n0(o.aktarimBekleyen)}`} onClick={go('/stok/aktarim')} />
+            <Kpi label="Toplam stok" value={n0(o.toplamStok)} help={`${n0(o.stokluKitap)} kitapta, adet${o.deger ? ` · değeri ${tl(o.deger.toplam)}` : ''}`}
+              info={<SqlInfo k={o.kaynaklar} alan={o.deger ? 'deger' : 'toplamStok'} label={o.deger ? 'Toplam stok ve stok değeri' : 'Toplam stok'} />} />
+            <Kpi label="Stokta yok" value={n0(o.stoksuzAktif)} help="Satışı olan ama Logo stoğu bitmiş kitap" onClick={() => update({ durum: 'stoksuz' })} active={durum === 'stoksuz'}
+              info={<SqlInfo k={o.kaynaklar} alan="stoksuzAktif" label="Stokta yok" />} />
+            <Kpi label={`${o.bitecekGun} günde bitecek`} value={n0(o.bitecek)} help={`${n0(o.kartsizKritik)} tanesinin açık üretim kartı yok · baskı süresi ${o.baskiSuresi} gün`} onClick={go('/stok/bitecekler')}
+              info={<SqlInfo k={o.kaynaklar} alan="kartsizKritik" label="Bitecek ve kartsız kritik kitaplar" />} />
+            <Kpi label="Logo’ya geçmemiş" value={n0(o.aktarimHatasi)} help={`Hata mesajlı hareket; mesajsız bekleyen ${n0(o.aktarimBekleyen)}`} onClick={go('/stok/aktarim')}
+              info={<SqlInfo k={o.kaynaklar} alan="aktarimHatasi" label="Logo’ya geçmemiş hareketler" />} />
           </KpiRow>
         </>
       )}
@@ -120,7 +126,7 @@ export default function StockHome() {
 
       {o && (
         <div className="grid gap-3 lg:grid-cols-3 lg:gap-4">
-          <Today title="En önce bitecekler" total={o.bitecek} to="/stok/bitecekler" pages={pages}>
+          <Today title="En önce bitecekler" total={o.bitecek} to="/stok/bitecekler" pages={pages} k={o.kaynaklar} alan="bugun.bitecek.items[].gun">
             {o.bugun.bitecek.items.slice(0, 8).map((i) => (
               <li key={i.stokKodu} className="flex items-start justify-between gap-2 py-1.5">
                 <BookCell it={i} />
@@ -131,7 +137,7 @@ export default function StockHome() {
               </li>
             ))}
           </Today>
-          <Today title="Logo’ya aktarılamayan" total={o.aktarimHatasi} to="/stok/aktarim" pages={pages}>
+          <Today title="Logo’ya aktarılamayan" total={o.aktarimHatasi} to="/stok/aktarim" pages={pages} k={o.kaynaklar} alan="bugun.aktarim.items[].yasGun">
             {o.bugun.aktarim.items.slice(0, 8).map((t) => (
               <li key={t.id} className="py-1.5">
                 <div className="flex justify-between gap-2 text-[12px] font-bold">
@@ -142,7 +148,7 @@ export default function StockHome() {
               </li>
             ))}
           </Today>
-          <Today title="Logo–CRM farkı en büyük" total={o.farkliKitap} to="/stok/fark" pages={pages}>
+          <Today title="Logo–CRM farkı en büyük" total={o.farkliKitap} to="/stok/fark" pages={pages} k={o.kaynaklar} alan="bugun.fark.items[].fark">
             {o.bugun.fark.items.slice(0, 8).map((i) => (
               <li key={i.stokKodu} className="flex items-start justify-between gap-2 py-1.5">
                 <BookCell it={i} />
@@ -159,7 +165,12 @@ export default function StockHome() {
       {o && (
         <Panel>
           <div className="mb-3 flex flex-col gap-2">
-            <Chips label="Durum" items={STATES.map((s) => ({ ...s, count: s.key ? o.durumlar.find((d) => d.key === s.key)?.adet : null }))} value={durum} onChange={(k) => update({ durum: k })} />
+            <div className="flex items-center gap-1">
+              <div className="min-w-0 flex-1">
+                <Chips label="Durum" items={STATES.map((s) => ({ ...s, count: s.key ? o.durumlar.find((d) => d.key === s.key)?.adet : null }))} value={durum} onChange={(k) => update({ durum: k })} />
+              </div>
+              <SqlInfo k={o.kaynaklar} alan="durumlar" label="Durum sayaçları" />
+            </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1">
                 <span className={labelCls}>Ara</span>
@@ -192,7 +203,7 @@ export default function StockHome() {
           {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
           {list.data && !list.data.items.length && <Empty>Bu süzgeçte kitap yok.</Empty>}
           {!!list.data?.items.length && (
-            <ItemList items={list.data.items} cols={['bakiye', 'crmRaf', 'hiz', 'gun', 'tukenme', 'bekleyen', 'durum', 'deger']} />
+            <ItemList k={list.data.kaynaklar} items={list.data.items} cols={['bakiye', 'crmRaf', 'hiz', 'gun', 'tukenme', 'bekleyen', 'durum', 'deger']} />
           )}
           {list.data && (
             <Pager page={list.data.page} pageSize={list.data.pageSize} total={list.data.total} shown={list.data.items.length}
@@ -220,18 +231,21 @@ export default function StockHome() {
   );
 }
 
-function Today({ title, total, to, pages, children }: { title: string; total: number; to: string; pages: ReturnType<typeof usePageAccess>; children: ReactNode }) {
+function Today({ title, total, to, pages, children, k, alan }: { title: string; total: number; to: string; pages: ReturnType<typeof usePageAccess>; children: ReactNode; k?: Kaynaklar; alan: string }) {
   return (
     <Panel>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-extrabold">{title}</h2>
-        {canOpenRoute(pages, to) ? (
-          <Link to={to} className="inline-flex min-h-11 items-center text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
-            Tümü ({n0(total)})
-          </Link>
-        ) : (
-          <span className="font-mono text-[12px] tabular-nums text-canvas-muted">{n0(total)}</span>
-        )}
+        <h2 className="text-[13px] font-extrabold"><InfoLabel k={k} alan={alan} label={title}>{title}</InfoLabel></h2>
+        <span className="inline-flex shrink-0 items-center gap-1">
+          {canOpenRoute(pages, to) ? (
+            <Link to={to} className="inline-flex min-h-11 items-center text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
+              Tümü ({n0(total)})
+            </Link>
+          ) : (
+            <span className="font-mono text-[12px] tabular-nums text-canvas-muted">{n0(total)}</span>
+          )}
+          <SqlInfo k={k} alan={alan.replace(/\.items\[\]\..*$/, '.total')} label={`${title} · sayı`} />
+        </span>
       </div>
       {total ? <ul className="divide-y divide-slate-100">{children}</ul> : <Empty>Kayıt yok.</Empty>}
       {total > 8 && <div className="mt-1 text-[11px] text-canvas-muted">En acil 8 kayıt; hepsi «Tümü» sayfasında, sayfalı.</div>}

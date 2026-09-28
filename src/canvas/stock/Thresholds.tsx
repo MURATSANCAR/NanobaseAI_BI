@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED } from '../engine';
@@ -72,6 +73,21 @@ export default function Thresholds() {
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Eşikler" />}
         {d && !d.items.length && <Empty>Bu durumda kayıt yok.</Empty>}
+        {!!d?.items.length && (
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-canvas-muted" aria-label="Rakamların sorgu bilgisi">
+            {durum === 'oneri' ? (
+              <>
+                <InfoLabel k={d.kaynaklar} alan="items[].bakiye">Stok</InfoLabel>
+                <InfoLabel k={d.kaynaklar} alan="items[].satisHizi">Aylık hız</InfoLabel>
+                <InfoLabel k={d.kaynaklar} alan="items[].gun">Kaç gün yeter</InfoLabel>
+                <InfoLabel k={d.kaynaklar} alan="items[].yenidenSiparisAdet">Önerilen gün ve adet</InfoLabel>
+                <InfoLabel k={d.kaynaklar} alan="total">Kitap sayısı</InfoLabel>
+              </>
+            ) : (
+              <span className="inline-flex items-center gap-1">Güvenlik günü ve adet<SqlInfo k={d.kaynaklar} alan="items[]" label="Eşik kayıtları" /></span>
+            )}
+          </div>
+        )}
         <ul className="flex flex-col gap-2">
           {durum === 'oneri'
             ? (d?.items as Proposal[] | undefined)?.map((p) => (

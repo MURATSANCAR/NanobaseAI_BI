@@ -5,6 +5,7 @@ import { Note, errText } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { fmtDay } from '../budget/api';
 import { stockApi, type DiffClass } from './api';
+import SqlInfo from '../components/SqlInfo';
 import ItemList from './ItemList';
 import { Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { RULES } from './rules';
@@ -43,18 +44,21 @@ export default function StockDiff() {
     >
       <DataDay day={d?.veriSonu} extra={d?.not} />
       <Panel>
-        <div className="mb-3">
+        <div className="mb-3 flex items-center gap-1">
+          <div className="min-w-0 flex-1">
           <Chips<'' | DiffClass>
             label="Kök neden"
             items={[{ key: '', label: 'Hepsi', count: all }, ...(d?.siniflar ?? []).map((s) => ({ key: s.key, label: s.label, count: s.adet }))]}
             value={sinif}
             onChange={(k) => set('sinif', k || null)}
           />
+          </div>
+          <SqlInfo k={d?.kaynaklar} alan="siniflar" label="Kök neden sayaçları" />
         </div>
         {q.error && <Note tone="err">{errText(q.error, 'Fark okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Logo ve CRM stoğu" />}
         {d && !d.items.length && <Empty>Bu sınıfta farklı kitap yok.</Empty>}
-        {!!d?.items.length && <ItemList items={d.items} cols={['bakiye', 'crmRaf', 'fark', 'aktarim']} />}
+        {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'crmRaf', 'fark', 'aktarim']} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>
     </StockFrame>
