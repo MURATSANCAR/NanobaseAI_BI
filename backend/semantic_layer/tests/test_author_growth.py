@@ -229,7 +229,7 @@ def test_prepared_growth_and_pool_answer_without_the_source(tmp_path, monkeypatc
     snaps.snap.refresh(force=True)
     ready = snaps.growth_inputs(GUID)
     rows, end, missing = ready["logo"](["K1"], date(this - 5, 1, 1), date.today())
-    assert end == date(this, 8, 17) and missing == []
+    assert end == date(this, 8, 17) and missing == list(range(this - 5, this - 1))   # görünümü olmayan yıllar söylenir
     assert sorted((r["yil"], r["tur"], r["miktar"]) for r in rows) == [(this - 1, "Satış", 4), (this, "Satış", 10), (this, "İade", 2)]
     g = G.compute("Timas_MSCRM.dbo", lambda sql: {"records": []}, ready["logo"], engine, T, GUID, web_enabled=False,
                   books_rows=ready["books"], loyalty_row=ready["loyalty"], prepared=True)
