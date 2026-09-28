@@ -152,8 +152,10 @@ def main() -> int:
         ref5.setdefault(k, Counter())["onay" if r["durum"] == approve else "ret"] += r["n"]
     print(f"   İYS: müşterisi boş satır (sayılmaz) portal {stats.get('iysNoCustomer')}; ayrıntı: scripts/acceptance/H2/iys-fark.sql")
     got5 = {k: Counter(v) for k, v in (stats.get("iysLatest") or {}).items()}
-    check("R5 İYS son durum (alan × onay/ret)", {k: dict(v) for k, v in ref5.items()} == {k: dict(v) for k, v in got5.items()},
-          json.dumps({k: dict(v) for k, v in ref5.items()}, ensure_ascii=False)[:300])
+    diff5 = {k: {"sql": dict(ref5.get(k, {})), "portal": dict(got5.get(k, {}))} for k in set(ref5) | set(got5)
+             if dict(ref5.get(k, {})) != dict(got5.get(k, {}))}
+    check("R5 İYS son durum (alan × onay/ret)", not diff5,
+          f"{len(ref5)} alan; fark: " + json.dumps(diff5, ensure_ascii=False)[:1200])
     chans = stats.get("iysChannels") or {}
     check("R5b her İYS alanının kanalı belirlendi", all(k in chans for k in ref5 if not k.startswith("kanal:")),
           f"eşlenen {len(chans)} / {len(ref5)}; eşlenemeyen İYS kaydı {stats.get('iysUnmapped')}")
@@ -176,9 +178,13 @@ def main() -> int:
         f"SELECT Name AS ad, obs_totalcount AS gonderim, obs_readcount AS okunma, obs_clickcount AS tiklama FROM {SCHEMA}.CampaignBase"))
     got8 = sorted((str(x["ad"]), float(x["gonderim"] or 0), float(x["okunma"] or 0), float(x["tiklama"] or 0)) for x in stats.get("campaigns") or [])
     check("R8 kampanya geçmişi", ref8 == got8, f"{len(ref8)} kampanya")
-    r9 = crm(f"""SELECT SUM(CASE WHEN ParentCustomerId IS NOT NULL THEN 1 ELSE 0 END) AS kurum,
-        SUM(CASE WHEN ParentCustomerId IS NULL AND ContactId IN (SELECT new_Katilimsaglayan FROM {SCHEMA}.new_eserkatilimBase WHERE statecode = 0)
-        THEN 1 ELSE 0 END) AS katki FROM {SCHEMA}.ContactBase WHERE StateCode = 0""")[0]
+    # SQL Server toplama içinde alt sorgu kabul etmez (hata 130): katkı sağlayanlar ayrı kümeden LEFT JOIN ile.
+    r9 = crm(f"""SELECT SUM(CASE WHEN c.ParentCustomerId IS NOT NULL THEN 1 ELSE 0 END) AS kurum,
+        SUM(CASE WHEN c.ParentCustomerId IS NULL AND k.cid IS NOT NULL THEN 1 ELSE 0 END) AS katki
+        FROM {SCHEMA}.ContactBase c
+        LEFT JOIN (SELECT DISTINCT new_Katilimsaglayan AS cid FROM {SCHEMA}.new_eserkatilimBase WHERE statecode = 0) k
+          ON k.cid = c.ContactId
+        WHERE c.StateCode = 0""")[0]
     ex = stats.get("excluded") or {}
     check("R9 okur sayılmayan kişi kartı (kurum / katkı)", (ex.get("kurum"), ex.get("katki")) == (r9["kurum"], r9["katki"]),
           f"portal {ex} · SQL {dict(r9)}")

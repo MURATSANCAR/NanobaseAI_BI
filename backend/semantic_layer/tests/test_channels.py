@@ -115,6 +115,18 @@ def test_scope_and_group_sql_quote_values_and_keep_the_sales_definition():
     assert "new_yil = 100000000" in src.crm_hedef_sql("Timas_MSCRM.dbo", 100000000)
 
 
+def test_filled_logo_sql_has_no_live_text_outside_the_query():
+    """Yorum satırında anılan çok satırlı yer tutucu (ölçü kolonları) yerine konunca ilk satırından sonrası yorum dışında
+    kalıyordu: kanal karnesi SQL Server'da «Incorrect syntax near ','» ile düştü (2026-09-28 kabul). SELECT'ten önce
+    yalnız yorum satırı olmalı."""
+    sc = src.scope_sql(["E-TICARET"], ["HB1"])
+    g = src.grup_sql(["INTERNET"], ["HB1"])
+    for sql in (src.kanal_karne_sql("411", 2026), src.eticaret_cari_sql("411", 2026, sc, g),
+                src.cari_kitap_sql("411", 2026, sc, g), src.cari_liste_sql("411", sc)):
+        head = sql[:sql.index("SELECT")]
+        assert all(not ln.strip() or ln.lstrip().startswith("--") for ln in head.splitlines()), head
+
+
 def test_target_labels_prefer_the_year_label():
     rows = [{"alan": "new_yil", "kod": 100000000, "ad": "2026"}, {"alan": "new_yil", "kod": 3, "ad": "2025"},
             {"alan": "new_bolge", "kod": 8, "ad": "HEPSİBURADA"}, {"alan": "new_yil", "kod": 3, "ad": "Diğer"}]

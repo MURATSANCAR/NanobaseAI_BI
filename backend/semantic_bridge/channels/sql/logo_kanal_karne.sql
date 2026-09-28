@@ -1,5 +1,6 @@
 -- M42 kanal karnesi, kanal (cari özel kodu 2) × ay: bütün cariler. Kanallar arası kıyasın tabanı (kitapçı, e-ticaret…).
--- Yer tutucular: {firm} yılın Logo firma numarası, {year}/{next} takvim yılı sınırı, {metrics} = _metrics.sql.
+-- Yer tutucular: {firm} yılın Logo firma numarası, {year}/{next} takvim yılı sınırı; ölçü kolonları _metrics.sql'den gelir.
+-- (Çok satırlı ölçü yer tutucusu yorum satırında anılmaz: yerine konunca ilk satırından sonrası yorum dışında kalır.)
 SELECT ISNULL(NULLIF(LTRIM(RTRIM(C.SPECODE2)), ''), '#YOK') AS kanal, MONTH(S.DATE_) AS ay,
 {metrics}
 FROM dbo.LG_{firm}_01_STLINE AS S

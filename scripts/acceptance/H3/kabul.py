@@ -99,6 +99,7 @@ def main() -> int:
     started = datetime.now(timezone.utc).isoformat()
     st = SemanticSettings.from_env()
     engine = open_store(st.store_dsn, create=False).engine
+    admin_mod.ensure(engine)   # ekrandan kaydedilen ayarlar (T-soft girişi) veritabanında; bağlanmazsa conf yalnız ortamı okur
     tenant = st.tenant_id
     ids: dict = {"startedAt": started, "tenant": tenant, "triggers": [], "runs": []}
     crm = bsrc.runner(os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"))
