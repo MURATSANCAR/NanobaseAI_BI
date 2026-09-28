@@ -54,8 +54,9 @@ def test_parse_merges_contexts_and_takes_worst_severity():
 def test_classify():
     assert m.classify([{"approvedCountries": ["TR"]}], []) == m.APPROVED
     assert m.classify([{"approvedCountries": ["TR"]}], [INFO]) == m.APPROVED  # bilgi gösterimi etkilemez
-    assert m.classify([{"approvedCountries": ["TR"]}], [IMG_SMALL]) == m.LIMITED
-    assert m.classify([{"approvedCountries": ["TR"]}, {"disapprovedCountries": ["TR"]}], []) == m.LIMITED
+    assert m.classify([{"approvedCountries": ["TR"]}], [IMG_SMALL]) == m.APPROVED  # yalnız gösterimi azaltan sorun sınırlı yapmaz
+    assert m.classify([{"approvedCountries": ["TR"]}, {"disapprovedCountries": ["TR"]}], []) == m.APPROVED  # başka gösterim türünde ret
+    assert m.classify([{"approvedCountries": ["TR"], "disapprovedCountries": ["DE"]}], []) == m.LIMITED
     assert m.classify([{"disapprovedCountries": ["TR"]}], [GTIN_BAD]) == m.DISAPPROVED
     assert m.classify([{"pendingCountries": ["TR"]}], []) == m.PENDING
     assert m.classify([], []) == m.PENDING
@@ -63,7 +64,7 @@ def test_classify():
 
 def test_summary_counts():
     items = [m.parse_product(_product("1")),
-             m.parse_product(_product("2", issues=[IMG_SMALL])),
+             m.parse_product(_product("2", disapproved=("DE",), issues=[IMG_SMALL])),  # bir yerde onaylı, bir yerde red = sınırlı
              m.parse_product(_product("3", approved=(), disapproved=("TR",), issues=[GTIN_BAD])),
              m.parse_product(_product("4", approved=(), disapproved=("TR",), issues=[GTIN_BAD, IMG_SMALL])),
              m.parse_product(_product("5", approved=(), pending=("TR",)))]
@@ -129,7 +130,7 @@ def _db():
 def test_save_matches_and_writes_snapshot_and_history():
     eng = _db()
     raw = [_product("p1", approved=(), disapproved=("TR",), issues=[GTIN_BAD]),
-           _product("K2", issues=[IMG_SMALL], gtins=()),
+           _product("K2", disapproved=("DE",), issues=[IMG_SMALL], gtins=()),
            _product("zzz", gtins=("0000000000000",))]
     data = m.save(eng, "t", "5411495322", raw, AT)
     s = data["summary"]

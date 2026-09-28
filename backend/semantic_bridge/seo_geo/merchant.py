@@ -166,10 +166,14 @@ def classify(dests: Iterable[dict[str, Any]], issues: Iterable[dict[str, Any]]) 
     dests = list(dests or [])
     approved = any(d.get("approvedCountries") for d in dests)
     disapproved = any(d.get("disapprovedCountries") for d in dests)
-    hurting = any(SEV_RANK.get(str(i.get("severity") or "").upper(), 0) >= 2 for i in issues or [])
+    # Merchant Center ekranının sayımı (2026-09-28 canlıda karşılaştırıldı: 6 onaylanmayan, 0 sınırlı): bir yerde
+    # onaylı ürün onaylıdır; «sınırlı» = AYNI gösterim yerinde bazı ülkelerde onaylı, bazılarında reddedilmiş. Başka bir
+    # gösterim türündeki ret (ör. keşfet reklamları) ya da yalnız gösterimi azaltan sorun ürünü sınırlı yapmaz — önceki
+    # tanım 599–619 ürünü yanlış sınırlı sayıyordu. Bu sorunlar iş listesine sorun kodu başına ayrıca düşer.
     if not approved:
         return DISAPPROVED if disapproved else PENDING
-    return LIMITED if disapproved or hurting else APPROVED
+    split = any(d.get("approvedCountries") and d.get("disapprovedCountries") for d in dests)
+    return LIMITED if split else APPROVED
 
 
 def parse_product(p: dict[str, Any]) -> dict[str, Any]:
