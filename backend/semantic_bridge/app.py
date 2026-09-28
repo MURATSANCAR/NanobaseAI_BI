@@ -7204,6 +7204,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M37 Okur topluluğu (Pazarlama › Okur ve müşteri): /api/v1/okur/*; okur sayıları H2 çekirdeğinden (okur_sources.ReadersCore).
     from semantic_bridge import okur_api
     app.state.okur = okur_api.register(app, rt, _require_caller, _can)
+    # M20 Basın, medya ve halkla ilişkiler (Pazarlama): PR dosyası, medya kişileri, gönderim, yansıma. /api/v1/pr/*.
+    from semantic_bridge import pr_api
+    app.state.pr = pr_api.register(app, rt, _require_caller, _can)
     return app
 
 

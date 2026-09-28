@@ -275,6 +275,12 @@
       "label": "Backlist"
     },
     {
+      "key": "sayfa:basin-iliskileri",
+      "area": "pazarlama",
+      "label": "Basın ilişkileri",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1684,6 +1690,29 @@
       "page": "sayfa:pazarlama-backlist",
       "label": "Backlist ekip ağırlığı",
       "hint": "Uyku endeksi bileşen ağırlıklarını ekibin varsayılanı olarak kaydetme (kişisel ağırlık herkesin kendi tercihidir)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pr.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basın dosyası, medya kişisi ve yansıma",
+      "hint": "PR dosyası açma, bülten ve e-posta metni, Zeki AI taslağı, gönderim listesi ve durumu, medya kişisi ekleme/düzenleme, yansıma kaydı"
+    },
+    {
+      "key": "ozellik:pr.onay",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basın dosyası onayı",
+      "hint": "Basın bültenini ve gönderim listesini onaylama ya da gerekçeyle geri gönderme, sonradan eklenen satırın onayı (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pr.gonder",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basına e-posta gönderme",
+      "hint": "Onaylı satırdaki kişiye özel e-postayı portal üzerinden tek alıcıya gönderme (toplu gönderim yok)",
       "explicit": true
     }
   ]

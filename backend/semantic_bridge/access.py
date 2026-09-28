@@ -531,6 +531,10 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/backlist", frozenset({page("pazarlama-backlist")})),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap"), page("pazarlama-backlist")})),
+    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
+    # M20 Basın ilişkileri (Pazarlama). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/pr/run-due", SYSTEM),
+    ("/api/v1/pr/", frozenset({page("basin-iliskileri")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -760,6 +764,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:pazarlama.plan-yaz"),
     (frozenset({"PUT"}), r"^/api/v1/marketing/backlist/weights$", "ozellik:pazarlama.backlist-ayar"),
     (frozenset({"GET"}), r"^/api/v1/marketing/backlist/export\.csv$", "ozellik:veri.disa-aktar"),
+    # Basın ilişkileri: PR dosyası, liste, Zeki AI taslağı, medya kişisi, yansıma. Dosya/satır onayı (`pr.onay`) ve
+    # tek alıcılı e-posta (`pr.gonder`) açıkça verilen yetkilerle ucun içinde denetlenir; bu kural onlara uymaz.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/pr/(kits(/[^/]+(/(draft|submit|withdraw|close|reopen|sends))?)?|sends/[^/]+(/pitch)?"
+     r"|contacts(/[^/]+)?|coverage(/[^/]+)?)$", "ozellik:pr.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/pr/report/export\.(pdf|xlsx)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

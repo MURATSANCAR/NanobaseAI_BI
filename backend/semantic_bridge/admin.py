@@ -716,6 +716,22 @@ SPEC: list[dict[str, Any]] = [
      "default": "6", "help": "Özel güne bu kadar hafta kala bağlı, stoklu ve aktivasyonu olmayan kitaplar e-postayla bildirilir"},
     {"key": "MARKETING_BACKLIST_DIGEST_MIN", "group": "marketing", "label": "Aylık özet endeks eşiği", "type": "int", "default": "70",
      "help": "Ayın ilk iş günü özetinde sayılan kitapların en düşük uyku endeksi (0–100)"},
+    # M20 Basın ilişkileri (aynı grup)
+    {"key": "PR_ALERT_RECIPIENTS", "group": "marketing", "label": "Basın ilişkileri bildirim alıcıları", "type": "text",
+     "default": "", "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, basın sorumlusu). Onaya gönderilen basın dosyası ve "
+                            "takip günü geçen cevapsız gönderimler buraya gider (dosya sahibine ayrıca). Gazeteciye hiçbir şey "
+                            "kendiliğinden gitmez"},
+    {"key": "PR_REPORT_RECIPIENTS", "group": "marketing", "label": "Haftalık yansıma özeti alıcıları", "type": "text",
+     "default": "", "help": "Virgülle iç e-posta adresleri. Boşsa bildirim alıcılarına gider; ikisi de boşsa özet gönderilmez"},
+    {"key": "PR_REPORT_WEEKDAY", "group": "marketing", "label": "Haftalık yansıma özeti günü", "type": "int", "default": "1",
+     "help": "1 = pazartesi … 7 = pazar. O günün sabah turunda bir önceki haftanın (pazartesi–pazar) özeti gider"},
+    {"key": "PR_FOLLOW_UP_DAYS", "group": "marketing", "label": "Basın gönderimi takip süresi (gün)", "type": "int", "default": "5",
+     "help": "Gönderimden bu kadar gün sonra cevap yoksa satır «takip günü geçti» olur ve hatırlatmaya girer"},
+    {"key": "PR_CRM_MEDIA_ROLES", "group": "marketing", "label": "CRM'de gazeteci kişi rolleri", "type": "text", "default": "",
+     "help": "CRM «Kişi Rolü» adları (virgülle; ör. Gazeteci). Bu rollere bağlı kişiler de medya kişisi sayılır. Boşsa yalnız "
+             "«Basın medya Mecrası» dolu kişiler ve CRM haber kayıtlarında haberi yapan/görüşülen kişiler gelir"},
+    {"key": "PR_TONE_MIN_PROB", "group": "marketing", "label": "Yansıma tonu: en düşük olasılık", "type": "text", "default": "0.6",
+     "help": "Zeki AI yansımanın tonunu bu olasılığın altında önermez; ton boş kalır, kullanıcı seçer"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
