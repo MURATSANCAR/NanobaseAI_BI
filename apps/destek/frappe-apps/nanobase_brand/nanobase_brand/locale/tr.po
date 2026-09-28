@@ -2255,3 +2255,9 @@ msgstr "Kurum hesabıyla giriş"
 
 msgid "Invalid username or password"
 msgstr "Geçersiz kullanıcı adı veya şifre"
+
+msgid "Recently Assigned Tickets"
+msgstr "Son Atanan Kayıtlar"
+
+msgid "My Feedback"
+msgstr "Geri Bildirimlerim"
