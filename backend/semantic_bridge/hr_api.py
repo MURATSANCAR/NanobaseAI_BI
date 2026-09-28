@@ -319,7 +319,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         need(who, F_KVKK, F_ACCESS_LOG, what="İmha tutanakları")
         with HK.capture(engine) as got:
             out = H.purge_runs(engine, tenant, before=before or None, limit=limit)
-        return hr.kaynak(out, got, "imhaKayit", {}, rest=("imhaKayit", F_IMHA_KAYIT), ignore=("next", "limit", "before"))
+        return hr.kaynak(out, got, "imhaKayit", {}, rest=("imhaKayit", F_IMHA_KAYIT))
 
     @app.post(P + "/purge/run-due")
     def hr_purge_run_due(request: Request) -> dict[str, Any]:
@@ -337,6 +337,6 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         need(who, F_ACCESS_LOG, what="İK erişim kaydı")
         with HK.capture(engine) as got:
             out = H.access_log(engine, tenant, subject_id=subjectId, username=user, before=before or None, limit=limit)
-        return hr.kaynak(out, got, "erisim", {}, rest=("erisim", F_ERISIM), ignore=("next", "limit", "before"))
+        return hr.kaynak(out, got, "erisim", {}, rest=("erisim", F_ERISIM))
 
     return hr

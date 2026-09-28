@@ -237,7 +237,7 @@ def register(app, hr: HrContext) -> None:
                "progressPct": round(100 * res["value"] / tgt, 1) if tgt else None,
                "note": "Logo kopyası donmuşsa son fatura tarihi dönem sonundan önce kalır; oran o tarihe kadardır."}
         return await run_in_threadpool(hr.kaynak, out, got, "ilerleme", {"target": ("hedef", F_HEDEF, ["semantic_hr_goals"])},
-                                       ("sistem", F_ILERLEME_SISTEM), (), ("years[].year",))
+                                       ("sistem", F_ILERLEME_SISTEM))
 
     @app.get(B + "/logo-salesman-fill")
     async def perf_salesman_fill(request: Request, year: int = 0) -> dict[str, Any]:
@@ -248,7 +248,7 @@ def register(app, hr: HrContext) -> None:
         def work():
             with HK.capture(engine) as got:
                 r = call(lambda: S.salesman_fill(logo_run(), year or date.today().year))
-            return hr.kaynak(r, got, "doluluk", {}, rest=("doluluk", F_DOLULUK), ignore=("year",))
+            return hr.kaynak(r, got, "doluluk", {}, rest=("doluluk", F_DOLULUK))
 
         return await run_in_threadpool(work)
 

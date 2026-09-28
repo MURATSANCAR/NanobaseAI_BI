@@ -38,6 +38,8 @@ P = "/api/v1/hr/learning"
 
 
 # Sorgu bilgisi formülleri (hr_kaynak): kural metni; kişi adı ya da sayı içermez.
+F_AYAR = ("Ayar değerleri (uyarı günü, dosya boyu sınırı, anket soruları) İK ayarı ve eğitim modülünün tanımıdır; bir "
+          "okumadan hesaplanmaz. Sorgu listesi bu ekranın okumalarıdır.")
 F_BENIM = ("Eğitimlerim: zorunlu eğitim durumu = eğitimin geçerlilik süresi ile son tamamlanan katılım (ya da doğrulanmış "
            "sertifika) tarihinden hesaplanır (geçerli / dolacak: uyarı günü içinde / dolmuş / hiç almamış); geçmiş = "
            "tamamlanan katılımlar; bekleyen anket = yanıtlanmamış eğitim anketi daveti.")
@@ -130,8 +132,10 @@ def register(app, hr: HrContext) -> None:
                        catalog=[{"id": k["id"], "title": k["title"], "kind": k["kind"], "validityDays": k["validityDays"]}
                                 for k in L.list_courses(engine, tenant, active_only=True)],
                        fileMaxMb=hr.settings()["fileMaxMb"])
-        return hr.kaynak(out, got, "egitimim", {"catalog": ("katalog", F_KATALOG, ["semantic_hr_courses"])},
-                         rest=("egitimim", F_BENIM), ignore=("alertDays", "fileMaxMb", "questions"))
+        return hr.kaynak(out, got, "egitimim", {"catalog": ("katalog", F_KATALOG, ["semantic_hr_courses"]),
+                                                 "alertDays": ("ayar", F_AYAR), "fileMaxMb": "hesap:ayar",
+                                                 "questions": "hesap:ayar"},
+                         rest=("egitimim", F_BENIM))
 
     @app.get(P + "/me/usage")
     def learning_my_usage(request: Request, days: int = 30, user: str = "") -> dict[str, Any]:
@@ -143,7 +147,7 @@ def register(app, hr: HrContext) -> None:
             raise HTTPException(400, detail={"code": "HR", "message": "Gün 1–366 arasında olmalı."})
         with HK.capture(engine) as got:
             out = S.my_usage(engine, tenant, who.user, days)
-        return hr.kaynak(out, got, "kullanimim", {}, rest=("kullanimim", F_KULLANIM_BEN), ignore=("days",))
+        return hr.kaynak(out, got, "kullanimim", {}, rest=("kullanimim", F_KULLANIM_BEN))
 
     @app.post(P + "/me/certificates", status_code=201)
     async def learning_my_cert_upload(request: Request, filename: str = "", courseId: str = "", title: str = "",
@@ -291,7 +295,7 @@ def register(app, hr: HrContext) -> None:
             out = L.dashboard(engine, tenant, alert_days=st()["alertDays"], people=people)
         if people:
             H.log_access(engine, tenant, who.user, "calisan", "egitim-pano", "goruntule", "zorunlu eğitim durumu")
-        return hr.kaynak(out, got, "egitimPano", {}, rest=("pano", F_PANO), ignore=("alertDays",))
+        return hr.kaynak(out, got, "egitimPano", {}, rest=("pano", F_PANO))
 
     @app.get(P + "/expiring")
     def learning_expiring(request: Request, days: Optional[int] = None) -> dict[str, Any]:
@@ -305,7 +309,7 @@ def register(app, hr: HrContext) -> None:
             items = [x for x in L.mandatory_status(engine, tenant, days=d or 0) if x["status"] != "gecerli"]
         H.log_access(engine, tenant, who.user, "calisan", "egitim-dolacak", "goruntule", "zorunlu eğitim listesi")
         out = {"days": d, "items": items, "total": len(items)}
-        return hr.kaynak(out, got, "dolacak", {"items[]": ("dolacak", F_DOLACAK), "total": "hesap:dolacak"}, ignore=("days",))
+        return hr.kaynak(out, got, "dolacak", {"items[]": ("dolacak", F_DOLACAK), "total": "hesap:dolacak", "days": "hesap:dolacak"})
 
     @app.get(P + "/export/expiring.csv")
     def learning_expiring_csv(request: Request, days: Optional[int] = None) -> Response:
@@ -581,7 +585,7 @@ def register(app, hr: HrContext) -> None:
             raise HTTPException(400, detail={"code": "HR", "message": "Gün 1–366 arasında olmalı."})
         with HK.capture(engine) as got:
             out = S.usage_map(engine, tenant, days, st()["minGroup"])
-        return hr.kaynak(out, got, "harita", {}, rest=("harita", F_HARITA), ignore=("days", "minGroup"))
+        return hr.kaynak(out, got, "harita", {}, rest=("harita", F_HARITA))
 
     # ------------------------------------------------------------------ rehberler
 
@@ -668,7 +672,7 @@ def register(app, hr: HrContext) -> None:
         spend, b, got = await run_in_threadpool(work)
         ratio = round(spend["total"] / b["amount"], 4) if spend.get("total") is not None and b and b["amount"] else None
         out = {**spend, "budget": b, "ratio": ratio, "accountCodes": s["accounts"]}
-        return await run_in_threadpool(hr.kaynak, out, got, "gider", {}, ("gider", F_GIDER), (), ("year", "months[].month", "budget.year"))
+        return await run_in_threadpool(hr.kaynak, out, got, "gider", {}, ("gider", F_GIDER))
 
     @app.get(P + "/spend/accounts")
     async def learning_spend_accounts(request: Request, year: int = 0) -> dict[str, Any]:
