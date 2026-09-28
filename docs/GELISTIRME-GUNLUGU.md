@@ -121,6 +121,13 @@
 - **Kurulum ve doğrulama:** `main` `1997b82d`; test sunucusunda yalnız `contracts.py` + `test_contracts.py` (canlı hâl
   önceki `main`le eşti), köprü 06:06'da yeniden başladı, health 200, pytest sözleşme 34/34. Panede 2024007186-1: bağlı
   kayıtlar -2, -3 … -10, -11 … -244 (243 kayıt). Müşteri VM'ine kurulmadı.
+## 2026-09-28 — Sohbet: saatli tarih aralığı gerçekten hesaplanıyor
+
+- K3'ten beri "20.08.2026 03:00 ile 21.08.2026 03:00 arasındaki …" tek aralık okunuyor ama saat geri soruluyordu: saati taşıyan kolon tanımlı değildi.
+- **Ölçüm (.155):** Logo belgenin saatini tarihin yanında tamsayı tutar — sipariş/fatura `TIME_`, satır `FTIME` = saat·2²⁴ + dakika·2¹⁶ + saniye·2⁸. Ağustos 2026'da sipariş 3.266/3.386, fatura 4.225/4.959 kayıtta Logo'nun oluşturma saatiyle (`CAPIBLOCK_CREATEDHOUR/MIN`) aynı saat:dakika; kalanlar sonradan kaydedilmiş belgeler.
+- **Beyan:** `equivalences.yml` → `time_of_day` (ORFICHE, LG_ORFICHE, INVOICE `TIME_`; STLINE `FTIME`; `logo_packed`). `Conventions.time_of_day` yalnız kolon profilde varsa ve tarih kolonu beyanla aynıysa yükler.
+- **Derleyici:** `_time_of_day_bounds` — gün sınırı olduğu gibi (tarih indeksi), ilk gün `(DATE_ >= ertesi gün OR TIME_ >= başlangıç saati)`, son gün `(DATE_ < son gün OR TIME_ < bitiş saati)`. **Çözümleyici:** ölçünün bütün tablolarında beyan varsa saatli aralık geri sorulmaz, açıklamaya kolonla yazılır; tek saat ("03:00'te") ya da beyansız tablo eskisi gibi geri sorulur.
+- **Doğrulama:** `test_time_of_day.py` 3/3 (ilgili setlerle 30/30). Gerçek Logo, bağımsız referansla: 14.08 03:00–15.08 03:00 net sipariş 207.577,38 (167 sipariş); 14.08 09:00–15.08 18:00 satış fatura 9.627.888,47; aynı aralık satış adedi (FTIME) 66.311. Müşterinin 20.08–21.08 sorusu derleniyor, .155 17.08'de bittiği için boş. Tam set 1.678 soru (taban 02d293be): yalnız hedeflenen 4 soru değişti, hata 0.
 
 ## 2026-09-28 — Test izi temizliği 2 ve CRM mükerrer yazar kaydı
 
