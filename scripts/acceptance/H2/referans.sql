@@ -18,13 +18,21 @@ SELECT COUNT(DISTINCT LOWER(LTRIM(RTRIM(e)))) AS n FROM (
 WHERE e LIKE '%@%';
 
 -- R5 · İYS son durum: her (müşteri, entegrasyon alanı) için en son kayıt; alan × durum sayısı.
+-- 2026-09-28 düzeltmesi (kabulde 6 alanın 4'ünde referans 1'er fazlaydı; teşhis: iys-fark.sql):
+--  * müşterisi boş satır kimsenin son durumu değildir: SQL'de bütün NULL müşteriler TEK bölmeye düşüp alan başına +1
+--    sayılıyordu → `obs_customerid IS NOT NULL`;
+--  * izin tarihi + oluşturma zamanı birebir aynı ve durumu farklı iki kayıtta ROW_NUMBER keyfî seçiyordu → ret kazanır
+--    (portalla aynı kural; 1 = READERS_IYS_APPROVE_VALUE varsayılanı);
+--  * alanı boş satır portalda kanal numarasıyla gruplanır → bölme anahtarında kanal.
 WITH son AS (
-  SELECT obs_customerid, obs_iysintegrationfieldid, obs_permissionstatus,
-         ROW_NUMBER() OVER (PARTITION BY obs_customerid, obs_iysintegrationfieldid
-                            ORDER BY obs_permissiondate DESC, CreatedOn DESC) rn
-  FROM Timas_MSCRM.dbo.obs_iyslogBase WHERE ISNULL(obs_iserror, 0) = 0)
-SELECT obs_iysintegrationfieldid AS alan, obs_permissionstatus AS durum, COUNT(*) AS n
-FROM son WHERE rn = 1 GROUP BY obs_iysintegrationfieldid, obs_permissionstatus;
+  SELECT obs_customerid, obs_iysintegrationfieldid, CAST(obs_channel AS int) AS kanal, obs_permissionstatus,
+         ROW_NUMBER() OVER (PARTITION BY obs_customerid, obs_iysintegrationfieldid,
+                                         CASE WHEN obs_iysintegrationfieldid IS NULL THEN CAST(obs_channel AS int) END
+                            ORDER BY obs_permissiondate DESC, CreatedOn DESC,
+                                     CASE WHEN CAST(obs_permissionstatus AS int) = 1 THEN 0 ELSE 1 END DESC) rn
+  FROM Timas_MSCRM.dbo.obs_iyslogBase WHERE ISNULL(obs_iserror, 0) = 0 AND obs_customerid IS NOT NULL)
+SELECT obs_iysintegrationfieldid AS alan, kanal, obs_permissionstatus AS durum, COUNT(*) AS n
+FROM son WHERE rn = 1 GROUP BY obs_iysintegrationfieldid, kanal, obs_permissionstatus;
 
 -- R6 · E-posta engeli: bu kişilerin hiçbiri e-posta listesine giremez (portalın okur/izin tablosuyla karşılaştırılır).
 SELECT ContactId AS id FROM Timas_MSCRM.dbo.ContactBase WHERE StateCode = 0 AND (DoNotEMail = 1 OR DoNotBulkEMail = 1);

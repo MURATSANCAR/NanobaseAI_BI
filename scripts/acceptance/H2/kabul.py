@@ -135,14 +135,22 @@ def main() -> int:
           f"portal {portal4} · SQL {n4} · fark {(portal4 or 0) - n4} (Türkçe İ/I ve sekme/satır sonu boşlukları)")
 
     # R5 İYS son durum (alan × durum).
+    # 2026-09-28: müşterisi boş satır sayılmaz (eski sorgu NULL müşterileri tek bölmede alan başına +1 sayıyordu), eş
+    # zamanlı çelişen kayıtta ret kazanır, alanı boş satır kanalla gruplanır — portalla aynı kural (referans.sql R5).
+    approve = int(R.settings()["iysApproveValue"])
     ref5: dict[str, Counter] = {}
-    for r in crm(f"""WITH son AS (SELECT obs_customerid, obs_iysintegrationfieldid, obs_permissionstatus,
-            ROW_NUMBER() OVER (PARTITION BY obs_customerid, obs_iysintegrationfieldid ORDER BY obs_permissiondate DESC, CreatedOn DESC) rn
-            FROM {SCHEMA}.obs_iyslogBase WHERE ISNULL(obs_iserror, 0) = 0)
-            SELECT obs_iysintegrationfieldid AS alan, obs_permissionstatus AS durum, COUNT(*) AS n FROM son WHERE rn = 1
-            GROUP BY obs_iysintegrationfieldid, obs_permissionstatus"""):
-        k = str(r["alan"]).strip("{}").upper() if r["alan"] else "kanal:None"
-        ref5.setdefault(k, Counter())["onay" if r["durum"] == R.settings()["iysApproveValue"] else "ret"] += r["n"]
+    for r in crm(f"""WITH son AS (SELECT obs_customerid, obs_iysintegrationfieldid, CAST(obs_channel AS int) AS kanal,
+            obs_permissionstatus,
+            ROW_NUMBER() OVER (PARTITION BY obs_customerid, obs_iysintegrationfieldid,
+                                            CASE WHEN obs_iysintegrationfieldid IS NULL THEN CAST(obs_channel AS int) END
+                               ORDER BY obs_permissiondate DESC, CreatedOn DESC,
+                                        CASE WHEN CAST(obs_permissionstatus AS int) = {approve} THEN 0 ELSE 1 END DESC) rn
+            FROM {SCHEMA}.obs_iyslogBase WHERE ISNULL(obs_iserror, 0) = 0 AND obs_customerid IS NOT NULL)
+            SELECT obs_iysintegrationfieldid AS alan, kanal, obs_permissionstatus AS durum, COUNT(*) AS n FROM son WHERE rn = 1
+            GROUP BY obs_iysintegrationfieldid, kanal, obs_permissionstatus"""):
+        k = str(r["alan"]).strip("{}").upper() if r["alan"] else f"kanal:{r['kanal']}"
+        ref5.setdefault(k, Counter())["onay" if r["durum"] == approve else "ret"] += r["n"]
+    print(f"   İYS: müşterisi boş satır (sayılmaz) portal {stats.get('iysNoCustomer')}; ayrıntı: scripts/acceptance/H2/iys-fark.sql")
     got5 = {k: Counter(v) for k, v in (stats.get("iysLatest") or {}).items()}
     check("R5 İYS son durum (alan × onay/ret)", {k: dict(v) for k, v in ref5.items()} == {k: dict(v) for k, v in got5.items()},
           json.dumps({k: dict(v) for k, v in ref5.items()}, ensure_ascii=False)[:300])

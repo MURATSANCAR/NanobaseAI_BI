@@ -181,6 +181,24 @@ def test_records_from_bundle_excludes_and_takes_latest_iys():
     assert stats["formTypes"] == {"100000001": 3}
 
 
+def test_iys_latest_skips_rows_without_customer_and_breaks_ties_to_refusal():
+    """Kabul 2026-09-28: 6 İYS alanının 4'ünde eski R5 portaldan 1'er fazlaydı. Müşterisi boş satır kimsenin son durumu
+    değildir (SQL ROW_NUMBER bütün NULL müşterileri alan başına tek bölmede sayıyordu); izin tarihi ve oluşturma zamanı
+    birebir aynı çelişen iki kayıtta okuma sırası sonucu değiştirmez, ret kazanır (R5 de öyle)."""
+    same = datetime(2025, 3, 1, 10, 0)
+    rows = [iys(C1, F_EMAIL, 1, datetime(2025, 1, 1)),
+            {**iys(None, F_EMAIL, 1, datetime(2025, 6, 1)), "id": "bos-1"},
+            {**iys("", F_SMS, 0, datetime(2025, 6, 1)), "id": "bos-2"},
+            {**iys(C2, F_SMS, 1, same), "id": "es-1"}, {**iys(C2, F_SMS, 0, same), "id": "es-2"}]
+    for logs in (rows, list(reversed(rows))):
+        _, stats = R.records_from_bundle(bundle(contacts=[contact(C1, "a@x.com"), contact(C2, "b@x.com")], logs=logs), _cfg(), KEY)
+        assert stats["iysLatest"] == {F_EMAIL: {"onay": 1}, F_SMS: {"ret": 1}}, logs
+        assert stats["iysNoCustomer"] == 2 and stats["iysRows"] == 5            # R10 bütün hatasız satırı sayar
+    # Alanı boş satır kanal numarasıyla gruplanır (R5 ile aynı anahtar).
+    _, stats = R.records_from_bundle(bundle(logs=[{**iys(C1, None, 1, same), "kanal": 3}]), _cfg(), KEY)
+    assert stats["iysLatest"] == {"kanal:3": {"onay": 1}}
+
+
 # ------------------------------------------------------------------ okuma turu (yazma)
 
 

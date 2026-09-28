@@ -593,13 +593,22 @@ def records_from_bundle(bundle: dict[str, Any], cfg: dict[str, Any], key: Option
     latest: dict[tuple[tuple[str, str], str], dict[str, Any]] = {}
     lo = datetime.min.replace(tzinfo=timezone.utc)
 
-    def order(r: dict[str, Any]) -> tuple[datetime, datetime]:
-        # Kabul SQL'iyle aynı sıra: izin tarihi, sonra oluşturma (boş en eskidir).
-        return (_utc(r.get("tarih")) or lo, _utc(r.get("olusturma")) or lo)
+    def order(r: dict[str, Any]) -> tuple[datetime, datetime, int]:
+        # Kabul SQL'iyle (R5) aynı sıra: izin tarihi, sonra oluşturma (boş en eskidir). İkisi de birebir aynı ve durum
+        # farklıysa «son kayıt» belirsizdi (SQL ROW_NUMBER keyfî seçer, burada ilk okunan kalırdı): ret kazanır — izin
+        # kanıtlanamıyorsa gönderilmez (KVKK tarafı güvenli), R5 aynı kuralı `CASE … END DESC` ile uygular.
+        try:
+            refused = 0 if int(r.get("durum")) == cfg["iysApproveValue"] else 1
+        except (TypeError, ValueError):
+            refused = 1
+        return (_utc(r.get("tarih")) or lo, _utc(r.get("olusturma")) or lo, refused)
     latest_all: dict[tuple[str, str], dict[str, Any]] = {}
     for row in bundle.get("iys") or []:
         cid = src._id(row.get("musteri"))
         if not cid:
+            # Müşterisi boş günlük satırı kimseye ait değil: son durum sayısına girmez (eski R5 bunları alan başına tek
+            # bir «boş müşteri» bölmesinde +1 sayıyordu — kabuldeki 1'er fark). Sayısı ayrıca yazılır.
+            stats["iysNoCustomer"] = stats.get("iysNoCustomer", 0) + 1
             continue
         fk = src._id(row.get("alan")) or f"kanal:{row.get('kanal')}"
         cur_all = latest_all.get((cid, fk))
@@ -1066,7 +1075,7 @@ def sync(engine: sa.engine.Engine, tenant: str, bundle: dict[str, Any], cfg: Opt
                    "candidateGroupsSkipped": skipped, "excluded": stats["excluded"],
                    "distinctEmailsContactLead": stats["distinctEmailsContactLead"], "iysRows": stats.get("iysRows", 0),
                    "iysUnmapped": stats["iysUnmapped"], "iysUnknownCustomer": stats["iysUnknownCustomer"],
-                   "iysChannels": stats.get("iysChannels", {}), "iysLatest": stats.get("iysLatest", {}), "iysLast": stats.get("iysLast"),
+                   "iysNoCustomer": stats.get("iysNoCustomer", 0), "iysChannels": stats.get("iysChannels", {}), "iysLatest": stats.get("iysLatest", {}), "iysLast": stats.get("iysLast"),
                    "formTypes": stats.get("formTypes", {}), "eventContacts": stats.get("eventContacts", 0),
                    "read": stats["read"], "campaigns": [
                        {"ad": src._s(x.get("ad")), "gonderim": x.get("gonderim"), "okunma": x.get("okunma"),
