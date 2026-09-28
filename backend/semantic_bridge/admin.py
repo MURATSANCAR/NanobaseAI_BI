@@ -236,6 +236,11 @@ SPEC: list[dict[str, Any]] = [
      "help": "E-posta adresleri, virgülle. Boşsa haftalık rapor yalnız ekranda durur"},
     {"key": "SEO_WEEKLY_REPORT_DAY", "group": "seo", "label": "Haftalık rapor günü (1=Pazartesi … 7=Pazar)", "type": "int",
      "default": "1", "help": "Rapor o günün gece işinde hazırlanır ve gönderilir"},
+    {"key": "YOUTUBE_API_KEY", "group": "seo", "label": "YouTube Data API anahtarı", "type": "secret", "default": "",
+     "help": "Google Cloud → YouTube Data API v3 anahtarı (ücretsiz günlük kota). Tanıtım videolarının başlık, açıklama, "
+             "izlenme ve açıklamada timas.com.tr bağlantısı olup olmadığı okunur; YouTube'a hiçbir şey yazılmaz"},
+    {"key": "SEO_MONTHLY_REPORT_TO", "group": "seo", "label": "Aylık SEO/GEO yönetim raporu alıcıları", "type": "text",
+     "default": "", "help": "E-posta adresleri, virgülle. Her ayın ilk gecesi önceki ayın PDF raporu hazırlanır; boşsa yalnız ekranda durur"},
     {"key": "SEO_GUIDE_BOOKS", "group": "seo", "label": "Rehber taslağında önceden seçili kitap", "type": "int", "default": "10",
      "help": "Rehber içerik taslağı üretilirken en uygun bu kadar kitap işaretli gelir; kullanıcı ekler, çıkarır"},
     {"key": "SEO_GUIDE_MIN_BOOKS", "group": "seo", "label": "Rehber için en az kitap", "type": "int", "default": "3",
