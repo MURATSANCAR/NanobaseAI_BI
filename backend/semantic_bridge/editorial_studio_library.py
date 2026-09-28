@@ -21,6 +21,7 @@ import json
 import logging
 import re
 import threading
+import unicodedata
 from typing import Any, Callable
 from urllib.parse import urlencode
 
@@ -165,7 +166,13 @@ def build(seo) -> list[dict[str, Any]]:
     return out
 
 
-def feed(seo, editor: str = "zamanlayıcı") -> dict[str, Any]:
+def header_name(name: str) -> str:
+    """X-Editor HTTP başlığıdır; başlık yalnız ASCII taşır («zamanlayıcı» → «zamanlayici»)."""
+    s = unicodedata.normalize("NFKD", str(name or "").translate(str.maketrans("ıİ", "iI")))
+    return "".join(ch for ch in s if ord(ch) < 128 and not unicodedata.combining(ch)).strip()[:200] or "zamanlayici"
+
+
+def feed(seo, editor: str = "zamanlayici") -> dict[str, Any]:
     """Arşivi besler. Aynı anda ikinci besleme başlamaz; ürün yoksa (T-soft tanımlı değil) hiçbir şey göndermez."""
     from datetime import datetime, timezone
 
@@ -180,7 +187,7 @@ def feed(seo, editor: str = "zamanlayıcı") -> dict[str, Any]:
             return {"started": True, "items": 0}
         total = {"stored": 0, "new": 0, "skipped": 0}
         for i in range(0, len(items), BATCH):
-            r = editorial_studio.post_json("/v1/studio/library/items", {"items": items[i:i + BATCH]}, editor,
+            r = editorial_studio.post_json("/v1/studio/library/items", {"items": items[i:i + BATCH]}, header_name(editor),
                                            timeout=300)
             for k in total:
                 total[k] += int(r.get(k) or 0)

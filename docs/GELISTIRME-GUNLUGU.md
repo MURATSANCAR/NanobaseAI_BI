@@ -30,6 +30,13 @@
   `dist.bak-20260928-061905`, portal `index-CN8RTg_l.js`.
 - **Doğrulama (köprü → GPU):** havuz araması «ördek vaklıyor» → Freesound/Commons ördek sesleri (CC0/CC BY); deneme
   işinde efekt ayarı «çocuk kitabı, açık»; öneri + 7. sayfa karışımı uçtan uca koşuluyor.
+## 2026-09-28 (06:45) — Kapak arşivi kuruldu: GPU stüdyo + test sunucusu (main `ddd33e68`); ilk doldurma; gece beslemesinde ASCII başlık hatası
+
+- **GPU:** `releases/ddd33e68` (`._*` 0), `editor-py:0.15.9-ddd33e68` + `editor-py-studio:0.15.9-ddd33e68`; göç `030_cover_library` uygulandı; Temporal'da koşan iş 0 iken yalnız `studio` ve `studio-worker` bu imajla yeniden kuruldu (compose servis adları `studio`/`studio-worker`; `secrets/cards.env` root'a ait olduğundan compose `sudo env …` ile — komutu kullanıcı koştu, Claude'un denemesi izin denetimine takıldı). Kaplarda `EDITOR_CODE_VERSION=0.15.9-ddd33e68`, `._*` 0; arşiv uçları anahtarsız 401, olmayan uç 404. Öteki servisler `68a1d411`'de (değişiklik yalnız stüdyo kodunda). Bu imaj main'deki M19 pazarlama stüdyo kodunu da canlıya aldı. GPU nginx (`add-studio-routes.py`, VM yolu) henüz koşmadı.
+- **Test sunucusu:** paylaşılan dosyalar (`access.py`, `access_catalog.json`, `app.py`, `App.tsx`, `navModel.ts`, `engine.ts`) başka oturumların kurulumlarıyla iki kez yarıştı (hazırlık→yazma arasında değiştiler). Son yol: canlı dosyayı okuduğu anda üç yollu birleştir (`app.py` için iki satır `return app` önüne), yalnız beklenen satır sayısı eklenmiş mi denetle, okunduğundan beri değişmemişse hepsini birden yaz; sonra köprü yeniden başladı (health 200), canlı ağacın kopyasında testler 20/20 ve `npm run build` → `cockpit/dist` (`index-CCgM7xMm.js`, portal aynı), `._*` 0.
+- **İlk doldurma:** gece işiyle aynı kod elle koştu (köprü ortamı, oturum açılmadan): 6.781 kayıt 17 sn'de gönderildi (6.763 görselli, 6.569 CRM'li), stüdyo 4 paralel indiriyor, ilk dakikalarda hata 0.
+- **Yakalanan hata:** besleme `X-Editor: zamanlayıcı` gönderiyordu; HTTP başlığı ASCII olmalı → httpx `UnicodeEncodeError`, hiçbir şey gitmedi. Gece işi her gece böyle düşecekti. Düzeltme: `header_name()` (Türkçe harf → ASCII), varsayılan `zamanlayici`, test eklendi (8/8). İlk doldurma ASCII adla yapıldı. Düzeltme main'e alınıp köprüye kurulacak.
+
 ## 2026-09-28 — Kapak arşivi: Timaş kapakları kategori ve alt kategoriye göre (dalda; kurulmadı)
 
 - **Neden:** Kullanıcı, stüdyoda üretilecek görseller için Timaş kapaklarına benzer istemlerden oluşan, görsel referanslı bir istem kütüphanesi istedi. İlk adım kapakları toplamak ve kategoriye göre kolay erişilir kılmak.
