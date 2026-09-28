@@ -48,6 +48,32 @@ def chat(messages: list[dict], *, priority: int = INTERACTIVE, max_tokens: int =
 	return _THINK.sub("", text).strip()
 
 
+def choose(prompt: str, choices: list[str], *, system: str | None = None, priority: int = BACKGROUND,
+		   timeout: int = 600) -> dict:
+	"""Kapalı küme seçim + olasılık (köprüdeki `QueuedLlm.choose` ile aynı yöntem, `secim.py`). Tek token cevap;
+	dönen sözlük: choice, probability, margin, probs, method. Model yoksa `ModelUnavailable`."""
+	from nanobase_brand.yz import secim
+
+	base, key, model = _endpoint()
+	headers = {"Content-Type": "application/json", "X-LLM-Module": "destek", "X-LLM-Priority": str(priority)}
+	if key:
+		headers["Authorization"] = f"Bearer {key}"
+
+	def cagir(messages: list[dict], extra: dict | None) -> dict:
+		body = {"model": model, "messages": messages, "max_tokens": 1, "temperature": 0, **(extra or {})}
+		try:
+			resp = requests.post(f"{base}/chat/completions", headers=headers, timeout=timeout, json=body)
+		except requests.RequestException as exc:
+			raise ModelUnavailable(type(exc).__name__) from exc
+		if extra and 400 <= resp.status_code < 500 and resp.status_code not in (401, 403, 429):
+			raise ValueError(f"yapılandırılmış seçim reddedildi: http {resp.status_code}")
+		if resp.status_code >= 400:
+			raise ModelUnavailable(f"http {resp.status_code}")
+		return resp.json()["choices"][0]
+
+	return secim.sec(cagir, prompt, choices, system)
+
+
 def chat_json(messages: list[dict], **kw) -> dict:
 	"""Modelden tek bir JSON nesnesi; metnin içindeki ilk {...} bloğu okunur."""
 	text = chat(messages, **kw)

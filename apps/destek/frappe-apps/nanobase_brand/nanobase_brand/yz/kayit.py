@@ -21,6 +21,7 @@ from frappe.utils import escape_html, now_datetime, strip_html
 
 from nanobase_brand.yz import bilgi, llm
 from nanobase_brand.yz.maske import Maske
+from nanobase_brand.yz import bilgi, llm, sinif
 
 DUYGULAR = ("Olumlu", "Nötr", "Olumsuz", "Öfkeli")
 ACIK_DURUMLAR = ("Open", "Replied", "Paused")
@@ -114,10 +115,11 @@ def classify(ticket: str) -> dict:
 		'"duygu": ..., "gerekce": "tek cümle, Türkçe"}\n\n'
 		f"KAYIT:\n{text}"
 	)
+	text = f"Konu: {doc.subject}\n\n{_text(doc.description, 6000)}"
+	# Konu köprüde M51 ile tek karar; öncelik/ekip/duygu kapalı küme seçim + olasılık (yz/sinif.py).
 	try:
-		out = llm.chat_json([{"role": "system", "content": KIMLIK}, {"role": "user", "content": prompt}],
-							priority=llm.BACKGROUND, max_tokens=300, temperature=0)
-	except (llm.ModelUnavailable, ValueError):
+		out = sinif.oner(doc, text, types, priorities, teams, DUYGULAR)
+	except llm.ModelUnavailable:
 		frappe.log_error(title=f"NanobaseAI sınıflama: {ticket}")
 		return {}
 

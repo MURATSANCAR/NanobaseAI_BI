@@ -591,6 +591,42 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu temsilcinin portalda bu yetkisi yok."})
         return engine, tenant, agent
 
+    def panel_system(request: Request) -> tuple[Any, str]:
+        """Masanın sunucu işi (temsilci yok): çağıran jetonu + isteğe bağlı panel anahtarı. Yalnız kişisel veri
+        döndürmeyen uçlar için (sınıflama)."""
+        require_caller(request)
+        want = (conf("DESTEK_PANEL_TOKEN", "") or "").strip()
+        if want:
+            import hmac
+
+            if not hmac.compare_digest(request.headers.get("x-destek-panel-key", ""), want):
+                raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Panel anahtarı gerekli."})
+        return system()
+
+    @app.post(f"{P}/panel/classify")
+    def support_panel_classify(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Destek masasının yeni talep sınıflaması (tek karar): konu + aciliyet M51'in kapalı kümesi ve olasılığıyla bir
+        kez sorulur, kaydedilir; aynı talep yeniden gelirse (ya da 5 dk'lık tur önce davrandıysa) yeniden sorulmaz.
+        Masa türü (`ticket_type`) bu cevaptan alınır; iki ayrı konu sınıflayıcısı kalmaz. Metin gövdeden gelir (masa
+        REST'i ayarlı değilse de çalışır), modele maskeli gider, köprüde saklanmaz."""
+        engine, tenant = panel_system(request)
+        from semantic_layer.runtime.llm_queue import NORMAL
+
+        ref = str(body.get("ticket") or "").strip()
+        if not re.match(r"^[A-Za-z0-9._\-]{1,64}$", ref):
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Talep numarası gerekli."})
+        have = S.get_insight(engine, tenant, ref)
+        if not (have and (have.get("klassMethod") or have.get("klassBy"))):
+            if str(body.get("subject") or "").strip() or str(body.get("description") or "").strip():
+                t = {"name": ref, **{k: body.get(k) for k in ("subject", "description", "raised_by", "opening_date", "modified")}}
+            else:
+                t = call(svc.destek().ticket, ref)
+                if not t:
+                    raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Talep bulunamadı."})
+            call(svc.classify_ticket, engine, tenant, t, NORMAL)
+            have = S.get_insight(engine, tenant, ref)
+        return S.panel_classification(have, S.list_classes(engine, tenant))
+
     @app.get(f"{P}/panel/context")
     def support_panel_context(request: Request, ticket: str = "", email: str = "", phone: str = "", order: str = "",
                               account: str = "") -> dict[str, Any]:

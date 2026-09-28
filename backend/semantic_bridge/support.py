@@ -805,6 +805,23 @@ def classification_values(res: dict[str, Any], faq: Optional[dict[str, Any]], ti
             "opened_on": src.as_date(ticket.get("opening_date")), "ticket_modified": str(ticket.get("modified") or "")[:40]}
 
 
+def panel_classification(ins: Optional[dict[str, Any]], classes: list[dict[str, Any]]) -> dict[str, Any]:
+    """Destek masasının arka plan sınıflamasına dönen tek karar (README «hemen düzeltilecekler» 7): konu listesi M51'in
+    sınıflarıdır, karar bu köprüde bir kez verilir ve kaydedilir; masa türünü buradan alır, kendi konu sınıflamasını
+    yapmaz. Temsilcinin düzelttiği sınıf (`klassBy` kişi) modelinkinin önündedir. Kişisel veri dönmez."""
+    by = {c["klass"]: c for c in classes}
+    ins = ins or {}
+    k = ins.get("klass")
+    c = by.get(k or "") or {}
+    return {"ticket": ins.get("ticket"), "klass": k, "label": c.get("label"), "description": c.get("description"),
+            "confident": bool(k and c), "p": ins.get("klassP"), "margin": ins.get("klassMargin"),
+            "method": ins.get("klassMethod"), "by": ins.get("klassBy"),
+            "guessLabel": (by.get(ins.get("klassGuess") or "") or {}).get("label"),
+            "urgency": ins.get("urgency"), "urgencyP": ins.get("urgencyP"),
+            "classes": [{"klass": x["klass"], "label": x["label"], "description": x.get("description") or ""}
+                        for x in classes if x.get("active", True)]}
+
+
 def set_class(engine: sa.engine.Engine, tenant: str, ref: str, actor: str, klass: str, urgency: Optional[str],
               classes: list[dict[str, Any]]) -> dict[str, Any]:
     """Temsilcinin düzelttiği sınıf (M50 karnesine «değiştirilen» olarak girer)."""
