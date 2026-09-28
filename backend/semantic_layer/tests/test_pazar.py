@@ -313,7 +313,7 @@ def test_brief_draft_rejects_unsourced_and_two_eyes(engine):
     b = P.draft_brief(engine, T, "ayse", "2026-08", chat)
     assert b["durum"] == "taslak" and b["sorunlar"] == []
     assert "TİMAŞ net cirosu 1.950 ₺ oldu. [K1]" in b["taslak"]
-    assert {x["neden"][:12] for x in b["reddedilen"]} == {"kaynakta ola", "kaynağa bağl"}
+    assert {x["neden"][:12] for x in b["reddedilen"]} == {"kaynakta olm", "kaynağa bağl"}
     assert "Pazar büyüklüğü: kaynak yok" in b["taslak"]
     bad = b["taslak"].replace("oldu. [K1]", "oldu, pazar 99 milyon.")
     edited = P.update_brief(engine, T, "ayse", b["id"], bad)
