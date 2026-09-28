@@ -426,7 +426,10 @@ class SemanticResolver:
         if not notes:
             return sq
         again = self._resolve(fixed, today)
-        if len(again.unresolved) >= len(sq.unresolved):
+        if again.unresolved:
+            # Only a correction that completes the reading. Tam set 2026-09-28: fixes that merely reduced the
+            # unresolved words ("kullanıcının" → a passive-customer label, "girişleri" → cheque entries) left a
+            # failing question with a filter nobody asked for, handed on to the model as a hint.
             return sq
         again.question = question
         again.explanation.insert(0, "yazım: " + ", ".join(f"'{a}' → '{b}'" for a, b in notes) + " olarak okundu")
