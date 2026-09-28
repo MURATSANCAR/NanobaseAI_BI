@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (14:30) — Müşteri VM'i aec8ff61 (menü yeniden düzeni dahil); Destek VM'e bu hâliyle kurulamaz
+
+- **Kullanıcı onayı:** «hadi kur». VM'deki kod 8b60d63c idi (dosya md5 eşit, 08:03 kurulumu); `merge-base --is-ancestor 8b60d63c aec8ff61` evet (arada 182 commit), çakışma işareti 0, arşiv test sunucusunda açılıp köprü yüklendi (2.276 yol). Birim `vm-deploy-aec8ff61`, günlük `/tmp/vm-deploy-aec8ff61.log`, kaynak `/tmp/bi-main-aec8ff61`.
+- Sonuç EXIT 0: 5 konteyner ayakta, `bi_var` korundu (7 → 7), oturumsuz yollar 200/401, VM `._*` 0, köprü sağlık 200, giriş `index-BnRVM6Di.js` (test sunucusuyla aynı derleme), VM köprüsünde 41 ayar grubu 10 kategoride. Web taraması kapalı (`WEB_WATCH_ENABLED` yok → 0, zamanlayıcı yok). İş kapsayıcısının «Connection refused» satırları köprü açılışından 32 sn sonra tek sefer (önceki kurulumlarda da var), sonrasında yok. Sürüm kaydı VM köprüsüne yazıldı; test sunucusu köprüsüne 401 (kurulumu etkilemiyor).
+- **Destek VM'e kurulmadı:** `apps/destek/scripts/install.sh` test sunucusuna bağlı (portal.nanobase.ai:8446, `/etc/nanobase/*` anahtarları, `/destek-llm` ve `/destek-baglam` nginx parçaları, köprü env dosyası, `/data/nanobaseai`). VM'de web katmanında bu yollar yok, dış erişim müşterinin NPM'inden (yönetici şifresi bizde yok). Uyarlama işi + dış erişim kararı gerekiyor; VM 4 vCPU / 7 GB (≈3 GB boş).
+
 ## 2026-09-28 (14:20) — Menü yeniden düzeni ve Destek c80862be test sunucusunda; nginx tam yeniden başlatıldı
 
 - **nginx:** kullanıcı `systemctl restart nginx`'i kendisi çalıştırdı (11:32'den beri reload `timas_api` bölge anahtarı yüzünden reddediliyordu). Sonra: `/destek-baglam/v1/` anahtarsız 401 (köprüde `panel/classify|context|insight|draft` var), Destek giriş hız sınırı 6. denemede 429. Destek vhost'u 067718bc hâlinden (md5 eşit) e9fa4a3f hâline güncellendi, reload temiz: başka kaynaktan socket.io 403, aynı site 200.
