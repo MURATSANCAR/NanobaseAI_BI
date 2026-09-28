@@ -64,7 +64,9 @@ def ensure_outgoing(config: dict | None = None) -> str:
 	}
 	name = frappe.db.get_value("Email Account", {"email_account_name": ACCOUNT}, "name")
 	doc = frappe.get_doc("Email Account", name) if name else frappe.new_doc("Email Account")
-	if imap_host:
+	# Aynı kutuyu iki ortam okursa her e-posta iki kayıt açar: gelen kutusunu okumayan ortamda site ayarı
+	# `nb_eposta_gelen_kapali` 1'dir (2026-09-28: kutuyu müşteri VM'i okur, test sunucusu yalnız gönderir).
+	if imap_host and not frappe.conf.get("nb_eposta_gelen_kapali"):
 		validity, uidnext = _mailbox_state(imap_host, cfg["user"], cfg["password"])
 		values.update(
 			{

@@ -1,0 +1,23 @@
+# Müşteri VM'i eki (install.sh COMPOSE_EXTRA=compose.bi-net.yaml): Destek, BI yığınının `bi_net` ağına da bağlanır.
+# - Dış kapı BI'ın web kapsayıcısıdır (infra/docker/bi/web.default.conf.template, 8446): `destek-frontend` adıyla
+#   buraya gelir; giriş hız sınırı ve canlı bildirim kaynak denetimi orada (test sunucusundaki nginx vhost'unun işi).
+# - Model ve kayıt türü bağlantısı web kapsayıcısının iç kapısından (8447, dışa açılmaz): http://web:8447/destek-llm/v1.
+# BI yığını önce kurulmuş olmalı (ağ onun). Test sunucusunda bu ek kullanılmaz.
+services:
+  frontend:
+    networks:
+      destek: {}
+      bi_net:
+        aliases: [destek-frontend]
+  backend:
+    networks: [destek, bi_net]
+  queue-short:
+    networks: [destek, bi_net]
+  queue-long:
+    networks: [destek, bi_net]
+  scheduler:
+    networks: [destek, bi_net]
+
+networks:
+  bi_net:
+    external: true
