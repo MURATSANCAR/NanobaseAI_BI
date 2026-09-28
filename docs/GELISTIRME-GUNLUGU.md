@@ -1,5 +1,37 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
+
+- **Durum:** VM'de `e543a122` (başka oturumun 05:38 kurulumu) M29–M32'yi ve sohbet kapsamını zaten içeriyordu; test sunucusunda
+  aynı gün başka bir oturum da kabul koştu (06:40 girişi). Bu tur, oradaki açık kalanların nedenini buldu ve düzeltti.
+  Uzun koşular için aday kodla yan köprü (127.0.0.1:8797, çağıran anahtarsız kopya ortam dosyası, iş bitince silindi):
+  canlı köprü 05:40–07:00 arasında başka oturumlarca defalarca yeniden başlatıldı.
+- **M29 İlk dağılım 34/34** (gece işi 59 sn; 1.111 kitap). Test planı, 545 satır, 6 değişiklik kaydı silindi; zamanlayıcı açıldı.
+- **M30 Saha: okuma 6/6.** «Portföy cari sayısı» ilk koşuda kaldı (API 840 > CRM sahibi 749): kabul betiği «BMT İl» carisinde il
+  temsilcisi boşsa sahibine düşme kuralını (kodda yazılı) saymıyordu — 112 cari bu yoldan geliyor, 840 ≤ 749+112. Betik düzeltildi.
+  Yazma uçları geçersiz gövdede 422/404 doğru; 403 beklenen iki madde yönetici olmayan hesap ister (doğrulanamadı).
+- **M31 Okul — hata bulundu ve düzeltildi (`0a405e24`):** okul kartı ve dönem raporu her istekte 502. Neden: M30 ile ortak
+  `semantic_saha_ziyaret` tablosunu M31 kendi kopyasıyla tanımlıyordu (`not`, tarih tipleri, `olusturan` yok); tabloyu M30 açtığı
+  için canlıda kolon `notu`, zamanlar metin. M31 artık `field_sales.VISITS`'i kullanır, sınırda çevirir; regresyon testi
+  (önce M30'un açtığı tabloya M31 ziyareti yazılır, geri okunur). Test sunucusuna kuruldu (md5 önceki main = sunucu). Kabul
+  **5 geçti, 2 doğrulanamadı**: il × kademe 65.478, öğrenci sayısı, dönem raporu 181/116/475, katalog 991 kitap stok+fiyat, bayi
+  eşleşmesi birebir; geçmiş ziyaret — CRM'de okula bağlı ziyaret kaydı hiç yok (new_etkinlikBase 57 bin kayıt, `new_ZiyaretYeri`
+  boş); kapsam 403 — temsilci oturumu yok. Gerçek DB'de tek ziyaret yazıldı → kartta not/tarihle okundu → silindi.
+- **M32 Kurumsal 38/40:** 1 fark (bir bayinin 90 günlük B2B sipariş sayısı 92/91) kayan pencereden — gece okuması anına sabitlenince
+  referans da 92; «teklif için kitap» doğrulanamadı (M9 maliyeti bağlı değil). Test fırsatı ve değişiklik kaydı silindi.
+- **Sohbet kapsamı — hata bulundu ve düzeltildi:** «Mercimek çorbası tarifi ver», «Türkiye'nin başkenti neresi?», «Bana bir aşk şiiri
+  yaz» veri hattına gidiyordu (çorba tarifi SQL'e). Model üçüne de OFFTOPIC diyor (kapıdan doğrudan ölçüldü); sınıflandırıcı hiç
+  çağrılmıyordu çünkü tek bir zayıf yerleşim («tarifi» → «renk tarif» INFERRED, «TÜRKİYE» PROFILE) iş sorusu kanıtı sayılıyordu.
+  Artık kanıt sertifikalı/açık kavram (varsayılan filtre hariç): `chat_scope.has_business_evidence`. Etkisi ölçüldü: set100'de yalnız
+  2 soru yeni olarak sınıflandırıcıya gider, ikisi DATA (reddedilen iş sorusu 0); sınırdaki iş soruları (Aşk romanları, İstanbul
+  bayileri, Nutuk…) DATA/UNKNOWN. Kabul düzeltmeyle yeniden (aday yan köprü): **79/85** (önce 75) — şirket dışı 6/6, kimlik 26/26,
+  teknoloji adı 0, reddedilen iş sorusu 0; 4 «bağlı olmayan konuda SQL» elle incelenecek. Sorgu kaydı 85 + yarım koşudan 36 satır silindi.
+- **Sohbet kabulünde kalan (kapsam dışı, veri hattı):** «2026 toptan satış faturası sayısı» fatura yerine satır sayıyor (1.113.232 /
+  21.009); «2026 net ciro» 837,9 Mn — referans 10 Eylül'ün fatura toplamı (848,1 Mn), bugünkü tanım faturalı satır (M46 ile aynı);
+  referans betiği bayat. Çözücü hızlı kapısı: 9 soru 21.09 temel çizgisinden farklı — sohbet commit'i çözücüye dokunmuyor, fark
+  K1–K5 ve katalog (70554→70581) kaynaklı.
+- **Test sunucusu:** M31 düzeltmesi kuruldu (okul kartı ve dönem raporu canlıda 200). Sohbet düzeltmesi bu girişle birlikte kuruluyor. **VM:** kurulmadı — VM `e543a122`'de; bu iki düzeltmeyi taşıyacak sonraki `main` noktası başka oturumların henüz VM kabulü yapılmamış işlerini de içeriyor.
+
 ## 2026-09-28 — M4 çeviri işi → M8 serbest çalışan işi ve hakediş (dalda, sunucuda doğrulanmadı)
 ## 2026-09-28 (06:45) — Kapak arşivi kuruldu: GPU stüdyo + test sunucusu (main `ddd33e68`); ilk doldurma; gece beslemesinde ASCII başlık hatası
 
