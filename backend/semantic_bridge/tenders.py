@@ -6,7 +6,10 @@ Resmî kaynaktan ilan içe alma ikinci sürümdür ve yalnız `TENDER_WATCH_ENAB
 Portal hiçbir kuruma teklif göndermez, e-imza kullanmaz; CRM'e ve Logo'ya yazmaz. Her yazma `semantic_audit`'e düşer.
 
 **Kalem–katalog eşleştirme sırası:** (1) ISBN/barkod birebir (ISBN-10 → ISBN-13 çevrilir, sağlama basamağı denetlenir);
-(2) ad (Türkçe harf ve noktalama sadeleşmiş) birebir, birden çok kitap varsa yazarla ayıklanır; (3) kalanlarda ad ve
+(2) ad (Türkçe harf ve noktalama sadeleşmiş) birebir, birden çok kitap varsa yazarla ayıklanır (soyadı tutmalı; yazarı
+doğrulanan kayıt yazarsız kaydın önüne geçer); (2b) çekirdek ad (cilt yazımı, baskı/boy ifadesi ayrılmış) tek kayıtta;
+kesin farklı ürün (başka cilt, set/tek kitap, e-kitap/basılı, başka yazar) hiçbir yolda otomatik eşleşmez, ayırt
+edilemeyen ikiz kayıt ya da tek tarafta yazılı cilt/baskı en çok «öneri» olur (sessiz yanlış eşleme yok); (3) kalanlarda ad ve
 yazar sözcüklerinin seyrekliğiyle ağırlıklı benzerlikten adaylar, Zeki AI'a kapalı küme seçimi («aynı eser hangisi,
 hiçbiri») — `QueuedLlm.choose`, seçim + olasılık. Eşikler ayardır: otomatik kabul (varsayılan p ≥ 0,90 ve marj ≥ 0,50),
 öneri (p ≥ 0,70 ve marj ≥ 0,30; insan onaylar), altı «emin değil» (adaylar gösterilir, insan seçer). Rakamı model üretmez:
@@ -399,9 +402,14 @@ def days_left(deadline: Optional[str], asof: Optional[date] = None) -> Optional[
     return (d - (asof or today())).days
 
 
+_APOSTROPHES = re.compile(r"(?<=\w)['’‘`´ʼ](?=\w)")
+
+
 def fold(s: Any) -> str:
-    """Karşılaştırma biçimi: Türkçe küçük harf, aksansız, noktalamasız, tek boşluk."""
-    t = str(s or "").replace("İ", "i").replace("I", "ı").lower()
+    """Karşılaştırma biçimi: Türkçe küçük harf (İ/I/ı/i), aksansız, noktalamasız, tek boşluk. Sözcük içi kesme işareti
+    sözcüğü bölmez («Kur'an» → «kuran», «Emre'nin» → «emrenin»); tire ve öbür noktalama boşluk olur."""
+    t = _APOSTROPHES.sub("", str(s or ""))
+    t = t.replace("İ", "i").replace("I", "ı").lower()
     t = t.replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
     t = unicodedata.normalize("NFKD", t)
     t = "".join(ch for ch in t if not unicodedata.combining(ch))
@@ -414,6 +422,126 @@ _STOP = {"ve", "ile", "bir", "de", "da", "ya", "the", "of", "and", "a", "an", "i
 
 def tokens(s: Any) -> list[str]:
     return [t for t in fold(s).split() if len(t) > 1 and t not in _STOP]
+
+
+# ------------------------------------------------------------------ ad çözümleme: çekirdek ad + cilt/set/biçim
+
+_ROMAN = {"i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6, "vii": 7, "viii": 8, "ix": 9, "x": 10, "xi": 11, "xii": 12,
+          "xiii": 13, "xiv": 14, "xv": 15, "xvi": 16, "xvii": 17, "xviii": 18, "xix": 19, "xx": 20}
+_ROMAN_RX = "|".join(sorted(_ROMAN, key=len, reverse=True))
+#: Sıra sayılı cilt (noktalı yazım; «3. Kitap» cilttir, «3 Kitap» set sayısıdır): «1. Cilt», «II. Kısım», «3.Kitap».
+_VOL_ORDINAL = re.compile(rf"(?<![0-9a-z])(\d{{1,3}}|{_ROMAN_RX})\s*\.\s*(cilt|cild|kitap|kisim|bolum|sayi|seri)\b")
+#: Noktasız cilt: «2 Cilt», «Cilt 2», «Cilt: II», «C. 3».
+_VOL_BEFORE = re.compile(rf"\b(\d{{1,3}}|{_ROMAN_RX}) (cilt|cild|kisim|bolum|sayi)\b")
+_VOL_AFTER = re.compile(rf"\b(cilt|cild|c|kisim|bolum|sayi|vol|volume) (\d{{1,3}}|{_ROMAN_RX})\b")
+_VOL_TRAIL = re.compile(r" (\d{1,2})$")
+_RAW_ROMAN_TRAIL = re.compile(r"\s([IVX]{1,5})\.?\s*\)?\s*$")      # ham metinde sonda büyük harf Romen rakamı
+#: Set/paket: «Seti», «Takımı», «5 Kitap», «10 Kitaplık Set», «Kutu Set».
+_SET_RX = re.compile(r"\b(\d{1,3} kitap(lik)?|kutu set|set|seti|takim|takimi)\b")
+_DIGITAL_RX = re.compile(r"\b(e kitap|ekitap|e book|ebook|sesli kitap)\b")
+#: Baskı/biçim ifadeleri (aynı eser, farklı baskı): çekirdek addan çıkarılır, ayrıca tutulur.
+_FORMAT_RX = re.compile(r"\b(ciltli|ciltsiz|karton kapak|sert kapak|bez cilt|somizli|cep boy|buyuk boy|orta boy|kucuk boy|"
+                        r"kutulu|ozel baski|yeni baski|\d{1,3} baski|tipki basim|genisletilmis baski)\b")
+#: Yazar bilinmiyor sayılan yazımlar.
+_NO_AUTHOR = {"kolektif", "komisyon", "anonim", "derleme", "cesitli", "yazarlar"}
+
+
+def _fold_dots(s: str) -> str:
+    """`fold` gibi, ama nokta kalır (sıra sayısı «3.» ile adet «3»ü ayırmak için)."""
+    t = _APOSTROPHES.sub("", s).replace("İ", "i").replace("I", "ı").lower()
+    t = t.replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")
+    t = "".join(ch for ch in unicodedata.normalize("NFKD", t) if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", re.sub(r"[^0-9a-z.]+", " ", t)).strip()
+
+
+def title_key(s: Any) -> dict[str, Any]:
+    """Adın karşılaştırma anahtarı: çekirdek ad (biçim/cilt/set sözcükleri çıkmış), cilt no, set mi, dijital mi, biçimler.
+    Kitaba özel kural yok: yalnız Türkçe yayıncılıkta genel yazımlar (cilt, set, baskı/boy, e-kitap)."""
+    raw = str(s or "")
+    vol: Optional[int] = None
+    dotted = _fold_dots(raw)
+    m = _VOL_ORDINAL.search(dotted)
+    if m:
+        vol = int(m.group(1)) if m.group(1).isdigit() else _ROMAN.get(m.group(1))
+        dotted = dotted[:m.start()] + " " + dotted[m.end():]
+    f = fold(dotted)
+    if vol is None:
+        m = _VOL_BEFORE.search(f) or _VOL_AFTER.search(f)
+        if m:
+            num_ = m.group(1) if m.re is _VOL_BEFORE else m.group(2)
+            vol = int(num_) if num_.isdigit() else _ROMAN.get(num_)
+            f = (f[:m.start()] + " " + f[m.end():]).strip()
+    digital = bool(_DIGITAL_RX.search(f))
+    f = _DIGITAL_RX.sub(" ", f)
+    is_set = bool(_SET_RX.search(f))
+    f = _SET_RX.sub(" ", f)
+    fmts = frozenset(x.group(1) for x in _FORMAT_RX.finditer(f))
+    f = re.sub(r"\s+", " ", _FORMAT_RX.sub(" ", f)).strip()
+    if vol is None and len(f.split()) >= 2:
+        t = _VOL_TRAIL.search(f)
+        r = _RAW_ROMAN_TRAIL.search(raw)
+        roman = r.group(1).lower() if r else ""
+        if t:
+            vol, f = int(t.group(1)), f[:t.start()].strip()
+        elif roman in _ROMAN and f.endswith(" " + roman):
+            vol, f = _ROMAN[roman], f[: -len(roman) - 1].strip()
+    core = " ".join(w for w in f.split() if w not in _STOP)
+    return {"core": core, "vol": vol, "set": is_set, "digital": digital, "fmt": fmts}
+
+
+def _surnames(s: Any) -> tuple[set[str], set[str]]:
+    """(bütün sözcükler, soyadları). Birden çok yazar virgül, «ve», «&», «/», «;» ile ayrılır; her yazarın son sözcüğü
+    soyadı sayılır («Tanpınar, Ahmet Hamdi» biçiminde ilk sözcük de)."""
+    txt = re.sub(r"\((.*?)\)", " ", str(s or ""))           # «(Çev. …)», «(Haz. …)» yazar değil
+    parts = [p for p in re.split(r"[,;&/]| ve | and ", txt, flags=re.I) if p.strip()]
+    words: set[str] = set()
+    last: set[str] = set()
+    for p in parts:
+        tk = [t for t in tokens(p) if t not in _NO_AUTHOR]
+        if tk:
+            words |= set(tk)
+            last.add(tk[-1])
+    if "," in txt and len(parts) == 2 and len(tokens(parts[0])) == 1:     # «Soyad, Ad»
+        last.add(tokens(parts[0])[0])
+    return words, last
+
+
+def author_compat(a: Any, b: Any) -> Optional[bool]:
+    """İki yazar yazımı aynı kişi(ler) mi: None = bilinmiyor (biri boş/«kolektif»), True/False. Yalnız ortak ad yetmez
+    («Ahmet Ümit» ≠ «Ahmet Hamdi Tanpınar»): bir tarafın soyadı öbüründe geçmeli ya da en az iki sözcük ortak olmalı."""
+    wa, la = _surnames(a)
+    wb, lb = _surnames(b)
+    if not wa or not wb:
+        return None
+    return bool(la & wb) or bool(lb & wa) or len(wa & wb) >= 2
+
+
+def key_conflict(a: dict[str, Any], b: dict[str, Any]) -> Optional[str]:
+    """Kesin farklı eser/ürün: iki tarafta da cilt no var ve farklı; biri set öbürü tek kitap; biri dijital."""
+    if a["vol"] is not None and b["vol"] is not None and a["vol"] != b["vol"]:
+        return f"cilt farklı ({a['vol']} / {b['vol']})"
+    if a["set"] != b["set"]:
+        return "biri set, öbürü tek kitap"
+    if a["digital"] != b["digital"]:
+        return "biri dijital, öbürü basılı"
+    return None
+
+
+def key_doubt(a: dict[str, Any], b: dict[str, Any]) -> Optional[str]:
+    """Aynı eser olabilir ama emin olunamaz: cilt bir tarafta var öbüründe yok; baskı/biçim ifadesi farklı."""
+    if (a["vol"] is None) != (b["vol"] is None):
+        return "cilt numarası yalnız bir tarafta yazılı"
+    if a["fmt"] != b["fmt"] and (a["fmt"] or b["fmt"]):
+        return "baskı/biçim ifadesi farklı (" + (", ".join(sorted(a["fmt"] ^ b["fmt"]))) + ")"
+    return None
+
+
+def _title_tail(part: str) -> bool:
+    """Tireyle ayrılmış parça adın devamı mı (cilt no, Romen rakamı, set, e-kitap, baskı/boy) — yazar değil."""
+    if re.fullmatch(rf"(\d{{1,3}}|{_ROMAN_RX})", fold(part)):
+        return True
+    k = title_key(part)
+    return not k["core"] and (k["vol"] is not None or k["set"] or k["digital"] or bool(k["fmt"]))
 
 
 # ------------------------------------------------------------------ ISBN
@@ -557,8 +685,13 @@ def _row_from_line(line: str) -> dict[str, Any]:
     s = re.sub(r"\s+", " ", s).strip(" -–,;:/")
     ad, yazar = s, None
     parts = [p.strip() for p in re.split(r"\s[-–/]\s", s) if p.strip()]
+    # «Osmanlı Tarihi - 2», «Sefiller - II. Cilt», «Nutuk - Ciltli»: tireden sonraki parça yazar değil, adın parçası.
+    while len(parts) >= 2 and _title_tail(parts[1]):
+        parts[0:2] = [f"{parts[0]} {parts[1]}"]
     if len(parts) >= 2:
         ad, yazar = parts[0], parts[1]
+    else:
+        ad = parts[0] if parts else ad
     return {"ad": ad or None, "yazar": yazar, "yayinevi": None, "isbn": isbn, "adet": adet}
 
 
@@ -717,7 +850,13 @@ class Catalog:
         self.index: dict[str, set[int]] = {}
         self.toks: list[set[str]] = []
         self.author_toks: list[set[str]] = []
+        self.keys: list[dict[str, Any]] = []
+        self.by_core: dict[str, list[int]] = {}
         for i, b in enumerate(books):
+            key = title_key(b.get("ad"))
+            self.keys.append(key)
+            if key["core"]:
+                self.by_core.setdefault(key["core"], []).append(i)
             if b.get("kod"):
                 self.by_code.setdefault(b["kod"], b)
             keys = {k for k in (norm_isbn(x) for x in (b.get("isbn_ham") or [])) if k}
@@ -772,13 +911,41 @@ NONE_CHOICE = "Hiçbiri — katalogda bu eser yok"
 
 
 def _author_ok(cat: Catalog, i: int, yazar: Optional[str]) -> bool:
-    at = set(tokens(yazar))
-    return not at or not cat.author_toks[i] or bool(at & cat.author_toks[i])
+    """Yazar çelişmiyor: bilinmiyor (bir taraf boş ya da «kolektif») ya da aynı kişi(ler) (`author_compat`)."""
+    return author_compat(yazar, cat.books[i].get("yazar")) is not False
+
+
+def _narrow_by_author(cat: Catalog, ids: list[int], yazar: Optional[str]) -> list[int]:
+    """Aynı adlı kayıtlardan yazarı DOĞRULANAN tek kayıt varsa o kalır: yazarı boş kayıt (ör. CRM'de olmayan Logo
+    malzeme kartı) yazarı tutan kaydın önüne geçmez. Birden çok doğrulanan ya da hiç yoksa liste olduğu gibi döner."""
+    if len(ids) <= 1 or not yazar:
+        return ids
+    confirmed = [i for i in ids if author_compat(yazar, cat.books[i].get("yazar")) is True]
+    return confirmed if len(confirmed) == 1 else ids
+
+
+def _twins(cat: Catalog, i: int, others: list[int], yazar: Optional[str]) -> list[int]:
+    """Kalemin bilgisiyle `i`'den ayırt edilemeyen kayıtlar: aynı çekirdek ad ve cilt/set/biçim, kalemin yazarıyla
+    ilişkisi aynı (ikisi de bilinmiyor ya da ikisi de tutuyor). Aynı eserin iki baskısı/kaydı ya da yazarı verilmemiş
+    kalemde aynı adlı iki eser — model hangisini seçerse seçsin insan onayı gerekir."""
+    ki, rel = cat.keys[i], author_compat(yazar, cat.books[i].get("yazar"))
+    out = []
+    for j in others:
+        kj = cat.keys[j]
+        if j == i or kj["core"] != ki["core"] or key_conflict(ki, kj) or key_doubt(ki, kj):
+            continue
+        if author_compat(yazar, cat.books[j].get("yazar")) == rel:
+            out.append(j)
+    return out
 
 
 def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str, list[str]], Any]],
               cfg: dict[str, Any]) -> dict[str, Any]:
-    """Tek kalemi eşleştirir. Dönen: durum, yöntem, stok kodu, olasılık, adaylar (ekranda seçim için)."""
+    """Tek kalemi eşleştirir. Dönen: durum, yöntem, stok kodu, olasılık, adaylar (ekranda seçim için).
+
+    Sessiz yanlış eşleme olmasın diye (kabul 2026-09-28: adla verilen 4 kalemden 1'i yanlış kitaba): kesin farklı ürün
+    (başka cilt, set/tek kitap, dijital/basılı, başka yazar) otomatik eşleşmez ve modele aday olarak gitmez (insan
+    listede görür); ayırt edilemeyen ikiz kayıt ya da tek tarafta yazılı cilt/baskı ifadesi varsa sonuç en çok «öneri»dir."""
     out: dict[str, Any] = {"eslesme_durumu": "yok", "eslesme_yontemi": None, "eslesen_stok_kodu": None, "eslesen_ad": None,
                            "olasilik": None, "adaylar": [], "not": None}
 
@@ -792,6 +959,8 @@ def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str
                  "yayinevi": cat.books[i].get("yayinevi"), "isbn": (cat.books[i].get("isbn") or [None])[0], "benzerlik": s}
                 for i, s in ids]
 
+    yazar = item.get("yazar")
+    ikey = title_key(item.get("ad"))
     # 1. ISBN / barkod
     isbn = norm_isbn(item.get("isbn")) if item.get("isbn") else None
     pool: list[int] = []
@@ -806,9 +975,25 @@ def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str
         same = [i for i in pool if f and fold(cat.books[i].get("ad")) == f]
     else:
         same = list(cat.by_title.get(f, [])) if f else []
-    same = [i for i in same if cat.books[i].get("kod") and _author_ok(cat, i, item.get("yazar"))]
+    same = _narrow_by_author(cat, [i for i in same if cat.books[i].get("kod") and _author_ok(cat, i, yazar)], yazar)
     if len(same) == 1:
         return hit(same[0], "isbn" if pool else "ad", p=1.0)
+    # 2b. Çekirdek ad: noktalama, «1. Cilt»/«Cilt 1», baskı/boy ifadesi farkı. Yalnız tek ve çelişmeyen kayıtta; tek
+    #     tarafta yazılı cilt ya da farklı baskı ifadesi «öneri» olur (insan onaylar).
+    if not pool and not same and ikey["core"]:
+        core = [i for i in cat.by_core.get(ikey["core"], [])
+                if cat.books[i].get("kod") and _author_ok(cat, i, yazar) and not key_conflict(ikey, cat.keys[i])]
+        core = _narrow_by_author(cat, core, yazar)
+        if len(core) == 1:
+            doubt = key_doubt(ikey, cat.keys[core[0]])
+            if doubt is None:
+                hit(core[0], "ad", p=1.0)
+                out["not"] = "Ad eşleşti (yazım farkı yok sayıldı)."
+                return out
+            hit(core[0], "ad", "oneri")
+            out["adaylar"] = cand_list([(core[0], None)])
+            out["not"] = f"Ad eşleşti ama {doubt}; onaylayın ya da başkasını seçin."
+            return out
     # 3. Adaylar → Zeki AI
     if pool:
         cands: list[tuple[int, Optional[float]]] = [(i, None) for i in pool]
@@ -816,17 +1001,23 @@ def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str
         cands = [(i, 1.0) for i in same]
         out["not"] = "Aynı adla birden çok katalog kaydı var."
     else:
-        cands = list(cat.candidates(item.get("ad"), item.get("yazar"), cfg["candidates"], cfg["minScore"]))
+        cands = list(cat.candidates(item.get("ad"), yazar, cfg["candidates"], cfg["minScore"]))
     cands = [(i, s) for i, s in cands if cat.books[i].get("kod")]
-    out["adaylar"] = cand_list(cands)
+    out["adaylar"] = cand_list(cands)          # insan bütün adayları görür (çelişenler dahil)
     if not cands:
         out["not"] = out["not"] or "Katalogda benzer ad bulunamadı."
+        return out
+    ok = [(i, s) for i, s in cands if not key_conflict(ikey, cat.keys[i]) and _author_ok(cat, i, yazar)]
+    if not ok:
+        out["eslesme_durumu"] = "belirsiz"
+        why = sorted({key_conflict(ikey, cat.keys[i]) or "yazar farklı" for i, _ in cands})
+        out["not"] = f"Emin değil: adaylar kalemden farklı ({'; '.join(why)}). Elle seçin ya da «katalogda yok» işaretleyin."
         return out
     if choose is None:
         out["eslesme_durumu"] = "belirsiz"
         out["not"] = "Zeki AI bu kurulumda yok; adaylardan seçin."
         return out
-    labels = [cat.label(i) for i, _ in cands]
+    labels = [cat.label(i) for i, _ in ok]
     seen: dict[str, int] = {}
     for n, lb in enumerate(labels):  # seçenekler benzersiz olmalı
         if lb in seen:
@@ -834,9 +1025,9 @@ def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str
         seen[labels[n]] = n
     prompt = ("Kamu ihalesi teknik şartnamesindeki bir kitap kalemi ile yayınevinin kataloğundaki adaylar aşağıda. "
               "Şartnamedeki kalem hangi katalog kaydıyla AYNI ESERDİR? Baskı/kapak farkı önemsizdir; farklı eser, farklı "
-              "cilt ya da farklı yazar aynı eser değildir. Hiçbiri aynı eser değilse son seçeneği seçin.\n\n"
+              "cilt, set ile tek kitap ya da farklı yazar aynı eser değildir. Hiçbiri aynı eser değilse son seçeneği seçin.\n\n"
               f"Şartname kalemi: {item.get('metin') or item.get('ad')}\n"
-              f"Ad: {item.get('ad') or '-'}\nYazar: {item.get('yazar') or '-'}\nYayınevi: {item.get('yayinevi') or '-'}\n"
+              f"Ad: {item.get('ad') or '-'}\nYazar: {yazar or '-'}\nYayınevi: {item.get('yayinevi') or '-'}\n"
               f"ISBN: {item.get('isbn') or '-'}")
     try:
         r = choose(prompt, labels + [NONE_CHOICE])
@@ -857,11 +1048,18 @@ def match_one(item: dict[str, Any], cat: Catalog, choose: Optional[Callable[[str
         out["eslesme_durumu"] = "belirsiz"
         out["not"] = "Zeki AI seçim yapamadı; adaylardan seçin."
         return out
-    i = cands[seen[r.choice]][0]
-    if auto:
+    i = ok[seen[r.choice]][0]
+    # Model «aynı eser» dedi; kural denetimi: ayırt edilemeyen ikiz ya da tek tarafta yazılı cilt/baskı → en çok öneri.
+    doubts = [d for d in (key_doubt(ikey, cat.keys[i]),) if d]
+    if _twins(cat, i, [j for j, _ in ok], yazar):
+        doubts.append("aynı ad ve bilgiyle birden çok katalog kaydı var (baskı/boy ya da yazar kalemde yok)")
+    if auto and not doubts:
         return hit(i, "zeki", "eslesti", p)
-    if sugg:
-        return hit(i, "zeki", "oneri", p)
+    if auto or sugg:
+        hit(i, "zeki", "oneri", p)
+        if doubts:
+            out["not"] = "Zeki AI aynı eser dedi ama " + "; ".join(doubts) + ". Onaylayın ya da başkasını seçin."
+        return out
     hit(i, "zeki", "belirsiz", p)
     out["not"] = "Zeki AI emin değil; önerilen aday işaretli, onaylayın ya da başkasını seçin."
     return out

@@ -149,6 +149,112 @@ def test_model_down_or_missing_leaves_the_item_to_a_human():
     assert m["eslesme_durumu"] == "yok" and m["adaylar"] == []
 
 
+# ------------------------------------------------------------------ ad eşleştirme sağlamlığı (kabul 2026-09-28: 4 adlı kalemin 1'i yanlış)
+
+
+def test_fold_turkish_case_and_apostrophes():
+    assert T.fold("KUR'AN-I KERİM") == T.fold("Kur’an-ı Kerim") == "kuran i kerim"
+    assert T.fold("IŞIK") == T.fold("ışık") == "isik"
+    assert T.fold("İstanbul") == T.fold("ISTANBUL") == "istanbul"
+    assert T.fold("Yunus Emre'nin Divanı") == "yunus emrenin divani"
+
+
+def test_title_key_reads_volume_set_digital_and_format():
+    k = T.title_key
+    assert (k("Osmanlı Tarihi 3. Cilt")["vol"], k("Osmanlı Tarihi 3. Cilt")["core"]) == (3, "osmanli tarihi")
+    assert k("OSMANLI TARİHİ 3.CİLT")["vol"] == 3
+    assert k("Osmanlı Tarihi Cilt: II")["vol"] == 2
+    assert (k("Osmanlı Tarihi II")["vol"], k("Osmanlı Tarihi II")["core"]) == (2, "osmanli tarihi")
+    assert k("Osmanlı Tarihi - 2")["vol"] == 2
+    assert k("Osmanlı Tarihi 3. Kitap")["vol"] == 3 and not k("Osmanlı Tarihi 3. Kitap")["set"]   # noktalı: cilt
+    assert k("Çocuk Klasikleri 10 Kitap")["set"] and k("Çocuk Klasikleri 10 Kitap")["vol"] is None  # noktasız: set
+    assert k("Osmanlı Tarihi Seti (2 Kitap)")["core"] == "osmanli tarihi"
+    assert k("Nutuk (Ciltli)") == {"core": "nutuk", "vol": None, "set": False, "digital": False, "fmt": frozenset({"ciltli"})}
+    assert k("Sefiller E-Kitap")["digital"] and k("Sefiller E-Kitap")["core"] == "sefiller"
+    assert k("Fahrenheit 451")["vol"] is None and k("1984")["core"] == "1984"
+    assert k("Uzay Yolculuğu Serisi 1 Aya Gidiyoruz")["vol"] is None
+
+
+def test_author_compat_needs_a_surname_not_just_a_first_name():
+    c = T.author_compat
+    assert c("Reşat Nuri", "Reşat Nuri Güntekin") is True
+    assert c("A. H. Tanpınar", "Ahmet Hamdi Tanpınar") is True
+    assert c("Tanpınar, Ahmet Hamdi", "Ahmet Hamdi Tanpınar") is True
+    assert c("Victor Hugo (Çev. Ali Veli)", "Victor Hugo") is True
+    assert c("Ahmet Ümit", "Ahmet Hamdi Tanpınar") is False                 # yalnız ad ortak: başka yazar
+    assert c("", "Ahmet Ümit") is None and c("Kolektif", "Ahmet Ümit") is None
+
+
+ROBUST = [
+    {"kod": "V1", "ad": "Osmanlı Tarihi 1. Cilt", "yazar": "İlber Ortaylı", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "V2", "ad": "Osmanlı Tarihi 2. Cilt", "yazar": "İlber Ortaylı", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "S1", "ad": "Osmanlı Tarihi Seti (2 Kitap)", "yazar": "İlber Ortaylı", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "K1", "ad": "Kayıp Gül", "yazar": "Serdar Özkan", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "K2", "ad": "KAYIP GÜL", "yazar": None, "isbn_ham": [], "kaynak": "logo"},       # CRM'de olmayan Logo kartı
+    {"kod": "N1", "ad": "Nutuk", "yazar": "Mustafa Kemal Atatürk", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "N2", "ad": "Nutuk", "yazar": "Mustafa Kemal Atatürk", "isbn_ham": [], "kaynak": "crm"},  # ikinci baskı kaydı
+    {"kod": "H1", "ad": "Huzur", "yazar": "Ahmet Hamdi Tanpınar", "isbn_ham": [], "kaynak": "crm"},
+    {"kod": "H2", "ad": "Huzur", "yazar": "Ahmet Ümit", "isbn_ham": [], "kaynak": "crm"},
+]
+
+
+def _robust():
+    return T.Catalog([dict(b) for b in ROBUST])
+
+
+def _states(m):
+    return m["eslesme_durumu"], m["eslesen_stok_kodu"]
+
+
+def test_volume_spelling_matches_the_same_volume_without_the_model():
+    for ad in ("Osmanlı Tarihi Cilt 2", "Osmanlı Tarihi II", "OSMANLI TARİHİ 2.CİLT", "Osmanlı Tarihi - 2"):
+        calls: list = []
+        m = T.match_one({"ad": ad, "yazar": "İlber Ortaylı"}, _robust(), chooser("x", 1, 1, calls), CFG)
+        assert _states(m) == ("eslesti", "V2") and m["eslesme_yontemi"] == "ad" and calls == [], ad
+
+
+def test_other_volume_or_set_never_matches_and_is_not_offered_to_the_model():
+    calls: list = []
+    m = T.match_one({"ad": "Osmanlı Tarihi 5. Cilt"}, _robust(), chooser("Osmanlı Tarihi 1", 0.99, 0.99, calls), CFG)
+    assert m["eslesme_durumu"] == "belirsiz" and m["eslesen_stok_kodu"] is None and "Emin değil" in m["not"]
+    assert m["adaylar"] and calls == []                                        # insan listeyi görür, model çağrılmaz
+    calls = []
+    m = T.match_one({"ad": "Osmanlı Tarihi"}, _robust(), chooser("Osmanlı Tarihi 1. Cilt", 0.99, 0.95, calls), CFG)
+    assert _states(m) == ("oneri", "V1") and "cilt" in m["not"]                 # cilt yalnız katalogda: en çok öneri
+    assert not any("Seti" in c for c in calls[0][1])                          # set tek kitaba aday değil
+    assert any(a["stokKodu"] == "S1" for a in m["adaylar"])
+
+
+def test_author_confirmed_record_beats_one_without_author():
+    calls: list = []
+    m = T.match_one({"ad": "Kayıp Gül", "yazar": "Serdar Özkan"}, _robust(), chooser("x", 1, 1, calls), CFG)
+    assert _states(m) == ("eslesti", "K1") and calls == []
+    m = T.match_one({"ad": "Huzur", "yazar": "Ahmet Ümit"}, _robust(), chooser("x", 1, 1, calls), CFG)
+    assert _states(m) == ("eslesti", "H2")                                      # «Ahmet» ortak ama soyadı başka
+    m = T.match_one({"ad": "Huzur", "yazar": "A. H. Tanpınar"}, _robust(), chooser("x", 1, 1, calls), CFG)
+    assert _states(m) == ("eslesti", "H1") and calls == []
+
+
+def test_indistinguishable_twins_are_at_most_a_suggestion():
+    for item, pick in (({"ad": "Nutuk", "yazar": "Mustafa Kemal Atatürk"}, "Nutuk · Mustafa Kemal Atatürk · N2"),
+                       ({"ad": "Kayıp Gül"}, "Kayıp Gül"), ({"ad": "Huzur"}, "Huzur · Ahmet Hamdi")):
+        m = T.match_one(item, _robust(), chooser(pick, 0.99, 0.95, []), CFG)
+        assert m["eslesme_durumu"] == "oneri" and "birden çok katalog kaydı" in m["not"], item
+        assert len(m["adaylar"]) >= 2
+
+
+def test_format_word_is_ignored_but_needs_confirmation():
+    m = T.match_one({"ad": "Kayıp Gül (Ciltli)", "yazar": "Serdar Özkan"}, _robust(), chooser("x", 1, 1, []), CFG)
+    assert _states(m) == ("oneri", "K1") and "ciltli" in m["not"]
+
+
+def test_free_line_dash_volume_is_part_of_the_title_not_the_author():
+    out = T.parse_text("Osmanlı Tarihi - 2 - İlber Ortaylı 3 adet\nNutuk - Ciltli 5 adet")
+    a, b = out["items"]
+    assert (a["ad"], a["yazar"], a["adet"]) == ("Osmanlı Tarihi 2", "İlber Ortaylı", 3)
+    assert (b["ad"], b["yazar"], b["adet"]) == ("Nutuk Ciltli", None, 5)
+
+
 # ------------------------------------------------------------------ fiyat, toplam, puan
 
 
