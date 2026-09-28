@@ -301,6 +301,7 @@ class _Index:
         self.cat_rows: dict[str, list[int]] = {}
         dur = np.zeros(len(self.rows), dtype=np.float32)
         bad = np.zeros(len(self.rows), dtype=bool)
+        quiet = np.zeros(len(self.rows), dtype=bool)
         for i, r in enumerate(self.rows):
             b = set()
             for t in (r.get("tags_en") or []) + (r.get("tags_tr") or []) + [r.get("title") or "", r.get("name") or ""]:
@@ -316,8 +317,9 @@ class _Index:
             dur[i] = float(r.get("dur") or 0)
             fl = r.get("flags") or []
             bad[i] = "kirpik" in fl or "sessiz" in fl
+            quiet[i] = r.get("lufs") is not None and float(r["lufs"]) < -42
         self.inv = {w: np.array(v, dtype=np.int64) for w, v in inv.items()}
-        self.dur, self.bad = dur, bad
+        self.dur, self.bad, self.quiet = dur, bad, quiet
         self.sha = [r["sha256"] for r in self.rows]
 
 
@@ -462,6 +464,7 @@ def search(text: str, *, en: str | None = None, category: str | None = None, kin
     elif kind == "anlik":
         score[ix.dur > 30] -= 0.05
     score[ix.bad] -= 0.1
+    score[ix.quiet] -= 0.05                       # < −42 LUFS: karışımda çok yükseltmek gerekir, gürültü tabanı da kalkar
     if category:
         mask = np.full(n, True)
         mask[np.array(ix.cat_rows.get(category, []), dtype=np.int64)] = False

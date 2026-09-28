@@ -154,6 +154,18 @@ def test_vote_keeps_majority_and_drops_invented(job):
     assert sfx._vote(only_once, u)[0] == []                            # tek okumada çıkan ipucu kalmaz
 
 
+def test_sound_hints_and_rule_support(job):
+    u = _units(job)
+    h = sfx.sound_hints(u)
+    assert "vak vak" in h and "gıcırdadı" in h and "uğuldamaya" in h and "Göl" not in h
+    b = {"blok": "b1", "alinti": "kapı gıcırdadı", "tur": "olay", "kategori": "kapi", "tarif": "gıcırdayan kapı",
+         "tarif_en": "door creaking", "yer": "ardindan"}
+    fake = {**b, "alinti": "herkes sustu", "kategori": "diger"}
+    cues, _ = sfx._vote([[b, fake], [], []], u, hints=h)
+    assert [c["quote"] for c in cues] == ["kapı gıcırdadı"] and cues[0]["ruled"] is True   # kural + tek okuma
+    assert sfx._vote([[b], [], []], u)[0] == []                                              # kuralsız tek okuma
+
+
 # ------------------------------------------------------------------ havuz
 def test_search_semantic_lexical_and_filters(pool):
     top = L.search("ördek vaklıyor", en="duck quacking", k=2)

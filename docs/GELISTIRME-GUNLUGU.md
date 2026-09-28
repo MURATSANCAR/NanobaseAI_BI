@@ -24,9 +24,13 @@
   «Efekt sesleri» (aç/kapa, öner, işaretli metin, 3 aday + dinle, kütüphane, ses düzeyi, yer, kaldır, kelime seçip ekle,
   ortam sayfa/bölüm, yalnız o sayfayı karıştır, efektli dinle, kaynakça). Köprü + giriş kapısı yolları.
 - **Deneme:** `2026092716271423aee2` kopyası `202609280000005f0e01`, 5. ve 7. sayfa iki anlatıcıyla (sıcak masalcı,
-  kadın anlatıcı); 7. sayfada «Vak vak» ve «Pıt pıt pıt» otomatik yerleşti.
-- **Doğrulama:** motor testleri stüdyo imajının geçici derlemesinde (`editor-py-studio:sfx-deneme`, ffmpeg'li);
-  ön yüz tsc/vitest/build test sunucusunda geçici dizinde; köprü uçları sahte stüdyoyla. Kurulmadı, main'e alınmadı.
+  kadın anlatıcı): 5'te «zıpladı» → zıplama sesi, 7'de «Vak vak» → ördek, «Pıt pıt pıt» → boing; hepsi Zeki AI'nin.
+  Denemede görülenler düzeltildi: modelin boş liste eğilimine dil kuralı (ikileme + ses fiili) ipucu ve ayrı kanıt,
+  okumaların farklı tariflerinden en uygun sesi bulanın seçimi, uygunluk < 0,35'te sesin kendiliğinden seçilmemesi,
+  sessiz kayda en çok +18 dB.
+- **Doğrulama:** motor testleri stüdyo imajının geçici derlemesinde (`editor-py-studio:sfx-deneme`, ffmpeg'li): tam set
+  537 geçti, 1 düştü (bilinen `test_proofing_contract` sıra bağımlılığı); ön yüz tsc temiz, vitest 38/38, build
+  test sunucusunda geçici dizinde; köprü uçları sahte stüdyoyla. Kurulmadı, main'e alınmadı.
 
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 

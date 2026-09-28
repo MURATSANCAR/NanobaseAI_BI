@@ -22,7 +22,7 @@ atıf, işaretler), dizin `_dizin/` (`katalog.jsonl`, `gomme.npy` LAION CLAP `la
 `gobek.npy` CSLS düzeltmesi, `metin/metin.onnx` metin kolu). Arama: kosinüs − 0,5·göbek + 0,25·etiket; Türkçe sorgu
 Zeki AI ile İngilizceye (önbellek `production/_sfx/ceviri.json`); seçim `sfx.rerank` (ilk 16 aday → Zeki AI tek harf ya
 da «hiçbiri», `fit`). Kod `production/sfx_library.py` (havuz), `sfx.py` (ipucu: 3 × 0,7 okuma, 2/3 oylama, alıntı metinde
-birebir; karışım ffmpeg: kelime zamanı sabit, efekt −23 LUFS + editör dB, sidechain kısma, ortam −38 LUFS döngü,
+birebir; dil kuralı `sound_hints` (ikileme, ses fiili) istemde ipucu ve oylamada ayrı kanıt; okumaların tariflerinden en uygun sesi bulan kalır; uygunluk < 0,35'te ses kendiliğinden seçilmez; karışım ffmpeg: kelime zamanı sabit, efekt −23 LUFS + editör dB (sessiz kayda en çok +18 dB), sidechain kısma, ortam −38 LUFS döngü,
 son −16 LUFS / −1,5 dBTP; varsayılan açık: yaş bandı 12'nin altında başlıyorsa), `api_sfx.py` (uçlar `…/jobs/{iş}/sfx…`,
 `/v1/studio/sfx/library…`), narration.py'de tek kanca `_efekt_kancasi` (sayfa sesi yazılınca öneri + karışım; hata
 anlatımı düşürmez), e-kitap efektli sesi `sfx.page_audio` ile alır, künyeye `sfx.kunye_rows` (kaynaklar + CC BY

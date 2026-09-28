@@ -333,7 +333,9 @@ function CueCard({ c, sounds, preview, onChange, onRemove, onSearch }: {
           Kütüphanede ara
         </button>
       </div>
-      {!chosen && c.candidates.length === 0 && <p className="text-[11.5px] text-canvas-muted">Uygun ses bulunamadı; kütüphanede arayın.</p>}
+      {!chosen && (c.candidates.length === 0
+        ? <p className="text-[11.5px] text-canvas-muted">Uygun ses bulunamadı; kütüphanede arayın.</p>
+        : <p className="text-[11.5px] text-amber-700">Zeki AI adaylardan emin değil; dinleyip birini seçin ya da kütüphanede arayın. Seçilene kadar bu efekt çalmaz.</p>)}
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Gain value={c.gain_db} onChange={(v) => onChange({ gain_db: v })} label={`«${c.quote}» ses düzeyi`} />
         <label className="sr-only" htmlFor={`place-${c.id}`}>Yeri</label>

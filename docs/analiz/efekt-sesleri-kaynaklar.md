@@ -38,7 +38,28 @@ gömmesi `gomme.npy`, göbek düzeltmesi `gobek.npy`, metin kolu `metin/metin.on
 İşaretler (katalogda `flags`): `yuksek` (> −10 LUFS), `kirpik` (örneklerin > %0,1'i tam ölçekte), `uzun` (> 120 sn),
 `kisa` (< 0,15 sn), `sessiz` (< −60 LUFS ya da tepe < −50 dBFS). Aramada kırpık/sessiz dosya geri düşer.
 
-SONUÇ_HAVUZ
+Ölçüm anındaki havuz (2026-09-28 03:00; `havuz.py rapor` → `_olcum/havuz-rapor.json`):
+
+| Kaynak | Dosya | Boyut | Süre |
+|---|---|---|---|
+| FSD50K (CC0 + CC BY, dev kümesi) | 34.976 | 21,5 GB | 67,6 sa |
+| Sonniss 2015, 2016, 2017 (1–5. parça) | 1.806 | 39,7 GB | 24,6 sa |
+| Wikimedia Commons | 2.241 | 14,7 GB | 52,0 sa |
+| Kenney | 611 | 0,03 GB | 0,2 sa |
+| OpenGameArt CC0 | 578 | 0,02 GB | 0,2 sa |
+| Zeki AI üretimi | 38 | 0,01 GB | — |
+| **Toplam** | **40.250** | **76 GB** | **144,6 sa** |
+
+Sürenler (gözetimsiz, `tamamla.sh` bitince ekler): Sonniss 2017 (6–9), 2018, 2019, 2020 (~95 GB; ayna 2–6 MB/s'ye
+düştü), FSD50K eval (CC0+CC BY ~8,4 bin klip), Commons'un kalan adayları (API isteği POST'a alındı: 40 uzun başlık GET
+adresine sığmıyordu, HTTP 414). İşaretliler: yüksek 922, kırpık 953, uzun 718, kısa 129, sessiz 151; kategorisiz 2.684.
+
+Kategori kapsaması (dosya etiketinden; bir dosya birden çok kategoride sayılabilir) — kullanıcının saydıkları:
+ördek 86, köpek 627, kedi 541, horoz 167, inek 60, kuş 1.560, aslan/büyük kedi 513; rüzgâr 3.630, yağmur 781, gök
+gürültüsü 656, dalga 664, dere 728, ateş 914; kapı 2.750, zil 1.478, saat 1.515, araba 3.253, tren 800; patlama 1.687,
+düşme 1.416, koşma 875, çarpma 2.865, sıçrama 369; boing 365, whoosh 414, pop 462, ding 494; orman 479, sahil 229,
+okul/oyun alanı 935, şehir 953. Eksik kategori yok; en ince: öpücük 3, maymun 23, kazma 28, papağan 30, kartal 35,
+su altı 38, baykuş 40, balina/yunus 44.
 
 ## 3. Arama (metinden ses)
 
@@ -116,6 +137,36 @@ girdi. Kalan ~508 tek geçişli tarif işlemcide gözetimsiz üretiliyor (kartla
 `tamamla.sh` kataloğu/gömmeyi/ölçümü yeniler. Üretilen seslerin kalitesi DİNLENMEDİ; ölçüm bunları kendi tarifleriyle
 eşleştirdiği için «karşılandı» saymaya yatkındır — editörün dinleyerek elemesi gerekir (kütüphanede kaynak adı «Zeki AI
 üretimi»). Canlıda «bulunamadı → o anda üret» için gateway'e takma ad eklenmedi (ayrı iş).
+
+## 5b. İpucu çıkarımının sağlamlaştırılması (deneme kitabında görüldü)
+
+- Model sayfa başına çoğu okumada boş liste veriyordu: «Vak vak!» geçen 7. sayfada 3 okumanın 2'si boş, oylama
+  ipucunu düşürdü. Düzeltme: dil kuralı (`sfx.sound_hints`: ikilemeler + Türkçe ses fiili kökleri; kitaptan bağımsız)
+  (1) istemde «şu ifadelere ayrıca karar ver» diye gider, (2) oylamada ayrı bir kanıt sayılır (kural + bir okuma
+  = kalır). Karakterin ağzından çıkan yansıma sözcüğün efekt olduğu isteme açıkça yazıldı. Sonuç: aynı sayfada 3/3 koşuda
+  «Vak vak» ve «Pıt pıt pıt».
+- Okumalar aynı ipucuna farklı tarif yazabiliyor («Vakvak'ın eğlenceli seslendirme efekti» ↔ «ördek vaklıyor»);
+  eşleştirme her tarifi dener, Zeki AI seçiminde uygunluğu en yüksek olan kalır.
+
+- Zeki AI adaylardan emin değilse (uygunluk < 0,35) ses kendiliğinden seçilmez, karışıma girmez; ekranda «emin değil,
+  dinleyip seçin» yazar (bir koşuda «Pıt pıt pıt» 0,19 uygunlukla «makine dönüşü»ne gitmişti).
+- Çok sessiz kayıt karışımda en çok +18 dB yükseltilir (denemede +27 dB gürültü tabanını da kaldırıyordu); aramada
+  −42 LUFS altı dosya hafifçe geri düşer.
+
+## 5c. Deneme (iş `2026092716271423aee2` kopyası `202609280000005f0e01`, «Etimesgutlu Bebek Aslan»)
+
+Son koşu (anlatım gerçek seslendirme modeliyle, öneri + seçim Zeki AI, karışım stüdyo imajında):
+
+| Sayfa / anlatıcı | Efekt (alıntı → ses, kaynak, lisans) | Yer (sn) | Süre anlatım → karışım | LUFS / gerçek tepe |
+|---|---|---|---|---|
+| 5 / sıcak masalcı | «zıpladı» → Jump Arcade (Commons, CC BY 4.0; Zeki AI uygunluk 0,87) | 22,58 | 22,98 → 23,45 | −16,8 / −1,9 |
+| 5 / kadın anlatıcı | aynı | 21,83 | 22,23 → 22,70 | −16,5 / −3,1 |
+| 7 / sıcak masalcı | «Vak vak» → 20130403_duck.04 (Freesound, CC BY 3.0; 0,66); «Pıt pıt pıt» → Boing raw (Commons, CC BY 4.0; 0,69) | 5,06 · 15,23 | 26,65 → 26,65 | −16,8 / −1,7 |
+| 7 / kadın anlatıcı | aynı | 5,07 · 13,91 | 24,99 → 24,99 | −16,5 / −2,8 |
+
+Dosyalar (efektli ve efektsiz mp3 + `yerlesim.json`) oturumun scratchpad'inde `efekt-sesleri/`; kategori başına bir
+örnek efekt `efekt-sesleri/ornekler/` (kaynak/lisans `ornekler.json`). Park ortamı bu koşuda önerilmedi (önceki bir
+koşuda elle eklenmişti).
 
 ## 6. Karışım kuralları (sfx.py)
 

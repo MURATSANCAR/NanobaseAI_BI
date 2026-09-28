@@ -10,7 +10,9 @@ Akış (sayfa başına):
        («kapı gıcırdadı», «rüzgâr esiyordu»), sahne ortamı («ormanda»). Her ipucu: tür (kapalı küme), metindeki alıntı
        (birebir geçmek ZORUNDA; geçmeyen atılır), kategori (kapalı küme: sfx_library.CATEGORIES), Türkçe arama tarifi
        ve İngilizce karşılığı, yer (kelimeyle birlikte | hemen ardından). Tek okuma gürültülüdür: sayfa VOTES kez okunur,
-       en az VOTE_MIN okumada çıkan ipucu (aynı blokta örtüşen kelimeler) kalır; güven = destek / okuma sayısı.
+       en az VOTE_MIN destekli ipucu (aynı blokta örtüşen kelimeler) kalır; destek = okuma sayısı + dil kuralının
+       (ikileme, ses fiili: `sound_hints`) aynı yeri bulması; güven = destek / okuma sayısı. Kuralın bulduğu ifadeler
+       istemde «ayrıca karar ver» ipucu olarak da gider.
     2. Eşleştirme: tarif → havuzda en uygun ADAY adet ses; varsayılan birincisi. Editör adaylardan birini seçer,
        kütüphanede arar, ses düzeyini değiştirir, kaldırır ya da kelimeyi seçip elle yeni efekt ekler.
     3. Karışım (`mix_page`): anlatım olduğu gibi 0. saniyeden başlar (kelime zamanları DEĞİŞMEZ, e-kitap vurgusu
@@ -60,6 +62,7 @@ VOTES = 3
 VOTE_MIN = 2
 READ_TEMPERATURE = 0.7
 CANDIDATES = 3
+FIT_MIN = 0.35                    # bunun altında aday kendiliğinden seçilmez (deneme: 0,19 uygunlukla «makine dönüşü»)
 CHILD_MAX = 12                    # yaş bandı bu yaşın altında başlıyorsa çocuk kitabı (efekt varsayılan açık)
 
 # Karışım düzeyleri (LUFS; efekt dosyasının ölçülmüş yüksekliğinden kazanç hesaplanır)
@@ -72,6 +75,7 @@ FX_FADE = 0.25
 AMB_FADE = 1.5
 DUCK = "threshold=0.03:ratio=8:attack=15:release=350:makeup=1"
 GAIN_RANGE = (-18.0, 12.0)
+MAX_BOOST = 18.0                  # çok sessiz kayıt en çok bu kadar yükseltilir (deneme: +27 dB gürültü tabanını da kaldırır)
 
 TYPES = {"yansima": "Yansıma sözcük", "olay": "Olay", "ortam": "Ortam"}
 PLACES = ("birlikte", "ardindan")
@@ -314,8 +318,10 @@ sesleri bul:
    okul bahçesinde, kalabalık bir çarşıda, gece vakti).
 
 Kurallar:
-- Konuşma, düşünce, duygu, görüntü, koku efekt DEĞİLDİR. Olmayan ya da olumsuzlanan ses («hiç ses çıkmadı») efekt
-  değildir. Yalnız benzetme olarak geçen sesi («gök gürültüsü gibi bağırdı») efekt yapma.
+- Konuşmanın ANLAMI, düşünce, duygu, görüntü, koku efekt DEĞİLDİR. Ama bir karakterin ağzından çıkan yansıma sözcük
+  EFEKTTİR (ördeğin «Vak vak!» demesi, köpeğin «Hav hav!», gülüşün «Kıh kıh!», düşüşün «Pat!»): alıntı yansıma
+  sözcüğün kendisidir. Olmayan ya da olumsuzlanan ses («hiç ses çıkmadı») efekt değildir. Yalnız benzetme olarak geçen
+  sesi («gök gürültüsü gibi bağırdı») efekt yapma.
 - «alinti», bloktaki metinden HARFİ HARFİNE kopyalanmış 1-6 kelimelik parçadır (sesi anlatan kelimeler). Metinde
   birebir geçmeyen alıntı geçersizdir.
 - Aynı ses sayfada tekrar ediyorsa yalnız ilk geçtiği yeri yaz.
@@ -327,9 +333,34 @@ Kurallar:
 - Hiç ses yoksa boş liste ver. Sayı sınırı yok; ama yalnız gerçekten duyulacak sesleri seç.
 
 Kategoriler: {cats}
-
+{hints}
 Sayfa metni:
 {text}"""
+
+# Türkçede sesi anlatan fiil kökleri ve ikilemeler (dil bilgisi; kitaptan bağımsız). Yalnız modele «bunlara ayrıca bak»
+# ipucu olarak gider: karar modelindir, ipucu listede diye efekt olmaz. Model boş liste vermeye yatkın (2026-09-28:
+# «Vak vak!» geçen sayfada 3 okumanın 2'si boştu); aday gösterilince her birine tek tek karar veriyor.
+SOUND_STEMS = ("havla", "miyavla", "mırla", "kükre", "gıcırda", "çıtırda", "patla", "gürle", "gümbürde", "uğulda",
+               "vızılda", "vızla", "tıkırda", "şırılda", "cıvılda", "şakı", "öttü", "ötüyor", "öterek", "çınla",
+               "şangırda", "fokurda", "hışırda", "kişne", "anır", "böğür", "mele", "gıdakla", "vakla", "ıslık",
+               "horla", "hapşır", "öksür", "hıçkır", "kahkaha", "alkış", "çatırda", "takırda", "tıkla", "gürültü",
+               "zil", "çaldı", "çalıyor", "düdük", "korna", "siren", "çarptı", "çarpıp", "düştü", "devrildi", "kırıldı",
+               "zıpla", "sıçra", "kükreme", "havlama", "gök gürült", "yağmur", "rüzgâr", "rüzgar", "fırtına", "dalga")
+_REDUP = re.compile(r"\b(\w{1,8})([ -])\1(?:\2\1)*\b", re.I)
+
+
+def sound_hints(units) -> list[str]:
+    """Sayfada ses olabilecek ifadeler: ikilemeler («vak vak», «pıt pıt pıt», «şırıl şırıl») ve ses fiilleri."""
+    out: list[str] = []
+    for u in units:
+        for m in _REDUP.finditer(u.text):
+            if len(m.group(1)) >= 2 and not m.group(1).isdigit():
+                out.append(m.group(0))
+        for w in u.words:
+            f = L.tr_lower(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
+            if any(f.startswith(s) for s in SOUND_STEMS):
+                out.append(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
+    return list(dict.fromkeys(x for x in out if x))
 
 
 def _cats_line() -> str:
@@ -342,7 +373,10 @@ def _page_prompt(units) -> tuple[str, list[str]]:
         ids.append(u.id)
         who = f" ({u.speaker})" if u.speaker else ""
         lines.append(f"[{u.id}]{who} {u.text}")
-    return PROMPT.replace("{cats}", _cats_line()).replace("{text}", "\n".join(lines)), ids
+    hints = sound_hints(units)
+    hint = ("\nMetinde ses olabilecek ifadeler (her birine ayrıca karar ver; efekt değilse alma): "
+            + ", ".join(f"«{h}»" for h in hints) + "\n") if hints else ""
+    return (PROMPT.replace("{cats}", _cats_line()).replace("{hints}", hint).replace("{text}", "\n".join(lines)), ids)
 
 
 async def _read_page(llm, units, pid: str, temperature: float) -> list[dict]:
@@ -357,10 +391,14 @@ async def _read_page(llm, units, pid: str, temperature: float) -> list[dict]:
     return out.get("ipuclari") or []
 
 
-def _vote(reads: list[list[dict]], units, min_votes: int = VOTE_MIN) -> tuple[list[dict], dict]:
-    """Okumaları birleştirir: aynı blokta kelimeleri örtüşen ipuçları tek ipucu; en az VOTE_MIN okumada çıkan kalır.
-    Alıntısı metinde birebir geçmeyen ipucu okumanın içinde atılır (sayılır)."""
+def _vote(reads: list[list[dict]], units, min_votes: int = VOTE_MIN, hints: list[str] | None = None
+          ) -> tuple[list[dict], dict]:
+    """Okumaları birleştirir: aynı blokta kelimeleri örtüşen ipuçları tek ipucu; en az `min_votes` destekle kalır.
+    Destek = ipucunu veren okuma sayısı + alıntı dil kuralının bulduğu bir ses ifadesiyle (sound_hints: ikileme ya da ses
+    fiili) örtüşüyorsa 1 (kural ve model iki ayrı kanıttır). Alıntısı metinde birebir geçmeyen ipucu okumanın içinde
+    atılır (sayılır)."""
     stats = {"reads": len(reads), "raw": 0, "not_in_text": 0, "kept": 0, "weak": 0}
+    hint_words = [set(L.words(h)) for h in (hints or [])]
     groups: list[dict] = []
     for r_i, items in enumerate(reads):
         for it in items:
@@ -383,7 +421,10 @@ def _vote(reads: list[list[dict]], units, min_votes: int = VOTE_MIN) -> tuple[li
             hit["items"].append(it)
     out = []
     for g in groups:
-        support = len(g["reads"])
+        u = next(u for u in units if u.id == g["block"])
+        span = set(L.words(" ".join(w.text for w in u.words[g["words"][0]:g["words"][1] + 1])))
+        ruled = any(h and h <= span for h in hint_words)
+        support = len(g["reads"]) + (1 if ruled else 0)
         if support < min_votes:
             stats["weak"] += 1
             continue
@@ -394,14 +435,16 @@ def _vote(reads: list[list[dict]], units, min_votes: int = VOTE_MIN) -> tuple[li
             return max(set(vals), key=vals.count)
         cat, typ, place = most("kategori"), most("tur"), most("yer")
         best = next((x for x in items if x["kategori"] == cat), items[0])
-        u = next(u for u in units if u.id == g["block"])
         a, z = g["words"]
         quote = " ".join(w.text for w in u.words[a:z + 1]).strip(" ,.;:!?…\"'«»“”")
         out.append({"id": new_id(), "kind": "ortam" if typ == "ortam" else "anlik", "type": typ,
                     "block": g["block"], "words": [a, z], "quote": quote, "query": best["tarif"][:200],
                     "query_en": best["tarif_en"][:200], "category": cat if cat in L.CATEGORIES else None,
                     "place": place if typ != "ortam" else "birlikte", "source": "zeki",
-                    "confidence": round(support / max(1, len(reads)), 2), "gain_db": 0.0})
+                    "confidence": round(min(1.0, support / max(1, len(reads))), 2), "gain_db": 0.0,
+                    "ruled": ruled,
+                    # okumaların farklı tarifleri: eşleştirmede hangisi havuzda daha uygun ses bulursa o kalır
+                    "alts": list(dict.fromkeys((x["tarif"][:200], x["tarif_en"][:200]) for x in items))})
         stats["kept"] += 1
     return out, stats
 
@@ -466,7 +509,7 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
         # bağımsız örnekler aynı sıcaklıkta: 0,2'de model sık sık boş liste veriyordu (2026-09-28 ölçümü; dere
         # sayfasında 0,2 → 0 ipucu, 0,7 → «şırıl şırıl akan»), oylama gürültüyü süzer
         reads = await asyncio.gather(*[_read_page(llm, units, pid, READ_TEMPERATURE) for _ in range(VOTES)])
-    cues, stats = _vote(list(reads), units)
+    cues, stats = _vote(list(reads), units, hints=sound_hints(units))
     old = _read(page_file(d, pid)) or {}
     kept = [c for c in old.get("cues", []) if keep_editor and c.get("source") == "editor"]
     taken = {(c["block"], tuple(c["words"])) for c in kept}
@@ -476,11 +519,22 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
     for c in cues:
         if (c["block"], tuple(c["words"])) in taken:
             continue
+        alts = c.pop("alts", None) or [(c["query"], c["query_en"])]
         if lib_ok:
-            cands = await asyncio.to_thread(match, c, None, POOL_K)
-            ranked, fit = await rerank(llm, c, cands)
+            best = None
+            for q, en in alts:                       # okumaların tarifleri; en uygun sesi bulan tarif kalır
+                alt = {**c, "query": q, "query_en": en}
+                cands = await asyncio.to_thread(match, alt, None, POOL_K)
+                ranked, fit = await rerank(llm, alt, cands)
+                if best is None or (fit or 0) > (best[2] or 0):
+                    best = (alt, ranked, fit)
+                if fit is not None and fit >= 0.8:
+                    break
+            alt, ranked, fit = best
+            c["query"], c["query_en"] = alt["query"], alt["query_en"]
             c["candidates"] = [x["id"] for x in ranked[:CANDIDATES]]
-            c["chosen"] = ranked[0]["id"] if ranked else None
+            # Zeki AI adaylardan emin değilse ses kendiliğinden seçilmez (karışıma girmez); editör dinleyip seçer
+            c["chosen"] = ranked[0]["id"] if ranked and (fit is None or fit >= FIT_MIN) else None
             c["fit"] = fit                           # Zeki AI'ye göre havuzda uygun ses olma olasılığı
         else:
             c["candidates"], c["chosen"] = [], None
@@ -597,7 +651,7 @@ def plan_placements(nrec: dict, cues: list[dict]) -> list[dict]:
         start = t[0] if c["place"] == "birlikte" else t[1]
         length = min(float(row.get("dur") or FX_MAX_SEC), FX_MAX_SEC)
         gain = FX_LUFS - float(row["lufs"]) if row.get("lufs") is not None else 0.0
-        gain = max(-40.0, min(30.0, gain)) + float(c.get("gain_db") or 0)
+        gain = max(-40.0, min(MAX_BOOST, gain)) + float(c.get("gain_db") or 0)
         out.append({"cue": c["id"], "sid": c["chosen"], "start": round(start, 3), "length": round(length, 3),
                     "gain_db": round(gain, 2), "place": c["place"], "quote": c["quote"], "title": row.get("title"),
                     "file": str(L.file_of(row))})
@@ -695,7 +749,7 @@ def mix_page(d: Path, pid: str) -> dict:
         if row:
             gain = AMB_LUFS - float(row["lufs"]) if row.get("lufs") is not None else -20.0
             amb_p = {"sid": amb["chosen"], "file": str(L.file_of(row)), "title": row.get("title"),
-                     "gain_db": round(max(-50.0, min(20.0, gain)) + float(amb.get("gain_db") or 0), 2)}
+                     "gain_db": round(max(-50.0, min(MAX_BOOST, gain)) + float(amb.get("gain_db") or 0), 2)}
     t0 = time.time()
     res = render(audio, float(nrec["duration"]), placements, amb_p, out)
     meta = {"version": MIX_VERSION, "page": pid, "hash": h, "narration_hash": nrec.get("hash"),

@@ -38,10 +38,12 @@ BAD_LIC = re.compile(r"(sa|nc|nd)\b|share|noncommercial|noderiv|gfdl|gpl", re.I)
 
 
 def api(**p):
+    """MediaWiki API çağrısı; gövde POST ile gider (40 uzun dosya başlığı GET adresine sığmıyordu: HTTP 414)."""
     p.update(format="json", formatversion="2")
+    err = None
     for t in range(6):
         try:
-            req = urllib.request.Request(API + "?" + urllib.parse.urlencode(p), headers=UA)
+            req = urllib.request.Request(API, data=urllib.parse.urlencode(p).encode(), headers=UA)
             with urllib.request.urlopen(req, timeout=60) as r:
                 return json.load(r)
         except Exception as e:  # noqa: BLE001

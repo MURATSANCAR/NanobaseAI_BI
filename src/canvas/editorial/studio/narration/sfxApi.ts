@@ -15,6 +15,8 @@ export type SfxCue = {
   id: string; kind: 'anlik' | 'ortam'; type: 'yansima' | 'olay' | 'ortam'; block: string; words: [number, number];
   quote: string; query: string; query_en: string; category: string | null; candidates: string[]; chosen: string | null;
   gain_db: number; place: 'birlikte' | 'ardindan'; source: 'zeki' | 'editor'; confidence: number | null; lost?: boolean;
+  /** Zeki AI'ye göre havuzda uygun ses olma olasılığı (düşükse ses kendiliğinden seçilmez). */
+  fit?: number | null;
 };
 export type SfxAmbience = {
   query: string; query_en: string; category: string | null; candidates: string[]; chosen: string | null; gain_db: number;
