@@ -1,5 +1,30 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (08:10) — Ölçümde düşen üç ekran: /saha 109 MB liste, /uretim 43 sn soğuk okuma, kapak görselleri 429
+
+- **Ölçüm:** 72 menü ekranının Playwright taraması (06:44–06:48) üç ekranda istek düşürdü. Test sunucusunda gerçek `timasai`
+  kısa oturumuyla portal üzerinden yeniden üretildi; nginx erişim günlüğü ve köprü günlüğü okundu.
+- **/saha — `field/today`:** hata değil boyut. Yönetici (herkesinki) kapsamında portföy bütün Logo carisi (248.351); uç hepsini
+  sıralayıp tek JSON'da gönderiyordu: 200, **109,5 MB, 22,7 sn** (ölçüm ~29 sn'de vazgeçti → nginx 499). Süre: DB okuma 5,4 ·
+  puan 5,2 · kart 3,2 · JSON kodlama 17 sn. Ekran zaten 40'ar gösterip tarayıcıda arıyordu. Düzeltme: sıralama kapsam başına
+  bellekte (anahtar: gece turu `_at`, gün, ziyaret/söz/öncelik/red girdilerinin özeti — biri değişirse yeniden hesaplanır,
+  kapsam başına ayrı kilit); `q`/`offset`/`limit` ile arama ve sayfa sunucuda, `total` hepsini sayar, «daha göster» sonrakini
+  getirir (tavan yok). KPI yine bütün portföyden. Önbellek tüm kapsam için ~280 MB.
+- **/uretim — `production/meta|cards|overview`:** üçü de 200 ama **43–45 sn** (meta 1,7 KB). CRM+Logo anlık görüntüsü
+  (CRM 10 sn, Logo 33 sn) 5 dk bellekte tutuluyordu; boşken üç uç aynı kilitte bekliyor, köprü 06:33–07:27 arasında başka
+  oturumlarca 8 kez yeniden başlatıldığı için önbellek sürekli boşalıyordu. Düzeltme: son okuma diskte
+  (`PRODUCTION_CACHE_DIR`, vars. `/data/nanobaseai/bi/var/production/snapshot.pkl`; VM'de `bi_var` biriminde), istek onu
+  hemen alır, 5 dk'dan eskiyse yenisi arka planda tek iş parçacığıyla okunur; kayıt okuma sorgularının özetiyle (`SHAPE`)
+  ve geçmiş penceresiyle eşleşmezse okunmaz. `meta` matbaa listesi için hiç beklemez. Yalnız ilk kurulumda ve «Verileri
+  yenile»de istek kaynağı bekler (ön yüz 180 sn tanıyor).
+- **Kapak arşivi görselleri:** tek açılışta 40 görsel **429** (genel `/timas/api/` sınırı 120/dk, 30 anlık; sayfa 60 kapak
+  istiyor), kalan 19'u ölçüm sayfadan çıkınca 499. Köprü tarafı sağlam (hepsi 200). Düzeltme: `deploy/nanobase-direct/
+  add-cover-image-limit.py` kapak görsel ucunu stüdyo görsel bölgesine (`timas_studio_img`, 600/dk, 120 anlık) alır; VM
+  şablonu `infra/docker/bi/web.default.conf.template` aynı blokla.
+- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
+  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
+  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
+
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
 - **Durum:** VM'de `e543a122` (başka oturumun 05:38 kurulumu) M29–M32'yi ve sohbet kapsamını zaten içeriyordu; test sunucusunda
