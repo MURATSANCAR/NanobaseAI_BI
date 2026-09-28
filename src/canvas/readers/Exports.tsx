@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Section, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { fmtDay, fmtInt, readersApi } from './api';
 import { ROOT } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Dışa aktarım günlüğü: kim, ne zaman, hangi segment, hangi kanal, kaç kişi, amaç ve dışarıda kalanlar. */
 export default function Exports() {
@@ -24,7 +25,7 @@ export default function Exports() {
           <thead>
             <tr>
               <th className={th}>Zaman</th><th className={th}>Kişi</th><th className={th}>Segment</th><th className={th}>Kanal</th>
-              <th className={`${th} text-right`}>Listede</th><th className={th}>Dışarıda</th><th className={th}>Amaç</th>
+              <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items[]">Listede</InfoLabel></th><th className={th}><InfoLabel k={d?.kaynaklar} alan="items[]">Dışarıda</InfoLabel></th><th className={th}>Amaç</th>
             </tr>
           </thead>
           <tbody>

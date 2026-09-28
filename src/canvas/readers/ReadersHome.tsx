@@ -4,6 +4,7 @@ import { Loading, Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { CHANNELS, fmtDay, fmtInt, fmtPct, type Overview } from './api';
 import { ConsentBar, ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Özet: tekil okur, kaynak kırılımı, kanal başına izin ve ulaşılabilir kitle, kaynak tazeliği. Yalnız sayılar. */
 export default function ReadersHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -27,10 +28,10 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
-        <Kpi label="Tekil okur" value={fmtInt(o.readers)} help={`${fmtInt(o.records)} kaynak kaydından · ${fmtInt(o.multiSource)} okur birden çok kayıtla birleşti`} />
-        <Kpi label="E-postayla ulaşılabilir" value={fmtInt(o.reach.email)} help={`İzinli${o.rules.requireKvkk ? ', KVKK rızalı' : ''}, 18 yaş üstü · okurların ${fmtPct(o.reach.email, o.readers)}'i`} />
-        <Kpi label="SMS ile ulaşılabilir" value={fmtInt(o.reach.sms)} help={`Aramayla ${fmtInt(o.reach.call)} · okurların ${fmtPct(o.reach.sms, o.readers)}'i`} />
-        <Kpi label="Birleştirme bekleyen" value={fmtInt(o.pendingCandidates)} help="Adı ve ili aynı, e-postası ve telefonu farklı okur çifti" />
+        <Kpi label="Tekil okur" value={fmtInt(o.readers)} help={`${fmtInt(o.records)} kaynak kaydından · ${fmtInt(o.multiSource)} okur birden çok kayıtla birleşti`} info={<SqlInfo k={o.kaynaklar} alan="readers" label="Tekil okur" />} />
+        <Kpi label="E-postayla ulaşılabilir" value={fmtInt(o.reach.email)} help={`İzinli${o.rules.requireKvkk ? ', KVKK rızalı' : ''}, 18 yaş üstü · okurların ${fmtPct(o.reach.email, o.readers)}'i`} info={<SqlInfo k={o.kaynaklar} alan="reach" label="E-postayla ulaşılabilir" />} />
+        <Kpi label="SMS ile ulaşılabilir" value={fmtInt(o.reach.sms)} help={`Aramayla ${fmtInt(o.reach.call)} · okurların ${fmtPct(o.reach.sms, o.readers)}'i`} info={<SqlInfo k={o.kaynaklar} alan="reach" label="SMS ile ulaşılabilir" />} />
+        <Kpi label="Birleştirme bekleyen" value={fmtInt(o.pendingCandidates)} help="Adı ve ili aynı, e-postası ve telefonu farklı okur çifti" info={<SqlInfo k={o.kaynaklar} alan="pendingCandidates" label="Birleştirme bekleyen" />} />
       </KpiRow>
 
       {!o.rules.exportEnabled && (
@@ -43,7 +44,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
       <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr] lg:gap-4">
         <Panel>
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Kanal başına izin</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanal başına izin<SqlInfo k={o.kaynaklar} alan="consent" label="Kanal başına izin ve dışlama nedenleri" /></h2>
             <span className="text-[11.5px] font-semibold text-canvas-muted">{fmtInt(o.readers)} okurda</span>
           </div>
           <div className="mt-3 flex flex-col gap-4">
@@ -73,7 +74,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
 
         <div className="flex flex-col gap-3 lg:gap-4">
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Kaynaklar</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kaynaklar<SqlInfo k={o.kaynaklar} alan="bySource" label="Kaynak başına okur ve kayıt, kopya oranı" /></h2>
             <ul className="mt-2 divide-y divide-slate-100 text-[12.5px]">
               {o.bySource.map((s) => (
                 <li key={s.source} className="flex items-baseline justify-between gap-2 py-1.5">
@@ -89,7 +90,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
             </p>
           </Panel>
           <Panel>
-            <h2 className="text-[15px] font-extrabold">Kaynak tazeliği</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kaynak tazeliği<SqlInfo k={o.kaynaklar} alan="sources" label="Kaynak okuma satır sayıları" /></h2>
             <ul className="mt-2 divide-y divide-slate-100 text-[12.5px]">
               {o.sources.map((s) => (
                 <li key={s.source} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
@@ -112,7 +113,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
           </Panel>
           {st.formTypes && Object.keys(st.formTypes).length > 0 && (
             <Panel>
-              <h2 className="text-[15px] font-extrabold">CRM kişi kartı: form tipi</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM kişi kartı: form tipi<SqlInfo k={o.kaynaklar} alan="run" label="Form tipi sayıları" /></h2>
               <p className="mt-0.5 text-[11.5px] text-canvas-muted">Bütün etkin kişi kartları (okur sayılmayanlar dahil). CRM etkinliğine katılan kişi: {fmtInt(st.eventContacts)}.</p>
               <ul className="mt-2 max-h-56 space-y-0.5 overflow-y-auto text-[12px]">
                 {Object.entries(st.formTypes).sort((a, b) => b[1] - a[1]).map(([code, n]) => (
@@ -125,7 +126,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
             </Panel>
           )}
           <Panel>
-            <h2 className="text-[15px] font-extrabold">18 yaş altı ve ortak iletişim</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">18 yaş altı ve ortak iletişim<SqlInfo k={o.kaynaklar} alan="minors" label="18 yaş altı ve ortak iletişim" /></h2>
             <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
               <strong className="text-canvas-ink">{fmtInt(o.minors)}</strong> okurun bir kaydında doğum yılı 18 yaş altını gösteriyor;
               ebeveyn rızası CRM'de ayrı tutulmadığından bu okurlar hiçbir listeye girmez (hukuk teyidi bekleniyor).
@@ -155,7 +156,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
           </div>
         </Panel>
         <Panel>
-          <h2 className="text-[15px] font-extrabold">CRM kampanya geçmişi</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM kampanya geçmişi<SqlInfo k={o.kaynaklar} alan="run" label="CRM kampanya sayaçları" /></h2>
           {campaigns.length === 0 ? (
             <p className="mt-1 text-[12.5px] text-canvas-muted">CRM'de e-posta/SMS kampanyası kaydı yok.</p>
           ) : (

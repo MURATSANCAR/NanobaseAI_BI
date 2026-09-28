@@ -1100,6 +1100,76 @@ _cache: dict[tuple[int, str], tuple[Optional[str], list[dict[str, Any]]]] = {}
 _cache_lock = threading.Lock()
 
 
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (readers_kaynak.py).
+# Sorgu bilgisi yalnız SQL metnini ve satır sayısını taşır; okur satırı (kişisel veri) hiçbir zaman kayda girmez.
+
+
+def active_stmt(tenant: str):
+    return sa.select(READERS).where(sa.and_(READERS.c.tenant_id == tenant, READERS.c.status == "aktif"))
+
+
+def consents_stmt(tenant: str):
+    return sa.select(CONSENTS.c.reader_id, CONSENTS.c.channel, CONSENTS.c.status, CONSENTS.c.source,
+                     CONSENTS.c.at).where(CONSENTS.c.tenant_id == tenant)
+
+
+def sync_stmt(tenant: str):
+    return sa.select(SYNC).where(SYNC.c.tenant_id == tenant)
+
+
+def pending_stmt(tenant: str):
+    return sa.select(sa.func.count()).select_from(CANDIDATES).where(
+        sa.and_(CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == "bekliyor"))
+
+
+def keys_stmt(tenant: str):
+    return (sa.select(KEYS.c.kind, sa.func.count(sa.distinct(KEYS.c.hash))).where(KEYS.c.tenant_id == tenant)
+            .group_by(KEYS.c.kind))
+
+
+def reader_stmt(tenant: str, reader_id: str):
+    return sa.select(READERS).where(sa.and_(READERS.c.tenant_id == tenant, READERS.c.reader_id == reader_id))
+
+
+def reader_consents_stmt(tenant: str, reader_id: str):
+    return sa.select(CONSENTS).where(sa.and_(CONSENTS.c.tenant_id == tenant, CONSENTS.c.reader_id == reader_id))
+
+
+def reader_events_stmt(tenant: str, ids: list[str]):
+    return sa.select(EVENTS).where(sa.and_(EVENTS.c.tenant_id == tenant, EVENTS.c.reader_id.in_(ids)))
+
+
+def reader_candidates_stmt(tenant: str, reader_id: str):
+    return sa.select(CANDIDATES).where(sa.and_(
+        CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == "bekliyor",
+        sa.or_(CANDIDATES.c.a_reader == reader_id, CANDIDATES.c.b_reader == reader_id)))
+
+
+def links_stmt(tenant: str, ids: list[str]):
+    return sa.select(LINKS).where(sa.and_(LINKS.c.tenant_id == tenant, LINKS.c.reader_id.in_(ids)))
+
+
+def candidates_stmts(tenant: str, status: str, page: int, size: int) -> dict[str, Any]:
+    base = sa.and_(CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == status)
+    return {"say": sa.select(sa.func.count()).select_from(CANDIDATES).where(base),
+            "sayfa": (sa.select(CANDIDATES).where(base).order_by(CANDIDATES.c.score.desc(), CANDIDATES.c.created_at)
+                      .offset(max(0, page) * size).limit(size))}
+
+
+def sql_runs_set(engine: sa.engine.Engine, tenant: str, runs: list[dict[str, Any]]) -> None:
+    """Okuma turunun çalıştırdığı CRM SQL'leri (metin, satır sayısı, süre, an; sonuç satırı yok)."""
+    with engine.begin() as c:
+        c.execute(META.delete().where(sa.and_(META.c.tenant_id == tenant, META.c.key == "sql")))
+        c.execute(META.insert().values(tenant_id=tenant, key="sql", value=_dump(runs)))
+
+
+def sql_runs(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    ensure(engine)
+    with engine.connect() as c:
+        v = c.execute(sa.select(META.c.value).where(sa.and_(META.c.tenant_id == tenant, META.c.key == "sql"))).scalar()
+    return _load(v, []) or []
+
+
 def profiles(engine: sa.engine.Engine, tenant: str, cfg: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
     """Etkin okurların profil + kanal başına son izin durumu. Okuma turu ya da birleştirme olunca yenilenir."""
     ensure(engine)
@@ -1111,10 +1181,9 @@ def profiles(engine: sa.engine.Engine, tenant: str, cfg: Optional[dict[str, Any]
         if hit and hit[0] == st and st is not None:
             return hit[1]
     with engine.connect() as c:
-        rows = list(c.execute(sa.select(READERS).where(sa.and_(READERS.c.tenant_id == tenant, READERS.c.status == "aktif"))))
+        rows = list(c.execute(active_stmt(tenant)))
         ev: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for e in c.execute(sa.select(CONSENTS.c.reader_id, CONSENTS.c.channel, CONSENTS.c.status, CONSENTS.c.source,
-                                     CONSENTS.c.at).where(CONSENTS.c.tenant_id == tenant)):
+        for e in c.execute(consents_stmt(tenant)):
             ev[e.reader_id].append({"channel": e.channel, "status": e.status, "source": e.source, "at": e.at})
     today = date.today()
     out = []
@@ -1146,7 +1215,7 @@ def sources_state(engine: sa.engine.Engine, tenant: str, cfg: Optional[dict[str,
     cfg = cfg or settings()
     stale_before = _now() - timedelta(hours=cfg["staleHours"])
     with engine.connect() as c:
-        rows = list(c.execute(sa.select(SYNC).where(SYNC.c.tenant_id == tenant)))
+        rows = list(c.execute(sync_stmt(tenant)))
     out = []
     for r in rows:
         if r.source == "_tur":
@@ -1202,10 +1271,8 @@ def overview(engine: sa.engine.Engine, tenant: str, cfg: Optional[dict[str, Any]
             else:
                 reasons[ch][why] += 1
     with engine.connect() as c:
-        pending = c.execute(sa.select(sa.func.count()).select_from(CANDIDATES).where(
-            sa.and_(CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == "bekliyor"))).scalar() or 0
-        keys = {k: n for k, n in c.execute(sa.select(KEYS.c.kind, sa.func.count(sa.distinct(KEYS.c.hash)))
-                                         .where(KEYS.c.tenant_id == tenant).group_by(KEYS.c.kind))}
+        pending = c.execute(pending_stmt(tenant)).scalar() or 0
+        keys = {k: n for k, n in c.execute(keys_stmt(tenant))}
     total_links = sum(link_counts.values())
     return {
         "readers": len(profs), "records": total_links, "multiSource": multi,
@@ -1228,7 +1295,7 @@ def overview(engine: sa.engine.Engine, tenant: str, cfg: Optional[dict[str, Any]
 
 def reader_row(engine: sa.engine.Engine, tenant: str, reader_id: str) -> Any:
     with engine.connect() as c:
-        r = c.execute(sa.select(READERS).where(sa.and_(READERS.c.tenant_id == tenant, READERS.c.reader_id == reader_id))).first()
+        r = c.execute(reader_stmt(tenant, reader_id)).first()
     if not r:
         raise ReadersError("Okur bulunamadı.", 404)
     return r
@@ -1239,8 +1306,7 @@ def links_of(engine: sa.engine.Engine, tenant: str, reader_ids: Iterable[str]) -
     out: list[Any] = []
     with engine.connect() as c:
         for i in range(0, len(ids), 500):                     # parça parça (parametre sınırı); sonuç kesilmez
-            out += list(c.execute(sa.select(LINKS).where(sa.and_(LINKS.c.tenant_id == tenant,
-                                                                  LINKS.c.reader_id.in_(ids[i:i + 500])))))
+            out += list(c.execute(links_stmt(tenant, ids[i:i + 500])))
     return out
 
 
@@ -1274,11 +1340,9 @@ def card(engine: sa.engine.Engine, tenant: str, reader_id: str, cfg: Optional[di
     links = links_of(engine, tenant, [reader_id])
     hist = _history_ids(engine, tenant, reader_id)
     with engine.connect() as c:
-        cons = list(c.execute(sa.select(CONSENTS).where(sa.and_(CONSENTS.c.tenant_id == tenant, CONSENTS.c.reader_id == reader_id))))
-        evs = list(c.execute(sa.select(EVENTS).where(sa.and_(EVENTS.c.tenant_id == tenant, EVENTS.c.reader_id.in_(hist)))))
-        cands = list(c.execute(sa.select(CANDIDATES).where(sa.and_(
-            CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == "bekliyor",
-            sa.or_(CANDIDATES.c.a_reader == reader_id, CANDIDATES.c.b_reader == reader_id)))))
+        cons = list(c.execute(reader_consents_stmt(tenant, reader_id)))
+        evs = list(c.execute(reader_events_stmt(tenant, hist)))
+        cands = list(c.execute(reader_candidates_stmt(tenant, reader_id)))
     ev_dicts = [{"channel": x.channel, "status": x.status, "source": x.source, "at": x.at} for x in cons]
     consents = {}
     for ch in CHANNELS + ("kvkk",):
@@ -1392,11 +1456,10 @@ def candidates(engine: sa.engine.Engine, tenant: str, status: str = "bekliyor", 
                cfg: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     cfg = cfg or settings()
     ensure(engine)
+    q = candidates_stmts(tenant, status, page, size)
     with engine.connect() as c:
-        base = sa.and_(CANDIDATES.c.tenant_id == tenant, CANDIDATES.c.status == status)
-        total = c.execute(sa.select(sa.func.count()).select_from(CANDIDATES).where(base)).scalar() or 0
-        rows = list(c.execute(sa.select(CANDIDATES).where(base).order_by(CANDIDATES.c.score.desc(), CANDIDATES.c.created_at)
-                              .offset(max(0, page) * size).limit(size)))
+        total = c.execute(q["say"]).scalar() or 0
+        rows = list(c.execute(q["sayfa"]))
     ids = sorted({x for r in rows for x in (r.a_reader, r.b_reader)})
     s = {x["id"]: x for x in summaries(engine, tenant, ids, cfg)}
     items = [{"id": r.id, "a": s.get(r.a_reader, {"id": r.a_reader}), "b": s.get(r.b_reader, {"id": r.b_reader}),

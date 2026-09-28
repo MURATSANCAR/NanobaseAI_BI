@@ -6,6 +6,7 @@ import { Loading, Note, Pill, Section, btnPrimary, errText, field, label } from 
 import { Panel } from '../editorial/kit';
 import { CHANNELS, fmtDay, readersApi } from './api';
 import { ConsentPill, ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** KVKK ilgili kişi başvurusu: bir e-posta/telefona ait bütün okur kayıtları, izinler, girdiği listeler, yüklemeler. */
 export default function SubjectRequest() {
@@ -42,6 +43,9 @@ export default function SubjectRequest() {
       </form>
       {m.error && <Note tone="err">{errText(m.error, 'Aranamadı.')}</Note>}
       {d && d.readers.length === 0 && d.uploads.length === 0 && <Note tone="info">Bu bilgiyle portalda hiçbir kayıt yok.</Note>}
+      {d && (d.readers.length > 0 || d.uploads.length > 0) && (
+        <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">{d.readers.length} okur kaydı · {d.uploads.length} yükleme satırında geçiyor<SqlInfo k={d.kaynaklar} alan="readers[]" label="KVKK başvurusu sonucu" /></p>
+      )}
       {d?.readers.map((c) => (
         <Panel key={c.id}>
           <div className="flex flex-wrap items-center gap-2">

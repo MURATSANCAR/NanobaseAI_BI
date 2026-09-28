@@ -387,8 +387,8 @@ def _get(conn, tenant: str, sid: str) -> Any:
     return r
 
 
-def list_segments(engine: sa.engine.Engine, tenant: str, status: str = "", domain: str = "") -> list[dict[str, Any]]:
-    R.ensure(engine)
+def segments_stmt(tenant: str, status: str = "", domain: str = ""):
+    """Segment listesi okuması (aynı ifade sorgu bilgisinde)."""
     q = sa.select(SEGMENTS).where(SEGMENTS.c.tenant_id == tenant)
     if status:
         q = q.where(SEGMENTS.c.status.in_(status.split(",")))
@@ -396,10 +396,29 @@ def list_segments(engine: sa.engine.Engine, tenant: str, status: str = "", domai
         q = q.where(SEGMENTS.c.status != "arsiv")
     if domain:
         q = q.where(SEGMENTS.c.domain == domain)
+    return q.order_by(SEGMENTS.c.updated_at.desc())
+
+
+def snapshots_stmt(tenant: str):
+    return sa.select(SNAPSHOTS).where(SNAPSHOTS.c.tenant_id == tenant).order_by(SNAPSHOTS.c.at)
+
+
+def history_stmt(tenant: str, sid: str):
+    return sa.select(SNAPSHOTS).where(sa.and_(SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.segment_id == sid)).order_by(SNAPSHOTS.c.at)
+
+
+def exports_stmts(tenant: str, page: int, size: int) -> dict[str, Any]:
+    return {"say": sa.select(sa.func.count()).select_from(EXPORTS).where(EXPORTS.c.tenant_id == tenant),
+            "sayfa": (sa.select(EXPORTS).where(EXPORTS.c.tenant_id == tenant).order_by(EXPORTS.c.at.desc())
+                      .offset(max(0, page) * size).limit(size))}
+
+
+def list_segments(engine: sa.engine.Engine, tenant: str, status: str = "", domain: str = "") -> list[dict[str, Any]]:
+    R.ensure(engine)
     with engine.connect() as c:
-        rows = list(c.execute(q.order_by(SEGMENTS.c.updated_at.desc())))
+        rows = list(c.execute(segments_stmt(tenant, status, domain)))
         snaps: dict[str, Any] = {}
-        for s in c.execute(sa.select(SNAPSHOTS).where(SNAPSHOTS.c.tenant_id == tenant).order_by(SNAPSHOTS.c.at)):
+        for s in c.execute(snapshots_stmt(tenant)):
             snaps[s.segment_id] = s
     out = []
     for r in rows:
@@ -504,12 +523,16 @@ def archive(engine: sa.engine.Engine, tenant: str, sid: str, user: str) -> dict[
         return _view(_get(c, tenant, sid))
 
 
+def pending_stmt(tenant: str):
+    return sa.select(SEGMENTS.c.owner, SEGMENTS.c.updated_by).where(sa.and_(
+        SEGMENTS.c.tenant_id == tenant, SEGMENTS.c.status == "onay-bekliyor"))
+
+
 def pending_for(engine: sa.engine.Engine, tenant: str, user: str) -> int:
     """Kişinin onaylayabileceği (kendisinin yazmadığı) bekleyen segment sayısı."""
     R.ensure(engine)
     with engine.connect() as c:
-        rows = list(c.execute(sa.select(SEGMENTS.c.owner, SEGMENTS.c.updated_by).where(sa.and_(
-            SEGMENTS.c.tenant_id == tenant, SEGMENTS.c.status == "onay-bekliyor"))))
+        rows = list(c.execute(pending_stmt(tenant)))
     u = user.lower()
     return sum(1 for r in rows if u not in {(r.owner or "").lower(), (r.updated_by or "").lower()})
 
@@ -567,8 +590,7 @@ def history(engine: sa.engine.Engine, tenant: str, sid: str) -> list[dict[str, A
     with engine.connect() as c:
         return [{"at": R._iso(s.at), "version": s.version, "total": s.total, "email": s.email_ok, "sms": s.sms_ok,
                  "call": s.call_ok}
-                for s in c.execute(sa.select(SNAPSHOTS).where(sa.and_(SNAPSHOTS.c.tenant_id == tenant,
-                                                                      SNAPSHOTS.c.segment_id == sid)).order_by(SNAPSHOTS.c.at))]
+                for s in c.execute(history_stmt(tenant, sid))]
 
 
 def segments_containing(engine: sa.engine.Engine, tenant: str, profile: dict[str, Any],
@@ -692,10 +714,10 @@ def record_export(engine: sa.engine.Engine, tenant: str, *, list_id: str, list_n
 
 def list_exports(engine: sa.engine.Engine, tenant: str, page: int = 0, size: int = 50) -> dict[str, Any]:
     R.ensure(engine)
+    q = exports_stmts(tenant, page, size)
     with engine.connect() as c:
-        total = c.execute(sa.select(sa.func.count()).select_from(EXPORTS).where(EXPORTS.c.tenant_id == tenant)).scalar() or 0
-        rows = list(c.execute(sa.select(EXPORTS).where(EXPORTS.c.tenant_id == tenant).order_by(EXPORTS.c.at.desc())
-                              .offset(max(0, page) * size).limit(size)))
+        total = c.execute(q["say"]).scalar() or 0
+        rows = list(c.execute(q["sayfa"]))
     return {"items": [_export_view(r) for r in rows], "total": total, "page": page, "pageSize": size}
 
 

@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnGhost, errText } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { CHANNELS, fmtDay, fmtInt, readersApi, type ReaderCard as Card } from './api';
 import { ConsentPill, ROOT, ReadersFrame, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const ATTR_LABELS: Record<string, string> = {
   form_tipi: 'Form tipi', kayit_tipi: 'Kayıt tipi', departman: 'İlgili departman', katilim_kaynagi: 'Katılım kaynağı',
@@ -49,6 +50,7 @@ function CardBody({ c, labels, canPersonal, personal, loadingPersonal, onPersona
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-mono text-[17px] font-extrabold">{c.id}</h2>
+          <SqlInfo k={c.kaynaklar} alan="events" label="Yaş, etkinlik, kaynak kaydı ve segmentler" />
           {c.status !== 'aktif' && <Pill tone="muted">{c.status === 'pasif' ? 'Kaynakta kaydı kalmadı' : c.status}</Pill>}
           {c.minor && <Pill tone="warn">18 yaş altı</Pill>}
           {c.attrs.uyari?.includes('ortak_iletisim') && <Pill tone="warn">Ortak iletişim bilgisi</Pill>}
@@ -86,7 +88,7 @@ function CardBody({ c, labels, canPersonal, personal, loadingPersonal, onPersona
 
       <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr] lg:gap-4">
         <Panel>
-          <h2 className="text-[15px] font-extrabold">İzinler</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">İzinler<SqlInfo k={c.kaynaklar} alan="consents" label="İzinler" /></h2>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Ret her zaman kazanır; izinli yalnız İYS onayıyla. Kanıtlar eskiden yeniye.</p>
           <div className="mt-2 flex flex-col divide-y divide-slate-100">
             {[...CHANNELS, 'kvkk' as const].map((ch) => {

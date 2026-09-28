@@ -7,6 +7,7 @@ import { Loading, Note, Pill, Section, btnPrimary, errText } from '../admin/ui';
 import { fmtDay, fmtInt, readersApi, SEGMENT_TONE, type SegmentStatus } from './api';
 import { ROOT, useMeta } from './parts';
 import SegmentBuilder from './SegmentBuilder';
+import SqlInfo from '../components/SqlInfo';
 
 const FILTERS: Array<{ id: string; label: string }> = [
   { id: '', label: 'Etkin' },
@@ -47,6 +48,9 @@ function SegmentList() {
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Segmentler açılamadı.')}</Note>}
       {q.data && q.data.items.length === 0 && <Note tone="info">Bu durumda segment yok.</Note>}
+      {q.data && q.data.items.length > 0 && (
+        <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">Son sayım rakamları<SqlInfo k={q.data.kaynaklar} alan="items[]" label="Segment son sayımları" /></p>
+      )}
       <ul className="grid gap-2 lg:grid-cols-2">
         {q.data?.items.map((s) => (
           <li key={s.id}>

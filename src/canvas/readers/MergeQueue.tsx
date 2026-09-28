@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Section, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { fmtDay, fmtInt, readersApi, type Candidate, type ReaderSummary } from './api';
 import { ConsentPill, ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const TABS = [
   { id: 'bekliyor', label: 'Bekleyen' },
@@ -61,7 +62,7 @@ export default function MergeQueue() {
       </ul>
       {d && d.total > d.pageSize && (
         <div className="flex items-center justify-between gap-2 text-[12px] font-semibold text-canvas-muted">
-          <span>{fmtInt(d.page * d.pageSize + 1)}–{fmtInt(Math.min(d.total, (d.page + 1) * d.pageSize))} / {fmtInt(d.total)}</span>
+          <span className="inline-flex items-center gap-1">{fmtInt(d.page * d.pageSize + 1)}–{fmtInt(Math.min(d.total, (d.page + 1) * d.pageSize))} / {fmtInt(d.total)}<SqlInfo k={d.kaynaklar} alan="total" label="Aday çift sayısı" /></span>
           <div className="flex gap-1">
             <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Önceki</button>
             <button type="button" className={btnGhost} disabled={(page + 1) * d.pageSize >= d.total} onClick={() => setPage((p) => p + 1)}>Sonraki</button>

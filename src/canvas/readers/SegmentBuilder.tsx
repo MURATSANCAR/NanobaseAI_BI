@@ -11,6 +11,7 @@ import {
   type Channel, type Counts, type Definition, type FieldSpec, type Rule, type Segment,
 } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const EMPTY: Definition = { match: 'all', rules: [] };
 
@@ -154,7 +155,7 @@ export default function SegmentBuilder({ id }: { id?: string }) {
           {s?.status === 'onayli' && <ExportPanel s={s} />}
           {s?.history && s.history.length > 0 && (
             <Panel>
-              <h2 className="text-[15px] font-extrabold">Gece sayımları</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Gece sayımları<SqlInfo k={s.kaynaklar} alan="history[]" label="Gece sayımları" /></h2>
               <ul className="mt-2 max-h-56 space-y-0.5 overflow-y-auto text-[12px]">
                 {[...s.history].reverse().map((h, i) => (
                   <li key={i} className="flex justify-between gap-2 font-mono tabular-nums">
@@ -317,7 +318,7 @@ function SizePanel({ counts, loading, error, excludeLabels }: { counts?: Counts;
   return (
     <Panel>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Büyüklük</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Büyüklük<SqlInfo k={counts?.kaynaklar} alan="total" label="Segment büyüklüğü" /></h2>
         {loading && <Loader2 aria-label="Hesaplanıyor" className="h-4 w-4 animate-spin text-canvas-muted" />}
       </div>
       {error ? <Note tone="err">{errText(error, 'Hesaplanamadı.')}</Note> : null}

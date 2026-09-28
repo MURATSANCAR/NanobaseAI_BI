@@ -182,10 +182,26 @@ def _view(r: Any) -> dict[str, Any]:
             "purgeAfter": R._iso(r.purge_after), "purgedAt": R._iso(r.purged_at)}
 
 
+def imports_stmt(tenant: str):
+    return sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.at.desc())
+
+
+def import_stmts(tenant: str, iid: str, status: str, page: int, size: int) -> dict[str, Any]:
+    """Tek yüklemenin okumaları: kayıt, süzgeçli satır sayısı, bu sayfanın satırları, durum başına sayı."""
+    q = sa.select(IMPORT_ROWS).where(IMPORT_ROWS.c.import_id == iid)
+    if status:
+        q = q.where(IMPORT_ROWS.c.status == status)
+    return {"kayit": sa.select(IMPORTS).where(sa.and_(IMPORTS.c.tenant_id == tenant, IMPORTS.c.id == iid)),
+            "say": sa.select(sa.func.count()).select_from(q.subquery()),
+            "sayfa": q.order_by(IMPORT_ROWS.c.row_no).offset(max(0, page) * size).limit(size),
+            "durum": (sa.select(IMPORT_ROWS.c.status, sa.func.count()).where(IMPORT_ROWS.c.import_id == iid)
+                      .group_by(IMPORT_ROWS.c.status))}
+
+
 def list_imports(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     R.ensure(engine)
     with engine.connect() as c:
-        return [_view(r) for r in c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.at.desc()))]
+        return [_view(r) for r in c.execute(imports_stmt(tenant))]
 
 
 def get(engine: sa.engine.Engine, tenant: str, iid: str, *, personal: bool, status: str = "", page: int = 0,
@@ -195,13 +211,10 @@ def get(engine: sa.engine.Engine, tenant: str, iid: str, *, personal: bool, stat
     with engine.connect() as c:
         r = _imp(c, tenant, iid)
         m = R._load(r.mapping_json, {})
-        q = sa.select(IMPORT_ROWS).where(IMPORT_ROWS.c.import_id == iid)
-        if status:
-            q = q.where(IMPORT_ROWS.c.status == status)
-        total = c.execute(sa.select(sa.func.count()).select_from(q.subquery())).scalar() or 0
-        rows = list(c.execute(q.order_by(IMPORT_ROWS.c.row_no).offset(max(0, page) * size).limit(size)))
-        by_status = dict(c.execute(sa.select(IMPORT_ROWS.c.status, sa.func.count()).where(IMPORT_ROWS.c.import_id == iid)
-                                   .group_by(IMPORT_ROWS.c.status)).all())
+        q = import_stmts(tenant, iid, status, page, size)
+        total = c.execute(q["say"]).scalar() or 0
+        rows = list(c.execute(q["sayfa"]))
+        by_status = dict(c.execute(q["durum"]).all())
     items = []
     mm = {k: (int(v) if v is not None else None) for k, v in m.items() if k in ROLES}
     for x in rows:

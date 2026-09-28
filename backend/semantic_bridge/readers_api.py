@@ -30,7 +30,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge import readers as R
+from semantic_bridge import readers_kaynak as K
 from semantic_bridge import readers_core as RC
 from semantic_bridge import readers_imports as imp
 from semantic_bridge import readers_segments as seg
@@ -115,8 +118,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def run_sync(engine, tenant: str) -> dict[str, Any]:
         cfg = R.settings()
         R.salt()                                                    # tuz yoksa CRM hiç okunmaz
-        bundle = src.read_all(crm(), schema(), cfg)
-        return R.sync(engine, tenant, bundle, cfg)
+        ran: list[dict[str, Any]] = []                              # çalışan SQL'ler (sorgu bilgisi; sonuç satırı yok)
+        bundle = src.read_all(PK.recording(crm(), "crm", ran), schema(), cfg)
+        out = R.sync(engine, tenant, bundle, cfg)
+        R.sql_runs_set(engine, tenant, ran)
+        return out
 
     def start_refresh(engine, tenant: str) -> bool:
         with _job_lock:
@@ -168,31 +174,28 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/overview")
     def readers_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(R.overview, engine, tenant)
+        return PV.bagla(call(R.overview, engine, tenant), lambda: K.for_overview(engine, tenant))
 
     @app.get(P + "/sources")
     def readers_sources(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"sources": R.sources_state(engine, tenant), "run": R.last_run(engine, tenant)}
+        return PV.bagla({"sources": R.sources_state(engine, tenant), "run": R.last_run(engine, tenant)},
+                        lambda: K.for_sources(engine, tenant))
 
     @app.get(P + "/mine")
     def readers_mine(request: Request) -> dict[str, Any]:
         """Kampüs zili: onayınızı bekleyen segment ve kaynak sorunu (yalnız sayı)."""
         engine, tenant, user, _ = ctx(request)
-        from semantic_bridge import kampus_kaynak as KK
-        from semantic_bridge import sorgu_izi as IZ
-
-        def read() -> dict[str, Any]:
-            waiting = seg.pending_for(engine, tenant, user) if can(user, F_APPROVE) else 0
-            problems = [s["label"] for s in R.sources_state(engine, tenant) if s["failing"] or s["stale"]]
-            return {"segmentsAwaiting": waiting, "sourceProblems": problems}
-        return IZ.izli(engine, read, prefix="portal.kampus.okur", title="Onayınızı bekleyen segmentler", text=KK.F_ZIL)
+        waiting = seg.pending_for(engine, tenant, user) if can(user, F_APPROVE) else 0
+        problems = [s["label"] for s in R.sources_state(engine, tenant) if s["failing"] or s["stale"]]
+        return PV.bagla({"segmentsAwaiting": waiting, "sourceProblems": problems}, lambda: K.for_mine(engine, tenant))
 
     @app.get(P + "/status")
     def readers_status(request: Request) -> dict[str, Any]:
-        ctx(request)
+        engine, tenant, _, _ = ctx(request)
         with _job_lock:
-            return dict(_job)
+            out = dict(_job)
+        return PV.bagla(out, lambda: K.for_status(engine, tenant))
 
     @app.post(P + "/refresh", status_code=202)
     def readers_refresh(request: Request) -> dict[str, Any]:
@@ -219,7 +222,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             ids = await run_in_threadpool(R.readers_for_links, engine, tenant, keys)
             audit(engine, user, "view", "reader_search", None, "Okur ada göre arandı", {"sonuc": len(ids)})
         items = await run_in_threadpool(R.summaries, engine, tenant, ids)
-        return {"items": items, "how": how, "total": len(items)}
+        return await run_in_threadpool(PV.bagla, {"items": items, "how": how, "total": len(items)},
+                                       lambda: K.for_search(engine, tenant))
 
     @app.get(P + "/item/{rid}")
     async def readers_item(rid: str, request: Request, kisisel: bool = False) -> dict[str, Any]:
@@ -238,7 +242,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                                 "active": int(v.get("durum") or 0) == 0} for (s, i), v in live.items()]
             audit(engine, user, "view", "reader_personal", rid, "Okurun kişisel verisi görüntülendi",
                   {"kayit": len(out["personal"])})
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_card(engine, tenant, out["id"]))
 
     @app.get(P + "/subject")
     async def readers_subject(request: Request, email: str = "", phone: str = "") -> dict[str, Any]:
@@ -275,7 +279,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = await run_in_threadpool(call, work)
         audit(engine, user, "view", "reader_subject", None, "KVKK başvurusu için okur arandı",
               {"okur": len(out["readers"]), "yukleme": len(out["uploads"])})
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_subject(engine, tenant))
 
     # ------------------------------------------------------------------ belirsiz eşleşme kuyruğu
 
@@ -284,7 +288,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = ctx(request)
         if durum not in ("bekliyor", "ayni", "farkli", "gecersiz"):
             raise HTTPException(400, detail={"code": "READERS", "message": "Durum geçersiz."})
-        return call(R.candidates, engine, tenant, durum, max(0, page))
+        return PV.bagla(call(R.candidates, engine, tenant, durum, max(0, page)),
+                        lambda: K.for_candidates(engine, tenant, durum, max(0, page)))
 
     @app.post(P + "/merge-candidates/{cid}/decision")
     def readers_candidate_decide(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -305,12 +310,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.post(P + "/preview")
     async def readers_preview(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, seg.preview, engine, tenant, body.get("definition") or {})
+        out = await run_in_threadpool(call, seg.preview, engine, tenant, body.get("definition") or {})
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_preview(engine, tenant))
 
     @app.get(P + "/segments")
     def readers_segments(request: Request, durum: str = "", alan: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": seg.list_segments(engine, tenant, durum, alan)}
+        return PV.bagla({"items": seg.list_segments(engine, tenant, durum, alan)}, lambda: K.for_segments(engine, tenant, durum, alan))
 
     @app.post(P + "/segments", status_code=201)
     async def readers_segment_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -343,7 +349,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = await run_in_threadpool(call, seg.get_segment, engine, tenant, sid)
         out["counts"] = (await run_in_threadpool(call, seg.preview, engine, tenant, out["definition"]))
         out["history"] = await run_in_threadpool(seg.history, engine, tenant, sid)
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_segment(engine, tenant, sid))
 
     @app.patch(P + "/segments/{sid}")
     async def readers_segment_update(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -388,7 +394,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def readers_segment_preview(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
         s = await run_in_threadpool(call, seg.get_segment, engine, tenant, sid)
-        return await run_in_threadpool(call, seg.preview, engine, tenant, s["definition"])
+        out = await run_in_threadpool(call, seg.preview, engine, tenant, s["definition"])
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_preview(engine, tenant))
 
     @app.post(P + "/segments/{sid}/export")
     async def readers_segment_export(sid: str, body: dict[str, Any], request: Request) -> Response:
@@ -408,7 +415,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/imports")
     def readers_imports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": imp.list_imports(engine, tenant)}
+        return PV.bagla({"items": imp.list_imports(engine, tenant)}, lambda: K.for_imports(engine, tenant))
 
     @app.post(P + "/imports", status_code=201)
     async def readers_import_create(request: Request, filename: str = "") -> dict[str, Any]:
@@ -428,7 +435,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = call(imp.get, engine, tenant, iid, personal=personal, status=durum, page=max(0, page))
         if personal and out["items"]:
             audit(engine, user, "view", "reader_import", iid, "Yükleme satırları açık görüntülendi", {"satir": len(out["items"])})
-        return out
+        return PV.bagla(out, lambda: K.for_import(engine, tenant, iid, durum, max(0, page)))
 
     @app.post(P + "/imports/{iid}/confirm")
     async def readers_import_confirm(iid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -460,7 +467,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/exports")
     def readers_exports(request: Request, page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return seg.list_exports(engine, tenant, max(0, page))
+        return PV.bagla(seg.list_exports(engine, tenant, max(0, page)), lambda: K.for_exports(engine, tenant, max(0, page)))
 
     # ------------------------------------------------------------------ sözleşme uçları (M24, M37, M35)
 

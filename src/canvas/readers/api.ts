@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** H2 Okuyucu veri tabanı ekranlarının köprü uçları: /api/v1/readers/*. Portal CRM'e yazmaz, ileti göndermez. */
 
@@ -72,6 +73,7 @@ export type Overview = {
   };
   sources: SourceState[];
   rules: { requireKvkk: boolean; minorAge: number; minorExport: boolean; okSources: string[]; exportEnabled: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type ReaderSummary = {
@@ -93,6 +95,7 @@ export type ReaderCard = {
   exportable: Partial<Record<Channel, boolean>>;
   personal: Array<{ source: string; sourceId: string; name: string | null; email: string | null; email2: string | null; phone: string | null; active: boolean }> | null;
   redirect?: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Candidate = {
@@ -111,7 +114,7 @@ export type FieldSpec = {
 export type ChannelCounts = { izinli: number; ret: number; bilinmiyor: number; exportable: number; excluded: Record<string, number> };
 export type Counts = {
   total: number; minors: number; email: ChannelCounts; sms: ChannelCounts; call: ChannelCounts; kvkk: Record<string, number>;
-  explanation?: string; definition?: Definition; of?: number;
+  explanation?: string; definition?: Definition; of?: number; kaynaklar?: Kaynaklar;
 };
 
 export type Segment = {
@@ -121,6 +124,7 @@ export type Segment = {
   lastSnapshot?: { at: string | null; total: number; email: number; sms: number; call: number } | null;
   counts?: Counts;
   history?: Array<{ at: string | null; version: number | null; total: number; email: number; sms: number; call: number }>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Draft = { name: string; definition: Definition; explanation: string; notes: string[]; counts: Counts };
@@ -139,6 +143,7 @@ export type ImportInfo = {
 
 export type ImportDetail = ImportInfo & {
   items: ImportRow[]; total: number; page: number; pageSize: number; byStatus: Record<string, number>; roles: Record<string, string>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type ExportRow = {
@@ -147,7 +152,7 @@ export type ExportRow = {
   excluded: Array<{ reason: string; label: string; count: number }>;
 };
 
-export type Paged<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type Paged<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 const B = '/api/v1/readers';
 
@@ -214,14 +219,14 @@ export const readersApi = {
   mine: () => send<{ segmentsAwaiting: number; sourceProblems: string[] }>('GET', '/mine'),
   status: () => send<Job>('GET', '/status'),
   refresh: () => send<Job & { started: boolean }>('POST', '/refresh', {}),
-  search: (q: string) => send<{ items: ReaderSummary[]; how: string; total?: number; note?: string }>('GET', `/search${qs({ q })}`),
+  search: (q: string) => send<{ items: ReaderSummary[]; how: string; total?: number; note?: string; kaynaklar?: Kaynaklar }>('GET', `/search${qs({ q })}`),
   item: (id: string, personal = false) => send<ReaderCard>('GET', `/item/${enc(id)}${qs({ kisisel: personal })}`, undefined, 300_000),
-  subject: (p: { email?: string; phone?: string }) => send<{ readers: ReaderCard[]; uploads: Array<{ import: string; row: number; status: string }> }>('GET', `/subject${qs(p)}`),
+  subject: (p: { email?: string; phone?: string }) => send<{ readers: ReaderCard[]; uploads: Array<{ import: string; row: number; status: string }>; kaynaklar?: Kaynaklar }>('GET', `/subject${qs(p)}`),
   candidates: (durum: string, page = 0) => send<Paged<Candidate>>('GET', `/merge-candidates${qs({ durum, page })}`),
   decide: (id: string, karar: 'ayni' | 'farkli', not?: string) => send<{ id: string; status: string }>('POST', `/merge-candidates/${enc(id)}/decision`, { karar, not }),
   fields: () => send<{ fields: FieldSpec[]; ops: Record<string, string> }>('GET', '/fields'),
   preview: (definition: Definition) => send<Counts>('POST', '/preview', { definition }),
-  segments: (durum = '') => send<{ items: Segment[] }>('GET', `/segments${qs({ durum })}`),
+  segments: (durum = '') => send<{ items: Segment[]; kaynaklar?: Kaynaklar }>('GET', `/segments${qs({ durum })}`),
   segment: (id: string) => send<Segment>('GET', `/segments/${enc(id)}`),
   createSegment: (b: { name: string; definition: Definition; origin?: string }) => send<Segment>('POST', '/segments', b),
   updateSegment: (id: string, b: { name?: string; definition?: Definition }) => send<Segment>('PATCH', `/segments/${enc(id)}`, b),
@@ -231,7 +236,7 @@ export const readersApi = {
   archive: (id: string) => send<Segment>('POST', `/segments/${enc(id)}/archive`, {}),
   draft: (text: string) => send<Draft>('POST', '/segments/draft-from-text', { text }, 180_000),
   exportList: (id: string, channel: Channel, purpose: string) => download('POST', `/segments/${enc(id)}/export`, { channel, purpose }),
-  imports: () => send<{ items: ImportInfo[] }>('GET', '/imports'),
+  imports: () => send<{ items: ImportInfo[]; kaynaklar?: Kaynaklar }>('GET', '/imports'),
   importDetail: (id: string, durum = '', page = 0) => send<ImportDetail>('GET', `/imports/${enc(id)}${qs({ durum, page })}`),
   upload: async (file: File) => {
     if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');

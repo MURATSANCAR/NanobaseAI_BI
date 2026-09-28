@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, Section, btnPrimary, errText, field } from '../admin/ui';
 import { fmtDay, readersApi, type ReaderSummary } from './api';
 import { ConsentPill, ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Okur ara: e-posta, cep telefonu ya da okur numarasıyla kesin arama (özet üzerinden). Ada göre arama yalnız kişisel veri yetkisiyle. */
 export default function ReaderSearch() {
@@ -34,6 +35,9 @@ export default function ReaderSearch() {
       {res.error && <Note tone="err">{errText(res.error, 'Arama yapılamadı.')}</Note>}
       {res.data?.note && <Note tone="info">{res.data.note}</Note>}
       {res.data && !res.data.note && res.data.items.length === 0 && <Note tone="info">Bu değerle eşleşen okur yok.</Note>}
+      {res.data && res.data.items.length > 0 && (
+        <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">{res.data.items.length} okur<SqlInfo k={res.data.kaynaklar} alan="items[]" label="Arama sonucu sayıları" /></p>
+      )}
       <ul className="flex flex-col gap-2">
         {res.data?.items.map((r) => <ReaderRow key={r.id} r={r} />)}
       </ul>

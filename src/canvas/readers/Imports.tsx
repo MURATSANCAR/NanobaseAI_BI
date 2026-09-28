@@ -10,6 +10,7 @@ import { fmtDay, fmtInt, readersApi, type ImportDetail } from './api';
 import { ROOT, useMeta } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
+import SqlInfo from '../components/SqlInfo';
 
 /** Etkinlik/fuar katılımcı dosyası: yükle → kolon eşle → eşleştir (eşleşti / yeni / geçersiz / izin eksik). */
 export default function Imports() {
@@ -53,6 +54,9 @@ function ImportList() {
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Yüklemeler açılamadı.')}</Note>}
       {q.data && q.data.items.length === 0 && <Note tone="info">Henüz yükleme yok. Etkinlik ya da fuar katılımcı listesini yukarıdaki alana bırakın.</Note>}
+      {q.data && q.data.items.length > 0 && (
+        <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">Satır, eşleşme ve izin sayıları<SqlInfo k={q.data.kaynaklar} alan="items[]" label="Yükleme sayıları" /></p>
+      )}
       <ul className="flex flex-col gap-2">
         {q.data?.items.map((i) => (
           <li key={i.id}>
@@ -125,10 +129,10 @@ function ImportScreen({ id }: { id: string }) {
       </div>
       {d.status !== 'yuklendi' && (
         <KpiRow>
-          <Kpi label="Eşleşti" value={fmtInt(d.matched)} help="Okur kaydı bulundu; etkinlik zaman çizelgesine yazıldı" />
-          <Kpi label="Yeni" value={fmtInt(d.new)} help="CRM'de yok; CRM'e işlenecek listede" />
-          <Kpi label="İzin eksik" value={fmtInt(d.missingConsent)} help="Eşleşen ama e-posta izni İYS'de olmayan" />
-          <Kpi label="Geçersiz / tekrar" value={`${fmtInt(d.rejected)} / ${fmtInt(d.duplicates)}`} help="E-posta ve cep telefonu yok / dosyada ikinci kez" />
+          <Kpi label="Eşleşti" value={fmtInt(d.matched)} help="Okur kaydı bulundu; etkinlik zaman çizelgesine yazıldı" info={<SqlInfo k={d.kaynaklar} alan="matched" label="Eşleşti" />} />
+          <Kpi label="Yeni" value={fmtInt(d.new)} help="CRM'de yok; CRM'e işlenecek listede" info={<SqlInfo k={d.kaynaklar} alan="new" label="Yeni" />} />
+          <Kpi label="İzin eksik" value={fmtInt(d.missingConsent)} help="Eşleşen ama e-posta izni İYS'de olmayan" info={<SqlInfo k={d.kaynaklar} alan="missingConsent" label="İzin eksik" />} />
+          <Kpi label="Geçersiz / tekrar" value={`${fmtInt(d.rejected)} / ${fmtInt(d.duplicates)}`} help="E-posta ve cep telefonu yok / dosyada ikinci kez" info={<SqlInfo k={d.kaynaklar} alan="rejected" label="Geçersiz / tekrar" />} />
         </KpiRow>
       )}
 
