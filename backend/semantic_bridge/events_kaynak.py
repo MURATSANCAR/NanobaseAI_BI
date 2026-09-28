@@ -15,7 +15,8 @@ from semantic_bridge import events_sources as src
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as P
 
-NOT_RAKAM = ("settings", "page", "pageSize", "year", "sort", "tasks[].sort", "crmMs", "window.tailDays", "shown")
+NOT_RAKAM = ("settings", "page", "pageSize", "year", "sort", "tasks[].sort", "crmMs", "window.tailDays", "shown",
+             "result.window", "fair.tasks[].sort")
 
 F_CAL = ("Takvim: portal fuar/etkinlik kartları + CRM etkinlikleri (başlangıcı yılda, etkin); CRM tipi portal eşlemesiyle "
          "sınıflanır, eşlenmemiş tip sayısı ayrı. Ay başına kayıt = o ayda başlayan kart + etkinlik.")

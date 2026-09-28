@@ -19,7 +19,8 @@ from semantic_bridge import relations_core as core
 
 NOT_RAKAM = ("settings", "page", "pageSize", "stageIndex", "items[].stageIndex", "projects[].stageIndex", "kurumTipi",
              "items[].kurumTipi", "items[].role", "role", "crmOrderStatus", "crmOrderType", "items[].crmOrderStatus",
-             "items[].crmOrderType", "gifts[].crmOrderStatus", "gifts[].crmOrderType", "year", "heat.meta")
+             "items[].crmOrderType", "gifts[].crmOrderStatus", "gifts[].crmOrderType", "year", "heat.meta",
+             "project.stageIndex")
 
 F_PEOPLE = ("Kişi listesi: temas zamanı gelen = önceliğin temas günü (kritik / normal, ayar) aşılmış kart; ısı = son temas "
             "notlarının sayısı ve yakınlığından kural puanı, son temasın üzerinden geçen gün; açık adım = yapılmamış «sıradaki "
