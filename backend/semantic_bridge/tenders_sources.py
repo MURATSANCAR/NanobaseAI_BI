@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import logging
 import re
+import time
+from datetime import datetime
 from typing import Any, Callable, Iterable, Optional
 
 from semantic_bridge import budget_sources as bsrc
@@ -60,6 +62,17 @@ def _num(v: Any) -> Optional[float]:
     except (TypeError, ValueError):
         return None
     return n if n == n else None
+
+
+def logged(conn: str, run: Runner, sink: list[dict[str, Any]]) -> Runner:
+    """Sorgu bilgisi: çalışan her SQL'i (bağlantı, metin, satır, süre, an) `sink`'e yazan çalıştırıcı."""
+    def wrapped(sql: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
+        rows = run(sql)
+        sink.append({"conn": conn, "sql": sql, "rows": len(rows), "dbMs": int((time.monotonic() - t) * 1000),
+                     "at": datetime.now().isoformat(timespec="seconds")})
+        return rows
+    return wrapped
 
 
 def current_firm(run: Runner) -> str:
@@ -149,6 +162,8 @@ def read_catalog(crm: Runner, logo: Runner, schema: str) -> dict[str, Any]:
     """Kitap kataloğu: CRM etkin kitapları + CRM'de olmayan Logo malzeme kartları. Logo barkodu okunamazsa not düşülür."""
     books: dict[str, dict[str, Any]] = {}
     notes: list[str] = []
+    reads: list[dict[str, Any]] = []
+    crm, logo = logged("crm", crm, reads), logged("logo", logo, reads)
     for r in crm(crm_catalog_sql(schema)):
         code = _clean(r.get("stok_kodu"))
         key = code or f"crm:{len(books)}"
@@ -180,7 +195,7 @@ def read_catalog(crm: Runner, logo: Runner, schema: str) -> dict[str, Any]:
             notes.append(f"Logo barkodları okunamadı ({e}); eşleştirme CRM ISBN'leriyle yapıldı.")
     except SourceError as e:
         notes.append(f"Logo malzeme kartları okunamadı ({e}); katalog yalnız CRM kitaplarından.")
-    return {"books": list(books.values()), "notes": notes}
+    return {"books": list(books.values()), "notes": notes, "sorgular": reads}
 
 
 def read_stock(logo: Runner, codes: Iterable[str]) -> dict[str, float]:
@@ -218,6 +233,8 @@ def read_prices(logo: Runner, codes: Iterable[str]) -> dict[str, dict[str, Any]]
 
 def read_public_sales(logo: Runner, crm: Runner, schema: str, year: int, channel: str = "KURUM") -> dict[str, Any]:
     """Yılın kamu kurumlarına satışı cari bazında. `kaynak` her satırda: crm (kurum rolü), kanal, ikisi."""
+    reads: list[dict[str, Any]] = []
+    crm, logo = logged("crm", crm, reads), logged("logo", logo, reads)
     accounts = crm(crm_public_accounts_sql(schema))
     counts = {int(r["rol"]): int(r["sayi"]) for r in crm(crm_role_counts_sql(schema)) if r.get("rol") is not None}
     crm_by_ref: dict[int, dict[str, Any]] = {}
@@ -248,7 +265,8 @@ def read_public_sales(logo: Runner, crm: Runner, schema: str, year: int, channel
                          "kaynak": "ikisi" if in_crm and in_channel else ("crm" if in_crm else "kanal"),
                          "crmRol": (crm_by_ref.get(ref) or {}).get("rol")}
     return {"year": year, "firm": firm, "rows": sorted(rows.values(), key=lambda x: -x["ciro"]),
-            "crmKurum": len(accounts), "crmLogoBagsiz": unlinked, "rolSayilari": counts, "kanal": channel}
+            "crmKurum": len(accounts), "crmLogoBagsiz": unlinked, "rolSayilari": counts, "kanal": channel,
+            "sorgular": reads, "okunma": datetime.now().isoformat(timespec="seconds")}
 
 
 # ------------------------------------------------------------------ birim maliyet (M9)

@@ -9,6 +9,7 @@ import {
   MATCH_TONE, fmtInt, fmtMoney, fmtPct, parseNum, tendersApi,
   type Candidate, type Item, type MatchState, type TenderDetail, type TenderMeta,
 } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Şartname kalemleri: liste alma (yapıştır ya da yüklenen dosya), katalogla eşleştirme (ISBN → ad → Zeki AI), insan
  *  onayı ve düzeltmesi, adet ve birim teklif fiyatı, teklif tablosu toplamları ve Excel. Geniş tablo kendi içinde kayar. */
@@ -52,7 +53,7 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
       <Panel>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-extrabold tracking-tight">Kalem–katalog eşleştirme</h2>
+            <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Kalem–katalog eşleştirme<SqlInfo k={d.kaynaklar} alan="kalemler[]" label="Kalemler: eşleşme olasılığı, stok, fiyat" /></h2>
             <p className="max-w-[90ch] text-[12px] text-canvas-muted">
               Sıra: ISBN/barkod birebir → ad birebir (yazarla ayıklanır) → benzer adlı {d.ayarlar.candidates} adaya Zeki AI «aynı eser hangisi» sorusu.
               Olasılık %{Math.round(d.ayarlar.autoProb * 100)} ve üstü (marj %{Math.round(d.ayarlar.autoMargin * 100)}) kendiliğinden eşleşir,
@@ -100,11 +101,11 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
               <th className={th}>#</th>
               <th className={th}>Şartname kalemi</th>
               <th className={th}>Eşleşen kitap</th>
-              <th className={`${th} text-right`}>Adet</th>
-              <th className={`${th} text-right`}>Stok</th>
-              <th className={`${th} text-right`}>Liste (KDV dahil)</th>
-              <th className={`${th} text-right`}>Birim teklif (KDV hariç)</th>
-              <th className={`${th} text-right`}>Tutar</th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kalemler[]" label="Adet">Adet</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kalemler[]" label="Stok (eşleştirme anında Logo)">Stok</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kalemler[]" label="Liste fiyatı ve Logo fiyatı">Liste (KDV dahil)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kalemler[]" label="Birim teklif ve marj">Birim teklif (KDV hariç)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kalemler[]" label="Tutar">Tutar</InfoLabel></th>
               <th className={th}>İşlem</th>
             </tr>
           </thead>
@@ -165,7 +166,7 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
 
       <Panel>
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-[16px] font-extrabold tracking-tight">Teklif tablosu</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Teklif tablosu<SqlInfo k={d.kaynaklar} alan="toplamlar" label="Teklif tablosu toplamları" /></h2>
           {meta.me.canExport && t.fiyatli > 0 && (
             <a className={btnGhost} href={tendersApi.pricingUrl(d.id)}>
               <FileSpreadsheet aria-hidden className="h-4 w-4" />
@@ -335,7 +336,7 @@ function PickSheet({ d, item, onClose, onPick }: { d: TenderDetail; item: Item |
               >
                 <div className="break-words font-semibold">{c.ad ?? '(adsız)'}</div>
                 <div className="break-words text-[11px] text-canvas-muted">{[c.yazar, c.yayinevi, c.isbn && `ISBN ${c.isbn}`, c.stokKodu].filter(Boolean).join(' · ')}</div>
-                {c.benzerlik != null && <div className="font-mono text-[10.5px] text-canvas-muted">benzerlik {fmtPct(c.benzerlik)}</div>}
+                {c.benzerlik != null && <div className="flex items-center gap-0.5 font-mono text-[10.5px] text-canvas-muted">benzerlik {fmtPct(c.benzerlik)}<SqlInfo k={search.data?.kaynaklar} alan="items[]" label="Benzerlik" /></div>}
               </button>
             </li>
           ))}

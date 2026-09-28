@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, tendersApi, type CheckItem, type CheckState, type TenderDetail, type TenderMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Belge kontrol listesi: şartname özetinden gelen ve elle eklenen kalemler, arşivdeki belgeye bağlama, geçerlilik.
  *  Belge bağlanınca kalem «var» olur; geçerliliği geçmiş belge «süresi dolmuş» görünür ve puana «yok» sayılır. */
@@ -28,7 +29,7 @@ export default function TenderChecklist({ d, meta }: { d: TenderDetail; meta: Te
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[16px] font-extrabold tracking-tight">Belge kontrol listesi</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Belge kontrol listesi<SqlInfo k={d.kaynaklar} alan="kontrolListesi[]" label="Belge kontrol listesi" /></h2>
           <p className="max-w-[90ch] text-[12px] text-canvas-muted">
             Şartname özetindeki belgeler kendiliğinden eklenir ve arşivde geçerli aynı türden belge varsa bağlanır. Liste taslaktır; ihale sorumlusu şartnameyle karşılaştırıp onaylar.
           </p>

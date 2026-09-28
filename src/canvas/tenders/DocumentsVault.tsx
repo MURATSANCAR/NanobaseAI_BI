@@ -10,6 +10,8 @@ import { fmtDay, fmtLeft, tendersApi, type DocRow, type TenderMeta } from './api
 import { AskSheet } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB, titleFromFilename } from '../components/fileDropRules';
+import { AskSheet, FilePick } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Şirket belge arşivi: vergi/SGK yazıları, imza sirküleri, teminat mektubu… Geçerlilik tarihi yaklaşan ve dolan
  *  belge işaretlidir; ihale kontrol listesi bu belgelere bağlanır. Yazma `ozellik:ihale.belge` ister. */
@@ -41,7 +43,7 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[16px] font-extrabold tracking-tight">Şirket belge arşivi</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Şirket belge arşivi<SqlInfo k={docs.data?.kaynaklar} alan="items[]" label="Belge geçerliliği ve kalan gün" /></h2>
           <p className="text-[12px] text-canvas-muted">
             İhale kontrol listesindeki kalemler bu belgelere bağlanır. Geçerliliği {docs.data?.uyariGun ?? meta.ayarlar.docWarnDays} gün içinde bitecek belge sarı, bitmiş belge kırmızı işaretlidir.
           </p>

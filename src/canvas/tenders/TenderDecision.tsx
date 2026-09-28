@@ -6,6 +6,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtLeft, fmtMoney, fmtPct, parseNum, tendersApi, type TenderDetail, type TenderMeta } from './api';
 import { AskSheet, Fact } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Karar: tek sayfa karar özeti (rakamlar SQL'den ve kayıtlardan; Zeki AI yalnız bu rakamlarla metin yazar), başvuru
  *  kararı önerisi ve iki göz onayı. Sonuç: teklif verildi, kazanıldı/kaybedildi/iptal, kazanan firma ve fiyat. */
@@ -56,7 +57,7 @@ function DecisionView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
       <Panel>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-extrabold tracking-tight">Karar özeti</h2>
+            <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Karar özeti<SqlInfo k={d.kaynaklar} alan="kararOzeti" label="Karar özeti rakamları" /></h2>
             <p className="text-[12px] text-canvas-muted">Rakamlar Logo, CRM ve portal kayıtlarından. Başvuru kararı ve teklif fiyatı insanındır; portal kuruma teklif göndermez.</p>
           </div>
           {me.canEdit && (
@@ -94,7 +95,7 @@ function DecisionView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
           <div className="flex flex-wrap items-center gap-2">
             <Pill tone="warn">Onay bekliyor</Pill>
             <span className="text-[13px] font-extrabold">{pending.kararAdi}</span>
-            {pending.teklifToplami != null && <span className="font-mono text-[12.5px] tabular-nums">{fmtMoney(pending.teklifToplami)} (KDV hariç)</span>}
+            {pending.teklifToplami != null && <span className="inline-flex items-center gap-0.5 font-mono text-[12.5px] tabular-nums">{fmtMoney(pending.teklifToplami)} (KDV hariç)<SqlInfo k={d.kaynaklar} alan="kararlar[]" label="Önerideki teklif toplamı" /></span>}
           </div>
           <div className="mt-1 text-[12px] text-canvas-muted">Öneren {pending.oneren} · {fmtDay(pending.oneriZamani)}</div>
           {pending.gerekce && <p className="mt-2 whitespace-pre-wrap break-words text-[12.5px]">{pending.gerekce}</p>}
@@ -145,7 +146,7 @@ function DecisionView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
 
       {d.kararlar.length > 0 && (
         <Panel>
-          <h2 className="text-[16px] font-extrabold tracking-tight">Karar geçmişi</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Karar geçmişi<SqlInfo k={d.kaynaklar} alan="kararlar[]" label="Karar geçmişi teklif toplamları" /></h2>
           <ul className="mt-2 flex flex-col gap-1.5">
             {d.kararlar.map((k) => (
               <li key={k.id} className="rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-[12.5px]">
@@ -229,8 +230,8 @@ function ResultView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <Fact label="Kazanan" value={r.kazanan ?? '—'} />
-            <Fact label="Kazanan fiyat" value={fmtMoney(r.kazananFiyat)} help={r.kazananListeOrani != null ? `Liste fiyatının ${fmtPct(r.kazananListeOrani)}'i` : undefined} />
-            <Fact label="Bizim teklif" value={fmtMoney(r.bizimFiyat)} />
+            <Fact label="Kazanan fiyat" info={<SqlInfo k={d.kaynaklar} alan="sonuc" label="Sonuç kaydı" />} value={fmtMoney(r.kazananFiyat)} help={r.kazananListeOrani != null ? `Liste fiyatının ${fmtPct(r.kazananListeOrani)}'i` : undefined} />
+            <Fact label="Bizim teklif" info={<SqlInfo k={d.kaynaklar} alan="sonuc" label="Bizim teklif" />} value={fmtMoney(r.bizimFiyat)} />
             <Fact label="Kaynak" value={r.kaynak ?? '—'} />
           </div>
           {r.neden && <p className="mt-2 whitespace-pre-wrap break-words text-[12.5px]"><b>Neden:</b> {r.neden}</p>}

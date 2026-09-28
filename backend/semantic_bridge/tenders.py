@@ -1413,14 +1413,10 @@ def rescore(engine: sa.engine.Engine, tenant: str, tid: str) -> None:
         c.execute(TENDERS.update().where(TENDERS.c.id == tid).values(uygunluk_puani=s["puan"], uygunluk_json=_dump(s)))
 
 
-def _docs_map(c: Any, tenant: str) -> dict[str, dict[str, Any]]:
-    return {r.id: dict(r._mapping) for r in c.execute(sa.select(DOCUMENTS).where(DOCUMENTS.c.tenant_id == tenant))}
+# ------------------------------------------------------------------ okuma ifadeleri (sorgu bilgisi aynısını gösterir)
 
 
-def list_tenders(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", il: str = "", kurum_turu: str = "",
-                 q: str = "", son: str = "") -> dict[str, Any]:
-    """Liste: süzgeç durum (acik | kapali | hepsi | tek durum), il, kurum türü, arama, son teklif tarihi üst sınırı.
-    Sayı tavanı yok; son teklif tarihine göre sıralı (tarihsiz en sonda)."""
+def tenders_stmt(tenant: str, *, durum: str = "hepsi", il: str = "", kurum_turu: str = "", son: str = ""):
     stmt = sa.select(TENDERS).where(TENDERS.c.tenant_id == tenant)
     if durum == "acik":
         stmt = stmt.where(TENDERS.c.durum.in_(OPEN_STATUSES))
@@ -1434,14 +1430,92 @@ def list_tenders(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", 
         stmt = stmt.where(TENDERS.c.kurum_turu == kurum_turu)
     if son:
         stmt = stmt.where(TENDERS.c.son_teklif_tarihi <= _day(son, "Son tarih") + "T23:59")
+    return stmt
+
+
+def tender_stmt(tenant: str, tid: str):
+    return sa.select(TENDERS).where(TENDERS.c.id == tid, TENDERS.c.tenant_id == tenant)
+
+
+def item_counts_stmt():
+    return (sa.select(ITEMS.c.tender_id, sa.func.count().label("n"),
+                      sa.func.sum(sa.case((ITEMS.c.eslesme_durumu == "eslesti", 1), else_=0)).label("ok"))
+            .group_by(ITEMS.c.tender_id))
+
+
+def pending_stmt():
+    return sa.select(DECISIONS.c.tender_id).where(DECISIONS.c.durum == "onayda")
+
+
+def status_counts_stmt(tenant: str):
+    return sa.select(TENDERS.c.il, TENDERS.c.durum).where(TENDERS.c.tenant_id == tenant)
+
+
+def items_stmt(tid: str):
+    return sa.select(ITEMS).where(ITEMS.c.tender_id == tid).order_by(ITEMS.c.sira)
+
+
+def checklist_stmt(tid: str):
+    return sa.select(CHECKLIST).where(CHECKLIST.c.tender_id == tid).order_by(CHECKLIST.c.sira)
+
+
+def documents_stmt(tenant: str):
+    return sa.select(DOCUMENTS).where(DOCUMENTS.c.tenant_id == tenant)
+
+
+def decisions_stmt(tid: str):
+    return sa.select(DECISIONS).where(DECISIONS.c.tender_id == tid).order_by(DECISIONS.c.oneri_zamani.desc())
+
+
+def results_stmt(tenant: str, tid: Optional[str] = None):
+    if tid is not None:
+        return sa.select(RESULTS).where(RESULTS.c.tender_id == tid)
+    return (sa.select(RESULTS, TENDERS.c.kurum, TENDERS.c.kurum_turu, TENDERS.c.konu, TENDERS.c.il)
+            .join(TENDERS, TENDERS.c.id == RESULTS.c.tender_id).where(TENDERS.c.tenant_id == tenant)
+            .order_by(RESULTS.c.zaman.desc()))
+
+
+def calendar_checks_stmt(tenant: str):
+    return (sa.select(CHECKLIST, TENDERS.c.kurum, TENDERS.c.durum.label("ihale_durum"))
+            .join(TENDERS, TENDERS.c.id == CHECKLIST.c.tender_id)
+            .where(TENDERS.c.tenant_id == tenant, CHECKLIST.c.gecerlilik_tarihi.is_not(None)))
+
+
+def files_stmt(tid: str):
+    return sa.select(FILES).where(FILES.c.tender_id == tid).order_by(FILES.c.zaman)
+
+
+def read_jobs_stmt(tid: str):
+    """Eşleştirme ve elle eşleştirmede Logo'dan stok/fiyat okuyan işler (çalışan SQL sonuçta saklı), yeniden eskiye."""
+    return (sa.select(JOBS).where(JOBS.c.tender_id == tid, JOBS.c.tur.in_(("eslestirme", "kalem-okuma")),
+                                  JOBS.c.durum == "bitti").order_by(JOBS.c.baslangic.desc()))
+
+
+def record_reads(engine: sa.engine.Engine, tid: str, user: str, reads: list[dict[str, Any]]) -> None:
+    """Elle eşleştirmede Logo'dan okunan stok/fiyat sorgularını (çalışan metin) bitmiş iş kaydı olarak saklar."""
+    if not reads:
+        return
+    now = _now()
+    with engine.begin() as c:
+        c.execute(JOBS.insert().values(id=uuid.uuid4().hex, tender_id=tid, tur="kalem-okuma", durum="bitti", ilerleme=1,
+                                       toplam=1, sonuc_json=_dump({"sorgular": reads}), baslatan=user, baslangic=now,
+                                       bitis=now))
+
+
+def _docs_map(c: Any, tenant: str) -> dict[str, dict[str, Any]]:
+    return {r.id: dict(r._mapping) for r in c.execute(documents_stmt(tenant))}
+
+
+def list_tenders(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", il: str = "", kurum_turu: str = "",
+                 q: str = "", son: str = "") -> dict[str, Any]:
+    """Liste: süzgeç durum (acik | kapali | hepsi | tek durum), il, kurum türü, arama, son teklif tarihi üst sınırı.
+    Sayı tavanı yok; son teklif tarihine göre sıralı (tarihsiz en sonda)."""
+    stmt = tenders_stmt(tenant, durum=durum, il=il, kurum_turu=kurum_turu, son=son)
     with engine.connect() as c:
         rows = c.execute(stmt).all()
-        counts = {r.tender_id: r for r in c.execute(
-            sa.select(ITEMS.c.tender_id, sa.func.count().label("n"),
-                      sa.func.sum(sa.case((ITEMS.c.eslesme_durumu == "eslesti", 1), else_=0)).label("ok"))
-            .group_by(ITEMS.c.tender_id)).all()}
-        pending = {r.tender_id for r in c.execute(sa.select(DECISIONS.c.tender_id).where(DECISIONS.c.durum == "onayda"))}
-        all_rows = c.execute(sa.select(TENDERS.c.il, TENDERS.c.durum).where(TENDERS.c.tenant_id == tenant)).all()
+        counts = {r.tender_id: r for r in c.execute(item_counts_stmt()).all()}
+        pending = {r.tender_id for r in c.execute(pending_stmt())}
+        all_rows = c.execute(status_counts_stmt(tenant)).all()
     qf = fold(q)
     out = []
     asof = today()
@@ -1467,15 +1541,13 @@ def detail(engine: sa.engine.Engine, tenant: str, tid: str) -> dict[str, Any]:
     cfg = settings()
     with engine.connect() as c:
         row = _tender_row(c, tenant, tid)
-        items = [_item_dict(r) for r in c.execute(sa.select(ITEMS).where(ITEMS.c.tender_id == tid).order_by(ITEMS.c.sira))]
+        items = [_item_dict(r) for r in c.execute(items_stmt(tid))]
         docs = _docs_map(c, tenant)
-        checks = [_check_out(r, docs, asof) for r in
-                  c.execute(sa.select(CHECKLIST).where(CHECKLIST.c.tender_id == tid).order_by(CHECKLIST.c.sira))]
+        checks = [_check_out(r, docs, asof) for r in c.execute(checklist_stmt(tid))]
         files = [{"id": f.id, "tur": f.tur, "ad": f.ad, "boyut": f.boyut, "mime": f.mime, "yukleyen": f.yukleyen,
-                  "zaman": _iso(f.zaman)} for f in c.execute(sa.select(FILES).where(FILES.c.tender_id == tid).order_by(FILES.c.zaman))]
-        decisions = [_decision_out(r) for r in c.execute(
-            sa.select(DECISIONS).where(DECISIONS.c.tender_id == tid).order_by(DECISIONS.c.oneri_zamani.desc()))]
-        result = _result_out(c.execute(sa.select(RESULTS).where(RESULTS.c.tender_id == tid)).first())
+                  "zaman": _iso(f.zaman)} for f in c.execute(files_stmt(tid))]
+        decisions = [_decision_out(r) for r in c.execute(decisions_stmt(tid))]
+        result = _result_out(c.execute(results_stmt(tenant, tid)).first())
         jobs = [_job_out(r) for r in c.execute(sa.select(JOBS).where(JOBS.c.tender_id == tid).order_by(JOBS.c.baslangic.desc()))]
     out = _tender_out(row, asof)
     tot = totals(items)
@@ -1653,7 +1725,8 @@ _active: set[str] = set()   # bu süreçte koşan iş kimlikleri
 def _job_out(r: Any) -> dict[str, Any]:
     d = dict(r._mapping)
     return {"id": d["id"], "tur": d["tur"], "durum": d["durum"], "ilerleme": d["ilerleme"], "toplam": d["toplam"],
-            "sonuc": _j(d["sonuc_json"], {}), "hata": d["hata"], "baslatan": d["baslatan"],
+            "sonuc": {k: v for k, v in (_j(d["sonuc_json"], {}) or {}).items() if k != "sorgular"},  # SQL ayrı yetkide
+            "hata": d["hata"], "baslatan": d["baslatan"],
             "baslangic": _iso(d["baslangic"]), "bitis": _iso(d["bitis"])}
 
 
@@ -1744,6 +1817,7 @@ def run_match(engine: sa.engine.Engine, tenant: str, tid: str, cat: Catalog, cho
         rows = [_item_dict(r) for r in c.execute(sa.select(ITEMS).where(ITEMS.c.tender_id == tid))]
     codes = sorted({r["eslesen_stok_kodu"] for r in rows if r["eslesen_stok_kodu"]})
     info = enrich(codes)
+    reads = list(getattr(enrich, "sorgular", None) or [])  # sorgu bilgisi: stok/fiyatı okuyan çalışan SQL'ler
     with engine.begin() as c:
         for r in rows:
             code = r["eslesen_stok_kodu"]
@@ -1752,7 +1826,8 @@ def run_match(engine: sa.engine.Engine, tenant: str, tid: str, cat: Catalog, cho
                 vals["onerilen_fiyat"] = suggested_price({**r, **vals}, row.fiyat_orani or 1.0) if code else None
             c.execute(ITEMS.update().where(ITEMS.c.tender_id == tid, ITEMS.c.sira == r["sira"]).values(**vals))
     rescore(engine, tenant, tid)
-    return {"kalem": total, "durumlar": stats, "kodlar": len(codes), "katalogNotlari": cat.notes}
+    return {"kalem": total, "durumlar": stats, "kodlar": len(codes), "katalogNotlari": cat.notes,
+            "sorgular": reads + list(getattr(cat, "sorgular", None) or [])}
 
 
 _NUM_RX = re.compile(r"\d+(?:[.,]\d+)*")
@@ -1927,8 +2002,7 @@ def checklist(engine: sa.engine.Engine, tenant: str, tid: str) -> dict[str, Any]
     with engine.connect() as c:
         _tender_row(c, tenant, tid)
         docs = _docs_map(c, tenant)
-        items = [_check_out(r, docs, today()) for r in
-                 c.execute(sa.select(CHECKLIST).where(CHECKLIST.c.tender_id == tid).order_by(CHECKLIST.c.sira))]
+        items = [_check_out(r, docs, today()) for r in c.execute(checklist_stmt(tid))]
     return {"items": items, "turler": DOC_TYPES, "durumlar": CHECK_STATES}
 
 
@@ -2059,7 +2133,7 @@ def delete_file(engine: sa.engine.Engine, tenant: str, tid: str, fid: str) -> di
 def documents(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     cfg = settings()
     with engine.connect() as c:
-        rows = c.execute(sa.select(DOCUMENTS).where(DOCUMENTS.c.tenant_id == tenant)).all()
+        rows = c.execute(documents_stmt(tenant)).all()
     items = [_doc_out(r, today(), cfg["docWarnDays"]) for r in rows]
     items.sort(key=lambda d: (d["gecerlilik"] is None, d["gecerlilik"] or "", d["ad"]))
     return {"items": items, "turler": DOC_TYPES, "uyariGun": cfg["docWarnDays"]}
@@ -2231,9 +2305,7 @@ def record_result(engine: sa.engine.Engine, tenant: str, user: str, tid: str, bo
 def results(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     """Sonuçlar ekranı: bütün sonuçlanmış ihaleler ve kurum türüne göre kazanma özeti."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(RESULTS, TENDERS.c.kurum, TENDERS.c.kurum_turu, TENDERS.c.konu, TENDERS.c.il)
-                         .join(TENDERS, TENDERS.c.id == RESULTS.c.tender_id).where(TENDERS.c.tenant_id == tenant)
-                         .order_by(RESULTS.c.zaman.desc())).all()
+        rows = c.execute(results_stmt(tenant)).all()
     items = []
     by_type: dict[str, dict[str, Any]] = {}
     for r in rows:
@@ -2264,11 +2336,10 @@ def calendar(engine: sa.engine.Engine, tenant: str, days: int = 90, asof: Option
     end = (asof + timedelta(days=max(0, days))).isoformat()
     events: list[dict[str, Any]] = []
     with engine.connect() as c:
-        tenders = c.execute(sa.select(TENDERS).where(TENDERS.c.tenant_id == tenant)).all()
-        docs = c.execute(sa.select(DOCUMENTS).where(DOCUMENTS.c.tenant_id == tenant)).all()
-        checks = c.execute(sa.select(CHECKLIST, TENDERS.c.kurum, TENDERS.c.durum.label("ihale_durum")).join(TENDERS, TENDERS.c.id == CHECKLIST.c.tender_id)
-                           .where(TENDERS.c.tenant_id == tenant, CHECKLIST.c.gecerlilik_tarihi.is_not(None))).all()
-        pending = {r.tender_id for r in c.execute(sa.select(DECISIONS.c.tender_id).where(DECISIONS.c.durum == "onayda"))}
+        tenders = c.execute(tenders_stmt(tenant)).all()
+        docs = c.execute(documents_stmt(tenant)).all()
+        checks = c.execute(calendar_checks_stmt(tenant)).all()
+        pending = {r.tender_id for r in c.execute(pending_stmt())}
     for t in tenders:
         if t.son_teklif_tarihi and t.durum in OPEN_STATUSES and t.durum != "teklif_verildi" and t.son_teklif_tarihi[:10] <= end:
             events.append({"tarih": t.son_teklif_tarihi, "tur": "son_teklif", "baslik": f"Son teklif: {t.kurum}",

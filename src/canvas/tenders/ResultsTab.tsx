@@ -4,6 +4,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtMoney, fmtPct, tendersApi } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Sonuçlanan ihaleler: kazanılan/kaybedilen, kazanan firma ve fiyat, kayıp nedeni; kurum türüne göre kazanma oranı ve
  *  kazanan fiyatın liste fiyatına oranı (teklif fiyatı önerisinin dayanağı). */
@@ -13,7 +14,7 @@ export default function ResultsTab() {
   return (
     <>
       <Panel>
-        <h2 className="text-[16px] font-extrabold tracking-tight">Kurum türüne göre</h2>
+        <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Kurum türüne göre<SqlInfo k={res.data?.kaynaklar} alan="ozet[]" label="Kurum türüne göre sonuçlar" /></h2>
         <p className="text-[12px] text-canvas-muted">«Kazanan / liste» = kazanan teklifin aynı kalemlerin KDV hariç liste toplamına oranı (ortanca). Yeni ihalede fiyat oranı önerisi buradan gelir.</p>
         {res.error && <div className="mt-2"><Note tone="err">{errText(res.error, 'Sonuçlar okunamadı.')}</Note></div>}
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -34,9 +35,9 @@ export default function ResultsTab() {
               <th className={th}>Kurum</th>
               <th className={th}>Sonuç</th>
               <th className={th}>Kazanan</th>
-              <th className={`${th} text-right`}>Kazanan fiyat</th>
-              <th className={`${th} text-right`}>Bizim teklif</th>
-              <th className={`${th} text-right`}>Kazanan / liste</th>
+              <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]" label="Kazanan fiyat">Kazanan fiyat</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]" label="Bizim teklif">Bizim teklif</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={res.data?.kaynaklar} alan="items[]" label="Kazanan / liste">Kazanan / liste</InfoLabel></th>
               <th className={th}>Neden</th>
               <th className={th}>Tarih</th>
             </tr>

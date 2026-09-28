@@ -7,6 +7,7 @@ import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, tendersApi, type CalendarEvent } from './api';
 import { LeftPill } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Son teklif tarihleri, belge geçerlilik bitişleri ve teminat iadeleri tek takvimde (tarihe göre). Süresi geçmiş
  *  ama hâlâ açık olanlar da görünür. */
@@ -84,6 +85,7 @@ export default function TenderCalendar() {
         <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-canvas-muted">
           <CalendarClock aria-hidden className="h-3.5 w-3.5" />
           {items.length} tarih · bugün {fmtDay(cal.data.bugun)}
+          <SqlInfo k={cal.data.kaynaklar} alan="items[]" label="Takvim tarihleri ve kalan gün" />
         </div>
       )}
     </Panel>

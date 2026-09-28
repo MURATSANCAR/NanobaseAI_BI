@@ -1,6 +1,10 @@
 import type { Reading } from '../components/ReadingBadge';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Uç cevabındaki sorgu bilgisi (`<SqlInfo k={…kaynaklar} alan="…" />`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M33 İhale takibi ekranlarının köprü uçları: /api/v1/tenders/*. */
 
@@ -178,6 +182,8 @@ export type RiskList = { items: RiskFlag[]; kategoriler: Record<string, string>;
 export type FileRow = { id: string; tur: 'sartname' | 'ek' | 'belge'; ad: string; boyut: number; mime: string; yukleyen: string; zaman: string | null };
 
 export type TenderDetail = TenderRow & {
+  /** Sorgu bilgisi (her rakamın SQL'i ve hesabı). */
+  kaynaklar?: Kaynaklar;
   ozet: Summary;
   kalemler: Item[];
   toplamlar: Totals;
@@ -265,9 +271,9 @@ const enc = encodeURIComponent;
 export const tendersApi = {
   meta: () => send<TenderMeta>('GET', '/meta'),
   list: (p: { durum?: string; il?: string; kurumTuru?: string; q?: string; son?: string }) =>
-    send<{ items: TenderRow[]; total: number; iller: string[]; durumSayilari: Record<string, number> }>('GET', qs(p)),
+    send<{ items: TenderRow[]; total: number; iller: string[]; durumSayilari: Record<string, number> } & WithK>('GET', qs(p)),
   create: (b: TenderInput) => send<TenderDetail>('POST', '', b),
-  detail: (id: string) => send<TenderDetail>('GET', `/${enc(id)}`),
+  detail: (id: string) => send<TenderDetail & WithK>('GET', `/${enc(id)}`),
   update: (id: string, b: TenderInput) => send<TenderDetail>('PATCH', `/${enc(id)}`, b),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/${enc(id)}`),
   addFile: (id: string, file: File, tur: 'sartname' | 'ek' | 'belge') => upload<FileRow>(`/${enc(id)}/files`, file, { tur }),
@@ -283,9 +289,9 @@ export const tendersApi = {
   job: (id: string, jid: string) => send<Job>('GET', `/${enc(id)}/jobs/${enc(jid)}`),
   updateItem: (id: string, sira: number, b: { stokKodu?: string | null; onayla?: boolean; adet?: number | null; onerilenFiyat?: number | null; not?: string }) =>
     send<Item>('PATCH', `/${enc(id)}/items/${sira}`, b, 180_000),
-  catalogSearch: (id: string, q: string) => send<{ items: Candidate[] }>('GET', `/${enc(id)}/catalog-search${qs({ q })}`, undefined, 180_000),
+  catalogSearch: (id: string, q: string) => send<{ items: Candidate[] } & WithK>('GET', `/${enc(id)}/catalog-search${qs({ q })}`, undefined, 180_000),
   pricingUrl: (id: string) => `${ENGINE_BASE}${B}/${enc(id)}/pricing.xlsx`,
-  checklist: (id: string) => send<{ items: CheckItem[]; turler: Record<string, string> }>('GET', `/${enc(id)}/checklist`),
+  checklist: (id: string) => send<{ items: CheckItem[]; turler: Record<string, string> } & WithK>('GET', `/${enc(id)}/checklist`),
   updateChecklist: (id: string, items: Array<Partial<CheckItem> & { sil?: boolean }>) =>
     send<{ items: CheckItem[] }>('PATCH', `/${enc(id)}/checklist`, { items }),
   brief: (id: string) => send<{ metin: string; kaynak: 'zeki' | 'kural'; not?: string | null }>('POST', `/${enc(id)}/brief`, {}, 180_000),
@@ -295,10 +301,10 @@ export const tendersApi = {
   reject: (id: string, note: string) => send<Decision>('POST', `/${enc(id)}/decision/reject`, { note }),
   result: (id: string, b: { sonuc: string; kazanan?: string; kazananFiyat?: number | null; bizimFiyat?: number | null; neden?: string; kaynak?: string }) =>
     send<Result>('POST', `/${enc(id)}/result`, b),
-  calendar: (gun = 90) => send<{ items: CalendarEvent[]; gun: number; bugun: string }>('GET', `/calendar${qs({ gun })}`),
-  results: () => send<{ items: ResultRow[]; ozet: Array<{ kurumTuru: string; kurumTuruAdi: string; sonuc: number; kazanilan: number; kazananOranOrtanca: number | null; oranSayisi: number }> }>('GET', '/results'),
-  publicSales: (yil: number, yenile = false) => send<PublicSales>('GET', `/public-sales${qs({ yil, yenile: yenile || undefined })}`, undefined, 600_000),
-  documents: () => send<{ items: DocRow[]; turler: Record<string, string>; uyariGun: number }>('GET', '/documents'),
+  calendar: (gun = 90) => send<{ items: CalendarEvent[]; gun: number; bugun: string } & WithK>('GET', `/calendar${qs({ gun })}`),
+  results: () => send<{ items: ResultRow[]; ozet: Array<{ kurumTuru: string; kurumTuruAdi: string; sonuc: number; kazanilan: number; kazananOranOrtanca: number | null; oranSayisi: number }> } & WithK>('GET', '/results'),
+  publicSales: (yil: number, yenile = false) => send<PublicSales & WithK>('GET', `/public-sales${qs({ yil, yenile: yenile || undefined })}`, undefined, 600_000),
+  documents: () => send<{ items: DocRow[]; turler: Record<string, string>; uyariGun: number } & WithK>('GET', '/documents'),
   addDocument: (file: File | null, meta: { ad: string; tur: string; gecerlilik?: string; note?: string }) =>
     upload<DocRow>('/documents', file, { ad: meta.ad, tur: meta.tur, gecerlilik: meta.gecerlilik ?? '', note: meta.note ?? '' }),
   updateDocument: (id: string, b: { ad?: string; tur?: string; gecerlilik?: string | null; not?: string }) => send<DocRow>('PATCH', `/documents/${enc(id)}`, b),

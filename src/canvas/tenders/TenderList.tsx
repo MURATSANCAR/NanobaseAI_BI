@@ -13,6 +13,7 @@ import TenderCalendar from './TenderCalendar';
 import DocumentsVault from './DocumentsVault';
 import ResultsTab from './ResultsTab';
 import PublicSalesTab from './PublicSalesTab';
+import SqlInfo from '../components/SqlInfo';
 
 /** M33 İhale takibi: açık ilanlar, takvim, şirket belge arşivi, sonuçlar ve kamu kurumlarına satış.
  *  Sekme ve süzgeçler adres çubuğunda (?sekme=, ?durum=, ?il=, ?tur=, ?q=); bağlantı paylaşılabilir. */
@@ -93,10 +94,10 @@ function Listing({ meta, params, update }: { meta: TenderMeta; params: URLSearch
   return (
     <>
       <KpiRow>
-        <Kpi label="Açık ihale" value={String(open)} help="Yeni, inceleniyor, başvurulacak, teklif verildi" active={durum === 'acik'} onClick={() => update({ durum: null })} />
-        <Kpi label="7 gün içinde son tarih" value={String(soon)} help="Listede, başvuru öncesi aşamada" />
-        <Kpi label="Onay bekleyen karar" value={String(pending)} help="Başvuru kararı ve teklif fiyatı" />
-        <Kpi label="Kazanılan" value={String(counts.kazanildi ?? 0)} help={`Kaybedilen ${counts.kaybedildi ?? 0}`} active={durum === 'kazanildi'} onClick={() => update({ durum: 'kazanildi' })} />
+        <Kpi label="Açık ihale" value={String(open)} help="Yeni, inceleniyor, başvurulacak, teklif verildi" active={durum === 'acik'} onClick={() => update({ durum: null })} info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.acik" label="Açık ihale" />} />
+        <Kpi label="7 gün içinde son tarih" value={String(soon)} help="Listede, başvuru öncesi aşamada" info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.yediGun" label="7 gün içinde son tarih" />} />
+        <Kpi label="Onay bekleyen karar" value={String(pending)} help="Başvuru kararı ve teklif fiyatı" info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.onayBekleyen" label="Onay bekleyen karar" />} />
+        <Kpi label="Kazanılan" value={String(counts.kazanildi ?? 0)} help={`Kaybedilen ${counts.kaybedildi ?? 0}`} active={durum === 'kazanildi'} onClick={() => update({ durum: 'kazanildi' })} info={<SqlInfo k={list.data?.kaynaklar} alan="durumSayilari" label="Kazanılan ve kaybedilen" />} />
       </KpiRow>
       <Note tone="info">
         Liste yalnız portala girilen ilanları içerir. Resmî kaynaktan otomatik ilan içe alma {meta.ayarlar.watchEnabled ? 'ikinci sürümde gelecek' : 'bu ortamda kapalı'};
@@ -145,7 +146,7 @@ function Listing({ meta, params, update }: { meta: TenderMeta; params: URLSearch
           )}
           {items.map((t) => <TenderCard key={t.id} t={t} />)}
         </div>
-        {list.data && <div className="mt-2 text-right font-mono text-[11.5px] text-canvas-muted">{list.data.total} ihale</div>}
+        {list.data && <div className="mt-2 flex items-center justify-end gap-1 font-mono text-[11.5px] text-canvas-muted">{list.data.total} ihale<SqlInfo k={list.data.kaynaklar} alan="items[]" label="İlanlar: son teklif, kalan gün, yaklaşık tutar" /></div>}
       </Panel>
     </>
   );

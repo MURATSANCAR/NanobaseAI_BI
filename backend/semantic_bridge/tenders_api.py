@@ -26,8 +26,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import tenders as T
 from semantic_bridge import tenders_risk as TR
+from semantic_bridge import tenders_kaynak as K
 from semantic_bridge import tenders_sources as src
 
 log = logging.getLogger("semantic.tenders.api")
@@ -76,6 +78,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def logo():
         return src.runner(rt().settings.connection_file)
 
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        """Bağlantı dosyalarından YALNIZ veritabanı adları (sorgu bilgisinde USE satırı için)."""
+        return PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_path())
+
     def crm():
         return src.runner(crm_path())
 
@@ -101,7 +107,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def catalog(fresh: bool = False) -> T.Catalog:
         def load() -> T.Catalog:
             data = src.read_catalog(crm(), logo(), schema())
-            return T.Catalog(data["books"], data["notes"])
+            cat = T.Catalog(data["books"], data["notes"])
+            cat.sorgular = data.get("sorgular") or []  # sorgu bilgisi: kataloğu kuran çalışan SQL'ler
+            return cat
         return cache.get("catalog", CATALOG_TTL, load, fresh)
 
     def enricher(cat: T.Catalog) -> Callable[[list[str]], dict[str, dict[str, Any]]]:
@@ -109,8 +117,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             codes = [c for c in codes if c in cat.by_code]
             stock: dict[str, float] = {}
             prices: dict[str, dict[str, Any]] = {}
+            enrich.sorgular = []  # type: ignore[attr-defined] — sorgu bilgisi: stok/fiyatı okuyan çalışan SQL'ler
             try:
-                run = logo()
+                run = src.logged("logo", logo(), enrich.sorgular)  # type: ignore[attr-defined]
                 stock = src.read_stock(run, codes)
                 prices = src.read_prices(run, codes)
             except src.SourceError as e:
@@ -168,7 +177,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def tenders_list(request: Request, durum: str = "acik", il: str = "", kurumTuru: str = "", q: str = "",
                      son: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(T.list_tenders, engine, tenant, durum=durum, il=il, kurum_turu=kurumTuru, q=q, son=son)
+        out = call(T.list_tenders, engine, tenant, durum=durum, il=il, kurum_turu=kurumTuru, q=q, son=son)
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, dict(durum=durum, il=il, kurum_turu=kurumTuru, son=son)))
 
     @app.post(P, status_code=201)
     def tenders_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -193,12 +203,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/calendar")
     def tenders_calendar(request: Request, gun: int = 90) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return T.calendar(engine, tenant, max(0, gun))
+        out = T.calendar(engine, tenant, max(0, gun))
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, out))
 
     @app.get(P + "/results")
     def tenders_results(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return T.results(engine, tenant)
+        out = T.results(engine, tenant)
+        return PV.bagla(out, lambda: K.for_results(engine, tenant, out))
 
     @app.get(P + "/public-sales")
     async def tenders_public_sales(request: Request, yil: int = 0, yenile: bool = False) -> dict[str, Any]:
@@ -209,7 +221,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         channel = T.settings()["publicChannel"]
         out = await run_in_threadpool(call, cache.get, ("sales", year), SALES_TTL,
                                       lambda: src.read_public_sales(logo(), crm(), schema(), year, channel), yenile)
-        return _sales_view(out)
+        view = _sales_view(out)
+        return await run_in_threadpool(PV.bagla, view, lambda: K.for_public_sales(view, *dbs()))
 
     def _sales_view(d: dict[str, Any]) -> dict[str, Any]:
         rows = d["rows"]
@@ -229,7 +242,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/documents")
     def tenders_documents(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return T.documents(engine, tenant)
+        out = T.documents(engine, tenant)
+        return PV.bagla(out, lambda: K.for_documents(engine, tenant, out))
 
     @app.post(P + "/documents", status_code=201)
     async def tenders_document_add(request: Request, ad: str = "", tur: str = "", gecerlilik: str = "", filename: str = "",
@@ -318,7 +332,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/{tid}")
     def tenders_detail(tid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(T.detail, engine, tenant, tid)
+        out = call(T.detail, engine, tenant, tid)
+        return PV.bagla(out, lambda: K.for_detail(engine, tenant, tid, out, *dbs()))
 
     @app.patch(P + "/{tid}")
     def tenders_update(tid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -476,10 +491,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def tenders_item_update(tid: str, sira: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
 
+        reads: list[dict[str, Any]] = []
+
         def enrich(codes: list[str]) -> dict[str, dict[str, Any]]:
-            return enricher(catalog())(codes)
+            e = enricher(catalog())
+            res = e(codes)
+            reads.extend(getattr(e, "sorgular", None) or [])
+            return res
 
         out, diff = await run_in_threadpool(call, T.update_item, engine, tenant, user, tid, sira, body, enrich)
+        await run_in_threadpool(T.record_reads, engine, tid, user, reads)
         if diff:
             audit(engine, user, "update", "tender_item", f"{tid}:{sira}", out["metin"][:120], diff)
         return out
@@ -492,6 +513,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         qs = q.strip()
         if len(qs) < 2:
             return {"items": []}
+        with_src = lambda o: PV.bagla(o, lambda: K.for_catalog_search(cat, *dbs()))  # noqa: E731
         isbn = T.norm_isbn(qs)
         if isbn and isbn in cat.by_isbn:
             ids = [(i, 1.0) for i in cat.by_isbn[isbn]]
@@ -499,9 +521,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             ids = [(cat.books.index(cat.by_code[qs]), 1.0)]
         else:
             ids = cat.candidates(qs, None, 30, 0.2)
-        return {"items": [{"stokKodu": cat.books[i]["kod"], "ad": cat.books[i]["ad"], "yazar": cat.books[i]["yazar"],
-                           "yayinevi": cat.books[i]["yayinevi"], "isbn": (cat.books[i].get("isbn") or [None])[0], "benzerlik": s}
-                          for i, s in ids if cat.books[i].get("kod")]}
+        return with_src({"items": [{"stokKodu": cat.books[i]["kod"], "ad": cat.books[i]["ad"], "yazar": cat.books[i]["yazar"],
+                                    "yayinevi": cat.books[i]["yayinevi"], "isbn": (cat.books[i].get("isbn") or [None])[0],
+                                    "benzerlik": s} for i, s in ids if cat.books[i].get("kod")]})
 
     @app.get(P + "/{tid}/pricing.xlsx")
     def tenders_pricing(tid: str, request: Request) -> Response:
@@ -516,7 +538,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/{tid}/checklist")
     def tenders_checklist(tid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(T.checklist, engine, tenant, tid)
+        out = call(T.checklist, engine, tenant, tid)
+        return PV.bagla(out, lambda: K.for_checklist(engine, tenant, tid))
 
     @app.patch(P + "/{tid}/checklist")
     def tenders_checklist_update(tid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

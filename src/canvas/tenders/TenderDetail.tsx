@@ -19,6 +19,7 @@ import TenderItems from './TenderItems';
 import TenderChecklist from './TenderChecklist';
 import TenderDecision from './TenderDecision';
 import TenderRisks from './TenderRisks';
+import SqlInfo from '../components/SqlInfo';
 
 /** Tek ihale: Özet · Kalemler · Belgeler · Karar · Sonuç. Sekme adres çubuğunda (?sekme=). Uzun işler (şartname özeti,
  *  kalem eşleştirme) arka planda koşar; ekran iki saniyede bir ilerlemeyi okur. */
@@ -70,9 +71,9 @@ export default function TenderDetailPage() {
       aside={
         <div className="grid grid-cols-2 gap-2">
           <Fact label="Durum" value={<Pill tone={STATUS_TONE[d.durum]}>{d.durumAdi}</Pill>} help={d.sorumlu ? `Sorumlu: ${d.sorumlu}` : undefined} />
-          <Fact label="Uygunluk" value={<ScoreBadge value={d.uygunlukPuani} />} help="Eşleşme, stok, belge, süre" />
-          <Fact label="Son teklif" value={fmtDay(d.sonTeklifTarihi)} help={d.sonTeklifTarihi ? <LeftPill days={d.kalanGun} /> : 'Girilmedi'} />
-          <Fact label="Teklif ara toplamı" value={fmtMoney(d.toplamlar.araToplam)} help={`${d.toplamlar.fiyatli} kalem, KDV hariç`} />
+          <Fact label="Uygunluk" value={<ScoreBadge value={d.uygunlukPuani} />} help="Eşleşme, stok, belge, süre" info={<SqlInfo k={d.kaynaklar} alan="uygunlukPuani" label="Uygunluk puanı" />} />
+          <Fact label="Son teklif" value={fmtDay(d.sonTeklifTarihi)} help={d.sonTeklifTarihi ? <LeftPill days={d.kalanGun} /> : 'Girilmedi'} info={<SqlInfo k={d.kaynaklar} alan="kalanGun" label="Son teklif kalan gün" />} />
+          <Fact label="Teklif ara toplamı" value={fmtMoney(d.toplamlar.araToplam)} help={`${d.toplamlar.fiyatli} kalem, KDV hariç`} info={<SqlInfo k={d.kaynaklar} alan="toplamlar" label="Teklif ara toplamı" />} />
         </div>
       }
     >
@@ -179,25 +180,25 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
           <div className="mt-2">
             <Note tone={cls === 'evet' ? 'ok' : cls === 'hayir' ? 'err' : 'warn'}>
               Zeki AI: ilan konusu {cls === 'evet' ? 'kitap/yayın alımı' : cls === 'hayir' ? 'kitap alımı gibi görünmüyor' : 'kitap alımı olup olmadığı belirsiz'}
-              {d.kitapIlani.olasilik != null ? ` (olasılık ${fmtPct(d.kitapIlani.olasilik)})` : ''}.
+              {d.kitapIlani.olasilik != null ? <> (olasılık {fmtPct(d.kitapIlani.olasilik)}<SqlInfo k={d.kaynaklar} alan="kitapIlani" label="Kitap ilanı olasılığı" className="ml-0.5" />)</> : ''}.
             </Note>
           </div>
         )}
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <Fact label="Kurum türü" value={d.kurumTuruAdi} help={d.il ?? undefined} />
           <Fact label="Usul" value={d.usulAdi ?? '—'} help={d.kaynakNo ? `İhale no ${d.kaynakNo}` : d.kaynakAdi} />
-          <Fact label="Yaklaşık tutar" value={fmtMoney(d.yaklasikTutar)} />
+          <Fact label="Yaklaşık tutar" value={fmtMoney(d.yaklasikTutar)} info={<SqlInfo k={d.kaynaklar} alan="yaklasikTutar" label="Yaklaşık tutar" />} />
           <Fact label="İlan tarihi" value={fmtDay(d.ilanTarihi)} />
           <Fact label="Teslim süresi" value={d.teslimSuresi ?? '—'} />
-          <Fact label="Teminat" value={fmtMoney(d.teminatTutari)} help={d.teminatIadeTarihi ? `İade ${fmtDay(d.teminatIadeTarihi)}` : undefined} />
-          <Fact label="Fiyat oranı" value={fmtPct(d.fiyatOrani)} help={d.fiyatOraniKaynak ?? undefined} />
+          <Fact label="Teminat" value={fmtMoney(d.teminatTutari)} info={<SqlInfo k={d.kaynaklar} alan="teminatTutari" label="Teminat tutarı" />} help={d.teminatIadeTarihi ? `İade ${fmtDay(d.teminatIadeTarihi)}` : undefined} />
+          <Fact label="Fiyat oranı" value={fmtPct(d.fiyatOrani)} help={d.fiyatOraniKaynak ?? undefined} info={<SqlInfo k={d.kaynaklar} alan="fiyatOrani" label="Fiyat oranı" />} />
           <Fact label="Kurum yetkilisi" value={d.yetkili ?? '—'} help="Yalnız bu kayıtta tutulur" />
         </div>
         {d.notlar && <p className="mt-3 whitespace-pre-wrap break-words text-[12.5px]">{d.notlar}</p>}
       </Panel>
 
       <Panel>
-        <h2 className="text-[16px] font-extrabold tracking-tight">Uygunluk puanı</h2>
+        <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Uygunluk puanı<SqlInfo k={d.kaynaklar} alan="uygunluk" label="Uygunluk puanı parçaları" /></h2>
         <p className="text-[12px] text-canvas-muted">Ölçülemeyen parça puana girmez; ağırlıklar kalanlara göre yeniden dağılır. Karar insanındır.</p>
         <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
           <Fact label={`Eşleşen kalem (ağırlık ${w.eslesme ?? '—'})`} value={fmtPct(u?.eslesme)} />
@@ -265,7 +266,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
 
       {(s.konu || s.belgeler?.length || s.kosullar?.length) ? (
         <Panel>
-          <h2 className="text-[16px] font-extrabold tracking-tight">Şartname özeti (Zeki AI)</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Şartname özeti (Zeki AI)<SqlInfo k={d.kaynaklar} alan="ozet" label="Şartname özeti" /></h2>
           <Note tone="warn">Taslaktır: her madde şartnameden alıntılanan cümleyle gösterilir; hukuk ve ihale sorumlusu onaylamadan beyan olarak kullanılmaz.</Note>
           <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-3">
             {([['Konu', s.konu], ['Teslim süresi', s.teslimSuresi], ['Teminat', s.teminat]] as Array<[string, Quote | null | undefined]>).map(([lbl, x]) => (

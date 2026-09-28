@@ -90,6 +90,43 @@ def risk(heavy: bool) -> None:
                                                               if v["connection"] == "portal"}}, heavy)
 
 
+# ---------------------------------------------------------------- M33 ihale
+
+@block("ihale")
+def ihale(heavy: bool) -> None:
+    from semantic_bridge import tenders_kaynak as K
+
+    st, lst = http("/api/v1/tenders?durum=hepsi", 300)
+    if not ok_or_skip("ihale /", st, lst):
+        return
+    k = contract("ihale /", lst, K.NOT_RAKAM)
+    got = run_all("ihale /", k, heavy)
+    rows = got.get("ihale.ilanlar")
+    if rows is not None:
+        check("R ihale: liste sayısı = ilan sorgusunun satırı", len(rows) >= num(lst.get("total")),
+              f"sorgu {len(rows)} · uç {lst.get('total')} (arama süzgeci uçta)")
+    for path in ("/api/v1/tenders/calendar", "/api/v1/tenders/results", "/api/v1/tenders/documents"):
+        st, out = http(path, 300)
+        if ok_or_skip(f"ihale {path}", st, out):
+            k = contract(f"ihale {path}", out, K.NOT_RAKAM)
+            run_all(f"ihale {path}", k, heavy)
+    st, ps = http("/api/v1/tenders/public-sales?yenile=true", 900)
+    if ok_or_skip("ihale /public-sales", st, ps):
+        k = contract("ihale /public-sales", ps, K.NOT_RAKAM)
+        got = run_all("ihale /public-sales", k, heavy)
+        sales = next((v for sid, v in got.items() if "STLINE" in (k["sources"][sid]["sql"] or "")), None)
+        if sales is not None:
+            total = sum(num(r.get("ciro")) for r in sales)
+            check("R ihale: kamu satışı Σ ciro ≥ uçtaki toplam (parça sorgular tekrar sayılmaz)", total + 1 >= num(ps.get("toplamCiro")),
+                  f"sorgu {total:,.2f} · uç {ps.get('toplamCiro')}")
+    tid = next((t["id"] for t in lst.get("items") or [] if t.get("kalem")), None)
+    if tid:
+        st, d = http(f"/api/v1/tenders/{tid}", 300)
+        if ok_or_skip("ihale /{id}", st, d):
+            k = contract("ihale /{id}", d, K.NOT_RAKAM)
+            run_all("ihale /{id}", k, heavy)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")
