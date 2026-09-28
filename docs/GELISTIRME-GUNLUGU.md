@@ -85,6 +85,13 @@
 - **Canlı ilk okuma:** 23 harita; hataların çoğu 2020'deki eski siteden kalan kayıtlı haritalar (portfolio, post, category…). Bunlar «eski» (365 günden uzun okunmayan) ayrı sınıf: özete katılmaz, iş listesine «Search Console'dan kaldırın» (düşük) olarak düşer; güncel harita hatası yüksek, son okumaya göre arttıysa kritik.
 - **Zengin sonuç:** URL Denetimi'nin `rich_json` bulguları iş listesine ileti başına tek madde (ERROR yüksek, WARNING orta; adres başına bir kez sayılır). Bağlantı Google taraması'nı `?filtre=rich` ile açar.
 - Testler `test_seo_gsc_sitemaps.py` (6), toplam SEO testleri 33/33; tsc temiz.
+## 2026-09-28 (akşam) — Sorgu bilgisi Grup 2 tamamlandı (finans, satış ve saha, kayıtlar) — DOĞRULANAMADI, testler koordinatörde
+
+- **İstek:** «tüm hesaplama ve rakam verdiğimiz ekranlarda çalıştırdığımız sorguları info olarak her kalemde ver ve kopyalanabilir olsun ama eksiksiz hepsinde». Dal `worktree-agent-a1f226538255070e7`, main'e taşınmadı; test sunucusuna bağlanılmadı. Yerelde yalnız `py_compile` ve TypeScript denetimi (temiz).
+- **Bağlanan modüller (her biri ayrı commit):** bütçe/finans/fiyatlama eksikleri, finansal denetim + yönetim raporları/Baskı Öneri, ilk baskı (M10), risk (M47), ihale (M33), ilk dağılım (M29), dijital yayın (M36), okul tanıtım (M31), saha (M30), bayi riski (M59), müşteri ilişkileri (M38), kurumsal satış (M32), DYK kurul, telif sözleşme/dönem/haklar (M6, M54), üretim/serbest çalışan/kişiler/yazar ilişkileri (M12, M8, M7). Envanterde G2 360 kalem: 334 bağlı, 18 rakam değil, 4 rakamsız bölüm; `sorgu_bilgisi_envanter.py` «TAMAM».
+- **Neden «çalışan SQL saklanır»:** ekrandaki rakam çoğunlukla gece/gün turunun yazdığı portal tablosundan geliyor; tabloyu dolduran Logo/CRM sorgusu (firma kopyası, pencere) ancak okuma anında bilinir. Tahmin edip SQL kurmak yanlış yıl kopyasını gösterebilir; bu yüzden her modül okuma anında çalışan metni kendi meta/JSON kaydına yazıyor, ekranda köken olarak gösteriyor, cevaplardan ayıklıyor. Eski kayıtta yoksa «hazırlanamadı» yazar.
+- **Düzeltmeler:** finansal denetimde Logo firma kodu sabitti (LG_411) → yıl kopyasına göre; serbest çalışan Logo hareketleri en çok 300 satır okuyordu (sessiz tavan, toplam eksik) → bütün hareketler, okuma sınırı aşılırsa 413.
+- **Açık:** `/kisiler` kişi ayrıntısındaki basın/web anılma sayıları Grup 1 (basın-web) dilimi; `provenance.placeholders_left` `{satis:2024}` şablonunu yakalamıyor (modüllerde `is_template` ile kapatıldı, ortak dosyada düzeltilmeli). Yeni testler `check.sh`'a eklenmedi (koordinatör elle koşacak).
 
 ## 2026-09-28 (13:10) — Test sunucusuna main `eecc1eb0` → `4f100621` (M16–M59, H1–H4, DYK, M9/M19/M53); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 

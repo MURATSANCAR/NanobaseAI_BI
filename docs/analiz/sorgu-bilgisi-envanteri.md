@@ -271,7 +271,7 @@ damgası, sürüm/katalog numarası, sayfa/sıra numarası, kart yerleşimi, yaz
 
 ## Grup 2 — Finans, satış ve saha, kayıtlar
 
-Özet: kalem kalem envanter koordinatör işi kapattığında yarımdı. Finans, yönetim raporları, risk, kurul, ilk baskı, ihale, ilk dağılım, saha, bayi, müşteri, okul, kurumsal satış rotaları çıkarıldı (örnek üç modülde sorgu bilgisi bağlantısı kalem kalem denetlendi); telif, haklar, dijital yayın, üretim, serbest çalışan, kişiler, yazar ilişkileri rotaları «envanter bekliyor» (**açık kalan**).
+Özet (2026-09-28, dal `worktree-agent-a1f226538255070e7`): Grup 2'nin bütün rotaları kalem kalem çıkarıldı ve bağlandı — 360 kalem satırı; 334'ünde sorgu bilgisi var (portal ifadesi + okumada çalışan Logo/CRM metni köken olarak, Python hesabında formül), 18'i rakam değil, 4'ü rakamsız bölüm. Açık kalan 1: `/kisiler` kişi ayrıntısındaki basın/web anılma sayıları basın-web modülünün (Grup 1) parçasıdır. Test sunucusunda DOĞRULANAMADI — testler koordinatörde.
 
 | Rota | Ekran · sekme | Kalem | Uç | Fonksiyon · SQL (dosya:satır) | Kaynak | Bugün SQL |
 |---|---|---|---|---|---|---|
