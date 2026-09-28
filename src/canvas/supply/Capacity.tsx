@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { NumField } from '../budget/parts';
@@ -89,8 +90,8 @@ export default function Capacity() {
                 <tr className="border-b border-slate-100">
                   <th className={th}>Matbaa</th>
                   <th className={th}>Ay</th>
-                  <th className={`${th} text-right`}>Adet</th>
-                  <th className={`${th} text-right`}>Forma</th>
+                  <th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">Adet</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">Forma</InfoLabel></th>
                   <th className={th}>Not</th>
                   <th className={th}>Giren</th>
                   {can && <th className={th} />}

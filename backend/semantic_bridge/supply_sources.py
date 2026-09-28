@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import time
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional
@@ -79,15 +81,40 @@ def sql_text(source_id: str) -> str:
     return (SQL_DIR / f"{source_id}.sql").read_text(encoding="utf-8")
 
 
+_filled = threading.local()
+
+
 def fill(source_id: str, **values: str) -> str:
-    """SQL dosyasını doğrulanmış değerlerle doldurur; doldurulmamış yer tutucu kalırsa hata (yarım SQL çalışmaz)."""
+    """SQL dosyasını doğrulanmış değerlerle doldurur; doldurulmamış yer tutucu kalırsa hata (yarım SQL çalışmaz).
+    Son doldurulan metin iş parçacığında işaretlenir: `Recorder` hangi kaynağın hangi firma kopyasının çalıştığını
+    buradan bilir (sorgu bilgisi)."""
     text = sql_text(source_id)
     for k, v in values.items():
         text = text.replace("{" + k + "}", str(v))
     left = re.findall(r"\{[a-z_]+\}", text)
     if left:
         raise SourceError(f"{source_id}: doldurulmamış yer tutucu {', '.join(sorted(set(left)))}")
+    _filled.last = (source_id, str(values.get("firma") or ""), text)
     return text
+
+
+class Recorder:
+    """Çalıştırıcıyı sarar: `fill()` ile kurulmuş her sorgunun ÇALIŞAN metnini, satır sayısını, süresini ve anını
+    `runs[kaynak(:firma)]` altında tutar. Ekrandaki «i» bu kaydı gösterir (şablon değil)."""
+
+    def __init__(self, run: "Run"):
+        self.run = run
+        self.runs: dict[str, dict[str, Any]] = {}
+
+    def __call__(self, sql: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
+        rows = self.run(sql)
+        last = getattr(_filled, "last", None)
+        if last and last[2] == sql:
+            sid, firm_, _ = last
+            self.runs[f"{sid}:{firm_}" if firm_ else sid] = {"sql": sql, "rows": len(rows),
+                                                             "ms": int((time.monotonic() - t) * 1000), "at": time.time()}
+        return rows
 
 
 def firm(f: str) -> str:

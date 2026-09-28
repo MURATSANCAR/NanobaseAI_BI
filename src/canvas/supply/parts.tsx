@@ -6,6 +6,7 @@ import { ChevronLeft, Copy, Download } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../engine';
+import { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { AskSheet } from '../budget/parts';
@@ -215,6 +216,9 @@ export function SuggestionList({ tur, canDecide, empty }: { tur: 'yuk' | 'kagit'
   if (!items.length) return <Note tone="info">{empty}</Note>;
   return (
     <div className="flex flex-col gap-2">
+      <div className="px-1 text-[11px] font-semibold text-canvas-muted">
+        <InfoLabel k={q.data?.kaynaklar} alan="items[]" label="Öneri rakamları">Öneri rakamlarının kaynağı</InfoLabel>
+      </div>
       {items.map((s) => (
         <article key={s.id} className="rounded-2xl border border-slate-100 bg-white/80 p-3">
           <div className="flex flex-wrap items-start justify-between gap-2">

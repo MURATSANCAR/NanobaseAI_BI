@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtKg, fmtMoney, fmtPct, fmtUnit, supplyApi } from './api';
@@ -30,6 +31,7 @@ export default function SupplyHome() {
           value={o ? fmtInt(o.yuk.acikIs) : '—'}
           help={o ? `${fmtInt(o.yuk.acikAdet)} adet · planı geçmiş ve tarihsiz dahil` : 'Baskıdan henüz çıkmamış'}
           onClick={() => nav('/tedarik/yuk')}
+          info={<SqlInfo k={o?.kaynaklar} alan="yuk" label="Açık baskı işi ve adet" />}
         />
         <Kpi
           label="Eşik aşımı"
@@ -37,12 +39,14 @@ export default function SupplyHome() {
           help={o ? `${fmtInt(o.cakismaAsim)} tanesi kapasite aşımı; kalanı referansın üstü` : 'Ay × matbaa'}
           active={!!o && o.cakisma > 0}
           onClick={() => nav('/tedarik/yuk?sekme=cakisma')}
+          info={<SqlInfo k={o?.kaynaklar} alan="cakisma" label="Eşik aşımı" />}
         />
         <Kpi
           label="Bu ay kağıt"
           value={o ? fmtKg(o.kagit.buAyKg) : '—'}
           help={o ? `${o.kagit.olcu === 'brut' ? 'Brüt (fire dahil)' : 'Net'}; ${fmtInt(o.kagit.kapsam.bos)} kartta kağıt bilgisi yok` : 'Açık kartlardan'}
           onClick={() => nav('/tedarik/kagit')}
+          info={<SqlInfo k={o?.kaynaklar} alan="kagit" label="Bu ay kağıt" />}
         />
         {me?.canDebt && o?.odeme30 ? (
           <Kpi
@@ -50,9 +54,11 @@ export default function SupplyHome() {
             value={fmtMoney(o.odeme30.toplam)}
             help={`Matbaa ve kağıtçı · vadesi geçmiş ${fmtMoney(o.odeme30.vadesiGecmis)} (FIFO yaklaşımı)`}
             onClick={() => nav('/tedarik/tedarikciler?sekme=odeme')}
+            info={<SqlInfo k={o.kaynaklar} alan="odeme30" label="30 gün ödeme" />}
           />
         ) : (
-          <Kpi label="Bekleyen öneri" value={o ? fmtInt(o.oneri) : '—'} help="Yük dengeleme ve kağıt alımı" onClick={() => nav('/tedarik/yuk')} />
+          <Kpi label="Bekleyen öneri" value={o ? fmtInt(o.oneri) : '—'} help="Yük dengeleme ve kağıt alımı" onClick={() => nav('/tedarik/yuk')}
+            info={<SqlInfo k={o?.kaynaklar} alan="oneri" label="Bekleyen öneri" />} />
         )}
       </KpiRow>
 
@@ -60,7 +66,7 @@ export default function SupplyHome() {
       {o && (
         <Panel>
           <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h2 className="text-[13px] font-extrabold">Baskı yükü — ay × matbaa (adet)</h2>
+            <h2 className="text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="yuk.satirlar[].hucreler" label="Baskı yükü ve toplam">Baskı yükü — ay × matbaa (adet)</InfoLabel></h2>
             <Link to="/tedarik/yuk" className="text-[12px] font-bold text-canvas-violet hover:underline">
               Ayrıntı ve öneriler
             </Link>
@@ -94,7 +100,7 @@ export default function SupplyHome() {
                   </tr>
                 ))}
                 <tr className="bg-slate-50/80">
-                  <td className={`${td} font-extrabold`}>Toplam</td>
+                  <td className={`${td} font-extrabold`}><InfoLabel k={o.kaynaklar} alan="yuk.toplam" label="Ay toplamı ve geçen yıl">Toplam</InfoLabel></td>
                   {o.yuk.aylar.map((m) => (
                     <td key={m.key} className={`${td} text-right font-mono font-bold tabular-nums`}>
                       {fmtInt(o.yuk.toplam[m.key]?.adet)}
@@ -116,7 +122,7 @@ export default function SupplyHome() {
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         {o && (
           <Panel>
-            <h2 className="px-1 text-[13px] font-extrabold">Kartı açılmamış baskı ihtiyacı</h2>
+            <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="plan">Kartı açılmamış baskı ihtiyacı</InfoLabel></h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
               Baskı önerisinde {o.plan.seviyeler.join(' ve ')} olup açık üretim kartı olmayan kitaplar ile ilk baskı kararı onaylanıp kartı açılmamış yeni kitaplar. Aya ve matbaaya henüz dağıtılmamış yüktür.
             </p>
@@ -140,7 +146,7 @@ export default function SupplyHome() {
         )}
         {inc.data && (
           <Panel>
-            <h2 className="px-1 text-[13px] font-extrabold">Depo girişi — gerçekleşen ve planlanan (adet)</h2>
+            <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={inc.data.kaynaklar} alan="gecmis" label="Depo girişi">Depo girişi — gerçekleşen ve planlanan (adet)</InfoLabel></h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
               Geçmiş aylar Logo'da üretimden giriş; gelecek aylar açık kartların planlanan depo girişi.{' '}
               {inc.data.depo?.kapasiteAdet
@@ -170,7 +176,7 @@ export default function SupplyHome() {
         )}
         {me?.canDebt && o?.faturasiz && (
           <Panel>
-            <h2 className="px-1 text-[13px] font-extrabold">Fatura eşleşmesi</h2>
+            <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="faturasiz">Fatura eşleşmesi</InfoLabel></h2>
             <p className="mt-1 px-1 text-[12.5px] leading-snug">
               Depoya girmiş ama baskı faturası görünmeyen <b>{fmtInt(o.faturasiz.kart)}</b> kart; hiçbir karta bağlanmayan{' '}
               <b>{fmtInt(o.faturasiz.fatura)}</b> baskı faturası satırı.{' '}
@@ -183,7 +189,7 @@ export default function SupplyHome() {
         {me?.canCost && o?.maliyet && (
           <Panel>
             <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-              <h2 className="text-[13px] font-extrabold">Adet başı baskı bedeli</h2>
+              <h2 className="text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="maliyet">Adet başı baskı bedeli</InfoLabel></h2>
               <Link to="/tedarik/maliyet" className="text-[12px] font-bold text-canvas-violet hover:underline">
                 Kırılımlar
               </Link>

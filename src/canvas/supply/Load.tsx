@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Mail } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, btnGhost, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -87,8 +88,9 @@ export default function Load() {
               {t.cakismalar.map((c) => (
                 <article key={`${c.matbaa}-${c.ay}`} className="rounded-2xl border border-slate-100 bg-white/80 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-[14px] font-extrabold">
+                    <h3 className="flex items-center gap-1 text-[14px] font-extrabold">
                       {c.matbaa} · {c.ayAdi}
+                      <SqlInfo k={t.kaynaklar} alan="cakismalar" label={`${c.matbaa} · ${c.ayAdi} yük ve eşik`} />
                     </h3>
                     <StatePill state={c.durum} />
                   </div>
@@ -121,16 +123,19 @@ export default function Load() {
       {t && tab === 'plan' && (
         <Panel>
           {t.plan.hata && <Note tone="warn">{t.plan.hata}</Note>}
-          <h2 className="px-1 text-[13px] font-extrabold">Baskı önerisi: {t.plan.seviyeler.join(', ')} — açık kartı yok</h2>
+          <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+            Baskı önerisi: {t.plan.seviyeler.join(', ')} — açık kartı yok
+            <SqlInfo k={t.kaynaklar} alan="plan" label="Baskı önerisi ve ilk baskı girdisi" />
+          </h2>
           <div className="mt-2">
             <TableWrap>
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className={th}>Kitap</th>
                   <th className={th}>Öneri</th>
-                  <th className={`${th} text-right`}>Tükenme (ay)</th>
-                  <th className={`${th} text-right`}>Stok</th>
-                  <th className={`${th} text-right`}>Önerilen adet</th>
+                  <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Tükenme (ay)</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Stok</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Önerilen adet</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -166,7 +171,7 @@ export default function Load() {
                   <tr className="border-b border-slate-100">
                     <th className={th}>Kitap</th>
                     <th className={th}>Yayın ayı</th>
-                    <th className={`${th} text-right`}>Adet</th>
+                    <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.ilkBaski">Adet</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -189,6 +194,7 @@ export default function Load() {
       {t && tab === 'degisiklik' && (
         <Panel>
           <p className="px-1 text-[12.5px]">
+            <SqlInfo k={t.kaynaklar} alan="degisiklikler" label="Plan değişiklikleri" className="mr-1" />
             Son 12 ayda CRM'de {fmtInt(t.degisiklikler.toplam)} baskı tarihi değişikliği;{' '}
             {fmtInt(Object.keys(t.degisiklikler.acikKartDegisiklik).length)} açık kartta en az bir değişiklik var
             {t.degisiklikler.kartsiz ? `, ${fmtInt(t.degisiklikler.kartsiz)} kayıt karta bağlı değil` : ''}.
@@ -219,6 +225,9 @@ export default function Load() {
       >
         {open && (
           <div className="flex flex-col">
+            <div className="flex items-center gap-1 pb-1 text-[11px] font-semibold text-canvas-muted">
+              <InfoLabel k={t?.kaynaklar} alan="satirlar[].hucreler" label="Hücre: iş, adet, forma ve birim maliyet">Rakamların sorgusu</InfoLabel>
+            </div>
             {open.cell.cards.map((c) => (
               <div key={c.id} className="border-b border-slate-100 py-2 last:border-0">
                 <CardLine c={c} />
@@ -265,7 +274,7 @@ function HeatTable({ t, onOpen }: { t: LoadTable; onOpen: (printer: string, mont
       <TableWrap>
         <thead>
           <tr className="border-b border-slate-100">
-            <th className={th}>Matbaa</th>
+            <th className={th}><InfoLabel k={t.kaynaklar} alan="satirlar" label="Baskı yükü (hücreler)">Matbaa</InfoLabel></th>
             {t.aylar.map((m) => (
               <th key={m.key} className={`${th} text-right`}>
                 {m.label}
@@ -278,8 +287,9 @@ function HeatTable({ t, onOpen }: { t: LoadTable; onOpen: (printer: string, mont
             <tr key={r.matbaa} className="border-b border-slate-50 last:border-0">
               <td className={td}>
                 <div className="font-bold">{r.matbaa}</div>
-                <div className="text-[10.5px] text-canvas-muted">
+                <div className="flex items-center gap-1 text-[10.5px] text-canvas-muted">
                   {r.kapasiteVar ? 'kapasite girili' : r.referans ? `referans ${fmtInt(r.referans.adet)} adet/ay` : 'eşik ölçülemedi'}
+                  {r.referans && <SqlInfo k={t.kaynaklar} alan="satirlar[].referans" label={`${r.matbaa} referans yükü`} />}
                 </div>
               </td>
               {t.aylar.map((m) => {
@@ -305,7 +315,7 @@ function HeatTable({ t, onOpen }: { t: LoadTable; onOpen: (printer: string, mont
             </tr>
           ))}
           <tr className="bg-slate-50/80">
-            <td className={`${td} font-extrabold`}>Toplam</td>
+            <td className={`${td} font-extrabold`}><InfoLabel k={t.kaynaklar} alan="toplam" label="Ay toplamı">Toplam</InfoLabel></td>
             {t.aylar.map((m) => (
               <td key={m.key} className={`${td} text-right font-mono font-bold tabular-nums`}>
                 {fmtInt(t.toplam[m.key]?.adet)}
@@ -317,6 +327,7 @@ function HeatTable({ t, onOpen }: { t: LoadTable; onOpen: (printer: string, mont
       </TableWrap>
       <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
         {t.referansNotu} Ufuk dışında kalan (daha ileri ayda planlı) {fmtInt(t.ufukDisi)} kart tabloda yok.
+        <SqlInfo k={t.kaynaklar} alan="ufukDisi" label="Ufuk dışı kart" className="ml-0.5" />
       </p>
     </Panel>
   );

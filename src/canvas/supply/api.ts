@@ -1,4 +1,5 @@
 import { ENGINE_BASE, send } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M52 Tedarik ve baskı köprü istemcisi (`/api/v1/supply/*`). Kartlar M12'den, kağıt alanları CRM'den, tedarikçi borcu
  *  ve baskı faturası Logo'dan (yalnız okuma). Borç ve maliyet alanları yetkisi olmayana boş gelir. */
@@ -74,6 +75,8 @@ export type LoadTable = {
   degisiklikler: { toplam: number; sebepler: Array<{ sebep: string; adet: number }>; acikKartDegisiklik: Record<string, number>; kartsiz: number };
   uyarilar: string[];
   asOf: string;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 
 export type LogoMeta = { firma: string; yil: number; veriSonu: string | null; yaslandirmaTarihi: string } | null;
@@ -92,6 +95,8 @@ export type Overview = {
   odeme30?: { toplam: number; satir: number; vadesiGecmis: number; fifoNotu: string };
   faturasiz?: { kart: number; fatura: number };
   maliyet?: { aylar: Month[]; seri: Record<string, CostPoint>; egilim: number | null; sonDonem: number | null; oncekiDonem: number | null };
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 
 export type Meta = {
@@ -118,6 +123,8 @@ export type PriceItem = { kod: string; ad: string; birim: string; miktar: number
 export type Paper = {
   aylar: Month[]; satirlar: PaperRow[]; cinsler: Array<{ cins: string | null; cinsAdi: string; gramaj: number | null; kg: number; aylar: Record<string, number> }>;
   olcu: 'brut' | 'net'; kapsam: { dolu: number; bos: number }; kagitsizKartlar: CardBrief[]; toplamKg: number; fiyat: PriceItem[] | null; alici: string; uyarilar: string[];
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 
 export type Buckets = { k_1_30: number; k_31_60: number; k_61_90: number; k_90p: number };
@@ -132,6 +139,8 @@ export type Suppliers = {
   items: SupplierRow[]; eslesme: Record<string, MapEntry>; eslesmeyen: Array<MapEntry & { matbaa: string }>;
   ozelKodlar: Array<{ ozelKod: string | null; cari: number }>; ayar: { matbaa: string[]; kagit: string[]; onEk: string };
   logo: LogoMeta; fifoNotu: string; uyarilar: string[]; borcGorunur: boolean; maliyetGorunur: boolean;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 export type OpenLine = { vade: string; tutar: number; acik: number; gun: number; faturaNo: string | null; faturaTarihi: string | null };
 export type Aging = Buckets & Ahead & { bakiye: number; gelmemis: number; vadesiGecmis: number; plansiz: number; katalogVadesiGecmis: number; acikSatir: OpenLine[] };
@@ -140,11 +149,15 @@ export type SupplierDetail = {
   yaslandirma: Aging | null; alis: { buYil: number; son12: number; fatura12: number; aylik: Record<string, number> } | null;
   faturalar: Array<{ tarih: string | null; no: string | null; tur: number; tutar: number; kdv: number; aciklama: string | null }> | null;
   acikIsler: CardBrief[]; bitenIsler: CardBrief[]; karne: Karne[]; logo: LogoMeta; fifoNotu: string; borcGorunur: boolean; maliyetGorunur: boolean;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 export type Payments = {
   gun: number; satirlar: Array<OpenLine & { kod: string; unvan: string; tur: string }>; toplam: number; haftalik: Array<{ hafta: string; tutar: number }>;
   vadesiGecmis: Array<{ kod: string; unvan: string; tur: string; vadesiGecmis: number; plansiz: number; kovalar: Buckets }>; vadesiGecmisToplam: number;
   logo: LogoMeta; fifoNotu: string;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 export type Link = { id: string; firma: string; satirRef: string; faturaNo: string | null; kartId: string | null; yontem: string; yontemAdi: string; olasilik: number | null; adaylar: Candidate[]; durum: 'oneri' | 'onayli' | 'ret'; durumAdi: string };
 export type Candidate = { kartId: string; kitap: string | null; baskiNo: number | null; stokKodu: string | null; matbaa: string | null; adet: number | null; depo: string | null; puan: number };
@@ -154,12 +167,16 @@ export type Unbilled = {
   aylik: Array<{ matbaa: string; ay: string; ayAdi: string; depoAdet: number; faturaAdet: number; fark: number }>;
   bekleme: { gun: number; kaynak: 'veri' | 'ayar'; ortanca: number | null; ornek: number };
   logo: LogoMeta; uyarilar: string[]; tutarGorunur: boolean;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 export type CostPoint = { agirlikliBirim: number; ortancaBirim: number; sayfa100: number | null; is: number; adet: number; tutar: number };
 export type CostTrend = {
   kirilim: string; aylar: Month[];
   gruplar: Array<{ grup: string; is: number; adet: number; agirlikliBirim: number | null; sonDonem: number | null; oncekiDonem: number | null; egilim: number | null; aylar: Record<string, CostPoint> }>;
   kagit: PriceItem[]; uyarilar: string[];
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 export type Suggestion = {
   id: string; tur: 'yuk' | 'kagit' | 'eskalasyon' | 'sartname'; turAdi: string; kartId: string | null; baslik: string | null;
@@ -170,6 +187,8 @@ export type Incoming = {
   plan: Array<{ ay: string; ayAdi: string; adet: number; is: number }>;
   planiGecmis: { adet: number; is: number };
   depo: { kapasiteAdet: number | null; stokAdet: number | null; kaynak: string } | null;
+  /** Sorgu bilgisi: her rakamın çalışan SQL'i ve hesabı (köprü `supply_kaynak.py`). */
+  kaynaklar?: Kaynaklar;
 };
 
 export const supplyApi = {
@@ -183,10 +202,10 @@ export const supplyApi = {
   unbilled: () => send<Unbilled>('GET', `${B}/unbilled`),
   cost: (kirilim: string) => send<CostTrend>('GET', `${B}/cost-trend?kirilim=${enc(kirilim)}`),
   incoming: (aylar = 6) => send<Incoming>('GET', `${B}/incoming?aylar=${aylar}`),
-  suggestions: (tur = '', durum = '') => send<{ items: Suggestion[] }>('GET', `${B}/suggestions?tur=${enc(tur)}&durum=${enc(durum)}`),
+  suggestions: (tur = '', durum = '') => send<{ items: Suggestion[]; kaynaklar?: Kaynaklar }>('GET', `${B}/suggestions?tur=${enc(tur)}&durum=${enc(durum)}`),
   decide: (id: string, karar: 'kabul' | 'ret', not?: string) => send<Suggestion>('POST', `${B}/suggestions/${enc(id)}/decision`, { karar, not }),
   draft: (tur: 'sartname' | 'eskalasyon', kartId: string) => send<Suggestion>('POST', `${B}/drafts`, { tur, kartId }),
-  capacity: () => send<{ items: Capacity[]; printers: string[]; referansNotu: string }>('GET', `${B}/capacity`),
+  capacity: () => send<{ items: Capacity[]; printers: string[]; referansNotu: string; kaynaklar?: Kaynaklar }>('GET', `${B}/capacity`),
   saveCapacity: (b: { matbaa: string; ay?: string | null; kapasiteAdet?: string; kapasiteForma?: string; not?: string }) => send<Capacity>('PUT', `${B}/capacity`, b),
   deleteCapacity: (id: string) => send<{ ok: boolean }>('DELETE', `${B}/capacity/${enc(id)}`),
   supplierMap: () => send<{ items: Record<string, MapEntry>; printers: string[] }>('GET', `${B}/supplier-map`),

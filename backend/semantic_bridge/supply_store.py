@@ -225,9 +225,14 @@ def _capacity(r: dict[str, Any]) -> dict[str, Any]:
             "byName": r.get("created_display") or r["created_by"], "at": _iso(r.get("created_at"))}
 
 
+def capacity_stmt(tenant: str) -> Any:
+    """Kapasite kayıtları okuması (uç ve sorgu bilgisi aynı ifade)."""
+    return (sa.select(CAPACITY).where(CAPACITY.c.tenant_id == tenant, CAPACITY.c.deleted_at.is_(None))
+            .order_by(CAPACITY.c.created_at.desc()))
+
+
 def list_capacity(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
-    q = (sa.select(CAPACITY).where(CAPACITY.c.tenant_id == tenant, CAPACITY.c.deleted_at.is_(None))
-         .order_by(CAPACITY.c.created_at.desc()))
+    q = capacity_stmt(tenant)
     with engine.connect() as c:
         return [_capacity(dict(r)) for r in c.execute(q).mappings()]
 
@@ -307,14 +312,18 @@ def add_draft(engine: sa.engine.Engine, tenant: str, user: str, *, tur: str, kar
     return _suggestion(row)
 
 
-def list_suggestions(engine: sa.engine.Engine, tenant: str, tur: str = "", durum: str = "") -> list[dict[str, Any]]:
+def suggestions_stmt(tenant: str, tur: str = "", durum: str = "") -> Any:
     q = sa.select(SUGGESTIONS).where(SUGGESTIONS.c.tenant_id == tenant)
     if tur:
         q = q.where(SUGGESTIONS.c.tur == tur)
     if durum:
         q = q.where(SUGGESTIONS.c.durum == durum)
+    return q.order_by(SUGGESTIONS.c.created_at.desc())
+
+
+def list_suggestions(engine: sa.engine.Engine, tenant: str, tur: str = "", durum: str = "") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        return [_suggestion(dict(r)) for r in c.execute(q.order_by(SUGGESTIONS.c.created_at.desc())).mappings()]
+        return [_suggestion(dict(r)) for r in c.execute(suggestions_stmt(tenant, tur, durum)).mappings()]
 
 
 def get_suggestion(engine: sa.engine.Engine, tenant: str, record: str) -> dict[str, Any]:
@@ -362,9 +371,13 @@ def _link(r: dict[str, Any]) -> dict[str, Any]:
             "onayTarihi": _iso(r.get("onay_tarihi")), "olusturan": r["created_by"], "olusturma": _iso(r.get("created_at"))}
 
 
+def links_stmt(tenant: str) -> Any:
+    return (sa.select(INVOICE_LINKS).where(INVOICE_LINKS.c.tenant_id == tenant, INVOICE_LINKS.c.deleted_at.is_(None))
+            .order_by(INVOICE_LINKS.c.created_at.desc()))
+
+
 def list_links(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
-    q = (sa.select(INVOICE_LINKS).where(INVOICE_LINKS.c.tenant_id == tenant, INVOICE_LINKS.c.deleted_at.is_(None))
-         .order_by(INVOICE_LINKS.c.created_at.desc()))
+    q = links_stmt(tenant)
     with engine.connect() as c:
         return [_link(dict(r)) for r in c.execute(q).mappings()]
 
@@ -439,10 +452,14 @@ def decide_link(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str
 # ------------------------------------------------------------------ matbaa ↔ cari eşlemesi
 
 
+def supplier_map_stmt(tenant: str) -> Any:
+    return (sa.select(SUPPLIER_MAP).where(SUPPLIER_MAP.c.tenant_id == tenant, SUPPLIER_MAP.c.deleted_at.is_(None))
+            .order_by(SUPPLIER_MAP.c.created_at.desc()))
+
+
 def list_supplier_map(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
     """CRM matbaa adı → geçerli (en yeni) elle eşleme."""
-    q = (sa.select(SUPPLIER_MAP).where(SUPPLIER_MAP.c.tenant_id == tenant, SUPPLIER_MAP.c.deleted_at.is_(None))
-         .order_by(SUPPLIER_MAP.c.created_at.desc()))
+    q = supplier_map_stmt(tenant)
     out: dict[str, dict[str, Any]] = {}
     with engine.connect() as c:
         for r in c.execute(q).mappings():

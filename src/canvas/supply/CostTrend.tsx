@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtInt, fmtPct, fmtUnit, supplyApi } from './api';
@@ -67,11 +68,11 @@ export default function CostTrend() {
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className={th}>Grup</th>
-                  <th className={`${th} text-right`}>İş</th>
-                  <th className={`${th} text-right`}>Ağırlıklı birim</th>
-                  <th className={`${th} text-right`}>Önceki yarı</th>
-                  <th className={`${th} text-right`}>Son yarı</th>
-                  <th className={`${th} text-right`}>Değişim</th>
+                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">İş</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Ağırlıklı birim</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Önceki yarı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Son yarı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Değişim</InfoLabel></th>
                   {months.map((m) => (
                     <th key={m.key} className={`${th} text-right`}>
                       {m.label}
@@ -116,7 +117,7 @@ export default function CostTrend() {
       )}
       {c && c.kagit.length > 0 && (
         <Panel>
-          <h2 className="px-1 text-[13px] font-extrabold">Kağıt alış fiyatı (kağıtçı carileri)</h2>
+          <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={c.kaynaklar} alan="kagit">Kağıt alış fiyatı (kağıtçı carileri)</InfoLabel></h2>
           <div className="mt-2">
             <TableWrap>
               <thead>

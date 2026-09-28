@@ -18,7 +18,9 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import supply as S
+from semantic_bridge import supply_kaynak as K
 from semantic_bridge import supply_sources as src
 from semantic_bridge import supply_store as store
 from semantic_bridge import supply_suggest as G
@@ -120,6 +122,16 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
                                     "message": "CRM ya da Logo şu anda yanıt vermiyor; birazdan tekrar deneyin."}) from e
             raise HTTPException(status_code=502, detail={"code": "SUPPLY", "message": "Tedarik verisi okunamadı."}) from e
 
+    def kdeps() -> dict[str, Any]:
+        """Sorgu bilgisi bağlamı: yalnız veritabanı adları (bağlantı bilgisi okunmaz), üretim modülü, rapor ve kararlar."""
+        return {"logo_db": PV.connection_database(deps["logo_file"]() or None),
+                "crm_db": PV.connection_database(deps["crm_file"]() or None), "production": production,
+                "report_data": deps.get("report_data"), "decisions": deps.get("decisions")}
+
+    def snap_of(engine: Any, tenant: str) -> dict[str, Any]:
+        """Uçun az önce kullandığı okuma (5 dk bellekte; yeniden okuma yapmaz)."""
+        return svc.snap(engine, tenant, False)
+
     def printers() -> list[str]:
         try:
             snap = production.source.snapshot(False)
@@ -155,22 +167,27 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     @app.get(f"{P}/overview")
     def supply_overview(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.overview, engine, tenant, debt=allowed(user, "ozellik:tedarik.borc"),
-                    cost=allowed(user, "ozellik:tedarik.maliyet"), fresh=fresh())
+        out = call(svc.overview, engine, tenant, debt=allowed(user, "ozellik:tedarik.borc"),
+                   cost=allowed(user, "ozellik:tedarik.maliyet"), fresh=fresh())
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     @app.get(f"{P}/sources")
     def supply_sources(request: Request) -> dict[str, Any]:
-        ctx(request)
-        return {"sources": [{"id": sid, "connection": conn, "title": t, "description": d, "sql": src.sql_text(sid)}
-                            for sid, conn, t, d in src.SOURCES],
-                "notes": [S.FIFO_NOTE, S.REFERENCE_NOTE]}
+        """Son okumada ÇALIŞAN sorgular (firma kopyası, CRM şeması, pencere yerinde; satır ve süreyle). Eskiden şablon
+        dosya dönüyordu (`{firma}`, `{crm}` …) — kopyala-çalıştır olmuyordu. Okunmamış kaynakta metin yok."""
+        engine, tenant, _, _ = ctx(request)
+        snap = call(svc.snap, engine, tenant, False)
+        k = K.for_sources(engine, tenant, snap, kdeps())
+        return {"sources": list(k.sources.values()), "notes": [S.FIFO_NOTE, S.REFERENCE_NOTE], "kaynaklar": k.to_dict()}
 
     # ------------------------------------------------------------------ yük ve çakışma
 
     @app.get(f"{P}/load")
     def supply_load(request: Request, aylar: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.load, engine, tenant, aylar or None, fresh(), allowed(user, "ozellik:tedarik.maliyet"))
+        cost = allowed(user, "ozellik:tedarik.maliyet")
+        out = call(svc.load, engine, tenant, aylar or None, fresh(), cost)
+        return PV.bagla(out, lambda: K.for_load(engine, tenant, snap_of(engine, tenant), out, kdeps(), cost=cost))
 
     @app.get(f"{P}/conflicts")
     def supply_conflicts(request: Request, aylar: int = 0) -> dict[str, Any]:
@@ -182,7 +199,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     def supply_incoming(request: Request, aylar: int = 6) -> dict[str, Any]:
         """Gelecek depo girişleri (M43 depo ve stok da okur; sayfa anahtarını RULES satırına ekler)."""
         engine, tenant, _, _ = ctx(request)
-        return call(svc.incoming, engine, tenant, max(1, min(24, int(aylar or 6))), fresh())
+        out = call(svc.incoming, engine, tenant, max(1, min(24, int(aylar or 6))), fresh())
+        return PV.bagla(out, lambda: K.for_incoming(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     # ------------------------------------------------------------------ kağıt
 
@@ -192,7 +210,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         out = call(svc.paper, engine, tenant, aylar or None, fresh())
         if not allowed(user, "ozellik:tedarik.maliyet"):
             out["fiyat"] = None
-        return out
+        return PV.bagla(out, lambda: K.for_paper(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     # ------------------------------------------------------------------ tedarikçiler, ödeme, fatura
 
@@ -208,13 +226,14 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             if not cost:
                 it["karne"] = [strip_karne(k) for k in it["karne"]]
         out["borcGorunur"], out["maliyetGorunur"] = debt, cost
-        return out
+        return PV.bagla(out, lambda: K.for_suppliers(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     @app.get(f"{P}/suppliers/{{cari}}")
     def supply_supplier(cari: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         # Kod Logo'daki tedarikçi listesinde birebir aranır; listede yoksa 404 (SQL'e yalnız bulunan kod girer).
         out = call(svc.supplier, engine, tenant, str(cari or "").strip(), fresh())
+        runs = out.pop("_runs", {}) or {}
         debt, cost = allowed(user, "ozellik:tedarik.borc"), allowed(user, "ozellik:tedarik.maliyet")
         if not debt:
             out["yaslandirma"], out["alis"], out["faturalar"] = None, None, None
@@ -223,7 +242,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             out["bitenIsler"] = [strip_cost(c) for c in out["bitenIsler"]]
             out["karne"] = [strip_karne(k) for k in out["karne"]]
         out["borcGorunur"], out["maliyetGorunur"] = debt, cost
-        return out
+        return PV.bagla(out, lambda: K.for_supplier(engine, tenant, snap_of(engine, tenant), out, kdeps(), runs))
 
     @app.get(f"{P}/payments")
     def supply_payments(request: Request, gun: int = 30, tur: str = "") -> dict[str, Any]:
@@ -231,7 +250,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         need(user, "ozellik:tedarik.borc", "Tedarikçi borç ve ödeme bilgisi")
         if tur not in ("", "matbaa", "kagit", "diger"):
             raise HTTPException(status_code=400, detail={"code": "SUPPLY", "message": "Tür matbaa, kagit ya da diger olmalı."})
-        return call(svc.payments, engine, tenant, max(1, min(366, int(gun or 30))), tur, fresh())
+        out = call(svc.payments, engine, tenant, max(1, min(366, int(gun or 30))), tur, fresh())
+        return PV.bagla(out, lambda: K.for_payments(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     @app.get(f"{P}/unbilled")
     def supply_unbilled(request: Request) -> dict[str, Any]:
@@ -243,13 +263,14 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             out["tutarGorunur"] = False
         else:
             out["tutarGorunur"] = True
-        return out
+        return PV.bagla(out, lambda: K.for_unbilled(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     @app.get(f"{P}/cost-trend")
     def supply_cost_trend(request: Request, kirilim: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         need(user, "ozellik:tedarik.maliyet", "Birim baskı maliyeti")
-        return call(svc.cost, engine, tenant, kirilim, fresh())
+        out = call(svc.cost, engine, tenant, kirilim, fresh())
+        return PV.bagla(out, lambda: K.for_cost(engine, tenant, snap_of(engine, tenant), out, kdeps()))
 
     # ------------------------------------------------------------------ öneriler ve taslaklar
 
@@ -260,7 +281,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             raise HTTPException(status_code=400, detail={"code": "SUPPLY", "message": "Öneri türü geçersiz."})
         if durum and durum not in store.STATES:
             raise HTTPException(status_code=400, detail={"code": "SUPPLY", "message": "Durum geçersiz."})
-        return {"items": store.list_suggestions(engine, tenant, tur, durum)}
+        out = {"items": store.list_suggestions(engine, tenant, tur, durum)}
+        return PV.bagla(out, lambda: K.for_suggestions(engine, tenant, out, tur=tur, durum=durum))
 
     @app.post(f"{P}/suggestions/{{sid}}/decision")
     def supply_suggestion_decision(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -307,7 +329,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
     @app.get(f"{P}/capacity")
     def supply_capacity(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": store.list_capacity(engine, tenant), "printers": printers(), "referansNotu": S.REFERENCE_NOTE}
+        out = {"items": store.list_capacity(engine, tenant), "printers": printers(), "referansNotu": S.REFERENCE_NOTE}
+        return PV.bagla(out, lambda: K.for_capacity(engine, tenant, out))
 
     @app.put(f"{P}/capacity")
     def supply_capacity_put(body: dict[str, Any], request: Request) -> dict[str, Any]:

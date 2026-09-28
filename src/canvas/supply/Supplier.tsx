@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Mail } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, btnGhost, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { KIND_LABEL, fmtDay, fmtInt, fmtMoney, fmtPct, fmtUnit, supplyApi } from './api';
@@ -32,7 +33,7 @@ export default function Supplier() {
           )}
           {d.borcGorunur && ag ? (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold">Borç ve ödeme (FIFO yaklaşımı)</h2>
+              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="yaslandirma">Borç ve ödeme (FIFO yaklaşımı)</InfoLabel></h2>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Box label="Bakiye" value={fmtMoney(ag.bakiye)} />
                 <Box label="Vadesi geçmiş" value={fmtMoney(ag.vadesiGecmis)} warn={ag.vadesiGecmis > 0} />
@@ -84,7 +85,7 @@ export default function Supplier() {
           )}
 
           <Panel>
-            <h2 className="px-1 text-[13px] font-extrabold">Açık işler ({fmtInt(d.acikIsler.length)})</h2>
+            <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="acikIsler" label="Açık işler">{`Açık işler (${fmtInt(d.acikIsler.length)})`}</InfoLabel></h2>
             <div className="mt-2">
               {d.acikIsler.length === 0 ? (
                 <Note tone="info">Bu matbaada baskıdan çıkmamış iş yok.</Note>
@@ -115,7 +116,7 @@ export default function Supplier() {
 
           {d.karne.length > 0 && (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold">Karne (Üretim yönetimi)</h2>
+              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="karne">Karne (Üretim yönetimi)</InfoLabel></h2>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {d.karne.map((k) => (
                   <div key={k.printer} className="contents">
@@ -135,8 +136,8 @@ export default function Supplier() {
 
           {d.borcGorunur && d.faturalar && (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold">Alış faturaları — son 12 ay ({fmtInt(d.faturalar.length)})</h2>
-              {d.alis && <p className="mt-1 px-1 text-[12px] text-canvas-muted">Bu yıl {fmtMoney(d.alis.buYil)} · son 12 ay {fmtMoney(d.alis.son12)} (KDV dahil)</p>}
+              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="faturalar" label="Alış faturaları">{`Alış faturaları — son 12 ay (${fmtInt(d.faturalar.length)})`}</InfoLabel></h2>
+              {d.alis && <p className="mt-1 px-1 text-[12px] text-canvas-muted"><InfoLabel k={d.kaynaklar} alan="alis" label="Alış toplamları">{`Bu yıl ${fmtMoney(d.alis.buYil)} · son 12 ay ${fmtMoney(d.alis.son12)} (KDV dahil)`}</InfoLabel></p>}
               <div className="mt-2">
                 <TableWrap>
                   <thead>
@@ -166,7 +167,7 @@ export default function Supplier() {
 
           {d.bitenIsler.length > 0 && (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold">Depoya giren işler ({fmtInt(d.bitenIsler.length)})</h2>
+              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="bitenIsler" label="Depoya giren işler">{`Depoya giren işler (${fmtInt(d.bitenIsler.length)})`}</InfoLabel></h2>
               <div className="mt-2">
                 {d.bitenIsler.map((c) => (
                   <CardLine

@@ -909,8 +909,9 @@ class Source:
         names: dict[str, dict[str, Any]] = {}
         options: dict[str, dict[int, str]] = {}
         changes: list[dict[str, Any]] = []
+        runs: dict[str, dict[str, Any]] = {}
         try:
-            crm = src.runner(self._crm_file())
+            crm = src.Recorder(src.runner(self._crm_file()))
             schema = self._schema()
             tech = src.read_card_tech(crm, schema, since)
             names = src.read_paper_names(crm, schema)
@@ -926,13 +927,14 @@ class Source:
         except src.SourceError as e:
             log.warning("supply: CRM teknik alanlar okunamadı: %s", e)
             warnings.append("CRM üretim kartının kağıt ve teknik alanları şu an okunamıyor; kağıt ihtiyacı ve forma yükü boş.")
+        runs.update(getattr(locals().get("crm"), "runs", {}) or {})
         options.setdefault("new_degisikliksebebi", dict(src.CHANGE_REASONS))
         crm_ms = int((time.monotonic() - t1) * 1000)
 
         t2 = time.monotonic()
         logo: dict[str, Any] = {"ok": False}
         try:
-            run = src.runner(self._logo_file())
+            run = src.Recorder(src.runner(self._logo_file()))
             firms = src.firms_for(run)
             firm, year = src.current_firm(firms, now)
             if year != now.year:
@@ -968,6 +970,7 @@ class Source:
         except src.SourceError as e:
             log.warning("supply: Logo okunamadı: %s", e)
             warnings.append("Logo'ya şu an ulaşılamıyor; tedarikçi borcu, fatura eşleşmesi ve alış eğilimi gösterilemiyor.")
+        runs.update(getattr(locals().get("run"), "runs", {}) or {})
         logo_ms = int((time.monotonic() - t2) * 1000)
         de = logo.get("dataEnd")
         if isinstance(de, date) and (now - de).days > 10:
@@ -976,7 +979,8 @@ class Source:
         return {"at": time.time(), "today": now.isoformat(), "since": since.isoformat(), "cards": cards,
                 "rawCards": psnap.get("cards") or [], "tech": tech, "paperNames": names, "options": options,
                 "planChanges": changes, "logo": logo, "warnings": warnings,
-                "db": {"m12Ms": m12_ms, "crmMs": crm_ms, "logoMs": logo_ms}}
+                "db": {"m12Ms": m12_ms, "crmMs": crm_ms, "logoMs": logo_ms},
+                "runs": runs}   # sorgu bilgisi: çalışan metin + satır/süre/an (supply_kaynak.py)
 
 
 # ============================================================ servis
@@ -1175,8 +1179,10 @@ class Service:
         done.sort(key=lambda x: x.get("depo") or "", reverse=True)
         stats = [x for x in self.printer_stats(snap["cards"], now) if x["printer"] in printers]
         firms = src.firms_between({int(k): v for k, v in lg["firms"].items()}, src.window_start(now, 12), now)
+        rec: Optional[src.Recorder] = None
         try:
-            invoices = src.read_supplier_invoices(self.source.logo_runner(), firms, code, src.window_start(now, 12))
+            rec = src.Recorder(self.source.logo_runner())
+            invoices = src.read_supplier_invoices(rec, firms, code, src.window_start(now, 12))
         except src.SourceError as e:
             log.warning("supply: tedarikçi faturaları okunamadı: %s", e)
             invoices = []
@@ -1184,7 +1190,8 @@ class Service:
         kind = lg["kinds"].get(code) or {"tur": "diger", "kaynak": ""}
         return {"kod": code, "unvan": sp["unvan"], "ozelKod": sp["ozelKod"], "tur": kind["tur"], "turKaynak": kind["kaynak"],
                 "crmMatbaa": printers, "yaslandirma": ag, "alis": buys, "faturalar": invoices, "acikIsler": jobs,
-                "bitenIsler": done, "karne": stats, "logo": self.logo_meta(snap, now), "fifoNotu": FIFO_NOTE}
+                "bitenIsler": done, "karne": stats, "logo": self.logo_meta(snap, now), "fifoNotu": FIFO_NOTE,
+                "_runs": dict(rec.runs) if rec else {}}
 
     def payments(self, engine: Any, tenant: str, days: int, kind: str = "", fresh: bool = False,
                  now: Optional[date] = None) -> dict[str, Any]:

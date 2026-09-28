@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Loading, Note, TableWrap, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { Tabs } from '../budget/parts';
@@ -73,18 +74,19 @@ export default function Paper() {
           <p className="px-1 text-[12px] leading-snug text-canvas-muted">
             Ölçü: {p.olcu === 'brut' ? 'brüt kg (fire dahil)' : 'net kg'} · toplam {fmtKg(p.toplamKg)} · kağıt bilgisi dolu {fmtInt(p.kapsam.dolu)} kart, boş{' '}
             {fmtInt(p.kapsam.bos)} kart. CRM'deki «toplam kağıt ihtiyacı» kolonunun birimi henüz doğrulanmadı; ayrı sütunda gösterilir.
+            <SqlInfo k={p.kaynaklar} alan="toplamKg" label="Toplam kağıt ve kapsam" className="ml-0.5" />
           </p>
           <div className="mt-3">
             <TableWrap>
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className={th}>Kağıt cinsi</th>
+                  <th className={th}><InfoLabel k={p.kaynaklar} alan="cinsler">Kağıt cinsi</InfoLabel></th>
                   {p.aylar.map((m) => (
                     <th key={m.key} className={`${th} text-right`}>
                       {m.label}
                     </th>
                   ))}
-                  <th className={`${th} text-right`}>Toplam</th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="cinsler">Toplam</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -112,7 +114,7 @@ export default function Paper() {
               </tbody>
             </TableWrap>
           </div>
-          <h2 className="mt-4 px-1 text-[13px] font-extrabold">Ay ve cins ayrıntısı</h2>
+          <h2 className="mt-4 px-1 text-[13px] font-extrabold"><InfoLabel k={p.kaynaklar} alan="satirlar">Ay ve cins ayrıntısı</InfoLabel></h2>
           <div className="mt-2">
             <TableWrap>
               <thead>
@@ -121,8 +123,8 @@ export default function Paper() {
                   <th className={th}>Kağıt cinsi</th>
                   <th className={`${th} text-right`}>{p.olcu === 'brut' ? 'Brüt kg' : 'Net kg'}</th>
                   <th className={`${th} text-right`}>{p.olcu === 'brut' ? 'Net kg' : 'Brüt kg'}</th>
-                  <th className={`${th} text-right`}>CRM toplam</th>
-                  <th className={`${th} text-right`}>Kart</th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">CRM toplam</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">Kart</InfoLabel></th>
                   <th className={th}>Parça / ebat</th>
                 </tr>
               </thead>
@@ -169,7 +171,7 @@ export default function Paper() {
             <Note tone="ok">Ufuktaki bütün kartlarda kağıt bilgisi var.</Note>
           ) : (
             <>
-              <p className="px-1 text-[12px] text-canvas-muted">Bu kartlarda CRM'de kağıt ihtiyacı girilmemiş; ihtiyaç toplamına girmez. CRM kartında tamamlanmalı.</p>
+              <p className="px-1 text-[12px] text-canvas-muted"><SqlInfo k={p.kaynaklar} alan="kagitsizKartlar" label="Kağıt bilgisi olmayan kartlar" className="mr-1" />Bu kartlarda CRM'de kağıt ihtiyacı girilmemiş; ihtiyaç toplamına girmez. CRM kartında tamamlanmalı.</p>
               <div className="mt-2">
                 {p.kagitsizKartlar.map((c) => (
                   <CardLine key={c.id} c={c} right={<span className="text-[11px] text-canvas-muted">{c.matbaa ?? 'matbaa yok'}</span>} />
@@ -195,9 +197,9 @@ export default function Paper() {
                   <tr className="border-b border-slate-100">
                     <th className={th}>Malzeme</th>
                     <th className={th}>Birim</th>
-                    <th className={`${th} text-right`}>Miktar</th>
-                    <th className={`${th} text-right`}>Ortalama</th>
-                    <th className={`${th} text-right`}>İlk ay</th>
+                    <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="fiyat">Miktar</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="fiyat">Ortalama</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="fiyat">İlk ay</InfoLabel></th>
                     <th className={`${th} text-right`}>Son ay</th>
                     <th className={`${th} text-right`}>Değişim</th>
                   </tr>
