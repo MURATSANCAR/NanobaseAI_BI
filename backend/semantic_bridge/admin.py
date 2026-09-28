@@ -87,6 +87,14 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle e-posta adresleri. Satış hedefinin eşik altına düşmesi ve departman bütçesi aşımı özetle gider"},
     {"key": "DIST_ALERT_RECIPIENTS", "group": "delivery", "label": "İlk dağılım uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (satış, lojistik). Plansız kitap, sevk gecikmesi, hiç satmayan bölge özetle gider; müşteriye gönderim yok"},
+    {"key": "TENDER_ALERT_RECIPIENTS", "group": "delivery", "label": "İhale hatırlatması alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (ihale sorumlusu, finans). Son teklif tarihi, belge geçerliliği, teminat iadesi ve onay bekleyen karar her sabah tek özetle gider; kuruma gönderim yok"},
+    {"key": "TENDER_WATCH_ENABLED", "group": "delivery", "label": "İhale ilanı içe alma", "type": "bool", "default": "0",
+     "help": "Resmî kaynaktan ilan içe alma (ikinci sürüm). Kapalıyken ilanlar elle ya da dosyayla girilir; müşteri ortamında kullanıcı kararı olmadan açılmaz"},
+    {"key": "TENDER_PRICE_SOURCE", "group": "delivery", "label": "İhale teklifinde liste fiyatı", "type": "text", "default": "crm",
+     "help": "crm = CRM KDV dahil liste fiyatı, logo = Logo geçerli satış fiyat listesi. Hangisi kullanıldığı teklif tablosunda yazar"},
+    {"key": "TENDER_DEFAULT_VAT", "group": "delivery", "label": "İhale: varsayılan KDV oranı", "type": "text", "default": "0",
+     "help": "CRM kitap kartında KDV oranı yoksa kullanılır; oran olarak (0,10 = %10)"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},
@@ -144,6 +152,23 @@ SPEC: list[dict[str, Any]] = [
      "help": "Üyelerin ortalama toplam karar skoru bu değer ve üstündeyse skor önerisi «Kabul» olur (0–100)"},
     {"key": "EDITORIAL_BOARD_REVISE_SCORE", "group": "crm", "label": "Kurul: revizyon skoru", "type": "int", "default": "50",
      "help": "Kabul skorunun altında, bu değer ve üstündeyse öneri «Revizyon», altındaysa «Red» olur (0–100)"},
+    # H1 Kategori ağacı: öneri eşikleri (golden set ile ölçülecek), taslak ağaç ve öncelik ayarları.
+    {"key": "CATEGORY_SUGGEST_MIN_PROB", "group": "crm", "label": "Kategori önerisi: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI önerisi bu olasılığın altındaysa «emin değil» işaretlenir, toplu onayla kabul edilmez (0–1)"},
+    {"key": "CATEGORY_SUGGEST_MIN_MARGIN", "group": "crm", "label": "Kategori önerisi: en düşük fark", "type": "text",
+     "default": "0.30", "help": "Seçilen ile ikinci seçenek arasındaki olasılık farkı bunun altındaysa «emin değil» (0–1)"},
+    {"key": "CATEGORY_TREE_MIN_BOOKS", "group": "crm", "label": "Taslak ağaçta düğüm için en az kitap", "type": "int",
+     "default": "3", "help": "Veriden taslak ağaç önerisinde bir düğüm en az bu kadar aktif kitapla açılır; kalanlar profil önerisiyle yerleşir"},
+    {"key": "CATEGORY_MAP_MIN_SHARE", "group": "crm", "label": "Eşleme önerisi için ortaklık payı", "type": "text",
+     "default": "0.5", "help": "Düğümün kitaplarının en az bu payında ortak olan ürün kategorisi / T-soft kategorisi eşleme olarak önerilir (0–1)"},
+    {"key": "CATEGORY_COOCCUR_SHARE", "group": "crm", "label": "Tema/etiket adayı için kategori payı", "type": "text",
+     "default": "0.25", "help": "Aynı kategorideki kitapların en az bu payında kullanılan tema ve etiket kitaba aday olarak sorulur (0–1)"},
+    {"key": "CATEGORY_PRIORITY_MONTHS", "group": "crm", "label": "Öncelik puanı dönemi (ay)", "type": "int",
+     "default": "24", "help": "Onay kuyruğu Logo'daki son bu kadar ayın net satış adedine göre sıralanır"},
+    {"key": "CATEGORY_DIFF_STALE_DAYS", "group": "crm", "label": "CRM farkı hatırlatma (gün)", "type": "int",
+     "default": "7", "help": "Onaylanıp bu kadar gündür CRM'e işlenmemiş fark «bekliyor» diye işaretlenir"},
+    {"key": "CATEGORY_BATCH_SECONDS", "group": "crm", "label": "Gece önerisi süresi (saniye)", "type": "int",
+     "default": "3600", "help": "Gece turunda profili olmayan kitaplara öneri üretmek için ayrılan süre; biten iş sonraki geceye kalır"},
     # Kişi rehberi
     {"key": "PEOPLE_MAX_IDLE_DAYS", "group": "people", "label": "Son giriş süresi (gün)", "type": "int", "default": "365",
      "help": "Rehbere yalnız bu kadar gün içinde etki alanına giriş yapmış kişiler girer; ortak ve kullanılmayan "
@@ -286,6 +311,45 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle iç e-posta adresleri (satış müdürü). Boşsa bildirim gitmez; kuyruk ekranda durur. Kuruma hiçbir e-posta gitmez"},
     {"key": "CORP_B2B_REPORT_TO", "group": "corporate", "label": "Haftalık bayi özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı sipariş vermeyen bayi listesi ekiyle gider; boşsa gitmez"},
+    # Pazarlama (M15 yeni kitap planı; M16–M18 aynı grubu kullanır)
+    {"key": "MARKETING_ALERT_RECIPIENTS", "group": "marketing", "label": "Pazarlama bildirim alıcıları", "type": "text",
+     "default": "", "help": "Virgülle e-posta adresleri (pazarlama müdürü, onaycılar). Onaya gönderilen plan ve günlük özet "
+                            "(yayına 60/30/14 gün kala planı onaysız kitaplar, eksik materyal, hedefi değişen planlar) buraya gider. "
+                            "Boşsa bildirim gönderilmez, plan geçmişinde «alıcı yok» yazar"},
+    {"key": "MARKETING_UPPER_APPROVAL_THRESHOLD", "group": "marketing", "label": "Üst onay eşiği (TL)", "type": "text",
+     "default": "", "help": "Plan bütçesi bu tutarı aşarsa pazarlama onayına ek olarak üst onay (genel müdür) gerekir. "
+                            "Boş bırakılırsa ikinci onay istenmez"},
+    {"key": "MARKETING_BUDGET_RATE", "group": "marketing", "label": "Kitap bütçesi oranı (%)", "type": "text", "default": "",
+     "help": "CRM proje kartında pazarlama bütçesi yoksa önerilen çerçeve = kitabın onaylı hedef cirosu × bu oran. Boşsa oran "
+             "veriden hesaplanır: son tam yılda pazarlama masraf merkezlerinin Logo gideri ÷ şirket net cirosu"},
+    {"key": "MARKETING_DEPT_CENTERS", "group": "marketing", "label": "Pazarlama masraf merkezleri", "type": "text", "default": "",
+     "help": "Oran veriden hesaplanırken sayılacak Logo masraf merkezi kodları (virgülle). Boşsa adında «Pazarlama» geçen merkezler"},
+    {"key": "MARKETING_BUDGET_ACCOUNTS", "group": "marketing", "label": "Sayılacak gider hesapları", "type": "text", "default": "",
+     "help": "Oran hesabında yalnız bu hesap kodlarıyla başlayan giderler (ör. 760). Boşsa merkezin bütün 7'li giderleri "
+             "(personel dahil; oran yüksek çıkabilir)"},
+    {"key": "MARKETING_CHANNEL_LOOKBACK_YEARS", "group": "marketing", "label": "Kanal payı geçmişi (yıl)", "type": "int", "default": "3",
+     "help": "Emsal kitapların CRM pazarlama harcaması yoksa kanal payı şirketin bu kadar yıllık harcamasından hesaplanır"},
+    {"key": "MARKETING_PUBLISH_DATE_ORDER", "group": "marketing", "label": "Yayın günü önceliği", "type": "text",
+     "default": "crm-kitap,crm-proje,uretim",
+     "help": "Yayın günü CRM'de üç yerde: crm-kitap (kitap kartı ilk baskı tarihi), crm-proje (proje kartı yayın tarihi), "
+             "uretim (ilk baskının depo girişi, yoksa dağılım planı). İlk dolu olan esas alınır"},
+    {"key": "MARKETING_HORIZON_DAYS", "group": "marketing", "label": "Liste penceresi (gün)", "type": "int", "default": "120",
+     "help": "Yeni kitap listesinin varsayılan aralığı: bugünden bu kadar gün sonrasına kadar yayımlanacaklar. Ekranda değiştirilir"},
+    {"key": "MARKETING_NO_PLAN_DAYS", "group": "marketing", "label": "«Planı yok» uyarısı (gün)", "type": "int", "default": "60",
+     "help": "Yayına bu kadar gün ya da daha az kalıp planı olmayan kitaplar üstteki kartta sayılır"},
+    {"key": "MARKETING_REMIND_DAYS", "group": "marketing", "label": "Hatırlatma günleri", "type": "text", "default": "60,30,14",
+     "help": "Yayına bu günler kala planı onaylı olmayan kitaplar günlük özete girer"},
+    {"key": "MARKETING_MATERIAL_DAYS", "group": "marketing", "label": "Materyal hatırlatması (gün)", "type": "int", "default": "21",
+     "help": "Yayına bu kadar gün kala onaylı materyali eksik plan özete girer"},
+    {"key": "MARKETING_REQUIRED_MATERIALS", "group": "marketing", "label": "Zorunlu materyaller", "type": "text",
+     "default": "foy,basin-bulteni,sosyal",
+     "help": "Yayından önce onaylı olması beklenen materyal türleri: foy, arka-kapak, basin-bulteni, sosyal, e-bulten-konu, "
+             "video-senaryo, kapak-brief, influencer-brief"},
+    {"key": "MARKETING_BANNED_CLAIMS", "group": "marketing", "label": "Ek yasaklı ifadeler", "type": "text", "default": "",
+     "help": "Zeki AI taslağında geçerse cümlenin düşeceği ek ifadeler (virgülle). «En çok satan», «bir numara», «rekor» gibi "
+             "kanıtsız üstünlük iddiaları zaten yasak"},
+    {"key": "MARKETING_TASK_TEMPLATE", "group": "marketing", "label": "Takvim şablonu (JSON)", "type": "text", "default": "",
+     "help": "Boşsa varsayılan şablon. Biçim: [[gün, \"iş\", \"kanal\", \"materyal\"], …] — gün yayın gününe göre (−60 … +30)"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -328,6 +392,9 @@ GROUPS = [
     {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
+    {"id": "marketing", "label": "Pazarlama planları",
+     "help": "Yeni kitap pazarlama planının bildirimleri, onay eşiği ve öneri kuralları. CRM'e ve dış kanallara hiçbir şey "
+             "gönderilmez; planlar portalda onaylanır."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -359,7 +426,8 @@ LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
-              "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki"}
+              "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
+              "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -661,6 +729,24 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
     if spec["key"] == "SEO_SITE_URL" and v and ("/rest" in v.lower() or not v.lower().startswith(("http://", "https://"))):
         # 2026-09-25: T-soft REST adresi bu kutuya girilmiş, şema taraması ve bağlantılar API adresine gitmişti.
         raise AdminError("«Mağaza adresi» sitenin adresi olmalı (örn. https://timas.com.tr); T-soft REST adresi üstteki kutuya girilir.")
+    if spec["key"] in ("MARKETING_UPPER_APPROVAL_THRESHOLD", "MARKETING_BUDGET_RATE") and v:
+        try:
+            n = float(v.replace(",", "."))
+        except ValueError:
+            raise AdminError(f"«{spec['label']}» bir sayı olmalı.") from None
+        if n < 0 or (spec["key"] == "MARKETING_BUDGET_RATE" and n > 100):
+            raise AdminError(f"«{spec['label']}» eksi olamaz" + (" ve 100'ü geçemez." if spec["key"] == "MARKETING_BUDGET_RATE" else "."))
+        return v.replace(",", ".")
+    if spec["key"] == "MARKETING_TASK_TEMPLATE" and v:
+        try:
+            rows = json.loads(v)
+            ok = isinstance(rows, list) and all(isinstance(r, list) and len(r) >= 4 and isinstance(r[0], int) and str(r[1]).strip()
+                                                for r in rows)
+        except ValueError:
+            ok = False
+        if not ok:
+            raise AdminError("«Takvim şablonu» [[gün, \"iş\", \"kanal\", \"materyal\"], …] biçiminde JSON olmalı.")
+        return v
     if t == "bool":
         return "1" if v in ("1", "true", "True", "on", "evet") else "0"
     if t == "int":

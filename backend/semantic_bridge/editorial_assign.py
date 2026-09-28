@@ -702,7 +702,11 @@ def approve_draft(engine: sa.engine.Engine, tenant: str, actor: str, version: in
 
 
 def rule_for(rules: list[dict[str, Any]], project: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """Önce Kitaplık kuralı, yoksa marka kuralı."""
+    """Önce Kitaplık kuralı, yoksa marka kuralı.
+
+    H1 bağlantı noktası: kural tablosu onaylı kategori ağacına geçtiğinde Kitaplık/marka →
+    `categories.m2_node_for(engine, tenant, kitaplik_id=…, marka_id=…)` ile yürürlükteki ağaç düğümüne çevrilir;
+    ağaç değişikliğinin M2 kurallarına etkisi `categories.impact()["m2"]`de görünür. Bugünkü kural değişmedi."""
     by = {f"{r['kind']}:{r['id']}": r for r in rules}
     for kind in ("kitaplik", "marka"):
         ref = project.get(kind)

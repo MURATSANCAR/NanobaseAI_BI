@@ -26,9 +26,10 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
 - Ekranlar: `/helpdesk` temsilci ekranı ve müşteri portalı (`/helpdesk/my-tickets`), `/app` masaüstü;
   masaüstünde `Ctrl+I` yapay zekâ panelini açar.
 - Giriş Frappe'nin kendi kullanıcılarıyla. Yönetici şifresi sunucuda `/etc/nanobase/destek-admin.txt` (root, 600).
-- Model: NanobaseAI modeli, OpenAI uyumlu korumalı uç `https://portal.nanobase.ai/gpu-llm/v1`
-  (anahtar sunucudaki `/etc/nanobase/timas-vm-gpu-llm.key` dosyasından kurulumda okunur, sitede şifreli
-  alanda durur). Bu uç LLM kapısının sırasına girmez — açık iş, aşağıda.
+- Model: NanobaseAI modeli, **LLM kapısından**: panel `https://portal.nanobase.ai/destek-llm/v1` (nginx
+  `deploy/nginx-destek-llm.conf`, Bearer anahtarı `/etc/nanobase/destek-llm.key`) → köprünün OpenAI uyumlu girişi
+  `/api/v1/llm/openai/v1/chat/completions` (`backend/semantic_bridge/llm_openai.py`). Her çağrı `sl_llm_queue`
+  sırasından kiralık alır (modül `destek`, etkileşimli öncelik); BI soruları ve gece işleriyle aynı slotları paylaşır.
 
 ## Kurulum / güncelleme
 
@@ -56,8 +57,8 @@ Veri volume'larda durur, kurulum silmez.
   İstanbul, tarih `gg.aa.yyyy`, para TRY, kullanım verisi (telemetri) kapalı, web alt bilgisi NanobaseAI.
 - Kaldırılanlar: üreticinin destek/belge/bulut menü satırları, üretici posta hizmeti seçeneği, ERPNext
   sekmesi (kayıt sistemi Logo), karşılama kaydındaki üretici videoları.
-- Ayarlar sekmelerindeki «daha fazla bilgi» bağlantıları hâlâ üreticinin belge sitesine gider (ad
-  ekranda yazmaz); kendi belge sitemiz olunca değiştirilecek.
+- Dış bağlantı yok: üretici belge bağlantıları, belge düğmeleri, yardım merkezi ve e-posta sağlayıcılarının yardım
+  sayfası bağlantıları silindi; `marka.py --denetle` dış adres deseni de tarar (yalnız yazı tipi sunucusu izinli).
 
 ## Türkçe
 
@@ -74,7 +75,5 @@ HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Açık işler
 
-- Yapay zekâ paneli modele doğrudan gidiyor, LLM kapısının sırasına girmiyor; kapıya OpenAI uyumlu
-  bir giriş gerekiyor.
 - Portalın AD girişiyle ortak oturum yok; Frappe'nin LDAP ayarıyla AD'ye bağlanabilir.
 - Müşteri VM'ine kurulmadı.

@@ -9,6 +9,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { UploadButton, WorkList, fmtBytes, useWorks } from './WorkPicker';
 import { ProofFindings, seriousCount } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
+import { DocumentPicker, DocumentResult } from './DocumentReview';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -188,6 +189,18 @@ export default function ProofScreen() {
   // Eser dosyası yokken seçilen kitap URL'de taşınır (?kitap=): sayfa yenilenince aynı kitap açılır.
   const [params, setParams] = useSearchParams();
   const picked = params.get('kitap');
+  // Yüklenen belge (?belge=): seçiliyken sağ sütun belgenin incelemesi
+  const doc = params.get('belge');
+  const pickDoc = (id: string | null) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('belge', id);
+        else next.delete('belge');
+        return next;
+      },
+      { replace: true },
+    );
   const pick = (t: string | null) =>
     setParams(
       (prev) => {
@@ -280,6 +293,8 @@ export default function ProofScreen() {
             progress={(x) => (x.proof ? `Prova v${x.proof.version} · ${nf.format(x.signatures.signed)}/${nf.format(x.signatures.total)} imza` : 'Prova yüklenmedi')}
           />
 
+          <DocumentPicker selected={doc} onSelect={pickDoc} />
+
           {s && (
             <Panel>
               <h2 className="px-1 text-[13px] font-extrabold">Prova dosyası</h2>
@@ -310,6 +325,11 @@ export default function ProofScreen() {
         </div>
 
         <div className="space-y-3 lg:space-y-4">
+          {/* Belge seçiliyse (?belge=) sağ sütun belgenin incelemesidir; kitap/eser görünümü onunla yer değiştirir. */}
+          {doc ? (
+            <DocumentResult key={doc} id={doc} />
+          ) : (
+          <>
           {!s ? (
             !noWork ? (
               // Eser seçili ama durumu henüz gelmedi ya da okunamadı.
@@ -373,6 +393,8 @@ export default function ProofScreen() {
           {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'ZEKİ AI son okuma raporu okunamadı.')} />}
           {/* Kelime haritası: aynı kitabın motordaki kaydıyla (eser dosyası ya da seçilen kitap). */}
           {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} findings={pr.findings.filter((f) => f.check === 'word_variety')} /> : null}
+          </>
+          )}
         </div>
       </div>
     </ModuleFrame>

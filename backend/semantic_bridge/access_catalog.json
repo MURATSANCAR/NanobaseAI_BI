@@ -187,6 +187,21 @@
       "label": "Saha ve tahsilat"
     },
     {
+      "key": "sayfa:ihale",
+      "area": "satis",
+      "label": "İhale takibi"
+    },
+    {
+      "key": "sayfa:pazarlama-yeni-kitap",
+      "area": "pazarlama",
+      "label": "Yeni kitap planı"
+    },
+    {
+      "key": "sayfa:kategori-agaci",
+      "area": "kayitlar",
+      "label": "Kategori ağacı"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -466,6 +481,36 @@
       "explicit": true
     },
     {
+      "key": "ozellik:ihale.duzenle",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale kaydı ve teklif hazırlığı",
+      "hint": "İlan girişi, şartname yükleme, kalem listesi ve eşleştirme, teklif fiyatı düzeltme, belge kontrol listesi, karar önerisi, sonuç kaydı"
+    },
+    {
+      "key": "ozellik:ihale.karar",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale kararı onayı",
+      "hint": "Başvurma/başvurmama kararını ve teklif fiyatını onaylama ya da gerekçeyle geri gönderme (öneren onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ihale.belge",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "Şirket belge arşivi",
+      "hint": "Vergi, SGK, imza sirküleri, teminat gibi ihale belgelerini yükleme, geçerlilik tarihini güncelleme, silme"
+    },
+    {
+      "key": "ozellik:ihale.kaynak-yonet",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale ilanı kaynağı",
+      "hint": "Resmî kaynaktan ilan içe almayı çalıştırma (ikinci sürüm; ortamda kapalıyken etkisiz)",
+      "explicit": true
+    },
+    {
       "key": "ozellik:masa.herkesinki",
       "area": "editoryal",
       "page": "sayfa:editoryal",
@@ -541,6 +586,13 @@
       "hint": "Doğru / yanlış alarm"
     },
     {
+      "key": "ozellik:son-okuma.belge",
+      "area": "editoryal",
+      "page": "sayfa:son-okuma",
+      "label": "Belge yükleyip inceletme",
+      "hint": "doc, docx, pdf, odt, rtf, txt, md — metin denetimleri"
+    },
+    {
       "key": "ozellik:yazar-iliski.yaz",
       "area": "kayitlar",
       "page": "sayfa:yazar-iliskileri",
@@ -576,6 +628,44 @@
       "page": "sayfa:editor-atama",
       "label": "Kural tablosunu onaylama",
       "hint": "Taslağı yürürlüğe alma; önceki sürüm arşive geçer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.oneri-uret",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili önerisi üretme",
+      "hint": "Zeki AI ile kategori, tür, yaş, tema ve etiket önerisi üretme; CRM/Logo/T-soft kaynaklarını yenileme (model harcar)"
+    },
+    {
+      "key": "ozellik:kategori.agac-duzenle",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kategori ağacı taslağı",
+      "hint": "Ağaç taslağı ve veriden taslak önerisi, düğüm eşlemeleri, tutarsızlık kuralları, etiket sözlüğü; onaya gönderme"
+    },
+    {
+      "key": "ozellik:kategori.agac-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kategori ağacını yürürlüğe alma",
+      "hint": "Onaya gönderilen ağaç sürümünü yürürlüğe alma ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.profil-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili onayı",
+      "hint": "Kendi kitaplarında (kartın editörü ya da yayın yönetmeni) alan alan kabul, düzeltme, ret; tutarsızlık önerisini uygulama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.herkesinki",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili: herkesin kitabı",
+      "hint": "Başka editörlerin kitaplarının profiline karar verme (yayın yönetmeni)",
       "explicit": true
     },
     {
@@ -803,6 +893,44 @@
       "page": "sayfa:kurumsal-satis",
       "label": "Kitap teması onayı",
       "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
+    },
+    {
+      "key": "ozellik:pazarlama.plan-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama planı hazırlama",
+      "hint": "Plan taslağı, kanal ve bütçe satırı, takvim, Zeki AI önerisi ve materyal taslağı, onaya gönderme, revizyon"
+    },
+    {
+      "key": "ozellik:pazarlama.butce-gor",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama bütçesini görme",
+      "hint": "Plan ve karnedeki bütçe tutarları, hedef ciro ve CRM'deki proje bütçesi; yetkisi olmayan kişi planı tutarsız görür"
+    },
+    {
+      "key": "ozellik:pazarlama.plan-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama planı onayı",
+      "hint": "Onaya gönderilen planı onaylama ya da gerekçeyle geri gönderme, materyale pazarlama onayı (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.butce-ust-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Pazarlama bütçesi üst onayı",
+      "hint": "Bütçesi Yönetim ayarındaki eşiği aşan planın ikinci onayı (genel müdür)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.materyal-editoryal-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-yeni-kitap",
+      "label": "Materyal editoryal onayı",
+      "hint": "Föy, basın bülteni, sosyal medya metni gibi materyallerin kitabın içeriğine uygunluğunu onaylama",
+      "explicit": true
     }
   ]
 }

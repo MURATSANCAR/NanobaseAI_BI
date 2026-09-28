@@ -1,9 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Plus, Search, Trash2 } from 'lucide-react';
-import { btnGhost, field } from '../../admin/ui';
+import { btnGhost, field, nf } from '../../admin/ui';
 import { useDebounced } from '../kit';
-import { contractApi, type Book, type Meta, type Party, type Terms, type Tier } from './api';
+import { contractApi, type Book, type LookupPage, type Meta, type Party, type Terms, type Tier } from './api';
 import { Field, num, toNum } from './ui';
 
 /** Sözleşme şartlarının formu: yeni taslakta, düzenlemede ve zeyilnamede aynı form kullanılır. */
@@ -43,17 +43,29 @@ function Group({ title, children, lead }: { title: string; lead?: string; childr
   );
 }
 
-function Lookup<T>({ label, placeholder, fetcher, render, onPick, qkey }: {
+/** CRM'den seçici. Sonuç kesilmez: CRM'deki gerçek eşleşme sayısı listenin altında yazar, kalanı
+ *  «Daha fazla göster» ile sayfa sayfa gelir. */
+function Lookup<T>({ label, placeholder, fetcher, render, onPick, qkey, unit }: {
   label: string;
   placeholder: string;
   qkey: string;
-  fetcher: (q: string) => Promise<{ items: T[] }>;
+  unit: string;
+  fetcher: (q: string, page: number) => Promise<LookupPage<T>>;
   render: (t: T) => ReactNode;
   onPick: (t: T) => void;
 }) {
   const [text, setText] = useState('');
   const q = useDebounced(text.trim(), 300);
-  const res = useQuery({ queryKey: ['contracts', 'lookup', qkey, q], queryFn: () => fetcher(q), enabled: q.length >= 2, staleTime: 60_000 });
+  const res = useInfiniteQuery({
+    queryKey: ['contracts', 'lookup', qkey, q],
+    queryFn: ({ pageParam }) => fetcher(q, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last) => (last.shown < last.total ? last.page + 1 : undefined),
+    enabled: q.length >= 2,
+    staleTime: 60_000,
+  });
+  const items = res.data?.pages.flatMap((p) => p.items) ?? [];
+  const last = res.data?.pages[res.data.pages.length - 1];
   const id = useId();
   return (
     <div className="relative sm:col-span-2">
@@ -65,9 +77,9 @@ function Lookup<T>({ label, placeholder, fetcher, render, onPick, qkey }: {
       {q.length >= 2 && (
         <ul className="mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-100 bg-white text-[12.5px] shadow-lg">
           {res.isLoading && <li className="px-3 py-2 text-canvas-muted">CRM'de aranıyor…</li>}
-          {res.error && <li className="px-3 py-2 text-red-700">{(res.error as Error).message}</li>}
-          {res.data && !res.data.items.length && <li className="px-3 py-2 text-canvas-muted">CRM'de bulunamadı; aşağıdan elle ekleyebilirsiniz.</li>}
-          {res.data?.items.map((t, i) => (
+          {res.error && !res.isFetchNextPageError && <li className="px-3 py-2 text-red-700">{(res.error as Error).message}</li>}
+          {res.data && !items.length && <li className="px-3 py-2 text-canvas-muted">CRM'de bulunamadı; aşağıdan elle ekleyebilirsiniz.</li>}
+          {items.map((t, i) => (
             <li key={i}>
               <button
                 type="button"
@@ -81,6 +93,26 @@ function Lookup<T>({ label, placeholder, fetcher, render, onPick, qkey }: {
               </button>
             </li>
           ))}
+          {last && last.total > 0 && (
+            <li className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-1.5 text-[11.5px] text-canvas-muted">
+              <span>
+                {last.shown < last.total
+                  ? `${nf.format(last.total)} ${unit} içinden ${nf.format(last.shown)} tanesi gösteriliyor`
+                  : `${nf.format(last.total)} ${unit}, hepsi gösteriliyor`}
+              </span>
+              {res.hasNextPage && (
+                <button
+                  type="button"
+                  onClick={() => res.fetchNextPage()}
+                  disabled={res.isFetchingNextPage}
+                  className="zk-press min-h-11 rounded-lg px-2 font-bold text-canvas-violet underline disabled:opacity-60 sm:min-h-0"
+                >
+                  {res.isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}
+                </button>
+              )}
+            </li>
+          )}
+          {res.isFetchNextPageError && <li className="px-3 py-2 text-red-700">{(res.error as Error).message}</li>}
         </ul>
       )}
     </div>
@@ -118,6 +150,7 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
         {!lock && (
           <Lookup
             qkey="parties"
+            unit="kişi ve firma"
             label="CRM'den ekle"
             placeholder="Kişi ya da firma adı"
             fetcher={contractApi.lookupParties}
@@ -168,6 +201,7 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
         {!lock && (
           <Lookup
             qkey="books"
+            unit="kitap kartı"
             label="CRM'den ekle"
             placeholder="Kitap adı, ISBN ya da stok kodu"
             fetcher={contractApi.lookupBooks}

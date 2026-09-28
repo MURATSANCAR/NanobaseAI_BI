@@ -57,7 +57,7 @@ def periods(terms: dict[str, Any], upto: date) -> list[tuple[date, date]]:
     step = int(terms.get("periodMonths") or 6)
     end_limit = date.fromisoformat(terms["end"]) if terms.get("end") else upto
     out = []
-    while s <= min(upto, end_limit) and len(out) < 400:
+    while s <= min(upto, end_limit):  # periodMonths 1–24 doğrulanır; döngü her adımda ilerler
         m = s.month - 1 + step
         e_year, e_month = s.year + m // 12, m % 12 + 1
         nxt = date(e_year, e_month, 1)

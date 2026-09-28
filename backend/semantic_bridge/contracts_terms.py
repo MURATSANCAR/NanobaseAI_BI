@@ -179,7 +179,7 @@ def _parties(v: Any) -> list[dict[str, Any]]:
             "accountId": _text(p.get("accountId"), 40) or None,
             "viaAgent": bool(p.get("viaAgent")),
         })
-    return out[:50]
+    return out
 
 
 def _books(v: Any) -> list[dict[str, Any]]:
@@ -199,7 +199,7 @@ def _books(v: Any) -> list[dict[str, Any]]:
             "format": fmt if fmt in RATE_KEYS else "karton",
             "listPrice": _num(b.get("listPrice"), f"{title} kapak fiyatı"),
         })
-    return out[:200]
+    return out
 
 
 def _tiers(v: Any) -> list[dict[str, Any]]:
@@ -214,7 +214,7 @@ def _tiers(v: Any) -> list[dict[str, Any]]:
         raise ContractError("İlk kademe 0 adetten başlamalı.")
     if len({t["from"] for t in out}) != len(out):
         raise ContractError("Aynı adetten başlayan iki kademe var.")
-    return out[:20]
+    return out
 
 
 def clean(raw: dict[str, Any], base: Optional[dict[str, Any]] = None) -> dict[str, Any]:

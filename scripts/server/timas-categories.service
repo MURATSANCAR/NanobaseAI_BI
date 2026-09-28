@@ -1,0 +1,11 @@
+[Unit]
+Description=Kategori ağacı (H1): CRM/Logo/T-soft kaynaklarını oku, tutarsızlık kurallarını koş, profili olmayan kitaplara Zeki AI önerisi üret
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/categories/run-due); bu birim yalnız çağırır. Kaynak okuması her gece bütün aktif kitap
+# kartlarını okur (uzun metinler hariç; ~9 bin kart), öneri süresi CATEGORY_BATCH_SECONDS (varsayılan 3600 sn) ile
+# sınırlıdır, biten iş sonraki geceye kalır. İlk kez elle koşturulur: systemctl start timas-categories.service
+ExecStart=/bin/sh -c 'curl -fsS -m 7190 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/categories/run-due'

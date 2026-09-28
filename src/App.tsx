@@ -52,6 +52,10 @@ const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
+const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
+const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
+const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
+const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
@@ -59,6 +63,8 @@ const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'))
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
 const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
+const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
+const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -127,6 +133,9 @@ export default function App() {
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
             <Route path="butce" element={<BudgetScreen />} />
+            {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
+            <Route path="ihale" element={<TenderList />} />
+            <Route path="ihale/:id" element={<TenderDetail />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />
@@ -142,6 +151,9 @@ export default function App() {
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
+            {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}
+            <Route path="pazarlama/yeni-kitap" element={<MarketingHome />} />
+            <Route path="pazarlama/plan/:id" element={<MarketingPlan />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
@@ -187,6 +199,10 @@ export default function App() {
             <Route path="yayin-kurulu" element={<BoardSessionsScreen />} />
             <Route path="yayin-kurulu/oturum/:id" element={<SessionScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
+            {/* H1 Kategori ağacı: tek onaylı ağaç, kitap profili (öneri → onay), tutarsızlıklar, CRM'e işlenecek fark (/api/v1/categories). */}
+            <Route path="kategori-agaci" element={<CategoriesScreen />} />
+            <Route path="kategori-agaci/kitap/:id" element={<CategoryBookProfile />} />
+            <Route path="kategori-agaci/:section" element={<CategoriesScreen />} />
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />

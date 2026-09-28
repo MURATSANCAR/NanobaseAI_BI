@@ -1,0 +1,10 @@
+[Unit]
+Description=İhale takibi hatırlatmaları ve kamu satış özeti; her gün 07:30
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+Persistent=true
+Unit=timas-tenders.service
+
+[Install]
+WantedBy=timers.target

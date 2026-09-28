@@ -228,6 +228,9 @@ export type Meta = {
   templateTargets: Record<string, string>;
 };
 
+/** CRM seçicisinin bir sayfası: `total` CRM'deki bütün eşleşme, `shown` bu sayfayla birlikte gösterilen kayıt sayısı. */
+export type LookupPage<T> = { items: T[]; total: number; shown: number; page: number };
+
 const BASE = '/api/v1/editorial/contracts';
 
 async function call<T>(path: string, init: { method?: string; body?: unknown; raw?: BodyInit; timeout?: number } = {}): Promise<T> {
@@ -302,8 +305,9 @@ export const contractApi = {
   templateDocx: (id: string, file: File) =>
     call<Template>(`/templates/${enc(id)}/docx${qs({ filename: file.name })}`, { method: 'PUT', raw: file, timeout: 120_000 }),
   templateDocxRemove: (id: string) => call<Template>(`/templates/${enc(id)}/docx`, { method: 'DELETE' }),
-  lookupBooks: (q: string) => call<{ items: Array<{ id: string; title: string; stockCode: string | null; isbn: string | null; format: string; listPrice: number | null }> }>(`/lookup/books${qs({ q })}`),
-  lookupParties: (q: string) => call<{ items: Array<{ type: 'kisi' | 'firma'; id: string; name: string }> }>(`/lookup/parties${qs({ q })}`),
+  lookupBooks: (q: string, page = 0) =>
+    call<LookupPage<{ id: string; title: string; stockCode: string | null; isbn: string | null; format: string; listPrice: number | null }>>(`/lookup/books${qs({ q, page: page || undefined })}`),
+  lookupParties: (q: string, page = 0) => call<LookupPage<{ type: 'kisi' | 'firma'; id: string; name: string }>>(`/lookup/parties${qs({ q, page: page || undefined })}`),
 };
 
 export const metaOptions = () => ({ queryKey: ['contracts', 'meta'], queryFn: contractApi.meta, staleTime: 10 * 60_000 });

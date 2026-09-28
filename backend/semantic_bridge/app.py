@@ -2361,6 +2361,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _job_for(job_id, request)
         return rt().jobs.cancel(job_id) or {}
 
+    # OpenAI istemcisiyle konuşan ayrı servisler (NanobaseAI Destek paneli) aynı sıradan geçer.
+    from semantic_bridge import llm_openai as llm_openai_mod
+
+    llm_openai_mod.register(app, rt, _require_caller)
+
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:
         """What the shadow compilers produced next to the answers this process served."""
@@ -6663,6 +6668,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import pricing
     app.state.pricing = pricing.register(app, rt, {"session": _greetings, "can": _can, "audit": admin_mod.audit,
                                                    "is_admin": admin_mod.is_admin})
+
+    # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
+    from semantic_bridge import tenders_api
+    app.state.tenders = tenders_api.register(app, rt, _require_caller, _can)
+
+    from semantic_bridge import categories_api
+    app.state.categories = categories_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing
@@ -6727,6 +6739,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("kurumsal", priority),
     })
+
+    # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
+    from semantic_bridge import marketing
+    app.state.marketing = marketing.register(app, rt, _require_caller, _can)
     return app
 
 

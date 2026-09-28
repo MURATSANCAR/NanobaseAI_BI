@@ -1,0 +1,10 @@
+[Unit]
+Description=Kategori ağacı kaynak okuması, tutarsızlık kuralları ve gece önerisi, her gece 03:40
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+Persistent=true
+Unit=timas-categories.service
+
+[Install]
+WantedBy=timers.target

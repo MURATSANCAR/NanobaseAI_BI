@@ -1,6 +1,6 @@
 # H1 — Kategori Ağacı Modülü: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Modül kimliği `categories` (`src/canvas/modules.json`, «Hazırlıklar» grubu)
+Durum: kodlandı (dalda, sunucuda doğrulanmadı — günlük 2026-09-28) · Tarih: 2026-09-28 · Modül kimliği `categories` (`src/canvas/modules.json`, «Hazırlıklar» grubu)
 
 Kaynaklar: iş tanımı `specs/Kategori_Ağacı_Modülü.txt` (ZEKİ_Moduller3.html'den), `ZEKİ_Veri_Haritasi2.html`,
 `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`, `docs/analiz/seo-geo-modul-2026-09-25.md`,

@@ -451,6 +451,9 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
                                          "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
+_CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
+                               page("yazar-giris")}) | _SEO
+
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
 #: başka sayfada da kullanılıyorsa ikisi de yazılır); işlem düzeyindeki daraltma Aşama B'nin işi.
@@ -462,8 +465,8 @@ RULES: list[tuple[str, Any]] = [
     # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
-    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
-    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
+    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
@@ -474,6 +477,19 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
     ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
+    # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/tenders/run-due", SYSTEM),
+    ("/api/v1/tenders/", frozenset({page("ihale")})),
+    # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
+    ("/api/v1/marketing/run-due", SYSTEM),
+    ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
+    ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
+    # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
+    # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
+    ("/api/v1/categories/run-due", SYSTEM),
+    ("/api/v1/categories/profile/", _CATEGORY_READERS),
+    ("/api/v1/categories/nodes", _CATEGORY_READERS),
+    ("/api/v1/categories/", frozenset({page("kategori-agaci")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -506,6 +522,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
     ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
     ("/api/v1/editorial/", _EDITORIAL),
+    # Belge incelemesi (Son Okuma → «Belge incele»): yükleme ve sonuçlar Son Okuma ya da Redaksiyon sayfasıyla
+    ("/api/v1/editorial/documents", frozenset(page(x) for x in ("son-okuma", "redaksiyon"))),
     ("/api/v1/people", OPEN),                      # Kampüs rehberi
     ("/api/v1/me/", OPEN),
     ("/api/v1/greetings", OPEN),
@@ -531,7 +549,8 @@ _S = r"^/api/v1/editorial/studio/jobs"
 FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/ask(/stream)?$", "ozellik:zeki.soru"),
     (frozenset({"GET"}), r"^/api/v1/(board/export\.xlsx|reports/[^/]+/file|financial-audit/runs/[^/]+/export"
-                         r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/ask/export\.pdf"
+                         r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/documents/[^/]+/export\.docx"
+                         r"|editorial/ask/export\.pdf"
                          r"|editorial/translation/jobs/[^/]+/(export\.docx|quality\.csv)|editorial/translation/terms/export\.csv"
                          r"|editorial/freelance/payouts/[^/]+/export\.csv"
                          r"|editorial/contracts/(item|addenda|statements)/[^/]+/document\.docx)$",
@@ -553,10 +572,31 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/distribution/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|books/refresh)$",
      "ozellik:dagilim.plan"),
     (frozenset({"GET"}), r"^/api/v1/distribution/plans/[^/]+/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # İhale: kayıt, dosya, kalem, eşleştirme, kontrol listesi, karar önerisi, sonuç. Karar onayı/geri gönderme açıkça
+    # verilen `ihale.karar` ile, ilan kaynağı `ihale.kaynak-yonet` ile ucun içinde; şirket belge arşivi `ihale.belge`.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/tenders(/(?!run-due$|watch/|documents(/|$)|[^/]+/decision/(approve|reject)$).*)?$", "ozellik:ihale.duzenle"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/tenders/documents(/[^/]+)?$", "ozellik:ihale.belge"),
+    (frozenset({"GET"}), r"^/api/v1/tenders/[^/]+/pricing\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Kategori ağacı: öneri üretme ve kaynak yenileme; ağaç taslağı, eşleme, kural ve etiket sözlüğü. Ağaç onayı ve
+    # profil kararı açıkça verilen `kategori.agac-onay` / `kategori.profil-onay` (+ `kategori.herkesinki`) ile ucun içinde.
+    (frozenset({"POST"}), r"^/api/v1/categories/(books/[^/]+/propose|refresh)$", "ozellik:kategori.oneri-uret"),
+    (frozenset({"PUT", "POST", "DELETE"}),
+     r"^/api/v1/categories/(tree|tree/(open|draft|suggest|submit|withdraw)|mappings|rules/[^/]+|tags/decision)$",
+     "ozellik:kategori.agac-duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/categories/crm-diff/export\.xlsx$", "ozellik:veri.disa-aktar"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
+    # Pazarlama planı: taslak, düzenleme, Zeki AI önerisi, materyal taslağı, onaya gönderme, revizyon. Plan onayı, üst
+    # bütçe onayı ve materyalin editoryal onayı açıkça verilen yetkilerle ucun içinde denetlenir; bu kural onlara uymaz.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/(plans(/[^/]+(/(lines|tasks|suggest|materials|submit|withdraw|revise))?)?|materials/[^/]+)$",
+     "ozellik:pazarlama.plan-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/plans/[^/]+/(export\.(pdf|csv)|package\.zip|crm-todo\.csv)$",
+     "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
+    (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
     # işi (segment kaydı, XLIFF içe aktarımı, terim önerisi) sayfa yetkisi + işteki rolüyle olur.
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs$", "ozellik:ceviri.yonet"),

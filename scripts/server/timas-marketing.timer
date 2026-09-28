@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazarlama planı hatırlatması, her gün 07:30
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+Persistent=true
+Unit=timas-marketing.service
+
+[Install]
+WantedBy=timers.target

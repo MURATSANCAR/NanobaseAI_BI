@@ -334,7 +334,7 @@ function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClo
         <PageImage bookId={bookId} bookTitle={bookTitle} page={page} marks={marks} activeKey={active?.key ?? null} onPick={onPick} cue={cue} />
       ) : (
         <p className="mt-2 shrink-0 rounded-xl bg-slate-50 px-3 py-4 text-center text-[12px] leading-snug text-canvas-muted">
-          {page === null ? 'Bu bulgu tek bir sayfaya bağlı değil; kitabın bütününe ilişkindir.' : 'Kitap kimliği yok; sayfa görseli getirilemiyor.'}
+          {page === null ? 'Bu bulgu tek bir sayfaya bağlı değil; kitabın bütününe ilişkindir.' : 'Sayfa görseli yok (yüklenen belgede basılı sayfa görüntüsü tutulmaz).'}
         </p>
       )}
 
