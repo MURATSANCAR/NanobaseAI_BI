@@ -6,6 +6,7 @@ import SqlEvidence from './SqlEvidence';
 import FindingReason from './FindingReason';
 import { findingSummary, rowExplanation } from './findings';
 import { accountingText, checkExplanations } from './presentation';
+import { ExceptionClusters, ExplainFinding } from './AuditAssist';
 
 export type DeepCheck = { sqlResultColumns?: {tested: string; affected: string}; sql?: string; id: string; title: string; status: string; affected: number | null; tested: number | null; formula: string; limitation: string };
 export type DeepAudit = {
@@ -66,7 +67,7 @@ export default function DeepAuditPanel({ data, runId, load, canDetail = true }: 
       <div className="audit-deep-checks">{data.checks.map(c => <article key={c.id} className={`audit-deep-check ${c.status}`}>
         <span className={`audit-status-icon ${c.status}`}>{c.status==='passed' ? <Check size={17}/> : <FileSearch size={17}/>}</span>
         <div><h3>{c.title}</h3><p>{c.tested == null ? 'Kaynak okunamadı' : `${number.format(c.tested)} kayıt / grup değerlendirildi`}</p>
-          {c.status === 'finding' && <FindingReason explanation={findingSummary(c)} />}<details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
+          {c.status === 'finding' && <FindingReason explanation={findingSummary(c)} />}{c.status === 'finding' && runId && <ExplainFinding runId={runId} checkId={c.id} />}<details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
         <button className="audit-button" disabled={!canDetail || c.affected == null || c.status==='unverified'} onClick={() => {setSelected(c.id);setPage(0);}}>
           {c.affected == null || c.status==='unverified' ? 'Doğrulanamadı' : c.affected ? `${number.format(c.affected)} inceleme adayı` : 'Fark bulunmadı'} <ArrowRight size={14}/>
         </button>
@@ -74,6 +75,7 @@ export default function DeepAuditPanel({ data, runId, load, canDetail = true }: 
     </section>
     {check && <section id="audit-exceptions" className="audit-panel audit-exceptions" aria-live="polite"><div className="audit-section-head"><h2>{check.title}</h2><button className="audit-button" onClick={() => setSelected('')}>Detayı kapat</button></div>
       <p>{checkExplanations[check.id] ?? accountingText(check.formula)}</p><p>Detay aynı dönem sınırıyla ayrı bir kaynak okumasıdır. Tutarlar aksi belirtilmedikçe TL’dir; farklar toplanmış zarar veya ceza değildir.</p>
+      {runId && canDetail && <ExceptionClusters key={check.id} runId={runId} checkId={check.id} />}
       {details.isFetching && <p role="status">Kaynak kayıtları okunuyor…</p>}{details.error && <p role="alert">{details.error instanceof Error ? details.error.message : 'Kayıtlar okunamadı.'}</p>}
       {details.data && <SqlEvidence sql={details.data.sql} description={`Aşağıdaki ${details.data.items.length} kaydı getiren, çalıştırılmış sorgudur. Sayfa ${page+1}; toplam ${details.data.total} bulgu. Raporun hesaplama anından ayrı bir okumadır.`} />}
       {details.data && (details.data.items.length ? <Rows rows={details.data.items} checkId={check.id}/> : <p>Bu sayfada inceleme adayı bulunmadı.</p>)}

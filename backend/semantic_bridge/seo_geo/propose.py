@@ -54,7 +54,42 @@ def _category(p: dict[str, Any]) -> str:
     return "-"
 
 
-def build_prompt(p: dict[str, Any], lim: dict[str, int]) -> str:
+TARGET_BLOCK = """
+HEDEF ARAMA SORGUSU
+Bu ürün sayfası Google'da şu sorguda görünüyor ama az tıklanıyor ya da ilk sıralarda değil: «{query}»
+- SeoTitle ve SeoDescription'da bu sorgunun kelimelerini, kayıttaki bilgiyle çelişmeden ve doğal biçimde geçir;
+  SearchKeywords'e sorguyu ekle.
+- Sorguda kayıtta karşılığı olmayan bir istek varsa (ör. "pdf", "özet", "ücretsiz", "indir", başka bir yayınevi) onu
+  metne YAZMA; yalnız kayıttaki bilgiyle uyuşan kelimeleri kullan.
+"""
+
+
+def build_prompt(p: dict[str, Any], lim: dict[str, int], target: Optional[str] = None) -> str:
+    base = _prompt(p, lim)
+    if not (target or "").strip():
+        return base
+    head, sep, tail = base.partition("ÜRÜN KAYDI")
+    return head + TARGET_BLOCK.format(query=target.strip()[:300]) + "\n" + sep + tail
+
+
+def target_check(fields: dict[str, str], query: Optional[str]) -> Optional[dict[str, Any]]:
+    """Hedef sorgunun anlamlı kelimeleri (3+ harf) başlıkta, meta açıklamada ve arama kelimelerinde geçiyor mu?
+    Kelime kökü (ilk 5 harf) karşılaştırılır; Türkçe ek farkı eksik sayılmaz. Yalnız bilgi: onayı insan verir."""
+    q = (query or "").strip()
+    if not q:
+        return None
+    words = [w for w in re.findall(r"\w+", _lower(q)) if len(w) >= 3]
+
+    def has(text: Any) -> list[str]:
+        stems = {_stem(t) for t in re.findall(r"\w+", _lower(rules.text_of(text) or ""))}
+        return [w for w in words if _stem(w) not in stems]
+
+    miss_t, miss_m, miss_k = has(fields.get("SeoTitle")), has(fields.get("SeoDescription")), has(fields.get("SearchKeywords"))
+    return {"query": q, "words": words, "inTitle": not miss_t, "inMeta": not miss_m, "inKeywords": not miss_k,
+            "missingTitle": miss_t, "missingMeta": miss_m}
+
+
+def _prompt(p: dict[str, Any], lim: dict[str, int]) -> str:
     return PROMPT.format(
         **lim, name=p.get("ProductName") or "-", author=rules.text_of(p.get("Model")) or "-",
         brand=p.get("Brand") or "-", category=_category(p),
@@ -175,10 +210,11 @@ def violations(fields: dict[str, str], lim: dict[str, int]) -> list[str]:
     return out
 
 
-def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int]) -> dict[str, str]:
+def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int], target: Optional[str] = None) -> dict[str, str]:
     """Öneri; sınır dışı çıkarsa model bir kez, neyin yanlış olduğu söylenerek düzeltmeye çağrılır. İkinci
-    cevap da uymazsa öneri olduğu gibi döner — ekran sayacı kırmızı gösterir, kullanıcı düzenler."""
-    messages = [{"role": "user", "content": build_prompt(p, lim)}]
+    cevap da uymazsa öneri olduğu gibi döner — ekran sayacı kırmızı gösterir, kullanıcı düzenler. `target`: fırsat
+    ekranından gelen hedef arama sorgusu (kişisel veri maskeli)."""
+    messages = [{"role": "user", "content": build_prompt(p, lim, target)}]
     raw = llm.chat(messages, max_tokens=3000, temperature=0.2)
     fields = parse(raw)
     wrong = violations(fields, lim)

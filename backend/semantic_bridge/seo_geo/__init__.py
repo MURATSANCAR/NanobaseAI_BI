@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 from . import connections, crm, geo, llms, pages, propose, redirects, rules, schema
 import hashlib
 
-from .store import CRM_BOOKS, GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
+from .store import CRM_BOOKS, GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, TARGETS, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -60,6 +60,16 @@ class PageDecision(BaseModel):
     action: str = Field(pattern="^(approve|reject)$")
     fields: dict[str, str] = Field(default_factory=dict)
     note: str = Field(default="", max_length=1000)
+
+
+class ProposeTarget(BaseModel):
+    """Fırsat ekranından «bu sorgu için öneri»: hedef arama sorgusu ve Search Console satırı (yalnız kayıt için)."""
+    query: str = Field(default="", max_length=300)
+    page: str = Field(default="", max_length=600)
+    position: Optional[float] = None
+    impressions: Optional[int] = None
+    clicks: Optional[int] = None
+    kind: str = Field(default="", max_length=24)
 
 
 class BulkApprove(BaseModel):
@@ -294,25 +304,31 @@ class SeoGeo:
     def rescore(self, p: dict[str, Any], fields: dict[str, str]) -> int:
         return rules.audit({**p, **fields}, rules.thresholds(self.conf), set())["score"]
 
-    def make_proposal(self, pid: str, user: str, priority: Optional[int] = None) -> dict[str, Any]:
+    def make_proposal(self, pid: str, user: str, priority: Optional[int] = None,
+                      target: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         with self._gen_lock:
             if pid in self._generating:
                 raise _err(409, "Bu ürün için öneri şu an yazılıyor; birkaç saniye sonra yeniden açın.")
             self._generating.add(pid)
         try:
-            return self._make_proposal(pid, user, priority)
+            return self._make_proposal(pid, user, priority, target)
         finally:
             with self._gen_lock:
                 self._generating.discard(pid)
 
-    def _make_proposal(self, pid: str, user: str, priority: Optional[int]) -> dict[str, Any]:
+    def _make_proposal(self, pid: str, user: str, priority: Optional[int],
+                       target: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        from semantic_bridge import zeki_text as Z
+
         row = self.product_row(pid)
         p = loads(row["data_json"], {})
         llm = self.runtime().llm_for("seo", priority)
         if llm is None:
             raise _err(503, "Yapay zekâ modeli bu kurulumda tanımlı değil.")
+        # Fırsat sorgusu arama kutusuna yazılmış serbest metindir: modele kişisel veri maskeli gider.
+        query = Z.mask_personal((target or {}).get("query") or "").strip() or None
         try:
-            fields = propose.suggest(llm, p, rules.thresholds(self.conf))
+            fields = propose.suggest(llm, p, rules.thresholds(self.conf), target=query)
         except ValueError as e:
             raise _err(502, f"Öneri üretilemedi: {e}") from None
         before = {k: str(p.get(k) or "") for k in propose.FIELDS}
@@ -325,8 +341,24 @@ class SeoGeo:
                 id=pid_new, tenant_id=self.tenant(), product_id=pid, status="hazir", fields_json=dumps(fields),
                 before_json=dumps(before), score_before=row["score"], score_after=self.rescore(p, fields),
                 model=getattr(llm, "model", None) or self.conf("LLM_MODEL_NAME"), created_by=user, created_at=now()))
-        self.audit(user, "create", pid, row["name"], {"proposal": pid_new})
+            if query:
+                t = target or {}
+                c.execute(TARGETS.insert().values(
+                    proposal_id=pid_new, tenant_id=self.tenant(), product_id=pid, query=query[:300],
+                    page=(str(t.get("page") or "")[:600] or None), position=t.get("position"),
+                    impressions=t.get("impressions"), clicks=t.get("clicks"), kind=(str(t.get("kind") or "")[:24] or None),
+                    created_by=user, created_at=now()))
+        self.audit(user, "create", pid, row["name"], {"proposal": pid_new, **({"hedefSorgu": query} if query else {})})
         return self.proposal(pid_new)
+
+    def targets(self, proposal_ids: list[str]) -> dict[str, dict[str, Any]]:
+        if not proposal_ids:
+            return {}
+        with self.engine().connect() as c:
+            rows = c.execute(sa.select(TARGETS).where(TARGETS.c.tenant_id == self.tenant(),
+                                                      TARGETS.c.proposal_id.in_(proposal_ids))).mappings().all()
+        return {r["proposal_id"]: {"query": r["query"], "page": r["page"], "position": r["position"],
+                                   "impressions": r["impressions"], "clicks": r["clicks"], "kind": r["kind"]} for r in rows}
 
     def external_proposal(self, pid: str, fields: dict[str, str], user: str, source: str) -> dict[str, Any]:
         """Başka modülün editör onaylı metnini (Kitap Tasarım Stüdyosu pazarlama kiti) bu ürünün bekleyen önerisi
@@ -799,18 +831,28 @@ def register(app, runtime, authorize, session_user):
             props = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == seo.tenant(),
                                                          PROPOSALS.c.product_id == pid)
                               .order_by(PROPOSALS.c.created_at.desc())).mappings().all()
+        tg = seo.targets([r["id"] for r in props])
         return {**_product_view(row, seo.conf("SEO_SITE_URL")),
                 "current": {k: str(p.get(k) or "") for k in propose.FIELDS},
                 "details": {"words": rules.words(p.get("Details")), "shortDescription": rules.text_of(p.get("ShortDescription"))},
                 "limits": rules.thresholds(seo.conf),
                 "crm": seo.crm_book(p),
                 "proposals": [{**_proposal_view(dict(r)),
-                               "unsupported": propose.unsupported(p, loads(r["fields_json"], {}))} for r in props]}
+                               "unsupported": propose.unsupported(p, loads(r["fields_json"], {})),
+                               "target": tg.get(r["id"]),
+                               "targetCheck": propose.target_check(loads(r["fields_json"], {}), (tg.get(r["id"]) or {}).get("query"))}
+                              for r in props]}
 
     @app.post("/api/v1/seo-geo/products/{pid}/propose")
-    def seo_propose(pid: str, request: Request) -> dict[str, Any]:
+    def seo_propose(pid: str, request: Request, body: Optional[ProposeTarget] = None) -> dict[str, Any]:
+        """Ürün için öneri. Gövdede hedef sorgu varsa (fırsat ekranı, tek tık) öneri o sorgu için yazılır ve sorgu
+        öneriyle birlikte kaydedilir. Akış aynı: onay insanda, T-soft'a gönderim yok."""
         user = gate(request)
-        return _proposal_view(seo.make_proposal(pid, user))
+        target = body.model_dump() if body is not None and body.query.strip() else None
+        out = seo.make_proposal(pid, user, target=target)
+        tg = seo.targets([out["id"]]).get(out["id"])
+        return {**_proposal_view(out), "target": tg,
+                "targetCheck": propose.target_check(loads(out["fields_json"], {}), (tg or {}).get("query"))}
 
     @app.post("/api/v1/seo-geo/proposals/{proposal_id}/decide")
     def seo_decide(proposal_id: str, body: Decision, request: Request) -> dict[str, Any]:

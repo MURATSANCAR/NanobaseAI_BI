@@ -244,7 +244,30 @@ export type RightsContract = {
   illustrator: string | null;
   parties: string[];
   inForce: boolean;
+  rightsMap?: RightsMap | null;
 };
+/** Yapılandırılmış hak haritası (öneri 18): her değer metinden birebir alıntıyla; alıntısız alan boş. */
+export type MapItem = { deger: string; alinti: string; kaynak: 'zeki' | 'kural' | 'insan'; ad?: string; tarih?: string | null };
+export type MapFields = { dil: MapItem[]; ulke: MapItem[]; format: MapItem[]; bitis: MapItem | null; munhasirlik: MapItem | null };
+export type RightsMap = {
+  id: number;
+  contractKey: string;
+  no: string | null;
+  book: string | null;
+  fields: MapFields;
+  source: 'zeki' | 'kural' | 'insan';
+  dropped: number;
+  reason: string | null;
+  status: 'oneri' | 'onayli' | 'reddedildi';
+  statusLabel: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  at: string;
+};
+/** Kapak e-postası taslağı: gönderim yok, kopyalanır. */
+export type CoverEmail = { konu: string; metin: string; kaynak: 'zeki' | 'kural'; neden: string | null; alici: string | null; hakSahibi: string; not: string };
+/** Koşu özeti: olgular SQL'den; `sql` çalıştırılan sorgular. */
+export type RunNote = { metin: string; kaynak: 'zeki' | 'kural'; neden: string | null; at: string; olgular: Record<string, unknown>; sql: string[]; saklanan: boolean };
 export type Grant = {
   id: number;
   bookId: string;
@@ -303,6 +326,9 @@ export type RightsMeta = {
   noteClasses: Record<string, string>;
   currencies: Record<string, string>;
   rights: Record<string, string>;
+  mapFields?: Record<string, string>;
+  mapFormats?: Record<string, string>;
+  mapExclusivity?: Record<string, string>;
 };
 export type Note = {
   id: number;
@@ -319,6 +345,7 @@ export type Note = {
   approvedBy: string | null;
   approvedAt: string | null;
   at: string;
+  map?: RightsMap | null;
 };
 export type NotesJob = { running: boolean; done: number; total: number; failed?: number; error: string | null; at: string | null };
 
@@ -386,6 +413,10 @@ export const royaltyApi = {
     call<{ decision: string }>(`${R}/renewals/${enc(key)}`, { method: 'PATCH', body: b }),
   suggestRenewal: (key: string) =>
     call<{ decision: string | null; probability: number | null; text: string | null; inputs: Record<string, unknown>; dropped: number }>(`${R}/renewals/${enc(key)}/suggest`, { method: 'POST', body: {}, timeout: 300_000 }),
+  coverEmail: (id: string, party: string) =>
+    call<CoverEmail>(`${R}/runs/${enc(id)}/parties/${enc(party)}/cover-email`, { method: 'POST', body: {}, timeout: 300_000 }),
+  summaryNote: (id: string, fresh = false) =>
+    call<RunNote>(`${R}/runs/${enc(id)}/summary-note${fresh ? '?fresh=true' : ''}`, { method: 'POST', body: {}, timeout: 300_000 }),
   contractLines: (key: string) =>
     call<{ items: Array<{ lineId: number; runId: string; runNo: string; label: string; runStatusLabel: string; status: LineStatus; statusLabel: string; exception: string | null; net: number | null; currency: string; statementId: string | null }> }>(`${R}/contracts/${enc(key)}/lines`),
 };
@@ -402,9 +433,12 @@ export const rightsApi = {
   licenseCreate: (b: Partial<License>) => call<License>('/rights/licenses-out', { method: 'POST', body: b }),
   licenseUpdate: (id: number, b: Partial<License>) => call<License>(`/rights/licenses-out/${id}`, { method: 'PATCH', body: b }),
   notes: (p: { status?: string; cls?: string; q?: string; page?: number }) =>
-    call<Page<Note> & { counts: Record<string, number>; job: NotesJob; can: Caps }>(`/rights/notes${qs(p)}`),
+    call<Page<Note> & { counts: Record<string, number>; job: NotesJob; mapJob?: NotesJob; mapCounts?: Record<string, number>; can: Caps }>(`/rights/notes${qs(p)}`),
   classify: () => call<NotesJob>('/rights/notes/classify', { method: 'POST', body: {} }),
   approveNote: (id: number, cls?: string) => call<Note>(`/rights/notes/${id}/approve`, { method: 'POST', body: { class: cls } }),
+  extractMap: () => call<NotesJob>('/rights/map/extract', { method: 'POST', body: {} }),
+  decideMap: (id: number, b: { action: 'onayla' | 'reddet'; fields?: MapFields }) =>
+    call<RightsMap>(`/rights/map/${id}/decide`, { method: 'POST', body: b }),
 };
 
 export const metaOptions = () => ({ queryKey: ['royalty', 'meta'], queryFn: royaltyApi.meta, staleTime: 10 * 60_000 });

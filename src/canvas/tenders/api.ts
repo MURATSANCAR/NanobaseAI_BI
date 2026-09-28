@@ -162,10 +162,18 @@ export type BriefFacts = {
 };
 
 export type Job = {
-  id: string; tur: 'ozet' | 'eslestirme'; durum: 'sirada' | 'calisiyor' | 'bitti' | 'hata' | 'kesildi';
+  id: string; tur: 'ozet' | 'eslestirme' | 'risk'; durum: 'sirada' | 'calisiyor' | 'bitti' | 'hata' | 'kesildi';
   ilerleme: number; toplam: number; sonuc: Record<string, unknown>; hata: string | null; baslatan: string;
   baslangic: string | null; bitis: string | null;
 };
+
+/** Şartnamedeki riskli koşul: alıntı şartnameden birebir; kategori kapalı kümeden; karar insanın. */
+export type RiskFlag = {
+  id: string; sira: number; kategori: string | null; kategoriAdi: string | null; alinti: string; kaynak: 'zeki' | 'kural' | 'incele';
+  ipucu: string | null; olasilik: number | null; marj: number | null; karar: 'engel' | 'engel-degil' | 'bilgi' | null;
+  kararAdi: string | null; kararNotu: string | null; kararVeren: string | null; kararZamani: string | null; dosya: string | null;
+};
+export type RiskList = { items: RiskFlag[]; kategoriler: Record<string, string>; kararlar: Record<string, string>; engel: number; kararsiz: number };
 
 export type FileRow = { id: string; tur: 'sartname' | 'ek' | 'belge'; ad: string; boyut: number; mime: string; yukleyen: string; zaman: string | null };
 
@@ -266,6 +274,9 @@ export const tendersApi = {
   deleteFile: (id: string, fid: string) => send<{ ok: boolean }>('DELETE', `/${enc(id)}/files/${enc(fid)}`),
   fileUrl: (id: string, fid: string) => `${ENGINE_BASE}${B}/${enc(id)}/files/${enc(fid)}`,
   summarize: (id: string, fileId?: string) => send<Job>('POST', `/${enc(id)}/summarize`, fileId ? { fileId } : {}),
+  risks: (id: string) => send<RiskList>('GET', `/${enc(id)}/risk-flags`),
+  runRisks: (id: string, fileId?: string) => send<Job>('POST', `/${enc(id)}/risk-flags`, fileId ? { fileId } : {}),
+  decideRisk: (id: string, rid: string, b: { karar: string; not?: string }) => send<RiskFlag>('PATCH', `/${enc(id)}/risk-flags/${enc(rid)}`, b),
   importItems: (id: string, b: { text?: string; fileId?: string; mode: 'replace' | 'append' }) =>
     send<{ eklenen: number; okunamayan: Array<{ satir: number; metin: string; neden: string }>; baslik: string[] }>('POST', `/${enc(id)}/items/import`, b, 300_000),
   match: (id: string, b: { onlyPending?: boolean; refreshCatalog?: boolean } = {}) => send<Job>('POST', `/${enc(id)}/items/match`, b),

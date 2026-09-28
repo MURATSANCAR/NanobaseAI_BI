@@ -27,6 +27,7 @@ from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import tenders as T
+from semantic_bridge import tenders_risk as TR
 from semantic_bridge import tenders_sources as src
 
 log = logging.getLogger("semantic.tenders.api")
@@ -388,6 +389,47 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
         out = call(T.start_job, engine, tenant, user, tid, "ozet", work)
         audit(engine, user, "run", "tender", tid, d["kurum"], {"is": "şartname özeti", "dosya": name})
+        return out
+
+    # ------------------------------------------------------------------ risk koşulu işaretleme
+
+    @app.get(P + "/{tid}/risk-flags")
+    def tenders_risk_list(tid: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = ctx(request)
+        return call(TR.listing, engine, tenant, tid)
+
+    @app.post(P + "/{tid}/risk-flags", status_code=202)
+    def tenders_risk_run(tid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Şartnamede riskli koşulları alıntıyla işaretler: aday cümle kuralla, kategori kapalı küme seçimle (model yoksa
+        kurala göre). Alıntısı metinde bulunmayan madde düşer."""
+        engine, tenant, user, _ = ctx(request)
+        d = call(T.detail, engine, tenant, tid)
+        fid = body.get("fileId") or next((f["id"] for f in reversed(d["dosyalar"]) if f["tur"] == "sartname"), None)
+        if not fid:
+            raise HTTPException(400, detail={"code": "TENDER", "message": "Önce şartname dosyasını yükleyin."})
+        name, data = call(_file_bytes, engine, tenant, tid, fid)
+        text = call(T.document_text, name, data)
+        if not (text or "").strip():
+            raise HTTPException(422, detail={"code": "TENDER", "message": "Şartname dosyasından metin okunamadı (taranmış görüntü olabilir)."})
+        choose = chooser()
+        summary = d.get("ozet") or {}
+
+        def work(progress):
+            cands, dropped = TR.candidates(text, summary)
+            progress(0, len(cands))
+            rows = TR.classify(cands, choose, progress)
+            saved = TR.save(engine, tid, rows, name)
+            return {**saved, "aday": len(cands), "atilan": dropped, "model": choose is not None}
+
+        out = call(T.start_job, engine, tenant, user, tid, "risk", work)
+        audit(engine, user, "run", "tender", tid, d["kurum"], {"is": "risk koşulu işaretleme", "dosya": name})
+        return out
+
+    @app.patch(P + "/{tid}/risk-flags/{rid}")
+    def tenders_risk_decide(tid: str, rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        out = call(TR.decide, engine, tenant, user, tid, rid, body)
+        audit(engine, user, "update", "tender_risk", tid, out["kategoriAdi"], {"karar": out["karar"], "alinti": out["alinti"][:200]})
         return out
 
     @app.post(P + "/{tid}/items/import")

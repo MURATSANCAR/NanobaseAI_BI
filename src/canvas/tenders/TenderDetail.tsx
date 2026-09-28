@@ -16,6 +16,7 @@ import { AskSheet, Fact, FilePick, LeftPill, ScoreBadge, Tabs, TenderFrame } fro
 import TenderItems from './TenderItems';
 import TenderChecklist from './TenderChecklist';
 import TenderDecision from './TenderDecision';
+import TenderRisks from './TenderRisks';
 
 /** Tek ihale: Özet · Kalemler · Belgeler · Karar · Sonuç. Sekme adres çubuğunda (?sekme=). Uzun işler (şartname özeti,
  *  kalem eşleştirme) arka planda koşar; ekran iki saniyede bir ilerlemeyi okur. */
@@ -98,7 +99,7 @@ function useJobWatch(tid: string, running: Job | null, onDone: () => void): Job 
     if (!j || ['calisiyor', 'sirada'].includes(j.durum) || seen.current === j.id) return;
     seen.current = j.id;
     onDone();
-    if (j.durum === 'bitti') toast.success(j.tur === 'ozet' ? 'Şartname özeti hazır.' : 'Eşleştirme bitti.');
+    if (j.durum === 'bitti') toast.success(j.tur === 'ozet' ? 'Şartname özeti hazır.' : j.tur === 'risk' ? 'Riskli koşullar işaretlendi.' : 'Eşleştirme bitti.');
     else toast.error(j.hata || 'İş tamamlanamadı.');
   }, [q.data, onDone]);
   return jid ? q.data ?? running : null;
@@ -106,7 +107,7 @@ function useJobWatch(tid: string, running: Job | null, onDone: () => void): Job 
 
 function JobBar({ job }: { job: Job }) {
   const pct = job.toplam ? Math.round((100 * job.ilerleme) / job.toplam) : 0;
-  const label = job.tur === 'ozet' ? 'Zeki AI şartnameyi okuyor' : 'Kalemler katalogla eşleştiriliyor';
+  const label = job.tur === 'ozet' ? 'Zeki AI şartnameyi okuyor' : job.tur === 'risk' ? 'Şartnamedeki riskli koşullar işaretleniyor' : 'Kalemler katalogla eşleştiriliyor';
   return (
     <div className="glass-panel flex flex-wrap items-center gap-3 rounded-2xl px-3 py-2 shadow-glass-float" role="status" aria-live="polite">
       <Loader2 aria-hidden className="h-4 w-4 animate-spin text-canvas-violet" />
@@ -282,6 +283,8 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
           <ReadingNote reading={s.okuma} />
         </Panel>
       ) : null}
+
+      <TenderRisks d={d} canEdit={can} modelVar={meta.modelVar} busy={busy} />
 
       <EditSheet open={editing} d={d} meta={meta} onClose={() => setEditing(false)} />
       <AskSheet

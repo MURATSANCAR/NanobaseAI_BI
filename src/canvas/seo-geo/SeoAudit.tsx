@@ -291,6 +291,13 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
         </button>}
       </div>
       {!!error && <div style={{ marginTop: 12 }}><Failed error={error} /></div>}
+      {proposal?.targetCheck && (
+        <p className={`sg-banner${proposal.targetCheck.inTitle && proposal.targetCheck.inMeta ? ' ok' : ''}`} style={{ marginTop: 12 }}>
+          Hedef arama: <b>«{proposal.targetCheck.query}»</b> — başlıkta {proposal.targetCheck.inTitle ? 'var' : `eksik (${proposal.targetCheck.missingTitle.join(', ')})`},
+          {' '}meta açıklamada {proposal.targetCheck.inMeta ? 'var' : `eksik (${proposal.targetCheck.missingMeta.join(', ')})`},
+          {' '}arama kelimelerinde {proposal.targetCheck.inKeywords ? 'var' : 'yok'}. Kayıtta karşılığı olmayan kelime bilerek yazılmaz.
+        </p>
+      )}
       {unsupported.length > 0 && (
         <p className="sg-banner" style={{ marginTop: 12 }}>
           Gerçeklik denetimi: öneride ürün kaydında geçmeyen ifadeler var — <b>{unsupported.join(', ')}</b>. Onaylamadan önce doğru olduklarına bakın.

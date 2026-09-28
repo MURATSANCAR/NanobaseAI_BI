@@ -54,6 +54,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 
 from semantic_bridge import dijital_sources as src
+from semantic_bridge import rights_map as RM
 from semantic_bridge import rights_notes as RN
 from semantic_bridge.seo_geo import crm as seo_crm
 
@@ -964,7 +965,10 @@ def get_title(engine: sa.engine.Engine, tenant: str, kitap_id: str, *, with_sale
     plats = _platforms(engine, tenant)
     out = _title_dict(r, plats, _listing_state(engine, tenant), full=True)
     reads = note_reads(engine, tenant)
+    maps = RM.for_keys(engine, tenant, [ct["id"] for ct in out["sozlesmeler"] if ct.get("not")])
     for ct in out["sozlesmeler"]:
+        # Yapılandırılmış hak haritası (M54 ile ortak; alanlar alıntılı, onay telif biriminde).
+        ct["hakHaritasi"] = RM.digital_view(RM.matching(maps, ct["id"], ct["not"])) if ct.get("not") else None
         rd = reads.get(ct["id"]) if ct.get("not") else None
         ct["notOkuma"] = ({"sonuc": rd["sonuc"], "sonucAdi": NOTE_CHOICES.get(rd["sonuc"] or "", "okunamadı"), "olasilik": rd["olasilik"],
                            "sinif": rd["sinif"], "sinifAdi": RN.RY.NOTE_CLASSES.get(rd["sinif"] or ""),
@@ -1260,6 +1264,7 @@ def rights_risks(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
         rows = c.execute(sa.select(TITLES).where(t.tenant_id == tenant, sa.or_(t.hak_ekitap.in_(RISK_RIGHTS), t.hak_sesli.in_(RISK_RIGHTS)))).all()
     plats = _platforms(engine, tenant)
     listings = _listing_state(engine, tenant)
+    maps = RM.for_keys(engine, tenant, [ct["id"] for r in rows for ct in _j(r.sozlesme_json, []) if ct.get("not")])
     risks, reviews = [], []
     for r in rows:
         on_e = bool(r.ekitap_var) or float(r.logo_dijital_12ay_adet or 0) > 0
@@ -1275,7 +1280,8 @@ def rights_risks(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
         d = _title_dict(r, plats, listings)
         d.update(hakEkitapGerekce=r.hak_ekitap_gerekce, hakSesliGerekce=r.hak_sesli_gerekce,
                  notOkuma="kisitliyor" if "kisitliyor" in flags else ("belirsiz" if "belirsiz" in flags else ("kisitlamiyor" if flags else None)),
-                 notluSozlesmeler=[{"id": ct["id"], "ad": ct.get("ad"), "taraflar": ct.get("taraflar"), "not": ct["not"]}
+                 notluSozlesmeler=[{"id": ct["id"], "ad": ct.get("ad"), "taraflar": ct.get("taraflar"), "not": ct["not"],
+                                    "hakHaritasi": RM.digital_view(RM.matching(maps, ct["id"], ct["not"]))}
                                    for ct in contracts if ct.get("not") and ct.get("yururlukte")],
                  riskBicim=[b for b, x in (("ekitap", risk_e), ("sesli", risk_s)) if x])
         if risk_e or risk_s:

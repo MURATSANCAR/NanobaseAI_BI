@@ -1710,7 +1710,8 @@ def save_license(engine: sa.engine.Engine, tenant: str, user: str, body: dict[st
 def _note(r: Any) -> dict[str, Any]:
     return {"id": r.id, "contractKey": r.contract_key, "no": r.no, "book": r.kitap, "text": r.metin, "class": r.sinif,
             "classLabel": NOTE_CLASSES.get(r.sinif or ""), "probability": r.olasilik, "margin": r.marj, "method": r.yontem,
-            "status": r.durum, "approvedBy": r.onaylayan, "approvedAt": _iso(r.onay_at), "at": _iso(r.tarih)}
+            "status": r.durum, "approvedBy": r.onaylayan, "approvedAt": _iso(r.onay_at), "at": _iso(r.tarih),
+            "textHash": r.metin_hash}
 
 
 def notes(engine: sa.engine.Engine, tenant: str, *, status: str = "", cls: str = "", q: str = "", page: int = 0) -> dict[str, Any]:

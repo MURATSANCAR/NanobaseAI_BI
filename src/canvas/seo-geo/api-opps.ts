@@ -20,6 +20,8 @@ export type OppItem = {
   lostClicks: number | null;
   brand: boolean;
   kinds: OppKind[];
+  /** Bu arama için istenmiş en son ürün önerisi (varsa). */
+  targetProposal?: { id: string; status: string } | null;
 };
 export type OppTotals = Record<OppKind, { all: number; brand: number; nonBrand: number; clicks: number; clicksBrand: number }>;
 export type Opportunities = {

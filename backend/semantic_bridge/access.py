@@ -851,7 +851,9 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PUT"}), r"^/api/v1/board$", "ozellik:pano.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/reports(/(?!run-due$)[^/]+(/run)?)?$", "ozellik:rapor.planla"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/alerts(/[^/]+)?$", "ozellik:uyari.kural"),
-    (frozenset({"GET"}), r"^/api/v1/financial-audit/(lines|documents|runs/[^/]+/exceptions/.+)$", "ozellik:denetim.detay"),
+    (frozenset({"GET"}), r"^/api/v1/financial-audit/(lines|documents|runs/[^/]+/(exceptions|clusters)/.+)$", "ozellik:denetim.detay"),
+    # İstisna kümeleme istisna satırlarını okur: ayrıntı yetkisi.
+    (frozenset({"POST"}), r"^/api/v1/financial-audit/runs/[^/]+/clusters/.+$", "ozellik:denetim.detay"),
     (frozenset({"POST"}), r"^/api/v1/financial-audit/runs/[^/]+/reviews/.+$", "ozellik:denetim.inceleme"),
     (frozenset({"POST"}), r"^/api/v1/financial-audit/refresh$", "ozellik:denetim.yenile"),
     (frozenset({"POST"}), r"^/api/v1/management/reports/[^/]+/refresh$", "ozellik:yonetim-raporu.yenile"),
@@ -950,7 +952,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"PATCH"}), r"^/api/v1/royalty/renewals/[^/]+$", "ozellik:telif.yenileme-karar"),
     (frozenset({"GET"}), r"^/api/v1/royalty/runs/[^/]+/(payments\.csv|withholding\.csv|statements\.zip"
                          r"|parties/[^/]+/statement\.docx)$", "ozellik:veri.disa-aktar"),
-    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/rights/(grants(/[^/]+)?|notes/classify|notes/[^/]+/approve)$",
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/rights/(grants(/[^/]+)?|notes/classify|notes/[^/]+/approve|map/extract|map/[^/]+/decide)$",
      "ozellik:haklar.duzenle"),
     (frozenset({"POST", "PATCH"}), r"^/api/v1/rights/licenses-out(/[^/]+)?$", "ozellik:haklar.lisans"),
     # Okur veri tabanı: birleştirme kararı ve kaynak yenileme; segment taslağı/düzenleme/onaya gönderme/arşiv ve Zeki

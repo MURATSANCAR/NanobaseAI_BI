@@ -141,7 +141,12 @@ export type Proposal = {
   productName?: string | null;
   /** Önerideki, kaynak kayıtta geçmeyen sayı ve özel adlar (gerçeklik denetimi). */
   unsupported?: string[];
+  /** Fırsat ekranından istendiyse hedef arama sorgusu (Search Console satırı). */
+  target?: ProposalTarget | null;
+  /** Hedef sorgunun kelimeleri başlıkta / meta açıklamada / arama kelimelerinde geçiyor mu (bilgi; onay insanda). */
+  targetCheck?: { query: string; words: string[]; inTitle: boolean; inMeta: boolean; inKeywords: boolean; missingTitle: string[]; missingMeta: string[] } | null;
 };
+export type ProposalTarget = { query: string; page?: string | null; position?: number | null; impressions?: number | null; clicks?: number | null; kind?: string | null };
 
 export type ProductDetail = ProductRow & {
   current: Record<SeoField, string>;
@@ -245,6 +250,9 @@ export const seoApi = {
   product: (id: string) => call<ProductDetail>(`products/${encodeURIComponent(id)}`),
   // Model önerisi kuyrukta bekleyebilir; kısa zaman aşımı yanlış hata gösterir.
   propose: (id: string) => call<Proposal>(`products/${encodeURIComponent(id)}/propose`, { method: 'POST', timeout: 300_000 }),
+  /** Fırsat sorgusu için öneri (tek tık): akış aynı, T-soft'a gönderim yok; hedef sorgu öneriyle kaydedilir. */
+  proposeFor: (id: string, target: ProposalTarget) =>
+    call<Proposal>(`products/${encodeURIComponent(id)}/propose`, { method: 'POST', body: target, timeout: 300_000 }),
   decide: (id: string, body: { action: 'approve' | 'reject'; fields?: Fields; note?: string }) =>
     call<Proposal>(`proposals/${id}/decide`, { method: 'POST', body, timeout: 120_000 }),
   bulkApprove: (ids: string[], note = '') =>

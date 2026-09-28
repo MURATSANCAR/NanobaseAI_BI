@@ -6,6 +6,7 @@ import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../kit';
 import { Field, Sheet, day, errMsg, money, num, stamp } from '../contracts/ui';
 import { download, royaltyApi, runPath, type Caps, type Party, type Run } from './api';
+import { CoverEmailButton } from './Drafts';
 
 /** Hak sahipleri: onaylı koşudan yazar başına birleşik beyanname. Gönderimi insan kendi e-postasıyla yapar; burada
  *  «gönderildi» kaydı tutulur (ilk sürümde sistemden dış gönderim yok). */
@@ -98,11 +99,14 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
                 <Pill tone={p.status === 'gonderildi' ? 'ok' : 'warn'}>{p.status === 'gonderildi' ? 'Gönderildi' : 'Gönderilmedi'}</Pill>
                 <span className="text-[11.5px] text-canvas-muted">{p.contracts} sözleşme{p.email ? ` · ${p.email}` : p.hasEmail ? '' : ' · e-posta yok'}</span>
                 {can.notify && (
-                  <button type="button" className={`${btnGhost} ml-auto`} disabled={busy === p.key}
-                    onClick={() => get(p.key, `${runPath(run.id)}/parties/${encodeURIComponent(p.key)}/statement.docx`)}>
-                    {busy === p.key ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-                    Beyanname
-                  </button>
+                  <span className="ml-auto flex flex-wrap gap-1.5">
+                    <CoverEmailButton run={run} party={p} />
+                    <button type="button" className={btnGhost} disabled={busy === p.key}
+                      onClick={() => get(p.key, `${runPath(run.id)}/parties/${encodeURIComponent(p.key)}/statement.docx`)}>
+                      {busy === p.key ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
+                      Beyanname
+                    </button>
+                  </span>
                 )}
               </div>
               <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">

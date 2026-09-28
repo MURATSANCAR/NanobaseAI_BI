@@ -3,6 +3,7 @@
 - semantic_seo_products: T-soft'tan okunan ürünün son hâli, denetim puanı ve sorunları.
 - semantic_seo_proposals: model önerisi → insan kararı (onay/ret). Hiçbir yere gönderilmez; öneri anındaki değerler
   `before_json`'da durur.
+- semantic_seo_proposal_targets: fırsat sorgusundan istenen önerinin hedef sorgusu (öneri → sorgu kaydı).
 - semantic_seo_runs: eşitleme turları (ne zaman, kaç ürün, hata).
 - semantic_seo_gsc: Search Console'dan okunan özetler (tür başına son hâl).
 - semantic_seo_questions: yapay zekâ görünürlüğü için izlenen sorular.
@@ -49,6 +50,22 @@ PROPOSALS = sa.Table(
     sa.Column("note", sa.String(1000)),
     sa.Column("sent_at", sa.DateTime(timezone=True)),
     sa.Column("result", sa.String(1000)),
+)
+#: Fırsat sorgusundan istenen önerinin hedefi (Search Console sorgusu). Öneri akışı aynıdır (insan onayı, gönderim yok);
+#: bu tablo yalnız «bu öneri hangi sorgu için istendi» kaydıdır.
+TARGETS = sa.Table(
+    "semantic_seo_proposal_targets", _md,
+    sa.Column("proposal_id", sa.String(32), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("product_id", sa.String(40), nullable=False, index=True),
+    sa.Column("query", sa.String(300), nullable=False),
+    sa.Column("page", sa.String(600)),
+    sa.Column("position", sa.Float),
+    sa.Column("impressions", sa.Integer),
+    sa.Column("clicks", sa.Integer),
+    sa.Column("kind", sa.String(24)),                        # yakin | dusuk_tiklama
+    sa.Column("created_by", sa.String(120)),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 RUNS = sa.Table(
     "semantic_seo_runs", _md,

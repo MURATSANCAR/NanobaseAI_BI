@@ -129,6 +129,12 @@ function ContractRow({ c, t, meta }: { c: Contract; t: TitleDetail; meta: Meta }
         <blockquote className="mt-1.5 break-words rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] leading-snug">
           <span className="font-bold">Hak notu: </span>{c.not}
           {c.notOkuma && <span className="mt-0.5 block text-[11px] text-canvas-muted">Zeki AI ön okuması: {c.notOkuma.sonucAdi}{c.notOkuma.olasilik !== null ? ` (olasılık %${Math.round((c.notOkuma.olasilik ?? 0) * 100)})` : ''} — karar telif biriminin.</span>}
+          {c.hakHaritasi && c.hakHaritasi.durum !== 'reddedildi' && c.hakHaritasi.ozet && (
+            <span className="mt-0.5 block text-[11px]">
+              <span className="font-bold">Hak haritası</span>{' '}
+              <span className="text-canvas-muted">({c.hakHaritasi.onayli ? 'telif onaylı' : c.hakHaritasi.kaynak === 'zeki' ? 'Zeki AI önerisi, alıntılı' : 'kurala göre öneri, alıntılı'})</span>: {c.hakHaritasi.ozet}
+            </span>
+          )}
         </blockquote>
       )}
       {decided.map((d, i) => (

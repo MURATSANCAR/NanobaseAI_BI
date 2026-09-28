@@ -49,6 +49,13 @@ export type Contract = {
   id: string; ad: string | null; taraflar: string[]; yururlukte: boolean; bitis: string | null; suresiz: boolean; ekitap: boolean;
   sesli: boolean; zkitap: boolean; iletim: boolean; korumaDisi: boolean; not: string | null;
   notOkuma: { sonuc: string | null; sonucAdi: string; olasilik: number | null } | null;
+  hakHaritasi?: HakHaritasi | null;
+};
+
+/** M54 ile ortak yapılandırılmış hak haritası (alanlar alıntılı; onay telif biriminde). */
+export type HakHaritasi = {
+  alanlar: Record<string, unknown>; ozet: string; durum: 'oneri' | 'onayli' | 'reddedildi'; durumAdi: string;
+  kaynak: 'zeki' | 'kural' | 'insan'; onayli: boolean;
 };
 
 export type TitleDetail = TitleRow & {
@@ -85,7 +92,7 @@ export type Page<T> = { items: T[]; total: number; page: number; pageSize: numbe
 export type Opportunity = TitleRow & { gerekce: string | null; puan: number | null };
 export type RiskRow = TitleRow & {
   hakEkitapGerekce: string | null; hakSesliGerekce: string | null; notOkuma: string | null; riskBicim: Format[];
-  notluSozlesmeler: Array<{ id: string; ad: string | null; taraflar: string[]; not: string }>;
+  notluSozlesmeler: Array<{ id: string; ad: string | null; taraflar: string[]; not: string; hakHaritasi?: HakHaritasi | null }>;
 };
 
 export type Platform = {

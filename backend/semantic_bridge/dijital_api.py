@@ -325,6 +325,13 @@ def register(app: Any, deps: dict[str, Any]) -> D.Refresher:
             out["hakNotu"] = D.read_notes(engine, tenant, llm("BATCH"), st["noteBudgetSec"])
         except Exception as e:  # noqa: BLE001
             out["hakNotu"] = {"error": str(e)[:200]}
+        try:
+            # Sınıfın üstüne yapılandırılmış hak haritası (M54 ile ortak tablo); aynı süre bütçesiyle, kalan sonraki gece.
+            from semantic_bridge import rights_map as RM
+            out["hakHaritasi"] = RM.run(engine, tenant, RM.pending(engine, tenant), llm("BATCH"),
+                                        budget_sec=st["noteBudgetSec"])
+        except Exception as e:  # noqa: BLE001
+            out["hakHaritasi"] = {"error": str(e)[:200]}
         items = D.due_alerts(engine, tenant, st, date.today())
         link = (conf("ALERT_LINK", "") or "").split("/uyarilar")[0]
         link = f"{link}/dijital-yayin" if link else ""

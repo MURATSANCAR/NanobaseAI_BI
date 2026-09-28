@@ -5,6 +5,7 @@ import { Calculator, CheckCheck, ChevronLeft, Loader2, Plus, Send, Undo2, X } fr
 import { toast } from 'sonner';
 import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
+import { RunNotePanel } from './Drafts';
 import { NumInput } from '../contracts/TermsForm';
 import { Field, Sheet, Tabs, day, errMsg, money, num, stamp } from '../contracts/ui';
 import { Advances } from './Advances';
@@ -112,6 +113,7 @@ export default function RoyaltyScreen() {
         </Panel>
       )}
       {m && r && tab === 'kosu' && <Summary run={r} meta={m} onReason={(code) => setMany({ sekme: 'istisna', neden: code })} />}
+      {m && r && tab === 'kosu' && <RunNotePanel key={r.id} run={r} />}
       {m && r && tab === 'kosu' && r.status !== 'taslak' && <RunLines run={r} meta={m} title="Bütün satırlar" />}
       {m && r && tab === 'istisna' && (
         r.status === 'taslak' ? <Panel><p className="py-8 text-center text-[12.5px] text-canvas-muted">Koşu henüz hesaplanmadı.</p></Panel>

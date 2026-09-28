@@ -276,6 +276,11 @@ function RiskCard({ r, meta, onOpen }: { r: RiskRow; meta: Meta; onOpen: (id: st
       {r.notluSozlesmeler.map((c) => (
         <blockquote key={c.id} className="mt-2 break-words rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-snug">
           <span className="font-bold">{c.taraflar.join(', ') || c.ad}: </span>{c.not}
+          {c.hakHaritasi && c.hakHaritasi.durum !== 'reddedildi' && c.hakHaritasi.ozet && (
+            <span className="mt-0.5 block text-[11px] text-canvas-muted">
+              Hak haritası ({c.hakHaritasi.onayli ? 'telif onaylı' : 'öneri'}): {c.hakHaritasi.ozet}
+            </span>
+          )}
         </blockquote>
       ))}
     </div>

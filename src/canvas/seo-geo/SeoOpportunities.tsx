@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { FIELD_LABEL, dateTime, fmt } from './api';
+import { FIELD_LABEL, dateTime, fmt, seoApi } from './api';
 import { oppsApi, type Delta, type ImpactItem, type ImpactStatus, type Metrics, type OppItem, type OppKind } from './api-opps';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 
@@ -219,6 +219,7 @@ function OppTable({ items, kind }: { items: OppItem[]; kind: OppKind }) {
             <th>Oran</th>
             <th>Sıra</th>
             <th>{kind === 'yakin' ? 'İlk üçte ek tıklama' : 'Kaçan tıklama'}</th>
+            <th>Öneri</th>
           </tr>
         </thead>
         <tbody>
@@ -251,11 +252,43 @@ function OppTable({ items, kind }: { items: OppItem[]; kind: OppKind }) {
               </td>
               <td className="num">{fmt(i.position, 1)}</td>
               <td className="num">{kind === 'yakin' ? (i.extraClicks == null ? '—' : `+${fmt(i.extraClicks)}`) : fmt(i.lostClicks)}</td>
+              <td style={{ minWidth: 150 }}>{i.productId ? <ProposeForQuery item={i} kind={kind} /> : <span style={{ fontSize: 11.5, color: 'var(--sg-muted)' }}>Ürün sayfası değil</span>}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+const PROPOSAL_STATE: Record<string, string> = { hazir: 'Öneri onay bekliyor', onaylandi: 'Onaylandı', reddedildi: 'Reddedildi' };
+
+/** Tek tık: bu arama sorgusunu hedef kelime yaparak ürün önerisi ister, sonra ürün denetimine götürür. Öneri akışı
+ *  aynıdır (onay insanda); T-soft'a hiçbir şey gitmez. */
+function ProposeForQuery({ item, kind }: { item: OppItem; kind: OppKind }) {
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const to = `/seo-geo/urun-denetimi?urun=${encodeURIComponent(item.productId!)}`;
+  const ask = useMutation({
+    mutationFn: () => seoApi.proposeFor(item.productId!, {
+      query: item.query, page: item.page, position: item.position, impressions: item.impressions, clicks: item.clicks, kind,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['seo-opps'] });
+      nav(to);
+    },
+  });
+  if (item.targetProposal) {
+    return <Link to={to}>{PROPOSAL_STATE[item.targetProposal.status] ?? item.targetProposal.status}</Link>;
+  }
+  return (
+    <>
+      <button className="sg-button" onClick={() => ask.mutate()} disabled={ask.isPending} title="Bu arama için başlık ve açıklama önerisi">
+        {ask.isPending ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
+        {ask.isPending ? 'Yazılıyor…' : 'Bu arama için öneri'}
+      </button>
+      {ask.error && <div role="alert" style={{ fontSize: 11, color: 'var(--sg-danger, #b4412f)', marginTop: 4 }}>{ask.error instanceof Error ? ask.error.message : 'Öneri yazılamadı.'}</div>}
+    </>
   );
 }
 

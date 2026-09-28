@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ExternalLink, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Check, ChevronLeft, ExternalLink, ListTree, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Note as Callout, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Pager, Panel, useDebounced } from '../kit';
 import { NumInput } from '../contracts/TermsForm';
 import { Field, Sheet, Tabs, day, errMsg, money, num } from '../contracts/ui';
+import RightsMapView from './RightsMap';
 import { rightsApi, rightsMetaOptions, type BookCard, type Grant, type License, type RightState, type RightsMeta } from '../royalty/api';
 
 /** M54 Haklar ve lisanslar: kitabın hak kartı (CRM hak bitleri + portaldaki dil/ülke kaydı + verilen lisanslar),
@@ -223,6 +224,9 @@ function ContractList({ items, meta }: { items: BookCard['contracts']; meta: Rig
             <div className="mt-1 text-[12px]">{x.originalLanguage ? `Özgün dil: ${x.originalLanguage}` : ''}{x.soldCountry ? ` · Satılan ülke: ${x.soldCountry}` : ''}</div>
           )}
           {x.rights_note && <div className="mt-1.5"><Callout tone="warn">Hak notu: {x.rights_note}</Callout></div>}
+          {x.rightsMap && x.rightsMap.status !== 'reddedildi' && (
+            <div className="mt-1.5"><RightsMapView map={x.rightsMap} canEdit={false} compact /></div>
+          )}
         </li>
       ))}
     </ul>
@@ -413,7 +417,15 @@ function Notes({ meta }: { meta: RightsMeta }) {
     queryKey: ['rights', 'notes', status, cls, dq, page],
     queryFn: () => rightsApi.notes({ status, cls, q: dq, page }),
     placeholderData: keepPreviousData,
-    refetchInterval: (qq) => (qq.state.data?.job.running ? 4000 : false),
+    refetchInterval: (qq) => (qq.state.data?.job.running || qq.state.data?.mapJob?.running ? 4000 : false),
+  });
+  const extract = useMutation({
+    mutationFn: rightsApi.extractMap,
+    onSuccess: (j) => {
+      toast.success(j.total ? `${j.total} açıklamanın hak haritası çıkarılıyor.` : 'Haritası çıkarılacak yeni açıklama yok.');
+      qc.invalidateQueries({ queryKey: ['rights', 'notes'] });
+    },
+    onError: (e) => toast.error(errMsg(e) ?? 'Başlatılamadı.'),
   });
   const run = useMutation({
     mutationFn: rightsApi.classify,
@@ -431,7 +443,7 @@ function Notes({ meta }: { meta: RightsMeta }) {
   const d = list.data;
   return (
     <Panel>
-      <div className="grid gap-2 sm:grid-cols-[auto_auto_1fr_auto]">
+      <div className="grid gap-2 sm:grid-cols-[auto_auto_1fr_auto_auto]">
         <select aria-label="Durum" value={status} onChange={(e) => setStatus(e.target.value)} className={field}>
           <option value="incele">İncelenecek ({num(d?.counts.incele ?? 0, 0)})</option>
           <option value="oneri">Zeki AI önerisi ({num(d?.counts.oneri ?? 0, 0)})</option>
@@ -449,9 +461,16 @@ function Notes({ meta }: { meta: RightsMeta }) {
             {d.job.running ? `${num(d.job.done, 0)} / ${num(d.job.total, 0)}` : 'Zeki AI ile sınıfla'}
           </button>
         )}
+        {d?.can.rightsEdit && (
+          <button type="button" className={btnGhost} disabled={extract.isPending || d.job.running || !!d.mapJob?.running} onClick={() => extract.mutate()}>
+            {d.mapJob?.running ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <ListTree aria-hidden className="h-4 w-4" />}
+            {d.mapJob?.running ? `${num(d.mapJob.done, 0)} / ${num(d.mapJob.total, 0)}` : 'Hak haritası çıkar'}
+          </button>
+        )}
       </div>
-      <p className="mt-2 text-[11.5px] text-canvas-muted">CRM'deki serbest metinli hak açıklamaları. Zeki AI yalnız sınıf önerir; emin olmadığı açıklama «incelenecek»tir, sınıfı telif uzmanı onaylar.</p>
+      <p className="mt-2 text-[11.5px] text-canvas-muted">CRM'deki serbest metinli hak açıklamaları. Zeki AI yalnız sınıf önerir; emin olmadığı açıklama «incelenecek»tir, sınıfı telif uzmanı onaylar. Hak haritası dil, ülke, format, bitiş ve münhasırlığı açıklamadan birebir alıntıyla çıkarır; alıntısı olmayan alan boş kalır, haritayı telif uzmanı onaylar.</p>
       {d?.job.error && <div className="mt-2"><Callout tone="warn">{d.job.error}</Callout></div>}
+      {d?.mapJob?.error && <div className="mt-2"><Callout tone="warn">{d.mapJob.error}</Callout></div>}
       {list.error && <div className="mt-2"><Callout tone="err">{errMsg(list.error)}</Callout></div>}
       {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan açıklama yok.</p>}
       <ul className="mt-3 space-y-2">
@@ -463,6 +482,7 @@ function Notes({ meta }: { meta: RightsMeta }) {
               {n.classLabel && <Pill tone={n.status === 'onayli' ? 'ok' : n.status === 'oneri' ? 'violet' : 'warn'}>{n.classLabel}{n.probability != null && n.status !== 'onayli' ? ` · %${num(n.probability * 100, 0)}` : ''}</Pill>}
             </div>
             <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-snug">{n.text}</p>
+            {n.map && <div className="mt-2"><RightsMapView key={`${n.map.id}-${n.map.status}`} map={n.map} canEdit={d.can.rightsEdit} /></div>}
             {d.can.rightsEdit && n.status !== 'onayli' && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {n.class && (

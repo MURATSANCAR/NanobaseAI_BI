@@ -26,7 +26,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
 from . import connections
-from .store import PRODUCTS, _md, dumps, iso, loads, now
+from .store import PRODUCTS, PROPOSALS, TARGETS, _md, dumps, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -252,6 +252,19 @@ def product_map(seo) -> dict[str, dict[str, str]]:
     return out
 
 
+def target_proposals(seo, product_ids: list[str]) -> dict[tuple[str, str], dict[str, Any]]:
+    """(ürün, katlanmış sorgu) → o sorgu için istenmiş en son öneri {id, durum}. Fırsat satırında «öneri istendi /
+    onaylandı» görünsün diye; öneri akışının kendisi ürün denetimi ekranındadır."""
+    if not product_ids:
+        return {}
+    with seo.engine().connect() as c:
+        rows = c.execute(sa.select(TARGETS.c.product_id, TARGETS.c.query, PROPOSALS.c.id, PROPOSALS.c.status)
+                         .join(PROPOSALS, PROPOSALS.c.id == TARGETS.c.proposal_id)
+                         .where(TARGETS.c.tenant_id == seo.tenant(), TARGETS.c.product_id.in_(product_ids))
+                         .order_by(TARGETS.c.created_at)).all()
+    return {(pid, fold(q)): {"id": prop_id, "status": st} for pid, q, prop_id, st in rows}
+
+
 # ------------------------------------------------------------------------------------------------ uçlar
 
 def _err(status: int, message: str) -> HTTPException:
@@ -280,11 +293,14 @@ def register(app, ctx) -> None:
         start = max(0, start)
         page = ranked[start:start + max(1, limit)]
         products = product_map(seo) if any(i["page"] for i in page) else {}
+        matched = {i["query"]: products.get(path_key(i["page"]) or "") if i["page"] else None for i in page}
+        done = target_proposals(seo, sorted({p["id"] for p in matched.values() if p}))
         items = []
         for i in page:
             p = products.get(path_key(i["page"]) or "") if i["page"] else None
             items.append({k: v for k, v in i.items() if k != "kinds"} | {
-                "kinds": i["kinds"], "productId": p["id"] if p else None, "productName": p["name"] if p else None})
+                "kinds": i["kinds"], "productId": p["id"] if p else None, "productName": p["name"] if p else None,
+                "targetProposal": done.get((p["id"], fold(i["query"]))) if p else None})
         return {"kind": kind, "brand": brand, "start": start, "total": len(ranked), "items": items,
                 "totals": data["totals"], "source": data["source"], "curve": data["curve"],
                 "connected": bool(connections.service_account_email()),

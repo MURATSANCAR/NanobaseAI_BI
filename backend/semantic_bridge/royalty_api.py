@@ -29,8 +29,10 @@ from semantic_bridge import budget_sources as bsrc
 from semantic_bridge import contracts as C
 from semantic_bridge import contracts_royalty as CR
 from semantic_bridge import contracts_terms as T
+from semantic_bridge import rights_map as RM
 from semantic_bridge import rights_notes as RN
 from semantic_bridge import royalty as RY
+from semantic_bridge import royalty_draft as RD
 from semantic_bridge import royalty_sources as S
 
 log = logging.getLogger("semantic.royalty.api")
@@ -118,6 +120,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     work_lock = threading.Lock()   # Logo'yu aynı anda tek ağır iş okur
     notes_state: dict[str, Any] = {"running": False, "done": 0, "total": 0, "error": None, "at": None}
+    map_state: dict[str, Any] = {"running": False, "done": 0, "total": 0, "error": None, "at": None}
 
     def crm_file() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
@@ -205,6 +208,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                     log.exception("royalty: %s", name)
                     on_error("İş tamamlanamadı; kayıt günlükte. Yeniden deneyin, sürerse destek ekibine haber verin.")
         threading.Thread(target=work, name=f"royalty-{name}", daemon=True).start()
+
+    def model(priority_name: str) -> Any:
+        """LLM kapısından modül adına model; tanımlı değilse None (kural metni)."""
+        try:
+            from semantic_layer.runtime import llm_queue
+            return rt().llm_for("royalty", getattr(llm_queue, priority_name))
+        except Exception as e:  # noqa: BLE001
+            log.info("royalty: model yok: %s", e)
+            return None
 
     def _docx(data: bytes, name: str, media: str = DOCX) -> Response:
         return Response(content=data, media_type=media, headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
@@ -374,6 +386,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         audit(engine, user, "update", "royalty_statement", run_id, "Beyanname gönderim kaydı",
               {"keys": body.get("keys"), "channel": body.get("channel"), "undo": bool(body.get("undo"))})
         return out
+
+    @app.post("/api/v1/royalty/runs/{run_id}/parties/{party}/cover-email")
+    def royalty_cover_email(run_id: str, party: str, request: Request) -> dict[str, Any]:
+        """Beyanname kapak e-postası taslağı (sayı denetimli). Gönderim yok: taslak kopyalanır, insan gönderir."""
+        engine, tenant, user, _ = ctx(request)
+        need(user, NOTIFY, "Telif beyannamesi")
+        out = call(RD.cover_email, engine, tenant, run_id, party, llm=model("NORMAL"))
+        audit(engine, user, "draft", "royalty_statement", run_id, "Beyanname kapak e-postası taslağı",
+              {"party": party, "source": out["kaynak"]})
+        return out
+
+    @app.post("/api/v1/royalty/runs/{run_id}/summary-note")
+    def royalty_run_summary(run_id: str, request: Request, fresh: bool = False) -> dict[str, Any]:
+        """Koşu özeti (yöneticiye): olgular SQL'den, anlatım sayı denetimli; olgular değişmedikçe saklanan döner."""
+        engine, tenant, user, _ = ctx(request)
+        return call(RD.run_summary, engine, tenant, run_id, llm=model("NORMAL"), fresh=fresh)
 
     # ------------------------------------------------------------------ ödeme listesi
 
@@ -582,7 +610,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = ctx(request)
         return {"can": caps(user), "grantKinds": RY.GRANT_KINDS, "licenseStatuses": RY.LICENSE_STATUSES,
                 "collectionStatuses": RY.COLLECTION_STATUSES, "noteClasses": RY.NOTE_CLASSES, "currencies": T.CURRENCIES,
-                "rights": S.RIGHT_LABELS}
+                "rights": S.RIGHT_LABELS, "mapFields": RM.FIELD_LABELS, "mapFormats": RM.FORMATS,
+                "mapExclusivity": RM.EXCLUSIVITY}
 
     @app.get("/api/v1/rights/search")
     def rights_search(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
@@ -630,6 +659,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             c["inForce"] = seo_crm.in_force(c, on)
             contracts.append(c)
         lic = RY.licenses(engine, tenant, book_id=book_id)
+        for c in contracts:
+            c["rightsMap"] = RM.for_text(engine, tenant, c["id"], c.get("rights_note")) if c.get("rights_note") else None
         h = head[0]
         return {"book": {"id": book_id.lower(), "title": h.get("new_name"), "stockCode": h.get("new_StokKodu"),
                          "ebookCode": h.get("new_EKitapStokKodu"), "isbn": h.get("new_isbn13")},
@@ -692,7 +723,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/rights/notes")
     def rights_notes(request: Request, status: str = "", cls: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {**call(RY.notes, engine, tenant, status=status, cls=cls, q=q, page=page), "job": dict(notes_state), "can": caps(user)}
+        out = call(RY.notes, engine, tenant, status=status, cls=cls, q=q, page=page)
+        # Yapılandırılmış hak haritası (öneri 18): aynı not, aynı metin özeti; metin değiştiyse eski harita gösterilmez.
+        maps = RM.for_keys(engine, tenant, [n["contractKey"] for n in out["items"]])
+        for n in out["items"]:
+            m = maps.get(n["contractKey"])
+            n["map"] = m if m and m["hash"] == n.get("textHash") else None
+        return {**out, "job": dict(notes_state), "mapJob": dict(map_state), "mapCounts": RM.counts(engine, tenant),
+                "can": caps(user)}
 
     @app.get("/api/v1/rights/notes/classify")
     def rights_notes_job(request: Request) -> dict[str, Any]:
@@ -723,10 +761,65 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 RN.classify(engine, tenant, items, llm, progress=progress)
             finally:
                 notes_state.update(running=False, at=RY._iso(RY._now()))
+            # Sınıfın üstüne yapılandırılmış hak haritası: yeni/değişen notlar (aynı iş, ayrı sayaç).
+            map_job(engine, tenant)
 
         threading.Thread(target=job, name="royalty-notes", daemon=True).start()
         audit(engine, user, "run", "rights_note", None, "Hak açıklaması sınıflandırma", {"count": len(items)})
         return dict(notes_state)
+
+    # ------------------------------------------------------------------ yapılandırılmış hak haritası (öneri 18)
+
+    def map_job(engine, tenant) -> None:
+        """Haritası olmayan ya da metni değişmiş notların haritasını çıkarır (kural + Zeki AI, alıntı denetimli)."""
+        if map_state["running"]:
+            return
+        items = RM.pending(engine, tenant)
+        map_state.update(running=True, done=0, total=len(items), error=None, at=None, failed=0)
+
+        def progress(ok: bool) -> None:
+            map_state["done"] += 1
+            if not ok:
+                map_state["failed"] = map_state.get("failed", 0) + 1
+                map_state["error"] = "Zeki AI bazı açıklamalara cevap veremedi; bunlarda yalnız kurala göre alanlar var."
+
+        try:
+            from semantic_layer.runtime.llm_queue import BATCH
+            try:
+                llm = rt().llm_for("royalty", BATCH)
+            except Exception:  # noqa: BLE001 — model yoksa yalnız kural
+                llm = None
+            RM.run(engine, tenant, items, llm, progress=progress)
+        except Exception as e:  # noqa: BLE001 — sayaç kapanır, kalan sonraki denemede
+            log.exception("hak haritası çıkarılamadı")
+            map_state["error"] = f"Hak haritası tamamlanamadı: {str(e)[:200]}"
+        finally:
+            map_state.update(running=False, at=RY._iso(RY._now()))
+
+    @app.post("/api/v1/rights/map/extract", status_code=202)
+    def rights_map_extract(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        need(user, RIGHTS_EDIT, "Hak haritası çıkarma")
+        if map_state["running"]:
+            return dict(map_state)
+        n = len(RM.pending(engine, tenant))
+        threading.Thread(target=map_job, args=(engine, tenant), name="rights-map", daemon=True).start()
+        audit(engine, user, "run", "rights_map", None, "Hak haritası çıkarma", {"count": n})
+        return {**dict(map_state), "total": n, "running": bool(n)}
+
+    @app.get("/api/v1/rights/map/extract")
+    def rights_map_job(request: Request) -> dict[str, Any]:
+        ctx(request)
+        return dict(map_state)
+
+    @app.post("/api/v1/rights/map/{map_id}/decide")
+    def rights_map_decide(map_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        need(user, RIGHTS_EDIT, "Hak haritası onayı")
+        m = call(RM.decide, engine, tenant, user, map_id, body)
+        audit(engine, user, "approve" if m["status"] == "onayli" else "reject", "rights_map", str(m["id"]), m["no"],
+              {"source": m["source"], "fields": m["fields"]})
+        return m
 
     @app.post("/api/v1/rights/notes/{note_id}/approve")
     def rights_note_approve(note_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:

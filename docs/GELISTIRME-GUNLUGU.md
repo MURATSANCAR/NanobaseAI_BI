@@ -107,6 +107,29 @@
 | Kayıtlar (ana menü) | var | kalktı |
 
 **Doğrulama (test sunucusu, geçici klasör `/tmp/claude-menu-dzn`, silindi; main `321f17ab` üstüne rebase sonrası):** `tsc -b` 0 hata; vitest 34 dosya / 174 test geçti (menü 38, ayar kategorileri 6); `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas vite build` geçti; pytest (yetki kataloğu/yönetim/erişim dokunan 76 dosya) 1561 geçti, 0 kaldı (rebase öncesi toplu koşuda `test_marketing_launch.py::test_endpoints_open_mark_and_explicit_decision` bir kez SQLAlchemy işletim hatası vermişti; tek başına 22/22, rebase sonrası toplu koşuda geçti — sıra bağımlı, menüyle ilgisiz). Tarayıcıda ekran denetimi yapılmadı (canlıya ve test sunucusuna kurulmadı; 320/390/768 px ve masaüstü kontrolü kurulumdan sonra yapılmalı).
+## 2026-09-28 — Eksik tamamlama: hak haritası, denetim bulgu açıklaması + kümeleme, ihale riski, telif taslakları, SEO fırsattan öneri
+
+**DOĞRULANAMADI — testler koordinatörde** (Mac'te yalnız `py_compile`). Dal `worktree-agent-acda90c391238ce66`, main `544d9b4a` üstünde.
+
+- **Öneri 18 — yapılandırılmış hak haritası** (`rights_map.py`): ortak hak açıklaması sınıflamasının üstüne. Karar: kural önce
+  (anahtar sözcüklü cümle alıntıdır, model gerekmez), Zeki AI yalnız kuralın bulamadığını ekler ve her değeri alıntı denetiminden
+  geçer; tarih ve münhasırlık değeri modelden değil alıntıdan kuralla okunur (olumsuzluk «değil/olmayan/gayri»). Format «metinde
+  geçen format» diye adlandırıldı: «sesli kitap hakkı yoktur» cümlesi de sesli formatı anar; hak var/yok hükmü verilmez, alıntı
+  gösterilir. Ülke kuralla çıkarılmaz (sözlük yok), yalnız alıntılı model değeri. Onay: telif uzmanı değer çıkarıp onaylar ya da
+  reddeder; düzeltilen harita «elle». M36 kitap ayrıntısı ve hak riski listesi aynı haritayı tek satır okur.
+- **Finansal denetim**: kontrol başına «ne demek / olası neden / bakılacak belge» kural metni (`GUIDE`, 18 kontrol) olgudur, model
+  2–3 cümleye çevirir; sayı olgu dışıysa kural metni. İstisna kümeleme sayfalı ayrıntı okumasını değil bütün istisnaları SQL'de
+  gruplar (tavan yok, `run_sql` 10.000 satır sınırı gruplara uygulanır); satır düzeyinde kural sınıfı, model yalnız sınıfsız
+  gruba. Kümeleme istisna satırı okuduğu için `denetim.detay` ister; açıklama sayfa yetkisiyle.
+- **İhale risk koşulu**: aday cümle kural (genel ihale sözlüğü), kategori kapalı küme; model olmadan da çalışır («kurala göre»).
+  Uzun tablo satırı 800 karakterde parçalanır (parça yine metnin kendisi). Yeniden işaretlemede aynı alıntının insan kararı korunur.
+- **Telif**: kapak e-postası taslağı yer tutucuyla (ad/e-posta modele gitmez); hitap yer tutucusu kaybolursa kural metni. Koşu
+  özeti toplamları doğrudan satır tablosundan SQL (çalıştırılan SQL cevapta), önceki onaylı koşu farkı kodla.
+- **SEO**: fırsat satırında «Bu arama için öneri» mevcut öneri akışını hedef sorguyla çağırır (sorgu maskeli, istemde «kayıtta
+  olmayanı yazma»), öneri + hedef sorgu kaydı, ürün denetiminde hedef kelime denetimi. T-soft'a istek yok.
+- **Sunucuda kalan:** `scripts/acceptance/zeki-eksik/check.sh` (pytest 12 dosya, tsc, vitest, build), yan port köprüsüyle
+  `kabul.py` (R1–R9; `ZE_IHALE` şartnamesi yüklü ihale), `temizlik.py`. İlk koşuda: `POST /api/v1/rights/map/extract` (bütün notlar;
+  süre model hızına bağlı, ölçülecek), M36 gece işi sonrası `hakHaritasi` sayacı.
 
 ## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
 

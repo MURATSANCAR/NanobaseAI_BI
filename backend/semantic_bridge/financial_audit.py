@@ -435,5 +435,9 @@ def register(app, runtime, authorize):
             log.exception("Financial audit detail failed")
             raise HTTPException(503, "Logo hareketleri okunamadı.")
 
+    # Bulgu açıklaması ve istisna kümeleme: bulgu kuraldır, Zeki AI yalnız açıklar/sınıflar (financial_audit_explain).
+    from .financial_audit_explain import register as register_explain
+    register_explain(app, runtime, authorize, query, load_run, archive_root)
+
     snapshots = AuditSnapshots(archive_root, build_report)
     return snapshots
