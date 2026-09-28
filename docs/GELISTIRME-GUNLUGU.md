@@ -23,6 +23,26 @@
   taşınıyor (418 bulgu, 1 taşınan), bulgu metinleri sade dille («Bu sayfada metnin yazısı kitabın geri kalanından
   küçük…», ayrıntı ayrı).
 - **Kalan:** müşteri VM'i (onayla); yeni stüdyo işlemlerinin rol kapısına bağlanması; efekt sesi havuzu (sürüyor).
+## 2026-09-28 — M6 Sözleşmeler: kalan tavanlar kaldırıldı, CRM seçicisi görünür sayfalamalı
+
+- **Neden:** bir önceki maddede «açık kalan» diye yazılan tavanlar; kullanıcı kaldırılmasını onayladı.
+- **Ne yapıldı:**
+  - CRM bağlı sözleşmeler (`related_sql`): `TOP 200` kalktı. Canlı CRM'de en kalabalık grup sözleşmesinin **243** bağlı
+    kaydı var — eski sorgu 43'ünü gizliyordu.
+  - Şartlar (`contracts_terms.py`): taraf 50 / kitap 200 / kademe 20 kesmesi kalktı; fazlası kaydederken sessizce
+    siliniyordu.
+  - Hakediş dönemleri (`contracts_royalty.periods`): 400 dönem tavanı kalktı; `periodMonths` 1–24 doğrulandığı için
+    döngü her adımda ilerler.
+  - Kitap/taraf seçicisi: `TOP 20` yerine sayfalama (`OFFSET … FETCH NEXT 20` + `COUNT(*) OVER ()`, editoryal aramadaki
+    kalıp). Uç `?page=` alır, cevapta `total` (CRM'deki bütün eşleşme) ve `shown` (gösterilen kayıt; e-kitabı olan kitap
+    kartı listede iki satır olduğu için öğe sayısından ayrı). Ekran (`TermsForm.tsx` → `Lookup`): listenin altında yapışık
+    satır «1.479 kişi ve firma içinden 20 tanesi gösteriliyor» + «Daha fazla göster». Kişi ve firma artık tek listede
+    ada göre sıralı (önceden 20 kişi + 20 firma).
+- **Doğrulama (test sunucusu, `/tmp/claude-lehmann`):** pytest sözleşme/yetki/SEO-CRM 51/51, `tsc` 0 hata, vitest 55/55.
+  Gerçek CRM (.28, salt okuma, doğrudan bağlantı): sayfalı sorgunun toplamı sayfalamasız referansla eş (taraf «ahmet»
+  1.479, «can» 3.240; kitap «aşk» 135, «tarih» 349), ilk üç sayfa referans sırasıyla birebir ve çakışmasız; bağlı sözleşme
+  243 = 243. Ekran tarayıcıda denenmedi (dal kurulu değil). Dal `main`e taşınmadı, kurulum yapılmadı.
+
 ## 2026-09-28 — M6 Sözleşmeler: listelerdeki sessiz satır tavanı kaldırıldı
 
 - **Neden:** `backend/semantic_bridge/contracts.py` üç yerde `.limit()` ile ekrana söylemeden kesiyordu — sözleşme
