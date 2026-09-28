@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (08:50) — «Benzer kitaplar» ve «Alışveriş» istek fırtınası: neden kapı döngüsü, düzeltme 418d128a; canlıda ölçüldü
+
+- **Belirti:** 08:00 ölçümünde `/seo-geo/benzer-kitaplar` 22 sn'de 8.738 istek (8.678 × 429), aynı IP'den sonra açılan ekranlar da 429 aldı; `/seo-geo/alisveris` 20 sn.
+- **Neden ekranların kodu değil:** `src/canvas/seo-geo/SeoSimilar.tsx` ve `SeoShopping.tsx`'te döngü yok (tek liste sorgusu, `retry: false`, benzer kitaplarda yalnız CRM okuması sürerken 5 sn tazeleme). Her turda `access/me` + `admin/me` + `editorial/web/status` + `me/prefs` + ekranın sorgusu birlikte tekrarlanıyor — «Geri bağlantılar»/«Panolar»daki kapı döngüsünün imzası (07:45 girişi). O saatte köprü başka kurulumlarla 35 dk'da 6 kez yeniden başladığı için `access/me` 502 alıyor, kapı ekranı söküp yeniden kuruyordu. Kod değişikliği gerekmedi.
+- **Önce (canlı `index-7sAHwo3L.js`, test sunucusunda Playwright, 1440, timasai 15 dk oturum, 60 sn):** benzer kitaplar normal 24 / köprü düşmüş 7.361; alışveriş normal 2.205 (2.107 × 429, 84 × 502 — o an köprü 502 veriyordu) / köprü düşmüş 6.764.
+- **Aday (main `ee599e34`, yalnız statik dosyalar adaydan):** 23 / 31; 27 / 30.
+- **Canlı sonra:** kapı düzeltmesi 08:28'de `frontend/src`'ye main hâliyle girdi, 08:39 (`DQzJWgtz`) ve 08:46 (`xfK_xCcb`) derlemeleriyle canlıda (kurulumu başka oturumlar yaptı; bu oturum `cockpit/dist`'e yazmadı). Ölçüm: benzer kitaplar 30 / 31, alışveriş 30 / 30. Normal modda görülen 19–22 × 429 aynı sunucu IP'sinden koşan başka ölçümlerin `timas_api` bölgesini doldurmasından; ekranın kendi isteği 60 sn'de 30. Alışverişin 20 sn'si çarpan etkisiydi: iki turda da başlık ve liste açıldı.
+- **Temizlik:** 3 kısa timasai oturumu açıldı, üçü de silindi; yazma yapılmadı; sunucuda `/tmp/claude-benzer` dışında dosya bırakılmadı. VM'e kurulum bu işte yok (kod değişikliği yok; kapı düzeltmesinin VM'e gidişi main dağıtımıyla).
+
 ## 2026-09-28 — Sesli okumaya «İnsan kaydı yükle» (dalda; kurulmadı)
 
 - **Neden:** kullanıcı «seslerimiz çok robotik, bize gerçek insan sesi lazım». Yayınevi kitabı seslendirmene okutur;
