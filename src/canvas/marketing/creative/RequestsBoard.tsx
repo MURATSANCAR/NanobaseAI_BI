@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, Image as ImageIcon, Search, Type } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { CalendarClock, ClipboardList, Image as ImageIcon, Search, Type } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, errText, field, nf } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../../editorial/kit';
 import { BOARD, STATE_TONE, creativeApi, daysLeft, fmtDay, type CreativeRequest, type ReqState, type Summary } from './api';
+import { invalidateCreative, useCreativeMeta } from './useMeta';
 
 /** Talep panosu. Masaüstünde beş sütun (Talep → Üretimde → Tasarım onayı → Mesaj onayı → Onaylı); telefonda durum
  *  çipleri ve tek sütun liste. Kart termine göre sıralı gelir (terminsizler sonda). */
@@ -48,6 +50,43 @@ export function RequestCard({ r }: { r: CreativeRequest }) {
       ) : null}
       <div className="mt-2 truncate text-[11px] text-canvas-muted">İsteyen {r.isteyenAd || r.isteyen}{r.atanan ? ` · atanan ${r.atanan}` : ''}</div>
     </Link>
+  );
+}
+
+/** Onaylı pazarlama planlarının (M15) henüz talebe dönüşmemiş görsel/metin materyalleri. Zamanlayıcı iş saatlerinde
+ *  saatte bir bunları kendiliğinden talebe çevirir; burada beklemeden tek tıkla açılır. */
+function PendingFromPlans() {
+  const me = useCreativeMeta().data?.me;
+  const qc = useQueryClient();
+  const nav = useNavigate();
+  const q = useQuery({ queryKey: ['creative', 'pending'], queryFn: creativeApi.pending, enabled: ENGINE_ENABLED, refetchInterval: 120_000 });
+  const open = useMutation({
+    mutationFn: creativeApi.fromMaterial,
+    onSuccess: (r) => { toast.success(`${r.id} açıldı.`); void invalidateCreative(qc); nav(`/pazarlama/icerik/${encodeURIComponent(r.id)}`); },
+    onError: (e) => toast.error(errText(e, 'Talep açılamadı.') ?? ''),
+  });
+  const items = q.data?.items ?? [];
+  if (items.length === 0) return null;
+  return (
+    <section className="mt-3 flex flex-col gap-2 rounded-2xl bg-violet-50/50 p-2.5" aria-label="Plandan bekleyen materyaller">
+      <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold text-canvas-violet">
+        <ClipboardList className="h-4 w-4" aria-hidden />Onaylı planlardan bekleyen materyal ({nf.format(items.length)})
+      </h3>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map((m) => (
+          <li key={m.materyalId} className="flex min-w-0 flex-col gap-1 rounded-xl border border-slate-200 bg-white/90 p-2.5">
+            <span className="truncate text-[13px] font-extrabold">{m.planAdi}</span>
+            <span className="truncate text-[11.5px] text-canvas-muted">{m.turAdi} · termin {fmtDay(m.termin)} · <Link className="text-canvas-violet hover:underline" to={`/pazarlama/plan/${encodeURIComponent(m.planId)}`}>{m.planId}</Link></span>
+            {me?.talep && (
+              <button type="button" disabled={open.isPending} onClick={() => open.mutate(m.materyalId)}
+                className="mt-1 inline-flex min-h-10 items-center justify-center rounded-xl border-2 border-canvas-violet/40 bg-white px-3 text-[12px] font-bold text-canvas-violet transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50">
+                Talep aç
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -97,6 +136,7 @@ export default function RequestsBoard({ params, update, due }: {
         </label>
       </div>
 
+      {!durum && <PendingFromPlans />}
       {due.length > 0 && !durum && (
         <Note tone="warn">
           Terminine 2 gün ya da daha az kalan onaysız talep: {due.map((r) => `${r.id} (${r.kitapAdi})`).join(', ')}

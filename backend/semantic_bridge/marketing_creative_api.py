@@ -164,7 +164,7 @@ def register(app: Any, deps: dict[str, Any]) -> None:
     """`deps`: auth(request) → (engine, tenant, user, display) · crm(request) → (şema, run) · can(user, key) ·
     is_admin(user) · audit(engine, user, action, kind, id, title, detail) · conf(key, default) · llm(priority) →
     kapıdan model ya da None · seo → SeoGeo (isteğe bağlı) · require_caller(request) · runtime() → (engine, tenant)
-    (zamanlayıcı için) · send_mail(subject, text, to) → durum."""
+    (zamanlayıcı için) · crm_system() → (şema, run) oturumsuz CRM okuması (zamanlayıcı) · send_mail(subject, text, to)."""
     auth, crm, can, is_admin, audit, conf = (deps[k] for k in ("auth", "crm", "can", "is_admin", "audit", "conf"))
     llm_for: Callable[[int], Any] = deps["llm"]
     seo = deps.get("seo")
@@ -287,6 +287,32 @@ def register(app: Any, deps: dict[str, Any]) -> None:
         audit(engine, user, "create", "mkt_creative_request", out["id"], out["kitapAdi"],
               {"kanal": out["kanal"], "formatlar": out["formatlar"], "metinTurleri": out["metinTurleri"]})
         return out
+
+    # ------------------------------------------------------------------ M15 planından talep
+    @app.get(f"{P}/materials/pending")
+    def creative_pending(request: Request) -> dict[str, Any]:
+        """Onaylı pazarlama planlarında henüz talebe dönüşmemiş görsel/metin materyalleri."""
+        engine, tenant, _, _ = ctx(request)
+        return {"items": call(store.pending_materials, engine, tenant)}
+
+    @app.post(f"{P}/from-material/{{mid}}", status_code=201)
+    def creative_from_material(mid: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        schema, run = crm(request)
+        out = call(_open_material, engine, tenant, user, mid, schema, run)
+        audit(engine, user, "create", "mkt_creative_request", out["id"], out["kitapAdi"],
+              {"plan": out["planId"], "materyal": out["materyalId"]})
+        return out
+
+    def _open_material(engine, tenant: str, user: str, mid: str, schema: str, run) -> dict[str, Any]:
+        from semantic_bridge.marketing import core as mcore
+        try:
+            mat, plan = mcore.material_row(engine, tenant, mid)
+        except mcore.MarketingError:
+            raise CreativeError("Pazarlama planında bu materyal yok.", 404) from None
+        stok = mat.get("stokKodu") or plan.get("stokKodu")
+        b = src.book(schema, run, stok) if stok else None
+        return store.open_from_material(engine, tenant, user, mid, b)
 
     @app.get(f"{P}/requests/{{rid}}")
     def creative_request(rid: str, request: Request, gecmis: bool = False) -> dict[str, Any]:
@@ -873,11 +899,33 @@ def register(app: Any, deps: dict[str, Any]) -> None:
 
     @app.post(f"{P}/run-due")
     def creative_run_due(request: Request) -> dict[str, Any]:
-        """Günlük özet e-postası (zamanlayıcı): yeni talepler, onay kuyrukları, terminine 2 gün kalan onaysız talepler.
-        Alıcılar `MKT_CREATIVE_DIGEST_TO` (virgülle); boşsa gönderilmez. Tek tek bildirim yok."""
+        """Zamanlayıcı (iş saatlerinde saatte bir): onaylı M15 planlarının görsel/metin materyallerinden talep açar
+        (K1: plan onaylanınca talep kendiliğinden «Talep»e düşer; kişi «sistem»), günde bir kez (08:30'dan sonra ilk
+        çağrıda) özet e-postası: yeni talepler, onay kuyrukları, terminine 2 gün kalan onaysız talepler. Alıcılar
+        `MKT_CREATIVE_DIGEST_TO`; boşsa gönderilmez. Tek tek bildirim yok."""
         deps["require_caller"](request)
         engine, tenant = deps["runtime"]()
         store.ensure(engine)
+        opened, failed = [], []
+        pend = []
+        try:
+            pend = store.pending_materials(engine, tenant)
+        except Exception:  # noqa: BLE001 — M15 tabloları kurulmamış olabilir
+            log.info("marketing creative: bekleyen materyal okunamadı", exc_info=True)
+        if pend and deps.get("crm_system"):
+            schema, run = deps["crm_system"]()
+            for m in pend:
+                try:
+                    b = src.book(schema, run, m["stokKodu"]) if m.get("stokKodu") else None
+                    r = store.open_from_material(engine, tenant, "sistem", m["materyalId"], b)
+                    opened.append(r["id"])
+                    audit(engine, "sistem", "create", "mkt_creative_request", r["id"], r["kitapAdi"],
+                          {"plan": r["planId"], "materyal": r["materyalId"]})
+                except Exception as e:  # noqa: BLE001 — biri düşerse diğerleri sürer; neden sonuçta
+                    failed.append({"materyal": m["materyalId"], "neden": public_error(e)})
+        now = datetime.now(TZ)
+        if store.meta_get(engine, tenant, "ozet_gunu") == now.date().isoformat() or (now.hour, now.minute) < (8, 30):
+            return {"acilan": opened, "acilamayan": failed, "eposta": "zamani-degil"}
         s = store.summary(engine, tenant, "", True, True, today())
         to = [x.strip() for x in (conf("MKT_CREATIVE_DIGEST_TO", "") or "").replace(";", ",").split(",") if "@" in x]
         lines = [f"Yeni talep (son 24 saat): {s['yeniTalep']}",
@@ -894,4 +942,6 @@ def register(app: Any, deps: dict[str, Any]) -> None:
         quiet = not s["yeniTalep"] and not s["tasarimBekleyen"] and not s["mesajBekleyen"] and not s["terminiYaklasan"]
         status = "no_recipients" if not to else "nothing" if quiet else deps["send_mail"](
             "ZEKİ · Pazarlama görsel ve metin — günlük özet", "\n".join(lines), to)
-        return {"ozet": s, "eposta": status, "alici": len(to)}
+        if status != "failed":
+            store.meta_set(engine, tenant, "ozet_gunu", now.date().isoformat())
+        return {"acilan": opened, "acilamayan": failed, "ozet": s, "eposta": status, "alici": len(to)}

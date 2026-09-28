@@ -480,6 +480,12 @@ RULES: list[tuple[str, Any]] = [
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
+    # M19 Pazarlama görsel ve metin. Onaylı varlık sözleşmesini (contract/assets) okuyacak modül (M21/M22/M24) kendi
+    # sayfa anahtarını o satıra ekler. M15'in genel «/api/v1/marketing/» satırından önce durur (en uzun önek kazanır;
+    # sıra okunurluk içindir).
+    ("/api/v1/marketing/creative/run-due", SYSTEM),
+    ("/api/v1/marketing/creative/contract/", frozenset({page("pazarlama-icerik")})),
+    ("/api/v1/marketing/creative/", frozenset({page("pazarlama-icerik")})),
     # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
     # M53 Set, hediye ve promosyon (Pazarlama → Üretim).
     ("/api/v1/marketing/sets/run-due", SYSTEM),
@@ -497,11 +503,6 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/categories/", frozenset({page("kategori-agaci")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
-    # M19 Pazarlama görsel ve metin. Onaylı varlık sözleşmesini (contract/assets) okuyacak modül (M21/M22/M24) kendi
-    # sayfa anahtarını o satıra ekler.
-    ("/api/v1/marketing/creative/run-due", SYSTEM),
-    ("/api/v1/marketing/creative/contract/", frozenset({page("pazarlama-icerik")})),
-    ("/api/v1/marketing/creative/", frozenset({page("pazarlama-icerik")})),
     ("/api/v1/reports/run-due", SYSTEM),
     ("/api/v1/reports", frozenset({page("planli-raporlar")})),
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
@@ -670,7 +671,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
                                r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
     # M19: talep açma; üretim (görsel dizimi, Zeki AI metni, başlık önerisi), kapak yükleme ve varlık düzeltme.
     # Tasarım/mesaj onayı ve marka kiti açıkça verilen yetkilerle ucun içinde denetlenir.
-    (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests$", "ozellik:icerik.talep"),
+    (frozenset({"POST"}), r"^/api/v1/marketing/creative/(requests|from-material/[^/]+)$", "ozellik:icerik.talep"),
     (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests/[^/]+/(produce|copy|headlines)$", "ozellik:icerik.uret"),
     (frozenset({"PUT"}), r"^/api/v1/marketing/creative/(requests/[^/]+/cover|assets/[^/]+)$", "ozellik:icerik.uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",

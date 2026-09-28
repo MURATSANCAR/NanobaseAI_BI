@@ -14,7 +14,7 @@ Yalnız okuma (varsayılan) ve yazma (`--write`: bir talep açar, dizer, Zeki AI
 Doğrudan-SQL referansları (uygulamanın SQL'i yeniden çalıştırılmaz; ayrı yazılmış sorgu, ayrı normalleştirme):
   R1 kitap kartı: CRM `new_kitapBase` ad, yazar, hashtag, en önemli cümle = API `/books/{stok}` (karakter karakter).
   R2 kitap araması: CRM'de eşleşen etkin kart sayısı = API `/books?q=` toplamı.
-  R3 arşiv: `semantic_mkt_assets` onaylı güncel varlık sayısı (stok kodu) = API arşiv toplamı = zip dosya sayısı.
+  R3 arşiv: `semantic_mkt_creative_assets` onaylı güncel varlık sayısı (stok kodu) = API arşiv toplamı = zip dosya sayısı.
   R4 alıntı: her metin varyantındaki alıntı CRM metin alanlarında (bu betiğin normalleştirmesiyle) birebir geçer.
   R5 hashtag: CRM `new_hastag` etiketleri üretilen hashtag setinin başında.
   R6 kapak özeti: talebe kaydedilen kapak özeti = stüdyodaki kitapsız işin kaydettiği kaynak özeti.
@@ -244,7 +244,7 @@ def main() -> int:
         from semantic_layer.store.catalog_store import open_store
         eng = open_store(SemanticSettings.from_env().store_dsn, create=False).engine
         with eng.connect() as c:
-            n_db = c.execute(sa.text("SELECT COUNT(*) FROM semantic_mkt_assets WHERE stok_kodu = :s AND request_id = :r"
+            n_db = c.execute(sa.text("SELECT COUNT(*) FROM semantic_mkt_creative_assets WHERE stok_kodu = :s AND request_id = :r"
                                      " AND mesaj_onay IS NOT NULL AND guncel = :t AND red_zaman IS NULL"),
                              {"s": stok, "r": rid, "t": True}).scalar()
             ids = [x["id"] for x in d["varliklar"]] + [rid]

@@ -71,11 +71,51 @@ def test_request_validation(engine):
     assert M.update_request(engine, T, r["id"], {"durum": "yeniden"})["durum"] == "talep"
 
 
-def test_material_hook_opens_once(engine):
-    mat = {"materyal_id": "MAT-1", "plan_id": "P-1", "kanal": "instagram", "formatlar": ["kare"], "metin_turleri": []}
-    a = M.open_from_material(engine, T, "sistem", mat, {**BOOK, "stok_kodu": "15201.01.0001"})
-    b = M.open_from_material(engine, T, "sistem", mat, {**BOOK, "stok_kodu": "15201.01.0001"})
-    assert a["id"] == b["id"] and a["planId"] == "P-1" and a["materyalId"] == "MAT-1"
+def _m15_plan(engine, approved=True):
+    from semantic_bridge.marketing import core as mc
+    mc._ready.discard(id(engine))
+    mc.ensure(engine)
+    pid = mc.create_plan(engine, T, "pazarlama", kind="yeni", baslik="Kitap Adı", stok_kodu="15201.01.0001",
+                         yayin_tarihi="2026-11-20")
+    sosyal = mc.add_material(engine, T, "pazarlama", pid, "sosyal", "Yeni kitap raflarda.", "kullanici")
+    foy = mc.add_material(engine, T, "pazarlama", pid, "foy", "Föy metni.", "kullanici")
+    with engine.begin() as c:
+        c.execute(mc.TASKS.insert().values(id="t" * 32, plan_id=pid, tarih="2026-11-10", gun_farki=-10, durum="bekliyor",
+                                           materyal_id=sosyal["id"], materyal_tur="sosyal", kaynak="sablon",
+                                           **{"is": "Sosyal medya gönderisi"}))
+        if approved:
+            c.execute(mc.PLANS.update().where(mc.PLANS.c.id == pid).values(durum="onayli"))
+    return mc, pid, sosyal, foy
+
+
+def test_material_hook_uses_m15_records(engine):
+    mc, pid, sosyal, foy = _m15_plan(engine)
+    assert [x["materyalId"] for x in M.pending_materials(engine, T)] == [sosyal["id"]]   # föy talep açmaz
+    a = M.open_from_material(engine, T, "sistem", sosyal["id"], BOOK)
+    b = M.open_from_material(engine, T, "sistem", sosyal["id"], BOOK)
+    assert a["id"] == b["id"] and a["planId"] == pid and a["materyalId"] == sosyal["id"] and a["materyalTur"] == "sosyal"
+    assert a["kanal"] == "instagram" and a["metinTurleri"] == ["aciklama", "hashtag"] and a["termin"] == "2026-11-10"
+    assert a["kampanya"] == "Kitap Adı" and "Yeni kitap raflarda." in a["brief"]
+    assert M.pending_materials(engine, T) == []
+    assert any(e["ne"] == "icerik-talebi" for e in mc.events(engine, pid))
+    with pytest.raises(CreativeError):
+        M.open_from_material(engine, T, "sistem", foy["id"], BOOK)
+    with pytest.raises(CreativeError) as e:
+        M.open_from_material(engine, T, "sistem", "yok", BOOK)
+    assert e.value.status == 404
+
+
+def test_plan_link_must_be_m15_record(engine):
+    mc, pid, sosyal, _ = _m15_plan(engine, approved=False)
+    assert M.pending_materials(engine, T) == []                          # onaysız plan talep açtırmaz
+    with pytest.raises(CreativeError):
+        _req(engine, planId="MP-1900-0001")
+    with pytest.raises(CreativeError):
+        _req(engine, planId="MP-1900-0001", materyalId=sosyal["id"])     # materyal başka plana ait
+    r = _req(engine, materyalId=sosyal["id"])
+    assert r["planId"] == pid and r["materyalTur"] == "sosyal"
+    r2 = M.update_request(engine, T, _req(engine)["id"], {"planId": pid})
+    assert r2["planId"] == pid and r2["materyalId"] is None
 
 
 # ------------------------------------------------------------------ metin denetimleri
@@ -266,6 +306,12 @@ def test_access_rules():
     assert A.rule_for(f"{p}/requests") == frozenset({A.page("pazarlama-icerik")})
     assert A.rule_for(f"{p}/run-due") == A.SYSTEM
     assert A.features_for("POST", f"{p}/requests") == ["ozellik:icerik.talep"]
+    assert A.features_for("POST", f"{p}/from-material/{'a' * 32}") == ["ozellik:icerik.talep"]
+    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap")})   # M15 ayrı sayfa
+    assert A.features_for("POST", f"{p}/assets/{'a' * 32}/reject") == []
+    from semantic_bridge.marketing import core as mc
+    ours = {t.name for t in M._md.sorted_tables}
+    assert all(n.startswith("semantic_mkt_creative_") for n in ours) and not ours & set(mc._md.tables)
     assert A.features_for("POST", f"{p}/requests/MC-2026-0001/produce") == ["ozellik:icerik.uret"]
     assert A.features_for("POST", f"{p}/requests/MC-2026-0001/copy") == ["ozellik:icerik.uret"]
     assert A.features_for("PUT", f"{p}/assets/{'a' * 32}") == ["ozellik:icerik.uret"]
@@ -414,4 +460,5 @@ def test_api_produce_copy_approve_zip(engine, monkeypatch, tmp_path):
     assert chk["durum"] == "uyari" and chk["iddia"]["karar"] == "hayır"
     assert c.get(f"{P}/books?q=Kitap").json()["total"] == 1
     assert c.get(f"{P}/meta").json()["me"]["admin"] is True
-    assert c.post(f"{P}/run-due").json()["eposta"] == "no_recipients"
+    assert c.post(f"{P}/run-due").json()["eposta"] in ("no_recipients", "zamani-degil")
+    assert c.get(f"{P}/materials/pending").json() == {"items": []}

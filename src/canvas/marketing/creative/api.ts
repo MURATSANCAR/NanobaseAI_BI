@@ -26,8 +26,10 @@ export type Cover = { kaynak?: string; url?: string | null; w?: number; h?: numb
 
 export type CreativeRequest = {
   id: string;
+  /** M15 pazarlama planı (`/pazarlama/plan/:id`) ve materyal kaydı. */
   planId: string | null;
   materyalId: string | null;
+  materyalTur: string | null;
   kampanya: string | null;
   stokKodu: string;
   kitapId: string | null;
@@ -158,6 +160,10 @@ export type Summary = {
   terminiYaklasan: Array<{ id: string; kitapAdi: string; termin: string; isteyen: string; atanan: string | null; durum: ReqState }>;
 };
 
+/** Onaylı M15 planında henüz talebe dönüşmemiş görsel/metin materyali. */
+export type PendingMaterial = { materyalId: string; planId: string; planAdi: string; tur: string; turAdi: string;
+  stokKodu: string | null; termin: string | null; metin: string; kanal: Channel };
+
 export type BrandFile = { id: string; ad: string; dosya: string; tur: 'logo' | 'font'; boyut: number; lisans?: string | null; yukleyen: string; zaman: string };
 export type Brand = { surum: number; palet: string[]; logolar: BrandFile[]; yaziTipleri: BrandFile[]; kurallar: string; yukleyen: string | null; zaman: string | null };
 export type Banned = { id: string; kalip: string; aciklama: string | null; ekleyen: string; zaman: string };
@@ -208,6 +214,8 @@ export const creativeApi = {
   requests: (f: { durum?: string; kanal?: string; stok?: string; atanan?: string; q?: string; page?: number }) =>
     send<Page<CreativeRequest>>('GET', `${P}/requests${qs(f)}`, undefined, 60_000),
   create: (b: NewRequest) => send<CreativeRequest>('POST', `${P}/requests`, b, 60_000),
+  pending: () => send<{ items: PendingMaterial[] }>('GET', `${P}/materials/pending`, undefined, 60_000),
+  fromMaterial: (mid: string) => send<CreativeRequest>('POST', `${P}/from-material/${id(mid)}`, {}, 60_000),
   request: (rid: string, history = false) => send<RequestDetail>('GET', `${P}/requests/${id(rid)}${qs({ gecmis: history })}`, undefined, 60_000),
   update: (rid: string, b: Partial<NewRequest> & { durum?: string; not?: string }) => send<CreativeRequest>('PATCH', `${P}/requests/${id(rid)}`, b, 30_000),
   uploadCover: (rid: string, f: File) => put<CreativeRequest>(`${P}/requests/${id(rid)}/cover${qs({ filename: f.name })}`, f),

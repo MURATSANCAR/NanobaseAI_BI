@@ -65,6 +65,30 @@
   - *M32:* teklif belgesi yeniden yazılmadı; M53 set/hediye kataloğu + fiyat–marj + kurumsal hediye seçenekleri; `handoff` M32 teklif satırı biçiminde, `m32FirsatId` bağ alanı.
 - **DOĞRULANAMADI — sunucu kapalı:** hiçbir gerçek DB/API kabulü yapılmadı; yerelde yalnız `py_compile` ve JSON doğrulaması. pytest/vitest ve TypeScript derlemesi koşturulmadı. Sunucuda sıra: main'e taşıma → kurulum → `run-due?basket=1&history=1` elle (süre günlüğe) → `kabul.py --olcum` (Ö1–Ö7 sonucu analiz §15'e) → `kabul.py --api --yazma` → `temizlik.py` → pytest `test_sets.py`, `test_access.py`; vitest.
 - **Açık:** Zeki AI sohbetinin `semantic_mkt_*` tablolarını okuması (modül soruları şimdilik ekrandan), bedelsiz promosyon çıkışının ölçüm yöntemi, set–bileşen yamyamlığı yorumu (sonraki sürüm; `effect` ucu yalnız seriler), sezon sonu raporu, ambalaj birim maliyetlerinin güncelliği (CRM'de 11 kayıt).
+## 2026-09-28 — M19 ikinci tur: main'deki M15 pazarlama çekirdeğine bağlandı, tablolar `semantic_mkt_creative_*` önekinde
+
+- **Neden:** main'e M15 pazarlama çekirdeği girdi (`backend/semantic_bridge/marketing/`, tablolar `semantic_mkt_plans|plan_lines|
+  tasks|materials|book_cards|events|jobs|meta`, uçlar `/api/v1/marketing/*`, menüde Pazarlama › Planlama). M19 dalı main
+  üstüne (`2dedb7ec`) yeniden oturtuldu; çakışmalar (app.py, App.tsx, navModel.ts, ModulesMenu.tsx, admin.py, katalog,
+  proje belleği) iki tarafı koruyarak çözüldü.
+- **Tablolar:** M19'un bütün tabloları `semantic_mkt_creative_*` önekine alındı (`assets`, `brand`, `banned` yeniden adlandı;
+  `requests`, `jobs`, `meta` zaten öyleydi). M15'in `semantic_mkt_meta` / `jobs` / `materials` tablolarıyla ad ortaklığı yok;
+  test bunu denetler. Sunucuya kurulmamıştı, göç gerekmez.
+- **M15 bağı:** `plan_id` ve `materyal_id` artık serbest metin değil; talep açılırken ve düzeltilirken M15 kaydı olduğu,
+  materyalin o plana ait olduğu denetlenir (`m15_link`). `open_from_material(materyal_id)` materyali M15 tablosundan okur:
+  sosyal → Instagram (kare/dikey gönderi/dikey + açıklama, hashtag), kapak brief'i → görsel biçimler, video senaryosu,
+  influencer brief'i, e-bülten konu satırı → karşılık gelen metin türü; föy, arka kapak ve basın bülteni M15'in kendi
+  metinleridir, talep açmaz. Brief materyal metni, termin takvimde o materyale bağlı en erken iş (yoksa yayın günü),
+  kampanya planın adı. Aynı materyale ve plan revizyonundaki kopyasına ikinci talep açılmaz; plan geçmişine
+  `icerik-talebi` olayı yazılır (M15 tablolarına tek yazma bu).
+- **K1 «plan onaylanınca talep kendiliğinden»:** M15 koduna dokunmadan `run-due` onaylı planların bekleyen materyallerini
+  talebe çevirir (kişi «sistem», CRM kitap kartı oturumsuz okunur); zamanlayıcı iş saatlerinde saatte bir, özet e-postası
+  günde bir (08:30 sonrası ilk çağrı, `semantic_mkt_creative_meta.ozet_gunu`). Ekranda Talepler sekmesinin başında
+  «Onaylı planlardan bekleyen materyal» listesi ve «Talep aç» (uçlar `GET materials/pending`, `POST from-material/{id}`,
+  yetki `icerik.talep`). Talep ekranında plana bağlantı.
+- **Yetki / menü:** access.py'de M19 satırları M15'in genel `/api/v1/marketing/` satırından önce; menüde tek Pazarlama grubu,
+  «Üretim» bölümü «Planlama»nın hemen altında.
+- **DOĞRULANAMADI — sunucu kapalı.** Yalnız `py_compile` ve JSON; testleri koordinatör koşturacak.
 
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 

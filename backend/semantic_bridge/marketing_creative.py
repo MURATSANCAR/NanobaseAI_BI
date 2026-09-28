@@ -4,16 +4,20 @@ Portalın kendi kayıtları (CRM'e, Logo'ya, T-soft'a yazılmaz; dış kanala hi
 kişi kendisi yükler):
 
 - **Talep** (`semantic_mkt_creative_requests`, kimlik `MC-<yıl>-<sıra>`): kitap (Logo/CRM stok kodu), kanal, biçimler,
-  metin türleri, brief, termin, isteyen/atanan, durum. Kampanya/plan bağı: `plan_id` + `materyal_id` M15 pazarlama
-  çekirdeği gelince onun kimlikleriyle dolar (şimdilik boş kalabilir); o güne kadar `kampanya` serbest addır.
-  `open_from_material()` M15'in plan onayında çağıracağı kancadır.
-- **Varlık** (`semantic_mkt_assets`): görsel (stüdyonun dizdiği PNG, arşivde kopyası) ya da metin (Zeki AI varyantı ya
+  metin türleri, brief, termin, isteyen/atanan, durum. Plan bağı M15 pazarlama çekirdeğinin kayıtlarıdır: `plan_id`
+  = `semantic_mkt_plans.id`, `materyal_id` = `semantic_mkt_materials.id` (verilirse kayıt var mı, materyal o plana mı
+  ait diye denetlenir); `kampanya` serbest addır. Onaylı M15 planındaki görsel/metin materyali (sosyal, kapak brief'i,
+  video senaryosu, influencer brief'i, e-bülten konu satırı) `open_from_material()` ile talebe dönüşür — ekrandan tek
+  tıkla ya da zamanlayıcıyla kendiliğinden (`pending_materials`); aynı materyale ve plan revizyonundaki kopyasına ikinci
+  talep açılmaz. Bu modül M15 tablolarını yalnız okur (plan geçmişine «içerik talebi açıldı» olayı yazılır).
+- Tabloların hepsi `semantic_mkt_creative_*` önekindedir (M15 `semantic_mkt_*` tablolarıyla çakışmaz).
+- **Varlık** (`semantic_mkt_creative_assets`): görsel (stüdyonun dizdiği PNG, arşivde kopyası) ya da metin (Zeki AI varyantı ya
   da elle). Sürümlüdür: düzeltme yeni satır açar (`surum`+1, `onceki_id`), eskisi `guncel=False` kalır. Onay iki
   aşamalıdır: görselde önce tasarım (`icerik.tasarim-onay`), sonra mesaj (`icerik.mesaj-onay`); metinde yalnız mesaj.
   Aynı kişi aynı varlıkta iki onayı birden veremez. Arşivde «onaylı» = `mesaj_onay` dolu, güncel, reddedilmemiş.
 - **Lisans taslağı**: görselinde model üretimi resim olan varlık (`taslak_lisans`) iki onayı alsa da «yayına hazır»
   sayılmaz; indirilen dosyanın adı `TASLAK-` ile başlar (görsel modelin ticari kullanım izni yok).
-- **Marka kiti** (`semantic_mkt_brand`, sürümlü) ve **yasaklı kalıp** listesi (`semantic_mkt_banned_phrases`).
+- **Marka kiti** (`semantic_mkt_creative_brand`, sürümlü) ve **yasaklı kalıp** listesi (`semantic_mkt_creative_banned`).
 - **İş** (`semantic_mkt_creative_jobs`): arka plan üretimleri (görsel dizimi, metin varyantları) ve durumu.
 
 Metin denetimleri modelsizdir (kod): platform karakter sınırı, yasaklı kalıp, alıntının kaynakta birebir geçmesi,
@@ -40,8 +44,9 @@ REQUESTS = sa.Table(
     "semantic_mkt_creative_requests", _md,
     sa.Column("id", sa.String(24), primary_key=True),                      # MC-2026-0001
     sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
-    sa.Column("plan_id", sa.String(64)),                                    # M15 plan (çekirdek gelince)
-    sa.Column("materyal_id", sa.String(64)),                                # M15 materyal satırı
+    sa.Column("plan_id", sa.String(64), index=True),                        # M15 semantic_mkt_plans.id
+    sa.Column("materyal_id", sa.String(64), index=True),                    # M15 semantic_mkt_materials.id
+    sa.Column("materyal_tur", sa.String(24)),                               # M15 materyal türü (revizyon kopyası için)
     sa.Column("kampanya", sa.String(200)),                                  # serbest kampanya adı
     sa.Column("stok_kodu", sa.String(40), nullable=False, index=True),
     sa.Column("kitap_id", sa.String(40)),                                   # CRM new_kitapId
@@ -68,7 +73,7 @@ REQUESTS = sa.Table(
     sa.Column("guncelleme", sa.DateTime(timezone=True), nullable=False),
 )
 ASSETS = sa.Table(
-    "semantic_mkt_assets", _md,
+    "semantic_mkt_creative_assets", _md,
     sa.Column("id", sa.String(32), primary_key=True),
     sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
     sa.Column("request_id", sa.String(24), nullable=False, index=True),
@@ -104,7 +109,7 @@ ASSETS = sa.Table(
     sa.Column("olusturma", sa.DateTime(timezone=True), nullable=False),
 )
 BRAND = sa.Table(
-    "semantic_mkt_brand", _md,
+    "semantic_mkt_creative_brand", _md,
     sa.Column("tenant_id", sa.String(80), primary_key=True),
     sa.Column("surum", sa.Integer, primary_key=True),
     sa.Column("palet_json", sa.Text),
@@ -115,7 +120,7 @@ BRAND = sa.Table(
     sa.Column("zaman", sa.DateTime(timezone=True), nullable=False),
 )
 BANNED = sa.Table(
-    "semantic_mkt_banned_phrases", _md,
+    "semantic_mkt_creative_banned", _md,
     sa.Column("id", sa.String(32), primary_key=True),
     sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
     sa.Column("kalip", sa.String(200), nullable=False),
@@ -458,7 +463,8 @@ def create_request(engine, tenant: str, user: str, display: Optional[str], body:
     if not title:
         raise CreativeError("Kitap bulunamadı; stok kodunu kontrol edin.", 404)
     now = _now()
-    row = {"tenant_id": tenant, "plan_id": _short(body.get("planId"), 64), "materyal_id": _short(body.get("materyalId"), 64),
+    plan_id, mat_id, mat_tur = m15_link(engine, tenant, body.get("planId"), body.get("materyalId"))
+    row = {"tenant_id": tenant, "plan_id": plan_id, "materyal_id": mat_id, "materyal_tur": mat_tur,
            "kampanya": _short(body.get("kampanya"), 200), "stok_kodu": stok, "kitap_id": (book or {}).get("kitap_id"),
            "kitap_adi": title[:300], "yazar": ((book or {}).get("yazar") or _short(body.get("yazar"), 300) or None),
            "studio_job": None, "studio_kind": None, "kapak_json": None, "kanal": kanal, "formatlar": _dumps(formats),
@@ -492,26 +498,127 @@ def _extra_formats() -> list[str]:
         return []
 
 
-def open_from_material(engine, tenant: str, user: str, material: dict[str, Any], book: dict[str, Any]) -> dict[str, Any]:
-    """M15 kancası: onaylanan plandaki görsel/metin materyal satırından talep (aynı materyal için ikinci talep açılmaz).
-    `material`: {plan_id, materyal_id, kanal, formatlar, metin_turleri, brief, hedef_kitle, ton, termin, kampanya}."""
-    mid = _short(material.get("materyal_id"), 64)
+# ------------------------------------------------------------------ M15 plan bağı
+#: M15 materyal türü → M19 talebi (kanal, görsel biçimleri, metin türleri). Föy, arka kapak ve basın bülteni M15'in
+#: kendi metin materyalleridir (görsel/metin üretimi istemez); talep açmaz.
+MATERIAL_MAP: dict[str, dict[str, Any]] = {
+    "sosyal": {"kanal": "instagram", "formatlar": ["kare", "dikey-gonderi", "dikey"], "metin": ["aciklama", "hashtag"]},
+    "kapak-brief": {"kanal": "diger", "formatlar": ["kare", "dikey", "yatay"], "metin": []},
+    "video-senaryo": {"kanal": "youtube", "formatlar": [], "metin": ["video-senaryosu"]},
+    "influencer-brief": {"kanal": "instagram", "formatlar": [], "metin": ["influencer-brief"]},
+    "e-bulten-konu": {"kanal": "e-bulten", "formatlar": ["e-bulten"], "metin": ["baslik"]},
+}
+
+
+def _m15():
+    from semantic_bridge.marketing import core as mcore
+    return mcore
+
+
+def m15_link(engine, tenant: str, plan_id: Any, materyal_id: Any) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Talebin M15 bağı: kimlikler M15 kaydı olmalı; materyal verildiyse planı materyalden gelir (ikisi çelişemez).
+    Dönen: (plan_id, materyal_id, materyal_tur)."""
+    pid, mid = _short(plan_id, 64), _short(materyal_id, 64)
+    if not pid and not mid:
+        return None, None, None
+    mc = _m15()
+    mc.ensure(engine)
     if mid:
-        with engine.connect() as c:
-            old = c.execute(sa.select(REQUESTS.c.id).where(REQUESTS.c.tenant_id == tenant,
-                                                           REQUESTS.c.materyal_id == mid)).scalar()
-        if old:
-            return get_request(engine, tenant, old)
-    body = {"stokKodu": book.get("stok_kodu"), "kanal": material.get("kanal") or "diger",
-            "formatlar": material.get("formatlar") or [], "metinTurleri": material.get("metin_turleri") or [],
-            "brief": material.get("brief"), "hedefKitle": material.get("hedef_kitle"), "ton": material.get("ton"),
-            "termin": material.get("termin"), "kampanya": material.get("kampanya"), "planId": material.get("plan_id"),
-            "materyalId": mid}
-    return create_request(engine, tenant, user, None, body, book)
+        try:
+            mat, plan = mc.material_row(engine, tenant, mid)
+        except mc.MarketingError:
+            raise CreativeError("Pazarlama planında bu materyal yok.", 404) from None
+        if pid and pid != plan["id"]:
+            raise CreativeError("Materyal bu plana ait değil.")
+        return plan["id"], mat["id"], mat["tur"]
+    with engine.connect() as c:
+        ok = c.execute(sa.select(mc.PLANS.c.id).where(mc.PLANS.c.tenant_id == tenant, mc.PLANS.c.id == pid)).scalar()
+    if not ok:
+        raise CreativeError("Pazarlama planı bulunamadı.", 404)
+    return pid, None, None
+
+
+def _material_due(c, mc, plan: dict[str, Any], mat: dict[str, Any]) -> Optional[str]:
+    """Materyalin termini: takvimde bu materyale (yoksa bu türe) bağlı en erken iş, yoksa planın yayın günü."""
+    for cond in (mc.TASKS.c.materyal_id == mat["id"], mc.TASKS.c.materyal_tur == mat["tur"]):
+        d = c.execute(sa.select(sa.func.min(mc.TASKS.c.tarih)).where(mc.TASKS.c.plan_id == plan["id"], cond,
+                                                                        mc.TASKS.c.tarih.is_not(None))).scalar()
+        if d:
+            return str(d)[:10]
+    return (plan.get("yayinTarihi") or None) and str(plan["yayinTarihi"])[:10]
+
+
+def _already(c, tenant: str, plan: dict[str, Any], mat: dict[str, Any]) -> Optional[str]:
+    """Bu materyal (ya da plan revizyonundan önceki sürümdeki aynı türü) için açılmış talep."""
+    old = c.execute(sa.select(REQUESTS.c.id).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.materyal_id == mat["id"])).scalar()
+    if old or not plan.get("oncekiId"):
+        return old
+    return c.execute(sa.select(REQUESTS.c.id).where(REQUESTS.c.tenant_id == tenant, REQUESTS.c.plan_id == plan["oncekiId"],
+                                                    REQUESTS.c.materyal_tur == mat["tur"])).scalar()
+
+
+def open_from_material(engine, tenant: str, user: str, material_id: str,
+                       book: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """M15 kancası: plandaki görsel/metin materyalinden talep. Brief materyalin metni, termin takvimden, kampanya planın
+    adı. Aynı materyal (ya da revizyondaki kopyası) için ikinci talep açılmaz; varsa o döner. `book`: CRM kitap kartı
+    (ad, yazar, kitap_id); yoksa planın başlığı kitap adı olur."""
+    mc = _m15()
+    mc.ensure(engine)
+    try:
+        mat, plan = mc.material_row(engine, tenant, str(material_id or ""))
+    except mc.MarketingError:
+        raise CreativeError("Pazarlama planında bu materyal yok.", 404) from None
+    spec = MATERIAL_MAP.get(mat["tur"])
+    if spec is None:
+        raise CreativeError(f"«{mat['turAdi']}» görsel/metin talebi açmaz; pazarlama planında yazılır.")
+    stok = mat.get("stokKodu") or plan.get("stokKodu")
+    if not stok:
+        raise CreativeError("Planın kitabı (stok kodu) yok; talep açılamaz.")
+    with engine.connect() as c:
+        old = _already(c, tenant, plan, mat)
+        due = _material_due(c, mc, plan, mat)
+    if old:
+        return get_request(engine, tenant, old)
+    brief = f"{mat['turAdi']} — «{plan['baslik']}» pazarlama planı ({plan['id']}).\n\n{mat.get('metin') or ''}"
+    body = {"stokKodu": stok, "kanal": spec["kanal"], "formatlar": spec["formatlar"], "metinTurleri": spec["metin"],
+            "brief": brief[:8000], "termin": due, "kampanya": plan["baslik"], "planId": plan["id"], "materyalId": mat["id"],
+            "kitapAdi": plan["baslik"]}
+    out = create_request(engine, tenant, user, None, body, book)
+    try:                                    # plan geçmişinde görünsün (M15 olay kaydı; plan değişmez)
+        with engine.begin() as c:
+            mc.event(c, plan["id"], user, "icerik-talebi", None, {"talep": out["id"], "materyal": mat["id"], "tur": mat["tur"]})
+    except Exception:  # noqa: BLE001 — olay kaydı yan bilgidir
+        pass
+    return out
+
+
+def pending_materials(engine, tenant: str) -> list[dict[str, Any]]:
+    """Onaylı M15 planlarında henüz talebe dönüşmemiş görsel/metin materyalleri (termine göre)."""
+    mc = _m15()
+    mc.ensure(engine)
+    out = []
+    with engine.connect() as c:
+        rows = c.execute(sa.select(mc.MATERIALS, mc.PLANS.c.baslik, mc.PLANS.c.onceki_id, mc.PLANS.c.yayin_tarihi,
+                                   mc.PLANS.c.stok_kodu.label("plan_stok"))
+                         .join(mc.PLANS, mc.PLANS.c.id == mc.MATERIALS.c.plan_id)
+                         .where(mc.PLANS.c.tenant_id == tenant, mc.PLANS.c.durum == "onayli",
+                                mc.MATERIALS.c.tur.in_(list(MATERIAL_MAP)))).mappings().all()
+        for r in rows:
+            plan = {"id": r["plan_id"], "baslik": r["baslik"], "oncekiId": r["onceki_id"], "yayinTarihi": r["yayin_tarihi"]}
+            mat = {"id": r["id"], "tur": r["tur"]}
+            if _already(c, tenant, plan, mat):
+                continue
+            out.append({"materyalId": r["id"], "planId": r["plan_id"], "planAdi": r["baslik"], "tur": r["tur"],
+                        "turAdi": mc.MATERIALS_KINDS.get(r["tur"], (r["tur"], None))[0],
+                        "stokKodu": r["stok_kodu"] or r["plan_stok"], "termin": _material_due(c, mc, plan, mat),
+                        "metin": (r["metin"] or "")[:300], "kanal": MATERIAL_MAP[r["tur"]]["kanal"]})
+    out.sort(key=lambda x: (x["termin"] or "9999", x["planId"]))
+    return out
 
 
 def _request_view(r: dict[str, Any], counts: Optional[dict[str, int]] = None) -> dict[str, Any]:
-    return {"id": r["id"], "planId": r["plan_id"], "materyalId": r["materyal_id"], "kampanya": r["kampanya"],
+    return {"id": r["id"], "planId": r["plan_id"], "materyalId": r["materyal_id"], "materyalTur": r["materyal_tur"],
+            "kampanya": r["kampanya"],
             "stokKodu": r["stok_kodu"], "kitapId": r["kitap_id"], "kitapAdi": r["kitap_adi"], "yazar": r["yazar"],
             "studioJob": r["studio_job"], "studioKind": r["studio_kind"], "kapak": _loads(r["kapak_json"], None),
             "kanal": r["kanal"], "kanalAdi": CHANNELS.get(r["kanal"], r["kanal"]),
@@ -605,10 +712,12 @@ def update_request(engine, tenant: str, rid: str, body: dict[str, Any]) -> dict[
     if "metinTurleri" in body:
         vals["metin_turleri"] = _dumps(_list(body["metinTurleri"], TEXT_KINDS, "Metin türü"))
     for k, col, n in (("hedefKitle", "hedef_kitle", 300), ("ton", "ton", 200), ("gorselBasligi", "gorsel_basligi", 300),
-                      ("atanan", "atanan", 120), ("kampanya", "kampanya", 200), ("planId", "plan_id", 64),
-                      ("materyalId", "materyal_id", 64)):
+                      ("atanan", "atanan", 120), ("kampanya", "kampanya", 200)):
         if k in body:
             vals[col] = _short(body[k], n)
+    if "planId" in body or "materyalId" in body:
+        pid, mid, mtur = m15_link(engine, tenant, body.get("planId"), body.get("materyalId"))
+        vals.update(plan_id=pid, materyal_id=mid, materyal_tur=mtur)
     if "brief" in body:
         vals["brief"] = str(body["brief"] or "").strip()[:8000] or None
     if "not" in body:
@@ -1197,6 +1306,20 @@ def save_banned(engine, tenant: str, user: str, items: list[dict[str, Any]]) -> 
                 c.execute(BANNED.insert().values(id=uuid.uuid4().hex, tenant_id=tenant, kalip=it["kalip"],
                                                  aciklama=it["aciklama"], ekleyen=user, zaman=_now()))
     return banned_phrases(engine, tenant)
+
+
+def meta_get(engine, tenant: str, key: str) -> Optional[str]:
+    with engine.connect() as c:
+        return c.execute(sa.select(META.c.deger).where(META.c.tenant_id == tenant, META.c.anahtar == key)).scalar()
+
+
+def meta_set(engine, tenant: str, key: str, value: str) -> None:
+    with engine.begin() as c:
+        cond = (META.c.tenant_id == tenant, META.c.anahtar == key)
+        if c.execute(sa.select(META.c.anahtar).where(*cond)).first():
+            c.execute(META.update().where(*cond).values(deger=value))
+        else:
+            c.execute(META.insert().values(tenant_id=tenant, anahtar=key, deger=value))
 
 
 # ------------------------------------------------------------------ özet ve günlük bildirim

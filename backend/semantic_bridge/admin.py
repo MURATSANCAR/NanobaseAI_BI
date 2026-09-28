@@ -388,7 +388,7 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MKT_CREATIVE_COVER_MIN_PX", "group": "creative", "label": "Kapak için en küçük kısa kenar (px)", "type": "int",
      "default": "800", "help": "Bundan küçük kapakta ekran «düşük çözünürlük» uyarır"},
     {"key": "MKT_CREATIVE_DIGEST_TO", "group": "creative", "label": "Günlük özet alıcıları", "type": "text", "default": "",
-     "help": "Virgülle e-posta adresleri (grafik ve pazarlama ekibi). Her iş günü 08:30'da tek özet; boşsa gönderilmez"},
+     "help": "Virgülle e-posta adresleri (grafik ve pazarlama ekibi). Her iş günü 08:30'dan sonra tek özet; boşsa gönderilmez"},
     {"key": "MKT_CREATIVE_CLAIM_MIN_P", "group": "creative", "label": "Kanıtsız iddia uyarısı: en düşük olasılık",
      "type": "text", "default": "0.70", "help": "Zeki AI «iddia var» dediğinde bu olasılığın altındaysa uyarı verilmez"},
     {"key": "MKT_CREATIVE_CLAIM_MIN_MARGIN", "group": "creative", "label": "Kanıtsız iddia uyarısı: en düşük fark",

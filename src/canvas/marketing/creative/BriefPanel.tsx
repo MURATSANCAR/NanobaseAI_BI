@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { AlertTriangle, ImageUp, Pencil } from 'lucide-react';
@@ -76,7 +77,15 @@ export default function BriefPanel({ r, meta }: { r: RequestDetail; meta: Meta |
             <Line k="Görsel üstü yazı" v={r.gorselBasligi} />
             <Line k="Hedef kitle" v={r.hedefKitle} />
             <Line k="Ton" v={r.ton} />
-            <Line k="Kampanya" v={[r.kampanya, r.planId ? `plan ${r.planId}` : null].filter(Boolean).join(' · ') || null} />
+            <Line k="Kampanya" v={r.kampanya} />
+            {r.planId && (
+              <div className="min-w-0">
+                <div className={label}>Pazarlama planı</div>
+                <Link to={`/pazarlama/plan/${encodeURIComponent(r.planId)}`} className="text-[12.5px] font-bold text-canvas-violet hover:underline">
+                  {r.planId}{r.materyalTur ? ` · ${r.materyalTur} materyali` : ''}
+                </Link>
+              </div>
+            )}
             <Line k="Etiketler" v={r.etiketler.join(', ') || null} />
             <Line k="Termin · atanan" v={`${fmtDay(r.termin)}${r.atanan ? ` · ${r.atanan}` : ''}`} />
           </div>
