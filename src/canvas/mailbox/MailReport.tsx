@@ -5,6 +5,8 @@ import { Kpi, KpiRow } from '../editorial/kit';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty, MailFrame } from './parts';
 import { fmtDay, fmtInt, hoursText, mailApi, pctText } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -44,10 +46,10 @@ export default function MailReport() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Gelen ileti" value={fmtInt(d.total)} help={`${fmtDay(d.start)} – ${fmtDay(d.end)}`} />
-            <Kpi label="Yanıtlanan" value={fmtInt(d.replied)} help={d.total ? `%${Math.round((d.replied / d.total) * 100)} oranında` : '—'} />
-            <Kpi label="SLA uyumu" value={pctText(d.slaRate)} help="Süresi gelmiş iletilerde hedef sürede ilk yanıt" />
-            <Kpi label="Tür düzeltme" value={pctText(d.correctedRate)} help={`Emin olunmayan payı ${pctText(d.unsureRate)}`} />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Gelen ileti" />} label="Gelen ileti" value={fmtInt(d.total)} help={`${fmtDay(d.start)} – ${fmtDay(d.end)}`} />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yanıtlanan" />} label="Yanıtlanan" value={fmtInt(d.replied)} help={d.total ? `%${Math.round((d.replied / d.total) * 100)} oranında` : '—'} />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="SLA uyumu" />} label="SLA uyumu" value={pctText(d.slaRate)} help="Süresi gelmiş iletilerde hedef sürede ilk yanıt" />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tür düzeltme" />} label="Tür düzeltme" value={pctText(d.correctedRate)} help={`Emin olunmayan payı ${pctText(d.unsureRate)}`} />
           </KpiRow>
           {d.categories.length === 0 ? (
             <Empty title="Bu aralıkta ileti yok" />
@@ -56,7 +58,7 @@ export default function MailReport() {
               <thead>
                 <tr>
                   <th className={th}>Tür</th>
-                  <th className={`${th} text-right`}>İleti</th>
+                  <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">İleti</InfoLabel></th>
                   <th className={`${th} text-right`}>Açık</th>
                   <th className={`${th} text-right`}>Süresi aşan</th>
                   <th className={`${th} text-right`}>İlk yanıt (iş saati)</th>
@@ -87,7 +89,7 @@ export default function MailReport() {
                 <tr>
                   <th className={th}>Birim</th>
                   <th className={th}>Kişi</th>
-                  <th className={`${th} text-right`}>İleti</th>
+                  <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">İleti</InfoLabel></th>
                   <th className={`${th} text-right`}>Açık</th>
                   <th className={`${th} text-right`}>Yanıtlanan</th>
                   <th className={`${th} text-right`}>Süresi aşan</th>
@@ -112,7 +114,7 @@ export default function MailReport() {
               <thead>
                 <tr>
                   <th className={th}>Hafta (pazartesi)</th>
-                  <th className={`${th} text-right`}>Gelen ileti</th>
+                  <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">Gelen ileti</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>

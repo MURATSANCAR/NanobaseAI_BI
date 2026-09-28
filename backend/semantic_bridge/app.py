@@ -4402,21 +4402,32 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/web")
     def editorial_web_overview(request: Request, page: int = 0, label: str = "") -> dict[str, Any]:
         engine, tenant = _web(request)
-        return dict(web_mod.overview(engine, tenant, page, label or None), enabled=_web_enabled())
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: dict(web_mod.overview(engine, tenant, page, label or None), enabled=_web_enabled()),
+                       prefix="portal.basinweb.ozet", title="Basın ve web", text="Basın ve web: ilgili haber = modelin ilgili dediği açık kaynak haberi (model sayı üretmez, yalnız ilgili/ton seçer); olumlu/olumsuz ton sayıları; yazar bilgisi = aranan yazar sayısı; yazar/kitap başına haber sayısı; kanal tablosunda okunan/eşleşen/ilgili son gece taramasının raporundan. Haberler açık RSS ve Wikidata'dan gece okunur, portala yazılır.", skip=("page", "pageSize"),
+                       extra=lambda k: [k.hesap("tarama", "Açık haber kaynakları.",
+                                                dis="Açık haber kaynakları (RSS) ve Wikidata, gece taraması")])
 
     @app.get("/api/v1/editorial/web/people/{contact_id}")
     def editorial_web_person(contact_id: str, request: Request) -> dict[str, Any]:
         engine, tenant = _web(request)
         if not _web_enabled():
             return {"items": [], "total": 0, "tone": {}, "facts": None, "checkedAt": None}
-        return web_mod.person(engine, tenant, contact_id)
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: web_mod.person(engine, tenant, contact_id), prefix="portal.basinweb.kisi",
+                       title="Yazarın haberleri", text="Basın ve web: ilgili haber = modelin ilgili dediği açık kaynak haberi (model sayı üretmez, yalnız ilgili/ton seçer); olumlu/olumsuz ton sayıları; yazar bilgisi = aranan yazar sayısı; yazar/kitap başına haber sayısı; kanal tablosunda okunan/eşleşen/ilgili son gece taramasının raporundan. Haberler açık RSS ve Wikidata'dan gece okunur, portala yazılır.")
 
     @app.get("/api/v1/editorial/web/books/{book_id}")
     def editorial_web_book(book_id: str, request: Request) -> dict[str, Any]:
         engine, tenant = _web(request)
         if not _web_enabled():
             return {"items": [], "total": 0, "tone": {}}
-        return web_mod.book(engine, tenant, book_id)
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: web_mod.book(engine, tenant, book_id), prefix="portal.basinweb.kitap",
+                       title="Kitabın haberleri", text="Basın ve web: ilgili haber = modelin ilgili dediği açık kaynak haberi (model sayı üretmez, yalnız ilgili/ton seçer); olumlu/olumsuz ton sayıları; yazar bilgisi = aranan yazar sayısı; yazar/kitap başına haber sayısı; kanal tablosunda okunan/eşleşen/ilgili son gece taramasının raporundan. Haberler açık RSS ve Wikidata'dan gece okunur, portala yazılır.")
 
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:

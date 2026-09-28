@@ -31,6 +31,15 @@ from fastapi import HTTPException, Query, Request
 
 from semantic_bridge import support as S
 from semantic_bridge import support_sources as src
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_izi as IZ
+
+T_KALITE = 'Özet: açık talep = durumu kapanmamış talepler (SLA aşıldı / yaklaşıyor / bugün dolan talebin yanıt-çözüm süresine göre); açılan = dönemde açılan talep, önceki dönem aynı uzunlukta; ilk yanıt ve çözüm medyanı talep zamanlarından; memnuniyet = puan ortalaması (N puan); sınıflanan / sınıflanamayan / düzeltilen / taslak kullanılan sayıları talep içgörü kayıtlarından; kanal ve temsilci kırılımı talep alanlarından; konular tablosu sınıf başına talep ve önceki döneme göre değişim; tekrarlayan = aynı kişiden N gün içinde ikinci talep.'
+T_KUYRUK = 'Kuyruk: talepler SLA durumuna göre sıralı; kalan süre = yanıt (ya da çözüm) son anı − şimdi; sınıf olasılığı sınıflayıcının seçim ölçüsü; taslak değişiklik oranı içgörü kaydından.'
+T_BAGLAM = 'Müşteri bağlamı: sipariş, açık sipariş ve bekleyen adet, risk onayı CRM sipariş kayıtlarından; kargo desisi CRM sevkiyat kaydından; fatura net tutarı Logo faturalarından (aranan e-posta, telefon, sipariş ya da cari koduyla; kişisel veri SQL metninde değer olarak görünür, sonuç satırı kayda girmez).'
+T_BAYI = 'Bayi görünümü: açık sipariş (en eskisi), bekleyen adet ve risk onayındaki tutar CRM siparişlerinden; bakiye (yaklaşık) ve vadesi geçen Logo cari hareketlerinden; Logo veri sonu son fatura günü.'
+T_SSS = 'Bilgi bankası açıkları: açık başına talep sayısı ve son N gün; gece işi talepleri SSS ile eşleştirir.'
+DESTEK_DIS = 'Destek masası talepleri, anlık okuma (talep, durum, SLA zamanları, puan)'
 from semantic_bridge.field_sales_sources import SourceError, text
 
 log = logging.getLogger("semantic.support.api")
@@ -290,6 +299,19 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     # -------------------------------------------------------------- genel
 
+    def dis_kaynak(got: list, key: str, title: str, text: str, *, destek: bool = False) -> PV.Kaynaklar:
+        """Logo/CRM okumaları (koşan metin, değerleri yerinde) + gerekirse destek masası."""
+        k = PV.Kaynaklar()
+        from semantic_bridge import soru_kaynak as SK
+
+        ids = IZ.dis_kaydet(k, got, f"destek.{key}", title, *SK.databases())
+        if destek:
+            ids.append(k.hesap("destek", "Talep bilgisi (e-posta ve sipariş ipucu).", dis=DESTEK_DIS))
+        if not ids:
+            raise PV.ProvenanceError("Bu aramada Logo ya da CRM okunmadı.")
+        k.alan("_hepsi", k.hesap(key, text, ids))
+        return k
+
     @app.get(f"{P}/meta")
     def support_meta(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = ctx(request)
@@ -333,8 +355,11 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                         code: str = "", ticket: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         need(user, F_BAGLAM, "Müşteri bağlamını görme yetkisi")
-        return call(read_context, engine, tenant, user, {"email": email, "phone": phone, "order": order,
-                                                         "account": account, "code": code, "ticket": ticket})
+        with IZ.izle_dis() as got:
+            out = call(read_context, engine, tenant, user, {"email": email, "phone": phone, "order": order,
+                                                            "account": account, "code": code, "ticket": ticket})
+        return PV.bagla(out, lambda: dis_kaynak(got, "baglam", "Müşteri bağlamı", T_BAGLAM,
+                                                destek=bool(ticket)))
 
     @app.get(f"{P}/dealers")
     def support_dealers(request: Request, q: str = "", offset: int = 0, size: int = 25) -> dict[str, Any]:
@@ -359,7 +384,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def support_dealer(account: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         need(user, F_BAGLAM, "Bayi görünümü yetkisi")
-        out = call(S.dealer, svc.source, settings(), account, domains=domains_of(user))
+        with IZ.izle_dis() as got:
+            out = call(S.dealer, svc.source, settings(), account, domains=domains_of(user))
+        out = PV.bagla(out, lambda: dis_kaynak(got, "bayi", "Bayi görünümü", T_BAYI))
         acc = out.get("account") or {}
         audit(engine, user, "read", "support_dealer", acc.get("id"), acc.get("unvan") or "Bayi görünümü",
               {"open": len(out.get("open") or []), "risk": len(out.get("risk") or [])})
@@ -488,8 +515,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/faq/gaps")
     def support_faq_gaps(request: Request, status: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {"items": S.list_gaps(engine, tenant, status or None), "canEdit": flag(user, F_SSS),
-                "night": S.meta_get(engine, tenant, "night")}
+        return IZ.izli(engine, lambda: {"items": S.list_gaps(engine, tenant, status or None), "canEdit": flag(user, F_SSS),
+                                        "night": S.meta_get(engine, tenant, "night")},
+                       prefix="portal.destek.sss", title="Bilgi bankası açıkları", text=T_SSS,
+                       extra=lambda k: [k.hesap("destek", "Açıklara bağlanan talepler.", dis=DESTEK_DIS)])
 
     @app.patch(P + "/faq/gaps/{gid}")
     def support_faq_gap_patch(gid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -517,7 +546,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if not all_:
             rows = [t for t in rows if svc.mine(t, user, emails) or not src.assignees(t)]
         now = datetime.now()
-        ins = S.insights_for(engine, tenant, [t.get("name") for t in rows])
+        with IZ.izle(engine) as ins_ran:
+            ins = S.insights_for(engine, tenant, [t.get("name") for t in rows])
         order = {"asildi": 0, "yaklasiyor": 1, "icinde": 2, None: 3}
         items = []
         for t in rows:
@@ -531,7 +561,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                           "urgency": i.get("urgency"), "hasDraft": bool(i.get("draft")),
                           "url": f"{st['destekLink']}/helpdesk/tickets/{t.get('name')}" if st["destekLink"] else None})
         items.sort(key=lambda x: (order.get(x["sla"], 3), x["due"] or "9999", x["opened"] or ""))
-        return {"configured": True, "scope": "all" if all_ else "mine", "items": items, "agentMapped": bool(emails)}
+        out = {"configured": True, "scope": "all" if all_ else "mine", "items": items, "agentMapped": bool(emails)}
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ins_ran, out, prefix="portal.destek.kuyruk", title="Talep içgörüleri",
+                                               text=T_KUYRUK, extra=lambda k: [k.hesap("destek", "Açık talepler.", dis=DESTEK_DIS)]))
 
     @app.get(f"{P}/quality")
     def support_quality(request: Request, frm: str = Query("", alias="from"), to: str = "") -> dict[str, Any]:
@@ -558,7 +590,12 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             out["configured"] = True
             return out
 
-        return call(read)
+        def traced() -> dict[str, Any]:
+            return IZ.izli(engine, read, prefix="portal.destek.kalite", title="Talep içgörüleri ve sınıflar",
+                           text=T_KALITE, extra=lambda k: [k.hesap("destek", "Dönemin ve önceki dönemin talepleri.",
+                                                                   dis=DESTEK_DIS)])
+
+        return call(traced)
 
     # -------------------------------------------------------------- sınıf ve SLA ayarı
 

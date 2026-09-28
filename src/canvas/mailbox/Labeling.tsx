@@ -7,6 +7,8 @@ import { Kpi, KpiRow } from '../editorial/kit';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty, MailFrame } from './parts';
 import { fmtInt, fmtWhen, mailApi, pctText } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Etiketleme: iletilere insan türü verilir (Zeki AI'ın önerisi gösterilmez — kör etiketleme). Doğruluk = insan etiketi
  *  ile modelin ilk seçiminin uyuşması; hedef %90. Otomatik atama bu oran tutmadan açılmaz. */
@@ -40,10 +42,10 @@ export default function Labeling() {
       {!canLabel && meta.data && <Note tone="info">Etiketlemek için «E-posta atama ve düzeltme» yetkisi gerekir; doğruluk tablosunu görebilirsiniz.</Note>}
       {a && (
         <KpiRow>
-          <Kpi label="Zeki AI doğruluğu" value={pctText(a.rate)} help={`${fmtInt(a.agree)} / ${fmtInt(a.n)} ileti · hedef %${Math.round(a.target * 100)}`} />
-          <Kpi label="Etiketlenen ileti" value={fmtInt(a.labeled)} help={a.unscored ? `${fmtInt(a.unscored)} iletide model sınıflamamıştı` : 'Birden çok etikette çoğunluk'} />
-          <Kpi label="Sizin etiketiniz" value={fmtInt(d?.labeledByMe)} help="Bu hesapla verilen" />
-          <Kpi label="Bekleyen" value={fmtInt(d?.total)} help="Sizin henüz etiketlemediğiniz" />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI doğruluğu" />} label="Zeki AI doğruluğu" value={pctText(a.rate)} help={`${fmtInt(a.agree)} / ${fmtInt(a.n)} ileti · hedef %${Math.round(a.target * 100)}`} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Etiketlenen ileti" />} label="Etiketlenen ileti" value={fmtInt(a.labeled)} help={a.unscored ? `${fmtInt(a.unscored)} iletide model sınıflamamıştı` : 'Birden çok etikette çoğunluk'} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Sizin etiketiniz" />} label="Sizin etiketiniz" value={fmtInt(d?.labeledByMe)} help="Bu hesapla verilen" />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen" />} label="Bekleyen" value={fmtInt(d?.total)} help="Sizin henüz etiketlemediğiniz" />
         </KpiRow>
       )}
       {a && a.byCategory.length > 0 && (
@@ -51,7 +53,7 @@ export default function Labeling() {
           <thead>
             <tr>
               <th className={th}>Tür (insan)</th>
-              <th className={`${th} text-right`}>İleti</th>
+              <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">İleti</InfoLabel></th>
               <th className={`${th} text-right`}>Uyuşan</th>
               <th className={`${th} text-right`}>Doğruluk</th>
               <th className={th}>En sık karışan</th>

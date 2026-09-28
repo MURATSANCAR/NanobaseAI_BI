@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { ContextView } from './CustomerContext';
 import { Block, Empty, SlaPill, SourceLine } from './parts';
 import { fmtDay, fmtPct, supportApi, type Meta, type QueueItem } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Açık talepler SLA'ya göre sıralı (aşılan → yaklaşan → süre içinde → SLA'sız). Talebe dokununca yanında Zeki AI önerisi,
  *  cevap taslağı ve müşteri bağlamı açılır. Talep masada cevaplanır; burada yalnız okunur ve taslak hazırlanır. */
@@ -20,6 +22,7 @@ export default function QueueTab({ meta }: { meta: Meta }) {
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <Block
+        info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Açık talepler" />}
         title="Açık talepler"
         help={scope === 'mine' ? 'Size atananlar ve henüz kimseye atanmamışlar.' : 'Bütün temsilcilerin açık talepleri.'}
         action={
@@ -243,7 +246,7 @@ function TicketPanel({ item, meta, onClose }: { item: QueueItem; meta: Meta; onC
       )}
 
       {meta.me.canContext ? (
-        <Block title="Müşteri bağlamı" help="Talebi gönderen adresle CRM ve Logo'dan.">
+        <Block info={<SqlInfo k={kaynakOf(ctx.data)} alan="_hepsi" label="Müşteri bağlamı" />} title="Müşteri bağlamı" help="Talebi gönderen adresle CRM ve Logo'dan.">
           {ctx.isLoading && <Loading />}
           {ctx.error && <Note tone="err">{errText(ctx.error, 'Bağlam okunamadı.')}</Note>}
           {ctx.data && <ContextView data={ctx.data} onPick={setAccount} />}

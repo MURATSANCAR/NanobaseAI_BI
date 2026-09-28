@@ -5,6 +5,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from
 import { ENGINE_ENABLED } from '../engine';
 import { Block, Empty, SourceLine } from './parts';
 import { fmtDay, fmtInt, supportApi, type Gap } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Bilgi bankası açıkları: SSS eşleşmesi bulunamayan taleplerin konuya göre sayısı. Yönetici soru ve cevabı yazar, onaylar;
  *  onaylı metin portaldan siteye gönderilmez (T-soft'a yazma yok), siteye elle girilir ve «siteye elle girildi» işaretlenir.
@@ -16,6 +18,7 @@ export default function FaqGaps() {
   const items = q.data?.items ?? [];
   return (
     <Block
+      info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bilgi bankası açıkları" />}
       title="Bilgi bankası açıkları"
       help="Sitede cevabı olsa gelmeyecek talepler: Zeki AI benzer SSS bulamadı. Liste her gece yeniden sayılır."
     >

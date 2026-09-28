@@ -987,7 +987,7 @@ class Source:
         conn = self._crm()
         try:
             run = _runner(conn)
-            return fn(lambda sql: src.lower_keys(run(src.guard(sql))))
+            return fn(lambda sql: self._traced("crm", run, sql))
         finally:
             _close(conn)
 
@@ -997,9 +997,20 @@ class Source:
         conn = self._logo()
         try:
             run = _runner(conn)
-            return fn(lambda sql: src.lower_keys(run(src.guard(sql))))
+            return fn(lambda sql: self._traced("logo", run, sql))
         finally:
             _close(conn)
+
+    @staticmethod
+    def _traced(kind: str, run: Callable[[str], Any], sql: str) -> Any:
+        """Koşan metni sorgu bilgisine bildirir (izleme açıksa): gösterilen = koşan, değerleri yerinde."""
+        from semantic_bridge import sorgu_izi as IZ
+
+        text = src.guard(sql)
+        t0 = time.monotonic()
+        rows = src.lower_keys(run(text))
+        IZ.dis(kind, text, rows=len(rows) if isinstance(rows, list) else None, ms=int((time.monotonic() - t0) * 1000))
+        return rows
 
     def destek(self, st: dict[str, Any]) -> src.DestekClient:
         return self._destek(st)

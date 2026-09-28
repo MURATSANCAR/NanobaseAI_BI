@@ -34,6 +34,17 @@ from starlette.concurrency import run_in_threadpool
 from semantic_bridge import mailbox as M
 from semantic_bridge import mailbox_classify as K
 from semantic_bridge import mailbox_sources as S
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_izi as IZ
+
+F_OZET = 'Kurumsal e-posta: bana atanan, süresi aşan, atanmamış, birimim ve bugün gelen sayıları kutudan inen ileti kayıtlarından (durum, atanan, SLA); sınıflanmayı bekleyen = türü henüz yazılmamış ileti; sekme rozetleri aynı sayımlar. İletiler posta kutusundan 5 dakikada bir portala iner (yalnız okuma + etiket).'
+F_LISTE = 'İleti listesi: sayfalama toplamı süzgece uyan ileti sayısı; ek sayısı iletinin kaydından; kalan SLA süresi = türün SLA süresi − iş saati olarak geçen süre.'
+F_DETAY = 'İleti: kalan/aşan SLA süresi iş saatine göre; ek boyutları posta kutusundan anlık (gövde portalda saklanmaz); gönderen tanıma CRM kişi/firma kaydından.'
+F_BASVURU = 'Başvurular kutusu: bekleyen başvuru ve ek sayısı başvuru kayıtlarından.'
+F_ROZET = 'Menü rozeti: size atanan açık ileti ve süresi aşan ileti sayısı.'
+F_RAPOR = 'Rapor: gelen = dönemde gelen ileti; yanıtlanan = yanıt olayı olan (oranı gelen üstünden); SLA uyumu = süresi içinde yanıtlanan ÷ yanıtlanan; tür düzeltme = türü elle değiştirilen ÷ sınıflanan; ilk yanıt ve kapanış süreleri iş saati ve takvim olarak medyan; birim/kişi ve haftalık tablolar aynı sayımın kırılımı.'
+F_ETIKET = 'Etiketleme: Zeki AI doğruluğu = insan etiketiyle aynı türü seçtiği ileti ÷ insan etiketi olan ileti; karışıklık tablosu tür başına uyuşan / toplam ve en sık karışan tür.'
+KUTU_DIS = "Posta kutusu, anlık okuma (gövde ve ekler portalda saklanmaz)"
 
 log = logging.getLogger("semantic.mailbox.api")
 P = "/api/v1/mailbox"
@@ -145,12 +156,14 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/overview")
     def mailbox_overview(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(M.overview, engine, tenant, user, rights(user), settings())
+        return IZ.izli(engine, lambda: call(M.overview, engine, tenant, user, rights(user), settings()),
+                       prefix="portal.eposta.ozet", title="Kurumsal e-posta özeti", text=F_OZET)
 
     @app.get(f"{P}/badge")
     def mailbox_badge(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(M.badge, engine, tenant, user, settings(), rights(user)["hr"])
+        return IZ.izli(engine, lambda: call(M.badge, engine, tenant, user, settings(), rights(user)["hr"]),
+                       prefix="portal.eposta.rozet", title="Menü rozeti", text=F_ROZET)
 
     @app.get(f"{P}/connection")
     def mailbox_connection(request: Request) -> dict[str, Any]:
@@ -177,13 +190,19 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     def mailbox_messages(request: Request, view: str = "mine", q: str = "", category: str = "", page: int = 0,
                          pageSize: int = 50) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(M.listing, engine, tenant, user, rights(user), settings(), view=view, q=q, category=category,
-                    page=page, page_size=pageSize)
+        return IZ.izli(engine, lambda: call(M.listing, engine, tenant, user, rights(user), settings(), view=view, q=q,
+                                            category=category, page=page, page_size=pageSize),
+                       prefix="portal.eposta.liste", title="İleti listesi", text=F_LISTE, skip=("page", "pageSize"))
 
     @app.get(P + "/messages/{mid}")
     async def mailbox_message(mid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        out = await run_in_threadpool(call, M.detail, engine, tenant, user, await run_in_threadpool(rights, user), settings(), mid)
+        rg = await run_in_threadpool(rights, user)
+
+        def read() -> tuple[dict[str, Any], list]:
+            with IZ.izle(engine) as ran:
+                return call(M.detail, engine, tenant, user, rg, settings(), mid), ran
+        out, ran = await run_in_threadpool(read)
         src = S.source(conf)
         out["link"] = src.web_link(out["providerId"], out["threadId"]) if src.kind == out["provider"] else None
         # Gövde kutudan anlık okunur, portalda saklanmaz.
@@ -194,7 +213,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
             out["attachments"] = [a.public() for a in item.attachments]
         except S.SourceError as e:
             out["bodyError"] = str(e)
-        return out
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.eposta.ileti", title="İleti",
+                                               text=F_DETAY, extra=lambda k: [k.hesap("kutu", "Gövde ve ekler.", dis=KUTU_DIS)]))
 
     @app.post(P + "/messages/{mid}/assign")
     def mailbox_assign(mid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -356,7 +376,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/applications")
     def mailbox_applications(request: Request, status: str = "yeni") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(M.applications, engine, tenant, status)
+        return IZ.izli(engine, lambda: call(M.applications, engine, tenant, status), prefix="portal.eposta.basvuru",
+                       title="Başvurular kutusu", text=F_BASVURU)
 
     # ------------------------------------------------------------------ rapor
 
@@ -369,7 +390,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
             s = date.fromisoformat(start) if start else e - timedelta(days=29)
         except ValueError:
             raise HTTPException(status_code=400, detail={"code": "MAILBOX", "message": "Tarih YYYY-AA-GG olmalı."}) from None
-        return call(M.report, engine, tenant, settings(), s, e)
+        return IZ.izli(engine, lambda: call(M.report, engine, tenant, settings(), s, e), prefix="portal.eposta.rapor",
+                       title="Kurumsal e-posta raporu", text=F_RAPOR)
 
     # ------------------------------------------------------------------ kurallar
 
@@ -411,7 +433,8 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     @app.get(f"{P}/labeling")
     def mailbox_labeling(request: Request, page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(M.labeling, engine, tenant, user, rights(user), settings(), page=page)
+        return IZ.izli(engine, lambda: call(M.labeling, engine, tenant, user, rights(user), settings(), page=page),
+                       prefix="portal.eposta.etiket", title="Etiketleme", text=F_ETIKET, skip=("page", "pageSize"))
 
     @app.post(P + "/labeling/{mid}")
     def mailbox_label(mid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

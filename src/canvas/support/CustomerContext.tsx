@@ -5,6 +5,8 @@ import { Loading, Note, Pill, TableWrap, btnPrimary, errText, field, td, th } fr
 import { ENGINE_ENABLED } from '../engine';
 import { Block, Empty, SourceLine } from './parts';
 import { fmtDay, fmtInt, fmtNum, fmtTl, guessQuery, supportApi, type Context, type ContextQuery, type Order } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Müşteri bağlamı: e-posta / telefon / sipariş no / cari kodu → CRM kişi-cari eşleşmesi, siparişler ve durumu, sevkiyat,
  *  kargo takibi, Logo'dan fatura/iade (veri sonu tarihiyle), masadaki önceki talepler. Bağımsız bileşen: destek masasının
@@ -109,10 +111,10 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
       )}
       {!c.needsChoice && c.hidden.length === 0 && (
         <>
-          <Block title="Siparişler" help="Canlı CRM. Açık = bekleyen adedi olan ve tamamlanmamış/iptal edilmemiş sipariş (CRM kuralı).">
+          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Siparişler" />} title="Siparişler" help="Canlı CRM. Açık = bekleyen adedi olan ve tamamlanmamış/iptal edilmemiş sipariş (CRM kuralı).">
             {c.orders.length === 0 ? <Empty title="Sipariş yok">Bu müşteri için penceredeki CRM siparişi bulunamadı.</Empty> : <OrderTable orders={c.orders} />}
           </Block>
-          <Block title="Kargo" help="Kargo firmasının gönderi kaydı CRM'de; takip numarası ya da irsaliye numarasıyla eşlenir.">
+          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Kargo" />} title="Kargo" help="Kargo firmasının gönderi kaydı CRM'de; takip numarası ya da irsaliye numarasıyla eşlenir.">
             {c.cargo.length === 0 ? (
               <Empty title="Kargo kaydı yok">Siparişlerde kargo firmasının gönderi kaydı bulunamadı.</Empty>
             ) : (
@@ -145,6 +147,7 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
             )}
           </Block>
           <Block
+            info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Fatura ve iade" />}
             title="Fatura ve iade (Logo)"
             help={c.logo?.dataEnd ? `Logo verisi ${fmtDay(c.logo.dataEnd)} tarihine kadar; sonrası için «fatura kesilmedi» denmez.` : 'Logo kaydı'}
           >

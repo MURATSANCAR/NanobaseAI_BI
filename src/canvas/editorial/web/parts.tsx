@@ -3,6 +3,8 @@ import { ExternalLink, Newspaper } from 'lucide-react';
 import { ENGINE_ENABLED, webApi, type WebMention, type WebTone } from '../../engine';
 import { nf } from '../../admin/ui';
 import { dateTime } from '../../format';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Basın ve web: yalnız yerel modelin "bu yazar/kitap hakkında" dediği haberler (olumlu, olumsuz, nötr). */
 
@@ -95,6 +97,7 @@ export function WebSection({ kind, id, framed }: { kind: 'person' | 'book'; id: 
         <Newspaper aria-hidden className="h-3.5 w-3.5 text-canvas-violet" />
         Basında ve web'de
         {d.total > 0 && <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(d.total)}</span>}
+        {d.total > 0 && <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Basında ve web'de" />}
       </h3>
       {f && (
         <div className="mt-1.5 rounded-xl bg-slate-50 px-3 py-2 text-[12px] leading-snug">

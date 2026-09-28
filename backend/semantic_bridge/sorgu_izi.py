@@ -102,6 +102,52 @@ def izli(engine: Any, fn: Callable[[], Any], **kw: Any) -> Any:
     return P.bagla(out, lambda: kaynak(engine, ran, out, **kw))
 
 
+# ------------------------------------------------------------------ Logo / CRM okumaları (dış bağlantı)
+
+_EXT: contextvars.ContextVar[Optional[list]] = contextvars.ContextVar("sorgu_izi_dis", default=None)
+
+
+@contextmanager
+def izle_dis() -> Iterator[list]:
+    """Blok içinde Logo/CRM'de koşan metinleri toplar (okuyan fonksiyon `dis()` ile bildirir)."""
+    outer = _EXT.get()
+    got: list = []
+    token = _EXT.set(got)
+    try:
+        yield got
+    finally:
+        _EXT.reset(token)
+        if outer is not None:
+            outer.extend(got)
+
+
+def dis(connection: str, sql: str, *, rows: Optional[int] = None, ms: Optional[int] = None) -> None:
+    """Okuyan fonksiyon koşturduğu metni bildirir (izleme yoksa hiçbir şey yapmaz; okuma yolunu yavaşlatmaz)."""
+    rec = _EXT.get()
+    if rec is not None and sql:
+        import time as _t
+
+        rec.append({"connection": connection, "sql": sql, "rows": rows, "ms": ms, "at": _t.time()})
+
+
+def dis_kaydet(k: P.Kaynaklar, got: list, prefix: str, title: str, logo_db: Optional[str], crm_db: Optional[str],
+               *, description: str = "") -> list[str]:
+    """Yakalanan Logo/CRM metinlerini kayda yazar (aynı metin bir kez; satır ve süre ilk koşunun)."""
+    seen: dict[tuple, str] = {}
+    ids: list[str] = []
+    for x in got:
+        key = (x["connection"], x["sql"])
+        if key in seen:
+            continue
+        sid = f"{prefix}.{len(seen) + 1}"
+        seen[key] = sid
+        conn = "crm" if x["connection"] == "crm" else "logo"
+        ids.append(k.sorgu(sid, f"{title} · {'CRM' if conn == 'crm' else 'Logo'}", conn, x["sql"],
+                           database=crm_db if conn == "crm" else logo_db, rows=x.get("rows"), ms=x.get("ms"),
+                           ran_at=x.get("at"), description=description or "Bu ekran açılırken koşan okuma."))
+    return ids
+
+
 def kaydet(k: P.Kaynaklar, ran: list, engine: Any, prefix: str, title: str, *, description: str = "",
            origin: tuple = (), limit_chars: Optional[int] = None) -> list[str]:
     """Yakalanan ifadeleri kayda yazar; kimlikleri döndürür (`prefix.1`, `prefix.2`, …). Aynı metin bir kez."""

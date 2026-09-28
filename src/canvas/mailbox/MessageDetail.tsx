@@ -19,6 +19,8 @@ import {
   type MessageDetail as Detail,
   type Status,
 } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Tek ileti: gövde kutudan anlık okunur (saklanmaz), tür/sorumlu düzeltme, atama, durum, yanıt taslağı, başvuru aktarımı. */
 export default function MessageDetail() {
@@ -85,7 +87,8 @@ function Body({ d, meta }: { d: Detail; meta: Meta }) {
             )}
           </div>
           {d.attachments.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-1.5">
+            <ul className="mt-3 flex flex-wrap items-center gap-1.5">
+              <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İletinin SLA süresi ve ekleri" />
               {d.attachments.map((a) => (
                 <li key={a.name} className="inline-flex max-w-full items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11.5px] font-semibold">
                   <Paperclip aria-hidden className="h-3.5 w-3.5 shrink-0" />

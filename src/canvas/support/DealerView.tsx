@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { ContextView, OrderTable } from './CustomerContext';
 import { Block, Empty, SourceLine } from './parts';
 import { fmtDay, fmtInt, fmtNum, fmtTl, supportApi, type Account } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Bayi görünümü: bayi seç → açık siparişler, bekleyen adet, risk limiti onayı bekleyenler, son sevkiyat ve kargo, Logo'da
  *  son faturalar ve yaklaşık bakiye. Rakamlar CRM ve Logo'dan; Zeki AI kullanılmaz. */
@@ -53,21 +55,22 @@ export default function DealerView() {
         {d && (
           <>
             <KpiRow>
-              <Kpi label="Açık sipariş" value={s ? fmtInt(s.open) : '—'} help={s?.oldestOpen ? `En eskisi ${fmtDay(s.oldestOpen)}` : 'Bekleyen adedi olan'} />
-              <Kpi label="Bekleyen adet" value={s ? fmtNum(s.pending) : '—'} help="Henüz gönderilmemiş" />
-              <Kpi label="Risk onayında" value={s ? fmtInt(s.risk) : '—'} help={s ? `${fmtTl(s.riskAmount)} · risk limiti onayı ya da bilgisi bekliyor` : 'CRM risk durumu'} />
+              <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık sipariş" />} label="Açık sipariş" value={s ? fmtInt(s.open) : '—'} help={s?.oldestOpen ? `En eskisi ${fmtDay(s.oldestOpen)}` : 'Bekleyen adedi olan'} />
+              <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen adet" />} label="Bekleyen adet" value={s ? fmtNum(s.pending) : '—'} help="Henüz gönderilmemiş" />
+              <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Risk onayında" />} label="Risk onayında" value={s ? fmtInt(s.risk) : '—'} help={s ? `${fmtTl(s.riskAmount)} · risk limiti onayı ya da bilgisi bekliyor` : 'CRM risk durumu'} />
               <Kpi
+                info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bakiye (yaklaşık)" />}
                 label="Bakiye (yaklaşık)"
                 value={d.balance ? fmtTl(d.balance.bakiye) : '—'}
                 help={d.balance ? `Vadesi geçen ${fmtTl(d.balance.vadesiGecmis)} · Logo ${fmtDay(d.balance.dataEnd)}'e kadar` : 'Logo carisi yok'}
               />
             </KpiRow>
             {d.risk.length > 0 && (
-              <Block title="Risk onayı bekleyen siparişler" help="Satış desteğin ya da finansın CRM'de karar vermesi gereken siparişler.">
+              <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Risk onayı bekleyen siparişler" />} title="Risk onayı bekleyen siparişler" help="Satış desteğin ya da finansın CRM'de karar vermesi gereken siparişler.">
                 <OrderTable orders={d.risk} />
               </Block>
             )}
-            <Block title="Açık siparişler" help="Bekleyen adedi olan, tamamlanmamış siparişler (tarih penceresinden bağımsız hepsi).">
+            <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık siparişler" />} title="Açık siparişler" help="Bekleyen adedi olan, tamamlanmamış siparişler (tarih penceresinden bağımsız hepsi).">
               {d.open.length ? <OrderTable orders={d.open} /> : <Empty title="Açık sipariş yok" />}
             </Block>
             <ContextView data={d} />

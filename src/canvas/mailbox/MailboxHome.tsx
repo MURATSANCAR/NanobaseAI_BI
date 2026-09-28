@@ -9,6 +9,8 @@ import { Kpi, KpiRow, useDebounced } from '../editorial/kit';
 import { ENGINE_ENABLED } from '../engine';
 import { CategoryPill, Empty, MailFrame, PriorityPill, StatusPill } from './parts';
 import { VIEW_ORDER, crmBadges, fmtInt, fmtWhen, mailApi, remainingText, senderText, type Message, type Meta, type View } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** H4 Kurumsal e-posta — gelen kutusu. Sekme ve arama adres çubuğunda (?sekme=, ?q=, ?tur=). */
 export default function MailboxHome() {
@@ -54,14 +56,15 @@ export default function MailboxHome() {
       {last?.llmError && <Note tone="warn">Zeki AI son turda cevap vermedi; iletiler sonraki turda sınıflanacak.</Note>}
 
       <KpiRow>
-        <Kpi label="Bana atanan" value={fmtInt(counts?.mine)} help="Açık ve yanıtlanmamış" active={view === 'mine'} onClick={() => set('sekme', null)} />
-        <Kpi label="Süresi aşan" value={fmtInt(counts?.overdue)} help="İlk yanıt süresi geçmiş (iş saatiyle)" active={view === 'overdue'} onClick={() => set('sekme', 'overdue')} />
+        <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Bana atanan" />} label="Bana atanan" value={fmtInt(counts?.mine)} help="Açık ve yanıtlanmamış" active={view === 'mine'} onClick={() => set('sekme', null)} />
+        <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Süresi aşan" />} label="Süresi aşan" value={fmtInt(counts?.overdue)} help="İlk yanıt süresi geçmiş (iş saatiyle)" active={view === 'overdue'} onClick={() => set('sekme', 'overdue')} />
         {m?.me.seeAll ? (
-          <Kpi label="Atanmamış" value={fmtInt(counts?.unassigned)} help="Zeki AI'ın önerisi hazır" active={view === 'unassigned'} onClick={() => set('sekme', 'unassigned')} />
+          <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Atanmamış" />} label="Atanmamış" value={fmtInt(counts?.unassigned)} help="Zeki AI'ın önerisi hazır" active={view === 'unassigned'} onClick={() => set('sekme', 'unassigned')} />
         ) : (
-          <Kpi label="Birimim" value={fmtInt(counts?.unit)} help="Birimime atanan açık iletiler" active={view === 'unit'} onClick={() => set('sekme', 'unit')} />
+          <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Birimim" />} label="Birimim" value={fmtInt(counts?.unit)} help="Birimime atanan açık iletiler" active={view === 'unit'} onClick={() => set('sekme', 'unit')} />
         )}
         <Kpi
+          info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Bugün gelen" />}
           label="Bugün gelen"
           value={fmtInt(ov.data?.counts.today)}
           help={ov.data?.counts.pending ? `${fmtInt(ov.data.counts.pending)} ileti sınıflanmayı bekliyor` : 'Görebildiğiniz iletiler'}
@@ -115,6 +118,7 @@ export default function MailboxHome() {
         <div className="flex items-center justify-between gap-2 text-[12px] font-semibold text-canvas-muted">
           <span className="tabular-nums">
             {fmtInt(page * list.data.pageSize + 1)}–{fmtInt(page * list.data.pageSize + list.data.items.length)} / {fmtInt(list.data.total)}
+            <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="İleti listesi: sayfa, ek ve SLA" className="ml-1" />
           </span>
           <div className="flex gap-1.5">
             <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage((p) => p - 1)}>

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Mail } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fmtInt, fmtWhen, mailApi } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Yazar giriş süreci panosundaki «E-postayla gelen başvurular» kutusu (H4 sözleşme ucu `GET /api/v1/mailbox/applications`).
  *  Aktarılmayı bekleyen başvuru yoksa ya da uç bu kurulumda yoksa hiç görünmez. */
@@ -17,6 +19,7 @@ export default function MailApplicationsBox() {
         E-postayla gelen başvurular
         <span className="rounded-md bg-canvas-violet/10 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-canvas-violet">{fmtInt(d.total)}</span>
         <span className="ml-auto text-[11.5px] font-semibold text-canvas-muted">aktarılmayı bekliyor</span>
+        <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen başvuru ve ek sayısı" />
       </summary>
       <ul className="mt-1 flex flex-col gap-1 pb-1">
         {d.items.map((a) => (

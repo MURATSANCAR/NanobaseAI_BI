@@ -6,6 +6,8 @@ import { Note, errText, nf } from '../../admin/ui';
 import { dateTime } from '../../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel } from '../kit';
 import { MentionRow, TONE, ToneBar } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Basın ve web: CRM yazarları ve kitapları hakkında Türk haber sitelerinin RSS akışlarında çıkan haberler.
  *  Her gece taranır; yerel modelin ilgili bulmadığı eşleşme gösterilmez. */
@@ -18,12 +20,15 @@ const STATUS: Record<WebChannel['status'], string> = {
 };
 
 /** Kanal haritası: hangi kanaldan ne okundu, kaçı yazarla eşleşti, kaçı ilgili bulundu; kapalı kanal nedeniyle. */
-function Channels({ rows }: { rows: WebChannel[] }) {
+function Channels({ rows, k }: { rows: WebChannel[]; k?: ReturnType<typeof kaynakOf> }) {
   const open = rows.filter((r) => r.status !== 'engelli');
   const closed = rows.filter((r) => r.status === 'engelli');
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Kanallar</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+        Kanallar
+        <SqlInfo k={k} alan="_hepsi" label="Kanal tablosu" />
+      </h2>
       <p className="mt-0.5 text-[11.5px] text-canvas-muted">
         {nf.format(open.length)} kanal taranıyor, {nf.format(closed.length)} kanal kapalı. Sayılar: okunan kayıt · yazarla eşleşen · ilgili bulunan.
       </p>
@@ -105,10 +110,10 @@ export default function WebScreen() {
 
       {d && (
         <KpiRow>
-          <Kpi label="İlgili haber" value={nf.format(shown)} help="Yazar ya da kitabı hakkında olan" />
-          <Kpi label="Olumlu" value={nf.format(d.tone.olumlu ?? 0)} help="Övgü, ödül, başarı" active={label === 'olumlu'} onClick={() => { setLabel(label === 'olumlu' ? '' : 'olumlu'); setPage(0); }} />
-          <Kpi label="Olumsuz" value={nf.format(d.tone.olumsuz ?? 0)} help="Eleştiri, tartışma" active={label === 'olumsuz'} onClick={() => { setLabel(label === 'olumsuz' ? '' : 'olumsuz'); setPage(0); }} />
-          <Kpi label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar açık bilgi tabanında arandı`} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İlgili haber" />} label="İlgili haber" value={nf.format(shown)} help="Yazar ya da kitabı hakkında olan" />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumlu" />} label="Olumlu" value={nf.format(d.tone.olumlu ?? 0)} help="Övgü, ödül, başarı" active={label === 'olumlu'} onClick={() => { setLabel(label === 'olumlu' ? '' : 'olumlu'); setPage(0); }} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumsuz" />} label="Olumsuz" value={nf.format(d.tone.olumsuz ?? 0)} help="Eleştiri, tartışma" active={label === 'olumsuz'} onClick={() => { setLabel(label === 'olumsuz' ? '' : 'olumsuz'); setPage(0); }} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar bilgisi" />} label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar açık bilgi tabanında arandı`} />
         </KpiRow>
       )}
 
@@ -127,7 +132,10 @@ export default function WebScreen() {
         </Panel>
 
         <Panel>
-          <h2 className="text-[15px] font-extrabold">En çok haberi çıkan yazarlar</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+            En çok haberi çıkan yazarlar
+            <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar başına haber" />
+          </h2>
           {d && !d.authors.length && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz yok.</p>}
           <ul className="mt-2">
             {(d?.authors ?? []).map((a) => (
@@ -146,7 +154,7 @@ export default function WebScreen() {
           </ul>
         </Panel>
       </div>
-      {d && <Channels rows={d.channels} />}
+      {d && <Channels rows={d.channels} k={kaynakOf(d)} />}
     </ModuleFrame>
   );
 }
