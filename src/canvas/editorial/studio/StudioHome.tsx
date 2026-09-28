@@ -6,12 +6,10 @@ import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi, type StudioArt
 import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
-import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
+import { StepIcon, StudioInfo, ago, ghostBtn, gradientBtn } from './shared';
 import { useCan } from '../../useAdmin';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
-import { StudioInfo } from './shared';
-
 
 /** Kitabın Word dosyasıyla yeni tasarım (köprü sınırı editorial_studio.DOCX_MAX = 20 MB). */
 function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
