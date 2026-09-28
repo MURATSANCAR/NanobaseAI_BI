@@ -893,6 +893,25 @@ SPEC: list[dict[str, Any]] = [
      "default": "3000", "help": "Kitabın benzerlik dizinine girecek arka kapak/özet metninin karakter sayısı (HTML temizlenmiş)"},
     {"key": "BOOK_SIMILAR_BATCH", "group": "zeki_ortak", "label": "Kitap benzerliği: parti", "type": "int", "default": "32",
      "help": "Dizin kurulurken gömme servisine bir istekte gönderilen kitap sayısı"},
+    {"key": "DOC_EXTRACT_WINDOW_CHARS", "group": "zeki_ortak", "label": "Belgeden alan çıkarma: bölüm uzunluğu",
+     "type": "int", "default": "24000",
+     "help": "Uzun belge (başvuru dosyası, sözleşme) Zeki AI'a bu kadar karakterlik bölümlerle gider; sayfa bölünmez, "
+             "bütün bölümler okunur"},
+    {"key": "DOC_EXTRACT_OVERLAP_PAGES", "group": "zeki_ortak", "label": "Belgeden alan çıkarma: örtüşen sayfa",
+     "type": "int", "default": "1", "help": "Ardışık iki bölümün ortak sayfa (parça) sayısı (0–5)"},
+    {"key": "BASVURU_ILKE_KATEGORILERI", "group": "zeki_ortak", "label": "Başvuru ön okuması: ilke kategorileri",
+     "type": "text", "default": "",
+     "help": "Yayın ilkelerine aykırılık işaretlerinin kategorileri, JSON: {\"anahtar\": \"ad\"}. Boşsa varsayılan "
+             "kategoriler (şiddet, müstehcenlik, nefret söylemi, inanç, madde, kendine zarar, siyasi propaganda, hukuki "
+             "risk, yaşa uygunluk)"},
+    {"key": "BASVURU_ONOKUMA_BENZER", "group": "zeki_ortak", "label": "Başvuru ön okuması: benzer kitap sayısı",
+     "type": "int", "default": "5", "help": "Ön okuma taslağındaki «katalogda konusu yakın kitaplar» listesinin uzunluğu"},
+    {"key": "BASVURU_ONOKUMA_MIN_OLASILIK", "group": "zeki_ortak", "label": "Başvuru ön okuması: en düşük olasılık",
+     "type": "text", "default": "0.70",
+     "help": "Tür ve hedef kitle seçiminin olasılığı bunun altındaysa alan boş kalır, «emin değil» yazılır (0–1)"},
+    {"key": "BASVURU_ONOKUMA_MIN_FARK", "group": "zeki_ortak", "label": "Başvuru ön okuması: en düşük fark",
+     "type": "text", "default": "0.30",
+     "help": "Seçilen değer ile ikinci değer arasındaki olasılık farkı bunun altındaysa «emin değil» (0–1)"},
     # M54 Telif dönemi
     {"key": "ROYALTY_CRM_STATUSES", "group": "royalty", "label": "Kapsamdaki CRM durum kodları", "type": "text",
      "default": "100000000,100000007",

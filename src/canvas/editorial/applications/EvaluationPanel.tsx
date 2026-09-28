@@ -8,6 +8,8 @@ import { Panel } from '../kit';
 import { fmtDay } from '../authors/shared';
 import { applicationsApi, type AppDetail, type Evaluation } from './api';
 import { AXES, ScoreField, errMsg, invalidateApps, useAppMeta } from './shared';
+import PrereadPanel from './PrereadPanel';
+import { mergeDraft } from './preread';
 
 /** Editör değerlendirme raporu (Aşama 1): içerik skoru, üç eksen puanı, sınıflandırma, katalog örtüşmesi,
  *  yayın ilkeleri kontrolü, öneri ve rapor metni. Taslak kaydedilir; «Raporu tamamla» zorunlu alanları ister. */
@@ -188,6 +190,17 @@ export default function EvaluationPanel({ app, editable }: { app: AppDetail; edi
           {app.round > 1 && `${app.round}. tur · `}
           {e?.submitted ? `Tamamlandı ${fmtDay(e.submittedAt)}` : e ? 'Taslak' : 'Henüz yazılmadı'}
         </span>
+      </div>
+      <div className="mt-3">
+        <PrereadPanel
+          appId={app.id}
+          onApply={(d, keys) => {
+            const { form, changed } = mergeDraft(f, d, keys);
+            setF(form);
+            if (changed.length) toast.success(`${changed.length} alan taslaktan dolduruldu; okuyup düzeltin, sonra kaydedin.`);
+            else toast.info(keys ? 'Bu alan zaten aynı.' : 'Boş alan kalmadı; tek tek aktarabilirsiniz.');
+          }}
+        />
       </div>
       <form
         className="mt-3 space-y-4 text-[12.5px]"

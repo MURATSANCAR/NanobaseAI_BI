@@ -4511,6 +4511,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     contracts_api_mod.register(app, rt=rt, greetings=_greetings, can=_can, editorial=_editorial,
                                crm_prefix=editorial_mod._prefix, audit=admin_mod.audit)
+    # Öneri 13: sözleşme belgesinden şart çıkarma (alıntıdan kodla okunan değerler, forma öneri; CRM'e yazma yok).
+    from semantic_bridge import contract_extract_api as contract_extract_api_mod
+
+    contract_extract_api_mod.register(app, rt=rt, greetings=_greetings, can=_can, audit=admin_mod.audit,
+                                      conf=admin_mod.conf)
 
     @app.get("/api/v1/editorial/board/summary")
     def editorial_board_summary(request: Request) -> dict[str, Any]:
@@ -5359,6 +5364,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "run": lambda sql: rt().run_sql(sql, rt().settings.max_rows),
         "person": editorial_mod.person,
     })
+
+    # Öneri 12: başvuru ön okuması ve editör raporu taslağı (belge okuma + alıntılı kapalı küme; puan/karar insanda).
+    from semantic_bridge import application_preread_api
+
+    def _preread_llm():
+        try:
+            from semantic_layer.runtime.llm_queue import NORMAL
+            return rt().llm_for("basvuru", NORMAL)
+        except Exception:  # noqa: BLE001 — model tanımlı değil
+            return None
+
+    application_preread_api.register(app, {"session": _greetings, "audit": admin_mod.audit, "conf": admin_mod.conf,
+                                           "llm": _preread_llm})
 
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,

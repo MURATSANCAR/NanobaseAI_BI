@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Download, FilePen, Loader2 } from 'lucide-react';
@@ -7,6 +7,8 @@ import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, detailKey, downloadDocx, metaOptions, type Detail, type Meta, type Status, type Terms } from './api';
 import TermsForm from './TermsForm';
+import DocumentExtract from './DocumentExtract';
+import { extractApi, stillApplied, type Suggestion } from './extract';
 import AddendaTab from './AddendaTab';
 import PaymentsTab from './PaymentsTab';
 import StatementsTab from './StatementsTab';
@@ -104,6 +106,7 @@ function EditSheet({ d, meta, onClose }: { d: Detail; meta: Meta; onClose: () =>
   const qc = useQueryClient();
   const [terms, setTerms] = useState<Terms>(d.terms);
   const [reason, setReason] = useState('');
+  const fromDoc = useRef<{ id: string; keys: string[]; s: Suggestion } | null>(null);
   const free = !d.record || meta.freeEdit.includes(d.status);
   const changes = changedFields(d.terms, terms, meta);
   const save = useMutation({
@@ -115,8 +118,12 @@ function EditSheet({ d, meta, onClose }: { d: Detail; meta: Meta; onClose: () =>
       }
       return contractApi.update(d.key, patch as Partial<Terms>, d.record?.version, reason || undefined);
     },
-    onSuccess: () => {
+    onSuccess: (rec) => {
       toast.success('Sözleşme kaydedildi.');
+      const doc = fromDoc.current;
+      if (doc) {
+        extractApi.accepted(doc.id, stillApplied(terms, doc.s, doc.keys), rec.id).catch(() => toast.warning('Belgeden aktarılan alanların kaydı yazılamadı; sözleşme kaydedildi.'));
+      }
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['editorial', 'contracts'] });
       onClose();
@@ -147,7 +154,18 @@ function EditSheet({ d, meta, onClose }: { d: Detail; meta: Meta; onClose: () =>
           </Field>
         </div>
       )}
-      <div className="mt-2">
+      <div className="mt-2 space-y-3">
+        {free && (
+          <DocumentExtract
+            meta={meta}
+            terms={terms}
+            contractKey={d.record?.id ?? d.key}
+            onApply={(next, keys, id, sug) => {
+              fromDoc.current = { id, keys, s: sug };
+              setTerms(next);
+            }}
+          />
+        )}
         <TermsForm value={terms} onChange={setTerms} meta={meta} />
       </div>
       {save.error && <div className="mt-3"><Note tone="err">{errMsg(save.error)}</Note></div>}

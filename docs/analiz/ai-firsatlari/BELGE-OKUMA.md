@@ -63,3 +63,5 @@ sayısı ve süre günlüğe düşer. Okunan metin portalda, bir sohbet modeline
 | M39 sektör raporu | `pazar_sources.read_scanned` (çıkarım işinde) | metinsiz sayfalar OCR; rakam OCR metninde birebir; rakam satırında «OCR» |
 | M57 sertifika | `hr_learning.certificate_check` → `POST /api/v1/hr/learning/certificates/{id}/check` | kayıttaki ad/tarih belgede birebir aranır; karar İK'nın |
 | M44 kargo faturası | — | portalda kargo faturası yükleme yok (2026-09-28); bağlanacak yer yok |
+| M1 başvuru ön okuması (öneri 12) | `application_preread.analyse` (pencereler `doc_extract.plan_windows`) | eser dosyası bölüm bölüm; her alan alıntılı, OCR sayfasından gelen alıntıda «OCR · %güven» |
+| M6 sözleşme şartları (öneri 13) | `contract_extract.analyse` | taranmış sözleşme sayfası OCR; oran/tutar/tarih alıntıdan kodla okunur |

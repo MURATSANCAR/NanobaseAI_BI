@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Loader2 } from 'lucide-react';
@@ -7,6 +7,8 @@ import { Note, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, metaOptions, type Terms } from './api';
 import TermsForm from './TermsForm';
+import DocumentExtract from './DocumentExtract';
+import { extractApi, stillApplied, type Suggestion } from './extract';
 import { Field, errMsg } from './ui';
 
 /** Yeni sözleşme taslağı: şartlar + şablon. Kayıt «Taslak» açılır, numara TS-<yıl>-<sıra>. */
@@ -25,12 +27,18 @@ export default function NewContract() {
   const tpls = useQuery({ queryKey: ['contracts', 'templates', 'sozlesme'], queryFn: () => contractApi.templates({ target: 'sozlesme' }) });
   const [terms, setTerms] = useState<Terms>(emptyTerms);
   const [tpl, setTpl] = useState<string>('auto');
+  // Belgeden aktarılan şartlar: taslak açılınca hangilerinin formda kaldığı okumaya yazılır (kim neyi onayladı).
+  const fromDoc = useRef<{ id: string; keys: string[]; s: Suggestion } | null>(null);
   const options = tpls.data?.items ?? [];
   const chosen = tpl === 'auto' ? options.find((t) => t.kind === terms.kind) ?? options.find((t) => !t.kind) : options.find((t) => t.id === tpl);
   const create = useMutation({
     mutationFn: () => contractApi.create(terms, chosen?.id),
     onSuccess: (r) => {
       toast.success(`${r.no} taslağı açıldı.`);
+      const d = fromDoc.current;
+      if (d) {
+        extractApi.accepted(d.id, stillApplied(terms, d.s, d.keys), r.id).catch(() => toast.warning('Belgeden aktarılan alanların kaydı yazılamadı; taslak açıldı.'));
+      }
       qc.invalidateQueries({ queryKey: ['contracts'] });
       nav(`/telif-sozlesme/${r.id}`);
     },
@@ -59,6 +67,15 @@ export default function NewContract() {
               </select>
             </Field>
           </Panel>
+          <DocumentExtract
+            meta={m}
+            terms={terms}
+            lock={!m.can.edit}
+            onApply={(next, keys, id, sug) => {
+              fromDoc.current = { id, keys, s: sug };
+              setTerms(next);
+            }}
+          />
           <TermsForm value={terms} onChange={setTerms} meta={m} lock={!m.can.edit} />
           {create.error && <Note tone="err">{errMsg(create.error)}</Note>}
           <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap justify-end gap-2 rounded-2xl bg-white/90 p-2 shadow-glass-float backdrop-blur">
