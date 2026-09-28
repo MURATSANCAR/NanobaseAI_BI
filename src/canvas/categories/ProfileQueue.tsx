@@ -65,7 +65,7 @@ export default function ProfileQueue() {
           <select className={field} value={f.status} onChange={(e) => set({ durum: e.target.value || null })}>
             <option value="">Hepsi</option>
             <option value="taslak,kismi">Karar bekleyen</option>
-            {Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{String(v)}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">
