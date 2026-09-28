@@ -35,6 +35,9 @@ import {
   Truck,
   Gavel,
   Waypoints,
+  Store,
+  Grid3x3,
+  Globe,
   Library,
   Radar,
   Bell,
@@ -106,6 +109,7 @@ import {
 
 export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'altyapi' | 'yonetim';
 export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'ik' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'platform' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -481,6 +485,18 @@ export const NAV: NavGroup[] = [
       { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },
       { id: 'ik-kayitlar', label: 'Çalışan ve KVKK kayıtları', to: '/ik/kayitlar', icon: ShieldCheck, section: 'Temel', hint: 'Çalışan ve birim kaydı, aydınlatma metni, açık rıza, saklama süresi, imha tutanağı, erişim kaydı', keywords: ['kvkk', 'çalışan', 'birim', 'rıza', 'imha', 'saklama'] },
     ],
+
+    // M40–M42 ortak çalışma alanı (pazar yerleri ve D2C); ilk açan M42 «Kanallar». M40 Trendyol ve M41 Amazon kendi bölümleriyle eklenir.
+    id: 'platform',
+    label: 'Platform',
+    hint: 'Pazar yerleri, D2C ve kanal kârlılığı',
+    icon: Store,
+    items: [
+      { id: 'kanallar', label: 'Kanal karnesi', to: '/kanallar', icon: Store, section: 'Kanallar', hint: 'Pazar yerleri ve timas.com.tr: kanala satış, iskonto, iade, marj ve hedef gerçekleşmesi; kanal detayı ve iskonto simülasyonu', keywords: ['kanal', 'pazar yeri', 'hepsiburada', 'kitapyurdu', 'd&r', 'idefix', 'amazon', 'trendyol', 'e-ticaret', 'iskonto', 'iade', 'marj', 'kârlılık', 'karne'] },
+      { id: 'kanal-matris', label: 'Kitap × kanal', to: '/kanallar/matris', icon: Grid3x3, section: 'Kanallar', hint: 'Hangi kanal hangi kitabı alıyor, hangisi iade ediyor', keywords: ['matris', 'kitap kanal', 'alım', 'iade'] },
+      { id: 'kanal-d2c', label: 'D2C büyüme', to: '/kanallar/d2c', icon: Globe, section: 'Kanallar', hint: 'timas.com.tr payı, sitede güçlü kitaplar ve D2C\'ye özel set önerisi', keywords: ['d2c', 'site', 'timas.com.tr', 'sadakat', 'set'] },
+      { id: 'kanal-eslesme', label: 'Cari eşleme', to: '/kanallar/eslesme', icon: Link2, section: 'Kanallar', hint: 'Logo carisi, kanal kodu ve CRM hedef bölgesi ↔ platform', keywords: ['eşleme', 'cari', 'platform', 'bölge'] },
+    ],
   },
   {
     id: 'yonetim',
@@ -536,6 +552,8 @@ export function visibleNav(
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'altyapi']);
   const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'ik'];
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'ik']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'platform'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama', 'platform']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

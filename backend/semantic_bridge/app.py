@@ -7247,6 +7247,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import hr_api, hr_recruit_api
     app.state.hr = hr_api.register(app, rt, _require_caller)
     hr_recruit_api.register(app, app.state.hr)
+    # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
+    from semantic_bridge import channels
+    app.state.channels = channels.register(app, rt, _require_caller, _can)
     return app
 
 

@@ -186,6 +186,11 @@ const SeoReviews = lazy(() => import('@/canvas/seo-geo/SeoReviews'));
 const SeoVideo = lazy(() => import('@/canvas/seo-geo/SeoVideo'));
 const SeoSunset = lazy(() => import('@/canvas/seo-geo/SeoSunset'));
 const SeoAuthors = lazy(() => import('@/canvas/seo-geo/SeoAuthors'));
+const ChannelsHome = lazy(() => import('@/canvas/channels/ChannelsHome'));
+const ChannelDetail = lazy(() => import('@/canvas/channels/Channel'));
+const ChannelsMatrix = lazy(() => import('@/canvas/channels/Matrix'));
+const ChannelsD2C = lazy(() => import('@/canvas/channels/D2CGrowth'));
+const ChannelsAccounts = lazy(() => import('@/canvas/channels/Accounts'));
 
 function RouteFallback() {
   return (
@@ -332,6 +337,12 @@ export default function App() {
             <Route path="etkinlikler/crm" element={<EventsCrm />} />
             <Route path="etkinlikler/oduller" element={<EventsAwards />} />
             <Route path="etkinlikler/tip-eslemesi" element={<EventsTypeMap />} />
+            {/* Platform › Kanallar: M42 kanal karnesi, kitap × kanal, D2C, cari eşleme (/api/v1/channels). M40/M41 aynı alana eklenir. */}
+            <Route path="kanallar" element={<ChannelsHome />} />
+            <Route path="kanallar/matris" element={<ChannelsMatrix />} />
+            <Route path="kanallar/d2c" element={<ChannelsD2C />} />
+            <Route path="kanallar/eslesme" element={<ChannelsAccounts />} />
+            <Route path="kanallar/:platform" element={<ChannelDetail />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

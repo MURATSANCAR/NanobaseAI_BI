@@ -456,6 +456,7 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
+_CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
@@ -551,6 +552,18 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/events/run-due", SYSTEM),
     ("/api/v1/events/me/agenda", OPEN),
     ("/api/v1/events/", frozenset({page("etkinlikler")})),
+    # M42 Platform ve kanallar (M40/M41 kendi alt yollarını ve sayfa anahtarlarını buraya ekler). Ortak uçlar (meta,
+    # durum, yenileme, dışa aktarma) dört sayfada; dışa aktarılan listenin sayfası ucun içinde ayrıca denetlenir.
+    ("/api/v1/channels/run-due", SYSTEM),
+    ("/api/v1/channels/meta", _CHANNELS),
+    ("/api/v1/channels/status", _CHANNELS),
+    ("/api/v1/channels/refresh", _CHANNELS),
+    ("/api/v1/channels/export/", _CHANNELS),
+    ("/api/v1/channels/matrix", frozenset({page("kanal-matris")})),
+    ("/api/v1/channels/d2c", frozenset({page("kanal-d2c")})),
+    ("/api/v1/channels/accounts", frozenset({page("kanal-eslesme")})),
+    ("/api/v1/channels/suggestions", frozenset({page("kanallar"), page("kanal-d2c")})),
+    ("/api/v1/channels/", frozenset({page("kanallar")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -835,6 +848,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/events/(awards(/[^/]+(/entries)?)?|award-entries/[^/]+)$",
      "ozellik:odul.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/events/fairs/[^/]+/result/export\.pdf$", "ozellik:veri.disa-aktar"),
+    # Kanallar (M42): eşleme yazma (cari, kanal kodu, hedef bölgesi, Zeki AI adayı), panel dosyası yükleme/silme, öneri
+    # taslağı. Marj/simülasyon ve öneri kararı açıkça verilen `kanal.marj` / `kanal.oneri-karar` ile ucun içinde.
+    (frozenset({"POST", "PUT", "DELETE"}), r"^/api/v1/channels/accounts(/.*)?$", "ozellik:kanal.eslesme"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/imports(/[^/]+)?$", "ozellik:kanal.yukle"),
+    (frozenset({"POST"}), r"^/api/v1/channels/(suggestions|d2c/suggest)$", "ozellik:kanal.oneri-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/channels/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

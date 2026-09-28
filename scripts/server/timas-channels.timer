@@ -1,0 +1,10 @@
+[Unit]
+Description=Kanal karnesi önbelleği ve cari eşleme adayları, her gece 04:00
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=timas-channels.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Kanal uyarıları (pazartesi) ve aylık kanal karnesi (ayın 2'si), 08:00
+
+[Timer]
+OnCalendar=Mon *-*-* 08:00:00
+OnCalendar=*-*-02 08:00:00
+Persistent=true
+Unit=timas-channels-report.service
+
+[Install]
+WantedBy=timers.target

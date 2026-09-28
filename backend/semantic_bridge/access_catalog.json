@@ -41,6 +41,10 @@
     {
       "id": "ik",
       "label": "İnsan Kaynakları"
+    },
+    {
+      "id": "platform",
+      "label": "Platform"
     }
   ],
   "pages": [
@@ -596,6 +600,26 @@
       "area": "ik",
       "label": "Çalışan ve KVKK kayıtları",
       "explicit": true
+    },
+    {
+      "key": "sayfa:kanallar",
+      "area": "platform",
+      "label": "Kanal karnesi"
+    },
+    {
+      "key": "sayfa:kanal-matris",
+      "area": "platform",
+      "label": "Kitap × kanal"
+    },
+    {
+      "key": "sayfa:kanal-d2c",
+      "area": "platform",
+      "label": "D2C büyüme"
+    },
+    {
+      "key": "sayfa:kanal-eslesme",
+      "area": "platform",
+      "label": "Cari eşleme"
     }
   ],
   "features": [
@@ -2009,6 +2033,43 @@
       "label": "İK şablonlarını düzenleme",
       "hint": "İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları",
       "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.marj",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal marjı ve simülasyon",
+      "hint": "Kanal ve kitap bazında maliyet, brüt kâr, marj, iade sonrası marj, M9 maliyetiyle tamamlama, iskonto simülasyonu ve ek kanal maliyeti oranı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.oneri-karar",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal önerisi kararı",
+      "hint": "İskonto, stok payı ve D2C önerilerini onaylama ya da gerekçeyle reddetme (öneren onaylayamaz; onay portal kaydıdır, platforma gönderilmez)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.eslesme",
+      "area": "platform",
+      "page": "sayfa:kanal-eslesme",
+      "label": "Cari ↔ platform eşlemesi",
+      "hint": "Logo carisini, kanal kodunu ve CRM hedef bölgesini platforma bağlama, Zeki AI adayını onaylama ya da değiştirme"
+    },
+    {
+      "key": "ozellik:kanal.yukle",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Panel dosyası yükleme",
+      "hint": "Pazar yeri panelinden indirilen satış raporunu (Excel/CSV) yükleme ve silme; kişisel kolonlar içeri alınmaz"
+    },
+    {
+      "key": "ozellik:kanal.oneri-yaz",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal önerisi taslağı",
+      "hint": "Simülasyondan iskonto önerisi ve D2C'ye özel set önerisi taslağı açma (Zeki AI gerekçe yazar)"
     }
   ]
 }

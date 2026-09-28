@@ -855,6 +855,49 @@ kabulü (`scripts/acceptance/m28/kabul.py`) test sunucusunda koşulacak. main'e 
 - **Sabah e-posta özeti** (`author_reminders.py`): kişi başına günde bir kez; bugün/yarınki randevular, notu girilmemiş randevular (yalnız yazana), geciken ve bugün vadesi gelen adımlar. Boşsa gitmez; gizli notun konusu gitmez; alıcı kişi rehberinden, izinli alan adı süzgeci uyarılarla aynı; yalnız yayınevi içi. Ayarlar `AUTHOR_REMINDERS_ENABLED` (varsayılan açık), `AUTHOR_REMINDER_TIME` (08:15); kişi Randevular sekmesinden kapatır. Zamanlayıcı `scripts/server/timas-author-reminders.{service,timer}` (08–19 arası 15 dk; köprü saat eşiğini ve günde bir kez kuralını uygular); müşteri VM'inde `jobs.py` döngüsü.
 - **Doğrulama (test sunucusu, yan port 8798 aday köprü, gerçek CRM .28 + Logo + katalog DB, geçici `timasai` oturumu):** ısı haritası 549 sözleşmeli yazar, hepsinde sadakat, 4–7 sn; iki yazarda gelişim: ilk okuma 117–121 sn, sonra önbellekten 0 sn, «Yenile» 87 sn ve aynı sonuç. **Bağımsız referans:** Adem Güneş'in 55 stok koduyla yıllık görünümden düz toplam 2025 = 19.032, 2026 = 7.451 — uygulamayla birebir (süzgeçsiz toplam 19.050 / 7.462; fark 157 kodları ve bedelsiz satırlar, kural gereği). Sabah özeti kuru koşu 200. nginx `/timas/api/` 600 sn (test ve VM şablonu). Test verisi: iki öneri kaydı + 2 değişiklik kaydı satırı ve oturumlar silindi. tsc temiz, vitest 71/71, köprü testleri 36/36 (yeni `test_author_growth.py` 11).
 - **Açık:** test sunucusunda site yorum özeti yalnız 67 üründe (SEO yorum okuması sürüyor); denenen iki yazarın kitaplarında yorum yoktu — eşleşme kuralı SEO modülünün EAN anahtarıyla aynı. Kurulum ve 4 genişlikte görsel kontrol `main`e girdikten sonra.
+## 2026-09-28 — M42 Diğer pazar yerleri ve D2C: kanal karnesi, kitap × kanal, D2C, cari eşleme (+ ortak `channels/` paketi)
+
+**Durum: DOĞRULANAMADI — testler koordinatörde.** Yerelde yalnız `py_compile` ve JSON denetimi yapıldı; pytest, tsc, vitest,
+derleme ve gerçek Logo/CRM kabulü (`scripts/acceptance/M42/check.sh`, `kabul.py`) test sunucusunda koşturulacak. Dal
+`worktree-agent-a413d1dced953ab0a`; main'e taşınmadı, kurulmadı.
+
+- **Ne:** yeni menü alanı «Platform» (`platform`, `NavGroupId` + `access_catalog.json` `areas`) › Kanallar: kanal karnesi
+  (`/kanallar`), kanal detayı (`/kanallar/:platform`), kitap × kanal (`/kanallar/matris`), D2C büyüme (`/kanallar/d2c`), cari
+  eşleme (`/kanallar/eslesme`). M40/M41 aynı alana ve `channels/` paketine kendi bölümleriyle eklenecek (`platforms.ReadOnlyClient`,
+  `semantic_channel_accounts`, `semantic_channel_suggestions` hazır).
+- **Karar — önbellek cari düzeyinde:** analizdeki `semantic_channel_scorecards` (platform × ay) yerine grup (cari ya da
+  `#K:<kanal kodu>`) × ay tutuldu; platform okuma anında onaylı eşlemeyle toplanır. Gerekçe: eşleme onaylanınca karne yeniden okuma
+  beklemeden değişir, «platform = eşlenmiş carilerin toplamı» (kabul 7) yapı gereği tutar.
+- **Karar — ölçüler tek geçişte:** plandaki `logo_iade.sql`, `logo_iskonto.sql`, `logo_marj.sql` ayrı dosyalar yerine ortak
+  `_metrics.sql` parçası (satış, iade, adet, brüt, satır iskontosu, maliyetli ciro/maliyet, maliyetsiz satır/ciro, iade maliyeti) kanal
+  ve cari sorgularına girer: yıl başına üç tarama yerine bir.
+- **Karar — iskonto ve iade tanımı:** iskonto oranı = LINETYPE 2 TOTAL ÷ malzeme satırı TOTAL, TRCODE 7,8,9 ve faturalı (katalogdaki
+  `iskonto_yuku` 7,8 ve faturasız satırları da sayar; fark kabulde yazılır). İade oranı satır LINENET'iyle (katalogdaki `iade_orani`
+  başlık NETTOTAL; iki tanımın farkı R1b/R3'te bilgi olarak).
+- **Karar — kanal koduyla eşleme (Soru 3):** D2C'nin Logo'daki carisi ölçülmedi; bireysel site müşterileri tek tek cari olabilir.
+  Eşleme ekranında bir kanal kodu bütünüyle platforma bağlanabilir (ör. INTERNET → timas.com.tr); tek tek eşlenen cari önce gelir.
+- **Karar — kanal hedefi (Soru 4):** kanal hedefi CRM satış hedefi bölgesidir (adet; bölge ↔ platform eşlemesi kullanıcıda, ad
+  eşleşmesi öneri); M46'dan türetilen kanal hedefi ayrıca gösterilir (kitap hedefi × kanalın geçen yıl o kitaptaki payı; kitap geçen
+  yıl kanalda yoksa kanalın genel payı) — bütçede kanal kırılımı yok, ekranda «paylaştırma» diye yazılır.
+- **Karar — kanal maliyeti (Soru 5):** komisyon/kargo/reklam Logo'da kanal bazında ayrışmıyor (ölçülecek); finansın girdiği
+  platform oranı (`ek-maliyet:<platform>`) varsa «katkı» hesaplanır, yoksa hiç gösterilmez.
+- **Karar — mağazaya yazma (Soru 2, kullanıcı kararı):** yok. Platform istemcisi taban sınıfı yalnız izinli okuma yollarını çağırır;
+  öneri onayı portal kaydıdır. Satış modeli sonraya: sell-through yalnız panel Excel/CSV yüklemesiyle (kişisel kolonlar içeri alınmaz,
+  adları kayda «kişisel olabilir» diye düşer).
+- **Eşleme adayı:** unvan ya da CRM adında platform adı veya işletmeci unvanı (varsayılan D-MARKET → Hepsiburada, DSM GRUP → Trendyol,
+  TURKUVAZ → D&R; Yönetim ayarından değişir) — birden çok platform geçerse modele kalır; değilse Zeki AI kapalı küme seçimi (platform
+  listesi + «Platform değil»), olasılık eşiği altı aday gösterilmez. Onay her zaman insanda.
+- **Marj:** yalnız `ozellik:kanal.marj` (explicit) olan kişiye gider; alanlar cevaptan çıkarılır. Maliyetsiz satır sayısı ve cirosu
+  her ekranda; M9 birim maliyet sağlayıcısı (`app.state.pricing_costs`, dalda) bağlıysa maliyetsiz satırlar onunla tamamlanır ve
+  birim maliyeti bilinmeyen kitap ayrıca sayılır. Bağ noktası `api.unit_costs()` — M9 main'e girince ek kod gerekmez.
+- **Eşikler (ölçülmedi, ayar):** iade uyarısı %10, iskonto artışı 2 puan, D2C güçlü kitap en az 20 adet ve genel payın 1,5 katı,
+  eşleme olasılığı 0,70 / fark 0,30.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (2 satır), `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (alan, 4 sayfa,
+  5 özellik), `admin.py` (`CHANNEL_*` ayarları, «Platform ve kanallar» grubu), `App.tsx` (5 rota), `navModel.ts` (+ test),
+  `ModulesMenu.tsx` (M42, «Platform Yönetimi»).
+- **Açık:** H3 site sipariş tabloları henüz yok (D2C sekmesi «bağlı değil» der; kolonlar okunurken doğrulanır); M43 yokken stok payı
+  önerisi kapalı; Zeki AI sohbet konusu `eticaret`'in veri alanı boş (`chat_topics.json`'a dokunulmadı).
+
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
