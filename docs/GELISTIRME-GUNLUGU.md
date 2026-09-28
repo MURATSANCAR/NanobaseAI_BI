@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (12:15) — NanobaseAI Destek e9fa4a3f test sunucusuna kuruldu, canlı bildirim doğrulandı
+
+- Kurulum: imaj `nanobase-destek:0.1.0-e9fa4a3f`, kod sürümü e9fa4a3f, `._*` hedef/kapsayıcı 0, «canlı bildirim ayarı: tamam».
+- Tarayıcıda: portal oturumuyla otomatik giriş, hedef sayfa (`/helpdesk/tickets`) korundu; bildirim bağlantısı websocket ile bağlı, `:9000` isteği 0; sunucudan gönderilen sınama bildirimi tarayıcıya ulaştı. Masaüstü: yardım menüsündeki dış bağlantı gizli, «Hakkında» yalnız NanobaseAI + e9fa4a3f, kenar çubuğunda N simgesi, durum «Açık», panel etiketleri Türkçe.
+- Test kullanıcısı (SSO'nun yeniden oluşturduğu timasai) silindi. VM'e kurulmadı (onay bekliyor); dış vhost'taki socket kaynak denetimi ve giriş sınırı nginx tam restart'ını bekliyor.
+
 ## 2026-09-28 (11:55) — NanobaseAI Destek son gözden geçirme: canlı bildirim hiç çalışmıyordu, masaüstünde marka artıkları
 
 - **Canlı bildirim (en önemli bulgu):** kayıt ekranları kendiliğinden yenilenmiyordu. Bildirim servisi bağlantıyı «Invalid origin» ile reddediyordu: iç nginx şablonu kaynak adresini site adından (`https://destek`) yazıyor, servis bunu gelen alan adıyla karşılaştırıyor ve oturumu doğrulamak için o adrese istek atıyor (ağda yok). Containerfile şablonda `Origin http://frontend:${NGINX_LISTEN_PORT}` ve `Host frontend` yapar (bildirim kapsayıcısından `http://frontend:8080` çağrısı sınandı: site çözülüyor). İç sunucu kaynağı ezdiği için başka siteden bağlanma denetimi dış vhost'a taşındı (`location /socket.io`, `map $http_origin`). `install.sh` ayarı denetler.
