@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
+
+- 74 worktree ve 83 yerel dal tarandı; işi main'de olmayan yalnız DYK kurul (4 commit), Zeki AI fırsatları analizi ve kapak arşivi günlük girişi çıktı → bu dala main üstüne dizildi. Saha `fmtCount` düzeltmesi (`ec51bcd2`) zaten main'deydi.
+- 70 worktree ve 78 yerel dal silindi. Korunan: helpdesk (çalışan oturum), `kurulum-kabul-0928` ve `studio-page-plan` (09:01–09:04 kaydedilmemiş değişiklik).
+- main push'u ve origin'deki 14 dalın silinmesi kullanıcıya bırakıldı (oturumda izin yok).
+
 ## 2026-09-28 (09:00) — Önce/sonra ölçümü: yavaş ekran 28 → 6; istek fırtınalarının kök sebebi kabukta
 
 - **Kurulum:** main `a1e0f02f` (diske yazan hazır cevap) test sunucusuna dar kapsamla (yalnız `app.py` yaması + 3 dosya; aday ağaçta tsc 0, vitest 71/71, köprü 38/38, derleme; arada canlı değişmedi; `._*` 0). `var/response-cache` 0700, `administrator`.
