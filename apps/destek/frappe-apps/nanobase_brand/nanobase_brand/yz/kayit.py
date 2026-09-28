@@ -21,7 +21,7 @@ from frappe.utils import escape_html, now_datetime, strip_html
 
 from nanobase_brand.yz import bilgi, llm
 from nanobase_brand.yz.maske import Maske
-from nanobase_brand.yz import bilgi, llm, sinif
+from nanobase_brand.yz import bilgi, birim, llm, sinif
 
 DUYGULAR = ("Olumlu", "Nötr", "Olumsuz", "Öfkeli")
 ACIK_DURUMLAR = ("Open", "Replied", "Paused")
@@ -102,6 +102,8 @@ def _activity(ticket: str, action: str) -> None:
 
 def classify(ticket: str) -> dict:
 	doc = frappe.get_doc("HD Ticket", ticket)
+	# Talep edenin AD birimi ve aynı adlı ekip: yapay zekânın ekip önerisinden önce (yz/birim.py).
+	birim_alanlari = birim.uygula(doc)
 	types = _options("HD Ticket Type")
 	priorities = _options("HD Ticket Priority")
 	teams = _options("HD Team")
@@ -121,9 +123,12 @@ def classify(ticket: str) -> dict:
 		out = sinif.oner(doc, text, types, priorities, teams, DUYGULAR)
 	except llm.ModelUnavailable:
 		frappe.log_error(title=f"NanobaseAI sınıflama: {ticket}")
-		return {}
+		if birim_alanlari:
+			frappe.db.set_value("HD Ticket", ticket, birim_alanlari, update_modified=False)
+			frappe.db.commit()
+		return birim_alanlari
 
-	applied = {}
+	applied = {k: v for k, v in birim_alanlari.items() if k == "agent_group"}
 	# Sistem kendi varsayılanını doldurur (tür, öncelik); o değerlerde kalan alan «seçilmemiş» sayılır.
 	default_type = frappe.db.get_single_value("HD Settings", "default_ticket_type")
 	default_priority = frappe.db.get_single_value("HD Settings", "default_priority")
@@ -146,9 +151,14 @@ def classify(ticket: str) -> dict:
 		frappe.db.rollback()
 		frappe.log_error(title=f"NanobaseAI sınıflama: atama kuralı çalışmadı ({ticket})")
 		frappe.db.set_value("HD Ticket", ticket, {
-			**applied, "nb_duygu": doc.nb_duygu, "nb_yz_not": doc.nb_yz_not}, update_modified=False)
+			**applied, "nb_duygu": doc.nb_duygu, "nb_yz_not": doc.nb_yz_not,
+			"nb_talep_birimi": doc.get("nb_talep_birimi")}, update_modified=False)
 	names = {"ticket_type": "tür", "priority": "öncelik", "agent_group": "ekip"}
 	parts = [f"{names[k]}: {v}" for k, v in applied.items()]
+	if birim_alanlari.get("agent_group"):
+		parts[list(applied).index("agent_group")] += " (talep edenin birimine göre)"
+	if birim_alanlari.get("nb_talep_birimi"):
+		parts.insert(0, f"talep edenin birimi: {birim_alanlari['nb_talep_birimi']}")
 	if duygu:
 		parts.append(f"duygu: {duygu}")
 	if parts:
@@ -164,6 +174,7 @@ def panel(ticket: str) -> dict:
 	doc = _check(ticket)
 	return {
 		"duygu": doc.get("nb_duygu"),
+		"birim": doc.get("nb_talep_birimi"),
 		"not": doc.get("nb_yz_not"),
 		"ozet": doc.get("nb_yz_ozet"),
 		"ozet_zamani": doc.get("nb_yz_ozet_zamani"),

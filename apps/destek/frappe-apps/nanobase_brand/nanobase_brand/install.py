@@ -58,8 +58,10 @@ SETTINGS = [
 CUSTOM_FIELDS = {
 	"HD Ticket": [
 		{"fieldname": "nb_yz_section", "fieldtype": "Section Break", "label": "NanobaseAI", "collapsible": 1},
+		{"fieldname": "nb_talep_birimi", "fieldtype": "Data", "label": "Talep edenin birimi", "read_only": 1,
+		 "insert_after": "nb_yz_section"},
 		{"fieldname": "nb_duygu", "fieldtype": "Select", "label": "Müşteri duygusu",
-		 "options": "\nOlumlu\nNötr\nOlumsuz\nÖfkeli", "read_only": 1, "insert_after": "nb_yz_section"},
+		 "options": "\nOlumlu\nNötr\nOlumsuz\nÖfkeli", "read_only": 1, "insert_after": "nb_talep_birimi"},
 		{"fieldname": "nb_yz_not", "fieldtype": "Small Text", "label": "Sınıflama gerekçesi", "read_only": 1,
 		 "insert_after": "nb_duygu"},
 		{"fieldname": "nb_yz_ozet", "fieldtype": "Small Text", "label": "Yazışma özeti", "read_only": 1,

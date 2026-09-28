@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (13:55) — NanobaseAI Destek: talep edenin AD birimi otomatik; kayıt türü bağlantısı sunucuda bekliyor
+
+- **Karar (kullanıcı):** ekipler şimdilik olduğu gibi; «maili atan kişinin departmanını otomatik tespit et, ona göre». `yz/birim.py`: kaydı açanın adresi AD'de aranır (mail, userPrincipalName, proxyAddresses; iç alan adında hesap adı), birim = department, boşsa en yakın OU (Timaş'ta OU). Kayda `nb_talep_birimi` («Talep edenin birimi») yazılır, temsilci panelinde görünür; aynı adlı etkin ekip varsa ve ekip boşsa kayıt o ekibe gider (yapay zekânın ekip önerisinden önce). Eşleşen ekip yoksa yalnız birim görünür; ekip birim adıyla açıldığı gün yönlendirme kendiliğinden başlar. Sonuç 24 saat önbellekte; AD'ye ulaşılamazsa önbelleğe yazılmaz. Birden çok kişi eşleşirse (paylaşılan adres) birim yazılmaz.
+- Sınıflama modeli düşse de birim ve birim ekibi yazılır.
+- **Kayıt türü bağlantısı:** M51'in `/destek-baglam/v1/` parçası kullanıcı onayıyla `/etc/nginx/snippets/destek-baglam.conf` (anahtar sunucuda yerine yazıldı, 640) ve `portal.nanobase.ai`'ye include edildi; `nginx -t` başarılı, ama yeniden yükleme `timas_api` bölge anahtarı değişikliği yüzünden 13:31'de de reddedildi (11:32'den beri canlı nginx eski ayarda) → tam restart bekliyor; adres şimdilik 404.
+
 ## 2026-09-28 (13:30) — Search Console site haritası durumu sürekli okunuyor; zengin sonuç hataları iş listesinde
 
 - **Erişim:** servis hesabı `zeki-seo@` Search Console'a «Tam», Merchant Center 5411495322'ye «Read-only + Performance and insights» olarak eklendi (kullanıcı onayıyla). GA4 mülkü 347043165 (Merchant'a bağlı) — zeki@'in GA4 erişimi yok, Timaş GA4 yöneticisi ekleyecek.

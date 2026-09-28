@@ -7,6 +7,10 @@
         <span class="text-ink-gray-5">{{ __("Customer mood") }}</span>
         <Badge :label="info.duygu" :theme="moodTheme" variant="subtle" />
       </div>
+      <div v-if="info.birim" class="flex items-center gap-2">
+        <span class="text-ink-gray-5">{{ __("Requester's unit") }}</span>
+        <span class="text-ink-gray-8">{{ info.birim }}</span>
+      </div>
       <p v-if="info.not" class="text-ink-gray-6">{{ info.not }}</p>
 
       <div class="space-y-1.5">
@@ -109,6 +113,7 @@ import Section from "../Section.vue";
 type Source = { tur: "makale" | "kayit"; ad: string; baslik?: string };
 type Info = {
   duygu?: string;
+  birim?: string;
   not?: string;
   ozet?: string;
   ozet_zamani?: string;
