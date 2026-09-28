@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Download, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
+import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { fmtInt, fmtMonth, fmtPct, fmtStamp, socialApi, todayIso, type ImportRow, type PostStatus } from './api';
@@ -90,11 +92,11 @@ export default function SocialReport() {
       {r && t && (
         <>
           <KpiRow>
-            <Kpi label="Erişim" value={fmtInt(t.reach)} help={`${fmtInt(r.olcuSatiri)} ölçü satırından`} />
-            <Kpi label="Etkileşim" value={fmtInt(t.etkilesim)} help="Beğeni, yorum, paylaşım, kaydetme" />
-            <Kpi label="Etkileşim oranı" value={fmtPct(t.oran)} help="Etkileşim ÷ erişim" />
+            <Kpi label="Erişim" value={fmtInt(t.reach)} help={`${fmtInt(r.olcuSatiri)} ölçü satırından`} info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Erişim" />} />
+            <Kpi label="Etkileşim" value={fmtInt(t.etkilesim)} help="Beğeni, yorum, paylaşım, kaydetme" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim" />} />
+            <Kpi label="Etkileşim oranı" value={fmtPct(t.oran)} help="Etkileşim ÷ erişim" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim oranı" />} />
             <Kpi label="Onay süresi" value={r.onaySuresiSaat === null ? '—' : `${r.onaySuresiSaat.toLocaleString('tr-TR')} sa`}
-              help={`Onaya gönderme → onay medyanı, ${r.onaySayisi} gönderi`} />
+              help={`Onaya gönderme → onay medyanı, ${r.onaySayisi} gönderi`} info={<SqlInfo k={r.kaynaklar} alan="onaySuresiSaat" label="Onay süresi" />} />
           </KpiRow>
           {r.olcuSatiri === 0 && <Note tone="info">Bu ay için içgörü yok. Aşağıdan platformun dışa aktarım dosyasını yükleyin ya da yayınlanmış gönderiye elle girin.</Note>}
 
@@ -111,7 +113,7 @@ export default function SocialReport() {
           </Block>
 
           <div className="grid gap-3 xl:grid-cols-2 xl:gap-4">
-            <Block title="İçerik türüne göre" help="Gönderi başına etkileşime göre sıralı; gönderiye bağlanmamış dosya satırları bu tabloya girmez.">
+            <Block title="İçerik türüne göre" info={<SqlInfo k={r.kaynaklar} alan="turler" label="İçerik türüne göre" />} help="Gönderi başına etkileşime göre sıralı; gönderiye bağlanmamış dosya satırları bu tabloya girmez.">
               <TableWrap>
                 <thead><tr><th className={th}>Tür</th><th className={th}>Gönderi</th><th className={th}>Erişim</th><th className={th}>Etkileşim</th><th className={th}>Gönderi başına</th><th className={th}>Oran</th></tr></thead>
                 <tbody>
@@ -129,7 +131,7 @@ export default function SocialReport() {
                 </tbody>
               </TableWrap>
             </Block>
-            <Block title="Hesaba göre">
+            <Block title="Hesaba göre" info={<SqlInfo k={r.kaynaklar} alan="hesaplar" label="Hesaba göre" />}>
               <TableWrap>
                 <thead><tr><th className={th}>Hesap</th><th className={th}>Erişim</th><th className={th}>Gösterim</th><th className={th}>Etkileşim</th><th className={th}>Takipçi</th></tr></thead>
                 <tbody>
@@ -154,6 +156,7 @@ export default function SocialReport() {
       )}
 
       <Block title="İçgörü dosyası içe aktar"
+        info={<SqlInfo k={imports.data?.kaynaklar} alan="items" label="İçe aktarmalar" />}
         help="Platformun dışa aktarım dosyası (.csv ya da .xlsx). Tanınan kolonlar: tarih, bağlantı, gösterim, erişim, beğeni, yorum, paylaşım, kaydetme, takipçi (Türkçe ya da İngilizce başlık). Bağlantısı yayınlanmış gönderiyle aynı olan satır o gönderiye bağlanır. Dosyada tarih yoksa gün girin.">
         {/* Yükleme her zaman görünür: yetkisi olmayan kişi kilitli alanı ve gereken yetkiyi görür. */}
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">

@@ -356,12 +356,16 @@ def account_dict(r: Any) -> dict[str, Any]:
             "guncelleyen": r.updated_by, "guncelleme": iso(r.updated_at)}
 
 
-def list_accounts(engine: sa.engine.Engine, tenant: str, *, include_inactive: bool = True) -> list[dict[str, Any]]:
+def accounts_stmt(tenant: str, include_inactive: bool = True):
     cond = [ACCOUNTS.c.tenant_id == tenant]
     if not include_inactive:
         cond.append(ACCOUNTS.c.active.is_(True))
+    return sa.select(ACCOUNTS).where(*cond).order_by(ACCOUNTS.c.imprint_ad, ACCOUNTS.c.platform, ACCOUNTS.c.handle)
+
+
+def list_accounts(engine: sa.engine.Engine, tenant: str, *, include_inactive: bool = True) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(ACCOUNTS).where(*cond).order_by(ACCOUNTS.c.imprint_ad, ACCOUNTS.c.platform, ACCOUNTS.c.handle)).all()
+        rows = c.execute(accounts_stmt(tenant, include_inactive)).all()
     return [account_dict(r) for r in rows]
 
 
@@ -437,15 +441,27 @@ def event(c: Any, post_id: str, user: str, action: str, note: Any = None, detail
                                      note=text(note, 4000), detail_json=None if detail is None else dump(detail)[:20000]))
 
 
+def events_stmt(post_id: str):
+    return sa.select(EVENTS).where(EVENTS.c.post_id == post_id).order_by(EVENTS.c.at.desc())
+
+
 def events(engine: sa.engine.Engine, post_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.post_id == post_id).order_by(EVENTS.c.at.desc())).all()
+        rows = c.execute(events_stmt(post_id)).all()
     return [{"id": r.id, "zaman": iso(r.at), "kim": r.user, "ne": r.action, "not": r.note, "ayrinti": loads(r.detail_json, None)}
             for r in rows]
 
 
+def post_stmt(tenant: str, pid: Any):
+    return sa.select(POSTS).where(POSTS.c.tenant_id == tenant, POSTS.c.id == str(pid or "")[:24])
+
+
+def account_stmt(aid: Any):
+    return sa.select(ACCOUNTS).where(ACCOUNTS.c.id == aid)
+
+
 def _post_row(c: Any, tenant: str, pid: Any, *, lock: bool = False) -> Any:
-    q = sa.select(POSTS).where(POSTS.c.tenant_id == tenant, POSTS.c.id == str(pid or "")[:24])
+    q = post_stmt(tenant, pid)
     if lock and c.engine.dialect.name == "postgresql":
         q = q.with_for_update()
     r = c.execute(q).first()
@@ -509,14 +525,14 @@ def get_post(engine: sa.engine.Engine, tenant: str, pid: str, st: dict[str, Any]
         r = _post_row(c, tenant, pid)
         acc = None
         if r.account_id:
-            a = c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.id == r.account_id)).first()
+            a = c.execute(account_stmt(r.account_id)).first()
             acc = account_dict(a) if a else None
     return post_dict(r, acc, st)
 
 
-def list_posts(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, frm: Optional[date] = None,
-               to: Optional[date] = None, account: str = "", status: str = "", stok: str = "", unscheduled: bool = False,
-               occasion: str = "") -> list[dict[str, Any]]:
+def posts_stmt(tenant: str, *, frm: Optional[date] = None, to: Optional[date] = None, account: str = "", status: str = "",
+               stok: str = "", unscheduled: bool = False, occasion: str = ""):
+    """Gönderi okuması (takvim, liste, fırsat, kitap içeriği)."""
     cond = [POSTS.c.tenant_id == tenant]
     if frm is not None:
         cond.append(POSTS.c.planned_at >= f"{frm.isoformat()} 00:00")
@@ -532,9 +548,17 @@ def list_posts(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, frm
         cond.append(POSTS.c.stok_kodu.in_([s for s in stok.split(",") if s]))
     if occasion:
         cond.append(POSTS.c.occasion_key == occasion)
+    return sa.select(POSTS).where(*cond).order_by(POSTS.c.planned_at, POSTS.c.id)
+
+
+def list_posts(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, frm: Optional[date] = None,
+               to: Optional[date] = None, account: str = "", status: str = "", stok: str = "", unscheduled: bool = False,
+               occasion: str = "") -> list[dict[str, Any]]:
+    q = posts_stmt(tenant, frm=frm, to=to, account=account, status=status, stok=stok, unscheduled=unscheduled,
+                   occasion=occasion)
     with engine.connect() as c:
-        rows = c.execute(sa.select(POSTS).where(*cond).order_by(POSTS.c.planned_at, POSTS.c.id)).all()
-        accs = {a.id: account_dict(a) for a in c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)).all()}
+        rows = c.execute(q).all()
+        accs = {a.id: account_dict(a) for a in c.execute(accounts_stmt(tenant)).all()}
     return [post_dict(r, accs.get(r.account_id or ""), st) for r in rows]
 
 
@@ -831,11 +855,15 @@ def job_get(engine: sa.engine.Engine, jid: str) -> dict[str, Any]:
     return _job(j)
 
 
-def jobs_of(engine: sa.engine.Engine, tenant: str, *, post_id: Optional[str] = None, hedef: Optional[str] = None) -> list[dict[str, Any]]:
+def jobs_stmt(tenant: str, *, post_id: Optional[str] = None, hedef: Optional[str] = None):
     cond = [JOBS.c.tenant_id == tenant]
     cond.append(JOBS.c.post_id == post_id if post_id else sa.and_(JOBS.c.post_id.is_(None), JOBS.c.hedef == hedef))
+    return sa.select(JOBS).where(*cond).order_by(JOBS.c.created_at.desc())
+
+
+def jobs_of(engine: sa.engine.Engine, tenant: str, *, post_id: Optional[str] = None, hedef: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(JOBS).where(*cond).order_by(JOBS.c.created_at.desc())).all()
+        rows = c.execute(jobs_stmt(tenant, post_id=post_id, hedef=hedef)).all()
     return [_job(j) for j in rows]
 
 
@@ -1100,9 +1128,13 @@ def import_metrics(engine: sa.engine.Engine, tenant: str, user: str, account_id:
     return {"id": iid, "satir": len(parsed["rows"]), "eslesen": matched, **summary}
 
 
+def imports_stmt(tenant: str):
+    return sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.created_at.desc())
+
+
 def list_imports(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(IMPORTS).where(IMPORTS.c.tenant_id == tenant).order_by(IMPORTS.c.created_at.desc())).all()
+        rows = c.execute(imports_stmt(tenant)).all()
     return [{"id": r.id, "accountId": r.account_id, "dosya": r.file_name, "satir": r.rows, "eslesen": r.matched,
              "ozet": loads(r.summary_json, {}), "kim": r.created_by, "zaman": iso(r.created_at)} for r in rows]
 
@@ -1136,10 +1168,13 @@ def add_manual_metric(engine: sa.engine.Engine, tenant: str, user: str, pid: str
     return {"postId": pid, "day": d, **vals}
 
 
+def metrics_stmt(tenant: str, pid: str):
+    return sa.select(METRICS).where(METRICS.c.tenant_id == tenant, METRICS.c.post_id == pid).order_by(METRICS.c.day.desc())
+
+
 def post_metrics(engine: sa.engine.Engine, tenant: str, pid: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(METRICS).where(METRICS.c.tenant_id == tenant, METRICS.c.post_id == pid)
-                         .order_by(METRICS.c.day.desc())).all()
+        rows = c.execute(metrics_stmt(tenant, pid)).all()
     return [{"id": r.id, "day": r.day, "kaynak": "dosya" if r.import_id else "elle", **{k: getattr(r, k) for k in METRIC_COLS}}
             for r in rows]
 
@@ -1161,19 +1196,29 @@ def _eng(r: dict[str, Any]) -> float:
     return sum((r.get(k) or 0) for k in ("likes", "comments", "shares", "saves"))
 
 
+def report_stmts(tenant: str, month: str) -> tuple[Any, Any, Any, Any]:
+    """Ay raporu okumaları: hesaplar, aydaki ölçü satırları, aya planlanan gönderiler, ölçüsü olan gönderilerin türü."""
+    start, end = _month(month)
+    mcond = [METRICS.c.tenant_id == tenant, METRICS.c.day >= start.isoformat(), METRICS.c.day <= end.isoformat()]
+    linked = sa.select(METRICS.c.post_id).where(*mcond, METRICS.c.post_id.is_not(None))
+    return (accounts_stmt(tenant),
+            sa.select(METRICS).where(*mcond),
+            sa.select(POSTS).where(POSTS.c.tenant_id == tenant, POSTS.c.planned_at >= f"{start.isoformat()} 00:00",
+                                   POSTS.c.planned_at <= f"{end.isoformat()} 23:59"),
+            sa.select(POSTS.c.id, POSTS.c.kind).where(POSTS.c.id.in_(linked)))
+
+
 def report(engine: sa.engine.Engine, tenant: str, month: str) -> dict[str, Any]:
     """Ay raporu: ölçüler gün sütununa göre ayda (`day BETWEEN ay başı AND ay sonu`), gönderi sayıları paylaşım
     zamanına göre. Etkileşim = beğeni + yorum + paylaşım + kaydetme; oran = etkileşim ÷ erişim (erişim yoksa boş).
     Kişi adı yok (KVKK): rapor hesap, içerik türü ve gönderi düzeyinde."""
     start, end = _month(month)
+    aq, mq, pq, kq = report_stmts(tenant, month)
     with engine.connect() as c:
-        accs = {a.id: account_dict(a) for a in c.execute(sa.select(ACCOUNTS).where(ACCOUNTS.c.tenant_id == tenant)).all()}
-        mrows = c.execute(sa.select(METRICS).where(METRICS.c.tenant_id == tenant, METRICS.c.day >= start.isoformat(),
-                                                   METRICS.c.day <= end.isoformat())).all()
-        prows = c.execute(sa.select(POSTS).where(POSTS.c.tenant_id == tenant, POSTS.c.planned_at >= f"{start.isoformat()} 00:00",
-                                                 POSTS.c.planned_at <= f"{end.isoformat()} 23:59")).all()
-        linked_ids = {m.post_id for m in mrows if m.post_id}
-        kinds = {p.id: (p.kind or "") for p in c.execute(sa.select(POSTS.c.id, POSTS.c.kind).where(POSTS.c.id.in_(linked_ids))).all()} if linked_ids else {}
+        accs = {a.id: account_dict(a) for a in c.execute(aq).all()}
+        mrows = c.execute(mq).all()
+        prows = c.execute(pq).all()
+        kinds = {p.id: (p.kind or "") for p in c.execute(kq).all()}
 
     def blank() -> dict[str, float]:
         return {k: 0.0 for k in METRIC_COLS if k != "followers"}

@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M22 Sosyal medya köprü uçları: /api/v1/social/*. Portal hiçbir platforma paylaşım yapmaz; onaylı gönderi yayına
  *  hazır paket olarak iner, uzman kendi hesabından paylaşıp bağlantıyı girer. */
@@ -78,6 +79,7 @@ export type Post = {
   createdBy: string;
   uyarilar?: Warning[];
   olcumler?: Array<{ id: string; day: string; kaynak: 'dosya' | 'elle' } & Partial<Record<MetricKey, number | null>>>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Calendar = {
@@ -88,6 +90,7 @@ export type Calendar = {
   unscheduled: Post[];
   total: number;
   onayBekleyen: Post[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Book = { kitapId: string | null; stokKodu: string; ad: string | null; yazar: string | null; yayineviId: string | null; yayinevi: string | null; kapak: string | null; ilkYayin: string | null };
@@ -98,6 +101,7 @@ export type Content = {
   gorseller: { studyo: AssetRef[]; studyoHata: string | null; arsiv: { bagli: boolean; items: AssetRef[]; hata?: string } };
   haklar: Array<{ sozlesme: string | null; hak: string | null }>;
   gonderiler: Post[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Occasion = {
@@ -132,6 +136,7 @@ export type Opportunities = {
     not: string | null;
   };
   basin: { acik: boolean; items: Array<{ baslik: string; url: string; kaynak: string; tarih: string | null; yazar: string; ton: string }> };
+  kaynaklar?: Kaynaklar;
 };
 
 export type ReportRow = Partial<Record<MetricKey, number>> & { etkilesim: number; oran: number | null; gonderi?: number; gonderiBasina?: number | null };
@@ -149,6 +154,7 @@ export type Report = {
   onaySuresiSaat: number | null;
   onaySayisi: number;
   yorum: Job | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type ImportRow = { id: string; accountId: string; dosya: string; satir: number; eslesen: number; ozet: { kolonlar?: Record<string, string>; atlananKolonlar?: string[]; toplam?: Partial<Record<MetricKey, number>> }; kim: string; zaman: string | null };
@@ -205,13 +211,13 @@ export type PostInput = Partial<{
 
 export const socialApi = {
   meta: () => send<Meta>('GET', '/meta'),
-  accounts: () => send<{ items: Account[]; total: number }>('GET', '/accounts'),
+  accounts: () => send<{ items: Account[]; total: number; kaynaklar?: Kaynaklar }>('GET', '/accounts'),
   addAccount: (b: Partial<Account>) => send<Account>('POST', '/accounts', b),
   updateAccount: (id: string, b: Partial<Account>) => send<Account>('PATCH', `/accounts/${enc(id)}`, b),
   suggestions: () =>
-    send<{ items: Array<{ id: string; ad: string | null; url: string | null; instagram: string | null; ekli: boolean }>; instagramDolu: number; marka: number }>(
+    send<{ items: Array<{ id: string; ad: string | null; url: string | null; instagram: string | null; ekli: boolean }>; instagramDolu: number; marka: number; kaynaklar?: Kaynaklar }>(
       'GET', '/accounts/crm-suggestions', undefined, 120_000),
-  books: (q: string, page = 0) => send<{ items: Book[]; total: number; page: number; pageSize: number }>('GET', `/books${qs({ q, page })}`),
+  books: (q: string, page = 0) => send<{ items: Book[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar }>('GET', `/books${qs({ q, page })}`),
   content: (stok: string, platform?: string) => send<Content>('GET', `/books/${enc(stok)}/content${qs({ platform })}`, undefined, 180_000),
   calendar: (frm: string, to: string, account?: string) => send<Calendar>('GET', `/calendar${qs({ frm, to, account })}`),
   opportunities: (days?: number, bpage = 0) => send<Opportunities>('GET', `/opportunities${qs({ days, bpage })}`, undefined, 300_000),
@@ -223,10 +229,10 @@ export const socialApi = {
     send<Post>('POST', `/posts/${enc(id)}/${action}`, b),
   draft: (id: string) => send<{ job: Job }>('POST', `/posts/${enc(id)}/draft`, {}),
   jobs: (id: string) => send<{ items: Job[] }>('GET', `/posts/${enc(id)}/jobs`),
-  events: (id: string) => send<{ items: Event[] }>('GET', `/posts/${enc(id)}/events`),
+  events: (id: string) => send<{ items: Event[]; kaynaklar?: Kaynaklar }>('GET', `/posts/${enc(id)}/events`),
   addMetric: (id: string, b: Partial<Record<MetricKey, number | null>> & { day?: string }) => send<unknown>('POST', `/posts/${enc(id)}/metrics`, b),
   packageUrl: (id: string) => `${ENGINE_BASE}${B}/posts/${enc(id)}/package.zip`,
-  imports: () => send<{ items: ImportRow[]; total: number }>('GET', '/imports'),
+  imports: () => send<{ items: ImportRow[]; total: number; kaynaklar?: Kaynaklar }>('GET', '/imports'),
   deleteImport: (id: string) => send<{ ok: boolean }>('DELETE', `/imports/${enc(id)}`),
   upload: async (account: string, file: File, gun?: string) => {
     if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');

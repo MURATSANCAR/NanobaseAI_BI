@@ -226,6 +226,15 @@ class Crm:
 # ------------------------------------------------------------------ M46 önbelleği (Logo satışı)
 
 
+def backlist_stmts(lo: int, hi: int) -> tuple[Any, Any]:
+    """Pencere ay indeksleri (yıl*12 + ay-1) arasında kitap başına net adet; künye tablosu."""
+    from semantic_bridge import budget as B
+
+    idx = B.SALES.c.year * 12 + B.SALES.c.month - 1
+    return (sa.select(B.SALES.c.stok_kodu, sa.func.sum(B.SALES.c.adet).label("adet")).where(idx >= lo, idx <= hi)
+            .group_by(B.SALES.c.stok_kodu), sa.select(B.BOOKINFO))
+
+
 def backlist_sales(engine: sa.engine.Engine) -> tuple[dict[str, float], dict[str, dict[str, Any]], Optional[date], tuple[int, int]]:
     """Son 12 tam ay (veri sonunun ayı dahil) kitap başına net adet, künye ve pencere. Bütçe modülü kurulu değilse
     boş döner (fırsat kutusunda «satış verisi yok» yazar)."""
@@ -241,29 +250,32 @@ def backlist_sales(engine: sa.engine.Engine) -> tuple[dict[str, float], dict[str
     if end is None:
         return {}, {}, None, (0, 0)
     lo, hi = S.month_window(end)
-    idx = B.SALES.c.year * 12 + B.SALES.c.month - 1
+    sq, iq = backlist_stmts(lo, hi)
     with engine.connect() as c:
-        rows = c.execute(sa.select(B.SALES.c.stok_kodu, sa.func.sum(B.SALES.c.adet)).where(idx >= lo, idx <= hi)
-                         .group_by(B.SALES.c.stok_kodu)).all()
-        info = {r.stok_kodu: dict(r._mapping) for r in c.execute(sa.select(B.BOOKINFO)).all()}
+        rows = c.execute(sq).all()
+        info = {r.stok_kodu: dict(r._mapping) for r in c.execute(iq).all()}
     return {r[0]: float(r[1] or 0) for r in rows}, info, end, (lo, hi)
 
 
 # ------------------------------------------------------------------ basın ve web (bayrakla)
 
 
+def press_stmt(tenant: str, since: date):
+    from semantic_bridge import web_watch as W
+
+    return sa.select(W.ITEMS.c.title, W.ITEMS.c.url, W.ITEMS.c.source, W.ITEMS.c.published_at,
+                     W.MENTIONS.c.author, W.MENTIONS.c.books_json, W.MENTIONS.c.label) \
+        .select_from(W.MENTIONS.join(W.ITEMS, W.ITEMS.c.id == W.MENTIONS.c.item_id)) \
+        .where(W.MENTIONS.c.tenant_id == tenant, W.MENTIONS.c.label.in_(("olumlu", "notr")),
+               sa.func.coalesce(W.ITEMS.c.published_at, W.ITEMS.c.fetched_at) >= since) \
+        .order_by(W.ITEMS.c.published_at.desc())
+
+
 def press_mentions(engine: sa.engine.Engine, tenant: str, since: date) -> list[dict[str, Any]]:
     """Son günlerde yazar/kitap hakkında çıkan olumlu ya da nötr haberler. Tablo yoksa boş."""
     try:
-        from semantic_bridge import web_watch as W
-
         with engine.connect() as c:
-            rows = c.execute(sa.select(W.ITEMS.c.title, W.ITEMS.c.url, W.ITEMS.c.source, W.ITEMS.c.published_at,
-                                       W.MENTIONS.c.author, W.MENTIONS.c.books_json, W.MENTIONS.c.label)
-                             .select_from(W.MENTIONS.join(W.ITEMS, W.ITEMS.c.id == W.MENTIONS.c.item_id))
-                             .where(W.MENTIONS.c.tenant_id == tenant, W.MENTIONS.c.label.in_(("olumlu", "notr")),
-                                    sa.func.coalesce(W.ITEMS.c.published_at, W.ITEMS.c.fetched_at) >= since)
-                             .order_by(W.ITEMS.c.published_at.desc())).all()
+            rows = c.execute(press_stmt(tenant, since)).all()
     except Exception as e:  # noqa: BLE001 — web taraması bu kurulumda yok
         log.info("social: basın kayıtları okunamadı: %s", e)
         return []

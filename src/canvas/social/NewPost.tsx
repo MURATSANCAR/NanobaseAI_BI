@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Search, X } from 'lucide-react';
+import SqlInfo from '../components/SqlInfo';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
@@ -140,7 +141,7 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
                   {books.data.items.length === 0 && <p className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
                   {books.data.total > books.data.items.length && (
                     <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11.5px] text-canvas-muted">
-                      <span>{books.data.total.toLocaleString('tr-TR')} kitap içinden {page * books.data.pageSize + 1}–{page * books.data.pageSize + books.data.items.length}</span>
+                      <span className="inline-flex items-center gap-1"><SqlInfo k={books.data.kaynaklar} alan="total" label="Kitap araması" />{books.data.total.toLocaleString('tr-TR')} kitap içinden {page * books.data.pageSize + 1}–{page * books.data.pageSize + books.data.items.length}</span>
                       <span className="flex gap-1">
                         <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage(page - 1)}>Önceki</button>
                         <button type="button" className={btnGhost} disabled={(page + 1) * books.data.pageSize >= books.data.total} onClick={() => setPage(page + 1)}>Sonraki</button>

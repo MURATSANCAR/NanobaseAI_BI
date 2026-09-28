@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Pencil, Plus } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { accountColor, socialApi, type Account, type Platform } from './api';
 import { Block, SocialFrame } from './parts';
@@ -58,7 +59,7 @@ export default function SocialAccounts() {
     >
       {accounts.error && <Note tone="err">{errText(accounts.error, 'Hesaplar açılamadı.')}</Note>}
       {accounts.isLoading && <Loading />}
-      <Block title="Tanımlı hesaplar">
+      <Block title="Tanımlı hesaplar" info={<SqlInfo k={accounts.data?.kaynaklar} alan="total" label="Tanımlı hesaplar" />}>
         {items.length === 0 && !accounts.isLoading && <p className="text-[12px] text-canvas-muted">Hesap yok.</p>}
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((a) => (
@@ -94,6 +95,7 @@ export default function SocialAccounts() {
       </Block>
 
       <Block title="CRM marka kartları"
+        info={<SqlInfo k={sug.data?.kaynaklar} alan="marka" label="CRM marka kartları" />}
         help={sug.data ? `${sug.data.marka} markanın ${sug.data.instagramDolu} tanesinde Instagram kullanıcı adı dolu. Diğer platformların hesapları CRM'de yok; elle eklenir.` : undefined}>
         {sug.error && <Note tone="err">{errText(sug.error, 'CRM okunamadı.')}</Note>}
         {sug.isLoading && <Loading />}

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ExternalLink, Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { fmtDay, fmtInt, fmtShort, socialApi, todayIso } from './api';
 import { Block, DaysLeft, SocialFrame } from './parts';
@@ -61,7 +62,7 @@ export default function SocialOpportunities() {
 
       {d && m && (
         <div className="grid gap-3 xl:grid-cols-2 xl:gap-4">
-          <Block title={`Özel günler (${d.ozelGunler.length})`}
+          <Block title={`Özel günler (${d.ozelGunler.length})`} info={<SqlInfo k={d.kaynaklar} alan="ozelGunler" label="Özel günler" />}
             help={`Tarih yöntemi SEO sezon takvimiyle aynı. Güne ${m.settings.leadDays} gün ya da daha az kalıp bağlı kitaplardan hiçbiri takvimde değilse uyarı. «Takvimde»: güne bağlı ya da pencere içinde gönderisi olan kitap.`}>
             {d.ozelGunler.length === 0 && <p className="text-[12px] text-canvas-muted">Bu pencerede özel gün yok.</p>}
             <ul className="flex flex-col gap-2">
@@ -108,7 +109,7 @@ export default function SocialOpportunities() {
           </Block>
 
           <div className="flex min-w-0 flex-col gap-3">
-            <Block title={`Bu ay ve yakında çıkan kitaplar (${d.yeniKitaplar.items.length})`}
+            <Block title={`Bu ay ve yakında çıkan kitaplar (${d.yeniKitaplar.items.length})`} info={<SqlInfo k={d.kaynaklar} alan="yeniKitaplar" label="Yeni kitaplar" />}
               help={`CRM ilk yayın tarihi ${fmtShort(d.yeniKitaplar.baslangic)} – ${fmtShort(d.yeniKitaplar.bitis)} arasında olan kitap kartları.`}>
               {d.yeniKitaplar.items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu aralıkta yeni kitap yok.</p>}
               <ul className="flex flex-col divide-y divide-slate-100">
@@ -124,7 +125,7 @@ export default function SocialOpportunities() {
               </ul>
             </Block>
 
-            <Block title={`Uzun süredir paylaşılmayan çok satanlar (${fmtInt(d.backlist.total)})`}
+            <Block title={`Uzun süredir paylaşılmayan çok satanlar (${fmtInt(d.backlist.total)})`} info={<SqlInfo k={d.kaynaklar} alan="backlist" label="Çok satan backlist" />}
               help={d.backlist.pencere
                 ? `Son 12 ay (${d.backlist.pencere.bas} – ${d.backlist.pencere.bit}, veri sonu ${fmtShort(d.backlist.veriSonu)}) net adet; ilk yayını ${m.settings.backlistMinAgeDays} günden eski ve ${m.settings.backlistQuietDays} gündür takvimde gönderisi olmayanlar.`
                 : undefined}>
@@ -156,7 +157,7 @@ export default function SocialOpportunities() {
               )}
             </Block>
 
-            <Block title="Basında çıkan haberler">
+            <Block title="Basında çıkan haberler" info={<SqlInfo k={d.kaynaklar} alan="basin" label="Basında çıkan haberler" />}>
               {!d.basin.acik && <p className="text-[12px] text-canvas-muted">Basın ve web taraması bu kurulumda kapalı.</p>}
               {d.basin.acik && d.basin.items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu pencerede yazar ya da kitap haberi yok.</p>}
               <ul className="flex flex-col gap-1.5">

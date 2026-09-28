@@ -27,7 +27,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge import social as S
+from semantic_bridge import social_kaynak as K
 from semantic_bridge import social_sources as src
 from semantic_bridge.marketing import guard as G
 from semantic_bridge.marketing.sources import Crm as MarketingCrm
@@ -163,7 +166,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def social_accounts(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = S.list_accounts(engine, tenant)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_accounts(engine, tenant))
 
     @app.post(R + "/accounts", status_code=201)
     def social_account_new(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -187,14 +190,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         brands = await run_in_threadpool(call, crm.brands)
         have = {(a["platform"], a["handle"].lstrip("@").lower()) for a in S.list_accounts(engine, tenant)}
         items = [{**b, "ekli": ("instagram", (b["instagram"] or "").lower()) in have} for b in brands]
-        return {"items": items, "instagramDolu": sum(1 for b in brands if b["instagram"]), "marka": len(brands)}
+        return PV.bagla({"items": items, "instagramDolu": sum(1 for b in brands if b["instagram"]), "marka": len(brands)},
+                        lambda: K.for_brands(engine, tenant))
 
     # ------------------------------------------------------------------ kitap ve içerik havuzu
 
     @app.get(R + "/books")
     async def social_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(call, crm.search, q, max(0, page))
+        out = await run_in_threadpool(call, crm.search, q, max(0, page))
+        return PV.bagla(out, lambda: K.for_search(q, max(0, page)))
 
     @app.get(R + "/books/{stok}/content")
     async def social_book_content(stok: str, request: Request, platform: str = "") -> dict[str, Any]:
@@ -216,10 +221,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             if m["alan"] in ("new_kitabinenonemlicumlesi", "new_alintlar"):
                 crm_quotes += [x.strip(" -•\t") for x in re.split(r"\n+", m["metin"]) if len(x.strip()) > 3]
         posts = S.list_posts(engine, tenant, st(), stok=stok)
-        return {"kitap": book, "alintilar": {"crm": crm_quotes, "studyo": studio["alintilar"]},
-                "gorseller": {"studyo": studio["items"], "studyoHata": studio.get("hata"),
-                              "arsiv": src.creative_assets(app.state, stok, platform)},
-                "haklar": rights, "gonderiler": posts}
+        out = {"kitap": book, "alintilar": {"crm": crm_quotes, "studyo": studio["alintilar"]},
+               "gorseller": {"studyo": studio["items"], "studyoHata": studio.get("hata"),
+                             "arsiv": src.creative_assets(app.state, stok, platform)},
+               "haklar": rights, "gonderiler": posts}
+        return PV.bagla(out, lambda: K.for_content(engine, tenant, stok, book.get("kitapId")))
 
     @app.get(R + "/studio/{job}/{sid}")
     def social_studio_image(job: str, sid: str, request: Request, w: int = 320) -> Response:
@@ -245,7 +251,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         end = S.day(to, "Bitiş") if to else start + timedelta(days=6)
         out = call(S.calendar, engine, tenant, st(), start, end, account)
         out["onayBekleyen"] = S.pending(engine, tenant, st())
-        return out
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, start, end, account))
 
     def build_opportunities(engine, tenant: str, days: int, bpage: int, ref: date) -> dict[str, Any]:
         from semantic_bridge.seo_geo import seasons as SS
@@ -295,8 +301,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/opportunities")
     async def social_opportunities(request: Request, days: int = 0, bpage: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        d = days if days > 0 else st()["opportunityDays"]
-        return await run_in_threadpool(call, build_opportunities, engine, tenant, min(d, 366), max(0, bpage), S.today())
+        d = min(days if days > 0 else st()["opportunityDays"], 366)
+        ref = S.today()
+        out = await run_in_threadpool(call, build_opportunities, engine, tenant, d, max(0, bpage), ref)
+        return PV.bagla(out, lambda: K.for_opportunities(engine, tenant, ref, d, PK.logo_db(rt)))
 
     # ------------------------------------------------------------------ gönderiler
 
@@ -311,16 +319,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/posts")
     def social_posts(request: Request, frm: str = "", to: str = "", account: str = "", status: str = "", stok: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        items = call(S.list_posts, engine, tenant, st(), frm=S.day(frm, "Başlangıç") if frm else None,
-                     to=S.day(to, "Bitiş") if to else None, account=account, status=status, stok=stok)
-        return {"items": items, "total": len(items)}
+        f, t = (S.day(frm, "Başlangıç") if frm else None), (S.day(to, "Bitiş") if to else None)
+        items = call(S.list_posts, engine, tenant, st(), frm=f, to=t, account=account, status=status, stok=stok)
+        return PV.bagla({"items": items, "total": len(items)},
+                        lambda: K.for_posts(engine, tenant, frm=f, to=t, account=account, status=status, stok=stok))
 
     @app.get(R + "/posts/{pid}")
     def social_post(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(S.get_post, engine, tenant, pid, st())
         out["olcumler"] = S.post_metrics(engine, tenant, pid)
-        return out
+        return PV.bagla(out, lambda: K.for_post(engine, tenant, pid, out.get("accountId")))
 
     @app.patch(R + "/posts/{pid}")
     def social_post_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -368,7 +377,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def social_post_events(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         call(S.get_post, engine, tenant, pid, st())
-        return {"items": S.events(engine, pid)}
+        return PV.bagla({"items": S.events(engine, pid)}, lambda: K.for_events(engine, pid))
 
     @app.post(R + "/posts/{pid}/metrics", status_code=201)
     def social_post_metric(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -472,7 +481,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def social_post_jobs(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         call(S.get_post, engine, tenant, pid, st())
-        return {"items": S.jobs_of(engine, tenant, post_id=pid)}
+        return PV.bagla({"items": S.jobs_of(engine, tenant, post_id=pid)}, lambda: K.for_jobs(engine, tenant, pid))
 
     # ------------------------------------------------------------------ yayına hazır paket
 
@@ -510,7 +519,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def social_imports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = S.list_imports(engine, tenant)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_imports(engine, tenant))
 
     @app.delete(R + "/imports/{iid}")
     def social_import_delete(iid: str, request: Request) -> dict[str, Any]:
@@ -528,7 +537,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = call(S.report, engine, tenant, m)
         jobs = S.jobs_of(engine, tenant, hedef=out["ay"])
         out["yorum"] = next((j for j in jobs if j["tur"] == "report"), None)
-        return out
+        return PV.bagla(out, lambda: K.for_report(engine, tenant, out["ay"]))
 
     @app.get(R + "/report/export.pdf")
     async def social_report_pdf(request: Request, month: str = "") -> Response:

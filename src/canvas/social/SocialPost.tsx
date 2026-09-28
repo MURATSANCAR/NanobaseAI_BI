@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Check, Download, ExternalLink, Plus, Search, Send, Sparkles, Trash2, Undo2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -174,7 +175,7 @@ export default function SocialPost() {
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-4">
             <div className="flex min-w-0 flex-col gap-3">
-              <Block title="Gönderi">
+              <Block title="Gönderi" info={<SqlInfo k={p.kaynaklar} alan="uyarilar" label="Karakter, etiket ve tür olasılığı" />}>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 sm:col-span-2">
                     <span className={labelCls}>Hesap</span>
@@ -288,6 +289,7 @@ export default function SocialPost() {
 
               {p.draft && p.draft.secenekler.length > 0 && (
                 <Block title="Zeki AI seçenekleri"
+                  info={<SqlInfo k={p.kaynaklar} alan="draft" label="Zeki AI seçenekleri" />}
                   help={`${fmtStamp(p.draft.zaman)} · ${p.draft.kim}. Kaynakta olmayan alıntı, rakam ya da kanıtsız iddia içeren ${p.draft.dusen} cümle düşürüldü. Seçtiğiniz metin forma gelir; kaydetmeden bir şey değişmez.`}>
                   <div className="grid gap-2 xl:grid-cols-3">
                     {p.draft.secenekler.map((o, i) => (
@@ -336,7 +338,7 @@ export default function SocialPost() {
               </Block>
 
               {p.status === 'yayinlandi' && (
-                <Block title="İçgörü" help="Platformun kendi ekranından okunan sayılar ya da Rapor sekmesinden içe aktarılan dosya. Portal platformlara bağlanmaz.">
+                <Block title="İçgörü" info={<SqlInfo k={p.kaynaklar} alan="olcumler" label="İçgörü" />} help="Platformun kendi ekranından okunan sayılar ya da Rapor sekmesinden içe aktarılan dosya. Portal platformlara bağlanmaz.">
                   {(p.olcumler ?? []).length > 0 && (
                     <div className="mb-2 overflow-x-auto">
                       <table className="w-full min-w-[520px] text-[12px]">
@@ -373,7 +375,7 @@ export default function SocialPost() {
                 </Block>
               )}
 
-              <Block title="Geçmiş">
+              <Block title="Geçmiş" info={<SqlInfo k={events.data?.kaynaklar} alan="items" label="Gönderi geçmişi" />}>
                 <ol className="flex flex-col gap-1.5">
                   {(events.data?.items ?? []).map((e) => (
                     <li key={e.id} className="text-[12px] leading-snug">
@@ -386,7 +388,7 @@ export default function SocialPost() {
             </div>
 
             <div className="flex min-w-0 flex-col gap-3">
-              <Block title="Kitaptan içerik" help={p.stokKodu ? `${p.kitapAd ?? ''} · ${p.stokKodu}` : 'Kitap bağlanınca CRM metinleri, alıntılar ve stüdyo görselleri burada.'}>
+              <Block title="Kitaptan içerik" info={<SqlInfo k={c?.kaynaklar} alan="kitap" label="Kitaptan içerik" />} help={p.stokKodu ? `${p.kitapAd ?? ''} · ${p.stokKodu}` : 'Kitap bağlanınca CRM metinleri, alıntılar ve stüdyo görselleri burada.'}>
                 {!p.stokKodu && editable && (
                   <div className="flex flex-col gap-1.5">
                     <span className="relative flex items-center">

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, ChevronLeft, ChevronRight, Plus, Undo2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -151,10 +152,10 @@ export default function SocialCalendar() {
 
       {cal.data && (
         <KpiRow>
-          <Kpi label="Taslak ve fikir" value={((c.taslak ?? 0) + (c.fikir ?? 0)).toLocaleString('tr-TR')} help="Bu aralıkta metni ya da onayı bekleyen" />
-          <Kpi label="Onay bekleyen" value={pending.length.toLocaleString('tr-TR')} help="Bütün tarihlerde onaya gönderilmiş" />
-          <Kpi label="Onaylı" value={(c.onayli ?? 0).toLocaleString('tr-TR')} help="Paket hazır; paylaşım ekipte" />
-          <Kpi label="Yayınlandı" value={(c.yayinlandi ?? 0).toLocaleString('tr-TR')} help="Bağlantısı girilmiş" />
+          <Kpi label="Taslak ve fikir" value={((c.taslak ?? 0) + (c.fikir ?? 0)).toLocaleString('tr-TR')} help="Bu aralıkta metni ya da onayı bekleyen" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Taslak ve fikir" />} />
+          <Kpi label="Onay bekleyen" value={pending.length.toLocaleString('tr-TR')} help="Bütün tarihlerde onaya gönderilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen" />} />
+          <Kpi label="Onaylı" value={(c.onayli ?? 0).toLocaleString('tr-TR')} help="Paket hazır; paylaşım ekipte" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Onaylı" />} />
+          <Kpi label="Yayınlandı" value={(c.yayinlandi ?? 0).toLocaleString('tr-TR')} help="Bağlantısı girilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Yayınlandı" />} />
         </KpiRow>
       )}
 
@@ -183,7 +184,7 @@ export default function SocialCalendar() {
           )}
           {cal.data && cal.data.unscheduled.length > 0 && (
             <div className="mt-3">
-              <h2 className="mb-1.5 text-[13px] font-extrabold">Tarihsiz fikir ve taslaklar ({cal.data.unscheduled.length})</h2>
+              <h2 className="mb-1.5 flex items-center gap-1 text-[13px] font-extrabold">Tarihsiz fikir ve taslaklar ({cal.data.unscheduled.length})<SqlInfo k={cal.data.kaynaklar} alan="unscheduled" label="Tarihsiz fikir ve taslaklar" /></h2>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {cal.data.unscheduled.map((p) => <PostChip key={p.id} p={p} />)}
               </div>
@@ -192,7 +193,7 @@ export default function SocialCalendar() {
         </section>
 
         <div className="flex min-w-0 flex-col gap-3">
-          <Block title={`Onay bekleyen (${pending.length})`} help={m?.me.canApprove ? 'Onaya gönderen kişi aynı gönderiyi onaylayamaz.' : 'Onay yetkisi olan kişi onaylar.'}>
+          <Block title={`Onay bekleyen (${pending.length})`} info={<SqlInfo k={cal.data?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen" />} help={m?.me.canApprove ? 'Onaya gönderen kişi aynı gönderiyi onaylayamaz.' : 'Onay yetkisi olan kişi onaylar.'}>
             {pending.length === 0 && <p className="text-[12px] text-canvas-muted">Onay bekleyen gönderi yok.</p>}
             <div className="flex flex-col gap-2">
               {pending.map((p) => (
@@ -219,7 +220,7 @@ export default function SocialCalendar() {
             </div>
           </Block>
 
-          <Block title="Yaklaşan fırsatlar" action={<Link to="/sosyal-medya/firsatlar" className={btnGhost}>Hepsi</Link>}
+          <Block title="Yaklaşan fırsatlar" info={<SqlInfo k={opp.data?.kaynaklar} alan="ozelGunler" label="Yaklaşan fırsatlar" />} action={<Link to="/sosyal-medya/firsatlar" className={btnGhost}>Hepsi</Link>}
             help={m ? `Özel güne ${m.settings.leadDays} gün ya da daha az kalıp bağlı kitaplardan hiçbiri takvimde değilse uyarı.` : undefined}>
             {opp.isLoading && <Loading />}
             {opp.error && <Note tone="err">{errText(opp.error, 'Fırsatlar okunamadı.')}</Note>}
