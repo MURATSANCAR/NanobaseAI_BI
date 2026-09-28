@@ -5,7 +5,7 @@
 Ayar standart girişten okunur: şifre komut satırına (süreç listesine) düşmez.
 
 Girdi portal girişinin ayar dosyasıyla aynı: host, port, netbios, dns_domain, base_dn, bind_user,
-bind_password (+ isteğe bağlı admin_group, admin_users). Şifre Frappe'nin şifreli alanında saklanır.
+bind_password (+ isteğe bağlı admin_group, admin_users). Şifre çatının şifreli alanında saklanır.
 """
 
 import json

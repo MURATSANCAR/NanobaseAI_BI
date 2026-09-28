@@ -214,6 +214,13 @@ def _iso(v: Any) -> Optional[str]:
     return str(v)
 
 
+def risk_label(sig: dict[str, Any], fill: float) -> str:
+    """Doluluk iki katı geçtiyse yüzde yerine tutar: «%60.918 dolu» okunmaz, «9,1 Mn ₺ / 15 bin ₺» okunur."""
+    if fill >= 2 and num(sig.get("limit_toplam")) > 0:
+        return f"Risk limiti aşıldı: {short_money(num(sig.get('risk_toplam')))} / {short_money(num(sig.get('limit_toplam')))}"
+    return f"Risk limiti {_pct(fill)} dolu"
+
+
 def _pct(v: float) -> str:
     """0,57 → «%57», 57,2 → «%5.720» (binlik ayraçlı)."""
     return "%" + f"{round(v * 100):,}".replace(",", ".")
@@ -369,7 +376,7 @@ def score(sig: dict[str, Any], ctx: dict[str, Any]) -> tuple[float, list[dict[st
         add("cek", 1, "Çek/senet: " + ", ".join(kinds))
     fill = opt_num(sig.get("risk_doluluk"))
     if fill is not None and fill >= 0.5:
-        add("risk", (fill - 0.5) / 0.5, f"Risk limiti {_pct(fill)} dolu")
+        add("risk", (fill - 0.5) / 0.5, risk_label(sig, fill))
     if int(num(sig.get("siparis_riskte"))):
         why = sig.get("siparis_riskte_sebep")
         add("siparis", 1, "Sipariş riske takıldı" + (f" ({why})" if why else ""))
@@ -598,7 +605,7 @@ def facts_of(b: dict[str, Any]) -> list[str]:
     if ev:
         f.append(f"Son 12 ayda {ev} karşılıksız çek/senet olayı.")
     if s.get("risk_doluluk") is not None:
-        f.append(f"Risk limiti doluluğu {_pct(num(s.get('risk_doluluk')))}.")
+        f.append(risk_label(s, num(s.get("risk_doluluk"))) + ".")
     if int(num(s.get("siparis_riskte"))):
         f.append(f"{int(num(s.get('siparis_riskte')))} sipariş risk onayı bekliyor.")
     gaps = [g for g in (b.get("hedefKitaplar") or [])[:3]]

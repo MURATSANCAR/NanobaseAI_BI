@@ -18,11 +18,11 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
 
 ## Nerede, nasıl çalışır
 
-- Tek Frappe sitesi `destek`; Docker yığını `nanobase-destek` (`docker/compose.yaml`): MariaDB 11.8,
+- Tek site `destek`; Docker yığını `nanobase-destek` (`docker/compose.yaml`): MariaDB 11.8,
   iki Redis, gunicorn, websocket, iki kuyruk işçisi, zamanlayıcı, nginx.
 - Test sunucusu: `/data/nanobaseai/destek` (yalnız `compose.yaml` + `.env`; kod imajın içinde).
   Konteyner nginx'i `127.0.0.1:8447`; dışarıya `https://portal.nanobase.ai:8446` (`deploy/nginx-destek-8446.conf`).
-  Frappe kök yolda çalışır (`/helpdesk`, `/app`, `/api`, `/assets`), o yüzden `/timas/` altına değil ayrı porta konur.
+  Çatı kök yolda çalışır (`/helpdesk`, `/app`, `/api`, `/assets`), o yüzden `/timas/` altına değil ayrı porta konur.
 - Ekranlar: `/helpdesk` temsilci ekranı ve müşteri portalı (`/helpdesk/my-tickets`), `/app` masaüstü;
   masaüstünde `Ctrl+I` yapay zekâ panelini açar.
 - Giriş Timaş Active Directory ile, iki yol:
@@ -57,7 +57,7 @@ Model çağrılarının hepsi LLM kapısından (`/destek-llm/v1`, modül `destek
 Bilgi bankası «NanobaseAI Destek Bilgisi»: yayımlanmış makaleler + çözülen kayıtlar (Flow günlük eşitleme); gömme BI'ın
 gömme servisi (`bge-m3`, 1024 boyut) — kapının `/embeddings` aktarıcısı. Temsilci paneli
 `helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue` (marka.py ile kenar çubuğuna eklenir).
-Giden e-posta hesabı tanımlı değilse raporlar yalnız Not olarak kalır.
+Giden e-posta: Gmail `zeki@timas.com.tr` (BI ile aynı hesap, uygulama şifresi köprünün yönetim ayarlarından; `nanobase_brand/eposta.py`), yalnız gönderim. Hesap yoksa raporlar yalnız Not olarak kalır.
 
 ## Kurulum / güncelleme
 

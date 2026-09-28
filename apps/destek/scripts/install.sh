@@ -114,8 +114,12 @@ for line in open(sys.argv[1], encoding="utf-8"):
         k, v = line.split("=", 1); v = v.strip()
         if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"\x27": v = v[1:-1]
         os.environ.setdefault(k.strip(), v)
-from semantic_bridge import admin as a
-c = {k: a.conf("ALERT_SMTP_" + k.upper()) for k in ("host", "port", "user", "password")}
+# Yönetim ekranındaki değer (semantic_settings) önce, yoksa ortam; köprünün ayar sırasıyla aynı.
+import sqlalchemy as sa
+from semantic_layer.config import SemanticSettings
+with sa.create_engine(SemanticSettings.from_env().store_dsn).connect() as db:
+    stored = dict(db.execute(sa.text("select key, value from semantic_settings where key like :k"), {"k": "ALERT_SMTP_%"}).all())
+c = {k: stored.get("ALERT_SMTP_" + k.upper()) or os.environ.get("ALERT_SMTP_" + k.upper(), "") for k in ("host", "port", "user", "password")}
 if not (c["user"] and c["password"]): sys.exit(3)
 print(json.dumps(c))' "$BRIDGE_ENV" \
     | dc exec -T backend bench --site "$SITE" execute nanobase_brand.eposta.ensure_outgoing >/dev/null \

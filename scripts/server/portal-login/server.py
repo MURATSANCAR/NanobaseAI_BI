@@ -38,7 +38,7 @@ TTL = 8 * 3600
 # Zeki AI chat: internal URL of the chat container, service account token and token secret. Root-owned, never committed.
 # {"url": "http://127.0.0.1:4000", "user_id": "...", "token": "...", "sso_secret": "...", "email_domain": "timas.local"}
 CHAT_FILE = os.environ.get('CHAT_CONFIG_FILE', '/etc/nanobase/zeki-chat.json')
-# NanobaseAI Destek (ayrı Frappe sitesi, ayrı port): portal oturumu olan kişi orada da otomatik girer.
+# NanobaseAI Destek (ayrı site, ayrı port): portal oturumu olan kişi orada da otomatik girer.
 # Çerez Path=/timas/ olduğu için Destek onu göremez; tarayıcı buraya gelir, 60 sn'lik tek kullanımlık imzalı
 # jetonla Destek'e döner. Anahtar Destek sitesiyle ortak (site_config destek_sso_secret). Root-owned, never committed.
 DESTEK_URL = os.environ.get('DESTEK_URL', 'https://portal.nanobase.ai:8446').rstrip('/')

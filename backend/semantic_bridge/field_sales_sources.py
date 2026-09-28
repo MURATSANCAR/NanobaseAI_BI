@@ -493,21 +493,22 @@ def read_cheque_events(run: Run, firms: Iterable[str], since: date, prefix_: str
     return out
 
 
-#: Bu tutara kadar olan limit «tanımlanmamış» sayılır. 2026-09-28 CRM: 44.322 etkin carinin 6.086'sında toplam limit tam
-#: 1 ₺ (yurt dışı dağıtıcılar dahil, riski milyonlarca ₺), 22'sinde 2–10 ₺, 10 ₺ ile 1.000 ₺ arasında 15 cari; 1 ₺ girilmiş
-#: yer tutucudur, doluluk «%47.799.611» gibi anlamsız sayılar veriyordu.
-MIN_REAL_LIMIT = 10.0
+#: Bu tutarın altındaki limit «tanımlanmamış» sayılır. 2026-09-28 CRM: 44.322 etkin carinin 6.086'sında toplam limit tam
+#: 1 ₺ (yurt dışı dağıtıcılar dahil, riski milyonlarca ₺), 22'sinde 2–10 ₺; portföyde 10 ₺'den büyük limitli 3.094 carinin
+#: yalnız 15'i 1.000 ₺'nin altında (12 ₺ gibi), gerçek limitler 2.501 / 5.000 / 15.000 ₺'den başlıyor. Yer tutucu limit
+#: doluluğu «%47.799.611» gibi anlamsız sayılar veriyordu.
+MIN_REAL_LIMIT = 1000.0
 
 
 def risk_of(acc: dict[str, Any]) -> dict[str, Any]:
-    """CRM limit/risk alanlarından doluluk (M59 aynı fonksiyonu kullanır). Limit 0/boş ya da `MIN_REAL_LIMIT`e kadar
+    """CRM limit/risk alanlarından doluluk (M59 aynı fonksiyonu kullanır). Limit 0/boş ya da `MIN_REAL_LIMIT`in altında
     (yer tutucu) ise doluluk yok (aşmış sayılmaz)."""
     lim, risk = opt_num(acc.get("limit_toplam")), opt_num(acc.get("risk_toplam"))
     return {
         "limit_acik": opt_num(acc.get("limit_acik")), "limit_cek": opt_num(acc.get("limit_cek")), "limit_toplam": lim,
         "risk_acik": opt_num(acc.get("risk_acik")), "risk_cek": opt_num(acc.get("risk_cek")), "risk_toplam": risk,
         "risk_siparis": opt_num(acc.get("risk_siparis")),
-        "risk_doluluk": (round(risk / lim, 4) if lim and lim > MIN_REAL_LIMIT and risk is not None else None),
+        "risk_doluluk": (round(risk / lim, 4) if lim and lim >= MIN_REAL_LIMIT and risk is not None else None),
     }
 
 

@@ -1,12 +1,12 @@
-"""Timaş Active Directory girişi: Frappe'nin LDAP ayarı, portal girişiyle aynı yöntemle.
+"""Timaş Active Directory girişi: çatının LDAP ayarı, portal girişiyle aynı yöntemle.
 
-Frappe basit bağlama (simple bind) yapar; etki alanı denetleyicisinde sertifika yok, basit bağlama
+Çatı basit bağlama (simple bind) yapar; etki alanı denetleyicisinde sertifika yok, basit bağlama
 şifreyi VPN üzerinden açık metin taşır. Portal girişi (scripts/server/portal-login/server.py) bu
 yüzden NTLM kullanır; burada da aynısı yapılır:
 
 - Hizmet hesabı `TIMAS\\timasai` NTLM ile bağlanır, kişi etkin AD kişileri arasında hesap adıyla
   aranır, sonra kişinin kendi şifresiyle `TIMAS\\<hesap>` olarak NTLM ile yeniden bağlanılır.
-- E-posta AD'de boşsa `hesap@<dns etki alanı>` kullanılır (Frappe kullanıcısı e-posta ister).
+- E-posta AD'de boşsa `hesap@<dns etki alanı>` kullanılır (çatının kullanıcısısı e-posta ister).
 - Her AD kişisi temsilcidir: `HD Agent` kaydı ilk girişte açılır (kullanıcı kararı 2026-09-28:
   destek ekranı AD ile entegre; kim portala giriyorsa burada da temsilci).
 - Şifre değiştirme buradan yapılmaz; AD şifresi yalnız AD'de değişir.

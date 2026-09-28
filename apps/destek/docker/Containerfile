@@ -1,4 +1,4 @@
-# NanobaseAI Destek imajı: Frappe çatısı + telephony (üst kaynaktan, sabit sürüm)
+# NanobaseAI Destek imajı: çatı + telephony (üst kaynaktan, sabit sürüm)
 # + depodaki markalı helpdesk, flow ve nanobase_brand.
 # Yapı frappe_docker images/layered/Containerfile'ı izler; fark, uygulamaların
 # git'ten değil bu depodan (apps/destek/frappe-apps) gelmesi.

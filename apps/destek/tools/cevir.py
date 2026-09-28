@@ -13,7 +13,7 @@ Kurallar:
 - Yer tutucular ({0}, {name}, %s, %(x)s), HTML etiketleri, baştaki/sondaki boşluk ve
   satır sonları birebir korunmalı; tutmayan cevap bir kez yeniden sorulur, yine
   tutmazsa girdi boş kalır (İngilizce görünür) ve rapora yazılır.
-- Ürün/teknoloji adı ekrana çıkmaz: Frappe, Helpdesk, Flow → NanobaseAI.
+- Ürün/teknoloji adı ekrana çıkmaz: çatı ve ürün adları → NanobaseAI.
 - Her parti bitince dosya diske yazılır; yarıda kalan koşu kaldığı yerden devam eder.
 """
 
