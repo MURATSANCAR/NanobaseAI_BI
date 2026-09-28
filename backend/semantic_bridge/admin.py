@@ -1069,6 +1069,18 @@ SPEC: list[dict[str, Any]] = [
              "gösterilmez. Boş: birleştirme yok, ekran uyarır"},
     {"key": "HR_TRAINING_ACCOUNTS", "group": "hr", "label": "Eğitim gider hesapları (Logo)", "type": "text", "default": "",
      "help": "Virgülle 7'li gider hesap kodları; alt hesaplar dahil sayılır. Adayları Eğitim → Gider ekranı listeler (Mali İşler seçer)"},
+    # İnsan kaynakları — M56 performans, M58 bağlılık
+    {"key": "HR_PERF_LOGO_SALES", "group": "hr", "label": "Hedefte Logo satış ölçüsü", "type": "bool", "default": "0",
+     "help": "Açıksa satış hedefinin ilerlemesi Logo'daki temsilci bazında faturalı net satıştan okunur. Satış faturalarında "
+             "temsilci alanı doluluğu ölçülmeden açmayın (Değerlendirme dönemi ekranındaki ölçüm)"},
+    {"key": "HR_PERF_REMIND_DAYS", "group": "hr", "label": "Değerlendirme hatırlatması (gün kala)", "type": "text", "default": "",
+     "help": "Açık dönemde son tarihe bu kadar gün kala İK alıcılarına eksik sayılarıyla tek özet (kişi adı yok). Boş: gönderim yok"},
+    {"key": "HR_SURVEY_SHUFFLE_MAX_SEC", "group": "hr", "label": "Anket cevabı yazım gecikmesi (sn, en çok)", "type": "int", "default": "20",
+     "help": "Cevap ve yorum, «cevapladı» işaretinden ayrı ve rastgele gecikmeyle yazılır ki sıra/zaman eşlemesi yapılamasın"},
+    {"key": "HR_SURVEY_THEMES", "group": "hr", "label": "Anket yorum temaları", "type": "text", "default": "",
+     "help": "Virgülle kapalı tema listesi; Zeki AI açık uçlu yorumları bu listeye sınıflar. Boşsa varsayılan liste"},
+    {"key": "HR_SUGGESTION_TOPICS", "group": "hr", "label": "Öneri kutusu konuları", "type": "text", "default": "",
+     "help": "Virgülle konu listesi; «Bir çalışanla ilgili şikâyet» her zaman İK'da kalır. Boşsa varsayılan liste"},
     # Platform ve kanallar (M42; M40/M41 bağlantı anahtarlarını aynı gruba ekler)
     {"key": "CHANNEL_SPECODES", "group": "channels", "label": "E-ticaret kanal kodları", "type": "text", "default": "E-TICARET",
      "help": "Logo cari kartındaki özel kod 2 değerleri (virgülle). Bu kodlu cariler eşleme listesine ve kanal karnesine girer"},

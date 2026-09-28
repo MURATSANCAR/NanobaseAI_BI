@@ -7333,6 +7333,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     hr_recruit_api.register(app, app.state.hr)
     from semantic_bridge import hr_learning_api  # M57 eğitim ve gelişim (/api/v1/hr/learning/*, /api/v1/hr/visit)
     hr_learning_api.register(app, app.state.hr)
+    # M56 performans ve M58 bağlılık aynı İK bağlamına bağlanır.
+    from semantic_bridge import hr_engagement_api, hr_performance_api
+    hr_performance_api.register(app, app.state.hr)
+    hr_engagement_api.register(app, app.state.hr)
     # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
     from semantic_bridge import channels
     app.state.channels = channels.register(app, rt, _require_caller, _can)

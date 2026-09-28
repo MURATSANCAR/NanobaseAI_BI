@@ -655,6 +655,15 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/hr/recruit/intake", SYSTEM),
     ("/api/v1/hr/recruit/reminders/run-due", SYSTEM),
     ("/api/v1/hr/recruit/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler")})),
+    # M56 performans: Performansım (bütün çalışanlara bağlanır), Ekibim, Hedefler, Değerlendirme; kişi kapsamı ucun içinde.
+    ("/api/v1/hr/performance/reminders/run-due", SYSTEM),
+    ("/api/v1/hr/performance/", frozenset(page(x) for x in ("ik-performansim", "ik-ekibim", "ik-hedefler", "ik-degerlendirme"))),
+    # M58 bağlılık. Anket formu oturumsuz da çalışır (çerezsiz istek kapıdan geçer, uç jetonu/kodu doğrular); oturumla gelirse OPEN.
+    ("/api/v1/hr/survey-public/", OPEN),
+    ("/api/v1/hr/engagement/run-due", SYSTEM),
+    ("/api/v1/hr/engagement/", frozenset(page(x) for x in ("ik-anketlerim", "ik-oneriler", "ik-baglilik", "ik-birimim",
+                                                          "ik-anket-yonetimi", "ik-aksiyonlar"))),
+    ("/api/v1/hr/", frozenset({page("ik-ise-alim"), page("ik-pozisyonlar"), page("ik-belgeler"), page("ik-kayitlar")})),
     # M36 Dijital yayın ve e-kitap. Satış raporu ve gelir finans verisidir: ayrı sayfa (dijital-satis); göstergeler ve
     # platform listesi iki sayfada da açık.
     ("/api/v1/dijital/run-due", SYSTEM),
