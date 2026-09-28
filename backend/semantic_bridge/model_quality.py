@@ -963,7 +963,7 @@ def _bucket(buckets: list[tuple[datetime, datetime]], at: Optional[datetime]) ->
     if at is None:
         return None
     for i, (a, b) in enumerate(buckets):
-        if a <= at < b:
+        if a <= at < b or (i == len(buckets) - 1 and at >= a):   # son hafta şimdiye kadar açık uçlu
             return i
     return None
 

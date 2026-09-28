@@ -1772,7 +1772,8 @@
       "area": "pazarlama",
       "page": "sayfa:pazarlama-backlist",
       "label": "Backlist ekip ağırlığı",
-      "hint": "Uyku endeksi bileşen ağırlıklarını ekibin varsayılanı olarak kaydetme (kişisel ağırlık herkesin kendi tercihidir)"
+      "hint": "Uyku endeksi bileşen ağırlıklarını ekibin varsayılanı olarak kaydetme (kişisel ağırlık herkesin kendi tercihidir)",
+      "explicit": true
     },
     {
       "key": "ozellik:pr.duzenle",

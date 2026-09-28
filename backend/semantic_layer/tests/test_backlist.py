@@ -507,7 +507,7 @@ def test_access_rules_for_backlist():
     assert f("PUT", "/api/v1/marketing/backlist/plans/MP-2026-0001/books") == [w]
     assert f("POST", "/api/v1/marketing/backlist/plans/MP-2026-0001/materials") == [w]
     assert f("POST", "/api/v1/marketing/backlist/matches/abc/decide") == [w]
-    assert f("PUT", "/api/v1/marketing/backlist/weights") == ["ozellik:pazarlama.backlist-ayar"]
+    assert f("PUT", "/api/v1/marketing/backlist/weights") == []      # açık anahtar: ucun içinde denetlenir
     assert f("GET", "/api/v1/marketing/backlist/export.csv") == ["ozellik:veri.disa-aktar"]
     assert f("GET", "/api/v1/marketing/backlist") == [] and f("GET", "/api/v1/marketing/backlist/B1") == []
     assert {"sayfa:pazarlama-backlist", "ozellik:pazarlama.backlist-ayar"} <= A.all_keys()

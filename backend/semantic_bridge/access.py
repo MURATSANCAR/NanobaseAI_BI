@@ -809,7 +809,6 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # ekip ağırlığı ayrı yetki; liste CSV'si dışa aktarım.
     (frozenset({"POST", "PUT"}), r"^/api/v1/marketing/backlist/(plans(/[^/]+/(books|materials))?|matches/[^/]+/decide)$",
      "ozellik:pazarlama.plan-yaz"),
-    (frozenset({"PUT"}), r"^/api/v1/marketing/backlist/weights$", "ozellik:pazarlama.backlist-ayar"),
     (frozenset({"GET"}), r"^/api/v1/marketing/backlist/export\.csv$", "ozellik:veri.disa-aktar"),
     # Basın ilişkileri: PR dosyası, liste, Zeki AI taslağı, medya kişisi, yansıma. Dosya/satır onayı (`pr.onay`) ve
     # tek alıcılı e-posta (`pr.gonder`) açıkça verilen yetkilerle ucun içinde denetlenir; bu kural onlara uymaz.

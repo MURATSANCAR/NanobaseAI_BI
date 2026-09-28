@@ -405,7 +405,7 @@ def risk(acc: dict[str, Any], st: dict[str, Any], now: date) -> tuple[float, str
         frac = (r - 1.5) / 1.5
         label = f"{gap} gündür alım yok (olağan aralık {round(med)} gün)"
         if last_order and acc.get("son_fatura") and last_order > acc["son_fatura"]:
-            frac *= 0.5
+            frac = _clamp(frac) * 0.5   # kesimden sonra CRM siparişi: puan yarıya iner (tavandan sonra)
             label += f"; CRM'de {last_order} tarihli sipariş var"
         add("aralik", frac, label)
     if prev > 0 and net < prev:
