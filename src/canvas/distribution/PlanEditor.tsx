@@ -11,6 +11,7 @@ import { fmtDay, fmtPct, parseNum } from '../budget/api';
 import { AskSheet, NumField } from '../budget/parts';
 import { STATUS_TONE, distApi, type Cell, type Line, type Plan } from './api';
 import { DataEnd, DistFrame, Share, n0 } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Kitabın dağılım planı: özet (hedef, stok, rezerv), ZEKİ AI gerekçesi ve benzer kitaplar, bölge × kanal matrisi,
  *  müşteri listesi (sayfalı, tavan yok). Taslakta satır ve hücre düzeltilir; onay iki göz. Adres: /ilk-dagilim/:stok?plan= */
@@ -205,10 +206,10 @@ function Summary({ p, editable, onSaved }: { p: Plan; editable: boolean; onSaved
   return (
     <>
       <KpiRow>
-        <Kpi label="Dağıtılacak" value={n0(p.toplam)} help={`ZEKİ AI önerisi ${n0(p.onerilenToplam)} · ${n0(p.musteri)} müşteri${p.elleSatir ? ` · ${n0(p.elleSatir)} satır elle` : ''}`} />
-        <Kpi label="Rezerv" value={n0(p.rezerv)} help={`Depoda kalan pay (öneri %${Math.round((p.basis.rezervPay ?? 0) * 100)})`} />
-        <Kpi label={p.guncelStok.tur === 'baski' ? 'Baskı adedi' : 'Stok bakiyesi'} value={n0(stock)} help={stock !== null ? `Kalan ${n0(stock - p.toplam - p.rezerv)}` : 'Logo\'da görünmüyor'} />
-        <Kpi label="Satış hedefi" value={hedef} help={p.hedef.var ? `Yıllık ${n0(p.hedef.yillikAdet)} · ${p.hedef.planBaslik ?? ''}` : 'Onaylı bütçede bu kitabın hedefi yok'} />
+        <Kpi label="Dağıtılacak" info={<SqlInfo k={p.kaynaklar} alan="toplam" label="Dağıtılacak ve öneri" />} value={n0(p.toplam)} help={`ZEKİ AI önerisi ${n0(p.onerilenToplam)} · ${n0(p.musteri)} müşteri${p.elleSatir ? ` · ${n0(p.elleSatir)} satır elle` : ''}`} />
+        <Kpi label="Rezerv" info={<SqlInfo k={p.kaynaklar} alan="rezerv" label="Rezerv" />} value={n0(p.rezerv)} help={`Depoda kalan pay (öneri %${Math.round((p.basis.rezervPay ?? 0) * 100)})`} />
+        <Kpi label={p.guncelStok.tur === 'baski' ? 'Baskı adedi' : 'Stok bakiyesi'} info={<SqlInfo k={p.kaynaklar} alan="guncelStok" label="Stok ve kalan" />} value={n0(stock)} help={stock !== null ? `Kalan ${n0(stock - p.toplam - p.rezerv)}` : 'Logo\'da görünmüyor'} />
+        <Kpi label="Satış hedefi" info={<SqlInfo k={p.kaynaklar} alan="hedef" label="Satış hedefi" />} value={hedef} help={p.hedef.var ? `Yıllık ${n0(p.hedef.yillikAdet)} · ${p.hedef.planBaslik ?? ''}` : 'Onaylı bütçede bu kitabın hedefi yok'} />
       </KpiRow>
       {editable && (
         <Panel>
@@ -243,7 +244,7 @@ function Rationale({ p }: { p: Plan }) {
       {p.gerekce && <p className="mt-1.5 max-w-[90ch] text-[13px] leading-relaxed">{p.gerekce}</p>}
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-canvas-muted">
         <span>{method}</span>
-        <span>Toplam: {total}</span>
+        <span className="inline-flex items-center gap-0.5">Toplam: {total}<SqlInfo k={p.kaynaklar} alan="basis" label="Öneri temeli" /></span>
         {b.modelAyiklama && <span>Benzer kitaplar ZEKİ AI ile ayıklandı</span>}
       </div>
       {!!p.benzerler.length && (
@@ -253,10 +254,10 @@ function Rationale({ p }: { p: Plan }) {
               <tr>
                 <th className={th}>Benzer kitap</th>
                 <th className={th}>Neden</th>
-                <th className={`${th} text-right`}>İlk {b.pencereGun ?? 56} gün net</th>
-                <th className={`${th} text-right`}>İade</th>
-                <th className={`${th} text-right`}>Müşteri</th>
-                <th className={`${th} text-right`}>CRM dağılım siparişi</th>
+                <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="benzerler[]" label="Benzer kitap penceresi net satışı">{`İlk ${b.pencereGun ?? 56} gün net`}</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="benzerler[]" label="İade oranı">İade</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="benzerler[]" label="Müşteri sayısı">Müşteri</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="benzerler[]" label="CRM dağılım siparişi">CRM dağılım siparişi</InfoLabel></th>
                 <th className={th}>Kanal</th>
               </tr>
             </thead>
@@ -300,7 +301,7 @@ function MatrixPanel({ p, editable, onCell }: { p: Plan; editable: boolean; onCe
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Bölge × kanal</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Bölge × kanal<SqlInfo k={p.kaynaklar} alan="matris" label="Bölge × kanal adetleri ve paylar" /></h2>
         <span className="text-[11.5px] text-canvas-muted">{editable ? 'Hücreye dokunun: toplam, hücredeki müşterilere oranla dağılır.' : `Toplam ${n0(m.toplam)} adet`}</span>
       </div>
       {/* Telefon: bölge kartları */}
@@ -429,7 +430,7 @@ function Lines({ p, editable, onSaved }: { p: Plan; editable: boolean; onSaved: 
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Müşteriler</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Müşteriler<SqlInfo k={d?.kaynaklar} alan="items[]" label="Müşteri satırları: pay, benzerlerde net, iade, adet, takip" /></h2>
         <span className="text-[11.5px] text-canvas-muted">{n0(p.satirSayisi)} satır; liste kesilmez, sayfalanır.</span>
       </div>
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">

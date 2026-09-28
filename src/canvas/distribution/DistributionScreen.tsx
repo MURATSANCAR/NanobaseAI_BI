@@ -14,6 +14,8 @@ import { DataEnd, DistFrame, n0 } from './parts';
 import TrackingTab from './TrackingTab';
 import MyRegion from './MyRegion';
 import AlertsTab from './AlertsTab';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M29 İlk dağılım: dağılım bekleyen kitaplar, izlenenler, BMT görünümü (Bölgem), uyarılar. Sekme adreste (?sekme=). */
 
@@ -121,10 +123,10 @@ export default function DistributionScreen() {
 
       {me?.canAll && data && (
         <KpiRow>
-          <Kpi label="Plan bekleyen" value={n0(waiting)} help={`Son ${data.pencereGun} günde depoya girip planı olmayan kitap`} active={tab === 'bekleyen' && durum === 'yok'} onClick={() => update({ sekme: 'bekleyen', durum: 'yok' })} />
-          <Kpi label="Listedeki kitap" value={n0(items.length)} help="Seçili süzgeçte" />
-          <Kpi label="İzlenen" value={n0(data.izlenen.length)} help={`Onaydan sonraki ${meta.data?.params.takipHafta ?? 8} hafta`} active={tab === 'izlenen'} onClick={() => update({ sekme: 'izlenen' })} />
-          <Kpi label="Açık uyarı" value={n0(alertCount.data?.total)} help="Plansız kitap, sevk gecikmesi, hiç satmayan bölge" active={tab === 'uyarilar'} onClick={() => update({ sekme: 'uyarilar' })} />
+          <Kpi label="Plan bekleyen" value={n0(waiting)} help={`Son ${data.pencereGun} günde depoya girip planı olmayan kitap`} active={tab === 'bekleyen' && durum === 'yok'} onClick={() => update({ sekme: 'bekleyen', durum: 'yok' })} info={<SqlInfo k={data.kaynaklar} alan="sayac.bekleyen" label="Plan bekleyen kitap" />} />
+          <Kpi label="Listedeki kitap" value={n0(items.length)} help="Seçili süzgeçte" info={<SqlInfo k={data.kaynaklar} alan="sayac.liste" label="Listedeki kitap" />} />
+          <Kpi label="İzlenen" info={<SqlInfo k={data.kaynaklar} alan="izlenen[]" label="İzlenen planlar" />} value={n0(data.izlenen.length)} help={`Onaydan sonraki ${meta.data?.params.takipHafta ?? 8} hafta`} active={tab === 'izlenen'} onClick={() => update({ sekme: 'izlenen' })} />
+          <Kpi label="Açık uyarı" info={<SqlInfo k={alertCount.data?.kaynaklar} alan="total" label="Açık uyarı sayısı" />} value={n0(alertCount.data?.total)} help="Plansız kitap, sevk gecikmesi, hiç satmayan bölge" active={tab === 'uyarilar'} onClick={() => update({ sekme: 'uyarilar' })} />
         </KpiRow>
       )}
 
@@ -165,10 +167,10 @@ export default function DistributionScreen() {
               {data.asof ? 'Bu süzgeçte kitap yok.' : 'Liste henüz okunmadı. «Depo girişlerini yenile» ile Logo ve üretim kartlarından okunur; sonra her gün 07:30 ve 13:30\'da kendiliğinden tazelenir.'}
             </div>
           )}
-          {!!items.length && <BookList items={items} canPlan={!!me?.canPlan} busy={generate.isPending ? generate.variables : undefined} onGenerate={(c) => generate.mutate(c)} />}
+          {!!items.length && <BookList items={items} k={data?.kaynaklar} canPlan={!!me?.canPlan} busy={generate.isPending ? generate.variables : undefined} onGenerate={(c) => generate.mutate(c)} />}
         </Panel>
       )}
-      {tab === 'izlenen' && <TrackingTab items={data?.izlenen ?? []} loading={books.isLoading} />}
+      {tab === 'izlenen' && <TrackingTab items={data?.izlenen ?? []} loading={books.isLoading} k={data?.kaynaklar} />}
       {tab === 'bolgem' && <MyRegion canAll={!!me?.canAll} />}
       {tab === 'uyarilar' && <AlertsTab />}
 
@@ -207,7 +209,7 @@ function Action({ b, canPlan, busy, onGenerate }: { b: Book; canPlan: boolean; b
   );
 }
 
-function BookList({ items, canPlan, busy, onGenerate }: { items: Book[]; canPlan: boolean; busy?: string; onGenerate: (c: string) => void }) {
+function BookList({ items, canPlan, busy, onGenerate, k }: { items: Book[]; canPlan: boolean; busy?: string; onGenerate: (c: string) => void; k?: Kaynaklar }) {
   return (
     <>
       {/* Telefon: kart listesi */}
@@ -223,8 +225,8 @@ function BookList({ items, canPlan, busy, onGenerate }: { items: Book[]; canPlan
             </div>
             <div className="mt-2 grid grid-cols-3 gap-2 text-[11.5px]">
               <div><div className={labelCls}>Depo</div>{fmtDay(b.depoGiris)}</div>
-              <div><div className={labelCls}>Baskı</div><span className="font-mono tabular-nums">{n0(b.baskiAdedi)}</span></div>
-              <div><div className={labelCls}>Stok</div><span className="font-mono tabular-nums">{n0(b.stok)}</span></div>
+              <div><div className={`${labelCls} flex items-center gap-0.5`}>Baskı<SqlInfo k={k} alan="items[]" label="Baskı adedi" /></div><span className="font-mono tabular-nums">{n0(b.baskiAdedi)}</span></div>
+              <div><div className={`${labelCls} flex items-center gap-0.5`}>Stok<SqlInfo k={k} alan="items[]" label="Stok bakiyesi" /></div><span className="font-mono tabular-nums">{n0(b.stok)}</span></div>
             </div>
             <div className="mt-2 flex justify-end"><Action b={b} canPlan={canPlan} busy={busy} onGenerate={onGenerate} /></div>
           </li>
@@ -238,9 +240,9 @@ function BookList({ items, canPlan, busy, onGenerate }: { items: Book[]; canPlan
               <th className={th}>Kitap</th>
               <th className={th}>Depoya giriş</th>
               <th className={th}>Baskı</th>
-              <th className={`${th} text-right`}>Baskı adedi</th>
-              <th className={`${th} text-right`}>Stok</th>
-              <th className={`${th} text-right`}>Plan</th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Baskı adedi">Baskı adedi</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Stok bakiyesi">Stok</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Plan adedi ve rezerv">Plan</InfoLabel></th>
               <th className={th}>Durum</th>
               <th className={th} />
             </tr>

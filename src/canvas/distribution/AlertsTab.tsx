@@ -6,6 +6,7 @@ import { Pager, Panel } from '../editorial/kit';
 import { fmtDay } from '../budget/api';
 import { ENGINE_ENABLED } from '../engine';
 import { distApi, type AlertKind } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Uyarılar: günde iki kez (07:30, 13:30) değerlendirilir; koşul kalkınca kendiliğinden kapanır. «Tükeniyor» bilgidir. */
 const KINDS: Array<{ key: '' | AlertKind; label: string }> = [
@@ -36,6 +37,8 @@ export default function AlertsTab() {
             ))}
           </div>
         </div>
+        <div className="flex items-center gap-1">
+        <SqlInfo k={d?.kaynaklar} alan="sayilar" label="Uyarı sayıları" />
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Durum">
           {(['acik', 'kapandi'] as const).map((v) => (
             <button key={v} type="button" aria-pressed={durum === v} onClick={() => { setDurum(v); setPage(0); }}
@@ -43,6 +46,7 @@ export default function AlertsTab() {
               {v === 'acik' ? 'Açık' : 'Kapanan'}
             </button>
           ))}
+        </div>
         </div>
       </div>
       {q.error && <Note tone="err">{errText(q.error, 'Uyarılar okunamadı.')}</Note>}

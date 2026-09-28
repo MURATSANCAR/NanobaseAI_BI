@@ -7,6 +7,7 @@ import { fmtDay } from '../budget/api';
 import { ENGINE_ENABLED } from '../engine';
 import { distApi } from './api';
 import { n0 } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** BMT görünümü (telefon öncelikli, salt okunur): onaylı planlarda kişinin carilerine düşen yeni kitaplar.
  *  Kitap kartına dokununca müşteri × adet × sevk. Bütün carileri görebilen kişi «Herkes» ile hepsini görür. */
@@ -19,7 +20,7 @@ export default function MyRegion({ canAll }: { canAll: boolean }) {
     <Panel>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[14px] font-extrabold">{all ? 'Bütün bölgelere gelen kitaplar' : 'Bölgenize gelen yeni kitaplar'}</div>
+          <div className="flex items-center gap-1 text-[14px] font-extrabold">{all ? 'Bütün bölgelere gelen kitaplar' : 'Bölgenize gelen yeni kitaplar'}<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Adet, müşteri ve sevk" /></div>
           <div className="text-[11.5px] text-canvas-muted">Onaylı dağılım planları, onaydan sonraki 8 hafta. Müşteri listesi CRM'de sahibi olduğunuz carilerden.</div>
         </div>
         {canAll && (

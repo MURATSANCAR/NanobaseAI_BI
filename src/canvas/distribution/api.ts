@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Uç cevabındaki sorgu bilgisi (`<SqlInfo k={…kaynaklar} alan="…" />`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M29 İlk dağılım ekranının köprü uçları: /api/v1/distribution/*. */
 
@@ -99,6 +103,8 @@ export type Comp = {
 };
 
 export type Plan = {
+  /** Sorgu bilgisi (plan ucu doldurur). */
+  kaynaklar?: Kaynaklar;
   id: string;
   stokKodu: string;
   ad: string | null;
@@ -233,13 +239,13 @@ const enc = encodeURIComponent;
 
 export const distApi = {
   meta: () => send<DistMeta>('GET', '/meta'),
-  books: (p: { durum?: string; q?: string } = {}) => send<BooksResponse>('GET', `/books${qs(p)}`),
+  books: (p: { durum?: string; q?: string } = {}) => send<BooksResponse & WithK>('GET', `/books${qs(p)}`),
   refreshBooks: () => send<{ kitap: number; logo: number; m12: number; uyarilar: string[] }>('POST', '/books/refresh', {}, 300_000),
-  plansOf: (stok: string) => send<{ items: Plan[] }>('GET', `/plans${qs({ stok })}`),
+  plansOf: (stok: string) => send<{ items: Plan[] } & WithK>('GET', `/plans${qs({ stok })}`),
   generate: (stokKodu: string) => send<Plan>('POST', '/plans/generate', { stokKodu }, 300_000),
-  plan: (id: string) => send<Plan>('GET', `/plans/${enc(id)}`),
+  plan: (id: string) => send<Plan & WithK>('GET', `/plans/${enc(id)}`),
   lines: (id: string, p: { q?: string; bolge?: string; kanal?: string; yalniz?: string; page?: number }) =>
-    send<LinePage>('GET', `/plans/${enc(id)}/lines${qs(p)}`),
+    send<LinePage & WithK>('GET', `/plans/${enc(id)}/lines${qs(p)}`),
   updatePlan: (id: string, b: { rezerv?: number; note?: string }) => send<Plan>('PATCH', `/plans/${enc(id)}`, b),
   updateLine: (id: string, no: number, b: { adet?: number; gerekce?: string }) => send<Line>('PATCH', `/plans/${enc(id)}/lines/${no}`, b),
   updateCell: (id: string, b: { bolge: string; kanal: string; adet: number; gerekce?: string }) => send<Plan>('PATCH', `/plans/${enc(id)}/cells`, b),
@@ -250,10 +256,10 @@ export const distApi = {
   reject: (id: string, note: string) => send<Plan>('POST', `/plans/${enc(id)}/reject`, { note }),
   revise: (id: string, reason: string) => send<Plan>('POST', `/plans/${enc(id)}/revise`, { reason }),
   track: (id: string) => send<{ satir: number }>('POST', `/plans/${enc(id)}/track`, {}, 300_000),
-  tracking: (stok: string, hafta?: number) => send<{ items: TrackSummary[]; veriSonu: string | null; takipHafta: number }>('GET', `/tracking${qs({ stok, hafta })}`),
-  myRegion: (herkes = false) => send<{ items: RegionBook[]; kapsam: 'kendi' | 'hepsi'; veriSonu: string | null }>('GET', `/my-region${qs({ herkes })}`),
+  tracking: (stok: string, hafta?: number) => send<{ items: TrackSummary[]; veriSonu: string | null; takipHafta: number } & WithK>('GET', `/tracking${qs({ stok, hafta })}`),
+  myRegion: (herkes = false) => send<{ items: RegionBook[]; kapsam: 'kendi' | 'hepsi'; veriSonu: string | null } & WithK>('GET', `/my-region${qs({ herkes })}`),
   alerts: (p: { durum?: string; tur?: string; page?: number } = {}) =>
-    send<{ items: DistAlert[]; total: number; page: number; pageSize: number; sayilar: Partial<Record<AlertKind, number>> }>('GET', `/alerts${qs(p)}`),
+    send<{ items: DistAlert[]; total: number; page: number; pageSize: number; sayilar: Partial<Record<AlertKind, number>> } & WithK>('GET', `/alerts${qs(p)}`),
   exportUrl: (id: string) => `${ENGINE_BASE}${B}/plans/${enc(id)}/export.xlsx`,
 };
 

@@ -39,6 +39,19 @@ CRM_ORDER_DISTRIBUTION = 2
 CRM_ORDER_CANCELLED = 100000001
 
 
+def logged(conn: str, run: Runner, sink: list[dict[str, Any]]) -> Runner:
+    """Sorgu bilgisi: çalışan her SQL'i (bağlantı, metin, satır, süre, an) `sink`'e yazan çalıştırıcı."""
+    import time as _time
+
+    def wrapped(sql: str) -> list[dict[str, Any]]:
+        t = _time.monotonic()
+        rows = run(sql)
+        sink.append({"conn": conn, "sql": sql, "rows": len(rows), "dbMs": int((_time.monotonic() - t) * 1000),
+                     "at": datetime.now().isoformat(timespec="seconds")})
+        return rows
+    return wrapped
+
+
 def book_prefixes() -> tuple[str, ...]:
     """Kitap kodu önekleri. M10 ölçümü: 15201 = basılı kitap; set, dergi, e-kitap, ticari ürün dışarıda."""
     raw = os.environ.get("DIST_CODE_PREFIXES", "15201")

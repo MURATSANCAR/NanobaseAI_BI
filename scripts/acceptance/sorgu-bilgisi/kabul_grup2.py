@@ -127,6 +127,35 @@ def ihale(heavy: bool) -> None:
             run_all("ihale /{id}", k, heavy)
 
 
+# ---------------------------------------------------------------- M29 ilk dağılım
+
+@block("ilk-dagilim")
+def ilk_dagilim(heavy: bool) -> None:
+    from semantic_bridge import distribution_kaynak as K
+
+    st, bk = http("/api/v1/distribution/books", 300)
+    if not ok_or_skip("dağılım /books", st, bk):
+        return
+    k = contract("dağılım /books", bk, K.NOT_RAKAM)
+    got = run_all("dağılım /books", k, heavy)
+    rows = got.get("dagilim.kitaplar")
+    if rows is not None:
+        check("R dağılım: liste satırı = kitap tablosu satırı (süzgeçsiz)", len(rows) == len(bk.get("items") or []),
+              f"tablo {len(rows)} · uç {len(bk.get('items') or [])}")
+    for path in ("/api/v1/distribution/tracking", "/api/v1/distribution/my-region?herkes=true", "/api/v1/distribution/alerts"):
+        st, out = http(path, 300)
+        if ok_or_skip(f"dağılım {path}", st, out):
+            k = contract(f"dağılım {path.split('?')[0]}", out, K.NOT_RAKAM)
+            run_all(f"dağılım {path.split('?')[0]}", k, heavy)
+    code = next((b["stokKodu"] for b in bk.get("items") or [] if b.get("plan")), None)
+    if code:
+        pid = next(b["plan"]["id"] for b in bk["items"] if b["stokKodu"] == code)
+        for path in (f"/api/v1/distribution/plans/{pid}", f"/api/v1/distribution/plans/{pid}/lines"):
+            st, out = http(path, 300)
+            if ok_or_skip(f"dağılım {path}", st, out):
+                contract(f"dağılım {path.rsplit('/', 1)[-1]}", out, K.NOT_RAKAM)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")

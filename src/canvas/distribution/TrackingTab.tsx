@@ -7,9 +7,11 @@ import { fmtDay, fmtPct } from '../budget/api';
 import { ENGINE_ENABLED } from '../engine';
 import { distApi, type TrackSummary } from './api';
 import { Share, n0 } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** İzlenen kitaplar: onaydan sonraki 8 hafta plan → sevk → faturalanan → iade. Kitaba dokununca bölge, hafta, cari. */
-export default function TrackingTab({ items, loading }: { items: TrackSummary[]; loading: boolean }) {
+export default function TrackingTab({ items, loading, k }: { items: TrackSummary[]; loading: boolean; k?: Kaynaklar }) {
   const [open, setOpen] = useState<string | null>(null);
   if (loading) return <Panel><div className="py-8 text-center text-[12px] text-canvas-muted">Okunuyor…</div></Panel>;
   if (!items.length) {
@@ -33,7 +35,8 @@ export default function TrackingTab({ items, loading }: { items: TrackSummary[];
               </div>
               {s.veriBitti && <span className="text-[11.5px] font-bold text-amber-700">Logo verisi onaydan önce bitiyor</span>}
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-5">
+            <div className="relative grid grid-cols-2 gap-2 pr-6 text-[12px] sm:grid-cols-5">
+              <span className="absolute right-0 top-0" onClick={(e) => e.stopPropagation()}><SqlInfo k={k} alan="izlenen[]" label={`${s.ad ?? s.stokKodu}: plan, sevk, fatura, iade`} /></span>
               <Fig label="Plan" value={n0(s.plan)} />
               <Fig label="Sevk" value={n0(s.sevk)} sub={fmtPct(s.sevkOrani, 0)} />
               <Fig label="Faturalanan" value={n0(s.fatura)} />
@@ -67,7 +70,7 @@ function Detail({ stok, planId }: { stok: string; planId: string }) {
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-canvas-muted">
-        <span>Değerlendirme günü {fmtDay(s.degerlendirmeGunu)}</span>
+        <span className="inline-flex items-center gap-1">Değerlendirme günü {fmtDay(s.degerlendirmeGunu)}<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Hafta, bölge ve müşteri takibi" /></span>
         <Link to={`/ilk-dagilim/${encodeURIComponent(stok)}?plan=${planId}`} className="font-bold text-canvas-violet hover:underline">Planı aç</Link>
       </div>
       {!!s.haftalar?.length && (

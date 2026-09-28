@@ -519,7 +519,11 @@ class Sources:
     def __init__(self, logo_run: Callable[[], src.Runner], crm_run: Callable[[], src.Runner], schema: Callable[[], str],
                  m12: Callable[[], Any] = lambda: None, m10: Callable[[], Any] = lambda: None,
                  llm: Callable[[], Any] = lambda: None):
-        self.logo_run, self.crm_run, self.schema = logo_run, crm_run, schema
+        # Sorgu bilgisi: bu bağlamda Logo/CRM'de çalışan her SQL (metin, satır, süre, an) — okuma kaydına yazılır.
+        self.reads: list[dict[str, Any]] = []
+        self.logo_run = lambda: src.logged("logo", logo_run(), self.reads)
+        self.crm_run = lambda: src.logged("crm", crm_run(), self.reads)
+        self.schema = schema
         self.m12, self.m10, self.llm = m12, m10, llm
         self._logo: Optional[src.Logo] = None
         self._accounts: Optional[tuple[float, list[dict[str, Any]]]] = None
@@ -607,15 +611,74 @@ def refresh_books(engine: sa.engine.Engine, tenant: str, S: Sources, engine_tena
     meta_set(engine, tenant, "logo", {"veriSonu": end.isoformat() if end else None,
                                       "depoSonu": depot_end.isoformat() if depot_end else None,
                                       "kitap": len(rows), "logoGiris": len(entries), "uretimKarti": len(m12),
-                                      "uyarilar": warnings, "pencere": since.isoformat()})
+                                      "uyarilar": warnings, "pencere": since.isoformat(), "sorgular": list(S.reads)})
     return {"kitap": len(rows), "logo": len(entries), "m12": len(m12), "uyarilar": warnings}
+
+
+# ------------------------------------------------------------------ okuma ifadeleri (sorgu bilgisi aynısını gösterir)
+
+
+def books_stmt(tenant: str):
+    return sa.select(BOOKS).where(BOOKS.c.tenant_id == tenant)
+
+
+def open_plans_stmt(tenant: str, codes: Optional[list[str]] = None):
+    q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.durum != "arsiv")
+    return q.where(PLANS.c.stok_kodu.in_(codes)) if codes is not None else q
+
+
+def approved_plans_stmt(tenant: str, code: str = ""):
+    q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.durum == "onayli")
+    if code:
+        q = q.where(PLANS.c.stok_kodu == code)
+    return q.order_by(PLANS.c.decided_at.desc())
+
+
+def book_plans_stmt(tenant: str, code: str):
+    return sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.stok_kodu == code).order_by(PLANS.c.surum.desc())
+
+
+def plan_stmt(tenant: str, plan_id: str):
+    return sa.select(PLANS).where(PLANS.c.id == plan_id, PLANS.c.tenant_id == tenant)
+
+
+def lines_stmt(plan_id: str, bmt: Optional[str] = None, *, only_qty: bool = False):
+    q = sa.select(LINES).where(LINES.c.plan_id == plan_id)
+    if only_qty:
+        q = q.where(LINES.c.adet > 0)
+    return _visible(q, bmt)
+
+
+def comps_stmt(plan_id: str):
+    return sa.select(COMPS).where(COMPS.c.plan_id == plan_id)
+
+
+def tracking_stmt(plan_ids: Optional[list[str]] = None):
+    q = sa.select(TRACKING)
+    return q.where(TRACKING.c.plan_id.in_(plan_ids or [""])) if plan_ids is not None else q
+
+
+def alerts_stmt(tenant: str, *, durum: str = "acik", tur: str = "", bmt: Optional[str] = None, page: Optional[int] = None):
+    cond = [ALERTS.c.tenant_id == tenant]
+    if durum == "acik":
+        cond.append(ALERTS.c.durum.in_(("acik", "bilgi")))
+    elif durum:
+        cond.append(ALERTS.c.durum == durum)
+    if tur:
+        cond.append(ALERTS.c.tur == tur)
+    if bmt:
+        cond.append(sa.func.lower(ALERTS.c.bmt_hesap) == bmt.lower())
+    q = sa.select(ALERTS).where(*cond).order_by(ALERTS.c.son_zaman.desc())
+    return q.offset(max(0, page) * PAGE_SIZE).limit(PAGE_SIZE) if page is not None else q
+
+
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
 
 
 def _latest_plans(c: Any, tenant: str, codes: Optional[list[str]] = None) -> dict[str, Any]:
     """Kitap başına arşivde olmayan en son plan (onaylı varsa o; açık taslak/onayda varsa o öne)."""
-    q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.durum != "arsiv")
-    if codes is not None:
-        q = q.where(PLANS.c.stok_kodu.in_(codes))
+    q = open_plans_stmt(tenant, codes)
     out: dict[str, Any] = {}
     rank = {"taslak": 3, "onayda": 2, "onayli": 1}
     for r in c.execute(q):
@@ -637,7 +700,7 @@ def list_books(engine: sa.engine.Engine, tenant: str, durum: str = "", q: str = 
     """«Dağılım bekleyen kitaplar» (depoya giriş penceresi) ve «İzlenen kitaplar» (onaydan sonraki takip penceresi)."""
     p = params()
     with engine.connect() as c:
-        books = c.execute(sa.select(BOOKS).where(BOOKS.c.tenant_id == tenant)).all()
+        books = c.execute(books_stmt(tenant)).all()
         plans = _latest_plans(c, tenant)
         approved = [r for r in plans.values() if r.durum == "onayli"]
         shipped = _shipped(c, [r.id for r in approved])
@@ -1119,7 +1182,8 @@ def generate(engine: sa.engine.Engine, tenant: str, user: str, code: str, S: Sou
             id=pid, tenant_id=tenant, stok_kodu=code, ad=book.ad, surum=v, durum="taslak",
             depo_giris_tarihi=book.depo_giris_tarihi, baski_adedi=book.baski_adedi, stok_bakiye=book.stok_bakiye,
             toplam_adet=0, onerilen_toplam=prop["total"], rezerv_adet=prop["reserve"],
-            hedef_plan_id=prop["target"].get("planId"), hedef_json=_dump(prop["target"]), basis_json=_dump(prop["basis"]),
+            hedef_plan_id=prop["target"].get("planId"), hedef_json=_dump(prop["target"]),
+            basis_json=_dump({**prop["basis"], "sorgular": list(S.reads)}),
             gerekce=prop["text"], gerekce_kaynak=prop["textSource"], created_by=user, created_at=now, updated_by=user,
             updated_at=now))
         _write_lines(c, pid, prop["lines"])
@@ -1337,7 +1401,8 @@ def _plan_dict(row: Any) -> dict[str, Any]:
         "id": row.id, "stokKodu": row.stok_kodu, "ad": row.ad, "surum": row.surum, "durum": row.durum,
         "durumEtiket": STATUSES.get(row.durum, row.durum), "depoGiris": row.depo_giris_tarihi, "baskiAdedi": row.baski_adedi,
         "stok": row.stok_bakiye, "toplam": row.toplam_adet, "onerilenToplam": row.onerilen_toplam, "rezerv": row.rezerv_adet,
-        "hedef": _j(row.hedef_json, {}), "basis": _j(row.basis_json, {}), "gerekce": row.gerekce,
+        "hedef": _j(row.hedef_json, {}), "basis": {k: v for k, v in (_j(row.basis_json, {}) or {}).items() if k != "sorgular"},
+        "gerekce": row.gerekce,
         "gerekceKaynak": row.gerekce_kaynak, "note": row.note, "revisionOf": row.revision_of,
         "revisionReason": row.revision_reason, "createdBy": row.created_by, "createdAt": _iso(row.created_at),
         "updatedBy": row.updated_by, "updatedAt": _iso(row.updated_at), "submittedBy": row.submitted_by,
@@ -1366,7 +1431,7 @@ def plan_detail(engine: sa.engine.Engine, tenant: str, plan_id: str, bmt: Option
         row = _plan_row(c, tenant, plan_id)
         lines = c.execute(_visible(sa.select(LINES.c.bolge, LINES.c.kanal, LINES.c.adet, LINES.c.onerilen_adet)
                                    .where(LINES.c.plan_id == row.id), bmt)).all()
-        comps = c.execute(sa.select(COMPS).where(COMPS.c.plan_id == row.id)).all()
+        comps = c.execute(comps_stmt(row.id)).all()
         stock, kind = _current_stock(c, tenant, row)
         n_lines = len(lines)
         edited = c.execute(sa.select(sa.func.count()).select_from(LINES).where(
@@ -1420,8 +1485,7 @@ def get_plan_row(engine: sa.engine.Engine, tenant: str, plan_id: str) -> Any:
 
 def plans_of(engine: sa.engine.Engine, tenant: str, code: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.stok_kodu == code)
-                         .order_by(PLANS.c.surum.desc())).all()
+        rows = c.execute(book_plans_stmt(tenant, code)).all()
     return [_plan_dict(r) for r in rows]
 
 
@@ -1516,7 +1580,9 @@ def refresh_tracking(engine: sa.engine.Engine, tenant: str, S: Sources, row: Any
         return {"planId": row.id, "satir": 0}
     start = (row.decided_at.astimezone(TZ) if row.decided_at.tzinfo else row.decided_at).date()
     end = start + timedelta(days=7 * p["takipHafta"])
+    n0 = len(S.reads)
     rows = S.logo().tracking(row.stok_kodu, start, end)
+    meta_set(engine, tenant, f"track:{row.id}", {"sorgular": S.reads[n0:], "satir": len(rows)})
     merged: dict[tuple[str, int], dict[str, float]] = {}
     for r in rows:
         if not r["cari_kodu"] or r["hafta"] < 1:
@@ -1568,10 +1634,7 @@ def tracking(engine: sa.engine.Engine, tenant: str, code: str = "", upto_week: i
     """Bir kitabın (ya da izlenen bütün kitapların) takibi: özet, bölge, hafta ve cari ayrıntısı."""
     p = params()
     with engine.connect() as c:
-        q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.durum == "onayli")
-        if code:
-            q = q.where(PLANS.c.stok_kodu == code)
-        plans = c.execute(q.order_by(PLANS.c.decided_at.desc())).all()
+        plans = c.execute(approved_plans_stmt(tenant, code)).all()
     out = []
     for row in plans:
         s = tracking_summary(engine, tenant, row, bmt)
@@ -1607,8 +1670,7 @@ def my_region(engine: sa.engine.Engine, tenant: str, user: Optional[str]) -> dic
     p = params()
     limit_day = today() - timedelta(days=7 * p["takipHafta"] + 7)
     with engine.connect() as c:
-        plans = c.execute(sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.durum == "onayli")
-                          .order_by(PLANS.c.decided_at.desc())).all()
+        plans = c.execute(approved_plans_stmt(tenant)).all()
         items = []
         for row in plans:
             d = row.decided_at.astimezone(TZ).date() if row.decided_at and row.decided_at.tzinfo else (row.decided_at.date() if row.decided_at else None)
@@ -1747,8 +1809,7 @@ def alerts(engine: sa.engine.Engine, tenant: str, *, durum: str = "acik", tur: s
         if bmt:
             cond.append(sa.func.lower(ALERTS.c.bmt_hesap) == bmt.lower())
         total = c.execute(sa.select(sa.func.count()).select_from(ALERTS).where(*cond)).scalar()
-        rows = c.execute(sa.select(ALERTS).where(*cond).order_by(ALERTS.c.son_zaman.desc())
-                         .offset(max(0, page) * PAGE_SIZE).limit(PAGE_SIZE)).all()
+        rows = c.execute(alerts_stmt(tenant, durum=durum, tur=tur, bmt=bmt, page=page)).all()
         counts = {t: n for t, n in c.execute(sa.select(ALERTS.c.tur, sa.func.count()).where(
             ALERTS.c.tenant_id == tenant, ALERTS.c.durum.in_(("acik", "bilgi"))).group_by(ALERTS.c.tur))}
     return {"items": [_alert_dict(a) for a in rows], "total": int(total or 0), "page": page, "pageSize": PAGE_SIZE,

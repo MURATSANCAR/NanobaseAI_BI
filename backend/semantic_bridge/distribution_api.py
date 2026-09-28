@@ -22,6 +22,7 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import distribution as D
+from semantic_bridge import distribution_kaynak as K
 from semantic_bridge import distribution_sources as src
 
 log = logging.getLogger("semantic.distribution.api")
@@ -53,6 +54,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         return D.Sources(lambda: src.runner(rt().settings.connection_file), lambda: src.runner(crm_path()),
                          lambda: admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo",
                          m12=lambda: getattr(app.state, "production", None), m10=m10, llm=llm)
+
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        """Bağlantı dosyalarından YALNIZ veritabanı adları (sorgu bilgisinde USE satırı için)."""
+        from semantic_bridge import provenance as PV
+        return PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_path())
+
+    def bind(out, build):
+        from semantic_bridge import provenance as PV
+        return PV.bagla(out, build)
 
     def m12_cards(engine, tenant) -> Callable[[], list]:
         def read() -> list:
@@ -108,7 +118,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(f"{P}/books")
     def dist_books(request: Request, durum: str = "", q: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(D.list_books, engine, tenant, durum, q)
+        out = call(D.list_books, engine, tenant, durum, q)
+        return bind(out, lambda: K.for_books(engine, tenant, out, *dbs()))
 
     @app.post(f"{P}/books/refresh")
     async def dist_books_refresh(request: Request) -> dict[str, Any]:
@@ -156,7 +167,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, _, _ = ctx(request)
         if not stok:
             raise HTTPException(status_code=400, detail={"code": "DISTRIBUTION", "message": "Stok kodu gerekli."})
-        return {"items": D.plans_of(engine, tenant, stok.strip()[:60])}
+        out = {"items": D.plans_of(engine, tenant, stok.strip()[:60])}
+        return bind(out, lambda: K.for_plans(engine, tenant, stok.strip()[:60]))
 
     @app.post(f"{P}/plans/generate", status_code=201)
     async def dist_generate(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -169,13 +181,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(f"{P}/plans/{{plan_id}}")
     def dist_plan(plan_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(D.plan_detail, engine, tenant, plan_id, scope(user))
+        out = call(D.plan_detail, engine, tenant, plan_id, scope(user))
+        return bind(out, lambda: K.for_plan(engine, tenant, plan_id, out, scope(user), *dbs()))
 
     @app.get(f"{P}/plans/{{plan_id}}/lines")
     def dist_lines(plan_id: str, request: Request, q: str = "", bolge: str = "", kanal: str = "", yalniz: str = "",
                    page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(D.list_lines, engine, tenant, plan_id, q=q, bolge=bolge, kanal=kanal, yalniz=yalniz, page=page, bmt=scope(user))
+        out = call(D.list_lines, engine, tenant, plan_id, q=q, bolge=bolge, kanal=kanal, yalniz=yalniz, page=page, bmt=scope(user))
+        return bind(out, lambda: K.for_lines(engine, tenant, plan_id, out, scope(user), *dbs()))
 
     @app.patch(f"{P}/plans/{{plan_id}}")
     def dist_plan_update(plan_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -270,18 +284,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(f"{P}/tracking")
     def dist_tracking(request: Request, stok: str = "", hafta: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(D.tracking, engine, tenant, stok.strip()[:60], hafta, scope(user))
+        out = call(D.tracking, engine, tenant, stok.strip()[:60], hafta, scope(user))
+        return bind(out, lambda: K.for_tracking(engine, tenant, out, scope(user), *dbs()))
 
     @app.get(f"{P}/my-region")
     def dist_my_region(request: Request, herkes: bool = False) -> dict[str, Any]:
         """BMT: kendi carilerine düşen kitaplar. Bütün carileri görebilen kişi `herkes=1` ile hepsini görür."""
         engine, tenant, user, _ = ctx(request)
         mine = scope(user)
-        return call(D.my_region, engine, tenant, None if (herkes and mine is None) else user)
+        who = None if (herkes and mine is None) else user
+        out = call(D.my_region, engine, tenant, who)
+        return bind(out, lambda: K.for_my_region(engine, tenant, out, who, *dbs()))
 
     @app.get(f"{P}/alerts")
     def dist_alerts(request: Request, durum: str = "acik", tur: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(D.alerts, engine, tenant, durum=durum, tur=tur, page=page, bmt=scope(user))
+        out = call(D.alerts, engine, tenant, durum=durum, tur=tur, page=page, bmt=scope(user))
+        return bind(out, lambda: K.for_alerts(engine, tenant, out, durum=durum, tur=tur, bmt=scope(user), page=page))
 
     return sources
