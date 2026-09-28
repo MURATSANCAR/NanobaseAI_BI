@@ -15,13 +15,15 @@ Tanımlar mevcut ekranlarla aynıdır, yeniden yazılmadı:
   TRCODE 7/8/9 satış, 2/3 iade eksi; net ciro = LINENET), gün kırılımıyla. Yıl → firma `L_CAPIPERIOD`. Stok kodları önce
   `ITEMS`'tan kayıt numarasına çevrilir (satış görünümlerindeki «IN listesi planı bozar» tuzağına düşmemek için STLINE
   `STOCKREF` ile süzülür). Veri sonu = `budget_sources.data_end_sql`.
-- **Depo stoku:** Baskı Öneri'nin `logo_depo_stok.sql` görünümü olduğu gibi; yedek sinyal CRM sipariş satırındaki
+- **Depo stoku:** Baskı Öneri'nin `logo_depo_stok.sql` görünümü olduğu gibi ve süzgeçsiz; kitap Python'da boşluk/harf
+  farkı gözetilmeden (`stock_key`) seçilir. Lansman penceresi bittiyse de bugünün okuması yazılır. Yedek sinyal CRM sipariş satırındaki
   «Sipariş anındaki depo stok» (`new_siparisanindakistokadedi`, en son siparişin değeri ve zamanı).
 - **Etkinlik:** CRM `new_etkinlik` (ilgili kitap bağı; katılımcı, satılan kitap, gelir, gider, durum). Katılımcının
   kişisel verisi okunmaz, yalnız sayı.
 """
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 
@@ -154,13 +156,23 @@ WHERE S.CANCELLED = 0 AND S.LINETYPE = 0 AND S.INVOICEREF <> 0 AND S.TRCODE IN (
 GROUP BY S.STOCKREF, CAST(S.DATE_ AS DATE)""".strip()
 
 
-def depot_sql(codes: Iterable[str]) -> str:
-    """Baskı Öneri'nin depo stoku sorgusu (değiştirilmeden), lansman kitaplarıyla süzülür."""
+def stock_key(v: Any) -> str:
+    """Stok kodu eşleme anahtarı: boşluksuz, büyük harf. Logo görünümündeki kod sağdan boşluklu ya da farklı harf
+    büyüklüğüyle gelebilir; lansmanın (CRM) kodu da öyle. İki taraf aynı anahtarla karşılaştırılır."""
+    return re.sub(r"\s+", "", str(v or "")).upper()
+
+
+def depot_sql(codes: Iterable[str] = ()) -> str:
+    """Baskı Öneri'nin depo stoku sorgusu **değiştirilmeden ve süzülmeden** (Baskı Öneri, M11 stok ve backlist de bütün
+    görünümü okur). Kitap süzgeci Python'da `stock_key` ile yapılır: görünümü `IN (...)` ile sarmak hem planı bozabilir
+    (Logo görünüm tuzakları) hem de kod biçimi farkında satırı düşürür — lansman ekranında depo boş kalıyordu
+    (M16 kabulü 2026-09-28: 15201.01.6715 için ekran boş, doğrudan SQL 686)."""
     from semantic_bridge.management import sql_text
 
     base = sql_text("baski-oneri", "logo_depo_stok").strip().rstrip(";")
-    return (f"-- Depo stoku (Baskı Öneri ile aynı görünüm), lansman kitaplarıyla süzüldü.\n"
-            f"SELECT d.stok_kodu, d.depo_stok FROM (\n{base}\n) AS d WHERE d.stok_kodu IN ({_codes(codes)})")
+    wanted = ", ".join(sorted({str(c).strip() for c in codes if c}))
+    return (f"-- Depo stoku (Baskı Öneri ile aynı görünüm, süzgeçsiz); lansman kitapları Python'da seçilir: {wanted}\n"
+            f"{base}")
 
 
 # ------------------------------------------------------------------ okuma
@@ -285,11 +297,13 @@ class Sources:
         return out, sqls
 
     def depot(self, codes: list[str]) -> tuple[dict[str, float], str]:
+        """Lansman kitaplarının depo stoku; anahtar `stock_key`. Görünümde hiç satırı olmayan kitap sözlükte yoktur."""
         sql = depot_sql(codes)
+        wanted = {stock_key(c) for c in codes if c}
         out: dict[str, float] = {}
         for r in self._run(self._logo, sql):
-            k = _s(r.get("stok_kodu"))
-            if k:
+            k = stock_key(r.get("stok_kodu"))
+            if k and k in wanted:
                 out[k] = out.get(k, 0.0) + _num(r.get("depo_stok"))
         return out, sql
 

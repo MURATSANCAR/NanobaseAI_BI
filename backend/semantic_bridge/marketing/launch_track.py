@@ -15,6 +15,7 @@ import sqlalchemy as sa
 
 from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import launch as L
+from semantic_bridge.marketing import launch_sources as src_mod
 from semantic_bridge.marketing.launch_sources import Sources, first_days
 from semantic_bridge.marketing.sources import SourceError
 
@@ -151,6 +152,7 @@ def refresh(engine: Any, tenant: str, launches: list[dict[str, Any]], src: Sourc
             sales, sqls["fatura"] = read("Logo faturalı satış", lambda: src.daily_sales(firms, codes, lo, hi), ({}, None))
             depot, sqls["depo"] = read("Logo depo stoku", lambda: src.depot(codes), (None, None))
     ok_sales = logo and sqls.get("fatura") is not None
+    dep = {src_mod.stock_key(k): float(v or 0.0) for k, v in (depot or {}).items()}
 
     for x in launches:
         lid, code, pub = x["id"], x["stokKodu"], x["yayinGunu"]
@@ -164,7 +166,8 @@ def refresh(engine: Any, tenant: str, launches: list[dict[str, Any]], src: Sourc
         years = sorted({y for y in range(p.year, (p + timedelta(days=29)).year + 1)})
         targets = _targets(engine, tenant, code, years)
         # Yayına pencereden uzun süre varsa (elle erken açılan lansman) yalnız bugünün anlık okuması yazılır.
-        for g in (L.days_between(a, b) or [today.isoformat()]):
+        span = L.days_between(a, b) or [today.isoformat()]
+        for g in span:
             d = date.fromisoformat(g)
             v: dict[str, Any] = {}
             if ok_orders:
@@ -187,9 +190,22 @@ def refresh(engine: Any, tenant: str, launches: list[dict[str, Any]], src: Sourc
                 if pend is not None:
                     v["bekleyen_urun_adet"] = pend.get(code, 0.0)
                 if depot is not None:
-                    v["depo_stok"] = depot.get(code, 0.0)
+                    v["depo_stok"] = dep.get(src_mod.stock_key(code), 0.0)
             if v:
                 rows[g] = v
+        if today.isoformat() not in span:
+            # Pencere bitti (D+30'dan sonra) ama lansman açık: bugünün anlık okuması (açık sipariş, bekleyen ürün, depo)
+            # yine yazılır; pencere dışı satırda sipariş/fatura/hedef alanı yok, toplamlar değişmez. Yazılmazsa ekranda
+            # depo stoku boş kalıyordu (M16 kabulü 2026-09-28).
+            snap: dict[str, Any] = {}
+            if open_ is not None:
+                snap["bekleyen_adet"] = open_.get(code, 0.0)
+            if pend is not None:
+                snap["bekleyen_urun_adet"] = pend.get(code, 0.0)
+            if depot is not None:
+                snap["depo_stok"] = dep.get(src_mod.stock_key(code), 0.0)
+            if snap:
+                rows[today.isoformat()] = snap
         report["gun"] += L.upsert_days(engine, lid, rows)
 
         dist = prev.get("dagilim")

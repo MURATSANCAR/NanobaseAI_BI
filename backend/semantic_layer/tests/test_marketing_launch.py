@@ -197,6 +197,45 @@ def test_refresh_writes_orders_sales_until_data_end_and_flags_stock_conflict(eng
     assert {d["gun"]: d for d in L.days_of(engine, lid)}[pub.isoformat()]["fatura_net_adet"] == 30
 
 
+def test_depot_reads_whole_view_and_matches_code_regardless_of_padding():
+    """M16 kabulü 2026-09-28: 15201.01.6715 ekranda boş, doğrudan SQL 686. Görünüm IN ile sarılmaz, kod boşluk/harf
+    farkı gözetilmeden eşlenir, aynı kodun satırları toplanır."""
+    seen = []
+
+    def logo_run(sql):
+        seen.append(sql)
+        return [{"stok_kodu": "15201.01.6715  ", "depo_stok": 600}, {"stok_kodu": "15201.01.6715", "depo_stok": 86},
+                {"stok_kodu": "99999.01.0001", "depo_stok": 5}]
+
+    src = S.Sources(lambda: "Timas_MSCRM.dbo", lambda: (lambda sql: []), lambda: logo_run)
+    got, sql = src.depot(["15201.01.6715"])
+    assert got == {S.stock_key("15201.01.6715"): 686.0}
+    assert "EOS_DEPO_STOK_KONTROL_211" in sql and " IN (" not in sql.split("\n", 1)[1]
+    assert S.stock_key(" 15201.01.6715 ") == S.stock_key("15201.01.6715") == "15201.01.6715"
+
+
+class _PaddedDepot(FakeSources):
+    def depot(self, codes):
+        return {f" {codes[0].lower()}  ": 686.0}, "SELECT depo"
+
+
+def test_depot_snapshot_is_written_after_the_window_without_touching_totals(engine, monkeypatch):
+    """Lansman açık ama 30 günlük pencere bitmiş: bugünün depo/açık sipariş okuması yine yazılır, toplamlar değişmez."""
+    today = C.today()
+    pub = today - timedelta(days=40)
+    lid, _ = _launch(engine, pub=pub.isoformat(), stok="15201.01.6715")
+    monkeypatch.setattr(TR, "_targets", lambda *a: {})
+    TR.refresh(engine, T, [L.get(engine, T, lid)], _PaddedDepot(pub, data_end=pub + timedelta(days=1)), _st(), logo=True,
+               today=today)
+    days = {d["gun"]: d for d in L.days_of(engine, lid)}
+    snap = days[today.isoformat()]
+    assert snap["depo_stok"] == 686 and snap["bekleyen_adet"] == 500
+    assert snap["siparis_adet"] is None and snap["hedef_payi_adet"] is None and snap["fatura_net_adet"] is None
+    h = L.get(engine, T, lid)
+    assert h["sinyal"]["depo"]["deger"] == 686 and h["sinyal"]["depo"]["kaynak"] == "logo"
+    assert h["sinyal"]["siparis"] == 70          # yalnız pencere içindeki iki sipariş günü
+
+
 def test_a_failed_source_is_reported_not_written_as_zero(engine, monkeypatch):
     today = C.today()
     pub = today - timedelta(days=2)
