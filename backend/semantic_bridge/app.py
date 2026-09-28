@@ -6681,7 +6681,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                                      snapshot=app.state.pricing.get)
     corporate_sales_sources.register_cost_provider(app.state.pricing_costs.birim)   # M32 (CORP_COST_SOURCE=m9)
     app.state.unit_cost = app.state.pricing_costs.labelled()                        # M33 (tenders_api okur)
-    # M53 set/hediye main'e girince: sets_sources.register_cost_provider(app.state.pricing_costs.birim)
+    from semantic_bridge import sets_sources
+    sets_sources.register_cost_provider(app.state.pricing_costs.birim)              # M53 (SETS_COST_SOURCE=m9)
 
     # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
     from semantic_bridge import tenders_api
