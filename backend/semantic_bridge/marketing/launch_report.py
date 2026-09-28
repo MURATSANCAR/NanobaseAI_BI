@@ -92,9 +92,8 @@ def numbers(full: dict[str, Any], days: list[dict[str, Any]], gun: int, events: 
     done = [x for x in tasks if x["durum"] == "yapildi"]
     add("madde", "Yapılan madde", len(done), "madde", "Kontrol listesi")
     add("maddeToplam", "Bu güne kadarki madde", len(tasks), "madde", "Kontrol listesi")
+    # Kaynak sorguları (okuma anındaki çalışmış metinler); ekranda gösterilen sorgu bilgisi `kaynak_lansman.for_reviews`.
     sql = dict(oz.get("sql") or {})
-    sql["gunluk"] = ("SELECT gun, siparis_adet, dagilim_adet, fatura_net_adet, fatura_net_ciro, hedef_payi_adet, veri_sonu_logo "
-                     f"FROM semantic_mkt_launch_daily WHERE launch_id = '{full['id']}' AND gun BETWEEN '{pub}' AND '{e_iso}' ORDER BY gun")
     return {"gun": gun, "pencere": {"bas": pub, "bit": e_iso}, "satirlar": rows, "veriSonuLogo": logo_end,
             "eksikGun": max(0, (end - (today or C.today())).days) if (today or C.today()) < end else 0,
             "yapilmayan": [{"is": x["is"], "tarih": x["tarih"], "durum": x["durum"]} for x in tasks if x["durum"] != "yapildi"],

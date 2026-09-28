@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay, fmtShortDay } from '../api';
 import { Block, DaysLeft } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { blApi, fmtN, fmtOne, type AgendaBook, type BlMeta } from './api';
 
 /** Gündem: önümüzdeki N haftanın özel günleri (bağlı kitaplar, stok, geçen yılın aynı ayı), yazarı yeni kitap çıkaran
@@ -97,7 +98,7 @@ export default function AgendaTab({ meta }: { meta: BlMeta }) {
       {d && !d.gunler.length && !d.yazarlar.length && !d.konular.length && <Note tone="info">Bu pencerede backlist kitaplarına bağlı gündem yok.</Note>}
 
       {d?.gunler.map((g) => (
-        <Block key={`${g.id}-${g.baslangic}`} title={g.ad ?? 'Özel gün'}
+        <Block key={`${g.id}-${g.baslangic}`} title={g.ad ?? 'Özel gün'} info={<SqlInfo k={d?.kaynaklar} alan="gunler[]" label="Stok, tükenme ve geçen yıl aynı ay" />}
           help={<>{fmtDay(g.baslangic)}{g.bitis && g.bitis !== g.baslangic ? ` – ${fmtDay(g.bitis)}` : ''} · {g.yontem ?? ''}{g.kesinlik === 'yaklasik' ? ' (yaklaşık)' : ''} · bağlı {g.kitaplar.length} kitap, stokta {g.stokta}, planı olmayan {g.aktivasyonsuz}</>}
           action={<div className="flex items-center gap-2"><DaysLeft days={g.kalanGun} />{action(`gun:${g.id}`, g.baslangic ?? undefined)}</div>}>
           {bookList(`gun:${g.id}`, g.kitaplar, true)}
@@ -105,7 +106,7 @@ export default function AgendaTab({ meta }: { meta: BlMeta }) {
       ))}
 
       {!!d?.yazarlar.length && (
-        <Block title="Yazarı yeni kitap çıkaranlar" help="Yeni kitabın ilk yayını son 30 gün ya da pencere içinde; aynı yazarın backlist kitapları çapraz satış adayıdır.">
+        <Block title="Yazarı yeni kitap çıkaranlar" info={<SqlInfo k={d?.kaynaklar} alan="yazarlar[]" label="Yazarı yeni kitap çıkaranlar" />} help="Yeni kitabın ilk yayını son 30 gün ya da pencere içinde; aynı yazarın backlist kitapları çapraz satış adayıdır.">
           <div className="flex flex-col gap-3">
             {d.yazarlar.map((a) => (
               <div key={a.stokKodu}>
@@ -121,7 +122,7 @@ export default function AgendaTab({ meta }: { meta: BlMeta }) {
       )}
 
       {!!d?.konular.length && (
-        <Block title="Konu eşleşmeleri" help="Özel günün adı kitabın CRM anahtar kelime ve temalarında geçiyor; Zeki AI «ilgili mi?» sorusuna kapalı kümeden cevap verdi. Onay sizde.">
+        <Block title="Konu eşleşmeleri" info={<SqlInfo k={d?.kaynaklar} alan="konular[]" label="Konu eşleşmesi ve skor" />} help="Özel günün adı kitabın CRM anahtar kelime ve temalarında geçiyor; Zeki AI «ilgili mi?» sorusuna kapalı kümeden cevap verdi. Onay sizde.">
           <ul className="flex flex-col divide-y divide-slate-100">
             {d.konular.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 py-2">

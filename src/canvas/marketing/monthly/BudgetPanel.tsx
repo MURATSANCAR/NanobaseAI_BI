@@ -3,7 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtMoney, fmtPct, parseNum } from '../api';
-import { Block, SourceNote } from '../parts';
+import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { monthApi, type MonthView } from './api';
 
 /** Bütçe ve öncelik: M46 ay hedef payı ve önceki ay oranıyla yeni kitap / backlist dağılımı. Tutarı kod hesaplar;
@@ -48,6 +49,7 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
     <Block
       title="Bütçe ve öncelik"
       help="Segment payı = ayın satış hedefindeki payı × önceki ay hedefin altında kalındıysa açık kadar artış. Kanal payı o segmentin kitaplarına bağlı CRM pazarlama harcamasından. Rakamı kod hesaplar; Zeki AI yalnız gerekçe yazar."
+      info={<SqlInfo k={view.kaynaklar} alan="budget[]" label="Bütçe önerisi" />}
     >
       {!view.hedef.planId && <Note tone="warn">{view.hedef.not ?? 'Bu ay için onaylı satış hedefi yok.'}</Note>}
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -55,10 +57,11 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
           <div key={s} className="rounded-xl bg-white/70 p-3">
             <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{s === 'yeni' ? 'Yeni kitap' : 'Backlist'}</div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12.5px]">
-              <span><b className="font-mono tabular-nums">{fmtPct(view.hedef.paylar?.[s] ?? null)}</b> hedef payı</span>
+              <span className="inline-flex items-center gap-0.5"><b className="font-mono tabular-nums">{fmtPct(view.hedef.paylar?.[s] ?? null)}</b> hedef payı<SqlInfo k={view.kaynaklar} alan="hedef" label="Hedef payı ve ay hedefi" /></span>
               {canSeeBudget && <span className="text-canvas-muted">{fmtMoney(seg[s]?.ciro ?? null)} ay hedefi</span>}
-              <span className={prev[s]?.oran != null && prev[s].oran! < 0.8 ? 'font-bold text-red-700' : 'text-canvas-muted'}>
+              <span className={`inline-flex items-center gap-0.5 ${prev[s]?.oran != null && prev[s].oran! < 0.8 ? 'font-bold text-red-700' : 'text-canvas-muted'}`}>
                 önceki ay {fmtPct(prev[s]?.oran ?? null)}
+                <SqlInfo k={view.kaynaklar} alan="oncekiAy" label="Önceki ay hedefe oran" />
               </span>
               {canSeeBudget && total > 0 && <span className="text-canvas-muted">bütçe payı {fmtPct(bySeg(s) / total)}</span>}
             </div>
@@ -70,6 +73,7 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
         <>
           <p className="mt-3 text-[12px] leading-snug text-canvas-muted">
             Çerçeve {fmtMoney(view.plan?.butceCerceve ?? null)} · {src?.gerekce ?? 'çerçeve yok'}
+            <SqlInfo k={view.kaynaklar} alan="plan" label="Bütçe çerçevesi" className="ml-0.5" />
           </p>
           <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-100 bg-white/80">
             <table className="w-full min-w-[560px] text-[12px]">
@@ -77,8 +81,8 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                   <th className="px-3 py-2">Segment</th>
                   <th className="px-3 py-2">Kanal</th>
-                  <th className="px-3 py-2 text-right">Öneri</th>
-                  <th className="px-3 py-2 text-right">Onaylanan</th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={view.kaynaklar} alan="budget[]">Öneri</InfoLabel></th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={view.kaynaklar} alan="budget[]">Onaylanan</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -112,7 +116,7 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
               </tbody>
               <tfoot>
                 <tr className="border-t border-slate-200">
-                  <td className="px-3 py-2 font-extrabold" colSpan={2}>Toplam</td>
+                  <td className="px-3 py-2 font-extrabold" colSpan={2}><InfoLabel k={view.kaynaklar} alan="plan">Toplam</InfoLabel></td>
                   <td className="px-3 py-2 text-right font-mono font-extrabold tabular-nums" colSpan={2}>{fmtMoney(view.plan?.butceToplam ?? null)}</td>
                 </tr>
               </tfoot>
@@ -145,7 +149,7 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
           <p className="mt-1 whitespace-pre-line text-[12.5px] leading-snug">{zeki.butceGerekce}</p>
         </div>
       )}
-      <SourceNote text={view.oncekiAy.kaynak} sql={view.oncekiAy.sql} />
+      {view.oncekiAy.kaynak && <p className="mt-2 text-[11px] leading-snug text-canvas-muted">{view.oncekiAy.kaynak}</p>}
     </Block>
   );
 }

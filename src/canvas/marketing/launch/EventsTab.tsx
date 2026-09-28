@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay, fmtInt, fmtMoney, parseNum } from '../api';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { launchApi, type Launch, type LaunchEvent, type LaunchMeta } from './api';
 
 /** Etkinlikler: CRM'de kitaba bağlı etkinlikler (okuma) + portalda girilen sonuç ve elle eklenen etkinlik. CRM'e
@@ -67,7 +68,7 @@ export default function EventsTab({ launch, meta }: { launch: Launch; meta: Laun
   const t = q.data?.toplam;
   return (
     <div className="flex flex-col gap-3">
-      <Block title="Yazar etkinlikleri" help="CRM'de bu kitaba bağlı etkinlikler; sonucu (katılımcı, satılan kitap) burada girilebilir. Toplamlar tamamlanan etkinliklerden.">
+      <Block title="Yazar etkinlikleri" info={<SqlInfo k={q.data?.kaynaklar} alan="toplam" label="Etkinlik toplamları" />} help="CRM'de bu kitaba bağlı etkinlikler; sonucu (katılımcı, satılan kitap) burada girilebilir. Toplamlar tamamlanan etkinliklerden.">
         {q.error && <Note tone="err">{errText(q.error, 'Etkinlikler açılamadı.')}</Note>}
         {q.data?.uyarilar.map((w) => <Note key={w} tone="warn">{w}</Note>)}
         {q.isLoading && <Loading />}

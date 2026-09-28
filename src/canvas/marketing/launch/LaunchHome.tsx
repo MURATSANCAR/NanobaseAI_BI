@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../api';
 import { Block, MarketingFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { TONE_CLASS, TONE_LABEL, dLabel, launchApi, type LaunchHead, type LaunchRisk, type RiskLevel, type TodayTask } from './api';
 
 /** M16 Lansman — ilk açılış: bu hafta ve gelecek 4 haftanın lansman şeridi (yayında ve ilk ay izlemesinde olanlar da),
@@ -190,16 +191,16 @@ export default function LaunchHome() {
 
       {list.data && (
         <>
-          <Block title="Yayında ve ilk ay izlemesinde" help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Renk: stok–talep çatışması ya da hedef payının eşik altı kırmızı; geciken madde ya da hedefin altı sarı. Risk bayrağı kuraldır (stok, dağılım, hedef payı, emsal sapması, siparişsiz gün); karar sizindir.">
+          <Block title="Yayında ve ilk ay izlemesinde" info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Gün sayacı, renk ve geciken madde" />} help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Renk: stok–talep çatışması ya da hedef payının eşik altı kırmızı; geciken madde ya da hedefin altı sarı. Risk bayrağı kuraldır (stok, dağılım, hedef payı, emsal sapması, siparişsiz gün); karar sizindir.">
             {live.length ? <Strip items={live} /> : <p className="text-[12.5px] text-canvas-muted">Şu an yayında olan lansman yok.</p>}
           </Block>
-          <Block title="Bu hafta ve gelecek 4 hafta" help="Yayın günü yaklaşan lansmanlar; gün sayacı yayın gününe göre.">
+          <Block title="Bu hafta ve gelecek 4 hafta" info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Gün sayacı ve geciken madde" />} help="Yayın günü yaklaşan lansmanlar; gün sayacı yayın gününe göre.">
             {soon.length ? <Strip items={soon} /> : <p className="text-[12.5px] text-canvas-muted">Önümüzdeki 5 haftada açılmış lansman yok.</p>}
           </Block>
         </>
       )}
 
-      <Block title="Bugün yapılacaklar" help={kim === 'ben' ? 'Sorumlusu siz olan maddeler (sorumlusu boşsa lansman sahibi). Geciken maddeler kırmızı.' : 'Bütün açık lansmanların bugün ve geciken maddeleri.'}>
+      <Block title="Bugün yapılacaklar" info={<SqlInfo k={todo.data?.kaynaklar} alan="items[]" label="Bugünün ve geciken maddeler" />} help={kim === 'ben' ? 'Sorumlusu siz olan maddeler (sorumlusu boşsa lansman sahibi). Geciken maddeler kırmızı.' : 'Bütün açık lansmanların bugün ve geciken maddeleri.'}>
         {todo.error && <Note tone="err">{errText(todo.error, 'Maddeler açılamadı.')}</Note>}
         {todo.isLoading && <Loading />}
         {todo.data && todo.data.items.length === 0 && <p className="text-[12.5px] text-canvas-muted">Bugün için bekleyen madde yok.</p>}

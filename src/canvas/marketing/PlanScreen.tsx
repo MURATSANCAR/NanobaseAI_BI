@@ -9,6 +9,7 @@ import { Kpi, KpiRow } from '../editorial/kit';
 import { AskSheet, Tabs } from '../budget/parts';
 import { STATUS_TONE, fmtDay, fmtInt, fmtMoney, fmtStamp, mktApi, type Plan } from './api';
 import { Block, MarketingFrame } from './parts';
+import SqlInfo from '../components/SqlInfo';
 import CardTab from './CardTab';
 import ChannelsTab from './ChannelsTab';
 import CalendarTab from './CalendarTab';
@@ -167,15 +168,19 @@ export default function PlanScreen() {
           {p.durum === 'arsiv' && <Note tone="info">Bu sürüm arşivde; yerini yeni onaylı sürüm aldı.</Note>}
 
           <KpiRow>
-            <Kpi label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} value={left === null ? '—' : left < 0 ? `${-left} gün önce` : `${left} gün`} help={`${fmtDay(p.yayinTarihi)} · ${p.yayinTarihiKaynakAdi ?? 'kaynak yok'}`} />
+            <Kpi label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} value={left === null ? '—' : left < 0 ? `${-left} gün önce` : `${left} gün`} help={`${fmtDay(p.yayinTarihi)} · ${p.yayinTarihiKaynakAdi ?? 'kaynak yok'}`}
+              info={<SqlInfo k={p.kaynaklar} alan="yayinTarihi" label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} />} />
             <Kpi label="Satış hedefi" value={p.hedef?.adet != null ? `${fmtInt(p.hedef.adet)} adet` : '—'}
-              help={p.hedef?.planId ? (me.canSeeBudget && p.hedef.ciro != null ? `${fmtMoney(p.hedef.ciro)} net ciro · ${p.hedef.year}` : `${p.hedef.year} bütçe planı`) : (p.hedef?.not ?? 'Onaylı hedef yok')} />
+              help={p.hedef?.planId ? (me.canSeeBudget && p.hedef.ciro != null ? `${fmtMoney(p.hedef.ciro)} net ciro · ${p.hedef.year}` : `${p.hedef.year} bütçe planı`) : (p.hedef?.not ?? 'Onaylı hedef yok')}
+              info={<SqlInfo k={p.kaynaklar} alan="hedef" label="Satış hedefi" />} />
             <Kpi label="Plan bütçesi" value={me.canSeeBudget ? fmtMoney(p.butceToplam) : '—'}
               help={me.canSeeBudget ? (p.butceCerceve != null ? `Çerçeve ${fmtMoney(p.butceCerceve)}` : 'Bütçe çerçevesi yok') : 'Bütçe görme yetkiniz yok'}
-              active={tab === 'kanal'} onClick={() => setParams({ sekme: 'kanal' }, { replace: true })} />
+              active={tab === 'kanal'} onClick={() => setParams({ sekme: 'kanal' }, { replace: true })}
+              info={<SqlInfo k={p.kaynaklar} alan="butceToplam" label="Plan bütçesi" />} />
             <Kpi label="Onaylı materyal" value={`${approvedMaterials} / ${p.materials.length}`}
               help={p.eksikMateryal?.length ? `Eksik: ${p.eksikMateryal.map((t) => m.materials[t] ?? t).join(', ')}` : 'Zorunlu materyaller tamam'}
-              active={tab === 'materyal'} onClick={() => setParams({ sekme: 'materyal' }, { replace: true })} />
+              active={tab === 'materyal'} onClick={() => setParams({ sekme: 'materyal' }, { replace: true })}
+              info={<SqlInfo k={p.kaynaklar} alan="materials" label="Onaylı materyal" />} />
           </KpiRow>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
@@ -226,7 +231,7 @@ export default function PlanScreen() {
                 )}
                 {!!p.zeki?.emsal?.length && (
                   <div className="mt-3">
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Emsal kontrolü (CRM'de emsal girilmemiş)</div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Emsal kontrolü (CRM'de emsal girilmemiş)<SqlInfo k={p.kaynaklar} alan="zeki" label="Emsal kontrolü olasılığı" /></div>
                     <ul className="mt-1 flex flex-col gap-1 text-[12px]">
                       {p.zeki.emsal.map((e) => (
                         <li key={e.stokKodu} className="flex items-start justify-between gap-2">
@@ -240,7 +245,7 @@ export default function PlanScreen() {
                     </ul>
                   </div>
                 )}
-                {!!p.zeki?.dusen && <p className="mt-2 text-[11px] text-canvas-muted">Denetimde {p.zeki.dusen} cümle düştü (kaynaksız rakam, bulunamayan alıntı ya da kanıtsız iddia).</p>}
+                {!!p.zeki?.dusen && <p className="mt-2 text-[11px] text-canvas-muted">Denetimde {p.zeki.dusen} cümle düştü (kaynaksız rakam, bulunamayan alıntı ya da kanıtsız iddia).<SqlInfo k={p.kaynaklar} alan="zeki" label="Denetimde düşen cümle" className="ml-0.5" /></p>}
               </Block>
               {p.stokKodu && !bl && (
                 <Block title="Zeki AI'a sor" help="Genel bakıştaki soru kutusu açılır; cevap satış verisinden gelir.">

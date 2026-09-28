@@ -246,8 +246,70 @@ def next_id(c: Any, tenant: str, year: int) -> str:
     return f"{prefix}{n:04d}"
 
 
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (kaynak_lansman.py).
+
+
+def launch_stmt(tenant: str, lid: str):
+    return sa.select(LAUNCHES).where(LAUNCHES.c.tenant_id == tenant, LAUNCHES.c.id == str(lid)[:24])
+
+
+def launch_tasks_stmt(lid: str, plan_id: str):
+    return (sa.select(C.TASKS).where(C.TASKS.c.launch_id == lid, C.TASKS.c.plan_id == plan_id)
+            .order_by(C.TASKS.c.tarih, C.TASKS.c.id))
+
+
+def launch_plan_stmt(plan_id: str):
+    return sa.select(C.PLANS.c.durum, C.PLANS.c.baslik, C.PLANS.c.hedef_json).where(C.PLANS.c.id == plan_id)
+
+
+def reviews_stmt(lid: str):
+    return sa.select(REVIEWS).where(REVIEWS.c.launch_id == lid).order_by(REVIEWS.c.gun)
+
+
+def days_stmt(lid: str):
+    return sa.select(DAILY).where(DAILY.c.launch_id == lid).order_by(DAILY.c.gun)
+
+
+def events_stmt(lid: str):
+    return sa.select(EVENTS).where(EVENTS.c.launch_id == lid).order_by(EVENTS.c.tarih, EVENTS.c.zaman)
+
+
+def media_stmt(lid: str):
+    return sa.select(MEDIA).where(MEDIA.c.launch_id == lid).order_by(MEDIA.c.tarih.desc(), MEDIA.c.zaman.desc())
+
+
+def list_stmt(tenant: str, *, frm: Optional[str] = None, to: Optional[str] = None, durum: str = "", sahip: str = ""):
+    cond = [LAUNCHES.c.tenant_id == tenant]
+    if frm:
+        cond.append(LAUNCHES.c.yayin_gunu >= frm)
+    if to:
+        cond.append(LAUNCHES.c.yayin_gunu <= to)
+    if durum:
+        cond.append(LAUNCHES.c.durum.in_([d for d in durum.split(",") if d]))
+    if sahip:
+        cond.append(sa.func.lower(LAUNCHES.c.sahip) == sahip.lower())
+    return sa.select(LAUNCHES).where(*cond).order_by(LAUNCHES.c.yayin_gunu, LAUNCHES.c.id)
+
+
+def overdue_stmt(ids: list[str], today: str):
+    """Lansman başına geciken (bugünden önceki, bekleyen) kontrol listesi maddesi sayısı."""
+    return (sa.select(C.TASKS.c.launch_id, sa.func.count()).where(
+        C.TASKS.c.launch_id.in_(ids or ["-"]), C.TASKS.c.durum == "bekliyor", C.TASKS.c.tarih < today)
+        .group_by(C.TASKS.c.launch_id))
+
+
+def today_stmt(tenant: str, today: str):
+    return (sa.select(C.TASKS, LAUNCHES.c.baslik.label("lansman_baslik"), LAUNCHES.c.sahip.label("lansman_sahip"),
+                      LAUNCHES.c.yayin_gunu, LAUNCHES.c.stok_kodu)
+            .select_from(C.TASKS.join(LAUNCHES, sa.and_(LAUNCHES.c.id == C.TASKS.c.launch_id,
+                                                        LAUNCHES.c.plan_id == C.TASKS.c.plan_id)))
+            .where(LAUNCHES.c.tenant_id == tenant, LAUNCHES.c.durum.in_(ACTIVE), C.TASKS.c.durum == "bekliyor",
+                   C.TASKS.c.tarih <= today)
+            .order_by(C.TASKS.c.tarih, LAUNCHES.c.yayin_gunu))
+
+
 def _row(c: Any, tenant: str, lid: str) -> Any:
-    r = c.execute(sa.select(LAUNCHES).where(LAUNCHES.c.tenant_id == tenant, LAUNCHES.c.id == str(lid)[:24])).first()
+    r = c.execute(launch_stmt(tenant, lid)).first()
     if not r:
         raise C.MarketingError("Lansman bulunamadı.", 404)
     return r
@@ -344,12 +406,11 @@ def get_full(engine: sa.engine.Engine, tenant: str, lid: str) -> dict[str, Any]:
     ensure(engine)
     with engine.connect() as c:
         r = _row(c, tenant, lid)
-        tasks = c.execute(sa.select(C.TASKS).where(C.TASKS.c.launch_id == r.id, C.TASKS.c.plan_id == r.plan_id)
-                          .order_by(C.TASKS.c.tarih, C.TASKS.c.id)).all()
+        tasks = c.execute(launch_tasks_stmt(r.id, r.plan_id)).all()
         mats = c.execute(sa.select(C.MATERIALS).where(C.MATERIALS.c.plan_id == r.plan_id, C.MATERIALS.c.durum == "onayli")
                          .order_by(C.MATERIALS.c.tur)).all()
-        plan = c.execute(sa.select(C.PLANS.c.durum, C.PLANS.c.baslik, C.PLANS.c.hedef_json).where(C.PLANS.c.id == r.plan_id)).first()
-        reviews = c.execute(sa.select(REVIEWS).where(REVIEWS.c.launch_id == r.id).order_by(REVIEWS.c.gun)).all()
+        plan = c.execute(launch_plan_stmt(r.plan_id)).first()
+        reviews = c.execute(reviews_stmt(r.id)).all()
     out = head(r)
     out["tasks"] = [C._task(t) for t in tasks]
     out["materials"] = [{"id": m.id, "tur": m.tur, "turAdi": C.MATERIALS_KINDS.get(m.tur, (m.tur, None))[0], "metin": m.metin,
@@ -364,20 +425,9 @@ def get_full(engine: sa.engine.Engine, tenant: str, lid: str) -> dict[str, Any]:
 def list_launches(engine: sa.engine.Engine, tenant: str, *, frm: Optional[str] = None, to: Optional[str] = None,
                   durum: str = "", sahip: str = "") -> list[dict[str, Any]]:
     ensure(engine)
-    cond = [LAUNCHES.c.tenant_id == tenant]
-    if frm:
-        cond.append(LAUNCHES.c.yayin_gunu >= frm)
-    if to:
-        cond.append(LAUNCHES.c.yayin_gunu <= to)
-    if durum:
-        cond.append(LAUNCHES.c.durum.in_([d for d in durum.split(",") if d]))
-    if sahip:
-        cond.append(sa.func.lower(LAUNCHES.c.sahip) == sahip.lower())
     with engine.connect() as c:
-        rows = c.execute(sa.select(LAUNCHES).where(*cond).order_by(LAUNCHES.c.yayin_gunu, LAUNCHES.c.id)).all()
-        counts = dict(c.execute(sa.select(C.TASKS.c.launch_id, sa.func.count()).where(
-            C.TASKS.c.launch_id.in_([r.id for r in rows] or ["-"]), C.TASKS.c.durum == "bekliyor",
-            C.TASKS.c.tarih < C.today().isoformat()).group_by(C.TASKS.c.launch_id)).all())
+        rows = c.execute(list_stmt(tenant, frm=frm, to=to, durum=durum, sahip=sahip)).all()
+        counts = dict(c.execute(overdue_stmt([r.id for r in rows], C.today().isoformat())).all())
     today = C.today()
     return [{**head(r, today), "gecikenMadde": int(counts.get(r.id, 0))} for r in rows]
 
@@ -388,13 +438,7 @@ def today_tasks(engine: sa.engine.Engine, tenant: str, user: str, *, mine: bool)
     ensure(engine)
     today = C.today().isoformat()
     with engine.connect() as c:
-        rows = c.execute(sa.select(C.TASKS, LAUNCHES.c.baslik.label("lansman_baslik"), LAUNCHES.c.sahip.label("lansman_sahip"),
-                                   LAUNCHES.c.yayin_gunu, LAUNCHES.c.stok_kodu)
-                         .select_from(C.TASKS.join(LAUNCHES, sa.and_(LAUNCHES.c.id == C.TASKS.c.launch_id,
-                                                                     LAUNCHES.c.plan_id == C.TASKS.c.plan_id)))
-                         .where(LAUNCHES.c.tenant_id == tenant, LAUNCHES.c.durum.in_(ACTIVE), C.TASKS.c.durum == "bekliyor",
-                                C.TASKS.c.tarih <= today)
-                         .order_by(C.TASKS.c.tarih, LAUNCHES.c.yayin_gunu)).all()
+        rows = c.execute(today_stmt(tenant, today)).all()
     out = []
     u = (user or "").lower()
     for r in rows:
@@ -534,7 +578,7 @@ def upsert_days(engine: sa.engine.Engine, lid: str, rows: dict[str, dict[str, An
 
 def days_of(engine: sa.engine.Engine, lid: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(DAILY).where(DAILY.c.launch_id == lid).order_by(DAILY.c.gun)).all()
+        rows = c.execute(days_stmt(lid)).all()
     return [{k: (C.iso(v) if isinstance(v, datetime) else v) for k, v in dict(r._mapping).items()} for r in rows]
 
 
@@ -690,7 +734,7 @@ def _event_dict(r: Any) -> dict[str, Any]:
 
 def portal_events(engine: sa.engine.Engine, lid: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.launch_id == lid).order_by(EVENTS.c.tarih, EVENTS.c.zaman)).all()
+        rows = c.execute(events_stmt(lid)).all()
     return [_event_dict(r) for r in rows]
 
 
@@ -779,7 +823,7 @@ def _media_dict(r: Any) -> dict[str, Any]:
 
 def portal_media(engine: sa.engine.Engine, lid: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(MEDIA).where(MEDIA.c.launch_id == lid).order_by(MEDIA.c.tarih.desc(), MEDIA.c.zaman.desc())).all()
+        rows = c.execute(media_stmt(lid)).all()
     return [_media_dict(r) for r in rows]
 
 

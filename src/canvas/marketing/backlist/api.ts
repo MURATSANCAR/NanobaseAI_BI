@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import type { Job, Material, Plan, PlanStatus } from '../api';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M17 Backlist uçları: /api/v1/marketing/backlist*. Plan onayı, bütçe, takvim ve materyal onayı çekirdeğin uçlarıyla
  *  (`mktApi`); backlist planı `kind='backlist'` olarak aynı akıştan geçer. */
@@ -85,6 +86,7 @@ export type ListPage = {
   kpi: { sapmaAcik: number; stokta: number; yakinGun: number; planli: number };
   agirlik: Weights;
   run: RunMeta | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Match = {
@@ -130,6 +132,7 @@ export type Detail = Row & {
   eylemler: Array<{ eylem: string; gerekce: string }>;
   veriSonu: string | null;
   asof: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type AgendaBook = { stokKodu: string; ad: string | null; yazar: string | null; stok: number | null; tukenmeAy: number | null; gecenYilAyAdet: number | null; planlar: PlanRef[]; sapmaAcik: boolean };
@@ -139,6 +142,7 @@ export type Agenda = {
   gunler: Array<Day & { kalanGun: number; kitaplar: AgendaBook[]; stokta: number; aktivasyonsuz: number }>;
   yazarlar: Array<{ stokKodu: string; ad: string | null; tarih: string | null; yazar: string | null; kitaplar: AgendaBook[] }>;
   konular: Array<Match & { kitap: AgendaBook }>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Campaign = {
@@ -217,8 +221,8 @@ export const blApi = {
   list: (p: ListParams) => send<ListPage>('GET', qs(p), undefined, 60_000),
   detail: (stok: string, agirlik?: string) => send<Detail>('GET', `/${enc(stok)}${qs({ agirlik })}`),
   agenda: (hafta?: number) => send<Agenda>('GET', `/agenda${qs({ hafta })}`),
-  effects: (yil?: number, backlist?: boolean) => send<{ items: Campaign[]; total: number; yillar: number[]; not: string }>('GET', `/effects${qs({ yil, backlist })}`),
-  activations: (arsiv = false) => send<{ items: Activation[]; total: number }>('GET', `/activations${qs({ arsiv })}`),
+  effects: (yil?: number, backlist?: boolean) => send<{ items: Campaign[]; total: number; yillar: number[]; not: string; kaynaklar?: Kaynaklar }>('GET', `/effects${qs({ yil, backlist })}`),
+  activations: (arsiv = false) => send<{ items: Activation[]; total: number; kaynaklar?: Kaynaklar }>('GET', `/activations${qs({ arsiv })}`),
   saveTeamWeights: (w: Weights) => send<{ teamWeights: Weights }>('PUT', '/weights', { agirlik: w }),
   decide: (id: string, karar: 'kabul' | 'red') => send<{ match: Match }>('POST', `/matches/${enc(id)}/decide`, { karar }),
   createPlan: (kitaplar: Array<{ stokKodu: string; rol?: string }>, baslangic?: string) =>

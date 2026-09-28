@@ -73,6 +73,7 @@ def emsal_days(engine: Any, tenant: str, src: Sources, firms: dict[int, str], da
     (geçmiş değişmez), eksik olan her günlük okumada yeniden denenir."""
     out = []
     errors = []
+    sqls: list[str] = []        # emsal satışını getiren Logo SQL'leri (sorgu bilgisi; tamamlanmış sonuçta saklananı)
     for e in items:
         code, lan = e.get("stokKodu"), e.get("lansman")
         if not code or not lan or len(lan) < 7:
@@ -80,7 +81,8 @@ def emsal_days(engine: Any, tenant: str, src: Sources, firms: dict[int, str], da
         key = f"launch-emsal:{code}"
         hit = C.meta_get(engine, tenant, key)
         if hit.get("tam"):
-            out.append({**{k: v for k, v in hit.items() if k != "_at"}, "stokKodu": code, "ad": e.get("ad")})
+            out.append({**{k: v for k, v in hit.items() if k not in ("_at", "sql")}, "stokKodu": code, "ad": e.get("ad")})
+            sqls += [x for x in hit.get("sql") or [] if x not in sqls]
             continue
         start = date(int(lan[:4]), int(lan[5:7]), 1)
         end = start + timedelta(days=EMSAL_WINDOW_DAYS)
@@ -89,13 +91,14 @@ def emsal_days(engine: Any, tenant: str, src: Sources, firms: dict[int, str], da
         if end < start:
             continue
         try:
-            rows, _ = src.daily_sales(firms, [code], start, end)
+            rows, run_sqls = src.daily_sales(firms, [code], start, end)
         except SourceError as ex:
             errors.append(f"Emsal {code}: {ex}")
             continue
         daily = {g: v["adet"] for (k, g), v in rows.items() if k == code}
         res = first_days(daily, start, 30, data_end)
-        C.meta_set(engine, tenant, key, res)
+        C.meta_set(engine, tenant, key, {**res, "sql": run_sqls})
+        sqls += [x for x in run_sqls if x not in sqls]
         out.append({**res, "stokKodu": code, "ad": e.get("ad")})
     full = [x for x in out if x.get("ilk30") is not None]
     week = [x for x in out if x.get("ilk7") is not None]
@@ -105,7 +108,7 @@ def emsal_days(engine: Any, tenant: str, src: Sources, firms: dict[int, str], da
         curve.append(round(sum(vals) / len(vals), 2) if vals else 0.0)
     return {"items": out, "ort7": round(sum(x["ilk7"] for x in week) / len(week), 2) if week else None,
             "ort30": round(sum(x["ilk30"] for x in full) / len(full), 2) if full else None,
-            "egri": curve if full else [], "hatalar": errors,
+            "egri": curve if full else [], "hatalar": errors, "sql": sqls,
             "not": None if out else "Emsal yok ya da emsallerin lansman ayı bilinmiyor (M15 karnesi, İlk baskı veri kümesi)."}
 
 
@@ -236,6 +239,9 @@ def refresh(engine: Any, tenant: str, launches: list[dict[str, Any]], src: Sourc
             em_items = ((card.get("emsal") or {}).get("items")) or []
             em = emsal_days(engine, tenant, src, firms, data_end, em_items)
             mine_err += em.pop("hatalar")
+            em_sql = em.pop("sql", [])
+            if em_sql:
+                ozet["sql"]["emsal"] = em_sql
             ozet["emsal"] = em
         tasks = L.get_full(engine, tenant, lid)["tasks"]
         ev = L.evaluate(pub, L.days_of(engine, lid), tasks, ozet, st, today)

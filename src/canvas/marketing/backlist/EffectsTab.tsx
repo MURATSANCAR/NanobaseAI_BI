@@ -4,6 +4,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, TableWrap, errText, field, label as labelCls, td, th } from '../../admin/ui';
 import { fmtMoney, fmtShortDay } from '../api';
 import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { blApi, fmtChange, fmtN, type BlMeta, type Campaign } from './api';
 
 /** Etki: CRM kampanyalarında ürünlerin kampanya öncesi 3 ay, kampanya ayları ve sonraki 2 ay Logo net adedi (ay düzeyi).
@@ -35,7 +36,7 @@ export default function EffectsTab({ meta }: { meta: BlMeta }) {
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Kampanyalar açılamadı.')}</Note>}
       {d && (
-        <Block title={`Kampanyalar (${fmtN(d.total)})`} help={d.not}>
+        <Block title={`Kampanyalar (${fmtN(d.total)})`} help={d.not} info={<SqlInfo k={d.kaynaklar} alan="items[]" label="Kampanya etkileri" />}>
           {!d.items.length && <Note tone="info">Bu süzgeçte CRM kampanyası yok.</Note>}
           {d.items.length > 0 && (
             <TableWrap>
@@ -43,12 +44,12 @@ export default function EffectsTab({ meta }: { meta: BlMeta }) {
                 <tr className="border-b border-slate-100">
                   <th className={th}>Kampanya</th>
                   <th className={th}>Tarih</th>
-                  <th className={`${th} text-right`}>Ürün</th>
-                  <th className={`${th} text-right`}>Önceki 3 ay</th>
-                  <th className={`${th} text-right`}>Kampanya</th>
-                  <th className={`${th} text-right`}>Sonraki 2 ay</th>
-                  <th className={`${th} text-right`}>Aylık ort. değişim</th>
-                  {money && <th className={`${th} text-right`}>Planlanan / gerçekleşen ciro</th>}
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Ürün</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Önceki 3 ay</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Kampanya</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Sonraki 2 ay</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Aylık ort. değişim</InfoLabel></th>
+                  {money && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Planlanan / gerçekleşen ciro</InfoLabel></th>}
                 </tr>
               </thead>
               <tbody>

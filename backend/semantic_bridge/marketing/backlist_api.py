@@ -26,7 +26,10 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import budget as B
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge.marketing import backlist as BL
+from semantic_bridge.marketing import kaynak_backlist as K
 from semantic_bridge.marketing import books as BK
 from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import plans as P
@@ -136,7 +139,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             "teamWeights": {k: team[k] for k in BL.KEYS if k in team} or None,
             "teamWeightsBy": team.get("kim"), "teamWeightsAt": team.get("_at"),
             "settings": {k: s[k] for k in ("agendaWeeks", "remindWeeks", "topicWeeks", "campaignYears", "digestMin", "minMonths")},
-            "run": C.meta_get(engine, tenant, "backlist") or None, "lastRun": C.meta_get(engine, tenant, "backlist-run-due") or None,
+            "run": {k_: v for k_, v in C.meta_get(engine, tenant, "backlist").items() if k_ != "sql"} or None, "lastRun": C.meta_get(engine, tenant, "backlist-run-due") or None,
             "modelReady": getattr(rt(), "llm", None) is not None,
             "me": {"username": user, "canWrite": can(user, F_WRITE), "canSeeBudget": can(user, F_BUDGET),
                    "canApprove": can(user, F_APPROVE), "canEditorial": can(user, F_EDITORIAL),
@@ -156,13 +159,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             out["items"] = [hide_money(x) for x in out["items"]]
         out["agirlik"] = w
         out["run"] = C.meta_get(engine, tenant, "backlist") or None
-        return out
+        if out["run"]:
+            out["run"] = {k_: v for k_, v in out["run"].items() if k_ != "sql"}   # çalışmış metinler sorgu bilgisinde
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, PK.logo_db(rt)))
 
     @app.get(R + "/agenda")
     def bl_agenda(request: Request, hafta: int = 0) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
         weeks = hafta if hafta > 0 else st()["agendaWeeks"]
-        return BL.agenda(engine, tenant, weeks)
+        out = BL.agenda(engine, tenant, weeks)
+        return PV.bagla(out, lambda: K.for_agenda(engine, tenant, out, PK.logo_db(rt)))
 
     @app.get(R + "/effects")
     def bl_effects(request: Request, yil: int = 0, backlist: bool = False) -> dict[str, Any]:
@@ -172,7 +178,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             for c_ in out["items"]:
                 c_["planlananCiro"] = c_["gerceklesenCiro"] = None
                 c_["urunler"] = [{**u, "planlananCiro": None, "gerceklesenCiro": None} for u in c_["urunler"]]
-        return out
+        return PV.bagla(out, lambda: K.for_effects(engine, tenant, yil or None, backlist, PK.logo_db(rt)))
 
     @app.get(R + "/activations")
     def bl_activations(request: Request, durum: str = "", arsiv: bool = False) -> dict[str, Any]:
@@ -180,7 +186,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = BL.activations(engine, tenant, durum=durum, include_archive=arsiv)
         if not can(user, F_BUDGET):
             out["items"] = [_redact(p) for p in out["items"]]
-        return out
+        return PV.bagla(out, lambda: K.for_activations(engine, tenant, out, durum, arsiv))
 
     @app.get(R + "/export.csv")
     def bl_csv(request: Request, sirala: str = "oncelik", agirlik: str = "", yayinevi: str = "", kitaplik: str = "",
@@ -247,7 +253,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def bl_plan_books(plan_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
         call(C.plan_full, engine, tenant, plan_id)
-        return {"items": BK.of(engine, plan_id)}
+        return PV.bagla({"items": BK.of(engine, plan_id)}, lambda: K.for_plan_books(engine, plan_id))
 
     @app.put(R + "/plans/{plan_id}/books")
     def bl_plan_books_put(plan_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -317,7 +323,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def bl_detail(stok: str, request: Request, agirlik: str = "") -> dict[str, Any]:
         engine, tenant, user = ctx(request)
         out = call(BL.detail, engine, tenant, stok, st(), weights(engine, tenant, agirlik))
-        return out if can(user, F_BUDGET) else hide_money(out)
+        out = out if can(user, F_BUDGET) else hide_money(out)
+        return PV.bagla(out, lambda: K.for_detail(engine, tenant, stok, PK.logo_db(rt)))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

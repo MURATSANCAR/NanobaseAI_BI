@@ -9,6 +9,7 @@ import { Kpi, KpiRow } from '../../editorial/kit';
 import { AskSheet, Tabs } from '../../budget/parts';
 import { fmtDay, fmtInt, fmtPct, fmtStamp } from '../api';
 import { MarketingFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { TONE_CLASS, TONE_LABEL, dLabel, launchApi } from './api';
 import ChecklistTab from './ChecklistTab';
 import TrackingTab from './TrackingTab';
@@ -126,13 +127,17 @@ export default function LaunchScreen() {
 
           <KpiRow>
             <Kpi label="Sipariş (yayından beri)" value={fmtInt(sig?.siparis)} help="CRM, saatte bir; sipariş satış değildir"
-              active={tab === 'izleme'} onClick={() => go({ sekme: 'izleme' })} />
+              active={tab === 'izleme'} onClick={() => go({ sekme: 'izleme' })}
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Sipariş (yayından beri)" />} />
             <Kpi label="Faturalı satış" value={fmtInt(sig?.fatura)}
-              help={sig?.veriSonuLogo ? `Logo, veri ${fmtDay(sig.veriSonuLogo)} tarihinde bitiyor` : 'Logo okunmadı'} />
+              help={sig?.veriSonuLogo ? `Logo, veri ${fmtDay(sig.veriSonuLogo)} tarihinde bitiyor` : 'Logo okunmadı'}
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Faturalı satış" />} />
             <Kpi label="Hedef payına oran" value={sig?.oran != null ? fmtPct(sig.oran) : '—'}
-              help={sig?.oran != null ? `${sig.oranEsas === 'fatura' ? 'Faturalı satış' : 'Sipariş'} / hedef payı · eşik ${fmtPct(m.settings.alertRatio)}` : 'Onaylı hedef yok ya da yayın günü gelmedi'} />
+              help={sig?.oran != null ? `${sig.oranEsas === 'fatura' ? 'Faturalı satış' : 'Sipariş'} / hedef payı · eşik ${fmtPct(m.settings.alertRatio)}` : 'Onaylı hedef yok ya da yayın günü gelmedi'}
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Hedef payına oran" />} />
             <Kpi label="Açık sipariş / depo" value={`${fmtInt(sig?.bekleyen)} / ${fmtInt(sig?.depo?.deger)}`}
-              help={sig?.stokCatismasi ? 'Açık sipariş depo stokunun üstünde' : (sig?.depo?.kaynakAdi ?? 'Depo stoku okunmadı')} />
+              help={sig?.stokCatismasi ? 'Açık sipariş depo stokunun üstünde' : (sig?.depo?.kaynakAdi ?? 'Depo stoku okunmadı')}
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Açık sipariş / depo" />} />
           </KpiRow>
 
           <Tabs tabs={TABS.map((t) => (t.key === 'kontrol' ? { ...t, badge: l.tasks.filter((x) => x.durum === 'bekliyor' && !!x.tarih && x.tarih < new Date().toISOString().slice(0, 10)).length } : t))}

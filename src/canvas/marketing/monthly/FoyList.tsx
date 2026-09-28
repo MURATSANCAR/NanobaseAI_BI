@@ -11,6 +11,7 @@ import { fmtStamp } from '../api';
 import { MarketingFrame } from '../parts';
 import { isMonth, monthApi, monthLabel } from './api';
 import FoyTable from './FoyTable';
+import SqlInfo from '../../components/SqlInfo';
 import MonthNav from './MonthNav';
 
 /** Satış föyleri (M18): ayın yeni kitaplarının föyleri, eksik alan ve uyumsuzluk, aylık paket. Adres: ?ay=YYYY-MM&durum=. */
@@ -99,10 +100,10 @@ export default function FoyList() {
 
       {k && (
         <KpiRow>
-          <Kpi label="Hazır" value={`${k.hazir} / ${k.toplam}`} help="Eksik alanı ve uyumsuzluğu olmayan föy" />
-          <Kpi label="Eksik alanlı" value={String(k.eksik)} help="Zorunlu alanı boş" active={durum === 'eksik'} onClick={() => set({ durum: durum === 'eksik' ? null : 'eksik' })} />
-          <Kpi label="Uyumsuz" value={String(k.uyumsuz)} help="Fiyat ya da barkod CRM/Logo arasında farklı" active={durum === 'uyumsuz'} onClick={() => set({ durum: durum === 'uyumsuz' ? null : 'uyumsuz' })} />
-          <Kpi label="Onaylı" value={`${k.onayli}`} help={k.eski ? `${k.eski} onaylı föyde CRM değişti` : 'Pakete girer'} active={durum === 'onayli'} onClick={() => set({ durum: durum === 'onayli' ? null : 'onayli' })} />
+          <Kpi label="Hazır" value={`${k.hazir} / ${k.toplam}`} help="Eksik alanı ve uyumsuzluğu olmayan föy" info={<SqlInfo k={d?.kaynaklar} alan="kpi" label="Hazır föy" />} />
+          <Kpi label="Eksik alanlı" value={String(k.eksik)} help="Zorunlu alanı boş" active={durum === 'eksik'} onClick={() => set({ durum: durum === 'eksik' ? null : 'eksik' })} info={<SqlInfo k={d?.kaynaklar} alan="kpi" label="Eksik alanlı" />} />
+          <Kpi label="Uyumsuz" value={String(k.uyumsuz)} help="Fiyat ya da barkod CRM/Logo arasında farklı" active={durum === 'uyumsuz'} onClick={() => set({ durum: durum === 'uyumsuz' ? null : 'uyumsuz' })} info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Uyumsuz föy (CRM–Logo farkı)" />} />
+          <Kpi label="Onaylı" value={`${k.onayli}`} help={k.eski ? `${k.eski} onaylı föyde CRM değişti` : 'Pakete girer'} active={durum === 'onayli'} onClick={() => set({ durum: durum === 'onayli' ? null : 'onayli' })} info={<SqlInfo k={d?.kaynaklar} alan="kpi" label="Onaylı föy" />} />
         </KpiRow>
       )}
 
@@ -126,7 +127,7 @@ export default function FoyList() {
 
       {!!d?.gonderimler.length && (
         <Panel>
-          <h2 className="text-[15px] font-extrabold tracking-tight">Gönderimler</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Gönderimler<SqlInfo k={d.kaynaklar} alan="gonderimler[]" label="Föy paketi gönderimleri" /></h2>
           <ul className="mt-2 flex flex-col gap-1 text-[12px]">
             {d.gonderimler.map((g) => (
               <li key={g.id}>{fmtStamp(g.zaman)} · {g.gonderen} · {g.adet} föy · {g.sonuc === 'sent' ? 'gönderildi' : g.sonuc === 'no_smtp' ? 'e-posta ayarı yok' : g.sonuc === 'no_recipient' ? 'alıcı yok' : 'gönderilemedi'}</li>

@@ -23,8 +23,11 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import export as X
+from semantic_bridge.marketing import kaynak_plan as K
 from semantic_bridge.marketing import plans as P
 from semantic_bridge.marketing.sources import Crm, SourceError
 from semantic_layer.runtime.llm_queue import NORMAL
@@ -107,6 +110,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def view(user: str, plan: dict[str, Any]) -> dict[str, Any]:
         return plan if can(user, F_BUDGET) else _redact(plan)
 
+    def logo_db() -> str | None:
+        """Sorgu bilgisindeki «USE [..]» satırı için yalnız veritabanı adı."""
+        return PK.logo_db(rt)
+
+    def pview(engine, tenant: str, user: str, plan: dict[str, Any]) -> dict[str, Any]:
+        """Plan cevabı + sorgu bilgisi (plan, satır, takvim, materyal okumaları ve hesaplar)."""
+        return PV.bagla(view(user, plan), lambda: K.for_plan(engine, tenant, plan, logo_db()))
+
     def audit(engine, user: str, action: str, plan: dict[str, Any], detail: Any = None, kind: str = "marketing_plan") -> None:
         admin_mod.audit(engine, user, action, kind, plan.get("id"), plan.get("baslik"), detail)
 
@@ -167,15 +178,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         end = date.fromisoformat(to) if to else C.today() + timedelta(days=s["horizonDays"])
         if end < start:
             raise HTTPException(status_code=400, detail={"code": "MARKETING", "message": "Bitiş başlangıçtan önce olamaz."})
+        trace: dict[str, Any] = {}
         out = await run_in_threadpool(call, P.new_books, engine, tenant, user, crm, s, frm=start, to=end, durum=durum,
-                                      yayinevi=yayinevi, sahip=sahip, q=q, page=page, fresh=yenile, can_approve=can(user, F_APPROVE))
+                                      yayinevi=yayinevi, sahip=sahip, q=q, page=page, fresh=yenile, can_approve=can(user, F_APPROVE),
+                                      trace=trace)
         if not can(user, F_BUDGET):
             for r in out["items"]:
                 if r.get("hedef"):
                     r["hedef"] = {**r["hedef"], "ciro": None}
                 if r.get("plan"):
                     r["plan"] = {**r["plan"], "butce": None}
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_new_books(engine, tenant, crm.schema(), s, out, trace, start, end))
 
     @app.get(R + "/books/{stok}/card")
     async def mkt_card(stok: str, request: Request, yenile: bool = False) -> dict[str, Any]:
@@ -183,7 +196,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out = await run_in_threadpool(call, P.card, engine, tenant, crm, m10(), stok, st(), fresh=yenile)
         if not can(user, F_BUDGET):
             out = {**out, "crmButce": None, "hedef": {k: v for k, v in (out.get("hedef") or {}).items() if k not in ("ciro", "aylik")}}
-        return out
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_card(engine, tenant, crm.schema(), app.state, out, logo_db()))
 
     @app.get(R + "/books/{stok}/emsal-adaylari")
     async def mkt_emsal_candidates(stok: str, request: Request, n: int = 10) -> dict[str, Any]:
@@ -193,7 +206,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             raise HTTPException(status_code=400, detail={"code": "MARKETING", "message": "Aday sayısı 1–100 olmalı."})
         eng = m10()
         card_ = await run_in_threadpool(call, P.card, engine, tenant, crm, eng, stok, st())
-        return await run_in_threadpool(call, P.emsal_candidates, engine, tenant, eng, card_, n)
+        out = await run_in_threadpool(call, P.emsal_candidates, engine, tenant, eng, card_, n)
+        return PV.bagla(out, lambda: K.for_emsal_candidates(app.state, out))
 
     # ------------------------------------------------------------------ planlar
 
@@ -222,7 +236,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         plan = call(C.plan_full, engine, tenant, plan_id)
         plan["ustOnayGerekli"] = C.needs_upper(plan["butceToplam"], st()["threshold"])
         plan["eksikMateryal"] = P._missing_materials(plan, st()["requiredMaterials"])
-        return view(user, plan)
+        return pview(engine, tenant, user, plan)
 
     @app.patch(R + "/plans/{plan_id}")
     def mkt_plan_update(plan_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -234,7 +248,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             call(C.reschedule, engine, tenant, user, plan_id)
             out = C.plan_full(engine, tenant, plan_id)
         audit(engine, user, "update", out, {k: body[k] for k in ("baslik", "yayinTarihi", "sahip", "butceCerceve") if k in body})
-        return view(user, out)
+        return pview(engine, tenant, user, out)
 
     @app.delete(R + "/plans/{plan_id}")
     def mkt_plan_delete(plan_id: str, request: Request) -> dict[str, Any]:
@@ -249,14 +263,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         need(user, F_BUDGET, "Bütçe görme")
         out = call(C.replace_lines, engine, tenant, user, plan_id, body.get("items"))
         audit(engine, user, "update", out, {"butce": out["butceToplam"], "satir": len(out["lines"])})
-        return view(user, out)
+        return pview(engine, tenant, user, out)
 
     @app.put(R + "/plans/{plan_id}/tasks")
     def mkt_tasks(plan_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(C.replace_tasks, engine, tenant, user, plan_id, body.get("items"))
         audit(engine, user, "update", out, {"takvim": len(out["tasks"])})
-        return view(user, out)
+        return pview(engine, tenant, user, out)
 
     @app.get(R + "/plans/{plan_id}/events")
     def mkt_events(plan_id: str, request: Request) -> dict[str, Any]:
@@ -268,7 +282,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 for side in ("eski", "yeni"):
                     if isinstance(e.get(side), dict):
                         e[side] = {k: v for k, v in e[side].items() if k not in ("toplam", "butce", "butce_cerceve", "butce_toplam")}
-        return {"items": items}
+        return PV.bagla({"items": items}, lambda: K.for_events(engine, plan_id))
 
     # ------------------------------------------------------------------ Zeki AI
 
@@ -483,7 +497,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         items = P.crm_todo(plan, card_)
         if not can(user, F_BUDGET):
             items = [{**i, "tutar": None} if i["tur"] != "proje-alani" else {**i, "deger": None, "crmDeger": None} for i in items]
-        return {"items": items, "planOnayli": plan["durum"] == "onayli"}
+        return PV.bagla({"items": items, "planOnayli": plan["durum"] == "onayli"}, lambda: K.for_todo(engine, tenant, plan, card_))
 
     @app.get(R + "/plans/{plan_id}/crm-todo.csv")
     async def mkt_todo_csv(plan_id: str, request: Request) -> Response:

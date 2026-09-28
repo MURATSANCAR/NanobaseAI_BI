@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import type { Task } from '../api';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M16 Lansman uçları: /api/v1/marketing/launches*. */
 
@@ -97,6 +98,7 @@ export type Launch = LaunchHead & {
   plan: { id: string; durum: string | null; durumAdi: string | null; baslik: string | null };
   reviews: Review[];
   ozet: { adaylar?: Record<string, string>; hatalar?: string[]; veriSonuLogo?: string };
+  kaynaklar?: Kaynaklar;
 };
 
 export type LaunchMeta = {
@@ -143,8 +145,8 @@ export type Tracking = {
   depo: Depot | null;
   emsal: { items: Array<{ stokKodu: string; ad: string | null; ilkGun: string | null; ilk7: number | null; ilk30: number | null }>; ort7: number | null; ort30: number | null; not: string | null };
   veriSonu: { logo: string | null; crm: string | null };
-  sql: Record<string, string | string[]>;
   okumaHatalari: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type LaunchEvent = {
@@ -198,8 +200,8 @@ const qs = (o: Record<string, string | number | undefined>) => {
 
 export const launchApi = {
   meta: () => send<LaunchMeta>('GET', '/meta'),
-  list: (p: { frm?: string; to?: string; durum?: string; kim?: string }) => send<{ items: LaunchHead[]; total: number }>('GET', qs(p)),
-  today: (kim: string) => send<{ items: TodayTask[]; tarih: string }>('GET', `/today${qs({ kim })}`),
+  list: (p: { frm?: string; to?: string; durum?: string; kim?: string }) => send<{ items: LaunchHead[]; total: number; kaynaklar?: Kaynaklar }>('GET', qs(p)),
+  today: (kim: string) => send<{ items: TodayTask[]; tarih: string; kaynaklar?: Kaynaklar }>('GET', `/today${qs({ kim })}`),
   candidates: () => send<{ items: Array<{ id: string; baslik: string; stokKodu: string; yayinTarihi: string; sahip: string | null }> }>('GET', '/candidates'),
   create: (planId: string) => send<Launch>('POST', '', { planId }, 180_000),
   get: (id: string) => send<Launch>('GET', `/${enc(id)}`),
@@ -208,15 +210,15 @@ export const launchApi = {
   addTask: (id: string, b: { is: string; tarih: string; sorumlu?: string; kanal?: string }) => send<{ task: LaunchTask }>('POST', `/${enc(id)}/tasks`, b),
   refresh: (id: string) => send<{ lansman: Launch }>('POST', `/${enc(id)}/refresh`, {}, 600_000),
   tracking: (id: string, gun: number) => send<Tracking>('GET', `/${enc(id)}/tracking${qs({ gun })}`),
-  events: (id: string) => send<{ items: LaunchEvent[]; toplam: Record<string, number | null>; uyarilar: string[] }>('GET', `/${enc(id)}/events`, undefined, 180_000),
+  events: (id: string) => send<{ items: LaunchEvent[]; toplam: Record<string, number | null>; uyarilar: string[]; kaynaklar?: Kaynaklar }>('GET', `/${enc(id)}/events`, undefined, 180_000),
   saveEvent: (id: string, b: Record<string, unknown>, eid?: string) =>
     eid ? send<{ event: LaunchEvent }>('PUT', `/${enc(id)}/events/${enc(eid)}`, b) : send<{ event: LaunchEvent }>('POST', `/${enc(id)}/events`, b),
   deleteEvent: (id: string, eid: string) => send<{ ok: boolean }>('DELETE', `/${enc(id)}/events/${enc(eid)}`),
-  media: (id: string) => send<{ items: MediaItem[]; ton: Record<string, number>; webAcik: boolean }>('GET', `/${enc(id)}/media`),
+  media: (id: string) => send<{ items: MediaItem[]; ton: Record<string, number>; webAcik: boolean; kaynaklar?: Kaynaklar }>('GET', `/${enc(id)}/media`),
   addMedia: (id: string, b: Record<string, unknown>) => send<{ media: MediaItem }>('POST', `/${enc(id)}/media`, b),
   deleteMedia: (id: string, mid: string) => send<{ ok: boolean }>('DELETE', `/${enc(id)}/media/${enc(mid)}`),
-  crmTodo: (id: string) => send<{ items: Array<{ nereye: string; ne: string | null; tarih: string | null; alanlar: Record<string, string | number | null> }>; uyarilar: string[] }>('GET', `/${enc(id)}/crm-todo`, undefined, 180_000),
-  reviews: (id: string) => send<{ items: Review[]; jobs: Job[] }>('GET', `/${enc(id)}/reviews`),
+  crmTodo: (id: string) => send<{ items: Array<{ nereye: string; ne: string | null; tarih: string | null; alanlar: Record<string, string | number | null> }>; uyarilar: string[]; kaynaklar?: Kaynaklar }>('GET', `/${enc(id)}/crm-todo`, undefined, 180_000),
+  reviews: (id: string) => send<{ items: Review[]; jobs: Job[]; kaynaklar?: Kaynaklar }>('GET', `/${enc(id)}/reviews`),
   draft: (id: string, gun: number) => send<{ review: Review; job: Job }>('POST', `/${enc(id)}/reviews/${gun}/draft`, {}, 180_000),
   decide: (id: string, gun: number, karar: string, gerekce: string) => send<{ review: Review }>('POST', `/${enc(id)}/reviews/${gun}/decide`, { karar, gerekce }),
   pdfUrl: (id: string) => `${ENGINE_BASE}${B}/${enc(id)}/export.pdf`,

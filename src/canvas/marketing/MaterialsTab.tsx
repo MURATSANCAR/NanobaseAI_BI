@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { DROP_REASON, MATERIAL_TONE, SOURCE_LABEL, fmtStamp, mktApi, type Material, type Meta, type Plan } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 import { BACKLIST_MATERIALS, blApi } from './backlist/api';
 
 /** Materyaller: CRM'den kaynağıyla alınanlar, Zeki AI taslakları, elle yazılanlar. Akış taslak → editoryal onay →
@@ -65,7 +66,7 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
       )}
       {!plan.materials.length && <Note tone="info">Henüz materyal yok. Kitap kartında pazarlama metni varsa plan açılırken buraya alınır; yoksa Zeki AI ile yazdırın.</Note>}
       {byType.map(({ t, items }) => (
-        <Block key={t} title={meta.materials[t] ?? t}>
+        <Block key={t} title={meta.materials[t] ?? t} info={<SqlInfo k={plan.kaynaklar} alan="materials[]" label="Materyal ve denetimde düşen cümleler" />}>
           <div className="flex flex-col gap-3">
             {items.map((m) => <MaterialCard key={m.id} m={m} plan={plan} meta={meta} onChange={refresh} />)}
           </div>

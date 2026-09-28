@@ -350,14 +350,9 @@ def emsal_candidates(engine: Any, tenant: str, eng: Any, card_: dict[str, Any], 
         out["items"].append({**{kk: r.get(kk) for kk in ("sira", "stokKodu", "ad", "yazar", "kitaplik", "gerekce")},
                              "lansman": _launch_of(bk), "ilk3": _sum_first(months, 3), "ilk6": _sum_first(months, 6),
                              "ilk12": _sum_first(months, 12), "gozlenenAy": len(months)})
+    # Satış sütunlarının çalışmış SQL'i sorgu bilgisinde (`kaynak_plan.for_emsal_candidates`): ilk baskı tahmini
+    # görüntüsünün kaydettiği metin; şablon dosya (yıl yer tutuculu) gösterilmez.
     out["satisKaynagi"] = "İlk baskı tahmini veri kümesi: Logo aylık net satış (iade düşülmüş), ilk yayın ayından itibaren."
-    try:
-        from semantic_bridge.management import ilk_baski as IB
-        from semantic_bridge.management import sql_text
-
-        out["sql"] = sql_text(IB.REPORT_ID, "logo_aylik_kanal")
-    except Exception:  # noqa: BLE001 — SQL metni okunamazsa kaynak cümlesi kalır
-        out["sql"] = None
     if ds is None:
         out["not"] = (out.get("not") + " " if out.get("not") else "") + "İlk baskı tahmini veri kümesi hazır değil; satış sütunları boş."
     return out
@@ -367,6 +362,17 @@ def _launch_of(bk: Any) -> Optional[str]:
     from semantic_bridge.management import ilk_baski_model as M
 
     return M.ms(bk.launch) if bk is not None and getattr(bk, "launch", None) is not None else None
+
+
+def author_books_stmt():
+    """Yazarın diğer kitaplarını bulmak için bütçe modülünün kitap bilgisi okuması (CRM kitap kartı + Logo adı)."""
+    return sa.select(B.BOOKINFO)
+
+
+def author_sales_stmt(codes: list[str]):
+    """Yazarın kitaplarının yıllık net adet ve net ciro okuması (bütçe modülünün Logo satış önbelleği)."""
+    return (sa.select(B.SALES.c.stok_kodu, B.SALES.c.year, sa.func.sum(B.SALES.c.adet), sa.func.sum(B.SALES.c.ciro))
+            .where(B.SALES.c.stok_kodu.in_(list(codes))).group_by(B.SALES.c.stok_kodu, B.SALES.c.year))
 
 
 def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, Any]:
@@ -389,18 +395,15 @@ def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, A
 
     def read_budget() -> bool:
         with engine.connect() as c:
-            for r in c.execute(sa.select(B.BOOKINFO)).all():
+            for r in c.execute(author_books_stmt()).all():
                 if r.stok_kodu != code and r.stok_kodu not in books and M.parts(r.yazar) & want:
                     books[r.stok_kodu] = {"stokKodu": r.stok_kodu, "ad": r.ad, "ilkYayin": r.ilk_yayin, "lansman": None, "ilk12": None}
             if books:
-                q = (sa.select(B.SALES.c.stok_kodu, B.SALES.c.year, sa.func.sum(B.SALES.c.adet), sa.func.sum(B.SALES.c.ciro))
-                     .where(B.SALES.c.stok_kodu.in_(list(books))).group_by(B.SALES.c.stok_kodu, B.SALES.c.year))
-                for s, y, a, ci in c.execute(q).all():
+                for s, y, a, ci in c.execute(author_sales_stmt(sorted(books))).all():
                     yearly[s][int(y)] = {"adet": round(float(a or 0), 2), "ciro": round(float(ci or 0), 2)}
         return True
 
     budget_ok = budget_read(engine, read_budget, False, "yazar satışı")
-    codes = list(books)
     years = sorted({y for v in yearly.values() for y in v})
     items = []
     for k, v in books.items():
@@ -410,9 +413,7 @@ def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, A
                "ciro": round(sum((yearly[k].get(y) or {}).get("ciro", 0) for k in books), 2)} for y in years]
     return {"yazar": detail.get("yazar"), "items": items, "yillar": totals,
             **({} if budget_ok else {"not": "Bütçe modülünün Logo satış önbelleği okunamadı; yıllık satış gösterilmiyor."}),
-            "kaynak": "Logo faturalı satış (net adet, net ciro = satır net tutarı), bütçe modülünün yıllık önbelleği.",
-            "sql": ("SELECT stok_kodu, year, SUM(adet), SUM(ciro) FROM semantic_budget_sales_actuals "
-                    f"WHERE stok_kodu IN ({', '.join(repr(x) for x in codes)}) GROUP BY stok_kodu, year") if codes else None}
+            "kaynak": "Logo faturalı satış (net adet, net ciro = satır net tutarı), bütçe modülünün yıllık önbelleği."}
 
 
 def special_days_section(days: list[dict[str, Any]], pub: Optional[str]) -> list[dict[str, Any]]:
@@ -488,6 +489,12 @@ def dept_ratio(engine: Any, st: dict[str, Any]) -> Optional[dict[str, Any]]:
     return budget_read(engine, lambda: _dept_ratio(engine, st), None, "departman oranı")
 
 
+def dept_ratio_stmts(y: int) -> dict[str, Any]:
+    """Departman oranının iki okuması: o yılın gider satırları ve şirket net cirosu (bütçe modülü önbelleği)."""
+    return {"gider": sa.select(B.EXPENSES).where(B.EXPENSES.c.year == y),
+            "ciro": sa.select(sa.func.coalesce(sa.func.sum(B.SALES.c.ciro), 0.0)).where(B.SALES.c.year == y)}
+
+
 def _dept_ratio(engine: Any, st: dict[str, Any]) -> Optional[dict[str, Any]]:
     end = B.data_end(engine)
     if end is None:
@@ -499,8 +506,9 @@ def _dept_ratio(engine: Any, st: dict[str, Any]) -> Optional[dict[str, Any]]:
         if not full:
             return None
         y = full[-1]
-        rows = c.execute(sa.select(B.EXPENSES).where(B.EXPENSES.c.year == y)).all()
-        ciro = float(c.execute(sa.select(sa.func.coalesce(sa.func.sum(B.SALES.c.ciro), 0.0)).where(B.SALES.c.year == y)).scalar() or 0)
+        st_ = dept_ratio_stmts(y)
+        rows = c.execute(st_["gider"]).all()
+        ciro = float(c.execute(st_["ciro"]).scalar() or 0)
     centers = {x.upper() for x in st["deptCenters"]}
     accounts = tuple(st["budgetAccounts"])
     used: dict[str, str] = {}
@@ -813,7 +821,8 @@ def _missing_materials(plan: dict[str, Any], required: list[str]) -> list[str]:
 
 def new_books(engine: Any, tenant: str, user: str, crm: Crm, st: dict[str, Any], *, frm: date, to: date, durum: str = "",
               yayinevi: str = "", sahip: str = "", q: str = "", page: int = 0, fresh: bool = False,
-              can_approve: bool = False) -> dict[str, Any]:
+              can_approve: bool = False, trace: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """`trace` verilirse sorgu bilgisi için okunan kümeler yazılır (stok kodları, yıl başına hedef kodları, plan kimlikleri)."""
     ref = C.today()
     books = crm.new_books(frm, to, fresh=fresh)
     codes = [b["stokKodu"] for b in books]
@@ -834,7 +843,16 @@ def new_books(engine: Any, tenant: str, user: str, crm: Crm, st: dict[str, Any],
         by_year[int(pub[:4])].append(b["stokKodu"])
         rows.append({**b, "yayinTarihi": pub, "yayinKaynagi": src, "kalanGun": _days_to(pub, ref), "plan": plan})
     tg = targets_many(engine, tenant, dict(by_year))
-    full_plans = {p["id"]: C.plan_full(engine, tenant, p["id"]) for p in plans_by.values()} if plans_by else {}
+    # Planların materyalleri tek okumada (eskiden plan başına ayrı okuma); eksik materyal buradan.
+    mats: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    if plans_by:
+        with engine.connect() as c:
+            for x in c.execute(C.materials_stmt([p["id"] for p in plans_by.values()])).all():
+                mats[x.plan_id].append(C.material_dict(x))
+    full_plans = {p["id"]: {"materials": mats.get(p["id"], [])} for p in plans_by.values()}
+    if trace is not None:
+        trace.update({"codes": codes, "byYear": {y: list(v) for y, v in by_year.items()},
+                      "planIds": [p["id"] for p in plans_by.values()]})
     kpi = {"plansiz": 0, "onayda": 0, "materyalEksik": 0, "hedefDegisti": 0}
     for r in rows:
         cur = tg.get(f"{r['yayinTarihi'][:4]}:{r['stokKodu']}")

@@ -3,12 +3,15 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { Pill, TableWrap, btnGhost, btnPrimary, td, th } from '../admin/ui';
 import { STATUS_TONE, fmtInt, fmtMoney, fmtShortDay, type BookRow, type Meta } from './api';
 import { DaysLeft } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Plan bekleyen / planlı yeni kitaplar. Masaüstünde tablo, telefonda kart; sayfalama üst bileşende (tavan yok). */
-export default function NewBooksList({ rows, meta, busy, onCreate }: {
+export default function NewBooksList({ rows, meta, busy, k, onCreate }: {
   rows: BookRow[];
   meta: Meta;
   busy: string | null;
+  k?: Kaynaklar;
   onCreate: (stok: string, withAi: boolean) => void;
 }) {
   const me = meta.me;
@@ -50,7 +53,7 @@ export default function NewBooksList({ rows, meta, busy, onCreate }: {
                 <div className="break-words text-[14px] font-extrabold leading-snug">{r.ad ?? r.stokKodu}</div>
                 <div className="mt-0.5 text-[11.5px] text-canvas-muted">{[r.yazar, r.yayinevi].filter(Boolean).join(' · ') || '—'}</div>
               </div>
-              <DaysLeft days={r.kalanGun} />
+              <span className="flex shrink-0 items-center gap-0.5"><DaysLeft days={r.kalanGun} /><SqlInfo k={k} alan="items[].kalanGun" label="Kalan gün" /></span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
               <span className="font-semibold">{fmtShortDay(r.yayinTarihi)}</span>
@@ -61,6 +64,8 @@ export default function NewBooksList({ rows, meta, busy, onCreate }: {
             <div className="mt-1 text-[11.5px] text-canvas-muted">
               Hedef: {r.hedef ? `${fmtInt(r.hedef.adet)} adet${me.canSeeBudget ? ` · ${fmtMoney(r.hedef.ciro)}` : ''}` : 'onaylı hedef yok'}
               {me.canSeeBudget && r.plan ? ` · Bütçe ${fmtMoney(r.plan.butce)}` : ''}
+              <SqlInfo k={k} alan="items[].hedef" label="Hedef" className="ml-0.5" />
+              {me.canSeeBudget && r.plan && <SqlInfo k={k} alan="items[].plan" label="Plan bütçesi" className="ml-0.5" />}
             </div>
             {materials(r) && <div className="mt-1 text-[11.5px] font-semibold text-amber-800">{materials(r)}</div>}
             <div className="mt-2.5">{action(r, true)}</div>
@@ -75,10 +80,10 @@ export default function NewBooksList({ rows, meta, busy, onCreate }: {
             <tr className="border-b border-slate-100">
               <th className={th}>Kitap</th>
               <th className={th}>Yayın</th>
-              <th className={th}>Kalan</th>
-              <th className={th}>Hedef</th>
+              <th className={th}><InfoLabel k={k} alan="items[].kalanGun">Kalan</InfoLabel></th>
+              <th className={th}><InfoLabel k={k} alan="items[].hedef">Hedef</InfoLabel></th>
               <th className={th}>Plan</th>
-              {me.canSeeBudget && <th className={`${th} text-right`}>Bütçe</th>}
+              {me.canSeeBudget && <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].plan">Bütçe</InfoLabel></th>}
               <th className={th}>Sorumlu</th>
               <th className={th} aria-label="İşlem" />
             </tr>

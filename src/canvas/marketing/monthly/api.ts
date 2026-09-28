@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import type { Meta, Plan, PlanStatus } from '../api';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M18 Aylık pazarlama planı ve satış föyü: /api/v1/marketing/months/*, /api/v1/marketing/foy*. */
 
@@ -115,7 +116,6 @@ export type MonthView = {
     veriSonu: string | null;
     not: string | null;
     kaynak?: string | null;
-    sql?: string | null;
     isler: TaskStats;
     plan: { id: string; durumAdi: string } | null;
   };
@@ -123,6 +123,7 @@ export type MonthView = {
   sayilar: Record<string, number>;
   foy: { toplam: number; onayli: number; eksik: number; uyumsuz: number; eski: number };
   uyari?: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type FoyStatus = 'taslak' | 'onayda' | 'onayli';
@@ -153,6 +154,7 @@ export type Foy = {
   kitap?: { yazar?: string | null; yayinevi?: string | null; kitaplik?: string | null; yayinTarihi?: string | null; sorumlu?: string | null; yayinKaynagi?: string | null };
   crmTodo?: Array<{ alan: string; ad: string; deger: string; kaynak: string }>;
   logo?: Mismatch | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type FoyPage = {
@@ -165,6 +167,7 @@ export type FoyPage = {
   gonderimler: Array<{ id: string; alicilar: string; gonderen: string; zaman: string | null; adet: number; sonuc: string }>;
   zorunlu: string[];
   logoKaynak: string;
+  kaynaklar?: Kaynaklar;
 };
 
 const B = '/api/v1/marketing';
@@ -201,7 +204,7 @@ export type TargetGap = { stokKodu: string; ad: string; oran: number | null; eks
 export type TargetGaps = {
   donem: string; donemAdi: string; items: TargetGap[]; hedefAlti: number; planli: number; plansiz: number; kaynak: string;
   kuralParagrafi: string; paragraf: string; paragrafKaynak: 'zeki' | 'kural'; paragrafDusen: number | null;
-  paragrafZaman: string | null; eskiParagraf: boolean; modelVar: boolean;
+  paragrafZaman: string | null; eskiParagraf: boolean; modelVar: boolean; kaynaklar?: Kaynaklar;
 };
 
 export const monthApi = {

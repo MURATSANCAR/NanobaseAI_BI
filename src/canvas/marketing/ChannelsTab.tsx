@@ -6,6 +6,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { NumField } from '../budget/parts';
 import { SOURCE_LABEL, fmtMoney, fmtPct, fmtShortDay, mktApi, parseNum, type Line, type Meta, type Plan } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 type Draft = Omit<Line, 'tutar'> & { tutar: string; key: string };
 
@@ -46,7 +47,8 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
 
   return (
     <div className="flex flex-col gap-3">
-      <Block title="Bütçe çerçevesi" help={cf?.gerekce ?? 'Çerçeve henüz hesaplanmadı: «Zeki AI önerisi al» ile kurulur ya da elle girilir.'}>
+      <Block title="Bütçe çerçevesi" help={cf?.gerekce ?? 'Çerçeve henüz hesaplanmadı: «Zeki AI önerisi al» ile kurulur ya da elle girilir.'}
+        info={<SqlInfo k={plan.kaynaklar} alan="butceCerceve" label="Bütçe çerçevesi" />}>
         {canBudget ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="sm:w-[220px]">
@@ -58,9 +60,9 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
               </button>
             )}
             <div className="flex flex-wrap gap-2 text-[12px] sm:ml-auto">
-              <Pill tone={plan.butceCerceve !== null && total > plan.butceCerceve ? 'warn' : 'muted'}>Satır toplamı {fmtMoney(total)}</Pill>
-              {hedefCiro ? <Pill tone="muted">Hedef cironun {fmtPct(total / hedefCiro)}</Pill> : <Pill tone="muted">Onaylı hedef ciro yok</Pill>}
-              {cf?.oran?.oran != null && <Pill tone="violet">Oran {fmtPct(cf.oran.oran)}{cf.oran.yil ? ` (${cf.oran.yil})` : ''}</Pill>}
+              <span className="inline-flex items-center gap-0.5"><Pill tone={plan.butceCerceve !== null && total > plan.butceCerceve ? 'warn' : 'muted'}>Satır toplamı {fmtMoney(total)}</Pill><SqlInfo k={plan.kaynaklar} alan="butceToplam" label="Satır toplamı" /></span>
+              {hedefCiro ? <span className="inline-flex items-center gap-0.5"><Pill tone="muted">Hedef cironun {fmtPct(total / hedefCiro)}</Pill><SqlInfo k={plan.kaynaklar} alan="oran" label="Hedef ciroya oran" /></span> : <Pill tone="muted">Onaylı hedef ciro yok</Pill>}
+              {cf?.oran?.oran != null && <span className="inline-flex items-center gap-0.5"><Pill tone="violet">Oran {fmtPct(cf.oran.oran)}{cf.oran.yil ? ` (${cf.oran.yil})` : ''}</Pill><SqlInfo k={plan.kaynaklar} alan="butceCerceve" label="Departman oranı" /></span>}
               {plan.ustOnayGerekli && <Pill tone="violet">Üst onay eşiğinin üstünde</Pill>}
             </div>
           </div>
@@ -70,6 +72,7 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
       </Block>
 
       <Block
+        info={<SqlInfo k={plan.kaynaklar} alan="lines[]" label="Kanal ve bütçe satırları" />}
         title="Kanallar"
         help="Kanal payı emsal kitapların CRM pazarlama bütçe kayıtlarından (yoksa şirket geneli) hesaplanır. Satırlar CRM'e yazılmaz; «Onay ve geçmiş» sekmesindeki listeyle CRM'e elle işlenir."
         action={editable && (

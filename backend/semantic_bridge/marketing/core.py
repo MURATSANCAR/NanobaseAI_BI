@@ -305,9 +305,14 @@ def event(c: Any, plan_id: str, who: str, what: str, old: Any = None, new: Any =
                                      yeni_json=None if new is None else dump(new)[:20000]))
 
 
+def events_stmt(plan_id: str):
+    """Plan geçmişi okuması (aynı ifade sorgu bilgisinde gösterilir)."""
+    return sa.select(EVENTS).where(EVENTS.c.plan_id == plan_id).order_by(EVENTS.c.zaman.desc())
+
+
 def events(engine: sa.engine.Engine, plan_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.plan_id == plan_id).order_by(EVENTS.c.zaman.desc())).all()
+        rows = c.execute(events_stmt(plan_id)).all()
     return [{"id": r.id, "zaman": iso(r.zaman), "kim": r.kim, "ne": r.ne, "eski": loads(r.eski_json, None),
              "yeni": loads(r.yeni_json, None)} for r in rows]
 
@@ -315,8 +320,28 @@ def events(engine: sa.engine.Engine, plan_id: str) -> list[dict[str, Any]]:
 # ------------------------------------------------------------------ plan okuma
 
 
+def plan_stmt(tenant: str, plan_id: str):
+    return sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.id == str(plan_id)[:24])
+
+
+def lines_stmt(plan_id: str):
+    return sa.select(LINES).where(LINES.c.plan_id == plan_id).order_by(LINES.c.sira, LINES.c.id)
+
+
+def tasks_stmt(plan_id: str):
+    return sa.select(TASKS).where(TASKS.c.plan_id == plan_id).order_by(TASKS.c.tarih, TASKS.c.id)
+
+
+def materials_stmt(plan_ids: Iterable[str]):
+    """Planların materyalleri (tek plan ya da liste; plan listesi ekranı hepsini tek okumada alır)."""
+    ids = [str(x) for x in plan_ids]
+    q = sa.select(MATERIALS)
+    q = q.where(MATERIALS.c.plan_id == ids[0]) if len(ids) == 1 else q.where(MATERIALS.c.plan_id.in_(ids))
+    return q.order_by(MATERIALS.c.plan_id, MATERIALS.c.tur, MATERIALS.c.guncelleme)
+
+
 def _row(c: Any, tenant: str, plan_id: str, *, lock: bool = False) -> Any:
-    q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant, PLANS.c.id == str(plan_id)[:24])
+    q = plan_stmt(tenant, plan_id)
     if lock and c.engine.dialect.name == "postgresql":
         q = q.with_for_update()
     row = c.execute(q).first()
@@ -363,15 +388,16 @@ def plan_head(r: Any) -> dict[str, Any]:
 def plan_full(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str, Any]:
     with engine.connect() as c:
         r = _row(c, tenant, plan_id)
-        lines = c.execute(sa.select(LINES).where(LINES.c.plan_id == r.id).order_by(LINES.c.sira, LINES.c.id)).all()
-        tasks = c.execute(sa.select(TASKS).where(TASKS.c.plan_id == r.id).order_by(TASKS.c.tarih, TASKS.c.id)).all()
-        mats = c.execute(sa.select(MATERIALS).where(MATERIALS.c.plan_id == r.id).order_by(MATERIALS.c.tur, MATERIALS.c.guncelleme)).all()
+        lines = c.execute(lines_stmt(r.id)).all()
+        tasks = c.execute(tasks_stmt(r.id)).all()
+        mats = c.execute(materials_stmt([r.id])).all()
     return {**plan_head(r), "lines": [_line(x) for x in lines], "tasks": [_task(x) for x in tasks],
             "materials": [material_dict(x) for x in mats]}
 
 
-def list_plans(engine: sa.engine.Engine, tenant: str, *, kind: str = "", durum: str = "", sahip: str = "", donem: str = "",
-               stok: Iterable[str] | None = None, include_archive: bool = False) -> list[dict[str, Any]]:
+def plans_stmt(tenant: str, *, kind: str = "", durum: str = "", sahip: str = "", donem: str = "",
+               stok: Iterable[str] | None = None, include_archive: bool = False):
+    """Plan listesi okuması (aynı ifade sorgu bilgisinde gösterilir)."""
     cond = [PLANS.c.tenant_id == tenant]
     if kind:
         cond.append(PLANS.c.kind == kind)
@@ -386,8 +412,14 @@ def list_plans(engine: sa.engine.Engine, tenant: str, *, kind: str = "", durum: 
     codes = [s for s in (stok or []) if s]
     if codes:
         cond.append(PLANS.c.stok_kodu.in_(codes))
+    return sa.select(PLANS).where(*cond).order_by(PLANS.c.yayin_tarihi, PLANS.c.id)
+
+
+def list_plans(engine: sa.engine.Engine, tenant: str, *, kind: str = "", durum: str = "", sahip: str = "", donem: str = "",
+               stok: Iterable[str] | None = None, include_archive: bool = False) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PLANS).where(*cond).order_by(PLANS.c.yayin_tarihi, PLANS.c.id)).all()
+        rows = c.execute(plans_stmt(tenant, kind=kind, durum=durum, sahip=sahip, donem=donem, stok=stok,
+                                    include_archive=include_archive)).all()
     return [plan_head(r) for r in rows]
 
 
@@ -911,9 +943,13 @@ def fail_stale_jobs(engine: sa.engine.Engine) -> int:
 # ------------------------------------------------------------------ karne önbelleği
 
 
+def card_stmt(tenant: str, code: str):
+    return sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.stok_kodu == code)
+
+
 def card_get(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, Any]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.stok_kodu == code)).first()
+        r = c.execute(card_stmt(tenant, code)).first()
     if not r:
         return None
     data = loads(r.veri_json, {})

@@ -5,7 +5,9 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../../admin/ui';
 import { fmtDay, fmtInt, fmtMoney, fmtStamp } from '../api';
-import { Block, SourceNote } from '../parts';
+import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { launchApi, type Launch, type LaunchMeta, type Review } from './api';
 
 /** D+7 ve D+30 değerlendirmesi: rakam tablosu SQL'den (model yok), Zeki AI iki paragraf özet ve en çok üç öneri yazar
@@ -37,7 +39,7 @@ function Decide({ launch, meta, rv }: { launch: Launch; meta: LaunchMeta; rv: Re
   );
 }
 
-function One({ launch, meta, gun, rv, running }: { launch: Launch; meta: LaunchMeta; gun: 7 | 30; rv: Review | undefined; running: boolean }) {
+function One({ launch, meta, gun, rv, running, k }: { launch: Launch; meta: LaunchMeta; gun: 7 | 30; rv: Review | undefined; running: boolean; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const due = new Date(Date.parse(launch.yayinGunu) + gun * 86_400_000).toISOString().slice(0, 10);
   const draft = useMutation({
@@ -45,10 +47,10 @@ function One({ launch, meta, gun, rv, running }: { launch: Launch; meta: LaunchM
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['launch', 'reviews', launch.id] }); toast.success('Rakamlar hazır; Zeki AI özeti yazılıyor.'); },
     onError: (e) => toast.error(errText(e, 'Rapor hazırlanamadı.') ?? ''),
   });
-  const sqlText = rv ? Object.entries(rv.rakam.sql).map(([k, v]) => `-- ${k}\n${Array.isArray(v) ? v.join('\n\n') : v}`).join('\n\n') : null;
   return (
     <Block
       title={`D+${gun} değerlendirmesi`}
+      info={rv ? <SqlInfo k={k} alan="items[]" label={`D+${gun} rakam tablosu`} /> : undefined}
       help={rv ? `İlk ${gun} gün (${fmtDay(rv.rakam.pencere.bas)} – ${fmtDay(rv.rakam.pencere.bit)}) · hazırlayan ${rv.hazirlayan} · ${fmtStamp(rv.hazirlama)}` : `${fmtDay(due)} sabahı kendiliğinden hazırlanır.`}
       action={meta.me.canWrite && rv?.durum !== 'karar' && (
         <button type="button" className={btnGhost} disabled={running || draft.isPending} onClick={() => draft.mutate()}>
@@ -63,7 +65,7 @@ function One({ launch, meta, gun, rv, running }: { launch: Launch; meta: LaunchM
           {rv.rakam.eksikGun > 0 && <Note tone="warn">{gun} gün henüz dolmadı ({rv.rakam.eksikGun} gün eksik): rakamlar bugüne kadardır.</Note>}
           <div className="mt-2">
             <TableWrap>
-              <thead className="bg-slate-50"><tr><th className={th}>Ölçü</th><th className={th}>Değer</th><th className={th}>Kaynak</th></tr></thead>
+              <thead className="bg-slate-50"><tr><th className={th}>Ölçü</th><th className={th}><InfoLabel k={k} alan="items[]">Değer</InfoLabel></th><th className={th}>Kaynak</th></tr></thead>
               <tbody>
                 {rv.rakam.satirlar.filter((r) => !(r.para && !meta.me.canSeeBudget)).map((r) => (
                   <tr key={r.anahtar} className="border-t border-slate-100">
@@ -75,7 +77,7 @@ function One({ launch, meta, gun, rv, running }: { launch: Launch; meta: LaunchM
               </tbody>
             </TableWrap>
           </div>
-          <SourceNote text="Rapor rakamları günlük tablodan ve bu sorgulardan; Zeki AI bu tablodaki rakamı aynen kullanır, yeni rakam yazamaz." sql={sqlText} />
+          <p className="mt-2 text-[11px] leading-snug text-canvas-muted">Rapor rakamları günlük tablodan ve okuma sorgularından; Zeki AI bu tablodaki rakamı aynen kullanır, yeni rakam yazamaz.</p>
           <div className="mt-3">
             <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Zeki AI özeti</div>
             {rv.ozet ? <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed">{rv.ozet}</p>
@@ -138,7 +140,7 @@ export default function ReviewTab({ launch, meta }: { launch: Launch; meta: Laun
       {!meta.modelReady && <Note tone="warn">Zeki AI modeli bu kurulumda bağlı değil: rapor yalnız rakam tablosuyla hazırlanır.</Note>}
       {uyari && <Note tone="warn">{uyari}</Note>}
       {q.data && ([7, 30] as const).map((g) => (
-        <One key={g} launch={launch} meta={meta} gun={g} rv={q.data.items.find((r) => r.gun === g)} running={runningFor(g)} />
+        <One key={g} launch={launch} meta={meta} gun={g} rv={q.data.items.find((r) => r.gun === g)} running={runningFor(g)} k={q.data.kaynaklar} />
       ))}
     </div>
   );

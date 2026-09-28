@@ -30,6 +30,14 @@ from semantic_bridge.marketing import plans as P
 TOP_IN_TEXT = 5          # paragrafta adı geçen kitap sayısı (liste tam kalır; bu yalnız metnin uzunluğu)
 
 
+def planned_tasks_stmt(tenant: str, donem: str):
+    """Stok kodlu planların (arşiv hariç) bu aya düşen, atlanmamış işlerinin stok kodları."""
+    first, last = M.bounds(donem)
+    return (sa.select(C.PLANS.c.stok_kodu).select_from(C.TASKS.join(C.PLANS, C.PLANS.c.id == C.TASKS.c.plan_id)).where(
+        C.PLANS.c.tenant_id == tenant, C.PLANS.c.durum != "arsiv", C.PLANS.c.stok_kodu.isnot(None),
+        C.TASKS.c.durum != "atlandi", C.TASKS.c.tarih >= first.isoformat(), C.TASKS.c.tarih <= last.isoformat()).distinct())
+
+
 def planned_codes(engine: Any, tenant: str, donem: str) -> set[str]:
     """Bu ay için işi planlı stok kodları: ay planı kalemleri + stok kodlu planların bu aya düşen işleri."""
     first, last = M.bounds(donem)
@@ -38,9 +46,7 @@ def planned_codes(engine: Any, tenant: str, donem: str) -> set[str]:
     if h:
         codes |= {x["stokKodu"] for x in M.items_of(engine, h["id"]) if x.get("stokKodu")}
     with engine.connect() as c:
-        rows = c.execute(sa.select(C.PLANS.c.stok_kodu).select_from(C.TASKS.join(C.PLANS, C.PLANS.c.id == C.TASKS.c.plan_id)).where(
-            C.PLANS.c.tenant_id == tenant, C.PLANS.c.durum != "arsiv", C.PLANS.c.stok_kodu.isnot(None),
-            C.TASKS.c.durum != "atlandi", C.TASKS.c.tarih >= first.isoformat(), C.TASKS.c.tarih <= last.isoformat()).distinct()).all()
+        rows = c.execute(planned_tasks_stmt(tenant, donem)).all()
     codes |= {r[0] for r in rows if r[0]}
     return codes
 

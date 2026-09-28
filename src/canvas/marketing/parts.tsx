@@ -55,13 +55,13 @@ export function DaysLeft({ days }: { days: number | null }) {
   );
 }
 
-/** Bölüm başlığı + isteğe bağlı sağ düğme. */
-export function Block({ title, help, action, children }: { title: string; help?: ReactNode; action?: ReactNode; children: ReactNode }) {
+/** Bölüm başlığı + isteğe bağlı sağ düğme. `info`: başlığın yanındaki sorgu bilgisi «i»'si (`<SqlInfo …/>`). */
+export function Block({ title, help, action, info, children }: { title: string; help?: ReactNode; action?: ReactNode; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold tracking-tight">{title}</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">{title}{info}</h2>
           {help && <p className="mt-0.5 max-w-[80ch] text-[11.5px] leading-snug text-canvas-muted">{help}</p>}
         </div>
         {action}

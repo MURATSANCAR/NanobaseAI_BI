@@ -9,6 +9,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { AskSheet } from '../../budget/parts';
 import { fmtDay, fmtStamp } from '../api';
 import { Block, MarketingFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { FIELD_SOURCE, FOY_TONE, fieldText, isMonth, monthApi, monthLabel, type Foy, type FoyField } from './api';
 
 /** Tek föy: telefonda önce önizleme (bayide gösterilen yüz) ve «Paylaş / PDF», sonra alanlar ve kaynakları, onay. */
@@ -29,7 +30,7 @@ function Preview({ f }: { f: Foy }) {
       <p className="text-[13px] font-semibold">{(v.yazar as string) ?? '—'}</p>
       <p className="text-[11.5px] text-canvas-muted">{[v.yayinevi, v.kitaplik, v.dizi].filter(Boolean).join(' · ') || '—'}</p>
       <div className="mt-3 rounded-xl bg-canvas-violet/10 px-3 py-2">
-        <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-violet">Tavsiye edilen satış fiyatı (KDV dahil)</div>
+        <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-violet">Tavsiye edilen satış fiyatı (KDV dahil)<SqlInfo k={f.kaynaklar} alan="alanlar[]" label="Föy fiyatı ve künye" /></div>
         <div className="font-mono text-[20px] font-extrabold tabular-nums">{money(v.fiyat)}</div>
       </div>
       <dl className="mt-3 grid grid-cols-[96px_1fr] gap-x-2 gap-y-1 text-[12px]">
@@ -177,12 +178,14 @@ export default function FoyScreen() {
                     {m.tur === 'barkod-isbn' && <> — barkod {String(m.barkod)}, ISBN {String(m.isbn)}</>}
                     {m.not && <span className="block text-[11px] font-normal opacity-80">{m.not}</span>}
                   </span>
+                  <SqlInfo k={f.kaynaklar} alan="uyumsuzluk[]" label={m.ad} />
                 </span>
               </Note>
             ))}
             {f.onayNotu && <Note tone="info">Onay notu: {f.onayNotu}</Note>}
 
-            <Block title="Alanlar" help="Her alanın kaynağı yanında: CRM kitap kartı, Zeki AI ya da elle. Elle düzeltme CRM yenilemesinde korunur; CRM'e yazılmaz (onaydan sonra «CRM'e işlenecek» listesine düşer).">
+            <Block title="Alanlar" help="Her alanın kaynağı yanında: CRM kitap kartı, Zeki AI ya da elle. Elle düzeltme CRM yenilemesinde korunur; CRM'e yazılmaz (onaydan sonra «CRM'e işlenecek» listesine düşer)."
+              info={<SqlInfo k={f.kaynaklar} alan="alanlar[]" label="Föy alanları" />}>
               <ul className="flex flex-col divide-y divide-slate-100">
                 {f.alanlar.map((a) => (
                   <li key={a.key} className="flex items-start gap-2 py-2">

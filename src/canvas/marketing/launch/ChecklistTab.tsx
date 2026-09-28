@@ -5,6 +5,7 @@ import { Check, Plus, RotateCcw } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../api';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { dLabel, launchApi, type Launch, type LaunchMeta, type LaunchTask } from './api';
 
 /** Kontrol listesi: planın takvimi + lansman maddeleri, yayın gününe göre üç bölüm. Tek tıkla «yapıldı»; kanıt
@@ -109,6 +110,7 @@ export default function ChecklistTab({ launch, meta }: { launch: Launch; meta: L
   const doneN = launch.tasks.filter((t) => t.durum === 'yapildi').length;
   return (
     <Block
+      info={<SqlInfo k={launch.kaynaklar} alan="tasks[]" label="Yapılan / toplam madde" />}
       title="Kontrol listesi"
       help={`${doneN} / ${total} madde yapıldı. Maddeler pazarlama planının takvimiyle aynı kayıttır: burada işaretlenen planda da yapılmış görünür. Yayın günü değişince bekleyen şablon maddeleri kayar.`}
     >

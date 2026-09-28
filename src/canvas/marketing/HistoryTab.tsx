@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, errText } from '../admin/ui';
 import { fmtMoney, fmtShortDay, fmtStamp, mktApi, type Meta, type Plan, type TodoItem } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const EVENT: Record<string, string> = {
   olusturuldu: 'Plan açıldı', duzenlendi: 'Plan düzenlendi', butce: 'Kanal ve bütçe değişti', 'oneri-butce': 'Zeki AI kanal ve bütçe önerisi',
@@ -55,6 +56,7 @@ export default function HistoryTab({ plan, meta }: { plan: Plan; meta: Meta }) {
       <Block
         title="CRM'e işlenecek"
         help="Portalda onaylanan ama CRM'de olmayan ya da farklı olan bilgiler. Portal CRM'e yazmaz; bu listeyi CRM'e ekibiniz işler."
+        info={<SqlInfo k={todo.data?.kaynaklar} alan="items[]" label="CRM'e işlenecek tutarlar" />}
         action={meta.me.canExport && <a className={btnGhost} href={mktApi.todoCsvUrl(plan.id)} download><Download aria-hidden className="h-4 w-4" />CSV</a>}
       >
         {todo.isLoading && <Loading />}

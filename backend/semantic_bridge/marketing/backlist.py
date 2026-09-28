@@ -394,6 +394,55 @@ class Sources:
             raise SourceError(f"Logo {year} satışı: {e}") from None
 
 
+# Okuma ifadeleri ayrı kurulur: aynı ifade hem çalıştırılır hem sorgu bilgisinde gösterilir (kaynak_backlist.py).
+
+
+def past_stmt(year: int):
+    return sa.select(PAST).where(PAST.c.year == year)
+
+
+def rows_stmt(tenant: str):
+    return sa.select(ROWS).where(ROWS.c.tenant_id == tenant)
+
+
+def rows_in_stmt(tenant: str, codes: Iterable[str]):
+    return sa.select(ROWS).where(ROWS.c.tenant_id == tenant, ROWS.c.stok_kodu.in_(list(codes) or [""]))
+
+
+def row_stmt(tenant: str, code: str):
+    return sa.select(ROWS).where(ROWS.c.tenant_id == tenant, ROWS.c.stok_kodu == code)
+
+
+def series_stmt(tenant: str, code: str):
+    return sa.select(SERIES).where(SERIES.c.tenant_id == tenant, SERIES.c.stok_kodu == code)
+
+
+def series_in_stmt(tenant: str, codes: Iterable[str]):
+    return sa.select(SERIES).where(SERIES.c.tenant_id == tenant, SERIES.c.stok_kodu.in_(list(codes) or [""]))
+
+
+def effects_code_stmt(tenant: str, code: str):
+    return (sa.select(EFFECTS).where(EFFECTS.c.tenant_id == tenant, EFFECTS.c.stok_kodu == code)
+            .order_by(EFFECTS.c.baslangic.desc()))
+
+
+def matches_code_stmt(tenant: str, code: str):
+    return sa.select(MATCHES).where(MATCHES.c.tenant_id == tenant, MATCHES.c.stok_kodu == code).order_by(MATCHES.c.tarih)
+
+
+def matches_stmt(tenant: str):
+    return sa.select(MATCHES).where(MATCHES.c.tenant_id == tenant)
+
+
+def effects_stmt(tenant: str, yil: Optional[int] = None, only_backlist: bool = False):
+    cond = [EFFECTS.c.tenant_id == tenant]
+    if yil:
+        cond.append(EFFECTS.c.baslangic.like(f"{int(yil)}-%"))
+    if only_backlist:
+        cond.append(EFFECTS.c.backlist.is_(True))
+    return sa.select(EFFECTS).where(*cond).order_by(EFFECTS.c.baslangic.desc(), EFFECTS.c.kampanya_id)
+
+
 def _year_sales(engine: sa.engine.Engine, tenant: str, src: Sources, year: int, *, refresh_past: bool,
                 notes: list[str]) -> tuple[Optional[list[Any]], str]:
     """Bir yılın kitap × ay satışı. M46 önbelleğinde varsa oradan (saatlik tazelenir); yoksa bu modülün geçmiş yıl
@@ -417,9 +466,14 @@ def _year_sales(engine: sa.engine.Engine, tenant: str, src: Sources, year: int, 
                 for i in range(0, len(rows), 5000):
                     c.execute(PAST.insert(), [{k: r[k] for k in ("year", "month", "stok_kodu", "adet", "ciro", "maliyet",
                                                                    "maliyetli_ciro")} for r in rows[i:i + 5000]])
-            C.meta_set(engine, tenant, key, {"rows": len(rows), "ciro": round(sum(r["ciro"] for r in rows), 2)})
+            firm = None
+            try:
+                firm = src.firms().get(year)
+            except SourceError:
+                firm = None
+            C.meta_set(engine, tenant, key, {"rows": len(rows), "ciro": round(sum(r["ciro"] for r in rows), 2), "firm": firm})
     with engine.connect() as c:
-        return c.execute(sa.select(PAST).where(PAST.c.year == year)).all(), "logo"
+        return c.execute(past_stmt(year)).all(), "logo"
 
 
 def _special_days(rows: list[dict[str, Any]], today: date) -> dict[str, dict[str, Any]]:
@@ -570,6 +624,10 @@ def build(engine: sa.engine.Engine, tenant: str, src: Sources, st: dict[str, Any
     frm, to = today - timedelta(days=30), today + timedelta(weeks=st["agendaWeeks"])
     author_rows = src.crm(Q.crm_author_new_sql(schema, frm, to, st["authorRole"]))
     campaigns = src.crm(Q.crm_campaigns_sql(schema, camp_since))
+    # Çalışan metinler (sorgu bilgisi: tabloyu dolduran asıl CRM/Logo sorguları)
+    ran_sql = {"stok": Q.logo_stock_sql(), "crmKitap": Q.crm_books_sql(schema), "crmGun": Q.crm_days_sql(schema),
+               "crmGunBag": Q.crm_day_links_sql(schema), "crmYazar": Q.crm_author_new_sql(schema, frm, to, st["authorRole"]),
+               "crmKampanya": Q.crm_campaigns_sql(schema, camp_since)}
 
     # 4) satırlar
     rows_out: list[dict[str, Any]] = []
@@ -706,7 +764,7 @@ def build(engine: sa.engine.Engine, tenant: str, src: Sources, st: dict[str, Any
             "sapmaAcik": sum(1 for r in rows_out if r["sapma_acik"]), "kampanya": len({k[0] for k in effects}),
             "eslesme": {"ozel-gun": sum(1 for m in matches if m["tur"] == "ozel-gun"),
                         "yazar-yeni": sum(1 for m in matches if m["tur"] == "yazar-yeni")},
-            "sureMs": ms, "notlar": notes}
+            "sureMs": ms, "notlar": notes, "sql": ran_sql, "hedefYil": year if tg.get("plan") else None}
     C.meta_set(engine, tenant, "backlist", meta)
     return meta
 
@@ -765,7 +823,7 @@ def list_rows(engine: sa.engine.Engine, tenant: str, *, weights: dict[str, float
     ensure(engine)
     today = today or C.today()
     with engine.connect() as c:
-        rows = c.execute(sa.select(ROWS).where(ROWS.c.tenant_id == tenant)).all()
+        rows = c.execute(rows_stmt(tenant)).all()
     items = [_row_dict(r, weights) for r in rows]
     in_plan = BK.by_codes(engine, tenant, kind="backlist")
     facets = {"yayinevleri": sorted({x["yayinevi"] for x in items if x["yayinevi"]}, key=G.fold),
@@ -868,14 +926,12 @@ def detail(engine: sa.engine.Engine, tenant: str, code: str, st: dict[str, Any],
     ensure(engine)
     today = today or C.today()
     with engine.connect() as c:
-        r = c.execute(sa.select(ROWS).where(ROWS.c.tenant_id == tenant, ROWS.c.stok_kodu == code)).first()
+        r = c.execute(row_stmt(tenant, code)).first()
         if not r:
             raise C.MarketingError("Kitap backlist listesinde yok.", 404)
-        ser = c.execute(sa.select(SERIES).where(SERIES.c.tenant_id == tenant, SERIES.c.stok_kodu == code)).all()
-        eff = c.execute(sa.select(EFFECTS).where(EFFECTS.c.tenant_id == tenant, EFFECTS.c.stok_kodu == code)
-                        .order_by(EFFECTS.c.baslangic.desc())).all()
-        mts = c.execute(sa.select(MATCHES).where(MATCHES.c.tenant_id == tenant, MATCHES.c.stok_kodu == code)
-                        .order_by(MATCHES.c.tarih)).all()
+        ser = c.execute(series_stmt(tenant, code)).all()
+        eff = c.execute(effects_code_stmt(tenant, code)).all()
+        mts = c.execute(matches_code_stmt(tenant, code)).all()
     x = _row_dict(r, weights)
     meta = C.meta_get(engine, tenant, "backlist")
     seri_rng = meta.get("seri") or []
@@ -929,11 +985,10 @@ def agenda(engine: sa.engine.Engine, tenant: str, weeks: int, *, today: Optional
     lim = (today + timedelta(weeks=weeks)).isoformat()
     t = today.isoformat()
     with engine.connect() as c:
-        mts = c.execute(sa.select(MATCHES).where(MATCHES.c.tenant_id == tenant)).all()
-        codes = {m.stok_kodu for m in mts}
-        rows = {r.stok_kodu: r for r in c.execute(sa.select(ROWS).where(ROWS.c.tenant_id == tenant,
-                                                                         ROWS.c.stok_kodu.in_(list(codes) or [""]))).all()}
-        ser = c.execute(sa.select(SERIES).where(SERIES.c.tenant_id == tenant, SERIES.c.stok_kodu.in_(list(codes) or [""]))).all()
+        mts = c.execute(matches_stmt(tenant)).all()
+        codes = sorted({m.stok_kodu for m in mts})
+        rows = {r.stok_kodu: r for r in c.execute(rows_in_stmt(tenant, codes)).all()}
+        ser = c.execute(series_in_stmt(tenant, codes)).all()
     sales = {(s.stok_kodu, s.yil_ay): s.net_adet for s in ser}
     plans = BK.by_codes(engine, tenant, codes, kind="backlist")
 
@@ -979,13 +1034,8 @@ def agenda(engine: sa.engine.Engine, tenant: str, weeks: int, *, today: Optional
 
 def effects(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, *, only_backlist: bool = False) -> dict[str, Any]:
     ensure(engine)
-    cond = [EFFECTS.c.tenant_id == tenant]
-    if yil:
-        cond.append(EFFECTS.c.baslangic.like(f"{int(yil)}-%"))
-    if only_backlist:
-        cond.append(EFFECTS.c.backlist.is_(True))
     with engine.connect() as c:
-        rows = c.execute(sa.select(EFFECTS).where(*cond).order_by(EFFECTS.c.baslangic.desc(), EFFECTS.c.kampanya_id)).all()
+        rows = c.execute(effects_stmt(tenant, yil, only_backlist)).all()
         years = sorted({int(r[0][:4]) for r in c.execute(sa.select(EFFECTS.c.baslangic).where(EFFECTS.c.tenant_id == tenant)
                                                                   .distinct()).all() if r[0]}, reverse=True)
     names = rows_by_code(engine, tenant, {r.stok_kodu for r in rows})

@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Pazarlama çekirdeğinin köprü uçları: /api/v1/marketing/* (M15 yeni kitap planı). */
 
@@ -78,6 +79,7 @@ export type BookPage = {
   window: { from: string; to: string };
   yayinevleri: string[];
   hepsi: number;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Line = {
@@ -166,6 +168,7 @@ export type Plan = {
   materials: Material[];
   ustOnayGerekli?: boolean;
   eksikMateryal?: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Emsal = {
@@ -214,7 +217,6 @@ export type Card = {
     items: Array<{ stokKodu: string; ad: string | null; ilkYayin: string | null; lansman: string | null; ilk12: number | null; yillik: Record<string, { adet: number; ciro: number } | null> }>;
     yillar: Array<{ yil: number; adet: number; ciro: number }>;
     kaynak?: string;
-    sql?: string | null;
     not?: string;
   };
   rakipler: Array<{ ad: string | null; yayinevi: string | null; yazarlar: string | null; satisAdedi: number | null; listeFiyati: number | null; tanitim: string | null }>;
@@ -224,6 +226,7 @@ export type Card = {
   veriSonu: { logo: string | null; emsalAy: string | null };
   uyarilar: string[];
   asof?: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Job = { id: string; tur: string; durum: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata'; adim: string | null; hata: string | null; sonuc: Record<string, unknown> | null; olusturma: string | null };
@@ -302,8 +305,8 @@ export const mktApi = {
   upperApprove: (id: string, note?: string) => send<Plan>('POST', `/plans/${enc(id)}/upper-approve`, { note }),
   reject: (id: string, note: string) => send<Plan>('POST', `/plans/${enc(id)}/reject`, { note }),
   revise: (id: string, reason: string) => send<Plan>('POST', `/plans/${enc(id)}/revise`, { reason }),
-  events: (id: string) => send<{ items: Event[] }>('GET', `/plans/${enc(id)}/events`),
-  todo: (id: string) => send<{ items: TodoItem[]; planOnayli: boolean }>('GET', `/plans/${enc(id)}/crm-todo`, undefined, 180_000),
+  events: (id: string) => send<{ items: Event[]; kaynaklar?: Kaynaklar }>('GET', `/plans/${enc(id)}/events`),
+  todo: (id: string) => send<{ items: TodoItem[]; planOnayli: boolean; kaynaklar?: Kaynaklar }>('GET', `/plans/${enc(id)}/crm-todo`, undefined, 180_000),
   pdfUrl: (id: string) => `${ENGINE_BASE}${B}/plans/${enc(id)}/export.pdf`,
   csvUrl: (id: string) => `${ENGINE_BASE}${B}/plans/${enc(id)}/export.csv`,
   packageUrl: (id: string) => `${ENGINE_BASE}${B}/plans/${enc(id)}/package.zip`,
@@ -376,7 +379,7 @@ export type EmsalCandidates = {
   not?: string;
   kaynak: string;
   satisKaynagi?: string;
-  sql?: string | null;
+  kaynaklar?: Kaynaklar;
   items: Array<{ sira: number; stokKodu: string; ad: string; yazar: string | null; kitaplik: string | null; gerekce: string[];
     lansman: string | null; ilk3: number | null; ilk6: number | null; ilk12: number | null; gozlenenAy: number }>;
 };

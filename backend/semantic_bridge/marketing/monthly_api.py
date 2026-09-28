@@ -22,8 +22,11 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge.marketing import core as C
 from semantic_bridge.marketing import foy as F
+from semantic_bridge.marketing import kaynak_aylik as K
 from semantic_bridge.marketing import foy_pdf as FP
 from semantic_bridge.marketing import monthly as M
 from semantic_bridge.marketing import monthly_gaps as MG
@@ -65,6 +68,9 @@ def register(app, rt, H: Any) -> None:
         M.ensure(engine)
         F.ensure(engine)
         return engine, tenant, user, display
+
+    def logo_db() -> str | None:
+        return PK.logo_db(rt)
 
     def donem_of(v: str) -> str:
         return H.call(M.parse_donem, v)
@@ -125,9 +131,10 @@ def register(app, rt, H: Any) -> None:
         kpi["hazir"] = sum(1 for r in rows if not r["eksikler"] and not r["engelleyen"] and not r["ayDisi"])
         shown = [r for r in rows if not durum or r["durum"] == durum or (durum == "eksik" and r["eksikler"])
                  or (durum == "uyumsuz" and r["engelleyen"]) or (durum == "eski" and r["eski"])]
-        return {"donem": donem, "donemAdi": M.label(donem), "items": shown, "kpi": kpi, "notlar": notes,
-                "logoNotu": (sync or {}).get("logoNotu"), "gonderimler": F.sends_of(engine, tenant, donem),
-                "zorunlu": fs["required"], "logoKaynak": fs["logoPrice"]}
+        out = {"donem": donem, "donemAdi": M.label(donem), "items": shown, "kpi": kpi, "notlar": notes,
+               "logoNotu": (sync or {}).get("logoNotu"), "gonderimler": F.sends_of(engine, tenant, donem),
+               "zorunlu": fs["required"], "logoKaynak": fs["logoPrice"]}
+        return PV.bagla(out, lambda: K.for_foy_list(engine, tenant, crm.schema(), out, logo, logo_db()))
 
     def foy_one(engine, tenant: str, stok: str, donem: str | None, fresh: bool = False, force: bool = False) -> dict[str, Any]:
         """Tek föy; yoksa (ya da `fresh`) CRM'den açar/tazeler. Dönem verilmezse yayın gününün ayı."""
@@ -148,7 +155,7 @@ def register(app, rt, H: Any) -> None:
         out["crmTodo"] = F.crm_todo(out) if out["durum"] == "onayli" else []
         out["logo"] = next((x for x in out["uyumsuzluk"] if x["tur"] == "fiyat-logo"), None)
         out["kitap"] = {"yayinKaynagi": src, "sorumlu": (detail or {}).get("sorumlu")}
-        return out
+        return PV.bagla(out, lambda: K.for_foy(engine, tenant, crm.schema(), out, logo, logo_db()))
 
     # ------------------------------------------------------------------ ay planı
 
@@ -165,7 +172,8 @@ def register(app, rt, H: Any) -> None:
         v["varsayilanDonem"] = M.default_donem(C.today(), st()["draftDay"])
         if v.get("plan"):
             v["plan"]["ustOnayGerekli"] = C.needs_upper(v["plan"]["butceToplam"], st()["threshold"])
-        return v if can(user, F_BUDGET) else M.redact(v)
+        out = v if can(user, F_BUDGET) else M.redact(v)
+        return await run_in_threadpool(PV.bagla, out, lambda: K.for_month(engine, tenant, crm.schema(), v, logo_db()))
 
     @app.post(R + "/months/{donem}/build")
     async def mkt_month_build(donem: str, request: Request) -> dict[str, Any]:
@@ -182,8 +190,9 @@ def register(app, rt, H: Any) -> None:
         d = donem_of(donem)
         h = plan_or_404(engine, tenant, d)
         items = [x for x in M.items_of(engine, h["id"]) if x["cakisma"]]
-        return {"donem": d, "items": [{"id": x["id"], "baslik": x["baslik"], "tur": x["tur"], "hafta": x["hafta"],
-                                       "baslangic": x["baslangic"], "cakisma": x["cakisma"]} for x in items], "total": len(items)}
+        out = {"donem": d, "items": [{"id": x["id"], "baslik": x["baslik"], "tur": x["tur"], "hafta": x["hafta"],
+                                      "baslangic": x["baslangic"], "cakisma": x["cakisma"]} for x in items], "total": len(items)}
+        return PV.bagla(out, lambda: K.for_conflicts(engine, tenant, h["id"]))
 
     @app.post(R + "/months/{donem}/items", status_code=201)
     def mkt_month_item_new(donem: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -276,7 +285,8 @@ def register(app, rt, H: Any) -> None:
         d = donem_of(donem)
         g = await run_in_threadpool(H.call, _gaps, engine, tenant, d)
         g["modelVar"] = rt().llm_for("marketing", NORMAL) is not None
-        return g if can(user, F_BUDGET) else MG.redact(g)
+        out = g if can(user, F_BUDGET) else MG.redact(g)
+        return PV.bagla(out, lambda: K.for_gaps(engine, tenant, d))
 
     @app.post(R + "/months/{donem}/target-gaps/explain")
     async def mkt_month_gaps_explain(donem: str, request: Request) -> dict[str, Any]:
@@ -298,7 +308,8 @@ def register(app, rt, H: Any) -> None:
             audit(engine, user, "run", h, {"hedefAcigiParagrafi": True, "dusen": res["dusen"]})
         out = MG.with_paragraph(engine, tenant, g)
         out["modelVar"] = True
-        return out if can(user, F_BUDGET) else MG.redact(out)
+        out = out if can(user, F_BUDGET) else MG.redact(out)
+        return PV.bagla(out, lambda: K.for_gaps(engine, tenant, d))
 
     @app.get(R + "/months/{donem}/events")
     def mkt_month_events(donem: str, request: Request) -> dict[str, Any]:
@@ -310,7 +321,7 @@ def register(app, rt, H: Any) -> None:
                 for side in ("eski", "yeni"):
                     if isinstance(e.get(side), dict):
                         e[side] = {k: v for k, v in e[side].items() if k not in ("toplam", "butce")}
-        return {"items": items}
+        return PV.bagla({"items": items}, lambda: K.for_month_events(engine, h["id"]))
 
     def _flow(donem: str, request: Request, kind: str, body: dict[str, Any]) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)

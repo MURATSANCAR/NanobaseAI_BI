@@ -89,9 +89,13 @@ def put(engine: sa.engine.Engine, tenant: str, user: str, plan_id: str, items: A
     return of(engine, plan_id)
 
 
+def of_stmt(plan_id: str):
+    return sa.select(PLAN_BOOKS).where(PLAN_BOOKS.c.plan_id == plan_id).order_by(PLAN_BOOKS.c.sira)
+
+
 def of(engine: sa.engine.Engine, plan_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PLAN_BOOKS).where(PLAN_BOOKS.c.plan_id == plan_id).order_by(PLAN_BOOKS.c.sira)).all()
+        rows = c.execute(of_stmt(plan_id)).all()
     return [{"stokKodu": r.stok_kodu, "rol": r.rol, "rolAdi": ROLES.get(r.rol, r.rol), "ad": r.ad, "sira": r.sira,
              "gerekce": r.gerekce} for r in rows]
 

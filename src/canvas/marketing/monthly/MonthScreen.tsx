@@ -10,6 +10,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { AskSheet, Tabs } from '../../budget/parts';
 import { STATUS_TONE, fmtDay, fmtMoney, fmtPct, fmtStamp, parseNum } from '../api';
 import { Block, MarketingFrame } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { isMonth, monthApi, monthLabel, type MonthItem, type MonthView } from './api';
 import BudgetPanel from './BudgetPanel';
 import CalendarGrid from './CalendarGrid';
@@ -107,13 +108,17 @@ export default function MonthScreen() {
           {o && (
             <KpiRow>
               <Kpi label={`${o.donemAdi} hedefe oran`} value={fmtPct(o.oran)}
-                help={o.not ?? (me.canSeeBudget ? `${fmtMoney(o.gercek)} / ${fmtMoney(o.hedef)} (hedefli kitaplar)` : 'Hedefli kitapların net cirosu ÷ ay hedefi')} />
+                help={o.not ?? (me.canSeeBudget ? `${fmtMoney(o.gercek)} / ${fmtMoney(o.hedef)} (hedefli kitaplar)` : 'Hedefli kitapların net cirosu ÷ ay hedefi')}
+                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy" label={`${o.donemAdi} hedefe oran`} />} />
               <Kpi label="Önceki ay işleri" value={o.isler.toplam ? `${o.isler.yapildi} / ${o.isler.toplam}` : '—'}
-                help={o.isler.toplam ? `Onaylı planların işleri; ${o.isler.atlandi} atlandı` : 'Önceki ay için onaylı plan işi yok'} />
+                help={o.isler.toplam ? `Onaylı planların işleri; ${o.isler.atlandi} atlandı` : 'Önceki ay için onaylı plan işi yok'}
+                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy.isler" label="Önceki ay işleri" />} />
               <Kpi label="Çakışma" value={String(v.cakismaSayisi)} help="Aynı hafta aynı kitaplıkta lansman ya da üst üste kampanya"
-                active={tab === 'takvim' && v.cakismaSayisi > 0} onClick={() => setParams({ sekme: 'takvim' }, { replace: true })} />
+                active={tab === 'takvim' && v.cakismaSayisi > 0} onClick={() => setParams({ sekme: 'takvim' }, { replace: true })}
+                info={<SqlInfo k={v.kaynaklar} alan="cakismaSayisi" label="Çakışma" />} />
               <Kpi label="Föy" value={`${v.foy.onayli} / ${v.foy.toplam}`} help={v.foy.eksik || v.foy.uyumsuz ? `${v.foy.eksik} eksik, ${v.foy.uyumsuz} uyumsuz` : 'Onaylı föy / ayın yeni kitabı'}
-                active={tab === 'foy'} onClick={() => setParams({ sekme: 'foy' }, { replace: true })} />
+                active={tab === 'foy'} onClick={() => setParams({ sekme: 'foy' }, { replace: true })}
+                info={<SqlInfo k={v.kaynaklar} alan="foy" label="Föy" />} />
             </KpiRow>
           )}
 
@@ -158,6 +163,7 @@ export default function MonthScreen() {
             >
               <div className="mb-2 flex flex-wrap gap-2 text-[11.5px] font-semibold text-canvas-muted">
                 {Object.entries(v.sayilar).filter(([, n]) => n > 0).map(([k, n]) => <span key={k}>{m.monthly?.types[k] ?? k}: {n}</span>)}
+                <SqlInfo k={v.kaynaklar} alan="items[]" label="Takvim kalemleri ve sayıları" />
               </div>
               {p ? <CalendarGrid view={v} channels={m.channels} onPick={setPick} /> : <p className="text-[12.5px] text-canvas-muted">Plan kurulunca takvim burada.</p>}
             </Block>
@@ -292,6 +298,7 @@ function ItemSheet({ item, view, editable, canSeeBudget, canNewBooks, channels, 
             {canSeeBudget && d.planlananCiro != null && <><dt className="text-canvas-muted">Planlanan ciro</dt><dd>{fmtMoney(d.planlananCiro)}</dd></>}
             {d.urunSayisi != null && <><dt className="text-canvas-muted">Ürün</dt><dd>{d.urunSayisi}</dd></>}
           </dl>
+          <p className="flex items-center gap-1 text-[11px] text-canvas-muted">Rakamların kaynağı<SqlInfo k={view?.kaynaklar} alan="items[]" label="Kalemin rakamları" /></p>
           <div className="flex flex-wrap gap-2">
             {d.plan && canNewBooks && <Link className={btnGhost} to={`/pazarlama/plan/${encodeURIComponent(d.plan.id)}`}>Planı aç ({d.plan.durumAdi})</Link>}
             {item.tur === 'yeni' && item.stokKodu && <Link className={btnGhost} to={`/pazarlama/foy/${encodeURIComponent(item.stokKodu)}?ay=${view?.donem ?? ''}`}>Föyü aç</Link>}

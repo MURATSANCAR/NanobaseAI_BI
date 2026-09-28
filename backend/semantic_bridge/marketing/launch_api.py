@@ -22,7 +22,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 from semantic_bridge.marketing import core as C
+from semantic_bridge.marketing import kaynak_lansman as K
 from semantic_bridge.marketing import launch as L
 from semantic_bridge.marketing import launch_report as RP
 from semantic_bridge.marketing import launch_risk as LR
@@ -173,13 +176,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         items = L.list_launches(engine, tenant, frm=frm or None, to=to or None, durum=durum, sahip=user if kim == "ben" else "")
         # Kural eşikli risk bayrağı + tek cümle (öneri 17): cümle gece yazılır, burada yalnız okunur.
         items = LR.attach(engine, tenant, items, st()["alertRatio"], LR.settings(admin_mod.conf))
-        return {"items": items, "total": len(items)}
+        out = {"items": items, "total": len(items)}
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, frm=frm or None, to=to or None, durum=durum,
+                                                sahip=user if kim == "ben" else ""))
 
     @app.get(R + "/today")
     def launch_today(request: Request, kim: str = "ben") -> dict[str, Any]:
         engine, tenant, user = ctx(request)
         items = L.today_tasks(engine, tenant, user, mine=kim != "hepsi")
-        return {"items": items, "total": len(items), "tarih": C.today().isoformat()}
+        return PV.bagla({"items": items, "total": len(items), "tarih": C.today().isoformat()}, lambda: K.for_today(engine, tenant))
 
     @app.get(R + "/candidates")
     def launch_candidates(request: Request) -> dict[str, Any]:
@@ -227,10 +232,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         except Exception as e:  # noqa: BLE001 — okuma hatası lansman özetinde ve bir sonraki koşuda görünür
             log.warning("launch: ilk okuma yapılamadı (%s): %s", lid, e)
 
+    def logo_db() -> str | None:
+        return PK.logo_db(rt)
+
     @app.get(R + "/{lid}")
     def launch_get(lid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user = ctx(request)
-        return money(user, call(L.get_full, engine, tenant, lid))
+        full = call(L.get_full, engine, tenant, lid)
+        return PV.bagla(money(user, full), lambda: K.for_launch(engine, tenant, full, logo_db()))
 
     @app.patch(R + "/{lid}")
     def launch_patch(lid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -265,7 +274,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user = ctx(request)
         if gun not in (7, 30):
             raise HTTPException(status_code=400, detail={"code": "MARKETING", "message": "gun 7 ya da 30 olmalı."})
-        return call(L.tracking, engine, tenant, lid, gun, can(user, F_BUDGET))
+        out = call(L.tracking, engine, tenant, lid, gun, can(user, F_BUDGET))
+        out.pop("sql", None)   # çalışmış metinler sorgu bilgisinde (kalem kalem, kopyalanabilir)
+        return PV.bagla(out, lambda: K.for_tracking(engine, tenant, L.get_full(engine, tenant, lid), logo_db()))
 
     # ---- etkinlik ve medya
 
@@ -277,7 +288,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if not can(user, F_BUDGET):
             ev = {"items": [{**x, "gelir": None, "gider": None} for x in ev["items"]],
                   "toplam": {**ev["toplam"], "gelir": None, "gider": None}}
-        return {**ev, "uyarilar": warn}
+        return PV.bagla({**ev, "uyarilar": warn}, lambda: K.for_events(engine, full, crm.schema()))
 
     @app.post(R + "/{lid}/events", status_code=201)
     def launch_event_add(lid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -303,7 +314,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(R + "/{lid}/media")
     def launch_media(lid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return media_of(engine, tenant, call(L.get_full, engine, tenant, lid))
+        full = call(L.get_full, engine, tenant, lid)
+        return PV.bagla(media_of(engine, tenant, full), lambda: K.for_media(engine, full))
 
     @app.post(R + "/{lid}/media", status_code=201)
     def launch_media_add(lid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -328,7 +340,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if not can(user, F_BUDGET):
             items = [{**i, "alanlar": {k: v for k, v in i["alanlar"].items() if "gelir" not in k.lower() and "gider" not in k.lower()}}
                      for i in items]
-        return {"items": items, "uyarilar": warn}
+        return PV.bagla({"items": items, "uyarilar": warn}, lambda: K.for_crm_todo(engine, full, crm.schema()))
 
     # ---- değerlendirme
 
@@ -373,7 +385,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         full = call(L.get_full, engine, tenant, lid)
         jobs = [j for j in C.jobs_of(engine, full["planId"]) if j["tur"].startswith("lansman-rapor")
                 and (j.get("hedef") or {}).get("lansman") == lid]
-        return {"items": money(user, full)["reviews"], "jobs": jobs}
+        return PV.bagla({"items": money(user, full)["reviews"], "jobs": jobs},
+                        lambda: K.for_reviews(engine, tenant, full, logo_db()))
 
     @app.post(R + "/{lid}/reviews/{gun}/draft", status_code=202)
     async def launch_review_draft(lid: str, gun: int, request: Request) -> dict[str, Any]:

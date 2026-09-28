@@ -5,6 +5,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { dayTag, fmtDay, mktApi, type Meta, type Plan, type Task, type TaskStatus } from './api';
 import { Block } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const TONE: Record<TaskStatus, 'ok' | 'muted' | 'warn'> = { bekliyor: 'warn', yapildi: 'ok', atlandi: 'muted' };
 
@@ -29,6 +30,7 @@ export default function CalendarTab({ plan, meta, editable, canMark, onSaved }: 
   return (
     <Block
       title="Takvim"
+      info={<SqlInfo k={plan.kaynaklar} alan="tasks[]" label="Takvim işleri ve gün farkı" />}
       help={plan.yayinTarihi ? `Yayın günü ${fmtDay(plan.yayinTarihi)}. Şablon işleri yayın günü değişince kendiliğinden kayar.` : 'Yayın tarihi yok: önce plan başlığındaki yayın tarihini girin.'}
       action={editable && (
         <button type="button" className={btnGhost}

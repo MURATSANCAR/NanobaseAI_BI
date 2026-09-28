@@ -4,7 +4,8 @@ import { RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { fmtDay, fmtInt, fmtMoney, fmtShortDay, fmtStamp, mktApi, type Meta } from './api';
-import { Block, SourceNote } from './parts';
+import { Block } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 const DATE_LABEL: Record<string, string> = {
   'crm-kitap': 'Kitap kartı',
@@ -46,7 +47,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
       </div>
       {c.uyarilar.map((u) => <Note key={u} tone="warn">{u}</Note>)}
 
-      <Block title="Kitap ve yayın günü">
+      <Block title="Kitap ve yayın günü" info={<SqlInfo k={c.kaynaklar} alan="kitap" label="Künye, kapak fiyatı ve sayfa" />}>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-[12.5px] sm:grid-cols-2">
           {[
             ['Kitap', k.ad], ['Yazar', k.yazar], ['Yayınevi', k.yayinevi], ['Kitaplık', k.kitaplik], ['Hedef kitle', k.hedefKitle],
@@ -74,7 +75,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
         <p className="mt-2 text-[11px] text-canvas-muted">Esas alınan sıra: {meta.settings.dateOrder.map((x) => meta.dateSources[x] ?? x).join(' → ')} (Yönetim → Pazarlama planları).</p>
       </Block>
 
-      <Block title="Satış hedefi" help="Bütçe ve hedefler modülünün yürürlükteki planı.">
+      <Block title="Satış hedefi" help="Bütçe ve hedefler modülünün yürürlükteki planı." info={<SqlInfo k={c.kaynaklar} alan="hedef" label="Satış hedefi" />}>
         {c.hedef.planId && c.hedef.adet != null ? (
           <div className="flex flex-wrap gap-4 text-[13px]">
             <div><span className="text-canvas-muted">Hedef adet</span> <strong className="font-mono">{fmtInt(c.hedef.adet)}</strong></div>
@@ -89,6 +90,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
       <Block
         title="Emsal kitaplar"
         help="CRM'de editörün girdiği emsaller ve ilk baskı tahmininin benzerlik puanıyla seçtiği kitaplar. Satış net adettir (iade düşülmüş), ilk yayın ayından itibaren."
+        info={<SqlInfo k={c.kaynaklar} alan="emsal" label="Emsal kitapların satışı" />}
       >
         {!em.hazir ? (
           <Note tone="info">{em.not}</Note>
@@ -99,6 +101,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
                 <Pill tone="violet">İlk baskı tahmini: ilk 6 ay {fmtInt(em.tahmin.baz6)} adet{em.tahmin.bant6 ? ` (${fmtInt(em.tahmin.bant6.low)}–${fmtInt(em.tahmin.bant6.high)})` : ''}</Pill>
                 {em.tahmin.baz12 != null && <Pill tone="violet">ilk 12 ay {fmtInt(em.tahmin.baz12)} adet</Pill>}
                 {em.tahmin.ilkBaski != null && <Pill tone="muted">önerilen ilk baskı {fmtInt(em.tahmin.ilkBaski)}</Pill>}
+                <SqlInfo k={c.kaynaklar} alan="emsal.tahmin" label="İlk baskı tahmini" className="self-center" />
               </div>
             )}
             {em.gerceklesen && (
@@ -109,7 +112,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className={th}>Kitap</th><th className={th}>Neden</th><th className={th}>Lansman</th>
-                    <th className={`${th} text-right`}>İlk 3 ay</th><th className={`${th} text-right`}>İlk 6 ay</th><th className={`${th} text-right`}>İlk 12 ay</th>
+                    <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="emsal.items[]">İlk 3 ay</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="emsal.items[]">İlk 6 ay</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="emsal.items[]">İlk 12 ay</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,21 +139,21 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
             ) : (
               <Note tone="info">Emsal bulunamadı: CRM'de emsal girilmemiş ve benzer kitap yok.</Note>
             )}
-            <SourceNote text={em.kaynak} />
+            {em.kaynak && <p className="mt-2 text-[11px] leading-snug text-canvas-muted">{em.kaynak}</p>}
           </>
         )}
       </Block>
 
       {!em.crmEmsalSayisi && <EmsalCandidatesBlock stok={stok} />}
 
-      <Block title={`Yazarın diğer kitapları${c.yazar.yazar ? ` · ${c.yazar.yazar}` : ''}`} help="Yıllık net adet ve net ciro Logo faturalı satıştır.">
+      <Block title={`Yazarın diğer kitapları${c.yazar.yazar ? ` · ${c.yazar.yazar}` : ''}`} help="Yıllık net adet ve net ciro Logo faturalı satıştır." info={<SqlInfo k={c.kaynaklar} alan="yazar" label="Yazarın diğer kitaplarının satışı" />}>
         {c.yazar.not && <Note tone="info">{c.yazar.not}</Note>}
         {c.yazar.items.length ? (
           <TableWrap>
             <thead>
               <tr className="border-b border-slate-100">
-                <th className={th}>Kitap</th><th className={th}>İlk yayın</th><th className={`${th} text-right`}>İlk 12 ay</th>
-                {years.map((y) => <th key={y} className={`${th} text-right`}>{y}</th>)}
+                <th className={th}>Kitap</th><th className={th}>İlk yayın</th><th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="yazar.items[]">İlk 12 ay</InfoLabel></th>
+                {years.map((y) => <th key={y} className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="yazar.items[]">{String(y)}</InfoLabel></th>)}
               </tr>
             </thead>
             <tbody>
@@ -180,11 +183,11 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
             </tbody>
           </TableWrap>
         ) : !c.yazar.not ? <Note tone="info">Yazarın başka kitabı bulunamadı.</Note> : null}
-        <SourceNote text={c.yazar.kaynak} sql={c.yazar.sql} />
+        {c.yazar.kaynak && <p className="mt-2 text-[11px] leading-snug text-canvas-muted">{c.yazar.kaynak}</p>}
       </Block>
 
       {meta.me.canSeeBudget && pj && (
-        <Block title="CRM'deki bütçe ve öncelik" help="Proje kartında yayın kurulunda girilen değerler (yalnız okunur).">
+        <Block title="CRM'deki bütçe ve öncelik" help="Proje kartında yayın kurulunda girilen değerler (yalnız okunur)." info={<SqlInfo k={c.kaynaklar} alan="crmButce" label="CRM'deki bütçe ve öncelik" />}>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[12.5px] sm:grid-cols-3">
             {[
               ['Toplam pazarlama (kurul)', pj.toplamKurul], ['Toplam pazarlama', pj.toplam], ['Basın', pj.basin], ['Kampanya', pj.kampanya],
@@ -205,7 +208,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
       )}
 
       {c.rakipler.length > 0 && (
-        <Block title="Rakip kitaplar" help="CRM «Rakip Kitap» kayıtları; satış adedinin kaynağı CRM'e girilen değerdir.">
+        <Block title="Rakip kitaplar" help="CRM «Rakip Kitap» kayıtları; satış adedinin kaynağı CRM'e girilen değerdir." info={<SqlInfo k={c.kaynaklar} alan="rakipler" label="Rakip kitaplar" />}>
           <ul className="flex flex-col gap-2">
             {c.rakipler.map((r, i) => (
               <li key={`${r.ad}-${i}`} className="rounded-xl bg-white/70 p-2.5 text-[12px]">
@@ -260,6 +263,7 @@ function EmsalCandidatesBlock({ stok }: { stok: string }) {
     <Block
       title="Emsal adayları (özet benzerliği)"
       help="CRM'de bu kitaba emsal girilmemiş. Katalogda arka kapak metni, kitaplığı, kategorisi ve teması anlamca en yakın kitaplar sırayla listelenir; emsal seçimi sizindir."
+      info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Emsal adaylarının satışı" />}
     >
       {q.isLoading ? (
         <Loading />
@@ -274,7 +278,7 @@ function EmsalCandidatesBlock({ stok }: { stok: string }) {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className={th}>Sıra</th><th className={th}>Kitap</th><th className={th}>Neden yakın</th><th className={th}>Lansman</th>
-                <th className={`${th} text-right`}>İlk 3 ay</th><th className={`${th} text-right`}>İlk 6 ay</th><th className={`${th} text-right`}>İlk 12 ay</th>
+                <th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">İlk 3 ay</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">İlk 6 ay</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">İlk 12 ay</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -295,7 +299,7 @@ function EmsalCandidatesBlock({ stok }: { stok: string }) {
             </tbody>
           </TableWrap>
           <p className="mt-2 text-[11px] text-canvas-muted">Aday bir kitabı emsal olarak kullanmak için CRM kitap kartına emsal girin; karne yenilenince «CRM emsali» olarak görünür.</p>
-          <SourceNote text={`${q.data.kaynak} ${q.data.satisKaynagi ?? ''}`} sql={q.data.sql} />
+          <p className="mt-1 text-[11px] leading-snug text-canvas-muted">{q.data.kaynak} {q.data.satisKaynagi ?? ''}</p>
         </>
       )}
     </Block>

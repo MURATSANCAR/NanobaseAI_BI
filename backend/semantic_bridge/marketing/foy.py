@@ -299,6 +299,29 @@ class LogoPrices:
         self.runner = runner
         self._cache: dict[Any, tuple[float, Any]] = {}
         self._lock = threading.Lock()
+        #: Stok kodu → o kodun fiyatını getiren okumada çalışmış Logo SQL metinleri, satır, süre ve an (sorgu bilgisi).
+        self.executed: dict[str, list[dict[str, Any]]] = {}
+
+    def _run(self) -> tuple[Callable[[str], list[dict[str, Any]]], list[dict[str, Any]]]:
+        """Çalışan her SQL'i (metin, satır, süre, an) kaydeden koşucu."""
+        base = self.runner()
+        runs: list[dict[str, Any]] = []
+
+        def run(sql: str) -> list[dict[str, Any]]:
+            t0 = time.monotonic()
+            rows = base(sql)
+            runs.append({"sql": sql, "rows": len(rows), "dbMs": int((time.monotonic() - t0) * 1000), "at": C.iso(C.now())})
+            return rows
+        return run, runs
+
+    def runs_for(self, codes: Iterable[str]) -> list[dict[str, Any]]:
+        """Bu kodların fiyatını getiren okumaların çalışmış SQL'leri (tekrarsız, okunma sırasıyla)."""
+        seen: dict[str, dict[str, Any]] = {}
+        with self._lock:
+            for k in codes:
+                for r in self.executed.get(k) or []:
+                    seen.setdefault(r["sql"], r)
+        return list(seen.values())
 
     def read(self, codes: Iterable[str], mode: str, fresh: bool = False) -> tuple[dict[str, dict[str, Any]], Optional[str]]:
         want = tuple(sorted({c for c in codes if c}))
@@ -311,15 +334,18 @@ class LogoPrices:
             hit = self._cache.get(key)
         if hit and not fresh and time.monotonic() - hit[0] < self.TTL:
             return hit[1]
+        run, runs = self._run()
         try:
-            val = (self._sales(want) if mode == "satis" else self._list(want)), None
+            val = (self._sales(want, run) if mode == "satis" else self._list(want, run)), None
         except (SourceError, RuntimeError) as e:
             return {}, str(e)[:300]
         with self._lock:
             self._cache[key] = (time.monotonic(), val)
+            for k in want:
+                self.executed[k] = runs
         return val
 
-    def _sales(self, codes: tuple[str, ...]) -> dict[str, dict[str, Any]]:
+    def _sales(self, codes: tuple[str, ...], run: Callable[[str], list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
         from semantic_bridge import management as M
         from semantic_bridge.marketing.sources import _values
 
@@ -327,7 +353,6 @@ class LogoPrices:
         anchor = "    WHERE s.[Satır Türü] = N'Malzeme'"
         if anchor not in text:
             raise SourceError("Logo fiyat sorgusunun biçimi değişmiş; föy fiyat karşılaştırması yapılamadı.")
-        run = self.runner()
         views = run("SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'")
         existing = {int(str(r["name"])[-4:]) for r in views}
         out: dict[str, dict[str, Any]] = {}
@@ -344,11 +369,11 @@ class LogoPrices:
                               "kaynak": "Logo satış satırı: B2B/CRM siparişli satışta ayın en yüksek birim fiyatı (Baskı Öneri tanımı)"}
         return out
 
-    def _list(self, codes: tuple[str, ...]) -> dict[str, dict[str, Any]]:
+    def _list(self, codes: tuple[str, ...], run: Callable[[str], list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
         from semantic_bridge import tenders_sources as TS
 
         out = {}
-        for k, v in TS.read_prices(self.runner(), codes).items():
+        for k, v in TS.read_prices(run, codes).items():
             if v.get("fiyat"):
                 out[k] = {"fiyat": round(float(v["fiyat"]), 2), "kaynak": f"Logo satış fiyat listesi ({v.get('liste')})"}
         return out
@@ -369,11 +394,16 @@ def _dict(r: Any, required: list[str]) -> dict[str, Any]:
             "zorunlu": required}
 
 
-def get_row(c: Any, tenant: str, stok: str, donem: Optional[str] = None, *, lock: bool = False) -> Any:
+def row_stmt(tenant: str, stok: str, donem: Optional[str] = None):
+    """Tek föy okuması (aynı ifade sorgu bilgisinde gösterilir)."""
     q = sa.select(FOY).where(FOY.c.tenant_id == tenant, FOY.c.stok_kodu == str(stok)[:60])
     if donem:
         q = q.where(FOY.c.donem == donem)
-    q = q.order_by(FOY.c.ay_disi, FOY.c.donem.desc())
+    return q.order_by(FOY.c.ay_disi, FOY.c.donem.desc())
+
+
+def get_row(c: Any, tenant: str, stok: str, donem: Optional[str] = None, *, lock: bool = False) -> Any:
+    q = row_stmt(tenant, stok, donem)
     if lock and c.engine.dialect.name == "postgresql":
         q = q.with_for_update()
     return c.execute(q).first()
@@ -437,12 +467,17 @@ def mark_out_of_month(engine: sa.engine.Engine, tenant: str, donem: str, codes: 
     return n
 
 
-def list_month(engine: sa.engine.Engine, tenant: str, donem: str, required: list[str], durum: str = "") -> list[dict[str, Any]]:
+def month_stmt(tenant: str, donem: str, durum: str = ""):
+    """Dönemin föyleri (aynı ifade sorgu bilgisinde gösterilir)."""
     cond = [FOY.c.tenant_id == tenant, FOY.c.donem == donem]
     if durum in STATUSES:
         cond.append(FOY.c.durum == durum)
+    return sa.select(FOY).where(*cond).order_by(FOY.c.ay_disi, FOY.c.stok_kodu)
+
+
+def list_month(engine: sa.engine.Engine, tenant: str, donem: str, required: list[str], durum: str = "") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(FOY).where(*cond).order_by(FOY.c.ay_disi, FOY.c.stok_kodu)).all()
+        rows = c.execute(month_stmt(tenant, donem, durum)).all()
     return [_dict(r, required) for r in rows]
 
 
@@ -666,9 +701,13 @@ def record_send(engine: sa.engine.Engine, tenant: str, donem: str, to: list[str]
     return {"id": sid, "sonuc": sonuc, "alici": len(to), "adet": adet}
 
 
+def sends_stmt(tenant: str, donem: str):
+    return sa.select(SENDS).where(SENDS.c.tenant_id == tenant, SENDS.c.donem == donem).order_by(SENDS.c.zaman.desc())
+
+
 def sends_of(engine: sa.engine.Engine, tenant: str, donem: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SENDS).where(SENDS.c.tenant_id == tenant, SENDS.c.donem == donem).order_by(SENDS.c.zaman.desc())).all()
+        rows = c.execute(sends_stmt(tenant, donem)).all()
     return [{"id": r.id, "alicilar": r.alicilar, "gonderen": r.gonderen, "zaman": C.iso(r.zaman), "dosya": r.dosya, "adet": r.adet,
              "sonuc": r.sonuc} for r in rows]
 

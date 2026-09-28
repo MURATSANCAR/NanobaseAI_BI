@@ -6,6 +6,7 @@ import { RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import { fmtDay, mktApi } from './api';
 import { MarketingFrame } from './parts';
 import NewBooksList from './NewBooksList';
@@ -132,10 +133,14 @@ export default function MarketingHome() {
 
       {k && m && (
         <KpiRow>
-          <Kpi label="Planı yok" value={k.plansiz.toLocaleString('tr-TR')} help={`Yayına ${m.settings.noPlanDays} gün ya da daha az kalan`} active={durum === 'plansiz'} onClick={() => setDurum(durum === 'plansiz' ? '' : 'plansiz')} />
-          <Kpi label="Onay bekleyen" value={k.onayda.toLocaleString('tr-TR')} help="Onaya gönderilmiş planlar" active={durum === 'onayda'} onClick={() => setDurum(durum === 'onayda' ? '' : 'onayda')} />
-          <Kpi label="Materyali eksik" value={k.materyalEksik.toLocaleString('tr-TR')} help={`Yayına ${m.settings.materialDays} gün kala onaylı materyali eksik`} active={durum === 'materyal'} onClick={() => setDurum(durum === 'materyal' ? '' : 'materyal')} />
-          <Kpi label="Hedefi değişen" value={k.hedefDegisti.toLocaleString('tr-TR')} help="Bütçe planı revize edildi; plan gözden geçirilmeli" active={durum === 'hedef'} onClick={() => setDurum(durum === 'hedef' ? '' : 'hedef')} />
+          <Kpi label="Planı yok" value={k.plansiz.toLocaleString('tr-TR')} help={`Yayına ${m.settings.noPlanDays} gün ya da daha az kalan`} active={durum === 'plansiz'} onClick={() => setDurum(durum === 'plansiz' ? '' : 'plansiz')}
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.plansiz" label="Planı yok" />} />
+          <Kpi label="Onay bekleyen" value={k.onayda.toLocaleString('tr-TR')} help="Onaya gönderilmiş planlar" active={durum === 'onayda'} onClick={() => setDurum(durum === 'onayda' ? '' : 'onayda')}
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.onayda" label="Onay bekleyen" />} />
+          <Kpi label="Materyali eksik" value={k.materyalEksik.toLocaleString('tr-TR')} help={`Yayına ${m.settings.materialDays} gün kala onaylı materyali eksik`} active={durum === 'materyal'} onClick={() => setDurum(durum === 'materyal' ? '' : 'materyal')}
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.materyalEksik" label="Materyali eksik" />} />
+          <Kpi label="Hedefi değişen" value={k.hedefDegisti.toLocaleString('tr-TR')} help="Bütçe planı revize edildi; plan gözden geçirilmeli" active={durum === 'hedef'} onClick={() => setDurum(durum === 'hedef' ? '' : 'hedef')}
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.hedefDegisti" label="Hedefi değişen" />} />
         </KpiRow>
       )}
 
@@ -165,11 +170,17 @@ export default function MarketingHome() {
             <RefreshCw aria-hidden className={`h-4 w-4 ${refresh.isPending ? 'animate-spin' : ''}`} />
             CRM'den yenile
           </button>
+          {d && (
+            <span className="inline-flex min-h-11 items-center gap-1 text-[11.5px] font-semibold text-canvas-muted lg:min-h-9">
+              {d.hepsi.toLocaleString('tr-TR')} kitap
+              <SqlInfo k={d.kaynaklar} alan="items[]" label="Kitap listesi ve sayılar" />
+            </span>
+          )}
         </div>
 
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
         {list.isLoading && <Loading />}
-        {d && m && d.items.length > 0 && <NewBooksList rows={d.items} meta={m} busy={busy} onCreate={(stok, ai) => create.mutate({ stok, ai })} />}
+        {d && m && d.items.length > 0 && <NewBooksList rows={d.items} meta={m} busy={busy} k={d.kaynaklar} onCreate={(stok, ai) => create.mutate({ stok, ai })} />}
         {d && d.items.length === 0 && (
           <div className="flex flex-col items-start gap-2 py-6 text-[12.5px] text-canvas-muted">
             {kim === 'ben' && d.hepsi > 0

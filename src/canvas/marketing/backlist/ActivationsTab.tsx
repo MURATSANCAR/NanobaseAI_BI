@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, errText } from '../../admin/ui';
 import { STATUS_TONE, fmtMoney, fmtShortDay } from '../api';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { blApi, type Activation, type BlMeta } from './api';
 
 /** Açılmış backlist planları ve durumları. Plan ekranı çekirdeğinki (kanal ve bütçe, takvim, materyal, onay).
@@ -37,7 +38,7 @@ export default function ActivationsTab({ meta }: { meta: BlMeta }) {
       {q.error && <Note tone="err">{errText(q.error, 'Planlar açılamadı.')}</Note>}
       {d && !d.items.length && <Note tone="info">Henüz backlist aktivasyon planı yok. Fırsatlar ya da Gündem sekmesinde kitapları seçip plan açın.</Note>}
       {d?.items.map((p) => (
-        <Block key={p.id} title={p.baslik}
+        <Block key={p.id} title={p.baslik} info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Plan bütçesi" />}
           help={<>{p.id} · sürüm {p.surum} · başlangıç {fmtShortDay(p.yayinTarihi)} · sahibi {p.sahip ?? '—'}{meta.me.canSeeBudget && p.butceToplam !== null ? ` · bütçe ${fmtMoney(p.butceToplam)}` : ''}</>}
           action={
             <div className="flex flex-wrap items-center gap-2">

@@ -3,7 +3,9 @@ import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContai
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, TableWrap, errText, td, th } from '../../admin/ui';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../api';
-import { Block, SourceNote } from '../parts';
+import { Block } from '../parts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 import { dLabel, launchApi, type Depot, type Launch, type LaunchMeta } from './api';
 
 /** İzleme (ilk 7 / 30 gün): birikimli sipariş (CRM, canlı), faturalı satış (Logo, veri sonuna kadar), hedef payı ve emsal
@@ -17,10 +19,10 @@ const SERIES = [
   { key: 'emsalKum', name: 'Emsal ortalaması', color: '#f59e0b', dash: '2 3' },
 ] as const;
 
-function Stat({ label, value, help }: { label: string; value: string; help: string }) {
+function Stat({ label, value, help, k, alan }: { label: string; value: string; help: string; k?: Kaynaklar; alan?: string }) {
   return (
     <div className="rounded-2xl border border-slate-100 bg-white/80 p-3">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-start justify-between gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}{alan && <SqlInfo k={k} alan={alan} label={label} />}</div>
       <div className="mt-1 font-mono text-[20px] font-bold leading-none tabular-nums">{value}</div>
       <div className="mt-1 text-[11px] leading-snug text-canvas-muted">{help}</div>
     </div>
@@ -42,12 +44,12 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
   const logoEnd = d?.veriSonu.logo ?? null;
   const logoEndD = logoEnd ? Math.round((Date.parse(logoEnd) - Date.parse(launch.yayinGunu)) / 86_400_000) : null;
   const sig = d?.sinyal;
-  const sqlText = d ? Object.entries(d.sql).map(([k, v]) => `-- ${k}\n${Array.isArray(v) ? v.join('\n\n') : v}`).join('\n\n') : null;
 
   return (
     <div className="flex flex-col gap-3">
       <Block
         title={`İlk ${gun} gün`}
+        info={<SqlInfo k={d?.kaynaklar} alan="seri[]" label={`İlk ${gun} gün grafiği`} />}
         help={`Birikimli adet, yayın gününden itibaren. Sipariş CRM'den saatte bir okunur (sipariş satış değildir); faturalı satış Logo'dan günde bir${logoEnd ? `, veri ${fmtDay(logoEnd)} tarihinde bitiyor` : ''}. Hedef payı: yürürlükteki bütçe planının aylık hedefi ÷ ayın gün sayısı.`}
         action={
           <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Dönem">
@@ -87,13 +89,13 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
               </ResponsiveContainer>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-              <Stat label="Sipariş" value={fmtInt(d.toplam.siparis)} help={`CRM, ilk ${gun} gün (bugüne kadar)`} />
+              <Stat label="Sipariş" value={fmtInt(d.toplam.siparis)} help={`CRM, ilk ${gun} gün (bugüne kadar)`} k={d.kaynaklar} alan="toplam" />
               <Stat label="Faturalı satış" value={fmtInt(d.toplam.fatura)}
-                help={meta.me.canSeeBudget && d.toplam.ciro != null ? `${fmtMoney(d.toplam.ciro)} net ciro · Logo` : 'Logo, veri sonuna kadar'} />
+                help={meta.me.canSeeBudget && d.toplam.ciro != null ? `${fmtMoney(d.toplam.ciro)} net ciro · Logo` : 'Logo, veri sonuna kadar'} k={d.kaynaklar} alan="toplam" />
               <Stat label="Hedef payı" value={fmtInt(d.toplam.hedef)}
-                help={sig?.oran != null ? `${sig.oranEsas === 'fatura' ? 'Satış' : 'Sipariş'} / hedef: ${fmtPct(sig.oran)}` : 'Onaylı hedef yok ya da oran hesaplanamadı'} />
+                help={sig?.oran != null ? `${sig.oranEsas === 'fatura' ? 'Satış' : 'Sipariş'} / hedef: ${fmtPct(sig.oran)}` : 'Onaylı hedef yok ya da oran hesaplanamadı'} k={d.kaynaklar} alan="sinyal" />
               <Stat label="Emsal ortalaması" value={fmtInt(gun === 7 ? d.toplam.emsal7 : d.toplam.emsal30)}
-                help={d.emsal.items.length ? `${d.emsal.items.length} emsal, ilk satış gününden` : (d.emsal.not ?? 'Emsal yok')} />
+                help={d.emsal.items.length ? `${d.emsal.items.length} emsal, ilk satış gününden` : (d.emsal.not ?? 'Emsal yok')} k={d.kaynaklar} alan="emsal" />
             </div>
           </>
         )}
@@ -104,10 +106,10 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
           {sig?.stokCatismasi && <Note tone="err">Açık sipariş depo stokunun üstünde: ek baskı ya da depo transferi satışla konuşulmalı.</Note>}
           {sig?.dagilimYok && <Note tone="err">Yayın günü geçti; dağılım siparişi görünmüyor.</Note>}
           <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <Stat label="Dağılım" value={fmtInt(d.dagilim?.adet)} help={d.dagilim ? `${fmtInt(d.dagilim.bayi)} bayi · ${fmtInt(d.dagilim.siparis)} sipariş · ${fmtDay(d.dagilim.bas)}–${fmtDay(d.dagilim.bit)}` : 'Okunmadı'} />
-            <Stat label="Açık sipariş" value={fmtInt(sig?.bekleyen)} help="Kapanmamış sipariş satırları (Baskı Öneri tanımı)" />
-            <Stat label="Bekleyen ürün" value={fmtInt(sig?.bekleyenUrun ?? [...d.seri].reverse().find((r) => r.bekleyenUrun != null)?.bekleyenUrun)} help="CRM «Bekleyen Ürün» (stok yokken açılan)" />
-            <Stat label="Depo stoku" value={fmtInt(d.depo?.deger)} help={depotHelp(d.depo)} />
+            <Stat label="Dağılım" value={fmtInt(d.dagilim?.adet)} help={d.dagilim ? `${fmtInt(d.dagilim.bayi)} bayi · ${fmtInt(d.dagilim.siparis)} sipariş · ${fmtDay(d.dagilim.bas)}–${fmtDay(d.dagilim.bit)}` : 'Okunmadı'} k={d.kaynaklar} alan="dagilim" />
+            <Stat label="Açık sipariş" value={fmtInt(sig?.bekleyen)} help="Kapanmamış sipariş satırları (Baskı Öneri tanımı)" k={d.kaynaklar} alan="sinyal" />
+            <Stat label="Bekleyen ürün" value={fmtInt(sig?.bekleyenUrun ?? [...d.seri].reverse().find((r) => r.bekleyenUrun != null)?.bekleyenUrun)} help="CRM «Bekleyen Ürün» (stok yokken açılan)" k={d.kaynaklar} alan="seri[]" />
+            <Stat label="Depo stoku" value={fmtInt(d.depo?.deger)} help={depotHelp(d.depo)} k={d.kaynaklar} alan="depo" />
           </div>
         </Block>
       )}
@@ -118,7 +120,7 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
             <thead className="bg-slate-50">
               <tr>
                 {['Gün', 'Tarih', 'Sipariş', 'Dağılım', 'Faturalı', ...(meta.me.canSeeBudget ? ['Net ciro'] : []), 'Hedef payı', 'Açık sipariş', 'Depo'].map((h) => (
-                  <th key={h} className={th}>{h}</th>
+                  <th key={h} className={th}>{h === 'Gün' || h === 'Tarih' ? h : <InfoLabel k={d.kaynaklar} alan="seri[]">{h}</InfoLabel>}</th>
                 ))}
               </tr>
             </thead>
@@ -138,7 +140,6 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
               ))}
             </tbody>
           </TableWrap>
-          <SourceNote text="Rakamlar her okumada bu sorgularla gelir; günlük tablo semantic_mkt_launch_daily." sql={sqlText} />
         </Block>
       )}
     </div>

@@ -10,6 +10,8 @@ import { fmtMoney, fmtShortDay } from '../api';
 import { Block } from '../parts';
 import { M46_TONE, blApi, fmtChange, fmtN, runout, weightsText, type BlMeta, type ComponentKey, type ListParams, type Row, type Weights } from './api';
 import OpportunityPanel from './OpportunityPanel';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Fırsatlar: bütün backlist (tavan yok, sayfalı), bileşen çubukları, ağırlık kaydırıcıları, seçip aktivasyon planı.
  *  Süzgeçler adres çubuğunda; kişisel ağırlık kişinin tercihinde (sunucuda), ekip varsayılanı ayrı yetkiyle. */
@@ -101,13 +103,17 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
       {d && (
         <KpiRow>
           <Kpi label="Backlist" value={fmtN(d.hepsi)} help={d.total === d.hepsi ? 'Süzgeç yok: bütün liste' : `Süzgeçle ${fmtN(d.total)} kitap`}
-            active={!get('m46') && !get('gun') && !get('stokta')} onClick={() => update({ m46: null, gun: null, stokta: null })} />
+            active={!get('m46') && !get('gun') && !get('stokta')} onClick={() => update({ m46: null, gun: null, stokta: null })}
+            info={<SqlInfo k={d.kaynaklar} alan="hepsi" label="Backlist" />} />
           <Kpi label="Açık sapma" value={fmtN(d.kpi.sapmaAcik)} help="Bu yılın satış hedefinde uyarısı açık" active={get('m46') === 'acik'}
-            onClick={() => update({ m46: get('m46') === 'acik' ? null : 'acik' })} />
+            onClick={() => update({ m46: get('m46') === 'acik' ? null : 'acik' })}
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Açık sapma" />} />
           <Kpi label="Yaklaşan özel gün" value={fmtN(d.kpi.yakinGun)} help={`Önümüzdeki ${meta.settings.agendaWeeks} haftada bağlı özel günü olan`}
-            active={get('gun') === 'yakin'} onClick={() => update({ gun: get('gun') === 'yakin' ? null : 'yakin' })} />
+            active={get('gun') === 'yakin'} onClick={() => update({ gun: get('gun') === 'yakin' ? null : 'yakin' })}
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Yaklaşan özel gün" />} />
           <Kpi label="Stokta" value={fmtN(d.kpi.stokta)} help={`Aktivasyon planında: ${fmtN(d.kpi.planli)}`} active={get('stokta') === '1'}
-            onClick={() => update({ stokta: get('stokta') === '1' ? null : '1' })} />
+            onClick={() => update({ stokta: get('stokta') === '1' ? null : '1' })}
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Stokta" />} />
         </KpiRow>
       )}
 
@@ -176,11 +182,11 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
         </div>
       )}
 
-      <Block title="Fırsat listesi" help={meta.formula}>
+      <Block title="Fırsat listesi" help={meta.formula} info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Fırsat listesi" />}>
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
         {d && !d.items.length && <Note tone="info">Süzgece uyan kitap yok.</Note>}
         {d && d.items.length > 0 && (
-          <Rows rows={d.items} meta={meta} picked={picked} onPick={toggle} onOpen={setOpen} />
+          <Rows rows={d.items} meta={meta} picked={picked} onPick={toggle} onOpen={setOpen} k={d.kaynaklar} />
         )}
         {d && (
           <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
@@ -256,8 +262,8 @@ export function ComponentBars({ row, meta }: { row: Row; meta: BlMeta }) {
   );
 }
 
-function Rows({ rows, meta, picked, onPick, onOpen }: {
-  rows: Row[]; meta: BlMeta; picked: Set<string>; onPick: (c: string) => void; onOpen: (c: string) => void;
+function Rows({ rows, meta, picked, onPick, onOpen, k }: {
+  rows: Row[]; meta: BlMeta; picked: Set<string>; onPick: (c: string) => void; onOpen: (c: string) => void; k?: Kaynaklar;
 }) {
   const me = meta.me;
   const tag = (r: Row) => (
@@ -295,6 +301,7 @@ function Rows({ rows, meta, picked, onPick, onOpen }: {
             <div className="mt-2 text-[11.5px] text-canvas-muted">
               12 ay {fmtN(r.adetSon12)} adet ({fmtChange(r.degisim)}) · stok {fmtN(r.stok)} · {runout(r)}
               {me.canSeeBudget && r.ciroSon12 !== null ? ` · ${fmtMoney(r.ciroSon12)}` : ''}
+              <SqlInfo k={k} alan="items[]" label="Kitabın rakamları" className="ml-0.5" />
             </div>
             <div className="mt-1.5">{tag(r)}</div>
           </li>
@@ -306,14 +313,14 @@ function Rows({ rows, meta, picked, onPick, onOpen }: {
             <tr className="border-b border-slate-100">
               {me.canWrite && <th className={th}><span className="sr-only">Seç</span></th>}
               <th className={th}>Kitap</th>
-              <th className={`${th} text-right`}>Endeks</th>
-              <th className={th}>Bileşenler</th>
-              <th className={`${th} text-right`}>Son 12 ay</th>
-              <th className={`${th} text-right`}>Değişim</th>
-              <th className={`${th} text-right`}>Stok</th>
-              <th className={`${th} text-right`}>Tükenme</th>
-              <th className={`${th} text-right`}>Tahmin 12 ay</th>
-              {me.canSeeBudget && <th className={`${th} text-right`}>Marj</th>}
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].endeks">Endeks</InfoLabel></th>
+              <th className={th}><InfoLabel k={k} alan="items[].bilesen">Bileşenler</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Son 12 ay</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Değişim</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Stok</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Tükenme</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Tahmin 12 ay</InfoLabel></th>
+              {me.canSeeBudget && <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Marj</InfoLabel></th>}
               <th className={th}>Durum</th>
             </tr>
           </thead>

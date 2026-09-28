@@ -410,9 +410,14 @@ def _item(r: Any) -> dict[str, Any]:
             "detay": C.loads(r.detay_json, {}), "cakisma": C.loads(r.cakisma_json, [])}
 
 
+def items_stmt(plan_id: str):
+    """Ay planının kalemleri (aynı ifade sorgu bilgisinde gösterilir)."""
+    return sa.select(ITEMS).where(ITEMS.c.plan_id == plan_id).order_by(ITEMS.c.baslangic, ITEMS.c.sira, ITEMS.c.id)
+
+
 def items_of(engine: sa.engine.Engine, plan_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(ITEMS).where(ITEMS.c.plan_id == plan_id).order_by(ITEMS.c.baslangic, ITEMS.c.sira, ITEMS.c.id)).all()
+        rows = c.execute(items_stmt(plan_id)).all()
     out = [_item(r) for r in rows]
     for x in out:
         x.pop("stok_kodu", None)
@@ -600,14 +605,18 @@ def month_targets(engine: Any, tenant: str, donem: str) -> dict[str, Any]:
             "kaynak": "Bütçe ve hedefler modülünün yürürlükteki planı: kitap hedeflerinin bu aya düşen payı (aylık dağılım)."}
 
 
+def month_actuals_stmt(y: int, m: int):
+    """Ayın Logo gerçekleşmesi okuması (bütçe modülünün önbelleği, kitap × ay)."""
+    return sa.select(B.SALES.c.stok_kodu, B.SALES.c.adet, B.SALES.c.ciro).where(B.SALES.c.year == y, B.SALES.c.month == m)
+
+
 def month_actuals(engine: Any, donem: str) -> dict[str, Any]:
     """Logo gerçekleşmesi (M46 önbelleği) o ay: kitap başına net ciro/adet, şirket toplamı (157 ticari ürün hariç)."""
     y, m = int(donem[:4]), int(donem[5:7])
 
     def read() -> dict[str, Any]:
         with engine.connect() as c:
-            rows = c.execute(sa.select(B.SALES.c.stok_kodu, B.SALES.c.adet, B.SALES.c.ciro)
-                             .where(B.SALES.c.year == y, B.SALES.c.month == m)).all()
+            rows = c.execute(month_actuals_stmt(y, m)).all()
         return {"kitap": {r.stok_kodu: {"ciro": float(r.ciro or 0), "adet": float(r.adet or 0)} for r in rows}}
 
     out = P.budget_read(engine, read, None, "ay gerçekleşmesi")
@@ -623,9 +632,7 @@ def month_actuals(engine: Any, donem: str) -> dict[str, Any]:
             "not": None if not partial else (f"Logo verisi {end.strftime('%d.%m.%Y')} tarihinde bitiyor; ay tam değil." if end
                                              else "Logo gerçekleşmesi henüz okunmadı."),
             "kaynak": "Logo faturalı satış (net ciro = satır net tutarı, iade düşülmüş), bütçe modülünün aylık önbelleği; "
-                      "157 ile başlayan ticari ürünler hariç.",
-            "sql": (f"SELECT SUM(ciro) FROM semantic_budget_sales_actuals WHERE year = {y} AND month = {m} "
-                    "AND stok_kodu NOT LIKE '157%'")}
+                      "157 ile başlayan ticari ürünler hariç."}
 
 
 def segment_ratios(targets: dict[str, Any], actuals: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -660,14 +667,19 @@ def open_deviations(engine: Any, tenant: str, year: int) -> dict[str, dict[str, 
     return out
 
 
+def task_stats_stmt(tenant: str, donem: str):
+    """Onaylı planların o aya düşen işleri, durum × kanal sayısı (aynı ifade sorgu bilgisinde)."""
+    first, last = bounds(donem)
+    return (sa.select(C.TASKS.c.durum, C.TASKS.c.kanal, sa.func.count()).select_from(
+        C.TASKS.join(C.PLANS, C.PLANS.c.id == C.TASKS.c.plan_id)).where(
+        C.PLANS.c.tenant_id == tenant, C.PLANS.c.durum == "onayli",
+        C.TASKS.c.tarih >= first.isoformat(), C.TASKS.c.tarih <= last.isoformat()).group_by(C.TASKS.c.durum, C.TASKS.c.kanal))
+
+
 def task_stats(engine: Any, tenant: str, donem: str) -> dict[str, Any]:
     """Onaylı (ve arşivdeki eski onaylı) planların o aya düşen işleri: yapılan / atlanan / bekleyen."""
-    first, last = bounds(donem)
     with engine.connect() as c:
-        rows = c.execute(sa.select(C.TASKS.c.durum, C.TASKS.c.kanal, sa.func.count()).select_from(
-            C.TASKS.join(C.PLANS, C.PLANS.c.id == C.TASKS.c.plan_id)).where(
-            C.PLANS.c.tenant_id == tenant, C.PLANS.c.durum == "onayli",
-            C.TASKS.c.tarih >= first.isoformat(), C.TASKS.c.tarih <= last.isoformat()).group_by(C.TASKS.c.durum, C.TASKS.c.kanal)).all()
+        rows = c.execute(task_stats_stmt(tenant, donem)).all()
     tot: dict[str, int] = {"bekliyor": 0, "yapildi": 0, "atlandi": 0}
     kanal: dict[str, dict[str, int]] = defaultdict(lambda: {"bekliyor": 0, "yapildi": 0, "atlandi": 0})
     for d, k, n in rows:
@@ -758,8 +770,12 @@ def suggest_budget(engine: Any, crm: Crm, plan: dict[str, Any], targets: dict[st
                                                                  for s, v in shares_by.items()}, "satirlar": rows}
 
 
+def budget_stmt(plan_id: str):
+    return sa.select(BUDGET).where(BUDGET.c.plan_id == plan_id).order_by(BUDGET.c.segment, BUDGET.c.oneri.desc())
+
+
 def _budget_rows(c: Any, plan_id: str) -> list[Any]:
-    return c.execute(sa.select(BUDGET).where(BUDGET.c.plan_id == plan_id).order_by(BUDGET.c.segment, BUDGET.c.oneri.desc())).all()
+    return c.execute(budget_stmt(plan_id)).all()
 
 
 def _mirror_lines(c: Any, plan_id: str, donem: str) -> float:
@@ -923,7 +939,7 @@ def view(engine: sa.engine.Engine, tenant: str, donem: str, st: dict[str, Any], 
                      "oran": round(gercek / hedefli, 4) if hedefli else None, "segment": ratios,
                      "sirketCiro": prev_actuals.get("sirketCiro"), "veriSonu": prev_actuals.get("veriSonu"),
                      "not": prev_actuals.get("not") or (prev_targets.get("not") if not prev_targets.get("planId") else None),
-                     "kaynak": prev_actuals.get("kaynak"), "sql": prev_actuals.get("sql"),
+                     "kaynak": prev_actuals.get("kaynak"),
                      "isler": task_stats(engine, tenant, prev),
                      "plan": {"id": prev_plan["id"], "durumAdi": prev_plan["durumAdi"]} if prev_plan else None},
         "cakismaSayisi": sum(1 for x in items if x["cakisma"]),

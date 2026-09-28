@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../api';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { launchApi, type Launch, type LaunchMeta } from './api';
 
 /** Medya yansıması: basın ve web taraması açık olan ortamda o kayıtlar (yalnız okuma, kanal adı ve bağlantıyla), her
@@ -32,6 +33,7 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
   return (
     <Block
       title="Medya yansıması"
+      info={<SqlInfo k={d?.kaynaklar} alan="ton" label="Tona göre yansıma sayısı" />}
       help={d?.webAcik ? 'Basın ve web taramasının bu kitapla eşleşen kayıtları (yalnız ilgili bulunanlar) ve elle girilen yansımalar.' : 'Bu ortamda basın ve web taraması kapalı: yansımalar elle girilir.'}
     >
       {q.error && <Note tone="err">{errText(q.error, 'Yansımalar açılamadı.')}</Note>}

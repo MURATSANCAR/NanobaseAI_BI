@@ -7,6 +7,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnPrimary, errText } from '../../admin/ui';
 import { fmtDay, fmtMoney, fmtShortDay } from '../api';
+import SqlInfo from '../../components/SqlInfo';
 import { M46_TONE, blApi, fmtChange, fmtN, fmtOne, monthName, runout, type BlMeta } from './api';
 
 /** Kitap fırsat kartı (yan panel): bileşenler ve ham değerleri, 36 tam ay satış, önerilen eylemler ve gerekçesi,
@@ -58,7 +59,7 @@ export default function OpportunityPanel({ stok, meta, agirlik, onClose }: { sto
           </div>
 
           <section>
-            <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Bileşenler</h3>
+            <h3 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Bileşenler<SqlInfo k={d.kaynaklar} alan="bilesen" label="Bileşenler ve endeks" /></h3>
             <ul className="mt-1 flex flex-col gap-1.5">
               {meta.components.map((c) => {
                 const b = d.bilesen[c.key];
@@ -79,11 +80,12 @@ export default function OpportunityPanel({ stok, meta, agirlik, onClose }: { sto
               Son 12 ay {fmtN(d.adetSon12)} adet, önceki 12 ay {fmtN(d.adetOnceki12)} ({fmtChange(d.degisim)}); depo stoku {fmtN(d.stok)} ({runout(d)});
               12 aylık Zeki AI tahmini {fmtN(d.tahmin12)} adet{money && d.ciroSon12 !== null ? `; son 12 ay net ciro ${fmtMoney(d.ciroSon12)}` : ''}.
               Veri sonu {fmtDay(d.veriSonu)}.
+              <SqlInfo k={d.kaynaklar} alan="adetSon12" label="12 ay satış, stok, tahmin" className="ml-0.5" />
             </p>
           </section>
 
           <section>
-            <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Son 36 tam ay net adet</h3>
+            <h3 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Son 36 tam ay net adet<SqlInfo k={d.kaynaklar} alan="seri[]" label="Aylık seri" /></h3>
             <div className="mt-1 h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={d.seri.map((m) => ({ ay: monthName(m.ay), adet: m.adet }))} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
@@ -109,7 +111,7 @@ export default function OpportunityPanel({ stok, meta, agirlik, onClose }: { sto
 
           {d.eslesmeler.length > 0 && (
             <section>
-              <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Gündem eşleşmeleri</h3>
+              <h3 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Gündem eşleşmeleri<SqlInfo k={d.kaynaklar} alan="eslesmeler[]" label="Gündem eşleşmeleri" /></h3>
               <ul className="mt-1 flex flex-col gap-1">
                 {d.eslesmeler.map((m) => (
                   <li key={m.id} className="flex flex-wrap items-center gap-1.5">
@@ -124,7 +126,7 @@ export default function OpportunityPanel({ stok, meta, agirlik, onClose }: { sto
           )}
 
           <section>
-            <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Geçmiş kampanyalar (öncesi / sonrası)</h3>
+            <h3 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Geçmiş kampanyalar (öncesi / sonrası)<SqlInfo k={d.kaynaklar} alan="kampanyalar[]" label="Kampanya etkisi" /></h3>
             {!d.kampanyalar.length && <p className="mt-1 text-canvas-muted">CRM'de bu kitabın kampanyası yok (B2C ve pazar yeri kampanyaları CRM'de tutulmuyor).</p>}
             <ul className="mt-1 flex flex-col gap-1.5">
               {d.kampanyalar.map((k) => (

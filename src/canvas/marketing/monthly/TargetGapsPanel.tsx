@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, btnGhost, errText } from '../../admin/ui';
 import { fmtMoney, fmtPct, fmtStamp } from '../api';
 import { Block } from '../parts';
+import SqlInfo from '../../components/SqlInfo';
 import { monthApi, type TargetGaps } from './api';
 
 /** Öneri 17 (M18): «hedefin altında kalan kitaplara bu ay iş planlanmamış». Liste kuraldır (bütçe modülünün açık kitap
@@ -24,6 +25,7 @@ export default function TargetGapsPanel({ ay, canSeeBudget }: { ay: string; canS
     <Block
       title="Hedefin altında, bu ay işi planlanmamış kitaplar"
       help="Kurala göre liste: bütçe ve hedefler modülünün açık kitap sapma uyarısı olan, ama bu ayın planında kalemi ya da bu aya düşen pazarlama işi olmayan kitaplar. Hangi kitaba iş açılacağına siz karar verirsiniz."
+      info={<SqlInfo k={g?.kaynaklar} alan="items[]" label="Hedef açığı listesi" />}
       action={g && g.plansiz > 0 && g.modelVar ? (
         <button type="button" className={btnGhost} disabled={explain.isPending} onClick={() => explain.mutate()}>
           {explain.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
@@ -36,8 +38,9 @@ export default function TargetGapsPanel({ ay, canSeeBudget }: { ay: string; canS
       {g && (
         <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-3 gap-2 text-center">
-            {[{ l: 'Hedef altı', n: g.hedefAlti }, { l: 'Bu ay planlı', n: g.planli }, { l: 'Planlanmamış', n: g.plansiz }].map(({ l, n }) => (
-              <div key={l} className="rounded-xl bg-white/70 px-2 py-2">
+            {[{ l: 'Hedef altı', n: g.hedefAlti, a: 'hedefAlti' }, { l: 'Bu ay planlı', n: g.planli, a: 'planli' }, { l: 'Planlanmamış', n: g.plansiz, a: 'plansiz' }].map(({ l, n, a }) => (
+              <div key={l} className="relative rounded-xl bg-white/70 px-2 py-2">
+                <span className="absolute right-1 top-1"><SqlInfo k={g.kaynaklar} alan={a} label={l} /></span>
                 <div className="font-mono text-[20px] font-bold tabular-nums leading-none">{n}</div>
                 <div className="mt-1 break-words text-[11px] font-bold leading-tight text-canvas-muted">{l}</div>
               </div>
