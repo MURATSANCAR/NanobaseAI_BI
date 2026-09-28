@@ -199,7 +199,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     svc = Service(source, deps.get("llm") or (lambda _p: None))
 
     def fair_out(engine, tenant: str, fid: str) -> dict[str, Any]:
-        d = fair_out(engine, tenant, fid)
+        d = E.fair_detail(engine, tenant, fid)
         return PV.bagla(d, lambda: K.for_fair(engine, tenant, d["id"]))
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
