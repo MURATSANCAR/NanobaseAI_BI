@@ -8,6 +8,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, fmtDate, lab
 import { Panel } from '../editorial/kit';
 import { STATUS_TONE, donemLabel, fmtInt, pazarApi, type Brief, type Source } from './api';
 import { ROOT, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Aylık yönetim özeti (DYK'ya). Zeki AI taslak yazar; her madde bir kaynağa ([K3]) bağlıdır ve maddedeki her sayı o
  *  kaynağın değeriyle tutmalıdır — tutmayan madde taslağa girmez, düzenlemede de onaya gönderilemez. Onay yönetimde
@@ -52,7 +54,10 @@ export default function BriefEditor({ donem }: { donem: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1">
             <Link to={`${ROOT}/ozet/${shift(-1)}`} className={btnGhost} aria-label="Önceki ay"><ChevronLeft aria-hidden className="h-4 w-4" /></Link>
-            <h2 className="px-1 text-[17px] font-extrabold">Pazar özeti — {valid ? donemLabel(donem) : donem}</h2>
+            <h2 className="flex items-center gap-1 px-1 text-[17px] font-extrabold">
+              Pazar özeti — {valid ? donemLabel(donem) : donem}
+              <SqlInfo k={(q.data as { sorguBilgisi?: Kaynaklar } | undefined)?.sorguBilgisi} alan="_hepsi" label="Özetin dayandığı olgular" />
+            </h2>
             <Link to={`${ROOT}/ozet/${shift(1)}`} className={btnGhost} aria-label="Sonraki ay"><ChevronRight aria-hidden className="h-4 w-4" /></Link>
           </div>
           {b && <Pill tone={STATUS_TONE[b.durum]}>{b.durumAd}</Pill>}

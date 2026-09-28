@@ -7,6 +7,8 @@ import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labe
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtNum, fmtPct, fmtTl, pazarApi, type MatrixRow } from './api';
 import { CategorySelect, Stat, useCategories, useMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Rakipler: yayınevi × kategori fiyat, sayfa ve format matrisi (TİMAŞ satırları aynı ölçülerle), izlenen rakipler,
  *  seçilen yayınevinin kayıtları. Kategori süzgeci yalnız eşlemesi onaylı rakip kayıtlarını sayar. */
@@ -112,15 +114,16 @@ export default function CompetitorMatrix() {
       {d && (
         <>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-            <Stat label="Rakip kitap" value={fmtInt(d.rakipOzet.kitap)} help={`${fmtInt(d.rakipOzet.yayinevi)} yayınevi · ${catLabel}`} />
-            <Stat label="Rakip medyan fiyat" value={fmtTl(d.rakipOzet.medyan)} help={`Çeyrekler ${fmtTl(d.rakipOzet.q1)} – ${fmtTl(d.rakipOzet.q3)}`} />
-            <Stat label="TİMAŞ medyan fiyat" value={fmtTl(d.timas[0]?.medyan)} help={`${fmtInt(d.timas[0]?.kitap)} kitap · KDV dahil`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Rakip kitap" />} label="Rakip kitap" value={fmtInt(d.rakipOzet.kitap)} help={`${fmtInt(d.rakipOzet.yayinevi)} yayınevi · ${catLabel}`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Rakip medyan fiyat" />} label="Rakip medyan fiyat" value={fmtTl(d.rakipOzet.medyan)} help={`Çeyrekler ${fmtTl(d.rakipOzet.q1)} – ${fmtTl(d.rakipOzet.q3)}`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="TİMAŞ medyan fiyat" />} label="TİMAŞ medyan fiyat" value={fmtTl(d.timas[0]?.medyan)} help={`${fmtInt(d.timas[0]?.kitap)} kitap · KDV dahil`} />
             <Stat
+              info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="TİMAŞ'ın konumu" />}
               label="TİMAŞ'ın konumu"
               value={d.timasKonum === null ? '—' : fmtPct(d.timasKonum, 0)}
               help="Rakip fiyatlarının bu kadarı TİMAŞ medyanının altında"
             />
-            <Stat label="Sayfa başı (medyan)" value={`${fmtNum(round2(d.rakipOzet.sayfaBasiMedyan))} ₺`} help={`TİMAŞ: ${fmtNum(round2(d.timas[0]?.sayfaBasiMedyan))} ₺`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Sayfa başı (medyan)" />} label="Sayfa başı (medyan)" value={`${fmtNum(round2(d.rakipOzet.sayfaBasiMedyan))} ₺`} help={`TİMAŞ: ${fmtNum(round2(d.timas[0]?.sayfaBasiMedyan))} ₺`} />
           </div>
           {d.eslenmemis !== null && d.eslenmemis > 0 && (
             <Note tone="warn">
@@ -128,6 +131,7 @@ export default function CompetitorMatrix() {
             </Note>
           )}
           <MatrixTable
+            k={kaynakOf(d)}
             rows={[...d.timas, ...rows]}
             newDays={d.newDays}
             watched={(y) => !!watchOf(y)}
@@ -150,7 +154,9 @@ export default function CompetitorMatrix() {
 
 const round2 = (v: number | null | undefined) => (v === null || v === undefined ? null : Math.round(v * 100) / 100);
 
-function MatrixTable({ rows, newDays, watched, onWatch, onPick, picked }: {
+function MatrixTable({ rows, newDays, watched, onWatch, onPick, picked, k }: {
+  /** Sorgu bilgisi (matris cevabı): kolonların hesabı ve okumaları. */
+  k?: ReturnType<typeof kaynakOf>;
   rows: MatrixRow[];
   newDays: number;
   watched: (y: string) => boolean;
@@ -163,7 +169,7 @@ function MatrixTable({ rows, newDays, watched, onWatch, onPick, picked }: {
       <thead>
         <tr className="border-b border-slate-100">
           <th className={th}>Yayınevi</th>
-          <th className={`${th} text-right`}>Kitap</th>
+          <th className={`${th} text-right`}><InfoLabel k={k} alan="_hepsi">Kitap</InfoLabel></th>
           <th className={`${th} text-right`}>Medyan fiyat</th>
           <th className={`${th} text-right`}>Fiyat bandı (çeyrekler)</th>
           <th className={`${th} text-right`}>Medyan sayfa</th>
@@ -223,7 +229,10 @@ function PublisherBooks({ yayinevi, kategori, onClose }: { yayinevi: string; kat
   return (
     <Panel>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="min-w-0 truncate text-[15px] font-extrabold">{yayinevi} — kayıtlar</h2>
+        <h2 className="flex min-w-0 items-center gap-1 truncate text-[15px] font-extrabold">
+          {yayinevi} — kayıtlar
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label={`${yayinevi}: fiyat ve sayfa`} />
+        </h2>
         <button type="button" onClick={onClose} className={btnGhost} aria-label="Kapat">
           <X aria-hidden className="h-4 w-4" />
         </button>

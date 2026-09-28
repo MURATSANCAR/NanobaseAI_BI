@@ -503,7 +503,8 @@ def categories(engine: sa.engine.Engine, tenant: str) -> CatIndex:
 
 def apply_snapshot(engine: sa.engine.Engine, tenant: str, *, competitors: list[dict[str, Any]],
                    own_books: list[dict[str, Any]], links: list[tuple[str, str]], kitaplik: list[dict[str, Any]],
-                   own_sales: Optional[dict[str, Any]], actor: str, errors: Optional[dict[str, str]] = None) -> dict[str, Any]:
+                   own_sales: Optional[dict[str, Any]], actor: str, errors: Optional[dict[str, str]] = None,
+                   okuma: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """CRM ve Logo okumasını köprünün tablolarına yazar (tam yenileme). Onaylı kategori eşlemesi korunur; kategori
     listesi değiştiyse karşılığı kalmayan onaylar «yeni»ye döner ve notu yazılır."""
     st = settings()
@@ -573,7 +574,9 @@ def apply_snapshot(engine: sa.engine.Engine, tenant: str, *, competitors: list[d
             "h1Tree": (h1 or {}).get("tree"), "rawCategories": len(raw_counts), "mappingReset": reset,
             "ownSales": ({k: v for k, v in own_sales.items() if k != "rows"} | {"rows": len(own_sales["rows"])})
             if own_sales is not None else prev.get("ownSales"),
-            "ownSalesAt": iso(at) if own_sales is not None else prev.get("ownSalesAt"), "errors": errors or {}}
+            "ownSalesAt": iso(at) if own_sales is not None else prev.get("ownSalesAt"), "errors": errors or {},
+            # Sorgu bilgisi: CRM okumasının şeması ve tanıtım kesimi (asıl SQL bunlarla yeniden kurulur).
+            "okuma": okuma or prev.get("okuma")}
     meta_set(engine, tenant, "snapshot", info)
     return info
 

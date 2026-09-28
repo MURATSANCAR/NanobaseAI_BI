@@ -9,6 +9,8 @@ import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { STATUS_TONE, fmtDay, fmtGrowth, fmtInt, fmtNum, fmtPct, fmtTlShort, lastMonth, pazarApi, type Dimension, type OwnMarket, type Overview } from './api';
 import { ROOT, useMeta } from './parts';
 import { BriefView } from './BriefEditor';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Özet: yönetim özeti, TİMAŞ iç göstergeleri (Logo, sell-in), onaylı sektör rakamları, eşleme kapsamı. Telefonda okunur. */
 export default function MarketHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -27,23 +29,28 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
         <Kpi
+          info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="TİMAŞ net ciro" />}
           label="TİMAŞ net ciro"
           value={t ? fmtTlShort(t.ytdCiro) : '—'}
           help={t ? `${o.own.period?.bitis ? `1 Oca – ${fmtDay(o.own.period.bitis)}` : o.own.yil} · önceki yılın aynı dönemine ${fmtGrowth(t.ciroBuyume)}` : o.own.empty ?? 'Logo satışı okunmadı'}
         />
-        <Kpi label="Rakip kayıt" value={fmtInt(o.freshness.records)} help={`${fmtInt(o.publishers)} yayınevi · CRM'de ${fmtInt(o.freshness.crmLinks)} emsal bağı`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Rakip kayıt" />} label="Rakip kayıt" value={fmtInt(o.freshness.records)} help={`${fmtInt(o.publishers)} yayınevi · CRM'de ${fmtInt(o.freshness.crmLinks)} emsal bağı`} />
         <Kpi
+          info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Eşlenmiş rakip" />}
           label="Eşlenmiş rakip"
           value={cov.records ? fmtPct(cov.approved / cov.records, 0) : '—'}
           help={`${fmtInt(cov.approved)} / ${fmtInt(cov.records)} kaydın kategorisi onaylı · ${fmtInt((o.mapping.counts.oneri ?? 0) + (o.mapping.counts.belirsiz ?? 0))} öneri bekliyor`}
         />
-        <Kpi label="Onaylı pazar rakamı" value={fmtInt(o.figures.length)} help={o.pendingFigures ? `${fmtInt(o.pendingFigures)} rakam onay bekliyor` : 'Sektör raporlarından, sayfa numarasıyla'} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı pazar rakamı" />} label="Onaylı pazar rakamı" value={fmtInt(o.figures.length)} help={o.pendingFigures ? `${fmtInt(o.pendingFigures)} rakam onay bekliyor` : 'Sektör raporlarından, sayfa numarasıyla'} />
       </KpiRow>
 
       <div className="grid gap-3 lg:grid-cols-[1.25fr_1fr] lg:gap-4">
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Yönetim özeti</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+              Yönetim özeti
+              <SqlInfo k={kaynakOf(o)} alan="brief" label="Yönetim özetinin olguları" />
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
               {o.pendingBrief && (
                 <Link to={`${ROOT}/ozet/${o.pendingBrief.donem}`} className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-extrabold text-canvas-violet hover:underline sm:min-h-0">
@@ -78,7 +85,10 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
 
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Onaylı pazar rakamları</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+              Onaylı pazar rakamları
+              <SqlInfo k={kaynakOf(o)} alan="figures" label="Onaylı pazar rakamları" />
+            </h2>
             {canReports && (
               <Link to={`${ROOT}/raporlar`} className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-extrabold text-canvas-violet hover:underline sm:min-h-0">
                 Raporlar <ArrowRight aria-hidden className="h-3.5 w-3.5" />
@@ -113,12 +123,15 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
         </Panel>
       </div>
 
-      <OwnMarketPanel initial={o.own} />
+      <OwnMarketPanel initial={o.own} k={kaynakOf(o)} />
 
       {canRivals && (
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold">Rakip verisi</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+              Rakip verisi
+              <SqlInfo k={kaynakOf(o)} alan="freshness" label="Yıl başına rakip kayıt" />
+            </h2>
             <Link to={`${ROOT}/rakipler`} className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-extrabold text-canvas-violet hover:underline sm:min-h-0">
               Fiyat ve format matrisi <ArrowRight aria-hidden className="h-3.5 w-3.5" />
             </Link>
@@ -145,7 +158,7 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
   );
 }
 
-function OwnMarketPanel({ initial }: { initial: OwnMarket }) {
+function OwnMarketPanel({ initial, k }: { initial: OwnMarket; k?: ReturnType<typeof kaynakOf> }) {
   const [boyut, setBoyut] = useState<Dimension>('kategori');
   const [yil, setYil] = useState<number | undefined>(undefined);
   const q = useQuery({
@@ -161,7 +174,10 @@ function OwnMarketPanel({ initial }: { initial: OwnMarket }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">TİMAŞ iç göstergeleri</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          TİMAŞ iç göstergeleri
+          <SqlInfo k={boyut === "kategori" && yil === undefined ? k : kaynakOf(q.data)} alan="_hepsi" label="TİMAŞ iç göstergeleri" />
+        </h2>
         <div className="flex flex-wrap items-center gap-2">
           <div role="group" aria-label="Kırılım" className="flex gap-1 rounded-xl bg-slate-100 p-1">
             {dims.map(([k, l]) => (

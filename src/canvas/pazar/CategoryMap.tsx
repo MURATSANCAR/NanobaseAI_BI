@@ -7,6 +7,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../ad
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, fmtPct, pazarApi, type MapRow, type MapStatus } from './api';
 import { CategorySelect, Stat, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Kategori eşlemesi: rakip kaydındaki serbest metin kategori → TİMAŞ kategorisi. Önce ad eşleşmesi, sonra Zeki AI
  *  kapalı küme seçimi (olasılıkla) önerir; karar insanda. «Karşılığı yok» da bir karardır. */
@@ -71,10 +73,10 @@ export default function CategoryMap() {
     <div className="flex flex-col gap-3 lg:gap-4">
       {d && (
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <Stat label="Onaylı kapsam" value={d.coverage.records ? fmtPct(d.coverage.approved / d.coverage.records, 0) : '—'} help={`${fmtInt(d.coverage.approved)} / ${fmtInt(d.coverage.records)} rakip kaydı`} />
-          <Stat label="Onay bekleyen" value={fmtInt((d.counts.oneri ?? 0) + (d.counts.belirsiz ?? 0))} help={`${fmtInt(d.counts.belirsiz ?? 0)} tanesinde Zeki AI emin değil`} />
-          <Stat label="Öneri bekleyen" value={fmtInt(d.counts.yeni ?? 0)} help="Henüz önerisi yazılmamış ham kategori" />
-          <Stat label="Karşılığı yok" value={fmtInt(d.coverage.noMatch)} help="TİMAŞ kategorisinde karşılığı olmadığı onaylanan kayıt" />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onaylı kapsam" />} label="Onaylı kapsam" value={d.coverage.records ? fmtPct(d.coverage.approved / d.coverage.records, 0) : '—'} help={`${fmtInt(d.coverage.approved)} / ${fmtInt(d.coverage.records)} rakip kaydı`} />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onay bekleyen" />} label="Onay bekleyen" value={fmtInt((d.counts.oneri ?? 0) + (d.counts.belirsiz ?? 0))} help={`${fmtInt(d.counts.belirsiz ?? 0)} tanesinde Zeki AI emin değil`} />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Öneri bekleyen" />} label="Öneri bekleyen" value={fmtInt(d.counts.yeni ?? 0)} help="Henüz önerisi yazılmamış ham kategori" />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Karşılığı yok" />} label="Karşılığı yok" value={fmtInt(d.coverage.noMatch)} help="TİMAŞ kategorisinde karşılığı olmadığı onaylanan kayıt" />
         </div>
       )}
       <Panel>

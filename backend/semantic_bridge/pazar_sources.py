@@ -264,12 +264,14 @@ def read_own_sales(run: Runner, years: int) -> dict[str, Any]:
         raise SourceError("Logo'da satış satırı bulunamadı.")
     rows: list[dict[str, Any]] = []
     missing: list[int] = []
+    read: list[int] = []
     for y in range(end.year - max(1, years) + 1, end.year + 1):
         firm = firms.get(y)
         if not firm:
             missing.append(y)
             continue
         cut = cut_day(y, end)
+        read.append(y)
         for r in run(item_sales_sql(firm, y, cut)):
             code = str(r.get("stok") or "").strip()
             if not code:
@@ -281,7 +283,8 @@ def read_own_sales(run: Runner, years: int) -> dict[str, Any]:
             rows.append({"yil": y, "boyut": "kanal", "anahtar": (clean(r.get("kanal")) or "(boş)")[:120], "yayinevi": None,
                          "ytd_adet": num(r.get("ytd_adet")) or 0.0, "ytd_ciro": num(r.get("ytd_ciro")) or 0.0,
                          "adet": num(r.get("adet")) or 0.0, "ciro": num(r.get("ciro")) or 0.0})
-    return {"rows": rows, "dataEnd": end.isoformat(), "missingYears": missing,
+    # `years`: okunan yıllar (sorgu bilgisi bu yılların SQL'ini firma ve kesim günüyle yeniden kurar).
+    return {"rows": rows, "dataEnd": end.isoformat(), "missingYears": missing, "years": read,
             "firms": {str(y): f for y, f in firms.items()}}
 
 

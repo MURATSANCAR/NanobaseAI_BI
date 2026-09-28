@@ -6,6 +6,8 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay, fmtInt, pazarApi, type Category } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M39 Pazar ve rakip ekranlarının ortak parçaları: kabuk, bölüm çubuğu (yetkiye göre), tazelik şeridi. */
 
@@ -104,6 +106,7 @@ export function FreshnessStrip() {
       {f.stale ? <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" /> : <Clock aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-canvas-muted" />}
       <span>
         Rakip verisi: <strong>{fmtInt(f.records)}</strong> kayıt, son ekleme/değişiklik <strong>{fmtDay(f.lastChange)}</strong>
+        <SqlInfo k={kaynakOf(f)} alan="records" label="Rakip verisinin tazeliği" className="ml-0.5" />
         {f.ageDays !== null && <> ({fmtInt(f.ageDays)} gün önce)</>}
         {f.stale && <> — {f.staleDays} günlük eşiği aştı; karşılaştırmalar bu tarihe göredir</>}. İlk kayıt {fmtDay(f.firstCreated)}.
         {f.snapshotAt && <> Portal CRM'i {fmtDay(f.snapshotAt)} tarihinde okudu.</>}
@@ -134,10 +137,13 @@ export function CategorySelect({ value, onChange, categories, empty = 'Bütün k
 }
 
 /** Küçük sayı karosu. */
-export function Stat({ label, value, help }: { label: string; value: ReactNode; help?: ReactNode }) {
+export function Stat({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className="mt-0.5 truncate font-mono text-[16px] font-bold tabular-nums">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>

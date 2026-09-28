@@ -28,7 +28,10 @@ from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import pazar as P
+from semantic_bridge import pazar_kaynak as PK
 from semantic_bridge import pazar_sources as src
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_izi as IZ
 
 log = logging.getLogger("semantic.pazar.api")
 B = "/api/v1/pazar"
@@ -90,6 +93,31 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def schema() -> str:
         return admin_mod.conf("CRM_SCHEMA") or "Timas_MSCRM.dbo"
+
+    def izli(engine, tenant: str, fn, *, prefix: str, title: str, text: str, skip: tuple = (), crm: bool = True,
+             logo: bool = True, rapor: bool = False, key: str = "kaynaklar"):
+        """Sorgu bilgisi: uçta koşan portal okumaları + anlık görüntüyü dolduran asıl CRM/Logo sorguları. Özet
+        uçlarının kendi `kaynaklar` listesi olduğundan onlarda kayıt `sorguBilgisi` anahtarına yazılır."""
+        with IZ.izle(engine) as ran:
+            out = fn()
+        if not isinstance(out, dict):
+            return out
+        dbs = (PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_file()))
+        org = None if rapor else (lambda k: PK.origin(k, engine, tenant, *dbs, crm=crm, logo=logo))
+        extra = (lambda k: [k.hesap("rapor", "Rakam yüklenen raporun sayfasından okunur.", dis=PK.RAPOR_DIS)]) if rapor else None
+
+        def build():
+            return IZ.kaynak(engine, ran, out, prefix=prefix, title=title, text=text, skip=skip + (key,), origin=org,
+                             extra=extra)
+        if key == "kaynaklar":
+            return PV.bagla(out, build)
+        try:
+            out[key] = build().to_dict()
+        except Exception as e:  # noqa: BLE001 — sorgu bilgisi rakamı düşürmez
+            log.warning("pazar: sorgu bilgisi kurulamadı: %s", e)
+            out[key] = {"sources": {}, "formulas": {}, "fields": {},
+                        "error": "Bu ekranın sorgu bilgisi hazırlanamadı; rakamlar etkilenmedi."}
+        return out
 
     def llm(priority: Optional[int]):
         try:
@@ -171,7 +199,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             log.warning("pazar: Logo okunamadı: %s", e)
         step("Köprü tablolarına yazılıyor")
         return P.apply_snapshot(engine, tenant, competitors=comp, own_books=own, links=links, kitaplik=kitaplik,
-                                own_sales=own_sales, actor=actor, errors=errors)
+                                own_sales=own_sales, actor=actor, errors=errors,
+                                okuma={"crmSchema": schema(), "blurbChars": st["blurbChars"],
+                                       "crmRows": {"competitors": len(comp), "ownBooks": len(own), "links": len(links),
+                                                   "kitaplik": len(kitaplik)}})
 
     def jobs() -> dict[str, Any]:
         return {"kaynak": sync_job.status(), "eslesme": suggest_job.status(),
@@ -197,12 +228,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/overview")
     def pazar_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {**P.overview(engine, tenant), "jobs": jobs()}
+        return izli(engine, tenant, lambda: {**P.overview(engine, tenant), "jobs": jobs()}, prefix="portal.pazar.ozet",
+                    title="Pazar özeti", text=PK.F_OZET, skip=("jobs",))
 
     @app.get(B + "/freshness")
     def pazar_freshness(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return P.freshness(engine, tenant)
+        return izli(engine, tenant, lambda: P.freshness(engine, tenant), prefix="portal.pazar.tazelik", title="Tazelik",
+                    text=PK.F_TAZELIK, logo=False, skip=("staleDays",))
 
     @app.get(B + "/status")
     def pazar_status(request: Request) -> dict[str, Any]:
@@ -272,13 +305,17 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/publishers")
     def pazar_publishers(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": P.publishers(engine, tenant)}
+        return izli(engine, tenant, lambda: {"items": P.publishers(engine, tenant)}, prefix="portal.pazar.yayinevleri",
+                    title="Yayınevleri", text=PK.F_MATRIS, logo=False)
 
     @app.get(B + "/competitors")
     def pazar_competitors(request: Request, yayinevi: str = "", kategori: str = "", q: str = "", durum: str = "",
                           page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(P.competitors, engine, tenant, yayinevi=yayinevi, kategori=kategori, q=q, durum=durum, page=max(0, page))
+        return izli(engine, tenant, lambda: call(P.competitors, engine, tenant, yayinevi=yayinevi, kategori=kategori, q=q,
+                                                 durum=durum, page=max(0, page)),
+                    prefix="portal.pazar.rakipler", title="Rakip kitaplar", text=PK.F_RAKIP, logo=False,
+                    skip=("page", "size", "pageSize"))
 
     def _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen):
         return call(P.matrix, engine, tenant, kategori=kategori, include_suggested=oneri, sayfa_min=sayfaMin or None,
@@ -288,7 +325,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def pazar_matrix(request: Request, kategori: str = "", oneri: bool = False, sayfaMin: int = 0, sayfaMax: int = 0,
                            yayinevi: str = "", izlenen: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(_matrix, engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen)
+        return await run_in_threadpool(lambda: izli(
+            engine, tenant, lambda: _matrix(engine, tenant, kategori, oneri, sayfaMin, sayfaMax, yayinevi, izlenen),
+            prefix="portal.pazar.matris", title="Rakip matrisi", text=PK.F_MATRIS, logo=False))
 
     @app.get(B + "/matrix/export.csv")
     def pazar_matrix_export(request: Request, kategori: str = "", oneri: bool = False, sayfaMin: int = 0, sayfaMax: int = 0,
@@ -303,20 +342,28 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/own-market")
     def pazar_own_market(request: Request, boyut: str = "kategori", yil: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(P.own_market, engine, tenant, boyut, yil or None)
+        return izli(engine, tenant, lambda: call(P.own_market, engine, tenant, boyut, yil or None),
+                    prefix="portal.pazar.ic", title="TİMAŞ iç göstergeleri", text=PK.F_IC, skip=("yil", "yillar"))
 
     @app.get(B + "/own-books")
     def pazar_own_books(request: Request, q: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        items = P.own_books(engine, tenant, q, 20)
-        return {"items": items, "limit": 20, "note": "İlk 20 eşleşme; aramayı daraltın." if len(items) == 20 else None}
+
+        def read() -> dict[str, Any]:
+            items = P.own_books(engine, tenant, q, 20)
+            return {"items": items, "limit": 20, "note": "İlk 20 eşleşme; aramayı daraltın." if len(items) == 20 else None}
+        return izli(engine, tenant, read, prefix="portal.pazar.kitaplar", title="TİMAŞ kitapları", text=PK.F_EMSAL,
+                    skip=("limit",))
 
     # ------------------------------------------------------------------ kategori eşlemesi
 
     @app.get(B + "/category-map")
     def pazar_category_map(request: Request, durum: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {**P.category_map(engine, tenant, durum=durum, q=q, page=max(0, page)), "job": suggest_job.status()}
+        return izli(engine, tenant, lambda: {**P.category_map(engine, tenant, durum=durum, q=q, page=max(0, page)),
+                                             "job": suggest_job.status()},
+                    prefix="portal.pazar.esleme", title="Kategori eşlemesi", text=PK.F_ESLEME, logo=False,
+                    skip=("job", "page", "pageSize", "size"))
 
     @app.post(B + "/category-map/decision")
     def pazar_category_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -356,7 +403,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 res = BS.similar_books(engine, tenant, metin=q, n=n)
             return res
 
-        out = await run_in_threadpool(call, P.comparables, engine, tenant, body, chooser(False), neighbors)
+        out = await run_in_threadpool(lambda: izli(engine, tenant, lambda: call(P.comparables, engine, tenant, body, chooser(False), neighbors),
+                                                   prefix="portal.pazar.emsal", title="Emsal arama", text=PK.F_EMSAL))
         audit(engine, user, "run", "pazar_comparables", body.get("crmKitapId"), "Emsal arama",
               {"q": str(body.get("q") or "")[:120], "rakip": len(out["rakip"]), "timas": len(out["timas"]), **out["counts"]})
         return out
@@ -399,9 +447,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/reports")
     def pazar_reports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        out = P.list_reports(engine, tenant)
-        out["items"] = [recover(engine, tenant, r) for r in out["items"]]
-        return out
+
+        def read() -> dict[str, Any]:
+            out = P.list_reports(engine, tenant)
+            out["items"] = [recover(engine, tenant, r) for r in out["items"]]
+            return out
+        return izli(engine, tenant, read, prefix="portal.pazar.raporlar", title="Sektör raporları", text=PK.F_RAPOR,
+                    rapor=True)
 
     @app.post(B + "/reports", status_code=201)
     async def pazar_report_add(request: Request, filename: str = "", kaynak: str = "", yil: str = "", baslik: str = "") -> dict[str, Any]:
@@ -419,7 +471,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/reports/{rid}")
     def pazar_report(rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return recover(engine, tenant, call(P.get_report, engine, tenant, rid))
+        return izli(engine, tenant, lambda: recover(engine, tenant, call(P.get_report, engine, tenant, rid)),
+                    prefix="portal.pazar.rapor", title="Sektör raporu", text=PK.F_RAPOR, rapor=True)
 
     @app.get(B + "/reports/{rid}/file")
     def pazar_report_file(rid: str, request: Request):
@@ -489,9 +542,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/reports/{rid}/figures")
     def pazar_report_figures(rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        out = call(P.figures, engine, tenant, rid)
-        out["report"] = recover(engine, tenant, {**out["report"]})
-        return out
+
+        def read() -> dict[str, Any]:
+            out = call(P.figures, engine, tenant, rid)
+            out["report"] = recover(engine, tenant, {**out["report"]})
+            return out
+        return izli(engine, tenant, read, prefix="portal.pazar.rakamlar", title="Raporun rakamları", text=PK.F_RAPOR,
+                    rapor=True)
 
     @app.post(B + "/reports/{rid}/figures", status_code=201)
     def pazar_report_figure_add(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -515,7 +572,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/briefs")
     def pazar_briefs(request: Request, durum: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return P.list_briefs(engine, tenant, durum)
+        return izli(engine, tenant, lambda: P.list_briefs(engine, tenant, durum), prefix="portal.pazar.ozetler",
+                    title="Aylık özetler", text=PK.F_OZETYAZI, key="sorguBilgisi")
 
     @app.get(B + "/briefs/approved")
     def pazar_brief_approved(request: Request) -> dict[str, Any]:
@@ -526,18 +584,21 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(B + "/briefs/by-period/{donem}")
     def pazar_brief_by_period(donem: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"brief": call(P.brief_by_donem, engine, tenant, donem), "donem": donem}
+        return izli(engine, tenant, lambda: {"brief": call(P.brief_by_donem, engine, tenant, donem), "donem": donem},
+                    prefix="portal.pazar.ozet-donem", title="Aylık özet", text=PK.F_OZETYAZI, key="sorguBilgisi")
 
     @app.get(B + "/briefs/sources")
     def pazar_brief_sources(request: Request) -> dict[str, Any]:
         """Taslağa verilecek kaynakların önizlemesi (modelsiz)."""
         engine, tenant, _, _ = ctx(request)
-        return P.brief_sources(engine, tenant)
+        return izli(engine, tenant, lambda: P.brief_sources(engine, tenant), prefix="portal.pazar.ozet-kaynak",
+                    title="Özetin kaynakları", text=PK.F_OZETYAZI, key="sorguBilgisi")
 
     @app.get(B + "/briefs/{bid}")
     def pazar_brief(bid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(P.get_brief, engine, tenant, bid)
+        return izli(engine, tenant, lambda: call(P.get_brief, engine, tenant, bid), prefix="portal.pazar.ozet-kayit",
+                    title="Aylık özet", text=PK.F_OZETYAZI, key="sorguBilgisi")
 
     @app.post(B + "/briefs/draft")
     async def pazar_brief_draft(request: Request, donem: str = "") -> dict[str, Any]:

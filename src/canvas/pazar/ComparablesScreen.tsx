@@ -6,6 +6,8 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel, useDebounced } from '../editorial/kit';
 import { fmtInt, fmtTl, pazarApi, type Comparable, type OwnBookHit } from './api';
 import { CategorySelect, useCategories, useMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Emsal bul: kitap adı ya da konu (ya da bir TİMAŞ kitabından başla) → rakip ve TİMAŞ emsalleri, gerekçeleriyle.
  *  Kurallı süzgeç (kategori, sayfa ±, fiyat ±) + ortak sözcük; ilk adayları Zeki AI «konu benzerliği» diye sınıflar. */
@@ -127,8 +129,8 @@ export default function ComparablesScreen() {
             {r.query.kategoriYol && <> Kategori: {r.query.kategoriYol}.</>}
           </Note>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-            <ResultList title="Rakip emsaller" items={r.rakip} />
-            <ResultList title="TİMAŞ emsalleri" items={r.timas} salesYear={r.salesYear} />
+            <ResultList title="Rakip emsaller" items={r.rakip} k={kaynakOf(r)} />
+            <ResultList title="TİMAŞ emsalleri" items={r.timas} salesYear={r.salesYear} k={kaynakOf(r)} />
           </div>
         </>
       )}
@@ -136,13 +138,16 @@ export default function ComparablesScreen() {
   );
 }
 
-function ResultList({ title, items, salesYear }: { title: string; items: Comparable[]; salesYear?: number | null }) {
+function ResultList({ title, items, salesYear, k }: { title: string; items: Comparable[]; salesYear?: number | null; k?: ReturnType<typeof kaynakOf> }) {
   const [all, setAll] = useState(false);
   const shown = all ? items : items.slice(0, 25);
   return (
     <Panel>
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">{title}</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          {title}
+          <SqlInfo k={k} alan="_hepsi" label={title} />
+        </h2>
         <span className="text-[11.5px] font-semibold text-canvas-muted">{fmtInt(items.length)} kitap</span>
       </div>
       {items.length === 0 ? (

@@ -10,6 +10,8 @@ import { STATUS_TONE, fmtInt, pazarApi, type Report } from './api';
 import { ROOT, useMeta } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Sektör raporları: yükleme (PDF, Excel, CSV), Zeki AI ile sayfa sayfa rakam çıkarımı, onay. Dosya yalnız bu sayfanın
  *  yetkisiyle iner; raporun kendisi portalda yayımlanmaz. */
@@ -43,7 +45,10 @@ export default function ReportsScreen() {
     <div className="flex flex-col gap-3 lg:gap-4">
       {meta.data && <UploadForm maxMb={meta.data.settings.fileMaxMb ?? 50} canUpload={!!me?.canUpload} />}
       <Panel>
-        <h2 className="text-[15px] font-extrabold">Yüklenen raporlar</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          Yüklenen raporlar
+          <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Rapor sayfaları ve rakam sayıları" />
+        </h2>
         <p className="mt-1 text-[12px] leading-snug text-canvas-muted">
           Zeki AI her sayfadan rakam önerir; sayfanın metninde birebir geçmeyen rakam atılır. Onaylanan rakam özete ve kurul paketine
           sayfa numarasıyla girer. Taranmış (metni olmayan) sayfalar bu sürümde okunmaz; o sayfaların rakamları elle girilir.

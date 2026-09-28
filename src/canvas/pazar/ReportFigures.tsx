@@ -9,6 +9,8 @@ import { Panel } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, fmtNum, pazarApi, type Category, type Figure, type FigureStatus } from './api';
 import { CategorySelect, ROOT, useMeta } from './parts';
 import { ReadingBadge } from '../components/ReadingBadge';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Bir raporun rakamları: Zeki AI önerisi → insan kararı (onayla, düzelt, reddet). Her rakam sayfa numarası ve kısa
  *  alıntıyla; düzeltmede modelin değeri korunur. */
@@ -52,7 +54,10 @@ export default function ReportFigures({ id }: { id: string }) {
           <ChevronLeft aria-hidden className="h-3.5 w-3.5" /> Raporlar
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h2 className="min-w-0 text-[17px] font-extrabold">{r.baslik}</h2>
+          <h2 className="flex min-w-0 items-center gap-1 text-[17px] font-extrabold">
+            {r.baslik}
+            <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Raporun rakamları" />
+          </h2>
           <Pill tone={STATUS_TONE[r.durum]}>{r.durumAd}</Pill>
           <a href={pazarApi.reportFileUrl(r.id)} className={`${btnGhost} ml-auto`}>
             <Download aria-hidden className="h-4 w-4" /> Dosyayı aç

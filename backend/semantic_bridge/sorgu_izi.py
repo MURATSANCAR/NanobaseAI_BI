@@ -63,12 +63,20 @@ def izle(engine: Any) -> Iterator[list]:
 
 def kaynak(engine: Any, ran: list, out: Any, *, prefix: str, title: str, text: str, skip: tuple = (),
            extra: Optional[Callable[[P.Kaynaklar], list[str]]] = None, description: str = "",
-           fields: Optional[Callable[[P.Kaynaklar, str], dict[str, str]]] = None) -> P.Kaynaklar:
+           fields: Optional[Callable[[P.Kaynaklar, str], dict[str, str]]] = None,
+           origin: Optional[Callable[[P.Kaynaklar], list[str]]] = None) -> P.Kaynaklar:
     """Yakalanan okumalardan kayıt: tek hesap (`text`) bütün okumaları girdi alır; cevabın rakam taşıyan her üst
     anahtarı (skip hariç) bu hesaba bağlanır. `extra(k)`: Logo/CRM sorguları ya da dış kaynak hesapları ekler
-    (kimlik listesi döndürür). `fields(k, ref)`: daha ince alan eşlemesi (üst anahtarın üstüne yazar)."""
+    (kimlik listesi döndürür). `origin(k)`: portal tablosunu dolduran asıl sorgular — portal okumalarının kökeni
+    olarak yazılır (önbellekten gelen rakamın asıl SQL'i). `fields(k, ref)`: daha ince alan eşlemesi."""
     k = P.Kaynaklar()
-    ids = kaydet(k, ran, engine, prefix, title, description=description or "Bu ekran açılırken koşan okuma.")
+    org = [i for i in (origin(k) if origin is not None else []) if i and not i.startswith("hesap:")]
+    org_hesap = [i for i in (list(k.formulas) if origin is not None else [])]
+    ids = kaydet(k, ran, engine, prefix, title, description=description or "Bu ekran açılırken koşan okuma.",
+                 origin=tuple(org))
+    ids += [f"hesap:{n}" for n in org_hesap]
+    if not ran and org:
+        ids += org
     if extra is not None:
         ids += [i for i in extra(k) if i]
     if not ids:
