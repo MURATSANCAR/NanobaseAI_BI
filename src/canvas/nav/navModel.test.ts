@@ -48,9 +48,7 @@ describe('sayfa yetkisi', () => {
 describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'yonetim']);
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'ik', 'yonetim']);
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'platform', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'ik', 'platform', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -63,8 +61,7 @@ describe('rol görünürlüğü', () => {
 
   it('ayar boşsa (editör değil) gruplar normal sırada ve hepsi açık gelir', () => {
     const g = visibleNav(user, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi']);
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'platform']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'altyapi', 'platform']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -72,8 +69,7 @@ describe('rol görünürlüğü', () => {
 
   it('editör: Editoryal en üstte «Çalışma alanım», Analiz ve Finans kapalı ama görünür, Yönetim yok', () => {
     const g = visibleNav(editor, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi']);
-    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'platform']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama', 'altyapi', 'platform']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);

@@ -832,8 +832,6 @@ export type AccessMe = {
   roles: Array<{ id: string; name: string; via: string[] }>;
 };
 
-/** `explicit`: kişisel veri gösteren sayfa (güvenlik, İK); «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
-export type AccessPage = { key: string; area: string; label: string; explicit?: boolean };
 /** `explicit`: «Bütün sayfalar» ile gelmez (İK ekranları); `sensitive`: kişisel veri, yöneticiye de rolüyle verilir. */
 export type AccessPage = { key: string; area: string; label: string; explicit?: boolean; sensitive?: boolean };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
