@@ -1,0 +1,6 @@
+{
+  "commit": "157d9f6a8",
+  "sourceFilesScanned": 7257,
+  "legacyWorkspaceRouteReferences": [],
+  "notes": "Production source excluding historical evidence, test directories and co-located test/spec files. Unknown URLs use the general 404 handler."
+}

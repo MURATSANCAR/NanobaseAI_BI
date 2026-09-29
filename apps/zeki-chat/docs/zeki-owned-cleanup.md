@@ -2,6 +2,8 @@
 
 29 Eylül 2026. Kaynak: BI `apps/zeki-chat`, uygulama sürümü `6c6d214d4`.
 
+Bu belge kimlik/lisans temizliğinin 29 Eylül kabul kaydıdır. Güncel sürüm ve sonradan kaldırılan kullanım sınırları için [30 Eylül kotasız mesajlaşma raporu](zeki-unlimited-messaging.md) geçerlidir.
+
 ## Değişiklik
 
 Ürünün lisans belgesi, süre/deneme/plan/kota modeli ve bunlara bağlı ekranlar kaldırıldı. Uygulama, kurulu yerel modülleri `@zeki.chat/capabilities` ile kaydeder; `GET /api/v1/capabilities.info` yalnız modül listesini döndürür. Yetki kontrolleri ve iki aşamalı doğrulama korunur. Başka üreticilerin uygulamalarına ait kullanım hakları bu kayıt tarafından açılmaz; dış mağaza tam yerel kurulumda kapalıdır.

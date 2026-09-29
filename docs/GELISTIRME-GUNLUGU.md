@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Şirket içi sohbet: kullanım kotaları kaldırıldı, son canlı kabul geçti
+
+- `157d9f6a8` main'den test sunucusuna yedekli kuruldu; imaj `zeki-ai-chat:8.5.3-157d9f6a8`, 9.552 kaynak dosyası eş, AppleDouble 0. Mesaj/dosya/grup DM -1; 50 jeton budaması yok; yerel doğrulanmış REST/DDP/köprü istek kotası yok; saklama politikası kapalı.
+- İlk tarayıcı turunda yakalanan ayrı HTTP yöntem sınırı düzeltildi. Son sürümde gerçek timasai hesabı: 51 jeton (ilk geçerli); 44.806 karakter mesaj/taslak/açıklama; 191.866.880 bayt gerçek kaynak arşivi dış nginx üzerinden yükleme ve indirme SHA eşitliği; REST, HTTP yöntem köprüsü ve gerçek WebSocket'te 25'er çağrı geçti. 6 ayrı bağlantıdan 6 mesaj 5 ms gönderim aralığında başlatıldı, 4.137 sn'de tamamlandı; tam içerikler bağımsız Mongo ile eşleşti.
+- 320/390/768/1440 px: uzun mesaj gönderildi, taşma/JS hatası/eski marka/dış HTTP isteği 0. Yenileme mevcut oturumu sürdürdü. 7/7 ağ kontrolü ve DNS/firewall geçti; anonim oda okuması reddedildi. Eski lisans uçları için 7.257 üretim kaynak dosyasında referans 0; bulunmayan URL'nin genel 404'ü normaldir.
+- Temizlik: son tur 16 mesaj/1 dosya/1 oda/1 portal oturumu/55 chat jetonu/18 çöp-kutusu belgesi; önceki tur 8 mesaj/1 dosya/1 oda/1 portal oturumu/52 jeton/10 çöp-kutusu belgesi. Kalan kabul referansı 0, GridFS dosya/parça 0; başlangıçtaki 3 kullanıcı/1 oda/1 mesaj korundu. Gerçek denetim geçmişi silinmedi.
+- **Sınır:** 8 kişiyi aşan DM gerçek ortamda DOĞRULANAMADI; yalnız 3 hesap var, uydurma hesap açılmadı. Kaynak ve canlı ayarda limit kaldırıldı. Donanım kapasitesi/yük performansı kabulü değildir. Yerel test ve müşteri VM kurulumu yok.
+- Rapor: `apps/zeki-chat/docs/zeki-unlimited-messaging.md`; kanıt: `apps/zeki-chat/docs/evidence/2026-09-30-unlimited-messaging/`.
+
 ## 2026-09-29 — Şirket içi sohbet kullanım sınırları kaldırılıyor
 
 - İlk canlı turda 51 oturum, 44.806 karakter mesaj/taslak ve 191.866.880 bayt gerçek kaynak arşivi yükleme/indirme geçti. Tarayıcıdaki 25 yöntem çağrısı ayrı HTTP–DDP köprüsünün 10 isteklik sınırını yakaladı: soket oturumu yerine sunucunun doğruladığı userId kullanıldı; sınırsız çağrıda sayaç artırma da atlanır. Geçici 8 mesaj, 1 dosya, 1 oda, 1 portal oturumu ve 52 chat jetonu temizlendi (kalan 0). Yeni sürüm tekrar doğrulanacak.
