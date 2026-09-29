@@ -196,7 +196,7 @@ class LlmQueue:
         """The queue may be opened by a process that does not create tables (the timed scripts open
         the store with create=False) before the bridge has been restarted on this version. It brings
         what it needs itself: the gate table, and the columns the ticket table has gained."""
-        try:
+        def install() -> None:
             S.sl_llm_gate.create(self.engine, checkfirst=True)
             insp = sa.inspect(self.engine)
             if not insp.has_table(S.sl_llm_queue.name):
@@ -207,6 +207,11 @@ class LlmQueue:
                 if col.name not in have:
                     with self._begin() as conn:
                         conn.execute(sa.text(f"ALTER TABLE {S.sl_llm_queue.name} ADD COLUMN {col.name} {col.type.compile(dialect=self.engine.dialect)}"))
+
+        try:
+            # Sürüm damgası: tanım değişmediyse her açılışta katalog sorgusu yapılmaz (store/schema_stamp.py).
+            from semantic_layer.store import schema_stamp
+            schema_stamp.run(self.engine, [S.sl_llm_gate, S.sl_llm_queue], install, name="sl_llm_queue")
         except Exception as e:  # noqa: BLE001 — two processes adding the same column at once: the loser is fine
             log.warning("llm queue: schema check: %s", e)
 

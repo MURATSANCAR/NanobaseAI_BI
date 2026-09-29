@@ -212,7 +212,8 @@ def entity_domains(engine: sa.engine.Engine, tenant: str, profiles: list[Any]) -
     key = (id(engine), tenant, len(profiles), id(profiles))
     if _ent_cache["key"] == key and time.monotonic() - _ent_cache["at"] < _TTL:
         return _ent_cache["map"]
-    _md.create_all(engine, checkfirst=True)
+    from semantic_layer.store import schema_stamp
+    schema_stamp.create_all(_md, engine)
     with engine.connect() as c:
         over = {str(e).upper(): d for e, d in c.execute(sa.select(ENTITY_DOMAINS.c.entity, ENTITY_DOMAINS.c.domain)
                                                          .where(ENTITY_DOMAINS.c.tenant_id == tenant)).all()}
@@ -230,7 +231,8 @@ def set_entity_domain(engine: sa.engine.Engine, tenant: str, actor: str, entity:
     ids = {d["id"] for d in data_domains()}
     if domain is not None and domain not in ids:
         raise AccessError("Bilinmeyen veri alanı.")
-    _md.create_all(engine, checkfirst=True)
+    from semantic_layer.store import schema_stamp
+    schema_stamp.create_all(_md, engine)
     e = (entity or "").strip().upper()
     if not e:
         raise AccessError("Varlık seçilmedi.")
@@ -334,7 +336,8 @@ def ensure(engine: sa.engine.Engine, tenant: str) -> None:
     with _lock:
         if key in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         with engine.begin() as c:
             found = c.execute(sa.select(ROLES.c.id).where(ROLES.c.id == _role_id(tenant, EVERYONE_ID))).first()
             if not found:
@@ -1415,7 +1418,8 @@ def _write_snapshot(engine: sa.engine.Engine, t: str, subject: str, members: Opt
 def refresh(engine: sa.engine.Engine, directory: "Directory", only: Optional[tuple[str, str]] = None) -> dict[str, Any]:
     """Bağı olan her AD grubunun, OU'nun ve CRM rolünün üyelerini okuyup görüntüye yazar.
     Zamanlayıcı (07:00 ve 12:00) ve yönetim ekranı çağırır; istek yolunda değil. `only` yalnız o bağı okur."""
-    _md.create_all(engine, checkfirst=True)
+    from semantic_layer.store import schema_stamp
+    schema_stamp.create_all(_md, engine)
     with engine.connect() as c:
         subjects = sorted({(t, str(s)) for t, s in c.execute(
             sa.select(BINDINGS.c.subject_type, BINDINGS.c.subject).where(BINDINGS.c.subject_type != "user")).all()})

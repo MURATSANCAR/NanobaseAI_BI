@@ -115,6 +115,39 @@ def _concurrency(key: str):
     return read
 
 
+class _CatalogAttr:
+    """Katalogdan kurulan alan (profiller, çözümleyici, derleyiciler, dil havuzu).
+
+    Köprü açılışında katalog arkada yüklenir (`boot.py`); yüklenmeden bu alana dokunan iş parçacığı yükleme bitene
+    kadar bekler — yarım kurulmuş katalogla cevap üretilmez. Yükleyen iş parçacığı beklemez. Katalog bir kez hazır
+    olduktan sonra (sonraki `rebuild`'ler dahil) okuma eskisi gibi doğrudandır.
+
+    `event`: hangi hazırlık beklenir. Profiller (dönem kapsamı işlendikten sonra) katalogun geri kalanından önce
+    hazırdır: `run_sql` ile okuyan ekranlar kolon dizinini ve dil havuzunu beklemez."""
+
+    def __init__(self, event: str = "_catalog_ready") -> None:
+        self.event = event
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.public = name
+        self.slot = "_cat_" + name
+
+    def __get__(self, obj: Any, owner: Optional[type] = None) -> Any:
+        if obj is None:
+            return self
+        d = obj.__dict__
+        ready = d.get(self.event)
+        if ready is not None and not ready.is_set() and d.get("_catalog_builder") != threading.get_ident():
+            obj.wait_catalog(self.event)
+        try:
+            return d[self.slot]
+        except KeyError:
+            raise AttributeError(self.public) from None
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        obj.__dict__[self.slot] = value
+
+
 class Runtime:
     """Process-wide state: store, profiles, resolver, compilers, DB connector, recall index."""
 
@@ -138,9 +171,27 @@ class Runtime:
     def crm_connector(self, value) -> None:
         self.__dict__["_crm_connector"] = pooled(value, "crm", _concurrency("CRM_MAX_CONCURRENT"))
 
-    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None):
+
+    profiles = _CatalogAttr("_profiles_ready")
+    conventions = _CatalogAttr("_profiles_ready")
+    resolver = _CatalogAttr()
+    existing = _CatalogAttr()
+    router = _CatalogAttr()
+    language_pool = _CatalogAttr()
+
+    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None,
+                 defer_catalog: bool = False):
+        """`defer_catalog=True`: katalog (profiller → derleyiciler) kurulmaz; çağıran `load_catalog()`'u arkada koşturur
+        (köprü açılışı). Varsayılan eskisi gibi: nesne döndüğünde katalog hazırdır (betikler, testler)."""
+        self.boot_timings: dict[str, float] = {}
+        self._catalog_ready = threading.Event()
+        self._profiles_ready = threading.Event()      # profiller + dönem kapsamı (katalogun ilk yarısı)
+        self._catalog_builder: Optional[int] = None
+        self._rebuild_lock = threading.RLock()
+        _t = time.perf_counter()
         self.settings = settings
         self.store = store or open_store(settings.store_dsn)
+        self.boot_timings["katalog-deposu"] = round(time.perf_counter() - _t, 3)
         self.connector = connector
         self.crm_connector = None
         _crm_file = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
@@ -150,7 +201,9 @@ class Runtime:
             except Exception as _e:  # noqa: BLE001
                 log.warning("CRM connector kurulamadi: %s", str(_e)[:200])
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
+        _t = time.perf_counter()
         self.queue = queue or LlmQueue.from_env(self.store.engine)
+        self.boot_timings["model-sirasi"] = round(time.perf_counter() - _t, 3)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         # Prompts other modules leave at the door (202 + id). Reads `self.llm` at run time: the admin
         # screen swaps the client without a restart.
@@ -170,10 +223,15 @@ class Runtime:
         self._result_ttl = float(os.environ.get("SEMANTIC_RESULT_TTL_SEC", "1800"))
         self.threads: dict[str, list[dict[str, str]]] = {}
         self.thread_plans: dict[str, Any] = {}
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id),
-                                              self.store.concept_entities(settings.tenant_id, settings.datasource_id))
+        # Profiller burada okunmaz: `rebuild()` ilk iş olarak okuyor. Eskiden ikisi de okuyordu — 4.874 profil her
+        # açılışta iki kez (hız 2. tur, 2026-09-29).
+        _t = time.perf_counter()
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
+        self.boot_timings["bilgi-paketi"] = round(time.perf_counter() - _t, 3)
+        # SQL dili katalogdan değil bağlantıdan gelir; ekran uçları (settings.dialect) katalog beklemeden okur.
+        if not settings.dialect:
+            settings.dialect = getattr(self.connector, "dialect", "") or "generic"
         self._catalog_version = None
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self._checked_at = 0.0
@@ -200,7 +258,36 @@ class Runtime:
         self._hot_lock = threading.Lock()
         self._stop = threading.Event()
         self._refresher: Optional[threading.Thread] = None
-        self.rebuild()
+        if not defer_catalog:
+            self.load_catalog()
+
+    # ------------------------------------------------------------------ catalog readiness
+    def catalog_is_ready(self) -> bool:
+        ev = self.__dict__.get("_catalog_ready")
+        return ev is None or ev.is_set()
+
+    def wait_catalog(self, event: str = "_catalog_ready") -> None:
+        """Katalog yüklenene kadar bekle (yükleyen iş parçacığı beklemez). İstekte süre sınırlı: dolarsa 503
+        «hazırlanıyor» (`boot.Warming`); arka plan işinde uzun bekler; olay döngüsünü hiç kilitlemez."""
+        ev = self.__dict__.get(event)
+        if ev is None or ev.is_set() or self.__dict__.get("_catalog_builder") == threading.get_ident():
+            return
+        from semantic_bridge import boot as boot_mod
+        boot_mod.wait(ev, "catalog")
+
+    def load_catalog(self) -> bool:
+        """Katalog kurulumu (profiller → çözümleyici → derleyiciler → dil havuzu). Açılışta arkada bir kez koşar;
+        bekleyenler bitince aynı anda serbest kalır."""
+        started = time.perf_counter()
+        self._catalog_builder = threading.get_ident()
+        try:
+            self.rebuild()
+        finally:
+            self._catalog_builder = None
+        self.boot_timings["katalog"] = round(time.perf_counter() - started, 2)
+        self._profiles_ready.set()
+        self._catalog_ready.set()
+        return True
 
     #: Documents the miner reads but the prompt does not carry. `sql/` holds the validated Q→SQL pairs,
     #: which reach the model through recall instead. `reference/` holds generated vendor material —
@@ -226,6 +313,10 @@ class Runtime:
         """Pick up a catalog published by another process (the nightly worker, the portal, a sibling
         uvicorn worker). A reload request only ever reaches one worker, so each worker checks for itself:
         one cheap version read at most every `every` seconds, and a rebuild only when it actually moved."""
+        if not self.catalog_is_ready():
+            # Açılışta katalog arkada yükleniyor: burada ikinci bir yükleme başlatılmaz, o yüklemenin bitmesi beklenir.
+            self.wait_catalog()
+            return
         now = time.time()
         if now - self._checked_at < every:
             return
@@ -276,28 +367,59 @@ class Runtime:
         threading.Thread(target=load, name="language-pool-reload", daemon=True).start()
 
     def rebuild(self) -> None:
+        """Katalogdan her şeyi yeniden kurar. İki yeniden kurulum aynı anda koşmaz (açılış yüklemesi sürerken gelen
+        reload/certify onu bekler, sonra kendi kurulumunu yapar)."""
+        import contextlib
+
+        lock = self.__dict__.get("_rebuild_lock") or contextlib.nullcontext()
+        with lock:
+            self._rebuild()
+
+    def _rebuild(self) -> None:
         s = self.settings
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(s.datasource_id),
-                                              self.store.concept_entities(s.tenant_id, s.datasource_id))
+        timings = self.__dict__.setdefault("boot_timings", {})
+        clock = [time.perf_counter()]
+
+        def mark(step: str) -> None:
+            now = time.perf_counter()
+            timings["katalog." + step] = round(now - clock[0], 3)
+            clock[0] = now
+
+        stored = self.store.list_profiles(s.datasource_id)
+        mark("profil-okuma")
+        entities = self.store.concept_entities(s.tenant_id, s.datasource_id)
+        mark("varlik-adlari")
+        self.profiles = one_entity_per_pattern(stored, entities)
+        mark("profil-birlestirme")
         self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
+        mark("katalog-surumu")
         self.conventions = Conventions.from_profiles(self.profiles)
         if s.project_dir:
             self.conventions.load_equivalences(s.project_dir / "equivalences.yml")
+        mark("gelenekler")
         # Declared period coverage the nightly measurement did not refute: the period chooser and the
         # gate read it off the profile; a table without it keeps needing its date filter.
         from semantic_layer import coverage as coverage_mod
         coverage_mod.apply(self.profiles, self.store, s)
+        mark("donem-kapsami")
+        # Profiller artık son hâlinde (açılışta: `run_sql` ile okuyan ekranlar buradan sonra beklemez).
+        profiles_ready = self.__dict__.get("_profiles_ready")
+        if profiles_ready is not None and not profiles_ready.is_set():
+            profiles_ready.set()
+            timings["profiller-hazir"] = round(sum(v for k, v in timings.items() if k.startswith("katalog.")), 2)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()
         self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions, verified_pairs=self.pairs)
+        mark("cozumleyici")
         det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id), conventions=self.conventions)
         existing = None
         if self.llm is not None:
             existing = ExistingCompiler(self.llm, self.profiles, s.context, rules_text=self.rules_text, recall=self.recall if s.recall_enabled else None, dialect=s.dialect, conventions=self.conventions)
         self.existing = existing
+        mark("derleyiciler")
         # SuperSonic joins only when configured: "shadow" measures it next to the answer, "primary"
         # is an explicit experiment. Neither is on by default (SEMANTIC_COMPILER / SUPERSONIC_MODE).
         alternates: dict[str, Any] = {}
@@ -313,6 +435,7 @@ class Runtime:
                 log.info("supersonic adapter enabled (mode=%s)", os.environ.get("SUPERSONIC_MODE", "shadow"))
         except Exception as e:  # noqa: BLE001
             log.warning("supersonic adapter unavailable: %s", e)
+        mark("supersonic")
         # The vocabulary someone has already written down tells the prompt which tables matter; a
         # three-hundred-table schema would not fit in a local model's context, and sending it whole
         # would bury the handful that answer the question.
@@ -331,6 +454,7 @@ class Runtime:
             existing.catalog_columns = cols
         except Exception as e:  # noqa: BLE001
             log.debug("catalog entity set unavailable: %s", e)
+        mark("sertifikali-dizin")
         # Vector routing over the catalog, for questions whose words nobody has written down yet. It
         # is strictly additional: the certified vocabulary above is consulted first and always, and a
         # deployment with no index — or one whose index is unreachable — routes exactly as before.
@@ -351,6 +475,7 @@ class Runtime:
                          len(existing.columns.docs), len(existing.columns.values))
             except Exception as e:  # noqa: BLE001
                 log.warning("column index unavailable, routing from the catalog alone: %s", e)
+        mark("kolon-dizini")
 
         # Narrows the retrieved shortlist before it becomes a prompt — the step every schema-linking
         # result says matters most. Measured on this deployment's golden set:
@@ -381,6 +506,7 @@ class Runtime:
                 log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
             except Exception as e:  # noqa: BLE001
                 log.warning("table selector unavailable, sending every retrieved table: %s", e)
+        mark("tablo-secici")
 
         # Looks a word the resolver could not place up in the data before the prompt is built —
         # the one move a person makes that this system did not: open the database and run a SELECT
@@ -394,6 +520,7 @@ class Runtime:
                          existing.probe.max_columns, existing.probe.budget)
             except Exception as e:  # noqa: BLE001
                 log.warning("value probe unavailable, questions answered from the catalog alone: %s", e)
+        mark("deger-yoklama")
 
         try:
             from semantic_layer.runtime.table_router import TableRouter
@@ -404,6 +531,7 @@ class Runtime:
                 log.info("table router enabled (%s, collection %s)", router.qdrant_url, router.collection)
         except Exception as e:  # noqa: BLE001
             log.debug("table router unavailable, routing from the catalog alone: %s", e)
+        mark("tablo-yonlendirici")
         # What people wrote in the portal is the last word on what a column means; until now the model
         # never saw it. The newest annotation for a table or column wins over an older one.
         try:
@@ -418,6 +546,7 @@ class Runtime:
                 log.info("%d portal annotations carried into the model prompt", len(said))
         except Exception as e:  # noqa: BLE001
             log.debug("annotations unavailable: %s", e)
+        mark("portal-aciklamalari")
         from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
         pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
         self._language_pool_stamp = file_stamp(pool_path)
@@ -431,8 +560,10 @@ class Runtime:
             existing.language_pool = self.language_pool
         log.info("language pool: %d candidates, %d stale/invalid rejected, hash %s",
                  len(self.language_pool.entries), self.language_pool.rejected, self.language_pool.content_hash[:12])
+        mark("dil-havuzu")
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
         self.warm_gaps()
+        mark("yonlendirici")
 
     # ------------------------------------------------------------------ recall (Memory ON)
     def recall(self, question: str, exclude_nl: Optional[str] = None) -> list[dict[str, str]]:
@@ -1969,14 +2100,16 @@ class AnnotationIn(BaseModel):
     author: str | None = None
 
 
-def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, allow_no_llm: bool = True) -> Runtime:
+def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, allow_no_llm: bool = True,
+                  defer_catalog: bool = False) -> Runtime:
+    """`defer_catalog=True`: katalog kurulmadan döner (köprü açılışı; `load_catalog()` arkada koşar)."""
     settings = settings or SemanticSettings.from_env()
     if connector is None and settings.connection_file and Path(settings.connection_file).exists():
         connector = connector_from_file(settings.connection_file)
     if llm is None and settings.llm_base and os.environ.get("SEMANTIC_LLM", "1") not in ("0", "false"):
         llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
                         extra=settings.llm_extra)
-    return Runtime(settings, store=store, connector=connector, llm=llm)
+    return Runtime(settings, store=store, connector=connector, llm=llm, defer_catalog=defer_catalog)
 
 
 def _lower_tr(text: str) -> str:
@@ -2239,24 +2372,43 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
     from semantic_bridge import admin as admin_mod
 
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        if state["rt"] is None:
-            state["rt"] = build_runtime()
-        rt = state["rt"]
-        log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
-        rt.start_refresher()
+    from semantic_bridge import boot as boot_mod
+
+    # Açılış (boot.py): uvicorn portu lifespan bitince açar; bu yüzden lifespan hiçbir ağır işi beklemez. Çalışma
+    # ortamı ve katalog tek arka plan iş parçacığında kurulur; ekran uçları çalışma ortamı hazır olunca (saniyeler),
+    # soru/katalog uçları katalog hazır olunca cevap verir. Önceden: `build_runtime()` lifespan içinde, 40–100 sn.
+    label_stop = threading.Event()
+
+    def _boot_build() -> Runtime:
+        r = build_runtime(defer_catalog=True)
+        state["rt"] = r
+        return r
+
+    def _boot_services(r: Runtime) -> None:
+        """Ekranların arka plan işleri: yalnız çalışma ortamını (depo, bağlantılar) ister, kataloğu beklemez."""
+        r.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
         app.state.editorial_intake.start()
         app.state.author_snapshots.start()
         app.state.management_reports.start()
+        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
+            r.jobs.start()
+
+    def _boot_catalog_services(r: Runtime) -> None:
+        log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(r.profiles), r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id).get("CERTIFIED"), bool(r.llm), bool(r.connector))
+        log.info("açılış adımları (sn): %s", r.boot_timings)
         # Label dictionary (every value of the certified text columns, every table copy): built on its own
         # connections when missing or a day old, then daily. The resolver only reads the file.
-        label_stop = threading.Event()
         if os.environ.get("SEMANTIC_LABEL_VALUES_BUILD", "1").strip().lower() not in ("0", "false", "no", "off"):
             from semantic_layer.runtime import label_values
-            label_values.start_refresher(lambda: state["rt"], label_stop)
+            label_values.start_refresher(rt, label_stop)
+
+    boot = boot_mod.Boot(_boot_build, _boot_services, _boot_catalog_services, runtime=runtime)
+    app_boot = boot
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -2265,19 +2417,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             anyio.to_thread.current_default_thread_limiter().total_tokens = int(os.environ.get("SEMANTIC_THREADPOOL", "200"))
         except Exception as e:  # noqa: BLE001
             log.warning("thread pool size left at its default: %s", e)
-        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
-            rt.jobs.start()
+        if runtime is not None and getattr(runtime, "catalog_is_ready", lambda: True)():
+            boot.run_inline()            # hazır verilen çalışma ortamı (testler): servisler eskisi gibi hemen başlar
+        else:
+            boot.start(services=True)
         try:
             yield
         finally:
             label_stop.set()
-            app.state.editorial_home.stop()
-            app.state.editorial_intake.stop()
-            app.state.author_snapshots.stop()
-            app.state.management_reports.stop()
-            app.state.financial_audit.stop()
-            rt.jobs.stop()
-            rt.stop_refresher()
+            if boot.stop():
+                app.state.editorial_home.stop()
+                app.state.editorial_intake.stop()
+                app.state.author_snapshots.stop()
+                app.state.management_reports.stop()
+                app.state.financial_audit.stop()
+                if state["rt"] is not None:
+                    state["rt"].jobs.stop()
+                    state["rt"].stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
     # Bütün 403'ler FORBIDDEN koduyla: ön yüz başka kodlu 403'ü «oturum düştü» sayıyor (modül kodu `module` alanında).
@@ -2306,9 +2462,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     _board_for_cache.internal_session = app.state.response_cache.resolve_internal
 
     def rt() -> Runtime:
-        if state["rt"] is None:
-            state["rt"] = build_runtime()
-        return state["rt"]
+        """Çalışma ortamı. Açılış sürüyorsa kurulmasını bekler (istekte süre sınırlı → 503 «hazırlanıyor»);
+        hiçbir zaman ikinci bir çalışma ortamı kurmaz."""
+        r = state["rt"]
+        if r is not None:
+            return r
+        return app_boot.wait_runtime()
 
     from semantic_bridge import access as access_mod
 
@@ -2414,8 +2573,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/health")
     def health() -> JSONResponse:
-        r = rt()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "responseCache": app.state.response_cache.view()})
+        """Açılış sürerken de hemen cevap verir (200, `ready: false`): süreç ayakta, katalog yükleniyor. `ready: true`
+        olunca eskisiyle aynı alanlar (profil sayısı, katalog durumu…) döner. Bekçi ve kurulum betikleri `ready`'e bakar."""
+        r = state["rt"]
+        view = app_boot.view() | {"steps": dict(r.boot_timings) if r is not None else {}}
+        if r is None or not r.catalog_is_ready():
+            return JSONResponse({"status": "starting", "ready": False, "service": "nanobaseai-bi-semantic-bridge",
+                                 "version": SEMANTIC_LAYER_VERSION, "profiles": None,
+                                 "llm": bool(r.llm) if r is not None else None, "db": bool(r.connector) if r is not None else None,
+                                 "pid": os.getpid(), "boot": view, "responseCache": app.state.response_cache.view()})
+        return JSONResponse({"status": "ok", "ready": True, "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "boot": view, "responseCache": app.state.response_cache.view()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:
@@ -2557,6 +2724,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         execute=bool(body.execute if body.execute is not None else True), progress=progress,
                         username=asker)
                     await queue.put({"event": "result", "result": _answer_kaynak(answer)})
+                except boot_mod.Warming:
+                    # Açılış sürüyor: hata değil, kısa bekleme (ekran aynı soruyu biraz sonra yeniden sorar).
+                    await queue.put({"event": "error", "message": boot_mod.WARMING_MESSAGE, "code": boot_mod.WARMING_CODE,
+                                     "retryable": True})
                 except Exception:
                     log.exception("stream ask failed")
                     await queue.put({"event": "error", "message": "Sorgu tamamlanamadı. Lütfen tekrar deneyin."})
@@ -8058,6 +8229,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # CSV indiren her uca Excel eşi: `bicim=xlsx` isteğinde CSV cevabı Excel'e çevrilir (en dış katman; kapı ve yetki aynı).
     from semantic_bridge import csv_excel
     csv_excel.register(app)
+
+    # Açılış kapısı — en dış katman (en son eklenen ara katman en dışta çalışır). Çalışma ortamı kurulana kadar
+    # istek (sağlık ucu hariç) olay döngüsünü kilitlemeden bekler; süre dolarsa kısa 503 «hazırlanıyor». Bağlamdaki
+    # işaret, içerideki uçların kataloğu süre sınırıyla beklemesini sağlar (arka plan işleri süresiz bekler).
+    @app.middleware("http")
+    async def boot_gate(request: Request, call_next):
+        token = boot_mod.IN_REQUEST.set(True)
+        try:
+            if state["rt"] is None and request.url.path != "/health":
+                if not await app_boot.wait_runtime_async(boot_mod.request_wait_sec()):
+                    w = boot_mod.Warming("runtime")
+                    return JSONResponse(status_code=w.status_code, content={"detail": w.detail}, headers=w.headers)
+            return await call_next(request)
+        finally:
+            boot_mod.IN_REQUEST.reset(token)
+
+    app.state.boot = boot
     return app
 
 

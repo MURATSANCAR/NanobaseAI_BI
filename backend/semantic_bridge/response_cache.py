@@ -162,6 +162,12 @@ class Entry:
     replay: dict[str, str] = field(default_factory=dict)   # yeniden üretmek için isteğin başlıkları (yalnız bellekte)
     busy: bool = False
     real: bool = True      # kişi bu cevabı kendisi istedi (False: yalnız ısıtıldı, henüz açmadı)
+    size: int = -1                  # gövde boyu (bayt); diskten gelen kayıtta gövde okunmadan bilinir
+    path: Optional[str] = None      # gövdesi henüz okunmamış kaydın dosyası (açılışta gövdeler okunmaz)
+
+    def __post_init__(self) -> None:
+        if self.size < 0:
+            self.size = len(self.body)
 
 
 class ResponseCache:
@@ -298,13 +304,15 @@ class ResponseCache:
                     self.stats["dropped"] += 1
                     continue
                 other_code = meta.get("code") != CODE_VERSION     # başka kod sürümü: son tazeleme saatinden eski sayılır
-                body = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body").read_bytes()
-                rows.append((float(meta.get("asked", 0)), key, Entry(body, [tuple(h) for h in meta["headers"]], int(meta["status"]),
+                # Hız (2026-09-29): açılışta yalnız künye okunur; gövde (toplam yüzlerce MB olabilir) ilk istendiğinde.
+                body_path = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body")
+                size = body_path.stat().st_size
+                rows.append((float(meta.get("asked", 0)), key, Entry(b"", [tuple(h) for h in meta["headers"]], int(meta["status"]),
                                                                      min(float(meta["at"]), last_refresh(now) - 1) if other_code
                                                                      else float(meta["at"]),
                                                                      float(meta.get("seconds", 0)),
                                                                      float(meta.get("asked", 0)),
-                                                                     real=bool(meta.get("real", True)))))
+                                                                     real=bool(meta.get("real", True)), size=size, path=str(body_path))))
             except (OSError, ValueError, KeyError):
                 continue
         for _, key, e in sorted(rows, key=lambda r: r[0]):
@@ -316,6 +324,13 @@ class ResponseCache:
         """Kişinin kendi isteği: kayıt «istendi» sayılır (son istenme anı, `real`)."""
         with self._lock:
             e = self._items.get(key)
+            if e is not None and e.path is not None:
+                try:
+                    e.body = Path(e.path).read_bytes()
+                    e.size, e.path = len(e.body), None
+                except OSError:                    # dosya gitmiş: kayıt da gider
+                    del self._items[key]
+                    return None
             if e is not None:
                 e.asked = time.time()
                 e.real = True
@@ -340,10 +355,10 @@ class ResponseCache:
             entry = Entry(body, headers, status, now, seconds, asked, replay, real=real)
             self._items[key] = entry
             self._items.move_to_end(key)
-            total = sum(len(e.body) for e in self._items.values())
+            total = sum(e.size for e in self._items.values())
             while total > MAX_TOTAL and len(self._items) > 1:      # en uzun süredir istenmeyen düşer
                 k, gone = self._items.popitem(last=False)
-                total -= len(gone.body)
+                total -= gone.size
                 gone_keys.append(k)
             self.stats["stored"] += 1
         for k in gone_keys:
@@ -466,7 +481,7 @@ class ResponseCache:
 
     def view(self) -> dict[str, Any]:
         with self._lock:
-            return {"entries": len(self._items), "bytes": sum(len(e.body) for e in self._items.values()),
+            return {"entries": len(self._items), "bytes": sum(e.size for e in self._items.values()),
                     "enabled": self.enabled, "warmDone": self.warm_done, **self.stats}
 
 

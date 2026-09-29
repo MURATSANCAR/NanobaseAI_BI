@@ -8,4 +8,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Mantık köprüde (/api/v1/pr/run-due); bu birim yalnız çağırır. İlk kurulumda elle bir kez koşturulur:
 #   systemctl start timas-pr.service && journalctl -u timas-pr.service -n 50
 # Müşteri VM'inde web taraması kapalıdır (WEB_WATCH_ENABLED=0): uç aday toplamayı kendisi atlar.
-ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/pr/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 1790 -X POST "http://127.0.0.1:8795/api/v1/pr/run-due"

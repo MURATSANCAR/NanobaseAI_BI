@@ -9,4 +9,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # gönderilmez; e-posta yalnız iç alıcılara (DIJITAL_*_RECIPIENTS). Hak notu ön okuması DIJITAL_NOTE_BUDGET_SEC ile sınırlı
 # sürer, kalan sonraki geceye kalır.
 # İlk kez elle koşturulur: systemctl start timas-dijital.service (bellek: run-it-before-it-runs-itself).
-ExecStart=/bin/sh -c 'curl -fsS -m 7190 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/dijital/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 7190 -X POST "http://127.0.0.1:8795/api/v1/dijital/run-due"

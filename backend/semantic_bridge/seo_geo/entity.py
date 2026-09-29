@@ -345,7 +345,8 @@ class Entity:
         eng = self.seo.engine()
         with _ready_lock:
             if id(eng) not in _ready:
-                _md.create_all(eng, tables=[ENTITY], checkfirst=True)
+                from semantic_layer.store import schema_stamp
+                schema_stamp.create_all(_md, eng, tables=[ENTITY])
                 _ready.add(id(eng))
         return eng
 

@@ -7,4 +7,4 @@ Type=oneshot
 EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Mantık köprüde (/api/v1/mailbox/run-due); bu birim yalnız çağırır. Kutu yalnız okunur (gmail.readonly + gmail.labels);
 # dışarıya hiçbir ileti gitmez. Tur süresi MAIL_LLM_BUDGET_SEC (varsayılan 200 sn); bitmeyen iletiler sonraki tura kalır.
-ExecStart=/bin/sh -c 'curl -fsS -m 290 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/mailbox/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 290 -X POST "http://127.0.0.1:8795/api/v1/mailbox/run-due"

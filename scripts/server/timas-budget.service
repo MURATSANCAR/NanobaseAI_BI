@@ -6,4 +6,4 @@ After=nanobase-semantic-bridge.service
 Type=oneshot
 EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Mantık köprüde (/api/v1/budget/run-due); bu birim yalnız çağırır. Geçmiş yıl okuması (haftada bir) 3-4 dk sürer.
-ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/budget/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 1790 -X POST "http://127.0.0.1:8795/api/v1/budget/run-due"

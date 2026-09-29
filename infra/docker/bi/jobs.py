@@ -11,8 +11,12 @@ sunucusunun saat dilimi). `Persistent=true` işler konteyner kapalıyken kaçır
 ilk kurulumda (durum dosyası yokken) geçmiş turlar koşulmaz — 1 çekirdekli VM'e onlarca iş birden binmesin.
 
 VM'de bilerek koşmayanlar `JOBS_EXCLUDE` (varsayılan: basın/web taraması — kullanıcı kararı 2026-09-25; Zeki AI
-kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ile gitmeyen servis (betik) desteklenmez, günlüğe
-yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
+kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ya da `kopru-cagir.sh` ile gitmeyen servis (betik)
+desteklenmez, günlüğe yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
+
+Köprü çağrısı `scripts/server/kopru-cagir.sh` ile aynı kuralla (`call_bridge`): köprü hazır olana kadar beklenir; yalnız
+işin başlamadığı (bağlanamadı, 502/503) ya da köprüyle birlikte öldüğü (bağlantı koptu ve köprünün pid'i değişti)
+durumda yeniden denenir. Toplam bekleme JOBS_BRIDGE_WAIT_SEC (varsayılan 900 sn).
 """
 from __future__ import annotations
 
@@ -24,6 +28,8 @@ import re
 import runpy
 import threading
 import time
+import http.client
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -37,6 +43,8 @@ SCHEDULE_DIR = os.environ.get("SCHEDULE_DIR", "/app/jobs/schedule")
 STATE_FILE = os.environ.get("JOBS_STATE", "/data/metrics/jobs-state.json")
 TZ = ZoneInfo(os.environ.get("JOBS_TZ", "Europe/Istanbul"))
 EXCLUDE = [p.strip() for p in os.environ.get("JOBS_EXCLUDE", "timas-web-watch,timas-model-quality-*").split(",") if p.strip()]
+BRIDGE_WAIT = float(os.environ.get("JOBS_BRIDGE_WAIT_SEC", "900"))
+RETRY_DELAY = float(os.environ.get("JOBS_RETRY_DELAY_SEC", "5"))
 
 DAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
 
@@ -185,7 +193,7 @@ def _ini(path: str) -> dict[str, list[str]]:
 
 
 # Yalnız köprü (8795): başka bir servise giden çağrı VM'de köprüye yöneltilmesin.
-_CURL = re.compile(r"curl\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
+_CURL = re.compile(r"(?:curl|kopru-cagir(?:\.sh)?)\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
 
 
 def parse_exec(line: str) -> tuple[str, int]:
@@ -273,10 +281,75 @@ def report(job: Job, ok: bool, detail: str = "") -> None:
         print(f"{job.name}: sistem durumuna bildirilemedi: {e}", flush=True)
 
 
+def _bridge_pid() -> Optional[int]:
+    """Köprü hazırsa süreç kimliği (bilinmiyorsa 0); hazır değilse None. Eski köprü (`boot` alanı yok): `status: ok`."""
+    try:
+        with urllib.request.urlopen(f"{BRIDGE}/health", timeout=5) as res:
+            h = json.load(res)
+    except Exception:  # noqa: BLE001 — cevap yok
+        return None
+    boot = h.get("boot")
+    if (boot is not None and not boot.get("runtimeReady")) or (boot is None and h.get("status") != "ok"):
+        return None
+    try:
+        return int(h.get("pid") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _wait_ready(deadline: float) -> Optional[int]:
+    pause = 2.0
+    while True:
+        pid = _bridge_pid()
+        if pid is not None:
+            return pid
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(pause)
+        pause = min(pause + 2.0, 10.0)
+
+
+def call_bridge(path: str, timeout: int, budget: Optional[float] = None):
+    """Köprüye tur çağrısı: hazır olmasını bekle; aynı işi iki kez koşturmadan yalnız «başlamadı» hatalarında dene."""
+    deadline = time.monotonic() + (BRIDGE_WAIT if budget is None else budget)
+    pid = _wait_ready(deadline)
+    if pid is None:
+        raise ConnectionError("köprü hazır olmadı")
+    delay = RETRY_DELAY
+    attempt = 1
+    while True:
+        try:
+            return _post(path, {}, timeout)
+        except urllib.error.HTTPError as e:
+            if e.code not in (502, 503):
+                raise
+            why: str = f"HTTP {e.code}"
+        except urllib.error.URLError as e:
+            # urllib bunu yalnız istek gönderilirken verir (bağlanamadı, ad çözülemedi — köprü kapsayıcısı yeniden
+            # başlıyor): istek köprüye ulaşmadı, iş başlamadı. Cevap beklerken zaman aşımı URLError değildir, denenmez.
+            why = f"bağlanamadı ({e.reason})"
+        except (http.client.RemoteDisconnected, ConnectionResetError) as e:
+            # Cevap gelmeden bağlantı koptu: köprü yeniden başladıysa iş onunla öldü; başlamadıysa iş sürüyor olabilir.
+            now = _wait_ready(deadline)
+            if now is None or now == pid:
+                raise
+            why = f"bağlantı koptu, köprü yeniden başladı ({type(e).__name__})"
+        if time.monotonic() + delay > deadline:
+            raise ConnectionError(f"köprü çağrısı bekleme süresi içinde başarılamadı: {why}")
+        print(f"{path}: deneme {attempt}: {why} — {delay:.0f} sn sonra yeniden", flush=True)
+        time.sleep(delay)
+        new = _wait_ready(deadline)
+        if new is None:
+            raise ConnectionError(f"köprü hazır olmadı: {why}")
+        pid = new
+        delay = min(delay * 2, 60.0)
+        attempt += 1
+
+
 def run(job: Job) -> None:
     started = datetime.now(TZ)
     try:
-        out = _post(job.path, {}, job.timeout)
+        out = call_bridge(job.path, job.timeout)
         print(f"{job.name}: {str(out)[:300]}", flush=True)
         report(job, True)
     except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki denenir

@@ -8,4 +8,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Mantık köprüde (/api/v1/marketing/launches/run-due); bu birim yalnız çağırır. Günlük kısım
 # MARKETING_LAUNCH_DAILY_HOUR (varsayılan 07) sonrasındaki ilk koşuda bir kez yapılır. İlk kurulumda elle bir kez:
 #   systemctl start timas-marketing-launch.service && journalctl -u timas-marketing-launch.service -n 50
-ExecStart=/bin/sh -c 'curl -fsS -m 3500 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/marketing/launches/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 3500 -X POST "http://127.0.0.1:8795/api/v1/marketing/launches/run-due"

@@ -6,4 +6,4 @@ After=nanobase-semantic-bridge.service
 Type=oneshot
 EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # Alıcılar portal çalışanlarıdır (yönlendirme tablosu, MAIL_INBOX_OWNERS, MAIL_TOP_MANAGERS); gönderene bir şey gitmez.
-ExecStart=/bin/sh -c 'curl -fsS -m 600 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/mailbox/sla-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 600 -X POST "http://127.0.0.1:8795/api/v1/mailbox/sla-due"

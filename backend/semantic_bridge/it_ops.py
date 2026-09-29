@@ -230,12 +230,17 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
-        # create_all var olan tabloya kolon eklemez; veri sonu SQL'i sonradan geldi.
-        have = {c["name"] for c in sa.inspect(engine).get_columns(CHECKS.name)}
-        if "sql_text" not in have:
-            with engine.begin() as c:
-                c.execute(sa.text(f"ALTER TABLE {CHECKS.name} ADD COLUMN sql_text TEXT"))
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            # create_all var olan tabloya kolon eklemez; veri sonu SQL'i sonradan geldi.
+            have = {c["name"] for c in sa.inspect(engine).get_columns(CHECKS.name)}
+            if "sql_text" not in have:
+                with engine.begin() as c:
+                    c.execute(sa.text(f"ALTER TABLE {CHECKS.name} ADD COLUMN sql_text TEXT"))
+
+        # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz (kolon eklenince tanım da değişir).
+        from semantic_layer.store import schema_stamp
+        schema_stamp.run(engine, _md.sorted_tables, install)
         _ready.add(id(engine))
 
 
