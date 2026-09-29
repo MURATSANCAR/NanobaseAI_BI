@@ -74,3 +74,38 @@ def test_only_books_by_isbn_barcode():
     assert not F.is_book(product(Barcode="8682815950163"))       # kutu oyunu
     assert not F.is_book(product(Barcode=""))
     assert not F.is_book(product(Barcode="L8440"))
+
+
+def test_feed_disabled_environment_sends_nothing(monkeypatch):
+    # Müşteri VM'i (STUDIO_LIBRARY_FEED=0) arşivi beslemez; GPU'daki ortak arşivi yalnız okur (09-29 kararı).
+    monkeypatch.setenv("STUDIO_LIBRARY_FEED", "0")
+    assert not F.feed_enabled()
+
+    def boom(*a, **k):
+        raise AssertionError("beslemesi kapalı ortam stüdyoya yazmamalı")
+    monkeypatch.setattr(F.editorial_studio, "post_json", boom)
+    monkeypatch.setattr(F, "build", boom)
+    assert F.feed(object()) == {"started": False, "reason": "bu ortam arşivi beslemez"}
+    monkeypatch.setenv("STUDIO_LIBRARY_FEED", "1")
+    assert F.feed_enabled()
+    monkeypatch.delenv("STUDIO_LIBRARY_FEED")
+    assert F.feed_enabled()
+
+
+def test_proxy_paths_stay_inside_gpu_ingress_read_routes(monkeypatch):
+    # VM köprüsü arşivi GPU genel nginx'inden okur; yalnız bu iki kalıp dışarı açık (add-studio-routes.py,
+    # EDITOR-STUDYO-KUTUPHANE). Köprünün ürettiği her okuma yolu bunlardan birine uymalı, yoksa nginx 200+HTML döner.
+    import re
+    routes = [re.compile(r"^/v1/studio/library(/categories|/covers)?$"),
+              re.compile(r"^/v1/studio/library/covers/([a-z]{2,10}-[A-Za-z0-9_.-]{1,60})(/image)?$")]
+    seen = []
+    monkeypatch.setattr(F.editorial_studio, "get_json", lambda path: seen.append(path) or {})
+    F._get("")
+    F._get("/categories", {"audience": "CHILD"})
+    F._get("/covers", {"cat": "Çocuk > Masal", "q": "ağaç", "sort": "sales", "page": 2, "size": 60})
+    F._get("/covers", {"cat": ""})
+    F._get(f"/covers/{F._cid('tsoft-12345')}")
+    seen.append(f"/v1/studio/library/covers/{F._cid('tsoft-12345')}/image?w=360")
+    assert len(seen) == 6
+    for p in seen:
+        assert any(r.match(p.split("?")[0]) for r in routes), p

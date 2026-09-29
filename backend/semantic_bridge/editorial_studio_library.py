@@ -7,8 +7,9 @@ aynı arşivi görür. Köprü iki iş yapar:
    kapak görselinin adresi, satış) ile barkodla bağlı CRM kitap kartı (çizer, okur kitlesi, yaş, tür) birleşir;
    yalnız kitaplar (barkodu ISBN) girer, beslemenin tam listesinde olmayan eski kayıtlar stüdyoda gizlenir;
    stüdyoya 1000'erli gönderilir; görselleri stüdyo kendisi indirir. SEO gece işinin sonunda (T-soft eşitlemesi
-   bittikten sonra) kendiliğinden koşar; yönetici ekrandan da başlatabilir. T-soft tanımlı olmayan ortamda (müşteri
-   VM'i) ürün tablosu boştur, besleme hiçbir şey göndermez.
+   bittikten sonra) kendiliğinden koşar; yönetici ekrandan da başlatabilir. Yalnız test sunucusu besler: müşteri VM'i
+   aynı GPU arşivini GPU'nun genel nginx'inden (yalnız GET yolları) okur, `STUDIO_LIBRARY_FEED=0` ile hiç beslemez
+   (kullanıcı kararı 2026-09-29; VM'de T-soft tanımlansa bile besleme yolları orada kapalıdır).
 2. **Vekil uçlar**: `/api/v1/editorial/studio/library…` → stüdyonun `/v1/studio/library…` uçları. Oturum zorunlu
    (sayfa kapısı «kitap-tasarim»); beslemeyi elle başlatmak yalnız yönetici.
 
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import unicodedata
@@ -46,6 +48,11 @@ feed_state: dict[str, Any] = {"running": False, "sent": 0, "startedAt": None, "f
 
 
 # ------------------------------------------------------------------ besleme
+def feed_enabled() -> bool:
+    """Bu ortam arşivi besler mi? Müşteri VM'inde `STUDIO_LIBRARY_FEED=0` (compose): VM yalnız okur."""
+    return os.environ.get("STUDIO_LIBRARY_FEED", "1").strip() != "0"
+
+
 def _fold(s: Any) -> str:
     return str(s or "").casefold().translate(str.maketrans("çğıöşü", "cgiosu"))
 
@@ -191,6 +198,8 @@ def feed(seo, editor: str = "zamanlayici") -> dict[str, Any]:
     """Arşivi besler. Aynı anda ikinci besleme başlamaz; ürün yoksa (T-soft tanımlı değil) hiçbir şey göndermez."""
     from datetime import datetime, timezone
 
+    if not feed_enabled():
+        return {"started": False, "reason": "bu ortam arşivi beslemez"}
     if not _feed_lock.acquire(blocking=False):
         return {"started": False, "reason": "besleme sürüyor"}
     feed_state.update(running=True, sent=0, startedAt=datetime.now(timezone.utc).isoformat(), finishedAt=None,
@@ -245,7 +254,7 @@ def register(app, deps: dict[str, Any]) -> None:
     audit: Callable[..., None] = deps.get("audit") or (lambda *a, **k: None)
     seo = deps.get("seo")
 
-    if seo is not None:
+    if seo is not None and feed_enabled():
         seo.nightly.append(("cover-library", lambda: feed(seo)))
 
     def call(fn, *a):
@@ -263,7 +272,7 @@ def register(app, deps: dict[str, Any]) -> None:
     @_IZ.izlenir('portal.studyo.arsiv', 'Kapak arşivi', 'Kapak arşivi: kapak, gelen ve indirilen kitap kaydı, hazır/sırada sayıları ve kategori/kitle sayaçları tasarım servisinin arşiv kaydından; arşivi site ürün listesi ve CRM etiketleri besler.', engine=None, dbs=_sk_dbs, dis_adi='Kitap tasarım servisi (işin kendi kaydı)')
     def editorial_studio_library_stats(request: Request) -> dict[str, Any]:
         auth(request)
-        return {**call(_get, ""), "feed": dict(feed_state)}
+        return {**call(_get, ""), "feed": {**feed_state, "enabled": seo is not None and feed_enabled()}}
 
     @app.get("/api/v1/editorial/studio/library/categories")
     def editorial_studio_library_categories(request: Request, audience: str | None = None) -> Any:
@@ -298,8 +307,8 @@ def register(app, deps: dict[str, Any]) -> None:
         engine, _tenant, user, is_admin = auth(request)
         if not is_admin:
             raise HTTPException(403, "Kapak arşivini yalnız yönetici yeniler.")
-        if seo is None:
-            raise HTTPException(409, "Bu ortamda besleme kaynağı yok.")
+        if seo is None or not feed_enabled():
+            raise HTTPException(409, "Bu ortamda besleme kaynağı yok; arşiv ortak arşivden okunur.")
         if feed_state["running"]:
             return {"started": False, "feed": dict(feed_state)}
         threading.Thread(target=lambda: _safe_feed(seo, user), name="cover-library-feed", daemon=True).start()

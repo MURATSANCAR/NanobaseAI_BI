@@ -374,8 +374,10 @@ if "EDITOR-STUDYO-PAZARLAMA-IS" not in s:
     s = s.replace("    # EDITOR-BITTI", mis + "    # EDITOR-BITTI", 1)
     changes.append("kitapsız pazarlama işi yolları (gövde 36 MB)")
 
-# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur; besleme (POST items/fetch) test sunucusundan tünelle
-# gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle, sıra, sayfa, genişlik) sorgu parametresidir.
+# 9) Kapak arşivi (api_library.py). Müşteri VM'i yalnız okur (köprüde STUDIO_LIBRARY_FEED=0); besleme (POST
+# items/retain/fetch) test sunucusundan tünelle gelir, bu yüzden dışarı açılmaz. Süzgeçler (kategori, arama, kitle,
+# sıra, sayfa, genişlik) sorgu parametresidir. 2026-09-28 08:44'te GPU'da kuruldu (09-29 yoklaması: yol 403 = IP
+# süzgeci devrede, `library/items` 200+HTML = varsayılan siteye düşüyor, dışarı açık değil).
 if "EDITOR-STUDYO-KUTUPHANE" not in s:
     CID = "[a-z]{2,10}-[A-Za-z0-9_.-]{1,60}"
     kut = ("    # EDITOR-STUDYO-KUTUPHANE  (kapak arsivi: kategori agaci, liste, gorsel)\n"
