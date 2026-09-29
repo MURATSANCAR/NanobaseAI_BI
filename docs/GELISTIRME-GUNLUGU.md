@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (akşam) — Test sunucusuna main `69a2b3de9` (Editoryal düzeltmeleri, lisans, İK KVKK, Trendyol/Amazon, Kitap 360); GPU'da kurulum parçalanması
+
+- **Kurulum:** 15 commit'in değiştirdiği çalışan 84 dosya (35 ön yüz, 49 köprü); her birinin sunucu hâli bir önceki main'di (`478cd5d0c`), kopyalamadan hemen önce yeniden denetlendi. Sunucu ağacının kopyasında `tsc -b` 0, `vite build` 33 sn, köprü testleri (tanımsız ad, erişim, pazar yeri, Kitap 360, sosyal) geçti. `cockpit/dist` → `index-BuUc4LKe.js`, `._*` 0, köprü yeniden başladı, `/health` 200, günlükte hata yok. GPU nginx betikleri ve VM compose'u (2 dosya) sunucuda başka hâlde; çalışan kodla ilgisiz, dokunulmadı.
+- **Canlı doğrulama (kullanıcının oturumu):** Kitap 360 önbelleksiz 1,3–3,7 sn (önce 7–12 sn); `/channels/trendyol|amazon/model` 200; İK çalışan listesi 200.
+- **Tanımsız ad denetiminin yanlış alarmı:** main'e 16:36'da giren `management/ilk_baski_pazar.py`'de `top(rows, n)` parametreleri tanımsız sayıldı. Python 3.12'nin sembol tablosu adı «top» olan fonksiyonun parametrelerini global işaretliyor (modül kapsamının iç adı da «top»). Denetim artık parametreyi hiç işaretlemez; yanlış alarm için test eklendi.
+- **Birleşik dal testinde İK görünürlük testi:** personel portalı ve M60 izin sayfaları kullanıcı kararıyla Herkes'e açık; eski test bütün İK sayfalarını «açıkça verilir» sayıyordu ve main'de de düşüyordu → test karara uyduruldu (öteki İK sayfaları açıkça verilir). `test_hr_core::test_job_runs_in_background_and_reports` yüklü sunucuda aralıklı düşüyor (süre sınırı), bu işle ilgisiz.
+- **GPU'da kurulum parçalanması:** bugün üç oturum GPU'ya main'in yalnız kendi parçasını, çalışan imajın üstüne türeterek kurdu (`-kapak` 11:52, `-ses2` 15:29, `-ses2-read` 16:50); her biri öncekini ezdi — kapak tarzı düzeltmesi 15:29'da geri gitti (`effective_style` yine «cocuk»). Çözüm: main'in tamamı (`04698f28`) tek sürüm olarak GPU'ya; `/data/editor/releases/04698f28`, imajlar derleniyor, editör testleri yeni imajda koşuyor.
+
 ## 2026-09-29 — ZEKI AI CHAT markası, ayrı depo ve gerçek sunucu kabulü
 
 - Sohbetin yerel deposu `~/Documents/GitHub/zeki-ai-chat` olarak adlandırıldı; mevcut SSO/dil düzeltmeleri `main`e birleştirildi, birleştirilen yerel dallar kaldırıldı. Bu BI deposunda ürün kodu değişmedi; bağlantı/durum belgeleri güncellendi.
