@@ -2580,13 +2580,58 @@ def _timer_times() -> dict[str, tuple[Optional[str], Optional[str]]]:
     return times
 
 
-def system_status() -> dict[str, Any]:
-    times = _timer_times()
+_UNIT_PROPS = "Id,ActiveState,SubState,LastTriggerUSec,NextElapseUSecRealtime,Result"
+
+
+def _units(names: list[str]) -> dict[str, dict[str, Any]]:
+    """Birimlerin hepsi tek `systemctl show` çağrısıyla (yetki gerektirmez). Çıktı birim başına boş satırla ayrılmış
+    blok; blok `Id` ile eşlenir, eşlenemeyen birim tek başına okunur (`_unit`). Sonuç `_unit` ile birebir aynı biçim."""
+    import subprocess
+
+    try:
+        out = subprocess.run(["systemctl", "show", *names, "-p", _UNIT_PROPS], capture_output=True, text=True,
+                             timeout=5).stdout
+    except Exception:  # noqa: BLE001 — systemctl yok: hepsi bilinmiyor (tek tek okumada da öyle)
+        return {n: {"unit": n, "state": "unknown"} for n in names}
+    found: dict[str, dict[str, Any]] = {}
+    for block in out.split("\n\n"):
+        kv = dict(line.split("=", 1) for line in block.splitlines() if "=" in line)
+        name = kv.get("Id")
+        if name in names and name not in found:
+            found[name] = {"unit": name, "state": kv.get("ActiveState") or "unknown", "sub": kv.get("SubState"),
+                           "last": kv.get("LastTriggerUSec") or None, "next": kv.get("NextElapseUSecRealtime") or None,
+                           "result": kv.get("Result")}
+    return {n: found.get(n) or _unit(n) for n in names}
+
+
+#: Sistem durumu kısa bellekte (2026-09-29): yönetim ekranı açılışında 9 birim tek tek + zamanlayıcı listesi = 10
+#: `systemctl` süreci ~5 sn sürüyordu. Şimdi iki süreç, aynı anda; sonuç 15 sn taze, 2 dk'ya kadar hemen dönüp arkada
+#: yenilenir (birim durumu canlı bilgidir, rakam değildir).
+_status_mem: Optional[Any] = None
+
+
+def _read_system_status() -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="systemctl") as ex:
+        times_f = ex.submit(_timer_times)
+        units_f = ex.submit(_units, [t["unit"] for t in TIMERS] + [s["unit"] for s in SERVICES])
+        times, units = times_f.result(), units_f.result()
     timers = []
     for t in TIMERS:
-        u = {**t, **_unit(t["unit"])}
+        u = {**t, **units[t["unit"]]}
         nxt, last = times.get(t["unit"], (None, None))
         u["next"] = nxt or u.get("next")
         u["last"] = last or u.get("last")
         timers.append(u)
-    return {"services": [{**s, **_unit(s["unit"])} for s in SERVICES], "timers": timers}
+    return {"services": [{**s, **units[s["unit"]]} for s in SERVICES], "timers": timers}
+
+
+def system_status(fresh: bool = False) -> dict[str, Any]:
+    """`fresh`: beklenerek şimdi okunur («Verileri yenile», arka plan toplayıcıları)."""
+    global _status_mem
+    if _status_mem is None:
+        from semantic_bridge.hizli_bellek import Bellek
+
+        _status_mem = Bellek("yonetim.sistem-durumu", taze=15, bayat=120, en_cok=1)
+    return _status_mem.al("sistem", _read_system_status, zorla=fresh)

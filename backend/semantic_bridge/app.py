@@ -7222,7 +7222,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "email": alerts_mod.email_status(),
             "engine": {"model": admin_mod.LLM_DISPLAY, "llm": bool(r.llm), "db": bool(r.connector),
                        "catalog": r.store.status_counts(tenant, ds), "profiles": len(r.profiles)},
-            **admin_mod.system_status(),
+            **admin_mod.system_status(fresh=FORCE_FRESH.get()),
             "recent": admin_mod.audit_list(engine, limit=8)["items"],
         }
         from semantic_bridge import admin_kaynak as ADK

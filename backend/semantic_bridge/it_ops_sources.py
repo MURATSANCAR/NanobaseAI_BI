@@ -428,7 +428,7 @@ def collect_timers(ctx: Ctx) -> int:
 
     if in_container(ctx) or shutil.which("systemctl") is None:
         return 0
-    base = admin_mod.system_status()["timers"]
+    base = admin_mod.system_status(fresh=True)["timers"]
     times = admin_mod._timer_times()
     n = 0
     seen = {t["unit"] for t in base}
