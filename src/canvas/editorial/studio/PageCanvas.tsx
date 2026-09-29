@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type SyntheticEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { ImageUp } from 'lucide-react';
 import { studioPlanApi, type Plan, type PlanArt, type PlanBox, type PlanBubble, type PlanEffect, type PlanFreeText, type PlanPage, type PlanRun, type PlanShape } from '../../engine';
 import { r1, safeRect, trimRect, type PageDims } from './planModel';
 import { ITEM_LABEL, PRINT_DPI, findItem, itemDpi, itemKey, pageItems, paletteKey, rotatable, shapesOf, withBox, type ItemRef, type PageItem } from './pageItems';
 import { SHAPE_MIME } from './slots';
+import { useRetrySrc } from './shared';
 import { paintOf, useElementCatalog, type RoleColors } from './elements';
 
 /** Sayfa tuvali. Altta sunucunun dizdiği sayfa önizlemesi (gerçek dizgi), üstünde seçilebilir ögeler.
@@ -339,7 +340,19 @@ function Runs({ runs, base }: { runs: PlanRun[]; base: { mmPx: number; color: st
 }
 
 /** Görsel yüklenemezse kırık resim simgesi yerine boşluk kalır (kutunun çerçevesi seçimde yine görünür). */
-const hideBroken = (e: SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.visibility = 'hidden'; };
+/** Sayfadaki resim ve figür. Eskiden hata olunca öğe DOM'da `visibility:hidden` yapılıyordu; React bunu geri almadığı
+ *  için tek bir geçici hata (köprü yeniden başlarken 502, hız sınırında 429) resmi, yeni sürüm üretilse bile, sayfada
+ *  kalıcı görünmez bırakıyordu. Şimdi yeniden denenir (useRetrySrc); yine alınamazsa kutuda bunu söyleyen yer tutucu. */
+function LiveImg({ src, className, style }: { src: string; className: string; style: CSSProperties }) {
+  const img = useRetrySrc(src);
+  if (img.failed || !img.url) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-[repeating-linear-gradient(45deg,#f1f5f9_0_8px,#e2e8f0_8px_16px)] text-[11px] font-bold text-slate-500`}
+        style={{ ...style, objectFit: undefined, objectPosition: undefined }}>Resim yüklenemedi</div>
+    );
+  }
+  return <img key={img.url} src={img.url} alt="" className={className} draggable={false} onError={img.onError} style={style} />;
+}
 
 const SHAPE: Record<string, string> = { oval: 'rounded-[50%]', thought: 'rounded-[45%] border-dashed', shout: 'rounded-md border-[3px]', box: 'rounded-lg' };
 
@@ -357,7 +370,7 @@ function LiveLayer({ job, plan, page, mmPx, bodySize, artSrc }: {
     <div className="pointer-events-none absolute inset-0" aria-hidden>
       {art && (
         artUrl
-          ? <img src={artUrl} alt="" className="absolute" draggable={false} onError={hideBroken}
+          ? <LiveImg src={artUrl} className="absolute"
               style={{ ...boxStyle(art.box, d), objectFit: art.fit, objectPosition: `${art.focus.x * 100}% ${art.focus.y * 100}%` }} />
           : <div className="absolute flex items-center justify-center bg-[repeating-linear-gradient(45deg,#f1f5f9_0_8px,#e2e8f0_8px_16px)] text-[11px] font-bold text-slate-500" style={boxStyle(art.box, d)}>Resim yok</div>
       )}
@@ -387,7 +400,7 @@ function LiveLayer({ job, plan, page, mmPx, bodySize, artSrc }: {
         );
       })}
       {[...page.figures.map((f) => ({ z: f.z, el: (
-        <img key={f.id} src={studioPlanApi.assetUrl(job, f.asset, Math.min(1600, Math.ceil((f.box.w * mmPx * 2) / 200) * 200 || 400))} alt="" draggable={false} onError={hideBroken}
+        <LiveImg key={f.id} src={studioPlanApi.assetUrl(job, f.asset, Math.min(1600, Math.ceil((f.box.w * mmPx * 2) / 200) * 200 || 400))}
           className="absolute object-contain" style={{ ...boxStyle(f.box, d), transform: `rotate(${f.rotate}deg) scaleX(${f.flip ? -1 : 1})` }} />
       ) })), ...page.texts.map((t) => ({ z: t.z, el: <FreeTextLive key={t.id} t={t} d={d} fs={fs(t.size)} mmPx={mmPx} color={color} palette={plan.palette} roles={roles} /> })),
       ...shapesOf(page).map((sh) => ({ z: sh.z, el: <ShapeLive key={sh.id} s={sh} plan={plan} fs={fs(sh.text_size ?? 14)} mmPx={mmPx} roles={roles} /> }))]

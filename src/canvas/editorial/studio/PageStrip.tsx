@@ -8,6 +8,7 @@ import { AlertTriangle, GripVertical, Plus, Trash2 } from 'lucide-react';
 import type { Plan, PlanPage } from '../../engine';
 import { ConfirmDialog } from './dialogs';
 import { Explain } from '../../components/Explain';
+import { useRetrySrc } from './shared';
 
 /** Sayfa şeridi: küçük önizlemeler, sürükleyerek sıralama (masaüstü; klavyeyle de: tutamağa odaklanıp
  *  boşluk + ok tuşları), araya boş sayfa ekleme, onaylı silme ve 8'in katı uyarısı. Telefonda şerit yatay
@@ -93,7 +94,7 @@ function Thumb({ page, no, on, src, pending, interactive, onSelect, onAdd, onDel
     disabled: !interactive,
     transition: reduceMotion() ? null : { duration: 200, easing: EASE },
   });
-  const [failed, setFailed] = useState<string | null>(null);
+  const thumb = useRetrySrc(src ?? null);
   return (
     <li
       ref={setNodeRef}
@@ -118,8 +119,8 @@ function Thumb({ page, no, on, src, pending, interactive, onSelect, onAdd, onDel
         </div>
         <button type="button" onClick={onSelect} aria-current={on ? 'page' : undefined} aria-label={`Sayfa ${no}`}
           className="mt-1 block w-full overflow-hidden rounded-md bg-white transition-transform duration-150 ease-out active:scale-[0.98]">
-          {src && failed !== src ? (
-            <img src={src} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setFailed(src)} className="block w-full" />
+          {thumb.url && !thumb.failed ? (
+            <img key={thumb.url} src={thumb.url} alt="" loading="lazy" decoding="async" draggable={false} onError={thumb.onError} className="block w-full bg-slate-100" />
           ) : (
             <div className="flex aspect-[169/231] w-full items-center justify-center bg-slate-50 text-[10.5px] text-canvas-muted">
               {src ? 'dizilmedi' : 'Yeni sayfa'}

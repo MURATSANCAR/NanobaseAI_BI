@@ -553,7 +553,7 @@ export class BookScene {
   // ---------------------------------------------------------------- dokular
   /** Görüntü bir kez indirilir; aynı görüntünün bölgeleri (sayfanın kırpılmış hâli, kapağın ön/arka/sırtı) GPU'da
    *  aynı kaynağı paylaşır. Doku yüklenene kadar yüzey kâğıt rengindedir (eski sayfa görünmez). */
-  private load(url: string, fn?: (base: THREE.Texture) => void) {
+  private load(url: string, fn?: (base: THREE.Texture) => void, attempt = 0) {
     let e = this.textures.get(url);
     if (!e) {
       const entry: TexEntry = { base: null as unknown as THREE.Texture, ready: false, waiters: [] };
@@ -561,7 +561,20 @@ export class BookScene {
         entry.ready = true;
         entry.waiters.splice(0).forEach((f) => f(entry.base));
         this.invalidate();
-      }, undefined, () => { entry.waiters.length = 0; });
+      }, undefined, () => {
+        // Görüntü alınamadı (sunucu meşgul, hız sınırı, ağ). Eskiden kayıt «hazır değil» olarak kalıyor, bekleyenler
+        // atılıyordu: o sayfa kitap açık kaldıkça kâğıt renginde, resimsiz görünürdü. Kayıt bırakılır; hâlâ bekleyen
+        // yüzey varsa artan aralıkla en çok üç kez yeniden istenir, sonraki çevirmede de yeniden denenir.
+        const waiting = entry.waiters.splice(0);
+        if (this.textures.get(url) === entry) this.textures.delete(url);
+        entry.base.dispose();
+        if (waiting.length && attempt < 3 && !this.disposed) {
+          setTimeout(() => {
+            if (this.disposed) return;
+            waiting.forEach((f) => this.load(url, f, attempt + 1));
+          }, 1500 * 2 ** attempt);
+        }
+      });
       entry.base.colorSpace = THREE.SRGBColorSpace;
       this.textures.set(url, (e = entry));
     }

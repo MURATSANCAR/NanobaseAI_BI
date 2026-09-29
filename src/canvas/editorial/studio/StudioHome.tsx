@@ -28,6 +28,14 @@ function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
 
 /** Kitap Tasarım Stüdyosu girişi: okunmuş bir kitaptan ya da Word dosyasından yeni tasarım başlatır,
  *  önceki işleri listeler. Kitap bilgisi CRM'den, resimler Qwen-Image-2.1'den, dizgi Typst'ten gelir. */
+/** Okunmuş kitabın kapağı; kapağı olmayan kitapta aynı boyda boş zemin kalır (satırlar hizalı). */
+function BookThumb({ id }: { id: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <span className="h-14 w-10 shrink-0 rounded-md bg-slate-100" aria-hidden />;
+  return <img src={bookCoverUrl(id)} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)}
+    className="h-14 w-10 shrink-0 rounded-md bg-slate-100 object-cover" />;
+}
+
 /** Tasarım listesinde üretilmiş kitabın kendi kapağı (dizilmiş kapak açılımının önizlemesi). Kapak henüz dizilmediyse
  *  ya da okunamazsa kitap simgesi kalır; kırık resim çizilmez. `rev` biten adım sayısıdır: kapak yeniden dizilince adres
  *  değişir, tarayıcı eski kapağı göstermez. Açılımın ön yüzü sağ yarıda olduğu için görüntü sağa dayalı kırpılır. */
@@ -142,8 +150,7 @@ export default function StudioHome() {
                 <li key={b.id}>
                   <button type="button" disabled={start.isPending} onClick={() => setPick({ id: b.id, title: b.publisher?.title || b.title })}
                     className="flex w-full items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-2 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-white active:scale-[0.98] disabled:opacity-60">
-                    <img src={bookCoverUrl(b.id)} alt="" loading="lazy" className="h-14 w-10 shrink-0 rounded-md bg-slate-100 object-cover"
-                      onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                    <BookThumb id={b.id} />
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-bold">{b.publisher?.title || b.title}</span>
                       <span className="block truncate text-[11.5px] text-canvas-muted">{(b.publisher?.authors?.length ? b.publisher.authors : b.authors).join(', ') || '—'}</span>
