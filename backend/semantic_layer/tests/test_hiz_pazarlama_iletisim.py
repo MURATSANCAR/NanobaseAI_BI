@@ -240,3 +240,104 @@ def test_iliskiler_rapor_crm_toplamlari_bellekten(portal, monkeypatch):
     r2 = c.get("/api/v1/public-affairs/report?year=2026").json()
     assert r2["crm"] == r1["crm"] and time.monotonic() - t0 < 1.5                 # süre doldu: eldeki hemen
     assert _bekle(lambda: fake.say("new_siparissatiriBase") == 2)                 # CRM arkada okundu
+
+
+# ------------------------------------------------------------------ M27 etkinlikler: tip eşlemesi ve takvim
+
+
+TY1 = "11111111-0000-0000-0000-000000000001"
+TY2 = "11111111-0000-0000-0000-000000000002"
+
+
+class SayanBaglanti:
+    """Etkinlik kaynağının bağlantısı gibi davranır: `execute(sql, max)` → (kolonlar, satırlar, kesildi)."""
+
+    def __init__(self, fake: SayanCrm):
+        self.fake = fake
+
+    def execute(self, sql, _max):
+        return [], self.fake(sql), False
+
+    def close(self):
+        pass
+
+
+def _ev_fake():
+    from semantic_bridge import events as E
+
+    bugun = E.today().isoformat() + " 09:00:00"
+    return SayanCrm({
+        "COUNT(e.new_etkinlikId)": [{"id": TY1, "ad": "Fuar", "durum": 0, "adet": 12, "son": bugun},
+                                    {"id": TY2, "ad": "Satış ziyareti", "durum": 0, "adet": 900, "son": bugun}],
+        "new_BalangTarihi >=": [{"id": "e1000000-0000-0000-0000-000000000001", "ad": "İmza günü", "tip_id": TY1, "tip": "Fuar",
+                                 "baslangic": bugun, "bitis": bugun, "yer": "Kadıköy", "il": "İstanbul", "durum": 1},
+                                {"id": "e1000000-0000-0000-0000-000000000002", "ad": "Ziyaret", "tip_id": TY2, "tip": "Satış ziyareti",
+                                 "baslangic": bugun, "bitis": bugun, "durum": 1}],
+    })
+
+
+@pytest.fixture
+def ev_engine(tmp_path, monkeypatch):
+    from semantic_bridge import events as E
+    from semantic_layer.store.catalog_store import open_store
+
+    monkeypatch.setenv("EVENTS_DIR", str(tmp_path / "events"))
+    e = open_store("sqlite://").engine
+    E._ready.discard(id(e))
+    E.ensure(e)
+    yield e
+    E._ready.discard(id(e))
+
+
+def _ev_client(engine, fake, yenile):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge import events_api
+
+    app = FastAPI()
+    svc = events_api.register(app, {
+        "auth": lambda r: (engine, "t1", "ayse", "Ayşe"), "can": lambda u, k: True, "is_admin": lambda u: False,
+        "audit": lambda *a, **k: None, "conf": lambda k, d="": d, "fresh": lambda: yenile["x"],
+        "crm_connect": lambda: SayanBaglanti(fake), "logo_connect": lambda: None, "llm": lambda p: None,
+        "system": lambda: (engine, "t1"), "require_caller": lambda r: None})
+    return TestClient(app), svc
+
+
+def test_etkinlik_tip_eslemesi_eski_hesap_yeni_hesap_ve_yenile(ev_engine):
+    from semantic_bridge import events as E
+    from semantic_bridge import events_sources as S
+
+    fake, yenile = _ev_fake(), {"x": False}
+    c, svc = _ev_client(ev_engine, fake, yenile)
+    r1 = c.get("/api/v1/events/type-map").json()
+    eski = E.type_rows(S.Source(lambda: SayanBaglanti(_ev_fake()), lambda: None, lambda: "Timas_MSCRM.dbo").types(),
+                       E.type_map(ev_engine, "t1"))
+    assert r1["items"] == eski and r1["counts"] == {"total": 2, "decided": 0, "suggested": 0}
+    assert fake.say("COUNT(e.new_etkinlikId)") == 1
+    assert c.get("/api/v1/events/type-map").json()["items"] == eski and fake.say("COUNT(e.new_etkinlikId)") == 1
+    yenile["x"] = True                                                   # «Verileri yenile»: ekran beklemez
+    assert c.get("/api/v1/events/type-map").json()["items"] == eski
+    assert fake.say("COUNT(e.new_etkinlikId)") == 1                      # 60 sn'den genç okuma yeniden başlatılmaz
+    b = svc.source._bellek
+    _eskit(b, ("types",), 120)
+    t0 = time.monotonic()
+    assert c.get("/api/v1/events/type-map").json()["items"] == eski
+    assert time.monotonic() - t0 < 1.5
+    assert _bekle(lambda: fake.say("COUNT(e.new_etkinlikId)") == 2)      # arkada okundu
+
+
+def test_etkinlik_takvimi_bellekten(ev_engine):
+    from semantic_bridge import events as E
+
+    fake, yenile = _ev_fake(), {"x": False}
+    c, svc = _ev_client(ev_engine, fake, yenile)
+    y = E.today().year
+    r1 = c.get(f"/api/v1/events/calendar?year={y}&unmapped=1").json()
+    assert r1["unmappedTypes"] == 2 and sorted(r1["events"], key=lambda e: e["id"])[0]["ad"] == "İmza günü"
+    assert fake.say("new_BalangTarihi >=") == 1
+    anahtar = next(k for k in svc.source._bellek._k if k[0] == "events")
+    _eskit(svc.source._bellek, anahtar, 700)
+    r2 = c.get(f"/api/v1/events/calendar?year={y}&unmapped=1").json()
+    assert r2["events"] == r1["events"] and r2["months"] == r1["months"]
+    assert _bekle(lambda: fake.say("new_BalangTarihi >=") == 2)

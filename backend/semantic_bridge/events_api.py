@@ -24,6 +24,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import events as E
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import events_kaynak as K
 from semantic_bridge import events_sources as src
 from semantic_bridge import provenance as PV
@@ -257,12 +258,35 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                        "canEdit": allowed(user, "ozellik:etkinlik.duzenle"), "canApprove": allowed(user, "ozellik:etkinlik.onay"),
                        "canAwards": allowed(user, "ozellik:odul.duzenle"), "canExport": allowed(user, "ozellik:veri.disa-aktar")}}
 
+    def durt(key: tuple) -> None:
+        """«Verileri yenile» (X-Data-Refresh): ekran bekletilmez, CRM okuması arkada yenilenir."""
+        if fresh():
+            nudge = getattr(source, "durt", None)
+            if nudge is not None:
+                nudge(key)
+
+    def year_key(y: int) -> tuple:
+        return ("events", date(y, 1, 1), date(y + 1, 1, 1))
+
+    def isit() -> None:
+        """Köprü açılışında tip listesi ve bu yılın etkinlikleri arkada okunur (ilk açan CRM'i beklemesin)."""
+        engine, _tenant = deps["system"]()
+        if HK.sqlite_mi(engine):
+            return
+        source.types()
+        y = E.today().year
+        source.events(date(y, 1, 1), date(y + 1, 1, 1))
+
+    HK.acilista("etkinlik.crm", isit)
+
     @app.get(f"{P}/calendar")
     def events_calendar(request: Request, year: Optional[int] = None, classes: str = "", unmapped: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         cls = [c for c in classes.split(",") if c in E.CLASSES] if classes else E.settings()["defaultClasses"]
         y = year_of(year)
-        return PV.bagla(call(svc.calendar, engine, tenant, y, cls, bool(unmapped), fresh()), lambda: K.for_calendar(engine, tenant, y))
+        out = call(svc.calendar, engine, tenant, y, cls, bool(unmapped), False)
+        durt(year_key(y))
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, y))
 
     @app.get(f"{P}/upcoming")
     def events_upcoming(request: Request) -> dict[str, Any]:
@@ -344,7 +368,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/type-map")
     def events_type_map(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        types = call(source.types, fresh())
+        types = call(source.types, False)
+        durt(("types",))
         rows = E.type_rows(types, E.type_map(engine, tenant))
         out = {"items": rows, "classes": E.CLASSES, "job": dict(svc.job),
                "counts": {"total": len(rows), "decided": sum(1 for r in rows if r["class"]),
