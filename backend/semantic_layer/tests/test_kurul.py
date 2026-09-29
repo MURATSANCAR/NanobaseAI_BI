@@ -69,6 +69,22 @@ def test_library_seeds_without_thresholds_and_is_idempotent(engine):
     assert K.seed_library(engine, TN) == 0 and K.indicator(engine, TN, "net_satis")["sahip"] == "cfo"
 
 
+
+def test_legacy_default_description_is_refreshed_but_edited_one_is_kept(engine):
+    import sqlalchemy as sa
+    old = K.LEGACY_ACIKLAMA["kasa_banka"][0]
+    new = next(g["aciklama"] for g in S.LIBRARY if g["kod"] == "kasa_banka")
+    with engine.begin() as c:   # eski kurulum: açıklama eski hazır metinde, bir başkası elle yazılmış
+        c.execute(K.INDICATORS.update().where(K.INDICATORS.c.kod == "kasa_banka").values(aciklama=old))
+        c.execute(K.INDICATORS.update().where(K.INDICATORS.c.kod == "vadesi_gecmis_alacak").values(aciklama="Bizim tanımımız"))
+    assert K.seed_library(engine, TN) == 0
+    with engine.connect() as c:
+        got = dict(c.execute(sa.select(K.INDICATORS.c.kod, K.INDICATORS.c.aciklama)
+                              .where(K.INDICATORS.c.kod.in_(["kasa_banka", "vadesi_gecmis_alacak"]))).all())
+    assert got["kasa_banka"] == new and "100 + 102" not in got["kasa_banka"]
+    assert got["vadesi_gecmis_alacak"] == "Bizim tanımımız"
+
+
 def test_state_and_color_rules():
     assert K.state_of(5, "artis_kotu", None, None) is None
     assert K.state_of(5, "artis_kotu", 3, 10) == "sari"

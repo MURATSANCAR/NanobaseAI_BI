@@ -177,7 +177,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
                   </button>}
                   {canExport && it.approved && <a className={ghostBtn} href={marketingApi.socialDownloadUrl(jobId, it.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
                   {canEdit && <button type="button" className={ghostBtn} aria-label="Görseli sil" title="Görseli sil" disabled={remove.isPending}
-                    onClick={() => { if (window.confirm('Bu görsel silinsin mi? Gerekirse aynı ayarlarla yeniden dizebilirsiniz.')) remove.mutate(it.id); }}>
+                    onClick={() => { if (window.confirm('Bu görsel silinsin mi? Silme geri alınamaz; gerekirse aynı ayarlarla yeniden dizebilirsiniz.')) remove.mutate(it.id); }}>
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </button>}
                 </div>}

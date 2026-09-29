@@ -19,6 +19,8 @@ export type Me = {
   disaAktar: boolean;
   firmalar: boolean;
   mutabakat: boolean;
+  /** Kargo maliyeti sayfası ve maliyet yetkisi birlikte. */
+  maliyetSayfa: boolean;
 };
 
 export type OpsSettings = { bekleyenGun: number; kutuluGun: number; bolgeHedef: Record<string, number>; guncelleyen?: Record<string, string | null> };
@@ -41,7 +43,7 @@ export type Meta = {
 export type DraftType = 'gecikme' | 'ozur' | 'iade';
 export type DecisionType = 'kurye' | 'bolge' | 'sozlesme';
 export type Group = 'firma' | 'sehir' | 'sube' | 'firma-sehir';
-export type ExportList = 'hatalar' | 'takipsiz' | 'kutulandi' | 'bekleyen' | 'firmalar' | 'mutabakat';
+export type ExportList = 'hatalar' | 'takipsiz' | 'kutulandi' | 'bekleyen' | 'firmalar' | 'mutabakat' | 'maliyet';
 
 export type Freshness = {
   veriSonu: string | null;
@@ -237,6 +239,90 @@ export type Reconcile = {
 
 export type Candidate = { cari: string | null; unvan: string | null; fatura: number; kdvHaric: number | null; son: string | null; eslenmis: boolean };
 
+/** Kargo maliyeti tedarikçi grubu (köprü `shipping.COST_GROUPS`). */
+export type CostGroup = 'kargo' | 'pazarYeri' | 'nakliye';
+
+export type CostMonth = {
+  ay: string;
+  kargo: number | null;
+  pazarYeri: number | null;
+  nakliye: number | null;
+  toplam: number | null;
+  netCiro: number | null;
+  oran: number | null;
+  irsaliye: number;
+  tasiyici: Array<{ kod: string; irsaliye: number }>;
+};
+
+export type CostSupplier = {
+  cari: string;
+  unvan: string | null;
+  grup: CostGroup;
+  grupAdi: string;
+  gider: number | null;
+  pay: number | null;
+  fatura: number;
+  hizmetler: Array<{ kod: string; ad: string | null; gider: number | null }>;
+  tasiyicilar: string[];
+};
+
+export type CostCarrier = {
+  kod: string;
+  kodlar: string[];
+  ad: string;
+  crmFirma: string | null;
+  irsaliye: number;
+  tasiyiciYok: boolean;
+  eslendi: boolean;
+  eslenenCariler: Array<{ cari: string; unvan: string | null }>;
+  gider: number | null;
+  irsaliyeBasi: number | null;
+  pazarYeriIrsaliye: number;
+  pazarYerleri: Array<{ unvan: string; irsaliye: number }>;
+};
+
+export type CostMarketplace = {
+  cariler: string[];
+  unvan: string;
+  gider: number | null;
+  irsaliye: number;
+  baskaTasiyici: number;
+  gonderiBasi: number | null;
+  /** Gönderi başı, pazar yerlerinin ortancasından 10 kat sapıyordu; gösterilmez. */
+  sapma?: boolean;
+  alicilar: Array<{ cari: string | null; unvan: string | null; irsaliye: number }>;
+  kodlar: Array<{ kod: string; ad: string; irsaliye: number }>;
+};
+
+export type ShippingCost = {
+  period: { yil: number; baslangic: string; bitis: string };
+  dataEnd: string | null;
+  giderSonu: string | null;
+  irsaliyeSonu: string | null;
+  totals: {
+    gider: number | null;
+    kargo: number | null;
+    pazarYeri: number | null;
+    nakliye: number | null;
+    netCiro: number | null;
+    oran: number | null;
+    irsaliye: number;
+    irsaliyeBasi: number | null;
+    tasiyiciYok: number;
+    tedarikci: number;
+    fatura: number;
+  };
+  byMonth: CostMonth[];
+  bySupplier: CostSupplier[];
+  byCarrier: CostCarrier[];
+  marketplaces: CostMarketplace[];
+  groups: Record<CostGroup, string>;
+  notes: string[];
+  yillar: number[];
+  hizmetKodlari: string[];
+  kaynaklar?: Kaynaklar;
+};
+
 const B = '/api/v1/shipping';
 
 async function fail(res: Response): Promise<never> {
@@ -293,6 +379,7 @@ export const shippingApi = {
   reconcile: (ay: string) => send<Reconcile>('GET', `/reconcile${qs({ ay })}`),
   reconcileSummary: (ay: string) => send<{ metin: string | null; not: string | null }>('POST', `/reconcile/summary${qs({ ay })}`),
   candidates: () => send<K & { items: Candidate[]; ipuclari: string[]; ayar: string }>('GET', '/reconcile/candidates'),
+  cost: (yil?: number, yenile = false) => send<ShippingCost>('GET', `/cost${qs({ yil, yenile })}`),
   createDraft: (siparisId: string, tur: DraftType) => send<Draft>('POST', '/drafts', { siparisId, tur }),
   updateDraft: (id: string, b: { metin?: string; durum?: 'taslak' | 'kullanildi' }) => send<Draft>('PATCH', `/drafts/${enc(id)}`, b),
   deleteDraft: (id: string) => send<{ ok: boolean }>('DELETE', `/drafts/${enc(id)}`),

@@ -32,6 +32,7 @@ HK.TABLES.update(LV.TABLE_LABELS)
 
 def register(app, hr: Any) -> None:
     ctx, need, call = hr.ctx, hr.need, hr.call
+    LV.register_hooks()
 
     def ready(request: Request) -> tuple[Any, str, H.Who]:
         engine, tenant, who = ctx(request)

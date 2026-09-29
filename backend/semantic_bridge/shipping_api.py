@@ -1,7 +1,8 @@
 """M44 Lojistik ve kargo uçları: /api/v1/shipping/*.
 
 Sayfa kapısı `access.RULES`: günlük hat, gönderi arama/kartı ve taslaklar `sayfa:kargo`; firma karnesi ve karar kaydı
-`sayfa:kargo-firmalar`; mutabakat `sayfa:kargo-mutabakat`. İşlem yetkileri:
+`sayfa:kargo-firmalar`; mutabakat `sayfa:kargo-mutabakat`; kargo maliyeti (Logo kargo/nakliye gideri, ciroya oranı,
+yaklaşık gönderi başı) `sayfa:kargo-maliyet`. İşlem yetkileri:
 
 - `ozellik:kargo.maliyet` (açıkça verilir) — tutar, desi, desi/sevk başı maliyet ve mutabakat. Yetkisi olmayana bu alanlar
   sunucuda çıkarılır (ekranda gizlemek yetmez).
@@ -42,6 +43,7 @@ F_DECIDE = "ozellik:kargo.karar"
 F_DRAFT = "ozellik:kargo.taslak"
 F_EXPORT = "ozellik:veri.disa-aktar"
 PAGE_HOME, PAGE_CARRIERS, PAGE_RECONCILE = "sayfa:kargo", "sayfa:kargo-firmalar", "sayfa:kargo-mutabakat"
+PAGE_COST = "sayfa:kargo-maliyet"
 TTL = 5 * 60
 LIST_PAGE = 50
 XLSX = S.XLSX_MIME
@@ -400,7 +402,8 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             "me": {"username": user, "display": display, "admin": bool(is_admin(user)),
                    "maliyet": has(user, F_COST), "alici": has(user, F_RECIPIENT), "karar": has(user, F_DECIDE),
                    "taslak": has(user, F_DRAFT), "disaAktar": has(user, F_EXPORT),
-                   "firmalar": has(user, PAGE_CARRIERS), "mutabakat": has(user, PAGE_RECONCILE) and has(user, F_COST)},
+                   "firmalar": has(user, PAGE_CARRIERS), "mutabakat": has(user, PAGE_RECONCILE) and has(user, F_COST),
+                   "maliyetSayfa": has(user, PAGE_COST) and has(user, F_COST)},
         }
 
     @app.get(P + "/overview")
@@ -656,7 +659,7 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             notes.append(f"CRM sevkiyatı okunamadı: {e}")
         if idx.data_end and idx.data_end < end - timedelta(days=1):
             notes.append(f"Kargo kayıtları {idx.data_end.strftime('%d.%m.%Y')} tarihinde bitiyor.")
-        notes.append("Kargo kaydındaki tutarın KDV dahil mi hariç mi olduğu ölçülecek; Logo iki biçimde verildi.")
+        notes.append("Kargo kaydındaki tutar KDV hariçtir; fark KDV hariç Logo tutarıyla hesaplanır.")
         out = S.reconcile(idx, start, end, carrier_codes=c["carrierCodes"], invoices=invoices, logo_shipments=logo_ship,
                           crm_shipments=crm_ship, notes=notes)
         out["kargoVeri"] = idx.freshness(c, S.today())
@@ -718,6 +721,69 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
                           for r in sorted(rows, key=lambda r: -float(r.get("kdv_haric") or 0))],
                 "ipuclari": sorted(set(hints)), "ayar": "SHIPPING_LOGO_CARRIER_CODES"}
 
+    # ------------------------------------------------------------------ kargo maliyeti
+
+    def cost_year(yil: Optional[int]) -> int:
+        """İstenen yıl (boşsa bu yıl); Logo'da dönemi olmayan yıl (SEMANTIC_FIRMS kapsamı dahil) 400. Logo'ya o an
+        ulaşılamıyorsa yıl denetlenmez: anlık görüntü varsa oradan döner, yoksa okuma 503 verir."""
+        year = int(yil) if yil else S.today().year
+        try:
+            firms = logo_firms()
+        except src.SourceError:
+            return year
+        if year not in firms:
+            allowed = ", ".join(str(y) for y in sorted(firms)) or "yok"
+            raise HTTPException(400, detail={"code": "SHIPPING", "message": f"Logo'da {year} yılının dönemi yok. Seçilebilen yıllar: {allowed}."})
+        return year
+
+    def cost_data(year: int) -> dict[str, Any]:
+        """Yılın kargo maliyeti: Logo kargo/nakliye gideri faturaları, pazar yeri alıcıları, taşıyıcı koduna göre irsaliye,
+        net ciro (dört okuma, yılın Logo firması) + CRM kargo firması adları. Hizmet kodları ve taşıyıcı ↔ cari eşlemesi
+        ayardan. CRM okunamazsa taşıyıcı adı irsaliyedeki koddur (rakam düşmez)."""
+        c = cfg()
+        firms = logo_firms()
+        f = src.firm_for(firms, year)
+        start, end = date(year, 1, 1), date(year + 1, 1, 1)
+        notes: list[str] = []
+        codes = list(c["costServiceCodes"])
+        run = logo()
+        cost_rows: list[dict[str, Any]] = []
+        receivers: list[dict[str, Any]] = []
+        if codes:
+            cost_rows = src.read_cost_lines(run, f, codes, start, end)
+            receivers = src.read_cost_receivers(run, f, codes, start, end)
+        else:
+            notes.append("Kargo gideri sayılan hizmet kodu tanımlı değil (yönetim ayarı «Kargo gideri hizmet kodları»); "
+                         "gider tarafı boş.")
+        slips = src.read_slip_counts(run, f, start, end)
+        sales = src.read_net_sales(run, f, start, end)
+        try:
+            cars = carriers()
+        except src.SourceError as e:
+            cars = {}
+            notes.append(f"CRM kargo firmaları okunamadı ({e}); taşıyıcı adı irsaliyedeki koddur.")
+        if not c["carrierCodes"]:
+            notes.append("Hiçbir taşıyıcının Logo carisi eşlenmemiş (yönetim ayarı «Kargo firması → Logo cari kodları»); "
+                         "«Kargo firması» grubu ve irsaliye başı maliyet boş kalır.")
+        out = S.cost_view(year, cost_rows=cost_rows, receivers=receivers, slips=slips, sales=sales, carriers=cars,
+                          carrier_codes=c["carrierCodes"], asof=S.today(), notes=notes)
+        out["yillar"] = sorted(firms)
+        out["hizmetKodlari"] = codes
+        return out
+
+    def cost_cached(year: int, fresh: bool = False) -> dict[str, Any]:
+        """Anlık görüntüde (mutabakat gibi): ilk açılış Logo'yu okuyup yazar, süresi dolan değer arkada tazelenir."""
+        return cache.get(("cost", year), TTL, lambda: cost_data(year), fresh, persist=True)
+
+    @app.get(P + "/cost")
+    def shipping_cost(request: Request, yil: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
+        engine, tenant, user, _ = ctx(request)
+        need(user, F_COST, "Kargo maliyeti görme")
+        with src.collect() as runs:
+            year = call(cost_year, yil)
+            out = dict(call(cost_cached, year, yenile))
+        return PV.bagla(out, lambda: K.for_cost(engine, tenant, out, runs, kdeps()))
+
     # ------------------------------------------------------------------ Zeki AI taslak (gönderim insanda)
 
     @app.post(P + "/drafts", status_code=201)
@@ -759,7 +825,8 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     @app.get(P + "/export/{liste}.xlsx")
     def shipping_export(liste: str, request: Request, gun: Optional[int] = None, firma: str = "", sehir: str = "",
-                        baslangic: str = "", bitis: str = "", kirilim: str = "firma", ay: str = "") -> Response:
+                        baslangic: str = "", bitis: str = "", kirilim: str = "firma", ay: str = "",
+                        yil: Optional[int] = None) -> Response:
         engine, tenant, user, _ = ctx(request)
         if liste not in S.EXPORTS:
             raise HTTPException(404, detail={"code": "SHIPPING", "message": "Böyle bir liste yok."})
@@ -794,6 +861,12 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
                         targets=ops(engine, tenant, c)["bolgeHedef"], cost=cost)
             rows, cols = card["items"], S.scorecard_columns(card["kirilim"], cost)
             note = f"Dönem {card['baslangic']} – {card['bitis']} (kargo irsaliye tarihi); kırılım {card['kirilimAdi']}."
+        elif liste == "maliyet":
+            need(user, PAGE_COST, "Kargo maliyeti")
+            need(user, F_COST, "Kargo maliyeti görme")
+            view = call(cost_cached, call(cost_year, yil))
+            rows, cols = S.cost_supplier_rows(view), S.COST_SUPPLIER_COLUMNS
+            note = f"Yıl {view['period']['yil']}; tutarlar KDV hariç. " + " ".join(view["notes"])
         else:
             need(user, PAGE_RECONCILE, "Kargo mutabakatı")
             need(user, F_COST, "Kargo maliyeti görme")

@@ -205,7 +205,15 @@ function EventsTab({ status }: { status: 'open' | 'resolved' }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
               <span className={`sg-chip ${SEV_TONE[e.severity]}`}>{SEV_LABEL[e.severity]}</span>
               <span className="sg-chip">{e.kindLabel}</span>
-              {e.hold && <span className="sg-chip">Bilgi</span>}
+              {e.hold && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                  <span className="sg-chip">Bilgi</span>
+                  <Explain label="Bilgi">
+                    Süren bir sorun değil, bir kez olan bir değişikliğin bildirimidir (örneğin robots.txt metninin değişmesi).
+                    Görmeniz için son görüldüğü günden sonra 7 gün açık kalır, ardından kendiliğinden kapanır.
+                  </Explain>
+                </span>
+              )}
             </div>
             <h3 style={{ margin: 0, fontSize: 14.5, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{e.title}</h3>
             {e.detail && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, overflowWrap: 'anywhere' }}>{e.detail}</p>}

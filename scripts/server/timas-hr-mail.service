@@ -5,4 +5,4 @@ After=nanobase-semantic-bridge.service
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/nanobase/semantic-bridge.env
-ExecStart=/bin/sh -c 'curl -fsS -m 290 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/hr/mail/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 290 -X POST "http://127.0.0.1:8795/api/v1/hr/mail/run-due"

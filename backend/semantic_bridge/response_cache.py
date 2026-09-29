@@ -105,6 +105,9 @@ NEVER_PREFIXES = (
     # İK personel portalı: kişisel veri diske yazılmasın; kart açılışı her seferinde erişim kaydına düşsün.
     "/api/v1/hr/portal/",
     "/api/v1/hr/leave/",
+    # Başvuru formlarının okuma durumu: ilk açılış tablo kurulumuyla yavaş sürüp içe aktarma öncesi cevap saklanmıştı
+    # (2026-09-29 tarayıcı testinde bulundu); durum ucu hep kaynaktan okunur.
+    "/api/v1/editorial/applications/forms",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
 NEVER_PARTS = re.compile(

@@ -564,7 +564,7 @@
       "subjects": "çalışan",
       "purpose": "Personel özlük kaydı, Profilim ve personel rehberi",
       "retention": null,
-      "retentionNote": "Özlük kaydı; süreli imha yok, İK kaydı sildiğinde gider (belgeleriyle birlikte)",
+      "retentionNote": "Özlük kaydı; süreli imha yok. İK kaydı sildiğinde yok olmaz, pasife alınır: satır belgeleri ve izin kayıtlarıyla birlikte semantic_hr_archive'e taşınır (hukuki süreç için)",
       "module": "İK personel portalı"
     },
     {
@@ -578,7 +578,7 @@
       "subjects": "çalışan",
       "purpose": "Özlük dosyası",
       "retention": null,
-      "retentionNote": "Özlük kaydıyla birlikte saklanır; kayıt ya da alan silinince gider",
+      "retentionNote": "Özlük kaydıyla birlikte saklanır; kayıt silinince semantic_hr_archive'e taşınır (bayt dahil), alan silinince gider",
       "module": "İK personel portalı"
     },
     {
@@ -625,7 +625,7 @@
       "subjects": "çalışan",
       "purpose": "İzin talebi, yönetici/İK onayı ve bordro izin listesi",
       "retention": null,
-      "retentionNote": "İş kaydı (izin geçmişi); süreli imha yok. Hassas türün adı yöneticide, rehberde ve e-postada gösterilmez",
+      "retentionNote": "İş kaydı (izin geçmişi); süreli imha yok. Kişi silinince semantic_hr_archive'e taşınır; başkasının talebinde vekil olarak anılışı boşaltılır, eski değer arşive yazılır. Hassas türün adı yöneticide, rehberde ve e-postada gösterilmez",
       "module": "İzin yönetimi (M60)"
     },
     {
@@ -638,7 +638,7 @@
       "subjects": "çalışan",
       "purpose": "Onay/ret/iptal izi",
       "retention": null,
-      "retentionNote": "Denetim izi; talep kaydıyla birlikte saklanır",
+      "retentionNote": "Denetim izi; talep kaydıyla birlikte saklanır, kişi silinince semantic_hr_archive'e taşınır",
       "module": "İzin yönetimi (M60)"
     },
     {
@@ -652,7 +652,7 @@
       "subjects": "çalışan",
       "purpose": "İzin bakiyesi hesabı",
       "retention": null,
-      "retentionNote": "İş kaydı (bakiye defteri); süreli imha yok",
+      "retentionNote": "İş kaydı (bakiye defteri); süreli imha yok, kişi silinince semantic_hr_archive'e taşınır",
       "module": "İzin yönetimi (M60)"
     },
     {
@@ -666,8 +666,22 @@
       "subjects": "çalışan",
       "purpose": "Belge isteyen izin türlerinde kanıt",
       "retention": null,
-      "retentionNote": "İzin talebiyle birlikte saklanır; süreli imha yok",
+      "retentionNote": "İzin talebiyle birlikte saklanır; süreli imha yok, kişi silinince semantic_hr_archive'e taşınır (bayt dahil)",
       "module": "İzin yönetimi (M60)"
+    },
+    {
+      "object": "semantic_hr_archive",
+      "columns": [
+        "subject_id",
+        "row_json",
+        "blob"
+      ],
+      "data": "Pasife alınan İK satırlarının tam kopyası: özlük kaydı ve belgeleri, izin talepleri, geçmişi, belgeleri (sağlık raporu olabilir — özel nitelikli), bakiye defteri, boşaltılan vekil anılışı",
+      "subjects": "çalışan",
+      "purpose": "Silinen personelin verisini hukuki süreç için saklamak (kullanıcı kararı 2026-09-29); hiçbir ekran okumaz",
+      "retention": null,
+      "retentionNote": "Süreli imha yok; geri getirme ve imha ayrı iştir. Kaynak tablo, kim ve ne zaman satırda",
+      "module": "İnsan kaynakları (İK-0)"
     },
     {
       "object": "semantic_hr_mail_outbox",

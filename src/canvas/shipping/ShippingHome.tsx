@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, Loader2, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { EmptyHint, Explain } from '../components/Explain';
@@ -146,6 +146,18 @@ export default function ShippingHome() {
           </div>
           <FreshNote f={o.kargoVeri} />
         </>
+      )}
+      {me?.maliyetSayfa && (
+        <Link
+          to="/kargo/maliyet"
+          className="glass-panel flex items-center justify-between gap-3 rounded-2xl p-3 shadow-glass-float transition-transform duration-150 ease-out active:scale-[0.99] sm:rounded-3xl sm:p-4"
+        >
+          <span className="min-w-0">
+            <span className="block text-[14px] font-extrabold">Kargo maliyeti</span>
+            <span className="block text-[12px] leading-snug text-canvas-muted">Yılın kargo ve nakliye gideri, cironun yüzdesi ve yaklaşık gönderi başı maliyet; taşıyıcı ve pazar yeri kırılımıyla.</span>
+          </span>
+          <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-canvas-violet" />
+        </Link>
       )}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'ara' ? null : t })} />
       {tab === 'ara' && meta.data && <SearchPanel meta={meta.data} params={params} update={update} />}

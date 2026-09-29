@@ -24,10 +24,13 @@ TITLES = {
     "crm_takipsiz_sevk": "Takipsiz sevk koşulu (CRM)", "logo_sevk": "Logo sevk irsaliyeleri",
     "logo_fatura_no": "Logo fatura numaraları", "logo_kargo_fatura": "Logo kargo faturaları",
     "logo_kargo_cari_aday": "Logo'da kargo carisi adayları",
+    "logo_kargo_gider": "Logo kargo ve nakliye gideri faturaları", "logo_kargo_alici": "Logo pazar yeri alıcılarına irsaliye",
+    "logo_kargo_irsaliye": "Logo satış irsaliyeleri (taşıyıcı kodu)", "logo_net_ciro": "Logo net ciro (satış − iade faturası)",
 }
 TAGS = {"errors": "entegrasyon hatası olanlar", "untracked": "takip numarası olmadan sevk edilenler",
         "boxed": "kutulanıp sevk edilmemiş olanlar", "shipped": "pencerede sevk edilenler", "index": "gönderi kaydı",
-        "carriers": "kargo firmaları", "reconcile": "mutabakat ayı", "shipments": "gönderi listesi sayfası"}
+        "carriers": "kargo firmaları", "reconcile": "mutabakat ayı", "shipments": "gönderi listesi sayfası",
+        "cost": "kargo maliyeti yılı"}
 
 F_SEVK = ("Sevk edilen = pencerede (son N gün, ayar) sevk tarihi olan ve durumu ayardaki «sevk» durumlarından olan CRM "
           "siparişleri; bugün = bugünün sevkleri.")
@@ -45,7 +48,7 @@ F_BEKLEYEN = ("Teslim bekleyen = kargo firmasının gönderi kaydında teslim ta
 F_KARNE = ("Firma karnesi (dönem = kargo irsaliye tarihi): gönderi = kayıt sayısı; teslim süresi = teslim − irsaliye günü "
            "(ortanca, ortalama, %90); iade oranı = iade ÷ gönderi; bekleyen = teslimsiz ve iadesiz; hedefi aşan = il hedef "
            "gününü aşan teslim; desi başı = Σ tutar ÷ Σ desi, sevk başı = Σ tutar ÷ Σ sevk adedi, gönderi başı = Σ tutar ÷ "
-           "gönderi. Tutarın KDV dahil mi hariç mi olduğu ölçülecek.")
+           "gönderi. Tutar KDV hariçtir (2024 Aras faturalarıyla ölçüldü).")
 F_VERI = ("Kargo verisi: kayıt = okunan etkin gönderi kaydı; veri sonu = en son kargo irsaliye tarihi; tarihsiz ve okunamayan "
           "= tarihi ya da sayısı çevrilemeyen kayıt sayısı.")
 F_SIPARIS = ("Sipariş satırı: koli = CRM koli adedi; kutulanalı gün = bugün − kutulandı (sevk yoksa); sevke kadar gün = sevk − "
@@ -58,6 +61,31 @@ F_MUTABAKAT = ("Mutabakat (ay, kargo irsaliye tarihi): CRM kargo kaydı tutarı 
                "hariç); fark = Logo − CRM. Sevk: Logo sevk irsaliyesi ↔ CRM sevkiyatı fatura numarasıyla eşleşme oranı.")
 F_ADAY = ("Kargo carisi adayı = son 12 ayda alınan hizmet faturası olan ve ünvanında ipucu (ayar ve CRM firma adları) geçen "
           "Logo carileri: fatura sayısı ve KDV hariç toplam.")
+F_GIDER = ("Kargo ve nakliye gideri = seçilen yılın Logo alınan hizmet faturalarında (iptal hariç) hizmet kodu ayardaki "
+           "kodlardan olan satırların tutarı toplamı; satır tutarı KDV hariçtir. Fatura = bu satırları taşıyan fatura sayısı.")
+F_GRUP = ("Tedarikçi grubu: vergi numarası (yoksa T.C. kimlik no) aynı yıl taşıyıcı kodlu satış irsaliyesi kestiğimiz bir alıcı "
+          "carininkiyle aynıysa ve o alıcıya yılın taşıyıcı kodlu irsaliyelerinin en az %1'i gitmişse «Pazar yeri» (bize kargo "
+          "faturası da kesen müşteri; birkaç gönderilik müşterinin tek seferlik faturası pazar yeri sayılmaz); değilse cari kodu «Kargo firması → Logo "
+          "cari kodları» ayarındaysa «Kargo firması»; ikisi de değilse «Nakliye ve diğer». Grup tutarı = gruptaki "
+          "tedarikçilerin gideri; pay = tedarikçinin gideri ÷ toplam gider.")
+F_CIRO = ("Net ciro = satış faturaları (7, 8, 9) Σ (NETTOTAL − TOTALVAT) − iade faturaları (2, 3) Σ (NETTOTAL − TOTALVAT); "
+          "KDV hariç, iptal hariç, ay = fatura tarihinin ayı.")
+F_ORAN = "Cironun yüzdesi = kargo ve nakliye gideri ÷ net ciro (yıl ya da ay)."
+F_IRSALIYE = ("İrsaliyeli gönderi = satış irsaliyeleri (7, 8; iptal hariç) içinde taşıyıcı kodu dolu olanların sayısı; kodu boş "
+              "olanlar (mağaza kasa satışı, kargo yok) ayrıca sayılır, gönderiye girmez.")
+F_IRS_BASI = ("Gönderi başı (yaklaşık) = dönemin kargo ve nakliye gideri ÷ dönemin irsaliyeli gönderisi. Faturalar toplu "
+              "kesildiği için gider gönderiye bağlanamaz; faturası gecikmiş ay rakamı düşük gösterir.")
+F_TASIYICI = ("Taşıyıcı = irsaliyedeki taşıyıcı kodu (harf büyüklüğü ve Türkçe harf farkı yok sayılır); CRM kargo firması "
+              "koduyla eşlenip adı alınır, aynı firmaya düşen kodlar tek satırdır. Logo carisi «Kargo firması → Logo cari "
+              "kodları» ayarından (firma adıyla ya da kodla). Gider = eşlenen carilerin yıl gideri; irsaliye başı = gider ÷ "
+              "taşıyıcının irsaliyesi (yalnız eşlenmişse, yaklaşık). Pazar yerine giden = alıcısı pazar yeri olan irsaliye.")
+F_PAZAR = ("Pazar yeri gönderisi başı = pazar yerinin kargo faturası toplamı ÷ o pazar yerinin alıcı carilerine (aynı vergi "
+           "numarası) giden taşıyıcı kodlu irsaliye; başka bir tedarikçi carisine eşlenmiş taşıyıcıyla gidenler o "
+           "tedarikçinin faturasında olduğundan sayılmaz («başka taşıyıcı»). Yaklaşıktır. Pazar yerlerinin "
+           "ortancasından 10 kattan fazla sapan gönderi başı gösterilmez (gider büyük olasılıkla başka hesapta ya da tek "
+           "seferlik).")
+F_AYLIK = ("Ay: gider fatura tarihine, irsaliye irsaliye tarihine, net ciro fatura tarihine göre; gruplar tedarikçi grubundan, "
+           "oran = ayın gideri ÷ ayın net cirosu, taşıyıcı kırılımı = ayın irsaliyesi taşıyıcıya göre.")
 
 
 class Ship:
@@ -109,9 +137,9 @@ class Ship:
             origin = list(dict.fromkeys(origin))
             self.k.sorgu(sid, "Anlık görüntü (portal)" + (f" · {TAGS[tag]}" if tag in TAGS else ""), "portal", r["sql"],
                          rows=r.get("rows"), ms=r.get("ms"), ran_at=r.get("at"), origin=origin,
-                         description=(f"CRM okumasının {r['alindi']} tarihli anlık görüntüsü" if r.get("alindi") else
-                                      "CRM okumasının anlık görüntüsü") + "; zamanlayıcı 15 dakikada bir yeniler, ekran CRM'i "
-                                     "beklemeden buradan okur. Köken: o okumada çalışan CRM sorgusu.")
+                         description=(f"CRM/Logo okumasının {r['alindi']} tarihli anlık görüntüsü" if r.get("alindi") else
+                                      "CRM/Logo okumasının anlık görüntüsü") + "; zamanlayıcı ya da ilk açılış yazar, ekran "
+                                     "kaynağı beklemeden buradan okur. Köken: o okumada çalışan CRM/Logo sorgusu.")
             seen[r["sql"]] = sid
         for t in dict.fromkeys(tags or [tag]):
             lst = self.by_tag.setdefault(t or r["name"], [])
@@ -244,6 +272,38 @@ def for_shipment(engine: Any, tenant: str, out: dict[str, Any], runs: list[dict[
     return k
 
 
-#: Rakam olmayan sayılar: CRM durum/tip kodu, sayfa, Logo belge türü, ayardaki durum kodu listesi.
+def _cost_runs(x: Ship, name: str) -> list[str]:
+    """Kargo maliyeti okumasının (`cost` etiketi) bu dosyadan çalışan sorgusu; değer anlık görüntüden geldiyse görüntü
+    okuması da (kökeni o sorgular)."""
+    return [s for s in x.t("cost") if s.startswith(f"kargo.cost.{name}") or s == "kargo.cost.anlik"]
+
+
+def for_cost(engine: Any, tenant: str, out: dict[str, Any], runs: list[dict[str, Any]], deps: dict[str, Any]) -> P.Kaynaklar:
+    x = _new(engine, tenant, runs, deps)
+    k = x.k
+    svc = x.settings("SHIPPING_COST_SERVICE_CODES")
+    mapc = x.settings("SHIPPING_LOGO_CARRIER_CODES")
+    gider_q, alici_q = _cost_runs(x, "logo_kargo_gider"), _cost_runs(x, "logo_kargo_alici")
+    irs_q, ciro_q = _cost_runs(x, "logo_kargo_irsaliye"), _cost_runs(x, "logo_net_ciro")
+    gider = h(k, "gider", F_GIDER, gider_q + [svc])
+    grup = h(k, "grup", F_GRUP, gider_q + alici_q + [svc, mapc])
+    ciro = h(k, "ciro", F_CIRO, ciro_q)
+    oran = h(k, "oran", F_ORAN, [gider, ciro])
+    irs = h(k, "irsaliye", F_IRSALIYE, irs_q)
+    basi = h(k, "gonderiBasi", F_IRS_BASI, [gider, irs])
+    tas = h(k, "tasiyici", F_TASIYICI, irs_q + alici_q + x.t("carriers") + [gider, grup, mapc])
+    pazar = h(k, "pazar", F_PAZAR, alici_q + [grup, mapc])
+    aylik = h(k, "aylik", F_AYLIK, [gider, grup, ciro, irs])
+    bind(k, {
+        "totals.gider": gider, "totals.fatura": gider, "totals.tedarikci": gider,
+        "totals.kargo": grup, "totals.pazarYeri": grup, "totals.nakliye": grup,
+        "totals.netCiro": ciro, "totals.oran": oran, "totals.irsaliye": irs, "totals.tasiyiciYok": irs,
+        "totals.irsaliyeBasi": basi,
+        "byMonth[]": aylik, "bySupplier[]": grup, "byCarrier[]": tas, "marketplaces[]": pazar,
+    })
+    return k
+
+
+#: Rakam olmayan sayılar: CRM durum/tip kodu, sayfa, Logo belge türü, ayardaki durum kodu listesi, seçilen ve seçilebilen yıl.
 NOT_RAKAM = ("items[].durum", "items[].tip", "siparis.durum", "siparis.tip", "sayfa", "sayfaBoyu", "durumlar",
-             "sevkiyatlar[].logo.tur", "items[].hatalar[].entegrasyon")
+             "sevkiyatlar[].logo.tur", "items[].hatalar[].entegrasyon", "period.yil", "yillar")

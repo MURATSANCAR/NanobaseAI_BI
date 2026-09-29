@@ -137,7 +137,7 @@ export default function NewCollabSheet({ open, meta, onClose, person, book, onCr
               {Object.entries(meta.turler).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
             <span className={hint}>
-              {kind === 'hediye' ? 'Yalnız kitap gönderilir, ücret ödenmez.' : kind === 'ucretli' ? 'Ücret ödenir; ücret alanı zorunlu olur. İş rapor aşamasını geçince ödeme listesine girer.' : 'Karşılıklı tanıtım; ücret girmek isteğe bağlı.'}
+              {kind === 'hediye' ? 'Yalnız kitap gönderilir, ücret ödenmez.' : kind === 'ucretli' ? 'Ücret ödenir; ücret alanı zorunlu olur. İş rapor aşamasını geçince ödeme listesine girer.' : 'Karşılıklı tanıtım; ücretli iş gibi işlenir, yalnız ücret zorunlu değildir. Ücret girerseniz iş rapordan sonra ödeme listesine girer, girmezseniz rapordan kapatılır. İletişim e-postası taslağına yasal etiket maddesi eklenir.'}
               {needsOk ? ' Teklif onaylanmadan sonraki aşamaya geçmez.' : ' Onay gerekmez.'}
               {legal ? ` Paylaşımda «${meta.yasalEtiket}» etiketi gerekir.` : ''}
             </span>
