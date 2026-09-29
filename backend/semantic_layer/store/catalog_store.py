@@ -1161,6 +1161,18 @@ class CatalogStore:
             n, last = conn.execute(stmt).first() or (0, None)
         return ((latest or {}).get("version", 0), int(n or 0), int(_dt(last).timestamp()) if last else 0)
 
+    def concept_stamp(self, tenant_id: str, datasource_id: str) -> tuple[int, int]:
+        """(concept count, last concept write in µs) over every status. Any concept or mapping change moves it:
+        every concept write sets `updated_at`, a mapping change touches its concept (`_touch`), a deleted
+        concept lowers the count. The glossary list keys its remembered answer on this (one indexed aggregate
+        instead of reading thousands of terms with their mappings on every open)."""
+        stmt = sa.select(sa.func.count(), sa.func.max(S.sl_concept.c.updated_at)).where(
+            S.sl_concept.c.tenant_id == tenant_id, S.sl_concept.c.datasource_id == datasource_id)
+        with self.engine.connect() as conn:
+            n, last = conn.execute(stmt).first() or (0, None)
+        last_dt = _dt(last) if last else None
+        return int(n or 0), (int(last_dt.timestamp() * 1_000_000) if last_dt else 0)
+
     def concept_entities(self, tenant_id: str, datasource_id: str) -> dict[str, str]:
         """table_pattern → the entity name the certified vocabulary calls it.
 

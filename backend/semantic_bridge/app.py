@@ -136,6 +136,7 @@ class Runtime:
         self._catalog_version = None
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self._checked_at = 0.0
+        self._gaps_lock = threading.Lock()      # veri sözlüğü: katalog işaretleri tek hesap
         # ---- sonuç önbelleği + arka plan tazeleyici -------------------------------------------
         # Kokpit açılışta beş ağır toplama sorgusu ister; tek bağlantı üstünde bunlar sıraya girer ve
         # kullanıcı toplam süreyi ekranda bekler. Önbellek bu beklemeyi devralır: istek anında elde
@@ -391,6 +392,7 @@ class Runtime:
         log.info("language pool: %d candidates, %d stale/invalid rejected, hash %s",
                  len(self.language_pool.entries), self.language_pool.rejected, self.language_pool.content_hash[:12])
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
+        self.warm_gaps()
 
     # ------------------------------------------------------------------ recall (Memory ON)
     def recall(self, question: str, exclude_nl: Optional[str] = None) -> list[dict[str, str]]:
@@ -1473,23 +1475,7 @@ class Runtime:
         hit = self._inventory_cache.get(key)
         if hit is not None:
             return hit
-        anns = self.store.list_annotations(s.datasource_id)
-        suggested = {(x["tablePattern"], (x["column"] or "").upper() or None): x for x in self.store.list_suggestions(s.datasource_id)}
-        by_key: dict[tuple[str, Optional[str]], list[Annotation]] = {}
-        for a in anns:
-            by_key.setdefault((a.table_pattern, (a.column or "").upper() or None), []).append(a)
-        concepts_by_col: dict[tuple[str, str], list[dict[str, Any]]] = {}
-        live = [c for c in self.store.find_concepts(s.tenant_id, s.datasource_id, limit=100000)
-                if c.status not in (ConceptStatus.REJECTED,)]
-        # Terim başına ayrı sorgu yerine toplu okuma (Veri sözlüğünün ilk açılışı 22 sn sürüyordu).
-        maps = self.store.list_mappings_many([c.id for c in live])
-        for c in live:
-            for m in maps.get(c.id, []):
-                if m.column:
-                    concepts_by_col.setdefault((m.entity, m.column.upper()), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "operator": m.operator, "values": m.values, "confidence": round(c.confidence, 2)})
-                elif m.formula:
-                    for ref in re.findall(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", m.formula):
-                        concepts_by_col.setdefault((ref[0], ref[1]), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "formula": m.formula, "confidence": round(c.confidence, 2)})
+        marks = self._catalog_marks()
         wanted = [p for p in self.profiles
                   if (not entity or p.entity.upper() == entity.upper())
                   and (not scope or _table_scope(p.table_name)[0] == scope.upper())
@@ -1513,42 +1499,9 @@ class Runtime:
         tables = []
         undefined_cols = 0
         for p in wanted:
-            cols = []
-            for c in p.columns:
-                cons = concepts_by_col.get((p.entity, c.name.upper()), [])
-                col_anns = [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, c.name.upper()), [])]
-                defined = bool(c.description) or bool(col_anns) or any(x["status"] == ConceptStatus.CERTIFIED for x in cons)
-                # what we worked out ourselves is knowledge, but it is not a definition: a column only
-                # this system has an opinion about is still one nobody has explained
-                if not defined:
-                    undefined_cols += 1
-                cols.append({
-                    "name": c.name, "type": c.data_type, "nullable": c.nullable, "isPrimaryKey": c.is_primary_key,
-                    "ref": f"{c.ref_entity}.{c.ref_column}" if c.ref_entity else None,
-                    "sensitive": c.sensitive, "sensitivityReason": c.sensitivity_reason,
-                    "sentinelValues": list(c.sentinel_values),
-                    "distinct": c.distinct_count, "topValues": [] if c.sensitive else [[v, n] for v, n in c.top_values[:12]],
-                    # three readings of one column, kept apart: what the source says, what we concluded
-                    # from the data, and what a person typed in the portal
-                    "description": c.description, "derived": list(c.derived), "unit": c.unit,
-                    # what the system read on its own, kept apart from what anyone has confirmed
-                    "suggestion": suggested.get((p.table_pattern, c.name.upper())),
-                    "annotations": col_anns, "concepts": cons,
-                    "status": "CERTIFIED" if any(x["status"] == ConceptStatus.CERTIFIED for x in cons) else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")),
-                })
-            scope_code, scope_sub = _table_scope(p.table_name)
-            tables.append({
-                "entity": p.entity, "tableName": p.table_name, "tablePattern": p.table_pattern, "schema": p.schema_name,
-                "scope": scope_code or None, "scopeSub": scope_sub or None,
-                "context": label_context(p.context, s.pattern_labels),
-                "description": p.description, "rowCount": p.row_count, "primaryKey": p.primary_key, "relationships": p.relationships,
-                "annotations": [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, None), [])],
-                "columns": cols if with_columns else [],
-                "columnCount": len(cols),
-                "certifiedColumns": sum(1 for c in cols if c["status"] == "CERTIFIED"),
-                "undefinedColumns": sum(1 for c in cols if c["status"] == "UNDEFINED"),
-                "scannedAt": p.scanned_at.isoformat(),
-            })
+            table, undefined = self._table_view(p, marks, with_columns)
+            undefined_cols += undefined
+            tables.append(table)
         out = {"datasourceId": s.datasource_id, "tables": tables, "tableCount": len(tables), "total": total,
                "scopes": [{"code": c, "tables": n} for c, n in sorted(scopes.items(), key=lambda kv: kv[0])],
                "columnCount": sum(t["columnCount"] for t in tables), "undefinedColumns": undefined_cols,
@@ -1558,6 +1511,122 @@ class Runtime:
         self._inventory_cache[key] = out
         return out
 
+    def _catalog_marks(self) -> dict[str, Any]:
+        return self.catalog_marks()[0]
+
+    def catalog_marks(self) -> tuple[dict[str, Any], list]:
+        """What was written, suggested and mapped against the schema, keyed by (pattern, column): portal
+        descriptions, open description suggestions, and every live term's column mapping — with the catalog
+        reads that produced them (sorgu bilgisi). Shared by the inventory, the gap list and one pattern's
+        detail; remembered under the same key as the inventory and dropped with it (a description written in
+        the portal clears it), so the ~all-terms read runs once per catalog version, not once per screen."""
+        key = ("marks", self._catalog_version)
+        hit = self._inventory_cache.get(key)
+        if hit is not None:
+            return hit
+        with self._gaps_lock:
+            hit = self._inventory_cache.get(key)
+            if hit is not None:
+                return hit
+            from semantic_bridge import sorgu_izi as IZ
+
+            with IZ.izle(self.store.engine) as ran:
+                marks = self._read_marks()
+            hit = (marks, list(ran))
+            self._inventory_cache[key] = hit
+            return hit
+
+    def _read_marks(self) -> dict[str, Any]:
+        s = self.settings
+        anns = self.store.list_annotations(s.datasource_id)
+        suggested = {(x["tablePattern"], (x["column"] or "").upper() or None): x for x in self.store.list_suggestions(s.datasource_id)}
+        by_key: dict[tuple[str, Optional[str]], list[Annotation]] = {}
+        for a in anns:
+            by_key.setdefault((a.table_pattern, (a.column or "").upper() or None), []).append(a)
+        concepts_by_col: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        live = [c for c in self.store.find_concepts(s.tenant_id, s.datasource_id, limit=100000)
+                if c.status not in (ConceptStatus.REJECTED,)]
+        # Terim başına ayrı sorgu yerine toplu okuma (Veri sözlüğünün ilk açılışı 22 sn sürüyordu).
+        maps = self.store.list_mappings_many([c.id for c in live])
+        for c in live:
+            for m in maps.get(c.id, []):
+                if m.column:
+                    concepts_by_col.setdefault((m.entity, m.column.upper()), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "operator": m.operator, "values": m.values, "confidence": round(c.confidence, 2)})
+                elif m.formula:
+                    for ref in re.findall(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", m.formula):
+                        concepts_by_col.setdefault((ref[0], ref[1]), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "formula": m.formula, "confidence": round(c.confidence, 2)})
+        return {"by_key": by_key, "suggested": suggested, "concepts_by_col": concepts_by_col}
+
+    @staticmethod
+    def _column_state(description: Any, has_annotation: bool, cons: list[dict[str, Any]]) -> tuple[bool, str]:
+        """One column's standing: (defined, status). What we worked out ourselves is knowledge, but it is not
+        a definition: a column only this system has an opinion about is still one nobody has explained."""
+        certified = any(x["status"] == ConceptStatus.CERTIFIED for x in cons)
+        defined = bool(description) or has_annotation or certified
+        return defined, ("CERTIFIED" if certified else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")))
+
+    def _table_view(self, p: Any, marks: dict[str, Any], with_columns: bool) -> tuple[dict[str, Any], int]:
+        """One table as the inventory shows it, and how many of its columns nobody has defined (no source
+        description, no portal description, no certified term — a column with only candidate terms counts)."""
+        s = self.settings
+        by_key, suggested, concepts_by_col = marks["by_key"], marks["suggested"], marks["concepts_by_col"]
+        cols = []
+        undefined = 0
+        for c in p.columns:
+            cons = concepts_by_col.get((p.entity, c.name.upper()), [])
+            col_anns = [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, c.name.upper()), [])]
+            defined, status = self._column_state(c.description, bool(col_anns), cons)
+            if not defined:
+                undefined += 1
+            cols.append({
+                "name": c.name, "type": c.data_type, "nullable": c.nullable, "isPrimaryKey": c.is_primary_key,
+                "ref": f"{c.ref_entity}.{c.ref_column}" if c.ref_entity else None,
+                "sensitive": c.sensitive, "sensitivityReason": c.sensitivity_reason,
+                "sentinelValues": list(c.sentinel_values),
+                "distinct": c.distinct_count, "topValues": [] if c.sensitive else [[v, n] for v, n in c.top_values[:12]],
+                # three readings of one column, kept apart: what the source says, what we concluded
+                # from the data, and what a person typed in the portal
+                "description": c.description, "derived": list(c.derived), "unit": c.unit,
+                # what the system read on its own, kept apart from what anyone has confirmed
+                "suggestion": suggested.get((p.table_pattern, c.name.upper())),
+                "annotations": col_anns, "concepts": cons,
+                "status": status,
+            })
+        scope_code, scope_sub = _table_scope(p.table_name)
+        return {
+            "entity": p.entity, "tableName": p.table_name, "tablePattern": p.table_pattern, "schema": p.schema_name,
+            "scope": scope_code or None, "scopeSub": scope_sub or None,
+            "context": label_context(p.context, s.pattern_labels),
+            "description": p.description, "rowCount": p.row_count, "primaryKey": p.primary_key, "relationships": p.relationships,
+            "annotations": [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, None), [])],
+            "columns": cols if with_columns else [],
+            "columnCount": len(cols),
+            "certifiedColumns": sum(1 for c in cols if c["status"] == "CERTIFIED"),
+            "undefinedColumns": sum(1 for c in cols if c["status"] == "UNDEFINED"),
+            "scannedAt": p.scanned_at.isoformat(),
+        }, undefined
+
+    def _profiles_by_size(self) -> list[Any]:
+        """Profiles in the inventory's order (fullest first, then by name) — the order the gap list and a
+        pattern's detail pick their representative copy from."""
+        return sorted(self.profiles, key=lambda p: (-(p.row_count or 0), p.entity))
+
+    def gaps_with_queries(self) -> tuple[dict[str, Any], list]:
+        """`gaps()` and the catalog reads that produced it (sorgu bilgisi: gösterilen = o sonucu üreten okuma).
+
+        Hız (2026-09-29): liste eskiden bütün envanteri kolonlarıyla kuruyordu — her kolon için ~20 alanlı sözlük,
+        7.725 tabloda ~300 bin sözlük, köprü yeniden kalkınca ve katalog değişince ilk açılış 7,4 sn. Liste yalnız
+        kolon durumlarını sayar; aynı durum kuralı (`_column_state`) doğrudan profillerden okunur. Sonuç katalog
+        parmak izine bağlı hatırlanır (envanterle aynı anahtar ve aynı düşürme) ve katalog yüklenince arkada ısıtılır."""
+        key = ("gaps", self._catalog_version)
+        hit = self._inventory_cache.get(key)
+        if hit is not None:
+            return hit
+        marks, ran = self.catalog_marks()
+        hit = (self._gaps_from(marks), ran)
+        self._inventory_cache[key] = hit
+        return hit
+
     def gaps(self) -> dict[str, Any]:
         """Açıklaması eksik tablo ve kolonlar, tablo kalıbına göre gruplu.
 
@@ -1565,34 +1634,45 @@ class Runtime:
         kalıba yazılır. Tablo tablo listelemek aynı eksiği yirmi kez gösterirdi. Kalıp başına bir satır: toplam
         satır, kaç kopya, kaç kolon eksik. Kolonlar ayrı uçtan, seçilince gelir.
         """
-        inv = self.inventory(with_columns=True)
-        cached = getattr(self, "_gaps_cache", None)
-        if cached is not None and cached[0] is inv:
-            return cached[1]
-        groups: dict[str, list[dict[str, Any]]] = {}
-        for t in inv["tables"]:
-            groups.setdefault(t.get("tablePattern") or t["tableName"], []).append(t)
+        return self.gaps_with_queries()[0]
+
+    def _gaps_from(self, marks: dict[str, Any]) -> dict[str, Any]:
+        by_key, suggested, concepts_by_col = marks["by_key"], marks["suggested"], marks["concepts_by_col"]
+        rank = {"CERTIFIED": 3, "CANDIDATE": 2, "DESCRIBED": 1, "UNDEFINED": 0}
+        groups: dict[str, list[Any]] = {}
+        for p in self._profiles_by_size():
+            groups.setdefault(p.table_pattern or p.table_name, []).append(p)
         items = []
         total_cols = undefined_cols = 0
-        for pattern, tables in groups.items():
-            tables.sort(key=lambda t: -(t.get("rowCount") or 0))
-            rep = tables[0]
-            cols = self._merged_columns(tables)
-            missing = [c for c in cols if c["status"] == "UNDEFINED"]
-            table_desc = rep.get("description") or ((rep.get("annotations") or [{}])[-1].get("text") if rep.get("annotations") else None)
-            rows = sum(t.get("rowCount") or 0 for t in tables)
-            total_cols += len(cols)
+        for pattern, profs in groups.items():
+            rep = profs[0]
+            # kalıbın kolonları: bir kopyada tanımlıysa tanımlı sayılır (en yüksek durum)
+            best: dict[str, int] = {}
+            first: dict[str, Any] = {}
+            for p in profs:
+                for c in p.columns:
+                    k = c.name.upper()
+                    anns = by_key.get((p.table_pattern, k))
+                    r = rank[self._column_state(c.description, bool(anns), concepts_by_col.get((p.entity, k), []))[1]]
+                    if k not in best or r > best[k]:
+                        best[k] = r
+                    first.setdefault(k, p)
+            missing = [k for k, r in best.items() if r == 0]
+            table_anns = by_key.get((rep.table_pattern, None), [])
+            table_desc = rep.description or (table_anns[-1].text if table_anns else None)
+            rows = sum(p.row_count or 0 for p in profs)
+            total_cols += len(best)
             undefined_cols += len(missing)
             items.append({
-                "tablePattern": pattern, "example": rep["tableName"], "copies": len(tables),
-                "source": data_source(rep.get("schema")),
+                "tablePattern": pattern, "example": rep.table_name, "copies": len(profs),
+                "source": data_source(rep.schema_name),
                 "description": table_desc, "tableMissing": not table_desc, "rows": rows,
-                "columns": len(cols), "missing": len(missing),
-                "suggestions": sum(1 for c in missing if c.get("suggestion")),
+                "columns": len(best), "missing": len(missing),
+                "suggestions": sum(1 for k in missing if suggested.get((first[k].table_pattern, k))),
             })
         items.sort(key=lambda x: (x["rows"] == 0, -(x["missing"] + (1 if x["tableMissing"] else 0) > 0), -x["rows"], x["example"]))
         with_gaps = [x for x in items if x["missing"] or x["tableMissing"]]
-        out = {
+        return {
             "summary": {"patterns": len(items), "patternsWithGaps": len(with_gaps),
                         "tablesWithoutDescription": sum(1 for x in items if x["tableMissing"]),
                         "columns": total_cols, "missingColumns": undefined_cols,
@@ -1600,8 +1680,20 @@ class Runtime:
                         "bySource": {src: sum(1 for x in items if x["source"] == src) for src in (LOGO, CRM)}},
             "items": items,
         }
-        self._gaps_cache = (inv, out)
-        return out
+
+    def warm_gaps(self) -> None:
+        """Katalog yüklenince eksik açıklama listesini arkada hazırlar: veri sözlüğünü ilk açan beklemez.
+        SQLite tek bağlantılıdır (testler); arka plan iş parçacığı yalnız başka veritabanında."""
+        if self.store.engine.dialect.name == "sqlite" or os.environ.get("SEMANTIC_WARM_GAPS", "1").strip().lower() in ("0", "false", "no", "off"):
+            return
+
+        def run() -> None:
+            try:
+                self.gaps_with_queries()
+            except Exception as e:  # noqa: BLE001 — ilk açılış kendisi hesaplar
+                log.info("veri sözlüğü ısıtılamadı: %s", e)
+
+        threading.Thread(target=run, name="gaps-warm", daemon=True).start()
 
     @staticmethod
     def _merged_columns(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1619,11 +1711,12 @@ class Runtime:
         return list(out.values())
 
     def gap_detail(self, table_pattern: str) -> Optional[dict[str, Any]]:
-        inv = self.inventory(with_columns=True)
-        tables = [t for t in inv["tables"] if (t.get("tablePattern") or t["tableName"]) == table_pattern]
-        if not tables:
+        """Bir kalıbın kolonları. Hız (2026-09-29): yalnız bu kalıbın kopyaları kurulur (eskiden bütün envanter)."""
+        profs = [p for p in self._profiles_by_size() if (p.table_pattern or p.table_name) == table_pattern]
+        if not profs:
             return None
-        tables.sort(key=lambda t: -(t.get("rowCount") or 0))
+        marks = self._catalog_marks()
+        tables = [self._table_view(p, marks, True)[0] for p in profs]
         rep = tables[0]
         cols = self._merged_columns(tables)
         def view(c: dict[str, Any]) -> dict[str, Any]:
@@ -2579,6 +2672,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 display_words.catalog_texts(r.store, s.tenant_id, s.datasource_id)))
         return {"words": _display_words["words"], "version": str(version)}
 
+    from semantic_bridge import hizli_bellek as _HB
+
+    #: Veri sözlüğü terim listesi (2026-09-29): 5.000 terim + eşlemeleri + sözlüğe çevirme her açılışta 1,2 sn, liste
+    #: aynı ekranın eksik açıklama hesabıyla aynı anda istenince 7,8 sn. Cevap katalogdaki terimlerin damgasına
+    #: (`concept_stamp`: terim sayısı + son terim yazımı; eşleme değişikliği de terimi günceller) bağlı hatırlanır —
+    #: damga değişmedikçe aynı okuma aynı sonucu verir, değişince ilk açılış yeniden okur.
+    _concepts_mem = _HB.Bellek("veri-sozlugu.terimler", taze=24 * 3600, en_cok=8)
+
     @app.get("/api/v1/semantic/concepts")
     def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
         _admin_gate(request)
@@ -2587,13 +2688,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import sorgu_izi as IZ
         from semantic_bridge import sozluk_kaynak as SZK
 
-        with IZ.izle(r.store.engine) as ran:
-            rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
-        src = source_by_entity(r.profiles)
-        # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
-        maps = r.store.list_mappings_many([c.id for c in rows])
-        out = {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
-        # Sorgu bilgisi: terim sayısını veren okuma (eşleme okumaları sayı vermez, kayda girmez).
+        profiles = r.profiles
+        stamp = r.store.concept_stamp(s.tenant_id, s.datasource_id)
+
+        def read() -> dict[str, Any]:
+            with IZ.izle(r.store.engine) as ran:
+                rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
+            src = source_by_entity(profiles)
+            # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
+            maps = r.store.list_mappings_many([c.id for c in rows])
+            out = {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
+            return {"out": out, "ran": list(ran)}
+
+        hit = _concepts_mem.al((s.tenant_id, s.datasource_id, status, type, q, limit, stamp, id(profiles)), read)
+        out, ran = dict(hit["out"]), hit["ran"]
+        # Sorgu bilgisi: terim sayısını veren okuma (bellekten dönse de o sonucu üreten okuma; eşleme okumaları sayı
+        # vermez, kayda girmez).
         return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, s.datasource_id, ran, out, title="Katalog terimleri",
                                                     text=SZK.F_TERIM))
 
@@ -3114,26 +3224,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/schema/gaps")
     def schema_gaps(request: Request) -> dict[str, Any]:
         _admin_gate(request)
-        from semantic_bridge import sorgu_izi as IZ
         from semantic_bridge import sozluk_kaynak as SZK
 
         r = rt()
-        with IZ.izle(r.store.engine) as ran:
-            out = r.gaps()
+        # Liste katalog parmak izine bağlı hatırlanır; sorgu bilgisi o listeyi üreten katalog okumalarıdır
+        # (bellekten dönse de). Cevaba `kaynaklar` eklenir: hatırlanan sözlük değişmesin diye sığ kopya.
+        out, ran = r.gaps_with_queries()
+        out = dict(out)
         return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
                                                     title="Tablolar ve eksik açıklamalar", text=SZK.F_TABLO, profiles=True))
 
     @app.get("/api/v1/schema/gaps/detail")
     def schema_gap_detail(request: Request, tablePattern: str) -> dict[str, Any]:
         _admin_gate(request)
-        from semantic_bridge import sorgu_izi as IZ
         from semantic_bridge import sozluk_kaynak as SZK
 
         r = rt()
-        with IZ.izle(r.store.engine) as ran:
-            out = r.gap_detail(tablePattern)
+        out = r.gap_detail(tablePattern)
         if out is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Tablo bulunamadı."})
+        ran = r.catalog_marks()[1]      # ayrıntının dayandığı katalog okumaları (hatırlanan işaretlerle aynı)
         return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
                                                     title="Tablo ayrıntısı", text=SZK.F_TABLO, profiles=True))
 
