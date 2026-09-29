@@ -1,5 +1,22 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (15:40) — Stüdyo ses işleri kuruldu: fısıltı düzeyi, insan kaydı eksikleri, yetki kapısı, VM yükleme sınırı
+
+- **Fısıltı:** üretimden sonra kısılır — tonsuz (5 kelimeden kısa) −10 dB, tonlu −5 dB (`expression.TABLE` `gain_db`/
+  `gain_tone_db`, servis `gain_db`, `editor-voice:5`). Ölçüm: talimat yolu çoğu kez yalnız alçak ses (−5…−6,5 dB).
+- **İnsan kaydı:** kelimeleri kayda yeniden yerleştirme + izin belgesini açma (ayrıntı alttaki madde). Test sunucusunda
+  uçtan uca: 25 sn'lik sayfa kaydı izin PDF'iyle yüklendi, 51 sn'de `human`; belge aynı baytlarla döndü; yerleştirme ucu
+  köprü → GPU kapısı → servis yolunda yanıt verdi (insan kaydı olmayan sayfada beklenen 400); sayfa yapay sese geri alındı.
+- **Yetki kapısı:** stüdyonun bütün yazmaları `tasarim.uret`, indirmeleri `veri.disa-aktar` (ayrıntı alttaki madde).
+  Canlıda kilitlenen yok: test sunucusu ve VM'de tek rol «Herkes» (bütün izinler).
+- **VM web:** `web.default.conf.template`'te ses kütüphanesi ve insan kaydı yüklemesine 251 MB (genel sınır 10 MB);
+  `nginx -t` dört ortam değişkeniyle geçti.
+- **GPU kurulumu seçici:** main'in `apps/editor`'ünde başka oturumların doğrulanmamış işleri var (metin bütçesi, belge okuma,
+  editoryal düzeltmeler); GPU müşteri VM'ine de hizmet ettiği için tam main kurulmadı. Sürüm `0.15.9-ce0fd1ce-ses2` =
+  GPU'daki `ce0fd1ce` + bu işin 9 dosyası (dosya kümeleri ayrık); kopyada tam set 613 geçti; dokuz servis + `editor-voice:5`,
+  giriş kapısı `EDITOR-STUDYO-INSANHIZA`. Test sunucusu: köprü 3 dosya + ön yüz 29 dosya (hepsi sunucuda main'in eski
+  sürümüydü, yabancı yama yok), sağlık 200, `._*` 0.
+
 ## 2026-09-29 — Sesli okumada insan kaydı: kelimeleri kayda yeniden yerleştirme ve izin belgesini ekranda açma (dalda; kurulmadı)
 
 - **Neden:** insan kayıtlı sayfanın metni küçük düzeltilince sayfa «güncel değil» kalıyordu; tek çare kaydı yeniden yüklemek ya da yapay sesle ezmekti. İzin belgesi saklanıyor ama ekrandan açılamıyordu.
