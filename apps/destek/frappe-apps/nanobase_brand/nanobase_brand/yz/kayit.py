@@ -312,7 +312,9 @@ def _applied(ticket: str, limit_chars: int = 2500) -> str:
 		parts.append(f"[Çözüm notu] {_text(doc.resolution_details, 1500)}")
 	for c in frappe.get_all(
 		"Communication",
-		filters={"reference_doctype": "HD Ticket", "reference_name": ticket, "sent_or_received": "Sent"},
+		# Otomatik öneri e-postası (yz/cozum.py) BT'nin çözümü sayılmaz: kendi önerisinden öğrenmesin.
+		filters={"reference_doctype": "HD Ticket", "reference_name": ticket, "sent_or_received": "Sent",
+				 "content": ["not like", "%nb-otomatik-oneri%"]},
 		fields=["content"], order_by="creation desc", limit=3,
 	):
 		parts.append(f"[Temsilci] {_text(c.content, 800)}")

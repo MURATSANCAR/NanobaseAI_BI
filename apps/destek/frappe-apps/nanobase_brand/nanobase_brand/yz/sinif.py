@@ -124,8 +124,33 @@ def oner(doc, text: str, types: list[str], priorities: list[str], teams: list[st
 	notlar: list[str] = []
 	hata = 0
 
-	k = konu(doc)
-	if k and k.get("confident") and k.get("label"):
+	kayit = f"KAYIT:\n{text}"
+	# Şirket içinden gelen talep (AD'de birimi var) BT kategorilerinden seçilir (yz/kategori.py); dışarıdan gelen
+	# müşteri talebi müşteri hizmetleri konu listesiyle (köprü) sınıflanır.
+	ic_talep = bool(doc.get("nb_talep_birimi"))
+	if ic_talep:
+		from nanobase_brand.yz import kategori
+
+		adlar = kategori.adlar()
+		k = None
+		try:
+			r = llm.choose(
+				"Aşağıdaki BT destek talebi hangi kategoriye girer?\n\nKategoriler:\n" + kategori.soru_metni()
+				+ f"\n\n{kayit}", adlar, priority=llm.BACKGROUND) if adlar else None
+		except llm.ModelUnavailable:
+			r = None
+			hata += 1
+		if r and secim.emin(r, min_p, min_m):
+			out["ticket_type"] = r["choice"]
+			notlar.append(f"kategori: {r['choice']} ({_yuzde(r)})")
+		elif r:
+			notlar.append("kategori: emin değil" + (f" (en olası {r['choice']})" if r.get("choice") else ""))
+		teams = []
+	else:
+		k = konu(doc)
+	if ic_talep:
+		pass
+	elif k and k.get("confident") and k.get("label"):
 		out["ticket_type"] = _tur(k["label"], k.get("description") or "", types)
 		notlar.append(f"konu: {k['label']} ({_yuzde(k)}{', temsilci düzeltmesi' if k.get('by') not in (None, 'zeki') else ''})")
 	elif k:
@@ -133,7 +158,6 @@ def oner(doc, text: str, types: list[str], priorities: list[str], teams: list[st
 	else:
 		notlar.append("konu: sonra sınıflanacak")
 
-	kayit = f"KAYIT:\n{text}"
 	sorular = []
 	if priorities:
 		sorular.append(("priority", "öncelik", "Aşağıdaki destek kaydının önceliği hangisi olmalı?", list(priorities)))
@@ -165,7 +189,7 @@ def oner(doc, text: str, types: list[str], priorities: list[str], teams: list[st
 				notlar.append(f"{ad}: {komsu} (%{round(p[komsu] * 100)}; {ikinci} ile birlikte %{round((p[komsu] + p[ikinci]) * 100)})")
 				continue
 		notlar.append(f"{ad}: emin değil")
-	if hata == len(sorular) and not k:
+	if hata >= len(sorular) and not k and not out:
 		raise llm.ModelUnavailable("sınıflama yapılamadı")
 	out["gerekce"] = "Olasılıklı seçim — " + "; ".join(notlar)
 	return out

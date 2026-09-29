@@ -124,6 +124,9 @@ if readable "$AD_FILE"; then
   rd "$AD_FILE" | python3 -c 'import json,sys; d=json.load(sys.stdin); d["admin_group"]=sys.argv[1] or "Administrators"; d["admin_users"]=sys.argv[2] or "zekiai,timasai,muratsancar"; print(json.dumps(d))' \
     "$ADMIN_GROUP" "$ADMIN_USERS" \
     | dc exec -T backend bench --site "$SITE" execute nanobase_brand.ad.ensure_ldap
+  # Rol modeli: AD'deki BT birimi temsilci + BT ekibi, diğerleri talep eden (yz/temsilci.py; her sabah da koşar).
+  dc exec -T backend bench --site "$SITE" execute nanobase_brand.yz.temsilci.esitle </dev/null \
+    || echo "UYARI: temsilci eşitlemesi yapılamadı (AD'ye ulaşılamadı?)"
 else
   echo "UYARI: $AD_FILE yok; AD girişi kapalı"
 fi

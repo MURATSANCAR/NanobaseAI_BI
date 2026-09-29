@@ -41,6 +41,10 @@ doc_events = {
 		"after_insert": "nanobase_brand.yz.kanca.on_ticket_insert",
 		"on_update": "nanobase_brand.yz.kanca.on_ticket_update",
 	},
+	# Otomatik çözüm önerisinden sonra talep edenin yanıtı (yz/cozum.py).
+	"Communication": {
+		"after_insert": "nanobase_brand.yz.kanca.on_communication_insert",
+	},
 }
 
 scheduler_events = {
@@ -48,5 +52,8 @@ scheduler_events = {
 		# Hafta içi 08:30: SLA riskindeki kayıtlar; pazartesi 08:00: haftalık rapor
 		"30 8 * * 1-5": ["nanobase_brand.yz.rapor.daily_sla_risk"],
 		"0 8 * * 1": ["nanobase_brand.yz.rapor.weekly"],
+		# Öneriye süresinde yanıt gelmeyen kayıt BT'ye (saat başı); BT temsilcileri AD'den (her sabah).
+		"5 * * * *": ["nanobase_brand.yz.cozum.zaman_asimi"],
+		"15 6 * * *": ["nanobase_brand.yz.temsilci.esitle"],
 	},
 }
