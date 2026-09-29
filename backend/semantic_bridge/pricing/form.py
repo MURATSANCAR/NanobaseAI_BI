@@ -595,6 +595,30 @@ def _pick_binding(name: Optional[str]) -> Optional[str]:
     return None
 
 
+#: Yayınevini ayırt etmeyen genel sözcükler (kitaplık adlarında yaş/tür anlatır).
+_GENERIC = {"TIMAS", "KITAP", "KITAPLIGI", "KITAPLARI", "YAYINLARI", "YAYINEVI", "YAYINCILIGI", "VE", "DIN", "OKUL", "ONCESI",
+            "EGITIM", "COCUK", "GENC", "GENCLIK", "ILK", "DUNYASI", "DUNYA"}
+
+
+def _tokens(text: Optional[str]) -> set[str]:
+    t = (text or "").upper().replace("İ", "I").replace("Ş", "S").replace("Ğ", "G").replace("Ü", "U").replace("Ö", "O").replace("Ç", "C")
+    return {w for w in "".join(ch if ch.isalnum() else " " for ch in t).split() if len(w) >= 3 and w not in _GENERIC}
+
+
+def publisher_from_library(library: str, publishers: list[str]) -> Optional[str]:
+    """CRM kitaplık adından tarifedeki yayınevi: kitaplık adıyla ayırt edici bir sözcüğü aynen paylaşan
+    tek bir yayınevi varsa o; birden çok ya da hiç yoksa None (kullanıcı seçer)."""
+    lib = _tokens(library)
+    if not lib:
+        return None
+
+    def hit(p: str) -> bool:
+        return bool(lib & _tokens(p))
+
+    found = [p for p in publishers if hit(p)]
+    return found[0] if len(found) == 1 else None
+
+
 def blank_inputs(tariff: dict, *, kur: Optional[dict] = None) -> dict[str, Any]:
     """Yeni kitap için başlangıç formu: basım Excel'lerinde en sık görülen seçimler (13,5x21, 3. hamur 60 gr, 57x88
     tabaka, tek renk iç, 4 renk bristol kapak, selofan + lokal lak, Amerikan cilt)."""
@@ -640,10 +664,16 @@ def from_book(detail: dict, tariff: dict, *, kur: Optional[dict] = None) -> dict
     if b.get("price"):
         inp["fiyat"] = b["price"]
         origin["fiyat"] = "CRM kitap kartı (KDV dahil kapak fiyatı)"
-    pub = next((k for k in (tariff.get("publishers") or {}) if _norm(k) == _norm(b.get("publisher"))), None)
+    pubs = list(tariff.get("publishers") or {})
+    pub = next((k for k in pubs if _norm(k) == _norm(b.get("publisher"))), None)
     if pub:
         inp["yayinevi"] = pub
         origin["yayinevi"] = "CRM kitap kartındaki yayınevi"
+    elif b.get("library"):
+        pub = publisher_from_library(b["library"], pubs)
+        if pub:
+            inp["yayinevi"] = pub
+            origin["yayinevi"] = f"CRM'de yayınevi boş; kitaplık adından ({b['library']})"
     roy = b.get("royalty") or {}
     if roy.get("rate") is not None and roy.get("on") != "tek":
         inp["telif"] = round(float(roy["rate"]) * 100, 4)
