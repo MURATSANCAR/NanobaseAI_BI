@@ -437,6 +437,7 @@
       },
       "keywords": ["başarı dağıtım", "dağıtımcı", "d&r kataloğu", "d&r'de", "idefix", "prefix", "baskısı yok", "temin edilemiyor", "perakende kataloğu"],
       "snapshots": {"semantic_pazar_dagitim_titles": {"column": "son_gorulme", "per": "kaynak"}},
+      "allow_personal": {"semantic_pazar_dagitim_titles": ["yazar", "cevirmen"]},
       "column_labels": {
         "semantic_pazar_dagitim_titles": {
           "kaynak": "katalog (basari: Başarı Dağıtım, dr: D&R)",

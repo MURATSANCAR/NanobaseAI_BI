@@ -288,7 +288,7 @@ def test_profile_never_reads_hr_tables_and_excludes_personal_columns(engine):
     assert {"semantic_risk_register", "semantic_risk_actions", "semantic_ads_daily", "semantic_mail_messages"} <= names
     for p in profiles:
         for col, info in p["columns"].items():
-            if P.is_person_or_secret(col):
+            if P.is_person_or_secret(col, info):
                 assert info["kind"] == P.EXCLUDED, (p["table"], col)
     reg = next(p for p in profiles if p["table"] == "semantic_risk_register")["columns"]
     assert reg["sahip"]["why"] == "kişisel veri" and reg["sahip_eposta"]["kind"] == P.EXCLUDED

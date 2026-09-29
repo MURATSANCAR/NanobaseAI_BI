@@ -5,7 +5,7 @@ Sınanan: ad katlama ve çoklu yazar ayrıştırma («Kolektif» hariç, unvan v
 doğrulanan kitaplar, Başarı'nın doğrulanan kitapta kullandığı yazımla eşleşme, yalnız son görüntüdeki başlıklar,
 TİMAŞ / başka yayınevi kırılımı, en yüksek baskı, fiyat aralığı, D&R'de de olanlar, belirsizlik nedenleri (tek sözcük,
 barkodla doğrulanamama, alan farkı, TİMAŞ'ta bağlanmamış aynı ad), çıkış endeksinin iki görüntüden önce boş kalması,
-sorgu bilgisinin her rakamı kapsaması; sohbet alanında kolon adı/notu, yazarın kişisel veri sayılıp seçenek olmaması,
+sorgu bilgisinin her rakamı kapsaması; sohbet alanında kolon adı/notu, yazar/çevirmenin bu alanda açık olması (alan bazlı istisna),
 kaynak başına son görüntü (bir katalog o gün okunmadıysa onun son görüntüsü) ve cevaba eklenen alan notu ile gün.
 
 Veriler yapaydır (sqlite) ve yalnız kuralları sınar; gerçek katalogla kabul test sunucusunda.
@@ -242,7 +242,10 @@ def test_topic_and_area_are_registered():
 def test_profile_labels_notes_and_personal_columns(engine):
     p = _chat_seed(engine)[TABLE]
     cols = p["columns"]
-    assert cols["yazar"]["kind"] == P.EXCLUDED and cols["cevirmen"]["kind"] == P.EXCLUDED
+    # Kullanıcı kararı 2026-09-29: bu alanda yayımlanmış künyedeki yazar/çevirmen açık (alan bazlı istisna).
+    assert cols["yazar"]["kind"] != P.EXCLUDED and cols["yazar"].get("kisiselIzin") is True
+    assert cols["cevirmen"]["kind"] != P.EXCLUDED and not P.is_person_or_secret("yazar", cols["yazar"])
+    assert P.is_person_or_secret("yazar")          # istisna yalnız bu alanın profilinde; başka yerde kural sürer
     assert cols["stok"]["label"].startswith("dağıtımcı stoğu") and "Prefix B2B" in cols["stok"]["note"]
     assert "999" in cols["site_stok"]["note"] and "iskonto" in cols["iskonto"]["note"]
     assert "%80" in cols["timas"]["note"] and cols["timas"]["kind"] == P.DIMENSION
@@ -260,8 +263,7 @@ def test_counts_each_catalogues_latest_snapshot(engine):
     assert out["type"] == "TEXT_TO_SQL" and out["records"] == [{P.COUNT: 7}]
     assert "basari 2026-09-25, dr 2026-09-24" in out["text"]
     assert "okura satışı" in out["text"] and "pazar payı" not in out["text"].lower()
-    for opt in (o for labels in picker.calls for o in labels):
-        assert "yazar" not in opt.lower() and "çevirmen" not in opt.lower()
+    # Yazar/çevirmen bu alanda kullanıcı kararıyla açık (2026-09-29); seçenek olarak çıkabilir.
 
 
 def test_status_from_question_and_column_note(engine):

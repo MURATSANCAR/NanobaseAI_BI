@@ -254,7 +254,8 @@ def _str_len(tname: str) -> Optional[int]:
     return int(tname[3:]) if tname.startswith("str") and tname[3:].isdigit() else None
 
 
-def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[str, Optional[str]]:
+def classify_column(name: str, tname: str, *, primary: bool = False,
+                    person_ok: bool = False) -> tuple[str, Optional[str]]:
     """Veriye bakmadan kesin sınıf: (sınıf, dışarıda bırakma nedeni). Veriye bakılması gerekenler (boyut mu
     öznitelik mi, metin tarihi mi) `None` nedenle «aday» döner; `profile` karar verir."""
     n = name.lower()
@@ -265,7 +266,7 @@ def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[st
         return SOFT_DELETE, None
     if _rx("secret").search(n):
         return EXCLUDED, "gizli bilgi"
-    if _rx("person").search(n):
+    if _rx("person").search(n) and not person_ok:
         return EXCLUDED, "kişisel veri"
     if tname == "json" or _rx("structured").search(n):
         return EXCLUDED, "yapısal alan"
@@ -287,9 +288,13 @@ def classify_column(name: str, tname: str, *, primary: bool = False) -> tuple[st
     return EXCLUDED, "desteklenmeyen tür"
 
 
-def is_person_or_secret(name: str) -> bool:
+def is_person_or_secret(name: str, info: Optional[dict[str, Any]] = None) -> bool:
+    """Kişisel ya da gizli kolon mu. Alan, yayımlanmış künye gibi kişisel olmayan bir kolonu açıkça açtıysa
+    (`allow_personal`, profilde `kisiselIzin`) kişisel veri kuralı o kolonda uygulanmaz; gizli bilgi kuralı her zaman."""
     n = name.lower()
-    return bool(_rx("secret").search(n) or _rx("person").search(n))
+    if _rx("secret").search(n):
+        return True
+    return bool(_rx("person").search(n)) and not (info or {}).get("kisiselIzin")
 
 
 # ------------------------------------------------------------------ profil
@@ -332,15 +337,19 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
         fixed = {rf["column"] for rf in a.get("row_filters") or []}
         names_of = (a.get("column_labels") or {}).get(name) or {}
         notes_of = (a.get("column_notes") or {}).get(name) or {}
+        # Alan bazlı istisna: yayımlanmış kitap künyesindeki yazar/çevirmen gibi adlar (kullanıcı kararı 2026-09-29).
+        allow_of = set((a.get("allow_personal") or {}).get(name) or [])
         cols: dict[str, dict[str, Any]] = {}
         with engine.connect() as c:
             rows = int(c.execute(sa.select(sa.func.count()).select_from(t).where(*where)).scalar() or 0)
             for col in t.columns:
                 tname = _type_name(col.type)
-                kind, why = classify_column(col.name, tname, primary=(pk == [col.name]))
+                kind, why = classify_column(col.name, tname, primary=(pk == [col.name]), person_ok=col.name in allow_of)
                 if col.name in fixed and kind != EXCLUDED:
                     kind, why = EXCLUDED, "alanın sabit süzgeci"
                 info: dict[str, Any] = {"type": tname, "kind": kind, "label": names_of.get(col.name) or humanize(col.name)}
+                if col.name in allow_of:
+                    info["kisiselIzin"] = True
                 if notes_of.get(col.name):
                     info["note"] = notes_of[col.name]
                 if why:
@@ -832,7 +841,7 @@ def reachable(base: dict[str, Any], by_table: dict[str, dict[str, Any]]) -> list
 
 def _cols(profile: dict[str, Any], kinds: Iterable[str]) -> list[tuple[str, dict[str, Any]]]:
     ks = set(kinds)
-    return [(c, i) for c, i in profile["columns"].items() if i["kind"] in ks and not is_person_or_secret(c)]
+    return [(c, i) for c, i in profile["columns"].items() if i["kind"] in ks and not is_person_or_secret(c, i)]
 
 
 def measure_options(base: dict[str, Any]) -> list[tuple[str, Any]]:
@@ -849,7 +858,7 @@ def group_options(nodes: list[Node]) -> list[tuple[str, Any]]:
     opts: list[tuple[str, Any]] = [(NONE_BREAKDOWN, None)]
     for n in nodes:
         for c, i in n.profile["columns"].items():
-            if is_person_or_secret(c):
+            if is_person_or_secret(c, i):
                 continue
             if i["kind"] in GROUPABLE or i.get("groupable"):
                 opts.append((f"{n.prefix}{i['label']}", (n.path, c)))
@@ -867,7 +876,7 @@ def filter_options(nodes: list[Node], used: set[tuple[tuple[str, ...], str]]) ->
     out: list[FilterOption] = []
     for n in nodes:
         for c, i in n.profile["columns"].items():
-            if is_person_or_secret(c) or (n.path, c) in used or "values" not in i:
+            if is_person_or_secret(c, i) or (n.path, c) in used or "values" not in i:
                 continue
             for v in i["values"]:
                 shown = ("evet" if v else "hayır") if isinstance(v, bool) else str(v)
@@ -1120,14 +1129,14 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
     if agg == "list":
         sel = []
         for c, i in base["columns"].items():
-            if i["kind"] in (LABEL, DIMENSION, ATTRIBUTE, TIME, MEASURE) and not is_person_or_secret(c):
+            if i["kind"] in (LABEL, DIMENSION, ATTRIBUTE, TIME, MEASURE) and not is_person_or_secret(c, i):
                 sel.append(t0.c[c].label(f"c{len(sel)}"))
                 names.append(i["label"])
         for path, n in nodes.items():
             if not path:
                 continue
             for c, i in n.profile["columns"].items():
-                if i["kind"] == LABEL and not is_person_or_secret(c):
+                if i["kind"] == LABEL and not is_person_or_secret(c, i):
                     sel.append(alias(path).c[c].label(f"c{len(sel)}"))
                     names.append(f"{n.prefix}{i['label']}")
         stmt = sa.select(*sel)
