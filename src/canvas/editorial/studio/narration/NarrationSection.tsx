@@ -18,6 +18,7 @@ import {
   type NarrationOverview, type NarrationPageRow,
 } from './api';
 import { StudioInfo } from '../shared';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Stüdyoda «Sesli okuma»: kitap Türkçe seslendirilir, e-kitapta okunan kelime vurgulanır. Sayfa sayfa dinleme ve
  *  okunan kelime vurgulu önizleme, anlatıcı ve karakter sesleri, telaffuz sözlüğü, yeniden üretim. Sayfalar sayfa
@@ -69,7 +70,7 @@ export default function NarrationSection({ jobId }: { jobId: string }) {
             Sesli okuma
             <StudioInfo label="Sesli okuma" what="Sayfa ve ses sayıları seslendirme kaydından." />
           </h2>
-          <p className="text-[11.5px] text-canvas-muted">Kitap Türkçe seslendirilir; e-kitapta okunan kelime vurgulanır.</p>
+          <p className="text-[11.5px] text-canvas-muted">Kitabı Zeki AI Türkçe seslendirir; e-kitapta okunan kelime vurgulanır. Sayfaları buradan dinleyip sesleri seçersiniz.</p>
         </div>
         {d && <Summary d={d} />}
       </div>
@@ -214,6 +215,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
               : human ? ((job.progress?.[0] ?? 0) === 0 ? 'Kelimeler kayda yerleştiriliyor…' : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfanın sesi yazıldı`)
                 : realigning ? `Kelimeler kayda yerleştiriliyor: ${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa`
                   : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
+            {' '}İş arka planda sürer; sayfadan ayrılabilirsiniz, döndüğünüzde ilerleme burada görünür.
           </span>
         </div>
       )}
@@ -286,7 +288,10 @@ function Listen({ jobId, d, running, onRegen, onRealign, regenBusy, onUploaded }
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-extrabold">Sayfa sayfa dinle</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Sayfa sayfa dinle
+          <Explain label="Sayfa durumları">Nokta rengi sayfanın sesini gösterir: yeşil hazır, sarı güncel değil (metin, ses ya da sözlük sonradan değişti; yeniden üretilmeli), gri henüz seslendirilmedi. Mikrofon simgesi sayfanın sesinin insan kaydı olduğunu gösterir.</Explain>
+        </h3>
         {row && (
           <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11.5px] text-canvas-muted">
             {row.human && <HumanBadge owner={row.owner} />}
@@ -296,7 +301,7 @@ function Listen({ jobId, d, running, onRegen, onRealign, regenBusy, onUploaded }
         )}
       </div>
       {readable.length === 0 ? (
-        <p className="text-[12.5px] text-canvas-muted">Kitapta okunacak metin yok.</p>
+        <EmptyHint title="Okunacak metin yok" why="Kitabın sayfalarında seslendirilecek yazı bulunamadı. Sayfa düzeninde sayfalara metin ekleyince burada sayfa sayfa listelenir." />
       ) : (
         <>
           <ul className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Sayfalar">
@@ -416,7 +421,10 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <h3 className="text-[13px] font-extrabold">Sesler</h3>
+      <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+        Sesler
+        <Explain label="Sesler">Anlatıcı sesi kitabın düz metnini, karakter sesleri o karakterin konuşma balonlarını okur. Seçimi kaydedince sesi değişen sayfalar «güncel değil» olur; «Seslendir» ile yenilenir. Oynat düğmesi kısa bir örnek cümle okur.</Explain>
+      </h3>
       <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-2.5 border-0 p-0">
       <div className="flex flex-col gap-1">
         <label htmlFor="narration-narrator" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Anlatıcı</label>

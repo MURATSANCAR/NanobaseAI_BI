@@ -7,6 +7,7 @@ import { Img, ago, press } from '../shared';
 import { marketingApi, type MarketingView } from './api';
 import { Approval, Generate, Section, field, ghostBtn, gradientBtn, label } from './parts';
 import { useCan } from '../../../useAdmin';
+import { EmptyHint } from '../../../components/Explain';
 
 const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
@@ -55,9 +56,13 @@ export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: 
           </p>
         )}
         {err && <Note tone="err">{err}</Note>}
+        {!bc.draft && bc.options.length === 0 && v.tasks['back-cover']?.status !== 'running' && !gen.isPending && (
+          <EmptyHint title="Henüz arka kapak yazısı yok"
+            why="Zeki AI kitabın metninden farklı açılardan birkaç seçenek yazar ve her birinin arka kapak alanına sığıp sığmadığını ölçer. Birini seçip düzenler, sonra onaylarsınız." />
+        )}
 
         {bc.options.length > 0 && (
-          <Section title="Seçenekler">
+          <Section title="Seçenekler" explain="Her seçeneğin altındaki çubuk, yazının arka kapaktaki yazı alanının ne kadarını dolduracağını gösterir: yeşil sığıyor, kırmızı alanı aşıyor. «Bunu düzenle» seçeneği aşağıdaki metin kutusuna taşır; kaydetmeden hiçbir şey değişmez.">
             <ul className="grid min-w-0 gap-2 md:grid-cols-3">
               {bc.options.map((o) => (
                 <li key={o.id} className="flex min-w-0 flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3">
@@ -75,7 +80,8 @@ export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: 
         )}
 
         {(bc.draft || bc.options.length > 0) && (
-          <Section title="Arka kapak yazısı" aside={<Approval approved={approvedNow ? bc.approved : null} />}>
+          <Section title="Arka kapak yazısı" aside={<Approval approved={approvedNow ? bc.approved : null} />}
+            explain="Sıra: «Taslağı kaydet» metni saklar ve alana göre ölçer; «Onayla» adınızla onaylar; «Kapağa uygula» kapak açılımını bu yazıyla yeniden dizer. Kapaktaki yazıyı eski hâline getirmek için «Kayıtlı tanıtım metnine dön»ü kullanın.">
             <label className="flex flex-col gap-1">
               <span className={label}>Metin · paragrafları boş satırla ayırın</span>
               <textarea className={field} rows={9} value={text} onChange={(e) => setText(e.target.value)} maxLength={20000} readOnly={!canEdit} />

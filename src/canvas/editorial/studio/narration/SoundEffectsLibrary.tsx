@@ -4,6 +4,7 @@ import { Check, Info, Loader2, Pause, Play, Search, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { press } from '../shared';
 import { sfxApi, useSfxCategories, type SfxSound } from './sfxApi';
+import { Explain } from '../../../components/Explain';
 
 /** Efekt havuzu tarayıcısı: kategori + metinle arama + dinle. «Seçme» kipinde (bir ipucu ya da ortam için) her satırda
  *  «Seç» düğmesi. Arama Türkçe yazılır; sunucu Zeki AI ile İngilizce karşılığını bulup anlamca arar. Her efektin
@@ -118,7 +119,10 @@ export default function SoundEffectsLibrary({ initialQuery = '', initialEn = '',
   return (
     <section aria-label={title ?? 'Efekt kütüphanesi'} className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-violet-100 bg-violet-50/40 p-2.5 sm:p-3">
       <div className="flex items-center gap-2">
-        <h4 className="min-w-0 flex-1 truncate text-[13px] font-extrabold">{title ?? 'Efekt kütüphanesi'}</h4>
+        <h4 className="flex min-w-0 flex-1 items-center gap-1 text-[13px] font-extrabold">
+          <span className="min-w-0 truncate">{title ?? 'Efekt kütüphanesi'}</span>
+          <Explain label="Efekt kütüphanesi">Aradığınız sesi Türkçe yazın (ör. «çıtırdayan ateş»); aynı anlama gelen sesler de bulunur. Oynat düğmesiyle dinleyin, «Seç» ile efekte bağlayın. ⓘ düğmesi sesin kaynağını ve lisansını gösterir; kullanılan seslerin kaynağı sesli e-kitabın künyesine eklenir.</Explain>
+        </h4>
         {info && <span className="shrink-0 text-[11px] text-canvas-muted">{info.stats.files.toLocaleString('tr-TR')} ses</span>}
         {onClose && (
           <button type="button" aria-label="Kapat" onClick={() => { preview.stop(); onClose(); }}
@@ -158,6 +162,9 @@ export default function SoundEffectsLibrary({ initialQuery = '', initialEn = '',
               </ul>
             ))
             : <p className="text-[12px] text-canvas-muted">Aramak istediğiniz sesi yazın ya da bir kategori seçin.</p>}
+      {res.data && res.data.items.length >= 30 && (
+        <p className="text-[11px] text-canvas-muted">Aramaya en çok uyan 30 ses gösteriliyor; aradığınız yoksa daha belirgin bir sözcük deneyin.</p>
+      )}
     </section>
   );
 }

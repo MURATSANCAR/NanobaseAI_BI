@@ -952,6 +952,12 @@ SPEC: list[dict[str, Any]] = [
                                                "aynı madde sayılır (0,5–1)"},
     {"key": "CONTRACT_COMPARE_TEMPLATE_MIN", "group": "contract_compare", "label": "Kalıp metin eşiği (sözleşme)", "type": "int",
      "default": "5", "help": "Bir not bu kadar ya da daha çok başka sözleşmede de varsa «kalıp metin» sayılır (2–1000)"},
+    {"key": "CONTRACT_COMPARE_EXTRA_DIMS", "group": "contract_compare", "label": "Varsayılan ek kıyas ölçütleri", "type": "text",
+     "default": "", "help": "Virgülle: ajans (ajans üzerinden), satis (hak sahibinin satış dilimi), hedef (hedef kitle), tur (tür), "
+                           "dil (yerli/çeviri). Boşsa yalnız tip, ödeme türü, para birimi, bölüm ve dönem; ekrandan değişir"},
+    {"key": "CONTRACT_COMPARE_UPLOAD_DAYS", "group": "contract_compare", "label": "Yüklenen belgenin saklama süresi (gün)",
+     "type": "int", "default": "0", "help": "Karşılaştırma için yüklenen belge bu kadar gün sonra dosyasıyla silinir (değişiklik "
+                                            "kaydına yazılır). 0 = süresiz; CRM ekleri ve şablonlar silinmez"},
     {"key": "CONTRACT_COMPARE_REFRESH_HOURS", "group": "contract_compare", "label": "CRM görüntüsünün yenilenmesi (saat)",
      "type": "text", "default": "12", "help": "CRM sözleşme görüntüsü bundan eskiyse ilk açılışta arka planda yeniden okunur; "
                                              "ekrandaki «Yenile» hemen okur"},

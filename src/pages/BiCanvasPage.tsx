@@ -87,7 +87,7 @@ export default function BiCanvasPage() {
         setAnsweredQ(q);
         setAnswer({ ...a, summary: a.summary ?? a.explanation });
       })
-      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'ZEKİ AI yanıt vermedi'))
+      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Zeki AI yanıt vermedi; biraz sonra yeniden sorun'))
       .finally(() => runNext());
   };
   const ask = (q: string) => {
@@ -136,7 +136,7 @@ export default function BiCanvasPage() {
 
   // Sohbet cevabı → pano kartı. Doğrusu sunucudaki pano: önce güncel liste okunur (başka sekmede eklenen
   // kart ezilmesin), kart boş yere eklenir, sonra sonucu sunucuda hesaplanır ki pano açılınca hazır olsun.
-  const addToBoard = async () => {
+  const addToBoard = async (): Promise<void> => {
     const a = answer;
     if (!a?.sql || !a.records?.length || board.state === 'saving') return;
     setBoard({ state: 'saving' });
@@ -190,12 +190,12 @@ export default function BiCanvasPage() {
           ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ? readableText(answer.summary) : 'ZEKİ AI özet üretmedi.'}”`,
+            : `“${answer?.summary ? readableText(answer.summary) : 'Zeki AI bu soru için özet yazmadı; tablodaki sonuca bakın.'}”`,
         m1: { label: 'Satır:', value: String(rows) },
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
-        board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: () => void addToBoard() } : undefined,
+        board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: (): void => void addToBoard() } : undefined,
         timing: !asking && answer?.records ? answer : null,
         interpret: !asking && !askErr && interpretChips.length > 0 ? { items: interpretChips, busy: asking, onPick: rephrase } : undefined,
         // Dönem veriden sonra kaldıysa motor aynı soruyu verinin son dönemine kurup gönderir; metin motorundur.

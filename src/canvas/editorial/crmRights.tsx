@@ -53,6 +53,9 @@ const TERM_HELP: Record<string, string> = {
   consentDate: MUVAFAKAT,
   ebookConsentDate: `${MUVAFAKAT} Bu alan e-kitap için verilen onayı gösterir.`,
   unpublishedTermination: 'Kitap bu tarihe kadar yayımlanmazsa sözleşmenin feshedilebileceği tarih.',
+  unpublishedTerminationMonths: 'Kitap bu kadar ay içinde yayımlanmazsa hak sahibi sözleşmeyi feshedebilir.',
+  overPrintQty: 'Sözleşmede belirtilen baskı adedinin üzerine basılabilecek ek adet. Yayın sözleşmelerinde genellikle fire ve tanıtım için ayrılır. CRM alanı: «Sözleşmede Belirtilen Fazla Basım (Adet)».',
+  overPrintPct: 'Baskı adedinin yüzdesi olarak izin verilen ek basım. Yayın sözleşmelerinde genellikle fire ve tanıtım için ayrılır. CRM alanı: «Sözleşmede Belirtilen Fazla Basım (Yüzde)».',
 };
 const DATES = new Set(['renewalStart', 'renewalEnd', 'terminated', 'unpublishedTermination', 'rightsTransferDate', 'consentDate', 'consentEnd', 'ebookConsentDate', 'ebookConsentEnd', 'protocolDate', 'protocolEnd']);
 const OPTIONS = new Set(['paymentType', 'basis', 'paymentMethod', 'currency']);

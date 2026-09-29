@@ -65,7 +65,7 @@
       <ListHeaderItem
         v-for="column in columns"
         :key="column.key"
-        :item="column"
+        :item="{ ...column, label: __(column.label) }"
         @columnWidthUpdated="handleColumnResize"
       />
     </ListHeader>

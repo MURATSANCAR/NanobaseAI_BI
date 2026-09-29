@@ -1653,6 +1653,21 @@
       "explicit": true
     },
     {
+      "key": "ozellik:sozlesme-karsilastirma.inceleme",
+      "area": "editoryal",
+      "page": "sayfa:sozlesme-karsilastirma",
+      "label": "Karşılaştırma bulgusu inceleme",
+      "hint": "Farklı madde, özgün not ve şekil eksiğini incelendi / istisna / CRM düzeltilmeli / hukuka sorulacak diye işaretleme"
+    },
+    {
+      "key": "ozellik:sozlesme-karsilastirma.pozisyon",
+      "area": "editoryal",
+      "page": "sayfa:sozlesme-karsilastirma",
+      "label": "Standart pozisyon (hukuk)",
+      "hint": "Sözleşme kuralı yazma, emsalden öneri üretme, öneriyi onaylama ve silme",
+      "explicit": true
+    },
+    {
       "key": "ozellik:telif.kosu",
       "area": "finans",
       "page": "sayfa:telif-donem",

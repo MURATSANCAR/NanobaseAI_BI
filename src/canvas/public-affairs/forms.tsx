@@ -12,6 +12,8 @@ import { nowLocal, usePeopleOptions } from '../editorial/authors/shared';
 import { fmtInt, paApi, type Note as PaNote, type Person, type Place } from './api';
 import { invalidatePa, usePaMeta } from './parts';
 
+const hint = 'mt-1 block text-[11px] font-medium leading-snug text-canvas-muted';
+
 /** M28 formları: temas notu (telefonda iki dokunuş), kişi kartı (CRM'den bağlama ya da elle), kurum kartı. */
 
 /* ------------------------------------------------------------------ temas notu */
@@ -70,11 +72,12 @@ export function NoteForm({
       toast.success(note ? 'Not güncellendi.' : 'Not kaydedildi.');
       onClose();
     },
-    onError: (e) => setErr(errText(e, 'Not kaydedilemedi.')),
+    onError: (e) => setErr(errText(e, 'Not kaydedilemedi. Alanları kontrol edip yeniden deneyin.')),
   });
 
   return (
-    <Sheet open={open} onClose={onClose} modal title={note ? 'Notu düzenle' : 'Temas notu'} subtitle={target.name}>
+    <Sheet open={open} onClose={onClose} modal title={note ? 'Notu düzenle' : 'Temas notu'}
+      subtitle={`${target.name} · Görüşme, telefon ya da ziyareti kısaca kaydedin; kartın geçmişinde görünür. Konu, tarih ve saat zorunlu.`}>
       <form
         className="space-y-3 text-[12.5px]"
         onSubmit={(e) => {
@@ -84,8 +87,8 @@ export function NoteForm({
         }}
       >
         <label className="block">
-          <span className={label}>Konu</span>
-          <input required maxLength={300} value={f.topic} onChange={(e) => set('topic', e.target.value)} autoFocus placeholder="ör. Kitap teşekkürü, proje görüşmesi" className={`${field} mt-1`} />
+          <span className={label}>Konu *</span>
+          <input required maxLength={300} value={f.topic} onChange={(e) => set('topic', e.target.value)} autoFocus placeholder="Ör. Kitap teşekkürü, proje görüşmesi" className={`${field} mt-1`} />
         </label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <label className="block">
@@ -120,12 +123,12 @@ export function NoteForm({
         </div>
         <label className="block">
           <span className={label}>Not</span>
-          <textarea rows={4} maxLength={20000} value={f.text} onChange={(e) => set('text', e.target.value)} className={`${field} mt-1 resize-y leading-snug`} />
+          <textarea rows={4} maxLength={20000} value={f.text} onChange={(e) => set('text', e.target.value)} placeholder="Ör. Yeni proje fikrini dinledi; il müdürlüğüyle görüşüp dönüş yapacak." className={`${field} mt-1 resize-y leading-snug`} />
         </label>
         <div className="grid gap-2 sm:grid-cols-[1fr_170px]">
           <label className="block">
             <span className={label}>Sıradaki adım</span>
-            <input maxLength={500} value={f.nextStep} onChange={(e) => set('nextStep', e.target.value)} placeholder="ör. Yeni kitabı gönder" className={`${field} mt-1`} />
+            <input maxLength={500} value={f.nextStep} onChange={(e) => set('nextStep', e.target.value)} placeholder="Ör. Yeni kitabı gönder" className={`${field} mt-1`} />
           </label>
           <label className="block">
             <span className={label}>Adım tarihi</span>
@@ -134,6 +137,7 @@ export function NoteForm({
         </div>
         <fieldset>
           <legend className={label}>Kim görür</legend>
+          <span className={hint}>«Özel» seçerseniz notu yalnız siz ve seçtiğiniz katılımcılar görür.</span>
           <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
             {(meta.data?.visibility ?? []).map((v) => (
               <label key={v.key} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 ${f.visibility === v.key ? 'border-canvas-violet bg-violet-50/60' : 'border-slate-200 bg-white/80'}`}>
@@ -155,7 +159,7 @@ export function NoteForm({
             Vazgeç
           </button>
           <button type="submit" className={btnPrimary} disabled={save.isPending || !f.topic.trim()}>
-            {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+            {save.isPending ? 'Kaydediliyor…' : note ? 'Değişiklikleri kaydet' : 'Notu kaydet'}
           </button>
         </div>
       </form>
@@ -221,7 +225,7 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
   const save = useMutation({
     mutationFn: () => (person ? paApi.updatePerson(person.id, body()) : paApi.addPerson(body())),
     onSuccess: (p) => done(p.id, person ? 'Kart güncellendi.' : 'Kişi kartı açıldı.'),
-    onError: (e) => setErr(errText(e, 'Kart kaydedilemedi.')),
+    onError: (e) => setErr(errText(e, 'Kart kaydedilemedi. Alanları kontrol edip yeniden deneyin.')),
   });
   const link = useMutation({
     mutationFn: (crmContactId: string) =>
@@ -254,6 +258,7 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
               </option>
             ))}
           </select>
+          <span className={hint}>«Kritik» kişide, uzun süre temas edilmedi uyarısı daha erken çıkar.</span>
         </label>
         <label className="flex min-h-11 items-center gap-2 self-end rounded-xl border border-slate-200 bg-white/80 px-3">
           <input type="checkbox" checked={f.isPublicOfficial} onChange={(e) => set('isPublicOfficial', e.target.checked)} />
@@ -265,7 +270,7 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
   );
 
   return (
-    <Sheet open={open} onClose={onClose} modal title={person ? 'Kişi kartını düzenle' : 'Yeni kişi'} subtitle={person ? person.name : 'CRM\'deki kişiye bağlayın ya da elle açın'}>
+    <Sheet open={open} onClose={onClose} modal title={person ? 'Kişi kartını düzenle' : 'Yeni kişi'} subtitle={person ? person.name : 'Kurumsal ilişki kurduğunuz kişinin kartını açar. CRM\'de kayıtlıysa «CRM\'den bağla» ile arayıp alın; değilse «Elle aç». Portal CRM\'e yazmaz.'}>
       {!person && (
         <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Kaynak">
           {(['crm', 'elle'] as const).map((m) => (
@@ -288,12 +293,13 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
             <span className={label}>Ad, kurum ya da unvan</span>
             <div className="relative mt-1">
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="ör. Ahmet Yılmaz, Marmara Üniversitesi" className={`${field} pl-9`} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Ör. Ahmet Yılmaz, Marmara Üniversitesi" className={`${field} pl-9`} />
             </div>
+            <span className={hint}>En az 2 harf yazın; bulunan kişinin yanındaki «Bu kişiyi al» kartı açar. Aşağıdaki alan, öncelik ve kamu görevlisi seçimi yeni karta aktarılır.</span>
           </label>
           {common}
           {crm.isFetching && !crm.data && <p className="text-canvas-muted">CRM'de aranıyor…</p>}
-          {crm.error && <Note tone="err">{errText(crm.error, 'CRM okunamadı.')}</Note>}
+          {crm.error && <Note tone="err">{errText(crm.error, 'CRM\'de arama yapılamadı. Biraz sonra yeniden deneyin ya da «Elle aç»ı kullanın.')}</Note>}
           {crm.data && (
             <>
               <p className="flex flex-wrap items-center gap-1 text-[11.5px] text-canvas-muted">
@@ -338,13 +344,13 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
           }}
         >
           <label className="block">
-            <span className={label}>Ad soyad</span>
-            <input required maxLength={300} value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!person} className={`${field} mt-1`} />
+            <span className={label}>Ad soyad *</span>
+            <input required maxLength={300} placeholder="Ör. Prof. Dr. Ayşe Kaya" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!person} className={`${field} mt-1`} />
           </label>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block">
               <span className={label}>Unvan / görev</span>
-              <input maxLength={300} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="ör. Tarih bölümü öğretim üyesi" className={`${field} mt-1`} />
+              <input maxLength={300} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ör. Tarih bölümü öğretim üyesi" className={`${field} mt-1`} />
             </label>
             <label className="block">
               <span className={label}>Kurum kartı</span>
@@ -356,19 +362,20 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
                   </option>
                 ))}
               </select>
+              <span className={hint}>Kurumun kartı varsa seçin; kişi o kurumun sayfasında da görünür.</span>
             </label>
           </div>
           {!f.orgId && (
             <label className="block">
               <span className={label}>Kurum adı (kartı yoksa)</span>
-              <input maxLength={300} value={f.orgName} onChange={(e) => set('orgName', e.target.value)} className={`${field} mt-1`} />
+              <input maxLength={300} value={f.orgName} onChange={(e) => set('orgName', e.target.value)} placeholder="Ör. Üsküdar İlçe Milli Eğitim Müdürlüğü" className={`${field} mt-1`} />
             </label>
           )}
           {common}
           <label className="block">
             <span className={label}>İlgi alanları (virgülle)</span>
-            <input value={f.interests} onChange={(e) => set('interests', e.target.value)} placeholder="ör. Osmanlı tarihi, çocuk edebiyatı" className={`${field} mt-1`} />
-            <span className="mt-1 block text-[11px] leading-snug text-canvas-muted">İnanç, siyasi görüş, köken gibi kişisel özellikler yazılmaz; yalnız mesleki ilgi.</span>
+            <input value={f.interests} onChange={(e) => set('interests', e.target.value)} placeholder="Ör. Osmanlı tarihi, çocuk edebiyatı" className={`${field} mt-1`} />
+            <span className={hint}>Virgülle ayırın. «Kime gönderelim?» hediye önerisi bu alanlara bakar. İnanç, siyasi görüş, köken gibi kişisel özellikler yazılmaz; yalnız mesleki ilgi.</span>
           </label>
           <div>
             <span className={label}>İlişki sahibi</span>
@@ -377,15 +384,15 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="block">
               <span className={label}>E-posta</span>
-              <input type="email" maxLength={200} value={f.email} onChange={(e) => set('email', e.target.value)} className={`${field} mt-1`} />
+              <input type="email" maxLength={200} value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="Ör. ayse.kaya@universite.edu.tr" className={`${field} mt-1`} />
             </label>
             <label className="block">
               <span className={label}>Telefon</span>
-              <input type="tel" maxLength={60} value={f.phone} onChange={(e) => set('phone', e.target.value)} className={`${field} mt-1`} />
+              <input type="tel" maxLength={60} value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Ör. 0216 123 45 67" className={`${field} mt-1`} />
             </label>
             <label className="block">
               <span className={label}>Şehir</span>
-              <input maxLength={120} value={f.city} onChange={(e) => set('city', e.target.value)} className={`${field} mt-1`} />
+              <input maxLength={120} value={f.city} onChange={(e) => set('city', e.target.value)} placeholder="Ör. İstanbul" className={`${field} mt-1`} />
             </label>
           </div>
           {err && <Note tone="err">{err}</Note>}
@@ -394,7 +401,7 @@ export function PersonForm({ open, onClose, person, onSaved }: { open: boolean; 
               Vazgeç
             </button>
             <button type="submit" className={btnPrimary} disabled={save.isPending || !f.name.trim()}>
-              {save.isPending ? 'Kaydediliyor…' : person ? 'Kaydet' : 'Kartı aç'}
+              {save.isPending ? 'Kaydediliyor…' : person ? 'Değişiklikleri kaydet' : 'Kişi kartını aç'}
             </button>
           </div>
         </form>
@@ -477,7 +484,7 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
   });
 
   return (
-    <Sheet open={open} onClose={onClose} modal title="Yeni kurum" subtitle="CRM ziyaret yerine bağlayın ya da (Diyanet, kütüphane, STK gibi) elle açın">
+    <Sheet open={open} onClose={onClose} modal title="Yeni kurum" subtitle="Kurumun kartını açar. Okul ya da kurum CRM'de ziyaret yeri olarak kayıtlıysa oradan alın; değilse (Diyanet, kütüphane, STK gibi) elle açın. Portal CRM'e yazmaz.">
       <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Kaynak">
         {(['crm', 'elle'] as const).map((m) => (
           <button
@@ -497,7 +504,7 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
           <div className="grid gap-2 sm:grid-cols-[1fr_170px]">
             <label className="block">
               <span className={label}>Kurum adı</span>
-              <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="ör. Üsküdar Belediyesi" className={`${field} mt-1`} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Ör. Üsküdar Belediyesi (en az 2 harf)" className={`${field} mt-1`} />
             </label>
             <label className="block">
               <span className={label}>Kurum tipi</span>
@@ -511,7 +518,7 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
               </select>
             </label>
           </div>
-          {places.error && <Note tone="err">{errText(places.error, 'CRM okunamadı.')}</Note>}
+          {places.error && <Note tone="err">{errText(places.error, 'CRM\'de arama yapılamadı. Biraz sonra yeniden deneyin ya da «Elle aç»ı kullanın.')}</Note>}
           {places.data && (
             <>
               <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">CRM'de {fmtInt(places.data.total)} kurum<SqlInfo k={places.data.kaynaklar} alan="total" label="CRM ziyaret yeri araması" /></p>
@@ -556,8 +563,8 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
           }}
         >
           <label className="block">
-            <span className={label}>Kurum adı</span>
-            <input required maxLength={300} value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} autoFocus className={`${field} mt-1`} />
+            <span className={label}>Kurum adı *</span>
+            <input required maxLength={300} value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} autoFocus placeholder="Ör. İstanbul Müftülüğü" className={`${field} mt-1`} />
           </label>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block">
@@ -572,12 +579,12 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
             </label>
             <label className="block">
               <span className={label}>İl</span>
-              <input maxLength={120} value={f.city} onChange={(e) => setF((p) => ({ ...p, city: e.target.value }))} className={`${field} mt-1`} />
+              <input maxLength={120} value={f.city} onChange={(e) => setF((p) => ({ ...p, city: e.target.value }))} placeholder="Ör. İstanbul" className={`${field} mt-1`} />
             </label>
           </div>
           <label className="block">
             <span className={label}>Not</span>
-            <textarea rows={3} maxLength={4000} value={f.note} onChange={(e) => setF((p) => ({ ...p, note: e.target.value }))} className={`${field} mt-1 resize-y`} />
+            <textarea rows={3} maxLength={4000} value={f.note} onChange={(e) => setF((p) => ({ ...p, note: e.target.value }))} placeholder="Ör. Yılda iki kez okuma kampanyası düzenliyor; iletişim basın biriminden." className={`${field} mt-1 resize-y`} />
           </label>
           {err && <Note tone="err">{err}</Note>}
           <div className="flex justify-end gap-2 pt-1">
@@ -585,7 +592,7 @@ export function OrgForm({ open, onClose, onSaved }: { open: boolean; onClose: ()
               Vazgeç
             </button>
             <button type="submit" className={btnPrimary} disabled={save.isPending || !f.name.trim()}>
-              {save.isPending ? 'Kaydediliyor…' : 'Kartı aç'}
+              {save.isPending ? 'Kaydediliyor…' : 'Kurum kartını aç'}
             </button>
           </div>
         </form>

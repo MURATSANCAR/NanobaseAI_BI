@@ -11,6 +11,7 @@ import VisitReportSheet from './VisitReportSheet';
 import DealerPanel from './DealerPanel';
 import SqlInfo from '../components/SqlInfo';
 import { ShowMoreButton, useShowMore } from '../components/ShowMore';
+import { parseTrNumber } from '../components/trNumber';
 
 /** Okul kartı (telefon öncelikli): profil, öncelik ve gerekçesi, Zeki AI ziyaret önerisi, bağlı/önerilen bayi, kademeye
  *  uygun katalog + PDF, geçmiş ziyaretler (portal + CRM), okul siparişleri. Listenin kaynağı ve tarihi görünür. */
@@ -202,7 +203,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
   const [result, setResult] = useState<Catalog | null>(null);
   const body = (preview: boolean) => ({
     siniflar: grades,
-    fiyatUst: cap ? Number(cap.replace(',', '.')) : null,
+    fiyatUst: cap ? parseTrNumber(cap) : null,
     adet: size === 'hepsi' ? ('hepsi' as const) : Number(size),
     onizleme: preview,
   });

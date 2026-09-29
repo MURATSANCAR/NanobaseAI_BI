@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { EngineAuthError, EngineForbiddenError } from '../../engine';
 import type { Status } from './api';
 import { Explain } from '../../components/Explain';
+import { normalizeTrNumber } from '../../components/trNumber';
 
 /** M6 Sözleşmeler ekranlarının ortak parçaları: biçimler, durum rengi, alttan açılan form kartı. */
 
@@ -38,7 +39,7 @@ export function errMsg(e: unknown, fallback = 'İşlem tamamlanamadı.'): string
 export const toNum = (s: string): number | null => {
   let t = s.trim();
   if (!t) return null;
-  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); // 12.500,50
+  t = normalizeTrNumber(t); // 12.500,50 ve 7.500 binlikle
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 };

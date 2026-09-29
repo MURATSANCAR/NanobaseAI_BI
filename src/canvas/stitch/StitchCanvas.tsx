@@ -12,6 +12,7 @@ import AnswerFeedback from '../components/AnswerFeedback';
 import ReasonPanel from '../reason/ReasonPanel';
 import { reasonApi } from '../reason/api';
 import { questionParticle } from '../interpret';
+import { Explain } from '../components/Explain';
 
 /**
  * Stitch ekranının (projects/13426839861607265553/screens/c35e1503…) birebir
@@ -326,7 +327,7 @@ function CanvasBody({
             </div>
             <span
               className={d.c5.sql ? 'w-2.5 h-2.5 rounded-full bg-mintSuccess ring-4 ring-mintSuccess/20 ml-2' : 'w-2.5 h-2.5 rounded-full bg-slate-300 ring-4 ring-slate-200/60 ml-2'}
-              title={d.c5.sql ? 'ZEKİ AI bu soruyu veriden cevapladı' : 'Henüz soru sorulmadı; kartlar özet dosyasından'}
+              title={d.c5.sql ? 'Zeki AI bu soruyu veriden cevapladı' : 'Henüz soru sorulmadı; kartlar günde iki kez hazırlanan özetten'}
             ></span>
           </div>
         </div>
@@ -810,5 +811,10 @@ function CanvasBody({
  *  buradan başlamaz (layout INTERACTIVE). */
 function Inf({ i }: { i?: CardInfo }) {
   if (!i) return null;
-  return <SqlInfo k={i.k} alan={i.alan} label={i.label} />;
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {i.explain && <Explain label={i.label}>{i.explain}</Explain>}
+      <SqlInfo k={i.k} alan={i.alan} label={i.label} />
+    </span>
+  );
 }

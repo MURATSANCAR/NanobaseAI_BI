@@ -4,7 +4,8 @@ import type { DbTiming } from '../DbTiming';
 import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Kartın sorgu bilgisi: başlığın yanındaki «i» (hesap + çalışan SQL'in tamamı, kopyalanabilir). */
-export type CardInfo = { k: Kaynaklar | null | undefined; alan: string; label: string };
+/** `explain`: kartın sade dille anlamı (başlıkta «?»); `k/alan`: rakamın sorgusu («i»). */
+export type CardInfo = { k: Kaynaklar | null | undefined; alan: string; label: string; explain?: string };
 
 export type StitchRow = { label: string; value: string };
 export type StitchSourceRow = { name: string; tag: string };

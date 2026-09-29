@@ -75,6 +75,9 @@ NEVER_PREFIXES = (
     "/api/v1/ask", "/api/v1/run_sql", "/api/v1/result/", "/api/v1/llm/", "/api/v1/access/", "/api/v1/admin/",
     "/api/v1/me/", "/api/v1/greetings", "/api/v1/rooms", "/api/v1/engine", "/api/v1/feedback", "/api/v1/people/",
     "/health",
+    # Sözleşme karşılaştırmanın kendi disk görüntüsü ve arka plan yenilemesi var (CRM'i yeniden oku, kurlar); ikinci
+    # önbellek yenilenen görüntüyü 07:00/12:00'ye kadar gizliyordu (2026-09-29 kabulünde bulundu).
+    "/api/v1/editorial/contracts/compare",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
 NEVER_PARTS = re.compile(

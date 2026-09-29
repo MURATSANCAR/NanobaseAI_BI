@@ -98,6 +98,24 @@ def _yuzde(r: dict) -> str:
 	return f"%{round(float(p) * 100)}" if p is not None else "olasılık yok"
 
 
+# Öncelik sıralı bir ölçektir: olasılık komşu iki düzeye bölünür (2026-09-29 «acil sözleşme basmam lazım»:
+# Acil %68 + Yüksek %29 — ikisi de %70 eşiğinin altında kaldı, öncelik boş kaldı). Komşu iki düzeyin toplamı
+# KOMSU_TOPLAM'ı geçer ve en olası düzey KOMSU_EN_AZ'dan büyükse en olası düzey seçilir.
+ONCELIK_SIRASI = ("Urgent", "High", "Medium", "Low")
+KOMSU_TOPLAM = 0.9
+KOMSU_EN_AZ = 0.5
+
+
+def _komsu(probs: dict | None, sira: list[str]) -> str | None:
+	if not probs or len(probs) < 2:
+		return None
+	a, b = sorted(probs, key=probs.get, reverse=True)[:2]
+	if a in sira and b in sira and abs(sira.index(a) - sira.index(b)) == 1 \
+			and probs[a] + probs[b] >= KOMSU_TOPLAM and probs[a] >= KOMSU_EN_AZ:
+		return a
+	return None
+
+
 def oner(doc, text: str, types: list[str], priorities: list[str], teams: list[str], duygular) -> dict:
 	"""kayit.classify'ın beklediği biçim: ticket_type, priority, agent_group, duygu, gerekce. Yalnız eşiği geçen alan
 	dolar. `types` listesi eklenen türle güncellenir. Hiçbir alan sorulamadıysa `ModelUnavailable`."""
@@ -123,16 +141,30 @@ def oner(doc, text: str, types: list[str], priorities: list[str], teams: list[st
 		sorular.append(("agent_group", "ekip", "Aşağıdaki destek kaydına hangi ekip bakmalı?", [*teams, EKIPSIZ]))
 	sorular.append(("duygu", "duygu", "Aşağıdaki destek kaydında müşterinin duygusu hangisi?", list(duygular)))
 	for alan, ad, soru, secenekler in sorular:
+		# Öncelik Türkçe adlarıyla sorulur («Urgent» yerine «Acil»): model Türkçe metinde Türkçe ölçeği daha net seçiyor.
+		etiket = {frappe._(s): s for s in secenekler} if alan == "priority" else {s: s for s in secenekler}
+		if len(etiket) != len(secenekler):
+			etiket = {s: s for s in secenekler}
 		try:
-			r = llm.choose(f"{soru}\n\n{kayit}", secenekler, priority=llm.BACKGROUND)
+			r = llm.choose(f"{soru}\n\n{kayit}", list(etiket), priority=llm.BACKGROUND)
 		except llm.ModelUnavailable:
 			hata += 1
 			continue
-		if secim.emin(r, min_p, min_m) and r["choice"] != EKIPSIZ:
-			out[alan] = r["choice"]
+		secilen = etiket.get(r.get("choice")) if r.get("choice") else None
+		if secim.emin(r, min_p, min_m) and secilen != EKIPSIZ:
+			out[alan] = secilen
 			notlar.append(f"{ad}: {r['choice']} ({_yuzde(r)})")
-		else:
-			notlar.append(f"{ad}: emin değil")
+			continue
+		if alan == "priority":
+			sira = [frappe._(p) for p in ONCELIK_SIRASI if p in secenekler]
+			komsu = _komsu(r.get("probs"), sira)
+			if komsu:
+				out[alan] = etiket[komsu]
+				p = r["probs"]
+				ikinci = sorted(p, key=p.get, reverse=True)[1]
+				notlar.append(f"{ad}: {komsu} (%{round(p[komsu] * 100)}; {ikinci} ile birlikte %{round((p[komsu] + p[ikinci]) * 100)})")
+				continue
+		notlar.append(f"{ad}: emin değil")
 	if hata == len(sorular) and not k:
 		raise llm.ModelUnavailable("sınıflama yapılamadı")
 	out["gerekce"] = "Olasılıklı seçim — " + "; ".join(notlar)

@@ -77,6 +77,7 @@ import { computed, provide, ref, watch } from "vue";
 import Branding from "./components/Branding.vue";
 import TicketSettings from "./components/TicketSettings.vue";
 import WorkflowKnowledgebaseSettings from "./components/WorkflowKnowledgebaseSettings.vue";
+import { disableSettingModalOutsideClick } from "../settingsModal";
 
 const configStore = useConfigStore();
 

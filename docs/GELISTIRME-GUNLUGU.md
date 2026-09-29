@@ -16,6 +16,35 @@
 - **İzin:** yeni anahtar açılmadı (rollere göç gerekirdi); `tasarim.uret` katalogda «Kitap tasarımında üretim ve düzenleme», açıklaması genişledi. Bugün üretebilen her rol ve Herkes («Bütün sayfalar») aynı erişimi korur; yalnız sayfası olup üretim yetkisi olmayan rol artık yazamaz. Roller veritabanından okunmadı (izin verilmedi), karar anahtarın anlamı üzerinden verildi.
 - **Ön yüz:** 28 dosya; kalıp mevcut stüdyo ekranları gibi «yetkisiz düğmeyi görmez», karar/durum gösteren düğmeler (yaş raporu kararları, kolaj tarzı, ses seçiciler) pasif, yükleme alanları gizlenmez kilitli (`FileDrop feature`), sayfa düzeni yetkisizde sunucu önizlemesiyle gezinme.
 - **Test (test sunucusu, geçici `/tmp/zk-rol`, silindi):** pytest yetki+stüdyo 34 + 39 geçti (yeni: uygulamadaki bütün stüdyo uçlarını tarayan sınıflandırma testi, sayfası olan ama yetkisi olmayan rolün 403 alması), köprü içe aktarma tamam; `tsc --noEmit` 0 hata, vitest 45 dosya / 251 test geçti. Canlıya kurulmadı.
+## 2026-09-29 (13:20) — Excel indirme: düzeltmeler test sunucusunda, set kart listesi ekranı da denendi
+
+- **Kurulum (`bb527271`):** 8 dosya (md5 = değişiklik öncesi main), derleme, köprü yeniden başladı. `cockpit/dist/index.html`
+  12:19'da başka oturumun root kurulumuyla root'a geçmişti; yeni paketler kopyalandı (aynı adlı dosyalar içerik olarak aynı,
+  `cmp` ile denetlendi), `index.html` sudo ile yazıldı. Portal `index-D-pg7UdU.js`; Kampüs paketinde «Rehberi indir (Excel)» var.
+- **Set kart listesi ekranı (kullanıcı: «hadi dene»):** test sunucusunda portalda açılmış set yoktu. `set_karti_deneme.py`:
+  taslak set API'den açıldı (`MS-2026-0931`, iki gerçek kitap), durumu yalnız bu kayıt için «kart-bekliyor» yapıldı (onay dört
+  göz ister, başka kişi taklit edilmedi), tarayıcıda Excel düğmesi: 6/6 geçti (11 satır hücre hücre aynı, 390 px taşma yok);
+  sonra taslağa alınıp uygulamanın silme yoluyla silindi, kayıt ve bileşen 0. Numara `MS-2026-0931` boşta kaldı.
+- **Test sürecinde bulunan iki tuzak:** (1) 8794 portunu 12:28'de başka oturumun yan köprüsü aldı, test ona gitti → boş port
+  seçiliyor; (2) süreç canlı köprünün hazır cevap klasörünü kullanıyordu, açılışta bütün kişilerin kayıtlarını tazelemeye çalışıp
+  kilitlendi → `yerinde.py` artık süreç başına geçici klasör kullanır.
+## 2026-09-29 (akşam, 2) — Kalan ekranlar tamamlandı (Genel bakış, stüdyo iç panelleri, pazarlama formları, belirsiz alanlar); «7.500» → 7,5 ₺ hatası düzeldi
+
+- **İstek (kullanıcı):** ilk turda dokunulmayan ve yüzeysel geçilen ekranlar.
+- **Genel bakış / Uyarılar (ortak kabuk, tek elden):** kart başlığındaki «i» parçası (`stitch/StitchCanvas` `Inf`) `CardInfo.explain` alır; net ciro, aylık seyir, kanal, en büyük cari, kaynak, özet, en çok satan kartlarına `cfo.ts` hesap tanımlarından sade açıklama. Özet cümlesinin Zeki AI'ın değil kartların rakamlarından kurulduğu yazıldı. «ZEKİ», «Verine sor», «Kanıt & Kaynak», «patlamak üzere» düzeldi; bilgi kutusundaki «3 dakikada bir» → özet sunucuda 3 dk, ekran 07:00/12:00. `BiCanvasPage` `addToBoard`/`onAdd` açık dönüş tipi (yeni `CardInfo` alanı TS7023 döngüsel çıkarımı tetikliyordu).
+- **Belirsiz alanlar — CRM'in kendi etiketleri test sunucusundan salt okuma (`MetadataSchema`, `StringMapBase`):** `new_imhaSuresiAy` = «Yayınlanmaması Halinde Fesih Süresi (ay)» → telif yenileme ekranındaki «İmha süresi» etiketi **yanlıştı**, düzeldi (sorgu bilgisi metni dahil); `account.new_distributionstatus` «Dağılım Durumu Göster» (Evet olan cari satışı olmasa da ilk dağılım planına eklenir — `distribution.py`); `new_bandroldurumu` Alındı/Alınmadı/Bandrolsüz; `campaign.obs_blacklistcount` «Kara Liste Adedi»; `new_ZKitapHakki` «Z-Kitap Hakkı» (açıklama yok → zenginleştirilmiş kitap); fazla basım (adet/yüzde). Hepsine «?».
+- **Paralel iki kol:** stüdyo iç panelleri (sesli okuma, sözlük, efekt sesleri, okur, yaş raporu, 3B/prova, öğeler, karakterler, stüdyo pazarlama, kapak, boyama, karşılaştırma, e-kitap) ve pazarlama formları (yeni gönderi, işbirliği, kişi, yansıma, kurumsal hediye/proje, ödül, segment oluşturucu, içerik talebi, lansman medya). Efekt sesi araması en uygun 30'u getirdiğini artık söyler.
+- **Tutar hatası (pazarlama formları kolu buldu):** ücret/bütçe alanına «7.500» yazan 7,5 kaydediyordu; aynı kalıp 10 modülün yardımcısında ve sözleşme `toNum`, eğitim kişi başı maliyet, okul fiyat üst sınırı, emsal fiyatı, ilk baskı fiyatında vardı. Ortak `components/trNumber.ts` + `trNumber.test.ts`; bütün bu yerler ona bağlandı. Serbest çalışan, uyarı eşiği, etkinlik, fiyatlama zaten doğruydu.
+- **Doğrulama (test sunucusu geçici kopya):** `tsc -b` 0, `vite build`, vitest 256/256 (46 dosya).
+- **Açık (kollar buldu, düzeltilmedi):** karakter referans görseli ve lansman medya kaydı onaysız siliniyor; boyama «Fark» 20 üstüne izin veriyor; yaş raporunda karardan sonra yazılan not kaydedilmiyor; telaffuz sözlüğünde okunuşu boş satır sessizce atılıyor; ses yükleme uyarısı sınır+10 sn'de; okur panelinde sunucu hatasında karar işareti geri alınmıyor; işbirliği ve içerik talebi pencereleri yeniden açılınca eski değerleri tutuyor; görsel/metin reddi `window.prompt` ile soruluyor.
+
+## 2026-09-29 (akşam) — Kitap pazarı verisi uçtan uca incelendi; stok vekili Logo ile doğrulandı; ekran kullanım haritası
+
+- **Kullanıcı:** «verileri uçtan uca incele, ekranlarda nerede nasıl kullanabileceğimizi çıkar.»
+- **Doğrulama:** Logo'da Başarı cari `12001.01.BA104` (2025: 257.048 adet sevk, 2026 Eylül'e kadar 229.965). 2.150 TİMAŞ barkodunda Logo sevki ↔ Başarı arşivindeki stok hareketi korelasyonu 0,92–0,94; adet olarak arşiv ≈3 kat eksik (15 günlük görüntü). Sonuç: rakip kitaplar için «çıkış endeksi» sıralama/eğilim olarak kullanılır, adet değil.
+- **Kalite:** Başarı alanları %87–100 dolu (ebat/renk bilgisiz); D&R'de fiyat ve kategori yolu tam, stok `b2bstock`'ta (`available_stock` %1); `deleted` anlamı belirsiz. TİMAŞ başlıklarının %99'u Logo barkoduyla eşleşiyor.
+- **Bulgu:** Başarı'da «Baskısı Yok» görünen ≈385 TİMAŞ başlığının Logo'da stoğu var (satış kaybı adayı; adetler Stok formülüyle doğrulanmalı). Ortalama liste fiyatı 21 ayda 137 → 226 ₺.
+- **Harita:** 10 ekran; öncelik Pazar ve rakip (CRM «Rakip Kitap»ın yerine), Stok/Baskı önerisi (dağıtımcı stoğu), Fiyatlama (otomatik rakip fiyatı), İlk baskı (rakip emsali). Hepsinden önce gece görüntüsü + arşiv içe alma + eşleme. Belge: `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
 
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
@@ -23,6 +52,10 @@
 - **Yapılan:** `admin.system_actor` — yapan boşsa ya da `sistem`/`system`/`zamanlayıcı`/`scheduler` ise yazarken ve listelerken `LLM_DISPLAY` («ZEKİ AI»); eski satırlar da ekranda böyle görünür, «ZEKİ AI» süzgeci onları da getirir; Yönetim → Kişiler'de kişi sayılmaz. `crm-unassigned/send` zamanlayıcıdan gelince yapan boş. Test sunucusunda Claude'un yazdığı `CRM_UNASSIGNED_TO` kaydı «ZEKİ AI»ye çevrildi.
 - **İlk gönderim:** 12:58'de kullanıcı isteğiyle elle; Bilgiislem@timas.com.tr, 105 kişi.
 - **Test:** `test_admin_audit_actor.py` (yeni, 2) + yönetim/yetki testleri 27 geçti.
+## 2026-09-29 (akşam) — Ekran sadeleştirme işi müşteri VM'inde de; «VM bekliyor» notu eskidi
+
+- Müşteri VM'ine başka oturumun kurduğu `7fa258e8` (12:25, `EXIT 0`, `._*` 0) bu işin bütün commit'lerini içeriyor: 275 rota sadeleştirmesi (`ba34271d`), cari araması «ilk N sonuç» (`e6b606c1`), ekrandan ve koddan dış çeviri programı adlarının kaldırılması (`c00bdfb2`, `206c5f29`). Aşağıdaki «Müşteri VM'i bekliyor» satırı artık geçerli değil.
+- Test sunucusu şu an main `2f358e72` ile birebir (1.465 dosya, fark 0). VM'de olmayan sonraki 27 commit başka oturumların işi.
 
 ## 2026-09-29 (öğleden sonra, 3) — Onay penceresi test sunucusunda tıklanarak denendi: 21/21
 
@@ -121,6 +154,13 @@
 - **Yazar ilişkileri** (2,3 sn): hazır parça istekte ayrıştırılmıyor, sadakat günde bir kez (`test_hiz_yazar_iliskileri.py`). Kart/ajanda ucunda ağır iş bulunmadı; ısı haritasıyla aynı süreçte bekliyorlardı.
 - **Sözleşmeler** (11–14 sn): özet editoryal masam hazırlığından, liste bellekte (`contracts_hizli.py`, `test_hiz_sozlesmeler.py`). Ortak kök neden: `Runtime._execute` tek bağlantı kilidi turların arkasında sıraya sokuyor (dokunulmadı).
 - **Açık:** kategori ağacı/üretim ve pazarlama backlist alt ajanlarda sürüyor; «Verileri yenile» başlığıyla ölçüm üretim/sözleşme/yazar ucunda kaynağı bilinçli bekler — ölçüm başlıksız yapılmalı.
+## 2026-09-29 — Kitap pazarı veri kaynağı: `API_URUN_DB` (.25) bulundu ve profillendi
+
+- **Kullanıcı:** «.25'te Logo prod'un yanında kitap pazar araştırması için başka bir DB daha var.»
+- **Bulunan:** `.25`'te 16 veritabanı; `zekiai`'nin girebildiği aday `API_URUN_DB`. Başarı Dağıtım kataloğunun tarihli arşivi (`urun_list_BACKUP` 7.525.932 satır, 35 görüntü 2024-03-21 → 2026-01-01, 2.649 yayınevi), güncel Başarı (`basari_list` 234.705) ve D&R B2B (`prefix_list` 386.124) katalogları (ikisi de 2026-09-25 tek görüntü), `LOGO_TARCIN_ITEM_LIST`, `urun_raf`, 3 eşleme görünümü.
+- **Yetki:** `zekiai` bu veritabanında yanlışlıkla `db_datawriter`'dı (okuyamıyor, yazabiliyordu; kullanıcının «yetki var» demesi bundan). Sistem kataloğundan rol üyeliği ölçülüp BT'ye tek satır verildi; aynı gün `db_datareader` yapıldı, yazma kaldırıldı.
+- **İlk ölçüm:** 2025-12-01 → 2026-01-01 arasında 221.964 ortak barkodun 41.680'inde depo stoku değişti, toplam düşüş 229.073 adet → stok farkı satış hızı vekili olarak kullanılabilir. Arşiv 2026-01-01'de duruyor; ileriye dönük hız için görüntüleri bizim saklamamız gerekir.
+- **Belge:** `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
 
 ## 2026-09-29 — Yetki üye okuması 07:00/12:00; departmansız CRM kullanıcıları Excel'i aynı saatlerde e-postayla
 
@@ -262,6 +302,16 @@
 - **Cevap kapısı** (`answer-gate --repeat 1`, 69 altın soru, canlı DB): SAĞLAM 50 · BOZUK 17 · VERİ 2. 21 Eylül'e göre 10 soru SAĞLAM→BOZUK, 2 soru BOZUK→SAĞLAM. Geçişten beri köprü günlüğünde eksik nesne/yetki/giriş hatası 0. Bozulanların nedeni kaynak değişikliği değil: D037 (model `CODE LIKE '120%'` ekliyor, canlıda 120 dışı bir cari var → 1 satır eksik), C015 (model müşteriyi ada göre grupluyor, canlıda aynı adlı iki cari → 1 satır eksik), A028 (derleyici `OptimizeError: Alias already used: d`, veriden bağımsız), A060 (modelin SQL'inde GROUP BY eksik), A019/A023/B007 (ret/cevap kararı), A094 (ortalama tam sayıya yuvarlanıyor), B064, A053 (merkezsiz gider satırı yok sayılıyor). A055/C010 VERİ: canlıda açık üretim emri yok, referans da boş. Bunlar ayrı iş olarak kaldı.
 - **Kabul betikleri:** bağımsız yıl→firma kopyaları (M24, M36, M48, M57, m31, sorgu-bilgisi denetim, zeki-fark) `SEMANTIC_FIRMS`'e uyar hale getirildi.
 - **Bekleyen:** müşteri VM'i (`.env`'e `SEMANTIC_FIRMS`, `secrets/logo-mssql-connection.json` → .25/`zekiai`, `main` kurulumu) — VM erişimi için kullanıcı onayı gerekiyor.
+## 2026-09-29 (13:00) — Sözleşme karşılaştırma: editör ve hukukçu gözüyle eksikler kapatıldı (faz 1–3)
+
+- **Neden:** Kullanıcı modülü editör ve hukukçu gözüyle yeniden değerlendirmemi, sonra hepsini analiz edip planlayıp kodlamamı istedi. Plan ve ölçümler `docs/analiz/sozlesme-karsilastirma-eksikler-2026-09-29.md` (13 madde; kademeli telif CRM'de tablo olmadığı için yapılamaz).
+- **Faz 1 (doğruluk, günlük iş):** TL tutarlar başlangıç ayının TCMB USD kuruyla dolara çevrilip kıyaslanıyor (5 yılda kur ~5 kat; nominal kıyas eskiyi «düşük» gösteriyordu). Kur önbelleği `kur.json`, 274 ay; **ortak `contracts_royalty.tcmb_rate` 2016 öncesi TCMB dosyalarını okuyamıyordu** (öznitelik sırası `CurrencyCode="USD" Kod="USD"`), düzeltildi — hakediş için de geçerli. Bulgu incelemesi (uygun / istisna / CRM düzeltilmeli / hukuka sorulacak, not, sorumlu; değer değişince eski değere ait), «incelenmemiş» süzgeci, liste CSV + Excel. Yeni sözleşme formunda ve düzenleme kartında kaydedilmeden emsal kontrolü. Şekil denetimi (FSEK 52 mali haklar, süre, başlangıç, tarih tutarlılığı, taraf, kitap, ücret, satışta ülke): gerçek veride 2.398 anlaşmada en az bir eksik (başlangıç 1.472, süre 1.313, kitap 1.276, taraf 918, ücret 501, mali hak 97). Hak açıklaması sınıfı serbest metnin yanında.
+- **Faz 2 (ticari kıyas):** isteğe bağlı ölçütler — ajans üzerinden (aracı taraf 2.768 kayıt), hak sahibinin satış dilimi (yazar ilişkilerinin hazır Logo satış okumasından son 36 ay; yeni Logo sorgusu yok), hedef kitle (kitap kartı, %99 dolu), tür (türler metni, %62), yerli/çeviri (kitabın orijinal dili, 5.863/7.169). Web kategorisi yalnız 5 kitapta dolu olduğu için kullanılmadı. Sözleşme olayları: ek protokol, muvafakatname, fesih, yenileme, portal zeyilnameleri.
+- **Faz 3 (hukuk):** standart pozisyonlar (kural + emsalden öneri → onay; `ozellik:sozlesme-karsilastirma.pozisyon` açık yetki), 20 hukuki madde türü (önce kural; kalan madde kendi modelimize maskeli metinle kapalı küme sorusu, eşik altı belirsiz), arşivin çoğunda olup belgede olmayan türler, çoklu yükleme ve sözleşme numarasıyla kendiliğinden bağlama, maskeli metin (maskesiz görünüm kayıt altında), saklama süresi ayarı, Word raporları (sözleşme, belge farkı). HEIC yalnız `pillow_heif` kuruluysa (kurulu değil; VM işlemcisi nedeniyle paket kurulumu ayrı onaya bırakıldı).
+- **Kabulde bulunan hata:** bugün `main`e giren hazır cevap katmanı yavaş GET'leri 07:00/12:00'ye kadar saklıyor; «CRM'i yeniden oku» ve kur tamamlanması ekrana yansımıyordu → karşılaştırma uçları bu katmanın dışında (kendi disk görüntüsü var).
+- **Doğrulama (test sunucusu, yan köprü :8801 + gerçek CRM, `scripts/acceptance/sozlesme-karsilastirma/kabul.py`):** **119/0**. Uç ↔ doğrudan CRM SQL: sözleşme sayısı, emsal dağılımı, kur çevrimi (betiğin kendi TCMB okumasıyla), şekil eksiği, pozisyon ihlali (karton telif en çok %10 → uç 12 = SQL 12), öneri alt sınırı (%5 yüzdeliği), olay tarihi, CSV satırı = tarama toplamı; gerçek taranmış PDF'in 42 maddesi: 5'i kuralla, 28'i Zeki AI ile türlendi; yüklenen belge sözleşme numarasıyla kendiliğinden bağlandı. Kur 273/274 ay: eksik ay başlangıcı gelecekte olan sözleşmenin (TCMB'de yok, beklenen). Kabulün kendi yükleme/inceleme/pozisyon satırları silindi (0 satır); timasai değişiklik kaydı satırları 7675–7727 ve 7732–7784 kaldı. pytest (karşılaştırma ~41 + sözleşme/erişim/yönetim), tsc, vitest geçti. Ekran 320/390/768/1440: sayfa taşması 0, konsol hatası 0. Ekran bilgisi kutusu karşılaştırma adresinde tek sözleşme metnini açıyordu (`path:/telif-sozlesme/:key` kalıbı) → kendi adres anahtarı + test.
+- **Kurulum:** henüz yok (önceki modülün test sunucusu kurulumu da yayın adımında bekliyor: köprü yeniden başlatma + arayüz derlemesi izin denetimine takıldı, komut kullanıcıda).
+
 ## 2026-09-29 (10:40) — Sözleşme karşılaştırma: maddeler geçmiş sözleşmelerle (emsal), özgün notlar, belge madde madde
 
 - **Neden:** Kullanıcı «okunan sözleşmelerin maddelerini geçmiş sözleşmelerle karşılaştırıp farklı olanları çıkaran» modül istedi; M6'da şart çıkarma vardı, emsal kıyası yoktu. Menü: Editoryal › Sözleşmeler › **Sözleşme karşılaştırma** (`/telif-sozlesme/karsilastirma`, sayfa anahtarı `sayfa:sozlesme-karsilastirma`).

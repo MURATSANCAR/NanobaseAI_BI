@@ -3,6 +3,7 @@ import { BookText, GraduationCap, Megaphone, ShoppingBag, Share2 } from 'lucide-
 import { Loading, Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import BackCoverTab from './BackCoverTab';
 import GuideTab from './GuideTab';
 import ProductTab from './ProductTab';
@@ -37,8 +38,11 @@ export default function MarketingKit({ jobId }: { jobId: string }) {
       <div id="pazarlama" className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-[16px] font-extrabold"><Megaphone className="h-5 w-5 text-canvas-violet" aria-hidden />Pazarlama</h2>
-            <p className="text-[12px] text-canvas-muted">Arka kapak yazısı, ürün sayfası, sosyal medya görselleri ve öğretmen kılavuzu. Hepsi editör onayıyla.</p>
+            <h2 className="flex items-center gap-2 text-[16px] font-extrabold">
+              <Megaphone className="h-5 w-5 text-canvas-violet" aria-hidden />Pazarlama
+              <Explain label="Pazarlama" className="-ml-1">Zeki AI metinleri kitabın kendi metninden yazar. Her çıktıyı bir editör onaylar ve kimin onayladığı kaydedilir; onaylanmamış çıktı indirilemez, kapağa uygulanamaz ve arama motoru metinlerine gitmez. Sekme adının yanındaki yeşil nokta, o çıktının onaylı olduğunu gösterir.</Explain>
+            </h2>
+            <p className="text-[12px] text-canvas-muted">Arka kapak yazısı, ürün sayfası, sosyal medya görselleri ve öğretmen kılavuzu. Zeki AI yazar, siz düzeltip onaylarsınız.</p>
           </div>
         </div>
         <div role="tablist" aria-label="Pazarlama kiti" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">

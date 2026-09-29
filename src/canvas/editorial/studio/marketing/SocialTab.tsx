@@ -6,6 +6,7 @@ import { Img, press } from '../shared';
 import { marketingApi, type MarketingView, type SocialEffect, type SocialTemplate, type SocialVisual } from './api';
 import { Approval, Section, field, ghostBtn, gradientBtn, label } from './parts';
 import { useCan } from '../../../useAdmin';
+import { EmptyHint } from '../../../components/Explain';
 
 const VISUALS: [SocialVisual, string, string][] = [
   ['cover', 'Kapak', 'Ön kapak, başlık ve kitap adı'],
@@ -56,7 +57,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
   return (
     <div className={`grid min-w-0 gap-4 ${canEdit ? 'lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]' : ''}`}>
       {canEdit && <div className="flex min-w-0 flex-col gap-3">
-        <Section title="Yeni görsel">
+        <Section title="Yeni görsel" explain="Sırayla: şablonu (paylaşılacak yerin ölçüsü) seçin, görsel türünü ve zemini seçin, isterseniz başlık yazın, sonra «Görseli diz». Dizilen görsel sağdaki listeye gelir; indirmek için önce onaylayın.">
           <div role="radiogroup" aria-label="Şablon" className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1">
             {s.templates.map((t) => (
               <button key={t.key} type="button" role="radio" aria-checked={template === t.key} onClick={() => setTemplate(t.key)}
@@ -83,7 +84,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
             <div className="flex flex-col gap-1">
               <span className={label}>Görsel</span>
               {pickable.length === 0 ? (
-                <p className="text-[12px] text-canvas-muted">{visual === 'cover' ? 'Kapak henüz dizilmedi.' : 'Seçilebilir iç sayfa resmi ya da fotoğraf yok.'}</p>
+                <p className="text-[12px] text-canvas-muted">{visual === 'cover' ? 'Kapak henüz dizilmedi; kapak dizilince burada seçilebilir. Şimdilik «Alıntı kartı»nı kullanabilirsiniz.' : 'Seçilebilir iç sayfa resmi ya da fotoğraf yok; kitabın resimleri çizilince burada görünür.'}</p>
               ) : (
                 <ul className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-3">
                   {pickable.map((x) => (
@@ -150,7 +151,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
 
           {draftSelected && (
             <Note tone="warn">
-              <span className="inline-flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{s.draft_note}: seçilen görsel ZEKİ AI ile çizildi.</span>
+              <span className="inline-flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{s.draft_note}: seçilen görsel Zeki AI ile çizildi.</span>
             </Note>
           )}
           {err && <Note tone="err">{err}</Note>}
@@ -163,7 +164,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
       <Section title={`Görseller (${s.items.length})`} aside={
         canExport && approvedCount > 0 ? <a className={ghostBtn} href={marketingApi.socialZipUrl(jobId)}><Download className="h-4 w-4" aria-hidden />Onaylıları indir ({approvedCount}, zip)</a> : null}>
         {s.items.length === 0 ? (
-          <p className="text-[12.5px] text-canvas-muted">{canEdit ? 'Henüz görsel yok. Soldan şablon ve görsel seçip dizin; her görsel onaylanınca indirilebilir.' : 'Henüz görsel yok.'}</p>
+          <EmptyHint title="Henüz görsel yok" why={canEdit ? 'Şablon ve görsel seçip «Görseli diz»e basın. Her görsel onaylanınca tek tek ya da hepsi birden indirilebilir.' : 'Görselleri kitap tasarımında üretim yetkisi olan biri dizer.'} />
         ) : (
           <ul className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {s.items.map((it) => (
@@ -187,8 +188,8 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
                     <Check className="h-4 w-4" aria-hidden />{it.approved ? 'Onayı geri al' : 'Onayla'}
                   </button>}
                   {canExport && it.approved && <a className={ghostBtn} href={marketingApi.socialDownloadUrl(jobId, it.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
-                  {canEdit && <button type="button" className={ghostBtn} aria-label="Görseli sil" disabled={remove.isPending}
-                    onClick={() => { if (window.confirm('Bu görsel silinsin mi?')) remove.mutate(it.id); }}>
+                  {canEdit && <button type="button" className={ghostBtn} aria-label="Görseli sil" title="Görseli sil" disabled={remove.isPending}
+                    onClick={() => { if (window.confirm('Bu görsel silinsin mi? Gerekirse aynı ayarlarla yeniden dizebilirsiniz.')) remove.mutate(it.id); }}>
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </button>}
                 </div>}

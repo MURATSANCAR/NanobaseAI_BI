@@ -865,7 +865,9 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
                          r"|editorial/ask/export\.pdf"
                          r"|editorial/translation/jobs/[^/]+/(export\.docx|quality\.csv)|editorial/translation/terms/export\.csv"
                          r"|editorial/freelance/payouts/[^/]+/export\.csv"
-                         r"|editorial/contracts/(item|addenda|statements)/[^/]+/document\.docx)$",
+                         r"|editorial/contracts/(item|addenda|statements)/[^/]+/document\.docx"
+                         r"|editorial/contracts/compare/scan\.csv"
+                         r"|editorial/contracts/compare/(contract/[^/]+/report|documents/diff)\.docx)$",
      "ozellik:veri.disa-aktar"),
     (frozenset({"PUT"}), r"^/api/v1/board$", "ozellik:pano.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/reports(/(?!run-due$)[^/]+(/run)?)?$", "ozellik:rapor.planla"),

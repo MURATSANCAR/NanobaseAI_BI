@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import { BookOpen, BookX, ChevronLeft, ChevronRight, Film, ImageDown, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import { ghostBtn, press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { SCREEN, proofApi, type PaperChoice, type ProofBook } from './api';
 import { BookScene, type BookState } from './scene';
 
@@ -202,17 +203,21 @@ export default function Book3DView({ jobId, book, paper, rev, title }: Props) {
         <button type="button" className={ghostBtn} disabled={recording} onClick={() => sceneRef.current?.resetView()} title="Görünümü sıfırla">
           <RotateCcw className="h-4 w-4" aria-hidden /><span className="sr-only sm:not-sr-only">Sıfırla</span>
         </button>
-        <button type="button" className={ghostBtn} disabled={recording} onClick={togglePresent}>
+        <button type="button" className={ghostBtn} disabled={recording} onClick={togglePresent}
+          title={present ? undefined : 'Tam ekran, kitap yavaşça döner; ok tuşlarıyla sayfa çevrilir'}>
           {present ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
-          {present ? 'Sunumdan çık' : 'Sunum'}
+          {present ? 'Sunumdan çık' : 'Sunumu başlat'}
         </button>
         <button type="button" className={ghostBtn} disabled={recording} onClick={onPng} title="Saydam zeminli yüksek çözünürlüklü görüntü">
-          <ImageDown className="h-4 w-4" aria-hidden />PNG
+          <ImageDown className="h-4 w-4" aria-hidden />Görüntü indir
         </button>
-        <button type="button" className={ghostBtn} disabled={recording} onClick={onVideo} title={`${VIDEO_S} saniyelik dönen video`}>
+        <button type="button" className={ghostBtn} disabled={recording} onClick={onVideo} title={`${VIDEO_S} saniyelik dönen video; kayıt bitene kadar bu ekranda kalın`}>
           {recording ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Film className="h-4 w-4" aria-hidden />}
-          {recording ? `Kaydediliyor %${Math.round((rec ?? 0) * 100)}` : 'Video'}
+          {recording ? `Kaydediliyor %${Math.round((rec ?? 0) * 100)}` : 'Video indir'}
         </button>
+        {!present && (
+          <Explain label="Görüntü ve video">«Görüntü indir» kitabın şu anki görünümünü saydam zeminli yüksek çözünürlüklü bir resim olarak kaydeder. «Video indir» kitabın döndüğü {VIDEO_S} saniyelik bir video kaydeder; kayıt tarayıcınızda yapılır, bitene kadar bu ekranda kalın. İkisi de kitabı değiştirmez.</Explain>
+        )}
       </div>
     </div>
   );

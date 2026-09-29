@@ -96,7 +96,7 @@ export const tabs = computed(() => {
           label: __("Invite Agents"),
           icon: markRaw(LucideUserPlus),
           component: markRaw(InviteAgents),
-          condition: () => auth.isAdmin || auth.isManager,
+          condition: () => false,
         },
         {
           label: __("Teams"),
@@ -142,6 +142,7 @@ export const tabs = computed(() => {
           label: __("Telephony"),
           icon: markRaw(PhoneIcon),
           component: markRaw(TelephonyPage),
+          condition: () => false,
         },
         {
           label: __("ERPNext"),
@@ -161,7 +162,7 @@ export const tabs = computed(() => {
         return true;
       });
     }
-    return true;
+    return !tab.items || tab.items.length > 0;
   });
 });
 

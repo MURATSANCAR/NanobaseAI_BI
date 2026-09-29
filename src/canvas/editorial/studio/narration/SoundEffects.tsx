@@ -11,6 +11,7 @@ import {
 } from './sfxApi';
 import { StudioInfo } from '../shared';
 import { useCan } from '../../../useAdmin';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Sesli okumada efekt sesleri: Zeki AI sayfa metninden yansıma sözcükleri («vak vak», «güm»), sesi olan olayları
  *  («kapı gıcırdadı») ve sahne ortamını bulur; her ipucu havuzdan en uygun sesle eşleşir. Editör her ipucunda sesi
@@ -48,7 +49,7 @@ export default function SoundEffects({ jobId, narrationReady }: { jobId: string;
             Efekt sesleri
             <StudioInfo label="Efekt sesleri" what="Efekt sayısı sayfalara yerleşmiş efektler; kütüphanedeki ses sayısı efekt kütüphanesinden." />
           </h3>
-          <p className="text-[11.5px] text-canvas-muted">Patlama, vak vak, rüzgâr, ateş… Anlatımın altına, kelimenin yanına yerleşir.</p>
+          <p className="text-[11.5px] text-canvas-muted">Patlama, vak vak, rüzgâr, ateş… Zeki AI metindeki sesleri bulur; seçtiğiniz efekt anlatımın altında, kelimenin okunduğu anda çalar.</p>
         </div>
         {d && (canEdit ? <Toggle jobId={jobId} d={d} onDone={refresh} />
           : <span className="text-[12px] font-bold text-canvas-muted">{d.settings.enabled ? 'Efektler açık' : 'Efektler kapalı'}</span>)}
@@ -118,7 +119,7 @@ function Body({ jobId, d, refresh, narrationReady, canEdit }: {
           {running && (
             <div className="flex flex-col gap-1">
               <Progress value={d.run.done ?? 0} total={d.run.total ?? 0} />
-              <span className="text-[11.5px] text-canvas-muted">{d.run.done ?? 0}/{d.run.total ?? 0} sayfa {d.run.kind === 'mix' ? 'karıştırıldı' : 'okundu'}</span>
+              <span className="text-[11.5px] text-canvas-muted">{d.run.done ?? 0}/{d.run.total ?? 0} sayfa {d.run.kind === 'mix' ? 'karıştırıldı' : 'okundu'} · İş arka planda sürer; sayfadan ayrılabilirsiniz.</span>
             </div>
           )}
           {!narrationReady && <Note tone="info">Efektli ses, sayfanın anlatımı hazır olunca karıştırılır.{canEdit ? ' Efektleri şimdiden seçebilirsiniz.' : ''}</Note>}
@@ -141,7 +142,7 @@ function PageEditor({ jobId, d, refresh, canEdit }: { jobId: string; d: SfxOverv
   const stamp = `${row?.mix ?? ''}-${row?.cues ?? ''}-${row?.suggested ?? ''}-${d.run.state}`;
   const pq = useSfxPage(jobId, pid, stamp);
 
-  if (d.pages.length === 0) return <p className="text-[12.5px] text-canvas-muted">Kitapta okunacak metin yok.</p>;
+  if (d.pages.length === 0) return <EmptyHint title="Okunacak metin yok" why="Efekt, sayfadaki yazıya bağlanır. Sayfa düzeninde sayfalara metin ekleyince sayfalar burada listelenir." />;
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <ul className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Sayfalar">
@@ -264,7 +265,10 @@ function PageBody({ jobId, pid, page, onSaved, canEdit }: {
 
       <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
       <div className="flex min-w-0 flex-col gap-2">
-        <h4 className="text-[12.5px] font-extrabold">Efektler {cues.length ? `(${cues.length})` : ''}</h4>
+        <h4 className="flex items-center gap-1 text-[12.5px] font-extrabold">
+          Efektler {cues.length ? `(${cues.length})` : ''}
+          <Explain label="Efektler">Her satır, metindeki bir kelimeye bağlı bir efekttir. Numaralı adaylardan birini dinleyip seçin; «Zeki AI %…» önerinin ne kadar emin olduğunu gösterir. «Kelimeyle birlikte» efekti kelime okunurken, «Hemen ardından» kelimeden sonra çaldırır. Değişiklikler «Sayfayı kaydet»e basınca geçerli olur.</Explain>
+        </h4>
         {cues.length === 0 && <p className="text-[12px] text-canvas-muted">{page.suggested ? 'Zeki AI bu sayfada efekt önermedi.' : 'Bu sayfa henüz önerilmedi.'}</p>}
         <ul className="flex flex-col gap-2">
           {cues.map((c) => (
@@ -293,7 +297,9 @@ function PageBody({ jobId, pid, page, onSaved, canEdit }: {
         </>}
         <span className="flex items-center gap-1.5 text-[11.5px] text-canvas-muted">
           <span className={`inline-block h-2 w-2 rounded-full ${MIX[page.mix.state].dot}`} aria-hidden />{MIX[page.mix.state].text}
+          <Explain label="Karıştırma">Karıştırma, seçilen efektleri sayfanın anlatım sesiyle tek ses dosyasında birleştirir; anlatım yeniden seslendirilmez. Önce «Sayfayı kaydet», sonra «Bu sayfayı karıştır». Sayfa henüz seslendirilmediyse efektli ses anlatım hazır olunca karıştırılabilir.</Explain>
         </span>
+        {dirty && <span className="w-full text-[11px] text-canvas-muted">Kaydedilmemiş değişiklik var; karıştırmadan önce sayfayı kaydedin.</span>}
       </div>
       {(save.error || mix.error) && <Note tone="err">{errText(save.error || mix.error, 'İşlem yapılamadı.')}</Note>}
       {mixUrl && <MixPlayer url={mixUrl} placements={page.mix.meta?.placements ?? []} />}
@@ -377,7 +383,10 @@ function Ambience({ amb, sounds, preview, onChange, onSearch }: {
     <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-2.5">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Trees className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-        <h4 className="text-[12.5px] font-extrabold">Ortam sesi</h4>
+        <h4 className="flex items-center gap-1 text-[12.5px] font-extrabold">
+          Ortam sesi
+          <Explain label="Ortam sesi">Sahnenin arka plan sesi (orman, yağmur, kalabalık…). Sayfa boyunca çok düşük çalar, girişte ve çıkışta yumuşakça açılıp kapanır. «Bölümün bütün sayfaları» seçilirse aynı bölümdeki sayfalarda da çalar.</Explain>
+        </h4>
         <span className="min-w-0 truncate text-[11.5px] text-canvas-muted">
           {amb ? `${amb.query || 'seçildi'}${amb.from_page ? ' · bölümden' : ''}` : 'Sayfa boyunca çok düşük, girişte ve çıkışta yumuşak'}
         </span>

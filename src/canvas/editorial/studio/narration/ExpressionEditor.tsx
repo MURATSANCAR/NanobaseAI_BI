@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Loader2, Play, RefreshCw, Sparkles, Square } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { NarrationError } from './api';
 import {
   expressionApi, useExpression,
@@ -70,15 +71,18 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
     <section className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-slate-200/80 bg-white/70 p-3" aria-labelledby={`ifade-${pid}`}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
-          <h3 id={`ifade-${pid}`} className="text-[13px] font-extrabold">İfade</h3>
+          <h3 id={`ifade-${pid}`} className="flex items-center gap-1 text-[13px] font-extrabold">
+            İfade
+            <Explain label="İfade">Seslendirmenin her cümleyi hangi tonla (neşe, merak, fısıltı…) okuyacağı ve hangi kelimeyi öne çıkaracağı. Değişiklik hemen kaydedilir; bu sayfanın sesi «güncel değil» olur ve yalnız bu sayfa yeniden seslendirilir. Ton düğmelerindeki yüzde, Zeki AI'ın o tonu ne kadar uygun bulduğunu gösterir.</Explain>
+          </h3>
           <p className="text-[11.5px] leading-snug text-canvas-muted">
-            Her cümlenin tonu ve vurgusu. ZEKİ AI önerir{canEdit ? '; cümleye dokunup değiştirebilirsiniz' : ''}.
+            Her cümlenin tonu ve vurgusu. Zeki AI önerir{canEdit ? '; cümleye dokunup değiştirebilirsiniz' : ''}.
           </p>
         </div>
         {canEdit && <button type="button" className={ghostBtn} disabled={suggest.isPending || !d} onClick={() => suggest.mutate()}
-          title="ZEKİ AI sayfayı okuyup cümleleri işaretler; sizin değiştirdiğiniz cümlelere dokunmaz">
+          title="Zeki AI sayfayı okuyup cümleleri işaretler; sizin değiştirdiğiniz cümlelere dokunmaz">
           {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-          {suggest.isPending ? 'ZEKİ AI okuyor…' : d?.suggested ? 'Yeniden öner' : 'ZEKİ AI önerisi'}
+          {suggest.isPending ? 'Zeki AI okuyor…' : d?.suggested ? 'Yeniden öner' : 'Zeki AI ile öner'}
         </button>}
       </div>
 
@@ -110,7 +114,7 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
             )}
       {d?.suggested && (
         <p className="text-[11px] text-canvas-muted">
-          ZEKİ AI önerisi {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d.suggested.at))}.
+          Zeki AI önerisi {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d.suggested.at))}.
           {' '}Sizin değiştirdiğiniz cümleler «Editör» olarak kalır.
         </p>
       )}
@@ -150,14 +154,14 @@ function Sentence({ s, labels, open, readOnly, onToggle, onChange, saving, canVo
         <span className="min-w-0 flex-1 text-[13px] leading-relaxed text-canvas-ink">
           {s.speaker && <span className="mr-1 text-[11px] font-bold text-canvas-muted">{s.speaker}:</span>}
           <Marked text={s.text} emphasis={emph} />
-          {s.dropped && <span className="ml-1 text-[11px] text-amber-700">· metin değişti, işaret düştü</span>}
+          {s.dropped && <span className="ml-1 text-[11px] text-amber-700">· metin değiştiği için eski işaret kalktı</span>}
         </span>
         <span className="mt-0.5 flex shrink-0 items-center gap-1">
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-canvas-muted motion-reduce:animate-none" aria-label="Kaydediliyor" />}
           {s.source && (
             <span className="hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 sm:inline"
-              title={s.source === 'editor' ? `Editör: ${s.by ?? ''}` : 'ZEKİ AI önerisi'}>
-              {s.source === 'editor' ? 'Editör' : 'ZEKİ AI'}
+              title={s.source === 'editor' ? `Editör: ${s.by ?? ''}` : 'Zeki AI önerisi'}>
+              {s.source === 'editor' ? 'Editör' : 'Zeki AI'}
             </span>
           )}
           {!readOnly && <ChevronDown className={`h-4 w-4 text-canvas-muted ${open ? 'rotate-180' : ''}`} aria-hidden />}

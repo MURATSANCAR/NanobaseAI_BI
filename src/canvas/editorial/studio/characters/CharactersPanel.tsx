@@ -110,7 +110,7 @@ function Mismatch({ jobId, it }: { jobId: string; it: CheckItem }) {
         className="h-16 w-20 shrink-0 rounded-lg bg-slate-100 object-cover" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[13px] font-extrabold">{it.page ? `Sayfa ${it.page}` : it.key} · v{it.v}</span>
+          <span className="text-[13px] font-extrabold">{it.page ? `Sayfa ${it.page}` : it.key} · {it.v}. sürüm</span>
           {bad ? <Pill tone="err">Karakter kartına uymuyor</Pill> : <Pill tone="muted">Denetlenemedi</Pill>}
           {it.approved && <Pill tone="ok">Onaylı</Pill>}
         </div>
@@ -216,7 +216,7 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
                 {suggesting ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
                 {suggesting ? `Öneriler hazırlanıyor (${TASK_TEXT[suggest!.status]})…` : `Kartı olmayan ${missing.length} karakter için öneri hazırla`}
               </button>
-              <p className="text-[11.5px] text-canvas-muted">ZEKİ AI bu kitabın karakter tariflerinden ve karakter çizimlerinden taslak kart hazırlar; siz düzeltip onaylarsınız.</p>
+              <p className="text-[11.5px] text-canvas-muted">Zeki AI bu kitabın karakter tariflerinden ve karakter çizimlerinden taslak kart hazırlar; siz düzeltip onaylarsınız. Hazırlık arka planda sürer, bitince kartlar listeye gelir.</p>
             </div>
           )}
           {suggest?.status === 'fail' && <Note tone="err">Öneri hazırlanamadı; biraz sonra yeniden deneyin.</Note>}
@@ -227,7 +227,9 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
       )}
 
       {v.series && (
-        <Section title="Bu kitapta karta uymayan görseller" aside={canEdit ? (
+        <Section title="Bu kitapta karta uymayan görseller"
+          explain="Her resimdeki karakter, onaylı kartın referans görseliyle karşılaştırılır. «Kartla fark» ne kadar büyükse karakter karttan o kadar farklı çizilmiştir; sınırı aşan resim «uymuyor» sayılır. «Denetle» bu kitabın resimlerini onaylı kartlarla yeniden karşılaştırır."
+          aside={canEdit ? (
           <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} disabled={checking || run.isPending || approved === 0 || (!!v.busy && !v.busy.error)}
             title={approved === 0 ? 'Önce bir kartı onaylayın' : undefined}
             onClick={() => run.mutate(() => cardsApi.check(jobId))}>

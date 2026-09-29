@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Note } from '../../../admin/ui';
 import { press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { SCREEN, proofApi, useProofReport, type ProofBook, type ProofReport, type ProofTarget } from './api';
 
 /** Baskı provası: aynı sayfa solda ekrandaki, sağda seçili kâğıda basılmış hâliyle; aradaki çizgi sürüklenir
@@ -166,13 +167,18 @@ export default function ProofCompare({ jobId, book, paper, rev, pageHint }: Prop
           className="sr-only" />
       </div>
 
+      <p className="-mt-1 text-center text-[11px] text-canvas-muted">
+        Ortadaki çizgiyi sürükleyin: solda ekrandaki renkler, sağda {paperInfo?.label ?? 'seçilen kâğıt'} üzerine basılmış hâli.
+      </p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <Stat tone={!r ? 'info' : r.gamut_share >= 5 ? 'warn' : 'ok'} title="Renk kaybı">
+        <Stat tone={!r ? 'info' : r.gamut_share >= 5 ? 'warn' : 'ok'} title="Renk kaybı"
+          explain="Ekranda görülen bazı canlı renkler matbaa mürekkebiyle basılamaz; baskıda soluklaşır ya da ton değiştirir. «Renk kaybı» açıkken bu alanlar provanın üstünde taralı gösterilir. Oran yüksekse resmin o bölgesindeki renkleri yumuşatmak baskı sonucunu ekrana yaklaştırır.">
           {!r ? (report.isError ? 'Ölçülemedi.' : 'Ölçülüyor…') : r.gamut_share === 0
             ? `${r.label} kâğıtta ekrandaki renkler korunuyor.`
             : `${cover ? 'Kapağın' : 'Sayfanın'} ${pct(r.gamut_share)} kadarında renk baskıda belirgin biçimde soluklaşır ya da ton değiştirir (taranmış alan).`}
         </Stat>
-        <Stat tone={!r ? 'info' : r.tac_share > 0 ? 'warn' : 'ok'} title="Mürekkep yükü">
+        <Stat tone={!r ? 'info' : r.tac_share > 0 ? 'warn' : 'ok'} title="Mürekkep yükü"
+          explain="Bir noktaya basılan dört baskı mürekkebinin toplamı. Her kâğıdın kaldırabileceği bir sınırı vardır; sınırı aşan koyu alanlar geç kurur, karşı sayfaya bulaşabilir. «Mürekkep fazlası» açıkken bu alanlar provanın üstünde gösterilir.">
           {!r ? '…' : (
             <>
               En yüksek {pct(r.tac_max)} · bu kâğıtta sınır {pct(r.tac_limit)}.{' '}
@@ -189,10 +195,13 @@ export default function ProofCompare({ jobId, book, paper, rev, pageHint }: Prop
   );
 }
 
-function Stat({ tone, title, children }: { tone: 'ok' | 'warn' | 'info'; title: string; children: React.ReactNode }) {
+function Stat({ tone, title, explain, children }: { tone: 'ok' | 'warn' | 'info'; title: string; explain?: string; children: React.ReactNode }) {
   return (
     <Note tone={tone}>
-      <span className="block text-[10.5px] font-extrabold uppercase tracking-wide opacity-80">{title}</span>
+      <span className="flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-wide">
+        <span className="opacity-80">{title}</span>
+        {explain && <Explain label={title}>{explain}</Explain>}
+      </span>
       {children}
     </Note>
   );

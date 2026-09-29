@@ -194,10 +194,11 @@ function GiftSheet({ gift, onClose }: { gift: Gift; onClose: () => void }) {
     mutationFn: (b: Record<string, unknown>) => paApi.updateGift(gift.id, b),
     onSuccess: async () => {
       await invalidatePa(qc);
-      toast.success('Kaydedildi.');
+      toast.success('Hediye satırı kaydedildi.');
     },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Kaydedilemedi. Alanları kontrol edip yeniden deneyin.') ?? ''),
   });
+  const hint = 'mt-1 block text-[11px] font-medium leading-snug text-canvas-muted';
   const draft = useMutation({
     mutationFn: () => paApi.draftNote(gift.id),
     onSuccess: async (g) => {
@@ -205,7 +206,7 @@ function GiftSheet({ gift, onClose }: { gift: Gift; onClose: () => void }) {
       await invalidatePa(qc);
       toast.success('Zeki AI taslağı yazıldı; gözden geçirip düzeltin.');
     },
-    onError: (e) => toast.error(errText(e, 'Taslak alınamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Zeki AI taslağı alınamadı. Biraz sonra yeniden deneyin ya da notu elle yazın.') ?? ''),
   });
   const labels = Object.fromEntries((meta.data?.giftStatus ?? []).map((s) => [s.key, s.label]));
   return (
@@ -216,13 +217,16 @@ function GiftSheet({ gift, onClose }: { gift: Gift; onClose: () => void }) {
           {gift.approvedBy && <span className="text-canvas-muted">Onaylayan {gift.approvedBy}</span>}
           {gift.shippedOn && <span className="text-canvas-muted">· sevk {fmtDay(gift.shippedOn)}</span>}
         </div>
+        <p className="text-[11.5px] leading-snug text-canvas-muted">Bu kitabın bu kişiye neden gittiği, kitapla gidecek kişisel not ve CRM'deki tanıtım siparişi. Portal kitabı göndermez; gönderimi satış operasyonu CRM siparişiyle yapar.</p>
         <label className="block">
           <span className={label}>Gerekçe</span>
-          <input maxLength={500} value={f.reason} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, reason: e.target.value }))} className={`${field} mt-1`} />
+          <input maxLength={500} value={f.reason} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, reason: e.target.value }))} placeholder="Ör. Osmanlı tarihi dersi veriyor; kitabın konusu doğrudan alanı" className={`${field} mt-1`} />
+          <span className={hint}>Onay verecek yöneticinin listede gördüğü açıklama; en çok 500 karakter.</span>
         </label>
         <label className="block">
           <span className={label}>Kişisel not</span>
-          <textarea rows={4} maxLength={4000} value={f.noteText} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, noteText: e.target.value }))} className={`${field} mt-1 resize-y leading-snug`} />
+          <textarea rows={4} maxLength={4000} value={f.noteText} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, noteText: e.target.value }))} placeholder="Ör. Sayın Hocam, yeni kitabımızı çalışmalarınıza katkı olur düşüncesiyle ilginize sunarız." className={`${field} mt-1 resize-y leading-snug`} />
+          <span className={hint}>Kitapla birlikte gidecek kısa not. Zeki AI taslağı bu kutuya yazılır; kaydetmeden önce okuyup düzeltin.</span>
         </label>
         {canEdit && (
           <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={draft.isPending} onClick={() => draft.mutate()}>
@@ -232,31 +236,38 @@ function GiftSheet({ gift, onClose }: { gift: Gift; onClose: () => void }) {
         )}
         <label className="block">
           <span className={label}>CRM tanıtım sipariş numarası</span>
-          <input maxLength={40} value={f.crmOrderNo} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, crmOrderNo: e.target.value }))} placeholder="Satış operasyonunun açtığı sipariş" className={`${field} mt-1`} />
-          {gift.crmSyncedAt && <span className="mt-1 block text-[11px] text-canvas-muted">CRM'den son okuma {fmtDay(gift.crmSyncedAt)}</span>}
+          <input maxLength={40} value={f.crmOrderNo} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, crmOrderNo: e.target.value }))} placeholder="Ör. 12345" className={`${field} mt-1`} />
+          <span className={hint}>Satış operasyonunun CRM'de açtığı tanıtım siparişinin numarası. Yazıldıktan sonra gönderim durumu her sabah CRM'den okunur; portal CRM'e yazmaz.</span>
+          {gift.crmSyncedAt && <span className={hint}>CRM'den son okuma {fmtDay(gift.crmSyncedAt)}</span>}
         </label>
         {['sevk', 'teslim', 'donus'].includes(gift.status) && (
           <label className="block">
             <span className={label}>Geri dönüş</span>
-            <textarea rows={2} maxLength={4000} value={f.feedback} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, feedback: e.target.value }))} placeholder="ör. Teşekkür etti, ders listesine aldı" className={`${field} mt-1 resize-y`} />
+            <textarea rows={2} maxLength={4000} value={f.feedback} disabled={!canEdit} onChange={(e) => setF((p) => ({ ...p, feedback: e.target.value }))} placeholder="Ör. Teşekkür etti, kitabı ders okuma listesine aldı" className={`${field} mt-1 resize-y`} />
+            <span className={hint}>Kişinin tepkisi; kişi kartında ve raporda görünür.</span>
           </label>
         )}
         {canEdit && (
-          <div className="flex flex-wrap justify-between gap-2 pt-1">
-            <div className="flex flex-wrap gap-1.5">
-              {GIFT_NEXT[gift.status].map((s) => (
-                <button key={s} type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={save.isPending} onClick={() => save.mutate({ status: s })}>
-                  {labels[s] ?? s}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-end justify-between gap-2 pt-1">
+            {GIFT_NEXT[gift.status].length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className={label}>Durumu değiştir (hemen kaydedilir)</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {GIFT_NEXT[gift.status].map((s) => (
+                    <button key={s} type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={save.isPending} onClick={() => save.mutate({ status: s })}>
+                      «{labels[s] ?? s}» yap
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               type="button"
               className={btnPrimary}
               disabled={save.isPending}
               onClick={() => save.mutate({ reason: f.reason || null, noteText: f.noteText || null, crmOrderNo: f.crmOrderNo || null, ...(['sevk', 'teslim', 'donus'].includes(gift.status) ? { feedback: f.feedback || null } : {}) })}
             >
-              {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+              {save.isPending ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
             </button>
           </div>
         )}
@@ -283,7 +294,7 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
   const run = useMutation({
     mutationFn: () => paApi.suggest(useMonth ? { month, all } : { bookIds: books.map((b) => b.id as string), all }),
     onSuccess: () => setPicked(new Set()),
-    onError: (e) => toast.error(errText(e, 'Öneri alınamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Öneri alınamadı. Biraz sonra yeniden deneyin.') ?? ''),
   });
   const add = useMutation({
     mutationFn: async (rows: Suggestion[]) => {
@@ -300,7 +311,7 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
     },
     onSuccess: async (r) => {
       await invalidatePa(qc);
-      if (r.ok) toast.success(`${r.ok} satır programa eklendi (öneri).`);
+      if (r.ok) toast.success(`${r.ok} satır programa «Öneri» durumunda eklendi; yönetim onaylayınca gönderime hazır olur.`);
       r.fail.forEach((m) => toast.warning(m));
       if (!r.fail.length) onClose();
     },
@@ -313,7 +324,7 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
   }, [run.data]);
 
   return (
-    <Sheet open={open} onClose={onClose} modal wide title="Kime gönderelim?" subtitle={`${fmtMonth(month)} programı · puan kuraldır: kişinin alanı, ilgi alanları ve CRM uzmanlığı × kitabın türü ve konusu`}>
+    <Sheet open={open} onClose={onClose} modal wide title="Kime gönderelim?" subtitle={`${fmtMonth(month)} programına kişi önerir. Kitapları seçin, «Önerileri getir»e basın, uygun kişileri işaretleyip programa ekleyin. Puan sabit bir kurala göredir: kişinin alanı, ilgi alanları ve CRM uzmanlığı ile kitabın türü ve konusu karşılaştırılır.`}>
       <div className="space-y-3 text-[12.5px]">
         <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Kitaplar">
           {[true, false].map((m) => (
@@ -329,13 +340,16 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
             </button>
           ))}
         </div>
+        <p className="text-[11.5px] leading-snug text-canvas-muted">
+          {useMonth ? `${fmtMonth(month)} ayında ilk baskısı yapılan kitaplar için öneri gelir.` : 'Aşağıdan bir ya da birkaç kitap ekleyin; eklenen kitaba dokununca listeden çıkar.'}
+        </p>
         {!useMonth && (
           <>
             <BookPicker picked={books.map((b) => b.id as string)} action="Ekle" onPick={(b) => setBooks((x) => [...x, b])} />
             {books.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {books.map((b) => (
-                  <button key={b.id} type="button" className="rounded-lg bg-violet-50 px-2 py-1 text-[11.5px] font-bold text-violet-800" onClick={() => setBooks((x) => x.filter((y) => y.id !== b.id))}>
+                  <button key={b.id} type="button" className="min-h-9 rounded-lg bg-violet-50 px-2 py-1 text-[11.5px] font-bold text-violet-800" aria-label={`${b.name} kitabını çıkar`} onClick={() => setBooks((x) => x.filter((y) => y.id !== b.id))}>
                     {b.name} ×
                   </button>
                 ))}
@@ -344,10 +358,13 @@ function SuggestSheet({ open, month, onClose }: { open: boolean; month: string; 
           </>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label className="flex min-h-11 items-center gap-2 font-semibold">
-            <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
-            Konu örtüşmesi olmayanları da göster
-          </label>
+          <div className="flex flex-col gap-0.5">
+            <label className="flex min-h-11 items-center gap-2 font-semibold">
+              <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
+              Konu örtüşmesi olmayanları da göster
+            </label>
+            <span className="text-[11px] font-medium leading-snug text-canvas-muted">Açıksa alanı ya da ilgisi kitapla eşleşmeyen kişiler de listelenir.</span>
+          </div>
           <button type="button" className={btnPrimary} disabled={run.isPending || (!useMonth && books.length === 0)} onClick={() => run.mutate()}>
             {run.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
             Önerileri getir

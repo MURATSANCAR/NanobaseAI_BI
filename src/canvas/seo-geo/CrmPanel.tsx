@@ -79,7 +79,9 @@ export default function CrmPanel({ book, tsoft }: { book: CrmBook | null; tsoft?
                   <ExplainLabel label="İnternet">Sözleşmenin, kitabın bir bölümünü internette göstermeye (Google Kitaplar önizlemesi, tadımlık PDF) izin verip vermediği.</ExplainLabel>
                 </th>
                 <th style={{ textAlign: 'center' }}>E-kitap</th>
-                <th style={{ textAlign: 'center' }}>Z-kitap</th>
+                <th style={{ textAlign: 'center' }}>
+                  <ExplainLabel label="Z-kitap">Zenginleştirilmiş kitap: metnin ses, video ya da etkileşimli içerik eklenmiş dijital sürümü. CRM'de sözleşmedeki «Z-Kitap Hakkı» alanından okunur.</ExplainLabel>
+                </th>
                 <th style={{ textAlign: 'center' }}>Sesli</th>
               </tr>
             </thead>

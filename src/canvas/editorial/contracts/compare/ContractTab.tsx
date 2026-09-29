@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowRight, ExternalLink, Search } from 'lucide-react';
-import { Note, Pill, field, nf } from '../../../admin/ui';
+import { ArrowRight, CheckCircle2, Download, ExternalLink, Search, TriangleAlert } from 'lucide-react';
+import { Note, Pill, btnGhost, field, nf } from '../../../admin/ui';
 import SqlInfo, { InfoLabel } from '../../../components/SqlInfo';
 import { Kpi, KpiRow, Panel, useDebounced } from '../../kit';
 import { day, errMsg } from '../ui';
-import { compareApi, type ClauseRow, type Detail, type Meta, type TextRow } from './api';
+import { compareApi, type ClauseRow, type Detail, type FormalCheck, type Meta, type PositionResult, type TextRow } from './api';
 import { band, pct, periodOptions, statusTone, textTone, visibleClauses } from './compare';
 import { TONE } from './ScanTab';
+import { ReviewButton } from './Review';
+import DimPicker from './DimPicker';
 
 /**
  * Tek sözleşme: kıyas grubu (hangi ölçütle, kaç emsal, neyi gevşettik), madde madde değer ↔ emsal dağılımı ve
@@ -16,10 +18,11 @@ import { TONE } from './ScanTab';
  */
 export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta; contractKey: string; onPick: (id: string) => void }) {
   const [years, setYears] = useState<number | undefined>(undefined);
+  const [dims, setDims] = useState<string | undefined>(undefined);
   const [onlyDiff, setOnlyDiff] = useState(true);
   const q = useQuery({
-    queryKey: ['contracts', 'compare', 'contract', meta.gorunum.okunduAn, contractKey, years],
-    queryFn: () => compareApi.contract(contractKey, years),
+    queryKey: ['contracts', 'compare', 'contract', meta.gorunum.okunduAn, contractKey, years, dims],
+    queryFn: () => compareApi.contract(contractKey, years, dims),
     enabled: !!contractKey,
     placeholderData: keepPreviousData,
   });
@@ -38,7 +41,8 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
       {contractKey && q.isLoading && <Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Emsaller okunuyor…</p></Panel>}
       {d && (
         <div className={`flex flex-col gap-3 transition-opacity duration-150 ease-out lg:gap-4 ${q.isFetching ? 'opacity-70' : ''}`}>
-          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} />
+          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} dims={d.ayar.olcut} onDims={setDims}
+            reportUrl={meta.can.export && d.subject.kaynak !== 'belge' ? compareApi.reportUrl(d.subject.key, years, dims) : null} />
           {d.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
           <KpiRow>
             <Kpi label="Farklı madde" value={nf.format(d.sayim.sapan)} help="Emsalden yüksek/düşük, nadir ya da eksik"
@@ -67,7 +71,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
                 <section key={g.id} className="mt-3">
                   <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{g.label}</h3>
                   <ul className="mt-1.5 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
-                    {rows.map((c) => <ClauseLine key={c.key} c={c} />)}
+                    {rows.map((c) => <ClauseLine key={c.key} c={c} contractKey={d.subject.key} canReview={d.can.review} />)}
                   </ul>
                 </section>
               );
@@ -76,8 +80,11 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
               <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bütün maddeler emsalle uyumlu. Hepsini görmek için süzgeci kaldırın.</p>
             )}
           </Panel>
+          {d.pozisyon.length > 0 && <Positions d={d} />}
+          {d.sekil.length > 0 && <Formal d={d} />}
           {d.texts.length > 0 && <Texts d={d} />}
           <History d={d} />
+          {d.olaylar.length > 0 && <Events d={d} />}
           <Peers d={d} />
         </div>
       )}
@@ -142,7 +149,15 @@ function Picker({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
-function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: number; onYears: (y: number) => void }) {
+function Head({ d, meta, years, onYears, dims, onDims, reportUrl }: {
+  d: Detail;
+  meta: Meta;
+  years: number;
+  onYears: (y: number) => void;
+  dims: string[];
+  onDims: (v: string) => void;
+  reportUrl: string | null;
+}) {
   const s = d.subject;
   const c = d.criteria;
   const link = s.kaynak === 'crm' || s.kaynak === 'portal' ? `/telif-sozlesme/${s.key}` : null;
@@ -159,15 +174,30 @@ function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: numbe
           <p className="mt-0.5 text-[12px] text-canvas-muted">
             {[s.yazar, s.tip, s.odeme, s.para, s.bolum, s.bas ? `${day(s.bas)}${s.bit ? ` – ${day(s.bit)}` : ''}` : s.yil].filter(Boolean).join(' · ')}
           </p>
+          {s.olcutler.some((x) => x.deger) && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {s.olcutler.filter((x) => x.deger).map((x) => (
+                <span key={x.id} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700" title={x.ad}>{x.deger}</span>
+              ))}
+            </div>
+          )}
           {s.kopyalar.length > 1 && (
             <p className="mt-1 text-[11.5px] text-canvas-muted">{`Aynı şartlı ${s.kopyalar.length} kitap kaydı: ${s.kopyalar.map((k) => k.no).join(', ')}`}</p>
           )}
-          {link && (
-            <Link to={link} className="mt-1 inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
-              Sözleşme sayfası
-              <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-            </Link>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {link && (
+              <Link to={link} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
+                Sözleşme sayfası
+                <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+              </Link>
+            )}
+            {reportUrl && (
+              <a href={reportUrl} className={btnGhost}>
+                <Download aria-hidden className="h-4 w-4" />
+                Word raporu
+              </a>
+            )}
+          </div>
         </div>
         <div className="w-full shrink-0 rounded-2xl border border-slate-100 bg-white/80 p-3 lg:w-[380px]">
           <div className="flex items-center justify-between gap-2">
@@ -197,15 +227,20 @@ function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: numbe
             <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{`Bu kayıtta bilinmeyen ölçüt: ${c.bilinmeyen.join(', ')} (kıyasa girmedi).`}</p>
           )}
           {!c.yeterli && <p className="mt-1 text-[11.5px] font-semibold text-rose-700">Bütün ölçütler gevşetildiği hâlde emsal az; kararlar temkinli okunmalı.</p>}
+          {c.kur && <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{c.kur}</p>}
+          <div className="mt-2 border-t border-slate-100 pt-2">
+            <DimPicker meta={meta} value={dims} onChange={onDims} />
+          </div>
         </div>
       </div>
     </Panel>
   );
 }
 
-function ClauseLine({ c }: { c: ClauseRow }) {
+function ClauseLine({ c, contractKey, canReview }: { c: ClauseRow; contractKey: string; canReview: boolean }) {
   const tone = statusTone(c.status);
-  const b = c.kind !== 'secim' && c.kind !== 'bayrak' ? band(c) : null;
+  const b = c.kind !== 'secim' && c.kind !== 'bayrak' ? band({ ...c, value: c.kind === 'tutar' ? c.kiyas ?? null : c.value }) : null;
+  const deviates = ['yuksek', 'dusuk', 'nadir', 'nadir-madde', 'eksik'].includes(c.status);
   return (
     <li className="grid gap-2 p-3 text-[12.5px] sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:gap-4">
       <div className="min-w-0">
@@ -213,8 +248,13 @@ function ClauseLine({ c }: { c: ClauseRow }) {
           <span className="font-bold">{c.label}</span>
           <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${TONE[tone]}`}>{c.statusLabel}</span>
         </div>
-        <div className="mt-1 font-mono text-[15px] font-bold tabular-nums">{c.valueLabel}</div>
+        <div className="mt-1 break-words font-mono text-[15px] font-bold tabular-nums">{c.valueLabel}</div>
         {c.reason && <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{c.reason}</p>}
+        {(deviates || c.inceleme) && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={c.key} title={c.label} value={c.valueLabel} current={c.inceleme} can={canReview} />
+          </div>
+        )}
       </div>
       <div className="min-w-0">
         {b ? (
@@ -238,6 +278,7 @@ function ClauseLine({ c }: { c: ClauseRow }) {
           {c.kind === 'secim' || c.kind === 'bayrak'
             ? `${nf.format(c.n)} emsal`
             : `${nf.format(c.dolu ?? 0)}/${nf.format(c.n)} emsalde dolu`}
+          {c.kind === 'tutar' && c.valueLabel.includes('≈') && ` · kıyas ${c.kiyasBirim ?? 'USD'} üzerinden`}
         </p>
       </div>
     </li>
@@ -265,6 +306,86 @@ function Band({ c, b, tone }: { c: ClauseRow; b: NonNullable<ReturnType<typeof b
   );
 }
 
+function Positions({ d }: { d: Detail }) {
+  const bad = d.pozisyon.filter((x) => !x.ok);
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-[15px] font-extrabold">
+          <InfoLabel k={d.kaynaklar} alan="pozisyon[]" label="Standart pozisyon">Standart pozisyon</InfoLabel>
+        </h2>
+        <span className={`rounded-md px-2 py-0.5 text-[11.5px] font-bold ${bad.length ? TONE.err : TONE.ok}`}>
+          {bad.length ? `${bad.length} ihlal` : `${d.pozisyon.length} kurala uyuyor`}
+        </span>
+      </div>
+      <ul className="mt-2 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
+        {d.pozisyon.map((x) => <PositionLine key={x.id} x={x} contractKey={d.subject.key} canReview={d.can.review} />)}
+      </ul>
+    </Panel>
+  );
+}
+
+function PositionLine({ x, contractKey, canReview }: { x: PositionResult; contractKey: string; canReview: boolean }) {
+  const Icon = x.ok ? CheckCircle2 : TriangleAlert;
+  return (
+    <li className="flex gap-2.5 p-3 text-[12.5px]">
+      <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${x.ok ? 'text-emerald-600' : x.level === 'kirmizi' ? 'text-rose-600' : 'text-amber-600'}`} />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-bold">{x.rule}</span>
+          {!x.ok && <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${x.level === 'kirmizi' ? TONE.err : TONE.warn}`}>{x.levelLabel ?? x.level}</span>}
+        </div>
+        <div className="text-[12px] text-canvas-muted">{`Bu sözleşme: ${x.value}`}</div>
+        {x.reason && <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{x.reason}</div>}
+        {!x.ok && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={`pozisyon:${x.id}`} title={x.rule} value={x.value} current={x.inceleme} can={canReview} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function Formal({ d }: { d: Detail }) {
+  const bad = d.sekil.filter((x) => !x.ok);
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-[15px] font-extrabold">
+          <InfoLabel k={d.kaynaklar} alan="sekil[]" label="Şekil denetimi">Şekil denetimi</InfoLabel>
+        </h2>
+        <span className={`rounded-md px-2 py-0.5 text-[11.5px] font-bold ${bad.length ? TONE.err : TONE.ok}`}>
+          {bad.length ? `${bad.length} eksik` : 'Eksik yok'}
+        </span>
+      </div>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Kaydın taşıması gereken şartlar. Hukuki görüş değildir; kayıt denetimidir.</p>
+      <ul className="mt-2 divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white/85">
+        {d.sekil.map((x) => <FormalLine key={x.id} x={x} contractKey={d.subject.key} canReview={d.can.review} />)}
+      </ul>
+    </Panel>
+  );
+}
+
+function FormalLine({ x, contractKey, canReview }: { x: FormalCheck; contractKey: string; canReview: boolean }) {
+  const Icon = x.ok ? CheckCircle2 : TriangleAlert;
+  return (
+    <li className="flex gap-2.5 p-3 text-[12.5px]">
+      <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${x.ok ? 'text-emerald-600' : 'text-rose-600'}`} />
+      <div className="min-w-0">
+        <div className="font-bold">{x.label}</div>
+        {x.detail && <div className="text-[12px] text-rose-700">{x.detail}</div>}
+        <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{x.law}</div>
+        {!x.ok && (
+          <div className="mt-1.5">
+            <ReviewButton contractKey={contractKey} clause={`sekil:${x.id}`} title={x.label} value={x.detail ?? 'Eksik'} current={x.inceleme} can={canReview} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function Texts({ d }: { d: Detail }) {
   return (
     <Panel>
@@ -273,23 +394,33 @@ function Texts({ d }: { d: Detail }) {
       </h2>
       <p className="mt-0.5 text-[11.5px] text-canvas-muted">CRM'deki açıklama alanları; başka sözleşmelerde birebir ya da çok benzer geçip geçmediği.</p>
       <ul className="mt-2 space-y-2">
-        {d.texts.map((t) => <TextLine key={t.key} t={t} />)}
+        {d.texts.map((t) => <TextLine key={t.key} t={t} contractKey={d.subject.key} canReview={d.can.review} />)}
       </ul>
     </Panel>
   );
 }
 
-function TextLine({ t }: { t: TextRow }) {
+function TextLine({ t, contractKey, canReview }: { t: TextRow; contractKey: string; canReview: boolean }) {
   return (
     <li className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bold">{t.label}</span>
         <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${TONE[textTone(t.status)]}`}>{t.statusLabel}</span>
+        {t.sinif && (
+          <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-bold text-violet-800" title="Haklar ve lisanslar ekranındaki sınıf">
+            {`Hak kısıtı: ${t.sinif.ad}${t.sinif.durum === 'onayli' ? ' (onaylı)' : ''}`}
+          </span>
+        )}
         <span className="text-[11px] text-canvas-muted">
           {t.toplam === 0 ? 'Başka hiçbir sözleşmede yok' : `${nf.format(t.birebir)} sözleşmede birebir, ${nf.format(t.benzer)} sözleşmede benzeri`}
         </span>
       </div>
       <p className="mt-1.5 whitespace-pre-wrap break-words leading-snug">{t.text}</p>
+      {(t.status === 'ozgun' || t.inceleme) && (
+        <div className="mt-1.5">
+          <ReviewButton contractKey={contractKey} clause={`not:${t.key}`} title={t.label} value={t.text.slice(0, 160)} current={t.inceleme} can={canReview} />
+        </div>
+      )}
       {t.ornekler.length > 0 && (
         <details className="mt-2">
           <summary className="min-h-11 cursor-pointer text-[12px] font-bold text-canvas-violet sm:min-h-0">Benzer metinler</summary>
@@ -383,6 +514,27 @@ function History({ d }: { d: Detail }) {
           </tbody>
         </table>
       </div>
+    </Panel>
+  );
+}
+
+function Events({ d }: { d: Detail }) {
+  return (
+    <Panel>
+      <h2 className="text-[15px] font-extrabold">
+        <InfoLabel k={d.kaynaklar} alan="olaylar" label="Sözleşme olayları">Sözleşme olayları</InfoLabel>
+      </h2>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Başlangıç, bitiş, ek protokol, muvafakatname, fesih, yenileme ve portal zeyilnameleri; anlaşmanın bütün kopyalarıyla.</p>
+      <ol className="mt-2 border-l-2 border-violet-100 pl-3">
+        {d.olaylar.map((x, i) => (
+          <li key={`${x.tarih}-${x.olay}-${i}`} className="relative py-1 text-[12.5px]">
+            <span className="absolute -left-[17px] top-2.5 h-2 w-2 rounded-full bg-canvas-violet" aria-hidden />
+            <span className="font-mono text-[12px] tabular-nums text-canvas-muted">{day(x.tarih)}</span>{' '}
+            <span className="font-semibold">{x.olay}</span>
+            {x.no && <span className="text-[11.5px] text-canvas-muted">{` · ${x.no}`}</span>}
+          </li>
+        ))}
+      </ol>
     </Panel>
   );
 }

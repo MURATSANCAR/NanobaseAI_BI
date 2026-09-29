@@ -164,7 +164,8 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
         </div>
       </Section>
 
-      <Section title="Görünüş">
+      <Section title="Görünüş" explain="Karakterin her resimde aynı çizilmesi için kullanılan tarif. Kartı kaydettiğinizde kart yeniden taslak olur; resimlerde kullanılması için alttaki «Onayla»ya basın.">
+
         <label className="flex flex-col gap-1.5">
           <span className={label}>Tarif</span>
           <textarea className={field} rows={4} value={draft.look_tr} onChange={(e) => set('look_tr', e.target.value)}
@@ -172,7 +173,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
         </label>
         <details className="rounded-xl border border-slate-200/80 bg-white/60 px-3 py-2" open={!!live?.en_stale || !draft.look_en}>
           <summary className="flex min-h-10 cursor-pointer items-center text-[12px] font-bold">Resim üretiminde kullanılan tarif</summary>
-          <p className="mb-2 text-[11.5px] text-canvas-muted">ZEKİ AI resimleri İngilizce tarifle çizer. Türkçe tarifi değiştirdiyseniz «Türkçeden yenile» deyin ya da buradan düzeltin.</p>
+          <p className="mb-2 text-[11.5px] text-canvas-muted">Zeki AI resimleri İngilizce tarifle çizer. Türkçe tarifi değiştirdiyseniz «Türkçeden yenile» deyin ya da buradan düzeltin.</p>
           <label className="flex flex-col gap-1.5">
             <span className={label}>Tür (İngilizce)</span>
             <input className={field} value={draft.species_en} onChange={(e) => set('species_en', e.target.value)} placeholder="little girl, baby wombat…" />
@@ -278,7 +279,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
                     className={`flex h-10 flex-1 items-center justify-center rounded-lg bg-white/80 disabled:opacity-40 ${press}`}>
                     <Star className="h-4 w-4" aria-hidden />
                   </button>
-                  <button type="button" disabled={busyAct} aria-label="Kaldır" title="Kaldır"
+                  <button type="button" disabled={busyAct} aria-label="Referans görseli karttan kaldır" title="Karttan kaldır (hemen uygulanır)"
                     onClick={() => act.mutate(() => cardsApi.removeRef(jobId, card.id, r.id))}
                     className={`flex h-10 flex-1 items-center justify-center rounded-lg bg-white/80 text-rose-600 disabled:opacity-40 ${press}`}>
                     <Trash2 className="h-4 w-4" aria-hidden />

@@ -8,6 +8,7 @@ import { fmtInt, fmtTl, pazarApi, type Comparable, type OwnBookHit } from './api
 import { CategorySelect, useCategories, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { parseTrNumber } from '../components/trNumber';
 
 /** Emsal bul: kitap adı ya da konu (ya da bir TİMAŞ kitabından başla) → rakip ve TİMAŞ emsalleri, gerekçeleriyle.
  *  Kurallı süzgeç (kategori, sayfa ±, fiyat ±) + ortak sözcük; ilk adayları Zeki AI «konu benzerliği» diye sınıflar. */
@@ -29,7 +30,7 @@ export default function ComparablesScreen() {
         crmKitapId: base?.crmId,
         kategoriId: kategori || undefined,
         sayfa: Number(sayfa) || undefined,
-        fiyat: Number(fiyat.replace(',', '.')) || undefined,
+        fiyat: parseTrNumber(fiyat) || undefined,
       }),
   });
   const s = meta.data?.settings;

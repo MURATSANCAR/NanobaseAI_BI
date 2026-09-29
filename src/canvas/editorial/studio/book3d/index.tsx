@@ -4,6 +4,7 @@ import type { StudioJob } from '../../../engine';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { press } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { SCREEN, useProofBook, type PaperChoice, type ProofBook } from './api';
 import './book3d.css';
 
@@ -71,7 +72,10 @@ export function BookProofSection({ jobId, d, rev }: { jobId: string; d: StudioJo
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-extrabold">3B ve prova</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+              3B ve prova
+              <Explain label="3B ve prova">«3B kitap» kitabı gerçek ölçüsü ve kalınlığıyla döndürüp sayfalarını çevirmenizi sağlar; görüntü ya da kısa video indirebilirsiniz. «Baskı provası» sayfanın ekrandaki hâliyle seçilen kâğıda basılmış hâlini yan yana gösterir. Buradaki kâğıt seçimi yalnız önizlemeyi değiştirir; kitabın baskı ayarına dokunmaz («kitabın» yazan, kitap için seçili kâğıttır).</Explain>
+            </h2>
             <p className="text-[12px] text-canvas-muted">Kitap gerçek ölçüleriyle; seçilen kâğıtta baskıda nasıl görüneceği.</p>
           </div>
           <div className="b3-tabs rounded-xl bg-slate-100 p-[3px]" data-tab={tab} role="tablist" aria-label="Görünüm">
@@ -85,7 +89,7 @@ export function BookProofSection({ jobId, d, rev }: { jobId: string; d: StudioJo
           </div>
         </div>
 
-        {q.error && <div className="mt-3"><Note tone="err">{errText(q.error, 'Kitabın ölçüleri okunamadı.')}</Note></div>}
+        {q.error && <div className="mt-3"><Note tone="err">{errText(q.error, 'Kitabın ölçüleri okunamadı. Sayfayı yenileyip tekrar deneyin.')}</Note></div>}
         {!book ? (!q.error && <div className="mt-3"><Waiting /></div>) : (
           <div className="mt-3 flex flex-col gap-3">
             <Papers book={book} value={tab === 'proof' ? proofPaper : paper} onChange={setPaper} withScreen={tab === '3d'} />

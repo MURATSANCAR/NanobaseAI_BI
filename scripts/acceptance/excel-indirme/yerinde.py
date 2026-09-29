@@ -21,6 +21,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# Hazır cevap klasörü bu sürece ait geçici klasör: canlı köprünün klasörüne yazılmaz, açılışta orada biriken kayıtlar
+# (bütün kişilerin) arkada yeniden üretilmeye çalışılmaz — 2026-09-29'da bu, test sürecini dakikalarca kilitledi.
+import tempfile  # noqa: E402
+
+os.environ["RESPONSE_CACHE_DIR"] = os.environ.get("KABUL_RC_DIR") or tempfile.mkdtemp(prefix="excel-kabul-rc-")
+
 USER = os.environ.get("TEST_USER", "timasai")
 COOKIE = "timas_session=excel-kabul-yerinde"
 calls: Counter = Counter()

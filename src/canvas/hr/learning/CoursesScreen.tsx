@@ -13,6 +13,7 @@ import { hrApi } from '../hrApi';
 import { fmtMoney, learningApi, localToIso, type Course, type Delivery, type Info, type Kind, type SessionState } from './learningApi';
 import { EmployeePicker, LearningFrame, fmtWhen, useLearningInfo } from './parts';
 import { ExplainLabel } from '../../components/Explain';
+import { parseTrNumber } from '../../components/trNumber';
 
 /** Katalog ve oturumlar: eğitim kartı (tür, biçim, süre, geçerlilik, maliyet, zorunlu eğitimin birimleri, ZEKİ ekranı) ve
  *  oturum listesi. Düzenleme `ik.egitim-yonet` ister; diğerleri okur. */
@@ -141,7 +142,7 @@ function CourseSheet({ info, course, onClose }: { info: Info; course: Course | n
         ...f,
         durationHours: f.durationHours === '' ? null : Number(f.durationHours.replace(',', '.')),
         validityDays: f.validityDays === '' ? null : Number(f.validityDays),
-        costPerPerson: f.costPerPerson === '' ? null : Number(f.costPerPerson.replace(',', '.')),
+        costPerPerson: f.costPerPerson === '' ? null : parseTrNumber(f.costPerPerson),
         moduleRoute: f.kind === 'zeki' ? f.moduleRoute || null : null,
         requiredUnits: f.kind === 'zorunlu' ? f.requiredUnits : [],
       };

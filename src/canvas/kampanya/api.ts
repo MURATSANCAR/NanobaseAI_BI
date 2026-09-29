@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M35 E-ticaret kampanya yönetimi: köprü uçları /api/v1/kampanya/*. Kampanya hiçbir platforma, T-soft'a ya da CRM'e
  *  gönderilmez; onaydan sonra ekip elle kurar ve «Elle kurdum» diye işaretler. */
@@ -347,7 +348,7 @@ export function pctToRatio(s: string): number | null {
 export function parseMoney(s: string): number | null {
   const t = s.replace(/[₺\s]/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) && n > 0 ? n : null;
 }

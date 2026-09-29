@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronRight, Search } from 'lucide-react';
-import { Note, Pill, field, nf } from '../../../admin/ui';
+import { CheckCircle2, ChevronRight, Download, Search } from 'lucide-react';
+import { Note, Pill, btnGhost, field, nf } from '../../../admin/ui';
+import { xlsxUrl } from '../../../components/excel';
 import SqlInfo, { InfoLabel } from '../../../components/SqlInfo';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../../kit';
 import { errMsg } from '../ui';
 import { compareApi, type Meta, type ScanItem, type ScanQuery } from './api';
 import { periodOptions, statusTone } from './compare';
+import DimPicker from './DimPicker';
 
 type Only = NonNullable<ScanQuery['only']>;
 
@@ -36,7 +38,8 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
       {scan.error && <Note tone="err">{errMsg(scan.error)}</Note>}
       {d && (
         <KpiRow>
-          <Kpi label="Taranan anlaşma" value={nf.format(d.ozet.anlasma)} help={`${nf.format(d.ozet.sozlesme)} CRM sözleşmesi; aynı şartlı grup kopyaları tek`}
+          <Kpi label="Taranan anlaşma" value={nf.format(d.ozet.anlasma)}
+            help={`${nf.format(d.ozet.sozlesme)} CRM sözleşmesi; grup kopyaları tek${d.ozet.emsalYetersiz ? ` · ${nf.format(d.ozet.emsalYetersiz)} anlaşmada emsal yetersiz` : ''}`}
             info={<SqlInfo k={d.kaynaklar} alan="ozet.anlasma" label="Taranan anlaşma" />} />
           <Kpi label="Farklı maddesi olan" value={nf.format(d.ozet.sapan)} help={`Emsalinden en az bir maddesi farklı (eşik %${nf.format(meta.ayarlar.esikYuzde)})`}
             active={f.only === 'sapan'} onClick={() => set({ only: 'sapan' })}
@@ -44,8 +47,14 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
           <Kpi label="Özgün notu olan" value={nf.format(d.ozet.ozgun)} help="Serbest metni hiçbir başka sözleşmede yok"
             active={f.only === 'ozgun'} onClick={() => set({ only: 'ozgun' })}
             info={<SqlInfo k={d.kaynaklar} alan="ozet" label="Özgün notu olan" />} />
-          <Kpi label="Emsali yetersiz" value={nf.format(d.ozet.emsalYetersiz)} help={`Bütün ölçütler gevşetilince de ${meta.ayarlar.emsal} emsal yok`}
-            info={<SqlInfo k={d.kaynaklar} alan="ozet" label="Emsali yetersiz" />} />
+          <Kpi label="Şekil eksiği olan" value={nf.format(d.ozet.sekil)} help="Mali hak, süre, taraf, kitap ya da ücret kaydı eksik"
+            active={f.only === 'sekil'} onClick={() => set({ only: 'sekil' })}
+            info={<SqlInfo k={d.kaynaklar} alan="ozet.sekil" label="Şekil eksiği olan" />} />
+          {d.ozet.pozisyon > 0 && (
+            <Kpi label="Pozisyon ihlali olan" value={nf.format(d.ozet.pozisyon)} help="Onaylı standart pozisyona aykırı"
+              active={f.only === 'pozisyon'} onClick={() => set({ only: 'pozisyon' })}
+              info={<SqlInfo k={d.kaynaklar} alan="ozet.pozisyon" label="Pozisyon ihlali olan" />} />
+          )}
         </KpiRow>
       )}
 
@@ -59,6 +68,8 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
           <select aria-label="Göster" className={field} value={f.only} onChange={(e) => set({ only: e.target.value as Only })}>
             <option value="sapan">Farklı maddesi olanlar</option>
             <option value="ozgun">Özgün notu olanlar</option>
+            <option value="sekil">Şekil eksiği olanlar</option>
+            <option value="pozisyon">Standart pozisyon ihlali olanlar</option>
             <option value="hepsi-sapma">Farklı madde ya da özgün not</option>
             <option value="hepsi">Bütün sözleşmeler</option>
           </select>
@@ -100,7 +111,34 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
             <input type="checkbox" className="h-4 w-4 accent-canvas-violet" checked={!!f.aktif} onChange={(e) => set({ aktif: e.target.checked })} />
             Yalnız yürürlükteki sözleşmeler
           </label>
+          <label className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-[12.5px] font-bold sm:min-h-0">
+            <input type="checkbox" className="h-4 w-4 accent-canvas-violet" checked={!!f.acik} onChange={(e) => set({ acik: e.target.checked })} />
+            Yalnız incelenmemiş bulgusu olanlar
+          </label>
         </div>
+        <div className="mt-2">
+          <DimPicker meta={meta} value={(f.olcut ?? meta.varsayilanOlcut.join(',')).split(',').filter(Boolean)} onChange={(v) => set({ olcut: v })} />
+        </div>
+        {meta.can.export && (
+          <div className="mt-2 flex flex-wrap justify-end gap-1.5">
+            <a className={btnGhost} href={xlsxUrl(compareApi.scanCsvUrl({ ...f, q: dq.trim() || undefined }))}>
+              <Download aria-hidden className="h-4 w-4" />
+              Excel
+            </a>
+            <a className={btnGhost} href={compareApi.scanCsvUrl({ ...f, q: dq.trim() || undefined })}>
+              <Download aria-hidden className="h-4 w-4" />
+              CSV
+            </a>
+          </div>
+        )}
+        {d && f.only === 'sekil' && d.sekilSayim.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+            <InfoLabel k={d.kaynaklar} alan="sekilSayim[]" label="Şekil eksikleri">Eksik şart:</InfoLabel>
+            {d.sekilSayim.map((x) => (
+              <span key={x.id} className="rounded-lg bg-rose-50 px-2 py-1 font-semibold text-rose-800">{`${x.label} ${nf.format(x.sayi)}`}</span>
+            ))}
+          </div>
+        )}
 
         {d && d.maddeler.length > 0 && (
           <div className="mt-3">
@@ -159,20 +197,38 @@ function Row({ it, onOpen }: { it: ScanItem; onOpen: () => void }) {
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {it.sapmalar.length > 0 && <Pill tone="err">{`${it.sapmalar.length} farklı`}</Pill>}
+            {it.sapmalar.length + it.sekilEksik.length + it.ozgunNotlar.length + it.pozisyon.length > 0 && it.acikBulgu === 0 && <Pill tone="ok">İncelendi</Pill>}
             <ChevronRight aria-hidden className="h-4 w-4 text-canvas-muted" />
           </div>
         </div>
-        {(it.sapmalar.length > 0 || it.ozgunNotlar.length > 0) && (
+        {(it.sapmalar.length > 0 || it.ozgunNotlar.length > 0 || it.sekilEksik.length > 0 || it.pozisyon.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
+            {it.pozisyon.map((x) => (
+              <span key={`p${x.id}`} className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-bold ${x.inceleme && !x.inceleme.open ? TONE.muted : x.level === 'kirmizi' ? TONE.err : TONE.warn}`}>
+                {x.inceleme && !x.inceleme.open && <CheckCircle2 aria-hidden className="h-3 w-3 shrink-0" />}
+                <span className="truncate">{`Pozisyon: ${x.rule}`}</span>
+                <span className="font-mono">{x.value}</span>
+              </span>
+            ))}
             {it.sapmalar.map((s) => (
-              <span key={s.key} className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold ${TONE[statusTone(s.status)]}`}>
+              <span key={s.key} className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold ${s.inceleme && !s.inceleme.open ? TONE.muted : TONE[statusTone(s.status)]}`}>
+                {s.inceleme && !s.inceleme.open && <CheckCircle2 aria-label={s.inceleme.statusLabel} className="h-3 w-3 shrink-0" />}
                 <span className="truncate">{s.label}</span>
-                <span className="font-mono tabular-nums">{s.valueLabel}</span>
-                <span className="opacity-75">{`· ${s.statusLabel}`}</span>
+                <span className="break-all font-mono tabular-nums">{s.valueLabel}</span>
+                <span className="opacity-75">{`· ${s.inceleme ? s.inceleme.statusLabel : s.statusLabel}`}</span>
+              </span>
+            ))}
+            {it.sekilEksik.map((x) => (
+              <span key={x.id} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold ${x.inceleme && !x.inceleme.open ? TONE.muted : TONE.warn}`}>
+                {x.inceleme && !x.inceleme.open && <CheckCircle2 aria-hidden className="h-3 w-3" />}
+                {`Şekil: ${x.label}`}
               </span>
             ))}
             {it.ozgunNotlar.map((n) => (
-              <span key={n.key} className={`inline-flex items-center rounded-lg px-2 py-1 text-[11.5px] font-semibold ${TONE.violet}`}>{`Özgün not: ${n.label}`}</span>
+              <span key={n.key} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold ${n.inceleme && !n.inceleme.open ? TONE.muted : TONE.violet}`}>
+                {n.inceleme && !n.inceleme.open && <CheckCircle2 aria-hidden className="h-3 w-3" />}
+                {`Özgün not: ${n.label}`}
+              </span>
             ))}
           </div>
         )}

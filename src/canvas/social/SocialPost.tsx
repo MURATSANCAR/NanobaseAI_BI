@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Check, Download, ExternalLink, Plus, Search, Send, Sparkles, Trash2, Undo2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -147,6 +148,7 @@ export default function SocialPost() {
 
   const title = p ? p.kitapAd || p.occasionAd || (p.text ?? '').slice(0, 60) || p.id : 'Gönderi';
   const c = content.data;
+  const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
 
   return (
     <SocialFrame
@@ -186,6 +188,7 @@ export default function SocialPost() {
                         <option key={a.id} value={a.id}>{a.ad} ({a.platformAdi} {a.handle})</option>
                       ))}
                     </select>
+                    <span className={hint}>Paylaşılacak hesap. Metin ve etiket sayacındaki sınır bu hesabın platformuna göredir.</span>
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className={labelCls}>Gün</span>
@@ -195,6 +198,7 @@ export default function SocialPost() {
                     <span className={labelCls}>Saat</span>
                     <input type="time" className={field} disabled={!editable} value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
                   </label>
+                  <p className={`${hint} sm:col-span-2`}>Takvimde görünen paylaşım zamanı. Portal paylaşmaz; bu saatte paylaşımı siz yaparsınız.</p>
                   <label className="flex flex-col gap-1 sm:col-span-2">
                     <span className={labelCls}>İçerik türü</span>
                     <select className={field} disabled={!m.me.canEdit || p.status === 'onayda' || p.status === 'iptal'} value={form.kind ?? ''}
@@ -202,6 +206,7 @@ export default function SocialPost() {
                       <option value="">Girilmedi (Zeki AI önerir)</option>
                       {Object.entries(m.kinds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
+                    <span className={hint}>Rapordaki «İçerik türüne göre» tablosu bu alana göre gruplanır. Yayınlandıktan sonra da düzeltilebilir.</span>
                   </label>
                   <label className="flex flex-col gap-1 sm:col-span-2">
                     <span className="flex items-baseline justify-between gap-2">
@@ -211,7 +216,8 @@ export default function SocialPost() {
                       </span>
                     </span>
                     <textarea className={`${field} min-h-[180px] leading-relaxed`} disabled={!editable} value={form.text}
-                      onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="Paylaşım metni" />
+                      onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="Ör. Yeni kitabımız raflarda! «Kitaptan içerik» bölümünden CRM metnini ya da bir alıntıyı ekleyebilir, «Zeki AI taslağı» ile üç seçenek alabilirsiniz." />
+                    <span className={hint}>Sayaç, metin ve etiketlerin toplam karakteridir; sınırı aşarsa kırmızı olur.</span>
                   </label>
                   <label className="flex flex-col gap-1 sm:col-span-2">
                     <span className="flex items-baseline justify-between gap-2">
@@ -220,14 +226,15 @@ export default function SocialPost() {
                         {tags}{tagLimit ? ` / ${tagLimit}` : ''}
                       </span>
                     </span>
-                    <input className={field} disabled={!editable} value={form.hashtags} placeholder="#kitap #okuma"
+                    <input className={field} disabled={!editable} value={form.hashtags} placeholder="Ör. #kitap #okuma #timaş"
                       onChange={(e) => setForm({ ...form, hashtags: e.target.value })} />
+                    <span className={hint}>Her etiketi # ile başlatıp boşlukla ayırın; sayaç yalnız # ile başlayanları sayar ve platformun sınırını yanında gösterir.</span>
                   </label>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {m.me.canEdit && (EDITABLE.has(p.status) || p.status === 'yayinlandi') && (
-                    <button type="button" className={btnPrimary} disabled={!dirty || save.isPending} onClick={saveForm}>Kaydet</button>
+                    <button type="button" className={btnPrimary} disabled={!dirty || save.isPending} onClick={saveForm}>Değişiklikleri kaydet</button>
                   )}
                   {m.me.canEdit && (p.status === 'fikir' || p.status === 'taslak') && (
                     <>
@@ -317,7 +324,9 @@ export default function SocialPost() {
 
               <Block title={`Görseller (${form.assets.length})`}
                 help="Görselin kendisi kaynağında durur (kitap tasarım stüdyosu ya da içerik arşivi); paylaşıma hazır pakete oradan girer.">
-                {form.assets.length === 0 && <p className="text-[12px] text-canvas-muted">Görsel eklenmedi. Kitap havuzundan seçin.</p>}
+                {form.assets.length === 0 && (
+                  <EmptyHint title="Görsel eklenmedi" why={p.stokKodu ? '«Kitaptan içerik» bölümünde stüdyo ya da arşiv görseline dokunun; seçtiğiniz görsel hemen kaydedilir.' : 'Önce «Kitaptan içerik» bölümünden bir kitap bağlayın; o kitabın görselleri orada listelenir.'} />
+                )}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {form.assets.map((a) => (
                     <div key={refKey(a)} className="relative overflow-hidden rounded-xl bg-white/80">
@@ -365,11 +374,11 @@ export default function SocialPost() {
                       {(['reach', 'impressions', 'likes', 'comments', 'shares', 'saves'] as MetricKey[]).map((k) => (
                         <label key={k} className="flex flex-col gap-1">
                           <span className={labelCls}>{m.metrics[k]}</span>
-                          <input inputMode="numeric" className={field} value={metric[k] ?? ''} onChange={(e) => setMetric({ ...metric, [k]: e.target.value })} />
+                          <input inputMode="numeric" className={field} value={metric[k] ?? ''} placeholder="Ör. 1250" onChange={(e) => setMetric({ ...metric, [k]: e.target.value })} />
                         </label>
                       ))}
                       <div className="flex items-end">
-                        <button type="button" className={btnPrimary} disabled={addMetric.isPending} onClick={() => addMetric.mutate()}>Kaydet</button>
+                        <button type="button" className={btnPrimary} disabled={addMetric.isPending} onClick={() => addMetric.mutate()}>İçgörüyü kaydet</button>
                       </div>
                     </div>
                   )}
@@ -394,7 +403,7 @@ export default function SocialPost() {
                   <div className="flex flex-col gap-1.5">
                     <span className="relative flex items-center">
                       <Search aria-hidden className="pointer-events-none absolute left-3 h-4 w-4 text-canvas-muted" />
-                      <input className={`${field} pl-9`} value={q} placeholder="Kitap adı ya da stok kodu" onChange={(e) => setQ(e.target.value)} />
+                      <input type="search" aria-label="Bağlanacak kitabı ara" className={`${field} pl-9`} value={q} placeholder="Ör. kitap adı ya da stok kodu (en az 2 harf)" onChange={(e) => setQ(e.target.value)} />
                     </span>
                     {(books.data?.items ?? []).map((b) => (
                       <button key={b.stokKodu} type="button" className="flex min-h-11 flex-col items-start rounded-xl bg-white/80 px-2.5 py-2 text-left transition-colors duration-150 hover:bg-white"

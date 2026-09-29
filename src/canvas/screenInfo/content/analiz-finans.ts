@@ -31,7 +31,7 @@ const CONTENT: ScreenInfoMap = {
       "Dönem verinin bittiği tarihten sonraysa Zeki AI soruyu verinin son dönemine göre cevaplar ve bunu belirtir.",
     ],
     data: "Logo satış ve iade faturaları (yıl bazında), Zeki AI'ın onaylı ölçü tanımları",
-    refresh: "Göstergeler 3 dakikada bir yeniden hesaplanır ve ekran kendiliğinden tazelenir.",
+    refresh: "Özet sunucuda 3 dakikada bir hazırlanır; açık ekran her gün 07:00 ve 12:00'de kendiliğinden tazelenir, «Verileri yenile» ile istediğiniz an güncellenir.",
     jobs: [
       { name: "Gösterge özeti", when: "3 dakikada bir", what: "Yılın satış göstergelerini Logo'dan okuyup ekran için hazırlar." },
     ],

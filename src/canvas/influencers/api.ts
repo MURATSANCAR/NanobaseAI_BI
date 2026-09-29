@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M23 İşbirlikleri ekranlarının köprü uçları: /api/v1/influencers/*. Ücret alanları yetkisi olmayana `null` gelir. */
 
@@ -236,7 +237,7 @@ export function fmtLeft(n: number | null | undefined): string {
 export function parseNum(s: string): number | null {
   const t = s.trim().replace(/\s/g, '').replace(/₺|%/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) ? n : null;
 }

@@ -5,6 +5,7 @@ import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { narrationApi, type HumanRecording, type NarrationOverview } from './api';
 import { FileDrop } from '../../../components/FileDrop';
+import { Explain } from '../../../components/Explain';
 
 /** «İnsan kaydı yükle»: yayınevinin seslendirmenine okuttuğu kayıt sayfanın sesi olur. Yapay ses üretilmez; kelime
  *  zamanları kayıttan çıkarılır (okurken vurgu, sesli e-kitap, efekt karışımı aynen çalışır). Bir dosya bir sayfayı ya
@@ -54,7 +55,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
       document: doc ? { name: doc.name, data: await b64(doc) } : null,
     }),
     onSuccess: () => {
-      setOk('Kayıt alındı; kelimeler kayda yerleştiriliyor. Bitince sayfa «İnsan sesi» olarak dinlenir.');
+      setOk('Kayıt alındı; kelimeler kayda yerleştiriliyor. Bu arka planda sürer; bitince sayfa «İnsan sesi» olarak dinlenir.');
       setAudio(null); setDoc(null); setReference(''); setConfirm(false);
       onDone();
     },
@@ -105,7 +106,10 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
           <p className="text-[11.5px] text-canvas-muted">Seçilen sayfalardan {replacing} tanesinin şimdiki sesi bu kayıtla değişir.</p>
         )}
         <fieldset className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-2.5">
-          <legend className="px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">Hak beyanı (zorunlu)</legend>
+          <legend className="flex items-center gap-1 px-1 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+            Hak beyanı (zorunlu)
+            <Explain label="Hak beyanı">Kaydı kitapta kullanabilmek için okuyan kişinin izni belgelenir. Okuyanın adı, izin belgesi ya da belge numarası ve onay kutusu olmadan kayıt yüklenmez; beyan kayıtla birlikte saklanır.</Explain>
+          </legend>
           <label htmlFor={`${f}-owner`} className="flex flex-col gap-1">
             <span className={labelCls}>Kaydı okuyan kişi</span>
             <input id={`${f}-owner`} className={inputCls} value={owner} maxLength={120} onChange={(e) => setOwner(e.target.value)} placeholder="Ad soyad" />

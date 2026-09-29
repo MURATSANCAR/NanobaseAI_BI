@@ -3,6 +3,7 @@ import { AlertTriangle, BadgeCheck, CircleDashed, Loader2, Sparkles } from 'luci
 import { Progress, ago, ghostBtn, gradientBtn } from '../shared';
 import type { MkTask, Signed } from './api';
 import { useCan } from '../../../useAdmin';
+import { Explain } from '../../../components/Explain';
 
 /** Pazarlama kitinin ortak parçaları. Yeni hareket yok: basışta stüdyonun `press` küçülmesi ve ilerleme çubuğu
  *  (shared.tsx) kullanılır; sekme değişimi anlıktır (sık kullanılır). */
@@ -43,12 +44,13 @@ export function Generate({ task, has, onRun, pending, what }: {
         {(canProduce || running) && (
           <button type="button" className={has ? ghostBtn : gradientBtn} disabled={running || !canProduce} onClick={onRun}>
             {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-            {running ? 'ZEKİ AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
+            {running ? 'Zeki AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
           </button>
         )}
         {running && task?.step && <span className="text-[12px] text-canvas-muted">{task.step}{t ? ` · ${n}/${t}` : ''}</span>}
       </div>
       {running && t > 0 && <Progress value={n} total={t} />}
+      {running && <p className="text-[11.5px] text-canvas-muted">Üretim arka planda sürer; sayfadan ayrılabilirsiniz, bitince sonuç burada olur.</p>}
       {task?.status === 'failed' && task.error && (
         <p className="flex items-start gap-1.5 text-[12px] text-rose-700"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{task.error}</p>
       )}
@@ -56,11 +58,11 @@ export function Generate({ task, has, onRun, pending, what }: {
   );
 }
 
-export function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+export function Section({ title, aside, explain, children }: { title: string; aside?: ReactNode; explain?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[14px] font-extrabold text-canvas-ink">{title}</h3>
+        <h3 className="flex items-center gap-1 text-[14px] font-extrabold text-canvas-ink">{title}{explain && <Explain label={title}>{explain}</Explain>}</h3>
         {aside}
       </div>
       {children}
