@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Test sunucusuna main `7f819b11` (CRM pasif süzgeci, Görevlerim Masam'da, editör atama salt okunur, CRM hakları)
+
+- **Kurulum:** değişen 38 dosyanın (33 yeni/değişen + 5 silinen) sunucu hâli md5 ile bir önceki main (`de376907`) sürümüydü; başka oturumun işi yoktu. Sunucu ağacının kopyasında `tsc -b` 0 hata, `vite build` (VITE_BASE=/timas/) 31 sn, pytest 397 geçti; kopyalamadan hemen önce md5 yeniden denetlendi, sonra 38/38 yeni md5. Köprü `nanobase-semantic-bridge` yeniden başlatıldı (yeni modül: `crm_active`, `crm_rights`), `cockpit/dist`'e önce parçalar sonra `index.html`; dışarıdan `index-6M6efgeR.js`. `._*` 0 (kaynak ve dist). Eski parçalar (ör. `RulesTab-*.js`) silinmedi, bağlı değil.
+- **Canlı kabul (portal üzerinden, timasai 15 dk oturumu, iş sonunda silindi):** `scripts/acceptance/crm-pasif-gorev-haklar/kabul.py` 19/19 — yan köprüdeki sonuçla aynı.
+- **Müşteri VM'ine kurulmadı** (onay bekliyor).
+
 ## 2026-09-29 — Yetkiler «Bağ ekle»: arama bütün türlerde
 
 - **Şikâyet (kullanıcı):** Yönetim → Yetkiler'de bir kişiye yetki vermek için ad arandı, kişi gelmedi.
