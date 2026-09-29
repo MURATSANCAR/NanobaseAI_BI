@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Yetkiler: bağın içindeki kişiler açılır, sayılar alt birim ve iç içe grubu sayar
+
+- **İstek (kullanıcı):** OU'nun altındaki kullanıcılar görünmüyordu; CRM departmanları da sorulmuştu.
+- **Ölçüm:** CRM'de 22 iş birimi var, etkin kullanıcısı olan 9; 151 etkin kişinin 107'si kök «Timaş CRM» biriminde (departmansız). Bu 107 kişinin AD birimi dolu (Pazarlama 18, Cocuk Editorya 17, Satis 15, depo 11…). Karar: departman kaynağı AD birimi; CRM iş birimi bağı eklenmedi.
+- **Sayı hatası:** listede OU sayısı yalnız doğrudan kişileri, grup sayısı `member` sayısını (kapalı hesap ve alt grup dahil) gösteriyordu; bağlanınca rolü alan kişi ise alt ağaç / iç içe etkin kişi. Şimdi ikisi aynı hesap: `ou_subtree_counts`, `nested_group_counts` (döngülü grup güvenli), DN'de kaçışlı virgül `_dn_parts`.
+- **Yeni uç:** `GET /api/v1/access/subjects/members?type&subject` (`Directory.members_of`, sorgu bilgisi `admin_kaynak.for_members`). Ekranda «N kişi ▾» hem «Bağ ekle» listesinde hem rolün bağlarında; 8'den fazla kişide liste içi arama.
+- **Doğrulama (gerçek AD/CRM, test sunucusu):** 140/140 grupta ve en büyük 6 OU'da sayı = açılan liste; CRM rolünde AD'de etkin hesabı olmayan 3 kişi hesap adıyla görünür. `test_access.py` + `test_access_data.py` 23 test geçti.
+
 ## 2026-09-29 — Test sunucusuna main `7f819b11` (CRM pasif süzgeci, Görevlerim Masam'da, editör atama salt okunur, CRM hakları)
 
 - **Kurulum:** değişen 38 dosyanın (33 yeni/değişen + 5 silinen) sunucu hâli md5 ile bir önceki main (`de376907`) sürümüydü; başka oturumun işi yoktu. Sunucu ağacının kopyasında `tsc -b` 0 hata, `vite build` (VITE_BASE=/timas/) 31 sn, pytest 397 geçti; kopyalamadan hemen önce md5 yeniden denetlendi, sonra 38/38 yeni md5. Köprü `nanobase-semantic-bridge` yeniden başlatıldı (yeni modül: `crm_active`, `crm_rights`), `cockpit/dist`'e önce parçalar sonra `index.html`; dışarıdan `index-6M6efgeR.js`. `._*` 0 (kaynak ve dist). Eski parçalar (ör. `RulesTab-*.js`) silinmedi, bağlı değil.
