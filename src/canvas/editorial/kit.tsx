@@ -127,8 +127,10 @@ export function KpiRow({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">{children}</div>;
 }
 
+/** `min-w-0`: ızgara hücresinde içindeki geniş tablo (TableWrap, min 640px) kolonu genişletmesin; tablo kendi
+ *  kutusunda kaysın, yandaki paneller kırpılmasın. */
 export function Panel({ children }: { children: ReactNode }) {
-  return <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">{children}</section>;
+  return <section className="glass-panel min-w-0 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">{children}</section>;
 }
 
 /** Sayfa aralığı, veritabanı süresi ve önceki/sonraki düğmeleri. */

@@ -79,7 +79,7 @@ export default function StockItem() {
               info={<SqlInfo k={it.kaynaklar} alan="satisHizi" label="Aylık satış hızı" />} />
           </KpiRow>
 
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <Panel>
               <h2 className="mb-2 text-[13px] font-extrabold"><InfoLabel k={it.kaynaklar} alan="raflar" label="Depo ve raf adetleri">Depo ve raf</InfoLabel></h2>
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -272,7 +272,7 @@ export default function StockItem() {
             )}
           </Panel>
 
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <Panel>
               <h2 className="mb-2 text-[13px] font-extrabold">Sayım ve düzeltme notları</h2>
               <div className="flex flex-col gap-2 sm:flex-row">

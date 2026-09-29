@@ -4,6 +4,12 @@
 
 - **Test sunucusu:** canlı ağaçta main'den farklı 46 dosya vardı (31'i main'in eski sürümü, 15'i yeni; main dışı yama 0). Hepsi `git archive main`'den kondu; çalışan koda etki eden yalnız `src/canvas/kampus/DestekCard.tsx` → tsc temiz, ön yüz derlendi ve yayınlandı (`index-BVfiR10d.js`), köprü kodu değişmediği için yeniden başlatılmadı. Sonra 3.287 izlenen dosyada main (`81efd969`) ile fark 0, `._*` 0. Yeni `timas-pazar-dagitim.timer` yalnız ağaca kondu, systemd'ye kurulmadı (sahibi pazar işi; önce elle koşturulmalı).
 - **Dallar:** `git cherry` ile main'de olmayan commit'i 0 olan 38 yerel dal kapatıldı (15'i temiz worktree'siyle) + 2 kopuk worktree. Dokunulmayanlar: içeriği main'de olsa da son 3 saatte commit almış / kilitli / kirli 13 worktree (açık oturumlar) ve main'de olmayan commit'i olan 31 dal (18'i main'le çakışıyor) — birleştirme kararı sahibine/kullanıcıya bırakıldı. Uzak depoda içeriği main'de olan 6 dalın silinmesi izin denetimine takıldı, komut kullanıcıda.
+## 2026-09-29 — Stok kartı mobilde sağdan kırpılıyordu: ızgara kolonu tabloyla genişliyordu (dalda; test sunucusunda doğrulanmadı)
+
+- **Belirti:** `/timas/stok/:stokKodu` 320/390/768 px'te «Talep ve hareket» `dl`'inin sağ kolonu, «Zeki AI talep tahmini» kartları ve «Dağıtımcı ve perakende» kesiliyordu; sayfa düzeyinde taşma yoktu.
+- **Neden:** `grid gap-3 lg:grid-cols-2` mobilde kolon tanımsız → örtük `auto` kolon, en geniş hücrenin min-content'i kadar genişler. «Depo ve raf» panelindeki `TableWrap` tablosu `min-w-[640px]`; kolon 664 px'e çıkıyor, aynı kolondaki bütün paneller o genişlikte çiziliyor ve `StockFrame`'in `main`i (`overflow-y-auto` → yatayda da kaydırma kutusu) sağını kesiyordu. Küçük bir örnekle 390 px'te ölçüldü: önce kolon 664 px, düzeltmeyle 374 px.
+- **Düzeltme:** `Panel` (`editorial/kit.tsx`) `min-w-0` — ızgara hücresi olarak içindeki geniş tablo kolonu artık genişletmez, tablo kendi kutusunda kayar; aynı `Panel`'i kullanan bütün ekranlar bu tuzaktan çıkar. `StockItem.tsx`'teki iki ızgaraya açık `grid-cols-1`. Taşma gizlenmedi.
+- **Doğrulama:** test sunucusu (38.247.162.28) Mac IP'sine 22/443'te kapalıydı; gerçek sayfada Playwright ölçümü bekliyor.
 
 ## 2026-09-29 (15:40) — Stüdyo ses işleri kuruldu: fısıltı düzeyi, insan kaydı eksikleri, yetki kapısı, VM yükleme sınırı
 
