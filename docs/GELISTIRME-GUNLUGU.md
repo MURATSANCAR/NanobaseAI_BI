@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (gece, 3) — Kitap hesabı: yeni kitapta KDV %0, telif varsayılanı kapak fiyatı × basılan adet
+
+- **Üretim/fiyat ekibinin geri bildirimi:** (1) kitapta KDV %0 — CRM'de 6.200 kitap %0, 16 kitap %8–20, 90 boş; (2) fiyat çalışmasında telif kapak fiyatı üzerinden, sözleşme ayrıntısına bakılmıyor; (3) dolaylı giderin telife uygulanması yönetime sorulacak; (4) küçük baskılar (500/200/100) için ayrı maliyet Excel'i var, üretimden istenecek.
+- **Hata:** Kitap hesabında yeni kitap açılınca KDV varsayılanı %10'du (`fromDefaults`) → fiyat analizinde net gelir %9 düşük. Varsayılan **%0**; kitap seçilince CRM'deki oran (değişmedi).
+- **Telif varsayılanı:** kitaptan ve yeni kitaptan **kapak fiyatı × basılan adet** (`royaltyBase: kapak`, `royaltyOn: baski`); CRM sözleşme türü «Telif» bölümünün açıklamasında yazar, seçimle değiştirilir. Bilgi metinleri (KDV, telif tabanı/doğuşu, kapak fiyatı, telif) buna göre.
+- **Mükemmeliyetçi Kişilik −%19:** hesap son baskının adediyle (10. baskı, 500 adet, 06.08.2026); 800 adetlik iç fire 500 adette basılanın 1,6 katı. Şablon küçük baskı için değil; küçük baskı Excel'i gelince eklenecek.
+- **Bekleyen sorular:** muhasebe — kâğıt alışındaki KDV maliyet mi (sistem ve Excel kâğıdı KDV hariç alıyor); yönetim — dolaylı gider telife uygulanacak mı; üretim — küçük baskı Excel'i.
+
 ## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
 
 - **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.

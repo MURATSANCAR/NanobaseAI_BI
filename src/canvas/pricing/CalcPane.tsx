@@ -48,8 +48,10 @@ function fromSuggested(s: Suggested, ov: Overview, fl: Partial<Record<FixedKey, 
     overheadRate: d.overheadRate,
     fixed: { avans: s.advance ?? 0, ceviri: fl.ceviri ?? 0, grafik: fl.grafik ?? 0, redaksiyon: fl.redaksiyon ?? 0, pazarlama: 0, diger: fl.diger ?? 0 },
     royaltyRate: s.royaltyRate ?? 0,
-    royaltyBase: s.royaltyBase,
-    royaltyOn: s.royaltyOn,
+    // TİMAŞ fiyat çalışmasında telif kapak fiyatı × basılan adetle hesaplanır (sözleşme ayrıntısına bakılmaz; kullanıcı
+    // 2026-09-29). Sözleşme türü «Telif» bölümünün açıklamasında yazar, seçimle değiştirilebilir.
+    royaltyBase: 'kapak',
+    royaltyOn: 'baski',
     vat: s.vat,
     discount: s.discount ?? 0,
     variableRate: s.variableRate ?? d.variableRate,
@@ -73,7 +75,7 @@ function fromDefaults(ov: Overview): Form {
   return {
     printService: null, paperPerCopy: null, printSetup: 0, overheadRate: d.overheadRate,
     fixed: { avans: 0, ceviri: 0, grafik: 0, redaksiyon: 0, pazarlama: 0, diger: 0 },
-    royaltyRate: 0, royaltyBase: 'kapak', royaltyOn: 'satis', vat: 0.1, discount: ov.measured?.discount ?? 0,
+    royaltyRate: 0, royaltyBase: 'kapak', royaltyOn: 'baski', vat: 0, discount: ov.measured?.discount ?? 0,
     variableRate: ov.measured?.distribution.rate ?? d.variableRate, sellThrough: d.sellThrough, targetMargin: d.targetMargin,
     qtys: d.qtys, chosenQty: d.qtys[Math.floor(d.qtys.length / 2)] ?? null, price: null,
   };
@@ -403,7 +405,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             ))}
           </Group>
 
-          <Group title="Telif" help={origin.royalty ? `${origin.royalty}. Oran yukarıda (Kitap ve baskı).` : 'Oran yukarıda (Kitap ve baskı).'}>
+          <Group title="Telif" help={`Varsayılan: kapak fiyatı × basılan adet (fiyat çalışmasındaki uygulama). Oran yukarıda (Kitap ve baskı).${origin.royalty ? ` ${origin.royalty}.` : ''}`}>
             <Select<'kapak' | 'net'>
               label="Telif tabanı"
               info={hi('royaltyBase', 'Telif tabanı')}
