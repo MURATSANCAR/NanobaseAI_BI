@@ -6,6 +6,10 @@
 - **Yapılan:** `admin.system_actor` — yapan boşsa ya da `sistem`/`system`/`zamanlayıcı`/`scheduler` ise yazarken ve listelerken `LLM_DISPLAY` («ZEKİ AI»); eski satırlar da ekranda böyle görünür, «ZEKİ AI» süzgeci onları da getirir; Yönetim → Kişiler'de kişi sayılmaz. `crm-unassigned/send` zamanlayıcıdan gelince yapan boş. Test sunucusunda Claude'un yazdığı `CRM_UNASSIGNED_TO` kaydı «ZEKİ AI»ye çevrildi.
 - **İlk gönderim:** 12:58'de kullanıcı isteğiyle elle; Bilgiislem@timas.com.tr, 105 kişi.
 - **Test:** `test_admin_audit_actor.py` (yeni, 2) + yönetim/yetki testleri 27 geçti.
+## 2026-09-29 (akşam) — Ekran sadeleştirme işi müşteri VM'inde de; «VM bekliyor» notu eskidi
+
+- Müşteri VM'ine başka oturumun kurduğu `7fa258e8` (12:25, `EXIT 0`, `._*` 0) bu işin bütün commit'lerini içeriyor: 275 rota sadeleştirmesi (`ba34271d`), cari araması «ilk N sonuç» (`e6b606c1`), ekrandan ve koddan dış çeviri programı adlarının kaldırılması (`c00bdfb2`, `206c5f29`). Aşağıdaki «Müşteri VM'i bekliyor» satırı artık geçerli değil.
+- Test sunucusu şu an main `2f358e72` ile birebir (1.465 dosya, fark 0). VM'de olmayan sonraki 27 commit başka oturumların işi.
 
 ## 2026-09-29 (öğleden sonra, 3) — Onay penceresi test sunucusunda tıklanarak denendi: 21/21
 
