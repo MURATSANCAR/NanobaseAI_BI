@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (17:00) — Kampüs «Ana Modüller» bütün ana modülleri gösterir; kutu modüle gider, sol menü yalnız o modül
+
+- **Neden:** Kullanıcı: «tüm modülleri Zeki ana panelde modüllere ekledin mi; tıklanınca doğrudan ilgili modüle gitsin, solda yalnız o modülün menüleri gelsin». Kart 6 sabit kutuydu (`GROUP_HOME`'dan: Genel Bakış, Editoryal Süreç, Finans & Risk, Yönetim Raporları, SEO & GEO, İK); «Genel Bakış» ve «Yönetim Raporları» ikisi de Finans modülüne düşüyordu, 8 ana modül (Analiz, Fiyatlama ve üretim, Pazarlama, Saha satış, Dijital, Müşteri ve pazar, Platform, Lojistik, Altyapı, Yönetim) hiç yoktu.
+- **Yapılan:** kutular sol menünün ana modüllerinden türer (`useNavData().groups`, Kampüs hariç): ad, simge, açıklama, sıra ve rol/ortam süzgeci menüyle aynı — menüde görünmeyen modül burada da yok. Hedef `groupEntry()` (`navModel.ts`): modülde kişinin açabildiği, `matchActive` ile yine o modüle düşen ilk ekran; oraya gidilince ray `railView` ile yalnız o modülün ekranlarını gösterir (ray mantığı değişmedi).
+- **Doğrulama:** test sunucusunda geçici klasörde `tsc -b` 0, `navModel.test.ts` 42/42 (yeni: her ana modülün giriş ekranı kendi modülünü açar; rolde görünmeyen ekran atlanır; başka modülde daha uzun eşleşen ekran atlanır).
+
 ## 2026-09-29 (16:45) — Sözleşme karşılaştırma: eksik kalan denemeler kapatıldı; ortak belge okumada açık bulundu
 
 - **Neden:** Kullanıcı «eksik kaldı mı, testleri yaptın mı» diye sordu; dört denenmemiş nokta vardı: kabulün son main'de koşması, VM'de oturumlu deneme, HEIC'in ekrandan uçtan uca yüklenmesi, mobil ekran görüntüleri.
