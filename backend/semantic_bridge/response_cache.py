@@ -60,6 +60,24 @@ NEVER_PARTS = re.compile(
 REVALIDATE_HEADER = "x-swr-revalidate"
 
 
+def _code_version() -> str:
+    """Köprü kodunun içerik özeti. Diskteki hazır cevap başka bir kod sürümünün cevabıysa kullanılmaz: kurulumdan sonra
+    eski biçimdeki cevap (ör. yeni eklenen alanı taşımayan) ekrana gelmesin."""
+    root = Path(__file__).resolve().parent
+    h = hashlib.sha256()
+    for f in sorted(root.rglob("*")):
+        if f.suffix in (".py", ".json") and "__pycache__" not in f.parts:
+            try:
+                h.update(str(f.relative_to(root)).encode())
+                h.update(f.read_bytes())
+            except OSError:
+                continue
+    return h.hexdigest()[:16]
+
+
+CODE_VERSION = _code_version()
+
+
 def cacheable_path(path: str) -> bool:
     return path.startswith("/api/v1/") and not path.startswith(NEVER_PREFIXES) and not NEVER_PARTS.search(path)
 
@@ -118,7 +136,8 @@ class ResponseCache:
         if self.dir is None:
             return
         base = self.dir / self._name(key)
-        meta = {"key": list(key), "headers": e.headers, "status": e.status, "at": e.at, "seconds": e.seconds, "asked": e.asked}
+        meta = {"key": list(key), "headers": e.headers, "status": e.status, "at": e.at, "seconds": e.seconds, "asked": e.asked,
+                "code": CODE_VERSION}
         try:
             for suffix, data in ((".body", e.body), (".meta.json", json.dumps(meta, ensure_ascii=False).encode())):
                 tmp = base.with_name(base.name + suffix + f".{secrets.token_hex(4)}.tmp")
@@ -146,8 +165,9 @@ class ResponseCache:
             try:
                 meta = json.loads(meta_path.read_text())
                 key = tuple(meta["key"])
-                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
-                    self._unlink(key)
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS or meta.get("code") != CODE_VERSION:
+                    self._unlink(key)          # eski ya da başka kod sürümünün cevabı
+                    self.stats["dropped"] += 1
                     continue
                 body = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body").read_bytes()
                 rows.append((float(meta.get("asked", 0)), key, Entry(body, [tuple(h) for h in meta["headers"]], int(meta["status"]),

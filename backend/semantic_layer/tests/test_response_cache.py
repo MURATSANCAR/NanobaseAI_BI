@@ -148,3 +148,15 @@ def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
     assert again.due() == []              # çerezsiz kayıt arkada değil, kişinin açılışında tazelenir
     again.invalidate("/api/v1/mod")
     assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
+
+
+def test_disk_answers_of_another_code_version_are_dropped(tmp_path, monkeypatch):
+    """Kurulumdan sonra eski kodun diskteki hazır cevabı kullanılmaz (yeni alanı taşımayan cevap ekrana gelmez)."""
+    key = ("ayse", "/api/v1/stock/overview", "")
+    first = RC.ResponseCache(str(tmp_path))
+    first.put(key, b'{"n": 1}', [("content-type", "application/json")], 200, 2.0, {})
+    assert RC.ResponseCache(str(tmp_path)).get(key) is not None          # aynı kod: yeniden başlatmada kalır
+    monkeypatch.setattr(RC, "CODE_VERSION", "baska-surum")
+    again = RC.ResponseCache(str(tmp_path))
+    assert again.get(key) is None and again.stats["dropped"] == 1
+    assert not list(tmp_path.glob("*.meta.json"))
