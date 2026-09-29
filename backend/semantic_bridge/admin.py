@@ -2376,6 +2376,15 @@ def system_info() -> dict[str, Any]:
 # ------------------------------------------------------------------ değişiklik kaydı
 
 
+#: Kişi olmayan yapan (zamanlayıcı, gece işi, otomatik kural): kayıtta ürünün adıyla görünür, «sistem» değil.
+_SYSTEM_ACTORS = frozenset({"sistem", "system", "zamanlayıcı", "scheduler"})
+
+
+def system_actor(actor: Optional[str]) -> str:
+    a = (actor or "").strip()
+    return LLM_DISPLAY if not a or a.lower() in _SYSTEM_ACTORS else a
+
+
 def audit(engine: Optional[sa.engine.Engine], actor: Optional[str], action: str, kind: str,
           object_id: Optional[str], title: Optional[str], detail: Any = None) -> None:
     eng = engine or _engine
@@ -2385,7 +2394,7 @@ def audit(engine: Optional[sa.engine.Engine], actor: Optional[str], action: str,
         ensure(eng)
         with eng.begin() as c:
             c.execute(AUDIT.insert().values(
-                at=_now(), actor=(actor or "sistem")[:120], action=action[:16], kind=kind[:24],
+                at=_now(), actor=system_actor(actor)[:120], action=action[:16], kind=kind[:24],
                 object_id=(str(object_id)[:120] if object_id else None), title=(str(title)[:300] if title else None),
                 detail=json.dumps(detail, ensure_ascii=False, default=str)[:20000] if detail is not None else None))
     except Exception as e:  # noqa: BLE001
@@ -2399,7 +2408,9 @@ def audit_list(engine: sa.engine.Engine, *, kind: Optional[str] = None, actor: O
     if kind:
         stmt = stmt.where(AUDIT.c.kind == kind)
     if actor:
-        stmt = stmt.where(AUDIT.c.actor == actor)
+        # Eski kayıtlarda kişi olmayan yapan «sistem» yazılıydı; ürün adıyla süzünce onlar da gelir.
+        names = [actor] + (sorted(_SYSTEM_ACTORS) if system_actor(actor) == LLM_DISPLAY else [])
+        stmt = stmt.where(AUDIT.c.actor.in_(names))
     if action:
         stmt = stmt.where(AUDIT.c.action == action)
     if q:
@@ -2411,7 +2422,7 @@ def audit_list(engine: sa.engine.Engine, *, kind: Optional[str] = None, actor: O
     with engine.connect() as c:
         rows = c.execute(stmt.order_by(AUDIT.c.id.desc()).limit(limit + 1)).mappings().all()
     items = [{
-        "id": r["id"], "at": _iso(r["at"]), "actor": r["actor"], "action": r["action"], "kind": r["kind"],
+        "id": r["id"], "at": _iso(r["at"]), "actor": system_actor(r["actor"]), "action": r["action"], "kind": r["kind"],
         "kindLabel": KIND_LABEL.get(r["kind"], r["kind"]), "objectId": r["object_id"], "title": r["title"],
         "detail": json.loads(r["detail"]) if r["detail"] else None,
     } for r in rows[:limit]]
@@ -2486,7 +2497,7 @@ def users_stmts(tenant: str, ds: str) -> dict[str, Any]:
         "reports": sa.select(rm.REPORTS.c.username, sa.func.count(), sa.func.max(rm.REPORTS.c.updated_at))
         .where(*rm._scope(tenant, ds, None)).group_by(rm.REPORTS.c.username),
         "actions": sa.select(AUDIT.c.actor, sa.func.count(), sa.func.max(AUDIT.c.at))
-        .where(AUDIT.c.actor != "sistem").group_by(AUDIT.c.actor),
+        .where(AUDIT.c.actor.notin_(sorted(_SYSTEM_ACTORS | {LLM_DISPLAY}))).group_by(AUDIT.c.actor),
     }
 
 

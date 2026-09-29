@@ -7177,7 +7177,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """Listeyi `CRM_UNASSIGNED_TO` alıcılarına Excel olarak gönderir. Her gün 07:00 ve 12:00'de
         `timas-crm-unassigned.timer` çağırır (caller token, çerezsiz); yönetici ekrandan da tetikler."""
         _require_caller(request)
-        actor = "zamanlayıcı"
+        actor = None                          # zamanlayıcı: kayıtta ürün adı (ZEKİ AI)
         if "timas_session" in request.headers.get("cookie", ""):
             _, _, actor = _access_admin(request)
         from semantic_bridge import crm_unassigned as CU
