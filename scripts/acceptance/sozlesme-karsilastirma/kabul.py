@@ -17,6 +17,20 @@ COUNT), PDF metni bu betikte ayrıca okunur (pypdf), köprü veritabanı doğrud
   K10 arşive karşı: belge sayısı = okunmuş belge − 1
   K11 her cevapta kaynağı yazılmamış rakam yok, SQL'de yer tutucu/sır yok; ekrana giden metinde teknoloji adı yok
   K12 oturumsuz istek 401
+  --- faz 1–3
+  K13 kur: TL avanslı bir sözleşmenin kıyas değeri = avans / (betiğin kendi okuduğu TCMB USD alış kuru, başlangıç ayı)
+  K14 şekil: «başlangıç tarihi yok» sayısı = SQL (anlaşma temsilcisi, başlangıcı boş)
+  K15 inceleme: yazılır (SQL satırı), sözleşmede görünür, «incelenmemiş» süzgecinde o bulgu kapanır, silinir (SQL)
+  K16 liste: CSV satır sayısı = tarama toplamı; Excel eşi xlsx
+  K17 taslak: kaydedilmeden emsal kontrolü (aşırı oran «yüksek»), kayıt yok (SQL)
+  K18 ek ölçüt: ajans + hedef kitle seçilince emsal daralır, ölçütler kıyas grubunda
+  K19 pozisyon: «karton telif en çok %20» kuralına aykıran anlaşmalar = SQL (tip 5, satıştan ödeme, new_Telif > 20)
+  K20 öneri: emsalden karton telif alt sınırı = SQL PERCENTILE_CONT(0,05) (anlaşma temsilcisi, son N yıl)
+  K21 madde türü: gerçek PDF maddelerinde kuralla bulunan her tür, maddenin kendi metninde türün sözcüğünü taşır
+  K22 Word: sözleşme raporu ve belge farkı açılır, metni taşır
+  K23 maske: sahte kimlik no ve e-posta maskeli cevapta yok, maskesiz cevapta var, görüntüleme kayda yazılır (SQL)
+  K24 eşleşme: dosya adındaki sözleşme numarası okununca bağlanır
+  K25 olaylar: ek protokol tarihi olan sözleşmede olay çizelgesi CRM tarihini taşır
 
 Yazma: iki karşılaştırma belgesi (yükleme) ve arşiv okumaları. Hepsi sonunda uçtan silinir, silindiği SQL ile denetlenir.
 CRM'e hiçbir şey yazılmaz. Ortam: BASE (yan köprü), COOKIE, SEMANTIC_STORE_DSN, SEMANTIC_CRM_CONNECTION_FILE,
@@ -33,6 +47,7 @@ import re
 import time
 import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from xml.sax.saxutils import escape
@@ -163,6 +178,206 @@ def pct(vals: list[float], q: float) -> float | None:
     lo = int(pos)
     hi = min(lo + 1, len(vals) - 1)
     return round(vals[lo] + (vals[hi] - vals[lo]) * (pos - lo), 6)
+
+
+def tcmb_usd(year: int, month: int) -> float | None:
+    """Betiğin kendi TCMB okuması (uygulamanın okuyucusundan bağımsız): ayın 1'i ya da önceki son iş günü."""
+    import datetime as dt
+
+    d = dt.date(year, month, 1)
+    for back in range(0, 11):
+        x = d - dt.timedelta(days=back)
+        url = f"https://www.tcmb.gov.tr/kurlar/{x:%Y%m}/{x:%d%m%Y}.xml"
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "kabul"}), timeout=20) as r:
+                text = r.read().decode("iso-8859-9", "replace")
+        except urllib.error.HTTPError:
+            continue
+        m = re.search(r'Kod="USD".*?<ForexBuying>([\d.]+)</ForexBuying>', text, re.S) or \
+            re.search(r'CurrencyCode="USD".*?<ForexBuying>([\d.]+)</ForexBuying>', text, re.S)
+        if m:
+            v = float(m.group(1))
+            return v / 1_000_000 if v > 10000 else v
+    return None
+
+
+REP = ("WITH x AS (SELECT LOWER(COALESCE(NULLIF(REPLACE(REPLACE(s.new_anasozlesmeid, '{', ''), '}', ''), ''), "
+       "CAST(s.new_sozlesmeId AS varchar(40)))) AS k, s.*, ROW_NUMBER() OVER (PARTITION BY LOWER(COALESCE(NULLIF(REPLACE("
+       "REPLACE(s.new_anasozlesmeid, '{', ''), '}', ''), ''), CAST(s.new_sozlesmeId AS varchar(40)))) ORDER BY CASE WHEN "
+       "LOWER(CAST(s.new_sozlesmeId AS varchar(40))) = LOWER(COALESCE(NULLIF(REPLACE(REPLACE(s.new_anasozlesmeid, '{', ''), "
+       "'}', ''), ''), CAST(s.new_sozlesmeId AS varchar(40)))) THEN 0 ELSE 1 END, LEN(s.new_name), s.new_name) AS rn "
+       "FROM {P}new_sozlesmeBase s WHERE s.statecode = 0) ")
+
+
+def all_items(path: str) -> list[dict]:
+    out, page = [], 0
+    while True:
+        st, d = http("GET", f"{path}&page={page}")
+        if st != 200:
+            return out
+        out += d["items"]
+        if (page + 1) * d["pageSize"] >= d["total"]:
+            return out
+        page += 1
+
+
+def faz123(run, engine, meta: dict, scan: dict, created: list[str]) -> None:
+    rep = REP.replace("{P}", P)
+    t0 = time.time()
+    for _ in range(180):                      # kurlar ilk açılışta arka planda okunur (~4 dk)
+        _, m = http("GET", B + "/meta")
+        if m and not m["kur"]["okunuyor"] and m["kur"]["okunan"] > 0:
+            break
+        time.sleep(5)
+    ok("kur önbelleği", m["kur"]["okunan"] == m["kur"]["ay"], f"{m['kur']['okunan']}/{m['kur']['ay']} ay, {round(time.time() - t0)} sn")
+    _, scan = http("GET", B + "/scan?only=sapan&page=0")
+    # K13 kur
+    rows = run(f"SELECT TOP 3 LOWER(CAST(new_sozlesmeId AS varchar(40))) AS id, new_sozlesmeavanstutari AS a, new_SozlesmeBaslangicTarihi AS b"
+               f" FROM {P}new_sozlesmeBase WHERE statecode = 0 AND new_sozlesmeparabirimi = 1 AND new_sozlesmeavanstutari > 0"
+               " AND new_SozlesmeBaslangicTarihi >= '2015-01-01' ORDER BY new_SozlesmeBaslangicTarihi DESC")
+    for r in rows:
+        st, d = http("GET", B + f"/contract/{r['id']}")
+        c = next((x for g in (d or {}).get("groups", []) for x in g["clauses"] if x["key"] == "new_sozlesmeavanstutari"), None)
+        b = str(r["b"])[:7]
+        rate = tcmb_usd(int(b[:4]), int(b[5:7]))
+        want = round(float(r["a"]) / rate, 2) if rate else None
+        got = round(float(c["kiyas"]), 2) if c and c.get("kiyas") is not None else None
+        ok(f"K13 kur {r['id'][:8]} ({b})", st == 200 and want is not None and got is not None and abs(want - got) <= 0.01,
+           f"uç {got} USD / betik {want} USD (kur {rate})")
+    # K14 şekil
+    n_start = run(rep + "SELECT COUNT(*) AS n FROM x WHERE x.rn = 1 AND x.new_SozlesmeBaslangicTarihi IS NULL")[0]["n"]
+    got = next((x["sayi"] for x in scan.get("sekilSayim", []) if x["id"] == "baslangic"), 0)
+    ok("K14 şekil: başlangıç tarihi yok", got >= n_start and got - n_start <= scan["ozet"]["anlasma"] * 0.01,
+       f"uç {got} (anlaşma kopyaları dahil) / SQL temsilci {n_start}")
+    # K15 inceleme
+    it = next(x for x in scan["items"] if x["sapmalar"])
+    clause = it["sapmalar"][0]["key"]
+    st, rv = http("POST", B + "/reviews", {"key": it["id"], "clause": clause, "status": "istisna", "note": "kabul denemesi"})
+    with engine.connect() as c:
+        nrow = c.execute(sa.text("SELECT COUNT(*) FROM semantic_contract_compare_reviews WHERE agreement = :a AND clause = :c"),
+                         {"a": it["agreement"], "c": clause}).scalar()
+    st2, d = http("GET", B + f"/contract/{it['id']}")
+    seen = next((x.get("inceleme") for g in d["groups"] for x in g["clauses"] if x["key"] == clause), None)
+    st3, _ = http("DELETE", B + f"/reviews?key={it['id']}&clause={clause}")
+    with engine.connect() as c:
+        left = c.execute(sa.text("SELECT COUNT(*) FROM semantic_contract_compare_reviews WHERE agreement = :a"), {"a": it["agreement"]}).scalar()
+    ok("K15 inceleme yaz/gör/sil", st == 200 and nrow == 1 and seen and seen["status"] == "istisna" and not seen["open"] and st3 == 200 and left == 0,
+       f"yaz {st}, SQL {nrow}, görünen {seen and seen['statusLabel']}, sil {st3}, kalan {left}")
+    # K16 CSV / Excel
+    req = urllib.request.Request(BASE + B + "/scan.csv?only=sapan&enAz=5", headers={"Cookie": COOKIE})
+    with urllib.request.urlopen(req, timeout=300) as r:
+        csv_text = r.read().decode("utf-8-sig")
+    st, s5 = http("GET", B + "/scan?only=sapan&enAz=5&page=0")
+    lines = [l for l in csv_text.splitlines() if l.strip()]
+    req = urllib.request.Request(BASE + B + "/scan.csv?only=sapan&enAz=5&bicim=xlsx", headers={"Cookie": COOKIE})
+    with urllib.request.urlopen(req, timeout=300) as r:
+        ctype, xbytes = r.headers.get("Content-Type", ""), r.read()
+    ok("K16 CSV = tarama toplamı, Excel eşi", len(lines) - 1 == s5["total"] and "spreadsheetml" in ctype and xbytes[:2] == b"PK",
+       f"CSV {len(lines) - 1} satır / tarama {s5['total']}; Excel {ctype} {len(xbytes)} bayt")
+    # K17 taslak
+    with engine.connect() as c:
+        before = c.execute(sa.text("SELECT COUNT(*) FROM semantic_contracts")).scalar()
+    st, d = http("POST", B + "/terms", {"terms": {"kind": "telif-alis", "paymentType": "satis", "currency": "TRY", "rates": {"karton": 60},
+                                                  "start": "2026-09-01", "parties": [], "books": [], "title": "Kabul taslağı", "rights": {}}})
+    c17 = next((x for g in (d or {}).get("groups", []) for x in g["clauses"] if x["key"] == "new_Telif"), {})
+    with engine.connect() as c:
+        after = c.execute(sa.text("SELECT COUNT(*) FROM semantic_contracts")).scalar()
+    ok("K17 taslak kontrolü", st == 200 and c17.get("status") == "yuksek" and before == after and any(not x["ok"] for x in d["sekil"]),
+       f"durum {c17.get('status')}, şekil eksiği {sum(1 for x in d['sekil'] if not x['ok'])}, portal kaydı {before}→{after}")
+    # K18 ek ölçüt
+    key = scan["items"][0]["id"]
+    st, base = http("GET", B + f"/contract/{key}?olcut=-")
+    st2, dd = http("GET", B + f"/contract/{key}?olcut=ajans,hedef")
+    ids = [b_["id"] for b_ in dd["criteria"]["boyutlar"]] + [x for x in dd["criteria"]["gevsetilen"]]
+    ok("K18 ek ölçüt", st == 200 and st2 == 200 and dd["criteria"]["emsal"] <= base["criteria"]["emsal"] and ("ajans" in ids or "Ajans üzerinden" in ids),
+       f"emsal {base['criteria']['emsal']} → {dd['criteria']['emsal']}; ölçütler {ids}")
+    # K19 pozisyon
+    st, rule = http("POST", B + "/positions", {"clause": "new_Telif", "op": "max", "value": 20, "level": "kirmizi",
+                                                "scope": {"tip": 5, "odeme": 2}, "reason": "kabul denemesi"})
+    items = all_items(B + "/scan?only=pozisyon&enAz=1")
+    got_ag = {x["agreement"] for x in items}
+    want = run(rep + "SELECT COUNT(DISTINCT x.k) AS n FROM x WHERE x.new_SozlesmeTipi = 5 AND x.new_TelifTipi = 2 AND x.new_Telif > 20")[0]["n"]
+    ok("K19 pozisyon ihlali = SQL", st == 200 and len(got_ag) >= want and len(got_ag) - want <= max(2, want * 0.05),
+       f"uç {len(got_ag)} anlaşma / SQL temsilci {want} (fark = temsilcisi uyan ama kopyası aykırı anlaşma)")
+    http("DELETE", B + f"/positions/{rule['id']}") if st == 200 else None
+    # K20 öneri
+    yil = meta["ayarlar"]["yil"]
+    import datetime as dt
+    now = dt.date.today().year
+    st, sg = http("POST", B + "/positions/suggest", {"tip": 5, "odeme": 2})
+    st2, pl = http("GET", B + "/positions")
+    mine = [p for p in pl["items"] if p["state"] == "oneri" and p["scope"]["tip"] == 5 and p["scope"]["odeme"] == 2]
+    low = next((p["value"] for p in mine if p["clause"] == "new_Telif" and p["op"] == "min"), None)
+    vals = [r["v"] for r in run(rep + f"SELECT CAST(x.new_Telif AS float) AS v FROM x WHERE x.rn = 1 AND x.new_SozlesmeTipi = 5 "
+                                     f"AND x.new_TelifTipi = 2 AND x.new_Telif > 0 AND YEAR(x.new_SozlesmeBaslangicTarihi) BETWEEN {now - yil} AND {now}")]
+    ok("K20 öneri alt sınırı = SQL %5", st == 200 and low is not None and abs(low - pct(vals, 0.05)) < 1e-6,
+       f"uç {low} / SQL {pct(vals, 0.05)} ({len(vals)} değer); {sg.get('eklenen')} öneri")
+    for p in mine:
+        http("DELETE", B + f"/positions/{p['id']}")
+    # K21 madde türü (gerçek PDF; kuralla bulunanlar)
+    st, docs = http("GET", B + "/documents")
+    pdf = next((x for x in docs["items"] if x["kind"] == "crm" and (x["filename"] or "").lower().endswith(".pdf")), None)
+    if pdf:
+        if pdf["status"] != "hazir":
+            http("POST", B + "/documents/read", {"ref": pdf["ref"]})
+            created.append(pdf["ref"])
+            wait_ready(pdf["ref"])
+        st, cp = http("POST", B + "/documents/corpus", {"a": pdf["ref"]})
+        from semantic_bridge import contracts_compare_docs as CDm
+        bad, rule_n, zeki_n = [], 0, 0
+        for r in cp.get("maddeler", []):
+            c = r["a"]
+            if c.get("turKaynak") == "kural":
+                rule_n += 1
+                words = CDm.CLAUSE_TYPES[c["tur"]][1]
+                txt = " " + fold((c.get("baslik") or "") + " " + (c.get("metin") or "")[:500]) + " "
+                if not any(f" {w}" in txt for w in words):
+                    bad.append(c["sira"])
+            elif c.get("turKaynak") == "zeki":
+                zeki_n += 1
+        ok("K21 madde türü (gerçek PDF)", st == 200 and rule_n > 0 and not bad,
+           f"{len(cp.get('maddeler', []))} madde: {rule_n} kuralla, {zeki_n} Zeki AI ile; sözcüğü tutmayan {bad}")
+    # K22–K24 Word, maske, eşleşme
+    no = scan["items"][0]["no"]
+    body = ["TELİF SÖZLEŞMESİ", f"Sözleşme No: {no}", "Madde 1 - Taraflar", "Hak sahibi Kabul Deneme, T.C. Kimlik No: 12345678950, "
+            "e-posta: kabul.deneme@ornek.invalid", "Madde 2 - Fesih", "Taraflardan biri ihlal halinde sözleşmeyi feshedebilir.",
+            "Madde 3 - Telif", "Yayınevi net satış tutarı üzerinden %10 telif öder."]
+    st, up = http("PUT", B + f"/documents?filename={urllib.parse.quote(no)}-kabul.docx", raw=docx(body))
+    if st == 201:
+        created.append(up["ref"])
+        d = wait_ready(up["ref"])
+        ok("K24 sözleşmeye kendiliğinden bağlandı", d.get("contractNo") == no, f"bağ {d.get('contractNo')} / beklenen {no}")
+        other = next((x["ref"] for x in docs["items"] if x["kind"] == "sablon"), None)
+        if other:
+            http("POST", B + "/documents/read", {"ref": other})
+            if other not in created:
+                created.append(other)
+            wait_ready(other)
+            st, masked = http("POST", B + "/documents/diff", {"a": up["ref"], "b": other})
+            text_m = json.dumps(masked, ensure_ascii=False)
+            st2, raw_ = http("POST", B + "/documents/diff", {"a": up["ref"], "b": other, "maskesiz": True})
+            text_r = json.dumps(raw_, ensure_ascii=False)
+            with engine.connect() as c:
+                views = c.execute(sa.text("SELECT COUNT(*) FROM semantic_audit WHERE actor = 'timasai' AND action = 'view' AND object_id = :r"),
+                                  {"r": up["ref"]}).scalar()
+            ok("K23 maske", st == 200 and "12345678950" not in text_m and "kabul.deneme@ornek.invalid" not in text_m
+               and "12345678950" in text_r and views >= 1, f"maskeli cevapta yok, maskesiz cevapta var; görüntüleme kaydı {views}")
+            req = urllib.request.Request(BASE + B + f"/documents/diff.docx?a={urllib.parse.quote(up['ref'])}&b={urllib.parse.quote(other)}",
+                                         headers={"Cookie": COOKIE})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                xml = zipfile.ZipFile(io.BytesIO(r.read())).read("word/document.xml").decode()
+            ok("K22 Word belge farkı", "Belge karşılaştırma raporu" in xml and "12345678950" not in xml, f"{len(xml)} karakter, maskeli")
+    req = urllib.request.Request(BASE + B + f"/contract/{scan['items'][0]['id']}/report.docx", headers={"Cookie": COOKIE})
+    with urllib.request.urlopen(req, timeout=300) as r:
+        xml = zipfile.ZipFile(io.BytesIO(r.read())).read("word/document.xml").decode()
+    ok("K22 Word sözleşme raporu", scan["items"][0]["no"] in xml and "Farklı maddeler" in xml, f"{len(xml)} karakter")
+    # K25 olaylar
+    ev = run(f"SELECT TOP 1 LOWER(CAST(new_sozlesmeId AS varchar(40))) AS id, CONVERT(varchar(10), new_ekprotokoltarihi, 23) AS t"
+             f" FROM {P}new_sozlesmeBase WHERE statecode = 0 AND new_ekprotokoltarihi IS NOT NULL ORDER BY new_ekprotokoltarihi DESC")
+    if ev:
+        st, d = http("GET", B + f"/contract/{ev[0]['id']}")
+        got = [x for x in d.get("olaylar", []) if x["olay"] == "Ek protokol"]
+        ok("K25 olay çizelgesi", st == 200 and any(x["tarih"] == ev[0]["t"] for x in got), f"uç {[x['tarih'] for x in got]} / SQL {ev[0]['t']}")
 
 
 def main() -> None:
@@ -353,6 +568,8 @@ def main() -> None:
            and next(r for r in cp["maddeler"] if r["a"]["baslik"] == "Film hakları")["durum"] == "arsivde-yok",
            f"belge {cp.get('belgeSayisi')} / okunmuş {n_ready}")
         check_provenance("arşive karşı", cp)
+
+    faz123(run, engine, meta, scan, created)
 
     # temizlik
     for ref in created:
