@@ -1,5 +1,20 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
+
+- **Ön denetim:** VM'deki son kurulum `7fa258e8` kurulacak `14d2346d`'nin atası (42 commit, geri sarma yok); çakışma işareti 0;
+  `/tmp/bi-main-14d2346d` (git archive) test sunucusunda köprü yükledi (2.321 uç); `._*` 0. Kurulum komutu Claude oturumunda
+  «üretime kurulum» izin denetimine takıldı → kullanıcı koştu: `systemd-run --unit=vm-deploy-14d2346d`, günlük
+  `/tmp/vm-deploy-14d2346d.log`, **EXIT 0**; 5 konteyner ayakta, `bi_var` korundu (7 → 7), oturumsuz yollar 302/200/401,
+  VM sürüm kaydı `14d2346d` (test sunucusu köprüsüne kayıt 401 — betiğin bilinen eksiği). Web taraması kapalı
+  (`WEB_WATCH_ENABLED` tanımsız, zamanlayıcı yok).
+- **VM kabulü (köprü konteyneri içinde `yerinde.py`, müşteri verisi, yalnız okuma; denetim/erişim yazıcıları sayaçta, geçici
+  hazır cevap klasörü; bitince `/tmp/ek` ve geçici klasör silindi):** **152 geçti, 0 kaldı, 22 uyarı.** Cariler 248.351 satır
+  (947.871 sayı + 325.781 tarih hücresi) birebir; CRM düzeltilecek 113.545; bayi riski 25.685; kârlılık 10.096; baskı öneri 5.061;
+  set kart listesi 9. Uyarılar test sunucusundakilerle aynı türde (kayıtsız kimlikli uçlar, timasai rolünde olmayan İK
+  zorunlu eğitim, bilerek metin kalan kod kolonları).
+- **Kurulum sırası tamam:** main → test sunucusu (kabul 146/0, ekran 136/0) → müşteri VM'i (152/0).
+
 ## 2026-09-29 (13:20) — Excel indirme: düzeltmeler test sunucusunda, set kart listesi ekranı da denendi
 
 - **Kurulum (`bb527271`):** 8 dosya (md5 = değişiklik öncesi main), derleme, köprü yeniden başladı. `cockpit/dist/index.html`
