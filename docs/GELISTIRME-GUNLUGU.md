@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (22:45) — Müşteri VM'ine `0f408d76b`: küçük ekran bilgi kutusu (+ Kampüs ekip sohbeti kartı)
+
+- **Ön denetim:** VM'deki son kurulum `411dd7be9` ⊂ `0f408d76b` (geri sarma yok). Aradaki kod: ekran bilgi kutusu (3 dosya), Kampüs `SohbetCard` + giriş servisi `/chat-presence` — ikisi de test sunucusunda canlı ve md5 eş. `git archive` → `/tmp/bi-main-0f408d76`, `._*` 0, çakışma işareti 0, köprü arşivden yüklendi (2.450 yol).
+- **Kurulum:** `systemd-run vm-deploy-0f408d76` (`/tmp/vm-deploy-0f408d76.log`) EXIT 0; bridge/jobs/login/web yeni (22:40), db dokunulmadı; rapor önbelleği 7 → 7; VM `._*` 0; sürüm kaydı `0f408d76b789` (8795'e yazılamadı uyarısı önceki kurulumlarda da var).
+- **Doğrulama:** VM web konteyneri `index-NK8IT1Mo.js` sunuyor (test sunucusuyla aynı), paket «Nasıl çalışır →» içeriyor; dış kapı `http://192.168.0.55/timas/` 200. Görsel deneme test sunucusunda yapıldı (Uyarılar, masaüstü + telefon).
+
 ## 2026-09-29 (22:35) — Ekran bilgi kutusu küçültüldü, kapatması kolaylaştı
 
 - **Neden:** kullanıcı «çok yer kaplıyor, kapatması zor» dedi. Kutu ilk girişte 600 px genişlik, ~560 px yükseklikte bütün metni (maddeler, veri, güncelleme, arka plan işleri, yapılabilecekler) açıp ekranın üstünü 15 sn örtüyordu; Esc yalnız odak kutudayken çalışıyor, dışarı tıklamak kapatmıyordu.
