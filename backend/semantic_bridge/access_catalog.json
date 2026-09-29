@@ -257,6 +257,11 @@
       "label": "Haklar ve lisanslar"
     },
     {
+      "key": "sayfa:sozlesme-karsilastirma",
+      "area": "editoryal",
+      "label": "Sözleşme karşılaştırma"
+    },
+    {
       "key": "sayfa:editor-atama",
       "area": "editoryal",
       "label": "Editör atama"
@@ -1637,6 +1642,14 @@
       "page": "sayfa:telif-sozlesme",
       "label": "Sözleşme şablonları",
       "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sozlesme-karsilastirma.belge",
+      "area": "editoryal",
+      "page": "sayfa:sozlesme-karsilastirma",
+      "label": "Karşılaştırma belgesi",
+      "hint": "Karşılaştırma için sözleşme belgesi yükleme ve silme; belge okumasını silme",
       "explicit": true
     },
     {

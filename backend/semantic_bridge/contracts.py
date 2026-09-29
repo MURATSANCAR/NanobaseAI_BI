@@ -1237,7 +1237,10 @@ def crm_contract_sql(p: str, crm_id: str) -> list[str]:
         " CAST(s.new_TelifTipi AS int) AS odeme_kod, CAST(s.new_telifturu AS int) AS esas_kod,"
         " CAST(s.new_sozlesmeparabirimi AS int) AS para_kod, CAST(s.statuscode AS int) AS durum_kod,"
         " s.new_Telif, s.new_sertkapaktelif, s.new_e_kitap_telif, s.new_SesliKitap, s.new_yurtdisitelif,"
-        " s.new_sozlesmeavanstutari, s.new_tekodemetutari, s.new_telifhesaplamaiskontosu,"
+        # Tek ödeme tutarı `new_TekdemeTutari`'nda (2026-09-29: tek ödemeli 7.658 sözleşmenin 6.912'sinde dolu);
+        # «Tek Ödeme Tutarı TL» (`new_tekodemetutari`) hiçbir kayıtta dolu değil, doluysa o önce gelir.
+        " s.new_sozlesmeavanstutari, COALESCE(NULLIF(s.new_tekodemetutari, 0), s.new_TekdemeTutari) AS new_tekodemetutari,"
+        " s.new_telifhesaplamaiskontosu,"
         " s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi, s.new_SozlesmeSuresiYil,"
         " CAST(ISNULL(s.new_suresizsozlesme, 0) AS int) AS suresiz, s.new_yazar_text, s.new_mutercim_text,"
         f" s.new_cizer_text, s.new_haklaraciklama, s.new_hesaplamatutari, s.new_anasozlesmeid, a.Name AS sirket, {rights},"

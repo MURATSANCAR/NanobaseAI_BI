@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Download, FilePen, Loader2 } from 'lucide-react';
+import { ChevronLeft, Download, FileDiff, FilePen, Loader2 } from 'lucide-react';
+import { canSeePage, usePageAccess } from '../../useAdmin';
 import { toast } from 'sonner';
 import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
@@ -302,6 +303,7 @@ export default function ContractDetail() {
   };
 
   const transitions = d && m ? m.transitions[d.status] ?? [] : [];
+  const canCompare = canSeePage(usePageAccess(), 'sozlesme-karsilastirma');
   return (
     <ModuleFrame
       route="/telif-sozlesme"
@@ -347,6 +349,12 @@ export default function ContractDetail() {
                     {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
                     Word olarak indir
                   </button>
+                )}
+                {canCompare && (
+                  <Link to={`/telif-sozlesme/karsilastirma?sekme=sozlesme&sozlesme=${encodeURIComponent(d.record?.id ?? d.key)}`} className={btnGhost}>
+                    <FileDiff aria-hidden className="h-4 w-4" />
+                    Emsalle karşılaştır
+                  </Link>
                 )}
               </div>
             </div>

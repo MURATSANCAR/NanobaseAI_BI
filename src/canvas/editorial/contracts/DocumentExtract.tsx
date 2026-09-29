@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, FileSearch, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Check, FileDiff, FileSearch, Sparkles } from 'lucide-react';
+import { canSeePage, usePageAccess } from '../../useAdmin';
 import { Note, Pill, btnGhost, btnPrimary } from '../../admin/ui';
 import SqlInfo from '../../components/SqlInfo';
 import { FileDrop } from '../../components/FileDrop';
@@ -63,6 +65,7 @@ export default function DocumentExtract({
     onApply(applySuggestion(terms, r.oneri, keys), next, item.id, r.oneri);
   };
   const pending = rows.filter((x) => !applied.includes(x.key));
+  const canCompare = canSeePage(usePageAccess(), 'sozlesme-karsilastirma');
   const running = item?.status === 'hazirlaniyor' || upload.isPending;
   const share = item && item.total > 0 ? Math.min(1, item.done / item.total) : 0;
 
@@ -110,6 +113,15 @@ export default function DocumentExtract({
             ) : null}
             {r && <span>{r.okuma.sayfa} sayfa · {r.pencere.sayi} bölümde okundu</span>}
             <SqlInfo k={q.data?.kaynaklar} alan="item" label="Belgeden şart okuması" />
+            {r && rows.length > 0 && canCompare && (
+              <Link
+                to={`/telif-sozlesme/karsilastirma?sekme=sozlesme&sozlesme=${encodeURIComponent(`belge-${item.id}`)}`}
+                className="inline-flex min-h-11 items-center gap-1 font-bold text-canvas-violet hover:underline sm:min-h-0"
+              >
+                <FileDiff aria-hidden className="h-3.5 w-3.5" />
+                Şartları emsalle karşılaştır
+              </Link>
+            )}
           </div>
 
           {running && (

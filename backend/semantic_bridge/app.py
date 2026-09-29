@@ -4549,6 +4549,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     contract_extract_api_mod.register(app, rt=rt, greetings=_greetings, can=_can, audit=admin_mod.audit,
                                       conf=admin_mod.conf)
+    # Sözleşme karşılaştırma: maddeler geçmiş sözleşmelerle (emsal), serbest metin ve belge madde madde (model yok).
+    from semantic_bridge import contracts_compare_api as contracts_compare_api_mod
+
+    contracts_compare_api_mod.register(app, rt=rt, greetings=_greetings, can=_can, crm_prefix=editorial_mod._prefix,
+                                       audit=admin_mod.audit, conf=admin_mod.conf)
 
     @app.get("/api/v1/editorial/board/summary")
     def editorial_board_summary(request: Request) -> dict[str, Any]:

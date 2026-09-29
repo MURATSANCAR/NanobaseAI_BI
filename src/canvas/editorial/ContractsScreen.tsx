@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, FilePlus2, Library, Search } from 'lucide-react';
+import { CalendarClock, FileDiff, FilePlus2, Library, Search } from 'lucide-react';
+import { canSeePage, usePageAccess } from '../useAdmin';
 import { ENGINE_ENABLED, type Contract, type ContractSummary } from '../engine';
 import { contractsListOptions, contractsSummaryOptions } from './queries';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../admin/ui';
@@ -200,6 +201,7 @@ export default function ContractsScreen() {
   const [params, setParams] = useSearchParams();
   const source = params.get('kaynak') === 'portal' ? 'portal' : 'crm';
   const meta = useQuery(metaOptions());
+  const access = usePageAccess();
   const records = useQuery({ queryKey: ['contracts', 'records', '', ''], queryFn: () => contractApi.records({}) });
   const [text, setText] = useState('');
   const [status, setStatus] = useState('');
@@ -220,6 +222,7 @@ export default function ContractsScreen() {
   const warnDays = s?.warnDays ?? 60;
   const err = errText(summary.error || list.error, 'Sözleşmeler okunamadı.');
 
+  const canCompare = canSeePage(access, 'sozlesme-karsilastirma');
   return (
     <ModuleFrame
       route="/telif-sozlesme"
@@ -243,6 +246,12 @@ export default function ContractsScreen() {
             <Library aria-hidden className="h-4 w-4" />
             Şablonlar
           </Link>
+          {canCompare && (
+            <Link to="/telif-sozlesme/karsilastirma" className={btnGhost}>
+              <FileDiff aria-hidden className="h-4 w-4" />
+              Karşılaştırma
+            </Link>
+          )}
         </div>
       }
     >

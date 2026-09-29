@@ -16,7 +16,7 @@ APPROVED = {
     "seo": {"seo", "geo"},
     "satis": {"corporate", "eticaret", "kampanya", "commerce", "readers", "dijital", "channels", "pazar"},
     "lojistik": {"stock", "shipping"},
-    "finans": {"royalty", "kurul"},
+    "finans": {"royalty", "kurul", "contract_compare"},
     "ik": {"hr", "rooms"},
     "sistem": {"itops", "security", "support", "performance"},
 }

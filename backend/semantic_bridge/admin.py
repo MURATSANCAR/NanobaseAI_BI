@@ -934,6 +934,24 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ROYALTY_ALERT_RECIPIENTS", "group": "royalty", "label": "Telif bildirim alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (telif birimi, muhasebe). Koşu hatırlatması, yenileme özeti ve «ödeme listesi "
              "hazır» gider; yazara gönderim yok"},
+    # Sözleşme karşılaştırma (emsal kıyası; model yok)
+    {"key": "CONTRACT_COMPARE_MIN_PEERS", "group": "contract_compare", "label": "En az emsal sayısı", "type": "int",
+     "default": "20", "help": "Kıyas grubu bundan küçükse ölçütler sırayla gevşetilir (dönem, bölüm, para birimi, ödeme türü); "
+                             "bir maddede bundan az dolu değer varsa o madde için karar verilmez (3–1000)"},
+    {"key": "CONTRACT_COMPARE_RARE_PCT", "group": "contract_compare", "label": "Sapma eşiği (%)", "type": "text",
+     "default": "5", "help": "Emsallerin bu yüzdesinden azında görülen değer «emsalden yüksek/düşük» ya da «nadir» "
+                             "işaretlenir; emsallerin (100 − eşik) yüzdesinde olan madde bu sözleşmede yoksa «eksik» (1–40)"},
+    {"key": "CONTRACT_COMPARE_YEARS", "group": "contract_compare", "label": "Emsal dönemi (yıl)", "type": "int",
+     "default": "5", "help": "Başlangıcı sözleşmenin başlangıç yılı ile bu kadar önceki yıl arasındaki sözleşmeler emsal "
+                            "olur; ekrandan da değişir (0–60)"},
+    {"key": "CONTRACT_COMPARE_TEXT_SIMILAR", "group": "contract_compare", "label": "Serbest metin benzerlik eşiği",
+     "type": "text", "default": "0.80", "help": "İki notun ortak kelimelerinin bütün kelimelerine oranı bunun üstündeyse "
+                                               "aynı madde sayılır (0,5–1)"},
+    {"key": "CONTRACT_COMPARE_TEMPLATE_MIN", "group": "contract_compare", "label": "Kalıp metin eşiği (sözleşme)", "type": "int",
+     "default": "5", "help": "Bir not bu kadar ya da daha çok başka sözleşmede de varsa «kalıp metin» sayılır (2–1000)"},
+    {"key": "CONTRACT_COMPARE_REFRESH_HOURS", "group": "contract_compare", "label": "CRM görüntüsünün yenilenmesi (saat)",
+     "type": "text", "default": "12", "help": "CRM sözleşme görüntüsü bundan eskiyse ilk açılışta arka planda yeniden okunur; "
+                                             "ekrandaki «Yenile» hemen okur"},
     # H2 Okur veri tabanı
     {"key": "READERS_EXPORT_ENABLED", "group": "readers", "label": "Liste dışa aktarımı açık", "type": "bool", "default": "0",
      "help": "Rıza metni ve çocuk kayıtları için hukuk teyidi gelince açılır. Kapalıyken segmentler sayılır, liste alınamaz"},
@@ -1450,6 +1468,9 @@ GROUPS = [
     {"id": "zeki_ortak", "category": "zeki", "label": "Zeki AI ortak araçlar",
      "help": "Belge okuma (taranmış sayfa dahil) ve kitap benzerliği araması. Belgeler yalnız kendi GPU sunucumuzda okunur, "
              "okunan metin modele gitmeden önce maskelenir; benzerlik yalnız sıralama içindir, rakamlar SQL'den gelir."},
+    {"id": "contract_compare", "category": "finans", "label": "Sözleşme karşılaştırma",
+     "help": "Sözleşmenin maddeleri geçmiş sözleşmelerle kıyaslanır: kıyas grubu, sapma eşiği ve serbest metin eşikleri. "
+             "Model kullanılmaz; CRM'e yazılmaz."},
     {"id": "royalty", "category": "finans", "label": "Telif dönemi",
      "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
              "beyannameyi yazara insan gönderir."},

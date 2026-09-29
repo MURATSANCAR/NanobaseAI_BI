@@ -240,7 +240,8 @@ export type LookupPage<T> = { items: T[]; total: number; shown: number; page: nu
 
 const BASE = '/api/v1/editorial/contracts';
 
-async function call<T>(path: string, init: { method?: string; body?: unknown; raw?: BodyInit; timeout?: number } = {}): Promise<T> {
+/** Köprü çağrısı (sözleşme karşılaştırma ekranı da kullanır). */
+export async function call<T>(path: string, init: { method?: string; body?: unknown; raw?: BodyInit; timeout?: number } = {}): Promise<T> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
   const method = init.method ?? 'GET';
   const res = await fetch(`${ENGINE_BASE}${BASE}${path}`, {
@@ -261,7 +262,7 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; ra
   return (await res.json()) as T;
 }
 
-const qs = (o: Record<string, string | number | boolean | undefined>) => {
+export const qs = (o: Record<string, string | number | boolean | undefined>) => {
   const s = Object.entries(o)
     .filter(([, v]) => v !== undefined && v !== '' && v !== false)
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)

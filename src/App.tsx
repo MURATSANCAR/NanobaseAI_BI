@@ -59,6 +59,7 @@ const ContractDetail = lazy(() => import('@/canvas/editorial/contracts/ContractD
 const NewContract = lazy(() => import('@/canvas/editorial/contracts/NewContract'));
 const ContractPayments = lazy(() => import('@/canvas/editorial/contracts/PaymentsScreen'));
 const ContractTemplates = lazy(() => import('@/canvas/editorial/contracts/TemplatesScreen'));
+const ContractCompare = lazy(() => import('@/canvas/editorial/contracts/compare/CompareScreen'));
 const RoyaltyScreen = lazy(() => import('@/canvas/editorial/royalty/RoyaltyScreen'));
 const RightsScreen = lazy(() => import('@/canvas/editorial/rights/RightsScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
@@ -615,6 +616,7 @@ export default function App() {
             <Route path="telif-sozlesme/yeni" element={<NewContract />} />
             <Route path="telif-sozlesme/odemeler" element={<ContractPayments />} />
             <Route path="telif-sozlesme/sablonlar" element={<ContractTemplates />} />
+            <Route path="telif-sozlesme/karsilastirma" element={<ContractCompare />} />
             <Route path="telif-sozlesme/:key" element={<ContractDetail />} />
             <Route path="telif-donem" element={<RoyaltyScreen />} />
             <Route path="haklar" element={<RightsScreen />} />

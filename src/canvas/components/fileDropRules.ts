@@ -94,6 +94,7 @@ export const UPLOAD_FEATURES: Record<string, string> = {
   'ceviri.terim': 'Terim bankası düzenleme',
   'basvuru.yaz': 'Başvuru kaydı ve editör raporu',
   'sozlesme.sablon': 'Sözleşme şablonları',
+  'sozlesme-karsilastirma.belge': 'Karşılaştırma belgesi',
   'serbest.yonet': 'Serbest çalışan kaydı ve iş dağıtımı',
   'tasarim.uret': 'Kitap tasarımında üretim',
   'ihale.belge': 'Şirket belge arşivi',

@@ -824,6 +824,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
     ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
+    # Sözleşme karşılaştırma (M6 alt ekranı): emsal, serbest metin, belge madde madde.
+    ("/api/v1/editorial/contracts/compare", frozenset({page("sozlesme-karsilastirma")})),
     # M54 Telif dönemi ve haklar. Sözleşme sayfası (M6) bir sözleşmenin dönem koşularını okur.
     ("/api/v1/royalty/run-due", SYSTEM),
     ("/api/v1/royalty/contracts/", frozenset({page("telif-donem"), page("telif-sozlesme")})),

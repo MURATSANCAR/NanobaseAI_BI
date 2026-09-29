@@ -499,6 +499,25 @@ const CONTENT: ScreenInfoMap = {
     actions: ['Kitabı seçip hak kartını görün, hak ekleyin ya da düzenleyin.', 'Verilen lisans kaydı açın.', 'Hak açıklamalarını «Zeki AI ile sınıfla» ve önerileri onaylayın.'],
   },
 
+  'sozlesme-karsilastirma': {
+    summary:
+      'Bir sözleşmenin maddeleri benzer geçmiş sözleşmelerle kıyaslanır; emsalden farklı oran, tutar ve süre, nadir hak, eksik madde ve başka hiçbir sözleşmede olmayan not çıkarılır. Belgeler madde madde karşılaştırılır.',
+    how: [
+      'Emsal: aynı sözleşme tipi, ödeme türü, para birimi ve bölüm, son yıllarda başlamış sözleşmeler. Emsal azsa ölçütler sırayla gevşetilir ve ekranda yazar.',
+      'Bir değer emsallerin eşik yüzdesinden azında görülüyorsa işaretlenir; gerekçe sayılarla yazılır (ör. «0/162 emsalde»). Grup sözleşmesinin aynı şartlı kopyaları tek sayılır.',
+      'Açıklama alanlarındaki metin öbür sözleşmelerde birebir ya da çok benzer aranır; hiçbirinde yoksa «bu sözleşmeye özgü» olur.',
+      'Belge maddelere bölünür ve seçilen belgeyle ya da bütün arşivle eşlenir; değişen kelimeler, sayılar ve şablon alanları ayrı renkte gösterilir.',
+      "Kararlar sayımdır, yapay zekâ tahmini değildir. CRM'e hiçbir şey yazılmaz.",
+    ],
+    data: "CRM sözleşmeleri, tarafları ve ekleri; sözleşme sayfasında okunan belgeler, şablonlar ve buradan yüklenen belgeler. CRM görüntüsü saklanır ve «CRM'i yeniden oku» ile tazelenir.",
+    refresh: 'CRM görüntüsü Yönetim ayarındaki süreden (varsayılan 12 saat) eskiyse ilk açılışta arka planda yeniden okunur.',
+    actions: [
+      'Olağan dışı sözleşmeleri madde, tip, ödeme türü ve yıla göre süzün; birine dokunup maddelerini inceleyin.',
+      'Sözleşmeyi arayıp emsal dönemini değiştirin; aynı hak sahibinin önceki sözleşmesinden farkları görün.',
+      'Belge yükleyin ya da arşivden okutun; iki belgeyi ya da bir belgeyi bütün arşivle karşılaştırın.',
+    ],
+  },
+
   'editor-atama': {
     summary:
       "Hangi projenin editörü kim: CRM proje kartındaki «Editörü» alanı. Editörsüz projeler ve editör başına projeler; atama CRM'de yapılır.",
