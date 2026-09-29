@@ -255,3 +255,15 @@ def test_after_restart_stale_entry_is_refreshed_with_internal_identity(tmp_path)
     r = asyncio.run(run())
     assert r.status_code == 200 and counters["n"] == 1
     assert json.loads(cache.get(key).body)["n"] == 1 and not RC.is_stale(cache.get(key).at)
+
+
+def test_disk_dir_live_port_only():
+    """Yan köprü (başka port) canlı klasöre yazmaz; açık klasör her zaman geçerli (2026-09-29, geri gelen test kaydı)."""
+    live = ["uvicorn", "semantic_bridge.app:app", "--host", "127.0.0.1", "--port", "8795"]
+    side = ["uvicorn", "semantic_bridge.app:app", "--host", "127.0.0.1", "--port", "8801"]
+    assert RC.disk_dir({}, live) == RC.LIVE_DIR
+    assert RC.disk_dir({}, ["uvicorn", "x:app", "--port=8795"]) == RC.LIVE_DIR
+    assert RC.disk_dir({}, side) is None
+    assert RC.disk_dir({"RESPONSE_CACHE_DIR": "/tmp/x"}, side) == "/tmp/x"
+    assert RC.disk_dir({"RESPONSE_CACHE_LIVE_PORT": "8801"}, side) == RC.LIVE_DIR
+    assert RC.disk_dir({}, ["pytest"]) == RC.LIVE_DIR    # port yok: eski davranış (testler conftest ile geçici klasör)

@@ -18,7 +18,8 @@ Kural:
   kaydedilen şey eski cevapla görünmez.
 - Hiç saklanmayanlar: sohbet/soru, SQL, sonuç dosyası, model, yetki, yönetim, kişisel tercih/profil, kutlama, oda,
   zamanlayıcı uçları, durum/ilerleme yoklamaları, dosya/görsel/PDF/dışa aktarma.
-Kayıtlar bellekte ve diskte (`RESPONSE_CACHE_DIR`, klasör 0700, köprü kullanıcısının): köprü yeniden başlayınca
+Kayıtlar bellekte ve diskte (`RESPONSE_CACHE_DIR`, klasör 0700, köprü kullanıcısının; verilmezse canlı klasör yalnız canlı
+porttan açılan köprünün — yan köprüler yalnız bellekte, `disk_dir`): köprü yeniden başlayınca
 (test sunucusunda günde onlarca kez) hazır cevaplar kaybolmaz. Diske yalnız cevap gövdesi ve başlıkları yazılır; isteğin
 çerezi (arkada yeniden üretmek için gereken) yalnız bellekte durur — yeniden başlatmadan sonra bayat kayıt ilk açılışta,
 o kişinin kendi isteğiyle arkada tazelenir.
@@ -44,6 +45,7 @@ import logging
 import os
 import re
 import secrets
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -134,6 +136,39 @@ def _code_version() -> str:
 
 
 CODE_VERSION = _code_version()
+
+
+#: Canlı köprünün hazır cevap klasörü ve portu (nginx'in baktığı; test sunucusunda systemd, VM'de Docker, ikisi de 8795).
+LIVE_DIR = "/data/nanobaseai/bi/var/response-cache"
+LIVE_PORT = "8795"
+
+
+def _argv_port(argv: Optional[list[str]] = None) -> Optional[str]:
+    args = list(sys.argv if argv is None else argv)
+    for i, a in enumerate(args):
+        if a == "--port" and i + 1 < len(args):
+            return args[i + 1]
+        if a.startswith("--port="):
+            return a.split("=", 1)[1]
+    return None
+
+
+def disk_dir(env: Optional[dict[str, str]] = None, argv: Optional[list[str]] = None) -> Optional[str]:
+    """Hazır cevapların diske yazılacağı klasör; None → yalnız bellek.
+
+    Açık `RESPONSE_CACHE_DIR` her zaman geçerlidir. Verilmemişse canlı klasör YALNIZ canlı porttan
+    (`RESPONSE_CACHE_LIVE_PORT`, varsayılan 8795) açılan köprünündür: aynı sunucuda kabul/ölçüm için açılan yan köprüler
+    (8788, 8797, 8798, 8799, 8801 …; köprü ortam dosyasının kopyasıyla) canlı klasörü açılışta belleğe alıp tazeleyerek geri
+    yazıyordu — silinen test kaydı (timasai) böyle geri geldi, başka kod sürümünün cevabı canlıya karıştı (2026-09-29)."""
+    env = os.environ if env is None else env
+    explicit = (env.get("RESPONSE_CACHE_DIR") or "").strip()
+    if explicit:
+        return explicit
+    port = _argv_port(argv)
+    if port is not None and port != (env.get("RESPONSE_CACHE_LIVE_PORT") or LIVE_PORT):
+        log.info("response cache: yan köprü (port %s) — hazır cevaplar yalnız bellekte, canlı klasöre yazılmaz", port)
+        return None
+    return LIVE_DIR
 
 
 def cacheable_path(path: str) -> bool:
