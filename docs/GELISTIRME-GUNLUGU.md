@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (09:30) — Logo kaynağı canlı prod 192.168.0.25; eski .155 tanımları kaldırılıyor, firma izin listesi
+
+- **Karar (kullanıcı):** Logo'da yedek (.155, `AISERVER`, 17.08.2026'da donmuş) kullanılmayacak; her şey prod'dan. .155'e giden URL/port/IP tanımları yedeksiz silinir.
+- **Erişim ölçüldü:** `192.168.0.25:1433` test sunucusunun `tun0` tünelinden açık. `timas\muratsancar` orada 18456 alıyor; CRM'in `zekiai` hesabı giriyor (`LOGODATABASEN`, `db_datareader`, yalnız SELECT). 2026 son fatura 28.09.2026 20:50 (.155'te 17.08); 2021–2025 fatura sayısı iki sunucuda birebir (502.826); TİMAŞ firmalarının tablo sayısı aynı (5.426).
+- **Engel bulundu, bağlantı çevrilmeden düzeltildi:** .25 aynı veritabanında 101 firma taşıyor (Başaran, Lacivert, Yuzu, Uçan Kitap, konsolide firmalar, 999 TİMAŞ TEST…; 53.099 tablo). Kod her yerde «yılı kapsayan en büyük firma numarası» kuralıyla `L_CAPIPERIOD`/`sys.tables`'tan firma buluyordu → .25'te 2026 = 999 (test firması), 2021–25 = 996 seçilirdi; ~45 modül bu yoldan geçer. Üretim ve fiyat modülleri bütün firmaları topluyordu; katalog taraması kapsamsızdı (`SEMANTIC_TABLE_LIKE` boş) → ilk gece 52.122 yabancı firma tablosu okunurdu.
+- **Çözüm:** `SEMANTIC_FIRMS` (bu şirketin firmaları: `015,016,105,115,171,181,191,201,211,411`), tek kaynak `backend/semantic_layer/firm_scope.py`. `firms_by_year` (bütçe + etkinlik/okul kopyaları), `production.py`, `pricing/data.py` kopya ölçümü ve profiler buradan okur; boşken davranış değişmez. Fiyat kopya ölçümü artık `SEMANTIC_EXCLUDE_CONTEXT`'e de uyar (015/016 okunmaz, diğer modüllerle aynı). Kurulum betikleri `SEMANTIC_FIRMS` boşken durur; `.env.example`'a eklendi.
+- **Temizlik (repo):** Yönetim ekranı yardım metinleri, servis listesinden «Logo veritabanı tüneli» (socat), `mssql_probe.py` varsayılanı, compose örnekleri, `timas-prod-ops.md`, kabul betiklerinin kaynak etiketleri .25'e. Tarihli ölçüm notları (katalog yazım betikleri, eşdeğerlik ölçümü) geçmiş kayıt olduğu için kaldı.
+- **Sunucuda silinecek .155 tanımları (kurulum adımı):** `timas-mssql-14330.service` ve `nanobase-bridge-mssql-14330.service` (socat), `secrets/logo-mssql-connection.json` ve `secrets/mssql-ro.datasources.json` (.25 + `zekiai`'ye yeniden yazılır), `backup-20260907-144601/mssql-ro.datasources.json`. Ayar tablosunda (`semantic_settings`) .155 değeri yok.
+- **Testler (test sunucusunda):** 16 modül, 177 test geçti; yeni `test_firm_scope.py` .25'in gerçek dönem şeklini taklit eder (ayar yokken 999'un kazandığını da sınar).
+- **Açık nokta:** .155 kataloğunda da TİMAŞ dışı firma numaralı ~1.150 nesne vardı (ör. `LG_XT1015_172`, `V_SatisRaporu_192`, `EOS_DAGITIM_MALIYET_019`). İzin listesi yenilerini engeller, eskileri silmez (gece taraması budama yapmaz); katalogdaki karşılıkları ayrıca incelenmeli.
+
 ## 2026-09-28 (17:05) — Müşteri VM'ine `04105220` kuruldu: 67 zamanlanmış iş, T-soft/Google bağlı
 
 - **Ön denetim:** çakışma işareti 0; VM'deki son kurulum `5a25436d` kurulacak sürümün atası; arşiv (`/tmp/bi-main-04105220`) test sunucusunda köprü yükledi (2.294 uç), `._*` 0. Kurulum `systemd-run --unit=vm-deploy-04105220`, günlük `/tmp/vm-deploy-04105220.log`, EXIT 0; `bi_var` korundu (7 → 7).
