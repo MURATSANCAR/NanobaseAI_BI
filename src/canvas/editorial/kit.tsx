@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import { btnGhost, nf } from '../admin/ui';
+import { Explain } from '../components/Explain';
 
 /** Editoryal Süreç (M1–M8) ekranlarının ortak parçaları. */
 
@@ -73,30 +74,51 @@ export function ModuleFrame({
 }
 
 /**
- * `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`); kartın sağ üst köşesinde, tıklanan kartın düğmesinin
- * dışında durur (iç içe düğme olmasın diye).
+ * `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`); `explain`: göstergenin sade dille anlamı («?»). İkisi de
+ * kartın sağ üst köşesinde, tıklanan kartın düğmesinin dışında durur (iç içe düğme olmasın diye).
  */
-export function Kpi({ label, value, help, active, onClick, info }: { label: string; value: string; help: string; active?: boolean; onClick?: () => void; info?: ReactNode }) {
+export function Kpi({
+  label,
+  value,
+  help,
+  active,
+  onClick,
+  info,
+  explain,
+}: {
+  label: string;
+  value: string;
+  help: string;
+  active?: boolean;
+  onClick?: () => void;
+  info?: ReactNode;
+  /** Göstergenin sade dille anlamı; köşede «?» olarak durur (bkz. components/Explain). */
+  explain?: ReactNode;
+}) {
+  const corner = info || explain;
   const body = (
     <>
-      <div className={`text-[11px] font-bold uppercase tracking-wide text-canvas-muted ${info ? 'pr-6' : ''}`}>{label}</div>
+      <div className={`text-[11px] font-bold uppercase tracking-wide text-canvas-muted ${info && explain ? 'pr-12' : corner ? 'pr-6' : ''}`}>{label}</div>
       <div className="mt-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight sm:text-[30px]">{value}</div>
       <div className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{help}</div>
     </>
   );
   const cls = `glass-panel rounded-2xl p-3.5 text-left shadow-glass-float sm:rounded-3xl sm:p-4 ${active ? 'ring-2 ring-canvas-violet' : ''}`;
   const card = !onClick ? (
-    <div className={info ? `${cls} h-full` : cls}>{body}</div>
+    <div className={corner ? `${cls} h-full` : cls}>{body}</div>
   ) : (
-    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} transition-transform duration-150 ease-out active:scale-[0.98] ${info ? 'h-full w-full' : ''}`}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} transition-transform duration-150 ease-out active:scale-[0.98] ${corner ? 'h-full w-full' : ''}`}>
       {body}
     </button>
   );
-  if (!info) return card;
+  if (!corner) return card;
   return (
     <div className="relative">
       {card}
-      <span className="absolute right-3 top-3 sm:right-3.5 sm:top-3.5">{info}</span>
+      <span className="absolute right-3 top-3 flex items-center gap-1 sm:right-3.5 sm:top-3.5">
+        {explain && <Explain label={label}>{explain}</Explain>}
+        {info}
+      </span>
     </div>
   );
 }

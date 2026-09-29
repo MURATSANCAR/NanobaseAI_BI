@@ -846,3 +846,36 @@ button.zk-page-ref--live:focus-visible {
 }
 .zk-scroll { scrollbar-width: none; }
 .zk-scroll::-webkit-scrollbar { display: none; }
+
+/* Terim açıklaması (components/Explain): ara sıra açılan küçük kutu — düğmeden büyür, 160 ms giriş, 120 ms çıkış,
+   yalnız opacity + transform. Tetikleyici basınca hafif küçülür. */
+.explain-trigger {
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.explain-trigger:active {
+  transform: scale(0.94);
+}
+.explain-popup {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.explain-popup[data-starting-style],
+.explain-popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.explain-popup[data-ending-style] {
+  transition-duration: 120ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .explain-trigger:active,
+  .explain-popup[data-starting-style],
+  .explain-popup[data-ending-style] {
+    transform: none;
+  }
+}

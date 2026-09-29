@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { EngineAuthError, EngineForbiddenError } from '../engine';
+import { Explain } from '../components/Explain';
 
 export const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -37,12 +38,28 @@ export const field =
   'w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base font-semibold outline-none focus:border-canvas-violet sm:text-[12.5px]';
 export const label = 'text-[11px] font-bold uppercase tracking-wide text-canvas-muted';
 
-export function Section({ title, help, action, children }: { title: string; help?: string; action?: ReactNode; children?: ReactNode }) {
+export function Section({
+  title,
+  help,
+  explain,
+  action,
+  children,
+}: {
+  title: string;
+  help?: string;
+  /** Bölümün sade dille ayrıntılı açıklaması; başlığın yanında «?» (bkz. components/Explain). */
+  explain?: ReactNode;
+  action?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-xl font-extrabold tracking-tight">{title}</h2>
+          <h2 className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight">
+            {title}
+            {explain && <Explain label={title}>{explain}</Explain>}
+          </h2>
           {help && <p className="mt-0.5 text-[12.5px] text-canvas-muted">{help}</p>}
         </div>
         {action}
