@@ -20,6 +20,14 @@
 
 - **Test:** etiket okumasının denetim modüllerini yüklemediğini bütün süreçte arıyordu; önce koşan metin bütçesi testi `editor.proofing._continuity`'yi yüklediğinde düşüyordu. Artık okumadan önce/sonra fark sayılır. GPU'da `editor-py-studio:0.15.9-04698f28` imajında editör testleri 650/650.
 - **VM:** başka bir oturumun kurduğu `134b8b79` (bu işlerin hepsini içeriyor) doğrulandı: köprü hazır, dış kapı 200, pasif süzgeci, kurul oturumu düzeltmesi, İK gizlilik eşiği 5, pazar yeri modülü, kart 25, `STUDIO_LIBRARY_FEED=0`, `._*` 0.
+## 2026-09-29 (gece, kapanış) — Dağıtımcı katalogları: test sunucusu ve müşteri VM'i canlı, açık kalanlar
+
+- **Yazar süzgeci (`fa37a769`) test sunucusunda:** yalnız değişen dosyalar md5 kontrolüyle kuruldu, 289 test geçti, Zeki AI alanı yeniden yazılıp onaylandı. Canlı 8795: «yazarı Metin Özdamarlar» 81 (referans 81); bilinmeyen ad sayı yerine açıklama; «baskısı yok TİMAŞ» 1.815.
+- **E-ticaret «D&R fiyat farkı»:** «Yenile» ucuyla hesaplandı. İlk deneme başka oturumun köprü yeniden başlatmasıyla yarıda kaldı; ikinci deneme 762 fark üretti. Doğrulama: 762'nin hepsi kurala uyuyor; stok koduyla eşlenen 717'sinde D&R fiyatı `prefix_list` ile birebir. 45 satırın site ürününde stok kodu yok, referansla eşlenemedi (DOĞRULANAMADI).
+- **Tarayıcı (390/768 px):** Stok, kitap detayı, Pazar, Rakipler, Kanallar yatay taşma 0. Kanallar'da Başarı paneli 225.993 adet / 28.348.872 ₺, depoda 62.164 adet / 2.888 stoklu başlık — referansla aynı.
+- **Müşteri VM'i:** başka oturumlar `fa37a769` ve `134b8b79`'u kurdu (`._*` 0). VM'de dağıtımcı turu elle bir kez koştu (VM'deki Logo hesabı `API_URUN_DB`'yi okuyor): Başarı 234.681, D&R 385.932, TİMAŞ grubu 10.530, matris hazır. VM kataloğunda Zeki AI `dagitimci-katalog` alanı kullanıcının çalıştırdığı komutla yazıldı (`new: 1`, 620.613 satır) ve onaylandı (`--certify dagitimci-katalog` → «onaylandı: 1 tablo»). Not: `--certify` alan adını argüman olarak ister.
+- **Açık, zamana bağlı:** satış hızı (çıkış endeksi), kalibrasyon ve Dağıtımcı nabzı en az iki gece görüntüsü ister; 30.09 06:15 turundan sonra doğrulanacak.
+- **BT'ye iki soru:** kaynak tablolar 25.09'dan beri yenilenmedi (ekranlar «N gündür yenilenmedi» yazıyor); D&R `prefix_list`'te 17. sayfa (satır 320.001–340.000) yok.
 
 ## 2026-09-29 (gece) — GPU editörü main `04698f28` tek sürüm olarak kuruldu; parça kurulumlar bitti
 
