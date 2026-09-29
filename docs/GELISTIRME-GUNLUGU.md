@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (21:00) — ZEKI AI CHAT ikinci bağımsız dış çıkış taraması
+
+- Kullanıcının «tekrar bak başka kalmasın» talebiyle paralel kaynak/tarayıcı/ağ incelemesi. Ek yollar kapatıldı: worker yanlış kök scope ve dış URL/redirect; eski decrypted cache'den geniş/CSP'siz cevap; aynı-origin iframe; geniş ESTABLISHED izni; UFW restore sırası; chat/Mongo DNS fallback.
+- Ayrı sohbet deposu main `6c4c4d3` + `9b12e38`; son imaj `zeki-ai-chat:8.5.3-9b12e38` test sunucusunda. `git archive main`, sunucuda paket/Meteor/Docker build; aynı hacimlerle üç konteyner recreate. 9.612 kaynak/fark0, AppleDouble0. BI ürün kodu değişmedi; yerel test ve müşteri VM kurulum yok.
+- Son sürüm canlı kabul: Mongo pozitif + DNS/Node/IPv4/IPv6/host/Deno negatif7/7; üç serviste DNS loopback, Mongo dış DNS EAI_AGAIN, ingress SERVFAIL/HTTP REJECT. IPv4/IPv6 guard yalnız REPLY, active/enabled; UFW sonrası/Docker öncesi. Fiziksel NIC probu0 paket (aynı son firewall, imaj değişmeden hemen önce).
+- Gerçek timasai SSO 320/390/768/1440: taşma/JS hatası/görünür vendor metni0. Gerçek worker scope/controller/updateViaCache doğru; dış ve credentialized URL ret, yerel200, gerçek302 redirect ret; çalışan worker'da eksik dosya404 ve hatalı400 sandbox CSP/no-store/nosniff. Eski cache okunmaz/yazılmaz. Fetch/WS/image/dış ve aynı-origin iframe engelli, vendor link iptal, dış HTTP isteği0.
+- Beş ayar ve abonelik tam `_id/rid/unread` sonucu bağımsız gerçek Mongo ile eşleşti (1 satır). Kullanıcı/mesaj/oda3/1/1 korundu. 1 portal oturumu+4 geçici jeton silindi; kalan0. İlk runtime kontrol betiğinin dosya sahipliği/await sorunları düzeltildi, son koşu geçti.
+- Açık eski sekme bir kez yenilenmeli. Tüm host/Docker reboot ve gerçek şifreli ek başarılı decrypt akışı bu turda DOĞRULANAMADI; bütün özelliklerin fonksiyonel kabulü iddiası yok. Kanıt sohbet deposunda `docs/evidence/2026-09-29-recheck/`, sınırlar `docs/zeki-local-egress.md`. Chat GitHub hedefi yeniden `Repository not found`; chat main yerelde/sunucuda güncel, uzak yayın bekliyor. Bu görevin main dışında işi yok; BI'deki diğer görevlerin mevcut dalları bu sohbet kapsamına dahil edilmedi.
+
+
 ## 2026-09-29 (21:00) — Kargo maliyeti: «eşlenmemiş taşıyıcı» uyarısı yalnız eşlenebilecekleri sayar; açıklamada hesap kodu yok
 
 - **Neden:** Uyarı «9 taşıyıcının Logo carisi eşlenmemiş» diyordu; içinde depo, merkez, iç sevk gibi kargo firması olmayan irsaliye kodları ve bedelini pazar yerinin faturaladığı UPS/HEPSİJET vardı. Gider kartının açıklamasında muhasebe hizmet kodları yazıyordu (finans notlarında kod yok kararı).
