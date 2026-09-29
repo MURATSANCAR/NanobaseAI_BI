@@ -297,3 +297,29 @@ def test_sum_uses_latest_snapshot_per_catalogue(engine):
     assert P.execute(engine, stmt, 5000) == [{"c0": 70}]            # 7 güncel başlık × 10
     assert plan.latest == "son_gorulme" and base["snapshot_per"] == "kaynak"
     assert sa.inspect(engine).has_table(TABLE)
+
+
+def test_author_name_filter_counts_only_that_author(engine):
+    """Kullanıcı kararıyla açılan yazar kolonu: sorudaki ad veritabanında aranır ve «içerir» süzgeci olur (canlıda
+    2026-09-29 bulunan hata: süzgeç kurulmuyor, bütün katalog sayısı veriliyordu)."""
+    _chat_seed(engine)
+    out = P.answer(engine, T, "Başarı Dağıtım kataloğunda yazarı Mustafa Ulusoy olan kaç kitap var?",
+                   chat_scope.topic("dagitimci"), user=None, llm=Picker(tablo=LABEL), today=date(2026, 9, 29), access=None)
+    assert out["type"] == "TEXT_TO_SQL"
+    assert out["records"] == [{P.COUNT: 3}]            # 011, 028 («…, Ayşe Kaya»), 035; düşen 059 ve «MUSTAFA  ULUSOY» değil
+    f = [x for x in out["plan"]["filters"] if x["op"] == "contains"]
+    assert f and f[0]["column"] == "yazar" and f[0]["value"] == "Mustafa Ulusoy"
+
+
+def test_unknown_author_name_is_not_answered_with_total(engine):
+    _chat_seed(engine)
+    out = P.answer(engine, T, "Başarı Dağıtım kataloğunda yazarı Zeynep Olmayanoğlu olan kaç kitap var?",
+                   chat_scope.topic("dagitimci"), user=None, llm=Picker(tablo=LABEL), today=date(2026, 9, 29), access=None)
+    assert out["type"] == "CLARIFICATION" and "records" not in out
+    assert "Zeynep Olmayanoğlu" in out["text"] and "bütün kayıtların sayısını vermiyorum" in out["text"]
+
+
+def test_name_phrases_from_question():
+    ph = P.name_phrases("Başarı Dağıtım kataloğunda Metin Özdamarlar'ın kaç kitabı var?")
+    assert "Metin Özdamarlar" in ph and "Başarı Dağıtım" in ph
+    assert P.name_phrases("Kaç kitap var?") == []

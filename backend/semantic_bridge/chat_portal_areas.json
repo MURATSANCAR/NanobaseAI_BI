@@ -442,6 +442,8 @@
         "semantic_pazar_dagitim_titles": {
           "kaynak": "katalog (basari: Başarı Dağıtım, dr: D&R)",
           "ad": "kitap adı",
+          "yazar": "yazar",
+          "cevirmen": "çevirmen",
           "yayinevi": "yayınevi (marka)",
           "ust_kategori": "üst kategori",
           "stok": "dağıtımcı stoğu (Başarı deposu / D&R Prefix B2B)",

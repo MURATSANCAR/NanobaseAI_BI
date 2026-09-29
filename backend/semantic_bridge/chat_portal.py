@@ -39,7 +39,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
@@ -818,6 +818,7 @@ class FilterOption:
     negate: bool
     label: str
     source: str = "model"
+    op: str = "eq"                          # eq | contains (açılmış metin kolonunda ad araması)
 
 
 def reachable(base: dict[str, Any], by_table: dict[str, dict[str, Any]]) -> list[Node]:
@@ -886,6 +887,67 @@ def filter_options(nodes: list[Node], used: set[tuple[tuple[str, ...], str]]) ->
     return out
 
 
+_NAME_RX = re.compile(r"[A-ZÇĞİÖŞÜÂÎÛ][\w'’.-]*")
+
+
+def name_phrases(question: str) -> list[str]:
+    """Sorudaki büyük harfle başlayan ardışık sözcük öbekleri (en az iki sözcük: «Metin Özdamarlar»). Soru başındaki
+    tek sözcük ve cümle başı büyük harfi ad sayılmaz; en uzun öbek önce denenir, alt öbekleri de aday olur."""
+    toks = question.replace("«", " ").replace("»", " ").replace('"', " ").split()
+    runs: list[list[str]] = []
+    cur: list[str] = []
+    for t in toks:
+        w = t.strip(",;:?!()")
+        base = re.sub(r"['’].*$", "", w)          # «Özdamarlar'ın» → «Özdamarlar»
+        if base and _NAME_RX.fullmatch(base):
+            cur.append(base)
+        else:
+            if len(cur) >= 2:
+                runs.append(cur)
+            cur = []
+    if len(cur) >= 2:
+        runs.append(cur)
+    out: list[str] = []
+    for r in runs:
+        for size in range(len(r), 1, -1):
+            for i in range(len(r) - size + 1):
+                ph = " ".join(r[i:i + size])
+                if ph not in out:
+                    out.append(ph)
+    return out
+
+
+class NameNotFound(Exception):
+    """Soru açılmış bir metin kolonunu (ör. yazar) anıyor ama sorudaki ad o kolonda yok: süzgeçsiz sayı verilmez."""
+
+    def __init__(self, label: str, tried: list[str]):
+        super().__init__(label)
+        self.label = label
+        self.tried = tried
+
+
+def text_filters(question: str, base: dict[str, Any], probe: Optional[Callable[[str, str, str], int]]) -> list[FilterOption]:
+    """Alanın açıkça açtığı metin kolonlarında (`kisiselIzin`: yazar, çevirmen) ad süzgeci. Soru kolonu adıyla anıyorsa
+    sorudaki ad öbekleri veritabanında o kolonda aranır (`probe` = eşleşen satır sayısı); ilk eşleşen öbek «içerir»
+    süzgeci olur. Kolon anılıp hiçbir öbek eşleşmezse `NameNotFound` — soru süzgeçsiz cevaplanmaz."""
+    if probe is None:
+        return []
+    qtoks = fold(question).split()
+    phrases = name_phrases(question)
+    out: list[FilterOption] = []
+    for c, i in base["columns"].items():
+        if not i.get("kisiselIzin"):
+            continue
+        words = {w for w in (fold(c).split() + fold(i.get("label") or "").split()) if len(w) >= 4}
+        if not any(t.startswith(w) for t in qtoks for w in words):
+            continue
+        hit = next((ph for ph in phrases if probe(base["table"], c, ph) > 0), None)
+        if hit is None:
+            raise NameNotFound(i.get("label") or humanize(c), phrases)
+        out.append(FilterOption((), c, hit, False, f"{i.get('label') or humanize(c)}: {hit} içeren", "soru", "contains"))
+    return out
+
+
 def _unique(opts: list[tuple[str, Any]]) -> list[tuple[str, Any]]:
     seen: dict[str, int] = {}
     out = []
@@ -923,7 +985,7 @@ class Plan:
         return {"table": self.table, "area": self.area, "measure": list(self.measure), "measureLabel": self.measure_label,
                 "group": list(self.group) if self.group else None, "groupLabel": self.group_label,
                 "filters": [{"path": list(f.path), "column": f.column, "value": _jsonable(f.value), "negate": f.negate,
-                             "label": f.label, "source": f.source} for f in self.filters],
+                             "label": f.label, "source": f.source, "op": f.op} for f in self.filters],
                 "time": {"path": list(self.time[0]), "column": self.time[1], "label": self.time_label} if self.time else None,
                 "window": {"start": _jsonable(self.window.start), "end": _jsonable(self.window.end),
                            "text": self.window.text} if self.window else None,
@@ -959,7 +1021,8 @@ def _pick(llm: Any, prompt: str, labels: list[str], st: dict[str, Any], step: st
 
 
 def plan_question(question: str, tables: list[dict[str, Any]], by_table: dict[str, dict[str, Any]], llm: Any,
-                  st: dict[str, Any], today: date) -> Plan:
+                  st: dict[str, Any], today: date,
+                  name_probe: Optional[Callable[[str, str, str], int]] = None) -> Plan:
     """Soruyu plana çevirir. Model yalnız kapalı kümeden seçer; dönem, «ilk N» ve sorudaki değer eşleşmesi kuraldan."""
     q = f"Soru: {question}\n"
     labels = [f"{t['label']}" for t in tables]
@@ -995,7 +1058,10 @@ def plan_question(question: str, tables: list[dict[str, Any]], by_table: dict[st
             plan.group_label, plan.group = gopts[g]
 
     fopts = filter_options(nodes, set())
-    plan.filters = literal_filters(question, fopts)
+    named = text_filters(question, base, name_probe)
+    # Ad araması kurulan kolonda birebir değer eşleşmesi bırakılmaz: çok yazarlı künyede («A, B») «içerir» doğrudur.
+    ncols = {(f.path, f.column) for f in named}
+    plan.filters = [f for f in literal_filters(question, fopts) if (f.path, f.column) not in ncols] + named
     used = {(f.path, f.column) for f in plan.filters}
     while True:
         rest = filter_options(nodes, used)
@@ -1107,6 +1173,11 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
         by_col.setdefault((f.path, f.column), []).append(f)
     for (path, c), fs in by_col.items():
         col = alias(path).c[c]
+        for f in fs:
+            if f.op == "contains":
+                like = "%" + str(f.value).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                where.append(col.ilike(like, escape="\\"))
+        fs = [f for f in fs if f.op != "contains"]
         eq = [f.value for f in fs if not f.negate]
         ne = [f.value for f in fs if f.negate]
         if eq:
@@ -1327,8 +1398,27 @@ def answer(engine: sa.engine.Engine, tenant: str, question: str, topic: dict[str
         return {"type": "CLARIFICATION", "plan": None,
                 "text": "Zeki AI şu an bu soruyu kayıtlarla eşleştiremiyor; biraz sonra yeniden deneyin."}
     by_table = {p["table"]: p for p in usable if p["area"] in readable}
+    def probe(table: str, column: str, text: str) -> int:
+        """Açılmış metin kolonunda adın geçtiği satır sayısı (kiracı süzgeçli, en çok 1 satır okunur)."""
+        prof = by_table.get(table) or {}
+        tc = _setting("tenant_column")
+        has_tc = bool(tc) and tc in prof.get("columns", {})
+        t = sa.table(table, sa.column(column), *([sa.column(tc)] if has_tc else []))
+        like = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        cond = [t.c[column].ilike(like, escape="\\")]
+        if has_tc:
+            cond.append(t.c[tc] == tenant)
+        with engine.connect() as c:
+            return 1 if c.execute(sa.select(sa.literal(1)).select_from(t).where(*cond).limit(1)).first() else 0
+
     try:
-        plan = plan_question(question, mine, by_table, llm, st, today)
+        plan = plan_question(question, mine, by_table, llm, st, today, probe)
+    except NameNotFound as nf:
+        tried = ", ".join(f"«{x}»" for x in nf.tried[:3])
+        text = (f"Soruda {nf.label.lower()} geçiyor ama " + (f"sorudaki ad ({tried}) kayıtlarda bulunamadı. " if tried else
+                "sorudan bir ad çıkaramadım. ") + "Adı kayıtlardaki yazımıyla, büyük harfle yeniden sorabilir misiniz? "
+                "Süzgeci uygulayamadığım için bütün kayıtların sayısını vermiyorum.")
+        return {"type": "CLARIFICATION", "text": text, "plan": {"step": "ad", "options": nf.tried[:3]}}
     except Unsure as u:
         what = {"tablo": "hangi kayıtlar", "ölçü": "hangi sayı ya da liste", "tarih": "hangi tarihe göre",
                 "kırılım": "neye göre kırılım"}.get(u.step, u.step)

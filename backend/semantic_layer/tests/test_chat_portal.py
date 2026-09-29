@@ -345,7 +345,8 @@ def test_count_with_value_from_question_and_tenant_filter(engine):
     assert out["type"] == "TEXT_TO_SQL"
     assert out["records"] == [{P.COUNT: 2}]                     # r1, r2 (başka kiracının r9'u sayılmaz)
     f = out["plan"]["filters"]
-    assert f == [{"path": [], "column": "durum", "value": "acik", "negate": False, "label": f[0]["label"], "source": "soru"}]
+    assert f == [{"path": [], "column": "durum", "value": "acik", "negate": False, "label": f[0]["label"], "source": "soru",
+                  "op": "eq"}]
     assert "2" in out["text"] and "Risk ve uyum" in out["text"]
 
 
