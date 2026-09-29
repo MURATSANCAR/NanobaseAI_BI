@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (19:30) — Kargo maliyeti test sunucusunda; test sunucusu tam main'e eşitlendi
+
+- **Kurulum (test sunucusu):** `5831f33ff` ile gelen 45 dosya (md5: sunucudakiler önceki main'le aynıydı). `hr_leave.py` sunucuda daha eski sürümdeydi (`7c3a52996` kurulmamıştı), önce yalnız damga satırı yamalandı. Sonra bütün ağaç main'le (`1a6de256a`) karşılaştırıldı: 15 dosya eski main sürümündeydi (İK kişi silme/pasife alma, Destek ön yüzü, altyapı dosyaları, iki kabul betiği) ve 3 test dosyası eksikti; sunucuda commit'lenmemiş iş yoktu. 18 dosya main sürümüyle değiştirildi, fark 0, `._*` 0. İK birimleri (`timas-hr-leave`, `timas-hr-mail`) `kopru-cagir.sh` ile kuruldu + `daemon-reload`; bütün `timas-*` birimleri main ile aynı. Ön yüz `index-DfcawrsS.js`, köprü yeniden başladı, hazır.
+- **Ayar:** `SHIPPING_LOGO_CARRIER_CODES` = `aras=32001.01.AR001; mngkargo=32001.01.MN001` (Yönetim ayarı, kayıtta «ZEKİ AI»). Yalnız bu ikisi: irsaliye kodu ile Logo faturası kesen cari birebir ölçüldü. UPS eşlenmedi; UPS irsaliyelerinin 26.506 / 46.071'i pazar yerine, bedeli pazar yeri faturalıyor, eşlemek irsaliye başını yanlış düşürür.
+- **Doğrulama:** `/api/v1/shipping/cost?yil=2026` kısa timasai oturumuyla (silindi): gider 11.076.823,00 ₺, oran %0,99, irsaliye 89.824; Aras irsaliye başı 431,51 ₺, MNG 291,10 ₺; Trendyol 60,29, Hepsiburada 54,57, N11 71,48 ₺; Kitapyurdu ve Amazon `sapma`. Excel 200. Ekran `/timas/kargo/maliyet` mobil (390) ve masaüstü (1440) görüntüsü: yatay taşma yok, 17 açıklama düğmesi, açıklama penceresi açılıyor. Tam set (`1a6de256a`): `tsc` 0, vitest 287/287, pytest 4.586 geçti · 0 hata (14 dk 32 sn).
+
 ## 2026-09-29 (19:30) — Stüdyo ses: son eksikler kapatıldı (yerleştirme canlıda, efekt kuralları, indirme yetkisi)
 
 - **Kelimeleri kayda yeniden yerleştirme canlıda uçtan uca:** deneme işinin 7. sayfasına insan kaydı (33 sn, 41/41 kelime)
