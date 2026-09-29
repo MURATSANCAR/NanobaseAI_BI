@@ -868,30 +868,65 @@ def person_books(schema: str, run: Callable[[str], dict[str, Any]], contact_id: 
             "page": max(0, int(page_no)), "pageSize": PAGE_SIZE, "db": _timing(res)}
 
 
-def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dict[str, Any]:
-    res = run(book_sql(schema, book_id))
-    head = (res.get("records") or [None])[0]
-    if head is None:
-        raise EditorialError("Kitap bulunamadı.", 404)
-    projects = run(book_projects_sql(schema, book_id)).get("records") or []
-    # Kitabın konusu: web tanıtım metni > özet > eski özet > projenin tek cümlelik fikri.
-    summary, summary_from = next(((_plain(head.get(f)), f) for f in ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
-                                  if _plain(head.get(f))), (None, None))
-    if summary is None:
-        summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
-    contracts = _with_rights(schema, run, run(book_contracts_sql(schema, book_id)).get("records") or [], lambda r: {
+def _book_contracts(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> list[dict[str, Any]]:
+    """Kitabın sözleşmeleri, CRM hakları ve lisans kapsamıyla (kapsam sözleşmelere bağlı: aynı iş içinde sonra)."""
+    return _with_rights(schema, run, run(book_contracts_sql(schema, book_id)).get("records") or [], lambda r: {
         "id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "kind": _s(r.get("new_SozlesmeTipi")),
         "status": _s(r.get("statuscode")), "stage": _s(r.get("new_sozlesmestatusu")),
         "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
         "royalty": _n(r.get("new_Telif")),
         "daysLeft": None if _n(r.get("kalan_gun")) is None else int(_n(r.get("kalan_gun")))})
+
+
+def book_key(head: Optional[dict[str, Any]]) -> tuple[str, str]:
+    """Kitap kartının başka kaynaklarla eşleştiği ad ve ISBN (cevaptaki `title` / `isbn` ile aynı)."""
+    head = head or {}
+    return _s(head.get("new_name")) or "", _s(head.get("new_isbn13")) or _s(head.get("new_isbn")) or ""
+
+
+def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str,
+         on_head: Optional[Callable[[Optional[dict[str, Any]]], None]] = None) -> dict[str, Any]:
+    """Kitap 360. Kitap kartı ve ona bağlı beş okuma (proje, sözleşme + hakları, rol, kurul, üretim) birbirini
+    beklemez: aynı anda koşar (`sorgu_izi.birlikte`; sonuç ve sorgu bilgisi sırası sabit). 2026-09-29 ölçümü: sırayla
+    koşunca CRM beklemesi toplanıyordu. `on_head(kart satırı | None)`: kitap kartı okununca (diğer okumalar sürerken)
+    çağrılır; uç kitabın editör kartını beklemeden aramaya başlar."""
+    from semantic_bridge.sorgu_izi import birlikte
+
+    _guid(book_id)                         # geçersiz kimlik hiçbir okuma başlamadan 400 döner
+
+    def head_read() -> dict[str, Any]:
+        r: dict[str, Any] = {}
+        try:
+            r = run(book_sql(schema, book_id))
+            return r
+        finally:
+            if on_head is not None:
+                on_head((r.get("records") or [None])[0])
+
+    res, projects_res, contracts, roles_res, board_res, production_res = birlikte(
+        head_read,
+        lambda: run(book_projects_sql(schema, book_id)),
+        lambda: _book_contracts(schema, run, book_id),
+        lambda: run(book_roles_sql(schema, book_id)),
+        lambda: run(book_board_sql(schema, book_id)),
+        lambda: run(book_production_sql(schema, book_id)),
+    )
+    head = (res.get("records") or [None])[0]
+    if head is None:
+        raise EditorialError("Kitap bulunamadı.", 404)
+    projects = projects_res.get("records") or []
+    # Kitabın konusu: web tanıtım metni > özet > eski özet > projenin tek cümlelik fikri.
+    summary, summary_from = next(((_plain(head.get(f)), f) for f in ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
+                                  if _plain(head.get(f))), (None, None))
+    if summary is None:
+        summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
     roles: dict[str, list[dict[str, Any]]] = {}
-    for r in run(book_roles_sql(schema, book_id)).get("records") or []:
+    for r in roles_res.get("records") or []:
         role = _s(r.get("rol")) or "Diğer"
         roles.setdefault(role, []).append({"id": _s(r.get("ContactId")), "name": _s(r.get("ad"))})
     return {
-        "id": _s(head.get("new_kitapId")), "title": _s(head.get("new_name")),
-        "isbn": _s(head.get("new_isbn13")) or _s(head.get("new_isbn")), "ebookIsbn": _s(head.get("new_ekitapisbn")),
+        "id": _s(head.get("new_kitapId")), "title": book_key(head)[0] or None,
+        "isbn": book_key(head)[1] or None, "ebookIsbn": _s(head.get("new_ekitapisbn")),
         "pages": _n(head.get("new_sayfasayisi")), "size": _s(head.get("new_Ebat")),
         "price": _n(head.get("new_kdvdahilfiyat")) or _n(head.get("new_PerakendeBirimFiyat")),
         "printNo": _n(head.get("new_baskisayisi")), "printTotal": _n(head.get("new_baskitoplamadedi")),
@@ -915,11 +950,11 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
                    "decision": _s(r.get("statuscode")), "note": _s(r.get("new_toplantikararnotu")),
                    "royalty": _n(r.get("new_onerilenteliforani")), "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
                    "project": _s(r.get("proje"))}
-                  for r in run(book_board_sql(schema, book_id)).get("records") or []],
+                  for r in board_res.get("records") or []],
         "production": [{"id": _s(r.get("new_UretimId")), "on": _date(r.get("CreatedOn")),
                         "delivery": _date(r.get("new_uretimteslimtarihi")), "editorial": _date(r.get("new_editoryalhazirliktarihi")),
                         "firstText": _date(r.get("new_yazardangelenilkmetin")), "status": _s(r.get("statuscode")),
                         "editor": _s(r.get("sorumlu_editor")), "designer": _s(r.get("grafiker"))}
-                       for r in run(book_production_sql(schema, book_id)).get("records") or []],
+                       for r in production_res.get("records") or []],
         "db": _timing(res),
     }

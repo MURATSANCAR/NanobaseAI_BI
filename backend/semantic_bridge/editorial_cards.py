@@ -445,7 +445,9 @@ def find_by_crm(title: str, isbn: str=''):
     wanted_isbn=_digits(isbn)
     wanted_title=(title or '').strip().casefold()
     if not wanted_isbn and not wanted_title: return None
-    cards=catalogue_cached()
+    # Kitap 360 her açılışta sorar: eldeki liste hemen (60 sn'den eskiyse arkada tazelenir, masa turu 5 dk'da bir
+    # tazeler). Bekleyerek tazelemek sayfayı kart servisinin 3–10 sn'lik liste okumasına bağlıyordu (2026-09-29 ölçümü).
+    cards=catalogue_snapshot()
     def crm(c): return c.get('publisher') or {}
     if wanted_isbn:
         hit=[c for c in cards if _digits(crm(c).get('isbn'))==wanted_isbn]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from typing import Optional
 
 import sqlglot
@@ -51,9 +52,8 @@ def strip_comments(sql: str) -> str:
 _FIRM_COL = "__nb_firm"
 
 
-def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: Optional[str] = "tsql") -> tuple[bool, str]:
-    """Every table the statement reads must be one the catalog profiled. Without this the endpoint is a
-    read-anything console over whatever the database login can reach."""
+def _allowed_index(profiles: list[SchemaProfile], context: Optional[dict[str, str]]) -> tuple[frozenset, frozenset, frozenset]:
+    """`allowed_tables`'ın bilinen adları: profilli tablo/varlık adları, şema niteleyicileri, varlık adları."""
     known: set[str] = set()
     schemas: set[str] = set()
     for p in profiles:
@@ -68,7 +68,13 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
                 if part:
                     schemas.add(part)
             known.update({f"{qual}.{phys}", f"{qual}.{p.table_name.upper()}"})
-    entity_names = {p.entity.upper() for p in profiles}
+    return frozenset(known), frozenset(schemas), frozenset(p.entity.upper() for p in profiles)
+
+
+def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: Optional[str] = "tsql") -> tuple[bool, str]:
+    """Every table the statement reads must be one the catalog profiled. Without this the endpoint is a
+    read-anything console over whatever the database login can reach."""
+    known, schemas, entity_names = _catalog_memo("allowed", profiles, context, _allowed_index)
     names = _physical_references(sql, dialect)
     if names is None:
         # Unreadable is not harmless: a statement this cannot parse is one whose tables it cannot
@@ -193,23 +199,41 @@ def _bare_entity(name: str) -> str:
     return re.sub(r"^LG_", "", str(name or "").upper())
 
 
-def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
-                    *, period: Optional[tuple] = None) -> str:
-    """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
+#: Profil listesinden kurulan dizinler (tablo adı → profil, varlık → temsilci, bilinen adlar), profil listesi ve
+#: bağlam başına bir kez (2026-09-29, Kitap 360 ölçümü): her `run_sql` bütün profilleri (binlerce) dolaşıp bu
+#: sözlükleri yeniden kuruyordu — sorgu başına ~0,1–0,2 sn işlemci, bir ekranın sekiz okumasında 1–2 sn. Katalog
+#: yenilenince profil listesi yeni bir liste olarak kurulur (`Runtime.rebuild`); anahtar listenin kimliği + uzunluğu
+#: + bağlamdır ve kayıt listenin kendisini tutar (kimlik yeniden kullanılamaz). Dönen dizinler yalnız okunur.
+_INDEX_CACHE: "dict[tuple, tuple]" = {}
+_INDEX_LOCK = threading.Lock()
+_BUILD_LOCK = threading.RLock()
 
-    A model spelling (schema_TABLE), a logical entity or a stale period name all resolve to the
-    physical table of the profiled pattern under the given context; LIMIT → TOP, EXTRACT → DATEPART.
 
-    With `period` given as (start, end), an entity whose rows are split across one table per year is
-    resolved here rather than in the prompt. Until now the model was handed the year-to-table map and
-    asked to write the UNION ALL itself — several hundred tokens of bookkeeping on every question,
-    and a step where a model can pick the wrong year, union a duplicate copy and return double the
-    real figure. The compiler already knows which tables a period needs and which copy to skip; doing
-    it here makes that knowledge structural instead of advisory.
+def _catalog_memo(kind: str, profiles: list[SchemaProfile], context: Optional[dict[str, str]], build):
+    key = (kind, id(profiles), len(profiles), tuple(sorted((str(k), str(v)) for k, v in (context or {}).items())))
+    with _INDEX_LOCK:
+        hit = _INDEX_CACHE.get(key)
+    if hit is not None and hit[0] is profiles:
+        return hit[1]
+    # Tek kurulum: katalog yenilenince aynı anda gelen okumalar (bir ekranın altı okuması) dizini altı kez kurmasın.
+    with _BUILD_LOCK:
+        with _INDEX_LOCK:
+            hit = _INDEX_CACHE.get(key)
+        if hit is not None and hit[0] is profiles:
+            return hit[1]
+        built = build(profiles, context)
+        with _INDEX_LOCK:
+            if len(_INDEX_CACHE) >= 16:     # eski katalog listeleri: yalnız bellek koruması, sonuç değişmez
+                _INDEX_CACHE.clear()
+            _INDEX_CACHE[key] = (profiles, built)
+    return built
 
-    Only tables of the representative's own pattern are unioned. The same entity can also exist as a
-    view or a hand-made copy under another prefix, and those are not other years of it.
-    """
+
+def _physical_index(profiles: list[SchemaProfile], context: dict[str, str]) -> tuple[dict, dict, dict]:
+    return _catalog_memo("physical", profiles, context, _build_physical_index)
+
+
+def _build_physical_index(profiles: list[SchemaProfile], context: dict[str, str]) -> tuple[dict, dict, dict]:
     by_table = {p.table_name.upper(): p for p in profiles}
     tables_of: dict[str, list[SchemaProfile]] = {}
     for p in profiles:
@@ -238,6 +262,27 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             by_table[_norm_key(p.schema_name, name)] = p
             by_table[f"{p.schema_name}_{name}".upper()] = p
             by_table[f"{p.schema_name}.{name}".upper()] = p
+    return by_table, tables_of, by_entity
+
+
+def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
+                    *, period: Optional[tuple] = None) -> str:
+    """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
+
+    A model spelling (schema_TABLE), a logical entity or a stale period name all resolve to the
+    physical table of the profiled pattern under the given context; LIMIT → TOP, EXTRACT → DATEPART.
+
+    With `period` given as (start, end), an entity whose rows are split across one table per year is
+    resolved here rather than in the prompt. Until now the model was handed the year-to-table map and
+    asked to write the UNION ALL itself — several hundred tokens of bookkeeping on every question,
+    and a step where a model can pick the wrong year, union a duplicate copy and return double the
+    real figure. The compiler already knows which tables a period needs and which copy to skip; doing
+    it here makes that knowledge structural instead of advisory.
+
+    Only tables of the representative's own pattern are unioned. The same entity can also exist as a
+    view or a hand-made copy under another prefix, and those are not other years of it.
+    """
+    by_table, tables_of, by_entity = _physical_index(profiles, context)
 
     def spread(prof: SchemaProfile) -> list[SchemaProfile]:
         """The tables of `prof`'s entity this period needs — one, unless the years span more.

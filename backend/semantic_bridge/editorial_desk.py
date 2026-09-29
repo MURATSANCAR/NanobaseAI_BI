@@ -393,9 +393,18 @@ def update_work(engine: sa.engine.Engine, tenant: str, user: str, admin: bool, w
                 _write_auto_checks(conn, work_id, proof, values["isbn"])
 
 
-def list_works(engine: sa.engine.Engine, tenant: str, user: str, admin: bool) -> list[dict[str, Any]]:
+def list_works(engine: sa.engine.Engine, tenant: str, user: str, admin: bool,
+               title: Optional[str] = None) -> list[dict[str, Any]]:
+    """Kişinin gördüğü eserler. `title` verilirse yalnız bu adı taşıyanlar (büyük/küçük harf ve baştaki/sondaki
+    boşluk farkı hariç, Python'un kuralıyla); özet (dosya, bölüm, imza okumaları) yalnız onlar için kurulur.
+    Kitap 360 bunu kullanır: bütün eserlerin özetini kurup sonra süzmek eser başına dört okuma demekti."""
+    wanted = title.strip().lower() if title is not None else None
     with engine.connect() as conn:
         rows = conn.execute(sa.select(WORKS).where(WORKS.c.tenant_id == tenant).order_by(WORKS.c.created_at.desc())).all()
+        if wanted is not None:
+            rows = [w for w in rows if wanted and (w.title or "").strip().lower() == wanted]
+            if not rows:
+                return []
         signer_of = {r.work_id for r in conn.execute(sa.select(SIGNATURES.c.work_id).where(
             sa.func.lower(SIGNATURES.c.username) == user.lower())).all()}
         out = []

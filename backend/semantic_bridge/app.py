@@ -5039,35 +5039,58 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                'Kitap: sayfa, baskı numarası, toplam ve ilk baskı adedi CRM kitap kartından; sözleşme bitişine kalan gün = bitiş − bugün; masadaki işlerin bölüm ve imza sayıları portal eser kayıtlarından.')
     def editorial_book(book_id: str, request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
-        out = _editorial_call(editorial_mod.book, schema, run, book_id)
+        import concurrent.futures
+        from semantic_bridge import editorial_cards
+        from semantic_bridge import sorgu_izi as IZ_mod
+
+        # Editörün kitap kartı ve inceleme kuyruğu (kart servisi) CRM okumalarını beklemez (2026-09-29 ölçümü: kart
+        # listesi okuması 2,7–5,6 sn, kuyruk ~0,5–0,9 sn; sırayla sayfayı 3–6 sn uzatıyordu). Kitap kartı CRM'den
+        # okununca (diğer CRM okumaları sürerken) kitabın editör kartı bellekteki listeden bulunur ve kuyruğu okunur.
+        head: "concurrent.futures.Future" = concurrent.futures.Future()
+
+        def _head(row: Optional[dict]) -> None:
+            try:
+                head.set_result(row)
+            except concurrent.futures.InvalidStateError:
+                pass
+
+        def _book() -> dict[str, Any]:
+            try:
+                return _editorial_call(editorial_mod.book, schema, run, book_id, on_head=_head)
+            finally:
+                _head(None)                  # geçersiz kimlik / hata: kart araması beklemede kalmaz
+
+        def _editor_book() -> tuple[Optional[dict], Optional[BaseException]]:
+            row = head.result()
+            if row is None:
+                return None, None
+            try:
+                title, isbn = editorial_mod.book_key(row)
+                card = editorial_cards.find_by_crm(title, isbn)
+                if not card:
+                    return None, None
+                queue = editorial_cards.review_queue(card["id"])
+                return {"id": card["id"], "title": card.get("title"), "generationId": queue.get("generation_id"),
+                        "codeVersion": queue.get("code_version"), "open": queue.get("open", 0)}, None
+            except Exception as e:  # noqa: BLE001 — editör kartı bir ektir, kitap sayfasını düşürmez
+                return None, e
+
+        out, (editor_book, editor_error) = IZ_mod.birlikte(_book, _editor_book)
         # Masadaki metin/prova bu kitabın adıyla açılmış eser dosyasından gelir (CRM'de karşılığı yok).
         try:
             from semantic_bridge import editorial_desk as desk
             engine, tenant, user, _ = _greetings(request)
             desk.ensure(engine)
             admin_mod.ensure(engine)
-            title = (out.get("title") or "").strip().lower()
-            works = [w for w in desk.list_works(engine, tenant, user, _can(user, "ozellik:masa.herkesinki"))
-                     if title and w["title"].strip().lower() == title]
-            out["desk"] = works
+            out["desk"] = desk.list_works(engine, tenant, user, _can(user, "ozellik:masa.herkesinki"),
+                                          title=out.get("title") or "")
         except Exception:  # noqa: BLE001 — masa kaydı bir ektir, kitap sayfasını düşürmez
             log.exception("editorial book desk lookup failed")
             out["desk"] = []
         # Editöre yüklenmiş kitapların inceleme kuyruğu; her kitapta yok, sayfayı düşürmez.
-        try:
-            from semantic_bridge import editorial_cards
-            card = editorial_cards.find_by_crm(out.get("title") or "", out.get("isbn") or "")
-            if card:
-                queue = editorial_cards.review_queue(card["id"])
-                out["editorBook"] = {"id": card["id"], "title": card.get("title"),
-                                     "generationId": queue.get("generation_id"),
-                                     "codeVersion": queue.get("code_version"),
-                                     "open": queue.get("open", 0)}
-            else:
-                out["editorBook"] = None
-        except Exception:  # noqa: BLE001
-            log.exception("editorial book review lookup failed")
-            out["editorBook"] = None
+        if editor_error is not None:
+            log.error("editorial book review lookup failed", exc_info=editor_error)
+        out["editorBook"] = editor_book
         return out
 
     @app.get("/api/v1/editorial/people/{contact_id}/books")
