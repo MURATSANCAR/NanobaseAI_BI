@@ -13,6 +13,7 @@ import { afterUnbanFromRoomCallback } from '../../../../server/lib/callbacks/aft
 import { beforeAddUsersToRoom, beforeAddUserToRoom } from '../../../../server/lib/callbacks/beforeAddUserToRoom';
 import { beforeChangeRoomRole } from '../../../../server/lib/callbacks/beforeChangeRoomRole';
 import { prepareCreateRoomCallback } from '../../../../server/lib/callbacks/beforeCreateRoomCallback';
+import { isFederationEnabled, isFederationLocalOnly } from '../../../../server/services/federation/utils';
 import { FederationActions } from '../../../../server/services/room/hooks/BeforeFederationActions';
 
 // callbacks.add('federation-event-example', async () => FederationMatrix.handleExample(), callbacks.priority.MEDIUM, 'federation-event-example-handler');
@@ -92,6 +93,13 @@ callbacks.add(
 );
 
 beforeAddUsersToRoom.add(async ({ usernames, inviter }, room) => {
+	if (isFederationLocalOnly()) {
+		if (usernames.some((username) => validateFederatedUsername(username))) {
+			throw new MeteorError('error-federation-disabled', 'Federation is disabled');
+		}
+		return;
+	}
+
 	if (!FederationActions.shouldPerformFederationAction(room) && inviter) {
 		// check if trying to invite a federated user to a non-federated room
 		const federatedUsernames = usernames.filter((u) => validateFederatedUsername(u));
@@ -290,6 +298,10 @@ callbacks.add(
 );
 
 callbacks.add('federation.beforeCreateDirectMessage', async (roomUsers, extraData) => {
+	if (isFederationLocalOnly()) {
+		return;
+	}
+
 	// TODO: use a shared helper to check whether a user is federated
 	// since the DM creation API doesn't tell us if the room is federated (unlike normal channels),
 	// we're currently inferring it: if any participant has a Matrix-style ID (@user:server), we treat the DM as federated
@@ -355,6 +367,10 @@ callbacks.add(
 );
 
 callbacks.add('afterSaveUser', async ({ user: userUpdated, oldUser: oldUserData }) => {
+	if (!isFederationEnabled()) {
+		return;
+	}
+
 	if (!userUpdated || !oldUserData) {
 		return;
 	}

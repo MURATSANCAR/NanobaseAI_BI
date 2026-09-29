@@ -1,7 +1,11 @@
 import { settings } from '../../../app/settings/server';
 
+export function isFederationLocalOnly(): boolean {
+	return process.env.ZEKI_LOCAL_ONLY === 'true' || settings.get('Zeki_Local_Only') === true;
+}
+
 export function isFederationEnabled(): boolean {
-	return settings.get<boolean>('Federation_Service_Enabled');
+	return !isFederationLocalOnly() && settings.get<boolean>('Federation_Service_Enabled');
 }
 
 export function throwIfFederationNotEnabled(): void {
