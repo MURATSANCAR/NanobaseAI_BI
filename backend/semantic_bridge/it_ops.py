@@ -2,13 +2,17 @@
 
 ZEKİ'yi ayakta tutan yedi halka (Logo, CRM, giriş, Zeki AI modeli, e-posta, şirket ağı bağlantısı, müşteri VM'i)
 5 dk'da bir denenir (`it_ops_sources.run_rings`, mevcut `admin.run_check` denemelerini çağırır); her sonuç
-`semantic_itops_checks`'e yazılır. Art arda `ITOPS_FAILS_TO_OPEN` (2) başarısız deneme bir **kopma olayı** açar, ilk
-başarılı deneme kapatır. Logo ve CRM'in son kayıt tarihi («veri sonu») eşiği aşarsa ayrı bir **tazelik olayı** açılır —
-okunan Logo kopyası donmuşsa (2026-08-17) bağlantı yeşil olsa bile raporlar eskidir.
+`semantic_itops_checks`'e yazılır. **Kopma olayı** yalnız gerçek ve süren kesintide açılır: art arda en az
+`ITOPS_FAILS_TO_OPEN` (2) başarısız deneme VE ilk başarısız denemeden bu yana en az `ITOPS_OUTAGE_MIN` (10) dk. Köprünün
+kendi açılış kaydının (`note_boot`, `semantic_itops_state.bridge_boots`) ±`ITOPS_RESTART_GRACE_MIN` (5) dk'sına düşen
+başarısız deneme sayılmaz: test sunucusunda köprü günde onlarca kez planlı yeniden başlatılır. İlk başarılı deneme olayı
+kapatır. Logo ve CRM'in son kayıt tarihi («veri sonu») eşiği aşarsa ayrı bir **tazelik olayı** açılır — okunan Logo
+kopyası donmuşsa (2026-08-17) bağlantı yeşil olsa bile raporlar eskidir.
 
-Bildirim kenarda gider, yalnız iç alıcılara (`ITOPS_RECIPIENTS`, alan adı `ITOPS_INTERNAL_DOMAINS` içinde olmalı): olay
-açılınca bir kez, düzelince bir kez (süresiyle), sürerse `ALERT_REMIND_HOURS` (tazelikte `ITOPS_STALE_REMIND_HOURS`)
-sonra hatırlatma. Gönderim olmadıysa sonraki turda yeniden denenir. Aynı turdaki olaylar tek e-postada toplanır.
+Bildirim kenarda gider, yalnız iç alıcılara (`ITOPS_RECIPIENTS`, alan adı `ITOPS_INTERNAL_DOMAINS` içinde olmalı), ortak
+iç bildirim şablonuyla (`ic_bildirim`: HTML + düz metin): olay açılınca bir kez, düzelince bir kez (süresiyle). Aynı olay
+için hatırlatma varsayılanda kapalıdır (`ITOPS_REMIND_HOURS`, tazelikte `ITOPS_STALE_REMIND_HOURS` = 0). Gönderim
+olmadıysa sonraki turda yeniden denenir. Aynı turdaki kopmalar tek e-postada, düzelmeler tek e-postada toplanır.
 
 Denetimler yalnız okur; hiçbir servis yeniden başlatılmaz (analiz §8). Rakamı model üretmez; olay taslağında model
 yalnız metni yazar, süre ve sayılar bu tablolardan gelir.
@@ -25,6 +29,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
+
+from semantic_bridge import ic_bildirim as IB
 
 log = logging.getLogger("semantic_bridge.it_ops")
 
@@ -141,17 +147,30 @@ STALE_RECIPE = ("Okunan veritabanındaki son kayıt eski. Bağlantı çalışıy
                 "sistemin donmuş bir kopyası olabilir. Raporlar bu tarihe kadar doğrudur; canlı veritabanına okuma "
                 "erişimi için BT ile görüşün.")
 
-#: Ekrana ve e-postaya giden metinde geçmeyecek teknoloji adları → sade karşılığı. İç günlükte ham metin kalır.
-_TECH = [
-    (re.compile(r"\bsystemd\b|\bsystemctl\b", re.I), "servis yöneticisi"),
-    (re.compile(r"\bdocker\b|\bcontainerd?\b", re.I), "kapsayıcı"),
-    (re.compile(r"\bnginx\b", re.I), "web sunucusu"),
-    (re.compile(r"\bv?llm\b|\bvllm\b|\bqwen[\w.-]*|\bopenai\b", re.I), "Zeki AI modeli"),
-    (re.compile(r"\bopenvpn\b|\bsocat\b", re.I), "şirket ağı bağlantısı"),
-    (re.compile(r"\bpy?odbc\b|\bfreetds\b|\bpymssql\b|\bsqlalchemy\b|\bpsycopg2?\b", re.I), "veritabanı sürücüsü"),
-    (re.compile(r"\bldap3?\b", re.I), "dizin"),
-    (re.compile(r"\bsmtplib\b", re.I), "posta"),
-]
+#: Ekrana ve e-postaya giden metinde geçmeyecek teknoloji adları → sade karşılığı (ortak liste `ic_bildirim.TECH`).
+#: İç günlükte ham metin kalır.
+_TECH = IB.TECH
+
+#: E-postada halkanın adı («Logo bağlantısı 09:42'den beri yanıt vermiyor») ve etkisi: hangi ekran/iş etkilenir.
+MAIL: dict[str, dict[str, str]] = {
+    "logo": {"name": "Logo bağlantısı",
+             "impact": "Satış, ciro, stok ve finans ekranları ile Zeki AI'ın rakamlı cevapları Logo'yu okuyamaz; ekranlar son "
+                       "okunan veriyi gösterir. Planlı raporlar ve uyarılar bu sürede çalışmaz."},
+    "crm": {"name": "CRM bağlantısı",
+            "impact": "Kitap kartları, yazar ve müşteri bilgileri, sözleşmeler gibi CRM'den okuyan ekranlar güncellenmez; "
+                      "CRM'e bağlı zamanlanmış listeler gitmez."},
+    "giris": {"name": "Portal girişi",
+              "impact": "Şirket dizinine ulaşılamadığı için kimse portala yeni giriş yapamaz. Açık oturumlar çalışmaya devam eder."},
+    "model": {"name": "Zeki AI modeli",
+              "impact": "Zeki AI'a sorulan sorular, taslaklar ve özetler bekler. Rakamlar, hazır ekranlar ve raporlar çalışır."},
+    "eposta": {"name": "E-posta gönderimi",
+               "impact": "Uyarılar, planlı raporlar ve bildirimler gönderilemez; bu e-posta da gecikmiş olabilir. Gönderilemeyenler "
+                         "bağlantı gelince yeniden denenir."},
+    "vpn": {"name": "Şirket ağı bağlantısı",
+            "impact": "Sunucumuz TİMAŞ ağına ulaşamıyor: Logo ve CRM okunamaz, bütün veri ekranları son okunan veriyle kalır."},
+    "vm": {"name": "Müşteri sunucusu",
+           "impact": "TİMAŞ içindeki portal açılmayabilir ya da oradaki zamanlanmış işler (raporlar, uyarılar) çalışmaz."},
+}
 
 SOURCES = ("timer", "manual", "watchdog")
 ENVS = ("test", "vm", "gpu")
@@ -254,10 +273,15 @@ def settings(conf: Callable[[str, str], str]) -> dict[str, Any]:
     return {
         "everySec": num("ITOPS_CHECK_EVERY_SEC", 300),
         "failsToOpen": max(1, num("ITOPS_FAILS_TO_OPEN", 2)),
+        # Gürültü önleme: kesinti en az bu kadar sürmeden olay açılmaz (e-posta da gitmez); köprü açılışının önünde ve
+        # arkasındaki bu kadar dakikadaki başarısız deneme sayılmaz (planlı yeniden başlatma).
+        "outageMin": num("ITOPS_OUTAGE_MIN", 10),
+        "restartGraceMin": num("ITOPS_RESTART_GRACE_MIN", 5),
         "logoStaleDays": num("ITOPS_LOGO_STALE_DAYS", 3),
         "crmStaleHours": num("ITOPS_CRM_STALE_HOURS", 24),
-        "remindHours": num("ALERT_REMIND_HOURS", 24),
-        "staleRemindHours": num("ITOPS_STALE_REMIND_HOURS", 24),
+        # 0: aynı olay için ikinci e-posta yok (düzelince tek «Düzeldi» gider).
+        "remindHours": num("ITOPS_REMIND_HOURS", 0),
+        "staleRemindHours": num("ITOPS_STALE_REMIND_HOURS", 0),
         "weeklyDay": min(7, max(1, num("ITOPS_WEEKLY_DAY", 1))),
         "reportHour": min(23, num("ITOPS_REPORT_HOUR", 8)),
     }
@@ -303,11 +327,54 @@ def _open_incident(c, tenant: str, ring: str, kind: str) -> Optional[Any]:
         INCIDENTS.c.closed_at.is_(None)).order_by(INCIDENTS.c.opened_at.desc())).mappings().first()
 
 
-def _recent_measured(c, tenant: str, ring: str, n: int) -> list[Any]:
-    """Halkanın son n ölçümü (ok None olanlar sayılmaz: «uygulanmaz» bir kopma da düzelme de değildir)."""
-    return c.execute(sa.select(CHECKS.c.ok, CHECKS.c.at, CHECKS.c.detail).where(
-        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.isnot(None))
-        .order_by(CHECKS.c.at.desc(), CHECKS.c.id.desc()).limit(n)).mappings().all()
+def in_restart_window(at: Optional[datetime], boots: Iterable[datetime], grace_min: int) -> bool:
+    """Deneme bir köprü açılışının ±grace dakikası içinde mi (planlı yeniden başlatma: durma ve açılış anı)."""
+    at = _aware(at)
+    if at is None or not grace_min:
+        return False
+    g = timedelta(minutes=grace_min)
+    return any(b - g <= at <= b + g for b in boots)
+
+
+def _fail_streak(c, tenant: str, ring: str, boots: list[datetime], grace_min: int) -> list[Any]:
+    """Son başarılı denemeden bu yana süren başarısız denemeler, eskiden yeniye. «Uygulanmaz» (ok None) ölçümler ve
+    yeniden başlatma penceresine düşenler sayılmaz: ikisi de kopma değildir."""
+    last_ok = c.execute(sa.select(sa.func.max(CHECKS.c.at)).where(
+        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(True))).scalar()
+    q = sa.select(CHECKS.c.ok, CHECKS.c.at, CHECKS.c.detail).where(
+        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(False))
+    if last_ok is not None:
+        q = q.where(CHECKS.c.at > last_ok)
+    rows = c.execute(q.order_by(CHECKS.c.at.asc(), CHECKS.c.id.asc())).mappings().all()
+    return [r for r in rows if not in_restart_window(r["at"], boots, grace_min)]
+
+
+# ------------------------------------------------------------------ köprü açılış kaydı (planlı yeniden başlatma)
+
+
+BOOT_KEEP_DAYS = 30
+
+
+def boots(engine: sa.engine.Engine, tenant: str) -> list[datetime]:
+    raw = state_get(engine, tenant, "bridge_boots")
+    try:
+        items = json.loads(raw) if raw else []
+    except ValueError:
+        items = []
+    out = [_aware(x) for x in items if isinstance(x, str)]
+    return sorted(x for x in out if x is not None)
+
+
+def note_boot(engine: sa.engine.Engine, tenant: str, at: datetime) -> bool:
+    """Köprünün açılış anını kaydeder (süreç başına bir kez; turda çağrılır, yazıyı yalnız ilk seferde yapar).
+    Kayıt `BOOT_KEEP_DAYS` günden eskiyi bırakır: o kadar eski açılışa hiçbir deneme düşmez."""
+    at = _aware(at)
+    have = boots(engine, tenant)
+    if any(abs((b - at).total_seconds()) < 1 for b in have):
+        return False
+    keep = [b for b in have if b >= at - timedelta(days=BOOT_KEEP_DAYS)] + [at]
+    state_set(engine, tenant, "bridge_boots", json.dumps([b.isoformat() for b in sorted(keep)]))
+    return True
 
 
 def stale_limit(ring: str, st: dict[str, Any]) -> Optional[timedelta]:
@@ -325,22 +392,26 @@ def evaluate(engine: sa.engine.Engine, tenant: str, results: Iterable[dict[str, 
     now = now or _now()
     opened: list[str] = []
     closed: list[str] = []
+    grace = int(st.get("restartGraceMin") or 0)
+    outage = timedelta(minutes=int(st.get("outageMin") or 0))
+    boot_list = boots(engine, tenant) if grace else []
     with engine.begin() as c:
         for r in results:
             ring, ok = r["ring"], r.get("ok")
-            # --- kopma
+            # --- kopma: art arda en az `failsToOpen` deneme VE ilk başarısız denemeden bu yana en az `outageMin` dk.
+            # Kısa kesinti ve köprünün planlı yeniden başlatması olay açmaz.
             if ok is not None:
                 cur = _open_incident(c, tenant, ring, "kopma")
                 if ok and cur:
                     c.execute(INCIDENTS.update().where(INCIDENTS.c.id == cur["id"]).values(closed_at=now))
                     closed.append(cur["id"])
                 elif not ok:
-                    recent = _recent_measured(c, tenant, ring, st["failsToOpen"])
-                    all_failed = len(recent) >= st["failsToOpen"] and all(x["ok"] is False for x in recent)
+                    streak = _fail_streak(c, tenant, ring, boot_list, grace)
+                    lasting = bool(streak) and now - _aware(streak[0]["at"]) >= outage
                     if cur:
                         c.execute(INCIDENTS.update().where(INCIDENTS.c.id == cur["id"]).values(last_error=screen_text(r.get("detail"))))
-                    elif all_failed:
-                        first = recent[-1]
+                    elif len(streak) >= st["failsToOpen"] and lasting:
+                        first = streak[0]
                         iid = uuid.uuid4().hex
                         c.execute(INCIDENTS.insert().values(
                             id=iid, tenant_id=tenant, ring=ring, kind="kopma", opened_at=_aware(first["at"]) or now,
@@ -368,24 +439,161 @@ def evaluate(engine: sa.engine.Engine, tenant: str, results: Iterable[dict[str, 
     return {"opened": opened, "closed": closed}
 
 
-# ------------------------------------------------------------------ bildirim
+# ------------------------------------------------------------------ bildirim (iç şablon: ic_bildirim)
 
 
-Sender = Callable[[str, str, list[str]], str]
+#: Gönderici: hazır bildirimi alıcılara yollar, durum döndürür (sent | no_smtp | no_recipient | failed).
+Sender = Callable[[IB.Notice, list[str]], str]
+
+WHY_RECIPIENTS = ("Bu adrese Sistem durumu ayarlarındaki «Kopma ve düzelme bildirimi alıcıları» listesinde olduğu için geldi. "
+                  "Aynı olay için ikinci e-posta gönderilmez; düzelince tek bir «Düzeldi» e-postası gelir.")
+WHY_WEEKLY = "Bu adrese Sistem durumu ayarlarındaki «Haftalık sağlık özeti alıcıları» listesinde olduğu için geldi."
 
 
-def _incident_line(row: Any, now: datetime) -> str:
-    ring = RING_BY_ID.get(row["ring"], {"label": row["ring"]})
-    if row["kind"] == "tazelik":
-        return f"- {ring['label']}: veri eski. {row['last_error'] or ''}"
-    dur = human_minutes(_minutes(row["opened_at"], row["closed_at"] or now))
-    return f"- {ring['label']}: {dur}'dır yok. Son hata: {row['last_error'] or row['first_error'] or '—'}"
+def _ring(rid: str) -> dict[str, str]:
+    base = RING_BY_ID.get(rid, {"id": rid, "label": rid, "hint": "", "recipe": ""})
+    return {**base, **MAIL.get(rid, {"name": base["label"], "impact": ""})}
+
+
+def _join(names: list[str]) -> str:
+    names = list(dict.fromkeys(names))
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " ve " + names[-1]
+
+
+def _fail_count(engine: sa.engine.Engine, tenant: str, ring: str, since: Any, until: Any = None) -> int:
+    q = sa.select(sa.func.count()).select_from(CHECKS).where(
+        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(False), CHECKS.c.at >= _aware(since))
+    if until is not None:
+        q = q.where(CHECKS.c.at <= _aware(until))
+    with engine.connect() as c:
+        return int(c.execute(q).scalar() or 0)
+
+
+def _last_data_end(engine: sa.engine.Engine, tenant: str, ring: str) -> Optional[datetime]:
+    with engine.connect() as c:
+        return _aware(c.execute(sa.select(CHECKS.c.data_end).where(
+            CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.data_end.isnot(None))
+            .order_by(CHECKS.c.at.desc(), CHECKS.c.id.desc()).limit(1)).scalar())
+
+
+def _limit_text(ring: str, st: dict[str, Any]) -> str:
+    lim = stale_limit(ring, st)
+    if lim is None:
+        return "—"
+    h = int(lim.total_seconds() // 3600)
+    return f"{h // 24} gün" if h % 24 == 0 and h >= 24 else f"{h} saat"
+
+
+def down_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any], now: datetime, link: str = "", *,
+                remind: bool = False, fail_counts: Optional[dict[str, int]] = None) -> IB.Notice:
+    """Kopma bildirimi (açılış ya da, ayarla açıldıysa, hatırlatma). Konu: «[Kesinti] Logo bağlantısı 09:42'den beri
+    yanıt vermiyor». `fail_counts` verilirse (örnek üretimi) deneme sayısı tablodan okunmaz."""
+    rows = sorted(rows, key=lambda r: _aware(r["opened_at"]))
+    first = _aware(rows[0]["opened_at"])
+    names = _join([_ring(r["ring"])["name"] for r in rows])
+    dur = human_minutes(_minutes(first, now))
+    tag = "Sürüyor" if remind else "Kesinti"
+    subj = f"{names} {IB.hm_suffix(first)} beri yanıt vermiyor" + (f" · {dur}" if remind else "")
+    what, impact, actions = [], [], []
+    for r in rows:
+        g = _ring(r["ring"])
+        n = (fail_counts or {}).get(r["ring"])
+        if n is None:
+            n = _fail_count(engine, tenant, r["ring"], r["opened_at"])
+        what.append(f"5 dakikada bir yapılan denetimde {g['name']} {IB.hm_suffix(r['opened_at'])} bu yana {n} kez art arda "
+                    f"yanıt vermedi. Kısa bir kesinti değil: olay ancak kesinti sürünce açılır.")
+        if g["impact"]:
+            impact.append(g["impact"])
+        steps = IB.split_steps(g.get("recipe", ""))
+        actions += [(f"{g['name']}: {s}" if len(rows) > 1 else s) for s in steps]
+    actions.append("Sorun çözülünce ayrıca bir şey yapmanız gerekmez: denetim 5 dakikada bir yapılır, olay kendiliğinden "
+                   "kapanır ve «Düzeldi» e-postası gelir.")
+    if len(rows) == 1:
+        r = rows[0]
+        table = IB.Table(title="Ayrıntı", columns=["Alan", "Değer"], rows=[
+            ["Başladı", IB.long_dt(r["opened_at"])], ["Süre", human_minutes(_minutes(r["opened_at"], now)) + " (sürüyor)"],
+            ["Son hata", IB.plain(r["last_error"] or r["first_error"] or "—", 300)],
+            ["Son deneme", IB.long_dt(now)]])
+    else:
+        table = IB.Table(title="Ayrıntı", columns=["Bağlantı", "Başladı", "Süre", "Son hata"], rows=[
+            [_ring(r["ring"])["name"], IB.short_dt(r["opened_at"]), human_minutes(_minutes(r["opened_at"], now)),
+             IB.plain(r["last_error"] or r["first_error"] or "—", 160)] for r in rows])
+    head = (f"{names} {IB.day_month(first)} {IB.hm_suffix(first)} beri yanıt vermiyor; kesinti şu ana dek {dur} sürdü.")
+    return IB.Notice(tone="kesinti", subject=IB.subject(tag, subj), headline=head, what=what,
+                     impact=list(dict.fromkeys(impact)), actions=actions, tables=[table],
+                     link=IB.portal_link(link, "sistem-durumu"), link_label="Sistem durumunu aç", at=now,
+                     why=WHY_RECIPIENTS, tag=tag)
+
+
+def stale_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any], st: dict[str, Any], now: datetime,
+                 link: str = "", *, remind: bool = False, data_ends: Optional[dict[str, datetime]] = None) -> IB.Notice:
+    """Veri eski bildirimi: bağlantı çalışıyor, okunan son kayıt eşikten eski (ör. donmuş Logo kopyası)."""
+    items = []
+    for r in rows:
+        end = (data_ends or {}).get(r["ring"]) or _last_data_end(engine, tenant, r["ring"])
+        items.append((r, RING_BY_ID.get(r["ring"], {"label": r["ring"]})["label"], end))
+    names = _join([f"{lbl} verisi" for _, lbl, _ in items])
+    ends = [e for _, _, e in items if e]
+    oldest = min(ends) if ends else None
+    since = f"{IB.day_month(oldest)}'{IB.suffix(IB.day_month(oldest).split()[-1])} beri" if oldest else "bir süredir"
+    tag = "Sürüyor" if remind else "Uyarı"
+    what = [f"{lbl} bağlantısı çalışıyor ama okunan son kayıt {IB.long_date(end) if end else 'bilinmiyor'} "
+            f"tarihli ({human_minutes(_minutes(end, now)) if end else '—'} önce). Eşik: {_limit_text(r['ring'], st)}."
+            for r, lbl, end in items]
+    table = IB.Table(title="Ayrıntı", columns=["Kaynak", "Son kayıt", "Eşik", "Fark edildi"], rows=[
+        [lbl, IB.long_date(end) if end else "—", _limit_text(r["ring"], st), IB.short_dt(r["opened_at"])]
+        for r, lbl, end in items])
+    return IB.Notice(
+        tone="uyari", tag=tag, subject=IB.subject(tag, f"{names} {since} güncellenmiyor"),
+        headline=f"{names} {since} güncellenmiyor: bağlantı çalışıyor ama yeni kayıt gelmiyor.",
+        what=what,
+        impact=["Raporlar ve ekranlar son kayıt tarihine kadar doğrudur; o tarihten sonraki fatura, satış ve kayıtlar "
+                "hiçbir ekranda görünmez."],
+        actions=IB.split_steps(STALE_RECIPE), tables=[table], link=IB.portal_link(link, "sistem-durumu"),
+        link_label="Sistem durumunu aç", at=now, why=WHY_RECIPIENTS)
+
+
+def fixed_notice(rows: list[Any], now: datetime, link: str = "") -> IB.Notice:
+    """Düzelme bildirimi: olay başına bir kez. Konu: «[Düzeldi] Logo bağlantısı 10:27'de geri geldi · 45 dk sürdü»."""
+    rows = sorted(rows, key=lambda r: _aware(r["closed_at"]))
+    def name(r: Any) -> str:
+        return (f"{RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']} verisi" if r["kind"] == "tazelik"
+                else _ring(r["ring"])["name"])
+    names = _join([name(r) for r in rows])
+    if len(rows) == 1:
+        r = rows[0]
+        dur = human_minutes(_minutes(r["opened_at"], r["closed_at"]))
+        if r["kind"] == "tazelik":
+            subj = f"{names} yeniden güncel"
+            head = f"{names} yeniden güncel: yeni kayıtlar {IB.hm_suffix(r['closed_at'], 'de')} okunmaya başladı."
+        else:
+            subj = f"{names} {IB.hm_suffix(r['closed_at'], 'de')} geri geldi · {dur} sürdü"
+            head = f"{names} {IB.day_month(r['closed_at'])} {IB.hm_suffix(r['closed_at'], 'de')} yeniden yanıt verdi; kesinti {dur} sürdü."
+        table = IB.Table(title="Ayrıntı", columns=["Alan", "Değer"], rows=[
+            ["Başladı", IB.long_dt(r["opened_at"])], ["Düzeldi", IB.long_dt(r["closed_at"])], ["Süre", dur]])
+    else:
+        subj = f"{names} yeniden çalışıyor"
+        head = f"{names} yeniden çalışıyor."
+        table = IB.Table(title="Ayrıntı", columns=["Bağlantı", "Başladı", "Düzeldi", "Süre"], rows=[
+            [name(r), IB.short_dt(r["opened_at"]), IB.short_dt(r["closed_at"]),
+             human_minutes(_minutes(r["opened_at"], r["closed_at"]))] for r in rows])
+    what = [f"{name(r)} {IB.short_dt(r['closed_at'])} itibarıyla yeniden çalışıyor "
+            f"({human_minutes(_minutes(r['opened_at'], r['closed_at']))} sürdü)." for r in rows]
+    return IB.Notice(
+        tone="duzeldi", subject=IB.subject("Düzeldi", subj), headline=head, what=what,
+        impact=["Etkilenen ekranlar ve işler yeniden güncel veriyi okuyor."],
+        actions=["Yapmanız gereken bir şey yok.",
+                 "Nedenini biliyorsanız Sistem durumu → Olaylar'da bu olaya kök neden notu yazın; olay değerlendirmesi "
+                 "oradan hazırlanır."],
+        tables=[table], link=IB.portal_link(link, "sistem-durumu"), link_label="Olayı aç", at=now, why=WHY_RECIPIENTS)
 
 
 def notify(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], send: Sender, recipients: list[str], *,
            link: str = "", now: Optional[datetime] = None) -> dict[str, Any]:
-    """Bekleyen bildirimleri tek e-postada gönderir: yeni açılan (ya da açılışı gönderilememiş), düzelen, hatırlatması
-    gelen olaylar. Sonuç her olayın satırına yazılır; gönderilemeyen sonraki turda yeniden denenir."""
+    """Bekleyen bildirimleri gönderir: yeni açılan kopmalar (tek e-posta), yeni «veri eski» olayları (tek e-posta),
+    düzelenler (tek e-posta), ayarla açıldıysa hatırlatmalar. Olay `evaluate`'te ancak gerçek ve süren kesintide açılır;
+    burada her olay için bir açılış, bir düzelme e-postası gider. Sonuç her olayın satırına yazılır; gönderilemeyen
+    sonraki turda yeniden denenir. Açılışı duyurulmamış olayın düzelmesi duyurulmaz."""
     now = now or _now()
     with engine.connect() as c:
         rows = c.execute(sa.select(INCIDENTS).where(INCIDENTS.c.tenant_id == tenant, sa.or_(
@@ -407,43 +615,38 @@ def notify(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], send: Send
         with engine.begin() as c:
             c.execute(INCIDENTS.update().where(INCIDENTS.c.id.in_([r["id"] for r in skip])).values(closed_notify="skip"))
     if not (new or remind or fixed):
-        return {"sent": None, "new": 0, "remind": 0, "fixed": 0}
+        return {"sent": None, "new": 0, "remind": 0, "fixed": 0, "mails": []}
 
-    parts: list[str] = []
-    labels = []
-    if new:
-        parts += ["Yeni sorun:"] + [_incident_line(r, now) for r in new]
-        for r in new:
-            ring = RING_BY_ID.get(r["ring"], {"recipe": ""})
-            parts.append(f"  Ne yapmalı: {STALE_RECIPE if r['kind'] == 'tazelik' else ring.get('recipe', '')}")
-        labels += [RING_BY_ID.get(r["ring"], {"label": r["ring"]})["label"] + (" verisi eski" if r["kind"] == "tazelik" else " koptu") for r in new]
-    if fixed:
-        parts += ["", "Düzeldi:"] + [
-            f"- {RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']}: düzeldi, "
-            f"{human_minutes(_minutes(r['opened_at'], r['closed_at']))} sürdü." for r in fixed]
-        labels += [RING_BY_ID.get(r["ring"], {"label": r["ring"]})["label"] + " düzeldi" for r in fixed]
-    if remind:
-        parts += ["", "Sürüyor (hatırlatma):"] + [_incident_line(r, now) for r in remind]
-        if not labels:
-            labels = ["sürüyor: " + ", ".join(RING_BY_ID.get(r["ring"], {"label": r["ring"]})["label"] for r in remind)]
-    parts += ["", f"Denetim zamanı: {local_str(now)}"]
-    if link:
-        parts += [f"Ayrıntı: {link.rstrip('/')}/sistem-durumu"]
-    subject = "ZEKİ sistem durumu: " + ", ".join(labels)
-    result = send(subject[:200], "\n".join(parts), recipients) if recipients else "no_recipient"
+    mails: list[dict[str, Any]] = []
+
+    def fire(n: IB.Notice) -> str:
+        res = send(n, recipients) if recipients else "no_recipient"
+        mails.append({"subject": n.subject, "result": res})
+        return res
+
+    new_down = [r for r in new if r["kind"] == "kopma"]
+    new_stale = [r for r in new if r["kind"] == "tazelik"]
+    rem_down = [r for r in remind if r["kind"] == "kopma"]
+    rem_stale = [r for r in remind if r["kind"] == "tazelik"]
+    # Önce bildirimler kurulup gönderilir, sonra sonuçlar tek işlemde satırlara yazılır.
+    updates: list[tuple[list[str], dict[str, Any]]] = []
+    for group, make in ((new_down, lambda g: down_notice(engine, tenant, g, now, link)),
+                        (new_stale, lambda g: stale_notice(engine, tenant, g, st, now, link))):
+        if group:
+            res = fire(make(group))
+            updates.append(([r["id"] for r in group], {"notify_status": res, **({"notified_at": now} if res == "sent" else {})}))
+    if fixed and fire(fixed_notice(fixed, now, link)) == "sent":
+        updates.append(([r["id"] for r in fixed], {"closed_notify": "sent"}))
+    for group, make in ((rem_down, lambda g: down_notice(engine, tenant, g, now, link, remind=True)),
+                        (rem_stale, lambda g: stale_notice(engine, tenant, g, st, now, link, remind=True))):
+        if group and fire(make(group)) == "sent":
+            updates.append(([r["id"] for r in group], {"reminded_at": now}))
     with engine.begin() as c:
-        for r in new:
-            vals: dict[str, Any] = {"notify_status": result}
-            if result == "sent":
-                vals["notified_at"] = now
-            c.execute(INCIDENTS.update().where(INCIDENTS.c.id == r["id"]).values(**vals))
-        if result == "sent":
-            for r in remind:
-                c.execute(INCIDENTS.update().where(INCIDENTS.c.id == r["id"]).values(reminded_at=now))
-        for r in fixed:
-            if result == "sent":
-                c.execute(INCIDENTS.update().where(INCIDENTS.c.id == r["id"]).values(closed_notify="sent"))
-    return {"sent": result, "new": len(new), "remind": len(remind), "fixed": len(fixed)}
+        for ids, vals in updates:
+            c.execute(INCIDENTS.update().where(INCIDENTS.c.id.in_(ids)).values(**vals))
+    results = [m["result"] for m in mails]
+    overall = "sent" if all(x == "sent" for x in results) else next(x for x in results if x != "sent")
+    return {"sent": overall, "new": len(new), "remind": len(remind), "fixed": len(fixed), "mails": mails}
 
 
 # ------------------------------------------------------------------ özetler (haftalık, günlük iş hataları)
@@ -482,31 +685,93 @@ def downtime(engine: sa.engine.Engine, tenant: str, since: datetime, until: Opti
     return out
 
 
-def weekly_text(engine: sa.engine.Engine, tenant: str, now: datetime, failing_jobs: list[dict[str, Any]]) -> tuple[str, str]:
+def weekly_notice(engine: Optional[sa.engine.Engine], tenant: str, now: datetime, failing_jobs: list[dict[str, Any]],
+                  link: str = "", *, dt: Optional[dict[str, dict[str, Any]]] = None,
+                  still: Optional[list[Any]] = None) -> IB.Notice:
+    """Haftalık sağlık özeti: son 7 günün kopma sayısı ve süresi bağlantı başına, şu an açık olaylar, hata veren işler.
+    `dt` ve `still` verilirse (örnek üretimi) tablolar okunmaz."""
     since = now - timedelta(days=7)
-    dt = downtime(engine, tenant, since, now)
+    if dt is None:
+        dt = downtime(engine, tenant, since, now)
     total = sum(v["minutes"] for v in dt.values())
+    count = sum(v["count"] for v in dt.values())
+    hit = [rid for rid, v in dt.items() if v["count"]]
     worst = max(dt.items(), key=lambda kv: kv[1]["minutes"]) if dt else None
-    with engine.connect() as c:
-        still = c.execute(sa.select(INCIDENTS).where(INCIDENTS.c.tenant_id == tenant, INCIDENTS.c.closed_at.is_(None))).mappings().all()
-    lines = [f"Son 7 gün ({local_str(since)} – {local_str(now)})", ""]
-    for r in RINGS:
-        v = dt.get(r["id"], {"count": 0, "minutes": 0})
-        lines.append(f"- {r['label']}: {v['count']} kopma, toplam {human_minutes(v['minutes'])}")
-    lines += ["", f"Toplam kesinti: {human_minutes(total)}"]
-    if worst and worst[1]["minutes"]:
-        lines.append(f"En çok bozulan: {RING_BY_ID.get(worst[0], {'label': worst[0]})['label']}")
-    if still:
-        lines += ["", "Şu an açık:"] + [_incident_line(r, now) for r in still]
+    if still is None:
+        with engine.connect() as c:
+            still = c.execute(sa.select(INCIDENTS).where(INCIDENTS.c.tenant_id == tenant, INCIDENTS.c.closed_at.is_(None))
+                              .order_by(INCIDENTS.c.opened_at.asc())).mappings().all()
+    period = IB.day_range(since, now - timedelta(days=1))
+    if not count:
+        head = f"Geçen hafta {len(RINGS)} bağlantının hepsi kesintisiz çalıştı."
+    else:
+        head = (f"Geçen hafta {len(RINGS)} bağlantıdan {len(RINGS) - len(hit)} tanesi kesintisiz çalıştı; toplam kesinti "
+                f"{human_minutes(total)}, en uzunu {_ring(worst[0])['name']} ({human_minutes(worst[1]['minutes'])}).")
+    what = [f"{period} arasında {count} kesinti kaydedildi, toplam {human_minutes(total)}." if count
+            else f"{period} arasında kesinti kaydedilmedi."]
     if failing_jobs:
-        lines += ["", "Hatalı zamanlanmış işler:"] + [f"- {j['label']}: {j.get('lastError') or 'başarısız'}" for j in failing_jobs]
-    return "ZEKİ haftalık sistem özeti", "\n".join(lines)
+        what.append(f"{len(failing_jobs)} zamanlanmış iş son koşusunda hata verdi.")
+    impact = []
+    if count:
+        impact.append("Kesinti sürelerinde ilgili ekranlar son okunan veriyi gösterdi, bağlı raporlar ve uyarılar çalışmadı.")
+    if still:
+        impact.append("Şu an açık sorun var: " + _join([
+            (f"{RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']} verisi eski" if r["kind"] == "tazelik"
+             else f"{_ring(r['ring'])['name']} yanıt vermiyor") for r in still]) + ". Çözülene kadar ilgili ekranlar etkilenir.")
+    if not impact:
+        impact.append("Kesinti kaynaklı bir etki olmadı.")
+    actions = []
+    if still:
+        actions.append("Açık sorunları Sistem durumu ekranında inceleyin; her birinin yanında ne yapılacağı yazar.")
+    if failing_jobs:
+        actions.append("Hata veren zamanlanmış işlerin son hata metnine bakın (aşağıdaki liste). Bağlantı kaynaklıysa "
+                       "bağlantı düzelince sonraki koşuda kendiliğinden toparlanır.")
+    if count:
+        actions.append("Kapanan olaylara kök neden notu yazılmadıysa Sistem durumu → Olaylar'dan ekleyin.")
+    if not actions:
+        actions.append("Yapmanız gereken bir şey yok.")
+    tables = [IB.Table(title="Bağlantılar", columns=["Bağlantı", "Kesinti", "Toplam süre"], numeric=(1, 2), rows=[
+        [_ring(r["id"])["name"], dt.get(r["id"], {}).get("count", 0),
+         human_minutes(dt.get(r["id"], {}).get("minutes", 0)) if dt.get(r["id"], {}).get("count") else "—"] for r in RINGS])]
+    if still:
+        tables.append(IB.Table(title="Şu an açık", columns=["Sorun", "Başladı", "Süre"], rows=[
+            [(f"{RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']} verisi eski" if r["kind"] == "tazelik"
+              else _ring(r["ring"])["name"]), IB.short_dt(r["opened_at"]), human_minutes(_minutes(r["opened_at"], now))]
+            for r in still]))
+    if failing_jobs:
+        tables.append(IB.Table(title="Hata veren zamanlanmış işler", columns=["İş", "Son koşu", "Son hata"], rows=[
+            [j["label"], IB.short_dt(_aware(j.get("lastAt"))), IB.plain(j.get("lastError") or "başarısız", 200)]
+            for j in failing_jobs]))
+    return IB.Notice(tone="bilgi", tag="Haftalık", subject=IB.subject("Haftalık", f"Sistem sağlığı · {period}"),
+                     headline=head, what=what, impact=impact, actions=actions, tables=tables,
+                     link=IB.portal_link(link, "sistem-durumu"), link_label="Sistem durumunu aç", at=now, why=WHY_WEEKLY)
+
+
+def weekly_text(engine: sa.engine.Engine, tenant: str, now: datetime, failing_jobs: list[dict[str, Any]]) -> tuple[str, str]:
+    n = weekly_notice(engine, tenant, now, failing_jobs)
+    return n.subject, IB.render_text(n)
+
+
+def jobs_digest_notice(failing: list[dict[str, Any]], now: datetime, link: str = "") -> IB.Notice:
+    """Günlük «hata veren zamanlanmış işler» özeti (bildirim alıcılarına, günde bir)."""
+    k = len(failing)
+    return IB.Notice(
+        tone="uyari", subject=IB.subject("Uyarı", f"Zamanlanmış işler · {k} iş hata verdi · {IB.day_month(now)}"),
+        headline=f"Son 24 saatte {k} zamanlanmış iş son koşusunda hata verdi.",
+        what=[f"{j['label']}: {IB.plain(j.get('lastError') or 'başarısız', 200)}" for j in failing],
+        impact=["Bu işlerin ürettiği rapor, liste ya da veri tazelemesi son başarılı koşudaki hâliyle kalır."],
+        actions=["Hata metnine bakın. Bir bağlantı kopukluğundan kaynaklanıyorsa bağlantı düzelince sonraki koşuda "
+                 "kendiliğinden toparlanır.",
+                 "Sürekli hata veren iş için Sistem durumu → Zamanlanmış işler sekmesini açın."],
+        tables=[IB.Table(title="Ayrıntı", columns=["İş", "Son koşu", "Sıklık"], rows=[
+            [j["label"], IB.short_dt(_aware(j.get("lastAt"))), j.get("every") or "—"] for j in failing])],
+        link=IB.portal_link(link, "sistem-durumu"), link_label="Zamanlanmış işleri aç", at=now,
+        why="Bu adrese Sistem durumu ayarlarındaki «Kopma ve düzelme bildirimi alıcıları» listesinde olduğu için geldi.")
 
 
 def jobs_digest_text(failing: list[dict[str, Any]], now: datetime) -> tuple[str, str]:
-    lines = [f"Son 24 saatte hata veren zamanlanmış işler ({local_str(now)}):", ""]
-    lines += [f"- {j['label']}: {j.get('lastError') or 'başarısız'} (son koşu {local_str(_aware(j.get('lastAt')))})" for j in failing]
-    return f"ZEKİ zamanlanmış iş hataları: {len(failing)} iş", "\n".join(lines)
+    n = jobs_digest_notice(failing, now)
+    return n.subject, IB.render_text(n)
 
 
 def due_digests(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], now: datetime) -> dict[str, Optional[str]]:
@@ -861,7 +1126,9 @@ def status(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, now: Op
         if len(downs) > 1:
             text += f"; {len(downs) - 1} halka daha kopuk"
     elif fails:
-        tone, text = "warn", f"{', '.join(x['label'] for x in fails)}: son deneme başarısız (tekrarında olay açılır)"
+        tone = "warn"
+        text = (f"{', '.join(x['label'] for x in fails)}: son deneme başarısız "
+                f"({st.get('outageMin') or 5} dk sürerse olay açılır)")
     elif stales:
         tone = "warn"
         text = "Bağlantılar çalışıyor · " + "; ".join(f"{x['label']} verisi eski ({x['dataEndAge']})" for x in stales)

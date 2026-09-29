@@ -7480,10 +7480,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if "timas_session" in request.headers.get("cookie", ""):
             _, _, actor = _access_admin(request)
         from semantic_bridge import crm_unassigned as CU
-        from semantic_bridge.corporate_sales_api import send_mail
 
         try:
-            out = CU.send(access_dir, admin_mod.conf, send_mail)
+            out = CU.send(access_dir, admin_mod.conf)
         except Exception as e:  # noqa: BLE001
             log.warning("crm-unassigned: liste gönderilemedi: %s", e)
             raise HTTPException(status_code=503, detail={

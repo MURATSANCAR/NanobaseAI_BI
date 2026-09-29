@@ -64,11 +64,11 @@ def test_no_recipient_means_no_crm_read_and_domain_filter_applies():
     sent = []
     out = CU.send(d, conf_of({"CRM_UNASSIGNED_TO": "a@timas.com.tr; b@gmail.com",
                               "ALERT_RECIPIENT_DOMAINS": "timas.com.tr"}),
-                  lambda subject, text, to, att: sent.append((subject, to, att[0][0])) or "sent",
+                  lambda notice, to, att: sent.append((notice.subject, to, att[0][0])) or "sent",
                   now=datetime(2026, 9, 29, 7, 0))
     assert out["ok"] and out["to"] == ["a@timas.com.tr"] and out["skipped"] == ["b@gmail.com"]
     assert sent[0][1] == ["a@timas.com.tr"] and sent[0][2].endswith("2026-09-29-0700.xlsx")
-    assert "2 kişi" in sent[0][0]
+    assert sent[0][0].startswith("[Bilgi] CRM'de departmanı olmayan 2 kullanıcı")
 
 
 def _timer(name):

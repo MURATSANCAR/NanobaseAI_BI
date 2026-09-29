@@ -25,8 +25,10 @@ from semantic_layer.tests.conftest import TENANT
 
 UTC = timezone.utc
 T0 = datetime(2026, 9, 28, 9, 0, tzinfo=UTC)
-ST = {"everySec": 300, "failsToOpen": 2, "logoStaleDays": 3, "crmStaleHours": 24, "remindHours": 24,
-      "staleRemindHours": 24, "weeklyDay": 1, "reportHour": 8}
+# Bu dosyanın kural testleri deneme sayısını sınar: süre eşiği ve yeniden başlatma payı kapalı. Gürültü önleme
+# (süre eşiği, açılış kaydı, tek kopma + tek düzelme) test_ic_bildirim.py'de.
+ST = {"everySec": 300, "failsToOpen": 2, "outageMin": 0, "restartGraceMin": 0, "logoStaleDays": 3, "crmStaleHours": 24,
+      "remindHours": 24, "staleRemindHours": 24, "weeklyDay": 1, "reportHour": 8}
 
 
 @pytest.fixture
@@ -38,12 +40,18 @@ def engine():
 
 
 class Outbox:
+    """Gönderici yerine: bildirimi (ic_bildirim.Notice) düz metne çevirip saklar."""
+
     def __init__(self, result: str = "sent"):
         self.result = result
         self.mails: list[tuple[str, str, list[str]]] = []
+        self.notices: list = []
 
-    def __call__(self, subject, text, to):
-        self.mails.append((subject, text, list(to)))
+    def __call__(self, notice, to):
+        from semantic_bridge import ic_bildirim as IB
+
+        self.notices.append(notice)
+        self.mails.append((notice.subject, IB.render_text(notice), list(to)))
         return self.result
 
 
@@ -76,14 +84,14 @@ def test_one_failure_is_noise_two_open_an_incident_and_success_closes_it(engine)
     assert I._aware(inc["opened_at"]) == T0                    # başlangıç ilk başarısız deneme
     assert I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=5))["new"] == 1
     subject, text, to = out.mails[-1]
-    assert "Logo koptu" in subject and "Ne yapmalı" in text and to == ["bt@timas.com.tr"]
+    assert subject.startswith("[Kesinti] Logo bağlantısı") and "NE YAPMALI" in text and to == ["bt@timas.com.tr"]
     # sürerken yeni e-posta yok (alarm yorgunluğu)
     tour(engine, [{"ring": "logo", "ok": False}], T0 + timedelta(minutes=10))
     assert I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=10))["sent"] is None
     ch = tour(engine, [{"ring": "logo", "ok": True, "data_end": T0}], T0 + timedelta(minutes=47))
     assert ch["closed"] == [inc["id"]] and not open_rows(engine, "kopma")
     I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=47))
-    assert "düzeldi" in out.mails[-1][0] and "47 dk sürdü" in out.mails[-1][1]
+    assert out.mails[-1][0].startswith("[Düzeldi]") and "47 dk sürdü" in out.mails[-1][1]
     assert len(out.mails) == 2
 
 
@@ -108,7 +116,9 @@ def test_reminder_after_remind_hours(engine):
     I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=5))
     assert I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(hours=23))["remind"] == 0
     r = I.notify(engine, TENANT, ST, out, ["bt@timas.com.tr"], now=T0 + timedelta(hours=24, minutes=6))
-    assert r["remind"] == 1 and "Sürüyor" in out.mails[-1][1]
+    assert r["remind"] == 1 and out.mails[-1][0].startswith("[Sürüyor]")
+    # Varsayılan ayarda hatırlatma kapalı: aynı olay için ikinci e-posta yok.
+    assert I.settings(lambda k, d="": d)["remindHours"] == 0 and I.settings(lambda k, d="": d)["staleRemindHours"] == 0
 
 
 def test_frozen_logo_copy_opens_a_staleness_incident_even_when_connected(engine):
@@ -261,7 +271,8 @@ def test_run_tour_records_opens_notifies_and_sends_the_daily_job_digest(engine, 
     fakes = {rid: (lambda ok: (lambda ctx: {"ok": ok, "detail": "sahte", "latency_ms": 5, "data_end": None}))(rid != "vpn")
              for rid in S.CHECKERS}
     ctx = _ctx(engine, overrides=fakes, conf={"ITOPS_RECIPIENTS": "bt@timas.com.tr, dis@gmail.com",
-                                              "ITOPS_INTERNAL_DOMAINS": "timas.com.tr"})
+                                              "ITOPS_INTERNAL_DOMAINS": "timas.com.tr",
+                                              "ITOPS_OUTAGE_MIN": "0", "ITOPS_RESTART_GRACE_MIN": "0"})
     I.upsert_job(engine, TENANT, "tablo:planli-raporlar", label="Planlı raporlar", source="table", last_at=T0,
                  last_ok=False, last_error="Aylık ciro: Logo'ya ulaşılamadı", failed_count=1)
     out = Outbox()

@@ -11,14 +11,12 @@ bekçisi ve VM'deki iş kapsayıcısı iş sonucunu bildirir), `report-release` 
 from __future__ import annotations
 
 import logging
-import smtplib
-import ssl
-from datetime import datetime, timedelta
-from email.message import EmailMessage
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 from fastapi import HTTPException, Request
 
+from semantic_bridge import ic_bildirim as IB
 from semantic_bridge import it_ops as I
 from semantic_bridge import it_ops_kaynak as IK
 from semantic_bridge import provenance as P
@@ -30,31 +28,14 @@ log = logging.getLogger("semantic_bridge.it_ops.api")
 SETTING_GROUP = "itops"
 
 
-def send_mail(subject: str, text: str, to: list[str]) -> str:
-    from semantic_bridge.alerts import smtp_settings
+#: Bu köprü sürecinin açılış anı. Her turda `note_boot` ile kayda geçer; planlı yeniden başlatmanın çevresindeki
+#: başarısız denemeler kopma sayılmaz (`it_ops.evaluate`).
+BOOT_AT = datetime.now(timezone.utc)
 
-    if not to:
-        return "no_recipient"
-    cfg = smtp_settings()
-    if not cfg:
-        return "no_smtp"
-    try:
-        msg = EmailMessage()
-        msg["Subject"], msg["From"], msg["To"] = subject, cfg["sender"], ", ".join(to)
-        msg.set_content(text)
-        ctx = ssl.create_default_context()
-        server = (smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20, context=ctx) if cfg["ssl"]
-                  else smtplib.SMTP(cfg["host"], cfg["port"], timeout=20))
-        with server as s:
-            if not cfg["ssl"] and cfg["starttls"]:
-                s.starttls(context=ctx)
-            if cfg["user"]:
-                s.login(cfg["user"], cfg["password"])
-            s.send_message(msg)
-        return "sent"
-    except Exception as e:  # noqa: BLE001
-        log.warning("sistem durumu e-postası gönderilemedi: %s", e)
-        return "failed"
+
+def send_mail(notice: IB.Notice, to: list[str]) -> str:
+    """İç bildirim şablonuyla (HTML + düz metin) gönderir."""
+    return IB.send(notice, to)
 
 
 def recipients(conf: Callable[[str, str], str], key: str = "ITOPS_RECIPIENTS") -> tuple[list[str], list[str]]:
@@ -66,11 +47,15 @@ def recipients(conf: Callable[[str, str], str], key: str = "ITOPS_RECIPIENTS") -
 
 
 def run_tour(ctx: S.Ctx, datasource: str, *, source: str = "timer", rings: Optional[list[str]] = None,
-             send: Callable[[str, str, list[str]], str] = send_mail, collect: bool = True, digests: bool = True,
-             now: Optional[datetime] = None) -> dict[str, Any]:
-    """Bir denetim turu: halkalar → kayıt → olay aç/kapat → işler → bildirim → (zamanı geldiyse) özetler."""
+             send: I.Sender = send_mail, collect: bool = True, digests: bool = True,
+             now: Optional[datetime] = None, boot_at: Optional[datetime] = None) -> dict[str, Any]:
+    """Bir denetim turu: açılış kaydı → halkalar → kayıt → olay aç/kapat → işler → bildirim → (zamanı geldiyse) özetler."""
     st = I.settings(ctx.conf)
     with I.run_lock:
+        try:
+            I.note_boot(ctx.engine, ctx.tenant, boot_at or BOOT_AT)
+        except Exception as e:  # noqa: BLE001
+            log.warning("itops: açılış kaydı yazılamadı: %s", e)
         results = S.run_rings(ctx, rings)
         for r in results:
             I.record_check(ctx.engine, ctx.tenant, r["ring"], r["ok"], latency_ms=r.get("latency_ms"),
@@ -96,14 +81,15 @@ def run_tour(ctx: S.Ctx, datasource: str, *, source: str = "timer", rings: Optio
             due = I.due_digests(ctx.engine, ctx.tenant, st, n)
             if due["daily"]:
                 failing = I.failing_jobs(ctx.engine, ctx.tenant, since=n - timedelta(hours=24))
-                res = send(*I.jobs_digest_text(failing, n), to) if failing and to else ("empty" if not failing else "no_recipient")
+                res = (send(I.jobs_digest_notice(failing, n, link), to) if failing and to
+                       else ("empty" if not failing else "no_recipient"))
                 if res in ("sent", "empty"):
                     I.state_set(ctx.engine, ctx.tenant, "daily_sent", due["daily"])
                 out["daily"] = res
             if due["weekly"]:
                 wto, _ = recipients(ctx.conf, "ITOPS_WEEKLY_TO")
-                subject, text = I.weekly_text(ctx.engine, ctx.tenant, n, I.failing_jobs(ctx.engine, ctx.tenant))
-                res = send(subject, text, wto) if wto else "no_recipient"
+                notice = I.weekly_notice(ctx.engine, ctx.tenant, n, I.failing_jobs(ctx.engine, ctx.tenant), link)
+                res = send(notice, wto) if wto else "no_recipient"
                 if res == "sent":
                     I.state_set(ctx.engine, ctx.tenant, "weekly_sent", due["weekly"])
                 out["weekly"] = res

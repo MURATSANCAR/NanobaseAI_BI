@@ -280,6 +280,56 @@ def _aware(v: Optional[datetime]) -> Optional[datetime]:
     return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
 
 
+MAIL_WHY = ("Bu adrese Kurumsal e-posta ayarlarındaki «Bağlantı uyarısı alıcıları» listesinde olduğu için geldi. "
+            "Aynı kesinti için ikinci e-posta gönderilmez; okuma düzelince tek bir «Düzeldi» e-postası gelir.")
+
+
+def _box_name(address: str) -> str:
+    a = (address or "").strip().lower()
+    return f"{a} kutusu" if "@" in a else "Kurumsal e-posta kutusu"
+
+
+def connection_down_notice(address: str, since: datetime, now: datetime, error: str, link: str = ""):
+    """«[Kesinti] Kurumsal e-posta kutusu 09:12'den beri okunamıyor» (ic_bildirim şablonu)."""
+    from semantic_bridge import ic_bildirim as IB
+
+    mins = max(0, int((now - since).total_seconds() // 60))
+    box = _box_name(address)
+    return IB.Notice(
+        tone="kesinti", subject=IB.subject("Kesinti", f"Kurumsal e-posta kutusu {IB.hm_suffix(since)} beri okunamıyor"),
+        headline=f"{box} {IB.day_month(since)} {IB.hm_suffix(since)} beri okunamıyor ({IB.minutes_text(mins)}).",
+        what=[f"Portal kutuyu 5 dakikada bir okur; son başarılı okuma {IB.long_dt(since)}. O andan bu yana her deneme başarısız."],
+        impact=["Kutuya gelen müşteri iletileri portala düşmüyor: sınıflama, kişiye atama ve yanıt süresi takibi durdu.",
+                "İletiler kutuda bekler, kaybolmaz; bağlantı gelince kaldığı yerden okunur."],
+        actions=["Yönetim → Kurumsal e-posta ekranında «Bağlantıyı dene» ile hatayı görün.",
+                 "Hata yetki ya da anahtarla ilgiliyse hizmet hesabının bu kutuyu okuma izninin ve anahtarının geçerli "
+                 "olduğunu kontrol edin.",
+                 "Kutu tarafında bir kesinti varsa ayrıca bir şey yapmanız gerekmez; düzelince e-posta gelir."],
+        tables=[IB.Table(title="Ayrıntı", columns=["Alan", "Değer"], rows=[
+            ["Kutu", box], ["Son başarılı okuma", IB.long_dt(since)], ["Süre", IB.minutes_text(mins) + " (sürüyor)"],
+            ["Son hata", IB.plain(error or "—", 300)]])],
+        link=IB.portal_link(link, "kurumsal-eposta"), link_label="Kurumsal e-postayı aç", at=now, why=MAIL_WHY)
+
+
+def connection_fixed_notice(address: str, since: datetime, back: datetime, now: datetime, link: str = ""):
+    """«[Düzeldi] Kurumsal e-posta kutusu 11:17'de yeniden okundu · 2 sa 5 dk sürdü»."""
+    from semantic_bridge import ic_bildirim as IB
+
+    mins = max(0, int((back - since).total_seconds() // 60))
+    dur = IB.minutes_text(mins)
+    box = _box_name(address)
+    return IB.Notice(
+        tone="duzeldi",
+        subject=IB.subject("Düzeldi", f"Kurumsal e-posta kutusu {IB.hm_suffix(back, 'de')} yeniden okundu · {dur} sürdü"),
+        headline=f"{box} {IB.day_month(back)} {IB.hm_suffix(back, 'de')} yeniden okundu; kesinti {dur} sürdü.",
+        what=["Bekleyen iletiler portala düşüyor; sınıflama ve atama kaldığı yerden devam ediyor."],
+        impact=["Kesinti sırasında gelen iletiler portala geç düştü; yanıt süresi takibinde gecikmiş görünebilirler."],
+        actions=["Yapmanız gereken bir şey yok."],
+        tables=[IB.Table(title="Ayrıntı", columns=["Alan", "Değer"], rows=[
+            ["Kutu", box], ["Okunamadı", IB.long_dt(since)], ["Yeniden okundu", IB.long_dt(back)], ["Süre", dur]])],
+        link=IB.portal_link(link, "kurumsal-eposta"), link_label="Kurumsal e-postayı aç", at=now, why=MAIL_WHY)
+
+
 def _iso(v: Any) -> Optional[str]:
     if v is None:
         return None

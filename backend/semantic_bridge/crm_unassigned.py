@@ -69,22 +69,32 @@ def summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def xlsx(rows: list[dict[str, Any]], when: Optional[datetime] = None) -> bytes:
+def xlsx(rows: list[dict[str, Any]], when: Optional[datetime] = None, *, minimal: bool = False) -> bytes:
+    """Yetkiler ekranından indirilen tam liste (roller, AD birimi, e-posta) ya da `minimal=True` ile e-posta eki: yalnız
+    işin gerektirdiği alanlar (ad, kullanıcı adı, CRM'de oluşturulma tarihi). E-posta kutudan kutuya dolaşır; kişisel
+    alan (e-posta adresi, roller) ona konmaz, tam liste portalda yetkiyle indirilir."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Kişiler"
-    ws.append(["#", "Ad Soyad", "AD hesabı", "AD birimi (OU)", "E-posta", "CRM'de açılış", "CRM iş birimi",
-               "Ana CRM rolleri", "Bütün CRM rolleri"])
-    for i, r in enumerate(rows, 1):
-        ws.append([i, r["name"], r["account"], r["adUnit"], r["email"], r["created"], r["crmUnit"],
-                   ", ".join(r["mainRoles"]) or "(rol yok)", ", ".join(r["roles"])])
+    if minimal:
+        ws.append(["#", "Ad Soyad", "Kullanıcı adı", "CRM'de oluşturulma"])
+        for i, r in enumerate(rows, 1):
+            ws.append([i, r["name"], r["account"], r["created"]])
+        widths = [5, 28, 22, 18]
+    else:
+        ws.append(["#", "Ad Soyad", "AD hesabı", "AD birimi (OU)", "E-posta", "CRM'de açılış", "CRM iş birimi",
+                   "Ana CRM rolleri", "Bütün CRM rolleri"])
+        for i, r in enumerate(rows, 1):
+            ws.append([i, r["name"], r["account"], r["adUnit"], r["email"], r["created"], r["crmUnit"],
+                       ", ".join(r["mainRoles"]) or "(rol yok)", ", ".join(r["roles"])])
+        widths = [5, 26, 20, 22, 32, 13, 16, 50, 80]
     for c in ws[1]:
         c.font = Font(bold=True, color="FFFFFF")
         c.fill = PatternFill("solid", fgColor="5B3FD6")
-    for col, w in zip("ABCDEFGHI", [5, 26, 20, 22, 32, 13, 16, 50, 80]):
+    for col, w in zip("ABCDEFGHI", widths):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "B2"
     ws.auto_filter.ref = ws.dimensions
@@ -111,25 +121,56 @@ def recipients(conf: Callable[..., str]) -> tuple[list[str], list[str]]:
     return ok, [a for a in to if a not in ok]
 
 
-def send(directory: Any, conf: Callable[..., str], send_mail: Callable[..., str],
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def notice(rows: list[dict[str, Any]], now: datetime, link: str = ""):
+    """«[Bilgi] CRM'de departmanı olmayan 107 kullanıcı · 29 Eylül 07:00» (ic_bildirim şablonu). Gövdede kişi adı
+    yok; kişi listesi ekte yalnız ad, kullanıcı adı ve oluşturulma tarihiyle."""
+    from semantic_bridge import ic_bildirim as IB
+
+    sm = summary(rows)
+    n = sm["count"]
+    at = now if now.tzinfo else now.replace(tzinfo=IB.LOCAL)
+    actions = ["Ekteki listedeki her kişiyi CRM'de çalıştığı departmanın iş birimine taşıyın.",
+               "Kişinin şirket dizinindeki birimini ve CRM rollerini portalda Yönetim → Yetkiler → «Departmansız CRM "
+               "kullanıcıları» listesinden görebilirsiniz."]
+    if sm["noAd"]:
+        actions.insert(0, f"{sm['noAd']} kişinin şirket dizininde etkin hesabı yok (ayrılmış olabilir): bu kişilerin CRM "
+                          "hesabını kapatın.")
+    what = [f"CRM'de hiçbir departmana (iş birimine) atanmamış, giriş yapabilen {n} etkin kullanıcı var.",
+            f"Bunların {sm['noRole']} tanesinin hiçbir CRM rolü yok; {sm['noAd']} tanesinin şirket dizininde etkin hesabı yok."]
+    return IB.Notice(
+        tone="bilgi", tag="Bilgi",
+        subject=IB.subject("Bilgi", f"CRM'de departmanı olmayan {n} kullanıcı · {IB.short_dt(at)}"),
+        headline=(f"CRM'de {n} kullanıcı hiçbir departmana atanmamış; liste ekteki Excel dosyasında." if n
+                  else "CRM'de departmanı olmayan kullanıcı kalmadı."),
+        what=what if n else ["Bütün etkin CRM kullanıcıları bir departmana atanmış."],
+        impact=["Departmanı olmayan kullanıcı CRM'de departman bazlı yetkilerde, kayıt sahipliğinde ve departman "
+                "raporlarında doğru yerde görünmez: iş birimine göre işleyen CRM yetkileri ve kayıt görünürlüğü bu kişiler "
+                "için departmanlarına değil en üst birime göre işler."] if n else [],
+        actions=actions if n else ["Yapmanız gereken bir şey yok."],
+        tables=[IB.Table(title="Şirket dizinindeki birime göre", columns=["Birim", "Kişi"], numeric=(1,),
+                         rows=[[x["unit"], x["count"]] for x in sm["byAdUnit"]])] if n else [],
+        link=IB.portal_link(link, "yonetim"), link_label="Yetkileri aç", at=at,
+        why="Bu adrese «Departmansız CRM kullanıcıları listesi alıcıları» ayarında olduğu için geldi; liste her gün "
+            "07:00 ve 12:00'de gider. CRM'e yazılmaz, yalnız okunur.")
+
+
+def send(directory: Any, conf: Callable[..., str], send_notice: Optional[Callable[..., str]] = None,
          now: Optional[datetime] = None) -> dict[str, Any]:
-    """Listeyi okuyup alıcılara Excel olarak gönderir. Alıcı yoksa okumaz bile (CRM'e boşuna gidilmez)."""
+    """Listeyi okuyup alıcılara Excel olarak gönderir. Alıcı yoksa okumaz bile (CRM'e boşuna gidilmez).
+    `send_notice(notice, to, attachments)`; varsayılanı ortak iç bildirim gönderimi (HTML + düz metin)."""
+    from semantic_bridge import ic_bildirim as IB
+
+    send_notice = send_notice or IB.send
     to, skipped = recipients(conf)
     if not to:
         return {"ok": True, "status": "no_recipient", "skipped": skipped}
     now = now or datetime.now()
     rows = build(directory)
     sm = summary(rows)
-    lines = [f"CRM'de departmana atanmamış (kök iş biriminde duran) etkin kullanıcı: {sm['count']} kişi.", "",
-             "AD birimine göre:"]
-    lines += [f"  {x['unit']}: {x['count']}" for x in sm["byAdUnit"]]
-    lines += ["", f"CRM rolü olmayan: {sm['noRole']} · AD hesabı kapalı: {sm['noAd']}",
-              "Liste ekteki Excel'de; CRM'den yalnız okunur."]
-    link = (conf("ALERT_LINK") or "").strip()
-    if link:
-        lines += ["", link]
     name = f"CRM-departmansiz-kullanicilar-{now.strftime('%Y-%m-%d-%H%M')}.xlsx"
-    status = send_mail(f"CRM departmansız kullanıcılar — {sm['count']} kişi ({now.strftime('%d.%m.%Y %H:%M')})",
-                       "\n".join(lines), to,
-                       [(name, xlsx(rows, now), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")])
+    status = send_notice(notice(rows, now, (conf("ALERT_LINK") or "").strip()), to,
+                         [(name, xlsx(rows, now, minimal=True), XLSX_MIME)])
     return {"ok": status == "sent", "status": status, "to": to, "skipped": skipped, **sm}

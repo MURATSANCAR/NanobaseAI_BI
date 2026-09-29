@@ -585,6 +585,65 @@ def alert_text(alerts: list[dict[str, Any]], link: str) -> str:
     return "\n".join(lines)
 
 
+#: Güvenlik uyarısı e-postası: kural başına etkisi ve BT'nin yapacağı ilk iş (ic_bildirim şablonu).
+RULE_MAIL: dict[str, dict[str, Any]] = {
+    "hatali_giris": {
+        "impact": "Biri hesabın parolasını deniyor olabilir. Hesap şirket dizininde kilitlenirse sahibi portala ve diğer "
+                  "şirket sistemlerine giremez.",
+        "actions": ["Hesabın sahibine denemeleri kendisinin yapıp yapmadığını sorun.",
+                    "Kendisi değilse şirket dizininde hesabın parolasını sıfırlayın ve kaynak adresi inceleyin.",
+                    "Uyarıyı Veri güvenliği ekranında «gerçek» ya da «gerçek değil» diye kapatın."]},
+    "mesai_disi_aktarim": {
+        "impact": "Mesai dışında toplu veri dışarı alındı; kişisel ya da ticari veri şirket dışına çıkmış olabilir.",
+        "actions": ["Kişiye ve yöneticisine dışa aktarmanın iş gereği olup olmadığını sorun.",
+                    "Veri güvenliği → Erişim kaydı'nda hangi ekrandan ne alındığına bakın.",
+                    "Uyarıyı «gerçek» ya da «gerçek değil» diye kapatın; iş gereğiyse nedenini not edin."]},
+    "yeni_yonetici": {
+        "impact": "Yönetici portalda her ekranı ve her veriyi görür, yetki ve ayarları değiştirebilir.",
+        "actions": ["Yönetici yetkisinin bilerek verildiğini, kimin verdiğini Yönetim → Değişiklik kaydı'ndan doğrulayın.",
+                    "Bilinmeyen bir değişiklikse kişiyi yönetici listesinden ve yönetici grubundan çıkarın.",
+                    "Uyarıyı «gerçek» ya da «gerçek değil» diye kapatın."]},
+    "herkes_genisledi": {
+        "impact": "Giriş yapan her çalışan yeni açılan sayfa ve işlemleri görebilir; kısıtlı veri geniş kitleye açılmış olabilir.",
+        "actions": ["Değişikliği kimin yaptığını Yönetim → Değişiklik kaydı'ndan bulun.",
+                    "Bilerek yapılmadıysa Yetkiler ekranında «Herkes» rolünden eklenen yetkiyi kaldırın.",
+                    "Uyarıyı «gerçek» ya da «gerçek değil» diye kapatın."]},
+    "saklama_durdu": {
+        "impact": "Süresi dolmuş kişisel veri ve kayıtlar silinmeden duruyor; saklama politikasına aykırı.",
+        "actions": ["Sistem durumu → Zamanlanmış işler'de saklama işinin son hatasına bakın.",
+                    "İş düzelince bir sonraki gece kendiliğinden çalışır; uyarıyı sonra kapatın."]},
+}
+SECURITY_WHY = ("Bu adrese Veri güvenliği ayarlarındaki «Güvenlik uyarısı alıcıları» listesinde olduğu için geldi. "
+                "Aynı uyarı için ikinci e-posta gönderilmez.")
+
+
+def alert_notice(alerts: list[dict[str, Any]], link: str, now: Optional[datetime] = None):
+    """Yeni güvenlik uyarıları tek e-postada. Konu: «[Güvenlik] Art arda hatalı giriş · «ali» hesabı · 29 Eylül 09:42»."""
+    from semantic_bridge import ic_bildirim as IB
+
+    now = now or _now()
+    rules = list(dict.fromkeys(a["rule"] for a in alerts))
+    label = lambda r: RULE_LABEL.get(r, r)  # noqa: E731
+    if len(alerts) == 1:
+        a = alerts[0]
+        subj = label(a["rule"]) + (f" · «{a['username']}» hesabı" if a.get("username") else "") + f" · {IB.short_dt(now)}"
+        head = f"{label(a['rule'])}: portal güvenlik kurallarından biri tetiklendi, incelemeniz gerekiyor."
+    else:
+        subj = f"{len(alerts)} yeni güvenlik uyarısı · {IB.short_dt(now)}"
+        head = f"{len(alerts)} yeni güvenlik uyarısı var: " + ", ".join(label(r) for r in rules) + "."
+    actions: list[str] = []
+    for r in rules:
+        actions += [(f"{label(r)}: {x}" if len(rules) > 1 else x) for x in RULE_MAIL.get(r, {}).get("actions", [])]
+    table = IB.Table(title="Uyarılar", columns=["Kural", "Hesap", "Önem"], rows=[
+        [label(a["rule"]), a.get("username") or "—", "Kritik" if a.get("severity") == "kritik" else "Uyarı"] for a in alerts])
+    return IB.Notice(
+        tone="guvenlik", subject=IB.subject("Güvenlik", subj), headline=head,
+        what=[a["summary"] for a in alerts],
+        impact=[RULE_MAIL[r]["impact"] for r in rules if r in RULE_MAIL],
+        actions=actions or ["Uyarıyı Veri güvenliği ekranında inceleyip «gerçek» ya da «gerçek değil» diye kapatın."],
+        tables=[table], link=link, link_label="Veri güvenliğini aç", at=now, why=SECURITY_WHY)
+
+
 def mark_mailed(engine: sa.engine.Engine, ids: list[int], status: str) -> None:
     if ids:
         with engine.begin() as c:
@@ -641,8 +700,9 @@ def close_alert(engine: sa.engine.Engine, alert_id: int, actor: str, body: dict[
     return _alert_view(after), {"from": before, "to": {"state": after["state"], "verdict": after["verdict"], "note": after["note"]}}
 
 
-def digest_text(engine: sa.engine.Engine, store_engine: sa.engine.Engine, tenant: str, ds: str, now: datetime) -> Optional[str]:
-    """Günlük özet: son 24 saatte kişi başına 403 ve yetki dışı soru sayısı. Hiç yoksa None (e-posta gitmez)."""
+def digest_counts(engine: sa.engine.Engine, store_engine: sa.engine.Engine, tenant: str, ds: str,
+                  now: datetime) -> dict[str, dict[str, int]]:
+    """Son 24 saatte kişi başına reddedilen sayfa/işlem (403) ve yetki dışı soru sayısı."""
     since = now - timedelta(hours=24)
     counts: dict[str, dict[str, int]] = {}
     with engine.connect() as c:
@@ -659,6 +719,46 @@ def digest_text(engine: sa.engine.Engine, store_engine: sa.engine.Engine, tenant
                 counts.setdefault(u or "?", {"forbidden": 0, "not_permitted": 0})["not_permitted"] = n
     except Exception as e:  # noqa: BLE001
         log.warning("güvenlik: günlük özette soru kaydı okunamadı: %s", e)
+    return counts
+
+
+def _digest_sorted(counts: dict[str, dict[str, int]]) -> list[tuple[str, dict[str, int]]]:
+    return sorted(counts.items(), key=lambda kv: (-(kv[1]["forbidden"] + kv[1]["not_permitted"]), kv[0]))
+
+
+def digest_notice(engine: sa.engine.Engine, store_engine: sa.engine.Engine, tenant: str, ds: str, now: datetime,
+                  link: str = ""):
+    """Günlük erişim özeti bildirimi (ic_bildirim). Hiç kayıt yoksa None: e-posta gitmez."""
+    return digest_notice_from(digest_counts(engine, store_engine, tenant, ds, now), now, link)
+
+
+def digest_notice_from(counts: dict[str, dict[str, int]], now: datetime, link: str = ""):
+    from semantic_bridge import ic_bildirim as IB
+
+    if not counts:
+        return None
+    since = now - timedelta(hours=24)
+    rows = _digest_sorted(counts)
+    total = sum(v["forbidden"] + v["not_permitted"] for _, v in rows)
+    return IB.Notice(
+        tone="bilgi", tag="Günlük",
+        subject=IB.subject("Günlük", f"Portal erişim özeti · {len(rows)} kişi · {IB.day_month(now)}"),
+        headline=f"Son 24 saatte {len(rows)} kişi yetkisi olmayan bir sayfayı açmayı ya da soruyu sormayı denedi ({total} kez).",
+        what=[f"{IB.short_dt(since)} – {IB.short_dt(now)} arasında reddedilen sayfa/işlem ve yetki dışı sorular kişi bazında sayıldı."],
+        impact=["Reddedilen denemelerde veri gösterilmedi. Çoğu, rolü henüz atanmamış kişinin menüde görmediği bir bağlantıyı "
+                "açmasıdır."],
+        actions=["Tekrarlayan kişi için işi gereği yetki gerekiyorsa Yetkiler ekranından rolünü gözden geçirin.",
+                 "Beklenmedik yoğun deneme varsa Veri güvenliği → Erişim kaydı'nda ayrıntıya bakın."],
+        tables=[IB.Table(title="Kişi bazında", columns=["Kullanıcı", "Sayfa/işlem reddi", "Yetki dışı soru"], numeric=(1, 2),
+                         rows=[[u, v["forbidden"], v["not_permitted"]] for u, v in rows])],
+        link=link, link_label="Erişim kaydını aç", at=now,
+        why="Bu adrese Veri güvenliği ayarlarındaki «Güvenlik uyarısı alıcıları» listesinde olduğu için geldi.")
+
+
+def digest_text(engine: sa.engine.Engine, store_engine: sa.engine.Engine, tenant: str, ds: str, now: datetime) -> Optional[str]:
+    """Günlük özet: son 24 saatte kişi başına 403 ve yetki dışı soru sayısı. Hiç yoksa None (e-posta gitmez)."""
+    since = now - timedelta(hours=24)
+    counts = digest_counts(engine, store_engine, tenant, ds, now)
     if not counts:
         return None
     lines = [f"Son 24 saat ({_fmt_local(since)} – {_fmt_local(now)}): yetkisiz erişim denemesi ve yetki dışı soru, kişi bazında.", ""]

@@ -31,6 +31,7 @@ import httpx
 from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import ic_bildirim as IB
 from semantic_bridge import mailbox as M
 from semantic_bridge import mailbox_classify as K
 from semantic_bridge import mailbox_sources as S
@@ -587,20 +588,30 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                 out["notified"] += 1
                 out["noRecipient"] += int(not it["users"])
                 out["levels"][it["level"]] = out["levels"].get(it["level"], 0) + 1
-            # Bağlantı: bağlıyken son başarılı okuma eşikten eskiyse bir kez uyarılır; okuma düzelince sıfırlanır.
+            # Bağlantı: bağlıyken son başarılı okuma eşikten eskiyse bir kez uyarılır (ortak iç bildirim şablonu); okuma
+            # düzelince, uyarı gitmişse tek bir «Düzeldi» e-postası gider ve kayıt sıfırlanır. Aynı kesinti için ikinci
+            # uyarı yok; yalnız gönderimi başarısız olan uyarı sonraki turda yeniden denenir.
             state = S.connection_state(conf)
             last_ok = M.meta_get(engine, tenant, "last_ok_at")
             if state["connected"] and last_ok:
-                age = (M._now() - M._aware(datetime.fromisoformat(last_ok))).total_seconds() / 60
+                now = M._now()
+                ok_at = M._aware(datetime.fromisoformat(last_ok))
+                age = (now - ok_at).total_seconds() / 60
                 sent = M.meta_get(engine, tenant, "conn_alert_at")
-                if age >= st["connectionAlertMin"] and not sent:
+                address = conf("MAIL_ADDRESS", "") or ""
+                base = conf("ALERT_LINK") or ""
+                if age >= st["connectionAlertMin"] and (not sent or sent.get("eposta") == "failed"):
                     run = M.meta_get(engine, tenant, "last_run") or {}
-                    status = send_mail("Kurumsal e-posta · kutu okunamıyor",
-                                       f"timas@ kutusu {int(age)} dakikadır okunamadı.\nSon hata: {run.get('error') or '-'}\n"
-                                       "Yönetim → Kurumsal e-posta ekranından bağlantıyı deneyin.", st["connectionAlertTo"])
-                    M.meta_set(engine, tenant, "conn_alert_at", {"at": M._now().isoformat(), "eposta": status})
+                    status = IB.send(M.connection_down_notice(address, ok_at, now, run.get("error") or "", base),
+                                     st["connectionAlertTo"])
+                    M.meta_set(engine, tenant, "conn_alert_at", {"at": now.isoformat(), "eposta": status,
+                                                                 "since": ok_at.isoformat()})
                     out["connectionAlert"] = status
                 elif age < st["connectionAlertMin"] and sent:
+                    if sent.get("eposta") == "sent":
+                        since = M._aware(datetime.fromisoformat(sent.get("since") or sent["at"]))
+                        out["connectionFixed"] = IB.send(M.connection_fixed_notice(address, since, ok_at, now, base),
+                                                         st["connectionAlertTo"])
                     M.meta_set(engine, tenant, "conn_alert_at", None)
             return out
         finally:
