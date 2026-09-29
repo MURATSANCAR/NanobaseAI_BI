@@ -568,6 +568,20 @@ def store_pairs(engine: sa.engine.Engine, tenant: str, pairs: set[tuple[str, str
     return len(pairs)
 
 
+def normalize_classes(engine: sa.engine.Engine, tenant: str) -> int:
+    """Kayıtlı kapak/kâğıt sınıf adlarını `_words` biçimine getirir (ayrıştırma kuralı sonradan değiştiyse eski
+    görüntüdeki «karton Kapak» da «Karton Kapak» olsun). Yalnız farklı olan değerler güncellenir; sayısı döner."""
+    T = TITLES.c
+    n = 0
+    with engine.begin() as c:
+        for col in (T.kapak, T.kagit):
+            for (v,) in c.execute(sa.select(col).where(T.tenant_id == tenant, col.isnot(None)).distinct()).all():
+                w = _words(v, 60)
+                if w != v:
+                    n += c.execute(TITLES.update().where(T.tenant_id == tenant, col == v).values({col.name: w})).rowcount or 0
+    return n
+
+
 def relink(engine: sa.engine.Engine, tenant: str, logo: dict[str, str]) -> int:
     """Logo barkod eşleşmesi değişmişse (yeni kart, silinen barkod) güncel hâldeki stok kodunu yeniler."""
     T = TITLES.c
@@ -745,6 +759,7 @@ def run_all(engine: sa.engine.Engine, tenant: str, run: Runner, firms: dict[int,
             log.warning("pazar dagitim %s okunamadı: %s", k, e)
             out[k] = {"error": str(e)[:300]}
     step("Logo eşleşmesi ve TİMAŞ markaları")
+    out["sinifAdi"] = normalize_classes(engine, tenant)
     out["relink"] = relink(engine, tenant, logo)
     out["timas"] = mark_timas(engine, tenant)
     win = stretch(engine, tenant)
