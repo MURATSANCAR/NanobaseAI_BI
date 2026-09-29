@@ -2672,6 +2672,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 display_words.catalog_texts(r.store, s.tenant_id, s.datasource_id)))
         return {"words": _display_words["words"], "version": str(version)}
 
+    from semantic_bridge import crm_names as _crm_names_mod
+
+    def _crm_meta_rows(sql: str) -> list[dict[str, Any]]:
+        c = rt().crm_connector
+        if c is None:
+            raise RuntimeError("CRM bağlantısı tanımlı değil")
+        _, rows, truncated = c.execute(sql, 1_000_000)
+        if truncated:
+            raise RuntimeError("CRM meta verisi eksik okundu")
+        return rows
+
+    _crm_names = _crm_names_mod.CrmNames(_crm_meta_rows)
+
+    @app.get("/api/v1/semantic/crm-names")
+    def crm_names_map() -> dict[str, Any]:
+        """CRM varlık/alan mantıksal adı → CRM'in kendi Türkçe etiketi («new_habermecrasname» → «Haber Mecrası»).
+        Ekran başlıkları (`readableName`) kuraldan önce buna bakar; CRM okunamazsa boş harita (bkz. crm_names.py)."""
+        return _crm_names.get()
+
     from semantic_bridge import hizli_bellek as _HB
 
     #: Veri sözlüğü terim listesi (2026-09-29): 5.000 terim + eşlemeleri + sözlüğe çevirme her açılışta 1,2 sn, liste

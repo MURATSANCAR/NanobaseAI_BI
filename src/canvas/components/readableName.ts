@@ -51,6 +51,59 @@ export function setLogoNames(n: Partial<LogoNames> | undefined | null): void {
   listeners.forEach((l) => l());
 }
 
+/** CRM'in kendi Türkçe etiketleri (`/semantic/crm-names`, CRM meta verisi). Anahtar küçük harfli mantıksal ad; alan
+ *  için ayrıca «varlık.alan». Yalnız CRM'e ait adlarda kullanılır (yayıncı önekli alan ya da «…Base» tablo): «name»,
+ *  «status» gibi genel sözcükler başka ekranlarda CRM etiketi almaz. Önekler haritanın kendisinden çıkarılır. */
+type CrmNames = { entities: Record<string, string>; attributes: Record<string, string> };
+let crmNames: CrmNames = { entities: {}, attributes: {} };
+let crmPrefixes = new Set<string>();
+
+/** CRM etiketleri çoğu kez Başlık Düzeninde («Yayın Durumu»); ekrandaki başlık dili cümle düzeni («Yayın durumu»).
+ *  Kısaltmalar (KDV, ISBN) olduğu gibi kalır. */
+const sentenceCase = (v: string) =>
+  v
+    .split(' ')
+    .map((w, i) => (i === 0 || /^\p{Lu}{2,}\d*$/u.test(w) ? w : w.toLocaleLowerCase('tr-TR')))
+    .join(' ');
+
+export function setCrmNames(n: Partial<CrmNames> | undefined | null): void {
+  if (!n) return;
+  const tidy = (o: Record<string, string> | undefined) =>
+    Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k.toLowerCase(), lowerFirst(sentenceCase(v.trim()))]));
+  crmNames = { entities: tidy(n.entities), attributes: tidy(n.attributes) };
+  crmPrefixes = new Set(
+    Object.keys(crmNames.attributes)
+      .concat(Object.keys(crmNames.entities))
+      .map((k) => /^([a-z][a-z0-9]{1,7})_/.exec(k.split('.').pop() ?? '')?.[1])
+      .filter((x): x is string => !!x),
+  );
+  wordsVersion += 1;
+  listeners.forEach((l) => l());
+}
+
+/** Ham ad CRM'e mi ait, öyleyse CRM'in etiketi. `entity`: nitelikli adda varlık (tablo) parçası. */
+function crmLabel(raw: string, entity?: string): string | null {
+  const s = raw.replace(/^\[|\]$/g, '');
+  const key = s.toLowerCase();
+  const base = /^(.+?)(?:Extension)?Base$/.exec(s);
+  if (base) {
+    const e = base[1].toLowerCase();
+    if (own(crmNames.entities, e)) return crmNames.entities[e];
+  }
+  const pre = /^([a-z][a-z0-9]{1,7})_/.exec(key)?.[1];
+  if (!pre || !crmPrefixes.has(pre)) return null;
+  if (entity) {
+    const e = entity.replace(/^\[|\]$/g, '').replace(/(?:Extension)?Base$/, '').toLowerCase();
+    if (own(crmNames.attributes, `${e}.${key}`)) return crmNames.attributes[`${e}.${key}`];
+  }
+  if (own(crmNames.attributes, key)) return crmNames.attributes[key];
+  if (own(crmNames.entities, key)) return crmNames.entities[key];
+  // Bağlantı alanının CRM'in eklediği ad eşi («new_habermecrasiname», «new_kitapidname»): kendi etiketi yoktur,
+  // bağlandığı alanın etiketi yazılır.
+  if (key.endsWith('name') && key.length > 4) return crmLabel(s.slice(0, -4), entity);
+  return null;
+}
+
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
@@ -457,8 +510,10 @@ function logoData(up: string, table: boolean): string | null {
   return own(columns, up) ? columns[up] : null;
 }
 
-/** Bir ad parçasını (noktasız) sözcüklere çevirir. */
-function part(raw: string): string {
+/** Bir ad parçasını (noktasız) sözcüklere çevirir. `entity`: nitelikli adda önceki parça (CRM tablosu olabilir). */
+function part(raw: string, entity?: string): string {
+  const crm = crmLabel(raw, entity);
+  if (crm) return crm;
   let s = raw.replace(/^\[|\]$/g, '');
   // Logo: LG_411_01_STLINE, LG_411_CLCARD, LV_411_…, L_CAPIFIRM. Firma/dönem numarası yıl yedeğidir; başlığa yazılmaz.
   const lg = /^L[GV]_(?:\d{3}|EXCHANGE)_(?:\d{2}_)?([A-Z0-9_]+)$/i.exec(s) ?? /^L_([A-Z0-9_]+)$/.exec(s);
@@ -528,7 +583,7 @@ function readableParts(s: string, head: boolean): string {
   const pieces = s.split('.').filter(Boolean);
   const kept = pieces.length > 1 ? pieces.filter((p, i) => i === pieces.length - 1 || !/^(dbo|\[?dbo\]?|[A-Za-z]{1,2})$/.test(p)) : pieces;
   return kept
-    .map(part)
+    .map((p, i) => part(p, i > 0 ? kept[i - 1] : undefined))
     .filter(Boolean)
     .map((t) => (head ? upperFirst(t) : t))
     .join(' · ');

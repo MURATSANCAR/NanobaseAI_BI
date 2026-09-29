@@ -536,6 +536,12 @@ export const displayWordsApi = {
   get: () => get<{ words: Record<string, string>; version: string }>('/api/v1/semantic/display-words', 30_000),
 };
 
+/** CRM varlık/alan adı → CRM'in kendi Türkçe etiketi (başlık çevirici bunu kuraldan önce kullanır). */
+export const crmNamesApi = {
+  get: () =>
+    get<{ entities: Record<string, string>; attributes: Record<string, string>; version: string }>('/api/v1/semantic/crm-names', 60_000),
+};
+
 export const boardApi = {
   load: () => send<{ user: string; cards: BoardCardDto[]; kaynaklar?: Kaynaklar }>('GET', '/api/v1/board', undefined, 30_000),
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
