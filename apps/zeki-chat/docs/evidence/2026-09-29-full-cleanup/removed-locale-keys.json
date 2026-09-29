@@ -1,0 +1,1123 @@
+{
+  "analysis": "Static references scanned across non-locale source/config including tests and stories; template/concatenation prefixes preserved. Third-party app/marketplace and error families preserved.",
+  "removedKeys": [
+    "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+    "Cloud_Change_Offline_License",
+    "Cloud_Invalid_license",
+    "Enterprise_Departments_description_free_trial",
+    "Enterprise_Departments_description_upgrade",
+    "Enterprise_Description",
+    "Enterprise_License",
+    "Enterprise_License_Description",
+    "Enterprise_Only",
+    "Enterprise_cap_description",
+    "Enterprise_capabilities",
+    "Enterprise_capability",
+    "Federation_Matrix_join_public_rooms_is_enterprise",
+    "Google_Meet_Enterprise_only",
+    "Google_Meet_Premium_only",
+    "Hold_Call_Premium_only",
+    "New_Call_Enterprise_Edition_Only",
+    "Operating_withing_plan_limits",
+    "Pexip_Enterprise_only",
+    "Pexip_Premium_only",
+    "Plan_limits_reached",
+    "Premium_Departments_description_free_trial",
+    "Premium_Departments_description_upgrade",
+    "Premium_Departments_title",
+    "Premium_License",
+    "Premium_License_alert",
+    "Premium_cap_description",
+    "Premium_capabilities",
+    "Premium_capability",
+    "Premium_omnichannel_capabilities",
+    "Premium_only",
+    "Sync_license_update",
+    "Sync_license_update_Callout",
+    "Sync_license_update_Callout_Title",
+    "Unlock_premium_capabilities",
+    "UpgradeToGetMore_Headline",
+    "UpgradeToGetMore_Subtitle",
+    "UpgradeToGetMore_accessibility-certification_Body",
+    "UpgradeToGetMore_accessibility-certification_Title",
+    "UpgradeToGetMore_auditing_Body",
+    "UpgradeToGetMore_auditing_Title",
+    "UpgradeToGetMore_custom-roles_Body",
+    "UpgradeToGetMore_custom-roles_Title",
+    "UpgradeToGetMore_engagement-dashboard_Body",
+    "UpgradeToGetMore_engagement-dashboard_Title",
+    "UpgradeToGetMore_oauth-enterprise_Body",
+    "UpgradeToGetMore_oauth-enterprise_Title",
+    "UpgradeToGetMore_scalability_Body",
+    "UpgradeToGetMore_scalability_Title",
+    "Upgrade_tab_connection_error_description",
+    "Upgrade_tab_connection_error_restore",
+    "Upgrade_tab_go_fully_featured",
+    "Upgrade_tab_trial_guide",
+    "Upgrade_tab_upgrade_your_plan",
+    "Upgrade_to_Pro",
+    "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+    "subscription.callout.activeUsers",
+    "subscription.callout.allPremiumCapabilitiesDisabled",
+    "subscription.callout.capabilitiesDisabled",
+    "subscription.callout.description.limitsExceeded",
+    "subscription.callout.description.limitsReached",
+    "subscription.callout.guestUsers",
+    "subscription.callout.monthlyActiveContacts",
+    "subscription.callout.roomsPerGuest",
+    "subscription.callout.servicesDisruptionsMayOccur",
+    "subscription.callout.servicesDisruptionsOccurring"
+  ],
+  "locales": {
+    "af.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "7aeeda813edc40f2bbed31bc46b1858f5b5654f32aeeff1e3af964b7f3969eb4",
+      "afterSha256": "32a6163155c908138265306ec9c4117dc22f53da4203a4a5d6b9a62190381cd0"
+    },
+    "ar.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "79e6f23f7e544e5f9b58607df952cf76e9b049abd59444d0e206c2bd8791a737",
+      "afterSha256": "12ecec9b381379f9c36208f4edab19f412414d5ef99d4f3f4c5964b4c60dbfb2"
+    },
+    "az.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "702cfb6ebfb2e2373ebb39a3f627cd02f1993a118145ef5210d61f995c7d1e91",
+      "afterSha256": "052e1e842c1e84878634ed509d375b3ab8ca0474d68eec4aa46a700211559d01"
+    },
+    "be-BY.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "fb2abcd78eba58f30bee8b14abc1cd756d98181a3ae335ecf3d3ca0166237563",
+      "afterSha256": "a5595b5d8e3a15dcd6e6f847bebae0b92fbc046dc860afabd381b8bcd2adef44"
+    },
+    "bg.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "7a5e38b8f33719555e80b2a131ced400d2a207c20354e65e422f43f0ba09e012",
+      "afterSha256": "2a020ef2be74a726c7d9a34cf21e48be924c134fe33fb44dc86f86d82da1d10a"
+    },
+    "bs.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "6e4857f52d57e909eaad29a00985957e1c6c4dffbecf3c395a81a8e51b82042d",
+      "afterSha256": "7d2f855ddae6f2a0c6684b33cec14a65c59f0e3256bfa7da8e463bd991d75cf7"
+    },
+    "ca.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "e37d0145081321b6533b36177acb10a18c6469732ffc87eafa6092d1cc3666d1",
+      "afterSha256": "0168b2d58c448c5a932ece672b1d65e1810ceb5c45787e6121979d4f1fce0791"
+    },
+    "cs.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "bd8bf486219215167da3a79fefacbc30777a9f5c06a8d9d36235799971604f3c",
+      "afterSha256": "b9c37a668bd252289947d9ee3d4382b092ad9abce659b1ef55908932dd06ed02"
+    },
+    "cy.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "deb1650b5a49f86565747f003d9fc27b72bf9c0a9c331dc6d3a19ab61495952b",
+      "afterSha256": "1d458afe889d493fa7b33193b3563cd3a6dca2166e3303dc3e0c163a212b3d27"
+    },
+    "da.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "f06ae6620a74ed05a3a6d035c0eb3ffdf4e7cd5c50c34bc110312084d6edc13e",
+      "afterSha256": "e57d1e464e01b7fa57ba5cb4e936ad10beb49af933da6c4ee7a3ba85825fb2c3"
+    },
+    "de-AT.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "b7e8b772c65cbd8e6c6a26d50a90012f70b0c939d62e47fb8a4e362054e21f0a",
+      "afterSha256": "cf7293cc409b3d2f9acbf241a8df4b3aa29da36851d49315c9b60d217ae41ffa"
+    },
+    "de.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_capabilities",
+        "Google_Meet_Enterprise_only",
+        "New_Call_Enterprise_Edition_Only",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "5727391487e3f79ac599f493770d814292717a25572b4420f388c6e661e9fc97",
+      "afterSha256": "2c735ae3872c1349e875dc44616114b1bf1c088ba3d954a3bd2a76bf7db933ca"
+    },
+    "el.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "9b35e1c3c16fd775795b4bc272707d5c5d9fa913858535d4edfc2a06c7b6e14e",
+      "afterSha256": "76377f419860f4ad4e228dca164813eb16c24a1be96b82624bf275e02f20e08c"
+    },
+    "en.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "e5aff61cb292726687d96622301a47d517c6e9071be28e6e46218a9182219228",
+      "afterSha256": "701c5eb8dcecfdf0a62b3c273cc5dd0b2b41a9b6fc1090cbaeddeacf3e2f82b2"
+    },
+    "eo.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "f80c3511a3c1291f9a2f8ae82004ecf412cfe534caab3bf2d9acfd8e5e561666",
+      "afterSha256": "64c9bf094d9827debb458cbc9c63ba43a6e59045fb4700b2f9074c015df3f32e"
+    },
+    "es.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_cap_description",
+        "Operating_withing_plan_limits",
+        "Plan_limits_reached",
+        "Premium_cap_description",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "2448d2fa9ea41efda6f9ea9fa3baa76e6f6556fe4c072e4aab1807bd726e5ed5",
+      "afterSha256": "a97550b8a158f401269b1f056131510dadc82b653083d245a180f9a0773879fd"
+    },
+    "fa.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "b52866f04702fe43ac798aeaa7c00a2e2c43882ca777e5ad68d3e18ac70ae370",
+      "afterSha256": "a7a0449a054b43a6caca68dd8ff963e4ce427e656dbb4d4b47f4a31ab35975f7"
+    },
+    "fi.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Pexip_Enterprise_only",
+        "Premium_Departments_title",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "860622cee3d49f800624703f48c685784c7fa967e1d55638dfd66d9cacadc4ff",
+      "afterSha256": "680e54676bde3a2303ca6f3092100e2b0345ea8286640755805bcd328de8ef21"
+    },
+    "fr.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "81a6c3f951a96aa88f1e507668b7933ac1e242e2128ab6315d0f6efd168ccf18",
+      "afterSha256": "f0714b60f7f36795cbbdc245f022ec95070422971e6d1f5dba6286d8dfb4c817"
+    },
+    "gl.i18n.json": {
+      "removedKeys": [
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "1069977e1cbcb3ce22c90cd4e465a795217adaa3a9f1516990edce9e4d2fccf7",
+      "afterSha256": "71b3c5d57fb4727a2a82f23c1d104e13be600d3a640cd7cecbf0ea3085320926"
+    },
+    "he.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "9e62a0eb3ebdec5863f58f75ccb18021d731d0cd9fcc1d6074bc67ee52eaefe6",
+      "afterSha256": "cc0dc54abe73e2494b10c23651e7952bb1af63f84ecc72d387c41011411c7b41"
+    },
+    "hi-IN.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "Operating_withing_plan_limits",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "77eaef4a023b12bf872c808b333957de600a5ab44482454f8c2cf4b6645b2143",
+      "afterSha256": "d9ea157fe43f57a2331a600e11243b8e6aba4a611ae9c683d9911e18ceaf0aaa"
+    },
+    "hr.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "f18f434002886d685eb5e4f28c3156b952cd08970c802e0dbf227847f82dc9d6",
+      "afterSha256": "23a0ca7f9620c7709e6d40a109dde5a0cd84d126192a00f93ce59e5a890ca259"
+    },
+    "hu.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_capabilities",
+        "Google_Meet_Enterprise_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Pexip_Enterprise_only",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "9dd7cd39023f634c8ae439b071aa606c8e1b55d52d1f64c45300cfde1aed616b",
+      "afterSha256": "328b4b1bc2df3d066412f3e6bf24b2b851eb1d71394b373f31da58488198b648"
+    },
+    "id.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "0993e6640210c9c053bd06e8a98f4251a3c851b9d54e40e0b3f4e2c4c63d0e7c",
+      "afterSha256": "558fe9e1df07eb37ede45d63e55dd012ef9b2e3fc8d55b645c81b8cf99771e1b"
+    },
+    "it.i18n.json": {
+      "removedKeys": [
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_Only",
+        "Enterprise_capability",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "Operating_withing_plan_limits",
+        "Premium_License",
+        "Premium_only",
+        "Sync_license_update_Callout_Title",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.monthlyActiveContacts"
+      ],
+      "beforeSha256": "a73e89f7b9cf4fc0fc87fb34970e955cd80639fa5770ee49af08af8f32993f97",
+      "afterSha256": "ed294422076114afaab7038e980cb9bb30c578e09836fce57f362a6b0e38b314"
+    },
+    "ja.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "3ecefaf4e9dac3f991ab2d9fcc37d0652b126a34b4143cb14a62b4a6cf6362c6",
+      "afterSha256": "bfae21c12fb4336ee0123e235f26f3d8cfc793b6f456adf881df15b200f8d42b"
+    },
+    "ka-GE.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "c53940cf7c4d0733836ba2c4f928805dff8aee00a2364da102691d8e3cf80a19",
+      "afterSha256": "9aca5cb49aefc318eeb4f8f87abbd8dc9184ffaf44ae8c90ff6c87733e6b8aac"
+    },
+    "km.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "750dabaf3d68f2f0ba2f32a113c9ffef13dc016e9c09fb36becaf42d64c7584c",
+      "afterSha256": "772262e98cf1932145eddc843a2310b93d2acc9b66faca07d1128a68faa36427"
+    },
+    "ko.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "8588278f7b7227e56fe3c83ab4acfb3ae2407dcab15d2d12744161fcd4db421c",
+      "afterSha256": "650021cbcc563882d27299c458eb258ad7b6fb8c5788e03d47e781115f49c0d3"
+    },
+    "ku.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "76c1491248958d28b6615efa50440fbe69df270ef7435291c570ab3fc83f45d1",
+      "afterSha256": "1b8a1de78f3a1c4cd97eb7ba0cd8fc58ea7937c23eb377e08d535e420ce55389"
+    },
+    "lo.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "df7ff97401b844ee12e002d937e1eca3466908ee4d3560d3ff8bcafc148ee417",
+      "afterSha256": "d0254093a20aae49cbd56d153e689942dccafe3ed0db43ac389659d256ceb32a"
+    },
+    "lt.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "d3c929d4dffac535568f3a853cef24356d411b88535e642cd07cfcd9869f1deb",
+      "afterSha256": "473606822424a7bc82b789a38264be643ff068615f303b585505b13c49be0919"
+    },
+    "lv.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "3491836ae1980e1af255703beb27a7fdc15b76bc9c080067701a3cdaf8b43dda",
+      "afterSha256": "b5bc2e97654239c79b8aceb53b8b820e7ecae893b00c0ade7a9dc6a85b14e927"
+    },
+    "mn.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "f3fd2234c8fc42fc016c84257dfeb2db01f7de593496b80d0f7f40ca467c5bb5",
+      "afterSha256": "20e5966805b0802187b7f2b2025e5cc1e81ca728f3b84cf48a71f5d4082dd6f7"
+    },
+    "ms-MY.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "a697be7e0e232be7259f44b36f7b4da31c2122ebe30d77fce813890b0c4bbee4",
+      "afterSha256": "ab15d1c7a9614d00d07aafab5dd8d62529b27195979e5f8655cac683e6a4e69a"
+    },
+    "nb.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "0b22e01b3e802490c6917ccf4d8089876e4fca2f52f01059bea12a5b306260a9",
+      "afterSha256": "2a73189722b1c6ffd53e4ed57d3aed236b3d5bca3714a32cced93dc6f7d858c2"
+    },
+    "nl.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "733525e32c39484218b914f93b7d8e2d00f151cd8cc65d0517a584437197aee4",
+      "afterSha256": "065c1a092d32445e043d753edcf6142acbf31fb9bd9e5b04e4ee331cb1159479"
+    },
+    "nn.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_to_Pro",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "d19b9421c358d896a4753f0f741f9a6eb1934992f77f919287f66a462740fc55",
+      "afterSha256": "c9d9ec8561e492e3e85583f43ea6b1bf3da040a18e816064340578984c556a48"
+    },
+    "pl.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "New_Call_Enterprise_Edition_Only",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "87874d3a2a8ea4cce981d7dfef1171108a509a9ad5b3f77a6d552b0b63b7e8f5",
+      "afterSha256": "e3e6c53f74036bd90c89c3bf35710f5f9afcedcc1ebf8b1ba3584dd03d56b5a2"
+    },
+    "pt-BR.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "5f67cf4e69abd8d79ca0056790738cc4638fc29a84a1ecbaab5200f673fb13c1",
+      "afterSha256": "0bc4a067edf956b318d3be8363c10224859773a19ec71693e79c712c995bf59b"
+    },
+    "pt.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "0bc9cfdf351fd0d28418969bb9bb41681dd7f9b070017752cd700094a2f383a0",
+      "afterSha256": "c6acc91410e1fa53271e70c67160dcd9e687dd7ea97655810ff2a8349ecfa745"
+    },
+    "ro.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "7c880bbe605648af80feab2996886ae3445b9266cc45ad54a0358494e2f52061",
+      "afterSha256": "ffcb8f3a0c1cfb3a3ce295fdcf3435e57b6a56cdc8d274d5bbb9c7bd03850584"
+    },
+    "ru.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "New_Call_Enterprise_Edition_Only",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "b0dea215690ad89a2ce98849aca51265092bda5289b716df7f17775e8a59fac0",
+      "afterSha256": "dd7a02a3709bde53e81e8797624f1e1b64a329c95c77dc35ce43843f0da6099f"
+    },
+    "sk-SK.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "73e0ec8b7185c13b7444e12e537c80c1a0a9196f630d23c5c15a4e0cf68fdb38",
+      "afterSha256": "c34e3dfbc1f0ed1591e62604f22befcf157f87089866c2c9374a9249d926589c"
+    },
+    "sl-SI.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "315f1b89e8fbc52bae62457f6c8fbc51bbc72bc4e5e85435e5237a8ccc93e429",
+      "afterSha256": "5d722b993fd60483b6d40b6ae154e99fd19959b83a89c64785b2d1e53699e0b3"
+    },
+    "sq.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "5c711bc79e90f70afaddc85900e4a35275906b39428754a8e3bfae9997381251",
+      "afterSha256": "b11bcc255474e249c782d96e5bad5c91e96767f16552701ea8d1a06b6529dc14"
+    },
+    "sr.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "4ecc67aac9a59c545a314bfcfea21eef1aeb34f5e888f705ed8790b1b36dbd2e",
+      "afterSha256": "051cf6da9a08720416e18ee89c2fe3d92d6905ad58b34b7731932591d09884d9"
+    },
+    "sv.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "95d1008e77621c1766969c42bfba8d4fb28f65143f2acfc80b0465b368399d94",
+      "afterSha256": "8095addb7d54880bd0082f2c06b281fe7d456768d1fbdb4e9c8cd3ead8b4d106"
+    },
+    "ta-IN.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "ca1d3b54ada68334cf0043ce8b8bf464bde8354fc55c9364244ac4c09e4277a0",
+      "afterSha256": "685c112efb4b2bb05acbe3a4b1c24dd8f1a943f3e06f53cefdcf3ab40b1af7ad"
+    },
+    "th-TH.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "f99ce9ce821992723ec2cb0cc0c9bea6bb5154b8449025bd984c1967bebacd20",
+      "afterSha256": "d2578180424646bb36ab43a7eda9eedd6ca2e129e1522cb67c9dfd1ea48875bb"
+    },
+    "tr.i18n.json": {
+      "removedKeys": [
+        "Premium_only",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "3fa15e4b385d8c2044b61a3ff1722782c11e5958db804a465425b0be8213ec71",
+      "afterSha256": "410008496b045abc4d2289ef9180a58d9ce12542c68b63dce953b369c8331ca1"
+    },
+    "ug.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "9b286a7e981411feea2a028332b63ae708859dad570e45299dd879193fb13a4f",
+      "afterSha256": "01329aa78595460c4e147f3ef1a1a53de051fedb51c7d0db39b5a06c035f194f"
+    },
+    "uk.i18n.json": {
+      "removedKeys": [
+        "Enterprise_License",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "0a54cf834e4f08ab2824cddf3b96f1cf949e2a451cf0327a2841f48b0029fbd7",
+      "afterSha256": "87fa7c758640f78433f8879da8c79c837efa1731cb74d713ac371fbf5fb605df"
+    },
+    "vi-VN.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "39c1e807f59ec7293d258eec2cd2e9a97a4deef688e28a4123b66f66653c2d8a",
+      "afterSha256": "f68a9bf194db0e7de57c10e5d67641ea7ce82435a9cd727a0f1bc45e3609a0fe"
+    },
+    "zh-HK.i18n.json": {
+      "removedKeys": [
+        "UpgradeToGetMore_engagement-dashboard_Title"
+      ],
+      "beforeSha256": "86affee50aa33af7a92a173d1070818cb2982317ef82cabc61f8707b14f8de74",
+      "afterSha256": "3841efc306f7087d65e01dc55111bb91d1da07f9bca7882e657bac070ed55a86"
+    },
+    "zh-TW.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license"
+      ],
+      "beforeSha256": "b56ea140af0c54a074130d8f8e0246ead51f48541726a20b6764e1d98f2440ed",
+      "afterSha256": "ee7be66dbd7334ebf4047d2279774e2af2ac5120a55a703d9debb7079b448d10"
+    },
+    "zh.i18n.json": {
+      "removedKeys": [
+        "Click_here_for_more_details_or_contact_sales_for_a_new_license",
+        "Cloud_Change_Offline_License",
+        "Cloud_Invalid_license",
+        "Enterprise_Departments_description_free_trial",
+        "Enterprise_Departments_description_upgrade",
+        "Enterprise_Description",
+        "Enterprise_License",
+        "Enterprise_License_Description",
+        "Enterprise_Only",
+        "Enterprise_cap_description",
+        "Enterprise_capabilities",
+        "Enterprise_capability",
+        "Federation_Matrix_join_public_rooms_is_enterprise",
+        "Google_Meet_Enterprise_only",
+        "Google_Meet_Premium_only",
+        "Hold_Call_Premium_only",
+        "New_Call_Enterprise_Edition_Only",
+        "Operating_withing_plan_limits",
+        "Pexip_Enterprise_only",
+        "Pexip_Premium_only",
+        "Plan_limits_reached",
+        "Premium_Departments_description_free_trial",
+        "Premium_Departments_description_upgrade",
+        "Premium_Departments_title",
+        "Premium_License",
+        "Premium_License_alert",
+        "Premium_cap_description",
+        "Premium_capabilities",
+        "Premium_capability",
+        "Premium_omnichannel_capabilities",
+        "Premium_only",
+        "Sync_license_update",
+        "Sync_license_update_Callout",
+        "Sync_license_update_Callout_Title",
+        "Unlock_premium_capabilities",
+        "UpgradeToGetMore_Headline",
+        "UpgradeToGetMore_Subtitle",
+        "UpgradeToGetMore_accessibility-certification_Body",
+        "UpgradeToGetMore_accessibility-certification_Title",
+        "UpgradeToGetMore_auditing_Body",
+        "UpgradeToGetMore_auditing_Title",
+        "UpgradeToGetMore_custom-roles_Body",
+        "UpgradeToGetMore_custom-roles_Title",
+        "UpgradeToGetMore_engagement-dashboard_Body",
+        "UpgradeToGetMore_engagement-dashboard_Title",
+        "UpgradeToGetMore_oauth-enterprise_Body",
+        "UpgradeToGetMore_oauth-enterprise_Title",
+        "UpgradeToGetMore_scalability_Body",
+        "UpgradeToGetMore_scalability_Title",
+        "Upgrade_tab_connection_error_description",
+        "Upgrade_tab_connection_error_restore",
+        "Upgrade_tab_go_fully_featured",
+        "Upgrade_tab_trial_guide",
+        "Upgrade_tab_upgrade_your_plan",
+        "Upgrade_to_Pro",
+        "You_reached_the_maximum_number_of_guest_users_allowed_by_your_license",
+        "subscription.callout.activeUsers",
+        "subscription.callout.allPremiumCapabilitiesDisabled",
+        "subscription.callout.capabilitiesDisabled",
+        "subscription.callout.description.limitsExceeded",
+        "subscription.callout.description.limitsReached",
+        "subscription.callout.guestUsers",
+        "subscription.callout.monthlyActiveContacts",
+        "subscription.callout.roomsPerGuest",
+        "subscription.callout.servicesDisruptionsMayOccur",
+        "subscription.callout.servicesDisruptionsOccurring"
+      ],
+      "beforeSha256": "1ea52cdd76f0e95bf14188ab84c01dbf5f3061116c0c9029f1d0321dd856e83d",
+      "afterSha256": "a288d053f116d5fa640412d21c12f290b3faf486af72f95e79660cb93ef0033a"
+    }
+  }
+}
