@@ -60,6 +60,9 @@ sudo install -d -o "${SERVICE_USER:-administrator}" -m 700 "/data/nanobaseai/bi/
 if [[ -z "${SEMANTIC_TABLE_LIKE:-}" && "${SEMANTIC_ALLOW_FULL_SCAN:-0}" != "1" ]]; then
   die "SEMANTIC_TABLE_LIKE is empty — set a scope (e.g. SEMANTIC_TABLE_LIKE='LG_411_%') or SEMANTIC_ALLOW_FULL_SCAN=1"
 fi
+# The production Logo keeps other companies' and test firms' years in the same database; without the company's own
+# firm list, "the highest firm covering a year" picks one of them (semantic_layer/firm_scope.py).
+[[ -n "${SEMANTIC_FIRMS:-}" ]] || die "SEMANTIC_FIRMS is empty — list this company's Logo firms (e.g. 015,016,105,115,171,181,191,201,211,411)"
 
 # --- 1. connection file (never printed), derived from the registered read-only datasource ---------
 if [[ ! -f "$CONN_FILE" ]]; then

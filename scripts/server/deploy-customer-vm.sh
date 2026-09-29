@@ -37,6 +37,7 @@ rsync -rc --exclude "._*" -e "$SSH" --exclude .env --exclude 'secrets/' --exclud
 echo "== derle ve kaldır"
 $SSH "$VM" "cd $DST/infra/docker/bi && grep -q '^SEMANTIC_ADMIN_TOKEN=.' .env || echo 'UYARI: .env içinde SEMANTIC_ADMIN_TOKEN boş; onay kararları 403 döner'
   grep -q '^PORTAL_ORIGIN=http' .env || { echo 'HATA: .env içinde PORTAL_ORIGIN yok; giriş 403 döner'; exit 1; }
+  grep -q '^SEMANTIC_FIRMS=[0-9]' .env || { echo 'HATA: .env içinde SEMANTIC_FIRMS yok; canlı Logo üzerinde başka şirketin firması seçilir'; exit 1; }
   test -s secrets/ad/timas-ad.json || { echo 'HATA: secrets/ad/timas-ad.json yok; giriş 503 döner'; exit 1; }
   test -s secrets/crm-mssql-connection.json || { echo 'HATA: secrets/crm-mssql-connection.json yok; CRM ekranları Logo sunucusuna düşer'; exit 1; }
   docker compose build bridge web login
