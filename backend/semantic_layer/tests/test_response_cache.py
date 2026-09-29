@@ -276,3 +276,9 @@ def test_disk_dir_live_port_only():
     assert RC.disk_dir({"RESPONSE_CACHE_LIVE_PORT": "8801"}, side) == RC.LIVE_DIR
     assert RC.disk_dir({}, ["pytest"]) == RC.LIVE_DIR    # port yok, test dışı süreç: eski davranış
     assert RC.disk_dir({"PYTEST_CURRENT_TEST": "t"}, live) is None     # test süreci canlı klasöre yazmaz
+
+
+def test_tests_never_touch_the_live_cache_folder():
+    """Testler canlı klasöre yazmaz (conftest her teste geçici klasör verir)."""
+    import os
+    assert "/data/nanobaseai" not in os.environ.get("RESPONSE_CACHE_DIR", "")
