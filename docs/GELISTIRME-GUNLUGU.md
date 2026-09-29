@@ -24,6 +24,13 @@
   → «Bu kitap neden önemli?», «Afiskagitcinsiid» → «Kağıt cinsi». CRM'in kendi etiketi yazıldığı için kişi CRM formunda gördüğü
   adı görür (ör. «new_GenelKanaat» → «Yayın kararı»).
 - **Test:** `test_crm_names.py` (5) + `test_access` ✓, `readableName.test.ts` 16, vitest 48 dosya / 265 ✓, `tsc -b` 0.
+## 2026-09-29 (14:40) — Test sunucusuna main `81e16903` (yazar giriş süzgeci + kişi kartı düzeltmesi); uçtan uca tarayıcı testi 48/48
+
+- **Kurulum:** 8 dosya (sunucu hâli md5 ile bir önceki main `30e93c7a`), sunucu ağacı kopyasında `tsc -b` 0, vitest 62/62 (editoryal + ekran bilgisi), pytest 16/16, `vite build` 37 sn; md5 yeniden denetlendi, 8/8 yeni. Köprü yeniden başlatıldı, dışarıdan `index-DykogImY.js`, `._*` 0.
+- **Tarayıcı testi (görünmez tarayıcı test sunucusunda, portal üzerinden, timasai 45 dk oturumu, iş sonunda silindi):** 12 ekran × 320/390/768/1280 — Masam, eski `/gorevlerim` adresi, Görevlerim panosu ve penceresi, editör atama (2 sekme), sözleşme listesi ve ayrıntısı, kitap 360 (hak açılırı), kişi kartı (küçük harfli `?kisi=` bağlantısı), yazar giriş (süzgeçsiz ve `?tur=Editoryal&yil=2026`), Haklar ve lisanslar. Yatay taşma her açılışta 0, konsol ve istek hatası 0; 48/48 (kitap 320 ilk açılışı köprü açılışından hemen sonra 41 sn sürüp kaldı, tekrarında 3 sn ile geçti).
+- **Testte bulunan ve düzeltilen:** kişi kartı `?kisi=` bağlantısı küçük harfli kimlikle gelince sonsuza kadar «Yükleniyor» kalıyordu (CRM kimliği büyük harf; yazar ilişkileri, basın-web, serbest çalışanlar, komut paleti bağlantıları küçük harf taşıyabiliyor) → karşılaştırma harf duyarsız.
+- **Test verisi notları:** seçilen iki kayıt 404 verdi — CRM'de `statecode = 0` ama durum nedeni «Pasif»; d49b498f'nin genişlettiği süzgeç doğru gizliyor. Görevlerim panosunun dolu hâli, timasai'nin CRM'de projesi olmadığı için gerçek bir editörün (24 proje) CRM verisiyle tarayıcıda yerine konarak çizildi; yazma engelliydi.
+- **Açık:** müşteri VM'ine kurulmadı. Telefonda yönetici görünümünde yazar giriş ekranının «Editörlerin bekleyen işleri» listesi (596 iş) süzgeçleri aşağı itiyor (önceden var olan düzen).
 
 ## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
 
