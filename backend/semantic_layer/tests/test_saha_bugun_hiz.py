@@ -63,7 +63,7 @@ def _source(taze=0.05, bayat=60.0):
 
 
 def test_list_reads_are_served_stale_and_refreshed_in_background():
-    s = _source()
+    s = _source(taze=0.5)
     st = {**_settings(), "schema": SCHEMA}
     with F.recording() as first:
         a = s.collections(st)
@@ -71,7 +71,7 @@ def test_list_reads_are_served_stale_and_refreshed_in_background():
     with F.recording() as again:
         assert s.collections(st) == a                                   # taze: CRM'e gidilmez
     assert _Crm.calls == ["crm.tahsilat"] and again == first            # okuma metni yine kaydedilir
-    time.sleep(0.08)
+    time.sleep(0.55)
     _Crm.version = 2
     _Crm.gate = threading.Event()
     t0 = time.monotonic()
