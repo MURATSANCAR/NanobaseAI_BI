@@ -1,5 +1,21 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (19:30) — Stüdyo ses: son eksikler kapatıldı (yerleştirme canlıda, efekt kuralları, indirme yetkisi)
+
+- **Kelimeleri kayda yeniden yerleştirme canlıda uçtan uca:** deneme işinin 7. sayfasına insan kaydı (33 sn, 41/41 kelime)
+  → metinde «Aslan» → «Aslancık» → sayfa hemen «güncel değil» → yerleştirme 8 sn (41 kelime, tahmini 0, yeni kelime
+  kayıtta) → metin geri → yeniden 8 sn (ilk metinle birebir) → sayfa yapay sese döndü.
+- **Tek sosyal görsel indirmesi** köprüde `veri.disa-aktar` (commit d81df7993); **yetki kapısı ön yüz testi** 11 test
+  (canlıda kısıtlı rol yok: herkes «Herkes»te, bütün izinler).
+- **Efekt:** üst üste binen efekt kısaltılır (`FX_MIN_SEC` 0,5 sn, karışım sürümü 3). Sesi çıkaranın cinsiyeti/yaşı
+  **yalnız balonda** (konuşanın sesi) seçime gider: ilk sürüm anlatımı okuyan kadın anlatıcıyı sesi çıkaran saydı, gülen
+  aslana kadın kahkahası, hapşıran file kız hapşırığı seçildi (tam kitap denetiminde görüldü, `d1c3180c`). Harf uzatması
+  yalnız tek başına ünlemde ses ipucu («Güüüümmmm!»); «çoook», «günleriiii» efekt alıyordu.
+- **Kurulum:** GPU stüdyo + işçi türetilmiş imaj `editor-py-studio:0.15.9-04698f28-sfx2` (GPU'daki 04698f28 + `sfx.py`;
+  dosya o sürümle aynıydı). Test sunucusu: köprü `app.py`/`access.py` üç yollu birleştirmeyle yalnız bu satırlar (arada
+  main'e giren başvuru formları işi taşınmadı), `editorial_studio_marketing.py` + iki ön yüz dosyası; sağlık 200, `._*` 0.
+  VM: başka oturumun kurduğu 21b29825 bu düzeltmeyi içeriyor (benim hazırladığım kaynak kurulmadan durdu; geri sarma yok).
+
 ## 2026-09-29 (19:00) — Müşteri VM'ine main `21b298253`: yazar başvuru formları VM'de, 3.013 başvuru
 
 - **Kullanıcı onayı:** «hadi». VM'deki son kurulum `134b8b79` (17:50) → `21b298253`'ün atası (geri sarma yok), arada 15 commit (başvuru formları, stüdyo, İK, sohbet; hepsi test sunucusunda doğrulanmış), çakışma işareti 0. CRM pasif süzgeci, Görevlerim/Masam, editör atama, haklar-lisans, yazar giriş süzgeci ve kişi kartı düzeltmesi zaten `134b8b79` ile VM'deydi.
