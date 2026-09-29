@@ -85,6 +85,9 @@ def test_sharp_drop_accounts_for_site_trend_and_noise():
     assert not g.sharp_drop(4, 1, 1.0)             # 4 → 1: fark gürültüden büyük değil
     assert not g.sharp_drop(0, 0, 1.0)
     assert not g.sharp_drop(900, 1010, 3.0)        # ziyaret arttı: site daha çok büyüse de «düştü» denmez
+    assert not g.sharp_drop(11, 9, 1.63)           # canlı örnek: satış 11 → 9 (%18) site büyüse de «sert» değil
+    assert g.sharp_drop(40, 12, 1.63)              # %70 düşüş
+    assert g.flags_of({"kind": "diger", "sessions": 5000, "purchases": 0, "p_sessions": 9000, "p_purchases": 50}, {"highTraffic": 1, "q3Prev": 1, "sessionRatio": 1.0, "purchaseRatio": 1.0}) == []  # sistem sayfası işaretlenmez
 
 
 def test_quantile():

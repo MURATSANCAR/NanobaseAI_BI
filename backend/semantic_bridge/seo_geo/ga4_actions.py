@@ -662,8 +662,11 @@ def c_general(it, ctx: Context, p, found: list[dict[str, Any]]) -> Optional[dict
                  "Aynı dönemde fiyat, kampanya ya da kapak değişikliği olup olmadığını T-soft panelinden denetleyin.",
                  "Rakipler ekranında aynı kitap aramasında sıranın başka siteye geçip geçmediğine bakın.",
                  "Sezon takviminde kitabın bağlı olduğu dönem geçmiş mi, kontrol edin."]
-        return _card("dusen_genel", "orta", "Organik ziyareti sert düşen sayfanın nedenini inceleyin", why, "seo", it,
-                     changes=[{"label": "Organik ziyaret", "current": n(pv["sessions"]), "proposed": n(cu["sessions"]), "ok": False},
+        what = ("Organik ziyareti ve satışı" if {"dusen_oturum", "dusen_ciro"} <= set(it["flags"])
+                else "Organik ziyareti" if "dusen_oturum" in it["flags"] else "Organik satışı")
+        return _card("dusen_genel", "orta", f"{what} sert düşen sayfanın nedenini inceleyin", why, "seo", it,
+                     changes=[{"label": "Organik ziyaret", "current": n(pv["sessions"]), "proposed": n(cu["sessions"]),
+                               "ok": False if "dusen_oturum" in it["flags"] else None},
                               {"label": "Satış", "current": n(pv["purchases"]), "proposed": n(cu["purchases"]), "ok": None},
                               {"label": "Ciro", "current": money(pv["revenue"]), "proposed": money(cu["revenue"]), "ok": None}],
                      heads=("Önceki 28 gün", "Son 28 gün"), steps=steps, impact=loss(it, ctx.th),

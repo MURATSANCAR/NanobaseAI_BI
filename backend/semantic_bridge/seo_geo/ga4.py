@@ -70,6 +70,11 @@ KEYS = ("sessions", "engaged", "carts", "purchases", "revenue")
 EXPECTED_SALES = 3
 #: Site genelindeki değişime göre beklenenin bu katının altı «sert düşüş».
 DROP_RATIO = 0.6
+#: «Sert düştü» için sayfanın kendi değeri de en az bu oranda düşmüş olmalı. Canlıda (2026-09-29) site geneli organik
+#: ziyaret 28 günde ~2 katına çıkınca yalnız site ortalamasına göre bakmak satışı 11 → 9 inen sayfayı «sert düştü» sayıyordu.
+MIN_OWN_DROP = 0.3
+#: Bayrak yalnız kitap ve kategori/yazar/yayınevi sayfalarına: sipariş, sepet, arama gibi sistem sayfaları iş değil.
+FLAG_KINDS = ("urun", "kategori")
 KINDS = {"urun": "Ürün", "kategori": "Kategori / yazar / yayınevi", "diger": "Diğer", "belirsiz": "Giriş sayfası belirlenemeyen"}
 FLAGS = {"satissiz": "Trafik yüksek, satış yok", "dusen_oturum": "Organik ziyaret sert düştü",
          "dusen_ciro": "Organik satış sert düştü"}
@@ -254,7 +259,7 @@ def sharp_drop(prev: float, cur: float, site_ratio: float) -> bool:
     """Site genelindeki değişim hesaba katılarak beklenen değerin DROP_RATIO katının altı ve fark gürültüden büyük.
     Değer gerçekten düşmüş olmalı: site daha çok büyüdü diye artan sayfaya «sert düştü» denmez (2026-09-29 testte
     %12 artan sayfa işaretleniyordu)."""
-    if prev <= 0 or cur >= prev:
+    if prev <= 0 or cur > prev * (1 - MIN_OWN_DROP):
         return False
     expected = prev * (site_ratio if site_ratio > 0 else 1.0)
     return cur <= expected * DROP_RATIO and (expected - cur) >= 2 * math.sqrt(expected)
@@ -342,7 +347,7 @@ def thresholds(pages: list[dict[str, Any]], organic_cur: dict[str, float], organ
 
 def flags_of(p: dict[str, Any], th: dict[str, Any]) -> list[str]:
     out = []
-    if p["kind"] == "belirsiz":
+    if p["kind"] not in FLAG_KINDS:
         return out
     if p["kind"] == "urun" and p["sessions"] > 0 and p["sessions"] >= th["highTraffic"] and p["purchases"] <= 0:
         out.append("satissiz")
