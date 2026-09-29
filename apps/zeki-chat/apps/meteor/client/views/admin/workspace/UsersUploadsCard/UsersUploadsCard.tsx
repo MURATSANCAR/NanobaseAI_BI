@@ -7,7 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useFormatMemorySize } from '../../../../hooks/useFormatMemorySize';
-import { useHasLicenseModule } from '../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../hooks/useHasCapability';
 import WorkspaceCardSection from '../components/WorkspaceCardSection';
 import WorkspaceCardSectionTitle from '../components/WorkspaceCardSectionTitle';
 import WorkspaceCardTextSeparator from '../components/WorkspaceCardTextSeparator';
@@ -26,7 +26,7 @@ const UsersUploadsCard = ({ statistics }: UsersUploadsCardProps): ReactElement =
 		router.navigate('/admin/engagement');
 	});
 
-	const { data: canViewEngagement = false } = useHasLicenseModule('engagement-dashboard');
+	const { data: canViewEngagement = false } = useHasCapability('engagement-dashboard');
 
 	return (
 		<Card height='full'>

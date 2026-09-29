@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import EngagementDashboardPage from './EngagementDashboardPage';
 import PageSkeleton from '../../../components/PageSkeleton';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import NotAuthorizedPage from '../../notAuthorized/NotAuthorizedPage';
 
 const isValidTab = (tab: string | undefined): tab is 'users' | 'messages' | 'channels' =>
@@ -18,7 +18,7 @@ const EngagementDashboardRoute = (): ReactElement | null => {
 	const tab = useRouteParameter('tab');
 	const eventStats = useEndpoint('POST', '/v1/statistics.telemetry');
 
-	const { isPending, data: hasEngagementDashboard = false } = useHasLicenseModule('engagement-dashboard');
+	const { isPending, data: hasEngagementDashboard = false } = useHasCapability('engagement-dashboard');
 
 	// Zeki: vendor upsell modal removed
 

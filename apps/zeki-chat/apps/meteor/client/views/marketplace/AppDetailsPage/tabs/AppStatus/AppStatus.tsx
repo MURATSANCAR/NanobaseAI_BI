@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import semver from 'semver';
 
 import AppStatusPriceDisplay from './AppStatusPriceDisplay';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useIsEnterprise } from '../../../../../hooks/useIsEnterprise';
 import AddonRequiredModal from '../../../AppsList/AddonRequiredModal';
 import type { appStatusSpanResponseProps } from '../../../helpers';
@@ -43,7 +43,7 @@ const AppStatus = ({ app, showStatus = true, isAppDetailsPage, installed, ...pro
 	const isEnterprise = data?.isEnterprise ?? false;
 
 	const appAddon = app.addon;
-	const { data: workspaceHasAddon = false } = useHasLicenseModule(appAddon);
+	const { data: workspaceHasAddon = false } = useHasCapability(appAddon);
 
 	const statuses = appMultiStatusProps(app, isAppDetailsPage, context || '', isEnterprise);
 

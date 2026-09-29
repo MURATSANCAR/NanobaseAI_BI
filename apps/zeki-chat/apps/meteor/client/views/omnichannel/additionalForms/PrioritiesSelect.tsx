@@ -7,7 +7,7 @@ import type { ComponentProps } from 'react';
 import { useCallback, forwardRef, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import { PriorityIcon } from '../priorities/PriorityIcon';
 
 type PrioritiesSelectProps = {
@@ -19,7 +19,7 @@ type PrioritiesSelectProps = {
 
 export const PrioritiesSelect = ({ value = '', label, options, onChange }: PrioritiesSelectProps) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const [sorting] = useState<Record<string, LivechatPriorityWeight>>({});
 
 	const formattedOptions = useMemo<SelectOption[]>(() => {

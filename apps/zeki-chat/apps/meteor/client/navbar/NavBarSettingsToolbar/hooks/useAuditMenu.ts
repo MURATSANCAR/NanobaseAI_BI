@@ -2,13 +2,13 @@ import type { GenericMenuItemProps } from '@rocket.chat/ui-client';
 import { usePermission, useRouter } from '@rocket.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 export const useAuditMenu = () => {
 	const router = useRouter();
 	const { t } = useTranslation();
 
-	const { data: hasAuditLicense = false } = useHasLicenseModule('auditing');
+	const { data: hasAuditLicense = false } = useHasCapability('auditing');
 
 	const hasAuditPermission = usePermission('can-audit') && hasAuditLicense;
 	const hasAuditLogPermission = usePermission('can-audit-log') && hasAuditLicense;

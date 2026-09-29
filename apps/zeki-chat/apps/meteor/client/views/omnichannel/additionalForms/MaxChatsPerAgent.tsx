@@ -4,12 +4,12 @@ import type { ComponentProps } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const MaxChatsPerAgent = ({ className }: { className?: ComponentProps<typeof Field>['className'] }) => {
 	const { t } = useTranslation();
 	const { control } = useFormContext();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	const maxChatsField = useId();
 

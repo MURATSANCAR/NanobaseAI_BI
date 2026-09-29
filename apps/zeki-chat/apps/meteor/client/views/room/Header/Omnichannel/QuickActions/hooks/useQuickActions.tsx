@@ -16,7 +16,7 @@ import { usePutChatOnHoldMutation } from './usePutChatOnHoldMutation';
 import { useReturnChatToQueueMutation } from './useReturnChatToQueueMutation';
 import PlaceChatOnHoldModal from '../../../../../../../app/livechat-enterprise/client/components/modals/PlaceChatOnHoldModal';
 import { LegacyRoomManager } from '../../../../../../../app/ui-utils/client';
-import { useHasLicenseModule } from '../../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../../hooks/useHasCapability';
 import { useLivechatInquiryStore } from '../../../../../../hooks/useLivechatInquiryStore';
 import { quickActionHooks } from '../../../../../../ui';
 import { useIsRoomOverMacLimit } from '../../../../../omnichannel/hooks/useIsRoomOverMacLimit';
@@ -269,7 +269,7 @@ export const useQuickActions = (): {
 	const canMoveQueue = !!omnichannelRouteConfig?.returnQueue && room?.u !== undefined;
 	const canForwardGuest = usePermission('transfer-livechat-guest');
 	const canSendTranscriptEmail = usePermission('send-omnichannel-chat-transcript');
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const canSendTranscriptPDF = usePermission('request-pdf-transcript');
 	const canCloseRoom = usePermission('close-livechat-room');
 	const canCloseOthersRoom = usePermission('close-others-livechat-room');

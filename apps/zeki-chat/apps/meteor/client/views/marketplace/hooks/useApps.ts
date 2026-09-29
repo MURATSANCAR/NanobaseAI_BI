@@ -1,5 +1,5 @@
 import { useDebouncedCallback } from '@rocket.chat/fuselage-hooks';
-import { useInvalidateLicense } from '@rocket.chat/ui-client';
+import { useInvalidateCapabilities } from '@rocket.chat/ui-client';
 import { usePermission, useStream } from '@rocket.chat/ui-contexts';
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -106,7 +106,7 @@ export const useApps = <
 	const { data: isEnterprise } = useIsEnterprise();
 
 	const invalidateAppsCountQuery = useInvalidateAppsCountQueryCallback();
-	const invalidateLicenseQuery = useInvalidateLicense();
+	const invalidateLicenseQuery = useInvalidateCapabilities();
 
 	const stream = useStream('apps');
 

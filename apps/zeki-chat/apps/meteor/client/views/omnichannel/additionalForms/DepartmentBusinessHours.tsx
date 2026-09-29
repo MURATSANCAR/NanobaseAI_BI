@@ -3,11 +3,11 @@ import { useEndpoint } from '@rocket.chat/ui-contexts';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 export const DepartmentBusinessHours = ({ bhId }: { bhId: string | undefined }) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const getBusinessHour = useEndpoint('GET', '/v1/livechat/business-hour');
 	const { data } = useQuery({
 		queryKey: ['/v1/livechat/business-hour', bhId],

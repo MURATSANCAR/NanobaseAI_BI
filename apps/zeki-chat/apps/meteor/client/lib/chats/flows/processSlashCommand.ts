@@ -36,7 +36,7 @@ const warnUnrecognizedSlashCommand = async (chat: ChatAPI, message: string): Pro
 		u: {
 			_id: 'rocket.cat',
 			username: 'rocket.cat',
-			name: 'Rocket.Cat',
+			name: 'ZEKI AI CHAT',
 		},
 		private: true,
 		_updatedAt: new Date(),

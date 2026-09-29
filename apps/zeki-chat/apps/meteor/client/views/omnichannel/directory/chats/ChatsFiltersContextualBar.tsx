@@ -14,7 +14,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../hooks/useHasCapability';
 import { CurrentChatTags } from '../../additionalForms';
 import AutoCompleteUnits from '../../additionalForms/AutoCompleteUnits';
 import AutoCompleteDepartmentMultiple from '../../components/AutoCompleteDepartmentMultiple';
@@ -31,7 +31,7 @@ const ChatsFiltersContextualBar = ({ onClose }: ChatsFiltersContextualBarProps) 
 	const { t } = useTranslation();
 	const canViewLivechatRooms = usePermission('view-livechat-rooms');
 	const canViewCustomFields = usePermission('view-livechat-room-customfields');
-	const { data: isEnterprise = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: isEnterprise = false } = useHasCapability('livechat-enterprise');
 
 	const { data } = useCustomFieldsQuery();
 	const contactCustomFields = data?.customFields.filter((customField) => customField.scope !== 'visitor');

@@ -4,11 +4,11 @@ import { useTranslation, Trans } from 'react-i18next';
 
 import AbacEnabledToggle from './AbacEnabledToggle';
 import SettingField from './SettingField';
-import { useHasLicenseModule } from '../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../hooks/useHasCapability';
 
 const SettingsPage = () => {
 	const { t } = useTranslation();
-	const { data: hasABAC = false } = useHasLicenseModule('abac');
+	const { data: hasABAC = false } = useHasCapability('abac');
 	const pdpType = useSetting('ABAC_PDP_Type', 'local');
 
 	return (

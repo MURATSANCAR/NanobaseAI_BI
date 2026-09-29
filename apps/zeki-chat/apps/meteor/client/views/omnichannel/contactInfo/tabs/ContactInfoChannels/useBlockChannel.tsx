@@ -5,14 +5,14 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BlockChannelModal from './BlockChannelModal';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import AdvancedContactModal from '../../AdvancedContactModal';
 
 export const useBlockChannel = ({ blocked, association }: { blocked: boolean; association: ILivechatContactVisitorAssociation }) => {
 	const { t } = useTranslation();
 	const setModal = useSetModal();
 	const dispatchToastMessage = useToastMessageDispatch();
-	const { data: hasLicense = false } = useHasLicenseModule('contact-id-verification');
+	const { data: hasLicense = false } = useHasCapability('contact-id-verification');
 	const queryClient = useQueryClient();
 
 	const blockContact = useEndpoint('POST', '/v1/omnichannel/contacts.block');

@@ -1,10 +1,10 @@
 import MonitorsPage from './MonitorsPage';
 import PageSkeleton from '../../../components/PageSkeleton';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import NotAuthorizedPage from '../../notAuthorized/NotAuthorizedPage';
 
 const MonitorsPageContainer = () => {
-	const { isPending, data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { isPending, data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	if (isPending) {
 		return <PageSkeleton />;

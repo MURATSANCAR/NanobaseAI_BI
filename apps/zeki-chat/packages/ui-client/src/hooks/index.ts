@@ -5,7 +5,7 @@ export * from './useEmbeddedLayout';
 export * from './useFeaturePreview';
 export * from './useFeaturePreviewList';
 export * from './useGoToDirectMessage';
-export * from './useLicense';
+export * from './useCapabilities';
 export * from './usePreferenceFeaturePreviewList';
 export * from './useThemeMode';
 export * from './useUserDisplayName';

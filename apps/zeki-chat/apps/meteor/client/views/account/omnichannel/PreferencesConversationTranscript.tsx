@@ -3,13 +3,13 @@ import { Field, FieldGroup, FieldLabel, FieldRow, FieldHint, ToggleSwitch } from
 import { useTranslation, usePermission, useSetting } from '@rocket.chat/ui-contexts';
 import { Controller, useFormContext } from 'react-hook-form';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const PreferencesConversationTranscript = () => {
 	const t = useTranslation();
 	const { control } = useFormContext();
 
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const alwaysSendEmailTranscript = useSetting('Livechat_transcript_send_always');
 	const canSendTranscriptPDF = usePermission('request-pdf-transcript');
 	const canSendTranscriptEmailPermission = usePermission('send-omnichannel-chat-transcript');

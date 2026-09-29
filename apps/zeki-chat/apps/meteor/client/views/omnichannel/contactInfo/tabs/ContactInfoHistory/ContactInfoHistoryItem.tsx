@@ -15,7 +15,7 @@ import { useSetModal } from '@rocket.chat/ui-contexts';
 import { useTranslation } from 'react-i18next';
 
 import { OmnichannelRoomIcon } from '../../../../../components/RoomIcon/OmnichannelRoomIcon';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { usePreventPropagation } from '../../../../../hooks/usePreventPropagation';
 import { useTimeFromNow } from '../../../../../hooks/useTimeFromNow';
 import { useOmnichannelSource } from '../../../hooks/useOmnichannelSource';
@@ -30,7 +30,7 @@ const ContactInfoHistoryItem = ({ source, lastMessage, verified, onClick }: Cont
 	const getTimeFromNow = useTimeFromNow(true);
 	const setModal = useSetModal();
 	const preventPropagation = usePreventPropagation();
-	const { data: hasLicense = false } = useHasLicenseModule('contact-id-verification');
+	const { data: hasLicense = false } = useHasCapability('contact-id-verification');
 	const { getSourceName } = useOmnichannelSource();
 
 	const customClass = css`

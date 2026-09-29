@@ -1,12 +1,12 @@
 import { usePermission } from '@rocket.chat/ui-contexts';
 
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useOmnichannelEnabled } from '../../../hooks/useOmnichannelEnabled';
 
 export const useOutboundMessageAccess = (): boolean => {
 	const isOmnichannelEnabled = useOmnichannelEnabled();
-	const { data: hasOmnichannelModule = false } = useHasLicenseModule('livechat-enterprise');
-	const { data: hasOutboundModule = false } = useHasLicenseModule('outbound-messaging');
+	const { data: hasOmnichannelModule = false } = useHasCapability('livechat-enterprise');
+	const { data: hasOutboundModule = false } = useHasCapability('outbound-messaging');
 	const hasPermission = usePermission('outbound.send-messages');
 
 	if (!isOmnichannelEnabled) {

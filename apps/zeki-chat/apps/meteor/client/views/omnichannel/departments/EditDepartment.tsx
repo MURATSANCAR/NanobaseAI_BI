@@ -33,7 +33,7 @@ import { formatAgentListPayload } from './utils/formatAgentListPayload';
 import { formatEditDepartmentPayload } from './utils/formatEditDepartmentPayload';
 import { getFormInitialValues } from './utils/getFormInititalValues';
 import { useFormSubmitWithDirtyCheck } from '../../../hooks/useFormSubmitWithDirtyCheck';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import { useRoomsList } from '../../../hooks/useRoomsList';
 import { EeTextInput, EeTextAreaInput, EeNumberInput, DepartmentBusinessHours } from '../additionalForms';
 import AutoCompleteUnit from '../additionalForms/AutoCompleteUnit';
@@ -60,7 +60,7 @@ function EditDepartment({ data, id, title, allowedToForwardData }: EditDepartmen
 
 	const { department, agents = [] } = data || {};
 
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const canManageUnits = usePermission('manage-livechat-units');
 
 	const initialValues = getFormInitialValues({ department, agents, allowedToForwardData });

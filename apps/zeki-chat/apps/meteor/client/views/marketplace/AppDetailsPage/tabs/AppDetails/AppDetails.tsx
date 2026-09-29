@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import AppDetailsAPIs from './AppDetailsAPIs';
 import { normalizeUrl } from './normalizeUrl';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import ScreenshotCarouselAnchor from '../../../components/ScreenshotCarouselAnchor';
 import type { AppInfo } from '../../../definitions/AppInfo';
 import { purifyOptions } from '../../../lib/purifyOptions';
@@ -39,7 +39,7 @@ const AppDetails = ({ app }: AppDetailsProps) => {
 
 	const appAddon = installed ? installedAddon : addon;
 
-	const { data: workspaceHasAddon = false } = useHasLicenseModule(appAddon);
+	const { data: workspaceHasAddon = false } = useHasCapability(appAddon);
 
 	return (
 		<Box mbs='36px' maxWidth='x640' w='full' marginInline='auto' color='default'>

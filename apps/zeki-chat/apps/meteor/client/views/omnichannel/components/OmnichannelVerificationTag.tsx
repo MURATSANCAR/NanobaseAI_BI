@@ -1,7 +1,7 @@
 import { Icon, Tag } from '@rocket.chat/fuselage';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 type OmnichannelVerificationTagProps = {
 	verified?: boolean;
@@ -10,7 +10,7 @@ type OmnichannelVerificationTagProps = {
 
 const OmnichannelVerificationTag = ({ verified, onClick }: OmnichannelVerificationTagProps) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('contact-id-verification');
+	const { data: hasLicense = false } = useHasCapability('contact-id-verification');
 	const isVerified = hasLicense && verified;
 
 	return (

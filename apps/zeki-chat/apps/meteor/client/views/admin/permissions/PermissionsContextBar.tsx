@@ -5,14 +5,14 @@ import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 
 import EditRolePageWithData from './EditRolePageWithData';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const PermissionsContextBar = (): ReactElement | null => {
 	const t = useTranslation();
 	const _id = useRouteParameter('_id');
 	const context = useRouteParameter('context');
 	const router = useRoute('admin-permissions');
-	const { isPending, data: hasCustomRolesModule = false } = useHasLicenseModule('custom-roles');
+	const { isPending, data: hasCustomRolesModule = false } = useHasCapability('custom-roles');
 
 	const handleCloseContextualbar = useEffectEvent(() => {
 		router.push({});

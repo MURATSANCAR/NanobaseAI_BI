@@ -2,7 +2,7 @@ import { FieldLabel, Box, Tag } from '@rocket.chat/fuselage';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 type AppearanceFieldLabelProps = ComponentProps<typeof FieldLabel> & {
 	premium?: boolean;
@@ -11,7 +11,7 @@ type AppearanceFieldLabelProps = ComponentProps<typeof FieldLabel> & {
 
 const AppearanceFieldLabel = ({ children, premium = false, ...props }: AppearanceFieldLabelProps) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const shouldDisableEnterprise = premium && !hasLicense;
 
 	if (!shouldDisableEnterprise) {

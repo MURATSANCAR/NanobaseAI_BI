@@ -8,13 +8,13 @@ import EditRolePage from './EditRolePage';
 import { useRole } from './hooks/useRole';
 import GenericError from '../../../components/GenericError';
 import PageSkeleton from '../../../components/PageSkeleton';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const EditRolePageWithData = ({ roleId }: { roleId?: IRole['_id'] }): ReactElement => {
 	const { t } = useTranslation();
 	const role = useRole(roleId);
 	const context = useRouteParameter('context');
-	const { isPending, isError, data: hasLicense } = useHasLicenseModule('custom-roles');
+	const { isPending, isError, data: hasLicense } = useHasCapability('custom-roles');
 
 	if (!role && context === 'edit') {
 		return <Callout type='danger'>{t('error-invalid-role')}</Callout>;

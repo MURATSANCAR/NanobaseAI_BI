@@ -14,7 +14,7 @@ import type { SubmitPayload } from './forms';
 import { ReviewStep, MessageStep, RecipientStep, RepliesStep } from './steps';
 import GenericError from '../../../../../../components/GenericError';
 import { useEndpointMutation } from '../../../../../../hooks/useEndpointMutation';
-import { useHasLicenseModule } from '../../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../../hooks/useHasCapability';
 import { formatPhoneNumber } from '../../../../../../lib/formatPhoneNumber';
 import { omnichannelQueryKeys } from '../../../../../../lib/queryKeys';
 import { useOmnichannelEnabled } from '../../../../hooks/useOmnichannelEnabled';
@@ -37,8 +37,8 @@ const OutboundMessageWizard = ({ defaultValues = {}, onSuccess, onError }: Outbo
 	const templates = sender ? provider?.templates[sender] : [];
 
 	const isOmnichannelEnabled = useOmnichannelEnabled();
-	const hasOmnichannelModule = useHasLicenseModule('livechat-enterprise');
-	const hasOutboundModule = useHasLicenseModule('outbound-messaging');
+	const hasOmnichannelModule = useHasCapability('livechat-enterprise');
+	const hasOutboundModule = useHasCapability('outbound-messaging');
 	const hasOutboundPermission = usePermission('outbound.send-messages');
 
 	const isLoadingModule = hasOutboundModule.isPending || hasOmnichannelModule.isPending;

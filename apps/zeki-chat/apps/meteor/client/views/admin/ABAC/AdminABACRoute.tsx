@@ -6,14 +6,14 @@ import AdminABACPage from './AdminABACPage';
 import type { ABACTab } from './hooks/useABACTabPermissions';
 import { ABAC_TAB_ORDER, useABACTabPermissions } from './hooks/useABACTabPermissions';
 import PageSkeleton from '../../../components/PageSkeleton';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import SettingsProvider from '../../../providers/SettingsProvider';
 import NotAuthorizedPage from '../../notAuthorized/NotAuthorizedPage';
 import EditableSettingsProvider from '../settings/EditableSettingsProvider';
 
 const AdminABACRoute = (): ReactElement => {
 	const canViewABACPage = usePermission('abac-management');
-	const { data: hasABAC = false } = useHasLicenseModule('abac');
+	const { data: hasABAC = false } = useHasCapability('abac');
 	const isModalOpen = !!useCurrentModal();
 	const tab = useRouteParameter('tab');
 	const router = useRouter();

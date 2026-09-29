@@ -9,7 +9,6 @@ import DeploymentCard from './DeploymentCard/DeploymentCard';
 import MessagesRoomsCard from './MessagesRoomsCard/MessagesRoomsCard';
 import UsersUploadsCard from './UsersUploadsCard/UsersUploadsCard';
 import VersionCard from './VersionCard/VersionCard';
-import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 
 type WorkspaceStatusPageProps = {
 	canViewStatistics: boolean;
@@ -32,9 +31,8 @@ const WorkspacePage = ({
 }: WorkspaceStatusPageProps) => {
 	const { t } = useTranslation();
 
-	const { data } = useIsEnterprise();
 
-	const warningMultipleInstances = !data?.isEnterprise && !statistics?.msEnabled && statistics?.instanceCount > 1;
+	const warningMultipleInstances = !statistics?.msEnabled && statistics?.instanceCount > 1;
 
 	return (
 		<Page bg='tint'>

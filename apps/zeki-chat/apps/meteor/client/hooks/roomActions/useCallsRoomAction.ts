@@ -4,12 +4,12 @@ import { lazy, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RoomContext } from '../../views/room/contexts/RoomContext';
-import { useHasLicenseModule } from '../useHasLicenseModule';
+import { useHasCapability } from '../useHasCapability';
 
 const VideoConfList = lazy(() => import('../../views/room/contextualBar/VideoConference/VideoConfList'));
 
 export const useCallsRoomAction = () => {
-	const { data: licensed = false } = useHasLicenseModule('videoconference-enterprise');
+	const { data: licensed = false } = useHasCapability('videoconference-enterprise');
 	const room = useContext(RoomContext)?.room;
 	const federated = room ? isRoomFederated(room) : false;
 	const { t } = useTranslation();

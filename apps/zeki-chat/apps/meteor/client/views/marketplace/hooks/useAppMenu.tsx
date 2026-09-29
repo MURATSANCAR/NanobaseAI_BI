@@ -21,7 +21,7 @@ import { useMarketplaceActions } from './useMarketplaceActions';
 import { useOpenAppPermissionsReviewModal } from './useOpenAppPermissionsReviewModal';
 import { useOpenIncompatibleModal } from './useOpenIncompatibleModal';
 import WarningModal from '../../../components/WarningModal';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 import type { AddonActionType } from '../AppsList/AddonRequiredModal';
 import AddonRequiredModal from '../AppsList/AddonRequiredModal';
@@ -59,8 +59,8 @@ export const useAppMenu = (app: App, isAppDetailsPage: boolean) => {
 	const { data } = useIsEnterprise();
 	const isEnterpriseLicense = !!data?.isEnterprise;
 
-	const { data: workspaceHasMarketplaceAddon = false } = useHasLicenseModule(app.addon);
-	const { data: workspaceHasInstalledAddon = false } = useHasLicenseModule(app.installedAddon);
+	const { data: workspaceHasMarketplaceAddon = false } = useHasCapability(app.addon);
+	const { data: workspaceHasInstalledAddon = false } = useHasCapability(app.installedAddon);
 
 	const [isLoading, setLoading] = useState(false);
 	const [requestedEndUser, setRequestedEndUser] = useState(app.requestedEndUser);

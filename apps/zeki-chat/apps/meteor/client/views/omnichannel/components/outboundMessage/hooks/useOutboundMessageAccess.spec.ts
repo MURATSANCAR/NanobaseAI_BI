@@ -3,7 +3,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 
 import { useOutboundMessageAccess } from './useOutboundMessageAccess';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useOmnichannelEnabled } from '../../../hooks/useOmnichannelEnabled';
 
 jest.mock('@rocket.chat/ui-contexts', () => ({
@@ -14,13 +14,13 @@ jest.mock('../../../hooks/useOmnichannelEnabled', () => ({
 	useOmnichannelEnabled: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useHasLicenseModule', () => ({
-	useHasLicenseModule: jest.fn(),
+jest.mock('../../../../../hooks/useHasCapability', () => ({
+	useHasCapability: jest.fn(),
 }));
 
 const usePermissionMock = jest.mocked(usePermission);
 const useOmnichannelEnabledMock = jest.mocked(useOmnichannelEnabled);
-const useHasLicenseModuleMock = jest.mocked(useHasLicenseModule);
+const useHasCapabilityMock = jest.mocked(useHasCapability);
 
 // TODO: do not mock the hook itself, mock only its dependencies
 const createSuccessfulQueryResult = (data: boolean): UseQueryResult<boolean, Error> => ({
@@ -58,7 +58,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return false if omnichannel is not enabled', () => {
 		useOmnichannelEnabledMock.mockReturnValue(false);
-		useHasLicenseModuleMock.mockReturnValue(createSuccessfulQueryResult(true));
+		useHasCapabilityMock.mockReturnValue(createSuccessfulQueryResult(true));
 		usePermissionMock.mockReturnValue(true);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());
@@ -67,7 +67,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return true if omnichannel module is missing (upsell)', () => {
 		useOmnichannelEnabledMock.mockReturnValue(true);
-		useHasLicenseModuleMock.mockImplementation((module) => createSuccessfulQueryResult(module !== 'livechat-enterprise'));
+		useHasCapabilityMock.mockImplementation((module) => createSuccessfulQueryResult(module !== 'livechat-enterprise'));
 		usePermissionMock.mockReturnValue(true);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());
@@ -76,7 +76,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return true if outbound module is missing (upsell)', () => {
 		useOmnichannelEnabledMock.mockReturnValue(true);
-		useHasLicenseModuleMock.mockImplementation((module) => createSuccessfulQueryResult(module !== 'outbound-messaging'));
+		useHasCapabilityMock.mockImplementation((module) => createSuccessfulQueryResult(module !== 'outbound-messaging'));
 		usePermissionMock.mockReturnValue(true);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());
@@ -85,7 +85,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return true if both modules are missing (upsell)', () => {
 		useOmnichannelEnabledMock.mockReturnValue(true);
-		useHasLicenseModuleMock.mockReturnValue(createSuccessfulQueryResult(false));
+		useHasCapabilityMock.mockReturnValue(createSuccessfulQueryResult(false));
 		usePermissionMock.mockReturnValue(true);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());
@@ -94,7 +94,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return true if all conditions are met and user has permission', () => {
 		useOmnichannelEnabledMock.mockReturnValue(true);
-		useHasLicenseModuleMock.mockReturnValue(createSuccessfulQueryResult(true));
+		useHasCapabilityMock.mockReturnValue(createSuccessfulQueryResult(true));
 		usePermissionMock.mockReturnValue(true);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());
@@ -103,7 +103,7 @@ describe('useOutboundMessageAccess', () => {
 
 	it('should return false if all conditions are met but user does not have permission', () => {
 		useOmnichannelEnabledMock.mockReturnValue(true);
-		useHasLicenseModuleMock.mockReturnValue(createSuccessfulQueryResult(true));
+		useHasCapabilityMock.mockReturnValue(createSuccessfulQueryResult(true));
 		usePermissionMock.mockReturnValue(false);
 
 		const { result } = renderHook(() => useOutboundMessageAccess());

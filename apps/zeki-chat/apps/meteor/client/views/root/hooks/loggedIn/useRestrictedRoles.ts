@@ -5,11 +5,11 @@ import { useEffect } from 'react';
 import { AuthorizationUtils } from '../../../../../app/authorization/lib';
 
 export const useRestrictedRoles = (): void => {
-	const isEnterpriseQuery = useMethod('license:isEnterprise');
+	const isEnterpriseQuery = useMethod('capabilities:hasModule');
 
 	const { data: isEnterprise, isSuccess } = useQuery({
-		queryKey: ['isEnterprise'],
-		queryFn: isEnterpriseQuery,
+		queryKey: ['capabilities', 'livechat-enterprise'],
+		queryFn: () => isEnterpriseQuery('livechat-enterprise'),
 	});
 
 	useEffect(() => {

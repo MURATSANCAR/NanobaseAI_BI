@@ -4,7 +4,7 @@ import { useEndpoint, usePermission } from '@rocket.chat/ui-contexts';
 import type { UseQueryOptions } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { omnichannelQueryKeys } from '../../../../../lib/queryKeys';
 import { useOmnichannelEnterpriseEnabled } from '../../../hooks/useOmnichannelEnterpriseEnabled';
 
@@ -19,7 +19,7 @@ const useOutboundProvidersList = <TData = OutboundProvidersResponse>(options?: U
 	const getProviders = useEndpoint('GET', '/v1/omnichannel/outbound/providers');
 
 	const isOmnichannelEnabled = useOmnichannelEnterpriseEnabled();
-	const { data: hasOutboundModule = false } = useHasLicenseModule('outbound-messaging');
+	const { data: hasOutboundModule = false } = useHasCapability('outbound-messaging');
 	const canSendOutboundMessages = usePermission('outbound.send-messages');
 
 	return useQuery<OutboundProvidersResponse, Error, TData>({

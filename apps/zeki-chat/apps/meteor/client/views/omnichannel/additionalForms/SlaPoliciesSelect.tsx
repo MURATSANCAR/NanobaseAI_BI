@@ -3,7 +3,7 @@ import type { SelectOption } from '@rocket.chat/fuselage';
 import { Field, FieldLabel, FieldRow, Select } from '@rocket.chat/fuselage';
 import { useId, useMemo } from 'react';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 type SlaPoliciesSelectProps = {
 	value: string;
@@ -13,7 +13,7 @@ type SlaPoliciesSelectProps = {
 };
 
 export const SlaPoliciesSelect = ({ value, label, options, onChange }: SlaPoliciesSelectProps) => {
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const optionsSelect = useMemo<SelectOption[]>(() => options?.map((option) => [option._id, option.name]), [options]);
 	const fieldId = useId();
 

@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import type { BusinessHoursFormData } from '../businessHours/BusinessHoursForm';
 import AutoCompleteDepartmentMultiple from '../components/AutoCompleteDepartmentMultiple';
 
@@ -14,7 +14,7 @@ const BusinessHoursMultiple = ({ className }: { className?: ComponentProps<typeo
 		control,
 		formState: { errors },
 	} = useFormContext<BusinessHoursFormData>();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	const enabledField = useId();
 	const nameField = useId();

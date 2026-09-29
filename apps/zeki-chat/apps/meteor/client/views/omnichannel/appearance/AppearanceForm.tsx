@@ -19,11 +19,11 @@ import { useTranslation } from 'react-i18next';
 
 import AppearanceFieldLabel from './AppearanceFieldLabel';
 import MarkdownText from '../../../components/MarkdownText';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const AppearanceForm = () => {
 	const { t } = useTranslation();
-	const { data: isEnterprise = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: isEnterprise = false } = useHasCapability('livechat-enterprise');
 
 	const { control, watch } = useFormContext();
 	const { Livechat_enable_message_character_limit } = watch();

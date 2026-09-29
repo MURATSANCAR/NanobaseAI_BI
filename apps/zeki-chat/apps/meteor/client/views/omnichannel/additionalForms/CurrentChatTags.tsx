@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import AutoCompleteTagsMultiple from '../tags/AutoCompleteTagsMultiple';
 
 type CurrentChatTagsProps = Pick<ComponentProps<typeof AutoCompleteTagsMultiple>, 'id' | 'aria-labelledby'> & {
@@ -11,7 +11,7 @@ type CurrentChatTagsProps = Pick<ComponentProps<typeof AutoCompleteTagsMultiple>
 };
 
 const CurrentChatTags = ({ value, handler, department, viewAll, ...props }: CurrentChatTagsProps) => {
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	if (!hasLicense) {
 		return null;

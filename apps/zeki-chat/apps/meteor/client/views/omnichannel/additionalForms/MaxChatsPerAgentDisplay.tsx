@@ -1,11 +1,11 @@
 import { InfoPanelLabel, InfoPanelText } from '@rocket.chat/ui-client';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 
 const MaxChatsPerAgentDisplay = ({ maxNumberSimultaneousChat = 0 }) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	if (!hasLicense) {
 		return null;

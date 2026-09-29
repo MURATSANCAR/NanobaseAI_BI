@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 
 import ContactInfoHistoryItem from './ContactInfoHistoryItem';
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import { useOmnichannelSource } from '../../../hooks/useOmnichannelSource';
 import AdvancedContactModal from '../../AdvancedContactModal';
 
@@ -27,7 +27,7 @@ const ContactInfoHistory = ({ contact, setChatId }: ContactInfoHistoryProps) => 
 	const setModal = useSetModal();
 	const [storedType, setStoredType] = useLocalStorage<string>('contact-history-type', 'all');
 
-	const { data: hasLicense = false } = useHasLicenseModule('contact-id-verification');
+	const { data: hasLicense = false } = useHasCapability('contact-id-verification');
 	const type = isFilterBlocked(hasLicense, storedType) ? 'all' : storedType;
 
 	const { getSourceName } = useOmnichannelSource();

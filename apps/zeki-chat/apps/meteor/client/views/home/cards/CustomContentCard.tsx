@@ -3,7 +3,6 @@ import { useRole, useSettingSetValue, useSetting, useToastMessageDispatch, useRo
 import type { ComponentProps, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useIsEnterprise } from '../../../hooks/useIsEnterprise';
 import CustomHomepageContent from '../CustomHomePageContent';
 
 const CustomContentCard = (props: Omit<ComponentProps<typeof Card>, 'type'>): ReactElement | null => {
@@ -11,7 +10,6 @@ const CustomContentCard = (props: Omit<ComponentProps<typeof Card>, 'type'>): Re
 	const dispatchToastMessage = useToastMessageDispatch();
 	const router = useRouter();
 
-	const { data } = useIsEnterprise();
 	const isAdmin = useRole('admin');
 	const customContentBody = useSetting('Layout_Home_Body', '');
 	const isCustomContentBodyEmpty = customContentBody === '';
@@ -37,7 +35,6 @@ const CustomContentCard = (props: Omit<ComponentProps<typeof Card>, 'type'>): Re
 		}
 	};
 
-	const isEnterprise = data?.isEnterprise;
 	const willNotShowCustomContent = isCustomContentBodyEmpty || !isCustomContentVisible;
 
 	const userVisibilityTooltipText = isCustomContentVisible ? t('Now_Its_Visible_For_Everyone') : t('Now_Its_Visible_Only_For_Admins');
@@ -74,8 +71,8 @@ const CustomContentCard = (props: Omit<ComponentProps<typeof Card>, 'type'>): Re
 					</Button>
 					<Button
 						icon='lightning'
-						disabled={willNotShowCustomContent || !isEnterprise}
-						title={!isEnterprise ? t('Premium_only') : customContentOnlyTooltipText}
+						disabled={willNotShowCustomContent}
+						title={customContentOnlyTooltipText}
 						onClick={handleOnlyShowCustomContent}
 						medium
 					>

@@ -8,7 +8,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { mapLivechatContactConflicts } from '../../../../../lib/mapLivechatContactConflicts';
-import { useHasLicenseModule } from '../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../hooks/useHasCapability';
 import { ContactManagerInput } from '../../additionalForms';
 import { useCustomFieldsMetadata } from '../../directory/hooks/useCustomFieldsMetadata';
 import { useReviewContact } from '../hooks/useReviewContact';
@@ -26,7 +26,7 @@ type HandleConflictsPayload = {
 
 const ReviewContactModal = ({ contact, onCancel }: ReviewContactModalProps) => {
 	const { t } = useTranslation();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	const {
 		control,

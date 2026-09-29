@@ -26,7 +26,7 @@ import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import Tags from '../components/Tags';
 
 type CloseChatModalFormData = {
@@ -75,7 +75,7 @@ const CloseChatModal = ({ department, visitorEmail, onCancel, onConfirm }: Close
 
 	const userTranscriptEmail = useUserPreference<boolean>('omnichannelTranscriptEmail') ?? false;
 	const userTranscriptPDF = useUserPreference<boolean>('omnichannelTranscriptPDF') ?? false;
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 	const transcriptPDFPermission = usePermission('request-pdf-transcript');
 	const transcriptEmailPermission = usePermission('send-omnichannel-chat-transcript');
 

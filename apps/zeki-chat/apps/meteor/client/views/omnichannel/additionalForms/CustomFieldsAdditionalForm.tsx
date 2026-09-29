@@ -5,7 +5,7 @@ import { useId, useMemo } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import type { EditCustomFieldsFormData } from '../customFields/EditCustomFields';
 
 const checkIsOptionsValid = (value: string) => {
@@ -23,7 +23,7 @@ const CustomFieldsAdditionalForm = ({ className }: { className?: ComponentProps<
 		watch,
 		formState: { errors },
 	} = useFormContext<EditCustomFieldsFormData>();
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	const { visibility, type } = watch();
 

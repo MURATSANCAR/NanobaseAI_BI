@@ -25,7 +25,7 @@ import { useCreateContact } from './hooks/useCreateContact';
 import { useEditContact } from './hooks/useEditContact';
 import { hasAtLeastOnePermission } from '../../../../app/authorization/client';
 import { useFormSubmitWithDirtyCheck } from '../../../hooks/useFormSubmitWithDirtyCheck';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import { omnichannelQueryKeys } from '../../../lib/queryKeys';
 import { ContactManagerInput } from '../additionalForms';
 import { useCustomFieldsMetadata } from '../directory/hooks/useCustomFieldsMetadata';
@@ -74,7 +74,7 @@ const EditContactInfo = ({ contactData, onClose, onCancel }: ContactNewEditProps
 	const { t } = useTranslation();
 	const setModal = useSetModal();
 
-	const { data: hasLicense = false } = useHasLicenseModule('contact-id-verification');
+	const { data: hasLicense = false } = useHasCapability('contact-id-verification');
 	const canViewCustomFields = hasAtLeastOnePermission(['view-livechat-room-customfields', 'edit-livechat-room-customfields']);
 
 	const editContact = useEditContact(['current-contacts']);

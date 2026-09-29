@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 
 import { QuickActionsEnum, type QuickActionsActionConfig } from '../../views/room/lib/quickActions';
-import { useHasLicenseModule } from '../useHasLicenseModule';
+import { useHasCapability } from '../useHasCapability';
 
 export const useOnHoldChatQuickAction = (): QuickActionsActionConfig | undefined => {
-	const { data: licensed = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: licensed = false } = useHasCapability('livechat-enterprise');
 
 	return useMemo(() => {
 		if (!licensed) {

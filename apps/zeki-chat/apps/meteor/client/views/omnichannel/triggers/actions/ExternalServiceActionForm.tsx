@@ -4,7 +4,7 @@ import type { Control, UseFormTrigger } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../hooks/useHasCapability';
 import type { TriggersPayload } from '../EditTrigger';
 import { useFieldError } from '../hooks';
 import { ActionExternalServiceUrl } from './ActionExternalServiceUrl';
@@ -19,7 +19,7 @@ type SendMessageActionFormType = ComponentProps<typeof Field> & {
 export const ExternalServiceActionForm = ({ control, trigger, index, ...props }: SendMessageActionFormType) => {
 	const { t } = useTranslation();
 
-	const { data: hasLicense = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasLicense = false } = useHasCapability('livechat-enterprise');
 
 	const timeoutFieldId = useId();
 	const timeoutFieldName = `actions.${index}.params.serviceTimeout` as const;

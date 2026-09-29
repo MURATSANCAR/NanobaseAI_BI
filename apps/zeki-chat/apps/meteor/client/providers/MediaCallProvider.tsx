@@ -4,14 +4,14 @@ import { MediaCallProvider as MediaCallProviderBase, MediaCallInstanceContext } 
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 
-import { useHasLicenseModule } from '../hooks/useHasLicenseModule';
+import { useHasCapability } from '../hooks/useHasCapability';
 
 const MediaCallProvider = ({ children }: { children: ReactNode }) => {
 	const localOnly = useSetting('Zeki_Local_Only', true);
 	const canMakeInternalCall = usePermission('allow-internal-voice-calls');
 	const canMakeExternalCall = usePermission('allow-external-voice-calls');
 
-	const { data: hasModule = false } = useHasLicenseModule('teams-voip');
+	const { data: hasModule = false } = useHasCapability('teams-voip');
 
 	const unauthorizedContextValue = useMemo(
 		() => ({

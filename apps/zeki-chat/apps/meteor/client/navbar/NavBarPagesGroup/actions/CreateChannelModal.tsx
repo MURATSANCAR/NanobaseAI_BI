@@ -30,7 +30,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { useEncryptedRoomDescription } from './useEncryptedRoomDescription';
 import UserAutoCompleteMultiple from '../../../components/UserAutoCompleteMultiple';
 import { useCreateChannelTypePermission } from '../../../hooks/useCreateChannelTypePermission';
-import { useHasLicenseModule } from '../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../hooks/useHasCapability';
 import { useIsFederationEnabled } from '../../../hooks/useIsFederationEnabled';
 import { useGoToRoom } from '../../../views/room/hooks/useGoToRoom';
 
@@ -83,7 +83,7 @@ const CreateChannelModal = ({ teamId = '', mainRoom, onClose, reload }: CreateCh
 	const channelNameRegex = useMemo(() => new RegExp(`^${namesValidation}$`), [namesValidation]);
 
 	const federationEnabled = useIsFederationEnabled();
-	const { data: federationModule = false } = useHasLicenseModule('federation');
+	const { data: federationModule = false } = useHasCapability('federation');
 	const federationAccessPermission = usePermission('access-federation');
 	const canUseFederation = federationModule && federationEnabled && federationAccessPermission;
 	const federationFieldHint = getFederationHintKey(federationModule, federationEnabled, federationAccessPermission);

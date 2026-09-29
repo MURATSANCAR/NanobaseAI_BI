@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { useHasLicenseModule } from '../../../../../hooks/useHasLicenseModule';
+import { useHasCapability } from '../../../../../hooks/useHasCapability';
 import {
 	sidePanelFiltersConfig,
 	useRedirectToDefaultTab,
@@ -14,7 +14,7 @@ const SidePanelOnHold = () => {
 	const rooms = useSidePanelRoomsListTab('onHold');
 	const [unreadOnly, toggleUnreadOnly] = useUnreadOnlyToggle();
 
-	const { data: hasEEModule = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: hasEEModule = false } = useHasCapability('livechat-enterprise');
 	useRedirectToDefaultTab(!hasEEModule);
 
 	if (!hasEEModule) {

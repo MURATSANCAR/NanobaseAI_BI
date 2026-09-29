@@ -17,7 +17,7 @@ import { getOmniChatSortQuery } from '../../app/livechat/lib/inquiries';
 import { ClientLogger } from '../../lib/ClientLogger';
 import type { OmnichannelContextValue } from '../contexts/OmnichannelContext';
 import { OmnichannelContext } from '../contexts/OmnichannelContext';
-import { useHasLicenseModule } from '../hooks/useHasLicenseModule';
+import { useHasCapability } from '../hooks/useHasCapability';
 import { useLivechatInquiryStore } from '../hooks/useLivechatInquiryStore';
 import { useOmnichannelContinuousSoundNotification } from '../hooks/useOmnichannelContinuousSoundNotification';
 import { useShouldPreventAction } from '../hooks/useShouldPreventAction';
@@ -65,7 +65,7 @@ const OmnichannelProvider = ({ children }: OmnichannelProviderProps) => {
 	const [routeConfig, setRouteConfig] = useSafely(useState<OmichannelRoutingConfig | undefined>(undefined));
 
 	const accessible = hasAccess && omniChannelEnabled;
-	const { data: isEnterprise = false } = useHasLicenseModule('livechat-enterprise');
+	const { data: isEnterprise = false } = useHasCapability('livechat-enterprise');
 
 	const getPriorities = useEndpoint('GET', '/v1/livechat/priorities');
 	const subscribe = useStream('notify-logged');
