@@ -79,7 +79,7 @@ class Service:
                 M.list_actions(engine, tenant), data["logo"]["daily"], kesim))
             info["health"] = self._health(engine, tenant, data, st)
             info["ms"] = int((time.monotonic() - t0) * 1000)
-            M.meta_set(engine, tenant, "run", {**info, "sorgular": reads})
+            M.meta_set(engine, tenant, "run", {**info, "liste": M.LIST_VERSION, "sorgular": reads})
             return {"ok": True, **{k: v for k, v in info.items() if k != "firms"}}
         finally:
             self._run.release()
@@ -91,6 +91,7 @@ class Service:
         if asked["decided"]:                       # kararlar bulgu metnine yansısın
             found, ask, info = M.health_findings(data, st, M.decisions(engine, tenant), tenant)
         stats = M.sync_findings(engine, tenant, found, info["tarih"])
+        stats["arama_dolduruldu"] = M.backfill_finding_search(engine, tenant)
         prev = M.save_score(engine, tenant, info)
         new_sec = [f for f in found if f["tur"] == "guvenlik"]
         mail = "yok"
@@ -105,7 +106,8 @@ class Service:
             mail = self.send_mail("Yeni CRM güvenlik bulgusu",
                                   f"Bu gece {new_security} yeni güvenlik bulgusu açıldı (ayrıntı yalnız yetkili ekranda).\n\n"
                                   + self.link("/musteri-iliskileri/veri-sagligi"), st["crmAdminRecipients"])
-        M.meta_set(engine, tenant, "health", {**info, "sync": stats, "zeki": asked, "guvenlik": len(new_sec)})
+        M.meta_set(engine, tenant, "health", {**info, "sync": stats, "zeki": asked, "guvenlik": len(new_sec),
+                                              "liste": M.LIST_VERSION})
         return {"puan": info["puan"], "onceki": prev, **stats, "zeki": asked, "mail": mail}
 
     @staticmethod
@@ -433,20 +435,32 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def musteri_overview(request: Request, temsilci: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         owner = owner_of(user, temsilci)
-        rows = M.account_rows(engine, tenant, owner)
-        codes = None if owner is None else {r["cari_kodu"] for r in rows}
-        acts = M.list_actions(engine, tenant, codes=codes, person=user if owner == user else "")
-        hist = M.score_history(engine, tenant, 400)
         run = M.meta_get(engine, tenant, "run")
-        out = M.overview(rows, acts, hist[-1] if hist else None)
+        hist = M.score_history(engine, tenant, 400)
+        stmts = None
+        if M.list_ready(run):
+            # Veritabanında toplanır: kanal sayımları, ilk 10 bakılacak ve sayısı (bütün cariler belleğe alınmaz).
+            codes = None if owner is None else M.owner_codes(engine, tenant, owner)
+            acts = M.list_actions(engine, tenant, codes=codes, person=user if owner == user else "")
+            out, stmts = M.overview_sql(engine, tenant, owner, acts, hist[-1] if hist else None)
+        else:
+            rows = M.account_rows(engine, tenant, owner)
+            codes = None if owner is None else {r["cari_kodu"] for r in rows}
+            acts = M.list_actions(engine, tenant, codes=codes, person=user if owner == user else "")
+            out = M.overview(rows, acts, hist[-1] if hist else None)
         out = {**out, "asof": run.get("asof"), "kesim": run.get("kesim"), "kapsam": "herkes" if owner is None else owner}
-        return PV.bagla(out, lambda: K.for_overview(engine, tenant, owner, settings(), out))
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, owner, settings(), out, stmts))
 
     @app.get(f"{P}/accounts")
     def musteri_accounts(request: Request, kanal: str = "", bolge: str = "", temsilci: str = "", risk: str = "",
                          segment: str = "", q: str = "", sort: str = "oncelik", p: int = 1, size: int = 50) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         owner = owner_of(user, temsilci)
+        if M.list_ready(M.meta_get(engine, tenant, "run")):
+            # Süzgeç, sıra, sayfa ve toplamlar veritabanında; yalnız sayfanın satırları okunur.
+            out, stmts = M.accounts_page(engine, tenant, owner, kanal=kanal, bolge=bolge, risk_=risk, q=q, segment=segment,
+                                         sort=sort, p=p, size=size)
+            return PV.bagla(out, lambda: K.for_accounts(engine, tenant, owner, settings(), out, stmts))
         rows = M.filter_rows(M.account_rows(engine, tenant, owner), kanal=kanal, bolge=bolge,
                              risk_=risk, q=q, segment=segment)
         rows.sort(key=M.SORTS.get(sort, M.SORTS["oncelik"]))
@@ -512,7 +526,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def musteri_actions(request: Request, durum: str = "", temsilci: str = "", musteri: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         owner = owner_of(user, temsilci)
-        codes = None if owner is None else {r["cari_kodu"] for r in M.account_rows(engine, tenant, owner)}
+        codes = None if owner is None else M.owner_codes(engine, tenant, owner)
         rows = M.list_actions(engine, tenant, codes=codes, code=musteri, durum=durum, person=user if owner == user else "")
         out = {"items": [M._action_out(a) for a in rows], "etki": M.action_effect(rows)}
         return PV.bagla(out, lambda: K.for_actions(engine, tenant, durum, musteri, out))
@@ -547,15 +561,24 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if tur == "guvenlik" and not security(user):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Güvenlik bulgularını görme yetkiniz yok."})
         st = settings()
-        rows = M.list_findings(engine, tenant, tur=tur, durum=durum, onem=onem, q=q, security=security(user))
-        items, pg = page([M._finding_out(r, st["crmUrl"]) for r in rows], p, size)
-        hist = M.score_history(engine, tenant, 400)
         info = M.meta_get(engine, tenant, "health")
+        stmts = None
+        if M.list_ready(info):
+            # Süzgeç, arama, sıra ve sayfa veritabanında; yalnız sayfanın bulguları okunur.
+            rows, total, stmts = M.findings_page(engine, tenant, tur=tur, durum=durum, onem=onem, q=q,
+                                                 security=security(user), p=p, size=size)
+            n = max(1, min(1000, int(size or 50)))
+            items, pg = [M._finding_out(r, st["crmUrl"]) for r in rows], {
+                "page": max(1, int(p or 1)), "size": n, "total": total, "pages": max(1, -(-total // n))}
+        else:
+            rows = M.list_findings(engine, tenant, tur=tur, durum=durum, onem=onem, q=q, security=security(user))
+            items, pg = page([M._finding_out(r, st["crmUrl"]) for r in rows], p, size)
+        hist = M.score_history(engine, tenant, 400)
         out = {"items": items, **pg, "sayilar": M.finding_counts(engine, tenant, security(user)),
                "puan": hist[-1] if hist else None, "onceki": hist[-2] if len(hist) > 1 else None,
                "veriDurumu": info.get("veriDurumu"), "crmKanal": info.get("crmKanal"), "kisi": info.get("kisi"),
                "zeki": info.get("zeki"), "tarih": info.get("tarih"), "warnings": (M.meta_get(engine, tenant, "run").get("warnings") or [])}
-        return PV.bagla(out, lambda: K.for_health(engine, tenant, tur, durum, onem, security(user), out))
+        return PV.bagla(out, lambda: K.for_health(engine, tenant, tur, durum, onem, security(user), out, stmts))
 
     @app.get(f"{P}/health/export.csv")
     def musteri_health_csv(request: Request, tur: str = "", durum: str = "acik-hepsi", onem: str = "", q: str = "") -> Response:

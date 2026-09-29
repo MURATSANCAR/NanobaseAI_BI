@@ -271,9 +271,12 @@ def musteri(heavy: bool) -> None:
         return
     k = contract("musteri /overview", o, K.NOT_RAKAM)
     got = run_all("musteri /overview", k, heavy)
-    rows = got.get("musteri.cariler")
+    # Liste kolonları hazırsa özet veritabanında kanal başına toplanır (musteri.kanallar); değilse cari satırları.
+    rows, col = got.get("musteri.kanallar"), "net12"
+    if rows is None:
+        rows, col = got.get("musteri.cariler"), "net_12ay"
     if rows is not None:
-        total = sum(num(r.get("net_12ay")) for r in rows)
+        total = sum(num(r.get(col)) for r in rows)
         check("R musteri: son 12 ay net KPI = cari satırları toplamı", abs(total - num((o.get("kpi") or {}).get("net12"))) < 1,
               f"tablo {total:,.2f} · kart {(o.get('kpi') or {}).get('net12')}")
     for path in ("/api/v1/musteri/meta", "/api/v1/musteri/accounts", "/api/v1/musteri/actions", "/api/v1/musteri/health",

@@ -104,3 +104,33 @@ def test_every_customer_screen_cites_its_queries(engine, monkeypatch):  # noqa: 
     assert k["sources"]["musteri.cariler.cari"]["origin"]
     assert "Kayıp riski" in k["formulas"]["risk"]["text"]
     assert "sorgular" not in c.get("/api/v1/musteri/meta").json()["run"]
+
+
+def test_database_path_gives_the_same_numbers_as_the_in_memory_path(engine, monkeypatch):  # noqa: F811
+    """Hız (2026-09-29): gece turu liste kolonlarını yazınca özet, cari listesi ve veri sağlığı veritabanında toplar/süzer/
+    sayfalar. Aynı veriyle eski yol (satırlar belleğe) ve yeni yol aynı cevabı verir; sorgu bilgisi çalışan ifadeyi gösterir."""
+    c = _app(engine, monkeypatch)
+    assert c.post("/api/v1/musteri/run-due?tur=gece").status_code == 200
+    assert M.list_ready(M.meta_get(engine, T, "run")) and M.list_ready(M.meta_get(engine, T, "health"))
+    paths = ["/api/v1/musteri/overview", "/api/v1/musteri/overview?temsilci=ayseb", "/api/v1/musteri/accounts",
+             "/api/v1/musteri/accounts?sort=ad&size=2&p=2", "/api/v1/musteri/accounts?q=kitab&risk=riskli",
+             "/api/v1/musteri/accounts?kanal=BAYI&sort=puan", "/api/v1/musteri/health",
+             "/api/v1/musteri/health?durum=&q=a&size=2&p=2", "/api/v1/musteri/actions?temsilci=ayseb"]
+    new = {p: c.get(p).json() for p in paths}
+    for p in paths:
+        _check(new[p])
+    src_of = lambda p: set(new[p]["kaynaklar"]["sources"])  # noqa: E731
+    assert {"musteri.kanallar", "musteri.bakilacak", "musteri.bakilacak_sayi"} <= src_of("/api/v1/musteri/overview")
+    assert {"musteri.cariler", "musteri.cariler_toplam"} <= src_of("/api/v1/musteri/accounts")
+    assert "LIMIT" in new["/api/v1/musteri/accounts"]["kaynaklar"]["sources"]["musteri.cariler"]["sql"].upper()
+    assert {"musteri.bulgular", "musteri.bulgular_sayi"} <= src_of("/api/v1/musteri/health")
+    for key in ("run", "health"):                                             # liste kolonlarından önceki tur kaydı
+        v = M.meta_get(engine, T, key)
+        v.pop("_at", None)
+        v.pop("liste", None)
+        M.meta_set(engine, T, key, v)
+    for p in paths:
+        old = c.get(p).json()
+        _check(old)
+        assert {k: v for k, v in old.items() if k != "kaynaklar"} == {k: v for k, v in new[p].items() if k != "kaynaklar"}, p
+    assert "musteri.kanallar" not in c.get("/api/v1/musteri/overview").json()["kaynaklar"]["sources"]

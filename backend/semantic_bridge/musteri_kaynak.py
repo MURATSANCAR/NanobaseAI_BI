@@ -1,7 +1,9 @@
 """M38 Müşteri ilişkileri: ekrandaki her rakamın sorgu bilgisi (ortak sözleşme `provenance.py`).
 
 Ekranlar gece turunun yazdığı cari, aksiyon, bulgu, puan ve segment tablolarından okur (`semantic_musteri_*`); gösterilen
-SQL uçta çalışan ifadedir (`musteri.*_stmt`). Bu tabloları dolduran Logo/CRM sorguları gece turunda ÇALIŞAN metindir
+SQL uçta çalışan ifadedir (`musteri.*_stmt`). Özet, cari listesi ve veri sağlığı listesi (liste kolonları hazırsa) toplamayı,
+süzgeci, sırayı ve sayfayı veritabanında yapar: o zaman gösterilen SQL `overview_sql`/`accounts_page`/`findings_page`'in
+çalıştırdığı ifadelerdir. Bu tabloları dolduran Logo/CRM sorguları gece turunda ÇALIŞAN metindir
 (firma kopyası, pencere, şema yerinde): tur kaydında (`semantic_musteri_meta` «run».sorgular) saklanır ve köken olarak
 gösterilir. Cari ayrıntısı ve aylık grafik Logo/CRM'i canlı okur (5 dk bellek): o istekte çalışan metin gösterilir.
 Değer, kayıp riski, segment, aksiyon etkisi ve veri sağlığı puanı Python hesabıdır; formülü girdileriyle yazılır.
@@ -60,11 +62,15 @@ class _Ctx(FK._Ctx):
                                    "Gece turunda çalıştı; cari, bulgu ve segment tablolarını bu okuma doldurdu.")
         return self._gece
 
+    def cari_origin(self) -> list[str]:
+        """Cari satırlarını dolduran gece turu okumaları (köken)."""
+        return self.g("crm.kullanicilar", "crm.cariler", "crm.son_siparis", "crm.ziyaret", "logo.donem", "logo.verisonu",
+                      "logo.cariler", "logo.gunluk_satis")
+
     def cariler(self, owner: Optional[str] = None, code: Optional[str] = None, sid: str = "musteri.cariler") -> str:
         return self.portal(sid, "Cari satırları (değer, risk, segment)", M.accounts_stmt(self.tenant, owner, code),
                            "Gece turunda yazılır: temsilci ataması, 12 ay değer, olağan alım aralığı, kayıp riski, segment.",
-                           origin=self.g("crm.kullanicilar", "crm.cariler", "crm.son_siparis", "crm.ziyaret", "logo.donem",
-                                         "logo.verisonu", "logo.cariler", "logo.gunluk_satis"))
+                           origin=self.cari_origin())
 
     def aksiyonlar(self, code: str = "", durum: str = "", sid: str = "musteri.aksiyon") -> str:
         return self.portal(sid, "Müşteri aksiyonları", M.actions_stmt(self.tenant, code, durum),
@@ -110,31 +116,59 @@ def for_meta(engine: Any, tenant: str, user: str, st: dict[str, Any], out: dict[
     return x.k
 
 
-def for_overview(engine: Any, tenant: str, owner: Optional[str], st: dict[str, Any], out: dict[str, Any]) -> P.Kaynaklar:
+def for_overview(engine: Any, tenant: str, owner: Optional[str], st: dict[str, Any], out: dict[str, Any],
+                 stmts: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`stmts` verildiyse (liste kolonları hazır) özet veritabanında toplanmıştır: gösterilen SQL o üç ifadedir."""
     x = _Ctx(engine, tenant, st)
     _ok(x)
-    ca = x.cariler(owner)
+    if stmts:
+        origin = x.cari_origin()
+        kan = x.portal("musteri.kanallar", "Kanal başına cari sayımları ve değer", stmts["kanallar"],
+                       "Gece turunun cari satırlarından kanal (Logo özel kod 2) başına: cari, aktif, son 12 ay ve bu yıl net "
+                       "toplamı, yüksek ve kayıp riskli cari sayısı (veritabanında toplanır).", origin=origin)
+        hot = x.portal("musteri.bakilacak", "Bakılacak ilk 10 cari", stmts["bakilacak"],
+                       "Düzeyi yüksek ya da kayıp olan cariler, risk puanı × risk altındaki değer sırasıyla ilk 10.",
+                       origin=origin)
+        say = x.portal("musteri.bakilacak_sayi", "Bakılacak cari sayısı", stmts["bakilacak_sayi"],
+                       "Düzeyi yüksek ya da kayıp olan cari sayısı.", origin=origin)
+        ca, kan_in, bak_in = hot, [kan], [say, hot]
+    else:
+        ca = x.cariler(owner)
+        kan_in, bak_in = [ca], [ca]
     kpi = x.h("ozet", "Özet: cari = kapsamdaki cari satırı; aktif = son 12 ayda net alımı ya da faturası olan; son 12 ay ve bu yıl "
               "net = satırların toplamı; riskli = düzeyi yüksek, kayıp = düzeyi kayıp olan cari sayısı. " + F_DEGER,
-              [ca] + x.g("logo.gunluk_satis"))
+              kan_in + x.g("logo.gunluk_satis"))
     f = {"kpi": kpi, "kpi.saglik": x.h("saglik", F_SAGLIK, [x.puanlar()]), "kanallar": x.h(
-        "kanal", "Kanal (Logo özel kod 2) başına aynı sayımlar: aktif cari, son 12 ay ve bu yıl net, riskli, kayıp.", [ca]),
+        "kanal", "Kanal (Logo özel kod 2) başına aynı sayımlar: aktif cari, son 12 ay ve bu yıl net, riskli, kayıp.", kan_in),
          "bakilacakToplam": x.h("bakilacak", "Bakılacak = düzeyi yüksek ya da kayıp olan cariler; sıra risk puanı × risk "
-                                "altındaki değer (son ve önceki 12 ayın büyüğü); ilk 10 gösterilir, toplam yazılır.", [ca]),
+                                "altındaki değer (son ve önceki 12 ayın büyüğü); ilk 10 gösterilir, toplam yazılır.", bak_in),
          "aksiyon": x.h("etki", F_ETKI, [x.aksiyonlar()] + x.g("logo.gunluk_satis"))}
     f.update(x.card_fields("bakilacak[]", ca))
     x.k.alanlar(f)
     return x.k
 
 
-def for_accounts(engine: Any, tenant: str, owner: Optional[str], st: dict[str, Any], out: dict[str, Any]) -> P.Kaynaklar:
+F_LISTE = ("Listede = süzgeçten (kanal, bölge, temsilci, risk, segment, arama) geçen cari; sayfa sayfa gelir (toplam her zaman "
+           "yazılır). Toplam net = süzgeçteki carilerin son 12 ay net alımı; riskli = yüksek ya da kayıp düzeyindeki cari sayısı.")
+
+
+def for_accounts(engine: Any, tenant: str, owner: Optional[str], st: dict[str, Any], out: dict[str, Any],
+                 stmts: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`stmts` verildiyse süzgeç, sıra ve sayfa veritabanında koştu: gösterilen SQL sayfa ve toplam ifadeleridir."""
     x = _Ctx(engine, tenant, st)
     _ok(x)
-    ca = x.cariler(owner)
+    if stmts:
+        origin = x.cari_origin()
+        ca = x.portal("musteri.cariler", "Cari satırları (bu sayfa)", stmts["sayfa"],
+                      "Gece turunun cari satırları; süzgeç, sıra ve sayfa veritabanında.", origin=origin)
+        tot = x.portal("musteri.cariler_toplam", "Süzgeçteki cari sayısı ve toplamlar", stmts["toplam"],
+                       "Süzgeçten geçen cari sayısı, son 12 ay net toplamı ve riskli cari sayısı.", origin=origin)
+        ins = [tot, ca]
+    else:
+        ca = x.cariler(owner)
+        ins = [ca]
     f = x.card_fields("items[]", ca)
-    f["total"] = x.h("liste", "Listede = süzgeçten (kanal, bölge, temsilci, risk, segment, arama) geçen cari; sayfa sayfa gelir "
-                     "(toplam her zaman yazılır). Toplam net = süzgeçteki carilerin son 12 ay net alımı; riskli = yüksek ya da "
-                     "kayıp düzeyindeki cari sayısı.", [ca])
+    f["total"] = x.h("liste", F_LISTE, ins)
     f["toplam"] = f["total"]
     x.k.alanlar(f)
     return x.k
@@ -198,18 +232,27 @@ def for_my_portfolio(engine: Any, tenant: str, user: str, st: dict[str, Any], ou
     return x.k
 
 
-def for_health(engine: Any, tenant: str, tur: str, durum: str, onem: str, security: bool, out: dict[str, Any]) -> P.Kaynaklar:
+def for_health(engine: Any, tenant: str, tur: str, durum: str, onem: str, security: bool, out: dict[str, Any],
+               stmts: Optional[dict[str, Any]] = None) -> P.Kaynaklar:
+    """`stmts` verildiyse süzgeç, arama, sıra ve sayfa veritabanında koştu: gösterilen SQL sayfa ve sayım ifadeleridir."""
     x = _Ctx(engine, tenant)
     _ok(x)
-    fi = x.portal("musteri.bulgular", "Veri sağlığı bulguları", M.findings_stmt(tenant, tur, durum, onem, security),
-                  "Gece turunda CRM okumasından; işaretler elle (CRM'de düzeltme insanın).",
-                  origin=x.g("crm.cari_saglik", "crm.tum_kullanicilar", "crm.son_siparis", "crm.kisiler", "crm.kampanya",
-                             "crm.guvenlik", "logo.cari_kodlari"))
+    origin = x.g("crm.cari_saglik", "crm.tum_kullanicilar", "crm.son_siparis", "crm.kisiler", "crm.kampanya", "crm.guvenlik",
+                 "logo.cari_kodlari")
+    desc = "Gece turunda CRM okumasından; işaretler elle (CRM'de düzeltme insanın)."
+    if stmts:
+        fi = x.portal("musteri.bulgular", "Veri sağlığı bulguları (bu sayfa)", stmts["sayfa"],
+                      desc + " Süzgeç, arama, sıra ve sayfa veritabanında.", origin=origin)
+        total = x.portal("musteri.bulgular_sayi", "Süzgeçteki bulgu sayısı", stmts["toplam"], desc, origin=origin)
+    else:
+        fi = x.portal("musteri.bulgular", "Veri sağlığı bulguları", M.findings_stmt(tenant, tur, durum, onem, security),
+                      desc, origin=origin)
+        total = fi
     sag = x.h("saglik", F_SAGLIK, [x.puanlar()])
     info = x.portal("musteri.saglik_kaydi", "Veri sağlığı tur kaydı", M.meta_stmt(tenant, "health"),
                     "Kişi kaydı veri durumu dağılımı, CRM kanal dağılımı, kişi sayısı, Zeki AI kararları.",
                     origin=x.g("crm.kisiler", "crm.cari_saglik"))
-    x.k.alanlar({"items": fi, "total": fi, "sayilar": x.portal("musteri.bulgu_sayilari", "Bulgu türü × durum",
+    x.k.alanlar({"items": fi, "total": total, "sayilar": x.portal("musteri.bulgu_sayilari", "Bulgu türü × durum",
                                                                M.finding_counts_stmt(tenant), "Bulgu tablosundan.", origin=[fi]),
                  "puan": sag, "onceki": sag, "veriDurumu": info, "crmKanal": info, "kisi": info, "zeki": info})
     return x.k

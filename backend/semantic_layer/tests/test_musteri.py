@@ -370,6 +370,113 @@ def test_monthly_series_fills_gaps():
     assert [x["ay"] for x in s] == ["2026-06", "2026-07", "2026-08"] and s[0]["net"] == 0.0
 
 
+# ------------------------------------------------------------------ hız: süzgeç/sıra/sayfa veritabanında (2026-09-29)
+
+
+def _synthetic(n=60, seed=7):
+    """Türkçe harf, boş değer, eşit puan, % ve _ içeren yapay cari satırları (gece turunun yazdığı kolonlarla)."""
+    import random
+
+    rnd = random.Random(seed)
+    keys = list(M.build_accounts(_data(), _st(), {}, {})[0][0].keys())
+    names = ["Işık Kitabevi", "İstanbul Dağıtım", "çınar yayın", "ALİ VELİ", None, "Kitapçı %50", "a_b kitap", "Öz Kırtasiye"]
+    rows = []
+    for i in range(n):
+        r = {k: None for k in keys}
+        r.update({"cari_kodu": f"120.{rnd.randint(0, 999):03d}.{i}", "ad": rnd.choice(names),
+                  "logo_kanal": rnd.choice(["KITAPCI", "BAYI", None, "", "Belirsiz", "DAĞITICI"]),
+                  "bolge": rnd.choice(["RİZE", "İstanbul", "izmir", None, "Rize"]), "temsilci": rnd.choice(["ayseb", None, "mehmet"]),
+                  "bireysel_mi": rnd.random() < 0.2, "risk_duzeyi": rnd.choice(list(M.LEVELS)),
+                  "risk_puani": rnd.choice([None, 0.0, 35.0, 60.0, round(rnd.uniform(0, 100), 1)]),
+                  "net_12ay": rnd.choice([None, 0.0, round(rnd.uniform(-500, 90000), 2)]),
+                  "net_onceki_12ay": rnd.choice([None, 0.0, round(rnd.uniform(0, 90000), 2)]),
+                  "net_yil": rnd.choice([None, round(rnd.uniform(-100, 50000), 2)]),
+                  "degisim": rnd.choice([None, round(rnd.uniform(-1, 2), 4)]), "fatura_12ay": rnd.choice([None, 0, rnd.randint(1, 40)]),
+                  "gun_son_alim": rnd.choice([None, 0, rnd.randint(1, 900)]),
+                  "segment": rnd.choice([None, "A · KITAPCI · Büyüyen", "B · BAYI · Düşen"]), "nedenler_json": "[]"})
+        rows.append(r)
+    return rows
+
+
+def _old_page(rows, p, size, sort, **flt):
+    """Uçtaki eski hesap (satırlar bellekte süzülür, sıralanır, sayfalanır) — birebir kopya."""
+    rows = M.filter_rows(rows, **flt)
+    rows.sort(key=M.SORTS.get(sort, M.SORTS["oncelik"]))
+    size, p = max(1, min(1000, int(size or 50))), max(1, int(p or 1))
+    return {"items": [M.card(r) for r in rows][(p - 1) * size:p * size], "page": p, "size": size, "total": len(rows),
+            "pages": max(1, -(-len(rows) // size)),
+            "toplam": {"net12": round(sum(M.num(r.get("net_12ay")) for r in rows), 2),
+                       "riskli": sum(1 for r in rows if r.get("risk_duzeyi") in ("yuksek", "kayip"))}}
+
+
+def test_accounts_page_in_the_database_equals_the_python_list(engine):
+    M.write_accounts(engine, T, _synthetic())
+    filters = [{}, {"kanal": "kitapci"}, {"kanal": "belirsiz"}, {"kanal": "dagitici"}, {"bolge": "rize"}, {"bolge": "istanbul"},
+               {"risk_": "riskli"}, {"risk_": "orta,dusuk"}, {"risk_": "yanlis"}, {"q": "kitap"}, {"q": " a"}, {"q": "%"},
+               {"q": "_"}, {"q": "IŞIK"}, {"segment": "A · KITAPCI · Büyüyen"}, {"kanal": "bayi", "q": "a"}]
+    for owner in (None, "ayseb"):
+        # Eşitlikte eski sıra satırların okunduğu sıradır; veritabanı yolu cari koduyla ayırır: aynı tabana oturt.
+        base = sorted(M.account_rows(engine, T, owner), key=lambda r: r["cari_kodu"])
+        for flt in filters:
+            for sort in list(M.SORTS) + ["yok"]:
+                for p, size in ((1, 50), (2, 7), (1, 1000)):
+                    new, _ = M.accounts_page(engine, T, owner, sort=sort, p=p, size=size, **flt)
+                    assert new == _old_page(list(base), p, size, sort, **flt), (owner, flt, sort, p, size)
+
+
+def test_overview_in_the_database_equals_the_python_overview(engine):
+    M.write_accounts(engine, T, _synthetic())
+    score = {"puan": 80.0}
+    for owner in (None, "ayseb", "kimse"):
+        base = sorted(M.account_rows(engine, T, owner), key=lambda r: r["cari_kodu"])
+        new, stmts = M.overview_sql(engine, T, owner, [], score)
+        old = M.overview(base, [], score)
+        # Aynı değerli iki kanalın sırası eski yolda satırların okunduğu sıraya bağlıydı; yenide kanal adıyla ayrılır.
+        by_name = lambda o: {**o, "kanallar": sorted(o["kanallar"], key=lambda g: g["kanal"])}  # noqa: E731
+        assert by_name(new) == by_name(old), owner
+        assert [g["net12"] for g in new["kanallar"]] == [g["net12"] for g in old["kanallar"]]
+        assert set(stmts) == {"kanallar", "bakilacak", "bakilacak_sayi"}
+    assert {k["kanal"] for k in new["kanallar"]} == set()                     # temsilcisi olmayan kapsam boş
+
+
+def test_findings_page_in_the_database_equals_the_python_list(engine):
+    import random
+
+    rnd = random.Random(3)
+    found = [{"id": f"f{rnd.randint(0, 99999):05d}-{i}", "tur": rnd.choice(list(M.HEALTH_TYPES)), "varlik": "account",
+              "kayit_id": f"k-{i}", "eslesen_kayit_id": None, "cari_kodu": rnd.choice([None, f"120.{i}"]),
+              "ad": rnd.choice([None, "Işık Kitabevi", "Şahıs carisi", "ALİ %5", "Işık Kitabevi"]), "olasilik": None,
+              "ozet": rnd.choice(["Kanal boş", "Cari kodu / Logo bağı dolu", "a_b"]), "onem": rnd.choice(["yuksek", "orta", "dusuk"])}
+             for i in range(80)]
+    M.sync_findings(engine, T, found, "2026-09-27")
+    changed = [{**f, "ad": "Yeni Ad", "ozet": "değişti"} if i % 5 == 0 else f for i, f in enumerate(found[:60])]
+    M.sync_findings(engine, T, changed, "2026-09-28")                         # 20 kapanır, 12'sinin metni değişir
+    with engine.begin() as c:
+        c.execute(M.FINDINGS.update().where(M.FINDINGS.c.id.in_([f["id"] for f in found[:10]])).values(ara=None))
+    assert M.backfill_finding_search(engine, T) == 10
+    for security in (False, True):
+        for durum in ("acik-hepsi", "", "kapandi"):
+            for tur in ("", "eksik_kanal", "guvenlik"):
+                for q in ("", "kit", "ışık", " a", "%", "_", "değişti", "K-1"):
+                    rows = M.list_findings(engine, T, tur=tur, durum=durum, q=q, security=security)
+                    for p, size in ((1, 50), (2, 9)):
+                        new, total, _ = M.findings_page(engine, T, tur=tur, durum=durum, q=q, security=security, p=p, size=size)
+                        assert total == len(rows) and new == rows[(p - 1) * size:p * size], (security, durum, tur, q, p)
+
+
+def test_list_columns_are_added_to_an_existing_table():
+    import sqlalchemy as sa
+
+    e = open_store("sqlite://").engine
+    with e.begin() as c:
+        c.execute(sa.text("CREATE TABLE semantic_musteri_accounts (tenant_id VARCHAR(80), cari_kodu VARCHAR(40), ad VARCHAR(300))"))
+    M._ready.discard(id(e))
+    M.ensure(e)
+    have = {c["name"] for c in sa.inspect(e).get_columns("semantic_musteri_accounts")}
+    assert {"ara", "kanal_ara", "bolge_ara", "ad_sira", "oncelik", "deger_riskte"} <= have
+    assert "ara" in {c["name"] for c in sa.inspect(e).get_columns("semantic_musteri_health_findings")}
+
+
 # ------------------------------------------------------------------ yetki
 
 

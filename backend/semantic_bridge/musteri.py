@@ -6,7 +6,11 @@ başına), CRM'den atama/sipariş/veri sağlığı kolonlarını okur; her müş
 (`semantic_musteri_accounts`, tam değiştirme). Veri sağlığı bulguları kalıcıdır (`semantic_musteri_health_findings`):
 koşulu kalkan bulgu kendiliğinden kapanır, «CRM'de düzeltildi» işaretlenen bulgu ertesi gece taramada yoksa doğrulanır,
 hâlâ varsa yeniden açılır. Ekranlar bu tablolardan okur; cari ayrıntısı son faturaları, kitap kırılımını, aylık alımı ve
-CRM siparişlerini canlı okur (5 dk bellek).
+CRM siparişlerini canlı okur (5 dk bellek). **Hız (2026-09-29):** gece turu cari satırına ve bulguya liste kolonlarını
+(arama metni, kanal/bölge anahtarı, ada göre sıra, öncelik) yazar; özet, cari listesi ve veri sağlığı listesi toplamayı,
+süzgeci, sırayı ve sayfayı veritabanında yapar (`overview_sql`, `accounts_page`, `findings_page`; 248 bin cari belleğe
+alınmaz). Sonuç eski bellek yoluyla (`overview`, `filter_rows`, `SORTS`, `list_findings`) birebir aynıdır; tur kaydında
+liste sürümü yoksa ekran eski yolla çalışır.
 
 **M30 ile ortak.** Temsilci ↔ cari ataması (`field_sales.assign`), CRM ↔ Logo eşleşmesi (`match_clients`), Logo takvimi
 (`logo_calendar`), kaynak bağlantısı (`Source`), ziyaretler (`semantic_saha_ziyaret`), tahsilat ve kredi göstergesi
@@ -97,6 +101,14 @@ ACCOUNTS = sa.Table(
     sa.Column("egilim", sa.String(10)),
     sa.Column("logo_kesim", sa.String(10)),
     sa.Column("hesaplandi_at", sa.DateTime(timezone=True)),
+    # Liste kolonları (hız, 2026-09-29): ekranın süzgeci ve sıralaması veritabanında koşsun diye gece turu yazar;
+    # değerler `filter_rows`/`SORTS`'un Python'da hesapladığının aynısıdır (`list_columns`).
+    sa.Column("ara", sa.Text),                           # F.fold(«ad kod bölge»): arama
+    sa.Column("kanal_ara", sa.Text),                     # F.fold(logo_kanal ya da «Belirsiz»)
+    sa.Column("bolge_ara", sa.Text),                     # F.fold(bölge)
+    sa.Column("ad_sira", sa.Text),                       # ad.lower(): ada göre sıra
+    sa.Column("oncelik", sa.Float),                      # risk puanı ÷ 100 × risk altındaki değer
+    sa.Column("deger_riskte", sa.Float),                 # at_stake: son ve önceki 12 ayın büyüğü
 )
 ACTIONS = sa.Table(
     "semantic_musteri_actions", _md,
@@ -141,6 +153,7 @@ FINDINGS = sa.Table(
     sa.Column("ilk_goruldu", sa.String(10), nullable=False),
     sa.Column("son_goruldu", sa.String(10), nullable=False),
     sa.Column("kapanis", sa.String(10)),
+    sa.Column("ara", sa.Text),                           # F.fold(«ad kod kayıt özet»): arama (hız, 2026-09-29)
 )
 SCORES = sa.Table(
     "semantic_musteri_health_score", _md,
@@ -181,11 +194,29 @@ META = sa.Table(
 )
 
 
+#: create_all var olan tabloya kolon eklemez: liste kolonları sonradan geldi (2026-09-29).
+_ADDED_COLUMNS = {"semantic_musteri_accounts": ("ara", "kanal_ara", "bolge_ara", "ad_sira", "oncelik", "deger_riskte"),
+                  "semantic_musteri_health_findings": ("ara",)}
+
+
 def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
         _md.create_all(engine, checkfirst=True)
+        insp = sa.inspect(engine)
+        for name, cols in _ADDED_COLUMNS.items():
+            have = {c["name"] for c in insp.get_columns(name)}
+            for col in cols:
+                if col in have:
+                    continue
+                ddl = _md.tables[name].c[col].type.compile(dialect=engine.dialect)
+                try:
+                    with engine.begin() as c:
+                        c.execute(sa.text(f"ALTER TABLE {name} ADD COLUMN {col} {ddl}"))
+                except Exception:  # noqa: BLE001 — başka süreç aynı anda eklediyse kolon vardır
+                    if col not in {c["name"] for c in sa.inspect(engine).get_columns(name)}:
+                        raise
         _ready.add(id(engine))
 
 
@@ -670,13 +701,23 @@ def build_accounts(data: dict[str, Any], st: dict[str, Any], visits_by_code: dic
     return out, info
 
 
+def list_columns(r: dict[str, Any]) -> dict[str, Any]:
+    """Cari satırının liste kolonları: `filter_rows` ve `SORTS`'un Python'da hesapladığı değerlerin aynısı (arama metni,
+    kanal ve bölge anahtarı, ada göre sıra, öncelik = risk puanı ÷ 100 × risk altındaki değer)."""
+    stake = at_stake(r)
+    return {"ara": F.fold(f"{r.get('ad') or ''} {r['cari_kodu']} {r.get('bolge') or ''}"),
+            "kanal_ara": F.fold(r.get("logo_kanal") or "Belirsiz"), "bolge_ara": F.fold(r.get("bolge") or ""),
+            "ad_sira": (r.get("ad") or "").lower(), "oncelik": (num(r.get("risk_puani")) / 100) * stake,
+            "deger_riskte": stake}
+
+
 def write_accounts(engine: sa.engine.Engine, tenant: str, rows: list[dict[str, Any]]) -> None:
-    """Tam değiştirme, tek işlemde (okuyan yarım liste görmez)."""
+    """Tam değiştirme, tek işlemde (okuyan yarım liste görmez). Liste kolonları aynı satırla yazılır."""
     at = _now()
     with engine.begin() as c:
         c.execute(ACCOUNTS.delete().where(ACCOUNTS.c.tenant_id == tenant))
         for i in range(0, len(rows), 1000):
-            part = [{**r, "tenant_id": tenant, "hesaplandi_at": at} for r in rows[i:i + 1000]]
+            part = [{**r, **list_columns(r), "tenant_id": tenant, "hesaplandi_at": at} for r in rows[i:i + 1000]]
             if part:
                 c.execute(ACCOUNTS.insert(), part)
 
@@ -971,6 +1012,11 @@ def health_findings(data: dict[str, Any], st: dict[str, Any], decisions: dict[st
     return out, ask, info
 
 
+def finding_search(f: Any) -> str:
+    """Bulgunun arama metni: `list_findings`'in Python'da aradığı metnin aynısı."""
+    return F.fold(f"{f.get('ad') or ''} {f.get('cari_kodu') or ''} {f['kayit_id']} {f.get('ozet') or ''}")
+
+
 def sync_findings(engine: sa.engine.Engine, tenant: str, found: list[dict[str, Any]], on: str) -> dict[str, int]:
     """Bulguları kalıcı tabloya işler. Yeni → açık. Görülen → son_goruldu; «kapandı/doğrulandı» iken yeniden görülürse
     açılır; «CRM'de düzeltildi» iken hâlâ görülürse açılır (doğrulama tutmadı). Görülmeyen açık bulgu → kendiliğinden
@@ -985,11 +1031,12 @@ def sync_findings(engine: sa.engine.Engine, tenant: str, found: list[dict[str, A
         old = cur.get(f["id"])
         vals = {k: f[k] for k in ("cari_kodu", "ad", "olasilik", "ozet", "onem")}
         if old is None:
-            ins.append({**f, "tenant_id": tenant, "durum": "acik", "ilk_goruldu": on, "son_goruldu": on})
+            ins.append({**f, "tenant_id": tenant, "durum": "acik", "ilk_goruldu": on, "son_goruldu": on,
+                        "ara": finding_search(f)})
             stats["yeni"] += 1
             continue
         u = {"b_id": f["id"], **{f"b_{k}": v for k, v in vals.items()}, "b_son": on, "b_durum": old["durum"],
-             "b_not": old.get("isaret_notu"), "b_kapanis": None}
+             "b_not": old.get("isaret_notu"), "b_kapanis": None, "b_ara": finding_search(f)}
         if old["durum"] in ("kapandi", "dogrulandi"):
             u["b_durum"] = "acik"
             stats["yeniden_acilan"] += 1
@@ -1019,11 +1066,24 @@ def sync_findings(engine: sa.engine.Engine, tenant: str, found: list[dict[str, A
             c.execute(FINDINGS.update().where(FINDINGS.c.id == sa.bindparam("b_id")).values(
                 cari_kodu=sa.bindparam("b_cari_kodu"), ad=sa.bindparam("b_ad"), olasilik=sa.bindparam("b_olasilik"),
                 ozet=sa.bindparam("b_ozet"), onem=sa.bindparam("b_onem"), son_goruldu=sa.bindparam("b_son"),
-                durum=sa.bindparam("b_durum"), isaret_notu=sa.bindparam("b_not"), kapanis=sa.bindparam("b_kapanis")), upd)
+                durum=sa.bindparam("b_durum"), isaret_notu=sa.bindparam("b_not"), kapanis=sa.bindparam("b_kapanis"),
+                ara=sa.bindparam("b_ara")), upd)
         if closes:
             c.execute(FINDINGS.update().where(FINDINGS.c.id == sa.bindparam("b_id")).values(
                 durum=sa.bindparam("b_durum"), kapanis=sa.bindparam("b_kapanis")), closes)
     return stats
+
+
+def backfill_finding_search(engine: sa.engine.Engine, tenant: str) -> int:
+    """Arama metni boş bulgular (kolon gelmeden yazılmış, o geceden beri görülmemiş kapalı kayıtlar) bir kez doldurulur."""
+    q = sa.select(FINDINGS.c.id, FINDINGS.c.ad, FINDINGS.c.cari_kodu, FINDINGS.c.kayit_id, FINDINGS.c.ozet).where(
+        FINDINGS.c.tenant_id == tenant, FINDINGS.c.ara.is_(None))
+    with engine.connect() as c:
+        upd = [{"b_id": r.id, "b_ara": finding_search(r._mapping)} for r in c.execute(q)]
+    if upd:
+        with engine.begin() as c:
+            c.execute(FINDINGS.update().where(FINDINGS.c.id == sa.bindparam("b_id")).values(ara=sa.bindparam("b_ara")), upd)
+    return len(upd)
 
 
 def save_score(engine: sa.engine.Engine, tenant: str, info: dict[str, Any]) -> Optional[float]:
@@ -1068,6 +1128,140 @@ def account_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str]) ->
     q = accounts_stmt(tenant, owner)
     with engine.connect() as c:
         return [_row(r) for r in c.execute(q)]
+
+
+#: Liste sürümü: gece turu liste kolonlarını yazınca tur kaydına (`run`.liste, `health`.liste) düşer. Kayıtta yoksa
+#: (kolonlar gelmeden yazılmış satırlar) ekran eski yolla, satırları belleğe alıp süzerek çalışır.
+LIST_VERSION = 1
+
+
+def list_ready(meta: dict[str, Any]) -> bool:
+    return meta.get("liste") == LIST_VERSION
+
+
+def _bin(expr: Any, engine: sa.engine.Engine) -> Any:
+    """Metin sırası Python'daki gibi kod noktası sırası (PostgreSQL'de «C» harmanlaması; SQLite zaten öyle)."""
+    return sa.collate(expr, "C") if engine.dialect.name == "postgresql" else expr
+
+
+def _nz(col: Any, default: Any = 0.0) -> Any:
+    return sa.func.coalesce(col, default)
+
+
+def _scope(tenant: str, owner: Optional[str]) -> list[Any]:
+    conds = [ACCOUNTS.c.tenant_id == tenant]
+    if owner is not None:
+        conds.append(ACCOUNTS.c.temsilci == owner)
+    return conds
+
+
+def overview_sql(engine: sa.engine.Engine, tenant: str, owner: Optional[str], actions: list[dict[str, Any]],
+                 score: Optional[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """`overview`'un veritabanında toplanan eşi (248 bin cari belleğe alınmaz): kanal başına sayım ve toplam, ilk 10
+    bakılacak ve bakılacak sayısı. Dönüş: (cevap, çalışan ifadeler)."""
+    a = ACCOUNTS.c
+    conds = _scope(tenant, owner)
+    n12, ny = _nz(a.net_12ay), _nz(a.net_yil)
+    aktif = sa.case((sa.or_(n12 > 0, _nz(a.fatura_12ay, 0) > 0), 1), else_=0)
+    kanal_q = sa.select(a.logo_kanal.label("kanal"), sa.func.count().label("cari"), sa.func.sum(aktif).label("aktif"),
+                        sa.func.sum(n12).label("net12"), sa.func.sum(ny).label("net_yil"),
+                        sa.func.sum(sa.case((a.risk_duzeyi == "yuksek", 1), else_=0)).label("riskli"),
+                        sa.func.sum(sa.case((a.risk_duzeyi == "kayip", 1), else_=0)).label("kayip")
+                        ).where(*conds).group_by(a.logo_kanal)
+    hot_conds = conds + [a.risk_duzeyi.in_(("yuksek", "kayip"))]
+    hot_q = sa.select(ACCOUNTS).where(*hot_conds).order_by(a.oncelik.desc(), _bin(a.cari_kodu, engine)).limit(10)
+    say_q = sa.select(sa.func.count().label("adet")).select_from(ACCOUNTS).where(*hot_conds)
+    with engine.connect() as c:
+        groups = c.execute(kanal_q).all()
+        hot = [_row(r) for r in c.execute(hot_q)]
+        n_hot = int(c.execute(say_q).scalar() or 0)
+    kan: dict[str, dict[str, Any]] = {}
+    n_rows = 0
+    for g in groups:
+        k = g.kanal or "Belirsiz"
+        cur = kan.setdefault(k, {"kanal": k, "aktif": 0, "net12": 0.0, "netYil": 0.0, "riskli": 0, "kayip": 0})
+        cur["aktif"] += int(g.aktif or 0)
+        cur["net12"] += float(g.net12 or 0.0)
+        cur["netYil"] += float(g.net_yil or 0.0)
+        cur["riskli"] += int(g.riskli or 0)
+        cur["kayip"] += int(g.kayip or 0)
+        n_rows += int(g.cari or 0)
+    chans = sorted(kan.values(), key=lambda g: (-g["net12"], g["kanal"]))
+    for g in chans:
+        g["net12"], g["netYil"] = round(g["net12"], 2), round(g["netYil"], 2)
+    out = {
+        "kpi": {"cari": n_rows, "aktif": sum(g["aktif"] for g in chans), "net12": round(sum(g["net12"] for g in chans), 2),
+                "netYil": round(sum(g["netYil"] for g in chans), 2),
+                "riskli": sum(g["riskli"] for g in chans), "kayip": sum(g["kayip"] for g in chans),
+                "saglik": score.get("puan") if score else None},
+        "kanallar": chans, "bakilacak": [card(r) for r in hot], "bakilacakToplam": n_hot,
+        "aksiyon": action_effect(actions),
+    }
+    return out, {"kanallar": kanal_q, "bakilacak": hot_q, "bakilacak_sayi": say_q}
+
+
+def _account_filters(kanal: str, bolge: str, risk_: str, q: str, segment: str) -> list[Any]:
+    """`filter_rows`'un veritabanı eşi (liste kolonlarıyla birebir aynı karşılaştırma)."""
+    a = ACCOUNTS.c
+    out: list[Any] = []
+    if kanal:
+        out.append(a.kanal_ara == F.fold(kanal))
+    if bolge:
+        out.append(a.bolge_ara == F.fold(bolge))
+    if risk_:
+        wanted = {x for x in risk_.split(",") if x in LEVELS}
+        if risk_ == "riskli":
+            wanted = {"yuksek", "kayip"}
+        out.append(a.risk_duzeyi.in_(sorted(wanted)) if wanted else sa.false())
+    if segment:
+        out.append(a.segment == segment)
+    if q.strip():
+        out.append(a.ara.contains(F.fold(q), autoescape=True))
+    return out
+
+
+def _account_order(sort: str, engine: sa.engine.Engine) -> list[Any]:
+    """`SORTS`'un veritabanı eşi; eşitlikte cari kodu (kod noktası sırası)."""
+    a = ACCOUNTS.c
+    code = _bin(a.cari_kodu, engine)
+    orders = {
+        "oncelik": [a.oncelik.desc(), code],
+        "puan": [_nz(a.risk_puani).desc(), a.deger_riskte.desc(), code],
+        "deger": [_nz(a.net_12ay).desc(), code],
+        "yil": [_nz(a.net_yil).desc(), code],
+        "degisim": [_nz(a.degisim, 9e9).asc(), code],
+        "ad": [_bin(a.ad_sira, engine), code],
+        "son": [_nz(a.gun_son_alim, -1).desc(), code],
+    }
+    return orders.get(sort) or orders["oncelik"]
+
+
+def accounts_page(engine: sa.engine.Engine, tenant: str, owner: Optional[str], *, kanal: str = "", bolge: str = "",
+                  risk_: str = "", q: str = "", segment: str = "", sort: str = "oncelik", p: int = 1,
+                  size: int = 50) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Cari listesi: süzgeç, sıra, sayfa ve toplamlar veritabanında; yalnız sayfanın satırları okunur."""
+    size = max(1, min(1000, int(size or 50)))
+    p = max(1, int(p or 1))
+    a = ACCOUNTS.c
+    conds = _scope(tenant, owner) + _account_filters(kanal, bolge, risk_, q, segment)
+    page_q = sa.select(ACCOUNTS).where(*conds).order_by(*_account_order(sort, engine)).limit(size).offset((p - 1) * size)
+    tot_q = sa.select(sa.func.count().label("adet"), sa.func.sum(_nz(a.net_12ay)).label("net12"),
+                      sa.func.sum(sa.case((a.risk_duzeyi.in_(("yuksek", "kayip")), 1), else_=0)).label("riskli")
+                      ).select_from(ACCOUNTS).where(*conds)
+    with engine.connect() as c:
+        rows = [_row(r) for r in c.execute(page_q)]
+        t = c.execute(tot_q).one()
+    total = int(t.adet or 0)
+    out = {"items": [card(r) for r in rows], "page": p, "size": size, "total": total, "pages": max(1, -(-total // size)),
+           "toplam": {"net12": round(float(t.net12 or 0.0), 2) if total else 0, "riskli": int(t.riskli or 0)}}
+    return out, {"sayfa": page_q, "toplam": tot_q}
+
+
+def owner_codes(engine: sa.engine.Engine, tenant: str, owner: str) -> set[str]:
+    """Temsilcinin cari kodları (aksiyon kapsamı için; yalnız kod okunur)."""
+    q = sa.select(ACCOUNTS.c.cari_kodu).where(*_scope(tenant, owner))
+    with engine.connect() as c:
+        return {r[0] for r in c.execute(q)}
 
 
 def one(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, Any]]:
@@ -1314,6 +1508,28 @@ def list_findings(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum
     order = {"yuksek": 0, "orta": 1, "dusuk": 2}
     rows.sort(key=lambda r: (order.get(r["onem"], 3), r["tur"], r.get("ad") or "", r["id"]))
     return rows
+
+
+ONEM_SIRA = {"yuksek": 0, "orta": 1, "dusuk": 2}
+
+
+def findings_page(engine: sa.engine.Engine, tenant: str, *, tur: str = "", durum: str = "", onem: str = "", q: str = "",
+                  security: bool = False, p: int = 1, size: int = 50) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
+    """`list_findings` + sayfanın veritabanı eşi: süzgeç, arama, sıra (önem, tür, ad, kimlik) ve sayfa veritabanında.
+    Dönüş: (sayfanın satırları, toplam, çalışan ifadeler)."""
+    size = max(1, min(1000, int(size or 50)))
+    p = max(1, int(p or 1))
+    base = findings_stmt(tenant, tur, durum, onem, security)
+    if q.strip():
+        base = base.where(FINDINGS.c.ara.contains(F.fold(q), autoescape=True))
+    rank = sa.case(*[(FINDINGS.c.onem == k, v) for k, v in ONEM_SIRA.items()], else_=3)
+    page_q = base.order_by(rank, _bin(FINDINGS.c.tur, engine), _bin(sa.func.coalesce(FINDINGS.c.ad, ""), engine),
+                           _bin(FINDINGS.c.id, engine)).limit(size).offset((p - 1) * size)
+    count_q = sa.select(sa.func.count().label("adet")).select_from(base.subquery())
+    with engine.connect() as c:
+        rows = [_row(r) for r in c.execute(page_q)]
+        total = int(c.execute(count_q).scalar() or 0)
+    return rows, total, {"sayfa": page_q, "toplam": count_q}
 
 
 def finding_counts_stmt(tenant: str) -> Any:
