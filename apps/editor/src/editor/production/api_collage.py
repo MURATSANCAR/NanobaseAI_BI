@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import collage
-from .api import Coded, _busy, _dir, _image, _start, editor, upload_mb
+from .api import Coded, _busy, _dir, _image, _preview, _start, editor, upload_mb
 
 router = APIRouter()
 C = "/v1/studio/jobs/{job}/collage"
@@ -154,6 +154,8 @@ def collage_photo(job: str, pid: str, w: int = Query(480, ge=0, le=2400)) -> Res
 def collage_preview(job: str, w: int = Query(900, ge=120, le=2400)) -> Response:
     d = _ready(job)
     try:
-        return _image(collage.front_preview(d, w), 0)
+        # Ön kapak zaten istenen genişlikte çizilir; ekrana aynı genişlikte WebP gider. Eskiden özgün PNG gidiyordu:
+        # 1040 px'te 1,6 MB, tünelden 3,3 sn (2026-09-29 ölçümü); öteki önizlemeler gibi WebP.
+        return _preview(collage.front_preview(d, w))
     except FileNotFoundError:
         raise HTTPException(404, "kapak henüz kurulmadı") from None
