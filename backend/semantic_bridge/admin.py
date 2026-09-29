@@ -1313,6 +1313,9 @@ SPEC: list[dict[str, Any]] = [
      "default": "KARGO,KURYE,LOJİSTİK,EXPRESS", "help": "Logo'da ünvanında bu sözcükler geçen hizmet faturası carileri aday olarak listelenir"},
     {"key": "SHIPPING_STALE_DAYS", "group": "shipping", "label": "Kargo kaydı eskime uyarısı (gün)", "type": "int", "default": "3",
      "help": "Son kargo kaydı bundan eskiyse ekranlar «teslim bilgisi eksik olabilir» uyarır"},
+    {"key": "SHIPPING_SNAPSHOT_MAX_MIN", "group": "shipping", "label": "Kargo anlık görüntüsü en çok kaç dakikalık", "type": "int",
+     "default": "45", "help": "Zamanlayıcı ağır CRM okumalarını 15 dakikada bir okuyup saklar; ekran bundan tazeyse beklemeden "
+                             "buradan okur, eskiyse CRM'e gider. 0 kapatır (her açılış CRM'i bekler)"},
     {"key": "SHIPPING_WAITING_DAYS", "group": "shipping", "label": "Teslim bekleyen eşiği (gün, varsayılan)", "type": "int",
      "default": "5", "help": "Depo müdürü ekranda değiştirebilir (kargo.karar yetkisiyle); bu değer ilk varsayılandır"},
     {"key": "SHIPPING_BOXED_DAYS", "group": "shipping", "label": "Kutulandı bekleyen eşiği (gün, varsayılan)", "type": "int",

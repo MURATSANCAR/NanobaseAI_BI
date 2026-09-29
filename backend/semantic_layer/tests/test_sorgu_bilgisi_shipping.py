@@ -132,3 +132,69 @@ def test_overview_counts_point_to_their_own_filtered_query(engine, monkeypatch):
     takipsiz = set(k["formulas"]["takipsiz"]["inputs"])
     assert "kargo.errors.crm_siparis_asama" in hata and "kargo.untracked.crm_siparis_asama" in takipsiz
     assert k["sources"]["kargo.errors.crm_siparis_asama"]["sql"] != k["sources"]["kargo.untracked.crm_siparis_asama"]["sql"]
+
+
+# ------------------------------------------------------------------ anlık görüntü (hız, 2026-09-29)
+
+
+class Boom:
+    """CRM'e gidilirse cevap 503 olur: görüntüden dönmesi gereken okuma canlıya gitmiş demektir."""
+
+    def __call__(self, text: str) -> list[dict]:
+        raise src.SourceError("CRM'e gidilmemeliydi")
+
+
+SCREENS = ["/overview", "/errors", "/untracked", "/boxed", "/waiting", "/carriers"]
+
+
+def _numbers(out: dict) -> dict:
+    return {k: v for k, v in out.items() if k != "kaynaklar"}
+
+
+def _no_crm(engine, monkeypatch, perms):
+    c = _client(engine, monkeypatch, perms)        # yeni süreç gibi: bellek boş
+    monkeypatch.setattr(src, "runner", lambda path: Boom())
+    return c
+
+
+def test_pack_roundtrip_keeps_every_type():
+    import uuid
+    from datetime import time as dtime
+    from decimal import Decimal
+
+    v = [{"a": datetime(2026, 9, 1, 8, 30, 15, 120), "b": date(2026, 9, 1), "c": Decimal("12.50"), "d": uuid.UUID(ORDER),
+          "e": dtime(10, 5), "f": b"\x00\x01", "g": (1, "x"), "h": None, "i": 1.25, "j": True, "k": "Ç", "l": [1, [2]]}]
+    assert S.unpack(json.loads(json.dumps(S.pack(v)))) == v
+    with pytest.raises(TypeError):
+        S.pack({"x": object()})
+    assert S.snapshot_key(("errors", date(2026, 8, 30))) == '["errors", "2026-08-30"]'
+
+
+def test_snapshot_gives_the_same_numbers_without_touching_crm(engine, monkeypatch):
+    live = _client(engine, monkeypatch, {COST})
+    before = {p: live.get("/api/v1/shipping" + p).json() for p in SCREENS}       # canlı okuma, görüntüye yazar
+    c = _no_crm(engine, monkeypatch, {COST})
+    for p in SCREENS:
+        r = c.get("/api/v1/shipping" + p)
+        assert r.status_code == 200, (p, r.text)
+        out = r.json()
+        assert _numbers(out) == _numbers(before[p]), p                          # eski hesap = yeni hesap
+        k = _check(out)
+        snaps = {sid: s for sid, s in k["sources"].items() if sid.endswith(".anlik")}
+        assert snaps and all(s["connection"] == "portal" and s["origin"] for s in snaps.values()), p
+        assert all("semantic_shipping_snapshots" in s["sql"] for s in snaps.values())
+    k = c.get("/api/v1/shipping/waiting").json()["kaynaklar"]
+    assert "kargo.index.crm_kargo_bilgisi" in k["sources"]["kargo.index.anlik"]["origin"]
+    assert "kargo.index.anlik" in k["formulas"]["bekleyen"]["inputs"]
+
+
+def test_old_snapshot_goes_live_and_run_due_refreshes_it(engine, monkeypatch):
+    from datetime import timezone
+
+    assert _client(engine, monkeypatch, set()).get("/api/v1/shipping/overview").status_code == 200
+    with engine.begin() as conn:
+        conn.execute(S.SNAPSHOTS.update().values(alindi=datetime.now(timezone.utc) - timedelta(hours=3)))
+    assert _no_crm(engine, monkeypatch, set()).get("/api/v1/shipping/overview").status_code == 503   # eski görüntü kullanılmaz
+    timer = _client(engine, monkeypatch, set())
+    assert timer.post("/api/v1/shipping/run-due?gorev=anlik").json()["anlik"]["ok"] is True
+    assert _no_crm(engine, monkeypatch, set()).get("/api/v1/shipping/overview").status_code == 200

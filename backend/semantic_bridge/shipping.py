@@ -20,6 +20,7 @@ kullanılır.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import json
@@ -32,7 +33,8 @@ import time
 import unicodedata
 import uuid
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as dtime, timedelta, timezone
+from decimal import Decimal
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
@@ -92,6 +94,22 @@ SETTINGS = sa.Table(
     sa.Column("deger", sa.Text, nullable=False),
     sa.Column("guncelleyen", sa.String(120)),
     sa.Column("guncelleme", sa.DateTime(timezone=True)),
+)
+
+#: Ağır CRM okumalarının anlık görüntüsü (hız, 2026-09-29). Günlük hat, teslim bekleyen, firma karnesi aynı altı okumadan
+#: gelir (kargo firmaları, gönderi kaydı, entegrasyon hatası, takipsiz sevk, kutulanmış sipariş, sevk sayısı); zamanlayıcı
+#: (`timas-shipping.timer`, 15 dk) bunları okuyup buraya yazar, ekran önce bellekten, yoksa buradan okur, o da yoksa ya da
+#: `SHIPPING_SNAPSHOT_MAX_MIN` dakikadan eskiyse CRM'e gider (ve buraya yazar). `deger` okumanın dönüşünün kendisidir
+#: (tür etiketli JSON: tarih, ondalık, kimlik aynen geri gelir; rakam değişmez), `sorgular` o okumada ÇALIŞAN CRM metinleri
+#: (sorgu bilgisinde köken). Kişisel kolon okuyan sorgu (alıcı, teslim alan) burada hiç yoktur.
+SNAPSHOTS = sa.Table(
+    "semantic_shipping_snapshots", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("anahtar", sa.String(300), primary_key=True),
+    sa.Column("deger", sa.Text, nullable=False),
+    sa.Column("sorgular", sa.Text, nullable=False),
+    sa.Column("alindi", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("sure_ms", sa.Integer),
 )
 
 ERROR_CLASSES = ["Adres bilgisi", "Telefon bilgisi", "Desi, ağırlık ya da koli", "Kimlik doğrulama ya da yetki",
@@ -210,6 +228,7 @@ def settings_from(conf: Callable[..., str]) -> dict[str, Any]:
         "classifyMinProb": _float(c("SHIPPING_CLASSIFY_MIN_PROB", "0.70"), 0.70, 0.0, 1.0),
         "classifyMinMargin": _float(c("SHIPPING_CLASSIFY_MIN_MARGIN", "0.30"), 0.30, 0.0, 1.0),
         "classifyBudgetSec": _int(c("SHIPPING_CLASSIFY_BUDGET_SEC", "600"), 600, 10, 7200),
+        "snapshotMaxMin": _int(c("SHIPPING_SNAPSHOT_MAX_MIN", "45"), 45, 0, 1440),
         "schema": c("CRM_SCHEMA", "Timas_MSCRM.dbo"),
     }
 
@@ -294,6 +313,105 @@ def meta_set(engine: sa.engine.Engine, tenant: str, key: str, value: str) -> Non
     with engine.begin() as c:
         c.execute(SETTINGS.delete().where(sa.and_(SETTINGS.c.tenant_id == tenant, SETTINGS.c.anahtar == f"_{key}")))
         c.execute(SETTINGS.insert().values(tenant_id=tenant, anahtar=f"_{key}", deger=value, guncelleyen="sistem", guncelleme=_now()))
+
+
+# ------------------------------------------------------------------ anlık görüntü (ağır CRM okumaları)
+
+
+def pack(v: Any) -> Any:
+    """Okuma dönüşünü JSON'a türüyle yazılabilir biçime çevirir; `unpack(pack(v)) == v` (tarih, saat, ondalık, kimlik,
+    bayt, demet dahil). Tanınmayan tür `TypeError`: görüntü yazılmaz, ekran canlı okumaya düşer (rakam bozulmaz)."""
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return v
+    if isinstance(v, datetime):
+        return {"$t": "dt", "v": v.isoformat()}
+    if isinstance(v, date):
+        return {"$t": "d", "v": v.isoformat()}
+    if isinstance(v, dtime):
+        return {"$t": "tm", "v": v.isoformat()}
+    if isinstance(v, Decimal):
+        return {"$t": "dec", "v": str(v)}
+    if isinstance(v, uuid.UUID):
+        return {"$t": "uuid", "v": str(v)}
+    if isinstance(v, (bytes, bytearray, memoryview)):
+        return {"$t": "b64", "v": base64.b64encode(bytes(v)).decode("ascii")}
+    if isinstance(v, tuple):
+        return {"$t": "tup", "v": [pack(x) for x in v]}
+    if isinstance(v, list):
+        return [pack(x) for x in v]
+    if isinstance(v, dict):
+        if "$t" in v or not all(isinstance(k, str) for k in v):
+            raise TypeError("Anlık görüntü: sözlük anahtarı metin değil ya da ayrılmış ad.")
+        return {k: pack(x) for k, x in v.items()}
+    raise TypeError(f"Anlık görüntü: {type(v).__name__} türü yazılamaz.")
+
+
+def unpack(v: Any) -> Any:
+    if isinstance(v, list):
+        return [unpack(x) for x in v]
+    if isinstance(v, dict):
+        if set(v) == {"$t", "v"}:
+            t, x = v["$t"], v["v"]
+            if t == "dt":
+                return datetime.fromisoformat(x)
+            if t == "d":
+                return date.fromisoformat(x)
+            if t == "tm":
+                return dtime.fromisoformat(x)
+            if t == "dec":
+                return Decimal(x)
+            if t == "uuid":
+                return uuid.UUID(x)
+            if t == "b64":
+                return base64.b64decode(x)
+            if t == "tup":
+                return tuple(unpack(i) for i in x)
+        return {k: unpack(x) for k, x in v.items()}
+    return v
+
+
+def snapshot_key(key: Any) -> str:
+    """Bellek anahtarı → görüntü anahtarı (okunur metin; pencere günü ve durum kodları dahil)."""
+    return json.dumps(list(key) if isinstance(key, tuple) else key, ensure_ascii=False, default=str)
+
+
+def snapshot_stmt(tenant: str, anahtar: str) -> Any:
+    """Ekranın görüntü okuması (sorgu bilgisinde gösterilen ifadenin kendisi)."""
+    return sa.select(SNAPSHOTS.c.deger, SNAPSHOTS.c.sorgular, SNAPSHOTS.c.alindi).where(
+        SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.anahtar == anahtar)
+
+
+def _aware(v: Optional[datetime]) -> Optional[datetime]:
+    if v is None:
+        return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+def snapshot_read(engine: sa.engine.Engine, tenant: str, anahtar: str, max_min: int) -> Optional[dict[str, Any]]:
+    """Görüntü `max_min` dakikadan tazeyse {deger, sorgular, alindi, stmt}; yoksa ya da eskiyse None (canlı okunur)."""
+    if max_min <= 0:
+        return None
+    stmt = snapshot_stmt(tenant, anahtar)
+    with engine.connect() as c:
+        r = c.execute(stmt).first()
+    if r is None:
+        return None
+    at = _aware(r.alindi)
+    if at is None or _now() - at > timedelta(minutes=max_min):
+        return None
+    return {"deger": unpack(json.loads(r.deger)), "sorgular": json.loads(r.sorgular or "[]"), "alindi": at, "stmt": stmt}
+
+
+def snapshot_write(engine: sa.engine.Engine, tenant: str, anahtar: str, value: Any, runs: list[dict[str, Any]],
+                   ms: Optional[int] = None) -> None:
+    deger = json.dumps(pack(value), ensure_ascii=False)
+    sorgular = json.dumps([{k: r.get(k) for k in ("name", "sql", "rows", "ms", "at", "tag")} for r in runs
+                           if r.get("conn") != "portal"], ensure_ascii=False, default=str)
+    cond = (SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.anahtar == anahtar)
+    with engine.begin() as c:
+        c.execute(SNAPSHOTS.delete().where(*cond))
+        c.execute(SNAPSHOTS.insert().values(tenant_id=tenant, anahtar=anahtar, deger=deger, sorgular=sorgular,
+                                            alindi=_now(), sure_ms=ms))
 
 
 # ------------------------------------------------------------------ küçük yardımcılar

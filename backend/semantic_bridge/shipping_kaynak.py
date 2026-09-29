@@ -3,7 +3,9 @@
 Rakamlar CRM (sipariş aşamaları, kargo firmasının gönderi kaydı, takip, sevkiyat) ve Logo (sevk, kargo faturası)
 okumalarından Python'da hesaplanır. Okumalar beş dakika bellekte tutulur; gösterilen SQL o okumada ÇALIŞAN metnin kendisidir
 (`shipping_sources.collect`: şema öneki, koşul, tarih penceresi yerinde; satır, süre ve çalıştığı an ile). Önbellekten gelen
-rakamda da okumayı dolduran sorgu görünür. Kişisel kolonlar (alıcı, teslim alan) okuyan sorgu listelenmez; sonuç satırı
+rakamda da okumayı dolduran sorgu görünür. Ağır okumalar (günlük hat, gönderi kaydı) zamanlayıcının 15 dakikalık anlık
+görüntüsünden de gelebilir (`semantic_shipping_snapshots`): o zaman ekranda çalışan portal okuması (`kargo.<etiket>.anlik`)
+ve kökeni olarak zamanlayıcıda ÇALIŞAN CRM metni görünür. Kişisel kolonlar (alıcı, teslim alan) okuyan sorgu listelenmez; sonuç satırı
 hiçbir koşulda kayda girmez. Kargo firmasının kimlik bilgisi kolonları hiçbir sorguda yoktur (`guard` + `clean_sql`).
 """
 from __future__ import annotations
@@ -70,6 +72,9 @@ class Ship:
         for r in runs:
             if "AS alici" in r["sql"] or "AS teslim_alan" in r["sql"]:
                 continue          # kişisel kolon okuyan tek kayıt sorgusu: rakam kaynağı değil, listelenmez
+            if r.get("conn") == "portal":
+                self._snapshot(r, seen)
+                continue
             if r["sql"] in seen:
                 sid = seen[r["sql"]]
             else:
@@ -79,11 +84,32 @@ class Ship:
                 sid = base if count[base] == 1 else f"{base}.{count[base]}"
                 conn = "logo" if r["name"].startswith("logo_") else "crm"
                 title = TITLES.get(r["name"], r["name"]) + (f" · {TAGS[tag]}" if tag in TAGS else "")
+                desc = ""
+                if r.get("anlik"):
+                    desc = ("Bu okuma anlık görüntüye yazıldı (zamanlayıcı 15 dakikada bir yeniler); ekrandaki rakam bu "
+                            "okumadandır, çalıştığı an yanında.")
+                elif tag:
+                    desc = "Okuma beş dakika bellekte tutulur; ekrandaki rakam bu okumadandır."
                 self.k.sorgu(sid, title, conn, r["sql"], database=deps.get("logo_db") if conn == "logo" else deps.get("crm_db"),
-                             rows=r.get("rows"), ms=r.get("ms"), ran_at=r.get("at"),
-                             description="Okuma beş dakika bellekte tutulur; ekrandaki rakam bu okumadandır." if tag else "")
+                             rows=r.get("rows"), ms=r.get("ms"), ran_at=r.get("at"), description=desc)
                 seen[r["sql"]] = sid
             self.by_tag.setdefault(r.get("tag") or r["name"], []).append(sid)
+
+    def _snapshot(self, r: dict[str, Any], seen: dict[str, str]) -> None:
+        """Portal anlık görüntü okuması: ekranda çalışan ifade; kökeni zamanlayıcıda çalışan CRM okuması (aynı etiket)."""
+        tag = r.get("tag") or ""
+        if r["sql"] in seen:
+            sid = seen[r["sql"]]
+        else:
+            sid = f"kargo.{tag}.anlik" if tag else "kargo.anlik"
+            origin = [x for x in self.by_tag.get(tag, []) if x in self.k.sources and self.k.sources[x]["connection"] != "portal"]
+            self.k.sorgu(sid, "Anlık görüntü (portal)" + (f" · {TAGS[tag]}" if tag in TAGS else ""), "portal", r["sql"],
+                         rows=r.get("rows"), ms=r.get("ms"), ran_at=r.get("at"), origin=origin,
+                         description=(f"CRM okumasının {r['alindi']} tarihli anlık görüntüsü" if r.get("alindi") else
+                                      "CRM okumasının anlık görüntüsü") + "; zamanlayıcı 15 dakikada bir yeniler, ekran CRM'i "
+                                     "beklemeden buradan okur. Köken: o okumada çalışan CRM sorgusu.")
+            seen[r["sql"]] = sid
+        self.by_tag.setdefault(tag or r["name"], []).append(sid)
 
     def t(self, *tags: str) -> list[str]:
         out: list[str] = []

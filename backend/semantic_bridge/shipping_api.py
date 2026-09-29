@@ -47,16 +47,24 @@ XLSX = S.XLSX_MIME
 
 
 class _Cache:
-    """Süreli bellek (5 dk). Aynı anahtarı iki iş parçacığı birlikte okumaz. Her okumanın çalıştırdığı sorgular değerle
-    birlikte saklanır; önbellekten dönen değerde de açık sorgu bilgisi toplayıcısına verilir (`src.collect`)."""
+    """Süreli bellek (5 dk) + ağır okumalarda portal anlık görüntüsü (`S.SNAPSHOTS`). Aynı anahtarı iki iş parçacığı
+    birlikte okumaz. Her okumanın çalıştırdığı sorgular değerle birlikte saklanır; önbellekten ya da görüntüden dönen
+    değerde de açık sorgu bilgisi toplayıcısına verilir (`src.collect`).
 
-    def __init__(self) -> None:
+    `persist=True` okumada sıra: bellek → görüntü (`SHIPPING_SNAPSHOT_MAX_MIN` dakikadan tazeyse; zamanlayıcı 15 dakikada
+    bir yeniler) → CRM (sonuç görüntüye yazılır). Görüntüden dönen değer okumanın dönüşünün aynısıdır; sorgu bilgisinde
+    görüntü okuması (portal) ve kökeni olarak zamanlayıcıda çalışan CRM metni görünür. «Yenile» (`fresh`) her zaman CRM'e
+    gider. Görüntü okunamaz ya da yazılamazsa ekran canlı okumayla çalışır (rakam düşmez)."""
+
+    def __init__(self, store: Optional[Callable[[], tuple[Any, str, int]]] = None) -> None:
         self._data: dict[Any, tuple[float, Any]] = {}
         self._runs: dict[Any, list[dict[str, Any]]] = {}
         self._locks: dict[Any, threading.Lock] = {}
+        self._derived: dict[str, tuple[Any, Any]] = {}
         self._guard = threading.Lock()
+        self._store = store
 
-    def get(self, key: Any, ttl: float, load: Callable[[], Any], fresh: bool = False) -> Any:
+    def get(self, key: Any, ttl: float, load: Callable[[], Any], fresh: bool = False, persist: bool = False) -> Any:
         with self._guard:
             lock = self._locks.setdefault(key, threading.Lock())
         with lock:
@@ -64,18 +72,69 @@ class _Cache:
             if hit and not fresh and time.monotonic() - hit[0] < ttl:
                 src.note(self._runs.get(key) or [])
                 return hit[1]
+            tag = key[0] if isinstance(key, tuple) else key
+            if persist and not fresh:
+                snap = self._snapshot(key, tag)
+                if snap is not None:
+                    val, runs = snap
+                    self._data[key] = (time.monotonic(), val)
+                    self._runs[key] = runs
+                    src.note(runs)
+                    return val
+            t0 = time.monotonic()
             with src.collect() as got:
                 val = load()
-            tag = key[0] if isinstance(key, tuple) else key
             for r in got:
                 r.setdefault("tag", tag)
             self._data[key] = (time.monotonic(), val)
             self._runs[key] = list(got)
+            if persist:
+                self._save(key, val, list(got), int((time.monotonic() - t0) * 1000))
             return val
+
+    def _snapshot(self, key: Any, tag: str) -> Optional[tuple[Any, list[dict[str, Any]]]]:
+        if self._store is None:
+            return None
+        try:
+            engine, tenant, max_min = self._store()
+            t0 = time.monotonic()
+            snap = S.snapshot_read(engine, tenant, S.snapshot_key(key), max_min)
+            if snap is None:
+                return None
+            runs = [{**r, "tag": r.get("tag") or tag, "anlik": True} for r in snap["sorgular"]]
+            runs.append({"name": "portal_anlik", "conn": "portal", "sql": PV.portal_sql(snap["stmt"], engine), "rows": 1,
+                         "ms": int((time.monotonic() - t0) * 1000), "at": time.time(), "tag": tag,
+                         "alindi": snap["alindi"].astimezone(S.TZ).strftime("%d.%m.%Y %H:%M")})
+            return snap["deger"], runs
+        except Exception as e:  # noqa: BLE001 — görüntü yoksa canlı okunur
+            log.warning("kargo: anlık görüntü okunamadı (%s): %s", key, e)
+            return None
+
+    def _save(self, key: Any, val: Any, runs: list[dict[str, Any]], ms: int) -> None:
+        if self._store is None:
+            return
+        try:
+            engine, tenant, max_min = self._store()
+            if max_min > 0:
+                S.snapshot_write(engine, tenant, S.snapshot_key(key), val, runs, ms)
+        except Exception as e:  # noqa: BLE001 — görüntü yazılamazsa ekran canlı okumayla çalışır
+            log.warning("kargo: anlık görüntü yazılamadı (%s): %s", key, e)
+
+    def derived(self, name: str, base: Any, build: Callable[[], Any]) -> Any:
+        """`base` (bellekteki okuma) değişmedikçe aynı türetilmiş değer (ör. kargo kaydı dizini) yeniden kurulmaz."""
+        with self._guard:
+            hit = self._derived.get(name)
+        if hit is not None and hit[0] is base:
+            return hit[1]
+        val = build()
+        with self._guard:
+            self._derived[name] = (base, val)
+        return val
 
     def clear(self) -> None:
         with self._guard:
             self._data.clear()
+            self._derived.clear()
 
 
 def register(app: Any, deps: dict[str, Any]) -> _Cache:
@@ -83,10 +142,16 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
     is_admin(user) · audit(engine, user, action, kind, id, title, detail) · conf(key, default) · engine() · tenant() ·
     logo_file() · crm_file() · llm(priority) → LLM kapısı istemcisi ya da None · send_mail(subject, text, to, attachments)."""
     auth, require_caller, can, is_admin, audit, conf = (deps[k] for k in ("auth", "require_caller", "can", "is_admin", "audit", "conf"))
-    cache = _Cache()
 
     def cfg() -> dict[str, Any]:
         return S.settings_from(conf)
+
+    def snapshot_store() -> tuple[Any, str, int]:
+        engine = deps["engine"]()
+        S.ensure(engine)
+        return engine, deps["tenant"](), cfg()["snapshotMaxMin"]
+
+    cache = _Cache(snapshot_store)
 
     def crm():
         return src.recording(src.runner(deps["crm_file"]()))
@@ -142,33 +207,36 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     def carriers(fresh: bool = False) -> dict[str, dict[str, Any]]:
         c = cfg()
-        return cache.get("carriers", 30 * 60, lambda: src.read_carriers(crm(), c["schema"]), fresh)
+        return cache.get("carriers", 30 * 60, lambda: src.read_carriers(crm(), c["schema"]), fresh, persist=True)
 
     def index(fresh: bool = False) -> S.CargoIndex:
         c = cfg()
-        return cache.get("index", TTL, lambda: S.CargoIndex(src.read_cargo_rows(crm(), c["schema"]), c), fresh)
+        raw = cache.get("index", TTL, lambda: src.read_cargo_rows(crm(), c["schema"]), fresh, persist=True)
+        return cache.derived("index", raw, lambda: S.CargoIndex(raw, c))
 
     def since(c: dict[str, Any]) -> date:
         return S.today() - timedelta(days=c["windowDays"])
 
     def error_rows(c: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         s = since(c)
-        return cache.get(("errors", s), TTL, lambda: src.read_orders(crm(), c["schema"], src.errors_where(s)), fresh)
+        return cache.get(("errors", s), TTL, lambda: src.read_orders(crm(), c["schema"], src.errors_where(s)), fresh,
+                         persist=True)
 
     def untracked_rows(c: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         s = since(c)
         return cache.get(("untracked", s, c["untrackedStatuses"], c["untrackedExcludeTypes"]), TTL,
                          lambda: src.read_orders(crm(), c["schema"], src.untracked_where(s, c["untrackedStatuses"], c["untrackedExcludeTypes"]),
-                                                 sira="ORDER BY s.new_sevktarihi DESC, s.new_name DESC"), fresh)
+                                                 sira="ORDER BY s.new_sevktarihi DESC, s.new_name DESC"), fresh, persist=True)
 
     def boxed_rows(c: dict[str, Any], fresh: bool = False) -> list[dict[str, Any]]:
         return cache.get("boxed", TTL, lambda: src.read_orders(crm(), c["schema"], src.boxed_where(),
-                                                                sira="ORDER BY s.new_sipariskutulanditarihi, s.new_name"), fresh)
+                                                                sira="ORDER BY s.new_sipariskutulanditarihi, s.new_name"), fresh,
+                         persist=True)
 
     def shipped(c: dict[str, Any], fresh: bool = False) -> dict[str, int]:
         s, t = since(c), S.today()
         return cache.get(("shipped", s, t, c["shippedStatuses"]), TTL,
-                         lambda: src.read_shipped_count(crm(), c["schema"], s, t, c["shippedStatuses"]), fresh)
+                         lambda: src.read_shipped_count(crm(), c["schema"], s, t, c["shippedStatuses"]), fresh, persist=True)
 
     def logo_firms() -> dict[int, str]:
         return cache.get("firms", 10 * 60, lambda: src.firms_by_year(logo()))
@@ -614,22 +682,36 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     @app.post(P + "/run-due")
     def shipping_run_due(request: Request, gorev: str = "") -> dict[str, Any]:
-        """15 dakikada bir çağrılır; günlük / haftalık / aylık işleri zamanı gelince bir kez koşar. `gorev=gunluk|haftalik|aylik`
-        elle, zamanını beklemeden koşturur (ilk kurulumda)."""
+        """15 dakikada bir çağrılır: her çağrıda ağır CRM okumalarının anlık görüntüsünü yeniler; günlük / haftalık / aylık
+        işleri zamanı gelince bir kez koşar. `gorev=anlik|gunluk|haftalik|aylik` elle, zamanını beklemeden koşturur."""
         require_caller(request)
         from semantic_layer.runtime.llm_queue import BATCH
 
-        if gorev not in ("", "gunluk", "haftalik", "aylik"):
-            raise HTTPException(400, detail={"code": "SHIPPING", "message": "Görev gunluk, haftalik ya da aylik olmalı."})
+        if gorev not in ("", "anlik", "gunluk", "haftalik", "aylik"):
+            raise HTTPException(400, detail={"code": "SHIPPING", "message": "Görev anlik, gunluk, haftalik ya da aylik olmalı."})
         engine, tenant, c = deps["engine"](), deps["tenant"](), cfg()
         S.ensure(engine)
         now = datetime.now(S.TZ)
         link = (conf("ALERT_LINK", "") or "").split("/uyarilar")[0]
         out: dict[str, Any] = {}
-        if gorev in ("gunluk",) or (not gorev and S.due(now, c["dailyAt"], S.meta_get(engine, tenant, "gunluk"))):
-            cache.clear()
+        # Anlık görüntü (her çağrıda, 15 dk): günlük hat, teslim bekleyen ve karnenin ağır CRM okumaları yeniden okunur ve
+        # portal tablosuna yazılır; ekranı ilk açan kişi CRM'i beklemez. SHIPPING_SNAPSHOT_MAX_MIN=0 kapatır.
+        refreshed = False
+        if gorev in ("", "anlik") and c["snapshotMaxMin"] > 0:
+            t0 = time.monotonic()
             try:
-                o = overview_data(engine, tenant, None, True)
+                carriers(True)
+                overview_data(engine, tenant, None, True)
+                refreshed = True
+                out["anlik"] = {"ok": True, "ms": int((time.monotonic() - t0) * 1000)}
+            except Exception as e:  # noqa: BLE001 — görüntü yenilenemese de günlük/haftalık/aylık işler koşar
+                log.warning("kargo: anlık görüntü yenilenemedi: %s", e)
+                out["anlik"] = {"hata": str(e)[:300]}
+        if gorev in ("gunluk",) or (not gorev and S.due(now, c["dailyAt"], S.meta_get(engine, tenant, "gunluk"))):
+            if not refreshed:
+                cache.clear()
+            try:
+                o = overview_data(engine, tenant, None, not refreshed)
                 errs = errors_view(engine, tenant, c)
                 out["siniflama"] = S.classify_pending(engine, tenant, errs, chooser(BATCH), c)
                 mail = "alici_yok"
