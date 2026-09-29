@@ -33,14 +33,14 @@ export function setters(setForm: (fn: (f: FormInputs | null) => FormInputs | nul
 }
 
 /** Maliyet alanlarının altı adımı (Excel'in sol tarafı). */
-export function CostGroups({ form, s, st }: { form: FormInputs; s: FormSetup; st: Setters }) {
+export function CostGroups({ form, s, st, r }: { form: FormInputs; s: FormSetup; st: Setters; r?: FormResult }) {
   return (
     <>
       <BookGroup form={form} s={s} set={st.set} />
-      <InnerGroup form={form} s={s} setIn={st.setIn} />
-      <CoverGroup form={form} s={s} setKapak={st.setKapak} />
+      <InnerGroup form={form} s={s} setIn={st.setIn} r={r} />
+      <CoverGroup form={form} s={s} setKapak={st.setKapak} r={r} />
       <BindingGroup form={form} s={s} setIn={st.setIn} />
-      <ExtrasGroup form={form} s={s} setEk={st.setEk} setPart={st.setPart} />
+      <ExtrasGroup form={form} s={s} setEk={st.setEk} setPart={st.setPart} r={r} />
       <OtherGroup form={form} setIn={st.setIn} set={st.set} />
     </>
   );
@@ -107,6 +107,23 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
   );
 }
 
+/** Kâğıt satırının elle fiyat kutusu: boşken hesaptaki fiyat ve kaynağı altında yazar. */
+function PriceField({ part, onChange, r, unit }: { part: FormPart; onChange: (p: Partial<FormPart>) => void; r?: FormResult; unit: 'kg' | 'adet' }) {
+  const used = r?.prices.find((p) => p.name === part.kagit && (unit === 'adet' || (p.gsm ?? null) === (part.gr ?? null)));
+  const src = used ? (used.source === 'logo' ? 'Logo alışı' : used.source === 'elle' ? 'elle' : "fiyat listesi (Logo'da alış yok)") : null;
+  return (
+    <NumField
+      label={unit === 'kg' ? 'Kâğıt fiyatı (elle)' : 'Birim fiyat (elle)'}
+      info={i(H.kgFiyat, 'Kâğıt fiyatı (elle)')}
+      suffix={unit === 'kg' ? '₺/kg' : '₺'}
+      value={part.kgFiyat ?? null}
+      onChange={(v) => onChange({ kgFiyat: v })}
+      placeholder={used && used.source !== 'elle' ? used.used.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : 'Logo alışı'}
+      hint={used && !part.kgFiyat ? `Hesapta ${used.used.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺/${used.unit} · ${src}` : part.kgFiyat ? 'Elle girilen fiyat kullanılıyor; silince Logo alışına döner.' : undefined}
+    />
+  );
+}
+
 function paperOptions(s: FormSetup, unit?: 'ton' | 'adet', empty = 'Yok') {
   return [{ value: '', label: empty }, ...s.tariff.papers.filter((p) => !unit || p.unit === unit).map((p) => ({ value: p.name, label: p.name }))];
 }
@@ -123,7 +140,7 @@ function SheetFields({ part, onChange, withGsm = true, withVerim = true, what }:
   );
 }
 
-function InnerGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setIn: SetIn }) {
+function InnerGroup({ form, s, setIn, r }: { form: FormInputs; s: FormSetup; setIn: SetIn; r?: FormResult }) {
   const o = s.origin;
   const hasColor = !!form.renkli.sayfa;
   return (
@@ -131,6 +148,7 @@ function InnerGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setIn:
       <Select<string> label="İç kâğıt" info={i(H.icKagit, 'İç kâğıt')} value={form.ic.kagit ?? ''} onChange={(v) => setIn('ic', { kagit: v || null })} options={paperOptions(s, 'ton', 'Seçin')} />
       <NumField label="Gramaj" info={i(H.gramaj, 'Gramaj')} suffix="gr" digits={0} value={form.ic.gr} onChange={(v) => setIn('ic', { gr: v })} hint={o.icGr} />
       <NumField label="Renk sayısı" info={i(H.renk, 'Renk sayısı')} digits={0} value={form.ic.renk} onChange={(v) => setIn('ic', { renk: v })} hint={o.icRenk} />
+      {form.ic.kagit && <PriceField part={form.ic} onChange={(p) => setIn('ic', p)} r={r} unit="kg" />}
       <More label="Tabaka, verim ve fire">
         <SheetFields part={form.ic} onChange={(p) => setIn('ic', p)} withGsm={false} what="İç" />
       </More>
@@ -147,6 +165,7 @@ function InnerGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setIn:
           <NumField label="Renkli sayfa sayısı" info={i(H.renkliSayfa, 'Renkli sayfa sayısı')} digits={0} value={form.renkli.sayfa} onChange={(v) => setIn('renkli', { sayfa: v })} />
           <Select<string> label="Renkli sayfa kâğıdı" info={i(H.icKagit, 'Kâğıt')} value={form.renkli.kagit ?? ''} onChange={(v) => setIn('renkli', { kagit: v || null })} options={paperOptions(s, 'ton', 'Seçin')} />
           <NumField label="Renkli sayfa rengi" info={i(H.renk, 'Renk sayısı')} digits={0} value={form.renkli.renk} onChange={(v) => setIn('renkli', { renk: v })} />
+          {form.renkli.kagit && <PriceField part={form.renkli} onChange={(p) => setIn('renkli', p)} r={r} unit="kg" />}
           <More label="Renkli sayfa tabakası ve fire">
             <SheetFields part={form.renkli} onChange={(p) => setIn('renkli', p)} what="Renkli sayfa" />
           </More>
@@ -156,13 +175,14 @@ function InnerGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setIn:
   );
 }
 
-function CoverGroup({ form, s, setKapak }: { form: FormInputs; s: FormSetup; setKapak: (p: Partial<FormInputs['kapak']>) => void }) {
+function CoverGroup({ form, s, setKapak, r }: { form: FormInputs; s: FormSetup; setKapak: (p: Partial<FormInputs['kapak']>) => void; r?: FormResult }) {
   const k = form.kapak;
   return (
     <Group step={3} title="Kapak">
       <Select<string> label="Kapak kartonu" info={i(H.kapakKagit, 'Kapak kartonu')} value={k.kagit ?? ''} onChange={(v) => setKapak({ kagit: v || null })} options={paperOptions(s, 'ton', 'Kapak yok')} />
       <NumField label="Gramaj" info={i(H.gramaj, 'Gramaj')} suffix="gr" digits={0} value={k.gr} onChange={(v) => setKapak({ gr: v })} />
       <NumField label="Kapak renk sayısı" info={i(H.kapakRenk, 'Kapak renk sayısı')} digits={0} value={k.renk} onChange={(v) => setKapak({ renk: v })} />
+      {k.kagit && <PriceField part={k} onChange={(p) => setKapak(p)} r={r} unit="kg" />}
       <Toggle label="Selofan" info={i(H.selofan, 'Selofan')} checked={k.selofan.var} onChange={(v) => setKapak({ selofan: { ...k.selofan, var: v } })} />
       <Toggle label="Lak" info={i(H.lak, 'Lak')} checked={k.lak.var} onChange={(v) => setKapak({ lak: { ...k.lak, var: v, tur: k.lak.tur ?? 'Lokal Lak-50x70' } })} />
       <Toggle label="Yaldız" info={i(H.yaldiz, 'Yaldız')} checked={k.yaldiz} onChange={(v) => setKapak({ yaldiz: v })} />
@@ -195,7 +215,7 @@ function BindingGroup({ form, s, setIn }: { form: FormInputs; s: FormSetup; setI
   );
 }
 
-function ExtrasGroup({ form, s, setEk, setPart }: { form: FormInputs; s: FormSetup; setEk: (p: Partial<FormInputs['ekler']>) => void; setPart: (k: ExtraKey, p: Partial<FormPart>) => void }) {
+function ExtrasGroup({ form, s, setEk, setPart, r }: { form: FormInputs; s: FormSetup; setEk: (p: Partial<FormInputs['ekler']>) => void; setPart: (k: ExtraKey, p: Partial<FormPart>) => void; r?: FormResult }) {
   const keys = Object.keys(s.extras) as ExtraKey[];
   const on = keys.filter((k) => form.ekler[k]?.kagit);
   return (
@@ -221,6 +241,7 @@ function ExtrasGroup({ form, s, setEk, setPart }: { form: FormInputs; s: FormSet
                 {(k === 'somiz' || k === 'ayrac') && (
                   <Toggle label={k === 'somiz' ? 'Şömiz işçiliği' : 'Ayraç / afiş işçiliği'} info={i(H.ekParca, 'İşçilik')} checked={!!p.iscilik} onChange={(v) => setPart(k, { iscilik: v })} />
                 )}
+                <PriceField part={p} onChange={(x) => setPart(k, x)} r={r} unit={e.kind === 'kg' ? 'kg' : 'adet'} />
                 <SheetFields part={p} onChange={(x) => setPart(k, x)} withGsm={e.kind === 'kg'} what={e.label.split(' ')[0]} />
               </div>
             )}
@@ -391,7 +412,7 @@ export function Lines({ r }: { r: FormResult }) {
                   </td>
                   <td className={`${td} text-right tabular-nums`}>
                     {l.unitPrice != null ? `${l.unitPrice.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${l.unit ?? '₺'}` : '—'}
-                    {l.priceSource && <div className="text-[10.5px] text-canvas-muted">{l.priceSource === 'logo' ? 'Logo alışı' : 'Fiyat listesi (Logo\'da alış yok)'}</div>}
+                    {l.priceSource && <div className="text-[10.5px] text-canvas-muted">{l.priceSource === 'logo' ? 'Logo alışı' : l.priceSource === 'elle' ? 'Elle girildi' : 'Fiyat listesi (Logo\'da alış yok)'}</div>}
                   </td>
                   <td className={`${td} text-right tabular-nums`}>{tl0(l.total)}</td>
                   <td className={`${td} text-right tabular-nums`}>{tl2(l.perCopy)}</td>
@@ -429,6 +450,7 @@ export function Lines({ r }: { r: FormResult }) {
 
 function lineSource(l: FormResult['lines'][number]): string {
   if (l.priceSource === 'logo') return 'Kâğıt fiyatı Logo\'daki son 6 ayın alış faturalarından (aynı cins ve gramaj, kg ağırlıklı ortalama).';
+  if (l.priceSource === 'elle') return 'Bu kitap için elle girilen kâğıt fiyatı (Logo alışının yerine).';
   if (l.priceSource === 'tarife') return 'Bu kâğıdın Logo\'da son 6 ayda alışı yok; fiyat listesindeki ton fiyatı × vade farkı × kur kullanıldı.';
   return 'Birim fiyatlar matbaa ve malzeme fiyat listesinden (Veri ve varsayımlar → Matbaa ve malzeme fiyat listesi).';
 }
@@ -455,7 +477,9 @@ function Prices({ r }: { r: FormResult }) {
                 <div className="font-bold">{p.name}{p.gsm ? ` · ${num(p.gsm)} gr` : ''}</div>
               </td>
               <td className={`${td} text-[12px]`}>
-                {p.source === 'logo' && p.logo
+                {p.source === 'elle'
+                  ? 'Elle girildi (bu kitap için)'
+                  : p.source === 'logo' && p.logo
                   ? `Logo alışı · ${p.logo.cards} kâğıt kartı${p.logo.sameGsm ? ', aynı gramaj' : ', aynı cins (gramaj yok)'} · son alış ${day(p.logo.last)}`
                   : p.unit === 'kg' ? `Fiyat listesi (Logo'da alış yok): ${p.tarifeText}` : `Fiyat listesi: ${p.tarifeText}`}
               </td>

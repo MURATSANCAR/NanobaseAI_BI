@@ -64,6 +64,11 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     excel: 'Excel\'de kâğıt fiyatı elle yazılan ton fiyatından geliyordu (N9:Q35); burada Logo\'daki gerçek alış fiyatı kullanılır.',
     dikkat: 'Logo\'da o cins kâğıdın son 6 ayda hiç alışı yoksa fiyat listesindeki ton fiyatı kullanılır (ton fiyatı × vade farkı × kur); kalem satırında «Fiyat listesi» diye yazar.',
   },
+  kgFiyat: {
+    ne: 'Bu kitap için kâğıdın kilogram fiyatını (tabaka malzemede adet fiyatını) elle yazın. Doluysa Logo alış fiyatının yerine geçer; tahmin yaparken «bu kâğıt şu fiyata gelirse» diye denemek için.',
+    nereden: 'Boşken kutunun altında hesapta kullanılan fiyat ve kaynağı yazar (Logo\'nun son 6 ay alışı ya da fiyat listesi). Yazdığınız fiyat yalnız bu kitabın hesabına girer, analizle birlikte saklanır.',
+    excel: 'Excel\'de kâğıt fiyatı sağdaki tablodan (N9:Q35) gelir, kitap bazında değiştirilmezdi.',
+  },
   icKagit: {
     ne: 'İç sayfaların basıldığı kâğıdın cinsi. Kâğıt maliyetinin büyük kısmı buradan gelir.',
     nereden: 'Liste fiyat listesindeki kâğıtlar. Kitap seçilince gramaja göre önerilir (60–65 gr 3. hamur, 90 gr ve üstü 1. hamur).',

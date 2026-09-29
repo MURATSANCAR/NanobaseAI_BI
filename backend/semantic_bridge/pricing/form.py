@@ -241,6 +241,10 @@ def compute(inputs: dict[str, Any], tariff: dict[str, Any], *, paper_source: str
             return 0.0
         en, boy, gr = _f(part.get("en")), _f(part.get("boy")), _f(part.get("gr"))
         p = price_of(name, gr)
+        manual = _f(part.get("kgFiyat"))
+        if manual is not None and manual > 0:  # kitaba özel elle fiyat (tahmin): Logo/liste fiyatının yerine
+            p = {**p, "price": manual, "source": "elle"}
+            prices_used[f"{p['name']}|{gr or ''}"] = {**prices_used[f"{p['name']}|{gr or ''}"], "used": manual, "source": "elle"}
         if kind == "tabaka" or p["unit"] == "adet":
             total = qty_sheets * p["price"]
             return line(key, group, label, f"J{excel_row}", total, material=p["name"], sheets=round(qty_sheets, 4),

@@ -178,7 +178,9 @@ export type Sources = { kaynaklar?: Kaynaklar; sources: Array<{ id: string; conn
 
 // ---- maliyet formu (basım Excel'iyle aynı hesap; köprü pricing/form.py)
 export type FormPart = { kagit?: string | null; en?: number | null; boy?: number | null; gr?: number | null; verim?: number | null; fire?: number | null;
-  renk?: number | null; iscilik?: boolean; sayfa?: number | null };
+  renk?: number | null; iscilik?: boolean; sayfa?: number | null;
+  /** Kitaba özel elle kâğıt fiyatı (₺/kg; tabaka malzemede ₺/adet). Boşsa Logo alışı. */
+  kgFiyat?: number | null };
 export type FormInputs = {
   yayinevi?: string | null; kitap?: string; yazar?: string; sayfa?: number | null; adet?: number | null; ebat?: string | null;
   fiyat?: number | null; simdikiFiyat?: number | null; ozelIskonto?: number | null; matbaaAyar?: number | null;
@@ -210,8 +212,8 @@ export type FormSetup = { kaynaklar?: Kaynaklar;
     lastPrint: LogoPrint | null; logoUnitCost: number | null };
 };
 export type FormLine = { key: string; group: 'kagit' | 'matbaa' | 'telif' | 'diger'; name: string; excel: string; total: number; perCopy: number;
-  material?: string; sheets?: number; kg?: number; unitPrice?: number; unit?: string; priceSource?: 'logo' | 'tarife'; plates?: number; formula?: string };
-export type FormPrice = { name: string; unit: 'kg' | 'adet'; tarife: number; used: number; source: 'logo' | 'tarife'; tarifeText: string; gsm: number | null;
+  material?: string; sheets?: number; kg?: number; unitPrice?: number; unit?: string; priceSource?: 'logo' | 'tarife' | 'elle'; plates?: number; formula?: string };
+export type FormPrice = { name: string; unit: 'kg' | 'adet'; tarife: number; used: number; source: 'logo' | 'tarife' | 'elle'; tarifeText: string; gsm: number | null;
   logo?: { perKg: number; kg: number; cards: number; sameGsm: boolean; last: string | null; names: string[] } | null };
 export type FormSummary = {
   forma: number; kagitAdet: number; matbaaAdet: number; telifAdet: number; kitapMaliyeti: number; kitapMaliyetiToplam: number; matbaaToplam: number;

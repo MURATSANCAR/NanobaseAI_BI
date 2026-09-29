@@ -352,7 +352,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
       ) : (
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-4">
           <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-3 lg:gap-4">
-            <CostGroups form={cost} s={setup.data} st={st} />
+            <CostGroups form={cost} s={setup.data} st={st} r={costCalc.data} />
           </fieldset>
           <div className="lg:sticky lg:top-2">
             <ResultCard r={costCalc.data} loading={costCalc.isFetching} err={costCalc.error} />

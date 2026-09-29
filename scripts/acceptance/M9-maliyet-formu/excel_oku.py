@@ -113,6 +113,20 @@ def part(wf, wv, row: int, **extra) -> dict:
             **extra}
 
 
+ROW_KEY = {7: "icKagit", 10: "kapakKagit", 11: "yanKagit", 12: "somiz", 13: "ayrac", 14: "mukavva", 15: "ciltBezi", 16: "digerKagit"}
+
+
+def kesim_key(wv):
+    """Özel kesimin (B27) hangi kâğıt satırına yapıldığı: Excel VLOOKUP(B27, A7:F17) ile ilk eşleşen satır."""
+    name = s(wv["B27"].value)
+    if not name:
+        return None
+    for r in range(7, 18):
+        if s(wv[f"A{r}"].value) == name:
+            return ROW_KEY.get(r)
+    return None
+
+
 def inputs(wf, wv) -> dict:
     j33f = wf["J33"].value
     ucret, bolen = None, 1.0
@@ -144,7 +158,8 @@ def inputs(wf, wv) -> dict:
                   "lak": {"var": x(wv["B35"].value), "tur": s(wv["A35"].value)},
                   "yaldiz": x(wv["B29"].value), "gofre": x(wv["B28"].value),
                   "gren": int(x(wv["I27"].value)) + int(x(wv["I30"].value)),
-                  "klise": {"adet": num(wv["I26"].value), "ebat": s(wv["D27"].value)}},
+                  "klise": {"adet": num(wv["I26"].value), "ebat": s(wv["D27"].value)},
+                  "ozelKesim": kesim_key(wv)},
         "ekler": ekler,
         "cilt": {"tur": s(wv["A36"].value), "birim": num(wv["D36"].value)},
         "diger": {"kapakUcreti": ucret, "kapakBolen": bolen, "kapakEtiket": s(wv["H33"].value), "nakliye": num(wv["J32"].value),
