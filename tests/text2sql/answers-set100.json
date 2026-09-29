@@ -807,7 +807,8 @@
       "musteri_bekleyen_tutar",
       "bekleyen_tutar",
       "bekleyen_toplam_tutar",
-      "tutar"
+      "tutar",
+      "bekleyen_siparis_tutari"
      ],
      "reference": "bekleyen_tutar",
      "tolerance": 0.0001
@@ -825,13 +826,14 @@
       "musteri_bekleyen_tutar",
       "bekleyen_tutar",
       "bekleyen_toplam_tutar",
-      "tutar"
+      "tutar",
+      "bekleyen_siparis_tutari"
      ],
      "reference_key": "musteri_kodu",
      "reference_value": "bekleyen_tutar"
     }
    ],
-   "note": "2026-09-18: 31 müşteri, toplam bekleyen tutar 18.062.204,75 ₺ (6.181 satır, 298 fiş, 85.688 adet); en çok bekleyen KİTAPYURDU (12001.01.Kİ027) 13.795.025,00, sonra TURKUVAZ 1.223.885,00, D-MARKET 625.000,00. Dayanak: iş tanımı 10 + Kural 10 (TRCODE 1, LINETYPE 0, CANCELLED 0, CLOSED 0, AMOUNT>SHIPPEDAMOUNT; tutar = Σ(AMOUNT−SHIPPEDAMOUNT)×PRICE). Köprü ORFICHE'ye INNER JOIN yaptığı için başlığı olmayan 1 yetim satırı (ORFLINE 108767, 375 ₺) atıyor: toplamı 18.061.829,75 (fark 2e-5, tolerans içinde), müşteri sayısı ve sıralama aynı. Sunum eksiği: köprü genel toplamı tek rakam olarak vermiyor; 'bekleyen_toplam_tutar' kolonu aslında müşteri tutarının kopyası."
+   "note": "2026-09-18: 31 müşteri, toplam bekleyen tutar 18.062.204,75 ₺ (6.181 satır, 298 fiş, 85.688 adet); en çok bekleyen KİTAPYURDU (12001.01.Kİ027) 13.795.025,00, sonra TURKUVAZ 1.223.885,00, D-MARKET 625.000,00. Dayanak: iş tanımı 10 + Kural 10 (TRCODE 1, LINETYPE 0, CANCELLED 0, CLOSED 0, AMOUNT>SHIPPEDAMOUNT; tutar = Σ(AMOUNT−SHIPPEDAMOUNT)×PRICE). Köprü ORFICHE'ye INNER JOIN yaptığı için başlığı olmayan 1 yetim satırı (ORFLINE 108767, 375 ₺) atıyor: toplamı 18.061.829,75 (fark 2e-5, tolerans içinde), müşteri sayısı ve sıralama aynı. Sunum eksiği: köprü genel toplamı tek rakam olarak vermiyor; 'bekleyen_toplam_tutar' kolonu aslında müşteri tutarının kopyası. | 2026-09-29 (koordinatör kararı): cevap doğru (31 satır = referans); katalog ölçüsünün takma adı bekleyen_siparis_tutari sum.answer ve pairs.answer_value listelerine eklendi, referans değişmedi."
   },
   {
    "n": 30,
@@ -1728,30 +1730,28 @@
    "n": 63,
    "id": "B064",
    "soru": "Etkinliklere harcadığımız toplam gider bütçenin neresinde duruyor?",
-   "kaynak": "crm",
+   "kaynak": "logo",
    "holdout": false,
-   "expect": [
-    "deny",
-    "answer"
-   ],
+   "expect": "answer",
    "verified": true,
-   "source": "crm",
-   "reference_sql": "SELECT SUM(e.new_ToplamEtkinlikGideri) AS toplam_etkinlik_gideri, SUM(CASE WHEN e.new_ToplamEtkinlikGideri>0 THEN 1 ELSE 0 END) AS giderli_etkinlik, MAX(CASE WHEN e.new_ToplamEtkinlikGideri>0 THEN e.new_BalangTarihi END) AS son_giderli_etkinlik, (SELECT COUNT(*) FROM Timas_MSCRM.dbo.new_projeBase p WHERE p.new_toplampazarlamabutcesi>0) AS pazarlama_butcesi_dolu_proje, (SELECT COUNT(*) FROM Timas_MSCRM.dbo.new_kitapBase k WHERE k.new_toplampazarlamabutcesi>0) AS pazarlama_butcesi_dolu_kitap FROM Timas_MSCRM.dbo.new_etkinlikBase e WHERE e.statecode=0",
+   "source": "logo",
+   "reference_sql": "SELECT SUM(L.DEBIT-L.CREDIT) AS toplam_etkinlik_gideri, COUNT(*) AS satir FROM LG_411_01_EMFLINE L WHERE L.CANCELLED=0 AND L.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND L.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND (L.ACCOUNTCODE LIKE '740.03%' OR L.ACCOUNTCODE LIKE '760.44.444%' OR L.ACCOUNTCODE LIKE '760.44.445%' OR L.ACCOUNTCODE LIKE '760.44.446%' OR L.ACCOUNTCODE LIKE '760.45%' OR L.ACCOUNTCODE LIKE '760.47.470%' OR L.ACCOUNTCODE LIKE '760.47.477%' OR L.ACCOUNTCODE LIKE '770.44.444%' OR L.ACCOUNTCODE LIKE '770.47.472%')",
    "checks": [
     {
      "kind": "value",
      "answer": [
       "toplam_etkinlik_gideri",
       "etkinlik_gideri",
+      "etkinlik_ve_fuar_gideri",
       "toplam_gider",
       "gider",
       "*"
      ],
      "reference": "toplam_etkinlik_gideri",
-     "tolerance": 0
+     "tolerance": 0.0005
     }
    ],
-   "note": "2026-09-18: etkinlik bütçesi verisi yok — new_etkinlikBase'te bütçe sütunu yok; pazarlama bütçesi sütunları (new_projeBase / new_kitapBase.new_toplampazarlamabutcesi) hiçbir kayıtta dolu değil; new_butcekalemiBase 2013–2014 (iş planı kalemleri), new_promosyonbutcesiBase 2 kayıt (2017, 2020), etkinlikle bağı yok. Etkinlik gideri de yalnız 2015–2016'da 28 etkinlikte dolu: toplam 9.275 ₺ (yaklaşık 57 bin aktif etkinliğin gerisi boş). Köprü reddetti → veriyle doğrulanıyor. Kural C21'e göre köprü toplam gideri verip bütçe olmadığını söylerse de dürüsttür; o durumda değer 9.275 ile karşılaştırılır (kontrol yalnız cevap gelirse çalışır)."
+   "note": "2026-09-18: etkinlik bütçesi verisi yok — new_etkinlikBase'te bütçe sütunu yok; pazarlama bütçesi sütunları (new_projeBase / new_kitapBase.new_toplampazarlamabutcesi) hiçbir kayıtta dolu değil; new_butcekalemiBase 2013–2014 (iş planı kalemleri), new_promosyonbutcesiBase 2 kayıt (2017, 2020), etkinlikle bağı yok. Etkinlik gideri de yalnız 2015–2016'da 28 etkinlikte dolu: toplam 9.275 ₺ (yaklaşık 57 bin aktif etkinliğin gerisi boş). Köprü reddetti → veriyle doğrulanıyor. Kural C21'e göre köprü toplam gideri verip bütçe olmadığını söylerse de dürüsttür; o durumda değer 9.275 ile karşılaştırılır (kontrol yalnız cevap gelirse çalışır). | 2026-09-29 (koordinatör kararı; kullanıcı altın kararlarını bıraktı): doğru kaynak LOGO — gerçekleşmiş finansal olayın kayıt sistemi Logo'dur (system-of-record-logo). Logo'da etkinlik/fuar gider hesapları: 740.03 Fuar Organizasyon; 760.44.444–446 Fuar/Stand kira, satınalma, kurulum; 760.45 Fuar Giderleri (451 kira, 452 kurulum, 453 yol/yemek/konaklama); 760.47.470 Organizasyon, Etkinlik, İmza Günü vb.; 760.47.477 Fuar yol/konaklama; 770.44.444; 770.47.472 Stand, Fuar, Sergi ve İmza. 2026 (LG_411_01_EMFLINE, CANCELLED=0, Σ(DEBIT−CREDIT)) = 4.831.871,56 ₺ (1.079 satır; en büyük 760.47.470: 3.405.000,92). 2025 net 0 (yıl sonu kapanış fişi 760'ları sıfırlıyor) → varsayılan dönem bu yıl; çok yıllık okumada kapanış/devir fişi dışlanmalı. CRM new_ToplamEtkinlikGideri yalnız 2015–16'da 28 kayıt (9.275 ₺) — eksik alan, referans değil. Etkinlik bütçesi hiçbir kaynakta yok (Kural C21): cevap toplamı verir, bütçenin tanımlı olmadığını söyler. expect: answer (eskiden deny/answer). Katalog ölçüsü: 'etkinlik ve fuar gideri' (scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py)."
   },
   {
    "n": 64,
@@ -1984,10 +1984,10 @@
       "ciro"
      ],
      "reference": "t",
-     "sql": "SELECT SUM(S.LINENET) AS t FROM LG_411_01_STLINE S WHERE S.TRCODE IN (7,8,9) AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' AND S.STOCKREF IN (SELECT ITEMREF FROM LG_411_UNITBARCODE WHERE LTRIM(RTRIM(BARCODE))='{key}')"
+     "sql": "SELECT SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END) AS t FROM LG_411_01_STLINE S WHERE S.TRCODE IN (2,3,7,8,9) AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.INVOICEREF<>0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' AND S.STOCKREF IN (SELECT ITEMREF FROM LG_411_UNITBARCODE WHERE LTRIM(RTRIM(BARCODE))='{key}')"
     }
    ],
-   "note": "İki kaynaklı. 5 denemede 5 farklı sonuç görüldü; bir kez üç barkodda iki veritabanıyla eşleşti. Hedef adet, ciro ₺ — fark kolonu birim karıştırıyor; kitap adı yerine barkod dönüyor. verified=false: sağlam olana kadar kapıyı kırmaz ama raporlanır."
+   "note": "İki kaynaklı. 5 denemede 5 farklı sonuç görüldü; bir kez üç barkodda iki veritabanıyla eşleşti. Hedef adet, ciro ₺ — fark kolonu birim karıştırıyor; kitap adı yerine barkod dönüyor. verified=false: sağlam olana kadar kapıyı kırmaz ama raporlanır. | 2026-09-29 (koordinatör kararı): Logo lookup cirosu kurala uyarlandı — satış = faturalı satır (INVOICEREF<>0), iade (TRCODE 2,3) düşülür (sales-are-invoiced-lines; iş tanımı 01 net ciro, LINENET). Eski lookup faturasız irsaliye satırlarını sayıyor, iadeyi düşmüyordu; katalog cirosuyla doğru bir cevap bile uymazdı."
   },
   {
    "n": 71,

@@ -358,6 +358,24 @@
 
 - **Test sunucusu:** `CalcPane.tsx` ve `help.ts` sunucuda önceki main hâlindeydi (md5), yerleştirildi; `index-DPaAEmv0.js`. Görünmez tarayıcı (timasai kısa oturum, silindi): yeni kitapta ve Mükemmeliyetçi Kişilik'te KDV «0», telif tabanı «Brüt — kapak fiyatı», doğuşu «Baskıdan ödeme — basılan adet»; sayfa hatası 0.
 - **Müşteri VM'i:** arada başka oturumların iki kurulumu (`14d2346d`, `151ee17d`, 14:49'da EXIT 0) — ikisi de `c9ad5e2b`'nin atası. Ön denetim `._*` 0, çakışma işareti 0, arşiv köprüsü 2.374 uç; `vm-deploy-c9ad5e2b` EXIT 0, 5 konteyner ayakta, `bi_var` 7 → 7. VM'in sunduğu `PricingScreen-WjtMwIfc.js` içinde `royaltyOn:"baski",vat:0`, «Excel tarifesi» 0.
+## 2026-09-29 (17:15) — Altın set kararları (koordinatör) ve etkinlik gideri Logo'ya (dal `zeki-kapi-sinif`)
+
+- **Karar sahibi:** kullanıcı altın kararlarını koordinatöre bıraktı («doğru olan ne ise onu yap»); koordinatör veriye bakıp karar verdi.
+- **Q63 (B064) — kaynak Logo** (gerçekleşmiş finansal olayın kayıt sistemi Logo): etkinlik/fuar gider hesapları 740.03,
+  760.44.444–446, 760.45, 760.47.470, 760.47.477, 770.44.444, 770.47.472; 2026 Σ(borç − alacak) = 4.831.871,56 ₺ (1.079 satır).
+  CRM `new_ToplamEtkinlikGideri` eksik alan (2015–16, 28 kayıt, 9.275 ₺). Altın: `source=logo`, `expect=answer`, referans Logo
+  hesap önekleri, gerekçe not alanında. Katalog: yeni ölçü «etkinlik ve fuar gideri»
+  (`scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py`; «etkinlik gideri/giderleri» eş anlamlıları buraya, CRM kavramı
+  «crm etkinlik kartı gideri» adına daraltılır; kapanış fişi türü `--olc` ile ölçülüp `--haric-fis-turu` ile dışlanır). K7 artık
+  kayıt kelimesinin başka tablonun ENTITY'si olmasına izin veriyor (sertifikalı ad belirler). Bilgi paketi Kural C10/C21
+  güncellendi: toplam harcama Logo'dan, etkinlik bütçesi hiçbir kaynakta tanımlı değil. Modelin «bütçe tanımlı değil,
+  karşılaştırma yapılamaz» okuması bilgi paketinde belgelenmiş bir yokluğa denk geliyorsa artık ret sebebi değil
+  (`CompilerRouter.compile`, `caveat_for(..., absence_only=True)`); başka itiraflar yine reddedilir.
+- **Q69 (A023):** Logo lookup cirosu kurala uyarlandı — faturalı satır (`INVOICEREF<>0`), iade (TRCODE 2,3) düşülür.
+- **Q29 (A031):** `bekleyen_siparis_tutari` `sum.answer` ve `pairs.answer_value` listelerine eklendi; referans aynı.
+- **Yan etki:** Q49 (A044, holdout) «etkinlik giderleri yazar bazında» artık Logo ölçüsünü okur; yazar kırılımı yalnız CRM kartında.
+- **DOĞRULANAMADI — testler koordinatörde.** Yeni testler: ENTITY'si başka tabloda olan kayıt kelimesi, belgelenmiş yokluk / ilgisiz itiraf.
+
 ## 2026-09-29 (16:30) — Zeki AI cevap kapısı: 17 sağlam olmayan soru 14 sınıfa bağlandı, yedi sınıf kodda (dal `zeki-kapi-sinif`)
 
 - **Girdi:** test sunucusundaki tam kapı (69 soru × 3, 10:22 UTC): SAĞLAM 52 · BOZUK 11 · KARARSIZ 4 · VERİ 2. Rapor SQL taşımıyor;

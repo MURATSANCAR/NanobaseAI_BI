@@ -9,9 +9,9 @@
 #                backend/semantic_bridge/{chat_portal,chat_scope,app}.py
 #   sonra        HIZLI KAPI SONRA: resolver-gate yeniden, ÖNCE ile fark. Beklenen fark YALNIZ A044 (Q49) ve B064 (Q63).
 #                Başka soru değişirse DUR: 1b (ayrık ölçü adı) ya da 2b (kırılım sözcüğü) yan etkisidir.
-#   katalog-kuru kaydın adı kolonları (record_label) — aday listesi, yazmaz
+#   katalog-kuru kaydın adı kolonları (record_label) — aday listesi; etkinlik ve fuar gideri (Logo) --olc ölçümü; yazmaz
 #   katalog-yaz  aynı betik --apply (liste okunduktan sonra; yanlış aday varsa EXCLUDE="terim,terim")
-#   hedefli      answer-gate --only Q4,Q11,Q29,Q40,Q43,Q49,Q63,Q69 --repeat 3
+#   hedefli      answer-gate --only Q4,Q11,Q29,Q40,Q43,Q49,Q63,Q69 --repeat 3 (altın 09-29: Q29, Q63, Q69 güncel)
 #   tam          answer-gate --repeat 3 --report (temel çizgi 52/11/4/2; SAĞLAM→BOZUK her geçiş bu dalın gerilemesi)
 #   kalite       quality-gate (golden, SEMANTIC_TABLE_SELECTOR=off SEMANTIC_LLM=0) — recall düşerse DUR
 #
@@ -54,6 +54,9 @@ case "${1:-}" in
   katalog-kuru|katalog-yaz)
     args=(); [ "$1" = katalog-yaz ] && args+=(--apply); [ -n "$EXCLUDE" ] && args+=(--exclude "$EXCLUDE")
     run_env $VENV - ${args[@]+"${args[@]}"} < "$SRC/scripts/catalog-authoring/2026-09-29-kayit-adi-kolonlari.py" | tee "$W/$1.txt"
+    # etkinlik ve fuar gideri (Logo): kuruda --olc ile bu yıl toplamı + geçen yılın fiş türü dökümü; KAPANIS=<TRCODE> verilirse dışlanır
+    eargs=(); [ "$1" = katalog-yaz ] && eargs+=(--apply) || eargs+=(--olc); [ -n "${KAPANIS:-}" ] && eargs+=(--haric-fis-turu "$KAPANIS")
+    run_env $VENV - "${eargs[@]}" < "$SRC/scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py" | tee -a "$W/$1.txt"
     ;;
   hedefli)
     cd "$SRC"

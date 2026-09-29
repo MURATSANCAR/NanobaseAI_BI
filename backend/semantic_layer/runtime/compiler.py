@@ -2538,6 +2538,16 @@ class CompilerRouter:
         if readings:
             out.explain = [f"yorum: {r}" for r in readings] + [e for e in out.explain if not str(e).startswith("yorum: ")]
         gaps = admitted_gaps(readings)
+        # A part the knowledge pack itself documents as absent ("etkinliklere bağlı bir bütçe tablosu yoktur … toplam
+        # verilir ve bütçenin tanımlı olmadığı söylenir", Kural C21) is not an admission that the answer is short: it
+        # is the documented answer. The operator's sentence is shown beside the model's reading; anything else the
+        # model says it could not do still refuses. 2026-09-29 tam kapı B064 (altın: answer).
+        rules = getattr(self.existing, "rules_text", "") if self.existing is not None else ""
+        documented = {g: caveat_for(g, rules, absence_only=True) for g in gaps} if rules else {}
+        documented = {g: why for g, why in documented.items() if why}
+        if documented:
+            gaps = [g for g in gaps if g not in documented]
+            out.explain = list(out.explain) + [f"belgelenmiş yokluk: {why}" for why in dict.fromkeys(documented.values())]
         if gaps:
             # Served, it is a number for a question nobody asked, with the admission buried in a comment. Refused,
             # the person reads what is missing in the model's own words — the honest answer.

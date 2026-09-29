@@ -243,11 +243,6 @@ def _rooted(key: str) -> str:
     return " ".join(short_root(t) for t in key.split())
 
 
-def _bare(entity: str) -> str:
-    """One table's two catalog spellings (STLINE / LG_STLINE) compared as one."""
-    return re.sub(r"^LG_", "", (entity or "").upper())
-
-
 #: "Yıllık ciro" bu yılın yıllık tutarını da anlatabilir; yıllara YAYILMAYI yalnız açık kırılım ister.
 _YEARLY_BREAKDOWN = re.compile(r"\b(yillara gore|yil yil|yil bazinda|yillar bazinda|yillara bol\w*|her yil)\b")
 
@@ -3341,15 +3336,16 @@ class SemanticResolver:
         """A generic measure word that, together with a record word a few words before it, is the name of ANOTHER
         certified measure: that measure is the one asked for.
 
-        2026-09-29 tam kapı B064: "Etkinliklere harcadığımız toplam gider" — "gider" matched the ERP expense
-        measure on its own, "etkinliklere" went to the CRM event table and was then left to the model as an
-        other-server word; the model filtered ledger lines by a name and summed 3,4 Mn ₺. The catalog certifies
-        "etkinlik gideri" (Σ event cost, 9.275 ₺): both of its words are in the question, in order, with only
-        words between that belong to nothing. Greedy matching reads adjacent words only and could not see it.
+        2026-09-29 tam kapı B064: "Etkinliklere harcadığımız toplam gider" — "gider" matched the generic ledger
+        expense measure (every 7xx account) on its own, "etkinliklere" went to the CRM event table and was then left
+        to the model as an other-server word; the model guessed which ledger lines were about events. The catalog
+        certifies "etkinlik gideri" (the event/fair expense accounts of the ledger — the system of record for money
+        spent): both of its words are in the question, in order, with only words between that belong to nothing.
+        Greedy matching reads adjacent words only and could not see it.
 
         Kept narrow on purpose: the words between must be unplaced (a relative verb, "toplam"); the record word
-        must be unplaced or an ENTITY of the very table the named measure maps to; exactly one certified measure
-        must carry that name. The slot is INFERRED — the name was put together, not written."""
+        must be unplaced or a one-word ENTITY (of any table — the certified name decides where the measure lives);
+        exactly one certified measure must carry that name. The slot is INFERRED — the name was put together."""
         reach = self._SPLIT_NAME_REACH
         for slot in [h for h in hits if h.semantic_type == SemanticType.METRIC and h.span and h.mapping]:
             i, j = slot.span
@@ -3370,8 +3366,8 @@ class SemanticResolver:
                 senses = [(c, maps) for c, maps in senses if c.semantic_type == SemanticType.METRIC and maps]
                 if len({c.id for c, _ in senses}) != 1 or senses[0][0].id == slot.concept_id:
                     continue
-                if owner is not None and not any(_bare(m.entity) == _bare(owner.mapping.entity) for m in senses[0][1]):
-                    continue
+                # The record word may be an ENTITY of another table: "etkinlik" names the CRM event table, while
+                # what was spent on events is booked in the ledger (system of record). The certified name decides.
                 found = (t, phrase, senses, owner)
                 break
             if found is None:

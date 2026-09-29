@@ -246,6 +246,41 @@ def test_a_measure_name_split_by_a_relative_clause_is_that_measure(catalog, prof
     assert named.status == "INFERRED" and (named.explain or {}).get("source") == "split_measure_name"
 
 
+def test_the_record_word_may_name_another_table_than_the_measure(catalog, profiles):
+    """«Etkinlik» names the CRM event table; what was spent on events is booked in the ledger. The certified name
+    «etkinlik gideri» decides — the entity word's table does not."""
+    stl = next(p for p in profiles if p.entity == "STLINE")
+    _certify(catalog, "etkinlik", SemanticType.ENTITY, Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS"))
+    _certify(catalog, "etkinlik gideri", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern=stl.table_pattern,
+                                                                     formula="SUM(STLINE.OUTCOST)"))
+    sq = _cost_catalog(catalog, profiles).resolve("Etkinliklere harcadığımız toplam gider ne kadar?", today=TODAY)
+    assert _metric_terms(sq) == ["etkinlik gideri"], (_metric_terms(sq), sq.explanation)
+    assert not [s for s in sq.slots if s.semantic_type == SemanticType.ENTITY and s.mapping and s.mapping.entity == "ITEMS"]
+
+
 def test_the_generic_measure_stays_when_no_certified_name_is_split(catalog, profiles):
     sq = _cost_catalog(catalog, profiles).resolve("Bu yıl toplam gider ne kadar?", today=TODAY)
     assert _metric_terms(sq) == ["gider"], (_metric_terms(sq), sq.explanation)
+
+
+# ---------------------------------------------------------------- K7b: belgelenmiş yokluk bir itiraf değildir
+
+def _c21_rule() -> str:
+    from pathlib import Path
+    text = (Path(__file__).resolve().parents[3] / "configs/semantic/knowledge/logo/knowledge/rules/crm-timas.md").read_text(encoding="utf-8")
+    return next(line for line in text.splitlines() if line.startswith("- **Etkinlik bütçesi yoktur:**"))
+
+
+def test_a_gap_the_knowledge_pack_documents_is_explained_by_the_operators_sentence():
+    """B064 (altın: answer): the model's reading «bütçe tanımlı değil, karşılaştırma yapılamaz» is what Kural C21
+    tells it to say. Matched to that documented absence, it is served with the operator's sentence, not refused."""
+    from semantic_layer.runtime.compiler import admitted_gaps, caveat_for
+    gap = "'butcenin' → etkinlik bütçesi hiçbir kaynakta tanımlı değil; bütçe karşılaştırması yapılamaz"
+    assert admitted_gaps([gap]) == [gap]
+    assert "bütçe" in caveat_for(gap, _c21_rule(), absence_only=True).lower()
+
+
+def test_an_undocumented_gap_is_not_excused_by_an_unrelated_rule():
+    from semantic_layer.runtime.compiler import caveat_for
+    gap = "'birim' → UNITSETL.NAME (STLINE'da birim kolonu yok, birim kırılımı eklenemedi)"
+    assert caveat_for(gap, _c21_rule(), absence_only=True) == ""
