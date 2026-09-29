@@ -32,6 +32,9 @@ def test_paths_and_keys():
     assert RC.cacheable_path("/api/v1/editorial/ask/catalog")
     assert RC.module_of("/api/v1/seo-geo/products/1/propose") == "/api/v1/seo-geo"
     assert RC.module_of("/api/v1/editorial/contracts/records/9") == "/api/v1/editorial/contracts"
+    # Redaksiyon: dosya kaldırma ve dosyadan eser, eser uçlarının hazır cevaplarını düşürür.
+    assert RC.module_of("/api/v1/editorial/files/abc/remove") == "/api/v1/editorial/works"
+    assert RC.module_of("/api/v1/editorial/works-from-file") == "/api/v1/editorial/works"
     assert RC.norm_query("b=2&a=1&_=99&refresh=true") == "a=1&b=2"
 
 

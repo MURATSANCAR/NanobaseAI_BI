@@ -180,13 +180,19 @@ def cacheable_path(path: str) -> bool:
     return path.startswith("/api/v1/") and not path.startswith(NEVER_PREFIXES) and not NEVER_PARTS.search(path)
 
 
+#: Aynı veriyi farklı yoldan yazan editoryal uçlar: yazma, okuyan modülün hazır cevaplarını düşürmeli. Redaksiyonda
+#: dosya kaldırma (`/editorial/files/<id>/remove`) ve dosyadan yeni eser (`/editorial/works-from-file`) eser uçlarını
+#: (`/editorial/works…`) değiştirir; ayrı modül sayılınca kaldırılan dosya ekranda kalıyordu (ZEKI-45 kabulü, 2026-09-29).
+EDITORIAL_SAME_DATA = {"files": "works", "works-from-file": "works"}
+
+
 def module_of(path: str) -> str:
     """Yazmanın düşüreceği önek: editoryal için iki parça (/api/v1/editorial/contracts), diğerlerinde bir (/api/v1/seo-geo)."""
     parts = [p for p in path.split("/") if p][:4]      # api, v1, modül, alt
     if len(parts) < 3:
         return path
     if parts[2] == "editorial" and len(parts) >= 4:
-        return "/" + "/".join(parts[:4])
+        return "/" + "/".join(parts[:3] + [EDITORIAL_SAME_DATA.get(parts[3], parts[3])])
     return "/" + "/".join(parts[:3])
 
 
