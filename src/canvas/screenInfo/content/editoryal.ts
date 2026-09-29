@@ -16,6 +16,27 @@ const KAPAK_ARSIVI: ScreenInfoMap[string] = {
 };
 
 /** Editoryal parça: başvurudan baskıya editoryal masa, çeviri, tasarım, dijital yayın, telif ve kişiler. */
+/** Sözleşme karşılaştırma: menü öğesi ve `path:/telif-sozlesme/karsilastirma` kalıbı aynı metni kullanır (`/telif-sozlesme/:key` kalıbı bu adresi de yakalıyordu). */
+const KARSILASTIRMA: ScreenInfoMap[string] = {
+  summary:
+    'Sözleşmenin maddeleri benzer geçmiş sözleşmelerle, hukuk biriminin standart pozisyonlarıyla ve şekil şartlarıyla kıyaslanır; farklı olan işaretlenir, incelenir ve Word/Excel olarak alınır. Belgeler madde madde ve madde türüne göre karşılaştırılır.',
+  how: [
+    'Emsal: aynı tip, ödeme türü, para birimi ve bölüm, son yıllarda başlamış sözleşmeler; isterseniz ajans, satış dilimi, hedef kitle, tür, yerli/çeviri de. Emsal azsa ölçütler sırayla gevşer ve ekranda yazar.',
+    'Değer emsallerin eşik yüzdesinden azında görülüyorsa işaretlenir, gerekçe sayıyla yazılır. TL tutarlar başlangıç ayının kuruyla dolara çevrilip kıyaslanır.',
+    'Onaylı standart pozisyona aykırılık ve şekil eksikleri (mali haklar, süre, taraf, kitap, ücret) ayrı listelenir; her bulgu incelendi, istisna, CRM düzeltilmeli ya da hukuka sorulacak diye işaretlenir.',
+    'Belge maddelere bölünür, her maddenin türü (fesih, münhasırlık, yetkili mahkeme…) bulunur; iki belge ya da bütün arşiv karşılaştırılır. Kişisel veriler maskeli gösterilir.',
+    "Kararlar sayımdır; madde türünde kural karar veremezse kendi modelimiz kapalı seçenekten seçer. CRM'e hiçbir şey yazılmaz.",
+  ],
+  data: "CRM sözleşmeleri, tarafları, kitapları ve ekleri; Logo satışı (satış dilimi); TCMB kuru; sözleşme sayfasında okunan belgeler, şablonlar, yüklenen belgeler; incelemeler ve standart pozisyonlar portalda.",
+  refresh: 'CRM görüntüsü Yönetim ayarındaki süreden (varsayılan 12 saat) eskiyse ilk açılışta arka planda yeniden okunur; kurlar eksik aylar için tamamlanır.',
+  actions: [
+    'Olağan dışı sözleşmeleri süzün, bulguları inceleyin, listeyi Excel olarak alın.',
+    'Sözleşmeyi açıp emsal ve ölçüt seçin; Word raporu indirin.',
+    'Standart pozisyon yazın ya da emsalden öneri üretip onaylayın.',
+    'Belge yükleyin (birden çok), sözleşmeye bağlayın; iki belgeyi ya da arşivi karşılaştırın.',
+  ],
+};
+
 const CONTENT: ScreenInfoMap = {
   basvurular: {
     summary:
@@ -451,6 +472,7 @@ const CONTENT: ScreenInfoMap = {
     actions: ['Word şablonu yükleyin ya da «Yeni şablon» açın.', 'Şablonu örnek değerlerle önizleyin.'],
   },
 
+  'path:/telif-sozlesme/karsilastirma': KARSILASTIRMA,
   'path:/telif-sozlesme/:key': {
     summary: 'Tek sözleşmenin sayfası: şartlar, metin, zeyilnameler, ödeme takvimi, hakediş ve değişiklik geçmişi.',
     how: [
@@ -499,25 +521,7 @@ const CONTENT: ScreenInfoMap = {
     actions: ['Kitabı seçip hak kartını görün, hak ekleyin ya da düzenleyin.', 'Verilen lisans kaydı açın.', 'Hak açıklamalarını «Zeki AI ile sınıfla» ve önerileri onaylayın.'],
   },
 
-  'sozlesme-karsilastirma': {
-    summary:
-      'Sözleşmenin maddeleri benzer geçmiş sözleşmelerle, hukuk biriminin standart pozisyonlarıyla ve şekil şartlarıyla kıyaslanır; farklı olan işaretlenir, incelenir ve Word/Excel olarak alınır. Belgeler madde madde ve madde türüne göre karşılaştırılır.',
-    how: [
-      'Emsal: aynı tip, ödeme türü, para birimi ve bölüm, son yıllarda başlamış sözleşmeler; isterseniz ajans, satış dilimi, hedef kitle, tür, yerli/çeviri de. Emsal azsa ölçütler sırayla gevşer ve ekranda yazar.',
-      'Değer emsallerin eşik yüzdesinden azında görülüyorsa işaretlenir, gerekçe sayıyla yazılır. TL tutarlar başlangıç ayının kuruyla dolara çevrilip kıyaslanır.',
-      'Onaylı standart pozisyona aykırılık ve şekil eksikleri (mali haklar, süre, taraf, kitap, ücret) ayrı listelenir; her bulgu incelendi, istisna, CRM düzeltilmeli ya da hukuka sorulacak diye işaretlenir.',
-      'Belge maddelere bölünür, her maddenin türü (fesih, münhasırlık, yetkili mahkeme…) bulunur; iki belge ya da bütün arşiv karşılaştırılır. Kişisel veriler maskeli gösterilir.',
-      "Kararlar sayımdır; madde türünde kural karar veremezse kendi modelimiz kapalı seçenekten seçer. CRM'e hiçbir şey yazılmaz.",
-    ],
-    data: "CRM sözleşmeleri, tarafları, kitapları ve ekleri; Logo satışı (satış dilimi); TCMB kuru; sözleşme sayfasında okunan belgeler, şablonlar, yüklenen belgeler; incelemeler ve standart pozisyonlar portalda.",
-    refresh: 'CRM görüntüsü Yönetim ayarındaki süreden (varsayılan 12 saat) eskiyse ilk açılışta arka planda yeniden okunur; kurlar eksik aylar için tamamlanır.',
-    actions: [
-      'Olağan dışı sözleşmeleri süzün, bulguları inceleyin, listeyi Excel olarak alın.',
-      'Sözleşmeyi açıp emsal ve ölçüt seçin; Word raporu indirin.',
-      'Standart pozisyon yazın ya da emsalden öneri üretip onaylayın.',
-      'Belge yükleyin (birden çok), sözleşmeye bağlayın; iki belgeyi ya da arşivi karşılaştırın.',
-    ],
-  },
+  'sozlesme-karsilastirma': KARSILASTIRMA,
 
   'editor-atama': {
     summary:

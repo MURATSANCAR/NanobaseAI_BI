@@ -39,4 +39,10 @@ describe('ekran bilgi kutusu içeriği', () => {
     expect(resolveKey(c, 'genel', '/genel/alt')).toBe('genel');
     expect(resolveKey(c, 'yok', '/baska')).toBeNull();
   });
+
+  it('menüde kendi ekranı olan alt adres üst kalıbın metnine düşmez (sözleşme karşılaştırma)', () => {
+    const k = resolveKey(CONTENT, 'sozlesme-karsilastirma', '/telif-sozlesme/karsilastirma');
+    expect(CONTENT[k!]).toBe(CONTENT['sozlesme-karsilastirma']);
+    expect(resolveKey(CONTENT, 'telif-sozlesme', '/telif-sozlesme/2018000950')).toBe('path:/telif-sozlesme/:key');
+  });
 });
