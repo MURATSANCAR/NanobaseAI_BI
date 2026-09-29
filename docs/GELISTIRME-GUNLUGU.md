@@ -6,6 +6,12 @@
 - **Kurulum (`vm-deploy-411dd7be`, `/tmp/vm-deploy-411dd7be.log`):** EXIT=0; bridge/web/login/jobs yeniden kuruldu, db dokunulmadı; rapor önbelleği 7 → 7 korundu; nginx -t geçti; oturumsuz uçlar 200/401. VM `._*` 0, imaj `nanobase-bi-bridge:latest`. Sürüm kaydı ilk koşuda «bilinmiyor» yazdı (CODE_SHA verilmemişti, ortam dosyası root'a ait) — iki köprüye `411dd7be9` ile yeniden yazıldı (VM kayıt 21, test sunucusu kayıt 2).
 - **Katalog:** kod kurulduktan sonra VM Q63'te hâlâ 9.275 ₺ (CRM alanı) dedi — VM kataloğu ayrı Postgres'te. `2026-09-29-etkinlik-fuar-gideri.py` ve `…kayit-adi-kolonlari.py` VM köprü konteynerinde kuru koşu (`--olc`: 2026 = 4.831.871,56 · 2025 = 6.625.966,51, test sunucusuyla aynı) → `--apply` (sem_fb2c1db9b29d CERTIFIED, iki CRM kavramı «crm etkinlik kartı gideri», işlem tipi kayıt adı).
 - **VM doğrulama:** «Etkinliklere harcadığımız toplam gider…» → 4.831.871,56 ₺; «…yazar bazında…» → 5 yazar satırı (test sunucusuyla aynı; sıralama/etkinlik sayısı açık işi burada da geçerli).
+## 2026-09-29 (22:30) — Kampüs'e «Ekip Sohbeti» kartı: kaç kişi çevrimiçi, kişiye doğrudan mesaj
+
+- **İstek:** sohbet ayrı konteyner olarak çalışsın, AD (LDAP) ile giren sohbete de girmiş olsun, ana panelde sohbet alanı ve «… kişi çevrimiçi» ifadesi olsun.
+- **Durum:** sohbet kaynağı `apps/zeki-chat`'te (d40776b36), test sunucusunda kendi yığınında (chat + mongo + ingress, 127.0.0.1:4000) çalışıyor; AD oturumuyla otomatik giriş `/chat-sso` ile zaten var — yeni kod gerekmedi.
+- **Yapılan:** giriş servisine `/chat-presence` (portal oturumu şart; sohbetin `users.presence` cevabı 15 sn önbellekli, servis hesabı/`rocket.cat`/kurulum yöneticisi sayılmaz; yapılandırma yoksa 404, sohbet cevap vermezse 503). Kampüs sağ sütununun başında `SohbetCard`: «N kişi çevrimiçi» rozeti, çevrimiçi kişiler (Çevrimiçi/Meşgul/Uzakta, rehber fotoğrafı), kişiye basınca `/timas/sohbet/direct/<hesap>`, «Sohbeti aç»; sohbet hep aynı sekmede (`zeki-sohbet`) açılır. Sohbetin olmadığı kurulumda (müşteri VM'i) kart görünmez.
+- **Test (test sunucusu, dal ağacı `/tmp/claude-sohbet`):** giriş servisi 19/19 (yeni: sayım, önbellek, 401/404/503), `tsc` 0, vitest 306/306 (yeni `SohbetCard.test.ts`).
 
 ## 2026-09-29 — ZEKI AI CHAT kaynağı BI deposuna alındı
 
