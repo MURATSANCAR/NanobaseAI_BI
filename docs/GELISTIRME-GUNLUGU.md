@@ -1,5 +1,18 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Sadeleştirme turunda bulunan yanıltıcı sayılar: dördünde hesap, ikisinde etiket düzeldi
+
+- **İstek (kullanıcı):** sabah turunda yalnız açıklaması düzeltilen 6 sayı için «etiket mi hesap mı» kararı koda bakarak verilsin (iş kararı Claude'da).
+- **1. Başvuru «N gündür bu adımda» → hesap.** Ekrandaki söz iş için doğru olan ölçüydü (kuyrukta takılı başvuru); `updated_at` ise düzenleme, dosya, yazı, oy ile de yenileniyordu, 14 gün kırmızısı hiç yanmayabiliyordu. Tabloda durum zamanı yok ama her durum değişikliği işlem kaydına eylem adıyla düşüyor; `_step_since` kaydı oynatıp durumun son değiştiği anı alır. Kolon + göç eklenmedi (geçmiş kayıtlar da aynı oynatmayla doğru çıkıyor). Aynı durumda editör değişimi sayacı sıfırlamaz (adım değişmedi). Ekran: «bugün bu adıma geldi», açıklama yeniden yazıldı.
+- **2. Trendyol «Geciken paket» → hesap.** Ana sayfa kartı, kaynak metni (`F_SIPARIS`) ve menü hepsi «paket» diyor; sayaç ise tablo anahtarı (paket × barkod) satırlarını sayıyordu. Artık gecikmiş satırı olan paketler kümesi; «Geciken» sekmesi satır listelemeye devam eder (açıklamada yazılı). Sipariş ekranındaki kart «Geciken paket» oldu.
+- **3. Amazon cari «Geçen yıl» → hesap.** Karttaki toplam zaten aynı dönemle kıyaslıyordu, cari satırı kıyaslamıyordu. Cari satırına `gecenYilAyniDonem` eklendi; sütun «Geçen yıl aynı dönem», geçen yılın tamamı hücrenin altında (yıl kapanmışsa gösterilmez) ve dışa aktarmada ayrı sütun. Sınır: önbellek ay taneciğinde, içinde bulunulan ay geçen yılın tam ayıyla kıyaslanır (toplam kartıyla aynı davranış).
+- **4. Destek «Taslak sonucu işaretlenen» → ek sayı.** Taslağın gerçekten işe yarayıp yaramadığı ancak gönderilenle görülür; köprüye `zeki.used` (gönderilen) eklendi, ekranda «Taslak kullanıldı: gönderilen / işaretlenen (az düzeltmeyle N)»; kart açıklamasında tanım.
+- **5. Kitap profili «Son 24 ay» → etiket.** Sayı `CATEGORY_PRIORITY_MONTHS` ile hesaplanıyor; etiket kuyruktaki gibi `thresholds.priorityMonths`'tan okunur.
+- **6. Finansal denetim sorgu anahtarındaki 2026 → etiket/anahtar.** Yıl ne isteğe gidiyor ne sonucu seçiyordu; yanlış sayı üretmiyordu ama yanıltıcıydı. Anahtar `['financial-audit', 'overview', runChoice]`.
+- **Test (test sunucusu, geçici kopya `/tmp/claude-sayilar`, sunucu ağacı + bu işin 17 dosyası):** 17 dosyanın sunucu hâli md5 ile eski main (`ba34271d`); pytest başvuru/Trendyol/Amazon/Destek/kanallar **108 geçti** (yeni: bekleme günü düzenleme ve yeniden atamada sıfırlanmaz, çok kitaplı geciken paket bir kez, Amazon cari aynı dönem, Destek `used`); `tsc -b` 0 hata, `vite build` geçti.
+- **Gerçek DB (salt okuma, bridge env'i):** Amazon 2026 (son ay 8): 9 cari satırının aynı dönem ve tam yıl rakamları bağımsız SQL ile **9/9** tuttu; satırların aynı dönem toplamı = kart toplamı 4.701.844,95 ₺ (tam yıl 6.100.825,03 ₺, bu yıl 1.991.930,10 ₺). En büyük cari (Belçika) bu yıl 1,90 Mn ₺, eski sütunda 5,98 Mn ₺ ile, yeni sütunda 4,61 Mn ₺ ile kıyaslanıyor. Başvuru: 3 başvurunun işlem kaydı oynatması 3/3 gerçek durumla aynı (kurul yolu dahil); kuyrukta başvuru yok, eski/yeni gün farkı canlıda gösterilemedi. **Trendyol sipariş tablosu ve Destek taslak sonuçları test sunucusunda boş** — bu ikisinin gerçek veriyle karşılaştırması DOĞRULANAMADI (yalnız birim testi).
+- Test sunucusunda duran 3 başvuru (B-2026-0001..0003, bugün 07:24) bu işin değil; dokunulmadı.
+
 ## 2026-09-29 — Yetki üye okuması 07:00/12:00; departmansız CRM kullanıcıları Excel'i aynı saatlerde e-postayla
 
 - **Karar (kullanıcı):** AD/CRM üye okuması 15 dakikada bir değil, her gün 07:00 ve 12:00'de; aynı saatlerde CRM'de departmansız kullanıcı listesi Excel olarak e-postayla.
@@ -26,7 +39,6 @@
 - **Doğrulama (test sunucusu, geçici dizin, sonra silindi):** `tsc --noEmit` 0 hata; vitest `src/canvas` 44 dosya / 245 test geçti; `VITE_BASE=/timas/ vite build` geçti. Pencere, en uzun gerçek mesajla ayrı bir deneme sayfasında görünmez tarayıcıda 320 ve 1280 px'te ölçüldü: telefonda alttan, tam genişlik, yatay taşma 0, düğmeler 44 px. Oturumlu portal ekranında tıklayarak denenmedi.
 - **Kurulmadı:** test sunucusunun canlı portalına ve müşteri VM'ine kurulum yapılmadı.
 - **Açık kalan (ayrı iş):** `window.confirm` kullanan 4 ekran (`RightsScreen`, çeviri `TermBank`, `MemoryBank`, `TranslationScreen`) `AskSheet`e taşınabilir.
-
 ## 2026-09-29 (akşam) — Kur düzeltmesi (`2b87541c`) test sunucusunda; Logo faturası kuru ekranda
 
 - **Kurulum:** 6 dosya (pricing `data.py`, `kaynak.py`, `sources.py`; `CostForm.tsx`, `TariffPanel.tsx`, `help.ts`) sunucuda eski main'e eşitti (md5), yerleştirildi; sunucu ağacının kopyasında `tsc -b` + `vite build`, `index-DRmiBLOs.js`; köprü yeniden başladı, sağlık 200; `._*` 0.
