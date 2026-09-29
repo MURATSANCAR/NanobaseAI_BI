@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (16:45) — Sözleşme karşılaştırma: eksik kalan denemeler kapatıldı; ortak belge okumada açık bulundu
+
+- **Neden:** Kullanıcı «eksik kaldı mı, testleri yaptın mı» diye sordu; dört denenmemiş nokta vardı: kabulün son main'de koşması, VM'de oturumlu deneme, HEIC'in ekrandan uçtan uca yüklenmesi, mobil ekran görüntüleri.
+- **Kabul son main'de (`f773bb1e9`, yan köprü, gerçek CRM):** ilk koşu 116/3. Üçü de referans betiğinin hatasıydı, ürünün değil: K8 SQL pasif sözleşmelerin eklerini de sayıyordu (bugünkü kural: pasif hiçbir yerde yok → referans etkin sözleşmeye bağlanır, 1 = 1); K6 kayıt kimliğiyle karşılaştırıyordu, oysa taraf anlaşmanın yalnız bir kopyasında olabiliyor (ör. 2024006998-1) → karşılaştırma anlaşma düzeyinde (43 = 43). Düzeltmeden sonra **119/0**. Pasif kuralıyla: etkin sözleşme 11.490 (uç = SQL), şekil «başlangıç yok» 678, pozisyon ihlali 11 = 11.
+- **HEIC uçtan uca:** gerçek iPhone fotoğrafı (12 MP, pasif sözleşmenin eki; yalnız okuma, deneme bitince sunucudan ve VM'den silindi) test sunucusunda 0,6 sn, VM işlemcisinde 1,6 sn'de JPEG'e çevrildi (aynı çıktı). Metinli örnek ve gerçek fotoğraf yan köprüye yüklendi: yükleme 201, HEIC→JPEG geçti, ama **okuma durdu**: taranmış sayfa okuyucusu (`doc_read` → `EDITOR_CATALOG_BASE/v1/read`, test sunucusunda 127.0.0.1:18889 tüneli) 404 dönüyor — GPU'daki kart servisinde `/v1/read` yok (main'de `apps/editor/src/editor/card_api.py:244` var, GPU geride). Bu yalnız HEIC'i değil, fotoğraf/taranmış belge okuyan her modülü etkiler; köprü günlüğünde 7 günde başarılı OCR çağrısı yok. Ayrı iş olarak açıldı (GPU kart servisine kurulum + VM nginx beyaz listesinde `/editor/cards/v1/read`). Yükleme denemeleri silindi.
+- **Mobil:** 320/390/768/1440'ta tarama, sözleşme, pozisyon, belge, yeni sözleşme ekranları: sayfa taşması 0, konsol hatası 0. «Bu ekran» kutusu dört genişlikte de karşılaştırma metnini gösteriyor, tek sözleşme metnini değil.
+- **VM oturumlu deneme:** betik hazır (`vm-dogrula.sh`: VM giriş konteynerinde 15 dk timasai oturumu, uçlar, oturum silinir; görüntü biçimi kontrolü) — oturum açtığı için kullanıcı koşar.
+
 ## 2026-09-29 (gece, 4) — Kampüs'e İK kartları; «Bugün» özetine kişiye özel ve yöneticiye ekip İK maddeleri
 
 - **Kullanıcı kararı:** Kampüs'e İK'dan herkese aynı beş kart (duyurular, aramıza katılanlar, doğum günleri, iş yıldönümleri, bugün izinde); «Bugün» özetine kişiye özel maddeler **yalnız kişinin kendi verisinden**; yönetici maddeleri **rol bazlı** (yalnız kendi ekibi).
@@ -88,7 +96,7 @@
 ## 2026-09-29 (15:20) — Sözleşme karşılaştırma: telefon fotoğrafı (HEIC) desteği kuruldu
 
 - **Neden:** Faz 3'te HEIC yüklemesi paket kurulu değilse açık hatayla reddediliyordu; paket, müşteri VM'inin temel işlemcisi (SSE4.2/POPCNT/AVX yok) nedeniyle ayrı onaya bırakılmıştı. Kullanıcı ölçümü ve kurulumu onayladı.
-- **Ölçüm (VM işlemcisi):** köprü imajından açılan, iş bitince silinen geçici konteynerde `pillow-heif` 1.8.0: içe aktarma, kodlama, çözme ve uygulamanın `heic_to_jpeg`'i çalıştı. Gerçek iPhone fotoğrafıyla denenemedi: sabah CRM'de 9 olan sözleşme eki şimdi 1 (yalnız PDF), HEIC ekler CRM'den kalkmış.
+- **Ölçüm (VM işlemcisi):** köprü imajından açılan, iş bitince silinen geçici konteynerde `pillow-heif` 1.8.0: içe aktarma, kodlama, çözme ve uygulamanın `heic_to_jpeg`'i çalıştı. Gerçek iPhone fotoğrafıyla sonradan denendi (aşağıdaki 16:45 girişi). *Düzeltme:* bu satırda «HEIC ekler CRM'den kalkmış» yazıyordu, yanlıştı — 8 HEIC ek, durum nedeni «Pasif» olan 2022006210-1/-2 sözleşmelerine bağlı; bugünkü pasif kayıt kuralı yüzünden hiçbir ekranda görünmüyorlar.
 - **Değişiklik:** `backend/semantic_bridge/requirements.txt` → `pillow-heif>=1.1` (başka paket değişmiyor; test sunucusunda kuru koşu yalnız `pillow_heif` ekledi).
 - **Test sunucusu:** pakete kuruldu (Pillow 12.3.0 aynı). Uygulama yolu (çözme → JPEG) 0,4 sn. Not: bu sunucuda HEIC **kodlama** (x265) asılı kalıyor, 4 çekirdekle sınırlasa da — uygulama kodlama kullanmaz; deneme örneği VM'de üretildi.
 - **Müşteri VM'i:** bağımlılık dosyası (md5 main ile eş) kondu, köprü imajı yeniden derlendi; konteynerde HEIC açık, sayfa 200, veri uçları oturumsuz 401, 10 dk'da hata kaydı 0, `._*` 0. Bağımlılık katmanı baştan kurulduğu için `uvicorn` 0.53 → 0.54 (VM'de `starlette` zaten 1.7.0'dı; test sunucusunda 1.6.0 / 0.52.4 — sürümler `>=` ile yazılı, sabitlenmiş değil).
