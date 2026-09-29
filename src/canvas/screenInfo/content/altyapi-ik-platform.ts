@@ -755,6 +755,29 @@ const CONTENT: ScreenInfoMap = {
     data: 'Trendyol satıcı panelinden indirilen dosyalar',
     actions: ['Dosya yükleyin (yetkiyle).', 'Yanlış yüklemeyi silin (yetkiyle; Trendyol’a bir şey gönderilmez).'],
   },
+  'trendyol-mutabakat': {
+    summary: 'Trendyol sipariş ve iadeleri Logo faturalarıyla karşılaştırılır: faturası kesilmemiş sipariş, fazla fatura, tutar farkı; hakediş dosyasındaki kesinti ve ödeme Logo’da nasıl görünüyor.',
+    how: [
+      'Sipariş ve iade dosyaları «Dosya yükle» sekmesinden, hesap ekstresi / hakediş dosyası bu ekrandan yüklenir.',
+      'Panel sipariş numarasının Logo faturasının hangi alanında geçtiği veriden bulunur; bulunamazsa pazar yeri carisinin faturalarında aynı kitap, adet ve gün aranır.',
+      'Kesinti Logo’da bulunamazsa ekran bunu yazar; rakam uydurulmaz.',
+      'Trendyol’a, Logo’ya ya da CRM’e hiçbir şey yazılmaz.',
+    ],
+    data: 'Trendyol sipariş, iade ve hakediş dosyaları; Logo faturaları, hizmet satırları ve cari hareketleri',
+    refresh: 'Dosya yükleyince ve «Veriyi yenile»ye basınca',
+    actions: ['Hakediş dosyası yükleyin (yetkiyle).', 'Eksik ve fazla faturaları süzüp Excel’e aktarın.', 'Kesinti ve ödemeyi Logo ile karşılaştırın.'],
+  },
+  'path:/trendyol/model': {
+    summary: 'Trendyol’da nasıl sattığımız Logo’dan ölçülür: kendi mağaza, toptan, konsinye ya da belirsiz; sonuç kanıtlarıyla yazılır.',
+    how: [
+      'Pazar yeri carileri unvandaki platform adıyla, cari eşlemesiyle ya da kanal koduyla bulunur; koda yazılmış cari yoktur.',
+      'Fatura türleri, faturalanmamış sevk, platformdan alınan hizmet faturaları ve para hareketleri salt okuma ile sayılır.',
+      'Kanıt yetmezse ya da birden fazla modelin izi varsa ekran «belirsiz» der.',
+    ],
+    data: 'Logo faturaları, irsaliyeler, hizmet satırları, cari hareketleri; CRM firma kartları ve siparişleri',
+    refresh: '«Veriyi yenile»ye basınca',
+    actions: ['Logo’dan yeniden ölçün.', 'Eksik cariyi Cari eşleme ekranında platforma bağlayın.'],
+  },
   'trendyol-sorular': {
     summary: 'Cevapsız müşteri soruları ve düşük puanlı yorumlar; Zeki AI yanıt taslağı yazar, yanıtı siz panelden verirsiniz.',
     how: [
@@ -785,6 +808,29 @@ const CONTENT: ScreenInfoMap = {
       'Amazon kitap listesini inceleyip Excel’e aktarın.',
       'Satıcı panelinden indirdiğiniz satış raporunu (Excel ya da CSV) yükleyin; kanalın son tüketiciye sattığı adet kanal karnesinde görünür.',
     ],
+  },
+  'amazon-mutabakat': {
+    summary: 'Amazon sipariş ve iade raporu Logo faturalarıyla, ödeme (settlement) raporundaki kesinti ve ödeme Logo’daki kayıtla karşılaştırılır.',
+    how: [
+      'Sipariş, iade ve ödeme raporlarını Amazon panelinden indirip bu ekrana yükleyin; alıcı adı ve adres kolonları okunmaz.',
+      'Panel sipariş numarasının Logo faturasının hangi alanında geçtiği veriden bulunur; bulunamazsa Amazon carisinin faturalarında aynı kitap, adet ve gün aranır.',
+      'Kesinti ya da tahsilat Logo’da bulunamazsa ekran bunu yazar; rakam uydurulmaz.',
+      'Amazon hesabına, Logo’ya ya da CRM’e hiçbir şey yazılmaz.',
+    ],
+    data: 'Amazon sipariş, iade ve ödeme raporları; Logo faturaları, hizmet satırları ve cari hareketleri',
+    refresh: 'Dosya yükleyince ve «Veriyi yenile»ye basınca',
+    actions: ['Rapor yükleyin (yetkiyle).', 'Eksik ve fazla faturaları süzüp Excel’e aktarın.'],
+  },
+  'path:/amazon/model': {
+    summary: 'Amazon Türkiye’de nasıl sattığımız Logo’dan ölçülür: kendi mağaza, toptan, konsinye ya da belirsiz; sonuç kanıtlarıyla yazılır.',
+    how: [
+      'Amazon carileri unvandaki platform adıyla, cari eşlemesiyle ya da kanal koduyla bulunur; koda yazılmış cari yoktur.',
+      'Fatura türleri, faturalanmamış sevk, platformdan alınan hizmet faturaları ve para hareketleri salt okuma ile sayılır.',
+      'Kanıt yetmezse ya da birden fazla modelin izi varsa ekran «belirsiz» der.',
+    ],
+    data: 'Logo faturaları, irsaliyeler, hizmet satırları, cari hareketleri; CRM firma kartları ve siparişleri',
+    refresh: '«Veriyi yenile»ye basınca',
+    actions: ['Logo’dan yeniden ölçün.', 'Eksik cariyi Cari eşleme ekranında platforma bağlayın.'],
   },
   'amazon-konsinye': {
     summary: 'Amazon konsinyede kalan adet, kitap bazında: faturalanmamış satış irsaliyesi eksi faturalanmamış iade irsaliyesi.',

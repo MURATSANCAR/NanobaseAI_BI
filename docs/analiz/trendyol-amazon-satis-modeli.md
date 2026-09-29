@@ -1,6 +1,25 @@
 # Trendyol ve Amazon satış modeli — kodlama öncesi analiz
 
-Tarih: 2026-09-29 · Durum: **karar bekliyor** (kod yazılmadı) · Kapsam: M40 Trendyol, M41 Amazon ve yurtdışı, M42 kanallar
+Tarih: 2026-09-29 · Durum: **kararlar verildi, Aşama 0 ve Aşama 1 kodlandı** (bkz. «Kararlar» ve §6) · Kapsam: M40 Trendyol,
+M41 Amazon ve yurtdışı, M42 kanallar
+
+---
+
+## Kararlar (2026-09-29)
+
+Kullanıcı §4'teki sekiz soruyu Claude'a bıraktı (bellek `business-decisions-delegated`). Kararlar ve gerekçeleri:
+
+| # | Soru | Karar | Gerekçe |
+|---|---|---|---|
+| S1 | Trendyol'da nasıl satıyoruz? | **Tahmin edilmez; Aşama 0 uygulamada ölçer.** Ekran «Bu kanalın satış modeli: … (kanıt: …)» yazar; sınıf kendi mağaza / toptan / konsinye / belirsiz. | Bugün hiçbir ölçüm modeli kanıtlamıyor (§2.1–2.4). Yanlış modelle kod yazmak Aşama 1–3'ü boşa çıkarır; model Logo'daki kayıt biçiminden okunabilir (§2.5). |
+| S2 | Amazon TR hangi modelde? | S1 ile aynı ölçüm, aynı ekran (`/amazon/model`). | CRM'deki kartlar üç modeli de ima ediyor (Vendor, Seller Central, konsinye tipi); veri karar verir. |
+| S3 | Yurtdışı dahil mi? | **İlk sürüm yalnız Türkiye (Trendyol + Amazon TR).** Yurtdışı ayrı iş. | Ölçülen yurtdışı satış Amazon değil, yurtdışı kanal kodlu cariler (§2.3); AB KDV/ihracat kapsamı ayrı analiz ister. |
+| S4 | Siparişler Logo'ya nasıl giriyor? | **Tahmin edilmez.** Aşama 1 okuması panel sipariş numarasının Logo faturasının hangi belge alanında geçtiğini veriden bulur ve alan başına isabeti ekranda yazar; bulamazsa «barkod + gün + adet». | Entegratör/elle giriş bilgisi yok; hangi alanın kullanıldığı verinin kendisinde ölçülebilir. Statik alan varsayımı yok (bellek `no-static-solutions`). |
+| S5 | Kesintiler Logo'da nasıl kayıtlı? | **Tahmin edilmez.** Aşama 0 pazar yeri carilerinden alınan hizmet faturalarını (TRCODE 1, 4; LINETYPE 4) hizmet kartıyla sayar; Aşama 1 hakediş ekstresindeki belge numarasını da Logo'da arar. Bulunamazsa ekran «kesinti Logo'da bulunamadı» yazar; **uydurulmaz**. | Cari bağı olmayan muhasebe fişi bu sürümde okunmaz; o yol ölçülürse ayrı iş. |
+| S6 | Veri yolu? | **Önce panel Excel'i**; API anahtarı gelince salt okuma API (Aşama 5). Bugün API kodu hazırlanmadı, yalnız belgede. | Anahtar yok; panel dosyası yolu M40'ta zaten çalışıyor. |
+| S7 | Önce hangi değer? | **Aşama 1 — satış/iade mutabakatı + hakediş.** Panel sipariş/iade ve hakediş/ekstre satırları ↔ Logo faturalı satış/iade; eşleşmeyen, tutar farkı, eksik, fazla listeleri; dönem özeti; kesinti ve ödeme ↔ Logo. | Kaçan fatura ve yanlış kesinti doğrudan para; fiyat önerisi (Aşama 3) gerçek kesinti oranı olmadan yanlış alt sınır üretir. |
+| S8 | Fiyat önerisi alt sınırı ve onay? | **Aşama 3 (bu turda KODLANMADI):** alt sınır = birim maliyet (M9) + gerçek kesinti (Aşama 1'in ölçtüğü oran) + hedef marj (Yönetim ayarı). **Hazırlayan ≠ onaylayan**; onaylanan öneri panel şablonu Excel'i olarak indirilir, insan panele yükler. | «Liste fiyatının %… altı» maliyeti bilmez; mevcut kural «hazırlayan onaylayamaz» (M40 vitrin, M42 iskonto) korunur. |
+| — | Pazar yerine yazma | **Yok** (ilke sürüyor). | 2026-09-28 kararı; T-soft yasağıyla aynı ilke. |
 
 Bağlam: 2026-09-28 kararı «Trendyol/Amazon satış modeli sonraya; M40–M42 yalnız okuma + Excel yükleme ile başlar»
 idi ([YOL-HARITASI.md](kullanici-ihtiyaclari/YOL-HARITASI.md) › «Sonraya bırakılanlar»). Kullanıcı 2026-09-29'da bu işi
@@ -343,4 +362,85 @@ ile modele göre ayrışan kısım:
 3. Aşama 1 ve 2 için iş biriminden **gerçek bir örnek dosya** iste: Trendyol hesap ekstresi, Amazon settlement ya da ödeme
    raporu. Kolon eş anlamlıları o dosyadan yazılır.
 
-Kod bu kararlardan önce yazılmaz.
+Kod bu kararlardan önce yazılmaz. *(2026-09-29: kararlar verildi — en üstteki «Kararlar»; uygulama §6.)*
+
+---
+
+## 6. Uygulama (2026-09-29): Aşama 0 ve Aşama 1
+
+Kod `backend/semantic_bridge/channels/`: `pazaryeri_model.py` (Aşama 0), `pazaryeri_dosya.py` (hakediş ve Amazon
+sipariş/iade dosyası), `mutabakat.py` (Aşama 1), `kaynak_mutabakat.py` (sorgu bilgisi), `pazaryeri_api.py` (uçlar);
+SQL `channels/sql/mp_*.sql`. Ekranlar `src/canvas/channels/marketplace/` (ortak) + `trendyol|amazon/Model.tsx`,
+`Reconcile.tsx`. Testler `backend/semantic_layer/tests/test_pazaryeri_mutabakat.py`.
+
+### 6.1 Pazar yeri carisi nasıl bulunur (kural; koda sabit cari adı/kodu/kitap yok)
+
+1. M42 cari eşlemesinde bu platforma bağlı (onaylı ya da aday) cari kodları;
+2. kanal kodu (özel kod 2) bütünüyle bu platforma bağlanmışsa o kanaldaki cariler;
+3. unvanında platformun adı (kapalı platform listesi `mapping.PLATFORMS`) ya da Yönetim ayarındaki adlardan biri
+   (`TRENDYOL_CARI_ADLARI`, `AMAZON_CARI_ADLARI`, `CHANNEL_PLATFORM_HINTS`) kelime sınırıyla geçen ve başka bir platformu
+   işaret etmeyen cariler (`mapping.name_candidate`); SQL `LIKE` ile aday çekilir, Python'da kelime sınırıyla süzülür;
+4. panel sipariş numarası Logo faturasında bulunursa (Aşama 1) o faturaların türü ve cari sayısı Aşama 0'a ayrıca kanıttır.
+
+### 6.2 Aşama 0 ölçümü (salt okuma; «Veriyi yenile»)
+
+Son `PAZARYERI_MODEL_YIL` (2) yıl, `SEMANTIC_FIRMS` ile süzülmüş yıl→firma eşlemesi; her sorgu tarih süzgeçli:
+fatura türü × cari × ay (`mp_fatura_turu`), hizmet satırları (`mp_hizmet`), fatura dışı cari hareketleri
+(`mp_cari_hareket`), faturalanmamış sevk ve eski açık sevk (`mp_sevk`), sevk → fatura gecikmesi (`mp_fatura_gecikme`),
+belge alanlarının doluluğu (`mp_anahtar_doluluk`), belge alanında platform adı geçen satış faturaları (`mp_belge_metni`);
+CRM'de platform adlı firma kartları ve sipariş tipi × yıl (`mp_crm_firma`, pasif süzgeci bağlantıda). Ham toplamlar
+`semantic_channel_meta › model:<platform>`; sınıflama her istekte bu toplamlardan.
+
+### 6.3 Sınıflama kuralı
+
+- **konsinye izi**: `PAZARYERI_KONSINYE_GUN` (30) günden eski faturalanmamış satış irsaliyesi ya da sevkten bu kadar
+  günden geç faturalanan sevk;
+- **toptan izi**: pazar yeri carisine toptan satış faturası (TRCODE 8);
+- **kendi mağaza izi**: pazar yeri carisine perakende satış faturası (7); belge alanında platform adı geçen perakende
+  fatura ya da bir ayda pazar yeri carisi sayısından çok farklı cariye kesilen fatura; panel siparişinin tüketici
+  faturasında bulunması; satış faturası olmadan platformdan alınan hizmet faturası;
+- tek iz → o model; konsinye + toptan → konsinye; kendi mağaza + öteki → **belirsiz (karma)**; iz yok → **belirsiz**
+  (nedeniyle). Kanıt `PAZARYERI_GUCLU_AY` (3) farklı ayda görülürse «güçlü», azsa «zayıf».
+- Kesinti bulgusu: pazar yeri carilerinden alınan faturalardaki hizmet satırları, kalem hizmet kartı adından kuralla
+  (komisyon, kargo, hizmet bedeli, reklam, stopaj, ceza); yoksa «Kesinti Logo'da bulunamadı».
+- Hakediş yolu: pazar yeri carilerinin fatura dışı alacak hareketleri (gelen havale, virman, dekont…).
+
+### 6.4 Aşama 1 — mutabakat ve hakediş
+
+- **Panel tarafı:** Trendyol sipariş ve iadesi M40 yüklemesinden (`semantic_trendyol_orders|claims`); Amazon sipariş/iade
+  raporu ve iki platformun hakediş/ekstresi `pazaryeri_dosya` (`semantic_mp_orders|settlement|imports`). Hakediş satırı
+  işaretli tutar (TİMAŞ lehine +); uzun biçimde `tutar` ya da `alacak − borç`, geniş biçimde kalem kolonları. Kolon eş
+  anlamlıları platformların bilinen dışa aktarım başlıklarından; **gerçek TİMAŞ dosyasıyla doğrulanmadı** — tanınmayan
+  başlıkta dosya reddedilir ve beklenen kolonları yazar.
+- **Logo okuması** (`mutabakat.refresh`, «Veriyi yenile»): panel dosyalarının tarih aralığı ± `MUTABAKAT_TOLERANS_GUN`
+  (15) içindeki satış, iade ve alış/hizmet faturalarının belge alanları bellekte taranır; panel sipariş numarası (ve
+  ekstredeki belge numarası) hangi alanda geçiyorsa bağ kurulur. Portala yalnız eşleşen ya da pazar yeri carisine kesilen
+  faturanın kimliği, türü, tarihi, NETTOTAL'i, cari kodu ve eşleşen alanın adı yazılır (belge metni kişisel veri
+  olabilir, yazılmaz). Satırlar (kitap/adet, hizmet satırı) ve pazar yeri carilerinin fatura dışı hareketleri ayrıca.
+- **Sınıflar:** eşleşti · tutar farkı (panel tutarı − NETTOTAL, eşik `MUTABAKAT_TUTAR_TOLERANS` 1 ₺) · eksik fatura ·
+  fazla fatura (iptal siparişe fatura, bir siparişe fazla fatura, pazar yeri carisine kesilip panelde karşılığı yok) ·
+  bekliyor · iptal. Durum sınıfı panelin durum metninden kuralla.
+- **Hakediş:** kalem ve ay başına satış, iade, kesinti, net, ödeme; Logo kesintisi (hizmet satırı, KDV hariç) ve Logo
+  tahsilatı ay başına yan yana; ekstre belge numaralarının Logo'da bulunan/bulunmayanı; hakedişte satışı olup Logo
+  faturası olmayan siparişler; ödeme tarihi gelecekte olan satırlardan beklenen ödeme takvimi.
+- **Yetki:** model uçları platform özet sayfasında; mutabakat `sayfa:trendyol-mutabakat` / `sayfa:amazon-mutabakat`;
+  dosya `ozellik:trendyol.yukle` / `ozellik:amazon.yukle`; Excel `ozellik:veri.disa-aktar`.
+
+### 6.5 Aşama 0 ölçüm sonucu (2026-09-29, test sunucusu, canlı Logo .25 + CRM .28, salt okuma) **[ölçüldü]**
+
+Dönem 2025-01-01 – 2026-09-29. §0'daki «ölçülemedi» bu ölçümle kapandı.
+
+| Platform | Sonuç | Başlıca kanıt | Kesinti Logo'da | Para |
+|---|---|---|---|---|
+| Trendyol | **Kendi mağaza, güçlü** | DSM Grup carisine (32001.01.DS001 + torba cari) 32.191 perakende satış faturası, 11,54 Mn ₺; belge alanında platform adı geçen 41.357 satış faturası, bir ayda en çok 3.038 farklı cari. Yan iz: 28 toptan fatura, 4.535 ₺ (%0,0) | Evet — platformdan alınan hizmet faturası: komisyon 1,78 Mn, kargo/nakliye 2,42 Mn, reklam 0,12 Mn ₺ (KDV hariç) | Gelen havale, 187 hareket, 8,45 Mn ₺ |
+| Amazon TR | **Konsinye, güçlü** | Amazon Turkey carisine (12001.01.C28561) 371 toptan satış faturası, 73,53 Mn ₺; 2026-08-30'dan eski faturalanmamış 2.144 satış irsaliyesi satırı (13.726 adet). Yan iz: satıcı hesabı carisinde (32001.01.AM004) 5.283 perakende fatura, 1,88 Mn ₺ (%2,5) — Seller Central satışı da var | Evet — reklam 4,18 Mn, komisyon 0,25 Mn ₺ | Gelen havale, 157 hareket, 67,12 Mn ₺ |
+
+Sonuç: §2.1'deki A (Trendyol satıcı mağazası) ve §2.2'deki C (Amazon konsinye, yanında küçük bir 3P) geçerli. Trendyol'da
+tüketici faturası pazar yeri carisine toplu kesiliyor; bu yüzden Aşama 1'in sipariş numarası eşlemesi (belge alanları
+~%100 dolu) anlamlı. Amazon'da mutabakat konsinye satış raporu ↔ fatura yolundan yürür.
+
+### 6.6 Açık kalanlar
+
+- Hakediş/ekstre ve Amazon rapor kolonları gerçek bir panel dosyasıyla doğrulanmalı (iş biriminden örnek dosya).
+- Kesinti cari bağı olmayan muhasebe fişiyle giriyorsa (Mali İşler) bu sürüm bulamaz, ekranda öyle yazar; o yol ayrı iş.
+- Aşama 2'nin «gerçek kesinti oranı → M42 katkı» bağı, Aşama 3 fiyat önerisi, Aşama 5 API kodlanmadı.

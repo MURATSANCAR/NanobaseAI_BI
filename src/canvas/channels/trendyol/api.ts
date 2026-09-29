@@ -29,7 +29,7 @@ export type TrendyolMeta = {
     canMap: boolean;
     canMargin: boolean;
     canExport: boolean;
-    pages: Record<'trendyol' | 'urunler' | 'siparisler' | 'sorular', boolean>;
+    pages: Record<'trendyol' | 'urunler' | 'siparisler' | 'sorular' | 'mutabakat', boolean>;
   };
 };
 

@@ -33,7 +33,7 @@ export type AmazonMeta = {
     canMap: boolean;
     canExport: boolean;
     canImport: boolean;
-    pages: Record<'amazon' | 'konsinye' | 'yurtdisi' | 'taslaklar', boolean>;
+    pages: Record<'amazon' | 'konsinye' | 'yurtdisi' | 'taslaklar' | 'mutabakat', boolean>;
   };
 };
 

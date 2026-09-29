@@ -40,7 +40,9 @@ log = logging.getLogger("semantic.sorgu_yakala")
 _ACTIVE: ContextVar[tuple["Yakalanan", ...]] = ContextVar("sorgu_yakala_active", default=())
 _LISTENING: set[int] = set()
 _LOCK = threading.Lock()
-_READ = re.compile(r"^\s*(\(\s*)*(select|with)\b", re.I)
+#: Okuma: baştaki SQL açıklamaları (`-- …` satırı, `/* … */`) atlanır — `channels/sql/*.sql` şablonları açıklamayla
+#: başlar; önceden bu okumalar kayda hiç girmiyordu (2026-09-29).
+_READ = re.compile(r"^\s*(?:(?:--[^\n]*(?:\n|$)|/\*.*?\*/)\s*)*(\(\s*)*(select|with)\b", re.I | re.S)
 _TABLES = re.compile(r"\b(?:from|join)\s+(?:[\"`\[]?\w+[\"`\]]?\.)?[\"`\[]?(\w+)[\"`\]]?", re.I)
 _PYFORMAT = re.compile(r"%\((\w+)\)s|%%|%s")
 

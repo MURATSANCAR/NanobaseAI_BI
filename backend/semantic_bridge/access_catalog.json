@@ -865,6 +865,11 @@
       "label": "Trendyol: soru ve yorum"
     },
     {
+      "key": "sayfa:trendyol-mutabakat",
+      "area": "platform",
+      "label": "Trendyol: satış/iade mutabakatı ve hakediş"
+    },
+    {
       "key": "sayfa:amazon",
       "area": "platform",
       "label": "Amazon ve yurtdışı: özet"
@@ -883,6 +888,11 @@
       "key": "sayfa:amazon-taslaklar",
       "area": "platform",
       "label": "Listeleme ve brief taslakları"
+    },
+    {
+      "key": "sayfa:amazon-mutabakat",
+      "area": "platform",
+      "label": "Amazon: satış/iade mutabakatı ve hakediş"
     },
     {
       "key": "sayfa:eticaret",
@@ -2805,7 +2815,7 @@
       "area": "platform",
       "page": "sayfa:trendyol",
       "label": "Trendyol panel dosyası yükleme",
-      "hint": "Ürün listesi, sipariş, iade, soru ve yorum dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
+      "hint": "Ürün listesi, sipariş, iade, soru, yorum ve hesap ekstresi / hakediş dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
     },
     {
       "key": "ozellik:trendyol.taslak",
@@ -2828,6 +2838,13 @@
       "page": "sayfa:amazon-taslaklar",
       "label": "Listeleme ve pazar kartı taslağı",
       "hint": "Tek kitap için hedef pazara listeleme, A+ ve çeviri brief'i taslağı; pazar değerlendirme kartı açma (Zeki AI; Amazon hesabına gönderilmez)"
+    },
+    {
+      "key": "ozellik:amazon.yukle",
+      "area": "platform",
+      "page": "sayfa:amazon-mutabakat",
+      "label": "Amazon panel dosyası yükleme",
+      "hint": "Amazon sipariş, iade ve ödeme (settlement) raporunu (Excel/CSV/TXT) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
     },
     {
       "key": "ozellik:amazon.parametre",

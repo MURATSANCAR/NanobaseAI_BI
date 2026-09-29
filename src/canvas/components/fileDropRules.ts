@@ -105,6 +105,7 @@ export const UPLOAD_FEATURES: Record<string, string> = {
   'okur.ice-aktar': 'Okur: etkinlik dosyası yükleme',
   'kanal.yukle': 'Panel dosyası yükleme',
   'trendyol.yukle': 'Trendyol panel dosyası yükleme',
+  'amazon.yukle': 'Amazon panel dosyası yükleme',
   'reklam.duzenle': 'Reklam verisi ve bağlar',
   'sosyal.duzenle': 'Sosyal medya takvimi düzenleme',
   'etkinlik.duzenle': 'Fuar ve etkinlik kartı hazırlama',

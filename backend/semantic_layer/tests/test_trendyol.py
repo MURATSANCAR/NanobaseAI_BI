@@ -342,7 +342,8 @@ def test_access_rules_for_trendyol_endpoints():
     assert r("/api/v1/channels/trendyol/claims/classify") == {"sayfa:trendyol-siparisler"}
     assert r("/api/v1/channels/trendyol/questions/Q1/draft") == {"sayfa:trendyol-sorular"}
     assert r("/api/v1/channels/trendyol/showcase") == {"sayfa:trendyol"}
-    assert r("/api/v1/channels/trendyol/meta") == {"sayfa:trendyol", "sayfa:trendyol-urunler", "sayfa:trendyol-siparisler", "sayfa:trendyol-sorular"}
+    assert r("/api/v1/channels/trendyol/meta") == {"sayfa:trendyol", "sayfa:trendyol-urunler", "sayfa:trendyol-siparisler",
+                                                   "sayfa:trendyol-sorular", "sayfa:trendyol-mutabakat"}
     assert r("/api/v1/channels/trendyol/run-due") == AC.SYSTEM
     f = AC.features_for
     assert f("POST", "/api/v1/channels/trendyol/imports") == ["ozellik:trendyol.yukle"]

@@ -1390,6 +1390,20 @@ SPEC: list[dict[str, Any]] = [
      "help": "new_siparisBase.new_siparistipi değeri"},
     {"key": "AMAZON_ULKE_TABLOSU", "group": "channels", "label": "CRM ülke varlığı", "type": "text", "default": "new_ulke",
      "help": "Telif Satış sözleşmesindeki «Telif Satılan Ülke» aramasının varlık adı (Base eki ve Id kolonu eklenir). Ölçülecek"},
+    # Trendyol/Amazon satış modeli (Aşama 0) ve mutabakat (Aşama 1) — başlangıç değerleri ölçülmemiştir
+    {"key": "PAZARYERI_MODEL_YIL", "group": "channels", "label": "Satış modeli: okunan yıl sayısı", "type": "int", "default": "2",
+     "help": "Satış modeli tespiti Logo'nun son verisinden geriye bu kadar yılı okur"},
+    {"key": "PAZARYERI_KONSINYE_GUN", "group": "channels", "label": "Satış modeli: konsinye günü", "type": "int", "default": "30",
+     "help": "Bu günden eski faturalanmamış sevk ya da sevkten bu kadar günden geç faturalanan sevk «konsinye izi» sayılır"},
+    {"key": "PAZARYERI_GUCLU_AY", "group": "channels", "label": "Satış modeli: güçlü kanıt için ay sayısı", "type": "int",
+     "default": "3", "help": "Modelin izi en az bu kadar farklı ayda görülürse kanıt «güçlü», azsa «zayıf» yazar"},
+    {"key": "PAZARYERI_BASKIN_PAY", "group": "channels", "label": "Satış modeli: baskın satış payı", "type": "text",
+     "default": "0.9", "help": "Kendi mağaza ile toptan/konsinye izi birlikteyse satış tutarının bu payından fazlası olan model "
+     "geçerli sayılır, öteki «yan iz» yazar (0,5–1)"},
+    {"key": "MUTABAKAT_TOLERANS_GUN", "group": "channels", "label": "Mutabakat: tarih toleransı (gün)", "type": "int",
+     "default": "15", "help": "Logo faturası panel tarihinden en çok bu kadar gün önce ya da sonra aranır"},
+    {"key": "MUTABAKAT_TUTAR_TOLERANS", "group": "channels", "label": "Mutabakat: tutar toleransı (₺)", "type": "text",
+     "default": "1", "help": "Panel tutarı ile Logo fatura tutarı (KDV dahil) arasındaki fark bundan küçükse «eşleşti»"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",

@@ -193,6 +193,9 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kanallar/eslesme')).toBe('kanal-eslesme');
     expect(at('/trendyol/vitrin')).toBe('trendyol'); // M40 vitrin/haftalık/yükleme sekmeleri → Trendyol mağazası
     expect(at('/trendyol/urunler')).toBe('trendyol-urunler');
+    expect(at('/trendyol/model')).toBe('trendyol'); // Aşama 0 satış modeli → Trendyol mağazası sekmesi
+    expect(at('/trendyol/mutabakat')).toBe('trendyol-mutabakat');
+    expect(at('/amazon/mutabakat')).toBe('amazon-mutabakat');
     expect(at('/amazon/konsinye')).toBe('amazon-konsinye');
     expect(at('/amazon/taslaklar')).toBe('amazon-taslaklar');
     expect(at('/e-ticaret')).toBe('eticaret'); // M34 platform durumu

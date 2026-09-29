@@ -490,8 +490,9 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
 _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
 _SUPPLY = frozenset(page(x) for x in ("tedarik", "tedarik-yuk", "tedarik-kagit", "tedarik-tedarikciler", "tedarik-maliyet"))
-_TRENDYOL = frozenset(page(x) for x in ("trendyol", "trendyol-urunler", "trendyol-siparisler", "trendyol-sorular"))
-_AMAZON = frozenset(page(x) for x in ("amazon", "amazon-konsinye", "amazon-yurtdisi", "amazon-taslaklar"))
+_TRENDYOL = frozenset(page(x) for x in ("trendyol", "trendyol-urunler", "trendyol-siparisler", "trendyol-sorular",
+                                        "trendyol-mutabakat"))
+_AMAZON = frozenset(page(x) for x in ("amazon", "amazon-konsinye", "amazon-yurtdisi", "amazon-taslaklar", "amazon-mutabakat"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
@@ -633,6 +634,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/channels/trendyol/claims", frozenset({page("trendyol-siparisler")})),
     ("/api/v1/channels/trendyol/questions", frozenset({page("trendyol-sorular")})),
     ("/api/v1/channels/trendyol/reviews", frozenset({page("trendyol-sorular")})),
+    # Aşama 1: satış/iade mutabakatı ve hakediş (panel dosyası ↔ Logo). Aşama 0 model tespiti Trendyol sayfasında.
+    ("/api/v1/channels/trendyol/mutabakat", frozenset({page("trendyol-mutabakat")})),
     ("/api/v1/channels/trendyol/", frozenset({page("trendyol")})),
     # M41 Amazon ve yurtdışı (Logo + CRM, yalnız okuma).
     ("/api/v1/channels/amazon/run-due", SYSTEM),
@@ -646,6 +649,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/channels/amazon/params", frozenset({page("amazon-yurtdisi")})),
     ("/api/v1/channels/amazon/market-cards", frozenset({page("amazon-yurtdisi")})),
     ("/api/v1/channels/amazon/drafts", frozenset({page("amazon-taslaklar")})),
+    ("/api/v1/channels/amazon/mutabakat", frozenset({page("amazon-mutabakat")})),
     ("/api/v1/channels/amazon/", frozenset({page("amazon")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
@@ -1071,6 +1075,10 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT"}), r"^/api/v1/channels/amazon/(drafts(/[^/]+)?|market-cards)$", "ozellik:amazon.taslak"),
     (frozenset({"POST"}), r"^/api/v1/channels/(trendyol|amazon)/cariler/ekle$", "ozellik:kanal.eslesme"),
     (frozenset({"GET"}), r"^/api/v1/channels/(trendyol|amazon)/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Aşama 1 panel dosyaları (hakediş; Amazon sipariş/iade raporu) ve mutabakat Excel'i.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/trendyol/mutabakat/dosyalar(/[^/]+)?$", "ozellik:trendyol.yukle"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/channels/amazon/mutabakat/dosyalar(/[^/]+)?$", "ozellik:amazon.yukle"),
+    (frozenset({"GET"}), r"^/api/v1/channels/(trendyol|amazon)/mutabakat/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # M36 Dijital yayın: platform durumu, platform tanımı, katalog okuması; satış raporu yükleme/eşleme/onay. Hak kararı
     # (`dijital.hak-karari`) ve dijital fiyat kararı (`dijital.fiyat-onay`) açıkça verilir, ucun içinde denetlenir.
     (frozenset({"PUT"}), r"^/api/v1/dijital/titles/[^/]+/listings/[^/]+$", "ozellik:dijital.durum-yaz"),

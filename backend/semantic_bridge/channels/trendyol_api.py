@@ -36,7 +36,7 @@ log = logging.getLogger("semantic.channels.trendyol.api")
 
 R = "/api/v1/channels/trendyol"
 PAGES = {"trendyol": "sayfa:trendyol", "urunler": "sayfa:trendyol-urunler", "siparisler": "sayfa:trendyol-siparisler",
-         "sorular": "sayfa:trendyol-sorular"}
+         "sorular": "sayfa:trendyol-sorular", "mutabakat": "sayfa:trendyol-mutabakat"}
 F_IMPORT = "ozellik:trendyol.yukle"
 F_DRAFT = "ozellik:trendyol.taslak"
 F_DECIDE = "ozellik:trendyol.oneri-karar"

@@ -265,12 +265,16 @@ const TrendyolQuestions = lazy(() => import('@/canvas/channels/trendyol/Question
 const TrendyolShowcase = lazy(() => import('@/canvas/channels/trendyol/Showcase'));
 const TrendyolWeekly = lazy(() => import('@/canvas/channels/trendyol/Weekly'));
 const TrendyolImports = lazy(() => import('@/canvas/channels/trendyol/Imports'));
+const TrendyolModel = lazy(() => import('@/canvas/channels/trendyol/Model'));
+const TrendyolReconcile = lazy(() => import('@/canvas/channels/trendyol/Reconcile'));
 const AmazonHome = lazy(() => import('@/canvas/channels/amazon/AmazonHome'));
 const AmazonConsignment = lazy(() => import('@/canvas/channels/amazon/Consignment'));
 const AmazonInternational = lazy(() => import('@/canvas/channels/amazon/International'));
 const AmazonRights = lazy(() => import('@/canvas/channels/amazon/Rights'));
 const AmazonDrafts = lazy(() => import('@/canvas/channels/amazon/Drafts'));
 const AmazonMarketCards = lazy(() => import('@/canvas/channels/amazon/MarketCards'));
+const AmazonModel = lazy(() => import('@/canvas/channels/amazon/Model'));
+const AmazonReconcile = lazy(() => import('@/canvas/channels/amazon/Reconcile'));
 
 function RouteFallback() {
   return (
@@ -504,12 +508,16 @@ export default function App() {
             <Route path="trendyol/vitrin" element={<TrendyolShowcase />} />
             <Route path="trendyol/haftalik" element={<TrendyolWeekly />} />
             <Route path="trendyol/yukle" element={<TrendyolImports />} />
+            <Route path="trendyol/model" element={<TrendyolModel />} />
+            <Route path="trendyol/mutabakat" element={<TrendyolReconcile />} />
             <Route path="amazon" element={<AmazonHome />} />
             <Route path="amazon/konsinye" element={<AmazonConsignment />} />
             <Route path="amazon/yurtdisi" element={<AmazonInternational />} />
             <Route path="amazon/haklar" element={<AmazonRights />} />
             <Route path="amazon/pazarlar" element={<AmazonMarketCards />} />
             <Route path="amazon/taslaklar" element={<AmazonDrafts />} />
+            <Route path="amazon/model" element={<AmazonModel />} />
+            <Route path="amazon/mutabakat" element={<AmazonReconcile />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
