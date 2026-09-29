@@ -4860,10 +4860,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             marks = intake_mod.all_marks(engine, tenant)
             # Projenin CRM ek dosyası sayısı (rapor dosyaları CRM'de proje eki olarak duruyor). Okunamazsa gündem yine
             # döner, ekran sayı göstermez.
+            # Ek tablosu (`AnnotationBase`) katalogda yok; katalog yolu (`run`) reddeder. Sözleşme karşılaştırmasındaki gibi
+            # CRM bağlantı dosyasıyla doğrudan, salt okunur okunur.
             files = None
             if ids:
                 try:
-                    files = intake_mod.files_by_project(run(intake_mod.project_files_sql(schema, ids)).get("records") or [])
+                    from semantic_bridge.budget_sources import runner as crm_runner
+
+                    crm = crm_runner(os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"), 120)
+                    files = intake_mod.files_by_project(crm(intake_mod.project_files_sql(schema, ids)) or [])
                 except Exception as e:  # noqa: BLE001
                     log.warning("kurul gündemi: proje ekleri okunamadı: %s", str(e)[:200])
             return {"date": day, "items": intake_mod.agenda(rows, opinions, marks, files), "opinionsVisible": see,
