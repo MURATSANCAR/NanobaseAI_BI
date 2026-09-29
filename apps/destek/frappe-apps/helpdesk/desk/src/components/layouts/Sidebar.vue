@@ -38,7 +38,7 @@
   <SettingsModal v-model="showSettingsModal" />
   <ShortcutsModal v-model="showShortcutsModal" />
   <HelpModal
-    v-if="showHelpModal"
+    v-if="false && showHelpModal"
     v-model="showHelpModal"
     v-model:articles="articles"
     appName="helpdesk"
@@ -198,6 +198,7 @@ const showPermissionNoticeBanner = computed(() => {
 
 const showOnboardingBanner = computed(() => {
   return (
+    false &&
     !isCustomerPortal.value &&
     !isOnboardingStepsCompleted.value &&
     authStore.isManager

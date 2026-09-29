@@ -2463,3 +2463,353 @@ msgstr "NanobaseAI; OAuth istemcisi, kaynak ya da yetkilendirme sunucusu olarak 
 # Temsilci panelinde talep edenin AD birimi (yz/birim.py).
 msgid "Requester's unit"
 msgstr "Talep edenin birimi"
+
+# 2026-09-29 uçtan uca sınama: Destek ekranlarında çevirisi olmayan 122 metin (model, çeviri hattı; gözden geçirildi).
+msgid "(advanced search)"
+msgstr "(gelişmiş arama)"
+
+msgid "API Key is required"
+msgstr "API Anahtarı gerekli"
+
+msgid "API Secret is required"
+msgstr "API Gizli Anahtarı gerekli"
+
+msgid "Account name"
+msgstr "Hesap adı"
+
+msgid "Account name is required"
+msgstr "Hesap adı gerekli"
+
+msgid "Add comment"
+msgstr "Yorum ekle"
+
+msgid "Already assigned to {0}"
+msgstr "Zaten {0} kişisine atandı"
+
+msgid "App Settings"
+msgstr "Uygulama Ayarları"
+
+msgid "Applying \"{0}\" discards the reply you have now, along with its {1} action(s)."
+msgstr "\"{0}\" uygulandığında, şu anki yanıtınız ve {1} işlemi silinir."
+
+msgid "Are you sure you want to delete {0} item(s)?"
+msgstr "{0} öğesini silmek istediğinize emin misiniz?"
+
+msgid "Article has been successfully moved."
+msgstr "Makale başarıyla taşındı."
+
+msgid "Assign agent"
+msgstr "Temsilci ata"
+
+msgid "Assign to"
+msgstr "Şuna ata"
+
+msgid "At least one email address is required"
+msgstr "En az bir e-posta adresi gerekli"
+
+msgid "At least one email address must be marked as primary"
+msgstr "En az bir e-posta adresi birincil olarak işaretlenmeli"
+
+msgid "At least one priority is required."
+msgstr "En az bir öncelik gerekli."
+
+msgid "Change type"
+msgstr "Türü değiştir"
+
+msgid "Clear filters"
+msgstr "Filtreleri temizle"
+
+msgid "Contact created"
+msgstr "Kişi oluşturuldu"
+
+msgid "Contact created and invited"
+msgstr "Kişi oluşturuldu ve davet edildi"
+
+msgid "Contact has no email address to invite"
+msgstr "Davet edilecek e-posta adresi bulunmuyor"
+
+msgid "Contact updated"
+msgstr "Kişi güncellendi"
+
+msgid "Copy ticket ID"
+msgstr "Kayıt kimliğini kopyala"
+
+msgid "Copy ticket link"
+msgstr "Kayıt bağlantısını kopyala"
+
+msgid "Could not load {0}"
+msgstr "{0} yüklenemedi"
+
+msgid "Could not update status."
+msgstr "Durum güncellenemedi."
+
+msgid "Create ticket \"{0}\""
+msgstr "\"{0}\" kaydını oluştur"
+
+msgid "Email Domain or manual server settings are required"
+msgstr "E-posta alan adı veya manuel sunucu ayarları gerekli"
+
+msgid "Email ID is required"
+msgstr "E-posta kimliği gerekli"
+
+msgid "Email address is required"
+msgstr "E-posta adresi gerekli"
+
+msgid "Exotel error: {0}"
+msgstr "Exotel hatası: {0}"
+
+msgid "Filter by priority"
+msgstr "Önceliğe göre filtrele"
+
+msgid "Filter by status"
+msgstr "Duruma göre filtrele"
+
+msgid "First name is required"
+msgstr "Ad gerekli"
+
+msgid "Go to next ticket (Shift + >)"
+msgstr "Sonraki kayda git (Shift + >)"
+
+msgid "Go to previous ticket (Shift + <)"
+msgstr "Önceki kayda git (Shift + <)"
+
+msgid "Go to ticket #{0}"
+msgstr "#{0} kaydına git"
+
+msgid "If enabled, all outgoing emails will be sent from this account. Note: Only one account can be default outgoing."
+msgstr "Etkinleştirilirse, tüm giden e-postalar bu hesaptan gönderilir. Not: Sadece bir hesap varsayılan giden olabilir."
+
+msgid "If enabled, all replies to your company (eg: replies@yourcompany.com) will come to this account. Note: Only one account can be default incoming."
+msgstr "Etkinleştirilirse, şirketinize gelen tüm yanıtlar (ör: replies@yourcompany.com) bu hesaba yönlendirilir. Not: Sadece bir hesap varsayılan gelen olabilir."
+
+msgid "If enabled, outgoing emails can be sent from this account."
+msgstr "Etkinleştirilirse, giden e-postalar bu hesaptan gönderilebilir."
+
+msgid "If enabled, tickets can be created from the incoming emails on this account."
+msgstr "Etkinleştirilirse, bu hesaptaki gelen e-postalardan kayıtlar oluşturulabilir."
+
+msgid "In 1 hour"
+msgstr "1 saat içinde"
+
+msgid "In 1 minute"
+msgstr "1 dakika içinde"
+
+msgid "In 1 year"
+msgstr "1 yıl içinde"
+
+msgid "In {0} days"
+msgstr "{0} gün içinde"
+
+msgid "In {0} hours"
+msgstr "{0} saat içinde"
+
+msgid "In {0} minutes"
+msgstr "{0} dakika içinde"
+
+msgid "In {0} months"
+msgstr "{0} ay içinde"
+
+msgid "In {0} weeks"
+msgstr "{0} hafta içinde"
+
+msgid "In {0} years"
+msgstr "{0} yıl içinde"
+
+msgid "Incoming Port"
+msgstr "Gelen Port"
+
+msgid "Incoming Server (IMAP/POP)"
+msgstr "Gelen Sunucu (IMAP/POP)"
+
+msgid "Invalid email ID"
+msgstr "Geçersiz e-posta kimliği"
+
+msgid "Invalid email address: {0}"
+msgstr "Geçersiz e-posta adresi: {0}"
+
+msgid "Invitation email resent successfully"
+msgstr "Davet e-postası başarıyla yeniden gönderildi"
+
+msgid "Invitation sent"
+msgstr "Davet gönderildi"
+
+msgid "Just now"
+msgstr "Az önce"
+
+msgid "Keyboard shortcuts"
+msgstr "Klavye kısayolları"
+
+msgid "Last seen {0}"
+msgstr "Son görülme {0}"
+
+msgid "Merge ticket"
+msgstr "Kaydı birleştir"
+
+msgid "My settings"
+msgstr "Ayarlarım"
+
+msgid "New article"
+msgstr "Yeni makale"
+
+msgid "New ticket"
+msgstr "Yeni kayıt"
+
+msgid "No results for \"{0}\""
+msgstr "\"{0}\" için sonuç yok"
+
+msgid "No system user is linked with this contact"
+msgstr "Bu kişiyle ilişkili bir sistem kullanıcısı yok"
+
+msgid "Outgoing Port"
+msgstr "Giden Port"
+
+msgid "Outgoing Server (SMTP)"
+msgstr "Giden Sunucu (SMTP)"
+
+msgid "Password is required"
+msgstr "Şifre zorunludur"
+
+msgid "Phone Numbers"
+msgstr "Telefon Numaraları"
+
+msgid "Remove tag"
+msgstr "Etiketi kaldır"
+
+msgid "Remove tags"
+msgstr "Etiketleri kaldır"
+
+msgid "Reply to ticket"
+msgstr "Kayda yanıt ver"
+
+msgid "Reset password email sent successfully"
+msgstr "Şifre sıfırlama e-postası başarıyla gönderildi"
+
+msgid "SLA Policies"
+msgstr "SLA Politikaları"
+
+msgid "SLA policy name is required."
+msgstr "SLA politikası adı zorunludur."
+
+msgid "Search for \"{0}\""
+msgstr "\"{0}\" için ara"
+
+msgid "Set availability"
+msgstr "Müsaitliği ayarla"
+
+msgid "Set priority"
+msgstr "Önceliği ayarla"
+
+msgid "Set team"
+msgstr "Ekip ayarla"
+
+msgid "Set ticket type"
+msgstr "Kayıt türünü ayarla"
+
+
+
+
+
+
+
+
+
+
+
+
+
+msgid "Show tickets assigned to me"
+msgstr "Bana atanan kayıtları göster"
+
+msgid "Status updated successfully."
+msgstr "Durum başarıyla güncellendi."
+
+msgid "Support / Sales"
+msgstr "Destek / Satış"
+
+msgid "Switch view"
+msgstr "Görünümü değiştir"
+
+msgid "The agent who sends the reply"
+msgstr "Yanıtı gönderen temsilci"
+
+msgid "Ticket #{0} copied"
+msgstr "Kayıt #{0} kopyalandı"
+
+msgid "Ticket URL copied"
+msgstr "Kayıt URL'si kopyalandı"
+
+msgid "Tickets you've recently worked on or viewed"
+msgstr "Yakın zamanda üzerinde çalıştığınız veya görüntülediğiniz kayıtlar"
+
+msgid "Twilio error: {0}"
+msgstr "Twilio hatası: {0}"
+
+msgid "Upload profile picture"
+msgstr "Profil fotoğrafı yükle"
+
+msgid "Use SSL for Incoming"
+msgstr "Gelen için SSL kullan"
+
+msgid "Use SSL for Outgoing"
+msgstr "Giden için SSL kullan"
+
+msgid "Use TLS for Incoming"
+msgstr "Gelen için TLS kullan"
+
+msgid "Use TLS for Outgoing"
+msgstr "Giden için TLS kullan"
+
+msgid "You haven't received any feedback yet"
+msgstr "Henüz geri bildirim almadınız"
+
+msgid "a value"
+msgstr "bir değer"
+
+msgid "example.com"
+msgstr "example.com"
+
+msgid "imap.example.com"
+msgstr "imap.example.com"
+
+msgid "in {0} M"
+msgstr "{0} ay içinde"
+
+msgid "in {0} d"
+msgstr "{0} gün içinde"
+
+msgid "in {0} h"
+msgstr "{0} saat içinde"
+
+msgid "in {0} m"
+msgstr "{0} dakika içinde"
+
+msgid "in {0} w"
+msgstr "{0} hafta içinde"
+
+msgid "in {0} y"
+msgstr "{0} yıl içinde"
+
+msgid "john.doe@example.com"
+msgstr "john.doe@example.com"
+
+msgid "johndoe@example.com"
+msgstr "johndoe@example.com"
+
+msgid "tickets"
+msgstr "kayıtlar"
+
+msgid "updated"
+msgstr "güncellendi"
+
+msgid "{0} does not have a phone number, set one to call them."
+msgstr "{0} telefon numarasına sahip değil, aramak için bir tane belirleyin."
+
+msgid "{0} filter(s) applied"
+msgstr "{0} filtre uygulandı"
+
+# Ayar sekmesi «Agents»: yapay zekâ panelinin çevirisi («Ajanlar») sonradan yüklenip ezerdi; masada «Temsilciler».
+msgid "Agents"
+msgstr "Temsilciler"
+
+msgid "Default"
+msgstr "Varsayılan"

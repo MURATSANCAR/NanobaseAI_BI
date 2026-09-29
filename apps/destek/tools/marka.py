@@ -314,6 +314,71 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		 ('import { socketio_port } from "../../../../sites/common_site_config.json";\n', '')],
 	),
 	(
+		# Temsilciler AD'den gelir (davet yok); telefon entegrasyonu kullanılmaz: iki ayar sekmesi gizli.
+		"helpdesk/desk/src/components/Settings/settingsModal.ts",
+		[('          component: markRaw(InviteAgents),\n          condition: () => auth.isAdmin || auth.isManager,',
+		  '          component: markRaw(InviteAgents),\n          condition: () => false,'),
+		 ('          component: markRaw(TelephonyPage),\n        },',
+		  '          component: markRaw(TelephonyPage),\n          condition: () => false,\n        },'),
+		 # Bütün sekmeleri gizli grup (Entegrasyonlar) başlığıyla boş kalmasın.
+		 ('        return true;\n      });\n    }\n    return true;\n  });',
+		  '        return true;\n      });\n    }\n    return !tab.items || tab.items.length > 0;\n  });')],
+	),
+	(
+		# «Başlarken» bandı ve paneli (e-posta bağla, temsilci davet et…) kurulumda yapılanları yeniden istiyor;
+		# yöneticiye her açılışta çıkıyordu. Gösterilmez.
+		"helpdesk/desk/src/components/layouts/Sidebar.vue",
+		[('    !isCustomerPortal.value &&\n    !isOnboardingStepsCompleted.value &&\n    authStore.isManager',
+		  '    false &&\n    !isCustomerPortal.value &&\n    !isOnboardingStepsCompleted.value &&\n    authStore.isManager'),
+		 ('    v-if="showHelpModal"', '    v-if="false && showHelpModal"')],
+	),
+	(
+		# Üst kaynak hatası: «Genel» ayar sekmesi değişkeni içe aktarmadan kullanıyor (ReferenceError); kaydedilmemiş
+		# değişiklik uyarısı çalışmıyordu. 2026-09-29 uçtan uca sınamada konsolda görüldü.
+		"helpdesk/desk/src/components/Settings/General/General.vue",
+		[('import WorkflowKnowledgebaseSettings from "./components/WorkflowKnowledgebaseSettings.vue";\n',
+		  'import WorkflowKnowledgebaseSettings from "./components/WorkflowKnowledgebaseSettings.vue";\n'
+		  'import { disableSettingModalOutsideClick } from "../settingsModal";\n')],
+	),
+	(
+		# Temsilci yanıtında «Kime» boş giderse yanıt kayda «gönderildi» yazılıyor ama hiçbir yere gitmiyordu
+		# (hata da vermiyordu): boşsa talep edene gider.
+		"helpdesk/helpdesk/helpdesk/doctype/hd_ticket/hd_ticket.py",
+		[('        sender = from_email_id or frappe.session.user\n        recipients = to\n',
+		  '        sender = from_email_id or frappe.session.user\n        recipients = to or self.raised_by\n')],
+	),
+	(
+		# Kayıt listesi: sütun adları hazır görünüm kayıtlarında İngilizce saklanır («Subject», «Status»); ekranda
+		# çeviriden geçer (kullanıcının kendi görünümleri de). 2026-09-29 uçtan uca sınamada görüldü.
+		"helpdesk/desk/src/components/ListViewBuilder.vue",
+		[('        :item="column"\n        @columnWidthUpdated="handleColumnResize"',
+		  '        :item="{ ...column, label: __(column.label) }"\n        @columnWidthUpdated="handleColumnResize"')],
+	),
+	(
+		"helpdesk/desk/src/pages/ticket/Tickets.vue",
+		[('            h("span", { class: "truncate flex-1 text-base" }, label),',
+		  '            h("span", { class: "truncate flex-1 text-base" }, __(label || "")),')],
+	),
+	(
+		# Süre birimleri kodda İngilizce sabit («2 days», «23h 49m»); Türkçe kısaltmalar.
+		"helpdesk/desk/src/utils.ts",
+		[('    return `${years} ${years === 1 ? "year" : "years"}`;', '    return `${years} yıl`;'),
+		 ('    return `${months} ${months === 1 ? "month" : "months"}`;', '    return `${months} ay`;'),
+		 ('    const dayLabel = `${days} ${days === 1 ? "day" : "days"}`;', '    const dayLabel = `${days} gün`;'),
+		 ('    return hours ? `${dayLabel} ${hours}h` : dayLabel;', '    return hours ? `${dayLabel} ${hours} sa` : dayLabel;'),
+		 ('    return minutes ? `${hours}h ${minutes}m` : `${hours}h`;', '    return minutes ? `${hours} sa ${minutes} dk` : `${hours} sa`;'),
+		 ('  return `${Math.floor(seconds / MINUTE)}m`;', '  return `${Math.floor(seconds / MINUTE)} dk`;')],
+	),
+	(
+		"helpdesk/desk/src/composables/useSLA.ts",
+		[('    return `${years}y ${months}mo`;', '    return `${years} yıl ${months} ay`;'),
+		 ('    return `${months}mo ${days}d`;', '    return `${months} ay ${days} gün`;'),
+		 ('    return `${days}d ${hours}h`;', '    return `${days} gün ${hours} sa`;'),
+		 ('    return `${hours}h ${minutes}m`;', '    return `${hours} sa ${minutes} dk`;'),
+		 ('    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;', '    return seconds > 0 ? `${minutes} dk ${seconds} sn` : `${minutes} dk`;'),
+		 ('  return `${seconds}s`;', '  return `${seconds} sn`;')],
+	),
+	(
 		# Arayüz kütüphanesi de kendi bildirim bağlantısını aynı :9000 kuralıyla açıyordu; $socket'i
 		# hemen ardından socket.ts'in bağlantısı ezdiği için fazlalık, kapatılır.
 		"helpdesk/desk/src/main.js",

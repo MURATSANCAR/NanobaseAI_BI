@@ -231,6 +231,8 @@ def draft_reply(ticket: str) -> dict:
 		"- Yalnız aşağıdaki bilgi bankası parçalarına ve yazışmaya dayan; bilgi yoksa uydurma, "
 		"netleştirmek için soru sor ya da ekibin inceleyeceğini söyle.\n"
 		"- Tarih, fiyat, iade/garanti sözü verme; bilgi bankasında açıkça yoksa yazma.\n"
+		"- Müşteriye iç sistemlerden (bilgi bankası, kayıt sistemi, yapay zekâ) söz etme.\n"
+		"- Yapılmamış bir işi yapılmış gibi yazma («ilettim», «inceledik» değil; «inceleyeceğiz» gibi).\n"
 		"- Köşeli parantezli yer tutucuları ([ad 1], [e-posta 1] gibi) gerekiyorsa aynen yaz, değiştirme.\n"
 		"- Selamlama ile başla; imza satırı yazma (temsilci ekler).\n"
 		"- Düz metin; paragraflar arasında boş satır.\n\n"

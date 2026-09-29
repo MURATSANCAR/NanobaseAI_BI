@@ -81,6 +81,7 @@ TRANSLATED_DOCTYPES = ("HD Ticket Status", "HD Ticket Type", "HD Ticket Priority
 
 
 def apply():
+	_ileri_tarihli_isler()
 	_custom_fields()
 	_translated_doctypes()
 	_help_menu()
@@ -119,6 +120,20 @@ def _write_single(doctype, values):
 def _exists_for_link(meta, field, value):
 	target = meta.get_field(field).options
 	return not target or bool(frappe.db.exists(target, value))
+
+
+def _ileri_tarihli_isler():
+	"""Yeni sitede çatı kayıtları önce varsayılan saat diliminde (UTC+5:30) yazar, Türkiye saatine (SETTINGS) sonra
+	geçilir: zamanlanmış iş tanımlarının oluşturulma zamanı 2,5 saat ileride kalır ve zamanlayıcı hiçbir işi
+	(e-posta gönderimi, gelen kutusu, SLA raporu) o saate kadar çalıştırmaz (2026-09-29 müşteri VM'i). İleri tarihli
+	olan iş şimdiden başlatılır; zaten çalışmış işe dokunulmaz."""
+	now = frappe.utils.now_datetime()
+	frappe.db.sql(
+		"update `tabScheduled Job Type` set last_execution=%(now)s "
+		"where (last_execution is null and creation > %(now)s) or last_execution > %(now)s",
+		{"now": now},
+	)
+	frappe.db.commit()
 
 
 def _help_menu():

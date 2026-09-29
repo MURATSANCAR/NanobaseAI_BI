@@ -226,15 +226,15 @@ function twoUnitDuration(milliseconds: number): string {
   const seconds = duration.seconds();
 
   if (years > 0) {
-    return `${years}y ${months}mo`;
+    return `${years} yıl ${months} ay`;
   } else if (months > 0) {
-    return `${months}mo ${days}d`;
+    return `${months} ay ${days} gün`;
   } else if (days > 0) {
-    return `${days}d ${hours}h`;
+    return `${days} gün ${hours} sa`;
   } else if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+    return `${hours} sa ${minutes} dk`;
   } else if (minutes > 0) {
-    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    return seconds > 0 ? `${minutes} dk ${seconds} sn` : `${minutes} dk`;
   }
-  return `${seconds}s`;
+  return `${seconds} sn`;
 }

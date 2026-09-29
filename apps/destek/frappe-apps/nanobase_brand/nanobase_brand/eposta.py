@@ -11,6 +11,7 @@ açar. Kutuda eski e-postalar (bildirimler, iç yazışma) var; hesap ilk açıl
 Kaydederken sistem SMTP ve IMAP'e giriş yapıp dener; yanlış şifre kurulumu durdurur.
 """
 
+import email.utils
 import imaplib
 import json
 import re
@@ -46,7 +47,9 @@ def otomatik_mi(mail) -> str | None:
 		return "liste"
 	if (h.get("X-Auto-Response-Suppress") or "").strip().lower() in ("all", "oof"):
 		return "otomatik yanıt"
-	if OTOMATIK_GONDEREN.match(mail.from_email or ""):
+	# Çatı göndereni «Yanıtla» adresinden alır (Drive paylaşım bildiriminde paylaşan kişi); asıl «From» da bakılır.
+	asil = email.utils.parseaddr(h.get("From") or "")[1]
+	if OTOMATIK_GONDEREN.match(asil or "") or OTOMATIK_GONDEREN.match(mail.from_email or ""):
 		return "gönderen"
 	return None
 
