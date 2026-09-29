@@ -56,7 +56,7 @@ describe('SidebarItemBadges', () => {
 			<SidebarItemBadges
 				room={createFakeSubscription({
 					status: 'INVITED',
-					inviter: { name: 'Rocket Cat', username: 'zeki.bot', _id: 'zeki.bot' },
+					inviter: { name: 'ZEKI AI CHAT', username: 'zeki.bot', _id: 'zeki.bot' },
 					ts: new Date('2025-01-01T00:00:00.000Z'),
 				})}
 			/>,

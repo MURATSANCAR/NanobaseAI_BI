@@ -16,7 +16,7 @@ describe('RoomInvite', () => {
 	const onReject = jest.fn();
 	const inviter = {
 		username: 'zeki.bot',
-		name: 'Rocket Cat',
+		name: 'ZEKI AI CHAT',
 		_id: 'zeki.bot',
 	};
 

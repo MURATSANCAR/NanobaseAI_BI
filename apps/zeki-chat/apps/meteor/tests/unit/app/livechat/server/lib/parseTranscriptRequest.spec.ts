@@ -109,7 +109,7 @@ describe('parseTranscriptRequest', () => {
 	it('should return `options` param with `transcriptRequest` key attached when no user is passed, no agent is serving but zeki.bot is present', async () => {
 		settingsGetMock.get.withArgs('Livechat_enable_transcript').returns(false);
 		settingsGetMock.get.withArgs('Livechat_transcript_send_always').returns(true);
-		modelsMock.Users.findOneById.resolves({ _id: 'zeki.bot', username: 'zeki.bot', name: 'Rocket Cat' } as any);
+		modelsMock.Users.findOneById.resolves({ _id: 'zeki.bot', username: 'zeki.bot', name: 'ZEKI AI CHAT' } as any);
 		modelsMock.LivechatVisitors.findOneById.resolves({ visitorEmails: [{ address: 'abc@chat.example.invalid' }] } as any);
 
 		const options = await parseTranscriptRequest({ v: { _id: '123' } } as any, {} as any);
@@ -121,7 +121,7 @@ describe('parseTranscriptRequest', () => {
 		expect(options.emailTranscript.requestData.requestedBy).to.be.deep.equal({
 			_id: 'zeki.bot',
 			username: 'zeki.bot',
-			name: 'Rocket Cat',
+			name: 'ZEKI AI CHAT',
 		});
 	});
 });

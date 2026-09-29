@@ -22,7 +22,7 @@ export type MediaStreamEvents = {
  * Audio and video are related if they come from the same source. For example: if the user is sharing their screen, the stream with the video may only include audio if that audio is from the user's screen - it may not include the user's mic.
  * The audio from the user's mic and the video from the user's camera also count as being related.
  *
- * We have no control over what remote peers may send us if they are not also a rocket.chat client. If they send us multiple tracks in the same stream, we'll use the first and ignore the rest. It's likely that all tracks would have the same data anyway - just with different encodings.
+ * We have no control over what remote peers may send us if they are not also a chat client. If they send us multiple tracks in the same stream, we'll use the first and ignore the rest. It's likely that all tracks would have the same data anyway - just with different encodings.
  * */
 export interface IMediaStreamWrapper {
 	readonly emitter: Emitter<MediaStreamEvents>;

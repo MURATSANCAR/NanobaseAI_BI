@@ -21,7 +21,7 @@ export const Default: Story = {
 	args: {
 		inviter: {
 			username: 'zeki.bot',
-			name: 'Rocket Cat',
+			name: 'ZEKI AI CHAT',
 			_id: 'zeki.bot',
 		},
 	},
@@ -35,7 +35,7 @@ export const WithInfoLink: Story = {
 		},
 		inviter: {
 			username: 'zeki.bot',
-			name: 'Rocket Cat',
+			name: 'ZEKI AI CHAT',
 			_id: 'zeki.bot',
 		},
 	},
@@ -46,7 +46,7 @@ export const Loading: Story = {
 		isLoading: true,
 		inviter: {
 			username: 'zeki.bot',
-			name: 'Rocket Cat',
+			name: 'ZEKI AI CHAT',
 			_id: 'zeki.bot',
 		},
 	},

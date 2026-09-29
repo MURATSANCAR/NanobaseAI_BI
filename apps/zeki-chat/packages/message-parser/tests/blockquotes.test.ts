@@ -4,27 +4,27 @@ import { paragraph, plain, quote, bold } from './helpers';
 test.each([
 	[
 		`
-As Rocket Cat said:
+As ZEKI AI CHAT said:
 > meowww
 > grr.
 `.trim(),
-		[paragraph([plain('As Rocket Cat said:')]), quote([paragraph([plain('meowww')]), paragraph([plain('grr.')])])],
+		[paragraph([plain('As ZEKI AI CHAT said:')]), quote([paragraph([plain('meowww')]), paragraph([plain('grr.')])])],
 	],
 	[
 		`
-As Rocket Cat said:
+As ZEKI AI CHAT said:
 > *meowww*
 > grr.
 `.trim(),
-		[paragraph([plain('As Rocket Cat said:')]), quote([paragraph([bold([plain('meowww')])]), paragraph([plain('grr.')])])],
+		[paragraph([plain('As ZEKI AI CHAT said:')]), quote([paragraph([bold([plain('meowww')])]), paragraph([plain('grr.')])])],
 	],
 	[
 		`
-As Rocket Cat said:
+As ZEKI AI CHAT said:
 >meowww
 >grr.
 `.trim(),
-		[paragraph([plain('As Rocket Cat said:')]), quote([paragraph([plain('meowww')]), paragraph([plain('grr.')])])],
+		[paragraph([plain('As ZEKI AI CHAT said:')]), quote([paragraph([plain('meowww')]), paragraph([plain('grr.')])])],
 	],
 	[
 		`
