@@ -87,6 +87,15 @@
 - **Beklenen süre:** damga + hazır kayıt okuması (2 küçük sorgu) + canlı küçük okumalar: bellekten < 0,2 sn; süreç yeni başladıysa kayıt tablodan bir kez okunur (sorgu–sayfada büyük JSON, ~0,5 sn); girdi değiştiyse ilk istek hesabı yapar (sorgu–sayfa ve rehber konuları artık dizinli, saniyeler mertebesi) — gece ısıtması bunu ekranı açandan önce yapar.
 - **Sunucuda kalan:** `semantic_seo_hazir` yeni tablo (köprü kendiliğinden kurar). Gece turunu elle koşturmak şart değil: kayıt yoksa ilk istek hesaplayıp yazar; ekranı ilk açan beklemesin diye kurulumdan sonra kabul betiği (`scripts/acceptance/seo-hiz/kabul_seo_hiz.py`, yan port, yalnız okuma) her uca istek atarak kayıtları doldurur ve süreleri ölçer.
 - **Testler:** `test_seo_hazir_hiz.py` (yeni) + mevcut SEO testleri, `test_sorgu_bilgisi_seo.py` — Mac'te yalnız `py_compile`; koordinatör sunucuda koşturur.
+## 2026-09-29 — Yavaş ekran uçları hızlandırıldı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** kullanıcı «veriler ekrana çok geç geliyor»; test sunucusunda `X-Data-Refresh: 1` ile uç süreleri 2,3–14 sn.
+- **Veri sözlüğü** (`/schema/gaps` 7,4 sn): liste bütün envanteri (~300 bin kolon sözlüğü) kuruyordu → kolon durumu profillerden sayılır, işaretler katalog sürümü başına bir kez, açılışta ısıtılır; ayrıntı yalnız kalıbın kopyalarını kurar. `/semantic/concepts` terim damgasına bağlı hatırlanır. Test: eski hesap = yeni hesap (`test_veri_sozlugu_hiz.py`).
+- **Yönetim** (`/admin/overview` 5,1 sn): 10 sıralı `systemctl` süreci → 2 paralel süreç + 15 sn bellek (`test_yonetim_hiz.py`).
+- **Sosyal medya** (`/social/opportunities` 4,8–6,8 sn, `/accounts/crm-suggestions` 5,7 sn): her açılışta CRM'e 1–3 sorgu → okuma `semantic_social_meta`'da saklanır, bayatsa arkada yenilenir, sabah turu yeniler (`test_sosyal_hiz.py`).
+- **Yazar ilişkileri** (2,3 sn): hazır parça istekte ayrıştırılmıyor, sadakat günde bir kez (`test_hiz_yazar_iliskileri.py`). Kart/ajanda ucunda ağır iş bulunmadı; ısı haritasıyla aynı süreçte bekliyorlardı.
+- **Sözleşmeler** (11–14 sn): özet editoryal masam hazırlığından, liste bellekte (`contracts_hizli.py`, `test_hiz_sozlesmeler.py`). Ortak kök neden: `Runtime._execute` tek bağlantı kilidi turların arkasında sıraya sokuyor (dokunulmadı).
+- **Açık:** kategori ağacı/üretim ve pazarlama backlist alt ajanlarda sürüyor; «Verileri yenile» başlığıyla ölçüm üretim/sözleşme/yazar ucunda kaynağı bilinçli bekler — ölçüm başlıksız yapılmalı.
 
 ## 2026-09-29 — Yetki üye okuması 07:00/12:00; departmansız CRM kullanıcıları Excel'i aynı saatlerde e-postayla
 
