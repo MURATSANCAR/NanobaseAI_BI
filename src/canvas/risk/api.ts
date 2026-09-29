@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** Uç cevabındaki sorgu bilgisi (`<SqlInfo k={…kaynaklar} alan="…" />`). */
 export type WithK = { kaynaklar?: Kaynaklar };
@@ -274,7 +275,7 @@ export function leftTone(n: number | null | undefined, warn = 7): Tone {
 export function parseNum(s: string): number | null {
   const t = s.trim().replace(/\s/g, '').replace(/₺|%/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : (t.match(/\./g) ?? []).length > 1 ? t.replace(/\./g, '') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) ? n : null;
 }

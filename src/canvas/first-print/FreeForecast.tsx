@@ -7,6 +7,7 @@ import { Box, FpFrame } from './parts';
 import { ForecastBody } from './BookForecast';
 import { sourceLine, useSummary } from './FirstPrintScreen';
 import { firstPrintApi, type FreeInput } from './api';
+import { parseTrNumber } from '../components/trNumber';
 
 /** CRM'de kartı olmayan (henüz açılmamış) kitap için tahmin: özellikler elle girilir, sonuç kaydedilmez. */
 
@@ -33,7 +34,7 @@ export default function FreeForecastPage() {
         ...f,
         launch: f.launch || min,
         pages: f.pages ? Number(f.pages) : null,
-        price: f.price ? Number(String(f.price).replace(',', '.')) : null,
+        price: f.price ? parseTrNumber(String(f.price)) : null,
       }),
   });
   const submit = (e: FormEvent) => {

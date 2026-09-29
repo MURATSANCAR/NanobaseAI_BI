@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Check, FileDown, FolderPlus, Loader2, Wand2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
 import SearchSelect from '../components/SearchSelect';
@@ -12,6 +13,8 @@ import { fmtDay, usePeopleOptions } from '../editorial/authors/shared';
 import { STAGE_FLOW, fmtInt, fmtMoney, paApi, parseAmount, type ProjectBook, type ProjectDetail, type Stage } from './api';
 import { BookPicker, PlacePicker } from './pickers';
 import { Empty, PaFrame, StageBar, invalidatePa, usePaMeta } from './parts';
+
+const hint = 'mt-1 block text-[11px] font-medium leading-snug text-canvas-muted';
 
 /** Kamu projeleri: fikir → ön görüşme → teklif → kurum onayı → uygulama → rapor → kapandı. Pano (telefonda yatay kayar),
  *  proje kartı (`?proje=`): aşama ve not, kitap listesi, hedef kurumlar, bütçe onayı, Zeki AI teklif dosyası taslağı,
@@ -111,14 +114,15 @@ function CreateSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
     mutationFn: () => paApi.addProject({ ...f, orgId: f.orgId || null, summary: f.summary || null }),
     onSuccess: async (p) => {
       await invalidatePa(qc);
-      toast.success('Proje açıldı (fikir).');
+      toast.success('Proje «Fikir» aşamasında açıldı; kartı açılıyor.');
       onClose();
       onSaved(p.id);
     },
-    onError: (e) => setErr(errText(e, 'Proje açılamadı.')),
+    onError: (e) => setErr(errText(e, 'Proje açılamadı. Alanları kontrol edip yeniden deneyin.')),
   });
   return (
-    <Sheet open={open} onClose={onClose} modal title="Yeni proje" subtitle="Fikir aşamasında açılır">
+    <Sheet open={open} onClose={onClose} modal title="Yeni proje"
+      subtitle="Bir kurumla yürütülecek okuma kampanyası, bağış ya da materyal projesini «Fikir» aşamasında panoya ekler. Kitaplar, bütçe ve teklif dosyası sonra proje kartında girilir. Yalnız proje adı zorunlu.">
       <form
         className="space-y-3 text-[12.5px]"
         onSubmit={(e) => {
@@ -129,7 +133,8 @@ function CreateSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
       >
         <label className="block">
           <span className={label}>Proje adı</span>
-          <input required maxLength={300} autoFocus value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="ör. İlçe okullarında okuma seferberliği" className={`${field} mt-1`} />
+          <input required maxLength={300} autoFocus value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="Ör. İlçe okullarında okuma seferberliği" className={`${field} mt-1`} />
+          <span className={hint}>Panoda ve teklif dosyasında görünen ad.</span>
         </label>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block">
@@ -145,7 +150,7 @@ function CreateSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
           <label className="block">
             <span className={label}>Kurum</span>
             <select value={f.orgId} onChange={(e) => setF((p) => ({ ...p, orgId: e.target.value }))} className={`${field} mt-1`}>
-              <option value="">Sonra seçilecek</option>
+              <option value="">Sonra seçeceğim</option>
               {(orgs.data?.items ?? []).map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
@@ -153,10 +158,12 @@ function CreateSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
               ))}
             </select>
           </label>
+          <p className={`${hint} sm:col-span-2 !mt-0`}>Kurum listesi «Kurumlar» sekmesindeki kartlardır; kurum yoksa önce orada açın.</p>
         </div>
         <label className="block">
           <span className={label}>Özet</span>
-          <textarea rows={3} maxLength={8000} value={f.summary} onChange={(e) => setF((p) => ({ ...p, summary: e.target.value }))} className={`${field} mt-1 resize-y`} />
+          <textarea rows={3} maxLength={8000} value={f.summary} onChange={(e) => setF((p) => ({ ...p, summary: e.target.value }))} placeholder="Ör. İlçedeki 12 ortaokulda 4. ve 5. sınıflara yaş grubuna uygun kitap seti ve okuma günlüğü." className={`${field} mt-1 resize-y`} />
+          <span className={hint}>Projenin amacı ve kapsamı, iki üç cümle. Zeki AI teklif dosyası taslağını yazarken bu özeti kullanır.</span>
         </label>
         {err && <Note tone="err">{err}</Note>}
         <div className="flex justify-end gap-2">
@@ -164,7 +171,7 @@ function CreateSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
             Vazgeç
           </button>
           <button type="submit" className={btnPrimary} disabled={save.isPending || !f.title.trim()}>
-            {save.isPending ? 'Açılıyor…' : 'Projeyi aç'}
+            {save.isPending ? 'Açılıyor…' : 'Projeyi panoya ekle'}
           </button>
         </div>
       </form>
@@ -232,9 +239,9 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
     onSuccess: async () => {
       await done();
       setStageNote('');
-      toast.success('Kaydedildi.');
+      toast.success('Proje kaydedildi.');
     },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Kaydedilemedi. Alanları kontrol edip yeniden deneyin.') ?? ''),
   });
   const approve = useMutation({
     mutationFn: ({ what, decision }: { what: 'budget' | 'proposal'; decision: 'onay' | 'geri' }) => paApi.approveProject(id, what, decision),
@@ -242,7 +249,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
       await done();
       toast.success('Onay kaydedildi.');
     },
-    onError: (e) => toast.error(errText(e, 'Onaylanamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Onay kaydedilemedi. Sayfayı yenileyip yeniden deneyin.') ?? ''),
   });
   const draft = useMutation({
     mutationFn: () => paApi.draftProposal(id),
@@ -250,7 +257,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
       await done();
       toast.info(r.started ? 'Zeki AI teklif dosyasını hazırlıyor; bitince burada görünür.' : 'Taslak zaten hazırlanıyor.');
     },
-    onError: (e) => toast.error(errText(e, 'Taslak başlatılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Zeki AI taslağı başlatılamadı. Biraz sonra yeniden deneyin.') ?? ''),
   });
 
   if (!p || !f) {
@@ -284,7 +291,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
             <StageBar stage={p.stage} label={p.stageLabel} />
             {canEdit && (
               <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-                <input value={stageNote} onChange={(e) => setStageNote(e.target.value)} maxLength={4000} placeholder="Aşama notu (ör. Teklif dosyası il müdürlüğüne verildi)" className={field} />
+                <input value={stageNote} onChange={(e) => setStageNote(e.target.value)} maxLength={4000} aria-label="Aşama notu" placeholder="Aşama notu, ör. Teklif dosyası il müdürlüğüne verildi" className={field} />
                 <div className="flex flex-wrap gap-1.5">
                   {next && (
                     <button type="button" className={btnPrimary} disabled={save.isPending} onClick={() => save.mutate({ stage: next, stageNote: stageNote || null })}>
@@ -306,10 +313,11 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                   </select>
                   {stageNote.trim() && (
                     <button type="button" className={btnGhost} disabled={save.isPending} onClick={() => save.mutate({ stageNote })}>
-                      Yalnız not
+                      Yalnız notu kaydet
                     </button>
                   )}
                 </div>
+                <p className={`${hint} sm:col-span-2 !mt-0`}>Aşama düğmesi hemen kaydeder ve geçmişe tarihli bir satır yazar; not yazdıysanız o satıra eklenir. Bütçesi olan proje, bütçe onaylanmadan «Uygulama» aşamasına geçemez.</p>
               </div>
             )}
           </div>
@@ -318,7 +326,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block sm:col-span-2">
                 <span className={label}>Proje adı</span>
-                <input maxLength={300} value={f.title} onChange={(e) => set('title', e.target.value)} className={`${field} mt-1`} />
+                <input maxLength={300} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ör. İlçe okullarında okuma seferberliği" className={`${field} mt-1`} />
               </label>
               <label className="block">
                 <span className={label}>Tür</span>
@@ -343,25 +351,29 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
               </label>
             </div>
             <label className="block">
-              <span className={label}>Özet (teklif taslağına girer)</span>
-              <textarea rows={3} maxLength={8000} value={f.summary} onChange={(e) => set('summary', e.target.value)} className={`${field} mt-1 resize-y`} />
+              <span className={label}>Özet</span>
+              <textarea rows={3} maxLength={8000} value={f.summary} onChange={(e) => set('summary', e.target.value)} placeholder="Ör. İlçedeki 12 ortaokulda 4. ve 5. sınıflara kitap seti ve okuma günlüğü." className={`${field} mt-1 resize-y`} />
+              <span className={hint}>Projenin amacı ve kapsamı; Zeki AI teklif taslağını yazarken bunu kullanır.</span>
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <span className={label}>Sorumlu</span>
                 <SearchSelect label="Sorumlu" placeholder="Seçilmedi" options={people.options} value={f.owner} onChange={(v) => set('owner', v)} className="mt-1" />
+                <span className={hint}>Projeyi yürüten iş arkadaşınız.</span>
               </div>
               <label className="block">
                 <span className={label}>Bütçe (₺)</span>
-                <input inputMode="decimal" value={f.budget} onChange={(e) => set('budget', e.target.value)} placeholder="ör. 125.000" className={`${field} mt-1`} />
+                <input inputMode="decimal" value={f.budget} onChange={(e) => set('budget', e.target.value)} placeholder="Ör. 125000 ya da 125000,50" className={`${field} mt-1`} />
+                <span className={hint}>Binlik nokta koymayın. Bütçe girilen proje, yönetim onaylamadan «Uygulama» aşamasına geçmez; tutarı değiştirmek onayı düşürür.</span>
               </label>
               <label className="block">
                 <span className={label}>Sıradaki adım</span>
-                <input maxLength={500} value={f.nextStep} onChange={(e) => set('nextStep', e.target.value)} className={`${field} mt-1`} />
+                <input maxLength={500} value={f.nextStep} onChange={(e) => set('nextStep', e.target.value)} placeholder="Ör. İl müdürlüğüyle görüşme ayarla" className={`${field} mt-1`} />
               </label>
               <label className="block">
                 <span className={label}>Adım tarihi</span>
                 <input type="date" value={f.nextOn} onChange={(e) => set('nextOn', e.target.value)} className={`${field} mt-1`} />
+                <span className={hint}>Bu tarih geçerse panoda «Adım gecikti» uyarısı çıkar.</span>
               </label>
             </div>
 
@@ -373,7 +385,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                 </button>
               </div>
               {books.length === 0 ? (
-                <p className="text-canvas-muted">Kitap seçilmedi.</p>
+                <EmptyHint title="Kitap seçilmedi" why="«Kitap ekle» ile projede dağıtılacak kitapları ve adetlerini girin; teklif dosyası ve erişim hesabı bu listeyi kullanır." />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {books.map((b, i) => (
@@ -384,10 +396,10 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                         inputMode="numeric"
                         value={b.qty ?? ''}
                         onChange={(e) => setBooks((x) => x.map((y, j) => (j === i ? { ...y, qty: e.target.value ? Number(e.target.value.replace(/\D/g, '')) : null } : y)))}
-                        placeholder="adet"
-                        className={`${field} w-24`}
+                        placeholder="Adet, ör. 50"
+                        className={`${field} w-28`}
                       />
-                      <button type="button" aria-label="Çıkar" className={`${btnGhost} !min-h-9 !px-2 !py-1`} onClick={() => setBooks((x) => x.filter((_, j) => j !== i))}>
+                      <button type="button" aria-label={`${b.name ?? b.stockCode} kitabını listeden çıkar`} className={`${btnGhost} !min-h-9 !px-2 !py-1`} onClick={() => setBooks((x) => x.filter((_, j) => j !== i))}>
                         <X aria-hidden className="h-3.5 w-3.5" />
                       </button>
                     </li>
@@ -404,12 +416,12 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                 </button>
               </div>
               {places.length === 0 ? (
-                <p className="text-canvas-muted">Hedef kurum seçilmedi; teklifte okul ve öğrenci sayısı buradan hesaplanır.</p>
+                <EmptyHint title="Hedef kurum seçilmedi" why="«Kurum ekle» ile projenin ulaşacağı okul ve kurumları CRM'den seçin; teklifteki okul ve öğrenci sayısı bu listeden hesaplanır." />
               ) : (
                 <ul className="flex flex-wrap gap-1.5">
                   {places.map((x) => (
                     <li key={x.id}>
-                      <button type="button" className="rounded-lg bg-violet-50 px-2 py-1 text-[11.5px] font-bold text-violet-800" onClick={() => setPlaces((y) => y.filter((z) => z.id !== x.id))}>
+                      <button type="button" aria-label={`${x.name} kurumunu listeden çıkar`} className="min-h-9 rounded-lg bg-violet-50 px-2 py-1 text-[11.5px] font-bold text-violet-800" onClick={() => setPlaces((y) => y.filter((z) => z.id !== x.id))}>
                         {x.name} ×
                       </button>
                     </li>
@@ -420,12 +432,14 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
 
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block">
-                <span className={label}>CRM sipariş numaraları (dağıtılan kitap)</span>
-                <input value={f.orders} onChange={(e) => set('orders', e.target.value)} placeholder="virgülle" className={`${field} mt-1`} />
+                <span className={label}>CRM sipariş numaraları</span>
+                <input value={f.orders} onChange={(e) => set('orders', e.target.value)} placeholder="Ör. 12345, 12346" className={`${field} mt-1`} />
+                <span className={hint}>Kitapların dağıtıldığı CRM siparişleri, virgülle. «CRM siparişiyle dağıtılan» adet bu siparişlerden okunur.</span>
               </label>
               <label className="block">
-                <span className={label}>Basın yansıması (her satıra bir bağlantı)</span>
-                <textarea rows={2} value={f.press} onChange={(e) => set('press', e.target.value)} className={`${field} mt-1 resize-y`} />
+                <span className={label}>Basın yansıması</span>
+                <textarea rows={2} value={f.press} onChange={(e) => set('press', e.target.value)} placeholder="Ör. https://www.gazete.com/okuma-kampanyasi-haberi" className={`${field} mt-1 resize-y`} />
+                <span className={hint}>Projeyle ilgili haberlerin bağlantıları; her satıra bir bağlantı.</span>
               </label>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -439,9 +453,10 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
               ).map(([k, l]) => (
                 <label key={k} className="block">
                   <span className={label}>{l}</span>
-                  <input inputMode="numeric" value={f[k]} onChange={(e) => set(k, e.target.value.replace(/[^\d.]/g, ''))} className={`${field} mt-1`} />
+                  <input inputMode="numeric" value={f[k]} onChange={(e) => set(k, e.target.value.replace(/[^\d.]/g, ''))} placeholder="Ör. 1200" className={`${field} mt-1`} />
                 </label>
               ))}
+              <p className={`${hint} col-span-2 !mt-0 sm:col-span-4`}>Projenin elle girilen sonuç sayıları. «Erişim (CRM)» kutusu bunlardan ayrıdır; hedef kurumlardan ve siparişlerden CRM'den okunur.</p>
             </div>
 
             <section className="rounded-2xl border border-slate-100 bg-white/80 p-3">
@@ -459,8 +474,9 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                   Zeki AI bölümleri yazıyor; CRM'den kurum ve öğrenci sayıları ekleniyor.
                 </p>
               ) : (
-                <textarea rows={10} value={f.proposalText} onChange={(e) => set('proposalText', e.target.value)} placeholder="Taslak yok. «Zeki AI ile taslak» amaç, kapsam, fayda ve takvimi yazar; sayılar ve mevzuat maddeleri koddan eklenir." className={`${field} resize-y font-mono text-[12px] leading-snug`} />
+                <textarea rows={10} value={f.proposalText} onChange={(e) => set('proposalText', e.target.value)} placeholder="Taslak yok. «Zeki AI ile taslak» amaç, kapsam, fayda ve takvimi yazar; sayılar CRM'den, mevzuat maddeleri resmî kaynaktan eklenir. İsterseniz buraya kendiniz de yazabilirsiniz." className={`${field} resize-y font-mono text-[12px] leading-snug`} />
               )}
+              {p.proposalStatus !== 'hazirlaniyor' && <span className={hint}>Kurum için hazırlanan teklif metni. Metni değiştirip kaydederseniz teklif onayı düşer ve yeniden onay gerekir.</span>}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {canEdit && (
                   <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={draft.isPending || p.proposalStatus === 'hazirlaniyor'} onClick={() => draft.mutate()}>
@@ -471,7 +487,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
                 {me?.canExport && p.proposalText && (
                   <a className={`${btnGhost} !min-h-9 !py-1`} href={paApi.proposalPdfUrl(p.id)} download>
                     <FileDown aria-hidden className="h-3.5 w-3.5" />
-                    PDF
+                    PDF indir
                   </a>
                 )}
               </div>
@@ -481,7 +497,7 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
           {canEdit && (
             <div className="sticky bottom-0 flex justify-end bg-white/95 py-2">
               <button type="button" className={btnPrimary} disabled={save.isPending} onClick={() => save.mutate(body())}>
-                {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+                {save.isPending ? 'Kaydediliyor…' : 'Proje kartını kaydet'}
               </button>
             </div>
           )}
@@ -566,10 +582,10 @@ function ProjectSheet({ id, onClose }: { id: string; onClose: () => void }) {
         </aside>
       </div>
 
-      <Sheet open={picker === 'book'} onClose={() => setPicker(null)} modal title="Kitap ekle" subtitle="Kaydet'e basınca listeye yazılır">
+      <Sheet open={picker === 'book'} onClose={() => setPicker(null)} modal title="Kitap ekle" subtitle="Seçtiğiniz kitap listeye eklenir; kalıcı olması için proje kartında «Proje kartını kaydet»e basın.">
         <BookPicker picked={books.map((b) => b.id)} action="Ekle" onPick={(b) => b.id && setBooks((x) => [...x, { id: b.id as string, name: b.name, stockCode: b.stockCode, qty: null }])} />
       </Sheet>
-      <Sheet open={picker === 'place'} onClose={() => setPicker(null)} modal title="Hedef kurum ekle" subtitle="CRM ziyaret yerleri">
+      <Sheet open={picker === 'place'} onClose={() => setPicker(null)} modal title="Hedef kurum ekle" subtitle="CRM'deki ziyaret yerlerinden (okul, kütüphane, kurum) seçin; kalıcı olması için proje kartında «Proje kartını kaydet»e basın.">
         <PlacePicker picked={places.map((x) => x.id)} onPick={(x) => x.id && setPlaces((y) => [...y, { id: x.id as string, name: x.name ?? 'CRM kurumu' }])} />
       </Sheet>
     </Sheet>

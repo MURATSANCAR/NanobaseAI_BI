@@ -64,16 +64,16 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
   const calm = Math.max(0, s.active - s.triggered.length - s.errored.length);
   const sp = spark(s.proximity.map((p) => p.pct));
   return {
-    ...base('Uyarılar', source, 'Kural yaz… örn. bu ayın iade tutarı 5 milyonu aşarsa haber ver', {
+    ...base('Uyarılar', source, 'Kural yazın… ör. bu ayın iade tutarı 5 milyonu aşarsa haber ver', {
       initials: 'TY',
       role: 'Timaş Yayınları · Uyarılar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
-      text: '“Hangi eşik patlamak üzere?”',
+      text: '“Hangi kural eşiğe yaklaştı?”',
     }, 3),
     c1: {
       icon: '🔔',
       title: 'Eşiği aşanlar',
-      badge: s.triggered.length ? 'Kritik' : 'Sakin',
+      badge: s.triggered.length ? 'Kritik' : 'Normal',
       big: num(s.triggered.length),
       bigSuffix: 'kural',
       subLabel: 'Aktif kural:',
@@ -126,7 +126,7 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       footValue: num(s.neverChecked.length),
     },
     c5: {
-      title: 'Kanıt & Kaynak',
+      title: 'Kaynak ve kanıt',
       badge: 'Canlı veri',
       summary: `${num(s.total)} kural · ${num(s.proximity.length)} ölçüm`,
       rows: [
@@ -218,7 +218,7 @@ function sqlParts(all: string | null | undefined): (...names: string[]) => strin
 }
 
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
-  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'ZEKİ AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Zeki AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
   const yok = (v: string) => (durum ? '—' : v);
   const son = c.totals?.son_fatura?.slice(0, 10);
   const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';
@@ -238,7 +238,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
   const last3 = c.months.slice(-3);
 
   return {
-    ...base('Genel bakış', source, 'ZEKİ’ye sor… örn. bu ay kanal bazında net ciro', {
+    ...base('Genel bakış', source, 'Zeki AI’a sorun… ör. bu ay kanal bazında net ciro', {
       initials: 'TY',
       role: `Timaş Yayınları · ${c.year}`,
       at: durum || (c.generatedAt ? `${summaryTime(c.generatedAt)} özeti` : `${sonTR} itibarıyla`),
@@ -247,7 +247,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     c1: {
       icon: '💰',
       title: 'Net ciro',
-      info: { k: c.kaynaklar, alan: 'c1', label: 'Net ciro' },
+      info: { k: c.kaynaklar, alan: 'c1', label: 'Net ciro', explain: 'Yılbaşından bugüne kesilen satış faturalarının KDV hariç tutarı, iade faturaları düşülerek; iptal faturalar sayılmaz. Rozet, geçen yılın aynı dönemine göre değişimdir.' },
       sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals'),
       badge: c.yoyPct == null ? String(c.year) : `${c.yoyPct >= 0 ? '+' : ''}${trPct(c.yoyPct)}`,
       big: yok(money(c.netYtd)),
@@ -262,7 +262,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c2: {
       title: 'Aylık seyir',
-      info: { k: c.kaynaklar, alan: 'c2', label: 'Aylık seyir' },
+      info: { k: c.kaynaklar, alan: 'c2', label: 'Aylık seyir', explain: 'Her ayın net cirosu. Büyük rakam verisi tamamlanmış son ayın cirosu; yüzde, geçen yılın aynı ayına göre değişim.' },
       sql: sqlOf('months', 'prevMonths'),
       badge: `${c.observedMonths || 0} ay`,
       label: lastFull ? `${AY[lastFull.ay - 1]} (son tam ay)` : 'Ay verisi yok',
@@ -277,7 +277,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c3: {
       title: 'Kanal dağılımı',
-      info: { k: c.kaynaklar, alan: 'c3', label: 'Kanal dağılımı' },
+      info: { k: c.kaynaklar, alan: 'c3', label: 'Kanal dağılımı', explain: 'Cironun fatura türüne göre dağılımı: toptan, perakende, diğer (hizmet) satış ve iadeler. İade oranı, iade tutarının brüt satışa oranıdır.' },
       sql: sqlOf('channels', 'totals'),
       badge: `${c.year} · brüt`,
       center: yok(money(toptan + perakende + diger + iade)),
@@ -293,7 +293,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c4: {
       title: 'En büyük cari',
-      info: { k: c.kaynaklar, alan: 'c4', label: 'En büyük cari' },
+      info: { k: c.kaynaklar, alan: 'c4', label: 'En büyük cari', explain: 'Bu yıl net cirosu en yüksek müşteri (cari). Rozet, bu carinin toplam net ciro içindeki payı; alttaki oran ilk 5 carinin toplam payı.' },
       sql: sqlOf('customers', 'months'),
       badge: top && c.netYtd > 0 ? trPct((top.net_ciro / c.netYtd) * 100) : '—',
       initials: (top?.cari ?? '??').slice(0, 2).toUpperCase(),
@@ -308,7 +308,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c5: {
       title: 'Kanıt & Kaynak',
-      info: { k: c.kaynaklar, alan: 'c5', label: 'Kanıt ve kaynak' },
+      info: { k: c.kaynaklar, alan: 'c5', label: 'Kaynak ve kanıt', explain: 'Bu ekrandaki rakamların dayandığı Logo kayıtlarının sayısı: fatura, fatura satırı ve cari. Rakamlara güvenmek için neye bakıldığını gösterir.' },
       badge: durum ? 'Bağlantı' : 'Canlı',
       summary: durum || `${money(c.units?.satir ?? 0)} satır · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
       rows: [
@@ -323,7 +323,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     main: {
       badge: 'ZEKİ AI ÖZETİ',
       subject: `Net ciro · ${c.year}`,
-      info: { k: c.kaynaklar, alan: 'main', label: 'Özet' },
+      info: { k: c.kaynaklar, alan: 'main', label: 'Özet', explain: 'Özet cümlesi yukarıdaki kartların rakamlarından kendiliğinden kurulur; ayrı bir hesap yoktur. Satılan adet, satış satırlarındaki adetten iade adetleri düşülerek bulunur.' },
       sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals', 'units'),
       timing: durum ? null : c.db,
       model: durum || `${sonTR} itibarıyla`,
@@ -333,17 +333,17 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
       m1: { label: 'Satılan adet:', value: yok(money(c.units?.satilan_adet ?? 0)) },
       m2: { label: 'Fatura:', value: yok(money(c.totals?.toplam_fatura ?? 0)) },
       m3: { label: 'İade faturası:', value: yok(money(c.totals?.iade_fatura ?? 0)) },
-      primary: 'Verine sor',
+      primary: 'Verinize sorun',
       primaryTo: '/',
       secondary: 'Uyarılar',
       secondaryTo: '/uyarilar',
       note: `${c.observedMonths || 0} ay gerçekleşti`,
     },
     sticker: {
-      info: { k: c.kaynaklar, alan: 'sticker', label: 'En çok satan' },
+      info: { k: c.kaynaklar, alan: 'sticker', label: 'En çok satan', explain: 'Bu yıl net satış adedi (satış − iade) en yüksek kitap; altında aynı kitabın net cirosu.' },
       kicker: 'En çok satan',
       meta: item ? `${money(item.adet)} adet` : '—',
-      title: item?.urun ?? yok('VERİ YOK'),
+      title: item?.urun ?? yok('Veri yok'),
       sub: item?.kod ?? '',
       footL: 'net ciro',
       footR: item ? `${money(item.net_ciro)} ₺` : '—',

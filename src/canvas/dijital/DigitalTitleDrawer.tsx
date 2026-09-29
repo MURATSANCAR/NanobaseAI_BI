@@ -8,6 +8,7 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { LISTING_TONE, dijitalApi, fmtInt, fmtMoney, type Contract, type Format, type ListingState, type Meta, type TitleDetail } from './api';
 import { Fact, RightPill } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 /** Kitap ayrıntısı (yan panel; /dijital-yayin/kitap/:id): kimlik alanları, sözleşmeler ve hak bayrakları, telif kararı,
  *  e-kitap dosyası (CRM + stüdyo), platform durumu ve geçmişi, dijital fiyat kararı, CRM'e işlenecekler, dijital satış. */
@@ -134,6 +135,7 @@ function ContractRow({ c, t, meta }: { c: Contract; t: TitleDetail; meta: Meta }
       </div>
       <div className="mt-1 flex flex-wrap gap-1">
         {flag(c.ekitap, 'e-kitap')}{flag(c.sesli, 'sesli')}{flag(c.iletim, 'internette gösterim')}{flag(c.zkitap, 'Z-kitap')}
+        {c.zkitap && <Explain label="Z-kitap">Zenginleştirilmiş kitap: metnin ses, video ya da etkileşimli içerik eklenmiş dijital sürümü. CRM'de sözleşmedeki «Z-Kitap Hakkı» alanından okunur.</Explain>}
         {c.korumaDisi && <Pill tone="muted">koruma dışı</Pill>}
       </div>
       {c.not && (

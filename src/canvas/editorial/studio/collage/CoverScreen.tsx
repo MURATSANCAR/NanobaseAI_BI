@@ -77,7 +77,10 @@ export default function CoverScreen() {
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-4">
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <Panel>
-            <div className={label} id="kapak-tarzi">Kapak tarzı</div>
+            <div className="flex items-center gap-1">
+              <div className={label} id="kapak-tarzi">Kapak tarzı</div>
+              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Başka bir tarza istediğiniz zaman geri geçebilirsiniz.</Explain>
+            </div>
             <div role="radiogroup" aria-labelledby="kapak-tarzi" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {STYLES.map(({ key, title: t, help, Icon }) => (
                 <button key={key} type="button" role="radio" aria-checked={current === key} disabled={pending}
@@ -94,7 +97,7 @@ export default function CoverScreen() {
               </p>
             )}
             {current === 'collage' && !v.selected && (
-              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: ZEKİ AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
+              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: Zeki AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
             )}
           </Panel>
 
@@ -106,7 +109,7 @@ export default function CoverScreen() {
             {current === 'collage' && v.draft && (
               <div role="status" className="mt-2 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">
                 <span className="min-w-0 flex-1">{DRAFT}</span>
-                <Explain label="Taslak kapak">ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır ve basılmamalıdır. Kendi yüklediğiniz fotoğraf taslak sayılmaz.</Explain>
+                <Explain label="Taslak kapak">Zeki AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır ve basılmamalıdır. Kendi yüklediğiniz fotoğraf taslak sayılmaz.</Explain>
               </div>
             )}
             <div className="mx-auto mt-2 w-full max-w-[520px]">
@@ -164,14 +167,14 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
                   className={`relative block w-full overflow-hidden rounded-xl border bg-white ${press} ${p.id === v.selected ? 'border-canvas-violet ring-2 ring-canvas-violet/40' : 'border-slate-200'}`}>
                   <Img src={collageApi.photoUrl(jobId, p.id, 320)} alt="" fallback={`${i + 1}`} className="aspect-[4/5] w-full object-cover grayscale" />
                   <span className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${p.draft ? 'bg-amber-100 text-amber-800' : 'bg-white/90 text-canvas-ink'}`}>
-                    {p.draft ? 'Taslak' : p.source === 'editor' ? 'Yüklenen' : 'ZEKİ AI'}
+                    {p.draft ? 'Taslak' : p.source === 'editor' ? 'Yüklenen' : 'Zeki AI'}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok. {canProduce ? '«3 aday üret» ile ZEKİ AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : 'Kendi fotoğrafınızı aşağıdan yükleyin.'}</p>
+          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok. {canProduce ? '«3 aday üret» ile Zeki AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : 'Kendi fotoğrafınızı aşağıdan yükleyin.'}</p>
         )}
         {sel && !sel.overflow && sel.cut_note && <p className="mt-2 text-[11.5px] text-canvas-muted">{sel.cut_note} Kesim düz yırtık kâğıt olarak kuruldu.</p>}
 
@@ -198,6 +201,7 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
           />
         </div>
         {otherBusy && <p className="mt-1 text-[11.5px] text-canvas-muted">Bu kitapta başka bir resim çiziliyor; bitince aday üretimi açılır.</p>}
+        {running && <p className="mt-1 text-[11.5px] text-canvas-muted">Adaylar arka planda hazırlanır; sayfadan ayrılabilirsiniz, bitince burada görünür.</p>}
         {v.job?.status === 'fail' && v.job.error && <Note tone="err">Aday üretilemedi: {v.job.error}</Note>}
         {v.scene?.why && <p className="mt-2 text-[11.5px] italic leading-snug text-canvas-muted">Konu seçimi: {v.scene.why}</p>}
       </Panel>

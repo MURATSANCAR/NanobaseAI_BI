@@ -5,6 +5,7 @@ import { Kpi, KpiRow } from '../editorial/kit';
 import { cnApi, fmtDay, fmtInt, fmtPct } from './api';
 import { Block } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { ExplainLabel } from '../components/Explain';
 
 const SOURCE: Record<string, string> = { crm: 'CRM kampanyası', dosya: 'Araç dosyası', elle: 'Elle' };
 
@@ -61,7 +62,7 @@ export default function Report() {
                 <thead><tr>
                   <th className={th}>Kampanya</th><th className={th}>Tür</th><th className={th}>Başlangıç</th>
                   <th className={`${th} text-right`}>Gönderim</th><th className={`${th} text-right`}>Okunan</th>
-                  <th className={`${th} text-right`}>Tıklanan</th><th className={`${th} text-right`}>Kara liste</th><th className={th}>Son gönderim kaydı</th>
+                  <th className={`${th} text-right`}>Tıklanan</th><th className={`${th} text-right`}><ExplainLabel label="Kara liste">CRM kampanya kartındaki «Kara Liste Adedi»: kara listede olduğu için bu gönderimin ulaşmadığı alıcı sayısı.</ExplainLabel></th><th className={th}>Son gönderim kaydı</th>
                 </tr></thead>
                 <tbody>
                   {r.crm.map((c) => (

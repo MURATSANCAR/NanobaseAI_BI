@@ -5,6 +5,7 @@ import type { PlanPage } from '../../../engine';
 import { Note, btnGhost, btnPrimary, errText } from '../../../admin/ui';
 import type { EditorCtx } from '../InspectorPanel';
 import { Progress } from '../shared';
+import { Explain } from '../../../components/Explain';
 import { FRONT, pollWhilePreparing, preparing, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
 import { findSpan, replaceTarget, targetText } from './textEdit';
 
@@ -190,17 +191,18 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        ZEKİ AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
+        Zeki AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
         {info.band ? ` (kitabın okur yaşı ${band(info.band)}; en küçüğüne göre)` : ''}. Her sayfa {info.passes} kez birbirinden bağımsız okunur;
         yalnız okumaların çoğunluğunda geçen işaret gösterilir.
+        {' '}<Explain label="Öneriyi uygulama">«Öneriyi uygula» sayfadaki metni hemen değiştirir ve sayfa düzeniyle birlikte kendiliğinden kaydedilir. Kartta «Geri al» ile, ya da Ctrl/Cmd+Z ve sürüm geçmişinden geri dönebilirsiniz. «Yoksay» metne dokunmaz, yalnız işareti kapatır.</Explain>
       </p>
       <RunHeader info={info} summary={summary} run={run} starting={starting} onStart={onStart} onResume={onResume}
         startLabel="Çocuk gözüyle oku" what="sayfa" />
       {msg && <Note tone="warn">{msg}</Note>}
       {run && run.status !== 'running' && run.stats && (
         <p className="text-[11.5px] text-canvas-muted">
-          {run.stats.shown} işaret gösteriliyor · okumalarda {run.stats.raw} işaret çıktı, metinde birebir bulunamayan {run.stats.dropped} tanesi atıldı
-          {run.stats.refuted ? `, resim/konuşan iddiası ayrıca sınanıp doğrulanmayan ${run.stats.refuted} tanesi düştü` : ''}.
+          {run.stats.shown} işaret gösteriliyor. Okumalarda toplam {run.stats.raw} işaret çıktı; alıntısı metinde aynen bulunamayan {run.stats.dropped} tanesi
+          {run.stats.refuted ? ` ve resim ya da konuşan kişiyle ilgili olup ikinci denetimde doğrulanmayan ${run.stats.refuted} tanesi` : ''} gösterilmiyor.
         </p>
       )}
       {run && (
@@ -387,9 +389,10 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. ZEKİ AI her çift sayfanın son cümlesinin
+        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. Zeki AI her çift sayfanın son cümlesinin
         «sonra ne oldu?» merakı uyandırıp uyandırmadığına bakar; güçlü değilse soru, yarım kalan eylem, ses sözcüğü ya da
         «ama…» gibi bir kalıpla yeni cümle önerir. Güçlü sayfa sonuna öneri yapılmaz.
+        {' '}<Explain label="Kabul et / Reddet">«Kabul et» sayfanın son cümlesini önerilenle değiştirir ve kendiliğinden kaydedilir; «Geri al» ile ya da Ctrl/Cmd+Z ile eski cümleye dönersiniz. «Reddet» metne dokunmaz. «merak» rozeti sayfa sonunun gücünü gösterir: güçlü, orta ya da zayıf.</Explain>
       </p>
       <RunHeader info={info} summary={summary} run={run} starting={starting} onStart={onStart} onResume={onResume}
         startLabel="Sayfa sonlarını değerlendir" what="çift sayfa" />
@@ -417,7 +420,7 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
                   <p className="mt-1.5"><span className="font-bold">{x.technique_label ?? 'Öneri'}: </span><Suggest from={x.quote} to={x.replacement} /></p>
                   {x.reason && <p className="mt-1 leading-snug text-canvas-muted">{x.reason}</p>}
                 </>
-              ) : <p className="mt-1.5 text-canvas-muted">ZEKİ AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi.</p>}
+              ) : <p className="mt-1.5 text-canvas-muted">Zeki AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi; isterseniz cümleyi kendiniz düzenleyin.</p>}
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 {dec === 'accepted' && (
                   <>

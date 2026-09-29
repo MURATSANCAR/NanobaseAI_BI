@@ -1,5 +1,6 @@
 import { ENGINE_BASE, send, type AuthorHeat } from '../engine';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M28 Kurumsal ilişkiler köprü istemcisi (`/api/v1/public-affairs/*`). Kişi/kurum kartı, temas notu, hediye programı ve
  *  kamu projeleri portal kaydıdır; CRM kişi, ziyaret yeri, kitap ve sipariş bilgisi yalnız okunur. Kişiye ve kuruma hiçbir
@@ -421,7 +422,7 @@ export function shiftMonth(key: string, delta: number): string {
 export function parseAmount(s: string): number | null {
   const t = s.trim().replace(/\s|₺/g, '');
   if (!t) return null;
-  const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  const n = Number(normalizeTrNumber(t));
   return Number.isFinite(n) ? n : null;
 }
 

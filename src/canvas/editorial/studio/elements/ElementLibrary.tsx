@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type DragEvent } from 'react';
 import { Drawer } from '@base-ui/react/drawer';
 import { RefreshCw, Search, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
+import { EmptyHint } from '../../../components/Explain';
 import { ghostBtn, press } from '../shared';
 import { elementsApi, useElementCatalog } from './api';
 import { Thumb, sectionTitle } from './controls';
@@ -104,9 +105,9 @@ export default function ElementLibrary({ jobId, onAdd, page, nextZ, rev, classNa
         </div>
       )}
       {catalog && !shown.length && (
-        <p className="py-4 text-center text-[12.5px] text-canvas-muted">
-          {needle ? `“${term.trim()}” için öğe yok.` : 'Bu grupta öğe yok.'}
-        </p>
+        needle
+          ? <EmptyHint title={`“${term.trim()}” için öğe yok`} why="Başka bir kelimeyle arayın (ör. tabela, yıldız, çerçeve) ya da «Tümü» grubuna dönün." />
+          : <EmptyHint title="Bu grupta öğe yok" why="Başka bir grup seçin ya da «Tümü»ne dönün." />
       )}
 
       {sections.map((g, gi) => (

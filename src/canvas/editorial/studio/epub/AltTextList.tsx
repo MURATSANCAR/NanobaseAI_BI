@@ -4,6 +4,7 @@ import { Check, Loader2, Sparkles } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Img, ghostBtn, press } from '../shared';
 import { epubApi, useAlts, type AltItem, type AltSource } from './api';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Alt metinleri gözden geçir: her görselin küçüğü, hangi sayfada olduğu, metni ve nereden geldiği. Editörün yazdığı
  *  her zaman kazanır; «Yeniden öner» ZEKİ AI'dan yeni öneri alır. Varsayılan görünüm yalnız gözden geçirilmesi
@@ -12,7 +13,7 @@ import { epubApi, useAlts, type AltItem, type AltSource } from './api';
 const SOURCE: Record<AltSource, string> = {
   editor: 'Editör yazdı',
   sahne: 'Sahne tarifinden',
-  model: 'Görselden (ZEKİ AI)',
+  model: 'Görselden (Zeki AI)',
   tarif: 'Figürün tarifinden',
   an: 'Sayfanın anından · gözden geçirin',
   kapak: 'Kitap bilgisinden',
@@ -59,7 +60,7 @@ function Row({ jobId, it }: { jobId: string; it: AltItem }) {
             Kaydet
           </button>
           <button type="button" className={ghostBtn} disabled={suggest.isPending} onClick={() => suggest.mutate()}
-            title="ZEKİ AI görselden ya da sahnenin tarifinden yeni bir alt metin önerir; yazdığınızın yerine geçer">
+            title="Zeki AI görselden ya da sahnenin tarifinden yeni bir alt metin önerir; yazdığınızın yerine geçer">
             {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {suggest.isPending ? 'Öneriliyor…' : 'Yeniden öner'}
           </button>
@@ -85,7 +86,10 @@ export default function AltTextList({ jobId }: { jobId: string }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[13px] font-extrabold">Alt metinler <span className="font-bold text-canvas-muted">· {items.length} görsel</span></h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          <span>Alt metinler <span className="font-bold text-canvas-muted">· {items.length} görsel</span></span>
+          <Explain label="Alt metin">Görme engelli okurun e-kitapta ekran okuyucuyla duyduğu, görselde ne olduğunu anlatan 1–2 cümle. Sizin yazdığınız metin her zaman korunur; «Yeniden öner» ise Zeki AI'ın yeni önerisini yazdığınızın yerine koyar. Değişiklik bir sonraki e-kitap üretiminde dosyaya girer.</Explain>
+        </h3>
         <div role="radiogroup" aria-label="Gösterilen alt metinler" className="inline-flex rounded-xl bg-slate-100 p-0.5">
           {([[false, `Gözden geçirilecek (${review.length})`], [true, 'Hepsi']] as const).map(([v, t]) => (
             <button key={String(v)} type="button" role="radio" aria-checked={all === v} onClick={() => setAll(v)}
@@ -97,10 +101,9 @@ export default function AltTextList({ jobId }: { jobId: string }) {
       </div>
       {q.error && <Note tone="err">{errText(q.error, 'Alt metinler okunamadı.')}</Note>}
       {!q.isLoading && !shown.length && (
-        <p className="text-[12px] text-canvas-muted">
-          {items.length ? 'Gözden geçirilecek alt metin yok. «Hepsi» ile bütün görsellerin metinlerini görebilirsiniz.' :
-            'E-kitaba girecek görsel yok.'}
-        </p>
+        items.length
+          ? <EmptyHint title="Gözden geçirilecek alt metin yok" why="Bütün görsellerin açıklaması hazır. «Hepsi» ile bütün görsellerin metinlerini görüp düzeltebilirsiniz." />
+          : <EmptyHint title="E-kitaba girecek görsel yok" why="Kitapta resim ya da görsel olmadığı için açıklama gerekmiyor." />
       )}
       <ul className="flex flex-col gap-2">
         {shown.map((it) => <Row key={it.key} jobId={jobId} it={it} />)}

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Search, X } from 'lucide-react';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
@@ -37,6 +38,7 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
   const [q, setQ] = useState('');
   const dq = useDebounced(q, 300);
   const [page, setPage] = useState(0);
+  const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
 
   useEffect(() => {
     if (!open) return;
@@ -72,12 +74,14 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
       onClose();
       nav(`/sosyal-medya/gonderi/${encodeURIComponent(p.id)}`);
     },
-    onError: (e) => toast.error(errText(e, 'Gönderi açılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Gönderi oluşturulamadı. Bağlantınızı kontrol edip yeniden deneyin.') ?? ''),
   });
 
   return (
     <Sheet open={open} modal onClose={onClose} title="Yeni gönderi"
-      subtitle={seed?.occasion ? `Özel gün: ${seed.occasion.ad}` : 'Metni bir sonraki adımda yazarsınız (CRM metni, Zeki AI taslağı ya da elle).'}>
+      subtitle={seed?.occasion
+        ? `Özel gün: ${seed.occasion.ad}. Gönderiyi takvime ekleyin; metni bir sonraki adımda yazarsınız.`
+        : 'Takvime yeni bir gönderi ekler. Burada yalnız ne zaman, hangi hesaptan ve hangi kitap için olduğunu seçersiniz; metni bir sonraki adımda yazarsınız (CRM metni, Zeki AI taslağı ya da elle). Hiçbir alan zorunlu değil.'}>
       <div className="flex flex-col gap-3">
         {active.length === 0 && (
           <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
@@ -87,9 +91,10 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Hesap</span>
           <select className={field} value={account} onChange={(e) => setAccount(e.target.value)}>
-            <option value="">Sonra seçilecek</option>
+            <option value="">Sonra seçeceğim</option>
             {active.map((a) => <option key={a.id} value={a.id}>{a.ad} ({a.platformAdi} {a.handle})</option>)}
           </select>
+          <span className={hint}>Gönderinin paylaşılacağı hesap; karakter ve etiket sınırı bu hesabın platformuna göre sayılır. Boş bırakırsanız gönderi sayfasında seçersiniz.</span>
         </label>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">
@@ -100,6 +105,7 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
             <span className={labelCls}>Saat</span>
             <input type="time" className={field} value={time} onChange={(e) => setTime(e.target.value)} />
           </label>
+          <p className={`${hint} col-span-2`}>Gönderi takvimde bu güne yerleşir. Portal paylaşım yapmaz; zamanı gelince paylaşımı siz kendi hesabınızdan yaparsınız.</p>
         </div>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>İçerik türü</span>
@@ -107,10 +113,12 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
             <option value="">Sonra (Zeki AI önerir)</option>
             {Object.entries(meta.kinds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          <span className={hint}>Gönderinin ne tür bir paylaşım olduğu; raporda türlere göre karşılaştırma bundan yapılır. Boş bırakırsanız Zeki AI bir tür önerir, sonra değiştirebilirsiniz.</span>
         </label>
 
         <div className="flex flex-col gap-1">
-          <span className={labelCls}>Kitap (isteğe bağlı)</span>
+          <label htmlFor="newpost-book" className={labelCls}>Kitap (isteğe bağlı)</label>
+          <span className={hint}>Kitap bağlarsanız gönderi sayfasında o kitabın CRM metinleri, alıntıları ve stüdyo görselleri hazır gelir.</span>
           {book ? (
             <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
               <div className="min-w-0 text-[12.5px] font-bold">
@@ -125,10 +133,10 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
             <>
               <span className="relative flex items-center">
                 <Search aria-hidden className="pointer-events-none absolute left-3 h-4 w-4 text-canvas-muted" />
-                <input className={`${field} pl-9`} value={q} placeholder="Kitap adı, yazar ya da stok kodu"
+                <input id="newpost-book" type="search" className={`${field} pl-9`} value={q} placeholder="Ör. kitap adı, yazar ya da stok kodu (en az 2 harf)"
                   onChange={(e) => { setQ(e.target.value); setPage(0); }} />
               </span>
-              {books.error && <p className="text-[12px] font-semibold text-red-700">{errText(books.error, 'CRM okunamadı.')}</p>}
+              {books.error && <p className="text-[12px] font-semibold text-red-700">{errText(books.error, 'Kitap listesi CRM\'den okunamadı. Biraz sonra yeniden deneyin ya da kitapsız devam edin.')}</p>}
               {books.data && (
                 <div className="flex flex-col divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white/80">
                   {books.data.items.map((b) => (
@@ -138,7 +146,9 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
                       <span className="text-[11px] text-canvas-muted">{[b.yazar, b.yayinevi, b.stokKodu].filter(Boolean).join(' · ')}</span>
                     </button>
                   ))}
-                  {books.data.items.length === 0 && <p className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
+                  {books.data.items.length === 0 && (
+                    <EmptyHint title="Bu aramayla kitap bulunamadı" why="Aramayı kısaltın ya da stok kodunu deneyin. Kitap seçmeden de gönderiyi ekleyebilirsiniz." />
+                  )}
                   {books.data.total > books.data.items.length && (
                     <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11.5px] text-canvas-muted">
                       <span className="inline-flex items-center gap-1"><SqlInfo k={books.data.kaynaklar} alan="total" label="Kitap araması" />{books.data.total.toLocaleString('tr-TR')} kitap içinden {page * books.data.pageSize + 1}–{page * books.data.pageSize + books.data.items.length}</span>
@@ -156,7 +166,7 @@ export default function NewPost({ open, seed, meta, accounts, onClose }: {
 
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
-          <button type="button" className={btnPrimary} disabled={create.isPending} onClick={() => create.mutate()}>Gönderiyi aç</button>
+          <button type="button" className={btnPrimary} disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? 'Ekleniyor…' : 'Gönderiyi takvime ekle, metne geç'}</button>
         </div>
       </div>
     </Sheet>

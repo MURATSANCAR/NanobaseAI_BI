@@ -8,6 +8,7 @@ import { ghostBtn, gradientBtn, press, Progress } from '../shared';
 import { ageApi, type AgeCheck, type AgeFinding, type AgeLevel, type AgeView, type AgeWord, type Decision, type PageRef } from './api';
 import './age.css';
 import { StudioInfo } from '../shared';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Yaş uygunluğu raporu (sözleşme: apps/editor/src/editor/production/age_report.py). Sayfa stüdyosunun üst
  *  şeridinde tek düğme; rapor yan sayfada açılır. Kelime düzeyi, cümle uzunluğu, hassas içerik ve okul/MEB
@@ -126,7 +127,7 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
         <div className="flex flex-wrap gap-2">
           <button type="button" className={gradientBtn} disabled={running || run.isPending} onClick={() => run.mutate()}>
             {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
-            {running ? 'Çıkarılıyor…' : rep ? 'Raporu yenile' : 'Raporu çıkar'}
+            {running ? 'Rapor hazırlanıyor…' : rep ? 'Raporu yenile' : 'Raporu çıkar'}
           </button>
           {rep && <a className={ghostBtn} href={ageApi.pdfUrl(jobId)}><Download className="h-4 w-4" aria-hidden />PDF indir</a>}
         </div>
@@ -134,14 +135,17 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
           <div className="mt-3 rounded-2xl border border-violet-100 bg-white/80 p-3" role="status" aria-live="polite">
             <div className="text-[12.5px] font-bold">{st?.step || 'Hazırlanıyor'}{st?.total ? ` · ${st.done}/${st.total}` : ''}</div>
             {!!st?.total && <div className="mt-2"><Progress value={st.done ?? 0} total={st.total} /></div>}
-            <p className="mt-1.5 text-[11.5px] text-canvas-muted">ZEKİ AI her pasajı ve seyrek kelimeyi tek tek okuyor; ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
+            <p className="mt-1.5 text-[11.5px] text-canvas-muted">Zeki AI her pasajı ve seyrek kelimeyi tek tek okuyor; uzun kitapta birkaç dakika sürebilir. Ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
           </div>
         )}
         {st?.state === 'failed' && <div className="mt-3"><Note tone="err">{st.error}</Note></div>}
         {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
         {!view && !error && <div className="mt-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-canvas-violet motion-reduce:animate-none" aria-hidden /></div>}
         {view && !rep && !running && st?.state !== 'failed' && (
-          <p className="mt-4 text-[13px] text-canvas-muted">Henüz rapor yok. «Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer.</p>
+          <div className="mt-4">
+            <EmptyHint title="Henüz rapor yok"
+              why="«Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer: kelime düzeyi, cümle uzunluğu, hassas içerik ve okul ölçütleri. Metne dokunmaz." />
+          </div>
         )}
 
         {rep && (
@@ -213,7 +217,7 @@ function Toggle({ on, children, onClick, disabled, tone = 'violet' }: { on: bool
 }
 
 function Findings({ items, goto, decide, busy }: { items: AgeFinding[]; goto: (p: { pid: string | null }) => void; decide: Decide; busy: boolean }) {
-  if (!items.length) return <p className="text-[13px] text-canvas-muted">Sayfa düzeyinde bulgu yok.</p>;
+  if (!items.length) return <EmptyHint title="Sayfa düzeyinde bulgu yok" why="Hiçbir sayfada uzun cümle, hedef yaşa göre zor sayfa ya da hassas içerik bulunmadı. Kelimeler ve okul ölçütleri için diğer sekmelere bakın." />;
   return (
     <ul className="flex flex-col gap-2">
       {items.map((f) => {
@@ -252,7 +256,8 @@ function Words({ rep, goto, decide, apply, busy, applied }: {
     <div>
       <p className="text-[12px] leading-snug text-canvas-muted">
         Bu yaş için yayımlanmış {ws.books} kitabın en çok {ws.K} tanesinde geçen kökler seyrek sayılır. Kitapta {rep.words.length} seyrek kök; içerik sözcükleri içindeki payı {pct(ws.rare_share)}
-        {ws.rare_share_p95 != null ? ` (bant kitaplarında %95’lik sınır ${pct(ws.rare_share_p95)})` : ''}. Öneriyi onaylamak metni değiştirmez; «Metne uygula» sayfa düzenindeki metne yazar.
+        {ws.rare_share_p95 != null ? ` (bu yaştaki kitapların %95’inde bu pay ${pct(ws.rare_share_p95)} ya da altında)` : ''}. Öneriyi onaylamak metni değiştirmez; «Metne uygula» sayfa düzenindeki metne yazar.
+        {' '}<Explain label="Metne uygula">Onayladığınız sade karşılık, kelimenin o biçiminin kitaptaki bütün geçişlerine yazılır ve sayfalar yeniden dizilir. Bu panelden geri alınmaz; gerekirse sayfa düzenindeki sürüm geçmişinden önceki hâline dönün. Yalnız sayfa düzeni kurulmuş kitapta çıkar.</Explain>
       </p>
       {applied && <div className="mt-2"><Note tone="ok">{applied.count} yerde değiştirildi; sayfalar yeniden diziliyor.</Note></div>}
       <ul className="mt-2 flex flex-col gap-2">
@@ -260,7 +265,7 @@ function Words({ rep, goto, decide, apply, busy, applied }: {
       </ul>
       {!!ws.unknown?.length && (
         <details className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3 text-[12px]">
-          <summary className="cursor-pointer font-bold">Sözlükte çözümlenemeyen {ws.unknown.length} biçim (kelime düzeyine katılmadı)</summary>
+          <summary className="cursor-pointer font-bold">Sözlükte bulunamayan {ws.unknown.length} kelime biçimi (kelime düzeyi hesabına katılmadı)</summary>
           <p className="mt-1.5 break-words leading-relaxed text-canvas-muted">{ws.unknown.map((u) => `${u.form} (${u.pages.join(', ')})`).join(' · ')}</p>
         </details>
       )}

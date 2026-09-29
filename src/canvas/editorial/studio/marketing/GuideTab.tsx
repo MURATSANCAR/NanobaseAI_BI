@@ -5,6 +5,7 @@ import { Note, errText } from '../../../admin/ui';
 import { press } from '../shared';
 import { marketingApi, type GuideBody, type MarketingView } from './api';
 import { Approval, Generate, Lines, Section, field, ghostBtn, label, tidy } from './parts';
+import { EmptyHint } from '../../../components/Explain';
 
 function clean(g: GuideBody): GuideBody {
   return {
@@ -41,6 +42,10 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
       </p>
       {err && <Note tone="err">{err}</Note>}
       {gd.notes.map((n) => <Note key={n} tone="info">{n}</Note>)}
+      {!g && v.tasks.guide?.status !== 'running' && !gen.isPending && (
+        <EmptyHint title="Henüz öğretmen kılavuzu yok"
+          why="Zeki AI kitabı okuyup özet, değerler, kazanımlar, bölüm bölüm sorular, kelime çalışması ve etkinlik önerileri yazar. Üretince burada düzenler, onaylayınca PDF olarak indirirsiniz." />
+      )}
       {g && (
         <>
           <Section title="Kılavuz" aside={<Approval approved={approvedNow ? gd.approved : null} />}>
@@ -83,7 +88,8 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
             </ul>
           </Section>
 
-          <Section title="Kelime çalışması">
+          <Section title="Kelime çalışması" explain="Kitapta geçen, okurun yaşına göre zor olabilecek kelimeler ve kitaptaki cümlesi. Kelimenin kendisi kitaptaki biçimiyle kalır; anlamını düzeltebilir ya da satırı kaldırabilirsiniz.">
+
             <ul className="flex min-w-0 flex-col gap-2">
               {g.vocabulary.map((w, i) => (
                 <li key={i} className="grid min-w-0 gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-2 sm:grid-cols-[minmax(0,10rem)_1fr_auto]">
@@ -127,7 +133,7 @@ export default function GuideTab({ jobId, v, refresh }: { jobId: string; v: Mark
               <Check className="h-4 w-4" aria-hidden />{approve.isPending ? 'PDF diziliyor…' : approvedNow ? 'Onaylandı' : 'Onayla ve PDF diz'}
             </button>
             {approvedNow && gd.pdf && (
-              <a className={ghostBtn} href={marketingApi.guidePdfUrl(jobId)}><FileDown className="h-4 w-4" aria-hidden />Kılavuz PDF'i</a>
+              <a className={ghostBtn} href={marketingApi.guidePdfUrl(jobId)}><FileDown className="h-4 w-4" aria-hidden />Kılavuz PDF'ini indir</a>
             )}
           </div>
         </>

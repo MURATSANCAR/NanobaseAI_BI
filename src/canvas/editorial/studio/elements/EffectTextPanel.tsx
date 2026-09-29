@@ -46,7 +46,8 @@ export default function EffectTextPanel({ jobId, value, onChange, palette, text,
 
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${className}`}>
-      <Section title="Efekt yazı">
+      <Section title="Efekt yazı" explain="Seçili serbest yazıya kavis, dalga, gölge, patlama gibi hazır bir görünüm verir; renkler kitabın paletinden gelir. «Düz yazı» efekti kaldırır, yazının metni değişmez. Değişiklik kendiliğinden kaydedilir.">
+
         <LivePreview effect={value} text={sample} color={color} palette={palette} roles={roles} />
         <div role="radiogroup" aria-label="Efekt stili" className="grid grid-cols-3 gap-1.5">
           <StyleTile label="Düz yazı" on={!value} onClick={() => onChange(null)}>

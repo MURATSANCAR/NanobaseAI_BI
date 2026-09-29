@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnGhost, errText, field, label as labelCls } from
 import { fmtDay } from '../api';
 import { Block } from '../parts';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 import { launchApi, type Launch, type LaunchMeta } from './api';
 
 /** Medya yansıması: basın ve web taraması açık olan ortamda o kayıtlar (yalnız okuma, kanal adı ve bağlantıyla), her
@@ -21,13 +22,13 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
   const refetch = () => { qc.invalidateQueries({ queryKey: ['launch', 'media', launch.id] }); qc.invalidateQueries({ queryKey: ['launch', 'crm-todo', launch.id] }); };
   const create = useMutation({
     mutationFn: () => launchApi.addMedia(launch.id, add),
-    onSuccess: () => { toast.success('Yansıma eklendi.'); setAdd({ ...add, mecra: '', baslik: '', url: '' }); refetch(); },
-    onError: (e) => toast.error(errText(e, 'Eklenemedi.') ?? ''),
+    onSuccess: () => { toast.success('Yansıma eklendi; tona göre sayılara da girdi.'); setAdd({ ...add, mecra: '', baslik: '', url: '' }); refetch(); },
+    onError: (e) => toast.error(errText(e, 'Yansıma eklenemedi. Alanları kontrol edip yeniden deneyin.') ?? ''),
   });
   const remove = useMutation({
     mutationFn: (id: string) => launchApi.deleteMedia(launch.id, id),
     onSuccess: () => { toast.success('Kayıt silindi.'); refetch(); },
-    onError: (e) => toast.error(errText(e, 'Silinemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Kayıt silinemedi. Sayfayı yenileyip yeniden deneyin.') ?? ''),
   });
   const d = q.data;
   return (
@@ -43,7 +44,10 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
           {Object.entries(meta.tones).map(([k, v]) => `${v}: ${d.ton[k] ?? 0}`).join(' · ')}
         </p>
       )}
-      {d && d.items.length === 0 && <p className="text-[12.5px] text-canvas-muted">Henüz yansıma yok.</p>}
+      {d && d.items.length === 0 && (
+        <EmptyHint title="Bu kitap için henüz yansıma yok"
+          why={meta.me.canWrite ? 'Kitapla ilgili çıkan haber, söyleşi ya da incelemeyi aşağıdaki formdan ekleyin.' : 'Kitapla ilgili haber ya da inceleme girilince burada görünür.'} />
+      )}
       <ul className="flex flex-col gap-1.5">
         {d?.items.map((m, i) => (
           <li key={m.id ?? `${m.url}-${i}`} className="flex items-start gap-2 rounded-2xl border border-slate-100 bg-white/80 p-2.5">
@@ -68,19 +72,22 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
       {meta.me.canWrite && (
         <form className="mt-3 grid grid-cols-1 gap-2 rounded-2xl bg-slate-50 p-2.5 sm:grid-cols-[150px_1fr_1fr_150px_130px_auto] sm:items-end"
           onSubmit={(e) => { e.preventDefault(); if (add.baslik.trim()) create.mutate(); }}>
+          <p className="text-[11.5px] font-medium leading-snug text-canvas-muted sm:col-span-full">
+            <span className="font-extrabold text-canvas-ink">Elle yansıma ekle.</span> Bu kitapla ilgili çıkan haberi kaydedin; yalnız başlık zorunlu. Ton, haberin kitaba nasıl baktığıdır ve yukarıdaki sayılara girer.
+          </p>
           <label className="flex flex-col gap-1"><span className={labelCls}>Mecra</span>
-            <input className={field} value={add.mecra} onChange={(e) => setAdd({ ...add, mecra: e.target.value })} /></label>
-          <label className="flex min-w-0 flex-col gap-1"><span className={labelCls}>Başlık</span>
-            <input className={field} value={add.baslik} onChange={(e) => setAdd({ ...add, baslik: e.target.value })} /></label>
+            <input className={field} value={add.mecra} placeholder="Ör. Hürriyet Kitap Sanat" onChange={(e) => setAdd({ ...add, mecra: e.target.value })} /></label>
+          <label className="flex min-w-0 flex-col gap-1"><span className={labelCls}>Başlık *</span>
+            <input className={field} value={add.baslik} placeholder="Ör. Yazarıyla yeni romanı üzerine söyleşi" onChange={(e) => setAdd({ ...add, baslik: e.target.value })} /></label>
           <label className="flex min-w-0 flex-col gap-1"><span className={labelCls}>Bağlantı</span>
-            <input className={field} inputMode="url" placeholder="https://…" value={add.url} onChange={(e) => setAdd({ ...add, url: e.target.value })} /></label>
+            <input className={field} inputMode="url" placeholder="Ör. https://www.gazete.com/haber" value={add.url} onChange={(e) => setAdd({ ...add, url: e.target.value })} /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Tarih</span>
             <input type="date" className={field} value={add.tarih} onChange={(e) => setAdd({ ...add, tarih: e.target.value })} /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Ton</span>
             <select className={field} value={add.ton} onChange={(e) => setAdd({ ...add, ton: e.target.value })}>
               {Object.entries(meta.tones).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select></label>
-          <button type="submit" className={btnGhost} disabled={!add.baslik.trim() || create.isPending}><Plus aria-hidden className="h-4 w-4" />Ekle</button>
+          <button type="submit" className={btnGhost} disabled={!add.baslik.trim() || create.isPending}><Plus aria-hidden className="h-4 w-4" />Yansımayı ekle</button>
         </form>
       )}
     </Block>

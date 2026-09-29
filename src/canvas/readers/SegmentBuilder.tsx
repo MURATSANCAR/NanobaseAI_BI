@@ -12,8 +12,19 @@ import {
 } from './api';
 import { ROOT, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 const EMPTY: Definition = { match: 'all', rules: [] };
+const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
+
+/** Kural türlerinin sade anlatımı (alanın türüne göre; sunucudaki kural denetimiyle aynı davranış). */
+const KIND_TEXT: Record<string, string> = {
+  set: 'Listeden bir ya da birkaç değer seçin. «Şunlardan biri»: seçtiklerinizden en az birine uyan okur girer; «şunlardan biri değil»: hiçbirine uymayan okur girer. En az bir değer seçilmeli.',
+  range: 'En az ve en çok değeri yazın; birini boş bırakırsanız o yön sınırsız olur. Bu bilgisi kayıtlı olmayan okur girmez.',
+  number: '«En az»: yazdığınız sayı ve üstü; «en çok»: yazdığınız sayı ve altı.',
+  days: '«Son … gün içinde»: tarihi yakın olanlar; «… günden eski»: tarihi daha eski olanlar. Tarihi kayıtlı olmayan okur girmez.',
+  bool: '«Evet» ya da «Hayır» seçin; okurun kaydı buna uymalı.',
+};
 
 /** Segment kurucu: kural + anlık büyüklük (toplam / e-posta / SMS), Zeki AI taslağı, onay akışı, izin denetimli dışa aktarım. */
 export default function SegmentBuilder({ id }: { id?: string }) {
@@ -52,16 +63,16 @@ export default function SegmentBuilder({ id }: { id?: string }) {
   const save = useMutation({
     mutationFn: () => (id ? readersApi.updateSegment(id, { name, definition: defn }) : readersApi.createSegment({ name, definition: defn, origin })),
     onSuccess: (r) => {
-      toast.success(id ? (r.status === 'taslak' && s?.status === 'onayli' ? 'Kaydedildi; kural değiştiği için segment yeniden onay ister.' : 'Kaydedildi.') : 'Segment taslağı açıldı.');
+      toast.success(id ? (r.status === 'taslak' && s?.status === 'onayli' ? 'Kaydedildi; kural değiştiği için segment taslağa döndü, yeniden onaya gönderin.' : 'Segment kaydedildi.') : 'Segment taslak olarak kaydedildi. Hazır olunca «Onaya gönder»e basın.');
       qc.invalidateQueries({ queryKey: ['readers', 'segments'] });
       qc.setQueryData(['readers', 'segment', r.id], (old: Segment | undefined) => ({ ...(old ?? {}), ...r }));
       if (!id) nav(`${ROOT}/segmentler/${r.id}`, { replace: true });
     },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Segment kaydedilemedi. Kuralları kontrol edip yeniden deneyin.') ?? ''),
   });
   const flow = useMutation({
     mutationFn: async (v: { act: 'submit' | 'approve' | 'reject' | 'archive'; note?: string }) => {
-      if (!id) throw new Error('Önce kaydedin.');
+      if (!id) throw new Error('Önce segmenti kaydedin.');
       if (v.act === 'submit') return readersApi.submit(id);
       if (v.act === 'approve') return readersApi.approve(id, v.note);
       if (v.act === 'reject') return readersApi.reject(id, v.note ?? '');
@@ -72,7 +83,7 @@ export default function SegmentBuilder({ id }: { id?: string }) {
       qc.invalidateQueries({ queryKey: ['readers', 'segment', id] });
       qc.invalidateQueries({ queryKey: ['readers', 'segments'] });
     },
-    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı. Sayfayı yenileyip yeniden deneyin.') ?? ''),
   });
 
   if (id && seg.isLoading) return <Loading />;
@@ -97,8 +108,13 @@ export default function SegmentBuilder({ id }: { id?: string }) {
               {s && <Pill tone={SEGMENT_TONE[s.status]}>{s.statusLabel}</Pill>}
               {s && <span className="font-mono text-[11px] text-canvas-muted">v{s.version} · {s.owner}</span>}
             </div>
-            <label className={`${label} mt-3 block`} htmlFor="seg-ad">Ad</label>
-            <input id="seg-ad" className={field} value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} placeholder="Örn. Çocuk kitabı ilgisi, e-posta izinli" />
+            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">
+              Segment, kurallarla tanımlanan bir okur grubudur. Kuralları aşağıda kurun; kaç okurun girdiği «Büyüklük» kutusunda anında hesaplanır.
+              Taslak onaylanınca her gece yeniden sayılır ve izinli okurların listesi alınabilir.
+            </p>
+            <label className={`${label} mt-3 block`} htmlFor="seg-ad">Segment adı *</label>
+            <input id="seg-ad" className={field} value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} placeholder="Ör. Çocuk kitabı ilgisi, e-posta izinli" />
+            <span className={`${hint} mt-1 block`}>Segment listesinde görünen ad; en az 3 harf.</span>
             {s?.decisionNote && <Note tone={s.status === 'taslak' ? 'warn' : 'info'}>Karar notu: {s.decisionNote}</Note>}
           </Panel>
 
@@ -118,9 +134,13 @@ export default function SegmentBuilder({ id }: { id?: string }) {
                 ))}
               </div>
             </div>
-            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">«Hepsi sağlansın»: okur bütün kurallara uymalı. «Biri yeter»: herhangi birine uyması yeterli. Büyüklük sağda anında hesaplanır.</p>
+            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">«Hepsi sağlansın»: okur bütün kurallara uymalı (grup daralır). «Biri yeter»: herhangi birine uyması yeterli (grup genişler). Büyüklük ve kuralların tek cümlelik anlamı «Büyüklük» kutusunda anında güncellenir.</p>
             {fields.isLoading && <Loading />}
-            {defn.rules.length === 0 && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz kural yok; bu hâliyle bütün etkin okurları kapsar. Aşağıdan bir alan seçip kural ekleyin.</p>}
+            {defn.rules.length === 0 && (
+              <div className="mt-2">
+                <EmptyHint title="Henüz kural yok" why={canEdit ? 'Bu hâliyle bütün etkin okurları kapsar. Aşağıdan bir alan seçip «Kural ekle»ye basın ya da Zeki AI\'a kimi hedeflediğinizi yazın.' : 'Bu segment bütün etkin okurları kapsıyor.'} />
+              </div>
+            )}
             <ol className="mt-2 flex flex-col gap-2">
               {defn.rules.map((r, i) => (
                 <RuleRow key={i} rule={r} spec={byField[r.field]} disabled={!canEdit} onChange={(x) => setRule(i, x)} onDrop={() => dropRule(i)} />
@@ -132,8 +152,9 @@ export default function SegmentBuilder({ id }: { id?: string }) {
           {canEdit && (
             <div className="flex flex-wrap gap-2">
               <button type="button" className={btnPrimary} disabled={!dirty || save.isPending || name.trim().length < 3} onClick={() => save.mutate()}>
-                {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}{id ? 'Kaydet' : 'Taslak olarak kaydet'}
+                {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}{id ? 'Değişiklikleri kaydet' : 'Segmenti taslak olarak kaydet'}
               </button>
+              {name.trim().length < 3 && <span className="self-center text-[11.5px] text-canvas-muted">Kaydetmek için en az 3 harflik bir ad yazın.</span>}
               {s?.status === 'onayli' && dirty && <span className="self-center text-[11.5px] text-amber-800">Kural değişirse segment yeniden onay ister.</span>}
             </div>
           )}
@@ -147,7 +168,7 @@ export default function SegmentBuilder({ id }: { id?: string }) {
               <p className="mt-1 text-[12px] text-canvas-muted">
                 {s.status === 'onayli' ? `${s.approvedBy} onayladı, ${fmtDay(s.approvedAt)}.`
                   : s.status === 'onay-bekliyor' ? `Onaya gönderildi, ${fmtDay(s.submittedAt)}. Yazan ya da son değiştiren onaylayamaz.`
-                    : s.status === 'arsiv' ? 'Arşivde.' : 'Taslak. Onaylı segment gece sayılır ve dışa aktarılabilir.'}
+                    : s.status === 'arsiv' ? 'Arşivde; değiştirilemez ve liste alınamaz.' : 'Taslak. Onaya gönderin; başka bir yetkili onaylayınca segment her gece sayılır ve liste alınabilir.'}
               </p>
               <FlowButtons s={s} dirty={dirty} canSegment={!!me?.canSegment} canApprove={!!me?.canApprove && !iAmAuthor} busy={flow.isPending}
                 onAct={(act, note) => flow.mutate({ act, note })} />
@@ -178,18 +199,18 @@ function ZekiDraft({ onDraft, modelVar }: { onDraft: (d: Awaited<ReturnType<type
   const m = useMutation({
     mutationFn: () => readersApi.draft(text),
     onSuccess: (d) => { onDraft(d); toast.success('Zeki AI kural taslağı önerdi; kuralları kontrol edip kaydedin.'); },
-    onError: (e) => toast.error(errText(e, 'Zeki AI öneri veremedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Zeki AI öneri veremedi. İsteği farklı yazın ya da kuralları elle kurun.') ?? ''),
   });
   if (!modelVar) return null;
   return (
     <Panel>
       <h2 className="flex items-center gap-1.5 text-[15px] font-extrabold"><Sparkles aria-hidden className="h-4 w-4 text-canvas-violet" />Zeki AI ile kur</h2>
-      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Kimi hedeflediğinizi yazın; Zeki AI yalnız bu kurulumdaki alan ve değerlerden kural önerir. Sayılar kuraldan hesaplanır.</p>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Kimi hedeflediğinizi bir cümleyle yazın (en az 5 harf); Zeki AI yalnız aşağıdaki alan ve değerlerden kural önerir ve mevcut kuralların yerine koyar. Kaydetmeden önce kuralları kontrol edin; sayılar kuraldan hesaplanır.</p>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-        <label className="sr-only" htmlFor="zeki-istek">İstek</label>
-        <input id="zeki-istek" className={field} value={text} onChange={(e) => setText(e.target.value)} placeholder="Örn. İstanbul'daki 25–40 yaş, e-posta izni olan okurlar" />
+        <label className="sr-only" htmlFor="zeki-istek">Kimi hedefliyorsunuz?</label>
+        <input id="zeki-istek" className={field} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ör. İstanbul'daki 25–40 yaş, e-posta izni olan okurlar" />
         <button type="button" className={btnGhost} disabled={m.isPending || text.trim().length < 5} onClick={() => m.mutate()}>
-          {m.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}Öner
+          {m.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}Kural öner
         </button>
       </div>
     </Panel>
@@ -198,16 +219,20 @@ function ZekiDraft({ onDraft, modelVar }: { onDraft: (d: Awaited<ReturnType<type
 
 function AddRule({ fields, onAdd }: { fields: FieldSpec[]; onAdd: (f: FieldSpec) => void }) {
   const [pick, setPick] = useState('');
+  const chosen = fields.find((x) => x.field === pick);
   return (
-    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-      <label className="sr-only" htmlFor="kural-ekle">Alan</label>
-      <select id="kural-ekle" className={field} value={pick} onChange={(e) => setPick(e.target.value)}>
-        <option value="">Alan seçin…</option>
-        {fields.map((f) => <option key={f.field} value={f.field}>{f.label}</option>)}
-      </select>
-      <button type="button" className={btnGhost} disabled={!pick} onClick={() => { const f = fields.find((x) => x.field === pick); if (f) onAdd(f); setPick(''); }}>
-        <Plus aria-hidden className="h-4 w-4" />Kural ekle
-      </button>
+    <div className="mt-3 flex flex-col gap-1">
+      <label className={label} htmlFor="kural-ekle">Yeni kural için alan</label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <select id="kural-ekle" className={field} value={pick} onChange={(e) => setPick(e.target.value)}>
+          <option value="">Alan seçin…</option>
+          {fields.map((f) => <option key={f.field} value={f.field}>{f.label}</option>)}
+        </select>
+        <button type="button" className={btnGhost} disabled={!pick} onClick={() => { if (chosen) onAdd(chosen); setPick(''); }}>
+          <Plus aria-hidden className="h-4 w-4" />Kural ekle
+        </button>
+      </div>
+      {chosen && <span className={hint}>{chosen.help ? `${chosen.help} ` : ''}{KIND_TEXT[chosen.kind] ?? ''}</span>}
     </div>
   );
 }
@@ -237,6 +262,7 @@ function RuleRow({ rule, spec, disabled, onChange, onDrop }: { rule: Rule; spec?
       </div>
       <div className="mt-1.5"><ValueEditor rule={rule} spec={spec} disabled={disabled} onChange={onChange} /></div>
       {spec.help && <p className="mt-1 text-[11px] text-canvas-muted">{spec.help}</p>}
+      {!disabled && KIND_TEXT[spec.kind] && <p className="mt-0.5 text-[11px] text-canvas-muted">{KIND_TEXT[spec.kind]}</p>}
     </li>
   );
 }
@@ -249,9 +275,9 @@ function ValueEditor({ rule, spec, disabled, onChange }: { rule: Rule; spec: Fie
     const set = (i: 0 | 1, v: string) => { const x: Array<number | null> = [lo, hi]; x[i] = v === '' ? null : Number(v); onChange({ ...rule, value: x }); };
     return (
       <div className="flex items-center gap-2 text-[12px]">
-        <input aria-label="En az" type="number" inputMode="numeric" className={num} value={lo ?? ''} disabled={disabled} onChange={(e) => set(0, e.target.value)} />
+        <input aria-label="En az" type="number" inputMode="numeric" className={num} value={lo ?? ''} disabled={disabled} placeholder="En az" onChange={(e) => set(0, e.target.value)} />
         <span>–</span>
-        <input aria-label="En çok" type="number" inputMode="numeric" className={num} value={hi ?? ''} disabled={disabled} onChange={(e) => set(1, e.target.value)} />
+        <input aria-label="En çok" type="number" inputMode="numeric" className={num} value={hi ?? ''} disabled={disabled} placeholder="En çok" onChange={(e) => set(1, e.target.value)} />
       </div>
     );
   }
@@ -297,9 +323,9 @@ function OptionPicker({ spec, value, disabled, onChange }: { spec: FieldSpec; va
       {!disabled && (
         <>
           {opts.length > 8 && (
-            <input aria-label={`${spec.label} içinde ara`} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-base sm:text-[12px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ara…" />
+            <input aria-label={`${spec.label} içinde ara`} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-base sm:text-[12px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Değerlerde ara…" />
           )}
-          {opts.length === 0 ? <p className="text-[11.5px] text-canvas-muted">Bu alan veride boş.</p> : (
+          {opts.length === 0 ? <p className="text-[11.5px] text-canvas-muted">Seçilecek değer yok: okur kayıtlarında bu alan hiç doldurulmamış. Kuralı silip başka bir alan deneyin.</p> : (
             <div className="max-h-44 overflow-y-auto overscroll-contain rounded-lg bg-slate-50 p-1">
               {list.map((o) => (
                 <label key={o} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-1.5 text-[12px] hover:bg-white">
@@ -322,7 +348,7 @@ function SizePanel({ counts, loading, error, excludeLabels }: { counts?: Counts;
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Büyüklük<SqlInfo k={counts?.kaynaklar} alan="total" label="Segment büyüklüğü" /></h2>
         {loading && <Loader2 aria-label="Hesaplanıyor" className="h-4 w-4 animate-spin text-canvas-muted" />}
       </div>
-      {error ? <Note tone="err">{errText(error, 'Hesaplanamadı.')}</Note> : null}
+      {error ? <Note tone="err">{errText(error, 'Büyüklük hesaplanamadı. Kurallarda boş kalan değer varsa tamamlayın; sorun sürerse sayfayı yenileyin.')}</Note> : null}
       {counts && (
         <>
           <div className="mt-2 grid grid-cols-3 gap-2">
@@ -371,10 +397,11 @@ function FlowButtons({ s, dirty, canSegment, canApprove, busy, onAct }: {
       {s.status === 'taslak' && canSegment && (
         <button type="button" className={btnPrimary} disabled={busy || dirty} onClick={() => onAct('submit')} title={dirty ? 'Önce kaydedin' : undefined}>Onaya gönder</button>
       )}
+      {s.status === 'taslak' && canSegment && dirty && <span className="text-[11.5px] text-amber-800">Kaydedilmemiş değişiklik var; onaya göndermeden önce kaydedin.</span>}
       {s.status === 'onay-bekliyor' && canApprove && (
         <>
           <label className="sr-only" htmlFor="karar-notu">Not</label>
-          <input id="karar-notu" className={field} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (geri göndermede zorunlu)" />
+          <input id="karar-notu" className={field} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Karar notu, ör. İzin koşulunu ekleyin (geri gönderirken zorunlu)" />
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnPrimary} disabled={busy} onClick={() => onAct('approve', note)}>Onayla</button>
             <button type="button" className={btnGhost} disabled={busy || note.trim().length < 3} onClick={() => onAct('reject', note)}>Geri gönder</button>
@@ -382,7 +409,7 @@ function FlowButtons({ s, dirty, canSegment, canApprove, busy, onAct }: {
         </>
       )}
       {s.status !== 'arsiv' && canSegment && (
-        <button type="button" className={btnGhost} disabled={busy} onClick={() => onAct('archive')}>Arşive kaldır</button>
+        <button type="button" className={btnGhost} disabled={busy} onClick={() => onAct('archive')}>Segmenti arşive kaldır</button>
       )}
     </div>
   );
@@ -402,7 +429,7 @@ function ExportPanel({ s }: { s: Segment }) {
       qc.invalidateQueries({ queryKey: ['readers', 'exports'] });
       setPurpose('');
     },
-    onError: (e) => toast.error(errText(e, 'Liste alınamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Liste alınamadı. Biraz sonra yeniden deneyin.') ?? ''),
   });
   if (!me?.canList || !me.canExport) return null;
   const labels = meta.data?.channels ?? { email: 'E-posta', sms: 'SMS', call: 'Arama' };
@@ -425,8 +452,9 @@ function ExportPanel({ s }: { s: Segment }) {
               </button>
             ))}
           </div>
-          <label className={`${label} mt-2 block`} htmlFor="aktarim-amac">Amaç</label>
-          <input id="aktarim-amac" className={field} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Örn. Ekim çocuk bülteni" />
+          <label className={`${label} mt-2 block`} htmlFor="aktarim-amac">Amaç *</label>
+          <input id="aktarim-amac" className={field} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Ör. Ekim çocuk bülteni" />
+          <span className={`${hint} mt-1 block`}>Listeyi ne için aldığınız, en az 5 harf. Dışa aktarım kaydına sizin adınızla yazılır.</span>
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className={btnPrimary} disabled={m.isPending || purpose.trim().length < 5} onClick={() => m.mutate(false)}>
               {m.isPending && !m.variables ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}

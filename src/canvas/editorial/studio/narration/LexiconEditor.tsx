@@ -4,6 +4,7 @@ import { Loader2, Play, Plus, Save, Trash2, Wand2 } from 'lucide-react';
 import { errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, press } from '../shared';
 import { narrationApi, type LexEntry } from './api';
+import { Explain } from '../../../components/Explain';
 
 /** Telaffuz sözlüğü: editör yazılışı ve okunuşu girer («Timaş → tımaş»). İki kapsam: bu kitap ve yayınevi (bütün
  *  kitaplar); aynı kelime ikisinde de varsa kitabınki geçerlidir. Kelime ek alabilir: «Timaş'ın» da düzelir.
@@ -61,8 +62,11 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-extrabold">Telaffuz sözlüğü</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Telaffuz sözlüğü
+          <Explain label="Telaffuz sözlüğü">Seslendirmenin yanlış okuduğu kelimeler için yazılışı ve nasıl okunacağını girin (ör. «Timaş» → «tımaş»). Ekleme, düzeltme ve silme «Sözlüğü kaydet»e basınca geçerli olur; kelimenin geçtiği sayfalar «güncel değil» olur ve yeniden seslendirilir.</Explain>
+        </h3>
         <div role="tablist" aria-label="Sözlük kapsamı" className="inline-flex rounded-xl bg-slate-100 p-0.5">
           {([['job', 'Bu kitap'], ['publisher', 'Yayınevi']] as const).map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={scope === k} onClick={() => setScope(k)}
@@ -77,6 +81,11 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
         {' '}Kelime ek alsa da düzelir («Timaş» → «Timaş'ın»).
       </p>
 
+      {list.length === 0 && (
+        <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5 text-[12px] leading-snug text-canvas-muted">
+          {scope === 'job' ? 'Bu kitap için' : 'Yayınevi için'} henüz kelime yok. Yanlış okunan bir ad ya da kısaltma varsa «Kelime ekle» ile yazılışını ve okunuşunu girin.
+        </p>
+      )}
       {list.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {list.map((r) => (
@@ -109,7 +118,10 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
 
       <form className="mt-1 flex flex-col gap-1.5 rounded-2xl bg-slate-50/80 p-2.5"
         onSubmit={(e) => { e.preventDefault(); if (probe.trim()) read.mutate(probe.trim()); }}>
-        <label htmlFor="narration-probe" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Nasıl okunur?</label>
+        <span className="flex items-center gap-1">
+          <label htmlFor="narration-probe" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Nasıl okunur?</label>
+          <Explain label="Nasıl okunur?">Bir cümle yazıp «Göster»e basın; seslendirmenin sayıları, kısaltmaları ve sözlükteki kelimeleri nasıl okuyacağı yazıyla gösterilir. Oynat düğmesi anlatıcı sesiyle dinletir. Kitaba bir şey kaydedilmez.</Explain>
+        </span>
         <div className="flex gap-1.5">
           <input id="narration-probe" value={probe} maxLength={300} onChange={(e) => { setProbe(e.target.value); setProbeOut(null); }}
             placeholder="Ör. Dr. Ahmet 1923'te 2. kata çıktı." className={input} />

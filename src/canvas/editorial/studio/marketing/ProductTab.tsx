@@ -6,6 +6,7 @@ import { ago, press } from '../shared';
 import { marketingApi, type MarketingView, type ProductPage, type SeoCandidate } from './api';
 import { Approval, Generate, Lines, Section, copyText, field, ghostBtn, gradientBtn, label, tidy } from './parts';
 import { readableText } from '../../../components/readableName';
+import { EmptyHint } from '../../../components/Explain';
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -55,13 +56,19 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
     <div className="flex min-w-0 flex-col gap-4">
       <Generate task={v.tasks.product} has={!!pr.page} onRun={() => gen.mutate()} pending={gen.isPending} what="Ürün sayfası" />
       <p className="text-[12px] text-canvas-muted">
-        Yaş, tür, sayfa, boyut gibi bilgiler kitabın kaydından ve dizgiden gelir; ZEKİ AI bunları değiştirmez. Uzunluk
+        Yaş, tür, sayfa, boyut gibi bilgiler kitabın kaydından ve dizgiden gelir; Zeki AI bunları değiştirmez. Uzunluk
         sınırları SEO & GEO ayarlarındandır. E-ticaret sitesine hiçbir şey gönderilmez: onaylı sayfa SEO ekranına öneri olarak düşer.
       </p>
       {err && <Note tone="err">{err}</Note>}
+      {!page && v.tasks.product?.status !== 'running' && !gen.isPending && (
+        <EmptyHint title="Henüz ürün sayfası yok"
+          why="Zeki AI kitabın metninden ürün başlığı, açıklamalar, öne çıkanlar, anahtar kelimeler ve sıkça sorulan soruları yazar. Üretince burada düzenleyip onaylarsınız." />
+      )}
       {page && (
         <>
-          <Section title="Ürün sayfası" aside={<Approval approved={approvedNow ? pr.approved : null} />}>
+          <Section title="Ürün sayfası" aside={<Approval approved={approvedNow ? pr.approved : null} />}
+            explain="«SEO başlığı» arama sonuçlarında görünen başlık, «Meta açıklama» başlığın altındaki kısa tanıtım yazısıdır. Sayaç yeşilse uzunluk önerilen aralıkta, kırmızıysa kısa ya da uzundur. Değişiklikler «Kaydet» ile saklanır; indirme ve SEO önerisi onaydan sonra açılır.">
+
             <div className="grid min-w-0 gap-3 md:grid-cols-2">
               <label className="flex min-w-0 flex-col gap-1">
                 <span className={label}>Ürün başlığı</span>
@@ -144,7 +151,7 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
                 <button type="button" className={ghostBtn} onClick={() => copy('html')}><Copy className="h-4 w-4" aria-hidden />{copied === 'html' ? 'Kopyalandı' : 'HTML kopyala'}</button>
                 <button type="button" className={ghostBtn} onClick={() => copy('text')}><Copy className="h-4 w-4" aria-hidden />{copied === 'text' ? 'Kopyalandı' : 'Metni kopyala'}</button>
                 {(['html', 'txt', 'json'] as const).map((f) => (
-                  <a key={f} className={ghostBtn} href={marketingApi.exportUrl(jobId, f)}><Download className="h-4 w-4" aria-hidden />{f.toUpperCase()}</a>
+                  <a key={f} className={ghostBtn} href={marketingApi.exportUrl(jobId, f)}><Download className="h-4 w-4" aria-hidden />{f.toUpperCase()} indir</a>
                 ))}
               </div>
               {copied === 'hata' && <Note tone="warn">Kopyalanamadı; dosyayı indirin.</Note>}

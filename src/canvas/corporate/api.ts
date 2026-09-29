@@ -1,5 +1,6 @@
 import type { Kaynaklar } from '../components/sqlInfo';
 import { ENGINE_BASE, send } from '../engine';
+import { normalizeTrNumber } from '../components/trNumber';
 
 /** M32 Kurumsal satış ve B2B köprü istemcisi (`/api/v1/corporate/*`). Kurum listesi ve alım geçmişi Logo'dan, kurum
  *  temsilcisi ve kitap temaları CRM'den okunur; fırsat, teklif, tema onayı ve hatırlatma portal kaydıdır. Siteye, CRM'e ve
@@ -450,7 +451,7 @@ export function fmtDay(iso: string | null | undefined): string {
 export function parseNum(s: string): number | null {
   const t = s.trim().replace(/\s/g, '').replace(/₺|%/g, '');
   if (!t) return null;
-  const norm = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  const norm = normalizeTrNumber(t);
   const n = Number(norm);
   return Number.isFinite(n) ? n : null;
 }

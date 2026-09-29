@@ -146,7 +146,7 @@ function RenewalSheet({ r, meta, k, canDecide, onClose }: { r: Renewal; meta: Me
           <ExternalLink aria-hidden className="h-3.5 w-3.5" /> Sözleşme sayfasını aç
         </Link>
         <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-          CRM sözleşme kartı <SqlInfo k={k} alan="items[]" label="Sözleşme (süre, yenilenme, imha, avans)" />
+          CRM sözleşme kartı <SqlInfo k={k} alan="items[]" label="Sözleşme (süre, yenilenme, fesih süresi, avans)" />
         </div>
         <dl>
           <Row label="Kitap">{r.book || '—'}{r.stockCode ? ` · ${r.stockCode}` : ''}</Row>
@@ -156,7 +156,7 @@ function RenewalSheet({ r, meta, k, canDecide, onClose }: { r: Renewal; meta: Me
           {r.renewEvery != null && <Row label="Yenilenme sıklığı">{num(r.renewEvery, 0)} yıl</Row>}
           {(r.renewStart || r.renewEnd) && <Row label="Yenileme dönemi">{day(r.renewStart)} – {day(r.renewEnd)}</Row>}
           {r.unpublishedTermination && <Row label="Yayınlanmazsa fesih">{day(r.unpublishedTermination)}</Row>}
-          {r.destroyMonths != null && <Row label="İmha süresi">{num(r.destroyMonths, 0)} ay</Row>}
+          {r.destroyMonths != null && <Row label="Yayınlanmazsa fesih süresi" explain="Kitap bu kadar ay içinde yayınlanmazsa hak sahibi sözleşmeyi feshedebilir. CRM'deki alan adı: «Yayınlanmaması Halinde Fesih Süresi (ay)».">{num(r.destroyMonths, 0)} ay</Row>}
           {r.reportPeriod != null && r.reportPeriod !== '' && <Row label="Rapor verme süresi">{String(r.reportPeriod)}</Row>}
           {r.advance ? <Row label="Avans (CRM)">{money(r.advance, r.currency)}</Row> : null}
           {r.decidedBy && <Row label="Karar">{r.decisionLabel} · {r.decidedBy}, {stamp(r.decidedAt)}</Row>}

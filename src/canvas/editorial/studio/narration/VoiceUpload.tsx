@@ -5,6 +5,7 @@ import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { useVoiceLibrary, voicesApi, type NarrationVoice, type VoiceLibrary } from './api';
 import { FileDrop } from '../../../components/FileDrop';
+import { Explain } from '../../../components/Explain';
 
 /** «Ses yükle»: yayınevinin kendi seslendirmeninin kaydını, kullanım hakkı belgesiyle ses kütüphanesine ekler.
  *  Hak beyanı zorunlu (onay kutusu, sesin sahibi, izin belgesi dosyası ya da belge numarası). Kayıt tarayıcıda çözülür
@@ -174,7 +175,10 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
   return (
     <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
       <div>
-        <h4 className="text-[13px] font-extrabold">Ses yükle</h4>
+        <h4 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Ses yükle
+          <Explain label="Ses yükle">Seslendirmeninizin kısa bir okuma kaydını yüklersiniz; bu ses kütüphaneye eklenir ve anlatıcı ya da karakter sesi olarak seçilebilir. Kayıt süre, gürültü ve ses seviyesi yönünden denetlenir; uygun değilse nedeni yazılır.</Explain>
+        </h4>
         <p className="text-[11.5px] leading-snug text-canvas-muted">
           Kendi seslendirmeninizin {lib.limits.min_sec}–{lib.limits.max_sec} sn'lik düz okuma kaydı (wav, mp3, m4a, ogg). Sessiz
           ortamda, müziksiz. Yalnız kullanım hakkı yayınevinize ait sesler yüklenir.
@@ -184,7 +188,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         <span className={labelCls}>Ses kaydı</span>
         <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding}
           picked={audio?.file} onPick={(file) => void pickAudio(file)} />
-        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ' — kısa görünüyor; en az 30 sn konuşma gerekir' : long ? ' — uzun görünüyor; en çok 60 sn konuşma kabul edilir' : ''}</span>}
+        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ` — kısa görünüyor; en az ${lib.limits.min_sec} sn konuşma gerekir` : long ? ` — uzun görünüyor; en çok ${lib.limits.max_sec} sn konuşma kabul edilir` : ''}</span>}
         {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">

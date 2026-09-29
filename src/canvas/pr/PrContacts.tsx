@@ -148,51 +148,58 @@ export function ContactForm({ meta, initial, contactKey, onClose }: {
     onSuccess: (c) => {
       qc.invalidateQueries({ queryKey: ['pr', 'contacts'] });
       qc.invalidateQueries({ queryKey: ['pr', 'contact', c.key] });
-      toast.success('Kaydedildi.');
+      toast.success(contactKey ? 'Kişi bilgileri kaydedildi.' : 'Medya kişisi eklendi; kartı açılıyor.');
       onClose();
       if (!contactKey) nav(`/basin-iliskileri/kisi/${encodeURIComponent(c.key)}`);
     },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Kişi kaydedilemedi. Alanları kontrol edip yeniden deneyin.') ?? ''),
   });
-  const input = (k: keyof typeof v, label: string, type = 'text') => (
+  const hint = 'text-[11px] font-medium leading-snug text-canvas-muted';
+  const input = (k: keyof typeof v, label: string, type = 'text', placeholder?: string, help?: string) => (
     <label className="flex flex-col gap-1">
       <span className={labelCls}>{label}</span>
-      <input className={field} type={type} value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
+      <input className={field} type={type} value={v[k]} placeholder={placeholder} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
+      {help && <span className={hint}>{help}</span>}
     </label>
   );
   return (
     <Sheet open modal onClose={onClose} title={contactKey ? 'Kişiyi düzenle' : 'Yeni medya kişisi'}
-      subtitle={contactKey?.startsWith('crm:') ? 'CRM kişisi: burada yazılan portalda tutulur, CRM değişmez.' : undefined}>
+      subtitle={contactKey?.startsWith('crm:')
+        ? 'CRM kişisi: burada yazdığınız yalnız portalda tutulur, CRM değişmez. Yalnız değiştirdiğiniz alanlar kaydedilir.'
+        : contactKey
+          ? 'Portalda eklenen kişinin bilgileri. Yalnız değiştirdiğiniz alanlar kaydedilir.'
+          : 'CRM\'de olmayan gazeteci, editör ya da kanalı portala ekler; CRM\'e yazılmaz. Yalnız ad soyad zorunlu.'}>
       <div className="flex flex-col gap-2">
-        {input('name', 'Ad soyad')}
+        {input('name', contactKey ? 'Ad soyad' : 'Ad soyad *', 'text', 'Ör. Mehmet Demir')}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {input('outlet', 'Mecra (gazete, dergi, kanal…)')}
+          {input('outlet', 'Mecra', 'text', 'Ör. Cumhuriyet Kitap, Kitap Sohbetleri podcast')}
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Mecra türü</span>
             <select className={field} value={v.outletType} onChange={(e) => setV({ ...v, outletType: e.target.value })}>
-              <option value="">—</option>
+              <option value="">Seçilmedi</option>
               {Object.entries(meta.outletTypes).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </label>
-          {input('role', 'Görevi')}
+          {input('role', 'Görevi', 'text', 'Ör. Kitap eki editörü')}
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Bölge</span>
             <select className={field} value={v.region} onChange={(e) => setV({ ...v, region: e.target.value })}>
-              <option value="">—</option>
+              <option value="">Seçilmedi</option>
               {Object.entries(meta.regions).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </label>
-          {input('email', 'E-posta', 'email')}
-          {input('phone', 'Telefon', 'tel')}
+          {input('email', 'E-posta', 'email', 'Ör. mehmet@gazete.com')}
+          {input('phone', 'Telefon', 'tel', 'Ör. 0212 123 45 67')}
         </div>
-        {input('topics', 'Konular (virgülle: çocuk, tarih, kişisel gelişim…)')}
+        {input('topics', 'Konular', 'text', 'Ör. çocuk, tarih, kişisel gelişim',
+          'Virgülle ayırın. Bir kitabın PR dosyasında kişi önerilirken bu konular kitabın türü ve kitaplığıyla karşılaştırılır.')}
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Not</span>
-          <textarea className={`${field} min-h-[80px]`} value={v.note} onChange={(e) => setV({ ...v, note: e.target.value })} />
+          <textarea className={`${field} min-h-[80px]`} placeholder="Ör. Söyleşi tekliflerine açık; kargo yerine e-posta ile dosya istiyor." value={v.note} onChange={(e) => setV({ ...v, note: e.target.value })} />
         </label>
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
-          <button type="button" className={btnPrimary} disabled={save.isPending || (contactKey ? JSON.stringify(v) === JSON.stringify(start) : !v.name.trim())} onClick={() => save.mutate()}>Kaydet</button>
+          <button type="button" className={btnPrimary} disabled={save.isPending || (contactKey ? JSON.stringify(v) === JSON.stringify(start) : !v.name.trim())} onClick={() => save.mutate()}>{contactKey ? 'Değişiklikleri kaydet' : 'Kişiyi ekle'}</button>
         </div>
       </div>
     </Sheet>

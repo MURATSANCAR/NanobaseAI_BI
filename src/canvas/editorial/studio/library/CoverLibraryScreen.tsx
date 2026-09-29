@@ -152,7 +152,7 @@ export default function CoverLibraryScreen() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu kurulumda açık değil; kapak arşivi açılamaz. Sistem yöneticinize bildirin.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; kapak arşivi açılamaz. Sistem yöneticinize bildirin.</Note>}
       {stats.error && <Note tone="err">{errText(stats.error, 'Kapak arşivi açılamadı. Sayfayı biraz sonra yenileyin.')}</Note>}
       {refresh.error && <Note tone="err">{errText(refresh.error, 'Arşiv yenilenemedi.')}</Note>}
       {stats.data?.feed.error && isAdmin && <Note tone="err">Son besleme yarıda kaldı: {stats.data.feed.error}</Note>}

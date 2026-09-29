@@ -157,11 +157,12 @@ function SendCard({ s, kit, meta, onChange, onMail }: { s: Send; kit: Kit; meta:
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Not</span>
-              <input className={field} value={note} disabled={!me.canEdit || kit.status === 'kapali'} onChange={(e) => setNote(e.target.value)} />
+              <input className={field} value={note} placeholder="Ör. Kitabı elden teslim edeceğiz" disabled={!me.canEdit || kit.status === 'kapali'} onChange={(e) => setNote(e.target.value)} />
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>CRM tanıtım siparişi no</span>
-              <input className={field} value={order} disabled={!me.canEdit || kit.status === 'kapali'} onChange={(e) => setOrder(e.target.value)} />
+              <input className={field} value={order} placeholder="Ör. 12345" disabled={!me.canEdit || kit.status === 'kapali'} onChange={(e) => setOrder(e.target.value)} />
+              <span className="text-[11px] font-medium leading-snug text-canvas-muted">Kitabın gönderildiği CRM siparişi; burada yalnız kayıt olarak tutulur.</span>
             </label>
           </div>
           {me.canEdit && kit.status !== 'kapali' && (
@@ -182,7 +183,7 @@ function SendCard({ s, kit, meta, onChange, onMail }: { s: Send; kit: Kit; meta:
                   ...(order !== (s.crmOrderNo ?? '') ? { crmOrderNo: order } : {}),
                 })}
               >
-                Kaydet
+                Satırı kaydet
               </button>
             </div>
           )}
@@ -199,7 +200,7 @@ function MailSheet({ send, kit, onClose, onSent }: { send: Send; kit: Kit; onClo
   const mail = useMutation({
     mutationFn: () => prApi.mail(send.id, bulten, subject),
     onSuccess: () => { toast.success('E-posta gönderildi.'); onSent(); },
-    onError: (e) => toast.error(errText(e, 'Gönderilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'E-posta gönderilemedi. Adresi kişi kartından kontrol edip yeniden deneyin.') ?? ''),
   });
   return (
     <Sheet open modal onClose={onClose} title="E-posta gönder" subtitle={`${send.contactName ?? ''}${send.outlet ? ` · ${send.outlet}` : ''}`}>
@@ -211,6 +212,7 @@ function MailSheet({ send, kit, onClose, onSent }: { send: Send; kit: Kit; onClo
         </label>
         <fieldset className="flex flex-col gap-1">
           <legend className={labelCls}>Metnin altına eklenecek bülten</legend>
+          <span className="text-[11px] font-medium leading-snug text-canvas-muted">PR dosyasındaki basın bülteni metnin altına eklenir. Yerel bülten yazılmadıysa «Yerel» seçilemez.</span>
           <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup">
             {([['ulusal', 'Ulusal'], ['yerel', 'Yerel'], ['yok', 'Ekleme']] as const).map(([v, l]) => (
               <button key={v} type="button" role="radio" aria-checked={bulten === v} disabled={v === 'yerel' && !kit.releaseLocal}
