@@ -21,13 +21,13 @@ from __future__ import annotations
 
 import logging
 import re
-import threading
 from typing import Any, Iterable, Optional
 
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
+from . import hazir
 from .store import CRM_BOOKS, PRODUCTS, RUNS, iso, loads
 
 log = logging.getLogger("semantic.seo_geo.shopping")
@@ -456,25 +456,20 @@ def _err(status: int, message: str) -> HTTPException:
 
 
 class Shopping:
-    """Denetim okumada hesaplanır; sonuç son T-soft/CRM eşitleme zamanına bağlı önbellekte durur (açıklama metni
-    önbelleğe girmez; besleme dosyası her indirmede veritabanından yeniden kurulur)."""
+    """Denetim hazır hesapta durur (`hazir.py`, `semantic_seo_hazir`): girdisi T-soft ürünleri, CRM kartları ve site
+    adresi; eşitleme değişince bir kez yeniden hesaplanır. Eskiden süreç belleğindeydi: köprü yeniden kalkınca ve her
+    süreçte ilk açılış bütün ürün JSON'unu iki kez açıyordu (11,8 sn). Açıklama metni kayda girmez; besleme dosyası her
+    indirmede veritabanından yeniden kurulur."""
 
     def __init__(self, seo: Any) -> None:
         self.seo = seo
-        self._lock = threading.Lock()
-        self._cache: tuple[Any, list[dict[str, Any]], dict[str, Any]] | None = None
 
     def site(self) -> str:
         return (self.seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
 
-    def _key(self) -> tuple[Any, ...]:
-        tenant = self.seo.tenant()
-        with self.seo.engine().connect() as c:
-            p = c.execute(sa.select(sa.func.count(), sa.func.max(PRODUCTS.c.synced_at)).where(
-                PRODUCTS.c.tenant_id == tenant)).first()
-            b = c.execute(sa.select(sa.func.count(), sa.func.max(CRM_BOOKS.c.synced_at)).where(
-                CRM_BOOKS.c.tenant_id == tenant)).first()
-        return (tenant, tuple(p or ()), tuple(b or ()), self.site())
+    def _stamp(self) -> str:
+        return hazir.damga(self.seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)],
+                           ek=(self.site(),))
 
     def _rows(self):
         """Etkin ürünler + CRM yayın durumu: (product_id, data, crm_flag), yield ile."""
@@ -493,23 +488,22 @@ class Shopping:
         return duplicate_gtins(p for _, p, _, _ in self._rows())
 
     def results(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        key = self._key()
-        with self._lock:
-            if self._cache and self._cache[0] == key:
-                return self._cache[1], self._cache[2]
-            site, dups = self.site(), self._dups()
-            out: list[dict[str, Any]] = []
-            for pid, p, score, flag in self._rows():
-                a = audit(p, site, crm_flag=flag, duplicate_gtins=dups)
-                out.append({"id": pid, "name": a["name"], "author": a["author"] or None, "url": a["url"],
-                            "image": a["image"], "gtin": a["gtin"], "book": a["book"], "price": a["price"],
-                            "salePrice": a["salePrice"], "currency": a["currency"], "availability": a["row"]["availability"] or None,
-                            "status": a["status"], "issues": a["issues"], "score": score,
-                            "sales": _num(p.get("CountTotalSales"))})
-            out.sort(key=lambda r: (-r["sales"], r["id"]))
-            summ = summarize(out)
-            self._cache = (key, out, summ)
-            return out, summ
+        self.seo.engine()
+        got = hazir.al(self.seo, "shopping", self._stamp(), self.compute)
+        return got["items"], got["summary"]
+
+    def compute(self) -> dict[str, Any]:
+        site, dups = self.site(), self._dups()
+        out: list[dict[str, Any]] = []
+        for pid, p, score, flag in self._rows():
+            a = audit(p, site, crm_flag=flag, duplicate_gtins=dups)
+            out.append({"id": pid, "name": a["name"], "author": a["author"] or None, "url": a["url"],
+                        "image": a["image"], "gtin": a["gtin"], "book": a["book"], "price": a["price"],
+                        "salePrice": a["salePrice"], "currency": a["currency"], "availability": a["row"]["availability"] or None,
+                        "status": a["status"], "issues": a["issues"], "score": score,
+                        "sales": _num(p.get("CountTotalSales"))})
+        out.sort(key=lambda r: (-r["sales"], r["id"]))
+        return {"items": out, "summary": summarize(out)}
 
     def feed(self, scope: str) -> tuple[str, int]:
         site, dups = self.site(), self._dups()
@@ -528,6 +522,7 @@ FEED_SCOPES = {"uygun": "engelleyicisi olmayanlar", "hazir": "yalnız hazır ola
 def register(app, ctx) -> None:
     seo = ctx.seo
     shop = Shopping(seo)
+    hazir.kaydet(seo, "shopping", shop.results)
 
     def _merchant_connected() -> bool:
         from . import merchant
