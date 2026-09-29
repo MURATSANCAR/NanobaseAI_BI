@@ -51,6 +51,7 @@
 - **Değerlendirme formu (`hr/performance/ReviewCycle.tsx`):** bölüm başına kart — başlık, tür (yetkinlik 1–5 / hedefler / açık uçlu), yetkinlikte maddeler, yol gösterici not; «Bölüm ekle».
 - **Ortak (`hr/ListEditor.tsx`):** var olan soru/bölüm/madde anahtarı aynen korunur (geçmiş sonuçlar anahtarla gruplanır); yeni anahtar kaydederken metnin ilk kelimelerinden üretilir (`a-z0-9_`, ≤24, çakışırsa `_2`). Bilinmeyen alanlar korunur; gönderilen veri eskisiyle aynı biçimde. Sunucu kuralları istemcide (boş metin, geçerli tür, seçenekli soruda ≥2 seçenek, tekil anahtar, ankette en çok 1 tavsiye puanı, yetkinlikte ≥1 madde, ölçek 5 satır) — «Kaydet» gerekçesiyle kapalı. Ekranda «JSON» kalmadı.
 - **Doğrulama (test sunucusu geçici kopya, IP engeli kalkınca):** `tsc -b` 0, `vite build`, vitest 268/268 (48 dosya).
+- **Test sunucusu:** 3 dosya (md5 = değişiklik öncesi main), `index-BVfiR10d.js`; ağaç main `81efd969` ile birebir (fark 0). **Müşteri VM'i kurulmadı:** VM'deki `c9ad5e2b` ile main arasında başka oturumların «DOĞRULANAMADI — testler koordinatörde» işaretli hız işleri var (canlı okuma kilidi/havuz, pazarlama-iletişim, SEO 2. tur, stok-kargo, e-ticaret, ilk açılış ısıtması); VM kurulumu main'in tamamını taşıdığı için bunlar doğrulanmadan VM'e gidilmez. Bu iş ve okur paneli düzeltmesi (`2c4f29b5`) o doğrulamadan sonraki VM kurulumuyla gider.
 
 ## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
 
