@@ -173,3 +173,70 @@ def test_pr_arka_okuma_hatasi_eski_listeyi_birakir():
     assert crm.media_contacts() == ilk
     with pytest.raises(S.SourceError):
         crm.media_contacts(fresh=True)
+
+
+# ------------------------------------------------------------------ M28 kurumsal ilişkiler: kişi rolleri ve rapor
+
+
+@pytest.fixture
+def portal():
+    from semantic_layer.store.catalog_store import open_store
+
+    return open_store("sqlite://").engine
+
+
+def _pa_client(portal, monkeypatch, fake):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge import public_affairs_api as PAA
+
+    monkeypatch.setattr(PAA.src, "runner", lambda path: fake)
+    app = FastAPI()
+    PAA.register(app, {
+        "auth": lambda r: (portal, "t1", "ayse", "Ayşe"), "require_caller": lambda r: None, "can": lambda u, k: True,
+        "is_admin": lambda u: False, "audit": lambda *a, **k: None, "conf": lambda k, d="": d,
+        "engine": lambda: portal, "tenant": lambda: "t1", "crm_file": lambda: "/yok", "llm": lambda p: None})
+    return TestClient(app)
+
+
+def _pa_fake():
+    return SayanCrm({
+        "new_kisiroluBase": [{"id": "0A1B2C3D-1111-2222-3333-444455556666", "ad": "Kanaat önderi", "kisi": 7},
+                             {"id": "1A1B2C3D-1111-2222-3333-444455556666", "ad": "Yazar", "kisi": 0}],
+        "AccountRoleCode = 1": [{"n": 42}],
+        "new_siparissatiriBase": [{"tip": 12, "siparis": 3, "adet": 150}],
+    })
+
+
+def test_iliskiler_roller_eski_hesap_yeni_hesap_ve_bellek(portal, monkeypatch):
+    from semantic_bridge import public_affairs_sources as src
+
+    fake = _pa_fake()
+    c = _pa_client(portal, monkeypatch, fake)
+    r1 = c.get("/api/v1/public-affairs/crm/roles").json()
+    # eski hesap: aynı SQL satırlarından ucun eski gövdesiyle
+    roles = [{"id": src.lid(r.get("id")), "name": src.s(r.get("ad")), "people": src.ival(r.get("kisi")) or 0}
+             for r in src.lower_rows(fake(src.person_roles_sql("Timas_MSCRM.dbo")))]
+    n = src.lower_rows(fake(src.decision_makers_sql("Timas_MSCRM.dbo")))
+    assert {k: r1[k] for k in ("personRoles", "decisionMakers")} == {"personRoles": roles, "decisionMakers": src.ival(n[0].get("n"))}
+    assert r1["decisionMakers"] == 42 and not r1["kaynaklar"].get("error")
+    r2 = c.get("/api/v1/public-affairs/crm/roles").json()
+    assert r2 == r1 and fake.say("new_kisiroluBase") == 2                         # 1 uç + 1 eski hesap; ikinci istek okumaz
+
+
+def test_iliskiler_rapor_crm_toplamlari_bellekten(portal, monkeypatch):
+    from semantic_bridge import hizli_bellek as HB
+
+    fake = _pa_fake()
+    c = _pa_client(portal, monkeypatch, fake)
+    r1 = c.get("/api/v1/public-affairs/report?year=2026").json()
+    assert [(t["type"], t["orders"], t["books"]) for t in r1["crm"]["types"]] == [(12, 3, 150)]
+    assert r1["crm"]["error"] is None and fake.say("new_siparissatiriBase") == 1
+    b = HB.KAYIT["iliskiler.crm"]
+    anahtar = next(k for k in b._k if str(k).startswith("promo:2026"))
+    _eskit(b, anahtar, 700)
+    t0 = time.monotonic()
+    r2 = c.get("/api/v1/public-affairs/report?year=2026").json()
+    assert r2["crm"] == r1["crm"] and time.monotonic() - t0 < 1.5                 # süre doldu: eldeki hemen
+    assert _bekle(lambda: fake.say("new_siparissatiriBase") == 2)                 # CRM arkada okundu
