@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Sohbet tam yerel temizlik: nihai canlı kabul geçti
+
+- Yayındaki imaj `zeki-ai-chat:8.5.3-6c6d214d4`, kaynak main'den. 9.523 kaynak dosyası birebir; imajda 118.737 dosya/61 yerel manifest tarandı. Ürüne ait eski lisans alanları kaldırıldı.
+- 90 koleksiyon/12.615 belge/426 indeks: taranan eski üretici/lisans içerik ve metadata bulgusu 0. Yedekli geçişte 3 kullanıcı/1 oda/1 mesaj korundu. Federation SDK'nın yeniden oluşturduğu iki boş eski koleksiyonun nedeni kaynakta giderildi; kaldırma sonrası 90 koleksiyonun içerik hashleri/sayıları/indeks sayıları eşleşti.
+- Gerçek timasai oturumuyla 320/390/768/1440 px, ikon fontu, capability API (25 modül), eski lisans API 404, CSP/SW kontrolleri geçti. Tam mesaj ve abonelik sonuçları bağımsız Mongo okumasıyla eşleşti.
+- Dış çıkış 7/7, üç konteynerin DNS/firewall kuralları geçti; eth0 yakalamasında dış prob paketi 0. 1 portal oturumu ve 4 chat jetonu silindi, kalan 0. Yeni test kullanıcı/mesajı yok. Yerel test ve müşteri VM kurulumu yapılmadı.
+- Teknik dış paket/protokol kimlikleri, bağımsız bildirimler, engelleme/geçiş referansları, Git geçmişi ve geri dönüş yedekleri korunur; mutlak sözcük sıfırı iddiası yok. Rapor ve kanıtlar: `apps/zeki-chat/docs/zeki-owned-cleanup.md`, `apps/zeki-chat/docs/evidence/2026-09-29-full-cleanup/`.
+
 ## 2026-09-29 (23:30) — Sohbet: bot adı test sunucusunda «zeki.bot», belge gönderimi sınandı, indirme simgesi düzeltildi
 
 - **Bot (kullanıcı: «rocket.cat bunu sil»):** silme yerine ad değişikliği (kullanıcı onayı) — uygulama botu silmeye izin vermiyor, silinse her açılışta yeniden kuruyor; hata bildirimi, giriş kilidi, kanal silme ona bağlı. Kaynaktaki ad/kimlik değişikliği aynı saatlerde başka oturumda `main`'e girdi (kimlik de `zeki.bot`, veritabanı için `apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs`); bu oturumun kaynak commit'i bu yüzden bırakıldı. Test sunucusunda veritabanında yalnız görünen ad değişti (yönetici ucu TOTP istedi): kullanıcı adı + avatar dosya adı + iki ayar `zeki.bot`, kimlik `rocket.cat` kaldı — göç betiği bu ara durumu tamamlar (kimlik çakışması kaydın kendisini dışlar). Tarayıcıda bot `zeki.bot`, Z avatarı; `rocket.cat` adında kullanıcı/ayar 0.

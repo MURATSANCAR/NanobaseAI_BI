@@ -1,0 +1,8 @@
+{
+  "interface": "eth0",
+  "captureExit": 124,
+  "captureStarted": true,
+  "probeExit": 1,
+  "physicalSynPackets": 0,
+  "passed": true
+}

@@ -25,4 +25,13 @@ Bu nedenle kaynak ağacında eski kelimenin mutlak sıfır olması kabul ölçü
 
 ## Canlı kabul
 
-Nihai imaj ve DB geçişi sürüyor; yeni sürümün canlı kabulü henüz **DOĞRULANAMADI**. Önceki sürüm sonuçları bu kodun kabulü sayılmaz. Son sonuçlar `docs/evidence/2026-09-29-full-cleanup/` altında kaydedilecektir.
+Test sunucusunda `zeki-ai-chat:8.5.3-6c6d214d4` yayında; aşağıdaki kabul kontrolleri geçti. Kaynak Git ağacından taşındı: 9.523 dosyada içerik farkı ve AppleDouble dosyası 0. İmaj taraması 118.737 dosya ve 61 sahip olunan paket manifestini kapsadı; ürüne ait lisans alanı/eski lisans dosyası 0.
+
+- **Veritabanı:** 90 koleksiyon, 12.615 belge ve 426 indeks tarandı. Taranan içerik ve koleksiyon/indeks adlarında eski üretici/lisans bulgusu 0. Eski lisans/deneme ayarları 0; bot kimliği ve kullanıcı adı `zeki.bot`. Kullanıcı/oda/mesaj sayıları geçiş öncesiyle aynı: 3/1/1.
+- **Derin taramada bulunan ek sorun:** harici federation SDK'sı iki boş eski koleksiyonu yeniden oluşturuyordu. Tam yerel modda başlangıç ve ilgili callback yolları kapatıldı; yalnız bu iki boş koleksiyon yedekli kaldırıldı. Korunan 90 koleksiyonun içerik hashleri, sayıları ve indeks sayıları değişmedi; eski koleksiyonlar yeniden oluşmadı.
+- **Gerçek API–Mongo karşılaştırması:** 1 abonelik ve 1 mesajın tam sonuç alanları bağımsız DB okumasıyla eşleşti. Capability API kaynakla aynı 25 modülü döndürdü; eski iki lisans ucu 404 verdi.
+- **Tarayıcı:** mevcut `timasai` hesabıyla 320/390/768/1440 px doğrulandı. Yatay taşma, görünen eski marka, JS hatası, başarısız JS/CSS/font ve dış HTTP isteği 0. Görsel incelemede bulunan ikon fontu çakışması düzeltildi; dört genişlikte `ZekiChat` fontu ve ikonlar doğrulandı. CSP ve service worker engelleri geçti.
+- **Dış çıkış:** 7/7 Node/Deno/doğrudan IP/DNS/host üzerinden dolanma kontrolü geçti; gerçek Mongo bağlantısı çalıştı. Üç konteynerin DNS ve ağ kuralları doğrulandı. Fiziksel eth0 yakalamasında kasıtlı dış bağlantı probunun çıkış paketi 0.
+- **Temizlik:** bu kabulde açılan 1 kısa portal oturumu ve 4 sohbet jetonu silindi; kalan 0. Test kullanıcı veya mesajı oluşturulmadı. Yerel test çalıştırılmadı; müşteri VM'ine kurulum yapılmadı.
+
+Kanıtlar: [2026-09-29-full-cleanup](evidence/2026-09-29-full-cleanup/README.md). Sonuçlar belirtilen sürüm, veri ve akışlara aittir; bütün ürün özelliklerinin kabulü veya host yeniden başlatma testi değildir. Çalışan sohbetin otomatik dış servis trafiği engellenir; kullanıcının tarayıcıda elle başka siteye gitmesini engellediğimiz iddia edilmez. Geri dönüş yedekleri ve Git geçmişi silinmemiştir.
