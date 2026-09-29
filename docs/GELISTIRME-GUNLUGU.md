@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — ZEKI AI CHAT tam yerel ağ: paralel audit, kalıcı çıkış engeli ve gerçek kabul
+
+- Kullanıcı açıkça **“Tam yerel: tüm dış servis çıkışlarını engelle”** seçti. Üç paralel denetim kaynak/bağımlılık, canlı ayar/cron ve tarayıcı yollarını inceledi. Sabit üretici servisleri kapalıydı; dinamik URL/oEmbed/webhook/Deno, wildcard CSP ve Google STUN açıkları bulundu.
+- Ayrı sohbet deposunda uygulama `43bcc94`, konfig kaynak `098dfe2`, kanıt/belge `ced6bd8`. Test sunucusu imajı `zeki-ai-chat:8.5.3-43bcc94`; 67 paket/Meteor/Docker derlemesi sunucuda. Kaynak 9.597 dosya/fark 0, AppleDouble 0. Yerel test yok; müşteri VM'ine kurulum yok.
+- Chat/Mongo internal `zeki-local` ağında. Docker internal ağı port yayımlamadığından sabit upstream nginx ingress eklendi; digest sabit, user101, readonly, capDropALL, yalnız 127.0.0.1:4000. Ek ağ **10.254.250.0/28**: otomatik tahsis müşteri VPN'iyle çakışmıştı, düzeltildi. `zeki-local-egress.service` Docker'dan önce INPUT host erişimi ve DOCKER-USER/FORWARD dış çıkış engellerini kurar; Docker bu birime bağımlıdır. Ingress Docker DNS aktarım boşluğu bulundu, `dns:[127.0.0.1]` ile kapatıldı; iç servis adı çözülüyor, dış DNS SERVFAIL.
+- Browser CSP self-only; dış preview/push/NPS/ICE kapalı, VoIP provider başlamıyor, custom script dağıtılmıyor. Eski upstream indirme installer'ı kapatıldı; serverFetch her redirect/DNS öncesi vendor hedefi reddediyor. Teknik paket/import adları bu ağ çalışmasında değiştirilmedi.
+- Kabul: 14 reddedilen + 6 izinli URL; gerçek runtime serverFetch 3/3 blok; Mongo pozitif + DNS/Node/IPv4/IPv6/host/Deno negatif 7/7; ingress dış HTTP REJECT ve DNS SERVFAIL. Fiziksel eth0 üzerinde bilinçli dış HTTP probuna ait paket 0. Chat 180 sn/ingress 120 sn paket metadata gözlemi, normal trafik yerel. Ingress capture'daki tek dış IP SYN bilinçli testtir, host firewall'da reddedildi.
+- Gerçek timasai SSO, 320/390/768/1440: taşma/JS hatası/görünür vendor metni 0; dış fetch/WebSocket/image/iframe CSP ile bloke, vendor link engelli; gerçek worker JS 200+CSP. Beş ayar API↔Mongo eşleşti; gerçek abonelik listesinin `_id/rid/unread` alanları ve sayısı tam eşleşti. İlk kabul okuyucusunun sayfalama/429 ve async WebSocket yanlış başarısızlığı düzeltildi, son koşu geçti.
+- Kullanıcı/mesaj/oda 3/1/1 ve veri hacimleri korundu; Mongo yedeği/eski imaj saklandı. Üç kontrol oturumu + 12 sohbet jetonu silindi, kalan test kullanıcı/jeton/oturum dosyası 0. Mesaj gönderme/tüm özelliklerin fonksiyonel kabulü ve tüm host Docker reboot testi yapılmadı; ağ izolasyonu ve gerçek giriş/okuma kabulü yapıldı.
+- Kanıtlar sohbet deposunda `docs/evidence/2026-09-29-egress/`, işletim belgesi `docs/zeki-local-egress.md`. Chat GitHub hedefi hâlâ `Repository not found`; yerel main ve test sunucusu güncel. BI deposunda yalnız durum/günlük güncellendi.
+
 ## 2026-09-29 (18:45) — Başvuru formları test sunucusunda: 3.013 başvuru alındı, zamanlayıcı açık
 
 - **Kurulum:** main `ec0564061` (19 dosya; `access.py`/`app.py` kurulum anında başka oturumun stüdyo kurulumuyla değişmişti → main hâli = onların hâli + bu işin 4 satırı olduğu doğrulanıp o kuruldu; ön yüz onların güncel ağacından yeniden derlendi), sonra `d69fcc58b` (3 dosya). md5 kurulum öncesi ve sonrası denetlendi, `._*` 0, köprü sağlıklı.
