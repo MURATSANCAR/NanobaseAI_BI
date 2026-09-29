@@ -1047,6 +1047,18 @@
       "retention": null,
       "retentionNote": "Denetim izi; paketle birlikte saklanır",
       "module": "Kurul (DYK)"
+    },
+    {
+      "object": "semantic_hizli_okuma",
+      "columns": [
+        "veri"
+      ],
+      "data": "Kişiden bağımsız kaynak okumalarının son değeri (sıkıştırılmış): kişi rehberi (CRM/AD: ad soyad, hesap adı, unvan, birim, iş e-postası ve telefonu), CRM etkinlik ve kitap kartlarındaki sorumlu adı ve hesabı",
+      "subjects": "çalışan",
+      "purpose": "Ekranların ilk açılışı CRM/AD okumasını beklemesin (hız 4. tur, hizli_kaynak.Kalici)",
+      "retention": null,
+      "retentionNote": "Anahtar başına tek satır; her okumada üzerine yazılır, kaynakta silinen kişi sonraki okumada düşer",
+      "module": "Köprü (ortak hız katmanı)"
     }
   ],
   "files": [
