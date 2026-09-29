@@ -566,14 +566,7 @@ class Runtime:
                 cached = self._complete_cache.get(key)
                 if use_cache and cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
                     return dict(self._served(cached[1], cached[0]), cached=True)
-                with self._results_lock:
-                    for rid, snap in list(self._results.items()):
-                        if time.time() - snap['at'] > self._result_ttl:
-                            self._discard_result(rid)
-                    # Reserve room before execution; older downloadable snapshots expire first.
-                    reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
-                    while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
-                        self._discard_result(next(iter(self._results)))
+                self._free_result_space()
                 db = [0.0]
                 try:
                     mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
@@ -588,12 +581,45 @@ class Runtime:
                 self._complete_cache[key] = (computed_at, out)
                 self._complete_cache.move_to_end(key)
                 while len(self._complete_cache) > 64:
-                    self._complete_cache.popitem(last=False)
+                    self._forget_cached(*self._complete_cache.popitem(last=False))
         finally:
             with self._wait_lock:
                 self._waiting -= 1
         out.update(physicalSql=phys, cached=False)
         return self._served(out, computed_at)
+
+    def _result_file_in_use(self, name) -> bool:
+        return any(s.get('_result_file') == name for s in self._results.values()) or \
+            any(c[1].get('_result_file') == name for c in self._complete_cache.values())
+
+    def _forget_cached(self, _key, entry) -> None:
+        """Önbellekten düşen sonucun dosyası, başka kayıt kullanmıyorsa diskten de silinir (yoksa alan dolar)."""
+        name = entry[1].get('_result_file')
+        if name and not self._result_file_in_use(name):
+            self.result_files.remove(name)
+
+    def _free_result_space(self) -> None:
+        """Yeni sonuçtan önce yer açar: süresi geçen sonuçlar, sahipsiz dosyalar, sonra en eski sonuç ve önbellek."""
+        with self._results_lock:
+            for rid, snap in list(self._results.items()):
+                if time.time() - snap['at'] > self._result_ttl:
+                    self._discard_result(rid)
+            folder = Path(self.result_files.directory.name)
+            reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
+
+            def used() -> int:
+                return sum(p.stat().st_size for p in folder.glob('*.jsonl') if p.exists())
+
+            if used() + reserve <= self.result_files.disk_budget:
+                return
+            for p in sorted(folder.glob('*.jsonl'), key=lambda x: x.stat().st_mtime):
+                if not self._result_file_in_use(str(p)):
+                    p.unlink(missing_ok=True)
+            while used() + reserve > self.result_files.disk_budget and (self._results or self._complete_cache):
+                if self._results:
+                    self._discard_result(next(iter(self._results)))
+                else:
+                    self._forget_cached(*self._complete_cache.popitem(last=False))
 
     def _discard_result(self, rid):
         old = self._results.pop(rid, None)
@@ -1364,6 +1390,7 @@ class Runtime:
             report("querying")
             parts_ms: list = []
             columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args, parts_ms))
+            self._free_result_space()
             out = self.result_files.write(iter([(columns, rows)]), self.settings.max_rows)
         except Exception as e:  # noqa: BLE001
             from semantic_bridge import access as access_mod
