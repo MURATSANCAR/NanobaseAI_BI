@@ -19,7 +19,8 @@ import {
   Sparkle,
   Sparkles,
 } from 'lucide-react';
-import { GROUP_HOME } from '../stitch/ModulesMenu';
+import { useNavData } from '../nav/useNav';
+import { groupEntry } from '../nav/navModel';
 import { useTimasSession } from '../TimasSession';
 import { canOpenRoute, useAccessMe, useCan, usePageAccess } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -74,13 +75,16 @@ const PROMPTS = [
   { label: '🧾 İade oranı', q: 'Bu yıl iade oranı yüzde kaç?' },
 ];
 
-/** Ana modüller ortak menüdeki giriş sayfalarını kullanır; alt ekranlar modül içinde kalır. */
-const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk', 'Yönetim Raporları', 'SEO & GEO', 'İnsan Kaynakları'].map((title, index) => ({
-  title,
-  to: GROUP_HOME[title].to,
-  note: GROUP_HOME[title].hint,
-  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700', 'bg-sky-100 text-sky-700', 'bg-rose-100 text-rose-700', 'bg-teal-100 text-teal-800'][index],
-}));
+/** Ana modül kutuları sol menüdeki ana modüllerin kendisidir (aynı ad, simge, sıra); kutu modülün giriş ekranını
+ *  açar, sol menü de yalnız o modülün ekranlarını gösterir. Renk sırayla döner. */
+const TILE_TONES = [
+  'bg-violet/10 text-violet',
+  'bg-amber-100 text-amber-800',
+  'bg-emerald-100 text-emerald-700',
+  'bg-sky-100 text-sky-700',
+  'bg-rose-100 text-rose-700',
+  'bg-teal-100 text-teal-800',
+];
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
 
@@ -98,7 +102,18 @@ export default function KampusPage() {
   const pages = usePageAccess();
   // Sorgu bilgisi: «N modül» rozetinin kaynağı (rol, izin ve bağ okumaları).
   const accessMe = useAccessMe();
-  const tiles = MODULE_TILES.filter((m) => canOpenRoute(pages, m.to));
+  // Menü zaten kişinin rolüne ve ortama göre süzülüdür; açamayacağı modül burada da yoktur.
+  const nav = useNavData();
+  const tiles = useMemo(
+    () =>
+      nav.groups
+        .filter((g) => g.id !== 'kampus')
+        .flatMap((g, i) => {
+          const to = groupEntry(nav.groups, g);
+          return to && canOpenRoute(pages, to) ? [{ id: g.id, title: g.label, to, note: g.hint, icon: g.icon, tone: TILE_TONES[i % TILE_TONES.length] }] : [];
+        }),
+    [nav.groups, pages],
+  );
   // ZEKİ'ye soru: rolde «Zeki AI'a soru sorma» ve cevabın açıldığı Genel bakış olmalı; yoksa kutu gösterilmez.
   const canAskZeki = useCan('zeki.soru') && canOpenRoute(pages, '/genel-bakis');
   const canExport = useCan('veri.disa-aktar');
@@ -523,14 +538,14 @@ export default function KampusPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {tiles.map((m) => (
                 <Link
-                  key={m.to}
+                  key={m.id}
                   to={m.to}
                   title={`${m.title} — ${m.note}`}
                   className="kp-lift group flex min-h-[72px] items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 hover:border-violet/30 hover:bg-white"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${m.tone}`}>
-                      <Sparkles className="h-4 w-4" />
+                      <m.icon aria-hidden className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="line-clamp-2 break-words text-xs font-bold leading-snug text-ink group-hover:text-violet">{m.title}</p>

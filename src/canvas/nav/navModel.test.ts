@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NAV, flatItems, matchActive, needsPagePermission, railView, recentGroupLabel, scoreText, visibleNav } from './navModel';
+import { NAV, flatItems, groupEntry, matchActive, needsPagePermission, railView, recentGroupLabel, scoreText, visibleNav } from './navModel';
 import { RECENT_KEEP, cleanNavState, pushRecent } from './navState';
 
 const user = { isAdmin: false, isEditor: false };
@@ -419,5 +419,27 @@ describe('yetki kataloğu alanları menüyle aynı', () => {
     expect([...used].filter((a) => !areaIds.includes(a))).toEqual([]);
     expect(areaIds.filter((a) => a !== 'ortak' && a !== 'kampus' && ![...used].includes(a))).toEqual([]);
     expect(areaIds.includes('kayitlar')).toBe(false);
+  });
+});
+
+describe('ana modül giriş ekranı (Kampüs kutuları)', () => {
+  it('her ana modülün giriş ekranı sol menüde yine o modülü açar', () => {
+    for (const g of NAV) {
+      const to = groupEntry(NAV, g);
+      expect(to, g.id).not.toBeNull();
+      const [path, q = ''] = to!.split('?');
+      expect(matchActive(NAV, path, q)?.group.id, g.id).toBe(g.id);
+      if (g.id !== 'kampus') expect(railView(visibleNav(admin, { webWatch: true }), g.id).kind).toBe('module');
+    }
+  });
+  it('rolde görünmeyen ekrana gitmez: modülde kişinin açabildiği ilk ekran', () => {
+    const only = visibleNav(user, {}, new Set(['sayfa:uretim', 'sayfa:telif-sozlesme']));
+    expect(groupEntry(only, only.find((x) => x.id === 'uretim-fiyat')!)).toBe('/uretim');
+    expect(groupEntry(only, only.find((x) => x.id === 'editoryal')!)).toBe('/telif-sozlesme');
+  });
+  it('başka modülde daha uzun eşleşen ekranı atlar', () => {
+    const finans = NAV.find((x) => x.id === 'finans')!;
+    const stolen = { ...finans, items: [{ ...finans.items[0], id: 'x', to: '/stok/fark' }, ...finans.items] };
+    expect(groupEntry([...NAV.filter((x) => x.id !== 'finans'), stolen], stolen)).toBe(finans.items[0].to);
   });
 });

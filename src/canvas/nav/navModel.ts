@@ -811,6 +811,18 @@ export function matchActive(groups: NavGroup[], pathname: string, search = ''): 
   return best ? { group: best.group, item: best.item } : null;
 }
 
+/** Ana modülün giriş ekranı: modülün, açılınca sol menüde yine bu modülü gösteren ilk ekranı. Başka modülde daha
+ *  uzun eşleşen bir öğeye düşen adres (ör. Fiyatlama'daki «Baskı önerisi» /yonetim-raporlari altında) atlanır ki
+ *  kişi tıkladığı modülün menüsünü görsün. Kampüs gibi tek ekranlı modülde `to`; uygun ekran yoksa null. */
+export function groupEntry(groups: NavGroup[], group: NavGroup): string | null {
+  if (group.to) return group.to;
+  for (const item of group.items) {
+    const [path, params] = splitTo(item.to);
+    if (matchActive(groups, path, params.toString())?.group.id === group.id) return item.to;
+  }
+  return null;
+}
+
 /** Bir bağlantı adresinin (sorgu parçası dahil) rolle açılan menü sayfası; Kampüs, Yönetim ve menü dışı adreste null. */
 export function permissionItemFor(to: string): NavItem | null {
   const [path, params] = splitTo(to);
