@@ -104,6 +104,7 @@ NEVER_PREFIXES = (
     "/api/v1/editorial/contracts/compare",
     # İK personel portalı: kişisel veri diske yazılmasın; kart açılışı her seferinde erişim kaydına düşsün.
     "/api/v1/hr/portal/",
+    "/api/v1/hr/leave/",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
 NEVER_PARTS = re.compile(

@@ -270,6 +270,12 @@ function MyRequests() {
               <div className="text-[11.5px] text-canvas-muted">{longDay(r.createdAt)} · {r.deliveryLabel}{r.mail ? ` · ${r.mail}` : ''}</div>
               {r.note && <div className="mt-1 whitespace-pre-line text-[12px]">{r.note}</div>}
               {r.answer && <div className="mt-1 rounded-lg bg-slate-50 px-2 py-1 text-[12px]"><span className="font-bold">İK:</span> {r.answer}</div>}
+              {r.files?.map((f) => (
+                <button key={f.id} type="button" className="mt-1 inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0"
+                  onClick={() => void portalApi.requestFile(r.id, f).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
+                  <Download aria-hidden className="h-3.5 w-3.5" />{f.filename} ({fileSize(f.size)})
+                </button>
+              ))}
               {r.status === 'bekliyor' && (
                 <button type="button" className="mt-1 text-[12px] font-bold text-red-700 hover:underline" onClick={() => setCancel(r)}>Geri al</button>
               )}

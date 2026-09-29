@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Download, FileText } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
@@ -74,6 +74,28 @@ export default function Profile() {
           )}
         </>
       )}
+      <MailPref />
     </HrFrame>
+  );
+}
+
+/** E-posta bildirimi tercihi: evrak ve izin sonuçları. Onay isteyen iş e-postaları (yöneticiye/İK'ya) kapatılamaz. */
+function MailPref() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['hr', 'portal', 'mail-pref'], queryFn: portalApi.mailPref, enabled: ENGINE_ENABLED });
+  const save = useMutation({
+    mutationFn: (off: boolean) => portalApi.setMailPref(off),
+    onSuccess: () => { toast.success('Tercih kaydedildi.'); void qc.invalidateQueries({ queryKey: ['hr', 'portal', 'mail-pref'] }); },
+    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.')),
+  });
+  if (!q.data) return null;
+  return (
+    <Block title="E-posta bildirimleri" help={q.data.mode === 'kapali' ? 'Portal e-posta bildirimleri şu an İK tarafından kapalı.' : 'Evrak talebinizin ve izin talebinizin sonucu şirket e-postanıza gelir.'}>
+      <label className="flex min-h-11 items-center gap-2 text-[13px] font-bold">
+        <input type="checkbox" className="h-4 w-4" checked={!q.data.off} disabled={save.isPending} onChange={(e) => save.mutate(!e.target.checked)} />
+        Evrak ve izin sonuçlarını e-postayla bildir
+      </label>
+      <p className="text-[11.5px] text-canvas-muted">Yöneticiyseniz onayınızı bekleyen izin e-postaları bu tercihten bağımsız gelir.</p>
+    </Block>
   );
 }

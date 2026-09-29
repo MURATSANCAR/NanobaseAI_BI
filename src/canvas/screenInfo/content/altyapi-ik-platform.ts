@@ -405,6 +405,27 @@ const CONTENT: ScreenInfoMap = {
     ],
     data: 'İK’nın özlük kaydı',
   },
+  'ik-izin': {
+    summary: 'Yıllık izin bakiyeniz, izin talebi ve geçmişiniz. Talep yöneticinize gider; kararı e-postayla ve burada görürsünüz.',
+    how: [
+      'Tarihleri seçince düşecek gün sayısı hemen hesaplanır; hafta sonu ve resmî tatiller sayılmaz, arife yarım gündür.',
+      'Bakiye açılış bakiyesi, yıllık hakediş, kullanım ve iadelerin toplamıdır.',
+      'Bekleyen talebi geri alabilirsiniz; onaylı izni başlamadan iptal ederseniz günler iade edilir.',
+      'Rapor gibi belge isteyen izinde belgeyi talebi açtıktan sonra yüklersiniz; yöneticiniz izin türünü görmez.',
+    ],
+    data: 'İK’nın özlük kaydı, izin türleri, resmî tatil takvimi ve izin defteri',
+    jobs: [{ name: 'Yıllık izin hakedişi', when: 'Her gece 02:10', what: 'İşe giriş yıldönümü gelen çalışana yıllık izin gününü deftere yazar.' }],
+  },
+  'ik-izin-ekip': {
+    summary: 'Yöneticisi olduğunuz çalışanların izin talepleri, ay takvimi ve aynı günlere yığılan izin uyarısı.',
+    how: [
+      'Onayladığınız yıllık izin çalışanın bakiyesinden düşer; ret gerekçesini çalışan görür.',
+      'Rapor ve doğum izni takvimde yalnız «izin» diye görünür.',
+      'Ekibin ayardaki oranı ya da fazlası aynı gün izinliyse uyarı çıkar.',
+    ],
+    data: 'Özlük kayıtlarındaki yönetici bilgisi ve izin talepleri',
+    jobs: [{ name: 'Onay hatırlatması', when: 'Her gece 02:10', what: 'Ayardaki iş günü kadar bekleyen talepler için yöneticiye günde bir e-posta yazar.' }],
+  },
   'ik-rehber': {
     summary: 'Aktif çalışanların departman, unvan ve iletişim bilgileri.',
     how: [

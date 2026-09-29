@@ -16,11 +16,12 @@ import PersonSheet from './PersonSheet';
 
 const ContentTabs = lazy(() => import('./ContentTabs'));
 const FieldsTab = lazy(() => import('./FieldsTab'));
+const LeaveAdmin = lazy(() => import('../../leave/admin/LeaveAdmin'));
 
 /** İK yönetimi (/ik/yonetim): personel özlük kaydı (liste, kart, belge, Excel), portal içeriği (duyuru, evrak deposu,
  *  evrak talepleri, yemek listesi, SSS), alan tanımları ve listeler. Sekmeler yetkiye göre görünür. */
 
-type Tab = 'personel' | 'talepler' | 'duyurular' | 'evrak' | 'yemek' | 'sss' | 'alanlar' | 'ayarlar';
+type Tab = 'personel' | 'izinler' | 'izin-ayarlari' | 'talepler' | 'duyurular' | 'evrak' | 'yemek' | 'sss' | 'alanlar' | 'ayarlar' | 'bildirimler';
 
 export default function HrAdmin() {
   const [params, setParams] = useSearchParams();
@@ -29,12 +30,15 @@ export default function HrAdmin() {
   const pending = useQuery({ queryKey: ['hr', 'portal', 'admin-requests', 'acik'], queryFn: () => portalApi.adminRequests('acik'), enabled: !!r?.portal });
   const tabs: { key: Tab; label: string; badge?: number | null }[] = [];
   if (r?.view || r?.edit) tabs.push({ key: 'personel', label: 'Personel' });
+  if (r?.leave) tabs.push({ key: 'izinler', label: 'İzinler' });
+  if (r?.leave || r?.leaveSettings) tabs.push({ key: 'izin-ayarlari', label: 'İzin ayarları' });
   if (r?.portal) {
     tabs.push({ key: 'talepler', label: 'Evrak talepleri', badge: pending.data?.total || null }, { key: 'duyurular', label: 'Duyurular' },
       { key: 'evrak', label: 'Evrak deposu' }, { key: 'yemek', label: 'Yemek listesi' }, { key: 'sss', label: 'Sık sorulan sorular' });
   }
   if (r?.fields || r?.view || r?.edit) tabs.push({ key: 'alanlar', label: 'Alanlar' });
   if (r?.fields || r?.portal) tabs.push({ key: 'ayarlar', label: 'Listeler ve ayarlar' });
+  if (r?.portal || r?.leave || r?.leaveSettings) tabs.push({ key: 'bildirimler', label: 'E-posta bildirimleri' });
   const want = params.get('sekme') as Tab | null;
   const tab: Tab | undefined = tabs.find((t) => t.key === want)?.key ?? tabs[0]?.key;
   const setTab = (t: Tab) => {
@@ -44,7 +48,7 @@ export default function HrAdmin() {
   };
   return (
     <HrFrame crumb="İK yönetimi" title="İK yönetimi" back={{ to: '/ik', label: 'İK ana sayfası' }}
-      lead="Personel özlük kayıtlarını girin ya da Excel'den yükleyin; duyuru, evrak, yemek listesi ve sık sorulan soruları yönetin; alanları, seçenek listelerini ve hangi alanın hangi sayfada görüneceğini ayarlayın.">
+      lead="Personel özlük kayıtlarını girin ya da Excel'den yükleyin; izin taleplerini ve bakiyeleri yönetin; duyuru, evrak, yemek listesi ve sık sorulan soruları yönetin; alanları, seçenek listelerini ve hangi alanın hangi sayfada görüneceğini ayarlayın.">
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.isLoading && <Loading />}
       {meta.data && !tabs.length && (
@@ -60,6 +64,7 @@ export default function HrAdmin() {
             {tab === 'personel' && <People meta={meta.data} />}
             {(tab === 'talepler' || tab === 'duyurular' || tab === 'evrak' || tab === 'yemek' || tab === 'sss') && <ContentTabs tab={tab} meta={meta.data} />}
             {(tab === 'alanlar' || tab === 'ayarlar') && <FieldsTab tab={tab} meta={meta.data} />}
+            {(tab === 'izinler' || tab === 'izin-ayarlari' || tab === 'bildirimler') && <LeaveAdmin tab={tab} meta={meta.data} />}
           </Suspense>
         </>
       )}

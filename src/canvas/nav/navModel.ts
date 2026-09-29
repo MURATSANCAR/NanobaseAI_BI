@@ -1,5 +1,6 @@
 import {
   Activity,
+  CalendarCheck2,
   IdCard,
   FolderOpen,
   CircleHelp,
@@ -670,6 +671,8 @@ export const NAV: NavGroup[] = [
       // Personel portalı (eski AppSheet): ana sayfa, Profilim, rehber, duyuru, evrak, SSS herkese; İK yönetimi açıkça verilir.
       { id: 'ik-anasayfa', label: 'İK ana sayfası', to: '/ik', icon: House, section: 'Personel portalı', hint: 'Kutucuklar, doğum günleri, son duyurular, bugünün menüsü; İK yetkilisine kadro sayıları', also: ['/ik/dogum-gunleri', '/ik/yemek'], keywords: ['ik', 'insan kaynakları', 'personel portalı', 'doğum günü', 'yemek listesi', 'menü'] },
       { id: 'ik-profilim', label: 'Profilim', to: '/ik/profilim', icon: IdCard, section: 'Personel portalı', hint: 'Özlük bilgilerim ve belgelerim', keywords: ['profil', 'özlük', 'bilgilerim', 'belgelerim'] },
+      { id: 'ik-izin', label: 'İzinlerim', to: '/ik/izin', icon: CalendarCheck2, section: 'Personel portalı', hint: 'Yıllık izin bakiyem, izin talebi, geçmiş ve belge', keywords: ['izin', 'yıllık izin', 'bakiye', 'rapor', 'mazeret', 'ücretsiz izin'] },
+      { id: 'ik-izin-ekip', label: 'Ekibimin izinleri', to: '/ik/izin/ekip', icon: CalendarRange, section: 'Personel portalı', hint: 'Onayımı bekleyen izin talepleri, ekip takvimi ve çakışma', keywords: ['izin onayı', 'ekip takvimi', 'kim izinde'] },
       { id: 'ik-rehber', label: 'Personel rehberi', to: '/ik/rehber', icon: BookUser, section: 'Personel portalı', hint: 'Departman, unvan, e-posta, şirket hattı ve dahili no', keywords: ['rehber', 'dahili', 'telefon', 'e-posta', 'kim'] },
       { id: 'ik-duyurular', label: 'Şirket içi duyurular', to: '/ik/duyurular', icon: Megaphone, section: 'Personel portalı', hint: 'Etkinlik, işe giriş ve genel duyurular', keywords: ['duyuru', 'etkinlik', 'haber'] },
       { id: 'ik-evrak', label: 'Evrak', to: '/ik/evrak', icon: FolderOpen, section: 'Personel portalı', hint: 'Evrak deposu (formlar, rehberler) ve evrak talebi (çalışma belgesi, bordro…)', keywords: ['evrak', 'form', 'çalışma belgesi', 'bordro', 'hizmet dökümü', 'talep'] },

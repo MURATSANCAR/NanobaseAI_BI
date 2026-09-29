@@ -63,7 +63,7 @@ function Requests({ meta }: { meta: PortalMeta }) {
           </tbody>
         </TableWrap>
       )}
-      <RequestSheet req={editing} meta={meta} onClose={() => setEditing(null)} />
+      <RequestSheet req={editing ? (list.data?.items.find((x) => x.id === editing.id) ?? editing) : null} meta={meta} onClose={() => setEditing(null)} />
     </Block>
   );
 }
@@ -72,7 +72,16 @@ function RequestSheet({ req, meta, onClose }: { req: DocRequest | null; meta: Po
   const refresh = useRefresh();
   const [status, setStatus] = useState('hazirlaniyor');
   const [answer, setAnswer] = useState('');
-  useEffect(() => { if (req) { setStatus(req.status === 'bekliyor' ? 'hazirlaniyor' : req.status); setAnswer(req.answer ?? ''); } }, [req]);
+  const [uploading, setUploading] = useState(false);
+  const [askFile, setAskFile] = useState<{ id: string; filename: string } | null>(null);
+  const delFile = useMutation({
+    mutationFn: (fid: string) => portalApi.deleteRequestFile((req as DocRequest).id, fid),
+    onSuccess: () => { setAskFile(null); toast.success('Evrak silindi.'); refresh(); },
+    onError: (e) => toast.error(errText(e, 'Silinemedi.')),
+    onSettled: () => setAskFile(null),
+  });
+  // Liste tazelenince (evrak eklendi) yazılan not silinmesin: yalnız başka talep açılınca sıfırla.
+  useEffect(() => { if (req) { setStatus(req.status === 'bekliyor' ? 'hazirlaniyor' : req.status); setAnswer(req.answer ?? ''); } }, [req?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const save = useMutation({
     mutationFn: () => portalApi.handleRequest((req as DocRequest).id, { status, answer }),
     onSuccess: () => { toast.success('Talep güncellendi.'); refresh(); onClose(); },
@@ -84,6 +93,24 @@ function RequestSheet({ req, meta, onClose }: { req: DocRequest | null; meta: Po
         <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
           <p className="text-[12.5px]">{longDay(req.createdAt)} · {req.deliveryLabel}{req.mail ? ` · ${req.mail}` : ''}</p>
           {req.note && <p className="whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2 text-[12.5px]">{req.note}</p>}
+          <div className="flex flex-col gap-1.5 rounded-xl bg-slate-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className={labelCls}>Hazır evrak (çalışan portaldan indirir)</span>
+              <FilePick label="Evrak ekle" accept={meta.fileAccept} maxBytes={meta.fileMaxMb * 1024 * 1024} busy={uploading}
+                onPick={(f) => { setUploading(true); void portalApi.uploadRequestFile(req.id, f).then(() => { toast.success('Evrak eklendi.'); refresh(); }).catch((e) => toast.error(errText(e, 'Yüklenemedi.'))).finally(() => setUploading(false)); }} />
+            </div>
+            {req.files?.length ? req.files.map((f) => (
+              <div key={f.id} className="flex items-center gap-1.5 text-[12px]">
+                <button type="button" className="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 text-left text-canvas-violet hover:underline sm:min-h-8"
+                  onClick={() => void portalApi.adminRequestFile(req.id, f).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
+                  <Download aria-hidden className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.filename}</span><span className="shrink-0 text-canvas-muted">{fileSize(f.size)}</span>
+                </button>
+                <button type="button" aria-label={`${f.filename} evrakını sil`} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-red-700 hover:bg-red-50 sm:h-8 sm:w-8"
+                  onClick={() => setAskFile(f)}><Trash2 aria-hidden className="h-3.5 w-3.5" /></button>
+              </div>
+            )) : <span className="text-[11.5px] text-canvas-muted">Eklenmedi. Belge e-postaya ek olarak gitmez; buraya ekleyin, çalışan «Taleplerim»den indirir.</span>}
+          </div>
+          <p className="text-[11.5px] text-canvas-muted">Durumu kaydedince çalışana şirket e-postasıyla bildirim gider (bildirimler açıksa).</p>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Durum</span>
             <select className={field} value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -100,6 +127,9 @@ function RequestSheet({ req, meta, onClose }: { req: DocRequest | null; meta: Po
           </div>
         </form>
       )}
+      <AskSheet open={!!askFile} title="Evrakı sil" danger confirm="Sil" busy={delFile.isPending}
+        message={<>«{askFile?.filename}» talepten silinecek; çalışan artık indiremez. Bu işlem geri alınamaz.</>}
+        onClose={() => setAskFile(null)} onConfirm={() => askFile && delFile.mutate(askFile.id)} />
     </Sheet>
   );
 }

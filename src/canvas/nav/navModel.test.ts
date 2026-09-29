@@ -120,6 +120,8 @@ describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
     expect(matchActive(g, '/ik/dogum-gunleri')?.item.id).toBe('ik-anasayfa');
     expect(matchActive(g, '/ik/yemek')?.item.id).toBe('ik-anasayfa');
     expect(matchActive(g, '/ik/yonetim')?.item.id).toBe('ik-yonetim');
+    expect(matchActive(g, '/ik/izin')?.item.id).toBe('ik-izin');
+    expect(matchActive(g, '/ik/izin/ekip')?.item.id).toBe('ik-izin-ekip');
     expect(matchActive(g, '/ik/egitim/rehberler')?.item.id).toBe('ik-egitim');
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-anasayfa', 'sayfa:ik-profilim'])))).toEqual(['kampus', 'ik-anasayfa', 'ik-profilim']);
   });

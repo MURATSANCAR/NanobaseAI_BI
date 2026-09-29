@@ -1,0 +1,10 @@
+[Unit]
+Description=İK e-posta kuyruğu; 5 dakikada bir
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+Unit=timas-hr-mail.service
+
+[Install]
+WantedBy=timers.target

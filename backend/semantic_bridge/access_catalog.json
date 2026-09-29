@@ -708,6 +708,16 @@
       "label": "İK sık sorulan sorular"
     },
     {
+      "key": "sayfa:ik-izin",
+      "area": "ik",
+      "label": "İzinlerim"
+    },
+    {
+      "key": "sayfa:ik-izin-ekip",
+      "area": "ik",
+      "label": "Ekibimin izinleri"
+    },
+    {
       "key": "sayfa:ik-yonetim",
       "area": "ik",
       "label": "İK yönetimi (özlük, portal içeriği, alanlar)",
@@ -2482,6 +2492,22 @@
       "page": "sayfa:ik-yonetim",
       "label": "Personel alanları ve listeler",
       "hint": "Alan adı, seçenekleri, zorunluluk, sayfa görünürlüğü, hassas işareti; evrak tipi ve kategori listeleri",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.izin-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "İzin yönetimi (İK)",
+      "hint": "Bütün izin talepleri ve İK onayı, bakiye defteri ve düzeltme, açılış bakiyesi Excel'i, aylık bordro izin listesi",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.izin-ayar",
+      "area": "ik",
+      "page": "sayfa:ik-yonetim",
+      "label": "İzin ayarları",
+      "hint": "İzin türleri ve gün sınırları (hukuk onayı), resmî tatil takvimi, çalışma takvimleri, onay akışı, hakediş basamakları",
       "explicit": true
     },
     {

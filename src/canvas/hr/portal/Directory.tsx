@@ -7,7 +7,7 @@ import { EmptyHint } from '../../components/Explain';
 import { useDebounced } from '../../editorial/kit';
 import { Block, HrFrame } from '../parts';
 import { Avatar } from './parts';
-import { portalApi } from './portalApi';
+import { longDay, portalApi } from './portalApi';
 
 /** Personel rehberi (/ik/rehber): aktif personel departmana göre; yalnız «rehber» işaretli alanlar. */
 export default function Directory() {
@@ -65,6 +65,9 @@ export default function Directory() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13.5px] font-extrabold">{x.adSoyad}</div>
                     <div className="truncate text-[12px] text-canvas-muted">{String(x.data.unvan ?? '') || '—'}</div>
+                    {q.data?.onLeave?.[x.id] && (
+                      <div className="mt-0.5 inline-flex rounded-md bg-lime-50 px-1.5 py-0.5 text-[11px] font-bold text-lime-800">İzinde · {longDay(q.data.onLeave[x.id])} dönüyor</div>
+                    )}
                     {extra.map((f) => x.data[f.key] ? (
                       <div key={f.key} className="truncate text-[11.5px] text-canvas-muted">{f.label}: <span className="text-canvas-ink">{String(x.data[f.key])}</span></div>
                     ) : null)}

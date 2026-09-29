@@ -161,6 +161,19 @@ REQUESTS = sa.Table(
     _ts("handled_at"),
 )
 
+REQUEST_FILES = sa.Table(
+    "semantic_hr_doc_request_files", _md,
+    sa.Column("id", sa.String(40), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("request_id", sa.String(40), nullable=False, index=True),
+    sa.Column("filename", sa.String(300), nullable=False),
+    sa.Column("mime", sa.String(120)),
+    sa.Column("size", sa.Integer, nullable=False, default=0),
+    sa.Column("blob", sa.LargeBinary, nullable=False),
+    sa.Column("uploaded_by", sa.String(120)),
+    _ts("uploaded_at", nullable=False),
+)
+
 MENU = sa.Table(
     "semantic_hr_menu", _md,
     sa.Column("tenant_id", sa.String(80), primary_key=True),
@@ -194,7 +207,7 @@ PSETTINGS = sa.Table(
 TABLE_LABELS = {
     "semantic_hr_person_fields": "personel alan tanımları", "semantic_hr_people": "personel özlük kaydı",
     "semantic_hr_people_files": "personel belgeleri", "semantic_hr_posts": "şirket içi duyurular",
-    "semantic_hr_docs": "evrak deposu", "semantic_hr_doc_requests": "evrak talepleri", "semantic_hr_menu": "yemek listesi",
+    "semantic_hr_docs": "evrak deposu", "semantic_hr_doc_requests": "evrak talepleri", "semantic_hr_doc_request_files": "hazır evraklar", "semantic_hr_menu": "yemek listesi",
     "semantic_hr_faq": "sık sorulan sorular", "semantic_hr_portal_settings": "İK portal ayarları",
 }
 
@@ -245,7 +258,8 @@ F_FIELDS = "ozellik:ik.alan-ayar"
 
 def rights(who: H.Who) -> dict[str, bool]:
     return {"view": who.can(F_VIEW, F_EDIT), "edit": who.can(F_EDIT), "sensitive": who.can(F_SENS),
-            "portal": who.can(F_PORTAL), "fields": who.can(F_FIELDS)}
+            "portal": who.can(F_PORTAL), "fields": who.can(F_FIELDS),
+            "leave": who.can("ozellik:ik.izin-yonet"), "leaveSettings": who.can("ozellik:ik.izin-ayar")}
 
 
 # ------------------------------------------------------------------ alanlar
@@ -1256,6 +1270,7 @@ def create_request(engine: sa.engine.Engine, tenant: str, user: str, display: st
 
 
 def list_requests(engine: sa.engine.Engine, tenant: str, *, user: str = "", status: str = "") -> list[dict[str, Any]]:
+    """Talepler (en yeni önce); İK'nın eklediği hazır evrakların adı ve boyutu dahil (bayt değil)."""
     ensure(engine)
     stmt = sa.select(REQUESTS).where(REQUESTS.c.tenant_id == tenant)
     if user:
@@ -1265,7 +1280,63 @@ def list_requests(engine: sa.engine.Engine, tenant: str, *, user: str = "", stat
     elif status:
         stmt = stmt.where(REQUESTS.c.status == status)
     with engine.connect() as c:
-        return [_req_out(r) for r in c.execute(stmt.order_by(REQUESTS.c.created_at.desc())).all()]
+        rows = c.execute(stmt.order_by(REQUESTS.c.created_at.desc())).all()
+        files = c.execute(sa.select(REQUEST_FILES.c.id, REQUEST_FILES.c.request_id, REQUEST_FILES.c.filename, REQUEST_FILES.c.size)
+                          .where(REQUEST_FILES.c.tenant_id == tenant, REQUEST_FILES.c.request_id.in_([r.id for r in rows] or [""]))).all()
+    out = []
+    for r in rows:
+        o = _req_out(r)
+        o["files"] = [{"id": f.id, "filename": f.filename, "size": int(f.size or 0)} for f in files if f.request_id == r.id]
+        out.append(o)
+    return out
+
+
+def get_request(engine: sa.engine.Engine, tenant: str, rid: str) -> dict[str, Any]:
+    ensure(engine)
+    with engine.connect() as c:
+        r = c.execute(sa.select(REQUESTS).where(REQUESTS.c.id == rid, REQUESTS.c.tenant_id == tenant)).first()
+    if r is None:
+        raise HrError("Talep bulunamadı.", 404)
+    return _req_out(r)
+
+
+def add_request_file(engine: sa.engine.Engine, tenant: str, actor: str, rid: str, filename: str, data: bytes, max_mb: int) -> dict[str, Any]:
+    """İK'nın hazırladığı belge talebe eklenir; çalışan portaldan indirir (e-postaya ek olarak gitmez)."""
+    get_request(engine, tenant, rid)
+    if not data:
+        raise HrError("Dosya boş.")
+    if len(data) > max_mb * 1024 * 1024:
+        raise HrError(f"Dosya {max_mb} MB sınırını aşıyor.", 413)
+    name = clean(filename, 300) or "evrak"
+    mime = _mime(name)
+    fid = new_id("evd")
+    with engine.begin() as c:
+        c.execute(REQUEST_FILES.insert().values(id=fid, tenant_id=tenant, request_id=rid, filename=name, mime=mime, size=len(data),
+                                                blob=data, uploaded_by=actor, uploaded_at=now()))
+    return {"id": fid, "filename": name, "size": len(data)}
+
+
+def request_file(engine: sa.engine.Engine, tenant: str, rid: str, fid: str, *, user: str = "") -> tuple[bytes, str, str]:
+    """`user` verilirse yalnız o kişinin talebinin belgesi döner."""
+    ensure(engine)
+    with engine.connect() as c:
+        req = c.execute(sa.select(REQUESTS.c.username).where(REQUESTS.c.id == rid, REQUESTS.c.tenant_id == tenant)).first()
+        r = c.execute(sa.select(REQUEST_FILES).where(REQUEST_FILES.c.id == fid, REQUEST_FILES.c.request_id == rid,
+                                                     REQUEST_FILES.c.tenant_id == tenant)).first()
+    if req is None or r is None or (user and req.username != user):
+        raise HrError("Belge bulunamadı.", 404)
+    return bytes(r.blob), r.filename, r.mime or "application/octet-stream"
+
+
+def delete_request_file(engine: sa.engine.Engine, tenant: str, rid: str, fid: str) -> str:
+    ensure(engine)
+    with engine.begin() as c:
+        r = c.execute(sa.select(REQUEST_FILES.c.filename).where(REQUEST_FILES.c.id == fid, REQUEST_FILES.c.request_id == rid,
+                                                                REQUEST_FILES.c.tenant_id == tenant)).first()
+        if r is None:
+            raise HrError("Belge bulunamadı.", 404)
+        c.execute(REQUEST_FILES.delete().where(REQUEST_FILES.c.id == fid))
+    return r.filename
 
 
 def handle_request(engine: sa.engine.Engine, tenant: str, actor: str, rid: str, body: dict[str, Any]) -> dict[str, Any]:

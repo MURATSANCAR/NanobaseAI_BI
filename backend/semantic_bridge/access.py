@@ -736,6 +736,11 @@ RULES: list[tuple[str, Any]] = [
     # İK personel portalı: çalışan uçları portal sayfalarından birini ister (Herkes'e açık sayfalar; uç kişinin kendi
     # kaydını ya da rehber alanlarını döner); İK yönetimi uçları açıkça verilen sayfayı.
     ("/api/v1/hr/portal/admin/", frozenset({page("ik-yonetim")})),
+    # M60 izin + İK e-posta kuyruğu. Çalışan/yönetici uçları kişinin kendi / ekibinin verisini döner.
+    ("/api/v1/hr/mail/run-due", SYSTEM),
+    ("/api/v1/hr/leave/run-due", SYSTEM),
+    ("/api/v1/hr/leave/admin/", frozenset({page("ik-yonetim")})),
+    ("/api/v1/hr/leave/", frozenset(page(x) for x in ("ik-izin", "ik-izin-ekip", "ik-anasayfa", "ik-rehber", "ik-yonetim"))),
     ("/api/v1/hr/portal/", frozenset(page(x) for x in ("ik-anasayfa", "ik-profilim", "ik-rehber", "ik-duyurular", "ik-evrak",
                                                       "ik-sss", "ik-yonetim"))),
     ("/api/v1/hr/visit", OPEN),
@@ -912,6 +917,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/stock/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # İK personel listesinin Excel'i (kişisel veri): İK yetkisine ek olarak genel dışa aktarma yetkisi.
     (frozenset({"GET"}), r"^/api/v1/hr/portal/admin/export$", "ozellik:veri.disa-aktar"),
+    (frozenset({"GET"}), r"^/api/v1/hr/leave/admin/payroll$", "ozellik:veri.disa-aktar"),
     # İhale: kayıt, dosya, kalem, eşleştirme, kontrol listesi, karar önerisi, sonuç. Karar onayı/geri gönderme açıkça
     # verilen `ihale.karar` ile, ilan kaynağı `ihale.kaynak-yonet` ile ucun içinde; şirket belge arşivi `ihale.belge`.
     (frozenset({"POST", "PATCH", "DELETE"}),

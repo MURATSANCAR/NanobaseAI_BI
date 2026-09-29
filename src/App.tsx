@@ -135,6 +135,8 @@ const HrMenu = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ 
 const HrDocs = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.DocsPage })));
 const HrFaq = lazy(() => import('@/canvas/hr/portal/SelfPages').then((m) => ({ default: m.FaqPage })));
 const HrAdmin = lazy(() => import('@/canvas/hr/portal/admin/HrAdmin'));
+const HrMyLeave = lazy(() => import('@/canvas/hr/leave/MyLeave'));
+const HrTeamLeave = lazy(() => import('@/canvas/hr/leave/TeamLeave'));
 const MyLearning = lazy(() => import('@/canvas/hr/learning/MyLearning'));
 const LearningDashboard = lazy(() => import('@/canvas/hr/learning/LearningDashboard'));
 const LearningCourses = lazy(() => import('@/canvas/hr/learning/CoursesScreen'));
@@ -384,6 +386,9 @@ export default function App() {
             <Route path="ik/evrak" element={<HrDocs />} />
             <Route path="ik/sss" element={<HrFaq />} />
             <Route path="ik/yonetim" element={<HrAdmin />} />
+            {/* M60 İzin yönetimi (/api/v1/hr/leave): İzinlerim, Ekibimin izinleri; İK sekmeleri İK yönetiminde. */}
+            <Route path="ik/izin" element={<HrMyLeave />} />
+            <Route path="ik/izin/ekip" element={<HrTeamLeave />} />
             {/* M43 Depo ve stok (Lojistik): stok, kitap stok kartı, bitecekler, fazla stok, güvenlik stoku, Logo–CRM farkı,
                 aktarım hataları, depo hattı (/api/v1/stock). */}
             <Route path="stok" element={<StockHome />} />

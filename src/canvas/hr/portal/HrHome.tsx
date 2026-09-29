@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  BookOpenCheck, BookUser, Cake, CircleHelp, FilePlus2, FolderOpen, Lightbulb, Megaphone, MessageSquareHeart, Settings2,
-  Target, UserRound, UtensilsCrossed,
+  BookOpenCheck, BookUser, Cake, CalendarCheck2, CircleHelp, FilePlus2, FolderOpen, Lightbulb, Megaphone, MessageSquareHeart,
+  TreePalm, Settings2, Target, UserRound, UsersRound, UtensilsCrossed,
 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, errText, nf } from '../../admin/ui';
@@ -31,7 +31,7 @@ export default function HrHome() {
   const pages = new Set(h?.pages ?? []);
   const hasPage = (id: string) => pages.has('*') || pages.has(`sayfa:${id}`);
   const r = h?.rights;
-  const manages = !!r && (r.view || r.edit || r.portal || r.fields);
+  const manages = !!r && (r.view || r.edit || r.portal || r.fields || r.leave || r.leaveSettings);
   return (
     <HrFrame
       crumb="İK ana sayfası"
@@ -45,6 +45,8 @@ export default function HrHome() {
           <Welcome h={h} />
           <section aria-label="İK ekranları" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 lg:gap-3">
             <Tile to="/ik/profilim" icon={UserRound} label="Profilim" hint="Özlük bilgilerim ve belgelerim" tone="bg-sky-100 text-sky-700" />
+            <Tile to="/ik/izin" icon={CalendarCheck2} label="İzinlerim" hint={h.leave.available !== null ? `Kullanılabilir ${String(h.leave.available).replace('.', ',')} gün · izin iste` : 'Bakiye ve izin talebi'} tone="bg-lime-100 text-lime-700" />
+            {h.leave.teamWaiting > 0 && <Tile to="/ik/izin/ekip" icon={UsersRound} label="Ekibimin izinleri" hint="Onayınızı bekleyen talepler ve ekip takvimi" tone="bg-violet-100 text-canvas-violet" badge={h.leave.teamWaiting} />}
             <Tile to="/ik/rehber" icon={BookUser} label="Personel rehberi" hint="Departman, unvan, e-posta, dahili" tone="bg-amber-100 text-amber-700" />
             <Tile to="/ik/duyurular" icon={Megaphone} label="Şirket içi duyurular" hint="Etkinlik, işe giriş, genel duyuru" tone="bg-rose-100 text-rose-700" />
             <Tile to="/ik/dogum-gunleri" icon={Cake} label="Doğum günleri" hint="Bu ay ve önümüzdeki günler" tone="bg-pink-100 text-pink-700" badge={h.birthdays.filter((b) => b.inDays === 0).length || null} />
@@ -59,6 +61,7 @@ export default function HrHome() {
             {manages && <Tile to="/ik/yonetim" icon={Settings2} label="İK yönetimi" hint="Personel girişi, içerik, alanlar ve ayarlar" tone="bg-violet-100 text-canvas-violet" badge={h.stats?.pendingRequests || null} />}
           </section>
           <Today h={h} />
+          {h.leaveStats && <LeaveSummary s={h.leaveStats} />}
           {h.stats && <HrStats s={h.stats} />}
         </>
       )}
@@ -84,7 +87,24 @@ function Welcome({ h }: { h: Home }) {
 
 function Today({ h }: { h: Home }) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 lg:gap-4">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 lg:gap-4">
+      <Block title="Bugün izinde" help={h.onLeave.length ? `${h.onLeave.length} kişi` : undefined}>
+        {h.onLeave.length ? (
+          <ul className="flex flex-col gap-1.5">
+            {h.onLeave.slice(0, 8).map((p) => (
+              <li key={p.id} className="flex items-center gap-2.5">
+                <TreePalm aria-hidden className="h-4 w-4 shrink-0 text-lime-700" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-bold">{p.adSoyad}</div>
+                  <div className="truncate text-[11.5px] text-canvas-muted">{p.departman || '—'}</div>
+                </div>
+                <span className="shrink-0 text-[11.5px] text-canvas-muted">{dayMonth(Number(p.back.slice(8, 10)), Number(p.back.slice(5, 7)))} dönüyor</span>
+              </li>
+            ))}
+            {h.onLeave.length > 8 && <li className="text-[12px] text-canvas-muted">ve {h.onLeave.length - 8} kişi daha</li>}
+          </ul>
+        ) : <p className="text-[12.5px] text-canvas-muted">Bugün izinli kimse yok.</p>}
+      </Block>
       <Block title="Doğum günleri" help="Bugün ve önümüzdeki 7 gün." action={<Link to="/ik/dogum-gunleri" className="text-[12px] font-bold text-canvas-violet hover:underline">Bu ayın listesi</Link>}>
         {h.birthdays.length ? (
           <ul className="flex flex-col gap-2">
@@ -128,6 +148,19 @@ function Today({ h }: { h: Home }) {
         ) : <p className="text-[12.5px] text-canvas-muted">Bugün için menü girilmemiş.</p>}
       </Block>
     </div>
+  );
+}
+
+function LeaveSummary({ s }: { s: NonNullable<Home['leaveStats']> }) {
+  return (
+    <Block title="İzin özeti" help="Yalnız izin yönetimi yetkisi olanlara görünür." action={<Link to="/ik/yonetim?sekme=izinler" className="text-[12px] font-bold text-canvas-violet hover:underline">İzinler</Link>}>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Stat label="Bugün izinde" value={nf.format(s.onLeaveToday)} />
+        <Stat label="Onay bekleyen" value={nf.format(s.waiting)} />
+        <Stat label="Bakiyesi 30+ gün" value={nf.format(s.highBalance.length)} help={s.highBalance.slice(0, 3).map((x) => x.adSoyad).join(', ') || undefined} />
+        <Stat label="30 gün içinde hakediş" value={nf.format(s.accrualSoon.length)} help={s.accrualSoon.slice(0, 3).map((x) => x.adSoyad).join(', ') || undefined} />
+      </div>
+    </Block>
   );
 }
 

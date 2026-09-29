@@ -16,7 +16,7 @@ export type PersonField = {
   builtin: boolean; active: boolean; updatedBy: string | null; updatedAt: string | null;
 };
 
-export type PortalRights = { view: boolean; edit: boolean; sensitive: boolean; portal: boolean; fields: boolean };
+export type PortalRights = { view: boolean; edit: boolean; sensitive: boolean; portal: boolean; fields: boolean; leave: boolean; leaveSettings: boolean };
 
 export type PortalSettings = {
   docTypes: string[]; postCategories: string[]; docCategories: string[]; faqCategories: string[]; expiryDays: number;
@@ -34,6 +34,12 @@ export type PortalMeta = {
   fileMaxMb: number;
   fileAccept: string;
   imageAccept: string;
+  mail: { mode: string; modes: Record<string, string>; domains: string[]; linkSet: boolean; hrRecipients: number };
+};
+
+export type MailRow = {
+  id: number; event: string; refType: string | null; refId: string | null; recipient: string | null; subject: string; body: string;
+  state: string; stateLabel: string; tries: number; error: string | null; createdAt: string; sentAt: string | null;
 };
 
 export type Value = string | number | null | undefined;
@@ -64,6 +70,7 @@ export type HrDoc = { id: string; category: string; code: string | null; title: 
 export type DocRequest = {
   id: string; username: string; display: string | null; mail: string | null; docType: string; delivery: string; deliveryLabel: string;
   note: string | null; status: string; statusLabel: string; answer: string | null; createdAt: string; handledBy: string | null; handledAt: string | null;
+  files?: { id: string; filename: string; size: number }[];
 };
 
 export type Faq = { id: string; category: string; question: string; answer: string; sort: number; updatedBy: string | null; updatedAt: string | null };
@@ -95,11 +102,14 @@ export type Home = {
   menuToday: MenuDay | null;
   myOpenRequests: number;
   stats?: Stats;
+  onLeave: { id: string; adSoyad: string; departman: string | null; back: string }[];
+  leave: { available: number | null; teamWaiting: number };
+  leaveStats?: { onLeaveToday: number; waiting: number; highBalance: { id: string; adSoyad: string; balance: number }[]; accrualSoon: { id: string; adSoyad: string; date: string; days: number }[] };
 };
 
 export type Profile = { person: Person | null; fields: PersonField[]; groups: Record<string, string>; manager?: string | null };
 
-export type Directory = { items: { id: string; adSoyad: string; data: Record<string, Value>; hasPhoto: boolean }[]; fields: PersonField[]; total: number };
+export type Directory = { items: { id: string; adSoyad: string; data: Record<string, Value>; hasPhoto: boolean }[]; fields: PersonField[]; total: number; onLeave: Record<string, string> };
 
 export type ImportResult = {
   sheet: string; columns: string[]; ignoredColumns: string[];
@@ -148,6 +158,9 @@ export const portalApi = {
   createRequest: (body: { docType: string; delivery: string; mail?: string; note?: string }) => hrSend<DocRequest>('POST', `${B}/requests`, body),
   cancelRequest: (id: string) => hrSend<{ ok: boolean }>('DELETE', `${B}/requests/${enc(id)}`),
   faq: () => hrSend<{ items: Faq[] }>('GET', `${B}/faq`),
+  requestFile: (rid: string, f: { id: string; filename: string }) => hrDownload(`${B}/requests/${enc(rid)}/files/${enc(f.id)}`, f.filename),
+  mailPref: () => hrSend<{ off: boolean; mode: string }>('GET', `${B}/me/mail-pref`),
+  setMailPref: (off: boolean) => hrSend<{ off: boolean }>('PUT', `${B}/me/mail-pref`, { off }),
 
   // İK yönetimi
   people: (p: { q?: string; durum?: string; firma?: string; departman?: string; ofis_lokasyon?: string }) =>
@@ -181,6 +194,10 @@ export const portalApi = {
 
   adminRequests: (status = 'acik') => hrSend<{ items: DocRequest[]; total: number }>('GET', `${AD}/requests${qs({ status })}`),
   handleRequest: (id: string, body: { status: string; answer?: string }) => hrSend<DocRequest>('PATCH', `${AD}/requests/${enc(id)}`, body),
+  uploadRequestFile: (id: string, file: File) => sendFile<{ id: string; filename: string; size: number }>(`${AD}/requests/${enc(id)}/files`, file),
+  adminRequestFile: (id: string, f: { id: string; filename: string }) => hrDownload(`${AD}/requests/${enc(id)}/files/${enc(f.id)}`, f.filename),
+  deleteRequestFile: (id: string, fid: string) => hrSend<{ ok: boolean }>('DELETE', `${AD}/requests/${enc(id)}/files/${enc(fid)}`),
+  mail: (before?: number) => hrSend<{ items: MailRow[]; hasMore: boolean; waiting: number; failed24h: number }>('GET', `${AD}/mail${qs({ before })}`),
 
   saveMenu: (days: MenuDay[]) => hrSend<{ ok: boolean; days: number }>('PUT', `${AD}/menu`, { days }),
 

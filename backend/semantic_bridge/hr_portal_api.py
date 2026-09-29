@@ -21,6 +21,7 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import hr_core as H
 from semantic_bridge import hr_kaynak as HK
+from semantic_bridge import hr_mail as HM
 from semantic_bridge import hr_portal as PT
 
 log = logging.getLogger("semantic_bridge.hr.portal")
@@ -30,6 +31,7 @@ SUBJECT = "personel"
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 HK.TABLES.update(PT.TABLE_LABELS)
+HK.TABLES.update(HM.TABLE_LABELS)
 
 F_KADRO = "Aktif personel = durumu «Aktif» olan özlük kaydı; pasif = öbürleri (portal kaydı)."
 F_GIRIS = ("İşe giren = son işe giriş tarihi bu ayın (yılın) ilk gününden bugüne olan kayıt; ayrılan = işten çıkış "
@@ -67,6 +69,15 @@ def register(app, hr: Any) -> None:
     def max_mb() -> int:
         return int(hr.settings()["fileMaxMb"])
 
+    def mailcfg() -> dict[str, Any]:
+        return HM.settings(hr.conf)
+
+    def notify_hr(engine: Any, tenant: str, event: str, subject: str, body: str, ref_type: str, ref_id: str) -> None:
+        """İK dağıtım adreslerine (HR_ALERT_RECIPIENTS) iş e-postası; kişi tercihi uygulanmaz."""
+        cfg = mailcfg()
+        for addr in hr.settings()["alertRecipients"]:
+            HM.enqueue(engine, tenant, cfg, event=event, to=addr, subject=subject, body=body, ref_type=ref_type, ref_id=ref_id, required=True)
+
     async def body_bytes(request: Request) -> bytes:
         mb = max_mb()
         if int(request.headers.get("content-length") or 0) > mb * 1024 * 1024:
@@ -82,7 +93,9 @@ def register(app, hr: Any) -> None:
         return {"me": {"username": who.user, "display": who.display, "isAdmin": who.admin}, "rights": rg,
                 "settings": st, "groups": PT.GROUPS, "fieldTypes": PT.FIELD_TYPES, "requestStatus": PT.REQUEST_STATUS,
                 "delivery": PT.DELIVERY, "peopleStatus": list(PT.PEOPLE_STATUS), "fileMaxMb": max_mb(),
-                "fileAccept": PT.FILE_ACCEPT, "imageAccept": ",".join(PT.IMAGE_EXT)}
+                "fileAccept": PT.FILE_ACCEPT, "imageAccept": ",".join(PT.IMAGE_EXT),
+                "mail": {"mode": mailcfg()["mode"], "modes": HM.MODES, "domains": mailcfg()["domains"], "linkSet": bool(mailcfg()["link"]),
+                         "hrRecipients": len(hr.settings()["alertRecipients"])}}
 
     @app.get(P + "/home")
     def portal_home(request: Request) -> dict[str, Any]:
@@ -103,6 +116,15 @@ def register(app, hr: Any) -> None:
             "menuToday": next(iter(PT.menu(engine, tenant, today, today)), None),
             "myOpenRequests": sum(1 for r in mine if r["status"] in ("bekliyor", "hazirlaniyor")),
         }
+        from semantic_bridge import hr_leave as LV
+
+        LV.ensure(engine)
+        # Bugün izinde olanlar (tür yok) ve kişinin kullanılabilir yıllık izni; ekip onayı bekleyen sayısı.
+        out["onLeave"] = LV.on_leave_today(engine, tenant, today)
+        out["leave"] = {"available": LV.summary_for(engine, tenant, me, today)["available"] if me else None,
+                        "teamWaiting": LV.team_waiting(engine, tenant, me.id_no) if me else 0}
+        if rg["leave"]:
+            out["leaveStats"] = LV.stats(engine, tenant, today)
         if rg["view"]:
             with HK.capture(engine) as got:
                 s = PT.stats(engine, tenant, rg, today)
@@ -144,8 +166,13 @@ def register(app, hr: Any) -> None:
 
     @app.get(P + "/directory")
     def portal_directory(request: Request) -> dict[str, Any]:
+        from semantic_bridge import hr_leave as LV
+
         engine, tenant, _, _ = ready(request)
-        return PT.directory(engine, tenant)
+        out = PT.directory(engine, tenant)
+        LV.ensure(engine)
+        out["onLeave"] = {x["id"]: x["back"] for x in LV.on_leave_today(engine, tenant)}
+        return out
 
     @app.get(P + "/photo/{pid}")
     def portal_photo(pid: str, request: Request) -> Response:
@@ -209,6 +236,27 @@ def register(app, hr: Any) -> None:
         engine, tenant, who, _ = ready(request)
         out = call(PT.create_request, engine, tenant, who.user, who.display, body)
         hr.audit(engine, who.user, "create", "hr_doc_request", out["id"], "Evrak talebi", {"tip": out["docType"]})
+        notify_hr(engine, tenant, "evrak_yeni", f"Evrak talebi: {out['docType']}",
+                  f"{out['display'] or out['username']} «{out['docType']}» istedi ({out['deliveryLabel']}).\n\n"
+                  "Evrak talepleri: {link}/ik/yonetim?sekme=talepler", "evrak_talebi", out["id"])
+        return out
+
+    @app.get(P + "/requests/{rid}/files/{fid}")
+    def portal_request_file(rid: str, fid: str, request: Request) -> Response:
+        engine, tenant, who, _ = ready(request)
+        data, name, mime = call(PT.request_file, engine, tenant, rid, fid, user=who.user)
+        return _download(data, name, mime)
+
+    @app.get(P + "/me/mail-pref")
+    def portal_mail_pref(request: Request) -> dict[str, Any]:
+        engine, tenant, who, _ = ready(request)
+        return {"off": HM.pref_off(engine, tenant, who.user), "mode": mailcfg()["mode"]}
+
+    @app.put(P + "/me/mail-pref")
+    def portal_mail_pref_put(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, who, _ = ready(request)
+        out = HM.set_pref(engine, tenant, who.user, bool(body.get("off")))
+        hr.audit(engine, who.user, "update", "hr_mail_pref", who.user, "E-posta bildirim tercihi", {"kapali": out["off"]})
         return out
 
     @app.delete(P + "/requests/{rid}")
@@ -425,7 +473,54 @@ def register(app, hr: Any) -> None:
         engine, tenant, who, _ = admin(request, PT.F_PORTAL, what="Evrak talebini işleme")
         out = call(PT.handle_request, engine, tenant, who.user, rid, body)
         hr.audit(engine, who.user, "update", "hr_doc_request", rid, "Evrak talebi", {"durum": out["status"]})
+        person = PT.person_of(engine, tenant, out["username"])
+        to = out["mail"] or (person.mail_adresi if person else None)
+        note = f"\nİK notu: {out['answer']}" if out.get("answer") else ""
+        HM.enqueue(engine, tenant, mailcfg(), event="evrak_durum", to=to, username=out["username"],
+                   subject=f"Evrak talebiniz: {out['statusLabel']}",
+                   body=f"«{out['docType']}» talebinizin durumu: {out['statusLabel']}.{note}\n\nEvrak talebim: {{link}}/ik/evrak?sekme=talep",
+                   ref_type="evrak_talebi", ref_id=rid)
         return out
+
+    @app.post(A + "/requests/{rid}/files", status_code=201)
+    async def admin_request_file_add(rid: str, request: Request, filename: str = "") -> dict[str, Any]:
+        engine, tenant, who, _ = await run_in_threadpool(admin, request, PT.F_PORTAL, what="Hazır evrak ekleme")
+        data = await body_bytes(request)
+        out = await run_in_threadpool(call, PT.add_request_file, engine, tenant, who.user, rid, filename, data, max_mb())
+        hr.audit(engine, who.user, "upload", "hr_doc_request", rid, "Hazır evrak eklendi", {"boyut": out["size"]})
+        return out
+
+    @app.get(A + "/requests/{rid}/files/{fid}")
+    def admin_request_file(rid: str, fid: str, request: Request) -> Response:
+        engine, tenant, _, _ = admin(request, PT.F_PORTAL, what="Hazır evrak")
+        data, name, mime = call(PT.request_file, engine, tenant, rid, fid)
+        return _download(data, name, mime)
+
+    @app.delete(A + "/requests/{rid}/files/{fid}")
+    def admin_request_file_delete(rid: str, fid: str, request: Request) -> dict[str, Any]:
+        engine, tenant, who, _ = admin(request, PT.F_PORTAL, what="Hazır evrak silme")
+        call(PT.delete_request_file, engine, tenant, rid, fid)
+        hr.audit(engine, who.user, "delete", "hr_doc_request", rid, "Hazır evrak silindi")
+        return {"ok": True}
+
+    # ------------------------------------------------------------------ e-posta kuyruğu
+
+    @app.get(A + "/mail")
+    def admin_mail(request: Request, before: int = 0) -> dict[str, Any]:
+        from semantic_bridge import hr_leave as LV
+
+        engine, tenant, _, _ = admin(request, PT.F_PORTAL, LV.F_LEAVE, LV.F_LEAVE_SET, what="E-posta kuyruğu")
+        return {**HM.list_outbox(engine, tenant, before=before), "settings": {k: v for k, v in mailcfg().items()}, "modes": HM.MODES,
+                "states": HM.STATE}
+
+    @app.post("/api/v1/hr/mail/run-due")
+    def hr_mail_run_due(request: Request) -> dict[str, Any]:
+        """Zamanlayıcı (5 dk): kuyruktaki bekleyen e-postaları gönderir (`HR_MAIL_MODE=gonder` iken satır oluşur)."""
+        from semantic_bridge.budget_api import _send_mail
+
+        hr.require_caller(request)
+        engine, tenant = hr.system()
+        return {"mode": mailcfg()["mode"], **HM.run_outbox(engine, tenant, _send_mail)}
 
     @app.put(A + "/menu")
     def admin_menu(body: dict[str, Any], request: Request) -> dict[str, Any]:

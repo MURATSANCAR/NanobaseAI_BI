@@ -1,0 +1,10 @@
+[Unit]
+Description=İzin hakedişi ve onay hatırlatması; her gece 02:10
+
+[Timer]
+OnCalendar=*-*-* 02:10:00
+Persistent=true
+Unit=timas-hr-leave.service
+
+[Install]
+WantedBy=timers.target
