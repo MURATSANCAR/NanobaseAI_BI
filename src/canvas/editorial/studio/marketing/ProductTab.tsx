@@ -6,6 +6,7 @@ import { ago, press } from '../shared';
 import { marketingApi, type MarketingView, type ProductPage, type SeoCandidate } from './api';
 import { Approval, Generate, Lines, Section, copyText, field, ghostBtn, gradientBtn, label, tidy } from './parts';
 import { readableText } from '../../../components/readableName';
+import { useCan } from '../../../useAdmin';
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -25,6 +26,9 @@ function clean(p: ProductPage): ProductPage {
 
 export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: MarketingView; refresh: () => void }) {
   const pr = v.product;
+  // Düzeltme, onay ve SEO önerisi «Kitap tasarımında üretim ve düzenleme», dosya indirme «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const [page, setPage] = useState<ProductPage | null>(pr.page);
   useEffect(() => setPage(pr.page), [pr.page]);
   const [copied, setCopied] = useState('');
@@ -61,6 +65,7 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
       {err && <Note tone="err">{err}</Note>}
       {page && (
         <>
+          <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
           <Section title="Ürün sayfası" aside={<Approval approved={approvedNow ? pr.approved : null} />}>
             <div className="grid min-w-0 gap-3 md:grid-cols-2">
               <label className="flex min-w-0 flex-col gap-1">
@@ -113,8 +118,8 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
             </ul>
           </Section>
 
-          <Section title="Sıkça sorulan sorular" aside={
-            <button type="button" className={ghostBtn} onClick={() => set('faq', [...page.faq, { q: '', a: '' }])}><Plus className="h-4 w-4" aria-hidden />Soru ekle</button>}>
+          <Section title="Sıkça sorulan sorular" aside={canEdit ? (
+            <button type="button" className={ghostBtn} onClick={() => set('faq', [...page.faq, { q: '', a: '' }])}><Plus className="h-4 w-4" aria-hidden />Soru ekle</button>) : undefined}>
             <ul className="flex min-w-0 flex-col gap-2">
               {page.faq.map((f, i) => (
                 <li key={i} className="grid min-w-0 gap-1.5 rounded-xl border border-slate-200 bg-white/70 p-2 sm:grid-cols-[1fr_1.4fr_auto]">
@@ -122,36 +127,37 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
                     onChange={(e) => set('faq', page.faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} />
                   <input className={field} placeholder="Cevap" aria-label={`Cevap ${i + 1}`} value={f.a}
                     onChange={(e) => set('faq', page.faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} />
-                  <button type="button" className={ghostBtn} aria-label={`Soru ${i + 1} sil`} onClick={() => set('faq', page.faq.filter((_, j) => j !== i))}>
+                  {canEdit && <button type="button" className={ghostBtn} aria-label={`Soru ${i + 1} sil`} onClick={() => set('faq', page.faq.filter((_, j) => j !== i))}>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                  </button>
+                  </button>}
                 </li>
               ))}
             </ul>
           </Section>
+          </fieldset>
 
-          <div className="flex flex-wrap gap-2">
+          {canEdit && <div className="flex flex-wrap gap-2">
             <button type="button" className={ghostBtn} disabled={!dirty || busy} onClick={() => save.mutate()}><Save className="h-4 w-4" aria-hidden />Kaydet</button>
             <button type="button" disabled={busy || approvedNow} onClick={() => approve.mutate()}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 border-emerald-500 bg-white px-4 text-[13px] font-bold text-emerald-700 disabled:opacity-50 ${press}`}>
               <Check className="h-4 w-4" aria-hidden />{approvedNow ? 'Onaylandı' : 'Onayla'}
             </button>
-          </div>
+          </div>}
 
           {approvedNow && (
-            <Section title="Kopyala · indir">
+            <Section title={canExport ? 'Kopyala · indir' : 'Kopyala'}>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={ghostBtn} onClick={() => copy('html')}><Copy className="h-4 w-4" aria-hidden />{copied === 'html' ? 'Kopyalandı' : 'HTML kopyala'}</button>
                 <button type="button" className={ghostBtn} onClick={() => copy('text')}><Copy className="h-4 w-4" aria-hidden />{copied === 'text' ? 'Kopyalandı' : 'Metni kopyala'}</button>
-                {(['html', 'txt', 'json'] as const).map((f) => (
+                {canExport && (['html', 'txt', 'json'] as const).map((f) => (
                   <a key={f} className={ghostBtn} href={marketingApi.exportUrl(jobId, f)}><Download className="h-4 w-4" aria-hidden />{f.toUpperCase()}</a>
                 ))}
               </div>
-              {copied === 'hata' && <Note tone="warn">Kopyalanamadı; dosyayı indirin.</Note>}
+              {copied === 'hata' && <Note tone="warn">{canExport ? 'Kopyalanamadı; dosyayı indirin.' : 'Kopyalanamadı.'}</Note>}
             </Section>
           )}
 
-          {approvedNow && (
+          {approvedNow && canEdit && (
             <Section title="SEO önerisi" aside={
               <button type="button" className={ghostBtn} disabled={match.isPending} onClick={() => match.mutate()}>
                 <Search className="h-4 w-4" aria-hidden />{match.isPending ? 'Aranıyor…' : 'E-ticaret sitesinde ara'}

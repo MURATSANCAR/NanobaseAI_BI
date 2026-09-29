@@ -1375,8 +1375,8 @@
       "key": "ozellik:tasarim.uret",
       "area": "editoryal",
       "page": "sayfa:kitap-tasarim",
-      "label": "Kitap tasarımında üretim",
-      "hint": "Üretim başlatma, yeniden başlatma, görsel/figür/boyama/seslendirme üretme (GPU harcar)"
+      "label": "Kitap tasarımında üretim ve düzenleme",
+      "hint": "Üretim başlatma ve yeniden başlatma; görsel, figür, boyama, kolaj, seslendirme, efekt sesi, e-kitap ve pazarlama kiti üretme (GPU harcar); sayfa düzeni, künye, karakter kartı, ses ve efekt ayarları, telaffuz, ifade, pazarlama metinleri ve e-kitap bilgilerini düzenleme ve onaylama; ses kütüphanesine ses ve insan kaydı yükleme. Yoksa stüdyo yalnız görüntülenir"
     },
     {
       "key": "ozellik:kategori.oneri-uret",

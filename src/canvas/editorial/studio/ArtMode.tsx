@@ -5,6 +5,7 @@ import { studioApi, type StudioArtMode, type StudioJob } from '../../engine';
 import { Note, btnGhost, btnPrimary, errText } from '../../admin/ui';
 import { Modal } from './dialogs';
 import { press } from './shared';
+import { useCan } from '../../useAdmin';
 
 /** Başlangıçta resim seçimi (sözleşme «Başlangıçta resim seçimi»): otomatik (önerilen) / her sayfa / bölüm başları /
  *  resimsiz. Yeni iş formunda seçilir; iş sayfasında gerekçesiyle görünür ve onayla değiştirilir. */
@@ -50,6 +51,7 @@ const ILLUSTRATION_TR: Record<string, string> = { HER_SAYFA: 'her sayfa resimli'
 /** İş sayfasında: mevcut seçim, otomatikse kararın gerekçesi ve onaylı «Değiştir». */
 export function ArtModeCard({ job, d }: { job: string; d: StudioJob }) {
   const qc = useQueryClient();
+  const canEdit = useCan('tasarim.uret');   // resim kullanımını değiştirmek yerleşimi yeniden kurar
   const current: StudioArtMode = d.job.art_mode ?? 'auto';
   const [open, setOpen] = useState(false);
   const [next, setNext] = useState<StudioArtMode>(current);
@@ -68,8 +70,8 @@ export function ArtModeCard({ job, d }: { job: string; d: StudioJob }) {
           {current === 'auto' && why && <div className="text-canvas-muted">{why}</div>}
           {current !== 'auto' && <div className="text-canvas-muted">Elle seçildi; otomatik kararın yerine bu uygulanır.</div>}
         </div>
-        <button type="button" className={btnGhost} disabled={busy} onClick={() => { setNext(current); change.reset(); setOpen(true); }}
-          title={busy ? 'Süren iş bitince değiştirilebilir' : undefined}>Değiştir</button>
+        {canEdit && <button type="button" className={btnGhost} disabled={busy} onClick={() => { setNext(current); change.reset(); setOpen(true); }}
+          title={busy ? 'Süren iş bitince değiştirilebilir' : undefined}>Değiştir</button>}
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title="Resim kullanımını değiştir"
         description="Sayfa yerleşimi yeni seçime göre yeniden kurulur. Üretilmiş resimler silinmez, «kullanılmayan resimler»e düşer; sayfa düzeni varsa önceki hâli sürüm geçmişinde kalır.">

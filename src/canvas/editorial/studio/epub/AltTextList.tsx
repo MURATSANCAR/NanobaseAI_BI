@@ -4,6 +4,7 @@ import { Check, Loader2, Sparkles } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Img, ghostBtn, press } from '../shared';
 import { epubApi, useAlts, type AltItem, type AltSource } from './api';
+import { useCan } from '../../../useAdmin';
 
 /** Alt metinleri gözden geçir: her görselin küçüğü, hangi sayfada olduğu, metni ve nereden geldiği. Editörün yazdığı
  *  her zaman kazanır; «Yeniden öner» ZEKİ AI'dan yeni öneri alır. Varsayılan görünüm yalnız gözden geçirilmesi
@@ -27,6 +28,8 @@ function where(it: AltItem): string {
 
 function Row({ jobId, it }: { jobId: string; it: AltItem }) {
   const qc = useQueryClient();
+  // Alt metni yazmak ve öneri almak «Kitap tasarımında üretim ve düzenleme» ister; yoksa metin yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const [text, setText] = useState(it.text);
   useEffect(() => setText(it.text), [it.text]);
   const refresh = () => {
@@ -51,9 +54,9 @@ function Row({ jobId, it }: { jobId: string; it: AltItem }) {
           </span>
         </div>
         <textarea id={id} value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={1000}
-          placeholder="Görselde ne görünüyor? (1–2 cümle)"
+          placeholder="Görselde ne görünüyor? (1–2 cümle)" readOnly={!canEdit}
           className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[12.5px]" />
-        <div className="flex flex-wrap gap-1.5">
+        {canEdit && <div className="flex flex-wrap gap-1.5">
           <button type="button" className={ghostBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate(text)}>
             {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Check className="h-4 w-4" aria-hidden />}
             Kaydet
@@ -63,7 +66,7 @@ function Row({ jobId, it }: { jobId: string; it: AltItem }) {
             {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {suggest.isPending ? 'Öneriliyor…' : 'Yeniden öner'}
           </button>
-        </div>
+        </div>}
         {err && <Note tone="err">{err}</Note>}
       </div>
     </li>

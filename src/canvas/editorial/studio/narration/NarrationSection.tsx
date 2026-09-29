@@ -115,7 +115,8 @@ function Summary({ d }: { d: NarrationOverview }) {
 }
 
 function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refresh: () => void }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  // Seslendirme, insan kaydı ve ses/sözlük/ifade düzenleme «Kitap tasarımında üretim ve düzenleme» ister; rolde yoksa
+  // düğmeler çıkmaz, sesler dinlenir.
   const canProduce = useCan('tasarim.uret');
   const job = d.job;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
@@ -407,6 +408,8 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
   const clean = Object.fromEntries(Object.entries(chars).filter(([, v]) => v));
   const dirty = JSON.stringify([narrator, clean]) !== JSON.stringify([d.settings.narrator, Object.fromEntries(Object.entries(d.settings.characters ?? {}).filter(([, v]) => v))]);
   const save = useMutation({ mutationFn: () => narrationApi.saveSettings(jobId, { narrator, characters: clean }), onSuccess: onSaved });
+  // Ses seçimi ve örnek dinleme (GPU) «Kitap tasarımında üretim ve düzenleme» ister; yoksa seçimler yalnız görünür.
+  const canEdit = useCan('tasarim.uret');
 
   // Kütüphanedeki «dinle»: her ses aynı kısa cümleyi okur (sunucu ses başına bir kez üretir).
   const listen = (voice: string, key: string) => onPlay(SAMPLE, voice, key);
@@ -414,10 +417,11 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
   return (
     <div className="flex flex-col gap-2.5">
       <h3 className="text-[13px] font-extrabold">Sesler</h3>
+      <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-2.5 border-0 p-0">
       <div className="flex flex-col gap-1">
         <label htmlFor="narration-narrator" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Anlatıcı</label>
         <VoicePicker id="narration-narrator" label="Anlatıcı" value={narrator} voices={d.voices} groups={d.groups}
-          onChange={setNarrator} onPlay={listen} playing={playing} canPlay={d.available} />
+          onChange={setNarrator} onPlay={listen} playing={playing} canPlay={d.available && canEdit} />
       </div>
       {d.speakers.length > 0 && (
         <div className="flex flex-col gap-1.5">
@@ -427,21 +431,22 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
               <label htmlFor={`narration-char-${i}`} className="flex min-h-10 items-center truncate text-[12.5px] font-bold" title={name}>{name}</label>
               <VoicePicker id={`narration-char-${i}`} label={`${name} sesi`} value={chars[name] ?? ''} voices={d.voices} groups={d.groups}
                 allowNarrator onChange={(v) => setChars((c) => ({ ...c, [name]: v }))}
-                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available} />
+                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available && canEdit} />
             </div>
           ))}
           {d.settings.source === 'auto' && Object.keys(d.settings.characters ?? {}).length > 0 && (
-            <p className="text-[11px] text-canvas-muted">Karakter sesleri tariflerine göre önerildi; değiştirebilirsiniz.</p>
+            <p className="text-[11px] text-canvas-muted">Karakter sesleri tariflerine göre önerildi{canEdit ? '; değiştirebilirsiniz' : ''}.</p>
           )}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      </fieldset>
+      {canEdit && <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sesleri kaydet' : 'Kaydedildi'}
         </button>
         {dirty && <span className="text-[11px] text-canvas-muted">Ses değişen sayfalar yeniden seslendirilir.</span>}
-      </div>
+      </div>}
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
       <VoiceUpload onChanged={onSaved} />
     </div>

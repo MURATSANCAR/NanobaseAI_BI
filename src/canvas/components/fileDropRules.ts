@@ -96,7 +96,7 @@ export const UPLOAD_FEATURES: Record<string, string> = {
   'sozlesme.sablon': 'Sözleşme şablonları',
   'sozlesme-karsilastirma.belge': 'Karşılaştırma belgesi',
   'serbest.yonet': 'Serbest çalışan kaydı ve iş dağıtımı',
-  'tasarim.uret': 'Kitap tasarımında üretim',
+  'tasarim.uret': 'Kitap tasarımında üretim ve düzenleme',
   'ihale.belge': 'Şirket belge arşivi',
   'ihale.duzenle': 'İhale kaydı ve teklif hazırlığı',
   'pazar.rapor-yukle': 'Sektör raporu yükleme',

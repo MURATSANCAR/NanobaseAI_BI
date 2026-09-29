@@ -6,6 +6,7 @@ import { Note, errText } from '../../../admin/ui';
 import { Img, ago, press } from '../shared';
 import { marketingApi, type MarketingView } from './api';
 import { Approval, Generate, Section, field, ghostBtn, gradientBtn, label } from './parts';
+import { useCan } from '../../../useAdmin';
 
 const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
@@ -26,6 +27,8 @@ function FillBar({ fill, fits }: { fill?: number; fits?: boolean }) {
 
 export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: MarketingView; refresh: () => void }) {
   const bc = v.back_cover;
+  // Kaydetme, onay ve kapağa uygulama «Kitap tasarımında üretim ve düzenleme» ister; yoksa metin yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const server = bc.draft?.text ?? '';
   const [text, setText] = useState(server);
   useEffect(() => setText(server), [server]);
@@ -64,7 +67,7 @@ export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: 
                   </div>
                   <FillBar fill={o.fill} fits={o.fits} />
                   <p className="line-clamp-6 whitespace-pre-line break-words text-[12.5px] leading-snug">{o.text}</p>
-                  <button type="button" className={`${ghostBtn} mt-auto`} onClick={() => setText(o.text)}>Bunu düzenle</button>
+                  {canEdit && <button type="button" className={`${ghostBtn} mt-auto`} onClick={() => setText(o.text)}>Bunu düzenle</button>}
                 </li>
               ))}
             </ul>
@@ -75,14 +78,14 @@ export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: 
           <Section title="Arka kapak yazısı" aside={<Approval approved={approvedNow ? bc.approved : null} />}>
             <label className="flex flex-col gap-1">
               <span className={label}>Metin · paragrafları boş satırla ayırın</span>
-              <textarea className={field} rows={9} value={text} onChange={(e) => setText(e.target.value)} maxLength={20000} />
+              <textarea className={field} rows={9} value={text} onChange={(e) => setText(e.target.value)} maxLength={20000} readOnly={!canEdit} />
             </label>
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-canvas-muted">
               <span>{words(text)} kelime{bc.capacity ? ` / ~${bc.capacity.words}` : ''}</span>
               {!dirty && bc.draft?.fill != null ? <div className="w-full sm:w-64"><FillBar fill={bc.draft.fill} fits={bc.draft.fits} /></div>
                 : dirty ? <span>Kaydedince alana göre ölçülür</span> : null}
             </div>
-            <div className="flex flex-wrap gap-2">
+            {canEdit && <div className="flex flex-wrap gap-2">
               <button type="button" className={ghostBtn} disabled={!dirty || busy || !text.trim()} onClick={() => save.mutate()}>
                 <Save className="h-4 w-4" aria-hidden />Taslağı kaydet
               </button>
@@ -99,7 +102,7 @@ export default function BackCoverTab({ jobId, v, refresh }: { jobId: string; v: 
                   <RotateCcw className="h-4 w-4" aria-hidden />Kayıtlı tanıtım metnine dön
                 </button>
               )}
-            </div>
+            </div>}
             {bc.approved && !bc.approved.fits && approvedNow && (
               <Note tone="warn">Onaylı yazı arka kapak alanını aşıyor; kapağa uygulanırsa barkod ya da yaş rozetiyle çakışabilir. Kısaltmanız önerilir.</Note>
             )}

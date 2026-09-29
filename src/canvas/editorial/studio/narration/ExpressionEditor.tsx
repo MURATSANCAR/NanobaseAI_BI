@@ -8,6 +8,7 @@ import {
   expressionApi, useExpression,
   type ExpressionItem, type ExpressionLabel, type ExpressionSentence, type ExpressionView,
 } from './expressionApi';
+import { useCan } from '../../../useAdmin';
 
 /** Sesli okumada ifade: sayfanın metni cümle cümle; her cümlenin yanında ifade etiketi (nötr, heyecan, merak, korku,
  *  neşe, fısıltı, üzüntü, öfke, şaşkınlık) ve vurgulanacak kelime. ZEKİ AI önerir, editör cümle cümle değiştirir;
@@ -40,6 +41,9 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
   onRegen?: (pid: string) => void;
 }) {
   const qc = useQueryClient();
+  // İfadeyi değiştirmek, ZEKİ AI önerisi ve cümle dinleme (GPU) «Kitap tasarımında üretim ve düzenleme» ister;
+  // yoksa cümleler etiketleriyle yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const q = useExpression(jobId, pid);
   const d = q.data;
   const [open, setOpen] = useState<string | null>(null);
@@ -68,14 +72,14 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
         <div className="min-w-0 flex-1">
           <h3 id={`ifade-${pid}`} className="text-[13px] font-extrabold">İfade</h3>
           <p className="text-[11.5px] leading-snug text-canvas-muted">
-            Her cümlenin tonu ve vurgusu. ZEKİ AI önerir; cümleye dokunup değiştirebilirsiniz.
+            Her cümlenin tonu ve vurgusu. ZEKİ AI önerir{canEdit ? '; cümleye dokunup değiştirebilirsiniz' : ''}.
           </p>
         </div>
-        <button type="button" className={ghostBtn} disabled={suggest.isPending || !d} onClick={() => suggest.mutate()}
+        {canEdit && <button type="button" className={ghostBtn} disabled={suggest.isPending || !d} onClick={() => suggest.mutate()}
           title="ZEKİ AI sayfayı okuyup cümleleri işaretler; sizin değiştirdiğiniz cümlelere dokunmaz">
           {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
           {suggest.isPending ? 'ZEKİ AI okuyor…' : d?.suggested ? 'Yeniden öner' : 'ZEKİ AI önerisi'}
-        </button>
+        </button>}
       </div>
 
       {err ? <Note tone="err">{errText(err, "İşlem yapılamadı.")}</Note> : null}
@@ -96,7 +100,7 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
             : (
               <ol className="flex flex-col gap-1.5">
                 {d.sentences.map((s) => (
-                  <Sentence key={s.key} s={s} labels={d.labels} open={open === s.key}
+                  <Sentence key={s.key} s={s} labels={d.labels} open={canEdit && open === s.key} readOnly={!canEdit}
                     onToggle={() => setOpen((o) => (o === s.key ? null : s.key))}
                     onChange={(patch) => change(s, patch)} saving={save.isPending && save.variables?.key === s.key}
                     canVoice={canVoice} playing={player.playing === s.key} loading={player.loading === s.key}
@@ -114,8 +118,10 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
   );
 }
 
-function Sentence({ s, labels, open, onToggle, onChange, saving, canVoice, playing, loading, onListen }: {
+function Sentence({ s, labels, open, readOnly, onToggle, onChange, saving, canVoice, playing, loading, onListen }: {
   s: ExpressionSentence;
+  /** Rolde düzenleme yoksa satır açılmaz (etiket, vurgu ve dinle düğmeleri çıkmaz). */
+  readOnly?: boolean;
   labels: ExpressionView['labels'];
   open: boolean;
   onToggle: () => void;
@@ -135,8 +141,9 @@ function Sentence({ s, labels, open, onToggle, onChange, saving, canVoice, playi
 
   return (
     <li className={`rounded-xl border ${open ? 'border-canvas-violet/40 bg-violet-50/30' : 'border-transparent'}`}>
-      <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={panel}
-        className={`flex min-h-10 w-full items-start gap-2 rounded-xl px-2 py-1.5 text-left ${press}`}>
+      <button type="button" onClick={readOnly ? undefined : onToggle} aria-expanded={readOnly ? undefined : open}
+        aria-controls={readOnly ? undefined : panel} disabled={readOnly}
+        className={`flex min-h-10 w-full items-start gap-2 rounded-xl px-2 py-1.5 text-left disabled:cursor-default ${readOnly ? '' : press}`}>
         <span className={`mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${tone.chip}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden />{name}
         </span>
@@ -153,7 +160,7 @@ function Sentence({ s, labels, open, onToggle, onChange, saving, canVoice, playi
               {s.source === 'editor' ? 'Editör' : 'ZEKİ AI'}
             </span>
           )}
-          <ChevronDown className={`h-4 w-4 text-canvas-muted ${open ? 'rotate-180' : ''}`} aria-hidden />
+          {!readOnly && <ChevronDown className={`h-4 w-4 text-canvas-muted ${open ? 'rotate-180' : ''}`} aria-hidden />}
         </span>
       </button>
 

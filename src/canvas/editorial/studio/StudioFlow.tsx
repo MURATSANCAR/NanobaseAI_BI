@@ -74,6 +74,7 @@ export default function StudioFlow() {
   const q = useStudioJob(jobId);
   // Yeniden başlatma ve kaldığı yerden sürdürme GPU harcar: «Kitap tasarımında üretim».
   const canProduce = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const restart = useMutation({ mutationFn: () => studioApi.restart(jobId), onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
   const qc = useQueryClient();
   const resume = useMutation({ mutationFn: () => studioApi.resume(jobId), onSuccess: () => qc.invalidateQueries({ queryKey: ['studio', 'job', jobId] }) });
@@ -230,9 +231,9 @@ export default function StudioFlow() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {d.files.ic && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}>İç sayfaları indir (PDF)</a>}
-                {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}>Kapağı indir (PDF)</a>}
-                {d.files['baski-ic'] && (
+                {canExport && d.files.ic && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}>İç sayfaları indir (PDF)</a>}
+                {canExport && d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}>Kapağı indir (PDF)</a>}
+                {canExport && d.files['baski-ic'] && (
                   <span className="inline-flex items-center gap-1">
                     <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')}>Baskı PDF'ini indir</a>
                     <Explain label="Baskı PDF'i">Matbaaya gönderilecek dosya: renkler baskı mürekkebine (CMYK) çevrilmiş, kesim payı ve kesim işaretleri eklenmiştir. Ekranda göz atmak için «İç sayfalar» dosyası yeterlidir.</Explain>
