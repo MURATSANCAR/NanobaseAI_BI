@@ -37,10 +37,14 @@ def is_admin(u: str) -> bool:
 
 def test_hr_pages_are_explicit_and_everyone_does_not_see_them():
     ik_pages = {p["key"] for p in A.catalog()["pages"] if p["area"] == "ik"}
-    # M56–M58 kendi sayfalarını ekler; İK-0/M55 sayfaları her zaman var ve hepsi açıkça verilir.
     # M56–M58 kendi İK sayfalarını ekler; İK-0 ve M55 sayfaları hep var, hepsi açıkça verilir.
     assert ik_pages >= {"sayfa:ik-ise-alim", "sayfa:ik-pozisyonlar", "sayfa:ik-belgeler", "sayfa:ik-kayitlar"}
-    assert ik_pages <= A.explicit_keys()
+    # Personel portalı (2026-09-29, kullanıcı kararı: eski personel portalının karşılığı) ve M60 izin: çalışanın kendi
+    # sayfaları Herkes'e açıktır; uçlar kişinin kendi / ekibinin verisini döner. Öteki bütün İK sayfaları açıkça verilir.
+    herkese = {"sayfa:ik-anasayfa", "sayfa:ik-profilim", "sayfa:ik-rehber", "sayfa:ik-duyurular", "sayfa:ik-evrak",
+               "sayfa:ik-sss", "sayfa:ik-izin", "sayfa:ik-izin-ekip"}
+    assert ik_pages - herkese <= A.explicit_keys()
+    assert "sayfa:ik-yonetim" in A.explicit_keys()
     ik_features = {f["key"] for f in A.catalog()["features"] if f["area"] == "ik"}
     assert ik_features <= A.explicit_keys()
     assert A.sensitive_keys() >= {"ozellik:ik.aday-hepsi", "ozellik:ik.kvkk-yonet", "ozellik:ik.erisim-kaydi",
