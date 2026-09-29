@@ -2,6 +2,8 @@
 
 ## 2026-09-29 — Şirket içi sohbet kullanım sınırları kaldırılıyor
 
+- İlk canlı turda 51 oturum, 44.806 karakter mesaj/taslak ve 191.866.880 bayt gerçek kaynak arşivi yükleme/indirme geçti. Tarayıcıdaki 25 yöntem çağrısı ayrı HTTP–DDP köprüsünün 10 isteklik sınırını yakaladı: soket oturumu yerine sunucunun doğruladığı userId kullanıldı; sınırsız çağrıda sayaç artırma da atlanır. Geçici 8 mesaj, 1 dosya, 1 oda, 1 portal oturumu ve 52 chat jetonu temizlendi (kalan 0). Yeni sürüm tekrar doğrulanacak.
+
 - Kullanıcı isteği: lisans uçları ve kullanıcı/mesaj/dosya/jeton kotaları olmasın. Eski lisans route kaydı yok; 404 genel bulunamadı yanıtı.
 - Mesaj 5.000 karakter, dosya 100 MB, grup DM 8 kişi sınırları sınırsız (-1); REST/DDP/istemci/diğer mesaj tüketicileri düzeltildi. Yerel doğrulanmış kullanıcı istek kotası ve 50 jeton budaması kaldırıldı; erişim ve giriş güvenliği korunur. Saklama politikası kapalı.
 - Yerel test yapılmadı. Yeni sürümün sunucu derlemesi ve gerçek API/DB/tarayıcı kabulü henüz **DOĞRULANAMADI**.

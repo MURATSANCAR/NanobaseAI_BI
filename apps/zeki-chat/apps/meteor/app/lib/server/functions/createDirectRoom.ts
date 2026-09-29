@@ -47,7 +47,7 @@ export async function createDirectRoom(
 		subscriptionExtra?: ISubscriptionExtraData;
 	},
 ): Promise<ICreatedRoom> {
-	const maxUsers = settings.get<number>('DirectMesssage_maxUsers') || 1;
+	const maxUsers = settings.get<number>('DirectMesssage_maxUsers') ?? -1;
 	if (maxUsers > 0 && members.length > maxUsers) {
 		throw new Meteor.Error(
 			'error-direct-message-max-user-exceeded',

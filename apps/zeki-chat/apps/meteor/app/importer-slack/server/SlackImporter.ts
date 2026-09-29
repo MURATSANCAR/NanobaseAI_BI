@@ -188,7 +188,7 @@ export class SlackImporter extends Importer {
 
 		await this.addCountToTotal(data.length);
 
-		const maxUsers = settings.get<number>('DirectMesssage_maxUsers') || 1;
+		const maxUsers = settings.get<number>('DirectMesssage_maxUsers') ?? -1;
 
 		for (const channel of data) {
 			await this.converter.addChannel({

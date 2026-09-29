@@ -38,8 +38,15 @@ DDPRateLimiter.addRule = (matcher, calls, time, callback) => {
 	return addRule.call(DDPRateLimiter, matcher, calls, time, callback);
 };
 
+// Both DDP and the authenticated HTTP method bridge provide a server-validated userId.
+// The HTTP bridge uses a token-derived connectionId, which is not a Meteor socket session.
+const isUnmeteredLocalRequest = (input) => process.env.ZEKI_LOCAL_ONLY === 'true' && Boolean(input.userId) && input.name !== 'login';
+
 const { _increment } = DDPRateLimiter;
 DDPRateLimiter._increment = function (input) {
+	if (isUnmeteredLocalRequest(input)) {
+		return;
+	}
 	const session = Meteor.server.sessions.get(input.connectionId);
 	input.broadcastAuth = (session && session.connectionHandle && session.connectionHandle.broadcastAuth) === true;
 
@@ -62,7 +69,7 @@ RateLimiter.prototype.check = function (input) {
 	};
 
 	// A validated local session has no messaging request quota. Login attempts still use the normal rules.
-	if (process.env.ZEKI_LOCAL_ONLY === 'true' && session?.userId && input.name !== 'login') {
+	if (isUnmeteredLocalRequest(input)) {
 		return reply;
 	}
 
