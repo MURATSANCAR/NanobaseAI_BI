@@ -17,7 +17,7 @@ from semantic_bridge import contracts_compare_docs as CD
 from semantic_bridge import provenance as P
 
 COLS = (["id", "no", "ana", "statuscode", "bas", "bit", "kitap", "yazar"] + list(CC.DIMS.values()) + [c.key for c in CC.CLAUSES]
-        + list(CC.META_COLS))
+        + list(CC.META_COLS) + list(CC.EVENT_COLS))
 
 
 def gid(n: int) -> str:
@@ -36,8 +36,8 @@ def row(n: int, *, ana: int | None = None, year: int = 2024, tip: int = 5, odeme
     return [base.get(c) for c in COLS]
 
 
-def data(rows: list[list], parties: dict | None = None) -> dict:
-    return {"builtAt": "2026-09-29T00:00:00+00:00", "queries": {"portfoy": {"sql": "SELECT 1 FROM Timas_MSCRM.dbo.new_sozlesmeBase", "rows": len(rows), "ms": 5, "at": "2026-09-29T00:00:00+00:00"}},
+def data(rows: list[list], parties: dict | None = None, books: dict | None = None) -> dict:
+    return {"books": books or {}, "bookOptions": {"1": "Yetişkin", "3": "Çocuk"}, "builtAt": "2026-09-29T00:00:00+00:00", "queries": {"portfoy": {"sql": "SELECT 1 FROM Timas_MSCRM.dbo.new_sozlesmeBase", "rows": len(rows), "ms": 5, "at": "2026-09-29T00:00:00+00:00"}},
             "columns": COLS, "rows": rows, "parties": parties or {},
             "labels": {"new_telif": "Karton K Telif %", "new_avanstutariyuzde": "avanstutarıyuzde"},
             "options": {"new_teliftipi": {"2": "Satıştan Ödeme", "3": "Tek Ödeme"}, "new_sozlesmetipi": {"5": "Telif Alış"},
@@ -397,3 +397,45 @@ def test_draft_terms_are_checked_without_saving():
     assert clause(out, "new_Telif")["status"] == "yuksek"
     fails = {x["id"] for x in out["sekil"] if not x["ok"]}
     assert {"hak", "sure", "kitap"} <= fails
+
+
+# ------------------------------------------------------------------ Faz 2: ticari ölçütler, satış dilimi, olaylar
+
+
+def test_extra_dims_narrow_peers_and_relax_first():
+    books = {gid(i): [[f"K{i}", 3 if i <= 25 else 1, "Masal" if i <= 25 else "Roman", "Türkçe"]] for i in range(1, 41)}
+    books[gid(99)] = [["K99", 3, "Masal,Öykü", "İngilizce"]]
+    parties = {gid(i): [[f"p{i}", f"Y{i}", 1 if i <= 22 else 0]] for i in range(1, 41)}
+    parties[gid(99)] = [["p99", "Ajans", 1]]
+    port = portfolio([row(99)], parties=parties, books=books)
+    e = port.entry_of[gid(99)]
+    assert e.dims["hedef"] == 3 and e.dims["tur"] == "Masal" and e.dims["dil"] == "ceviri" and e.dims["ajans"] == 1
+    cfg = CC.Cfg(min_peers=20, rare=0.05, years=5, dims=("ajans", "hedef"))
+    crit = CC.compare(port, subj(port, 99), cfg)["criteria"]
+    assert crit["emsal"] == 22 and [b["id"] for b in crit["boyutlar"]][-2:] == ["ajans", "hedef"]
+    cfg2 = CC.Cfg(min_peers=20, rare=0.05, years=5, dims=("ajans", "dil"))       # yerli emsal yok → önce dil gevşer
+    crit2 = CC.compare(port, subj(port, 99), cfg2)["criteria"]
+    assert crit2["gevsetilen"][0] == "Yerli / çeviri" and crit2["emsal"] == 22
+
+
+def test_sales_tiers_from_last_36_months():
+    part = {"data": {"dataEnd": "2026-06-30", "years": {
+        "2026": {"rows": {"K1": [[6, 0, 100, 0], [6, 1, -10, 0]], "K2": [[1, 0, 5, 0]]}},
+        "2023": {"rows": {"K1": [[6, 0, 999, 0]], "K3": [[7, 0, 50, 0]]}}}}}
+    got = CC.sales_last_months(part)
+    assert got == {"K1": 90.0, "K2": 5.0, "K3": 50.0}                         # 2023-06 36 ayın dışında, 2023-07 içinde
+    assert CC.sales_last_months({"data": {}}) is None
+    books = {gid(i): [[f"K{i}", 1, None, None]] for i in range(1, 11)}
+    parties = {gid(i): [[f"p{i}", f"Y{i}", 0]] for i in range(1, 11)}
+    port = CC.Portfolio(data([row(i) for i in range(1, 11)], parties=parties, books=books), RATES,
+                        {f"K{i}": float(i * 10) for i in range(1, 10)})
+    tiers = {i: port.entry_of[gid(i)].dims["satis"] for i in range(1, 11)}
+    assert tiers[9] == "ust" and tiers[1] == "alt" and tiers[10] == "yok" and tiers[5] == "orta"
+
+
+def test_timeline_lists_events_of_all_copies():
+    r1 = row(100, ana=100, new_ekprotokoltarihi="2025-03-01T00:00:00", new_fesihtarihi="2026-01-10T00:00:00")
+    r2 = row(101, ana=100, new_Telif=12)
+    port = portfolio([r1, r2])
+    ev = CC.timeline(port, subj(port, 101))
+    assert [x["olay"] for x in ev] == ["Başlangıç", "Ek protokol", "Fesih"]

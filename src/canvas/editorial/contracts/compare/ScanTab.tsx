@@ -8,6 +8,7 @@ import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../../kit';
 import { errMsg } from '../ui';
 import { compareApi, type Meta, type ScanItem, type ScanQuery } from './api';
 import { periodOptions, statusTone } from './compare';
+import DimPicker from './DimPicker';
 
 type Only = NonNullable<ScanQuery['only']>;
 
@@ -108,6 +109,9 @@ export default function ScanTab({ meta, onOpen }: { meta: Meta; onOpen: (id: str
             <input type="checkbox" className="h-4 w-4 accent-canvas-violet" checked={!!f.acik} onChange={(e) => set({ acik: e.target.checked })} />
             Yalnız incelenmemiş bulgusu olanlar
           </label>
+        </div>
+        <div className="mt-2">
+          <DimPicker meta={meta} value={(f.olcut ?? meta.varsayilanOlcut.join(',')).split(',').filter(Boolean)} onChange={(v) => set({ olcut: v })} />
         </div>
         {meta.can.export && (
           <div className="mt-2 flex flex-wrap justify-end gap-1.5">

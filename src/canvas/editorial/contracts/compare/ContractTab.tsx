@@ -10,6 +10,7 @@ import { compareApi, type ClauseRow, type Detail, type FormalCheck, type Meta, t
 import { band, pct, periodOptions, statusTone, textTone, visibleClauses } from './compare';
 import { TONE } from './ScanTab';
 import { ReviewButton } from './Review';
+import DimPicker from './DimPicker';
 
 /**
  * Tek sözleşme: kıyas grubu (hangi ölçütle, kaç emsal, neyi gevşettik), madde madde değer ↔ emsal dağılımı ve
@@ -17,10 +18,11 @@ import { ReviewButton } from './Review';
  */
 export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta; contractKey: string; onPick: (id: string) => void }) {
   const [years, setYears] = useState<number | undefined>(undefined);
+  const [dims, setDims] = useState<string | undefined>(undefined);
   const [onlyDiff, setOnlyDiff] = useState(true);
   const q = useQuery({
-    queryKey: ['contracts', 'compare', 'contract', meta.gorunum.okunduAn, contractKey, years],
-    queryFn: () => compareApi.contract(contractKey, years),
+    queryKey: ['contracts', 'compare', 'contract', meta.gorunum.okunduAn, contractKey, years, dims],
+    queryFn: () => compareApi.contract(contractKey, years, dims),
     enabled: !!contractKey,
     placeholderData: keepPreviousData,
   });
@@ -39,7 +41,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
       {contractKey && q.isLoading && <Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Emsaller okunuyor…</p></Panel>}
       {d && (
         <div className={`flex flex-col gap-3 transition-opacity duration-150 ease-out lg:gap-4 ${q.isFetching ? 'opacity-70' : ''}`}>
-          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} />
+          <Head d={d} meta={meta} years={years ?? d.ayar.yil} onYears={setYears} dims={d.ayar.olcut} onDims={setDims} />
           {d.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
           <KpiRow>
             <Kpi label="Farklı madde" value={nf.format(d.sayim.sapan)} help="Emsalden yüksek/düşük, nadir ya da eksik"
@@ -80,6 +82,7 @@ export default function ContractTab({ meta, contractKey, onPick }: { meta: Meta;
           {d.sekil.length > 0 && <Formal d={d} />}
           {d.texts.length > 0 && <Texts d={d} />}
           <History d={d} />
+          {d.olaylar.length > 0 && <Events d={d} />}
           <Peers d={d} />
         </div>
       )}
@@ -144,7 +147,14 @@ function Picker({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
-function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: number; onYears: (y: number) => void }) {
+function Head({ d, meta, years, onYears, dims, onDims }: {
+  d: Detail;
+  meta: Meta;
+  years: number;
+  onYears: (y: number) => void;
+  dims: string[];
+  onDims: (v: string) => void;
+}) {
   const s = d.subject;
   const c = d.criteria;
   const link = s.kaynak === 'crm' || s.kaynak === 'portal' ? `/telif-sozlesme/${s.key}` : null;
@@ -161,6 +171,13 @@ function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: numbe
           <p className="mt-0.5 text-[12px] text-canvas-muted">
             {[s.yazar, s.tip, s.odeme, s.para, s.bolum, s.bas ? `${day(s.bas)}${s.bit ? ` – ${day(s.bit)}` : ''}` : s.yil].filter(Boolean).join(' · ')}
           </p>
+          {s.olcutler.some((x) => x.deger) && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {s.olcutler.filter((x) => x.deger).map((x) => (
+                <span key={x.id} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700" title={x.ad}>{x.deger}</span>
+              ))}
+            </div>
+          )}
           {s.kopyalar.length > 1 && (
             <p className="mt-1 text-[11.5px] text-canvas-muted">{`Aynı şartlı ${s.kopyalar.length} kitap kaydı: ${s.kopyalar.map((k) => k.no).join(', ')}`}</p>
           )}
@@ -200,6 +217,9 @@ function Head({ d, meta, years, onYears }: { d: Detail; meta: Meta; years: numbe
           )}
           {!c.yeterli && <p className="mt-1 text-[11.5px] font-semibold text-rose-700">Bütün ölçütler gevşetildiği hâlde emsal az; kararlar temkinli okunmalı.</p>}
           {c.kur && <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{c.kur}</p>}
+          <div className="mt-2 border-t border-slate-100 pt-2">
+            <DimPicker meta={meta} value={dims} onChange={onDims} />
+          </div>
         </div>
       </div>
     </Panel>
@@ -442,6 +462,27 @@ function History({ d }: { d: Detail }) {
           </tbody>
         </table>
       </div>
+    </Panel>
+  );
+}
+
+function Events({ d }: { d: Detail }) {
+  return (
+    <Panel>
+      <h2 className="text-[15px] font-extrabold">
+        <InfoLabel k={d.kaynaklar} alan="olaylar" label="Sözleşme olayları">Sözleşme olayları</InfoLabel>
+      </h2>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">Başlangıç, bitiş, ek protokol, muvafakatname, fesih, yenileme ve portal zeyilnameleri; anlaşmanın bütün kopyalarıyla.</p>
+      <ol className="mt-2 border-l-2 border-violet-100 pl-3">
+        {d.olaylar.map((x, i) => (
+          <li key={`${x.tarih}-${x.olay}-${i}`} className="relative py-1 text-[12.5px]">
+            <span className="absolute -left-[17px] top-2.5 h-2 w-2 rounded-full bg-canvas-violet" aria-hidden />
+            <span className="font-mono text-[12px] tabular-nums text-canvas-muted">{day(x.tarih)}</span>{' '}
+            <span className="font-semibold">{x.olay}</span>
+            {x.no && <span className="text-[11.5px] text-canvas-muted">{` · ${x.no}`}</span>}
+          </li>
+        ))}
+      </ol>
     </Panel>
   );
 }

@@ -34,6 +34,10 @@ export type Meta = {
   incelemeDurumlari: Record<ReviewStatus, string>;
   sekilDenetimleri: Record<string, { ad: string; dayanak: string }>;
   kur: { ay: number; okunan: number; okunuyor: boolean };
+  olcutler: Record<string, string>;
+  varsayilanOlcut: string[];
+  satisVar: boolean;
+  satisDilimleri: Record<string, string>;
   can: { upload: boolean; review: boolean; export: boolean };
   kaynaklar?: Kaynaklar;
 };
@@ -80,6 +84,8 @@ export type ScanQuery = {
   yilE?: number;
   only?: 'sapan' | 'ozgun' | 'sekil' | 'hepsi-sapma' | 'hepsi';
   acik?: boolean;
+  /** Ek kıyas ölçütleri, virgülle («ajans,satis»); boş dize = hiçbiri, yok = Yönetim varsayılanı. */
+  olcut?: string;
   madde?: string;
   aktif?: boolean;
   enAz?: number;
@@ -160,7 +166,9 @@ export type Detail = {
     durum: string | null;
     kopyalar: Array<{ id: string; no: string }>;
     anlasma: Array<{ id: string; no: string }>;
+    olcutler: Array<{ id: string; ad: string; deger: string | null }>;
   };
+  olaylar: Array<{ tarih: string; olay: string; no: string | null }>;
   criteria: Criteria;
   groups: Array<{ id: string; label: string; clauses: ClauseRow[] }>;
   texts: TextRow[];
@@ -175,7 +183,7 @@ export type Detail = {
   };
   warnings: string[];
   gorunum: View;
-  ayar: { yil: number; emsal: number; esikYuzde: number };
+  ayar: { yil: number; emsal: number; esikYuzde: number; olcut: string[] };
   can: { review: boolean };
   kaynaklar?: Kaynaklar;
 };
@@ -234,15 +242,16 @@ export const compareApi = {
   meta: () => call<Meta>(`${B}/meta`, { timeout: 180_000 }),
   refresh: () => call<{ ok: boolean; yenileniyor: boolean }>(`${B}/refresh`, { method: 'POST', body: {} }),
   scan: (p: ScanQuery) =>
-    call<Scan>(`${B}/scan${qs({ ...p, aktif: p.aktif || undefined } as Record<string, string | number | boolean | undefined>)}`, { timeout: 180_000 }),
+    call<Scan>(`${B}/scan${qs({ ...p, aktif: p.aktif || undefined, olcut: p.olcut === '' ? '-' : p.olcut } as Record<string, string | number | boolean | undefined>)}`, { timeout: 180_000 }),
   search: (q: string, page = 0) => call<Found>(`${B}/search${qs({ q, page })}`),
   scanCsvUrl: (p: ScanQuery) =>
-    `${ENGINE_BASE}/api/v1/editorial/contracts${B}/scan.csv${qs({ ...p, page: undefined, aktif: p.aktif || undefined, acik: p.acik || undefined } as Record<string, string | number | boolean | undefined>)}`,
+    `${ENGINE_BASE}/api/v1/editorial/contracts${B}/scan.csv${qs({ ...p, page: undefined, aktif: p.aktif || undefined, acik: p.acik || undefined, olcut: p.olcut === '' ? '-' : p.olcut } as Record<string, string | number | boolean | undefined>)}`,
   terms: (terms: unknown) => call<Omit<Detail, 'peers'>>(`${B}/terms`, { method: 'POST', body: { terms }, timeout: 120_000 }),
   reviewSave: (b: { key: string; clause: string; status: ReviewStatus; note?: string; owner?: string }) =>
     call<Review>(`${B}/reviews`, { method: 'POST', body: b }),
   reviewDelete: (key: string, clause: string) => call<{ ok: boolean }>(`${B}/reviews${qs({ key, clause })}`, { method: 'DELETE' }),
-  contract: (key: string, yil?: number) => call<Detail>(`${B}/contract/${enc(key)}${qs({ yil })}`, { timeout: 180_000 }),
+  contract: (key: string, yil?: number, olcut?: string) =>
+    call<Detail>(`${B}/contract/${enc(key)}${qs({ yil, olcut: olcut === '' ? '-' : olcut })}`, { timeout: 180_000 }),
   documents: () => call<{ items: Doc[]; crmHata: string | null; can: { upload: boolean }; kaynaklar?: Kaynaklar }>(`${B}/documents`),
   read: (ref: string) => call<Doc | { ref: string; status: DocStatus }>(`${B}/documents/read`, { method: 'POST', body: { ref } }),
   readAll: () => call<{ ok: boolean; kuyruk: number | null; suruyor: boolean }>(`${B}/documents/read-all`, { method: 'POST', body: {} }),

@@ -72,6 +72,11 @@ F_SEKIL = ("Şekil denetimi kaydın şu şartları taşıyıp taşımadığını
 F_INCELEME = ("İnceleme portalda tutulur: durum (incelendi uygun, bilinçli istisna, CRM'de düzeltilmeli, hukuka sorulacak), not "
               "ve sorumlu. İnceleme işaretlendiği andaki değere aittir; CRM'de değer değişince «eski değere ait» olur ve bulgu "
               "yeniden açık sayılır. «Açık bulgu» = incelenmemiş, eski değere ait ya da durumu açık iş olan bulgu.")
+F_OLCUT = ("İsteğe bağlı ölçütler (ekrandan seçilir): ajans üzerinden = sözleşmenin bir tarafı aracı işaretli firma; hak "
+           "sahibinin satış dilimi = hak sahibinin bütün sözleşmelerindeki kitapların stok kodlarıyla Logo'da son 36 ayın net "
+           "satış adedi (satış − iade), satışı olan hak sahipleri arasında üst %20 / orta %40 / alt %40, satışı yoksa ayrı "
+           "dilim; hedef kitle = kitapların en sık hedef kitlesi; tür = türler metninin ilk türü; yerli/çeviri = kitabın "
+           "orijinal dili (Türkçe ve Osmanlı Türkçesi yerli). Emsal azsa önce bu ölçütler gevşer.")
 F_BELGE = ("Belge maddelere «Madde N», «N.», «N.N», «Article N» başlıklarından bölünür (numara yoksa paragraflar). İki belge "
            "madde sırası korunarak en yüksek toplam benzerlikle eşlenir; benzerlik kelime dizisi eşleşme oranıdır (şablon "
            "yer tutucusu sayılmaz). Eşik altı madde «yalnız bu belgede» ya da «yalnız karşılaştırılanda»; sırası tutmayan "
@@ -162,7 +167,7 @@ def kaynak_docs(stmt: Any, bind: Any, crm_sql: Optional[str], prefix: str) -> P.
 
 def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple], can: Callable[[str, str], bool],
              crm_prefix: Callable[[str], str], audit: Callable[..., None], conf: Callable[[str], Any]) -> None:
-    state: dict[str, Any] = {"reset": set(), "reading": set()}
+    state: dict[str, Any] = {"reset": set(), "reading": set(), "sales": (None, None)}
     lock = threading.Lock()
 
     def prefix() -> str:
@@ -187,8 +192,30 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                 log.warning("sözleşme karşılaştırma: %d yarıda kalan belge okuması hata olarak işaretlendi", n)
         return engine, tenant, user
 
-    def cfg(years: Optional[int] = None) -> CC.Cfg:
-        return CC.with_overrides(CC.settings(conf), years)
+    def cfg(years: Optional[int] = None, dims: Optional[str] = None) -> CC.Cfg:
+        return CC.with_overrides(CC.settings(conf), years, dims)
+
+    def sales_part() -> Optional[dict[str, Any]]:
+        snaps_a = getattr(app.state, "author_snapshots", None)
+        try:
+            return snaps_a.part("sales") if snaps_a is not None else None
+        except Exception as e:  # noqa: BLE001 — satış hazırlığı yoksa satış dilimi ölçütü kullanılamaz
+            log.info("sözleşme karşılaştırma: satış hazırlığı okunamadı: %s", str(e)[:160])
+            return None
+
+    def sales_now() -> Optional[tuple[float, dict[str, float]]]:
+        part = sales_part()
+        if not part:
+            return None
+        stamp = float(part.get("updatedAt") or 0)
+        with lock:
+            if state["sales"][0] == stamp:
+                return state["sales"][1]
+        got = CC.sales_last_months(part)
+        val = (stamp, got) if got is not None else None
+        with lock:
+            state["sales"] = (stamp, val)
+        return val
 
     def call(fn, *a, **kw):
         try:
@@ -203,7 +230,20 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
             raise
 
     def portfolio(tenant: str, c: CC.Cfg, force: bool = False) -> CC.Portfolio:
-        return call(snaps.get, tenant, c, force=force)
+        return call(snaps.get, tenant, c, force=force, sales=sales_now())
+
+    def logo_sources(k: P.Kaynaklar) -> list[str]:
+        """Satış diliminin dayandığı Logo okumaları (yazar ilişkilerinin yıllık satış hazırlığı)."""
+        data = (sales_part() or {}).get("data") or {}
+        db = P.connection_database(rt().settings.connection_file)
+        ids = []
+        for y, blob in sorted((data.get("years") or {}).items()):
+            qy = (blob or {}).get("query") or {}
+            if qy.get("sql"):
+                ids.append(k.sorgu(f"karsilastirma.logo.{y}", f"Logo satış {y} (stok kodu × ay)", "logo", qy["sql"], database=db,
+                                   rows=qy.get("rows"), ms=qy.get("dbMs"), ran_at=qy.get("at"),
+                                   description="Yazar ilişkileri ekranının arka planda hazırladığı okuma; satış dilimi bundan."))
+        return ids
 
     def need(user: str) -> None:
         if not can(user, UPLOAD):
@@ -226,6 +266,8 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                "belgeTurleri": CD.KINDS, "belgeDurumlari": CD.STATUS, "gorunum": snap_info(tenant, port),
                "incelemeDurumlari": ST.REVIEW_STATUS, "sekilDenetimleri": {k: {"ad": v[0], "dayanak": v[1]} for k, v in CC.FORMAL.items()},
                "kur": snaps.rate_status(tenant),
+               "olcutler": {d: CC.DIM_LABELS[d] for d in CC.EXTRA_DIMS}, "varsayilanOlcut": list(c.dims),
+               "satisVar": port.sales_known, "satisDilimleri": CC.SALES_TIERS,
                "can": {"upload": can(user, UPLOAD), "review": can(user, REVIEW), "export": can(user, "ozellik:veri.disa-aktar")}}
         return P.bagla(out, lambda: _meta_k(port))
 
@@ -258,23 +300,23 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
     def compare_scan(request: Request, q: str = "", tip: Optional[int] = None, odeme: Optional[int] = None,
                      bolum: Optional[int] = None, yilDen: Optional[int] = None, yilE: Optional[int] = None,
                      only: str = "sapan", madde: str = "", aktif: bool = False, enAz: int = 1, acik: bool = False,
-                     page: int = 0, yil: Optional[int] = None) -> dict[str, Any]:
+                     page: int = 0, yil: Optional[int] = None, olcut: Optional[str] = None) -> dict[str, Any]:
         engine, tenant, _ = session(request)
-        c = cfg(yil)
+        c = cfg(yil, olcut)
         port = portfolio(tenant, c)
         kw = scan_kw(q, tip, odeme, bolum, yilDen, yilE, only, madde, aktif, enAz, acik, engine, tenant)
         out = call(CC.scan_page, port, c, page=page, **kw)
         out["gorunum"] = snap_info(tenant, port)
-        out["ayar"] = {"yil": c.years}
+        out["ayar"] = {"yil": c.years, "olcut": list(c.dims)}
         return P.bagla(out, lambda: kaynak_scan(port, prefix(), tenant, engine))
 
     @app.get(B + "/scan.csv")
     def compare_scan_csv(request: Request, q: str = "", tip: Optional[int] = None, odeme: Optional[int] = None,
                          bolum: Optional[int] = None, yilDen: Optional[int] = None, yilE: Optional[int] = None,
                          only: str = "sapan", madde: str = "", aktif: bool = False, enAz: int = 1, acik: bool = False,
-                         yil: Optional[int] = None) -> Response:
+                         yil: Optional[int] = None, olcut: Optional[str] = None) -> Response:
         engine, tenant, user = session(request)
-        c = cfg(yil)
+        c = cfg(yil, olcut)
         port = portfolio(tenant, c)
         kw = scan_kw(q, tip, odeme, bolum, yilDen, yilE, only, madde, aktif, enAz, acik, engine, tenant)
         text = call(CC.scan_csv, port, c, **kw)
@@ -338,9 +380,9 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         return subj, ("karsilastirma.portal", "Portal sözleşme kaydı", C.record_stmt(tenant, rec["id"]))
 
     @app.get(B + "/contract/{key}")
-    def compare_contract(key: str, request: Request, yil: Optional[int] = None) -> dict[str, Any]:
+    def compare_contract(key: str, request: Request, yil: Optional[int] = None, olcut: Optional[str] = None) -> dict[str, Any]:
         engine, tenant, user = session(request)
-        c = cfg(yil)
+        c = cfg(yil, olcut)
         port = portfolio(tenant, c)
         subj, src = call(subject_of, engine, tenant, port, key)
         out = contract_view(engine, tenant, user, port, subj, c)
@@ -352,10 +394,31 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
         out["history"] = CC.history(port, subj)
         out["warnings"] = CC.warnings_of(subj)
         out["gorunum"] = snap_info(tenant, port)
-        out["ayar"] = {"yil": c.years, "emsal": c.min_peers, "esikYuzde": round(c.rare * 100, 2)}
+        out["ayar"] = {"yil": c.years, "emsal": c.min_peers, "esikYuzde": round(c.rare * 100, 2), "olcut": list(c.dims)}
         out["can"] = {"review": can(user, REVIEW) and subj.kind in ("crm", "portal")}
+        out["olaylar"] = CC.timeline(port, subj) + portal_addenda(engine, tenant, subj)
+        out["olaylar"].sort(key=lambda x: x["tarih"])
         attach_reviews(engine, tenant, subj, out)
         attach_rights_class(engine, tenant, subj, out)
+        return out
+
+    def portal_addenda(engine, tenant: str, subj: CC.Subject) -> list[dict[str, Any]]:
+        """Portal kaydının zeyilnameleri (CRM'de karşılığı yok) olay çizelgesine."""
+        if subj.kind != "portal":
+            return []
+        from semantic_bridge import contracts as C
+
+        try:
+            items = C.addenda(engine, tenant, subj.key, subj.no)
+        except Exception as e:  # noqa: BLE001
+            log.info("sözleşme karşılaştırma: zeyilnameler okunamadı: %s", str(e)[:160])
+            return []
+        out = []
+        for a in items:
+            day = str(a.get("effectiveOn") or a.get("createdAt") or "")[:10]
+            if day:
+                out.append({"tarih": day, "olay": f"Zeyilname: {a.get('title') or a.get('no')} ({a.get('statusLabel') or a.get('status')})",
+                            "no": a.get("no")})
         return out
 
     def attach_reviews(engine, tenant: str, subj: CC.Subject, out: dict[str, Any]) -> None:
@@ -393,7 +456,11 @@ def register(app, *, rt: Callable[[], Any], greetings: Callable[[Request], tuple
                     agreement: str) -> P.Kaynaklar:
         if src is not None and not isinstance(src[2], str):
             src = (src[0], src[1], P.portal_sql(src[2], engine))
-        return kaynak_contract(port, prefix(), src, tenant, engine, agreement)
+        k = kaynak_contract(port, prefix(), src, tenant, engine, agreement)
+        logo = logo_sources(k) if port.sales_known else []
+        k.alan("subject.olcutler", k.hesap("olcut", F_OLCUT, [s for s in k.sources if s.startswith("karsilastirma.crm.")] + logo))
+        k.alan("olaylar", "karsilastirma.crm.portfoy")
+        return k
 
     # ------------------------------------------------------------------ taslak (kaydedilmemiş şartlar)
 

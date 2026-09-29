@@ -138,10 +138,23 @@ TEXT_CLAUSES = tuple(c for c in CLAUSES if c.kind == "metin")
 
 #: Kıyas grubunun boyutları (CRM kolonu) ve gevşetme sırası (ilk gevşeyen ilk).
 DIMS = {"tip": "new_SozlesmeTipi", "odeme": "new_TelifTipi", "para": "new_sozlesmeparabirimi", "bolum": "new_ilgilidepartman"}
-DIM_LABELS = {"tip": "Sözleşme tipi", "odeme": "Ödeme türü", "para": "Para birimi", "bolum": "İlgili bölüm", "yil": "Dönem"}
+DIM_LABELS = {"tip": "Sözleşme tipi", "odeme": "Ödeme türü", "para": "Para birimi", "bolum": "İlgili bölüm", "yil": "Dönem",
+              "ajans": "Ajans üzerinden", "satis": "Hak sahibinin satış dilimi", "hedef": "Hedef kitle", "tur": "Tür",
+              "dil": "Yerli / çeviri"}
 RELAX = ("yil", "bolum", "para", "odeme")
+#: İsteğe bağlı ticari ölçütler (ekrandan seçilir; varsayılanı Yönetim ayarı). Gevşetmede ilk bunlar düşer.
+EXTRA_DIMS = ("ajans", "satis", "hedef", "tur", "dil")
+SALES_TIERS = {"ust": "Üst %20 (çok satan)", "orta": "Orta %40", "alt": "Alt %40", "yok": "Son 36 ayda satışı yok"}
 #: Kıyaslanmayan ama şekil denetiminin okuduğu bilgiler (kitap bağı sayısı, telif satışında ülke var mı).
 META_COLS = ("kitapsay", "ulkevar")
+#: Olay zaman çizelgesi (kıyaslanmaz): CRM'deki ek belge ve durum tarihleri.
+EVENT_COLS = {
+    "new_ekprotokoltarihi": "Ek protokol", "new_ekprotokolbitist": "Ek protokol bitişi",
+    "new_muvafakatnametarihi": "Muvafakatname", "new_muvafakatnamebitist": "Muvafakatname bitişi",
+    "new_emuvafakatnamebitistt": "E-kitap muvafakatnamesi bitişi", "new_malihakdevirt": "Mali hak devri",
+    "new_fesihtarihi": "Fesih", "new_yenilemebaslangictarihi": "Yenileme başlangıcı",
+    "new_yenilemebitistarihi": "Yenileme bitişi", "new_YaynlanmamasHalindeFesihTarihi": "Yayınlanmama hâlinde fesih tarihi",
+}
 TRY_CODE, USD_CODE = 1, 2
 OPTION_COLS = tuple(DIMS.values()) + tuple(c.key for c in CLAUSES if c.kind == "secim") + ("statuscode",)
 
@@ -176,9 +189,10 @@ class Cfg:
     text_similar: float = 0.80
     template_min: int = 5
     refresh_hours: float = 12.0
+    dims: tuple = ()
 
     def key(self) -> tuple:
-        return (self.min_peers, self.rare, self.years, self.text_similar, self.template_min)
+        return (self.min_peers, self.rare, self.years, self.text_similar, self.template_min, self.dims)
 
 
 SETTINGS = {
@@ -189,6 +203,12 @@ SETTINGS = {
     "CONTRACT_COMPARE_TEMPLATE_MIN": ("template_min", int, 5, 2, 1000),
     "CONTRACT_COMPARE_REFRESH_HOURS": ("refresh_hours", float, 12.0, 0.25, 720.0),
 }
+
+
+def parse_dims(raw: Any) -> tuple:
+    """«ajans,satis» → ('ajans', 'satis'); bilinmeyen ölçüt atılır, sıra EXTRA_DIMS sırasıdır."""
+    got = {x.strip() for x in str(raw or "").split(",") if x.strip()}
+    return tuple(d for d in EXTRA_DIMS if d in got)
 
 
 def settings(conf: Callable[[str], Any]) -> Cfg:
@@ -203,14 +223,14 @@ def settings(conf: Callable[[str], Any]) -> Cfg:
             v = default
         v = min(max(v, lo), hi)
         vals[name] = v / 100.0 if name == "rare" else v
-    return Cfg(**vals)
+    return Cfg(**vals, dims=parse_dims(conf("CONTRACT_COMPARE_EXTRA_DIMS")))
 
 
-def with_overrides(cfg: Cfg, years: Optional[int] = None) -> Cfg:
-    """Ekrandan seçilen dönem (yıl sayısı; -1 = bütün yıllar)."""
-    if years is None:
-        return cfg
-    return Cfg(cfg.min_peers, cfg.rare, max(-1, min(int(years), 60)), cfg.text_similar, cfg.template_min, cfg.refresh_hours)
+def with_overrides(cfg: Cfg, years: Optional[int] = None, dims: Optional[str] = None) -> Cfg:
+    """Ekrandan seçilen dönem (yıl sayısı; -1 = bütün yıllar) ve isteğe bağlı ölçütler («ajans,satis»; boş = hiçbiri)."""
+    y = cfg.years if years is None else max(-1, min(int(years), 60))
+    d = cfg.dims if dims is None else parse_dims(dims)
+    return Cfg(cfg.min_peers, cfg.rare, y, cfg.text_similar, cfg.template_min, cfg.refresh_hours, d)
 
 
 # ================================================================================ CRM okuması
@@ -236,6 +256,7 @@ def portfolio_sql(p: str) -> str:
     return ("SELECT s.new_sozlesmeId AS id, s.new_name AS no, s.new_anasozlesmeid AS ana, CAST(s.statuscode AS int) AS statuscode,"
             " s.new_SozlesmeBaslangicTarihi AS bas, s.new_SozlesmeBitisTarihi AS bit, s.new_stokaditext AS kitap,"
             f" s.new_yazar_text AS yazar, {dims}, " + ", ".join(cols)
+            + "".join(f", s.{c}" for c in EVENT_COLS)
             + f", (SELECT COUNT(*) FROM {p}new_new_sozlesme_new_kitapBase sk WHERE sk.new_sozlesmeid = s.new_sozlesmeId) AS kitapsay,"
             " CASE WHEN s.new_telifsatilanulke IS NULL THEN 0 ELSE 1 END AS ulkevar"
             f" FROM {p}new_sozlesmeBase s WHERE s.statecode = 0 ORDER BY s.new_name, s.new_sozlesmeId")
@@ -244,10 +265,25 @@ def portfolio_sql(p: str) -> str:
 def parties_sql(p: str) -> str:
     """Sözleşme tarafları (kişi ya da firma kimliği + adı): aynı hak sahibinin önceki sözleşmeleri için."""
     return ("SELECT t.new_sozlesmeid AS sid, CAST(COALESCE(t.new_kisi, t.new_Firma) AS varchar(36)) AS pid,"
-            " COALESCE(c.FullName, a.Name) AS ad"
+            " COALESCE(c.FullName, a.Name) AS ad, CAST(ISNULL(t.new_aracivarmi, 0) AS int) AS araci"
             f" FROM {p}new_sozlesmetarafiBase t LEFT JOIN {p}ContactBase c ON c.ContactId = t.new_kisi"
             f" LEFT JOIN {p}AccountBase a ON a.AccountId = t.new_Firma"
             " WHERE t.statecode = 0 AND COALESCE(t.new_kisi, t.new_Firma) IS NOT NULL ORDER BY t.new_sozlesmeid")
+
+
+def books_sql(p: str) -> str:
+    """Sözleşmenin kitapları: stok kodu (satış dilimi), hedef kitle, tür ve orijinal dil (yerli/çeviri). Lookup adı için
+    CRM'in `new_kitap` görünümü okunur."""
+    return ("SELECT sk.new_sozlesmeid AS sid, k.new_StokKodu AS kod, CAST(k.new_hedefkitle AS int) AS hedef,"
+            " k.new_turlertext AS tur, k.new_orjinaldiliName AS dil"
+            f" FROM {p}new_new_sozlesme_new_kitapBase sk JOIN {p}new_kitap k ON k.new_kitapId = sk.new_kitapid"
+            " ORDER BY sk.new_sozlesmeid, k.new_name")
+
+
+def book_options_sql(p: str) -> str:
+    return (f"SELECT m.AttributeValue AS kod, m.Value AS ad FROM {p}StringMapBase m"
+            f" WHERE m.ObjectTypeCode = (SELECT e.ObjectTypeCode FROM {p}EntityView e WHERE e.Name = 'new_kitap')"
+            " AND m.LangId = 1055 AND m.AttributeName = 'new_hedefkitle' ORDER BY m.AttributeValue")
 
 
 def labels_sql(p: str) -> str:
@@ -290,15 +326,15 @@ def _cell(v: Any) -> Any:
 def read_crm(run: Runner, prefix: str) -> dict[str, Any]:
     """CRM'den anlık görüntü: sözleşmeler (sütun listesi + satırlar), taraflar, etiketler, seçenekler ve çalışan sorgular."""
     out: dict[str, Any] = {"builtAt": datetime.now(timezone.utc).isoformat(), "queries": {}}
-    parts = (("portfoy", portfolio_sql(prefix)), ("taraf", parties_sql(prefix)), ("etiket", labels_sql(prefix)),
-             ("secenek", options_sql(prefix)))
+    parts = (("portfoy", portfolio_sql(prefix)), ("taraf", parties_sql(prefix)), ("kitap", books_sql(prefix)),
+             ("etiket", labels_sql(prefix)), ("secenek", options_sql(prefix)), ("kitapsecenek", book_options_sql(prefix)))
     rows: dict[str, list[dict[str, Any]]] = {}
     for name, sql in parts:
         t0 = time.monotonic()
         try:
             got = run(sql)
         except Exception as e:  # noqa: BLE001 — etiketler okunamazsa yerel ad kullanılır; portföy okunamazsa hata
-            if name in ("etiket", "secenek"):
+            if name in ("etiket", "secenek", "kitap", "kitapsecenek"):
                 log.warning("sözleşme karşılaştırma: CRM %s okunamadı: %s", name, str(e)[:200])
                 got = []
             else:
@@ -307,15 +343,23 @@ def read_crm(run: Runner, prefix: str) -> dict[str, Any]:
         out["queries"][name] = {"sql": sql, "rows": len(got), "ms": int((time.monotonic() - t0) * 1000),
                                 "at": datetime.now(timezone.utc).isoformat()}
     cols = (["id", "no", "ana", "statuscode", "bas", "bit", "kitap", "yazar"] + list(DIMS.values()) + [c.key for c in CLAUSES]
-            + list(META_COLS))
+            + list(META_COLS) + list(EVENT_COLS))
     out["columns"] = cols
     out["rows"] = [[_cell(r.get(c)) for c in cols] for r in rows["portfoy"]]
     parties: dict[str, list[list[str]]] = defaultdict(list)
     for r in rows["taraf"]:
         sid, pid = _gid(r.get("sid")), _gid(r.get("pid"))
         if sid and pid:
-            parties[sid].append([pid, str(r.get("ad") or "").strip()])
+            parties[sid].append([pid, str(r.get("ad") or "").strip(), int(r.get("araci") or 0)])
     out["parties"] = parties
+    books: dict[str, list[list[Any]]] = defaultdict(list)
+    for r in rows["kitap"]:
+        sid = _gid(r.get("sid"))
+        if sid:
+            books[sid].append([str(r.get("kod") or "").strip() or None, r.get("hedef"), str(r.get("tur") or "").strip() or None,
+                               str(r.get("dil") or "").strip() or None])
+    out["books"] = books
+    out["bookOptions"] = {str(int(r["kod"])): str(r.get("ad") or "").strip() for r in rows["kitapsecenek"] if r.get("kod") is not None}
     out["labels"] = {str(r.get("kolon") or "").lower(): str(r.get("ad") or "").strip() for r in rows["etiket"] if r.get("ad")}
     opts: dict[str, dict[str, str]] = defaultdict(dict)
     for r in rows["secenek"]:
@@ -457,6 +501,32 @@ class Rates:
         return {"ay": len(months), "okunan": ok, "okunuyor": busy}
 
 
+# ================================================================================ Logo satışı (satış dilimi)
+
+def sales_last_months(part: Optional[dict[str, Any]], months: int = 36) -> Optional[dict[str, float]]:
+    """Yazar ilişkilerinin hazırladığı Logo satışından (stok kodu × ay × satış/iade) stok kodu başına son `months` ayın
+    net adedi (satış − iade). Hazırlık yoksa None (satış dilimi ölçütü kullanılamaz, ekranda yazar)."""
+    data = (part or {}).get("data") or {}
+    years = data.get("years") or {}
+    if not years:
+        return None
+    end = str(data.get("dataEnd") or "")[:7]
+    if re.match(r"^\d{4}-\d{2}$", end):
+        last = int(end[:4]) * 12 + int(end[5:7]) - 1
+    else:
+        y = max(int(k) for k in years)
+        last = y * 12 + 11
+    first = last - months + 1
+    out: dict[str, float] = defaultdict(float)
+    for y, blob in years.items():
+        for code, rows in ((blob or {}).get("rows") or {}).items():
+            for ay, ret, qty, _net in rows:
+                m = int(y) * 12 + int(ay) - 1
+                if first <= m <= last:
+                    out[code] += -abs(float(qty or 0)) if ret else float(qty or 0)
+    return dict(out)
+
+
 # ================================================================================ anlık görüntü (disk + bellek)
 
 class Snapshots:
@@ -518,12 +588,14 @@ class Snapshots:
 
         threading.Thread(target=job, name="contract-compare-refresh", daemon=True).start()
 
-    def get(self, tenant: str, cfg: Cfg, *, force: bool = False) -> "Portfolio":
+    def get(self, tenant: str, cfg: Cfg, *, force: bool = False,
+            sales: Optional[tuple[float, dict[str, float]]] = None) -> "Portfolio":
+        """`sales`: (hazırlandığı an, stok kodu → son 36 ay net adet) — yazar ilişkilerinin Logo satış hazırlığından."""
         path = self.path(tenant)
         if force or not path.exists():
             self._build(tenant)
         mtime = path.stat().st_mtime
-        key = (mtime, self.rates.mtime(tenant))
+        key = (mtime, self.rates.mtime(tenant), sales[0] if sales else None)
         with self.lock:
             hit = self.mem.get(tenant)
         if hit is None or hit[0] != key:
@@ -532,7 +604,7 @@ class Snapshots:
             months = needed_months(data)
             with self.lock:
                 self.months[tenant] = (mtime, months)
-            port = Portfolio(data, self.rates.load(tenant))
+            port = Portfolio(data, self.rates.load(tenant), sales[1] if sales else None)
             port.rate_status = self.rates.status(tenant, months)
             with self.lock:
                 self.mem[tenant] = (key, port)
@@ -676,7 +748,8 @@ def _natural(text: str) -> tuple:
 class Portfolio:
     """Anlık görüntünün kıyasa hazır hâli: anlaşmalar, gruplar, taraflar ve not dizini (işlem başına bir kez kurulur)."""
 
-    def __init__(self, data: dict[str, Any], rates: Optional[dict[str, Any]] = None):
+    def __init__(self, data: dict[str, Any], rates: Optional[dict[str, Any]] = None,
+                 sales: Optional[dict[str, float]] = None):
         self.rate_info = {m: v for m, v in (rates or {}).items() if (v or {}).get("kur")}
         self.rates = {m: float(v["kur"]) for m, v in self.rate_info.items()}
         self.rate_status: dict[str, Any] = {}
@@ -703,6 +776,7 @@ class Portfolio:
             e = by_sig.get(sig)
             no = str(row[at["no"]] or "").strip() or cid
             meta = {k: (row[at[k]] if k in at else None) for k in META_COLS}
+            meta["olaylar"] = {k: str(row[at[k]])[:10] for k in EVENT_COLS if k in at and row[at[k]] not in (None, "", 0)}
             if e is None:
                 e = Entry(idx=len(self.entries), agreement=agreement, ids=[cid], nos=[no], dims=dims, year=_year(row[at["bas"]]),
                           values=values, texts=texts, status=row[at["statuscode"]], start=str(row[at["bas"]] or "")[:10] or None,
@@ -731,11 +805,15 @@ class Portfolio:
         # Taraflar: kişi/firma → anlaşmalar
         self.parties_of: dict[str, list[tuple[str, str]]] = {}
         self.entries_of_party: dict[str, set[int]] = defaultdict(set)
+        self.agent_agreements: set[str] = set()
         for sid, items in (data.get("parties") or {}).items():
             e = self.entry_of.get(sid)
             if e is None:
                 continue
-            for pid, name in items:
+            for it in items:
+                pid, name = it[0], it[1]
+                if len(it) > 2 and it[2]:
+                    self.agent_agreements.add(e.agreement)
                 self.parties_of.setdefault(e.agreement, [])
                 if (pid, name) not in self.parties_of[e.agreement]:
                     self.parties_of[e.agreement].append((pid, name))
@@ -745,11 +823,52 @@ class Portfolio:
         for pid, name in self.name_of_party.items():
             if name:
                 self.party_by_name[fold(name)].add(pid)
+        self.book_options = data.get("bookOptions") or {}
+        self.sales_known = sales is not None
+        self._extra_dims(data.get("books") or {}, sales)
         self.texts = TextIndex(self.entries)
         self._windows: dict[tuple, "Window"] = {}
         self._groups: dict[tuple, dict[tuple, list[Entry]]] = {}
         self._scan: dict[tuple, dict[str, Any]] = {}
         self.lock = threading.Lock()
+
+    # ---------------------------------------------------------------- ticari ölçütler
+
+    def _extra_dims(self, books: dict[str, list[list[Any]]], sales: Optional[dict[str, float]]) -> None:
+        """Anlaşma başına isteğe bağlı ölçütler: ajans üzerinden mi, hak sahibinin satış dilimi, kitapların hedef kitlesi,
+        türü (türler metninin ilk türü) ve yerli/çeviri (kitabın orijinal dili; Türkçe ve Osmanlı Türkçesi yerli)."""
+        self.party_sales: dict[str, float] = {}
+        codes_of: dict[int, set[str]] = {}
+        for e in self.entries:
+            rows = [b for cid in e.ids for b in books.get(cid, [])]
+            codes_of[e.idx] = {b[0] for b in rows if b[0]}
+            hedef = Counter(int(b[1]) for b in rows if b[1] is not None).most_common(1)
+            tur = Counter(str(b[2]).split(",")[0].strip() for b in rows if b[2]).most_common(1)
+            langs = {str(b[3]) for b in rows if b[3]}
+            e.dims["hedef"] = hedef[0][0] if hedef else None
+            e.dims["tur"] = tur[0][0] if tur and tur[0][0] else None
+            e.dims["dil"] = (("ceviri" if langs - {"Türkçe", "Osmanlı Türkçesi"} else "yerli") if langs else None)
+            e.dims["ajans"] = 1 if e.agreement in self.agent_agreements else 0
+            e.dims["satis"] = None
+        if sales is None:
+            return
+        # Hak sahibinin son 36 ay net satış adedi: bütün sözleşmelerinin kitaplarının stok kodları
+        qty: dict[str, float] = {}
+        for pid, idxs in self.entries_of_party.items():
+            codes = set().union(*(codes_of.get(i, set()) for i in idxs)) if idxs else set()
+            qty[pid] = sum(sales.get(c, 0.0) for c in codes)
+        sold = sorted(v for v in qty.values() if v > 0)
+        def tier(v: float) -> str:
+            if v <= 0 or not sold:
+                return "yok"
+            below = bisect.bisect_left(sold, v) / len(sold)
+            return "ust" if below >= 0.8 else "orta" if below >= 0.4 else "alt"
+        self.party_sales = qty
+        for e in self.entries:
+            pids = [pid for pid, _ in self.parties_of.get(e.agreement, [])]
+            if pids:
+                best = max(qty.get(p, 0.0) for p in pids)
+                e.dims["satis"] = tier(best)
 
     # ---------------------------------------------------------------- kur
 
@@ -791,7 +910,19 @@ class Portfolio:
         return (self.options.get(col.lower()) or {}).get(str(int(code))) or str(code)
 
     def dim_label(self, dim: str, code: Any) -> Optional[str]:
-        return self.option(DIMS[dim], code) if dim in DIMS else None
+        if code is None:
+            return None
+        if dim in DIMS:
+            return self.option(DIMS[dim], code)
+        if dim == "ajans":
+            return "Ajans üzerinden" if code else "Doğrudan (ajanssız)"
+        if dim == "satis":
+            return SALES_TIERS.get(code, str(code))
+        if dim == "hedef":
+            return self.book_options.get(str(int(code))) or str(code)
+        if dim == "dil":
+            return {"yerli": "Yerli", "ceviri": "Çeviri"}.get(code, str(code))
+        return str(code)
 
     def show(self, c: Clause, v: Any, currency: Optional[int] = None) -> str:
         if v is None or v == "":
@@ -842,10 +973,13 @@ class Portfolio:
         """Konunun kıyas penceresi, pencereden çıkarılacak kendi kopyaları ve kullanılan ölçütler."""
         use = [d for d in DIMS if subject.dims.get(d) is not None]
         missing = [d for d in DIMS if subject.dims.get(d) is None]
+        extras = [d for d in cfg.dims if subject.dims.get(d) is not None and not (d == "satis" and not self.sales_known)]
+        missing += [d for d in cfg.dims if d not in extras]
+        use += extras
         year = subject.year
         years = cfg.years if year is not None else -1
         relaxed: list[str] = []
-        steps = list(RELAX)
+        steps = list(reversed(extras)) + list(RELAX)
         while True:
             w = self.window(subject.dims, tuple(use), year, years)
             own = [e for e in w.members if e.agreement == subject.agreement]
@@ -1427,6 +1561,29 @@ def history(port: Portfolio, subj: Subject) -> dict[str, Any]:
             "degisen": changes}
 
 
+def timeline(port: Portfolio, subj: Subject) -> list[dict[str, Any]]:
+    """Anlaşmanın olayları (başlangıç, bitiş, ek protokol, muvafakatname, fesih, yenileme…), kopyalarıyla, tarih sırasıyla."""
+    group = port.by_agreement.get(subj.agreement, []) if subj.entry is not None else []
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+
+    def add(day: Optional[str], what: str, no: Optional[str]) -> None:
+        if not day or (day, what) in seen:
+            return
+        seen.add((day, what))
+        out.append({"tarih": day[:10], "olay": what, "no": no})
+
+    for e in group:
+        add(e.start, "Başlangıç", e.no)
+        add(e.end, "Bitiş", e.no)
+        for col, day in (e.meta.get("olaylar") or {}).items():
+            add(day, EVENT_COLS.get(col, col), e.no)
+    if subj.entry is None:
+        add(subj.start, "Başlangıç", subj.no)
+    out.sort(key=lambda x: x["tarih"])
+    return out
+
+
 def warnings_of(subj: Subject) -> list[str]:
     out = []
     now = datetime.now(timezone.utc).year
@@ -1450,7 +1607,8 @@ def subject_head(port: Portfolio, subj: Subject) -> dict[str, Any]:
             "yil": subj.year, "bas": e.start if e is not None else None, "bit": e.end if e is not None else None,
             "durum": port.option("statuscode", e.status) if e is not None and e.status is not None else None,
             "kopyalar": ([{"id": i, "no": n} for i, n in zip(e.ids, e.nos)] if e is not None else []),
-            "anlasma": [{"id": x.id, "no": x.no} for x in port.by_agreement.get(subj.agreement, []) if e is None or x.idx != e.idx]}
+            "anlasma": [{"id": x.id, "no": x.no} for x in port.by_agreement.get(subj.agreement, []) if e is None or x.idx != e.idx],
+            "olcutler": [{"id": d, "ad": DIM_LABELS[d], "deger": port.dim_label(d, subj.dims.get(d))} for d in EXTRA_DIMS]}
 
 
 # ================================================================================ tarama listesi
