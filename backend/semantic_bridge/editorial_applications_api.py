@@ -51,6 +51,7 @@ def register(app, deps: dict[str, Any]) -> None:
     person = deps["person"]
     require_caller = deps["require_caller"]
     engine_tenant: Callable[[], tuple[Any, str]] = deps["engine_tenant"]
+    invalidate: Callable[[str], Any] = deps.get("invalidate") or (lambda prefix: 0)
     runner = mkt.ReportRunner()
     state = {"reset": set()}
 
@@ -193,6 +194,10 @@ def register(app, deps: dict[str, Any]) -> None:
         if not forms_mod.sheet_ids(conf("BASVURU_FORM_SHEETS")):
             return {"skipped": "başvuru formu tablosu tanımlı değil"}
         out = forms_sync(engine, tenant, forms_mod.ACTOR)
+        if out["new"] or any(s.get("updated") for s in out["sheets"]):
+            # Hazır cevap katmanı `run-due` yollarını hiç görmediği için bu yazma Başvurular'ın hazır cevaplarını kendisi
+            # düşürmez; düşürülmezse yeni başvuru bir sonraki 07:00/12:00 tazelemesine kadar listede görünmezdi.
+            invalidate("/api/v1/editorial/applications")
         if out["new"]:
             audit(engine, forms_mod.ACTOR, "create", "application_form", None, f"{out['new']} başvuru formdan alındı",
                   {s.get("title") or s["sheetId"]: s.get("new", 0) for s in out["sheets"]})

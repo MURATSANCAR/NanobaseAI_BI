@@ -5711,6 +5711,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "person": editorial_mod.person,
         "require_caller": _require_caller,
         "engine_tenant": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "invalidate": lambda prefix: (app.state.response_cache.invalidate(prefix)
+                                      if getattr(app.state, "response_cache", None) else 0),
     })
 
     # Öneri 12: başvuru ön okuması ve editör raporu taslağı (belge okuma + alıntılı kapalı küme; puan/karar insanda).
@@ -8134,6 +8136,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "system": lambda: (rt().store.engine, rt().settings.tenant_id),
         "require_caller": _require_caller,
         "engine_tenant": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "invalidate": lambda prefix: (app.state.response_cache.invalidate(prefix)
+                                      if getattr(app.state, "response_cache", None) else 0),
     })
 
     # M28 Kurumsal ilişkiler: kanaat önderi/kurum kartı, hediye kitap programı, kamu projeleri. Uçlar /api/v1/public-affairs/*.
