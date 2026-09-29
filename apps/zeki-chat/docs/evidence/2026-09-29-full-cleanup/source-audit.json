@@ -1,6 +1,6 @@
 {
   "timestampUtc": "2026-09-29T20:21:19.808345+00:00",
-  "commit": "9ed4a607f",
+  "commit": "6c6d214d4",
   "scope": "Every Git-tracked chat path including hidden files; symbolic-link content excluded; registry and wire-protocol bindings retained",
   "files": 9523,
   "countsByCategory": {
@@ -17672,5 +17672,6 @@
       "category": "external_npm_binding",
       "excerpt": "\"@rocket.chat/string-helpers\": \"npm:~0.32.0\""
     }
-  ]
+  ],
+  "followupScope": "Federation local-mode guards add no new vendor identifiers; final runtime source verified against this commit."
 }

@@ -1,6 +1,6 @@
 # Yerel ürün kimliği ve lisans yapısı temizliği
 
-29 Eylül 2026. Kaynak: BI `apps/zeki-chat`, uygulama sürümü `a1aec595a`.
+29 Eylül 2026. Kaynak: BI `apps/zeki-chat`, uygulama sürümü `6c6d214d4`.
 
 ## Değişiklik
 
