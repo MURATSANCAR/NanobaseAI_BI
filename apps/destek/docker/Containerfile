@@ -38,11 +38,15 @@ COPY --chown=frappe:frappe frappe-apps/nanobase_brand apps/nanobase_brand
 # compile-po-to-mo çevirileri derledikten sonra site önbelleğini temizlemek için --site ister;
 # o son adım imajda anlamsız, derlendiği .mo dosyasından denetlenir.
 # bench build, package.json'unda build betiği olan uygulamaları da derler (destek ekranı, yapay zekâ paneli).
+# NumPy 2.3 serisine sabit: 2.4'ten itibaren x86-64-v2 (SSE4.2/POPCNT) ister; müşteri VM'i Hyper-V işlemci uyumluluk
+# modunda ve sanal işlemcide yalnız SSE3 var — çatı openpyxl üzerinden NumPy'yi site kurulumunda yüklüyor, kurulum
+# düşüyordu (2026-09-28). 2.3.5'le bütün paketler (openpyxl, cv2, shapely, onnxruntime, nltk) VM'de denendi.
 RUN printf 'frappe\ntelephony\nhelpdesk\nflow\nnanobase_brand\n' > sites/apps.txt \
  && for app in telephony helpdesk flow nanobase_brand; do \
       ./env/bin/pip install --no-cache-dir -e apps/$app || exit 1; \
     done \
  && bench setup requirements --node \
+ && ./env/bin/pip install --no-cache-dir "numpy>=2.3,<2.4" \
  && ./env/bin/python apps/nanobase_brand/nanobase_brand/simge.py apps \
  && bench build --production \
  && (bench compile-po-to-mo --force || true) \
