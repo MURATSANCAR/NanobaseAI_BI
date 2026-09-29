@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { XLSX_PARAM, xlsxUrl } from '../components/excel';
 
 /** H2 Okuyucu veri tabanı ekranlarının köprü uçları: /api/v1/readers/*. Portal CRM'e yazmaz, ileti göndermez. */
 
@@ -189,7 +190,7 @@ async function download(method: 'GET' | 'POST', path: string, body?: unknown): P
   });
   if (!res.ok) return fail(res);
   const blob = await res.blob();
-  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? 'okur-listesi.csv';
+  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? (path.includes(XLSX_PARAM) ? 'okur-listesi.xlsx' : 'okur-listesi.csv');
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -235,7 +236,8 @@ export const readersApi = {
   reject: (id: string, note: string) => send<Segment>('POST', `/segments/${enc(id)}/reject`, { note }),
   archive: (id: string) => send<Segment>('POST', `/segments/${enc(id)}/archive`, {}),
   draft: (text: string) => send<Draft>('POST', '/segments/draft-from-text', { text }, 180_000),
-  exportList: (id: string, channel: Channel, purpose: string) => download('POST', `/segments/${enc(id)}/export`, { channel, purpose }),
+  exportList: (id: string, channel: Channel, purpose: string, excel = false) =>
+    download('POST', excel ? xlsxUrl(`/segments/${enc(id)}/export`) : `/segments/${enc(id)}/export`, { channel, purpose }),
   imports: () => send<{ items: ImportInfo[]; kaynaklar?: Kaynaklar }>('GET', '/imports'),
   importDetail: (id: string, durum = '', page = 0) => send<ImportDetail>('GET', `/imports/${enc(id)}${qs({ durum, page })}`),
   upload: async (file: File) => {
@@ -252,7 +254,7 @@ export const readersApi = {
   },
   confirm: (id: string, b: { mapping: Record<string, number | null>; eventName: string; eventDate: string }) =>
     send<ImportDetail>('POST', `/imports/${enc(id)}/confirm`, b, 600_000),
-  crmCsv: (id: string) => download('GET', `/imports/${enc(id)}/crm.csv`),
+  crmCsv: (id: string, excel = false) => download('GET', excel ? xlsxUrl(`/imports/${enc(id)}/crm.csv`) : `/imports/${enc(id)}/crm.csv`),
   purgeImport: (id: string) => send<{ purged: number }>('DELETE', `/imports/${enc(id)}`),
   exports: (page = 0) => send<Paged<ExportRow>>('GET', `/exports${qs({ page })}`),
 };

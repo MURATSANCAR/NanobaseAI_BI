@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, FileArchive, FileText, Loader2, Sparkles } from 'lucide-react';
+import { Download, FileArchive, FileSpreadsheet, FileText, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
@@ -16,6 +16,7 @@ import CalendarTab from './CalendarTab';
 import MaterialsTab from './MaterialsTab';
 import HistoryTab from './HistoryTab';
 import PlanBooks from './backlist/PlanBooks';
+import { xlsxUrl } from '../components/excel';
 
 /** Plan ekranı: Karne · Kanal ve bütçe · Takvim · Materyaller · Onay ve geçmiş; sağda Zeki AI önerisi. */
 
@@ -117,6 +118,7 @@ export default function PlanScreen() {
         <>
           <a className={btnGhost} href={mktApi.pdfUrl(p.id)} download><FileText aria-hidden className="h-4 w-4" />PDF</a>
           <a className={btnGhost} href={mktApi.csvUrl(p.id)} download><Download aria-hidden className="h-4 w-4" />CSV</a>
+          <a className={btnGhost} href={xlsxUrl(mktApi.csvUrl(p.id))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</a>
           <a className={btnGhost} href={mktApi.packageUrl(p.id)} download><FileArchive aria-hidden className="h-4 w-4" />Yayına hazır paket</a>
         </>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Download, Search } from 'lucide-react';
+import { Download, FileSpreadsheet, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { fmtShort } from '../field/api';
@@ -8,6 +8,7 @@ import { Empty } from '../field/parts';
 import { SEGMENTS, TREND_LABEL, dealersApi, type DealersMeta, type ListParams } from './api';
 import { DealerRow } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** Bayiler: süzgeçli liste (segment, grup, kanal, il, temsilci, eğilim, durum), sayfalı; toplam her zaman yazılı. BMT'de
  *  liste yalnız kendi carileri (sunucu süzer). */
@@ -110,10 +111,16 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
             <SqlInfo k={data.kaynaklar} alan="count" label="Bayi listesi" className="ml-0.5" />
           </span>
           {meta.me.canExport && (
-            <a href={dealersApi.exportUrl(p)} className={`${btnGhost} inline-flex items-center gap-1.5`}>
-              <Download aria-hidden className="h-4 w-4" />
-              CSV
-            </a>
+            <>
+              <a href={dealersApi.exportUrl(p)} className={`${btnGhost} inline-flex items-center gap-1.5`}>
+                <Download aria-hidden className="h-4 w-4" />
+                CSV
+              </a>
+              <a href={xlsxUrl(dealersApi.exportUrl(p))} className={`${btnGhost} inline-flex items-center gap-1.5`}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                Excel
+              </a>
+            </>
           )}
         </div>
       )}

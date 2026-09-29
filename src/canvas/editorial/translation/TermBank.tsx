@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Download, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, Download, FileSpreadsheet, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED, translationApi, type Term } from '../../engine';
 import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
@@ -9,6 +9,7 @@ import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi } from './ioApi';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { xlsxUrl } from '../../components/excel';
 
 /** Terim bankası: dil çifti başına genel terimler ve işe özel terimler. Onaylı terimi «Terim bankası düzenleme»
  *  yetkisi olan yazar; çevirmenin önerisi «aday» olarak gelir, burada onaylanır. */
@@ -242,10 +243,16 @@ export default function TermBank() {
             </FileButton>
           </div>
           {canExport && (
-            <a href={translationApi.termsCsvUrl(src, tgt)} className={btnGhost}>
-              <Download aria-hidden className="h-4 w-4" />
-              CSV indir
-            </a>
+            <>
+              <a href={translationApi.termsCsvUrl(src, tgt)} className={btnGhost}>
+                <Download aria-hidden className="h-4 w-4" />
+                CSV indir
+              </a>
+              <a href={xlsxUrl(translationApi.termsCsvUrl(src, tgt))} className={btnGhost}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                Excel indir
+              </a>
+            </>
           )}
           <div className="w-full">
             <FileButton

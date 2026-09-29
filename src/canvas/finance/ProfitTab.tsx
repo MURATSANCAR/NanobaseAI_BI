@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download, Search } from 'lucide-react';
+import { Download, FileSpreadsheet, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
@@ -8,6 +8,7 @@ import { Tabs } from '../budget/parts';
 import { financeApi, fmtNum, fmtPct, fmtShort, type Meta, type ProfitBy, type ProfitRow } from './api';
 import { Approx, DataEnd, Money, SumCard } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** Kârlılık: kitap · seri · yayınevi · kanal · cari. Kesin katkı yalnız maliyeti işlenmiş satırlardan; yaklaşık katkı
  *  M9 birim maliyeti ve sözleşme oranından telifle, kapsamıyla birlikte. */
@@ -83,9 +84,14 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
             </span>
           </label>
           {meta.me.canExport && (
-            <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={financeApi.profitExportUrl(params)} download>
-              <Download aria-hidden className="h-4 w-4" /> CSV
-            </a>
+            <>
+              <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={financeApi.profitExportUrl(params)} download>
+                <Download aria-hidden className="h-4 w-4" /> CSV
+              </a>
+              <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={xlsxUrl(financeApi.profitExportUrl(params))} download>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+              </a>
+            </>
           )}
         </div>
       </Panel>

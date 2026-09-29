@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { xlsxUrl } from '../components/excel';
 
 const PAGE = 40;
 type Action = 'yeni_baski_301' | 'yazar_301' | 'stokta_yok' | 'gone_410' | 'arama_verisi';
@@ -95,9 +96,14 @@ export default function SeoSunset() {
             </button>
           )}
           {canExport && (
-            <a className="sg-button" href={`${ENGINE_BASE}/api/v1/seo-geo/sunset/export.csv`}>
-              <Download size={16} aria-hidden /> CSV indir
-            </a>
+            <>
+              <a className="sg-button" href={`${ENGINE_BASE}/api/v1/seo-geo/sunset/export.csv`}>
+                <Download size={16} aria-hidden /> CSV indir
+              </a>
+              <a className="sg-button" href={xlsxUrl(`${ENGINE_BASE}/api/v1/seo-geo/sunset/export.csv`)}>
+                <FileSpreadsheet size={16} aria-hidden /> Excel indir
+              </a>
+            </>
           )}
         </>
       }

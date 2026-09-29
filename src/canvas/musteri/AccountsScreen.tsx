@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Download } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { Empty, FieldFrame } from '../field/parts';
@@ -10,6 +10,7 @@ import { musteriApi, type AccountQuery } from './api';
 import { AccountRow, SubNav } from './parts';
 import { RepPicker, RunNotes, useMusteriMeta } from './CustomersHome';
 import SqlInfo from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** Cariler: kanal, bölge (il), temsilci, risk düzeyi, segment süzgeci ve arama; süzgeçler adres çubuğunda. Kolonlar kartta:
  *  son fatura, 12 ay net, değişim, risk ve nedeni. Sayfalama sunucuda; toplam sayı her zaman yazılır. */
@@ -153,10 +154,16 @@ export default function AccountsScreen() {
               <SqlInfo k={d.kaynaklar} alan="total" label="Cari listesi" className="ml-0.5" />
             </span>
             {m?.me.canExport && (
-              <a className={`${btnGhost} !min-h-9`} href={musteriApi.accountsCsvUrl(f)}>
-                <Download aria-hidden className="h-4 w-4" />
-                CSV
-              </a>
+              <>
+                <a className={`${btnGhost} !min-h-9`} href={musteriApi.accountsCsvUrl(f)}>
+                  <Download aria-hidden className="h-4 w-4" />
+                  CSV
+                </a>
+                <a className={`${btnGhost} !min-h-9`} href={xlsxUrl(musteriApi.accountsCsvUrl(f))}>
+                  <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                  Excel
+                </a>
+              </>
             )}
           </div>
           {d.items.length === 0 ? (

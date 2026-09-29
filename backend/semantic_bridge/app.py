@@ -7719,6 +7719,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
         "llm": lambda priority: rt().llm_for("kurul", priority), "send_mail": _ecom_send_mail,
     })
+    # CSV indiren her uca Excel eşi: `bicim=xlsx` isteğinde CSV cevabı Excel'e çevrilir (en dış katman; kapı ve yetki aynı).
+    from semantic_bridge import csv_excel
+    csv_excel.register(app)
     return app
 
 

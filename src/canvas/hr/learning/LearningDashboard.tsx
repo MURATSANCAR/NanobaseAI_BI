@@ -123,9 +123,14 @@ function Attention({ rows, info, k }: { rows: StatusRow[]; info: Info; k?: Kayna
       action={
         <>
           {info.can.export && (
-            <button type="button" className={btnGhost} onClick={() => void learningApi.exportExpiring().catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
-              CSV indir
-            </button>
+            <>
+              <button type="button" className={btnGhost} onClick={() => void learningApi.exportExpiring().catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
+                CSV indir
+              </button>
+              <button type="button" className={btnGhost} onClick={() => void learningApi.exportExpiringXlsx().catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
+                Excel indir
+              </button>
+            </>
           )}
           <button type="button" className={btnPrimary} disabled={pickedCourses.size !== 1} onClick={() => setOpen(true)}
             title={pickedCourses.size > 1 ? 'Tek bir eğitimin kişilerini seçin' : undefined}>

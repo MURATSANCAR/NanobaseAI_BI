@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Download, Search } from 'lucide-react';
+import { Download, FileSpreadsheet, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { Panel, Pager, useDebounced } from '../editorial/kit';
@@ -9,6 +9,7 @@ import { dijitalApi, fmtInt, type Format, type Opportunity } from './api';
 import { Chips, DigitalFrame, ListHead, RightPill, Tabs } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import DigitalTitleDrawer from './DigitalTitleDrawer';
+import { xlsxUrl } from '../components/excel';
 
 /** Fırsatlar: hakkı olan, basılıda iyi satan, dijital sürümü olmayan kitaplar (e-kitap) ve sesli kitap adayları.
  *  Rakamlar Logo faturalı satırdan; sıra son 12 ay basılı net adede göre. Liste tek tıkla CSV olarak iner. */
@@ -53,10 +54,14 @@ export default function OpportunitiesScreen() {
       lead="Hakkı olan (hak notu yok ya da telif birimi karar vermiş), dijital sürümü olmayan ve son 12 ayda basılıda iyi satan kitaplar. Hakkı eksik, yok ya da incelenmeli olan kitap bu listeye girmez."
       aside={
         meta.data?.me.canExport ? (
-          <div className="flex justify-start lg:justify-end">
+          <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
             <a className={btnGhost} href={dijitalApi.opportunitiesCsv(tur, dq)}>
               <Download aria-hidden className="h-4 w-4" />
               Listeyi indir (CSV)
+            </a>
+            <a className={btnGhost} href={xlsxUrl(dijitalApi.opportunitiesCsv(tur, dq))}>
+              <FileSpreadsheet aria-hidden className="h-4 w-4" />
+              Listeyi indir (Excel)
             </a>
           </div>
         ) : undefined

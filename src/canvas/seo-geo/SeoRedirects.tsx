@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fmt, seoApi, type Confidence, type Redirect } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { xlsxUrl } from '../components/excel';
 
 const PAGE = 40;
 const CONF: Array<{ id: Confidence; label: string; tone: string }> = [
@@ -57,9 +58,16 @@ export default function SeoRedirects() {
       title="Anasayfaya giden yönlendirmeler"
       lead="Silinen sayfaların eski adresi anasayfaya yönlenirse Google bunu “yumuşak 404” sayar. Her eski adres için en doğru yaşayan sayfa önerilir: ISBN’den aynı kitap, aynı adlı yazar ya da adres benzerliği. Karar yalnız kaydedilir; T-soft’a gönderilmez — onaylananları CSV olarak indirip panelden girin."
       actions={
-        canExport && <a className="sg-button" href={seoApi.redirectCsvUrl()}>
-          <Download size={16} aria-hidden /> Onaylananları indir (CSV)
-        </a>
+        canExport && (
+          <>
+            <a className="sg-button" href={seoApi.redirectCsvUrl()}>
+              <Download size={16} aria-hidden /> Onaylananları indir (CSV)
+            </a>
+            <a className="sg-button" href={xlsxUrl(seoApi.redirectCsvUrl())}>
+              <FileSpreadsheet size={16} aria-hidden /> Onaylananları indir (Excel)
+            </a>
+          </>
+        )
       }
     >
       <section className="sg-kpis" aria-label="Özet">

@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Download, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { xlsxUrl } from '../components/excel';
 
 /** Sorgu–sayfa eşlemesi: /api/v1/seo-geo/keymap. Search Console'un sorgu+sayfa kırılımından; her önemli arama için
  *  hedef sayfa, yanlış sıralanan sayfa ve sayfamızın olmadığı aramalar. Karar yalnız kaydedilir. */
@@ -102,9 +103,14 @@ export default function SeoKeymap() {
       lead="Her önemli Google araması için hangi sayfamızın öne çıkması gerektiği: kitap araması kitabın sayfasına, yazar araması yazar sayfasına, soru ve liste araması rehber ya da liste sayfasına. Başka bir sayfa sıralanıyorsa ya da uyan sayfamız yoksa burada görünür. Son 28 günün Search Console verisinden; karar yalnız kaydedilir."
       actions={
         canExport && d?.ready ? (
-          <a className="sg-button" href={api.csv(brand)}>
-            <Download size={16} aria-hidden /> Listeyi indir (CSV)
-          </a>
+          <>
+            <a className="sg-button" href={api.csv(brand)}>
+              <Download size={16} aria-hidden /> Listeyi indir (CSV)
+            </a>
+            <a className="sg-button" href={xlsxUrl(api.csv(brand))}>
+              <FileSpreadsheet size={16} aria-hidden /> Listeyi indir (Excel)
+            </a>
+          </>
         ) : undefined
       }
     >

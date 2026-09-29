@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Loader2, Search, SlidersHorizontal } from 'lucide-react';
+import { Download, FileSpreadsheet, Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { ENGINE_ENABLED, prefsApi } from '../../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../../admin/ui';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../../editorial/kit';
@@ -12,6 +12,7 @@ import { M46_TONE, blApi, fmtChange, fmtN, runout, weightsText, type BlMeta, typ
 import OpportunityPanel from './OpportunityPanel';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { xlsxUrl } from '../../components/excel';
 
 /** Fırsatlar: bütün backlist (tavan yok, sayfalı), bileşen çubukları, ağırlık kaydırıcıları, seçip aktivasyon planı.
  *  Süzgeçler adres çubuğunda; kişisel ağırlık kişinin tercihinde (sunucuda), ekip varsayılanı ayrı yetkiyle. */
@@ -164,7 +165,10 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
             <SlidersHorizontal aria-hidden className="h-4 w-4" />Ağırlıklar
           </button>
           {me.canExport && (
-            <a className={btnGhost} href={blApi.csvUrl({ ...lp, q: dq })} download><Download aria-hidden className="h-4 w-4" />CSV</a>
+            <>
+              <a className={btnGhost} href={blApi.csvUrl({ ...lp, q: dq })} download><Download aria-hidden className="h-4 w-4" />CSV</a>
+              <a className={btnGhost} href={xlsxUrl(blApi.csvUrl({ ...lp, q: dq }))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</a>
+            </>
           )}
         </div>
         {showWeights && (

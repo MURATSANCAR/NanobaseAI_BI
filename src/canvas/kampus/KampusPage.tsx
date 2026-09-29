@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import {
   Download,
+  FileSpreadsheet,
   ArrowRight,
   Bell,
   Bot,
@@ -43,6 +44,7 @@ import OutageStrip from '../it-ops/OutageStrip';
 import { notifyExport } from '../data-security/notify';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { downloadCsvAsXlsx } from '../components/excel';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
@@ -214,8 +216,8 @@ export default function KampusPage() {
     }
   };
 
-  // Alt bilgi: rehberi dosya olarak indir (Excel'in Türkçe ayarla açtığı ; ayraçlı, BOM'lu CSV).
-  const downloadDirectory = () => {
+  // Alt bilgi: rehberi dosya olarak indir (Excel'in Türkçe ayarla açtığı ; ayraçlı, BOM'lu CSV ya da gerçek Excel).
+  const directoryCsv = () => {
     const cols: Array<[string, (p: Person) => string]> = [
       ['Ad Soyad', (p) => p.name],
       ['Ünvan', (p) => p.title],
@@ -229,14 +231,22 @@ export default function KampusPage() {
     ];
     const cell = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
     const lines = [cols.map(([h]) => cell(h)).join(';'), ...everyone.map((p) => cols.map(([, f]) => cell(f(p))).join(';'))];
-    const blob = new Blob([`﻿${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+    return `﻿${lines.join('\r\n')}`;
+  };
+  const directoryName = () => `dahili-rehber-${new Date().toISOString().slice(0, 10)}.csv`;
+  const downloadDirectory = () => {
+    const blob = new Blob([directoryCsv()], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `dahili-rehber-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = directoryName();
     notifyExport('Dahili rehber (kişi, dahili, cep, e-posta)', 'csv', everyone.length);
     a.click();
     URL.revokeObjectURL(url);
+  };
+  const downloadDirectoryXlsx = () => {
+    notifyExport('Dahili rehber (kişi, dahili, cep, e-posta)', 'xlsx', everyone.length);
+    downloadCsvAsXlsx(directoryCsv(), directoryName()).catch((e: Error) => toast.error(e.message));
   };
 
   return (
@@ -759,6 +769,17 @@ export default function KampusPage() {
             title="Rehberdeki herkesi CSV olarak indir (Excel açar)"
           >
             <Download className="h-3.5 w-3.5" /> Dahili Rehber (CSV)
+          </button>
+          )}
+          {canExport && (
+          <button
+            type="button"
+            onClick={downloadDirectoryXlsx}
+            disabled={everyone.length === 0}
+            className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-semibold text-violet hover:bg-white disabled:text-muted sm:min-h-0 sm:py-1.5"
+            title="Rehberdeki herkesi Excel olarak indir"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Dahili Rehber (Excel)
           </button>
           )}
         </div>

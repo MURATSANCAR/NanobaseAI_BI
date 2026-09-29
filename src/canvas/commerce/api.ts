@@ -1,6 +1,7 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { XLSX_PARAM, xlsxUrl } from '../components/excel';
 
 /** Rakam uçlarının cevabında sorgu bilgisi (`<SqlInfo k={d.kaynaklar} …/>`). */
 export type WithK = { kaynaklar?: Kaynaklar };
@@ -172,7 +173,7 @@ async function download(path: string, body: unknown): Promise<{ count: number | 
   });
   if (!res.ok) return fail(res);
   const blob = await res.blob();
-  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? 'eticaret-listesi.csv';
+  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? (path.includes(XLSX_PARAM) ? 'eticaret-listesi.xlsx' : 'eticaret-listesi.csv');
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -214,7 +215,10 @@ export const commerceApi = {
   runs: (durum = '', page = 0) => send<Paged<Run> & WithK>('GET', `/runs${qs({ durum, page })}`),
   approve: (id: string, note?: string) => send<Run>('POST', `/runs/${enc(id)}/approve`, { note }),
   reject: (id: string, note: string) => send<Run>('POST', `/runs/${enc(id)}/reject`, { note }),
-  exportRun: (id: string, purpose: string) => download(`/runs/${enc(id)}/export`, { purpose }),
+  exportRun: (id: string, purpose: string, excel = false) => {
+    const p = `/runs/${enc(id)}/export`;
+    return download(excel ? xlsxUrl(p) : p, { purpose });
+  },
   campaigns: () => send<{ items: Campaign[] } & WithK>('GET', '/campaigns'),
   createCampaign: (b: { runId: string; name: string; start?: string; end?: string }) => send<Campaign>('POST', '/campaigns', b),
   campaign: (id: string) => send<Campaign & WithK>('GET', `/campaigns/${enc(id)}`),

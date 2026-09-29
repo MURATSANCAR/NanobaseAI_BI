@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Eye, EyeOff, Link2, X } from 'lucide-react';
+import { Download, Eye, EyeOff, FileSpreadsheet, Link2, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
@@ -9,6 +9,7 @@ import { fmtDay, fmtInt, fmtNum, fmtPct, fmtTl, pazarApi, type MatrixRow } from 
 import { CategorySelect, Stat, useCategories, useMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { xlsxUrl } from '../components/excel';
 
 /** Rakipler: yayınevi × kategori fiyat, sayfa ve format matrisi (TİMAŞ satırları aynı ölçülerle), izlenen rakipler,
  *  seçilen yayınevinin kayıtları. Kategori süzgeci yalnız eşlemesi onaylı rakip kayıtlarını sayar. */
@@ -89,9 +90,14 @@ export default function CompetitorMatrix() {
             Yalnız izlenen yayınevleri
           </label>
           {meta.data?.me.canExport && d && (
-            <a href={pazarApi.matrixCsvUrl(filter)} className={`${btnGhost} ml-auto`}>
-              <Download aria-hidden className="h-4 w-4" /> CSV
-            </a>
+            <>
+              <a href={pazarApi.matrixCsvUrl(filter)} className={`${btnGhost} ml-auto`}>
+                <Download aria-hidden className="h-4 w-4" /> CSV
+              </a>
+              <a href={xlsxUrl(pazarApi.matrixCsvUrl(filter))} className={btnGhost}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+              </a>
+            </>
           )}
         </div>
         {(wl.data?.items.length ?? 0) > 0 && (

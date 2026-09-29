@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Check, Download, FilePlus2, Loader2, Undo2, X } from 'lucide-react';
+import { Check, Download, FilePlus2, FileSpreadsheet, Loader2, Undo2, X } from 'lucide-react';
 import { freelanceApi, type FlPayable, type FlPayoutHead } from '../../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
@@ -10,6 +10,7 @@ import { Panel } from '../kit';
 import { LogoMovements } from './PeoplePane';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, day, q2, stamp, tl, todayIso, useFlRefresh, type FlCtx } from './shared';
+import { xlsxUrl } from '../../components/excel';
 
 /**
  * Hakediş: kabul edilmiş işler kişi başına bir belgede toplanır, satırlar o anki tutarla dondurulur.
@@ -227,9 +228,14 @@ function PayoutDetail({ ctx, id, onClose }: { ctx: FlCtx; id: string; onClose: (
           </div>
           <div className="flex shrink-0 gap-1.5">
             {canExport && (
-              <a href={freelanceApi.payoutCsvUrl(h.id)} className={`${btnGhost} px-2.5`} aria-label="CSV indir" title="Excel için CSV indir">
-                <Download aria-hidden className="h-4 w-4" />
-              </a>
+              <>
+                <a href={freelanceApi.payoutCsvUrl(h.id)} className={`${btnGhost} px-2.5`} aria-label="CSV indir" title="CSV indir">
+                  <Download aria-hidden className="h-4 w-4" />
+                </a>
+                <a href={xlsxUrl(freelanceApi.payoutCsvUrl(h.id))} className={`${btnGhost} px-2.5`} aria-label="Excel indir" title="Excel indir">
+                  <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                </a>
+              </>
             )}
             <button type="button" onClick={onClose} aria-label="Hakedişi kapat" className={`${btnGhost} px-2.5`}>
               <X aria-hidden className="h-4 w-4" />

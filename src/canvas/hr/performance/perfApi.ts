@@ -1,5 +1,6 @@
 import { hrDownload, hrSend, qs } from '../hrApi';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { xlsxUrl } from '../../components/excel';
 
 /** M56 Performans yönetimi uçları (/api/v1/hr/performance/*). Kapsam köprüde: kendi kaydım, ekip zincirim, İK/GM. */
 
@@ -115,6 +116,7 @@ export const perfApi = {
   remind: (id: string, which: 'self' | 'manager') => hrSend<{ people: number; sent: number; noMail: number; failed: number; adRead: boolean }>('POST', `${P}/cycles/${enc(id)}/remind`, { which }, 180_000),
   calibration: (id: string) => hrSend<Calibration>('GET', `${P}/cycles/${enc(id)}/calibration`),
   exportCycle: (id: string) => hrDownload(`${P}/cycles/${enc(id)}/export.csv`, 'degerlendirme.csv'),
+  exportCycleXlsx: (id: string) => hrDownload(xlsxUrl(`${P}/cycles/${enc(id)}/export.csv`), 'degerlendirme.xlsx'),
   review: (id: string) => hrSend<Review>('GET', `${P}/reviews/${enc(id)}`),
   saveReview: (id: string, b: { self?: Answers; manager?: Answers }) => hrSend<Review>('PATCH', `${P}/reviews/${enc(id)}`, b),
   submitSelf: (id: string, self: Answers) => hrSend<Review>('POST', `${P}/reviews/${enc(id)}/submit-self`, { self }),

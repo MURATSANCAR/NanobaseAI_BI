@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Check, Copy, Download, FileDown, Search, X } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Download, FileDown, FileSpreadsheet, Search, X } from 'lucide-react';
 import { adminApi, type PromptDetail, type PromptRow } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, errText, field, fmtDate, nf, td, th } from './ui';
+import { xlsxUrl } from '../components/excel';
 
 /** Cevap tipi → okunur etiket + renk. Başarısız/eksik olanlar göze çarpsın. */
 const TYPE: Record<string, { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' | 'violet' }> = {
@@ -307,9 +308,10 @@ export default function PromptTracker() {
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const o = overview.data;
 
-  const csv = () => {
+  const csv = (excel: boolean) => {
     const a = document.createElement('a');
-    a.href = adminApi.promptsExportUrl({ only, q: search, days: daysNum });
+    const url = adminApi.promptsExportUrl({ only, q: search, days: daysNum });
+    a.href = excel ? xlsxUrl(url) : url;
     a.click();
   };
 
@@ -318,9 +320,14 @@ export default function PromptTracker() {
       title="Soru izleme"
       help="Müşteri ortamında sorulan her soru, üretilen SQL, sonuç ve kapının kararı. Satıra dokunun; incelemek ve nereyi düzelteceğimizi işaretlemek için."
       action={
-        <button type="button" onClick={csv} className={btnGhost}>
-          <FileDown className="h-4 w-4" /> CSV
-        </button>
+        <span className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => csv(false)} className={btnGhost}>
+            <FileDown className="h-4 w-4" /> CSV
+          </button>
+          <button type="button" onClick={() => csv(true)} className={btnGhost}>
+            <FileSpreadsheet className="h-4 w-4" /> Excel
+          </button>
+        </span>
       }
     >
       {o && (

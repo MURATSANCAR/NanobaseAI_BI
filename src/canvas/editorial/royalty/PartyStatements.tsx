@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileArchive, Loader2, Send, Undo2 } from 'lucide-react';
+import { Download, FileArchive, FileSpreadsheet, Loader2, Send, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../kit';
@@ -8,6 +8,7 @@ import { Field, Sheet, day, errMsg, money, num, stamp } from '../contracts/ui';
 import { download, royaltyApi, runPath, type Caps, type Party, type Run } from './api';
 import { CoverEmailButton } from './Drafts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { xlsxUrl } from '../../components/excel';
 
 /** Hak sahipleri: onaylı koşudan yazar başına birleşik beyanname. Gönderimi insan kendi e-postasıyla yapar; burada
  *  «gönderildi» kaydı tutulur (ilk sürümde sistemden dış gönderim yok). */
@@ -226,6 +227,12 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
                 {busy === 'withholding.csv' ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
                 Stopaj özeti
               </button>
+              {['payments.csv', 'withholding.csv'].map((f) => (
+                <button key={f} type="button" className={btnGhost} disabled={busy === xlsxUrl(f)} onClick={() => get(xlsxUrl(f))}>
+                  {busy === xlsxUrl(f) ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileSpreadsheet aria-hidden className="h-4 w-4" />}
+                  {f === 'payments.csv' ? 'Ödeme listesi (Excel)' : 'Stopaj özeti (Excel)'}
+                </button>
+              ))}
             </>
           )}
         </div>

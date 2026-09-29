@@ -1,4 +1,5 @@
 import { hrDownload, hrSend, qs } from '../hrApi';
+import { xlsxUrl } from '../../components/excel';
 
 /** M58 Çalışan deneyimi ve bağlılık uçları (/api/v1/hr/engagement/*) ve oturumsuz anket formu (/api/v1/hr/survey-public/*). */
 
@@ -80,6 +81,7 @@ export const engApi = {
   refreshThemes: (id: string) => hrSend<{ classified: number; themes: number }>('POST', `${E}/surveys/${enc(id)}/themes/refresh`, undefined, 600_000),
   share: (id: string) => hrSend<Survey>('POST', `${E}/surveys/${enc(id)}/share`),
   exportCsv: (id: string) => hrDownload(`${E}/surveys/${enc(id)}/export.csv`, 'anket.csv'),
+  exportXlsx: (id: string) => hrDownload(xlsxUrl(`${E}/surveys/${enc(id)}/export.csv`), 'anket.xlsx'),
   trend: () => hrSend<{ items: TrendRow[]; suggestions: { total: number; answered: number; open: number; avgDays: number | null } }>('GET', `${E}/trend`),
   myUnits: () => hrSend<{ units: { id: string; name: string | null }[]; results: Result[] }>('GET', `${E}/my-units`),
   createSuggestion: (text: string, anonymous: boolean) => hrSend<{ id: string; anonymous: boolean; followCode: string | null }>('POST', `${E}/suggestions`, { text, anonymous }),

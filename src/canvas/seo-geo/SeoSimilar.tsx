@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, RefreshCw, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { xlsxUrl } from '../components/excel';
 
 /** Benzer kitaplar: /api/v1/seo-geo/similar. CRM emsal bağları + tema/yaş + yazar/dizi → kitap sayfasından verilecek
  *  «ilgili ürünler» bağlantıları. Karar yalnız kaydedilir; onaylananlar CSV ile T-soft'a elle girilir. */
@@ -150,9 +151,14 @@ export default function SeoSimilar() {
             </button>
           )}
           {canExport && (
-            <a className="sg-button" href={api.csv()}>
-              <Download size={16} aria-hidden /> Onaylananları indir (CSV)
-            </a>
+            <>
+              <a className="sg-button" href={api.csv()}>
+                <Download size={16} aria-hidden /> Onaylananları indir (CSV)
+              </a>
+              <a className="sg-button" href={xlsxUrl(api.csv())}>
+                <FileSpreadsheet size={16} aria-hidden /> Onaylananları indir (Excel)
+              </a>
+            </>
           )}
         </>
       }

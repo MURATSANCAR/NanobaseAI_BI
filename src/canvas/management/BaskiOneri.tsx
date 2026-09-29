@@ -1,7 +1,8 @@
 import { forwardRef, useCallback, useEffect, useMemo, useState, type HTMLAttributes } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TableVirtuoso, type TableComponents } from 'react-virtuoso';
-import { ArrowDown, ArrowDownToLine, ArrowUp, Code2, Info, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowDown, ArrowDownToLine, ArrowUp, Code2, FileSpreadsheet, Info, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
@@ -14,6 +15,7 @@ import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import './management.css';
 import { notifyExport } from '../data-security/notify';
+import { downloadCsvAsXlsx } from '../components/excel';
 
 const REPORT_ID = 'baski-oneri';
 
@@ -204,6 +206,12 @@ export default function BaskiOneri() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadXlsx = () => {
+    if (!view) return;
+    notifyExport(`Baskı öneri raporu (${view.id})`, 'xlsx', rows.length);
+    downloadCsvAsXlsx(csvOf(view, rows), `baski-oneri-${view.id}-${snap?.data?.asOf ?? 'rapor'}.csv`).catch((e: Error) => toast.error(e.message));
+  };
+
   const refreshing = refresh.isPending || !!snap?.refreshing;
   const levels = view?.oneriLevels ?? snap?.data?.oneriLevels ?? [];
   const activeFilters =
@@ -234,9 +242,14 @@ export default function BaskiOneri() {
                 <Code2 size={16} /> SQL ve hesaplar
               </button>
               {canExport && (
-                <button type="button" className="mg-button" onClick={download} disabled={!view || rows.length === 0}>
-                  <ArrowDownToLine size={16} /> CSV
-                </button>
+                <>
+                  <button type="button" className="mg-button" onClick={download} disabled={!view || rows.length === 0}>
+                    <ArrowDownToLine size={16} /> CSV
+                  </button>
+                  <button type="button" className="mg-button" onClick={downloadXlsx} disabled={!view || rows.length === 0}>
+                    <FileSpreadsheet size={16} /> Excel
+                  </button>
+                </>
               )}
               {canRefresh && (
                 <button type="button" className="mg-button" onClick={() => refresh.mutate()} disabled={refreshing || !ENGINE_ENABLED}>

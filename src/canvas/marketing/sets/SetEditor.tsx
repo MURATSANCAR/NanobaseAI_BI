@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Link2, Loader2, Save, Sparkles, Trash2 } from 'lucide-react';
+import { Download, FileSpreadsheet, Link2, Loader2, Save, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../../admin/ui';
 import { Panel, useDebounced } from '../../editorial/kit';
@@ -12,6 +12,7 @@ import { STATUS_TONE, addItem, canEditSet, pctToRatio, setsApi, type ItemInput, 
 import { MarginCell, SetsFrame, Tone } from './parts';
 import BookPicker from './BookPicker';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { xlsxUrl } from '../../components/excel';
 
 /** Set ekranı: bileşenler, fiyat–marj hesaplayıcı (kaydetmeden anında), ambalaj, sezon ve kanal, ZEKİ AI metinleri, onay,
  *  «CRM/Logo'ya açılacak kart» listesi ve CRM kartıyla eşleme. */
@@ -426,6 +427,7 @@ function CardPanel({ s, canWrite, canExport, onSaved }: { s: SetRow; canWrite: b
         {canExport && (
           <div className="flex gap-2">
             <a className={btnGhost} href={setsApi.cardUrl(s.id, 'csv')} download><Download aria-hidden className="h-4 w-4" /> CSV</a>
+            <a className={btnGhost} href={xlsxUrl(setsApi.cardUrl(s.id, 'csv'))} download><FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel</a>
             <a className={btnGhost} href={setsApi.cardUrl(s.id, 'pdf')} download><Download aria-hidden className="h-4 w-4" /> PDF</a>
           </div>
         )}

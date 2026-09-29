@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, fmtDate, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
@@ -10,6 +10,7 @@ import { dijitalApi, fmtInt, fmtMoney, fmtPct, type ImportSummary, type Sales } 
 import { AskSheet, DigitalFrame, Tabs } from './parts';
 import ImportWizard, { UploadStep } from './ImportWizard';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** Dijital satış (finans verisi, ayrı sayfa yetkisi): onaylı platform raporlarından aylık gelir, platform ve kitap kırılımı,
  *  eşleşmeyen açık satırlar, Logo'daki e-kitap faturaları (ayrı sütun; iki kaynak toplanmaz), dijital/basılı oranı;
@@ -87,10 +88,16 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
             </select>
           </label>
           {canExport && (
-            <a className={btnGhost} href={dijitalApi.salesCsv({ donem: donem || undefined, platform: platform || undefined })}>
-              <Download aria-hidden className="h-4 w-4" />
-              CSV
-            </a>
+            <>
+              <a className={btnGhost} href={dijitalApi.salesCsv({ donem: donem || undefined, platform: platform || undefined })}>
+                <Download aria-hidden className="h-4 w-4" />
+                CSV
+              </a>
+              <a className={btnGhost} href={xlsxUrl(dijitalApi.salesCsv({ donem: donem || undefined, platform: platform || undefined }))}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                Excel
+              </a>
+            </>
           )}
         </div>
       </Panel>

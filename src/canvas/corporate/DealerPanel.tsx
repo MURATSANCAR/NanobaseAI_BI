@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Download, Search } from 'lucide-react';
+import { Download, FileSpreadsheet, Search } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
@@ -8,6 +8,7 @@ import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty } from './parts';
 import { corporateApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type Meta } from './api';
+import { xlsxUrl } from '../components/excel';
 
 const SHOW = 25;
 
@@ -89,9 +90,14 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
           ))}
         </div>
         {meta.me.canExport && (
-          <a className={btnGhost} href={view === 'bayi' ? corporateApi.dealersCsvUrl(p) : corporateApi.highlightsCsvUrl()} download>
-            <Download aria-hidden className="h-4 w-4" /> CSV
-          </a>
+          <>
+            <a className={btnGhost} href={view === 'bayi' ? corporateApi.dealersCsvUrl(p) : corporateApi.highlightsCsvUrl()} download>
+              <Download aria-hidden className="h-4 w-4" /> CSV
+            </a>
+            <a className={btnGhost} href={xlsxUrl(view === 'bayi' ? corporateApi.dealersCsvUrl(p) : corporateApi.highlightsCsvUrl())} download>
+              <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+            </a>
+          </>
         )}
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">

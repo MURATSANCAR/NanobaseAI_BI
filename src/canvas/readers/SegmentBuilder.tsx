@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import { Panel, useDebounced } from '../editorial/kit';
@@ -395,7 +395,7 @@ function ExportPanel({ s }: { s: Segment }) {
   const [purpose, setPurpose] = useState('');
   const qc = useQueryClient();
   const m = useMutation({
-    mutationFn: () => readersApi.exportList(s.id, channel, purpose),
+    mutationFn: (excel: boolean) => readersApi.exportList(s.id, channel, purpose, excel),
     onSuccess: (r) => {
       toast.success(`Liste indirildi: ${fmtInt(r.count)} kişi${r.excluded ? `, izin/koşul nedeniyle ${fmtInt(r.excluded)} kişi dışarıda` : ''}.`);
       qc.invalidateQueries({ queryKey: ['readers', 'exports'] });
@@ -426,10 +426,16 @@ function ExportPanel({ s }: { s: Segment }) {
           </div>
           <label className={`${label} mt-2 block`} htmlFor="aktarim-amac">Amaç</label>
           <input id="aktarim-amac" className={field} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Örn. Ekim çocuk bülteni" />
-          <button type="button" className={`${btnPrimary} mt-2`} disabled={m.isPending || purpose.trim().length < 5} onClick={() => m.mutate()}>
-            {m.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-            Listeyi indir (CSV)
-          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className={btnPrimary} disabled={m.isPending || purpose.trim().length < 5} onClick={() => m.mutate(false)}>
+              {m.isPending && !m.variables ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
+              Listeyi indir (CSV)
+            </button>
+            <button type="button" className={btnPrimary} disabled={m.isPending || purpose.trim().length < 5} onClick={() => m.mutate(true)}>
+              {m.isPending && m.variables ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileSpreadsheet aria-hidden className="h-4 w-4" />}
+              Listeyi indir (Excel)
+            </button>
+          </div>
         </>
       )}
     </Panel>

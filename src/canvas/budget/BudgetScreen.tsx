@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Calculator, Download, Loader2, RefreshCw } from 'lucide-react';
+import { Calculator, Download, FileSpreadsheet, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
@@ -15,6 +15,7 @@ import DeptTab from './DeptTab';
 import ScenariosTab from './ScenariosTab';
 import GenerateSheet from './GenerateSheet';
 import SqlInfo from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** M46 Bütçe planlama ve kontrolü. Yıl, plan ve sekme adres çubuğunda (?yil=, ?plan=, ?sekme=); bağlantı paylaşılabilir. */
 
@@ -150,10 +151,16 @@ export default function BudgetScreen() {
           </button>
         )}
         {plan && (
-          <a className={`${btnGhost} flex-1`} href={budgetApi.exportUrl(plan.id)} download>
-            <Download aria-hidden className="h-4 w-4" />
-            Hedefleri indir
-          </a>
+          <>
+            <a className={`${btnGhost} flex-1`} href={budgetApi.exportUrl(plan.id)} download>
+              <Download aria-hidden className="h-4 w-4" />
+              Hedefleri indir (CSV)
+            </a>
+            <a className={`${btnGhost} flex-1`} href={xlsxUrl(budgetApi.exportUrl(plan.id))} download>
+              <FileSpreadsheet aria-hidden className="h-4 w-4" />
+              Hedefleri indir (Excel)
+            </a>
+          </>
         )}
       </div>
     </div>

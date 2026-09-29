@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, Loader2, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, btnPrimary, errText, field, label, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
@@ -106,7 +106,7 @@ function ImportScreen({ id }: { id: string }) {
     },
     onError: (e) => toast.error(errText(e, 'Eşleştirilemedi.') ?? ''),
   });
-  const csv = useMutation({ mutationFn: () => readersApi.crmCsv(id), onError: (e) => toast.error(errText(e, 'Liste alınamadı.') ?? '') });
+  const csv = useMutation({ mutationFn: (excel: boolean) => readersApi.crmCsv(id, excel), onError: (e) => toast.error(errText(e, 'Liste alınamadı.') ?? '') });
   const purge = useMutation({
     mutationFn: () => readersApi.purgeImport(id),
     onSuccess: () => { toast.success('Kişi satırları silindi; sayılar kaldı.'); qc.invalidateQueries({ queryKey: ['readers'] }); },
@@ -177,9 +177,14 @@ function ImportScreen({ id }: { id: string }) {
         ))}
         <span className="ml-auto flex flex-wrap gap-2">
           {d.new > 0 && d.status === 'eslesti' && me?.canExport && (mine || me.canPersonal) && (
-            <button type="button" className={btnGhost} disabled={csv.isPending} onClick={() => csv.mutate()}>
-              <Download aria-hidden className="h-4 w-4" />CRM'e işlenecek yeni kişiler
-            </button>
+            <>
+              <button type="button" className={btnGhost} disabled={csv.isPending} onClick={() => csv.mutate(false)}>
+                <Download aria-hidden className="h-4 w-4" />CRM'e işlenecek yeni kişiler (CSV)
+              </button>
+              <button type="button" className={btnGhost} disabled={csv.isPending} onClick={() => csv.mutate(true)}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />CRM'e işlenecek yeni kişiler (Excel)
+              </button>
+            </>
           )}
           {canImport && (
             <button type="button" className={btnGhost} disabled={purge.isPending} onClick={() => purge.mutate()}>

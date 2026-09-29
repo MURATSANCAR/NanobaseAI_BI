@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Download, NotebookPen } from 'lucide-react';
+import { Download, FileSpreadsheet, NotebookPen } from 'lucide-react';
 import { ENGINE_ENABLED, translationApi, type QualityReport as Report } from '../../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, nf, td, th } from '../../admin/ui';
 import { dateTime, num } from '../../format';
@@ -10,6 +10,7 @@ import { CATEGORY, ProgressBar, SEVERITY, StagePill, fmtDay, pair, paceText, pct
 import { QePanel } from './qe';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { xlsxUrl } from '../../components/excel';
 
 /** Kalite raporu (M4): işin gerçek kayıtlarından. MQM inceleme puanı (onaylanan kelimelere göre hata ağırlığı),
  *  inceleyenin düzeltme oranı, otomatik denetim bulguları, terim uyumu, bölüm ve gün gün ilerleme. */
@@ -293,10 +294,16 @@ export default function QualityReport() {
             Çeviri masası
           </Link>
           {canExport && (
-            <a href={translationApi.qualityCsvUrl(jobId)} className={btnGhost}>
-              <Download aria-hidden className="h-4 w-4" />
-              CSV
-            </a>
+            <>
+              <a href={translationApi.qualityCsvUrl(jobId)} className={btnGhost}>
+                <Download aria-hidden className="h-4 w-4" />
+                CSV
+              </a>
+              <a href={xlsxUrl(translationApi.qualityCsvUrl(jobId))} className={btnGhost}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                Excel
+              </a>
+            </>
           )}
         </div>
       }

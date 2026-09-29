@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { CheckCheck, Download, ExternalLink, EyeOff, RotateCcw } from 'lucide-react';
+import { CheckCheck, Download, ExternalLink, EyeOff, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -12,6 +12,7 @@ import { barHeights, musteriApi, type Finding } from './api';
 import { SubNav } from './parts';
 import { RunNotes, useMusteriMeta } from './CustomersHome';
 import SqlInfo from '../components/SqlInfo';
+import { xlsxUrl } from '../components/excel';
 
 /** CRM veri sağlığı: Logo bağı olmayan, olası tekrar, kanalı eksik, sahipsiz / ortak hesaba ait cari kayıtları, izin
  *  çelişkileri ve (yalnız yetkiliye) güvenlik bulguları. Portal CRM'e yazmaz: bulgu «CRM'de düzeltildi» diye işaretlenir,
@@ -175,10 +176,16 @@ export default function DataHealthScreen() {
           <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[12px] text-canvas-muted">
             <span>{d.total.toLocaleString('tr-TR')} bulgu</span>
             {m.me.canExport && (
-              <a className={`${btnGhost} !min-h-9`} href={musteriApi.healthCsvUrl({ tur, durum, onem, q })}>
-                <Download aria-hidden className="h-4 w-4" />
-                CRM'de düzeltilecek listesi
-              </a>
+              <>
+                <a className={`${btnGhost} !min-h-9`} href={musteriApi.healthCsvUrl({ tur, durum, onem, q })}>
+                  <Download aria-hidden className="h-4 w-4" />
+                  CRM'de düzeltilecek listesi (CSV)
+                </a>
+                <a className={`${btnGhost} !min-h-9`} href={xlsxUrl(musteriApi.healthCsvUrl({ tur, durum, onem, q }))}>
+                  <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                  Excel
+                </a>
+              </>
             )}
           </div>
 

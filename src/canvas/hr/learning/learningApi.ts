@@ -2,6 +2,7 @@ import type { Reading } from '../../components/ReadingBadge';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import { hrDownload, hrSend, qs, type Job } from '../hrApi';
+import { xlsxUrl } from '../../components/excel';
 
 /** M57 Eğitim ve gelişim uçları (/api/v1/hr/learning/*, /api/v1/hr/visit). İstemci İK-0'ın `hrSend`'ini kullanır. */
 
@@ -174,6 +175,7 @@ export const learningApi = {
   dashboard: () => hrSend<Dashboard>('GET', `${L}/dashboard`),
   expiring: (days?: number) => hrSend<{ days: number | null; items: StatusRow[]; total: number }>('GET', `${L}/expiring${qs({ days })}`),
   exportExpiring: (days?: number) => hrDownload(`${L}/export/expiring.csv${qs({ days })}`, 'zorunlu-egitim.csv'),
+  exportExpiringXlsx: (days?: number) => hrDownload(xlsxUrl(`${L}/export/expiring.csv${qs({ days })}`), 'zorunlu-egitim.xlsx'),
   courses: (active = false) => hrSend<{ items: Course[] }>('GET', `${L}/courses${qs({ active: active || undefined })}`),
   createCourse: (body: Partial<Course>) => hrSend<Course>('POST', `${L}/courses`, body),
   updateCourse: (id: string, body: Partial<Course>) => hrSend<Course>('PATCH', `${L}/courses/${enc(id)}`, body),

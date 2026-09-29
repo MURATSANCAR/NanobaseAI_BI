@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, ChevronLeft, ChevronRight, Download, History, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { xlsxUrl } from '../components/excel';
 
 const PAGE = 40;
 type Owner = 'tsoft' | 'telif' | 'icerik' | 'bt' | 'yayin' | 'seo';
@@ -133,9 +134,14 @@ export default function SeoWorklist() {
             </button>
           )}
           {canExport && (
-            <a className="sg-button" href={`${ENGINE_BASE}/api/v1/seo-geo/worklist/export.csv?${qs(filters)}`}>
-              <Download size={16} aria-hidden /> CSV indir
-            </a>
+            <>
+              <a className="sg-button" href={`${ENGINE_BASE}/api/v1/seo-geo/worklist/export.csv?${qs(filters)}`}>
+                <Download size={16} aria-hidden /> CSV indir
+              </a>
+              <a className="sg-button" href={xlsxUrl(`${ENGINE_BASE}/api/v1/seo-geo/worklist/export.csv?${qs(filters)}`)}>
+                <FileSpreadsheet size={16} aria-hidden /> Excel indir
+              </a>
+            </>
           )}
         </>
       }

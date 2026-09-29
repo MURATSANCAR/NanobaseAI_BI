@@ -652,6 +652,8 @@ RULES: list[tuple[str, Any]] = [
     # M49 Veri güvenliği (Altyapı ve destek). Sayfa açıkça verilir; istemci tarafı dışa aktarma bildirimi herkese açık.
     ("/api/v1/data-security/run-due", SYSTEM),
     ("/api/v1/data-security/export-notice", OPEN),
+    # İstemcide üretilen CSV'nin Excel'e çevrilmesi (csv_excel.py): kişi ekranda gördüğü tabloyu gönderir; bildirim istemciden.
+    ("/api/v1/export/xlsx", OPEN),
     ("/api/v1/data-security/", frozenset({page("veri-guvenligi")})),
     # M51 Müşteri hizmetleri. Zamanlayıcı run-due uçlarını, destek masası paneli (çerezsiz, sunucudan sunucuya) panel/
     # uçlarını çağırır; panel ucu temsilcinin portal yetkisini kendi içinde uygular.

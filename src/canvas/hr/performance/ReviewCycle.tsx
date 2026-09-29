@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, Plus } from 'lucide-react';
+import { Download, FileSpreadsheet, Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, nf, td, th } from '../../admin/ui';
 import Sheet from '../../editorial/studio/reader/Sheet';
@@ -85,6 +85,7 @@ function StatusTab({ cycle, meta }: { cycle: Cycle; meta?: PerfMeta }) {
           {cycle.state === 'kalibrasyon' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('reopen')}>Yeniden aç</button>}
           {(cycle.state === 'acik' || cycle.state === 'kalibrasyon') && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('close')}>Dönemi kapat</button>}
           {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycle(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />Tablo (CSV)</button>}
+          {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycleXlsx(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Tablo (Excel)</button>}
         </div>
       )}
       {st.error && <Note tone="err">{errText(st.error, 'Durum okunamadı.')}</Note>}

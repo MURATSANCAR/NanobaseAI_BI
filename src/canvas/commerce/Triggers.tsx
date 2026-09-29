@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Play, Plus } from 'lucide-react';
+import { FileSpreadsheet, Loader2, Play, Plus } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import { Panel } from '../editorial/kit';
@@ -230,7 +230,7 @@ function RunCard({ r, excl, onChange, k }: { r: Run; excl: Record<string, string
     onError: (e) => toast.error(errText(e, 'Karar kaydedilemedi.') ?? ''),
   });
   const exp = useMutation({
-    mutationFn: () => commerceApi.exportRun(r.id, purpose),
+    mutationFn: (excel: boolean) => commerceApi.exportRun(r.id, purpose, excel),
     onSuccess: (x) => { toast.success(`${fmtInt(x.count)} kişi indirildi; ${fmtInt(x.excluded)} kişi yeniden denetimde dışarıda kaldı.`); onChange(); },
     onError: (e) => toast.error(errText(e, 'Liste indirilemedi.') ?? ''),
   });
@@ -274,8 +274,11 @@ function RunCard({ r, excl, onChange, k }: { r: Run; excl: Record<string, string
           {me?.canList && meta.data?.exportEnabled && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <input className={field} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Amaç (kayda geçer), örn. Ekim bülteni" />
-              <button type="button" className={btnGhost} onClick={() => exp.mutate()} disabled={exp.isPending || purpose.trim().length < 5}>
-                {exp.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Hedef grubu indir
+              <button type="button" className={btnGhost} onClick={() => exp.mutate(false)} disabled={exp.isPending || purpose.trim().length < 5}>
+                {exp.isPending && !exp.variables && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Hedef grubu indir (CSV)
+              </button>
+              <button type="button" className={btnGhost} onClick={() => exp.mutate(true)} disabled={exp.isPending || purpose.trim().length < 5}>
+                {exp.isPending && exp.variables ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileSpreadsheet aria-hidden className="h-4 w-4" />}Hedef grubu indir (Excel)
               </button>
             </div>
           )}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, field, td, th } from '../../admin/ui';
 import { fmtDay } from '../hrApi';
@@ -62,7 +62,10 @@ export default function EngagementDashboard() {
               <div className="flex flex-wrap gap-2">
                 {scope !== 'sirket' && <button type="button" className={btnGhost} onClick={() => setScope('sirket')}>Şirket geneline dön</button>}
                 {can?.export && s.state === 'kapandi' && (
-                  <button type="button" className={btnGhost} onClick={() => void engApi.exportCsv(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />CSV</button>
+                  <>
+                    <button type="button" className={btnGhost} onClick={() => void engApi.exportCsv(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />CSV</button>
+                    <button type="button" className={btnGhost} onClick={() => void engApi.exportXlsx(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</button>
+                  </>
                 )}
               </div>
             }>

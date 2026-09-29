@@ -10,6 +10,7 @@ import { ecomApi, isEan, type Diff, type DiffKind, type Meta } from './api';
 import { DiffCard, EticaretFrame, MarkSheet } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
+import { xlsxUrl } from '../components/excel';
 
 /** M34 Farklar (eşitleme raporu): her satır bir kitabın bir farkı; CRM, Logo ve site değerleri yan yana. Süzgeçler adres
  *  çubuğunda (?tur=, ?durum=, ?q=, ?sahip=). Seçilen farklar topluca işaretlenir; barkodlu kitapların içerik paketi indirilir. */
@@ -132,6 +133,10 @@ function Listing({ meta }: { meta: Meta }) {
               <a className={btnGhost} href={ecomApi.diffsCsvUrl({ tur, durum, q: dq, sahip })}>
                 <Download aria-hidden className="h-4 w-4" />
                 Listeyi indir (CSV)
+              </a>
+              <a className={btnGhost} href={xlsxUrl(ecomApi.diffsCsvUrl({ tur, durum, q: dq, sahip }))}>
+                <FileSpreadsheet aria-hidden className="h-4 w-4" />
+                Listeyi indir (Excel)
               </a>
             </>
           )}
