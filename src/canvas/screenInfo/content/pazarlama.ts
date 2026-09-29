@@ -1046,7 +1046,7 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       "Durum, sahip ve metinle süzün",
       "Farkı «düzeltildi», «sonra» ya da «bilinçli» işaretleyin",
-      "Listeyi indirin (CSV)",
+      "Listeyi indirin (CSV ya da Excel)",
     ],
   },
 

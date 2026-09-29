@@ -126,11 +126,16 @@ def _date_parts(s: str) -> Optional[tuple[int, ...]]:
     return None
 
 
+_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
 def same(raw: str, val: Any) -> bool:
     if val is None:
         return raw.strip() == ""
     if isinstance(val, str):
-        return val == raw
+        # Excel'in kabul etmediği kontrol karakterleri atılır; 32.767'yi aşan hücre «…» ile biter (csv_excel kuralı).
+        r = _CTRL.sub("", raw)
+        return val == r or (len(val) == 32767 and val.endswith("…") and r.startswith(val[:-1]))
     if isinstance(val, (datetime, date)):
         p = _date_parts(raw)
         v = (val.year, val.month, val.day, getattr(val, "hour", 0), getattr(val, "minute", 0), getattr(val, "second", 0))

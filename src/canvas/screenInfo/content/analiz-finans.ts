@@ -143,7 +143,7 @@ const CONTENT: ScreenInfoMap = {
       { name: "Haftalık kaynak okuma ve eşleme önerisi", when: "Her pazartesi 05:30", what: "Rakip kayıtlarını okur ve yeni rakip kategorileri için eşleme önerisi hazırlar." },
     ],
     actions: [
-      "Yayınevi ve kategoriye göre fiyat, sayfa ve format bandını karşılaştırın; tabloyu CSV olarak indirin.",
+      "Yayınevi ve kategoriye göre fiyat, sayfa ve format bandını karşılaştırın; tabloyu CSV ya da Excel olarak indirin.",
       "İzlediğiniz rakipleri seçin.",
       "Bir kitap ya da konu için emsal arayın.",
       "Rakip kategorisini bir TİMAŞ kategorisine eşleyin ya da «karşılığı yok» diye işaretleyin.",
@@ -209,7 +209,7 @@ const CONTENT: ScreenInfoMap = {
     ],
     actions: [
       "Dönemi, önceki dönemi, geçen yılı ve bütçeyi yan yana karşılaştırın.",
-      "Gelir tablosunu Excel'e, kârlılığı CSV'ye aktarın.",
+      "Gelir tablosunu Excel'e, kârlılığı CSV ya da Excel'e aktarın.",
       "Yetkiniz varsa hesap eşlemesini onaylayın ve ay kapanışını kaydedin.",
       "Vergi takvimini düzenleyin ya da bir önceki yıldan kopyalayın.",
     ],
@@ -267,7 +267,7 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       "Öneri düzeyine, yayınevine, statüye göre süzün; kitap, yazar ya da stok koduyla arayın.",
       "Bir kolonun kaynağını ve hesabını açın.",
-      "Görünen listeyi CSV olarak indirin; yetkiniz varsa verileri hemen yeniletin.",
+      "Görünen listeyi CSV ya da Excel olarak indirin; yetkiniz varsa verileri hemen yeniletin.",
     ],
   },
 

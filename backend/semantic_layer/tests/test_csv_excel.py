@@ -67,6 +67,8 @@ def test_turkish_and_dot_decimals_column_by_column():
 def test_grouped_value_follows_file_convention_or_stays_text():
     # Dosya Türkçe ondalık kullanıyor: «12.500» binlik ayraçlı 12500.
     assert _convert("Tutar;Adet\n1,5;12.500\n")[1] == [1.5, 12500]
+    # Dosya nokta ondalık kullanıyor: «4.333» ondalık 4,333 (Python çıktısında binlik ayraç olmaz).
+    assert _convert("Oran;Ortalama\n0.5;4.333\n1.25;3.667\n")[1:] == [[0.5, 4.333], [1.25, 3.667]]
     # Dosyada ipucu yok: «12.500» iki türlü okunur → metin kalır (CSV'de nasıl görünüyorsa).
     assert _convert("Adet\n12.500\n")[1] == ["12.500"]
 
@@ -100,6 +102,30 @@ def test_formula_like_text_is_not_a_formula():
 def test_mixed_decimal_styles_keep_ambiguous_values_as_text():
     rows = _convert("Değer\n1,5\n2.25\n7\n")
     assert rows[1:] == [["1,5"], ["2.25"], [7]]
+
+
+def test_control_characters_long_cells_and_row_limit(monkeypatch):
+    # Excel'in kabul etmediği kontrol karakteri atılır (dosya düşmez); sekme ve satır sonu kalır.
+    data, _ = X.to_xlsx('Not\n"hata\x01 metni\tsekme\nsatır"\n', "t")
+    assert _rows(_sheet(data))[1] == ["hata metni\tsekme\nsatır"]
+    # 32.767 karakteri aşan hücre «…» ile biter.
+    data, _ = X.to_xlsx("Not\n" + "a" * 40000 + "\n", "t")
+    v = _rows(_sheet(data))[1][0]
+    assert len(v) == X.MAX_CELL and v.endswith("…")
+    # Sayfa sınırını aşan liste sessizce kesilmez.
+    monkeypatch.setattr(X, "MAX_ROWS", 3)
+    with pytest.raises(X.TooManyRows):
+        X.to_xlsx("A\n1\n2\n3\n", "t")
+
+
+def test_styles_and_escaping():
+    data, _ = X.to_xlsx('Ad & <Soyad>;Tutar;Tarih;Pay\n"Ali ""Veli"" & <b>";1.234,5;2026-09-29 08:05;%12\n', "a'b")
+    ws = _sheet(data)
+    assert ws.title == "a'b" and ws["A1"].font.b and ws["A1"].value == "Ad & <Soyad>"
+    assert ws["A2"].value == 'Ali "Veli" & <b>'
+    assert (ws["B2"].value, ws["B2"].number_format) == (1234.5, "#,##0.0")
+    assert (ws["C2"].value, ws["C2"].number_format) == (datetime(2026, 9, 29, 8, 5), "dd.mm.yyyy hh:mm")
+    assert (ws["D2"].value, ws["D2"].number_format) == (pytest.approx(0.12), "0%")
 
 
 def test_every_row_and_value_survives():

@@ -85,14 +85,14 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
             </span>
           </label>
           {meta.me.canExport && (
-            <>
-              <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={financeApi.profitExportUrl(params)} download>
+            <div className="col-span-2 flex gap-2 sm:col-span-1">
+              <a className={`${btnGhost} flex-1 whitespace-nowrap`} href={financeApi.profitExportUrl(params)} download>
                 <Download aria-hidden className="h-4 w-4" /> CSV indir
               </a>
-              <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={xlsxUrl(financeApi.profitExportUrl(params))} download>
+              <a className={`${btnGhost} flex-1 whitespace-nowrap`} href={xlsxUrl(financeApi.profitExportUrl(params))} download>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel indir
               </a>
-            </>
+            </div>
           )}
         </div>
       </Panel>

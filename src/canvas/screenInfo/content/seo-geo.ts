@@ -187,7 +187,7 @@ const CONTENT: ScreenInfoMap = {
     ],
     data: 'Google Search Console ve T-soft ürün ve sayfa kayıtları',
     refresh: 'Her gece, fırsat okumasıyla birlikte',
-    actions: ['Önerilen hedef sayfayı onaylayın ya da reddedin; karar yalnız kaydedilir.', '«Listeyi indir (CSV)» ile tabloyu indirin.'],
+    actions: ['Önerilen hedef sayfayı onaylayın ya da reddedin; karar yalnız kaydedilir.', '«Listeyi indir (CSV)» ya da «(Excel)» ile tabloyu indirin.'],
   },
 
   'seo-soru': {
@@ -275,7 +275,7 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       'Önerileri tek tek onaylayın ya da reddedin.',
       '«Kesin eşleşmelerin hepsini onayla» ya da «Yüksek güvenlilerin hepsini onayla» ile toplu onay verin.',
-      '«Onaylananları indir (CSV)» ile T-soft paneline girilecek listeyi alın.',
+      '«Onaylananları indir» (CSV ya da Excel) ile T-soft paneline girilecek listeyi alın.',
     ],
   },
 
@@ -402,7 +402,7 @@ const CONTENT: ScreenInfoMap = {
     data: 'CRM yayın durumu, T-soft ürünleri ve Google Search Console',
     refresh: 'Her gece',
     jobs: [{ name: 'Öneri hesabı', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Satıştan kalkan kitap sayfalarının önerileri yeniden hesaplanır.' }],
-    actions: ['Öneri türüne ve duruma göre süzün.', 'Önerileri onaylayın ya da reddedin.', '«CSV indir» ile panele girilecek listeyi alın; «Yeniden hesapla» ile hemen yenileyin.'],
+    actions: ['Öneri türüne ve duruma göre süzün.', 'Önerileri onaylayın ya da reddedin.', '«CSV indir» ya da «Excel indir» ile panele girilecek listeyi alın; «Yeniden hesapla» ile hemen yenileyin.'],
   },
 
   'seo-yazar-sayfa': {
@@ -434,7 +434,7 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       'Sorumluya ve duruma göre süzün; gruplu ya da tek tek görün.',
       'Bir işin durumunu (yapılıyor, bitti, yok say) ve notunu kaydedin.',
-      '«Yeniden topla» ile listeyi hemen yenileyin, «CSV indir» ile dışa aktarın.',
+      '«Yeniden topla» ile listeyi hemen yenileyin, «CSV indir» ya da «Excel indir» ile dışa aktarın.',
     ],
   },
 
@@ -494,7 +494,7 @@ const CONTENT: ScreenInfoMap = {
     jobs: [{ name: 'CRM bağ okuması', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Emsal kitap, tema ve yaş bağları CRM’den yeniden okunur.' }],
     actions: [
       'Önerileri seçip onaylayın ya da reddedin.',
-      '«Onaylananları indir (CSV)» ile T-soft’a elle girilecek listeyi alın.',
+      '«Onaylananları indir» (CSV ya da Excel) ile T-soft’a elle girilecek listeyi alın.',
       '«CRM’den yeniden oku» ile bağları hemen yenileyin.',
     ],
   },

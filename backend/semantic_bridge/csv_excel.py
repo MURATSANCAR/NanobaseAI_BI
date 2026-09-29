@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import logging
 import re
 from datetime import date, datetime
 from typing import Any, Callable, Optional
@@ -28,6 +30,8 @@ from urllib.parse import parse_qsl, quote, unquote
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
+
+log = logging.getLogger("semantic.csv_excel")
 
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PARAM = "bicim"
@@ -168,7 +172,8 @@ def plan_columns(header: list[str], body: list[list[str]]) -> list[dict[str, Any
     file_style = file_styles.pop() if len(file_styles) == 1 else None
     for p in plans:
         if p["style"] == "grouped":
-            p["style"] = "tr" if file_style == "tr" else None   # «12.500» nokta ondalık yazımda binlik ayraç olmaz
+            # «12.500» / «4.333»: dosya Türkçe yazıyorsa binlik (12500), nokta ondalık yazıyorsa ondalık (4,333); ipucu yoksa metin.
+            p["style"] = file_style
     return plans
 
 
@@ -208,46 +213,163 @@ def sheet_title(name: str) -> str:
     return t or "Liste"
 
 
+# Excel'in kabul etmediği kontrol karakterleri (sekme, satır sonu, satır başı hariç 0x00–0x1F).
+_ILLEGAL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+MAX_ROWS = 1_048_576          # Excel'in bir sayfadaki satır sınırı (başlık dahil)
+MAX_CELL = 32_767             # Excel'in bir hücredeki karakter sınırı
+_EPOCH = datetime(1899, 12, 30)
+_BUILTIN_FMT = {"#,##0": 3, "#,##0.00": 4, "0%": 9, "0.00%": 10}
+_NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+_NS_R = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+
+
+class TooManyRows(ValueError):
+    pass
+
+
+def _esc(v: str) -> str:
+    return v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _col(n: int) -> str:
+    out = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        out = chr(65 + r) + out
+    return out
+
+
+def _text(v: str) -> str:
+    v = _ILLEGAL.sub("", v) if _ILLEGAL.search(v) else v
+    if len(v) > MAX_CELL:
+        v = v[: MAX_CELL - 1] + "…"
+    return v
+
+
+def _num(v: float | int) -> str:
+    return str(v) if isinstance(v, int) else repr(v)
+
+
 def to_xlsx(data: bytes | str, title: str = "Liste") -> tuple[bytes, int]:
-    """CSV → .xlsx baytları ve veri satırı sayısı (başlık hariç)."""
-    from openpyxl import Workbook
-    from openpyxl.cell.cell import TYPE_STRING
-    from openpyxl.styles import Alignment, Font
-    from openpyxl.utils import get_column_letter
+    """CSV → .xlsx baytları ve veri satırı sayısı (başlık hariç).
+
+    Dosya Office Open XML biçiminde doğrudan akışla yazılır (satır içi metin, sabit biçim tablosu): 250 bin satırlık
+    liste openpyxl ile ~50 sn sürüyordu (sunucuda hızlı XML altyapısı yok), bu yolla birkaç saniye. Değerler ve sayı
+    biçimleri aynı karar kurallarından gelir (`cell_value`). Excel sınırları: kabul etmediği kontrol karakterleri atılır;
+    32.767 karakteri aşan hücre «…» ile biter; 1.048.576 satırı aşan liste `TooManyRows` (sessiz kesme yok)."""
+    import zipfile
 
     rows = parse(decode(data))
     header, body = (rows[0], rows[1:]) if rows else ([], [])
+    if len(body) + (1 if header else 0) > MAX_ROWS:
+        raise TooManyRows(f"{len(body):,} satır Excel'in sayfa sınırını (1.048.576) aşıyor; CSV'yi kullanın.".replace(",", "."))
     plans = plan_columns(header, body)
-    wb = Workbook()
-    ws = wb.active
-    ws.title = sheet_title(title)
-    widths = [len(h) for h in header] + [0] * max(0, len(plans) - len(header))
-    if header:
-        ws.append(header)
-        for c in ws[1]:
-            c.font = Font(bold=True)
-            c.alignment = Alignment(vertical="top", wrap_text=True)
-    for r_i, row in enumerate(body, start=2 if header else 1):
-        for c_i, raw in enumerate(row, start=1):
-            plan = plans[c_i - 1] if c_i - 1 < len(plans) else {"text": True, "style": None}
-            val, fmt = cell_value(raw, plan)
-            if val is None:
-                continue
-            cell = ws.cell(row=r_i, column=c_i, value=val)
-            if isinstance(val, str):
-                cell.data_type = TYPE_STRING   # «=…» formül olarak çalışmaz
-            if fmt:
-                cell.number_format = fmt
-            if c_i - 1 < len(widths):
-                widths[c_i - 1] = max(widths[c_i - 1], min(len(raw), 80))
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[get_column_letter(i)].width = max(8, min(60, w + 2))
-    if header:
-        ws.freeze_panes = "A2"
-        if plans:
-            ws.auto_filter.ref = f"A1:{get_column_letter(len(plans))}{max(1, len(body) + 1)}"
+    ncol = max([len(plans)] + [len(r) for r in body]) if (header or body) else 0
+    widths = [len(header[i]) if i < len(header) else 0 for i in range(ncol)]
+    for row in body:
+        for i, raw in enumerate(row):
+            if len(raw) > widths[i]:
+                widths[i] = min(len(raw), 80)
+    nrows = len(body) + (1 if header else 0)
+    last = f"{_col(max(ncol, 1))}{max(nrows, 1)}"
+    cols = [_col(i) for i in range(1, ncol + 1)]
+    fmt_ids: dict[str, int] = {}     # biçim → hücre stili sırası (0 düz, 1 başlık, 2.. biçimli)
+
+    def style_of(fmt: str) -> int:
+        if fmt not in fmt_ids:
+            fmt_ids[fmt] = len(fmt_ids) + 2
+        return fmt_ids[fmt]
+
+    text_plan = {"text": True, "style": None}
     buf = io.BytesIO()
-    wb.save(buf)
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zf:
+        with zf.open("xl/worksheets/sheet1.xml", "w") as fh:
+            out: list[str] = []
+
+            def flush() -> None:
+                fh.write("".join(out).encode("utf-8"))
+                out.clear()
+
+            out.append(f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet {_NS} {_NS_R}>'
+                       f'<dimension ref="A1:{last}"/><sheetViews><sheetView workbookViewId="0">')
+            if header:
+                out.append('<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+                           '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/>')
+            out.append('</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>')
+            if ncol:
+                out.append("<cols>" + "".join(f'<col min="{i}" max="{i}" width="{max(8, min(60, w + 2))}" customWidth="1"/>'
+                                              for i, w in enumerate(widths, start=1)) + "</cols>")
+            out.append("<sheetData>")
+            r = 0
+            if header:
+                r = 1
+                out.append('<row r="1">' + "".join(
+                    f'<c r="{cols[i]}1" t="inlineStr" s="1"><is><t xml:space="preserve">{_esc(_text(h))}</t></is></c>'
+                    for i, h in enumerate(header)) + "</row>")
+            for row in body:
+                r += 1
+                cells = []
+                for i, raw in enumerate(row):
+                    val, fmt = cell_value(raw, plans[i] if i < len(plans) else text_plan)
+                    if val is None:
+                        continue
+                    ref = f"{cols[i]}{r}"
+                    if isinstance(val, str):
+                        cells.append(f'<c r="{ref}" t="inlineStr"><is><t xml:space="preserve">{_esc(_text(val))}</t></is></c>')
+                    elif isinstance(val, datetime):
+                        cells.append(f'<c r="{ref}" s="{style_of(fmt or "dd.mm.yyyy hh:mm")}"><v>{_num((val - _EPOCH).total_seconds() / 86400)}</v></c>')
+                    elif isinstance(val, date):
+                        cells.append(f'<c r="{ref}" s="{style_of(fmt or "dd.mm.yyyy")}"><v>{(val - _EPOCH.date()).days}</v></c>')
+                    else:
+                        cells.append(f'<c r="{ref}"' + (f' s="{style_of(fmt)}"' if fmt else "") + f"><v>{_num(val)}</v></c>")
+                out.append(f'<row r="{r}">' + "".join(cells) + "</row>")
+                if len(out) >= 2000:
+                    flush()
+            out.append("</sheetData>")
+            if header and ncol:
+                out.append(f'<autoFilter ref="A1:{last}"/>')
+            out.append('<pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/></worksheet>')
+            flush()
+        name = sheet_title(title)
+        qname = "'" + name.replace("'", "''") + "'"
+        defined = (f'<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'
+                   f'{_esc(qname)}!$A$1:${_col(max(ncol, 1))}${max(nrows, 1)}</definedName></definedNames>') if header and ncol else ""
+        zf.writestr("xl/workbook.xml", f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook {_NS} {_NS_R}>'
+                    f'<bookViews><workbookView/></bookViews><sheets><sheet name="{_esc(name)}" sheetId="1" r:id="rId1"/></sheets>'
+                    f"{defined}</workbook>")
+        custom = [f for f in fmt_ids if f not in _BUILTIN_FMT]
+        num_id = {f: _BUILTIN_FMT.get(f) or 164 + custom.index(f) for f in fmt_ids}
+        numfmts = (f'<numFmts count="{len(custom)}">' + "".join(
+            f'<numFmt numFmtId="{num_id[f]}" formatCode="{_esc(f)}"/>' for f in custom) + "</numFmts>") if custom else ""
+        xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>',
+               '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">'
+               '<alignment vertical="top" wrapText="1"/></xf>']
+        xfs += [f'<xf numFmtId="{num_id[f]}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' for f in fmt_ids]
+        font = '<sz val="11"/><name val="Calibri"/><family val="2"/>'
+        zf.writestr("xl/styles.xml", f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet {_NS}>{numfmts}'
+                    f'<fonts count="2"><font>{font}</font><font><b/>{font}</font></fonts>'
+                    '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+                    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+                    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+                    f'<cellXfs count="{len(xfs)}">{"".join(xfs)}</cellXfs>'
+                    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>')
+        zf.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+                    "</Relationships>")
+        zf.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+                    "</Relationships>")
+        zf.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                    '<Default Extension="xml" ContentType="application/xml"/>'
+                    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+                    "</Types>")
     return buf.getvalue(), len(body)
 
 
@@ -321,7 +443,17 @@ class CsvToXlsx:
                 disp = next((_header_text(v) for k, v in headers if k.lower() == b"content-disposition"), "")
                 path = scope.get("path") or ""
                 name = xlsx_name(disp, path.rsplit("/", 1)[-1])
-                body, _ = await run_in_threadpool(to_xlsx, b"".join(chunks), name)
+                try:
+                    body, _ = await run_in_threadpool(to_xlsx, b"".join(chunks), name)
+                except Exception as e:  # noqa: BLE001 — dosya inmez, kişi nedenini görür (düz 500 değil)
+                    too_many = isinstance(e, TooManyRows)
+                    log.warning("excel: %s Excel'e çevrilemedi: %s", path, e)
+                    msg = str(e) if too_many else "Liste Excel'e çevrilemedi; CSV'yi kullanın."
+                    err = json.dumps({"detail": {"code": "EXPORT", "message": msg}}, ensure_ascii=False).encode()
+                    await send({"type": "http.response.start", "status": 422 if too_many else 500,
+                                "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(err)).encode())]})
+                    await send({"type": "http.response.body", "body": err, "more_body": False})
+                    return
                 keep = [(k, v) for k, v in headers if k.lower() not in (b"content-type", b"content-length", b"content-disposition")]
                 keep += [(b"content-type", XLSX_MEDIA.encode()), (b"content-length", str(len(body)).encode()),
                          (b"content-disposition", disposition(name).encode("latin-1"))]
@@ -341,7 +473,10 @@ def register(app: Any) -> None:
         if not isinstance(text, str) or not text.strip():
             raise HTTPException(400, detail={"code": "EXPORT", "message": "Dönüştürülecek tablo boş."})
         name = xlsx_name("", str(body.get("filename") or "liste.csv"))
-        data, _ = await run_in_threadpool(to_xlsx, text, name)
+        try:
+            data, _ = await run_in_threadpool(to_xlsx, text, name)
+        except TooManyRows as e:
+            raise HTTPException(422, detail={"code": "EXPORT", "message": str(e)}) from None
         return Response(content=data, media_type=XLSX_MEDIA, headers={"Content-Disposition": disposition(name)})
 
     app.add_middleware(CsvToXlsx)

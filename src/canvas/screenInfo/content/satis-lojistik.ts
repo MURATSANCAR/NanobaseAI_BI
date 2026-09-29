@@ -89,7 +89,7 @@ const CONTENT: ScreenInfoMap = {
       },
     ],
     actions: [
-      "«Bayiler» sekmesinde segment, grup, kanal ve temsilciye göre süzün, listeyi CSV olarak alın.",
+      "«Bayiler» sekmesinde segment, grup, kanal ve temsilciye göre süzün, listeyi CSV ya da Excel olarak alın.",
       "Limit önerilerini onaylayın ya da reddedin; CRM'e işledikten sonra «CRM'e işlendi» diye işaretleyin.",
       "Bayi kartından ziyaret öncesi risk brifini açın ve aksiyon atayın.",
       "Yetkiniz varsa «Kurallar» sekmesinde ağırlıkların yeni sürümünü gerekçesiyle onaya gönderin.",
@@ -341,7 +341,7 @@ const CONTENT: ScreenInfoMap = {
       "Kayıp riski puanı kuralla hesaplanır; nedenler kartta etiket olarak yazar.",
     ],
     data: "Logo faturalı satış; CRM atamaları ve siparişleri",
-    actions: ["Süzün ve sıralayın", "Cariyi açıp ayrıntısına bakın", "Yetkiniz varsa listeyi CSV olarak indirin"],
+    actions: ["Süzün ve sıralayın", "Cariyi açıp ayrıntısına bakın", "Yetkiniz varsa listeyi CSV ya da Excel olarak indirin"],
   },
 
   'path:/musteri-iliskileri/cari/:kod': {

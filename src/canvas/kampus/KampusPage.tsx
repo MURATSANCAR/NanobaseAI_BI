@@ -788,9 +788,9 @@ export default function KampusPage() {
             onClick={downloadDirectory}
             disabled={everyone.length === 0}
             className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-semibold text-violet hover:bg-white disabled:text-muted sm:min-h-0 sm:py-1.5"
-            title="Rehberdeki herkesi CSV olarak indir (Excel açar)"
+            title="Rehberdeki herkesi CSV olarak indir"
           >
-            <Download className="h-3.5 w-3.5" /> Rehberi indir (Excel için CSV)
+            <Download className="h-3.5 w-3.5" /> Rehberi indir (CSV)
           </button>
           )}
           {canExport && (
@@ -801,7 +801,7 @@ export default function KampusPage() {
             className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-semibold text-violet hover:bg-white disabled:text-muted sm:min-h-0 sm:py-1.5"
             title="Rehberdeki herkesi Excel olarak indir"
           >
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Dahili Rehber (Excel)
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Rehberi indir (Excel)
           </button>
           )}
         </div>

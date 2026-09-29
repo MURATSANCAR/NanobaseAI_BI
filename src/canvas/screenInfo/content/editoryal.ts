@@ -132,7 +132,7 @@ const CONTENT: ScreenInfoMap = {
       'Segment numarasına dokununca o cümle çeviri masasında açılır.',
     ],
     data: 'Bu çeviri işinin onay, hata ve ilerleme kayıtları.',
-    actions: ['Hataları ve uyarılı cümleleri açıp düzeltin.', 'Raporu CSV olarak indirin.'],
+    actions: ['Hataları ve uyarılı cümleleri açıp düzeltin.', 'Raporu CSV ya da Excel olarak indirin.'],
   },
 
   cevirmenler: {
@@ -316,7 +316,7 @@ const CONTENT: ScreenInfoMap = {
       'Hakkı eksik, yok ya da incelenmesi gereken kitap listeye girmez; eşik ve türler yönetim ekranından değişir.',
     ],
     data: 'CRM telif sözleşmeleri ve kitap kartları, Logo faturalı satış',
-    actions: ['E-kitap ve sesli kitap sekmeleri arasında geçin.', 'Kitabı açıp ayrıntısına bakın.', 'Yetkiniz varsa listeyi CSV olarak indirin.'],
+    actions: ['E-kitap ve sesli kitap sekmeleri arasında geçin.', 'Kitabı açıp ayrıntısına bakın.', 'Yetkiniz varsa listeyi CSV ya da Excel olarak indirin.'],
   },
 
   'serbest-calisanlar': {
