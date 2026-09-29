@@ -10,6 +10,10 @@ virgül), kısa biçim `*:0/15`, ve `OnBootSec` + `OnUnitActiveSec` aralıkları
 sunucusunun saat dilimi). `Persistent=true` işler konteyner kapalıyken kaçırdıkları son turu açılışta bir kez koşar;
 ilk kurulumda (durum dosyası yokken) geçmiş turlar koşulmaz — 1 çekirdekli VM'e onlarca iş birden binmesin.
 
+Bir birimde birden çok `ExecStart` varsa (Type=oneshot) hepsi dosyadaki sırayla koşar: biri hata verirse sonrakiler
+koşmaz, `-` önekli satırın hatası yok sayılır (systemd kuralı); boş `ExecStart=` önceki satırları siler. Aynı birim
+(ve örnek) bir turu bitirmeden yeniden tetiklenirse ikinci tur koşmaz, systemd'nin etkinleşmekte olan birime katılması gibi.
+
 VM'de bilerek koşmayanlar `JOBS_EXCLUDE` (varsayılan: basın/web taraması — kullanıcı kararı 2026-09-25; Zeki AI
 kalite kapıları — iç ölçüm, test dosyaları ister). Köprüye `curl` ya da `kopru-cagir.sh` ile gitmeyen servis (betik)
 desteklenmez, günlüğe yazılır. Ana ekran özeti ayrı döngüdür (METRICS_EVERY_SEC).
@@ -157,15 +161,31 @@ def parse_span(text: str) -> int:
 
 # ------------------------------------------------------------------------------------------------ dosyalar
 @dataclass
+class Step:
+    """Birimin tek `ExecStart` satırı."""
+    path: str                      # köprü yolu (sorgu dahil)
+    timeout: int
+    ignore_failure: bool = False   # `ExecStart=-…`: hatası birimi düşürmez, sonraki satır koşar
+
+
+@dataclass
 class Job:
     name: str                      # zamanlayıcı adı (timas-stock)
     label: str                     # servis açıklaması
-    path: str                      # köprü yolu (sorgu dahil)
-    timeout: int
+    path: str                      # ilk adımın köprü yolu (sorgu dahil)
+    timeout: int                   # ilk adımın zaman aşımı
     calendars: list[Calendar] = field(default_factory=list)
     boot: int = 0
     every: int = 0
     persistent: bool = False
+    steps: list[Step] = field(default_factory=list)   # bütün ExecStart satırları, dosyadaki sırayla
+    unit: str = ""                 # birim + örnek (timas-dealers@gunluk); aynı birimin iki turu üst üste binmez
+
+    def __post_init__(self) -> None:
+        if not self.steps:
+            self.steps = [Step(self.path, self.timeout)]
+        if not self.unit:
+            self.unit = self.name
 
     def describe(self) -> str:
         if self.calendars:
@@ -196,6 +216,28 @@ def _ini(path: str) -> dict[str, list[str]]:
 _CURL = re.compile(r"(?:curl|kopru-cagir(?:\.sh)?)\b(?P<opts>.*?)[\"']?http://127\.0\.0\.1:8795(?P<path>/api/[^\"'\s]+)")
 
 
+_PREFIX = re.compile(r"^([-@:+!]*)(.*)$", re.S)
+
+
+def parse_step(line: str) -> Step:
+    """ExecStart değeri → adım. Önekler systemd'deki gibi: `-` hatayı yok sayar; `@ : + !` VM'de anlamsız, atılır."""
+    m = _PREFIX.match(line.strip())
+    prefix, rest = (m.group(1), m.group(2)) if m else ("", line)
+    path, timeout = parse_exec(rest)
+    return Step(path=path, timeout=timeout, ignore_failure="-" in prefix)
+
+
+def exec_lines(values: list[str]) -> list[str]:
+    """Birimdeki ExecStart değerleri → koşulacak satırlar. Boş `ExecStart=` öncekileri siler (systemd kuralı)."""
+    out: list[str] = []
+    for v in values:
+        if v:
+            out.append(v)
+        else:
+            out.clear()
+    return out
+
+
 def parse_exec(line: str) -> tuple[str, int]:
     """ExecStart satırı → (köprü yolu, zaman aşımı sn). Köprüye curl değilse ValueError."""
     m = _CURL.search(line)
@@ -223,11 +265,16 @@ def load_jobs(directory: str, exclude: Optional[list[str]] = None) -> tuple[list
             if m:
                 unit, inst = f"{m.group(1)}.service", m.group(2)
             s = _ini(os.path.join(directory, unit))
-            execs = [x for x in s.get("ExecStart", []) if x]
+            execs = exec_lines(s.get("ExecStart", []))
             if not execs:
                 raise ValueError(f"{unit}: ExecStart yok")
-            path, timeout = parse_exec(execs[-1].replace("%i", inst))
-            job = Job(name=name, label=(s.get("Description") or [name])[0], path=path, timeout=timeout,
+            try:
+                steps = [parse_step(x.replace("%i", inst)) for x in execs]
+            except ValueError as e:
+                raise ValueError(f"{unit}: {e}") from None
+            job = Job(name=name, label=(s.get("Description") or [name])[0], path=steps[0].path,
+                      timeout=steps[0].timeout, steps=steps,
+                      unit=f"{unit[:-len('@.service')]}@{inst}" if inst else unit[:-len(".service")],
                       calendars=[parse_calendar(c) for c in t.get("OnCalendar", [])],
                       boot=parse_span((t.get("OnBootSec") or ["0"])[0]),
                       every=parse_span((t.get("OnUnitActiveSec") or ["0"])[0]),
@@ -346,16 +393,51 @@ def call_bridge(path: str, timeout: int, budget: Optional[float] = None):
         attempt += 1
 
 
-def run(job: Job) -> None:
-    started = datetime.now(TZ)
+_unit_locks: dict[str, threading.Lock] = {}
+_unit_locks_guard = threading.Lock()
+
+
+def _unit_lock(unit: str) -> threading.Lock:
+    with _unit_locks_guard:
+        return _unit_locks.setdefault(unit, threading.Lock())
+
+
+def run(job: Job) -> bool:
+    """Birimin bütün ExecStart adımlarını sırayla koşar (Type=oneshot). Dönüş: tur başarılı mı.
+
+    Adım hata verirse sonrakiler koşmaz; `-` önekli adımın hatası yok sayılır ve sıradaki koşar. Aynı birim hâlâ
+    koşuyorsa bu tetik atlanır: iş iki kez koşmaz."""
+    lock = _unit_lock(job.unit)
+    if not lock.acquire(blocking=False):
+        print(f"{job.name}: {job.unit} hâlâ koşuyor, bu tetik atlandı", flush=True)
+        return False
     try:
-        out = call_bridge(job.path, job.timeout)
-        print(f"{job.name}: {str(out)[:300]}", flush=True)
-        report(job, True)
-    except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki denenir
-        print(f"{job.name} başarısız: {e}", flush=True)
-        report(job, False, f"{type(e).__name__}: {e}")
-    _write_state(job.name, started)
+        started = datetime.now(TZ)
+        ok, notes = True, []
+        many = len(job.steps) > 1
+        for i, st in enumerate(job.steps, 1):
+            tag = f"{job.name} [{i}/{len(job.steps)}] {st.path}" if many else job.name
+            try:
+                out = call_bridge(st.path, st.timeout)   # köprü hazır olana kadar bekler, «başlamadı» hatasında dener
+                print(f"{tag}: {str(out)[:300]}", flush=True)
+            except Exception as e:  # noqa: BLE001 — bir tur patlarsa bir sonraki tetikte yeniden denenir
+                err = f"{type(e).__name__}: {e}"
+                if st.ignore_failure:
+                    print(f"{tag} başarısız (yok sayıldı, «-»): {err}", flush=True)
+                    notes.append(f"{st.path} başarısız (yok sayıldı): {err}")
+                    continue
+                print(f"{tag} başarısız: {err}", flush=True)
+                notes.append(f"{st.path} başarısız: {err}" if many else err)
+                rest = [s.path for s in job.steps[i:]]
+                if rest:
+                    notes.append("koşmadı: " + ", ".join(rest))
+                ok = False
+                break
+        report(job, ok, "; ".join(notes))
+        _write_state(job.name, started)
+        return ok
+    finally:
+        lock.release()
 
 
 def _sleep_until(at: datetime) -> None:
@@ -406,7 +488,8 @@ def main() -> None:
     for n, why in skipped:
         print(f"  - {n}: {why}", flush=True)
     for j in jobs:
-        print(f"  + {j.name}: {j.describe()} → {j.path}", flush=True)
+        print(f"  + {j.name}: {j.describe()} → {' → '.join(('-' if st.ignore_failure else '') + st.path for st in j.steps)}",
+              flush=True)
     state = _read_state()
     first_deploy = not os.path.exists(STATE_FILE)
     if first_deploy:  # ilk kurulum: bugünkü geçmiş turları koşma; bundan sonrası takvimle

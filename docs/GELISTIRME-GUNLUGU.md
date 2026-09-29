@@ -150,6 +150,12 @@
   giriş» sekmesi (65), adresten açılış (`?tur=Pazarlama&geciken=1` → 196), sayfa hatası 0.
 - **Kurulmadı:** test sunucusu ve müşteri VM'i (main'e merge ve kurulum ayrı adım). Kart şeması değiştiği için ilk açılışta pano
   önbelleği yeniden okunur (kaynak dosyanın özeti anahtarda).
+## 2026-09-29 — Müşteri VM'inde çok satırlı zamanlayıcı birimlerinin bütün adımları koşar (DOĞRULANAMADI — testler koordinatörde)
+
+- **Hata:** VM'in iş çalıştırıcısı (`infra/docker/bi/jobs.py`) test sunucusunun `timas-*.service` birimlerini okuyor ama yalnız SON `ExecStart` satırını koşuyordu. Depoda birden çok `ExecStart` içeren tek `timas-*` birimi `timas-channels` (04:00): VM'de yalnız Amazon/yurtdışı turu (`/api/v1/channels/amazon/run-due`) koşmuş; **M42 kanal gece turu** (`/api/v1/channels/run-due?tur=gece`) ve **M40 Trendyol turu** (`/api/v1/channels/trendyol/run-due`) bugüne kadar VM'de hiç koşmadı. (Diğer eşleşmeler VM'e girmez: `deploy-semantic-bridge.sh` iki ayrı birim yazar; `infra/systemd/nanobase-semantic-worker.service` ExecStartPre + tek ExecStart.)
+- **Düzeltme:** birimin bütün `ExecStart` satırları dosyadaki sırayla koşar (systemd Type=oneshot): öneksiz satır hata verirse sonrakiler koşmaz; `-` önekli satırın hatası yok sayılır, sıradaki koşar; boş `ExecStart=` öncekileri siler; `@ : + !` önekleri atılır. Satırlardan biri köprüye curl değilse birim bütünüyle «koşmayanlar» listesine düşer (yarım koşu olmasın). Aynı birim (+örnek) turu sürerken yeniden tetiklenirse ikinci tur atlanır — iş iki kez koşmaz. Sistem durumuna tur başına tek bildirim; ayrıntıda düşen adım, koşmayan adımlar ve yok sayılan hatalar.
+- **Test:** `backend/semantic_layer/tests/test_vm_jobs_multi_exec.py` (yeni, 9): `timas-channels` üç adım doğru sırada ve önekle; sırayla koşma; hata sonrakileri durdurur; `-` hatası durdurmaz; öneksiz ilk satır düşerse `-` satırlar da koşmaz; boş ExecStart sıfırlar; köprü dışı satır birimi reddeder; aynı birim üst üste koşmaz. `test_vm_jobs_schedule.py` değişmedi. Mac'te yalnız `py_compile`.
+- **Kalan:** koordinatör pytest'i koşturacak; sonra main → test sunucusu → VM (bridge imajı yeniden derlenmeli, `jobs.py` imaja COPY ile girer). VM'e kurulunca ilk 04:00'ü beklemeden `timas-channels` bir kez elle tetiklenmeli (bellek: run-it-before-it-runs-itself) — gece ve Trendyol turu VM'de ilk kez koşacak.
 
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
