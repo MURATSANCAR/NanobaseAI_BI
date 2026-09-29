@@ -120,8 +120,7 @@ STATE = sa.Table(
 RINGS: list[dict[str, str]] = [
     {"id": "logo", "label": "Logo", "hint": "Logo veritabanına bağlantı ve son fatura tarihi",
      "recipe": "Önce «Şirket ağı bağlantısı» halkasına bakın; o da kopuksa önce onu düzeltin. Değilse Logo veritabanı "
-               "sunucusunun açık olduğunu ve okuma hesabının kilitlenmediğini kontrol edin. Düzelince 5 dk içinde "
-               "kendiliğinden kapanır."},
+               "sunucusunun açık olduğunu ve okuma hesabının kilitlenmediğini kontrol edin."},
     {"id": "crm", "label": "CRM", "hint": "CRM veritabanına bağlantı ve son değişiklik zamanı",
      "recipe": "CRM veritabanı sunucusunun açık olduğunu ve okuma hesabının kilitlenmediğini kontrol edin. CRM ekranları "
                "açılıyor ama ZEKİ okuyamıyorsa hesabın parolası değişmiş olabilir: Yönetim → Ayarlar → CRM."},
