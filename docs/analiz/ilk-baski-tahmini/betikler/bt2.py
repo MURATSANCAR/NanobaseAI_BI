@@ -1,16 +1,16 @@
 """Aşama 2 deneyi: çıkıştan m ay sonra 12 aylık toplam — emsal büyümesiyle revize vs tahmin servisi (zaman serisi) vs ikisinin ortalaması."""
 import json
 import math
-import pickle
 import sys
 import urllib.request
 from datetime import date, datetime, timedelta
 
 sys.path.insert(0, "/tmp/claude-m10/stage")
 from semantic_bridge.management import ilk_baski_model as M  # noqa: E402
+from semantic_bridge import typed_json as TJ  # noqa: E402
 
 P12 = json.load(open("/tmp/claude-m10/params_h12.json"))
-d = pickle.load(open("/tmp/claude-m10/data.pkl", "rb"))
+d = TJ.unpack(open("/tmp/claude-m10/data.json.z", "rb").read())
 son = datetime.fromisoformat(str(d["logo_son_fatura"]["records"][0]["son_fatura"])[:19]).date()
 end = M.mi(son.year, son.month) - (0 if (son + timedelta(days=1)).month != son.month else 1)
 ds = M.build_dataset(d["crm_kitaplar"]["records"], d["crm_emsal"]["records"], d["logo_aylik_kanal"]["records"], end)
