@@ -1,30 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CalendarX2, History, X } from 'lucide-react';
-import { assignApi, type AssignConflict, type EditorLoadInfo, type EditorTask, type TaskStatus } from '../../engine';
-import { Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } from '../../admin/ui';
+import { History, X } from 'lucide-react';
+import { assignApi, type EditorTask, type TaskPatch, type TaskStatus } from '../../engine';
+import { Note, btnGhost, btnPrimary, errText, field, label, nf } from '../../admin/ui';
 import { assignKeys, taskHistoryOptions } from '../queries';
 import './assign.css';
 
-/** M2 editör atama ekranlarının ortak parçaları: yan pencere, yük göstergesi, çakışma listesi, görev düzenleme. */
+/** Editör atama ve Masam › Görevlerim ortak parçaları: yan pencere, görev düzenleme, proje künyesi. */
 
 const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const shortFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 /** "2026-09-27" → "27 Eyl 2026". Tarih yalnız gün; saat dilimi kaydırmasın diye UTC okunur. */
 export const day = (iso: string | null | undefined) => (iso ? dayFmt.format(new Date(`${iso.slice(0, 10)}T00:00:00Z`)) : '—');
-export const shortDay = (iso: string | null | undefined) => (iso ? shortFmt.format(new Date(`${iso.slice(0, 10)}T00:00:00Z`)) : '—');
 
 export function todayIso(): string {
   const d = new Date();
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0, 10);
-}
-
-export function addDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 export const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
@@ -37,18 +29,6 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   tamamlandi: 'Tamamlandı',
   iptal: 'İptal',
 };
-const STATUS_TONE: Record<TaskStatus, 'muted' | 'violet' | 'warn' | 'ok' | 'err'> = {
-  sirada: 'muted',
-  calisiyor: 'violet',
-  beklemede: 'warn',
-  tamamlandi: 'ok',
-  iptal: 'err',
-};
-
-export function StatusPill({ status }: { status: TaskStatus }) {
-  return <Pill tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Pill>;
-}
-
 /** Yan pencere: masaüstünde sağdan, telefonda alttan. Odak, Esc ve dış tıklama base-ui'da. */
 export function Sheet({
   open,
@@ -87,49 +67,7 @@ export function Sheet({
   );
 }
 
-/** İş yükü: açık görev / kapasite. Kapasite yazılmamışsa yüzde yok, yalnız sayı. */
-export function LoadMeter({ load, compact }: { load: EditorLoadInfo; compact?: boolean }) {
-  const pct = load.pct;
-  const tone = pct == null ? 'bg-slate-300' : pct > 100 ? 'bg-red-500' : pct >= 85 ? 'bg-amber-400' : 'bg-canvas-mint';
-  return (
-    <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-2 text-[11.5px]">
-        <span className="font-semibold text-canvas-muted">
-          {load.capacity ? `${nf.format(load.open)} / ${nf.format(load.capacity)} görev` : `${nf.format(load.open)} açık görev`}
-        </span>
-        <span className={`font-mono font-bold tabular-nums ${pct != null && pct > 100 ? 'text-red-600' : ''}`}>
-          {pct != null ? `%${nf.format(pct)}` : 'kapasite yok'}
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct == null ? 0 : Math.min(100, pct)}%` }} />
-      </div>
-      {!compact && (load.overdue > 0 || load.undated > 0 || load.pages > 0) && (
-        <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-canvas-muted">
-          {load.overdue > 0 && <span className="font-bold text-red-600">{nf.format(load.overdue)} gecikmiş</span>}
-          {load.undated > 0 && <span>{nf.format(load.undated)} terminsiz</span>}
-          {load.pages > 0 && <span>{nf.format(load.pages)} sayfa</span>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function ConflictList({ items }: { items: AssignConflict[] }) {
-  if (!items.length) return null;
-  return (
-    <ul className="mt-1.5 space-y-1">
-      {items.map((c, i) => (
-        <li key={i} className="flex items-start gap-1.5 text-[11.5px] font-semibold leading-snug text-amber-800">
-          {c.kind === 'izin' ? <CalendarX2 aria-hidden className="mt-px h-3.5 w-3.5 shrink-0" /> : <AlertTriangle aria-hidden className="mt-px h-3.5 w-3.5 shrink-0" />}
-          <span>{c.text}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-const ACTION_TEXT: Record<string, string> = { atandi: 'Atandı', 'panoya-alindi': 'Panoya alındı', guncellendi: 'Güncellendi' };
+const ACTION_TEXT: Record<string, string> = { atandi: 'Atandı', 'panoya-alindi': 'Takip başladı', guncellendi: 'Güncellendi' };
 const FIELD_TEXT: Record<string, string> = { status: 'Durum', start: 'Başlangıç', due: 'Termin', pages: 'Sayfa', note: 'Not' };
 
 function changeText(k: string, v: unknown): string | null {
@@ -178,7 +116,8 @@ function TaskHistory({ id }: { id: string }) {
   );
 }
 
-/** Görevin durumu, tarihleri, sayfası ve notu. Termin değişirse gerekçe istenir; geçmiş altta. */
+/** Görevin durumu, tarihleri, sayfası ve notu. Termin değişirse gerekçe istenir; geçmiş altta.
+ *  Kayıt CRM projesine bağlıdır: ilk kaydedişte köprü takibi açar. */
 export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: EditorTask) => void }) {
   const qc = useQueryClient();
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -192,7 +131,7 @@ export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: Ed
   const needReason = dueChanged && !!task.due;
   const save = useMutation({
     mutationFn: () => {
-      const body: Parameters<typeof assignApi.updateTask>[1] = {};
+      const body: TaskPatch = {};
       if (status !== task.status) body.status = status;
       if ((start || null) !== (task.start || null)) body.start = start || null;
       if (dueChanged) body.due = due || null;
@@ -200,7 +139,7 @@ export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: Ed
       if (pg !== task.pages) body.pages = pg;
       if ((note.trim() || null) !== (task.note || null)) body.note = note.trim() || null;
       if (reason.trim()) body.reason = reason.trim();
-      return assignApi.updateTask(task.id, body);
+      return assignApi.updateMine(task.projectId, body);
     },
     onSuccess: (t) => {
       qc.invalidateQueries({ queryKey: assignKeys.all });
@@ -261,15 +200,19 @@ export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: Ed
       </label>
       {err && <Note tone="err">{err}</Note>}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" className={btnGhost} onClick={() => setShowLog((v) => !v)} aria-expanded={showLog}>
-          <History aria-hidden className="h-4 w-4" />
-          Geçmiş
-        </button>
+        {task.id ? (
+          <button type="button" className={btnGhost} onClick={() => setShowLog((v) => !v)} aria-expanded={showLog}>
+            <History aria-hidden className="h-4 w-4" />
+            Geçmiş
+          </button>
+        ) : (
+          <span />
+        )}
         <button type="submit" className={btnPrimary} disabled={save.isPending || bad || (needReason && !reason.trim())}>
           {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
       </div>
-      {showLog && <TaskHistory id={task.id} />}
+      {showLog && task.id && <TaskHistory id={task.id} />}
     </form>
   );
 }

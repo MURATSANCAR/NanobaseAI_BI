@@ -11,6 +11,7 @@ import { contractApi, metaOptions } from './contracts/api';
 import { Tabs, day, errMsg, statusTone as portalTone } from './contracts/ui';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { RightChips } from './crmRights';
 
 /** Köprü cevabındaki sorgu bilgisi (tipler engine.ts'te ortak; bu ekran yalnız okur). */
 type WithK<T> = T & { kaynaklar?: Kaynaklar };
@@ -318,6 +319,9 @@ export default function ContractsScreen() {
                     <div className="mt-1.5">
                       <Terms c={c} />
                     </div>
+                    <div className="mt-2">
+                      <RightChips rights={c.rights} compact />
+                    </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Period c={c} />
                       <DaysLeft c={c} warnDays={warnDays} />
@@ -334,7 +338,7 @@ export default function ContractsScreen() {
                       <tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                         <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].portal" label="Portal rozeti ve fark sayısı">Kitap ve sözleşme no</InfoLabel></th>
                         <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].parties" label="Hak sahibi payı">Hak sahibi</InfoLabel></th>
-                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].rates" label="Telif oranları ve avans">Telif oranları</InfoLabel></th>
+                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].rates" label="Telif oranları ve avans">Telif oranları ve haklar</InfoLabel></th>
                         <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].daysLeft" label="Kalan gün">Süre</InfoLabel></th>
                         <th className="px-3 py-2.5">Durum</th>
                       </tr>
@@ -352,6 +356,9 @@ export default function ContractsScreen() {
                             <Rates c={c} />
                             <div className="mt-1">
                               <Terms c={c} />
+                            </div>
+                            <div className="mt-1.5">
+                              <RightChips rights={c.rights} compact />
                             </div>
                           </td>
                           <td className="px-3 py-2.5">

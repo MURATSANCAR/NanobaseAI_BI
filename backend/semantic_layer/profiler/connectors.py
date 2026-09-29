@@ -823,7 +823,9 @@ def connector_from_config(data: dict[str, Any]) -> Connector:
         ds = str(cfg.pop("datasource", "mssql"))
     ds = ds.lower()
     if ds in ("mssql", "sqlserver"):
-        return MSSQLConnector(cfg)
+        # CRM veritabanında pasif kayıt okunmaz; süzgeç bağlantıda (bkz. runtime/crm_active.py).
+        from semantic_layer.runtime.crm_active import wrap
+        return wrap(MSSQLConnector(cfg), cfg.get("database"))
     if ds in ("postgres", "postgresql", "pg"):
         return PostgresConnector(cfg)
     if ds == "sqlite":

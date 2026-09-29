@@ -169,11 +169,6 @@
       "label": "Yayın kurulu"
     },
     {
-      "key": "sayfa:gorevlerim",
-      "area": "editoryal",
-      "label": "Görevlerim"
-    },
-    {
       "key": "sayfa:redaksiyon",
       "area": "editoryal",
       "label": "Redaksiyon"
@@ -1377,30 +1372,6 @@
       "page": "sayfa:kitap-tasarim",
       "label": "Kitap tasarımında üretim",
       "hint": "Üretim başlatma, yeniden başlatma, görsel/figür/boyama/seslendirme üretme (GPU harcar)"
-    },
-    {
-      "key": "ozellik:editor-atama.ata",
-      "area": "editoryal",
-      "page": "sayfa:editor-atama",
-      "label": "Editör atama ve profil",
-      "hint": "Projeye editör atama, başkasının görevini ve terminini değiştirme, editör kapasitesi ve izin kaydı",
-      "explicit": true
-    },
-    {
-      "key": "ozellik:editor-atama.kural",
-      "area": "editoryal",
-      "page": "sayfa:editor-atama",
-      "label": "Kategori–editör kural taslağı",
-      "hint": "Kural tablosunun taslağını yazma ve silme",
-      "explicit": true
-    },
-    {
-      "key": "ozellik:editor-atama.kural-onay",
-      "area": "editoryal",
-      "page": "sayfa:editor-atama",
-      "label": "Kural tablosunu onaylama",
-      "hint": "Taslağı yürürlüğe alma; önceki sürüm arşive geçer",
-      "explicit": true
     },
     {
       "key": "ozellik:kategori.oneri-uret",

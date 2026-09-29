@@ -140,10 +140,6 @@ export async function prefetchEditorialLists(qc: QueryClient, username: string):
 export const assignKeys = {
   all: ['editorial', 'assign'] as const,
   pending: (q: string, status: string, category: string, page: number) => ['editorial', 'assign', 'pending', q, status, category, page] as const,
-  suggest: (project: string, start: string, due: string) => ['editorial', 'assign', 'suggest', project, start, due] as const,
-  editors: ['editorial', 'assign', 'editors'] as const,
-  calendar: (start: string) => ['editorial', 'assign', 'calendar', start] as const,
-  rules: ['editorial', 'assign', 'rules'] as const,
   mine: ['editorial', 'assign', 'mine'] as const,
   history: (id: string) => ['editorial', 'assign', 'history', id] as const,
 };
@@ -156,26 +152,6 @@ export const assignPendingOptions = (q: string, status: string, category: string
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
   });
-
-export const assignSuggestOptions = (project: string, start: string, due: string) =>
-  queryOptions({
-    queryKey: assignKeys.suggest(project, start, due),
-    queryFn: () => assignApi.suggest(project, start || undefined, due || undefined),
-    enabled: ENGINE_ENABLED && !!project,
-    placeholderData: keepPreviousData,
-  });
-
-export const assignEditorsOptions = () => queryOptions({ queryKey: assignKeys.editors, queryFn: assignApi.editors, enabled: ENGINE_ENABLED });
-
-export const assignCalendarOptions = (start: string, end: string) =>
-  queryOptions({
-    queryKey: assignKeys.calendar(start),
-    queryFn: () => assignApi.calendar(start, end),
-    enabled: ENGINE_ENABLED && !!start,
-    placeholderData: keepPreviousData,
-  });
-
-export const assignRulesOptions = () => queryOptions({ queryKey: assignKeys.rules, queryFn: assignApi.rules, enabled: ENGINE_ENABLED });
 
 export const myTasksOptions = () => queryOptions({ queryKey: assignKeys.mine, queryFn: assignApi.mine, enabled: ENGINE_ENABLED });
 

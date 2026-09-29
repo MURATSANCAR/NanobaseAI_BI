@@ -32,6 +32,7 @@ from typing import Any, Callable, Optional
 import sqlalchemy as sa
 
 from semantic_bridge import contracts_docs as D
+from semantic_bridge import crm_rights
 from semantic_bridge import contracts_royalty as R
 from semantic_bridge import contracts_terms as T
 from semantic_bridge.contracts_terms import ContractError
@@ -1239,8 +1240,10 @@ def crm_contract_sql(p: str, crm_id: str) -> list[str]:
         " s.new_sozlesmeavanstutari, s.new_tekodemetutari, s.new_telifhesaplamaiskontosu,"
         " s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi, s.new_SozlesmeSuresiYil,"
         " CAST(ISNULL(s.new_suresizsozlesme, 0) AS int) AS suresiz, s.new_yazar_text, s.new_mutercim_text,"
-        f" s.new_cizer_text, s.new_haklaraciklama, s.new_hesaplamatutari, s.new_anasozlesmeid, a.Name AS sirket, {rights}"
+        f" s.new_cizer_text, s.new_haklaraciklama, s.new_hesaplamatutari, s.new_anasozlesmeid, a.Name AS sirket, {rights},"
+        f" {crm_rights.columns('s')}"
         f" FROM {p}new_sozlesmeBase s LEFT JOIN {p}AccountBase a ON a.AccountId = s.new_SozlemeninSahibi"
+        f"{crm_rights.joins(p, 's')}"
         f" WHERE s.new_sozlesmeId = '{g}'"
     )
     books = (
@@ -1368,8 +1371,11 @@ def crm_contract(head: dict[str, Any], books: list[dict[str, Any]], parties: lis
     }
     if raw["start"] and raw["end"] and raw["end"] < raw["start"]:
         raw["end"] = None  # CRM'de ters girilmiş tarih; portal kaydı bitişi boş açar, ekran uyarır
+    # CRM'in bütün hakları ve lisans şartları (salt okunur; portal şartlarına girmez, farkta sayılmaz).
     return {"no": str(head.get("new_name") or "").strip() or None, "crmStatus": _i(head.get("durum_kod")),
-            "status": T.STATUS_FROM_CRM.get(_i(head.get("durum_kod")), "yururlukte"), "terms": T.clean(raw)}
+            "status": T.STATUS_FROM_CRM.get(_i(head.get("durum_kod")), "yururlukte"), "terms": T.clean(raw),
+            "id": str(head.get("new_sozlesmeId") or "").lower() or None,
+            "rights": crm_rights.rights(head), "license": crm_rights.license_of(head)}
 
 
 def detail(engine: sa.engine.Engine, tenant: str, key: str, crm_loader: Callable[[str], Optional[dict[str, Any]]]) -> dict[str, Any]:

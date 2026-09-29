@@ -10,23 +10,18 @@ import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 
-/** M2 Editör Atama. Sekmeler: atama bekleyen projeler (öneri + atama), iş yükü (kapasite, izin, görevler),
- *  takvim ve çakışmalar, kategori–editör kural tablosu, CRM'deki bütün projeler. Atama ve termin ZEKİ AI'da
- *  tutulur (CRM'e yazılmaz); CRM proje kartındaki "Editörü" alanı okunur ve üstüne bindirilir. */
+/** M2 Editör atama — yalnız CRM'den okunur (kullanıcı kararı 2026-09-29). Editör, CRM proje kartındaki
+ *  «Editörü» alanıdır; atama CRM'de yapılır, portal yazmaz. Sekmeler: editörsüz projeler, editörler ve projeleri.
+ *  Eski sekme adresleri (?sekme=yuk|takvim|kurallar) editörler sekmesine düşer. */
 
 const PendingTab = lazy(() => import('./assign/PendingTab'));
-const LoadTab = lazy(() => import('./assign/LoadTab'));
-const CalendarTab = lazy(() => import('./assign/CalendarTab'));
-const RulesTab = lazy(() => import('./assign/RulesTab'));
 
 const TABS = [
-  { id: 'bekleyen', label: 'Atama bekleyen' },
-  { id: 'yuk', label: 'İş yükü' },
-  { id: 'takvim', label: 'Takvim' },
-  { id: 'kurallar', label: 'Kural tablosu' },
-  { id: 'projeler', label: 'Bütün projeler' },
+  { id: 'bekleyen', label: 'Editörsüz projeler' },
+  { id: 'projeler', label: 'Editörler ve projeler' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
+const OLD_TABS = new Set(['yuk', 'takvim', 'kurallar']);
 
 const TONES = ['bg-canvas-violet', 'bg-canvas-coral', 'bg-canvas-mint', 'bg-canvas-amber', 'bg-sky-400', 'bg-slate-400', 'bg-rose-300', 'bg-teal-300'];
 
@@ -180,7 +175,7 @@ function ProjectsTab() {
 export default function EditorsScreen() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('sekme');
-  const tab: TabId = TABS.some((t) => t.id === raw) ? (raw as TabId) : 'bekleyen';
+  const tab: TabId = TABS.some((t) => t.id === raw) ? (raw as TabId) : raw && OLD_TABS.has(raw) ? 'projeler' : 'bekleyen';
   const pick = (id: TabId) => {
     const next = new URLSearchParams(params);
     if (id === 'bekleyen') next.delete('sekme');
@@ -192,8 +187,8 @@ export default function EditorsScreen() {
       route="/editor-atama"
       crumb="Editör atama"
       title="Editör atama"
-      lead="Editörsüz projeye kural, geçmiş ve müsaitliğe göre editör önerilir ve atanır; iş yükü, takvim çakışması ve kategori–editör kuralları buradan yönetilir. Atama ZEKİ AI'da tutulur, CRM'e yazılmaz."
-      source="CRM projeleri + ZEKİ AI atamaları"
+      lead="Hangi projenin editörü kim: CRM proje kartındaki «Editörü» alanı. Atama CRM'de yapılır; burada editörsüz projeleri ve editör başına projeleri görürsünüz."
+      source="CRM projeleri"
     >
       <div role="tablist" aria-label="Editör atama bölümleri" className="-mx-1 flex gap-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
         {TABS.map((t) => (
@@ -212,9 +207,6 @@ export default function EditorsScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       <Suspense fallback={<Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Yükleniyor…</p></Panel>}>
         {tab === 'bekleyen' && <PendingTab />}
-        {tab === 'yuk' && <LoadTab />}
-        {tab === 'takvim' && <CalendarTab />}
-        {tab === 'kurallar' && <RulesTab />}
         {tab === 'projeler' && <ProjectsTab />}
       </Suspense>
     </ModuleFrame>

@@ -10,6 +10,7 @@ import { Field, Sheet, Tabs, day, errMsg, money, num } from '../contracts/ui';
 import RightsMapView from './RightsMap';
 import { rightsApi, rightsMetaOptions, type BookCard, type Grant, type License, type RightState, type RightsMeta } from '../royalty/api';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { LicenseTerms, RightChips } from '../crmRights';
 
 /** M54 Haklar ve lisanslar: kitabın hak kartı (CRM hak bitleri + portaldaki dil/ülke kaydı + verilen lisanslar),
  *  yurtdışına verilen lisanslar ve serbest metinli hak açıklamalarının sınıfı. CRM'e yazılmaz. */
@@ -221,13 +222,33 @@ function ContractList({ items, meta }: { items: BookCard['contracts']; meta: Rig
             <ExternalLink aria-hidden className="h-3.5 w-3.5 text-canvas-muted" />
           </div>
           <div className="mt-1 text-[12px] text-canvas-muted">{x.parties.join(', ') || [x.author, x.translator, x.illustrator].filter(Boolean).join(', ') || '—'}</div>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {Object.entries(x.rights).map(([k, v]) => (
-              <Pill key={k} tone={v ? 'ok' : 'muted'}>{v ? '' : 'Yok: '}{meta.rights[k] ?? k}</Pill>
-            ))}
+          <div className="mt-1.5">
+            {x.crmRights ? (
+              <RightChips rights={x.crmRights} />
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(x.rights).map(([k, v]) => (
+                  <Pill key={k} tone={v ? 'ok' : 'muted'}>{v ? '' : 'Yok: '}{meta.rights[k] ?? k}</Pill>
+                ))}
+              </div>
+            )}
           </div>
-          {(x.originalLanguage || x.soldCountry) && (
-            <div className="mt-1 text-[12px]">{x.originalLanguage ? `Özgün dil: ${x.originalLanguage}` : ''}{x.soldCountry ? ` · Satılan ülke: ${x.soldCountry}` : ''}</div>
+          {(x.originalLanguage || x.soldCountry || x.grantor) && (
+            <div className="mt-1 text-[12px]">
+              {[x.originalLanguage && `Özgün dil: ${x.originalLanguage}`, x.soldCountry && `Satılan ülke: ${x.soldCountry}`, x.grantor && `Hakkı devreden: ${x.grantor}`].filter(Boolean).join(' · ')}
+            </div>
+          )}
+          {x.license && (
+            <details className="group mt-1.5">
+              <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1 text-[11.5px] font-bold text-canvas-violet [&::-webkit-details-marker]:hidden">
+                Lisans şartları (CRM)
+                <span aria-hidden className="transition-transform duration-150 ease-out group-open:rotate-90 motion-reduce:transition-none">›</span>
+              </summary>
+              <div className="mt-1.5 rounded-xl border border-slate-100 bg-white/90 p-3">
+                {/* Hak notu aşağıda ayrıca gösterilir; burada tekrar etmez. */}
+                <LicenseTerms license={{ ...x.license, rightsNote: null }} />
+              </div>
+            </details>
           )}
           {x.rights_note && <div className="mt-1.5"><Callout tone="warn">Hak notu: {x.rights_note}</Callout></div>}
           {x.rightsMap && x.rightsMap.status !== 'reddedildi' && (

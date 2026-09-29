@@ -17,6 +17,7 @@ import ContractRuns from '../royalty/ContractRuns';
 import { changedFields, show } from './terms';
 import { Field, Row, Sheet, Tabs, day, errMsg, money, num, stamp, statusTone, today } from './ui';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { LicenseTerms, RightChips } from '../crmRights';
 
 /** M6: tek sözleşmenin sayfası. Adres CRM kimliği ya da portal kaydı kimliğidir; CRM sözleşmesi ilk
  *  düzenlemede portala alınır (CRM'e yazılmaz), sonra aynı adresten açılır. */
@@ -93,6 +94,21 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
           {t.printRun != null && <Row label="İlk baskı">{num(t.printRun, 0)} adet</Row>}
         </dl>
       </Panel>
+      {(d.crm?.rights || d.crm?.license) && (
+        <Panel>
+          <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">
+            Haklar ve lisans (CRM) <SqlInfo k={d.kaynaklar} alan="crm" label="CRM sözleşme hakları ve lisans şartları" />
+          </h3>
+          <p className="mb-2 text-[11.5px] leading-snug text-canvas-muted">CRM sözleşme kartından salt okunur; boş alan «girilmemiş» yazılır, «yok» sayılmaz.</p>
+          <RightChips rights={d.crm.rights} />
+        </Panel>
+      )}
+      {d.crm?.license && (
+        <Panel>
+          <h3 className="mb-2 text-[13px] font-extrabold">Lisans şartları (CRM)</h3>
+          <LicenseTerms license={d.crm.license} />
+        </Panel>
+      )}
       {t.notes && (
         <Panel>
           <h3 className="mb-1 text-[13px] font-extrabold">Notlar</h3>

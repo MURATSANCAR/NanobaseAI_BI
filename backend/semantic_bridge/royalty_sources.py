@@ -23,6 +23,7 @@ from datetime import date
 from typing import Any, Callable, Iterable, Optional
 
 from semantic_bridge import contracts as C
+from semantic_bridge import crm_rights
 from semantic_bridge import contracts_royalty as R
 from semantic_bridge import contracts_terms as T
 
@@ -214,7 +215,8 @@ def book_head_sql(p: str, book_id: str) -> str:
 
 
 def book_contracts_sql(p: str, book_id: str) -> str:
-    """Kitaba bağlı etkin Telif Alış ve Telif Satış sözleşmeleri, hak bitleriyle. Tür bilinmeyen alanlar metne çevrilir."""
+    """Kitaba bağlı etkin Telif Alış ve Telif Satış sözleşmeleri, hak bitleriyle ve CRM lisans şartlarıyla
+    (`crm_rights`: orijinal dil, satılan ülke ve hakkı devreden firma bağlı kayıtlardan adıyla okunur)."""
     g = _check_guid(book_id)
     bits = ", ".join(f"CAST(ISNULL(s.{col}, 0) AS int) AS [{col}]" for col in RIGHT_COLUMNS)
     return ("SELECT s.new_sozlesmeId AS id, s.new_name AS no, CAST(s.new_SozlesmeTipi AS int) AS tip_kod,"
@@ -223,8 +225,9 @@ def book_contracts_sql(p: str, book_id: str) -> str:
             " CAST(ISNULL(s.new_KorumaDEser, 0) AS int) AS public_domain, s.new_haklaraciklama AS rights_note,"
             " CAST(s.new_orjinaldili AS nvarchar(200)) AS orjinal_dil, CAST(s.new_telifsatilanulke AS nvarchar(200)) AS satilan_ulke,"
             " CAST(s.new_hakdevredenfirma AS nvarchar(200)) AS hak_devreden, s.new_yazar_text AS yazar,"
-            f" s.new_mutercim_text AS mutercim, s.new_cizer_text AS cizer, {bits}"
+            f" s.new_mutercim_text AS mutercim, s.new_cizer_text AS cizer, {bits}, {crm_rights.columns('s')}"
             f" FROM {p}new_new_sozlesme_new_kitapBase sk JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = sk.new_sozlesmeid"
+            f"{crm_rights.joins(p, 's')}"
             f" WHERE sk.new_kitapid = '{g}' AND s.statecode = 0 AND s.new_SozlesmeTipi IN ({ALIS}, {SATIS})"
             " ORDER BY s.new_SozlesmeTipi DESC, s.new_name")
 

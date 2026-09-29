@@ -1386,6 +1386,26 @@ export const webApi = {
   book: (id: string) => send<WebSubject>('GET', `/api/v1/editorial/web/books/${encodeURIComponent(id)}`, undefined, 60_000),
 };
 
+/** CRM sözleşme hakkı: var (true), yok (false), CRM'de girilmemiş (null). */
+export type CrmRight = { key: string; label: string; granted: boolean | null };
+/** CRM lisans şartları; `terms` yalnız dolu alanları taşır (anahtarlar crm_rights.TERMS). */
+export type CrmLicense = {
+  flags: Array<{ key: string; label: string }>;
+  terms: Record<string, string | number>;
+  rightsNote: string | null;
+  royaltyNote: string | null;
+  countries: string[];
+  languages: string[];
+};
+export type CrmRightsFields = { rights?: CrmRight[]; license?: CrmLicense; purchase?: boolean; inForce?: boolean };
+/** Kitabın hakları: yürürlükteki Telif Alış sözleşmelerinin birleşimi. */
+export type BookRights = {
+  basis: number;
+  items: Array<{ key: string; label: string; state: 'var' | 'kismi' | 'yok' | 'girilmemis'; yes: number; of: number; missing: string[] }>;
+  notes: Array<{ no: string | null; text: string }>;
+  countries: string[];
+  languages: string[];
+};
 export type ContractRate = { format: string; percent: number };
 export type ContractParty = { name: string; share: number | null; scope: string | null; viaAgent: boolean };
 export type Contract = {
@@ -1410,7 +1430,7 @@ export type Contract = {
   parties: ContractParty[];
   /** Portalda düzenlenmişse portal kaydının durumu ve CRM'e işlenmemiş fark sayısı. */
   portal?: { id: string; status: string; statusLabel: string; updatedAt: string; diff: number } | null;
-};
+} & CrmRightsFields;
 export type ContractPage = { items: Contract[]; total: number; page: number; pageSize: number; db?: DbTiming | null };
 export type ContractFacet = { code: number; label: string | null; count: number };
 export type ContractSummary = {
@@ -1456,7 +1476,7 @@ export type PersonDetail = {
   name: string | null;
   bio: string | null;
   works: Array<{ bookId: string | null; title: string | null; role: string | null; on: string | null }>;
-  contracts: Array<{ id: string; no: string | null; status: string | null; start: string | null; end: string | null; royalty: number | null; share: number | null }>;
+  contracts: Array<{ id: string; no: string | null; status: string | null; kind: string | null; start: string | null; end: string | null; royalty: number | null; share: number | null } & CrmRightsFields>;
   projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; on: string | null; editor: string | null }>;
   truncated: boolean;
   db?: DbTiming | null;
@@ -1814,8 +1834,9 @@ export const editorsApi = {
     ),
 };
 
-// -------------------------------------------------------- M2 editör atama (yazma): görev, kural, yük, takvim
-// CRM'e yazılmaz; atama ve termin köprünün kendi tablolarında durur, CRM projesinin üstüne bindirilir.
+// -------------------------------------------------------- M2 editör atama (yalnız CRM'den okunur) ve Masam › Görevlerim
+// Kim hangi projenin editörü CRM'dedir; portal atama yapmaz. Görevlerim'deki durum, termin ve not editörün kendi
+// takibidir (köprünün tablosunda; CRM'e yazılmaz).
 
 export type AssignRef = { id: string; name: string | null };
 export type AssignProject = {
@@ -1835,12 +1856,13 @@ export type AssignProject = {
   author: string | null;
 };
 export type TaskStatus = 'sirada' | 'calisiyor' | 'beklemede' | 'tamamlandi' | 'iptal';
+/** Görevlerim satırı: CRM projesi + kişinin takip kaydı. Kaydı henüz yoksa `id` boştur, durum «sırada». */
 export type EditorTask = {
-  id: string;
+  id: string | null;
   projectId: string;
   projectName: string | null;
   category: string | null;
-  editorId: string;
+  editorId: string | null;
   editorName: string | null;
   role: 'editor' | 'destek';
   roleLabel: string;
@@ -1858,64 +1880,11 @@ export type EditorTask = {
   updatedBy: string | null;
   updatedAt: string | null;
   doneAt: string | null;
+  project?: AssignProject;
 };
 export type TaskLogEntry = { at: string; actor: string; action: string; detail: Record<string, unknown> | null };
-export type AssignConflict = { kind: 'izin' | 'kapasite'; from: string | null; to: string | null; text: string; count?: number; capacity?: number };
-export type EditorLoadInfo = { open: number; capacity: number | null; pct: number | null; pages: number; overdue: number; undated: number };
-export type EditorAbsence = { id: string; editorId: string; start: string; end: string; reason: string | null; createdBy: string };
-export type EditorProfile = { capacity: number | null; available: boolean; note: string | null; updatedBy: string | null; updatedAt: string | null };
-export type AssignEditor = {
-  id: string;
-  name: string | null;
-  disabled: boolean;
-  account: string;
-  profile: EditorProfile | null;
-  load: EditorLoadInfo;
-  crmOpen: number;
-  crmTotal: number;
-  absences: EditorAbsence[];
-  tasks: EditorTask[];
-};
-export type AssignCandidate = {
-  id: string;
-  name: string | null;
-  score: number;
-  reasons: string[];
-  conflicts: AssignConflict[];
-  load: EditorLoadInfo;
-  categoryProjects: number;
-  totalProjects: number;
-  rule: 'birincil' | 'yedek' | null;
-};
-export type AssignRule = { kind: 'kitaplik' | 'marka'; id: string; name: string; primary: string[]; backup: string[] };
-export type RuleVersion = {
-  id: string;
-  version: number;
-  state: 'taslak' | 'yururlukte' | 'arsiv';
-  rules: AssignRule[];
-  note: string | null;
-  createdBy: string;
-  createdAt: string;
-  approvedBy: string | null;
-  approvedAt: string | null;
-};
-export type RuleCategory = {
-  kind: 'kitaplik' | 'marka';
-  id: string;
-  name: string;
-  projects: number;
-  editors: { id: string; name: string | null; count: number }[];
-};
-export type CalendarRow = {
-  id: string;
-  name: string | null;
-  capacity: number | null;
-  load: EditorLoadInfo;
-  tasks: (EditorTask & { from: string; to: string | null })[];
-  absences: EditorAbsence[];
-  conflicts: { kind: 'izin' | 'kapasite'; from: string; to: string; max: number }[];
-};
 export type CrmMe = { id: string; name: string | null; disabled: boolean };
+export type TaskPatch = Partial<{ status: TaskStatus; start: string | null; due: string | null; pages: number | null; note: string | null; reason: string }>;
 
 export const assignApi = {
   /** status: '100000019|100000020' gibi kodlar, 'hepsi' ya da boş (ilk açılış süzgeci). */
@@ -1929,65 +1898,18 @@ export const assignApi = {
       statuses: number[];
       defaultStatuses: number[];
       statusFacets: ContractFacet[];
-      onBoard: number;
       db?: DbTiming | null;
     }>('GET', `/api/v1/editorial/assignments/pending${qs({ q: p.q, status: p.status, category: p.category, page: p.page })}`, undefined, 60_000),
-  suggest: (project: string, start?: string, due?: string) =>
-    send<{
-      project: AssignProject;
-      category: { kind: string; id: string; name: string } | null;
-      categoryLabel: string | null;
-      rule: AssignRule | null;
-      ruleVersion: number | null;
-      items: AssignCandidate[];
-      excluded: { id: string; name: string | null; reason: string }[];
-      start: string;
-      due: string;
-      dueGiven: boolean;
-      tasks: EditorTask[];
-    }>('GET', `/api/v1/editorial/assignments/suggest${qs({ project, start, due })}`, undefined, 60_000),
-  assign: (b: { projectId: string; editorId: string; role: 'editor' | 'destek'; start: string; due: string; pages?: number | null; note?: string; force?: boolean }) =>
-    send<EditorTask>('POST', '/api/v1/editorial/assignments', b, 60_000),
-  editors: () => send<{ items: AssignEditor[]; sinceYear: number; workStatuses: number[]; me: CrmMe | null }>('GET', '/api/v1/editorial/assignments/editors', undefined, 60_000),
-  saveProfile: (id: string, b: { capacity: number | null; available: boolean; note?: string | null }) =>
-    send<EditorProfile>('PUT', `/api/v1/editorial/assignments/editors/${encodeURIComponent(id)}/profile`, b, 30_000),
-  addAbsence: (id: string, b: { start: string; end: string; reason?: string }) =>
-    send<EditorAbsence>('POST', `/api/v1/editorial/assignments/editors/${encodeURIComponent(id)}/absences`, b, 30_000),
-  deleteAbsence: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/assignments/absences/${encodeURIComponent(id)}`, undefined, 30_000),
-  calendar: (start?: string, end?: string) =>
-    send<{ start: string; end: string; today: string; items: CalendarRow[] }>('GET', `/api/v1/editorial/assignments/calendar${qs({ start, end })}`, undefined, 60_000),
-  tasks: (p: { editor?: string; project?: string; active?: boolean }) =>
-    send<{ items: EditorTask[] }>('GET', `/api/v1/editorial/assignments/tasks${qs({ editor: p.editor, project: p.project, active: p.active === undefined ? undefined : String(p.active) })}`, undefined, 30_000),
-  updateTask: (id: string, b: Partial<{ status: TaskStatus; start: string | null; due: string | null; pages: number | null; note: string | null; reason: string }>) =>
-    send<EditorTask>('PATCH', `/api/v1/editorial/assignments/tasks/${encodeURIComponent(id)}`, b, 30_000),
   history: (id: string) => send<{ items: TaskLogEntry[] }>('GET', `/api/v1/editorial/assignments/tasks/${encodeURIComponent(id)}/history`, undefined, 30_000),
   mine: () =>
-    send<{
-      me: CrmMe | null;
-      user: string;
-      tasks: EditorTask[];
-      crmOnly: AssignProject[];
-      load: EditorLoadInfo | null;
-      absences: EditorAbsence[];
-      sinceYear?: number;
-      db?: DbTiming | null;
-    }>('GET', '/api/v1/editorial/tasks/mine', undefined, 60_000),
-  adopt: (projectId: string) => send<EditorTask>('POST', '/api/v1/editorial/tasks/mine/adopt', { projectId }, 30_000),
-  rules: () =>
-    send<{
-      active: RuleVersion | null;
-      draft: RuleVersion | null;
-      history: RuleVersion[];
-      categories: RuleCategory[];
-      editors: { id: string; name: string | null; disabled: boolean }[];
-      sinceYear: number;
-      canEdit: boolean;
-      canApprove: boolean;
-    }>('GET', '/api/v1/editorial/assignments/rules', undefined, 60_000),
-  suggestRules: () => send<{ rules: AssignRule[]; sinceYear: number }>('GET', '/api/v1/editorial/assignments/rules/suggest', undefined, 60_000),
-  saveDraft: (rules: AssignRule[], note?: string) => send<unknown>('PUT', '/api/v1/editorial/assignments/rules/draft', { rules, note }, 30_000),
-  discardDraft: () => send<unknown>('DELETE', '/api/v1/editorial/assignments/rules/draft', undefined, 30_000),
-  approve: (version: number) => send<unknown>('POST', '/api/v1/editorial/assignments/rules/approve', { version }, 30_000),
+    send<{ me: CrmMe | null; user: string; tasks: EditorTask[]; sinceYear?: number; db?: DbTiming | null }>(
+      'GET',
+      '/api/v1/editorial/tasks/mine',
+      undefined,
+      60_000,
+    ),
+  /** Görevlerim: projenin takibini değiştirir; kayıt yoksa köprü açar. */
+  updateMine: (projectId: string, b: TaskPatch) => send<EditorTask>('PATCH', `/api/v1/editorial/tasks/mine/${encodeURIComponent(projectId)}`, b, 30_000),
 };
 
 // -------------------------------------------------------- editoryal masa (M3 redaksiyon, M5 son okuma)
@@ -2445,7 +2367,8 @@ export type BookDetail = {
   summary: string | null;
   summaryFrom: string | null;
   roles: Array<{ role: string; people: Array<{ id: string | null; name: string | null }> }>;
-  contracts: Array<{ id: string; no: string | null; kind: string | null; status: string | null; stage: string | null; start: string | null; end: string | null; royalty: number | null; daysLeft: number | null }>;
+  contracts: Array<{ id: string; no: string | null; kind: string | null; status: string | null; stage: string | null; start: string | null; end: string | null; royalty: number | null; daysLeft: number | null } & CrmRightsFields>;
+  rights?: BookRights;
   projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; stage: string | null; on: string | null; editor: string | null; idea: string | null }>;
   board: Array<{ id: string; date: string | null; decision: string | null; note: string | null; royalty: number | null; printRun: string | null; project: string | null }>;
   production: Array<{ id: string; on: string | null; delivery: string | null; editorial: string | null; firstText: string | null; status: string | null; editor: string | null; designer: string | null }>;

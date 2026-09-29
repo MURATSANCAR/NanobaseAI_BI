@@ -11,6 +11,7 @@ import ReviewPanel from './ReviewPanel';
 import BookCollabs from '../influencers/BookCollabs';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { BookRightsPanel, RightsDetails } from './crmRights';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -134,26 +135,36 @@ function Contracts({ b }: { b: BookDetail }) {
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
-          Sözleşmeler
+          Haklar ve sözleşmeler
           <SqlInfo k={kaynakOf(b)} alan="_hepsi" label="Sözleşme bitişine kalan gün" />
         </h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
           Telif ve sözleşmeler
         </Link>
       </div>
-      <ul className="mt-2 space-y-1.5">
+      <section className="mt-2">
+        <h3 className="px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kitabın hakları</h3>
+        <div className="mt-1.5">
+          <BookRightsPanel rights={b.rights} />
+        </div>
+      </section>
+      <h3 className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sözleşmeler ({nf.format(b.contracts.length)})</h3>
+      <ul className="mt-1.5 space-y-1.5">
         {b.contracts.map((c) => (
-          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
-            <span className="min-w-0">
-              <span className="block font-mono text-[12px] font-semibold">{c.no || '—'}</span>
-              <span className="block text-[11px] text-canvas-muted">
-                {[c.kind, c.royalty != null ? `telif ${pct(c.royalty, 0)}` : null, c.start || c.end ? `${dateTime(c.start)} – ${dateTime(c.end)}` : null].filter(Boolean).join(' · ')}
+          <li key={c.id} className="rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0">
+                <span className="block font-mono text-[12px] font-semibold">{c.no || '—'}</span>
+                <span className="block text-[11px] text-canvas-muted">
+                  {[c.kind && crmLabel(c.kind), c.royalty != null ? `telif ${pct(c.royalty, 0)}` : null, c.start || c.end ? `${dateTime(c.start)} – ${dateTime(c.end)}` : null].filter(Boolean).join(' · ')}
+                </span>
               </span>
-            </span>
-            <span className="flex shrink-0 gap-1.5">
-              {c.daysLeft != null && c.daysLeft >= 0 && c.daysLeft <= 60 && <Pill tone="err">{nf.format(c.daysLeft)} gün</Pill>}
-              {c.status && <Pill tone={tone(c.status)}>{crmLabel(c.status)}</Pill>}
-            </span>
+              <span className="flex shrink-0 gap-1.5">
+                {c.daysLeft != null && c.daysLeft >= 0 && c.daysLeft <= 60 && <Pill tone="err">{nf.format(c.daysLeft)} gün</Pill>}
+                {c.status && <Pill tone={tone(c.status)}>{crmLabel(c.status)}</Pill>}
+              </span>
+            </div>
+            <RightsDetails rights={c.rights} license={c.license} />
           </li>
         ))}
       </ul>

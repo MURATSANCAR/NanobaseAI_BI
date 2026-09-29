@@ -33,7 +33,6 @@ const PlanEditor = lazy(() => import('@/canvas/editorial/studio/PlanEditor'));
 const CoverScreen = lazy(() => import('@/canvas/editorial/studio/collage/CoverScreen'));
 const CoverLibraryScreen = lazy(() => import('@/canvas/editorial/studio/library/CoverLibraryScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
-const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const FreelanceScreen = lazy(() => import('@/canvas/editorial/freelance/FreelanceScreen'));
 const PricingScreen = lazy(() => import('@/canvas/pricing/PricingScreen'));
@@ -565,7 +564,7 @@ export default function App() {
             <Route path="pazar-arastirma/:section" element={<PazarScreen />} />
             <Route path="pazar-arastirma/raporlar/:id" element={<PazarScreen />} />
             <Route path="pazar-arastirma/ozet/:donem" element={<PazarScreen />} />
-            <Route path="gorevlerim" element={<MyTasksScreen />} />
+            <Route path="gorevlerim" element={<Navigate to="/editoryal#gorevlerim" replace />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />
             <Route path="uretim" element={<ProductionScreen />} />

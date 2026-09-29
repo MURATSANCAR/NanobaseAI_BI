@@ -11,6 +11,7 @@ import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
 import { RelationBody } from './authors/CardPanel';
 import SqlInfo from '../components/SqlInfo';
+import { RightChips, RightsDetails } from './crmRights';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -137,15 +138,22 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
             </>
           }
         >
-          <ul className="mt-1.5 max-h-60 space-y-1.5 overflow-y-auto pr-1">
+          <ul className="zk-scroll mt-1.5 max-h-[28rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
             {p.contracts.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="font-mono text-[11.5px] tabular-nums">{c.no || '—'}</span>
-                {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
-                <span className="font-mono text-[11px] tabular-nums text-canvas-muted">
-                  {dateTime(c.start)} – {dateTime(c.end)}
-                </span>
-                {c.royalty != null && <span className="text-[11px] text-canvas-muted">telif {pct(c.royalty, 0)}</span>}
+              <li key={c.id} className="border-t border-slate-100 pt-1.5 first:border-t-0 first:pt-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="font-mono text-[11.5px] tabular-nums">{c.no || '—'}</span>
+                  {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
+                  {c.kind && <span className="text-[11px] text-canvas-muted">{crmLabel(c.kind)}</span>}
+                  <span className="font-mono text-[11px] tabular-nums text-canvas-muted">
+                    {dateTime(c.start)} – {dateTime(c.end)}
+                  </span>
+                  {c.royalty != null && <span className="text-[11px] text-canvas-muted">telif {pct(c.royalty, 0)}</span>}
+                </div>
+                <div className="mt-1">
+                  <RightChips rights={c.rights} compact />
+                </div>
+                <RightsDetails rights={c.rights} license={c.license} />
               </li>
             ))}
           </ul>

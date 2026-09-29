@@ -67,6 +67,11 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
             if not head:
                 return None
             out = C.crm_contract(head[0], run(books_sql).get("records") or [], run(parties_sql).get("records") or [])
+            try:
+                from semantic_bridge import crm_rights
+                crm_rights.attach_scope([out], run, crm_prefix(schema))
+            except Exception as e:  # noqa: BLE001 — ülke/dil kapsamı okunamazsa sözleşme yine açılır
+                log.warning("contracts: CRM ülke/dil kapsamı okunamadı (%s): %s", crm_id, e)
             parent = C.parent_of(head[0])
             try:
                 out["related"] = C.related(run(C.related_sql(crm_prefix(schema), crm_id, parent)).get("records") or [], parent)

@@ -1,4 +1,4 @@
-import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
+import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders, type CrmLicense, type CrmRight } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import type { Kaynaklar } from '../../components/sqlInfo';
 
@@ -251,6 +251,9 @@ export type RightsContract = {
   parties: string[];
   inForce: boolean;
   rightsMap?: RightsMap | null;
+  /** CRM'in 12 hakkı; boş alan `granted: null` (girilmemiş) — `rights` eski eşlemede boşu «yok» sayar. */
+  crmRights?: CrmRight[];
+  license?: CrmLicense;
 };
 /** Yapılandırılmış hak haritası (öneri 18): her değer metinden birebir alıntıyla; alıntısız alan boş. */
 export type MapItem = { deger: string; alinti: string; kaynak: 'zeki' | 'kural' | 'insan'; ad?: string; tarih?: string | null };

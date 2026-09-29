@@ -18,6 +18,8 @@ import html
 import re
 from typing import Any, Callable, Optional
 
+from semantic_bridge import crm_rights
+
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _GUID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
 
@@ -139,8 +141,9 @@ def list_sql(schema: str, page: int, *, order: str = "bitis", **flt: Any) -> str
         " s.new_SesliKitap, s.new_yurtdisitelif, s.new_sozlesmeparabirimi, s.new_sozlesmeavanstutari,"
         " s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi, s.new_SozlesmeSuresiYil,"
         " s.new_suresizsozlesme, s.statuscode, s.new_sozlesmestatusu, s.ModifiedOn,"
-        " DATEDIFF(day, CAST(GETDATE() AS date), s.new_SozlesmeBitisTarihi) AS kalan_gun"
-        f" FROM {p}new_sozlesmeBase s WHERE {_where(p, **flt)}"
+        " DATEDIFF(day, CAST(GETDATE() AS date), s.new_SozlesmeBitisTarihi) AS kalan_gun,"
+        f" {crm_rights.columns('s')}"
+        f" FROM {p}new_sozlesmeBase s{crm_rights.joins(p, 's')} WHERE {_where(p, **flt)}"
         f" ORDER BY {by} OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
     )
 
@@ -240,7 +243,9 @@ def page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, *, ord
     """Bir sayfa sözleşme: kayıtlar, o sayfanın kitapları ve tarafları, süzgece uyan toplam sayı."""
     total = int(_n((run(count_sql(schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
     res = run(list_sql(schema, page_no, order=order, **flt))
-    items = [contract(r) for r in res.get("records") or []]
+    rows = res.get("records") or []
+    items = [contract(r) for r in rows]
+    crm_rights.attach(items, {str(r.get("new_sozlesmeId") or "").lower(): r for r in rows})
     by_id = {c["id"].lower(): c for c in items if c["id"]}
     if by_id:
         ids = [c["id"] for c in items if c["id"]]
@@ -503,9 +508,10 @@ def person_works_sql(schema: str, contact_id: str) -> str:
 def person_contracts_sql(schema: str, contact_id: str) -> str:
     p = _prefix(schema)
     return (
-        "SELECT s.new_sozlesmeId, s.new_name, s.statuscode, s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi,"
-        " s.new_Telif, t.new_Odeme"
+        "SELECT s.new_sozlesmeId, s.new_name, s.statuscode, s.new_SozlesmeTipi, s.new_SozlesmeBaslangicTarihi,"
+        f" s.new_SozlesmeBitisTarihi, s.new_Telif, t.new_Odeme, {crm_rights.columns('s')}"
         f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
+        f"{crm_rights.joins(p, 's')}"
         f" WHERE t.statecode = 0 AND s.statecode = 0 AND t.new_kisi = '{_guid(contact_id)}'"
         " ORDER BY s.new_SozlesmeBitisTarihi DESC"
     )
@@ -555,10 +561,12 @@ def person(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -
         "bio": _s(head.get("new_kisaozgecmis")) or _s(head.get("new_ozgecmis")),
         "works": [{"bookId": _s(r.get("new_kitapId")), "title": _s(r.get("kitap")), "role": _s(r.get("rol")),
                    "on": _date(r.get("CreatedOn"))} for r in works.get("records") or []],
-        "contracts": [{"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
-                       "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
-                       "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme"))}
-                      for r in run(person_contracts_sql(schema, contact_id)).get("records") or []],
+        "contracts": _with_rights(schema, run, run(person_contracts_sql(schema, contact_id)).get("records") or [],
+                                  lambda r: {"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")),
+                                             "status": _s(r.get("statuscode")), "kind": _s(r.get("new_SozlesmeTipi")),
+                                             "start": _date(r.get("new_SozlesmeBaslangicTarihi")),
+                                             "end": _date(r.get("new_SozlesmeBitisTarihi")),
+                                             "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme"))}),
         "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
                       "text": _s(r.get("new_icerikdurumu")), "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor"))}
                      for r in run(person_projects_sql(schema, contact_id)).get("records") or []],
@@ -763,8 +771,10 @@ def book_contracts_sql(schema: str, book_id: str) -> str:
     return (
         "SELECT s.new_sozlesmeId, s.new_name, s.new_SozlesmeTipi, s.statuscode, s.new_sozlesmestatusu,"
         " s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi, s.new_Telif, s.new_suresizsozlesme,"
-        " DATEDIFF(day, CAST(GETDATE() AS date), s.new_SozlesmeBitisTarihi) AS kalan_gun"
+        " DATEDIFF(day, CAST(GETDATE() AS date), s.new_SozlesmeBitisTarihi) AS kalan_gun,"
+        f" {crm_rights.columns('s')}"
         f" FROM {p}new_new_sozlesme_new_kitapBase sk JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = sk.new_sozlesmeid"
+        f"{crm_rights.joins(p, 's')}"
         f" WHERE s.statecode = 0 AND sk.new_kitapid = '{_guid(book_id)}' ORDER BY s.new_SozlesmeBitisTarihi DESC"
     )
 
@@ -814,6 +824,22 @@ def book_production_sql(schema: str, book_id: str) -> str:
     )
 
 
+def _with_rights(schema: str, run: Callable[[str], dict[str, Any]], rows: list[dict[str, Any]],
+                 shape: Callable[[dict[str, Any]], dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sözleşme satırları → çıktı; her birine CRM hakları, lisans şartları, ülke ve dil kapsamı eklenir.
+    Aynı sözleşme (kişinin birden çok taraf kaydı) bir kez döner."""
+    items, seen = [], set()
+    for r in rows:
+        key = str(r.get("new_sozlesmeId") or "").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(shape(r))
+    crm_rights.attach(items, {str(r.get("new_sozlesmeId") or "").lower(): r for r in rows})
+    crm_rights.attach_scope(items, run, _prefix(schema))
+    return items
+
+
 def _hit(r: dict[str, Any], kind: Optional[str] = None) -> dict[str, Any]:
     return {"kind": kind or _s(r.get("tur")), "id": _s(r.get("id")), "title": _s(r.get("ad")),
             "note": _s(r.get("ek1")), "extra": _s(r.get("ek2")), "status": _s(r.get("durum")), "date": _date(r.get("tarih"))}
@@ -853,6 +879,12 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
                                   if _plain(head.get(f))), (None, None))
     if summary is None:
         summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
+    contracts = _with_rights(schema, run, run(book_contracts_sql(schema, book_id)).get("records") or [], lambda r: {
+        "id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "kind": _s(r.get("new_SozlesmeTipi")),
+        "status": _s(r.get("statuscode")), "stage": _s(r.get("new_sozlesmestatusu")),
+        "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
+        "royalty": _n(r.get("new_Telif")),
+        "daysLeft": None if _n(r.get("kalan_gun")) is None else int(_n(r.get("kalan_gun")))})
     roles: dict[str, list[dict[str, Any]]] = {}
     for r in run(book_roles_sql(schema, book_id)).get("records") or []:
         role = _s(r.get("rol")) or "Diğer"
@@ -873,12 +905,8 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
         "illustratorsText": _s(head.get("new_cizerlertext")), "translatorsText": _s(head.get("new_tercumelertext")),
         "authorsText": _s(head.get("new_yazartext")),
         "roles": [{"role": k, "people": v} for k, v in sorted(roles.items())],
-        "contracts": [{"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "kind": _s(r.get("new_SozlesmeTipi")),
-                       "status": _s(r.get("statuscode")), "stage": _s(r.get("new_sozlesmestatusu")),
-                       "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
-                       "royalty": _n(r.get("new_Telif")),
-                       "daysLeft": None if _n(r.get("kalan_gun")) is None else int(_n(r.get("kalan_gun")))}
-                      for r in run(book_contracts_sql(schema, book_id)).get("records") or []],
+        "contracts": contracts,
+        "rights": crm_rights.book_summary(contracts),
         "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
                       "text": _s(r.get("new_icerikdurumu")), "stage": _s(r.get("new_isPlaniAsamasi")),
                       "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor")), "idea": _plain(r.get("fikir"))}

@@ -176,6 +176,16 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
 - Kodda koruma `backend/semantic_bridge/seo_geo/connections.py` → `READ_ONLY`; liste dışı yol çağrılmadan hata atar.
 - SEO/GEO önerileri onaylanır ve kayıt altında durur; hedef CRM (müşteriden Web API yetkisi bekleniyor), T-soft değil.
 
+## CRM'de pasif kayıt kullanılmaz (kullanıcı kuralı 2026-09-29)
+
+- Hiçbir ekranda, raporda ve Zeki AI cevabında CRM'de pasif (`statecode = 1`) kayıt kullanılmaz. Süzgeç bağlantıdadır:
+  `backend/semantic_layer/runtime/crm_active.py` — `*_MSCRM` veritabanına giden her SELECT'te `statecode` kolonu olan
+  `new_*` tabloları ile `ContactBase`/`AccountBase`, `(SELECT * FROM … WHERE statecode = 0) <takma ad>` olarak okunur.
+  Yeni CRM sorgusu yazarken ayrıca hatırlamak gerekmez; yine de ana tabloya `statecode = 0` yazmak zararsızdır.
+- Süzülmeyenler: kullanıcı hesabı (`SystemUserBase`; kapalı hesap `IsDisabled` ile gösterilir), durumu süreç aşaması olan
+  standart varlıklar (fırsat, sipariş, fatura, vaka, etkinlik), N:N ara tabloları (durum kolonu yok).
+- Kapatmak yalnız teşhis içindir: `CRM_ACTIVE_ONLY=0`.
+
 ## CRM'e yazma yok (kullanıcı kuralı 2026-09-28)
 
 - Müşteri CRM'ine (Dynamics, 192.168.0.28 `Timas_MSCRM`) **yazma yetkimiz yok**. CRM'e hiçbir yoldan yazılmaz:

@@ -50,18 +50,6 @@ const CONTENT: ScreenInfoMap = {
     actions: ['«Yeni oturum» açıp gündemi kurun.', 'Oturumu açıp puanınızı ve oyunuzu girin.', 'Başkan olarak kararı kaydedin ya da geri alın.'],
   },
 
-  gorevlerim: {
-    summary:
-      'Size atanan editörlük işleri pano hâlinde: sırada, çalışılıyor, beklemede ve tamamlandı. Durumu ve termini buradan güncellersiniz.',
-    how: [
-      'Görevler editör atama ekranındaki atamalardan gelir; her değişiklik gerekçesiyle görev geçmişine yazılır, atayan kişi görür.',
-      "CRM'de editörü siz olduğunuz ama panoda olmayan projeler ayrıca listelenir; çalıştığınızı panonuza alırsınız.",
-      'İzin ve müsait olmadığınız günleri girersiniz; takvimde görevle çakışan gün çakışma sayılır.',
-    ],
-    data: "Atamalar portalda tutulur; proje bilgisi CRM'den okunur. CRM'e yazılmaz.",
-    actions: ['Göreve «Başladım», «Tamamladım» ya da «Devam ediyorum» deyin.', 'Termini ve tahmini sayfayı güncelleyin.', "CRM'deki projenizi «Panoma al» ile ekleyin.", 'İzin günlerinizi girin.'],
-  },
-
   redaksiyon: {
     summary:
       'Metin işleme ve redaksiyon: eser metni yüklenir, bölümlere ayrılır ve ölçülür; Zeki AI yazım ve üslup önerisi çıkarır, kararı editör verir.',
@@ -240,9 +228,9 @@ const CONTENT: ScreenInfoMap = {
       "Roller CRM'deki eser katılımcı tipleridir; birden çok rol varsa rol süzgeci çıkar.",
       "Yazarın randevu ve görüşme notları kişinin «İlişki» bölümündedir; çizer ya da serbest çalışanı kartındaki düğmeyle Serbest çalışanlar'a eklersiniz.",
     ],
-    data: "CRM eser katılımları, sözleşmeler ve projeler. CRM'e yazılmaz.",
+    data: "CRM eser katılımları, sözleşmeler (hakları ve lisans şartlarıyla) ve projeler. CRM'e yazılmaz.",
     refresh: 'İlk sayfa 5 dakikada bir önceden okunur; açılışta CRM beklenmez.',
-    actions: ['Kişi türünü seçin, ad ile arayın.', 'Kişiyi açıp eserlerini, sözleşmelerini ve projelerini görün.'],
+    actions: ['Kişi türünü seçin, ad ile arayın.', 'Kişiyi açıp eserlerini, sözleşmelerini, haklarını ve projelerini görün.'],
   },
 
   'yazar-iliskileri': {
@@ -286,8 +274,9 @@ const CONTENT: ScreenInfoMap = {
       'Durum taslak → imza sürecinde → yürürlükte → süresi bitti ya da feshedildi diye ilerler.',
       'Yürürlükteki sözleşmenin şartı zeyilnameyle değişir; kayıt düzeltmesi gerekçe ister ve geçmişe yazılır.',
       "Portal CRM'e yazmaz; portal değeri ile CRM değeri arasındaki farklar sözleşme sayfasında listelenir.",
+      "Her sözleşmenin hakları (çoğaltma, yayma, iletim, e-kitap, sesli kitap, çeviri…) ve lisans şartları CRM'den okunur; boş alan «girilmemiş» yazılır.",
     ],
-    data: "CRM sözleşmeleri ve portaldaki sözleşme kayıtları.",
+    data: "CRM sözleşmeleri (haklar, lisans şartları, ülke ve dil kapsamı dahil) ve portaldaki sözleşme kayıtları.",
     refresh: 'Açılış listesi 5 dakikada bir önceden okunur.',
     actions: [
       '«Yeni sözleşme» ile taslak açın.',
@@ -335,19 +324,15 @@ const CONTENT: ScreenInfoMap = {
 
   'editor-atama': {
     summary:
-      'Editörsüz projeye kural, geçmiş ve müsaitliğe göre editör önerilir ve atanır; iş yükü, takvim çakışması ve kategori–editör kuralları buradan yönetilir.',
+      "Hangi projenin editörü kim: CRM proje kartındaki «Editörü» alanı. Editörsüz projeler ve editör başına projeler; atama CRM'de yapılır.",
     how: [
-      'Her aday editör puanı ve gerekçesiyle önerilir; öneri kurallarla hesaplanır, son kararı siz verirsiniz.',
-      'Kural tablosu kategoriye birincil ve yedek editör bağlar; taslak yetkili onaylayınca yürürlüğe girer, eski sürüm arşivde kalır.',
-      'İş yükü editörün eşzamanlı görev kapasitesine göre hesaplanır; kapasite girilmemişse yüzde gösterilmez.',
+      "Editörsüz projeler, CRM'de «Editörü» boş olan etkin projelerdir; ilk açılışta iş planı ve kurul onaylı durumdakiler gelir, durum çipleriyle diğerleri açılır.",
+      'Editör başına proje sayısı CRM proje durumlarına göre renklenir; editöre dokununca projeleri listelenir.',
+      "Portal atama yapmaz ve CRM'e yazmaz; CRM'de pasif kayıtlar hiçbir listede görünmez.",
     ],
-    data: "CRM projeleri; atama, termin, kapasite ve kurallar portalda tutulur. CRM'e yazılmaz.",
+    data: "CRM proje kartları ve kullanıcılar. CRM'e yazılmaz.",
     refresh: 'Açılış listesi 5 dakikada bir önceden okunur.',
-    actions: [
-      'Atama bekleyen, İş yükü, Takvim, Kural tablosu ve Bütün projeler arasında geçin.',
-      'Projeye editör atayın, termin girin.',
-      'Kural tablosunu düzenleyip onaya gönderin.',
-    ],
+    actions: ['Editörsüz projeler ile Editörler ve projeler arasında geçin.', 'Proje ya da yazar adıyla arayın, duruma göre süzün.'],
   },
 
   'kategori-agaci': {
@@ -425,6 +410,7 @@ const CONTENT: ScreenInfoMap = {
       "Künye ve süreç bilgisi CRM kitap kartından okunur.",
       "CRM'de tür kaydı yoksa Zeki AI'ın kitabın metninden belirlediği tür, kaynağıyla birlikte gösterilir.",
       'Masadaki metin ve prova bölümü redaksiyon ve son okuma kayıtlarına bağlanır.',
+      "Kitabın hakları yürürlükteki Telif Alış sözleşmelerinden çıkar: hak bütün sözleşmelerde varsa «var», bir kısmında varsa hangi sözleşmede eksik olduğu yazılır.",
     ],
     data: "CRM kitap kartı, eser katılımları, sözleşmeler ve üretim kayıtları; portaldaki metin ve prova kayıtları. CRM'e yazılmaz.",
     actions: ['Emeği geçen kişiyi ya da sözleşmeyi açın.', 'Metne ve provaya geçin.'],
@@ -432,15 +418,16 @@ const CONTENT: ScreenInfoMap = {
 
   editoryal: {
     summary:
-      "Masam: editörün ana ekranı. En üstte şimdi sizi bekleyen işler, altında size atanmış bütün dosyalar, çeviri masanız ve Zeki AI'a soru kutusu.",
+      "Masam: editörün ana ekranı. En üstte şimdi sizi bekleyen işler, sonra Görevlerim panosu, altında size atanmış bütün dosyalar, çeviri masanız ve Zeki AI'a soru kutusu.",
     how: [
       'Dosya, CRM proje kartında editörü siz olan yazar giriş süreci projesidir; sırası sizde olan adım «Şimdi yapılacaklar»a düşer.',
+      "Görevlerim: CRM'de editörü siz olan iş planı ya da kurul onaylı projeler; durumu, termini ve notu siz tutarsınız, termin değişikliği gerekçe ister. CRM'e yazılmaz.",
       'Yönetici bütün editörlerin dosyalarını, gecikenleri ve editör atanmamış projeleri görür.',
       'Soru kutusunda bir kitaba soru sorarsınız; Zeki AI cevabı kitabın kendi metninden, sayfa numarasıyla verir.',
     ],
     data: 'CRM projeleri ve editoryal masa kayıtları.',
     refresh: "CRM'den 5 dakikada bir kendiliğinden okunur; okunamazsa son başarılı bilgiler gösterilir.",
-    actions: ['Bekleyen adımı açıp işaretleyin.', 'Kitap arayın.', "Zeki AI'a soru sorun."],
+    actions: ['Bekleyen adımı açıp işaretleyin.', 'Göreve «Başladım» ya da «Tamamladım» deyin, termin girin.', 'Kitap arayın.', "Zeki AI'a soru sorun."],
   },
 };
 

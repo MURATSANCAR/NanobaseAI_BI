@@ -226,12 +226,11 @@ export const NAV: NavGroup[] = [
     icon: BookOpen,
     items: [
       // Kitap 360 (/kitap/:id) Masam'daki aramadan açılır; orada Masam etkin görünür.
-      { id: 'editoryal', label: 'Masam', to: '/editoryal', icon: LayoutDashboard, section: 'Günlük', hint: 'Editoryal akış ve dosya takibi', also: ['/kitap'], keywords: ['editoryal süreç', 'kitap ara'] },
+      { id: 'editoryal', label: 'Masam', to: '/editoryal', icon: LayoutDashboard, section: 'Günlük', hint: 'Editoryal akış, görevlerim ve dosya takibi', also: ['/kitap'], keywords: ['editoryal süreç', 'kitap ara', 'görevlerim', 'görev', 'termin'] },
       { id: 'basvurular', label: 'Başvurular', to: '/basvurular', icon: Inbox, section: 'Günlük', hint: 'Yeni kitap başvuruları, editör raporu, kurul kararı ve arşiv', keywords: ['başvuru', 'dosya', 'kuyruk', 'red', 'arşiv', 'kurul raporu', 'editör raporu'] },
       { id: 'yazar-giris', label: 'Yazar giriş süreci', to: '/yazar-giris', icon: Route, section: 'Günlük', hint: 'Yeni kitap başvuruları ve projeler', keywords: ['başvuru', 'proje', 'dosya'] },
       { id: 'yayin-kurulu', label: 'Yayın kurulu', to: '/yayin-kurulu', icon: UsersRound, section: 'Günlük', hint: 'Kurul oturumları, üye oyu ve kararlar', keywords: ['kurul', 'toplantı', 'oy', 'oturum'] },
-      { id: 'gorevlerim', label: 'Görevlerim', to: '/gorevlerim', icon: ListChecks, section: 'Günlük', hint: 'Size atanan editörlük işleri ve terminleri', keywords: ['görev', 'termin', 'pano', 'iş listesi'] },
-      { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, section: 'Günlük', hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
+      { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, section: 'Günlük', hint: 'CRM\'deki editör atamaları ve editörsüz projeler', keywords: ['editörler', 'atama', 'iş yükü', 'editörsüz'] },
       { id: 'redaksiyon', label: 'Redaksiyon', to: '/redaksiyon', icon: PenLine, section: 'Yayına hazırlık', hint: 'Metin işleme ve üsluplandırma', keywords: ['redaksiyon', 'metin'] },
       { id: 'ceviri', label: 'Çeviri', to: '/ceviri', icon: Languages, section: 'Yayına hazırlık', hint: 'Çeviri işleri, terim bankası ve kalite raporu', keywords: ['çeviri', 'tercüme', 'terim', 'segment', 'kalite'] },
       { id: 'ceviri-masam', label: 'Çeviri masam', to: '/ceviri/masam', icon: NotebookPen, section: 'Yayına hazırlık', hint: 'Çevirmenin ve inceleyenin kendi ekranı', keywords: ['çevirmen', 'segment', 'xliff'] },

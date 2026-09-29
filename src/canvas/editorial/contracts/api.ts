@@ -1,4 +1,4 @@
-import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
+import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders, type CrmLicense, type CrmRight } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import type { Kaynaklar } from '../../components/sqlInfo';
 
@@ -180,6 +180,9 @@ export type Detail = {
     terms: Terms;
     /** CRM'deki ana sözleşme ve ona bağlı kayıtlar (`new_anasozlesmeid`). */
     related?: Array<{ id: string; no: string | null; relation: 'ana' | 'bagli'; status: Status; start: string | null; end: string | null }>;
+    /** CRM'in bütün hakları ve lisans şartları (salt okunur; portal şartlarına girmez). */
+    rights?: CrmRight[];
+    license?: CrmLicense;
   } | null;
   diff: Change[];
   crmChangedSinceAdopt?: boolean;

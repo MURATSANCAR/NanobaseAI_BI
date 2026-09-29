@@ -30,6 +30,7 @@ from semantic_bridge import contracts as C
 from semantic_bridge import contracts_kaynak as CK
 from semantic_bridge import provenance as P
 from semantic_bridge import contracts_royalty as CR
+from semantic_bridge import crm_rights
 from semantic_bridge import contracts_terms as T
 from semantic_bridge import rights_map as RM
 from semantic_bridge import rights_notes as RN
@@ -682,13 +683,20 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                  "open_ended": r.get("open_ended"), "terminated": r.get("terminated"), "public_domain": r.get("public_domain"),
                  "rights_note": (str(r.get("rights_note") or "").strip() or None),
                  "rights": {key: bool(r.get(col)) for col, key in S.RIGHT_COLUMNS.items()},
-                 "originalLanguage": S.option_label(options, "new_orjinaldili", r.get("orjinal_dil")),
-                 "soldCountry": S.option_label(options, "new_telifsatilanulke", r.get("satilan_ulke")),
-                 "grantor": S.option_label(options, "new_hakdevredenfirma", r.get("hak_devreden")),
+                 # Bu üç alan CRM'de başka kayda bağdır (dil, ülke, firma); ad bağlı kayıttan gelir (2026-09-29 ölçümü:
+                 # 2.097 / 3.643 / 200 dolu, hepsi eşleşiyor). Seçim listesi etiketi yalnız yedektir.
+                 "originalLanguage": r.get("lr_orijinal_dil") or S.option_label(options, "new_orjinaldili", r.get("orjinal_dil")),
+                 "soldCountry": r.get("lr_satilan_ulke") or S.option_label(options, "new_telifsatilanulke", r.get("satilan_ulke")),
+                 "grantor": r.get("lr_devreden_firma") or S.option_label(options, "new_hakdevredenfirma", r.get("hak_devreden")),
+                 "crmRights": crm_rights.rights(r), "license": crm_rights.license_of(r),
                  "author": r.get("yazar"), "translator": r.get("mutercim"), "illustrator": r.get("cizer"),
                  "parties": [x for x in parts.get(cid, []) if x]}
             c["inForce"] = seo_crm.in_force(c, on)
             contracts.append(c)
+        try:
+            crm_rights.attach_scope(contracts, lambda sql: {"records": c_run(sql)}, p)
+        except Exception:  # noqa: BLE001 — ülke/dil kapsamı okunamazsa hak kartı yine açılır
+            log.exception("rights: CRM ülke/dil kapsamı okunamadı")
         lic = RY.licenses(engine, tenant, book_id=book_id)
         for c in contracts:
             c["rightsMap"] = RM.for_text(engine, tenant, c["id"], c.get("rights_note")) if c.get("rights_note") else None

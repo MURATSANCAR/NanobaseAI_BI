@@ -14,10 +14,12 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
 import { fmtDay } from './translation/parts';
 import AskBox from './AskBox';
+import MyTasks from './MyTasks';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 
-/** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, altında kendisine atanmış bütün dosyalar.
+/** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, sonra Görevlerim (CRM'de editörü olduğu iş
+ *  durumundaki projeler, durum/termin takibiyle), altında kendisine atanmış bütün dosyalar.
  *  Dosya, CRM proje kartında editörü oturumdaki kişi olan yazar giriş süreci projesidir. */
 
 /** Kişinin masasında duran iş: karar bekleyen öneri, onaylanmamış bölüm, imza bekleyen prova. */
@@ -442,6 +444,7 @@ export default function EditorialHome() {
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
           <div className="space-y-3">
             {d && <EditorTable items={d.items} todo={todo} k={kaynakOf(intake.data)} />}
+            <MyTasks />
             {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} k={kaynakOf(intake.data)} />}
             {works.data && <Desk works={desk} user={works.data.user} k={kaynakOf(home.data)} />}
             <TranslationDesk />
@@ -463,6 +466,8 @@ export default function EditorialHome() {
               </ul>
             </section>
           )}
+
+          <MyTasks />
 
           {/* Sohbet açılışta üstte kalır (kullanıcı kararı 09-22); dosyası olan editörde işlerin altına iner. */}
           <AskBox />
