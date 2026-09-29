@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { AlertTriangle, GripVertical, Plus, Trash2 } from 'lucide-react';
 import type { Plan, PlanPage } from '../../engine';
 import { ConfirmDialog } from './dialogs';
+import { Explain } from '../../components/Explain';
 
 /** Sayfa şeridi: küçük önizlemeler, sürükleyerek sıralama (masaüstü; klavyeyle de: tutamağa odaklanıp
  *  boşluk + ok tuşları), araya boş sayfa ekleme, onaylı silme ve 8'in katı uyarısı. Telefonda şerit yatay
@@ -54,7 +55,9 @@ export default function PageStrip({
       </div>
       {eight && (
         <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-2 py-1.5 text-[11px] font-semibold leading-snug text-amber-800" role="status">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{eight}
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">{eight}</span>
+          <Explain label="Neden 8'in katı?">Kitaplar matbaada büyük kâğıda sekizer (ya da on altışar) sayfa basılıp katlanarak hazırlanır. Sayfa sayısı 8'in katı değilse sonda boş sayfa kalır.</Explain>
         </div>
       )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>

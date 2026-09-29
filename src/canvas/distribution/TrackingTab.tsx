@@ -9,6 +9,7 @@ import { distApi, type TrackSummary } from './api';
 import { Share, n0 } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** İzlenen kitaplar: onaydan sonraki 8 hafta plan → sevk → faturalanan → iade. Kitaba dokununca bölge, hafta, cari. */
 export default function TrackingTab({ items, loading, k }: { items: TrackSummary[]; loading: boolean; k?: Kaynaklar }) {
@@ -17,12 +18,16 @@ export default function TrackingTab({ items, loading, k }: { items: TrackSummary
   if (!items.length) {
     return (
       <Panel>
-        <div className="py-8 text-center text-[12.5px] text-canvas-muted">İzlenen kitap yok. Onaylanan plan onay gününden itibaren 8 hafta burada izlenir.</div>
+        <EmptyHint title="İzlenen kitap yok" why="Bir dağılım planı onaylandığında kitap onay gününden itibaren 8 hafta burada sevk, fatura ve iadeyle izlenir." />
       </Panel>
     );
   }
   return (
     <div className="flex flex-col gap-2">
+      <div className="flex items-start gap-1.5 px-1 text-[12px] text-canvas-muted">
+        <span>Plan: dağıtılması planlanan adet · Sevk: müşteriye çıkan · Faturalanan: faturası kesilen · İade: geri gelen. Kitaba dokununca bölge, hafta ve müşteri ayrıntısı açılır.</span>
+        <Explain label="Takip rakamları">«Plan dışı sevk»: bu kitaptan, planda adedi olmayan müşterilere yapılan sevk. Kırmızı «Net», o bölgeye sevk yapıldığı hâlde net satışın sıfır ya da eksi kaldığını gösterir.</Explain>
+      </div>
       {items.map((s) => (
         <Panel key={s.planId}>
           <button type="button" onClick={() => setOpen(open === s.stokKodu ? null : s.stokKodu)} aria-expanded={open === s.stokKodu} className="flex w-full flex-col gap-2 text-left">

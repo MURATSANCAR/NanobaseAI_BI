@@ -6,6 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, dateTime, fmt, scoreTone, seoApi, type PageDetail, type PageField, type PageKind } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint } from '../components/Explain';
+import { Term, type TermKey } from './terms';
 
 const PAGE = 30;
 const KINDS: Array<{ id: PageKind; label: string }> = [
@@ -13,9 +15,9 @@ const KINDS: Array<{ id: PageKind; label: string }> = [
   { id: 'category', label: 'Kategoriler' },
   { id: 'brand', label: 'Yayınevleri' },
 ];
-const FIELDS: Array<{ id: PageField; label: string }> = [
-  { id: 'SeoTitle', label: 'SEO başlığı' },
-  { id: 'SeoDescription', label: 'Meta açıklama' },
+const FIELDS: Array<{ id: PageField; label: string; term?: TermKey }> = [
+  { id: 'SeoTitle', label: 'SEO başlığı', term: 'seoTitle' },
+  { id: 'SeoDescription', label: 'Meta açıklama', term: 'metaDescription' },
   { id: 'Intro', label: 'Tanıtım metni' },
 ];
 
@@ -55,7 +57,7 @@ export default function SeoPages() {
       crumb="Yazar ve kategori"
       eyebrow="SEO & GEO · sayfalar"
       title="Yazar, kategori ve yayınevi sayfaları"
-      lead="Bu sayfaların başlık ve açıklaması çoğunlukla yalnız ad. ZEKİ AI, sayfanın kitaplarından, satışlarından ve doğrulanmış Wikidata bilgisinden SEO başlığı, meta açıklama ve tanıtım metni önerir; uydurma bilgi işaretlenir. Karar yalnız kaydedilir, T-soft’a gönderilmez."
+      lead="Bu sayfaların Google başlığı ve açıklaması çoğunlukla yalnız addan ibaret. Zeki AI, sayfadaki kitaplardan, satışlardan ve doğrulanmış Wikidata bilgisinden başlık, açıklama ve tanıtım metni önerir; siz onaylar ya da reddedersiniz. T-soft’a hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="tablist" aria-label="Sayfa türü">
         {KINDS.map((k) => (
@@ -74,8 +76,11 @@ export default function SeoPages() {
           {list.error && <Failed error={list.error} />}
           {list.data && (
             <p className="sg-sub" style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--sg-muted)' }}>
-              {fmt(total)} sayfa · {fmt(list.data.withBooks)} tanesinde aktif kitap var · çok satandan aza
+              {fmt(total)} sayfa · {fmt(list.data.withBooks)} tanesinde aktif kitap var · çok satandan aza · sağdaki sayı SEO puanı (0–100)
             </p>
+          )}
+          {list.data && !list.data.items.length && (
+            <EmptyHint title={query ? 'Aramaya uyan sayfa yok' : 'Sayfa bulunamadı'} why={query ? 'Adı kısaltarak ya da farklı yazarak yeniden arayın.' : 'Sayfalar T-soft’tan her gece okunur; ilk okumadan sonra burada listelenir.'} />
           )}
           <div className="sg-list">
             {list.data?.items.map((p) => (
@@ -111,10 +116,10 @@ export default function SeoPages() {
           {selected ? (
             <Detail kind={kind} id={selected} />
           ) : (
-            <div className="sg-empty">
-              <h2>Bir sayfa seçin</h2>
-              <p>Soldan bir yazar, kategori ya da yayınevi seçtiğinizde sorunları ve ZEKİ AI önerisi burada açılır.</p>
-            </div>
+            <EmptyHint
+              title="Listeden bir sayfa seçin"
+              why="Seçtiğiniz yazar, kategori ya da yayınevi sayfasının sorunları, mevcut metinleri ve Zeki AI önerisi burada yan yana açılır."
+            />
           )}
         </section>
       </div>
@@ -163,7 +168,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
             </a>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /></div>
+            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /> <Term k="score" label="Puan" /></div>
             <div className="sg-kpi-value sg-mono">
               {p.score}
               <small>/100</small>
@@ -174,7 +179,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
         <div style={{ marginTop: 12, display: 'grid', gap: 6, fontSize: 12.5 }}>
           {p.facts.top.length > 0 && (
             <div>
-              <b>Öne çıkan kitaplar:</b> {p.facts.top.slice(0, 6).map((t) => t.name).join(' · ')}
+              <b>Öne çıkan kitaplar:</b> {p.facts.top.map((t) => t.name).join(' · ')}
             </div>
           )}
           {p.facts.cats.length > 0 && (
@@ -184,7 +189,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
           )}
           {kind === 'model' && (
             <div>
-              <b>Wikidata:</b>{' '}
+              <b>Wikidata</b> <Term k="wikidata" />:{' '}
               {p.facts.wikidata?.wikidata ? (
                 <a href={p.facts.wikidata.wikidata} target="_blank" rel="noreferrer">
                   {p.facts.wikidata.description || 'kayıt'} <ExternalLink size={11} aria-hidden />
@@ -197,7 +202,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
         </div>
       </div>
       {p.issues.length === 0 ? (
-        <p className="sg-banner ok">Bu sayfa kurallara uyuyor.</p>
+        <p className="sg-banner ok">Bu sayfa bütün SEO kurallarına uyuyor; yapılacak iş yok.</p>
       ) : (
         <Review key={open?.id ?? 'bekliyor'} page={p} proposal={open} pending={propose.isPending} error={propose.error}
           canApprove={!!me.data?.canApprove} onRegenerate={canPropose ? () => propose.mutate() : undefined} onDone={refresh} />
@@ -234,8 +239,8 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>Uyarılar ve ZEKİ AI önerisi</h2>
-          <p className="sg-sub" style={{ margin: 0 }}>{pending ? 'Öneriler yazılıyor…' : proposal ? `ZEKİ AI · ${dateTime(proposal.createdAt)}` : 'Öneri henüz yok.'}</p>
+          <h2>Sorunlar ve Zeki AI önerisi</h2>
+          <p className="sg-sub" style={{ margin: 0 }}>{pending ? 'Zeki AI öneriyi hazırlıyor…' : proposal ? `Zeki AI · ${dateTime(proposal.createdAt)} · öneriyi onaylamadan önce kutuda düzenleyebilirsiniz.` : onRegenerate ? 'Öneri henüz yok; «Yeniden üret» ile isteyebilirsiniz.' : 'Öneri henüz yok.'}</p>
         </div>
         {onRegenerate && <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
           {pending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />} Yeniden üret
@@ -248,7 +253,7 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
         </p>
       )}
       <div className="sg-diff" style={{ marginTop: 16 }}>
-        {FIELDS.map(({ id: k, label }) => {
+        {FIELDS.map(({ id: k, label, term }) => {
           const issues = page.issues.filter((i) => i.field === k);
           const next = fields[k];
           const range = lim[k];
@@ -258,7 +263,10 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
           return (
             <section key={k} className="sg-field" aria-label={label}>
               <div className="sg-field-head">
-                <span>{label}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {label}
+                  {term && <Term k={term} label={label} />}
+                </span>
                 {next && <span className={`sg-mono ${over ? 'over' : ''}`}>{k === 'Intro' ? `${len} kelime` : `${len} / ${range?.[0]}–${range?.[1]} karakter`}</span>}
               </div>
               <div className="sg-fix">
@@ -302,7 +310,7 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
           </button>
           <small>
             {canApprove
-              ? 'Onay yalnız kaydedilir; T-soft’a gönderim yok.'
+              ? 'Onay yalnız kayda geçer (kim, ne zaman, hangi metin); T-soft’a ve CRM’e hiçbir şey gönderilmez.'
               : 'Onay yetkiniz yok. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
           </small>
           {decide.error && <Failed error={decide.error} />}

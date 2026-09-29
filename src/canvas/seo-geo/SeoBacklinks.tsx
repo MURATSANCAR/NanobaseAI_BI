@@ -6,6 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term, TermLabel } from './terms';
 
 const PAGE = 50;
 type View = 'pages' | 'domains' | 'new' | 'lost' | 'books';
@@ -68,7 +70,7 @@ export default function SeoBacklinks() {
       crumb="Gelen bağlantılar"
       eyebrow="SEO & GEO · Gelen bağlantılar"
       title="Gelen bağlantılar"
-      lead="Başka sitelerin sayfalarımıza verdiği bağlantılar, arama motorlarının ve yapay zekâ motorlarının siteye güveninin en güçlü işaretlerinden biridir. Liste Bing’in gördüğü bağlantılardan gelir (tam liste değildir); her gece okunur ve bir önceki okumayla karşılaştırılır."
+      lead={<>Başka sitelerin sayfalarımıza verdiği bağlantılar; arama motorları ve yapay zekâ servisleri bunu güven işareti sayar. Liste Bing’in gördüğü bağlantılardan gelir (tam liste değildir); her gece okunur ve bir önceki okumayla karşılaştırılır. <Term k="backlink" /></>}
       actions={
         canRun && d?.configured && (
           <button className="sg-button" onClick={() => read.mutate()} disabled={read.isPending || running}>
@@ -90,19 +92,20 @@ export default function SeoBacklinks() {
         </div>
       )}
       {d && d.configured && !d.snapshot && !running && (
-        <div className="sg-empty">
-          <h2>Henüz okunmadı</h2>
-          <p>Gece turunda ya da “Şimdi oku” ile ilk okuma yapılır. Yeni/kaybolan bağlantılar ikinci okumadan sonra görünür.</p>
-        </div>
+        <EmptyHint title="Henüz okunmadı" why="Gece turunda ya da «Şimdi oku» ile ilk okuma yapılır. Yeni ve kaybolan bağlantılar ikinci okumadan sonra görünür." />
       )}
 
       {d && s && d.snapshot && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bağlantı alan sayfa" value={fmt(s.pages)} note={`Toplam ${fmt(s.inbound)} gelen bağlantı · ${dateTime(d.snapshot.taken_at)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı alan sayfa" />} />
-            <Kpi label="Bağlantı veren site" value={fmt(s.domains)} note={`Ayrıntısı okunan ${fmt(s.detailed)} sayfadan`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı veren site" />} />
-            <Kpi label="Yeni" value={d.previous ? fmt(s.new) : '—'} note={d.previous ? `Önceki okuma ${dateTime(d.previous.taken_at)}` : 'Karşılaştırma için ikinci okuma gerekiyor'} tone={s.new ? 'good' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yeni" />} />
-            <Kpi label="Kaybolan" value={d.previous ? fmt(s.lost) : '—'} note="Yalnız iki okumada da ayrıntısı okunan sayfalar" tone={s.lost ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kaybolan" />} />
+            <Kpi label="Bağlantı alan sayfa" value={fmt(s.pages)} note={`Toplam ${fmt(s.inbound)} gelen bağlantı · ${dateTime(d.snapshot.taken_at)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı alan sayfa" />}
+              explain="Başka sitelerden en az bir bağlantı alan sayfamızın sayısı; altta toplam gelen bağlantı." />
+            <Kpi label="Bağlantı veren site" value={fmt(s.domains)} note={`Ayrıntısı okunan ${fmt(s.detailed)} sayfadan`} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı veren site" />}
+              explain="Bize bağlantı veren farklı site sayısı. Aynı siteden gelen çok bağlantı tek site sayılır; farklı ve güvenilir siteler daha değerlidir." />
+            <Kpi label="Yeni" value={d.previous ? fmt(s.new) : '—'} note={d.previous ? `Önceki okuma ${dateTime(d.previous.taken_at)}` : 'Karşılaştırma için ikinci okuma gerekiyor'} tone={s.new ? 'good' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yeni" />}
+              explain="Bir önceki okumada olmayıp bu okumada görülen bağlantılar." />
+            <Kpi label="Kaybolan" value={d.previous ? fmt(s.lost) : '—'} note="Yalnız iki okumada da ayrıntısı okunan sayfalar" tone={s.lost ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kaybolan" />}
+              explain="Önceki okumada olup artık görülmeyen bağlantılar; değerli bir siteden kaybolduysa o siteyle iletişime geçmeye değer." />
           </section>
           {!d.snapshot.complete && (
             <p className="sg-banner">
@@ -111,6 +114,11 @@ export default function SeoBacklinks() {
           )}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <Explain label="Listeler" title="Listeler">
+                «Bağlantısız çok satanlar»: hiçbir siteden bağlantı almayan çok satan kitaplarımız; tanıtım ve basın çalışmasında önce bunlar düşünülebilir.
+              </Explain>
+            </span>
             <div className="sg-filters" role="radiogroup" aria-label="Liste">
               {VIEWS.map((v) => (
                 <button key={v.id} className="sg-filter" role="radio" aria-checked={view === v.id} aria-pressed={view === v.id} onClick={() => setView(v.id)}>
@@ -125,10 +133,10 @@ export default function SeoBacklinks() {
           </div>
 
           {!d.items.length && (
-            <div className="sg-empty">
-              <h2>Kayıt yok</h2>
-              <p>{view === 'new' || view === 'lost' ? (d.previous ? 'İki okuma arasında değişiklik yok.' : 'Karşılaştırma için ikinci okuma gerekiyor.') : 'Bu listeye uyan kayıt yok.'}</p>
-            </div>
+            <EmptyHint
+              title={view === 'new' || view === 'lost' ? 'Değişiklik yok' : 'Bu listeye uyan kayıt yok'}
+              why={view === 'new' || view === 'lost' ? (d.previous ? 'İki okuma arasında yeni ya da kaybolan bağlantı yok.' : 'Karşılaştırma için ikinci okuma gerekiyor; ertesi gece okumasından sonra görünür.') : query ? 'Aramayı kısaltın ya da temizleyin.' : 'Başka bir liste seçin.'}
+            />
           )}
           {d.items.length > 0 && (
             <section className="sg-card" aria-label="Liste">
@@ -178,7 +186,7 @@ function Head({ view }: { view: View }) {
       <tr>
         {cols[view].map(([t, right]) => (
           <th key={t} style={right ? R : undefined}>
-            {t}
+            {t === 'Bağlantı metni' ? <TermLabel k="anchor" label={t} /> : t}
           </th>
         ))}
       </tr>
@@ -234,10 +242,10 @@ function Line({ view, r }: { view: View; r: Record<string, unknown> }) {
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

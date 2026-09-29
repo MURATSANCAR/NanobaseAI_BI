@@ -77,11 +77,11 @@ function One({ launch, meta, gun, rv, running, k }: { launch: Launch; meta: Laun
               </tbody>
             </TableWrap>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-canvas-muted">Rapor rakamları günlük tablodan ve okuma sorgularından; Zeki AI bu tablodaki rakamı aynen kullanır, yeni rakam yazamaz.</p>
+          <p className="mt-2 text-[11px] leading-snug text-canvas-muted">Rapor rakamları günlük izleme tablosundan gelir; Zeki AI bu rakamları aynen kullanır, yeni rakam yazamaz.</p>
           <div className="mt-3">
             <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Zeki AI özeti</div>
             {rv.ozet ? <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed">{rv.ozet}</p>
-              : <p className="mt-1 text-[12.5px] text-canvas-muted">{running ? 'Yazılıyor…' : 'Özet yok (model bağlı değil ya da denetimden geçen cümle kalmadı).'}</p>}
+              : <p className="mt-1 text-[12.5px] text-canvas-muted">{running ? 'Yazılıyor…' : 'Özet yok: Zeki AI şu an bağlı değil ya da yazdığı cümlelerin hiçbiri denetimden geçmedi.'}</p>}
             {rv.oneriler.length > 0 && (
               <>
                 <div className="mt-2 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Öneriler</div>
@@ -137,7 +137,7 @@ export default function ReviewTab({ launch, meta }: { launch: Launch; meta: Laun
     <div className="flex flex-col gap-3">
       {q.error && <Note tone="err">{errText(q.error, 'Değerlendirme açılamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {!meta.modelReady && <Note tone="warn">Zeki AI modeli bu kurulumda bağlı değil: rapor yalnız rakam tablosuyla hazırlanır.</Note>}
+      {!meta.modelReady && <Note tone="warn">Zeki AI şu an bağlı değil: rapor yalnız rakam tablosuyla hazırlanır, yorum ve öneri yazılmaz.</Note>}
       {uyari && <Note tone="warn">{uyari}</Note>}
       {q.data && ([7, 30] as const).map((g) => (
         <One key={g} launch={launch} meta={meta} gun={g} rv={q.data.items.find((r) => r.gun === g)} running={runningFor(g)} k={q.data.kaynaklar} />

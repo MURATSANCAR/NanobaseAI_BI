@@ -50,7 +50,7 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
       <Block
         title={`İlk ${gun} gün`}
         info={<SqlInfo k={d?.kaynaklar} alan="seri[]" label={`İlk ${gun} gün grafiği`} />}
-        help={`Birikimli adet, yayın gününden itibaren. Sipariş CRM'den saatte bir okunur (sipariş satış değildir); faturalı satış Logo'dan günde bir${logoEnd ? `, veri ${fmtDay(logoEnd)} tarihinde bitiyor` : ''}. Hedef payı: yürürlükteki bütçe planının aylık hedefi ÷ ayın gün sayısı.`}
+        help={`Birikimli adet, yayın gününden itibaren. Sipariş CRM'den saatte bir okunur (sipariş satış değildir); faturalı satış Logo'dan günde bir${logoEnd ? `, veri ${fmtDay(logoEnd)} tarihinde bitiyor` : ''}. Hedef payı: bütçe planındaki aylık hedefin güne bölünmüş hâli.`}
         action={
           <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Dönem">
             {([7, 30] as const).map((g) => (
@@ -102,12 +102,12 @@ export default function TrackingTab({ launch, meta, gun, onGun }: { launch: Laun
       </Block>
 
       {d && (
-        <Block title="Rafa ulaşma" help="Dağılım siparişi ve açık sipariş CRM'den; depo stoku Logo depo görünümünden, Logo verisi eskiyse CRM'deki en son siparişin anındaki stoktan (kaynağı yazılı).">
+        <Block title="Rafa ulaşma" help="Dağılım siparişi ve açık sipariş CRM'den; depo stoku Logo'dan; Logo verisi eskiyse CRM'deki en son siparişteki stoktan alınır (kaynağı altında yazar).">
           {sig?.stokCatismasi && <Note tone="err">Açık sipariş depo stokunun üstünde: ek baskı ya da depo transferi satışla konuşulmalı.</Note>}
           {sig?.dagilimYok && <Note tone="err">Yayın günü geçti; dağılım siparişi görünmüyor.</Note>}
           <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <Stat label="Dağılım" value={fmtInt(d.dagilim?.adet)} help={d.dagilim ? `${fmtInt(d.dagilim.bayi)} bayi · ${fmtInt(d.dagilim.siparis)} sipariş · ${fmtDay(d.dagilim.bas)}–${fmtDay(d.dagilim.bit)}` : 'Okunmadı'} k={d.kaynaklar} alan="dagilim" />
-            <Stat label="Açık sipariş" value={fmtInt(sig?.bekleyen)} help="Kapanmamış sipariş satırları (Baskı Öneri tanımı)" k={d.kaynaklar} alan="sinyal" />
+            <Stat label="Açık sipariş" value={fmtInt(sig?.bekleyen)} help="Henüz kapanmamış (sevk edilmemiş) sipariş satırları" k={d.kaynaklar} alan="sinyal" />
             <Stat label="Bekleyen ürün" value={fmtInt(sig?.bekleyenUrun ?? [...d.seri].reverse().find((r) => r.bekleyenUrun != null)?.bekleyenUrun)} help="CRM «Bekleyen Ürün» (stok yokken açılan)" k={d.kaynaklar} alan="seri[]" />
             <Stat label="Depo stoku" value={fmtInt(d.depo?.deger)} help={depotHelp(d.depo)} k={d.kaynaklar} alan="depo" />
           </div>

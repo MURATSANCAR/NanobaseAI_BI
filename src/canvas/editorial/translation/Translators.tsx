@@ -7,6 +7,7 @@ import { Panel } from '../kit';
 import { LANGS, pct } from './parts';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Çevirmen karnesi: çeviri işlerimize atanmış kişiler; iş, kelime, inceleme puanı ve teslim. Kayıtlar yalnız
  *  bu modülün işlerinden gelir; CRM'deki çevirmen listesi Kişiler ekranındadır. */
@@ -32,11 +33,15 @@ export default function Translators() {
         </Link>
       </div>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        İnceleme puanı MQM yöntemiyle: onaylanan kelimelere göre hata ağırlıkları (küçük 1, büyük 5, kritik 25). Teslim, işin son segmenti onaylandığı gün ile teslim tarihinin karşılaştırmasıdır.
+        Yalnız portaldaki çeviri işlerine atanmış kişiler. Teslim, işin son segmentinin onaylandığı gün ile teslim tarihinin karşılaştırmasıdır.
       </p>
       {q.error && <Note tone="err">{errText(q.error, 'Çevirmenler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {q.data && !items.length && <p className="mt-3 px-1 text-[12px] text-canvas-muted">Henüz çevirmen atanmış iş yok.</p>}
+      {q.data && !items.length && (
+        <div className="mt-3">
+          <EmptyHint title="Henüz çevirmen atanmış iş yok" why="«Çeviri işleri» sekmesinde bir işe çevirmen atayınca karnesi burada oluşur." />
+        </div>
+      )}
       <ul className="mt-2 grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {items.map((t) => (
           <li key={t.username} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
@@ -59,7 +64,12 @@ export default function Translators() {
                 <dd className="font-mono text-[14px] font-bold tabular-nums">%{pct(t.wordsDone, t.words)}</dd>
               </div>
               <div>
-                <dt className="text-canvas-muted">İnceleme puanı</dt>
+                <dt className="flex items-center gap-1 text-canvas-muted">
+                  Puan
+                  <Explain label="İnceleme puanı">
+                    İnceleyenin işaretlediği hatalardan hesaplanan 0–100 puan (MQM yöntemi). Hata ağırlıkları: küçük 1, büyük 5, kritik 25; onaylanan kelime sayısına bölünür.
+                  </Explain>
+                </dt>
                 <dd className="font-mono text-[14px] font-bold tabular-nums">{t.mqm == null ? '—' : num(t.mqm, 1)}</dd>
               </div>
             </dl>

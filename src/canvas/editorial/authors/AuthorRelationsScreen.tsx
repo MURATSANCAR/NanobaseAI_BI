@@ -90,17 +90,18 @@ export default function AuthorRelationsScreen() {
       route="/yazar-iliskileri"
       crumb="Yazar ilişkileri"
       title="Yazar ilişkileri"
-      lead="Yazarlarla ve aday yazarlarla temasın kaydı: yazar kartı, randevu ve görüşme notu, aday havuzu. Isı haritası kimle ne zaman görüşüldüğünü, kimin arandığını gösterir. Görüşme kayıtları portalda tutulur; sözleşme ve eser bilgisi CRM'den okunur."
+      lead="Yazarlarla ve aday yazarlarla görüşmelerinizi kaydedin: yazar kartı, randevu, görüşme notu ve aday havuzu. Isı haritası kimle ne zaman görüşüldüğünü gösterir. Kayıtlar portalda tutulur; sözleşme ve eser bilgisi CRM'den okunur."
       source={cards.data ? `${nf.format(cards.data.total)} aday kartı` : 'Portal + CRM'}
       presence="Kaynak: portal + CRM"
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       <KpiRow>
         <Kpi
           label="Havuzdaki aday"
           value={pool === null ? '—' : nf.format(pool)}
           help="Vazgeçilenler hariç"
+          explain="Aday havuzundaki kartlar; «vazgeçildi» aşamasındakiler sayılmaz. Karta dokununca Aday havuzu açılır."
           active={tab === 'havuz'}
           onClick={() => update({ sekme: 'havuz' })}
           info={cards.data ? <SqlInfo k={cards.data.kaynaklar} alan="havuzToplam" label="Havuzdaki aday" /> : undefined}
@@ -109,6 +110,7 @@ export default function AuthorRelationsScreen() {
           label="Bu hafta randevum"
           value={week === null ? '—' : nf.format(week)}
           help="Önümüzdeki 7 gün"
+          explain="Önümüzdeki 7 gün içindeki randevularınız: yazdığınız, katıldığınız ya da sorumlusu olduğunuz yazarın randevuları."
           active={tab === 'randevu'}
           onClick={() => update({ sekme: 'randevu' })}
           info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.hafta" label="Bu hafta randevum" /> : undefined}
@@ -117,6 +119,7 @@ export default function AuthorRelationsScreen() {
           label="Notu eksik"
           value={mine.data ? nf.format(mine.data.missingNotes.length) : '—'}
           help="Tarihi geçmiş, notu girilmemiş randevum"
+          explain="Tarihi geçtiği hâlde görüşme notu yazılmamış randevularınız. Notu Randevular sekmesinden girebilirsiniz."
           onClick={() => update({ sekme: 'randevu' })}
           info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.notEksik" label="Notu eksik randevu" /> : undefined}
         />
@@ -124,6 +127,7 @@ export default function AuthorRelationsScreen() {
           label="Geciken adım"
           value={late === null ? '—' : nf.format(late)}
           help="Tarihi geçmiş sıradaki adımım"
+          explain="Görüşme notunda «sıradaki adım» olarak yazdığınız ve tarihi geçtiği hâlde kapanmamış işler."
           onClick={() => update({ sekme: 'randevu' })}
           info={mine.data ? <SqlInfo k={mine.data.kaynaklar} alan="sayac.gecikenAdim" label="Geciken adım" /> : undefined}
         />

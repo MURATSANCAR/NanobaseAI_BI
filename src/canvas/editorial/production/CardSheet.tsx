@@ -13,13 +13,14 @@ import { Chain, POINTS, SOURCE_LABEL, STAGE_TONE, daysText, fmtDay, fmtMoney, fm
 /** Üretim kartı: takvim (plan / gerçekleşen / kaynak), matbaa seçim raporu, Logo'da gerçekleşen, baskı dosyaları,
  *  kalite ve notlar. CRM'e yazılmaz; burada girilen her şey portal kaydıdır ve kimin girdiği yazar. */
 
-function Block({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Block({ title, action, help, children }: { title: string; action?: ReactNode; help?: string; children: ReactNode }) {
   return (
     <section className="mt-4 first:mt-1">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{title}</h3>
         {action}
       </div>
+      {help && <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{help}</p>}
       <div className="mt-1.5">{children}</div>
     </section>
   );
@@ -193,7 +194,7 @@ function PrinterBlock({ c, canWrite, canApprove }: { c: ProdDetail; canWrite: bo
     <>
       {c.approval && (
         <Note tone="ok">
-          Prodüksiyon onayı: <b>{c.approval}</b>
+          Onaylanan matbaa: <b>{c.approval}</b>
         </Note>
       )}
       {c.suggestions.length === 0 ? (
@@ -259,11 +260,11 @@ function PrinterBlock({ c, canWrite, canApprove }: { c: ProdDetail; canWrite: bo
           </label>
           <label>
             <span className={label}>Birim fiyat (₺)</span>
-            <input className={`${field} mt-1`} inputMode="decimal" value={f.unitPrice} onChange={set('unitPrice')} />
+            <input className={`${field} mt-1`} inputMode="decimal" value={f.unitPrice} onChange={set('unitPrice')} placeholder="ör. 12,50" />
           </label>
           <label>
             <span className={label}>Toplam (₺)</span>
-            <input className={`${field} mt-1`} inputMode="decimal" value={f.totalPrice} onChange={set('totalPrice')} />
+            <input className={`${field} mt-1`} inputMode="decimal" value={f.totalPrice} onChange={set('totalPrice')} placeholder="ör. 25000" />
           </label>
           <label>
             <span className={label}>Teslim tarihi</span>
@@ -271,7 +272,7 @@ function PrinterBlock({ c, canWrite, canApprove }: { c: ProdDetail; canWrite: bo
           </label>
           <label>
             <span className={label}>Kapasite / not</span>
-            <input className={`${field} mt-1`} value={f.note} onChange={set('note')} />
+            <input className={`${field} mt-1`} value={f.note} onChange={set('note')} placeholder="ör. 3 hafta içinde basabilir" />
           </label>
           <div className="flex gap-1.5 sm:col-span-2">
             <button type="submit" className={btnPrimary} disabled={w.quote.isPending}>
@@ -299,7 +300,7 @@ function QualityBlock({ c, canWrite }: { c: ProdDetail; canWrite: boolean }) {
           {current.note && <span className="mt-0.5 block">{current.note}</span>}
         </p>
       ) : (
-        <p className="text-[12px] text-canvas-muted">Kalite sonucu girilmedi.</p>
+        <p className="text-[12px] text-canvas-muted">Kalite sonucu girilmedi.{!c.actual.depo ? ' Kitap depoya girince işaretlenebilir.' : ''}</p>
       )}
       {canWrite && c.actual.depo && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -336,7 +337,7 @@ function NotesBlock({ c, canWrite, me, admin }: { c: ProdDetail; canWrite: boole
         </form>
       )}
       {c.entries.length === 0 ? (
-        <p className="mt-1.5 text-[12px] text-canvas-muted">Portal kaydı yok.</p>
+        <p className="mt-1.5 text-[12px] text-canvas-muted">Bu karta portalda girilmiş not ya da kayıt yok.</p>
       ) : (
         <ul className="mt-2 space-y-1">
           {c.entries.map((e) => (
@@ -441,6 +442,7 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
 
           <Block
             title="Matbaa seçim raporu"
+            help="Matbaaların geçmiş işlerine (zamanında teslim, fiyat, kalite) ve bu kart için girilen tekliflere göre sıralanmış öneri. Onayı yetkili kişi verir."
             action={
               <span className="inline-flex items-center gap-1 text-[11px] text-canvas-muted">
                 puan <SqlInfo k={c.kaynaklar} alan="suggestions[]" label="Matbaa seçim raporu" />
@@ -520,11 +522,11 @@ export default function CardSheet({ id, onClose }: { id: string | null; onClose:
             )}
           </Block>
 
-          <Block title="Kalite">
+          <Block title="Kalite" help="Kitap depoya girdikten sonra baskı kalitesi işaretlenir; matbaanın puanına katılır.">
             <QualityBlock c={c} canWrite={canWrite} />
           </Block>
 
-          <Block title="Notlar ve kayıtlar">
+          <Block title="Notlar ve kayıtlar" help="Portalda bu karta girilen tarih, kalite ve notlar; CRM'e yazılmaz, kimin girdiği görünür.">
             <NotesBlock c={c} canWrite={canWrite} me={me?.username ?? ''} admin={!!me?.admin} />
           </Block>
 

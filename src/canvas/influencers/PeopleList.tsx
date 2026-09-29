@@ -42,7 +42,7 @@ export default function PeopleList() {
   return (
     <InflFrame
       title="İçerik üreticileri"
-      lead="Kim, hangi platformda, hangi konuda; hangi kitapları aldı, ne paylaştı. Sayılar elle ya da CSV ile girilir; resmî API bağlantısı ikinci sürümde."
+      lead="İçerik üreticileri: kim, hangi platformda, hangi konuda; hangi kitapları aldı, ne paylaştı. Takipçi ve etkileşim sayıları elle ya da dosyayla girilir."
       aside={m ? (
         <div className="flex flex-wrap items-start gap-2 lg:justify-end">
           {/* CSV içe aktarma yetkisizde de görünür (kilitli, gereken yetki yazılı). */}
@@ -71,7 +71,7 @@ export default function PeopleList() {
           <div className="mt-3 flex flex-col gap-2">
             {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
             {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-            {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kayıt yok.</div>}
+            {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte içerik üreticisi yok. Aramayı ya da süzgeçleri temizleyin; yeni kişiyi «Yeni içerik üreticisi» ile ekleyin.</div>}
             {list.data?.items.map((p) => <PersonRowCard key={p.id} p={p} meta={m} />)}
           </div>
           {list.data && <div className="mt-2 flex items-center justify-end gap-1 font-mono text-[11.5px] text-canvas-muted">{list.data.total} kişi<SqlInfo k={list.data.kaynaklar} alan="items" label="Kişiler, takipçi ve işbirliği sayıları" /></div>}

@@ -89,12 +89,12 @@ export default function SetsScreen() {
   return (
     <SetsFrame
       title="Set ve hediye"
-      lead="Bütün setler satışı, stoğu ve marjıyla; birlikte alım ve yazar/dizi kümelerinden set önerisi; onaylanan set için CRM ve Logo'ya açılacak kart listesi; kurumsal hediye teklifi ve promosyon ürünleri. CRM'e ve Logo'ya yazılmaz: kartı ekip kendi akışıyla açar, portal okuyup eşler."
+      lead="Setlerin satışı, stoğu ve kârı (marj); birlikte alınan kitaplardan yeni set önerileri; kurumsal hediye teklifleri ve promosyon ürünleri. Portal CRM'e ve Logo'ya yazmaz: onaylanan set için kartı ekip açar, portal okuyup eşler."
       source={st?.dataEnd ? `CRM + Logo · ${fmtDay(st.dataEnd)}` : 'CRM + Logo'}
       presence={meta.data ? `${meta.data.me.display}` : ''}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Set ve hediye bilgisi açılamadı.')}</Note>}
       {alerts.length > 0 && (
         <section aria-label="Uyarılar" className="flex flex-col gap-1.5">

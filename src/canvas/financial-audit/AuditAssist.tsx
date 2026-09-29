@@ -52,7 +52,7 @@ export function ExplainFinding({ runId, checkId }: { runId: string; checkId: str
     <div className="audit-assist" aria-live="polite">
       <b>{data.kaynak === 'zeki' ? 'Zeki AI açıklaması' : 'Kurala göre açıklama'}</b>
       <p>{data.metin}</p>
-      <small>Bulgu kuraldan gelir ve değişmez; açıklama yalnız yorumdur.{data.kaynak !== 'zeki' && data.neden ? ' Model metni sayı denetiminden geçmediği ya da model yanıt vermediği için kural metni gösteriliyor.' : ''}</small>
+      <small>Bulgu kuraldan gelir ve değişmez; açıklama yalnız yorumdur.{data.kaynak !== 'zeki' && data.neden ? ' Zeki AI metni sayı denetiminden geçmediği ya da Zeki AI yanıt vermediği için kural metni gösteriliyor.' : ''}</small>
     </div>
   );
 }
@@ -114,8 +114,8 @@ export function ExceptionClusters({ runId, checkId }: { runId: string; checkId: 
               </tbody>
             </table>
           </div>
-          {!d.model && <p>Model bu kurulumda tanımlı değil; kuralın bilemediği gruplar «incelenecek» kaldı.</p>}
-          {!!d.failed && <p>{d.failed} grup için model yanıt vermedi; bunlar «incelenecek».</p>}
+          {!d.model && <p>Zeki AI bu kurulumda açık değil; kuralın bilemediği gruplar «incelenecek» kaldı.</p>}
+          {!!d.failed && <p>{d.failed} grup için Zeki AI yanıt vermedi; bunlar «incelenecek».</p>}
         </>
       )}
     </div>

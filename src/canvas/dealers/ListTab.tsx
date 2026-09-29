@@ -9,6 +9,7 @@ import { SEGMENTS, TREND_LABEL, dealersApi, type DealersMeta, type ListParams } 
 import { DealerRow } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { xlsxUrl } from '../components/excel';
+import { Explain } from '../components/Explain';
 
 /** Bayiler: süzgeçli liste (segment, grup, kanal, il, temsilci, eğilim, durum), sayfalı; toplam her zaman yazılı. BMT'de
  *  liste yalnız kendi carileri (sunucu süzer). */
@@ -55,7 +56,7 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
   };
   const data = q.data;
   const pages = data ? Math.max(1, Math.ceil(data.count / SIZE)) : 1;
-  const err = errText(q.error, 'Liste okunamadı.');
+  const err = errText(q.error, 'Bayi listesi okunamadı; biraz sonra yeniden deneyin.');
 
   return (
     <div className="flex flex-col gap-3">
@@ -80,6 +81,9 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
             </button>
           ))}
           <span className="ml-1 text-[11.5px] text-canvas-muted">{segs.size ? 'seçili segmentler' : 'bütün segmentler'}</span>
+          <Explain label="Segment" title="Segment ne demek?">
+            A en düşük, D en yüksek risk segmentidir; skor yükseldikçe risk artar. Birden çok segment seçebilirsiniz. Satıra dokununca bayi kartında skorun bileşenleri açılır.
+          </Explain>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <Select label="Grup" value={p.grup ?? ''} onChange={(v) => update({ grup: v || null })} options={[['', 'Hepsi'], ['standart', 'Kitapçı ve bayi'], ['anahtar', 'Anahtar hesap']]} />
@@ -130,7 +134,7 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
       ) : err ? (
         <Note tone="err">{err}</Note>
       ) : !data || data.items.length === 0 ? (
-        <Empty>Bu süzgeçle bayi yok.</Empty>
+        <Empty>Bu süzgeçle bayi yok. Aramayı temizleyin ya da segment ve diğer süzgeçleri gevşetin.</Empty>
       ) : (
         <>
           <ul className="flex flex-col gap-2">

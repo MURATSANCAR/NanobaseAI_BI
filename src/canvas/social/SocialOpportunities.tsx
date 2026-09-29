@@ -44,7 +44,7 @@ export default function SocialOpportunities() {
     <SocialFrame
       crumb="Fırsatlar"
       title="İçerik fırsatları"
-      lead="Özel günler (CRM'deki gün ve kitap bağı), yeni çıkan kitaplar ve uzun süredir paylaşılmayan çok satanlar. Satış rakamları Logo faturalı satıştır (iade düşülmüş); sayılar kaynağından hesaplanır."
+      lead="Ne paylaşsak? Yaklaşan özel günler ve bunlara bağlı kitaplar, yeni çıkan kitaplar ve uzun süredir paylaşılmayan çok satanlar. Satış rakamları Logo'daki faturalı satıştır (iadesi düşülmüş)."
       source="CRM + Logo"
       presence={d ? `${d.ozelGunler.length} özel gün` : '…'}
       aside={
@@ -63,8 +63,8 @@ export default function SocialOpportunities() {
       {d && m && (
         <div className="grid gap-3 xl:grid-cols-2 xl:gap-4">
           <Block title={`Özel günler (${d.ozelGunler.length})`} info={<SqlInfo k={d.kaynaklar} alan="ozelGunler" label="Özel günler" />}
-            help={`Tarih yöntemi SEO sezon takvimiyle aynı. Güne ${m.settings.leadDays} gün ya da daha az kalıp bağlı kitaplardan hiçbiri takvimde değilse uyarı. «Takvimde»: güne bağlı ya da pencere içinde gönderisi olan kitap.`}>
-            {d.ozelGunler.length === 0 && <p className="text-[12px] text-canvas-muted">Bu pencerede özel gün yok.</p>}
+            help={`Güne ${m.settings.leadDays} gün ya da daha az kalmışsa ve o güne bağlı kitaplardan hiçbirinin gönderisi takvimde yoksa kırmızı uyarı çıkar. «Takvimde»: o güne bağlı ya da bu dönemde gönderisi olan kitap.`}>
+            {d.ozelGunler.length === 0 && <p className="text-[12px] text-canvas-muted">Önümüzdeki günlerde CRM'de tanımlı özel gün yok.</p>}
             <ul className="flex flex-col gap-2">
               {d.ozelGunler.map((o) => (
                 <li key={o.key} id={o.key} className="rounded-xl bg-white/80 p-2.5">
@@ -158,8 +158,8 @@ export default function SocialOpportunities() {
             </Block>
 
             <Block title="Basında çıkan haberler" info={<SqlInfo k={d.kaynaklar} alan="basin" label="Basında çıkan haberler" />}>
-              {!d.basin.acik && <p className="text-[12px] text-canvas-muted">Basın ve web taraması bu kurulumda kapalı.</p>}
-              {d.basin.acik && d.basin.items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu pencerede yazar ya da kitap haberi yok.</p>}
+              {!d.basin.acik && <p className="text-[12px] text-canvas-muted">Basın ve web taraması kapalı; bu bölüm boş kalır.</p>}
+              {d.basin.acik && d.basin.items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu dönemde yazarlarımız ya da kitaplarımızla ilgili haber bulunmadı.</p>}
               <ul className="flex flex-col gap-1.5">
                 {d.basin.items.map((n) => (
                   <li key={n.url} className="flex items-start justify-between gap-2 rounded-xl bg-white/80 p-2">

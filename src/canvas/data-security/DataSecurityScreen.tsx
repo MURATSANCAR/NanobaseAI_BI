@@ -15,6 +15,7 @@ import InventoryTab from './InventoryTab';
 import RetentionTab from './RetentionTab';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** M49 Veri yönetimi ve güvenlik. Sekme adres çubuğunda (?sekme=); bağlantı paylaşılabilir. Yetkiler ve değişiklik
  *  kaydı Yönetim ekranında kalır; bu ekran onlara bağlantı verir, kopyalamaz. */
@@ -32,7 +33,7 @@ type Tab = (typeof TABS)[number]['key'];
 
 export function SecurityFrame({ children }: { children: ReactNode }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Altyapı ve destek', crumb: 'Veri güvenliği', source: 'Kaynak: portal kaydı · giriş servisi · AD · CRM', presence: 'Veri güvenliği' }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Altyapı ve destek', crumb: 'Veri güvenliği', source: 'Kaynak: portal kaydı · giriş kaydı · Active Directory · CRM', presence: 'Veri güvenliği' }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
@@ -40,9 +41,9 @@ export function SecurityFrame({ children }: { children: ReactNode }) {
               <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Altyapı ve destek · Veri yönetimi ve güvenlik</div>
               <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Veri güvenliği</h1>
               <p className="mt-1 max-w-[78ch] text-[12.5px] leading-snug text-canvas-muted">
-                Portala kim, ne zaman girdi; kim yetkisi olmayan bir sayfayı denedi, kim ne indirdi. Uyarılar kuraldan gelir ve
-                gerekçesiyle yazılır. Kişisel veri envanteri ve saklama süreleri burada; süresi dolan kayıt yalnız yönetici
-                açtığında ve önizlemesi görüldükten sonra silinir.
+                Portala kim, ne zaman girdi; kim yetkisi olmayan bir sayfayı denedi, kim ne indirdi. Uyarılar belirli kurallardan
+                doğar ve gerekçesiyle yazılır. Kişisel veri envanteri ve saklama süreleri de burada; süresi dolan kayıt yalnız
+                yönetici saklamayı açtığında ve önizlemesi görüldükten sonra silinir.
               </p>
             </header>
             {children}
@@ -67,8 +68,8 @@ export default function DataSecurityScreen() {
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.data && !meta.data.loginService.configured && (
         <Note tone="warn">
-          Giriş servisine yönetim bağlantısı kurulmamış: giriş kaydı bu ekrana taşınmıyor ve oturum kapatılamıyor. Sunucuda
-          giriş servisine ve köprüye aynı yönetim jetonu verilmeli.
+          Giriş kaydı bu ekrana gelmiyor ve buradan oturum kapatılamıyor, çünkü giriş hizmetiyle bağlantı kurulmamış. Bu
+          bağlantıyı BT’nin kurulum sırasında tanımlaması gerekir.
         </Note>
       )}
       {tab === 'ozet' && <SummaryTab meta={meta.data} go={go} />}
@@ -103,10 +104,14 @@ function SummaryTab({ meta, go }: { meta?: SecurityMeta; go: (t: Tab) => void })
   return (
     <>
       <KpiRow>
-        <Kpi label="Açık uyarı" value={fmtN(s.openAlerts.kritik + s.openAlerts.uyari)} help={`${fmtN(s.openAlerts.kritik)} kritik`} onClick={() => go('uyarilar')} info={<SqlInfo k={kaynakOf(s)} alan="openAlerts" label="Açık uyarı" />} />
-        <Kpi label="Hatalı giriş · 24 saat" value={fmtN(s.last24h.loginFailed)} help={`${fmtN(s.last24h.loginOk)} başarılı giriş`} onClick={() => go('giris')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Hatalı giriş" />} />
-        <Kpi label="Yetkisiz deneme · 24 saat" value={fmtN(s.last24h.forbidden)} help="Sayfa ya da işlem reddi" onClick={() => go('erisim')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Yetkisiz deneme" />} />
-        <Kpi label="Dışa aktarma · 24 saat" value={fmtN(s.last24h.export)} help="Excel, CSV, PDF, Word" onClick={() => go('erisim')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Dışa aktarma" />} />
+        <Kpi label="Açık uyarı" value={fmtN(s.openAlerts.kritik + s.openAlerts.uyari)} help={`${fmtN(s.openAlerts.kritik)} kritik`} onClick={() => go('uyarilar')}
+          explain="Kapatılmamış güvenlik uyarıları. Uyarı, aşağıdaki «Kurallar» bölümündeki koşullardan biri tutunca açılır; biri inceleyip «gerçek» ya da «gerçek değil» diye kapatana kadar açık kalır." info={<SqlInfo k={kaynakOf(s)} alan="openAlerts" label="Açık uyarı" />} />
+        <Kpi label="Hatalı giriş · 24 saat" value={fmtN(s.last24h.loginFailed)} help={`${fmtN(s.last24h.loginOk)} başarılı giriş`} onClick={() => go('giris')}
+          explain="Son 24 saatte parolası ya da kullanıcı adı yanlış girilen giriş denemeleri. Aynı hesapta kısa sürede çok sayıda hatalı giriş uyarı açar." info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Hatalı giriş" />} />
+        <Kpi label="Yetkisiz deneme · 24 saat" value={fmtN(s.last24h.forbidden)} help="Sayfa ya da işlem reddi" onClick={() => go('erisim')}
+          explain="Son 24 saatte birinin yetkisi olmayan bir sayfayı açmayı ya da bir işlemi yapmayı denediği ve portalın reddettiği durumlar." info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Yetkisiz deneme" />} />
+        <Kpi label="Dışa aktarma · 24 saat" value={fmtN(s.last24h.export)} help="Excel, CSV, PDF, Word" onClick={() => go('erisim')}
+          explain="Son 24 saatte portaldan indirilen dosyalar (Excel, CSV, PDF, Word). Kimin neyi indirdiği «Erişim kaydı» sekmesinde." info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Dışa aktarma" />} />
       </KpiRow>
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         <Panel>
@@ -125,11 +130,11 @@ function SummaryTab({ meta, go }: { meta?: SecurityMeta; go: (t: Tab) => void })
               label="«Herkes» rolünün kapsamı"
               value={s.everyone.all ? 'bütün sayfalar' : `${s.everyone.pages}/${s.everyone.pagesTotal} sayfa`}
               tone={s.everyone.all ? 'err' : s.everyone.pages > 0 ? 'warn' : 'ok'}
-              help="Prod öncesi daraltılacak. Kimin neyi kaybedeceği: Hesap hijyeni → «Herkes» daraltma önizlemesi."
+              help="Her çalışanın açabildiği sayfa sayısı; daraltılması önerilir. Daraltınca kimin neyi kaybedeceği: Hesap hijyeni → «Herkes» daraltma önizlemesi."
             />
             <Row label="Veri alanı atanmamış tablo" value={fmtN(s.unassignedEntities)} tone={s.unassignedEntities ? 'warn' : 'ok'}
-              help="ZEKİ AI'ın alan kuralına düşmeyen tablolar; Yönetim → Yetkiler → Veri alanları." />
-            <Row label="Kaynakta kişisel veri kolonu" value={fmtN(s.sensitiveColumns)} help="Maskeli: değeri okunmaz, modele gitmez." />
+              help="Hiçbir veri alanına (satış, finans gibi) bağlanmamış kaynak tablolar. Yetki veri alanı üzerinden verildiği için atanmaları gerekir: Yönetim → Yetkiler → Veri alanları." />
+            <Row label="Kaynakta kişisel veri kolonu" value={fmtN(s.sensitiveColumns)} help="Ad, telefon, e-posta gibi kişisel veri taşıyan kolonlar maskelidir: değeri okunmaz, Zeki AI’a gitmez." />
             <Row
               label="Giriş kaydı"
               value={!s.loginService.configured ? 'bağlı değil' : pull?.ok ? 'çalışıyor' : pull ? 'hata' : 'henüz çekilmedi'}
@@ -139,14 +144,17 @@ function SummaryTab({ meta, go }: { meta?: SecurityMeta; go: (t: Tab) => void })
           </div>
         </Panel>
         <Panel>
-          <h2 className="text-[16px] font-extrabold tracking-tight">Kurallar</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+            Kurallar
+            <Explain label="Kurallar">Güvenlik uyarısını bu koşullar açar. Eşikleri yönetici değiştirebilir; burada her zaman geçerli değerler yazar.</Explain>
+          </h2>
           {meta ? (
             <ul className="mt-2 space-y-1.5 text-[12.5px] leading-snug">
               <li>Aynı hesaba {meta.rules.failWindowMin} dakikada {meta.rules.failThreshold} ve üzeri hatalı giriş → kritik uyarı.</li>
               <li>Mesai dışında ({meta.rules.workHours} dışı ya da hafta sonu) bir saatte {meta.rules.offhoursExportMin} ve üzeri dışa aktarma → kritik uyarı.</li>
               <li>Yeni yönetici ya da «Herkes» rolüne yetki eklenmesi → kritik uyarı.</li>
               <li>Saklama işi uygulanıyorken 2 gece üst üste çalışmazsa → kritik uyarı.</li>
-              <li>Günlük özet (kişi başına 403 ve yetki dışı soru) her gün {meta.rules.dailyAt}'ten sonra.</li>
+              <li>Günlük özet (kişi başına yetkisiz sayfa denemesi ve yetki dışı soru) her gün {meta.rules.dailyAt}'ten sonra.</li>
               <li className="text-canvas-muted">
                 {meta.rules.recipients ? `Uyarılar ${meta.rules.recipients} alıcıya e-postayla gider.` : 'Uyarı alıcısı girilmemiş: uyarılar yalnız bu ekranda.'} Eşikler: Yönetim → Ayarlar → Veri güvenliği.
               </li>
@@ -154,7 +162,7 @@ function SummaryTab({ meta, go }: { meta?: SecurityMeta; go: (t: Tab) => void })
           ) : null}
           {meta?.me.isAdmin && (
             <div className="mt-3 flex flex-wrap gap-3 text-[12.5px] font-bold">
-              <Link className="text-canvas-violet hover:underline" to="/yonetim?bolum=access">Yetkiler</Link>
+              <Link className="text-canvas-violet hover:underline" to="/yonetim?bolum=access">Yetkileri aç</Link>
               <Link className="text-canvas-violet hover:underline" to="/yonetim?bolum=audit">Değişiklik kaydı</Link>
               <Link className="text-canvas-violet hover:underline" to="/yonetim?bolum=prompts">Soru izleme</Link>
               <Link className="text-canvas-violet hover:underline" to="/yonetim?bolum=settings">Ayarlar</Link>

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -55,19 +56,19 @@ export default function ShippingHome() {
     <ShippingFrame
       title="Kargo ve gönderiler"
       crumb="Kargo"
-      lead="Sabah listesi: entegrasyon hatası alan, takip numarası olmadan sevk edilen, kutulanıp bekleyen ve teslim edilmemiş gönderiler. Sipariş, fatura ya da takip numarasıyla tek aramada gönderi kartı. Kargo firmasına ve CRM'e hiçbir şey yazılmaz."
+      lead="Her sabah bakılacak liste: kargo firmasına aktarılamayan, takip numarası olmadan çıkan, kutulanıp bekleyen ve hâlâ teslim edilmemiş gönderiler. Aşağıdan sipariş, fatura ya da takip numarasıyla gönderi arayabilirsiniz. Kargo firmasına ve CRM'e hiçbir şey yazılmaz."
       meta={meta.data}
       aside={
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
           {me?.karar && (
             <button type="button" className={btnGhost} onClick={() => setSettingsOpen(true)}>
               <SlidersHorizontal aria-hidden className="h-4 w-4" />
-              Eşikler
+              Eşikleri ayarla
             </button>
           )}
           <button type="button" className={btnGhost} disabled={refresh.isPending} onClick={() => refresh.mutate()}>
             {refresh.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <RefreshCw aria-hidden className="h-4 w-4" />}
-            Yenile
+            Verileri yenile
           </button>
         </div>
       }
@@ -79,12 +80,16 @@ export default function ShippingHome() {
         <>
           <KpiRow>
             <Kpi label="Sevk edilen" value={fmtInt(o.sevk.adet)} help={`Son ${o.pencereGun} gün · bugün ${fmtInt(o.sevk.bugun)}`}
+              explain="CRM'de sevk edildi durumuna geçen sipariş sayısı; sevk tarihine göre son günler ve bugün."
               info={<SqlInfo k={o.kaynaklar} alan="sevk" label="Sevk edilen" />} />
             <Kpi label="Entegrasyon hatası" value={fmtInt(o.hata)} help="Takip numarası yok, firma servisi hata döndü" onClick={() => nav('/kargo/hatalar')}
+              explain="CRM siparişi kargo firmasının sistemine otomatik aktarılamamış: firmadan hata mesajı gelmiş ve takip numarası oluşmamış. Karta dokunursanız hatalar listesi açılır."
               info={<SqlInfo k={o.kaynaklar} alan="hata" label="Entegrasyon hatası" />} />
             <Kpi label="Takip numarasız sevk" value={fmtInt(o.takipsiz)} help={`Son ${o.pencereGun} günde sevk edilmiş`} active={tab === 'takipsiz'} onClick={() => update({ sekme: 'takipsiz' })}
+              explain="Sevk edildi görünen ama CRM'de kargo takip numarası boş olan siparişler. Müşteri kargosunu izleyemez; numara CRM'e girilmeli."
               info={<SqlInfo k={o.kaynaklar} alan="takipsiz" label="Takip numarasız sevk" />} />
             <Kpi label={`Teslim bekleyen ${o.bekleyen.esikGun}+ gün`} value={fmtInt(o.bekleyen.esikUstu)} help={`Toplam teslim bekleyen ${fmtInt(o.bekleyen.toplam)}`} onClick={() => nav('/kargo/bekleyen')}
+              explain="Kargoya verildiği (kargo irsaliyesi) günden bu yana en az bu kadar gün geçmiş, teslim tarihi hâlâ boş ve iade olmayan gönderiler. Gün eşiği «Eşikleri ayarla» ile değişir."
               info={<SqlInfo k={o.kaynaklar} alan="bekleyen" label="Teslim bekleyen" />} />
           </KpiRow>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
@@ -112,7 +117,12 @@ export default function ShippingHome() {
               )}
             </Panel>
             <Panel>
-              <h2 className="text-[14px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="son30">Son 30 gün firma özeti</InfoLabel></h2>
+              <h2 className="flex items-center gap-1 text-[14px] font-extrabold">
+                <InfoLabel k={o.kaynaklar} alan="son30">Son 30 gün firma özeti</InfoLabel>
+                <Explain label="Firma özeti" title="Satırlar nasıl okunur?">
+                  Her firma için: gönderi sayısı · ortanca teslim süresi (gönderilerin yarısı bu sürede ya da daha kısa sürede teslim edildi) · iade oranı (iade dönen gönderi ÷ bütün gönderi){o.son30.toplam.desiBasi !== undefined ? ' · desi başı maliyet (kargo tutarı ÷ toplam desi; desi, paketin hacim ağırlığıdır)' : ''}.
+                </Explain>
+              </h2>
               <p className="text-[11.5px] text-canvas-muted">
                 {o.son30.baslangic} – {o.son30.bitis} (kargo kaydının veri sonuna göre) · {fmtInt(o.son30.toplam.gonderi)} gönderi, ortanca teslim {fmtDays(o.son30.toplam.ortancaGun)}
                 {o.son30.toplam.desiBasi !== undefined && ` · desi başı ${fmtMoney(o.son30.toplam.desiBasi)}`}
@@ -130,7 +140,7 @@ export default function ShippingHome() {
                   ))}
                 </div>
               ) : (
-                <Empty>Bu dönemde kargo kaydı yok; veri sonuna bakın.</Empty>
+                <EmptyHint title="Son 30 günde kargo kaydı yok" why="Kargo kayıtları geç gelmiş olabilir; aşağıdaki veri sonu notuna bakın." />
               )}
             </Panel>
           </div>
@@ -171,7 +181,7 @@ function SearchPanel({ meta, params, update }: { meta: Meta; params: URLSearchPa
               className={`${field} pl-9`}
               value={q}
               inputMode="search"
-              placeholder="Sipariş no, fatura no, takip no ya da cari"
+              placeholder="ör. sipariş no, takip no ya da müşteri adı"
               onChange={(e) => {
                 setQ(e.target.value);
                 setPage(0);
@@ -204,7 +214,12 @@ function SearchPanel({ meta, params, update }: { meta: Meta; params: URLSearchPa
         {tooShort && <Empty>En az 2 karakter yazın.</Empty>}
         {list.isLoading && <Empty>Aranıyor…</Empty>}
         {list.error && <Note tone="err">{errText(list.error, 'Arama yapılamadı.')}</Note>}
-        {d && !d.items.length && <Empty>Bu aramada sipariş yok.</Empty>}
+        {d && !d.items.length && (
+          <EmptyHint
+            title={dq ? 'Bu aramada sipariş bulunamadı' : 'Bu süzgeçte sipariş yok'}
+            why={dq ? 'Numarayı eksiksiz yazdığınızdan emin olun ya da müşteri adının bir kısmıyla arayın. Durum ve firma süzgeçlerini «Hepsi» yapmayı deneyin.' : 'Durum ya da kargo firması süzgecini değiştirin.'}
+          />
+        )}
         {d?.items.map((o) => <OrderRow key={o.id} o={o} />)}
       </div>
       {d && (d.devami || page > 0) && (
@@ -229,8 +244,8 @@ function UntrackedPanel({ meta }: { meta: Meta }) {
         <div className="min-w-0">
           <h2 className="text-[15px] font-extrabold"><InfoLabel k={d?.kaynaklar} alan="toplam" label="Takip numarasız sevk">Takip numarası olmadan sevk</InfoLabel></h2>
           <p className="max-w-[80ch] text-[12px] text-canvas-muted">
-            Son {meta.ayarlar.pencereGun} günde sevk edilmiş (durum kodu {meta.ayarlar.takipsizDurumlar.join(', ')}) ve CRM'de takip numarası boş siparişler.
-            {d && d.haricTipler.length > 0 && ` Hariç tutulan sipariş tipleri: ${d.haricTipler.join(', ')}.`}
+            Son {meta.ayarlar.pencereGun} günde sevk edilmiş ama CRM'de kargo takip numarası boş siparişler. Müşteri gönderisini izleyemez; takip numarasını CRM'e girin.
+            {d && d.haricTipler.length > 0 && ` Takip numarası beklenmeyen sipariş tipleri sayılmaz: ${d.haricTipler.join(', ')}.`}
           </p>
         </div>
         <ExportButton list="takipsiz" can={meta.me.disaAktar} />
@@ -238,7 +253,7 @@ function UntrackedPanel({ meta }: { meta: Meta }) {
       <div className="mt-3 flex flex-col gap-2">
         {list.isLoading && <Empty>Okunuyor…</Empty>}
         {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-        {d && !d.items.length && <Empty>Bu pencerede takip numarasız sevk yok.</Empty>}
+        {d && !d.items.length && <EmptyHint title="Takip numarasız sevk yok" why={`Son ${meta.ayarlar.pencereGun} günde sevk edilen bütün siparişlerin takip numarası var.`} />}
         {d?.items.map((o) => <OrderRow key={o.id} o={o} />)}
       </div>
       {d && <div className="mt-2 text-right font-mono text-[11.5px] text-canvas-muted">{fmtInt(d.toplam)} sipariş</div>}
@@ -255,7 +270,7 @@ function BoxedPanel({ meta }: { meta: Meta }) {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-[15px] font-extrabold"><InfoLabel k={d?.kaynaklar} alan="toplam" label="Kutulandı, sevk edilmedi">Kutulandı, sevk edilmedi</InfoLabel></h2>
-          <p className="max-w-[80ch] text-[12px] text-canvas-muted">Durumu «Kutulandı» ve sevk tarihi boş siparişler, kutulanalı en uzun bekleyen önce.</p>
+          <p className="max-w-[80ch] text-[12px] text-canvas-muted">Depoda kutulanmış ama henüz kargoya verilmemiş siparişler; en uzun bekleyen en üstte. «En az gün» kutusuyla kaç gündür bekleyenleri göreceğinizi seçin.</p>
         </div>
         <div className="flex items-end gap-2">
           <label className="flex w-28 flex-col gap-1">
@@ -273,7 +288,7 @@ function BoxedPanel({ meta }: { meta: Meta }) {
       )}
       {list.isLoading && <Empty>Okunuyor…</Empty>}
       {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-      {d && !d.items.length && <Empty>Bu eşikte bekleyen kutulu sipariş yok.</Empty>}
+      {d && !d.items.length && <EmptyHint title="Bu eşikte bekleyen kutulu sipariş yok" why="Kutulanan siparişler bu süreden önce kargoya verilmiş. Daha kısa bekleyenleri görmek için «En az gün» değerini düşürün." />}
       {d && d.items.length > 0 && (
         <div className="mt-2">
           <TableWrap>
@@ -283,7 +298,7 @@ function BoxedPanel({ meta }: { meta: Meta }) {
                 <th className={th}>Müşteri</th>
                 <th className={th}>Kargo firması</th>
                 <th className={th}>Kutulandı</th>
-                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].kutulanaliGun">Bekleyen</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].kutulanaliGun">Bekleme süresi</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -319,20 +334,20 @@ function SettingsSheet({ open, meta, onClose }: { open: boolean; meta: Meta; onC
   });
   const bad = !/^\d{1,3}$/.test(bekleyen) || !/^\d{1,3}$/.test(kutulu) || Number(bekleyen) < 1;
   return (
-    <Sheet open={open} modal onClose={onClose} title="Kargo eşikleri" subtitle="Sabah listesinin ve uyarı e-postasının eşikleri. İl hedef süreleri firma karnesinden verilir.">
+    <Sheet open={open} modal onClose={onClose} title="Kargo eşikleri" subtitle="Sabah listesinde bir gönderinin kaç gün bekledikten sonra gösterileceğini belirler; uyarı e-postası da bu eşikleri kullanır. İl bazında hedef teslim süreleri firma karnesinden verilir.">
       <div className="flex flex-col gap-3 text-[13px]">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Teslim bekleyen, en az gün</span>
-          <input className={field} inputMode="numeric" value={bekleyen} onChange={(e) => setBekleyen(e.target.value.replace(/\D/g, ''))} />
+          <input className={field} inputMode="numeric" placeholder="ör. 5" value={bekleyen} onChange={(e) => setBekleyen(e.target.value.replace(/\D/g, ''))} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kutulandı ama sevk edilmedi, en az gün</span>
-          <input className={field} inputMode="numeric" value={kutulu} onChange={(e) => setKutulu(e.target.value.replace(/\D/g, ''))} />
+          <input className={field} inputMode="numeric" placeholder="ör. 2" value={kutulu} onChange={(e) => setKutulu(e.target.value.replace(/\D/g, ''))} />
         </label>
         <div className="flex justify-end">
           <button type="button" className={btnPrimary} disabled={bad || save.isPending} onClick={() => save.mutate()}>
             {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-            Kaydet
+            Eşikleri kaydet
           </button>
         </div>
       </div>

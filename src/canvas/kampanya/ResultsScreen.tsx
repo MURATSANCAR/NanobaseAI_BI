@@ -63,6 +63,7 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
       <KpiRow>
         <Kpi label="Günlük satış (kampanya)" value={k?.gunlukAdet === null || k?.gunlukAdet === undefined ? '—' : fmtInt(k.gunlukAdet)}
           help={`Önceki dönem ${o?.gunlukAdet === null || o?.gunlukAdet === undefined ? '—' : fmtInt(o.gunlukAdet)} · ${r.degisim.satis === null ? 'değişim yok' : `${r.degisim.satis.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} kat`}`}
+          explain="Kampanya günlerinde ortalama bir günde satılan adet. Kampanyadan hemen önceki aynı uzunluktaki dönemle karşılaştırılır; «kat», satışın kaç katına çıktığını gösterir."
           info={<SqlInfo k={r.kaynaklar} alan="degisim" label="Günlük satış (kampanya)" />} />
         <Kpi label="Kampanya satışı" value={fmtInt(k?.adet)} help={`${fmtMoney(k?.tutar)} net · ${k ? `${k.gun}/${k.gunToplam} gün okundu` : ''}`}
           info={<SqlInfo k={r.kaynaklar} alan="donemler" label="Kampanya satışı" />} />
@@ -70,6 +71,7 @@ export default function ResultsScreen({ c, ov }: { c: Campaign; ov: Overview }) 
           info={<SqlInfo k={r.kaynaklar} alan="donemler" label="İade oranı" />} />
         <Kpi label="Gerçekleşen marj" value={k?.marjOrani === null || k?.marjOrani === undefined ? '—' : fmtPct(k.marjOrani)}
           help={`Maliyeti girilmiş satışlardan (${fmtPct(k?.maliyetKapsami)} kapsam) · önceki ${fmtPct(o?.marjOrani)}`}
+          explain="Kampanya süresince gerçekleşen satışın kâr payı (birim maliyet düşülerek). Yalnız maliyeti girilmiş kitapların satışından hesaplanır; «kapsam» bu satışların payıdır."
           info={<SqlInfo k={r.kaynaklar} alan="donemler" label="Gerçekleşen marj" />} />
       </KpiRow>
       {r.crmEtki && (

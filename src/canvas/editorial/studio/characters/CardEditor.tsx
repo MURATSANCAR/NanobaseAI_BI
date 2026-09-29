@@ -98,7 +98,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
     },
     onSuccess: (r) => {
       adopt(r.card);
-      setMsg({ tone: 'ok', text: r.card.en_stale ? 'Kaydedildi. Türkçe tarif değişti; modele giden tarifi yenileyin.' : 'Kaydedildi. Resimlerde kullanılması için onaylayın.' });
+      setMsg({ tone: 'ok', text: r.card.en_stale ? 'Kaydedildi. Türkçe tarif değişti; resim üretiminde kullanılan (İngilizce) tarifi yenileyin.' : 'Kaydedildi. Resimlerde kullanılması için onaylayın.' });
       refresh();
       if (!card) onDone();
     },
@@ -130,7 +130,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
     <div className="flex flex-col gap-4">
       {msg && <Note tone={msg.tone}>{msg.text}</Note>}
       {view.task?.translate?.status === 'fail' && view.task.translate.card === card?.id && (
-        <Note tone="err">Modele giden tarif yenilenemedi; biraz sonra yeniden deneyin ya da elle düzeltin.</Note>
+        <Note tone="err">Resim üretiminde kullanılan tarif yenilenemedi; biraz sonra yeniden deneyin ya da elle düzeltin.</Note>
       )}
       {live?.status === 'approved' && !dirty && (
         <Note tone="ok">Onaylı{live.approved_by ? ` · ${live.approved_by}` : ''} — dizinin her kitabında bu kart kullanılıyor.</Note>
@@ -167,12 +167,12 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
         </label>
         <details className="rounded-xl border border-slate-200/80 bg-white/60 px-3 py-2" open={!!live?.en_stale || !draft.look_en}>
           <summary className="flex min-h-10 cursor-pointer items-center text-[12px] font-bold">Resim üretiminde kullanılan tarif</summary>
-          <p className="mb-2 text-[11.5px] text-canvas-muted">Görsel model İngilizce tarifle çalışır. Türkçe tarifi değiştirdiyseniz «Türkçeden yenile» deyin ya da buradan düzeltin.</p>
+          <p className="mb-2 text-[11.5px] text-canvas-muted">ZEKİ AI resimleri İngilizce tarifle çizer. Türkçe tarifi değiştirdiyseniz «Türkçeden yenile» deyin ya da buradan düzeltin.</p>
           <label className="flex flex-col gap-1.5">
-            <span className={label}>Tür (model için)</span>
+            <span className={label}>Tür (İngilizce)</span>
             <input className={field} value={draft.species_en} onChange={(e) => set('species_en', e.target.value)} placeholder="little girl, baby wombat…" />
           </label>
-          <textarea className={`${field} mt-2`} rows={3} value={draft.look_en} onChange={(e) => set('look_en', e.target.value)} aria-label="Modele giden tarif" />
+          <textarea className={`${field} mt-2`} rows={3} value={draft.look_en} onChange={(e) => set('look_en', e.target.value)} aria-label="Resim üretiminde kullanılan tarif" />
           {live?.en_stale && <p className="mt-1.5 text-[11.5px] font-semibold text-amber-700">Türkçe tarif değişti; bu tarif eski kalmış olabilir.</p>}
           {card && (
             <button type="button" className={`${ghostBtn} mt-2`} disabled={busyAct || dirty || !!translating}
@@ -239,7 +239,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
                 <textarea className={field} rows={2} value={o.look_tr} onChange={(e) => upd({ look_tr: e.target.value })} placeholder="Tarif" aria-label="Kıyafet tarifi" />
                 <details>
                   <summary className="flex min-h-9 cursor-pointer items-center text-[11.5px] font-bold text-canvas-muted">Resim üretiminde kullanılan tarif</summary>
-                  <textarea className={field} rows={2} value={o.look_en} onChange={(e) => upd({ look_en: e.target.value })} aria-label="Kıyafetin modele giden tarifi" />
+                  <textarea className={field} rows={2} value={o.look_en} onChange={(e) => upd({ look_en: e.target.value })} aria-label="Kıyafetin resim üretiminde kullanılan tarifi" />
                 </details>
                 <ColorField name="Ana renk" value={o.color ?? undefined} onChange={(v) => upd({ color: v ?? null })} />
               </li>
@@ -310,7 +310,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
         </button>
         {card && live && (
           <button type="button" className={`${ghostBtn} shrink-0 whitespace-nowrap !px-3`} disabled={busyAct || dirty || (live.status !== 'approved' && (!!live.en_stale || !live.look_en))}
-            title={dirty ? 'Önce kaydedin' : live.en_stale ? 'Önce modele giden tarifi yenileyin' : undefined}
+            title={dirty ? 'Önce kaydedin' : live.en_stale ? 'Önce resim üretiminde kullanılan tarifi yenileyin' : undefined}
             onClick={() => act.mutate(() => cardsApi.approve(jobId, card.id, live.status !== 'approved'))}>
             {live.status === 'approved' ? 'Onayı kaldır' : 'Onayla'}
           </button>

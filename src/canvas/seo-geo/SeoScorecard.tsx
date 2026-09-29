@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmBook, type CrmFlag, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain } from '../components/Explain';
+import { TermLabel } from './terms';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/scorecard*) */
 type Status = 'iyi' | 'dikkat' | 'sorun' | 'bilinmiyor';
@@ -98,7 +100,7 @@ export default function SeoScorecard() {
       crumb="Kitap karnesi"
       eyebrow="SEO & GEO · Kitap karnesi"
       title="Kitap karnesi"
-      lead="Bir kitabın ürün kaydı, hakları, Google’daki durumu, aramadaki performansı, rakipleri, yapay zekâ cevapları ve daha fazlası tek sayfada. Her bölüm kendi ayrıntı ekranına bağlanır. Yalnız okunur; hiçbir yere bir şey gönderilmez."
+      lead="Bir kitabın bütün SEO ve GEO durumu tek sayfada: ürün kaydı, hakları, Google’daki durumu, aramadaki performansı, rakipleri, yapay zekâ cevapları ve daha fazlası. Önce en üstteki işlere bakın; her bölüm kendi ayrıntı ekranına bağlanır. Yalnız okunur."
       actions={
         selected && (
           <button className="sg-button" onClick={() => choose('')}>
@@ -144,10 +146,10 @@ function Picker({ onPick }: { onPick: (id: string) => void }) {
       {list.isLoading && <Loading text="Kitaplar getiriliyor…" />}
       {list.error && <Failed error={list.error} />}
       {list.data && !items.length && (
-        <div className="sg-empty">
-          <h2>Kitap bulunamadı</h2>
-          <p>{query ? 'Bu aramaya uyan satıştaki kitap yok.' : 'Henüz T-soft eşitlemesi yapılmamış.'}</p>
-        </div>
+        <EmptyHint
+          title="Kitap bulunamadı"
+          why={query ? 'Bu aramaya uyan satıştaki kitap yok; adı kısaltarak ya da yazarla arayın.' : 'T-soft’tan henüz ürün okunmadı; gece okumasından sonra kitaplar burada listelenir.'}
+        />
       )}
       <div className="sg-list">
         {items.map((p) => (
@@ -232,7 +234,7 @@ function Card({ id }: { id: string }) {
             </p>
           </div>
           <div style={{ textAlign: 'center', flex: 'none', minWidth: 110 }} aria-label={`Genel not ${g.letter ?? 'yok'}, ${g.score ?? '—'} puan`}>
-            <div className="sg-kpi-label">Genel not <SeoInfo k={card.data?.kaynaklar} label="Genel not" /></div>
+            <div className="sg-kpi-label">Genel not <SeoInfo k={card.data?.kaynaklar} label="Genel not" /> <Explain label="Genel not">Aşağıdaki bölümlerin durumuna (iyi, dikkat, sorun) göre verilen A–F arası not. Hesabın ayrıntısı «Not nasıl hesaplanır» bölümünde.</Explain></div>
             <div
               className={`sg-chip ${GRADE_TONE(g.letter)}`}
               style={{ fontSize: 30, fontWeight: 800, padding: '8px 22px', marginTop: 6, borderRadius: 18 }}
@@ -240,15 +242,16 @@ function Card({ id }: { id: string }) {
               {g.letter ?? '—'}
             </div>
             <div className="sg-kpi-note sg-mono">{g.score != null ? `${g.score}/100` : 'Veri yok'}</div>
-            {g.lowData && <div className="sg-kpi-note">Az veriyle</div>}
+            {g.lowData && <div className="sg-kpi-note">Az veriyle; bölümlerin çoğu bilinmiyor</div>}
           </div>
         </div>
       </section>
 
       <section className="sg-card" aria-label="Önce yapılacak işler">
         <h2>Önce yapılacak {d.top.length > 0 ? d.top.length : ''} iş</h2>
+        <p className="sg-sub" style={{ margin: '0 0 4px' }}>Bu kitap için en önemli işler; işe dokunun, ilgili ekran açılsın.</p>
         {d.top.length === 0 ? (
-          <p className="sg-sub" style={{ margin: 0 }}>Bilinen bölümlerde açık iş yok.</p>
+          <p className="sg-banner ok" style={{ margin: 0 }}>Bilinen bölümlerde açık iş yok.</p>
         ) : (
           <ol style={{ margin: '8px 0 0', paddingLeft: 20, display: 'grid', gap: 8 }}>
             {d.top.map((a) => (
@@ -321,8 +324,8 @@ function SectionCard({ s, crm, k }: { s: Section; crm?: CrmBook | null; k?: Kayn
                 <tr>
                   <th>Arama <SeoInfo k={k} label="Arama" /></th>
                   <th style={{ textAlign: 'right' }}>Tıklama</th>
-                  <th style={{ textAlign: 'right' }}>Gösterim</th>
-                  <th style={{ textAlign: 'right' }}>Sıra</th>
+                  <th style={{ textAlign: 'right' }}><TermLabel k="impressions" label="Gösterim" /></th>
+                  <th style={{ textAlign: 'right' }}><TermLabel k="position" label="Sıra" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -360,7 +363,7 @@ function SectionCard({ s, crm, k }: { s: Section; crm?: CrmBook | null; k?: Kayn
       )}
 
       <Link className="sg-button" style={{ alignSelf: 'flex-start', marginTop: 'auto' }} to={s.link}>
-        Ayrıntı ekranı <ArrowRight size={14} aria-hidden />
+        Ayrıntı ekranına git <ArrowRight size={14} aria-hidden />
       </Link>
     </section>
   );

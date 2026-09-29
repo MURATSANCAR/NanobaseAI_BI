@@ -6,6 +6,7 @@ import { Note, TableWrap, btnPrimary, errText, field, label as labelCls, td, th 
 import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct } from '../budget/api';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { kampanyaApi, type Overview } from './api';
 
 /** Aday kitaplar: kural süzgeci (stok fazlası, yavaşlama, sezon; hak, maliyet, marj koşulları) ve rakamlı gerekçe.
@@ -50,6 +51,9 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
   return (
     <Panel>
       <div className="flex flex-col gap-3">
+        <p className="text-[12px] leading-snug text-canvas-muted">
+          Kampanyaya girmeye uygun kitapları bulur. Aşağıdaki düğmelerle hangi koşullara bakılacağını seçin; beğendiğiniz kitapları işaretleyip bir taslak kampanyaya ekleyin.
+        </p>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Kurallar">
           {Object.entries(ov.kurallar).map(([k, v]) => (
             <button key={k} type="button" aria-pressed={rules.includes(k)} onClick={() => toggleRule(k)}
@@ -98,7 +102,7 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
                 {ov.me.canEdit && <th className={th}><span className="sr-only">Seç</span></th>}
                 <th className={th}>Kitap</th>
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok yeter</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Stok kaç ay yeter</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Satış (son / önceki)</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Liste</InfoLabel></th>
                 {rules.includes('marj') && <th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Marj</InfoLabel></th>}
@@ -136,6 +140,11 @@ export default function CandidatesPanel({ ov, campaignId, onAdded }: { ov: Overv
               })}
             </tbody>
           </TableWrap>
+          {d && !d.items.length && (
+            <div className="mt-3">
+              <EmptyHint title="Koşullara uyan aday kitap yok" why="Seçili koşulların bir kısmını kaldırın ya da aramayı temizleyin." />
+            </div>
+          )}
           <Pager page={page} pageSize={d?.pageSize ?? 50} total={d?.total ?? 0} shown={d?.items.length ?? 0}
             loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
           {d && <div className="mt-1 text-right"><InfoLabel k={d.kaynaklar} alan="total" label="Aday kitap sayısı">{`${fmtInt(d.total)} aday`}</InfoLabel></div>}

@@ -10,6 +10,7 @@ import { Pager, Panel, useDebounced } from '../kit';
 import { HeatPill, fmtDay, invalidateAuthors, useAuthorsMeta } from './shared';
 import SqlInfo from '../../components/SqlInfo';
 import type { PanelTarget } from './CardPanel';
+import { EmptyHint } from '../../components/Explain';
 
 /** Potansiyel yazar havuzu: portalda açılan aday kartları aşama aşama, altında CRM'de bir projenin olası yazarı
  *  olup henüz yazar rolüyle eseri olmayan kişiler («Havuza al» ile kart açılır). */
@@ -99,7 +100,14 @@ function CrmCandidates({ onOpen }: { onOpen: (t: PanelTarget) => void }) {
         </div>
       )}
       <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={data?.items.length ?? 0} loading={list.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} />
-      {data && !data.items.length && !list.isLoading && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan olası yazar yok.</p>}
+      {data && !data.items.length && !list.isLoading && (
+        <div className="mt-3">
+          <EmptyHint
+            title={q ? 'Bu adla olası yazar yok' : 'CRM\'de olası yazar yok'}
+            why={q ? 'Adı farklı yazmayı deneyin.' : 'Bu tarihten sonra açılan projelerde «olası yazar» girilmiş kişi bulunamadı.'}
+          />
+        </div>
+      )}
       <ul className="mt-3 grid gap-2 xl:grid-cols-2">
         {(data?.items ?? []).map((p) => (
           <li key={p.crmContactId} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 bg-white/85 px-3 py-2.5 text-[12.5px]">
@@ -198,7 +206,7 @@ export default function PoolTab({ onOpen }: { onOpen: (t: PanelTarget) => void }
           </label>
           <label className="flex min-h-11 items-center gap-2 text-[12px] font-semibold">
             <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} className="h-4 w-4 accent-[#6D4AFF]" />
-            Arşiv
+            Arşivdekileri göster
           </label>
         </div>
         {err && (
@@ -207,9 +215,13 @@ export default function PoolTab({ onOpen }: { onOpen: (t: PanelTarget) => void }
           </div>
         )}
         {cards.data && !items.length && (
-          <p className="py-8 text-center text-[12.5px] text-canvas-muted">
-            {q || stage || mine || archived ? 'Bu süzgece uyan aday kartı yok.' : 'Havuzda henüz aday yok. «Yeni yazar kartı» ya da aşağıdaki CRM listesinden «Havuza al» ile ekleyin.'}
-          </p>
+          <div className="mt-3">
+            {q || stage || mine || archived ? (
+              <EmptyHint title="Bu süzgece uyan aday kartı yok" why="Aramayı temizleyin, «Tümü»nü seçin ya da işaretli kutuları kaldırın." />
+            ) : (
+              <EmptyHint title="Havuzda henüz aday yok" why="Üstteki «Yeni yazar kartı» düğmesiyle ya da aşağıdaki CRM listesinden «Havuza al» ile aday ekleyin." />
+            )}
+          </div>
         )}
         <div className="mt-3 space-y-4">
           {groups.map((g) => {

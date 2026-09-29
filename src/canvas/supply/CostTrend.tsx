@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Loading, Note, TableWrap, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtInt, fmtPct, fmtUnit, supplyApi } from './api';
@@ -29,11 +30,11 @@ export default function CostTrend() {
   return (
     <SupplyFrame
       title="Birim baskı maliyeti"
-      lead="Adet başı baskı bedeli: Logo'daki matbaa baskı faturası (Komple Baskı Giderleri) ÷ faturalanan adet, KDV hariç; fatura ayına göre. «100 sayfa başı» farklı kalınlıktaki kitapları karşılaştırmak içindir. Eğilim: dönemin son yarısı ile ilk yarısının ağırlıklı ortalaması."
+      lead="Bir kitabı bastırmanın adet başına kaça mal olduğu ve zamanla nasıl değiştiği: matbaanın baskı faturası (Logo, KDV hariç) ÷ faturalanan adet, fatura ayına göre. Cilt, sayfa sayısı, baskı tipi ya da matbaaya göre ayırıp karşılaştırabilirsiniz."
       aside={
         <div className="flex flex-wrap items-end justify-start gap-2 lg:justify-end">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kırılım</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Neye göre ayır</span>
             <select
               className={`${field} w-auto`}
               value={kirilim}
@@ -55,24 +56,27 @@ export default function CostTrend() {
         </div>
       }
     >
-      {me && !me.canCost && <Note tone="info">Birim baskı maliyeti «birim maliyet» yetkisiyle görünür.</Note>}
+      {me && !me.canCost && <Note tone="info">Birim baskı maliyeti yalnız «birim maliyet» yetkisi olanlara görünür. Gerekirse yöneticinizden yetki isteyin.</Note>}
       <ErrorNote error={q.error} fallback="Maliyet eğilimi okunamadı." />
       <Warnings items={c?.uyarilar} />
       {q.isLoading && <Loading />}
       {c && (
         <Panel>
+          {c.gruplar.length > 0 && (
+            <p className="mb-2 px-1 text-[11.5px] text-canvas-muted">Ay sütunlarında üstte adet başı bedel, altta iş sayısı ve «100 sayfa başı» bedel yazar; 100 sayfa başı, farklı kalınlıktaki kitapları kıyaslamak içindir.</p>
+          )}
           {c.gruplar.length === 0 ? (
-            <Note tone="info">Dönemde baskı faturası karta bağlanmış iş yok.</Note>
+            <EmptyHint title="Hesaplanacak baskı yok" why="Bu dönemde baskı faturası bir üretim kartına bağlanmış iş bulunamadı. Faturası bağlanmamış baskılar «Tedarikçiler → Fatura eşleşmesi» sekmesindedir." />
           ) : (
             <TableWrap>
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className={th}>Grup</th>
                   <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">İş</InfoLabel></th>
-                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Ağırlıklı birim</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={c.kaynaklar} alan="gruplar">Ağırlıklı birim</InfoLabel><Explain label="Ağırlıklı birim">Bütün işlerin toplam baskı tutarı ÷ toplam adet. Büyük tirajlı işler sonucu daha çok etkiler.</Explain></span></th>
                   <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Önceki yarı</InfoLabel></th>
                   <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Son yarı</InfoLabel></th>
-                  <th className={`${th} text-right`}><InfoLabel k={c.kaynaklar} alan="gruplar">Değişim</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={c.kaynaklar} alan="gruplar">Değişim</InfoLabel><Explain label="Değişim">Dönemin son yarısındaki adet başı bedelin ilk yarısına göre değişimi. Kırmızı: pahalanıyor, yeşil: ucuzluyor.</Explain></span></th>
                   {months.map((m) => (
                     <th key={m.key} className={`${th} text-right`}>
                       {m.label}
@@ -99,7 +103,7 @@ export default function CostTrend() {
                             <>
                               {fmtUnit(v.agirlikliBirim)}
                               <div className="text-[10px] text-canvas-muted">
-                                {v.is} iş{v.sayfa100 !== null ? ` · ${fmtUnit(v.sayfa100)}/100 sf` : ''}
+                                {v.is} iş{v.sayfa100 !== null ? ` · ${fmtUnit(v.sayfa100)}/100 sayfa` : ''}
                               </div>
                             </>
                           ) : (
@@ -118,6 +122,7 @@ export default function CostTrend() {
       {c && c.kagit.length > 0 && (
         <Panel>
           <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={c.kaynaklar} alan="kagit">Kağıt alış fiyatı (kağıtçı carileri)</InfoLabel></h2>
+          <p className="mt-1 px-1 text-[11.5px] text-canvas-muted">Kağıtçılardan alınan malzemenin ilk ve son aydaki birim fiyatı (KDV hariç). Farklı ölçü birimleri ayrı satırdadır.</p>
           <div className="mt-2">
             <TableWrap>
               <thead>

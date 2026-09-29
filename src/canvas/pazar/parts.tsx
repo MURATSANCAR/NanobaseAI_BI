@@ -8,6 +8,7 @@ import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { fmtDay, fmtInt, pazarApi, type Category } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** M39 Pazar ve rakip ekranlarının ortak parçaları: kabuk, bölüm çubuğu (yetkiye göre), tazelik şeridi. */
 
@@ -49,8 +50,8 @@ export function PazarFrame({ presence, aside, badges, children }: {
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Müşteri ve pazar · Pazar araştırması ve rekabet</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Pazar ve rakip</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
-                  Rakip yayınevlerinin fiyat, sayfa ve format bandı; TİMAŞ'ın kategori, marka ve kanal büyümesi; yüklenen sektör raporlarından
-                  sayfa numaralı rakamlar ve kurula giden aylık özet. Her rakamın kaynağı yanında yazar; kaynağı olmayan pazar rakamı üretilmez.
+                  Rakip yayınevlerinin fiyat, sayfa sayısı ve format aralıkları; Timaş'ın kategori, marka ve kanal büyümesi; yüklenen sektör
+                  raporlarındaki rakamlar (sayfa numarasıyla) ve yönetime giden aylık özet. Her rakamın kaynağı yanında yazar; kaynağı olmayan pazar rakamı gösterilmez.
                 </p>
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[440px]">{aside}</div>}
@@ -137,11 +138,12 @@ export function CategorySelect({ value, onChange, categories, empty = 'Bütün k
 }
 
 /** Küçük sayı karosu. */
-export function Stat({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
+export function Stat({ label, value, help, info, explain }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
       <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
         <span className="min-w-0 truncate">{label}</span>
+        {explain && <Explain label={label}>{explain}</Explain>}
         {info}
       </div>
       <div className="mt-0.5 truncate font-mono text-[16px] font-bold tabular-nums">{value}</div>

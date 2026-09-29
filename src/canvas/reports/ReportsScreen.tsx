@@ -18,6 +18,7 @@ import ExcelDraft, { duplicateLabels } from './ExcelDraft';
 import DbTimingBadge from '../DbTiming';
 import { useCan } from '../useAdmin';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -39,9 +40,9 @@ const RECURRENCE: Array<{ v: ReportRecurrence; label: string }> = [
 
 const LAST: Record<Exclude<ReportLastStatus, null>, { label: string; tone: string }> = {
   sent: { label: 'Gönderildi', tone: 'bg-emerald-50 text-emerald-700' },
-  no_smtp: { label: 'Dosya hazır · e-posta ayarı yok', tone: 'bg-amber-50 text-amber-800' },
-  no_recipient: { label: 'Dosya hazır · alıcı yok', tone: 'bg-slate-100 text-canvas-ink' },
-  failed: { label: 'Hata', tone: 'bg-red-50 text-red-700' },
+  no_smtp: { label: 'Dosya hazır · e-posta ayarı yapılmadığı için gönderilmedi', tone: 'bg-amber-50 text-amber-800' },
+  no_recipient: { label: 'Dosya hazır · alıcı olmadığı için gönderilmedi', tone: 'bg-slate-100 text-canvas-ink' },
+  failed: { label: 'Rapor hazırlanamadı', tone: 'bg-red-50 text-red-700' },
 };
 
 const EXAMPLE = "Her pazartesi 08:30'da geçen haftanın yayınevlerine göre net cirosunu Excel olarak ad@timas.com.tr'ye gönder";
@@ -104,7 +105,7 @@ const toInput = (p: Plan): ReportInput => ({
 });
 
 const errMsg = (e: unknown, fallback: string) =>
-  e instanceof EngineAuthError ? 'Oturum gerekli.' : e ? (e as Error).message || fallback : null;
+  e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : e ? (e as Error).message || fallback : null;
 
 const btn =
   'flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2.5 text-[12.5px] font-extrabold transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 sm:min-h-0';
@@ -122,13 +123,13 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void 
         <label className={label} htmlFor="rp-title">
           Başlık
         </label>
-        <input id="rp-title" value={plan.title} onChange={(e) => set('title', e.target.value)} className={field} />
+        <input id="rp-title" value={plan.title} onChange={(e) => set('title', e.target.value)} placeholder="Ör. Haftalık yayınevi cirosu" className={field} />
       </div>
       <div>
         <label className={label} htmlFor="rp-q">
-          Veri sorusu <span className="font-normal">(her çalışmada yeniden sorulur; “bu ay” o günü anlatır)</span>
+          Veri sorusu <span className="font-normal">(rapor her çalıştığında yeniden sorulur; «bu ay», «geçen hafta» o günün tarihine göre anlaşılır)</span>
         </label>
-        <textarea id="rp-q" rows={2} value={plan.question} onChange={(e) => set('question', e.target.value)} className={field} />
+        <textarea id="rp-q" rows={2} value={plan.question} onChange={(e) => set('question', e.target.value)} placeholder="Ör. geçen haftanın yayınevlerine göre net cirosu" className={field} />
       </div>
 
       <div>
@@ -164,7 +165,7 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void 
           {plan.recurrence === 'monthly' && (
             <div>
               <label className={label} htmlFor="rp-md">
-                Ayın kaçı
+                Ayın kaçı <span className="font-normal">(1–28)</span>
               </label>
               <input
                 id="rp-md"
@@ -198,7 +199,7 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <div>
           <label className={label} htmlFor="rp-to">
-            Alıcılar <span className="font-normal">(virgülle; boşsa yalnız dosya üretilir)</span>
+            Alıcılar <span className="font-normal">(e-postaları virgülle ayırın; boş bırakırsanız dosya yalnız bu ekrandan indirilir)</span>
           </label>
           <input
             id="rp-to"
@@ -409,9 +410,19 @@ export default function ReportsScreen() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               )}
-              {authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturum gerekli.</div>}
-              {!list.isLoading && !authRequired && !reports.length && (
-                <div className="p-3 text-[12px] leading-snug text-canvas-muted">Henüz plan yok. Ne istediğinizi yandaki kutuya bir cümleyle yazın.</div>
+              {authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.</div>}
+              {!list.isLoading && !authRequired && !list.error && !reports.length && (
+                <EmptyHint
+                  title="Henüz planlı rapor yok"
+                  why={
+                    canPlan
+                      ? 'Ne istediğinizi yandaki kutuya bir cümleyle yazın; ör. «her pazartesi geçen haftanın satışlarını Excel olarak gönder».'
+                      : 'Size ait planlı rapor bulunmuyor.'
+                  }
+                />
+              )}
+              {list.error && !authRequired && (
+                <div className="p-3 text-[12px] font-semibold text-red-700">Planlar şu an okunamadı; biraz sonra sayfayı yenileyin.</div>
               )}
               {reports.map((r) => (
                 <button
@@ -428,7 +439,7 @@ export default function ReportsScreen() {
                     <span className="truncate">{r.when}</span>
                     {r.status === 'paused' && <span className="shrink-0 rounded bg-slate-200 px-1.5 font-bold text-canvas-ink">Duraklatıldı</span>}
                     {r.status === 'done' && <span className="shrink-0 rounded bg-slate-200 px-1.5 font-bold text-canvas-ink">Bitti</span>}
-                    {r.lastStatus === 'failed' && <span className="shrink-0 rounded bg-red-50 px-1.5 font-bold text-red-700">Hata</span>}
+                    {r.lastStatus === 'failed' && <span className="shrink-0 rounded bg-red-50 px-1.5 font-bold text-red-700">Son çalışma hatalı</span>}
                   </span>
                 </button>
               ))}
@@ -444,7 +455,7 @@ export default function ReportsScreen() {
               {email && !email.configured && (
                 <div className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-800">
                   <Mail className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>E-posta ayarı henüz yok. Raporlar zamanında üretilir ve buradan indirilir; ayar girilince alıcılara kendiliğinden gider.</span>
+                  <span>E-posta gönderim ayarı henüz yapılmadı. Raporlar yine zamanında hazırlanır ve bu ekrandan indirilir; ayar yapılınca alıcılara kendiliğinden gider.</span>
                 </div>
               )}
               {errText && <div className="rounded-xl bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{errText}</div>}
@@ -452,7 +463,7 @@ export default function ReportsScreen() {
 
               {!cur && !canPlan ? (
                 <div className="rounded-xl bg-slate-50 px-3 py-6 text-center text-[12.5px] text-canvas-muted">
-                  Soldan bir plan seçin. Yeni planlı rapor oluşturmak rolünüzde yok.
+                  Soldaki listeden bir plan seçin. Yeni planlı rapor oluşturma yetkiniz yok; gerekirse yöneticinize başvurun.
                 </div>
               ) : !cur ? (
                 <>
@@ -460,7 +471,7 @@ export default function ReportsScreen() {
                     <div className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">Yeni planlı rapor</div>
                     <h2 className="mt-1 text-2xl font-extrabold tracking-tight">Ne istediğinizi bir cümleyle yazın</h2>
                     <p className="mt-1 text-[12.5px] text-canvas-muted">
-                      Sistem zamanı, sıklığı, alıcıları ve veri sorusunu ayırır; kaydetmeden önce hepsini düzeltebilirsiniz.
+                      Zeki AI cümlenizden zamanı, sıklığı, alıcıları ve istediğiniz veriyi ayırır; ilk 50 satırı önizlersiniz. Kaydetmeden önce hepsini düzeltebilirsiniz.
                     </p>
                   </div>
                   <div>
@@ -477,7 +488,7 @@ export default function ReportsScreen() {
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <button type="button" disabled={!text.trim() || parse.isPending} onClick={submitParse} className={`${btn} bg-canvas-violet text-white shadow-md`}>
                         {parse.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        {parse.isPending ? 'Soru motora soruluyor…' : 'Planı çıkar'}
+                        {parse.isPending ? 'Zeki AI cümlenizi okuyor…' : 'Planı çıkar'}
                       </button>
                       {!text && (
                         <button type="button" onClick={() => setText(EXAMPLE)} className="min-h-11 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
@@ -516,7 +527,7 @@ export default function ReportsScreen() {
                             onChange={(e) => setRunNow(e.target.checked)}
                             className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
                           />
-                          Onaylayınca ilk Excel'i hemen üret
+                          Onaylayınca ilk dosyayı hemen hazırla
                         </label>
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -538,7 +549,7 @@ export default function ReportsScreen() {
                             className={`${btn} bg-gradient-to-r from-canvas-mint to-emerald-600 text-white shadow-md`}
                           >
                             {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                            Excel'i onayla ve planla
+                            Onayla ve planla
                           </button>
                         </div>
                       </div>
@@ -590,7 +601,7 @@ export default function ReportsScreen() {
 
                   <div className="grid grid-cols-2 gap-3 text-[12px] sm:grid-cols-4">
                     <Stat k="Plan" v={cur.when} />
-                    <Stat k="Sıradaki" v={cur.status === 'active' ? fmtDate(cur.nextRunAt) : '—'} />
+                    <Stat k="Sıradaki gönderim" v={cur.status === 'active' ? fmtDate(cur.nextRunAt) : '—'} />
                     <Stat k="Son çalışma" v={fmtDate(cur.lastRunAt)} />
                     <Stat k="Biçim" v={cur.fmt === 'xlsx' ? 'Excel' : 'CSV'} />
                   </div>
@@ -616,7 +627,7 @@ export default function ReportsScreen() {
                         ))}
                       </div>
                     ) : (
-                      <div className="mt-1 text-[12px] text-canvas-muted">Alıcı yok; dosya yalnız buradan indirilir.</div>
+                      <div className="mt-1 text-[12px] text-canvas-muted">Alıcı yok; dosya e-postayla gitmez, yalnız bu ekrandan indirilir.</div>
                     )}
                   </div>
 
@@ -692,14 +703,17 @@ export default function ReportsScreen() {
                       </button>
                     )}
                     {confirmDelete ? (
-                      <button type="button" disabled={remove.isPending} onClick={() => remove.mutate(cur.id)} className={`${btn} bg-red-600 text-white shadow-md`}>
-                        {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        Evet, sil
-                      </button>
+                      <>
+                        <button type="button" disabled={remove.isPending} onClick={() => remove.mutate(cur.id)} className={`${btn} bg-red-600 text-white shadow-md`}>
+                          {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          Evet, kalıcı olarak sil
+                        </button>
+                        <span className="basis-full text-[11.5px] font-semibold text-red-700">Plan ve hazırlanmış dosyaları silinir; bu işlem geri alınamaz.</span>
+                      </>
                     ) : (
                       <button type="button" onClick={() => setConfirmDelete(true)} className={`${btn} bg-slate-100 text-canvas-ink hover:bg-red-50 hover:text-red-700`}>
                         <Trash2 className="h-4 w-4" />
-                        Sil
+                        Planı sil
                       </button>
                     )}
                     </>)}

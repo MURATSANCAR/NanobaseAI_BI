@@ -81,7 +81,7 @@ export default function CorporateScreen() {
   return (
     <CorporateFrame
       title="Kurumsal satış ve B2B"
-      lead="Kurumlara tema paketi, teklif ve fırsat takibi; geçen yıl bu dönemde alan kurumların hatırlatması; sipariş vermeyen bayiler ve öne çıkarılacak kitaplar. Kurum alımları, stok ve fiyat Logo'dan; kurum temsilcisi ve kitap temaları CRM'den okunur. Siteye, CRM'e ve Logo'ya hiçbir şey yazılmaz; teklif belgesini temsilci gönderir."
+      lead="Kurumlara toplu kitap satışını takip edersiniz: fırsatlar, tema paketi ve teklif, geçen yıl bu dönemde alım yapan kurumların hatırlatması ve sipariş vermeyen bayiler. Veriler Logo ve CRM'den okunur; hiçbir sisteme yazılmaz, teklifi temsilci gönderir."
       source={s?.dataEnd ? `Logo · ${fmtDay(s.dataEnd)} tarihine kadar` : 'Logo + CRM'}
       presence={busy ? (status.data?.step ?? m?.status.step ?? 'Okunuyor') : last?._at ? `Son okuma ${fmtDay(last._at)}` : 'Henüz okunmadı'}
       aside={
@@ -96,7 +96,7 @@ export default function CorporateScreen() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {last && last.ok === false && <Note tone="err">Son okuma başarısız: {last.error}</Note>}
       {last?.warnings?.map((w) => <Note key={w} tone="warn">{w}</Note>)}
@@ -106,7 +106,8 @@ export default function CorporateScreen() {
         <Kpi
           label={s?.window ? `Kurum cirosu ${s.window.year} ${s.window.label}` : 'Kurum cirosu'}
           value={s ? fmtShort(s.kurumCiro) : '—'}
-          help={s ? `Geçen yıl aynı dönem ${fmtShort(s.kurumCiroGecenYil)}${g !== null ? ` · ${g >= 0 ? '+' : ''}${fmtPct(g)}` : ''}` : 'KURUM kanalı net ciro'}
+          help={s ? `Geçen yıl aynı dönem ${fmtShort(s.kurumCiroGecenYil)}${g !== null ? ` · ${g >= 0 ? '+' : ''}${fmtPct(g)}` : ''}` : 'Kurum kanalı net satış'}
+          explain="Logo'da kurum kanalındaki müşterilere kesilen faturaların, iadeler düşüldükten sonraki toplamı; yılın bugüne kadarki dönemi geçen yılın aynı dönemiyle karşılaştırılır."
           active={tab === 'kurum'}
           onClick={() => go('kurum')}
           info={<SqlInfo k={s?.kaynaklar} alan="kurumCiroBuyume" label="Kurum cirosu, geçen yıl aynı dönem ve büyüme" />}
@@ -115,6 +116,7 @@ export default function CorporateScreen() {
           label="Açık fırsat"
           value={s ? fmtInt(s.acikFirsat) : '—'}
           help={s ? `Tahmini ${fmtShort(s.acikFirsatDeger)}${m && !m.me.seeAll ? ' · sizin' : ''}` : 'Aday → Karar'}
+          explain="Henüz kazanılmamış ya da kaybedilmemiş fırsatlar (aday, görüşüldü, teklif, karar aşamaları). Altında bu fırsatların tahmini toplam değeri yazar."
           active={tab === 'firsat'}
           onClick={() => go('firsat')}
           info={<SqlInfo k={s?.kaynaklar} alan="acikFirsat" label="Açık fırsat ve tahmini değer" />}
@@ -123,6 +125,7 @@ export default function CorporateScreen() {
           label="Hatırlatma"
           value={s ? fmtInt(s.hatirlatma) : '—'}
           help={s ? `Geçen yıl bu dönemde ${fmtShort(s.hatirlatmaTutar)} alan kurumlar` : 'Dönemsel alım'}
+          explain={`Geçen yıl önümüzdeki aylarda alım yapmış kurumlar. Hatırlatma, alım ayından ${m?.settings.reminderLeadDays ?? 45} gün önce açılır; kuruma zamanında teklif götürmeniz içindir.`}
           active={tab === 'hatirlatma'}
           onClick={() => go('hatirlatma')}
           info={<SqlInfo k={s?.kaynaklar} alan="hatirlatma" label="Hatırlatma ve geçen yıl tutarı" />}
@@ -132,12 +135,14 @@ export default function CorporateScreen() {
             label="Sipariş vermeyen bayi"
             value={s ? fmtInt(s.sessizBayi) : '—'}
             help={s && m ? `${m.settings.silentDays} gündür faturası yok · ${fmtInt(s.bayi)} bayiden` : 'Bayi kanalı'}
+            explain={`Bayi kanalındaki carilerden ${m?.settings.silentDays ?? ''} gündür Logo'da faturası olmayanlar. Karta dokununca bayi paneli açılır.`}
             active={tab === 'bayi'}
             onClick={() => go('bayi')}
             info={<SqlInfo k={s?.kaynaklar} alan="sessizBayi" label="Sipariş vermeyen bayi ve bayi sayısı" />}
           />
         ) : (
           <Kpi label="Onay bekleyen" value={s ? fmtInt(s.onayBekleyen) : '—'} help="İndirim/marj eşiğini aşan teklif"
+            explain="İndirimi izin verilen sınırı aşan ya da kâr payı alt sınırın altına düşen teklifler müdür onayı bekler; onaya gönderen kişi aynı teklifi onaylayamaz."
             info={<SqlInfo k={s?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen teklif" />} />
         )}
       </KpiRow>

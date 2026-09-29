@@ -86,7 +86,7 @@ export default function SourcesSheet({
               <div className="mg-eyebrow">VERİ KAYNAĞI</div>
               <Dialog.Title className="mg-sheet-title">Bu rapor nereden geliyor?</Dialog.Title>
               <Dialog.Description className="mg-sheet-sub">
-                Ekrandaki her sayı aşağıdaki sorgulardan okunur ve buradaki hesaplarla birleştirilir. Gösterilen SQL, sunucuda çalışan dosyanın kendisidir.
+                Ekrandaki her sayı aşağıdaki Logo ve CRM okumalarından gelir ve «Hesaplamalar» sekmesindeki kurallarla birleştirilir. Sorgu metinleri, sistemin gerçekten çalıştırdığı hâliyle gösterilir.
               </Dialog.Description>
             </div>
             <Dialog.Close className="mg-icon-button" aria-label="Kapat">

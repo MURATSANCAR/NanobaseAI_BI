@@ -2,6 +2,7 @@ import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query'
 import { ENGINE_ENABLED } from '../../engine';
 import { fmtDay } from '../authors/shared';
 import { productionApi, type Delay, type Milestone, type MilestoneSource, type ProdCard, type ProdStage } from './api';
+import { Explain } from '../../components/Explain';
 
 /** M12 Üretim yönetimi ekranlarının ortak parçaları: dönüm noktası zinciri, kaynak etiketi, biçimler, sorgu anahtarları. */
 
@@ -74,6 +75,17 @@ export function useProductionMeta() {
 
 export function invalidateProduction(qc: QueryClient): Promise<void> {
   return qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'production' && q.queryKey[1] !== 'meta' });
+}
+
+/** Zincirin ve durum süzgeçlerinin sade açıklaması; liste başlığında «?» (kart satırı düğme olduğu için satırın dışında). */
+export function ChainLegend() {
+  return (
+    <Explain label="Üretim adımları" title="Üretim adımları ve renkler">
+      Her kartta dört adım: matbaa belirlendi → baskı dosyası matbaada → baskı çıkışı → depo girişi. Yeşil dolu nokta gerçekleşti, kırmızı gecikti (planı geçti),
+      boş halka planlandı, gri planı yok demektir. «Eski, kapanmamış»: son plan tarihinin üstünden ayardaki süre (varsayılan 180 gün) geçmiş, depoya girmemiş kart; iş bırakılmış ya da CRM'de
+      kapatılmamış olabilir.
+    </Explain>
+  );
 }
 
 /** Dönüm noktası zinciri: dört nokta yan yana; gerçekleşen dolu, geciken kırmızı, planlanan boş halka. */

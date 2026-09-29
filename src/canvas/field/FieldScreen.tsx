@@ -47,7 +47,7 @@ export default function FieldScreen() {
   const aside = m?.me.canAll ? (
     <label className="flex flex-col gap-1">
       <span className={`${labelCls} flex items-center gap-0.5`}>
-        Temsilci (cari sayısı)
+        Temsilci (müşteri sayısı)
         <SqlInfo k={m.kaynaklar} alan="reps" label="Temsilci başına cari" />
       </span>
       <select className={field} value={temsilci} onChange={(e) => update({ temsilci: e.target.value || null })}>
@@ -65,12 +65,12 @@ export default function FieldScreen() {
     <FieldFrame
       crumb="Saha ve tahsilat"
       title="Saha ve tahsilat"
-      lead="Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onay durumu. Atama CRM'den (cari sahibi, BMT il), bakiye ve satış Logo'dan okunur; tahsilat CRM'de girilir, burada yeniden girilmez."
+      lead="Bugün hangi müşteriye gideceğinizi, müşterinin borç ve sipariş özetini, vadesi geçmiş alacakları ve tahsilat onaylarını tek yerde görürsünüz. Müşterileriniz CRM'den, bakiye ve satış Logo'dan gelir; tahsilatı yine CRM'e girersiniz."
       source={run?.asof ? `${fmtCount(run.portfolio ?? 0)} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar` : 'CRM + Logo'}
       presence={run?.asof ? `Veri ${fmtDay(run.asof)}` : 'Hazırlanmadı'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {run?.asof && (
         <p className="flex flex-wrap items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
@@ -88,7 +88,7 @@ export default function FieldScreen() {
             </Note>
           ))}
           {!m.me.canAll && run?.asof && m.me.cari === 0 && (
-            <Note tone="info">CRM'de size atanmış müşteri carisi yok. Atama CRM'deki cari sahibi (BMT) ya da ilin müşteri temsilcisi alanından gelir.</Note>
+            <Note tone="info">CRM'de size atanmış müşteri yok. Müşteriler, CRM'deki cari sahibi ya da ilin müşteri temsilcisi alanından size bağlanır; eksikse CRM yöneticinizden atama isteyin.</Note>
           )}
           <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'bugun' ? null : t })} />
           {tab === 'bugun' && <TodayTab meta={m} temsilci={temsilci} />}

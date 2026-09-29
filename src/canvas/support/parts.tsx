@@ -15,9 +15,9 @@ export function SupportFrame({ source, presence, aside, children }: { source: st
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Altyapı ve destek · Müşteri hizmetleri</div>
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Müşteri hizmetleri</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
-                  Talepler destek masasında açılır ve cevaplanır; bu ekran masayı yalnız okur. Temsilci müşterinin siparişini, kargosunu ve
-                  faturasını tek yerde görür; Zeki AI konu ve aciliyet önerir, cevap taslağı yazar — taslağı temsilci düzeltip masadan kendisi
-                  gönderir. Sipariş ve kargo canlı CRM'den, fatura ve iade Logo'dan (veri sonu tarihiyle) okunur; hiçbir kaynağa yazılmaz.
+                  Müşteri taleplerinin durumu, süre hedefleri ve hizmet kalitesi. Temsilci müşterinin siparişini, kargosunu ve faturasını tek
+                  yerde görür; Zeki AI konu ve aciliyet önerir, cevap taslağı yazar, taslağı temsilci düzeltip destek masasından kendisi gönderir.
+                  Sipariş ve kargo CRM’den, fatura ve iade Logo’dan okunur; bu ekran hiçbir kaynağa yazmaz.
                 </p>
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[420px]">{aside}</div>}

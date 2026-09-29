@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnPrimary, errText, field, label as labelCls } fr
 import { fmtDay } from '../api';
 import { Block, MarketingFrame } from '../parts';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 import { TONE_CLASS, TONE_LABEL, dLabel, launchApi, type LaunchHead, type LaunchRisk, type RiskLevel, type TodayTask } from './api';
 
 /** M16 Lansman — ilk açılış: bu hafta ve gelecek 4 haftanın lansman şeridi (yayında ve ilk ay izlemesinde olanlar da),
@@ -168,7 +169,7 @@ export default function LaunchHome() {
             </select>
           </label>
           <button type="button" className={`${btnPrimary} self-end`} disabled={!pick || open.isPending} onClick={() => open.mutate(pick)}>
-            <Rocket aria-hidden className="h-4 w-4" />Aç
+            <Rocket aria-hidden className="h-4 w-4" />Lansmanı aç
           </button>
         </div>
       )}
@@ -179,23 +180,23 @@ export default function LaunchHome() {
     <MarketingFrame
       crumb="Lansman"
       title="Lansman ve yayın ayı"
-      lead={`Onaylı pazarlama planından açılan lansman paketi: yayın gününe göre kontrol listesi, ilk 7 ve 30 günün sipariş, faturalı satış, stok ve hedef takibi, D+7 ve D+30 değerlendirmesi. Lansman, yayına ${m?.settings.openDays ?? 14} gün kala kendiliğinden açılır. Dış kanala hiçbir şey kendiliğinden gönderilmez; gönderiyi ekip yapar, burada işaretler.`}
+      lead={`Yeni kitabın yayın haftası ve ilk ayı: yapılacaklar listesi, sipariş, satış ve stok takibi, yayından 7 ve 30 gün sonraki (D+7, D+30) değerlendirme. Lansman, onaylı pazarlama planından yayına ${m?.settings.openDays ?? 14} gün kala kendiliğinden açılır; dışarıya hiçbir şey kendiliğinden gönderilmez.`}
       source={m?.lastRun?.tarih ? `CRM + Logo · son okuma ${fmtDay(m.lastRun.tarih)}` : 'CRM + Logo'}
       presence={list.data ? `${list.data.total} lansman` : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Lansman bilgisi açılamadı.')}</Note>}
       {list.error && <Note tone="err">{errText(list.error, 'Lansmanlar açılamadı.')}</Note>}
       {list.isLoading && <Loading />}
 
       {list.data && (
         <>
-          <Block title="Yayında ve ilk ay izlemesinde" info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Gün sayacı, renk ve geciken madde" />} help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Renk: stok–talep çatışması ya da hedef payının eşik altı kırmızı; geciken madde ya da hedefin altı sarı. Risk bayrağı kuraldır (stok, dağılım, hedef payı, emsal sapması, siparişsiz gün); karar sizindir.">
-            {live.length ? <Strip items={live} /> : <p className="text-[12.5px] text-canvas-muted">Şu an yayında olan lansman yok.</p>}
+          <Block title="Yayında ve ilk ay izlemesinde" info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Gün sayacı, renk ve geciken madde" />} help="Yayın gününden bu yana 30 gün dolmamış lansmanlar. Kırmızı: talep stoğu aşıyor ya da satış hedefin çok gerisinde. Sarı: geciken madde var ya da satış hedefin altında. Risk uyarısı kuralla (stok, dağıtım, hedef, emsal, siparişsiz gün) konur; karar sizindir.">
+            {live.length ? <Strip items={live} /> : <p className="text-[12.5px] text-canvas-muted">Şu an yayında ya da ilk ay izlemesinde lansman yok{kim === 'ben' ? ' (yalnız size düşenler gösteriliyor)' : ''}.</p>}
           </Block>
           <Block title="Bu hafta ve gelecek 4 hafta" info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Gün sayacı ve geciken madde" />} help="Yayın günü yaklaşan lansmanlar; gün sayacı yayın gününe göre.">
-            {soon.length ? <Strip items={soon} /> : <p className="text-[12.5px] text-canvas-muted">Önümüzdeki 5 haftada açılmış lansman yok.</p>}
+            {soon.length ? <Strip items={soon} /> : <p className="text-[12.5px] text-canvas-muted">Önümüzdeki 5 haftada açılmış lansman yok. Lansman, onaylı planı olan kitaba yayına {m?.settings.openDays ?? 14} gün kala kendiliğinden açılır.</p>}
           </Block>
         </>
       )}
@@ -203,7 +204,7 @@ export default function LaunchHome() {
       <Block title="Bugün yapılacaklar" info={<SqlInfo k={todo.data?.kaynaklar} alan="items[]" label="Bugünün ve geciken maddeler" />} help={kim === 'ben' ? 'Sorumlusu siz olan maddeler (sorumlusu boşsa lansman sahibi). Geciken maddeler kırmızı.' : 'Bütün açık lansmanların bugün ve geciken maddeleri.'}>
         {todo.error && <Note tone="err">{errText(todo.error, 'Maddeler açılamadı.')}</Note>}
         {todo.isLoading && <Loading />}
-        {todo.data && todo.data.items.length === 0 && <p className="text-[12.5px] text-canvas-muted">Bugün için bekleyen madde yok.</p>}
+        {todo.data && todo.data.items.length === 0 && <EmptyHint title="Bugün için bekleyen madde yok" why={kim === 'ben' ? 'Size düşen bugünkü ve geciken bütün maddeler tamam. Ekibin işlerini görmek için «Hepsi»ni seçin.' : 'Açık lansmanların bugünkü ve geciken bütün maddeleri tamam.'} />}
         {todo.data && todo.data.items.length > 0 && m && (
           <TodayList items={todo.data.items} canWrite={m.me.canWrite} busy={busy} onDone={(t) => done.mutate(t)} />
         )}

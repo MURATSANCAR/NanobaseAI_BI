@@ -33,10 +33,11 @@ import { useCan } from '../../useAdmin';
 import { useTimasSession } from '../../TimasSession';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import SegmentTools from './SegmentTools';
-import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
+import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, SegmentHelp, StagePill, XliffHelp, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
 import { QePill, QeSection, QeStrip, flagged, useQe, type QeItem } from './qe';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Çeviri masam: çevirmenin ve inceleyenin kendi ekranı. Sol: bölümün segmentleri (kaynak | hedef); etkin
  *  segmentte yazılır. Sağ (telefonda segmentin altında): terimler, çeviri belleği, ZEKİ taslağı, otomatik
@@ -52,8 +53,8 @@ const FILTER_LABEL: Record<string, string> = {
   onaylandi: 'Onaylı',
   sorunlu: 'Denetim uyarısı olan',
   hatali: 'İnceleme hatası olan',
-  taslakli: 'ZEKİ taslağı bekleyen',
-  zeki: 'ZEKİ şüpheli (tahmin 85 altı)',
+  taslakli: 'Zeki AI taslağı bekleyen',
+  zeki: 'Zeki AI şüpheli (kalite tahmini 85 altı)',
 };
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
@@ -70,9 +71,12 @@ function MyJobs({ me }: { me: string }) {
       {q.error && <Note tone="err">{errText(q.error, 'İşler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
       {q.data && !items.length && (
-        <p className="mt-2 px-1 text-[12.5px] leading-snug text-canvas-muted">
-          Şu an size atanmış çeviri ya da inceleme işi yok. İş, «Çeviri» ekranında çevirmen ya da inceleyen olarak adınız yazılınca burada görünür.
-        </p>
+        <div className="mt-2">
+          <EmptyHint
+            title="Size atanmış çeviri ya da inceleme işi yok"
+            why="İş, «Çeviri» ekranında çevirmen ya da inceleyen olarak adınız yazılınca burada görünür."
+          />
+        </div>
       )}
       <ul className="mt-2 grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {items.map((j) => {
@@ -112,13 +116,14 @@ function MyJobs({ me }: { me: string }) {
   );
 }
 
-function Section({ title, icon, children, count }: { title: string; icon: ReactNode; children: ReactNode; count?: number }) {
+function Section({ title, icon, children, count, explain }: { title: string; icon: ReactNode; children: ReactNode; count?: number; explain?: ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold">
         {icon}
         {title}
         {count != null && <span className="font-mono text-[11px] font-bold text-canvas-muted">{nf.format(count)}</span>}
+        {explain && <Explain label={title}>{explain}</Explain>}
       </h3>
       <div className="mt-2">{children}</div>
     </section>
@@ -248,7 +253,12 @@ function Aside({
   const tgtDir = dirOf(job.targetLang);
   return (
     <div className="space-y-2">
-      <Section title="Terimler" icon={<BookMarked aria-hidden className="h-4 w-4 text-canvas-violet" />} count={d.terms.length}>
+      <Section
+        title="Terimler"
+        icon={<BookMarked aria-hidden className="h-4 w-4 text-canvas-violet" />}
+        count={d.terms.length}
+        explain="Bu cümlede geçen, terim bankasındaki karşılığıyla çevrilmesi gereken adlar ve kavramlar. «Var» karşılığın çeviride kullanıldığını, «Yok» kullanılmadığını gösterir."
+      >
         {!d.terms.length && <p className="text-[11.5px] text-canvas-muted">Bu segmentte bankadaki bir terim geçmiyor.</p>}
         <ul className="space-y-1.5">
           {d.terms.map((t) => (
@@ -274,7 +284,7 @@ function Aside({
       </Section>
 
       {d.draft && (
-        <Section title="ZEKİ taslağı" icon={<Sparkles aria-hidden className="h-4 w-4 text-canvas-violet" />}>
+        <Section title="Zeki AI taslağı" icon={<Sparkles aria-hidden className="h-4 w-4 text-canvas-violet" />}>
           <p dir={tgtDir} className="whitespace-pre-wrap text-[12.5px] leading-relaxed">
             {d.draft}
           </p>
@@ -283,11 +293,16 @@ function Aside({
               Taslağı kullan
             </button>
           )}
-          <p className="mt-1 text-[11px] text-canvas-muted">Makine taslağıdır; olduğu gibi onaylamadan önce okuyun.</p>
+          <p className="mt-1 text-[11px] text-canvas-muted">Zeki AI'ın ham taslağıdır; olduğu gibi onaylamadan önce okuyun.</p>
         </Section>
       )}
 
-      <Section title="Çeviri belleği" icon={<History aria-hidden className="h-4 w-4 text-canvas-violet" />} count={d.memory.length}>
+      <Section
+        title="Çeviri belleği"
+        icon={<History aria-hidden className="h-4 w-4 text-canvas-violet" />}
+        count={d.memory.length}
+        explain="Daha önce çevrilmiş, bu cümleye en az %70 benzeyen cümleler ve çevirileri. %100 birebir aynı cümle demektir; «Kullan» çeviriyi kutuya koyar."
+      >
         {!d.memory.length && <p className="text-[11.5px] text-canvas-muted">Bu dil çiftinde benzer (%70+) çevrilmiş cümle yok.</p>}
         <ul className="space-y-2">
           {d.memory.map((m, i) => (
@@ -310,7 +325,12 @@ function Aside({
         </ul>
       </Section>
 
-      <Section title="Otomatik denetim" icon={<AlertTriangle aria-hidden className="h-4 w-4 text-amber-600" />} count={d.issues.length}>
+      <Section
+        title="Otomatik denetim"
+        icon={<AlertTriangle aria-hidden className="h-4 w-4 text-amber-600" />}
+        count={d.issues.length}
+        explain="Kaydedilen çeviriyi sabit kurallarla denetler: sayılar, terim karşılığı, kullanılmayacak karşılık, noktalama, boşluk, olağan dışı uzunluk gibi. Uyarı kesin hata değildir, bakılacak yeri gösterir."
+      >
         {!d.target ? (
           <p className="text-[11.5px] text-canvas-muted">Hedef yazılınca denetlenir.</p>
         ) : !d.issues.length ? (
@@ -330,7 +350,12 @@ function Aside({
       <QeSection item={qe} translated={d.status === 'cevrildi' || d.status === 'onaylandi'} />
 
       {(d.errorList.length > 0 || (mode === 'inceleme' && d.roles.review && d.status !== 'bos')) && (
-        <Section title="İnceleme hataları" icon={<AlertTriangle aria-hidden className="h-4 w-4 text-rose-600" />} count={d.errorList.length}>
+        <Section
+          title="İnceleme hataları"
+          icon={<AlertTriangle aria-hidden className="h-4 w-4 text-rose-600" />}
+          count={d.errorList.length}
+          explain="İnceleyenin bu cümlede işaretlediği hatalar. Kategori ve ağırlık (küçük, büyük, kritik) kalite raporundaki inceleme puanını belirler."
+        >
           <ul className="space-y-1.5">
             {d.errorList.map((x) => (
               <li key={x.id} className="flex items-start justify-between gap-2 text-[12px] leading-snug">
@@ -724,7 +749,7 @@ function Row({ s, active, onOpen, srcDir, tgtDir, qe, children }: { s: SegmentRo
           {s.source}
         </span>
         <span dir={tgtDir} className="col-start-2 mt-1 min-w-0 break-words leading-snug md:col-start-3 md:mt-0">
-          {s.target ? <span className="font-semibold">{s.target}</span> : <span className="italic text-canvas-muted">{s.hasDraft ? 'ZEKİ taslağı var' : 'Boş'}</span>}
+          {s.target ? <span className="font-semibold">{s.target}</span> : <span className="italic text-canvas-muted">{s.hasDraft ? 'Zeki AI taslağı var' : 'Boş'}</span>}
           {(s.issues.length > 0 || s.errors > 0 || s.edited || flagged(qe)) && (
             <span className="mt-1 flex flex-wrap gap-1">
               <QePill item={qe} />
@@ -829,7 +854,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
     await qc.invalidateQueries({ queryKey: ['translation', 'job', jobId] });
     await qc.invalidateQueries({ queryKey: ['translation', 'segment'] });
   };
-  const placeDrafts = useMutation({ mutationFn: () => translationApi.useDraft(jobId, chapter ?? null), onSuccess: async (r) => { setNotice(`${nf.format(r.filled)} boş segmente ZEKİ taslağı yerleştirildi (taslak olarak; her birini okuyup onaylayın).`); await refreshAll(); } });
+  const placeDrafts = useMutation({ mutationFn: () => translationApi.useDraft(jobId, chapter ?? null), onSuccess: async (r) => { setNotice(`${nf.format(r.filled)} boş segmente Zeki AI taslağı yerleştirildi (taslak olarak; her birini okuyup onaylayın).`); await refreshAll(); } });
   const approveAll = useMutation({ mutationFn: () => translationApi.approveMany(jobId, chapter ?? null), onSuccess: async (r) => { setNotice(`${nf.format(r.approved)} segment onaylandı.`); await refreshAll(); } });
 
   if (!j) return <Panel>{job.error ? <Note tone="err">{errText(job.error, 'Çeviri işi okunamadı.')}</Note> : <Loading />}</Panel>;
@@ -889,6 +914,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
             <Download aria-hidden className="h-4 w-4" />
             XLIFF indir
           </a>
+          <XliffHelp />
           <FileButton
             tone="ghost"
             accept=".xlf,.xliff,.sdlxliff,.mqxliff"
@@ -939,7 +965,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
         {j.draft.state === 'calisiyor' && (
           <div className="mt-2">
             <Note tone="info">
-              ZEKİ taslağı hazırlanıyor: %{pct(j.draft.done, j.draft.total)}.
+              Zeki AI taslağı hazırlanıyor: %{pct(j.draft.done, j.draft.total)}.
             </Note>
           </div>
         )}
@@ -952,7 +978,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
 
       {!j.source ? (
         <Panel>
-          <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu işin kaynak metni henüz yüklenmedi.</p>
+          <EmptyHint title="Bu işin kaynak metni henüz yüklenmedi" why="Kaynak metni işi yöneten kişi «Çeviri» ekranından yükler; yüklenince cümleler burada çevrilmeye hazır olur." />
         </Panel>
       ) : (
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-4">
@@ -1004,6 +1030,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
                 <span className="font-mono tabular-nums">
                   {nf.format(items.length)} segment{list.data ? ` / işte ${nf.format(list.data.total)}` : ''}
                 </span>
+                <SegmentHelp />
               </span>
               <span className="hidden gap-3 md:flex">
                 <span>{langName(j.sourceLang)}</span>
@@ -1012,9 +1039,13 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
             </div>
             {list.error && <Note tone="err">{errText(list.error, 'Segmentler okunamadı.')}</Note>}
             {list.data && !items.length && (
-              <p className="py-8 text-center text-[12.5px] text-canvas-muted">
-                {filter === 'zeki' && qe.data && !qe.data.summary.scored ? 'ZEKİ kalite tahmini bu işte henüz çalıştırılmadı.' : 'Bu süzgece uyan segment yok.'}
-              </p>
+              <div className="mt-2">
+                {filter === 'zeki' && qe.data && !qe.data.summary.scored ? (
+                  <EmptyHint title="Zeki AI kalite tahmini bu işte henüz çalıştırılmadı" why="Tahmini işin inceleyeni ya da yöneticisi üstteki düğmeyle başlatır." />
+                ) : (
+                  <EmptyHint title="Bu süzgece uyan segment yok" why="«Göster» seçimini «Bütün segmentler» yapın, başka bölüm seçin ya da aramayı temizleyin." />
+                )}
+              </div>
             )}
             <ul className="mt-2 space-y-1.5">
               {items.map((s) => (
@@ -1043,7 +1074,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
             <div className="lg:sticky lg:top-0">
               {!active && (
                 <Panel>
-                  <p className="text-[12px] text-canvas-muted">Bir segment seçin.</p>
+                  <p className="text-[12px] text-canvas-muted">Soldan bir segment seçin; terimler, benzer eski çeviriler ve denetim sonuçları burada görünür.</p>
                 </Panel>
               )}
               <div ref={setAsideEl} />
@@ -1065,7 +1096,7 @@ export default function Workbench() {
       route="/ceviri/masam"
       crumb="Çeviri masam"
       title="Çeviri masam"
-      lead="Segment segment çeviri ve inceleme. Terim bankası, çeviri belleği ve otomatik denetim yanınızda; yazdığınız kendiliğinden taslak olarak kaydedilir, onayladığınız segment ilerlemeye sayılır."
+      lead="Size atanan çeviri ve inceleme işlerini cümle cümle (segment) yaptığınız ekran. Yazdığınız kendiliğinden taslak olarak kaydedilir; terimler, benzer eski çeviriler ve otomatik denetim yanınızda."
       source="Çeviri masası"
       presence="Kaynak: çeviri kayıtları"
       aside={
@@ -1076,7 +1107,7 @@ export default function Workbench() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; çeviri kayıtları okunamaz. Sistem yöneticinize haber verin.</Note>}
       {jobId ? <Desk key={jobId} jobId={jobId} me={me} /> : <MyJobs me={me} />}
     </ModuleFrame>
   );

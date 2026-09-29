@@ -9,6 +9,7 @@ import { Field, Sheet, day, errMsg, money, num, stamp, today } from '../contract
 import { royaltyApi, type AdvanceItem, type Meta } from './api';
 import SqlInfo from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 const STEP = 50;
 
@@ -28,12 +29,15 @@ export function Advances({ meta }: { meta: Meta }) {
         <KpiRow>
           {totals.slice(0, 2).map(([cur, t]) => (
             <Kpi key={cur} label={`Kalan avans (${cur})`} value={money(t.remaining, cur)} help={`Verilen ${money(t.advance, cur)}`}
+              explain="Son hesaplanan koşuya göre henüz telifle kapanmamış (kazanılmamış) avans toplamı. Alttaki tutar sözleşmelerde verilen toplam avanstır."
               info={<SqlInfo k={d.kaynaklar} alan="totals" label={`Kalan avans (${cur})`} />} />
           ))}
           <Kpi label="Açılışı girilmemiş" value={num(totals.reduce((s, [, t]) => s + t.missing, 0), 0)} help="Bu sözleşmeler koşuda istisna"
+            explain="Avansı olan ama kalan bakiyesi (açılış) girilmemiş sözleşmeler. Bilinmeyen avans sıfır sayılmaz; açılış girilene kadar koşuda istisnadır. Karta dokununca liste bunlara süzülür."
             active={only === 'acilis-yok'} onClick={() => setOnly((v) => (v === 'acilis-yok' ? '' : 'acilis-yok'))}
             info={<SqlInfo k={d.kaynaklar} alan="totals" label="Açılışı girilmemiş" />} />
           <Kpi label="Geri dönmesi zor" value={num(totals.reduce((s, [, t]) => s + t.risk, 0), 0)} help={`Bugünkü hızla ${num(meta.riskYears)} yıldan uzun`}
+            explain={`Son koşudaki telif hızı sürerse kalan avansın telifle kapanması ${num(meta.riskYears)} yıldan uzun sürecek sözleşmeler. Karta dokununca liste bunlara süzülür.`}
             active={only === 'risk'} onClick={() => setOnly((v) => (v === 'risk' ? '' : 'risk'))}
             info={<SqlInfo k={d.kaynaklar} alan="riskYears" label="Geri dönmesi zor (risk yılı)" />} />
         </KpiRow>
@@ -46,11 +50,17 @@ export function Advances({ meta }: { meta: Meta }) {
             <SqlInfo k={d.kaynaklar} alan="items[]" label="Avanslı sözleşmeler (avans, kalan, dönem telifi, kapanma)" className="ml-0.5 align-middle" />
           </p>
         ) : d ? (
-          <div className="mt-2"><Note tone="info">Henüz hesaplanmış bir dönem koşusu yok; avans portföyü koşudan okunur.</Note></div>
+          <div className="mt-2">
+            <EmptyHint title="Henüz hesaplanmış bir dönem koşusu yok" why="Avansların kalanı dönem koşusundan okunur. «Koşu» sekmesinden bir dönem koşusu açıp hesaplatın." />
+          </div>
         ) : null}
         {list.error && <div className="mt-2"><Note tone="err">{errMsg(list.error)}</Note></div>}
         {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
-        {d && d.run && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan avanslı sözleşme yok.</p>}
+        {d && d.run && !d.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Bu süzgece uyan avanslı sözleşme yok" why="Aramayı temizleyin ya da üstteki kartlardan seçili süzgeci kapatın." />
+          </div>
+        )}
         <ul className="mt-3 space-y-2">
           {d?.items.slice(0, shown).map((x) => (
             <li key={x.contractKey} className="rounded-2xl border border-slate-100 bg-white/80 p-3">
@@ -61,7 +71,7 @@ export function Advances({ meta }: { meta: Meta }) {
                 {!x.recoupable && <Pill tone="muted">Mahsup edilmez</Pill>}
                 {d.can.advance && (
                   <button type="button" className={`${btnGhost} ml-auto`} onClick={() => setEdit(x)}>
-                    {x.opening ? 'Açılışı değiştir' : 'Açılış gir'}
+                    {x.opening ? 'Açılış bakiyesini değiştir' : 'Açılış bakiyesi gir'}
                   </button>
                 )}
               </div>
@@ -70,7 +80,12 @@ export function Advances({ meta }: { meta: Meta }) {
                 <span>Avans <b className="font-mono tabular-nums">{money(x.advance, x.currency)}</b></span>
                 <span>Kalan <b className="font-mono tabular-nums">{x.remaining != null ? money(x.remaining, x.currency) : '—'}</b></span>
                 <span>Dönem telifi <b className="font-mono tabular-nums">{money(x.periodGross, x.currency)}</b></span>
-                {x.yearsToRecoup != null && <span>Kapanma ≈ <b>{num(x.yearsToRecoup, 1)} yıl</b></span>}
+                {x.yearsToRecoup != null && (
+                  <span className="inline-flex items-center gap-1">
+                    Kapanma ≈ <b>{num(x.yearsToRecoup, 1)} yıl</b>
+                    <Explain label="Kapanma süresi">Bu dönemin telifi aynı hızla sürerse kalan avansın kaç yılda telifle kapanacağı.</Explain>
+                  </span>
+                )}
                 {x.opening && <span className="text-canvas-muted">Açılış {money(x.opening.amount, x.opening.currency)} · {day(x.opening.asOf)} · {x.opening.by}</span>}
               </div>
             </li>

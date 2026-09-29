@@ -135,7 +135,7 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
 
       <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
         <div className="text-[13px] font-semibold text-canvas-ink">
-          Bir soruda “{c.term}” geçtiğinde ZEKİ {maps.length > 1 ? 'şu tanımlardan uygun olanı' : 'şunu'} kullanır:
+          Bir soruda “{c.term}” geçtiğinde Zeki AI {maps.length > 1 ? 'şu tanımlardan uygun olanı' : 'şunu'} kullanır:
         </div>
         <div className="mt-3 space-y-3">
           {maps.map((m: ConceptMapping) => (
@@ -280,7 +280,7 @@ function useDescribe(tablePattern: string) {
   return { describe, accept, dismiss };
 }
 
-const errOf = (e: unknown) => (e ? (e instanceof EngineAuthError ? 'Oturum gerekli.' : (e as Error).message || 'Kaydedilemedi.') : null);
+const errOf = (e: unknown) => (e ? (e instanceof EngineAuthError ? 'Oturumunuz kapanmış; yeniden giriş yapın.' : (e as Error).message || 'Kaydedilemedi.') : null);
 
 /** Açıklaması eksik bir kolon: ne olduğu, örnek değerleri, varsa ZEKİ'nin önerisi ve yazma alanı. */
 function MissingColumn({ c, tablePattern, canWrite }: { c: GapColumn; tablePattern: string; canWrite: boolean }) {
@@ -305,7 +305,7 @@ function MissingColumn({ c, tablePattern, canWrite }: { c: GapColumn; tablePatte
         <div className="mt-3 rounded-xl border border-canvas-violet/20 bg-canvas-violet/[0.06] p-3">
           <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-canvas-violet">
             <Sparkles className="h-3.5 w-3.5" />
-            ZEKİ'nin tahmini
+            Zeki AI'ın tahmini
           </div>
           <p className="mt-1 text-[13px] leading-snug text-canvas-ink">{c.suggestion.text}</p>
           {canWrite && !writing && (
@@ -450,7 +450,7 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-[15px] font-extrabold">Anlamı yazılmamış {nf.format(d.missing.length)} alan</h3>
             <span className="text-[12px] text-canvas-muted">
-              {canWrite ? 'Doldurdukça ZEKİ bu alanları sorularda doğru kullanır.' : 'Açıklama yazmak yöneticilere açık.'}
+              {canWrite ? 'Doldurdukça Zeki AI bu alanları sorularda doğru kullanır.' : 'Açıklama yazmak yöneticilere açık.'}
             </span>
           </div>
           <ul className="space-y-2">
@@ -624,7 +624,7 @@ function GlossaryScreenInner() {
       id: 'terimler',
       icon: BookOpen,
       title: 'Terimler',
-      help: '“Ciro”, “iade” gibi kelimeleri ZEKİ nasıl hesaplıyor',
+      help: '“Ciro”, “iade” gibi kelimeleri Zeki AI nasıl hesaplıyor; onaylı her terimin formülü ve kaynağı',
       stat: conceptsQ.data ? `${nf.format(terms.length)} onaylı terim` : '…',
     },
     {
@@ -647,7 +647,7 @@ function GlossaryScreenInner() {
     <Shell
       head={{
         tenant: 'Timaş Yayınları',
-        section: 'Yapay Zeka Raporları',
+        section: 'Yönetim',
         crumb: 'Veri sözlüğü',
         source: TABS.find((t) => t.id === tab)?.title ?? '',
         presence: 'canlı',
@@ -733,7 +733,7 @@ function GlossaryScreenInner() {
                   {tab === 'eksikler' && (summary?.suggestions ?? 0) > 0 && (
                     <label className="flex min-h-9 cursor-pointer items-center gap-1.5 sm:min-h-0">
                       <input type="checkbox" checked={onlySuggested} onChange={(e) => setOnlySuggested(e.target.checked)} className="h-3.5 w-3.5 accent-[#7c5cff]" />
-                      Yalnız ZEKİ'nin tahmini olanlar
+                      Yalnız Zeki AI'ın tahmini olanlar
                     </label>
                   )}
                 </div>
@@ -752,7 +752,7 @@ function GlossaryScreenInner() {
 
               <div className="mt-1.5 flex-1 space-y-1 overflow-auto pr-1">
                 {loading && <Spinner />}
-                {!loading && authRequired && <Empty>Oturum gerekli.</Empty>}
+                {!loading && authRequired && <Empty>Oturumunuz kapanmış; yeniden giriş yapın.</Empty>}
                 {!loading && !authRequired && (tab === 'terimler' ? conceptsQ.error : gapsQ.error) && (
                   <Empty>{errOf(tab === 'terimler' ? conceptsQ.error : gapsQ.error)}</Empty>
                 )}
@@ -814,7 +814,7 @@ function GlossaryScreenInner() {
                   ))}
 
                 {!loading && !authRequired && (tab === 'terimler' ? shownTerms.length === 0 : shownTables.length === 0) && (
-                  <Empty>{q ? 'Aramaya uyan kayıt yok.' : tab === 'eksikler' ? 'Eksik açıklama kalmadı.' : 'Kayıt yok.'}</Empty>
+                  <Empty>{q ? 'Aramaya uyan kayıt yok; başka bir kelime deneyin.' : tab === 'eksikler' ? 'Eksik açıklama kalmadı.' : tab === 'terimler' ? 'Henüz onaylı terim yok; terimler «Onaylar» ekranında onaylanınca burada görünür.' : 'Bu süzgeçte tablo yok; «Boş tabloları da göster»i deneyin.'}</Empty>
                 )}
               </div>
             </div>

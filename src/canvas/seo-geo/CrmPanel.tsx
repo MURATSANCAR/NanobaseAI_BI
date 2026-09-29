@@ -1,5 +1,6 @@
 import { Check, ExternalLink, Minus } from 'lucide-react';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, type CrmBook } from './api';
+import { ExplainLabel } from '../components/Explain';
 
 /** Ürünün CRM kitap kartı: internette gösterim hakkı (Google önizlemesi, tadımlık PDF), yayın durumu ve SEO/GEO'ya
  *  kaynak olabilecek bilgiler. Yalnız okunur; hak kararı ön süzgeçtir, kesin söz telif biriminindir. */
@@ -9,7 +10,7 @@ export default function CrmPanel({ book, tsoft }: { book: CrmBook | null; tsoft?
       <section className="sg-card" aria-label="CRM kitap kartı">
         <h2>CRM kitap kartı</h2>
         <p className="sg-sub" style={{ margin: 0 }}>
-          Bu ürünün barkodu CRM’deki hiçbir kitap kartıyla eşleşmedi; hak ve yayın durumu bilinmiyor. Barkod ya da CRM kartındaki EAN-13 kontrol edilmeli.
+          Bu ürünün barkodu CRM’deki hiçbir kitap kartıyla eşleşmedi; hak ve yayın durumu bilinmiyor. T-soft’taki barkod ile CRM kartındaki 13 haneli barkod (EAN-13) aynı olmalı; birinde yazım hatası olabilir.
         </p>
       </section>
     );
@@ -40,8 +41,8 @@ export default function CrmPanel({ book, tsoft }: { book: CrmBook | null; tsoft?
   ];
   const hints = [
     tsoft && tsoft.words < 80 && (book.summary || book.promo) && 'T-soft açıklaması kısa; CRM’deki özet ve tanıtım metni açıklamaya kaynak olabilir.',
-    book.video && 'CRM’de tanıtım videosu var; ürün sayfasında video şeması (VideoObject) kullanılabilir.',
-    book.originalTitle && 'Özgün ad sayfada ve şemada (translationOfWork) yer alırsa özgün adla yapılan aramalarda da bulunur.',
+    book.video && 'CRM’de tanıtım videosu var; ürün sayfasına videonun yapısal verisi eklenirse Google video sonuçlarında da çıkabilir.',
+    book.originalTitle && 'Özgün ad sayfada ve yapısal veride yer alırsa kitap özgün adıyla yapılan aramalarda da bulunur.',
   ].filter(Boolean) as string[];
 
   return (
@@ -74,7 +75,9 @@ export default function CrmPanel({ book, tsoft }: { book: CrmBook | null; tsoft?
               <tr>
                 <th>Taraf</th>
                 <th>Durum</th>
-                <th style={{ textAlign: 'center' }}>İnternet</th>
+                <th style={{ textAlign: 'center' }}>
+                  <ExplainLabel label="İnternet">Sözleşmenin, kitabın bir bölümünü internette göstermeye (Google Kitaplar önizlemesi, tadımlık PDF) izin verip vermediği.</ExplainLabel>
+                </th>
                 <th style={{ textAlign: 'center' }}>E-kitap</th>
                 <th style={{ textAlign: 'center' }}>Z-kitap</th>
                 <th style={{ textAlign: 'center' }}>Sesli</th>

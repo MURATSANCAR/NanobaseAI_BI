@@ -5,6 +5,7 @@ import { Panel } from '../kit';
 import SqlInfo from '../../components/SqlInfo';
 import { productionApi, type ProdCard } from './api';
 import { CardRow } from './CardsTab';
+import { EmptyHint } from '../../components/Explain';
 
 /** Gecikmeler: planı geçmiş, gerçekleşmemiş adımlar. Basamaklı bildirim: gecikme ayardaki günü aşınca yöneticiye çıkar. */
 export default function DelaysTab({ onOpen }: { onOpen: (id: string) => void }) {
@@ -30,7 +31,9 @@ export default function DelaysTab({ onOpen }: { onOpen: (id: string) => void }) 
         </p>
       </div>
       {list.length === 0 ? (
-        <p className="px-1 py-3 text-[12px] text-canvas-muted">Kayıt yok.</p>
+        <div className="mt-2">
+          <EmptyHint title={key === 'yonetici' ? 'Yöneticiye çıkan gecikme yok' : 'Sorumluda bekleyen gecikme yok'} why="Planı geçmiş, gerçekleşmemiş adım olunca kart burada görünür." />
+        </div>
       ) : (
         <ul className="mt-2 space-y-1.5">
           {list.map((c) => (

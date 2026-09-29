@@ -32,7 +32,7 @@ export default function PublicSalesTab() {
           <div className="min-w-0">
             <h2 className="text-[16px] font-extrabold tracking-tight">Kamu kurumlarına satış</h2>
             <p className="max-w-[80ch] text-[12px] text-canvas-muted">
-              Logo faturalı satış (iade düşülmüş net ciro). Kamu: CRM'de «Devlet Kurumu» ya da «Resmi» işaretli firmalar (Logo cari bağıyla) ve Logo'da satış kanalı {d?.kanal ?? 'KURUM'} olan cariler.
+              Kamu kurumlarına yaptığımız faturalı satışlar (Logo, iadeler düşülmüş). Kamu sayılanlar: CRM'de «Devlet Kurumu» ya da «Resmi» işaretli ve Logo carisine bağlı firmalar ile Logo'da satış kanalı {d?.kanal ?? 'KURUM'} olan cariler.
             </p>
           </div>
           <div className="flex items-end gap-2">

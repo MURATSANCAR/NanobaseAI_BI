@@ -195,7 +195,7 @@ function DecisionForm({ t, c, meta }: { t: TitleDetail; c: Contract; meta: Meta 
       </label>
       <button type="button" className={btnPrimary} disabled={!gerekce.trim() || m.isPending} onClick={() => m.mutate()}>
         {m.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-        Kararı yaz
+        Kararı kaydet
       </button>
     </div>
   );
@@ -245,7 +245,7 @@ function ListingRow({ t, chip, meta }: { t: TitleDetail; chip: TitleDetail['plat
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Platform fiyatı</span>
-            <input className={field} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} />
+            <input className={field} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} placeholder="Örn. 89,90" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Not</span>
@@ -288,11 +288,11 @@ function PriceBox({ t, meta }: { t: TitleDetail; meta: Meta }) {
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[160px_minmax(0,1fr)_auto] sm:items-end">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Dijital fiyat (₺)</span>
-            <input className={field} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} placeholder="boş: kararı kaldır" />
+            <input className={field} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} placeholder="Boş bırakılırsa karar kalkar" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Gerekçe</span>
-            <input className={field} value={gerekce} onChange={(e) => setGerekce(e.target.value)} />
+            <input className={field} value={gerekce} onChange={(e) => setGerekce(e.target.value)} placeholder="Örn. benzer e-kitapların fiyatı" />
           </label>
           <button type="button" className={btnPrimary} disabled={m.isPending || (!!fiyat.trim() && !gerekce.trim())} onClick={() => m.mutate()}>Kaydet</button>
         </div>

@@ -58,10 +58,13 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
         {meta.me.canExport && d && (
           <a className={btnGhost} href={fieldApi.weeklyXlsxUrl({ hafta: week, temsilci })} download>
             <Download aria-hidden className="h-4 w-4" />
-            Excel
+            Excel indir
           </a>
         )}
       </div>
+      <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">
+        Temsilci başına satış (yıl başından ve geçen yılın aynı dönemi), hedef oranı, vadesi geçmiş alacak, CRM tahsilat onayları ve haftanın ziyaretleri. Hedef oranı %80'in altındaysa kırmızı yazar.
+      </p>
       {!meta.me.canPerformance && (
         <Note tone="info">Temsilci karşılaştırması yetkiyle açılır; burada yalnız kendi satırınız görünür.</Note>
       )}
@@ -70,11 +73,11 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
       {q.isLoading ? (
         <Loading />
       ) : !d ? null : d.items.length === 0 ? (
-        <Empty>Bu hafta için rapor satırı yok.</Empty>
+        <Empty title="Bu hafta için rapor satırı yok">Seçtiğiniz haftada gösterilecek temsilci verisi bulunmuyor. Oklarla başka bir haftaya geçmeyi deneyin.</Empty>
       ) : (
         <>
           <p className="px-1 text-[11.5px] text-canvas-muted">
-            {fmtDay(d.start)} – {fmtDay(d.end)} · satış ve alacak {fmtDay(d.asof)} sabahki veriden (Logo {fmtDay(d.dataEnd)} tarihine kadar). Vadesi geçmiş tutarlar yaklaşıktır (FIFO).
+            {fmtDay(d.start)} – {fmtDay(d.end)} · satış ve alacak {fmtDay(d.asof)} sabahki veriden (Logo {fmtDay(d.dataEnd)} tarihine kadar). Vadesi geçmiş tutarlar yaklaşıktır: ödemeler en yeni vadelerden geriye doğru dağıtılır.
             <SqlInfo k={d.kaynaklar} alan="items" label="Haftalık saha raporu" className="ml-0.5" />
           </p>
           <ul className="flex flex-col gap-2 lg:hidden">
@@ -86,7 +89,7 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
             <TableWrap>
               <thead>
                 <tr>
-                  {['Temsilci', 'Cari', 'Yıl başından', 'Geçen yıl', 'Hedef oranı', 'Vadesi geçmiş', '90+ gün', 'Onay bekleyen', 'Reddedilen', 'Ziyaret', 'Notlu'].map((h) => (
+                  {['Temsilci', 'Müşteri', 'Yıl başından', 'Geçen yıl', 'Hedef oranı', 'Vadesi geçmiş', '90+ gün', 'Onay bekleyen', 'Reddedilen', 'Ziyaret', 'Notlu'].map((h) => (
                     <th key={h} className={th}>
                       {h === 'Temsilci' ? h : <InfoLabel k={d.kaynaklar} alan="items" label={h}>{h}</InfoLabel>}
                     </th>
@@ -137,7 +140,7 @@ function RepCard({ r }: { r: RepRow }) {
     <li className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <div className="flex items-baseline justify-between gap-2">
         <div className="min-w-0 truncate text-[13.5px] font-extrabold">{r.ad}</div>
-        <div className="shrink-0 text-[11.5px] text-canvas-muted">{fmtCount(r.cari)} cari</div>
+        <div className="shrink-0 text-[11.5px] text-canvas-muted">{fmtCount(r.cari)} müşteri</div>
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
         {cells.map(([k, v, bad]) => (

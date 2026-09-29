@@ -32,11 +32,12 @@ export default function GuidesScreen() {
     <LearningFrame
       crumb="Eğitim ve gelişim"
       title="Modül rehberleri"
-      lead="Her ekran için kısa, göreve dayalı rehber. Yayımlanan rehber o ekranın üst şeridindeki «Nasıl kullanılır» düğmesinden açılır."
+      lead="Her ekran için kısa, adım adım kullanım rehberi. Zeki AI taslak yazar, yetkili kişi düzeltip yayımlar; yayımlanan rehber o ekranın üst şeridindeki «Nasıl kullanılır» düğmesinden açılır."
     >
       {q.error && <Note tone="err">{errText(q.error, 'Rehberler okunamadı.')}</Note>}
       <Block title="Ekranlar" help={`${ITEMS.length} ekran · ${published} rehber yayında`} info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Yayındaki rehber sayısı" />}
         action={<input className={`${field} sm:w-[260px]`} placeholder="Ekran ara" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Ekran ara" />}>
+        {!shown.length && <p className="text-[12px] text-canvas-muted">Aramaya uyan ekran yok; başka bir kelime deneyin.</p>}
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((i) => {
             const g = byRoute.get(i.id);
@@ -50,7 +51,7 @@ export default function GuidesScreen() {
                     {!g && <Pill tone="muted">Rehber yok</Pill>}
                     {g && <Pill tone={g.published ? 'ok' : 'warn'}>{g.published ? `Yayında · sürüm ${g.version}` : 'Taslak'}</Pill>}
                     {g?.dirty && <Pill tone="warn">Yayımlanmamış değişiklik</Pill>}
-                    {g && g.published && <Pill tone="muted">Yaradı {g.votes.useful} · yaramadı {g.votes.notUseful}</Pill>}
+                    {g && g.published && <Pill tone="muted">Okuyan oyu: yaradı {g.votes.useful} · yaramadı {g.votes.notUseful}</Pill>}
                   </span>
                 </button>
               </li>
@@ -139,7 +140,7 @@ function GuideEditor({ item, guide, info, onClose }: { item: Item; guide: Guide 
               <span className={labelCls}>Metin</span>
               <textarea className={`${field} min-h-[260px] font-mono text-[12.5px]`} value={body} onChange={(e) => setBody(e.target.value)} disabled={!canWrite}
                 placeholder={'## Ne işe yarar\n…\n\n## Adımlar\n1. …\n2. …'} />
-              <span className="text-[11px] text-canvas-muted">«## » başlık, «1. » adım, «- » madde. Altyapı ya da model adı yazılmaz; yapay zekâ özelliği «Zeki AI» diye geçer.</span>
+              <span className="text-[11px] text-canvas-muted">«## » başlık, «1. » adım, «- » madde. Altyapı ya da teknoloji adı yazılmaz; yapay zekâ özelliği «Zeki AI» diye geçer.</span>
             </label>
             {canWrite && info.modelVar && (
               <label className="flex flex-col gap-1">

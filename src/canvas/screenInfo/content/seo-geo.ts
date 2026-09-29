@@ -19,7 +19,7 @@ const CONTENT: ScreenInfoMap = {
     ],
     actions: [
       '«T-soft’tan yeniden oku» ile ürünleri hemen yeniden okutun.',
-      '«Önerileri önceden üret» ile gece beklemeden bir saatlik öneri turu başlatın.',
+      '«Önerileri şimdi hazırlat» ile gece beklemeden bir saatlik öneri turu başlatın.',
       'Bir sorun kuralına tıklayıp o sorunu taşıyan ürünleri süzün.',
     ],
   },
@@ -118,7 +118,7 @@ const CONTENT: ScreenInfoMap = {
 
   'seo-kaynak': {
     summary:
-      'İzlenen sorulara yapay zekâ motorlarının verdiği cevaplarda kaynak gösterilen siteler. Sık kaynak olup Timaş’ı anmayan siteler tanıtım ve iletişim için hedef listesidir.',
+      'İzlenen sorulara yapay zekâ servislerinin verdiği cevaplarda kaynak gösterilen siteler. Sık kaynak olup Timaş’ı anmayan siteler tanıtım ve iletişim için hedef listesidir.',
     how: [
       'Yapay zekâ görünürlüğü ölçümlerindeki kaynak adresleri site başına toplanır.',
       'Her site türüne ayrılır: kitapçı, pazar yeri, haber sitesi, yayınevi, blog, ansiklopedi, rakip…',
@@ -201,7 +201,7 @@ const CONTENT: ScreenInfoMap = {
     data: 'Google Search Console, CRM kitap kartları (tema, yaş) ve sezon takvimi',
     refresh: 'Her gece',
     jobs: [{ name: 'Öneri yenileme', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Soru önerileri güncel arama ve CRM verisiyle yeniden kurulur.' }],
-    actions: ['Öneriyi «Ekle» ile izlenen sorulara alın ya da reddedin.', 'Kaynağa ve duruma göre süzün.', '«Önerileri yenile» ile hemen yeniden kurun.'],
+    actions: ['Öneriyi «Ölçüme ekle» ile izlenen sorulara alın ya da reddedin.', 'Kaynağa ve duruma göre süzün.', '«Önerileri yenile» ile hemen yeniden kurun.'],
   },
 
   'seo-youtube': {
@@ -237,15 +237,15 @@ const CONTENT: ScreenInfoMap = {
 
   'seo-ai': {
     summary:
-      'İzlenen okur soruları yapay zekâ motorlarına sorulur; cevapta Timaş’ın anılıp anılmadığı, sitemizin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir.',
+      'İzlenen okur soruları ChatGPT, Gemini, Perplexity ve Claude gibi yapay zekâ servislerine sorulur; cevapta Timaş’ın anılıp anılmadığı, sitemizin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir.',
     how: [
-      'Sorular motorların resmî erişim yollarıyla sorulur; anahtarı girilmemiş motor ölçülmez, sonuç uydurulmaz.',
-      'Her soru her motora varsayılan olarak 7 günde bir sorulur; motor başına günlük sınır ekranda görünür.',
+      'Sorular servislerin resmî erişim yollarıyla sorulur; anahtarı girilmemiş servis ölçülmez, sonuç uydurulmaz.',
+      'Her soru her servise varsayılan olarak 7 günde bir sorulur; servis başına günlük soru hakkı ekranda görünür.',
       'Gönderilen yalnız kamuya açık okur sorusudur; şirket verisi gönderilmez.',
     ],
-    data: 'Yapay zekâ motorlarının cevapları',
+    data: 'Yapay zekâ servislerinin cevapları',
     refresh: 'Her gece, sırası gelen sorular',
-    jobs: [{ name: 'Yapay zekâ ölçümü', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Sırası gelen sorular anahtarı tanımlı motorlara sorulur ve cevaplar kaydedilir.' }],
+    jobs: [{ name: 'Yapay zekâ ölçümü', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Sırası gelen sorular anahtarı tanımlı servislere sorulur ve cevaplar kaydedilir.' }],
     actions: ['«Soru ekle» ile izlenecek soru ekleyin, gereksizini silin.', '«Şimdi ölç» ile ölçümü hemen başlatın.', 'Bir soruyu açıp cevaptaki kaynakları ve geçen kitapları görün.'],
   },
 
@@ -274,7 +274,7 @@ const CONTENT: ScreenInfoMap = {
     refresh: 'Her gece 03:00 eşitlemesiyle',
     actions: [
       'Önerileri tek tek onaylayın ya da reddedin.',
-      '«Kesinlerin hepsini onayla» ya da «Yüksekleri onayla» ile toplu onay verin.',
+      '«Kesin eşleşmelerin hepsini onayla» ya da «Yüksek güvenlilerin hepsini onayla» ile toplu onay verin.',
       '«Onaylananları indir (CSV)» ile T-soft paneline girilecek listeyi alın.',
     ],
   },
@@ -304,7 +304,7 @@ const CONTENT: ScreenInfoMap = {
 
   'seo-kimlik': {
     summary:
-      'Google’ın bilgi paneli ve yapay zekâ motorları Timaş’ı, yazarlarını ve kitaplarını Wikidata, Wikipedia ve sitedeki kurum bilgisinden tanır. Bu ekran bu kayıtların eksiklerini gösterir.',
+      'Google’ın bilgi paneli ve yapay zekâ servisleri Timaş’ı, yazarlarını ve kitaplarını Wikidata, Wikipedia ve sitedeki kurum bilgisinden tanır. Bu ekran bu kayıtların eksiklerini gösterir.',
     how: [
       'Kurum: Wikidata kaydı ve anasayfadaki kurum şeması (ad, logo, sosyal hesaplar) denetlenir.',
       'Çok satan yazarlar Wikidata ve Wikipedia’da aranır; kitapların ISBN’i Wikidata’da var mı bakılır.',
@@ -314,12 +314,12 @@ const CONTENT: ScreenInfoMap = {
     data: 'Wikidata, Wikipedia, sitedeki kurum şeması, T-soft ürünleri ve CRM kitap kartları',
     refresh: 'Her gece, eskimiş (30 günden eski) kayıtlar',
     jobs: [{ name: 'Kimlik denetimi', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Eskimiş kayıtlara yarım saatlik süreyle yeniden bakılır; kalan ertesi geceye kalır.' }],
-    actions: ['Kurum, Yazarlar ve Google Kitaplar hazırlığı sekmeleri arasında geçin.', '«Eskimişlere yeniden bak» ile denetimi hemen başlatın.', 'Önerilen kurum şemasını «Kopyala» ile alıp site yöneticisine iletin.'],
+    actions: ['Kurum, Yazarlar ve Google Kitaplar hazırlığı sekmeleri arasında geçin.', '«Eskimişlere yeniden bak» ile denetimi hemen başlatın.', 'Önerilen kurum bilgisi kodunu «Kodu kopyala» ile alıp site yöneticisine iletin.'],
   },
 
   'seo-rehber': {
     summary:
-      'Okurun «hangi kitabı okumalıyım?» sorusuna cevap veren liste ve rehber sayfası taslakları. Yapay zekâ motorları ve Google bu tür sayfaları kaynak gösterir.',
+      'Okurun «hangi kitabı okumalıyım?» sorusuna cevap veren liste ve rehber sayfası taslakları. Yapay zekâ servisleri ve Google bu tür sayfaları kaynak gösterir.',
     how: [
       'Konular Google’da liste ya da öneri arayan aramalardan ve izlenen sorulardan çıkar.',
       'Kitaplar yalnız kendi kataloğumuzdan ve CRM kartlarından seçilir; neden seçildiği yazılır.',
@@ -361,7 +361,7 @@ const CONTENT: ScreenInfoMap = {
     data: 'Teknik tarama ve T-soft ürün ve sayfa kayıtları',
     refresh: 'Her gece, teknik tarama bittikten sonra',
     jobs: [{ name: 'Bağlantı hesabı', when: 'Her gece, teknik tarama bittikten sonra', what: 'Site içi bağlantı haritası yeniden hesaplanır.' }],
-    actions: ['Sekmeler arasında bağlantısız kitaplar, derinlik, yazar–kitap ve bağlantı metinlerini inceleyin.', 'Bir sayfanın «Bağlantıları gör» ile gelen ve giden bağlantılarını açın.'],
+    actions: ['Sekmeler arasında bağlantısız kitaplar, derinlik, yazar–kitap ve bağlantı metinlerini inceleyin.', 'Bir sayfanın «Bağlantıları gör» ile ya da üstteki kutuya adres yazıp «Bağlantıları göster» ile gelen ve giden bağlantılarını açın.'],
   },
 
   'seo-yorum': {
@@ -521,7 +521,7 @@ const CONTENT: ScreenInfoMap = {
 
   'seo-sema': {
     summary:
-      'Kitap sayfalarının yapısal verisi (şema): Google ve yapay zekâ motorlarının kitabı, yazarı, fiyatı ve stoku okuduğu işaretlemenin eksikleri.',
+      'Kitap sayfalarının yapısal verisi (şema): Google ve yapay zekâ servislerinin kitabı, yazarı, fiyatı ve stoku okuduğu işaretlemenin eksikleri.',
     how: [
       'Sayfalar yalnız okunarak, saniyede bir taranır; ISBN, yazar, yayınevi, fiyat, stok, puan, soru–cevap gibi alanlar aranır.',
       'Başlık, meta açıklama ve asıl adres (canonical) etiketleri de denetlenir.',
@@ -530,12 +530,12 @@ const CONTENT: ScreenInfoMap = {
     data: 'Canlı site taraması ve T-soft ürünleri',
     refresh: 'Her gece',
     jobs: [{ name: 'Şema taraması', when: 'Her gece, 03:00 eşitlemesinden sonra', what: 'Kitap sayfaları en çok iki saat boyunca taranır.' }],
-    actions: ['Eksiği olan sayfaları süzün.', '«Taramayı başlat» ile bir saatlik taramayı hemen başlatın.', '«Tema isteği belgesi»ni indirip site yöneticisine iletin.'],
+    actions: ['Eksiği olan sayfaları süzün.', '«Taramayı başlat» ile bir saatlik taramayı hemen başlatın.', '«Tema isteği belgesini indir» ile belgeyi alıp site yöneticisine iletin.'],
   },
 
   'seo-llms': {
     summary:
-      'Yapay zekâ motorlarına sitenin ne olduğunu, hangi yayınevlerini, kategorileri, yazarları ve kitapları taşıdığını anlatan llms.txt dosyasının önerisi.',
+      'Yapay zekâ servislerine sitenin ne olduğunu, hangi yayınevlerini, kategorileri, yazarları ve kitapları taşıdığını anlatan llms.txt dosyasının önerisi.',
     how: [
       'Dosya yalnız T-soft’tan okunan veriden kurulur; uydurma bilgi girmez.',
       'İki dosya vardır: özet (llms.txt) ve bütün aktif kitapları içeren tam dosya (llms-full.txt).',
@@ -543,7 +543,7 @@ const CONTENT: ScreenInfoMap = {
     ],
     data: 'T-soft ürünleri',
     refresh: 'Her gece 03:00 eşitlemesiyle',
-    actions: ['İki dosya arasında geçip içeriğe bakın.', 'Dosyayı indirip site yöneticisine iletin.'],
+    actions: ['İki dosya arasında geçip içeriğe bakın.', '«Dosyayı indir» ile alıp site yöneticisine iletin; site yöneticisi T-soft paneliyle site köküne yükler.'],
   },
 
   'seo-crm': {
@@ -582,7 +582,7 @@ const CONTENT: ScreenInfoMap = {
     summary: 'Ürün önerileri için verilen onay ve ret kararları: kim, ne zaman, hangi alanlar ve puanın öncesi ile sonrası.',
     how: [
       'Ürün denetimi ekranında verilen her karar burada listelenir.',
-      'Onaylanan metinler kayıt altında durur; T-soft’a ya da siteye gönderilmez.',
+      'Onaylanan metinler yalnız kayıt altında durur; T-soft’a, CRM’e ya da siteye gönderilmez.',
     ],
     data: 'SEO & GEO karar kayıtları',
     refresh: 'Karar verildikçe anında',

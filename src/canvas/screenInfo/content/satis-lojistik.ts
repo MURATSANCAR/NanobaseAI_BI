@@ -239,6 +239,137 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  // ---- Saha, okul, kurumsal, ihale ve müşteri ilişkileri: menüde olmayan alt/detay sayfaları ----
+
+  'path:/ilk-dagilim/:stok': {
+    summary:
+      "Tek kitabın dağılım planı: kaç adedin hangi bölge, kanal ve müşteriye gideceği, depoda kalacak rezerv, önerinin gerekçesi ve onay durumu.",
+    how: [
+      "İlk öneriyi Zeki AI benzer kitapların ilk 8 haftadaki müşteri dağılımına bakarak kurar; adetler Logo ve CRM verisinden hesaplanır.",
+      "Taslakta bölge × kanal hücresini ya da müşteri satırını gerekçeyle düzeltebilirsiniz; hücre toplamı hücredeki müşterilere oranla dağılır.",
+      "Dağıtılacak adet ile rezervin toplamı stoğu aşarsa plan onaya gönderilemez; onaya gönderen kişi planı onaylayamaz.",
+      "Onaylı plan 8 hafta boyunca sevk, fatura ve iadeyle izlenir; portal CRM'e ve Logo'ya bir şey yazmaz.",
+    ],
+    data: "Logo depo girişi, stok, satış, sevk ve iade; CRM üretim kartı, dağılım siparişleri ve cari sahipleri; onaylı satış bütçesi",
+    actions: [
+      "Plan yoksa Zeki AI ile plan önerisi oluşturun",
+      "Rezervi, hücreleri ve müşteri adetlerini gerekçeyle düzeltin",
+      "Planı onaya gönderin, onaylayın ya da gerekçeyle geri gönderin",
+      "Onaylı planın sevk listesini Excel olarak indirin; gerekirse «Revize et» ile yeni sürüm açın",
+    ],
+  },
+
+  'path:/saha/musteri/:code': {
+    summary:
+      "Tek müşterinin ziyaret öncesi brifingi: özet, ödeme ve vadesi geçmiş alacak, siparişler, hedef, önerilecek kitaplar ve görüşme notları.",
+    how: [
+      "Rakamlar Logo ve CRM'den gelir; Zeki AI yalnız kısa özeti yazar ve özetteki her sayı aşağıdaki verilerde geçmek zorundadır.",
+      "Vadesi geçmiş tutarlar yaklaşıktır: ödemeler en yeni vadelerden geriye doğru dağıtılır.",
+      "Görüşme notu, ziyaret planı ve ödeme planı yalnız portalda tutulur; tahsilat CRM'e girilir, portal CRM'e ve Logo'ya yazmaz.",
+      "Gizli not yalnız yazana görünür ve Zeki AI özetine girmez.",
+    ],
+    data: "CRM atama, sipariş ve tahsilat kayıtları; Logo bakiye, fatura, ödeme ve çek hareketleri",
+    refresh: "Brifing açıldığında canlı okunur (5 dakika saklanır).",
+    actions: [
+      "Görüşme notu bırakın ya da ziyareti planlayın",
+      "Vadesi geçmiş borç için ödeme planı önerin",
+      "Yetkiniz varsa müşteriyi öncelik listesinde öne alın",
+      "Görüşmeden sonra takip e-postası taslağı yazdırın",
+    ],
+  },
+
+  'path:/okul-tanitim/:id': {
+    summary:
+      "Tek okulun kartı: profil ve öncelik puanı, Zeki AI ziyaret önerisi, bağlı ve önerilen bayiler, kademeye uygun katalog, geçmiş ziyaretler ve okul siparişleri.",
+    how: [
+      "Okul bilgileri CRM ziyaret yerlerinden gelir; öğrenci sayısı CRM'de metin alanı olduğundan sayıya çevrilemeyen değer «bilinmiyor» görünür.",
+      "Öncelik puanı kuralla hesaplanır; bileşenleri «Puan nasıl hesaplandı» altında yazar.",
+      "Katalog, seçtiğiniz sınıflara uygun ve stokta olan kitaplardan hazırlanır; sıra ildeki bayilerin satışına göredir.",
+      "Ziyaret raporu ve bayi eşleşmesi portalda tutulur; CRM'e bir şey yazılmaz.",
+    ],
+    data: "CRM ziyaret yerleri, etkinlikler ve siparişler; Logo satış ve stok",
+    actions: [
+      "Ziyaret raporu girin ya da okulu plana ekleyin",
+      "Kademeye uygun kataloğu hazırlayıp PDF olarak indirin",
+      "Bayi önerisini onaylayın ya da onaya önerin",
+      "Zeki AI'dan ziyaret hazırlık notu alın",
+    ],
+  },
+
+  'path:/kurumsal-satis/firsat/:id': {
+    summary:
+      "Tek kurum fırsatı: aşama, karar tarihi ve sonraki adım, teklif sürümleri, teklif mektubu ve kurumun geçmiş alımları.",
+    how: [
+      "Teklif paket önerisiyle ya da boş başlar; her kitabın stoğu, liste fiyatı ve birim maliyeti yanında görünür.",
+      "İndirim sınırı aşılır ya da kâr payı alt sınırın altına düşerse teklif müdür onayına gider; onaya gönderen onaylayamaz.",
+      "Zeki AI yalnız teklif mektubu taslağını yazar; rakamlar tablodan gelir.",
+      "Teklif belgesini indirip kuruma temsilci gönderir; portal B2B sitesine, CRM'e ve Logo'ya yazmaz.",
+    ],
+    data: "Portal fırsat ve teklif kayıtları; Logo kurum alımları, stok ve fiyat; CRM kurum kartı",
+    actions: [
+      "Fırsat bilgilerini ve aşamayı güncelleyin",
+      "Teklif açın, kitapları ve indirimi düzenleyin",
+      "Teklifi onaya gönderin; kurumun kararını «kabul» ya da «ret» olarak işleyin",
+      "Teklifi PDF ya da Excel olarak indirin",
+    ],
+  },
+
+  'path:/ihale/:id': {
+    summary:
+      "Tek ihale: ilan bilgileri ve uygunluk puanı, şartname kalemlerinin katalogla eşleşmesi, teklif tablosu, belge kontrol listesi, karar ve sonuç.",
+    how: [
+      "Şartname yüklenince Zeki AI özet çıkarır ve riskli koşulları işaretler; her madde şartnameden alıntıyla gösterilir.",
+      "Kalemler önce ISBN, sonra kitap adı ve yazarla eşleşir; emin olunamayanlarda Zeki AI aday seçer, düşük güvende karar size kalır.",
+      "Birim teklif fiyatı, KDV hariç liste fiyatı × fiyat oranıyla hesaplanır; başvuru kararı ve teklif fiyatı iki kişinin onayıyla kesinleşir.",
+      "Portal kuruma teklif göndermez; CRM'e ve Logo'ya yazmaz.",
+    ],
+    data: "Portal ihale kayıtları ve yüklenen dosyalar; Logo katalog, stok ve fiyat",
+    actions: [
+      "Şartname ve kalem listesini yükleyin, eşleşmeleri onaylayın ya da düzeltin",
+      "Teklif tablosunu Excel olarak indirin",
+      "Belge kontrol listesini arşivdeki belgelere bağlayın",
+      "Kararı onaya gönderin; teklif verilince sonucu girin",
+    ],
+  },
+
+  'path:/musteri-iliskileri/cariler': {
+    summary:
+      "Bütün carilerin listesi: kayıp riski puanı ve nedenleri, son 12 ay alımı ve değişimi; kanal, il, risk, segment ve temsilciye göre süzülür.",
+    how: [
+      "Liste varsayılan olarak risk × değer sırasıyla gelir: riski yüksek ve cirosu büyük olan önde.",
+      "Temsilci yalnız kendi carilerini görür; yetkisi olan, temsilci seçerek başka portföylere bakar.",
+      "Kayıp riski puanı kuralla hesaplanır; nedenler kartta etiket olarak yazar.",
+    ],
+    data: "Logo faturalı satış; CRM atamaları ve siparişleri",
+    actions: ["Süzün ve sıralayın", "Cariyi açıp ayrıntısına bakın", "Yetkiniz varsa listeyi CSV olarak indirin"],
+  },
+
+  'path:/musteri-iliskileri/cari/:kod': {
+    summary:
+      "Tek carinin ayrıntısı: kayıp riski ve nedeni, aylık alım grafiği, aksiyonlar ve sonuçları, aldığı kitaplar, CRM siparişleri, faturalar ve ziyaretler.",
+    how: [
+      "Neden kuraldan yazılır; Zeki AI 1–2 cümlelik özet yazabilir, özetteki her sayı kaynak veride geçmek zorundadır.",
+      "Yazdığınız aksiyonun sonucu 30 ve 90 gün sonra Logo'daki alımdan kendiliğinden ölçülür.",
+      "Telefon numarası yalnız carinin sahibi olan temsilciye, istediğinde CRM'den o an okunur.",
+      "Risk puanı limit ya da fiyatı değiştirmez; portal CRM'e ve Logo'ya yazmaz.",
+    ],
+    data: "Logo faturalı satış ve faturalar; CRM sipariş, ziyaret ve cari kayıtları; saha ekranının tahsilat göstergesi",
+    refresh: "Açıldığında canlı okunur (5 dakika saklanır).",
+    actions: ["Aksiyon yazın ya da güncelleyin", "Carinizse telefonla arayın", "Saha brifingine geçin"],
+  },
+
+  'path:/musteri-iliskileri/portfoyum': {
+    summary:
+      "Size atanmış carilerin telefon görünümü: önce bu hafta aranacak riskli cariler, sonra açık aksiyonlar ve diğer carileriniz.",
+    how: [
+      "Yalnız kendi carileriniz görünür; yetkiniz olsa da başkasının portföyü burada yer almaz.",
+      "Yüksek risk ve kayıp düzeyindeki cariler risk × değer sırasıyla üste çıkar.",
+      "Kartın yanındaki kalemle tek dokunuşta aksiyon yazarsınız; sonucu 30 ve 90 gün sonra ölçülür.",
+    ],
+    data: "Logo faturalı satış; CRM atamaları ve siparişleri",
+    actions: ["Portföyde arayın", "Aksiyon yazın", "Cari ayrıntısını açın"],
+  },
+
   stok: {
     summary:
       "Kitap başına Logo stoğu, ambar ve raf dağılımı, satış hızı ve stoğun kaç gün yeteceği; açık üretim kartı ve bekleyen siparişler.",
@@ -379,7 +510,7 @@ const CONTENT: ScreenInfoMap = {
       "Kargo firmasına, CRM'e, Logo'ya ya da müşteriye hiçbir şey gönderilmez.",
     ],
     data: "CRM sipariş, sevkiyat ve kargo kayıtları; Logo sevk ve fatura numaraları",
-    refresh: "Okuma 5 dakika saklanır; «Yenile» ile hemen okunur.",
+    refresh: "Okuma 5 dakika saklanır; «Verileri yenile» ile hemen okunur.",
     jobs: [
       {
         name: "Günlük kargo özeti",
@@ -390,8 +521,44 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       "Sipariş, fatura, takip no ya da müşteriyle gönderi arayın.",
       "Takip numarasız sevk ve kutulanıp bekleyen listelerini açın.",
-      "Yetkiniz varsa «Eşikler»den bekleme günlerini ayarlayın.",
+      "Yetkiniz varsa «Eşikleri ayarla» ile bekleme günlerini değiştirin.",
     ],
+  },
+
+  'path:/kargo/gonderi/:id': {
+    summary: "Tek siparişin depodan teslime kadarki yolculuğu: zaman çizelgesi, kargo firmasına aktarım sonucu, kargo kaydı, CRM sevkiyatı ve Logo faturası.",
+    how: [
+      "Zaman çizelgesi sipariş, depo, kutulama, sevk, kargo ve teslim tarihlerini hangi sistemden geldiğiyle sıralar.",
+      "Kargo kaydı siparişe takip numarasıyla bağlanır; bağlanamazsa teslim bilgisi görünmez.",
+      "Alıcı adı ile tutar ve desi yalnız yetkisi olanlara görünür.",
+      "Zeki AI müşteriye gecikme, özür ya da iade mesajı taslağı yazar; müşteri adı ve adresi ona verilmez, gönderimi siz yaparsınız.",
+    ],
+    data: "CRM sipariş, sevkiyat ve kargo kayıtları; Logo fatura numaraları",
+    actions: ["Takip numarasına tıklayıp kargo firmasının sayfasında izleyin.", "Mesaj taslağı hazırlayın, düzeltip kopyalayın ve «Gönderdim» diye işaretleyin (yetkiyle)."],
+  },
+
+  'path:/kargo/hatalar': {
+    summary: "Kargo firmasının sistemine aktarılamadığı için etiketi basılamayan ya da takip numarası oluşmayan siparişler ve firmadan dönen hata mesajı.",
+    how: [
+      "Son günlerin siparişlerinden, kargo firması aktarım alanında sonuç ya da mesaj olup takip numarası boş kalanlar listelenir.",
+      "Zeki AI her yeni hata mesajını bir kez okuyup adres, telefon, desi gibi sabit türlerden birine ayırır.",
+      "Aktarımı yeniden denemek CRM'deki sipariş ekranından yapılır; portal kargo firmasına istek göndermez.",
+    ],
+    data: "CRM siparişlerindeki kargo firması aktarım sonuçları",
+    refresh: "Okuma 5 dakika saklanır.",
+    actions: ["Firma ya da hata türüne göre süzün.", "Listeyi Excel olarak indirin (yetkiyle)."],
+  },
+
+  'path:/kargo/bekleyen': {
+    summary: "Kargoya verilmiş ama kargo firmasının kaydında hâlâ teslim edilmemiş ve iade de olmamış gönderiler, kaç gündür beklediğine göre.",
+    how: [
+      "Bekleme süresi = bugün − kargo irsaliyesinin tarihi.",
+      "Teslim için söz verilen tarih tutulmadığından «geç» yerine «kaç gündür bekliyor» yazılır; gün eşiğini siz seçersiniz.",
+      "Firma tablosu bekleyenleri süre aralıklarına böler; firmayı arayıp sormak için kullanın.",
+    ],
+    data: "CRM'deki kargo firması gönderi kayıtları",
+    refresh: "Okuma 5 dakika saklanır.",
+    actions: ["En az bekleme gününü, firmayı ve şehri seçin.", "Listeyi Excel olarak indirin (yetkiyle)."],
   },
 
   'kargo-firmalar': {
@@ -476,7 +643,7 @@ const CONTENT: ScreenInfoMap = {
       },
     ],
     actions: [
-      "Ufku seçip yük tablosunu ve eşik aşımlarını inceleyin.",
+      "Kaç ay ileriye bakacağınızı seçip yük tablosunu ve eşik aşımlarını inceleyin.",
       "Dengeleme önerisini kabul edin ya da reddedin.",
       "«Matbaa kapasitesi» ekranında matbaaların aylık adet ve forma kapasitesini girin.",
     ],
@@ -498,7 +665,30 @@ const CONTENT: ScreenInfoMap = {
         what: "Yaklaşan baskılar için kağıt alım önerisi üretir.",
       },
     ],
-    actions: ["Ufku seçip ay ve cins ayrıntısını açın.", "Kağıt bilgisi eksik kartları tamamlatın."],
+    actions: ["Kaç ay ileriye bakacağınızı seçip ay ve cins ayrıntısını açın.", "Kağıt bilgisi eksik kartları tamamlatın."],
+  },
+
+  'path:/tedarik/kapasite': {
+    summary: "Matbaaların ayda en çok kaç kitap ya da forma basabileceğini girdiğiniz ekran; «Baskı yükü» tablosu bu değeri sınır olarak kullanır.",
+    how: [
+      "Kapasite başka hiçbir sistemde tutulmaz; yalnız burada girilir.",
+      "Ay boş bırakılırsa değer her ay için geçerlidir; belirli bir ay için girilen değer o ay onun yerine kullanılır.",
+      "Kapasitesi girilmeyen matbaa, son 12 ayının en yoğun ayıyla karşılaştırılır; buna «kapasite» denmez.",
+    ],
+    data: "Portalda girilen kapasite kayıtları",
+    actions: ["Matbaa, ay ve aylık adet ya da forma kapasitesini girin («matbaa kapasitesi» yetkisiyle).", "Eski kaydı silin."],
+  },
+
+  'path:/tedarik/tedarikci/:cari': {
+    summary: "Tek bir matbaa ya da kağıtçının sayfası: açık işler, borç ve ödeme planı, alış faturaları, teslim karnesi ve depoya giren işler.",
+    how: [
+      "Borç ve vade dağılımı Logo'dan tahmini hesaplanır; Logo'da ödeme faturaya bağlanmadığı için kesin borç değildir.",
+      "Açık iş ve karne, cari CRM'deki bir matbaa adıyla eşlenmişse görünür.",
+      "Tutarlar yalnız «tedarikçi borç» yetkisi olanlara görünür.",
+      "Açık işler için Zeki AI şartname ve gecikme yazısı taslağı hazırlar; portal göndermez, siz gönderirsiniz.",
+    ],
+    data: "Logo cari hareketleri, ödeme planı ve faturalar; CRM üretim kartları",
+    actions: ["Vadesi geçmiş ödemeleri ve açık işleri inceleyin.", "Şartname ya da gecikme yazısı taslağı hazırlayıp kopyalayın (yetkiyle)."],
   },
 
   'tedarik-tedarikciler': {
@@ -539,7 +729,7 @@ const CONTENT: ScreenInfoMap = {
     ],
     data: "Logo baskı ve kağıt alış faturaları; CRM üretim kartlarının teknik bilgileri",
     refresh: "Okuma 5 dakika saklanır.",
-    actions: ["Kırılım seçip grupların birim maliyet değişimini karşılaştırın."],
+    actions: ["Cilt, sayfa sayısı, baskı tipi ya da matbaaya göre ayırıp adet başı bedelin değişimini karşılaştırın."],
   },
 };
 

@@ -8,6 +8,7 @@ import { BookCell, Chips, ExportLink } from '../platformKit';
 import { amazonApi } from './api';
 import { AmazonData, AmazonFrame, useAmazonMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 export default function AmazonRights() {
   const meta = useAmazonMeta();
@@ -21,8 +22,8 @@ export default function AmazonRights() {
   return (
     <AmazonFrame
       title="Haklar ve diller"
-      lead="CRM'deki etkin Telif Satış sözleşmeleri: hakkı yurtdışına satılmış kitaplar, ülke ve yabancı yayınevi, yanında kitabın yurtdışı faturalı satışı. Hak bilgisi olmayan kitap için «yurtdışında satılabilir» denmez."
-      aside={<input className={field} placeholder="Kitap ya da stok kodu" value={text} onChange={(e) => setText(e.target.value)} />}
+      lead="Çeviri ya da yayın hakkını yabancı bir yayınevine sattığımız kitaplar: hangi ülke, hangi yayınevi, sözleşme tarihleri ve kitabın yurtdışı satışı. Bilgi CRM'deki etkin Telif Satış sözleşmelerinden gelir. Listede olmayan kitap için hak durumu bilinmiyor demektir."
+      aside={<input className={field} aria-label="Kitap ara" placeholder="Ara: kitap ya da stok kodu" value={text} onChange={(e) => setText(e.target.value)} />}
     >
       <AmazonData meta={m} />
       {r.error && <Note tone="info">{errText(r.error, 'Haklar açılamadı.')}</Note>}
@@ -37,10 +38,15 @@ export default function AmazonRights() {
           <SqlInfo k={d?.kaynaklar} alan="items" label="Sekme sayıları" /></div>
             <ExportLink show={!!m?.me.canExport} href={amazonApi.exportUrl('haklar', { ulke, q })} />
           </div>
-          {!d.total ? <Note tone="info">Telif Satış sözleşmesi bulunmadı ya da CRM henüz okunmadı.</Note> : (
+          {!d.total ? (
+            <EmptyHint
+              title={ulke || q ? 'Bu süzgeçte sözleşme yok' : 'Telif Satış sözleşmesi bulunamadı'}
+              why={ulke || q ? 'Başka bir ülke seçin ya da aramayı temizleyin.' : 'CRM henüz okunmamış olabilir. Üstteki «Veriyi yenile» ile okumayı başlatın.'}
+            />
+          ) : (
             <>
               <TableWrap>
-                <thead><tr><th className={th}>Kitap</th><th className={th}>Hak satılan ülke</th><th className={th}>Yayınevi / ajans</th><th className={th}>Sözleşme</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Yurtdışı net adet</InfoLabel></th></tr></thead>
+                <thead><tr><th className={th}>Kitap</th><th className={th}>Hak satılan ülke</th><th className={th}>Yayınevi / ajans</th><th className={th}>Sözleşme</th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d?.kaynaklar} alan="items">Yurtdışı net adet</InfoLabel><Explain label="Yurtdışı net adet">Bizim baskımızın yurtdışı carilere faturayla satılan adedi (iade düşülmüş). Hakkı satılan yabancı baskının satışı değildir.</Explain></span></th></tr></thead>
                 <tbody>
                   {d.items.map((x, i) => (
                     <tr key={`${x.stokKodu ?? x.kitap}-${i}`} className="border-t border-slate-100">

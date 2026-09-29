@@ -7,7 +7,7 @@ import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '.
 import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
-import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
+import { FileButton, LANGS, PersonField, ProgressBar, SegmentHelp, StagePill, Tabs, XliffHelp, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import PayoutPanel from './PayoutPanel';
 import MemoryBank from './MemoryBank';
 import { QeJobPanel } from './qe';
@@ -16,6 +16,7 @@ import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint } from '../../components/Explain';
 
 /** M4 Çeviri Yönetimi: çeviri işleri (kaynak, segmentler, atama, ilerleme, ZEKİ ham taslak, dosyalar),
  *  terim bankası ve çevirmen karneleri. Çevirmenin kendi ekranı /ceviri/masam, kalite raporu /ceviri/:iş/kalite. */
@@ -56,11 +57,11 @@ function JobForm({ onDone, onCancel }: { onDone: (id: string) => void; onCancel:
     >
       <div>
         <span className={label}>Eser adı</span>
-        <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className={`${field} mt-1`} />
+        <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className={`${field} mt-1`} placeholder="Kitabın adı" />
       </div>
       <div>
         <span className={label}>Yazar</span>
-        <input value={author} onChange={(e) => setAuthor(e.target.value)} className={`${field} mt-1`} />
+        <input value={author} onChange={(e) => setAuthor(e.target.value)} className={`${field} mt-1`} placeholder="İsteğe bağlı" />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
@@ -143,11 +144,16 @@ function JobList({ jobs, selected, onSelect, canManage, k }: { jobs: Translation
         </div>
       )}
       {!jobs.length && (
-        <p className="mt-3 px-1 text-[12px] leading-snug text-canvas-muted">
-          {canManage
-            ? 'Henüz çeviri işi yok. Yukarıdaki alana kaynak metni bırakın; iş dosya adından açılır.'
-            : 'Size açık bir çeviri işi yok.'}
-        </p>
+        <div className="mt-3">
+          <EmptyHint
+            title={canManage ? 'Henüz çeviri işi yok' : 'Size açık bir çeviri işi yok'}
+            why={
+              canManage
+                ? 'Üstteki alana kaynak metni bırakın ya da «Yeni çeviri işi» ile açın; iş dosya adından açılır.'
+                : 'Bir işte çevirmen ya da inceleyen olarak adınız yazılınca burada görünür.'
+            }
+          />
+        </div>
       )}
       <ul className="mt-2 space-y-1.5">
         {jobs.map((j) => (
@@ -306,7 +312,7 @@ function Candidates({ job, canTerm }: { job: TranslationJobDetail; canTerm: bool
       </p>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Adaylar okunamadı.')}</Note>}
-      {q.data && !items.length && <p className="mt-2 text-[12px] text-canvas-muted">Aday yok.</p>}
+      {q.data && !items.length && <p className="mt-2 text-[12px] text-canvas-muted">Bankaya eklenecek yeni ad bulunmadı.</p>}
       <ul className="mt-2 space-y-1.5">
         {items.map((c) => (
           <li key={c.term} className="rounded-xl border border-slate-100 bg-white px-2.5 py-2 text-[12px]">
@@ -433,7 +439,10 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
         {j.words.total > 0 && (
           <div className="mt-3 rounded-2xl border border-slate-100 bg-white/85 p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2 text-[12px]">
-              <span className="font-extrabold">İlerleme</span>
+              <span className="flex items-center gap-1 font-extrabold">
+                İlerleme
+                <SegmentHelp />
+              </span>
               <span className="font-mono tabular-nums text-canvas-muted">
                 {nf.format(j.words.done)} / {nf.format(j.words.total)} kelime çevrildi · {nf.format(j.words.approved)} onaylı
               </span>
@@ -456,9 +465,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
 
       {manage && (
         <Panel>
-          <h3 className="px-1 text-[13px] font-extrabold">Atama</h3>
+          <h3 className="px-1 text-[13px] font-extrabold">Çevirmen ve inceleyen</h3>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Çevirmen ve inceleyen portal kullanıcısıdır; işi «Çeviri masam» ekranında görür. Dışarıdan çalışan çevirmene XLIFF dosyası verilir, dönen dosya aşağıdan yüklenir.
+            Çevirmen ve inceleyen portal kullanıcısıdır; işi «Çeviri masam» ekranında görür. Portala girmeyen çevirmene XLIFF dosyası verilir, dönen dosya aşağıdaki «Dosyalar» bölümünden yüklenir.
           </p>
           <div className="mt-2.5">
             <Assignment job={j} onSaved={refresh} />
@@ -481,7 +490,7 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             </span>
           </p>
         ) : (
-          <p className="mt-1 px-1 text-[12px] leading-snug text-canvas-muted">Henüz kaynak yüklenmedi.</p>
+          <p className="mt-1 px-1 text-[12px] leading-snug text-canvas-muted">Henüz kaynak yüklenmedi. Çevrilecek metni (Word, metin ya da PDF) aşağıya bırakın.</p>
         )}
           <div className="mt-2.5">
             <FileButton
@@ -532,9 +541,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
 
       {j.source && (
         <Panel>
-          <h3 className="px-1 text-[13px] font-extrabold">ZEKİ ham taslak</h3>
+          <h3 className="px-1 text-[13px] font-extrabold">Zeki AI ham taslağı</h3>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Boş segmentler için terim bankasına uyan ham çeviri. ZEKİ çevirir; otomatik denetim sayı, terim, yasak karşılık ya da noktalama sorunu bulursa o cümleleri sorunun adıyla yeniden düzelttirir. Taslak hedef metne kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
+            Boş segmentler için terim bankasına uyan ham çeviri. Zeki AI çevirir; otomatik denetim sayı, terim, yasak karşılık ya da noktalama sorunu bulursa o cümleleri sorunun adıyla yeniden düzelttirir. Taslak çeviriye kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
           </p>
           {drafting && (
             <div className="mt-2">
@@ -568,7 +577,10 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
 
       {j.source && (
         <Panel>
-          <h3 className="px-1 text-[13px] font-extrabold">Dosyalar</h3>
+          <h3 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+            Dosyalar
+            <XliffHelp />
+          </h3>
           <div className="mt-2 flex flex-wrap gap-2">
             <a href={translationApi.xliffUrl(j.id)} className={btnGhost}>
               <Download aria-hidden className="h-4 w-4" />
@@ -595,12 +607,12 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             {canExport && (
               <a href={translationApi.docxUrl(j.id)} className={btnGhost}>
                 <Download aria-hidden className="h-4 w-4" />
-                Çeviri (DOCX)
+                Çeviriyi Word olarak indir
               </a>
             )}
           </div>
           <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            XLIFF 1.2: Trados, memoQ, OmegaT ve Phrase açar. Dönen dosyada yalnız bu işin segmentleri okunur; onaylı segmentlere dokunulmaz. DOCX'te çevrilmemiş segment «[ÇEVRİLMEDİ]» ile işaretlenir.
+            Dönen XLIFF dosyasında yalnız bu işin segmentleri okunur; onaylı segmentlere dokunulmaz. Word dosyasında (DOCX) çevrilmemiş segment «[ÇEVRİLMEDİ]» ile işaretlenir.
           </p>
           {manage && (
             <div className="mt-3 rounded-2xl border border-slate-100 bg-white/85 p-3">
@@ -612,12 +624,12 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
                       ? `${nf.format(open)} segment henüz çevrilmedi; çeviri bitince aktarılır.`
                       : j.workId
                         ? 'Daha önce aktarıldı; yeniden aktarmak redaksiyonda yeni metin sürümü açar.'
-                        : 'Çeviri, M3 Redaksiyon\'a eser dosyası ve metin sürümü olarak gider.'}
+                        : 'Çeviri, Redaksiyon ekranına eser dosyası ve yeni metin sürümü olarak gider.'}
                   </span>
                 </span>
                 <button type="button" disabled={!!open || toRed.isPending} onClick={() => toRed.mutate()} className={`${btn} bg-canvas-mint/15 text-emerald-700`}>
                   {toRed.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Send aria-hidden className="h-4 w-4" />}
-                  Aktar
+                  Redaksiyona aktar
                 </button>
               </div>
               {toRed.data && (
@@ -646,7 +658,7 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             }}
           >
             <Trash2 aria-hidden className="h-4 w-4" />
-            İşi sil
+            İşi kalıcı olarak sil
           </button>
         </div>
       )}
@@ -785,10 +797,10 @@ function Jobs() {
       <TranslationDrop onCreated={setSelected} />
       {jobs.data && items.length > 0 && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Süren iş" />} label="Süren iş" value={nf.format(active.length)} help={`${nf.format(items.length - active.length)} iş bitti ya da kaynak bekliyor`} />
-          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Çevrilen kelime" />} label="Çevrilen kelime" value={`%${pct(done, words)}`} help={`${nf.format(done)} / ${nf.format(words)} (süren işler)`} />
-          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Gecikme riski" />} label="Gecikme riski" value={nf.format(late)} help="Son 14 günün hızıyla teslime yetişmeyen" />
-          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="İnceleme bekleyen" />} label="İnceleme bekleyen" value={nf.format(waiting)} help="Çevrildi, onay bekleyen segment" />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Süren iş" />} explain="Çeviride ya da incelemede olan işler. Kaynak bekleyen ve tamamlanan işler sayılmaz." label="Süren iş" value={nf.format(active.length)} help={`${nf.format(items.length - active.length)} iş bitti ya da kaynak bekliyor`} />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Çevrilen kelime" />} explain="Süren işlerde çevrilmiş ya da onaylanmış segmentlerin kelimesinin, bu işlerin toplam kaynak kelimesine oranı." label="Çevrilen kelime" value={`%${pct(done, words)}`} help={`${nf.format(done)} / ${nf.format(words)} (süren işler)`} />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="Gecikme riski" />} explain="Son 14 günün günlük çeviri hızı sürerse teslim tarihine yetişmeyecek süren iş sayısı." label="Gecikme riski" value={nf.format(late)} help="Son 14 günün hızıyla teslime yetişmeyen" />
+          <Kpi info={<SqlInfo k={kaynakOf(jobs.data)} alan="_hepsi" label="İnceleme bekleyen" />} explain="Çevirmenin onaylayıp inceleyenin henüz onaylamadığı segment sayısı (süren işlerde)." label="İnceleme bekleyen" value={nf.format(waiting)} help="Çevrildi, onay bekleyen segment" />
         </KpiRow>
       )}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-4">
@@ -797,9 +809,10 @@ function Jobs() {
           <JobPanel key={selected} jobId={selected} onDeleted={() => setSelected(null)} />
         ) : (
           <Panel>
-            <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">
-              {canManage ? 'Soldan bir çeviri işi seçin ya da üstteki alana kaynak metni bırakın.' : 'Soldan bir çeviri işi seçin.'}
-            </p>
+            <EmptyHint
+              title="Bir çeviri işi seçin"
+              why={canManage ? 'Listeden bir iş seçin ya da üstteki alana kaynak metni bırakıp yeni iş açın.' : 'Listeden bir iş seçin; ayrıntısı burada açılır.'}
+            />
           </Panel>
         )}
       </div>
@@ -815,12 +828,12 @@ export default function TranslationScreen() {
       route="/ceviri"
       crumb="Çeviri"
       title="Çeviri yönetimi"
-      lead="Kaynak metin cümle segmentlerine bölünür; çevirmen kendi ekranında terim bankası, çeviri belleği ve otomatik denetimle çalışır, inceleyen onaylar ve hataları işaretler. Kalite raporu işin gerçek kayıtlarından hesaplanır."
+      lead="Çeviri işlerini açın, çevirmen ve inceleyen atayın, ilerlemeyi izleyin. Kaynak metin cümlelere (segment) bölünür; çevirmen «Çeviri masam»da çalışır, inceleyen onaylar."
       source="Çeviri masası"
       presence="Kaynak: çeviri kayıtları"
       aside={<Tabs tabs={TABS} value={tab} label="Çeviri bölümü" onChange={(k) => setParams({ sekme: k }, { replace: true })} />}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; çeviri kayıtları okunamaz. Sistem yöneticinize haber verin.</Note>}
       {tab === 'isler' && <Jobs />}
       {tab === 'terimler' && <TermBank />}
       {tab === 'bellek' && <MemoryBank />}

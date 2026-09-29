@@ -7,6 +7,7 @@ import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtAt, fmtValue, mqApi, shortSha, type Meta, type ScoreRow, type Version } from './api';
 import { Empty, WeekBars, weekLabels } from './parts';
+import { Explain } from '../components/Explain';
 
 /** Karne: modül başına tek satır. Ölçülmemiş satır «ölçülmedi» der; demo sayı yoktur. Kişi yalnız sayfa yetkisi olan
  *  modüllerin satırını görür (süzgeç köprüde). */
@@ -17,7 +18,7 @@ export default function Scorecard({ meta, onOpenRun }: { meta: Meta; onOpenRun: 
     <>
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Pencere</span>
+          <span className={labelCls}>Dönem</span>
           <select className={`${field} w-auto`} value={days} onChange={(e) => setDays(Number(e.target.value))}>
             {[...new Set([7, 30, 90, 365, meta.windowDays])].sort((a, b) => a - b).map((d) => (
               <option key={d} value={d}>Son {d} gün</option>
@@ -70,6 +71,9 @@ function Row({ r, onOpenRun, k }: { r: ScoreRow; onOpenRun: (id: string) => void
                 <div className="mt-0.5 font-mono text-[30px] font-bold leading-none tabular-nums">{fmtValue(r.primary.value, r.primary.kind)}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-canvas-muted">
                   {r.primary.detail && <span>{r.primary.detail}</span>}
+                  {(r.primary.broken || r.primary.fixed) ? (
+                    <Explain label="Bozulan ve düzelen">Bir önceki ölçümde doğru olup bu ölçümde yanlışa dönen sorular «bozulan», tersi «düzelen»dir.</Explain>
+                  ) : null}
                   {r.primary.broken ? <Pill tone="err">{r.primary.broken} bozulan</Pill> : null}
                   {r.primary.fixed ? <Pill tone="ok">{r.primary.fixed} düzelen</Pill> : null}
                   {r.primary.runId && (
@@ -81,7 +85,7 @@ function Row({ r, onOpenRun, k }: { r: ScoreRow; onOpenRun: (id: string) => void
               </div>
             )}
             {r.id === 'bi' && !r.primary && (
-              <div className="text-[12px] text-canvas-muted">Cevap kapısı henüz koşmadı; aşağıdaki sayılar kullanıcı sorularından.</div>
+              <div className="text-[12px] text-canvas-muted">Doğrulanmış sorularla cevap ölçümü (cevap kapısı) henüz yapılmadı; aşağıdaki sayılar kullanıcıların sorularından.</div>
             )}
             {r.reading && (
               <div className="min-w-0">
@@ -106,8 +110,11 @@ function Row({ r, onOpenRun, k }: { r: ScoreRow; onOpenRun: (id: string) => void
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {r.metrics.map((m) => (
-              <div key={m.key} className="min-w-0 rounded-xl bg-white/80 px-3 py-2" title={m.help}>
-                <dt className="truncate text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{m.label}</dt>
+              <div key={m.key} className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
+                <dt className="flex min-w-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+                  <span className="truncate">{m.label}</span>
+                  {m.help && <Explain label={m.label}>{m.help}</Explain>}
+                </dt>
                 <dd className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{fmtValue(m.value, m.kind)}</dd>
               </div>
             ))}
@@ -142,14 +149,17 @@ const TYPE_LABEL: Record<string, string> = {
 function CurrentVersion({ v }: { v: Version | null }) {
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold tracking-tight">Şu anki sürüm</h2>
+      <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+        Şu anki sürüm
+        <Explain label="Şu anki sürüm">Zeki AI’ın cevabını etkileyen parçaların bugünkü hâli. Kalite değişince önce hangi parçanın değiştiğine «Sürümler» sekmesinden bakılır.</Explain>
+      </h2>
       {!v ? (
         <div className="mt-1 text-[12px] text-canvas-muted">Henüz sürüm kaydı yok; ilk kurulumda ya da ilk koşuda yazılır.</div>
       ) : (
         <dl className="mt-2 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
-          <Fact k="Kod" v={shortSha(v.codeSha)} />
-          <Fact k="Katalog" v={v.catalogVersion !== null ? `v${v.catalogVersion} · ${v.catalogCertified ?? '—'} onaylı` : '—'} />
-          <Fact k="Model" v={v.model} />
+          <Fact k="Kod sürümü" v={shortSha(v.codeSha)} />
+          <Fact k="Veri sözlüğü" v={v.catalogVersion !== null ? `v${v.catalogVersion} · ${v.catalogCertified ?? '—'} onaylı` : '—'} />
+          <Fact k="Zeki AI ayarı" v={v.modelDigest ?? '—'} />
           <Fact k="Kaydedildi" v={`${fmtAt(v.at)} · ${v.sourceLabel}`} />
         </dl>
       )}

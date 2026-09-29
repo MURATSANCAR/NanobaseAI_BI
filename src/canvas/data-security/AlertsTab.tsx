@@ -8,6 +8,7 @@ import { AskSheet } from '../budget/parts';
 import { SEVERITY, fmtAt, securityApi, type Alert, type SecurityMeta } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint } from '../components/Explain';
 
 const STATES = [
   { key: 'open', label: 'Açık' },
@@ -65,7 +66,12 @@ export default function AlertsTab({ meta }: { meta?: SecurityMeta }) {
       </div>
       {q.error && <div className="mt-2"><Note tone="err">{errText(q.error, 'Uyarılar okunamadı.')}</Note></div>}
       {q.data && !items.length && (
-        <p className="mt-3 text-[12.5px] text-canvas-muted">{state === 'open' ? 'Açık uyarı yok.' : 'Kayıt yok.'}</p>
+        <div className="mt-3">
+          <EmptyHint
+            title={state === 'open' ? 'Açık uyarı yok' : state === 'closed' ? 'Kapatılmış uyarı yok' : 'Henüz uyarı yok'}
+            why={state === 'open' ? 'Şu an incelenmeyi bekleyen güvenlik uyarısı yok. Kurallar 5 dakikada bir yeniden koşar.' : 'Bir kural tuttuğunda uyarı burada listelenir.'}
+          />
+        </div>
       )}
       <ul className="mt-3 space-y-2">
         {items.map((a) => (
@@ -75,7 +81,7 @@ export default function AlertsTab({ meta }: { meta?: SecurityMeta }) {
               <span className="text-[12.5px] font-extrabold">{a.ruleLabel}</span>
               <span className="text-[11.5px] text-canvas-muted">{fmtAt(a.at)}</span>
               {a.state === 'closed' && (
-                <Pill tone={a.verdict === 'gercek' ? 'err' : 'ok'}>{a.verdict === 'gercek' ? 'gerçek' : 'gerçek değil'}</Pill>
+                <Pill tone={a.verdict === 'gercek' ? 'err' : 'ok'}>{a.verdict === 'gercek' ? 'gerçek olay' : 'gerçek değil'}</Pill>
               )}
               {a.mailed === 'sent' && <Pill tone="muted">e-posta gitti</Pill>}
             </div>
@@ -89,8 +95,8 @@ export default function AlertsTab({ meta }: { meta?: SecurityMeta }) {
               <div className="mt-2 flex flex-wrap gap-2">
                 {a.state === 'open' ? (
                   <>
-                    <button type="button" className={btnGhost} onClick={() => setAsk({ alert: a, verdict: 'gercek' })}>Gerçek, kapat</button>
-                    <button type="button" className={btnGhost} onClick={() => setAsk({ alert: a, verdict: 'gercek-degil' })}>Gerçek değil</button>
+                    <button type="button" className={btnGhost} onClick={() => setAsk({ alert: a, verdict: 'gercek' })}>Gerçek olay, kapat</button>
+                    <button type="button" className={btnGhost} onClick={() => setAsk({ alert: a, verdict: 'gercek-degil' })}>Gerçek değil, kapat</button>
                   </>
                 ) : (
                   <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate({ id: a.id, body: { state: 'open' } })}>

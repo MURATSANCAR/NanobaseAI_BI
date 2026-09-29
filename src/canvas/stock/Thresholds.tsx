@@ -9,7 +9,8 @@ import { Pager, Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { fmtDay } from '../budget/api';
 import { gunText, n0, n1, stockApi, type Proposal, type Threshold } from './api';
-import { BookCell, Chips, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { BookCell, Chips, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { EmptyHint } from '../components/Explain';
 import { RULES } from './rules';
 
 /** Güvenlik stoku (/stok/esikler): Logo'da asgari seviye girilmediği için portal önerir (günlük satış × (baskı süresi +
@@ -72,7 +73,7 @@ export default function Thresholds() {
       <Panel>
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Eşikler" />}
-        {d && !d.items.length && <Empty>Bu durumda kayıt yok.</Empty>}
+        {d && !d.items.length && <EmptyHint title="Bu durumda eşik yok" why="Seçtiğiniz durumdaki güvenlik stoku kaydı bulunmadı; başka bir durumu seçin." />}
         {!!d?.items.length && (
           <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-canvas-muted" aria-label="Rakamların sorgu bilgisi">
             {durum === 'oneri' ? (

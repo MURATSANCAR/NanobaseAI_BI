@@ -42,8 +42,9 @@ export function ReadersFrame({ presence, aside, badges, children }: {
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Dijital ve topluluk · Okur ve topluluk</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Okur veri tabanı</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
-                  CRM kişi, müşteri adayı ve İYS kayıtlarını aynı e-posta ya da telefonla tek okurda birleştirir; kanal başına izni
-                  gösterir, kurala dayalı segment kurar. Ekranda kişi adı yok, sayılar var. Portal CRM'e yazmaz ve ileti göndermez.
+                  CRM'deki kişi, müşteri adayı ve İYS (ticari ileti izni) kayıtları aynı e-posta ya da telefonla tek okurda birleşir; her kanal
+                  (e-posta, SMS, arama) için izin durumu görünür ve kurala göre okur grupları (segment) kurulur. Ekranda kişi adı yok, sayılar var.
+                  Portal CRM'e yazmaz ve ileti göndermez.
                 </p>
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[420px]">{aside}</div>}

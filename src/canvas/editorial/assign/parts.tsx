@@ -83,7 +83,7 @@ function TaskHistory({ id }: { id: string }) {
   const q = useQuery(taskHistoryOptions(id));
   if (q.isLoading) return <p className="text-[12px] text-canvas-muted">Geçmiş okunuyor…</p>;
   const items = q.data?.items ?? [];
-  if (!items.length) return <p className="text-[12px] text-canvas-muted">Kayıt yok.</p>;
+  if (!items.length) return <p className="text-[12px] text-canvas-muted">Bu görevde henüz değişiklik kaydı yok.</p>;
   return (
     <ol className="space-y-2">
       {items.map((h, i) => {
@@ -184,7 +184,7 @@ export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: Ed
         </label>
         <label className="col-span-2 block sm:col-span-1">
           <span className={label}>Tahmini sayfa</span>
-          <input inputMode="numeric" pattern="[0-9]*" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ''))} className={`${field} mt-1`} />
+          <input inputMode="numeric" pattern="[0-9]*" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ''))} placeholder="Ör. 240" className={`${field} mt-1`} />
         </label>
       </div>
       {bad && <Note tone="err">Termin, başlangıçtan önce olamaz.</Note>}
@@ -196,8 +196,9 @@ export function TaskEditor({ task, onDone }: { task: EditorTask; onDone?: (t: Ed
       )}
       <label className="block">
         <span className={label}>Not</span>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className={`${field} mt-1 resize-y`} />
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Ör. ikinci okuma sürüyor, kapak onayı bekleniyor" className={`${field} mt-1 resize-y`} />
       </label>
+      <p className="text-[11.5px] leading-snug text-canvas-muted">Durum, tarih, sayfa ve not yalnız portalda saklanır; CRM'deki proje kartı değişmez.</p>
       {err && <Note tone="err">{err}</Note>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         {task.id ? (

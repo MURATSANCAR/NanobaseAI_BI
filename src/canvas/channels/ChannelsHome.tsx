@@ -6,6 +6,7 @@ import { ChevronRight, Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
+import { Explain } from '../components/Explain';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../budget/api';
@@ -75,7 +76,7 @@ function Suggestions({ meta }: { meta: ChannelsMeta }) {
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Karar bekleyen öneriler <SqlInfo k={q.data?.kaynaklar} alan="items" label="Karar bekleyen öneriler" /></h2>
-      <p className="mb-2 text-[12px] text-canvas-muted">İskonto ve D2C önerileri. Onay portal kaydıdır; pazar yerine, siteye ya da CRM'e gönderilmez, uygulamayı ekip yapar.</p>
+      <p className="mb-2 text-[12px] text-canvas-muted">Ekibin hazırladığı iskonto, stok payı ve timas.com.tr set önerileri. Onay yalnız portalda kayıt olur; pazar yerine, siteye ya da CRM'e gönderilmez, uygulamayı ekip yapar. Kendi önerinize başka bir yetkili karar verir.</p>
       {q.isLoading ? <Loading /> : (
         <ul className="flex flex-col gap-2">
           {items.map((s) => {
@@ -147,7 +148,7 @@ export default function ChannelsHome() {
   return (
     <ChannelsFrame
       title="Kanal karnesi"
-      lead="Pazar yerleri ve timas.com.tr: kanala satış, iskonto, iade, marj ve hedef gerçekleşmesi tek ekranda. Rakamlar Logo faturalı satırlarından; platform = onaylı cari eşlemesi."
+      lead="Her pazar yerine ve timas.com.tr'ye ne kadar sattığımızı, ne kadar iskonto verdiğimizi, ne kadarının iade geldiğini ve hedefin neresinde olduğumuzu gösterir. Rakamlar Logo faturalarından gelir; hangi carinin hangi platform olduğu «Cari eşleme» sekmesinde belirlenir."
       aside={aside}
     >
       <DataBar meta={m} yil={yil} />
@@ -170,19 +171,35 @@ export default function ChannelsHome() {
           </p>
           <KpiRow>
             <Kpi label="E-ticaret net ciro" value={`${fmtShort(t.eticaret.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(eticDelta)} · kanala satış − iade`}
+              explain="Platforma bağlanmış bütün e-ticaret carilerine kesilen satış faturaları eksi iade faturaları (satır tutarı). Pazar yerinin okura sattığı değil, bizim pazar yerine sattığımızdır."
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="E-ticaret net ciro" />} />
             <Kpi label="Şirket içindeki pay" value={fmtPct(t.eticaretPay)} help={`Şirket net cirosu ${fmtShort(t.sirket.netCiro)} ₺`}
+              explain="E-ticaret net cirosunun, aynı dönemde şirketin bütün kanallardaki (kitapçı, dağıtıcı, e-ticaret…) net cirosuna oranı."
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Şirket içindeki pay" />} />
-            <Kpi label="D2C payı" value={fmtPct(t.d2cPay)} help="timas.com.tr'nin e-ticaret içindeki payı"
+            <Kpi label="timas.com.tr payı" value={fmtPct(t.d2cPay)} help="Kendi sitemizin e-ticaret içindeki payı"
+              explain="Okura doğrudan sattığımız (D2C) timas.com.tr'nin net cirosunun, e-ticaret net cirosu içindeki payı."
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="D2C payı" />} />
             <Kpi
               label={canMargin ? 'E-ticaret brüt marjı' : 'E-ticaret iade oranı'}
               value={canMargin ? fmtPct(t.eticaret.marj ?? null) : fmtPct(t.eticaret.iadeOrani)}
               help={canMargin ? coverageText(t.eticaret) : `İskonto oranı ${fmtPct(t.eticaret.iskontoOrani)}`}
+              explain={canMargin
+                ? 'Satıştan kalan brüt kârın satışa oranı (1 − maliyet ÷ ciro). Yalnız Logo’da maliyeti girilmiş satırlarla hesaplanır; maliyetsiz satırlar altta ayrıca yazılır, marja katılmaz.'
+                : 'İade faturası tutarının satış faturası tutarına oranı. Yükselmesi, kanalın kitapları satamayıp geri gönderdiğini gösterir.'}
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label={canMargin ? 'E-ticaret brüt marjı' : 'E-ticaret iade oranı'} />}
             />
           </KpiRow>
 
+          <div className="flex items-center gap-1 px-1">
+            <h2 className="text-[15px] font-extrabold">Platformlar</h2>
+            <Explain label="Platform kartları" title="Kartlardaki oranlar">
+              <span className="block"><b>İskonto oranı:</b> faturada kanala yapılan indirimin, indirimsiz satış tutarına oranı.</span>
+              <span className="block"><b>İade oranı:</b> iade faturası tutarının satış faturası tutarına oranı.</span>
+              <span className="block"><b>Brüt marj:</b> maliyeti bilinen satışlarda kalan brüt kârın satışa oranı; «iade sonrası» olanda iadeler de düşülür.</span>
+              <span className="block"><b>CRM hedef gerçekleşme:</b> CRM'deki bölge satış hedefinin (adet) bugüne düşen payının ne kadarı satıldı.</span>
+              Karta dokunursanız platformun ay ay ve cari cari ayrıntısı açılır.
+            </Explain>
+          </div>
           <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 2xl:grid-cols-4">
             {d.platforms.map((c) => <PlatformTile key={c.platform} c={c} canMargin={canMargin} k={d.kaynaklar} />)}
           </section>
@@ -195,7 +212,7 @@ export default function ChannelsHome() {
 
           <Panel>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanallar arası kıyas <SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar arası kıyas" /></h2>
-            <p className="mb-2 text-[12px] text-canvas-muted">Logo cari kartındaki kanal koduna göre bütün satış (kitapçı, dağıtıcı, e-ticaret …). Platform kartlarıyla aynı tanım.</p>
+            <p className="mb-2 text-[12px] text-canvas-muted">Şirketin bütün satışı, Logo cari kartındaki kanal koduna göre (kitapçı, dağıtıcı, e-ticaret …). E-ticaretin öteki kanallara göre ne kadar iskonto verip ne kadar iade aldığını buradan kıyaslayabilirsiniz; hesap platform kartlarıyla aynıdır.</p>
             <TableWrap>
               <thead>
                 <tr>
@@ -205,7 +222,14 @@ export default function ChannelsHome() {
                   <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">İskonto oranı</InfoLabel></th>
                   <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">İade oranı</InfoLabel></th>
                   {canMargin && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Brüt marj</InfoLabel></th>}
-                  {canMargin && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kanallar">Maliyetli ciro payı</InfoLabel></th>}
+                  {canMargin && (
+                    <th className={`${th} text-right`}>
+                      <span className="inline-flex items-center gap-1">
+                        <InfoLabel k={d.kaynaklar} alan="kanallar">Maliyetli ciro payı</InfoLabel>
+                        <Explain label="Maliyetli ciro payı">Satış tutarının ne kadarında Logo’da maliyet girilmiş. Bu oran düşükse brüt marj kanalın yalnız küçük bir kısmını yansıtır.</Explain>
+                      </span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>

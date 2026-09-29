@@ -9,6 +9,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { REVIEW_TONE, fmtDay, fmtInt, okurApi, type OkurMeta, type Review, type ReviewState } from './api';
 import { OkurFrame } from './parts';
+import { EmptyHint } from '../components/Explain';
 import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../signals/ReaderVoice';
 import type { VoiceLabel } from '../signals/api';
 
@@ -47,7 +48,7 @@ export default function ReviewsScreen() {
       source="Kaynak: site yorumları (yalnız okuma) · portal kaydı"
       aside={
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-          <Link to="/seo-geo/yorumlar" className={btnGhost}>Yorum sayıları (SEO)</Link>
+          <Link to="/seo-geo/yorumlar" className={btnGhost}>Yorum sayılarını aç (SEO)</Link>
           <button type="button" className={btnGhost} disabled={list.isFetching || reread.isPending} onClick={() => reread.mutate()}>
             <RefreshCw aria-hidden className={`h-4 w-4 ${reread.isPending ? 'animate-spin' : ''}`} />
             Siteden yeniden oku
@@ -55,7 +56,7 @@ export default function ReviewsScreen() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; yorumlar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {list.error && <Note tone="err">{errText(list.error, 'Yorumlar okunamadı.')}</Note>}
       <ReaderVoicePanel sources={['site-yorum']} />
       {n && (
@@ -69,7 +70,7 @@ export default function ReviewsScreen() {
       <Panel>
         {list.data && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Yorumlar, puanlar ve durum<SqlInfo k={k} alan="items" label="Yorum listesi ve puanlar" /></p>}
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Site yorumları okunuyor…</div>}
-        {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte yorum yok.</div>}
+        {list.data && !list.data.items.length && <EmptyHint title={durum === 'cevapsiz' ? 'Cevap bekleyen yorum yok' : 'Bu durumda yorum yok'} why={durum === 'cevapsiz' ? 'Sitedeki bütün yorumlara cevap verilmiş ya da taslağı hazır. Yeni yorumlar için «Siteden yeniden oku»ya basabilirsiniz.' : 'Üstteki kartlardan başka bir durum seçin.'} />}
         <div className="flex flex-col gap-2">
           {meta.data && list.data?.items.map((r) => <ReviewCard key={r.id} r={r} meta={meta.data} topic={topics.data?.items[r.id]} />)}
         </div>
@@ -139,16 +140,16 @@ function ReviewCard({ r, meta, topic }: { r: Review; meta: OkurMeta; topic?: Voi
           {meta.modelVar && (
             <button type="button" className={btnGhost} disabled={busy || !r.metin} onClick={() => draft.mutate()}>
               {draft.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-              {r.taslak ? 'Yeni taslak' : 'Zeki AI taslağı'}
+              {r.taslak ? 'Yeni taslak yaz' : 'Zeki AI ile taslak yaz'}
             </button>
           )}
-          {!open && !r.taslak && <button type="button" className={btnGhost} onClick={() => setOpen(true)}>Elle yaz</button>}
+          {!open && !r.taslak && <button type="button" className={btnGhost} onClick={() => setOpen(true)}>Cevabı elle yaz</button>}
           {(open || r.taslak) && (
             <button type="button" className={btnGhost} disabled={busy || !text.trim()} onClick={() => mark.mutate('taslak')}>Taslağı kaydet</button>
           )}
           <button type="button" className={btnPrimary} disabled={busy} onClick={() => mark.mutate('cevaplandi')}>
             <Check aria-hidden className="h-4 w-4" />
-            Sitede cevaplandı
+            Sitede cevapladım
           </button>
         </div>
       )}

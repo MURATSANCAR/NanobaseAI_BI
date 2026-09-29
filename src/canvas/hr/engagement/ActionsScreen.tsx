@@ -8,6 +8,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDay } from '../hrApi';
 import { HrFrame } from '../parts';
 import { engApi, type Action, type EngMeta } from './engApi';
+import { EmptyHint } from '../../components/Explain';
 
 /** M58 Aksiyon planı: anket sonrası «ne yapacağız». İK ekler ve düzenler; birim yöneticisi kendi biriminin aksiyonunda
  *  durum ve not yazar. Bir sonraki ankette ilgili madde bu aksiyonla yan yana izlenir. */
@@ -21,7 +22,12 @@ export default function ActionsScreen() {
       aside={q.data?.canCreate ? <div className="flex justify-start lg:justify-end"><button type="button" className={btnPrimary} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Aksiyon ekle</button></div> : undefined}>
       {q.error && <Note tone="err">{errText(q.error, 'Aksiyonlar okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {q.data && !q.data.items.length && <Note tone="info">Aksiyon yok.</Note>}
+      {q.data && !q.data.items.length && (
+        <EmptyHint
+          title="Henüz aksiyon yok"
+          why={q.data.canCreate ? 'Kapanan bir anketin sonucuna bakıp «Aksiyon ekle» ile yapılacak işi, sorumlu birimi ve son tarihi girin.' : 'İK anket sonrası aksiyon eklediğinde biriminizinkiler burada görünür.'}
+        />
+      )}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {(q.data?.items ?? []).map((a) => {
           const late = a.dueOn && a.dueOn < today && (a.state === 'acik' || a.state === 'devam');
@@ -60,7 +66,7 @@ function ActionSheet({ a, admin, meta, onClose }: { a: Action | null; admin: boo
     <Sheet open modal onClose={onClose} title={a ? a.title : 'Yeni aksiyon'}>
       <div className="flex flex-col gap-3">
         <fieldset disabled={!admin} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1"><span className={labelCls}>Aksiyon</span><input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+          <label className="flex flex-col gap-1"><span className={labelCls}>Aksiyon</span><input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="ör. Birim içi aylık bilgilendirme toplantısı başlatmak" /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Birim</span>
             <select className={field} value={f.unitId} onChange={(e) => setF({ ...f, unitId: e.target.value })}><option value="">Şirket geneli</option>{meta.units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
           </label>
@@ -72,7 +78,7 @@ function ActionSheet({ a, admin, meta, onClose }: { a: Action | null; admin: boo
         <label className="flex flex-col gap-1"><span className={labelCls}>Durum</span>
           <select className={field} value={f.state} onChange={(e) => setF({ ...f, state: e.target.value as Action['state'] })}>{Object.entries(meta.actionStates).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
         </label>
-        <label className="flex flex-col gap-1"><span className={labelCls}>Not</span><textarea className={`${field} min-h-[80px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
+        <label className="flex flex-col gap-1"><span className={labelCls}>Not</span><textarea className={`${field} min-h-[80px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="Ne yapıldı, ne kaldı" /></label>
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
           <button type="button" className={btnPrimary} disabled={save.isPending || (admin && !f.title.trim())} onClick={() => save.mutate()}>Kaydet</button>

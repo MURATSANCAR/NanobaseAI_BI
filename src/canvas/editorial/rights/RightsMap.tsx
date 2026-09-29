@@ -6,6 +6,7 @@ import { Pill, btnGhost, btnPrimary } from '../../admin/ui';
 import { errMsg } from '../contracts/ui';
 import { rightsApi, type MapFields, type MapItem, type RightsMap } from '../royalty/api';
 import { MAP_ORDER as ORDER, dropItem, isEmptyMap, itemsOf, shown, usesModel } from './rightsMapText';
+import { Explain } from '../../components/Explain';
 
 /** Yapılandırılmış hak haritası (öneri 18): dil, ülke, format, bitiş, münhasırlık — her değer hak açıklamasından birebir
  *  alıntıyla gösterilir; alıntısı olmayan alan boştur. Onay telif uzmanındadır: gereksiz değer çıkarılıp onaylanabilir. */
@@ -32,7 +33,13 @@ export default function RightsMapView({ map, canEdit, compact = false }: { map: 
   return (
     <div className="rounded-xl border border-slate-100 bg-white/70 px-3 py-2">
       <div className="flex flex-wrap items-center gap-2 text-[11.5px]">
-        <span className="font-extrabold uppercase tracking-wide text-canvas-muted">Hak haritası</span>
+        <span className="inline-flex items-center gap-1 font-extrabold uppercase tracking-wide text-canvas-muted">
+          Hak haritası
+          <Explain label="Hak haritası">
+            Serbest metinli hak notundaki dil, ülke, format, bitiş tarihi ve münhasırlık bilgisinin düzenli hâli. Her değer notta geçen cümlesiyle gösterilir;
+            gereksiz değeri çıkarıp onaylarsınız. Münhasırlık, hakkın yalnız bize verilip verilmediğidir.
+          </Explain>
+        </span>
         <Pill tone={map.status === 'onayli' ? 'ok' : map.status === 'reddedildi' ? 'muted' : zeki ? 'violet' : 'warn'}>
           {map.status === 'oneri' ? (zeki ? 'Zeki AI önerisi' : 'Kurala göre öneri') : map.statusLabel}
         </Pill>

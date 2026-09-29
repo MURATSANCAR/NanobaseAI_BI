@@ -103,9 +103,9 @@ function MarketView({ m }: { m: Market }) {
         {m.withoutSales > 0 && ` (${nf.format(m.withoutSales)} kitapta satış görülmedi, senaryoya girmedi)`}. İlk yıl = yayın ayı dahil 12 ay, iadeler düşülmüş.
       </p>
       <div className="grid gap-2 sm:grid-cols-3">
-        <Scenario k="Kötümser" v={m.scenarios.kotumser} help="İlk yıl satışının 1. çeyreği" />
-        <Scenario k="Baz" v={m.scenarios.baz} help="Ortanca kitap" strong />
-        <Scenario k="İyimser" v={m.scenarios.iyimser} help="3. çeyrek" />
+        <Scenario k="Kötümser" v={m.scenarios.kotumser} help="Benzer kitapların dörtte biri bunun altında kaldı" />
+        <Scenario k="Baz" v={m.scenarios.baz} help="Ortadaki kitap: yarısı altında, yarısı üstünde" strong />
+        <Scenario k="İyimser" v={m.scenarios.iyimser} help="Benzer kitapların dörtte üçü bunun altında kaldı" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Curve m={m} />
@@ -311,7 +311,11 @@ export default function ReportPanel({ appId, canWrite, status }: { appId: string
         {d?.status === 'hazirlaniyor' && <p className="text-[12.5px] text-canvas-muted">CRM'den benzer kitaplar, Logo'dan satışları okunuyor…</p>}
         {d?.status === 'hata' && <Note tone="err">{d.error ?? 'Rapor üretilemedi.'}</Note>}
         {d?.content && <BoardReportView r={d.content} />}
-        {d && d.status === null && <p className="text-[12.5px] text-canvas-muted">Henüz rapor üretilmedi.</p>}
+        {d && d.status === null && (
+          <p className="text-[12.5px] text-canvas-muted">
+            Henüz rapor üretilmedi. Rapor, aynı kitaplıkta daha önce çıkan benzer kitapların ilk yıl satışından kötümser, baz ve iyimser tahmin çıkarır{canWrite ? '; hemen görmek için «Raporu üret»e basın.' : '.'}
+          </p>
+        )}
       </div>
     </Panel>
   );

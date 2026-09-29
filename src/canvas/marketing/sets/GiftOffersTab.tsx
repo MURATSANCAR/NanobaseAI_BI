@@ -11,7 +11,7 @@ import { OFFER_TONE, setsApi, type Account, type SetsMeta } from './api';
 import { Tone } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
-/** Kurumsal teklifler: firma (CRM) + kişi sayısı + kişi başı bütçe → seçenekler (kod), mektup (ZEKİ AI), onay, PDF. */
+/** Kurumsal teklifler: firma (CRM) + kişi sayısı + kişi başı bütçe → seçenekler (kod), mektup (Zeki AI), onay, PDF. */
 export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
   const [durum, setDurum] = useState('');
   const [q, setQ] = useState('');
@@ -47,7 +47,7 @@ export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
           )}
         </div>
         <p className="mt-2 text-[11.5px] text-canvas-muted">
-          Seçenekleri sistem hesaplar (stoğu kişi sayısına yeten, kademe indirimi sonrası bütçeye sığan set, paket ve kitaplar); mektubu ZEKİ AI taslak
+          Seçenekleri sistem hesaplar (stoğu kişi sayısına yeten, kademe indirimi sonrası bütçeye sığan set, paket ve kitaplar); mektubu Zeki AI taslak
           yazar, satış düzeltir. Onaydan sonra PDF indirilir; kuruma gönderimi satış yapar. Kurumsal satış fırsatı açıldıysa teklif oraya bağlanır.
         </p>
       </section>
@@ -84,7 +84,7 @@ export default function GiftOffersTab({ meta }: { meta: SetsMeta }) {
                   <td className={td}>{o.hazirlayan ?? '—'}</td>
                 </tr>
               ))}
-              {!list.data.items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={7}>Teklif yok.</td></tr>}
+              {!list.data.items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={7}>Bu süzgeçte teklif yok. Aramayı temizleyin ya da «Yeni teklif» ile açın.</td></tr>}
             </tbody>
           </TableWrap>
           <Pager page={list.data.page} pageSize={list.data.pageSize} total={list.data.total} shown={list.data.items.length}

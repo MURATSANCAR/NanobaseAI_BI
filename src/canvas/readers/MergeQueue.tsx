@@ -8,6 +8,7 @@ import { Loading, Note, Section, btnGhost, btnPrimary, errText } from '../admin/
 import { fmtDay, fmtInt, readersApi, type Candidate, type ReaderSummary } from './api';
 import { ConsentPill, ROOT, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 const TABS = [
   { id: 'bekliyor', label: 'Bekleyen' },
@@ -35,7 +36,7 @@ export default function MergeQueue() {
   return (
     <Section
       title="Birleştirme kuyruğu"
-      help="Aynı e-posta ya da telefon kesin birleşir; burada yalnız adı ve ili aynı olup iletişim bilgisi farklı çiftler var. Kişisel veri modele gitmez; puan kuraldan."
+      help="Aynı e-posta ya da telefonu olan kayıtlar kendiliğinden birleşir. Burada adı ve ili aynı ama iletişim bilgisi farklı çiftler var; aynı kişi mi, değil mi siz karar verirsiniz. Benzerlik puanı sabit kurala göre hesaplanır, kişisel veri Zeki AI'a gönderilmez."
     >
       <div className="flex flex-wrap gap-1" role="tablist">
         {TABS.map((t) => (
@@ -53,7 +54,7 @@ export default function MergeQueue() {
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Kuyruk açılamadı.')}</Note>}
-      {d && d.items.length === 0 && <Note tone="info">{tab === 'bekliyor' ? 'Karar bekleyen çift yok.' : 'Bu durumda çift yok.'}</Note>}
+      {d && d.items.length === 0 && <EmptyHint title={tab === 'bekliyor' ? 'Karar bekleyen çift yok' : 'Bu durumda çift yok'} why={tab === 'bekliyor' ? 'Yeni aday çiftler her gece kaynaklar okunduktan sonra burada belirir.' : 'Bu duruma karar verilmiş çift henüz yok.'} />}
       <ul className="flex flex-col gap-2">
         {d?.items.map((c) => (
           <PairRow key={c.id} c={c} canMerge={canMerge && tab === 'bekliyor'} busy={decide.isPending && decide.variables?.id === c.id}
@@ -80,7 +81,7 @@ function PairRow({ c, canMerge, busy, onDecide }: { c: Candidate; canMerge: bool
         <div className="flex flex-wrap gap-1 text-[11.5px] font-semibold">
           {c.reasons.map((r) => <span key={r} className="rounded-md bg-slate-100 px-1.5 py-0.5">{r}</span>)}
         </div>
-        <span className="font-mono text-[11.5px] text-canvas-muted">puan {Math.round(c.score * 100)}</span>
+        <span className="font-mono text-[11.5px] text-canvas-muted" title="Benzerlik puanı (0–100): yükseldikçe iki kaydın aynı kişi olma ihtimali artar">benzerlik {Math.round(c.score * 100)}</span>
       </div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <Side r={c.a} />

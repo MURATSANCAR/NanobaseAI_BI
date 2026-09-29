@@ -12,7 +12,7 @@ import { OFFER_TONE, pctToRatio, setsApi, type Offer } from './api';
 import { BudgetGap, MarginCell, SetsFrame, Tone } from './parts';
 import SqlInfo from '../../components/SqlInfo';
 
-/** Kurumsal hediye teklifi: seçenekler (kod), kademe indirimi, mektup (ZEKİ AI taslağı), onay (gönderen onaylayamaz), PDF.
+/** Kurumsal hediye teklifi: seçenekler (kod), kademe indirimi, mektup (Zeki AI taslağı), onay (gönderen onaylayamaz), PDF.
  *  Kurumsal satış fırsatı (M32) ile bağ: fırsat numarası teklife yazılır; kalemler M32 teklif satırı biçiminde de alınabilir. */
 
 type Ask = null | 'submit' | 'withdraw' | 'approve' | 'reject';
@@ -58,12 +58,12 @@ export default function GiftOfferEditor() {
   return (
     <SetsFrame
       title={o?.firmaAdi ?? 'Kurumsal teklif'}
-      lead={o ? `${o.id} · ${fmtInt(o.adet)} kişi · kişi başı bütçe ${fmtMoney(o.kisiBasiButce)}${o.sezon ? ` · ${o.sezon}` : ''}` : ''}
+      lead={o ? `Firmaya sunulacak hediye kitap teklifi: kişi sayısı ve bütçeye uyan seçenekler, teklif mektubu ve onay. ${fmtInt(o.adet)} kişi · kişi başı bütçe ${fmtMoney(o.kisiBasiButce)}${o.sezon ? ` · ${o.sezon}` : ''}` : ''}
       back={{ to: '/pazarlama/set-hediye?sekme=teklifler', label: 'Kurumsal teklifler' }}
       source="CRM + Logo"
       presence={o?.durumAdi ?? ''}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {offer.error && <Note tone="err">{errText(offer.error, 'Teklif açılamadı.')}</Note>}
       {o && meta.data && (
         <>
@@ -149,7 +149,7 @@ function Terms({ o, editable, busy, onSave }: { o: Offer; editable: boolean; bus
         </label>
       </div>
       <div className="mt-3">
-        <span className={labelCls}>Adet kademeleri (adet ve üstü → indirim %)</span>
+        <span className={labelCls}>Adet indirimleri (bu adet ve üstünde → indirim %)</span>
         <ul className="mt-1 flex flex-col gap-1">
           {tiers.map((t, i) => (
             <li key={i} className="flex items-center gap-2">
@@ -187,7 +187,7 @@ function Terms({ o, editable, busy, onSave }: { o: Offer; editable: boolean; bus
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kurumsal satış fırsatı</span>
-          <input className={`${field} font-mono`} disabled={!editable} value={m32} placeholder="fırsat no (varsa)" onChange={(e) => setM32(e.target.value)} />
+          <input className={`${field} font-mono`} disabled={!editable} value={m32} placeholder="CRM fırsat numarası (varsa)" onChange={(e) => setM32(e.target.value)} />
         </label>
       </div>
       {editable && (
@@ -246,7 +246,7 @@ function Letter({ o, editable, onSaved }: { o: Offer; editable: boolean; onSaved
   useEffect(() => setText(o.mektup ?? ''), [o.mektup]);
   const draft = useMutation({
     mutationFn: () => setsApi.letter(o.id),
-    onSuccess: (r) => { setText(r.text); toast.success(`ZEKİ AI mektup taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
+    onSuccess: (r) => { setText(r.text); toast.success(`Zeki AI mektup taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
     onError: (e) => toast.error(errText(e, 'Mektup yazılamadı.') ?? ''),
   });
   const save = useMutation({
@@ -261,7 +261,7 @@ function Letter({ o, editable, onSaved }: { o: Offer; editable: boolean; onSaved
         {editable && (
           <button type="button" className={btnGhost} disabled={draft.isPending} onClick={() => draft.mutate()}>
             {draft.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-            ZEKİ AI taslağı
+            Zeki AI ile taslak yaz
           </button>
         )}
       </div>

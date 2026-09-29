@@ -8,6 +8,7 @@ import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Sorgu–sayfa eşlemesi: /api/v1/seo-geo/keymap. Search Console'un sorgu+sayfa kırılımından; her önemli arama için
  *  hedef sayfa, yanlış sıralanan sayfa ve sayfamızın olmadığı aramalar. Karar yalnız kaydedilir. */
@@ -100,7 +101,7 @@ export default function SeoKeymap() {
       crumb="Sorgu–sayfa eşlemesi"
       eyebrow="SEO & GEO · Search Console"
       title="Sorgu–sayfa eşlemesi"
-      lead="Her önemli Google araması için hangi sayfamızın öne çıkması gerektiği: kitap araması kitabın sayfasına, yazar araması yazar sayfasına, soru ve liste araması rehber ya da liste sayfasına. Başka bir sayfa sıralanıyorsa ya da uyan sayfamız yoksa burada görünür. Son 28 günün Search Console verisinden; karar yalnız kaydedilir."
+      lead="Her önemli Google araması için hangi sayfamızın çıkması gerektiği: kitap araması kitabın sayfasına, yazar araması yazar sayfasına, «hangi kitap» araması rehber sayfasına. Yanlış sayfa çıkıyorsa ya da uyan sayfamız yoksa burada görünür. Son 28 günün Search Console verisinden; karar yalnız kaydedilir."
       actions={
         canExport && d?.ready ? (
           <>
@@ -121,17 +122,20 @@ export default function SeoKeymap() {
       {r.isLoading && <Loading text="Aramalar sayfalarla eşleniyor…" />}
       {r.error && <Failed error={r.error} />}
       {d && !d.ready ? (
-        <div className="sg-empty">
-          <h2>{d.connected ? 'Sayfa kırılımı henüz yok' : 'Search Console bağlı değil'}</h2>
-          <p>{d.reason}</p>
-        </div>
+        <EmptyHint
+          title={d.connected ? 'Arama–sayfa verisi henüz yok' : 'Search Console bağlı değil'}
+          why={d.connected ? d.reason : <>{d.reason} Kurulum: <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranı.</>}
+        />
       ) : (
         d && (
           <>
             <section className="sg-kpis" aria-label="Özet">
-              <Kpi label="Yanlış sayfa sıralanıyor" value={fmt(d.totals.yanlis.nonBrand)} note={`Marka dışı · ${fmt(d.totals.yanlis.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Yanlış sayfa sıralanıyor" />} />
-              <Kpi label="Sayfamız yok" value={fmt(d.totals.bosluk.nonBrand)} note={`Marka dışı · ${fmt(d.totals.bosluk.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Sayfamız yok" />} />
-              <Kpi label="Doğru sayfa" value={fmt(d.totals.eslesme.nonBrand)} note="Aramaya uyan sayfa öne çıkıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Doğru sayfa" />} />
+              <Kpi label="Yanlış sayfa sıralanıyor" value={fmt(d.totals.yanlis.nonBrand)} note={`Marka dışı · ${fmt(d.totals.yanlis.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Yanlış sayfa sıralanıyor" />}
+                explain="Aramaya uygun bir sayfamız var ama Google’da başka bir sayfamız çıkıyor (ör. kitap aramasında yazar sayfası). Doğru sayfa güçlendirilmeli." />
+              <Kpi label="Sayfamız yok" value={fmt(d.totals.bosluk.nonBrand)} note={`Marka dışı · ${fmt(d.totals.bosluk.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Sayfamız yok" />}
+                explain="Aranan şeye uyan bir sayfamız yok; bu aramalar yeni sayfa ya da rehber içerik fırsatıdır." />
+              <Kpi label="Doğru sayfa" value={fmt(d.totals.eslesme.nonBrand)} note="Aramaya uyan sayfa öne çıkıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Doğru sayfa" />}
+                explain="Aramaya uyan sayfamız zaten Google’da en çok tıklanan adresimiz; yapılacak iş yok." />
               <Kpi label="Karar verilen" value={fmt(d.decided.onaylandi + d.decided.reddedildi)} note={`${fmt(d.decided.onaylandi)} onay · ${fmt(d.decided.reddedildi)} ret`} info={<SeoInfo k={r.data?.kaynaklar} label="Karar verilen" />} />
             </section>
 
@@ -144,6 +148,9 @@ export default function SeoKeymap() {
               <Chip on={brand === '0'} onClick={() => reset(setBrand)('0')} label="Marka dışı" />
               <Chip on={brand === '1'} onClick={() => reset(setBrand)('1')} label="Marka araması" />
               <Chip on={brand === ''} onClick={() => reset(setBrand)('')} label="Hepsi" />
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Explain label="Marka araması">İçinde Timaş adı geçen aramalar. Bunlar zaten sizi arayanlar olduğu için ayrı tutulur; fırsatlar genelde marka dışı aramalardadır.</Explain>
+              </span>
             </div>
             <label className="sg-search">
               <Search size={16} aria-hidden />
@@ -152,15 +159,15 @@ export default function SeoKeymap() {
 
             <section className="sg-card">
               <h2>{kind === 'hepsi' ? 'Bütün aramalar' : d.kinds.find((x) => x.id === kind)?.label}</h2>
+              <p className="sg-sub" style={{ marginBottom: 6 }}>
+                Ne yapmalı: her aramada «Önerilen hedef»e bakın; doğruysa «Hedefi onayla»ya basın, değilse hedef adresi düzeltip onaylayın.
+              </p>
               <p className="sg-sub">
                 Sıralanan sayfa, aramada en çok tıklanan adresimizdir. Aramanın türü adından çıkarılır: sitedeki kitap adları, yazarlar ve kategoriler; “en iyi”,
                 “önerileri”, “okunması gereken” gibi kalıplar soru/liste araması sayılır. Sitede hiç ürünü olmayan kitap ya da yazar tanınmaz. Gösterime göre sıralı.
               </p>
               {!d.items.length ? (
-                <div className="sg-empty">
-                  <h2>Bu süzgeçte arama yok</h2>
-                  <p>Durum ya da marka süzgecini değiştirmeyi deneyin.</p>
-                </div>
+                <EmptyHint title="Bu süzgeçte arama yok" why="Durum ya da marka süzgecini değiştirmeyi deneyin." />
               ) : (
                 <div className="sg-list">
                   {d.items.map((i) => (
@@ -312,10 +319,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

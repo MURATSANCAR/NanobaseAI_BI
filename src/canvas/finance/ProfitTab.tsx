@@ -9,6 +9,7 @@ import { financeApi, fmtNum, fmtPct, fmtShort, type Meta, type ProfitBy, type Pr
 import { Approx, DataEnd, Money, SumCard } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Kârlılık: kitap · seri · yayınevi · kanal · cari. Kesin katkı yalnız maliyeti işlenmiş satırlardan; yaklaşık katkı
  *  M9 birim maliyeti ve sözleşme oranından telifle, kapsamıyla birlikte. */
@@ -86,16 +87,16 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
           {meta.me.canExport && (
             <>
               <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={financeApi.profitExportUrl(params)} download>
-                <Download aria-hidden className="h-4 w-4" /> CSV
+                <Download aria-hidden className="h-4 w-4" /> CSV indir
               </a>
               <a className={`${btnGhost} col-span-2 sm:col-span-1`} href={xlsxUrl(financeApi.profitExportUrl(params))} download>
-                <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+                <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel indir
               </a>
             </>
           )}
         </div>
       </Panel>
-      {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Kârlılık okunamadı.')}</Note> : d && (
+      {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Kârlılık okunamadı; biraz sonra yeniden deneyin.')}</Note> : d && (
         <>
           <DataEnd data={d} extra={<span>Dönem {d.donem}</span>} />
           <Note tone="info">
@@ -110,6 +111,9 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
             <SumCard label={<>Yaklaşık marj <Approx /></>} value={fmtPct(d.toplam.marjYaklasik)} info={<SqlInfo k={d.kaynaklar} alan="toplam.marjYaklasik" label="Yaklaşık marj (toplam)" />} />
             <SumCard label="Maliyeti bilinmeyen satış" value={fmtShort(d.toplam.maliyetBilinmeyenNet)} info={<SqlInfo k={d.kaynaklar} alan="toplam.maliyetBilinmeyenNet" label="Maliyeti bilinmeyen satış" />} />
           </div>
+          {!d.items.length ? (
+            <EmptyHint title="Bu dönemde gösterilecek satış yok" why="Ay aralığını genişletin ya da aramayı temizleyin." />
+          ) : (
           <TableWrap>
             <thead>
               <tr>
@@ -124,7 +128,12 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
                 {royalty && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].telif">Telif</InfoLabel></th>}
                 <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].katkiYaklasik">Yaklaşık katkı</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].marjYaklasik">Yaklaşık marj</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].kapsam">Kapsam</InfoLabel></th>
+                <th className={`${th} text-right`}>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={d.kaynaklar} alan="items[].kapsam">Kapsam</InfoLabel>
+                    <Explain label="Kapsam">Satışın ne kadarının maliyeti (Logo'dan ya da tahminle) biliniyor. Kapsam düşükse yaklaşık katkı eksik kalır.</Explain>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +141,7 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
               <Row r={d.toplam} royalty={royalty} total />
             </tbody>
           </TableWrap>
+          )}
           <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={setPage} />
         </>
       )}

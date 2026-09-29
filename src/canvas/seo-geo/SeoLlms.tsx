@@ -5,6 +5,8 @@ import { Check, Copy, Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fmt, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { Explain } from '../components/Explain';
+import { Term } from './terms';
 
 /** llms.txt: yapay zekâ motorlarına sitenin ne olduğunu anlatan dosya. Öneri eşitlenmiş veriden, modelsiz kurulur.
  *  T-soft'a gönderilmez; buradan kopyalanır ya da indirilir ve T-soft paneline elle yüklenir. */
@@ -21,22 +23,26 @@ export default function SeoLlms() {
       crumb="Yapay zekâ tarama dosyası"
       eyebrow="SEO & GEO · yapay zekâ dosyası"
       title="Yapay zekâ tarama dosyası"
-      lead="ChatGPT, Gemini ve Perplexity gibi motorlara sitenin ne olduğunu, hangi yayınevlerini ve kitapları taşıdığını anlatan dosya. Öneri T-soft’tan okunan veriden kurulur; T-soft’a gönderilmez, panelden elle yüklenir."
+      lead={<>Yapay zekâ servislerine sitenin ne olduğunu, hangi yayınevlerini ve kitapları taşıdığını anlatan dosyanın hazır önerisi. T-soft’tan okunan veriden kurulur; buradan indirilip T-soft paneline elle yüklenir. <Term k="llms" /></>}
     >
       {q.isLoading && <Loading text="Öneri hazırlanıyor…" />}
       {q.error && <Failed error={q.error} />}
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitedeki llms.txt" value={cur?.status === 200 ? (curText.length > 20 ? `${fmt(curText.length)} karakter` : 'Boş') : cur?.status ? `HTTP ${cur.status}` : 'Okunamadı'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms.txt" />} />
-            <Kpi label="Sitedeki llms-full.txt" value={d.current['llms-full.txt']?.status === 200 ? 'Var' : 'Yok'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms-full.txt" />} />
-            <Kpi label="Öneride kitap" value={fmt(d.books)} info={<SeoInfo k={q.data?.kaynaklar} label="Öneride kitap" />} />
-            <Kpi label="Yayınevi / yazar" value={`${fmt(d.brands)} / ${fmt(d.authors)}`} info={<SeoInfo k={q.data?.kaynaklar} label="Yayınevi / yazar" />} />
+            <Kpi label="Sitedeki llms.txt" value={cur?.status === 200 ? (curText.length > 20 ? `${fmt(curText.length)} karakter` : 'Boş') : cur?.status === 404 ? 'Sitede yok' : cur?.status ? `Açılmadı (${cur.status})` : 'Okunamadı'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms.txt" />}
+              explain="Şu an timas.com.tr’de yayında olan özet dosya. «Boş» ya da «Sitede yok» ise yapay zekâ servislerine site hakkında hiçbir şey anlatılmıyor demektir." />
+            <Kpi label="Sitedeki llms-full.txt" value={d.current['llms-full.txt']?.status === 200 ? 'Var' : 'Yok'} info={<SeoInfo k={q.data?.kaynaklar} label="Sitedeki llms-full.txt" />}
+              explain="Bütün aktif kitapları listeleyen uzun dosya sitede yayında mı." />
+            <Kpi label="Öneride kitap" value={fmt(d.books)} info={<SeoInfo k={q.data?.kaynaklar} label="Öneride kitap" />}
+              explain="Hazırlanan tam dosyada (llms-full.txt) listelenen aktif kitap sayısı." />
+            <Kpi label="Yayınevi / yazar" value={`${fmt(d.brands)} / ${fmt(d.authors)}`} info={<SeoInfo k={q.data?.kaynaklar} label="Yayınevi / yazar" />}
+              explain="Hazırlanan dosyada anılan yayınevi ve yazar sayısı." />
           </section>
 
           {cur?.status === 200 && curText.length <= 20 && (
             <p className="sg-banner">
-              Sitedeki <code>{d.site}/llms.txt</code> şu an yalnız “{curText || '—'}” içeriyor; yapay zekâ motorlarına bir şey anlatmıyor.
+              Sitedeki <code>{d.site}/llms.txt</code> şu an yalnız “{curText || '—'}” içeriyor; yapay zekâ servislerine bir şey anlatmıyor. Aşağıdaki öneriyi indirip site yöneticisine iletin.
             </p>
           )}
 
@@ -53,7 +59,7 @@ export default function SeoLlms() {
               <div className="sg-actions">
                 <CopyButton text={tab === 'llms' ? d.llms : d.full} />
                 <button className="sg-button" onClick={() => download(tab === 'llms' ? 'llms.txt' : 'llms-full.txt', tab === 'llms' ? d.llms : d.full)}>
-                  <Download size={16} aria-hidden /> İndir
+                  <Download size={16} aria-hidden /> Dosyayı indir
                 </button>
               </div>
             </div>
@@ -61,7 +67,7 @@ export default function SeoLlms() {
               {tab === 'llms'
                 ? `Özet dosya: yayınevleri, kategoriler, en çok satan ${fmt(d.listedSellers)} kitap (satışı olan ${fmt(d.sellers)} kitabın ilk ${fmt(d.listedSellers)}’ü) ve en çok kitabı olan yazarlar.`
                 : `Bütün aktif kitaplar (${fmt(d.books)}), yayınevine göre.`}{' '}
-              Yükleme: T-soft paneli → dosya yöneticisi / site kökü (<code>{d.site}/{tab === 'llms' ? 'llms.txt' : 'llms-full.txt'}</code>).
+              Nasıl yayınlanır: «İndir» ile dosyayı alın, site yöneticisi T-soft paneli → dosya yöneticisi ile site köküne yükler (<code>{d.site}/{tab === 'llms' ? 'llms.txt' : 'llms-full.txt'}</code>). Buradan siteye hiçbir şey gönderilmez.
             </p>
             <pre className="sg-pre">{tab === 'llms' ? d.llms : d.full}</pre>
           </section>
@@ -71,10 +77,10 @@ export default function SeoLlms() {
   );
 }
 
-function Kpi({ label, value, info }: { label: string; value: string; info?: ReactNode }) {
+function Kpi({ label, value, info, explain }: { label: string; value: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ fontSize: 20 }}>{value}</div>
     </div>
   );

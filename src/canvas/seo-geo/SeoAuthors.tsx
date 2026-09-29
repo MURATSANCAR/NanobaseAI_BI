@@ -6,6 +6,8 @@ import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshC
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, scoreTone } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { Term } from './terms';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -85,7 +87,7 @@ export default function SeoAuthors() {
       crumb="Yazar sayfaları"
       eyebrow="SEO & GEO · Yazar güven sinyalleri"
       title="Yazar sayfaları"
-      lead="Google ve yapay zekâ motorları bir kitabı önerirken yazarın kim olduğuna, deneyimine ve kaynakların onu tanıyıp tanımadığına bakar. En çok satan yazardan başlayarak her yazar için sayfa, tanıtım metni, kimlik kaydı, kitap sayfalarındaki kimlik bağlantısı, çevirmen/çizer künyesi ve ödüller denetlenir."
+      lead={<>Google ve yapay zekâ servisleri bir kitabı önerirken yazarın kim olduğuna ve başka kaynakların onu tanıyıp tanımadığına bakar. En çok satan yazardan başlayarak her yazarın sayfası, tanıtım metni, açık kayıtları, çevirmen/çizer künyesi ve ödülleri denetlenir; yazara dokunun, eksikler ve ne yapılacağı açılsın. <Term k="trust" /></>}
       actions={
         canRun && (
           <button className="sg-button" onClick={() => read.mutate()} disabled={read.isPending || running}>
@@ -103,10 +105,14 @@ export default function SeoAuthors() {
       {d && s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Yazar" value={fmt(s.authors)} note="Satıştaki kitaplardan" info={<SeoInfo k={list.data?.kaynaklar} label="Yazar" />} />
-            <Kpi label="Ortalama güven puanı" value={s.average == null ? '—' : fmt(s.average)} note="Bilinen maddelerin ağırlıklı oranı, 100 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama güven puanı" />} />
-            <Kpi label="Yazar sayfası yok" value={fmt(s.missing.page)} note="Sitede sayfası bulunamayan yazar" tone={s.missing.page ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yazar sayfası yok" />} />
-            <Kpi label="Kimlik kaydı eksik" value={fmt(s.missing.wikidata)} note="Wikidata/Wikipedia’da kaydı yok ya da belirsiz" tone={s.missing.wikidata ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kimlik kaydı eksik" />} />
+            <Kpi label="Yazar" value={fmt(s.authors)} note="Satıştaki kitaplardan" info={<SeoInfo k={list.data?.kaynaklar} label="Yazar" />}
+              explain="Satıştaki kitapları olan yazar sayısı; liste en çok satan yazardan başlar." />
+            <Kpi label="Ortalama güven puanı" value={s.average == null ? '—' : fmt(s.average)} note="Bilinen maddelerin ağırlıklı oranı, 100 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama güven puanı" />}
+              explain="Her yazar için denetlenen maddelerden tamam olanların ağırlıklı oranı (100 üzerinden); durumu bilinmeyen maddeler hesaba girmez. Yazarların ortalaması." />
+            <Kpi label="Yazar sayfası yok" value={fmt(s.missing.page)} note="Sitede sayfası bulunamayan yazar" tone={s.missing.page ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Yazar sayfası yok" />}
+              explain="Sitede kendi sayfası bulunamayan yazarlar; Google ve okur yazar hakkında bilgi alacak bir sayfa bulamaz." />
+            <Kpi label="Kimlik kaydı eksik" value={fmt(s.missing.wikidata)} note="Wikidata/Wikipedia’da kaydı yok ya da belirsiz" tone={s.missing.wikidata ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kimlik kaydı eksik" />}
+              explain="Wikidata ya da Wikipedia’da kaydı bulunmayan ya da hangi kayıt olduğu kesin olmayan yazarlar. Google ve yapay zekâ servisleri kişiyi bu kayıtlardan tanır." />
           </section>
           <p className="sg-banner">
             {s.crmRead
@@ -131,10 +137,7 @@ export default function SeoAuthors() {
           </label>
 
           {!d.items.length && (
-            <div className="sg-empty">
-              <h2>Yazar yok</h2>
-              <p>Bu süzgece uyan yazar bulunamadı.</p>
-            </div>
+            <EmptyHint title="Bu süzgece uyan yazar yok" why={query ? 'Aramayı kısaltın ya da temizleyin.' : 'Üstten «Tümü»nü seçin.'} />
           )}
           <div className="sg-list">
             {d.items.map((r) => {
@@ -186,8 +189,8 @@ export default function SeoAuthors() {
                         <table className="sg-table">
                           <thead>
                             <tr>
-                              <th>Madde</th>
-                              <th>Durum</th>
+                              <th><ExplainLabel label="Madde">Parantezdeki sayı, maddenin güven puanındaki ağırlığıdır; büyük olan daha önemlidir.</ExplainLabel></th>
+                              <th><ExplainLabel label="Durum">«Bilinmiyor»: bakılacak veri henüz okunmadı ya da taranmadı. «Gerekmiyor»: madde bu yazar için geçerli değil (ör. CRM’de çevirmen ya da çizer yazılı kitabı yoksa künye maddesi). İkisi de puana katılmaz.</ExplainLabel></th>
                               <th>Ayrıntı ve yapılacak</th>
                             </tr>
                           </thead>
@@ -234,10 +237,10 @@ export default function SeoAuthors() {
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

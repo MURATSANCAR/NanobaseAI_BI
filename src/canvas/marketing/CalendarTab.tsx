@@ -31,7 +31,7 @@ export default function CalendarTab({ plan, meta, editable, canMark, onSaved }: 
     <Block
       title="Takvim"
       info={<SqlInfo k={plan.kaynaklar} alan="tasks[]" label="Takvim işleri ve gün farkı" />}
-      help={plan.yayinTarihi ? `Yayın günü ${fmtDay(plan.yayinTarihi)}. Şablon işleri yayın günü değişince kendiliğinden kayar.` : 'Yayın tarihi yok: önce plan başlığındaki yayın tarihini girin.'}
+      help={plan.yayinTarihi ? `Yayın günü ${fmtDay(plan.yayinTarihi)}. Hazır işler yayın gününe göre dizilir, yayın günü değişince kendiliğinden kayar. Tarihi geçen ve yapılmamış iş kırmızı görünür.` : 'Yayın tarihi yok: önce plan başlığındaki yayın tarihini girin.'}
       action={editable && (
         <button type="button" className={btnGhost}
           onClick={() => setRows((xs) => [...xs, { tarih: plan.yayinTarihi, gunFarki: 0, is: 'Yeni iş', kanal: null, sorumlu: null, durum: 'bekliyor', kanitUrl: null, kaynak: 'kullanici' }])}>
@@ -39,7 +39,7 @@ export default function CalendarTab({ plan, meta, editable, canMark, onSaved }: 
         </button>
       )}
     >
-      {rows.length === 0 && <Note tone="info">Takvimde iş yok.</Note>}
+      {rows.length === 0 && <Note tone="info">Takvimde iş yok. Plan açılırken yayın gününe göre hazır işler eklenir; yayın günü belli değilse takvim boş kalır. {editable ? '«İş ekle» ile elle ekleyebilirsiniz.' : ''}</Note>}
       <ol className="flex flex-col gap-1.5">
         {sorted.map(({ r, i }) => {
           const late = r.durum === 'bekliyor' && !!r.tarih && r.tarih < today;

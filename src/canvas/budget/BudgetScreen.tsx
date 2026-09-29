@@ -88,7 +88,7 @@ export default function BudgetScreen() {
   const refresh = useMutation({
     mutationFn: budgetApi.refresh,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budget', 'meta'] }),
-    onError: (e) => toast.error(errText(e, 'Yenileme başlatılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Gerçekleşme yenilemesi başlatılamadı; biraz sonra yeniden deneyin.') ?? ''),
   });
 
   const act = useMutation({
@@ -111,7 +111,7 @@ export default function BudgetScreen() {
       if (kind === 'revise' && out) update({ plan: out.id, sekme: 'hedefler' });
       if (kind === 'delete') update({ plan: null });
     },
-    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'İşlem yapılamadı; biraz sonra yeniden deneyin.') ?? ''),
   });
 
   const years = useMemo(() => {
@@ -147,7 +147,7 @@ export default function BudgetScreen() {
         {me?.canEdit && (
           <button type="button" className={`${btnPrimary} flex-1`} onClick={() => setGen(true)} disabled={!data?.dataEnd}>
             <Calculator aria-hidden className="h-4 w-4" />
-            Veriden öneri
+            Veriden öneri hazırla
           </button>
         )}
         {plan && (
@@ -172,8 +172,8 @@ export default function BudgetScreen() {
       presence={plan ? `${plan.title} · ${plan.statusLabel}` : `${year}`}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {meta.error && <Note tone="err">{errText(meta.error, 'Bütçe bilgisi açılamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; bütçe verileri gösterilemiyor.</Note>}
+      {meta.error && <Note tone="err">{errText(meta.error, 'Bütçe bilgisi açılamadı; biraz sonra sayfayı yenileyin.')}</Note>}
 
       {data && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white/70 px-3 py-2 text-[12px] font-semibold text-canvas-muted">
@@ -225,12 +225,16 @@ export default function BudgetScreen() {
 
           <KpiRow>
             <Kpi label="Hedef net ciro" value={fmtShort(t.ciro)} help={`${t.kitap.toLocaleString('tr-TR')} kitap + ${t.program.ekBaslik.toLocaleString('tr-TR')} ek başlık`}
+              explain="Plandaki kitap satış hedefleri ile yeni kitap programının yıllık net ciro toplamı (iskonto ve iade sonrası)."
               info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef net ciro" />} />
             <Kpi label="Hedef net adet" value={fmtShort(t.adet)} help={`Yeni ${fmtShort(t.segments.yeni?.adet ?? 0)} · backlist ${fmtShort(t.segments.backlist?.adet ?? 0)}`}
+              explain="Planda hedeflenen yıllık net satış adedi. «Yeni» son dönemde çıkan kitapları, «backlist» daha önce çıkmış eski kitapları gösterir."
               info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef net adet" />} />
             <Kpi label="Hedef brüt marj" value={fmtPct(t.marj)} help={`Brüt kâr ${fmtShort(t.brutKar)} ₺`}
+              explain="Hedef cirodan kitapların maliyeti düşülünce kalan brüt kârın ciroya oranı. Altında brüt kârın tutarı yazar."
               info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Hedef brüt marj" />} />
             <Kpi label="Departman bütçesi" value={fmtShort(t.gider)} help="Yıllık gider bütçesi (7 ile başlayan hesaplar)" active={tab === 'departman'} onClick={() => update({ sekme: 'departman' })}
+              explain="Departmanların yıllık gider bütçesi toplamı (muhasebede 7 ile başlayan gider hesapları). Karta dokunursanız departman bütçesi sekmesi açılır."
               info={<SqlInfo k={plans.data?.kaynaklar} alan="items[].totals" row={plan.id} label="Departman bütçesi" />} />
           </KpiRow>
         </>
@@ -240,8 +244,8 @@ export default function BudgetScreen() {
         <section className="glass-panel flex flex-col items-start gap-2 rounded-3xl p-5 shadow-glass-float">
           <h2 className="text-lg font-extrabold">{year} için henüz plan yok</h2>
           <p className="max-w-[70ch] text-[12.5px] text-canvas-muted">
-            Veriden öneri, Logo gerçekleşmesinden (taban dönem), CRM kitap kartlarından ve baskı önerisinin ZEKİ AI satış tahmininden kurala göre üç senaryolu bir taslak hesaplar:
-            muhafazakâr, temel ve iyimser. Taslaklar düzenlenir, biri onaya gönderilir; onaylanınca yılın yürürlükteki planı olur.
+            «Veriden öneri», geçmiş Logo satışlarından, CRM kitap kartlarından ve Zeki AI tahminlemeden üç senaryolu bir taslak hazırlar:
+            muhafazakâr, temel ve iyimser. Taslakları düzenler, birini onaya gönderirsiniz; onaylanınca yılın yürürlükteki planı olur.
           </p>
           {me?.canEdit ? (
             <button type="button" className={btnPrimary} onClick={() => setGen(true)} disabled={!data?.dataEnd}>
@@ -249,7 +253,7 @@ export default function BudgetScreen() {
               Veriden öneri oluştur
             </button>
           ) : (
-            <Note tone="info">Taslak hazırlama yetkisi olan biri öneriyi oluşturabilir.</Note>
+            <Note tone="info">Öneriyi bütçe taslağı hazırlama yetkisi olan biri oluşturabilir; gerekirse bütçe sorumlusuna haber verin.</Note>
           )}
         </section>
       )}
@@ -288,7 +292,7 @@ export default function BudgetScreen() {
             : ask === 'revise' ? 'Yürürlükteki planın kopyası yeni bir taslak sürüm olarak açılır. Onaylanana kadar mevcut hedefler geçerli kalır.'
             : 'Taslak ve bütün satırları silinir. Bu işlem geri alınmaz.'
         }
-        confirm={{ submit: 'Onaya gönder', withdraw: 'Taslağa al', approve: 'Onayla', reject: 'Geri gönder', revise: 'Revizyon aç', delete: 'Sil', '': '' }[ask ?? '']}
+        confirm={{ submit: 'Onaya gönder', withdraw: 'Taslağa al', approve: 'Onayla', reject: 'Geri gönder', revise: 'Revizyon aç', delete: 'Kalıcı olarak sil', '': '' }[ask ?? '']}
         danger={ask === 'delete'}
         input={ask === 'reject' ? 'Gerekçe' : ask === 'revise' ? 'Revizyon gerekçesi (sezon, piyasa değişimi…)' : ask === 'approve' ? 'Not (isteğe bağlı)' : undefined}
         required={ask === 'reject' || ask === 'revise'}

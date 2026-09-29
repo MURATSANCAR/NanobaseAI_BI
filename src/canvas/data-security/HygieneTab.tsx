@@ -8,6 +8,7 @@ import { AskSheet } from '../budget/parts';
 import { SEVERITY, fmtAt, fmtN, securityApi, type SecurityMeta } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint, ExplainLabel } from '../components/Explain';
 
 /** Hesap hijyeni (AD, CRM ve portal izlerinin kesişimi) ve «Herkes» daraltma önizlemesi. */
 export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
@@ -37,8 +38,8 @@ export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
               <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Hesap hijyeni sayıları" />
             </h2>
             <p className="text-[12px] text-canvas-muted">
-              AD'de kapalı ama portalda izi olan, uzun süredir girmeyen, test adı taşıyan ve rolü olmayan hesaplar. Portal AD'ye ve
-              CRM'e yazmaz; hesap kapatma BT'nin işidir, burada yalnız portal oturumu kapanır.
+              Active Directory’de kapalı ama portalda izi olan, uzun süredir girmeyen, test adı taşıyan ya da rolü olmayan hesaplar.
+              Portal Active Directory’ye ve CRM’e yazmaz; hesabı kapatmak BT’nin işidir, burada yalnız portal oturumu kapatılır.
             </p>
           </div>
           <button type="button" className={btnGhost} disabled={q.isFetching} onClick={() => q.refetch()}>
@@ -61,12 +62,20 @@ export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
             )}
           </div>
         )}
+        {hy && !items.length && (
+          <div className="mt-3">
+            <EmptyHint title={kind ? 'Bu türde bulgu yok' : 'Bulgu yok'} why="Taranan hesapların hiçbirinde temizlenmesi gereken bir durum bulunmadı." />
+          </div>
+        )}
         {hy && (
           <div className="mt-3">
+            {!!items.length && (
             <TableWrap>
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className={th}>Önem</th>
+                  <th className={th}>
+                    <ExplainLabel label="Önem">«Kritik» hemen bakılmalı (ör. şirket hesabı kapalı ama portal oturumu açık); diğerleri düzenli temizlikte ele alınabilir.</ExplainLabel>
+                  </th>
                   <th className={th}>Kişi</th>
                   <th className={th}>Bulgu</th>
                   <th className={th}>Son giriş</th>
@@ -95,11 +104,11 @@ export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
                     )}
                   </tr>
                 ))}
-                {!items.length && <tr><td className={td} colSpan={5}>Bulgu yok.</td></tr>}
               </tbody>
             </TableWrap>
+            )}
             <p className="mt-2 text-[11.5px] text-canvas-muted">
-              Kaynaklar: AD {hy.sources.ad ? `${fmtN(hy.sources.adPeople)} etkin kişi` : 'okunamadı'} · CRM{' '}
+              Kaynaklar: Active Directory {hy.sources.ad ? `${fmtN(hy.sources.adPeople)} etkin kişi` : 'okunamadı'} · CRM{' '}
               {hy.sources.crm ? `${fmtN(hy.sources.crmUsers)} etkin kullanıcı` : 'okunamadı'} · giriş kaydı{' '}
               {hy.loginsSince ? `${fmtAt(hy.loginsSince)}'den beri` : 'boş'} · tarama {fmtAt(hy.at)}
             </p>
@@ -110,7 +119,7 @@ export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
       <AskSheet
         open={!!ask}
         title="Oturumlarını kapat"
-        message={<p>«{ask}» kişisinin bütün açık portal oturumları kapanacak. AD'de etkin olmadığı için yeniden giriş yapamaz.</p>}
+        message={<p>«{ask}» kişisinin bütün açık portal oturumları kapanacak. Active Directory hesabı etkin olmadığı için yeniden giriş yapamaz.</p>}
         confirm="Oturumları kapat"
         danger
         busy={revoke.isPending}
@@ -145,8 +154,8 @@ function EveryonePreviewPanel() {
         <SqlInfo k={kaynakOf(view)} alan="_hepsi" label="Kaybeden kişi sayıları" />
       </h2>
       <p className="text-[12px] text-canvas-muted">
-        «Herkes» giriş yapan herkese uygulanır. Prod öncesi daraltılacak; bu önizleme, daraltılırsa hangi kişinin hangi sayfayı
-        kaybedeceğini bugünkü roller ve AD üyelikleriyle hesaplar. Hiçbir şey değişmez; daraltma Yönetim → Yetkiler'de yapılır.
+        «Herkes» rolü giriş yapan her çalışana uygulanır ve daraltılması önerilir. Bu önizleme, daraltılırsa kimin hangi sayfayı
+        kaybedeceğini bugünkü roller ve Active Directory grup üyelikleriyle hesaplar. Burada hiçbir şey değişmez; daraltma Yönetim → Yetkiler’de yapılır.
       </p>
       {!run && (
         <div className="mt-3">

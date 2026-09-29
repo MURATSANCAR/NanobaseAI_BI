@@ -11,6 +11,7 @@ import SqlInfo from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
 import { downloadIcs, fmtDay, fmtWeekday, invalidateAuthors } from './shared';
 import type { PanelTarget } from './CardPanel';
+import { Explain } from '../../components/Explain';
 
 /** Randevular: önümüzdeki 30 günün randevuları gün gün, tarihi geçip notu girilmemiş randevular, görüşmelerden
  *  kalan açık «sıradaki adım»lar (tarihi geçen önde). Varsayılan «benim»: yazdığım, katılımcısı olduğum ya da
@@ -64,14 +65,17 @@ function ReminderToggle() {
         />
         Sabah e-posta özeti
       </label>
+      <Explain label="Sabah e-posta özeti">
+        Her sabah bir kez, bugünkü ve yarınki randevularınızı, notu girilmemiş randevularınızı ve geciken adımlarınızı size e-postayla bildirir. Yazara ya da dışarıya gönderilmez.
+      </Explain>
       <span className="inline-flex flex-wrap items-center gap-x-0.5 text-[11.5px] text-canvas-muted">
         {!d.smtp
-          ? 'E-posta sunucusu tanımlı değil; özet gönderilemez (Yönetim → Ayarlar).'
+          ? 'E-posta gönderimi ayarlanmamış; özet gönderilemez (Yönetim → Ayarlar).'
           : d.enabled
             ? n
               ? `Bugünkü özette ${n} iş: ${d.today.randevu} randevu, ${d.today.not} notu eksik, ${d.today.adim} adım.`
               : 'Bugün sizi bekleyen iş yok; boş özet gönderilmez.'
-            : 'Kapalı.'}
+            : 'Özet kapalı; size e-posta gitmez.'}
         {d.smtp && d.enabled && n > 0 && <SqlInfo k={d.kaynaklar} alan="today" label="Bugünkü özet" className="ml-0.5" />}
       </span>
     </div>
@@ -173,7 +177,8 @@ export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void
               </ul>
             </Section>
 
-            <Section title="Açık adımlar" count={data.openSteps.length} empty="Bekleyen adım yok." k={data.kaynaklar} alan="sayac.adim">
+            <Section title="Açık adımlar" count={data.openSteps.length} empty="Görüşme notlarında yazılmış, bekleyen «sıradaki adım» yok." k={data.kaynaklar} alan="sayac.adim">
+              <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">Görüşme notundaki «sıradaki adım»lar. İş bitince kutuyu işaretleyin; adım listeden kalkar.</p>
               <ul className="mt-2 space-y-1.5">
                 {data.openSteps.map((m) => (
                   <li key={m.id} className="flex items-start gap-2 rounded-2xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">

@@ -60,10 +60,10 @@ export default function SupportScreen() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil; ekran boş kalır.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {m && !m.destek.configured && (
-        <Note tone="warn">Destek masası bağlantısı ayarlanmamış; kuyruk ve kalite boş kalır. Yönetim → Ayarlar → Müşteri hizmetleri.</Note>
+        <Note tone="warn">Destek masası bağlantısı ayarlanmamış, bu yüzden kuyruk ve kalite panosu boş. Yöneticiniz Yönetim → Ayarlar → Müşteri hizmetleri’nden bağlantıyı girebilir.</Note>
       )}
       {m?.me.canContext && (!m.me.dataCari || !m.me.dataSatis) && (
         <Note tone="info">

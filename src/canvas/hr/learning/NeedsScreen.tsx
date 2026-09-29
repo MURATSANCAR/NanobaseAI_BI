@@ -43,14 +43,14 @@ export default function NeedsScreen() {
     <LearningFrame
       crumb="Eğitim ve gelişim"
       title="Eğitim ihtiyaçları"
-      lead="Çalışanların, yöneticilerin ve İK'nın bildirdiği ihtiyaçlar. Zeki AI her ihtiyacı katalogdaki bir eğitime eşler, öncelik ve tek cümlelik gerekçe önerir; modele kişi adı gitmez. Karar İK'nındır."
+      lead="Çalışanların, yöneticilerin ve İK'nın bildirdiği eğitim ihtiyaçları. Zeki AI her ihtiyacı katalogdaki bir eğitime eşler, öncelik ve tek cümlelik gerekçe önerir; Zeki AI'a kişi adı gitmez. Karar İK'nındır."
       aside={
         can?.manage ? (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-            <button type="button" className={btnGhost} onClick={() => setAdding(true)}><Plus aria-hidden className="h-4 w-4" />İhtiyaç</button>
+            <button type="button" className={btnGhost} onClick={() => setAdding(true)}><Plus aria-hidden className="h-4 w-4" />İhtiyaç ekle</button>
             {info.data?.modelVar && (
               <button type="button" className={btnPrimary} disabled={suggest.isPending} onClick={() => suggest.mutate()}>
-                {suggest.isPending ? `Zeki AI eşliyor… ${progress ?? ''}` : 'Zeki AI önerisi al'}
+                {suggest.isPending ? `Zeki AI eşliyor… ${progress ?? ''}` : 'Zeki AI’dan öneri al'}
               </button>
             )}
           </div>
@@ -59,7 +59,7 @@ export default function NeedsScreen() {
     >
       {q.error && <Note tone="err">{errText(q.error, 'İhtiyaçlar okunamadı.')}</Note>}
       {d && d.summary.length > 0 && (
-        <Block title="Öncelik sırası" help="Açık ve onaylı ihtiyaçlar, eğitim başına: önce yüksek öncelikli sayısı, sonra toplam." info={<SqlInfo k={d.kaynaklar} alan="summary" label="İhtiyaç sayıları" />}>
+        <Block title="Öncelik sırası" help="Hangi eğitim için en çok ihtiyaç var: açık ve onaylı ihtiyaçlar eğitim başına sayılır; önce yüksek öncelikli sayısına, sonra toplama göre sıralanır. «Belirsiz»: önceliği henüz verilmemiş." info={<SqlInfo k={d.kaynaklar} alan="summary" label="İhtiyaç sayıları" />}>
           <TableWrap>
             <thead>
               <tr><th className={th}>Eğitim</th><th className={`${th} text-right`}>Toplam</th><th className={`${th} text-right`}>Yüksek</th><th className={`${th} text-right`}>Orta</th><th className={`${th} text-right`}>Düşük</th><th className={`${th} text-right`}>Belirsiz</th></tr>
@@ -86,8 +86,8 @@ export default function NeedsScreen() {
           </select>
         }
       >
-        {!can?.manage && <Note tone="info">İhtiyaç metni ve kişi eğitim yönetimi yetkisiyle görünür.</Note>}
-        {d && d.items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu durumda ihtiyaç yok.</p>}
+        {!can?.manage && <Note tone="info">İhtiyacın metnini ve kimin bildirdiğini yalnız eğitim yönetimi yetkisi olanlar görür.</Note>}
+        {d && d.items.length === 0 && <p className="text-[12px] text-canvas-muted">{state ? 'Bu durumda ihtiyaç yok; durum süzgecini «Hepsi» yapabilirsiniz.' : 'Henüz bildirilmiş eğitim ihtiyacı yok. Çalışanlar «Eğitimlerim» ekranından bildirebilir.'}</p>}
         <ul className="flex flex-col gap-2">
           {d?.items.map((n) => <NeedRow key={n.id} n={n} info={info.data} canDecide={!!can?.manage} />)}
         </ul>
@@ -147,7 +147,7 @@ function NeedRow({ n, info, canDecide }: { n: Need; info?: Info; canDecide: bool
           </label>
           <div className="flex flex-wrap gap-2">
             {n.state !== 'onaylandi' && <button type="button" className={btnPrimary} disabled={decide.isPending} onClick={() => decide.mutate('onaylandi')}>Onayla</button>}
-            {n.state === 'onaylandi' && <button type="button" className={btnPrimary} disabled={decide.isPending} onClick={() => decide.mutate('karsilandi')}>Karşılandı</button>}
+            {n.state === 'onaylandi' && <button type="button" className={btnPrimary} disabled={decide.isPending} onClick={() => decide.mutate('karsilandi')}>Karşılandı olarak işaretle</button>}
             {n.state !== 'reddedildi' && <button type="button" className={btnGhost} disabled={decide.isPending} onClick={() => decide.mutate('reddedildi')}>Reddet</button>}
           </div>
         </div>

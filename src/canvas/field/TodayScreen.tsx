@@ -10,6 +10,7 @@ import { CustomerRow, Empty, Stat } from './parts';
 import VisitNoteSheet from './VisitNoteSheet';
 import MorningBrief from './MorningBrief';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 /** «Bugün» (telefonun ilk ekranı): üstte 3 sayı, bugün planlanan ziyaretler, sonra kural puanıyla sıralı müşteri listesi
  *  (gerekçe çipleriyle). Sıralamayı temsilci ziyaret planlayarak değiştirir; müdür önceliği gerekçesiyle üste çıkarır. */
@@ -47,12 +48,13 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       {!dq && <MorningBrief temsilci={temsilci} />}
       {t.warning && <Note tone="warn">{t.warning}</Note>}
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="Vadesi geçmiş" info={<SqlInfo k={t.kaynaklar} alan="kpi" label="Vadesi geçmiş ve 90+ gün" />} value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} tone={t.kpi.k90 > 0 ? 'err' : undefined} />
-        <Stat label="Onay bekleyen" info={<SqlInfo k={t.kaynaklar} alan="kpi.onayBekleyen" label="Onay bekleyen CRM tahsilatı" />} value={fmtCount(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
+        <Stat label="Vadesi geçmiş" info={<SqlInfo k={t.kaynaklar} alan="kpi" label="Vadesi geçmiş ve 90+ gün" />} value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} explain="Vadesi dolduğu hâlde ödenmemiş alacakların toplamı (Logo). Altındaki rakam, 90 günden fazla gecikmiş kısmıdır. Tutarlar yaklaşıktır." tone={t.kpi.k90 > 0 ? 'err' : undefined} />
+        <Stat label="Onay bekleyen" info={<SqlInfo k={t.kaynaklar} alan="kpi.onayBekleyen" label="Onay bekleyen CRM tahsilatı" />} value={fmtCount(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} explain="CRM'e girilmiş ama finansın henüz onaylamadığı tahsilat kayıtlarının sayısı; altında toplam tutarı. Ayrıntısı «Tahsilat» sekmesindedir." tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
         <Stat
           label="Hedef oranı"
           info={<SqlInfo k={t.kaynaklar} alan="kpi.hedefOrani" label="Hedef oranı" />}
           value={fmtPct(t.kpi.hedefOrani)}
+          explain="Yıl başından bugüne gerçekleşen satışın, bu tarihe kadar beklenen hedef tutarına oranı. %100 ve üstü hedefin gerisinde olmadığınızı gösterir; hedefin nereden geldiği «Sıra nasıl belirleniyor?» altında yazar."
           help={meta.run.target?.kaynak === 'crm-tutarsiz' ? 'CRM hedefleri tutarsız; ayrıntı aşağıda' : 'Yıl başından, beklenene göre'}
         />
       </div>
@@ -91,7 +93,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           <SqlInfo k={t.kaynaklar} alan="planned" label="Bugün planlanan ziyaretler" />
         </h2>
         {t.planned.length === 0 ? (
-          <Empty>Bugün için planlanmış ziyaret yok. Listeden bir müşteriyi «Planla» ile bugüne alabilirsiniz.</Empty>
+          <Empty title="Bugün planlanmış ziyaret yok">Aşağıdaki öncelik listesinden bir müşteriyi «Planla» ile bugüne alabilirsiniz.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
             {t.planned.map((v) =>
@@ -131,6 +133,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           <div>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
               Öncelik sırası ({fmtCount(total)})
+              <Explain label="Öncelik sırası">Müşterileriniz bugün ziyaret edilme önceliğine göre sıralanır. Soldaki sayı öncelik puanıdır (0–100); altındaki etiketler müşterinin neden üstte olduğunu söyler.</Explain>
               <SqlInfo k={t.kaynaklar} alan="total" label="Öncelik listesi" />
             </h2>
             <p className="text-[11.5px] text-canvas-muted">
@@ -144,12 +147,12 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           </label>
         </div>
         {items.length === 0 ? (
-          <Empty>
+          <Empty title={t.kpi.cari === 0 ? 'Listede müşteri yok' : 'Aramaya uyan müşteri yok'}>
             {t.kpi.cari === 0
               ? meta.run.asof
-                ? 'CRM\'de size atanmış (sahibi siz olan ya da ilinizin temsilcisi olduğunuz) müşteri carisi yok.'
-                : 'Saha verisi henüz hazırlanmadı; ilk gece turundan sonra liste dolar.'
-              : 'Aramaya uyan müşteri yok.'}
+                ? 'CRM\'de size atanmış (sahibi siz olan ya da ilinizin temsilcisi olduğunuz) müşteri yok. Atama eksikse CRM yöneticinize başvurun.'
+                : 'Saha verisi henüz hazırlanmadı; her sabah 06:30\'daki hazırlıktan sonra liste dolar.'
+              : 'Unvanın bir kısmını, cari kodunu ya da ili yazarak yeniden deneyin.'}
           </Empty>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -195,9 +198,9 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           <SqlInfo k={t.kaynaklar} alan="items[].puan" label="Öncelik puanı" />
         </div>
         <p className="mt-2 leading-snug text-canvas-muted">
-          Puan kuraldır, model vermez. Her bileşenin en çok puanı yanında; toplam 100'de kesilir. Vadesi geçmiş alacak yaşa göre
-          ağırlıklıdır ve sizin portföyünüzdeki sırasına göre puanlanır. Tutarlar yaklaşıktır: Logo'da ödeme kapama kullanılmadığı için
-          bakiye en yeni vadelerden geriye dağıtılır (FIFO).
+          Puan sabit bir kurala göre hesaplanır; Zeki AI puan vermez. Her bileşenin alabileceği en yüksek puan yanında yazar; toplam 100'ü
+          geçmez. Vadesi geçmiş alacak, gecikme süresine göre ağırlıklıdır ve sizin müşterileriniz arasındaki sırasına göre puanlanır.
+          Tutarlar yaklaşıktır: Logo'da ödemeler tek tek faturalara kapatılmadığı için bakiye en yeni vadelerden geriye doğru dağıtılır.
         </p>
         <ul className="mt-2 grid gap-1 sm:grid-cols-2">
           {meta.weights.map((w) => (

@@ -6,6 +6,7 @@ import { fmtDay, fmtInt, fmtPct, STATUS_TONE, TREE_TONE, type Overview, type Pro
 import { FillBar, ROOT } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** Özet: katalog sayacı, profil durumu, alan doluluğu, tutarsızlıklar, bana düşenler, ağaç ve CRM farkı. */
 export default function CategoriesHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -26,10 +27,14 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Aktif kitap" />} label="Aktif kitap" value={fmtInt(o.activeBooks)} help={`CRM'de etkin kitap kartı · ${fmtInt(o.placed)} kitabın ağaçta yeri var`} />
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı profil" />} label="Onaylı profil" value={fmtInt(approved)} help={`${fmtPct(approved, o.activeBooks)} · taslak ${fmtInt(o.status.taslak)}, kısmi ${fmtInt(o.status.kismi)}`} />
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Satıştaki kitap" />} label="Satıştaki kitap" value={fmtPct(o.sellingApproved, o.selling)} help={`${fmtInt(o.selling)} satıştaki kitabın onaylı kategorisi olanı (hedef: tamamı)`} />
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Açık tutarsızlık" />} label="Açık tutarsızlık" value={fmtInt(o.findings.open)} help={`${rules.length} kuralda · CRM'e işlenecek ${fmtInt(o.crmDiff.rows)} satır`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Aktif kitap" />} label="Aktif kitap" value={fmtInt(o.activeBooks)}
+          explain="CRM'de etkin (pasif olmayan) kitap kartı sayısı. «Ağaçta yeri var»: CRM sınıflamalarıyla onaylı kategori ağacında bir düğüme yerleşen kitaplar."  help={`CRM'de etkin kitap kartı · ${fmtInt(o.placed)} kitabın ağaçta yeri var`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı profil" />} label="Onaylı profil" value={fmtInt(approved)}
+          explain="Kategorisi editör tarafından kabul edilmiş ya da düzeltilmiş kitap profilleri. «Taslak»: önerilere hiç karar verilmedi; «kısmi»: bazı alanlara karar verildi."  help={`${fmtPct(approved, o.activeBooks)} · taslak ${fmtInt(o.status.taslak)}, kısmi ${fmtInt(o.status.kismi)}`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Satıştaki kitap" />} label="Satıştaki kitap" value={fmtPct(o.sellingApproved, o.selling)}
+          explain="Logo'da son dönemde satışı olan kitaplardan onaylı kategorisi olanların payı. Önce bu kitapların profili tamamlanmalı."  help={`${fmtInt(o.selling)} satıştaki kitabın onaylı kategorisi olanı (hedef: tamamı)`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Açık tutarsızlık" />} label="Açık tutarsızlık" value={fmtInt(o.findings.open)}
+          explain="CRM'deki sınıflamalar arasında birbiriyle çelişen ya da eksik kalan kayıtlar (ör. yaş aralığı hedef kitleyle uyuşmuyor). Kural başına dağılım aşağıda."  help={`${rules.length} kuralda · CRM'e işlenecek ${fmtInt(o.crmDiff.rows)} satır`} />
       </KpiRow>
 
       <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr] lg:gap-4">
@@ -42,7 +47,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
             {o.fill.map((f) => <FillBar key={f.key} label={f.label} filled={f.filled} total={f.total} />)}
           </div>
           <p className="mt-3 text-[11.5px] leading-snug text-canvas-muted">
-            Çoka-çok bağlar: ürün kategorisi {fmtInt(o.links.urunkategorisi)}, raf {fmtInt(o.links.raf)}, sergilenecek {fmtInt(o.links.sergilenecek)},
+            Kitap kartlarına bağlı sınıflama sayısı: ürün kategorisi {fmtInt(o.links.urunkategorisi)}, raf {fmtInt(o.links.raf)}, sergilenecek {fmtInt(o.links.sergilenecek)},
             tema {fmtInt(o.links.tema)}, anahtar kelime {fmtInt(o.links.anahtarkelime)}, tür {fmtInt(o.links.tur)}. Site: {fmtInt(o.tsoft.products ?? 0)} ürün,
             {' '}{fmtInt(o.tsoft.categories)} kategori{o.tsoft.syncedAt ? ` (SEO eşitlemesi ${fmtDay(o.tsoft.syncedAt)})` : ' (SEO eşitlemesi yok)'}.
           </p>
@@ -89,7 +94,14 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
 
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         <Panel>
-          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Profil durumu<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Profil durumu" /></h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+            Profil durumu<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Profil durumu" />
+            <Explain label="Profil durumu">
+              Kitap profili, Zeki AI'ın bir kitap için önerdiği kategori, tür, yaş, tema ve etiketlerdir. «Profil yok»: henüz öneri üretilmedi;
+              «Taslak»: hiçbir öneriye karar verilmedi; «Kısmi onay»: bazı alanlar kararlı; «Onaylı»: kategori kabul edildi.
+            </Explain>
+          </h2>
+          <p className="mt-1 text-[11.5px] text-canvas-muted">Duruma dokununca o durumdaki kitaplar onay kuyruğunda açılır.</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {(Object.keys(o.statusLabels) as ProfileStatus[]).map((s) => (
               <li key={s}>
@@ -104,7 +116,7 @@ export default function CategoriesHome({ overview, loading, error }: { overview?
         <Panel>
           <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Tutarsızlıklar<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Tutarsızlıklar" /></h2>
           {rules.length === 0 ? (
-            <p className="mt-1 text-[12.5px] text-canvas-muted">Açık tutarsızlık yok.</p>
+            <p className="mt-1 text-[12.5px] text-canvas-muted">Açık tutarsızlık yok; CRM sınıflamaları birbiriyle uyumlu.</p>
           ) : (
             <ul className="mt-2 divide-y divide-slate-100">
               {rules.map(([k, n]) => (

@@ -14,7 +14,7 @@ import BookPicker from './BookPicker';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { xlsxUrl } from '../../components/excel';
 
-/** Set ekranı: bileşenler, fiyat–marj hesaplayıcı (kaydetmeden anında), ambalaj, sezon ve kanal, ZEKİ AI metinleri, onay,
+/** Set ekranı: bileşenler, fiyat–marj hesaplayıcı (kaydetmeden anında), ambalaj, sezon ve kanal, Zeki AI metinleri, onay,
  *  «CRM/Logo'ya açılacak kart» listesi ve CRM kartıyla eşleme. */
 
 type Ask = null | 'submit' | 'withdraw' | 'approve' | 'reject' | 'delete';
@@ -62,7 +62,7 @@ export default function SetEditor() {
     onError: (e) => toast.error(errText(e, 'Durum değişmedi.') ?? ''),
   });
 
-  if (!ENGINE_ENABLED) return <SetsFrame title="Set" lead="" source="CRM + Logo" presence="" back={{ to: '/pazarlama/set-hediye', label: 'Set ve hediye' }}><Note tone="warn">Veri bağlantısı bu derlemede tanımlı değil.</Note></SetsFrame>;
+  if (!ENGINE_ENABLED) return <SetsFrame title="Set" lead="" source="CRM + Logo" presence="" back={{ to: '/pazarlama/set-hediye', label: 'Set ve hediye' }}><Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note></SetsFrame>;
 
   const editable = !!s && canEditSet(s.durum) && !!me?.canWrite;
   const mine = (s?.gonderen ?? '').toLowerCase() === (me?.username ?? '').toLowerCase();
@@ -70,7 +70,7 @@ export default function SetEditor() {
   return (
     <SetsFrame
       title={s?.ad ?? 'Set'}
-      lead={s ? `${s.turAdi} · ${s.kaynakAdi}${s.stokKodu ? ` · stok kodu ${s.stokKodu}` : ''}${s.bilesenKaynak ? ` · bileşenler: ${s.bilesenKaynak === 'crm-set-islemi' ? 'CRM set işlemi' : s.bilesenKaynak === 'logo-recete' ? 'Logo reçetesi' : 'portal'}` : ''}` : ''}
+      lead={s ? `Setin kitapları, fiyatı ve kârı; onaylanınca CRM ve Logo'da açılacak kartın bilgileri. ${s.turAdi} · ${s.kaynakAdi}${s.stokKodu ? ` · stok kodu ${s.stokKodu}` : ''}${s.bilesenKaynak ? ` · bileşenler: ${s.bilesenKaynak === 'crm-set-islemi' ? 'CRM set işlemi' : s.bilesenKaynak === 'logo-recete' ? 'Logo reçetesi' : 'portal'}` : ''}` : ''}
       back={{ to: '/pazarlama/set-hediye', label: 'Set ve hediye' }}
       source="CRM + Logo"
       presence={s?.durumAdi ?? ''}
@@ -210,7 +210,7 @@ function Components({ s, editable, canSeeCost, onSaved }: { s: SetRow; editable:
               </tr>
             );
           })}
-          {!items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={7}>Bileşen yok.</td></tr>}
+          {!items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={7}>Sette kitap yok.{editable ? ' Aşağıdan kitap arayıp ekleyin.' : ''}</td></tr>}
         </tbody>
       </TableWrap>
       {s.stokKodu && (
@@ -370,7 +370,7 @@ function TextsPanel({ s, canWrite, onSaved }: { s: SetRow; canWrite: boolean; on
   useEffect(() => { setTanitim(s.tanitim ?? ''); setBrief(s.brief ?? ''); }, [s.tanitim, s.brief]);
   const draft = useMutation({
     mutationFn: (kind: 'tanitim' | 'brief') => setsApi.text(s.id, kind),
-    onSuccess: (r, kind) => { if (kind === 'tanitim') setTanitim(r.text); else setBrief(r.text); toast.success(`ZEKİ AI taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
+    onSuccess: (r, kind) => { if (kind === 'tanitim') setTanitim(r.text); else setBrief(r.text); toast.success(`Zeki AI taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
     onError: (e) => toast.error(errText(e, 'Taslak yazılamadı.') ?? ''),
   });
   const save = useMutation({
@@ -385,7 +385,7 @@ function TextsPanel({ s, canWrite, onSaved }: { s: SetRow; canWrite: boolean; on
         {canWrite && (
           <button type="button" className={btnGhost} disabled={draft.isPending} onClick={() => draft.mutate(kind)}>
             {draft.isPending && draft.variables === kind ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-            ZEKİ AI taslağı
+            Zeki AI ile taslak yaz
           </button>
         )}
       </span>
@@ -426,9 +426,9 @@ function CardPanel({ s, canWrite, canExport, onSaved }: { s: SetRow; canWrite: b
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM ve Logo'da açılacak kart<SqlInfo k={t?.kaynaklar} alan="onerilenFiyat" label="Açılacak kartın fiyatı ve bileşenleri" /></h2>
         {canExport && (
           <div className="flex gap-2">
-            <a className={btnGhost} href={setsApi.cardUrl(s.id, 'csv')} download><Download aria-hidden className="h-4 w-4" /> CSV</a>
-            <a className={btnGhost} href={xlsxUrl(setsApi.cardUrl(s.id, 'csv'))} download><FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel</a>
-            <a className={btnGhost} href={setsApi.cardUrl(s.id, 'pdf')} download><Download aria-hidden className="h-4 w-4" /> PDF</a>
+            <a className={btnGhost} href={setsApi.cardUrl(s.id, 'csv')} download><Download aria-hidden className="h-4 w-4" /> CSV indir</a>
+            <a className={btnGhost} href={xlsxUrl(setsApi.cardUrl(s.id, 'csv'))} download><FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel indir</a>
+            <a className={btnGhost} href={setsApi.cardUrl(s.id, 'pdf')} download><Download aria-hidden className="h-4 w-4" /> PDF indir</a>
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ import { fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../../budget/api';
 import { STATUS_TONE, addItem, setsApi, type ItemInput, type SetsMeta } from './api';
 import { MarginCell, Tone } from './parts';
 import BookPicker from './BookPicker';
+import { Explain } from '../../components/Explain';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Setler sekmesi: mevcut (CRM) + önerilen + taslak setlerin tamamı, tavansız ve sayfalı. */
@@ -34,12 +35,16 @@ export default function SetsTab({ meta }: { meta: SetsMeta }) {
       {s && (
         <KpiRow>
           <Kpi label="Set" value={fmtInt(s.toplam)} help={`${fmtInt(s.satista)} satışta · ${fmtInt(s.oneri)} taslak/öneri`}
-            active={durum === ''} onClick={() => { setDurum(''); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Set" />} />
+            active={durum === ''} onClick={() => { setDurum(''); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Set" />}
+            explain="Portaldaki bütün setler: satışta olanlar, taslaklar ve öneriden sete çevrilenler. Set, birden çok kitabın tek kodla birlikte satıldığı üründür." />
           <Kpi label="Son 12 ayda satışsız" value={fmtInt(s.satissiz)} help="Satıştaki setlerden net satışı olmayanlar"
-            active={sort === 'adet' && durum === 'satista'} onClick={() => { setDurum('satista'); setSort('adet'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Son 12 ayda satışsız" />} />
-          <Kpi label="Marj bilinmiyor" value={fmtInt(s.marjBilinmiyor)} help={meta.me.canSeeCost ? 'Bir bileşende maliyet yok' : 'Maliyeti görme yetkiniz yok'} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Marj bilinmiyor" />} />
+            active={sort === 'adet' && durum === 'satista'} onClick={() => { setDurum('satista'); setSort('adet'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Son 12 ayda satışsız" />}
+            explain="Satışta görünen ama son 12 ayda setin kendi koduyla hiç net satışı olmayan setler. Fiyatını, içeriğini ya da satışta kalmasını gözden geçirin." />
+          <Kpi label="Marj bilinmiyor" value={fmtInt(s.marjBilinmiyor)} help={meta.me.canSeeCost ? 'Bir bileşende maliyet yok' : 'Maliyeti görme yetkiniz yok'} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Marj bilinmiyor" />}
+            explain="Marj, KDV hariç set gelirinden kitapların maliyeti ve ambalaj düşülerek bulunan kârdır. Bileşen kitaplardan birinin maliyeti girilmemişse marj hesaplanmaz." />
           <Kpi label="Onay / kart bekleyen" value={`${fmtInt(s.onayda)} / ${fmtInt(s.kartBekliyor)}`} help="Onay bekleyen · onaylı, CRM kartı açılmamış"
-            active={durum === 'onayda,kart-bekliyor'} onClick={() => { setDurum('onayda,kart-bekliyor'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Onay / kart bekleyen" />} />
+            active={durum === 'onayda,kart-bekliyor'} onClick={() => { setDurum('onayda,kart-bekliyor'); setPage(0); }} info={<SqlInfo k={list.data?.kaynaklar} alan="summary" label="Onay / kart bekleyen" />}
+            explain="Soldaki sayı onay bekleyen set taslakları; sağdaki, onaylanmış ama CRM'de kartı henüz açılmamış setler. Kartı ekip açar, portal onu okuyup setle eşler." />
         </KpiRow>
       )}
 
@@ -95,7 +100,7 @@ export default function SetsTab({ meta }: { meta: SetsMeta }) {
                 <th className={th}>Durum</th>
                 <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Bileşen</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Set fiyatı</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Liste toplamı</InfoLabel></th>
+                <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1"><InfoLabel k={list.data.kaynaklar} alan="items[]">Liste toplamı</InfoLabel><Explain label="Liste toplamı">Setteki kitapların tek tek liste fiyatlarının toplamı (KDV dahil). «İndirim», set fiyatının bu toplama göre ne kadar düşük olduğudur.</Explain></span></th>
                 <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">İndirim</InfoLabel></th>
                 {meta.me.canSeeCost && <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Marj</InfoLabel></th>}
                 <th className={`${th} text-right`}><InfoLabel k={list.data.kaynaklar} alan="items[]">Stok</InfoLabel></th>
@@ -130,7 +135,7 @@ export default function SetsTab({ meta }: { meta: SetsMeta }) {
                 </tr>
               ))}
               {!list.data.items.length && (
-                <tr><td className={`${td} text-canvas-muted`} colSpan={10}>Bu süzgeçte set yok.</td></tr>
+                <tr><td className={`${td} text-canvas-muted`} colSpan={10}>Bu süzgeçte set yok. Aramayı temizleyin ya da durum ve tür süzgeçlerini «Hepsi» yapın.</td></tr>
               )}
             </tbody>
           </TableWrap>
@@ -167,11 +172,11 @@ function NewSetSheet({ open, meta, onClose }: { open: boolean; meta: SetsMeta; o
     onError: (e) => toast.error(errText(e, 'Set açılamadı.') ?? ''),
   });
   return (
-    <Sheet open={open} modal onClose={onClose} title="Yeni set taslağı" subtitle="Taslak portalda durur; onaylanınca CRM'de açılacak kart listesi çıkar.">
+    <Sheet open={open} modal onClose={onClose} title="Yeni set taslağı" subtitle="Taslak yalnız portalda durur. Onaylanınca, ekibin CRM'de açacağı kartın bilgileri listelenir.">
       <div className="flex flex-col gap-3 text-[13px]">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Set adı</span>
-          <input className={field} value={ad} onChange={(e) => setAd(e.target.value)} />
+          <input className={field} value={ad} placeholder="ör. Anneler Günü seti" onChange={(e) => setAd(e.target.value)} />
         </label>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1">

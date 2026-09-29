@@ -10,6 +10,7 @@ import { ecomApi, fmtDay, fmtInt, fmtMoney0, fmtPct, isEan, type Account, type M
 import { EticaretFrame, Stamp } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
+import { EmptyHint } from '../components/Explain';
 
 /** M34 Pazar yerleri: Logo'da pazar yeri kanalındaki carilere satış (sell-in), iade ve geçen yılın aynı dönemiyle karşılaştırma;
  *  cari başına kitap kırılımı; pazar yerlerinde satan ve stoğu tükenmek üzere olan kitaplar; içerik paketi indirme. Platformun okura
@@ -19,10 +20,10 @@ export default function MarketplacesScreen() {
   return (
     <EticaretFrame
       title="Pazar yerleri"
-      lead="Pazar yeri carilerine Logo'dan kesilen faturalar (satış, iade, net ciro). Bu, platformun Timaş'tan aldığıdır; okura sattığı adet ve platformdaki fiyat bu sürümde yok. Platformlara hiçbir şey gönderilmez; içerik paketini indirip platformun ekranına siz yüklersiniz."
+      lead="Pazar yerlerine (Trendyol, Amazon, Hepsiburada gibi) Logo'dan kestiğimiz faturalar: satış, iade ve net ciro. Bu, platformun bizden aldığıdır; okura sattığı adet burada yok. Platformlara hiçbir şey gönderilmez; içerik paketini indirip platforma siz yüklersiniz."
       source="Kaynak: Logo faturalı satış satırı (kesim tarihiyle)"
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.data && <Body meta={meta.data} />}
     </EticaretFrame>
@@ -71,7 +72,7 @@ function Body({ meta }: { meta: Meta }) {
           </label>
           <div className="flex flex-col items-start gap-1 sm:items-end">
             {d && <Stamp>{fmtDay(d.donem.bas)} – {fmtDay(d.donem.son)} · karşılaştırma {fmtDay(d.donem.oncekiBas)} – {fmtDay(d.donem.oncekiSon)} · Logo kesimi {fmtDay(d.kesim)}</Stamp>}
-            {d && <Stamp>Kanal: {d.kanallar.join(', ')} (Logo cari özel kod 2)</Stamp>}
+            {d && <Stamp>Pazar yeri sayılan kanallar: {d.kanallar.join(', ')}</Stamp>}
             <button type="button" className={btnGhost} disabled={m.isFetching} onClick={() => { fresh.current = true; qc.invalidateQueries({ queryKey: ['eticaret', 'markets'] }); }}>
               <RefreshCw aria-hidden className="h-4 w-4" />
               Logo'dan yeniden oku
@@ -85,10 +86,12 @@ function Body({ meta }: { meta: Meta }) {
         <>
           <KpiRow>
             <Kpi label="Net ciro" value={fmtMoney0(t.net)} help={`Geçen yılın aynı dönemi ${fmtMoney0(t.oncekiNet)}${t.degisim !== null ? ` · ${signed(t.degisim)}` : ''}`}
+              explain="Pazar yeri carilerine kesilen satış faturalarından iadeler düşüldükten sonra kalan tutar. Seçili yılın bugüne kadarki dönemi, geçen yılın aynı dönemiyle karşılaştırılır."
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri net ciro" />} />
             <Kpi label="Satış" value={fmtMoney0(t.satis)} help={`${fmtInt(t.satisAdet)} adet`}
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri satış" />} />
             <Kpi label="İade" value={fmtMoney0(t.iade)} help={`${fmtInt(t.iadeAdet)} adet · iade oranı ${fmtPct(t.iadeOrani)}`}
+              explain="Pazar yerlerinden geri gelen kitapların tutarı ve adedi. İade oranı, iadenin satışa oranıdır."
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Pazar yeri iade" />} />
             <Kpi label="Cari" value={fmtInt(d.cariler.length)} help="Bu dönemde faturası olan pazar yeri carisi"
               info={<SqlInfo k={d.kaynaklar} alan="cariler" label="Pazar yeri cari sayısı" />} />
@@ -97,7 +100,7 @@ function Body({ meta }: { meta: Meta }) {
             <h2 className="inline-flex items-center gap-1 text-[16px] font-extrabold">
               Cariler <SqlInfo k={d.kaynaklar} alan="cariler" label="Pazar yeri carileri" />
             </h2>
-            {!d.cariler.length && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bu dönemde pazar yeri carisine fatura yok.</p>}
+            {!d.cariler.length && <EmptyHint title="Bu dönemde pazar yeri faturası yok" why="Seçili yılda pazar yeri carilerine Logo'da fatura kesilmemiş. Başka bir yıl seçebilirsiniz." />}
             {!!d.cariler.length && (
               <div className="mt-2">
                 <TableWrap>
@@ -107,7 +110,7 @@ function Body({ meta }: { meta: Meta }) {
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Net ciro</InfoLabel></th>
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Değişim</InfoLabel></th>
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">İade oranı</InfoLabel></th>
-                      <th className={th}><InfoLabel k={d.kaynaklar} alan="cariler">Aylık net</InfoLabel></th>
+                      <th className={th}><InfoLabel k={d.kaynaklar} alan="cariler">Aylık net (12 ay)</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -145,7 +148,7 @@ function Body({ meta }: { meta: Meta }) {
         </div>
         {risk.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Okunuyor…</div>}
         {risk.error && <Note tone="err">{errText(risk.error, 'Liste okunamadı.')}</Note>}
-        {risk.data && !risk.data.items.length && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Tükenme riski olan kitap yok.</p>}
+        {risk.data && !risk.data.items.length && <EmptyHint title="Tükenmek üzere kitap yok" why="Pazar yerlerinde satan kitapların hepsinin stoğu, son ayların satış hızıyla eşik süreden uzun yetiyor." />}
         {!!risk.data?.items.length && <Books items={risk.data.items} meta={meta} onOpen={setOpen} />}
       </Panel>
       <CariSheet cari={cari} yil={yil ?? d?.yil} meta={meta} onClose={() => setCari(null)} onOpen={setOpen} />
@@ -193,7 +196,7 @@ function Books({ items, meta, onOpen, picked, onPick }: {
             </div>
           </div>
           <span className="font-mono text-[12px] tabular-nums">{fmtInt(b.net)} adet net</span>
-          <span className="font-mono text-[12px] tabular-nums">{fmtMoney0(b.ciro)}</span>
+          <span className="font-mono text-[12px] tabular-nums">{fmtMoney0(b.ciro)} net ciro</span>
           <span className="font-mono text-[12px] tabular-nums">
             stok {fmtInt(b.stokLogo)}{b.kalanGun !== null ? ` · ~${fmtInt(b.kalanGun)} gün` : ''}
           </span>
@@ -226,7 +229,7 @@ function CariSheet({ cari, yil, meta, onClose, onOpen }: {
               <a className={`${btnGhost} ${keys.length ? '' : 'pointer-events-none opacity-50'}`} aria-disabled={!keys.length}
                 href={keys.length ? ecomApi.contentPackUrl(keys) : undefined}>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                Seçilenlerin içerik paketi{keys.length ? ` (${keys.length})` : ''}
+                Seçilenlerin içerik paketini indir{keys.length ? ` (${keys.length})` : ''}
               </a>
               <button type="button" className={btnGhost}
                 onClick={() => setPicked(new Set(q.data.items.map((b) => b.productKey).filter((k): k is string => isEan(k))))}>

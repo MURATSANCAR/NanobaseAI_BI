@@ -44,6 +44,9 @@ export default function ContextUpload() {
   const c = ctx.data;
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Buraya yüklenen akademik takvim, plan önerisinde tatil ve sınav günlerine okul konmamasını sağlar; ilçe gelişmişlik endeksi ise okulların öncelik puanına girer. Dosyayı CSV ya da Excel olarak, örnekteki başlıklarla yükleyin.
+      </p>
       {ctx.error && <Note tone="err">{errText(ctx.error, 'Yüklenen veri okunamadı.')}</Note>}
       {ctx.isLoading && <Loading />}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

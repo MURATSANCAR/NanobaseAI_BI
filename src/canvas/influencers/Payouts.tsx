@@ -22,8 +22,8 @@ export default function Payouts() {
   return (
     <InflFrame
       title="İşbirliği ödemeleri"
-      lead="Yalnız rapor aşamasını geçmiş, yasal etiketi işaretlenmiş ücretli işler. İşi açan ya da satırı hazırlayan onaylayamaz; ödendi işareti Logo belge numarası ister."
-      aside={d?.me.canExport ? <a href={inflApi.payoutsUrl(month)} className={btnGhost}><Download aria-hidden className="h-4 w-4" /> Excel</a> : undefined}
+      lead="Ücretli işbirliklerinin ödeme listesi: yalnız rapor aşamasını geçmiş ve yasal etiketi «var» işaretlenmiş işler girer. İşi açan ya da satırı hazırlayan onaylayamaz; ödeme Logo'da yapılır, burada Logo belge numarasıyla «ödendi» işaretlenir."
+      aside={d?.me.canExport ? <a href={inflApi.payoutsUrl(month)} className={btnGhost}><Download aria-hidden className="h-4 w-4" /> Excel indir</a> : undefined}
     >
       {meta.data && !meta.data.me.canSeeFee && <Note tone="warn">Ödeme listesi işbirliği onay ya da ödeme yetkisi ister.</Note>}
       <Panel>
@@ -57,7 +57,7 @@ function List({ d }: { d: Data }) {
       </KpiRow>
       <Panel>
         <div className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Ödeme satırları<SqlInfo k={d.kaynaklar} alan="items" label="Ödeme satırları" /></div>
-        {d.items.length === 0 && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu ay ödeme satırı yok.</div>}
+        {d.items.length === 0 && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu ay ödeme satırı yok. Ücretli bir işbirliği rapor aşamasını geçince satırı burada oluşur.</div>}
         <div className="flex flex-col gap-2">
           {d.items.map((r) => (
             <div key={r.id} className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-100 bg-white/80 p-3 md:grid-cols-[minmax(0,1fr)_140px_auto] md:items-center">

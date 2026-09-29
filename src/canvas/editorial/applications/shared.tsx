@@ -4,6 +4,7 @@ import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query'
 import { ENGINE_ENABLED } from '../../engine';
 import { Pill, field, label, nf } from '../../admin/ui';
 import { applicationsApi, type AppStatus, type Tally } from './api';
+import { Explain } from '../../components/Explain';
 
 /** M1 ekranlarının ortak parçaları: durum rozeti, puan alanı, oy dağılımı, sorgu anahtarları. */
 
@@ -160,7 +161,10 @@ export function TallyView({ tally, compact }: { tally: Tally; compact?: boolean 
             {' '}
             (kabul ≥ {tally.thresholds.accept}, revizyon ≥ {tally.thresholds.revise})
           </span>
-        )}
+        )}{' '}
+        <Explain label="Oy çoğunluğu ve skor önerisi">
+          Oy çoğunluğu en çok oyu alan seçenektir. Toplam skor, üç eksen ortalamasının ortalamasıdır; eşiği geçerse kabul ya da revizyon, geçmezse red önerilir. İkisi de yalnız yol gösterir, kararı başkan verir.
+        </Explain>
       </p>
     </div>
   );

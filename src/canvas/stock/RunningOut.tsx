@@ -8,7 +8,8 @@ import { fmtDay } from '../budget/api';
 import SqlInfo from '../components/SqlInfo';
 import { n0, stockApi } from './api';
 import ItemList from './ItemList';
-import { Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { Chips, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { EmptyHint, Explain } from '../components/Explain';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
 
@@ -79,7 +80,10 @@ export default function RunningOut() {
         <Panel>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
             <label className="flex w-full flex-col gap-1 sm:w-40">
-              <span className={labelCls}>Kaç gün içinde</span>
+              <span className={`${labelCls} inline-flex items-center gap-1`}>
+                Kaç gün içinde
+                <Explain label="Kaç gün içinde">Stoğu bu kadar gün içinde bitecek kitaplar listelenir. Boş bırakırsanız varsayılan süre kullanılır. Yeni baskının depoya gelmesinden önce bitecek kitaplar her durumda listededir.</Explain>
+              </span>
               <input className={field} inputMode="numeric" value={gun} placeholder={String(d?.gun ?? meta.data?.params.runoutDays ?? 30)}
                 onChange={(e) => { setGun(e.target.value.replace(/\D/g, '')); set('gun', e.target.value.replace(/\D/g, '') || null); }} />
             </label>
@@ -90,7 +94,9 @@ export default function RunningOut() {
           </div>
           {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
           {q.isLoading && <Loading what="Bitecekler" />}
-          {d && !d.items.length && <Empty>Bu sürede bitecek kitap yok. Satış hızı ve stok kaynağı ayrı ayrı okunuyor; boş liste bir okuma hatası değilse gerçekten bitecek kitap yoktur.</Empty>}
+          {d && !d.items.length && (
+            <EmptyHint title="Bu sürede bitecek kitap yok" why="Stoktaki her kitap, seçtiğiniz gün sayısından ve yeni baskının gelme süresinden uzun yetiyor. Daha uzun bir süre yazıp yeniden bakabilirsiniz." />
+          )}
           {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
           {!!d?.items.some((i) => i.tahminAralik?.g90) && (
             <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
@@ -104,7 +110,7 @@ export default function RunningOut() {
       {tab === 'oneri' && (
         <Panel>
           {sug.error && <Note tone="err">{errText(sug.error, 'Öneriler okunamadı.')}</Note>}
-          {sug.data && !sug.data.items.length && <Empty>Karar bekleyen öneri yok. Öneriler her sabah 06:30’da üretilir.</Empty>}
+          {sug.data && !sug.data.items.length && <EmptyHint title="Karar bekleyen öneri yok" why="Zeki AI üretim önerilerini her sabah 06:30’da hazırlar; yeni öneri gelince burada görünür." />}
           <ul className="flex flex-col gap-2">
             {sug.data?.items.map((s) => (
               <li key={s.id} className="rounded-2xl border border-slate-100 bg-white/80 p-3 text-[12.5px]">

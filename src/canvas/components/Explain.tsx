@@ -28,6 +28,7 @@ export function Explain({
   return (
     <Popover.Root>
       <Popover.Trigger
+        type="button"
         className={`explain-trigger relative inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full align-middle text-canvas-muted after:absolute after:-inset-2.5 after:content-[''] hover:bg-violet-50 hover:text-canvas-violet focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 data-[popup-open]:bg-violet-50 data-[popup-open]:text-canvas-violet ${className}`}
         aria-label={`${label}: ne anlama gelir?`}
         onClick={(e) => e.stopPropagation()}

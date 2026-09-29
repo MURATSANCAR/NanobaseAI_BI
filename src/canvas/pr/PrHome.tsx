@@ -60,21 +60,25 @@ export default function PrHome() {
     <PrFrame
       crumb="Basın ilişkileri"
       title="Basın ilişkileri"
-      lead="Kitap başına PR dosyası (bülten, kişiye özel e-posta, gönderim listesi), medya kişileri ve yansımalar. Zeki AI taslak yazar, pazarlama müdürü onaylar; gazeteciye e-posta yalnız onaylı satırdan, tek tek ve bir kişinin elinden gider."
+      lead="Her kitap için bir PR dosyası: basın bülteni, gazeteciye özel e-posta ve kime gönderileceği listesi. Zeki AI taslak yazar, pazarlama müdürü onaylar; e-posta yalnız onaylı satırdan, tek tek ve sizin elinizle gider. Çıkan haberler «yansıma» olarak kaydedilir."
       source={d?.webWatch ? 'CRM + Basın ve web taraması' : 'CRM · web taraması bu ortamda kapalı'}
       presence={d ? `${d.kpi.books.toLocaleString('tr-TR')} kitap` : '…'}
       aside={<BookSearch />}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Basın ilişkileri açılamadı.')}</Note>}
       {d?.booksError && <Note tone="warn">{d.booksError} Portaldaki dosyalar ve yansımalar yine görünür.</Note>}
 
       {d && (
         <KpiRow>
-          <Kpi label="Dosyası yok" value={d.kpi.noKit.toLocaleString('tr-TR')} help={`${monthLabel(d.month)} ayında çıkan ${d.kpi.books} kitaptan`} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Dosyası yok" />} />
-          <Kpi label="Onay bekleyen" value={d.kpi.pending.toLocaleString('tr-TR')} help="Onaya gönderilmiş PR dosyası" info={<SqlInfo k={d.kaynaklar} alan="pending" label="Onay bekleyen" />} />
-          <Kpi label="Cevap bekleyen" value={d.kpi.overdue.toLocaleString('tr-TR')} help={`Gönderimden ${m?.settings.followUpDays ?? 5} gün geçti, dönüş yok`} info={<SqlInfo k={d.kaynaklar} alan="overdue" label="Cevap bekleyen" />} />
-          <Kpi label="Son 30 gün yansıma" value={d.kpi.recent.toLocaleString('tr-TR')} help={d.kpi.candidates ? `${d.kpi.candidates} aday onay bekliyor` : 'Kayıtlı yansıma'} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Son 30 gün yansıma ve aday" />} />
+          <Kpi label="Dosyası yok" value={d.kpi.noKit.toLocaleString('tr-TR')} help={`${monthLabel(d.month)} ayında çıkan ${d.kpi.books} kitaptan`} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Dosyası yok" />}
+            explain="Seçili ayda ilk baskısı çıkan kitaplardan henüz PR dosyası açılmamış olanlar. Aşağıdaki listeden «PR dosyası aç» ile başlayın." />
+          <Kpi label="Onay bekleyen" value={d.kpi.pending.toLocaleString('tr-TR')} help="Onaya gönderilmiş PR dosyası" info={<SqlInfo k={d.kaynaklar} alan="pending" label="Onay bekleyen" />}
+            explain="Hazırlayanın onaya gönderdiği PR dosyaları. Bülten ve gönderim listesi birlikte onaylanır; dosyayı gönderen kişi onaylayamaz." />
+          <Kpi label="Cevap bekleyen" value={d.kpi.overdue.toLocaleString('tr-TR')} help={`Gönderimden ${m?.settings.followUpDays ?? 5} gün geçti, dönüş yok`} info={<SqlInfo k={d.kaynaklar} alan="overdue" label="Cevap bekleyen" />}
+            explain={`Gazeteciye gönderilmiş, ${m?.settings.followUpDays ?? 5} günlük takip süresi geçmiş ve hâlâ dönüş işaretlenmemiş gönderimler. Arayın ya da yazın, sonucu dosyada işaretleyin.`} />
+          <Kpi label="Son 30 gün yansıma" value={d.kpi.recent.toLocaleString('tr-TR')} help={d.kpi.candidates ? `${d.kpi.candidates} aday onay bekliyor` : 'Kayıtlı yansıma'} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Son 30 gün yansıma ve aday" />}
+            explain="Yansıma, kitabımız hakkında basında ya da internette çıkan haber, yazı veya röportajdır. Sayı son 30 günde kaydedilenleri gösterir; «aday», kabul edilmeyi bekleyen bulunmuş haberlerdir." />
         </KpiRow>
       )}
 

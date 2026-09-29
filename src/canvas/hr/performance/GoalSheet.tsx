@@ -37,7 +37,7 @@ export default function GoalSheet({ goalId, init, meta, parents, onClose }: {
           {g && g.level !== 'sirket' && (g.can.edit || g.can.revise) && meta.modelVar && <AlignBox g={g} />}
           {g && g.checkins.length > 0 && (
             <div>
-              <div className={`${labelCls} flex items-center gap-1`}>Check-in geçmişi<SqlInfo k={g.kaynaklar} alan="checkins" label="İlerleme kayıtları" /></div>
+              <div className={`${labelCls} flex items-center gap-1`}>İlerleme kayıtları (check-in)<SqlInfo k={g.kaynaklar} alan="checkins" label="İlerleme kayıtları" /></div>
               <ul className="mt-1 flex flex-col gap-1.5">
                 {g.checkins.map((c, i) => (
                   <li key={c.id ?? i} className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
@@ -126,7 +126,7 @@ function Editor({ g, init, meta, parents, onSaved }: { g: GoalDetail | null; ini
       )}
       <label className="flex flex-col gap-1">
         <span className={labelCls}>Hedef</span>
-        <input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Kısa ve ölçülebilir" />
+        <input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="ör. Yıl sonuna kadar 12 yeni çocuk kitabı yayımlamak" />
       </label>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1">
@@ -135,18 +135,19 @@ function Editor({ g, init, meta, parents, onSaved }: { g: GoalDetail | null; ini
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Hedef değer</span>
-          <input className={field} inputMode="decimal" value={f.targetValue} onChange={(e) => setF({ ...f, targetValue: e.target.value })} />
+          <input className={field} inputMode="decimal" value={f.targetValue} onChange={(e) => setF({ ...f, targetValue: e.target.value })} placeholder="ör. 12" />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Ağırlık (%)</span>
-          <input className={field} inputMode="numeric" value={f.weight} onChange={(e) => setF({ ...f, weight: e.target.value })} />
+          <input className={field} inputMode="numeric" value={f.weight} onChange={(e) => setF({ ...f, weight: e.target.value })} placeholder="ör. 30" />
+          <span className="text-[11px] leading-snug text-canvas-muted">Hedefin sizin bütün hedefleriniz içindeki payı.</span>
         </label>
       </div>
       {level !== 'sirket' && (
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Bağlı olduğu hedef</span>
           <select className={field} value={f.parentGoalId} onChange={(e) => setF({ ...f, parentGoalId: e.target.value })}>
-            <option value="">Bağlanmadı</option>
+            <option value="">Bağlanmadı (üst hedef seçin)</option>
             {parentOptions.map((p) => <option key={p.id} value={p.id}>{p.levelLabel}{p.unitName ? ` · ${p.unitName}` : ''} — {p.title}</option>)}
           </select>
         </label>
@@ -162,18 +163,19 @@ function Editor({ g, init, meta, parents, onSaved }: { g: GoalDetail | null; ini
         {f.measureKind === 'sistem' ? (
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Logo satış temsilcisi kodu</span>
-            <input className={field} value={f.measureRef} onChange={(e) => setF({ ...f, measureRef: e.target.value })} />
+            <input className={field} value={f.measureRef} onChange={(e) => setF({ ...f, measureRef: e.target.value })} placeholder="Logo'daki temsilci kodu" />
           </label>
         ) : (
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Birim (adet, ₺, %…)</span>
-            <input className={field} value={f.unitLabel} onChange={(e) => setF({ ...f, unitLabel: e.target.value })} />
+            <input className={field} value={f.unitLabel} onChange={(e) => setF({ ...f, unitLabel: e.target.value })} placeholder="ör. kitap" />
           </label>
         )}
       </div>
       <label className="flex flex-col gap-1">
         <span className={labelCls}>Açıklama / nasıl ölçülür</span>
-        <textarea className={`${field} min-h-[80px]`} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+        <textarea className={`${field} min-h-[80px]`} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
+          placeholder="Hedefe ulaşıldığını neye bakarak anlayacaksınız?" />
       </label>
       {drafts.length > 0 && (
         <div className="flex flex-col gap-1.5">
@@ -242,12 +244,13 @@ function CheckinBox({ g, onDone }: { g: GoalDetail; onDone: (x: GoalDetail) => v
   const [f, setF] = useState({ progressPct: '', value: '', note: '' });
   const save = useMutation({
     mutationFn: () => perfApi.checkin(g.id, { progressPct: f.progressPct === '' ? null : Number(f.progressPct), value: f.value === '' ? null : Number(f.value.replace(',', '.')), note: f.note }),
-    onSuccess: (x) => { toast.success('Check-in kaydedildi.'); setF({ progressPct: '', value: '', note: '' }); onDone(x); },
+    onSuccess: (x) => { toast.success('İlerleme kaydedildi.'); setF({ progressPct: '', value: '', note: '' }); onDone(x); },
     onError: (e) => toast.error(errText(e, 'Check-in kaydedilemedi.')),
   });
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-white/80 p-3">
-      <div className="text-[13px] font-extrabold">Check-in</div>
+      <div className="text-[13px] font-extrabold">İlerleme kaydı (check-in)</div>
+      <div className="text-[11.5px] leading-snug text-canvas-muted">Hedefin bugünkü durumunu girin: tamamlanma yüzdesi, ulaşılan değer ya da kısa bir not; en az biri yeterli.</div>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>İlerleme %</span>
@@ -258,7 +261,7 @@ function CheckinBox({ g, onDone }: { g: GoalDetail; onDone: (x: GoalDetail) => v
           <input className={field} inputMode="decimal" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} />
         </label>
       </div>
-      <textarea className={`${field} min-h-[60px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="Kısa not" />
+      <textarea className={`${field} min-h-[60px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="ör. İlk iki çeyrekte 5 kitap çıktı; takvim yolunda" />
       <div className="flex justify-end">
         <button type="button" className={btnPrimary} disabled={save.isPending || (!f.progressPct && !f.value && !f.note.trim())} onClick={() => save.mutate()}>Kaydet</button>
       </div>
@@ -309,15 +312,16 @@ function RevisionBox({ g, canDecide, onDone }: { g: GoalDetail; canDecide: boole
   }
   return (
     <details className="rounded-2xl border border-slate-100 bg-white/80 p-3">
-      <summary className="cursor-pointer text-[13px] font-extrabold">Revizyon iste</summary>
+      <summary className="cursor-pointer text-[13px] font-extrabold">Hedefte değişiklik iste (revizyon)</summary>
+      <p className="mt-1 text-[11.5px] text-canvas-muted">Yalnız değişmesini istediğiniz alanı doldurun; talep onaylayana gider.</p>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Yeni başlık" />
         <input className={field} inputMode="decimal" value={f.targetValue} onChange={(e) => setF({ ...f, targetValue: e.target.value })} placeholder="Yeni hedef değer" />
         <input className={field} inputMode="numeric" value={f.weight} onChange={(e) => setF({ ...f, weight: e.target.value })} placeholder="Yeni ağırlık" />
       </div>
-      <textarea className={`${field} mt-2 min-h-[60px]`} value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Gerekçe" />
+      <textarea className={`${field} mt-2 min-h-[60px]`} value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Değişiklik neden gerekli? (zorunlu)" />
       <div className="mt-2 flex justify-end">
-        <button type="button" className={btnPrimary} disabled={ask.isPending || !f.reason.trim()} onClick={() => ask.mutate()}>Gönder</button>
+        <button type="button" className={btnPrimary} disabled={ask.isPending || !f.reason.trim()} onClick={() => ask.mutate()}>Talebi gönder</button>
       </div>
     </details>
   );

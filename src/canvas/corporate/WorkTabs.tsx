@@ -54,7 +54,7 @@ export function RemindersTab({ meta }: { meta: Meta }) {
       </p>
       {list.error && <Note tone="err">{errText(list.error, 'Hatırlatmalar okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {d && d.items.length === 0 && <div className="mt-3"><Empty title="Bu dönem için hatırlatma yok" /></div>}
+      {d && d.items.length === 0 && <div className="mt-3"><Empty title="Bu durumda hatırlatma yok">Önümüzdeki aylarda geçen yıl alım yapmış kurum bulunmuyor ya da hepsi için fırsat açılmış. Başka bir durum seçerek diğerlerini görebilirsiniz.</Empty></div>}
       <ul className="mt-3 grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {(d?.items ?? []).map((r) => (
           <li key={r.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-white/90 p-3">
@@ -76,7 +76,7 @@ export function RemindersTab({ meta }: { meta: Meta }) {
                     <button type="button" className={btnPrimary} disabled={toOpp.isPending} onClick={() => toOpp.mutate(r.id)}>
                       <Plus aria-hidden className="h-4 w-4" /> Fırsat aç
                     </button>
-                    <button type="button" className={btnGhost} disabled={close.isPending} onClick={() => close.mutate({ id: r.id, d: 'kapandi' })}>Kapat</button>
+                    <button type="button" className={btnGhost} disabled={close.isPending} onClick={() => close.mutate({ id: r.id, d: 'kapandi' })}>Hatırlatmayı kapat</button>
                   </>
                 )}
                 {r.durum === 'kapandi' && (
@@ -99,7 +99,7 @@ export function ApprovalsTab() {
     <Panel>
       {list.error && <Note tone="err">{errText(list.error, 'Onay kuyruğu okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {list.data && list.data.items.length === 0 && <Empty title="Onay bekleyen teklif yok" />}
+      {list.data && list.data.items.length === 0 && <Empty title="Onay bekleyen teklif yok">İndirim ya da kâr payı sınırını aşan bir teklif onaya gönderildiğinde burada görünür.</Empty>}
       <ul className="flex flex-col gap-2">
         {(list.data?.items ?? []).map((q) => (
           <li key={q.id} className="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-white/90 p-3">
@@ -119,7 +119,7 @@ export function ApprovalsTab() {
   );
 }
 
-/** ZEKİ AI'ın kitaplara önerdiği temalar: onaylanan tema paket önerisine girer. */
+/** Zeki AI'ın kitaplara önerdiği temalar: onaylanan tema paket önerisine girer. */
 export function ThemesTab({ meta }: { meta: Meta }) {
   const qc = useQueryClient();
   const [durum, setDurum] = useState<'onerildi' | 'onayli' | 'reddedildi'>('onerildi');
@@ -160,12 +160,12 @@ export function ThemesTab({ meta }: { meta: Meta }) {
         </label>
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-        CRM'deki tema bağları doğrudan onaylıdır. ZEKİ AI stoktaki etiketsiz kitaplara her gece kapalı listeden ({meta.vocabulary.length} tema
+        Temalar, kurumlara hazırlanan kitap paketlerinde kullanılır. CRM'deki tema bağları doğrudan onaylıdır. Zeki AI stoktaki temasız kitaplara her gece sabit tema listesinden ({meta.vocabulary.length} tema
         <SqlInfo k={meta.kaynaklar} alan="vocabularyCount" label="Tema listesindeki tema sayısı" className="ml-0.5" />) öneri yapar; öneri onaylanana kadar paket önerisine girmez.
       </p>
       {list.error && <Note tone="err">{errText(list.error, 'Temalar okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {d && d.items.length === 0 && <div className="mt-3"><Empty title="Bu durumda tema yok" /></div>}
+      {d && d.items.length === 0 && <div className="mt-3"><Empty title="Bu durumda tema yok">Aramayı temizleyin ya da başka bir durum seçin.</Empty></div>}
       <ul className="mt-3 flex flex-col gap-2">
         {(d?.items ?? []).map((b) => (
           <li key={b.stokKodu} className="rounded-xl border border-slate-100 bg-white/90 p-3">
@@ -204,7 +204,7 @@ export function ThemesTab({ meta }: { meta: Meta }) {
                 </span>
               ) : (
                 <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => setAddFor({ stok: b.stokKodu, tema: '' })}>
-                  <Plus aria-hidden className="h-3.5 w-3.5" /> Tema
+                  <Plus aria-hidden className="h-3.5 w-3.5" /> Tema ekle
                 </button>
               ))}
             </div>

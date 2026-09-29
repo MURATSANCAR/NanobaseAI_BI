@@ -10,7 +10,7 @@ import { setsApi, type SetsMeta } from './api';
 import { MarginCell, Tone } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
-/** Öneriler: B2C birlikte alım, aynı yazar ve aynı dizi kümeleri (kural), ZEKİ AI ad/tanıtım ve özel gün. Tavansız, sayfalı. */
+/** Öneriler: B2C birlikte alım, aynı yazar ve aynı dizi kümeleri (kural), Zeki AI ad/tanıtım ve özel gün. Tavansız, sayfalı. */
 export default function SuggestionsTab({ meta }: { meta: SetsMeta }) {
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -101,7 +101,7 @@ export default function SuggestionsTab({ meta }: { meta: SetsMeta }) {
               ? <>mevcut {fmtInt(disc.n)} setin medyan indirimi ({fmtPct(disc.indirim)}) liste toplamına uygulanır.</>
               : <>mevcut setlerde yeterli örnek yok ({fmtInt(disc.n)}); liste toplamı önerilir, indirimi siz belirlersiniz.</>}
             <SqlInfo k={list.data?.kaynaklar} alan="indirim" label="Medyan indirim" className="ml-0.5" />
-            {' '}Ad ve tanıtım ZEKİ AI taslağıdır; gerekçedeki sayılar sistemden gelir.
+            {' '}Ad ve tanıtım Zeki AI taslağıdır; gerekçedeki sayılar sistemden gelir.
           </p>
         )}
       </section>
@@ -178,7 +178,7 @@ function PairsView({ meta }: { meta: SetsMeta }) {
     <section className="flex flex-col gap-2">
       <label className="flex max-w-md flex-col gap-1">
         <span className={labelCls}>Kitap ara</span>
-        <input className={field} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+        <input className={field} value={q} placeholder="Kitap adı ya da stok kodu" onChange={(e) => { setQ(e.target.value); setPage(0); }} />
       </label>
       <p className="px-1 text-[11.5px] text-canvas-muted">
         Yalnız tüketici (B2C) siparişleri; bayi siparişi sepet sayılmaz. En az {meta.settings.basketMinOrders} siparişte birlikte geçen bütün çiftler

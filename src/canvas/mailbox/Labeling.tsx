@@ -9,6 +9,7 @@ import { Empty, MailFrame } from './parts';
 import { fmtInt, fmtWhen, mailApi, pctText } from './api';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** Etiketleme: iletilere insan türü verilir (Zeki AI'ın önerisi gösterilmez — kör etiketleme). Doğruluk = insan etiketi
  *  ile modelin ilk seçiminin uyuşması; hedef %90. Otomatik atama bu oran tutmadan açılmaz. */
@@ -34,7 +35,7 @@ export default function Labeling() {
   return (
     <MailFrame
       title="Etiketleme"
-      lead="Geçmiş ve yeni iletilere doğru türü siz verin; Zeki AI'ın önerisi burada gösterilmez. Etiketler yalnız doğruluğu ölçmek için kullanılır."
+      lead="Geçmiş ve yeni iletilere doğru türü siz verin; Zeki AI'ın önerisi burada bilerek gösterilmez ki seçiminiz etkilenmesin. Etiketler yalnız Zeki AI'ın ne kadar doğru tahmin ettiğini ölçmek için kullanılır."
       connection={meta.data?.connection}
       lastRun={meta.data?.lastRun}
     >
@@ -42,8 +43,8 @@ export default function Labeling() {
       {!canLabel && meta.data && <Note tone="info">Etiketlemek için «E-posta atama ve düzeltme» yetkisi gerekir; doğruluk tablosunu görebilirsiniz.</Note>}
       {a && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI doğruluğu" />} label="Zeki AI doğruluğu" value={pctText(a.rate)} help={`${fmtInt(a.agree)} / ${fmtInt(a.n)} ileti · hedef %${Math.round(a.target * 100)}`} />
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Etiketlenen ileti" />} label="Etiketlenen ileti" value={fmtInt(a.labeled)} help={a.unscored ? `${fmtInt(a.unscored)} iletide model sınıflamamıştı` : 'Birden çok etikette çoğunluk'} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI doğruluğu" />} label="Zeki AI doğruluğu" value={pctText(a.rate)} help={`${fmtInt(a.agree)} / ${fmtInt(a.n)} ileti · hedef %${Math.round(a.target * 100)}`} explain="Sizin ve ekibin verdiği türle Zeki AI'ın ilk tahmininin aynı olduğu iletilerin oranı. Hedefe ulaşılmadan iletiler kendiliğinden atanmaz." />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Etiketlenen ileti" />} label="Etiketlenen ileti" value={fmtInt(a.labeled)} help={a.unscored ? `${fmtInt(a.unscored)} iletide Zeki AI tür önermemişti` : 'Birden çok etikette çoğunluk'} />
           <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Sizin etiketiniz" />} label="Sizin etiketiniz" value={fmtInt(d?.labeledByMe)} help="Bu hesapla verilen" />
           <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen" />} label="Bekleyen" value={fmtInt(d?.total)} help="Sizin henüz etiketlemediğiniz" />
         </KpiRow>
@@ -56,7 +57,7 @@ export default function Labeling() {
               <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">İleti</InfoLabel></th>
               <th className={`${th} text-right`}>Uyuşan</th>
               <th className={`${th} text-right`}>Doğruluk</th>
-              <th className={th}>En sık karışan</th>
+              <th className={th}><span className="inline-flex items-center gap-1">En sık karışan<Explain label="En sık karışan">Bu türdeki iletiler için Zeki AI'ın en sık yanlışlıkla seçtiği tür ve kaç kez olduğu.</Explain></span></th>
             </tr>
           </thead>
           <tbody>
@@ -76,7 +77,7 @@ export default function Labeling() {
         </TableWrap>
       )}
       {q.isLoading && <Loading />}
-      {d && d.items.length === 0 && <Empty title="Etiketlenecek ileti kalmadı" />}
+      {d && d.items.length === 0 && <Empty title="Etiketlenecek ileti kalmadı">Yeni iletiler geldikçe burada etiketlemeniz için listelenir.</Empty>}
       {d && d.items.length > 0 && (
         <ul className="flex flex-col gap-2">
           {d.items.map((x) => (

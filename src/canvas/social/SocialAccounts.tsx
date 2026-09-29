@@ -45,7 +45,7 @@ export default function SocialAccounts() {
     <SocialFrame
       crumb="Hesaplar"
       title="Sosyal medya hesapları"
-      lead="İmprint başına hesaplar. Takvim, rapor ve Zeki AI taslağı bu listeyi kullanır; portal hesaplara bağlanmaz ve paylaşım yapmaz."
+      lead="Her yayınevi markasının sosyal medya hesapları. Takvim, rapor ve Zeki AI taslakları bu listeyi kullanır; portal hesaplara bağlanmaz ve paylaşım yapmaz."
       source="CRM marka kartları"
       presence={`${items.length} hesap`}
       aside={canEdit ? (
@@ -60,7 +60,7 @@ export default function SocialAccounts() {
       {accounts.error && <Note tone="err">{errText(accounts.error, 'Hesaplar açılamadı.')}</Note>}
       {accounts.isLoading && <Loading />}
       <Block title="Tanımlı hesaplar" info={<SqlInfo k={accounts.data?.kaynaklar} alan="total" label="Tanımlı hesaplar" />}>
-        {items.length === 0 && !accounts.isLoading && <p className="text-[12px] text-canvas-muted">Hesap yok.</p>}
+        {items.length === 0 && !accounts.isLoading && <p className="text-[12px] text-canvas-muted">Henüz hesap tanımlı değil. Aşağıdaki CRM marka kartlarından birini seçerek ya da elle hesap ekleyin.</p>}
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((a) => (
             <div key={a.id} className={`flex flex-col gap-1.5 rounded-xl bg-white/80 p-3 ${a.aktif ? '' : 'opacity-60'}`}>
@@ -75,7 +75,7 @@ export default function SocialAccounts() {
                 {!a.aktif && <Pill tone="muted">Pasif</Pill>}
               </div>
               <div className="text-[11.5px] text-canvas-muted">
-                {a.imprintAd ? `İmprint: ${a.imprintAd}` : 'İmprint bağlı değil'}{a.sahip ? ` · yöneten ${a.sahip}` : ''}
+                {a.imprintAd ? `Marka: ${a.imprintAd}` : 'Markaya bağlı değil'}{a.sahip ? ` · yöneten ${a.sahip}` : ''}
               </div>
               {a.ton && <p className="line-clamp-2 text-[11.5px] leading-snug">Dil: {a.ton}</p>}
               {canEdit && (
@@ -139,7 +139,7 @@ export default function SocialAccounts() {
               <input className={field} value={edit.ad ?? ''} placeholder="Timaş Çocuk · Instagram" onChange={(e) => setEdit({ ...edit, ad: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className={labelCls}>İmprint (CRM markası)</span>
+              <span className={labelCls}>Yayınevi markası (CRM)</span>
               <select className={field} value={edit.imprintCrmId ?? ''}
                 onChange={(e) => {
                   const b = sug.data?.items.find((x) => x.id === e.target.value);
@@ -151,8 +151,8 @@ export default function SocialAccounts() {
             </label>
             <div className="grid grid-cols-2 gap-2">
               <label className="flex flex-col gap-1">
-                <span className={labelCls}>Yöneten (AD hesabı)</span>
-                <input className={field} value={edit.sahip ?? ''} onChange={(e) => setEdit({ ...edit, sahip: e.target.value })} />
+                <span className={labelCls}>Hesabı yöneten kişi (kullanıcı adı)</span>
+                <input className={field} value={edit.sahip ?? ''} placeholder="ör. ayse.yilmaz" onChange={(e) => setEdit({ ...edit, sahip: e.target.value })} />
               </label>
               <label className="flex flex-col gap-1">
                 <span className={labelCls}>Takvim rengi</span>

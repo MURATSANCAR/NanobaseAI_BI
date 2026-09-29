@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { FileSpreadsheet, FileText, RefreshCw, Sparkles, Upload } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { Block } from '../marketing/parts';
@@ -57,8 +58,8 @@ export default function AdsOverview() {
         )}
         {m.me.canExport && (
           <>
-            <a className={btnGhost} href={adsApi.pdfUrl(period)} download><FileText aria-hidden className="h-4 w-4" />PDF</a>
-            <a className={btnGhost} href={adsApi.xlsxUrl(period)} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</a>
+            <a className={btnGhost} href={adsApi.pdfUrl(period)} download><FileText aria-hidden className="h-4 w-4" />PDF indir</a>
+            <a className={btnGhost} href={adsApi.xlsxUrl(period)} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel indir</a>
           </>
         )}
       </div>
@@ -68,7 +69,7 @@ export default function AdsOverview() {
   return (
     <AdsFrame
       title="Dijital pazarlama ve reklam"
-      lead="Bütün reklam kanallarının harcaması tek tabloda, kitap bazında Logo e-ticaret cirosuyla yan yana. Veri platformun dışa aktarım dosyasıyla gelir; Zeki AI önerir, para kararı pazarlama müdüründen geçer. Platformlarda hiçbir değişiklik portaldan yapılmaz."
+      lead="Google, Meta, TikTok gibi bütün reklam kanallarının harcaması tek yerde ve kitap kitap Logo'daki e-ticaret satışıyla yan yana. Veriyi platformdan indirdiğiniz raporla yüklersiniz; Zeki AI önerir, para kararını pazarlama müdürü verir. Portal reklam hesaplarında hiçbir değişiklik yapmaz."
       meta={m}
       aside={aside}
     >
@@ -85,23 +86,27 @@ export default function AdsOverview() {
 
       {g && d && (
         <KpiRow>
-          <Kpi label="Harcama" value={fmtMoney(g.harcama)} help={`${fmtInt(g.tiklama)} tıklama · TBM ${fmtMoney2(g.tbm)}`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Harcama, tıklama, TBM" />} />
-          <Kpi label="Platform ROAS" value={fmtRatio(g.platformRoas)} help={`Platformun bildirdiği dönüşüm değeri ${fmtMoney(g.donusumDegeri)}; gerçek getiri değildir`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Platform ROAS" />} />
-          <Kpi label="E-ticaret net ciro" value={fmtMoney(g.eticaretCiro)} help={d.verimDonemi ? `Logo, ${fmtDay(d.verimDonemi.bas)} – ${fmtDay(d.verimDonemi.bit)}` : 'Bu dönemde Logo satış verisi yok'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="E-ticaret net ciro" />} />
-          <Kpi label="Pazarlama verimi" value={fmtRatio(g.verim)} help={d.verimDonemi ? `E-ticaret ciro ÷ aynı günlerin harcaması (${fmtMoney(g.harcamaVeriIcinde)})` : 'Satış verisi olan günlerde hesaplanır'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="Pazarlama verimi" />} />
+          <Kpi label="Harcama" value={fmtMoney(g.harcama)} help={`${fmtInt(g.tiklama)} tıklama · TBM ${fmtMoney2(g.tbm)}`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Harcama, tıklama, TBM" />}
+            explain="Seçili dönemde bütün reklam kanallarına harcanan tutar (TL). Alt satırdaki TBM, tıklama başı maliyettir: harcama ÷ tıklama." />
+          <Kpi label="Platform ROAS" value={fmtRatio(g.platformRoas)} help={`Platformun bildirdiği dönüşüm değeri ${fmtMoney(g.donusumDegeri)}; gerçek getiri değildir`} info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Platform ROAS" />}
+            explain="Reklam platformunun kendi bildirdiği satış değerinin harcamaya bölümü (ör. 3,0 = her 1 ₺ için 3 ₺). Platform kendi payını geniş sayar; gerçek getiri için «Pazarlama verimi»ne bakın." />
+          <Kpi label="E-ticaret net ciro" value={fmtMoney(g.eticaretCiro)} help={d.verimDonemi ? `Logo, ${fmtDay(d.verimDonemi.bas)} – ${fmtDay(d.verimDonemi.bit)}` : 'Bu dönemde Logo satış verisi yok'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="E-ticaret net ciro" />}
+            explain="Aynı günlerde Logo'ya işlenmiş e-ticaret satışının iadesi düşülmüş tutarı. Logo verisi geriden gelir; hangi günlere kadar olduğu alt satırda yazar." />
+          <Kpi label="Pazarlama verimi" value={fmtRatio(g.verim)} help={d.verimDonemi ? `E-ticaret ciro ÷ aynı günlerin harcaması (${fmtMoney(g.harcamaVeriIcinde)})` : 'Satış verisi olan günlerde hesaplanır'} info={<SqlInfo k={d.kaynaklar} alan="gosterge" label="Pazarlama verimi" />}
+            explain="Logo e-ticaret net cirosunun, aynı günlerdeki reklam harcamasına bölümü. Yalnız Logo satış verisi olan günler hesaba girer. Satışa reklam dışı etkiler de karışır; neden-sonuç göstermez." />
         </KpiRow>
       )}
 
       {d && (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-4">
           <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-            <Block title="Kanallar" info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar ve bağsız harcama" />} help={`Kitaba bağlı olmayan harcama ${fmtMoney(d.bagsiz.harcama)} (${fmtPct(d.bagsiz.pay)}). Hedef: %10'un altı.`}>
+            <Block title="Kanallar" info={<SqlInfo k={d.kaynaklar} alan="kanallar" label="Kanallar ve bağsız harcama" />} help={`Kitaba bağlanmamış kampanyaların harcaması ${fmtMoney(d.bagsiz.harcama)} (${fmtPct(d.bagsiz.pay)}); bu harcama kitap verimine girmez. Hedef: %10'un altı.`}>
               {Object.keys(d.digerParaBirimi).length > 0 && (
                 <Note tone="warn">TL dışı harcama toplama katılmadı: {Object.entries(d.digerParaBirimi).map(([k, v]) => `${k} ${v.toLocaleString('tr-TR')}`).join(', ')}</Note>
               )}
               <ChannelTable d={d} />
             </Block>
-            <Block title="Kitaplar" info={<SqlInfo k={d.kaynaklar} alan="kitaplar" label="Kitaplar: harcama, e-ticaret ciro, verim, stok, M15" />} help="Kitaba bağlı kampanyaların harcaması, kitabın Logo e-ticaret cirosu (aynı günler) ve stok durumu. M15 sütunu kitabın onaylı pazarlama planındaki reklam kanalı satırlarıdır.">
+            <Block title="Kitaplar" info={<SqlInfo k={d.kaynaklar} alan="kitaplar" label="Kitaplar: harcama, e-ticaret ciro, verim, stok, plan" />} help="Kitaba bağlı kampanyaların harcaması, kitabın aynı günlerdeki Logo e-ticaret cirosu ve stok durumu. Son sütun, kitabın onaylı pazarlama planında reklama ayrılan tutardır. Stok kırmızıysa reklam stok bitene kadar sürmeyebilir.">
               <BookTable d={d} stockDays={m?.settings.stockDays ?? null} />
             </Block>
             <Block title="Kampanyalar" info={<SqlInfo k={d.kaynaklar} alan="kampanyalar" label="Kampanyalar" />} help="Harcamaya göre sıralı. Bağ ve kitap seçimi Kampanyalar ekranında." action={<Link to="/reklam/kampanyalar" className={btnGhost}>Kampanyalar</Link>}>
@@ -113,7 +118,7 @@ export default function AdsOverview() {
               <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Öneriler ve uyarılar<SqlInfo k={d.kaynaklar} alan="oneriler" label="Öneriler" /></h2>
               <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">Kurallar her sabah çalışır; eşiği girilmeyen kural kapalıdır (Yönetim → Dijital pazarlama ve reklam).</p>
               <div className="mt-2 flex flex-col gap-2">
-                {d.oneriler.length === 0 && <p className="py-3 text-[12px] text-canvas-muted">Açık öneri yok.</p>}
+                {d.oneriler.length === 0 && <p className="py-3 text-[12px] text-canvas-muted">Açık öneri yok. Kurallar her sabah yeniden bakar; stok, satış dışı kitap ya da bütçe aşımı olursa burada görünür.</p>}
                 {d.oneriler.map((s) => <SuggestionCard key={s.id} s={s} meta={m} />)}
               </div>
               {m && (
@@ -138,11 +143,11 @@ export default function AdsOverview() {
 }
 
 function ChannelTable({ d }: { d: Overview }) {
-  if (!d.kanallar.length) return <p className="py-3 text-[12px] text-canvas-muted">Bu dönemde harcama yok.</p>;
+  if (!d.kanallar.length) return <p className="py-3 text-[12px] text-canvas-muted">Bu dönemde harcama yok. Dönemi değiştirin ya da platform raporunu «Veri yükle» ekranından yükleyin.</p>;
   return (
     <TableWrap>
       <thead>
-        <tr><th className={th}>Kanal</th><th className={`${th} text-right`}>Harcama</th><th className={`${th} text-right`}>Pay</th><th className={`${th} text-right`}>Tıklama</th><th className={`${th} text-right`}>TBM</th><th className={`${th} text-right`}>Platform ROAS</th></tr>
+        <tr><th className={th}>Kanal</th><th className={`${th} text-right`}>Harcama</th><th className={`${th} text-right`}>Pay</th><th className={`${th} text-right`}>Tıklama</th><th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1">TBM<Explain label="TBM" title="Tıklama başı maliyet">Harcamanın tıklama sayısına bölümü: reklama gelen her tıklama için ortalama kaç lira ödendiği.</Explain></span></th><th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1">Platform ROAS<Explain label="Platform ROAS" title="Platformun bildirdiği getiri">Reklam platformunun kendi saydığı satış değerinin harcamaya bölümü. Platform kendi reklamının payını geniş sayar; gerçek satış için «Pazarlama verimi»ne bakın.</Explain></span></th></tr>
       </thead>
       <tbody className="font-mono tabular-nums">
         {d.kanallar.map((c) => (
@@ -167,7 +172,7 @@ function BookTable({ d, stockDays }: { d: Overview; stockDays: number | null }) 
       <thead>
         <tr>
           <th className={th}>Kitap</th><th className={`${th} text-right`}>Harcama</th><th className={`${th} text-right`}>E-ticaret ciro</th>
-          <th className={`${th} text-right`}>Verim</th><th className={`${th} text-right`}>Stok</th><th className={`${th} text-right`}>M15 reklam satırı</th>
+          <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1">Verim<Explain label="Verim">Kitabın Logo e-ticaret cirosunun, kitaba bağlı reklam harcamasına bölümü (aynı günler).</Explain></span></th><th className={`${th} text-right`}>Stok</th><th className={`${th} text-right`}>Plandaki reklam bütçesi</th>
         </tr>
       </thead>
       <tbody>
@@ -209,7 +214,7 @@ function CampaignTable({ d }: { d: Overview }) {
       <thead>
         <tr>
           <th className={th}>Kampanya</th><th className={th}>Kitap</th><th className={`${th} text-right`}>Harcama</th><th className={`${th} text-right`}>Tıklama</th>
-          <th className={`${th} text-right`}>TBM</th><th className={`${th} text-right`}>Platform ROAS</th>
+          <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1">TBM<Explain label="TBM" title="Tıklama başı maliyet">Harcamanın tıklama sayısına bölümü: reklama gelen her tıklama için ortalama kaç lira ödendiği.</Explain></span></th><th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1">Platform ROAS<Explain label="Platform ROAS" title="Platformun bildirdiği getiri">Reklam platformunun kendi saydığı satış değerinin harcamaya bölümü. Platform kendi reklamının payını geniş sayar; gerçek satış için «Pazarlama verimi»ne bakın.</Explain></span></th>
         </tr>
       </thead>
       <tbody>

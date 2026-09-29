@@ -45,6 +45,7 @@ import { notifyExport } from '../data-security/notify';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import { downloadCsvAsXlsx } from '../components/excel';
+import { EmptyHint } from '../components/Explain';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
@@ -196,7 +197,7 @@ export default function KampusPage() {
     const text = praiseText.trim();
     if (!to || !text || praiseBusy) return;
     if (!ENGINE_ENABLED) {
-      toast.error('Motor bağlı değil; alkış gönderilemez.');
+      toast.error('Bağlantı kurulamadı; alkış şu an gönderilemiyor. Biraz sonra yeniden deneyin.');
       return;
     }
     setPraiseBusy(true);
@@ -349,13 +350,13 @@ export default function KampusPage() {
                     </Link>
                   )}
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Sana gelen kutlamalar</span>
+                    <span className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Size gelen kutlamalar</span>
                     <span className="kp-mono text-[11px] text-muted">son 30 gün</span>
                   </div>
                   {greetings.isLoading ? (
                     <p className="text-xs text-muted">Yükleniyor…</p>
                   ) : received.length === 0 ? (
-                    <p className="text-xs text-muted">Henüz kutlama yok. Alkış duvarından arkadaşlarını alkışlayabilirsin.</p>
+                    <p className="text-xs text-muted">Son 30 günde size gelen kutlama yok. Alkış duvarından siz de bir çalışma arkadaşınızı alkışlayabilirsiniz.</p>
                   ) : (
                     <ul className="max-h-72 space-y-1.5 overflow-y-auto">
                       {received.map((g) => (
@@ -481,7 +482,7 @@ export default function KampusPage() {
                 </div>
                 <div className="mt-3 flex items-start gap-2 text-[11px] text-muted">
                   <Sparkle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet" />
-                  <span>Sorunuz ZEKİ AI Genel Bakış ekranında gerçek veriyle cevaplanır.</span>
+                  <span>Sorunuz Genel bakış ekranında Zeki AI tarafından Logo verisiyle cevaplanır.</span>
                 </div>
                 </>) : (
                   <p className="mt-1.5 text-xs leading-relaxed text-muted">Kişi ve dahili aramak için üstteki arama kutusunu kullanın.</p>
@@ -550,7 +551,7 @@ export default function KampusPage() {
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">{people.data ? `${people.data.total} Kişi` : '…'}</span>
                     <SqlInfo k={kaynakOf(people.data)} alan="total" label="Rehber: kişi ve birim sayısı" />
                   </div>
-                  <p className="text-xs text-muted">CRM’deki etkin kullanıcılar · kat, dahili, cep ve birim araması</p>
+                  <p className="text-xs text-muted">CRM’deki etkin çalışanlar. Ad, birim, dahili ya da kat yazarak arayın; kat düğmeleriyle süzün.</p>
                 </div>
               </div>
               <div className="kp-scroll flex items-center gap-1 overflow-x-auto pb-1 text-xs sm:pb-0">
@@ -595,7 +596,7 @@ export default function KampusPage() {
               {people.isLoading && <div className="col-span-full py-6 text-center text-xs text-muted">Rehber CRM’den okunuyor…</div>}
               {people.error && (
                 <div className="col-span-full py-6 text-center text-xs text-rose-700">
-                  {people.error instanceof EngineAuthError ? 'Oturum gerekli.' : people.error instanceof Error ? people.error.message : 'Rehber okunamadı.'}
+                  {people.error instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : people.error instanceof Error ? people.error.message : 'Rehber şu an okunamadı; biraz sonra sayfayı yenileyin.'}
                 </div>
               )}
               {staff.map((p) => {
@@ -633,7 +634,28 @@ export default function KampusPage() {
                   </div>
                 );
               })}
-              {people.data && !staff.length && <div className="col-span-full py-6 text-center text-xs text-muted">Eşleşen kişi yok.</div>}
+              {people.data && !staff.length && (
+                <div className="col-span-full">
+                  <EmptyHint
+                    title="Aramanıza uyan kişi yok"
+                    why={everyone.length ? 'Adın bir kısmını, birimi ya da dahili numarayı yazmayı deneyin; kat seçiliyse «Tümü»ne dönün.' : 'Rehberde henüz etkin kullanıcı görünmüyor.'}
+                    action={
+                      term || floor !== ALL_FLOORS ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTerm('');
+                            setFloor(ALL_FLOORS);
+                          }}
+                          className="kp-press min-h-11 rounded-lg bg-slate-100 px-3 text-xs font-semibold text-ink hover:bg-slate-200 sm:min-h-0 sm:py-1.5"
+                        >
+                          Aramayı temizle
+                        </button>
+                      ) : undefined
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div className="mt-3 flex flex-col justify-between gap-2 border-t border-slate-200/70 pt-3 text-xs text-muted sm:flex-row sm:items-center">
@@ -647,8 +669,8 @@ export default function KampusPage() {
                     )}
                     <strong>{people.data.total}</strong> etkin kullanıcı
                     <SqlInfo k={kaynakOf(people.data)} alan="total" label="Rehber: kişi ve birim sayısı" className="ml-0.5" />
-                    {people.data.truncated && ' (liste kesildi)'}
-                    {!people.data.adChecked && ' · dizin denetlenemedi'}
+                    {people.data.truncated && ' (listenin tamamı gösterilemedi)'}
+                    {!people.data.adChecked && ' · şirket kullanıcı listesiyle karşılaştırılamadı'}
                     {people.data.db && <DbTimingBadge timing={people.data.db} className="mt-0.5 flex" />}
                   </>
                 ) : (
@@ -656,7 +678,7 @@ export default function KampusPage() {
                 )}
               </span>
               <button type="button" onClick={() => setProfileOpen(true)} className="kp-press flex items-center gap-1 font-medium text-violet">
-                Dahili ve katını ekle <ArrowRight className="h-3.5 w-3.5" />
+                Dahilinizi ve katınızı ekleyin <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </Card>
@@ -670,7 +692,7 @@ export default function KampusPage() {
                 </div>
                 <div>
                   <h2 className="kp-display text-base font-bold text-ink">Kutlamalar &amp; Alkış Duvarı</h2>
-                  <p className="text-xs text-muted">Çalışma arkadaşlarımıza günün tebriğini ve mikro-övgüsünü iletin</p>
+                  <p className="text-xs text-muted">Bir çalışma arkadaşınıza kısa bir teşekkür ya da tebrik yazın; aynı kişiye günde bir alkış gider, duvarda son 30 gün görünür.</p>
                 </div>
               </div>
               <button
@@ -679,7 +701,7 @@ export default function KampusPage() {
                 onClick={() => setPraiseOpen((v) => !v)}
                 className="kp-press min-h-11 sm:min-h-0 flex w-fit items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
               >
-                <Plus className="h-3.5 w-3.5" /> Alkış Gönder
+                <Plus className="h-3.5 w-3.5" /> Alkış gönder
               </button>
             </div>
 
@@ -705,7 +727,7 @@ export default function KampusPage() {
                   required
                   maxLength={200}
                   aria-label="Tebrik notu"
-                  placeholder="Mikro tebrik notunuz"
+                  placeholder="Ör. Fuar hazırlığındaki emeğin için teşekkürler!"
                   className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-1.5 text-xs focus:border-violet focus:outline-none"
                 />
                 <button type="submit" disabled={praiseBusy} className="kp-press min-h-11 sm:min-h-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-60">
@@ -717,9 +739,9 @@ export default function KampusPage() {
             {greetings.isLoading ? (
               <p className="text-xs text-muted">Yükleniyor…</p>
             ) : greetings.error ? (
-              <p className="text-xs text-rose-700">{greetings.error instanceof EngineAuthError ? 'Oturum gerekli.' : 'Alkış duvarı yüklenemedi.'}</p>
+              <p className="text-xs text-rose-700">{greetings.error instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : 'Alkış duvarı şu an yüklenemedi; biraz sonra sayfayı yenileyin.'}</p>
             ) : wall.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-muted">Son 30 günde alkış yok. İlkini sen gönder.</p>
+              <EmptyHint title="Son 30 günde alkış yok" why="İlk alkışı siz gönderin: «Alkış gönder»e basın, kişiyi ve kısa notunuzu yazın." icon={<HeartHandshake className="h-[18px] w-[18px]" />} />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {wall.map((g) => (
@@ -768,7 +790,7 @@ export default function KampusPage() {
             className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-semibold text-violet hover:bg-white disabled:text-muted sm:min-h-0 sm:py-1.5"
             title="Rehberdeki herkesi CSV olarak indir (Excel açar)"
           >
-            <Download className="h-3.5 w-3.5" /> Dahili Rehber (CSV)
+            <Download className="h-3.5 w-3.5" /> Rehberi indir (Excel için CSV)
           </button>
           )}
           {canExport && (

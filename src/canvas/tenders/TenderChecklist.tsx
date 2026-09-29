@@ -38,7 +38,7 @@ export default function TenderChecklist({ d, meta }: { d: TenderDetail; meta: Te
       </div>
       {docs.error && <div className="mt-2"><Note tone="err">{errText(docs.error, 'Belge arşivi okunamadı.')}</Note></div>}
       <ul className="mt-3 flex flex-col gap-1.5">
-        {!items.length && <li className="text-[12.5px] text-canvas-muted">Liste boş. Şartnameden Zeki AI özeti çıkarın ya da kalem ekleyin.</li>}
+        {!items.length && <li className="text-[12.5px] text-canvas-muted">Liste boş. «Özet» sekmesinde şartname için Zeki AI özeti çıkarın ya da aşağıdan belgeyi elle ekleyin.</li>}
         {items.map((c) => (
           <li key={c.id} className="grid grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-white/80 px-3 py-2 lg:grid-cols-[minmax(0,1fr)_150px_minmax(0,220px)_150px_auto] lg:items-center">
             <div className="min-w-0">
@@ -88,7 +88,7 @@ export default function TenderChecklist({ d, meta }: { d: TenderDetail; meta: Te
       {can && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className={labelCls}>Yeni kalem</span>
+            <span className={labelCls}>Yeni belge</span>
             <input className={field} value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="Örn. Yayınevi yetki belgesi" />
           </label>
           <button
@@ -98,7 +98,7 @@ export default function TenderChecklist({ d, meta }: { d: TenderDetail; meta: Te
             onClick={() => save.mutate([{ kalem: newItem.trim(), zorunlu: true }], { onSuccess: () => setNewItem('') })}
           >
             {save.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Plus aria-hidden className="h-4 w-4" />}
-            Ekle
+            Listeye ekle
           </button>
         </div>
       )}

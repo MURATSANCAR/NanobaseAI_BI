@@ -9,6 +9,7 @@ import { ModuleFrame, Panel } from '../kit';
 import { MARK_LABEL, MarkButton, Progress, waitingSentence } from './parts';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { Explain } from '../../components/Explain';
 
 /** Bir projenin 9 adımı: ne bitti, ne zaman, kimde bekliyor. Kanıtı CRM'den; iki adım portaldan işaretlenir. */
 
@@ -90,7 +91,7 @@ export default function IntakeProjectScreen() {
         <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
         Süreç panosu
       </Link>
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {!p && !err && <Loading />}
 
@@ -129,6 +130,11 @@ export default function IntakeProjectScreen() {
                 <MarkButton projectId={p.id} step={current.no} label={`${MARK_LABEL[current.no] ?? current.markable} olarak işaretle`} className="shrink-0" />
               )}
             </div>
+            {current?.markable && p.canMark && !p.outcome && (
+              <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+                Bu adımın CRM'de kaydı yok; işiniz bitince buradan işaretleyin. İşaret yalnız portalda tutulur, yanlışsa adımın altındaki «Geri al» ile kaldırılır.
+              </p>
+            )}
             {current?.markable && !p.canMark && !p.outcome && (
               <p className="mt-2 text-[11.5px] text-canvas-muted">Bu adımı projenin editörü ya da yönetici işaretler.</p>
             )}
@@ -136,6 +142,12 @@ export default function IntakeProjectScreen() {
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
             <Panel>
+              <p className="mb-3 flex items-center gap-1 text-[11.5px] leading-snug text-canvas-muted">
+                Biten adımın altında tarihi ve nereden bilindiği yazar.
+                <Explain label="Adımın kaynağı">
+                  «CRM»: kanıt CRM kaydında var. «Portalda işaretlendi»: editör buradan işaretledi. «Sonraki adımdan çıkarıldı»: sonraki bir adım bittiği için bu adım da bitmiş sayıldı.
+                </Explain>
+              </p>
               {p.phases.map((ph) => (
                 <section key={ph.no} className="mt-4 first:mt-0">
                   <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
@@ -170,7 +182,7 @@ export default function IntakeProjectScreen() {
               <Panel>
                 <h2 className="text-[14px] font-extrabold">Kurul kararları</h2>
                 {p.boards.length === 0 ? (
-                  <p className="mt-2 text-[12.5px] text-canvas-muted">Proje henüz kurula çıkmadı.</p>
+                  <p className="mt-2 text-[12.5px] text-canvas-muted">Proje henüz kurula çıkmadı. Kurul kararı CRM'e girilince tarihi, kararı, baskı, fiyat ve telif bilgisiyle burada görünür.</p>
                 ) : (
                   <ul className="mt-2 space-y-2.5">
                     {p.boards.map((b) => (

@@ -28,10 +28,10 @@ export default function IndicatorsTab({ meta }: { meta: RiskMeta }) {
     <>
       <Note tone="info">
         Değerler Logo, CRM ve portalın hazır raporlarından ölçülür (günlük, haftalık ya da aylık; her sabah). Gösterge inceleme adayıdır; hüküm değildir.
-        Logo kopyası donmuşsa «son N gün» pencereleri veri son gününe göre kurulur ve değerin yanında yazar.
+        Logo verisi bugüne kadar güncel değilse «son N gün» hesapları verinin son gününe göre yapılır; bu, değerin yanında yazar.
       </Note>
       {pending.length > 0 && <Note tone="warn">{pending.length} gösterge taslağı onay bekliyor{meta.me.canIndicatorApprove ? '' : ' (onay yetkiniz yok)'}.<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Gösterge tanımları" className="ml-0.5" /></Note>}
-      {items.length === 0 ? <Empty>Gösterge yok.</Empty> : (
+      {items.length === 0 ? <Empty>Tanımlı gösterge yok.</Empty> : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {items.map((g) => <IndicatorCard key={g.kod} g={g} meta={meta} k={q.data?.kaynaklar} onEdit={() => setEditing(g)} expanded={open === g.kod} onToggle={() => setOpen(open === g.kod ? null : g.kod)} />)}
         </div>

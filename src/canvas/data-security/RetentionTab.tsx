@@ -8,6 +8,7 @@ import { AskSheet } from '../budget/parts';
 import { fmtAt, fmtDay, fmtN, securityApi, type RetentionObject, type SecurityMeta } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { ExplainLabel } from '../components/Explain';
 
 /** Saklama süreleri: her kayıt türü için süre, «bu süreyle kaç satır etkilenir» önizlemesi, uygulama anahtarı ve gece
  *  işinin kanıt satırları. Kapalıyken hiçbir kayıt silinmez; açmak `guvenlik.saklama` ister ve önizleme gösterilir. */
@@ -64,8 +65,8 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
             </h2>
             <p className="max-w-[80ch] text-[12px] text-canvas-muted">
               Süresi dolan kayıt yalnız «uygula» açıkken ve her gece {d.dailyAt}'ten sonra işlenir; önce kaç satırın etkileneceği
-              yazılır, sonra işlenen satır sayısı ve tarih aralığı. Soru kaydında satır silinmez, yalnız sonuç tablosu boşaltılır.
-              Süreler hukukla teyit edilecek (varsayılanların gerekçesi geliştirme günlüğünde).
+              yazılır, sonra işlenen satır sayısı ve tarih aralığı. Zeki AI soru kaydında satır silinmez, yalnız cevapta dönen sonuç
+              verisi boşaltılır. Önerilen süreler hukuk birimiyle teyit edilecektir.
             </p>
           </div>
           <div className="flex flex-col items-start gap-1.5 sm:items-end">
@@ -89,8 +90,12 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className={th}>Kayıt</th>
-                <th className={th}>Süre (gün)</th>
-                <th className={`${th} text-right`}>Süresi dolmuş satır</th>
+                <th className={th}>
+                  <ExplainLabel label="Süre (gün)">Kaydın kaç gün tutulacağı. 0 ya da boş: süresiz, hiç silinmez.</ExplainLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Süresi dolmuş satır">Bugünkü süreyle silinecek ya da boşaltılacak satır sayısı. Uygulama kapalıyken yalnız sayılır.</ExplainLabel>
+                </th>
                 <th className={th}>Tarih aralığı</th>
               </tr>
             </thead>
@@ -138,7 +143,8 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
       </Panel>
 
       <Panel>
-        <h2 className="text-[16px] font-extrabold tracking-tight">Gece işinin kanıtı</h2>
+        <h2 className="text-[16px] font-extrabold tracking-tight">Gece işinin kaydı</h2>
+        <p className="text-[12px] text-canvas-muted">Saklama işinin her gece ne yaptığı: «önizleme» satırında yalnız sayıldı, «uygulandı» satırında gerçekten silindi ya da boşaltıldı.</p>
         {runs.error && <div className="mt-2"><Note tone="err">{errText(runs.error, 'Kanıt satırları okunamadı.')}</Note></div>}
         <div className="mt-3">
           <TableWrap>
@@ -169,7 +175,7 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
         </div>
         {runs.hasNextPage && (
           <div className="mt-3 flex justify-center">
-            <button type="button" className={btnGhost} disabled={runs.isFetchingNextPage} onClick={() => runs.fetchNextPage()}>Daha eski</button>
+            <button type="button" className={btnGhost} disabled={runs.isFetchingNextPage} onClick={() => runs.fetchNextPage()}>Daha eski kayıtlar</button>
           </div>
         )}
       </Panel>
@@ -200,7 +206,7 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
         open={ask === 'off'}
         title="Uygulamayı durdur"
         message={<p>Gece işi yalnız önizleme yazmaya döner; hiçbir kayıt silinmez.</p>}
-        confirm="Durdur"
+        confirm="Uygulamayı durdur"
         busy={save.isPending}
         onClose={() => setAsk(null)}
         onConfirm={() => save.mutate({ apply: false })}

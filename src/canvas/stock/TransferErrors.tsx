@@ -7,7 +7,8 @@ import { Note, Pill, TableWrap, errText, label as labelCls, td, th } from '../ad
 import { Pager, Panel } from '../editorial/kit';
 import { fmtDay } from '../budget/api';
 import { n0, stockApi, type Transfer } from './api';
-import { Chips, Empty, ExportLink, Loading, SourcesButton, StockFrame, num } from './parts';
+import { Chips, ExportLink, Loading, SourcesButton, StockFrame, num } from './parts';
+import { EmptyHint, Explain } from '../components/Explain';
 import { RULES } from './rules';
 
 /** Logo'ya aktarılamayan hareketler (/stok/aktarim): CRM'de başlayıp Logo'ya fiş olarak geçemeyen malzeme hareketleri,
@@ -67,7 +68,7 @@ export default function TransferErrors() {
         </div>
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Aktarım kayıtları" />}
-        {d && !d.items.length && <Empty>Kayıt yok.</Empty>}
+        {d && !d.items.length && <EmptyHint title="Aktarılamayan hareket yok" why="Bu süzgeçte CRM’de kalıp Logo’ya geçmemiş depo hareketi bulunmadı." />}
         {!!d?.items.length && <Rows items={d.items} k={d.kaynaklar} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>
@@ -108,9 +109,9 @@ function Rows({ items, k }: { items: Transfer[]; k?: Kaynaklar }) {
               <th className={th}>Fiş</th>
               <th className={th}>İşlem</th>
               <th className={th}>Depo</th>
-              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].yasGun">Yaş</InfoLabel></th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center gap-0.5"><InfoLabel k={k} alan="items[].yasGun">Yaş</InfoLabel><Explain label="Yaş">Hareketin CRM’e girilmesinden bu yana geçen gün. Eski kayıtlar fatura ve irsaliyeyi geciktirir.</Explain></span></th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].miktar">Miktar</InfoLabel></th>
-              <th className={th}>Neden (Zeki AI)</th>
+              <th className={th}><span className="inline-flex items-center gap-0.5">Neden (Zeki AI)<Explain label="Neden">Zeki AI’ın Logo mesajını okuyarak tahmin ettiği hata türü. Kesin neden için yandaki Logo mesajına bakın.</Explain></span></th>
               <th className={th}>Logo mesajı</th>
             </tr>
           </thead>

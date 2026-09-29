@@ -31,7 +31,7 @@ export default function EngagementDashboard() {
   const t = trend.data;
   return (
     <HrFrame crumb="Bağlılık panosu" title="Bağlılık panosu"
-      lead="Anonim anketlerin toplu sonucu. Sonuç anket kapanınca ve gösterim eşiği girilince görünür; eşiğin altındaki birim üst birimle birlikte gösterilir. Kimin katıldığı ya da ne cevap verdiği hiçbir ekranda yoktur."
+      lead="Adsız çalışan anketlerinin toplu sonucu: çalışan tavsiye puanı (eNPS), bağlılık endeksi, madde sonuçları ve yorum temaları. Sonuç anket kapanınca görünür; yanıtı az olan birim üst birimle birlikte gösterilir. Kimin katıldığı ya da ne cevap verdiği hiçbir ekranda yoktur."
       aside={surveys.data && surveys.data.items.length > 0 ? (
         <select className={field} value={sel} onChange={(e) => { setSel(e.target.value); setScope('sirket'); }} aria-label="Anket">
           {surveys.data.items.map((x) => <option key={x.id} value={x.id}>{x.title} · {x.stateLabel}</option>)}
@@ -40,7 +40,7 @@ export default function EngagementDashboard() {
       {surveys.error && <Note tone="err">{errText(surveys.error, 'Anketler okunamadı.')}</Note>}
       {surveys.data && !surveys.data.items.length && <Note tone="info">Henüz anket yok. <Link className="font-bold text-canvas-violet underline" to="/ik/anket-yonetimi">Anket yönetimi</Link>nden başlatın.</Note>}
       {t && t.items.length > 0 && (
-        <Block title="Eğilim" help="Kapanmış anketler; gösterim eşiği altındakiler boş." info={<SqlInfo k={trend.data?.kaynaklar} alan="items[]" label="Anket eğilimi" />}>
+        <Block title="Eğilim" help="Kapanmış anketlerin sonuçları yan yana; yanıtı gösterim eşiğinin altında kalan anketin rakamları boş görünür." info={<SqlInfo k={trend.data?.kaynaklar} alan="items[]" label="Anket eğilimi" />}>
           <TableWrap>
             <thead><tr><th className={th}>Anket</th><th className={th}>Kapanış</th><th className={th}>Yanıt oranı</th><th className={th}>eNPS</th><th className={th}>Endeks</th></tr></thead>
             <tbody>
@@ -63,8 +63,8 @@ export default function EngagementDashboard() {
                 {scope !== 'sirket' && <button type="button" className={btnGhost} onClick={() => setScope('sirket')}>Şirket geneline dön</button>}
                 {can?.export && s.state === 'kapandi' && (
                   <>
-                    <button type="button" className={btnGhost} onClick={() => void engApi.exportCsv(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />CSV</button>
-                    <button type="button" className={btnGhost} onClick={() => void engApi.exportXlsx(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</button>
+                    <button type="button" className={btnGhost} onClick={() => void engApi.exportCsv(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />CSV indir</button>
+                    <button type="button" className={btnGhost} onClick={() => void engApi.exportXlsx(s.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel indir</button>
                   </>
                 )}
               </div>
@@ -77,9 +77,9 @@ export default function EngagementDashboard() {
             {prog.data && (
               <Block title="Katılım" help={prog.data.note} info={<SqlInfo k={prog.data.kaynaklar} alan="rate" label="Katılım ve yanıt oranı" />}>
                 <div className="grid grid-cols-2 gap-2">
-                  <Fact label="Davet" value={prog.data.invited} />
+                  <Fact label="Davet" value={prog.data.invited} explain="Ankete portaldan davet edilen, hesabı olan çalışan sayısı." />
                   <Fact label="Cevaplayan" value={prog.data.responded} />
-                  <Fact label="Basılı kod" value={`${prog.data.paperUsed} / ${prog.data.paperIssued}`} />
+                  <Fact label="Basılı kod" value={`${prog.data.paperUsed} / ${prog.data.paperIssued}`} explain="Bilgisayarı olmayan çalışanlara dağıtılan kartlardan kullanılan / basılan kod sayısı." />
                   <Fact label="Yanıt oranı" value={prog.data.rate !== null ? `%${fmtNum(prog.data.rate * 100, 0)}` : '—'} />
                 </div>
                 {prog.data.noAccount > 0 && <div className="mt-2 text-[11.5px] text-canvas-muted">Hedef kitlede hesabı olmayan {prog.data.noAccount} kişi var; onlara basılı kod dağıtın.</div>}
@@ -108,7 +108,7 @@ function ThemesBlock({ sid, data, error, canRaw, canRefresh, onRefreshed }: {
   const refresh = useMutation({ mutationFn: () => engApi.refreshThemes(sid), onSuccess: (r) => { toast.success(`${r.classified} yorum sınıflandı, ${r.themes} tema özeti yazıldı.`); onRefreshed(); },
     onError: (e) => toast.error(errText(e, 'Tema özeti yazılamadı.')) });
   return (
-    <Block title="Açık uçlu yorumlar: temalar" help="Zeki AI yorumları kapalı tema listesine ayırır ve alıntısız özet yazar; eşiğin altındaki temaya özet yazılmaz."
+    <Block title="Açık uçlu yorumlar: temalar" help="Zeki AI yorumları sabit bir tema listesine ayırır ve kimseyi ele vermemek için alıntı yapmadan özet yazar; az yorumlu temaya özet yazılmaz."
       action={
         <div className="flex flex-wrap gap-2">
           {canRefresh && <button type="button" className={btnGhost} disabled={refresh.isPending} onClick={() => refresh.mutate()}>{refresh.isPending ? 'Zeki AI çalışıyor…' : 'Temaları yenile'}</button>}
@@ -125,7 +125,7 @@ function ThemesBlock({ sid, data, error, canRaw, canRefresh, onRefreshed }: {
               {t.summary ? <div className="mt-0.5 break-words">{t.summary}</div> : t.note && <div className="text-canvas-muted">{t.note}</div>}
             </li>
           ))}
-          {!data.themes.length && <li className="text-[12px] text-canvas-muted">Yorum yok.</li>}
+          {!data.themes.length && <li className="text-[12px] text-canvas-muted">Bu ankette açık uçlu yorum yok.</li>}
         </ul>
       )}
       {raw.data?.comments && (

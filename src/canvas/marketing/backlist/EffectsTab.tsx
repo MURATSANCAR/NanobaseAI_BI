@@ -5,6 +5,7 @@ import { Loading, Note, Pill, TableWrap, errText, field, label as labelCls, td, 
 import { fmtMoney, fmtShortDay } from '../api';
 import { Block } from '../parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { Explain } from '../../components/Explain';
 import { blApi, fmtChange, fmtN, type BlMeta, type Campaign } from './api';
 
 /** Etki: CRM kampanyalarında ürünlerin kampanya öncesi 3 ay, kampanya ayları ve sonraki 2 ay Logo net adedi (ay düzeyi).
@@ -37,7 +38,7 @@ export default function EffectsTab({ meta }: { meta: BlMeta }) {
       {q.error && <Note tone="err">{errText(q.error, 'Kampanyalar açılamadı.')}</Note>}
       {d && (
         <Block title={`Kampanyalar (${fmtN(d.total)})`} help={d.not} info={<SqlInfo k={d.kaynaklar} alan="items[]" label="Kampanya etkileri" />}>
-          {!d.items.length && <Note tone="info">Bu süzgeçte CRM kampanyası yok.</Note>}
+          {!d.items.length && <Note tone="info">Bu süzgeçte CRM kampanyası yok. Başlangıç yılını «Hepsi» yapın ya da «Yalnız backlist ürünleri» işaretini kaldırın.</Note>}
           {d.items.length > 0 && (
             <TableWrap>
               <thead>
@@ -48,7 +49,7 @@ export default function EffectsTab({ meta }: { meta: BlMeta }) {
                   <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Önceki 3 ay</InfoLabel></th>
                   <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Kampanya</InfoLabel></th>
                   <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Sonraki 2 ay</InfoLabel></th>
-                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Aylık ort. değişim</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Aylık ort. değişim</InfoLabel><Explain label="Aylık ortalama değişim">Kampanya aylarında aylık ortalama net satış adedinin, kampanyadan önceki 3 ayın aylık ortalamasına göre değişimi. Yalnız öncesi ve sonrası karşılaştırılır; artışın kampanyadan geldiği iddia edilmez.</Explain></span></th>
                   {money && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Planlanan / gerçekleşen ciro</InfoLabel></th>}
                 </tr>
               </thead>

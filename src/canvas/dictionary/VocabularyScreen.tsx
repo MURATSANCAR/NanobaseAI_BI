@@ -105,7 +105,7 @@ function VocabularyInner() {
   const add = useMutation({
     mutationFn: () => vocabularyAdd(cur!.entity, cur!.column, own.trim()),
     onSuccess: () => {
-      say('Senin kelimen kaydedildi; üretim bunu bir daha değiştiremez');
+      say('Kelimeniz kaydedildi; Zeki AI bunu bir daha değiştirmez');
       setOwn('');
       invalidate();
     },
@@ -120,17 +120,17 @@ function VocabularyInner() {
   });
   const regen = useMutation({
     mutationFn: () => vocabularyGenerate(cur!.entity, cur!.column),
-    onSuccess: (r) => say(r.started ? 'Üretim başladı; bir dakika içinde listede' : 'Model bağlı değil'),
+    onSuccess: (r) => say(r.started ? 'Üretim başladı; bir dakika içinde listede' : 'Zeki AI şu an bağlı değil; biraz sonra yeniden deneyin'),
   });
   const mErr = [decide.error, add.error, describe.error, regen.error].find(Boolean) as Error | undefined;
-  const errText = mErr instanceof EngineAuthError ? 'Oturum gerekli.' : mErr ? mErr.message || 'Kaydedilemedi.' : null;
+  const errText = mErr instanceof EngineAuthError ? 'Oturumunuz kapanmış; yeniden giriş yapın.' : mErr ? mErr.message || 'Kaydedilemedi.' : null;
   const counts = proposed.data?.counts;
 
   return (
     <Shell
       head={{
         tenant: 'Timaş Yayınları',
-        section: 'Yapay Zeka Raporları',
+        section: 'Yönetim',
         crumb: 'Eş anlamlılar',
         source: `${nf.format(counts?.PROPOSED ?? 0)} öneri bekliyor`,
         presence: `${nf.format(counts?.APPROVED ?? 0)} onaylı`,
@@ -160,12 +160,19 @@ function VocabularyInner() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+            <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+              {tab === 'oneri'
+                ? 'Logo ve CRM alanlarının gündelik adları: çalışanlar soruda bu kelimeleri kullanınca Zeki AI doğru alanı bulur. Önerileri onaylayın ya da reddedin.'
+                : tab === 'karar'
+                  ? 'Onaylanmış ve reddedilmiş kelimeler; Zeki AI bunları bir daha değiştirmez.'
+                  : 'Kaynakta açıklaması olmayan alanlar. Bir cümleyle ne olduğunu yazarsanız Zeki AI bu cümleden kelime önerir.'}
+            </p>
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
               <Search className="h-3.5 w-3.5 text-canvas-muted" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Alan veya kelime ara…"
+                placeholder="Alan ya da kelime ara…"
                 className="w-full bg-transparent font-semibold outline-none placeholder:text-canvas-muted/70 text-base sm:text-[12.5px]"
               />
             </div>
@@ -185,10 +192,16 @@ function VocabularyInner() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               )}
-              {!loading && authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturum gerekli.</div>}
+              {!loading && authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturumunuz kapanmış; yeniden giriş yapın.</div>}
               {!loading && !authRequired && !filtered.length && (
                 <div className="p-3 text-[12px] text-canvas-muted">
-                  {tab === 'oneri' ? 'Bekleyen öneri yok.' : tab === 'karar' ? 'Henüz karar verilmiş kelime yok.' : 'Açıklaması olmayan alan yok.'}
+                  {groups.length
+                    ? 'Aramaya ya da kaynak süzgecine uyan alan yok.'
+                    : tab === 'oneri'
+                      ? 'Bekleyen öneri yok; yeni öneriler üretildikçe burada görünür.'
+                      : tab === 'karar'
+                        ? 'Henüz karar verilmiş kelime yok.'
+                        : 'Açıklaması olmayan alan yok.'}
                 </div>
               )}
               {filtered.map((g) => (
@@ -220,7 +233,7 @@ function VocabularyInner() {
           {/* Sağ: alanın kelimeleri */}
           <div ref={detailRef} className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:min-h-0 md:flex-1 md:shrink md:overflow-y-auto">
             {!cur ? (
-              <div className="flex h-full items-center justify-center text-[13px] text-canvas-muted">{authRequired ? 'Oturum gerekli.' : 'Soldan bir alan seç.'}</div>
+              <div className="flex h-full items-center justify-center text-[13px] text-canvas-muted">{authRequired ? 'Oturumunuz kapanmış; yeniden giriş yapın.' : 'Soldan bir alan seçin.'}</div>
             ) : (
               <div className="space-y-5">
                 <div className="flex flex-wrap items-end justify-between gap-2">
@@ -241,7 +254,7 @@ function VocabularyInner() {
                       className={['flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-[12px] font-bold text-canvas-ink sm:min-h-0', press].join(' ')}
                     >
                       {regen.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      Yeniden üret
+                      Zeki AI'a yeniden önerdir
                     </button>
                   )}
                 </div>
@@ -249,7 +262,7 @@ function VocabularyInner() {
                 {tab === 'bosluk' ? (
                   <div className="rounded-2xl border border-canvas-violet/20 bg-canvas-violet/[0.06] p-4">
                     <p className="text-[13.5px] leading-relaxed text-canvas-ink">
-                      Bu alanın kaynakta açıklaması yok; sistem ondan kelime üretemiyor. <strong>Bir cümleyle ne olduğunu yaz</strong> — kelimeler bu cümleden üretilip onayına gelir.
+                      Bu alanın kaynakta açıklaması yok; Zeki AI ondan kelime üretemiyor. <strong>Bir cümleyle ne olduğunu yazın</strong>; kelimeler bu cümleden üretilip onayınıza gelir.
                     </p>
                     <textarea
                       value={sentence}
@@ -276,7 +289,7 @@ function VocabularyInner() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-[14px] font-extrabold text-canvas-ink">{it.term}</span>
-                              {it.source === 'human' && <span className="rounded bg-canvas-mint/15 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-700">senin kelimen</span>}
+                              {it.source === 'human' && <span className="rounded bg-canvas-mint/15 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-700">sizin kelimeniz</span>}
                               {it.status === 'APPROVED' && it.source !== 'human' && <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-700">onaylı</span>}
                               {it.status === 'REJECTED' && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-bold text-slate-500">reddedildi</span>}
                               {it.reason && it.status === 'PROPOSED' && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-700">belirsiz: {it.reason}</span>}
@@ -316,7 +329,7 @@ function VocabularyInner() {
 
                     <div className="rounded-2xl bg-slate-50 p-3">
                       <label className="text-[11px] font-bold text-canvas-muted" htmlFor="kendi-kelimen">
-                        Kendi kelimeni ekle <span className="font-normal">(anında sözlüğe girer; üretim bunu bir daha değiştiremez)</span>
+                        Kendi kelimenizi ekleyin <span className="font-normal">(anında sözlüğe girer; Zeki AI bunu bir daha değiştirmez)</span>
                       </label>
                       <div className="mt-1 flex gap-2">
                         <input
@@ -348,7 +361,7 @@ function VocabularyInner() {
                 <div className="space-y-1.5 rounded-2xl bg-slate-50 p-3 text-[11.5px] leading-snug text-canvas-muted">
                   <div><strong className="text-canvas-ink">Onayla:</strong> kelime bu alanın sözlüğüne girer; sorularda doğrudan tanınır, gece taraması onu düşüremez.</div>
                   <div><strong className="text-canvas-ink">Reddet:</strong> bu kelime bu alan için bir daha önerilmez.</div>
-                  <div><strong className="text-canvas-ink">Kural:</strong> senin yazdığın ya da karar verdiğin hiçbir kelimeyi üretim değiştirmez.</div>
+                  <div><strong className="text-canvas-ink">Kural:</strong> sizin yazdığınız ya da karar verdiğiniz hiçbir kelimeyi Zeki AI değiştirmez.</div>
                 </div>
               </div>
             )}

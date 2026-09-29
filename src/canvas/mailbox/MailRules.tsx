@@ -7,6 +7,7 @@ import { AskSheet } from '../budget/parts';
 import { ENGINE_ENABLED } from '../engine';
 import { MailFrame } from './parts';
 import { mailApi, toRulesBody, type Ruleset } from './api';
+import { ExplainLabel } from '../components/Explain';
 
 type Editable = Pick<Ruleset, 'note' | 'categories' | 'routes' | 'sla' | 'templates'>;
 
@@ -43,7 +44,7 @@ export default function MailRules() {
   return (
     <MailFrame
       title="E-posta kuralları"
-      lead="Türler (Zeki AI yalnız bu listeden seçer), türe göre sorumlu kişi ve birim, ilk yanıt süreleri (iş saati) ve yanıt şablonları. Değişiklik taslakta yazılır, başka bir yetkili onaylayınca yürürlüğe girer."
+      lead="İleti türleri (Zeki AI yalnız bu listeden seçer), her tür için sorumlu kişi ve birim, yanıt süreleri (iş saatiyle) ve yanıt şablonları. Değişiklik önce taslak olarak kaydedilir, başka bir yetkili onaylayınca yürürlüğe girer."
       connection={m?.connection}
       lastRun={m?.lastRun}
     >
@@ -181,7 +182,7 @@ function Editor({ ed, setEd, canEdit, roles }: { ed: Editable; setEd: (e: Editab
             <thead>
               <tr>
                 <th className={th}>Açık</th>
-                <th className={th}>Anahtar</th>
+                <th className={th}><ExplainLabel label="Anahtar">Türün sistemdeki kısa kodu (küçük harf, boşluksuz). Raporlar ve kurallar bu koda bağlanır; yürürlükteki bir türün kodunu değiştirmeyin.</ExplainLabel></th>
                 <th className={th}>Ad</th>
                 <th className={th}>Açıklama</th>
                 <th className={th}>Rol</th>
@@ -223,7 +224,7 @@ function Editor({ ed, setEd, canEdit, roles }: { ed: Editable; setEd: (e: Editab
 
       <Card>
         <div className="text-[13px] font-extrabold">Yönlendirme ve süre</div>
-        <p className="text-[11.5px] text-canvas-muted">Hesap adı (AD). Sorumlu önerilir; hatırlatma ona, eskalasyon birim yöneticisine gider. Süreler iş saatidir: hatırlatma ≤ eskalasyon ≤ üst yönetici.</p>
+        <p className="text-[11.5px] text-canvas-muted">Kişileri kullanıcı adıyla yazın (şirket hesabındaki ad). Sorumlu, iletinin atanması için önerilir; hatırlatma ona, eskalasyon birim yöneticisine gider. Süreler iş saatidir: hatırlatma ≤ eskalasyon ≤ üst yönetici.</p>
         <div className="mt-2">
           <TableWrap>
             <thead>
@@ -233,9 +234,9 @@ function Editor({ ed, setEd, canEdit, roles }: { ed: Editable; setEd: (e: Editab
                 <th className={th}>Sorumlu</th>
                 <th className={th}>Yedek</th>
                 <th className={th}>Birim yöneticisi</th>
-                <th className={th}>Hatırlatma</th>
-                <th className={th}>Eskalasyon</th>
-                <th className={th}>Üst</th>
+                <th className={th}><ExplainLabel label="Hatırlatma">İleti bu kadar iş saati yanıtsız kalınca sorumlu kişiye hatırlatma gider.</ExplainLabel></th>
+                <th className={th}><ExplainLabel label="Eskalasyon">Bu kadar iş saati geçince durum birim yöneticisine bildirilir.</ExplainLabel></th>
+                <th className={th}><ExplainLabel label="Üst">Bu kadar iş saati geçince üst yöneticiye bildirilir.</ExplainLabel></th>
               </tr>
             </thead>
             <tbody>

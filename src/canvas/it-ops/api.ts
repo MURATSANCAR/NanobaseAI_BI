@@ -236,4 +236,4 @@ export const SOURCE: Record<Job['source'], string> = {
   watchdog: 'Sağlık denetimi',
 };
 
-export const ENV_LABEL: Record<Release['env'], string> = { test: 'Test sunucusu', vm: "Müşteri VM'i", gpu: 'Zeki AI sunucusu' };
+export const ENV_LABEL: Record<Release['env'], string> = { test: 'Test sunucusu', vm: 'Şirket içi kurulum', gpu: 'Zeki AI sunucusu' };

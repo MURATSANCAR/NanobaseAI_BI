@@ -65,7 +65,7 @@ export function FairTasks({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
           );
         })}
       </ul>
-      {f.tasks.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Görev yok.</p>}
+      {f.tasks.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Bu kartta görev yok.{edit ? ' Aşağıdan görev ekleyebilirsiniz.' : ''}</p>}
       {edit && (
         <form className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_160px_160px_auto] sm:items-end"
           onSubmit={(e) => {
@@ -221,7 +221,7 @@ export function FairAuthors({ f, m, onChange }: { f: FairDetail; m: Meta; onChan
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-5 lg:gap-4">
       <div className="lg:col-span-3">
         <Block title="Yazar programı" info={<SqlInfo k={f.kaynaklar} alan="authors" label="Yazar programı" />} help={<>İmza günü ve söyleşi saatleri. Yazarla randevu ve görüşme kaydı <Link className="font-bold text-canvas-violet hover:underline" to="/yazar-iliskileri">Yazar ilişkileri</Link> ekranında.</>}>
-          {f.authors.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Program yok.</p>}
+          {f.authors.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Henüz yazar programı yok.{edit ? ' İmza günü ya da söyleşisi olacak yazarı aşağıdan ekleyin.' : ''}</p>}
           <ul className="flex flex-col divide-y divide-slate-100">
             {f.authors.map((a) => (
               <li key={a.id} className="flex items-start gap-2 py-2 text-[12.5px]">

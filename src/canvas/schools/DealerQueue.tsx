@@ -7,6 +7,7 @@ import { schoolsApi } from './api';
 import { LinkRow } from './DealerPanel';
 import { invalidateSchools, useSchoolsMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Onay kuyruğu (saha yöneticisi): Zeki AI'ın plandaki okullara önerdiği ve temsilcilerin ziyaret raporunda yönlendirdiği
  *  bayi eşleşmeleri. Onay açıkça verilen `okul.bayi-onay` yetkisiyle; herkes kuyruğu görür, karar veremez. */
@@ -26,10 +27,13 @@ export default function DealerQueue() {
   });
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Okulun kitaplarını hangi kitapçı ya da bayiden alacağını eşleştiririz. Öneriler Zeki AI'dan ve temsilcilerin ziyaret raporlarından gelir; yetkili kişi onaylar ya da reddeder.
+      </p>
       {!canDealer && <Note tone="info">Eşleşmeleri görebilirsiniz; onay ya da ret yetkisi rolünüzde yok.</Note>}
       {q.error && <Note tone="err">{errText(q.error, 'Kuyruk okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {q.data && q.data.items.length === 0 && <Note tone="ok">Onay bekleyen bayi eşleşmesi yok.</Note>}
+      {q.data && q.data.items.length === 0 && <EmptyHint title="Onay bekleyen bayi eşleşmesi yok" why="Yeni öneri geldiğinde burada listelenir. Bir okulun bayi adaylarını okul kartından da görebilirsiniz." />}
       {q.data && q.data.items.length > 0 && (
         <p className="flex items-center gap-1 px-1 text-[12px] font-semibold text-canvas-muted">
           Onay bekleyen {q.data.total.toLocaleString('tr-TR')} eşleşme

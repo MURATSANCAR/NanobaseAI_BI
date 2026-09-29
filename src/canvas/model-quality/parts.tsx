@@ -17,9 +17,9 @@ export function MqFrame({ aside, children }: { aside?: ReactNode; children: Reac
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Altyapı ve destek</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Zeki AI kalitesi</h1>
                 <p className="mt-1 max-w-[76ch] text-[12.5px] leading-snug text-canvas-muted">
-                  Zeki AI'ın isabeti her değişiklikten sonra ölçülür: doğrulanmış sorular referans rakamla karşılaştırılır, bozulan soru
-                  değişiklik kaydıyla yan yana görünür. Kullanıcıların «Yanlış» dediği cevaplar sınıflanır; iyileştirme katalog, kural ve
-                  eş anlamlılarla yapılır.
+                  Zeki AI’ın doğru cevap verip vermediği düzenli olarak ölçülür: cevabı önceden doğrulanmış sorular yeniden sorulur ve
+                  doğru rakamla karşılaştırılır; bozulan soru, arada yapılan değişiklikle yan yana görünür. Kullanıcıların «Kısmen» ya da
+                  «Yanlış» dediği cevaplar hata türüne ayrılır; iyileştirme veri sözlüğü, kurallar ve eş anlamlılarla yapılır.
                 </p>
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[420px]">{aside}</div>}
@@ -57,8 +57,8 @@ export function weekLabels(weeks: Array<{ from: string; to: string }>): string[]
 /** SQL metni: yalnız «SQL'i göster» yetkisi olana; kendi kutusunda kayar, sayfa kaymaz. */
 export function SqlBox({ sql, label }: { sql: string | null | undefined; label?: string }) {
   const can = useCan('kart.sql-goster');
-  if (!sql) return <div className="text-[11.5px] text-canvas-muted">{label ? `${label}: ` : ''}SQL yok</div>;
-  if (!can) return <div className="text-[11.5px] text-canvas-muted">SQL'i görme yetkiniz yok.</div>;
+  if (!sql) return <div className="text-[11.5px] text-canvas-muted">{label ? `${label}: ` : ''}Sorgu yazılmadı</div>;
+  if (!can) return <div className="text-[11.5px] text-canvas-muted">Sorgu metnini görme yetkiniz yok.</div>;
   return (
     <pre className="max-h-[220px] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-slate-900 px-3 py-2 font-mono text-[11px] leading-snug text-slate-100">
       {sql}

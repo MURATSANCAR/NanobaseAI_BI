@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, ExternalLink, Gauge, Loader2, RefreshCw } fr
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, type Severity } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { Term } from './terms';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/tech*, /speed*) */
 type RunState = { running: boolean; done?: number; failed?: number; queue?: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -101,13 +103,30 @@ const techApi = {
 const PAGE = 40;
 const TABS = [
   { id: 'sorunlar', label: 'Sayfa sorunları' },
-  { id: 'sitemap', label: 'Sitemap' },
+  { id: 'sitemap', label: 'Site haritası' },
   { id: 'google-haritalar', label: 'Google’daki haritalar' },
   { id: 'botlar', label: 'Yapay zekâ botları' },
   { id: 'gorseller', label: 'Görseller' },
   { id: 'hiz', label: 'Hız' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
+/** Sekmenin ne işe yaradığı; sekme şeridinin altında tek cümle. */
+const TAB_HINT: Record<Tab, string> = {
+  sorunlar: 'Canlı sayfalardaki teknik sorunlar: açılmayan ya da yönlenen sayfalar, yanlış asıl adres etiketi, aramadan gizlenen sayfalar. Bu listeyi site yöneticisine iletin.',
+  sitemap: 'Sitenin Google’a verdiği sayfa listesi (site haritası) güncel mi, satıştaki her kitap listede var mı.',
+  'google-haritalar': 'Search Console’a gönderilmiş site haritalarını Google’ın okuyup okumadığı ve bulduğu hatalar.',
+  botlar: 'Arama motoru ve yapay zekâ botlarının sitenin hangi bölümlerine girebildiği (robots.txt izinleri).',
+  gorseller: 'Kitap sayfalarındaki görsellerin yazılı tanımı (alt metin), dosya adı ve boyutu; Google Görseller bunlara bakar.',
+  hiz: 'Sayfaların ne kadar hızlı açıldığı; Google, gerçek ziyaretçilerdeki hızı sıralamada kullanır.',
+};
+/** Hız ölçülerinin sade anlamı. */
+const METRIC_WHY: Record<Metric, string> = {
+  lcp: 'Sayfanın en büyük parçasının (çoğunlukla kapak görseli ya da başlık) ekranda görünme süresi. Ne kadar kısa, o kadar iyi.',
+  inp: 'Ziyaretçi bir yere dokunduğunda ya da tıkladığında sayfanın tepki verme süresi.',
+  cls: 'Sayfa yüklenirken içeriğin ne kadar kaydığı; kayma okuru yanlış yere tıklatır. 0’a yakın olması iyidir.',
+  fcp: 'Sayfada ilk yazı ya da görselin görünme süresi.',
+  ttfb: 'Sitenin ilk cevabı gönderme süresi.',
+};
 const KIND_LABEL: Record<Kind, string> = { product: 'Ürün', category: 'Kategori', brand: 'Yayınevi', author: 'Yazar', home: 'Anasayfa' };
 const CAT_TONE: Record<'good' | 'ni' | 'poor', 'good' | 'mid' | 'bad'> = { good: 'good', ni: 'mid', poor: 'bad' };
 const CAT_LABEL: Record<'good' | 'ni' | 'poor', string> = { good: 'İyi', ni: 'İyileştirilmeli', poor: 'Kötü' };
@@ -145,7 +164,7 @@ export default function SeoTech() {
       crumb="Teknik sağlık"
       eyebrow="SEO & GEO · teknik tarama"
       title="Teknik sağlık"
-      lead="Sayfaların açılıp açılmadığı, yönlendirmeler, canonical ve dizin ayarları, sitemap, robots.txt'teki arama ve yapay zekâ botları, görseller ve sayfa hızı. Site yalnız okunarak, saniyede en çok bir istekle taranır; değişiklik yapılmaz."
+      lead="Sitenin teknik sağlığı: sayfalar açılıyor mu, yönlendirmeler ve asıl adres ayarları doğru mu, site haritası güncel mi, botlara izin var mı, görseller ve hız nasıl. Site yalnız okunarak, saniyede en çok bir istekle taranır; hiçbir şey değiştirilmez."
     >
       <div className="sg-filters" role="tablist" aria-label="Bölüm">
         {TABS.map((t) => (
@@ -154,6 +173,7 @@ export default function SeoTech() {
           </button>
         ))}
       </div>
+      <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)', lineHeight: 1.5 }}>{TAB_HINT[tab]}</p>
       {tab === 'sorunlar' && <IssuesTab group="page" />}
       {tab === 'gorseller' && <IssuesTab group="image" />}
       {tab === 'sitemap' && <SitemapTab />}
@@ -205,34 +225,39 @@ function IssuesTab({ group }: { group: 'page' | 'image' }) {
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Taranan sayfa" value={fmt(d.checked)} note={`Son tarama ${dateTime(d.lastChecked)} · her gece kaldığı yerden sürer`} info={<SeoInfo k={r.data?.kaynaklar} label="Taranan sayfa" />} />
-            <Kpi label="Sorunlu sayfa" value={fmt(d.withIssues)} note="En az bir teknik sorunu olan" info={<SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" />} />
+            <Kpi label="Taranan sayfa" value={fmt(d.checked)} note={`Son tarama ${dateTime(d.lastChecked)} · her gece kaldığı yerden sürer`} info={<SeoInfo k={r.data?.kaynaklar} label="Taranan sayfa" />}
+              explain="Canlı sitede açılıp denetlenen sayfa sayısı: anasayfa, ürün sayfaları (çok satandan başlayarak) ve yazar, kategori, yayınevi sayfaları." />
+            <Kpi label="Sorunlu sayfa" value={fmt(d.withIssues)} note="En az bir teknik sorunu olan" info={<SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" />}
+              explain="Taranan sayfalardan en az bir teknik sorun bulunanların sayısı. Sorunun ne olduğu soldaki listede, hangi sayfada olduğu sağdaki tabloda." />
             {group === 'page' ? (
               <Kpi
                 label="Açılmayan / yönlenen"
                 value={fmt(['not_found', 'server_error', 'fetch_error', 'redirect_loop'].reduce((a, k) => a + (d.checks.find((c) => c.id === k)?.count ?? 0), 0))}
-                note={`Yönlendirilen ${fmt((d.checks.find((c) => c.id === 'redirected')?.count ?? 0) + (d.checks.find((c) => c.id === 'redirect_chain')?.count ?? 0))}`} info={<SeoInfo k={r.data?.kaynaklar} label="Açılmayan / yönlenen" />} />
+                note={`Yönlendirilen ${fmt((d.checks.find((c) => c.id === 'redirected')?.count ?? 0) + (d.checks.find((c) => c.id === 'redirect_chain')?.count ?? 0))}`} info={<SeoInfo k={r.data?.kaynaklar} label="Açılmayan / yönlenen" />}
+                explain="Büyük sayı: bulunamayan (404), sunucu hatası veren, hiç açılamayan ya da yönlendirme döngüsüne giren sayfalar. Alttaki sayı başka adrese yönlenen sayfalar; bunlar açılır ama Google için fazladan adım demektir." />
             ) : (
-              <Kpi label="Kapak alt metni sorunlu" value={fmt(d.checks.find((c) => c.id === 'main_img_alt')?.count)} note="Ana ürün görselinin alt metni kitap adını taşımıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Kapak alt metni sorunlu" />} />
+              <Kpi label="Kapak alt metni sorunlu" value={fmt(d.checks.find((c) => c.id === 'main_img_alt')?.count)} note="Ana ürün görselinin alt metni kitap adını taşımıyor" info={<SeoInfo k={r.data?.kaynaklar} label="Kapak alt metni sorunlu" />}
+                explain="Alt metin, görselin yazılı tanımıdır; Google Görseller ve ekran okuyucular bunu okur. Kapak görselinin alt metninde kitabın adı geçmeli." />
             )}
             <Kpi
               label="Türe göre"
               value={fmt(d.byKind.product)}
-              note={(Object.keys(KIND_LABEL) as Kind[]).filter((k) => d.byKind[k]).map((k) => `${KIND_LABEL[k]} ${fmt(d.byKind[k])}`).join(' · ') || '—'} info={<SeoInfo k={r.data?.kaynaklar} label="Türe göre" />} />
+              note={(Object.keys(KIND_LABEL) as Kind[]).filter((k) => d.byKind[k]).map((k) => `${KIND_LABEL[k]} ${fmt(d.byKind[k])}`).join(' · ') || '—'} info={<SeoInfo k={r.data?.kaynaklar} label="Türe göre" />}
+              explain="Büyük sayı taranan ürün sayfası sayısıdır; alt satırda taranan sayfaların türe göre dağılımı." />
           </section>
 
           {!d.checked && (
-            <div className="sg-empty">
-              <h2>Henüz tarama yok</h2>
-              <p>“Taramayı başlat”a basın ya da gece taramasını bekleyin. Anasayfa, ürün sayfaları (çok satandan) ve yazar/kategori/yayınevi sayfaları sırayla açılır.</p>
-            </div>
+            <EmptyHint
+              title="Henüz tarama yapılmadı"
+              why="«Taramayı başlat»a basın ya da gece taramasını bekleyin. Anasayfa, ürün sayfaları (çok satandan) ve yazar, kategori, yayınevi sayfaları sırayla açılır."
+            />
           )}
 
           {d.checked > 0 && (
             <div className="sg-grid">
               <section className="sg-card sg-span-5">
                 <h2>{group === 'image' ? 'Görsel sorunları' : 'Sorunlar'}</h2>
-                <p className="sg-sub">Taranan sayfaların kaçında var. Tıklayınca sayfalar süzülür.</p>
+                <p className="sg-sub">Her sorunun kaç sayfada olduğu. Bir soruna dokunun; neden önemli olduğu altta, o sayfalar sağda görünür.</p>
                 <div className="sg-bars">
                   {checks
                     .filter((c) => c.count > 0)
@@ -258,7 +283,7 @@ function IssuesTab({ group }: { group: 'page' | 'image' }) {
                         </span>
                       </button>
                     ))}
-                  {!checks.some((c) => c.count > 0) && <p className="sg-sub">Taranan sayfalarda bu gruptan sorun yok.</p>}
+                  {!checks.some((c) => c.count > 0) && <p className="sg-banner ok">Taranan sayfalarda bu gruptan sorun bulunmadı.</p>}
                 </div>
                 {issue && <p className="sg-banner" style={{ marginTop: 14 }}>{d.checks.find((c) => c.id === issue)?.why}</p>}
               </section>
@@ -282,10 +307,7 @@ function IssuesTab({ group }: { group: 'page' | 'image' }) {
                   ))}
                 </div>
                 {!d.items.length ? (
-                  <div className="sg-empty">
-                    <h2>Sayfa yok</h2>
-                    <p>Bu süzgece uyan sorunlu sayfa bulunamadı.</p>
-                  </div>
+                  <EmptyHint title="Bu süzgece uyan sorunlu sayfa yok" why="Sayfa türünü «Tümü» yapın ya da soldan başka bir sorun seçin." />
                 ) : (
                   <div className="sg-table-wrap">
                     <table className="sg-table">
@@ -364,10 +386,10 @@ function Chain({ chain }: { chain: Hop[] }) {
 
 function PageDetail({ it }: { it: TechItem }) {
   const rows: Array<[string, ReactNode]> = [];
-  if (it.canonical?.href && it.canonical.kind !== 'self') rows.push(['Canonical', it.canonical.href + (it.canonical.target ? ` (${it.canonical.target.status}${it.canonical.target.hops ? `, ${it.canonical.target.hops} yönlendirme` : ''})` : '')]);
-  if (it.robots && /noindex|nofollow|none/i.test(it.robots)) rows.push(['Robots', it.robots]);
-  if (it.xRobotsTag) rows.push(['X-Robots-Tag', it.xRobotsTag]);
-  if (it.title) rows.push(['Başlık', `${it.title} (${it.title.length} karakter)`]);
+  if (it.canonical?.href && it.canonical.kind !== 'self') rows.push(['Asıl adres etiketi (canonical)', it.canonical.href + (it.canonical.target ? ` (${it.canonical.target.status}${it.canonical.target.hops ? `, ${it.canonical.target.hops} yönlendirme` : ''})` : '')]);
+  if (it.robots && /noindex|nofollow|none/i.test(it.robots)) rows.push(['Aramadan gizleme ayarı (robots)', it.robots]);
+  if (it.xRobotsTag) rows.push(['Sunucunun gizleme ayarı (X-Robots-Tag)', it.xRobotsTag]);
+  if (it.title) rows.push(['Sayfa başlığı', `${it.title} (${it.title.length} karakter)`]);
   if (it.trackingLinks.length) rows.push([`İzleme parametreli bağlantı (${it.trackingLinks.length})`, it.trackingLinks.join('\n')]);
   if (!rows.length) return null;
   return (
@@ -485,10 +507,7 @@ function GscSitemapsTab() {
       {d && !d.configured && <p className="sg-banner err">Search Console mülkü girilmemiş (Yönetim → SEO &amp; GEO).</p>}
       {(d?.state.error || s?.error) && <p className="sg-banner err">Son okuma başarısız: {d?.state.error || s?.error}</p>}
       {d?.configured && !s && !running && (
-        <div className="sg-empty">
-          <h2>Henüz okunmadı</h2>
-          <p>“Şimdi oku”ya basın; sonra her {d.refreshHours} saatte bir kendiliğinden okunur.</p>
-        </div>
+        <EmptyHint title="Henüz okunmadı" why={`«Şimdi oku»ya basın; sonra her ${d.refreshHours} saatte bir kendiliğinden okunur.`} />
       )}
       {s && sum && (
         <>
@@ -498,14 +517,18 @@ function GscSitemapsTab() {
               value={fmt(sum.sitemaps)}
               note={`${sum.obsolete ? `${fmt(sum.obsolete)} tanesi eski siteden kalma · ` : ''}son okuma ${dateTime(s.savedAt)}`}
               tone={sum.obsolete ? 'mid' : undefined}
+              explain="Search Console’a bildirilmiş site haritası dosyası sayısı. Bir yıldan uzun süredir okunmayanlar eski siteden kalmadır ve kaldırılmalıdır."
             />
-            <Kpi label="Hata" value={fmt(sum.errors)} note={`${fmt(sum.withErrors)} haritada`} tone={sum.errors ? 'bad' : 'good'} />
-            <Kpi label="Uyarı" value={fmt(sum.warnings)} note={`${fmt(sum.withWarnings)} haritada`} tone={sum.warnings ? 'bad' : 'good'} />
+            <Kpi label="Hata" value={fmt(sum.errors)} note={`${fmt(sum.withErrors)} haritada`} tone={sum.errors ? 'bad' : 'good'}
+              explain="Google’ın haritaları okurken bulduğu hata sayısı. Hatalı haritadaki sayfalar Google’a geç ya da hiç ulaşmayabilir; ayrıntısı Search Console’dadır." />
+            <Kpi label="Uyarı" value={fmt(sum.warnings)} note={`${fmt(sum.withWarnings)} haritada`} tone={sum.warnings ? 'bad' : 'good'}
+              explain="Haritanın okunmasını durdurmayan ama düzeltilmesi gereken sorunlar." />
             <Kpi
               label="Google’ın okumadığı"
               value={fmt(sum.notRead)}
               note={`${d?.staleDays} günden uzun süredir okunmayan`}
               tone={sum.notRead ? 'bad' : 'good'}
+              explain="Google’ın uzun süredir indirmediği haritalar; içlerindeki yeni kitaplar Google’a geç ulaşır."
             />
           </section>
           <section className="sg-card">
@@ -519,7 +542,7 @@ function GscSitemapsTab() {
                 <thead>
                   <tr>
                     <th>Harita</th>
-                    <th>Gönderilen adres</th>
+                    <th><ExplainLabel label="Gönderilen adres">Haritada Google’a bildirilen sayfa adresi sayısı.</ExplainLabel></th>
                     <th>Hata</th>
                     <th>Uyarı</th>
                     <th>Google son okuma</th>
@@ -588,7 +611,7 @@ function SitemapTab() {
       <div className="sg-actions">
         <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending || running}>
           {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
-          {running ? 'Sitemap okunuyor…' : 'Sitemap ve robots.txt’i yenile'}
+          {running ? 'Site haritası okunuyor…' : 'Site haritasını ve robots.txt’i yeniden oku'}
         </button>
       </div>
       {r.isLoading && <Loading text="Sitemap sonuçları getiriliyor…" />}
@@ -596,35 +619,39 @@ function SitemapTab() {
       {refresh.error && <Failed error={refresh.error} />}
       {r.data?.state.error && <p className="sg-banner err">Son okuma durdu: {r.data.state.error}</p>}
       {r.data && !s && (
-        <div className="sg-empty">
-          <h2>Sitemap henüz okunmadı</h2>
-          <p>“Yenile”ye basın ya da gece işini bekleyin. robots.txt’teki sitemap adresleri okunur, örnek adresler açılıp denetlenir.</p>
-        </div>
+        <EmptyHint
+          title="Site haritası henüz okunmadı"
+          why="«Yeniden oku»ya basın ya da gece işini bekleyin. robots.txt’te yazan harita adresleri okunur, içlerinden örnek adresler açılıp denetlenir."
+        />
       )}
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitemap dosyası" value={fmt(s.sitemaps.length)} note={s.fallback ? 'robots.txt’te Sitemap satırı yok; /sitemap.xml denendi' : `robots.txt’te ${fmt(s.declared.length)} adres`} tone={s.fallback ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemap dosyası" />} />
-            <Kpi label="Sitemaplerdeki adres" value={fmt(s.totalUrls)} note={`Son okuma ${dateTime(s.checkedAt)}${s.partial ? ' · süre doldu, eksik okundu' : ''}`} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemaplerdeki adres" />} />
-            <Kpi label="Sitemapte olmayan ürün" value={fmt(s.missingCount)} note={`Satıştaki ${fmt(s.activeProducts)} üründen`} tone={s.missingCount ? 'bad' : 'good'} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemapte olmayan ürün" />} />
+            <Kpi label="Site haritası dosyası" value={fmt(s.sitemaps.length)} note={s.fallback ? 'robots.txt’te harita satırı yok; /sitemap.xml denendi' : `robots.txt’te ${fmt(s.declared.length)} adres`} tone={s.fallback ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Site haritası dosyası" />}
+              explain="Okunan site haritası dosyası sayısı. Site haritası, sitedeki sayfaların Google’a verilen listesidir; adresi robots.txt’te yazmalı, yazmıyorsa arama motorları haritayı bulmakta zorlanır." />
+            <Kpi label="Haritalardaki adres" value={fmt(s.totalUrls)} note={`Son okuma ${dateTime(s.checkedAt)}${s.partial ? ' · süre doldu, eksik okundu' : ''}`} info={<SeoInfo k={r.data?.kaynaklar} label="Haritalardaki adres" />}
+              explain="Bütün site haritalarında listelenen toplam sayfa adresi." />
+            <Kpi label="Haritada olmayan ürün" value={fmt(s.missingCount)} note={`Satıştaki ${fmt(s.activeProducts)} üründen`} tone={s.missingCount ? 'bad' : 'good'} info={<SeoInfo k={r.data?.kaynaklar} label="Haritada olmayan ürün" />}
+              explain="Satıştaki ürünlerden adresi hiçbir site haritasında geçmeyenler. Google bunları ancak site içi bağlantılardan bulabilir." />
             <Kpi
               label="Örneklem denetimi"
               value={`${fmt(s.sample.ok)} / ${fmt(s.sample.checked)}`}
               note={`Rastgele ${fmt(s.sample.checked)} adres (toplam ${fmt(s.sample.of)}) · yönlenen ${fmt(s.sample.redirect)} · açılmayan ${fmt(s.sample.error)}`}
-              tone={s.sample.checked && s.sample.ok < s.sample.checked ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Örneklem denetimi" />} />
+              tone={s.sample.checked && s.sample.ok < s.sample.checked ? 'bad' : undefined} info={<SeoInfo k={r.data?.kaynaklar} label="Örneklem denetimi" />}
+              explain="Haritalardan rastgele seçilen adreslerin kaçının doğrudan açıldığı. Haritadaki adres yönlenmemeli ve hata vermemeli." />
           </section>
 
           <section className="sg-card">
-            <h2>Sitemap dosyaları <SeoInfo k={r.data?.kaynaklar} label="Sitemap dosyaları" /></h2>
-            <p className="sg-sub">En yeni lastmod {fmt(s.staleDays)} günden eskiyse ya da dosya açılmıyorsa işaretlenir: arama motoru yeni kitapları geç görür.</p>
+            <h2>Site haritası dosyaları <SeoInfo k={r.data?.kaynaklar} label="Site haritası dosyaları" /></h2>
+            <p className="sg-sub">Haritadaki en yeni güncelleme tarihi {fmt(s.staleDays)} günden eskiyse «Eski», dosya açılmıyorsa kırmızı işaretlenir: arama motoru yeni kitapları geç görür.</p>
             <div className="sg-table-wrap">
               <table className="sg-table">
                 <thead>
                   <tr>
                     <th>Dosya</th>
                     <th>Tür</th>
-                    <th>Adres</th>
-                    <th>En yeni lastmod</th>
+                    <th>Adres sayısı</th>
+                    <th>En yeni güncelleme</th>
                     <th>Durum</th>
                   </tr>
                 </thead>
@@ -635,13 +662,13 @@ function SitemapTab() {
                       <td>{m.kind === 'index' ? 'Dizin' : m.kind === 'urlset' ? 'Adres listesi' : '—'}</td>
                       <td className="num">{fmt(m.count)}</td>
                       <td className="sg-mono" style={{ whiteSpace: 'nowrap' }}>
-                        {m.newest ? dateTime(m.newest) : m.count ? 'lastmod yok' : '—'}
+                        {m.newest ? dateTime(m.newest) : m.count ? 'tarih yazılmamış' : '—'}
                       </td>
                       <td>
                         {m.error || (m.status && m.status !== 200) ? (
                           <span className="sg-chip bad">{m.error || m.status}</span>
                         ) : m.stale ? (
-                          <span className="sg-chip mid">Bayat</span>
+                          <span className="sg-chip mid">Eski</span>
                         ) : (
                           <span className="sg-chip good">Güncel</span>
                         )}
@@ -656,7 +683,7 @@ function SitemapTab() {
           <div className="sg-grid">
             <section className="sg-card sg-span-6">
               <h2>Örneklemde sorunlu adresler <SeoInfo k={r.data?.kaynaklar} label="Örneklemde sorunlu adresler" /></h2>
-              <p className="sg-sub">Sitemapteki adresler 200 dönmeli ve yönlenmemeli. Bu bir örneklemdir; bütün adresler taranmadı.</p>
+              <p className="sg-sub">Haritadaki adresler doğrudan açılmalı (200) ve başka adrese yönlenmemeli. Bu bir örneklemdir; bütün adresler denenmedi.</p>
               {!s.sample.items.length ? (
                 <p className="sg-banner ok">Örneklemdeki bütün adresler doğrudan açıldı.</p>
               ) : (
@@ -689,10 +716,10 @@ function SitemapTab() {
               )}
             </section>
             <section className="sg-card sg-span-6">
-              <h2>Sitemapte olmayan ürünler <SeoInfo k={r.data?.kaynaklar} label="Sitemapte olmayan ürünler" /></h2>
-              <p className="sg-sub">Satıştaki ürünün adresi hiçbir sitemapte yok. Çok satandan aza.</p>
+              <h2>Haritada olmayan ürünler <SeoInfo k={r.data?.kaynaklar} label="Haritada olmayan ürünler" /></h2>
+              <p className="sg-sub">Satıştaki ürünün adresi hiçbir site haritasında yok. Çok satandan aza; listeyi site yöneticisine iletin.</p>
               {!s.missingCount ? (
-                <p className="sg-banner ok">{s.totalUrls ? 'Satıştaki bütün ürünler sitemapte.' : 'Sitemap okunamadığı için karşılaştırma yapılmadı.'}</p>
+                <p className="sg-banner ok">{s.totalUrls ? 'Satıştaki bütün ürünler site haritasında.' : 'Site haritası okunamadığı için karşılaştırma yapılmadı.'}</p>
               ) : (
                 <>
                   <div className="sg-table-wrap">
@@ -739,12 +766,12 @@ function BotsTab() {
       {s && (
         <>
           <p className="sg-banner">
-            Arama motorları ve yapay zekâ aramaları (ChatGPT araması, Perplexity, Claude araması) sayfayı ancak robots.txt izin veriyorsa kaynak gösterebilir. Model eğitimi için veri toplayan botları kapatmak görünürlüğü etkilemez; açık ya da kapalı tutmak işletmenin kararıdır. Son okuma {dateTime(s.savedAt)}
-            {s.status !== 200 ? ` · robots.txt ${s.status ?? 'açılamadı'} döndü (dosya yoksa her şey açık sayılır)` : ''}. Yenilemek için Sitemap sekmesindeki düğme kullanılır.
+            Arama motorları ve yapay zekâ servislerinin arama botları, sayfayı ancak robots.txt izin veriyorsa gösterebilir ve kaynak verebilir. Yapay zekâ eğitimi için veri toplayan botları kapatmak görünürlüğü etkilemez; açık ya da kapalı tutmak işletmenin kararıdır. Son okuma {dateTime(s.savedAt)}
+            {s.status !== 200 ? ` · robots.txt ${s.status ?? 'açılamadı'} döndü (dosya yoksa her şey açık sayılır)` : ''}. Yenilemek için Site haritası sekmesindeki düğme kullanılır. <Term k="robots" />
           </p>
           <section className="sg-card">
-            <h2>Bot × yol <SeoInfo k={r.data?.kaynaklar} label="Bot × yol" /></h2>
-            <p className="sg-sub">Her bot için temsilî sayfalar. Kural RFC 9309’a göre: en uzun eşleşen kural geçerli, eşitlikte izin kazanır; botun kendi bölümü yoksa genel (*) bölüm uygulanır.</p>
+            <h2>Botların izin durumu <SeoInfo k={r.data?.kaynaklar} label="Botların izin durumu" /></h2>
+            <p className="sg-sub">Her bot için örnek sayfalarda «Açık» (okuyabilir) ya da «Kapalı» (robots.txt engelliyor). Arama ve yapay zekâ araması botlarında «Kapalı» kırmızıdır, düzeltilmelidir. Kural robots.txt standardına göre okunur: botun kendi bölümü yoksa genel (*) bölüm uygulanır.</p>
             <div className="sg-table-wrap">
               <table className="sg-table">
                 <thead>
@@ -819,8 +846,8 @@ function SpeedTab() {
     return (
       <div className="sg-empty">
         <Gauge size={22} aria-hidden />
-        <h2>Google API anahtarı girilmemiş <SeoInfo k={r.data?.kaynaklar} label="Google API anahtarı girilmemiş" /></h2>
-        <p>Sayfa hızı ve gerçek kullanıcı ölçümleri (Core Web Vitals) Google’ın PageSpeed ve CrUX servislerinden okunur. Anahtarı Yönetim → SEO & GEO → Google API anahtarı alanına girin; anahtar yalnız bu iki servisle kısıtlı olmalı.</p>
+        <h2>Google hız anahtarı girilmemiş <SeoInfo k={r.data?.kaynaklar} label="Google hız anahtarı girilmemiş" /></h2>
+        <p>Sayfa hızı ve gerçek ziyaretçi ölçümleri Google’ın hız ölçüm servislerinden (PageSpeed ve CrUX) okunur. Yöneticiniz anahtarı Yönetim → SEO & GEO → Google API anahtarı alanına girmeli; anahtar yalnız bu iki servisle kısıtlı olmalı.</p>
       </div>
     );
 
@@ -837,10 +864,10 @@ function SpeedTab() {
       {d.state.error && <p className="sg-banner err">Son ölçüm durdu: {d.state.error}</p>}
 
       <section className="sg-card">
-        <h2>Gerçek kullanıcılar: bütün site (son 28 gün, p75) <SeoInfo k={r.data?.kaynaklar} label="Gerçek kullanıcılar: bütün site (son 28 gün, p75)" /></h2>
-        <p className="sg-sub">Chrome kullanıcılarının yaşadığı hız; Google sıralamada bunu kullanır. Ziyaretlerin %75’i bu değerden iyi.</p>
+        <h2>Gerçek ziyaretçilerde hız: bütün site (son 28 gün) <SeoInfo k={r.data?.kaynaklar} label="Gerçek ziyaretçilerde hız" /> <Term k="cwv" /></h2>
+        <p className="sg-sub">Chrome kullanan ziyaretçilerin yaşadığı hız; Google sıralamada bunu kullanır. Gösterilen değer, ziyaretlerin %75’inin bundan iyi olduğu değerdir.</p>
         {!d.origin.phone && !d.origin.desktop ? (
-          <p className="sg-banner">Henüz ölçüm yok. “Hızı şimdi ölç”e basın ya da gece işini bekleyin.</p>
+          <p className="sg-banner">Henüz ölçüm yok. «Hızı şimdi ölç»e basın ya da gece işini bekleyin.</p>
         ) : (
           <div className="sg-grid">
             {(['phone', 'desktop'] as const).map((ff) => {
@@ -851,14 +878,14 @@ function SpeedTab() {
                   {!o ? (
                     <p className="sg-sub">Ölçüm yok.</p>
                   ) : o.noData ? (
-                    <p className="sg-sub">Yeterli trafik verisi yok.</p>
+                    <p className="sg-sub">Google bu cihazda ölçüm verecek kadar ziyaret görmemiş.</p>
                   ) : o.error ? (
                     <p className="sg-banner err">{o.error}</p>
                   ) : (
                     <div className="sg-kpis">
                       {(['lcp', 'inp', 'cls'] as const).map((m) => {
                         const v = o.metrics[m];
-                        return <Kpi key={m} label={METRIC_LABEL[m]} value={metricText(m, v?.p75)} note={thresholdText(m, d.thresholds[m])} tone={v?.category ? CAT_TONE[v.category] : undefined} chip={v?.category ? CAT_LABEL[v.category] : undefined} info={<SeoInfo k={r.data?.kaynaklar} label={METRIC_LABEL[m]} />} />;
+                        return <Kpi key={m} label={METRIC_LABEL[m]} value={metricText(m, v?.p75)} note={thresholdText(m, d.thresholds[m])} tone={v?.category ? CAT_TONE[v.category] : undefined} chip={v?.category ? CAT_LABEL[v.category] : undefined} info={<SeoInfo k={r.data?.kaynaklar} label={METRIC_LABEL[m]} />} explain={METRIC_WHY[m]} />;
                       })}
                     </div>
                   )}
@@ -873,10 +900,10 @@ function SpeedTab() {
       <section className="sg-card">
         <h2>Örnek sayfalar <SeoInfo k={r.data?.kaynaklar} label="Örnek sayfalar" /></h2>
         <p className="sg-sub">
-          Anasayfa, en çok satan {fmt(d.state.sample?.products ?? 10)} ürün, en çok satan {fmt(d.state.sample?.pages ?? 5)} kategori ve yazar sayfası. Puan laboratuvar ölçümüdür (0–100); sağdaki üç değer o sayfanın gerçek kullanıcı ölçümü (telefon), trafik azsa boş kalır.
+          Anasayfa, en çok satan {fmt(d.state.sample?.products ?? 10)} ürün, en çok satan {fmt(d.state.sample?.pages ?? 5)} kategori ve yazar sayfası. Puan ve «test» sütunları Google’ın test ortamındaki ölçümüdür (0–100; 90 üstü iyi, 50 altı kötü); sağdaki üç değer o sayfanın gerçek ziyaretçi ölçümü (telefon), ziyaret azsa boş kalır.
         </p>
         {!d.items.length ? (
-          <p className="sg-banner">Henüz sayfa ölçümü yok.</p>
+          <p className="sg-banner">Henüz sayfa ölçümü yok; «Hızı şimdi ölç»e basın ya da gece ölçümünü bekleyin.</p>
         ) : (
           <div className="sg-table-wrap">
             <table className="sg-table">
@@ -885,11 +912,11 @@ function SpeedTab() {
                   <th>Sayfa</th>
                   <th>Puan (telefon) <SeoInfo k={r.data?.kaynaklar} label="Puan (telefon)" /></th>
                   <th>Puan (masaüstü) <SeoInfo k={r.data?.kaynaklar} label="Puan (masaüstü)" /></th>
-                  <th>LCP (lab) <SeoInfo k={r.data?.kaynaklar} label="LCP (lab)" /></th>
-                  <th>CLS (lab) <SeoInfo k={r.data?.kaynaklar} label="CLS (lab)" /></th>
-                  <th>LCP <SeoInfo k={r.data?.kaynaklar} label="LCP" /></th>
-                  <th>INP <SeoInfo k={r.data?.kaynaklar} label="INP" /></th>
-                  <th>CLS <SeoInfo k={r.data?.kaynaklar} label="CLS" /></th>
+                  <th>LCP (test) <SeoInfo k={r.data?.kaynaklar} label="LCP (test)" /></th>
+                  <th>CLS (test) <SeoInfo k={r.data?.kaynaklar} label="CLS (test)" /></th>
+                  <th><ExplainLabel label="LCP">{METRIC_WHY.lcp}</ExplainLabel> <SeoInfo k={r.data?.kaynaklar} label="LCP" /></th>
+                  <th><ExplainLabel label="INP">{METRIC_WHY.inp}</ExplainLabel> <SeoInfo k={r.data?.kaynaklar} label="INP" /></th>
+                  <th><ExplainLabel label="CLS">{METRIC_WHY.cls}</ExplainLabel> <SeoInfo k={r.data?.kaynaklar} label="CLS" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -1002,10 +1029,10 @@ function SpeedTab() {
 }
 
 /* ------------------------------------------------------------------ küçük parçalar */
-function Kpi({ label, value, note, tone, chip, info }: { label: string; value: string; note?: string; tone?: 'good' | 'mid' | 'bad'; chip?: string; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, chip, info, explain }: { label: string; value: string; note?: string; tone?: 'good' | 'mid' | 'bad'; chip?: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {value}
         {tone && <span className={`sg-chip ${tone}`}>{chip ?? (tone === 'good' ? 'İyi' : tone === 'mid' ? 'Orta' : 'Dikkat')}</span>}

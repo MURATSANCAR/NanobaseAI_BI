@@ -17,6 +17,8 @@ import AskBox from './AskBox';
 import MyTasks from './MyTasks';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint, Explain } from '../components/Explain';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, sonra Görevlerim (CRM'de editörü olduğu iş
  *  durumundaki projeler, durum/termin takibiyle), altında kendisine atanmış bütün dosyalar.
@@ -27,12 +29,16 @@ function Desk({ works, user, k }: { works: Work[]; user: string; k?: ReturnType<
   const mine = works.filter((w) => w.createdBy.toLowerCase() === user.toLowerCase() || w.members.includes(user.toLowerCase()) || w.signatures.total > 0);
   const openChapters = mine.reduce((a, w) => a + (w.chapters.total - w.chapters.approved), 0);
   const waitingProofs = mine.filter((w) => w.proof && w.signatures.signed < w.signatures.total);
+  const more = useShowMore(mine, 6);
   if (!mine.length) return null;
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
           Masanızdaki eserler
+          <Explain label="Masanızdaki eserler">
+            Redaksiyon ve son okumada sizin açtığınız, üyesi olduğunuz ya da imza bekleyen eserler. «Bölüm sürüyor» henüz onaylanmamış bölümü, «imza bekliyor» provada atılmamış imzayı gösterir.
+          </Explain>
           <SqlInfo k={k} alan="_hepsi" label="Bölüm ve imza sayıları" />
         </h2>
         <Link to="/redaksiyon" className="text-[11.5px] font-bold text-canvas-violet underline">
@@ -40,7 +46,7 @@ function Desk({ works, user, k }: { works: Work[]; user: string; k?: ReturnType<
         </Link>
       </div>
       <ul className="mt-2 space-y-1.5">
-        {mine.slice(0, 6).map((w) => {
+        {more.shown.map((w) => {
           const open = w.chapters.total - w.chapters.approved;
           return (
             <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
@@ -48,7 +54,7 @@ function Desk({ works, user, k }: { works: Work[]; user: string; k?: ReturnType<
                 <span className="block break-words font-semibold leading-snug">{w.title}</span>
                 <span className="block text-[11px] text-canvas-muted">
                   {w.manuscript ? `${nf.format(w.chapters.approved)}/${nf.format(w.chapters.total)} bölüm onaylı` : 'Metin yüklenmedi'}
-                  {w.proof ? ` · prova v${w.proof.version}` : ''}
+                  {w.proof ? ` · prova ${nf.format(w.proof.version)}. sürüm` : ''}
                 </span>
               </span>
               <span className="flex shrink-0 gap-1.5">
@@ -61,6 +67,7 @@ function Desk({ works, user, k }: { works: Work[]; user: string; k?: ReturnType<
           );
         })}
       </ul>
+      <ShowMoreButton more={more} noun="eser" />
       {(openChapters > 0 || waitingProofs.length > 0) && (
         <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
           Toplam {nf.format(openChapters)} bölüm sürüyor
@@ -84,7 +91,7 @@ function TranslationDesk() {
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
           Çeviri işleriniz
-          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bekleyen segment sayıları" />
+          <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bekleyen cümle sayıları" />
         </h2>
         <Link to="/ceviri/masam" className="text-[11.5px] font-bold text-canvas-violet underline">
           Çeviri masam
@@ -108,7 +115,7 @@ function TranslationDesk() {
                   </span>
                 </span>
                 <span className="flex shrink-0 gap-1.5">
-                  {left > 0 && <Pill tone="warn">{nf.format(left)} segment {translator ? 'bekliyor' : 'onay bekliyor'}</Pill>}
+                  {left > 0 && <Pill tone="warn">{nf.format(left)} cümle {translator ? 'çeviri bekliyor' : 'onay bekliyor'}</Pill>}
                   {j.pace.overdue ? <Pill tone="err">Teslim geçti</Pill> : j.pace.late ? <Pill tone="warn">Gecikme riski</Pill> : null}
                 </span>
               </Link>
@@ -128,6 +135,7 @@ function Expiring({ data, k }: { data?: ContractPage; k?: ReturnType<typeof kayn
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
           Süresi yaklaşan sözleşmeler
+          <Explain label="Süresi yaklaşan sözleşmeler">Bitişi yaklaşan CRM sözleşmelerinden en yakın beşi. Bitişine 14 gün ya da daha az kalanlar kırmızıdır.</Explain>
           <SqlInfo k={k} alan="_hepsi" label="Süresi yaklaşan sözleşmeler" />
         </h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
@@ -175,7 +183,7 @@ function TodoCard({ c }: { c: IntakeCard }) {
           <MarkButton projectId={c.id} step={c.step} label={label} className="[&_button]:w-full" />
         ) : (
           <Link to={`/yazar-giris/${c.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-canvas-violet px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-md transition-transform duration-150 ease-out active:scale-[0.97] sm:min-h-0">
-            Aç
+            Projeyi aç
             <ArrowRight aria-hidden className="h-4 w-4" />
           </Link>
         )}
@@ -217,7 +225,19 @@ function MyFiles({ running, todo, completed, k }: { running: IntakeCard[]; todo:
         </div>
       </div>
       {items.length === 0 ? (
-        <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan dosya yok.</p>
+        <div className="mt-2">
+          <EmptyHint
+            title="Bu süzgece uyan dosya yok"
+            why="Başka bir süzgeç seçin; bütün dosyalarınızı görmek için «Tümü»ne dokunun."
+            action={
+              f !== 'all' ? (
+                <button type="button" onClick={() => setF('all')} className="min-h-9 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold hover:bg-slate-200">
+                  Tümünü göster
+                </button>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <ul className="mt-2">
           {items.map((c) => (
@@ -269,6 +289,9 @@ function EditorTable({ items, todo, k }: { items: IntakeCard[]; todo: IntakeCard
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
           Editörlere göre dosyalar
+          <Explain label="Editörlere göre dosyalar">
+            Süren: editörün açık projeleri. Bekleyen: editörün işi olan adımda duranlar. Kurulda: yayın kurulu evresindekiler. Geciken: bulunduğu adımda gecikme sınırını aşanlar.
+          </Explain>
           <SqlInfo k={k} alan="_hepsi" label="Editör başına süren, bekleyen, kurulda, geciken" />
         </h2>
         <span className="text-[11.5px] text-canvas-muted">Bekleyen işleri görmek için satıra dokunun</span>
@@ -415,7 +438,7 @@ export default function EditorialHome() {
       presence={all && d ? `${nf.format(d.items.length)} dosya` : undefined}
       aside={<SearchBox />}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{home.data || d ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
       {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}
 
@@ -423,17 +446,17 @@ export default function EditorialHome() {
         <KpiRow>
           {all ? (
             <>
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosya" />} label="Süren dosya" value={nf.format(d.items.length)} help="CRM'de açık yazar giriş projesi" />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editörlerde bekleyen" />} label="Editörlerde bekleyen" value={nf.format(todo.length)} help="Sırası editörde olan adım" />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} label="Geciken" value={nf.format(allLate)} help={`${pct(allLate, d.items.length)} · ${lateHelp}`} />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editör atanmamış" />} label="Editör atanmamış" value={nf.format(unassigned.length)} help={`${nf.format(unassignedWaiting)} tanesinde iş bekliyor`} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosya" />} explain="CRM'de açık duran, henüz tamamlanmamış ya da kapanmamış yazar giriş süreci projeleri." label="Süren dosya" value={nf.format(d.items.length)} help="CRM'de açık yazar giriş projesi" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editörlerde bekleyen" />} explain="Editörün işi olan adımda duran projeler: editör raporu, yazara kurul kararını bildirme ya da yazarın kişi kartı." label="Editörlerde bekleyen" value={nf.format(todo.length)} help="Sırası editörde olan adım" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} explain="Bulunduğu adımda gecikme sınırından uzun bekleyen dosyalar. Bekleme, bir önceki adımın bittiği günden sayılır." label="Geciken" value={nf.format(allLate)} help={`${pct(allLate, d.items.length)} · ${lateHelp}`} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Editör atanmamış" />} explain="CRM proje kartında «Editörü» alanı boş olan süren dosyalar. Atama CRM'de yapılır." label="Editör atanmamış" value={nf.format(unassigned.length)} help={`${nf.format(unassignedWaiting)} tanesinde iş bekliyor`} />
             </>
           ) : (
             <>
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosyanız" />} label="Süren dosyanız" value={nf.format(running.length)} help="Size atanmış açık proje" />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Sizi bekleyen" />} label="Sizi bekleyen" value={nf.format(todo.length)} help="Sırası sizde olan adım" />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} label="Geciken" value={nf.format(lateRunning)} help={lateHelp} />
-              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Kurulda" />} label="Kurulda" value={nf.format(boardRunning)} help="Yayın kurulu evresinde" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Süren dosyanız" />} explain="CRM'de editörü siz olan, henüz tamamlanmamış yazar giriş süreci projeleri." label="Süren dosyanız" value={nf.format(running.length)} help="Size atanmış açık proje" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Sizi bekleyen" />} explain="Sizin işiniz olan adımda duran dosyalar: editör raporu, yazara kurul kararını bildirme ya da yazarın kişi kartı. Her biri aşağıda kart olarak durur." label="Sizi bekleyen" value={nf.format(todo.length)} help="Sırası sizde olan adım" />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Geciken" />} explain="Dosyalarınızdan bulunduğu adımda gecikme sınırından uzun bekleyenler. Bekleme, bir önceki adımın bittiği günden sayılır." label="Geciken" value={nf.format(lateRunning)} help={lateHelp} />
+              <Kpi info={<SqlInfo k={kaynakOf(intake.data)} alan="_hepsi" label="Kurulda" />} explain="Dosyalarınızdan yayın kurulu evresinde olanlar: kurula sunum hazırlığı ya da kurul kararı bekleyenler." label="Kurulda" value={nf.format(boardRunning)} help="Yayın kurulu evresinde" />
             </>
           )}
         </KpiRow>

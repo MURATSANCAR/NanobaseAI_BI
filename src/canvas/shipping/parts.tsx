@@ -99,7 +99,7 @@ export function FreshNote({ f, k }: { f: Freshness | undefined; k?: Kaynaklar })
   );
 }
 
-export function ExportButton({ list, params, can, label = 'Excel' }: { list: ExportList; params?: Record<string, string | number | undefined>; can: boolean; label?: string }) {
+export function ExportButton({ list, params, can, label = 'Excel indir' }: { list: ExportList; params?: Record<string, string | number | undefined>; can: boolean; label?: string }) {
   if (!can) return null;
   return (
     <a className={btnGhost} href={shippingApi.exportUrl(list, params)}>

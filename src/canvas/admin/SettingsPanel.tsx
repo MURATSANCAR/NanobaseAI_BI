@@ -21,7 +21,7 @@ const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> =
     label: 'Bağlan',
     help: 'CRM ayrı bir bağlantı değil: aynı sunucudaki başka bir veritabanı. Deneme, o veritabanının okunabildiğine bakar.',
   },
-  llm: { id: 'llm', label: 'Sor', help: 'Modele tek kelimelik bir soru sorar; cevabın süresini ve geldiğini gösterir.' },
+  llm: { id: 'llm', label: 'Sor', help: 'Zeki AI’a tek kelimelik bir soru sorar; cevabın gelip gelmediğini ve süresini gösterir.' },
   seo: {
     id: 'seo',
     label: 'Bağlantıyı sına',
@@ -30,7 +30,7 @@ const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> =
   geo: {
     id: 'geo',
     label: 'Bağlantıyı sına',
-    help: 'Girilmiş her yapay zekâ anahtarını hesabın model listesini okuyarak dener. Soru sormaz, kota harcamaz.',
+    help: 'Girilmiş her yapay zekâ hizmeti anahtarını, hesabın erişebildiği listeyi okuyarak dener. Soru sormaz, kota harcamaz.',
   },
   mailbox: {
     id: 'mailbox',
@@ -283,7 +283,7 @@ export default function SettingsPanel() {
     <div className="space-y-5 pb-20">
       <Section
         title="Ayarlar"
-        help="Burada kaydedilen değer sunucu ayar dosyasındakinin önüne geçer. Her değişiklik kişi ve saatle değişiklik kaydına yazılır; parolalar kayda da ekrana da geri gelmez."
+        help="Portalın bağlantıları, bildirimleri ve modül ayarları. Burada kaydedilen değer sunucu ayar dosyasındakinin önüne geçer; her değişiklik kişi ve saatle değişiklik kaydına yazılır, parolalar kayda da ekrana da geri gelmez."
         action={
           <button type="button" disabled={checkAll.isPending || dirty.length > 0} onClick={() => checkAll.mutate()} className={btnGhost}>
             {checkAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
@@ -377,7 +377,7 @@ export default function SettingsPanel() {
                 <input value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="ad@timas.com.tr" autoCapitalize="none" spellCheck={false} className={field} />
                 <button type="button" disabled={!testTo.includes('@') || test.isPending || dirty.length > 0} onClick={() => test.mutate(testTo.trim())} className={`${btnGhost} shrink-0`}>
                   {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Gönder
+                  Deneme gönder
                 </button>
               </div>
               {test.data && <div className="mt-2"><Note tone={test.data.ok ? 'ok' : 'err'}>{test.data.message}</Note></div>}
@@ -394,7 +394,7 @@ export default function SettingsPanel() {
                 <input value={dirUser} onChange={(e) => setDirUser(e.target.value)} placeholder="hesap adı (isteğe bağlı)" autoCapitalize="none" spellCheck={false} className={field} />
                 <button type="button" disabled={dirTest.isPending || dirty.length > 0} onClick={() => dirTest.mutate(dirUser.trim())} className={`${btnGhost} shrink-0`}>
                   {dirTest.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
-                  Bağlan
+                  Dizine bağlan
                 </button>
               </div>
               {dirTest.data && <div className="mt-2"><Note tone={dirTest.data.ok ? 'ok' : 'err'}>{dirTest.data.message}</Note></div>}
@@ -428,7 +428,7 @@ export default function SettingsPanel() {
         <Card>
           <div className="text-[14px] font-extrabold">Sistem tanımları</div>
           <p className="text-[12px] text-canvas-muted">
-            Servisin açılışta okuduğu, ekrandan değiştirilmeyen tanımlar. Bir ayarın neden beklendiği gibi davranmadığı çoğu zaman burada yazar.
+            Portalın açılışta okuduğu, bu ekrandan değiştirilemeyen tanımlar (BT kurulumda girer). Bir ayarın neden beklendiği gibi davranmadığı çoğu zaman burada yazar.
           </p>
           <dl className="mt-2 divide-y divide-slate-100">
             {system.data.items.map((i) => (

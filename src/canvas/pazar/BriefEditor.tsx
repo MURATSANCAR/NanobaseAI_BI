@@ -190,7 +190,7 @@ export default function BriefEditor({ donem }: { donem: string }) {
   );
 }
 
-const TUR: Record<Source['tur'], string> = { ic: 'TİMAŞ (Logo)', dis: 'Sektör raporu', rakip: 'Rakip (CRM)', tazelik: 'Veri tazeliği' };
+const TUR: Record<Source['tur'], string> = { ic: 'Timaş (Logo)', dis: 'Sektör raporu', rakip: 'Rakip (CRM)', tazelik: 'Veri tazeliği' };
 
 function SourceList({ sources }: { sources: Source[] }) {
   if (!sources.length) return <p className="mt-1 text-[12.5px] text-canvas-muted">Kaynak yok.</p>;

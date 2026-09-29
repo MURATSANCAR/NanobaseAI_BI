@@ -20,10 +20,10 @@ export default function FaqGaps() {
     <Block
       info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Bilgi bankası açıkları" />}
       title="Bilgi bankası açıkları"
-      help="Sitede cevabı olsa gelmeyecek talepler: Zeki AI benzer SSS bulamadı. Liste her gece yeniden sayılır."
+      help="Zeki AI’ın benzer bir SSS maddesi bulamadığı talepler, konuya göre. Bu konulara SSS yazılırsa müşteri cevabı sitede bulabilir ve talep açmaz. Liste her gece yeniden sayılır."
     >
       {items.length === 0 ? (
-        <Empty title="Açık yok">Gece sayımında eşik üstünde SSS'siz konu çıkmadı ya da henüz sayım yapılmadı.</Empty>
+        <Empty title="Bilgi bankası açığı yok">Gece sayımında SSS’si eksik, yeterince sık gelen bir konu çıkmadı ya da henüz sayım yapılmadı.</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((g) => (
@@ -66,7 +66,8 @@ function GapItem({ gap, canEdit }: { gap: Gap; canEdit: boolean }) {
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Cevap</span>
-            <textarea className={`${field} min-h-[120px] font-normal`} value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={!canEdit} />
+            <textarea className={`${field} min-h-[120px] font-normal`} value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={!canEdit}
+              placeholder="Müşterinin anlayacağı dille kısa, adım adım cevap" />
           </label>
           {canEdit ? (
             <div className="flex flex-wrap gap-1.5">
@@ -82,11 +83,16 @@ function GapItem({ gap, canEdit }: { gap: Gap; canEdit: boolean }) {
                 </button>
               )}
               <button type="button" className={btnGhost} disabled={save.isPending} onClick={() => save.mutate('kapandi')}>
-                Gerek yok
+                Gerek yok, kapat
               </button>
             </div>
           ) : (
             <SourceLine>Düzeltme ve onay «SSS maddesi onayı» yetkisiyle yapılır.</SourceLine>
+          )}
+          {canEdit && (
+            <SourceLine>
+              Onaylanan madde Zeki AI’ın SSS eşleştirmesine hemen katılır. Portal siteye yazmaz: metni siteye elle girdikten sonra «Siteye elle girildi»ye basın.
+            </SourceLine>
           )}
           {gap.approvedBy && <SourceLine>Onaylayan {gap.approvedBy} · {fmtDay(gap.approvedAt)}</SourceLine>}
         </div>

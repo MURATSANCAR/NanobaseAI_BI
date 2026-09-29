@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { EngineAuthError, EngineForbiddenError } from '../../engine';
 import type { Status } from './api';
+import { Explain } from '../../components/Explain';
 
 /** M6 Sözleşmeler ekranlarının ortak parçaları: biçimler, durum rengi, alttan açılan form kartı. */
 
@@ -42,20 +43,48 @@ export const toNum = (s: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-export function Field({ label, hint, children, wide }: { label: string; hint?: string; children: ReactNode; wide?: boolean }) {
+/** Form alanı. `explain` verilirse etiketin yanında «?» durur; «?» bir düğme olduğu için label'ın dışına
+ *  konur (label içindeki düğme etiketi input yerine kendine bağlar), input ayrı bir label'la adlandırılır. */
+export function Field({ label, hint, children, wide, explain }: { label: string; hint?: string; children: ReactNode; wide?: boolean; explain?: ReactNode }) {
+  const cls = `block min-w-0 ${wide ? 'sm:col-span-2' : ''}`;
+  const head = 'text-[11px] font-bold uppercase tracking-wide text-canvas-muted';
+  if (explain)
+    return (
+      <div className={cls}>
+        <span className={`flex items-center gap-1 ${head}`}>
+          {label}
+          <Explain label={label}>{explain}</Explain>
+        </span>
+        <label className="mt-1 block">
+          <span className="sr-only">{label}</span>
+          {children}
+        </label>
+        {hint && <span className="mt-1 block text-[11px] leading-snug text-canvas-muted">{hint}</span>}
+      </div>
+    );
   return (
-    <label className={`block min-w-0 ${wide ? 'sm:col-span-2' : ''}`}>
-      <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</span>
+    <label className={cls}>
+      <span className={head}>{label}</span>
       <div className="mt-1">{children}</div>
       {hint && <span className="mt-1 block text-[11px] leading-snug text-canvas-muted">{hint}</span>}
     </label>
   );
 }
 
-export function Row({ label, children }: { label: string; children: ReactNode }) {
+/** Tanım satırı; `explain` verilirse etiketin yanında «?». */
+export function Row({ label, children, explain }: { label: string; children: ReactNode; explain?: ReactNode }) {
   return (
     <div className="grid grid-cols-[minmax(0,130px)_minmax(0,1fr)] gap-2 border-b border-slate-100 py-1.5 text-[12.5px] last:border-0 sm:grid-cols-[180px_minmax(0,1fr)]">
-      <dt className="text-canvas-muted">{label}</dt>
+      <dt className="text-canvas-muted">
+        {explain ? (
+          <span className="inline-flex items-center gap-1">
+            {label}
+            <Explain label={label}>{explain}</Explain>
+          </span>
+        ) : (
+          label
+        )}
+      </dt>
       <dd className="min-w-0 break-words font-semibold">{children}</dd>
     </div>
   );

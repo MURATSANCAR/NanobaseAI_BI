@@ -58,7 +58,7 @@ export default function PrCoverage() {
     <PrFrame
       crumb="Yansımalar"
       title="Yansımalar"
-      lead="Çıkan haberin bağlantısını yapıştırın: başlık, tarih ve mecra okunur, kitap ve kişi eşleşir; gönderim satırı kendiliğinden «haber çıktı» olur. Haber metni kopyalanmaz; başlık, kısa özet ve bağlantı tutulur."
+      lead="Yansıma, kitaplarımız hakkında basında ya da internette çıkan haberdir. Bağlantıyı yapıştırın: başlık, tarih ve mecra okunur, kitap ve kişi eşleşir; o kişiye yapılmış gönderim kendiliğinden «haber çıktı» olur. Haber metni kopyalanmaz."
       source={d?.webWatch ? 'Portal + CRM arşivi + Basın ve web taraması' : 'Portal + CRM arşivi · web taraması bu ortamda kapalı'}
       presence={d ? `${d.total.toLocaleString('tr-TR')} kayıt` : '…'}
       aside={m?.me.canEdit ? (
@@ -117,7 +117,7 @@ export default function PrCoverage() {
         {list.isLoading && <Loading />}
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
         {d && d.items.length === 0 && (
-          <Empty>{durum === 'aday' ? (d.webWatch ? 'Onay bekleyen aday yok.' : 'Web taraması kapalı olduğundan aday gelmez.') : 'Bu süzgeçle yansıma yok.'}</Empty>
+          <Empty>{durum === 'aday' ? (d.webWatch ? 'Onay bekleyen aday yok.' : 'Web taraması kapalı olduğundan aday gelmez.') : 'Bu süzgeçle yansıma yok. Aramayı temizleyin ya da durum süzgecini değiştirin; yeni haberi «Yansıma ekle» ile girin.'}</Empty>
         )}
         <ul className="flex flex-col gap-2">
           {d?.items.map((c) => m && <CoverageRow key={c.id} c={c} meta={m} onChange={done} />)}

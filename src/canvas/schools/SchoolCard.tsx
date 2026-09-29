@@ -10,6 +10,7 @@ import { CalendarNote, SchoolsFrame, ScoreBadge, ScoreParts, addDays, daysAgo, f
 import VisitReportSheet from './VisitReportSheet';
 import DealerPanel from './DealerPanel';
 import SqlInfo from '../components/SqlInfo';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Okul kartı (telefon öncelikli): profil, öncelik ve gerekçesi, Zeki AI ziyaret önerisi, bağlı/önerilen bayi, kademeye
  *  uygun katalog + PDF, geçmiş ziyaretler (portal + CRM), okul siparişleri. Listenin kaynağı ve tarihi görünür. */
@@ -119,7 +120,7 @@ export default function SchoolCard() {
             {me?.canVisit && (
               <button type="button" className={`${btnPrimary} flex-1 lg:flex-none`} onClick={() => setReport(true)}>
                 <ClipboardPen aria-hidden className="h-4 w-4" />
-                Ziyaret raporu
+                Ziyaret raporu gir
               </button>
             )}
             {me?.canVisit && (
@@ -223,6 +224,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
   const shown = s.grades.length ? GRADES.filter((g) => s.grades.includes(g) || grades.includes(g)) : GRADES;
   return (
     <Block title="Katalog (kademeye uygun, stokta)" action={<SqlInfo k={detail.kaynaklar} alan="catalogs" label="Hazırlanan kataloglar" />}>
+      <p className="mb-2 text-[11.5px] leading-snug text-canvas-muted">Sınıfları seçin; «Listeyi göster» kitapları ekranda gösterir, «PDF hazırla» okula bırakabileceğiniz kataloğu indirir.</p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sınıflar">
         {shown.map((g) => (
           <button
@@ -241,7 +243,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
       <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-md">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>En yüksek fiyat (₺)</span>
-          <input className={field} inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="Sınır yok" />
+          <input className={field} inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="Örn. 150 (boş: sınır yok)" />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kitap sayısı</span>
@@ -298,7 +300,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
       {detail.catalogs.length > 0 && (
         <div className="mt-3 text-[11.5px] text-canvas-muted">
           Daha önce hazırlananlar:{' '}
-          {detail.catalogs.slice(0, 5).map((k, i) => (
+          {detail.catalogs.map((k, i) => (
             <span key={k.id}>
               {i ? ', ' : ''}
               {canExport ? (
@@ -317,6 +319,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
 }
 
 function Visits({ c }: { c: SchoolDetail }) {
+  const crm = useShowMore(c.crmVisits, 30);
   return (
     <Block
       title="Ziyaretler"
@@ -361,7 +364,7 @@ function Visits({ c }: { c: SchoolDetail }) {
             )}
           </li>
         ))}
-        {c.crmVisits.slice(0, 30).map((v, i) => (
+        {crm.shown.map((v, i) => (
           <li key={v.id ?? i} className="rounded-xl border border-slate-100 bg-white/70 px-3 py-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[12.5px] font-bold">{fmtDay(v.day)}</span>
@@ -380,8 +383,8 @@ function Visits({ c }: { c: SchoolDetail }) {
           </li>
         ))}
       </ul>
-      {c.crmVisits.length > 30 && <p className="mt-1 text-[11px] text-canvas-muted">CRM'de {c.crmVisits.length} kayıt var; en yeni 30'u gösteriliyor.</p>}
-      {!c.portalVisits.length && !c.crmVisits.length && <p className="text-[12px] text-canvas-muted">Kayıtlı ziyaret yok.</p>}
+      <ShowMoreButton more={crm} noun="CRM ziyareti" />
+      {!c.portalVisits.length && !c.crmVisits.length && <p className="text-[12px] text-canvas-muted">Bu okula kayıtlı ziyaret yok. Ziyaret sonrası «Ziyaret raporu gir» ile kaydedebilirsiniz.</p>}
     </Block>
   );
 }
@@ -405,7 +408,7 @@ function Orders({ c }: { c: SchoolDetail }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-1 text-[12px] text-canvas-muted">Eşleşen sipariş yok.</p>
+        <p className="mt-1 text-[12px] text-canvas-muted">Bu okulla eşleşen örnek kitap ya da okul satışı siparişi yok.</p>
       )}
     </Block>
   );

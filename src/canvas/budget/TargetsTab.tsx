@@ -10,6 +10,7 @@ import { budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, parseNum, type BookTarget,
 import { NumField, RatioBar, StatePill } from './parts';
 import { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain as TermHint } from '../components/Explain';
 
 const SORTS = [
   ['ciro', 'Hedef ciro'],
@@ -20,7 +21,7 @@ const SORTS = [
 
 const METHOD: Record<string, string> = {
   gecmis: 'Taban dönemin satışı',
-  tahmin: 'ZEKİ AI 12 aylık satış tahmini',
+  tahmin: 'Zeki AI tahminleme (12 aylık satış)',
   kohort: 'Aynı yayınevinin yeni kitap ortalaması',
   elle: 'Elle eklendi',
 };
@@ -30,7 +31,7 @@ function Explain({ b }: { b: BookTarget }) {
   const rows: Array<[string, string]> = [['Yöntem', METHOD[String(o.yontem)] ?? '—']];
   if (o.yontem === 'gecmis' || o.yontem === 'tahmin') {
     rows.push(['Taban dönem satışı', `${fmtInt(Number(o.gecmisAdet ?? 0))} adet · ${fmtMoney(Number(o.gecmisCiro ?? 0))}`]);
-    if (o.tahminAdet !== null && o.tahminAdet !== undefined) rows.push(['ZEKİ AI tahmini (12 ay, temel)', `${fmtInt(Number(o.tahminAdet))} adet`]);
+    if (o.tahminAdet !== null && o.tahminAdet !== undefined) rows.push(['Zeki AI tahminleme (12 ay, temel)', `${fmtInt(Number(o.tahminAdet))} adet`]);
     const band = (b.oneri as { tahminBandi?: { p10: number | null; p50: number | null; p90: number | null; aralik: boolean } | null }).tahminBandi;
     if (band?.aralik) rows.push(['Tahmin aralığı (12 ay)', `muhafazakâr ${fmtInt(Number(band.p10))} · temel ${fmtInt(Number(band.p50))} · iyimser ${fmtInt(Number(band.p90))} adet`]);
     if (o.tahminKantil && o.tahminKantil !== 'p50') rows.push(['Senaryo tabanı', o.tahminKantil === 'p10' ? 'Tahminin alt sınırı (muhafazakâr)' : 'Tahminin üst sınırı (iyimser)']);
@@ -183,7 +184,7 @@ function AddSheet({ plan, open, onClose }: { plan: Plan; open: boolean; onClose:
       <div className="flex flex-col gap-3">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Stok kodu</span>
-          <input className={field} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Logo / CRM stok kodu" />
+          <input className={field} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Logo / CRM stok kodu, ör. 15201.01.4529" />
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <NumField id="a-adet" label="Net adet" value={adet} onChange={setAdet} />
@@ -256,8 +257,8 @@ export default function TargetsTab({ plan, editable, trackable, durum, onDurum }
         )}
       </div>
 
-      {list.isLoading ? <Loading /> : list.error ? <Note tone="err">{errText(list.error, 'Hedefler okunamadı.')}</Note> : !data?.items.length ? (
-        <Note tone="info">Bu süzgeçle kitap yok.</Note>
+      {list.isLoading ? <Loading /> : list.error ? <Note tone="err">{errText(list.error, 'Hedefler okunamadı; biraz sonra yeniden deneyin.')}</Note> : !data?.items.length ? (
+        <EmptyHint title="Bu süzgeçle kitap yok" why="Aramayı temizleyin ya da segment, yayınevi ve durum seçimlerini «tümü»ne alın." />
       ) : (
         <TableWrap>
           <thead>
@@ -269,7 +270,12 @@ export default function TargetsTab({ plan, editable, trackable, durum, onDurum }
               <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].marj">Marj</InfoLabel></th>
               {track && (
                 <>
-                  <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].izleme.beklenenCiro">Beklenen</InfoLabel></th>
+                  <th className={`${th} text-right`}>
+                    <span className="inline-flex items-center gap-1">
+                      <InfoLabel k={data.kaynaklar} alan="items[].izleme.beklenenCiro">Beklenen</InfoLabel>
+                      <TermHint label="Beklenen">Yıllık hedefin, veri son gününe kadar gerçekleşmiş olması gereken kısmı; planın dayandığı geçmiş dönemin aylık satış dağılımına göre hesaplanır.</TermHint>
+                    </span>
+                  </th>
                   <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].izleme.gercekCiro">Gerçekleşen</InfoLabel></th>
                   <th className={th}><InfoLabel k={data.kaynaklar} alan="items[].izleme.oranCiro">Oran</InfoLabel></th>
                 </>

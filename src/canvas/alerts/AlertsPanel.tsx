@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pause, Play, RotateCw, Trash2, X } from 'lucide-react';
 import DbTimingBadge from '../DbTiming';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { useCan } from '../useAdmin';
 import {
@@ -121,7 +122,7 @@ function relative(iso: string | null): string {
 }
 
 const STATE: Record<AlertRule['state'], { label: string; cls: string }> = {
-  ok: { label: 'Sakin', cls: 'bg-emerald-50 text-emerald-700' },
+  ok: { label: 'Normal', cls: 'bg-emerald-50 text-emerald-700' },
   triggered: { label: 'Eşik aşıldı', cls: 'bg-red-50 text-red-700' },
   error: { label: 'Ölçülemedi', cls: 'bg-amber-50 text-amber-800' },
   unknown: { label: 'Ölçülmedi', cls: 'bg-slate-100 text-slate-600' },
@@ -134,7 +135,8 @@ const NOTIFY: Record<string, string> = {
   no_recipient: 'alıcı yok',
 };
 
-const errText = (e: unknown) => (e instanceof EngineAuthError ? 'Oturum gerekli.' : (e as Error)?.message || 'İşlem yapılamadı.');
+const errText = (e: unknown) =>
+  e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : (e as Error)?.message || 'İşlem yapılamadı; biraz sonra yeniden deneyin.';
 
 export default function AlertsPanel({
   mode,
@@ -196,6 +198,10 @@ export default function AlertsPanel({
             </button>
           )}
         </div>
+
+        <p className="mt-2 text-[12px] leading-snug text-canvas-muted">
+          Bir rakamı izleyen kurallar kurarsınız; kural 15 dakikada bir güncel veriyle ölçülür, koşul sağlanınca alıcılara e-posta gider.
+        </p>
 
         {!email.configured && (
           <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-900">
@@ -268,7 +274,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
     try {
       const a = await askEngine(q);
       if (!a.records) {
-        setProbeErr(a.summary || a.explanation || 'ZEKİ AI bu soruya bir değer döndürmedi.');
+        setProbeErr(a.summary || a.explanation || 'Zeki AI bu soruya bir değer bulamadı. Soruyu tek bir rakam isteyecek biçimde yazın; ör. «bu ayın iade tutarı».');
         return;
       }
       const v = singleValue(a.records as Array<Record<string, unknown>>);
@@ -276,7 +282,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
       // Gösterilen SQL köprünün Logo/CRM'de koşturduğu fiziksel metindir (kopyala-çalıştır aynı değeri verir).
       else setProbe({ ...v, sql: a.physicalSql, k: a.kaynaklar });
     } catch (e) {
-      setProbeErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
+      setProbeErr(e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : 'Zeki AI şu an yanıt vermedi; biraz sonra yeniden deneyin.');
     } finally {
       setProbing(false);
     }
@@ -347,15 +353,19 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
               </strong>
             </>
           )}
-          {probe.sql && <div className="mt-1 truncate font-mono text-[11px] text-canvas-muted" title={probe.sql}>{probe.sql}</div>}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]">
         <div>
-          <label className={label} htmlFor="kural-kosul">
-            Koşul
-          </label>
+          <div className="flex items-center gap-1">
+            <label className={label} htmlFor="kural-kosul">
+              Koşul
+            </label>
+            <Explain label="Koşul">
+              Büyük/küçük koşulunda değer yazdığınız eşiği geçince uyarı gelir. «Olağan dışı» koşulunda eşik yazmazsınız; değer geçmiş dönemlerden hesaplanan beklenen aralığın dışına çıkınca uyarı gelir.
+            </Explain>
+          </div>
           <select
             id="kural-kosul"
             value={condition}
@@ -377,14 +387,21 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
           </select>
         </div>
         <div>
-          <label className={label} htmlFor="kural-esik">
-            {anomaly ? (
-              <>Hassasiyet <span className="font-normal">1–5; aralık = medyan ± hassasiyet × yayılım (2 önerilir)</span></>
-            ) : (
-              <>Eşik <span className="font-normal">örn. 5.000.000 ya da 5 milyon</span></>
+          <div className="flex items-center gap-1">
+            <label className={label} htmlFor="kural-esik">
+              {anomaly ? (
+                <>Hassasiyet <span className="font-normal">1 ile 5 arası; 2 önerilir</span></>
+              ) : (
+                <>Eşik <span className="font-normal">örn. 5.000.000 ya da 5 milyon</span></>
+              )}
+            </label>
+            {anomaly && (
+              <Explain label="Hassasiyet">
+                Beklenen aralık, geçmiş dönemlerin orta değeri ve olağan dalgalanmasından kurulur. Sayı büyüdükçe aralık genişler ve daha az uyarı gelir; küçüldükçe küçük sapmalar da uyarı olur.
+              </Explain>
             )}
-          </label>
-          <input id="kural-esik" inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} className={field} />
+          </div>
+          <input id="kural-esik" inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder={anomaly ? '2' : 'örn. 5 milyon'} className={field} />
           {threshold && thr == null && <div className="mt-1 text-[11px] font-semibold text-red-600">Sayı anlaşılamadı.</div>}
           {anomaly && thr != null && (thr < 1 || thr > 5) && <div className="mt-1 text-[11px] font-semibold text-red-600">Hassasiyet 1 ile 5 arasında olmalı.</div>}
         </div>
@@ -410,7 +427,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
             <div>
               Beklenen aralık <strong className="font-mono tabular-nums">{rangeText(sug)}</strong>
               <SqlInfo k={sug.kaynaklar} alan="alt" label="Beklenen aralık ve önerilen eşik" className="ml-0.5" />
-              <span className="text-canvas-muted"> · {sug.yontem === 'mevsimsel' ? 'geçmiş 24 ayın aynı penceresi, mevsim ayıklanarak' : 'son 12 ayın aynı penceresinin medyanı'} ({sug.nokta} nokta)</span>
+              <span className="text-canvas-muted"> · {sug.yontem === 'mevsimsel' ? 'geçmiş 24 ayın aynı dönemlerinden, mevsim etkisi ayıklanarak' : 'son 12 ayın aynı dönemlerinin orta değerinden'} ({sug.nokta} dönem)</span>
             </div>
             {!anomaly && sug.oneri && (
               <div className="flex flex-wrap items-center gap-2">
@@ -430,11 +447,11 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
           <label className={label} htmlFor="kural-ad">
             Kural adı <span className="font-normal">boş kalırsa soru kullanılır</span>
           </label>
-          <input id="kural-ad" value={title} onChange={(e) => setTitle(e.target.value)} className={field} />
+          <input id="kural-ad" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="örn. Aylık iade uyarısı" className={field} />
         </div>
         <div>
           <label className={label} htmlFor="kural-alici">
-            E-posta alıcıları <span className="font-normal">virgülle ayırın</span>
+            E-posta alıcıları <span className="font-normal">virgülle ayırın; boşsa uyarı yalnız bu ekranda görünür</span>
           </label>
           <input
             id="kural-alici"
@@ -450,7 +467,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
 
       <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
         <span className="text-[11.5px] text-canvas-muted">
-          {!probe ? 'Kaydetmeden önce şu anki değeri ölçün.' : thr == null ? 'Eşiği yazın.' : 'Kural her 15 dakikada bir kontrol edilir.'}
+          {!probe ? 'Kaydetmeden önce «Şu anki değeri ölç»e basın.' : thr == null ? (anomaly ? 'Hassasiyeti yazın.' : 'Eşiği yazın.') : 'Kural 15 dakikada bir kontrol edilir.'}
         </span>
         <button
           type="button"
@@ -483,18 +500,21 @@ function RuleList({
 
   if (!rules.length) {
     return (
-      <div className="py-8 text-center text-[13px] text-canvas-muted">
-        Henüz kural yok.
-        {onNew && (
-          <>
-            {' '}
-            <button type="button" onClick={onNew} className="font-bold text-canvas-violet underline-offset-2 hover:underline">
+      <EmptyHint
+        title="Henüz uyarı kuralı yok"
+        why={
+          onNew
+            ? 'İzlemek istediğiniz rakam için bir kural kurun; ör. «bu ayın iade tutarı 5 milyonu aşarsa haber ver».'
+            : 'Size ait uyarı kuralı bulunmuyor. Kural kurma yetkisi için yöneticinize başvurun.'
+        }
+        action={
+          onNew ? (
+            <button type="button" onClick={onNew} className="min-h-11 rounded-xl bg-canvas-violet px-3.5 text-[12.5px] font-extrabold text-white shadow-md sm:min-h-9">
               İlk kuralı kurun
             </button>
-            : örneğin “bu ayın iade tutarı 5 milyonu aşarsa haber ver”.
-          </>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -502,9 +522,12 @@ function RuleList({
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-[12px] text-canvas-muted">
+          <Explain label="Durumlar" title="Kural durumları ne demek?" className="mr-1">
+            «Normal»: son kontrolde koşul sağlanmadı. «Eşik aşıldı»: koşul sağlandı, alıcılara e-posta gider; durum sürerse bir süre sonra bir kez hatırlatılır. «Ölçülemedi»: soru son kontrolde değer döndürmedi. «Ölçülmedi»: kural henüz kontrol edilmedi. «Duraklatıldı»: kural siz sürdürene kadar kontrol edilmez.
+          </Explain>
           {checkAll.data
             ? `${checkAll.data.checked} kural kontrol edildi · ${checkAll.data.triggered} tanesi eşiği aşıyor${checkAll.data.errors.length ? ` · ${checkAll.data.errors.length} ölçülemedi` : ''}`
-            : 'Sunucu her 15 dakikada bir kontrol eder.'}
+            : 'Kurallar 15 dakikada bir kendiliğinden kontrol edilir.'}
           {checkAll.data && <SqlInfo k={checkAll.data.kaynaklar} alan="checked" label="Kontrol özeti" className="ml-1" />}
         </span>
         {canEdit && (
@@ -577,7 +600,7 @@ function RuleRow({
             </span>
           )}
           <span>Son kontrol {relative(rule.last_checked_at)}</span>
-          <span>{rule.recipients.length ? rule.recipients.join(', ') : 'alıcı yok'}</span>
+          <span>{rule.recipients.length ? rule.recipients.join(', ') : 'alıcı yok (e-posta gitmez)'}</span>
           {rule.last_notify && rule.last_notify !== 'no_recipient' && <span>{NOTIFY[rule.last_notify] ?? rule.last_notify}</span>}
         </div>
         {rule.last_db && rule.state !== 'error' && <DbTimingBadge timing={rule.last_db} className="mt-0.5" />}
@@ -588,12 +611,13 @@ function RuleRow({
       </div>
       {canEdit && (
       <div className="flex items-center gap-0.5">
-        <button type="button" title="Şimdi kontrol et" onClick={() => check.mutate()} disabled={check.isPending} className={btn}>
+        <button type="button" title="Şimdi kontrol et" aria-label="Şimdi kontrol et" onClick={() => check.mutate()} disabled={check.isPending} className={btn}>
           {check.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
         </button>
         <button
           type="button"
           title={rule.status === 'paused' ? 'Sürdür' : 'Duraklat'}
+          aria-label={rule.status === 'paused' ? 'Kuralı sürdür' : 'Kuralı duraklat'}
           onClick={() => toggle.mutate()}
           disabled={toggle.isPending}
           className={btn}
@@ -608,14 +632,14 @@ function RuleRow({
               disabled={del.isPending}
               className="rounded-lg bg-red-50 px-2 py-1 text-[11.5px] font-extrabold text-red-700 hover:bg-red-100"
             >
-              Silinsin mi? Evet
+              Kural silinsin mi? Evet
             </button>
             <button type="button" onClick={() => setConfirm(false)} disabled={del.isPending} className="rounded-lg px-2 py-1 text-[11.5px] font-bold text-canvas-muted hover:bg-slate-100">
               Vazgeç
             </button>
           </>
         ) : (
-          <button type="button" title="Sil" onClick={() => setConfirm(true)} className={btn}>
+          <button type="button" title="Kuralı sil" aria-label="Kuralı sil" onClick={() => setConfirm(true)} className={btn}>
             <Trash2 className="h-4 w-4" />
           </button>
         )}

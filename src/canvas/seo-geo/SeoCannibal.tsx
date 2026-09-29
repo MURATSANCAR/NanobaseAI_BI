@@ -7,6 +7,8 @@ import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term, TermLabel } from './terms';
 
 /** Yarışan sayfalar: /api/v1/seo-geo/cannibal. Search Console'un sorgu+sayfa kırılımından; yalnız okunur. */
 
@@ -81,7 +83,7 @@ export default function SeoCannibal() {
       crumb="Yarışan sayfalar"
       eyebrow="SEO & GEO · Search Console"
       title="Yarışan sayfalar"
-      lead="Aynı aramada sitemizin iki ya da daha çok adresi gösteriliyorsa Google hangisini öne çıkaracağına karar veremez; gösterim ve tıklama bölünür. Son 28 günün Search Console verisinden hesaplanır, her gece yenilenir."
+      lead={<>Aynı aramada sitemizin iki ya da daha çok adresi çıkıyorsa Google hangisini öne çıkaracağına karar veremez; gösterim ve tıklama bölünür, ikisi de geride kalabilir. Her durum için önerilen iş yazılıdır. Son 28 günün Search Console verisinden, her gece yenilenir. <Term k="cannibal" /></>}
     >
       <CannibalList />
     </SeoLayout>
@@ -116,18 +118,22 @@ export function CannibalList() {
       {r.isLoading && <Loading text="Yarışan sayfalar aranıyor…" />}
       {r.error && <Failed error={r.error} />}
       {d && !d.ready ? (
-        <div className="sg-empty">
-          <h2>{d.connected ? 'Sayfa kırılımı henüz yok' : 'Search Console bağlı değil'}</h2>
-          <p>{d.reason}</p>
-        </div>
+        <EmptyHint
+          title={d.connected ? 'Arama–sayfa verisi henüz yok' : 'Search Console bağlı değil'}
+          why={d.connected ? d.reason : <>{d.reason} Kurulum: <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranı.</>}
+        />
       ) : (
         d && (
           <>
             <section className="sg-kpis" aria-label="Özet">
-              <Kpi label="Zararlı bölünme" value={fmt(d.totals.severity.zararli.nonBrand)} note={`Marka dışı arama · ${fmt(d.totals.severity.zararli.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Zararlı bölünme" />} />
-              <Kpi label="İzlenmeli" value={fmt(d.totals.severity.izle.nonBrand)} note={`Baskın sayfa yok ama biri ilk ${fmt(t!.harmPosition)} sırada`} info={<SeoInfo k={r.data?.kaynaklar} label="İzlenmeli" />} />
-              <Kpi label="Adres kopyası" value={fmt(d.totals.types.kopya)} note="Parametreli ya da yazım farklı aynı sayfa" info={<SeoInfo k={r.data?.kaynaklar} label="Adres kopyası" />} />
-              <Kpi label="Aynı kitabın iki ürünü" value={fmt(d.totals.types.baski)} note="Eski/yeni baskı ya da ikinci kayıt" info={<SeoInfo k={r.data?.kaynaklar} label="Aynı kitabın iki ürünü" />} />
+              <Kpi label="Zararlı bölünme" value={fmt(d.totals.severity.zararli.nonBrand)} note={`Marka dışı arama · ${fmt(d.totals.severity.zararli.impressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Zararlı bölünme" />}
+                explain="Hiçbir adresimiz gösterimin çoğunu almıyor ve öne çıkan iki adres de ilk sıralarda değil. Önce bunlara bakın." />
+              <Kpi label="İzlenmeli" value={fmt(d.totals.severity.izle.nonBrand)} note={`Baskın sayfa yok ama biri ilk ${fmt(t!.harmPosition)} sırada`} info={<SeoInfo k={r.data?.kaynaklar} label="İzlenmeli" />}
+                explain="Gösterim bölünüyor ama adreslerden biri ilk sıralarda; şimdilik zarar yok, gelişmesini izleyin." />
+              <Kpi label="Adres kopyası" value={fmt(d.totals.types.kopya)} note="Parametreli ya da yazım farklı aynı sayfa" info={<SeoInfo k={r.data?.kaynaklar} label="Adres kopyası" />}
+                explain="Aynı sayfanın sonuna parametre eklenmiş ya da yazımı farklı ikinci adresi. Genelde asıl adres etiketiyle (canonical) çözülür." />
+              <Kpi label="Aynı kitabın iki ürünü" value={fmt(d.totals.types.baski)} note="Eski/yeni baskı ya da ikinci kayıt" info={<SeoInfo k={r.data?.kaynaklar} label="Aynı kitabın iki ürünü" />}
+                explain="Aynı kitabın eski ve yeni baskısı ya da iki ayrı ürün kaydı aynı aramada yarışıyor." />
             </section>
 
             <div className="sg-filters" role="toolbar" aria-label="Önem">
@@ -139,6 +145,11 @@ export function CannibalList() {
               <Chip on={brand === '0'} onClick={() => reset(setBrand)('0')} label="Marka dışı" />
               <Chip on={brand === '1'} onClick={() => reset(setBrand)('1')} label="Marka araması" />
               <Chip on={brand === ''} onClick={() => reset(setBrand)('')} label="Hepsi" />
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Explain label="Önem düzeyleri" title="Önem düzeyleri">
+                  «Zararlı bölünme»: hiçbir adres baskın değil, hepsi geride. «İzlenmeli»: bölünme var ama biri ilk sıralarda. «Bir sayfa baskın»: gösterimin çoğunu tek adres alıyor, genelde sorun yok. «Marka araması»: içinde Timaş geçen aramalar.
+                </Explain>
+              </span>
             </div>
             <div className="sg-filters" role="toolbar" aria-label="Çift türü">
               <Chip on={!type} onClick={() => reset(setType)('')} label="Bütün türler" />
@@ -157,10 +168,7 @@ export function CannibalList() {
                 gerisinde. Asıl adres en çok tıklanandır; öneriler ona göre yazılır. Gösterime göre sıralı.
               </p>
               {!d.items.length ? (
-                <div className="sg-empty">
-                  <h2>Bu süzgeçte yarışan arama yok</h2>
-                  <p>Önem ya da marka süzgecini değiştirmeyi deneyin.</p>
-                </div>
+                <EmptyHint title="Bu süzgeçte yarışan arama yok" why="Önem, marka ya da tür süzgecini değiştirmeyi deneyin." />
               ) : (
                 <div className="sg-list">
                   {d.items.map((i) => (
@@ -205,9 +213,9 @@ function Group({ i, k }: { i: Item; k?: Kaynaklar | null }) {
           <thead>
             <tr>
               <th>Adres</th>
-              <th>Gösterim payı <SeoInfo k={k} label="Gösterim payı" /></th>
+              <th><TermLabel k="impressions" label="Gösterim payı" /> <SeoInfo k={k} label="Gösterim payı" /></th>
               <th>Tıklama <SeoInfo k={k} label="Tıklama" /></th>
-              <th>Sıra <SeoInfo k={k} label="Sıra" /></th>
+              <th><TermLabel k="position" label="Sıra" /> <SeoInfo k={k} label="Sıra" /></th>
             </tr>
           </thead>
           <tbody>
@@ -279,10 +287,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

@@ -66,7 +66,7 @@ def cards_sql(q: str = "") -> str:
         where.append(f"(C.DEFINITION_ LIKE N'%{k}%' OR C.CODE LIKE N'%{k}%')")
     else:
         where.append(f"C.SPECODE IN ({codes})")
-    return (f"SELECT TOP 40 C.CODE AS code, C.DEFINITION_ AS name, C.SPECODE AS specode, C.CITY AS city,"
+    return (f"SELECT C.CODE AS code, C.DEFINITION_ AS name, C.SPECODE AS specode, C.CITY AS city,"
             f" CASE WHEN C.SPECODE IN ({codes}) THEN 1 ELSE 0 END AS freelance"
             f" FROM {_tbl('CLCARD')} C WHERE {' AND '.join(where)}"
             f" ORDER BY CASE WHEN C.SPECODE IN ({codes}) THEN 0 ELSE 1 END, C.DEFINITION_")

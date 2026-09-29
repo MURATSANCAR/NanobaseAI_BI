@@ -21,12 +21,14 @@ export default function Report() {
           <KpiRow>
             <Kpi label="Sonucu olan bülten" value={fmtInt(r.toplam.bulten)} help="Gönderim sayısı girilmiş bültenler" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Sonucu olan bülten" />} />
             <Kpi label="Gönderilen" value={fmtInt(r.toplam.gonderilen)} help="Bültenlerin son sonuçlarının toplamı" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Gönderilen" />} />
-            <Kpi label="Açılma oranı" value={fmtPct(r.toplam.acilmaOrani)} help="Açılan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Açılma oranı" />} />
-            <Kpi label="Tıklama oranı" value={fmtPct(r.toplam.tiklamaOrani)} help="Tıklanan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Tıklama oranı" />} />
+            <Kpi label="Açılma oranı" value={fmtPct(r.toplam.acilmaOrani)} help="Açılan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Açılma oranı" />}
+              explain="Bülteni açan kişi sayısının gönderilen kişi sayısına oranı. Bazı e-posta programları açılmayı saymadığı için gerçek oran biraz daha yüksek olabilir." />
+            <Kpi label="Tıklama oranı" value={fmtPct(r.toplam.tiklamaOrani)} help="Tıklanan ÷ gönderilen" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Tıklama oranı" />}
+              explain="Bültendeki bir bağlantıya tıklayan kişi sayısının gönderilen kişi sayısına oranı. Bültenin ilgi çekip çekmediğini en iyi bu gösterir." />
           </KpiRow>
           <Block title="Portalda hazırlanan bültenler" info={<SqlInfo k={r.kaynaklar} alan="items[]" label="Bülten sonuçları" />} help="Sonuç, bağlı CRM kampanyasından her sabah okunur ya da e-posta aracının dışa aktarım dosyasından alınır (yalnız toplamlar).">
             {r.items.length === 0 ? (
-              <p className="py-4 text-[12.5px] text-canvas-muted">Henüz onaylanmış bülten yok.</p>
+              <p className="py-4 text-[12.5px] text-canvas-muted">Henüz onaylanmış bülten yok. Bültenler sekmesinden bülten hazırlayıp onaylatınca sonuçları burada görünür.</p>
             ) : (
               <TableWrap>
                 <thead><tr>

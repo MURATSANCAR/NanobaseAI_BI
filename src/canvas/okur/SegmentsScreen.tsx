@@ -14,6 +14,7 @@ import {
   type Channel, type Flag, type Interest, type Kvkk, type Measure, type OkurMeta, type Segment, type SegmentInput,
 } from './api';
 import { AskSheet, CoreMissing, Fact, OkurFrame, Tabs } from './parts';
+import { EmptyHint } from '../components/Explain';
 
 /** M37 «Okur segmentleri»: kural → anlık büyüklük (toplam / izinli) → amaç, süre, kanal → KVKK onayı. Onaylanmamış
  *  segment dışa aktarılamaz; kişi listesi dışa aktarımı ikinci sürümde. İlgi alanlarının özel nitelikli çağrışım işareti
@@ -46,18 +47,18 @@ export default function SegmentsScreen() {
     <OkurFrame
       crumb="Okur segmentleri"
       title="Okur segmentleri"
-      lead="Segment kişiyle değil ölçütle kurulur: kural yazılır, büyüklüğü (toplam ve izinli) ölçülür, amacı ve süresi yazılır, KVKK sorumlusu onaylar. Din ve inanç çağrışımlı ilgi alanları hukuk kararı olmadan kullanılmaz."
+      lead="Segment, belirli ölçütlere uyan okur grubudur; kişi tek tek seçilmez. Kuralı yazar, grubun büyüklüğünü (toplam ve izinli) ölçer, amacı ve süreyi girersiniz; KVKK sorumlusu onaylar. Din ve inanç çağrışımlı ilgi alanları hukuk kararı olmadan kullanılmaz."
       source="Kaynak: okur veri tabanı · portal kaydı"
       aside={m?.me.canSegment ? (
         <div className="flex justify-start lg:justify-end">
           <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
             <Plus aria-hidden className="h-4 w-4" />
-            Yeni segment
+            Yeni segment kur
           </button>
         </div>
       ) : undefined}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {m && !m.cekirdek.bagli && <CoreMissing message={m.cekirdek.mesaj} />}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'segmentler' ? null : t })} />
@@ -95,7 +96,7 @@ function SegmentList({ meta, durum, setDurum }: { meta: OkurMeta; durum: string;
       {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {list.error && <Note tone="err">{errText(list.error, 'Segmentler okunamadı.')}</Note>}
       {list.data && !list.data.items.length && (
-        <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte segment yok.{meta.me.canSegment ? ' «Yeni segment» ile başlayın.' : ''}</div>
+        <EmptyHint title="Bu süzgece uyan segment yok" why={`Başka bir durum seçin.${meta.me.canSegment ? ' Yeni bir okur grubunu «Yeni segment kur» ile başlatabilirsiniz.' : ''}`} />
       )}
       <div className="flex flex-col gap-2">
         {list.data?.items.map((s) => (
@@ -215,7 +216,7 @@ function SegmentSheet({ id, meta, onClose }: { id: string; meta: OkurMeta; onClo
               <button type="button" className={btnGhost} disabled={busy} onClick={() => setEditing(true)}>Düzenle</button>
             )}
             {meta.me.canSegment && ['taslak', 'reddedildi', 'suresi_doldu'].includes(s.durum) && (
-              <button type="button" className={btnGhost} disabled={busy} onClick={() => setAsk('sil')}>Sil</button>
+              <button type="button" className={btnGhost} disabled={busy} onClick={() => setAsk('sil')}>Segmenti sil</button>
             )}
             {meta.me.canSegment && meta.cekirdek.bagli && s.durum !== 'onay_bekliyor' && (
               <button type="button" className={btnGhost} disabled={busy || !s.kvkk?.ok} onClick={() => measure.mutate()}>
@@ -367,7 +368,7 @@ function SegmentForm({ meta, initial, onDone }: { meta: OkurMeta; initial?: Segm
 
       <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
         <div className={`${labelCls} flex items-center gap-1`}>İlgi alanları<SqlInfo k={cats.data?.kaynaklar} alan="items" label="İlgi alanı başına okur" /></div>
-        {!meta.cekirdek.bagli && <p className="mt-1 text-[12px] text-canvas-muted">Okur çekirdeği bağlı değil; ilgi alanı listesi gelmiyor. Kuralı aşağıda yazabilirsiniz.</p>}
+        {!meta.cekirdek.bagli && <p className="mt-1 text-[12px] text-canvas-muted">Okur veri tabanı bu ekrana bağlı değil; ilgi alanı listesi gelmiyor. Kuralı aşağıda yazabilirsiniz.</p>}
         {cats.isLoading && <p className="mt-1 text-[12px] text-canvas-muted">Yükleniyor…</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           {items.map((i) => (
@@ -396,7 +397,7 @@ function SegmentForm({ meta, initial, onDone }: { meta: OkurMeta; initial?: Segm
         <details className="mt-3">
           <summary className="cursor-pointer text-[12px] font-bold">Kural (gelişmiş)</summary>
           <textarea className={`${field} mt-1 min-h-[140px] font-mono !text-[12px]`} value={ruleText} onChange={(e) => { setRuleText(e.target.value); setPreview(null); }} spellCheck={false} />
-          {!rule && <p className="mt-1 text-[11.5px] text-red-700">Kural geçerli bir nesne değil.</p>}
+          {!rule && <p className="mt-1 text-[11.5px] text-red-700">Kural metni okunamadı; yazım hatası olabilir. Son değişikliği geri alın ya da yukarıdaki alanları kullanın.</p>}
         </details>
       </div>
 
@@ -492,7 +493,7 @@ function InterestList({ meta }: { meta: OkurMeta }) {
             </div>
           </div>
         ))}
-        {d?.bagli && !d.items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Okur veri tabanı ilgi alanı vermedi.</div>}
+        {d?.bagli && !d.items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Okur kayıtlarında ilgi alanı bilgisi bulunamadı.</div>}
       </div>
       <AskSheet
         open={!!ask}

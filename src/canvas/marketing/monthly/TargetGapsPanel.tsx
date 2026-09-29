@@ -24,12 +24,12 @@ export default function TargetGapsPanel({ ay, canSeeBudget }: { ay: string; canS
   return (
     <Block
       title="Hedefin altında, bu ay işi planlanmamış kitaplar"
-      help="Kurala göre liste: bütçe ve hedefler modülünün açık kitap sapma uyarısı olan, ama bu ayın planında kalemi ya da bu aya düşen pazarlama işi olmayan kitaplar. Hangi kitaba iş açılacağına siz karar verirsiniz."
+      help="Bütçe planında satış hedefinin gerisinde kaldığı uyarısı olan, ama bu ayın planında kalemi ya da bu aya düşen pazarlama işi olmayan kitaplar. Hangi kitaba iş açılacağına siz karar verirsiniz."
       info={<SqlInfo k={g?.kaynaklar} alan="items[]" label="Hedef açığı listesi" />}
       action={g && g.plansiz > 0 && g.modelVar ? (
         <button type="button" className={btnGhost} disabled={explain.isPending} onClick={() => explain.mutate()}>
           {explain.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-          {g.paragrafKaynak === 'zeki' ? 'Paragrafı yenile' : 'Zeki AI paragrafı'}
+          {g.paragrafKaynak === 'zeki' ? 'Özeti yenile' : 'Zeki AI ile özetle'}
         </button>
       ) : undefined}
     >

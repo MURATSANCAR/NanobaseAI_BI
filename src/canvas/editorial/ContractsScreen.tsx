@@ -12,6 +12,8 @@ import { Tabs, day, errMsg, statusTone as portalTone } from './contracts/ui';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { RightChips } from './crmRights';
+import { EmptyHint, Explain } from '../components/Explain';
+import { TERM } from './contracts/glossary';
 
 /** Köprü cevabındaki sorgu bilgisi (tipler engine.ts'te ortak; bu ekran yalnız okur). */
 type WithK<T> = T & { kaynaklar?: Kaynaklar };
@@ -75,7 +77,7 @@ function Title({ c }: { c: Contract }) {
       </Link>
       <div className="mt-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-canvas-muted">
         {c.no || c.code || '—'}
-        {c.portal && <Pill tone="violet">Portalda: {c.portal.statusLabel}{c.portal.diff ? ` · ${c.portal.diff} fark` : ''}</Pill>}
+        {c.portal && <Pill tone="violet">Portalda: {c.portal.statusLabel}{c.portal.diff ? ` · CRM'e işlenecek ${c.portal.diff} fark` : ''}</Pill>}
       </div>
     </div>
   );
@@ -100,17 +102,29 @@ function Kpis({ s, expiring, onExpiring }: { s: WithK<ContractSummary>; expiring
   const k = s.kaynaklar;
   return (
     <KpiRow>
-      <Kpi label="Yürürlükte" value={nf.format(s.active)} help={`${nf.format(s.total)} etkin kayıt içinde`} info={<SqlInfo k={k} alan="active" label="Yürürlükte" />} />
-      <Kpi label="Yenilemede" value={nf.format(s.renewal)} help="Durumu “Aktif - Yenileme”" info={<SqlInfo k={k} alan="renewal" label="Yenilemede" />} />
+      <Kpi
+        label="Yürürlükte"
+        value={nf.format(s.active)}
+        help={`${nf.format(s.total)} etkin kayıt içinde`}
+        explain="CRM'de durumu aktif olan sözleşmeler (yenilemede olanlar dahil). Alttaki sayı, pasife alınmamış bütün CRM sözleşmeleridir."
+        info={<SqlInfo k={k} alan="active" label="Yürürlükte" />}
+      />
+      <Kpi label="Yenilemede" value={nf.format(s.renewal)} help="Durumu “Aktif - Yenileme”" explain="CRM'de durumu «Aktif - Yenileme» olan sözleşmeler." info={<SqlInfo k={k} alan="renewal" label="Yenilemede" />} />
       <Kpi
         label={`${s.warnDays} günde bitiyor`}
         value={nf.format(s.expiring)}
         help={expiring ? 'Süzgeç açık; kapatmak için dokunun' : 'Listede görmek için dokunun'}
         active={expiring}
         onClick={onExpiring}
+        explain={`Yürürlükte, süresiz olmayan ve bitiş tarihi bugünden itibaren ${s.warnDays} gün içinde olan sözleşmeler. Karta dokununca liste bunlara süzülür.`}
         info={<SqlInfo k={k} alan="expiring" label={`${s.warnDays} günde bitiyor`} />}
       />
-      <Kpi label="Ortalama telif" value={pct(s.avgRoyalty, 1)} help={`Karton kapak oranı dolu ${nf.format(s.avgRoyaltyOver)} yürürlükteki sözleşme`} info={<SqlInfo k={k} alan="avgRoyalty" label="Ortalama telif" />} />
+      <Kpi
+        label="Ortalama telif"
+        value={pct(s.avgRoyalty, 1)}
+        help={`Karton kapak oranı dolu ${nf.format(s.avgRoyaltyOver)} yürürlükteki sözleşme`}
+        explain="Yürürlükteki sözleşmelerde karton kapak telif oranının basit ortalaması. Oranı girilmemiş sözleşmeler hesaba katılmaz."
+        info={<SqlInfo k={k} alan="avgRoyalty" label="Ortalama telif" />} />
     </KpiRow>
   );
 }
@@ -145,7 +159,16 @@ function PortalRecords() {
       {list.error && <div className="mt-3"><Note tone="err">{errMsg(list.error)}</Note></div>}
       {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
       {list.data && !items.length && (
-        <p className="py-10 text-center text-[12.5px] text-canvas-muted">Portalda açılmış ya da düzenlenmiş sözleşme yok. «Yeni sözleşme» ile taslak açın ya da CRM listesinden bir sözleşmeyi düzenleyin.</p>
+        <div className="mt-3">
+          {q || status ? (
+            <EmptyHint title="Süzgece uyan portal kaydı yok" why="Aramayı temizleyin ya da durumu «Tüm durumlar» yapın." />
+          ) : (
+            <EmptyHint
+              title="Portalda açılmış ya da düzenlenmiş sözleşme yok"
+              why="«Yeni sözleşme» ile taslak açın ya da CRM listesinden bir sözleşmeyi açıp «Düzenle»ye basın; kayıt burada görünür."
+            />
+          )}
+        </div>
       )}
       <ul className="mt-3 space-y-2">
         {items.map((r) => (
@@ -202,7 +225,7 @@ export default function ContractsScreen() {
       route="/telif-sozlesme"
       crumb="Telif & Sözleşme"
       title="Telif ve lisans sözleşmeleri"
-      lead="CRM'deki sözleşmeler ve portalda açılan taslaklar. Sözleşmeye dokununca şartlar, metin, zeyilname, ödeme takvimi ve hakediş açılır. Portal CRM'e yazmaz; farklar sözleşme sayfasında listelenir."
+      lead="Telif ve lisans sözleşmelerinin listesi: CRM'deki sözleşmeler ve portalda açılan taslaklar. Sözleşmeye dokununca ayrıntısı açılır. Portal CRM'e yazmaz; farklar «CRM'e işlenmesi gereken» diye gösterilir."
       source={s ? `${nf.format(s.active)} yürürlükte sözleşme` : 'CRM sözleşmeleri'}
       aside={
         <div className="flex flex-wrap justify-start gap-1.5 lg:justify-end">
@@ -223,7 +246,7 @@ export default function ContractsScreen() {
         </div>
       }
     >
-            {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+            {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; sözleşmeler okunamaz. Sistem yöneticinize haber verin.</Note>}
             {err && <Note tone="err">{err}</Note>}
             {s && <Kpis s={s} expiring={expiring} onExpiring={() => setExpiring((v) => !v)} />}
 
@@ -296,7 +319,9 @@ export default function ContractsScreen() {
               />
 
               {!list.isLoading && !items.length && !err && (
-                <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan sözleşme yok.</p>
+                <div className="mt-3">
+                  <EmptyHint title="Bu süzgece uyan sözleşme yok" why="Aramayı temizleyin, durum ve tip süzgeçlerini «Tüm» yapın ya da «günde bitiyor» kartındaki süzgeci kapatın." />
+                </div>
               )}
 
               {/* Telefon ve tablet: kart listesi. */}
@@ -337,8 +362,18 @@ export default function ContractsScreen() {
                     <thead>
                       <tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                         <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].portal" label="Portal rozeti ve fark sayısı">Kitap ve sözleşme no</InfoLabel></th>
-                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].parties" label="Hak sahibi payı">Hak sahibi</InfoLabel></th>
-                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].rates" label="Telif oranları ve avans">Telif oranları ve haklar</InfoLabel></th>
+                        <th className="px-3 py-2.5">
+                          <span className="inline-flex items-center gap-1">
+                            <InfoLabel k={data?.kaynaklar} alan="items[].parties" label="Hak sahibi payı">Hak sahibi</InfoLabel>
+                            <Explain label="Hak sahibi">Yüzde, kişinin telifteki payıdır. «aracılı», hak sahibine ajans ya da temsilci üzerinden bağlanıldığını gösterir.</Explain>
+                          </span>
+                        </th>
+                        <th className="px-3 py-2.5">
+                          <span className="inline-flex items-center gap-1">
+                            <InfoLabel k={data?.kaynaklar} alan="items[].rates" label="Telif oranları ve avans">Telif oranları ve haklar</InfoLabel>
+                            <Explain label="Telif oranı">{TERM.telifOrani} Altında ödeme şekli, telif esası ve avans yazar; renkli etiketler sözleşmedeki hakları gösterir.</Explain>
+                          </span>
+                        </th>
                         <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].daysLeft" label="Kalan gün">Süre</InfoLabel></th>
                         <th className="px-3 py-2.5">Durum</th>
                       </tr>

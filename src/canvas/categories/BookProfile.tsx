@@ -82,12 +82,12 @@ export default function BookProfile() {
                 {me?.canPropose && (
                   <button type="button" className={btnGhost} disabled={busy} onClick={() => propose.mutate(false)}>
                     {propose.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-                    {b.status === 'yok' ? 'Zeki AI önerisi üret' : 'Yeniden üret'}
+                    {b.status === 'yok' ? 'Zeki AI önerisi üret' : 'Zeki AI’a yeniden önerdir'}
                   </button>
                 )}
                 {canDecide && (
                   <button type="button" className={btnPrimary} disabled={busy || !pendingSure} onClick={() => decide.mutate({ all: 'kabul' })}>
-                    <Check aria-hidden className="h-4 w-4" /> Onayla{pendingSure ? ` (${pendingSure})` : ''}
+                    <Check aria-hidden className="h-4 w-4" /> Emin önerileri onayla{pendingSure ? ` (${pendingSure})` : ''}
                   </button>
                 )}
               </div>
@@ -98,6 +98,10 @@ export default function BookProfile() {
               </p>
             )}
             {propose.isPending && <p className="mt-2 text-[12px] font-semibold text-canvas-muted">Zeki AI kitabın künyesini ve arka kapak metnini okuyup ağaçta düzey düzey seçiyor…</p>}
+            <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+              Aşağıda CRM'deki bugünkü sınıflamalar ve Zeki AI'ın alan alan önerileri var. Her öneriyi kabul edin, düzeltin ya da reddedin; «Emin önerileri onayla»
+              yalnız Zeki AI'ın emin olduğu önerileri kabul eder. Portal CRM'e yazmaz: onaylanan fark «CRM'e işlenecek» listesine düşer.
+            </p>
           </Panel>
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:gap-4">

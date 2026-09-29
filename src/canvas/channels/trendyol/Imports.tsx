@@ -13,13 +13,14 @@ import { Chips } from '../platformKit';
 import { trendyolApi, type ImportType } from './api';
 import { TrendyolFrame, useTrendyolMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 const HELP: Record<ImportType, string> = {
-  urun: 'Mağazanın bütün ürünleri: barkod, satıcı stok kodu, durum, stok, Trendyol satış fiyatı. Yeni liste eskisinin yerine geçer.',
-  siparis: 'Paket/sipariş no, sipariş tarihi, durum, kargo, termin, barkod, adet, tutar. Aynı paket yeniden gelirse son dosya geçerli.',
-  iade: 'Talep no, barkod, iade nedeni, açıklama, tarih. Açıklamadaki e-posta ve telefon maskelenir.',
-  soru: 'Soru metni, barkod, cevap ya da durum, tarih. Müşteri adı kolonu içeri alınmaz.',
-  yorum: 'Puan, yorum metni, barkod ya da ürün adı, tarih.',
+  urun: 'Mağazanın bütün ürünleri. Beklenen kolonlar: barkod, satıcı stok kodu, durum (satışta/kapalı), stok, Trendyol satış fiyatı. Yeni liste eskisinin yerine geçer; stok ve fiyat farkı bu dosyadan hesaplanır.',
+  siparis: 'Beklenen kolonlar: paket ya da sipariş no, sipariş tarihi, durum, kargo firması, kargoya son gün (termin), barkod, adet, tutar. Aynı paket yeniden gelirse son dosya geçerli olur.',
+  iade: 'Beklenen kolonlar: talep no, barkod, iade nedeni, açıklama, tarih. Açıklamadaki e-posta ve telefon gizlenir.',
+  soru: 'Beklenen kolonlar: soru metni, barkod, cevap ya da durum, tarih. Müşteri adı kolonu içeri alınmaz.',
+  yorum: 'Beklenen kolonlar: puan, yorum metni, barkod ya da ürün adı, tarih.',
 };
 
 export default function TrendyolImports() {
@@ -50,12 +51,14 @@ export default function TrendyolImports() {
   return (
     <TrendyolFrame
       title="Panel dosyası yükle"
-      lead="Trendyol satıcı panelinden indirilen Excel ya da CSV. Yalnız ürün, adet, tutar, durum ve metin kolonları alınır; alıcı adı, adres, telefon gibi kolonlar hiç okunmaz ve adları kayda düşer."
+      lead="Trendyol ekranlarındaki bilgiler, satıcı panelinden indirip buraya yüklediğiniz Excel ya da CSV dosyalarından gelir. Önce dosya türünü seçin, sonra dosyayı bırakın. Alıcı adı, adres, telefon gibi kolonlar okunmaz; yalnız adları kayda geçer."
     >
       {/* Birincil eylem: dosya türünü seç, dosyayı bırak. Yetkisi olmayan kişi kilitli alanı ve gereken yetkiyi görür. */}
       <Panel>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">1. Dosya türünü seçin</p>
         <Chips value={tur} onChange={setTur} items={(Object.keys(types) as ImportType[]).map((k) => ({ key: k, label: types[k] }))} />
         <p className="my-2 text-[12.5px] text-canvas-muted">{HELP[tur]}</p>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">2. Dosyayı bırakın (.xlsx ya da .csv, en çok 25 MB)</p>
         <FileDrop
           title={`${types[tur]} dosyasını yükle`}
           accept=".xlsx,.csv"
@@ -69,9 +72,11 @@ export default function TrendyolImports() {
       <Panel>
         <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Yüklemeler <SqlInfo k={list.data?.kaynaklar} alan="items" label="Yüklemeler" /></h2>
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
-        {list.isLoading ? <Loading /> : !list.data?.items.length ? <Note tone="info">Henüz dosya yüklenmedi. Trendyol panelinden indirdiğiniz dosyayı yukarıdaki alana bırakın.</Note> : (
+        {list.isLoading ? <Loading /> : !list.data?.items.length ? (
+          <EmptyHint title="Henüz dosya yüklenmedi" why="Trendyol satıcı panelinden indirdiğiniz dosyayı yukarıdaki alana bırakın. İşe ürün listesiyle başlamanızı öneririz; stok ve fiyat karşılaştırması ondan yapılır." />
+        ) : (
           <TableWrap>
-            <thead><tr><th className={th}>Tür</th><th className={th}>Dosya</th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Satır</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Kitaba bağlanan</InfoLabel></th><th className={th}>İçeri alınmayan kolonlar</th><th className={th}>Yükleyen</th><th className={th} /></tr></thead>
+            <thead><tr><th className={th}>Tür</th><th className={th}>Dosya</th><th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items">Satır</InfoLabel></th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={list.data?.kaynaklar} alan="items">Kitaba bağlanan</InfoLabel><Explain label="Kitaba bağlanan">Barkodu Logo'daki bir kitapla eşleşen satır sayısı. Eşleşmeyen satırlar stok ve fiyat karşılaştırmasına giremez; Logo'da barkodu eksik kitap olabilir.</Explain></span></th><th className={th}>İçeri alınmayan kolonlar</th><th className={th}>Yükleyen</th><th className={th}><span className="sr-only">İşlem</span></th></tr></thead>
             <tbody>
               {list.data.items.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">

@@ -7,6 +7,7 @@ import { Pager, Panel, useDebounced } from '../kit';
 import { BAND, LOYALTY, TRACE, cellClass, daysAgo, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
 import type { PanelTarget } from './CardPanel';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** İlişki ısı haritası: satır yazar, sütun son 12 ay, hücre o ay yapılan görüşme sayısı. Satırlar yürürlükte
  *  sözleşmesi olan yazarlar (CRM) ile ilişki kartı olan herkestir. Varsayılan sıra en soğuk önce: aranması gereken
@@ -200,12 +201,18 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
         <p className="mt-1 flex items-center gap-1 text-[11px] text-canvas-muted">
           Süzgece uyan yazar sayısı
           <SqlInfo k={data.kaynaklar} alan="total" label="Isı haritası satır sayısı" />
+          <span aria-hidden>·</span> Yazarın adına dokunun, ilişki kartı açılsın.
         </p>
       )}
 
       {map.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">CRM'deki sözleşmeler ve görüşmeler okunuyor…</p>}
       {data && !data.items.length && !map.isLoading && (
-        <p className="py-10 text-center text-[12.5px] text-canvas-muted">{q ? 'Bu adla yazar yok.' : 'Bu kapsamda yazar yok.'}</p>
+        <div className="mt-3">
+          <EmptyHint
+            title={q ? 'Bu adla yazar bulunamadı' : 'Bu kapsamda yazar yok'}
+            why={q ? 'Adı farklı yazmayı deneyin ya da kapsamı «Hepsi» yapın.' : 'Üstteki kapsam seçiminden «Hepsi»ni seçerek bütün yazarlara bakın.'}
+          />
+        </div>
       )}
       {data && data.items.length > 0 && (
         <div className="mt-3 overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-100 bg-white">

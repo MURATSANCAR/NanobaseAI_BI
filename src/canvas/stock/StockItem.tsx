@@ -68,12 +68,14 @@ export default function StockItem() {
           </div>
           <KpiRow>
             <Kpi label="Logo stok" value={n0(it.bakiye)} help={it.logoVar ? `${it.ambarlar.length} ambarda` : 'Bu yıl Logo’da hareketi yok'}
+              explain="Logo’daki giriş − çıkış; bütün ambarların toplamı. İleri tarihli üretim girişi sayılmaz."
               info={<SqlInfo k={it.kaynaklar} alan="bakiye" label="Logo stok" />} />
-            <Kpi label="CRM raf" value={n0(it.crmRaf)} help={it.fark ? `Fark ${it.fark > 0 ? '+' : ''}${n0(it.fark)} · ${it.farkEtiket}` : `${it.rafSayisi} raf`}
+            <Kpi label="CRM raf" explain="CRM’deki raf kayıtlarına göre raflarda kalan adet. Logo’dan farkı varsa altında nedeniyle yazar." value={n0(it.crmRaf)} help={it.fark ? `Fark ${it.fark > 0 ? '+' : ''}${n0(it.fark)} · ${it.farkEtiket}` : `${it.rafSayisi} raf`}
               info={<SqlInfo k={it.kaynaklar} alan={it.fark ? 'fark' : 'crmRaf'} label={it.fark ? 'CRM raf ve Logo–CRM farkı' : 'CRM raf'} />} />
-            <Kpi label="Kaç gün yeter" value={gunText(it.gun)} help={it.tukenmeTarihi ? `Tahmini tükenme ${fmtDay(it.tukenmeTarihi)}` : 'Satış hızı yok'}
+            <Kpi label="Kaç gün yeter" explain="Logo stoğu, aylık satış hızıyla kaç gün yeter. Tükenme tarihi Logo verisinin son gününden sayılır." value={gunText(it.gun)} help={it.tukenmeTarihi ? `Tahmini tükenme ${fmtDay(it.tukenmeTarihi)}` : 'Satış hızı yok'}
               info={<SqlInfo k={it.kaynaklar} alan="gun" label="Kaç gün yeter" />} />
             <Kpi label="Aylık satış hızı" value={n1(it.satisHizi)} help={`Kritik: ${it.kritikGun} gün (baskı ${it.baskiSuresi} + güvenlik)`}
+              explain="Bir ayda ortalama satılan adet (son çeyreklerin ağırlıklı ortalaması, faturalı satış). «Kritik» gün, yeni baskının depoya gelmesi için gereken süredir."
               info={<SqlInfo k={it.kaynaklar} alan="satisHizi" label="Aylık satış hızı" />} />
           </KpiRow>
 

@@ -112,6 +112,7 @@ export default function PackageBuilder({ meta }: { meta: Meta }) {
             run.mutate();
           }}
         >
+          <p className="text-[12px] leading-snug text-canvas-muted">Kurum için tema, paket sayısı ve bütçe girin; birkaç kitap paketi alternatifi hazırlanır, beğendiğinizi teklife dönüştürürsünüz.</p>
           {opp.data && <Note tone="info">Teklif «{opp.data.kurum} · {opp.data.ad}» fırsatına eklenecek.</Note>}
           <fieldset className="flex flex-col gap-1.5">
             <legend className={labelCls}>Tema (bir ya da daha çok)</legend>
@@ -143,7 +144,7 @@ export default function PackageBuilder({ meta }: { meta: Meta }) {
           <div className="flex flex-col gap-1">
             <span className={labelCls}>Bütçe (₺, isteğe bağlı)</span>
             <div className="grid grid-cols-[1fr_auto] gap-2">
-              <input className={`${field} font-mono tabular-nums`} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} aria-label="Bütçe" />
+              <input className={`${field} font-mono tabular-nums`} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} aria-label="Bütçe" placeholder="Örn. 250" />
               <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Bütçe türü">
                 {(['kisi', 'toplam'] as const).map((k) => (
                   <button key={k} type="button" role="radio" aria-checked={budgetKind === k} onClick={() => setBudgetKind(k)}
@@ -165,12 +166,12 @@ export default function PackageBuilder({ meta }: { meta: Meta }) {
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>İndirim %</span>
-              <input className={`${field} font-mono tabular-nums`} inputMode="decimal" value={disc} placeholder="kural" onChange={(e) => setDisc(e.target.value)} />
+              <input className={`${field} font-mono tabular-nums`} inputMode="decimal" value={disc} placeholder="Boş: kural" onChange={(e) => setDisc(e.target.value)} />
             </label>
           </div>
           <p className="text-[11px] leading-snug text-canvas-muted">
             Aday: seçilen temada onaylı etiketi olan, stoğu paket sayısına yeten ve bugün geçerli Logo satış fiyatı olan kitaplar; bu yılın satışına göre sıralanır.
-            İndirim boşsa hacim kuralı uygulanır.
+            İndirim boş bırakılırsa adede göre önerilir: benzer büyüklükteki geçmiş kurum faturalarındaki indirim ya da tanımlı indirim basamakları.
           </p>
           <button type="submit" className={btnPrimary} disabled={!themes.length || run.isPending}>
             {run.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}

@@ -10,6 +10,7 @@ import { AskSheet, Tabs } from '../budget/parts';
 import { STATUS_TONE, fmtDay, fmtInt, fmtMoney, fmtStamp, mktApi, type Plan } from './api';
 import { Block, MarketingFrame } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import CardTab from './CardTab';
 import ChannelsTab from './ChannelsTab';
 import CalendarTab from './CalendarTab';
@@ -116,10 +117,10 @@ export default function PlanScreen() {
     <div className="flex flex-wrap gap-2 lg:justify-end">
       {me.canExport && (
         <>
-          <a className={btnGhost} href={mktApi.pdfUrl(p.id)} download><FileText aria-hidden className="h-4 w-4" />PDF</a>
-          <a className={btnGhost} href={mktApi.csvUrl(p.id)} download><Download aria-hidden className="h-4 w-4" />CSV</a>
-          <a className={btnGhost} href={xlsxUrl(mktApi.csvUrl(p.id))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</a>
-          <a className={btnGhost} href={mktApi.packageUrl(p.id)} download><FileArchive aria-hidden className="h-4 w-4" />Yayına hazır paket</a>
+          <a className={btnGhost} href={mktApi.pdfUrl(p.id)} download><FileText aria-hidden className="h-4 w-4" />PDF indir</a>
+          <a className={btnGhost} href={mktApi.csvUrl(p.id)} download><Download aria-hidden className="h-4 w-4" />Tabloyu indir (CSV)</a>
+          <a className={btnGhost} href={xlsxUrl(mktApi.csvUrl(p.id))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Tabloyu indir (Excel)</a>
+          <a className={btnGhost} href={mktApi.packageUrl(p.id)} download><FileArchive aria-hidden className="h-4 w-4" />Yayına hazır paketi indir</a>
         </>
       )}
     </div>
@@ -129,6 +130,9 @@ export default function PlanScreen() {
     <MarketingFrame
       crumb={bl ? 'Backlist' : 'Yeni kitap planı'}
       title={p?.baslik ?? 'Pazarlama planı'}
+      lead={bl
+        ? 'Seçilen backlist kitaplarını yeniden hareketlendirme planı: kitaplar, kanal ve bütçe, iş takvimi ve tanıtım metinleri. Plan onaylanınca değişmez; değişiklik için «Revize et» yeni sürüm açar.'
+        : 'Bu kitabın pazarlama planı: satış karnesi, kanal ve bütçe, yayın gününe göre iş takvimi ve tanıtım metinleri. Plan onaylanınca değişmez; değişiklik için «Revize et» yeni sürüm açar.'}
       source={p ? `${p.id} · sürüm ${p.surum}` : ''}
       presence={p ? p.durumAdi : '…'}
       detail={p?.baslik}
@@ -171,18 +175,22 @@ export default function PlanScreen() {
 
           <KpiRow>
             <Kpi label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} value={left === null ? '—' : left < 0 ? `${-left} gün önce` : `${left} gün`} help={`${fmtDay(p.yayinTarihi)} · ${p.yayinTarihiKaynakAdi ?? 'kaynak yok'}`}
-              info={<SqlInfo k={p.kaynaklar} alan="yayinTarihi" label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} />} />
+              info={<SqlInfo k={p.kaynaklar} alan="yayinTarihi" label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} />}
+              explain={bl ? 'Aktivasyonun başlayacağı güne kaç gün kaldığı. Alt satırda tarih ve tarihin nereden alındığı yazar.' : 'Kitabın yayın gününe kaç gün kaldığı. Alt satırda tarih ve tarihin hangi CRM alanından alındığı yazar; takvimdeki işler bu güne göre dizilir.'} />
             <Kpi label="Satış hedefi" value={p.hedef?.adet != null ? `${fmtInt(p.hedef.adet)} adet` : '—'}
               help={p.hedef?.planId ? (me.canSeeBudget && p.hedef.ciro != null ? `${fmtMoney(p.hedef.ciro)} net ciro · ${p.hedef.year}` : `${p.hedef.year} bütçe planı`) : (p.hedef?.not ?? 'Onaylı hedef yok')}
-              info={<SqlInfo k={p.kaynaklar} alan="hedef" label="Satış hedefi" />} />
+              info={<SqlInfo k={p.kaynaklar} alan="hedef" label="Satış hedefi" />}
+              explain="Bütçe planında bu kitap için onaylanmış satış adedi. Zeki AI hedef üretmez; onaylı hedef yoksa kart boş kalır." />
             <Kpi label="Plan bütçesi" value={me.canSeeBudget ? fmtMoney(p.butceToplam) : '—'}
               help={me.canSeeBudget ? (p.butceCerceve != null ? `Çerçeve ${fmtMoney(p.butceCerceve)}` : 'Bütçe çerçevesi yok') : 'Bütçe görme yetkiniz yok'}
               active={tab === 'kanal'} onClick={() => setParams({ sekme: 'kanal' }, { replace: true })}
-              info={<SqlInfo k={p.kaynaklar} alan="butceToplam" label="Plan bütçesi" />} />
+              info={<SqlInfo k={p.kaynaklar} alan="butceToplam" label="Plan bütçesi" />}
+              explain="Kanal ve bütçe sekmesindeki satırların toplamı. «Çerçeve», bu kitap için ayrılabilecek üst tutardır; plan toplamı onu aşmamalıdır." />
             <Kpi label="Onaylı materyal" value={`${approvedMaterials} / ${p.materials.length}`}
               help={p.eksikMateryal?.length ? `Eksik: ${p.eksikMateryal.map((t) => m.materials[t] ?? t).join(', ')}` : 'Zorunlu materyaller tamam'}
               active={tab === 'materyal'} onClick={() => setParams({ sekme: 'materyal' }, { replace: true })}
-              info={<SqlInfo k={p.kaynaklar} alan="materials" label="Onaylı materyal" />} />
+              info={<SqlInfo k={p.kaynaklar} alan="materials" label="Onaylı materyal" />}
+              explain="Tanıtım metinlerinden (bülten, föy, sosyal medya metni gibi) kaçının son onayı aldığı. Zorunlu olanlardan biri eksikse alt satırda yazar." />
           </KpiRow>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
@@ -201,7 +209,7 @@ export default function PlanScreen() {
                 title="Zeki AI önerisi"
                 help="Kanal ve bütçe kural ve emsal oranlarıyla hesaplanır; Zeki AI yalnız gerekçeyi, konumlamayı ve metin taslaklarını yazar. Rakam üretmez; kaynakta olmayan alıntı ve rakam düşer."
               >
-                {!m.modelReady && <Note tone="warn">Zeki AI modeli bu kurulumda bağlı değil: öneri yalnız kural ve emsal oranıyla kurulur.</Note>}
+                {!m.modelReady && <Note tone="warn">Zeki AI şu an bağlı değil: öneri yalnız kurallar ve emsal kitapların oranıyla kurulur, gerekçe ve metin taslağı yazılmaz.</Note>}
                 {bl && (
                   <p className="mt-1 text-[12px] leading-snug text-canvas-muted">
                     Kanal ve bütçe plan açılırken kural ve kitapların geçmiş pazarlama harcamasıyla kuruldu. «Neden şimdi oku»
@@ -233,7 +241,7 @@ export default function PlanScreen() {
                 )}
                 {!!p.zeki?.emsal?.length && (
                   <div className="mt-3">
-                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Emsal kontrolü (CRM'de emsal girilmemiş)<SqlInfo k={p.kaynaklar} alan="zeki" label="Emsal kontrolü olasılığı" /></div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Emsal kontrolü (CRM'de emsal girilmemiş)<SqlInfo k={p.kaynaklar} alan="zeki" label="Emsal kontrolü olasılığı" /><Explain label="Emsal kontrolü">Emsal, bu kitaba benzeyen ve daha önce yayımlanmış kitaptır; karnede satışı örnek alınır. CRM'de emsal girilmediği için Zeki AI adayların benzer olup olmadığını tahmin eder; yüzde, bu tahminin gücüdür.</Explain></div>
                     <ul className="mt-1 flex flex-col gap-1 text-[12px]">
                       {p.zeki.emsal.map((e) => (
                         <li key={e.stokKodu} className="flex items-start justify-between gap-2">

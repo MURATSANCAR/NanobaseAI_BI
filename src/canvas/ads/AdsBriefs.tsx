@@ -43,10 +43,10 @@ export default function AdsBriefs() {
   return (
     <AdsFrame
       title="Kampanya brief'i"
-      lead="Yeni kitap ya da backlist kampanyası için hedef kitle, ana mesaj, kanal önerisi ve üç reklam metni taslağı. Müşteri listesiyle benzer kitle kurma önerilmez; indirim ve «en çok satan» gibi iddialar kanıtsız yazılmaz."
+      lead="Brief, reklamı hazırlayacak kişiye verilen kısa iş tanımıdır. Bir kitap seçin; Zeki AI hedef kitle, ana mesaj, kanal önerisi ve üç reklam metni taslağı yazar, siz düzeltip onaylarsınız. Kanıtı olmayan indirim ya da «en çok satan» gibi iddialar yazılmaz; müşteri listemiz reklam hedeflemesi için önerilmez."
       meta={m}
     >
-      {m && !m.modelReady && <Note tone="warn">Zeki AI bu kurulumda bağlı değil; brief elle yazılabilir ama taslak üretilemez.</Note>}
+      {m && !m.modelReady && <Note tone="warn">Zeki AI şu an bağlı değil; yeni brief taslağı hazırlatamazsınız, var olan brief'leri düzenleyebilirsiniz.</Note>}
       {canEdit && (
         <Panel>
           <h2 className="text-[15px] font-extrabold tracking-tight">Yeni brief</h2>
@@ -62,7 +62,7 @@ export default function AdsBriefs() {
               <input className={field} value={note} maxLength={1000} placeholder="ör. yetişkin okura, lansman ayı, Instagram ağırlıklı" onChange={(e) => setNote(e.target.value)} />
             </label>
             <button type="button" className={btnPrimary} disabled={!book || create.isPending || !m?.modelReady} onClick={() => create.mutate()}>
-              <Sparkles aria-hidden className="h-4 w-4" />Taslak iste
+              <Sparkles aria-hidden className="h-4 w-4" />Zeki AI taslağı iste
             </button>
           </div>
         </Panel>
@@ -70,7 +70,7 @@ export default function AdsBriefs() {
       {list.error && <Note tone="err">{errText(list.error, 'Brief listesi açılamadı.')}</Note>}
       {list.isLoading && <Loading />}
       {list.data && <p className="flex items-center gap-1 px-1 text-[11.5px] text-canvas-muted">Brief kayıtları ve denetim sayıları<SqlInfo k={list.data.kaynaklar} alan="items" label="Brief'ler" /></p>}
-      {list.data && list.data.items.length === 0 && <p className="px-1 py-4 text-[12.5px] text-canvas-muted">Henüz brief yok.</p>}
+      {list.data && list.data.items.length === 0 && <p className="px-1 py-4 text-[12.5px] text-canvas-muted">Henüz brief yok. Yukarıdan kitap seçip «Zeki AI taslağı iste» ile ilk brief'i hazırlatın.</p>}
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {list.data?.items.map((b) => <BriefCard key={b.id} b={b} canEdit={canEdit} />)}
       </div>
@@ -125,9 +125,9 @@ function BriefCard({ b, canEdit }: { b: Brief; canEdit: boolean }) {
             <Copy aria-hidden className="h-4 w-4" />Kopyala
           </button>
         )}
-        {canEdit && <button type="button" className={btnGhost} onClick={() => setDel(true)}><Trash2 aria-hidden className="h-4 w-4" />Sil</button>}
+        {canEdit && <button type="button" className={btnGhost} onClick={() => setDel(true)}><Trash2 aria-hidden className="h-4 w-4" />Brief'i sil</button>}
       </div>
-      <AskSheet open={del} title="Brief'i sil" message={`${b.kitapAdi ?? b.stokKodu} brief'i silinecek.`} confirm="Sil" danger busy={remove.isPending}
+      <AskSheet open={del} title="Brief'i sil" message={`${b.kitapAdi ?? b.stokKodu} brief'i silinecek. Bu işlem geri alınamaz.`} confirm="Sil" danger busy={remove.isPending}
         onClose={() => setDel(false)} onConfirm={() => remove.mutate()} />
     </Panel>
   );

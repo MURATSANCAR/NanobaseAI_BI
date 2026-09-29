@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, previousMonth, shippingApi } from './api';
@@ -36,7 +37,7 @@ export default function Reconcile() {
     <ShippingFrame
       crumb="Kargo mutabakatı"
       title="Kargo mutabakatı"
-      lead="Ay sonunda kargo firmasının faturasını gönderi kaydıyla karşılaştırmak için: firma bazında kargo kaydı tutarı, Logo'daki alınan hizmet faturası (KDV hariç ve dahil), fark, mükerrer takip numarası. Logo'daki gerçekleşen sevkin CRM sevkiyatıyla eşleşme oranı da buradadır."
+      lead="Mutabakat: ay sonunda kargo firmasının bize kestiği faturanın, o ay gerçekten gönderdiğimiz paketlerin tutarıyla tutup tutmadığını kontrol etmek. Firma firma kargo kaydındaki tutar, Logo'daki kargo faturası, aradaki fark ve iki kez sayılmış takip numaraları gösterilir; itiraz kararı finansındır."
       meta={meta.data}
       aside={
         meta.data && allowed && (
@@ -45,21 +46,25 @@ export default function Reconcile() {
               <span className={labelCls}>Ay</span>
               <input className={field} type="month" value={ay} onChange={(e) => { setSummary(null); setParams(e.target.value ? { ay: e.target.value } : {}, { replace: true }); }} />
             </label>
-            <ExportButton list="mutabakat" params={{ ay }} can={meta.data.me.disaAktar} label="Excel'e al" />
+            <ExportButton list="mutabakat" params={{ ay }} can={meta.data.me.disaAktar} />
           </div>
         )
       }
     >
-      {meta.data && !allowed && <Note tone="warn">Mutabakat kargo maliyetini görme yetkisi ister; rolünüzde yok.</Note>}
+      {meta.data && !allowed && <Note tone="warn">Mutabakat, kargo maliyetini görme yetkisi ister ve rolünüzde bu yetki yok. Gerekirse yöneticinizden yetki isteyin.</Note>}
       {rec.isLoading && <Note tone="info">Logo kargo faturaları, Logo sevk ve CRM sevkiyatı okunuyor…</Note>}
       {rec.error && <Note tone="err">{errText(rec.error, 'Mutabakat okunamadı.')}</Note>}
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
-            <Kpi label="Kargo kaydı tutarı" value={fmtMoney(d.toplam.crmTutar)} help="Kargo firmasının gönderi kaydından" info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Kargo kaydı tutarı" />} />
-            <Kpi label="Logo kargo faturası" value={fmtMoney(d.toplam.logoKdvHaric)} help="KDV hariç, eşlenen carilerde" info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo kargo faturası" />} />
-            <Kpi label="Logo carisi eşlenmemiş" value={fmtInt(d.toplam.eslenmeyenFirma)} help="Gönderisi olan firma" onClick={() => setShowCandidates(true)} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo carisi eşlenmemiş firma" />} />
+            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`}
+              explain="Seçilen ayda kargo firmalarının kaydında görünen gönderi sayısı." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
+            <Kpi label="Kargo kaydı tutarı" value={fmtMoney(d.toplam.crmTutar)} help="Kargo firmasının gönderi kaydından"
+              explain="Kargo firmasının CRM'e düşen gönderi kayıtlarındaki tutarların toplamı: faturada görmeyi beklediğimiz rakam." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Kargo kaydı tutarı" />} />
+            <Kpi label="Logo kargo faturası" value={fmtMoney(d.toplam.logoKdvHaric)} help="KDV hariç, eşlenen carilerde"
+              explain="Aynı ay Logo'ya işlenmiş, kargo firmalarının carilerinden gelen hizmet faturalarının KDV hariç toplamı. Yalnız Logo carisi eşlenmiş firmalar sayılır." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo kargo faturası" />} />
+            <Kpi label="Logo carisi eşlenmemiş" value={fmtInt(d.toplam.eslenmeyenFirma)} help="Gönderisi olan firma" onClick={() => setShowCandidates(true)}
+              explain="Gönderisi olduğu hâlde Logo'daki carisi henüz tanımlanmamış kargo firması sayısı; bunların faturası karşılaştırılamaz. Karta dokunursanız aşağıda aday cariler açılır." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo carisi eşlenmemiş firma" />} />
           </KpiRow>
           {d.notlar.map((n) => <Note key={n} tone="warn">{n}</Note>)}
           <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
@@ -68,12 +73,12 @@ export default function Reconcile() {
               <h2 className="text-[14px] font-extrabold">Firma bazında</h2>
               <button type="button" className={btnGhost} disabled={sum.isPending} onClick={() => sum.mutate()}>
                 {sum.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-                Zeki AI fark özeti
+                Farkı Zeki AI ile özetle
               </button>
             </div>
             {summary && <p className="mt-2 whitespace-pre-line rounded-xl bg-canvas-violet/5 px-3 py-2 text-[12.5px]">{summary}</p>}
             {d.items.length === 0 ? (
-              <Empty>Bu ayda kargo kaydı da Logo faturası da yok.</Empty>
+              <EmptyHint title="Bu ayda kargo kaydı da Logo faturası da yok" why="Başka bir ay seçin. Fatura henüz Logo'ya işlenmemiş olabilir." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -83,10 +88,10 @@ export default function Reconcile() {
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Gönderi</InfoLabel></th>
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Kargo kaydı</InfoLabel></th>
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Logo (KDV hariç)</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Fark</InfoLabel></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Fark</InfoLabel><Explain label="Fark">Logo faturası (KDV hariç) − kargo kaydı tutarı. Kırmızı: fatura, kayıtlardan fazla; firmaya sorulmalı.</Explain></span></th>
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Logo (KDV dahil)</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Mükerrer</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Tutarı okunamayan</InfoLabel></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Mükerrer</InfoLabel><Explain label="Mükerrer">Aynı takip numarası ikinci (ve sonraki) kez kaydedilmiş gönderilerin sayısı ve tutarı; aynı paket iki kez faturalanmış olabilir.</Explain></span></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Tutarı okunamayan</InfoLabel><Explain label="Tutarı okunamayan">Kargo kaydında tutarı boş ya da okunamayan gönderi sayısı; bunlar «Kargo kaydı» toplamına girmez.</Explain></span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -109,12 +114,12 @@ export default function Reconcile() {
                 </TableWrap>
               </div>
             )}
-            <p className="mt-2 text-[11.5px] text-canvas-muted">Fark = Logo faturası − kargo kaydı tutarı. Kargo kaydındaki tutarın KDV dahil mi hariç mi olduğu ölçülecek; iki fark birlikte okunmalı.</p>
+            <p className="mt-2 text-[11.5px] text-canvas-muted">Fark = Logo faturası (KDV hariç) − kargo kaydı tutarı. Kargo kaydındaki tutarın KDV dahil mi hariç mi olduğu henüz kesin değil; bu yüzden «Logo (KDV dahil)» sütunuyla birlikte okuyun.</p>
           </Panel>
           {d.sevk && (
             <Panel>
               <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="sevk">Logo sevk ↔ CRM sevkiyat</InfoLabel></h2>
-              <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">Logo'da gerçekleşen sevk: satış irsaliyesi satırları (çıkış). CRM'de Logo'ya aktarıldı işaretli sevkiyatlar, fatura numarasıyla eşlenir.</p>
+              <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">Depodan çıkan her sevkin iki sistemde de görünüp görünmediğinin kontrolü: Logo'daki satış irsaliyeleri ile CRM'de «Logo'ya aktarıldı» işaretli sevkiyatlar fatura numarasıyla eşleştirilir. Eşleşmeyen fatura numaraları aşağıda listelenir.</p>
               <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                 <Fact label="Logo irsaliye" value={`${fmtInt(d.sevk.logoIrsaliye)} (${fmtInt(d.sevk.logoFaturali)} faturalı)`} />
                 <Fact label="Logo satır / adet" value={`${fmtInt(d.sevk.logoSatir)} / ${fmtInt(d.sevk.logoAdet)}`} />
@@ -134,18 +139,18 @@ export default function Reconcile() {
               <div className="min-w-0">
                 <h2 className="text-[14px] font-extrabold">Logo carisi eşleme</h2>
                 <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">
-                  Mutabakat için her kargo firmasının Logo cari kodu yönetim ekranındaki «Kargo firması → Logo cari kodları» ayarına yazılır. Aşağıdaki liste son 12 ayda hizmet faturası kesen ve ünvanı kargoya benzeyen carilerdir; eşlemeyi siz onaylarsınız.
+                  Faturayı karşılaştırabilmek için her kargo firmasının Logo'daki cari kodunun bilinmesi gerekir. Kod, yönetim ekranındaki «Kargo firması → Logo cari kodları» ayarına yazılır. Aşağıdaki liste, son 12 ayda hizmet faturası kesen ve ünvanı kargo firmasına benzeyen Logo carileridir; doğru olanı seçip ayara siz yazarsınız.
                 </p>
               </div>
               <button type="button" className={btnGhost} onClick={() => setShowCandidates((x) => !x)}>
-                {showCandidates ? 'Gizle' : 'Aday carileri göster'}
+                {showCandidates ? 'Aday carileri gizle' : 'Aday carileri göster'}
               </button>
             </div>
             {showCandidates && (
               <div className="mt-2">
                 {cand.isLoading && <Empty>Logo okunuyor…</Empty>}
                 {cand.error && <Note tone="err">{errText(cand.error, 'Adaylar okunamadı.')}</Note>}
-                {cand.data && !cand.data.items.length && <Empty>Aday cari bulunamadı (ipuçları: {cand.data.ipuclari.join(', ')}).</Empty>}
+                {cand.data && !cand.data.items.length && <EmptyHint title="Aday cari bulunamadı" why={`Ünvanında şu sözcükler geçen hizmet faturası kesen cari yok: ${cand.data.ipuclari.join(', ')}. Cari kodunu Logo'dan bulup ayara elle yazabilirsiniz.`} />}
                 {cand.data && cand.data.items.length > 0 && (
                   <TableWrap>
                     <thead>

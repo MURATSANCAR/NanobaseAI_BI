@@ -42,7 +42,7 @@ export default function PortfolioPhone() {
     <FieldFrame
       crumb="Müşteri ilişkileri"
       title="Portföyüm"
-      lead="Size atanmış cariler. Risk Logo kesim tarihine göre hesaplanır; CRM'deki yeni sipariş riski yumuşatır."
+      lead="Size atanmış müşteriler (cari). Önce bu hafta aramanız gereken riskli cariler gelir; kartın yanındaki kalemle aksiyon yazarsınız. Son faturadan sonra CRM'de siparişi olan carinin risk puanı azaltılır."
       source={d?.kesim ? `Logo ${fmtDay(d.kesim)} tarihine kadar` : 'Logo + CRM'}
       presence={d ? `${d.count} cari` : 'Portföy'}
       back={{ to: '/musteri-iliskileri', label: 'Özet' }}
@@ -63,7 +63,7 @@ export default function PortfolioPhone() {
             action={<SqlInfo k={d.kaynaklar} alan="buHafta" label="Bu hafta aranacaklar" />}
           >
             {hot.length === 0 ? (
-              <Empty>Riskli cariniz yok.</Empty>
+              <Empty title="Bu hafta aranacak cari yok">Carilerinizin hiçbiri yüksek risk ya da kayıp düzeyinde değil.</Empty>
             ) : (
               <ul className="flex flex-col gap-2">
                 {hot.map((a) => (
@@ -83,7 +83,7 @@ export default function PortfolioPhone() {
           )}
           <Block title={`Diğer carilerim (${rest.length})`}>
             {rest.length === 0 ? (
-              <Empty>Başka cari yok.</Empty>
+              <Empty title="Başka cari yok">{needle ? 'Aramaya uyan başka cari bulunamadı.' : 'Bütün carileriniz yukarıdaki listede.'}</Empty>
             ) : (
               <ul className="flex flex-col gap-2">
                 {rest.map((a) => (

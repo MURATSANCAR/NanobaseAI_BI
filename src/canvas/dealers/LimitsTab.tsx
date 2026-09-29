@@ -60,7 +60,7 @@ export default function LimitsTab({ meta }: { meta: DealersMeta }) {
       ) : err ? (
         <Note tone="err">{err}</Note>
       ) : (q.data?.items ?? []).length === 0 ? (
-        <Empty>Bu durumda limit önerisi yok.</Empty>
+        <Empty>Bu durumda limit önerisi yok. Başka bir durum sekmesine bakabilirsiniz.</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {q.data!.items.map((p) => (

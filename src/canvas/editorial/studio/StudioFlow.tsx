@@ -5,11 +5,12 @@ import { ArrowRight, FileText, Info, Link2, RotateCcw } from 'lucide-react';
 import { ENGINE_ENABLED, studioApi, type StudioJob, type StudioStep } from '../../engine';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
-import { Img, Progress, STATUS_TEXT, StepIcon, ghostBtn, gradientBtn, secs } from './shared';
+import { Img, Progress, STATUS_TEXT, StepIcon, StepLegend, ghostBtn, gradientBtn, secs } from './shared';
 import KunyePanel from './KunyePanel';
 import { ArtModeCard } from './ArtMode';
 import { useCan } from '../../useAdmin';
 import { StudioInfo } from './shared';
+import { Explain } from '../../components/Explain';
 
 /** Yeni tasarımın akışı: içerik, CRM proje bilgisi, sistemin kararları ve canlı üretim adımları.
  *  Sayfa şeridi dizilmiş iç sayfalardan gelir (PDF'in kendisi); her karar gerekçesiyle görünür. */
@@ -94,16 +95,16 @@ export default function StudioFlow() {
       route="/kitap-tasarim"
       crumb="Yeni tasarım"
       title={d?.state.title || 'Yeni tasarım'}
-      lead="İçerikten baskıya: sistem kitabı okur, CRM'den proje bilgisini alır, yaşa ve türe göre baskı kararlarını verir, sayfaları yerleştirir ve resimler."
+      lead="Tasarımın durumu: ZEKİ AI kitabı okur, CRM'den kitap bilgisini alır, yaşa ve türe göre kararları verir, sayfaları yerleştirip resimler. İş arka planda sürer; sayfadan ayrılabilirsiniz."
       source={`İş ${jobId}`}
     >
       {err && <Note tone="err">{err}</Note>}
       {d?.busy?.key === 'hat' && d.busy.queued && !d.busy.error && (
-        <Note tone="info">Sırada: GPU'da başka bir kitabın işi sürüyor; o bitince bu tasarım kendiliğinden başlar.</Note>
+        <Note tone="info">Sırada: şu an başka bir kitabın resimleri çiziliyor; o bitince bu tasarım kendiliğinden başlar. Beklemeniz gerekmez.</Note>
       )}
       {failed && (
         <Note tone="err">
-          Hat durdu: {d?.state.error}{' '}
+          Tasarım yarıda durdu: {d?.state.error}{' '}
           {canProduce && d?.pages.length ? (
             <button type="button" className="mr-3 font-bold underline" onClick={() => resume.mutate()} disabled={resume.isPending}>
               <RotateCcw className="mr-1 inline h-3.5 w-3.5" aria-hidden />Kaldığı yerden devam et
@@ -114,6 +115,11 @@ export default function StudioFlow() {
               Baştan başlat
             </button>
           )}
+          {canProduce && (
+            <span className="mt-1 block text-[11.5px] font-normal">
+              {d?.pages.length ? '«Kaldığı yerden devam et» çizilmiş resimleri korur. ' : ''}«Baştan başlat» aynı kitapla yeni bir tasarım açar; bu tasarım listede kalır.
+            </span>
+          )}
         </Note>
       )}
       {!d ? <Panel><Loading /></Panel> : (
@@ -121,21 +127,27 @@ export default function StudioFlow() {
           <div className="grid gap-3 lg:grid-cols-[1.45fr_1fr] lg:gap-4">
             <div className="flex flex-col gap-3 lg:gap-4">
               <Panel>
-                <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><FileText className="h-4 w-4 text-canvas-violet" aria-hidden />Kaynak metin<StudioInfo label="Bölüm ve kelime" what="Bölüm ve kelime sayısı yüklenen kitap metninden sayılır." /></h2>
+                <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><FileText className="h-4 w-4 text-canvas-violet" aria-hidden />Kitabın metni<StudioInfo label="Bölüm ve kelime" what="Bölüm ve kelime sayısı yüklenen kitap metninden sayılır." /></h2>
                 <div className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[12.5px]">
-                  <span className="font-bold">{d.job.source.file_name || 'Editörün okuduğu kitap'}</span>
+                  <span className="font-bold">{d.job.source.file_name || 'Editörlerin okuttuğu kitap'}</span>
                   {d.book && <span className="font-mono text-[11.5px] text-canvas-muted">{d.book.chapters.length} bölüm · {d.book.words.toLocaleString('tr-TR')} kelime</span>}
                 </div>
               </Panel>
 
               <Panel>
-                <h2 className="mb-2 text-[15px] font-extrabold">Resim kullanımı</h2>
+                <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold">
+                  Resim kullanımı
+                  <Explain label="Resim kullanımı">Kitapta hangi sayfalara resim çizileceği. «Otomatik»te karar okur yaşına, türe ve yayınevi kaydına göre verilir; gerekçesi burada yazar.</Explain>
+                </h2>
                 <ArtModeCard job={jobId} d={d} />
               </Panel>
 
               <Panel>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-[15px] font-extrabold">CRM'den gelen proje bilgisi</h2>
+                  <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+                    CRM'deki kitap bilgisi
+                    <Explain label="CRM'deki kitap bilgisi">Kitabın CRM kartından okunur; burada değiştirilmez. Boş (—) alan CRM'de girilmemiş demektir. Kitap adı ve yazar aşağıdaki Künye bölümünden düzeltilebilir.</Explain>
+                  </h2>
                   {d.book?.meta?.ISBN && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 font-mono text-[11px] text-canvas-violet">
                       <Link2 className="h-3 w-3" aria-hidden />ISBN {String(d.book.meta.ISBN)}
@@ -150,7 +162,7 @@ export default function StudioFlow() {
                   <Field label="Stok kodu" value={d.book?.meta?.STOCK_CODE as string} />
                   <Field label="Hedef yaş" value={d.profile ? `${d.profile.age_min}–${d.profile.age_max}` : null} />
                   <Field label="Tür" value={d.book?.meta?.GENRE as string} />
-                  <Field label="Resim" value={d.profile ? `${ILLUSTRATION_TR[d.profile.illustration] ?? d.profile.illustration}${d.profile.illustration_source ? ` · ${d.profile.illustration_source}` : ''}` : null} />
+                  <Field label="Resim kullanımı" value={d.profile ? `${ILLUSTRATION_TR[d.profile.illustration] ?? d.profile.illustration}${d.profile.illustration_source ? ` · ${d.profile.illustration_source}` : ''}` : null} />
                 </div>
                 {summary.length > 0 && (
                   <blockquote className="mt-3 rounded-2xl border-l-4 border-canvas-violet/50 bg-white/70 px-3 py-2 text-[12.5px] italic leading-relaxed text-slate-700">
@@ -160,19 +172,19 @@ export default function StudioFlow() {
                 )}
                 {d.profile?.disagreement && (
                   <p className="mt-2 flex items-start gap-1.5 text-[11.5px] text-amber-700"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Yaş: {d.profile.disagreement}. Karar yayınevinin beyanıdır.</p>
+                    Yaş: {d.profile.disagreement}. Yayınevi kaydındaki yaş esas alındı.</p>
                 )}
               </Panel>
 
               <Panel>
-                <h2 className="text-[15px] font-extrabold">Sistemin kararları</h2>
-                <p className="text-[11.5px] text-canvas-muted">Her karar bir kurala dayanır.</p>
+                <h2 className="text-[15px] font-extrabold">Tasarım kararları</h2>
+                <p className="text-[11.5px] text-canvas-muted">Kitap ölçüsü, yazı tipi, resim üslubu gibi kararlar ve her birinin gerekçesi. Her karar bir kurala dayanır.</p>
                 <ul className="mt-2 flex flex-col gap-1.5">
                   {reasons.map((r, i) => (
                     <li key={i} className="rounded-xl bg-white/70 px-3 py-1.5 text-[12.5px]">{r}</li>
                   ))}
                   {d.style && <li className="rounded-xl bg-white/70 px-3 py-1.5 text-[12.5px]">Üslup: {d.style.medium}. {d.style.why}</li>}
-                  {!reasons.length && <li className="text-[12px] text-canvas-muted">Kararlar profil çıkınca görünür.</li>}
+                  {!reasons.length && <li className="text-[12px] text-canvas-muted">Kitap okunup yaşı ve türü belirlenince kararlar burada görünür.</li>}
                 </ul>
                 {d.style && (
                   <div className="mt-2 flex gap-1.5" aria-label="Renk paleti">
@@ -183,7 +195,8 @@ export default function StudioFlow() {
             </div>
 
             <Panel>
-              <h2 className="text-[15px] font-extrabold">Üretim adımları</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Üretim adımları<StepLegend label="Adım durumları" /></h2>
+              <p className="text-[11.5px] text-canvas-muted">Adımlar sırayla yapılır; sağdaki süre adımın ne kadar sürdüğünü (dakika:saniye) gösterir. Ekran kendiliğinden yenilenir.</p>
               <ol className="mt-2 flex flex-col gap-1">
                 {d.state.steps.map((s) => <StepRow key={s.key} s={s} />)}
               </ol>
@@ -209,18 +222,29 @@ export default function StudioFlow() {
                   Sayfalar{pages.length ? ` (${pages.length})` : ''}
                   <StudioInfo label="Sayfa ve resim sayıları" what="Sayfa sayısı dizilmiş iç sayfalar; resim = boyanmış ÷ resimli sayfa." />
                 </h2>
-                {d.spec && <p className="text-[11.5px] text-canvas-muted">{d.spec.trim_w / 10}×{d.spec.trim_h / 10} cm · {d.spec.body_font} {d.layout?.body_size ?? d.spec.body_size} pt · resim {painted}/{artPages}</p>}
+                {d.spec && (
+                  <p className="flex flex-wrap items-center gap-1 text-[11.5px] text-canvas-muted">
+                    {d.spec.trim_w / 10}×{d.spec.trim_h / 10} cm · {d.spec.body_font} {d.layout?.body_size ?? d.spec.body_size} pt · resim {painted}/{artPages}
+                    <Explain label="Sayfa bilgisi">Kesimden sonraki kitap ölçüsü, gövde metninin yazı tipi ve puntosu (pt, yazı boyutu). «Resim» resmi seçilmiş sayfa sayısını, iç kapak ve künye gibi ön sayfalar dışındaki sayfa sayısıyla karşılaştırır.</Explain>
+                  </p>
+                )}
               </div>
-              <div className="flex gap-2">
-                {d.files.ic && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}>İç sayfalar (PDF)</a>}
-                {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}>Kapak (PDF)</a>}
-                {d.files['baski-ic'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')}>Baskı PDF'i (CMYK)</a>}
-                <Link to={`/kitap-tasarim/${jobId}/studyo`} className={gradientBtn} aria-disabled={!typeset}
+              <div className="flex flex-wrap items-center gap-2">
+                {d.files.ic && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}>İç sayfaları indir (PDF)</a>}
+                {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}>Kapağı indir (PDF)</a>}
+                {d.files['baski-ic'] && (
+                  <span className="inline-flex items-center gap-1">
+                    <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')}>Baskı PDF'ini indir</a>
+                    <Explain label="Baskı PDF'i">Matbaaya gönderilecek dosya: renkler baskı mürekkebine (CMYK) çevrilmiş, kesim payı ve kesim işaretleri eklenmiştir. Ekranda göz atmak için «İç sayfalar» dosyası yeterlidir.</Explain>
+                  </span>
+                )}
+                <Link to={`/kitap-tasarim/${jobId}/studyo`} className={`${gradientBtn} ${typeset ? '' : 'cursor-not-allowed opacity-50'}`} aria-disabled={!typeset}
                   onClick={(e) => { if (!typeset) e.preventDefault(); }}>
                   Stüdyoya geç <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </div>
             </div>
+            {!typeset && <p className="mt-1 text-[11.5px] text-canvas-muted">Sayfalar dizilince burada görünür ve «Stüdyoya geç» açılır.</p>}
             <ul className="mt-3 flex gap-2 overflow-x-auto pb-2">
               {(pages.length ? pages : Array.from({ length: 32 }, (_, i) => ({ no: i + 1 }) as { no: number })).map((p) => (
                 <li key={p.no} className="w-[92px] shrink-0">
@@ -238,7 +262,10 @@ export default function StudioFlow() {
 
           {d.preflight && (
             <Panel>
-              <h2 className="text-[15px] font-extrabold">Ön baskı denetimi</h2>
+              <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+                Ön baskı denetimi
+                <Explain label="Ön baskı denetimi">Dosya matbaaya gitmeden önce yapılan otomatik kontrol. Yeşil madde sorunsuz, sarı madde bakmanız gereken bir uyarı, kırmızı madde düzeltilmesi gereken bir sorundur. Baskı PDF'i denetim geçince üretilir.</Explain>
+              </h2>
               <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
                 {d.preflight.checks.map((c) => (
                   <li key={c.name} className="flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2 text-[12.5px]">

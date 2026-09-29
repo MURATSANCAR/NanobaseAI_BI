@@ -17,7 +17,7 @@ function useFilter<T>(items: T[], text: (x: T) => string) {
   const box = (
     <div className="relative w-full sm:w-72">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-canvas-muted" />
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ara…" className={`${field} pl-8`} />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Başlık, sahip ya da soru ara" className={`${field} pl-8`} />
     </div>
   );
   return { filtered, box };
@@ -81,7 +81,7 @@ export function ReportsAdmin() {
   const err = errText(status.error, 'Değiştirilemedi.') ?? errText(del.error, 'Silinemedi.');
 
   return (
-    <Section title="Planlı raporlar" help="Herkesin planladığı raporlar. Sahibinin ekranında da aynı anda değişir." action={box}>
+    <Section title="Planlı raporlar" help="Bütün kişilerin planladığı raporlar; zamanı gelince hazırlanıp alıcılara e-postayla gider. Burada duraklatır ya da silerseniz sahibinin ekranında da aynı anda değişir." action={box}>
       {err && <Note tone="err">{err}</Note>}
       {q.isLoading ? (
         <Loading />
@@ -169,7 +169,7 @@ export function AlertsAdmin() {
   const err = errText(status.error, 'Değiştirilemedi.') ?? errText(del.error, 'Silinemedi.');
 
   return (
-    <Section title="Uyarılar" help="Herkesin eşik kuralları; her kişi ekranında yalnız kendininkini görür. Kontrol 15 dakikada bir sunucuda yapılır." action={box}>
+    <Section title="Uyarılar" help="Bütün kişilerin eşik kuralları (ör. «stok 100'ün altına inerse haber ver»); her kişi kendi ekranında yalnız kendininkini görür. Kurallar 15 dakikada bir denetlenir." action={box}>
       {err && <Note tone="err">{err}</Note>}
       {q.isLoading ? (
         <Loading />
@@ -249,7 +249,7 @@ export function CardsAdmin() {
   const { filtered, box } = useFilter(items, (c) => `${c.title} ${c.owner} ${c.question}`);
 
   return (
-    <Section title="Pano kartları" help="Kişilerin panolarındaki kartlar. Silinen kart sahibinin panosundan da kalkar." action={box}>
+    <Section title="Pano kartları" help="Kişilerin panolarındaki kartlar. Silinen kart sahibinin panosundan da kalkar ve geri getirilemez." action={box}>
       {del.error && <Note tone="err">{errText(del.error, 'Silinemedi.')}</Note>}
       {q.isLoading ? (
         <Loading />

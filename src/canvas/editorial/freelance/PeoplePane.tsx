@@ -392,7 +392,7 @@ function Portfolio({ ctx, p }: { ctx: FlCtx; p: FlPersonDetail }) {
         {ctx.canManage && (
           <div className="grid gap-2 sm:grid-cols-2">
             <FieldBox label="Etiketler">
-              <TagInput value={tags} onChange={setTags} placeholder="kapak, suluboya…" max={10} />
+              <TagInput value={tags} onChange={setTags} placeholder="Ör. kapak, suluboya" max={10} />
             </FieldBox>
             <FieldBox label="Kitap (isteğe bağlı)">
               <input value={book} onChange={(e) => setBook(e.target.value)} className={field} placeholder="Hangi işten" />
@@ -643,7 +643,7 @@ function PersonForm({ ctx, initial, onDone, onCancel }: { ctx: FlCtx; initial: F
         </div>
 
         <FieldBox label="Üslup ve uzmanlık etiketleri" hint="Virgül ya da Enter ile ekleyin (ör. suluboya, çocuk kitabı, dijital).">
-          <TagInput value={d.styles} onChange={(v) => set('styles', v)} placeholder="suluboya, çizgi roman…" />
+          <TagInput value={d.styles} onChange={(v) => set('styles', v)} placeholder="Ör. suluboya, çizgi roman" />
         </FieldBox>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -766,7 +766,7 @@ function CrmPicker({ value, name, onPick }: { value: string; name: string; onPic
           {res.isLoading && <li className="px-3 py-2 text-[12px] text-canvas-muted">CRM'de aranıyor…</li>}
           {res.error && <li className="px-3 py-2 text-[12px] text-red-700">{errText(res.error, 'CRM okunamadı.')}</li>}
           {res.data && !res.data.items.length && <li className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kişi yok.</li>}
-          {res.data?.items.slice(0, 12).map((c) => (
+          {res.data?.items.map((c) => (
             <li key={c.id}>
               <button type="button" onClick={() => onPick(c.id, c.name || '')} className="w-full px-3 py-2 text-left text-[12px] hover:bg-slate-50">
                 <span className="font-bold">{c.name || 'Adı kayıtlı değil'}</span>

@@ -10,6 +10,7 @@ import { ConfirmDialog } from './dialogs';
 import { useCan } from '../../useAdmin';
 import { FileDrop, FilePick } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Kütüphane sekmesi: fotoğraf yükleme (dosya seç, tuvale bırak, telefonda kamera/galeri), figür üretme,
  *  süren işler ve iş başına figür/fotoğraf kütüphanesi. Kütüphanedeki öge tuvale sürüklenir (masaüstü)
@@ -117,9 +118,12 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
 
       {/* Figür üret */}
       {canProduce && <section className="flex flex-col gap-2">
-        <Label>Figür üret</Label>
+        <span className="flex items-center gap-1">
+          <Label>Figür çizdir</Label>
+          <Explain label="Figür">Sayfaya serbestçe yerleştirilen, zemini saydam küçük çizim (ör. bir hayvan, bir eşya). Kitabın resim üslubuyla çizilir.</Explain>
+        </span>
         <textarea rows={2} className={field} value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={600}
-          placeholder="Ör. kırmızı balonlu küçük tilki" aria-label="Figür tarifi" />
+          placeholder="Ne çizilsin? Ör. kırmızı balonlu küçük tilki" aria-label="Figür tarifi" />
         {names.length > 0 && (
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Karakter referansı">
             {names.map((n) => {
@@ -138,7 +142,7 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
           Bitince seçili sayfaya ekle
         </label>
         <button type="button" className={btnPrimary} disabled={busy || !prompt.trim()} onClick={submit}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}Figür üret
+          {busy ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}Figürü çiz
         </button>
         <p className="text-[11.5px] text-canvas-muted">Figür kitabın üslubuyla, saydam zeminle çizilir. Üretim sürerken düzenlemeye devam edebilirsiniz.</p>
         {err && <p className="text-[12px] font-semibold text-rose-700">{err}</p>}
@@ -177,7 +181,12 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
             ))}
           </div>
         </div>
-        {assets.length === 0 && <p className="text-[12px] text-canvas-muted">Henüz figür ya da fotoğraf yok.</p>}
+        {assets.length === 0 && (
+          <EmptyHint
+            title={filter === 'all' ? 'Kütüphane boş' : filter === 'figure' ? 'Henüz figür yok' : 'Henüz fotoğraf yok'}
+            why={filter === 'all' ? 'Yukarıdan fotoğraf yükleyin ya da figür çizdirin; hepsi burada toplanır ve sayfaya eklenebilir.' : 'Süzgeci «Hepsi» yapın ya da yukarıdan yenisini ekleyin.'}
+          />
+        )}
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(128px,1fr))] gap-2">
           {assets.map(([gid, a]) => (
             <AssetCard key={gid} job={ctx.job} gid={gid} a={a} canAdd={!!ctx.page}
@@ -186,7 +195,7 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
         </ul>
       </section>
       <ConfirmDialog open={!!askDel} title="Kütüphaneden silinsin mi?" danger confirm="Sil"
-        body="Bir sayfada kullanılıyorsa silinmez; hangi sayfalarda olduğu yazılır."
+        body="Görsel bu kitabın kütüphanesinden çıkar. Bir sayfada kullanılıyorsa silinmez; hangi sayfalarda olduğu yazılır."
         onClose={() => setAskDel(null)}
         onConfirm={() => { const g = askDel; setAskDel(null); if (g) onDeleteAsset(g).catch((e: Error) => setErr(e.message)); }} />
     </div>

@@ -13,6 +13,7 @@ import { Checks, KampanyaFrame, Margin, StatusPill } from './parts';
 import CandidatesPanel from './CandidatesPanel';
 import ResultsScreen from './ResultsScreen';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Kampanya ayrıntısı: kitaplar ve simülasyon, adaylar, Zeki AI metni, sonuç; onay akışı ve «elle kurdum» işareti. */
 
@@ -63,10 +64,13 @@ export default function CampaignDetail() {
               info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kitap ve ortalama indirim" />} />
             <Kpi label="Marj (önce → kampanya)" value={c.ozet.marjOraniSonra === null ? '—' : fmtPct(c.ozet.marjOraniSonra)}
               help={`Kampanyasız ${fmtPct(c.ozet.marjOraniOnce)} · ${fmtInt(c.ozet.marjBilinen)} kitapta hesaplandı`}
+              explain="Kampanyalı fiyatla satıştan, kanal kesintisi, birim maliyet ve telif düşüldükten sonra kalan kâr payı. Altında kampanyasız marj yazar; maliyeti bilinmeyen kitaplar hesaba girmez."
               info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Marj (önce → kampanya)" />} />
             <Kpi label="Kırmızı kontrol" value={fmtInt(c.ozet.kirmizi)} help={`${fmtInt(c.ozet.kirmiziKitap)} kitapta · sarı ${fmtInt(c.ozet.sari)}`}
+              explain="Kırmızı kontrol, onaydan önce çözülmesi gereken sorundur (ör. zarar, sözleşme sınırı). Sarı olanlar dikkat edilmesi gereken durumlardır. Her kitabın kontrolleri aşağıdaki tabloda yazar."
               info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Kırmızı kontrol" />} />
             <Kpi label="Maliyeti eksik / stok riski" value={`${fmtInt(c.ozet.maliyetEksik)} / ${fmtInt(c.ozet.stokRiski)}`} help="Maliyetsiz kitapta marj hesaplanmaz"
+              explain="Soldaki sayı birim maliyeti bilinmeyen kitaplar, sağdaki kampanya bitmeden stoğu tükenebilecek kitaplardır."
               info={<SqlInfo k={c.kaynaklar} alan="ozet" label="Maliyeti eksik / stok riski" />} />
           </KpiRow>
           {c.onayNotu && <Note tone={c.durum === 'taslak' ? 'warn' : 'info'}>{c.durum === 'taslak' ? 'Geri gönderildi' : 'Onay notu'} ({c.onaylayan}): {c.onayNotu}</Note>}
@@ -129,8 +133,8 @@ function Actions({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c:
         <div className="flex flex-wrap gap-1.5">
           <button type="button" className={btnPrimary} disabled={busy || !c.ozet.kitap} onClick={() => run.mutate(() => kampanyaApi.submit(c.id))}>Onaya gönder</button>
           {!c.submittedAt && (
-            <button type="button" className={btnGhost} disabled={busy} onClick={() => { if (window.confirm('Taslak silinsin mi?')) del.mutate(); }}>
-              <Trash2 aria-hidden className="h-4 w-4" />Sil
+            <button type="button" className={btnGhost} disabled={busy} onClick={() => { if (window.confirm('Taslak kampanya ve kitapları silinsin mi? Bu işlem geri alınmaz.')) del.mutate(); }}>
+              <Trash2 aria-hidden className="h-4 w-4" />Taslağı sil
             </button>
           )}
         </div>
@@ -156,7 +160,7 @@ function Actions({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c:
             <span className={labelCls}>Elle kurulum</span>
             <input className={field} value={kurulum} onChange={(e) => setKurulum(e.target.value)} placeholder="Nerede, nasıl kuruldu (panel, T-soft, CRM)" />
           </label>
-          <button type="submit" className={btnGhost} disabled={busy || kurulum === (c.kurulumNotu ?? '')}>Elle kurdum</button>
+          <button type="submit" className={btnGhost} disabled={busy || kurulum === (c.kurulumNotu ?? '')}>Elle kurdum olarak işaretle</button>
           {c.kurulduBy && <span>İşaretleyen {c.kurulduBy} · {fmtDay(c.kurulduAt)}</span>}
         </form>
       )}
@@ -166,13 +170,13 @@ function Actions({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c:
             <span className={labelCls}>CRM kampanya kimliği</span>
             <input className={field} value={crmId} onChange={(e) => setCrmId(e.target.value)} placeholder="CRM’de açılan bayi kampanyası" />
           </label>
-          <button type="submit" className={btnGhost} disabled={busy || crmId.trim() === (c.crmKampanyaId ?? '')}>Bağla</button>
+          <button type="submit" className={btnGhost} disabled={busy || crmId.trim() === (c.crmKampanyaId ?? '')}>CRM kampanyasını bağla</button>
         </form>
       )}
       {ov.me.canExport && (
         <div className="flex flex-wrap gap-1.5">
-          <a className={btnGhost} href={kampanyaApi.exportUrl(c.id)}><Download aria-hidden className="h-4 w-4" />Brif (Excel)</a>
-          <a className={btnGhost} href={kampanyaApi.exportUrl(c.id, true)}><Download aria-hidden className="h-4 w-4" />İç değerlendirme</a>
+          <a className={btnGhost} href={kampanyaApi.exportUrl(c.id)}><Download aria-hidden className="h-4 w-4" />Brifi indir (Excel)</a>
+          <a className={btnGhost} href={kampanyaApi.exportUrl(c.id, true)}><Download aria-hidden className="h-4 w-4" />İç değerlendirmeyi indir</a>
         </div>
       )}
       {!['bitti', 'iptal'].includes(c.durum) && ov.me.canEdit && (
@@ -211,7 +215,7 @@ function BooksTab({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c
           {mutate.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin text-canvas-muted" />}
         </div>
         {!items.length ? (
-          <Note tone="info">Kampanyada kitap yok. «Aday iste» sekmesinden ya da yukarıdaki aramadan ekleyin.</Note>
+          <EmptyHint title="Kampanyada kitap yok" why={edit ? '«Aday iste» sekmesinden uygun kitapları seçin ya da yukarıdaki aramadan kitap ekleyin.' : 'Kampanyayı hazırlayan kişi kitapları ekledikçe burada görünür.'} />
         ) : (
           <TableWrap>
             <thead>
@@ -238,9 +242,9 @@ function BooksTab({ c, ov, onChange }: { c: Campaign; ov: Overview; onChange: (c
           </TableWrap>
         )}
         <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-          Birim net gelir = fiyat ÷ (1 + KDV) × (1 − kanal kesintisi). Marj = net gelir − birim maliyet − birim telif; maliyet yoksa «hesaplanamaz».
-          Telif esası CRM sözleşmesinden (perakende fiyatından ödenen telifi indirim düşürmez). Son {ov.ayarlar.fiyatGun} gün en düşük fiyat kuralı
-          yalnız site için ve kendi günlük fiyat kaydımızdan denetlenir; hukuk birimi teyit etmeli.
+          Marj, KDV'siz satış fiyatından kanal kesintisi, birim maliyet ve birim telif düşüldükten sonra kalandır; maliyet bilinmiyorsa «hesaplanamaz» yazar
+          (birim net gelir = fiyat ÷ (1 + KDV) × (1 − kanal kesintisi)). Telif esası CRM sözleşmesinden gelir; perakende fiyatından ödenen telifi indirim düşürmez.
+          «Son {ov.ayarlar.fiyatGun} günün en düşük fiyatı» kuralı yalnız site kampanyalarında, kendi günlük fiyat kaydımızdan denetlenir; hukuk birimi teyit etmeli.
         </p>
       </Panel>
     </>
@@ -275,12 +279,15 @@ function Settings({ c, run, busy }: { c: Campaign; run: (fn: () => Promise<Campa
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kanal kesintisi %</span>
-          <input className={field} inputMode="decimal" value={kes} onChange={(e) => setKes(e.target.value)} placeholder="girilmedi" />
+          <input className={field} inputMode="decimal" value={kes} onChange={(e) => setKes(e.target.value)} placeholder="Örn. 15" />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>Beklenen artış (kat)</span>
-          <input className={field} inputMode="decimal" value={artis} onChange={(e) => setArtis(e.target.value)} placeholder="öğrenimden" />
-        </label>
+        <div className="flex flex-col gap-1">
+          <span className={`${labelCls} inline-flex items-center gap-1`}>
+            <label htmlFor="kampanya-beklenen-artis">Beklenen artış (kat)</label>
+            <Explain label="Beklenen artış">Kampanya süresince günlük satışın kaç katına çıkmasını beklediğiniz (ör. 2 = iki katı). Stoğun ne zaman tükeneceği buna göre tahmin edilir; boş bırakırsanız geçmiş kampanyaların öğrenimleri kullanılır.</Explain>
+          </span>
+          <input id="kampanya-beklenen-artis" className={field} inputMode="decimal" value={artis} onChange={(e) => setArtis(e.target.value)} placeholder="Boş: geçmiş kampanyalardan" />
+        </div>
         <div className="col-span-2 flex items-end lg:col-span-1">
           <button type="button" className={`${btnGhost} w-full`} disabled={!dirty || busy || bit < bas}
             onClick={() => run(() => kampanyaApi.update(c.id, { baslangic: bas, bitis: bit, platform: platform.trim() || null,
@@ -329,11 +336,11 @@ function BookSearch({ have, onAdd }: { have: Set<string>; onAdd: (stok: string) 
                 <span className="block text-[11px] text-canvas-muted">{[b.yazar, b.stok, `stok ${fmtInt(b.stokAdet)}`, fmtMoney(b.liste)].filter(Boolean).join(' · ')}</span>
               </span>
               <button type="button" className={btnGhost} disabled={have.has(b.stok)} onClick={() => onAdd(b.stok)}>
-                {have.has(b.stok) ? 'Eklendi' : 'Ekle'}
+                {have.has(b.stok) ? 'Eklendi' : 'Kampanyaya ekle'}
               </button>
             </li>
           ))}
-          {!hits.data.items.length && <li className="text-[12px] text-canvas-muted">Eşleşen kitap yok.</li>}
+          {!hits.data.items.length && <li className="text-[12px] text-canvas-muted">Aramaya uyan kitap yok; başka bir ad, yazar ya da barkod deneyin.</li>}
         </ul>
       )}
     </Panel>

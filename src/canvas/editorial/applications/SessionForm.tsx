@@ -92,6 +92,7 @@ export default function SessionForm({
           <div className="mt-1">
             <SearchSelect label="Başkan" placeholder="Kişi seçin" options={people.options} value={f.chair} onChange={(v) => set('chair', v || me)} />
           </div>
+          <p className="mt-0.5 text-[11px] text-canvas-muted">Kararı başkan ya da kurul yöneticisi kaydeder; başkan üyelere kendiliğinden eklenir.</p>
         </div>
         <div>
           <span className={label}>Üyeler</span>
@@ -102,7 +103,7 @@ export default function SessionForm({
         </div>
         <label className="block">
           <span className={label}>Not</span>
-          <textarea rows={2} maxLength={4000} value={f.note} onChange={(e) => set('note', e.target.value)} className={`${field} mt-1`} />
+          <textarea rows={2} maxLength={4000} value={f.note} onChange={(e) => set('note', e.target.value)} placeholder="Ör. gündemdeki dosyalar toplantıdan önce okunmalı" className={`${field} mt-1`} />
         </label>
         {err && <Note tone="err">{err}</Note>}
         <div className="flex flex-wrap justify-end gap-2">

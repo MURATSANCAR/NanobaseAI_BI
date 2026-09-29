@@ -65,7 +65,7 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
     <Block
       title="Kitaplar ve adetler"
       info={<SqlInfo k={f.kaynaklar} alan="bookList" label="Kitaplar: öneri, planlanan, stok, satılan" />}
-      help={`Öneri: geçen yılın aynı fuarında ${m.settings.channel} kanalı net satışı × ${String(m.settings.suggestFactor).replace('.', ',')}; son ${m.settings.newBookMonths} ayın yeni çıkanları (stokta olanlar) temeldeki ortanca satışın ${String(m.settings.newBookFactor).replace('.', ',')} katıyla. Stok önerinin altındaysa işaretlenir.`}
+      help={`Fuara hangi kitaptan kaç adet götürüleceği. «Öneri», geçen yılın aynı fuarındaki net satışın ${String(m.settings.suggestFactor).replace('.', ',')} katıdır; son ${m.settings.newBookMonths} ayda çıkan ve stokta olan yeni kitaplar için listedeki ortanca satışın ${String(m.settings.newBookFactor).replace('.', ',')} katı alınır. Stok önerinin altındaysa işaretlenir. «Planlanan»ı siz girersiniz.`}
       action={edit ? (
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnGhost} disabled={suggest.isPending} onClick={() => suggest.mutate()}>

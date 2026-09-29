@@ -38,6 +38,9 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Materyal, kitabın tanıtım metnidir (satış föyü, basın bülteni, sosyal medya metni gibi). Her metin iki onaydan geçer: önce editoryal onay, sonra pazarlama onayı; ikisini aynı kişi veremez. Onaylı metin değiştirilirse onay yeniden gerekir.
+      </p>
       {me.canWrite && open && (
         <Block title="Yeni materyal" help="Zeki AI yalnız CRM'deki metinlere ve karneye dayanır; kaynakta birebir geçmeyen alıntı, kaynaksız rakam ve kanıtsız iddia içeren cümle düşer.">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -55,7 +58,7 @@ export default function MaterialsTab({ plan, meta, running }: { plan: Plan; meta
           </div>
           {manual !== null && (
             <div className="mt-2 flex flex-col gap-2">
-              <textarea className={`${field} min-h-[160px]`} value={manual} onChange={(e) => setManual(e.target.value)} />
+              <textarea className={`${field} min-h-[160px]`} placeholder="Metni buraya yazın ya da yapıştırın" value={manual} onChange={(e) => setManual(e.target.value)} />
               <div className="flex justify-end gap-2">
                 <button type="button" className={btnGhost} onClick={() => setManual(null)}>Vazgeç</button>
                 <button type="button" className={btnPrimary} disabled={!manual.trim() || create.isPending} onClick={() => create.mutate(manual)}>Ekle</button>
@@ -121,10 +124,10 @@ function MaterialCard({ m, plan, meta, onChange }: { m: Material; plan: Plan; me
         {canEdit && dirty && <button type="button" className={btnGhost} onClick={() => setText(m.metin)}>Geri al</button>}
         {canEdit && <button type="button" className={btnGhost} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>Kaydet</button>}
         {m.durum === 'taslak' && me.canEditorial && !dirty && (
-          <button type="button" className={btnPrimary} disabled={approve.isPending} onClick={() => approve.mutate('editoryal')}>Editoryal onay</button>
+          <button type="button" className={btnPrimary} disabled={approve.isPending} onClick={() => approve.mutate('editoryal')}>Editoryal onay ver</button>
         )}
         {m.durum === 'editoryal-onayli' && me.canApprove && !sameEditor && !dirty && (
-          <button type="button" className={btnPrimary} disabled={approve.isPending} onClick={() => approve.mutate('pazarlama')}>Pazarlama onayı</button>
+          <button type="button" className={btnPrimary} disabled={approve.isPending} onClick={() => approve.mutate('pazarlama')}>Pazarlama onayı ver</button>
         )}
       </div>
     </article>

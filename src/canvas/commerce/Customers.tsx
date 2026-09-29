@@ -7,6 +7,7 @@ import { Pager, Panel } from '../editorial/kit';
 import { cellShade, commerceApi, fmtDay, fmtInt, fmtRatio, fmtTl, type Segment } from './api';
 import { ROOT, SegmentPill, useMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** RFM matrisi (yenilik × sıklık), segment büyüklüğü ve geçişleri; tıklanınca maskeli müşteri listesi. */
 export default function Customers() {
@@ -43,7 +44,7 @@ export default function Customers() {
     <div className="flex flex-col gap-3 lg:gap-4">
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr] lg:gap-4">
         <Panel>
-          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Yenilik × sıklık <SqlInfo k={r.kaynaklar} alan="matrix" label="Yenilik × sıklık (RFM)" /></h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Yenilik × sıklık <Explain label="Yenilik × sıklık">Müşterileri, en son ne zaman ve kaç kez sipariş verdiklerine göre bir tabloya yerleştirir. Sağ üst köşe yakın zamanda sık alanlar (en değerli), sol alt uzun süredir almayan tek siparişliler. Hücre koyulaştıkça müşteri sayısı artar.</Explain><SqlInfo k={r.kaynaklar} alan="matrix" label="Yenilik × sıklık tablosu" /></h2>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Satır: son geçerli siparişten bu yana geçen gün. Sütun: geçerli sipariş sayısı. Hücrede müşteri sayısı.</p>
           <div className="mt-2 overflow-x-auto">
             <table className="w-full min-w-[520px] border-separate border-spacing-1 text-[12px]">
@@ -93,7 +94,7 @@ export default function Customers() {
           <Panel>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Son {r.moves.days} günde segment geçişleri <SqlInfo k={r.kaynaklar} alan="moves" label="Segment geçişleri" /></h2>
             {r.moves.items.length === 0 ? (
-              <p className="mt-1 text-[12.5px] text-canvas-muted">Geçiş yok.</p>
+              <p className="mt-1 text-[12.5px] text-canvas-muted">Bu sürede segment değiştiren müşteri yok.</p>
             ) : (
               <ul className="mt-2 divide-y divide-slate-100 text-[12.5px]">
                 {r.moves.items.map((m) => (
@@ -124,7 +125,7 @@ export default function Customers() {
             </select>
           </label>
         </div>
-        <p className="mt-0.5 text-[11.5px] text-canvas-muted">Müşteri adı yok; «MÜ-» etiketi site müşterisinin özetinden türer. Kartta sipariş geçmişi ve izin.</p>
+        <p className="mt-0.5 text-[11.5px] text-canvas-muted">Müşteri adı gösterilmez; «MÜ-» ile başlayan etiket her müşteri için sabit bir takma addır. Etikete dokununca sipariş geçmişi ve izin durumu açılır.</p>
         {list.error && <div className="mt-2"><Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note></div>}
         <div className="mt-2">
           <TableWrap>
@@ -147,6 +148,9 @@ export default function Customers() {
               ))}
             </tbody>
           </TableWrap>
+          {list.data && !list.data.items.length && (
+            <div className="mt-3"><EmptyHint title="Bu segmentte müşteri yok" why="«Hepsi»ni seçerek bütün müşterileri görebilirsiniz." /></div>
+          )}
           <Pager page={page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
             loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
         </div>

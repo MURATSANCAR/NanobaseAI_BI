@@ -10,6 +10,7 @@ import { Block, HrFrame } from '../parts';
 import GoalSheet from './GoalSheet';
 import { GoalRow } from './parts';
 import { REVIEW_TONE, perfApi, thisYear } from './perfApi';
+import { Explain } from '../../components/Explain';
 
 /** M56 Performansım: hedeflerim ve bağlı oldukları üst hedef, açık görevlerim (öz değerlendirme, yorum, check-in),
  *  değerlendirmelerim ve hakkımda üretilen iş kayıtları özeti (KVKK md. 11: hakkımda kullanılan veriyi görürüm). */
@@ -24,7 +25,7 @@ export default function MyPerformance() {
     <HrFrame
       crumb="Performansım"
       title="Performansım"
-      lead="Hedefleriniz ve şirket hedefine bağı, çeyrek check-in'leri, değerlendirmeleriniz ve hakkınızda hazırlanan iş kayıtları özeti. Burada gördüğünüz her şey yöneticinizin gördüğüyle aynıdır; puanı sistem değil yöneticiniz verir."
+      lead="Hedefleriniz ve şirket hedefine bağı, dönem içindeki ilerleme kayıtlarınız (check-in), değerlendirmeleriniz ve hakkınızda hazırlanan iş kayıtları özeti. Burada gördüğünüz her şey yöneticinizin gördüğüyle aynıdır; puanı sistem değil yöneticiniz verir."
       aside={d?.employee ? (
         <div className="flex justify-start lg:justify-end">
           <button type="button" className={btnPrimary} onClick={() => setOpen('new')}><Plus aria-hidden className="h-4 w-4" />Yeni hedef</button>
@@ -58,15 +59,26 @@ export default function MyPerformance() {
               </ul>
             </Block>
           )}
-          <Block title="Hedeflerim" help="Hedefe dokunarak ayrıntı, check-in ve revizyon talebi. Taslak hedef onaya gönderilince yöneticinize düşer." info={<SqlInfo k={d.kaynaklar} alan="goals" label="Hedef değeri ve ilerleme" />}>
-            {!d.goals.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Henüz hedefiniz yok.</div>}
+          <Block title="Hedeflerim" help="Hedefe dokunarak ayrıntıyı açın, ilerleme kaydı (check-in) girin ya da değişiklik isteyin. Taslak hedef onaya gönderilince yöneticinize düşer."
+            info={
+              <>
+                <SqlInfo k={d.kaynaklar} alan="goals" label="Hedef değeri ve ilerleme" />
+                <Explain label="Hedef satırı">
+                  <span className="block"><b>Çubuk:</b> son ilerleme kaydınızdaki tamamlanma yüzdesi.</span>
+                  <span className="block"><b>Ağırlık:</b> hedefin toplam içindeki payı.</span>
+                  <span className="block"><b>↳</b> hedefin bağlı olduğu birim ya da şirket hedefi; «üst hedefe bağlı değil» ise bir üst hedef seçilmeli.</span>
+                  <span className="block"><b>Revizyon bekliyor:</b> hedefte değişiklik istendi, yöneticinin kararı bekleniyor.</span>
+                </Explain>
+              </>
+            }>
+            {!d.goals.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Henüz hedefiniz yok. «Yeni hedef» ile ekleyin; onaya gönderince yöneticinize düşer.</div>}
             <ul className="flex flex-col gap-1.5">
               {d.goals.map((g) => <li key={g.id}><GoalRow g={g} onOpen={() => setOpen(g.id)} /></li>)}
             </ul>
           </Block>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <Block title="Değerlendirmelerim">
-              {!d.reviews.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Değerlendirme dönemi yok.</div>}
+              {!d.reviews.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Size açılmış değerlendirme yok. İK bir değerlendirme dönemi başlatınca burada görünür.</div>}
               <ul className="flex flex-col gap-1.5">
                 {d.reviews.map((r) => (
                   <li key={r.id}>
@@ -79,7 +91,7 @@ export default function MyPerformance() {
               </ul>
             </Block>
             <Block title="Hakkımdaki iş kayıtları özeti" help="Yöneticiniz ya da İK değerlendirme için bilgi amaçlı özet hazırladığında burada görünür. Puan değildir." info={<SqlInfo k={d.kaynaklar} alan="workSummaries" label="İş kayıtları özeti" />}>
-              {!d.workSummaries.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Hazırlanmış özet yok.</div>}
+              {!d.workSummaries.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Hakkınızda hazırlanmış özet yok.</div>}
               <ul className="flex flex-col gap-1.5">
                 {d.workSummaries.map((w) => (
                   <li key={w.id} className="rounded-xl bg-white/80 px-3 py-2 text-[12.5px]">

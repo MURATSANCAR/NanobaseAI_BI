@@ -9,6 +9,7 @@ import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import { dijitalApi, fmtInt, type Meta, type Overview, type RiskRow, type TitleRow } from './api';
 import { Chips, DigitalFrame, ListHead, RightPill, Tabs } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import DigitalTitleDrawer from './DigitalTitleDrawer';
 import PlatformsTab from './PlatformsTab';
 
@@ -70,7 +71,7 @@ export default function DigitalCatalog() {
       crumb="Dijital yayın"
       me={me}
       title="Dijital yayın ve e-kitap"
-      lead="Her kitabın e-kitap ve sesli kitap hakkı (CRM sözleşmeleri), e-ISBN, e-kitap dosyası ve platform durumu tek satırda. Platform durumu yalnız sizin girdiğiniz ya da onaylı rapordan gelen bilgidir; portal hiçbir platforma, CRM'e ya da Logo'ya bir şey göndermez."
+      lead="Her kitabın e-kitap ve sesli kitap hakkı (CRM sözleşmelerinden), e-ISBN'i, e-kitap dosyası ve hangi dijital platformlarda olduğu tek satırda. Platform durumunu siz girersiniz ya da onaylı satış raporundan gelir; portal hiçbir platforma, CRM'e ya da Logo'ya bir şey göndermez."
       aside={
         me?.canWrite ? (
           <div className="flex justify-start lg:justify-end">
@@ -82,20 +83,24 @@ export default function DigitalCatalog() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {(meta.error || ov.error) && <Note tone="err">{errText(meta.error || ov.error, 'Ekran bilgisi okunamadı.')}</Note>}
       <ReadingNote ov={ov.data} />
       <KpiRow>
         <Kpi label="Dijitalde" value={fmtInt(k?.dijitalde)} help={`${fmtInt(k?.kitap)} kitaptan; e-kitap stok kodu ya da platformda`}
           active={params.get('durum') === 'dijitalde'} onClick={() => update({ sekme: null, durum: 'dijitalde' })}
+          explain="E-kitap olarak yayında sayılan kitaplar: e-kitap stok kodu açılmış ya da bir dijital platformda yayında görünenler. Karta dokununca liste bunlara süzülür."
           info={<SqlInfo k={src} alan="kart.dijitalde" label="Dijitalde" />} />
         <Kpi label="Hakkı var, dijitalde yok" value={fmtInt(k?.hakliDijitalYok)} help={`${fmtInt(k?.firsat)} tanesi fırsat listesinde`}
           active={params.get('durum') === 'dijitalde-yok'} onClick={() => update({ sekme: null, durum: 'dijitalde-yok' })}
+          explain="Sözleşmeye göre e-kitap hakkımız olduğu hâlde henüz dijitalde yayımlanmamış kitaplar. Bunların bir kısmı satış verisine göre «Fırsatlar» listesinde önceliklendirilir."
           info={<SqlInfo k={src} alan="kart.hakliDijitalYok" label="Hakkı var, dijitalde yok" />} />
         <Kpi label="Hak riski" value={fmtInt(k?.hakRiski)} help={`Dijitalde ama hakkı eksik/yok/incele · ${fmtInt(k?.incele)} kitap karar bekliyor`}
           active={tab === 'risk'} onClick={() => update({ sekme: 'risk' })}
+          explain="Dijitalde görünen ama sözleşmeye göre dijital hakkı eksik, yok ya da incelenmesi gereken kitaplar. Hukuki risk taşır; telif biriminin karar vermesi gerekir."
           info={<SqlInfo k={src} alan="kart.hakRiski" label="Hak riski" />} />
         <Kpi label="Son satış raporu" value={ov.data?.sonRapor?.donem ?? '—'} help={ov.data?.sonRapor?.platform ?? 'Henüz onaylı rapor yok'}
+          explain="Dijital platformlardan yüklenip onaylanan en son satış raporunun dönemi ve platformu. Raporlar «Satış» bölümünden yüklenir."
           info={<SqlInfo k={src} alan="sonRapor" label="Son satış raporu" />} />
       </KpiRow>
       <Tabs tabs={TABS.map((t) => ({ ...t, badge: t.key === 'risk' ? k?.hakRiski : t.key === 'crm' ? k?.crmIslenecek : null }))} value={tab}
@@ -162,13 +167,16 @@ function CatalogList({ meta, params, update, onOpen }: {
             {DURUM.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>E-kitap hakkı</span>
-          <select className={field} value={hak} onChange={(e) => update({ hak: e.target.value || null, sayfa: null })}>
+        <div className="flex flex-col gap-1">
+          <span className={`${labelCls} inline-flex items-center gap-1`}>
+            <label htmlFor="dijital-ekitap-hak">E-kitap hakkı</label>
+            <Explain label="E-kitap hakkı">CRM'deki sözleşmelere göre kitabın e-kitap olarak yayımlanma hakkı. «İncele» olanlarda sözleşme notu hakkı kısıtlıyor olabilir; kararı telif birimi verir.</Explain>
+          </span>
+          <select id="dijital-ekitap-hak" className={field} value={hak} onChange={(e) => update({ hak: e.target.value || null, sayfa: null })}>
             <option value="">Hepsi</option>
             {Object.entries(meta.haklar).map(([key, v]) => <option key={key} value={key}>{v}</option>)}
           </select>
-        </label>
+        </div>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kart türü</span>
           <select className={field} value={tur} onChange={(e) => update({ tur: e.target.value === 'kitap' ? null : e.target.value, sayfa: null })}>
@@ -187,7 +195,7 @@ function CatalogList({ meta, params, update, onOpen }: {
       <div className="mt-2 flex flex-col gap-2">
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
         {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-        {list.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kitap yok.</div>}
+        {list.data && !items.length && <EmptyHint title="Bu süzgece uyan kitap yok" why="Durum, hak ya da kart türü süzgecini «Hepsi»ne alın veya aramayı temizleyin." />}
         {items.map((t) => <TitleCard key={t.kitapId} t={t} onOpen={onOpen} />)}
       </div>
       {list.data && (
@@ -256,7 +264,7 @@ function RiskTab({ meta, onOpen }: { meta: Meta; onOpen: (id: string) => void })
         </h2>
         <div className="mt-2 flex flex-col gap-2">
           {q.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
-          {q.data && !q.data.risk.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Hak riski olan kitap yok.</div>}
+          {q.data && !q.data.risk.length && <EmptyHint title="Hak riski olan kitap yok" why="Dijitalde görünen bütün kitapların sözleşmesinde dijital hak bulunuyor." />}
           {q.data?.risk.map((r) => <RiskCard key={r.kitapId} r={r} meta={meta} onOpen={onOpen} />)}
         </div>
       </Panel>
@@ -322,7 +330,7 @@ function PendingTab({ onOpen }: { onOpen: (id: string) => void }) {
             e-kitap stok kodu açılmamış kitaplar burada listelenir; CRM'e işlendiğinde gece okumasında kendiliğinden kapanır.
           </p>
         </div>
-        <select className={`${field} w-auto`} value={durum} onChange={(e) => setDurum(e.target.value)}>
+        <select aria-label="Durum" className={`${field} w-auto`} value={durum} onChange={(e) => setDurum(e.target.value)}>
           <option value="acik">Açık</option>
           <option value="kapandi">Kapanmış</option>
           <option value="hepsi">Hepsi</option>
@@ -330,7 +338,7 @@ function PendingTab({ onOpen }: { onOpen: (id: string) => void }) {
       </div>
       {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
       <div className="mt-3 flex flex-col gap-2">
-        {q.data && !q.data.items.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Kayıt yok.</div>}
+        {q.data && !q.data.items.length && <EmptyHint title={durum === 'acik' ? "CRM'e işlenecek alan yok" : 'Bu durumda kayıt yok'} why={durum === 'acik' ? "CRM'de eksik e-ISBN, e-kitap durumu ya da stok kodu bulunmuyor." : 'Başka bir durum seçin.'} />}
         {q.data?.items.map((p) => (
           <button key={p.id} type="button" onClick={() => onOpen(p.kitapId)}
             className="grid grid-cols-1 gap-1 rounded-2xl border border-slate-100 bg-white/80 p-3 text-left hover:border-canvas-violet/40 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.2fr)_120px] md:items-center">

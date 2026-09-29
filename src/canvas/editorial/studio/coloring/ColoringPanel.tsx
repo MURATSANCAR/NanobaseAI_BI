@@ -146,7 +146,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
             </button>}
             <button type="button" className={ghostBtn} onClick={() => setOpen(false)}>Vazgeç</button>
           </div>
-          <p className="text-[11px] text-canvas-muted">Çizgiler görsel model açılmadan çıkarılır; birkaç dakika sürer. Yeni kitap ayrı bir iş olarak açılır, sayfa düzeni ekranında düzenlenir.</p>
+          <p className="text-[11px] text-canvas-muted">Çizgiler resimlerden otomatik çıkarılır (ZEKİ AI çizmez); birkaç dakika sürer. Yeni kitap ayrı bir iş olarak açılır, sayfa düzeni ekranında düzenlenir.</p>
         </div>
       )}
 
@@ -244,7 +244,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <div className="mt-2">
           <Note tone="warn">
             <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden />
-            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi ZEKİ AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce modelsiz çizgiye dönün ya da çizerin elinden geçirin.
+            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi ZEKİ AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce otomatik çıkarılan çizgiye dönün ya da çizerin elinden geçirin.
           </Note>
         </div>
       )}
@@ -304,7 +304,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Boyama çizgileri</h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-            Çizgi modelsiz çıkarılır. Yetmezse «ZEKİ AI ile yeniden çiz» yeni sürüm üretir (taslak); sürümler ve onay yukarıdaki sayfa gezgininde.
+            Çizgi resimden otomatik çıkarılır. Yetmezse «ZEKİ AI ile yeniden çiz» yeni sürüm üretir (taslak); sürümler ve onay yukarıdaki sayfa gezgininde.
           </p>
           <ul className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {v.arts.map((a) => {
@@ -317,7 +317,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                   <div className="flex items-center justify-between gap-1 text-[11px]">
                     <span className="font-mono text-canvas-muted">{a.no ? `s. ${a.no}` : '—'}</span>
                     <span className={`rounded-full px-1.5 py-0.5 font-bold ${a.draft ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-canvas-muted'}`}>
-                      {a.draft ? 'ZEKİ AI · taslak' : 'Modelsiz'}
+                      {a.draft ? 'ZEKİ AI · taslak' : 'Otomatik çizgi'}
                     </span>
                   </div>
                   {canProduce && <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}

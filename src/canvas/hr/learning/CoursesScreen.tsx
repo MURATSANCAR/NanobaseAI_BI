@@ -12,6 +12,7 @@ import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { hrApi } from '../hrApi';
 import { fmtMoney, learningApi, localToIso, type Course, type Delivery, type Info, type Kind, type SessionState } from './learningApi';
 import { EmployeePicker, LearningFrame, fmtWhen, useLearningInfo } from './parts';
+import { ExplainLabel } from '../../components/Explain';
 
 /** Katalog ve oturumlar: eğitim kartı (tür, biçim, süre, geçerlilik, maliyet, zorunlu eğitimin birimleri, ZEKİ ekranı) ve
  *  oturum listesi. Düzenleme `ik.egitim-yonet` ister; diğerleri okur. */
@@ -26,12 +27,12 @@ export default function CoursesScreen() {
     <LearningFrame
       crumb="Eğitim ve gelişim"
       title="Katalog ve oturumlar"
-      lead="Eğitim kartları ve oturumlar. Zorunlu eğitimin yenileme periyodu işyerinin tehlike sınıfına bağlıdır; kartta «geçerlilik süresi» olarak girilir, sistemde sabit değildir."
+      lead="Şirketin eğitim kataloğu ve planlanan oturumlar. Zorunlu eğitimlerin (ör. iş güvenliği) yenileme süresi işyerinin tehlike sınıfına bağlıdır; bu süre eğitim kartına «geçerlilik» olarak girilir."
       aside={
         can?.manage ? (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-            <button type="button" className={btnGhost} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Eğitim kartı</button>
-            <button type="button" className={btnPrimary} onClick={() => setNewSession(true)}><Plus aria-hidden className="h-4 w-4" />Oturum</button>
+            <button type="button" className={btnGhost} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Eğitim kartı ekle</button>
+            <button type="button" className={btnPrimary} onClick={() => setNewSession(true)}><Plus aria-hidden className="h-4 w-4" />Oturum aç</button>
           </div>
         ) : undefined
       }
@@ -51,11 +52,18 @@ function CourseList({ onEdit }: { onEdit?: (c: Course) => void }) {
   return (
     <Block title="Eğitim kataloğu" help={`${items.length} eğitim`} info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Eğitim kataloğu" />}>
       {q.isLoading && <p className="text-[12px] text-canvas-muted">Yükleniyor…</p>}
-      {q.data && items.length === 0 && <p className="text-[12px] text-canvas-muted">Katalog boş. İlk kartı «Eğitim kartı» ile ekleyin.</p>}
+      {q.data && items.length === 0 && <p className="text-[12px] text-canvas-muted">Katalog boş. İlk kartı «Eğitim kartı ekle» ile ekleyin.</p>}
       {items.length > 0 && (
         <TableWrap>
           <thead>
-            <tr><th className={th}>Eğitim</th><th className={th}>Tür</th><th className={th}>Biçim</th><th className={th}>Geçerlilik</th><th className={th}><InfoLabel k={q.data?.kaynaklar} alan="items[]" label="Kişi başı maliyet">Kişi başı</InfoLabel></th><th className={th}>Kapsam</th><th className={th} /></tr>
+            <tr><th className={th}>Eğitim</th><th className={th}>
+              <ExplainLabel label="Tür">
+                «Zorunlu»: yasa ya da şirket gereği alınması gereken, süresi dolunca yenilenen eğitim. «Gelişim»: isteğe bağlı mesleki eğitim.
+                «ZEKİ kullanımı»: portal ekranlarının kullanımını öğreten eğitim.
+              </ExplainLabel>
+            </th><th className={th}>Biçim</th><th className={th}>
+              <ExplainLabel label="Geçerlilik">Sertifikanın kaç gün geçerli sayıldığı; bu süre dolunca eğitim yenilenmelidir.</ExplainLabel>
+            </th><th className={th}><InfoLabel k={q.data?.kaynaklar} alan="items[]" label="Kişi başı maliyet">Kişi başı</InfoLabel></th><th className={th}>Kapsam</th><th className={th}><span className="sr-only">İşlem</span></th></tr>
           </thead>
           <tbody>
             {items.map((c) => (
@@ -92,7 +100,7 @@ function SessionList({ info }: { info?: Info }) {
       }
     >
       {q.error && <Note tone="err">{errText(q.error, 'Oturumlar okunamadı.')}</Note>}
-      {q.data && items.length === 0 && <p className="text-[12px] text-canvas-muted">Bu durumda oturum yok.</p>}
+      {q.data && items.length === 0 && <p className="text-[12px] text-canvas-muted">{state ? 'Bu durumda oturum yok; durum süzgecini «Hepsi» yapabilirsiniz.' : 'Henüz oturum açılmadı.'}</p>}
       <ul className="flex flex-col gap-2">
         {items.map((s) => (
           <li key={s.id}>
@@ -151,7 +159,7 @@ function CourseSheet({ info, course, onClose }: { info: Info; course: Course | n
       <div className="flex flex-col gap-3 p-4">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Eğitimin adı</span>
-          <input className={field} value={f.title} onChange={(e) => set('title', e.target.value)} />
+          <input className={field} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="ör. Temel iş sağlığı ve güvenliği" />
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1">
@@ -279,7 +287,7 @@ function SessionSheet({ onClose }: { onClose: () => void }) {
             <input className={field} value={trainer} onChange={(e) => setTrainer(e.target.value)} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Kontenjan (bilgi)</span>
+            <span className={labelCls}>Kontenjan (yalnız bilgi amaçlı)</span>
             <input className={field} inputMode="numeric" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
           </label>
         </div>

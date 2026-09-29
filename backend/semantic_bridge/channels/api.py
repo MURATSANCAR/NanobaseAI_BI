@@ -200,7 +200,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         uc = unit_costs() if can(user, F_MARGIN) else None
         with Y.yakala(engine) as q:
             out = await run_in_threadpool(call, SC.channel, engine, tenant, platform, yil, ay, uc)
-            out["imports"] = I.list_imports(engine, tenant, platform)[:5]
+            out["imports"] = I.list_imports(engine, tenant, platform)
         out["m9Bagli"] = uc is not None
         out = view(user, out)
         return PV.bagla(out, lambda: K.for_channel(engine, tenant, out, q))

@@ -55,7 +55,7 @@ export default function RiskCard() {
         </div>
       ) : undefined}>
       {(q.isLoading || meta.isLoading) && <Loading />}
-      {q.error && <Note tone="err">{errText(q.error, 'Risk okunamadı.')}</Note>}
+      {q.error && <Note tone="err">{errText(q.error, 'Risk okunamadı; bağlantıyı kontrol edip yeniden deneyin.')}</Note>}
       {r && m && (
         <>
           {r.durum === 'oneri' && <Note tone="info">Zeki AI önerisi: metni kontrol edin, olasılık ve etkiyi siz verin. Kabul etmeden risk kaydına girmez.</Note>}
@@ -100,7 +100,7 @@ export default function RiskCard() {
           <Actions r={r} meta={m} k={q.data?.kaynaklar} />
           <Panel>
             <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Gözden geçirme geçmişi<SqlInfo k={q.data?.kaynaklar} alan="gozdenGecirmeler[]" label="Gözden geçirme geçmişi (eski → yeni puan)" /></h2>
-            {r.gozdenGecirmeler.length === 0 ? <Empty>Henüz gözden geçirilmedi.</Empty> : (
+            {r.gozdenGecirmeler.length === 0 ? <Empty>Henüz gözden geçirilmedi. «Gözden geçir» ile olasılık ve etkiyi güncelleyip not bırakabilirsiniz.</Empty> : (
               <ul className="flex flex-col gap-1.5">
                 {r.gozdenGecirmeler.map((v) => (
                   <li key={v.id} className="rounded-xl bg-white/80 px-3 py-2 text-[12px] leading-snug">
@@ -196,11 +196,11 @@ function Actions({ r, meta, k }: { r: RiskDetail; meta: RiskMeta; k?: Kaynaklar 
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Aksiyonlar<SqlInfo k={k} alan="aksiyonlar[]" label="Aksiyonlar: termin ve kalan gün" /></h2>
-        {r.yazabilir && !adding && <button type="button" className={btnGhost} onClick={() => setAdding(true)}><Plus aria-hidden className="h-4 w-4" />Aksiyon</button>}
+        {r.yazabilir && !adding && <button type="button" className={btnGhost} onClick={() => setAdding(true)}><Plus aria-hidden className="h-4 w-4" />Aksiyon ekle</button>}
       </div>
       {adding && (
         <form className="mb-3 flex flex-col gap-2 rounded-xl bg-white/80 p-3" onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
-          <TextInput id="ac-eylem" label="Aksiyon" value={f.eylem} onChange={(v) => setF({ ...f, eylem: v })} />
+          <TextInput id="ac-eylem" label="Aksiyon" value={f.eylem} onChange={(v) => setF({ ...f, eylem: v })} placeholder="Ör. İkinci bir matbaayla çerçeve sözleşme yapmak" />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <TextInput id="ac-sahip" label="Sahip" value={f.sahip} onChange={(v) => setF({ ...f, sahip: v })} />
             <TextInput id="ac-ep" label="E-posta" type="email" value={f.sahipEposta} onChange={(v) => setF({ ...f, sahipEposta: v })} />
@@ -212,7 +212,7 @@ function Actions({ r, meta, k }: { r: RiskDetail; meta: RiskMeta; k?: Kaynaklar 
           </div>
         </form>
       )}
-      {r.aksiyonlar.length === 0 ? <Empty>Aksiyon yok.</Empty> : (
+      {r.aksiyonlar.length === 0 ? <Empty>Bu risk için aksiyon yok. Riski azaltacak işi sahibi ve termini ile «Aksiyon ekle»den tanımlayın.</Empty> : (
         <ul className="flex flex-col gap-1.5">
           {r.aksiyonlar.map((a) => <ActionRow key={a.id} a={a} r={r} meta={meta} />)}
         </ul>

@@ -11,6 +11,7 @@ import { creativeApi, fmtDay } from './api';
 import { ApprovalLine, DraftBadge, smallBtn } from './parts';
 import { useCreativeMeta } from './useMeta';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Arşiv: onaylı (ya da süzgeçle bekleyen/reddedilen) güncel varlıklar; kitap, kampanya/etiket, kanal, biçim, tür ve
  *  tarih süzgeci. Tavansız, sayfalı. «Bu kitabın bütün görselleri» tek aramada. */
@@ -66,7 +67,7 @@ export default function AssetLibrary({ params, update }: { params: URLSearchPara
             {meta?.formatlar.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
           </select></label>
         <label className="flex flex-col gap-0.5"><span className={label}>Kampanya / etiket</span>
-          <input className={field} defaultValue={f.etiket} onBlur={(e) => update({ etiket: e.target.value.trim() || null, sayfa: null })} placeholder="Tam ad" /></label>
+          <input className={field} defaultValue={f.etiket} onBlur={(e) => update({ etiket: e.target.value.trim() || null, sayfa: null })} placeholder="Kampanya adının tamamı" /></label>
         <div className="grid grid-cols-2 gap-1.5">
           <label className="flex min-w-0 flex-col gap-0.5"><span className={label}>Başlangıç</span><input type="date" className={field} value={f.baslangic} onChange={sel('bas')} /></label>
           <label className="flex min-w-0 flex-col gap-0.5"><span className={label}>Bitiş</span><input type="date" className={field} value={f.bitis} onChange={sel('bit')} /></label>
@@ -75,7 +76,7 @@ export default function AssetLibrary({ params, update }: { params: URLSearchPara
 
       {list.error && <div className="mt-2"><Note tone="err">{errText(list.error, 'Arşiv okunamadı.')}</Note></div>}
       {list.isLoading && <Loading />}
-      {!list.isLoading && items.length === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">Bu süzgeçte varlık yok.</p>}
+      {!list.isLoading && items.length === 0 && <div className="mt-3"><EmptyHint title="Bu süzgeçte dosya yok" why="Arşivde onaylanmış görsel ve metinler durur. Aramayı temizleyin ya da kanal, biçim, tarih süzgeçlerini gevşetin." /></div>}
 
       <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {items.map((a) => (

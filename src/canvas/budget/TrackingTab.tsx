@@ -10,6 +10,7 @@ import { DEPT, budgetApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type Group
 import { RatioBar, StatePill } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { Explain } from '../components/Explain';
 
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
@@ -38,8 +39,8 @@ function YearEndPanel({ y }: { y: YearEnd }) {
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
         {fmtInt(y.kitap)} kitap (hedef cirosunun {y.kapsamPay === null ? '—' : '%' + Math.round(y.kapsamPay * 100)}’i): {fmtDay(y.asof)} itibarıyla
-        gerçekleşen {fmtShort(y.gercekCiro)} ₺ + yılın kalan günleri için ZEKİ AI satış tahmini, hedefteki birim fiyatla ciroya
-        çevrilir. Aralık aylık tahmin aralıklarının toplamıdır.
+        gerçekleşen {fmtShort(y.gercekCiro)} ₺ + yılın kalan günleri için Zeki AI tahminleme; tahmin edilen adet, hedefteki birim fiyatla ciroya
+        çevrilir. Muhafazakâr ve iyimser değerler aylık tahmin aralıklarının toplamıdır.
         {missing ? ' Tahminin kapsamadığı aylar (' + missing + ') eklenmedi.' : ''}
       </p>
     </Panel>
@@ -130,8 +131,8 @@ function Deviations({ year, planId }: { year: number; planId: string }) {
           ))}
         </div>
       </div>
-      {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Uyarılar okunamadı.')}</Note> : !items.length ? (
-        <Note tone="ok">{status === 'acik' ? 'Açık uyarı yok.' : 'Kayıt yok.'}</Note>
+      {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Uyarılar okunamadı; biraz sonra yeniden deneyin.')}</Note> : !items.length ? (
+        <Note tone="ok">{status === 'acik' ? 'Açık uyarı yok. Yeni bir sapma olursa saatlik denetimde burada açılır.' : status === 'kapandi' ? 'Kapanmış uyarı yok.' : 'Hedef güncellemesi kaydı yok.'}</Note>
       ) : (
         <TableWrap>
           <thead>
@@ -194,7 +195,7 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
     return <Note tone="info">{plan.year} dönemi için Logo'da henüz gerçekleşme yok. Plan onaylandıktan sonra yıl başladığında izleme kendiliğinden açılır.</Note>;
   }
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'İzleme hesaplanamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'İzleme hesaplanamadı; biraz sonra yeniden deneyin.')}</Note>;
   const d = q.data;
   if (!d?.sirket || !d.kitapHedefleri) return <Note tone="info">Bu plan için izleme verisi yok.</Note>;
   const esik = d.esik ?? 0.8;
@@ -217,7 +218,13 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
         <Summary title="Kitap hedefleri" g={d.kitapHedefleri} help="Yalnız planda adıyla hedefi olan kitaplar."
           info={<SqlInfo k={d.kaynaklar} alan="kitapHedefleri" label="Kitap hedefleri" />} />
         <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
-          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kitap durumu<SqlInfo k={d.kaynaklar} alan="durumlar" label="Kitap durumu" /></div>
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Kitap durumu
+            <Explain label="Kitap durumu" title="Durumlar ne demek?">
+              Kitabın gerçekleşen satışının, hedefin bugüne düşen payına oranı. Hedefte: %100 ve üstü. İzlenmeli: eşik (%{Math.round(esik * 100)}) ile %100 arası. Sapma: eşiğin altı. Başlamadı: bugüne henüz beklenen satış yok. Bir duruma dokunursanız o kitaplar listelenir.
+            </Explain>
+            <SqlInfo k={d.kaynaklar} alan="durumlar" label="Kitap durumu" />
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             {(['sapma', 'izle', 'iyi', 'baslamadi'] as TrackState[]).map((k) => (
               <button key={k} type="button" onClick={() => onFilter(k)}

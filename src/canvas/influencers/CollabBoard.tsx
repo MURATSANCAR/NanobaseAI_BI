@@ -30,24 +30,28 @@ export default function CollabBoard() {
   return (
     <InflFrame
       title="İşbirlikleri"
-      lead="İçerik üreticileriyle kitap gönderiminden ödemeye kadar bütün işbirlikleri tek panoda. Portal içerik üreticisine yazmaz, paylaşım yapmaz; hesap sayıları elle ya da dosyayla girilir."
+      lead="Kitaplarımızı tanıtan içerik üreticileriyle (kitap blogcusu, Instagram, YouTube, TikTok hesapları) yapılan işbirlikleri: tekliften kitap gönderimine, paylaşımdan ödemeye kadar tek panoda. Portal içerik üreticisine yazmaz, paylaşım yapmaz."
       aside={me?.canEdit ? (
         <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
           <Plus aria-hidden className="h-4 w-4" /> Yeni işbirliği
         </button>
       ) : undefined}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {(meta.error || board.error) && <Note tone="err">{errText(meta.error ?? board.error, 'Pano okunamadı.')}</Note>}
       {board.data && meta.data && (
         <>
           <KpiRow>
             <Kpi label="Açık işbirliği" value={String(board.data.open)} help={mine ? 'Açtıklarım' : 'Hepsi'} active={!mine}
-              onClick={() => setParams(mine ? {} : { benim: '1' }, { replace: true })} info={<SqlInfo k={board.data.kaynaklar} alan="open" label="Açık işbirliği" />} />
-            <Kpi label="Onay bekleyen teklif" value={String(board.data.waitingApproval)} help="Seçim ve ücret onayı" info={<SqlInfo k={board.data.kaynaklar} alan="waitingApproval" label="Onay bekleyen teklif" />} />
-            <Kpi label="Bağlantısı geciken" value={String(board.data.linkLate)} help={`Yayın tarihinden ${meta.data.ayarlar.linkGraceDays} gün sonra bağlantı yok`} info={<SqlInfo k={board.data.kaynaklar} alan="linkLate" label="Bağlantısı geciken" />} />
+              onClick={() => setParams(mine ? {} : { benim: '1' }, { replace: true })} info={<SqlInfo k={board.data.kaynaklar} alan="open" label="Açık işbirliği" />}
+              explain="Kapanmamış bütün işbirlikleri. Karta dokunarak yalnız sizin açtıklarınızla hepsi arasında geçiş yaparsınız." />
+            <Kpi label="Onay bekleyen teklif" value={String(board.data.waitingApproval)} help="Seçim ve ücret onayı" info={<SqlInfo k={board.data.kaynaklar} alan="waitingApproval" label="Onay bekleyen teklif" />}
+              explain="Kişi seçimi ve ücreti onay bekleyen teklifler. Onay gelmeden iş ilerlemez; teklifi öneren kişi kendisi onaylayamaz." />
+            <Kpi label="Bağlantısı geciken" value={String(board.data.linkLate)} help={`Yayın tarihinden ${meta.data.ayarlar.linkGraceDays} gün sonra bağlantı yok`} info={<SqlInfo k={board.data.kaynaklar} alan="linkLate" label="Bağlantısı geciken" />}
+              explain="Kararlaştırılan yayın tarihinin üstünden süre geçtiği hâlde paylaşım bağlantısı girilmemiş işbirlikleri. İçerik üreticisine ulaşıp bağlantıyı isteyin." />
             <Kpi label="Bu ay" value={board.data.month.spend !== null ? fmtMoney(board.data.month.spend) : String(board.data.month.collabs)}
-              help={board.data.month.spend !== null ? `${board.data.month.collabs} işbirliği${board.data.month.budget ? ` · bütçe ${fmtMoney(board.data.month.budget)}` : ''}` : 'işbirliği (ücretler yetkiyle görünür)'} info={<SqlInfo k={board.data.kaynaklar} alan="month" label="Bu ay" />} />
+              help={board.data.month.spend !== null ? `${board.data.month.collabs} işbirliği${board.data.month.budget ? ` · bütçe ${fmtMoney(board.data.month.budget)}` : ''}` : 'işbirliği (ücretler yetkiyle görünür)'} info={<SqlInfo k={board.data.kaynaklar} alan="month" label="Bu ay" />}
+              explain="Bu ay yapılan işbirliği harcaması ve sayısı; aylık bütçe girildiyse yanında yazar. Ücretleri yalnız onay ya da ödeme yetkisi olanlar görür." />
           </KpiRow>
           <Reminders board={board.data} onOpen={setOpen} />
           <Columns board={board.data} meta={meta.data} onOpen={setOpen} />
@@ -107,7 +111,7 @@ function Columns({ board, meta, onOpen }: { board: Board; meta: Meta; onOpen: (i
       <div className="mt-1 flex flex-wrap gap-1">
         {c.waitingApproval && <Pill tone="warn">Onay bekliyor</Pill>}
         {c.linkLate && <Pill tone="err">Bağlantı yok</Pill>}
-        {c.stage === 'yayinda' && c.disclosureOk !== true && <Pill tone="warn">Etiket işaretlenmedi</Pill>}
+        {c.stage === 'yayinda' && c.disclosureOk !== true && <Pill tone="warn">Yasal etiket eksik</Pill>}
       </div>
     </button>
   );
@@ -124,7 +128,7 @@ function Columns({ board, meta, onOpen }: { board: Board; meta: Meta; onOpen: (i
           </select>
         </label>
         <div className="flex flex-col gap-2">
-          {col.items.length === 0 && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu aşamada iş yok.</div>}
+          {col.items.length === 0 && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu aşamada işbirliği yok. Başka bir aşama seçin.</div>}
           {col.items.map(card)}
         </div>
       </div>

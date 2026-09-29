@@ -5,7 +5,7 @@ Akış (docs/analiz/seo-geo-modul-2026-09-25.md):
 2. Öneri: kullanıcı bir ürün için öneri ister; model ürünün kendi kaydından SEO alanlarını yazar.
 3. Karar: onay verebilen kişi öneriyi (gerekirse düzenleyip) onaylar ya da reddeder. Onay yalnız kararı ve
    onaylanan metni kaydeder. **T-soft'a hiçbir şey gönderilmez** (kullanıcı yasağı 2026-09-25; istemci yalnız
-   okur). Onaylanan metnin gideceği yer CRM'dir; CRM Web API yetkisi gelince bu adım eklenecek.
+   okur). CRM'e de yazılmaz (kullanıcı kuralı 2026-09-28: CRM yalnız okunur); onaylanan metin portalda kayıtlı durur.
 Her karar ve gönderim `semantic_audit`'e yazılır.
 
 Uçlar `/api/v1/seo-geo/*`; oturum şart. `run-due` gece zamanlayıcısının ucudur (yalnız çağıran belirteci).

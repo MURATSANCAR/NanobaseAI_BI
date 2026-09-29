@@ -6,6 +6,7 @@ import { Panel } from '../kit';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { productionApi, type LeadTime, type ProdOverview } from './api';
 import { POINTS, defaultPublication, fmtDay } from './shared';
+import { Explain } from '../../components/Explain';
 
 /** Geriye doğru takvim: yayın ayından geriye her adımın en geç tarihi. Dosya teslimi kuralı ayardan (varsayılan: yayın
  *  ayından önceki ayın 15'i); baskı yayın ayı içinde; CRM takviminin ara tarihleri ve gerçekte süren süreler kartlardan
@@ -74,6 +75,7 @@ export default function CalendarTab({ overview }: { overview: ProdOverview | nul
         <h2 className="px-1 text-[13px] font-extrabold">
           {d ? <InfoLabel k={d.kaynaklar} alan="plan">Yayın tarihinden geriye</InfoLabel> : 'Yayın tarihinden geriye'}
         </h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">Kitabın çıkmasını istediğiniz günü seçin; her adımın en geç hangi gün tamamlanması gerektiği aşağıda hesaplanır.</p>
         <label className="mt-2 block px-1">
           <span className={label}>Hedef yayın tarihi</span>
           <input type="date" className={`${field} mt-1 sm:max-w-[220px]`} value={pub} onChange={(e) => setPub(e.target.value)} />
@@ -102,8 +104,11 @@ export default function CalendarTab({ overview }: { overview: ProdOverview | nul
         )}
       </Panel>
       <Panel>
-        <h2 className="px-1 text-[13px] font-extrabold">
+        <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
           <InfoLabel k={q.data?.kaynaklar ?? overview?.kaynaklar} alan="leads">Ölçülen süreler</InfoLabel>
+          <Explain label="Ortanca ve «çoğu»">
+            Ortanca: kartların yarısı bu süreden kısa, yarısı uzun sürdü. «Çoğu»: kartların ortadaki yarısının süresi bu aralıkta (en hızlı ve en yavaş dörtte birler hariç).
+          </Explain>
         </h2>
         <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
           İki adımı da gerçekleşmiş kartlardan (baskı çıkışı ve depo girişi Logo'dan); sıra dışı giriş (sonraki adım öncekinden önce) süreye katılmaz.

@@ -8,6 +8,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { WorkList, WorkUpload, useWorks } from './WorkPicker';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { ExplainLabel } from '../components/Explain';
 
 /** M3 Metin İşleme ve Redaksiyon. Metin dosyası yüklenir, bölümlere ayrılır, ölçülür; model yazım ve üslup
  *  önerisi çıkarır, editör kabul/ret eder. Kabul edilen öneri metne işlenir ve ilk hâle göre farkta görünür. */
@@ -19,17 +20,21 @@ const STATUS: Record<ChapterRow['status'], { label: string; tone: 'ok' | 'warn' 
 };
 
 function Metrics({ m }: { m: TextMetrics }) {
-  const rows: Array<[string, string]> = [
-    ['Okunabilirlik (Ateşman)', m.atesman == null ? '—' : `${num(m.atesman, 1)}${m.band ? ` · ${m.band}` : ''}`],
+  const rows: Array<[string, string, string?]> = [
+    [
+      'Okunabilirlik',
+      m.atesman == null ? '—' : `${num(m.atesman, 1)}${m.band ? ` · ${m.band}` : ''}`,
+      'Türkçe metinler için okunabilirlik puanı (Ateşman ölçüsü): kelime ve cümle uzunluğundan hesaplanır. Puan yükseldikçe metin kolay okunur.',
+    ],
     ['Cümle başına kelime', num(m.wordsPerSentence, 1)],
     ['Kelime başına hece', num(m.syllablesPerWord, 2)],
     ['Kelime · cümle · paragraf', `${nf.format(m.words)} · ${nf.format(m.sentences)} · ${nf.format(m.paragraphs)}`],
   ];
   return (
     <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
-      {rows.map(([k, v]) => (
+      {rows.map(([k, v, hint]) => (
         <div key={k}>
-          <dt className="text-[11px] leading-snug text-canvas-muted">{k}</dt>
+          <dt className="text-[11px] leading-snug text-canvas-muted">{hint ? <ExplainLabel label={k}>{hint}</ExplainLabel> : k}</dt>
           <dd className="font-mono font-bold tabular-nums">{v}</dd>
         </div>
       ))}
@@ -131,7 +136,7 @@ function ChapterPane({ chapterId, onChanged }: { chapterId: string; onChanged: (
         <div className="flex flex-wrap gap-1.5">
           <button type="button" disabled={working || review.isPending || d.status === 'onaylandi'} onClick={() => review.mutate()} className={`${btn} bg-canvas-violet text-white`}>
             {working || review.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-            {working ? 'Denetleniyor…' : 'ZEKİ ile denetle'}
+            {working ? 'Denetleniyor…' : 'Zeki AI ile denetle'}
           </button>
           {d.status === 'onaylandi' ? (
             <button type="button" disabled={approve.isPending} onClick={() => approve.mutate(false)} className={btnGhost}>
@@ -194,7 +199,7 @@ function ChapterPane({ chapterId, onChanged }: { chapterId: string; onChanged: (
         </ul>
       )}
       {!d.suggestions.length && d.reviewState === 'yok' && (
-        <p className="mt-3 text-[12.5px] leading-snug text-canvas-muted">Bu bölüm henüz denetlenmedi. “ZEKİ ile denetle” yazım ve üslup önerilerini çıkarır; her öneriye siz karar verirsiniz.</p>
+        <p className="mt-3 text-[12.5px] leading-snug text-canvas-muted">Bu bölüm henüz denetlenmedi. «Zeki AI ile denetle» yazım ve üslup önerilerini çıkarır; her öneriyi siz kabul eder ya da yok sayarsınız.</p>
       )}
 
       <Diff d={d} />
@@ -243,10 +248,10 @@ export default function RedactionScreen() {
       route="/redaksiyon"
       crumb="Redaksiyon"
       title="Metin işleme ve redaksiyon"
-      lead="Metin dosyası yüklenir, bölümlere ayrılır ve ölçülür; ZEKİ yazım ve üslup önerisi çıkarır, kararı editör verir. Kabul edilen öneri metne işlenir; ilk hâl saklanır."
+      lead="Eser metnini yükleyin; bölümlere ayrılır ve ölçülür. Zeki AI yazım ve üslup önerisi çıkarır, kararı siz verirsiniz. Kabul edilen öneri metne işlenir, ilk hâl saklanır."
       source={w ? w.title : 'Editoryal masa'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {/* Birincil eylem: metin yükleme. Liste boşken de burada; bırakılan dosya eser dosyasını adından açar. */}
@@ -262,10 +267,10 @@ export default function RedactionScreen() {
 
       {w && chapters.length > 0 && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Bölüm" />} label="Bölüm" value={nf.format(chapters.length)} help={detail.data?.versions.length ? `Metin sürümü ${detail.data.versions[0].version}` : ''} />
-          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Onaylanan" />} label="Onaylanan" value={nf.format(approved)} help={`${nf.format(chapters.length - approved)} bölüm sürüyor`} />
-          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Karar bekleyen öneri" />} label="Karar bekleyen öneri" value={nf.format(pending)} help="Kabul ya da ret bekliyor" />
-          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Kelime" />} label="Kelime" value={nf.format(chapters.reduce((a, c) => a + c.words, 0))} help="Güncel metin" />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Bölüm" />} explain="Yüklenen metnin ayrıldığı bölüm sayısı. Yeni sürüm yüklenince bölümler baştan kurulur." label="Bölüm" value={nf.format(chapters.length)} help={detail.data?.versions.length ? `Metnin ${nf.format(detail.data.versions[0].version)}. sürümü` : ''} />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Onaylanan" />} explain="Editörün «Bölümü onayla» dediği bölümler. Karar bekleyen önerisi olan bölüm onaylanamaz." label="Onaylanan" value={nf.format(approved)} help={`${nf.format(chapters.length - approved)} bölüm sürüyor`} />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Karar bekleyen öneri" />} explain="Zeki AI'ın çıkardığı, henüz kabul edilmemiş ya da yok sayılmamış yazım ve üslup önerileri; bütün bölümlerin toplamı." label="Karar bekleyen öneri" value={nf.format(pending)} help="Kabul ya da ret bekliyor" />
+          <Kpi info={<SqlInfo k={kaynakOf(detail.data)} alan="_hepsi" label="Kelime" />} explain="Bütün bölümlerin güncel metnindeki kelime sayısı; kabul edilen öneriler dahil." label="Kelime" value={nf.format(chapters.reduce((a, c) => a + c.words, 0))} help="Güncel metin" />
         </KpiRow>
       )}
 
@@ -292,7 +297,7 @@ export default function RedactionScreen() {
                   {detail.data.versions.map((v) => (
                     <li key={v.id} className="flex items-baseline justify-between gap-2">
                       <a href={deskApi.fileUrl(v.id)} className="min-w-0 truncate font-semibold text-canvas-violet underline">
-                        v{v.version} · {v.filename}
+                        {nf.format(v.version)}. sürüm · {v.filename}
                       </a>
                       <span className="shrink-0 font-mono text-[11px] tabular-nums text-canvas-muted">{v.report.chapters ?? 0} bölüm</span>
                     </li>

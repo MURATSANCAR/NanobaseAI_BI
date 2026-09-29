@@ -48,7 +48,7 @@ export default function BudgetPanel({ view, editable, canSeeBudget, onSaved }: {
   return (
     <Block
       title="Bütçe ve öncelik"
-      help="Segment payı = ayın satış hedefindeki payı × önceki ay hedefin altında kalındıysa açık kadar artış. Kanal payı o segmentin kitaplarına bağlı CRM pazarlama harcamasından. Rakamı kod hesaplar; Zeki AI yalnız gerekçe yazar."
+      help="Bütçe önce kitap gruplarına (segment), ayın satış hedefindeki paylarına göre bölünür; önceki ay hedefin altında kalınan grubun payı açık kadar artırılır. Kanal payı, o grubun kitaplarına bağlı CRM pazarlama harcamasından gelir. Rakamları sistem kuralla hesaplar; Zeki AI yalnız gerekçe yazar."
       info={<SqlInfo k={view.kaynaklar} alan="budget[]" label="Bütçe önerisi" />}
     >
       {!view.hedef.planId && <Note tone="warn">{view.hedef.not ?? 'Bu ay için onaylı satış hedefi yok.'}</Note>}

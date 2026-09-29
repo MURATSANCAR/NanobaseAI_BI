@@ -10,6 +10,8 @@ import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { readableName } from '../components/readableName';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term, type TermKey } from './terms';
 
 /** Aylık yönetim raporu: önceki takvim ayının SEO & GEO özeti, PDF olarak; gece kendiliğinden hazırlanır, alıcı
  *  tanımlıysa e-postayla gider. */
@@ -58,6 +60,9 @@ const shortMonth = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slic
 const pct = (v: number | null | undefined, digits = 1) => (v == null ? '—' : `%${fmt(v * 100, digits)}`);
 const change = (cur?: number | null, ref?: number | null) => (cur == null || ref == null || !ref ? null : cur / ref - 1);
 const signed = (v: number | null) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}%${fmt(Math.abs(v) * 100, 1)}`);
+/** İş listesi durum anahtarlarının ekrandaki adı. */
+const WL_LABEL: Record<string, string> = { yeni: 'Yeni', yapiliyor: 'Yapılıyor', bitti: 'Bitti', yoksay: 'Yok sayıldı' };
+const KPI_TERM: Record<'clicks' | 'impressions' | 'ctr' | 'position', TermKey> = { clicks: 'clicks', impressions: 'impressions', ctr: 'ctr', position: 'position' };
 const SEND_LABEL: Record<string, string> = {
   no_recipient: 'Alıcı tanımlı değil; yalnız ekranda',
   no_smtp: 'E-posta sunucusu tanımlı değil',
@@ -99,7 +104,7 @@ export default function SeoMonthly() {
       crumb="Aylık rapor"
       eyebrow="SEO & GEO · yönetim"
       title="Aylık rapor"
-      lead="Her ayın ilk gecesi bir önceki takvim ayının (İstanbul saati) özeti hazırlanır: Google’dan gelen tıklama ve gösterim, en çok değişen sorgu ve sayfalar, kitap sayfalarının durumu, öneri kararları, haklar, teknik sorunlar, yapay zekâ cevaplarında anılma ve uyarılar. Google’ın son günleri birkaç gün geç kesinleştiği için rapor kesinleşince yeniden hazırlanır ve alıcı tanımlıysa bir kez e-postayla gider."
+      lead="Yönetim için bir önceki ayın SEO ve GEO özeti: Google’dan gelen ziyaret, en çok değişen aramalar ve sayfalar, kitap sayfalarının durumu, kararlar, teknik sorunlar, yapay zekâ cevaplarında anılma. Her ayın ilk gecesi kendiliğinden hazırlanır; PDF olarak indirilebilir."
       actions={
         canRun && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -118,10 +123,10 @@ export default function SeoMonthly() {
       {d?.state.error && <p className="sg-banner err">Son hazırlık başarısız: {d.state.error}</p>}
 
       {d && !d.items.length && (
-        <section className="sg-empty">
-          <h2>Henüz rapor yok</h2>
-          <p>İlk rapor ayın ilk gecesi kendiliğinden hazırlanır{canRun ? '; isterseniz yukarıdan bir ay seçip şimdi hazırlayın.' : '.'}</p>
-        </section>
+        <EmptyHint
+          title="Henüz rapor yok"
+          why={`İlk rapor ayın ilk gecesi kendiliğinden hazırlanır${canRun ? '; isterseniz yukarıdan bir ay seçip «Raporu hazırla»ya basın.' : '.'}`}
+        />
       )}
 
       {d && sel && (
@@ -134,7 +139,7 @@ export default function SeoMonthly() {
                   Hazırlandı {dateTime(sel.createdAt)}
                   {sel.createdBy ? ` · ${sel.createdBy}` : ''} · {sel.sentAt ? `Gönderildi ${dateTime(sel.sentAt)}` : sel.sendResult ? SEND_LABEL[sel.sendResult] ?? 'Gönderilmedi' : 'Gönderilmedi'}
                 </p>
-                {!sel.complete && <p className="sg-kpi-note" style={{ margin: '4px 0 0' }}>Google’ın son günleri henüz kesinleşmedi; rapor kesinleşince yeniden hazırlanır.</p>}
+                {!sel.complete && <p className="sg-kpi-note" style={{ margin: '4px 0 0' }}>Google’ın son günleri henüz kesinleşmedi; rapor kesinleşince kendiliğinden yeniden hazırlanır ve alıcı tanımlıysa bir kez e-postayla gider.</p>}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <a className="sg-button" href={monthlyApi.pdfUrl(sel.month)}>
@@ -163,7 +168,7 @@ export default function SeoMonthly() {
                 <tr>
                   <th>Ay</th>
                   <th>Tıklama <SeoInfo k={page.data?.kaynaklar} label="Tıklama" /></th>
-                  <th>Puanı 80+ (çok satan) <SeoInfo k={page.data?.kaynaklar} label="Puanı 80+ (çok satan)" /></th>
+                  <th>Puanı 80+ (çok satan) <SeoInfo k={page.data?.kaynaklar} label="Puanı 80+ (çok satan)" /> <Explain label="Puanı 80+ (çok satan)">En çok satan kitaplardan SEO puanı eşik ve üstünde olanların payı.</Explain></th>
                   <th>Gönderim</th>
                   <th />
                 </tr>
@@ -238,7 +243,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="sg-kpi-note">Günlük veri yok.</p>
+            <p className="sg-kpi-note">Bu ay için günlük Google verisi yok.</p>
           )}
         </section>
         <section className="sg-card sg-span-5">
@@ -288,7 +293,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
               <h2 style={{ marginTop: 16 }}>İş listesi</h2>
               <dl className="sg-facts">
                 {Object.entries(s.worklist.byStatus ?? {}).map(([k, v]) => (
-                  <Fact key={k} k={k} v={fmt(v)} />
+                  <Fact key={k} k={WL_LABEL[k] ?? k} v={fmt(v)} />
                 ))}
                 <Fact k="Toplam" v={fmt(s.worklist.total)} />
                 {s.worklist.changedInMonth != null && <Fact k="Bu ay güncellenen" v={fmt(s.worklist.changedInMonth)} />}
@@ -342,7 +347,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
 
         <section className="sg-card sg-span-6">
           <h2>Yapay zekâ cevaplarında anılma <SeoInfo k={k} label="Yapay zekâ cevaplarında anılma" /></h2>
-          <p className="sg-sub">İzlenen sorularda Timaş’ın anılma oranı, bu ay</p>
+          <p className="sg-sub">İzlenen okur sorularında cevapta Timaş’ın ya da bir Timaş kitabının adının geçtiği ölçümlerin payı, bu ay</p>
           {s.geo.engines.some((e) => e.measured) ? (
             <div className="sg-bars">
               {s.geo.engines
@@ -411,6 +416,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
 }
 
 function Kpi({ label, value, cur, prev, ly, k, lowerBetter, info }: { label: string; value: string; cur?: number | null; prev: Period; ly: Period; k: 'clicks' | 'impressions' | 'ctr' | 'position'; lowerBetter?: boolean; info?: ReactNode }) {
+  // Yeşil/kırmızı: iyi yöndeki değişim yeşil; sırada küçük sayı iyidir.
   const line = (name: string, ref: Period) => {
     if (!ref.available) return <div className="sg-kpi-note">{name}: veri yok</div>;
     const ch = change(cur, ref[k] ?? null);
@@ -423,7 +429,7 @@ function Kpi({ label, value, cur, prev, ly, k, lowerBetter, info }: { label: str
   };
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null} <Term k={KPI_TERM[k]} label={label} /></div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       {line('Önceki ay', prev)}
       {line('Geçen yıl', ly)}
@@ -487,7 +493,7 @@ function MoversView({ mv, label, k }: { mv: Movers; label: string; k?: Kaynaklar
           </table>
         </div>
       ) : (
-        <p className="sg-kpi-note">Yok.</p>
+        <p className="sg-kpi-note">Bu yönde değişen yok.</p>
       )}
     </>
   );

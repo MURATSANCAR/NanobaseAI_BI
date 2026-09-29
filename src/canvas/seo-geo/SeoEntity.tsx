@@ -6,6 +6,8 @@ import { Check, ChevronLeft, ChevronRight, CircleHelp, Copy, ExternalLink, Loade
 import { ENGINE_ENABLED } from '../engine';
 import { RIGHTS_LABEL, call, dateTime, fmt, qs, type CrmRights } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { Term } from './terms';
 
 type AuthorStatus = 'wikipedia' | 'wikidata' | 'yok' | 'belirsiz' | 'bekliyor';
 type GbCheck = 'isbn' | 'rights' | 'status' | 'cover' | 'pdf';
@@ -132,7 +134,7 @@ export default function SeoEntity() {
       crumb="Kimlik ve bilgi paneli"
       eyebrow="SEO & GEO · kimlik"
       title="Kimlik ve bilgi paneli"
-      lead={`Google’ın bilgi paneli ve yapay zekâ motorları bir yayınevini, yazarı ve kitabı Wikidata, Wikipedia ve sitedeki kurum şeması gibi açık kayıtlardan tanır. Bu ekran bu kayıtların durumunu ve eksiklerini gösterir; hiçbir yere yazmaz. Kayıtlara ${o?.refreshDays ?? 30} günde bir yeniden bakılır.`}
+      lead={<>Google’ın bilgi paneli ve yapay zekâ servisleri bir yayınevini, yazarı ve kitabı Wikidata, Wikipedia ve sitedeki kurum bilgisi gibi açık kayıtlardan tanır. Bu ekran bu kayıtların durumunu ve eksiklerini gösterir; hiçbir yere yazmaz. Kayıtlara {o?.refreshDays ?? 30} günde bir yeniden bakılır. <Term k="knowledgePanel" /></>}
       actions={
         <button className="sg-button" onClick={() => refresh.mutate(false)} disabled={refresh.isPending || running}>
           {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
@@ -151,14 +153,19 @@ export default function SeoEntity() {
             <Kpi
               label="Kurum kontrolleri"
               value={o.organization ? `${o.organization.checks.filter((c) => c.ok).length} / ${o.organization.checks.length}` : '—'}
-              note={o.organization ? `Son bakış ${dateTime(o.organization.checkedAt)}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Kurum kontrolleri" />} />
-            <Kpi label="Wikipedia’sı olan yazar" value={fmt(o.authors.counts.wikipedia)} note={`${fmt(o.authors.total)} yazar · yalnız Wikidata ${fmt(o.authors.counts.wikidata)}`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Wikipedia’sı olan yazar" />} />
-            <Kpi label="Kaydı olmayan yazar" value={fmt(o.authors.counts.yok)} note={`Belirsiz ${fmt(o.authors.counts.belirsiz)} · bakılmadı ${fmt(o.authors.counts.bekliyor)}`} tone={o.authors.counts.yok ? 'bad' : undefined} info={<SeoInfo k={overview.data?.kaynaklar} label="Kaydı olmayan yazar" />} />
+              note={o.organization ? `Son bakış ${dateTime(o.organization.checkedAt)}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Kurum kontrolleri" />}
+              explain="Timaş’ın Wikidata kaydı ve anasayfadaki kurum bilgisi üzerinde yapılan denetimlerden kaçının geçtiği. Ayrıntı «Kurum» sekmesinde." />
+            <Kpi label="Wikipedia’sı olan yazar" value={fmt(o.authors.counts.wikipedia)} note={`${fmt(o.authors.total)} yazar · yalnız Wikidata ${fmt(o.authors.counts.wikidata)}`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Wikipedia’sı olan yazar" />}
+              explain="Hem Wikidata’da hem Wikipedia’da kaydı bulunan yazar sayısı. Bu yazarlar Google ve yapay zekâ servisleri tarafından en kolay tanınır." />
+            <Kpi label="Kaydı olmayan yazar" value={fmt(o.authors.counts.yok)} note={`Belirsiz ${fmt(o.authors.counts.belirsiz)} · bakılmadı ${fmt(o.authors.counts.bekliyor)}`} tone={o.authors.counts.yok ? 'bad' : undefined} info={<SeoInfo k={overview.data?.kaynaklar} label="Kaydı olmayan yazar" />}
+              explain="Wikidata’da hiç kaydı bulunamayan yazarlar. «Belirsiz»: adı tutan birden çok kayıt var, hangisi olduğu kesin değil." />
             <Kpi
               label="Wikidata’da kitap"
               value={o.books.isbn ? fmt(o.books.isbn.found) : '—'}
-              note={o.books.isbn ? `${fmt(o.books.isbn.active)} aktif ISBN içinde${o.books.isbn.complete ? '' : ` · ${fmt(o.books.isbn.checked)} tanesine bakıldı`}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Wikidata’da kitap" />} />
-            <Kpi label="Google Kitaplar’a hazır" value={fmt(o.books.googleBooks.ready)} note={`${fmt(o.books.googleBooks.total)} aktif kitap içinde`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Google Kitaplar’a hazır" />} />
+              note={o.books.isbn ? `${fmt(o.books.isbn.active)} aktif ISBN içinde${o.books.isbn.complete ? '' : ` · ${fmt(o.books.isbn.checked)} tanesine bakıldı`}` : 'Henüz bakılmadı'} info={<SeoInfo k={overview.data?.kaynaklar} label="Wikidata’da kitap" />}
+              explain="Satıştaki kitapların ISBN’leriyle Wikidata’da aranınca kaydı bulunan kitap sayısı." />
+            <Kpi label="Google Kitaplar’a hazır" value={fmt(o.books.googleBooks.ready)} note={`${fmt(o.books.googleBooks.total)} aktif kitap içinde`} tone="good" info={<SeoInfo k={overview.data?.kaynaklar} label="Google Kitaplar’a hazır" />}
+              explain="ISBN, internette gösterim hakkı, yayın durumu, kapak ve tadımlık PDF’i tamam olan, Google Kitaplar’a önizleme için yüklenebilecek kitap sayısı." />
           </section>
 
           <div className="sg-filters" role="tablist" aria-label="Bölüm">
@@ -168,6 +175,14 @@ export default function SeoEntity() {
               </button>
             ))}
           </div>
+
+          <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)', lineHeight: 1.5 }}>
+            {tab === 'kurum'
+              ? 'Timaş Yayınları’nın Wikidata kaydı ve anasayfada Google’a verdiği kurum bilgisi doğru ve eksiksiz mi.'
+              : tab === 'yazarlar'
+                ? 'Yazarlarımızın Wikidata ve Wikipedia kaydı var mı; yoksa ne gerekiyor. Çok satan yazardan başlayın.'
+                : 'Hangi kitap Google Kitaplar’da önizlemeye hazır, hangisinde ne eksik.'}
+          </p>
 
           {tab === 'kurum' && <Organization o={o} onRefresh={() => refresh.mutate(true)} busy={running || refresh.isPending} />}
           {tab === 'yazarlar' && <Authors filter={params.get('suzgec') ?? ''} setFilter={(v) => set('suzgec', v)} />}
@@ -183,13 +198,15 @@ function Organization({ o, onRefresh, busy }: { o: Overview; onRefresh: () => vo
   const [copied, setCopied] = useState(false);
   if (!org) {
     return (
-      <div className="sg-empty">
-        <h2>Kurum kaydına henüz bakılmadı</h2>
-        <p>Wikidata’daki Timaş Yayınları kaydı ve anasayfadaki kurum şeması okunur; birkaç saniye sürer.</p>
-        <button className="sg-button" onClick={onRefresh} disabled={busy}>
-          <RefreshCw size={16} aria-hidden /> Şimdi bak
-        </button>
-      </div>
+      <EmptyHint
+        title="Kurum kaydına henüz bakılmadı"
+        why="Wikidata’daki Timaş Yayınları kaydı ve anasayfadaki kurum bilgisi okunur; birkaç saniye sürer."
+        action={
+          <button className="sg-button" onClick={onRefresh} disabled={busy}>
+            <RefreshCw size={16} aria-hidden /> Şimdi bak
+          </button>
+        }
+      />
     );
   }
   const wd = org.wikidata;
@@ -225,7 +242,7 @@ function Organization({ o, onRefresh, busy }: { o: Overview; onRefresh: () => vo
         </button>
       </section>
       <section className="sg-card sg-span-6" aria-label="Wikidata">
-        <h2>Wikidata kaydı</h2>
+        <h2>Wikidata kaydı <Term k="wikidata" /></h2>
         {wd ? (
           <dl className="sg-facts">
             <div>
@@ -276,12 +293,12 @@ function Organization({ o, onRefresh, busy }: { o: Overview; onRefresh: () => vo
       <section className="sg-card sg-span-12" aria-label="Önerilen şema">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start', flexWrap: 'wrap' }}>
           <div>
-            <h2>Önerilen kurum şeması (anasayfa)</h2>
-            <p className="sg-sub">sameAs listesi Wikidata’dan ve sayfada zaten olanlardan kuruldu. Tema isteğine eklenir; siteye buradan bir şey yazılmaz.</p>
+            <h2>Önerilen kurum bilgisi kodu (anasayfa) <Term k="schema" /></h2>
+            <p className="sg-sub">Anasayfaya eklenecek hazır kod. Resmî hesaplar listesi («sameAs») Wikidata’dan ve sayfada zaten olanlardan kuruldu. Kopyalayıp site yöneticisine iletin; tema isteğine eklenir, siteye buradan bir şey yazılmaz.</p>
           </div>
           <button className="sg-button" onClick={copy}>
             {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
-            {copied ? 'Kopyalandı' : 'Kopyala'}
+            {copied ? 'Kopyalandı' : 'Kodu kopyala'}
           </button>
         </div>
         <pre className="sg-pre">{org.jsonld}</pre>
@@ -325,10 +342,7 @@ function Authors({ filter, setFilter }: { filter: string; setFilter: (v: string)
         {list.isLoading && <Loading text="Yazarlar getiriliyor…" />}
         {list.error && <Failed error={list.error} />}
         {list.data && !list.data.items.length && (
-          <div className="sg-empty">
-            <h2>Yazar yok</h2>
-            <p>Bu süzgece uyan yazar bulunamadı.</p>
-          </div>
+          <EmptyHint title="Bu süzgece uyan yazar yok" why="Aramayı kısaltın ya da üstten «Tümü»nü seçin." />
         )}
         {!!list.data?.items.length && (
           <div className="sg-table-wrap">
@@ -337,7 +351,9 @@ function Authors({ filter, setFilter }: { filter: string; setFilter: (v: string)
                 <tr>
                   <th>Yazar</th>
                   <th style={{ textAlign: 'right' }}>Satış</th>
-                  <th>Durum</th>
+                  <th>
+                    <ExplainLabel label="Durum">«Wikidata + Wikipedia»: en iyi durum. «Yalnız Wikidata»: Wikipedia maddesi yok. «Kaydı yok»: açık kayıt bulunamadı. «Belirsiz»: adı tutan birden çok kayıt var. «Henüz bakılmadı»: sıradaki turda bakılacak.</ExplainLabel>
+                  </th>
                   <th>Ne gerekiyor</th>
                 </tr>
               </thead>
@@ -417,7 +433,7 @@ function GoogleBooks({ filter, setFilter }: { filter: string; setFilter: (v: str
   return (
     <>
       <p className="sg-banner">
-        Google Kitaplar’da önizleme için kitap Play Kitaplar İş Ortağı Merkezi’ne elle yüklenir; burada yalnız hangi kitabın hazır olduğu ve neyin eksik olduğu listelenir. Hak kararı CRM’deki telif alış sözleşmelerinden bir ön süzgeçtir; kesin söz telif biriminindir. Tadımlık PDF yeterli değilse tam metin dosyası ayrıca gerekir.
+        Google Kitaplar’da önizleme için kitap Play Kitaplar İş Ortağı Merkezi’ne elle yüklenir; burada yalnız hangi kitabın hazır olduğu ve neyin eksik olduğu listelenir. «Hak» sütunu CRM’deki telif alış sözleşmelerinden bir ön elemedir; kesin söz telif birimindedir. Tadımlık PDF yeterli değilse tam metin dosyası ayrıca gerekir.
       </p>
       <div className="sg-filters" role="toolbar" aria-label="Süzgeç">
         <Chip on={!filter} onClick={() => setFilter('')} label="Tümü" n={s?.total} />
@@ -431,10 +447,7 @@ function GoogleBooks({ filter, setFilter }: { filter: string; setFilter: (v: str
         {list.isLoading && <Loading text="Kitaplar getiriliyor…" />}
         {list.error && <Failed error={list.error} />}
         {list.data && !list.data.items.length && (
-          <div className="sg-empty">
-            <h2>Kitap yok</h2>
-            <p>Bu süzgece uyan kitap bulunamadı.</p>
-          </div>
+          <EmptyHint title="Bu süzgece uyan kitap yok" why="Üstten «Tümü»nü seçin." />
         )}
         {!!list.data?.items.length && (
           <div className="sg-table-wrap">
@@ -443,9 +456,15 @@ function GoogleBooks({ filter, setFilter }: { filter: string; setFilter: (v: str
                 <tr>
                   <th>Kitap</th>
                   <th style={{ textAlign: 'right' }}>Satış</th>
-                  {GB_ORDER.map((k) => (
-                    <th key={k}>{GB_SHORT[k]}</th>
-                  ))}
+                  {GB_ORDER.map((k) =>
+                    k === 'rights' ? (
+                      <th key={k}>
+                        <ExplainLabel label={GB_SHORT[k]}>Kitabın CRM’deki telif alış sözleşmeleri internette gösterime izin veriyor mu. Kitap CRM’de yoksa çarpı görünür.</ExplainLabel>
+                      </th>
+                    ) : (
+                      <th key={k}>{GB_SHORT[k]}</th>
+                    ),
+                  )}
                   <th>Durum</th>
                 </tr>
               </thead>
@@ -486,9 +505,10 @@ function GoogleBooks({ filter, setFilter }: { filter: string; setFilter: (v: str
                       {b.ready ? (
                         <span className="sg-chip good">Hazır</span>
                       ) : (
-                        <span className="sg-chip bad" title={b.missing.join(' · ')}>
-                          {b.missing.length} eksik
-                        </span>
+                        <>
+                          <span className="sg-chip bad">{b.missing.length} eksik</span>
+                          {b.missing.length > 0 && <div style={{ fontSize: 11, color: 'var(--sg-muted)', marginTop: 4, minWidth: 120 }}>{b.missing.join(' · ')}</div>}
+                        </>
                       )}
                     </td>
                   </tr>
@@ -520,10 +540,10 @@ function Pager({ start, total, setStart }: { start: number; total: number; setSt
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

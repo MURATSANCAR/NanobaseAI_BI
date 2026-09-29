@@ -27,8 +27,8 @@ function ChangeNote({ cardId, fark }: { cardId: string; fark: CardChange }) {
         {!fark.ilk && fark.degisti && <NarrativePill kaynak={note.kaynak} />}
         {fark.zaman && <span className="text-[11px] text-canvas-muted">son değişim {dateTime(fark.zaman)}</span>}
       </div>
-      {q.isLoading && <p className="text-[12px] text-canvas-muted">Anlatım hazırlanıyor… (şimdilik kurala göre maddeler)</p>}
-      {q.error && <Note tone="warn">{errText(q.error, 'Anlatım alınamadı; kurala göre maddeler gösteriliyor.')}</Note>}
+      {q.isLoading && <p className="text-[12px] text-canvas-muted">Zeki AI anlatımı hazırlıyor… Şimdilik hesaplanan farklar gösteriliyor.</p>}
+      {q.error && <Note tone="warn">{errText(q.error, 'Zeki AI anlatımı alınamadı; hesaplanan farklar gösteriliyor.')}</Note>}
       <ul className="flex list-disc flex-col gap-1 pl-5 text-[13px] leading-snug">
         {note.maddeler.map((m, i) => <li key={i}>{m}</li>)}
       </ul>
@@ -43,7 +43,7 @@ export default function CardInsight({ cardId, title, question, data, onClose }: 
   return (
     <Sheet open modal wide onClose={onClose} title={title} subtitle="Önceki sonuca göre ne değişti ve rakamın nedeni">
       {fark ? <ChangeNote cardId={cardId} fark={fark} /> : (
-        <p className="text-[12.5px] text-canvas-muted">Kart yenilendikçe önceki sonuçla fark burada yazılır.</p>
+        <p className="text-[12.5px] text-canvas-muted">Kart yenilendikçe önceki sonuçla arasındaki fark burada yazılır.</p>
       )}
       {question ? (
         <div className="mt-4 border-t border-slate-100 pt-3">

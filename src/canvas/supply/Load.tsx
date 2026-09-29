@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, Mail } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Loading, Note, TableWrap, btnGhost, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -50,11 +51,11 @@ export default function Load() {
   return (
     <SupplyFrame
       title="Baskı yükü"
-      lead="Baskıdan henüz çıkmamış kartların baskı ayı × matbaa yükü (adet, iş, forma). Eşik: matbaanın girilen aylık kapasitesi; girilmemişse son 12 ayın en yüksek aylık yükü yalnız referanstır. Dengeleme önerisini kabul etmek CRM kartını değiştirmez; değişikliği Üretim yönetiminde ve CRM'de siz yaparsınız."
+      lead="Baskıdan henüz çıkmamış işlerin hangi ay hangi matbaada toplandığı. Bir matbaaya bir aya fazla iş yığılırsa kırmızı ya da amber görünür; o zaman işi başka aya ya da matbaaya kaydırmak için öneri hazırlanır. Öneriyi kabul etmek kartı değiştirmez; değişikliği Üretim yönetiminde ve CRM'de siz yaparsınız."
       aside={
         <div className="flex flex-wrap items-end justify-start gap-2 lg:justify-end">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Ufuk</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kaç ay ileri</span>
             <select className={`${field} w-auto`} value={String(months ?? meta.data?.settings.loadMonths ?? 6)} onChange={(e) => update({ aylar: e.target.value })}>
               {[3, 4, 6, 9, 12].map((n) => (
                 <option key={n} value={n}>
@@ -64,7 +65,7 @@ export default function Load() {
             </select>
           </label>
           <Link to="/tedarik/kapasite" className={btnGhost}>
-            Matbaa kapasitesi
+            Matbaa kapasitelerini düzenle
           </Link>
           {me?.canExport && <ExportLink href={supplyApi.exportUrl('yuk')} />}
         </div>
@@ -82,7 +83,7 @@ export default function Load() {
       {t && tab === 'cakisma' && (
         <Panel>
           {t.cakismalar.length === 0 ? (
-            <Note tone="ok">Eşiği aşan ay × matbaa yok.</Note>
+            <EmptyHint title="Eşiği aşan ay × matbaa yok" why="Önümüzdeki aylarda hiçbir matbaaya kapasitesinin ya da son 12 ayın en yoğun ayının üstünde iş düşmüyor." />
           ) : (
             <div className="flex flex-col gap-3">
               {t.cakismalar.map((c) => (
@@ -115,7 +116,7 @@ export default function Load() {
       {tab === 'oneri' && (
         <Panel>
           <p className="mb-3 px-1 text-[12px] leading-snug text-canvas-muted">
-            Her gece eşiği aşan hücrelerden, hücre eşik altına inene kadar: baskı dosyası henüz matbaaya gitmemiş, matbaa onayı verilmemiş kart önce aynı matbaanın sonraki ayına (yayın ayını geçmeden), olmazsa zamanında teslimi daha düşük olmayan başka matbaaya önerilir. Sayılar kural hesabıdır.
+            Her gece, işi fazla olan ay × matbaa için öneri hazırlanır: baskı dosyası henüz matbaaya gitmemiş ve matbaa onayı verilmemiş bir iş önce aynı matbaanın sonraki ayına (yayın ayını geçmeden), olmazsa zamanında teslim oranı daha düşük olmayan başka bir matbaaya kaydırılır. Rakamlar kural hesabıdır; kabul ettiğinizde kartı Üretim yönetiminde siz değiştirirsiniz.
           </p>
           <SuggestionList tur="yuk" canDecide={!!me?.canDecide} empty="Bekleyen yük dengeleme önerisi yok." />
         </Panel>
@@ -133,7 +134,7 @@ export default function Load() {
                 <tr className="border-b border-slate-100">
                   <th className={th}>Kitap</th>
                   <th className={th}>Öneri</th>
-                  <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Tükenme (ay)</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Tükenme (ay)</InfoLabel><Explain label="Tükenme (ay)">Bugünkü stok, baskı önerisi raporundaki satış hızıyla kaç ayda biter.</Explain></span></th>
                   <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Stok</InfoLabel></th>
                   <th className={`${th} text-right`}><InfoLabel k={t.kaynaklar} alan="plan.baskiOneri">Önerilen adet</InfoLabel></th>
                 </tr>
@@ -164,7 +165,7 @@ export default function Load() {
           <h2 className="mt-4 px-1 text-[13px] font-extrabold">Onaylı ilk baskı — üretim kartı yok</h2>
           <div className="mt-2">
             {t.plan.ilkBaski.length === 0 ? (
-              <Note tone="info">Kartı açılmamış onaylı ilk baskı kararı yok.</Note>
+              <EmptyHint title="Kartı açılmamış ilk baskı kararı yok" why="Onaylanan bütün ilk baskı kararlarının üretim kartı açılmış." />
             ) : (
               <TableWrap>
                 <thead>
@@ -245,12 +246,12 @@ export default function Load() {
                       <>
                         <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'sartname', kartId: c.id })}>
                           <FileText aria-hidden className="h-4 w-4" />
-                          Şartname
+                          Şartname taslağı
                         </button>
                         {c.gecikme > 0 && (
                           <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'eskalasyon', kartId: c.id })}>
                             <Mail aria-hidden className="h-4 w-4" />
-                            Gecikme yazısı
+                            Gecikme yazısı taslağı
                           </button>
                         )}
                       </>
@@ -268,9 +269,18 @@ export default function Load() {
 }
 
 function HeatTable({ t, onOpen }: { t: LoadTable; onOpen: (printer: string, month: string, cell: Cell) => void }) {
-  if (!t.satirlar.length) return <Note tone="info">Baskıdan çıkmamış açık kart yok.</Note>;
+  if (!t.satirlar.length) return <EmptyHint title="Baskıdan çıkmamış açık kart yok" why="Üretim yönetiminde açık baskı işi bulunmuyor; yeni kart açıldığında burada görünür." />;
   return (
     <Panel>
+      <div className="mb-2 flex items-center gap-1 px-1 text-[12px] text-canvas-muted">
+        Her hücre o ay o matbaada basılacak adet ve iş sayısıdır; hücreye dokunursanız işler listelenir.
+        <Explain label="Yük tablosu" title="Renkler ve forma">
+          <span className="block"><b>Kırmızı:</b> matbaa için girilen aylık kapasite aşıldı.</span>
+          <span className="block"><b>Amber:</b> kapasite girilmemiş; matbaanın son 12 ayda en yoğun ayı aşıldı (kapasite değil, referans).</span>
+          <span className="block"><b>Mor tonları:</b> eşiğe göre doluluk; koyulaştıkça yük artar.</span>
+          <span className="block"><b>Forma-baskı:</b> kitabın forma sayısı × adet. Forma, tek tabakada basılıp katlanan sayfa grubudur; matbaanın asıl iş yükünü adetten daha iyi gösterir.</span>
+        </Explain>
+      </div>
       <TableWrap>
         <thead>
           <tr className="border-b border-slate-100">

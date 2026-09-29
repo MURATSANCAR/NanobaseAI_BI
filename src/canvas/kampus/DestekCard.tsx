@@ -17,7 +17,7 @@ export default function DestekCard() {
         <Headset aria-hidden className="h-4 w-4 shrink-0 text-violet" />
         <h3 className="kp-display truncate text-xs font-bold uppercase tracking-wider text-ink">Destek Masası</h3>
       </div>
-      <p className="text-xs text-muted">Bilgisayar, yazılım ya da iş talebini buradan aç; durumunu masadan izle.</p>
+      <p className="text-xs text-muted">Bilgisayar, yazılım ya da iş talebinizi buradan açın; talebin durumunu «Taleplerim»den izleyin. Masa yeni sekmede açılır.</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <a
           href={destekUrl('/helpdesk/tickets/new')}
@@ -25,7 +25,7 @@ export default function DestekCard() {
           rel="noreferrer"
           className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl bg-violet px-3 text-xs font-semibold text-white hover:bg-violet/90 sm:min-h-0 sm:py-2"
         >
-          <Plus aria-hidden className="h-3.5 w-3.5" /> Yeni talep
+          <Plus aria-hidden className="h-3.5 w-3.5" /> Talep aç
         </a>
         <a
           href={destekUrl('/helpdesk/tickets')}

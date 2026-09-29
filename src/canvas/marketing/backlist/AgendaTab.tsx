@@ -83,19 +83,19 @@ export default function AgendaTab({ meta }: { meta: BlMeta }) {
     <div className="flex flex-col gap-3 lg:gap-4">
       <div className="flex flex-wrap items-end gap-2 px-1">
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Pencere</span>
+          <span className={labelCls}>Önümüzdeki</span>
           <select className={`${field} w-auto`} value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
             {[4, 6, 8, 12, 16, 26].map((w) => <option key={w} value={w}>{w} hafta</option>)}
           </select>
         </label>
         <p className="max-w-[80ch] text-[11.5px] leading-snug text-canvas-muted">
-          Özel gün bağları ve yazarın yeni kitabı CRM'den; tarih yöntemi SEO sezon takvimiyle aynı. Arama ilgisi ve haber verisi kullanılmaz.
+          Önümüzdeki haftalarda backlist kitaplarını gündeme taşıyabilecek fırsatlar: yaklaşan özel günler, yazarın yeni kitabı ve konu eşleşmeleri. Bağlar CRM'den gelir; kitapları seçip plan açabilirsiniz.
           Özel güne {meta.settings.remindWeeks} hafta kala, bağlı ve stoklu ama planı olmayan kitaplar e-postayla hatırlatılır.
         </p>
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Gündem açılamadı.')}</Note>}
-      {d && !d.gunler.length && !d.yazarlar.length && !d.konular.length && <Note tone="info">Bu pencerede backlist kitaplarına bağlı gündem yok.</Note>}
+      {d && !d.gunler.length && !d.yazarlar.length && !d.konular.length && <Note tone="info">Seçtiğiniz süre içinde backlist kitaplarına bağlı özel gün, yazarın yeni kitabı ya da konu eşleşmesi yok. Süreyi uzatmayı deneyin.</Note>}
 
       {d?.gunler.map((g) => (
         <Block key={`${g.id}-${g.baslangic}`} title={g.ad ?? 'Özel gün'} info={<SqlInfo k={d?.kaynaklar} alan="gunler[]" label="Stok, tükenme ve geçen yıl aynı ay" />}
@@ -122,7 +122,7 @@ export default function AgendaTab({ meta }: { meta: BlMeta }) {
       )}
 
       {!!d?.konular.length && (
-        <Block title="Konu eşleşmeleri" info={<SqlInfo k={d?.kaynaklar} alan="konular[]" label="Konu eşleşmesi ve skor" />} help="Özel günün adı kitabın CRM anahtar kelime ve temalarında geçiyor; Zeki AI «ilgili mi?» sorusuna kapalı kümeden cevap verdi. Onay sizde.">
+        <Block title="Konu eşleşmeleri" info={<SqlInfo k={d?.kaynaklar} alan="konular[]" label="Konu eşleşmesi ve skor" />} help="Özel günün adı kitabın CRM'deki anahtar kelime ve temalarında geçiyor. Zeki AI eşleşmenin ilgili olup olmadığını tahmin etti; kararı siz verirsiniz.">
           <ul className="flex flex-col divide-y divide-slate-100">
             {d.konular.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 py-2">

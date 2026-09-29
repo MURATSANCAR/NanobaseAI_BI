@@ -11,6 +11,7 @@ import { AskSheet, DigitalFrame, Tabs } from './parts';
 import ImportWizard, { UploadStep } from './ImportWizard';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint } from '../components/Explain';
 
 /** Dijital satış (finans verisi, ayrı sayfa yetkisi): onaylı platform raporlarından aylık gelir, platform ve kitap kırılımı,
  *  eşleşmeyen açık satırlar, Logo'daki e-kitap faturaları (ayrı sütun; iki kaynak toplanmaz), dijital/basılı oranı;
@@ -43,7 +44,7 @@ export default function DigitalSalesScreen() {
       crumb="Dijital satış"
       me={me}
       title="Dijital satış"
-      lead="Platformların aylık satış raporları kitaplara eşlenir; eşleşmeyen satır atılmaz, açık iş olarak kalır. Döviz kuru onayda sizden alınır, modül kur varsaymaz. Logo'da e-kitap stok koduyla kesilen faturalar ayrı gösterilir."
+      lead="Dijital platformların aylık satış raporlarını yükler, satırları kitaplarımızla eşleştirirsiniz; eşleşmeyen satır silinmez, açık iş olarak bekler. Döviz kurunu onay sırasında siz girersiniz. Logo'daki e-kitap faturaları ayrıca gösterilir."
       aside={
         me ? (
           <div className="flex justify-start lg:justify-end">
@@ -55,7 +56,7 @@ export default function DigitalSalesScreen() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'pano' ? null : t, yukle: null, rapor: null })} />
       {tab === 'pano' && <Dashboard canExport={!!me?.canExport} params={params} update={update} />}
@@ -78,7 +79,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_minmax(0,260px)_auto] sm:items-end">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Dönem (YYYY ya da YYYY-AA)</span>
-            <input className={field} value={donem} placeholder="hepsi" onChange={(e) => update({ donem: e.target.value.trim() || null })} />
+            <input className={field} value={donem} placeholder="Örn. 2026-08 (boş: hepsi)" onChange={(e) => update({ donem: e.target.value.trim() || null })} />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Platform</span>
@@ -91,11 +92,11 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
             <>
               <a className={btnGhost} href={dijitalApi.salesCsv({ donem: donem || undefined, platform: platform || undefined })}>
                 <Download aria-hidden className="h-4 w-4" />
-                CSV
+                Listeyi indir (CSV)
               </a>
               <a className={btnGhost} href={xlsxUrl(dijitalApi.salesCsv({ donem: donem || undefined, platform: platform || undefined }))}>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                Excel
+                Listeyi indir (Excel)
               </a>
             </>
           )}
@@ -104,17 +105,20 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
       {q.error && <Note tone="err">{errText(q.error, 'Satış okunamadı.')}</Note>}
       <KpiRow>
         <Kpi label="Dijital gelir" value={fmtMoney(totals.net)} help="Onaylı platform raporları, TL (onaydaki kurla)"
+          explain="Onaylanmış platform raporlarındaki net satış tutarlarının toplamı; döviz cinsinden raporlar onay sırasında girilen kurla TL'ye çevrilir."
           info={<SqlInfo k={k} alan="toplam.net" label="Dijital gelir" />} />
         <Kpi label="Dijital adet" value={fmtInt(totals.adet)} help={`${fmtInt(s?.kitaplar.length)} kitap`}
           info={<SqlInfo k={k} alan="kart.adet" label="Dijital adet" />} />
         <Kpi label="Eşleşmeyen satır" value={fmtInt(s?.eslesmeyen.length)} help="Açık iş; Raporlar sekmesinde eşlenir"
+          explain="Rapordaki satırlardan hangi kitaba ait olduğu bulunamayanlar. Bu satırlar gelir toplamına ve kitap tablosuna girmez; «Raporlar» sekmesinde raporu açıp elle eşleyin."
           info={<SqlInfo k={k} alan="sayac.eslesmeyen" label="Eşleşmeyen satır" />} />
         <Kpi label="Logo e-kitap faturası" value={fmtInt(totals.logoAdet)} help={s?.logoPencere ? `${s.logoPencere[0]} – ${s.logoPencere[1]}` : 'Logo okuması yok'}
+          explain="Logo'da e-kitap stok koduyla kesilmiş faturaların adedi. Aynı satış hem platform raporunda hem burada olabileceği için iki rakam toplanmaz."
           info={<SqlInfo k={k} alan="toplam.logoAdet" label="Logo e-kitap faturası" />} />
       </KpiRow>
       <Panel>
         <h2 className="text-[15px] font-extrabold">Aylık gelir, platforma göre</h2>
-        {!s?.aylik.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Onaylı rapor yok.</p> : (
+        {!s?.aylik.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Bu dönem ve platform için onaylı rapor yok. Raporu «Rapor yükle» ile yükleyip onaylayın.</p> : (
           <div className="mt-2"><TableWrap>
             <thead><tr><th className={th}>Dönem</th><th className={th}>Platform</th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].satir">Satır</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].adet">Adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="aylik[].netTl">Net (TL)</InfoLabel></th></tr></thead>
             <tbody>{s.aylik.map((r) => (
@@ -128,7 +132,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
       <Panel>
         <h2 className="text-[15px] font-extrabold">Kitaplar</h2>
         <p className="mt-0.5 text-[12px] text-canvas-muted">E-kitap telifi için kitap bazında dijital satış (onaylı raporlar).</p>
-        {!s?.kitaplar.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Eşlenmiş satış yok.</p> : (
+        {!s?.kitaplar.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Kitaba eşlenmiş satış yok.</p> : (
           <div className="mt-2"><TableWrap>
             <thead><tr><th className={th}>Stok kodu</th><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].adet">Dijital adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].netTl">Net (TL)</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="kitaplar[].basili12Adet">Basılı 12 ay</InfoLabel></th></tr></thead>
             <tbody>{s.kitaplar.map((b) => (
@@ -142,7 +146,7 @@ function Dashboard({ canExport, params, update }: { canExport: boolean; params: 
       <Panel>
         <h2 className="text-[15px] font-extrabold">Dijital / basılı, hedef kitleye göre</h2>
         <p className="mt-0.5 text-[12px] text-canvas-muted">Dijital: seçili dönemdeki onaylı rapor adedi; basılı: aynı kitapların son 12 ay Logo faturalı net adedi.</p>
-        {!s?.dijitalBasiliOran.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Veri yok.</p> : (
+        {!s?.dijitalBasiliOran.length ? <p className="mt-2 text-[12.5px] text-canvas-muted">Karşılaştırılacak dijital satış yok.</p> : (
           <div className="mt-2"><TableWrap>
             <thead><tr><th className={th}>Hedef kitle</th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].dijitalAdet">Dijital adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].basiliAdet">Basılı adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={k} alan="dijitalBasiliOran[].oran">Oran</InfoLabel></th></tr></thead>
             <tbody>{s.dijitalBasiliOran.map((r) => (
@@ -205,7 +209,7 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
       <h2 className="text-[15px] font-extrabold">Yüklenen raporlar</h2>
       {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
       <div className="mt-2 flex flex-col gap-2">
-        {list.data && !list.data.items.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Henüz rapor yüklenmedi. Yukarıdaki alana platformun aylık raporunu bırakın.</div>}
+        {list.data && !list.data.items.length && <EmptyHint title="Henüz rapor yüklenmedi" why="Yukarıdaki alana platformun aylık satış raporunu (Excel ya da CSV) bırakın." />}
         {list.data?.items.map((r) => (
           <div key={r.id} className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-100 bg-white/80 p-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center">
             <div className="min-w-0">
@@ -221,7 +225,7 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
               <SqlInfo k={list.data?.kaynaklar} alan="items[]" row={r.id} label={`${r.platform ?? 'Rapor'} · ${r.donem}`} className="ml-0.5" />
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <button type="button" className={btnGhost} onClick={() => update({ rapor: r.id })}>Aç</button>
+              <button type="button" className={btnGhost} onClick={() => update({ rapor: r.id })}>Raporu aç</button>
               {canImport && r.durum !== 'iptal' && (
                 <button type="button" className={btnGhost} onClick={() => setAsking(r)}>{r.durum === 'onizleme' ? 'Sil' : 'İptal et'}</button>
               )}
@@ -230,7 +234,7 @@ function Reports({ params, update, canImport }: { params: URLSearchParams; updat
         ))}
       </div>
       <AskSheet open={!!asking} title={asking?.durum === 'onizleme' ? 'Önizleme silinsin mi?' : 'Rapor iptal edilsin mi?'}
-        message={asking?.durum === 'onizleme' ? 'Yüklenen satırlar silinir.' : 'Satırlar kayıtta kalır ama toplamlara girmez. Aynı dönemin düzeltilmiş raporu sonra yüklenebilir.'}
+        message={asking?.durum === 'onizleme' ? 'Yüklenen satırlar silinir. Bu işlem geri alınmaz.' : 'Satırlar kayıtta kalır ama toplamlara girmez. Aynı dönemin düzeltilmiş raporu sonra yüklenebilir.'}
         confirm={asking?.durum === 'onizleme' ? 'Sil' : 'İptal et'} danger busy={remove.isPending}
         onClose={() => setAsking(null)} onConfirm={() => asking && remove.mutate(asking.id)} />
     </Panel>

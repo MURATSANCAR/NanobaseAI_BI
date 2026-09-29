@@ -11,6 +11,7 @@ import { LogoMovements } from './PeoplePane';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, day, q2, stamp, tl, todayIso, useFlRefresh, type FlCtx } from './shared';
 import { xlsxUrl } from '../../components/excel';
+import { Explain } from '../../components/Explain';
 
 /**
  * Hakediş: kabul edilmiş işler kişi başına bir belgede toplanır, satırlar o anki tutarla dondurulur.
@@ -48,8 +49,8 @@ export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
             <SqlInfo k={payable.data?.kaynaklar} alan="items[]" label="Ödenecek işler" />
           </h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Teslimi kabul edilmiş, henüz hakedişe girmemiş görevler.</p>
-          {payable.error && <Note tone="err">{errText(payable.error, 'Okunamadı.')}</Note>}
-          {payable.data && !payable.data.items.length && <Empty>Ödenecek iş yok.</Empty>}
+          {payable.error && <Note tone="err">{errText(payable.error, 'Ödenecek işler okunamadı. Sayfayı yenileyip yeniden deneyin.')}</Note>}
+          {payable.data && !payable.data.items.length && <Empty>Ödenecek iş yok. İş paketlerinde teslimi kabul ettiğiniz görevler burada toplanır.</Empty>}
           <ul className="mt-2 space-y-2">
             {payable.data?.items.map((g) => (
               <PayableGroup key={g.personId} ctx={ctx} g={g} onCreated={(id) => setOpen(id)} />
@@ -76,6 +77,12 @@ export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
               ))}
             </div>
           </div>
+          <p className="mt-2 flex items-center gap-1 text-[11.5px] leading-snug text-canvas-muted">
+            Hakediş belgesi taslak → onay bekliyor → onaylandı → ödendi diye ilerler.
+            <Explain label="Hakediş durumları">
+              Taslak: hazırlanıyor. Onay bekliyor: onay yetkilisine gönderildi. Onaylandı: ödeme için hazır. Ödendi: ödeme Logo'da yapılıp portalda işaretlendi. Tutarlar brüt ücrettir (KDV hariç).
+            </Explain>
+          </p>
           {list.data && (
             <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
               Durum toplamları
@@ -85,7 +92,7 @@ export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
             </p>
           )}
           {list.error && <Note tone="err">{errText(list.error, 'Hakedişler okunamadı.')}</Note>}
-          {list.data && !list.data.items.length && <Empty>Bu durumda hakediş yok.</Empty>}
+          {list.data && !list.data.items.length && <Empty>Bu durumda hakediş yok. Üstten başka bir durum seçin.</Empty>}
           <ul className="mt-2 space-y-1.5">
             {list.data?.items.map((h) => (
               <li key={h.id}>

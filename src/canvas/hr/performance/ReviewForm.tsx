@@ -51,7 +51,7 @@ function Body({ r, onChange }: { r: Review; onChange: (x: Review) => void }) {
     onSuccess: (x) => { toast.success('Teslim edildi.'); onChange(x); },
     onError: (e) => toast.error(errText(e, 'Teslim edilemedi.')),
   });
-  if (!form) return <Note tone="warn">Dönemin formu yok.</Note>;
+  if (!form) return <Note tone="warn">Bu dönem için değerlendirme formu seçilmemiş; İnsan Kaynakları’na haber verin.</Note>;
   const editing = r.can.editSelf || r.can.editManager;
   const labels = form.overallLabels;
   return (
@@ -73,7 +73,10 @@ function Body({ r, onChange }: { r: Review; onChange: (x: Review) => void }) {
         </Block>
       )}
       {editing && (
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl bg-white/90 p-2 shadow-glass-float backdrop-blur">
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-white/90 p-2 shadow-glass-float backdrop-blur">
+          <span className="mr-auto min-w-0 text-[11.5px] leading-snug text-canvas-muted">
+            {r.can.editSelf ? 'Teslim ettikten sonra öz değerlendirmenizi değiştiremezsiniz.' : 'Çalışanla paylaşana kadar düzeltebilirsiniz; genel değerlendirme puanı zorunludur.'}
+          </span>
           <button type="button" className={btnGhost} disabled={saveDraft.isPending} onClick={() => saveDraft.mutate()}>Taslak kaydet</button>
           <button type="button" className={btnPrimary} disabled={submit.isPending || (r.can.editManager && !mgr.overall)} onClick={() => submit.mutate()}>
             {r.can.editSelf ? 'Öz değerlendirmeyi teslim et' : 'Değerlendirmeyi teslim et'}
@@ -100,6 +103,7 @@ function SectionBlock({ s, r, self, mgr, setSelf, setMgr }: {
       )}
       {s.kind === 'yetkinlik' && (
         <ul className="flex flex-col gap-2">
+          <li className="text-[11.5px] text-canvas-muted">Her maddeyi 1 (en düşük) ile 5 (en yüksek) arasında puanlayın.</li>
           {s.items.map((it) => (
             <li key={it.key} className="rounded-xl bg-white/80 p-2.5">
               <div className="text-[13px] font-bold">{it.label}</div>
@@ -158,7 +162,7 @@ function NoteField({ label, value, disabled, onChange, rewriteId }: { label: str
         <div className="rounded-xl bg-canvas-violet/5 p-2.5 text-[12.5px]">
           <div className="whitespace-pre-wrap break-words">{hint}</div>
           <div className="mt-1.5 flex justify-end gap-2">
-            <button type="button" className={btnGhost} onClick={() => setHint(null)}>Kalsın</button>
+            <button type="button" className={btnGhost} onClick={() => setHint(null)}>Kendi metnimi koru</button>
             <button type="button" className={btnPrimary} onClick={() => { onChange(hint); setHint(null); }}>Bunu kullan</button>
           </div>
           <div className="mt-1 text-[11px] text-canvas-muted">Adlar ve iletişim bilgileri Zeki AI'a gönderilmeden gizlendi; yeni olay eklenmez.</div>
@@ -180,7 +184,7 @@ function FlowBox({ r, onChange }: { r: Review; onChange: (x: Review) => void }) 
     onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.')),
   });
   return (
-    <Block title="Süreç">
+    <Block title="Süreç adımları" help="Her adım bir öncekinden sonra açılır. Yöneticinin yazdıkları, görüşmede çalışanla paylaşılana kadar çalışana görünmez.">
       <ol className="flex flex-col gap-1 text-[12.5px]">
         <li>Öz değerlendirme: {r.selfSubmittedAt ? fmtDateTime(r.selfSubmittedAt) : 'bekleniyor'}</li>
         <li>Yönetici değerlendirmesi: {r.managerSubmittedAt ? fmtDateTime(r.managerSubmittedAt) : 'bekleniyor'}</li>
@@ -198,7 +202,7 @@ function FlowBox({ r, onChange }: { r: Review; onChange: (x: Review) => void }) 
       )}
       {r.can.comment && (
         <div className="mt-2 flex flex-col gap-2">
-          <textarea className={`${field} min-h-[90px]`} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Yorumunuz (isteğe bağlı; itirazda zorunlu)" />
+          <textarea className={`${field} min-h-[90px]`} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Değerlendirme hakkındaki yorumunuz (isteğe bağlı; itiraz ediyorsanız zorunlu)" />
           <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={objection} onChange={(e) => setObjection(e.target.checked)} />Bu değerlendirmeye itiraz ediyorum</label>
           <div className="flex justify-end"><button type="button" className={btnPrimary} disabled={act.isPending || (objection && !comment.trim())} onClick={() => act.mutate('comment')}>Gönder</button></div>
         </div>
@@ -223,7 +227,7 @@ function WorkBox({ r, onChange }: { r: Review; onChange: (x: Review) => void }) 
   return (
     <Block title="İş kayıtları özeti" info={<SqlInfo k={r.kaynaklar} alan="workSummaries" label="İş kayıtları özeti" />} help="Portal görevleri ve CRM sahiplik kayıtlarının sayıları; bilgi amaçlıdır, puan değildir. Portal kullanım kayıtları kullanılmaz."
       action={r.can.workSummary ? <button type="button" className={btnGhost} disabled={gen.isPending} onClick={() => gen.mutate()}>{gen.isPending ? 'Hazırlanıyor…' : 'Özet hazırla'}</button> : undefined}>
-      {!r.workSummaries.length && <div className="text-[12px] text-canvas-muted">Özet yok.</div>}
+      {!r.workSummaries.length && <div className="text-[12px] text-canvas-muted">Henüz özet hazırlanmadı.</div>}
       <ul className="flex flex-col gap-1.5">
         {r.workSummaries.map((w) => (
           <li key={w.id} className="rounded-xl bg-white/80 px-3 py-2 text-[12.5px]">

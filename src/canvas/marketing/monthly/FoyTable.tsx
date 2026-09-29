@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { Pill } from '../../admin/ui';
+import { EmptyHint } from '../../components/Explain';
 import { fmtShortDay } from '../api';
 import { FOY_TONE, type Foy } from './api';
 
@@ -26,7 +27,7 @@ function Flags({ f, fields }: { f: Foy; fields: Record<string, string> }) {
 }
 
 export default function FoyTable({ rows, fields }: { rows: Foy[]; fields: Record<string, string> }) {
-  if (rows.length === 0) return <p className="py-6 text-[12.5px] text-canvas-muted">Bu ay yayımlanacak yeni kitap yok ya da süzgece uyan föy yok.</p>;
+  if (rows.length === 0) return <EmptyHint title="Gösterilecek föy yok" why="Bu ay CRM'de yayın günü olan yeni kitap yok ya da seçtiğiniz durum süzgecine uyan föy yok. Başka bir ay seçin ya da durumu «Hepsi» yapın." />;
   const link = (f: Foy) => `/pazarlama/foy/${encodeURIComponent(f.stokKodu)}?ay=${f.donem}`;
   return (
     <>

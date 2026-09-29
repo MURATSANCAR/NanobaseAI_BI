@@ -7,6 +7,7 @@ import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
 
 const PAGE = 40;
 type Owner = 'tsoft' | 'telif' | 'icerik' | 'bt' | 'yayin' | 'seo';
@@ -122,7 +123,7 @@ export default function SeoWorklist() {
       crumb="İş listesi"
       eyebrow="SEO & GEO · İş listesi"
       title="Tek iş listesi"
-      lead="Bütün SEO & GEO ekranlarının çıkardığı işler tek listede: kim yapacak, ne kadar önemli, nerede. Sıra satış ve Google verisiyle hesaplanan etkiye göre; her işin yanında hesabı yazılı. Kaynak ekran bir işi artık göstermiyorsa iş kendiliğinden kapanır. Hiçbir şey siteye ya da CRM'e gönderilmez."
+      lead="Bütün SEO ve GEO ekranlarının çıkardığı işler tek sırada: kim yapacak, ne kadar önemli, nereden geldi. Biriminizin işlerini süzün, «Ekrana git» ile ayrıntıya bakın, durumu ve atanan kişiyi yazın. Hiçbir şey siteye ya da CRM’e gönderilmez."
       actions={
         <>
           <button className="sg-button" onClick={() => setShowLog((v) => !v)} aria-pressed={showLog}>
@@ -155,6 +156,7 @@ export default function SeoWorklist() {
           {list.error && <Failed error={list.error} />}
           {d && (
             <>
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sg-muted)' }}>Kartlar her birimin açık işlerini gösterir; bir karta dokunun, liste o birime süzülsün.</p>
               <section className="sg-kpis" aria-label="Sorumlu başına açık işler">
                 {OWNERS.map((o) => {
                   const s = d.summary[o];
@@ -205,6 +207,11 @@ export default function SeoWorklist() {
                     </button>
                   ))}
                 </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <Explain label="Durum ve görünüm" title="Durumlar ve görünüm">
+                    «Açık»: yeni ve yapılıyor işler. «Yok sayıldı»: yapılmayacağına karar verilen iş. Kaynak ekran bir işi artık göstermiyorsa iş kendiliğinden kapanır. «Gruplu»: aynı türden ürün ya da kişi işleri tek satırda toplanır; «Tek tek» hepsini ayrı gösterir.
+                  </Explain>
+                </span>
                 <div className="sg-filters" role="radiogroup" aria-label="Görünüm">
                   <button className="sg-filter" role="radio" aria-checked={view === 'gruplu'} aria-pressed={view === 'gruplu'} onClick={() => setView('gruplu')}>
                     Gruplu
@@ -227,7 +234,7 @@ export default function SeoWorklist() {
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="İş, kitap ya da kişi ara" aria-label="Ara" />
               </label>
               <p className="sg-banner">
-                Etki puanı = önem derecesi + satış adedi + Google gösterimi + tahmini ek tıklama (+ gruplu işlerde kayıt sayısı), her biri logaritmik.{' '}
+                Etki puanı işin önem derecesini, kitabın satışını, Google’daki gösterimini ve tahmini ek tıklamayı (gruplu işlerde kayıt sayısını da) birleştirir; büyük değerler aşırı baskın olmasın diye her biri sıkıştırılarak (logaritmik) eklenir. Büyük puanlı işi önce yapın.{' '}
                 {d.builtAt ? `Liste ${dateTime(d.builtAt)} tarihinde toplandı; ${fmt(Math.round(d.cacheSeconds / 60))} dakikadan eskiyse arka planda yenilenir.` : ''}
                 {d.building ? ' Yeni liste şu an toplanıyor.' : ''}
               </p>
@@ -240,10 +247,10 @@ export default function SeoWorklist() {
               )}
               {d.buildError && <p className="sg-banner err">Son toplama tamamlanamadı: {d.buildError}</p>}
               {d.ready && !d.items.length && (
-                <div className="sg-empty">
-                  <h2>İş yok</h2>
-                  <p>Bu süzgece uyan açık iş kalmadı.</p>
-                </div>
+                <EmptyHint
+                  title="Bu süzgece uyan iş yok"
+                  why={status === 'acik' && !owner && !source && !query ? 'Açık iş kalmadı; bütün işler bitti ya da yok sayıldı.' : 'Birim, durum, kaynak ya da arama süzgecini gevşetin.'}
+                />
               )}
               {d.ready && d.items.length > 0 && (
                 <p style={{ margin: '0 0 8px', fontSize: 12.5, color: 'var(--sg-muted)' }}>
@@ -315,7 +322,7 @@ function WorkRow({ it, canEdit, statuses, onDone, statusFilter = '' }: { it: Ite
       </div>
       <p style={{ margin: '8px 0 4px', fontSize: 13, overflowWrap: 'anywhere' }}>{it.detail}</p>
       <p className="sg-mono" style={{ margin: '0 0 10px', fontSize: 11.5, color: 'var(--sg-muted)', overflowWrap: 'anywhere' }}>
-        Puan: {it.impactBasis}
+        Etki hesabı: {it.impactBasis}
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Link className="sg-button" to={it.link}>
@@ -352,14 +359,14 @@ function WorkRow({ it, canEdit, statuses, onDone, statusFilter = '' }: { it: Ite
               ))}
             </select>
             <label className="sg-search" style={{ flex: '1 1 160px' }}>
-              <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Atanan kişi (AD adı)" aria-label="Atanan kişi" maxLength={120} />
+              <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Atanan kişi (kullanıcı adı)" aria-label="Atanan kişi" maxLength={120} />
             </label>
             <label className="sg-search" style={{ flex: '2 1 220px' }}>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && dirty && it.status !== 'karisik' && save.mutate(it.status)}
-                placeholder="Not"
+                placeholder="Not, ör. site yöneticisine iletildi"
                 aria-label="Not"
                 maxLength={1000}
               />
@@ -446,7 +453,7 @@ function WorklistLog() {
       {d && !d.items.length && (
         <div className="sg-empty">
           <h2>Geçmiş boş <SeoInfo k={log.data?.kaynaklar} label="Geçmiş boş" /></h2>
-          <p>Henüz kapanan ya da durumu değişen iş yok.</p>
+          <p>Henüz kapanan ya da durumu değişen iş yok. Bir işin durumunu değiştirdiğinizde burada kaydı görünür.</p>
         </div>
       )}
       {d && d.items.length > 0 && (

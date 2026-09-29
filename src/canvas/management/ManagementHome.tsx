@@ -5,6 +5,7 @@ import Shell from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { managementApi, sinceText } from './api';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import './management.css';
 
 /** Rapor kimliği → ekran yolu. Yeni rapor: backend'e modül, buraya satır, App.tsx'e rota. */
@@ -28,7 +29,7 @@ export default function ManagementHome() {
               <h1>
                 Karar raporları<span>.</span>
               </h1>
-              <p>Sabit tanımlı, kaynağı ve SQL’i açık raporlar. Veriler Logo ve CRM’den beş dakikada bir kendiliğinden okunur; istenince elle de yenilenebilir.</p>
+              <p>Tanımı sabit, her rakamın kaynağı ve hesabı açık karar raporları. Veriler Logo ve CRM’den beş dakikada bir kendiliğinden okunur. Açmak için bir rapora dokunun.</p>
             </div>
           </header>
 
@@ -40,9 +41,13 @@ export default function ManagementHome() {
           )}
           {list.error && (
             <section className="mg-empty">
-              <h2>Liste açılamadı</h2>
+              <h2>Rapor listesi açılamadı</h2>
               <p>{(list.error as Error).message}</p>
             </section>
+          )}
+
+          {list.isSuccess && reports.length === 0 && (
+            <EmptyHint title="Gösterilecek rapor yok" why="Rapor listesi boş geldi. Birkaç dakika sonra sayfayı yenileyin; sürerse sistem yöneticinize haber verin." />
           )}
 
           <div className="mg-cards">
@@ -68,7 +73,7 @@ export default function ManagementHome() {
                   </div>
                   <div className="mg-card-meta">
                     <span>
-                      <Database size={12} aria-hidden /> {r.sources} sorgu
+                      <Database size={12} aria-hidden /> {r.sources} kaynak okuma
                     </span>
                     <span>Güncelleme: {sinceText(r.updatedAt)} · {Math.round(r.refreshIntervalSeconds / 60)} dk’da bir</span>
                   </div>

@@ -111,7 +111,7 @@ export default function DeptTab({ plan, editable }: { plan: Plan; editable: bool
         </p>
       </div>
       {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Bütçe okunamadı.')}</Note> : !groups.length ? (
-        <Note tone="info">Bu planda departman satırı yok.</Note>
+        <Note tone="info">Bu planda departman bütçesi satırı yok.</Note>
       ) : (
         <TableWrap>
           <thead>

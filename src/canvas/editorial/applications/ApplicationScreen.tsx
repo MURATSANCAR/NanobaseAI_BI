@@ -124,7 +124,7 @@ function Actions({ a, onEdit }: { a: AppDetail; onEdit: () => void }) {
         <span className={label}>{a.evaluator ? 'Başka editöre ata' : 'Editöre ata'}</span>
         <SearchSelect label="Editör" placeholder="Kişi seçin" options={people.options} value={assignee} onChange={setAssignee} />
         <button type="button" className={`${btnGhost} w-full`} disabled={!assignee || assign.isPending} onClick={() => assign.mutate(assignee)}>
-          Ata
+          Seçilen editöre ata
         </button>
       </div>,
     );
@@ -203,7 +203,7 @@ function Actions({ a, onEdit }: { a: AppDetail; onEdit: () => void }) {
   if (['yeni', 'degerlendirmede', 'revizyon', 'kurul_bekliyor'].includes(a.status) && mineOrManager && canWrite) {
     blocks.push(
       <button key="withdraw" type="button" className={`${btnGhost} w-full !text-canvas-muted`} onClick={() => setSheet('geri_cekildi')}>
-        Yazar geri çekti
+        Yazarın geri çektiğini kaydet
       </button>,
     );
   }
@@ -222,7 +222,10 @@ function Actions({ a, onEdit }: { a: AppDetail; onEdit: () => void }) {
   return (
     <Panel>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Sıradaki adım</h2>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-extrabold">Sıradaki adım</h2>
+          <p className="text-[11.5px] leading-snug text-canvas-muted">Başvurunun şu anki durumunda sizin yapabileceğiniz işler.</p>
+        </div>
         {canWrite && open && (
           <button type="button" className={`${btnGhost} !min-h-9 !py-1`} onClick={onEdit}>
             <Pencil aria-hidden className="h-3.5 w-3.5" />
@@ -285,7 +288,7 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
                 İndir
               </a>
               {canWrite && open && (
-                <button type="button" aria-label={`${f.filename} dosyasını sil`} className={`${btnGhost} !min-h-9 !py-1`} disabled={del.isPending} onClick={() => del.mutate(f.id)}>
+                <button type="button" aria-label={`${f.filename} dosyasını sil (geri alınamaz)`} title="Dosyayı sil (geri alınamaz)" className={`${btnGhost} !min-h-9 !py-1`} disabled={del.isPending} onClick={() => del.mutate(f.id)}>
                   <Trash2 aria-hidden className="h-4 w-4" />
                 </button>
               )}
@@ -478,7 +481,7 @@ function CrmLink({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
           </button>
           {canWrite && (
             <div className="space-y-1.5">
-              <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="CRM'de proje adıyla ara" className={field} />
+              <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="CRM'de proje adıyla ara (en az 3 harf)" className={field} />
               {search.isFetching && <p className="text-[11.5px] text-canvas-muted">CRM aranıyor…</p>}
               <ul className="space-y-1">
                 {(search.data?.projects ?? []).map((p) => (
@@ -488,7 +491,7 @@ function CrmLink({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
                       {p.note && <span className="text-canvas-muted"> · {p.note}</span>}
                     </span>
                     <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={link.isPending} onClick={() => link.mutate(p.id)}>
-                      Bağla
+                      Bu projeye bağla
                     </button>
                   </li>
                 ))}

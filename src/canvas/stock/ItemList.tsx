@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { TableWrap, label as labelCls, td, th } from '../admin/ui';
 import { fmtDay } from '../budget/api';
 import { InfoLabel } from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { gunText, n0, n1, tl, type Item } from './api';
 import { BookCell, StatePill, num } from './parts';
@@ -94,6 +95,23 @@ const SPEC: Record<Col, { head: string; alan?: string; right?: boolean; cell: (i
   deger: { head: 'Stok değeri', alan: 'stokDegeri', right: true, cell: (i) => (i.stokDegeri === undefined ? '—' : i.stokDegeri === null ? 'maliyet yok' : tl(i.stokDegeri)) },
 };
 
+/** Kolonun sade dille anlamı (başlıktaki «?»). Hesaplar `rules.ts` ile aynı. */
+const TIP: Partial<Record<Col, string>> = {
+  bakiye: 'Logo’daki giriş − çıkış. İleri tarihli (henüz depoya girmemiş) üretim girişi sayılmaz.',
+  crmRaf: 'CRM’deki raf kayıtlarına göre raflarda kalan adet. Logo stoğuyla farkı «Logo–CRM farkı» ekranında görünür.',
+  hiz: 'Bir ayda ortalama kaç adet satıldığı: son çeyreklerin ağırlıklı ortalaması, yalnız faturalı satış.',
+  gun: 'Bugünkü Logo stoğu, bu satış hızıyla kaç gün yeter. Satışı olmayan kitapta hesaplanmaz.',
+  tukenme: 'Logo verisinin son günü + kaç gün yeter. Bugünden değil, verinin bittiği günden sayılır.',
+  kritik: 'Yeni baskının depoya gelmesi için gereken süre (ölçülen baskı süresi + güvenlik günü). Stok bundan önce biterse «altında» yazar.',
+  fark: 'CRM raf kalanı − Logo stok. Eksi sayı CRM’de Logo’dakinden az kitap göründüğünü söyler.',
+  aktarim: 'Farkı açıklayan neden. Logo’ya aktarılmamış hareket varsa fark büyük olasılıkla ondandır; açıklanamayan fark sayım adayıdır.',
+  devir: 'Yıl satış adedi ÷ ortalama stok. Sayı büyüdükçe stok daha hızlı dönüyor demektir.',
+  sonHareket: 'Seçilen pencere içindeki son stok hareketinin tarihi; yılbaşı devri hareket sayılmaz.',
+  tahmin90: 'Zeki AI tahminlemesinin önümüzdeki 90 gün için beklediği satış adedi; alttaki aralık olası en düşük ve en yüksek değer.',
+  deger: 'Logo stoğu × birim maliyet. Birim maliyeti bulunamayan kitapta «maliyet yok» yazar.',
+  bekleyen: 'CRM’deki açık siparişlerde bekleyen adet (perakende ve iç cariler hariç). Alttaki «Logo» satırı, Logo’daki açık satış siparişlerinde henüz sevk edilmemiş adettir.',
+};
+
 /**
  * `k` + `base`: sorgu bilgisi (cevabın `kaynaklar`ı ve satırların yolu, ör. «items[]», «bugun.bitecek.items[]»). Tabloda
  * her kolon başlığında «i»; telefonda kartların üstünde bir kez kolon başına «i» (her kartta tekrar etmez).
@@ -109,7 +127,15 @@ export default function ItemList({ items, cols, action, k, base = 'items[]' }: {
     && (c !== 'tahmin90' || items.some((i) => i.tahminAralik?.g90)));
   const head = (c: Col) => {
     const a = SPEC[c].alan;
-    return a && k ? <InfoLabel k={k} alan={`${base}.${a}`}>{SPEC[c].head}</InfoLabel> : SPEC[c].head;
+    const text = a && k ? <InfoLabel k={k} alan={`${base}.${a}`}>{SPEC[c].head}</InfoLabel> : SPEC[c].head;
+    const tip = TIP[c];
+    if (!tip) return text;
+    return (
+      <span className="inline-flex items-center gap-0.5">
+        {text}
+        <Explain label={SPEC[c].head}>{tip}</Explain>
+      </span>
+    );
   };
   const infoCols = k ? shown.filter((c) => SPEC[c].alan) : [];
   return (

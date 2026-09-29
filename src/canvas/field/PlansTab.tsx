@@ -23,6 +23,9 @@ export default function PlansTab({ meta }: { meta: FieldMeta }) {
   const err = errText(q.error, 'Ödeme planları okunamadı.');
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">
+        Vadesi geçmiş borcu taksitlendirme önerileri. Temsilci önerir ve onaya gönderir, başka bir yetkili onaylar. Onay yalnız burada kayda geçer; müşteriyle anlaşma ve Logo/CRM işlemi ayrıca yapılır.
+      </p>
       <div className="-mx-1 overflow-x-auto px-1">
         <div className="flex w-max min-w-full gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Plan durumu">
           {opts.map((o) => (
@@ -46,7 +49,7 @@ export default function PlansTab({ meta }: { meta: FieldMeta }) {
       ) : err ? (
         <Note tone="err">{err}</Note>
       ) : (q.data?.items ?? []).length === 0 ? (
-        <Empty>Bu durumda ödeme planı yok. Plan, müşteri brifingindeki «Ödeme planı öner» ile başlar.</Empty>
+        <Empty title="Bu durumda ödeme planı yok">Ödeme planı, müşteri brifingindeki alt çubukta yer alan «Ödeme planı» düğmesiyle önerilir. Başka bir durum seçerek diğer planları görebilirsiniz.</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {q.data!.items.map((p) => (

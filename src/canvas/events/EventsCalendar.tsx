@@ -97,27 +97,31 @@ export default function EventsCalendar() {
     <EventsFrame
       crumb="Fuar ve etkinlik"
       title="Fuar, etkinlik ve ödüller"
-      lead="Yılın fuar, imza günü ve söyleşileri tek takvimde: CRM etkinlikleri ve portalda açılan fuar kartları. Kart; kitap ve adet önerisi, görevler, gider ve yazar programını, fuar bitince de satış–sipariş–gider sonucunu toplar. CRM'e hiçbir şey yazılmaz."
+      lead="Yılın fuar, imza günü ve söyleşileri tek takvimde. Her fuar için bir kart açılır: hangi kitaptan kaç adet götürüleceği, hazırlık görevleri, gider ve yazar programı; fuar bitince satış ve gider sonucu. CRM'e hiçbir şey yazılmaz."
       source={`CRM etkinlik · Logo ${m?.settings.channel ?? 'FUAR'} kanalı`}
       presence={d ? `${d.fairs.length} kart · ${d.events.length} CRM kaydı` : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Etkinlik bilgisi açılamadı.')}</Note>}
       {d?.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
 
       {u && d && (
         <KpiRow>
-          <Kpi label="Yaklaşan kart" value={String(u.fairs.length)} help="Bitmemiş, iptal olmayan fuar/etkinlik kartı" info={<SqlInfo k={u.kaynaklar} alan="fairs" label="Yaklaşan kart" />} />
-          <Kpi label="Geciken görev" value={String(u.lateTasks.length)} help="Son tarihi geçmiş, yapılmamış hazırlık görevi" info={<SqlInfo k={u.kaynaklar} alan="lateTasks" label="Geciken görev" />} />
-          <Kpi label="Ödül son tarihi" value={String(soonAwards.length)} help="Son başvurusuna 30 gün ya da daha az kalan ödül" onClick={() => nav('/etkinlikler/oduller')} info={<SqlInfo k={u.kaynaklar} alan="awards" label="Ödül son tarihi" />} />
-          <Kpi label="Sınıflanmamış tip" value={String(d.unmappedTypes)} help={`${year} yılında kaydı olan, eşlemesi yapılmamış CRM etkinlik tipi`} onClick={() => nav('/etkinlikler/tip-eslemesi')} info={<SqlInfo k={d.kaynaklar} alan="unmappedTypes" label="Sınıflanmamış tip" />} />
+          <Kpi label="Yaklaşan kart" value={String(u.fairs.length)} help="Bitmemiş, iptal olmayan fuar/etkinlik kartı" info={<SqlInfo k={u.kaynaklar} alan="fairs" label="Yaklaşan kart" />}
+            explain="Portalda açılmış, henüz bitmemiş ve iptal edilmemiş fuar ya da etkinlik kartları. CRM'deki etkinlik kayıtları bu sayıya girmez." />
+          <Kpi label="Geciken görev" value={String(u.lateTasks.length)} help="Son tarihi geçmiş, yapılmamış hazırlık görevi" info={<SqlInfo k={u.kaynaklar} alan="lateTasks" label="Geciken görev" />}
+            explain="Fuar kartlarındaki hazırlık görevlerinden (stant yeri, yazar programı, sevkiyat listesi gibi) son tarihi geçtiği hâlde «yapıldı» işaretlenmemiş olanlar." />
+          <Kpi label="Ödül son tarihi" value={String(soonAwards.length)} help="Son başvurusuna 30 gün ya da daha az kalan ödül" onClick={() => nav('/etkinlikler/oduller')} info={<SqlInfo k={u.kaynaklar} alan="awards" label="Ödül son tarihi" />}
+            explain="Kitaplarımızla başvurulabilecek ödüllerden son başvuru tarihine 30 gün ya da daha az kalanlar. Karta dokununca Ödüller ekranı açılır." />
+          <Kpi label="Sınıflanmamış tip" value={String(d.unmappedTypes)} help={`${year} yılında kaydı olan, eşlemesi yapılmamış CRM etkinlik tipi`} onClick={() => nav('/etkinlikler/tip-eslemesi')} info={<SqlInfo k={d.kaynaklar} alan="unmappedTypes" label="Sınıflanmamış tip" />}
+            explain="CRM'deki etkinlik tiplerinden henüz fuar, imza günü, söyleşi gibi bir sınıfa bağlanmamış olanlar. Bağlanmayan tipin kayıtları takvimde «Sınıfsız» görünür; karta dokunup eşleyin." />
         </KpiRow>
       )}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         <div className="flex min-w-0 flex-col gap-3 lg:col-span-2 lg:gap-4">
-          <Block title="Yaklaşan fuar ve etkinlikler" info={<SqlInfo k={u?.kaynaklar} alan="fairs" label="Yaklaşan fuar ve etkinlikler" />} help="Başlangıca kalan gün, hazırlık (yapılan görev oranı) ve katılım kararı.">
+          <Block title="Yaklaşan fuar ve etkinlikler" info={<SqlInfo k={u?.kaynaklar} alan="fairs" label="Yaklaşan fuar ve etkinlikler" />} help="Başlangıca kalan gün, hazırlık çubuğu (görevlerin ne kadarı yapıldı) ve katılım kararı. Karta dokununca fuar kartı açılır.">
             {up.isLoading && <Loading />}
             {up.error && <Note tone="err">{errText(up.error, 'Liste açılamadı.')}</Note>}
             {u && u.fairs.length === 0 && (
@@ -262,7 +266,7 @@ export default function EventsCalendar() {
             </ul>
           </Block>
           <Block title="Hatırlatmalar" help="Son 14 gün. Dış gönderim yok; hatırlatmalar burada ve Kampüs ajandasında.">
-            {u && u.reminders.length === 0 && <p className="py-2 text-[12.5px] text-canvas-muted">Hatırlatma yok.</p>}
+            {u && u.reminders.length === 0 && <p className="py-2 text-[12.5px] text-canvas-muted">Son 14 günde hatırlatma yok.</p>}
             <ul className="flex flex-col gap-1.5">
               {(u?.reminders ?? []).map((r) => {
                 const body = (

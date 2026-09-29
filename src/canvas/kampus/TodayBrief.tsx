@@ -65,7 +65,7 @@ export default function TodayBrief() {
           <div role="dialog" aria-label="Bugün" className="glass-panel fixed inset-x-2 top-[4.5rem] z-50 rounded-2xl p-3 shadow-glass-float sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[380px]">
             <div className="mb-2 flex items-center justify-between">
               <span className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Bugün</span>
-              <span className="kp-mono text-[11px] text-muted">yalnız yetkili olduğun ekranlar</span>
+              <span className="kp-mono text-[11px] text-muted">yetkili olduğunuz ekranlardan</span>
             </div>
             {!d ? (
               <p className="text-xs text-muted">Yükleniyor…</p>
@@ -75,7 +75,7 @@ export default function TodayBrief() {
                   <p className="text-xs leading-relaxed text-ink">{text}</p>
                   <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
                     {write.isPending && <Loader2 aria-hidden className="h-3 w-3 animate-spin" />}
-                    {write.isPending ? 'Zeki AI özetliyor…' : byModel ? `Zeki AI${d.ozet?.dusen ? ` · denetimde ${d.ozet.dusen} cümle düştü` : ''}` : 'Kurala göre özet'}
+                    {write.isPending ? 'Zeki AI özetliyor…' : byModel ? `Zeki AI özeti${d.ozet?.dusen ? ` · doğrulanamayan ${d.ozet.dusen} cümle çıkarıldı` : ''}` : 'Maddelerden derlenen özet'}
                   </div>
                 </div>
                 {d.items.length > 0 && (
@@ -99,7 +99,7 @@ export default function TodayBrief() {
                     ))}
                   </ul>
                 )}
-                {d.okunamayan.length > 0 && <p className="mt-2 text-[11px] text-muted">Okunamayan: {d.okunamayan.join(', ')}.</p>}
+                {d.okunamayan.length > 0 && <p className="mt-2 text-[11px] text-muted">Şu an okunamayan bölümler: {d.okunamayan.join(', ')}.</p>}
               </>
             )}
           </div>

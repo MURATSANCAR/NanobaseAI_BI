@@ -85,6 +85,7 @@ export default function PackagesPane({ ctx }: { ctx: FlCtx }) {
             <SqlInfo k={list.data.kaynaklar} alan="items[]" label="İş paketleri" />
             <span aria-hidden>·</span> okunmamış
             <SqlInfo k={list.data.kaynaklar} alan="items[].unread" label="Okunmamış ileti" />
+            <span aria-hidden>·</span> Pakete dokunun, görevleri ve teslimleri açılsın.
           </p>
         )}
         <ul className="mt-2 space-y-2">
@@ -175,7 +176,7 @@ function BookPicker({ value, onPick }: { value: string; onPick: (title: string, 
       />
       {focus && q.length >= 2 && q !== value && (res.data?.books.length ?? 0) > 0 && (
         <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-canvas-card">
-          {res.data?.books.slice(0, 10).map((b) => (
+          {res.data?.books.map((b) => (
             <li key={b.id}>
               <button
                 type="button"
@@ -260,7 +261,7 @@ function PackageForm({ ctx, onDone, onCancel }: { ctx: FlCtx; onDone: (id: strin
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <FieldBox label="Paket adı *">
-            <input required value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="İç illüstrasyonlar" />
+            <input required value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="Ör. İç illüstrasyonlar" />
           </FieldBox>
           <FieldBox label="Kitap">
             <BookPicker value={book.title} onPick={(t, id) => setBook({ title: t, id })} />
@@ -286,7 +287,7 @@ function PackageForm({ ctx, onDone, onCancel }: { ctx: FlCtx; onDone: (id: strin
           <legend className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Görevlere böl</legend>
           <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
             <FieldBox label={`Toplam (${unit})`}>
-              <input value={total} onChange={(e) => setTotal(e.target.value)} className={field} inputMode="decimal" placeholder="24" />
+              <input value={total} onChange={(e) => setTotal(e.target.value)} className={field} inputMode="decimal" placeholder="Ör. 24" />
             </FieldBox>
             <FieldBox label="Kaç parça">
               <input value={parts} onChange={(e) => setParts(e.target.value)} className={field} inputMode="numeric" />

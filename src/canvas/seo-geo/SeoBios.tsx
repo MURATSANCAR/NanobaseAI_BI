@@ -6,6 +6,8 @@ import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { STATUS_LABEL, call, dateTime, fmt, qs, seoApi, type ProductDetail } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { EmptyHint } from '../components/Explain';
+import { Term } from './terms';
 
 /* ------------------------------------------------------------------ uçlar: /api/v1/seo-geo/bios/* */
 type DraftStatus = 'hazir' | 'onaylandi' | 'reddedildi';
@@ -119,7 +121,7 @@ export default function SeoBios() {
       crumb="Yazar biyografileri"
       eyebrow="SEO & GEO · yazar biyografileri"
       title="Yazar biyografileri"
-      lead="“Bu yazar kim?” sorusunda Google ve yapay zekâ cevapları yazarı anlatan, kaynağı belli bir sayfa arar. Biyografi yalnız CRM’deki özgeçmişten yazılır; yazarın Timaş’tan çıkan kitapları listesini sistem kurar. Sıra satıştan aza. Özgeçmişi olmayan yazar için taslak yazılmaz, CRM’e girilecek iş olarak görünür. Onay yalnız kaydedilir; siteye hiçbir şey gönderilmez."
+      lead="«Bu yazar kim?» sorusunda Google ve yapay zekâ servisleri yazarı anlatan, kaynağı belli bir sayfa arar. Zeki AI, yazar sayfası biyografisini yalnız CRM’deki özgeçmişten yazar; siz düzenleyip onaylarsınız. Özgeçmişi olmayan yazar, CRM’e girilecek iş olarak görünür. Siteye hiçbir şey gönderilmez."
       actions={
         canRun && (
           <button className="sg-button" disabled={refresh.isPending || d?.run.running || d?.crmReady === false} onClick={() => refresh.mutate()}>
@@ -137,7 +139,10 @@ export default function SeoBios() {
         ))}
       </div>
 
-      {d && !d.crmReady && <p className="sg-banner">CRM bağlantısı tanımlı değil; özgeçmişler okunamıyor.</p>}
+      <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)' }}>
+        Sıra satıştan aza. «Taslak bekleyen»: özgeçmişi var, henüz taslak yazılmadı. «Özgeçmiş yok»: CRM’de özgeçmiş boş, önce orada doldurulmalı. «Sitede adı eşleşmedi»: CRM’deki ad sitedeki yazar adıyla aynı yazılmamış.
+      </p>
+      {d && !d.crmReady && <p className="sg-banner">CRM bağlantısı tanımlı değil; özgeçmişler okunamıyor. Yöneticinize başvurun.</p>}
       {refresh.error && <Failed error={refresh.error} />}
       {d?.run.error && <p className="sg-banner err">Son tur: {d.run.error}</p>}
 
@@ -157,10 +162,10 @@ export default function SeoBios() {
           {list.isLoading && <Loading text="Yazarlar getiriliyor…" />}
           {list.error && <Failed error={list.error} />}
           {d && !d.items.length && (
-            <div className="sg-empty">
-              <h2>Yazar yok</h2>
-              <p>{d.crmRead ? 'Bu süzgece uyan yazar bulunamadı.' : 'CRM’den yazar özgeçmişleri henüz okunmadı; gece okuması ya da “CRM’den yeniden oku” ile gelir.'}</p>
-            </div>
+            <EmptyHint
+              title={d.crmRead ? 'Bu süzgece uyan yazar yok' : 'Özgeçmişler henüz okunmadı'}
+              why={d.crmRead ? 'Aramayı kısaltın ya da üstten «Tümü»nü seçin.' : 'CRM’den yazar özgeçmişleri gece okumasıyla ya da «CRM’den yeniden oku» ile gelir.'}
+            />
           )}
           <div className="sg-list">
             {d?.items.map((a) => (
@@ -204,10 +209,10 @@ export default function SeoBios() {
           {key ? (
             <AuthorPanel authorKey={key} />
           ) : (
-            <div className="sg-empty">
-              <h2>Bir yazar seçin</h2>
-              <p>Soldan bir yazar seçtiğinizde CRM özgeçmişi, sitedeki kitapları ve varsa ZEKİ AI taslağı açılır.</p>
-            </div>
+            <EmptyHint
+              title="Listeden bir yazar seçin"
+              why="Seçtiğiniz yazarın CRM özgeçmişi, sitedeki kitapları ve varsa Zeki AI taslağı burada açılır."
+            />
           )}
         </section>
       </div>
@@ -249,7 +254,7 @@ function AuthorPanel({ authorKey }: { authorKey: string }) {
             'Sitede bu yazar için sayfa bulunamadı.'
           )}
           {!x.matched && ' · CRM’deki adı sitedeki yazar adlarıyla eşleşmedi; adın yazımı iki yerde aynı olmalı.'}
-          {x.sameAs.length > 0 && ` · kimlik bağlantısı: ${x.sameAs.length}`}
+          {x.sameAs.length > 0 && ` · başka sitelerdeki resmî kaydı: ${x.sameAs.length}`}
         </p>
         {!x.hasBio ? (
           <p className="sg-banner" style={{ marginTop: 12 }}>
@@ -279,7 +284,7 @@ function AuthorPanel({ authorKey }: { authorKey: string }) {
             </button>
           </div>
         )}
-        {draft.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>ZEKİ AI biyografiyi yazıyor; bir iki dakika sürebilir.</p>}
+        {draft.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>Zeki AI biyografiyi yazıyor; bir iki dakika sürebilir.</p>}
         {draft.error && <div style={{ marginTop: 12 }}><Failed error={draft.error} /></div>}
       </div>
 
@@ -327,7 +332,7 @@ function Editor({ draft, name }: { draft: Draft; name: string }) {
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>ZEKİ AI taslağı</h2>
+          <h2>Zeki AI taslağı</h2>
           <p className="sg-sub" style={{ margin: 0 }}>
             {dateTime(draft.createdAt)} · {draft.createdBy ?? '—'}
             {open ? ' · onaylamadan önce düzenleyebilirsiniz' : ''}
@@ -366,7 +371,7 @@ function Editor({ draft, name }: { draft: Draft; name: string }) {
         </section>
         <section className="sg-field" aria-label="Kısa tanım">
           <div className="sg-field-head">
-            <span>Kısa tanım (meta açıklama)</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Kısa tanım (meta açıklama) <Term k="metaDescription" /></span>
             <span className={`sg-mono ${sumOff ? 'over' : ''}`}>{fields.Summary.length} / {L.meta_min}–{L.meta_max} karakter</span>
           </div>
           <textarea className="sg-after" rows={3} value={fields.Summary} readOnly={!open} onChange={(e) => setFields({ ...fields, Summary: e.target.value })} aria-label="Kısa tanım" />
@@ -392,7 +397,7 @@ function Editor({ draft, name }: { draft: Draft; name: string }) {
       </div>
 
       <details className="sg-more" style={{ marginTop: 12 }}>
-        <summary>Yapılandırılmış veri (kişi) — sistem kurar, onayda yeniden hesaplanır</summary>
+        <summary>Yapısal veri (kişi bilgisi) — kendiliğinden kurulur, onayda yeniden hesaplanır</summary>
         <pre className="sg-pre" style={{ marginTop: 8 }}>{JSON.stringify(draft.jsonld, null, 2)}</pre>
       </details>
 
@@ -400,7 +405,7 @@ function Editor({ draft, name }: { draft: Draft; name: string }) {
         <>
           {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
           <div className="sg-decide" style={{ marginTop: 16 }}>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (isteğe bağlı), ör. doğum yılı düzeltildi" aria-label="Editör notu" />
             <button className="sg-button primary" disabled={!canApprove || decide.isPending || !fields.Bio.trim()} onClick={() => decide.mutate('approve')}>
               {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
               Onayla
@@ -411,7 +416,7 @@ function Editor({ draft, name }: { draft: Draft; name: string }) {
             <small>
               {!canApprove
                 ? 'Onay yetkiniz yok; taslağı görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'
-                : 'Onay yalnız kaydedilir; siteye, T-soft’a ya da CRM’e gönderim yok.'}
+                : 'Onay yalnız kayda geçer; siteye, T-soft’a ya da CRM’e hiçbir şey gönderilmez. Metin, indirilen HTML ile yazar sayfasına site yönetimince elle girilir.'}
             </small>
           </div>
         </>

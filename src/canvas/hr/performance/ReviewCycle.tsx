@@ -37,7 +37,7 @@ export default function ReviewCycle() {
     <HrFrame
       crumb="Değerlendirme dönemi"
       title="Değerlendirme dönemi"
-      lead="Öz değerlendirme → yönetici değerlendirmesi → görüşme ve paylaşım → çalışan yorumu → İK onayı. Puanı sistem vermez; kalibrasyon yöneticilerin verdiği puanların birim dağılımıdır."
+      lead="Değerlendirme dönemini açın, kimin nerede kaldığını izleyin ve hatırlatın. Sıra: öz değerlendirme → yönetici değerlendirmesi → görüşme ve paylaşım → çalışan yorumu → İK onayı. Puanı sistem vermez; yönetici verir."
       aside={cycles.data && cycles.data.items.length > 0 ? (
         <select className={field} value={sel} onChange={(e) => setSel(e.target.value)} aria-label="Dönem">
           {cycles.data.items.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.stateLabel}</option>)}
@@ -46,7 +46,7 @@ export default function ReviewCycle() {
     >
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
       {cycles.error && <Note tone="err">{errText(cycles.error, 'Dönemler okunamadı.')}</Note>}
-      {tab === 'durum' && (cycle ? <StatusTab cycle={cycle} meta={meta.data} /> : cycles.data && <Note tone="info">Henüz dönem yok.</Note>)}
+      {tab === 'durum' && (cycle ? <StatusTab cycle={cycle} meta={meta.data} /> : cycles.data && <Note tone="info">Henüz değerlendirme dönemi yok.{can?.cycle ? ' «Dönemler» sekmesinden yeni dönem açın.' : ''}</Note>)}
       {tab === 'donem' && meta.data && <CyclesTab items={cycles.data?.items ?? []} meta={meta.data} onPick={(id) => { setSel(id); setTab('durum'); }} />}
       {tab === 'kalibrasyon' && cycle && <Calibration cycleId={cycle.id} />}
       {tab === 'form' && <FormsTab />}
@@ -78,14 +78,14 @@ function StatusTab({ cycle, meta }: { cycle: Cycle; meta?: PerfMeta }) {
       {can?.cycle && (
         <div className="flex flex-wrap gap-2">
           {cycle.state === 'hazirlik' && <button type="button" className={btnPrimary} disabled={act.isPending} onClick={() => act.mutate('open')}>Dönemi aç</button>}
-          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={sync.isPending} onClick={() => sync.mutate()}>Katılımcıları eşitle</button>}
-          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={remind.isPending} onClick={() => remind.mutate('self')}>Öz değerlendirmesi eksiklere hatırlat</button>}
-          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={remind.isPending} onClick={() => remind.mutate('manager')}>Yöneticilere hatırlat</button>}
+          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={sync.isPending} onClick={() => sync.mutate()} title="Dönem açıldıktan sonra işe girenleri ekler, yöneticisi sonradan girilen kişiyi yöneticisine bağlar">Katılımcıları güncelle</button>}
+          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={remind.isPending} onClick={() => remind.mutate('self')}>Öz değerlendirmesi eksiklere e-posta gönder</button>}
+          {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={remind.isPending} onClick={() => remind.mutate('manager')}>Yöneticilere e-posta gönder</button>}
           {cycle.state === 'acik' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('calibrate')}>Kalibrasyona al</button>}
           {cycle.state === 'kalibrasyon' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('reopen')}>Yeniden aç</button>}
           {(cycle.state === 'acik' || cycle.state === 'kalibrasyon') && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('close')}>Dönemi kapat</button>}
-          {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycle(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />Tablo (CSV)</button>}
-          {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycleXlsx(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Tablo (Excel)</button>}
+          {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycle(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><Download aria-hidden className="h-4 w-4" />Tabloyu indir (CSV)</button>}
+          {can.export && <button type="button" className={btnGhost} onClick={() => void perfApi.exportCycleXlsx(cycle.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}><FileSpreadsheet aria-hidden className="h-4 w-4" />Tabloyu indir (Excel)</button>}
         </div>
       )}
       {st.error && <Note tone="err">{errText(st.error, 'Durum okunamadı.')}</Note>}
@@ -93,16 +93,17 @@ function StatusTab({ cycle, meta }: { cycle: Cycle; meta?: PerfMeta }) {
       {d && (
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Fact label="Katılımcı" value={nf.format(d.total)} info={<SqlInfo k={d.kaynaklar} alan="total" label="Katılımcı" />} />
+            <Fact label="Katılımcı" value={nf.format(d.total)} explain="Bu dönemde değerlendirilecek çalışan sayısı." info={<SqlInfo k={d.kaynaklar} alan="total" label="Katılımcı" />} />
             <Fact label="Öz değerlendirme" value={`${d.selfDone} · ${pct(d.selfRate)}`} help={cycle.selfDue ? `son ${fmtDay(cycle.selfDue)}` : undefined} info={<SqlInfo k={d.kaynaklar} alan="selfDone" label="Öz değerlendirme" />} />
-            <Fact label="Yönetici" value={`${d.managerDone} · ${pct(d.managerRate)}`} help={cycle.managerDue ? `son ${fmtDay(cycle.managerDue)}` : undefined} info={<SqlInfo k={d.kaynaklar} alan="managerDone" label="Yönetici değerlendirmesi" />} />
-            <Fact label="Paylaşılan" value={nf.format(d.shared)} info={<SqlInfo k={d.kaynaklar} alan="shared" label="Paylaşılan" />} />
-            <Fact label="Onaylanan" value={nf.format(d.approved)} info={<SqlInfo k={d.kaynaklar} alan="approved" label="Onaylanan" />} />
-            <Fact label="İtiraz" value={nf.format(d.objections)} help={d.noManager ? `${d.noManager} kişinin yöneticisi yok` : undefined} info={<SqlInfo k={d.kaynaklar} alan="objections" label="İtiraz" />} />
+            <Fact label="Yönetici değerlendirmesi" value={`${d.managerDone} · ${pct(d.managerRate)}`} help={cycle.managerDue ? `son ${fmtDay(cycle.managerDue)}` : undefined} info={<SqlInfo k={d.kaynaklar} alan="managerDone" label="Yönetici değerlendirmesi" />} />
+            <Fact label="Paylaşılan" value={nf.format(d.shared)} explain="Yöneticinin görüşmeyi yapıp sonucu çalışanla paylaştığı değerlendirmeler." info={<SqlInfo k={d.kaynaklar} alan="shared" label="Paylaşılan" />} />
+            <Fact label="Onaylanan" value={nf.format(d.approved)} explain="Çalışan yorumundan sonra İK’nın onayladığı, tamamlanmış değerlendirmeler." info={<SqlInfo k={d.kaynaklar} alan="approved" label="Onaylanan" />} />
+            <Fact label="İtiraz" value={nf.format(d.objections)} help={d.noManager ? `${d.noManager} kişinin yöneticisi yok` : undefined}
+              explain="Çalışanın paylaşılan değerlendirmeye yorumunda itiraz ettiği kayıtlar; İK onayından önce bakılmalı." info={<SqlInfo k={d.kaynaklar} alan="objections" label="İtiraz" />} />
           </div>
-          <Block title="Birimler" info={<SqlInfo k={d.kaynaklar} alan="units" label="Birim tamamlanma" />}>
+          <Block title="Birimler" help="Birim adına dokununca aşağıdaki kişi listesi o birime süzülür; yeniden dokununca süzgeç kalkar." info={<SqlInfo k={d.kaynaklar} alan="units" label="Birim tamamlanma" />}>
             <TableWrap>
-              <thead><tr><th className={th}>Birim</th><th className={th}>Kişi</th><th className={th}>Öz</th><th className={th}>Yönetici</th><th className={th}>Onay</th></tr></thead>
+              <thead><tr><th className={th}>Birim</th><th className={th}>Kişi</th><th className={th}>Öz değ.</th><th className={th}>Yönetici değ.</th><th className={th}>Onay</th></tr></thead>
               <tbody>
                 {d.units.map((u) => (
                   <tr key={u.unitName} className="border-t border-slate-100">
@@ -141,11 +142,11 @@ function SalesmanFill({ logoOn }: { logoOn: boolean }) {
   const [year, setYear] = useState(new Date().getFullYear());
   const run = useMutation({ mutationFn: () => perfApi.salesmanFill(year), onError: (e) => toast.error(errText(e, 'Ölçülemedi.')) });
   return (
-    <Block title="Satış hedeflerinde Logo ölçüsü" help={`Satış faturalarında temsilci alanı doluluğu. Oran yeterliyse yönetici ayarlardan «Hedefte Logo satış ölçüsü»nü açar. Şu an ${logoOn ? 'açık' : 'kapalı'}.`}
+    <Block title="Satış hedeflerinde Logo ölçüsü" help={`Satış hedeflerinin ilerlemesi Logo'dan otomatik ölçülebilir mi: Logo satış faturalarında satış temsilcisi alanının ne kadar dolu olduğu. Oran yeterliyse yönetici ayarlardan «Hedefte Logo satış ölçüsü»nü açar. Şu an ${logoOn ? 'açık' : 'kapalı'}.`}
       action={
         <div className="flex gap-2">
           <input className={`${field} w-24`} inputMode="numeric" value={year} onChange={(e) => setYear(Number(e.target.value) || year)} aria-label="Yıl" />
-          <button type="button" className={btnGhost} disabled={run.isPending} onClick={() => run.mutate()}>{run.isPending ? 'Ölçülüyor…' : 'Ölç'}</button>
+          <button type="button" className={btnGhost} disabled={run.isPending} onClick={() => run.mutate()}>{run.isPending ? 'Ölçülüyor…' : 'Doluluğu ölç'}</button>
         </div>
       }>
       {run.data && (
@@ -165,7 +166,7 @@ function CyclesTab({ items, meta, onPick }: { items: Cycle[]; meta: PerfMeta; on
           <button type="button" className={btnPrimary} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Yeni dönem</button>
         </div>
       )}
-      {!items.length && <Note tone="info">Dönem yok.</Note>}
+      {!items.length && <Note tone="info">Henüz değerlendirme dönemi yok.{meta.me.can.cycle ? ' «Yeni dönem» ile başlayın.' : ''}</Note>}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {items.map((c) => (
           <li key={c.id} className="glass-panel flex flex-col gap-1 rounded-2xl p-3 shadow-glass-float">
@@ -174,9 +175,9 @@ function CyclesTab({ items, meta, onPick }: { items: Cycle[]; meta: PerfMeta; on
               <Pill tone={c.state === 'acik' ? 'ok' : c.state === 'kapandi' ? 'muted' : 'warn'}>{c.stateLabel}</Pill>
             </div>
             <div className="text-[11.5px] text-canvas-muted">Dönem {fmtDay(c.periodStart)} – {fmtDay(c.periodEnd)} · formlar {fmtDay(c.startsOn)} – {fmtDay(c.endsOn)}</div>
-            <div className="text-[11.5px] text-canvas-muted">{c.form ? `${c.form.name} (s${c.form.version})` : 'Form seçilmedi'}{c.audience.units?.length ? ` · ${c.audience.units.length} birim` : ' · bütün çalışanlar'}</div>
+            <div className="text-[11.5px] text-canvas-muted">{c.form ? `${c.form.name} (sürüm ${c.form.version})` : 'Form seçilmedi'}{c.audience.units?.length ? ` · ${c.audience.units.length} birim` : ' · bütün çalışanlar'}</div>
             <div className="mt-1 flex flex-wrap gap-2">
-              <button type="button" className={btnGhost} onClick={() => onPick(c.id)}>Durum</button>
+              <button type="button" className={btnGhost} onClick={() => onPick(c.id)}>Durumu gör</button>
               {meta.me.can.cycle && c.state !== 'kapandi' && c.state !== 'kalibrasyon' && <button type="button" className={btnGhost} onClick={() => setEdit(c)}>Düzenle</button>}
             </div>
           </li>
@@ -263,7 +264,7 @@ function FormsTab() {
         {(q.data?.items ?? []).map((f) => (
           <li key={f.id}>
             <button type="button" onClick={() => setEdit(f)} className="glass-panel flex w-full flex-col gap-1 rounded-2xl p-3 text-left shadow-glass-float">
-              <div className="flex flex-wrap items-center gap-1.5"><span className="min-w-0 flex-1 text-[14px] font-extrabold">{f.name}</span><Pill tone={f.state === 'yururlukte' ? 'ok' : 'muted'}>{f.stateLabel}</Pill><span className="font-mono text-[11px]">s{f.version}</span></div>
+              <div className="flex flex-wrap items-center gap-1.5"><span className="min-w-0 flex-1 text-[14px] font-extrabold">{f.name}</span><Pill tone={f.state === 'yururlukte' ? 'ok' : 'muted'}>{f.stateLabel}</Pill><span className="font-mono text-[11px]">sürüm {f.version}</span></div>
               <div className="text-[11.5px] text-canvas-muted">{f.sections.map((s) => s.title).join(' · ')}</div>
             </button>
           </li>
@@ -282,7 +283,7 @@ function FormEditor({ f, starter, onClose }: { f: Form | null; starter: { name: 
   const save = useMutation({
     mutationFn: () => {
       let sections: unknown;
-      try { sections = JSON.parse(text); } catch { throw new Error('Bölümler geçerli JSON değil.'); }
+      try { sections = JSON.parse(text); } catch { throw new Error('Bölümler metni bozuk; tırnak, virgül ve parantezleri kontrol edin.'); }
       const overall = labels.split('\n').map((x) => x.trim()).filter(Boolean);
       const body: Record<string, unknown> = { name, state, sections, ...(overall.length ? { overallLabels: overall } : {}) };
       return f ? perfApi.updateForm(f.id, body) : perfApi.createForm(body);
@@ -302,7 +303,7 @@ function FormEditor({ f, starter, onClose }: { f: Form | null; starter: { name: 
           </label>
         </div>
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Bölümler (JSON: title, kind = yetkinlik | hedef | acik, items: [{'{'}label{'}'}])</span>
+          <span className={labelCls}>Bölümler (örnek yapıyı koruyarak düzenleyin: title = bölüm başlığı, kind = yetkinlik | hedef | acik, items = maddeler)</span>
           <textarea className={`${field} min-h-[260px] font-mono text-[12px]`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
         </label>
         <label className="flex flex-col gap-1">

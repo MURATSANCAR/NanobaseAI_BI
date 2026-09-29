@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { NumField } from '../budget/parts';
@@ -40,13 +41,14 @@ export default function Capacity() {
   return (
     <SupplyFrame
       title="Matbaa kapasitesi"
-      lead="Matbaaların aylık kapasitesi hiçbir sistemde tutulmuyor; buraya girilen değer baskı yükü tablosunda eşik olur. Girilmemiş matbaada karşılaştırma son 12 ayın en yüksek aylık yüküyle yapılır ve «kapasite» denmez."
+      lead="Bir matbaanın ayda en fazla kaç kitap (ya da forma) basabileceğini buraya girin. Bu bilgi başka hiçbir sistemde yok; girdiğiniz değer «Baskı yükü» tablosunda sınır olarak kullanılır. Girilmeyen matbaa, son 12 ayının en yoğun ayıyla karşılaştırılır."
       back={{ to: '/tedarik/yuk', label: 'Baskı yükü' }}
     >
       <ErrorNote error={q.error} fallback="Kapasite kayıtları okunamadı." />
       {can ? (
         <Panel>
           <h2 className="px-1 text-[13px] font-extrabold">Kapasite gir</h2>
+          <p className="px-1 text-[12px] text-canvas-muted">Matbaayı seçin; adet ya da forma kapasitesinden en az birini yazın. Ayı boş bırakırsanız değer her ay için geçerli olur; belirli bir ay için girdiğiniz değer o ay bunun yerine kullanılır.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Matbaa</span>
@@ -63,27 +65,27 @@ export default function Capacity() {
               <span className={labelCls}>Ay (boş = her ay)</span>
               <input type="month" className={field} value={form.ay} onChange={(e) => setForm({ ...form, ay: e.target.value })} />
             </label>
-            <NumField id="cap-adet" label="Aylık adet" value={form.adet} onChange={(v) => setForm({ ...form, adet: v })} />
-            <NumField id="cap-forma" label="Aylık forma" value={form.forma} onChange={(v) => setForm({ ...form, forma: v })} help="Forma × adet (forma-baskı)" />
+            <NumField id="cap-adet" label="Aylık adet" value={form.adet} onChange={(v) => setForm({ ...form, adet: v })} help="Ayda basabileceği kitap adedi" />
+            <NumField id="cap-forma" label="Aylık forma" value={form.forma} onChange={(v) => setForm({ ...form, forma: v })} help="Forma sayısı × adet (forma-baskı); forma, tek tabakada basılan sayfa grubudur" />
             <label className="flex flex-col gap-1">
-              <span className={labelCls}>Not</span>
-              <input className={field} value={form.not} onChange={(e) => setForm({ ...form, not: e.target.value })} />
+              <span className={labelCls}>Not (isteğe bağlı)</span>
+              <input className={field} value={form.not} placeholder="ör. yeni makine Mart'ta devrede" onChange={(e) => setForm({ ...form, not: e.target.value })} />
             </label>
           </div>
           <div className="mt-3 flex justify-end">
             <button type="button" className={btnPrimary} disabled={!form.matbaa || (!form.adet && !form.forma) || save.isPending} onClick={() => save.mutate()}>
-              Kaydet
+              Kapasiteyi kaydet
             </button>
           </div>
         </Panel>
       ) : (
-        <Note tone="info">Kapasite girmek «matbaa kapasitesi» yetkisiyle olur; kayıtları görebilirsiniz.</Note>
+        <Note tone="info">Kapasite girmek için «matbaa kapasitesi» yetkisi gerekir; aşağıdaki kayıtları görebilirsiniz. Değişiklik gerekiyorsa yetkili kişiye iletin.</Note>
       )}
       {q.isLoading && <Loading />}
       {q.data && (
         <Panel>
           {q.data.items.length === 0 ? (
-            <Note tone="info">Henüz kapasite girilmedi.</Note>
+            <EmptyHint title="Henüz kapasite girilmedi" why={can ? 'Yukarıdaki formla ilk matbaanın aylık kapasitesini girin. Girilene kadar baskı yükü yalnız geçmiş yoğunlukla karşılaştırılır.' : 'Girilene kadar baskı yükü yalnız geçmiş yoğunlukla karşılaştırılır.'} />
           ) : (
             <TableWrap>
               <thead>
@@ -94,7 +96,7 @@ export default function Capacity() {
                   <th className={`${th} text-right`}><InfoLabel k={q.data.kaynaklar} alan="items[]">Forma</InfoLabel></th>
                   <th className={th}>Not</th>
                   <th className={th}>Giren</th>
-                  {can && <th className={th} />}
+                  {can && <th className={th}><span className="sr-only">İşlem</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -108,7 +110,7 @@ export default function Capacity() {
                     <td className={td}>{r.byName}</td>
                     {can && (
                       <td className={td}>
-                        <button type="button" className={btnGhost} aria-label="Sil" disabled={remove.isPending} onClick={() => remove.mutate(r.id)}>
+                        <button type="button" className={btnGhost} aria-label="Kapasite kaydını sil (geri alınamaz)" title="Kapasite kaydını sil (geri alınamaz)" disabled={remove.isPending} onClick={() => remove.mutate(r.id)}>
                           <Trash2 aria-hidden className="h-4 w-4" />
                         </button>
                       </td>

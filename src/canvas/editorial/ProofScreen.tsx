@@ -12,6 +12,7 @@ import { WordMapPanel } from './WordMapPanel';
 import { DocumentPicker, DocumentResult, DocumentUpload } from './DocumentReview';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { ExplainLabel } from '../components/Explain';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -19,35 +20,39 @@ import { kaynakOf } from '../components/kaynakOf';
 
 function Report({ f }: { f: DeskFile }) {
   const r = f.report;
-  const rows: Array<[string, string]> = [
-    ['Sayfa', `${nf.format(r.pages ?? 0)} · ${num(r.signatures16, 2)} forma`],
+  const rows: Array<[string, string, string?]> = [
+    ['Sayfa', `${nf.format(r.pages ?? 0)} · ${num(r.signatures16, 2)} forma`, 'Forma, 16 sayfalık baskı tabakasıdır; forma sayısı, sayfa sayısının 16\'ya bölümüdür.'],
     ['Ebat', Object.keys(r.sizes || {}).join(', ') || '—'],
-    ['Yazı tipi', `${nf.format((r.fonts || []).length)} tip${(r.unembeddedFonts || []).length ? `, ${(r.unembeddedFonts || []).length} gömülü değil` : ', hepsi gömülü'}`],
-    ['Görsel', `${nf.format(r.images ?? 0)}${r.rgbImages ? ` · ${nf.format(r.rgbImages)} RGB` : ''}`],
+    [
+      'Yazı tipi',
+      `${nf.format((r.fonts || []).length)} tip${(r.unembeddedFonts || []).length ? `, ${(r.unembeddedFonts || []).length} gömülü değil` : ', hepsi gömülü'}`,
+      'Gömülü yazı tipi PDF\'in içinde taşınır; gömülü olmayan yazı tipi matbaada başka bir yazı tipiyle değişebilir.',
+    ],
+    ['Görsel', `${nf.format(r.images ?? 0)}${r.rgbImages ? ` · ${nf.format(r.rgbImages)} RGB` : ''}`, 'RGB, ekran için kaydedilmiş renk düzenidir; baskıda bu görsellerin renkleri kayabilir.'],
   ];
   return (
     <div className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <a href={deskApi.fileUrl(f.id)} className="min-w-0 truncate text-[12.5px] font-extrabold text-canvas-violet underline">
-          v{f.version} · {f.filename}
+          {nf.format(f.version)}. sürüm · {f.filename}
         </a>
         <span className="shrink-0 font-mono text-[11px] tabular-nums text-canvas-muted">{fmtBytes(f.bytes)}</span>
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
-        {rows.map(([k, v]) => (
+        {rows.map(([k, v, hint]) => (
           <div key={k}>
-            <dt className="text-[11px] leading-snug text-canvas-muted">{k}</dt>
+            <dt className="text-[11px] leading-snug text-canvas-muted">{hint ? <ExplainLabel label={k}>{hint}</ExplainLabel> : k}</dt>
             <dd className="font-semibold leading-snug">{v}</dd>
           </div>
         ))}
       </dl>
       {r.versus && (
         <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-          v{r.versus.version} ile farkı: sayfa sayısı {r.versus.pageDelta > 0 ? `+${r.versus.pageDelta}` : nf.format(r.versus.pageDelta)}
+          {nf.format(r.versus.version)}. sürümle farkı: sayfa sayısı {r.versus.pageDelta > 0 ? `+${r.versus.pageDelta}` : nf.format(r.versus.pageDelta)}
           {r.versus.changedPages.length ? `, metni değişen ${nf.format(r.versus.changedPages.length)} sayfa (ilk: ${r.versus.changedPages.slice(0, 8).join(', ')})` : ', ortak sayfaların metni aynı'}
         </p>
       )}
-      <p className="mt-1.5 break-all font-mono text-[10.5px] leading-snug text-canvas-muted">SHA-256 {f.sha256}</p>
+      <p className="mt-1.5 break-all font-mono text-[10.5px] leading-snug text-canvas-muted">Dosya parmak izi: {f.sha256}</p>
     </div>
   );
 }
@@ -93,12 +98,15 @@ function Signers({ s, onChanged }: { s: ProofState; onChanged: () => void }) {
     <Panel>
       <h2 className="px-1 text-[13px] font-extrabold">Yayın onay imzaları</h2>
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Her imza, o anki prova dosyasının SHA-256 özetine atılır. Yeni prova yüklenince imzalar sıfırlanır. Bu bir e-imza değildir; portal oturumundaki AD hesabının kaydıdır.
+        Her imza, o anki prova dosyasının parmak izine bağlanır; yeni prova yüklenince imzalar sıfırlanır. Bu bir e-imza değildir, portala giriş yaptığınız hesapla atılan onay kaydıdır.
       </p>
       {err && (
         <div className="mt-2">
           <Note tone="err">{err}</Note>
         </div>
+      )}
+      {s.signatures.length === 0 && (
+        <p className="mt-2 px-1 text-[12px] leading-snug text-canvas-muted">Henüz imzacı eklenmedi. Aşağıya rolü ve kullanıcı adını yazıp «İmzacı ekle»ye basın.</p>
       )}
       <ul className="mt-2 space-y-1.5">
         {s.signatures.map((x) => (
@@ -135,14 +143,14 @@ function Signers({ s, onChanged }: { s: ProofState; onChanged: () => void }) {
       >
         <label className="block">
           <span className={label}>Rol</span>
-          <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Genel Yayın Yönetmeni" className={`${field} mt-1`} />
+          <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Ör. Genel Yayın Yönetmeni" className={`${field} mt-1`} />
         </label>
         <label className="block">
-          <span className={label}>AD hesabı</span>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="adsoyad" className={`${field} mt-1`} />
+          <span className={label}>Kullanıcı adı</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Ör. adsoyad (Active Directory)" className={`${field} mt-1`} />
         </label>
         <button type="submit" disabled={!role.trim() || !username.trim() || save.isPending} className={`${btnGhost} self-end`}>
-          Ekle
+          İmzacı ekle
         </button>
       </form>
       {mine && !mine.signedAt && (
@@ -160,7 +168,7 @@ function Signers({ s, onChanged }: { s: ProofState; onChanged: () => void }) {
  *  yoksa ad olduğu gibi. Böylece «dedem-tekrar-cocuk-oldu» yerine «Dedem Tekrar Çocuk Oldu» yazar. */
 function BookChips({ books, cards, picked, onPick }: { books: string[]; cards?: BookCard[]; picked: string | null; onPick: (title: string | null) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="ZEKİ AI'ın okuduğu kitaplar">
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Zeki AI'ın okuduğu kitaplar">
       <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
       {books.map((t) => {
         const active = picked === t;
@@ -307,10 +315,10 @@ export default function ProofScreen() {
       route="/son-okuma"
       crumb="Son Okuma"
       title="Son okuma ve yayın onayı"
-      lead="Prova PDF'inden sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma ölçülür; elle işaretlenen maddeler ve imzalar tamamlanınca onay oluşur. Matbaaya gönderim ve ERP tetikleme yoktur."
+      lead="Baskıya gidecek prova PDF'ini yükleyin: sayfa, ebat, yazı tipi, renk, ISBN ve forma dosyadan ölçülür. Kontrol maddeleri ve imzalar tamamlanınca yayın onayı oluşur; matbaaya ya da başka bir sisteme gönderim yapılmaz."
       source={s ? s.work.title : noWork && picked ? findCatalogCard(catalog.data?.items, picked)?.publisher?.title || picked : 'Editoryal masa'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {/* Birincil eylem: belge ya da prova yükleme. Liste boşken de burada; seçim beklemez. */}
@@ -328,13 +336,13 @@ export default function ProofScreen() {
         <KpiRow>
           {s && (
             <>
-              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Prova sürümü" />} label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
-              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Dosyadan geçen" />} label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
-              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Elle işaretlenen" />} label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
-              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="İmza" />} label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Prova sürümü" />} explain="Bu eser için yüklenen en son prova dosyasının sürüm numarası. Her yeni yükleme sürümü bir artırır ve imzaları sıfırlar." label="Prova sürümü" value={s.versions[0] ? nf.format(s.versions[0].version) : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Dosyadan geçen" />} explain="Provadan kendiliğinden ölçülen maddelerden geçenlerin sayısı / bütün otomatik maddeler." label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Elle işaretlenen" />} explain="Gözle kontrol edilip «geçti» ya da «geçmedi» diye işaretlenen maddeler / bütün gözle kontrol maddeleri." label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
+              <Kpi info={<SqlInfo k={kaynakOf(s)} alan="_hepsi" label="İmza" />} explain="Bu provaya atılmış imza / eklenen imzacı sayısı. Bütün kontroller geçip bütün imzalar atılınca yayın onayı oluşur." label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
             </>
           )}
-          {hasProofing && <Kpi info={<SqlInfo k={kaynakOf(pr)} alan="_hepsi" label="Zeki AI bulguları" />} label="ZEKİ AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
+          {hasProofing && <Kpi info={<SqlInfo k={kaynakOf(pr)} alan="_hepsi" label="Zeki AI bulguları" />} explain="Zeki AI'ın kitabın metninde bulduğu uyarı ve hata düzeyindeki bulgular. Yalnız öneridir; kontrol listesini ve onayı etkilemez." label="Zeki AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
         </KpiRow>
       )}
 
@@ -352,7 +360,7 @@ export default function ProofScreen() {
             works={items}
             selected={workId}
             onSelect={setWorkId}
-            progress={(x) => (x.proof ? `Prova v${x.proof.version} · ${nf.format(x.signatures.signed)}/${nf.format(x.signatures.total)} imza` : 'Prova yüklenmedi')}
+            progress={(x) => (x.proof ? `Prova ${nf.format(x.proof.version)}. sürüm · ${nf.format(x.signatures.signed)}/${nf.format(x.signatures.total)} imza` : 'Prova yüklenmedi')}
           />
 
           <DocumentPicker selected={doc} onSelect={pickDoc} />
@@ -372,7 +380,7 @@ export default function ProofScreen() {
               >
                 <span className={label}>ISBN</span>
                 <div className="mt-1 flex gap-1.5">
-                  <input value={isbn} onChange={(e) => setIsbn(e.target.value)} inputMode="numeric" placeholder="978…" className={field} />
+                  <input value={isbn} onChange={(e) => setIsbn(e.target.value)} inputMode="numeric" placeholder="Ör. 978605…" className={field} />
                   <button type="submit" disabled={setIsbnM.isPending} className={btnGhost}>
                     Kaydet
                   </button>
@@ -399,7 +407,7 @@ export default function ProofScreen() {
                 key={picked ?? ''}
                 report={picked ? pr : undefined}
                 loading={!!picked && proofing.isLoading}
-                error={picked ? errText(proofing.error, 'ZEKİ AI son okuma raporu okunamadı.') : null}
+                error={picked ? errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.') : null}
                 picker={
                   engineOff ? null : books.isLoading ? (
                     <Loading />
@@ -411,13 +419,13 @@ export default function ProofScreen() {
                 }
                 idle={
                   engineOff
-                    ? 'ZEKİ AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.'
+                    ? 'Zeki AI bağlantısı bu kurulumda tanımlı değil; otomatik son okuma kapalı.'
                     : books.isLoading || books.error
                       ? null
                       : !chips.length
                         ? books.data?.loading
                           ? 'Okunmuş kitaplar getiriliyor; liste gelince burada seçilebilir.'
-                          : 'Motorun okuduğu kitap yok. Bir kitap okunup denetimleri koşunca burada listelenir.'
+                          : 'Zeki AI\'ın okuduğu kitap henüz yok. Bir kitap okunup denetimleri tamamlanınca burada listelenir.'
                         : 'Bulgularını görmek için bir kitap seçin.'
                 }
               />
@@ -442,6 +450,9 @@ export default function ProofScreen() {
 
               <Panel>
                 <h2 className="px-1 text-[13px] font-extrabold">Kontrol listesi</h2>
+                <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
+                  «Dosyadan» etiketli maddeler provadan kendiliğinden ölçülür. Diğerlerini gözle kontrol edip ✓ (geçti) ya da ✕ (geçmedi) ile işaretleyin; aynı düğmeye yeniden dokunmak işareti kaldırır.
+                </p>
                 <ul className="mt-2 space-y-1.5">
                   {s.checks.map((c) => (
                     <CheckRow key={c.id} c={c} busy={setCheck.isPending} onSet={(passed) => setCheck.mutate({ id: c.id, passed })} />
@@ -452,7 +463,7 @@ export default function ProofScreen() {
               <Signers s={s} onChanged={refresh} />
             </>
           )}
-          {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'ZEKİ AI son okuma raporu okunamadı.')} />}
+          {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.')} />}
           {/* Kelime haritası: aynı kitabın motordaki kaydıyla (eser dosyası ya da seçilen kitap). */}
           {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} findings={pr.findings.filter((f) => f.check === 'word_variety')} /> : null}
           </>

@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
 
 const PAGE = 40;
 type View = 'yorumsuz' | 'puansiz_sema' | 'yorumlu' | 'dusuk';
@@ -39,7 +40,7 @@ type Summary = {
 };
 type Resp = { summary: Summary; views: Record<View, string>; recommendations: string[]; total: number; start: number; items: Row[] };
 
-const SCHEMA_LABEL: Record<Row['schema'], string> = { tamam: 'Şemada puan var', puan_yok: 'Şemada puan yok', taranmadi: 'Sayfa taranmadı' };
+const SCHEMA_LABEL: Record<Row['schema'], string> = { tamam: 'Google puanı görüyor', puan_yok: 'Google puanı görmüyor', taranmadi: 'Sayfa taranmadı' };
 
 /** Okur yorumları: çok satıp hiç yorum almamış kitaplar, puan dağılımı ve yorumu olup şemada puanı görünmeyen sayfalar.
  *  Yalnız sayı ve puan okunur; yorumcu bilgisi saklanmaz, hiçbir şey gönderilmez. */
@@ -80,7 +81,7 @@ export default function SeoReviews() {
       crumb="Okur yorumları"
       eyebrow="SEO & GEO · Okur yorumları"
       title="Okur yorumları"
-      lead="Yorum ve yıldız, arama sonucunda kitabın öne çıkmasını ve yapay zekâ cevaplarında güvenilir görünmesini sağlar. Burada yalnız yorum sayısı ve puan okunur; yorumcu bilgisi saklanmaz. Yorum isteği göndermek site ve CRM’in işidir — bu ekran hiçbir şey göndermez."
+      lead="Yorum ve yıldız, Google sonucunda kitabın öne çıkmasını ve yapay zekâ cevaplarında güvenilir görünmesini sağlar. Burada çok satıp yorum almamış kitaplar ve puanı Google’a görünmeyen sayfalar listelenir. Yalnız yorum sayısı ve puan okunur; bu ekran hiçbir şey göndermez."
       actions={
         canRun && (
           <button className="sg-button" onClick={() => read.mutate()} disabled={read.isPending || running}>
@@ -99,15 +100,18 @@ export default function SeoReviews() {
         <>
           <section className="sg-kpis" aria-label="Özet">
             <Kpi label="Yorumlu kitap" value={`${fmt(s.withReviews)} / ${fmt(s.activeBooks)}`} note={`Toplam ${fmt(s.reviews)} yorum · son okuma ${dateTime(s.lastRead)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Yorumlu kitap" />} />
-            <Kpi label="Ortalama puan" value={s.average == null ? '—' : fmt(s.average, 1)} note="Yorum sayısıyla ağırlıklı, 5 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama puan" />} />
-            <Kpi label="Çok satan, yorumsuz" value={fmt(s.zeroTopSelling)} note={`${fmt(s.prioritySales)} ve üstü satış, hiç yorum yok`} tone={s.zeroTopSelling ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Çok satan, yorumsuz" />} />
-            <Kpi label="Şemada puan yok" value={fmt(s.schemaMissing)} note={`Yorumlu ama sayfada puan görünmüyor · taranmamış ${fmt(s.schemaUnchecked)}`} tone={s.schemaMissing ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Şemada puan yok" />} />
+            <Kpi label="Ortalama puan" value={s.average == null ? '—' : fmt(s.average, 1)} note="Yorum sayısıyla ağırlıklı, 5 üzerinden" info={<SeoInfo k={list.data?.kaynaklar} label="Ortalama puan" />}
+              explain="Bütün yorumların yıldız ortalaması; çok yorumlu kitap ortalamaya daha çok etki eder." />
+            <Kpi label="Çok satan, yorumsuz" value={fmt(s.zeroTopSelling)} note={`${fmt(s.prioritySales)} ve üstü satış, hiç yorum yok`} tone={s.zeroTopSelling ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Çok satan, yorumsuz" />}
+              explain="Satışı eşiğin üstünde olduğu hâlde hiç yorumu olmayan kitaplar; yorum toplama çalışmasında önce bunlar düşünülmeli." />
+            <Kpi label="Google puanı görmüyor" value={fmt(s.schemaMissing)} note={`Yorumlu ama sayfanın yapısal verisinde puan yok · taranmamış ${fmt(s.schemaUnchecked)}`} tone={s.schemaMissing ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Şemada puan yok" />}
+              explain="Kitabın yorumu var ama sayfadaki gizli yapısal veride (şema) puan yazmıyor; bu yüzden Google sonucunda yıldız çıkmaz. Düzeltme site teması tarafında yapılır." />
           </section>
 
           <div className="sg-grid">
             <section className="sg-card sg-span-5" aria-label="Puan dağılımı">
               <h2>Puan dağılımı <SeoInfo k={list.data?.kaynaklar} label="Puan dağılımı" /></h2>
-              <p className="sg-sub">{s.reviewStars ? 'Onaylı yorumların yıldızları.' : 'Kitap ortalamaları (yorum ayrıntısı henüz okunmadı).'}</p>
+              <p className="sg-sub">{s.reviewStars ? 'Onaylı yorumların kaç yıldız verdiği.' : 'Kitapların ortalama puanlarının dağılımı (yorum ayrıntısı henüz okunmadı).'}</p>
               <div className="sg-bars">
                 {['5', '4', '3', '2', '1'].map((k) => (
                   <div key={k} className="sg-bar-row">
@@ -145,10 +149,7 @@ export default function SeoReviews() {
           </div>
 
           {list.data && !list.data.items.length && (
-            <div className="sg-empty">
-              <h2>Kitap yok</h2>
-              <p>Bu listeye uyan kitap bulunamadı.</p>
-            </div>
+            <EmptyHint title="Bu listeye uyan kitap yok" why={query ? 'Aramayı kısaltın ya da temizleyin.' : 'Başka bir liste seçin.'} />
           )}
           <div className="sg-list">
             {list.data?.items.map((r) => (
@@ -201,10 +202,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

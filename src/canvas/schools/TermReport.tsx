@@ -67,8 +67,8 @@ export default function TermReport({ params, update }: { params: URLSearchParams
         </label>
         {me?.all ? (
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Temsilci (AD hesabı)</span>
-            <input className={field} defaultValue={owner} key={owner} onBlur={(e) => update({ sahip: e.target.value.trim() || null })} placeholder="Bütün ekip" />
+            <span className={labelCls}>Temsilci kullanıcı adı</span>
+            <input className={field} defaultValue={owner} key={owner} onBlur={(e) => update({ sahip: e.target.value.trim() || null })} placeholder="Örn. ayilmaz (boş: bütün ekip)" />
           </label>
         ) : (
           <p className="self-end text-[11.5px] text-canvas-muted">Plan ve ziyaret rakamları yalnız sizin kayıtlarınız.</p>
@@ -82,10 +82,10 @@ export default function TermReport({ params, update }: { params: URLSearchParams
             {fmtDay(d.from)} – {fmtDay(d.to)} · veri {fmtDay(d.asOf)} okundu
           </p>
           <KpiRow>
-            <Kpi label="Plan gerçekleşmesi" info={<SqlInfo k={d.kaynaklar} alan="plans" label="Plan gerçekleşmesi" />} value={fmtPct(d.plans.rate)} help={`${d.plans.realized} / ${d.plans.planned} planlı okul (${d.plans.approved} onaylı)`} />
-            <Kpi label="Ziyaret" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret" />} value={fmtNum(d.visits.portal + d.visits.crm)} help={`Portal ${d.visits.portal} · CRM ${d.visits.crm} (tamamlanan)`} />
-            <Kpi label="Ziyaret edilen okul" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret edilen okul" />} value={fmtNum(d.visits.schools)} help="Portal ya da CRM'de dönemde en az bir ziyaret" />
-            <Kpi label="Okul siparişi" info={<SqlInfo k={d.kaynaklar} alan="orders" label="Okul siparişi" />} value={fmtNum(d.orders.total)} help="Örnek + okul satışı (CRM, dönemde açılan)" />
+            <Kpi label="Plan gerçekleşmesi" info={<SqlInfo k={d.kaynaklar} alan="plans" label="Plan gerçekleşmesi" />} value={fmtPct(d.plans.rate)} help={`${d.plans.realized} / ${d.plans.planned} planlı okul (${d.plans.approved} onaylı)`} explain="Dönemde plana alınan okullardan kaçına gerçekten gidildiği. Gidildi sayılması için okula portalda rapor girilmiş ya da CRM'de ziyaret tamamlanmış olmalı." />
+            <Kpi label="Ziyaret" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret" />} value={fmtNum(d.visits.portal + d.visits.crm)} help={`Portal ${d.visits.portal} · CRM ${d.visits.crm} (tamamlanan)`} explain="Dönemde yapılan okul ziyaretlerinin toplamı: portalda girilen ziyaret raporları ile CRM'de tamamlanmış ziyaretler." />
+            <Kpi label="Ziyaret edilen okul" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret edilen okul" />} value={fmtNum(d.visits.schools)} help="Portal ya da CRM'de dönemde en az bir ziyaret" explain="Aynı okula birden çok kez gidilse de bir sayılır." />
+            <Kpi label="Okul siparişi" info={<SqlInfo k={d.kaynaklar} alan="orders" label="Okul siparişi" />} value={fmtNum(d.orders.total)} help="Örnek + okul satışı (CRM, dönemde açılan)" explain="Dönemde CRM'de okullar için açılan siparişler: örnek kitap gönderimleri ve okul satışları birlikte sayılır. Kırılımı aşağıdadır." />
           </KpiRow>
 
           <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Loading, Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { Tabs } from '../budget/parts';
@@ -46,14 +47,14 @@ export default function Suppliers() {
   return (
     <SupplyFrame
       title="Matbaa ve kağıtçılar"
-      lead="Logo'daki tedarikçi carileri: matbaa ve kağıtçı özel koduyla ya da baskı faturası kesmiş olmasıyla ayrılır. Her matbaanın açık işi, karnesi (Üretim yönetiminden), borcu ve önümüzdeki ödemeleri bir arada. Logo'da ödeme kapama kullanılmadığı için borç FIFO yaklaşımıyla hesaplanır."
+      lead="Matbaa ve kağıtçılarımız: her birinde kaç açık iş olduğu, işleri zamanında teslim etme oranı, onlara ne kadar borcumuz olduğu ve önümüzdeki ödemeler. Tedarikçiler Logo'daki özel koddan ya da baskı faturası kesmiş olmalarından tanınır. Borç tutarları tahminidir: Logo'da hangi ödemenin hangi faturayı kapattığı tutulmaz."
       source={q.data?.logo ? `Logo ${q.data.logo.yil} · veri sonu ${fmtDay(q.data.logo.veriSonu)}` : undefined}
       aside={
         me?.canExport && me.canDebt ? (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-            <ExportLink href={supplyApi.exportUrl('borc')} label="Borç (Excel)" />
-            <ExportLink href={supplyApi.exportUrl('odeme')} label="Ödeme (Excel)" />
-            <ExportLink href={supplyApi.exportUrl('faturasiz')} label="Faturasız (Excel)" />
+            <ExportLink href={supplyApi.exportUrl('borc')} label="Borç listesini indir" />
+            <ExportLink href={supplyApi.exportUrl('odeme')} label="Ödeme planını indir" />
+            <ExportLink href={supplyApi.exportUrl('faturasiz')} label="Faturasız baskıları indir" />
           </div>
         ) : undefined
       }
@@ -93,7 +94,7 @@ function SupplierList({ data }: { data: SuppliersData }) {
       </div>
       {items.length === 0 ? (
         <div className="mt-3">
-          <Note tone="info">Bu türde tedarikçi yok. Özel kod yazımını «Matbaa ↔ cari» sekmesinden kontrol edin.</Note>
+          <EmptyHint title="Bu türde tedarikçi yok" why="Tedarikçiler Logo'daki özel koddan tanınır. Özel kodun Logo'daki yazımını «Matbaa ↔ cari» sekmesinden kontrol edin." />
         </div>
       ) : (
         <div className="mt-3">
@@ -101,12 +102,12 @@ function SupplierList({ data }: { data: SuppliersData }) {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className={th}>Tedarikçi</th>
-                <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].acikIs">Açık iş</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].karne">Zamanında</InfoLabel></th>
+                <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={data.kaynaklar} alan="items[].acikIs">Açık iş</InfoLabel><Explain label="Açık iş">Bu matbaaya atanmış, henüz baskıdan çıkmamış üretim kartı sayısı.</Explain></span></th>
+                <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={data.kaynaklar} alan="items[].karne">Zamanında</InfoLabel><Explain label="Zamanında">Planlanan baskı tarihinde ya da daha önce basılan işlerin oranı (Üretim yönetimindeki kartlardan).</Explain></span></th>
                 {debt && (
                   <>
-                    <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].bakiye">Bakiye</InfoLabel></th>
-                    <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].vadesiGecmis">Vadesi geçmiş</InfoLabel></th>
+                    <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={data.kaynaklar} alan="items[].bakiye">Bakiye</InfoLabel><Explain label="Bakiye">Bu tedarikçiye borcumuz: bu yıl başından Logo cari hareketlerinde alacak − borç.</Explain></span></th>
+                    <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={data.kaynaklar} alan="items[].vadesiGecmis">Vadesi geçmiş</InfoLabel><Explain label="Vadesi geçmiş">Ödeme günü geçmiş ama tahminen hâlâ ödenmemiş tutar. Ödemeler en eski vadeden başlayarak düşüldüğü için yaklaşıktır.</Explain></span></th>
                     <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].gelecek">30 gün içinde</InfoLabel></th>
                     <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items[].alis12">12 ay alış</InfoLabel></th>
                   </>
@@ -146,7 +147,7 @@ function SupplierList({ data }: { data: SuppliersData }) {
           </TableWrap>
         </div>
       )}
-      {!debt && <p className="mt-2 px-1 text-[11.5px] text-canvas-muted">Borç ve ödeme tutarları «tedarikçi borç» yetkisiyle görünür.</p>}
+      {!debt && <p className="mt-2 px-1 text-[11.5px] text-canvas-muted">Borç ve ödeme tutarları yalnız «tedarikçi borç» yetkisi olanlara görünür.</p>}
     </Panel>
   );
 }
@@ -208,7 +209,7 @@ function PaymentsTab() {
                   <th className={th}>Tedarikçi</th>
                   <th className={th}>Fatura</th>
                   <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">Plan tutarı</InfoLabel></th>
-                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">Açık (FIFO)</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={p.kaynaklar} alan="satirlar">Açık (tahmini)</InfoLabel><Explain label="Açık (tahmini)">Bu ödeme satırının tahminen ödenmemiş kısmı. Logo ödemeyi faturaya bağlamadığı için bakiye en yeni vadeli satırlardan geriye doğru dağıtılır.</Explain></span></th>
                 </tr>
               </thead>
               <tbody>
@@ -229,7 +230,7 @@ function PaymentsTab() {
                 {p.satirlar.length === 0 && (
                   <tr>
                     <td className={td} colSpan={5}>
-                      Bu sürede vadesi gelen açık ödeme satırı yok.
+                      Seçilen sürede vadesi gelen açık ödeme yok. Süreyi uzatabilir ya da türü «Hepsi» yapabilirsiniz.
                     </td>
                   </tr>
                 )}
@@ -277,12 +278,12 @@ function InvoiceTab({ meta }: { meta: Meta }) {
               <SqlInfo k={u.kaynaklar} alan="kartlar" label="Faturası görünmeyen kartlar ve bekleme" />
             </h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Faturanın karta bağlanma kuralı Üretim yönetimininkiyle aynı: fatura satırının özel kodu = kitabın stok kodu, kartın zaman penceresinde. Bekleme süresi {u.bekleme.gun} gün
+              Kitap depoya girdiği hâlde matbaanın baskı faturası Logo'da görünmüyorsa burada listelenir; faturayı matbaadan isteyin. Fatura, satırındaki özel kod kitabın stok koduyla aynıysa karta bağlanır. Faturanın gelmesi için beklenen süre {u.bekleme.gun} gün
               {u.bekleme.kaynak === 'veri' ? ` (depo girişinden faturaya gün farkının 3. çeyreği, ${fmtInt(u.bekleme.ornek)} baskıdan ölçüldü)` : ' (ayar; ölçmeye yetecek örnek yok)'}.
             </p>
             <div className="mt-2">
               {u.kartlar.length === 0 ? (
-                <Note tone="ok">Bekleme süresini geçmiş faturasız baskı yok.</Note>
+                <EmptyHint title="Faturası geciken baskı yok" why="Depoya giren bütün baskıların faturası beklenen süre içinde Logo'ya gelmiş." />
               ) : (
                 u.kartlar.map((c) => (
                   <CardLine key={c.id} c={c} right={<span className="text-[11px] text-canvas-muted">{c.matbaa ?? '—'} · depo {fmtDay(c.depo)} · {c.bekleyenGun} gün</span>} />
@@ -296,7 +297,7 @@ function InvoiceTab({ meta }: { meta: Meta }) {
               <SqlInfo k={u.kaynaklar} alan="faturalar" label="Kartsız baskı faturaları" />
             </h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Son 12 ay. Aday kart her gece önerilir (aynı stok kodu ya da eşlenmiş matbaa + adet ±%15 + depo tarihi yakınlığı; birden çok aday varsa Zeki AI seçer). Öneri onaylanmadan hesaba girmez.
+              Son 12 ayda kesilmiş ama hangi baskıya ait olduğu anlaşılamayan fatura satırları. Her gece bir aday kart önerilir (aynı stok kodu ya da aynı matbaa, adet ±%15 ve depo tarihi yakın; birden çok aday varsa Zeki AI seçer). «Onayla» dediğinizde fatura o karta bağlanır; onaylanmayan öneri hesaba girmez.
             </p>
             <div className="mt-2 flex flex-col gap-2">
               {u.faturalar.map((f) => (
@@ -364,12 +365,12 @@ function InvoiceTab({ meta }: { meta: Meta }) {
                   )}
                 </article>
               ))}
-              {u.faturalar.length === 0 && <Note tone="ok">Karta bağlanmayan baskı faturası yok.</Note>}
+              {u.faturalar.length === 0 && <EmptyHint title="Karta bağlanmayan baskı faturası yok" why="Son 12 aydaki bütün baskı faturaları bir üretim kartına bağlı." />}
             </div>
           </Panel>
           <Panel>
             <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={u.kaynaklar} alan="aylik">Matbaa × ay: depoya giren ve faturalanan adet</InfoLabel></h2>
-            <p className="mt-1 px-1 text-[11.5px] text-canvas-muted">Kaba karşılaştırma: faturayı kesen Logo carisi matbaaya eşlenmişse sayılır.</p>
+            <p className="mt-1 px-1 text-[11.5px] text-canvas-muted">Her ay, her matbaadan depoya giren adet ile o matbaanın faturaladığı adet yan yana. Kaba bir kontroldür: yalnız Logo carisi matbaaya eşlenmiş faturalar sayılır. «Fark» depoya giren − faturalanan adettir.</p>
             <div className="mt-2">
               <TableWrap>
                 <thead>
@@ -420,7 +421,7 @@ function MappingTab({ data, meta }: { data: SuppliersData; meta: Meta }) {
       <Panel>
         <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={data.kaynaklar} alan="eslesme">CRM matbaası ↔ Logo carisi</InfoLabel></h2>
         <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-          Öneri veriden: kartın CRM matbaası ile o kartın baskı faturasını kesen Logo carisi; en çok işi olan cari, iş sayısı ve payı yeterliyse önerilir, değilse «belirsiz». Elle girilen eşleme öneriyi ezer.
+          CRM'deki matbaa adının Logo'da hangi cariye karşılık geldiği. Öneri veriden çıkar: o matbaanın kartlarının faturasını en çok hangi Logo carisi kesmişse o önerilir; yeterince açık değilse «belirsiz» yazar. Elle seçtiğiniz eşleme öneriden önce gelir.
         </p>
         <div className="mt-2">
           <TableWrap>
@@ -459,11 +460,11 @@ function MappingTab({ data, meta }: { data: SuppliersData; meta: Meta }) {
                             ))}
                           </select>
                           <button type="button" className={btnGhost} disabled={save.isPending || edit[p] === undefined} onClick={() => save.mutate({ matbaa: p, cari: edit[p] || null })}>
-                            Kaydet
+                            Eşlemeyi kaydet
                           </button>
                           {m?.kaynak === 'elle' && (
                             <button type="button" className={btnGhost} disabled={save.isPending} onClick={() => save.mutate({ matbaa: p, kaldir: true })}>
-                              Öneriye dön
+                              Öneriye geri dön
                             </button>
                           )}
                         </div>
@@ -479,8 +480,8 @@ function MappingTab({ data, meta }: { data: SuppliersData; meta: Meta }) {
       <Panel>
         <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={data.kaynaklar} alan="ozelKodlar">Tedarikçi carilerinde özel kod dağılımı</InfoLabel></h2>
         <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-          Ayar: matbaa özel kodu «{data.ayar.matbaa.join(', ')}», kağıtçı özel kodu «{data.ayar.kagit.join(', ')}», cari kod öneki {data.ayar.onEk}. Logo'daki yazım farklıysa portal ayarlarından düzeltilir;
-          aşağıdaki dağılım Logo'daki gerçek yazımdır.
+          Portal, tedarikçileri Logo cari kartındaki özel koddan tanır. Şu an matbaa için «{data.ayar.matbaa.join(', ')}», kağıtçı için «{data.ayar.kagit.join(', ')}» aranıyor (cari kodu {data.ayar.onEk} ile başlayanlarda).
+          Aşağıda Logo'da gerçekte kullanılan özel kodlar ve kaç caride geçtiği var; yazım farklıysa ayar portal yöneticisi tarafından düzeltilir.
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {data.ozelKodlar

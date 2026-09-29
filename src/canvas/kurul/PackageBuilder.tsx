@@ -31,7 +31,7 @@ export default function PackageBuilder() {
       back={{ to: p ? `/kurul/toplanti/${p.toplantiId}` : '/kurul?sekme=paketler', label: 'Toplantı' }}
     >
       {q.isLoading && <Loading />}
-      {q.error && <Note tone="err">{errText(q.error, 'Paket okunamadı.')}</Note>}
+      {q.error && <Note tone="err">{errText(q.error, 'Paket okunamadı; bağlantıyı kontrol edip yeniden deneyin.')}</Note>}
       {p && meta.data && (
         <>
           <StatusBar p={p} meta={meta.data} />
@@ -106,7 +106,7 @@ function StatusBar({ p, meta }: { p: Package; meta: KurulMeta }) {
         </Note>
       )}
       {!draft && <p className="mt-2 text-[11.5px] text-canvas-muted">Dondurulan paket değişmez; kaynak rakamlar sonradan değişse de bu sürüm aynı kalır. Düzeltme için toplantı sayfasından yeniden derleyin (yeni sürüm).</p>}
-      <AskSheet open={asking} title="Paketi dondur" confirm="Dondur" busy={freeze.isPending} onClose={() => setAsking(false)} onConfirm={() => freeze.mutate()}
+      <AskSheet open={asking} title="Paketi dondur" confirm="Kalıcı olarak dondur" busy={freeze.isPending} onClose={() => setAsking(false)} onConfirm={() => freeze.mutate()}
         message="Dondurulan paket ve PDF'i bir daha değişmez; kurul üyeleri bu sürümü görür. Devam edilsin mi?" />
     </Panel>
   );

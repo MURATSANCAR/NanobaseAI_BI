@@ -55,7 +55,7 @@ export default function DataPane({ ov }: { ov: Overview }) {
             <h3 className="flex flex-wrap items-center gap-1.5 text-[14px] font-extrabold">Kâğıt ve bandrol alışları · son 6 ay<SqlInfo k={ov.kaynaklar} alan="measured.paper" label="Kâğıt ve bandrol alışları" /></h3>
             <p className="mt-0.5 text-[11.5px] text-canvas-muted">
               İç kâğıt ortalaması {tl2(m.paper.innerPerKg)}/kg, kapak kartonu {tl2(m.paper.coverPerKg)}/kg, bandrol {tl2(m.paper.bandrol?.unit)}/adet. Kâğıt maliyeti
-              hesabında fire %10 ve kapak alanı iki sayfanın 2,3 katı varsayılır (ölçülemedi).
+              hesabında fire %10 ve kapak alanı iki sayfanın 2,3 katı varsayılır (veriden ölçülemedi).
             </p>
             <div className="mt-2">
               <TableWrap>
@@ -126,13 +126,14 @@ function DefaultsForm({ ov }: { ov: Overview }) {
         {ov.defaults.updatedBy ? ` Son değiştiren ${ov.defaults.updatedBy}, ${fmtDate(ov.defaults.updatedAt)}.` : ''}
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <NumField label="Hedef kâr marjı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Hedef kâr marjı (varsayım)" />} suffix="%" percent value={d.targetMargin} disabled={ro} onChange={(v) => setD({ ...d, targetMargin: v ?? 0 })} />
-        <NumField label="Dağıtım gideri (ölçülemezse)" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Dağıtım gideri (varsayım)" />} suffix="%" percent value={d.variableRate} disabled={ro} onChange={(v) => setD({ ...d, variableRate: v ?? 0 })} />
-        <NumField label="Genel gider payı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Genel gider payı (varsayım)" />} suffix="%" percent value={d.overheadRate} disabled={ro} onChange={(v) => setD({ ...d, overheadRate: v ?? 0 })} />
-        <NumField label="Satış oranı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Satış oranı (varsayım)" />} suffix="%" percent value={d.sellThrough} disabled={ro} onChange={(v) => setD({ ...d, sellThrough: v ?? 1 })} />
+        <NumField label="Hedef kâr marjı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Hedef kâr marjı (varsayım)" />} suffix="%" percent value={d.targetMargin} disabled={ro} onChange={(v) => setD({ ...d, targetMargin: v ?? 0 })} hint="Kârın net satış gelirine oranı" />
+        <NumField label="Dağıtım gideri (ölçülemezse)" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Dağıtım gideri (varsayım)" />} suffix="%" percent value={d.variableRate} disabled={ro} onChange={(v) => setD({ ...d, variableRate: v ?? 0 })} hint="Nakliye gideri Logo'dan ölçülemezse kullanılır" />
+        <NumField label="Genel gider payı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Genel gider payı (varsayım)" />} suffix="%" percent value={d.overheadRate} disabled={ro} onChange={(v) => setD({ ...d, overheadRate: v ?? 0 })} hint="Baskı ve kâğıt maliyetine eklenen oran" />
+        <NumField label="Satış oranı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Satış oranı (varsayım)" />} suffix="%" percent value={d.sellThrough} disabled={ro} onChange={(v) => setD({ ...d, sellThrough: v ?? 1 })} hint="Basılanın satılması beklenen kısmı" />
         <label className="block min-w-0">
           <span className={`${labelCls} flex items-center gap-1`}>Baskı adedi senaryoları<SqlInfo k={ov.kaynaklar} alan="defaults" label="Baskı adedi senaryoları (varsayım)" /></span>
-          <input className={`${field} mt-1 tabular-nums`} value={qtyText} disabled={ro} onChange={(e) => setQtyText(e.target.value)} />
+          <input className={`${field} mt-1 tabular-nums`} value={qtyText} disabled={ro} onChange={(e) => setQtyText(e.target.value)} placeholder="1000, 2000, 3000, 5000" />
+          <span className="mt-1 block text-[11px] text-canvas-muted">Virgülle ayırın</span>
         </label>
       </div>
       {!ro && (
@@ -144,7 +145,7 @@ function DefaultsForm({ ov }: { ov: Overview }) {
           {save.isSuccess && <span className="text-[12px] font-semibold text-emerald-700">Kaydedildi.</span>}
         </div>
       )}
-      {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Kaydedilemedi.')}</Note></div>}
+      {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Varsayımlar kaydedilemedi; biraz sonra yeniden deneyin.')}</Note></div>}
     </Panel>
   );
 }
@@ -152,14 +153,14 @@ function DefaultsForm({ ov }: { ov: Overview }) {
 function SourcesList() {
   const canSql = useCan('kart.sql-goster');
   const src = useQuery({ queryKey: ['pricing', 'sources'], queryFn: pricingApi.sources, enabled: ENGINE_ENABLED });
-  if (src.error) return <Note tone="err">{errText(src.error, 'Kaynaklar okunamadı.')}</Note>;
+  if (src.error) return <Note tone="err">{errText(src.error, 'Veri kaynakları şu an okunamadı.')}</Note>;
   if (!src.data) return <Loading />;
   return (
     <Panel>
-      <h3 className="text-[14px] font-extrabold">Kaynak sorgular</h3>
+      <h3 className="text-[14px] font-extrabold">Veri kaynakları</h3>
       <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-        Yalnız okuma. Logo'da her yıl ayrı bir kopya: {(src.data.copies ?? []).map((c) => `${c.from.slice(0, 4)}–${c.last.slice(0, 4)}`).join(', ') || '—'}; her kopyadan
-        yalnız kendi tarihleri okunur. Görüntü {day(src.data.asOf)}.
+        Bu ekranın rakamlarının Logo ve CRM'den nasıl okunduğu; kaynaklara yalnız okuma yapılır. Logo'da her dönem ayrı tutulur:{' '}
+        {(src.data.copies ?? []).map((c) => `${c.from.slice(0, 4)}–${c.last.slice(0, 4)}`).join(', ') || '—'}; her dönemden yalnız kendi tarihleri okunur. Son okuma {day(src.data.asOf)}.
       </p>
       <div className="mt-2 space-y-2">
         {src.data.sources.map((s) => (
@@ -176,7 +177,7 @@ function SourcesList() {
             ) : s.sql ? (
               <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">{s.sql}</pre>
             ) : (
-              <p className="mt-1 text-[11.5px] text-canvas-muted">Görüntü henüz kurulmadı; sorgu ilk kurulumda çalışır.</p>
+              <p className="mt-1 text-[11.5px] text-canvas-muted">Bu kaynak henüz ilk kez okunmadı; ilk okumadan sonra burada görünür.</p>
             )}
           </details>
         ))}

@@ -13,6 +13,7 @@ import OpportunityPanel from './OpportunityPanel';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
 import { xlsxUrl } from '../../components/excel';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Fırsatlar: bütün backlist (tavan yok, sayfalı), bileşen çubukları, ağırlık kaydırıcıları, seçip aktivasyon planı.
  *  Süzgeçler adres çubuğunda; kişisel ağırlık kişinin tercihinde (sunucuda), ekip varsayılanı ayrı yetkiyle. */
@@ -105,16 +106,20 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
         <KpiRow>
           <Kpi label="Backlist" value={fmtN(d.hepsi)} help={d.total === d.hepsi ? 'Süzgeç yok: bütün liste' : `Süzgeçle ${fmtN(d.total)} kitap`}
             active={!get('m46') && !get('gun') && !get('stokta')} onClick={() => update({ m46: null, gun: null, stokta: null })}
-            info={<SqlInfo k={d.kaynaklar} alan="hepsi" label="Backlist" />} />
+            info={<SqlInfo k={d.kaynaklar} alan="hepsi" label="Backlist" />}
+            explain="Yayımlanalı bir yılı geçmiş, satıştaki kitapların sayısı. Karta dokunursanız hedef, özel gün ve stok süzgeçleri kalkar." />
           <Kpi label="Açık sapma" value={fmtN(d.kpi.sapmaAcik)} help="Bu yılın satış hedefinde uyarısı açık" active={get('m46') === 'acik'}
             onClick={() => update({ m46: get('m46') === 'acik' ? null : 'acik' })}
-            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Açık sapma" />} />
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Açık sapma" />}
+            explain="Bütçe planında bu yıl için satış hedefi olan ve hedefin gerisinde kaldığı uyarısı hâlâ açık olan kitaplar. Öncelikli ele alınması gerekenler bunlardır." />
           <Kpi label="Yaklaşan özel gün" value={fmtN(d.kpi.yakinGun)} help={`Önümüzdeki ${meta.settings.agendaWeeks} haftada bağlı özel günü olan`}
             active={get('gun') === 'yakin'} onClick={() => update({ gun: get('gun') === 'yakin' ? null : 'yakin' })}
-            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Yaklaşan özel gün" />} />
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Yaklaşan özel gün" />}
+            explain="Konusu yaklaşan bir özel güne (ör. Anneler Günü, Öğretmenler Günü) bağlanmış kitaplar. O güne yönelik kampanya için iyi adaylardır." />
           <Kpi label="Stokta" value={fmtN(d.kpi.stokta)} help={`Aktivasyon planında: ${fmtN(d.kpi.planli)}`} active={get('stokta') === '1'}
             onClick={() => update({ stokta: get('stokta') === '1' ? null : '1' })}
-            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Stokta" />} />
+            info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Stokta" />}
+            explain="Depoda stoğu olan kitaplar; kampanya yalnız bunlar için anlamlıdır. Alt satırda kaçının zaten bir aktivasyon planında olduğu yazar." />
         </KpiRow>
       )}
 
@@ -162,12 +167,12 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
             <option value="var">Aktivasyon planında</option>
           </select>
           <button type="button" className={btnGhost} aria-expanded={showWeights} onClick={() => setShowWeights((v) => !v)}>
-            <SlidersHorizontal aria-hidden className="h-4 w-4" />Ağırlıklar
+            <SlidersHorizontal aria-hidden className="h-4 w-4" />Ağırlıkları ayarla
           </button>
           {me.canExport && (
             <>
-              <a className={btnGhost} href={blApi.csvUrl({ ...lp, q: dq })} download><Download aria-hidden className="h-4 w-4" />CSV</a>
-              <a className={btnGhost} href={xlsxUrl(blApi.csvUrl({ ...lp, q: dq }))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Excel</a>
+              <a className={btnGhost} href={blApi.csvUrl({ ...lp, q: dq })} download><Download aria-hidden className="h-4 w-4" />Listeyi indir (CSV)</a>
+              <a className={btnGhost} href={xlsxUrl(blApi.csvUrl({ ...lp, q: dq }))} download><FileSpreadsheet aria-hidden className="h-4 w-4" />Listeyi indir (Excel)</a>
             </>
           )}
         </div>
@@ -186,9 +191,13 @@ export default function OpportunitiesTab({ meta }: { meta: BlMeta }) {
         </div>
       )}
 
-      <Block title="Fırsat listesi" help={meta.formula} info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Fırsat listesi" />}>
+      <Block
+        title="Fırsat listesi"
+        help={<>Kitaplar «uyku endeksi»ne göre sıralanır: 0–100 arası puan; yüksekse kitap yeniden hareketlendirmeye daha uygundur. Satış düşüşü, stok, marj, satış tahmini ve hedef sapması birleştirilir; ağırlıkları siz ayarlarsınız. Kitabın adına dokununca ayrıntısı açılır.<Explain label="Uyku endeksi" title="Uyku endeksi nasıl hesaplanır?" className="ml-1">{meta.formula}</Explain></>}
+        info={<SqlInfo k={d?.kaynaklar} alan="items[]" label="Fırsat listesi" />}
+      >
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
-        {d && !d.items.length && <Note tone="info">Süzgece uyan kitap yok.</Note>}
+        {d && !d.items.length && <EmptyHint title="Süzgece uyan kitap yok" why="Arama kutusunu temizleyin ya da yayınevi, kitaplık, hedef durumu ve özel gün süzgeçlerini «Hepsi» yapın." />}
         {d && d.items.length > 0 && (
           <Rows rows={d.items} meta={meta} picked={picked} onPick={toggle} onOpen={setOpen} k={d.kaynaklar} />
         )}
@@ -320,9 +329,9 @@ function Rows({ rows, meta, picked, onPick, onOpen, k }: {
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[].endeks">Endeks</InfoLabel></th>
               <th className={th}><InfoLabel k={k} alan="items[].bilesen">Bileşenler</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Son 12 ay</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Değişim</InfoLabel></th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1"><InfoLabel k={k} alan="items[]">Değişim</InfoLabel><Explain label="Değişim">Son 12 tam ayın net satış adedinin önceki 12 aya göre değişimi. Kırmızı, satışın düştüğünü gösterir.</Explain></span></th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Stok</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Tükenme</InfoLabel></th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center justify-end gap-1"><InfoLabel k={k} alan="items[]">Tükenme</InfoLabel><Explain label="Tükenme">Bugünkü depo stoğu, son satış hızıyla kaç ayda biter. Satışı olmayan kitapta «satış yok» yazar.</Explain></span></th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Tahmin 12 ay</InfoLabel></th>
               {me.canSeeBudget && <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]">Marj</InfoLabel></th>}
               <th className={th}>Durum</th>

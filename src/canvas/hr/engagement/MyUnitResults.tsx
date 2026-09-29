@@ -18,8 +18,8 @@ export default function MyUnitResults() {
       aside={<div className="flex justify-start lg:justify-end"><Link className="text-[12.5px] font-bold text-canvas-violet hover:underline" to="/ik/aksiyonlar">Birimimin aksiyonları →</Link></div>}>
       {q.error && <Note tone="err">{errText(q.error, 'Sonuç okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {d && !d.units.length && <Note tone="info">Kayıtta yöneticisi olduğunuz bir birim yok.</Note>}
-      {d && d.units.length > 0 && !d.results.length && <Note tone="info">Birim sonuçları henüz paylaşılmadı.</Note>}
+      {d && !d.units.length && <Note tone="info">Kayıtta yöneticisi olduğunuz bir birim yok. Yanlışsa İnsan Kaynakları’ndan birim yöneticisi kaydınızı düzeltmesini isteyin.</Note>}
+      {d && d.units.length > 0 && !d.results.length && <Note tone="info">Biriminizin anket sonucu henüz paylaşılmadı. İK bir anketi kapatıp sonucu yöneticilerle paylaşınca burada görünür.</Note>}
       {d?.results.map((r, i) => (
         <Block key={`${r.survey.id}-${r.scope}-${i}`} title={`${r.survey.title} · ${r.unitName ?? ''}`} help={`Kapanış ${fmtDay(r.survey.closesAt)}`}>
           <ResultView r={r} k={d.kaynaklar} base="results[]" row={`${r.survey.id}:${r.scope}`} />

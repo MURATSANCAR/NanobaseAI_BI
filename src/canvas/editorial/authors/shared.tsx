@@ -202,7 +202,7 @@ export function SnapshotBar({ compact }: { compact?: boolean }) {
         className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-slate-100 px-2.5 font-extrabold text-canvas-ink transition-transform duration-150 ease-out hover:bg-slate-200 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100"
       >
         <RefreshCw aria-hidden className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
-        Yenile
+        Verileri yenile
       </button>
     </div>
   );

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, ChevronLeft, Download, Eye, Loader2, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
+import { EmptyHint } from '../../components/Explain';
 import { ModuleFrame, Panel } from '../kit';
 import { contractApi, downloadDocx, metaOptions, type Template } from './api';
 import { Field, Sheet, errMsg, stamp } from './ui';
@@ -190,7 +191,7 @@ function Card({ t, can, k, onEdit, onPreview }: { t: Template; can: boolean; k?:
             {t.hasDocx && <button type="button" className={btnGhost} onClick={() => window.confirm('Word dosyası kaldırılsın mı? Belge metin şablonundan üretilir.') && removeDocx.mutate()}>Word'ü kaldır</button>}
             <button type="button" className={btnGhost} onClick={() => archive.mutate()}>
               {t.active ? <Archive aria-hidden className="h-4 w-4" /> : <RotateCcw aria-hidden className="h-4 w-4" />}
-              {t.active ? 'Arşivle' : 'Geri al'}
+              {t.active ? 'Arşivle' : 'Arşivden çıkar'}
             </button>
           </>
         )}
@@ -232,7 +233,7 @@ function NewFromDocx({ targets, can }: { targets: Record<string, string>; can: b
         </label>
         <FileDrop<Template>
           title="Word şablonu yükle (yeni şablon)"
-          hint="Şablon dosya adıyla açılır; {{alan}} yer tutucuları tanınır. Adı ve sözleşme türünü sonra «Düzenle»den değiştirirsiniz."
+          hint="Şablon dosya adıyla açılır. Word dosyasında {{taraflar}} gibi çift süslü parantezle yazılan yerler, belge üretilirken sözleşmedeki değerle doldurulur. Adı ve sözleşme türünü sonra «Düzenle»den değiştirirsiniz."
           accept=".docx"
           maxBytes={TEMPLATE_DOCX_MAX}
           feature="sozlesme.sablon"
@@ -258,7 +259,7 @@ export default function TemplatesScreen() {
   const can = !!data?.can.templates;
   const groups = Object.entries(data?.targets ?? {}).map(([k, v]) => ({ k, v, items: (data?.items ?? []).filter((t) => t.target === k) }));
   return (
-    <ModuleFrame route="/telif-sozlesme" crumb="Sözleşmeler" title="Şablon kütüphanesi" lead="Sözleşme, zeyilname ve hakediş bildirimi şablonları. Her kayıt sürümü bir artırır; sözleşme hangi sürümden üretildiğini geçmişine yazar." source="Portal">
+    <ModuleFrame route="/telif-sozlesme" crumb="Sözleşmeler" title="Şablon kütüphanesi" lead="Sözleşme, zeyilname ve hakediş bildirimi metinlerinin kalıpları. Belge üretilirken şablondaki alanlar sözleşmenin şartlarıyla dolar; her kayıt şablonun sürümünü bir artırır." source="Portal">
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <Link to="/telif-sozlesme" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
           <ChevronLeft aria-hidden className="h-4 w-4" />
@@ -283,7 +284,12 @@ export default function TemplatesScreen() {
       {groups.map((g) => (
         <Panel key={g.k}>
           <h2 className="mb-2 text-[14px] font-extrabold">{g.v}</h2>
-          {!g.items.length && <p className="text-[12px] text-canvas-muted">Şablon yok. Word şablonunu yukarıdaki alana bırakın.</p>}
+          {!g.items.length && (
+            <EmptyHint
+              title={archived ? 'Bu türde şablon yok' : 'Bu türde etkin şablon yok'}
+              why={can ? 'Word şablonunu yukarıdaki alana bırakın ya da «Yeni şablon» ile metin şablonu yazın.' : 'Şablonları, şablon yetkisi olan kişi ekler.'}
+            />
+          )}
           <ul className="space-y-2">
             {g.items.map((t) => (
               <Card key={t.id} t={t} can={can} k={data?.kaynaklar} onEdit={() => setEdit(t)} onPreview={() => setPreview(t)} />

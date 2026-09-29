@@ -13,6 +13,7 @@ import { PlanCard } from './PlansTab';
 import VisitNoteSheet from './VisitNoteSheet';
 import NoteSignalCard from '../signals/NoteSignalCard';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 /** Müşteri brifingi (telefon, tek sayfa, kaydırmalı): Özet · Ödeme · Sipariş · Hedef · Öneri · Notlar. Rakamlar Logo ve
  *  CRM'den; Zeki AI yalnız 3 cümlelik özeti yazar ve özetteki her sayı aşağıdaki olgulardan gelir. Alt çubuk: not bırak,
@@ -93,7 +94,7 @@ export default function CustomerBrief() {
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-[12px] text-canvas-muted">
-                {[b.code, b.il, b.kanal, b.temsilciAd ? `BMT ${b.temsilciAd}` : 'temsilcisi yok'].filter(Boolean).join(' · ')}
+                {[b.code, b.il, b.kanal, b.temsilciAd ? `Temsilci ${b.temsilciAd}` : 'temsilcisi yok'].filter(Boolean).join(' · ')}
               </div>
               <div className="mt-1.5">
                 <Chips chips={b.gerekce} />
@@ -138,14 +139,14 @@ export default function CustomerBrief() {
             </div>
           </nav>
 
-          <Block id="odeme" title="Ödeme" help={`Vade ve yaşlandırma yaklaşık (FIFO): Logo'da ödeme kapama kullanılmıyor. Yaşlandırma ${fmtDay(b.agingAsof)} gününe göre.`}>
+          <Block id="odeme" title="Ödeme" help={`Vade ve gecikme süreleri yaklaşıktır: Logo'da ödemeler tek tek faturalara kapatılmadığı için bakiye en yeni vadelerden geriye doğru dağıtılır. Hesap ${fmtDay(b.agingAsof)} gününe göre.`}>
             <KV k="Bakiye" info={<SqlInfo k={b.kaynaklar} alan="signals.bakiye" label="Bakiye" />} v={fmtMoney(s.bakiye)} />
             <KV k="Vadesi geçmiş (yaklaşık)" info={<SqlInfo k={b.kaynaklar} alan="signals.vadesi_gecmis" label="Vadesi geçmiş" />} v={fmtMoney(s.vadesi_gecmis)} tone={(s.vadesi_gecmis ?? 0) > 0 ? 'err' : undefined} />
             {m.buckets.map((k) => (
               <KV key={k.key} k={`  ${k.label}`} info={<SqlInfo k={b.kaynaklar} alan={`signals.${k.key}`} label={k.label} />} v={fmtMoney(s[k.key])} tone={k.key === 'k_90p' && (s.k_90p ?? 0) > 0 ? 'err' : undefined} />
             ))}
-            <KV k="Vadesi gelmemiş" info={<SqlInfo k={b.kaynaklar} alan="signals.gelmemis" label="Vadesi gelmemiş" />} v={fmtMoney(s.gelmemis)} />
-            {(s.plansiz ?? 0) > 0 && <KV k="Vade planı olmayan bakiye" info={<SqlInfo k={b.kaynaklar} alan="signals.plansiz" label="Plansız bakiye" />} v={fmtMoney(s.plansiz)} tone="warn" />}
+            <KV k="Vadesi gelmemiş" info={<><Explain label="Vadesi gelmemiş">Bakiyenin henüz ödeme günü gelmemiş kısmı; şu an gecikme sayılmaz.</Explain><SqlInfo k={b.kaynaklar} alan="signals.gelmemis" label="Vadesi gelmemiş" /></>} v={fmtMoney(s.gelmemis)} />
+            {(s.plansiz ?? 0) > 0 && <KV k="Vade planı olmayan bakiye" info={<><Explain label="Vade planı olmayan bakiye">Logo'da ödeme günü tanımlanmamış bakiye; bu yüzden vadesi geçmiş ya da gelmemiş diye ayrılamıyor.</Explain><SqlInfo k={b.kaynaklar} alan="signals.plansiz" label="Plansız bakiye" /></>} v={fmtMoney(s.plansiz)} tone="warn" />}
             <KV
               k="Son ödeme"
               info={<SqlInfo k={b.kaynaklar} alan="signals.odeme_12ay" label="Son ödeme" />}
@@ -158,8 +159,8 @@ export default function CustomerBrief() {
               v={`${s.karsiliksiz_olay_12ay ?? 0} karşılıksız · ${s.protesto_olay_12ay ?? 0} protesto`}
               tone={(s.karsiliksiz_olay_12ay ?? 0) + (s.protesto_olay_12ay ?? 0) > 0 ? 'err' : undefined}
             />
-            <KV k="Risk / limit (CRM)" info={<SqlInfo k={b.kaynaklar} alan="signals.risk_toplam" label="Risk ve limit" />} v={`${fmtMoney(s.risk_toplam)} / ${fmtMoney(s.limit_toplam)}`} />
-            <KV k="Limit doluluğu" info={<SqlInfo k={b.kaynaklar} alan="signals.risk_doluluk" label="Limit doluluğu" />} v={fmtPct(s.risk_doluluk)} tone={(s.risk_doluluk ?? 0) >= 0.9 ? 'err' : (s.risk_doluluk ?? 0) >= 0.75 ? 'warn' : undefined} />
+            <KV k="Risk / limit (CRM)" info={<><Explain label="Risk / limit">Soldaki rakam müşterinin CRM'deki toplam risk tutarı, sağdaki ona tanınan kredi limitidir.</Explain><SqlInfo k={b.kaynaklar} alan="signals.risk_toplam" label="Risk ve limit" /></>} v={`${fmtMoney(s.risk_toplam)} / ${fmtMoney(s.limit_toplam)}`} />
+            <KV k="Limit doluluğu" info={<><Explain label="Limit doluluğu">Riskin limite oranı. %75'i geçince turuncu, %90'ı geçince kırmızı yazar; limit dolunca yeni siparişler CRM'de risk onayına takılabilir.</Explain><SqlInfo k={b.kaynaklar} alan="signals.risk_doluluk" label="Limit doluluğu" /></>} v={fmtPct(s.risk_doluluk)} tone={(s.risk_doluluk ?? 0) >= 0.9 ? 'err' : (s.risk_doluluk ?? 0) >= 0.75 ? 'warn' : undefined} />
             {b.odemeler.length > 0 && (
               <div className="mt-2">
                 <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
@@ -298,7 +299,7 @@ export default function CustomerBrief() {
             <KV k="Geçen yıl toplam" info={<SqlInfo k={b.kaynaklar} alan="signals.gecen_yil_tam" label="Geçen yıl toplam" />} v={fmtMoney(s.gecen_yil_tam)} />
             <KV k="İade oranı" info={<SqlInfo k={b.kaynaklar} alan="signals.iade_orani" label="İade oranı" />} v={fmtPct(s.iade_orani)} />
             {s.hedef_beklenen !== null && <KV k="Bugüne kadar beklenen" info={<SqlInfo k={b.kaynaklar} alan="signals.hedef_beklenen" label="Beklenen" />} v={fmtMoney(s.hedef_beklenen)} />}
-            {s.hedef_acigi !== null && <KV k="Hedef açığı" info={<SqlInfo k={b.kaynaklar} alan="signals.hedef_acigi" label="Hedef açığı" />} v={fmtPct(s.hedef_acigi)} tone={(s.hedef_acigi ?? 0) > 0.2 ? 'err' : undefined} />}
+            {s.hedef_acigi !== null && <KV k="Hedef açığı" info={<><Explain label="Hedef açığı">Bugüne kadar beklenen alımın ne kadarının eksik kaldığı. %20'yi geçerse kırmızı yazar.</Explain><SqlInfo k={b.kaynaklar} alan="signals.hedef_acigi" label="Hedef açığı" /></>} v={fmtPct(s.hedef_acigi)} tone={(s.hedef_acigi ?? 0) > 0.2 ? 'err' : undefined} />}
             {b.hedefKitaplar.length > 0 && <GapList brief={b} />}
           </Block>
 
@@ -316,7 +317,7 @@ export default function CustomerBrief() {
               <NoteSignalCard code={b.code} screen="saha" />
             </div>
             {b.ziyaretler.length === 0 ? (
-              <p className="text-[12px] text-canvas-muted">Henüz not yok.</p>
+              <p className="text-[12px] text-canvas-muted">Henüz not yok. Alttaki «Not bırak» ile ilk görüşme notunu yazabilirsiniz.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {b.ziyaretler.map((v) => (
@@ -353,7 +354,7 @@ export default function CustomerBrief() {
                         {v.durum === 'yapildi' && m.me.canNote && b.zekiVar && (
                           <button type="button" className={`${btnGhost} !min-h-9 !bg-white`} disabled={followup.isPending} onClick={() => followup.mutate(v.id)}>
                             {followup.isPending && followup.variables === v.id && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-                            Takip e-postası taslağı
+                            Takip e-postası taslağı yaz
                           </button>
                         )}
                       </div>
@@ -377,7 +378,7 @@ export default function CustomerBrief() {
           </div>
         </div>
       )}
-      {!b && !q.isLoading && !err && <Empty>Brifing bulunamadı.</Empty>}
+      {!b && !q.isLoading && !err && <Empty title="Müşteri brifingi bulunamadı">Bu cari kodu için brifing verisi yok. «Bugün» listesinden müşteriyi yeniden seçin.</Empty>}
 
       {sheet && b && (
         <VisitNoteSheet open onClose={() => setSheet(null)} code={b.code} unvan={b.unvan} mode={sheet.mode} visit={sheet.visit} />

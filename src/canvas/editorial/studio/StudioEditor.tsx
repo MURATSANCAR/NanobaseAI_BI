@@ -16,6 +16,7 @@ import AgeReportEntry from './age/AgeReport';
 import { BookProofSection } from './book3d';
 import { useCan } from '../../useAdmin';
 import { StudioInfo } from './shared';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -27,6 +28,8 @@ const SUGGEST: Record<Mode, string[]> = {
   fix: ['Işığı sıcaklaştır', 'Karakterleri biraz yakınlaştır', 'Arka planı sadeleştir', 'Renkleri yumuşat'],
   new: ['Daha geniş bir açıdan göster', 'Karakterin yüz ifadesi öne çıksın', 'Gün batımı ışığında olsun'],
 };
+
+const LEAD = 'Resimli sayfaları ve kapağı tek tek inceleyin: beğenmediğiniz resmi düzelttirin ya da yeniden çizdirin, beğendiğinizi onaylayın.';
 
 function spreads(total: number): number[][] {
   const out: number[][] = [[1]];
@@ -79,7 +82,7 @@ export default function StudioEditor() {
   const select = useMutation({ mutationFn: (v: number) => studioApi.select(jobId, key!, v), onSuccess: refresh });
   const approve = useMutation({ mutationFn: (ok: boolean) => studioApi.approve(jobId, key!, ok), onSuccess: refresh });
 
-  if (!d) return <ModuleFrame route="/kitap-tasarim" crumb="Sayfa stüdyosu" title="Sayfa stüdyosu" lead="" source={`İş ${jobId}`}>{q.error ? <Note tone="err">{errText(q.error, 'Okunamadı.')}</Note> : <Panel><Loading /></Panel>}</ModuleFrame>;
+  if (!d) return <ModuleFrame route="/kitap-tasarim" crumb="Sayfa stüdyosu" title="Sayfa stüdyosu" lead={LEAD} source={`İş ${jobId}`}>{q.error ? <Note tone="err">{errText(q.error, 'Okunamadı.')}</Note> : <Panel><Loading /></Panel>}</ModuleFrame>;
 
   const art = key ? artOf(d, key) : null;
   const page = key && key !== 'kapak' ? d.pages.find((p) => String(p.no) === key) : undefined;
@@ -89,20 +92,21 @@ export default function StudioEditor() {
   const busyHere = !!d.busy && !d.busy.error && d.busy.key === key;
   const busyAny = !!d.busy && !d.busy.error;
   const sceneChars = key === 'kapak' ? d.characters.slice(0, 3) : d.characters.filter((c) => page?.scene?.characters.includes(c.name));
-  const err = errText(regen.error || select.error || approve.error, '') || (d.busy?.error && d.busy.key === key ? `Üretim başarısız: ${d.busy.error}` : '');
+  const err = errText(regen.error || select.error || approve.error, '') || (d.busy?.error && d.busy.key === key ? `Resim çizilemedi: ${d.busy.error} Yeniden deneyebilirsiniz.` : '');
 
   return (
     <ModuleFrame
       route="/kitap-tasarim"
       crumb="Sayfa stüdyosu"
       title={d.state.title}
-      lead={`${total} sayfa · ${d.spec ? `${d.spec.trim_w / 10}×${d.spec.trim_h / 10} cm` : ''} · ${d.profile ? `${d.profile.age_min}–${d.profile.age_max} yaş` : ''}`}
+      lead={[LEAD, [`${total} sayfa`, d.spec ? `${d.spec.trim_w / 10}×${d.spec.trim_h / 10} cm` : '', d.profile ? `${d.profile.age_min}–${d.profile.age_max} yaş` : ''].filter(Boolean).join(' · ')].join(' ')}
       source={`İş ${jobId}`}
       aside={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <span className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${waiting.length ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
             {artKeys.length - waiting.length}/{artKeys.length} resim onaylı{waiting.length ? ` · ${waiting.length} onay bekliyor` : ''}
             <StudioInfo label="Resim onayı" what="Onaylı resim = bütün resimler − onay bekleyenler." className="ml-1" />
+            <Explain label="Resim onayı" className="ml-0.5">Her resmi siz onaylarsınız. Bütün resimler onaylanmadan ve ön baskı denetimi geçmeden baskı PDF'i üretilmez.</Explain>
           </span>
           <AgeReportEntry jobId={jobId} />
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/sayfalar`} title="Sayfa ekle/sil/sırala, yerleşim, balon, renkli yazı, figür ve fotoğraf">
@@ -113,13 +117,16 @@ export default function StudioEditor() {
           <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
           {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
           {d.files['baski-ic'] ? (
-            <a className={gradientBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')} title="CMYK, PDF/X-3, kesim işaretli">
+            <a className={gradientBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')} title="Matbaa dosyası: renkler baskıya (CMYK) çevrilmiş, kesim işaretli">
               <Download className="h-4 w-4" aria-hidden />Baskı PDF'i
             </a>
           ) : (
-            <span className={`${gradientBtn} pointer-events-none opacity-50`}
-              title="Bütün resimler onaylanıp ön baskı denetimi geçince CMYK baskı PDF'i üretilir">
-              Baskıya hazır değil
+            <span className="inline-flex items-center gap-1">
+              <span className={`${gradientBtn} pointer-events-none opacity-50`}
+                title="Bütün resimler onaylanıp ön baskı denetimi geçince CMYK baskı PDF'i üretilir">
+                Baskıya hazır değil
+              </span>
+              <Explain label="Baskıya hazır değil">Bütün resimler onaylanıp ön baskı denetimi geçince matbaaya gidecek baskı PDF'i (renkleri baskıya çevrilmiş, kesim işaretli) kendiliğinden üretilir ve buradan indirilir.</Explain>
             </span>
           )}
           {d.files['baski-kapak'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-kapak')}><Download className="h-4 w-4" aria-hidden />Baskı kapağı</a>}
@@ -130,7 +137,10 @@ export default function StudioEditor() {
       <div className="grid gap-3 lg:grid-cols-[210px_1fr_380px] lg:gap-4">
         {/* Sayfa gezgini */}
         <Panel>
-          <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sayfa gezgini</div>
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Sayfa gezgini
+            <Explain label="Sayfa gezgini">Kitap açılım açılım (yan yana duran iki sayfa) listelenir. Nokta rengi: yeşil tüm resimler onaylı, sarı onay bekleyen resim var, mor şu an çiziliyor.</Explain>
+          </div>
           <ul className="mt-2 flex max-h-[70vh] flex-col gap-2 overflow-y-auto pr-1">
             {d.cover.art && (
               <li>
@@ -194,7 +204,10 @@ export default function StudioEditor() {
           )}
           {art && art.versions.length > 1 && (
             <div className="mt-3">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sürümler</div>
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                Sürümler
+                <Explain label="Sürümler">Her düzeltme ya da yeni çizim ayrı bir sürüm olarak saklanır. Kullanmak istediğiniz sürüme dokunun; seçilen sürüm sayfaya konur.</Explain>
+              </div>
               <ul className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
                 {art.versions.map((v) => (
                   <li key={v.v} className="w-[132px] shrink-0">
@@ -215,7 +228,7 @@ export default function StudioEditor() {
         {/* Resim paneli */}
         <Panel>
           {!art && !missing ? (
-            <p className="text-[12.5px] text-canvas-muted">Bu açılımda resim yok. Resimli bir sayfaya ya da kapağa tıklayın.</p>
+            <EmptyHint title="Bu açılımda resim yok" why="Sayfa gezgininden resimli bir açılımı ya da kapağı seçin, sonra açık kitapta resmine dokunun." />
           ) : (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -224,12 +237,12 @@ export default function StudioEditor() {
                   {missing ? 'Resim yok' : art?.approved ? `Onaylı${art.approved_by ? ` · ${art.approved_by}` : ''}` : 'Onay bekliyor'}
                 </span>
               </div>
-              {missing && <Note tone="warn">Bu sayfanın resmi çizilemedi. «Yeni görsel üret» ile çizin; isterseniz yönlendirme yazın.</Note>}
+              {missing && <Note tone="warn">Bu sayfanın resmi çizilemedi. «Yeni resim çiz» ile yeniden deneyin; isterseniz ne görmek istediğinizi yazın.</Note>}
               {sel && <Img src={studioApi.artUrl(jobId, key!, sel.v, 760)} alt="Seçili resim" fallback="resim" className="w-full rounded-xl border border-slate-200" />}
 
               <div role="radiogroup" aria-label="Üretim yolu" className="grid grid-cols-2 gap-2">
-                {([['fix', 'Düzelt', 'Mevcut görseli referans alır, yalnız yazdığın kısmı değiştirir', Wand2],
-                   ['new', 'Farklı üret', 'Sayfanın metninden sıfırdan yeni bir görsel çizer', Sparkles]] as const).map(([m, t, help, Icon]) => (
+                {([['fix', 'Düzelt', 'Seçili resmi temel alır, yalnız yazdığınız değişikliği yapar', Wand2],
+                   ['new', 'Farklı çiz', 'Sayfanın metninden sıfırdan yeni bir resim çizer', Sparkles]] as const).map(([m, t, help, Icon]) => (
                   <button key={m} type="button" role="radio" aria-checked={effMode === m} onClick={() => setMode(m)}
                     disabled={missing && m === 'fix'}
                     className={`rounded-2xl border p-2.5 text-left disabled:opacity-40 ${press} ${effMode === m ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
@@ -237,7 +250,7 @@ export default function StudioEditor() {
                     <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">{help}</span>
                     {m === 'fix' && effMode === 'fix' && sel && (
                       <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-white px-1 py-0.5 font-mono text-[10.5px] text-canvas-violet">
-                        <Img src={studioApi.artUrl(jobId, key!, sel.v, 64)} alt="" fallback="" className="h-4 w-5 rounded-sm object-cover" />Referans: v{sel.v}
+                        <Img src={studioApi.artUrl(jobId, key!, sel.v, 64)} alt="" fallback="" className="h-4 w-5 rounded-sm object-cover" />Temel: v{sel.v}
                       </span>
                     )}
                   </button>
@@ -245,7 +258,7 @@ export default function StudioEditor() {
               </div>
 
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{effMode === 'fix' ? 'Ne değişsin?' : 'Yönlendirme (isteğe bağlı)'}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{effMode === 'fix' ? 'Ne değişsin?' : 'Ne görmek istersiniz? (isteğe bağlı)'}</span>
                 <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} maxLength={1200}
                   placeholder={effMode === 'fix' ? 'Ör. balonu maviye çevir, babanın gözlüğünü kaldır' : 'Ör. sahneyi daha yukarıdan göster'}
                   className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[13px] outline-none focus:border-canvas-violet" />
@@ -259,7 +272,10 @@ export default function StudioEditor() {
 
               {sceneChars.length > 0 && (
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Karakter tutarlılığı · referanslar eklenir</div>
+                  <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                    Sahnedeki karakterler
+                    <Explain label="Sahnedeki karakterler">Karakterlerin her resimde aynı görünmesi için karakter kartlarındaki görünümleri çizime örnek olarak eklenir.</Explain>
+                  </div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {sceneChars.map((c) => (
                       <span key={c.i} className="inline-flex items-center gap-1.5 rounded-full bg-white/80 py-0.5 pl-0.5 pr-2.5 text-[11.5px] font-bold" title={c.look}>
@@ -271,25 +287,27 @@ export default function StudioEditor() {
                 </div>
               )}
 
-              {canProduce && <div className="flex gap-2">
+              {canProduce && <div className="flex flex-wrap gap-2">
                 <button type="button" className={`${gradientBtn} flex-1`} disabled={busyAny || regen.isPending || (effMode === 'fix' && !prompt.trim())}
                   onClick={() => regen.mutate({ variants: 1, mode: effMode })}>
                   {busyHere ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : effMode === 'fix' ? <Wand2 className="h-4 w-4" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
-                  {busyHere ? (d.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : effMode === 'fix' ? 'Düzelt ve üret' : 'Yeni görsel üret'}
+                  {busyHere ? (d.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : effMode === 'fix' ? 'Düzelt ve çiz' : 'Yeni resim çiz'}
                 </button>
                 {effMode === 'new' && (
-                  <button type="button" className={ghostBtn} disabled={busyAny || regen.isPending} onClick={() => regen.mutate({ variants: 3, mode: effMode })}>
-                    Varyant ×3
+                  <button type="button" className={ghostBtn} disabled={busyAny || regen.isPending} onClick={() => regen.mutate({ variants: 3, mode: effMode })}
+                    title="Aynı sayfa için üç farklı resim çizer; birini Sürümler'den seçersiniz">
+                    3 seçenek çiz
                   </button>
                 )}
               </div>}
-              {busyAny && !busyHere && <p className="text-[11.5px] text-canvas-muted">Başka bir resim çiziliyor ({d.busy?.key === 'kapak' ? 'kapak' : `sayfa ${d.busy?.key}`}); bitince bu resim için üretim açılır.</p>}
+              {busyAny && !busyHere && <p className="text-[11.5px] text-canvas-muted">Başka bir resim çiziliyor ({d.busy?.key === 'kapak' ? 'kapak' : `sayfa ${d.busy?.key}`}); o bitince bu resim için çizim açılır.</p>}
+              {busyHere && <p className="text-[11.5px] text-canvas-muted">Resim çizilirken sayfadan ayrılabilirsiniz; bitince yeni sürüm burada seçili olarak görünür ve onayınızı bekler.</p>}
 
               {page?.scene && (
                 <blockquote className="rounded-2xl border border-amber-200/70 bg-amber-50/50 px-3 py-2 text-[12px]">
-                  <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-amber-700"><Quote className="h-3 w-3" aria-hidden />Sahnenin dayanağı · sayfa {key}</div>
+                  <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-amber-700"><Quote className="h-3 w-3" aria-hidden />Resmin dayandığı cümle · sayfa {key}</div>
                   <p className="mt-1 italic leading-snug">“{page.scene.quote}”</p>
-                  {!page.scene.grounded && <p className="mt-1 text-[11px] text-amber-700">Sahne tarifi sayfanın cümlesine birebir bağlanamadı; kontrol edin.</p>}
+                  {!page.scene.grounded && <p className="mt-1 text-[11px] text-amber-700">Resmin tarifi sayfadaki bir cümleyle birebir eşleşmedi; resmin metne uyduğunu kontrol edin.</p>}
                 </blockquote>
               )}
 

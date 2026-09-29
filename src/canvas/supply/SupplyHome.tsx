@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import { Loading, Note, TableWrap, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtKg, fmtMoney, fmtPct, fmtUnit, supplyApi } from './api';
@@ -20,7 +21,7 @@ export default function SupplyHome() {
   return (
     <SupplyFrame
       title="Tedarik ve baskı"
-      lead="Bütün baskıların portföy görünümü: ay × matbaa yükü, kağıt ihtiyacı, matbaa ve kağıtçı borcu, birim baskı maliyeti. Kartlar Üretim yönetiminden okunur; burada kart açılmaz, matbaa atanmaz. Öneriler karar içindir, CRM'e ve matbaaya gönderim yoktur."
+      lead="Önümüzdeki aylarda hangi matbaaya ne kadar baskı işi düştüğü, ne kadar kağıt gerektiği, matbaa ve kağıtçılara ne kadar ödeme yapılacağı ve adet başı baskı bedelinin gidişi tek bakışta. Baskı kartları Üretim yönetiminden okunur; burada kart açılmaz, matbaa atanmaz, CRM'e ve matbaaya bir şey gönderilmez."
       source={o?.logo ? `Logo ${o.logo.yil} · veri sonu ${fmtDay(o.logo.veriSonu)}` : undefined}
     >
       <ErrorNote error={ov.error} fallback="Tedarik özeti okunamadı." />
@@ -31,6 +32,7 @@ export default function SupplyHome() {
           value={o ? fmtInt(o.yuk.acikIs) : '—'}
           help={o ? `${fmtInt(o.yuk.acikAdet)} adet · planı geçmiş ve tarihsiz dahil` : 'Baskıdan henüz çıkmamış'}
           onClick={() => nav('/tedarik/yuk')}
+          explain="Üretim kartı açık, henüz baskıdan çıkmamış ya da depoya girmemiş (iptal edilmemiş) baskı işleri ve toplam adedi. Plan tarihi geçmiş ya da tarihi olmayan kartlar da sayılır."
           info={<SqlInfo k={o?.kaynaklar} alan="yuk" label="Açık baskı işi ve adet" />}
         />
         <Kpi
@@ -39,6 +41,7 @@ export default function SupplyHome() {
           help={o ? `${fmtInt(o.cakismaAsim)} tanesi kapasite aşımı; kalanı referansın üstü` : 'Ay × matbaa'}
           active={!!o && o.cakisma > 0}
           onClick={() => nav('/tedarik/yuk?sekme=cakisma')}
+          explain="Bir matbaaya bir ayda düşen işin, o matbaa için girilen aylık kapasiteyi (kırmızı) ya da kapasite girilmemişse son 12 ayın en yoğun ayını (amber, yalnız referans) aştığı ay × matbaa sayısı."
           info={<SqlInfo k={o?.kaynaklar} alan="cakisma" label="Eşik aşımı" />}
         />
         <Kpi
@@ -46,18 +49,21 @@ export default function SupplyHome() {
           value={o ? fmtKg(o.kagit.buAyKg) : '—'}
           help={o ? `${o.kagit.olcu === 'brut' ? 'Brüt (fire dahil)' : 'Net'}; ${fmtInt(o.kagit.kapsam.bos)} kartta kağıt bilgisi yok` : 'Açık kartlardan'}
           onClick={() => nav('/tedarik/kagit')}
+          explain="Bu ay baskıya girecek açık kartların CRM'deki kağıt bilgisinden toplanan kağıt ağırlığı. «Brüt» baskı firesi dahil demektir. Kağıt bilgisi girilmemiş kartlar sayılamaz."
           info={<SqlInfo k={o?.kaynaklar} alan="kagit" label="Bu ay kağıt" />}
         />
         {me?.canDebt && o?.odeme30 ? (
           <Kpi
             label="30 gün ödeme"
             value={fmtMoney(o.odeme30.toplam)}
-            help={`Matbaa ve kağıtçı · vadesi geçmiş ${fmtMoney(o.odeme30.vadesiGecmis)} (FIFO yaklaşımı)`}
+            help={`Matbaa ve kağıtçı · vadesi geçmiş ${fmtMoney(o.odeme30.vadesiGecmis)} (tahmini)`}
             onClick={() => nav('/tedarik/tedarikciler?sekme=odeme')}
+            explain="Önümüzdeki 30 günde vadesi gelen matbaa ve kağıtçı ödemeleri, Logo ödeme planından. Logo'da hangi ödemenin hangi faturayı kapattığı tutulmadığından, ödemeler en eski faturadan başlayarak düşülür; rakam tahminidir."
             info={<SqlInfo k={o.kaynaklar} alan="odeme30" label="30 gün ödeme" />}
           />
         ) : (
           <Kpi label="Bekleyen öneri" value={o ? fmtInt(o.oneri) : '—'} help="Yük dengeleme ve kağıt alımı" onClick={() => nav('/tedarik/yuk')}
+            explain="Karar bekleyen öneriler: yoğun aydaki işi başka aya ya da matbaaya kaydırma ve zamanında kağıt alma önerileri."
             info={<SqlInfo k={o?.kaynaklar} alan="oneri" label="Bekleyen öneri" />} />
         )}
       </KpiRow>
@@ -113,9 +119,12 @@ export default function SupplyHome() {
               </tbody>
             </TableWrap>
           </div>
-          <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Kırmızı: girilen kapasite aşıldı. Amber: kapasite tanımlı değil, matbaanın son 12 ayda baskıdan çıkan en yüksek aylık yükü aşıldı (bu kapasite değil, referanstır).
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
+            <span className="inline-flex items-center gap-1"><span aria-hidden className="h-3 w-3 rounded bg-red-100 ring-1 ring-red-200" />Kapasite aşıldı</span>
+            <span className="inline-flex items-center gap-1"><span aria-hidden className="h-3 w-3 rounded bg-amber-100 ring-1 ring-amber-200" />Son 12 ayın en yoğun ayı aşıldı (kapasite girilmemiş)</span>
+            <span className="inline-flex items-center gap-1"><span aria-hidden className="h-3 w-3 rounded bg-canvas-violet/25" />Mor koyulaştıkça yük artar</span>
+            <span>«·» o ay iş yok</span>
+          </div>
         </Panel>
       )}
 
@@ -124,7 +133,7 @@ export default function SupplyHome() {
           <Panel>
             <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="plan">Kartı açılmamış baskı ihtiyacı</InfoLabel></h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Baskı önerisinde {o.plan.seviyeler.join(' ve ')} olup açık üretim kartı olmayan kitaplar ile ilk baskı kararı onaylanıp kartı açılmamış yeni kitaplar. Aya ve matbaaya henüz dağıtılmamış yüktür.
+              Yakında basılması gerekecek ama henüz üretim kartı açılmamış kitaplar: baskı önerisi raporunda {o.plan.seviyeler.join(' ve ')} görünenler ile ilk baskı kararı onaylanmış yeni kitaplar. Bu yük henüz bir aya ve matbaaya dağıtılmadığı için yukarıdaki tabloda yoktur.
             </p>
             {o.plan.hata && <div className="mt-2"><Note tone="warn">{o.plan.hata}</Note></div>}
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -148,7 +157,7 @@ export default function SupplyHome() {
           <Panel>
             <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={inc.data.kaynaklar} alan="gecmis" label="Depo girişi">Depo girişi — gerçekleşen ve planlanan (adet)</InfoLabel></h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Geçmiş aylar Logo'da üretimden giriş; gelecek aylar açık kartların planlanan depo girişi.{' '}
+              Gri kutular son 6 ayda Logo'da üretimden depoya giren adet; mor kutular açık kartların önümüzdeki aylar için planlanan depo girişi.{' '}
               {inc.data.depo?.kapasiteAdet
                 ? `Depo kapasitesi ${fmtInt(inc.data.depo.kapasiteAdet)} adet (${inc.data.depo.kaynak}).`
                 : 'Depo kapasitesi tanımlı değil; depo ve stok modülünde girilince karşılaştırılır.'}
@@ -189,7 +198,10 @@ export default function SupplyHome() {
         {me?.canCost && o?.maliyet && (
           <Panel>
             <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-              <h2 className="text-[13px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="maliyet">Adet başı baskı bedeli</InfoLabel></h2>
+              <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+                <InfoLabel k={o.kaynaklar} alan="maliyet">Adet başı baskı bedeli</InfoLabel>
+                <Explain label="Adet başı baskı bedeli">Matbaa faturasındaki baskı tutarının basılan adede bölümü, aylara göre (adetle ağırlıklı). Çizgi yalnız gidişi gösterir; değerler «Kırılımlar» sayfasındadır.</Explain>
+              </h2>
               <Link to="/tedarik/maliyet" className="text-[12px] font-bold text-canvas-violet hover:underline">
                 Kırılımlar
               </Link>

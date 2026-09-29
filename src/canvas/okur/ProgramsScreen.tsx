@@ -14,6 +14,7 @@ import {
   type EventGroup, type OkurMeta, type Program, type ProgramInput, type ProgramState, type ProgramType,
 } from './api';
 import { AskSheet, OkurFrame, Tabs } from './parts';
+import { EmptyHint } from '../components/Explain';
 
 /** M37 «Topluluk programları»: okuma kulübü, imza günü, anket ve çevrim içi etkinlik takvimi, Zeki AI duyuru taslağı
  *  (gönderilmez; kopyalanıp mevcut kanaldan insan gönderir) ve CRM'deki geçmiş etkinliklerin katılım/satış özeti. */
@@ -51,12 +52,12 @@ export default function ProgramsScreen() {
         <div className="flex justify-start lg:justify-end">
           <button type="button" className={btnPrimary} onClick={() => setEditing('new')}>
             <Plus aria-hidden className="h-4 w-4" />
-            Yeni program
+            Yeni program ekle
           </button>
         </div>
       ) : undefined}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'takvim' ? null : t })} />
       {m && tab === 'takvim' && <Calendar meta={m} kapsam={params.get('kapsam') ?? 'yaklasan'} setKapsam={(k) => update({ kapsam: k === 'yaklasan' ? null : k })} onOpen={setEditing} />}
@@ -97,7 +98,10 @@ function Calendar({ meta, kapsam, setKapsam, onOpen }: { meta: OkurMeta; kapsam:
       {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {list.error && <Note tone="err">{errText(list.error, 'Programlar okunamadı.')}</Note>}
       {list.data && !items.length && (
-        <div className="py-8 text-center text-[12.5px] text-canvas-muted">Program yok.{meta.me.canProgram ? ' «Yeni program» ile ekleyin.' : ''}</div>
+        <EmptyHint
+          title={kapsam === 'yaklasan' ? 'Yaklaşan program yok' : 'Bu aralıkta program yok'}
+          why={meta.me.canProgram ? 'Okuma kulübü, imza günü, anket ya da çevrim içi etkinliği «Yeni program ekle» ile takvime alın.' : 'Başka bir aralık seçin.'}
+        />
       )}
       <div className="flex flex-col gap-4">
         {[...groups.entries()].map(([k, ps]) => (
@@ -236,7 +240,7 @@ function ProgramSheet({ meta, program, onClose }: { meta: OkurMeta; program: Pro
                     <span className="text-canvas-muted">{b.yazar ? ` · ${b.yazar}` : ''}{b.stokKodu ? ` · ${b.stokKodu}` : ''}</span>
                   </button>
                 ))}
-                {books.data && dq.trim().length >= 2 && !books.data.items.length && <p className="text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
+                {books.data && dq.trim().length >= 2 && !books.data.items.length && <p className="text-[12px] text-canvas-muted">Aramaya uyan kitap yok; başka bir ad, yazar ya da stok kodu deneyin.</p>}
               </div>
             </>
           ) : <p className="mt-1 text-[12px] text-canvas-muted">—</p>}
@@ -284,7 +288,7 @@ function ProgramSheet({ meta, program, onClose }: { meta: OkurMeta; program: Pro
         </div>
         {!ro && (
           <div className="flex flex-wrap justify-end gap-2">
-            {id && <button type="button" className={btnGhost} disabled={del.isPending} onClick={() => setAsk(true)}>Sil</button>}
+            {id && <button type="button" className={btnGhost} disabled={del.isPending} onClick={() => setAsk(true)}>Programı sil</button>}
             <button type="button" className={btnPrimary} disabled={bad || save.isPending} onClick={() => save.mutate()}>
               {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
               Kaydet

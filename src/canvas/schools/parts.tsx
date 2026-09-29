@@ -122,7 +122,7 @@ export function addDays(d: string, n: number): string {
 export function ScoreBadge({ score }: { score: number }) {
   const tone = score >= 60 ? 'bg-canvas-violet text-white' : score >= 35 ? 'bg-canvas-violet/15 text-canvas-violet' : 'bg-slate-100 text-canvas-ink';
   return (
-    <span className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-xl px-1.5 font-mono text-[13px] font-extrabold tabular-nums ${tone}`} title="Öncelik puanı (0–100)">
+    <span className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-xl px-1.5 font-mono text-[13px] font-extrabold tabular-nums ${tone}`} title="Öncelik puanı (0–100): yükseldikçe okula gitmek daha önemli. Bileşenleri okul kartında yazar.">
       {Math.round(score)}
     </span>
   );

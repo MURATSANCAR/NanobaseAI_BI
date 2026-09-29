@@ -7,7 +7,8 @@ import { fmtDay } from '../budget/api';
 import { stockApi, type DiffClass } from './api';
 import SqlInfo from '../components/SqlInfo';
 import ItemList from './ItemList';
-import { Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { Chips, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { EmptyHint } from '../components/Explain';
 import { RULES } from './rules';
 
 /** Logo–CRM farkı (/stok/fark): kitap başına CRM raf kalanı − Logo stok ve kök neden. Tek sayı gösterilmez; iki kaynak
@@ -57,7 +58,7 @@ export default function StockDiff() {
         </div>
         {q.error && <Note tone="err">{errText(q.error, 'Fark okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Logo ve CRM stoğu" />}
-        {d && !d.items.length && <Empty>Bu sınıfta farklı kitap yok.</Empty>}
+        {d && !d.items.length && <EmptyHint title="Bu nedende fark yok" why="Seçtiğiniz nedene giren, Logo ile CRM rafı arasında farkı olan kitap bulunmadı." />}
         {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'crmRaf', 'fark', 'aktarim']} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>

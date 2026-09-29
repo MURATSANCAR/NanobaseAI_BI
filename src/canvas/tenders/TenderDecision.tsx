@@ -7,6 +7,7 @@ import { Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtLeft, fmtMoney, fmtPct, parseNum, tendersApi, type TenderDetail, type TenderMeta } from './api';
 import { AskSheet, Fact } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Karar: tek sayfa karar özeti (rakamlar SQL'den ve kayıtlardan; Zeki AI yalnız bu rakamlarla metin yazar), başvuru
  *  kararı önerisi ve iki göz onayı. Sonuç: teklif verildi, kazanıldı/kaybedildi/iptal, kazanan firma ve fiyat. */
@@ -58,7 +59,7 @@ function DecisionView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
             <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Karar özeti<SqlInfo k={d.kaynaklar} alan="kararOzeti" label="Karar özeti rakamları" /></h2>
-            <p className="text-[12px] text-canvas-muted">Rakamlar Logo, CRM ve portal kayıtlarından. Başvuru kararı ve teklif fiyatı insanındır; portal kuruma teklif göndermez.</p>
+            <p className="text-[12px] text-canvas-muted">İhaleye girip girmemeye karar vermek için gereken rakamlar tek yerde (Logo, CRM ve portal kayıtları). Başvuru kararını ve teklif fiyatını siz verirsiniz; portal kuruma teklif göndermez.</p>
           </div>
           {me.canEdit && (
             <button type="button" className={btnGhost} disabled={brief.isPending} onClick={() => brief.mutate()}>
@@ -218,7 +219,7 @@ function ResultView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
           <h2 className="text-[16px] font-extrabold tracking-tight">Teklif verildi mi?</h2>
           <p className="text-[12px] text-canvas-muted">Teklif kuruma e-imzayla ya da elden verildikten sonra işaretleyin; portal teklif göndermez.</p>
           <div className="mt-2">
-            <button type="button" className={btnPrimary} disabled={offered.isPending} onClick={() => offered.mutate()}>Teklif verildi</button>
+            <button type="button" className={btnPrimary} disabled={offered.isPending} onClick={() => offered.mutate()}>Teklif verildi olarak işaretle</button>
           </div>
         </Panel>
       )}
@@ -250,7 +251,7 @@ function ResultView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Kazanan firma</span>
-              <input className={field} value={kazanan} onChange={(e) => setKazanan(e.target.value)} placeholder={sonuc === 'kazanildi' ? 'Boşsa TİMAŞ' : 'İlan sonucundaki firma'} />
+              <input className={field} value={kazanan} onChange={(e) => setKazanan(e.target.value)} placeholder={sonuc === 'kazanildi' ? 'Boş bırakılırsa Timaş' : 'İlan sonucundaki firma'} />
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Kazanan fiyat (KDV hariç ₺)</span>
@@ -277,7 +278,7 @@ function ResultView({ d, meta }: { d: TenderDetail; meta: TenderMeta }) {
           </div>
         </Panel>
       )}
-      {!meta.me.canEdit && !r && <Panel><div className="py-6 text-center text-[12.5px] text-canvas-muted">Sonuç kaydı yok.</div></Panel>}
+      {!meta.me.canEdit && !r && <EmptyHint title="Sonuç kaydı yok" why="İhale sonuçlandığında ihale sorumlusu kazanan firmayı ve fiyatı buraya girer." />}
     </>
   );
 }

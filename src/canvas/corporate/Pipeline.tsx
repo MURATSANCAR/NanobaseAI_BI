@@ -191,11 +191,14 @@ export default function Pipeline({ meta, onReminders }: { meta: Meta; onReminder
           </label>
           {meta.me.canQuote && (
             <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
-              <Plus aria-hidden className="h-4 w-4" /> Yeni fırsat
+              <Plus aria-hidden className="h-4 w-4" /> Yeni fırsat aç
             </button>
           )}
         </div>
-        {!meta.me.seeAll && <p className="mt-2 text-[11.5px] text-canvas-muted">Yalnız sizin fırsatlarınız ve onayınızı bekleyenler görünür.</p>}
+        <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+          Açık fırsatlar aşamalarına göre dizilir: {OPEN_STAGES.map((s) => meta.stages[s]).join(' → ')}. Kazanılan ve kaybedilenleri «Kapananlar da» ile görürsünüz; aşamayı kartın altındaki listeden değiştirin.
+        </p>
+        {!meta.me.seeAll && <p className="mt-1 text-[11.5px] text-canvas-muted">Yalnız sizin fırsatlarınız ve onayınızı bekleyenler görünür.</p>}
         {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
         {list.isLoading && <Loading />}
 
@@ -235,7 +238,7 @@ export default function Pipeline({ meta, onReminders }: { meta: Meta; onReminder
                 {(byStage.get(phoneStage) ?? []).map((o) => (
                   <OppCard key={o.id} o={o} meta={meta} showOwner={meta.me.seeAll} onStage={onStage} k={list.data?.kaynaklar} />
                 ))}
-                {(byStage.get(phoneStage) ?? []).length === 0 && <li className="py-6 text-center text-[12px] text-canvas-muted">Bu aşamada fırsat yok.</li>}
+                {(byStage.get(phoneStage) ?? []).length === 0 && <li className="py-6 text-center text-[12px] text-canvas-muted">Bu aşamada fırsat yok. Üstten başka bir aşama seçin.</li>}
               </ul>
             </div>
             {/* Masaüstü: aşama sütunları (kendi kabında yatay kayar). */}
@@ -279,7 +282,7 @@ export default function Pipeline({ meta, onReminders }: { meta: Meta; onReminder
                 </Link>
               </li>
             ))}
-            {list.data && list.data.yaklasan.length === 0 && <li className="text-[12px] text-canvas-muted">Yaklaşan karar yok.</li>}
+            {list.data && list.data.yaklasan.length === 0 && <li className="text-[12px] text-canvas-muted">Önümüzdeki 7 günde karar tarihi olan açık fırsat yok.</li>}
           </ul>
         </Panel>
         <Panel>
@@ -297,7 +300,7 @@ export default function Pipeline({ meta, onReminders }: { meta: Meta; onReminder
               <SqlInfo k={rem.data?.kaynaklar} alan="toplamGecenYil" label="Hatırlatmaların geçen yıl tutarı" className="ml-0.5" />
             </span>
           </div>
-          <button type="button" className={`${btnGhost} mt-2 w-full`} onClick={onReminders}>Listeyi aç</button>
+          <button type="button" className={`${btnGhost} mt-2 w-full`} onClick={onReminders}>Hatırlatmaları aç</button>
         </Panel>
         {summary.data && summary.data.kapanan > 0 && (
           <Panel>

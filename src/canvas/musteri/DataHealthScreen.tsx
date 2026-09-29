@@ -13,6 +13,7 @@ import { SubNav } from './parts';
 import { RunNotes, useMusteriMeta } from './CustomersHome';
 import SqlInfo from '../components/SqlInfo';
 import { xlsxUrl } from '../components/excel';
+import { Explain } from '../components/Explain';
 
 /** CRM veri sağlığı: Logo bağı olmayan, olası tekrar, kanalı eksik, sahipsiz / ortak hesaba ait cari kayıtları, izin
  *  çelişkileri ve (yalnız yetkiliye) güvenlik bulguları. Portal CRM'e yazmaz: bulgu «CRM'de düzeltildi» diye işaretlenir,
@@ -83,7 +84,7 @@ export default function DataHealthScreen() {
     <FieldFrame
       crumb="CRM veri sağlığı"
       title="CRM veri sağlığı"
-      lead="Raporları eksik gösteren cari kayıtları ve izin çelişkileri. Düzeltme CRM'de elle yapılır; portal yalnız bulguyu ve işaretini tutar, ertesi gece doğrular."
+      lead="CRM'deki cari kayıtlarından raporları eksik ya da yanlış gösterenler (Logo bağı olmayan, tekrar olabilecek, sahipsiz kayıtlar) ve izin çelişkileri. Düzeltmeyi CRM'de siz yaparsınız; portal ertesi gece kontrol eder."
       source={d?.tarih ? `Tarama ${fmtDay(d.tarih)} · CRM` : 'CRM'}
       presence={d?.puan ? `Puan ${d.puan.puan}` : 'Veri sağlığı'}
       back={{ to: '/musteri-iliskileri', label: 'Özet' }}
@@ -101,10 +102,11 @@ export default function DataHealthScreen() {
               value={d.puan ? `${d.puan.puan.toLocaleString('tr-TR')} / 100` : '—'}
               help={delta === null ? 'Bulgusu olmayan etkin cari payı' : `Önceki taramaya göre ${delta > 0 ? '+' : ''}${delta.toLocaleString('tr-TR')}`}
               tone={delta !== null && delta < 0 ? 'warn' : undefined}
+              explain="Etkin CRM carilerinden hiçbir bulgusu olmayanların payı (100 üzerinden). Bulgular CRM'de düzeltildikçe puan yükselir."
             />
             <Stat label="Etkin CRM carisi" info={<SqlInfo k={d.kaynaklar} alan="puan" label="Etkin CRM carisi" />} value={(d.puan?.etkin ?? 0).toLocaleString('tr-TR')} />
             <Stat label="Bulgulu cari" info={<SqlInfo k={d.kaynaklar} alan="puan" label="Bulgulu cari" />} value={(d.puan?.bulgulu ?? 0).toLocaleString('tr-TR')} />
-            <Stat label="Zeki AI kararı bekleyen" info={<SqlInfo k={d.kaynaklar} alan="zeki" label="Karar bekleyen çift" />} value={String(d.zeki?.waiting ?? 0)} help="Olası tekrar çifti; her gece sırayla sorulur" />
+            <Stat label="Zeki AI kararı bekleyen" info={<SqlInfo k={d.kaynaklar} alan="zeki" label="Karar bekleyen çift" />} value={String(d.zeki?.waiting ?? 0)} help="Olası tekrar çifti; her gece sırayla sorulur" explain="Aynı firma olabileceği düşünülen iki cari kaydı. Zeki AI her gece sırayla «aynı firma / farklı / belirsiz» kararı verir; sonuç bulgulara yansır." />
           </div>
 
           {points.length > 1 && (
@@ -152,16 +154,19 @@ export default function DataHealthScreen() {
               <span className={labelCls}>Ara</span>
               <input className={field} value={search} placeholder="Unvan, cari kodu, CRM kimliği" enterKeyHint="search" onChange={(e) => setSearch(e.target.value)} onBlur={() => update({ q: search.trim() || null })} />
             </label>
-            <label className="flex min-w-0 flex-col gap-1">
-              <span className={labelCls}>Durum</span>
-              <select className={field} value={durum} onChange={(e) => update({ durum: e.target.value === 'acik-hepsi' ? null : e.target.value })}>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className={`${labelCls} inline-flex items-center gap-1`}>
+                <label htmlFor="musteri-bulgu-durum">Durum</label>
+                <Explain label="Bulgu durumları">Açık: henüz düzeltilmedi. Doğrulama bekleyen: «CRM'de düzeltildi» dediniz, ertesi gece kontrol edilecek. Doğrulandı: düzeltme görüldü. Kendiliğinden kapandı: sorun ortadan kalktı. Yok sayıldı: gerekçeyle bırakıldı.</Explain>
+              </span>
+              <select id="musteri-bulgu-durum" className={field} value={durum} onChange={(e) => update({ durum: e.target.value === 'acik-hepsi' ? null : e.target.value })}>
                 {STATES.map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
             <label className="flex min-w-0 flex-col gap-1">
               <span className={labelCls}>Önem</span>
               <select className={field} value={onem} onChange={(e) => update({ onem: e.target.value || null })}>
@@ -179,18 +184,18 @@ export default function DataHealthScreen() {
               <>
                 <a className={`${btnGhost} !min-h-9`} href={musteriApi.healthCsvUrl({ tur, durum, onem, q })}>
                   <Download aria-hidden className="h-4 w-4" />
-                  CRM'de düzeltilecek listesi (CSV)
+                  CRM'de düzeltilecekleri indir (CSV)
                 </a>
                 <a className={`${btnGhost} !min-h-9`} href={xlsxUrl(musteriApi.healthCsvUrl({ tur, durum, onem, q }))}>
                   <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                  Excel
+                  Excel indir
                 </a>
               </>
             )}
           </div>
 
           {d.items.length === 0 ? (
-            <Empty>Bu süzgeçte bulgu yok.</Empty>
+            <Empty title="Bu süzgece uyan bulgu yok">{durum === 'acik-hepsi' && !tur && !onem && !q ? 'Açık bulgu kalmadı; CRM kayıtları temiz görünüyor.' : 'Bulgu türünü «Hepsi»ne alın ya da durum, önem ve aramayı değiştirin.'}</Empty>
           ) : (
             <ul className={`flex flex-col gap-2 ${h.isPlaceholderData ? 'opacity-60' : ''}`}>
               {d.items.map((f) => (

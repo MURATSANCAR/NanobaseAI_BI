@@ -1,6 +1,7 @@
 import { Loader2, RotateCw } from 'lucide-react';
 import { Pill } from '../admin/ui';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { STATE, fmtAt, fmtDay, fmtMinutes, fmtMs, type Incident, type Ring } from './api';
 
@@ -36,6 +37,7 @@ export default function RingCard({ ring, canCheck, busy, onCheck, onIncident, k 
           Veri sonu <strong>{ring.id === 'logo' ? fmtDay(ring.dataEnd) : fmtAt(ring.dataEnd)}</strong>
           {ring.dataEndAge && <span className="text-canvas-muted"> · {ring.dataEndAge}</span>}
           <SqlInfo k={k} alan="rings[]" row={ring.id} label={`${ring.label}: veri sonu`} className="ml-1" />
+          <Explain label="Veri sonu" className="ml-0.5">Bu kaynaktaki en yeni kaydın tarihi. Bağlantı çalışsa bile bu tarih izin verilen süreden eskiyse «Veri eski» olayı açılır.</Explain>
         </div>
       )}
 
@@ -73,7 +75,7 @@ export default function RingCard({ ring, canCheck, busy, onCheck, onIncident, k 
             type="button"
             onClick={onCheck}
             disabled={busy}
-            aria-label={`${ring.label} halkasını şimdi dene`}
+            aria-label={`${ring.label} bağlantısını şimdi dene`}
             className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold text-canvas-ink transition-transform duration-150 ease-out hover:bg-slate-200 active:scale-[0.97] disabled:opacity-50 sm:min-h-9"
           >
             {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <RotateCw aria-hidden className="h-4 w-4" />}

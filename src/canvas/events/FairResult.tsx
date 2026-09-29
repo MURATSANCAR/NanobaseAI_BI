@@ -34,7 +34,7 @@ export default function FairResult() {
     <EventsFrame
       crumb="Fuar ve etkinlik"
       title={f ? `${f.name} — sonuç` : 'Fuar sonucu'}
-      lead={f ? `${fmtRange(f.startsOn, f.endsOn)} · ${[f.venue, f.city].filter(Boolean).join(', ') || f.kindLabel}` : undefined}
+      lead={f ? `Fuar bitince ne kazandık: Logo'daki fuar satışı, CRM siparişleri ve gider, geçen yılın aynı fuarıyla karşılaştırmalı. ${fmtRange(f.startsOn, f.endsOn)} · ${[f.venue, f.city].filter(Boolean).join(', ') || f.kindLabel}` : undefined}
       source={`Logo ${m?.settings.channel ?? 'FUAR'} kanalı · CRM sipariş`}
       presence={r ? `veri sonu ${fmtDay(r.dataEnd)}` : '…'}
       detail={f ? `${f.name} · sonuç` : undefined}
@@ -62,11 +62,13 @@ export default function FairResult() {
           {r.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
           {r.cached && <p className="px-1 text-[11.5px] text-canvas-muted">Kayıtlı sonuç ({fmtDay(r.computedAt.slice(0, 10))} hesaplandı). Güncel veri için «Yeniden hesapla».</p>}
           <KpiRow>
-            <Kpi label="Net satış" value={fmtMoney(r.netCiro)} help={`${fmtInt(r.netAdet)} adet · ${r.kitapSayisi} kitap (${r.channel ?? 'fuar'} kanalı)`} info={<SqlInfo k={q.data?.kaynaklar} alan="result.netCiro" label="Net satış" />} />
+            <Kpi label="Net satış" value={fmtMoney(r.netCiro)} help={`${fmtInt(r.netAdet)} adet · ${r.kitapSayisi} kitap (${r.channel ?? 'fuar'} kanalı)`} info={<SqlInfo k={q.data?.kaynaklar} alan="result.netCiro" label="Net satış" />}
+              explain="Fuar günlerinde Logo'da fuar kanalına (ya da karta bağlı carilere) kesilmiş faturaların iadesi düşülmüş tutarı." />
             <Kpi label="Geçen yıla göre" value={deg !== null ? `${deg >= 0 ? '+' : ''}${fmtPct(deg, 1)}` : '—'}
               help={r.prev ? `${r.prev.label}: ${fmtMoney(r.prev.netCiro)}` : 'Karşılaştırma yok'} info={<SqlInfo k={q.data?.kaynaklar} alan="result.prev" label="Geçen yıla göre" />} />
             <Kpi label="Gider" value={fmtMoney(r.toplamGider)} help={r.butce != null ? `Bütçe ${fmtMoney(r.butce)} · fark ${fmtMoney(r.butceFarki)}` : 'Bütçe girilmedi'} info={<SqlInfo k={q.data?.kaynaklar} alan="result.toplamGider" label="Gider" />} />
-            <Kpi label="1 ₺ gidere satış" value={fmtRatio(r.roi)} help="Net satış ÷ toplam gider" info={<SqlInfo k={q.data?.kaynaklar} alan="result.roi" label="1 ₺ gidere satış" />} />
+            <Kpi label="1 ₺ gidere satış" value={fmtRatio(r.roi)} help="Net satış ÷ toplam gider" info={<SqlInfo k={q.data?.kaynaklar} alan="result.roi" label="1 ₺ gidere satış" />}
+              explain="Fuarda harcanan her 1 ₺ gidere karşılık kaç ₺ net satış yapıldığı (net satış ÷ toplam gider). 1'in altı, giderin satıştan fazla olduğunu gösterir." />
           </KpiRow>
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
@@ -110,7 +112,7 @@ export default function FairResult() {
             </div>
             <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
               <Block title="CRM siparişleri" info={<SqlInfo k={q.data?.kaynaklar} alan="result.orders" label="CRM siparişleri" />} help="Sipariş tarihi fuar günlerinde olan fuar, etkinlik ve imza siparişleri (iptal ve birleştirilenler hariç).">
-                {r.orders.length === 0 && <p className="text-[12.5px] text-canvas-muted">Sipariş yok.</p>}
+                {r.orders.length === 0 && <p className="text-[12.5px] text-canvas-muted">Fuar günlerinde CRM'de fuar, etkinlik ya da imza siparişi yok.</p>}
                 <ul className="flex flex-col gap-1 text-[12.5px]">
                   {r.orders.map((o) => (
                     <li key={o.tip} className="flex justify-between gap-2"><span>{o.ad} · {o.adet}</span><span className="font-mono tabular-nums">{fmtMoney(o.tutar)}</span></li>

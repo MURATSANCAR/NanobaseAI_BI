@@ -69,7 +69,7 @@ export default function PaPersonCard() {
   return (
     <PaFrame
       title={p.name}
-      lead={[p.title, p.orgName, p.city].filter(Boolean).join(' · ') || 'Unvan ve kurum girilmemiş'}
+      lead={`Bu kişiyle ilişkimizin tamamı: temas notları, gönderilen kitaplar ve ilişkinin sıcaklığı. ${[p.title, p.orgName, p.city].filter(Boolean).join(' · ') || 'Unvan ve kurum girilmemiş'}`}
       back={{ to: `${BASE}/kisiler`, label: 'Kişiler' }}
       source={p.crmContactId ? 'CRM kişisi + portal' : 'Portal kaydı'}
       aside={
@@ -162,7 +162,7 @@ export default function PaPersonCard() {
 
           <Block title="Gönderilen kitaplar" info={<SqlInfo k={p.kaynaklar} alan="gifts" label="Gönderilen kitaplar" />} help="Hediye programındaki bütün satırlar; aynı kitap aynı kişiye ikinci kez yazılamaz.">
             {p.gifts.length === 0 ? (
-              <Empty title="Hediye yok" />
+              <Empty title="Bu kişiye henüz kitap gönderilmedi" />
             ) : (
               <ul className="divide-y divide-slate-100">
                 {p.gifts.map((g) => (
@@ -186,7 +186,7 @@ export default function PaPersonCard() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-          <Block title="İlişki" info={<SqlInfo k={p.kaynaklar} alan="heat" label="İlişki ısısı ve temas zamanı" />}>
+          <Block title="İlişki" info={<SqlInfo k={p.kaynaklar} alan="heat" label="İlişki ısısı ve temas zamanı" />} help="İlişki ısısı, temas kayıtlarından hesaplanan 0–100 arası puandır; yüksekse ilişki sıcaktır. Kutucuklar son 12 ayda her ay kaç temas olduğunu gösterir.">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="font-mono text-[28px] font-bold leading-none tabular-nums">{p.heat.score}</span>
               <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">/ 100 ilişki ısısı</span>

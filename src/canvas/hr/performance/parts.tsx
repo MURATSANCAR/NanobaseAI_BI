@@ -21,7 +21,7 @@ export function GoalRow({ g, onOpen, showOwner }: { g: Goal; onOpen: () => void;
       </div>
       <div className="flex items-center gap-2">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100}
-          aria-valuenow={pctVal ?? undefined} aria-label="Son check-in ilerlemesi">
+          aria-valuenow={pctVal ?? undefined} aria-label="Son ilerleme kaydındaki tamamlanma">
           <div className="h-full rounded-full bg-canvas-violet" style={{ width: `${Math.min(100, Math.max(0, pctVal ?? 0))}%` }} />
         </div>
         <span className="w-12 text-right font-mono text-[11px] tabular-nums text-canvas-muted">{pctVal !== null ? `%${pctVal}` : '—'}</span>

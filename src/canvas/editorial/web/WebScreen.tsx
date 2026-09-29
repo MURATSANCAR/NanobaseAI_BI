@@ -8,6 +8,7 @@ import { Kpi, KpiRow, ModuleFrame, Pager, Panel } from '../kit';
 import { MentionRow, TONE, ToneBar } from './parts';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint, ExplainLabel } from '../../components/Explain';
 
 /** Basın ve web: CRM yazarları ve kitapları hakkında Türk haber sitelerinin RSS akışlarında çıkan haberler.
  *  Her gece taranır; yerel modelin ilgili bulmadığı eşleşme gösterilmez. */
@@ -18,6 +19,7 @@ const STATUS: Record<WebChannel['status'], string> = {
   hata: 'bg-amber-50 text-amber-800',
   engelli: 'bg-slate-100 text-canvas-muted',
 };
+const STATUS_TEXT: Record<WebChannel['status'], string> = { açık: 'açık', kapalı: 'kapalı', hata: 'okunamadı', engelli: 'kapalı' };
 
 /** Kanal haritası: hangi kanaldan ne okundu, kaçı yazarla eşleşti, kaçı ilgili bulundu; kapalı kanal nedeniyle. */
 function Channels({ rows, k }: { rows: WebChannel[]; k?: ReturnType<typeof kaynakOf> }) {
@@ -38,9 +40,15 @@ function Channels({ rows, k }: { rows: WebChannel[]; k?: ReturnType<typeof kayna
             <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
               <th className="px-2 py-1.5">Kanal</th>
               <th className="px-2 py-1.5">Tür</th>
-              <th className="px-2 py-1.5 text-right">Okunan</th>
-              <th className="px-2 py-1.5 text-right">Eşleşen</th>
-              <th className="px-2 py-1.5 text-right">İlgili</th>
+              <th className="px-2 py-1.5 text-right">
+                <ExplainLabel label="Okunan">Kanaldan son taramada okunan haber ya da girdi sayısı.</ExplainLabel>
+              </th>
+              <th className="px-2 py-1.5 text-right">
+                <ExplainLabel label="Eşleşen">Başlığında ya da özetinde CRM'deki bir yazarın adı geçen kayıtlar.</ExplainLabel>
+              </th>
+              <th className="px-2 py-1.5 text-right">
+                <ExplainLabel label="İlgili">Eşleşenlerden Zeki AI'ın gerçekten o yazar ya da kitabı hakkında bulduğu ve ekranda gösterilenler.</ExplainLabel>
+              </th>
               <th className="px-2 py-1.5">Son okuma</th>
             </tr>
           </thead>
@@ -49,7 +57,7 @@ function Channels({ rows, k }: { rows: WebChannel[]; k?: ReturnType<typeof kayna
               <tr key={r.key} className="border-t border-slate-100 align-top">
                 <td className="px-2 py-1.5">
                   <span className="font-semibold">{r.label}</span>
-                  {r.status !== 'açık' && <span className={`ml-1.5 rounded px-1 text-[10.5px] font-bold ${STATUS[r.status]}`}>{r.status}</span>}
+                  {r.status !== 'açık' && <span className={`ml-1.5 rounded px-1 text-[10.5px] font-bold ${STATUS[r.status]}`}>{STATUS_TEXT[r.status] ?? r.status}</span>}
                   {r.note && <span className="block text-[11px] text-canvas-muted">{r.note}</span>}
                 </td>
                 <td className="px-2 py-1.5 text-canvas-muted">{r.kind}</td>
@@ -94,10 +102,10 @@ export default function WebScreen() {
       route="/basin-web"
       crumb="Basın ve web"
       title="Basın ve web"
-      lead="Yazarlarımız ve kitapları hakkında haber sitelerinde ve sözlüklerde çıkanlar. Her gece taranır; yalnız gerçekten ilgili bulunanlar gösterilir, her kaydın yanında kanalı yazar."
+      lead="Yazarlarımız ve kitapları hakkında haber sitelerinde ve açık kaynaklarda çıkanlar. Her gece taranır; Zeki AI'ın gerçekten ilgili bulduğu haberler, kaynağı ve tonuyla gösterilir."
       source={d?.lastRun?.at ? `Son tarama ${dateTime(d.lastRun.at)}` : 'Kaynak: haber akışları, açık bilgi tabanı'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {d && !d.enabled && (
         <Note tone="info">
@@ -110,17 +118,24 @@ export default function WebScreen() {
 
       {d && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İlgili haber" />} label="İlgili haber" value={nf.format(shown)} help="Yazar ya da kitabı hakkında olan" />
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumlu" />} label="Olumlu" value={nf.format(d.tone.olumlu ?? 0)} help="Övgü, ödül, başarı" active={label === 'olumlu'} onClick={() => { setLabel(label === 'olumlu' ? '' : 'olumlu'); setPage(0); }} />
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumsuz" />} label="Olumsuz" value={nf.format(d.tone.olumsuz ?? 0)} help="Eleştiri, tartışma" active={label === 'olumsuz'} onClick={() => { setLabel(label === 'olumsuz' ? '' : 'olumsuz'); setPage(0); }} />
-          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar bilgisi" />} label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar açık bilgi tabanında arandı`} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İlgili haber" />} explain="Zeki AI'ın bir yazarımız ya da kitabımız hakkında olduğuna karar verdiği haberler; olumlu, olumsuz ve nötr toplamı." label="İlgili haber" value={nf.format(shown)} help="Yazar ya da kitabı hakkında olan" />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumlu" />} explain="Tonu olumlu bulunan ilgili haberler. Karta dokununca liste yalnız bunlara süzülür." label="Olumlu" value={nf.format(d.tone.olumlu ?? 0)} help="Övgü, ödül, başarı" active={label === 'olumlu'} onClick={() => { setLabel(label === 'olumlu' ? '' : 'olumlu'); setPage(0); }} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Olumsuz" />} explain="Tonu olumsuz bulunan ilgili haberler. Karta dokununca liste yalnız bunlara süzülür." label="Olumsuz" value={nf.format(d.tone.olumsuz ?? 0)} help="Eleştiri, tartışma" active={label === 'olumsuz'} onClick={() => { setLabel(label === 'olumsuz' ? '' : 'olumsuz'); setPage(0); }} />
+          <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar bilgisi" />} explain="Açık bilgi tabanında kaydı bulunan yazar sayısı; doğum yılı, meslek ve ödül bilgisi kişi kartında görünür." label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar açık bilgi tabanında arandı`} />
         </KpiRow>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-4">
         <Panel>
           <h2 className="text-[15px] font-extrabold">{label ? `${TONE[label].label} haberler` : 'Son haberler'}</h2>
-          {d && !d.items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Henüz ilgili haber yok. Tarama her gece sürer.</p>}
+          {d && !d.items.length && (
+            <div className="mt-2">
+              <EmptyHint
+                title={label ? `${TONE[label].label} haber yok` : 'Henüz ilgili haber yok'}
+                why={label ? 'Tüm haberleri görmek için seçili karta yeniden dokunun.' : 'Tarama her gece yapılır; ilgili bulunan haberler burada birikir.'}
+              />
+            </div>
+          )}
           <ul className="mt-1">
             {(d?.items ?? []).map((m) => (
               <MentionRow key={`${m.url}-${m.contactId}`} m={m} showAuthor />
@@ -136,7 +151,7 @@ export default function WebScreen() {
             En çok haberi çıkan yazarlar
             <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yazar başına haber" />
           </h2>
-          {d && !d.authors.length && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz yok.</p>}
+          {d && !d.authors.length && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz haberi çıkan yazar yok.</p>}
           <ul className="mt-2">
             {(d?.authors ?? []).map((a) => (
               <li key={a.contactId} className="border-t border-slate-100 py-2.5 first:border-t-0">

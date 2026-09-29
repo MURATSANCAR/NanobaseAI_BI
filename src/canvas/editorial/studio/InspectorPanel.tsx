@@ -13,6 +13,7 @@ import { EFFECT_LABEL } from './elements';
 import RunsEditor, { paletteChips } from './RunsEditor';
 import AssetTools, { type AssetJobKind } from './AssetTools';
 import { ConfirmDialog } from './dialogs';
+import { Explain } from '../../components/Explain';
 
 /** Sağ panel: sekmeler (Sayfa · Öge · Balonlar · Kütüphane · Palet · Geçmiş). Telefonda tuval yalnız
  *  görüntülemedir; her şey buradaki alanlarla düzenlenir (kutu konumu/ölçüsü mm olarak da girilir). */
@@ -132,7 +133,10 @@ export function PageTab({ ctx }: { ctx: EditorCtx }) {
       )}
 
       <div>
-        <Label>Yerleşim</Label>
+        <span className="flex items-center gap-1">
+          <Label>Yerleşim</Label>
+          <Explain label="Yerleşim">Sayfada resim ve yazının nasıl duracağı. Bir yerleşim seçince kutular hazır yerlerine gider; sonra tuvalde elle kaydırabilirsiniz (sayfa «Elle düzenlendi» olur).</Explain>
+        </span>
         <div className="mt-1.5 grid grid-cols-4 gap-1.5">
           {LAYOUTS.map((l) => {
             const blocked = !!l.needsArtOnly && textful;
@@ -167,7 +171,10 @@ export function PageTab({ ctx }: { ctx: EditorCtx }) {
 
       {!page.art && (unused.data?.length ?? 0) > 0 && (
         <div>
-          <Label>Sayfaya bağlı olmayan resimler · {unused.data!.length}</Label>
+          <span className="flex items-center gap-1">
+            <Label>Sayfaya bağlı olmayan resimler · {unused.data!.length}</Label>
+            <Explain label="Sayfaya bağlı olmayan resimler">Çizilmiş ama şu an hiçbir sayfada kullanılmayan resimler (ör. silinen bir sayfadan ya da resim kullanımı değişince kalanlar). «Bu sayfaya koy» ile bu sayfaya yerleştirin.</Explain>
+          </span>
           <ul className="mt-1.5 flex flex-col gap-1">
             {unused.data!.map((id) => (
               <li key={id} className="flex items-center justify-between gap-2 rounded-lg bg-white/70 px-2 py-1 text-[12px]">
@@ -219,7 +226,7 @@ export function ItemTab({ ctx }: { ctx: EditorCtx }) {
               </button>
             </li>
           ))}
-          {!all.length && <li className="text-[12px] text-canvas-muted">Bu sayfada öge yok.</li>}
+          {!all.length && <li className="text-[12px] text-canvas-muted">Bu sayfada öge yok. «Sayfa» sekmesinden yazı ya da balon, «Kütüphane»den figür ya da fotoğraf ekleyin.</li>}
         </ul>
       </div>
     );
@@ -273,6 +280,10 @@ export function ItemTab({ ctx }: { ctx: EditorCtx }) {
       </div>
       {warnSafe && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">Güvenli alanın dışına taşıyor; baskıda kesilebilir.</p>}
 
+      <p className="-mb-1 flex items-center gap-1 text-[11.5px] text-canvas-muted">
+        Konum ve ölçü (milimetre)
+        <Explain label="Konum ve ölçü">Kutunun yeri ve boyu milimetre olarak. «Sol» ve «Üst», taşma payı dahil sayfanın sol üst köşesinden ölçülür. Tuvalde sürükleyerek de değiştirebilirsiniz.</Explain>
+      </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
         <Num label="Sol" suffix="mm" value={it.box.x} onChange={(x) => setBox({ x })} />
         <Num label="Üst" suffix="mm" value={it.box.y} onChange={(y) => setBox({ y })} />
@@ -308,6 +319,11 @@ export function ItemTab({ ctx }: { ctx: EditorCtx }) {
                 className={`rounded-xl border px-2 py-2 text-[12px] font-bold ${page.art!.fit === f ? 'border-canvas-violet bg-violet-50' : 'border-slate-200 bg-white/80'}`}>{t}</button>
             ))}
           </div>
+          <p className="text-[11.5px] leading-snug text-canvas-muted">
+            {page.art.fit === 'cover'
+              ? 'Kutu tamamen dolar, taşan kenarlar kırpılır. Odak sürgüleriyle resmin hangi bölgesinin görünür kalacağını seçin.'
+              : 'Resmin tamamı kutuya sığar; kutuyla oranı farklıysa kenarlarda boşluk kalır.'}
+          </p>
           {page.art.fit === 'cover' && (
             <div className="grid grid-cols-2 gap-2">
               {(['x', 'y'] as const).map((ax) => (
@@ -408,6 +424,7 @@ function TextBoxEditor({ ctx, page, cursor, setCursor, onSplit, splitting }: {
           {splitting ? 'Taşınıyor…' : 'İmleçten sonrasını sonraki sayfaya taşı'}
         </button>
       </div>
+      {!cursor && <p className="text-[11px] text-canvas-muted">Metni bölmek için önce yukarıdaki yazıda bölmek istediğiniz yere tıklayın.</p>}
     </div>
   );
 }
@@ -535,7 +552,9 @@ export function BubblesTab({ ctx }: { ctx: EditorCtx }) {
         </div>
       )}
       {err && <p className="text-[12px] font-semibold text-rose-700">{err}</p>}
-      {page.bubbles.length === 0 && <p className="text-[12.5px] text-canvas-muted">Bu sayfada balon yok.</p>}
+      {page.bubbles.length === 0 && (
+        <p className="text-[12.5px] text-canvas-muted">Bu sayfada balon yok. «Balonları öner» sayfadaki konuşma cümlelerinden balon önerir; kendiniz eklemek için «Sayfa» sekmesinde «Balon ekle»yi kullanın.</p>
+      )}
       {page.bubbles.map((b, i) => (
         <div key={b.id} className={`rounded-xl border bg-white/60 p-2.5 ${ctx.sel?.kind === 'bubble' && ctx.sel.id === b.id ? 'border-canvas-violet' : 'border-slate-200/80'}`}>
           <div className="mb-1.5 flex items-center justify-between">
@@ -562,7 +581,10 @@ export function PaletteTab({ ctx }: { ctx: EditorCtx }) {
   const names = useMemo(() => characterNames(ctx), [ctx]);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[12px] text-canvas-muted">Renkler kitabın resimlerinden seçildi; beyaz kâğıtta okunur olmalıdır (kontrast en az 4,5).</p>
+      <p className="flex flex-wrap items-center gap-1 text-[12px] text-canvas-muted">
+        Kitabın renkleri; çoğu resimlerden seçilir. Yazıda kullanılan renk beyaz kâğıtta okunur olmalı.
+        <Explain label="Okunurluk (kontrast)">Yazı rengiyle beyaz kâğıt arasındaki fark. 4,5'in altındaki renkler küçük yazıda zor okunur; «Okunması zor» uyarısı çıkan rengi koyulaştırın.</Explain>
+      </p>
       <ul className="flex flex-col gap-2">
         {pal.colors.map((c, i) => {
           const cr = contrastOnWhite(c.hex);
@@ -594,7 +616,10 @@ export function PaletteTab({ ctx }: { ctx: EditorCtx }) {
 
       {names.length > 0 && (
         <div>
-          <Label>Karakter renkleri</Label>
+          <span className="flex items-center gap-1">
+            <Label>Karakter renkleri</Label>
+            <Explain label="Karakter renkleri">Her karakterin konuşma rengi. Balon yazısı «Konuşanın rengi»nde bırakılırsa konuşan karakterin buradaki rengiyle yazılır.</Explain>
+          </span>
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {names.map((n) => (
               <li key={n} className="flex flex-wrap items-center gap-1.5 rounded-xl bg-white/70 px-2 py-1.5">
@@ -617,6 +642,18 @@ export function PaletteTab({ ctx }: { ctx: EditorCtx }) {
     </div>
   );
 }
+
+/** Sekmenin ne işe yaradığı; sekme şeridinin altında tek satır. */
+export const TAB_HINT: Record<Tab, string> = {
+  sayfa: 'Seçili sayfanın yerleşimi; yazı ve balon ekleme; sayfayı taşıma, arkasına sayfa ekleme ya da silme.',
+  oge: 'Tuvalde seçtiğiniz ögenin (resim, yazı, balon, figür, şekil) konumu, ölçüsü ve ayarları.',
+  balon: 'Sayfanın konuşma balonları. ZEKİ AI sayfadaki konuşmalardan balon önerebilir.',
+  ogeler: 'Hazır süs, şekil ve çerçeveler; dokunarak ya da sayfaya sürükleyerek ekleyin.',
+  efekt: 'Seçili serbest yazıya kavis, gölge, dış çizgi gibi hazır yazı efektleri verin.',
+  kutuphane: 'Fotoğraf yükleyin ya da ZEKİ AI ile figür çizdirin; kütüphanedekileri sayfaya ekleyin.',
+  palet: 'Kitabın renkleri, gövde yazısının rengi ve karakterlerin konuşma renkleri.',
+  gecmis: 'Kaydedilen her sürüm; eski bir sürüme dönebilirsiniz.',
+};
 
 export const TABS: { key: Tab; label: string }[] = [
   { key: 'sayfa', label: 'Sayfa' }, { key: 'oge', label: 'Öge' }, { key: 'balon', label: 'Balonlar' },

@@ -7,6 +7,7 @@ import { Panel, useDebounced } from '../editorial/kit';
 import { STATUS_TONE, day, num, overviewKey, pct, pricingApi, tl0, tl2, type Overview, type Proposal } from './api';
 import { NumField, Stat } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
 
 /**
@@ -53,6 +54,9 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Baskı ve kâğıt maliyeti kapak fiyatına göre yükselmiş eski kitapları (backlist) listeler. Seçtiğiniz kitaplarla toplu zam teklifi hazırlar, Mali İşler onayına gönderirsiniz.
+      </p>
       <Panel>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <NumField
@@ -62,18 +66,21 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
             value={target ?? d?.measuredTarget ?? null}
             onChange={setTarget}
             info={<SqlInfo k={d?.kaynaklar} alan="measuredTarget" label="Ölçülen hedef oran" />}
-            hint={d?.measuredTarget != null ? `Ölçülen: son 12 ayın ${num(d.freshBooks)} yeni kitabında ortanca ${pct(d.measuredTarget)}` : 'Ölçülemedi — elle girin'}
+            hint={d?.measuredTarget != null ? `Birim bedelin kapak fiyatına oranı en çok bu olsun. Ölçülen: son 12 ayın ${num(d.freshBooks)} yeni kitabında ortanca ${pct(d.measuredTarget)}` : 'Ölçülemedi; elle girin (ör. %20)'}
           />
           <NumField label="Son iki yılda en az satış" suffix="adet" digits={0} value={minSold} onChange={setMinSold} hint="Hiç satmayan kitaba zam önerilmez" />
           <Stat info={<SqlInfo k={d?.kaynaklar} alan="count" label="Fiyat revizyonu adayları" />} label="Aday" value={d ? num(d.count) : '—'} note={d ? `${num(d.candidates)} kitabın son baskısı incelendi` : undefined} />
           <Stat info={<SqlInfo k={d?.kaynaklar} alan="secim" label="Seçilen kitaplar ve ortalama artış" />} label="Seçilen" value={num(picked.size)} note={pickedRows.length ? `Ortalama artış ${pct(pickedRows.reduce((s, r) => s + r.increase, 0) / pickedRows.length)}` : 'Tablodan işaretleyin'} />
         </div>
       </Panel>
-      {bl.error && <Note tone="err">{errText(bl.error, 'Adaylar okunamadı.')}</Note>}
+      {bl.error && <Note tone="err">{errText(bl.error, 'Zam adayları şu an okunamadı; biraz sonra yeniden deneyin.')}</Note>}
       {!d ? (
         !bl.error && <Loading />
       ) : d.rows.length === 0 ? (
-        <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu hedef oranla revizyon adayı yok.</p>
+        <EmptyHint
+          title="Bu hedef oranla zam adayı yok"
+          why="Maliyeti kapak fiyatına göre hedef oranı aşan kitap bulunmadı. Daha fazla aday görmek için hedef oranı düşürün ya da en az satış adedini azaltın."
+        />
       ) : (
         <TableWrap>
           <thead>
@@ -91,7 +98,12 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
               <th className={th}>Son baskı</th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].printUnit">Baskı / adet</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].paperUnit">Kâğıt / adet</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].ratio">Maliyet / fiyat</InfoLabel></th>
+              <th className={`${th} text-right`}>
+                <span className="inline-flex items-center gap-1">
+                  <InfoLabel k={d.kaynaklar} alan="rows[].ratio">Maliyet / fiyat</InfoLabel>
+                  <Explain label="Maliyet / fiyat">Son baskının birim bedelinin (baskı + bugünkü kâğıt) KDV hariç kapak fiyatına oranı. Hedef oranı aşan kitaplar listelenir.</Explain>
+                </span>
+              </th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].sold2y">Satış (2 yıl)</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].price">Kapak fiyatı</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].proposed">Önerilen</InfoLabel></th>
@@ -142,7 +154,7 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
             </button>
           </div>
           <p className="mt-1 text-[11px] text-canvas-muted">Teklif sunucuda yeniden hesaplanıp dondurulur ve Mali İşler onayına düşer.</p>
-          {create.error && <Note tone="err">{errText(create.error, 'Teklif oluşturulamadı.')}</Note>}
+          {create.error && <Note tone="err">{errText(create.error, 'Teklif oluşturulamadı; biraz sonra yeniden deneyin.')}</Note>}
         </Panel>
       )}
 
@@ -246,8 +258,8 @@ function ProposalList({ ov, items, k }: { ov: Overview; items: Proposal[]; k?: K
               </div>
             </div>
           )}
-          {p.status === 'onaylandi' && <div className="mt-2"><Note tone="ok">Onaylandı. Fiyatlar CRM'e ve satış kanallarına ayrıca girilir.</Note></div>}
-          {decide.error && <Note tone="err">{errText(decide.error, 'Karar kaydedilemedi.')}</Note>}
+          {p.status === 'onaylandi' && <div className="mt-2"><Note tone="ok">Onaylandı. Yeni fiyatları CRM'e ve satış kanallarına ayrıca girin; buradan hiçbir sisteme yazılmaz.</Note></div>}
+          {decide.error && <Note tone="err">{errText(decide.error, 'Kararınız kaydedilemedi; biraz sonra yeniden deneyin.')}</Note>}
         </Panel>
       )}
     </section>

@@ -144,7 +144,7 @@ function StageSheet({ open, c, meta, onClose }: { open: boolean; c: Candidate; m
         )}
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Not (isteğe bağlı)</span>
-          <textarea className={`${field} min-h-[80px]`} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <textarea className={`${field} min-h-[80px]`} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="ör. İkinci görüşmeye çağrılacak" />
         </label>
         {stage === 'sonuc' && outcome === 'ret' && (
           <Note tone="info">Ret sonrası adaya yazmayı unutmayın: Yazışma bölümünden şablondan ret mektubu hazırlayın.</Note>
@@ -287,7 +287,7 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
     onSuccess: (r) => {
       const n = Object.values(r.maskCounts).reduce((a, b) => a + b, 0);
       const ocr = r.okuma?.ocrSayfa.length
-        ? ` ${r.okuma.ocrSayfa.length} sayfa taranmış görüntüden okundu (OCR)${r.okuma.enDusukGuven != null ? `, en düşük güven %${Math.round(r.okuma.enDusukGuven * 100)}` : ''}.`
+        ? ` ${r.okuma.ocrSayfa.length} sayfa taranmış görüntüden okundu${r.okuma.enDusukGuven != null ? `, en düşük güven %${Math.round(r.okuma.enDusukGuven * 100)}` : ''}.`
         : '';
       toast.success((n ? `Özgeçmiş yüklendi; ${n} kişisel bilgi maskelendi.` : 'Özgeçmiş yüklendi.') + ocr);
       refresh();
@@ -322,7 +322,7 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
                 {c.can.downloadOriginal && (
                   <button type="button" className={btnGhost} onClick={() => recruitApi.downloadFile(c.id, f.id, f.filename).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
                     <Download aria-hidden className="h-4 w-4" />
-                    <span className="sr-only sm:not-sr-only">Özgün</span>
+                    <span className="sr-only sm:not-sr-only">Özgün dosyayı indir</span>
                   </button>
                 )}
                 {c.can.files && (
@@ -333,7 +333,7 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
               </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 {masked.map(([k, n]) => <Pill key={k} tone="muted">{k}: {n}</Pill>)}
-                <Pill tone={f.modelChecked ? 'ok' : 'warn'}>{f.modelChecked ? 'Zeki AI denetledi' : 'Zeki AI denetimi özetle birlikte'}</Pill>
+                <Pill tone={f.modelChecked ? 'ok' : 'warn'}>{f.modelChecked ? 'Özel nitelikli bilgiler Zeki AI ile de maskelendi' : 'Özel nitelikli bilgi denetimi kanıtlı özetle birlikte yapılır'}</Pill>
               </div>
               <details className="mt-1.5">
                 <summary className="cursor-pointer text-[12px] font-bold text-canvas-violet">Maskeli metni göster</summary>
@@ -427,7 +427,7 @@ function Interviews({ c }: { c: Candidate & WithK }) {
           </ul>
         </details>
       )}
-      {!c.interviews.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Planlanmış mülakat yok.</div>}
+      {!c.interviews.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Planlanmış mülakat yok.{c.can.decide ? ' «Mülakat planla» ile tarih ve görüşmecileri girin.' : ''}</div>}
       <ul className="flex flex-col gap-2">
         {c.interviews.map((iv) => (
           <li key={iv.id} className="rounded-xl border border-slate-100 bg-white/80 p-2.5">
@@ -566,7 +566,7 @@ function Letters({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
           </div>
         </div>
       )}
-      {!c.messages.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Yazışma yok.</div>}
+      {!c.messages.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Henüz mektup hazırlanmadı.{c.can.letters ? ' Yukarıdan türünü seçip taslak hazırlayın.' : ''}</div>}
       <ul className="flex flex-col gap-2">
         {c.messages.map((m) => <MessageItem key={m.id} m={m} c={c} meta={meta} onChanged={refresh} />)}
       </ul>
@@ -612,7 +612,7 @@ function MessageItem({ m, c, meta, onChanged }: { m: Message; c: Candidate; meta
       <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
         <button type="button" className={btnGhost} onClick={() => recruitApi.downloadMessage(m.id).catch((e) => toast.error(errText(e, 'İndirilemedi.')))}>
           <Download aria-hidden className="h-4 w-4" />
-          Word
+          Word indir
         </button>
         {editable && text !== m.body && (
           <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate({ action: 'edit', body: { body: text } })}>Kaydet</button>
@@ -630,7 +630,7 @@ function MessageItem({ m, c, meta, onChanged }: { m: Message; c: Candidate; meta
           <button type="button" className={btnPrimary} disabled={act.isPending || text !== m.body} onClick={() => setAsk('sent')}>Gönderdim</button>
         )}
         {c.can.letters && !['gonderildi', 'iptal'].includes(m.status) && (
-          <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate({ action: 'cancel' })}>İptal</button>
+          <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate({ action: 'cancel' })}>Mektubu iptal et</button>
         )}
       </div>
       <AskSheet
@@ -698,7 +698,7 @@ function Kvkk({ c }: { c: Candidate }) {
   const purposes = Object.entries(hrMeta.data?.purposes ?? {}).filter(([, p]) => p.subject === 'aday');
   const r = c.retention;
   return (
-    <Block title="KVKK" help="Başvurunun değerlendirilmesi açık rıza istemez (sözleşmenin kurulması). Rıza yalnız havuzda tutma, referans görüşmesi ve gereksiz özel nitelikli veri içindir.">
+    <Block title="Kişisel veriler (KVKK)" help="Başvurunun değerlendirilmesi açık rıza istemez (sözleşmenin kurulması). Rıza yalnız havuzda tutma, referans görüşmesi ve gereksiz özel nitelikli veri içindir.">
       <div className="rounded-xl bg-slate-50 p-2.5 text-[12.5px] leading-snug">
         {c.employeeId ? 'Kayıt çalışan kaydına geçti; aday imhasına girmez.'
           : !c.outcome ? 'Süreç sürüyor; saklama süresi sonuçlanınca başlar.'

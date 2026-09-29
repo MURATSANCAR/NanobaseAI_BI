@@ -5,6 +5,7 @@ import { Panel } from '../editorial/kit';
 import { fmtDay, fmtMoney, fmtShort, type CashBand } from './api';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { Explain } from '../components/Explain';
 
 /** Olasılıklı 13 haftalık nakit bandı (öneri 7). Vadesi belli kalemler (çek/senet, sözleşme ödemesi, vergi) tablodaki
  *  kuraldan; vadesi belirsiz müşteri tahsilatı ve satıcı ödemesi geçmiş haftalık gerçekleşenin tahmininden (p10–p90).
@@ -29,7 +30,13 @@ export default function CashBandPanel({ band, k }: { band: CashBand | undefined;
   return (
     <Panel>
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="flex items-center gap-1 text-[15px] font-extrabold">Olasılıklı nakit bandı<SqlInfo k={k} alan="bant" label="Olasılıklı nakit bandı" /></h3>
+        <h3 className="flex items-center gap-1 text-[15px] font-extrabold">
+          Olasılıklı nakit bandı
+          <Explain label="Olasılıklı nakit bandı">
+            Günü belli olan kalemler (çek-senet, sözleşme ödemesi, vergi) olduğu gibi alınır; günü belirsiz müşteri tahsilatı ve satıcı ödemesi için geçmiş haftaların gerçekleşeninden bir aralık çıkarılır. «En kötü %10»: yalnız on durumdan birinde bundan kötü olması beklenir; «En iyi %10» bunun tersidir.
+          </Explain>
+          <SqlInfo k={k} alan="bant" label="Olasılıklı nakit bandı" />
+        </h3>
         <Pill tone="violet">Tahmin</Pill>
       </div>
       <p className="mt-1 text-[12px] leading-snug text-canvas-muted">{band.not} Geçmiş: {band.gecmisHafta} hafta.</p>

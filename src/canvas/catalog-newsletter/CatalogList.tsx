@@ -95,7 +95,7 @@ export default function CatalogList({ meta }: { meta: Meta }) {
       )}
       {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle katalog yok.</p>}
+      {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle katalog yok. Süzgeci değiştirin ya da yukarıdaki formla yeni katalog açın.</p>}
       <ul className="flex flex-col gap-2">
         {list.data?.items.map((c) => (
           <li key={c.id}>

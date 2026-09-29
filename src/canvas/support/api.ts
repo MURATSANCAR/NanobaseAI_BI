@@ -268,10 +268,10 @@ export const fmtMinutes = (m: number | null | undefined) => {
 export const fmtPct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `%${nf0.format(v * 100)}`);
 
 export const SLA_LABEL: Record<string, { label: string; tone: 'err' | 'warn' | 'ok' | 'muted' }> = {
-  asildi: { label: 'SLA aşıldı', tone: 'err' },
-  yaklasiyor: { label: 'SLA yaklaşıyor', tone: 'warn' },
+  asildi: { label: 'Süre aşıldı', tone: 'err' },
+  yaklasiyor: { label: 'Süre doluyor', tone: 'warn' },
   icinde: { label: 'Süre içinde', tone: 'ok' },
-  yok: { label: 'SLA yok', tone: 'muted' },
+  yok: { label: 'Süre hedefi yok', tone: 'muted' },
 };
 
 /** Değişim: bu dönem / önceki dönem − 1; önceki 0 ise null. */

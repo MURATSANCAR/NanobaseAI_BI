@@ -97,7 +97,8 @@ export default function TypeMap() {
       {d && m && (
         <>
           <KpiRow>
-            <Kpi label="Karar bekleyen" value={fmtInt(d.counts.total - d.counts.decided)} help="Sınıfı belirlenmemiş tip" active={filter === 'karar'} onClick={() => setFilter('karar')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar bekleyen" />} />
+            <Kpi label="Karar bekleyen" value={fmtInt(d.counts.total - d.counts.decided)} help="Sınıfı belirlenmemiş tip" active={filter === 'karar'} onClick={() => setFilter('karar')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar bekleyen" />}
+              explain="Hangi sınıfa (fuar, imza günü, söyleşi…) girdiğine henüz karar verilmemiş CRM etkinlik tipleri. Bu tiplerin kayıtları takvimde «Sınıfsız» görünür." />
             <Kpi label="Öneri hazır" value={fmtInt(d.counts.suggested)} help="Zeki AI önerisi olan, karar bekleyen" active={filter === 'oneri'} onClick={() => setFilter('oneri')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Öneri hazır" />} />
             <Kpi label="Karar verilen" value={fmtInt(d.counts.decided)} help="Takvimde kullanılan eşleme" active={filter === 'hepsi'} onClick={() => setFilter('hepsi')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar verilen" />} />
             <Kpi label="Toplam tip" value={fmtInt(d.counts.total)} help="CRM etkinlik tipi (etkin ve etkin olmayan)" info={<SqlInfo k={d.kaynaklar} alan="items" label="Toplam tip, kayıt sayısı ve öneri olasılığı" />} />

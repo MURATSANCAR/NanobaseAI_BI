@@ -24,13 +24,15 @@ export default function PromoItemsTab() {
     <>
       {s && (
         <KpiRow>
-          <Kpi label="Ürün" value={fmtInt(s.toplam)} help="157 önekli kart + CRM promosyon kartları" active={!stok && !tur}
-            onClick={() => { setStok(''); setTur(''); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ürün" />} />
+          <Kpi label="Ürün" value={fmtInt(s.toplam)} help="Ticari ürünler ve CRM promosyon kartları" active={!stok && !tur}
+            onClick={() => { setStok(''); setTur(''); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ürün" />}
+            explain="Kitap dışındaki tanıtım ve hediye ürünleri: Logo'daki ticari ürünler ile CRM'deki promosyon ve pazarlama materyali kartları." />
           <Kpi label="Stoğu yok" value={fmtInt(s.stokYok)} help="Logo stok bakiyesi sıfır ya da altı" active={stok === '0'}
             onClick={() => { setStok('0'); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Stoğu yok" />} />
-          <Kpi label="Ticari ürün (157)" value={fmtInt(s['157'])} help="Satış raporlarından ayrı tutulan kodlar" active={tur === '157'}
-            onClick={() => { setTur('157'); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ticari ürün (157)" />} />
-          <Kpi label="157 son 12 ay ciro" value={fmtShort(s.son12Ciro)} help="Faturalı satış, iade düşülmüş" info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="157 son 12 ay ciro" />} />
+          <Kpi label="Ticari ürün" value={fmtInt(s['157'])} help="Kitap satış raporlarına girmeyen ürünler" active={tur === '157'}
+            onClick={() => { setTur('157'); setPage(0); }} info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ticari ürün" />}
+            explain="Logo'da stok kodu 157 ile başlayan, kitap olmayan ürünler. Kitap satışı raporlarından ayrı tutulur." />
+          <Kpi label="Ticari ürün cirosu (12 ay)" value={fmtShort(s.son12Ciro)} help="Faturalı satış, iade düşülmüş" info={<SqlInfo k={res.data?.kaynaklar} alan="summary" label="Ticari ürün cirosu (12 ay)" />} />
         </KpiRow>
       )}
       <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
@@ -51,7 +53,7 @@ export default function PromoItemsTab() {
             <span className={labelCls}>Tür</span>
             <select className={field} value={tur} onChange={(e) => { setTur(e.target.value); setPage(0); }}>
               <option value="">Hepsi</option>
-              <option value="157">Ticari ürün (Logo 157)</option>
+              <option value="157">Ticari ürün (Logo)</option>
               <option value="crm-promosyon">CRM promosyon kartı</option>
               <option value="crm-pazarlama-materyali">CRM pazarlama materyali</option>
             </select>
@@ -83,7 +85,7 @@ export default function PromoItemsTab() {
                   <td className={`${td} text-right font-mono tabular-nums`}>{fmtShort(r.son12Ciro)}</td>
                 </tr>
               ))}
-              {!res.data.items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={5}>Bu süzgeçte ürün yok.</td></tr>}
+              {!res.data.items.length && <tr><td className={`${td} text-canvas-muted`} colSpan={5}>Bu süzgeçte ürün yok. Aramayı temizleyin ya da stok ve tür süzgeçlerini «Hepsi» yapın.</td></tr>}
             </tbody>
           </TableWrap>
           <Pager page={res.data.page} pageSize={res.data.pageSize} total={res.data.total} shown={res.data.items.length}

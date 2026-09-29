@@ -3,6 +3,7 @@ import { AlertTriangle, Check, CircleDashed, Loader2, MinusCircle, X } from 'luc
 import type { StudioStepStatus } from '../../engine';
 import SqlInfo from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { Explain } from '../../components/Explain';
 
 /** Kitap Tasarım Stüdyosu'nun ortak parçaları. Hareket yalnız durum değişimini anlatmak için:
  *  basışta 0,97 küçülme, ilerleme çubuğu genişliği; ikisi de 160–240 ms ease-out. */
@@ -14,17 +15,35 @@ export const ghostBtn =
   `inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3.5 text-[13px] font-bold text-canvas-ink hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 ${press}`;
 
 export const STATUS_TEXT: Record<StudioStepStatus, string> = {
-  waiting: 'Bekliyor', running: 'Sürüyor', done: 'Tamam', warn: 'Uyarı', fail: 'Hata', skipped: 'Atlandı',
+  waiting: 'Bekliyor', running: 'Sürüyor', done: 'Tamam', warn: 'Uyarı', fail: 'Durdu', skipped: 'Atlandı',
 };
 
 export function StepIcon({ status }: { status: StudioStepStatus }) {
   const base = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full';
-  if (status === 'done') return <span className={`${base} bg-emerald-500 text-white`}><Check className="h-4 w-4" aria-hidden /></span>;
-  if (status === 'warn') return <span className={`${base} bg-amber-400 text-white`}><AlertTriangle className="h-4 w-4" aria-hidden /></span>;
-  if (status === 'fail') return <span className={`${base} bg-rose-500 text-white`}><X className="h-4 w-4" aria-hidden /></span>;
-  if (status === 'running') return <span className={`${base} bg-gradient-to-br from-canvas-coral to-canvas-violet text-white`}><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /></span>;
-  if (status === 'skipped') return <span className={`${base} bg-slate-200 text-slate-500`}><MinusCircle className="h-4 w-4" aria-hidden /></span>;
-  return <span className={`${base} border border-slate-300 bg-white text-slate-400`}><CircleDashed className="h-4 w-4" aria-hidden /></span>;
+  // Simgenin anlamı ekran okuyucuya da söylenir (renk tek başına bilgi taşımasın).
+  const sr = <span className="sr-only">{STATUS_TEXT[status]}</span>;
+  if (status === 'done') return <span className={`${base} bg-emerald-500 text-white`}><Check className="h-4 w-4" aria-hidden />{sr}</span>;
+  if (status === 'warn') return <span className={`${base} bg-amber-400 text-white`}><AlertTriangle className="h-4 w-4" aria-hidden />{sr}</span>;
+  if (status === 'fail') return <span className={`${base} bg-rose-500 text-white`}><X className="h-4 w-4" aria-hidden />{sr}</span>;
+  if (status === 'running') return <span className={`${base} bg-gradient-to-br from-canvas-coral to-canvas-violet text-white`}><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />{sr}</span>;
+  if (status === 'skipped') return <span className={`${base} bg-slate-200 text-slate-500`}><MinusCircle className="h-4 w-4" aria-hidden />{sr}</span>;
+  return <span className={`${base} border border-slate-300 bg-white text-slate-400`}><CircleDashed className="h-4 w-4" aria-hidden />{sr}</span>;
+}
+
+/** Adım simgelerinin anlamı («?»). Düğme olduğu için bağlantı ya da düğme içine konmaz, yanına konur. */
+export function StepLegend({ label = 'Durum simgeleri' }: { label?: string }) {
+  return (
+    <Explain label={label}>
+      <ul className="flex flex-col gap-0.5">
+        <li><b>Boş daire:</b> sırası gelmedi.</li>
+        <li><b>Dönen simge:</b> şu an yapılıyor.</li>
+        <li><b>Yeşil tik:</b> tamamlandı.</li>
+        <li><b>Sarı ünlem:</b> tamamlandı ama bakmanız gereken bir uyarı var.</li>
+        <li><b>Kırmızı çarpı:</b> bu adımda durdu.</li>
+        <li><b>Gri çizgi:</b> bu tasarımda atlandı.</li>
+      </ul>
+    </Explain>
+  );
 }
 
 export function Progress({ value, total }: { value: number; total: number }) {

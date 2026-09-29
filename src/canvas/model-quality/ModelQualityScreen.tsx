@@ -67,15 +67,15 @@ function StartRuns({ suites, startable, onStarted }: { suites: Record<string, st
   const start = useMutation({
     mutationFn: (suite: string) => mqApi.start(suite),
     onSuccess: (r) => {
-      toast.success(`${r.suiteLabel} sıraya alındı; zamanlayıcı birkaç dakika içinde başlatır.`);
+      toast.success(`${r.suiteLabel} sıraya alındı; birkaç dakika içinde başlar.`);
       void qc.invalidateQueries({ queryKey: ['mq'] });
       onStarted();
     },
     onError: (e) => toast.error(errText(e, 'Koşu başlatılamadı.') ?? 'Koşu başlatılamadı.'),
   });
   const help: Record<string, string> = {
-    resolver: 'Soruların okunuşu kayıtlı temel çizgiyle aynı mı · ~2 dk, Zeki AI modeli çalışmaz',
-    answer: 'Doğrulanmış sorular referans rakamla aynı cevabı veriyor mu · ~35 dk, Zeki AI kapasitesi harcar',
+    resolver: 'Zeki AI soruları önceki ölçümdeki gibi anlıyor mu · yaklaşık 2 dk, kullanıcıları yavaşlatmaz',
+    answer: 'Doğrulanmış sorular doğru rakamla cevaplanıyor mu · yaklaşık 35 dk, bu sürede Zeki AI biraz yavaşlayabilir',
   };
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-white/70 p-3">

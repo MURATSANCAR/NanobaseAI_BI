@@ -5,6 +5,7 @@ import { Panel } from '../kit';
 import { money } from '../contracts/ui';
 import { lineTone, royaltyApi } from './api';
 import SqlInfo from '../../components/SqlInfo';
+import { Explain } from '../../components/Explain';
 
 /** M6 sözleşme sayfasında «Bu sözleşmenin dönem koşuları». Telif dönemi sayfasına yetkisi olmayan kişide hiç görünmez. */
 export default function ContractRuns({ contractKey }: { contractKey: string }) {
@@ -13,7 +14,10 @@ export default function ContractRuns({ contractKey }: { contractKey: string }) {
   if (!items.length) return null;
   return (
     <Panel>
-      <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Bu sözleşmenin dönem koşuları <SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Dönem koşularındaki satırlar (net)" /></h3>
+      <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">
+        Bu sözleşmenin dönem koşuları <SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Dönem koşularındaki satırlar (net)" />
+        <Explain label="Dönem koşuları">«Telif dönemi» ekranında bütün sözleşmeler için toplu yapılan hesaplarda bu sözleşmenin durumu ve net tutarı. Koşu adına dokununca o koşu açılır.</Explain>
+      </h3>
       <ul className="space-y-1.5">
         {items.map((x) => (
           <li key={x.lineId} className="flex flex-wrap items-center gap-2 text-[12.5px]">

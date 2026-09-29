@@ -54,7 +54,7 @@ export function ScoreBadge({ value }: { value: number | null | undefined }) {
   if (value === null || value === undefined) return <span className="text-[11.5px] text-canvas-muted">puan yok</span>;
   const tone = value >= 70 ? 'bg-emerald-500' : value >= 45 ? 'bg-amber-400' : 'bg-red-500';
   return (
-    <span className="inline-flex min-w-[88px] items-center gap-2" title="Uygunluk puanı (100 üzerinden)">
+    <span className="inline-flex min-w-[88px] items-center gap-2" title="Uygunluk puanı (100 üzerinden): kalemlerin kataloğa eşleşmesi, stok, belgeler ve kalan süreye göre ihaleye girmenin ne kadar uygun olduğu">
       <span className="relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-100" aria-hidden>
         <span className={`absolute inset-y-0 left-0 rounded-full ${tone}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </span>

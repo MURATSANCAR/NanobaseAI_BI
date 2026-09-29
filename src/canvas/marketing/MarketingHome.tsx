@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { fmtDay, mktApi } from './api';
 import { MarketingFrame } from './parts';
 import NewBooksList from './NewBooksList';
@@ -121,12 +122,12 @@ export default function MarketingHome() {
     <MarketingFrame
       crumb="Yeni kitap planı"
       title="Yeni kitap pazarlama planı"
-      lead="Yayına hazırlanan her kitap için karne (emsal ve yazarın gerçek satışı, onaylı hedef), kanal ve bütçe, yayın gününden geri sayan takvim ve materyal taslakları. Zeki AI önerir, pazarlama müdürü onaylar; dış kanala hiçbir şey kendiliğinden gönderilmez."
+      lead="Yayına hazırlanan her kitabın pazarlama planı: satış karnesi, kanal ve bütçe, yayın gününe göre iş takvimi ve tanıtım metinleri. Zeki AI taslak önerir, pazarlama müdürü onaylar; hiçbir şey dışarıya kendiliğinden gönderilmez."
       source={m?.lastRun?.tarih ? `CRM · son hatırlatma ${fmtDay(m.lastRun.tarih)}` : 'CRM + Logo'}
       presence={d ? `${d.hepsi.toLocaleString('tr-TR')} kitap` : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Pazarlama bilgisi açılamadı.')}</Note>}
       {m?.lastRun?.eposta === 'no_smtp' && <Note tone="warn">Günlük hatırlatma gönderilemedi: e-posta ayarı yok (Yönetim → E-posta).</Note>}
       {m?.lastRun?.eposta === 'no_recipient' && <Note tone="warn">Günlük hatırlatma gönderilemedi: alıcı yok (Yönetim → Pazarlama planları).</Note>}
@@ -134,13 +135,17 @@ export default function MarketingHome() {
       {k && m && (
         <KpiRow>
           <Kpi label="Planı yok" value={k.plansiz.toLocaleString('tr-TR')} help={`Yayına ${m.settings.noPlanDays} gün ya da daha az kalan`} active={durum === 'plansiz'} onClick={() => setDurum(durum === 'plansiz' ? '' : 'plansiz')}
-            info={<SqlInfo k={d?.kaynaklar} alan="kpi.plansiz" label="Planı yok" />} />
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.plansiz" label="Planı yok" />}
+            explain={`Yayın gününe ${m.settings.noPlanDays} gün ya da daha az kalmış, henüz pazarlama planı açılmamış kitaplar. Karta dokunursanız liste bunlara süzülür.`} />
           <Kpi label="Onay bekleyen" value={k.onayda.toLocaleString('tr-TR')} help="Onaya gönderilmiş planlar" active={durum === 'onayda'} onClick={() => setDurum(durum === 'onayda' ? '' : 'onayda')}
-            info={<SqlInfo k={d?.kaynaklar} alan="kpi.onayda" label="Onay bekleyen" />} />
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.onayda" label="Onay bekleyen" />}
+            explain="Hazırlayanın onaya gönderdiği, pazarlama müdürünün kararını bekleyen planlar. Planı gönderen kişi kendi planını onaylayamaz." />
           <Kpi label="Materyali eksik" value={k.materyalEksik.toLocaleString('tr-TR')} help={`Yayına ${m.settings.materialDays} gün kala onaylı materyali eksik`} active={durum === 'materyal'} onClick={() => setDurum(durum === 'materyal' ? '' : 'materyal')}
-            info={<SqlInfo k={d?.kaynaklar} alan="kpi.materyalEksik" label="Materyali eksik" />} />
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.materyalEksik" label="Materyali eksik" />}
+            explain={`Yayına ${m.settings.materialDays} gün ya da daha az kalmış, zorunlu tanıtım materyallerinden en az biri henüz onaylanmamış planlar.`} />
           <Kpi label="Hedefi değişen" value={k.hedefDegisti.toLocaleString('tr-TR')} help="Bütçe planı revize edildi; plan gözden geçirilmeli" active={durum === 'hedef'} onClick={() => setDurum(durum === 'hedef' ? '' : 'hedef')}
-            info={<SqlInfo k={d?.kaynaklar} alan="kpi.hedefDegisti" label="Hedefi değişen" />} />
+            info={<SqlInfo k={d?.kaynaklar} alan="kpi.hedefDegisti" label="Hedefi değişen" />}
+            explain="Plan hazırlandıktan sonra bütçe planında kitabın satış hedefi değişmiş. Bütçe ve kanal payını yeni hedefe göre gözden geçirin." />
         </KpiRow>
       )}
 
@@ -182,12 +187,18 @@ export default function MarketingHome() {
         {list.isLoading && <Loading />}
         {d && m && d.items.length > 0 && <NewBooksList rows={d.items} meta={m} busy={busy} k={d.kaynaklar} onCreate={(stok, ai) => create.mutate({ stok, ai })} />}
         {d && d.items.length === 0 && (
-          <div className="flex flex-col items-start gap-2 py-6 text-[12.5px] text-canvas-muted">
-            {kim === 'ben' && d.hepsi > 0
-              ? <>Bu aralıkta size düşen kitap yok (sorumlusu olduğunuz ya da onayınızı bekleyen). Aralıkta {d.hepsi.toLocaleString('tr-TR')} kitap var.
-                  <button type="button" className={btnGhost} onClick={() => update({ kim: 'hepsi' })}>Hepsini göster</button></>
-              : 'Bu süzgeçle kitap yok.'}
-          </div>
+          kim === 'ben' && d.hepsi > 0 ? (
+            <EmptyHint
+              title="Bu aralıkta size düşen kitap yok"
+              why={`«Bana düşenler» yalnız sorumlusu olduğunuz ya da onayınızı bekleyen kitapları gösterir. Seçili tarihlerde toplam ${d.hepsi.toLocaleString('tr-TR')} kitap var.`}
+              action={<button type="button" className={btnGhost} onClick={() => update({ kim: 'hepsi' })}>Hepsini göster</button>}
+            />
+          ) : (
+            <EmptyHint
+              title="Bu süzgeçle kitap yok"
+              why="Liste, CRM'de yayın günü seçtiğiniz tarih aralığına düşen kitaplardan gelir. Tarih aralığını genişletin ya da durum, yayınevi ve arama süzgeçlerini gevşetin."
+            />
+          )
         )}
         {d && d.total > 0 && (
           <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />

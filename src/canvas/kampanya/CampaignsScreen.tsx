@@ -13,6 +13,7 @@ import { isoPlus, kampanyaApi, pctToRatio, type Kanal, type Overview } from './a
 import { CalendarStrip, KampanyaFrame, StatusPill } from './parts';
 import CandidatesPanel from './CandidatesPanel';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** M35 E-ticaret kampanyaları: kayıt defteri, takvim, aday kitaplar, CRM bayi kampanyaları, öğrenimler. */
 
@@ -95,22 +96,24 @@ export default function CampaignsScreen({ initial = 'liste' }: { initial?: 'list
   return (
     <KampanyaFrame
       title="Kampanyalar"
-      lead="Site, pazar yeri, bayi ve fuar kampanyalarının kayıt defteri: kitap kitap indirim, marj, telif ve sözleşme sınırı; stok ve tükenme; onay; bitince önce/sonra sonucu. Kampanya hiçbir platforma, T-soft'a ya da CRM'e gönderilmez — onaydan sonra ekip elle kurar."
+      lead="Site, pazar yeri, bayi ve fuar kampanyalarını planlarsınız: her kitap için indirimin kâra, telife ve stoğa etkisini görür, onaya gönderir, bitince sonucunu ölçersiniz. Kampanya hiçbir platforma, T-soft'a ya da CRM'e gönderilmez; onaydan sonra ekip elle kurar."
       source={st?.dataEnd ? `Logo + CRM · ${fmtDay(st.dataEnd)}` : 'Logo + CRM'}
       presence={d ? d.me.display : ''}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {ov.error && <Note tone="err">{errText(ov.error, 'Kampanya bilgisi açılamadı.')}</Note>}
       {d && (
         <KpiRow>
           <Kpi label="Taslak" value={fmtInt(d.sayilar.taslak)} help="Hazırlanan kampanyalar"
             info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Taslak kampanya" />} />
           <Kpi label="Onay bekliyor" value={fmtInt(d.sayilar.onay_bekliyor)} help={d.me.canApprove ? 'Onayınızı bekleyenler aşağıda' : 'Onaycıda'}
+            explain="Hazırlanıp onaya gönderilmiş, henüz onaylanmamış ya da geri çevrilmemiş kampanyalar. Kampanyayı hazırlayan kişi kendi kampanyasını onaylayamaz."
             info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Onay bekleyen kampanya" />} />
           <Kpi label="Yürütülüyor" value={fmtInt(d.sayilar.yurutuluyor + d.sayilar.onaylandi)} help="Onaylı ve süren kampanyalar"
             info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Yürütülen kampanya" />} />
           <Kpi label="Biten" value={fmtInt(d.sayilar.bitti)} help="Sonucu ve öğrenimi yazılabilir"
+            explain="Bitiş tarihi geçmiş kampanyalar. Kampanya sayfasında önce/sonra satış sonucunu görüp «öğrenim» yazabilirsiniz; öğrenimler sonraki kampanyaların tahminine katkı verir."
             info={<SqlInfo k={d.kaynaklar} alan="sayilar" label="Biten kampanya" />} />
         </KpiRow>
       )}
@@ -198,7 +201,7 @@ function ListTab({ ov }: { ov: Overview }) {
           <div className="col-span-2 flex items-end sm:col-span-1">
             <button type="button" className={`${btnPrimary} w-full`} onClick={() => setCreating(true)}>
               <Plus aria-hidden className="h-4 w-4" />
-              Yeni kampanya
+              Yeni kampanya aç
             </button>
           </div>
         )}
@@ -214,8 +217,8 @@ function ListTab({ ov }: { ov: Overview }) {
               <th className={th}>Durum</th>
               <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Kitap</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Ort. indirim</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Kampanyalı marj</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Uyarı</InfoLabel></th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Kampanyalı marj</InfoLabel><Explain label="Kampanyalı marj">İndirim ve kanal kesintisi uygulandıktan sonra satıştan kalan kâr payı (maliyet düşülerek). Maliyeti bilinmeyen kitaplar varsa altında yazar; hiç maliyet yoksa «hesaplanamaz» görünür.</Explain></span></th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={list.data?.kaynaklar} alan="items[].ozet">Uyarı</InfoLabel><Explain label="Uyarı">Kırmızı sayı: onaydan önce mutlaka çözülmesi gereken sorunlar (ör. zarar, sözleşme sınırı). Turuncu sayı: dikkat edilmesi gereken durumlar. Ayrıntısı kampanya sayfasındadır.</Explain></span></th>
             </tr>
           </thead>
           <tbody>
@@ -242,6 +245,11 @@ function ListTab({ ov }: { ov: Overview }) {
             ))}
           </tbody>
         </TableWrap>
+        {list.data && !list.data.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Bu süzgece uyan kampanya yok" why={ov.me.canEdit ? 'Aramayı ya da durum ve kanal süzgecini değiştirin; yeni bir kampanyayı «Yeni kampanya aç» ile başlatabilirsiniz.' : 'Aramayı ya da durum ve kanal süzgecini değiştirin.'} />
+          </div>
+        )}
         <Pager page={page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
           loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
         {list.data && <div className="mt-1 text-right"><InfoLabel k={list.data.kaynaklar} alan="total" label="Kampanya sayısı (süzgece uyan)">{`${fmtInt(list.data.total)} kampanya`}</InfoLabel></div>}
@@ -289,7 +297,7 @@ function NewCampaignSheet({ open, onClose, ov }: { open: boolean; onClose: () =>
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Platform</span>
-            <input className={field} value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="İsteğe bağlı" />
+            <input className={field} value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Örn. Trendyol (isteğe bağlı)" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Başlangıç</span>
@@ -305,7 +313,7 @@ function NewCampaignSheet({ open, onClose, ov }: { open: boolean; onClose: () =>
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Kanal kesintisi %</span>
-            <input className={field} inputMode="decimal" value={kes} onChange={(e) => setKes(e.target.value)} placeholder="Komisyon / bayi iskontosu" />
+            <input className={field} inputMode="decimal" value={kes} onChange={(e) => setKes(e.target.value)} placeholder="Örn. 15 (komisyon ya da iskonto)" />
           </label>
         </div>
         <p className="text-[11.5px] leading-snug text-canvas-muted">
@@ -430,10 +438,10 @@ function CalendarTab({ ov }: { ov: Overview }) {
               <input className={field} value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="İsteğe bağlı" />
             </label>
             <div className="col-span-2 flex items-end sm:col-span-1">
-              <button type="submit" className={`${btnPrimary} w-full`} disabled={!ad.trim() || add.isPending}>Ekle</button>
+              <button type="submit" className={`${btnPrimary} w-full`} disabled={!ad.trim() || add.isPending}>Takvime ekle</button>
             </div>
           </form>
-          <p className="mt-2 text-[11.5px] text-canvas-muted">Özel günler ve bağlı kitaplar SEO sezon takviminden (CRM) gelir; platformların kampanya dönemlerini ve fuarları buradan girersiniz.</p>
+          <p className="mt-2 text-[11.5px] text-canvas-muted">Özel günler ve bunlara bağlı kitaplar CRM'deki sezon takviminden gelir; platformların kampanya dönemlerini ve fuarları buradan girersiniz.</p>
         </Panel>
       )}
     </>
@@ -488,6 +496,11 @@ function CrmTab() {
             ))}
           </tbody>
         </TableWrap>
+        {list.data && !list.data.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Gösterilecek bayi kampanyası yok" why={etkin ? '«Yalnız etkin» seçimini kaldırarak geçmiş kampanyaları da görebilirsiniz.' : 'CRM\'de tanımlı bayi kampanyası bulunamadı.'} />
+          </div>
+        )}
         <Pager page={page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
           loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
       </div>
@@ -528,7 +541,7 @@ function LearningsTab({ ov }: { ov: Overview }) {
             <p className="mt-1 whitespace-pre-line text-[12.5px] leading-snug">{l.ozet}</p>
           </li>
         ))}
-        {list.data && !list.data.items.length && <li className="text-[12px] text-canvas-muted">Henüz öğrenim yazılmadı.</li>}
+        {list.data && !list.data.items.length && <li><EmptyHint title="Henüz öğrenim yazılmadı" why="Biten bir kampanyanın sayfasında sonucu inceleyip öğrenim yazdığınızda burada listelenir." /></li>}
       </ul>
       <Pager page={page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
         loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />

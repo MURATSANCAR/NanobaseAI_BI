@@ -12,6 +12,8 @@ import { ActionItem, ActionSheet, LevelBadge } from './parts';
 import { useMusteriMeta } from './CustomersHome';
 import NoteSignalCard from '../signals/NoteSignalCard';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Cari ayrıntısı: risk ve nedeni (2 dokunuş: liste → cari), aylık alım grafiği, aksiyon geçmişi (aksiyon yazmak 3 dokunuş),
  *  kitap dağılımı, CRM siparişleri, ziyaretler (M30 ortak kaydı), tahsilat göstergesi (M30). Arama yalnız portföy sahibine:
@@ -27,6 +29,7 @@ export default function AccountDetail() {
   const [tel, setTel] = useState<string | null | undefined>(undefined);
   const a = q.data;
   const m = meta.data;
+  const visits = useShowMore(a?.ziyaretler, 10);
 
   const summary = useMutation({
     mutationFn: () => musteriApi.summary(kod),
@@ -107,12 +110,12 @@ export default function AccountDetail() {
               ) : (
                 <button type="button" className={`${btnGhost} sm:flex-none`} disabled={phone.isPending || tel === null} onClick={() => phone.mutate()}>
                   <Phone aria-hidden className="h-4 w-4" />
-                  {tel === null ? 'CRM\'de telefon yok' : 'Ara'}
+                  {tel === null ? 'CRM\'de telefon yok' : 'Telefonu göster ve ara'}
                 </button>
               ))}
           </div>
 
-          <Block title="Değer ve alım" help={`Faturalı satır, satış − iade. Pencere Logo kesimi (${fmtDay(a.kesim)}) ile biter.`} action={<SqlInfo k={a.kaynaklar} alan="net12" label="Değer ve alım" />}>
+          <Block title="Değer ve alım" help={`Logo faturalarındaki satıştan iade düşülerek hesaplanır; dönem Logo verisinin bittiği gün (${fmtDay(a.kesim)}) ile biter.`} action={<SqlInfo k={a.kaynaklar} alan="net12" label="Değer ve alım" />}>
             <KV k="Son 12 ay net" info={<SqlInfo k={a.kaynaklar} alan="net12" label="Son 12 ay net" />} v={fmtMoney(a.net12)} />
             <KV k="Önceki 12 ay net" info={<SqlInfo k={a.kaynaklar} alan="netOnceki" label="Önceki 12 ay net" />} v={fmtMoney(a.netOnceki)} />
             <KV k="Değişim" info={<SqlInfo k={a.kaynaklar} alan="degisim" label="Değişim" />} v={fmtChange(a.degisim)} tone={a.degisim !== null && a.degisim < -0.1 ? 'err' : undefined} />
@@ -120,7 +123,7 @@ export default function AccountDetail() {
             <KV k="Son 12 ay fatura" info={<SqlInfo k={a.kaynaklar} alan="fatura12" label="Son 12 ay fatura" />} v={a.fatura12 ?? '—'} />
             <KV k="Son fatura" v={fmtDay(a.sonFatura)} />
             <KV k="Son alımdan bu yana" info={<SqlInfo k={a.kaynaklar} alan="gunSonAlim" label="Son alımdan bu yana" />} v={a.gunSonAlim === null ? '—' : `${a.gunSonAlim} gün`} tone={a.duzey === 'kayip' ? 'err' : undefined} />
-            <KV info={<SqlInfo k={a.kaynaklar} alan="aralik" label="Olağan alım aralığı" />} k={`Olağan alım aralığı${a.aralikKaynagi ? ` (${INTERVAL_SOURCE[a.aralikKaynagi]})` : ''}`} v={a.aralik === null ? '—' : `${Math.round(a.aralik)} gün`} />
+            <KV info={<><Explain label="Olağan alım aralığı">Carinin alımları arasında genellikle geçen süre (son 24 ayın ortancası). Son alımdan bu yana geçen süre bunun çok üstüne çıkınca kayıp riski artar.</Explain><SqlInfo k={a.kaynaklar} alan="aralik" label="Olağan alım aralığı" /></>} k={`Olağan alım aralığı${a.aralikKaynagi ? ` (${INTERVAL_SOURCE[a.aralikKaynagi]})` : ''}`} v={a.aralik === null ? '—' : `${Math.round(a.aralik)} gün`} />
             <KV k="İade oranı (12 ay / önceki)" info={<SqlInfo k={a.kaynaklar} alan="iade12" label="İade oranı" />} v={`${fmtPct(a.iade12)} / ${fmtPct(a.iadeOnceki)}`} />
             <KV k="CRM son sipariş" v={fmtDay(a.sonSiparis)} />
             <KV k="Son ziyaret" v={fmtDay(a.sonZiyaret)} />
@@ -130,7 +133,7 @@ export default function AccountDetail() {
             {months.isLoading ? (
               <Loading />
             ) : series.length === 0 ? (
-              <Empty>Aylık veri okunamadı.</Empty>
+              <Empty title="Aylık veri okunamadı">Logo'dan aylık alım verisi gelmedi; sayfayı daha sonra yeniden açın.</Empty>
             ) : (
               <div
                 role="img"
@@ -155,14 +158,14 @@ export default function AccountDetail() {
                 <SqlInfo k={a.kaynaklar} alan="aksiyonlar" label="Aksiyonlar ve sonuçları" />
                 {m.me.canAction ? (
                   <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => setSheet({ edit: null })}>
-                    Yeni
+                    Aksiyon yaz
                   </button>
                 ) : null}
               </span>
             }
           >
             {a.aksiyonlar.length === 0 ? (
-              <Empty>Henüz aksiyon yok.</Empty>
+              <Empty title="Henüz aksiyon yok">{m.me.canAction ? '«Aksiyon yaz» ile bu cari için yapılacak işi kaydedin; 30 ve 90 gün sonraki alım kendiliğinden ölçülür.' : 'Bu cari için yazılmış aksiyon bulunmuyor.'}</Empty>
             ) : (
               <ul className="flex flex-col gap-2">
                 {a.aksiyonlar.map((x) => (
@@ -178,7 +181,7 @@ export default function AccountDetail() {
               help={`Saha ve tahsilat ekranının gece rakamı (${fmtDay(a.tahsilat.asof)}); kredi kararı bu ekranın işi değil.`}
               action={
                 <Link className="text-[12px] font-extrabold text-canvas-violet hover:underline" to={`/saha/musteri/${encodeURIComponent(a.code)}`}>
-                  Brifing
+                  Saha brifingini aç
                 </Link>
               }
             >
@@ -191,7 +194,7 @@ export default function AccountDetail() {
 
           <Block title="Kitaplar (son 12 ay)" help="Kitap başına net adet ve net tutar, en çok alınan üstte." action={<SqlInfo k={a.kaynaklar} alan="kitaplar" label="Kitap başına alım" />}>
             {a.kitaplar.length === 0 ? (
-              <Empty>Son 12 ayda kitap alımı yok.</Empty>
+              <Empty title="Son 12 ayda kitap alımı yok" />
             ) : (
               <ul className="flex flex-col">
                 {a.kitaplar.slice(0, 15).map((b) => (
@@ -209,7 +212,7 @@ export default function AccountDetail() {
 
           <Block title="Siparişler (CRM, son 12 ay)" action={<SqlInfo k={a.kaynaklar} alan="siparisler" label="CRM siparişleri" />}>
             {a.siparisler.length === 0 ? (
-              <Empty>CRM'de son 12 ayda sipariş yok.</Empty>
+              <Empty title="CRM'de son 12 ayda sipariş yok" />
             ) : (
               <ul className="flex flex-col">
                 {a.siparisler.map((o, i) => (
@@ -226,7 +229,7 @@ export default function AccountDetail() {
 
           <Block title="Son faturalar (Logo)" action={<SqlInfo k={a.kaynaklar} alan="faturalar" label="Son faturalar" />}>
             {a.faturalar.length === 0 ? (
-              <Empty>Fatura yok.</Empty>
+              <Empty title="Logo'da fatura yok" />
             ) : (
               a.faturalar.map((x, i) => <KV key={`${x.no}-${i}`} k={`${fmtDay(x.tarih)} · ${x.no || '—'}`} v={fmtMoney(x.tutar)} />)
             )}
@@ -237,10 +240,11 @@ export default function AccountDetail() {
               <NoteSignalCard code={kod} screen="musteri" />
             </div>
             {a.ziyaretler.length === 0 ? (
-              <Empty>Kayıtlı ziyaret yok.</Empty>
+              <Empty title="Kayıtlı ziyaret yok">Saha ekranında bu cariye yazılan ziyaret notları burada görünür.</Empty>
             ) : (
+              <>
               <ul className="flex flex-col gap-1.5">
-                {a.ziyaretler.slice(0, 10).map((v) => (
+                {visits.shown.map((v) => (
                   <li key={v.id} className="rounded-xl bg-slate-50 px-3 py-2 text-[12.5px]">
                     <div className="text-[11px] font-bold text-canvas-muted">
                       {fmtDay(v.gerceklesen || v.planlanan)} · {v.sahip}
@@ -249,6 +253,8 @@ export default function AccountDetail() {
                   </li>
                 ))}
               </ul>
+              <ShowMoreButton more={visits} noun="ziyaret" />
+              </>
             )}
           </Block>
 

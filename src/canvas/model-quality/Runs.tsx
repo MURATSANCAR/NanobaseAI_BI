@@ -11,6 +11,7 @@ import {
   type Case, type CaseRow, type Meta, type Run, type RunDetail, type Version,
 } from './api';
 import { Empty, SqlBox } from './parts';
+import { Explain } from '../components/Explain';
 
 /** Koşular: kapı koşularının listesi; bir koşu açılınca önceki koşuyla önce/sonra ve bozulan sorular. */
 export default function Runs({ meta, selected, onSelect }: { meta: Meta; selected: string | null; onSelect: (id: string | null) => void }) {
@@ -27,7 +28,7 @@ function RunList({ meta, onSelect }: { meta: Meta; onSelect: (id: string) => voi
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Takım</span>
+          <span className={labelCls}>Ölçüm türü</span>
           <select className={field} value={suite} onChange={(e) => { setSuite(e.target.value); setPage(0); }}>
             <option value="">Hepsi</option>
             {Object.entries(meta.suites).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -36,14 +37,17 @@ function RunList({ meta, onSelect }: { meta: Meta; onSelect: (id: string) => voi
       </div>
       <div className="mt-3 flex flex-col gap-2">
         {q.data && q.data.items.length > 0 && (
-          <div className="flex justify-end text-[11px] text-canvas-muted">
+          <div className="flex items-center justify-end gap-1 text-[11px] text-canvas-muted">
             <InfoLabel k={kaynakOf(q.data)} alan="items" label="Koşu sayıları">Sağlam, bozulan, düzelen</InfoLabel>
+            <Explain label="Sağlam, bozulan, düzelen">
+              «Sağlam»: beklenen cevabı veren soru. «Bozulan»: bir önceki koşuda doğruyken bu koşuda yanlışa dönen; «düzelen»: tersi.
+            </Explain>
           </div>
         )}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.error && <Note tone="err">{errText(q.error, 'Koşular okunamadı.')}</Note>}
         {q.data && !q.data.items.length && (
-          <Empty>Henüz koşu yok. Kapı betikleri <code>--report</code> ile koşunca ya da zamanlayıcı çalışınca burada görünür.</Empty>
+          <Empty>Henüz kalite koşusu yok. Koşular zamanlanmış saatlerde kendiliğinden ya da yetkili biri «Koşu başlat»a bastığında burada görünür.</Empty>
         )}
         {q.data?.items.map((r) => <RunCard key={r.id} r={r} onOpen={() => onSelect(r.id)} />)}
       </div>
@@ -65,7 +69,7 @@ function RunCard({ r, onOpen }: { r: Run; onOpen: () => void }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
           <Pill tone={RUN_TONE[r.status]}>{r.statusLabel}</Pill>
-          {r.polluted && <Pill tone="warn">ölçüm sırasında kurulum</Pill>}
+          {r.polluted && <Pill tone="warn">ölçüm sırasında değişiklik oldu</Pill>}
           <span className="text-[13px] font-extrabold">{r.suiteLabel}</span>
         </div>
         <div className="mt-0.5 truncate font-mono text-[11.5px] text-canvas-muted">{r.label || '—'}</div>
@@ -137,12 +141,12 @@ function RunView({ meta, id, onBack }: { meta: Meta; id: string; onBack: () => v
           </div>
         </div>
         {!cases.data?.baselineRunId && cases.data && (
-          <Note tone="info">Bu takımın önceki koşusu yok: «bozulan», betiğin kendi temel çizgisine göre bozuk sayılan vakalardır.</Note>
+          <Note tone="info">Bu ölçüm türünün önceki koşusu yok: «bozulan», kayıtlı temel sonuca göre bozuk sayılan sorulardır.</Note>
         )}
         <div className="mt-3 flex flex-col gap-2">
           {cases.isLoading && <Empty>Yükleniyor…</Empty>}
           {cases.error && <Note tone="err">{errText(cases.error, 'Vakalar okunamadı.')}</Note>}
-          {cases.data && !cases.data.items.length && <Empty>Bu süzgeçte vaka yok.</Empty>}
+          {cases.data && !cases.data.items.length && <Empty>Bu süzgeçte soru yok. Başka bir süzgeç seçin ya da «Hepsi»ne dönün.</Empty>}
           {cases.data?.items.map((c) => <CaseItem key={c.id} c={c} meta={meta} />)}
         </div>
         {cases.data && cases.data.total > cases.data.size && (
@@ -164,7 +168,7 @@ function RunHeader({ r, kRun, kCases }: { r: RunDetail; kRun?: ReturnType<typeof
         <SqlInfo k={kCases} alan="_hepsi" label="Vaka sayaçları" />
       </div>
       <div className="mt-1 text-[11.5px] text-canvas-muted">
-        {fmtAt(r.startedAt)} → {fmtAt(r.finishedAt)} · {fmtDuration(r.durationSec)}{r.env ? ` · ${r.env === 'vm' ? 'müşteri ortamı' : 'test sunucusu'}` : ''}
+        {fmtAt(r.startedAt)} → {fmtAt(r.finishedAt)} · {fmtDuration(r.durationSec)}{r.env ? ` · ${r.env === 'vm' ? 'şirket içi kurulum' : 'test sunucusu'}` : ''}
       </div>
       {r.error && <Note tone="err">{r.error}</Note>}
       {r.polluted && (
@@ -203,10 +207,10 @@ function VersionBox({ title, v, run, other }: { title: string; v: Version | null
           {v ? (
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-canvas-muted">
               <span>Kod <span className={cls(diff(v.codeSha, other?.codeSha))}>{shortSha(v.codeSha)}</span></span>
-              <span>Katalog <span className={cls(diff(v.catalogVersion, other?.catalogVersion))}>v{v.catalogVersion ?? '—'}</span></span>
+              <span>Veri sözlüğü <span className={cls(diff(v.catalogVersion, other?.catalogVersion))}>v{v.catalogVersion ?? '—'}</span></span>
               <span>Bilgi paketi <span className={cls(diff(v.knowledgeDigest, other?.knowledgeDigest))}>{v.knowledgeDigest ?? '—'}</span></span>
               <span>Kural <span className={cls(diff(v.rulesDigest, other?.rulesDigest))}>{v.rulesDigest ?? '—'}</span></span>
-              <span className={cls(diff(v.modelDigest, other?.modelDigest))}>{v.model}</span>
+              <span>Zeki AI ayarı <span className={cls(diff(v.modelDigest, other?.modelDigest))}>{v.modelDigest ?? '—'}</span></span>
             </div>
           ) : (
             <div className="mt-1 text-canvas-muted">Sürüm kaydı yok</div>
@@ -245,7 +249,7 @@ function CaseSide({ title, c }: { title: string; c: Case | null }) {
         {c && <Pill tone={STATUS_TONE[c.status]}>{c.statusLabel}</Pill>}
       </div>
       {!c ? (
-        <div className="text-[11.5px] text-canvas-muted">Önceki koşuda bu vaka yok.</div>
+        <div className="text-[11.5px] text-canvas-muted">Önceki koşuda bu soru yoktu.</div>
       ) : (
         <>
           {c.detail.length > 0 && (
@@ -255,7 +259,7 @@ function CaseSide({ title, c }: { title: string; c: Case | null }) {
           )}
           <SqlBox sql={c.sql} />
           <div className="font-mono text-[10.5px] text-canvas-muted">
-            sonuç özeti {c.resultDigest?.slice(0, 12) ?? '—'} · referans {c.expectedDigest?.slice(0, 12) ?? '—'}
+            sonuç kodu {c.resultDigest?.slice(0, 12) ?? '—'} · beklenen {c.expectedDigest?.slice(0, 12) ?? '—'}
           </div>
         </>
       )}

@@ -51,7 +51,7 @@ export default function ReportsTab({ meta }: { meta: RiskMeta }) {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:gap-4">
         <Panel>
           <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Brifingler</h2>
-          {list.isLoading ? <Loading /> : items.length === 0 ? <Empty>Henüz brifing yok.</Empty> : (
+          {list.isLoading ? <Loading /> : items.length === 0 ? <Empty>Henüz kurul brifingi hazırlanmadı.{canDraft ? ' Dönemi yazıp «Brifing taslağı hazırla»ya basın.' : ''}</Empty> : (
             <ul className="flex flex-col gap-1.5">
               {items.map((r) => (
                 <li key={r.id}>

@@ -7,6 +7,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../engine';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { AskSheet } from '../budget/parts';
@@ -125,7 +126,7 @@ export function StatePill({ state }: { state: CellState }) {
   return <Pill tone={tone}>{STATE_LABEL[state]}</Pill>;
 }
 
-export function ExportLink({ href, label = 'Excel' }: { href: string; label?: string }) {
+export function ExportLink({ href, label = 'Excel indir' }: { href: string; label?: string }) {
   return (
     <a href={href} className={btnGhost} download>
       <Download aria-hidden className="h-4 w-4" />
@@ -173,7 +174,7 @@ export function DraftSheet({ draft, onClose }: { draft: Suggestion | null; onClo
               }}
             >
               <Copy aria-hidden className="h-4 w-4" />
-              Kopyala
+              Taslağı kopyala
             </button>
           </div>
         </div>
@@ -196,7 +197,7 @@ export function useDraft() {
   return { draft, close: () => setDraft(null), make };
 }
 
-/** Öneri listesi: kural hesabı + Zeki AI gerekçesi; kabul / ret (ret gerekçeli). Karar CRM'i değiştirmez. */
+/** Öneri listesi: kural hesabı + Zeki AI gerekçesi; kabul / ret (ret gerekçeli). Karar CRM'i değiştirmez. Boşsa `empty` başlığıyla boş durum. */
 export function SuggestionList({ tur, canDecide, empty }: { tur: 'yuk' | 'kagit'; canDecide: boolean; empty: string }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['supply', 'suggestions', tur], queryFn: () => supplyApi.suggestions(tur, 'bekliyor'), enabled: ENGINE_ENABLED });
@@ -204,7 +205,7 @@ export function SuggestionList({ tur, canDecide, empty }: { tur: 'yuk' | 'kagit'
   const decide = useMutation({
     mutationFn: (v: { id: string; karar: 'kabul' | 'ret'; not?: string }) => supplyApi.decide(v.id, v.karar, v.not),
     onSuccess: (s) => {
-      toast.success(s.durum === 'kabul' ? 'Kabul edildi. Kartı M12/CRM\'de değiştirmek sizin işiniz; portal değiştirmez.' : 'Reddedildi.');
+      toast.success(s.durum === 'kabul' ? 'Kabul edildi. Üretim kartını CRM\'de değiştirmek sizin işiniz; portal değiştirmez.' : 'Reddedildi.');
       setRejecting(null);
       void qc.invalidateQueries({ queryKey: ['supply'] });
     },
@@ -213,7 +214,7 @@ export function SuggestionList({ tur, canDecide, empty }: { tur: 'yuk' | 'kagit'
   if (q.error) return <ErrorNote error={q.error} fallback="Öneriler okunamadı." />;
   const items = q.data?.items ?? [];
   if (q.isLoading) return <div className="py-4 text-[12px] text-canvas-muted">Yükleniyor…</div>;
-  if (!items.length) return <Note tone="info">{empty}</Note>;
+  if (!items.length) return <EmptyHint title={empty} why="Yeni öneri, üretim kartları değiştikçe hesaplanır; kabul ya da ret ettikleriniz bu listeden düşer." />;
   return (
     <div className="flex flex-col gap-2">
       <div className="px-1 text-[11px] font-semibold text-canvas-muted">

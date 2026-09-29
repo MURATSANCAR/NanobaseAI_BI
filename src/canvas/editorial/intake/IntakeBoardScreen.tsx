@@ -11,6 +11,7 @@ import { ProjectCard, TodoGroups, waitingText } from './parts';
 import MailApplicationsBox from '../../mailbox/ApplicationsBox';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Yazar giriş süreci: müşterinin 9 adımı üç evrede. Her kart bir CRM projesi; sütunda en uzun bekleyen üstte. */
 
@@ -22,7 +23,7 @@ const matches = (c: IntakeCard, q: string) => {
   return [c.name, c.author, c.editor].some((v) => (v || '').toLocaleLowerCase('tr').includes(t));
 };
 
-function Column({ no, title, lead, steps, cards }: { no: number; title: string; lead: string; steps: string[]; cards: IntakeCard[] }) {
+function Column({ no, title, lead, steps, cards, filtering }: { no: number; title: string; lead: string; steps: string[]; cards: IntakeCard[]; filtering?: boolean }) {
   const [shown, setShown] = useState(STEP_PAGE);
   return (
     <Panel>
@@ -36,7 +37,12 @@ function Column({ no, title, lead, steps, cards }: { no: number; title: string; 
       <p className="mt-1 text-[12px] text-canvas-muted">{lead}</p>
       <p className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{steps.join(' · ')}</p>
       {cards.length === 0 ? (
-        <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu evrede bekleyen proje yok.</p>
+        <div className="mt-3">
+          <EmptyHint
+            title={filtering ? 'Süzgece uyan proje yok' : 'Bu evrede proje yok'}
+            why={filtering ? 'Aramayı temizleyin ya da «Yalnız gecikenler» / «Yalnız benimkiler» süzgecini kapatın.' : 'Şu an bu evrenin adımlarında bekleyen proje bulunmuyor.'}
+          />
+        </div>
       ) : (
         <ul className="mt-3 space-y-2">
           {cards.slice(0, shown).map((c) => (
@@ -162,7 +168,7 @@ export default function IntakeBoardScreen() {
       source={d?.updatedAt ? `Son okuma ${stamp(d.updatedAt * 1000)}` : 'Kaynak: CRM projeleri'}
       aside={search}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {d?.error && <Note tone="warn">{d.error}</Note>}
       {d?.loading && <Note tone="info">CRM ilk kez okunuyor; birkaç dakika sürebilir. Ekran kendiliğinden yenilenecek.</Note>}
@@ -186,6 +192,12 @@ export default function IntakeBoardScreen() {
           <button type="button" aria-pressed={onlyMine} onClick={() => setOnlyMine((v) => !v)} className={`${btnGhost} ${onlyMine ? 'ring-2 ring-canvas-violet' : ''}`}>
             Yalnız benimkiler ({nf.format(d.items.filter((c) => c.mine).length)})
           </button>
+          <span className="inline-flex items-center gap-1 text-canvas-muted">
+            Kart altındaki çizgi
+            <Explain label="İlerleme çizgisi">
+              9 adımın her biri bir parçadır; evreler arasında boşluk vardır. Yeşil biten adım, mor şu anki adım, kırmızımsı gecikmiş şu anki adım, gri henüz gelinmemiş adımdır.
+            </Explain>
+          </span>
           <span className="text-canvas-muted">
             Gecikme: bir adımda {nf.format(d.lateDays)} günden uzun bekleme.
             {d.lastBoard && <> Son kurul {dateTime(d.lastBoard)}.</>}
@@ -221,6 +233,7 @@ export default function IntakeBoardScreen() {
                   lead={ph.lead}
                   steps={ph.steps.map((s) => s.title)}
                   cards={filtered.filter((c) => c.phase === ph.no)}
+                  filtering={!!q || onlyLate || onlyMine}
                 />
               </div>
             ))}

@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain } from '../components/Explain';
 import { useCan } from '../useAdmin';
 
 const PAGE = 30;
@@ -89,7 +91,7 @@ export default function SeoYoutube() {
       crumb="YouTube"
       eyebrow="SEO & GEO · Kitap videoları"
       title="YouTube"
-      lead="CRM kitap kartındaki YouTube tanıtım videoları. Açıklamasında kitabın timas.com.tr sayfası olan video izleyeni satın alma sayfasına götürür; başlığında kitabın adı geçen video aramada bulunur. YouTube’dan yalnız okunur; hiçbir şey değiştirilmez."
+      lead="CRM kitap kartlarındaki YouTube tanıtım videoları. Açıklamasında kitabın timas.com.tr sayfası olan video izleyeni satın alma sayfasına götürür; başlığında kitabın adı geçen video aramada bulunur. Eksikleri kanal sahibine iletin; YouTube’dan yalnız okunur, hiçbir şey değiştirilmez."
       actions={
         canRun && d?.configured && (
           <button className="sg-button primary" onClick={() => refresh.mutate()} disabled={refresh.isPending || running}>
@@ -107,7 +109,7 @@ export default function SeoYoutube() {
       {d && !d.configured && (
         <section className="sg-card">
           <h2>YouTube bağlantısı kurulmamış <SeoInfo k={list.data?.kaynaklar} label="YouTube bağlantısı kurulmamış" /></h2>
-          <p className="sg-sub">Video bilgisini okumak için ücretsiz bir YouTube Data API v3 anahtarı gerekir. Anahtar yalnız okuma içindir.</p>
+          <p className="sg-sub">Video bilgisini okumak için ücretsiz bir YouTube anahtarı (YouTube Data API v3) gerekir; yalnız okuma içindir. Adımları yöneticiniz uygular:</p>
           <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 1.7 }}>
             {(d.setup ?? []).map((t) => (
               <li key={t}>{t}</li>
@@ -117,27 +119,31 @@ export default function SeoYoutube() {
       )}
 
       {s && !s.videos && (
-        <div className="sg-empty">
-          <h2>Videolu kitap yok</h2>
-          <p>Satıştaki kitapların CRM kartlarında YouTube bağlantısı bulunamadı. CRM okuması yapılmadıysa önce Haklar ve CRM ekranından okuyun.</p>
-        </div>
+        <EmptyHint
+          title="Videolu kitap yok"
+          why={<>Satıştaki kitapların CRM kartlarında YouTube bağlantısı bulunamadı. CRM okuması yapılmadıysa önce <Link to="/seo-geo/crm-haklar">Haklar ve CRM</Link> ekranından okutun.</>}
+        />
       )}
 
       {s && s.videos > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Video" value={fmt(s.videos)} note={`${fmt(s.books)} kitapta · ${fmt(s.checked)} denetlendi`} info={<SeoInfo k={list.data?.kaynaklar} label="Video" />} />
+            <Kpi label="Video" value={fmt(s.videos)} note={`${fmt(s.books)} kitapta · ${fmt(s.checked)} denetlendi`} info={<SeoInfo k={list.data?.kaynaklar} label="Video" />}
+              explain="CRM kitap kartlarında bağlantısı bulunan YouTube videosu sayısı; kaç kitapta olduğu ve kaçının YouTube’dan okunup denetlendiği altta." />
             <Kpi label="Toplam izlenme" value={fmt(s.totalViews)} note={s.lastChecked ? `Son okuma ${dateTime(s.lastChecked)}` : 'Henüz okunmadı'} info={<SeoInfo k={list.data?.kaynaklar} label="Toplam izlenme" />} />
-            <Kpi label="Kitap sayfası yok" value={fmt(s.flags.kitap_linki_yok)} note={`Hiç timas.com.tr bağlantısı yok: ${fmt(s.flags.link_yok)}`} tone={s.flags.kitap_linki_yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kitap sayfası yok" />} />
-            <Kpi label="Başlıkta kitap adı yok" value={fmt(s.flags.baslik)} note="Aramada kitap adıyla bulunmaz" tone={s.flags.baslik ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Başlıkta kitap adı yok" />} />
-            <Kpi label="Erişilemeyen" value={fmt(closed)} note="Silinmiş, gizli ya da gömülemez" tone={closed ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Erişilemeyen" />} />
+            <Kpi label="Kitap sayfası yok" value={fmt(s.flags.kitap_linki_yok)} note={`Hiç timas.com.tr bağlantısı yok: ${fmt(s.flags.link_yok)}`} tone={s.flags.kitap_linki_yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Kitap sayfası yok" />}
+              explain="Açıklamasında kitabın timas.com.tr’deki sayfasına bağlantı olmayan videolar. İzleyen kişi kitabı satın alacağı sayfaya ulaşamaz." />
+            <Kpi label="Başlıkta kitap adı yok" value={fmt(s.flags.baslik)} note="Aramada kitap adıyla bulunmaz" tone={s.flags.baslik ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Başlıkta kitap adı yok" />}
+              explain="Video başlığında kitabın adı geçmiyor; kitap adıyla arayan kişi videoyu bulamaz." />
+            <Kpi label="Erişilemeyen" value={fmt(closed)} note="Silinmiş, gizli ya da gömülemez" tone={closed ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Erişilemeyen" />}
+              explain="Silinmiş, gizlenmiş ya da başka sitelere yerleştirilmesi kapatılmış videolar. CRM’deki bağlantı güncellenmeli." />
           </section>
 
           {s.channels.length > 0 && (
             <section className="sg-card">
               <h2>Kanallar <SeoInfo k={list.data?.kaynaklar} label="Kanallar" /></h2>
               <p className="sg-sub">
-                Videoların yayınlandığı kanallar. Bir okuma {fmt(s.callsPerRefresh)} birim harcar; günlük ücretsiz kota {fmt(s.dailyQuota)} birim.
+                Videoların yayınlandığı kanallar. Bir okuma {fmt(s.callsPerRefresh)} birim harcar; YouTube’un günlük ücretsiz hakkı {fmt(s.dailyQuota)} birim.
               </p>
               <div className="sg-table-wrap">
                 <table className="sg-table">
@@ -185,12 +191,7 @@ export default function SeoYoutube() {
             ))}
           </div>
 
-          {d && !d.items.length && (
-            <div className="sg-empty">
-              <h2>Video yok</h2>
-              <p>Bu süzgece uyan video bulunamadı.</p>
-            </div>
-          )}
+          {d && !d.items.length && <EmptyHint title="Bu süzgece uyan video yok" why="Üstten «Tümü»nü seçin." />}
           <div className="sg-list">
             {d?.items.map((r) => (
               <article key={r.videoId} className="sg-card" style={{ padding: 14 }}>
@@ -222,7 +223,7 @@ export default function SeoYoutube() {
                     )}
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <a className="sg-button" href={r.url} target="_blank" rel="noreferrer">
-                        <ExternalLink size={14} aria-hidden /> Video
+                        <ExternalLink size={14} aria-hidden /> Videoyu aç
                       </a>
                       {r.books.filter((b) => b.url).map((b) => (
                         <a key={b.id} className="sg-button" href={b.url!} target="_blank" rel="noreferrer">
@@ -234,7 +235,7 @@ export default function SeoYoutube() {
                 </div>
                 {r.suggestions.length > 0 && r.flags.some((f) => f.code === 'kitap_linki_yok' || f.code === 'link_yok') && (
                   <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--sg-muted)' }}>Açıklamanın ilk satırına eklenmesi önerilen metin:</p>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--sg-muted)' }}>Video açıklamasının ilk satırına eklenmesi önerilen metin (kopyalayıp kanal sahibine iletin):</p>
                     {r.suggestions.map((t) => (
                       <CopyLine key={t} text={t} />
                     ))}
@@ -287,10 +288,10 @@ function CopyLine({ text }: { text: string }) {
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

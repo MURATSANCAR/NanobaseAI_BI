@@ -229,7 +229,7 @@ async function call<T>(path: string, method: 'GET' | 'POST' = 'GET', body?: unkn
     const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } | string } | null;
     const detail = j?.detail;
     const msg = typeof detail === 'string' ? detail : detail?.message;
-    if (res.status === 401) throw new Error('Oturum gerekli.');
+    if (res.status === 401) throw new Error('Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.');
     if (res.status === 403) throw new EngineForbiddenError(msg || 'Bu işlem için yetkiniz yok.');
     if (res.status === 503 && typeof detail === 'object' && detail?.code === 'NOT_READY') throw new NotReadyError(msg);
     throw new Error(msg || 'Sunucu yanıt vermedi.');

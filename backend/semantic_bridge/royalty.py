@@ -263,7 +263,7 @@ EXCEPTIONS: dict[str, tuple[str, bool, str]] = {
                          "Avans sekmesinde kazanılmamış kalan avansı tarihiyle ve gerekçesiyle girin; bilinmeyen avans sıfır sayılmaz."),
     "avans-para-birimi": ("Avans açılışının para birimi farklı", False, "Açılışı sözleşmenin para birimiyle yeniden girin."),
     "onayli-hakedis-var": ("Bu dönemle çakışan onaylı hakediş var", False,
-                           "Aynı satışa iki kez telif ödenmez; sözleşmeyi hariç tutun ya da M6'daki hakedişi gözden geçirin."),
+                           "Aynı satışa iki kez telif ödenmez; sözleşmeyi hariç tutun ya da sözleşme sayfasındaki hakedişi gözden geçirin."),
     "sonraki-donem-onayli": ("Sonraki bir dönemin hakedişi onaylı", False, "Sıra bozulmasın diye önce sonraki hakediş iptal edilmeli."),
     "hesap-hatasi": ("Hesap yapılamadı", False, "Hata metnine göre sözleşmeyi düzeltin."),
     "pay-toplami": ("Taraf payları toplamı %100 değil", True, "Paylar girildiği gibi uygulandı; doğruysa kabul edin."),

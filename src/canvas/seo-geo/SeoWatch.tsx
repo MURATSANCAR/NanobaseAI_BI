@@ -8,6 +8,8 @@ import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
+import { TermLabel } from './terms';
 
 /** İzleme ve rapor: öteki ekranların sakladığı veriden gece çıkarılan olaylar (tıklama düşüşü, 404 artışı, robots.txt,
  *  sitemap, yapay zekâ cevaplarından düşme, CRM yayın durumu, hız) ve haftalık rapor. */
@@ -107,7 +109,7 @@ export default function SeoWatch() {
       crumb="İzleme ve rapor"
       eyebrow="SEO & GEO · izleme"
       title="İzleme ve rapor"
-      lead="Her gece öteki ekranların topladığı veriye bakılır: Google tıklamasında düşüş, bulunamayan ya da hata veren sayfa artışı, robots.txt ve sitemap değişikliği, yapay zekâ cevaplarından düşme, CRM yayın durumu ve sayfa hızı. Olay ilk görüldüğünde bir kez e-posta gider; sorun sürdükçe açık kalır, kalkınca kendiliğinden kapanır."
+      lead="Her gece ters giden bir şey var mı diye bakılır: Google tıklamasında düşüş, açılmayan sayfa artışı, robots.txt ya da site haritası değişikliği, yapay zekâ cevaplarından düşme, CRM yayın durumu, sayfa hızı. Olay ilk görüldüğünde bir kez e-posta gider; sorun kalkınca kendiliğinden kapanır."
       actions={
         canRun && (
           <button className="sg-button" onClick={() => run.mutate()} disabled={run.isPending || !!s?.state.running}>
@@ -130,8 +132,10 @@ export default function SeoWatch() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Açık olay" value={fmt(s.counts.open)} note={`Kritik ${fmt(s.counts.bySeverity.kritik)} · yüksek ${fmt(s.counts.bySeverity.yüksek)} · orta ${fmt(s.counts.bySeverity.orta)}`} tone={s.counts.bySeverity.kritik ? 'bad' : undefined} info={<SeoInfo k={summary.data?.kaynaklar} label="Açık olay" />} />
-            <Kpi label="E-posta bekleyen" value={fmt(s.counts.unnotified)} note="Açık olup henüz bildirilmemiş olaylar" info={<SeoInfo k={summary.data?.kaynaklar} label="E-posta bekleyen" />} />
+            <Kpi label="Açık olay" value={fmt(s.counts.open)} note={`Kritik ${fmt(s.counts.bySeverity.kritik)} · yüksek ${fmt(s.counts.bySeverity.yüksek)} · orta ${fmt(s.counts.bySeverity.orta)}`} tone={s.counts.bySeverity.kritik ? 'bad' : undefined} info={<SeoInfo k={summary.data?.kaynaklar} label="Açık olay" />}
+              explain="Koşulu hâlâ süren olaylar (ör. tıklama düşüşü devam ediyor). Önce kritik olanlara bakın; «İlgili ekranda aç» ile ayrıntıya gidin." />
+            <Kpi label="E-posta bekleyen" value={fmt(s.counts.unnotified)} note="Açık olup henüz bildirilmemiş olaylar" info={<SeoInfo k={summary.data?.kaynaklar} label="E-posta bekleyen" />}
+              explain="Açık olup alıcı ya da e-posta sunucusu tanımlı olmadığı için henüz e-postası gitmemiş olaylar. Ayar yapılınca bir sonraki denetimde gönderilir." />
             <Kpi label="Kapanan" value={fmt(s.counts.resolved)} note="Koşulu kalkan olaylar" info={<SeoInfo k={summary.data?.kaynaklar} label="Kapanan" />} />
             <Kpi label="Son denetim" value={s.state.finishedAt ? dateTime(s.state.finishedAt) : '—'} note="Gece işiyle ya da düğmeyle" small info={<SeoInfo k={summary.data?.kaynaklar} label="Son denetim" />} />
           </section>
@@ -188,14 +192,12 @@ function EventsTab({ status }: { status: 'open' | 'resolved' }) {
       {list.isLoading && <Loading text="Olaylar getiriliyor…" />}
       {list.error && <Failed error={list.error} />}
       {list.data && !items.length && (
-        <div className="sg-empty">
-          <h2>{status === 'open' ? 'Açık olay yok' : 'Kapanan olay yok'}</h2>
-          <p>
-            {status === 'open'
-              ? 'Son denetimde izlenen hiçbir koşul aşılmadı. Veri gelmeyen alanlar (bağlantısı olmayan kaynaklar) denetlenmez; eşikler «Eşikler» sekmesinde.'
-              : 'Henüz koşulu kalkıp kapanan bir olay yok.'}
-          </p>
-        </div>
+        <EmptyHint
+          title={status === 'open' ? 'Açık olay yok' : 'Kapanan olay yok'}
+          why={status === 'open'
+            ? 'Son denetimde izlenen hiçbir koşul aşılmadı. Veri gelmeyen alanlar (bağlantısı olmayan kaynaklar) denetlenmez; eşikler «Eşikler» sekmesinde.'
+            : 'Henüz koşulu kalkıp kapanan bir olay yok.'}
+        />
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((e) => (
@@ -362,7 +364,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
             <div className="sg-table-wrap">
               <table className="sg-table">
                 <thead>
-                  <tr><th>Motor <SeoInfo k={k} label="Motor" /></th><th>Ölçüm <SeoInfo k={k} label="Ölçüm" /></th><th>Anılma <SeoInfo k={k} label="Anılma" /></th><th>Kaynak <SeoInfo k={k} label="Kaynak" /></th></tr>
+                  <tr><th>Servis <SeoInfo k={k} label="Servis" /></th><th>Ölçüm <SeoInfo k={k} label="Ölçüm" /></th><th><TermLabel k="mention" label="Anılma" /> <SeoInfo k={k} label="Anılma" /></th><th><TermLabel k="citation" label="Kaynak" /> <SeoInfo k={k} label="Kaynak" /></th></tr>
                 </thead>
                 <tbody>
                   {s.geo.engines.map((e) => (
@@ -446,7 +448,7 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
 }
 
 function MoversTable({ rows, note, k }: { rows: Movers[]; note: string; k?: Kaynaklar | null }) {
-  if (!rows.length) return <p className="sg-kpi-note">Yok.</p>;
+  if (!rows.length) return <p className="sg-kpi-note">Bu yönde değişen sorgu yok.</p>;
   return (
     <>
       <div className="sg-table-wrap">
@@ -489,10 +491,10 @@ function ThresholdsTab({ thresholds }: { thresholds: WatchList['thresholds'] }) 
   );
 }
 
-function Kpi({ label, value, note, tone, small, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, small, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; small?: boolean; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={{ ...(tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : {}), ...(small ? { fontSize: 18 } : {}) }}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

@@ -77,10 +77,13 @@ export default function CommerceHome() {
         <Kpi label="Sipariş" value={fmtInt(c.siparis)} help={`Önceki döneme ${fmtChange(o.change.siparis)} · iptal/iade ${fmtInt(c.iptal)}`}
           info={<SqlInfo k={o.kaynaklar} alan="cur" label="Sipariş" />} />
         <Kpi label="Site cirosu" value={fmtTl(c.ciro)} help={`Önceki döneme ${fmtChange(o.change.ciro)} · sitenin kendi tutarı`}
+          explain="Seçili dönemde sitede verilen geçerli siparişlerin, sitenin kendi kayıtlarındaki toplam tutarı. Logo'daki fatura tutarıyla karşılaştırması aşağıdadır."
           info={<SqlInfo k={o.kaynaklar} alan="cur" label="Site cirosu" />} />
         <Kpi label="Sepet ortalaması" value={fmtTl(c.sepet)} help={`Önceki döneme ${fmtChange(o.change.sepet)}`}
+          explain="Bir siparişin ortalama tutarı: site cirosunun sipariş sayısına bölümü."
           info={<SqlInfo k={o.kaynaklar} alan="cur" label="Sepet ortalaması" />} />
         <Kpi label="Müşteri" value={fmtInt(c.musteri)} help={`Yeni ${fmtInt(c.yeni)} · tekrar ${fmtInt(c.tekrar)} · misafir sipariş ${fmtInt(c.misafir)}`}
+          explain="Dönemde sipariş veren farklı müşteri sayısı. «Yeni» ilk kez alanlar, «tekrar» daha önce de almış olanlar; «misafir» üye olmadan verilen siparişlerdir."
           info={<SqlInfo k={o.kaynaklar} alan="cur" label="Müşteri" />} />
       </KpiRow>
 
@@ -107,7 +110,7 @@ export default function CommerceHome() {
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Müşteri segmentleri <SqlInfo k={o.kaynaklar} alan="segments" label="Müşteri segmentleri" /></h2>
             <Link to={`${ROOT}/musteriler`} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-extrabold text-canvas-violet sm:min-h-0">
-              Matris <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+              Müşteri matrisini aç <ArrowRight aria-hidden className="h-3.5 w-3.5" />
             </Link>
           </div>
           <ul className="mt-2 divide-y divide-slate-100 text-[12.5px]">
@@ -124,7 +127,7 @@ export default function CommerceHome() {
       <Panel>
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold">En çok satan 10 kitap <SqlInfo k={o.kaynaklar} alan="top" label="En çok satan kitaplar" /></h2>
         {o.top.length === 0 ? (
-          <p className="mt-1 text-[12.5px] text-canvas-muted">Bu dönemde satırlı sipariş yok.</p>
+          <p className="mt-1 text-[12.5px] text-canvas-muted">Bu dönemde kitap satırı içeren sipariş yok. Başka bir dönem seçebilirsiniz.</p>
         ) : (
           <div className="mt-2">
             <TableWrap>

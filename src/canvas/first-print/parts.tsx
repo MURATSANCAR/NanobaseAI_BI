@@ -8,6 +8,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Pill, TableWrap, field, td, th } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { TIER, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, type Forecast, type Horizon } from './api';
+import { Explain, ExplainLabel } from '../components/Explain';
 
 /** M10 ekranlarının ortak parçaları: çerçeve, senaryo kartları, grafik, kanal, emsal tablosu, kitap arama. */
 
@@ -198,7 +199,7 @@ export function Legend({ actual }: { actual?: boolean }) {
 
 /** Kanal dağılımı: emsallerin ilk 6 ayındaki satış payı, baz senaryonun adedine uygulanır. */
 export function ChannelBars({ h }: { h: Horizon }) {
-  if (!h.channels.length) return <p className="text-[12px] text-canvas-muted">Emsallerde kanal kırılımı yok.</p>;
+  if (!h.channels.length) return <p className="text-[12px] text-canvas-muted">Emsallerin satışında kanal bilgisi yok; kanal dağılımı gösterilemiyor.</p>;
   return (
     <ul className="space-y-1.5">
       {h.channels.map((c) => (
@@ -225,8 +226,15 @@ export function AnalogTable({ h }: { h: Horizon }) {
           <th className={th}>Emsal kitap</th>
           <th className={th}>Çıkış</th>
           <th className={th}>Neden benzer</th>
-          <th className={`${th} text-right`}>İlk {h.curve.length} ay satış</th>
-          <th className={`${th} text-right`}>Ağırlık</th>
+          <th className={`${th} text-right`}>
+            <span className="inline-flex items-center gap-1">
+              İlk {h.curve.length} ay satış
+              <Explain label="İlk aylar satışı">Emsalin çıkışından sonraki aylardaki gerçek satışı. «Düzeltilmiş» yazıyorsa, emsalin çıktığı dönemle bu kitabın dönemi arasındaki genel satış düzeyi farkına göre oranlanmış değer tahmine girer.</Explain>
+            </span>
+          </th>
+          <th className={`${th} text-right`}>
+            <ExplainLabel label="Ağırlık">Emsalin bu kitaba ne kadar benzediğini gösteren puan; puanı yüksek emsal tahmine daha çok etki eder.</ExplainLabel>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -278,7 +286,7 @@ export function BookSearch({ onPick, placeholder = 'Kitap ara: ad, yazar ya da s
         <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto overscroll-contain rounded-2xl border border-slate-100 bg-white p-1 shadow-canvas-card">
           {res.isLoading && <p className="px-3 py-2 text-[12px] text-canvas-muted">Aranıyor…</p>}
           {res.error && <p className="px-3 py-2 text-[12px] text-red-700">{(res.error as Error).message}</p>}
-          {res.data && res.data.items.length === 0 && <p className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
+          {res.data && res.data.items.length === 0 && <p className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok. Adın bir kısmını, yazarı ya da stok kodunu deneyin.</p>}
           {res.data && res.data.items.length > 0 && (
             <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{fmtUnits(res.data.total)} kitap</p>
           )}

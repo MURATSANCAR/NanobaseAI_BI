@@ -8,6 +8,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { distApi } from './api';
 import { n0 } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** BMT görünümü (telefon öncelikli, salt okunur): onaylı planlarda kişinin carilerine düşen yeni kitaplar.
  *  Kitap kartına dokununca müşteri × adet × sevk. Bütün carileri görebilen kişi «Herkes» ile hepsini görür. */
@@ -21,7 +22,7 @@ export default function MyRegion({ canAll }: { canAll: boolean }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-1 text-[14px] font-extrabold">{all ? 'Bütün bölgelere gelen kitaplar' : 'Bölgenize gelen yeni kitaplar'}<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Adet, müşteri ve sevk" /></div>
-          <div className="text-[11.5px] text-canvas-muted">Onaylı dağılım planları, onaydan sonraki 8 hafta. Müşteri listesi CRM'de sahibi olduğunuz carilerden.</div>
+          <div className="text-[11.5px] text-canvas-muted">Son 8 haftada onaylanan dağılım planları. Müşteri listesi CRM'de sahibi olduğunuz carilerden gelir; kitaba dokununca müşteri başına adet ve sevk görünür.</div>
         </div>
         {canAll && (
           <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Kapsam">
@@ -37,9 +38,10 @@ export default function MyRegion({ canAll }: { canAll: boolean }) {
       {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
       {q.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Okunuyor…</div>}
       {q.isSuccess && !items.length && (
-        <div className="py-8 text-center text-[12.5px] text-canvas-muted">
-          Son 8 haftada onaylanan planlarda {all ? '' : 'carilerinize düşen '}kitap yok.
-        </div>
+        <EmptyHint
+          title={all ? 'Son 8 haftada onaylanan plan yok' : 'Müşterilerinize düşen yeni kitap yok'}
+          why={all ? 'Bir kitabın dağılım planı onaylandığında burada görünür.' : 'Son 8 haftada onaylanan planlarda CRM\'de sahibi olduğunuz carilere adet düşmemiş. Atamanız eksikse CRM\'deki cari sahibi alanını kontrol ettirin.'}
+        />
       )}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
         {items.map((b) => {

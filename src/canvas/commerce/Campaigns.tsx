@@ -6,6 +6,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, errText, td, th } from '../ad
 import { Panel } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { commerceApi, fmtChange, fmtDay, fmtInt, fmtRatio, fmtTl, type Campaign } from './api';
 import { useMeta } from './parts';
 
@@ -16,7 +17,7 @@ export default function Campaigns() {
   if (q.error) return <Note tone="err">{errText(q.error, 'Kampanyalar açılamadı.')}</Note>;
   const items = q.data?.items ?? [];
   if (!items.length) {
-    return <Note tone="info">Henüz kampanya yok. Onaylı bir tetik listesinden «Kampanya sonucu için aç» ile açılır; kontrol grubu olmayan liste ölçülmez.</Note>;
+    return <EmptyHint title="Henüz ölçülen kampanya yok" why="«Tetikler» bölümünde onaylı bir listenin kartından «Kampanya sonucu için aç» ile başlatılır. Kontrol grubu olmayan liste ölçülemez." />;
   }
   return <div className="flex flex-col gap-3 lg:gap-4">{items.map((c) => <CampaignCard key={c.id} c={c} k={q.data?.kaynaklar} />)}</div>;
 }
@@ -40,7 +41,7 @@ function CampaignCard({ c, k }: { c: Campaign; k?: Kaynaklar }) {
         {r && <Pill tone={r.kesin ? 'ok' : 'warn'}>{r.kesin ? 'Kesin' : 'Kesinleşmedi'}</Pill>}
       </div>
       {!r ? (
-        <p className="mt-2 text-[12.5px] text-canvas-muted">Sonuç henüz hesaplanmadı.</p>
+        <p className="mt-2 text-[12.5px] text-canvas-muted">Sonuç henüz hesaplanmadı; her gece yeniden hesaplanır.</p>
       ) : (
         <>
           <div className="mt-3">
@@ -64,8 +65,8 @@ function CampaignCard({ c, k }: { c: Campaign; k?: Kaynaklar }) {
             </TableWrap>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
-            <div className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-canvas-muted">Dönüşüm farkı (puan)</dt><dd className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{fmtChange(r.lift.fark)}</dd></div>
-            <div className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-canvas-muted">%95 güven aralığı</dt><dd className="mt-0.5 font-mono text-[13px] font-bold tabular-nums">{r.lift.alt == null ? '—' : `${fmtRatio(r.lift.alt, 2)} … ${fmtRatio(r.lift.ust, 2)}`}</dd></div>
+            <div className="rounded-xl bg-slate-50 p-2.5"><dt className="flex items-center gap-1 font-bold text-canvas-muted">Dönüşüm farkı (puan)<Explain label="Dönüşüm farkı">Ulaşılan (hedef) grupta alışveriş yapanların oranı ile ulaşılmayan (kontrol) gruptaki oran arasındaki fark. Artı değer kampanyanın alışverişi artırdığını gösterir.</Explain></dt><dd className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{fmtChange(r.lift.fark)}</dd></div>
+            <div className="rounded-xl bg-slate-50 p-2.5"><dt className="flex items-center gap-1 font-bold text-canvas-muted">%95 güven aralığı<Explain label="%95 güven aralığı">Gerçek farkın büyük olasılıkla bu iki değer arasında olduğunu söyler. Aralık sıfırı içeriyorsa fark tesadüf olabilir; kampanyanın işe yaradığı söylenemez.</Explain></dt><dd className="mt-0.5 font-mono text-[13px] font-bold tabular-nums">{r.lift.alt == null ? '—' : `${fmtRatio(r.lift.alt, 2)} … ${fmtRatio(r.lift.ust, 2)}`}</dd></div>
             <div className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-canvas-muted">Ek alışveriş yapan</dt><dd className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{fmtInt(r.ekAlan)}</dd></div>
             <div className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-canvas-muted">Ek ciro</dt><dd className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{fmtTl(r.ekCiro)}</dd></div>
           </dl>
@@ -77,7 +78,7 @@ function CampaignCard({ c, k }: { c: Campaign; k?: Kaynaklar }) {
           {meta.data?.me.canTrigger && meta.data.modelVar && (
             <button type="button" className={`${btnGhost} mt-2`} onClick={() => comment.mutate()} disabled={comment.isPending}>
               {comment.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-              Zeki AI yorumu
+              Zeki AI yorumu iste
             </button>
           )}
         </>

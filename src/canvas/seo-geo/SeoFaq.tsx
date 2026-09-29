@@ -6,6 +6,7 @@ import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { STATUS_LABEL, call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { EmptyHint } from '../components/Explain';
 
 /* ------------------------------------------------------------------ uçlar: /api/v1/seo-geo/faq/* */
 type DraftStatus = 'hazir' | 'onaylandi' | 'reddedildi';
@@ -114,7 +115,7 @@ export default function SeoFaq() {
       crumb="Kitap soru–cevapları"
       eyebrow="SEO & GEO · kitap soru–cevapları"
       title="Kitap soru–cevapları"
-      lead="Yapay zekâ asistanları ve Google, “kaç yaş için uygun?”, “ne anlatıyor?”, “yazarı kim?”, “kaç sayfa?” gibi sorulara doğrudan cevap veren soru–cevap bloklarını alıntılar. Cevaplar yalnız kitabın CRM kartından ve sitedeki kaydından yazılır; CRM’deki okuma-anlama test soruları kullanılmaz. Sıra satıştan aza. Onaylananlar JSON olarak indirilir; siteye hiçbir şey gönderilmez."
+      lead="Google ve yapay zekâ asistanları «kaç yaş için uygun?», «ne anlatıyor?», «kaç sayfa?» gibi sorulara doğrudan cevap veren soru–cevapları alıntılar. Zeki AI bunları yalnız kitabın CRM kartından ve sitedeki kaydından yazar; siz düzenleyip onaylarsınız. Siteye hiçbir şey gönderilmez."
       actions={
         canExport && (
           <a className="sg-button" href={faqApi.exportUrl()} download>
@@ -130,6 +131,9 @@ export default function SeoFaq() {
           </button>
         ))}
       </div>
+      <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)' }}>
+        Sıra satıştan aza. «Taslak bekleyen»: bilgisi yeterli, henüz taslak yazılmadı. «Kaynak yok»: CRM kartında soru–cevaba yetecek bilgi yok. «Atlanan»: kitap bu iş için uygun görülmedi; nedeni kitabı açınca yazar. CRM’deki okuma-anlama test soruları kullanılmaz.
+      </p>
       {d?.run.error && <p className="sg-banner err">Son gece turu: {d.run.error}</p>}
 
       <div className="sg-audit">
@@ -148,10 +152,7 @@ export default function SeoFaq() {
           {list.isLoading && <Loading text="Kitaplar getiriliyor…" />}
           {list.error && <Failed error={list.error} />}
           {d && !d.items.length && (
-            <div className="sg-empty">
-              <h2>Kitap yok</h2>
-              <p>Bu süzgece uyan kitap bulunamadı.</p>
-            </div>
+            <EmptyHint title="Bu süzgece uyan kitap yok" why="Aramayı kısaltın ya da üstten «Tümü»nü seçin." />
           )}
           <div className="sg-list">
             {d?.items.map((b) => (
@@ -192,10 +193,10 @@ export default function SeoFaq() {
           {pid ? (
             <BookPanel pid={pid} />
           ) : (
-            <div className="sg-empty">
-              <h2>Bir kitap seçin</h2>
-              <p>Soldan bir kitap seçtiğinizde soru–cevaba kaynak olan bilgiler ve varsa ZEKİ AI taslağı açılır.</p>
-            </div>
+            <EmptyHint
+              title="Listeden bir kitap seçin"
+              why="Seçtiğiniz kitabın soru–cevaba kaynak olan bilgileri ve varsa Zeki AI taslağı burada açılır."
+            />
           )}
         </section>
       </div>
@@ -254,7 +255,7 @@ function BookPanel({ pid }: { pid: string }) {
             </button>
           </div>
         )}
-        {draft.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>ZEKİ AI soru–cevapları yazıyor; bir iki dakika sürebilir.</p>}
+        {draft.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>Zeki AI soru–cevapları yazıyor; bir iki dakika sürebilir.</p>}
         {draft.error && <div style={{ marginTop: 12 }}><Failed error={draft.error} /></div>}
       </div>
 
@@ -300,7 +301,7 @@ function Editor({ draft }: { draft: Draft }) {
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>ZEKİ AI taslağı</h2>
+          <h2>Zeki AI taslağı</h2>
           <p className="sg-sub" style={{ margin: 0 }}>
             {dateTime(draft.createdAt)} · {draft.createdBy ?? '—'}
             {open ? ' · onaylamadan önce düzenleyebilirsiniz' : ''}
@@ -313,7 +314,7 @@ function Editor({ draft }: { draft: Draft }) {
         <p className={`sg-banner ${draft.status === 'onaylandi' ? 'ok' : ''}`} style={{ marginTop: 12 }}>
           <b>{STATUS_LABEL[draft.status]}</b> · {draft.decidedBy ?? '—'} · {dateTime(draft.decidedAt)}
           {draft.note ? ` — ${draft.note}` : ''}
-          {draft.status === 'onaylandi' && ' — Siteye gönderim yok; onaylananlar JSON dosyasıyla site temasına elle verilir.'}
+          {draft.status === 'onaylandi' && ' — Siteye gönderim yok; onaylananlar «Onaylananları indir» dosyasıyla site yönetimine elle verilir.'}
         </p>
       )}
 
@@ -354,7 +355,7 @@ function Editor({ draft }: { draft: Draft }) {
       </section>
 
       <details className="sg-more" style={{ marginTop: 12 }}>
-        <summary>Yapılandırılmış veri (soru–cevap) — sistem kurar, onayda yeniden hesaplanır</summary>
+        <summary>Yapısal veri (soru–cevap) — kendiliğinden kurulur, onayda yeniden hesaplanır</summary>
         <pre className="sg-pre" style={{ marginTop: 8 }}>{JSON.stringify(draft.jsonld, null, 2)}</pre>
       </details>
 
@@ -362,7 +363,7 @@ function Editor({ draft }: { draft: Draft }) {
         <>
           {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
           <div className="sg-decide" style={{ marginTop: 16 }}>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (isteğe bağlı), ör. yaş aralığı düzeltildi" aria-label="Editör notu" />
             <button className="sg-button primary" disabled={!canApprove || decide.isPending || !filled.length} onClick={() => decide.mutate('approve')}>
               {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
               Onayla
@@ -373,7 +374,7 @@ function Editor({ draft }: { draft: Draft }) {
             <small>
               {!canApprove
                 ? 'Onay yetkiniz yok; taslağı görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'
-                : 'Onay yalnız kaydedilir; siteye, T-soft’a ya da CRM’e gönderim yok. Boş soru–cevaplar onayda düşer.'}
+                : 'Onay yalnız kayda geçer; siteye, T-soft’a ya da CRM’e hiçbir şey gönderilmez. Boş soru–cevaplar onayda düşer.'}
             </small>
           </div>
         </>

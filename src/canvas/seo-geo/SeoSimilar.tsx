@@ -8,6 +8,8 @@ import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term } from './terms';
 
 /** Benzer kitaplar: /api/v1/seo-geo/similar. CRM emsal bağları + tema/yaş + yazar/dizi → kitap sayfasından verilecek
  *  «ilgili ürünler» bağlantıları. Karar yalnız kaydedilir; onaylananlar CSV ile T-soft'a elle girilir. */
@@ -142,7 +144,7 @@ export default function SeoSimilar() {
       crumb="Benzer kitaplar"
       eyebrow="SEO & GEO · Site içi bağlantılar"
       title="Benzer kitaplar"
-      lead="Her kitap sayfası için «ilgili ürünler» önerisi: önce CRM’de editörün girdiği emsal kitaplar, sonra ortak tema ve yaş, aynı yazar ve aynı dizi. Sayfada zaten bağlantı olanlar ayrılır; hiç bağlantı almayan kitaplara giden öneriler öne alınır. Karar yalnız kaydedilir — onaylananları CSV olarak indirip T-soft’a elle girin."
+      lead="Her kitap sayfasının «ilgili ürünler» bölümüne hangi kitapların konacağına dair öneri: önce CRM’de editörün girdiği emsal kitaplar, sonra ortak tema ve yaş, aynı yazar ve dizi. Bağlantı almayan kitaplara giden öneriler öne alınır. Karar yalnız kaydedilir; onaylananları CSV olarak indirip T-soft’a elle girin."
       actions={
         <>
           {canRun && d?.crmReady && (
@@ -176,10 +178,14 @@ export default function SeoSimilar() {
       {d && s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Öneri çıkan kitap" value={fmt(s.withSuggestions)} note={`Satıştaki ${fmt(s.eligible)} kitaptan`} info={<SeoInfo k={r.data?.kaynaklar} label="Öneri çıkan kitap" />} />
-            <Kpi label="Eklenecek bağlantı" value={fmt(s.toAdd)} note={s.graphKnown ? `${fmt(s.alreadyLinked)} öneri sayfada zaten var` : 'Site taraması yok; sayfada olup olmadığı bilinmiyor'} info={<SeoInfo k={r.data?.kaynaklar} label="Eklenecek bağlantı" />} />
-            <Kpi label="Yetim kitaba giden" value={fmt(s.orphanTargets)} note="Hiçbir sayfadan bağlantı almayan hedef kitap" info={<SeoInfo k={r.data?.kaynaklar} label="Yetim kitaba giden" />} />
-            <Kpi label="CRM emsal bağı" value={fmt(s.emsalLinks)} note={`${fmt(s.emsalOnSale)} bağda iki kitap da satışta`} info={<SeoInfo k={r.data?.kaynaklar} label="CRM emsal bağı" />} />
+            <Kpi label="Öneri çıkan kitap" value={fmt(s.withSuggestions)} note={`Satıştaki ${fmt(s.eligible)} kitaptan`} info={<SeoInfo k={r.data?.kaynaklar} label="Öneri çıkan kitap" />}
+              explain="Satıştaki kitaplardan en az bir benzer kitap önerisi çıkanların sayısı." />
+            <Kpi label="Eklenecek bağlantı" value={fmt(s.toAdd)} note={s.graphKnown ? `${fmt(s.alreadyLinked)} öneri sayfada zaten var` : 'Site taraması yok; sayfada olup olmadığı bilinmiyor'} info={<SeoInfo k={r.data?.kaynaklar} label="Eklenecek bağlantı" />}
+              explain="Önerilen ama kitap sayfasında henüz bağlantısı olmayan benzer kitap sayısı. Sayfada zaten bağlı olanlar sayılmaz." />
+            <Kpi label="Yetim kitaba giden" value={fmt(s.orphanTargets)} note="Hiçbir sayfadan bağlantı almayan hedef kitap" info={<SeoInfo k={r.data?.kaynaklar} label="Yetim kitaba giden" />}
+              explain="Sitenin hiçbir sayfasından bağlantı almayan («yetim») kitaplara giden öneri sayısı. Bu bağlantılar o kitabın bulunmasını en çok kolaylaştırır." />
+            <Kpi label="CRM emsal bağı" value={fmt(s.emsalLinks)} note={`${fmt(s.emsalOnSale)} bağda iki kitap da satışta`} info={<SeoInfo k={r.data?.kaynaklar} label="CRM emsal bağı" />}
+              explain="Editörlerin CRM’de bir kitaba «emsal» olarak bağladığı kitap sayısı; önerilerin ilk ve en güvenilir kaynağı." />
           </section>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -206,16 +212,22 @@ export default function SeoSimilar() {
 
           <section className="sg-card">
             <h2>{d.views[view]}</h2>
+            <p className="sg-sub" style={{ marginBottom: 6 }}>
+              Ne yapmalı: her kitapta sayfaya konacak benzer kitapları işaretleyip «Seçilenleri onayla»ya basın; uymayanın işaretini kaldırın, gerekirse ürün koduyla elle ekleyin.
+            </p>
             <p className="sg-sub">
               Sıra: CRM emsal kitap ({fmt(s.tiers.emsal)} öneri) → ortak tema ve yaş ({fmt(s.tiers.tema)}) → aynı yazar ({fmt(s.tiers.yazar)}) → adından aynı dizi (
               {fmt(s.tiers.dizi)}); her basamakta hedefin satışına göre. Aynı kitabın başka baskısı ({fmt(s.excluded.baski)}) ve set bağıyla bağlı kitaplar (
-              {fmt(s.excluded.set)}) öneriye girmez. Hedef {fmt(s.weakInlinks)} sayfadan az bağlantı alıyorsa zayıf sayılır.
+              {fmt(s.excluded.set)}) öneriye girmez. Hedef {fmt(s.weakInlinks)} sayfadan az bağlantı alıyorsa zayıf sayılır.{' '}
+              <Explain label="Öneri etiketleri" title="Etiketler ne demek?">
+                «Emsal»: CRM’de editörün bağladığı kitap. «Tema»: ortak tema ve yaş. «Yazar»: aynı yazar. «Dizi»: adından aynı dizi. «Anlam»: özeti anlamca yakın, kurala ek aday. «Eklenmeli»: sayfada bağlantısı yok. «Zaten bağlı»: sayfada var. «Bilinmiyor»: sayfa taranmadı.
+              </Explain>
             </p>
             {!d.items.length ? (
-              <div className="sg-empty">
-                <h2>Bu görünümde kitap yok</h2>
-                <p>{view === 'eklenecek' ? 'Eklenecek bağlantı kalmadı ya da hepsine karar verildi.' : 'Aramayı ya da görünümü değiştirmeyi deneyin.'}</p>
-              </div>
+              <EmptyHint
+                title="Bu görünümde kitap yok"
+                why={view === 'eklenecek' ? 'Eklenecek bağlantı kalmadı ya da hepsine karar verildi.' : 'Aramayı ya da görünümü değiştirmeyi deneyin.'}
+              />
             ) : (
               <div className="sg-list">
                 {d.items.map((row) => (
@@ -305,6 +317,7 @@ function Book({ row, perBook, canApprove }: { row: Row; perBook: number; canAppr
                 </a>
                 <LinkState s={x} />
                 {x.linked !== true && x.orphan && <span className="sg-chip bad">Yetim</span>}
+                {x.linked !== true && x.orphan && <Term k="orphan" label="Yetim" />}
                 {x.linked !== true && x.weak && <span className="sg-chip mid">Az bağlantı ({fmt(x.inlinks)})</span>}
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--sg-muted)', marginTop: 2, overflowWrap: 'anywhere' }}>
@@ -380,7 +393,7 @@ function Book({ row, perBook, canApprove }: { row: Row; perBook: number; canAppr
             value={extra}
             onChange={(e) => setExtra(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addExtra()}
-            placeholder="Ürün kodu ekle"
+            placeholder="Ürün kodu ekle, Enter"
             aria-label="Listeye ürün kodu ekle"
             className="sg-mono"
             style={{ flex: '0 1 160px' }}
@@ -422,10 +435,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

@@ -52,6 +52,7 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
             <h2 className="text-[16px] font-extrabold">Marka kiti</h2>
             {b && b.surum > 0 && <span className="text-[11.5px] text-canvas-muted">Sürüm {b.surum} · {b.yukleyen} · {fmtDay(b.zaman)}</span>}
           </div>
+          <p className="text-[12px] leading-snug text-canvas-muted">Görseller hazırlanırken kullanılan renk paleti, logo ve yazı tipleri.</p>
           {brand.isLoading && <Loading />}
           {err && <Note tone="err">{err}</Note>}
           {!canEdit && <Note tone="info">Marka kitini görüntülüyorsunuz; düzenleme rolünüzde yok.</Note>}
@@ -127,7 +128,7 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
             <div className="flex flex-col gap-1.5">
               {canEdit && (
                 <input className={field} value={fontLicense} onChange={(e) => setFontLicense(e.target.value)} maxLength={400}
-                  placeholder="Lisans notu (zorunlu): sunucuda kullanım izni, kaynak, sözleşme" />
+                  placeholder="Lisans notu (zorunlu): kullanım izni, kaynak, sözleşme" />
               )}
               <FileDrop
                 size="sm"
@@ -137,7 +138,7 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
                 feature="icerik.marka"
                 allowed={canEdit}
                 disabled={!fontLicense.trim()}
-                disabledReason="Önce lisans notunu yazın (sunucuda kullanım izni, kaynak, sözleşme)."
+                disabledReason="Önce lisans notunu yazın (kullanım izni, kaynak, sözleşme)."
                 run={(f) => upload.mutateAsync({ tur: 'font', f })}
               />
             </div>
@@ -149,7 +150,7 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
         <div className="flex flex-col gap-3">
           <h2 className="text-[16px] font-extrabold">Yasaklı kalıplar</h2>
           <p className="text-[12px] leading-snug text-canvas-muted">
-            Metinde geçerse varyant «uyarı» alır, onaycı karar verir. Büyük/küçük harf ve Türkçe harf farkı gözetilmez; «re:» ile başlayan kalıp düzenli ifadedir.
+            Metinde geçerse varyant «uyarı» alır, onaycı karar verir. Büyük/küçük harf ve Türkçe harf farkı gözetilmez. Gelişmiş kullanım: «re:» ile başlayan kalıp desen olarak aranır.
           </p>
           <ul className="flex flex-col gap-1.5">
             {phrases.map((p, i) => (
@@ -157,7 +158,7 @@ export default function BrandKit({ canEdit }: { canEdit: boolean }) {
                 <input className={field} value={p.kalip} readOnly={!canEdit} aria-label="Kalıp" maxLength={200}
                   onChange={(e) => setPhrases((o) => o.map((x, j) => (j === i ? { ...x, kalip: e.target.value } : x)))} />
                 <input className={`${field} col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto`} value={p.aciklama ?? ''} readOnly={!canEdit} aria-label="Açıklama" maxLength={400}
-                  placeholder="Neden" onChange={(e) => setPhrases((o) => o.map((x, j) => (j === i ? { ...x, aciklama: e.target.value } : x)))} />
+                  placeholder="Neden yasak? (ör. abartılı iddia)" onChange={(e) => setPhrases((o) => o.map((x, j) => (j === i ? { ...x, aciklama: e.target.value } : x)))} />
                 {canEdit && <button type="button" className={`${btnGhost} col-start-2 row-start-1 sm:col-start-auto`} aria-label="Kalıbı sil"
                   onClick={() => setPhrases((o) => o.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" aria-hidden /></button>}
               </li>

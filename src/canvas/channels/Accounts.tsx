@@ -12,6 +12,7 @@ import { Tabs } from '../budget/parts';
 import { channelsApi, platformName, type Account, type ChannelsMeta } from './api';
 import { ChannelsFrame, DataBar, useChannelsMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** M42 cari ↔ platform eşlemesi (/kanallar/eslesme). Zeki AI ya da unvan eşleşmesi aday önerir, kullanıcı onaylar; kanal
  * kodu ve CRM hedef bölgesi de burada platforma bağlanır. Eşleme portal kaydıdır; CRM'e ve Logo'ya yazılmaz. */
@@ -61,7 +62,7 @@ function AccountRow({ a, meta, onSaved }: { a: Account; meta: ChannelsMeta; onSa
         {a.platform && <div className="mt-1 text-[12px] font-bold">{platformName(meta, a.platform)}</div>}
         {a.yontem && <div className="text-[11px] text-canvas-muted">{YONTEM[a.yontem] ?? a.yontem}{a.olasilik !== null ? ` · olasılık ${fmtPct(a.olasilik, 0)}` : ''}</div>}
         {a.durum === 'bekliyor' && a.aday && a.aday.emin === false && top.length > 0 && (
-          <div className="text-[11px] text-canvas-muted">Zeki AI emin değil: {top.map(([k, v]) => `${platformName(meta, k)} ${fmtPct(v, 0)}`).join(', ')}</div>
+          <div className="text-[11px] text-canvas-muted">Zeki AI emin değil; en olası: {top.map(([k, v]) => `${platformName(meta, k)} ${fmtPct(v, 0)}`).join(', ')}</div>
         )}
         {a.onaylayan && <div className="text-[11px] text-canvas-muted">{a.onaylayan} · {fmtDay(a.onayTarihi)}</div>}
       </td>
@@ -74,7 +75,7 @@ function AccountRow({ a, meta, onSaved }: { a: Account; meta: ChannelsMeta; onSa
               {a.durum === 'aday' && choice === a.platform ? 'Adayı onayla' : 'Kaydet'}
             </button>
             {a.durum !== 'bekliyor' && (
-              <button type="button" className={btnGhost} disabled={save.isPending} onClick={() => { setChoice(''); save.mutate({ platform: null, onay: false }); }}>Kaldır</button>
+              <button type="button" className={btnGhost} disabled={save.isPending} onClick={() => { setChoice(''); save.mutate({ platform: null, onay: false }); }}>Eşlemeyi kaldır</button>
             )}
           </div>
         ) : <span className="text-[12px] text-canvas-muted">Eşleme yetkisi yok</span>}
@@ -113,7 +114,7 @@ function Cariler({ meta }: { meta: ChannelsMeta }) {
         <div className="min-w-0">
           <h2 className="flex items-center gap-1 text-[15px] font-extrabold">E-ticaret carileri <SqlInfo k={r.data?.kaynaklar} alan="items" label="E-ticaret carileri: durum sayıları, olasılık" /></h2>
           <p className="text-[12px] text-canvas-muted">
-            Logo kanal kodu {r.data?.specodes.join(', ') ?? '…'} olan cariler (her gece güncellenir) ve elle eşlenenler. Aday ya unvanda platform/işletmeci adı geçtiği için ya da Zeki AI'ın kapalı listeden seçimidir; onay gerekir.
+            Logo’da kanal kodu {r.data?.specodes.join(', ') ?? '…'} olan cariler (her gece güncellenir) ve elle eşlenenler. «Aday üret», unvanında platform adı geçen carilere ya da Zeki AI’ın tahminine göre platform önerir; öneri siz onaylayana kadar hesaba girmez.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -126,13 +127,14 @@ function Cariler({ meta }: { meta: ChannelsMeta }) {
           {meta.me.canExport && (
             <a className={btnGhost} href={channelsApi.exportUrl('eslesme')} download>
               <Download aria-hidden className="h-4 w-4" />
-              Excel
+              Excel indir
             </a>
           )}
         </div>
       </div>
       <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]">
-        <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
+        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
           {([['aday', 'Onay bekleyen'], ['bekliyor', 'Aday yok'], ['onayli', 'Onaylı'], ['', 'Hepsi']] as const).map(([k, l]) => (
             <button key={k || 'hepsi'} type="button" onClick={() => { const p = new URLSearchParams(params); if (k) p.set('durum', k); else p.set('durum', ''); setParams(p, { replace: true }); }}
               className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-2.5 text-[12px] font-extrabold transition-colors duration-150 ${durum === k ? 'bg-white shadow-sm' : 'text-canvas-muted'}`}>
@@ -140,11 +142,24 @@ function Cariler({ meta }: { meta: ChannelsMeta }) {
             </button>
           ))}
         </div>
-        <input className={field} placeholder="Cari kodu, unvan ya da CRM adı" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari ara" />
+        <Explain label="Eşleme durumları" title="Durumlar ne demek?">
+          <span className="block"><b>Onay bekleyen (Aday):</b> bir platform önerildi, bir yetkilinin onaylaması gerekiyor.</span>
+          <span className="block"><b>Aday yok:</b> henüz öneri çıkmadı ya da Zeki AI emin olamadı; platformu siz seçin.</span>
+          <span className="block"><b>Onaylı:</b> cari bu platforma bağlı; satışları karnede o platformda sayılır.</span>
+        </Explain>
+        </div>
+        <input className={field} placeholder="Ara: cari kodu, unvan ya da CRM adı" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari ara" />
       </div>
       {r.data?.cards.crmError && <Note tone="warn">CRM okunamadı ({r.data.cards.crmError}); CRM adları eksik.</Note>}
       {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Eşleme listesi açılamadı.')}</Note> : !items.length ? (
-        <Note tone="info">{r.data?.items.length ? 'Bu süzgeçte cari yok.' : 'Cari listesi henüz Logo\'dan okunmadı; «Veriyi yenile».'}</Note>
+        r.data?.items.length ? (
+          <EmptyHint
+            title={durum === 'aday' && !q.trim() ? 'Onay bekleyen cari yok' : 'Bu süzgeçte cari yok'}
+            why={durum === 'aday' && !q.trim() ? 'Önerilen bütün eşlemeler karara bağlanmış. Yeni cariler için «Aday üret» düğmesini kullanabilirsiniz.' : 'Başka bir durum seçin ya da aramayı temizleyin.'}
+          />
+        ) : (
+          <EmptyHint title="Cari listesi henüz okunmadı" why="E-ticaret carileri Logo’dan henüz okunmamış. Üstteki «Veriyi yenile» düğmesiyle okumayı başlatın." />
+        )
       ) : (
         <TableWrap>
           <thead><tr><th className={th}>Cari</th><th className={th}>Durum</th><th className={th}>Platform</th></tr></thead>
@@ -170,8 +185,8 @@ function KanalCodes({ meta }: { meta: ChannelsMeta }) {
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Kanal kodu ile eşleme <SqlInfo k={r.data?.kaynaklar} alan="items" label="Kanal kodu net cirosu" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">
-        Tek tek eşlenemeyecek kadar çok carisi olan kanal (ör. sitenin bireysel müşterileri) bütünüyle bir platforma bağlanır; o koddaki bütün cariler tek satırda toplanır.
-        Tek tek eşlenen cari kanal kodu eşlemesinin önüne geçer. Net ciro {r.data?.yil ?? '—'} yılı.
+        Kanal kodu, Logo cari kartındaki satış kanalı işaretidir. Tek tek eşlenemeyecek kadar çok carisi olan bir kanal (ör. sitenin bireysel müşterileri) buradan bütünüyle bir platforma bağlanır; o koddaki bütün cariler tek satırda toplanır.
+        Bir cari «Cariler» sekmesinde ayrıca eşlendiyse o eşleme geçerli olur. Net ciro {r.data?.yil ?? '—'} yılı.
       </p>
       {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Kanal kodları okunamadı.')}</Note> : (
         <TableWrap>
@@ -213,7 +228,7 @@ function Regions({ meta }: { meta: ChannelsMeta }) {
       <p className="mb-2 text-[12px] text-canvas-muted">CRM'deki satış hedefi bölgesi (D&amp;R, Hepsiburada, Kitapyurdu, B2C …) hangi platformun hedefi? Karnede «CRM hedef gerçekleşme» bu eşlemeyle hesaplanır.</p>
       {r.data?.crmError && <Note tone="warn">CRM okunamadı: {r.data.crmError}</Note>}
       {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Bölgeler okunamadı.')}</Note> : !r.data?.items.length ? (
-        <Note tone="info">CRM satış hedefleri henüz okunmadı; «Veriyi yenile».</Note>
+        <EmptyHint title="CRM satış hedefleri henüz okunmadı" why="Üstteki «Veriyi yenile» düğmesiyle okumayı başlatın; hedef bölgeleri okunduktan sonra burada listelenir." />
       ) : (
         <TableWrap>
           <thead><tr><th className={th}>Bölge</th><th className={`${th} text-right`}><InfoLabel k={r.data?.kaynaklar} alan="items">Yıllık hedef (adet)</InfoLabel></th><th className={th}>Platform</th></tr></thead>
@@ -248,7 +263,7 @@ export default function Accounts() {
   return (
     <ChannelsFrame
       title="Cari eşleme"
-      lead="Hangi Logo carisi hangi platform: kanal karnesi, kitap × kanal ve Trendyol/Amazon ekranları bu eşlemeyi kullanır. Eşleme portal kaydıdır; CRM'e ve Logo'ya hiçbir şey yazılmaz."
+      lead="Logo’daki hangi carinin hangi pazar yerine (Trendyol, Amazon, Hepsiburada…) ait olduğunu burada belirlersiniz; kanal ekranlarındaki bütün rakamlar bu eşlemeye göre toplanır. Eşleme yalnız portalda tutulur; CRM'e ve Logo'ya yazılmaz."
     >
       <DataBar meta={m} yil={m?.defaultYear ?? undefined} />
       <Tabs tabs={SECTIONS} value={section} onChange={(k) => { const p = new URLSearchParams(params); p.set('bolum', k); setParams(p, { replace: true }); }} />

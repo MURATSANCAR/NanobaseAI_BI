@@ -5,6 +5,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as lab
 import { Panel } from '../editorial/kit';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint, Explain } from '../components/Explain';
 import {
   ENV_LABEL, SOURCE, fmtAt, fmtBytes, fmtMinutes, fmtMs, itOpsApi,
   type Incident, type Release, type SettingItem, type Status,
@@ -33,6 +34,7 @@ export function IncidentsTab({ status, onOpen }: { status: Status | undefined; o
           <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
             Son 30 gün kesinti
             <SqlInfo k={kaynakOf(q.data?.pages[0])} alan="downtime30" label="Son 30 gün kesinti" />
+            <Explain label="Son 30 gün kesinti">Her bağlantının son 30 günde kaç kez koptuğu ve kopuk kaldığı toplam süre. «Veri eski» olayları bu sayıya girmez.</Explain>
           </h3>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
             {Object.entries(down).map(([ring, v]) => (
@@ -55,7 +57,12 @@ export function IncidentsTab({ status, onOpen }: { status: Status | undefined; o
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Olaylar okunamadı.')}</Note>}
-      {!q.isLoading && !items.length && <Note tone="info">Bu görünümde olay yok.</Note>}
+      {!q.isLoading && !q.error && !items.length && (
+        <EmptyHint
+          title={state === 'open' ? 'Açık olay yok' : 'Bu görünümde olay yok'}
+          why={state === 'open' ? 'Şu an kopuk ya da verisi eski bağlantı yok.' : 'Bir bağlantı koptuğunda ya da verisi eskidiğinde olay burada listelenir.'}
+        />
+      )}
       <ul className="flex flex-col gap-2">
         {items.map((i) => (
           <li key={i.id}>
@@ -89,7 +96,7 @@ export function JobsTab() {
   if (q.isLoading) return <Loading />;
   if (q.error) return <Note tone="err">{errText(q.error, 'İşler okunamadı.')}</Note>;
   const items = q.data?.items ?? [];
-  if (!items.length) return <Note tone="info">Henüz iş kaydı yok; ilk denetim turundan sonra dolar.</Note>;
+  if (!items.length) return <EmptyHint title="Henüz iş kaydı yok" why="Zamanlanmış işlerin durumu ilk denetim turundan sonra (5 dakika içinde) burada görünür." />;
   return (
     <Panel>
       <div className="-mx-1 overflow-x-auto px-1">
@@ -97,7 +104,12 @@ export function JobsTab() {
           <thead className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             <tr>
               <th className="py-2 pr-3">İş</th>
-              <th className="py-2 pr-3"><InfoLabel k={kaynakOf(q.data)} alan="items">Sonuç</InfoLabel></th>
+              <th className="py-2 pr-3">
+                <span className="inline-flex items-center gap-1">
+                  <InfoLabel k={kaynakOf(q.data)} alan="items">Sonuç</InfoLabel>
+                  <Explain label="Sonuç">İşin son çalışmasının sonucu. «Bilinmiyor»: iş henüz çalışmadı ya da sonucunu bildirmedi.</Explain>
+                </span>
+              </th>
               <th className="py-2 pr-3">Son koşu</th>
               <th className="py-2 pr-3">Sıradaki</th>
               <th className="py-2">Hata</th>
@@ -137,7 +149,7 @@ function ReleaseLine({ r }: { r: Release }) {
       <span className="font-mono tabular-nums">{r.codeSha ? r.codeSha.slice(0, 12) : 'sürüm bilinmiyor'}</span>
       {r.image && <span className="min-w-0 break-all text-canvas-muted">{r.image}</span>}
       <Pill tone={r.appledoubleCount === 0 ? 'ok' : r.appledoubleCount === null ? 'muted' : 'err'}>
-        Mac artığı {r.appledoubleCount === null ? '?' : nf.format(r.appledoubleCount)}
+        Mac artığı {r.appledoubleCount === null ? 'ölçülmedi' : nf.format(r.appledoubleCount)}
       </Pill>
       <span className="text-canvas-muted tabular-nums">{fmtAt(r.at)} · {r.reportedBy}</span>
     </div>
@@ -161,6 +173,9 @@ export function ReleasesTab() {
         <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
           Ortamların son kurulumu
           <SqlInfo k={kaynakOf(first)} alan="_hepsi" label="Kurulumlar ve Mac artığı" />
+          <Explain label="Ortamların son kurulumu">
+            Her ortama en son kurulan kod sürümü. «Mac artığı», kurulumla sunucuya yanlışlıkla taşınan gizli Mac dosyalarının sayısıdır; doğru kurulumda 0 olmalı.
+          </Explain>
         </h3>
         <div className="mt-2 flex flex-col gap-2">
           {(['test', 'vm', 'gpu'] as const).map((env) =>
@@ -172,19 +187,19 @@ export function ReleasesTab() {
         {first?.parity !== null && first?.parity !== undefined && (
           <div className="mt-3">
             <Note tone={first.parity ? 'ok' : 'warn'}>
-              {first.parity ? "Test sunucusu ve müşteri VM'i aynı kod sürümünde." : "Test sunucusu ile müşteri VM'i farklı kod sürümünde. VM'e geriye sarma yapılmaz; kurulacak sürüm VM'dekini içermeli."}
+              {first.parity ? 'Test sunucusu ve şirket içi kurulum aynı kod sürümünde.' : 'Test sunucusu ile şirket içi kurulum farklı kod sürümünde. Şirket içi kuruluma eski sürüm kurulmaz; kurulacak sürüm oradakini de içermeli.'}
             </Note>
           </div>
         )}
       </Panel>
-      {!items.length && <Note tone="info">Henüz sürüm kaydı yok. Kurulum betikleri her kurulumun sonunda bildirir.</Note>}
+      {!items.length && <EmptyHint title="Henüz sürüm kaydı yok" why="Her kurulumun sonunda sürüm buraya kendiliğinden bildirilir; ilk kurulumdan sonra dolar." />}
       <ul className="flex flex-col gap-2">
         {items.map((r) => (
           <li key={r.id} className="glass-panel rounded-2xl p-3 shadow-glass-float"><ReleaseLine r={r} />{r.note && <p className="mt-1 text-[12px] text-canvas-muted">{r.note}</p>}</li>
         ))}
       </ul>
       {q.hasNextPage && (
-        <button type="button" className={`${btnGhost} self-center`} disabled={q.isFetchingNextPage} onClick={() => q.fetchNextPage()}>Daha eski</button>
+        <button type="button" className={`${btnGhost} self-center`} disabled={q.isFetchingNextPage} onClick={() => q.fetchNextPage()}>Daha eski sürümler</button>
       )}
     </div>
   );
@@ -227,11 +242,11 @@ export function CapacityTab() {
           Zeki AI kapasitesi · son {c.days} gün
           <SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Zeki AI kapasitesi" />
         </h3>
-        <p className="mt-0.5 text-[11.5px] text-canvas-muted">Modül başına tamamlanan model işi; sırada bekleme ve modelin kendi süresi (ortanca).</p>
+        <p className="mt-0.5 text-[11.5px] text-canvas-muted">Her modülün Zeki AI’a gönderdiği ve tamamlanan işler; sırada bekleme ve işlem süresi ortanca değerdir (işlerin yarısı bundan kısa sürdü).</p>
         <div className="-mx-1 mt-2 overflow-x-auto px-1">
           <table className="w-full min-w-[420px] text-left text-[12.5px]">
             <thead className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-              <tr><th className="py-1.5 pr-3">Modül</th><th className="py-1.5 pr-3 text-right">İş</th><th className="py-1.5 pr-3 text-right">Sırada bekleme</th><th className="py-1.5 text-right">Model süresi</th></tr>
+              <tr><th className="py-1.5 pr-3">Modül</th><th className="py-1.5 pr-3 text-right">İş</th><th className="py-1.5 pr-3 text-right">Sırada bekleme</th><th className="py-1.5 text-right">İşlem süresi</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {c.modules.map((m) => (
@@ -242,13 +257,16 @@ export function CapacityTab() {
                   <td className="py-1.5 text-right tabular-nums">{fmtMs(m.modelP50Ms)}</td>
                 </tr>
               ))}
-              {!c.modules.length && <tr><td colSpan={4} className="py-2 text-canvas-muted">Bu dönemde tamamlanan model işi yok.</td></tr>}
+              {!c.modules.length && <tr><td colSpan={4} className="py-2 text-canvas-muted">Bu dönemde tamamlanan Zeki AI işi yok.</td></tr>}
             </tbody>
           </table>
         </div>
       </Panel>
       <Panel>
-        <h3 className="text-[13px] font-extrabold">Sorular · son {c.days} gün</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Sorular · son {c.days} gün
+          <Explain label="Sorular">Kullanıcıların Zeki AI’a sorduğu sorular: toplam, hatayla biten ve cevap süresinin ortancası.</Explain>
+        </h3>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-slate-50 p-2"><div className="font-mono text-[18px] font-bold tabular-nums">{nf.format(c.questions.count)}</div><div className="text-[11px] text-canvas-muted">soru</div></div>
           <div className="rounded-xl bg-slate-50 p-2"><div className="font-mono text-[18px] font-bold tabular-nums">{nf.format(c.questions.errors)}</div><div className="text-[11px] text-canvas-muted">hatalı</div></div>
@@ -299,6 +317,9 @@ export function SettingsTab({ status }: { status: Status | undefined }) {
         </Note>
       )}
       {!edit && <Note tone="info">Ayarları görebilirsiniz; değiştirmek için «Sistem durumu ayarları» yetkisi gerekir.</Note>}
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Olayın ne zaman açılacağını, hatırlatmaların sıklığını ve bildirimin kime gideceğini buradan ayarlarsınız. Alanın altındaki satır ne değiştirdiğini söyler.
+      </p>
       <Panel>
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
           {q.data.items.map((i: SettingItem) => (

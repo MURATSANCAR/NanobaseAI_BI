@@ -296,7 +296,7 @@ def test_messages_unread_and_email(engine):
 
 def test_logo_sql_is_read_only_and_escaped():
     sql = L.cards_sql("O'Neil%")
-    assert sql.startswith("SELECT TOP 40") and "O''Neil[%]" in sql and "LG_411_CLCARD" in sql
+    assert sql.startswith("SELECT C.CODE") and "TOP " not in sql and "O''Neil[%]" in sql and "LG_411_CLCARD" in sql
     assert "N'ÇİZER'" in L.cards_sql("")
     lines = L.lines_sql("320.01.001")
     assert "LG_411_01_CLFLINE" in lines and "L.CANCELLED = 0" in lines and "'20260101'" in lines

@@ -7,6 +7,7 @@ import { fmtDay } from '../hrApi';
 import { Block, HrFrame } from '../parts';
 import SqlInfo from '../../components/SqlInfo';
 import { engApi } from './engApi';
+import { EmptyHint } from '../../components/Explain';
 
 /** M58 Anketlerim: açık anketlerim. «Cevapla» her seferinde yeni bir tek kullanımlık bağlantı üretir; cevap bu bağlantıyla,
  *  adınız olmadan kaydedilir. */
@@ -24,7 +25,9 @@ export default function MySurveys() {
       aside={<div className="flex justify-start lg:justify-end"><Link to="/ik/oneriler" className={btnGhost}>Öneri ver</Link></div>}>
       {q.error && <Note tone="err">{errText(q.error, 'Anketler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {q.data && !q.data.items.length && <Note tone="info">Şu an size açık anket yok.</Note>}
+      {q.data && !q.data.items.length && (
+        <EmptyHint title="Şu an size açık anket yok" why="İnsan Kaynakları yeni bir anket açtığında burada görünür. Bu arada bir öneriniz varsa «Öneri ver» ile iletebilirsiniz." />
+      )}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {(q.data?.items ?? []).map((s) => (
           <li key={s.id} className="glass-panel flex flex-col gap-2 rounded-2xl p-4 shadow-glass-float">
@@ -34,7 +37,7 @@ export default function MySurveys() {
             </div>
             <div className="flex items-center gap-1 text-[12px] text-canvas-muted">{s.kindLabel} · {s.questions} soru · yaklaşık iki dakika<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Soru sayısı" /></div>
             {!s.responded && (
-              <button type="button" className={btnPrimary} disabled={link.isPending} onClick={() => link.mutate(s.id)}>Cevapla</button>
+              <button type="button" className={btnPrimary} disabled={link.isPending} onClick={() => link.mutate(s.id)}>Anketi cevapla</button>
             )}
           </li>
         ))}

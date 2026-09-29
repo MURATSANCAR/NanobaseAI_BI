@@ -69,7 +69,7 @@ function Fields({ o, canEdit, seeAll, vocabulary, onSave, busy }: {
         {input('karar', 'Karar tarihi', 'date')}
         {input('adim', 'Sonraki adım')}
         {input('adimTarih', 'Sonraki adım tarihi', 'date')}
-        {seeAll && input('sahip', 'Sahip (portal hesabı)')}
+        {seeAll && input('sahip', 'Sorumlu (kullanıcı adı)')}
       </div>
       <label className="flex flex-col gap-1">
         <span className={labelCls}>Notlar</span>
@@ -154,7 +154,7 @@ export default function OpportunityPage() {
                     </span>
                   )}
                   {o.kayipSinifLabel && (
-                    <Pill tone="err">{o.kayipSinifLabel}{o.kayipSinifKaynak === 'oneri' ? ' (ZEKİ AI önerisi)' : ''}</Pill>
+                    <Pill tone="err">{o.kayipSinifLabel}{o.kayipSinifKaynak === 'oneri' ? ' (Zeki AI önerisi)' : ''}</Pill>
                   )}
                 </div>
                 {canEdit && (
@@ -186,10 +186,10 @@ export default function OpportunityPage() {
                 {canEdit && isOpen && (
                   <div className="flex flex-wrap gap-2">
                     <Link className={btnGhost} to={`/kurumsal-satis?sekme=paket&firsat=${o.id}${o.tema ? `&tema=${encodeURIComponent(o.tema)}` : ''}`}>
-                      <PackageSearch aria-hidden className="h-4 w-4" /> Paket önerisiyle
+                      <PackageSearch aria-hidden className="h-4 w-4" /> Paket önerisiyle başla
                     </Link>
                     <button type="button" className={btnGhost} onClick={() => setBlank(true)}>
-                      <Plus aria-hidden className="h-4 w-4" /> Boş teklif
+                      <Plus aria-hidden className="h-4 w-4" /> Boş teklif aç
                     </button>
                   </div>
                 )}
@@ -215,7 +215,7 @@ export default function OpportunityPage() {
                 {selected ? (
                   <QuoteEditor key={selected.id} quote={selected} meta={m} oppOpen={isOpen} k={o.kaynaklar} />
                 ) : (
-                  <p className="text-[12.5px] text-canvas-muted">Henüz teklif yok. Paket önerisiyle ya da boş bir teklifle başlayın.</p>
+                  <p className="text-[12.5px] text-canvas-muted">Henüz teklif yok. «Paket önerisiyle başla» temaya uygun kitaplardan bir paket kurar; «Boş teklif aç» ile kitapları tek tek seçersiniz.</p>
                 )}
               </div>
               {quotes.length > 0 && (
@@ -279,7 +279,7 @@ export default function OpportunityPage() {
                       <SqlInfo k={a.kaynaklar} alan="enCokAy" label="En çok alım yapılan ay" className="ml-0.5" />
                     </p>
                   )}
-                  {a.epostaIzni === false && <Note tone="warn">Kurumun e-posta izni yok (İYS); toplu e-postaya eklenmez.</Note>}
+                  {a.epostaIzni === false && <Note tone="warn">Kurumun ticari e-posta izni yok (İleti Yönetim Sistemi kaydı); toplu e-postaya eklenmez.</Note>}
                 </div>
               )}
             </Panel>

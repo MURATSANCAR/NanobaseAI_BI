@@ -7,6 +7,7 @@ import { Panel, useDebounced } from '../editorial/kit';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { Empty } from './parts';
+import { Explain } from '../components/Explain';
 import { corporateApi, fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, type Meta } from './api';
 import { xlsxUrl } from '../components/excel';
 
@@ -92,16 +93,16 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
         {meta.me.canExport && (
           <>
             <a className={btnGhost} href={view === 'bayi' ? corporateApi.dealersCsvUrl(p) : corporateApi.highlightsCsvUrl()} download>
-              <Download aria-hidden className="h-4 w-4" /> CSV
+              <Download aria-hidden className="h-4 w-4" /> Listeyi indir (CSV)
             </a>
             <a className={btnGhost} href={xlsxUrl(view === 'bayi' ? corporateApi.dealersCsvUrl(p) : corporateApi.highlightsCsvUrl())} download>
-              <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+              <FileSpreadsheet aria-hidden className="h-4 w-4" /> Listeyi indir (Excel)
             </a>
           </>
         )}
       </div>
       <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-        Bayi kanalı: {meta.settings.dealerChannels.join(', ')} (Logo özel kod 2). Liste siteye gönderilmez; öne çıkarma ve kampanya siteye elle girilir.
+        Bayi kanalındaki cariler ({meta.settings.dealerChannels.join(', ')}). «Sipariş vermeyen» listesi, uzun süredir faturası olmayan bayileri arayıp hatırlatmanız içindir. Liste siteye gönderilmez; öne çıkarma ve kampanya siteye elle girilir.
       </p>
 
       {view === 'bayi' && (
@@ -117,7 +118,7 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
             </div>
             <SqlInfo k={list.data?.kaynaklar} alan="counts" label="Sipariş vermeyen ve aktif bayi sayısı" className="self-center" />
             <label className="flex flex-col gap-1">
-              <span className={labelCls}>Gün</span>
+              <span className={labelCls}>Kaç gündür faturasız</span>
               <input className={`${field} w-20 font-mono tabular-nums`} inputMode="numeric" value={gun}
                 onChange={(e) => setGun(Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1))} />
             </label>
@@ -145,7 +146,7 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
           )}
           {list.error && <Note tone="err">{errText(list.error, 'Bayiler okunamadı.')}</Note>}
           {list.isLoading && <Loading />}
-          {list.data && rows.length === 0 && <div className="mt-3"><Empty title="Bu süzgece uyan bayi yok" /></div>}
+          {list.data && rows.length === 0 && <div className="mt-3"><Empty title="Bu süzgece uyan bayi yok">Gün sayısını değiştirin, sınıf süzgecini «Hepsi»ne alın ya da aramayı temizleyin.</Empty></div>}
           {rows.length > 0 && (
             <div className="mt-3">
               <TableWrap>
@@ -156,8 +157,8 @@ export default function DealerPanel({ meta }: { meta: Meta }) {
                     <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].gun">Gün</InfoLabel></th>
                     <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].fatura12ay">12 ay fatura</InfoLabel></th>
                     <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].ciro12ay">12 ay net ciro</InfoLabel></th>
-                    <th className={th}><InfoLabel k={list.data?.kaynaklar} alan="items[].sinif">Sınıf</InfoLabel></th>
-                    <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[].b2bSiparis">B2B sipariş</InfoLabel></th>
+                    <th className={th}><span className="inline-flex items-center gap-1"><InfoLabel k={list.data?.kaynaklar} alan="items[].sinif">Sınıf</InfoLabel><Explain label="Sınıf">Bayilerin son 12 aydaki net satışına göre sıralaması: A sınıfı bayiler toplam satışın %80'ini yapan en büyük bayilerdir; B ve C daha küçüklerdir.</Explain></span></th>
+                    <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={list.data?.kaynaklar} alan="items[].b2bSiparis">B2B sipariş</InfoLabel><Explain label="B2B sipariş">Bayinin bayi sipariş sitesinden (B2B) son dönemde verdiği sipariş sayısı; CRM'den okunur.</Explain></span></th>
                   </tr>
                 </thead>
                 <tbody>

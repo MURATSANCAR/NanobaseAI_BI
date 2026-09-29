@@ -11,6 +11,7 @@ import { ROOT, useMeta } from './parts';
 import { BriefView } from './BriefEditor';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** Özet: yönetim özeti, TİMAŞ iç göstergeleri (Logo, sell-in), onaylı sektör rakamları, eşleme kapsamı. Telefonda okunur. */
 export default function MarketHome({ overview, loading, error }: { overview?: Overview; loading: boolean; error: unknown }) {
@@ -29,19 +30,21 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
         <Kpi
-          info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="TİMAŞ net ciro" />}
-          label="TİMAŞ net ciro"
+          info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Timaş net ciro" />}
+          label="Timaş net ciro"
+          explain="Yılbaşından Logo verisinin bittiği güne kadar Timaş'ın faturalı satışlarından iadeler düşülmüş tutar; önceki yılın aynı dönemiyle karşılaştırılır. Bu, bizim bayilere ve kanallara satışımızdır; okura satış değildir."
           value={t ? fmtTlShort(t.ytdCiro) : '—'}
           help={t ? `${o.own.period?.bitis ? `1 Oca – ${fmtDay(o.own.period.bitis)}` : o.own.yil} · önceki yılın aynı dönemine ${fmtGrowth(t.ciroBuyume)}` : o.own.empty ?? 'Logo satışı okunmadı'}
         />
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Rakip kayıt" />} label="Rakip kayıt" value={fmtInt(o.freshness.records)} help={`${fmtInt(o.publishers)} yayınevi · CRM'de ${fmtInt(o.freshness.crmLinks)} emsal bağı`} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Rakip kayıt" />} label="Rakip kayıt" value={fmtInt(o.freshness.records)} help={`${fmtInt(o.publishers)} yayınevi · CRM'de ${fmtInt(o.freshness.crmLinks)} emsal bağı`} explain="CRM'de tutulan rakip yayınevi kitaplarının sayısı. «Emsal bağı», bir rakip kitabın bizim bir kitabımıza benzer (emsal) olarak bağlandığı kayıtlardır." />
         <Kpi
           info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Eşlenmiş rakip" />}
           label="Eşlenmiş rakip"
+          explain="Kategorisi bizim kategori ağacımıza eşlenip onaylanmış rakip kayıtlarının payı. Eşlenmeyen kayıt kategori karşılaştırmalarına girmez; önerileri «Kategori eşlemesi» bölümünde onaylayın."
           value={cov.records ? fmtPct(cov.approved / cov.records, 0) : '—'}
           help={`${fmtInt(cov.approved)} / ${fmtInt(cov.records)} kaydın kategorisi onaylı · ${fmtInt((o.mapping.counts.oneri ?? 0) + (o.mapping.counts.belirsiz ?? 0))} öneri bekliyor`}
         />
-        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı pazar rakamı" />} label="Onaylı pazar rakamı" value={fmtInt(o.figures.length)} help={o.pendingFigures ? `${fmtInt(o.pendingFigures)} rakam onay bekliyor` : 'Sektör raporlarından, sayfa numarasıyla'} />
+        <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Onaylı pazar rakamı" />} label="Onaylı pazar rakamı" explain="Yüklenen sektör raporlarından okunup bir kişinin onayladığı rakamların sayısı (ör. pazar büyüklüğü). Her rakam rapor adı ve sayfa numarasıyla gösterilir." value={fmtInt(o.figures.length)} help={o.pendingFigures ? `${fmtInt(o.pendingFigures)} rakam onay bekliyor` : 'Sektör raporlarından, sayfa numarasıyla'} />
       </KpiRow>
 
       <div className="grid gap-3 lg:grid-cols-[1.25fr_1fr] lg:gap-4">
@@ -78,7 +81,7 @@ export default function MarketHome({ overview, loading, error }: { overview?: Ov
             </>
           ) : (
             <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
-              Onaylı özet yok. Zeki AI her ayın ilk haftası geçen ayın taslağını yazar; her cümle bir kaynağa bağlıdır, onay yönetimdedir.
+              Onaylı özet yok. Zeki AI her ayın ilk haftasında geçen ayın taslağını yazar; her cümle bir kaynağa bağlıdır, yönetim onaylayınca burada görünür.
             </p>
           )}
         </Panel>
@@ -175,8 +178,8 @@ function OwnMarketPanel({ initial, k }: { initial: OwnMarket; k?: ReturnType<typ
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
-          TİMAŞ iç göstergeleri
-          <SqlInfo k={boyut === "kategori" && yil === undefined ? k : kaynakOf(q.data)} alan="_hepsi" label="TİMAŞ iç göstergeleri" />
+          Timaş iç göstergeleri
+          <SqlInfo k={boyut === "kategori" && yil === undefined ? k : kaynakOf(q.data)} alan="_hepsi" label="Timaş iç göstergeleri" />
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <div role="group" aria-label="Kırılım" className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -215,7 +218,7 @@ function OwnMarketPanel({ initial, k }: { initial: OwnMarket; k?: ReturnType<typ
                 <th className={`${th} text-right`}>Önceki yıl</th>
                 <th className={`${th} text-right`}>Büyüme</th>
                 <th className={`${th} text-right`}>Adet büyümesi</th>
-                <th className={`${th} text-right`}>TİMAŞ içi pay</th>
+                <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Timaş içi pay<Explain label="Timaş içi pay">Bu satırın Timaş'ın toplam net cirosu içindeki payı. Pazar payı değildir; yalnız kendi satışlarımız içindeki ağırlığı gösterir.</Explain></span></th>
               </tr>
             </thead>
             <tbody>

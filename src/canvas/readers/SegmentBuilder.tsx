@@ -118,8 +118,9 @@ export default function SegmentBuilder({ id }: { id?: string }) {
                 ))}
               </div>
             </div>
+            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">«Hepsi sağlansın»: okur bütün kurallara uymalı. «Biri yeter»: herhangi birine uyması yeterli. Büyüklük sağda anında hesaplanır.</p>
             {fields.isLoading && <Loading />}
-            {defn.rules.length === 0 && <p className="mt-2 text-[12.5px] text-canvas-muted">Kural yok: bütün etkin okurlar.</p>}
+            {defn.rules.length === 0 && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz kural yok; bu hâliyle bütün etkin okurları kapsar. Aşağıdan bir alan seçip kural ekleyin.</p>}
             <ol className="mt-2 flex flex-col gap-2">
               {defn.rules.map((r, i) => (
                 <RuleRow key={i} rule={r} spec={byField[r.field]} disabled={!canEdit} onChange={(x) => setRule(i, x)} onDrop={() => dropRule(i)} />

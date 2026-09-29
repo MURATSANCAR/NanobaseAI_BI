@@ -87,8 +87,8 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
       <Box
         info={<SqlInfo k={fc.kaynaklar} alan="horizons" label="Satış senaryoları" />}
         title={`Satış senaryoları · ${fc.launchName} çıkış`}
-        help={`Kötümser / baz / iyimser: geçmişte benzer tahminlerin gerçekleşme dağılımının %20 / %50 / %80 noktaları.${
-          onLaunch ? ' Yayın ayı toplamı pek değiştirmez (geçmiş sınamada mevsim ve pazar düzeltmesi isabeti artırmadı); ayları ve emsallerin yaşını değiştirir.' : ''
+        help={`Baz en olası satıştır. Kötümser: gerçekleşenin %80 olasılıkla üstünde kalacağı adet; iyimser: %80 olasılıkla altında kalacağı adet. Oranlar geçmişte benzer tahminlerin nasıl gerçekleştiğinden çıkar.${
+          onLaunch ? ' Yayın ayını değiştirmek toplamı pek değiştirmez; satışın aylara dağılımını ve emsallerin seçimini değiştirir.' : ''
         }`}
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -147,7 +147,7 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
             ))}
           </ul>
           <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-            Adet basamakları yayınevinin geçmişte kullandığı ilk baskı adetleridir. Birim maliyet ve adede göre maliyet fiyatlama modülünden gelecek.
+            Adet basamakları yayınevinin geçmişte kullandığı ilk baskı adetleridir. Adede göre birim maliyeti «Fiyatlama ve maliyet» ekranında hesaplayabilirsiniz.
           </p>
           {fc.mode !== 'free' && <DecisionBox fc={fc} can={can} />}
         </Box>
@@ -157,14 +157,14 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
         <Box title="Kanal dağılımı" info={<SqlInfo k={fc.kaynaklar} alan="horizons.6.channels[]" label="Kanal dağılımı" />} help={`Emsallerin ilk 6 ayındaki satış payları, baz senaryoya uygulandı${hz.discount !== null ? `; ortalama iskonto ${pct(hz.discount)}` : ''}.`}>
           <ChannelBars h={fc.horizons['6']} />
         </Box>
-        <Box title="Gerekçe">
+        <Box title="Gerekçe" help="Tahminin hangi bilgilere dayandığı, kısa maddelerle.">
           <ul className="list-disc space-y-1 pl-5 text-[12.5px] leading-snug">
             {fc.reasons.map((r) => <li key={r}>{r}</li>)}
           </ul>
         </Box>
       </div>
 
-      <Box title={`Emsal kitaplar (${hz.analogs.length})`} info={<SqlInfo k={fc.kaynaklar} alan={`horizons.${h}.analogs`} label="Emsal kitaplar" />} help="Puanı en yüksek emsaller; tahmin bunların satışının puan ağırlıklı ortancasıdır. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
+      <Box title={`Emsal kitaplar (${hz.analogs.length})`} info={<SqlInfo k={fc.kaynaklar} alan={`horizons.${h}.analogs`} label="Emsal kitaplar" />} help="Bu kitaba en çok benzeyen, daha önce çıkmış kitaplar. Tahmin, bunların satışından benzerlik puanına göre ağırlıklandırılarak çıkar. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
         <AnalogTable h={hz} />
       </Box>
     </div>

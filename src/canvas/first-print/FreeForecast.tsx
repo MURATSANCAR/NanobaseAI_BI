@@ -53,11 +53,11 @@ export default function FreeForecastPage() {
         <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className={label}>Kitap adı</span>
-            <input className={field} value={f.name} onChange={(e) => set('name', e.target.value)} required />
+            <input className={field} value={f.name} onChange={(e) => set('name', e.target.value)} required placeholder="Ör. yeni roman" />
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className={label}>Yazar</span>
-            <input className={field} value={f.authors ?? ''} onChange={(e) => set('authors', e.target.value)} />
+            <input className={field} value={f.authors ?? ''} onChange={(e) => set('authors', e.target.value)} placeholder="Birden çoksa virgülle ayırın" />
           </label>
           <div className="flex flex-col gap-1">
             <span className={label}>Yayınevi</span>
@@ -81,11 +81,11 @@ export default function FreeForecastPage() {
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Sayfa sayısı</span>
-            <input className={field} inputMode="numeric" value={f.pages ?? ''} onChange={(e) => set('pages', e.target.value.replace(/\D/g, ''))} />
+            <input className={field} inputMode="numeric" value={f.pages ?? ''} onChange={(e) => set('pages', e.target.value.replace(/\D/g, ''))} placeholder="Ör. 240" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Kapak fiyatı (₺)</span>
-            <input className={field} inputMode="decimal" value={f.price ?? ''} onChange={(e) => set('price', e.target.value.replace(/[^\d,.]/g, ''))} />
+            <input className={field} inputMode="decimal" value={f.price ?? ''} onChange={(e) => set('price', e.target.value.replace(/[^\d,.]/g, ''))} placeholder="Ör. 250" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Yayın ayı</span>
@@ -97,7 +97,7 @@ export default function FreeForecastPage() {
             </button>
           </div>
         </form>
-        {run.error && <div className="mt-3"><Note tone="err">{errText(run.error, 'Tahmin kurulamadı.')}</Note></div>}
+        {run.error && <div className="mt-3"><Note tone="err">{errText(run.error, 'Tahmin yapılamadı; alanları kontrol edip yeniden deneyin.')}</Note></div>}
       </Box>
       {run.data && <ForecastBody fc={run.data} can={summary.data?.can} />}
     </FpFrame>

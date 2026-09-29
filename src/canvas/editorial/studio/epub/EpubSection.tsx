@@ -177,12 +177,12 @@ export default function EpubSection({ jobId }: { jobId: string }) {
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-[15px] font-extrabold"><BookOpen className="h-4 w-4 text-canvas-violet" aria-hidden />E-kitap<StudioInfo label="E-kitap sayıları" what="Görsel, gözden geçirilecek görsel, sayfa ve bölüm sayıları e-kitap kaydından." /></h2>
             <p className="mt-0.5 text-[12px] leading-snug text-canvas-muted">
-              Aynı sayfa planından; metin gerçek metin (seçilebilir, sesli okunur), görsellerin alt metni, yazı tipleri gömülü.
+              Basılı kitabın sayfa düzeninden e-kitap dosyası hazırlanır: metin seçilebilir ve sesli okunabilir, görsellere görme engelli okurlar için açıklama (alt metin) eklenir, yazı tipleri dosyanın içindedir.
             </p>
           </div>
           {r && v.status !== 'running' && (
             <a className={ghostBtn} href={epubApi.fileUrl(jobId)} download>
-              <Download className="h-4 w-4" aria-hidden />İndir <span className="font-semibold text-canvas-muted">· {mb(r.size)}</span>
+              <Download className="h-4 w-4" aria-hidden />E-kitabı indir <span className="font-semibold text-canvas-muted">· {mb(r.size)}</span>
             </a>
           )}
         </div>

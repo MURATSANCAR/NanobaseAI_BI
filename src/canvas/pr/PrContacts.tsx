@@ -79,7 +79,7 @@ export default function PrContacts() {
         </div>
         {list.isLoading && <Loading />}
         {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
-        {d && d.items.length === 0 && <Empty>Bu süzgeçle kişi yok.</Empty>}
+        {d && d.items.length === 0 && <Empty>Bu süzgeçle kişi yok. Aramayı temizleyin ya da süzgeçleri «Hepsi» yapın; listede olmayan kişiyi «Yeni medya kişisi» ile ekleyebilirsiniz.</Empty>}
         <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
           {d?.items.map((c) => (
             <li key={c.key}>

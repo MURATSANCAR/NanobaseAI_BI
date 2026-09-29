@@ -39,7 +39,7 @@ export default function AccessAdmin() {
   return (
     <Section
       title="Yetkiler"
-      help="Kim hangi sayfayı görür. Rolü bir AD grubuna, AD birimine, CRM rolüne ya da tek kişiye bağlayın; kişi bağlı olduğu bütün rollerin sayfalarını görür. Yöneticiler her şeyi görür."
+      help="Kim hangi sayfayı görür, hangi işlemi yapar ve Zeki AI'da hangi veriyi okur. Rolü bir Active Directory (AD) grubuna ya da birimine, CRM rolüne veya tek kişiye bağlayın; kişi bağlı olduğu bütün rollerin yetkilerini alır. Yöneticiler her şeyi görür."
       action={
         <button type="button" onClick={() => refresh.mutate()} disabled={refresh.isPending} className={btnGhost}>
           {refresh.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -207,8 +207,8 @@ function RoleEditor({
       <Card className="space-y-3">
         {role?.system && (
           <Note tone="info">
-            «Herkes» giriş yapan herkese uygulanır. Roller atanana kadar bütün sayfalar açık; prod öncesi burada
-            daraltılır.
+            «Herkes» giriş yapan her çalışana uygulanır. Roller atanana kadar bütün sayfalar açıktır; canlı kullanımda burada
+            daraltılmalıdır. Kimin neyi kaybedeceğini Veri güvenliği → Hesap hijyeni ekranında önizleyebilirsiniz.
           </Note>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -241,7 +241,7 @@ function RoleEditor({
             className="h-4 w-4 accent-canvas-violet"
           />
           <span className="text-[12.5px] font-bold">Bütün sayfalar ve işlemler</span>
-          <span className="text-[11.5px] text-canvas-muted">sonradan eklenenler dahil; «ayrıca verilir» işaretliler hariç</span>
+          <span className="text-[11.5px] text-canvas-muted">sonradan eklenenler dahil; «ayrıca verilir» işaretli hassas işlemler hariç, onlar tek tek seçilir</span>
         </label>
 
         {/* Sütun sayısı panelin genişliğinden: ekran genişliğine bağlı sütun, dar yönetim panelinde metni komşu kutuya taşırıyordu. */}
@@ -304,10 +304,10 @@ function RoleEditor({
         </div>
 
         <div role="group" aria-labelledby="zeki-veri" className="min-w-0 rounded-xl border border-slate-100 bg-white/70 p-2.5">
-          <div id="zeki-veri" className="px-1 pb-1 text-[12.5px] font-extrabold">ZEKİ AI veri alanları</div>
+          <div id="zeki-veri" className="px-1 pb-1 text-[12.5px] font-extrabold">Zeki AI veri alanları</div>
           <p className="px-1 pb-1.5 text-[11.5px] text-canvas-muted">
-            ZEKİ AI'a sorulan soruların, panoların, planlı raporların ve uyarıların hangi verileri okuyabileceği. Kapsam dışı
-            soru açık bir retle cevaplanır.
+            Zeki AI'a sorulan soruların, panoların, planlı raporların ve uyarıların hangi verileri okuyabileceği. Kapsam dışı
+            soru açıkça reddedilir.
           </p>
           <div className="grid gap-0.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))]">
             {catalog.data.map((d) =>
@@ -619,7 +619,7 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
       </div>
       {add.error && <Note tone="err">{errText(add.error, 'Bağ eklenemedi.')}</Note>}
       {add.data?.refresh && !add.data.refresh.ok && (
-        <Note tone="warn">Bağ eklendi ama üyeler okunamadı; zamanlayıcı 15 dakika içinde yeniden dener.</Note>
+        <Note tone="warn">Bağ eklendi ama üyeler okunamadı; portal 15 dakika içinde yeniden dener.</Note>
       )}
       {list.isLoading ? (
         <Loading />
@@ -708,7 +708,7 @@ function PersonView() {
       <div className="space-y-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
-          <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="Ad ya da AD hesabı" className={`${field} pl-9`} />
+          <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="Ad ya da şirket hesabı" className={`${field} pl-9`} />
         </div>
         {people.isLoading ? (
           <Loading />
@@ -809,7 +809,7 @@ function PersonView() {
               </div>
             </Card>
             <Card className="space-y-2">
-              <div className={label}>ZEKİ AI'ın bu kişi için okuyabildiği veri</div>
+              <div className={label}>Zeki AI'ın bu kişi için okuyabildiği veri</div>
               <ul className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))]">
                 {e.data.map((d) => (
                   <li key={d.id} className={`flex items-center gap-2 text-[12.5px] ${d.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`} title={d.hint}>
@@ -857,7 +857,7 @@ function DataDomains() {
   return (
     <div className="space-y-3">
       <Note tone="info">
-        Her tablo bir veri alanına düşer; rol, ZEKİ AI'ın hangi alanları okuyabileceğini taşır. Alan kurallarla atanır; buradan
+        Her tablo bir veri alanına düşer; rol, Zeki AI'ın hangi alanları okuyabileceğini taşır. Alan kurallarla atanır; buradan
         seçtiğiniz alan kuralın önüne geçer. «Atanmamış» tablolar, «Herkes» rolü daraltıldığında yalnız yöneticiye açık kalır.
       </Note>
       <div className="flex flex-wrap items-center gap-1.5">

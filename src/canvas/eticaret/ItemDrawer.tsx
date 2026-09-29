@@ -13,6 +13,7 @@ import { DiffCard, MarkSheet, ThreeValues } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { readableName } from '../components/readableName';
+import { Explain } from '../components/Explain';
 
 /** Kitabın üç kaynaktaki değerleri, farkları, fark günlüğü ve Zeki AI kart önerileri. 2 tıkla açılır (liste → kitap). */
 export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string | null; meta: Meta; onClose: () => void }) {
@@ -52,13 +53,13 @@ export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string
             <div className="flex flex-wrap gap-2">
               <a className={btnGhost} href={ecomApi.contentPackUrl([k.productKey])}>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                İçerik paketi (Excel)
+                İçerik paketini indir (Excel)
               </a>
             </div>
           )}
           <section className="flex flex-col gap-1.5">
             <h3 className="text-[14px] font-extrabold">Fark günlüğü</h3>
-            {!q.data.gunluk.length && <p className="text-[12px] text-canvas-muted">Kayıt yok.</p>}
+            {!q.data.gunluk.length && <p className="text-[12px] text-canvas-muted">Bu kitabın farkları için henüz bir işlem kaydı yok.</p>}
             <ol className="flex flex-col gap-1">
               {q.data.gunluk.map((g, i) => (
                 <li key={i} className="grid grid-cols-1 gap-0.5 rounded-lg bg-slate-50 px-2.5 py-1.5 sm:grid-cols-[130px_120px_1fr] sm:gap-2">
@@ -90,9 +91,11 @@ function Sources({ k, kk }: { k: Item; kk?: Kaynaklar }) {
   return (
     <section className="flex flex-col">
       <h3 className="mb-1 inline-flex items-center gap-1 text-[14px] font-extrabold">
-        Üç kaynak <SqlInfo k={kk} alan="kitap" label="Üç kaynak: fiyat, stok, satış, doluluk" />
+        Üç kaynak
+        <Explain label="Üç kaynak">Aynı kitabın CRM kartındaki, Logo'daki ve sitedeki (T-soft) değerleri yan yana. «Kart doluluğu», CRM kartındaki zorunlu alanların ne kadarının dolu olduğunu gösterir; boş alanlar altta listelenir.</Explain>
+        <SqlInfo k={kk} alan="kitap" label="Üç kaynak: fiyat, stok, satış, doluluk" />
       </h3>
-      {row('Satışta / aktif', k.crmVar ? `TSOFT Aktif: ${yesNo(k.crmTsoftAktif)}${k.crmEtkin ? '' : ' (kart pasif)'}` : 'Kart yok', null,
+      {row('Satışta / aktif', k.crmVar ? `TSOFT Aktif: ${yesNo(k.crmTsoftAktif)}` : 'Kart yok', null,
         k.sitede ? (k.siteAktif ? 'Satışta' : 'Pasif') : 'Ürün yok')}
       {row('Ad', k.ad, null, k.adSite)}
       {row('Fiyat', fmtMoney(k.fiyatCrm), fmtMoney(k.fiyatLogo),
@@ -134,7 +137,7 @@ function Proposals({ k, kk, items, meta, busy, onPropose, onDone }: {
         {meta.me.canPropose && k.tsoftUrunId && (
           <button type="button" className={btnPrimary} disabled={busy} onClick={onPropose}>
             {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-            Öneri iste
+            Zeki AI'dan öneri iste
           </button>
         )}
       </div>

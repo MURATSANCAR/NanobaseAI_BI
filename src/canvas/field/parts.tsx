@@ -5,6 +5,7 @@ import Shell, { ZoomStage } from '../stitch/Shell';
 import { fmtDay, fmtShort, scoreTone, type Chip, type Customer } from './api';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Saha ekranlarının ortak parçaları: kabuk, müşteri kartı, gerekçe çipleri, puan rozeti. Telefon önce (320/390 px):
  *  listeler kart, dokunma hedefleri en az 44 px, geniş tablo yalnız yöneticinin raporunda ve kendi kabında kayar. */
@@ -67,7 +68,7 @@ export function ScoreBadge({ value }: { value: number | null | undefined }) {
   return (
     <span
       className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-xl px-1.5 font-mono text-[13px] font-extrabold tabular-nums ${TONE[scoreTone(value)]}`}
-      title="Öncelik puanı (kural; bileşenler aşağıda)"
+      title="Öncelik puanı: 0–100, yükseldikçe bugün gitmek daha önemli. Nasıl hesaplandığı «Sıra nasıl belirleniyor?» altında."
     >
       {value === null || value === undefined ? '—' : Math.round(value)}
     </span>
@@ -127,7 +128,7 @@ export function CustomerRow({ c, showRep, trailing, k, alan = 'items[]' }: { c: 
   );
 }
 
-export function Stat({ label, value, help, tone, info }: { label: string; value: string; help?: string; tone?: 'err' | 'warn'; info?: ReactNode }) {
+export function Stat({ label, value, help, tone, info, explain }: { label: string; value: string; help?: string; tone?: 'err' | 'warn'; info?: ReactNode; explain?: ReactNode }) {
   // «137,4 Mn ₺»: rakam büyük, birim küçük; dar telefonda (320 px, kutu içi ~66 px) birim alt satıra iner, kesilmez.
   const m = /^(.*\d)\s+((?:bin|Mn)\s*₺|₺)$/.exec(value);
   const [num, unit] = m ? [m[1], m[2]] : [value, ''];
@@ -135,6 +136,7 @@ export function Stat({ label, value, help, tone, info }: { label: string; value:
     <div className="min-w-0 rounded-2xl border border-slate-100 bg-white/85 p-3">
       <div className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
         <span className="min-w-0 truncate">{label}</span>
+        {explain && <Explain label={label}>{explain}</Explain>}
         {info}
       </div>
       <div className={`mt-0.5 flex flex-wrap items-baseline gap-x-1 font-mono text-[17px] font-extrabold leading-tight tabular-nums sm:text-[20px] ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-800' : ''}`}>
@@ -146,7 +148,10 @@ export function Stat({ label, value, help, tone, info }: { label: string; value:
   );
 }
 
-export function Empty({ children }: { children: ReactNode }) {
+/** Boş durum. `title` verilirse başlık + neden boş / ne yapılabilir (bkz. components/Explain · EmptyHint); verilmezse
+ *  eski tek satırlık görünüm (başka ekranlar `<Empty>metin</Empty>` biçiminde kullanır). */
+export function Empty({ title, children }: { title?: string; children?: ReactNode }) {
+  if (title) return <EmptyHint title={title} why={children} />;
   return <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-8 text-center text-[12.5px] text-canvas-muted">{children}</div>;
 }
 

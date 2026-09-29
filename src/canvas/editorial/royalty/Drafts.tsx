@@ -44,7 +44,7 @@ export function RunNotePanel({ run }: { run: Run }) {
           <p className="whitespace-pre-wrap break-words text-[12.5px] leading-relaxed">{note.metin}</p>
           <p className="text-[11px] text-canvas-muted">Sayılar koşu satırlarından okunur; metindeki her sayı bu olgularla denetlenir.{note.saklanan ? ' Olgular değişmediği için saklanan özet gösteriliyor.' : ''}</p>
           <details className="text-[11.5px]">
-            <summary className="inline-flex min-h-11 cursor-pointer items-center font-bold text-canvas-violet sm:min-h-0">Sorgu</summary>
+            <summary className="inline-flex min-h-11 cursor-pointer items-center font-bold text-canvas-violet sm:min-h-0">Rakamların sorgusunu göster</summary>
             {note.sql.map((s, i) => <pre key={i} className="mt-1 max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-2 font-mono text-[11px]">{s}</pre>)}
           </details>
         </div>
@@ -65,7 +65,7 @@ export function CoverEmailButton({ run, party }: { run: Run; party: Party }) {
     <>
       <button type="button" className={btnGhost} disabled={ask.isPending} onClick={() => ask.mutate()}>
         {ask.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileText aria-hidden className="h-4 w-4" />}
-        Kapak e-postası
+        Kapak e-postası taslağı
       </button>
       {draft && <CoverEmailSheet draft={draft} onClose={() => setDraft(null)} />}
     </>
@@ -87,6 +87,7 @@ function CoverEmailSheet({ draft, onClose }: { draft: CoverEmail; onClose: () =>
       }>
       <div className="space-y-3">
         <Note tone="info">{draft.not}</Note>
+        <p className="text-[11.5px] text-canvas-muted">Portal e-posta göndermez: metni kopyalayıp kendi e-postanızdan gönderin.</p>
         <div className="flex flex-wrap items-center gap-2 text-[12px]">
           <Pill tone={draft.kaynak === 'zeki' ? 'violet' : 'muted'}>{draft.kaynak === 'zeki' ? 'Zeki AI taslağı' : 'Kurala göre taslak'}</Pill>
           <span className="text-canvas-muted">{draft.hakSahibi}{draft.alici ? ` · ${draft.alici}` : ' · e-posta adresi kayıtlı değil'}</span>

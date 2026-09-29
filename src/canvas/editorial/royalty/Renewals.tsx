@@ -9,6 +9,7 @@ import { Field, Row, Sheet, day, errMsg, money, num, stamp } from '../contracts/
 import { royaltyApi, type Meta, type Renewal } from './api';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 const STEP = 50;
 const decisionTone = (d: string): 'ok' | 'warn' | 'err' | 'muted' | 'violet' =>
@@ -35,12 +36,16 @@ export function Renewals({ meta }: { meta: Meta }) {
       {d && (
         <KpiRow>
           <Kpi label={overdue ? 'Bitişi geçmiş' : `${days} gün içinde biten`} value={num(d.total, 0)} help="Etkin ve süreli sözleşme (bütün türler)"
+            explain={overdue ? "CRM'de etkin, süreli ve bitiş tarihi geçmiş sözleşmeler (bütün türler)." : "CRM'de etkin, süreli ve bitiş tarihi seçili gün sayısı içinde olan sözleşmeler (bütün türler)."}
             info={<SqlInfo k={d.kaynaklar} alan="total" label={overdue ? 'Bitişi geçmiş' : `${days} gün içinde biten`} />} />
           <Kpi label="Karar bekliyor" value={num(d.counts.bekliyor ?? 0, 0)} help="Yenile / bırak / müzakere girilmemiş"
+            explain="Yenile, bırak ya da müzakere kararı henüz girilmemiş sözleşmeler. Karta dokununca liste bunlara süzülür."
             active={decision === 'bekliyor'} onClick={() => { setDecision((v) => (v === 'bekliyor' ? '' : 'bekliyor')); reset(); }}
             info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar bekliyor" />} />
-          <Kpi label="Yenilenecek" value={num(d.counts.yenile ?? 0, 0)} help="Kararı verilmiş" info={<SqlInfo k={d.kaynaklar} alan="counts" label="Yenilenecek" />} />
-          <Kpi label="Müzakere" value={num(d.counts.muzakere ?? 0, 0)} help="Yeniden müzakere edilecek" info={<SqlInfo k={d.kaynaklar} alan="counts" label="Müzakere" />} />
+          <Kpi label="Yenilenecek" value={num(d.counts.yenile ?? 0, 0)} help="Kararı verilmiş"
+            explain="Kararı «yenile» girilmiş sözleşmeler. Portal CRM'e yazmaz; yenilenen sözleşme CRM'de elle güncellenir."  info={<SqlInfo k={d.kaynaklar} alan="counts" label="Yenilenecek" />} />
+          <Kpi label="Müzakere" value={num(d.counts.muzakere ?? 0, 0)} help="Yeniden müzakere edilecek"
+            explain="Şartları hak sahibiyle yeniden görüşülecek sözleşmeler."  info={<SqlInfo k={d.kaynaklar} alan="counts" label="Müzakere" />} />
         </KpiRow>
       )}
       <Panel>
@@ -58,7 +63,11 @@ export function Renewals({ meta }: { meta: Meta }) {
         </div>
         {list.error && <div className="mt-2"><Note tone="err">{errMsg(list.error)}</Note></div>}
         {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">CRM okunuyor…</p>}
-        {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan sözleşme yok.</p>}
+        {d && !d.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Bu süzgece uyan sözleşme yok" why="Süreyi genişletin (ör. 180 gün), kararı «Bütün kararlar» yapın ya da aramayı temizleyin." />
+          </div>
+        )}
         {d && d.items.length > 0 && (
           <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
             <InfoLabel k={d.kaynaklar} alan="items[]" label="Sözleşmeler (bitiş, kalan gün, karar)">{`${num(d.items.length, 0)} sözleşme`}</InfoLabel>
@@ -134,7 +143,7 @@ function RenewalSheet({ r, meta, k, canDecide, onClose }: { r: Renewal; meta: Me
       ) : undefined}>
       <div className="space-y-3">
         <Link to={`/telif-sozlesme/${r.contractKey}`} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
-          <ExternalLink aria-hidden className="h-3.5 w-3.5" /> Sözleşme sayfası
+          <ExternalLink aria-hidden className="h-3.5 w-3.5" /> Sözleşme sayfasını aç
         </Link>
         <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
           CRM sözleşme kartı <SqlInfo k={k} alan="items[]" label="Sözleşme (süre, yenilenme, imha, avans)" />
@@ -158,7 +167,7 @@ function RenewalSheet({ r, meta, k, canDecide, onClose }: { r: Renewal; meta: Me
             <span className="text-[12.5px] font-extrabold">Zeki AI önerisi</span>
             <button type="button" className={`${btnGhost} ml-auto`} disabled={suggest.isPending} onClick={() => suggest.mutate()}>
               {suggest.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-              {sug ? 'Yeniden öner' : 'Gerekçe öner'}
+              {sug ? 'Yeniden öner' : 'Gerekçe önerisi al'}
             </button>
           </div>
           {sug ? (

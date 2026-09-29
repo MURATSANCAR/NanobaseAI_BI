@@ -79,7 +79,7 @@ export default function ProgramTab({ plan, editable }: { plan: Plan; editable: b
         </p>
       </div>
       {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Program okunamadı.')}</Note> : !items.length ? (
-        <Note tone="info">Programda satır yok.</Note>
+        <Note tone="info">Bu planda yeni kitap programı satırı yok.</Note>
       ) : (
         <TableWrap>
           <thead>

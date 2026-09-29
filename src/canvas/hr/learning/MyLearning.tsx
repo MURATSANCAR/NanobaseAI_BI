@@ -13,6 +13,7 @@ import SqlInfo from '../../components/SqlInfo';
 import GuideSheet from './GuideSheet';
 import { learningApi, type Me, type Question, type Team } from './learningApi';
 import { StatusPill, fmtDay, fmtWhen } from './parts';
+import { Explain } from '../../components/Explain';
 
 /** «Eğitimlerim»: kişinin kendi zorunlu eğitimleri, oturumları, sertifikaları, anketleri ve ihtiyaç bildirimi. Yöneticiye
  *  (`ik.egitim-onay`) ekibinin onay bekleyen talepleri ve eğitim durumu. Portal kullanımı yalnız kişinin kendisine. */
@@ -59,11 +60,20 @@ function Mandatory({ d }: { d: Me & WithK }) {
   return (
     <Block
       title="Zorunlu eğitimlerim"
-      info={<SqlInfo k={d.kaynaklar} alan="mandatory" label="Zorunlu eğitim durumu" />}
+      info={
+        <>
+          <SqlInfo k={d.kaynaklar} alan="mandatory" label="Zorunlu eğitim durumu" />
+          <Explain label="Zorunlu eğitim durumları">
+            <span className="block"><b>Geçerli:</b> belgeniz var ve süresi dolmadı.</span>
+            <span className="block"><b>Süresi dolacak:</b> geçerlilik yakında bitiyor; yenileme oturumuna katılın.</span>
+            <span className="block"><b>Süresi doldu / Hiç almadı:</b> eğitimi almanız gerekiyor; İK sizi bir oturuma ekler ya da oturum açılınca talep edebilirsiniz.</span>
+          </Explain>
+        </>
+      }
       help={d.alertDays ? `Geçerliliği ${d.alertDays} gün içinde bitecek olanlar «dolacak» görünür.` : 'Süresi dolmuş ya da hiç alınmamış zorunlu eğitimler kırmızı görünür.'}
     >
       {d.mandatory.length === 0 ? (
-        <p className="text-[12px] text-canvas-muted">Size uygulanan zorunlu eğitim tanımlı değil.</p>
+        <p className="text-[12px] text-canvas-muted">Biriminiz için tanımlı zorunlu eğitim yok; yapmanız gereken bir şey yok.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-slate-100">
           {d.mandatory.map((m) => (
@@ -181,7 +191,11 @@ function Sessions({ d }: { d: Me & WithK }) {
   const past = d.enrollments.filter((e) => e.sessionState !== 'planli' || e.approval === 'reddedildi');
   return (
     <Block title="Oturumlarım" help="Katılım talebi yöneticinizin onayına gider; dış eğitimde ardından İK onaylar." info={<SqlInfo k={d.kaynaklar} alan="enrollments" label="Oturumlarım ve geçmiş" />}>
-      {upcoming.length === 0 && past.length === 0 && <p className="text-[12px] text-canvas-muted">Henüz bir oturum kaydınız yok.</p>}
+      {upcoming.length === 0 && past.length === 0 && (
+        <p className="text-[12px] text-canvas-muted">
+          Henüz bir oturum kaydınız yok.{d.openSessions.length ? ' Aşağıdaki açık oturumlardan birine katılmak için talep gönderebilirsiniz.' : ''}
+        </p>
+      )}
       {upcoming.length > 0 && (
         <ul className="flex flex-col gap-2">
           {upcoming.map((e) => (
@@ -271,7 +285,7 @@ function Certificates({ d }: { d: Me }) {
       action={<button type="button" className={btnGhost} onClick={() => setOpen(true)}>Belge ekle</button>}
     >
       {d.certificates.length === 0 ? (
-        <p className="text-[12px] text-canvas-muted">Kayıtlı sertifikanız yok.</p>
+        <p className="text-[12px] text-canvas-muted">Kayıtlı sertifikanız yok. Katıldığınız oturumların belgesi kendiliğinden eklenir; dışarıda aldığınız belgeyi «Belge ekle» ile yükleyin.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-slate-100">
           {d.certificates.map((c) => (
@@ -449,6 +463,9 @@ function TeamPanel() {
             ))}
           </ul>
         </div>
+      )}
+      {t && t.managerKnown && !t.members.length && !t.pending.length && (
+        <p className="text-[12px] text-canvas-muted">Ekibinizde kayıtlı çalışan yok.</p>
       )}
       {t && t.members.length > 0 && (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">

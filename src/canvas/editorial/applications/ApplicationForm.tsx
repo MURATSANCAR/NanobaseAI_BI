@@ -188,20 +188,20 @@ export default function ApplicationForm({
             </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field title="Yaş (en az)">
-                <input inputMode="numeric" value={f.ageFrom} onChange={(e) => set('ageFrom', e.target.value.replace(/\D/g, ''))} className={field} />
+                <input inputMode="numeric" value={f.ageFrom} onChange={(e) => set('ageFrom', e.target.value.replace(/\D/g, ''))} placeholder="Ör. 8" className={field} />
               </Field>
               <Field title="Yaş (en çok)">
-                <input inputMode="numeric" value={f.ageTo} onChange={(e) => set('ageTo', e.target.value.replace(/\D/g, ''))} className={field} />
+                <input inputMode="numeric" value={f.ageTo} onChange={(e) => set('ageTo', e.target.value.replace(/\D/g, ''))} placeholder="Ör. 12" className={field} />
               </Field>
             </div>
             <Field title="Sayfa tahmini" required>
-              <input required inputMode="numeric" value={f.pageEstimate} onChange={(e) => set('pageEstimate', e.target.value.replace(/\D/g, ''))} className={field} />
+              <input required inputMode="numeric" value={f.pageEstimate} onChange={(e) => set('pageEstimate', e.target.value.replace(/\D/g, ''))} placeholder="Ör. 240" className={field} />
             </Field>
             <Field title="Tür" hint="Roman, inceleme, biyografi, etkinlik…">
               <input maxLength={120} value={f.genre} onChange={(e) => set('genre', e.target.value)} className={field} />
             </Field>
           </div>
-          <Field title="Kategori (CRM kitaplık)" hint="Kurul raporundaki benzer kitap satışları ve baskı önerisi bu kategoriden hesaplanır.">
+          <Field title="Kategori (CRM'deki kitaplık)" hint="Kurul raporundaki benzer kitap satışları ve baskı önerisi bu kategoriden hesaplanır.">
             <SearchSelect
               label="Kategori"
               placeholder={cats.isLoading ? 'CRM okunuyor…' : 'Seçilmedi'}
@@ -213,7 +213,7 @@ export default function ApplicationForm({
           {cats.error && <Note tone="warn">{errMsg(cats.error, 'Kategoriler CRM\'den okunamadı.')}</Note>}
           <div className="grid gap-3 sm:grid-cols-2">
             <Field title="Seri bilgisi">
-              <input maxLength={300} value={f.series} onChange={(e) => set('series', e.target.value)} className={field} />
+              <input maxLength={300} value={f.series} onChange={(e) => set('series', e.target.value)} placeholder="Ör. dizinin adı ve kaçıncı kitap olduğu" className={field} />
             </Field>
             <Field title="Geliş kanalı">
               <select value={f.channel} onChange={(e) => set('channel', e.target.value)} className={field}>
@@ -276,7 +276,7 @@ export default function ApplicationForm({
                         {c.name} <Pill tone={c.author ? 'violet' : 'muted'}>{c.author ? 'CRM yazarı' : 'CRM kişisi'}</Pill>
                       </span>
                       <button type="button" className={`${btnGhost} !min-h-9 !py-1`} onClick={() => setF((p) => ({ ...p, crmContactId: c.crmContactId, crmName: c.name }))}>
-                        Bağla
+                        Bu kişiye bağla
                       </button>
                     </li>
                   ))}

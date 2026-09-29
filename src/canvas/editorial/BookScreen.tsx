@@ -33,10 +33,10 @@ function genreFact(b: BookDetail, card: BookCard | null): { value: string | null
   const pct = p?.probability != null ? ` (%${Math.round(p.probability * 100)} güven)` : '';
   if (crm) {
     // CRM'deki tür iki ayrı türe işaret ediyordu («Bilim Tarihi, İnceleme-Araştırma»): hangisi olarak okunduğu
-    return p?.source === 'MODEL' ? { value: crm, note: `ZEKİ AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };
+    return p?.source === 'MODEL' ? { value: crm, note: `Zeki AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };
   }
-  if (p?.source === 'MODEL') return { value: BOOK_FORM_TR[p.form], note: `ZEKİ AI belirledi · CRM'de tür kaydı yok${pct}` };
-  if (p?.source === 'NONE') return { value: BOOK_FORM_TR.UNKNOWN, note: "CRM'de tür kaydı yok; ZEKİ AI kitabın metninden kesin karar veremedi" };
+  if (p?.source === 'MODEL') return { value: BOOK_FORM_TR[p.form], note: `Zeki AI belirledi · CRM'de tür kaydı yok${pct}` };
+  if (p?.source === 'NONE') return { value: BOOK_FORM_TR.UNKNOWN, note: "CRM'de tür kaydı yok; Zeki AI kitabın metninden kesin karar veremedi" };
   return { value: null };
 }
 
@@ -149,6 +149,9 @@ function Contracts({ b }: { b: BookDetail }) {
         </div>
       </section>
       <h3 className="mt-3 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sözleşmeler ({nf.format(b.contracts.length)})</h3>
+      {b.contracts.some((c) => c.daysLeft != null && c.daysLeft >= 0 && c.daysLeft <= 60) && (
+        <p className="mt-0.5 px-1 text-[11px] leading-snug text-canvas-muted">Kırmızı gün rozeti, sözleşmenin bitişine 60 gün ya da daha az kaldığını gösterir.</p>
+      )}
       <ul className="mt-1.5 space-y-1.5">
         {b.contracts.map((c) => (
           <li key={c.id} className="rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
@@ -288,8 +291,8 @@ function Desk({ b }: { b: BookDetail }) {
               </span>
             </div>
             <div className="mt-0.5 text-[11px] text-canvas-muted">
-              {w.manuscript ? `Metin v${w.manuscript.version} · ${nf.format(w.chapters.approved)}/${nf.format(w.chapters.total)} bölüm onaylı` : 'Metin yüklenmedi'}
-              {w.proof ? ` · Prova v${w.proof.version} · ${nf.format(w.signatures.signed)}/${nf.format(w.signatures.total)} imza` : ' · Prova yüklenmedi'}
+              {w.manuscript ? `Metin ${nf.format(w.manuscript.version)}. sürüm · ${nf.format(w.chapters.approved)}/${nf.format(w.chapters.total)} bölüm onaylı` : 'Metin yüklenmedi'}
+              {w.proof ? ` · Prova ${nf.format(w.proof.version)}. sürüm · ${nf.format(w.signatures.signed)}/${nf.format(w.signatures.total)} imza` : ' · Prova yüklenmedi'}
             </div>
           </li>
         ))}
@@ -317,7 +320,7 @@ export default function BookScreen() {
       lead="Bu kitabın CRM'deki ve editoryal masadaki bütün kayıtları: künye, emeği geçenler, sözleşmeler, proje ve kurul kararı, üretim, metin ve prova."
       source={b?.isbn ? `ISBN ${b.isbn}` : 'Kitap kartı'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {q.isLoading && <Panel><Loading /></Panel>}
 

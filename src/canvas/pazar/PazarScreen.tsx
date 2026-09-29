@@ -40,7 +40,7 @@ export default function PazarScreen() {
       qc.invalidateQueries({ queryKey: ['pazar'] });
       const err = status.data?.kaynak.error;
       if (err) toast.error(err);
-      else toast.success('CRM rakip katalog, TİMAŞ kitapları ve Logo satışları yeniden okundu.');
+      else toast.success('CRM rakip katalog, Timaş kitapları ve Logo satışları yeniden okundu.');
     }
     wasRunning.current = now;
   }, [running, status.data, qc]);
@@ -89,7 +89,7 @@ export default function PazarScreen() {
         [`${ROOT}/raporlar`]: overview.data?.pendingFigures ?? null,
       }}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Pazar ekranı açılamadı.')}</Note>}
       <FreshnessStrip />
       {section}

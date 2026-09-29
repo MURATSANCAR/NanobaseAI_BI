@@ -89,13 +89,14 @@ export default function RequestScreen() {
       source="Stüdyo pazarlama kiti + CRM kitap kartı"
       lead={r ? (
         <span>
+          Bu talebin brief'i, görselleri ve metinleri; her biri onaydan geçtikten sonra indirilebilir.{' '}
           <span className="font-mono font-bold">{r.id}</span> · {r.kanalAdi} · termin {fmtDay(r.termin)} · isteyen {r.isteyenAd || r.isteyen}
           {r.studioKind === 'kitap' ? ' · stüdyodaki kitap işiyle' : ''}
         </span>
       ) : undefined}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Talep okunamadı.')}</Note>}
       {drafts > 0 && (

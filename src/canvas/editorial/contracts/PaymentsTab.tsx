@@ -8,6 +8,7 @@ import { contractApi, type Detail, type Meta, type Payment } from './api';
 import { NumInput } from './TermsForm';
 import { Field, Sheet, day, errMsg, money, today } from './ui';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Sözleşmenin ödeme takvimi: avans, tek ödeme, onaylı hakedişler ve diğer ödemeler; vade ve ödendi bilgisi. */
 
@@ -56,7 +57,7 @@ function PaymentSheet({ d, meta, p, onClose }: { d: Detail; meta: Meta; p: Payme
             ))}
           </select>
         </Field>
-        <Field label="Alacaklı">
+        <Field label="Alacaklı" hint="Ödemeyi alacak kişi ya da firma; sözleşmedeki taraflardan seçebilirsiniz.">
           <input value={party} disabled={locked} onChange={(e) => setParty(e.target.value)} className={field} list="contract-parties" />
           <datalist id="contract-parties">
             {d.terms.parties.map((x) => (
@@ -108,7 +109,7 @@ export function PaidSheet({ p, onClose }: { p: Payment; onClose: () => void }) {
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
           <button type="button" className={btnPrimary} disabled={pay.isPending || amount == null} onClick={() => pay.mutate()}>
             {pay.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-            Ödendi
+            Ödendi olarak kaydet
           </button>
         </>
       }
@@ -120,8 +121,8 @@ export function PaidSheet({ p, onClose }: { p: Payment; onClose: () => void }) {
         <Field label={`Ödenen tutar (${p.currency})`}>
           <NumInput value={amount} onChange={setAmount} />
         </Field>
-        <Field label="Dekont / Logo fiş no" wide>
-          <input value={ref} onChange={(e) => setRef(e.target.value)} className={field} />
+        <Field label="Dekont / Logo fiş no" wide hint="İsteğe bağlı; ödemeyi sonradan bulmak için. Portal Logo'ya yazmaz.">
+          <input value={ref} onChange={(e) => setRef(e.target.value)} className={field} placeholder="ör. dekont ya da Logo fiş numarası" />
         </Field>
       </div>
       {pay.error && <div className="mt-3"><Note tone="err">{errMsg(pay.error)}</Note></div>}
@@ -217,7 +218,12 @@ export default function PaymentsTab({ d, meta }: { d: Detail; meta: Meta }) {
             </div>
           )}
         </div>
-        {!d.payments.length && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Ödeme planı yok. «Şartlardan plan çıkar» avans ve tek ödemeyi ekler; hakedişler onaylandıkça gelir.</p>}
+        {!d.payments.length && (
+          <EmptyHint
+            title="Ödeme planı yok"
+            why="«Şartlardan plan çıkar» sözleşmedeki avansı ve tek ödemeyi ekler; hakediş ödemeleri, hakediş onaylandıkça buraya kendiliğinden gelir."
+          />
+        )}
         <ul className="space-y-2">
           {d.payments.map((p) => (
             <PaymentRow key={p.id} p={p} canEdit={d.can.edit} canPay={d.can.finance} onEdit={() => setEdit(p)} onPay={() => setPaying(p)} onCancel={() => askCancel(p)} />

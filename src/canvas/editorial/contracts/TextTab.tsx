@@ -7,6 +7,7 @@ import { Note, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Panel } from '../kit';
 import { contractApi, type Detail } from './api';
 import { errMsg } from './ui';
+import { EmptyHint } from '../../components/Explain';
 
 /** Sözleşme metni: şablondan üretilir, taslakken elle düzenlenir, Word olarak indirilir. İmzadan sonra değişmez. */
 export default function TextTab({ d }: { d: Detail }) {
@@ -32,9 +33,10 @@ export default function TextTab({ d }: { d: Detail }) {
   if (!rec)
     return (
       <Panel>
-        <p className="py-6 text-center text-[12.5px] text-canvas-muted">
-          CRM sözleşmenin metnini tutmuyor. Metin portalda şablondan üretilir; önce sözleşmeyi düzenleyip portala alın.
-        </p>
+        <EmptyHint
+          title="Sözleşme metni henüz portalda yok"
+          why="CRM sözleşmenin metnini tutmuyor. Metin portalda şablondan üretilir; önce üstteki «Düzenle» ile sözleşmeyi portala alın."
+        />
       </Panel>
     );
   const selected = options.find((t) => t.id === tpl);
@@ -58,10 +60,10 @@ export default function TextTab({ d }: { d: Detail }) {
         </div>
       )}
       {selected?.hasDocx && editable && (
-        <div className="mb-3"><Note tone="info">Bu şablonun Word dosyası var: «Word» indirmesi Word dosyasını doldurur; buradaki metin yalnız önizlemedir.</Note></div>
+        <div className="mb-3"><Note tone="info">Bu şablonun Word dosyası var: «Word olarak indir» o Word dosyasını doldurur; buradaki metin yalnız önizlemedir.</Note></div>
       )}
       {rec.bodyEdited && <div className="mb-3"><Note tone="info">Metin şablondan üretildikten sonra elle düzenlendi.</Note></div>}
-      {!rec.body && !editable && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Metin üretilmemiş. «Word» indirmesi seçili şablonu şartlarla doldurur.</p>}
+      {!rec.body && !editable && <EmptyHint title="Metin üretilmemiş" why="Üstteki «Word olarak indir» seçili şablonu sözleşme şartlarıyla doldurup indirir." />}
       {(rec.body || editable) && (
         <textarea
           aria-label="Sözleşme metni"

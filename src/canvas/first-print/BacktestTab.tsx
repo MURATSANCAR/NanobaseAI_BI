@@ -4,6 +4,7 @@ import { Note, Pill, TableWrap, td, th } from '../admin/ui';
 import SqlCode from '../management/SqlCode';
 import { Box, Segmented, TierPill } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { ExplainLabel } from '../components/Explain';
 import { fmtUnits, monthName, pct, type Backtest, type Metrics, type PrintRules, type Summary } from './api';
 
 /** Geçmiş sınama: geçmişte çıkmış kitaplar, çıkıştan 2 ay önceki veriyle tahmin edilip gerçekleşenle karşılaştırılır.
@@ -20,7 +21,7 @@ const ROWS: Array<{ key: keyof Metrics; label: string; hint: string; fmt: (v: nu
 
 function MetricsTable({ bt }: { bt: Backtest }) {
   const cols: Array<{ key: 'model' | 'naive' | 'emsal'; label: string }> = [
-    { key: 'model', label: 'Emsal puanlı tahmin (kural)' },
+    { key: 'model', label: 'Bu ekranın tahmini (emsal puanlı)' },
     { key: 'emsal', label: 'Yalnız CRM emsalleri' },
     { key: 'naive', label: 'Son 12 ayın ortancası' },
   ];
@@ -144,7 +145,7 @@ export default function BacktestTab({ s }: { s: Summary }) {
   const bt = s.backtest?.[h];
   const bt6 = s.backtest?.['6'];
   const pr = s.backtest?.print;
-  if (!bt) return <Note tone="info">Geçmiş sınama henüz yok.</Note>;
+  if (!bt) return <Note tone="info">Geçmiş karşılaştırma henüz hazır değil; ilk veri okuması bitince burada görünür.</Note>;
   const m = bt.model;
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
@@ -166,11 +167,11 @@ export default function BacktestTab({ s }: { s: Summary }) {
       </Box>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Kitap kitap tahmin ve gerçekleşen" />} title="Kitap kitap tahmin ve gerçekleşen" help="Her nokta bir kitap; kesik çizgi tam isabet. Eksenler logaritmik.">
+        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Kitap kitap tahmin ve gerçekleşen" />} title="Kitap kitap tahmin ve gerçekleşen" help="Her nokta bir kitap; kesik çizginin üstündeki kitaplar tahminden çok, altındakiler az sattı. Eksenlerde her aralık bir öncekinin 10 katıdır.">
           <Scatterplot bt={bt} />
         </Box>
         <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="İlk baskı bu kadar yapılsaydı" />} title="İlk baskı bu kadar yapılsaydı" help="12 ayı gözlenmiş sınama kitapları: ilk 6 / 12 ayda satışın baskıyı aştığı (tükenen) kitap oranı ve 12. ay sonunda elde kalan payın ortancası.">
-          {pr ? <PrintRulesTable pr={pr} /> : <p className="text-[12px] text-canvas-muted">Henüz yok.</p>}
+          {pr ? <PrintRulesTable pr={pr} /> : <p className="text-[12px] text-canvas-muted">Bu karşılaştırma henüz hesaplanmadı; veri yenilenince burada görünür.</p>}
         </Box>
       </div>
 
@@ -214,7 +215,9 @@ export default function BacktestTab({ s }: { s: Summary }) {
                 <th className={`${th} text-right`}>Kitap</th>
                 <th className={`${th} text-right`}>Tipik sapma</th>
                 <th className={`${th} text-right`}>2 kat içinde</th>
-                <th className={`${th} text-right`}>Aralık tuttu</th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Aralık tuttu">Gerçekleşen satışın %80 tahmin aralığının içinde kaldığı kitap oranı; %80'e yakınsa aralık güvenilirdir.</ExplainLabel>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -244,7 +247,9 @@ export default function BacktestTab({ s }: { s: Summary }) {
               <th className={`${th} text-right`}>Kitap</th>
               <th className={`${th} text-right`}>Tipik sapma</th>
               <th className={`${th} text-right`}>±%50 içinde</th>
-              <th className={`${th} text-right`}>Yön</th>
+              <th className={`${th} text-right`}>
+                <ExplainLabel label="Yön">Gerçekleşen ÷ tahmin, ortanca. 1'in üstü: tahmin eksik kaldı; 1'in altı: tahmin fazla çıktı.</ExplainLabel>
+              </th>
             </tr>
           </thead>
           <tbody>

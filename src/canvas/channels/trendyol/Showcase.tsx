@@ -11,6 +11,7 @@ import { BookCell, ExportLink, yesNo } from '../platformKit';
 import { trendyolApi, type Suggestion } from './api';
 import { TrendyolData, TrendyolFrame, useTrendyolMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 const STATE: Record<Suggestion['durum'], { label: string; tone: 'violet' | 'ok' | 'err' }> = {
   taslak: { label: 'Karar bekliyor', tone: 'violet' },
@@ -35,8 +36,10 @@ function Suggestions({ canDecide, me }: { canDecide: boolean; me: string }) {
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Öneriler <SqlInfo k={q.data?.kaynaklar} alan="items" label="Öneriler" /></h2>
-      <p className="mb-2 text-[12px] text-canvas-muted">Onay portal kaydıdır; Trendyol'a gönderilmez. Öneriyi hazırlayan onaylayamaz.</p>
-      {q.isLoading ? <Loading /> : !items.length ? <Note tone="info">Henüz vitrin önerisi yok.</Note> : (
+      <p className="mb-2 text-[12px] text-canvas-muted">Hazırlanan vitrin önerileri ve kararları. Onay yalnız portalda kayıt olur, Trendyol'a gönderilmez; vitrini mağaza panelinden siz düzenlersiniz. Öneriyi hazırlayan kişi kendi önerisini onaylayamaz.</p>
+      {q.isLoading ? <Loading /> : !items.length ? (
+        <EmptyHint title="Henüz vitrin önerisi yok" why="Yukarıdaki listeden kitapları işaretleyip «öneri taslağı hazırla» düğmesiyle ilk öneriyi oluşturabilirsiniz." />
+      ) : (
         <div className="flex flex-col gap-2">
           {items.map((s) => (
             <div key={s.id} className="rounded-2xl bg-white/70 p-3">
@@ -92,21 +95,23 @@ export default function TrendyolShowcase() {
   return (
     <TrendyolFrame
       title="Vitrin önerisi"
-      lead="Depo stoğu derin ve Trendyol'da hızlı satan kitaplar (kural: satış hızı × stoğun karşıladığı hafta). Zeki AI yalnız rakamsız gerekçe yazar; karar insanda."
+      lead="Trendyol vitrininde (öne çıkan ürünler) yer almaya en uygun kitaplar: Trendyol'da hızlı satan ve depoda uzun süre yetecek stoğu olanlar önde. Kitapları seçip öneri hazırlarsınız; kararı bir yetkili verir."
     >
       <TrendyolData meta={m} />
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[12px] text-canvas-muted">
-            {d ? <>Satış hızı son {d.pencereGun} gün (sipariş dosyasındaki son gün {d.veriSonu ?? '—'}); depo stoğu en az {fmtInt(d.minStok)}.</> : '…'}
+            {d ? <>Satış hızı, sipariş dosyasındaki son {d.pencereGun} günden (son gün {d.veriSonu ?? '—'}) hesaplanır. Yalnız depo stoğu en az {fmtInt(d.minStok)} olan kitaplar listelenir.</> : '…'}
           </p>
           <ExportLink show={!!m?.me.canExport} href={trendyolApi.exportUrl('vitrin')} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Adaylar açılamadı.')}</Note>}
-        {r.isLoading ? <Loading /> : d && (!d.total ? <Note tone="info">Aday yok: sipariş dosyası yüklenmemiş ya da eşiği geçen kitap yok.</Note> : (
+        {r.isLoading ? <Loading /> : d && (!d.total ? (
+          <EmptyHint title="Vitrin adayı yok" why="Ya sipariş dosyası yüklenmemiş ya da son dönemde Trendyol'da satan kitapların hiçbirinin depo stoğu alt sınırı geçmiyor. «Dosya yükle» sekmesinden güncel sipariş dosyasını yükleyin." />
+        ) : (
           <>
             <TableWrap>
-              <thead><tr>{m?.me.canDraft && <th className={th}><span className="sr-only">Seç</span></th>}<th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Haftalık</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Depo</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Kaç hafta</InfoLabel></th><th className={th}>Trendyol'da açık</th></tr></thead>
+              <thead><tr>{m?.me.canDraft && <th className={th}><span className="sr-only">Seç</span></th>}<th className={th}>Kitap</th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d?.kaynaklar} alan="items">Haftalık</InfoLabel><Explain label="Haftalık">Trendyol'da haftada ortalama satılan adet.</Explain></span></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Depo</InfoLabel></th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d?.kaynaklar} alan="items">Kaç hafta</InfoLabel><Explain label="Kaç hafta">Depodaki stok, bugünkü satış hızıyla kaç hafta yeter. Vitrine çıkan kitap daha hızlı satacağı için stoğu uzun yetenler önde.</Explain></span></th><th className={th}>Trendyol'da açık</th></tr></thead>
               <tbody>
                 {d.items.map((x) => (
                   <tr key={x.stokKodu} className="border-t border-slate-100">
@@ -129,10 +134,10 @@ export default function TrendyolShowcase() {
         ))}
         {m?.me.canDraft && picked.size > 0 && (
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-            <input className={field} placeholder="Not (ör. Kasım kampanyası için)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <input className={field} aria-label="Öneri notu" placeholder="Not (isteğe bağlı), ör. Kasım kampanyası için" value={note} onChange={(e) => setNote(e.target.value)} />
             <button type="button" className={btnPrimary} onClick={() => suggest.mutate()} disabled={suggest.isPending}>
               <Sparkles aria-hidden className="h-4 w-4" />
-              {picked.size} kitapla öneri taslağı
+              {picked.size} kitapla öneri taslağı hazırla
             </button>
           </div>
         )}

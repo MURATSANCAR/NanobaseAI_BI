@@ -107,7 +107,7 @@ function Body({ c, meta }: { c: CollabDetail; meta: Meta }) {
             </button>
           )}
           {prev && <button type="button" className={btnGhost} onClick={() => save.mutate({ stage: prev })}>Geri: {meta.asamalar[prev]}</button>}
-          {c.stage !== 'odeme' && <button type="button" className={btnGhost} onClick={() => setAsk('vazgec')}>Vazgeç</button>}
+          {c.stage !== 'odeme' && <button type="button" className={btnGhost} onClick={() => setAsk('vazgec')}>İşbirliğinden vazgeç</button>}
         </div>
       )}
       {c.stage === 'odeme' && <Note tone="info">Ödeme satırı muhasebede; ödeme Logo belge numarasıyla işaretlenince iş kendiliğinden kapanır.</Note>}
@@ -125,7 +125,7 @@ function Body({ c, meta }: { c: CollabDetail; meta: Meta }) {
         <Field label="Yayın günü">
           <input type="date" className={field} value={f.pubAt} disabled={closed || !me.canEdit} onChange={(e) => set('pubAt')(e.target.value)} />
         </Field>
-        <Field label="Yasal etiket (işbirliği/reklam)" hint={meta.ayarlar.disclosureKinds.includes(c.kind) ? 'Rapor için «var» şart' : undefined}>
+        <Field label="Yasal etiket (işbirliği/reklam)" hint={meta.ayarlar.disclosureKinds.includes(c.kind) ? 'Paylaşımda «işbirliği» ya da «reklam» ibaresi var mı? Rapor için «var» şart' : 'Paylaşımda «işbirliği» ya da «reklam» ibaresi var mı?'}>
           <select className={field} value={f.disc} disabled={closed || !me.canEdit} onChange={(e) => set('disc')(e.target.value)}>
             <option value="">İşaretlenmedi</option>
             <option value="var">Var</option>

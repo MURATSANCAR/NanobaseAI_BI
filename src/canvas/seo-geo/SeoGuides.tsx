@@ -5,6 +5,8 @@ import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Download, Externa
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, call, dateTime, fmt, qs, seoApi, type ProductDetail } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint } from '../components/Explain';
+import { Term, TermLabel } from './terms';
 
 /* ------------------------------------------------------------------ uçlar: /api/v1/seo-geo/guides/* */
 type GuideStatus = 'hazir' | 'onaylandi' | 'reddedildi';
@@ -128,7 +130,7 @@ export default function SeoGuides() {
       crumb="Rehber içerikler"
       eyebrow="SEO & GEO · rehber içerikler"
       title="Rehber içerikler"
-      lead="Yapay zekâ cevap motorları ve Google, okurun “hangi kitap?” sorusuna cevap veren liste ve rehber sayfalarını kaynak gösterir; tek kitabın ürün sayfası bu soruyu cevaplamaz. Konular Search Console aramalarından ve izlenen sorulardan çıkar, kitaplar yalnız kendi kataloğumuzdan ve CRM kartlarından seçilir. ZEKİ AI taslağı yazar, kaynakta olmayan bilgi işaretlenir. Onay yalnız kaydedilir; siteye hiçbir şey gönderilmez."
+      lead="Google ve yapay zekâ servisleri, okurun «hangi kitabı okuyayım?» sorusuna cevap veren liste sayfalarını kaynak gösterir. Burada okurların aradığı konular için kendi kitaplarımızdan liste sayfası taslağı hazırlanır: siz kitapları seçersiniz, Zeki AI yazar, siz düzenleyip onaylarsınız. Siteye hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="tablist" aria-label="Liste">
         <button className="sg-filter" role="tab" aria-selected={tab === 'konular'} aria-pressed={tab === 'konular'} onClick={() => set({ liste: '', taslak: '' })}>
@@ -156,18 +158,22 @@ export default function SeoGuides() {
                   {fmt(topics.data.total)} konu · Search Console {topics.data.search.start ? `${topics.data.search.start} – ${topics.data.search.end}` : 'verisi yok'} · çok gösterilenden aza
                   {run?.finishedAt && ` · gece hazırlığı ${dateTime(run.finishedAt)}: ${fmt(run.done)} taslak`}
                   {run?.running && ' · gece hazırlığı sürüyor'}
+                  <br />
+                  Her konu, okurların Google’da aradığı ya da izlenen sorularda geçen bir «hangi kitap» sorusudur. Bir konuya dokunun, uygun kitaplarımız açılsın.
                 </p>
               )}
               {topics.data && !topics.data.items.length && (
-                <div className="sg-empty">
-                  <h2>Konu yok</h2>
-                  <p>
-                    {topics.data.search.savedAt
-                      ? 'Aramalarda liste ya da öneri arayan sorgu bulunamadı.'
-                      : 'Search Console verisi henüz okunmadı; konular okunan aramalardan çıkar.'}{' '}
-                    Konuyu elle açmak için <Link to="/seo-geo/ai-gorunurluk">izlenen sorulara</Link> soru ekleyin.
-                  </p>
-                </div>
+                <EmptyHint
+                  title="Henüz konu yok"
+                  why={
+                    <>
+                      {topics.data.search.savedAt
+                        ? 'Aramalarda liste ya da öneri arayan sorgu bulunamadı.'
+                        : 'Search Console verisi henüz okunmadı; konular okunan aramalardan çıkar.'}{' '}
+                      Konuyu elle açmak için <Link to="/seo-geo/ai-gorunurluk">izlenen sorulara</Link> soru ekleyin.
+                    </>
+                  }
+                />
               )}
               <div className="sg-list">
                 {topics.data?.items.map((t) => (
@@ -192,10 +198,7 @@ export default function SeoGuides() {
               {drafts.isLoading && <Loading text="Taslaklar getiriliyor…" />}
               {drafts.error && <Failed error={drafts.error} />}
               {drafts.data && !drafts.data.items.length && (
-                <div className="sg-empty">
-                  <h2>Taslak yok</h2>
-                  <p>Konular listesinden bir konu seçip taslak ürettiğinizde burada görünür.</p>
-                </div>
+                <EmptyHint title={status ? 'Bu durumda taslak yok' : 'Henüz taslak yok'} why="«Konular» listesinden bir konu seçip taslak ürettiğinizde burada görünür." />
               )}
               <div className="sg-list">
                 {drafts.data?.items.map((g) => (
@@ -236,14 +239,12 @@ export default function SeoGuides() {
           ) : tab === 'konular' && topicKey ? (
             <TopicPanel topicKey={topicKey} draft={listed?.draft ?? null} />
           ) : (
-            <div className="sg-empty">
-              <h2>{tab === 'konular' ? 'Bir konu seçin' : 'Bir taslak seçin'}</h2>
-              <p>
-                {tab === 'konular'
-                  ? 'Soldan bir konu seçtiğinizde bu soruya uyan kitaplarımız ve neden seçildikleri açılır; seçtiğiniz kitaplarla ZEKİ AI taslak yazar.'
-                  : 'Soldan bir taslak seçtiğinizde metni düzenleyip onaylayabilir ya da dışa aktarabilirsiniz.'}
-              </p>
-            </div>
+            <EmptyHint
+              title={tab === 'konular' ? 'Listeden bir konu seçin' : 'Listeden bir taslak seçin'}
+              why={tab === 'konular'
+                ? 'Seçtiğiniz konuya uyan kitaplarımız ve neden seçildikleri açılır; işaretlediğiniz kitaplarla Zeki AI taslak yazar.'
+                : 'Seçtiğiniz taslağın metnini düzenleyip onaylayabilir ya da HTML olarak indirebilirsiniz.'}
+            />
           )}
         </section>
       </div>
@@ -312,9 +313,9 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
               <thead>
                 <tr>
                   <th>Sorgu</th>
-                  <th>Gösterim <SeoInfo k={books.data?.kaynaklar} label="Gösterim" /></th>
+                  <th><TermLabel k="impressions" label="Gösterim" /> <SeoInfo k={books.data?.kaynaklar} label="Gösterim" /></th>
                   <th>Tıklama <SeoInfo k={books.data?.kaynaklar} label="Tıklama" /></th>
-                  <th>Sıra <SeoInfo k={books.data?.kaynaklar} label="Sıra" /></th>
+                  <th><TermLabel k="position" label="Sıra" /> <SeoInfo k={books.data?.kaynaklar} label="Sıra" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -337,7 +338,7 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
           <div>
             <h2>Uygun kitaplar <SeoInfo k={books.data?.kaynaklar} label="Uygun kitaplar" /></h2>
             <p className="sg-sub" style={{ margin: 0 }}>
-              {fmt(tot)} kitap eşleşti · {fmt(selected.length)} seçili. Tür, web kategorisi, anahtar kelime, hedef kitle ve yaşa göre; eşitlikte çok satan önde. CRM’de satıştan çekilmiş ya da bizim olmayan kitap alınmaz.
+              {fmt(tot)} kitap eşleşti · {fmt(selected.length)} seçili. Rehbere girecek kitapları işaretleyin, sonra «Taslak üret»e basın. Eşleşme tür, web kategorisi, anahtar kelime, hedef kitle ve yaşa göredir; eşitlikte çok satan önde. CRM’de satıştan çekilmiş ya da bizim olmayan kitap alınmaz.
             </p>
           </div>
           <button className="sg-button primary" disabled={!selected.length || create.isPending} onClick={() => create.mutate()}>
@@ -345,7 +346,7 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
             {activeDraft ? 'Seçimle yeniden üret' : 'Taslak üret'}
           </button>
         </div>
-        {create.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>ZEKİ AI taslağı yazıyor; kitap sayısına göre birkaç dakika sürebilir.</p>}
+        {create.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>Zeki AI taslağı yazıyor; kitap sayısına göre birkaç dakika sürebilir.</p>}
         {create.error && <div style={{ marginTop: 12 }}><Failed error={create.error} /></div>}
         {!tot && <p className="sg-banner" style={{ marginTop: 12 }}>Bu konuya uyan kitap verimizde bulunamadı; CRM kartlarında tür ya da anahtar kelime eksik olabilir.</p>}
         <div className="sg-list" style={{ marginTop: 12 }}>
@@ -440,7 +441,7 @@ function Editor({ guide }: { guide: Guide }) {
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>ZEKİ AI taslağı</h2>
+          <h2>Zeki AI taslağı</h2>
           <p className="sg-sub" style={{ margin: 0 }}>
             {guide.topic.title} · {dateTime(guide.createdAt)} · {guide.createdBy ?? '—'}
             {open ? ' · onaylamadan önce düzenleyebilirsiniz' : ''}
@@ -458,7 +459,7 @@ function Editor({ guide }: { guide: Guide }) {
         <p className={`sg-banner ${guide.status === 'onaylandi' ? 'ok' : ''}`} style={{ marginTop: 12 }}>
           <b>{STATUS_LABEL[guide.status]}</b> · {guide.decidedBy ?? '—'} · {dateTime(guide.decidedAt)}
           {guide.note ? ` — ${guide.note}` : ''}
-          {guide.status === 'onaylandi' && ' — Siteye gönderim yok; sayfa, indirilen HTML ile site yönetiminden (CRM/T-soft paneli) elle açılacak.'}
+          {guide.status === 'onaylandi' && ' — Siteye gönderim yok; sayfa, indirilen HTML ile site yönetimince elle açılır.'}
         </p>
       )}
       {general.length > 0 && (
@@ -470,14 +471,14 @@ function Editor({ guide }: { guide: Guide }) {
       <div className="sg-diff" style={{ marginTop: 16 }}>
         <section className="sg-field" aria-label="SEO başlığı">
           <div className="sg-field-head">
-            <span>SEO başlığı</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>SEO başlığı <Term k="seoTitle" /></span>
             <span className={`sg-mono ${titleOver ? 'over' : ''}`}>{fields.SeoTitle.length} / {L.title_min}–{L.title_max} karakter</span>
           </div>
           <textarea className="sg-after" rows={2} value={fields.SeoTitle} readOnly={!open} onChange={(e) => setFields({ ...fields, SeoTitle: e.target.value })} aria-label="SEO başlığı" />
         </section>
         <section className="sg-field" aria-label="Meta açıklama">
           <div className="sg-field-head">
-            <span>Meta açıklama</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Meta açıklama <Term k="metaDescription" /></span>
             <span className={`sg-mono ${metaOver ? 'over' : ''}`}>{fields.SeoDescription.length} / {L.meta_min}–{L.meta_max} karakter</span>
           </div>
           <textarea className="sg-after" rows={3} value={fields.SeoDescription} readOnly={!open} onChange={(e) => setFields({ ...fields, SeoDescription: e.target.value })} aria-label="Meta açıklama" />
@@ -585,7 +586,7 @@ function Editor({ guide }: { guide: Guide }) {
       </div>
 
       <details className="sg-more" style={{ marginTop: 12 }}>
-        <summary>Yapılandırılmış veri (ItemList + soru–cevap) — kodla kurulur, onayda yeniden hesaplanır</summary>
+        <summary>Yapısal veri (kitap listesi + soru–cevap) — kendiliğinden kurulur, onayda yeniden hesaplanır</summary>
         <pre className="sg-pre" style={{ marginTop: 8 }}>{JSON.stringify(guide.jsonld, null, 2)}</pre>
       </details>
 
@@ -593,7 +594,7 @@ function Editor({ guide }: { guide: Guide }) {
         <>
           {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
           <div className="sg-decide" style={{ marginTop: 16 }}>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (isteğe bağlı), ör. sıra değiştirildi" aria-label="Editör notu" />
             <button className="sg-button primary" disabled={!canApprove || decide.isPending || !order.length || emptyBooks.length > 0 || !fields.SeoTitle.trim()}
               onClick={() => decide.mutate('approve')}>
               {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
@@ -607,7 +608,7 @@ function Editor({ guide }: { guide: Guide }) {
                 ? 'Onay yetkiniz yok; taslağı görebilir, indirebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'
                 : emptyBooks.length
                   ? 'Paragrafı boş kitap var; yazın ya da listeden çıkarın.'
-                  : 'Onay yalnız kaydedilir; siteye, T-soft’a ya da CRM’e gönderim yok. Sayfa, indirilen HTML ile site yönetiminden elle açılır.'}
+                  : 'Onay yalnız kayda geçer; siteye, T-soft’a ya da CRM’e hiçbir şey gönderilmez. Sayfa, indirilen HTML ile site yönetimince elle açılır.'}
             </small>
           </div>
         </>

@@ -123,7 +123,7 @@ export default function SocialCalendar() {
         {m.me.canEdit && (
           <button type="button" className={btnPrimary} onClick={() => setSeed({ day: view === 'gun' ? anchor : today >= frm && today <= to ? today : frm })}>
             <Plus aria-hidden className="h-4 w-4" />
-            Yeni
+            Yeni gönderi
           </button>
         )}
       </div>
@@ -134,28 +134,32 @@ export default function SocialCalendar() {
     <SocialFrame
       crumb="Sosyal medya"
       title="Sosyal medya takvimi"
-      lead="Bütün imprint hesaplarının paylaşımları tek takvimde: kitaptan içerik, onay ve yayına hazır paket. Portal hiçbir hesaba kendiliğinden paylaşım yapmaz; onaylı gönderiyi ekip paylaşır ve bağlantısını girer."
+      lead="Yayınevi markalarının bütün hesaplarındaki paylaşımlar tek takvimde: kitaptan içerik, onay ve paylaşıma hazır paket. Portal hiçbir hesaba kendiliğinden paylaşım yapmaz; onaylı gönderiyi ekip kendisi paylaşır ve bağlantısını girer."
       source={m?.lastRun?.tarih ? `CRM · son özet ${fmtShort(m.lastRun.tarih)}` : 'CRM + stüdyo'}
       presence={cal.data ? `${cal.data.total.toLocaleString('tr-TR')} gönderi` : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Sosyal medya bilgisi açılamadı.')}</Note>}
       {m?.lastRun?.eposta === 'no_recipient' && <Note tone="warn">Sabah özeti gönderilemedi: alıcı yok (Yönetim → Sosyal medya).</Note>}
       {m?.lastRun?.eposta === 'no_smtp' && <Note tone="warn">Sabah özeti gönderilemedi: e-posta ayarı yok (Yönetim → E-posta).</Note>}
       {accounts.data && accounts.data.total === 0 && (
         <Note tone="info">
           Henüz hesap tanımlı değil. <Link className="font-extrabold text-canvas-violet underline" to="/sosyal-medya/hesaplar">Hesaplar</Link> sekmesinden
-          imprint hesaplarını ekleyin (CRM'deki marka kartlarının Instagram adları öneri olarak gelir).
+          yayınevi markalarının hesaplarını ekleyin (CRM'deki marka kartlarının Instagram adları öneri olarak gelir).
         </Note>
       )}
 
       {cal.data && (
         <KpiRow>
-          <Kpi label="Taslak ve fikir" value={((c.taslak ?? 0) + (c.fikir ?? 0)).toLocaleString('tr-TR')} help="Bu aralıkta metni ya da onayı bekleyen" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Taslak ve fikir" />} />
-          <Kpi label="Onay bekleyen" value={pending.length.toLocaleString('tr-TR')} help="Bütün tarihlerde onaya gönderilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen" />} />
-          <Kpi label="Onaylı" value={(c.onayli ?? 0).toLocaleString('tr-TR')} help="Paket hazır; paylaşım ekipte" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Onaylı" />} />
-          <Kpi label="Yayınlandı" value={(c.yayinlandi ?? 0).toLocaleString('tr-TR')} help="Bağlantısı girilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Yayınlandı" />} />
+          <Kpi label="Taslak ve fikir" value={((c.taslak ?? 0) + (c.fikir ?? 0)).toLocaleString('tr-TR')} help="Bu aralıkta metni ya da onayı bekleyen" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Taslak ve fikir" />}
+            explain="Takvimde görünen tarih aralığında henüz metni yazılmamış (fikir) ya da yazılıp onaya gönderilmemiş (taslak) gönderiler." />
+          <Kpi label="Onay bekleyen" value={pending.length.toLocaleString('tr-TR')} help="Bütün tarihlerde onaya gönderilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="onayBekleyen" label="Onay bekleyen" />}
+            explain="Tarihine bakılmaksızın onaya gönderilmiş bütün gönderiler. Gönderiyi onaya gönderen kişi kendisi onaylayamaz." />
+          <Kpi label="Onaylı" value={(c.onayli ?? 0).toLocaleString('tr-TR')} help="Paket hazır; paylaşım ekipte" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Onaylı" />}
+            explain="Onaylanmış, paylaşıma hazır gönderiler. Paylaşımı ekip kendi hesabından yapar; portal hiçbir şeyi kendiliğinden paylaşmaz." />
+          <Kpi label="Yayınlandı" value={(c.yayinlandi ?? 0).toLocaleString('tr-TR')} help="Bağlantısı girilmiş" info={<SqlInfo k={cal.data?.kaynaklar} alan="counts" label="Yayınlandı" />}
+            explain="Paylaşıldıktan sonra bağlantısı girilip «yayınlandı» işaretlenen gönderiler. Performans rakamları bu gönderiler için girilir." />
         </KpiRow>
       )}
 
@@ -236,7 +240,10 @@ export default function SocialCalendar() {
                     <DaysLeft days={o.kalanGun} running={o.suruyor} />
                   </Link>
                 ))}
-                {opp.data.ozelGunler.length === 0 && <p className="text-[12px] text-canvas-muted">Pencerede özel gün yok.</p>}
+                {opp.data.ozelGunler.length === 0 && <p className="text-[12px] text-canvas-muted">Önümüzdeki günlerde özel gün yok.</p>}
+                {!warnDays.length && opp.data.ozelGunler.length > 5 && (
+                  <p className="text-[11.5px] text-canvas-muted">En yakın 5 özel gün; kalan {(opp.data.ozelGunler.length - 5).toLocaleString('tr-TR')} tanesi «Hepsi» sayfasında.</p>
+                )}
                 <p className="pt-1 text-[11.5px] text-canvas-muted">
                   Bu ay ve yakında çıkan {opp.data.yeniKitaplar.items.length.toLocaleString('tr-TR')} kitaptan{' '}
                   {opp.data.yeniKitaplar.items.filter((b) => !b.takvimde).length.toLocaleString('tr-TR')} tanesi takvimde değil.

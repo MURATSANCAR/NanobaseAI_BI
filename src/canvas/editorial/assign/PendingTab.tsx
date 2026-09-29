@@ -8,6 +8,7 @@ import { assignPendingOptions } from '../queries';
 import { day, projectMeta } from './parts';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint } from '../../components/Explain';
 
 /** CRM'de «Editörü» boş etkin projeler (salt okunur; atama CRM'de yapılır). Varsayılan süzgeç iş durumundakiler
  *  (iş planı / kurul onaylı); durum çipleriyle diğerleri de açılır. */
@@ -41,7 +42,7 @@ export default function PendingTab() {
         </h2>
       </div>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        CRM proje kartında «Editörü» boş olan {d ? `${d.sinceYear} ve sonrası ` : ''}etkin projeler. Editör CRM'de atanır; atanınca liste kendiliğinden güncellenir.
+        CRM proje kartında «Editörü» boş olan {d ? `${d.sinceYear} ve sonrası ` : ''}etkin projeler. Editör CRM'de atanır; atanınca liste kendiliğinden güncellenir. Durum çipleriyle hangi proje durumlarının listeleneceğini seçersiniz.
       </p>
       {d && (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Proje durumu">
@@ -70,7 +71,14 @@ export default function PendingTab() {
         </div>
       )}
       <Pager page={page} pageSize={d?.pageSize ?? 50} total={d?.total ?? 0} shown={d?.items.length ?? 0} loading={list.isLoading} fetching={list.isFetching} db={d?.db} onPage={setPage} />
-      {!list.isLoading && !err && !d?.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan editörsüz proje yok.</p>}
+      {!list.isLoading && !err && !d?.items.length && (
+        <div className="mt-3">
+          <EmptyHint
+            title={q ? 'Aramaya uyan editörsüz proje yok' : 'Bu durumlarda editörsüz proje yok'}
+            why={q ? 'Aramayı kısaltın ya da başka bir yazımla deneyin.' : 'Seçili durumlardaki bütün projelerin editörü atanmış. Başka durumlara bakmak için yukarıdaki çiplere dokunun.'}
+          />
+        </div>
+      )}
       <ul className="mt-3 space-y-2">
         {(d?.items ?? []).map((p) => (
           <li key={p.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">

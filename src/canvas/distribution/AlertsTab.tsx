@@ -7,6 +7,7 @@ import { fmtDay } from '../budget/api';
 import { ENGINE_ENABLED } from '../engine';
 import { distApi, type AlertKind } from './api';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Uyarılar: günde iki kez (07:30, 13:30) değerlendirilir; koşul kalkınca kendiliğinden kapanır. «Tükeniyor» bilgidir. */
 const KINDS: Array<{ key: '' | AlertKind; label: string }> = [
@@ -38,6 +39,7 @@ export default function AlertsTab() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+        <Explain label="Uyarı türleri">Plan yok: depoya girmiş kitabın planı açılmadı. Sevk edilmedi: onaylı plandaki müşteriye süresinde sevk yapılmadı. Hiç satmadı: sevk edilen bölgede satış görünmüyor. Tükeniyor: bilgi amaçlıdır. Sorun ortadan kalkınca uyarı kendiliğinden kapanır.</Explain>
         <SqlInfo k={d?.kaynaklar} alan="sayilar" label="Uyarı sayıları" />
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="group" aria-label="Durum">
           {(['acik', 'kapandi'] as const).map((v) => (
@@ -50,7 +52,9 @@ export default function AlertsTab() {
         </div>
       </div>
       {q.error && <Note tone="err">{errText(q.error, 'Uyarılar okunamadı.')}</Note>}
-      {d && !d.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">{durum === 'acik' ? 'Açık uyarı yok.' : 'Kapanan uyarı yok.'}</div>}
+      {d && !d.items.length && (durum === 'acik'
+        ? <EmptyHint title="Açık uyarı yok" why="Şu an ilgilenmeniz gereken plan, sevk ya da satış sorunu görünmüyor. Uyarılar her gün 07:30 ve 13:30'da yeniden değerlendirilir." />
+        : <EmptyHint title="Kapanan uyarı yok" why="Sorunu ortadan kalkıp kendiliğinden kapanan uyarılar burada listelenir." />)}
       <ul className="flex flex-col gap-1.5">
         {d?.items.map((a) => (
           <li key={a.id} className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white/80 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">

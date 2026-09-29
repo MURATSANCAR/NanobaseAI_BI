@@ -47,19 +47,19 @@ export default function MailboxHome() {
   return (
     <MailFrame
       title="Kurumsal e-posta"
-      lead="timas@ genel kutusuna gelen iletiler: Zeki AI türünü ve önceliğini önerir, sorumlu kişi yönlendirme tablosundan gelir, siz atarsınız. Yanıt kutudan gönderilir; portal yalnız okur, iletinin gövdesini saklamaz."
+      lead="Şirketin genel e-posta kutusuna (timas@) gelen iletiler. Zeki AI her iletinin türünü ve önceliğini önerir, kurallara göre sorumlu kişiyi bulur; atamayı siz yaparsınız. Yanıtı e-posta programından gönderirsiniz; portal yalnız okur, ileti gövdesini saklamaz."
       connection={m?.connection}
       lastRun={last}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; iletiler açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {last?.llmError && <Note tone="warn">Zeki AI son turda cevap vermedi; iletiler sonraki turda sınıflanacak.</Note>}
 
       <KpiRow>
         <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Bana atanan" />} label="Bana atanan" value={fmtInt(counts?.mine)} help="Açık ve yanıtlanmamış" active={view === 'mine'} onClick={() => set('sekme', null)} />
-        <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Süresi aşan" />} label="Süresi aşan" value={fmtInt(counts?.overdue)} help="İlk yanıt süresi geçmiş (iş saatiyle)" active={view === 'overdue'} onClick={() => set('sekme', 'overdue')} />
+        <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Süresi aşan" />} label="Süresi aşan" value={fmtInt(counts?.overdue)} help="İlk yanıt süresi geçmiş (iş saatiyle)" explain="İletinin türüne göre tanımlı ilk yanıt süresi (yalnız iş saatleri sayılarak) dolduğu hâlde yanıtlanmamış iletiler. Önce bunlara bakın." active={view === 'overdue'} onClick={() => set('sekme', 'overdue')} />
         {m?.me.seeAll ? (
-          <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Atanmamış" />} label="Atanmamış" value={fmtInt(counts?.unassigned)} help="Zeki AI'ın önerisi hazır" active={view === 'unassigned'} onClick={() => set('sekme', 'unassigned')} />
+          <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Atanmamış" />} label="Atanmamış" value={fmtInt(counts?.unassigned)} help="Zeki AI'ın önerisi hazır" explain="Henüz kimseye atanmamış iletiler. Listede her iletinin yanında önerilen kişi yazar; «Öneriyi ata» ile tek dokunuşta atayabilirsiniz." active={view === 'unassigned'} onClick={() => set('sekme', 'unassigned')} />
         ) : (
           <Kpi info={<SqlInfo k={kaynakOf(ov.data)} alan="_hepsi" label="Birimim" />} label="Birimim" value={fmtInt(counts?.unit)} help="Birimime atanan açık iletiler" active={view === 'unit'} onClick={() => set('sekme', 'unit')} />
         )}
@@ -104,7 +104,13 @@ export default function MailboxHome() {
       {(meta.isLoading || list.isLoading) && <Loading />}
       {list.data && list.data.items.length === 0 && (
         <Empty title={q || category ? 'Aramaya uyan ileti yok' : 'Bu sekmede ileti yok'}>
-          {m && !m.connection.connected ? 'Kutu bağlanınca iletiler burada görünür.' : view === 'mine' ? 'Size atanmış açık ileti yok.' : null}
+          {m && !m.connection.connected
+            ? 'Kutu bağlanınca iletiler burada görünür.'
+            : q || category
+              ? 'Aramayı kısaltın ya da tür süzgecini «Bütün türler»e alın.'
+              : view === 'mine'
+                ? 'Size atanmış açık ileti yok. Başka sekmelerden birimin ya da atanmamış iletilere bakabilirsiniz.'
+                : null}
         </Empty>
       )}
       {list.data && list.data.items.length > 0 && m && (
@@ -118,7 +124,7 @@ export default function MailboxHome() {
         <div className="flex items-center justify-between gap-2 text-[12px] font-semibold text-canvas-muted">
           <span className="tabular-nums">
             {fmtInt(page * list.data.pageSize + 1)}–{fmtInt(page * list.data.pageSize + list.data.items.length)} / {fmtInt(list.data.total)}
-            <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="İleti listesi: sayfa, ek ve SLA" className="ml-1" />
+            <SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="İleti listesi: sayfa, ek ve yanıt süresi" className="ml-1" />
           </span>
           <div className="flex gap-1.5">
             <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage((p) => p - 1)}>

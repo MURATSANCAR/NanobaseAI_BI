@@ -8,6 +8,7 @@ import { Note, btnGhost, btnPrimary, errText, field, label } from '../../admin/u
 import { Img } from '../../editorial/studio/shared';
 import { creativeApi, fmtDay, type Meta, type RequestDetail } from './api';
 import { Block } from './parts';
+import { Explain } from '../../components/Explain';
 import { invalidateCreative } from './useMeta';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
@@ -54,7 +55,12 @@ export default function BriefPanel({ r, meta }: { r: RequestDetail; meta: Meta |
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <Block title="Brief" aside={canEdit && !edit ? <button type="button" className={btnGhost} onClick={startEdit}><Pencil className="h-4 w-4" aria-hidden />Düzenle</button> : null}>
+      <Block title="Brief" aside={
+        <span className="flex items-center gap-2">
+          <Explain label="Brief">Tasarımcıya ve metin yazarına verilen kısa iş tanımı: amaç, ana mesaj, ton ve vurgulanacak nokta.</Explain>
+          {canEdit && !edit ? <button type="button" className={btnGhost} onClick={startEdit}><Pencil className="h-4 w-4" aria-hidden />Düzenle</button> : null}
+        </span>
+      }>
         {edit ? (
           <div className="flex flex-col gap-2">
             <label className="flex flex-col gap-1"><span className={label}>Brief</span><textarea className={field} rows={4} value={f.brief} onChange={set('brief')} maxLength={8000} /></label>

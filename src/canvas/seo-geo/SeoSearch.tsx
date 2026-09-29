@@ -6,6 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type SearchReport } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint } from '../components/Explain';
+import { TermLabel } from './terms';
 
 type Kind = 'queries' | 'pages';
 
@@ -32,7 +34,7 @@ export default function SeoSearch() {
       crumb="Arama ve kelimeler"
       eyebrow="SEO & GEO · Google Search Console"
       title="Aranan kelimeler ve sayfalar"
-      lead="Google’da timas.com.tr’yi getiren sorgular ve sayfalar: tıklama, gösterim, tıklama oranı ve ortalama sıra. Veri her gece okunur; son 3 gün Google’da kesinleşmediği için dahil edilmez."
+      lead="İnsanların Google’da hangi kelimelerle aradığında timas.com.tr’nin çıktığı ve hangi sayfalarımızın tıklandığı. Veri Search Console’dan her gece okunur; son 3 gün Google’da kesinleşmediği için dahil edilmez."
       actions={
         canRun && <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
           {refresh.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
@@ -49,6 +51,9 @@ export default function SeoSearch() {
           Sayfalar
         </button>
       </div>
+      <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)' }}>
+        {kind === 'queries' ? 'Google’a yazılan aramalar; en çok tıklanandan aza.' : 'Google’dan tıklama alan sayfalarımız; en çok tıklanandan aza. Adrese dokunursanız sayfa açılır.'}
+      </p>
       {r.isLoading && <Loading text="Search Console verisi getiriliyor…" />}
       {r.error && <Failed error={r.error} />}
       {r.data && <Table data={r.data} kind={kind} filter={filter} setFilter={setFilter} shown={shown} setShown={setShown} />}
@@ -72,12 +77,10 @@ function Table({ data, kind, filter, setFilter, shown, setShown }: {
 
   if (!data.rows.length) {
     return (
-      <div className="sg-empty">
-        <h2>Search Console verisi yok</h2>
-        <p>
-          Servis hesabı tanımlanıp Search Console mülküne eklenince bu tablo dolar. Kurulum adımları <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranında.
-        </p>
-      </div>
+      <EmptyHint
+        title="Search Console verisi yok"
+        why={<>Search Console bağlantısı kurulup ilk okuma yapılınca bu tablo dolar. Kurulum adımları <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranında.</>}
+      />
     );
   }
   const totals = rows.reduce((a, r) => ({ c: a.c + r.clicks, i: a.i + r.impressions }), { c: 0, i: 0 });
@@ -86,21 +89,22 @@ function Table({ data, kind, filter, setFilter, shown, setShown }: {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <label className="sg-search">
           <Search size={16} aria-hidden />
-          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={kind === 'queries' ? 'Kelime süz' : 'Adres süz'} aria-label="Süz" />
+          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={kind === 'queries' ? 'Kelime süz, ör. roman' : 'Adres süz, ör. yazar'} aria-label="Süz" />
         </label>
         <span className="sg-mono" style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
           {fmt(rows.length)} satır · {fmt(totals.c)} tıklama · {fmt(totals.i)} gösterim · {data.start} – {data.end} · okundu {dateTime(data.savedAt)}
         </span>
       </div>
-      <div className="sg-table-wrap">
+      {!rows.length && <EmptyHint title="Süzgece uyan satır yok" why="Yazdığınızı kısaltın ya da kutuyu temizleyin." />}
+      <div className="sg-table-wrap" hidden={!rows.length}>
         <table className="sg-table">
           <thead>
             <tr>
               <th>{kind === 'queries' ? 'Sorgu' : 'Sayfa'}</th>
-              <th style={{ textAlign: 'right' }}>Tıklama</th>
-              <th style={{ textAlign: 'right' }}>Gösterim</th>
-              <th style={{ textAlign: 'right' }}>TO</th>
-              <th style={{ textAlign: 'right' }}>Ort. sıra</th>
+              <th style={{ textAlign: 'right' }}><TermLabel k="clicks" label="Tıklama" /></th>
+              <th style={{ textAlign: 'right' }}><TermLabel k="impressions" label="Gösterim" /></th>
+              <th style={{ textAlign: 'right' }}><TermLabel k="ctr" label="TO" /></th>
+              <th style={{ textAlign: 'right' }}><TermLabel k="position" label="Ort. sıra" /></th>
             </tr>
           </thead>
           <tbody>

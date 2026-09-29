@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ExternalLink, Pencil, Plus, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -58,9 +59,9 @@ export default function PersonCard() {
             <Fact label="İşbirliği" value={fmtInt(p.totals.collabs)} help={`${p.totals.published} yayında`} info={<SqlInfo k={p.kaynaklar} alan="totals" label="İşbirliği" />} />
             <Fact label="Etkileşim" value={fmtInt(p.totals.engagement)} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Etkileşim" />} />
             <Fact label="Harcama" value={p.totals.spend !== null ? fmtMoney(p.totals.spend) : 'yetkiyle görünür'} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Harcama" />} />
-            <Fact label="Etkileşim başı maliyet" value={p.totals.cpe !== null ? fmtMoney(p.totals.cpe) : '—'} info={<SqlInfo k={p.kaynaklar} alan="totals" label="Etkileşim başı maliyet" />} />
+            <Fact label="Etkileşim başı maliyet" value={p.totals.cpe !== null ? fmtMoney(p.totals.cpe) : '—'} info={<><SqlInfo k={p.kaynaklar} alan="totals" label="Etkileşim başı maliyet" /><Explain label="Etkileşim başı maliyet">Bu kişiye yapılan harcamanın, paylaşımlarının aldığı etkileşime (beğeni, yorum, paylaşım, kaydetme) bölümü.</Explain></>} />
             <Fact label="Ücret aralığı" value={m.me.canSeeFee ? (p.feeMin !== null || p.feeMax !== null ? `${fmtMoney(p.feeMin)} – ${fmtMoney(p.feeMax)}` : '—') : p.feeSet ? 'girildi' : '—'} />
-            <Fact label="İlişki puanı" info={<SqlInfo k={p.kaynaklar} alan="relation" label="İlişki puanı" />} value={<RelationBadge rel={p.relation} />} help={p.relation.last ? `son yayın ${fmtDay(p.relation.last)}` : undefined} />
+            <Fact label="İlişki puanı" info={<><SqlInfo k={p.kaynaklar} alan="relation" label="İlişki puanı" /><Explain label="İlişki puanı">0–100 arası puan: paylaşımla sonuçlanan son işbirliğinin yakınlığı (en çok 40), son 12 aydaki işbirliği sayısı (en çok 30) ve vazgeçilmeden sonuçlanan işlerin oranı (en çok 30). 67 ve üstü sıcak, 33 ve altı soğuk ilişkidir.</Explain></>} value={<RelationBadge rel={p.relation} />} help={p.relation.last ? `son yayın ${fmtDay(p.relation.last)}` : undefined} />
           </div>
           <Panel>
             <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Hesaplar ve ölçümler<SqlInfo k={p.kaynaklar} alan="accounts" label="Hesaplar ve ölçümler" /></h2>
@@ -76,7 +77,7 @@ export default function PersonCard() {
                   <span className="min-w-0 flex-1 break-words text-[13px] font-bold">{a.platformAdi} @{a.handle}</span>
                   {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="text-canvas-violet" aria-label="Hesabı aç"><ExternalLink aria-hidden className="h-4 w-4" /></a>}
                   <span className="font-mono text-[12px] tabular-nums">{a.latest?.followers !== null && a.latest?.followers !== undefined ? `${fmtInt(a.latest.followers)} takipçi` : 'ölçüm yok'}</span>
-                  {a.latest && <span className="text-[11px] text-canvas-muted">{fmtDay(a.latest.day)} · {a.latest.source === 'api' ? 'API' : 'elle'}</span>}
+                  {a.latest && <span className="text-[11px] text-canvas-muted">{fmtDay(a.latest.day)} · {a.latest.source === 'api' ? 'otomatik' : 'elle'}</span>}
                   {m.me.canEdit && <button type="button" className={btnGhost} onClick={() => setMeasure(a)}>Ölçüm gir</button>}
                 </div>
               ))}
@@ -84,7 +85,7 @@ export default function PersonCard() {
           </Panel>
           <Panel>
             <h2 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">İşbirlikleri<SqlInfo k={p.kaynaklar} alan="collabs" label="İşbirlikleri" /></h2>
-            {p.collabs.length === 0 ? <div className="text-[12.5px] text-canvas-muted">Henüz işbirliği yok.</div> : (
+            {p.collabs.length === 0 ? <div className="text-[12.5px] text-canvas-muted">Bu kişiyle henüz işbirliği yok. «Yeni işbirliği» ile başlayabilirsiniz.</div> : (
               <TableWrap>
                 <table className="w-full min-w-[720px] text-[12.5px]">
                   <thead><tr><th className={th}>No</th><th className={th}>Kitap</th><th className={th}>Tür</th><th className={th}>Aşama</th><th className={th}>Yayın</th><th className={th}>Etkileşim</th>{m.me.canSeeFee && <th className={th}>Ücret</th>}<th className={th}>Ödeme</th></tr></thead>

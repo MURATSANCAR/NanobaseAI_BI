@@ -459,7 +459,7 @@ export function WordMapPanel({ bookId, findings = [], docId }: { bookId: string;
     <Panel>
       <h2 className="px-1 text-[13px] font-extrabold">Kelime haritası</h2>
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Kitaptaki her sözcük köküne inilerek bir kez sayılır (göze, gözüme, gözü → göz). Birden çok geçen sözcüklerde ZEKİ AI anlamları ayırır: «göze girmek» deyimi, organ olarak göz ve dolabın gözü ayrı anlamdır; yan yana geçseler de tekrar sayılmaz. Özel adlar sayılmaz.
+        Kitaptaki her sözcük köküne inilerek bir kez sayılır (göze, gözüme, gözü → göz). Birden çok geçen sözcüklerde Zeki AI anlamları ayırır: «göze girmek» deyimi, organ olarak göz ve dolabın gözü ayrı anlamdır; yan yana geçseler de tekrar sayılmaz. Özel adlar sayılmaz.
       </p>
       <div className="mt-2">
         {q.isLoading ? (
@@ -467,7 +467,7 @@ export function WordMapPanel({ bookId, findings = [], docId }: { bookId: string;
         ) : q.error ? (
           <Note tone="err">{errText(q.error, 'Kelime haritası okunamadı.')}</Note>
         ) : !m?.ready ? (
-          <Note tone="info">{docId ? 'Belgenin kelime haritası henüz hazır değil; inceleme bitince burada görünür.' : 'Bu kitabın kelime haritası henüz çıkarılmadı. Son okuma denetimleri yeniden koşunca burada görünür.'}</Note>
+          <Note tone="info">{docId ? 'Belgenin kelime haritası henüz hazır değil; inceleme bitince burada görünür.' : 'Bu kitabın kelime haritası henüz çıkarılmadı. Son okuma denetimleri yeniden yapılınca burada görünür.'}</Note>
         ) : (
           <Body m={m} bookId={bookId} findings={findings} document={!!docId} />
         )}

@@ -8,6 +8,7 @@ import { Panel } from './kit';
 import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, inheritedLabel, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
 import { carriedFromOf, isCarriedReject, isPending, severityCounts } from './proofCarry';
 import { useCan } from '../useAdmin';
+import { Explain } from '../components/Explain';
 
 /** M5: ZEKİ AI'ın kitabın metninde koştuğu otomatik son okuma denetimleri ve bulguları.
  *  Rapor köprüden kitap adıyla gelir; burada gösterim, yerel süzme ve editörün bulguya kararı vardır.
@@ -71,7 +72,7 @@ function CheckChip({ c, active, onClick }: { c: ProofingCheck; active: boolean; 
       disabled={failed && c.findings === 0}
       onClick={onClick}
       title={
-        (failed ? `Denetim koşamadı${c.error ? `: ${c.error}` : ''}` : p ? `İsabet: ${nf.format(p.accepted)} doğru / ${nf.format(p.accepted + p.rejected)} karar` : 'Henüz karar yok') +
+        (failed ? `Denetim tamamlanamadı${c.error ? `: ${c.error}` : ''}` : p ? `İsabet: ${nf.format(p.accepted)} doğru / ${nf.format(p.accepted + p.rejected)} karar` : 'Henüz karar yok') +
         (c.hidden ? ` · ${nf.format(c.hidden)} bulgu önceki okumadaki kararla gizli` : '')
       }
       className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-[11.5px] transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 ${
@@ -80,7 +81,7 @@ function CheckChip({ c, active, onClick }: { c: ProofingCheck; active: boolean; 
     >
       <span className="min-w-0 truncate font-bold">{c.label}</span>
       {failed ? (
-        <span className={`shrink-0 rounded-md px-1 text-[10.5px] font-bold ${active ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>koşamadı</span>
+        <span className={`shrink-0 rounded-md px-1 text-[10.5px] font-bold ${active ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>tamamlanamadı</span>
       ) : (
         <span className={`shrink-0 font-mono text-[10.5px] tabular-nums ${active ? 'text-white/80' : c.serious > 0 ? 'text-amber-800' : 'text-canvas-muted'}`}>
           {nf.format(c.serious)}/{nf.format(c.findings)}
@@ -306,13 +307,19 @@ export function ProofFindings({
   if (error) body = <Note tone="err">{error}</Note>;
   else if (loading) body = <Loading />;
   else if (!report) body = idle === undefined ? <Loading /> : idle ? <Empty>{idle}</Empty> : null;
-  else if (!report.configured) body = <Empty>ZEKİ AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.</Empty>;
-  else if (!report.bookId && !docMode) body = <Empty>Bu eser motorda henüz okunmamış. Kitap adı motordaki adla birebir eşleşmeli.</Empty>;
-  else if (!report.checks.length) body = <Empty>Eser okunmuş, denetimler henüz koşmamış. Motor sırası gelince burada görünür.</Empty>;
+  else if (!report.configured) body = <Empty>Zeki AI bağlantısı bu kurulumda tanımlı değil; otomatik son okuma kapalı.</Empty>;
+  else if (!report.bookId && !docMode) body = <Empty>Bu eser Zeki AI tarafından henüz okunmamış. Eşleşme kitap adıyla yapılır; eser adının kitabın adıyla birebir aynı olduğundan emin olun.</Empty>;
+  else if (!report.checks.length) body = <Empty>Eser okunmuş ama denetimler henüz tamamlanmadı. Sırası gelince bulgular burada görünür.</Empty>;
   else
     body = (
       <>
-        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Denetimler">
+        <p className="mt-2 flex items-center gap-1 text-[11.5px] leading-snug text-canvas-muted">
+          Denetimler: dokununca yalnız o denetimin bulguları kalır.
+          <Explain label="Denetim çipleri">
+            Her çipte denetimin adı, uyarı ve hata sayısı / toplam bulgu ve isabet yüzdesi yazar. İsabet, editörlerin «Doğru» dediği bulguların karar verilen bulgulara oranıdır.
+          </Explain>
+        </p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-label="Denetimler">
           {report.checks.map((c) => (
             <CheckChip key={c.name} c={c} active={check === c.name} onClick={() => setCheck(check === c.name ? null : c.name)} />
           ))}
@@ -320,7 +327,7 @@ export function ProofFindings({
         {report.checks.some((c) => c.status === 'FAILED' && c.error) && (
           <div className="mt-1.5">
             <Note tone="err">
-              Koşamayan denetim var:{' '}
+              Tamamlanamayan denetim var:{' '}
               {report.checks
                 .filter((c) => c.status === 'FAILED')
                 .map((c) => `${c.label}${c.error ? ` (${c.error})` : ''}`)
@@ -331,7 +338,7 @@ export function ProofFindings({
 
         {findings.length === 0 ? (
           <div className="mt-3">
-            <Note tone="ok">Denetimler koştu, bulgu yok.</Note>
+            <Note tone="ok">Denetimler tamamlandı, bulgu yok.</Note>
           </div>
         ) : (
           <div className={`mt-3 ${desktop && panelOpen ? 'grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-start gap-3' : ''}`}>
@@ -448,14 +455,14 @@ export function ProofFindings({
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">{docMode ? docMode.title : 'ZEKİ AI son okuma'}</h2>
+        <h2 className="text-[13px] font-extrabold">{docMode ? docMode.title : 'Zeki AI son okuma'}</h2>
         {docMode ? docMode.action ?? null : bookId && canExport && report?.checks.length ? <WordExport bookId={bookId} /> : null}
       </div>
       {docMode ? (
         <div className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">{docMode.lead}</div>
       ) : (
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        ZEKİ AI, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.
+        Zeki AI kitabın metnini okuyup otomatik denetimleri yapar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya dokunun: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Kararınız bulguya kaydedilir ve denetimin isabetini ölçer; kitabı değiştirmez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
       </p>
       )}

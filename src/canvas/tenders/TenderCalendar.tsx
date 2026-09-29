@@ -8,6 +8,7 @@ import { Panel } from '../editorial/kit';
 import { fmtDay, tendersApi, type CalendarEvent } from './api';
 import { LeftPill } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Son teklif tarihleri, belge geçerlilik bitişleri ve teminat iadeleri tek takvimde (tarihe göre). Süresi geçmiş
  *  ama hâlâ açık olanlar da görünür. */
@@ -45,7 +46,7 @@ export default function TenderCalendar() {
       </div>
       {cal.error && <div className="mt-3"><Note tone="err">{errText(cal.error, 'Takvim okunamadı.')}</Note></div>}
       {cal.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
-      {cal.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu aralıkta tarih yok.</div>}
+      {cal.data && !items.length && <EmptyHint title="Bu aralıkta tarih yok" why="Seçtiğiniz aralıkta son teklif günü, belge geçerlilik bitişi ya da teminat iadesi bulunmuyor. Aralığı genişletmeyi deneyin." />}
       <div className="mt-3 flex flex-col gap-4">
         {[...groups.entries()].map(([month, evs]) => (
           <section key={month}>

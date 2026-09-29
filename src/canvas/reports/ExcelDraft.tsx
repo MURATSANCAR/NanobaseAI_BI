@@ -291,7 +291,7 @@ export default function ExcelDraft({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
 
-  const errText = refine.error instanceof EngineAuthError ? 'Oturum gerekli.' : refine.error ? (refine.error as Error).message : null;
+  const errText = refine.error instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : refine.error ? (refine.error as Error).message : null;
   const hiddenCount = layout.length - visible.length;
   const version = steps.length + 1;
 
@@ -533,7 +533,7 @@ export default function ExcelDraft({
         {errText && <div className="mt-2 rounded-lg bg-red-50 px-2.5 py-1.5 text-[12px] font-semibold text-red-700">{errText}</div>}
         <p aria-live="polite" className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
           {refine.isPending
-            ? 'Uygulanıyor… Kolon komutları anında biter; veri değişiyorsa model soruyu yeniden yazar ve veri yeniden çekilir, bu bir dakikayı bulabilir.'
+            ? 'Uygulanıyor… Kolon komutları anında biter; veri değişiyorsa Zeki AI soruyu yeniden yazar ve veri yeniden çekilir; bu bir dakikayı bulabilir.'
             : 'Kolon adı, sırası, biçimi ve gizleme anında uygulanır. Filtre, dönem ya da yeni ölçü soruyu değiştirir ve veri yeniden çekilir.'}
         </p>
       </div>

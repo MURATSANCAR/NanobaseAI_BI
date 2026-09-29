@@ -50,7 +50,7 @@ export default function TenderRisks({ d, canEdit, modelVar, busy }: { d: TenderD
       </div>
       {q.error && <div className="mt-2"><Note tone="err">{errText(q.error, 'Okunamadı.')}</Note></div>}
       {!hasSpec && <p className="mt-2 text-[12.5px] text-canvas-muted">Önce şartname dosyasını yükleyin.</p>}
-      {data && !data.items.length && hasSpec && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz işaretlenmedi.</p>}
+      {data && !data.items.length && hasSpec && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz işaretlenmedi. «Risk koşullarını işaretle» ile şartnamedeki ceza, teminat ve süre gibi koşulları listeleyin.</p>}
       {!!data?.items.length && (
         <>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -87,7 +87,7 @@ export default function TenderRisks({ d, canEdit, modelVar, busy }: { d: TenderD
             ))}
           </ul>
           <p className="mt-2 text-[11.5px] text-canvas-muted">
-            {items[0]?.dosya ? `Kaynak: ${items[0].dosya}. ` : ''}{!modelVar ? 'Model tanımlı değil; kategoriler kurala göre.' : ''}
+            {items[0]?.dosya ? `Kaynak: ${items[0].dosya}. ` : ''}{!modelVar ? 'Zeki AI bu kurulumda kapalı; kategoriler kurala göre seçildi.' : ''}
           </p>
         </>
       )}

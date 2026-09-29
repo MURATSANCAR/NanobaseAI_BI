@@ -813,8 +813,8 @@ def weekly(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], bitis: str
     out = {
         "bas": a, "bit": z,
         "siparis": {"paket": o["paketSayisi"], "adet": o["adet"], "tutar": o["tutar"], "geciken": o["geciken"],
-                    "kitaplar": o["kitaplar"][:20]},
-        "iade": {"talep": sum(v["talep"] for v in cl["siniflar"].values()), "siniflar": cl["siniflar"], "kitaplar": cl["kitaplar"][:20]},
+                    "kitaplar": o["kitaplar"]},
+        "iade": {"talep": sum(v["talep"] for v in cl["siniflar"].values()), "siniflar": cl["siniflar"], "kitaplar": cl["kitaplar"]},
         "soru": {"cevapsiz": qs["cevapsiz"], "geciken": qs["geciken"]},
         "yorum": {"hafta": len(week_reviews), "dusuk": sum(1 for r in week_reviews if r.puan is not None and r.puan <= 3), "ortalama": rv["ortalama"]},
         "stokFarki": sd["counts"], "yuklemeler": last_imports(engine, tenant), "ozet": None,

@@ -11,6 +11,7 @@ import { collageApi, collageKey, useCollage, type CollageView, type CoverStyle }
 import { useCan } from '../../../useAdmin';
 import { FileDrop } from '../../../components/FileDrop';
 import { MB } from '../../../components/fileDropRules';
+import { Explain } from '../../../components/Explain';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
  *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
@@ -22,7 +23,7 @@ const DRAFT = 'Taslak — ticari kullanım izni bekleniyor';
 const STYLES: { key: CoverStyle; title: string; help: string; Icon: typeof ImageIcon }[] = [
   { key: 'illustrated', title: 'Resimli', help: 'Kitabın üslubunda çizilmiş kapak resmi, üstünde başlık ve yazar.', Icon: ImageIcon },
   { key: 'collage', title: 'Kolaj', help: 'Siyah-beyaz eski fotoğraf yırtık kâğıt gibi kesilir; başlık daktilo şeritlerde.', Icon: Layers },
-  { key: 'typographic', title: 'Tipografik', help: 'Resimsiz: paletten zemin, başlık ve yazar büyük yazıyla.', Icon: Type },
+  { key: 'typographic', title: 'Tipografik', help: 'Resimsiz: kitabın renklerinden zemin, başlık ve yazar büyük yazıyla.', Icon: Type },
 ];
 
 const label = 'text-[11px] font-bold uppercase tracking-wide text-canvas-muted';
@@ -51,12 +52,12 @@ export default function CoverScreen() {
 
   const title = job.data?.state.title || 'Kapak';
   const frame = (body: ReactNode) => (
-    <ModuleFrame route="/kitap-tasarim" crumb="Kapak" title={title} lead="Kapak tarzı: resimli, kolaj ya da tipografik"
+    <ModuleFrame route="/kitap-tasarim" crumb="Kapak" title={title} lead="Ön kapağın tarzını seçin: resimli, kolaj ya da tipografik (yalnız yazı). Seçim ön kapağı yeniden kurar; arka kapak, sırt ve barkod her tarzda aynıdır."
       source={`İş ${jobId}`}
       aside={
         <div className="flex flex-wrap items-center gap-2">
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/studyo`}><ArrowLeft className="h-4 w-4" aria-hidden />Sayfa stüdyosu</Link>
-          {job.data?.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak PDF</a>}
+          {job.data?.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapağı indir (PDF)</a>}
         </div>
       }>
       {body}
@@ -103,7 +104,10 @@ export default function CoverScreen() {
               {pending && <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-canvas-violet"><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />Kapak yenileniyor…</span>}
             </div>
             {current === 'collage' && v.draft && (
-              <div role="status" className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">{DRAFT}</div>
+              <div role="status" className="mt-2 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">
+                <span className="min-w-0 flex-1">{DRAFT}</span>
+                <Explain label="Taslak kapak">ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır ve basılmamalıdır. Kendi yüklediğiniz fotoğraf taslak sayılmaz.</Explain>
+              </div>
             )}
             <div className="mx-auto mt-2 w-full max-w-[520px]">
               {v.built ? (
@@ -160,19 +164,19 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
                   className={`relative block w-full overflow-hidden rounded-xl border bg-white ${press} ${p.id === v.selected ? 'border-canvas-violet ring-2 ring-canvas-violet/40' : 'border-slate-200'}`}>
                   <Img src={collageApi.photoUrl(jobId, p.id, 320)} alt="" fallback={`${i + 1}`} className="aspect-[4/5] w-full object-cover grayscale" />
                   <span className={`absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${p.draft ? 'bg-amber-100 text-amber-800' : 'bg-white/90 text-canvas-ink'}`}>
-                    {p.draft ? 'Taslak' : 'Yüklenen'}
+                    {p.draft ? 'Taslak' : p.source === 'editor' ? 'Yüklenen' : 'ZEKİ AI'}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok.</p>
+          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok. {canProduce ? '«3 aday üret» ile ZEKİ AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : 'Kendi fotoğrafınızı aşağıdan yükleyin.'}</p>
         )}
         {sel && !sel.overflow && sel.cut_note && <p className="mt-2 text-[11.5px] text-canvas-muted">{sel.cut_note} Kesim düz yırtık kâğıt olarak kuruldu.</p>}
 
         <label className="mt-3 flex flex-col gap-1">
-          <span className={label}>Yönlendirme (isteğe bağlı)</span>
+          <span className={label}>Fotoğrafta ne olsun? (isteğe bağlı)</span>
           <textarea value={direction} onChange={(e) => setDirection(e.target.value)} rows={2} maxLength={1200}
             placeholder="Ör. deniz kıyısında, elinde uçurtma tutan bir çocuk"
             className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[13px]" />
@@ -200,7 +204,7 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
 
       <Panel>
         <div className="flex items-center justify-between gap-2">
-          <div className={label}>Düzen</div>
+          <div className={label}>Kolaj düzeni</div>
           <span className="font-mono text-[11px] text-canvas-muted">düzen {v.layout + 1}</span>
         </div>
         <p className="mt-1 text-[11.5px] text-canvas-muted">Aynı kitap her zaman aynı düzeni verir; «Başka düzen» yırtık kenarı, lekeleri ve etiketlerin yerini değiştirir.</p>
@@ -228,8 +232,11 @@ function LabelsEditor({ v, pending, onSave }: { v: CollageView; pending: boolean
   return (
     <Panel>
       <div className="flex items-center justify-between gap-2">
-        <div className={label}>Etiket şeritleri</div>
-        {v.label_size_pt && <span className="font-mono text-[11px] text-canvas-muted">{v.label_size_pt.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} pt</span>}
+        <div className="flex items-center gap-1">
+          <div className={label}>Etiket şeritleri</div>
+          <Explain label="Etiket şeritleri">Kolaj kapakta başlığın yazıldığı daktilo şeritleri. Her satır ayrı bir şerittir; başlığı istediğiniz yerden bölmek için satırları düzenleyin.</Explain>
+        </div>
+        {v.label_size_pt && <span className="font-mono text-[11px] text-canvas-muted">yazı {v.label_size_pt.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} pt</span>}
       </div>
       <p className="mt-1 text-[11.5px] text-canvas-muted">
         {v.labels ? 'Elle bölündü: her satır bir şerit.' : 'Başlık uzunluğuna göre otomatik bölündü.'} Uzun şerit sığmazsa yazı küçülür; daha da sığmazsa bölmeniz istenir.

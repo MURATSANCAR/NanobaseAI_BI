@@ -78,7 +78,7 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
                 {p.basis.tahmin?.bant && (
                   <div className="rounded-xl bg-violet-50/70 px-2.5 py-2 text-[11.5px] leading-snug">
                     <div className="flex flex-wrap items-center gap-1.5 font-bold">
-                      ZEKİ AI tahmini · 12 ay
+                      Zeki AI tahminleme · 12 ay
                       <span className="rounded bg-white/80 px-1 text-[10px] font-extrabold uppercase tracking-wide text-canvas-violet">tahmin</span>
                     </div>
                     {p.basis.tahmin.bant.aralik ? (

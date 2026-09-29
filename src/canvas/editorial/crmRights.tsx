@@ -3,6 +3,7 @@ import type { BookRights, CrmLicense, CrmRight } from '../engine';
 import { Pill, nf } from '../admin/ui';
 import { crmLabel } from '../format';
 import { day } from './assign/parts';
+import { Explain } from '../components/Explain';
 
 /** CRM sözleşme hakları ve lisans şartları: sözleşme sayfası, kitap 360 ve kişi kartı aynı parçaları kullanır.
  *  Kaynak köprüdeki `crm_rights.py`; CRM'de boş alan «girilmemiş»tir, «yok» diye gösterilmez. */
@@ -45,6 +46,13 @@ const TERM_LABEL: Record<string, string> = {
   ebookConsentEnd: 'E-kitap muvafakatname bitişi',
   protocolDate: 'Ek protokol tarihi',
   protocolEnd: 'Ek protokol bitişi',
+};
+/** Anlamı açık olmayan lisans şartlarının sade açıklaması («?»). */
+const MUVAFAKAT = 'Muvafakatname, hak sahibinin (ör. mirasçı ya da ilk yayıncı) eserin yayımlanmasına yazılı onay verdiği belgedir.';
+const TERM_HELP: Record<string, string> = {
+  consentDate: MUVAFAKAT,
+  ebookConsentDate: `${MUVAFAKAT} Bu alan e-kitap için verilen onayı gösterir.`,
+  unpublishedTermination: 'Kitap bu tarihe kadar yayımlanmazsa sözleşmenin feshedilebileceği tarih.',
 };
 const DATES = new Set(['renewalStart', 'renewalEnd', 'terminated', 'unpublishedTermination', 'rightsTransferDate', 'consentDate', 'consentEnd', 'ebookConsentDate', 'ebookConsentEnd', 'protocolDate', 'protocolEnd']);
 const OPTIONS = new Set(['paymentType', 'basis', 'paymentMethod', 'currency']);
@@ -112,7 +120,7 @@ export function LicenseTerms({ license }: { license: CrmLicense | undefined }) {
   if (!license) return null;
   const keys = ORDER.filter((k) => license.terms[k] != null && license.terms[k] !== '');
   const empty = !keys.length && !license.flags.length && !license.countries.length && !license.languages.length && !license.rightsNote && !license.royaltyNote;
-  if (empty) return <p className="text-[12px] text-canvas-muted">CRM'de lisans şartı girilmemiş.</p>;
+  if (empty) return <p className="text-[12px] text-canvas-muted">CRM'de lisans şartı girilmemiş. Şartlar CRM sözleşme kartına girilince burada görünür.</p>;
   return (
     <div className="space-y-2.5 text-[12.5px]">
       {license.flags.length > 0 && (
@@ -144,7 +152,16 @@ export function LicenseTerms({ license }: { license: CrmLicense | undefined }) {
         <dl className="grid gap-x-3 gap-y-1 sm:grid-cols-[220px_minmax(0,1fr)]">
           {keys.map((k) => (
             <div key={k} className="contents">
-              <dt className="text-canvas-muted">{TERM_LABEL[k]}</dt>
+              <dt className="text-canvas-muted">
+                {TERM_HELP[k] ? (
+                  <span className="inline-flex items-center gap-1">
+                    {TERM_LABEL[k]}
+                    <Explain label={TERM_LABEL[k]}>{TERM_HELP[k]}</Explain>
+                  </span>
+                ) : (
+                  TERM_LABEL[k]
+                )}
+              </dt>
               <dd className="break-words font-semibold tabular-nums">{termValue(k, license.terms[k])}</dd>
             </div>
           ))}

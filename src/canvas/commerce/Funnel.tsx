@@ -47,7 +47,7 @@ export default function Funnel() {
       </p>
       <div className="mt-2">
         <TableWrap>
-          <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Adet / görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Tutar</InfoLabel></th></tr></thead>
+          <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Satış / görüntülenme</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={f.kaynaklar} alan="items">Tutar</InfoLabel></th></tr></thead>
           <tbody>
             {f.items.map((r) => (
               <tr key={r.barkod} className="border-t border-slate-100">

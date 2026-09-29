@@ -44,7 +44,7 @@ export default function PrReport() {
     <PrFrame
       crumb="Rapor"
       title="Yansıma raporu"
-      lead="Varsayılan dönem geçen hafta (pazartesi–pazar). Haftalık özet Yönetim ayarındaki günde e-postayla da gider."
+      lead="Seçtiğiniz dönemde kaç gazeteciye ulaşıldı, kaçından dönüş geldi ve kaç haber çıktı. Varsayılan dönem geçen haftadır (pazartesi–pazar); haftalık özet ayrıca iç ekibe e-postayla gider."
       source="Portal kayıtları + CRM arşivi"
       presence={r ? `${r.coverage.total} yansıma` : '…'}
       aside={
@@ -74,9 +74,11 @@ export default function PrReport() {
         <>
           <KpiRow>
             <Kpi label="Gönderim" value={r.sends.total.toLocaleString('tr-TR')} help="Dönemde gönderilen (e-posta, kargo, elden, telefon)" info={<SqlInfo k={r.kaynaklar} alan="sends" label="Gönderim" />} />
-            <Kpi label="Dönüş" value={r.sends.answered.toLocaleString('tr-TR')} help={`Cevap ya da haber · oran ${pct(r.sends.answerRate)}`} info={<SqlInfo k={r.kaynaklar} alan="sends" label="Dönüş" />} />
+            <Kpi label="Dönüş" value={r.sends.answered.toLocaleString('tr-TR')} help={`Cevap ya da haber · oran ${pct(r.sends.answerRate)}`} info={<SqlInfo k={r.kaynaklar} alan="sends" label="Dönüş" />}
+              explain="Dönemde gönderilenlerden durumu «cevap geldi» ya da «haber çıktı» olanlar. Oran, dönüşün gönderime bölümüdür." />
             <Kpi label="Kayıtlı yansıma" value={r.coverage.total.toLocaleString('tr-TR')} help={r.pendingCandidates ? `${r.pendingCandidates} aday onay bekliyor` : 'Yayın tarihine göre'} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Kayıtlı yansıma" />} />
-            <Kpi label="CRM arşivi" value={r.archive.total === null ? '—' : r.archive.total.toLocaleString('tr-TR')} help={r.archive.note ?? 'Aynı dönemde CRM haber kaydı'} info={<SqlInfo k={r.kaynaklar} alan="archive" label="CRM arşivi" />} />
+            <Kpi label="CRM arşivi" value={r.archive.total === null ? '—' : r.archive.total.toLocaleString('tr-TR')} help={r.archive.note ?? 'Aynı dönemde CRM haber kaydı'} info={<SqlInfo k={r.kaynaklar} alan="archive" label="CRM arşivi" />}
+              explain="Aynı dönemde CRM'deki haber kayıtlarının sayısı. Portaldaki yansımalardan ayrıdır; karşılaştırma için gösterilir." />
           </KpiRow>
 
           <Block
@@ -88,7 +90,7 @@ export default function PrReport() {
               </button>
             ) : null}
           >
-            {!m.modelReady && <Empty>Zeki AI modeli bu kurulumda bağlı değil.</Empty>}
+            {!m.modelReady && <Empty>Zeki AI şu an bağlı değil; özet yazılamıyor.</Empty>}
             {withComment && comment.isLoading && <p className="flex items-center gap-2 text-[12.5px] text-canvas-muted"><Loader2 aria-hidden className="h-4 w-4 animate-spin" /> Yorum yazılıyor…</p>}
             {comment.data?.comment?.metin && <p className="whitespace-pre-line text-[13px] leading-snug">{comment.data.comment.metin}</p>}
             {comment.data && !comment.data.comment?.metin && <Empty>Denetimden geçen cümle kalmadı; sayılar aşağıda.</Empty>}
@@ -114,7 +116,7 @@ function Dist({ title, rows, labels, info }: { title: string; rows: Record<strin
   const items = Object.entries(rows).sort((a, b) => b[1] - a[1]);
   return (
     <Block title={title} info={info}>
-      {items.length === 0 && <Empty>Kayıt yok.</Empty>}
+      {items.length === 0 && <Empty>Bu dönemde kayıt yok.</Empty>}
       <ul className="flex flex-col gap-1.5">
         {items.map(([k, n]) => (
           <li key={k} className="flex flex-col gap-1">
@@ -135,7 +137,7 @@ function Dist({ title, rows, labels, info }: { title: string; rows: Record<strin
 function Ranked({ title, rows, info }: { title: string; rows: Array<{ name: string; count: number }>; info?: ReactNode }) {
   return (
     <Block title={title} info={info}>
-      {rows.length === 0 && <Empty>Kayıt yok.</Empty>}
+      {rows.length === 0 && <Empty>Bu dönemde kayıt yok.</Empty>}
       <ol className="flex flex-col divide-y divide-slate-100">
         {rows.map((x, i) => (
           <li key={`${x.name}-${i}`} className="flex justify-between gap-2 py-1.5 text-[12.5px]">

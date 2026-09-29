@@ -53,11 +53,13 @@ export default function PaReport() {
           <KpiRow>
             <Kpi label="Kişi kartı" value={fmtInt(r.people.total)} help={`Kritik ${fmtInt(r.people.critical)} · kamu görevlisi ${fmtInt(r.people.publicOfficials)}`} info={<SqlInfo k={r.kaynaklar} alan="people" label="Kişi kartı" />} />
             <Kpi label="Temas notu" value={fmtInt(r.contacts.notes)} help={`${fmtInt(r.contacts.people)} kişi · ${fmtInt(r.contacts.orgs)} kurum`} info={<SqlInfo k={r.kaynaklar} alan="contacts" label="Temas notu" />} />
-            <Kpi label="Gönderilen kitap" value={fmtInt(r.gifts.sentBooks)} help={`${fmtInt(r.gifts.sentPeople)} kişi · ${fmtInt(r.gifts.feedback)} geri dönüş`} info={<SqlInfo k={r.kaynaklar} alan="gifts" label="Gönderilen kitap" />} />
-            <Kpi label="Proje erişimi" value={fmtInt(r.projects.reach.students)} help={`öğrenci · ${fmtInt(r.projects.reach.schools)} okul · ${fmtInt(r.projects.reach.books)} kitap`} info={<SqlInfo k={r.kaynaklar} alan="projects" label="Proje erişimi" />} />
+            <Kpi label="Gönderilen kitap" value={fmtInt(r.gifts.sentBooks)} help={`${fmtInt(r.gifts.sentPeople)} kişi · ${fmtInt(r.gifts.feedback)} geri dönüş`} info={<SqlInfo k={r.kaynaklar} alan="gifts" label="Gönderilen kitap" />}
+              explain="Hediye programında gönderilmiş kitap sayısı; alt satırda kaç kişiye gittiği ve kaçından geri dönüş kaydedildiği yazar." />
+            <Kpi label="Proje erişimi" value={fmtInt(r.projects.reach.students)} help={`öğrenci · ${fmtInt(r.projects.reach.schools)} okul · ${fmtInt(r.projects.reach.books)} kitap`} info={<SqlInfo k={r.kaynaklar} alan="projects" label="Proje erişimi" />}
+              explain="Kamu projelerinde ulaşılan öğrenci sayısı; yanında okul ve dağıtılan kitap sayısı yazar. Rakamlar projelere girilen hedef kurum ve kitap bilgisinden gelir." />
           </KpiRow>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-            <Block title="CRM tanıtım ve bağış siparişleri" info={<SqlInfo k={r.kaynaklar} alan="crm" label="CRM tanıtım ve bağış siparişleri" />} help="Yıl içinde CRM'de açılan siparişler; iptal ve birleştirilen siparişler sayılmaz (ayar).">
+            <Block title="CRM tanıtım ve bağış siparişleri" info={<SqlInfo k={r.kaynaklar} alan="crm" label="CRM tanıtım ve bağış siparişleri" />} help="Yıl içinde CRM'de açılan tanıtım ve bağış siparişleri; iptal edilen ve başka siparişle birleştirilenler sayılmaz.">
               {r.crm.error ? (
                 <Note tone="warn">{r.crm.error}</Note>
               ) : r.crm.types.length === 0 ? (

@@ -7,6 +7,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDateTime, recruitApi, type Template } from '../hrApi';
 import { Block, HrFrame } from '../parts';
+import { EmptyHint } from '../../components/Explain';
 
 /** M55 İK belgeleri: ilan, «başvurunuz alındı», mülakat daveti, teklif ve ret şablonları. `{{alan}}` yer tutucuları aday
  *  kartında mektup hazırlanırken doldurulur. Yürürlükteki şablon kullanılır; metin değişince sürüm artar. */
@@ -21,7 +22,7 @@ export default function TemplatesScreen() {
     <HrFrame
       crumb="Belgeler"
       title="İK belgeleri"
-      lead="İlan, «başvurunuz alındı», mülakat daveti, teklif ve ret şablonları. Mektup aday kartında şablondan taslak olur; gönderimi siz yaparsınız. «Başvurunuz alındı» şablonu aday aydınlatma metnine atıf yapmalıdır."
+      lead="İlan, «başvurunuz alındı», mülakat daveti, teklif ve ret mektuplarının şablonları. Aday kartında mektup, türünün yürürlükteki şablonundan taslak olarak hazırlanır; gönderimi siz yaparsınız."
       aside={
         canEdit ? (
           <div className="flex justify-start lg:justify-end">
@@ -35,14 +36,22 @@ export default function TemplatesScreen() {
     >
       {list.error && <Note tone="err">{errText(list.error, 'Şablonlar okunamadı.')}</Note>}
       {list.data && !list.data.items.length && (
-        <Note tone="info">Henüz şablon yok. {canEdit ? '«Yeni şablon» ile başlayın; başlangıç metinlerinden birini yükleyip düzeltebilirsiniz.' : ''}</Note>
+        <EmptyHint
+          title="Henüz şablon yok"
+          why={canEdit ? '«Yeni şablon» ile başlayın; her tür için hazır bir başlangıç metnini yükleyip düzeltebilirsiniz.' : 'Şablonları İK hazırlar; hazır olduğunda burada görünür.'}
+        />
+      )}
+      {list.data && list.data.items.length > 0 && (
+        <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+          Her türde yalnız «Yürürlükte» durumundaki şablon kullanılır. «Başvurunuz alındı» şablonu aday aydınlatma metnine atıf yapmalıdır.
+        </p>
       )}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
         {Object.entries(kinds).map(([kind, label]) => {
           const rows = (list.data?.items ?? []).filter((t) => t.kind === kind);
           return (
             <Block key={kind} title={label} help={rows.some((t) => t.state === 'yururlukte') ? undefined : 'Yürürlükte şablon yok; bu türde mektup hazırlanamaz.'}>
-              {!rows.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Şablon yok.</div>}
+              {!rows.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Bu türde şablon yok.</div>}
               <ul className="flex flex-col gap-1.5">
                 {rows.map((t) => (
                   <li key={t.id}>
@@ -50,7 +59,7 @@ export default function TemplatesScreen() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="min-w-0 break-words text-[13px] font-extrabold">{t.name}</span>
                         <Pill tone={t.state === 'yururlukte' ? 'ok' : t.state === 'arsiv' ? 'muted' : 'warn'}>{t.stateLabel}</Pill>
-                        <span className="font-mono text-[11px] text-canvas-muted">s{t.version}</span>
+                        <span className="font-mono text-[11px] text-canvas-muted">sürüm {t.version}</span>
                       </div>
                       <div className="text-[11.5px] text-canvas-muted">{t.updatedBy ?? '—'} · {fmtDateTime(t.updatedAt)}</div>
                       {t.unknown.length > 0 && <div className="mt-0.5 text-[11.5px] text-amber-800">Tanınmayan alan: {t.unknown.join(', ')}</div>}
@@ -104,7 +113,7 @@ function EditorSheet({ t, kinds, fields, canEdit, onClose }: {
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Ad</span>
-            <input className={field} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+            <input className={field} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ör. Genel ret mektubu" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Durum</span>
@@ -113,6 +122,7 @@ function EditorSheet({ t, kinds, fields, canEdit, onClose }: {
               <option value="yururlukte">Yürürlükte</option>
               <option value="arsiv">Arşiv</option>
             </select>
+            <span className="text-[11px] leading-snug text-canvas-muted">Mektupta yalnız «Yürürlükte» olan kullanılır.</span>
           </label>
         </div>
         <label className="flex flex-col gap-1">
@@ -126,6 +136,7 @@ function EditorSheet({ t, kinds, fields, canEdit, onClose }: {
         )}
         <details className="rounded-xl bg-slate-50 p-2.5">
           <summary className="cursor-pointer text-[12.5px] font-bold">Kullanılabilen alanlar</summary>
+          <p className="mt-1 text-[11.5px] text-canvas-muted">Metne süslü parantezli alanı yazın; mektup hazırlanırken adayın bilgisiyle doldurulur.</p>
           <ul className="mt-1 grid grid-cols-1 gap-0.5 text-[12px] sm:grid-cols-2">
             {Object.entries(fields).map(([k, v]) => (
               <li key={k}><code className="font-mono text-[11.5px]">{`{{${k}}}`}</code> — {v}</li>

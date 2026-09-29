@@ -4,6 +4,7 @@ import { studioPlanApi, type Plan, type PlanAsset, type PlanBox } from '../../en
 import { btnGhost, btnPrimary } from '../../admin/ui';
 import { PRINT_DPI, effectiveDpi } from './pageItems';
 import { useCan } from '../../useAdmin';
+import { Explain } from '../../components/Explain';
 
 /** Fotoğraf/figür araçları: etkin çözünürlük, «Kaliteyi artır» (öncesi/sonrası karşılaştırma → Kullan),
  *  «Arka planı kaldır» (önizle → onayla) ve «Özgüne dön». Sonuç kopyaları plandaki `assets`'ten okunur
@@ -54,14 +55,19 @@ export default function AssetTools({ job, plan, gid, box, fit, running, onStart,
         </div>
         <div className="min-w-0 text-[12px] leading-snug">
           <div className="truncate font-bold">{a.name || a.prompt || (isPhoto ? 'Fotoğraf' : 'Figür')}</div>
-          <div className="text-canvas-muted">{a.w_px}×{a.h_px} px{dpi !== null ? ` · bu kutuda ${dpi} dpi` : ''}</div>
+          <div className="flex flex-wrap items-center gap-1 text-canvas-muted">
+            {a.w_px}×{a.h_px} px{dpi !== null ? ` · bu kutuda ${dpi} dpi` : ''}
+            {dpi !== null && (
+              <Explain label="Çözünürlük (dpi)">Görselin bu kutudaki baskı netliği: 2,5 cm'ye düşen nokta sayısı. Baskıda net çıkması için en az {PRINT_DPI} dpi gerekir; kutuyu büyüttükçe düşer.</Explain>
+            )}
+          </div>
           {a.note && <div className="text-amber-700">{a.note}</div>}
         </div>
       </div>
 
       {low && (
         <div className="rounded-xl bg-amber-50 px-2.5 py-2 text-[12px] font-semibold text-amber-800">
-          Baskıda bulanık çıkabilir ({dpi} dpi; baskı için {PRINT_DPI} dpi gerekir). Kutuyu küçültün ya da kaliteyi artırın.
+          Baskıda bulanık çıkabilir ({dpi} dpi; baskı için {PRINT_DPI} dpi gerekir). Kutuyu küçültün ya da «Kaliteyi artır» ile ZEKİ AI görseli büyütüp netleştirsin; sonucu karşılaştırıp siz seçersiniz.
           {canProduce && <div className="mt-1.5">
             <button type="button" className={btnPrimary} disabled={running.has('upscale')} onClick={() => start('upscale')}>
               {running.has('upscale') ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
@@ -85,7 +91,7 @@ export default function AssetTools({ job, plan, gid, box, fit, running, onStart,
       {isPhoto && !a.alpha && (
         cutout && !dismissed.has(cutout[0]) ? (
           <div className="rounded-xl border border-slate-200 bg-white/80 p-2">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Arka planı kaldırılmış hâli</div>
+            <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Arka planı kaldırılmış hâli · önizleme</div>
             <div className="pe-checker mt-1.5 overflow-hidden rounded-lg">
               <img src={studioPlanApi.assetUrl(job, cutout[0], 640)} alt="Arka planı kaldırılmış fotoğraf" className="mx-auto max-h-56 object-contain" />
             </div>
@@ -134,7 +140,7 @@ function Compare({ job, before, after, caption, onUse, onDismiss }: {
       </div>
       <input type="range" min={0} max={100} value={v} onChange={(e) => setV(Number(e.target.value))}
         aria-label="Karşılaştırma sürgüsü" className="mt-1.5 w-full accent-[#7C5CFF]" />
-      <p className="text-[11.5px] text-canvas-muted">{caption}</p>
+      <p className="text-[11.5px] text-canvas-muted">{caption}. Sürgüyü kaydırıp iki hâli karşılaştırın; «Kullan» derseniz sayfaya yenisi konur, özgünü kütüphanede kalır.</p>
       <div className="mt-1.5 flex gap-2">
         <button type="button" className={btnPrimary} onClick={onUse}><Check className="h-4 w-4" aria-hidden />Kullan</button>
         <button type="button" className={btnGhost} onClick={onDismiss}>Şimdilik değil</button>

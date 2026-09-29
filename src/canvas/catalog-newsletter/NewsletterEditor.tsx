@@ -84,7 +84,7 @@ export default function NewsletterEditor() {
     } else if (j.durum === 'hata') toast.error(j.hata ?? 'Taslak yazılamadı.');
   }, [jobQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ENGINE_ENABLED) return <CnFrame crumb="Bülten" title="Bülten" source="—" presence="—"><Note tone="warn">Veri bağlantısı tanımlı değil.</Note></CnFrame>;
+  if (!ENGINE_ENABLED) return <CnFrame crumb="Bülten" title="Bülten" source="—" presence="—"><Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note></CnFrame>;
   const list = d?.kitaplar ?? [];
   const edits: ItemEdit[] = list.map((k) => ({ crmKitapId: k.crmKitapId }));
   const move = (i: number, dir: -1 | 1) => {
@@ -101,7 +101,7 @@ export default function NewsletterEditor() {
     <CnFrame
       crumb="Bülten"
       title={d?.baslik ?? 'Bülten'}
-      lead={d ? `${d.planlanan ? `Planlanan gönderim ${fmtDay(d.planlanan)}` : 'Gönderim tarihi girilmedi'}${d.konu ? ` · «${d.konu}»` : ''}` : undefined}
+      lead={d ? `Bültenin kitaplarını seçin, giriş metnini ve konu satırını yazın, onaylatın; onaylı bülten dosyasını şirketin e-posta aracına yüklersiniz. ${d.planlanan ? `Planlanan gönderim ${fmtDay(d.planlanan)}` : 'Gönderim tarihi girilmedi'}${d.konu ? ` · «${d.konu}»` : ''}` : undefined}
       source="CRM + Logo"
       presence={d?.segmentBuyuklugu !== null && d?.segmentBuyuklugu !== undefined ? `${fmtInt(d.segmentBuyuklugu)} izinli okur` : 'segment sayılmadı'}
       back={{ to: '/katalog-bulten?sekme=bulten', label: 'Bültenler' }}
@@ -134,7 +134,7 @@ export default function NewsletterEditor() {
       {d && m && (
         <>
           {d.not && d.durum === 'taslak' && <Note tone="warn">Geri gönderme gerekçesi: {d.not}</Note>}
-          <Note tone="info">Portal bu bülteni göndermez. Onaylanan HTML şirketin izin yönetimi olan e-posta aracına yüklenir; alıcı listesini araç kendi kaynağından alır.</Note>
+          <Note tone="info">Portal bu bülteni göndermez. Onaylanan bülten dosyası şirketin izin yönetimi olan e-posta aracına yüklenir; alıcı listesini araç kendi kaynağından alır.</Note>
 
           {editable && (
             <Block title="Bülten bilgisi">
@@ -219,7 +219,7 @@ export default function NewsletterEditor() {
           </Block>
 
           {d.html && (
-            <Block title="Önizleme" help="E-posta aracına yüklenecek HTML. Abonelikten çıkma bağlantısı aracın kendi yer tutucusuyla eklenir.">
+            <Block title="Önizleme" help="E-posta aracına yüklenecek bültenin görünümü. Abonelikten çıkma bağlantısını e-posta aracı kendisi ekler.">
               <iframe title="Bülten önizlemesi" sandbox="" srcDoc={d.html} className="h-[560px] w-full rounded-xl border border-slate-100 bg-white" />
             </Block>
           )}
@@ -229,7 +229,7 @@ export default function NewsletterEditor() {
       )}
       <AskSheet open={ask === 'reject'} title="Geri gönder" message="Bülten hazırlayana gerekçeyle geri gider." confirm="Geri gönder" input="Gerekçe" required
         busy={action.isPending} onClose={() => setAsk(null)} onConfirm={(t) => action.mutate({ act: 'reject', note: t })} />
-      <AskSheet open={ask === 'delete'} title="Bülteni sil" message="Taslak bülten silinir." confirm="Sil" danger busy={remove.isPending}
+      <AskSheet open={ask === 'delete'} title="Bülteni sil" message="Taslak bülten silinir. Bu işlem geri alınamaz." confirm="Sil" danger busy={remove.isPending}
         onClose={() => setAsk(null)} onConfirm={() => remove.mutate()} />
     </CnFrame>
   );
@@ -369,7 +369,7 @@ function Results({ d, canEdit }: { d: Newsletter; canEdit: boolean }) {
           <TableWrap>
             <thead><tr>
               <th className={th}>Zaman</th><th className={th}>Kaynak</th><th className={`${th} text-right`}>Gönderilen</th>
-              <th className={`${th} text-right`}>Açılma</th><th className={`${th} text-right`}>Tıklama</th><th className={`${th} text-right`}>Çıkan</th><th className={th} />
+              <th className={`${th} text-right`}>Açılma</th><th className={`${th} text-right`}>Tıklama</th><th className={`${th} text-right`}>Abonelikten çıkan</th><th className={th} />
             </tr></thead>
             <tbody>
               {d.sonuclar.map((r) => (

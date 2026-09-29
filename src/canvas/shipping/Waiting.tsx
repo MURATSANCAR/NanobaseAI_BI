@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { ageTone, fmtDay, fmtInt, fmtMoney, fmtNum, shippingApi } from './api';
@@ -38,12 +39,12 @@ export default function Waiting() {
     <ShippingFrame
       crumb="Teslim bekleyen"
       title="Teslim bekleyen gönderiler"
-      lead="Kargo firmasının kaydında teslim tarihi ve iade bilgisi olmayan gönderiler; yaş = bugün − kargo irsaliye tarihi. Firmayı arayıp takip etmek için firma bazında ayrılır."
+      lead="Kargoya verilmiş ama kargo firmasının kaydında hâlâ teslim edilmemiş (ve iade de olmamış) gönderiler, kaç gündür beklediğine göre. Firmayı arayıp sormak için firma firma ayrılır."
       meta={meta.data}
       aside={
         meta.data && (
           <div className="flex justify-start lg:justify-end">
-            <ExportButton list="bekleyen" params={{ gun, firma: firma || undefined, sehir: sehir || undefined }} can={meta.data.me.disaAktar} label="Excel'e al" />
+            <ExportButton list="bekleyen" params={{ gun, firma: firma || undefined, sehir: sehir || undefined }} can={meta.data.me.disaAktar} />
           </div>
         )
       }
@@ -53,7 +54,7 @@ export default function Waiting() {
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:max-w-[900px]">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>En az bekleyen gün</span>
-            <input className={field} inputMode="numeric" value={gunParam ?? String(gun ?? '')} onChange={(e) => set('gun', e.target.value.replace(/\D/g, '').slice(0, 3))} />
+            <input className={field} inputMode="numeric" placeholder="ör. 5" value={gunParam ?? String(gun ?? '')} onChange={(e) => set('gun', e.target.value.replace(/\D/g, '').slice(0, 3))} />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Kargo firması</span>
@@ -75,18 +76,22 @@ export default function Waiting() {
         <>
           <KpiRow>
             <Kpi label={`${d.esikGun}+ gün bekleyen`} value={fmtInt(d.esikUstu)} help="Teslim ve iade bilgisi yok"
+              explain="Kargo irsaliye tarihinden bu yana en az bu kadar gün geçmiş, teslim tarihi boş ve iade olmayan gönderiler. Bekleme süresi = bugün − kargo irsaliyesinin tarihi."
               info={<SqlInfo k={d.kaynaklar} alan="esikUstu" label="Eşiği aşan teslim bekleyen" />} />
             <Kpi label="Toplam teslim bekleyen" value={fmtInt(d.toplam)} help="Süzgeçteki bütün gönderiler"
               info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Toplam teslim bekleyen" />} />
             {d.kovalar.slice(-2).map((k) => (
-              <Kpi key={k.kova} label={k.kova} value={fmtInt(k.adet)} help="Yaş kovası" info={<SqlInfo k={d.kaynaklar} alan="kovalar" label={`Yaş kovası ${k.kova}`} />} />
+              <Kpi key={k.kova} label={k.kova} value={fmtInt(k.adet)} help="Bu süre aralığında bekleyen gönderi" info={<SqlInfo k={d.kaynaklar} alan="kovalar" label={`Yaş kovası ${k.kova}`} />} />
             ))}
           </KpiRow>
           <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
           <Panel>
-            <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="firmalar" label="Firma × yaş kovası">Firma bazında</InfoLabel></h2>
+            <h2 className="flex items-center gap-1 text-[14px] font-extrabold">
+              <InfoLabel k={d.kaynaklar} alan="firmalar" label="Firma × bekleme süresi">Firma bazında</InfoLabel>
+              <Explain label="Firma tablosu">Her sütun bir bekleme süresi aralığıdır; hücre o firmada o kadar süredir bekleyen gönderi sayısı. Firma adına dokunursanız liste o firmaya süzülür.</Explain>
+            </h2>
             {d.firmalar.length === 0 ? (
-              <Empty>Teslim bekleyen gönderi yok (veri sonuna bakın).</Empty>
+              <EmptyHint title="Teslim bekleyen gönderi yok" why="Kargo kayıtları geç gelmiş olabilir; yukarıdaki veri sonu notuna bakın. «0» her zaman gecikme olmadığı anlamına gelmez." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -117,7 +122,7 @@ export default function Waiting() {
           <Panel>
             <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="items[]" label="Bekleyen gönderiler">{`Gönderiler (${d.esikGun}+ gün, en eskisi önce)`}</InfoLabel></h2>
             {d.items.length === 0 ? (
-              <Empty>Bu eşikte bekleyen gönderi yok.</Empty>
+              <EmptyHint title="Bu eşikte bekleyen gönderi yok" why="Daha kısa süredir bekleyenleri görmek için «En az bekleyen gün» değerini düşürün ya da firma ve şehir süzgeçlerini «Hepsi» yapın." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -126,10 +131,10 @@ export default function Waiting() {
                       <th className={th}>Takip no</th>
                       <th className={th}>Firma</th>
                       <th className={th}>Kargo irsaliyesi</th>
-                      <th className={`${th} text-right`}>Bekleyen</th>
+                      <th className={`${th} text-right`}>Bekleme süresi</th>
                       <th className={th}>Şehir / şube</th>
                       <th className={th}>Kanal</th>
-                      {cost && <th className={`${th} text-right`}>Desi</th>}
+                      {cost && <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Desi<Explain label="Desi">Paketin hacim ağırlığı; kargo ücreti genellikle desiye göre hesaplanır.</Explain></span></th>}
                       {cost && <th className={`${th} text-right`}>Tutar</th>}
                     </tr>
                   </thead>
@@ -141,7 +146,7 @@ export default function Waiting() {
                         <td className={`${td} font-mono tabular-nums`}>{fmtDay(c.irsTarihi)}</td>
                         <td className={`${td} text-right`}><Pill tone={ageTone(c.yas, d.esikGun)}>{fmtInt(c.yas)} gün</Pill></td>
                         <td className={td}>{[c.sehir, c.varisSube].filter(Boolean).join(' · ') || '—'}</td>
-                        <td className={td}>{c.kanal ?? '—'}{c.tahsilatli && <span className="ml-1"><Pill tone="warn">Tahsilatlı</Pill></span>}</td>
+                        <td className={td}>{c.kanal ?? '—'}{c.tahsilatli && <span className="ml-1" title="Kapıda ödemeli: tutarı kargo firması alıcıdan tahsil eder"><Pill tone="warn">Tahsilatlı</Pill></span>}</td>
                         {cost && <td className={`${td} text-right font-mono tabular-nums`}>{fmtNum(c.desi)}</td>}
                         {cost && <td className={`${td} text-right font-mono tabular-nums`}>{fmtMoney(c.tutar)}</td>}
                       </tr>

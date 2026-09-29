@@ -42,6 +42,7 @@ import { readableText } from '../components/readableName';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import CardInsight, { cardChange } from './CardInsight';
+import { Explain } from '../components/Explain';
 import {
   fromDto,
   loadBoard,
@@ -535,7 +536,7 @@ export default function BoardScreen() {
       const cols = (a.columns ?? []) as Col[];
       const rows = (a.records ?? []) as Row[];
       if (!a.sql || !rows.length) {
-        setErr(a.summary || a.explanation || 'ZEKİ AI bu soruya tablo döndürmedi.');
+        setErr(a.summary || a.explanation || 'Zeki AI bu soruya tablo olarak cevap veremedi. Soruyu daha açık yazmayı deneyin; ör. «bu yıl aylara göre net ciro».');
         setErrQueryId(a.queryId ?? null);
       } else {
         setPending({
@@ -552,7 +553,7 @@ export default function BoardScreen() {
         });
       }
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : 'Zeki AI şu an yanıt vermedi; biraz sonra yeniden deneyin.');
     } finally {
       setAsking(false);
     }
@@ -614,7 +615,7 @@ export default function BoardScreen() {
       const rows = (a.records ?? []) as Row[];
       const sql = a.sql;
       if (!sql || rows.length !== 1 || numericCols(cols, rows).length < 2) {
-        setErr(a.summary || 'ZEKİ AI bu karşılaştırmayı tek satırda iki sayı olarak veremedi.');
+        setErr(a.summary || 'Zeki AI bu karşılaştırmayı iki rakam olarak veremedi; kart değişmedi.');
         return;
       }
       const next = cards.map((c) => (c.id === card.id ? { ...c, sql, question: q, chart: 'kpi' as ChartKind } : c));
@@ -627,7 +628,7 @@ export default function BoardScreen() {
       await pushToServer(next);
       void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : 'Zeki AI şu an yanıt vermedi; biraz sonra yeniden deneyin.');
     } finally {
       setComparing(null);
     }
@@ -647,7 +648,7 @@ export default function BoardScreen() {
       const rows = (a.records ?? []) as Row[];
       const sql = a.sql;
       if (!sql || !cols.length) {
-        setErr(a.summary || 'ZEKİ AI bu soruya şu an tablo olarak cevap veremedi; kart değişmedi.');
+        setErr(a.summary || 'Zeki AI bu soruya şu an tablo olarak cevap veremedi; kart değişmedi.');
         return;
       }
       const next = cards.map((c) => (c.id === card.id ? { ...c, sql } : c));
@@ -660,7 +661,7 @@ export default function BoardScreen() {
       await pushToServer(next);
       void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi; kart değişmedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : 'Zeki AI şu an yanıt vermedi; kart değişmedi. Biraz sonra yeniden deneyin.');
     } finally {
       setComparing(null);
     }
@@ -682,7 +683,7 @@ export default function BoardScreen() {
       const { blob, name } = await boardApi.exportXlsx(ids);
       download(name, blob);
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : e instanceof Error ? e.message : 'Excel üretilemedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturumunuz kapanmış; sayfayı yenileyip yeniden giriş yapın.' : e instanceof Error ? e.message : 'Excel dosyası hazırlanamadı; biraz sonra yeniden deneyin.');
     } finally {
       setExporting(null);
     }
@@ -780,7 +781,7 @@ export default function BoardScreen() {
               ) : saveState === 'failed' ? (
                 <span className="text-red-600">Kaydedilemedi</span>
               ) : board.isError ? (
-                <span className="text-amber-600">Sunucuya ulaşılamadı</span>
+                <span className="text-amber-600">Bağlantı yok; değişiklikler kaydedilemeyebilir</span>
               ) : (
                 <>
                   <Clock className="h-3 w-3" /> Son sorgu {stamp(lastRun)}
@@ -816,9 +817,10 @@ export default function BoardScreen() {
                 <Box className="mx-auto h-7 w-7 text-canvas-violet" />
                 <h2 className="mt-3 text-base font-extrabold">Panonuz boş</h2>
                 <p className="mt-1.5 max-w-[340px] text-[12.5px] leading-snug text-canvas-muted">
-                  Aşağıya bir soru yazın. Gelen sonucu beğenirseniz “Panoya ekle” deyin, kart burada sabit kalsın.
-                  Kartları başlığından tutup sürükleyebilir, köşesinden büyütebilirsiniz. Pano hesabınıza bağlıdır; başka
-                  bilgisayarda da aynı görünür.
+                  {canEdit && canAsk
+                    ? 'Aşağıdaki kutuya bir soru yazın (ör. «aylara göre net ciro»). Gelen sonucu beğenirseniz «Panoya ekle»ye basın; kart burada kalır ve güncel veriyle yenilenir. Kartları başlığından tutup taşıyabilir, köşesinden büyütebilirsiniz.'
+                    : 'Panoya kart eklemek için Zeki AI’a soru sorma ve pano düzenleme yetkisi gerekir; yetki için yöneticinize başvurun.'}{' '}
+                  Pano hesabınıza bağlıdır; başka bilgisayarda da aynı görünür.
                 </p>
               </div>
             </div>
@@ -876,7 +878,7 @@ export default function BoardScreen() {
                         <button
                           type="button"
                           onClick={() => patch(c.id, { depth: !c.depth })}
-                          title="Gerçek 3B görünüm (WebGL); fareyle döndürülür"
+                          title="Üç boyutlu görünüm; fareyle ya da parmağınızla döndürülür"
                           aria-pressed={Boolean(c.depth)}
                           className={[
                             'pano-press h-7 rounded-md border px-2 text-[11px] font-semibold transition-colors',
@@ -891,7 +893,7 @@ export default function BoardScreen() {
                         type="button"
                         onClick={() => void reask(c)}
                         disabled={comparing === c.id}
-                        title="Soruyu bugünkü ZEKİ AI'a yeniden sor; kartın sorgusu yenisiyle değişir"
+                        title="Soruyu Zeki AI'a yeniden sorun; kartın sorgusu yeni cevapla değişir"
                         className="pano-press h-7 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-canvas-muted transition-colors hover:border-slate-300 disabled:opacity-60"
                       >
                         {comparing === c.id ? 'Soruluyor…' : 'Yeniden sor'}
@@ -917,7 +919,7 @@ export default function BoardScreen() {
                       )}
                       <ToolSelect
                         value={c.refresh ?? 'manual'}
-                        title="Sunucu kartı kendiliğinden ne zaman tazelesin"
+                        title="Kart kendiliğinden ne zaman tazelensin"
                         icon={<Timer className="h-3 w-3 text-canvas-muted" />}
                         onChange={(v) =>
                           patch(c.id, {
@@ -932,6 +934,9 @@ export default function BoardScreen() {
                           </option>
                         ))}
                       </ToolSelect>
+                      <Explain label="Tazeleme" title="Tazeleme ne demek?">
+                        «Elle»: kart siz yenileyince ya da panoyu açtığınızda sonucu 5 dakikadan eskiyse yeniden sorgulanır. «Saatte bir» ve «Her gün»: siz ekranda olmasanız da kart planına göre kendiliğinden yeniden sorgulanır.
+                      </Explain>
                       {c.refresh === 'daily' && (
                         <input
                           type="time"
@@ -943,11 +948,11 @@ export default function BoardScreen() {
                       )}
                       {r?.isError && (
                         <span className="text-[11px] font-bold text-red-600" title={r.error instanceof Error ? r.error.message : ''}>
-                          veri gelmedi
+                          veri alınamadı
                         </span>
                       )}
                       {r?.data?.truncated && (
-                        <span className="text-[11px] font-bold text-amber-600" title="Sonuç motorun satır sınırında kesildi">
+                        <span className="text-[11px] font-bold text-amber-600" title="Sonuç çok uzun olduğu için yalnız ilk satırlar geldi; ayrıntı için soruyu daraltın">
                           ilk {rows.length.toLocaleString('tr-TR')} satır
                         </span>
                       )}

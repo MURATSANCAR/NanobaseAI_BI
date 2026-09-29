@@ -32,6 +32,7 @@ import { CALC_HELP as CH, FORM_HELP } from './help';
 import { CostGroups, Lines, MobileBar, ResultCard, setters } from './CostForm';
 import type { Kaynaklar } from '../components/sqlInfo';
 import MarketPrices from './MarketPrices';
+import { Explain } from '../components/Explain';
 
 /** Ekrandaki girdiler: baskı hizmeti ve kâğıt ayrı kutularda, hesaba toplamları gider. */
 type Form = Inputs & { printService?: number | null; paperPerCopy?: number | null };
@@ -318,7 +319,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
         )}
       </Panel>
 
-      {(book.error || analysis.error || setup.error) && <Note tone="err">{errText(book.error ?? analysis.error ?? setup.error, 'Kayıt okunamadı.')}</Note>}
+      {(book.error || analysis.error || setup.error) && <Note tone="err">{errText(book.error ?? analysis.error ?? setup.error, 'Kitap ya da hesap okunamadı; bağlantıyı yeniden açmayı deneyin.')}</Note>}
       {book.data && !aid && <BookFacts b={book.data} />}
 
       <Panel>
@@ -438,8 +439,8 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             <NumField label="KDV oranı" info={inputInfo('vat', 'KDV oranı')} suffix="%" percent value={form.vat} disabled={readOnly} onChange={(v) => set({ vat: v })} />
             <NumField label="Ortalama kanal iskontosu" info={inputInfo('discount', 'Ortalama kanal iskontosu')} suffix="%" percent value={form.discount} disabled={readOnly} onChange={(v) => set({ discount: v })} />
             <NumField label="Dağıtım gideri" info={inputInfo('variableRate', 'Dağıtım gideri')} suffix="%" percent value={form.variableRate} disabled={readOnly} onChange={(v) => set({ variableRate: v })} hint="Net satışın oranı" />
-            <NumField label="Satış oranı" info={inputInfo('sellThrough', 'Satış oranı')} suffix="%" percent value={form.sellThrough} disabled={readOnly} onChange={(v) => set({ sellThrough: v })} hint="Basılanın hesap döneminde satılan kısmı" />
-            <NumField label="Hedef kâr marjı" info={inputInfo('targetMargin', 'Hedef kâr marjı')} suffix="%" percent value={form.targetMargin} disabled={readOnly} onChange={(v) => set({ targetMargin: v })} hint="Net satış gelirine oranla" />
+            <NumField label="Satış oranı" info={inputInfo('sellThrough', 'Satış oranı')} suffix="%" percent value={form.sellThrough} disabled={readOnly} onChange={(v) => set({ sellThrough: v })} hint="Basılanın hesap döneminde satılması beklenen kısmı; satılmayan kitap depoda maliyet olarak kalır" />
+            <NumField label="Hedef kâr marjı" info={inputInfo('targetMargin', 'Hedef kâr marjı')} suffix="%" percent value={form.targetMargin} disabled={readOnly} onChange={(v) => set({ targetMargin: v })} hint="Kârın net satış gelirine oranı; fiyat önerisi bu hedefe göre hesaplanır" />
             <label className="block min-w-0">
               <span className={`${labelCls} flex items-center gap-1`}>Baskı adedi senaryoları{inputInfo('qtys', 'Baskı adedi senaryoları')}</span>
               <input
@@ -456,7 +457,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             </label>
           </Group>
 
-          {calc.error && <Note tone="err">{errText(calc.error, 'Hesap yapılamadı.')}</Note>}
+          {calc.error && <Note tone="err">{errText(calc.error, 'Hesap yapılamadı; girdileri kontrol edin (baskı bedeli ve sayfa sayısı dolu olmalı).')}</Note>}
           {calc.data && (
             <Results
               r={calc.data}
@@ -486,7 +487,7 @@ export default function CalcPane({ ov }: { ov: Overview }) {
                   <SqlInfo k={calc.data?.kaynaklar} alan="summary" label="Seçilen adet ve kapak fiyatı" className="ml-0.5" />
                 </span>
               </div>
-              {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Kaydedilemedi.')}</Note></div>}
+              {save.error && <div className="mt-2"><Note tone="err">{errText(save.error, 'Analiz kaydedilemedi; biraz sonra yeniden deneyin.')}</Note></div>}
             </Panel>
           )}
           {!ov.me.canWrite && <Note tone="info">Hesap sizde görünür; analizi kaydetmek ve onaya göndermek «Fiyat analizi hazırlama» yetkisi ister.</Note>}
@@ -528,7 +529,7 @@ export function BookPicker({ onPick, disabled, label = 'Kitap ara (ad, yazar ya 
       </div>
       {open && dq.length >= 2 && hits.data && (
         <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[50vh] overflow-y-auto rounded-2xl border border-slate-100 bg-white p-1 shadow-xl" role="listbox">
-          {hits.data.items.length === 0 && <div className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok.</div>}
+          {hits.data.items.length === 0 && <div className="px-3 py-2 text-[12px] text-canvas-muted">Eşleşen kitap yok. Adın bir kısmını ya da stok kodunu deneyin; yeni kitapsa aramadan sayfa sayısını yazıp «Veriden öner»e basın.</div>}
           {hits.data.items.map((b) => (
             <button
               key={b.code}
@@ -647,6 +648,7 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
           <Stat
             info={<SqlInfo k={r.kaynaklar} alan="recommendation" label="Önerilen kapak fiyatı" />}
             label="Önerilen kapak fiyatı"
+            explain="Maliyet alt sınırı ile benzer kitapların ortanca fiyatından büyük olanı; KDV dahil ve 5 ₺'ye yukarı yuvarlanmış."
             value={tl0(rec.price)}
             note={
               rec.price ? (
@@ -658,17 +660,19 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
               )
             }
           />
-          <Stat info={<SqlInfo k={r.kaynaklar} alan="recommendation" label="Maliyet alt sınırı" />} label="Maliyet alt sınırı" value={tl0(rec.floor)} note={`${num(s.qty)} adette hedef marj ${pct(s.targetMargin)}`} />
+          <Stat info={<SqlInfo k={r.kaynaklar} alan="recommendation" label="Maliyet alt sınırı" />} label="Maliyet alt sınırı" explain="Seçilen baskı adedinde hedef kâr marjını tutturan en düşük kapak fiyatı (KDV dahil). Bunun altındaki fiyat hedef marjı karşılamaz." value={tl0(rec.floor)} note={`${num(s.qty)} adette hedef marj ${pct(s.targetMargin)}`} />
           <Stat
             info={<SqlInfo k={r.kaynaklar} alan="comparables" label="Emsal bandı" />}
             label="Emsal bandı"
+            explain="Benzer kitapların kapak fiyatlarının orta yarısı: en ucuz dörtte biri ile en pahalı dörtte biri dışarıda bırakılır."
             value={rec.band[0] != null ? `${num(rec.band[0])}–${num(rec.band[1])} ₺` : '—'}
             note={comp ? `${num(comp.price.n)} emsal kitap${r.marketCount ? ` + ${num(r.marketCount)} pazar fiyatı` : ''}, ortanca ${tl0(rec.median)}` : 'Emsal yok'}
           />
-          <Stat info={<SqlInfo k={r.kaynaklar} alan="summary" label="Birim maliyet" />} label="Birim maliyet" value={tl2(s.unitCost)} note={`${num(s.qty)} adet, toplam ${tl0(s.totalCost)}`} />
+          <Stat info={<SqlInfo k={r.kaynaklar} alan="summary" label="Birim maliyet" />} label="Birim maliyet" explain="Basılan kitap başına maliyet: baskı ve kâğıt bedeli ile sabit giderlerin (avans, çeviri, grafik…) adede düşen payı. Telif ve dağıtım satışa bağlı olduğu için dahil değildir." value={tl2(s.unitCost)} note={`${num(s.qty)} adet, toplam ${tl0(s.totalCost)}`} />
           <Stat
             info={<SqlInfo k={r.kaynaklar} alan="summary" label="Başabaş" />}
             label="Başabaş"
+            explain="Bu fiyatla bütün maliyetin karşılanması için satılması gereken adet. Kırmızı: başabaş baskı adedini aşıyor, yani baskının tamamı satılsa da zarar. Turuncu: marj hedefin altında. Yeşil: hedef marj tutuyor."
             value={s.breakeven != null ? `${num(s.breakeven)} adet` : '—'}
             tone={s.breakeven != null && s.breakeven > s.qty ? 'err' : s.margin != null && s.margin >= s.targetMargin ? 'ok' : 'warn'}
             note={`${tl0(s.price)} fiyatla marj ${pct(s.margin)} · kâr ${tl0(s.profit)}`}
@@ -696,7 +700,12 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
               <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Başabaş</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Kâr</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="scenarios[]">Marj</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="floors[]">Hedef marja fiyat</InfoLabel></th>
+              <th className={`${th} text-right`}>
+                <span className="inline-flex items-center gap-1">
+                  <InfoLabel k={r.kaynaklar} alan="floors[]">Hedef marja fiyat</InfoLabel>
+                  <Explain label="Hedef marja fiyat">O baskı adedinde hedef kâr marjını tutturan en düşük kapak fiyatı (KDV dahil, 5 ₺'ye yukarı).</Explain>
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -742,7 +751,12 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
                 <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Telif</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Dağıtım</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Birim maliyet</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Adet başı katkı</InfoLabel></th>
+                <th className={`${th} text-right`}>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={r.kaynaklar} alan="channels[]">Adet başı katkı</InfoLabel>
+                    <Explain label="Adet başı katkı">Bu müşteri grubuna satılan bir kitabın net gelirinden telif, dağıtım ve birim maliyet düşülünce kalan tutar. Eksi ise o grupta her satış zarar ettirir.</Explain>
+                  </span>
+                </th>
                 <th className={`${th} text-right`}><InfoLabel k={r.kaynaklar} alan="channels[]">Marj</InfoLabel></th>
               </tr>
             </thead>
@@ -762,7 +776,7 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
               ))}
             </tbody>
           </TableWrap>
-          <p className="px-1 text-[11px] text-canvas-muted">İskonto ve satış payı son 12 ayın Logo kitap satışından, müşteri grubu (cari kartın grup kodu) başına.</p>
+          <p className="px-1 text-[11px] text-canvas-muted">Aynı kapak fiyatının her müşteri grubunda ne kadar kazandırdığını gösterir. İskonto ve satış payı son 12 ayın Logo kitap satışından, müşteri grubu (cari kartın grup kodu) başına.</p>
         </section>
       )}
 
@@ -810,7 +824,7 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
                 <p className="px-1 text-[11px] text-canvas-muted">
                   <SqlInfo k={r.kaynaklar} alan="comparables" label="Baskı bedeli eğrisi" className="mr-0.5" />
                   Baskı bedeli eğrisi (sayfa başına): adet başına {tl2(comp.printCurvePerPage.a)} + baskı başına {tl0(comp.printCurvePerPage.b)} ÷ adet ·{' '}
-                  {num(comp.printCurvePerPage.n)} fatura{comp.printCurvePerPage.r2 != null ? ` · uyum ${pct(comp.printCurvePerPage.r2)}` : ''}
+                  {num(comp.printCurvePerPage.n)} fatura{comp.printCurvePerPage.r2 != null ? ` · faturalarla uyum ${pct(comp.printCurvePerPage.r2)}` : ''}
                   {comp.printCurvePerPage.shape === 'ortalama' ? ' · veride adetle düşen bir eğri yok, ortalama kullanıldı' : ''}.
                 </p>
               )}

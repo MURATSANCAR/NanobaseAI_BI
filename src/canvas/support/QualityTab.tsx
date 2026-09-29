@@ -7,6 +7,7 @@ import { Block, Empty, SourceLine } from './parts';
 import { change, fmtDay, fmtInt, fmtMinutes, fmtNum, fmtPct, lastDays, supportApi, type Meta } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 const WINDOWS = [7, 30, 90] as const;
 const STATUS_LABEL: Record<string, string> = { Open: 'Açık', Paused: 'Beklemede', Resolved: 'Çözüldü' };
@@ -40,7 +41,7 @@ export default function QualityTab({ meta, view }: { meta: Meta; view: 'ozet' | 
     return (
       <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Konular" />} title="Konular" help={`${fmtDay(d.window.from)} – ${fmtDay(d.window.to)}; önceki dönem ${fmtDay(d.previousWindow.from)} – ${fmtDay(d.previousWindow.to)}. Konu Zeki AI'ın ya da temsilcinin seçimidir.`} action={picker}>
         {d.topics.length === 0 ? (
-          <Empty title="Bu dönemde talep yok" />
+          <Empty title="Bu dönemde talep yok">Daha uzun bir dönem seçin.</Empty>
         ) : (
           <TableWrap>
             <thead>
@@ -48,7 +49,12 @@ export default function QualityTab({ meta, view }: { meta: Meta; view: 'ozet' | 
                 <th className={th}>Konu</th>
                 <th className={`${th} text-right`}>Talep</th>
                 <th className={`${th} text-right`}>Önceki dönem</th>
-                <th className={`${th} text-right`}>Değişim</th>
+                <th className={`${th} text-right`}>
+                  <span className="inline-flex items-center gap-1">
+                    Değişim
+                    <Explain label="Değişim">Bu dönemdeki talep sayısının önceki eş uzunluktaki döneme göre farkı. «Yeni»: önceki dönemde bu konuda talep yoktu.</Explain>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -82,23 +88,26 @@ export default function QualityTab({ meta, view }: { meta: Meta; view: 'ozet' | 
         {picker}
       </div>
       <KpiRow>
-        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık talep" />} label="Açık talep" value={fmtInt(d.openNow)} help={`${fmtInt(d.sla.asildi)} SLA aşıldı · ${fmtInt(d.sla.yaklasiyor)} yaklaşıyor · bugün dolan ${fmtInt(d.dueToday)}`} />
-        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açılan" />} label="Açılan" value={fmtInt(d.opened)} help={`Önceki dönem ${fmtInt(d.openedPrevious)}${grow !== null ? ` · ${grow >= 0 ? '+' : ''}${fmtPct(grow)}` : ''} · çözülen ${fmtInt(d.resolved)}`} />
-        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İlk yanıt (medyan)" />} label="İlk yanıt (medyan)" value={fmtMinutes(d.firstResponseMedianMin)} help={`${fmtInt(d.firstResponseCount)} talepte ölçüldü · çözüm medyanı ${d.resolutionMedianHours === null ? '—' : `${fmtNum(d.resolutionMedianHours)} sa`}`} />
-        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Memnuniyet" />} label="Memnuniyet" value={d.csat === null ? '—' : `${fmtNum(d.csat)} / 5`} help={`${fmtInt(d.csatCount)} puan · masanın geri bildirim formundan`} />
+        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık talep" />} label="Açık talep" value={fmtInt(d.openNow)} help={`${fmtInt(d.sla.asildi)} süre aşıldı · ${fmtInt(d.sla.yaklasiyor)} süre doluyor · bugün dolan ${fmtInt(d.dueToday)}`}
+          explain="Şu an kapanmamış talepler (dönem seçiminden bağımsız). «Süre aşıldı»: ilk yanıt ya da çözüm süre hedefi geçti; «bugün dolan»: süresi bugün bitecek olanlar." />
+        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açılan" />} label="Açılan" value={fmtInt(d.opened)}
+          explain="Seçili dönemde açılan talep sayısı ve aynı uzunluktaki bir önceki dönemle karşılaştırması."  help={`Önceki dönem ${fmtInt(d.openedPrevious)}${grow !== null ? ` · ${grow >= 0 ? '+' : ''}${fmtPct(grow)}` : ''} · çözülen ${fmtInt(d.resolved)}`} />
+        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İlk yanıt (medyan)" />} label="İlk yanıt (ortanca)" value={fmtMinutes(d.firstResponseMedianMin)}
+          explain="Talebin açılmasından ilk cevaba kadar geçen sürenin ortancası: taleplerin yarısı bundan kısa sürede cevaplandı. Çözüm ortancası da aynı biçimde hesaplanır."  help={`${fmtInt(d.firstResponseCount)} talepte ölçüldü · çözüm ortancası ${d.resolutionMedianHours === null ? '—' : `${fmtNum(d.resolutionMedianHours)} sa`}`} />
+        <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Memnuniyet" />} explain="Seçili dönemde müşterilerin destek masasının geri bildirim formunda verdiği puanların ortalaması (5 üzerinden)." label="Memnuniyet" value={d.csat === null ? '—' : `${fmtNum(d.csat)} / 5`} help={`${fmtInt(d.csatCount)} puan · masanın geri bildirim formundan`} />
       </KpiRow>
       <div className="grid gap-3 lg:grid-cols-2">
-        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI karnesi" />} title="Zeki AI karnesi" help="Sınıflama isabeti = temsilcinin değiştirmediği pay (hedef %85). Taslak: gönderilen ve az düzeltilen.">
+        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI karnesi" />} title="Zeki AI karnesi" help="Zeki AI’ın bu dönemdeki talepleri konuya ayırma ve cevap taslağı yazma başarısı. İsabet, temsilcinin konuyu değiştirmediği paydır (hedef %85).">
           <ul className="grid grid-cols-2 gap-2 text-[12.5px]">
             <Stat label="Sınıflanan" value={fmtInt(d.zeki.classified)} />
             <Stat label="Sınıflanamadı" value={fmtInt(d.zeki.unsure)} />
             <Stat label="Sırada" value={fmtInt(d.zeki.waiting)} />
             <Stat label="Temsilci düzeltti" value={fmtInt(d.zeki.corrected)} />
             <Stat label="SSS bulunamadı" value={fmtInt(d.zeki.noFaq)} />
-            <Stat label="Taslak kullanıldı" value={`${fmtInt(d.zeki.drafts)} (az düzeltme ${fmtInt(d.zeki.sentAsIs)})`} />
+            <Stat label="Taslak sonucu işaretlenen" value={`${fmtInt(d.zeki.drafts)} (az düzeltmeyle gönderilen ${fmtInt(d.zeki.sentAsIs)})`} />
           </ul>
         </Block>
-        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Kanal ve durum" />} title="Kanal ve durum" help="Masanın durum kategorisine göre bu dönemde açılanlar.">
+        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Kanal ve durum" />} title="Kanal ve durum" help="Bu dönemde açılan taleplerin geldiği kanal ve destek masasındaki bugünkü durumu.">
           <ul className="grid grid-cols-2 gap-2 text-[12.5px]">
             <Stat label="E-posta" value={fmtInt(d.channel.eposta)} />
             <Stat label="Müşteri portalı" value={fmtInt(d.channel.portal)} />
@@ -109,8 +118,8 @@ export default function QualityTab({ meta, view }: { meta: Meta; view: 'ozet' | 
         </Block>
       </div>
       {d.agents && (
-        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Temsilci başına açık talep" />} title="Temsilci başına açık talep" help="Yalnız «Bütün talep kuyruğu» yetkisiyle görünür.">
-          {d.agents.length === 0 ? <Empty title="Açık talep yok" /> : (
+        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Temsilci başına açık talep" />} title="Temsilci başına açık talep" help="Her temsilciye atanmış açık talep sayısı; iş yükünü dengelemek için. Yalnız «Bütün talep kuyruğu» yetkisiyle görünür.">
+          {d.agents.length === 0 ? <Empty title="Açık talep yok">Hiçbir temsilcinin üzerinde açık talep yok.</Empty> : (
             <ul className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {d.agents.map((a) => (
                 <li key={a.agent} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-[12.5px]">

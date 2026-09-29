@@ -16,6 +16,7 @@ import MyRegion from './MyRegion';
 import AlertsTab from './AlertsTab';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 
 /** M29 İlk dağılım: dağılım bekleyen kitaplar, izlenenler, BMT görünümü (Bölgem), uyarılar. Sekme adreste (?sekme=). */
 
@@ -112,21 +113,21 @@ export default function DistributionScreen() {
   return (
     <DistFrame
       title="İlk dağılım"
-      lead="Depoya giren kitabın hangi bölgeye, kanala ve müşteriye kaç adet gideceğini ZEKİ AI benzer kitapların ilk 8 haftasından önerir; satış düzeltir, lojistik onaylar, sevk listesi Excel'e iner. Onaylanan plan 8 hafta boyunca sevk, fatura ve iadeyle izlenir."
+      lead="Depoya yeni giren kitabın hangi bölgeye, kanala ve müşteriye kaç adet gideceğini planlarsınız. Zeki AI benzer kitapların ilk 8 haftasına bakarak öneri hazırlar; satış ekibi düzeltir, lojistik onaylar, onaylanan plan 8 hafta izlenir."
       source={meta.data?.veriSonu ? `Logo · ${fmtDay(meta.data.veriSonu)}'e kadar` : 'Logo + CRM'}
       presence={me ? (me.canAll ? 'Bütün bölgeler' : 'Kendi carileriniz') : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'İlk dağılım açılamadı.')}</Note>}
       {meta.data && <DataEnd veriSonu={meta.data.veriSonu} depoSonu={meta.data.depoSonu} />}
 
       {me?.canAll && data && (
         <KpiRow>
-          <Kpi label="Plan bekleyen" value={n0(waiting)} help={`Son ${data.pencereGun} günde depoya girip planı olmayan kitap`} active={tab === 'bekleyen' && durum === 'yok'} onClick={() => update({ sekme: 'bekleyen', durum: 'yok' })} info={<SqlInfo k={data.kaynaklar} alan="sayac.bekleyen" label="Plan bekleyen kitap" />} />
-          <Kpi label="Listedeki kitap" value={n0(items.length)} help="Seçili süzgeçte" info={<SqlInfo k={data.kaynaklar} alan="sayac.liste" label="Listedeki kitap" />} />
-          <Kpi label="İzlenen" info={<SqlInfo k={data.kaynaklar} alan="izlenen[]" label="İzlenen planlar" />} value={n0(data.izlenen.length)} help={`Onaydan sonraki ${meta.data?.params.takipHafta ?? 8} hafta`} active={tab === 'izlenen'} onClick={() => update({ sekme: 'izlenen' })} />
-          <Kpi label="Açık uyarı" info={<SqlInfo k={alertCount.data?.kaynaklar} alan="total" label="Açık uyarı sayısı" />} value={n0(alertCount.data?.total)} help="Plansız kitap, sevk gecikmesi, hiç satmayan bölge" active={tab === 'uyarilar'} onClick={() => update({ sekme: 'uyarilar' })} />
+          <Kpi label="Plan bekleyen" value={n0(waiting)} help={`Son ${data.pencereGun} günde depoya girip planı olmayan kitap`} explain={`Son ${data.pencereGun} günde depoya girmiş ama henüz hiç dağılım planı açılmamış kitapların sayısı. Karta dokununca yalnız bu kitaplar listelenir.`} active={tab === 'bekleyen' && durum === 'yok'} onClick={() => update({ sekme: 'bekleyen', durum: 'yok' })} info={<SqlInfo k={data.kaynaklar} alan="sayac.bekleyen" label="Plan bekleyen kitap" />} />
+          <Kpi label="Listedeki kitap" value={n0(items.length)} help="Seçili süzgeçte" explain="Aşağıdaki listede, seçtiğiniz durum süzgecine ve aramaya uyan kitap sayısı." info={<SqlInfo k={data.kaynaklar} alan="sayac.liste" label="Listedeki kitap" />} />
+          <Kpi label="İzlenen" info={<SqlInfo k={data.kaynaklar} alan="izlenen[]" label="İzlenen planlar" />} value={n0(data.izlenen.length)} help={`Onaydan sonraki ${meta.data?.params.takipHafta ?? 8} hafta`} explain={`Planı onaylanmış ve onay gününden bu yana ${meta.data?.params.takipHafta ?? 8} hafta dolmamış kitaplar. Bu sürede plan; sevk, fatura ve iadeyle karşılaştırılır.`} active={tab === 'izlenen'} onClick={() => update({ sekme: 'izlenen' })} />
+          <Kpi label="Açık uyarı" info={<SqlInfo k={alertCount.data?.kaynaklar} alan="total" label="Açık uyarı sayısı" />} value={n0(alertCount.data?.total)} help="Plansız kitap, sevk gecikmesi, hiç satmayan bölge" explain="Henüz kapanmamış uyarıların sayısı. Uyarılar günde iki kez değerlendirilir; sorun ortadan kalkınca uyarı kendiliğinden kapanır." active={tab === 'uyarilar'} onClick={() => update({ sekme: 'uyarilar' })} />
         </KpiRow>
       )}
 
@@ -163,9 +164,17 @@ export default function DistributionScreen() {
           {data?.uyarilar.map((w) => <Note key={w} tone="warn">{w}</Note>)}
           {books.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Okunuyor…</div>}
           {data && !items.length && (
-            <div className="py-8 text-center text-[12.5px] text-canvas-muted">
-              {data.asof ? 'Bu süzgeçte kitap yok.' : 'Liste henüz okunmadı. «Depo girişlerini yenile» ile Logo ve üretim kartlarından okunur; sonra her gün 07:30 ve 13:30\'da kendiliğinden tazelenir.'}
-            </div>
+            data.asof ? (
+              <EmptyHint
+                title="Bu süzgece uyan kitap yok"
+                why={q ? 'Aramadaki kelimeyi kısaltmayı ya da başka bir durum seçmeyi deneyin.' : 'Seçtiğiniz durumda kitap bulunmuyor. «Hepsi» ile bütün kitapları görebilirsiniz.'}
+              />
+            ) : (
+              <EmptyHint
+                title="Liste henüz okunmadı"
+                why="«Depo girişlerini yenile» ile Logo ve üretim kartlarından okunur; sonra her gün 07:30 ve 13:30'da kendiliğinden tazelenir."
+              />
+            )
           )}
           {!!items.length && <BookList items={items} k={data?.kaynaklar} canPlan={!!me?.canPlan} busy={generate.isPending ? generate.variables : undefined} onGenerate={(c) => generate.mutate(c)} />}
         </Panel>
@@ -178,7 +187,7 @@ export default function DistributionScreen() {
         <Panel>
           <div className="mb-2 flex items-center gap-2 text-[12px] font-extrabold">
             <Sparkles aria-hidden className="h-4 w-4 text-canvas-violet" />
-            ZEKİ AI'a sorun
+            Zeki AI'a sorun
           </div>
           <div className="flex flex-wrap gap-2">
             {ASK.map((s) => (
@@ -204,7 +213,7 @@ function Action({ b, canPlan, busy, onGenerate }: { b: Book; canPlan: boolean; b
   return (
     <button type="button" className={btnPrimary} disabled={!!busy} onClick={() => onGenerate(b.stokKodu)}>
       {busy === b.stokKodu ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-      ZEKİ AI önerisi
+      Plan önerisi al
     </button>
   );
 }
@@ -239,11 +248,11 @@ function BookList({ items, canPlan, busy, onGenerate, k }: { items: Book[]; canP
             <tr>
               <th className={th}>Kitap</th>
               <th className={th}>Depoya giriş</th>
-              <th className={th}>Baskı</th>
+              <th className={th}>Baskı türü</th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Baskı adedi">Baskı adedi</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Stok bakiyesi">Stok</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={k} alan="items[]" label="Plan adedi ve rezerv">Plan</InfoLabel></th>
-              <th className={th}>Durum</th>
+              <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={k} alan="items[]" label="Plan adedi ve rezerv">Plan</InfoLabel><Explain label="Plan">Planda müşterilere dağıtılacak toplam adet; altındaki «rezerv» sonradan gelecek siparişler için depoda tutulan adettir.</Explain></span></th>
+              <th className={th}><ExplainLabel label="Durum">Plan yok: kitaba henüz plan açılmadı. Taslak: plan hazırlanıyor. Onayda: onay bekliyor. Onaylı: sevk listesi indirilebilir. Sevkte: sevkiyat başladı.</ExplainLabel></th>
               <th className={th} />
             </tr>
           </thead>

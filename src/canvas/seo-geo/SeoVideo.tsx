@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileText } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term } from './terms';
 
 const PAGE = 30;
 type SchemaState = 'var' | 'yok' | 'bilinmiyor';
@@ -57,15 +60,15 @@ export default function SeoVideo() {
       crumb="Video"
       eyebrow="SEO & GEO · Kitap videoları"
       title="Kitap videoları"
-      lead="CRM kitap kartında YouTube tanıtım videosu olan kitaplar. Video sayfada gömülü ve video şemasıyla işaretliyse Google video sonuçlarında ve yapay zekâ cevaplarında kitabı videosuyla gösterebilir. Buradaki şema ve site haritası öneridir; siteye hiçbir şey yazılmaz."
+      lead={<>CRM kitap kartında YouTube tanıtım videosu olan kitaplar. Video kitap sayfasına yerleştirilmiş ve video yapısal verisiyle işaretlenmişse Google, kitabı video sonuçlarında da gösterebilir. Buradaki kod ve dosyalar site yöneticisi içindir; siteye hiçbir şey yazılmaz. <Term k="schema" /></>}
       actions={
         canExport && (
           <>
             <a className="sg-button" href={`${ENGINE_BASE}/api/v1/seo-geo/video/sitemap.xml`}>
-              <Download size={16} aria-hidden /> Video site haritası
+              <Download size={16} aria-hidden /> Video site haritasını indir
             </a>
             <a className="sg-button primary" href={`${ENGINE_BASE}/api/v1/seo-geo/video/theme-request.md`}>
-              <FileText size={16} aria-hidden /> Tema isteği
+              <FileText size={16} aria-hidden /> Tema isteğini indir
             </a>
           </>
         )
@@ -75,18 +78,20 @@ export default function SeoVideo() {
       {list.error && <Failed error={list.error} />}
 
       {s && !s.withVideo && (
-        <div className="sg-empty">
-          <h2>Videolu kitap yok</h2>
-          <p>Satıştaki kitapların CRM kartlarında YouTube bağlantısı bulunamadı. CRM okuması yapılmadıysa önce Haklar ve CRM ekranından okuyun.</p>
-        </div>
+        <EmptyHint
+          title="Videolu kitap yok"
+          why={<>Satıştaki kitapların CRM kartlarında YouTube bağlantısı bulunamadı. CRM okuması yapılmadıysa önce <Link to="/seo-geo/crm-haklar">Haklar ve CRM</Link> ekranından okutun.</>}
+        />
       )}
 
       {s && s.withVideo > 0 && (
         <>
           <section className="sg-kpis" aria-label="Özet">
             <Kpi label="Videolu kitap" value={fmt(s.withVideo)} note={`Geçerli video bağlantısı ${fmt(s.valid)}`} info={<SeoInfo k={list.data?.kaynaklar} label="Videolu kitap" />} />
-            <Kpi label="Sayfada video şeması var" value={fmt(s.schema.var)} note="Şema taramasına göre" tone="good" info={<SeoInfo k={list.data?.kaynaklar} label="Sayfada video şeması var" />} />
-            <Kpi label="Video şeması yok" value={fmt(s.schema.yok)} note="Videonun sayfada gömülü olup olmadığı bilinmiyor" tone={s.schema.yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Video şeması yok" />} />
+            <Kpi label="Sayfada video şeması var" value={fmt(s.schema.var)} note="Şema taramasına göre" tone="good" info={<SeoInfo k={list.data?.kaynaklar} label="Sayfada video şeması var" />}
+              explain="Kitap sayfası taranmış ve videonun yapısal verisi (şema) sayfada bulunmuş; Google videoyu tanıyabilir." />
+            <Kpi label="Video şeması yok" value={fmt(s.schema.yok)} note="Videonun sayfada gömülü olup olmadığı bilinmiyor" tone={s.schema.yok ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Video şeması yok" />}
+              explain="Kitap sayfası tarandı ama videonun yapısal verisi yok. «Önerilen şema» kodunu ve tema isteğini site yöneticisine iletin." />
             <Kpi label="Bağlantı geçersiz" value={fmt(s.invalid)} note="Kanal ya da liste bağlantısı; CRM’de video adresi düzeltilmeli" tone={s.invalid ? 'bad' : undefined} info={<SeoInfo k={list.data?.kaynaklar} label="Bağlantı geçersiz" />} />
           </section>
 
@@ -104,12 +109,7 @@ export default function SeoVideo() {
             ))}
           </div>
 
-          {list.data && !list.data.items.length && (
-            <div className="sg-empty">
-              <h2>Kitap yok</h2>
-              <p>Bu süzgece uyan kitap bulunamadı.</p>
-            </div>
-          )}
+          {list.data && !list.data.items.length && <EmptyHint title="Bu süzgece uyan kitap yok" why="Üstten «Tümü»nü seçin." />}
           <div className="sg-list">
             {list.data?.items.map((r) => (
               <article key={r.id} className="sg-card" style={{ padding: 14 }}>
@@ -127,7 +127,7 @@ export default function SeoVideo() {
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <a className="sg-button" href={r.video} target="_blank" rel="noreferrer">
-                        <ExternalLink size={14} aria-hidden /> Video
+                        <ExternalLink size={14} aria-hidden /> Videoyu aç
                       </a>
                       {r.url && (
                         <a className="sg-button" href={r.url} target="_blank" rel="noreferrer">
@@ -136,7 +136,7 @@ export default function SeoVideo() {
                       )}
                       {r.jsonld && (
                         <button className="sg-button" aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>
-                          {open === r.id ? 'Şemayı gizle' : 'Önerilen şema'}
+                          {open === r.id ? 'Kodu gizle' : 'Önerilen kodu göster'}
                         </button>
                       )}
                     </div>
@@ -175,7 +175,7 @@ function JsonBlock({ text }: { text: string }) {
   return (
     <div style={{ marginTop: 12 }}>
       <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--sg-muted)' }}>
-        Yayın tarihi (uploadDate) Google için zorunludur; CRM’de olmadığı için tema YouTube’dan ya da elle doldurmalı.
+        Sayfaya eklenecek hazır kod; kopyalayıp site yöneticisine iletin. Videonun yayın tarihi (uploadDate) Google için zorunludur; CRM’de olmadığı için YouTube’dan ya da elle doldurulmalı.
       </p>
       <pre className="sg-pre" style={{ overflowX: 'auto', maxWidth: '100%' }}>{text}</pre>
       <button
@@ -189,10 +189,10 @@ function JsonBlock({ text }: { text: string }) {
   );
 }
 
-function Kpi({ label, value, note, tone, info }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode }) {
+function Kpi({ label, value, note, tone, info, explain }: { label: string; value: string; note: string; tone?: 'good' | 'bad'; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono" style={tone ? { color: tone === 'good' ? '#0f7a51' : '#c2361b' } : undefined}>{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

@@ -74,6 +74,10 @@ export default function Findings() {
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <Panel>
+        <p className="mb-2 text-[12px] leading-snug text-canvas-muted">
+          CRM'deki sınıflamaların birbiriyle çeliştiği ya da eksik kaldığı kitaplar; aşağıdaki kurallarla bulunur. Kitaba dokunup profilini düzeltin
+          ya da Zeki AI'ın emin olduğu öneriyi toplu uygulayın.
+        </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.4fr_1fr_1fr]">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Ara</span>
@@ -146,7 +150,7 @@ export default function Findings() {
             </li>
           ))}
         </ul>
-        {list.data && !list.data.total && !list.isFetching && <p className="mt-3 text-[12.5px] text-canvas-muted">Bu süzgeçte bulgu yok.</p>}
+        {list.data && !list.data.total && !list.isFetching && <p className="mt-3 text-[12.5px] text-canvas-muted">{f.status === 'acik' && !f.rule && !q ? 'Açık tutarsızlık yok.' : 'Bu süzgeçte bulgu yok; kural, durum ya da aramayı değiştirin.'}</p>}
         <Pager page={f.page} pageSize={list.data?.pageSize ?? 50} total={list.data?.total ?? 0} shown={items.length}
           loading={list.isLoading} fetching={list.isFetching} onPage={(p) => set({ sayfa: p ? String(p) : null })} />
       </Panel>
@@ -172,8 +176,9 @@ export default function Findings() {
                       onBlur={(e) => { const n = Number(e.target.value); if (Number.isFinite(n) && n !== v) rule.mutate({ key: r.key, body: { params: { [k]: n } } }); }} />
                   </label>
                 ))}
+                <Pill tone={r.enabled ? 'ok' : 'muted'}>{r.enabled ? 'Açık' : 'Kapalı'}</Pill>
                 <button type="button" className={btnGhost} disabled={!me?.canEditTree || rule.isPending} onClick={() => rule.mutate({ key: r.key, body: { enabled: !r.enabled } })}>
-                  {r.enabled ? 'Açık' : 'Kapalı'}
+                  {r.enabled ? 'Kuralı kapat' : 'Kuralı aç'}
                 </button>
               </div>
             </li>

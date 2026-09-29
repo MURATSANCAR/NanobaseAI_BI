@@ -8,6 +8,7 @@ import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, fmtPct, pazarApi, type MapRow, type MapStatus } from './api';
 import { CategorySelect, Stat, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** Kategori eşlemesi: rakip kaydındaki serbest metin kategori → TİMAŞ kategorisi. Önce ad eşleşmesi, sonra Zeki AI
@@ -76,7 +77,7 @@ export default function CategoryMap() {
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onaylı kapsam" />} label="Onaylı kapsam" value={d.coverage.records ? fmtPct(d.coverage.approved / d.coverage.records, 0) : '—'} help={`${fmtInt(d.coverage.approved)} / ${fmtInt(d.coverage.records)} rakip kaydı`} />
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Onay bekleyen" />} label="Onay bekleyen" value={fmtInt((d.counts.oneri ?? 0) + (d.counts.belirsiz ?? 0))} help={`${fmtInt(d.counts.belirsiz ?? 0)} tanesinde Zeki AI emin değil`} />
           <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Öneri bekleyen" />} label="Öneri bekleyen" value={fmtInt(d.counts.yeni ?? 0)} help="Henüz önerisi yazılmamış ham kategori" />
-          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Karşılığı yok" />} label="Karşılığı yok" value={fmtInt(d.coverage.noMatch)} help="TİMAŞ kategorisinde karşılığı olmadığı onaylanan kayıt" />
+          <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Karşılığı yok" />} label="Karşılığı yok" value={fmtInt(d.coverage.noMatch)} help="Timaş kategorisinde karşılığı olmadığı onaylanan kayıt" />
         </div>
       )}
       <Panel>
@@ -119,7 +120,7 @@ export default function CategoryMap() {
         {running && <p className="mt-2 text-[12px] font-semibold text-canvas-muted">Zeki AI öneri yazıyor; bitince liste tazelenir.</p>}
         {list.isLoading && <Loading />}
         {list.error && <Note tone="err">{errText(list.error, 'Eşleme listesi açılamadı.')}</Note>}
-        {d && d.items.length === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">Bu durumda kategori yok.</p>}
+        {d && d.items.length === 0 && <div className="mt-3"><EmptyHint title="Bu durumda kategori yok" why="Başka bir durum seçin ya da aramayı temizleyin." /></div>}
         <ul className="mt-2 divide-y divide-slate-100">
           {d?.items.map((row) => <MapItem key={row.ham} row={row} can={can} categories={d.categories} busy={decide.isPending} onDecide={(items) => decide.mutate(items)} />)}
         </ul>
@@ -149,7 +150,7 @@ function MapItem({ row, can, categories, busy, onDecide }: {
         <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
           {row.kategoriYol ? <>Onaylı: <strong className="text-canvas-ink">{row.kategoriYol}</strong> ({row.onaylayan})</>
             : row.oneriYol ? <>Öneri: <strong className="text-canvas-ink">{row.oneriYol}</strong> · {row.yontem === 'ad' ? 'ad eşleşmesi' : `Zeki AI${row.olasilik !== null ? ` %${Math.round(row.olasilik * 100)}` : ''}`}</>
-            : row.durum === 'reddedildi' ? <>TİMAŞ kategorisinde karşılığı yok ({row.onaylayan})</>
+            : row.durum === 'reddedildi' ? <>Timaş kategorisinde karşılığı yok ({row.onaylayan})</>
             : 'Henüz öneri yok.'}
           {row.not && <> · {row.not}</>}
         </div>

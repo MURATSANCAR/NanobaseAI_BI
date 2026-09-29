@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
 
 const PAGE = 40;
 type Source = 'arama' | 'tema' | 'sezon';
@@ -103,11 +104,11 @@ export default function SeoQuestionSuggest() {
       crumb="Soru önerileri"
       eyebrow="SEO & GEO · Yapay zekâ görünürlüğü"
       title="Soru önerileri"
-      lead="Yapay zekâ görünürlüğünü ölçmek için izlenecek okur soruları. Öneriler Google aramalarındaki soru biçimli sorgulardan, CRM’deki tema ve yaş bilgisinden ve özel günlerden kodla üretilir; yalnız satıştaki kitaplarımızın cevap olabileceği sorular önerilir. Eklenen soru, izlenen sorulara yazılır ve düzenli olarak ölçülür."
+      lead="Yapay zekâ cevaplarında Timaş’ın geçip geçmediğini ölçmek için izlenecek okur sorusu adayları. Google aramalarından, CRM’deki tema ve yaş bilgisinden ve özel günlerden çıkarılır; yalnız kitaplarımızın cevap olabileceği sorular önerilir. «Ölçüme ekle» dediğiniz soru düzenli olarak ölçülür."
       actions={
         <>
           <Link className="sg-button" to="/seo-geo/ai-gorunurluk">
-            İzlenen sorular
+            İzlenen sorulara git
           </Link>
           {canRun && (
             <button className="sg-button primary" onClick={() => refresh.mutate()} disabled={refresh.isPending || running}>
@@ -128,7 +129,8 @@ export default function SeoQuestionSuggest() {
       {d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bekleyen öneri" value={fmt(pending)} note={d.lastRefresh ? `Son yenileme ${dateTime(d.lastRefresh)}` : 'Henüz yenilenmedi'} info={<SeoInfo k={list.data?.kaynaklar} label="Bekleyen öneri" />} />
+            <Kpi label="Bekleyen öneri" value={fmt(pending)} note={d.lastRefresh ? `Son yenileme ${dateTime(d.lastRefresh)}` : 'Henüz yenilenmedi'} info={<SeoInfo k={list.data?.kaynaklar} label="Bekleyen öneri" />}
+              explain="Henüz eklenmemiş ya da reddedilmemiş soru adaylarının toplamı. Her soruya «Ölçüme ekle» ya da «Reddet» deyin." />
             {SOURCES.map(([s, label]) => (
               <Kpi key={s} label={label} value={fmt(d.counts[s]?.['öneri'] ?? 0)} note={`${fmt(d.counts[s]?.eklendi ?? 0)} eklendi · ${fmt(d.counts[s]?.reddedildi ?? 0)} reddedildi`} info={<SeoInfo k={list.data?.kaynaklar} label={label} />} />
             ))}
@@ -151,15 +153,22 @@ export default function SeoQuestionSuggest() {
             ))}
           </div>
 
+          <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sg-muted)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            Ne yapmalı: okurun gerçekten soracağı soruları «Ölçüme ekle» ile alın, anlamsız ya da tekrar edenleri «Reddet» ile kapatın.
+            <Explain label="Kaynaklar" title="Öneriler nereden gelir?">
+              «Aramalar»: Google’da soru biçiminde yazılmış aramalarımız. «Tema/yaş»: CRM’deki tema ve yaş bilgisi çok kitapta ortak olan birleşimler. «Sezon»: yaklaşan özel günler ve onlara bağlı kitaplar.
+            </Explain>
+          </p>
+
           {source === 'tema' && (
             <p className="sg-banner ok">Tema/yaş sorusu yalnız satıştaki en az {fmt(d.minBooks)} kitabımız o birleşime uyuyorsa önerilir.</p>
           )}
 
           {!d.items.length && (
-            <div className="sg-empty">
-              <h2>Öneri yok</h2>
-              <p>{status === 'öneri' ? 'Bu kaynakta bekleyen öneri kalmadı. Öneriler her gece yenilenir.' : 'Bu durumda soru yok.'}</p>
-            </div>
+            <EmptyHint
+              title={status === 'öneri' ? 'Bekleyen öneri kalmadı' : 'Bu durumda soru yok'}
+              why={status === 'öneri' ? 'Bu kaynaktaki bütün önerilere karar verildi. Öneriler her gece yenilenir; başka bir kaynağa da bakabilirsiniz.' : 'Üstten başka bir durum ya da kaynak seçin.'}
+            />
           )}
           <div className="sg-list">
             {d.items.map((it) => (
@@ -174,7 +183,7 @@ export default function SeoQuestionSuggest() {
                         disabled={decide.isPending}
                         onClick={() => decide.mutate({ id: it.id, action: 'accept' })}
                       >
-                        <Plus size={14} aria-hidden /> Ekle
+                        <Plus size={14} aria-hidden /> Ölçüme ekle
                       </button>
                       <button className="sg-button" disabled={decide.isPending} onClick={() => decide.mutate({ id: it.id, action: 'reject' })}>
                         <X size={14} aria-hidden /> Reddet
@@ -249,10 +258,10 @@ function dateOnly(iso: string) {
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

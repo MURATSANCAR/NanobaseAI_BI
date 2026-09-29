@@ -143,7 +143,7 @@ export default function SocialPost() {
   };
   const append = (s: string) => setForm((f) => ({ ...f, text: f.text ? `${f.text.trimEnd()}\n\n${s}` : s }));
 
-  if (!ENGINE_ENABLED) return <SocialFrame crumb="Gönderi" title="Gönderi" source="—" presence="—"><Note tone="warn">Veri bağlantısı yok.</Note></SocialFrame>;
+  if (!ENGINE_ENABLED) return <SocialFrame crumb="Gönderi" title="Gönderi" source="—" presence="—"><Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note></SocialFrame>;
 
   const title = p ? p.kitapAd || p.occasionAd || (p.text ?? '').slice(0, 60) || p.id : 'Gönderi';
   const c = content.data;
@@ -154,6 +154,7 @@ export default function SocialPost() {
       title={title}
       source={p ? `${p.id} · ${p.createdBy}` : '…'}
       presence={p?.statusAdi ?? '…'}
+      lead="Tek gönderinin metni, etiketleri, görselleri ve onayı. Adımlar: fikir → taslak → onayda → onaylı → yayınlandı. Paylaşımı siz kendi hesabınızdan yaparsınız, sonra bağlantıyı girip «yayınlandı» işaretlersiniz."
       back={{ to: '/sosyal-medya', label: 'Takvim' }}
       tabs={false}
     >
@@ -231,7 +232,7 @@ export default function SocialPost() {
                   {m.me.canEdit && (p.status === 'fikir' || p.status === 'taslak') && (
                     <>
                       <button type="button" className={btnGhost} disabled={running || draft.isPending || !m.modelReady} onClick={() => draft.mutate()}
-                        title={m.modelReady ? undefined : 'Zeki AI bu kurulumda bağlı değil'}>
+                        title={m.modelReady ? undefined : 'Zeki AI şu an bağlı değil'}>
                         <Sparkles aria-hidden className="h-4 w-4" />
                         {running ? (lastJob?.adim || 'Zeki AI yazıyor…') : 'Zeki AI taslağı'}
                       </button>
@@ -260,11 +261,11 @@ export default function SocialPost() {
                   {(p.status === 'onayli' || p.status === 'yayinlandi') && m.me.canExport && (
                     <a className={btnGhost} href={socialApi.packageUrl(p.id)} download>
                       <Download aria-hidden className="h-4 w-4" />
-                      Yayına hazır paket
+                      Paylaşıma hazır paketi indir
                     </a>
                   )}
                   {p.status === 'onayli' && m.me.canEdit && (
-                    <button type="button" className={btnPrimary} onClick={() => setAsk({ kind: 'published' })}>Yayınlandı</button>
+                    <button type="button" className={btnPrimary} onClick={() => setAsk({ kind: 'published' })}>Yayınlandı olarak işaretle</button>
                   )}
                   {p.status === 'yayinlandi' && p.publishedUrl && (
                     <a className={btnGhost} href={p.publishedUrl} target="_blank" rel="noreferrer">
@@ -315,7 +316,7 @@ export default function SocialPost() {
               )}
 
               <Block title={`Görseller (${form.assets.length})`}
-                help="Görselin kendisi kaynağında durur (stüdyo ya da içerik arşivi); yayına hazır pakete oradan girer.">
+                help="Görselin kendisi kaynağında durur (kitap tasarım stüdyosu ya da içerik arşivi); paylaşıma hazır pakete oradan girer.">
                 {form.assets.length === 0 && <p className="text-[12px] text-canvas-muted">Görsel eklenmedi. Kitap havuzundan seçin.</p>}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {form.assets.map((a) => (
@@ -393,7 +394,7 @@ export default function SocialPost() {
                   <div className="flex flex-col gap-1.5">
                     <span className="relative flex items-center">
                       <Search aria-hidden className="pointer-events-none absolute left-3 h-4 w-4 text-canvas-muted" />
-                      <input className={`${field} pl-9`} value={q} placeholder="Kitap ara" onChange={(e) => setQ(e.target.value)} />
+                      <input className={`${field} pl-9`} value={q} placeholder="Kitap adı ya da stok kodu" onChange={(e) => setQ(e.target.value)} />
                     </span>
                     {(books.data?.items ?? []).map((b) => (
                       <button key={b.stokKodu} type="button" className="flex min-h-11 flex-col items-start rounded-xl bg-white/80 px-2.5 py-2 text-left transition-colors duration-150 hover:bg-white"

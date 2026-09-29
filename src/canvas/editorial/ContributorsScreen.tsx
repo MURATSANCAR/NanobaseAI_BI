@@ -12,6 +12,7 @@ import { WebSection } from './web/parts';
 import { RelationBody } from './authors/CardPanel';
 import SqlInfo from '../components/SqlInfo';
 import { RightChips, RightsDetails } from './crmRights';
+import { EmptyHint } from '../components/Explain';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -112,7 +113,7 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
       {relations && <Relations p={p} />}
 
       <Block title="Eserler" count={p.works.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
-        {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste sunucunun satır sınırında kesildi.</p>}
+        {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste çok uzun olduğu için kısaltıldı; eserlerin tamamı gösterilmiyor.</p>}
         <ul className="mt-1.5 max-h-72 space-y-1 overflow-y-auto pr-1">
           {p.works.map((w, i) => (
             <li key={`${w.bookId}-${w.role}-${i}`} className="flex items-baseline justify-between gap-2">
@@ -224,7 +225,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
 
   return (
     <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {data && (
@@ -233,21 +234,24 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
             label={m.people}
             value={nf.format(data.total)}
             help={q || role ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
+            explain="CRM'de bu sekmenin rollerinden biriyle en az bir kitaba katılım kaydı olan kişi sayısı. Arama ya da rol seçiliyse yalnız uyanlar sayılır."
             info={<SqlInfo k={data.kaynaklar} alan="total" label={m.people} />}
           />
           <Kpi
             label="Son 12 ayda çalışan"
             value={nf.format(data.activePeople)}
             help="Bu dönemde yeni eser kaydı olan"
+            explain="Son 12 ayda en az bir kitaba yeni katılım kaydı açılmış kişiler."
             info={<SqlInfo k={data.kaynaklar} alan="activePeople" label="Son 12 ayda çalışan" />}
           />
           <Kpi
             label="Kişi başına eser"
             value={data.total ? nf.format(Math.round((data.contributions / data.total) * 10) / 10) : '—'}
             help={`${nf.format(data.contributions)} eser katkısı`}
+            explain="Her kişinin katkı verdiği farklı kitap sayısının ortalaması; aynı kitapta iki rolü olan kişi o kitabı bir kez sayar."
             info={<SqlInfo k={data.kaynaklar} alan="kisiBasinaEser" label="Kişi başına eser" />}
           />
-          <Kpi label="Kapsanan rol" value={nf.format(roles.length)} help={roles.join(', ')} />
+          <Kpi label="Kapsanan rol" value={nf.format(roles.length)} help={roles.join(', ')} explain="Bu sekmede listelenen CRM katılımcı tipleri. Rol süzgecinden birini seçerseniz yalnız o rol kalır." />
         </KpiRow>
       )}
 
@@ -257,7 +261,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
             <label className="relative block">
               <span className="sr-only">Kişi ara</span>
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
-              <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ad soyad" className={`${field} pl-9`} />
+              <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ad soyad ile arayın" className={`${field} pl-9`} />
             </label>
             {m.roles.length > 1 && (
               <div className="flex min-w-0 items-center gap-1">
@@ -279,13 +283,39 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
             </select>
           </div>
           <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={items.length} loading={list.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} />
-          {!list.isLoading && !items.length && !err && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan kişi yok.</p>}
+          {!list.isLoading && !items.length && !err && (
+            <div className="mt-3">
+              <EmptyHint
+                title={q || role ? 'Süzgece uyan kişi yok' : 'Bu sekmede kişi yok'}
+                why={q || role ? 'Adı farklı yazmayı deneyin ya da «Tüm roller»i seçin.' : 'CRM\'de bu rollerle eser katılım kaydı olan kişi bulunamadı.'}
+                action={
+                  q || role ? (
+                    <button
+                      type="button"
+                      className="min-h-9 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold hover:bg-slate-200"
+                      onClick={() => {
+                        setText('');
+                        setRole('');
+                      }}
+                    >
+                      Süzgeçleri temizle
+                    </button>
+                  ) : undefined
+                }
+              />
+            </div>
+          )}
           {items.length > 0 && (
             <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-canvas-muted">
               Satırdaki eser, rol ve son 12 ay sayıları
               <SqlInfo k={data?.kaynaklar} alan="items[]" label="Kişi listesi" />
               <span aria-hidden>·</span> toplam
               <SqlInfo k={data?.kaynaklar} alan="total" label="Süzgece uyan kişi" />
+            </p>
+          )}
+          {items.length > 0 && (
+            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">
+              Sağdaki sayı kişinin eser sayısıdır; altında son 12 aydaki eseri ya da son çalıştığı tarih yazar. Kişiye dokunun, ayrıntısı açılsın.
             </p>
           )}
           <ul className="mt-2 grid gap-2 xl:grid-cols-2">

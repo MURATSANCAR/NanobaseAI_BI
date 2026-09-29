@@ -38,17 +38,20 @@ export default function CashTab() {
   const rebuild = useMutation({
     mutationFn: financeApi.cashRebuild,
     onSuccess: (r) => { toast.success(r.started ? 'Nakit tablosu kuruluyor.' : 'Başka bir okuma sürüyor; bitince yeniden deneyin.'); qc.invalidateQueries({ queryKey: ['finance', 'cash'] }); },
-    onError: (e) => toast.error(errText(e, 'Başlatılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Nakit tablosu kurulamadı; biraz sonra yeniden deneyin.') ?? ''),
   });
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Nakit tablosu açılamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Nakit tablosu açılamadı; biraz sonra yeniden deneyin.')}</Note>;
   const d = q.data;
   if (!d) return null;
   const head = (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="flex min-h-9 items-center gap-1.5 text-[12px] font-semibold">
+      <p className="basis-full text-[12px] leading-snug text-canvas-muted">
+        Önümüzdeki 13 haftada kasa ve bankaya girecek ve çıkacak parayı hafta hafta gösterir. Kapanışı eksiye düşen hafta nakit açığıdır ve kırmızı görünür.
+      </p>
+      <label className="flex min-h-11 items-center gap-1.5 text-[12px] font-semibold sm:min-h-9">
         <input type="checkbox" checked={budget} onChange={(e) => setBudget(e.target.checked)} />
-        Bütçe gider temposunu çıkışa kat
+        Bütçedeki gider temposunu da çıkış olarak ekle
       </label>
       <button type="button" className={`${btnGhost} ml-auto`} onClick={() => rebuild.mutate()} disabled={!!running || rebuild.isPending}>
         {running || rebuild.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <RefreshCw aria-hidden className="h-4 w-4" />}
@@ -180,7 +183,7 @@ export default function CashTab() {
       <Panel>
         <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Geçmiş tahmin ↔ gerçekleşen<SqlInfo k={hist.data?.kaynaklar} alan="items[]" label="Geçmiş tahmin ↔ gerçekleşen" /></h3>
         {hist.data?.not ? <p className="text-[12.5px] text-canvas-muted">{hist.data.not}</p> : !hist.data?.items.length ? (
-          <p className="text-[12.5px] text-canvas-muted">Henüz karşılaştırma yok.</p>
+          <p className="text-[12.5px] text-canvas-muted">Henüz karşılaştırılacak geçmiş tahmin yok; tablo birkaç hafta kurulduktan sonra tahmin ile gerçekleşen burada yan yana görünür.</p>
         ) : (
           <>
             <p className="mb-2 text-[12px] text-canvas-muted">Gerçekleşen = kasa ve banka (100, 102) haftalık net hareketi. Ortalama mutlak sapma {fmtMoney(hist.data.ortalamaMutlakSapma)}.</p>

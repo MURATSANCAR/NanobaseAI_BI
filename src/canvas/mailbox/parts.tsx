@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, PlugZap } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { Note } from '../admin/ui';
+import { EmptyHint } from '../components/Explain';
 import { PRIORITY_TONE, STATUS_TONE, lastRunText, probText, type Connection, type LastRun, type Message, type Priority, type Status } from './api';
 
 const SECTIONS = [
@@ -124,13 +125,9 @@ export function CategoryPill({ m }: { m: Pick<Message, 'categoryLabel' | 'catego
   );
 }
 
+/** Boş durum: başlık + neden boş / ne yapılabilir (bkz. components/Explain · EmptyHint). */
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-8 text-center">
-      <div className="text-[13px] font-extrabold">{title}</div>
-      {children && <div className="mx-auto mt-1 max-w-[56ch] text-[12px] leading-snug text-canvas-muted">{children}</div>}
-    </div>
-  );
+  return <EmptyHint title={title} why={children} />;
 }
 
 export function Warn({ children }: { children: ReactNode }) {

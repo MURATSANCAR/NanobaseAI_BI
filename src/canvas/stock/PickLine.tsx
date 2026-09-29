@@ -6,6 +6,7 @@ import { Note, TableWrap, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Pager, Panel } from '../editorial/kit';
 import { n0, n1, stockApi } from './api';
 import { Empty, Loading, SourcesButton, StockFrame, num } from './parts';
+import { EmptyHint } from '../components/Explain';
 import { RULES } from './rules';
 
 /** Sipariş hazırlık hattı (/stok/depo-hatti): CRM sipariş aşamaları (depoda bekliyor → toplanıyor → kutulanıyor →
@@ -35,6 +36,7 @@ export default function PickLine() {
           <KpiRow>
             {d.asamalar.map((a) => (
               <Kpi key={a.key} label={a.label} value={n0(a.adet)} help={`Aşamada ortanca ${hours(a.ortancaSaat)} · en eski ${hours(a.enEskiSaat)}`}
+                explain="Şu an bu aşamada duran sipariş sayısı. «Ortanca» siparişlerin yarısının bu süreden kısa beklediğini söyler; «en eski» en uzun bekleyen siparişin süresidir."
                 info={<SqlInfo k={d.kaynaklar} alan="asamalar" label={`${a.label} · sipariş ve süre`} />} />
             ))}
           </KpiRow>
@@ -67,7 +69,7 @@ export default function PickLine() {
               Depodaki siparişler (en uzun bekleyen üstte)
               <SqlInfo k={d.kaynaklar} alan="acik.total" label="Depodaki sipariş sayısı" />
             </h2>
-            {!d.acik.items.length && <Empty>Depo aşamasında sipariş yok.</Empty>}
+            {!d.acik.items.length && <EmptyHint title="Depoda bekleyen sipariş yok" why="Şu an hazırlık aşamalarından birinde duran sipariş bulunmuyor." />}
             {!!d.acik.items.length && (
               <TableWrap>
                 <thead>

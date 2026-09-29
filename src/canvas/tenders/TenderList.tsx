@@ -14,6 +14,7 @@ import DocumentsVault from './DocumentsVault';
 import ResultsTab from './ResultsTab';
 import PublicSalesTab from './PublicSalesTab';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** M33 İhale takibi: açık ilanlar, takvim, şirket belge arşivi, sonuçlar ve kamu kurumlarına satış.
  *  Sekme ve süzgeçler adres çubuğunda (?sekme=, ?durum=, ?il=, ?tur=, ?q=); bağlantı paylaşılabilir. */
@@ -49,19 +50,19 @@ export default function TenderList() {
   return (
     <TenderFrame
       title="Okul, kütüphane ve kamu ihaleleri"
-      lead="Kamu kurumlarının kitap alımları: ilan kaydı, şartname kalemlerinin katalogla eşleştirilmesi (stok, fiyat), teklif fiyat tablosu, belge kontrol listesi, karar ve sonuç. Portal kuruma teklif göndermez; hazırlık ve kayıt içindir."
+      lead="Okul, kütüphane ve kamu kurumlarının kitap alım ihalelerine hazırlanırsınız: ilanı kaydedin, şartnamedeki kitapları kataloğumuzla eşleştirin, teklif fiyatını ve belgeleri hazırlayın, kararı onaylatın. Portal kuruma teklif göndermez."
       aside={
         me?.canEdit ? (
           <div className="flex justify-start lg:justify-end">
             <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
               <Plus aria-hidden className="h-4 w-4" />
-              Yeni ihale
+              Yeni ihale kaydet
             </button>
           </div>
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'ilanlar' ? null : t })} />
       {tab === 'ilanlar' && meta.data && <Listing meta={meta.data} params={params} update={update} />}
@@ -94,10 +95,10 @@ function Listing({ meta, params, update }: { meta: TenderMeta; params: URLSearch
   return (
     <>
       <KpiRow>
-        <Kpi label="Açık ihale" value={String(open)} help="Yeni, inceleniyor, başvurulacak, teklif verildi" active={durum === 'acik'} onClick={() => update({ durum: null })} info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.acik" label="Açık ihale" />} />
-        <Kpi label="7 gün içinde son tarih" value={String(soon)} help="Listede, başvuru öncesi aşamada" info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.yediGun" label="7 gün içinde son tarih" />} />
-        <Kpi label="Onay bekleyen karar" value={String(pending)} help="Başvuru kararı ve teklif fiyatı" info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.onayBekleyen" label="Onay bekleyen karar" />} />
-        <Kpi label="Kazanılan" value={String(counts.kazanildi ?? 0)} help={`Kaybedilen ${counts.kaybedildi ?? 0}`} active={durum === 'kazanildi'} onClick={() => update({ durum: 'kazanildi' })} info={<SqlInfo k={list.data?.kaynaklar} alan="durumSayilari" label="Kazanılan ve kaybedilen" />} />
+        <Kpi label="Açık ihale" value={String(open)} help="Yeni, inceleniyor, başvurulacak, teklif verildi" explain="Sonucu henüz belli olmayan ihaleler: yeni girilen, incelenen, başvurulacak ve teklifi verilmiş olanlar. Dokununca liste bunlara süzülür." active={durum === 'acik'} onClick={() => update({ durum: null })} info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.acik" label="Açık ihale" />} />
+        <Kpi label="7 gün içinde son tarih" value={String(soon)} help="Listede, başvuru öncesi aşamada" explain="Aşağıdaki listede, henüz teklif verilmemiş ve son teklif tarihine 7 gün ya da daha az kalmış ihaleler. Önce bunlara bakın." info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.yediGun" label="7 gün içinde son tarih" />} />
+        <Kpi label="Onay bekleyen karar" value={String(pending)} help="Başvuru kararı ve teklif fiyatı" explain="Başvurma kararı ve teklif fiyatı ikinci bir yetkilinin onayını bekleyen ihaleler. Kararı hazırlayan kişi kendi kararını onaylayamaz." info={<SqlInfo k={list.data?.kaynaklar} alan="sayac.onayBekleyen" label="Onay bekleyen karar" />} />
+        <Kpi label="Kazanılan" value={String(counts.kazanildi ?? 0)} help={`Kaybedilen ${counts.kaybedildi ?? 0}`} explain="Sonucu «kazanıldı» olarak girilen ihale sayısı; altında kaybedilenler yazar. Sonuçları «Sonuçlar» sekmesinde görebilirsiniz." active={durum === 'kazanildi'} onClick={() => update({ durum: 'kazanildi' })} info={<SqlInfo k={list.data?.kaynaklar} alan="durumSayilari" label="Kazanılan ve kaybedilen" />} />
       </KpiRow>
       <Note tone="info">
         Liste yalnız portala girilen ilanları içerir. Resmî kaynaktan otomatik ilan içe alma {meta.ayarlar.watchEnabled ? 'ikinci sürümde gelecek' : 'bu ortamda kapalı'};
@@ -140,9 +141,10 @@ function Listing({ meta, params, update }: { meta: TenderMeta; params: URLSearch
           {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
           {list.data && !items.length && (
-            <div className="py-8 text-center text-[12.5px] text-canvas-muted">
-              Bu süzgeçte ihale yok.{meta.me.canEdit ? ' «Yeni ihale» ile ilk kaydı girin.' : ''}
-            </div>
+            <EmptyHint
+              title="Bu süzgece uyan ihale yok"
+              why={`Aramayı ya da durum, kurum türü ve il süzgeçlerini değiştirin.${meta.me.canEdit ? ' Yeni bir ilanı «Yeni ihale kaydet» ile girebilirsiniz.' : ''}`}
+            />
           )}
           {items.map((t) => <TenderCard key={t.id} t={t} />)}
         </div>
@@ -174,7 +176,7 @@ function TenderCard({ t }: { t: TenderRow }) {
         {t.sonTeklifTarihi && ['yeni', 'inceleniyor', 'basvurulacak'].includes(t.durum) && <LeftPill days={t.kalanGun} />}
       </div>
       <div className="flex flex-wrap items-center gap-2 md:flex-col md:items-start md:gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted md:hidden">Kalem</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted md:hidden">Kataloğa eşleşen kalem</span>
         <span className="font-mono text-[12px] tabular-nums">{t.kalem ? `${t.eslesen}/${t.kalem} eşleşti` : 'kalem yok'}</span>
         {t.yaklasikTutar !== null && <span className="font-mono text-[11.5px] tabular-nums text-canvas-muted">{fmtMoney(t.yaklasikTutar)}</span>}
       </div>
@@ -245,8 +247,8 @@ function NewTenderSheet({ open, meta, onClose }: { open: boolean; meta: TenderMe
               {Object.entries(meta.usuller).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
-          {inp('kaynakNo', 'İhale kayıt no')}
-          {inp('yaklasikTutar', 'Yaklaşık tutar (₺)', { inputMode: 'decimal' })}
+          {inp('kaynakNo', 'İhale kayıt no', { placeholder: 'Örn. 2026/123456' })}
+          {inp('yaklasikTutar', 'Yaklaşık tutar (₺)', { inputMode: 'decimal', placeholder: 'Örn. 150.000' })}
           {inp('ilanTarihi', 'İlan tarihi', { type: 'date' })}
           {inp('sonTarih', 'Son teklif tarihi', { type: 'date' })}
           {inp('sonSaat', 'Son teklif saati', { type: 'time' })}

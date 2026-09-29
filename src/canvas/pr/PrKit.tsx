@@ -69,7 +69,7 @@ export default function PrKit() {
     <PrFrame
       crumb="PR dosyası"
       title={kit ? kit.bookTitle : 'PR dosyası'}
-      lead={kit ? [kit.id, kit.author, kit.publishDate && `yayın ${fmtDay(kit.publishDate)}`, `sahibi ${kit.owner ?? '—'}`].filter(Boolean).join(' · ') : undefined}
+      lead={kit ? `Bu kitabın basın bülteni, gazetecilere gidecek e-postalar ve çıkan haberler. Önce dosya onaylanır, sonra her e-postayı siz tek tek gönderirsiniz. ${[kit.id, kit.author, kit.publishDate && `yayın ${fmtDay(kit.publishDate)}`, `sahibi ${kit.owner ?? '—'}`].filter(Boolean).join(' · ')}` : undefined}
       source="Portal kaydı · CRM yalnız okunur"
       presence={kit ? `${kit.sends.length} kişi` : '…'}
       back={{ to: '/basin-iliskileri', label: 'Basın ilişkileri' }}
@@ -94,7 +94,7 @@ export default function PrKit() {
               ) : null
             }
           >
-            {!m.modelReady && <Note tone="warn">Zeki AI modeli bu kurulumda bağlı değil; metinleri elle yazın.</Note>}
+            {!m.modelReady && <Note tone="warn">Zeki AI şu an bağlı değil; metinleri elle yazın.</Note>}
             {kit.job?.status === 'hata' && <Note tone="err">Son Zeki AI işi yarıda kaldı: {kit.job.error}</Note>}
             <Texts kit={kit} meta={m} onSaved={(k) => qc.setQueryData(['pr', 'kit', id], k)} />
             {kit.draft.openings?.metin && (
@@ -115,7 +115,7 @@ export default function PrKit() {
             help="Bu kitap için kayıtlı haberler. Kişi ve kitap eşleşen gönderim satırı kendiliğinden «haber çıktı» olur."
             action={m.me.canEdit ? <Link to={`/basin-iliskileri/yansimalar?ekle=1&kitap=${encodeURIComponent(kit.crmBookId)}`} className={btnGhost}>Yansıma ekle</Link> : null}
           >
-            {kit.coverage.length === 0 && <Empty>Henüz yansıma yok.</Empty>}
+            {kit.coverage.length === 0 && <Empty>Henüz yansıma yok. Kitapla ilgili çıkan haberi «Yansımalar» ekranından ekleyin; gönderim yaptığınız kişiyle eşleşirse o satır kendiliğinden «haber çıktı» olur.</Empty>}
             <ul className="flex flex-col divide-y divide-slate-100">
               {kit.coverage.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
@@ -215,10 +215,10 @@ function Actions({ kit, meta, busy, onAsk, onReopen }: { kit: Kit; meta: Meta; b
           </>
         )}
         {me.canEdit && kit.status === 'onayda' && (
-          <button type="button" className={btnGhost} disabled={busy} onClick={() => onAsk('withdraw')}>Geri çek</button>
+          <button type="button" className={btnGhost} disabled={busy} onClick={() => onAsk('withdraw')}>Onaydan geri çek</button>
         )}
         {me.canEdit && kit.status !== 'kapali' && kit.status !== 'onayda' && (
-          <button type="button" className={btnGhost} disabled={busy} onClick={() => onAsk('close')}>Kapat</button>
+          <button type="button" className={btnGhost} disabled={busy} onClick={() => onAsk('close')}>Dosyayı kapat</button>
         )}
         {me.canEdit && kit.status === 'kapali' && (
           <button type="button" className={btnGhost} disabled={busy} onClick={onReopen}>Yeniden aç</button>

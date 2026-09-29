@@ -7,14 +7,15 @@ import type { Kaynaklar } from '../components/sqlInfo';
 import ColName from '../components/ColName';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, errText, field, fmtDate, nf, td, th } from './ui';
 import { xlsxUrl } from '../components/excel';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Cevap tipi → okunur etiket + renk. Başarısız/eksik olanlar göze çarpsın. */
 const TYPE: Record<string, { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' | 'violet' }> = {
   TEXT_TO_SQL: { label: 'Cevaplandı', tone: 'ok' },
   CLARIFICATION: { label: 'Netleştirme', tone: 'warn' },
   INCOMPLETE_ANSWER: { label: 'Eksik', tone: 'warn' },
-  NON_SQL_QUERY: { label: 'SQL yok', tone: 'muted' },
-  SQL_INVALID: { label: 'SQL geçersiz', tone: 'err' },
+  NON_SQL_QUERY: { label: 'Sorgu yazılmadı', tone: 'muted' },
+  SQL_INVALID: { label: 'Sorgu reddedildi', tone: 'err' },
   NOT_PERMITTED: { label: 'Yetki dışı veri', tone: 'warn' },
   DATA_UNAVAILABLE: { label: 'Veri kapsam dışı', tone: 'muted' },
   DATA_SOURCE_UNAVAILABLE: { label: 'Kaynak ulaşılamaz', tone: 'err' },
@@ -78,7 +79,8 @@ function CopyBtn({ text }: { text: string }) {
 function ResultTable({ result }: { result: NonNullable<PromptDetail['result']> }) {
   const cols = result.columns ?? [];
   const rows = result.records ?? [];
-  const shown = rows.slice(0, 200);
+  const more = useShowMore(rows, 200);
+  const shown = more.shown;
   if (!cols.length) return <Note tone="info">Bu cevapta saklı sonuç satırı yok.</Note>;
   return (
     <div className="space-y-1">
@@ -109,6 +111,7 @@ function ResultTable({ result }: { result: NonNullable<PromptDetail['result']> }
           ? 'Sonuç çok büyük olduğu için satırlar saklanmadı; yalnız başlık ve sayım tutuldu.'
           : `${nf.format(rows.length)} satır saklandı${rows.length > shown.length ? `, ilk ${shown.length} gösteriliyor` : ''}.`}
       </p>
+      <ShowMoreButton more={more} noun="satır" />
     </div>
   );
 }
@@ -195,7 +198,7 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
                 <section>
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                      {d.result?.physicalSql ? 'Veritabanında koşan SQL' : 'Üretilen SQL (çözülmemiş, katalog adlarıyla)'}
+                      {d.result?.physicalSql ? 'Kaynakta çalışan sorgu' : 'Yazılan sorgu (veri sözlüğü adlarıyla, henüz çözülmemiş)'}
                     </span>
                     <CopyBtn text={d.result?.physicalSql || d.sql || ''} />
                   </div>
@@ -210,12 +213,12 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
               )}
               {d.gate && Object.keys(d.gate).length > 0 && (
                 <section>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kapı kararları</div>
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Denetim kararları</div>
                   <pre className="overflow-x-auto rounded-xl bg-amber-50 p-3 text-[11.5px] text-amber-900">{JSON.stringify(d.gate, null, 2)}</pre>
                 </section>
               )}
               <details>
-                <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Semantik çözümleme</summary>
+                <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sorunun nasıl okunduğu (ayrıntı)</summary>
                 <pre className="mt-1 max-h-72 overflow-auto rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed">{JSON.stringify(d.resolved, null, 2)}</pre>
               </details>
             </>
@@ -308,6 +311,7 @@ export default function PromptTracker() {
   });
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const o = overview.data;
+  const failing = useShowMore(o?.topFailing, 8);
 
   const csv = (excel: boolean) => {
     const a = document.createElement('a');
@@ -319,14 +323,14 @@ export default function PromptTracker() {
   return (
     <Section
       title="Soru izleme"
-      help="Müşteri ortamında sorulan her soru, üretilen SQL, sonuç ve kapının kararı. Satıra dokunun; incelemek ve nereyi düzelteceğimizi işaretlemek için."
+      help="Zeki AI'a sorulan her soru, yazılan sorgu, sonuç ve denetimin kararı. Soruya dokunup inceleyin; düzeltilmesi gerekeni «Düzeltilecek» diye işaretleyip not bırakın."
       action={
         <span className="flex flex-wrap gap-2">
           <button type="button" onClick={() => csv(false)} className={btnGhost}>
-            <FileDown className="h-4 w-4" /> CSV
+            <FileDown className="h-4 w-4" /> CSV indir
           </button>
           <button type="button" onClick={() => csv(true)} className={btnGhost}>
-            <FileSpreadsheet className="h-4 w-4" /> Excel
+            <FileSpreadsheet className="h-4 w-4" /> Excel indir
           </button>
         </span>
       }
@@ -349,7 +353,7 @@ export default function PromptTracker() {
           }}
         >
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-canvas-muted" />
-          <input value={text} onChange={(e) => setText(e.target.value)} onBlur={() => setSearch(text.trim())} placeholder="Soru ya da SQL ara…" className={`${field} pl-8`} />
+          <input value={text} onChange={(e) => setText(e.target.value)} onBlur={() => setSearch(text.trim())} placeholder="Soru ya da sorgu metni ara…" className={`${field} pl-8`} />
         </form>
         <select value={only} onChange={(e) => setOnly(e.target.value)} className={`${field} sm:w-44`} aria-label="Süzgeç">
           {FILTERS.map(([v, l]) => (
@@ -373,7 +377,7 @@ export default function PromptTracker() {
             <AlertTriangle className="h-3.5 w-3.5" /> En sık başarısız sorular
           </div>
           <ul className="flex flex-wrap gap-1.5">
-            {o.topFailing.slice(0, 8).map((f) => (
+            {failing.shown.map((f) => (
               <li key={f.question}>
                 <button
                   type="button"
@@ -389,6 +393,7 @@ export default function PromptTracker() {
               </li>
             ))}
           </ul>
+          <ShowMoreButton more={failing} noun="soru" />
         </div>
       )}
 

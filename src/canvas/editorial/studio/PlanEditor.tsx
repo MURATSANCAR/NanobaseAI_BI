@@ -19,7 +19,7 @@ import { nextZ, removable, removeItem, shapesOf, type ItemRef } from './pageItem
 import { centerBoxAt } from './elements';
 import PageStrip from './PageStrip';
 import PageCanvas, { CANVAS_DROP } from './PageCanvas';
-import { BubblesTab, EffectTab, ElementsTab, ItemTab, PageTab, PaletteTab, TABS, nudge, type EditorCtx, type Tab } from './InspectorPanel';
+import { BubblesTab, EffectTab, ElementsTab, ItemTab, PageTab, PaletteTab, TABS, TAB_HINT, nudge, type EditorCtx, type Tab } from './InspectorPanel';
 import FigureLibrary, { jobDone, jobFailed } from './FigureLibrary';
 import HistoryPanel from './HistoryPanel';
 import StudioReaderEntry from './reader';
@@ -27,6 +27,9 @@ import { ConfirmDialog, Modal } from './dialogs';
 import type { AssetJobKind } from './AssetTools';
 import './plan.css';
 import { StudioInfo } from './shared';
+import { EmptyHint, Explain } from '../../components/Explain';
+
+const LEAD = 'İç sayfaları düzenleyin: sayfa ekleyin, silin, sıralayın; resim, yazı, balon, figür ve fotoğrafı yerleştirin. Her değişiklik kendiliğinden kaydedilir.';
 
 /** Sayfa düzeni (sözleşme: docs/analiz/studyo-sayfa-plani-sozlesme.md). Sayfa planı donduktan sonra iç
  *  sayfalar burada düzenlenir: sayfa ekle/sil/sırala, yerleşim, resim ve yazı kutusunu sürükle/boyutlandır,
@@ -58,9 +61,9 @@ function StatusPill({ s }: { s: SyncState }) {
   if (s.status === 'saving') { tone = 'bg-violet-50 text-canvas-violet'; icon = <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />; text = 'Kaydediliyor…'; }
   if (s.status === 'offline') { tone = 'bg-amber-50 text-amber-800'; icon = <CloudOff className="h-3.5 w-3.5" aria-hidden />; text = `Bağlantı yok — değişiklikler cihazda saklanıyor (${n})`; }
   if (s.status === 'busy') { tone = 'bg-amber-50 text-amber-800'; icon = <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />; text = `Üretim sürüyor — değişiklikler sırada (${n})`; }
-  if (s.status === 'auth') { tone = 'bg-amber-50 text-amber-800'; icon = <CloudOff className="h-3.5 w-3.5" aria-hidden />; text = `Oturum gerekli — değişiklikler cihazda saklanıyor (${n})`; }
+  if (s.status === 'auth') { tone = 'bg-amber-50 text-amber-800'; icon = <CloudOff className="h-3.5 w-3.5" aria-hidden />; text = `Oturumunuz kapandı, yeniden giriş yapın — değişiklikler cihazda saklanıyor (${n})`; }
   if (s.status === 'error') { tone = 'bg-rose-50 text-rose-700'; icon = <AlertTriangle className="h-3.5 w-3.5" aria-hidden />; text = `Bir değişiklik kaydedilemedi (${n} bekliyor)`; }
-  if (s.status === 'conflict') { tone = 'bg-rose-50 text-rose-700'; icon = <AlertTriangle className="h-3.5 w-3.5" aria-hidden />; text = 'Kararınız bekleniyor'; }
+  if (s.status === 'conflict') { tone = 'bg-rose-50 text-rose-700'; icon = <AlertTriangle className="h-3.5 w-3.5" aria-hidden />; text = 'Aynı yeri başkası da değiştirdi — kararınız bekleniyor'; }
   return (
     <span role="status" aria-live="polite" className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold ${tone}`}>
       {icon}{text}{n > 0 && s.storage === 'memory' ? ' · cihaza yazılamadı, sekmeyi kapatmayın' : ''}
@@ -412,7 +415,7 @@ export default function PlanEditor() {
   const d = studio.data;
   const title = d?.state.title ?? 'Sayfa düzeni';
   const cm = (mm: number) => (mm / 10).toLocaleString('tr-TR', { maximumFractionDigits: 1 });
-  const lead = plan ? `${plan.pages.length} iç sayfa · ${cm(plan.page.w - 2 * plan.page.bleed)}×${cm(plan.page.h - 2 * plan.page.bleed)} cm · taşma payı ${plan.page.bleed} mm` : '';
+  const lead = plan ? `${LEAD} ${plan.pages.length} iç sayfa · ${cm(plan.page.w - 2 * plan.page.bleed)}×${cm(plan.page.h - 2 * plan.page.bleed)} cm · taşma payı ${plan.page.bleed} mm` : LEAD;
 
   const ctx: EditorCtx | null = plan ? {
     job, plan, page, pageNo: index + 1, studio: d, sel, setSel, setPage,
@@ -437,15 +440,15 @@ export default function PlanEditor() {
 
   if (state.status === 'loading' || (!plan && state.status !== 'no-plan')) {
     return (
-      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead="" source={`İş ${job}`} aside={aside}>
-        <Panel>{state.error ? <Note tone="err">{state.error}</Note> : state.status === 'auth' ? <Note tone="warn">Oturum gerekli.</Note> : <Loading />}</Panel>
+      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
+        <Panel>{state.error ? <Note tone="err">{state.error}</Note> : state.status === 'auth' ? <Note tone="warn">Oturumunuz kapanmış. Yeniden giriş yapınca sayfa düzeni açılır.</Note> : <Loading />}</Panel>
       </ModuleFrame>
     );
   }
 
   if (state.status === 'no-plan' || !plan || !ctx) {
     return (
-      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead="" source={`İş ${job}`} aside={aside}>
+      <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead={LEAD} source={`İş ${job}`} aside={aside}>
         <Panel><PlanPreparing job={job} onReady={() => sync.reload()} /></Panel>
       </ModuleFrame>
     );
@@ -457,7 +460,7 @@ export default function PlanEditor() {
       <div className="pe-root flex flex-col gap-3">
         {state.status === 'error' && state.error && (
           <Note tone="err">
-            Sunucu bir değişikliği kabul etmedi: {state.error}
+            Bir değişiklik kaydedilemedi: {state.error} Yeniden deneyin ya da bu değişikliği bırakıp devam edin.
             <span className="mt-1.5 flex flex-wrap gap-2">
               <button type="button" className={btnGhost} onClick={() => sync.retry()}>Tekrar dene</button>
               <button type="button" className={btnGhost} onClick={() => setAskDiscard(true)}>Bu değişikliği bırak</button>
@@ -478,7 +481,7 @@ export default function PlanEditor() {
                 <div className="min-w-0 text-center text-[12px] font-bold">
                   Sayfa {index + 1} / {plan.pages.length}
                   <StudioInfo label="Sayfa planı" what="İç sayfa sayısı, sayfa ölçüsü (taşma payı düşülerek) ve taşan metin sayfa planından." className="ml-1" />
-                  {page?.overflow && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800">metin taşıyor</span>}
+                  {page?.overflow && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800" title="Metin kutusuna sığmıyor; çözüm «Sayfa» sekmesinde">metin sığmıyor</span>}
                 </div>
                 <button type="button" className={ghostBtn} disabled={index >= plan.pages.length - 1} onClick={() => setPageId(plan.pages[index + 1].id)} aria-label="Sonraki sayfa"><ChevronRight className="h-4 w-4" aria-hidden /></button>
               </div>
@@ -490,10 +493,12 @@ export default function PlanEditor() {
                     interactive={interactive} suggestions={suggestions} onFiles={upload} onDropShape={addShape}
                   />
                 </div>
-              ) : <p className="py-10 text-center text-[12.5px] text-canvas-muted">Plan boş. Soldan sayfa ekleyin.</p>}
+              ) : <EmptyHint title="Bu kitapta henüz sayfa yok" why="Sayfalar şeridindeki «Ekle» ile ilk sayfayı ekleyin." />}
               <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
                 <span className="mr-2 inline-block h-0 w-4 border-t border-dashed border-canvas-coral align-middle" />kesim çizgisi
+                <Explain label="Kesim çizgisi" className="ml-0.5">Kâğıdın matbaada kesileceği yer. Dışındaki şerit taşma payıdır ve kesilip atılır; resmi bu paya kadar uzatırsanız kenarda beyaz çizgi kalmaz.</Explain>
                 <span className="mx-2 inline-block h-0 w-4 border-t border-dashed border-canvas-violet align-middle" />güvenli alan
+                <Explain label="Güvenli alan" className="ml-0.5">Yazı ve önemli ayrıntılar bu çizginin içinde kalmalı; dışı kesimde kayabilir ya da cilt tarafında kaybolabilir.</Explain>
                 {interactive
                   ? ' · Sürükleyin, köşeden boyutlandırın (Shift: oran korunur, Alt: yapışmasız); ok tuşları 1 mm, Shift ile 5 mm.'
                   : ' · Telefonda tuval yalnız görüntülenir; ögeye dokunup sağdaki alanlardan düzenleyin.'}
@@ -509,6 +514,7 @@ export default function PlanEditor() {
                   </button>
                 ))}
               </div>
+              <p className="-mt-1 mb-3 text-[11.5px] leading-snug text-canvas-muted">{TAB_HINT[tab]}</p>
               <div role="tabpanel">
                 {tab === 'sayfa' && <PageTab ctx={ctx} />}
                 {tab === 'oge' && <ItemTab ctx={ctx} />}

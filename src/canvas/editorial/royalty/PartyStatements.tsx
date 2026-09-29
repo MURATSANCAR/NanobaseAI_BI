@@ -9,6 +9,8 @@ import { download, royaltyApi, runPath, type Caps, type Party, type Run } from '
 import { CoverEmailButton } from './Drafts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { xlsxUrl } from '../../components/excel';
+import { EmptyHint, Explain } from '../../components/Explain';
+import { TERM } from '../contracts/glossary';
 
 /** Hak sahipleri: onaylı koşudan yazar başına birleşik beyanname. Gönderimi insan kendi e-postasıyla yapar; burada
  *  «gönderildi» kaydı tutulur (ilk sürümde sistemden dış gönderim yok). */
@@ -35,7 +37,11 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
     onError: (e) => toast.error(errMsg(e) ?? 'Kaydedilemedi.'),
   });
   if (run.status !== 'onayli') {
-    return <Panel><p className="py-8 text-center text-[12.5px] text-canvas-muted">Beyannameler koşu onaylanınca hazırlanır.</p></Panel>;
+    return (
+      <Panel>
+        <EmptyHint title="Beyannameler koşu onaylanınca hazırlanır" why="Koşuyu hesaplatıp onaya gönderin; başka bir kişi onaylayınca hak sahibi başına beyanname burada çıkar." />
+      </Panel>
+    );
   }
   const d = list.data;
   const get = async (key: string, path: string) => {
@@ -59,9 +65,11 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
     <>
       {d && (
         <KpiRow>
-          <Kpi label="Hak sahibi" value={num(d.all, 0)} help="Onaylı sözleşmelerin tarafları" info={<SqlInfo k={d.kaynaklar} alan="all" label="Hak sahibi" />} />
-          <Kpi label="Gönderildi" value={num(d.sent, 0)} help={d.all ? `%${num((d.sent / d.all) * 100, 0)} tamamlandı` : '—'} info={<SqlInfo k={d.kaynaklar} alan="sent" label="Gönderildi" />} />
-          <Kpi label="Bekleyen" value={num(d.all - d.sent, 0)} help="Beyannamesi henüz gönderilmedi" info={<SqlInfo k={d.kaynaklar} alan="all" label="Bekleyen (bütün − gönderilen)" />} />
+          <Kpi label="Hak sahibi" value={num(d.all, 0)} help="Onaylı sözleşmelerin tarafları"
+            explain="Onaylı koşudaki sözleşmelerin tarafları. Aynı kişinin birden çok sözleşmesi tek beyannamede birleşir; beyanname dönemdeki satışı ve ödenecek telifi bildirir."
+            info={<SqlInfo k={d.kaynaklar} alan="all" label="Hak sahibi" />} />
+          <Kpi label="Gönderildi" value={num(d.sent, 0)} explain="Beyannamesi «gönderildi» olarak işaretlenen hak sahipleri. Portal kendisi göndermez; gönderen kişi işaretler." help={d.all ? `%${num((d.sent / d.all) * 100, 0)} tamamlandı` : '—'} info={<SqlInfo k={d.kaynaklar} alan="sent" label="Gönderildi" />} />
+          <Kpi label="Bekleyen" value={num(d.all - d.sent, 0)} explain="Beyannamesi henüz «gönderildi» işaretlenmemiş hak sahipleri." help="Beyannamesi henüz gönderilmedi" info={<SqlInfo k={d.kaynaklar} alan="all" label="Bekleyen (bütün − gönderilen)" />} />
         </KpiRow>
       )}
       <Panel>
@@ -76,7 +84,7 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
             <div className="ml-auto flex flex-wrap gap-1.5">
               <button type="button" className={btnGhost} disabled={busy === 'zip'} onClick={() => get('zip', `${runPath(run.id)}/statements.zip`)}>
                 {busy === 'zip' ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <FileArchive aria-hidden className="h-4 w-4" />}
-                Bütün beyannameler
+                Bütün beyannameleri indir
               </button>
               <button type="button" className={btnPrimary} disabled={!pickedItems.length} onClick={() => setSending(pickedItems)}>
                 <Send aria-hidden className="h-4 w-4" />
@@ -88,7 +96,11 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
         {!can.notify && <div className="mt-2"><Note tone="info">Beyanname indirme ve e-posta adresi «Telif beyannamesi» yetkisiyle açılır.</Note></div>}
         {list.error && <div className="mt-2"><Note tone="err">{errMsg(list.error)}</Note></div>}
         {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
-        {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan hak sahibi yok.</p>}
+        {d && !d.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Bu süzgece uyan hak sahibi yok" why="Aramayı temizleyin ya da gönderim durumunu «Hepsi» yapın." />
+          </div>
+        )}
         {d && d.items.length > 0 && (
           <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
             <InfoLabel k={d.kaynaklar} alan="items[]" label="Hak sahibi toplamları (ödenecek, brüt, avans, stopaj, sözleşme sayısı)">{`${num(d.total, 0)} hak sahibi`}</InfoLabel>
@@ -111,7 +123,7 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
                     <button type="button" className={btnGhost} disabled={busy === p.key}
                       onClick={() => get(p.key, `${runPath(run.id)}/parties/${encodeURIComponent(p.key)}/statement.docx`)}>
                       {busy === p.key ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-                      Beyanname
+                      Beyannameyi indir
                     </button>
                   </span>
                 )}
@@ -126,7 +138,7 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
                   {stamp(p.sentAt)} · {p.sentBy} · {p.channel === 'eposta' ? 'e-posta' : p.channel}{p.note ? ` · ${p.note}` : ''}
                   {can.notify && (
                     <button type="button" className="inline-flex min-h-11 items-center gap-1 font-bold text-canvas-violet hover:underline sm:min-h-0" onClick={() => undo.mutate(p.key)}>
-                      <Undo2 aria-hidden className="h-3.5 w-3.5" /> Geri al
+                      <Undo2 aria-hidden className="h-3.5 w-3.5" /> Gönderildi işaretini geri al
                     </button>
                   )}
                 </div>
@@ -178,7 +190,7 @@ function SentSheet({ run, parties, onClose }: { run: Run; parties: Party[]; onCl
           </select>
         </Field>
         <Field label="Not">
-          <input value={note} onChange={(e) => setNote(e.target.value)} className={field} />
+          <input value={note} onChange={(e) => setNote(e.target.value)} className={field} placeholder="İsteğe bağlı; ör. kargo takip no" />
         </Field>
       </div>
     </Sheet>
@@ -190,7 +202,11 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
   const [busy, setBusy] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['royalty', 'payments', run.id, run.updatedAt], queryFn: () => royaltyApi.payments(run.id), enabled: run.status === 'onayli' && can.payments });
   if (run.status !== 'onayli') {
-    return <Panel><p className="py-8 text-center text-[12.5px] text-canvas-muted">Ödeme listesi koşu onaylanınca hazırlanır.</p></Panel>;
+    return (
+      <Panel>
+        <EmptyHint title="Ödeme listesi koşu onaylanınca hazırlanır" why="Onaylı koşuda kime, hangi sözleşmeden, ne kadar ödeneceği burada listelenir." />
+      </Panel>
+    );
   }
   if (!can.payments) return <Panel><Note tone="info">Ödeme listesi «Telif ödeme listesi» yetkisiyle açılır (muhasebe).</Note></Panel>;
   const get = async (name: string) => {
@@ -210,6 +226,7 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
         <KpiRow>
           {Object.entries(q.data.totals).map(([cur, t]) => (
             <Kpi key={cur} label={`Ödenecek (${cur})`} value={money(t.net, cur)} help={`${t.payees} ödeme · stopaj ${money(t.withholding, cur)}`}
+              explain="Bu para birimindeki toplam net ödeme: brüt telif − avans mahsubu − stopaj. Stopaj ayrıca vergi dairesine yatırılır."
               info={<SqlInfo k={q.data?.kaynaklar} alan="totals" label={`Ödenecek (${cur})`} />} />
           ))}
         </KpiRow>
@@ -221,11 +238,11 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
             <>
               <button type="button" className={btnGhost} disabled={busy === 'payments.csv'} onClick={() => get('payments.csv')}>
                 {busy === 'payments.csv' ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-                Ödeme listesi
+                Ödeme listesini indir
               </button>
               <button type="button" className={btnGhost} disabled={busy === 'withholding.csv'} onClick={() => get('withholding.csv')}>
                 {busy === 'withholding.csv' ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-                Stopaj özeti
+                Stopaj özetini indir
               </button>
               {['payments.csv', 'withholding.csv'].map((f) => (
                 <button key={f} type="button" className={btnGhost} disabled={busy === xlsxUrl(f)} onClick={() => get(xlsxUrl(f))}>
@@ -245,8 +262,18 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                   <th className="px-3 py-2">Hak sahibi</th><th className="px-3 py-2">Sözleşme</th>
                   <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Brüt (satır × pay)">Brüt</InfoLabel></th>
-                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Avans mahsubu (satır × pay)">Avans</InfoLabel></th>
-                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Stopaj (satır × pay)">Stopaj</InfoLabel></th>
+                  <th className="px-3 py-2 text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <InfoLabel k={q.data.kaynaklar} alan="items[]" label="Avans mahsubu (satır × pay)">Avans</InfoLabel>
+                      <Explain label="Avans mahsubu">{TERM.mahsup}</Explain>
+                    </span>
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <InfoLabel k={q.data.kaynaklar} alan="items[]" label="Stopaj (satır × pay)">Stopaj</InfoLabel>
+                      <Explain label="Stopaj">{TERM.stopaj}</Explain>
+                    </span>
+                  </th>
                   <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Net (satır × pay)">Net</InfoLabel></th><th className="px-3 py-2">Vade</th>
                 </tr>
               </thead>

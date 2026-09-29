@@ -6,6 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term } from './terms';
 
 const PAGE = 40;
 
@@ -36,7 +38,7 @@ export default function SeoSchema() {
       crumb="Şema denetimi"
       eyebrow="SEO & GEO · yapılandırılmış veri"
       title="Kitap sayfalarının şeması"
-      lead="Google ve yapay zekâ motorları kitabı, yazarı ve fiyatı sayfadaki yapılandırılmış veriden (schema.org) okur. Sayfalar yalnız okunarak, saniyede bir taranır; eksikler kitap başına listelenir. Şemayı T-soft teması ürettiği için düzeltme tema isteğiyle yapılır."
+      lead={<>Google ve yapay zekâ servisleri kitabın adını, yazarını, fiyatını ve stokunu sayfadaki gizli yapısal veriden okur. <Term k="schema" /> Kitap sayfaları yalnız okunarak taranır, eksikler kitap başına listelenir. Bu veriyi site teması ürettiği için düzeltme, indirilen tema isteği belgesiyle T-soft tarafına iletilir.</>}
       actions={
         <>
           {canRun && <button className="sg-button" onClick={() => crawl.mutate()} disabled={crawl.isPending || d?.crawl.running}>
@@ -44,7 +46,7 @@ export default function SeoSchema() {
             {d?.crawl.running ? `Taranıyor ${fmt(d.crawl.done)}${d.crawl.queue ? ` / ${fmt(d.crawl.queue)}` : ''}` : 'Taramayı başlat (1 saat)'}
           </button>}
           <a className="sg-button primary" href={seoApi.themeRequestUrl()}>
-            <Download size={16} aria-hidden /> Tema isteği belgesi
+            <Download size={16} aria-hidden /> Tema isteği belgesini indir
           </a>
         </>
       }
@@ -56,34 +58,34 @@ export default function SeoSchema() {
         <>
           <section className="sg-kpis" aria-label="Özet">
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Taranan kitap sayfası <SeoInfo k={r.data?.kaynaklar} label="Taranan kitap sayfası" /></div>
+              <div className="sg-kpi-label">Taranan kitap sayfası <SeoInfo k={r.data?.kaynaklar} label="Taranan kitap sayfası" /> <Explain label="Taranan kitap sayfası">Canlı sitede açılıp yapısal verisi okunan kitap sayfası sayısı. Tarama sayfaları saniyede bir, yalnız okuyarak açar.</Explain></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.checked)}</div>
               <div className="sg-kpi-note">Son tarama {dateTime(d.lastChecked)} · her gece sürer</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Sorunlu sayfa <SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" /></div>
+              <div className="sg-kpi-label">Sorunlu sayfa <SeoInfo k={r.data?.kaynaklar} label="Sorunlu sayfa" /> <Explain label="Sorunlu sayfa">Yapısal verisinde en az bir eksik bulunan kitap sayfası sayısı. Soldan bir eksik seçerseniz yalnız o eksiği taşıyanlar sayılır.</Explain></div>
               <div className="sg-kpi-value sg-mono">{fmt(d.total)}</div>
               <div className="sg-kpi-note">{issue ? `Süzgeç: ${title(issue)}` : 'En az bir eksiği olan'}</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Kurum şeması adı <SeoInfo k={r.data?.kaynaklar} label="Kurum şeması adı" /></div>
+              <div className="sg-kpi-label">Kurum şeması adı <SeoInfo k={r.data?.kaynaklar} label="Kurum şeması adı" /> <Explain label="Kurum şeması adı">Sitenin kendini Google’a hangi kurum adıyla tanıttığı. Google bilgi panelinde ve yapay zekâ cevaplarında bu ad kullanılır; «Timaş Yayınları» olmalı.</Explain></div>
               <div className="sg-kpi-value" style={{ fontSize: 18 }}>{d.organization?.name ?? '—'}</div>
               <div className="sg-kpi-note">{d.organization?.name === 'Timaş Yayınları' ? 'Doğru' : 'Olması gereken: Timaş Yayınları'}</div>
             </div>
           </section>
 
           {!d.checked && (
-            <div className="sg-empty">
-              <h2>Henüz tarama yok</h2>
-              <p>“Taramayı başlat”a basın ya da gece taramasını bekleyin. Sayfalar saniyede bir, yalnız okunarak açılır.</p>
-            </div>
+            <EmptyHint
+              title="Henüz tarama yapılmadı"
+              why={canRun ? '«Taramayı başlat»a basın ya da gece taramasını bekleyin. Sayfalar saniyede bir, yalnız okunarak açılır.' : 'Gece taraması bittiğinde sonuçlar burada görünür.'}
+            />
           )}
 
           {d.checked > 0 && (
             <div className="sg-grid">
               <section className="sg-card sg-span-5">
                 <h2>Eksikler <SeoInfo k={r.data?.kaynaklar} label="Eksikler" /></h2>
-                <p className="sg-sub">Taranan sayfalarda kaç tanesinde var. Tıklayınca sayfalar süzülür.</p>
+                <p className="sg-sub">Her eksiğin kaç sayfada olduğu ve oranı. Bir eksiğe dokunun, sağda yalnız o sayfalar ve eksiğin neden önemli olduğu görünsün.</p>
                 <div className="sg-bars">
                   {d.checks
                     .filter((c) => c.count > 0)
@@ -116,7 +118,11 @@ export default function SeoSchema() {
 
               <section className="sg-card sg-span-7">
                 <h2>{issue ? title(issue) : 'Sorunlu sayfalar'}</h2>
-                <p className="sg-sub">Çok satandan aza. Yazar kimliği için veri Yazar ve kategori ekranındaki Wikidata eşleşmelerinden gelir.</p>
+                {issue && d.checks.find((c) => c.id === issue)?.why && (
+                  <p className="sg-banner" style={{ margin: '0 0 10px' }}>{d.checks.find((c) => c.id === issue)?.why}</p>
+                )}
+                <p className="sg-sub">Çok satandan aza. Kitabın adına dokunursanız Ürün denetiminde açılır. Yazar kimliği için veri Yazar ve kategori ekranındaki Wikidata eşleşmelerinden gelir.</p>
+                {!d.items.length && <EmptyHint title="Sorunlu sayfa yok" why="Taranan kitap sayfalarının yapısal verisinde bu süzgece uyan eksik bulunmadı." />}
                 <div className="sg-table-wrap">
                   <table className="sg-table">
                     <thead>

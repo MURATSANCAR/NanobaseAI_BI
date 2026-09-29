@@ -69,22 +69,26 @@ export default function CreativeHome() {
       crumb="Görsel ve metin"
       title="Görsel ve metin"
       source="Stüdyo pazarlama kiti + CRM kitap kartı"
-      lead="Sosyal medya, reklam, site ve e-bülten görselleri tek tasarımdan bütün boyutlarda dizilir; başlık, açıklama, reklam metni, hashtag, video senaryosu ve influencer brief'i Zeki AI taslağıdır. Görsel önce tasarım, sonra mesaj onayı alır; onaylı paket indirilir, yükleme kişinin kendisindedir — hiçbir kanala otomatik gönderim yok."
+      lead="Sosyal medya, reklam, site ve e-bülten için görsel ve metin talepleri. Görsel tek tasarımdan bütün boyutlarda hazırlanır, metinler Zeki AI taslağıdır. Görsel önce tasarım, sonra mesaj onayı alır; onaylı paketi indirip kanala siz yüklersiniz, hiçbir yere kendiliğinden gönderilmez."
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       <KpiRow>
         <Kpi label="Yeni talep" value={s ? nf.format(s.yeniTalep) : '—'} help="Son 24 saatte açılan" onClick={() => update({ sekme: null, durum: 'talep' })}
-          info={<SqlInfo k={s?.kaynaklar} alan="yeniTalep" label="Yeni talep" />} />
+          info={<SqlInfo k={s?.kaynaklar} alan="yeniTalep" label="Yeni talep" />}
+          explain="Son 24 saatte açılmış, henüz üretime alınmamış görsel ve metin talepleri. Karta dokunursanız pano bu taleplere süzülür." />
         <Kpi label="Tasarım onayı" value={s?.tasarimBekleyen != null ? nf.format(s.tasarimBekleyen) : '—'}
           help={s?.tasarimBekleyen == null ? 'Rolünüzde tasarım onayı yok' : 'Onay bekleyen görsel'} onClick={() => update({ sekme: null, durum: 'tasarim-onayi' })}
-          info={<SqlInfo k={s?.kaynaklar} alan="tasarimBekleyen" label="Tasarım onayı" />} />
+          info={<SqlInfo k={s?.kaynaklar} alan="tasarimBekleyen" label="Tasarım onayı" />}
+          explain="Görselin tasarım yönünden (yerleşim, renk, marka kurallarına uygunluk) onay bekleyen talepler. Bu onayı yalnız tasarım onay yetkisi olan kişi verir." />
         <Kpi label="Mesaj onayı" value={s?.mesajBekleyen != null ? nf.format(s.mesajBekleyen) : '—'}
           help={s?.mesajBekleyen == null ? 'Rolünüzde mesaj onayı yok' : 'Onay bekleyen görsel ve metin'} onClick={() => update({ sekme: null, durum: 'mesaj-onayi' })}
-          info={<SqlInfo k={s?.kaynaklar} alan="mesajBekleyen" label="Mesaj onayı" />} />
+          info={<SqlInfo k={s?.kaynaklar} alan="mesajBekleyen" label="Mesaj onayı" />}
+          explain="İçeriğin söylediği şey yönünden son onayı bekleyen görsel ve metinler. Görsel buraya tasarım onayından sonra gelir; aynı kişi bir görsele iki onayı birden veremez." />
         <Kpi label="Termini yakın" value={s ? nf.format(s.terminiYaklasan.length) : '—'} help="2 gün ya da daha az kalan, onaysız" onClick={() => update({ sekme: null, durum: null })}
-          info={<SqlInfo k={s?.kaynaklar} alan="terminiYaklasan" label="Termini yakın" />} />
+          info={<SqlInfo k={s?.kaynaklar} alan="terminiYaklasan" label="Termini yakın" />}
+          explain="Teslim tarihine (termin) 2 gün ya da daha az kalmış ve henüz onaylanmamış talepler." />
       </KpiRow>
 
       {tab === 'talepler' && <RequestsBoard params={params} update={update} due={s?.terminiYaklasan ?? []} />}

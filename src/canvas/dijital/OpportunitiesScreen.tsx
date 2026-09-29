@@ -10,6 +10,7 @@ import { Chips, DigitalFrame, ListHead, RightPill, Tabs } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import DigitalTitleDrawer from './DigitalTitleDrawer';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint } from '../components/Explain';
 
 /** Fırsatlar: hakkı olan, basılıda iyi satan, dijital sürümü olmayan kitaplar (e-kitap) ve sesli kitap adayları.
  *  Rakamlar Logo faturalı satırdan; sıra son 12 ay basılı net adede göre. Liste tek tıkla CSV olarak iner. */
@@ -51,7 +52,7 @@ export default function OpportunitiesScreen() {
       crumb="Dijital yayın"
       me={meta.data?.me}
       title="Dijital fırsatlar"
-      lead="Hakkı olan (hak notu yok ya da telif birimi karar vermiş), dijital sürümü olmayan ve son 12 ayda basılıda iyi satan kitaplar. Hakkı eksik, yok ya da incelenmeli olan kitap bu listeye girmez."
+      lead="E-kitap ya da sesli kitap olarak çıkarmaya değer kitaplar: dijital hakkımız olan, henüz dijital sürümü bulunmayan ve son 12 ayda basılıda iyi satan kitaplar. Hakkı eksik, yok ya da incelenmesi gereken kitap bu listeye girmez."
       aside={
         meta.data?.me.canExport ? (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
@@ -67,13 +68,13 @@ export default function OpportunitiesScreen() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       <Tabs tabs={TABS} value={tur} onChange={(t) => update({ tur: t === 'ekitap' ? null : t, sayfa: null })} />
       {st && (
         <Note tone="info">
           Eşik: son 12 ayda en az {fmtInt(tur === 'sesli' ? st.audioMinQty : st.oppMinQty)} adet basılı satış
           {tur === 'sesli' && (st.audioGenres.length ? `; türler: ${st.audioGenres.join(', ')}` : '; bütün türler')}. Puan, kitabın basılı
-          satışta kaçıncı yüzdelikte olduğudur. Eşik ve türler yönetim ekranında (Dijital yayın ve e-kitap) değişir.
+          satışta öteki kitaplar arasındaki yerini 0–100 arasında gösterir (100'e yakın puan, en çok satanlar arasında demektir). Eşik ve türler yönetim ekranında (Dijital yayın ve e-kitap) değişir.
           <SqlInfo k={list.data?.kaynaklar} alan="esik" label="Fırsat eşiği" className="ml-0.5" />
         </Note>
       )}
@@ -96,7 +97,7 @@ export default function OpportunitiesScreen() {
         <div className="mt-2 flex flex-col gap-2">
           {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
           {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-          {list.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu eşikte fırsat yok.</div>}
+          {list.data && !items.length && <EmptyHint title="Bu eşikte fırsat yok" why={dq ? 'Aramayı temizleyip yeniden deneyin.' : 'Eşiği geçen ve dijital sürümü olmayan hakkı temiz kitap bulunmuyor.'} />}
           {items.map((o) => <OppCard key={o.kitapId} o={o} tur={tur} onOpen={setOpen} />)}
         </div>
         {list.data && (

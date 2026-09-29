@@ -16,6 +16,7 @@ import { Img, ghostBtn, press } from '../shared';
 import { Modal } from '../dialogs';
 import { useIsAdmin } from '../../../useAdmin';
 import { StudioInfo } from '../shared';
+import { EmptyHint, Explain } from '../../../components/Explain';
 
 /** Kapak arşivi: Timaş'ın yayımlanmış kapakları, sitedeki kategori ve alt kategorilere göre. Kapaklar stüdyoda
  *  durur (gece T-soft + CRM'den beslenir); ekran yalnız okur. Seçimler adres çubuğunda: kategori (kat), arama (q),
@@ -151,8 +152,8 @@ export default function CoverLibraryScreen() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {stats.error && <Note tone="err">{errText(stats.error, 'Kapak arşivi açılamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu kurulumda açık değil; kapak arşivi açılamaz. Sistem yöneticinize bildirin.</Note>}
+      {stats.error && <Note tone="err">{errText(stats.error, 'Kapak arşivi açılamadı. Sayfayı biraz sonra yenileyin.')}</Note>}
       {refresh.error && <Note tone="err">{errText(refresh.error, 'Arşiv yenilenemedi.')}</Note>}
       {stats.data?.feed.error && isAdmin && <Note tone="err">Son besleme yarıda kaldı: {stats.data.feed.error}</Note>}
 
@@ -163,7 +164,7 @@ export default function CoverLibraryScreen() {
             <p className="max-w-[70ch] text-[12.5px] leading-snug text-canvas-muted">
               {stats.data.total > 0
                 ? `${nf.format(stats.data.total)} kitap kaydı geldi, kapaklar iniyor (${nf.format(stats.data.fetch.done)} indi). Sayfa kendini yeniler.`
-                : 'Kapaklar her gece sitedeki ürünlerden ve CRM kitap kartlarından toplanır. İlk toplama henüz yapılmadı.'}
+                : 'Kapaklar her gece sitedeki ürünlerden ve CRM kitap kartlarından toplanır. İlk toplama henüz yapılmadı; yarın yeniden bakın.'}
             </p>
             {isAdmin && stats.data.total === 0 && (
               <button type="button" className={ghostBtn} onClick={() => refresh.mutate()} disabled={refresh.isPending || stats.data.feed.running}>
@@ -203,8 +204,9 @@ export default function CoverLibraryScreen() {
                 );
               })}
             </div>
+            <Explain label="Okur kitlesi">Kitabın çocuk, genç ya da yetişkin okura yönelik olduğu; CRM kitap kartından gelir. Yanındaki sayı o kitledeki kapak sayısıdır.</Explain>
             <label className="ml-auto flex items-center gap-2 text-[12px] font-bold text-canvas-muted">
-              Sıra
+              Sırala
               <select
                 value={sort}
                 onChange={(e) => update({ sira: e.target.value === 'title' ? 'ad' : null })}
@@ -290,7 +292,12 @@ export default function CoverLibraryScreen() {
 
                 {list.error && <div className="mt-3"><Note tone="err">{errText(list.error, 'Kapaklar okunamadı.')}</Note></div>}
                 {list.data && list.data.items.length === 0 && (
-                  <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgeçle kapak yok.</p>
+                  <div className="mt-3">
+                    <EmptyHint
+                      title="Bu seçime uyan kapak yok"
+                      why="Aramayı kısaltın, okur kitlesini «Hepsi» yapın ya da «Bütün kapaklar»a dönün."
+                    />
+                  </div>
                 )}
                 {!list.data && list.isLoading && (
                   <div className="flex justify-center py-10 text-canvas-muted"><Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-label="Yükleniyor" /></div>

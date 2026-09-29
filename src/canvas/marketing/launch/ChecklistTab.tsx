@@ -112,7 +112,7 @@ export default function ChecklistTab({ launch, meta }: { launch: Launch; meta: L
     <Block
       info={<SqlInfo k={launch.kaynaklar} alan="tasks[]" label="Yapılan / toplam madde" />}
       title="Kontrol listesi"
-      help={`${doneN} / ${total} madde yapıldı. Maddeler pazarlama planının takvimiyle aynı kayıttır: burada işaretlenen planda da yapılmış görünür. Yayın günü değişince bekleyen şablon maddeleri kayar.`}
+      help={`${doneN} / ${total} madde yapıldı. Maddeler pazarlama planının takvimiyle aynı kayıttır: burada işaretlenen planda da yapılmış görünür. Yayın günü değişince bekleyen hazır maddeler de kayar.`}
     >
       {total === 0 && <Note tone="info">Kontrol listesinde madde yok.</Note>}
       <div className="flex flex-col gap-3">

@@ -4,6 +4,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtAt, securityApi, type AccessRow } from './api';
+import { EmptyHint, ExplainLabel } from '../components/Explain';
 
 const KINDS = [
   { key: '', label: 'Hepsi' },
@@ -36,7 +37,8 @@ export default function AccessTab() {
     <Panel>
       <h2 className="text-[16px] font-extrabold tracking-tight">Erişim kaydı</h2>
       <p className="text-[12px] text-canvas-muted">
-        Her istek değil, yalnız reddedilen istekler ve dışa aktarmalar yazılır (ölçülülük). Mesai dışı satırlar işaretlidir.
+        Portal her tıklamayı değil, yalnız reddedilen sayfa ve işlemleri, Zeki AI’ın yetki dışı bulduğu soruları ve dışa aktarmaları kaydeder
+        (kişisel veride ölçülülük). Mesai dışında yapılanlar işaretlidir.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <label className="flex flex-col gap-1">
@@ -46,7 +48,7 @@ export default function AccessTab() {
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Hesap</span>
+          <span className={labelCls}>Hesap (kullanıcı adı)</span>
           <input className={field} value={user} onChange={(e) => setUser(e.target.value)} placeholder="ör. ahmety" autoComplete="off" />
         </label>
         <label className="flex flex-col gap-1">
@@ -55,6 +57,12 @@ export default function AccessTab() {
         </label>
       </div>
       {q.error && <div className="mt-2"><Note tone="err">{errText(q.error, 'Erişim kaydı okunamadı.')}</Note></div>}
+      {q.data && !rows.length && (
+        <div className="mt-3">
+          <EmptyHint title="Bu süzgece uyan kayıt yok" why="Türü «Hepsi» yapın, hesap adını silin ya da daha eski bir tarih seçin." />
+        </div>
+      )}
+      {!!rows.length && (
       <div className="mt-3">
         <TableWrap>
           <thead>
@@ -63,7 +71,9 @@ export default function AccessTab() {
               <th className={th}>Hesap</th>
               <th className={th}>Tür</th>
               <th className={th}>Ne</th>
-              <th className={th}>Yetki</th>
+              <th className={th}>
+                <ExplainLabel label="Yetki">Bu işlem için gereken yetkinin kodu. Kişiye yetki vermek gerekiyorsa Yönetim → Yetkiler’den verilir.</ExplainLabel>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -81,10 +91,10 @@ export default function AccessTab() {
                 <td className={`${td} font-mono text-[11px] text-canvas-muted`}>{r.permKey ?? '—'}</td>
               </tr>
             ))}
-            {q.data && !rows.length && <tr><td className={td} colSpan={5}>Kayıt yok.</td></tr>}
           </tbody>
         </TableWrap>
       </div>
+      )}
       {q.hasNextPage && (
         <div className="mt-3 flex justify-center">
           <button type="button" className={btnGhost} disabled={q.isFetchingNextPage} onClick={() => q.fetchNextPage()}>

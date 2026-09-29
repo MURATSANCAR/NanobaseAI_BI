@@ -8,6 +8,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { POSITION_TONE, fmtDay, hrApi, recruitApi, type Position, type RecruitMeta, type Warning } from '../hrApi';
 import SqlInfo from '../../components/SqlInfo';
 import { AskSheet, Block, HrFrame, splitUsers } from '../parts';
+import { Explain } from '../../components/Explain';
 
 /** M55 pozisyonlar: pozisyon kartı (birim, yetkinlikler, işe alan yönetici, görüşmeciler), Zeki AI ilan taslağı ve
  *  ayrımcılık denetimi, mülakat soru seti, onay akışı (İK açar, onaycı onaylar; gönderen onaylayamaz). */
@@ -39,7 +40,7 @@ export default function PositionEditor() {
     <HrFrame
       crumb="Pozisyonlar"
       title="Pozisyonlar"
-      lead="Pozisyon kartı yetkinlikleri taşır; ilan metni ve mülakat soruları oradan türetilir. İK açar ve onaya gönderir, onaycı açar ya da gerekçeyle geri gönderir. İlan taslağında yaş, cinsiyet, medeni hal, askerlik gibi koşullar denetlenir."
+      lead="Açılacak her kadronun kartı: birim, yetkinlikler, işe alan yönetici ve görüşmeciler. İlan metni ve mülakat soruları yetkinliklerden hazırlanır. İK kartı onaya gönderir; onaycı başvuruya açar ya da gerekçeyle geri gönderir."
       aside={
         meta.data?.me.can.positionOpen ? (
           <div className="flex justify-start lg:justify-end">
@@ -53,14 +54,26 @@ export default function PositionEditor() {
     >
       {list.error && <Note tone="err">{errText(list.error, 'Pozisyonlar okunamadı.')}</Note>}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-4">
-        <Block title="Liste" action={
+        <Block title="Pozisyonlar" info={
+          <Explain label="Pozisyon durumları">
+            <span className="block"><b>Taslak:</b> İK hazırlıyor.</span>
+            <span className="block"><b>Onayda:</b> onaycının kararını bekliyor.</span>
+            <span className="block"><b>Açık:</b> onaylandı, başvuru alıyor.</span>
+            <span className="block"><b>Beklemede:</b> geçici olarak durduruldu.</span>
+            <span className="block"><b>Kapandı:</b> alım bitti; kart artık değiştirilemez.</span>
+          </Explain>
+        } action={
           <select className={`${field} !min-h-9 !py-1`} value={state} onChange={(e) => setState(e.target.value)} aria-label="Durum">
             <option value="">Bütün durumlar</option>
             {Object.entries(meta.data?.positionStates ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         }>
           {list.isLoading && <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
-          {list.data && !items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Pozisyon yok.</div>}
+          {list.data && !items.length && (
+            <div className="py-6 text-center text-[12px] text-canvas-muted">
+              {state ? 'Bu durumda pozisyon yok; durum süzgecini «Bütün durumlar» yapın.' : 'Henüz pozisyon açılmadı.'}
+            </div>
+          )}
           {!!items.length && (
             <div className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
               Aday sayıları <SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Pozisyon başına aday sayısı" />
@@ -170,7 +183,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
         action={
           <>
             <Pill tone={POSITION_TONE[p.state]}>{p.stateLabel}</Pill>
-            <Link to={`/ik/ise-alim?pozisyon=${p.id}`} className={btnGhost}>Adaylar</Link>
+            <Link to={`/ik/ise-alim?pozisyon=${p.id}`} className={btnGhost}>Adayları gör</Link>
           </>
         }
       >
@@ -189,11 +202,11 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>İşe alan yönetici (hesap adı)</span>
-            <input className={field} value={f.hiringManager} onChange={(e) => setF({ ...f, hiringManager: e.target.value })} autoComplete="off" />
+            <input className={field} value={f.hiringManager} onChange={(e) => setF({ ...f, hiringManager: e.target.value })} autoComplete="off" placeholder="ör. ayse.yilmaz" />
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className={labelCls}>Görüşmeciler (hesap adları, virgülle)</span>
-            <input className={field} value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })} autoComplete="off" />
+            <input className={field} value={f.team} onChange={(e) => setF({ ...f, team: e.target.value })} autoComplete="off" placeholder="ör. mehmet.kaya, zeynep.demir" />
             <span className="text-[11px] text-canvas-muted">İşe alan yönetici ve görüşmeciler yalnız bu pozisyonun adaylarını görür (rollerinde «Adayları görme» varsa).</span>
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
@@ -203,7 +216,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
             <span className={labelCls}>Not (ilan taslağına girer)</span>
-            <textarea className={`${field} min-h-[64px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
+            <textarea className={`${field} min-h-[64px]`} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="ör. Hibrit çalışma, haftada iki gün ofis" />
           </label>
         </fieldset>
         <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -229,7 +242,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
             <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => action.mutate({ a: 'resume' })}>Yeniden aç</button>
           )}
           {can.positionOpen && p.state !== 'kapandi' && (
-            <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => action.mutate({ a: 'close' })}>Kapat</button>
+            <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => action.mutate({ a: 'close' })}>Pozisyonu kapat</button>
           )}
         </div>
       </Block>
@@ -241,7 +254,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
           editable ? (
             <>
               <button type="button" className={btnGhost} disabled={check.isPending || !f.postingText.trim()} onClick={() => check.mutate()}>
-                {check.isPending ? 'Denetleniyor…' : 'Denetle'}
+                {check.isPending ? 'Denetleniyor…' : 'Ayrımcı koşulu denetle'}
               </button>
               <button type="button" className={btnPrimary} disabled={draft.isPending || !meta.modelVar || !p.competencies.length} onClick={() => draft.mutate()}>
                 {draft.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
@@ -288,7 +301,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
           ) : undefined
         }
       >
-        {!p.interviewKit.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Soru seti yok.</div>}
+        {!p.interviewKit.length && <div className="py-3 text-center text-[12px] text-canvas-muted">Henüz soru seti yok. Yetkinlikler kaydedildikten sonra Zeki AI’a önerdirebilirsiniz.</div>}
         <ul className="flex flex-col gap-2">
           {p.interviewKit.map((k) => (
             <li key={k.competency} className="rounded-xl border border-slate-100 bg-white/80 p-2.5">

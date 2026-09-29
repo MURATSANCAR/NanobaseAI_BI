@@ -11,6 +11,7 @@ import { QePanel } from './qe';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
 import { xlsxUrl } from '../../components/excel';
+import { Explain, ExplainLabel } from '../../components/Explain';
 
 /** Kalite raporu (M4): işin gerçek kayıtlarından. MQM inceleme puanı (onaylanan kelimelere göre hata ağırlığı),
  *  inceleyenin düzeltme oranı, otomatik denetim bulguları, terim uyumu, bölüm ve gün gün ilerleme. */
@@ -21,14 +22,19 @@ function Mqm({ r }: { r: Report }) {
   const totals = sev.map((s) => cats.reduce((a, c) => a + (r.mqm.categories[c]?.[s] ?? 0), 0));
   return (
     <Panel>
-      <h2 className="px-1 text-[13px] font-extrabold">İnceleme hataları (MQM)</h2>
+      <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+        İnceleme hataları (MQM)
+        <Explain label="MQM">
+          Çeviri kalitesini ölçmede yaygın kullanılan hata sayma yöntemi. İnceleyen her hatayı bir kategoriyle ve ağırlıkla (küçük, büyük, kritik) işaretler;
+          ağır hata puanı daha çok düşürür. 100 hatasız demektir.
+        </Explain>
+      </h2>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
         Puan = (1 − ceza / incelenen kelime) × 100. Ağırlıklar: küçük {r.mqm.weights.kucuk}, büyük {r.mqm.weights.buyuk}, kritik {r.mqm.weights.kritik}. Toplam ceza{' '}
         {nf.format(r.mqm.penalty)}, incelenen {nf.format(r.mqm.reviewedWords)} kelime.
       </p>
       <div className="mt-2">
         <TableWrap>
-          <table className="min-w-full text-[12px]">
             <thead>
               <tr>
                 <th className={th}>Kategori</th>
@@ -59,7 +65,6 @@ function Mqm({ r }: { r: Report }) {
                 ))}
               </tr>
             </tbody>
-          </table>
         </TableWrap>
       </div>
       {r.errorList.length > 0 && (
@@ -96,7 +101,7 @@ function Checks({ r }: { r: Report }) {
     <Panel>
       <h2 className="px-1 text-[13px] font-extrabold">Otomatik denetim</h2>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Modelsiz kurallar: sayı, terim karşılığı, yasak karşılık, son noktalama, parantez/tırnak, bağlantı, boşluk, kaynağın kopyası, aynı cümlenin farklı çevirisi, olağan dışı uzunluk. {nf.format(r.checks.segments)} segmentte uyarı var.
+        Zeki AI kullanmayan sabit kurallar: sayı, terim karşılığı, yasak karşılık, son noktalama, parantez/tırnak, bağlantı, boşluk, kaynağın kopyası, aynı cümlenin farklı çevirisi, olağan dışı uzunluk. {nf.format(r.checks.segments)} segmentte uyarı var.
       </p>
       {!codes.length ? (
         <p className="mt-2 px-1 text-[12px] font-semibold text-emerald-700">Çevrilmiş segmentlerde uyarı yok.</p>
@@ -141,16 +146,19 @@ function Terms({ r }: { r: Report }) {
   return (
     <Panel>
       <h2 className="px-1 text-[13px] font-extrabold">Terim uyumu</h2>
-      <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">Onaylı terimin geçtiği çevrilmiş segmentlerde karşılığı hedefte var mı. Uymayanlar üstte.</p>
+      <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">Onaylı terimin geçtiği çevrilmiş segmentlerde bankadaki karşılığı çeviride kullanılmış mı. Uymayanlar üstte.</p>
       <div className="mt-2">
         <TableWrap>
-          <table className="min-w-full text-[12px]">
             <thead>
               <tr>
                 <th className={th}>Terim</th>
                 <th className={th}>Karşılık</th>
-                <th className={`${th} text-right`}>Geçtiği</th>
-                <th className={`${th} text-right`}>Uyan</th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Geçtiği">Terimin kaynakta geçtiği çevrilmiş segment sayısı.</ExplainLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Uyan">Bu segmentlerden kaçında bankadaki karşılığın çeviride kullanıldığı. Geçtiğinden azsa turuncu görünür.</ExplainLabel>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -163,7 +171,6 @@ function Terms({ r }: { r: Report }) {
                 </tr>
               ))}
             </tbody>
-          </table>
         </TableWrap>
       </div>
     </Panel>
@@ -176,15 +183,20 @@ function Chapters({ r }: { r: Report }) {
       <h2 className="px-1 text-[13px] font-extrabold">Bölümler</h2>
       <div className="mt-2">
         <TableWrap>
-          <table className="min-w-full text-[12px]">
             <thead>
               <tr>
                 <th className={th}>Bölüm</th>
                 <th className={`${th} text-right`}>Kelime</th>
                 <th className={`${th} min-w-[120px]`}>İlerleme</th>
-                <th className={`${th} text-right`}>Uyarı</th>
-                <th className={`${th} text-right`}>Hata</th>
-                <th className={`${th} text-right`}>MQM</th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Uyarı">Otomatik denetimin bu bölümde uyarı verdiği segment sayısı.</ExplainLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Hata">İnceleyenin bu bölümde işaretlediği hata sayısı.</ExplainLabel>
+                </th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="MQM">Bölümün inceleme puanı (0–100); henüz onaylanan segment yoksa «—».</ExplainLabel>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -208,7 +220,6 @@ function Chapters({ r }: { r: Report }) {
                 </tr>
               ))}
             </tbody>
-          </table>
         </TableWrap>
       </div>
     </Panel>
@@ -222,13 +233,14 @@ function Daily({ r }: { r: Report }) {
       <h2 className="px-1 text-[13px] font-extrabold">Gün gün ilerleme (kelime)</h2>
       <div className="mt-2 grid gap-3 xl:grid-cols-2">
         <TableWrap>
-          <table className="min-w-full text-[12px]">
             <thead>
               <tr>
                 <th className={th}>Gün</th>
                 <th className={`${th} text-right`}>Çevrildi</th>
                 <th className={`${th} text-right`}>Onaylandı</th>
-                <th className={`${th} text-right`}>Geri alındı</th>
+                <th className={`${th} text-right`}>
+                  <ExplainLabel label="Geri alındı">O gün onayı geri alınan ya da çevirmene geri gönderilen segmentlerin kelimesi.</ExplainLabel>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -241,10 +253,8 @@ function Daily({ r }: { r: Report }) {
                 </tr>
               ))}
             </tbody>
-          </table>
         </TableWrap>
         <TableWrap>
-          <table className="min-w-full text-[12px]">
             <thead>
               <tr>
                 <th className={th}>Kişi</th>
@@ -263,7 +273,6 @@ function Daily({ r }: { r: Report }) {
                 </tr>
               ))}
             </tbody>
-          </table>
         </TableWrap>
       </div>
     </Panel>
@@ -281,7 +290,7 @@ export default function QualityReport() {
       route="/ceviri"
       crumb="Kalite raporu"
       title={r ? r.title : 'Kalite raporu'}
-      lead="İşin segment, inceleme ve ilerleme kayıtlarından hesaplanır; örnek veri yoktur. Tek tahmin «ZEKİ kalite tahmini» panelidir ve öyle işaretlidir. Segment numarasına tıklayınca çeviri masasında o segment açılır."
+      lead="Bir çeviri işinin kalitesini ve ilerlemesini gösterir; rakamlar işin gerçek kayıtlarından gelir. Tek tahmin «Zeki AI kalite tahmini» bölümüdür. Segment numarasına dokununca o cümle çeviri masasında açılır."
       source={r ? pair(r) : 'Çeviri masası'}
       presence="Kaynak: çeviri kayıtları"
       aside={
@@ -297,19 +306,19 @@ export default function QualityReport() {
             <>
               <a href={translationApi.qualityCsvUrl(jobId)} className={btnGhost}>
                 <Download aria-hidden className="h-4 w-4" />
-                CSV
+                CSV indir
               </a>
               <a href={xlsxUrl(translationApi.qualityCsvUrl(jobId))} className={btnGhost}>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                Excel
+                Excel indir
               </a>
             </>
           )}
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {q.error && <Note tone="err">{errText(q.error, 'Kalite raporu okunamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; kalite raporu okunamaz. Sistem yöneticinize haber verin.</Note>}
+      {q.error && <Note tone="err">{errText(q.error, 'Kalite raporu okunamadı. Sayfayı yenileyin; sürerse işin «Çeviri» ekranında hâlâ durduğunu kontrol edin.')}</Note>}
       {q.isLoading && (
         <Panel>
           <Loading />
@@ -321,17 +330,19 @@ export default function QualityReport() {
             <Kpi
               info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="İnceleme puanı (MQM)" />}
               label="İnceleme puanı (MQM)"
+              explain="İnceleyenin işaretlediği hataların ağırlıklı cezası, onaylanan kelime sayısına bölünür: puan = (1 − ceza / incelenen kelime) × 100. 100 hatasız demektir."
               value={r.mqm.score == null ? '—' : num(r.mqm.score, 1)}
               help={r.mqm.reviewedWords ? `${nf.format(r.mqm.reviewedWords)} kelime incelendi · ${nf.format(r.mqm.errors)} hata` : 'Henüz onaylanan segment yok'}
             />
             <Kpi
               info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="İnceleyen düzeltmesi" />}
               label="İnceleyen düzeltmesi"
+              explain="Onaylanan segmentlerden kaçında inceleyenin çevirmenin metnini değiştirdiği (yüzde). Yüksek oran çeviride çok düzeltme gerektiğini gösterir."
               value={r.edits.rate == null ? '—' : `%${num(r.edits.rate, r.edits.rate < 1 ? 2 : 1)}`}
               help={r.edits.reviewed ? `${nf.format(r.edits.segments)} / ${nf.format(r.edits.reviewed)} onaylı segment değişti` : 'Henüz onaylanan segment yok'}
             />
-            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Otomatik uyarı" />} label="Otomatik uyarı" value={nf.format(r.checks.segments)} help={`${nf.format(r.segments.cevrildi + r.segments.onaylandi + r.segments.taslak)} yazılı segmentte`} />
-            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Terim uyumu" />} label="Terim uyumu" value={termPct == null ? '—' : `%${termPct}`} help={r.terms.uses ? `${nf.format(r.terms.ok)} / ${nf.format(r.terms.uses)} kullanım` : 'Onaylı terim geçmedi'} />
+            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Otomatik uyarı" />} explain="Otomatik denetimin en az bir uyarı verdiği segment sayısı. Alttaki sayı, metni yazılmış (taslak, çevrilmiş ya da onaylı) segmentlerdir." label="Otomatik uyarı" value={nf.format(r.checks.segments)} help={`${nf.format(r.segments.cevrildi + r.segments.onaylandi + r.segments.taslak)} yazılı segmentte`} />
+            <Kpi info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Terim uyumu" />} explain="Onaylı bir terimin geçtiği çevrilmiş segmentlerde, bankadaki karşılığın çeviride kullanılma oranı." label="Terim uyumu" value={termPct == null ? '—' : `%${termPct}`} help={r.terms.uses ? `${nf.format(r.terms.ok)} / ${nf.format(r.terms.uses)} kullanım` : 'Onaylı terim geçmedi'} />
           </KpiRow>
 
           <Panel>

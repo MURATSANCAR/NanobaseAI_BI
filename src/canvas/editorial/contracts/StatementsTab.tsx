@@ -9,12 +9,22 @@ import { NumInput } from './TermsForm';
 import { Field, day, errMsg, money, num, stamp } from './ui';
 import SqlInfo from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
+import { EmptyHint, Explain, ExplainLabel } from '../../components/Explain';
+import { TERM } from './glossary';
 
 /** Hesap görünümündeki «i»: `alan` verilmezse hesabın genel alanı. */
 type Info = (label: string, alan?: string) => ReactNode;
 
 /** Hakediş: dönem seçilir → Logo satışı (ya da girilen baskı adedi) ile hesaplanır → taslak kaydedilir →
  *  onaylanınca ödeme takvimine düşer. Onaylı hakediş değişmez; iptal edilip yeniden hesaplanır. */
+
+/** Hesap kartlarının sade açıklaması (köprüdeki hakediş hesabına göre). */
+const CALC_HELP: Record<string, string> = {
+  Adet: 'Dönemde telife esas olan adet: faturalı satıştan iadeler düşülmüş satış ya da girilen basılan adet.',
+  'Brüt telif': 'Matrah × telif oranı. Avans, stopaj ve önceki dönemden devreden eksi düşülmeden önceki telif.',
+  'Avanstan düşülen': TERM.mahsup,
+  'Ödenecek net': 'Brüt telif; önceki dönemden devreden eksi, avanstan düşülen ve stopaj çıkarıldıktan sonra hak sahibine ödenecek tutar.',
+};
 
 const monthStart = (ym: string) => `${ym}-01`;
 const monthEnd = (ym: string) => {
@@ -42,7 +52,13 @@ function CalcView({ c, info }: { c: Calc; info?: Info }) {
           ['Ödenecek net', money(c.net, cur)],
         ].map(([l, v]) => (
           <div key={l} className="rounded-2xl border border-slate-100 bg-white p-2.5">
-            <div className="flex items-center justify-between gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{l}{info?.(l)}</div>
+            <div className="flex items-center justify-between gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              <span className="inline-flex min-w-0 items-center gap-1">
+                {l}
+                {CALC_HELP[l] && <Explain label={l}>{CALC_HELP[l]}</Explain>}
+              </span>
+              {info?.(l)}
+            </div>
             <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{v}</div>
           </div>
         ))}
@@ -63,7 +79,9 @@ function CalcView({ c, info }: { c: Calc; info?: Info }) {
               <th className="px-2.5 py-2">Kitap</th>
               <th className="px-2.5 py-2">Taraf</th>
               <th className="px-2.5 py-2 text-right">Adet</th>
-              <th className="px-2.5 py-2 text-right">Matrah</th>
+              <th className="px-2.5 py-2 text-right">
+                <ExplainLabel label="Matrah">Telif oranının uygulandığı tutar: net satış tutarı ya da adet × kapak fiyatı; hesaplama iskontosu varsa düşülmüş olarak.</ExplainLabel>
+              </th>
               <th className="px-2.5 py-2 text-right">Oran</th>
               <th className="px-2.5 py-2 text-right"><span className="inline-flex items-center gap-1">Telif{info?.('Kitap × taraf satırları (adet, matrah, oran, telif)', 'lines')}</span></th>
             </tr>
@@ -89,7 +107,7 @@ function CalcView({ c, info }: { c: Calc; info?: Info }) {
             ))}
             {!c.lines.length && (
               <tr>
-                <td colSpan={6} className="px-2.5 py-6 text-center text-canvas-muted">Hesaplanacak satır yok.</td>
+                <td colSpan={6} className="px-2.5 py-6 text-center text-canvas-muted">Hesaplanacak satır yok: dönemde satış ya da baskı bulunamadı ya da sözleşmeye stok kodlu kitap bağlanmamış.</td>
               </tr>
             )}
           </tbody>
@@ -129,10 +147,10 @@ function StatementCard({ s, canFinance, k }: { s: Statement; canFinance: boolean
       </div>
       {s.note && <p className="mt-1 whitespace-pre-wrap text-[11.5px] text-canvas-muted">{s.note}</p>}
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <button type="button" className={btnGhost} onClick={() => setOpen((v) => !v)} aria-expanded={open}>{open ? 'Ayrıntıyı gizle' : 'Ayrıntı'}</button>
+        <button type="button" className={btnGhost} onClick={() => setOpen((v) => !v)} aria-expanded={open}>{open ? 'Ayrıntıyı gizle' : 'Ayrıntıyı göster'}</button>
         <button type="button" className={btnGhost} onClick={download}>
           <Download aria-hidden className="h-4 w-4" />
-          Bildirim (Word)
+          Telif bildirimini indir (Word)
         </button>
         {canFinance && s.status === 'taslak' && (
           <button type="button" className={btnPrimary} disabled={approve.isPending} onClick={() => window.confirm(`Net ${money(s.net, s.currency)} onaylanıp ödeme takvimine eklensin mi?`) && approve.mutate()}>
@@ -193,9 +211,10 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
   if (!royalty)
     return (
       <Panel>
-        <p className="py-6 text-center text-[12.5px] text-canvas-muted">
-          «{meta.paymentTypes[t.paymentType] ?? t.paymentType}» sözleşmede dönemsel hakediş hesaplanmaz; tutar ödeme takviminden izlenir.
-        </p>
+        <EmptyHint
+          title="Bu sözleşmede dönemsel hakediş yok"
+          why={`«${meta.paymentTypes[t.paymentType] ?? t.paymentType}» sözleşmede telif satışa ya da baskıya göre hesaplanmaz; tutar «Ödeme takvimi» sekmesinden izlenir.`}
+        />
       </Panel>
     );
 
@@ -203,7 +222,10 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
     <div className="space-y-3">
       {d.can.finance && d.status !== 'iptal' && (
         <Panel>
-          <h3 className="text-[13px] font-extrabold">Hakediş hesapla</h3>
+          <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+            Hakediş hesapla
+            <Explain label="Hakediş">{TERM.hakedis}</Explain>
+          </h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
             {meta.salesBased.includes(t.paymentType) ? 'Satış Logo\'dan kitabın stok koduyla, faturalı satırlardan okunur; iadeler düşülür. ' : ''}
             {printBased ? 'Baskı adedi kaynakta tutulmuyor; dönemde basılan adedi ve kapak fiyatını girin. ' : ''}
@@ -294,8 +316,18 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
         </Panel>
       )}
       <Panel>
-        <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Hakedişler <SqlInfo k={d.kaynaklar} alan="sayac.hakedis" label="Hakediş sayısı" /></h3>
-        {!d.statements.length && <p className="py-4 text-center text-[12.5px] text-canvas-muted">Kayıtlı hakediş yok.</p>}
+        <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">
+          Hakedişler <SqlInfo k={d.kaynaklar} alan="sayac.hakedis" label="Hakediş sayısı" />
+          <Explain label="Hakediş durumları">
+            <b>Taslak</b>: hesaplandı, finans onayı bekliyor. <b>Onaylandı</b>: ödeme takvimine eklendi, artık değişmez. <b>İptal</b>: geçersiz; dönem yeniden hesaplanabilir.
+          </Explain>
+        </h3>
+        {!d.statements.length && (
+          <EmptyHint
+            title="Kayıtlı hakediş yok"
+            why={d.can.finance ? 'Yukarıdan dönemi seçip «Hesapla»ya basın, sonucu taslak olarak kaydedin.' : 'Hakedişi finans yetkisi olan kişi hesaplar; kaydedilince burada görünür.'}
+          />
+        )}
         <ul className="space-y-2">
           {d.statements.map((s) => (
             <StatementCard key={s.id} s={s} canFinance={d.can.finance} k={d.kaynaklar} />

@@ -10,6 +10,8 @@ import { AskSheet } from '../../budget/parts';
 import { amazonApi, type MarketCard, type Params } from './api';
 import { AmazonData, AmazonFrame, tl, useAmazonMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
+import { ShowMoreButton, useShowMore } from '../../components/ShowMore';
 
 const EMPTY = { pazar: '', ad: '', ulkeler: '', doviz: '', kurKaynagi: '', kdvOrani: '', kargoBirim: '', komisyonOrani: '', not: '' };
 const pct = (v: string) => { const n = parseNum(v); return n === null ? null : n / 100; };
@@ -41,10 +43,12 @@ function ParamsPanel({ canParam }: { canParam: boolean }) {
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Pazar parametreleri (finans) <SqlInfo k={q.data?.kaynaklar} alan="items" label="Pazar parametreleri (finans)" /></h2>
-      <p className="mb-2 text-[12px] text-canvas-muted">Kur kaynağı, KDV, kargo ve komisyon varsayımları; kartta olduğu gibi yazılır, gizlenmez. Ülkeler Logo cari kartındaki yazımla.</p>
-      {q.isLoading ? <Loading /> : (
+      <p className="mb-2 text-[12px] text-canvas-muted">Finans ekibinin her pazar için girdiği varsayımlar: hangi kur kullanılır, KDV, birim kargo ve pazar yeri komisyonu. Değerlendirme kartlarında olduğu gibi yazılır. «Logo ülke yazımları», o ülkenin Logo cari kartlarında nasıl yazıldığıdır (virgülle ayırın).</p>
+      {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Parametreler açılamadı.')}</Note> : !(q.data?.items ?? []).length ? (
+        <EmptyHint title="Henüz pazar parametresi girilmemiş" why={canParam ? 'Aşağıdaki alanlarla ilk pazarın varsayımlarını girin; kartlar bu varsayımlarla hazırlanır.' : 'Finans ekibi varsayımları girdiğinde burada listelenir.'} />
+      ) : (
         <TableWrap>
-          <thead><tr><th className={th}>Pazar</th><th className={th}>Ülkeler</th><th className={th}>Kur</th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">KDV</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Kargo</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Komisyon</InfoLabel></th><th className={th} /></tr></thead>
+          <thead><tr><th className={th}>Pazar</th><th className={th}>Ülkeler</th><th className={th}>Kur</th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">KDV</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Kargo</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Komisyon</InfoLabel></th><th className={th}><span className="sr-only">İşlem</span></th></tr></thead>
           <tbody>
             {(q.data?.items ?? []).map((p) => (
               <tr key={p.pazar} className="border-t border-slate-100">
@@ -68,10 +72,11 @@ function ParamsPanel({ canParam }: { canParam: boolean }) {
           {inp('doviz', 'Döviz', 'EUR')}
           {inp('kurKaynagi', 'Kur kaynağı', 'Logo günlük kur')}
           {inp('kdvOrani', 'KDV (%)', '7')}
-          {inp('kargoBirim', 'Kargo birim (TL)')}
-          {inp('komisyonOrani', 'Komisyon (%)')}
+          {inp('kargoBirim', 'Birim kargo (TL)')}
+          {inp('komisyonOrani', 'Pazar yeri komisyonu (%)')}
           <div className="sm:col-span-2 lg:col-span-4">
-            <button type="button" className={btnPrimary} onClick={() => save.mutate()} disabled={save.isPending || !f.pazar.trim() || !f.ad.trim()}>Kaydet</button>
+            <button type="button" className={btnPrimary} onClick={() => save.mutate()} disabled={save.isPending || !f.pazar.trim() || !f.ad.trim()}>Parametreyi kaydet</button>
+            <span className="ml-2 text-[11.5px] text-canvas-muted">Pazar kodu ve ad zorunlu. Aynı pazar kodu yeniden kaydedilirse eskisinin yerine geçer.</span>
           </div>
         </div>
       )}
@@ -82,6 +87,7 @@ function ParamsPanel({ canParam }: { canParam: boolean }) {
 function Card({ c, canDecide, me, decisions }: { c: MarketCard; canDecide: boolean; me: string; decisions: Record<string, string> }) {
   const qc = useQueryClient();
   const [ask, setAsk] = useState<string | null>(null);
+  const books = useShowMore(c.gostergeler.kitaplar, 5);
   const decide = useMutation({
     mutationFn: ({ karar, not }: { karar: string; not?: string }) => amazonApi.decideCard(c.id, karar, not),
     onSuccess: () => {
@@ -108,7 +114,9 @@ function Card({ c, canDecide, me, decisions }: { c: MarketCard; canDecide: boole
         <div>
           <div className={labelCls}>Haklar ve kitaplar</div>
           <div>Hak satılmış kitap: {fmtInt(g.hakSatilanKitap)}</div>
-          <div className="text-[11.5px] text-canvas-muted">{g.kitaplar.slice(0, 5).map((k) => k.ad || k.stokKodu).join(' · ') || '—'}</div>
+          <div className="mt-0.5 text-[11px] font-semibold text-canvas-muted">Bu ülkelerde en çok satanlar:</div>
+          <div className="text-[11.5px] text-canvas-muted">{books.shown.map((k) => k.ad || k.stokKodu).join(' · ') || '—'}</div>
+          <ShowMoreButton more={books} noun="kitap" />
         </div>
         <div>
           <div className={labelCls}>Varsayımlar</div>
@@ -151,16 +159,17 @@ export default function AmazonMarketCards() {
   return (
     <AmazonFrame
       title="Pazar değerlendirmesi"
-      lead="Yeni yurtdışı pazar için gösterge kartı: o ülkelerdeki faturalı satış, hak satışları ve finansın varsayımları. Zeki AI rakamsız gerekçe yazar; kararı yetkili verir, kartı hazırlayan karar veremez."
+      lead="Yeni bir yurtdışı pazara (ör. Almanya) girilip girilmeyeceğini değerlendirmek için kart: o ülkelere şimdiye kadarki satışımız, sattığımız haklar ve finansın maliyet varsayımları. Zeki AI kısa gerekçe yazar; kararı kartı hazırlayandan başka bir yetkili verir."
     >
       <AmazonData meta={m} />
       {m?.me.canDraft && (
         <Panel>
-          <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Yeni kart</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Yeni kart</h2>
+          <p className="mb-2 text-[12px] text-canvas-muted">Pazar kodunu ve o pazarın ülke(ler)ini Logo cari kartındaki yazımla girin; birden çok ülkeyi virgülle ayırın.</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[0.6fr_1.4fr_1.4fr_auto] sm:items-end">
-            <label className="flex flex-col gap-1"><span className={labelCls}>Pazar</span><input className={field} value={form.pazar} placeholder="DE" onChange={(e) => setForm((f) => ({ ...f, pazar: e.target.value }))} /></label>
-            <label className="flex flex-col gap-1"><span className={labelCls}>Ülkeler (Logo yazımı)</span><input className={field} value={form.ulkeler} placeholder="ALMANYA" onChange={(e) => setForm((f) => ({ ...f, ulkeler: e.target.value }))} /></label>
-            <label className="flex flex-col gap-1"><span className={labelCls}>Not</span><input className={field} value={form.not} onChange={(e) => setForm((f) => ({ ...f, not: e.target.value }))} /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Pazar</span><input className={field} value={form.pazar} placeholder="ör. DE" onChange={(e) => setForm((f) => ({ ...f, pazar: e.target.value }))} /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Ülkeler (Logo yazımı)</span><input className={field} value={form.ulkeler} placeholder="ör. ALMANYA, GERMANY" onChange={(e) => setForm((f) => ({ ...f, ulkeler: e.target.value }))} /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Not (isteğe bağlı)</span><input className={field} value={form.not} placeholder="ör. fuar görüşmesinden sonra" onChange={(e) => setForm((f) => ({ ...f, not: e.target.value }))} /></label>
             <button type="button" className={btnPrimary} onClick={() => create.mutate()} disabled={create.isPending || !form.pazar.trim() || !form.ulkeler.trim()}>
               <Sparkles aria-hidden className="h-4 w-4" />Kart hazırla
             </button>
@@ -168,9 +177,16 @@ export default function AmazonMarketCards() {
         </Panel>
       )}
       <Panel>
-        <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">Kartlar <SqlInfo k={cards.data?.kaynaklar} alan="items" label="Kartlar" /></h2>
+        <h2 className="flex items-center gap-1 mb-2 text-[15px] font-extrabold">
+          Kartlar <SqlInfo k={cards.data?.kaynaklar} alan="items" label="Kartlar" />
+          <Explain label="Kararlar" title="Karar nasıl verilir?">
+            Kartı hazırlayan dışındaki bir yetkili «Pazara girilsin», «Bekle / yeniden değerlendir» ya da «Girilmesin» der. «Bekle» ve «Girilmesin» için gerekçe yazmak zorunludur. Karar yalnız portalda kayıt olur, Amazon'a bir şey gönderilmez.
+          </Explain>
+        </h2>
         {cards.error && <Note tone="err">{errText(cards.error, 'Kartlar açılamadı.')}</Note>}
-        {cards.isLoading ? <Loading /> : !cards.data?.items.length ? <Note tone="info">Henüz kart yok.</Note> : (
+        {cards.isLoading ? <Loading /> : !cards.data?.items.length ? (
+          <EmptyHint title="Henüz değerlendirme kartı yok" why={m?.me.canDraft ? 'Yukarıdaki «Yeni kart» alanından bir pazar için ilk kartı hazırlayın.' : 'Kart hazırlama yetkisi olan bir kişi kart açtığında burada görünür.'} />
+        ) : (
           <div className="flex flex-col gap-2">
             {cards.data.items.map((c) => <Card key={c.id} c={c} canDecide={!!m?.me.canDecide} me={m?.me.username ?? ''} decisions={cards.data.decisions} />)}
           </div>

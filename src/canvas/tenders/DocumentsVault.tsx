@@ -11,6 +11,7 @@ import { FileDrop } from '../components/FileDrop';
 import { MB, titleFromFilename } from '../components/fileDropRules';
 import { AskSheet } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Şirket belge arşivi: vergi/SGK yazıları, imza sirküleri, teminat mektubu… Geçerlilik tarihi yaklaşan ve dolan
  *  belge işaretlidir; ihale kontrol listesi bu belgelere bağlanır. Yazma `ozellik:ihale.belge` ister. */
@@ -71,7 +72,7 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
       </div>
       {docs.error && <div className="mt-3"><Note tone="err">{errText(docs.error, 'Belgeler okunamadı.')}</Note></div>}
       {docs.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
-      {docs.data && !items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Arşivde belge yok. Yukarıdaki alana belge bırakın.</div>}
+      {docs.data && !items.length && <EmptyHint title="Arşivde belge yok" why={can ? 'Vergi borcu yoktur yazısı, imza sirküleri gibi şirket belgelerini yukarıdaki alana bırakın; ihalelerin belge listesine bağlanır.' : 'Belge ekleme yetkisi olan biri şirket belgelerini buraya yükler.'} />}
       <ul className="mt-3 flex flex-col gap-1.5">
         {items.map((d) => (
           <li key={d.id} className="grid grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-white/80 px-3 py-2 md:grid-cols-[minmax(0,1fr)_200px_auto] md:items-center">

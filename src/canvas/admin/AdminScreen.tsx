@@ -53,7 +53,7 @@ export default function AdminScreen() {
   const body = me.isLoading ? (
     <Loading />
   ) : me.error ? (
-    <Note tone="err">{me.error instanceof EngineAuthError ? 'Oturum gerekli.' : 'Yetki bilgisi okunamadı.'}</Note>
+    <Note tone="err">{me.error instanceof EngineAuthError ? 'Oturumunuz kapanmış; yeniden giriş yapın.' : 'Yetki bilginiz okunamadı; sayfayı yenileyin, sürerse BT’ye haber verin.'}</Note>
   ) : !me.data?.isAdmin ? (
     <NoAccess user={me.data?.user} />
   ) : tab === 'settings' ? (
@@ -82,7 +82,7 @@ export default function AdminScreen() {
     <Shell
       head={{
         tenant: 'Timaş Yayınları',
-        section: 'Yapay Zeka Raporları',
+        section: 'Yönetim',
         crumb: 'Portal ayarları',
         source: me.data?.user ? `${me.data.user}${me.data.isAdmin ? ' · yönetici' : ''}` : '',
         presence: overview.data ? (overview.data.email.configured ? 'E-posta hazır' : 'E-posta ayarı yok') : '',

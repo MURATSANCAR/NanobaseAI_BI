@@ -148,7 +148,7 @@ export function ExportLink({ href, show }: { href: string; show: boolean }) {
   return (
     <a className={btnGhost} href={href}>
       <Download aria-hidden className="h-4 w-4" />
-      Excel
+      Excel indir
     </a>
   );
 }

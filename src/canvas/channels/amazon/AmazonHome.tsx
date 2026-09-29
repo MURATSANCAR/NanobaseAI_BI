@@ -14,6 +14,7 @@ import { BookCell, ExportLink } from '../platformKit';
 import { amazonApi, type Candidate } from './api';
 import { AmazonData, AmazonFrame, money, tl, useAmazonMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, ExplainLabel } from '../../components/Explain';
 
 const CRM_TYPES: Record<string, string> = { '14': 'Amazon Konsinye' };
 const CAND: Record<Candidate['durum'], { label: string; tone: 'ok' | 'warn' | 'muted' | 'violet' | 'err' }> = {
@@ -39,10 +40,16 @@ function Accounts({ canMap }: { canMap: boolean }) {
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon carileri <SqlInfo k={d?.kaynaklar} alan="adayCariler" label="Amazon carileri" /></h2>
-      <p className="mb-2 text-[12px] text-canvas-muted">Logo'da unvanında {d?.desenler?.join(', ') ?? '—'} geçen cariler ve eşleme durumu. Karne ve konsinye yalnız onaylı carileri sayar.</p>
-      {q.isLoading ? <Loading /> : !d?.adayCariler.length ? <Note tone="info">{d?.okundu ? 'Bu adla cari bulunmadı.' : '«Veriyi yenile» Logo carilerini okur.'}</Note> : (
+      <p className="mb-2 text-[12px] text-canvas-muted">Logo'da unvanında {d?.desenler?.join(', ') ?? '—'} geçen cariler ve eşleme durumu. Kanal karnesi ve konsinye hesabı yalnız «Amazon olarak onaylı» carileri sayar.</p>
+      {q.isLoading ? <Loading /> : !d?.adayCariler.length ? (
+        d?.okundu ? (
+          <EmptyHint title="Unvanında Amazon geçen cari bulunmadı" why="Amazon'a başka adla fatura kesiliyorsa carisini «Cari eşleme» ekranında elle Amazon'a bağlayabilirsiniz." />
+        ) : (
+          <EmptyHint title="Logo carileri henüz okunmadı" why="Üstteki «Veriyi yenile» düğmesi Logo carilerini de okur." />
+        )
+      ) : (
         <TableWrap>
-          <thead><tr><th className={th}>Cari</th><th className={th}>Kanal kodu</th><th className={th}>Eşleme</th><th className={th} /></tr></thead>
+          <thead><tr><th className={th}>Cari</th><th className={th}>Kanal kodu</th><th className={th}><ExplainLabel label="Eşleme">Cari, kanal karnesinde Amazon olarak sayılıyor mu? «Aday» onay bekler; «eşleme listesinde yok» olanı aday olarak ekleyebilirsiniz.</ExplainLabel></th><th className={th}><span className="sr-only">İşlem</span></th></tr></thead>
           <tbody>
             {d.adayCariler.map((c) => (
               <tr key={c.cariKodu} className="border-t border-slate-100">
@@ -93,11 +100,14 @@ function Books({ canExport }: { canExport: boolean }) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon'a faturalanan kitaplar <SqlInfo k={d?.kaynaklar} alan="items" label="Amazon'a faturalanan kitaplar" /></h2>
         <div className="flex gap-2">
-          <input className={`${field} sm:w-64`} placeholder="Kitap ya da stok kodu" value={text} onChange={(e) => setText(e.target.value)} />
+          <input className={`${field} min-w-0 sm:w-64`} aria-label="Kitap ara" placeholder="Ara: kitap ya da stok kodu" value={text} onChange={(e) => setText(e.target.value)} />
           <ExportLink show={canExport} href={amazonApi.exportUrl('kitaplar', { q })} />
         </div>
       </div>
-      {r.error ? <Note tone="info">{errText(r.error, 'Liste açılamadı.')}</Note> : r.isLoading ? <Loading /> : d && (
+      <p className="mb-2 text-[12px] text-canvas-muted">Onaylı Amazon carilerine faturayla sattığımız kitaplar: sevk edilen, iade gelen ve net kalan adet.</p>
+      {r.error ? <Note tone="info">{errText(r.error, 'Liste açılamadı.')}</Note> : r.isLoading ? <Loading /> : d && (!d.items.length ? (
+        <EmptyHint title={q ? 'Aramaya uyan kitap yok' : 'Amazon’a faturalı satış yok'} why={q ? 'Kitap adını ya da stok kodunu kontrol edin.' : 'Onaylı Amazon carilerine kesilmiş fatura bulunamadı. Cariler yukarıda «Amazon olarak onaylı» görünmüyorsa önce eşlemeyi onaylayın.'} />
+      ) : (
         <>
           <TableWrap>
             <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Sevk (faturalı)</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">İade</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th></tr></thead>
@@ -115,7 +125,7 @@ function Books({ canExport }: { canExport: boolean }) {
           </TableWrap>
           <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={r.isLoading} fetching={r.isFetching} onPage={setPage} />
         </>
-      )}
+      ))}
     </Panel>
   );
 }
@@ -136,8 +146,8 @@ function SalesReport({ canImport }: { canImport: boolean }) {
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Amazon'un sattığı (panel raporu) <SqlInfo k={list.data?.kaynaklar} alan="items" label="Amazon'un sattığı (panel raporu)" /></h2>
       <p className="mb-2 text-[12px] text-canvas-muted">
-        Satıcı panelinden indirilen satış raporu (Excel/CSV): Amazon'un son tüketiciye sattığı adet ve kanal stoğu. Karşılaştırma kanal karnesinin Amazon sayfasında.
-        Müşteri kolonları içeri alınmaz.
+        Amazon satıcı panelinden indirdiğiniz satış raporunu (Excel ya da CSV) yükleyin: Amazon'un okura sattığı adet ve Amazon'daki stok. Bizim Amazon'a sattığımızla karşılaştırması kanal karnesinin Amazon sayfasındadır.
+        Müşteri bilgisi içeren kolonlar içeri alınmaz.
       </p>
       <FileDrop
         size="sm"
@@ -168,7 +178,7 @@ export default function AmazonHome() {
   return (
     <AmazonFrame
       title="Amazon ve yurtdışı"
-      lead="Amazon carilerine faturalı satış, konsinyede kalan, yurtdışı kanal satışı ve satılmış yabancı haklar. Rakamlar Logo ve CRM'den; Amazon hesabına hiçbir şey gönderilmez."
+      lead="Amazon'a faturalı satışımız, Amazon'a satılmak üzere gönderilip henüz faturalanmamış (konsinye) kitaplar, yurtdışı satış ve yabancı yayınevlerine satılan haklar. Rakamlar Logo ve CRM'den gelir; Amazon hesabına hiçbir şey gönderilmez."
     >
       <AmazonData meta={m} />
       {m && <Note tone="info">{m.api.neden}</Note>}
@@ -181,13 +191,17 @@ export default function AmazonHome() {
           <KpiRow>
             <Kpi label="Amazon net ciro" value={d.toptan.donem ? `${fmtShort(d.toptan.donem.netCiro)} ₺` : '—'}
               help={d.toptan.donem ? `${d.toptan.period?.yil} · geçen yıla göre ${signedPct(d.toptan.degisim)} · iade ${fmtPct(d.toptan.donem.iadeOrani)}` : (d.toptan.neden ?? '—')}
+            explain="Amazon olarak onaylı carilere kesilen satış faturaları eksi iade faturaları. Amazon'un okura sattığı değil, bizim Amazon'a sattığımızdır."
             info={<SqlInfo k={d?.kaynaklar} alan="toptan" label="Amazon net ciro" />} />
             <Kpi label="Konsinyede kalan" value={d.konsinye ? fmtInt(d.konsinye.kalan) : '—'} help={d.konsinye ? `${fmtInt(d.konsinye.kitap)} kitap · faturalanmamış sevk ${fmtInt(d.konsinye.sevk)} − iade ${fmtInt(d.konsinye.iade)}` : 'Henüz okunmadı'}
+            explain="Konsinye: kitap Amazon'a irsaliyeyle gönderilir, satıldıkça faturalanır. Kalan = faturalanmamış sevk irsaliyesi adedi − faturalanmamış iade irsaliyesi adedi; yani Amazon'da duran ama henüz parası faturalanmamış kitaplar."
             info={<SqlInfo k={d?.kaynaklar} alan="konsinye" label="Konsinyede kalan" />} />
             <Kpi label="Yurtdışı net ciro" value={y?.netCiro !== undefined ? `${fmtShort(y.netCiro)} ₺` : '—'}
               help={y?.hata ?? (y?.yil ? `${y.yil} · ${fmtInt(y.ulkeSayisi ?? 0)} ülke · geçen yıl aynı dönem ${fmtShort(y.gecenYilAyniDonem ?? 0)} ₺` : 'Henüz okunmadı')}
+            explain="Logo'da yurtdışı kanal koduyla işaretli carilere kesilen satış faturaları eksi iadeler, TL karşılığıyla."
             info={<SqlInfo k={d?.kaynaklar} alan="yurtdisi" label="Yurtdışı net ciro" />} />
             <Kpi label="Satılmış yabancı hak" value={d.haklar ? fmtInt(d.haklar.kitap) : '—'} help={d.haklar ? `${fmtInt(d.haklar.sozlesme)} Telif Satış sözleşmesi` : 'CRM okunmadı'}
+            explain="Yabancı bir yayınevine çeviri ya da yayın hakkı satılmış kitap sayısı; CRM'deki etkin Telif Satış sözleşmelerinden."
             info={<SqlInfo k={d?.kaynaklar} alan="haklar" label="Satılmış yabancı hak" />} />
           </KpiRow>
           {y?.dovizToplam && Object.keys(y.dovizToplam).length > 0 && (

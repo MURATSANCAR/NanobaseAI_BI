@@ -11,6 +11,7 @@ import { Block, HrFrame } from '../parts';
 import GoalSheet from './GoalSheet';
 import { GoalRow } from './parts';
 import { REVIEW_TONE, perfApi, thisYear, type PerfMeta, type TeamPerson } from './perfApi';
+import { Explain } from '../../components/Explain';
 
 /** M56 Ekibim: yalnız yönetici zincirimdeki kişiler (kayıttaki yönetici bağı). Hedef ilerlemesi, eksik check-in, onay
  *  bekleyen hedef ve revizyon, değerlendirme durumu. Kişi kartı açılınca erişim kaydına yazılır. */
@@ -39,6 +40,13 @@ export default function MyTeam() {
       {d && d.people.length > 0 && (
         <div className="flex items-center gap-1 px-1 text-[11px] font-semibold text-canvas-muted">
           Hedef, ilerleme ve değerlendirme sayıları <SqlInfo k={d.kaynaklar} alan="people" label="Ekip sayıları" />
+          <Explain label="Kişi kartındaki işaretler">
+            <span className="block"><b>ort. %:</b> kişinin hedeflerindeki son ilerleme kayıtlarının ortalaması.</span>
+            <span className="block"><b>Onay bekliyor:</b> kişinin onayınıza gönderdiği hedefler.</span>
+            <span className="block"><b>Revizyon:</b> kişinin değişiklik istediği hedefler.</span>
+            <span className="block"><b>Check-in yok:</b> bu dönem hiç ilerleme kaydı girilmemiş hedefler.</span>
+            <span className="block"><b>Dolaylı:</b> size değil, ekibinizdeki bir yöneticiye bağlı kişi.</span>
+          </Explain>
         </div>
       )}
       {d && d.people.length > 0 && (
@@ -91,12 +99,12 @@ function PersonSheet({ p, canWrite, meta, onClose }: { p: TeamPerson; canWrite: 
               <div className="flex items-center gap-1 text-[13px] font-extrabold">Hedefler<SqlInfo k={d.kaynaklar} alan="goals" label="Hedef değeri ve ilerleme" /></div>
               {canWrite && <button type="button" className={btnGhost} onClick={() => setGoal('new')}><Plus aria-hidden className="h-4 w-4" />Hedef ekle</button>}
             </div>
-            {!d.goals.length && <div className="text-[12px] text-canvas-muted">Hedef yok.</div>}
+            {!d.goals.length && <div className="text-[12px] text-canvas-muted">Bu kişinin {thisYear()} için hedefi yok.{canWrite ? ' «Hedef ekle» ile ekleyebilirsiniz.' : ''}</div>}
             <ul className="flex flex-col gap-1.5">{d.goals.map((g) => <li key={g.id}><GoalRow g={g} onOpen={() => setGoal(g.id)} /></li>)}</ul>
           </div>
           <div>
             <div className="mb-1 text-[13px] font-extrabold">Değerlendirmeler</div>
-            {!d.reviews.length && <div className="text-[12px] text-canvas-muted">Değerlendirme yok.</div>}
+            {!d.reviews.length && <div className="text-[12px] text-canvas-muted">Bu kişi için açılmış değerlendirme yok.</div>}
             <ul className="flex flex-col gap-1.5">
               {d.reviews.map((r) => (
                 <li key={r.id}>

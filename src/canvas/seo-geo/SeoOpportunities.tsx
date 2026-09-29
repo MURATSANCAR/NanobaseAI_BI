@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { FIELD_LABEL, dateTime, fmt, seoApi } from './api';
 import { oppsApi, type Delta, type ImpactItem, type ImpactStatus, type Metrics, type OppItem, type OppKind } from './api-opps';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { TermLabel } from './terms';
 
 const PAGE = 50;
 
@@ -53,8 +55,8 @@ export default function SeoOpportunities() {
       title="Fırsatlar ve etki"
       lead={
         tab === 'firsatlar'
-          ? 'Google’da ilk sayfanın altında kalan ve çok gösterilip az tıklanan aramalar. Ek tıklama tahmini sitenin kendi tıklama oranlarından hesaplanır; son 28 günün kesin verisi, her gece yenilenir.'
-          : 'Onaylanan metin hiçbir yere bizden gönderilmez; ölçüm, metin sitede göründüğü gün başlar (gece eşitlemesinde ürünün canlı alanları onaylanan metinle aynı görüldüğünde). O günden önceki 28 gün ile sonraki 28 gün karşılaştırılır; Search Console’un kesin verisi 3 gün geç geldiği için sonuç yayından 31 gün sonra çıkar. Site geneli değişim karşılaştırma içindir.'
+          ? 'Birkaç sıra yükselince çok daha fazla tıklama getirecek aramalar ve Google’da çok görünüp az tıklanan aramalar. Bir aramaya göre o kitap için yeni başlık ve açıklama önerisi isteyebilirsiniz. Son 28 günün verisi, her gece yenilenir.'
+          : 'Onaylanan bir metin sitede göründüğü gün ölçüm başlar: o günden önceki 28 gün ile sonraki 28 gün karşılaştırılır. Google verisi 3 gün geç kesinleştiği için sonuç yayından 31 gün sonra çıkar.'
       }
     >
       <div className="sg-filters" role="toolbar" aria-label="Bölüm">
@@ -124,13 +126,17 @@ function Opportunities() {
             <Kpi
               label="Yakın sıradaki arama"
               value={fmt(d.totals.yakin.nonBrand)}
-              note={`${fmt(t!.nearMin)}–${fmt(t!.nearMax)}. sıra · marka araması ayrıca ${fmt(d.totals.yakin.brand)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Yakın sıradaki arama" />} />
-            <Kpi label="İlk üçe çıkınca ek tıklama" value={fmt(d.totals.yakin.clicks)} note="28 günde, marka dışı aramalarda tahmini" info={<SeoInfo k={r.data?.kaynaklar} label="İlk üçe çıkınca ek tıklama" />} />
+              note={`${fmt(t!.nearMin)}–${fmt(t!.nearMax)}. sıra · marka araması ayrıca ${fmt(d.totals.yakin.brand)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Yakın sıradaki arama" />}
+              explain={`Google’da ortalama ${fmt(t!.nearMin)} ile ${fmt(t!.nearMax)}. sıra arasında çıkan, içinde «timaş» geçmeyen arama sayısı. Birkaç sıra yükselmek bu aramaları ilk sonuçlara taşır.`} />
+            <Kpi label="İlk üçe çıkınca ek tıklama" value={fmt(d.totals.yakin.clicks)} note="28 günde, marka dışı aramalarda tahmini" info={<SeoInfo k={r.data?.kaynaklar} label="İlk üçe çıkınca ek tıklama" />}
+              explain={`Bu aramalar sitenizde ${fmt(t!.targetPosition)}. sıradaki aramaların tipik tıklama oranına ulaşsa 28 günde gelecek ek tıklama tahmini.`} />
             <Kpi
               label="Az tıklanan arama"
               value={fmt(d.totals.dusuk_tiklama.nonBrand)}
-              note={`Aynı sıranın tipik oranının yarısından az · en az ${fmt(t!.lowMinImpressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Az tıklanan arama" />} />
-            <Kpi label="Kaçan tıklama" value={fmt(d.totals.dusuk_tiklama.clicks)} note="Tipik orana ulaşsa gelecek, marka dışı" info={<SeoInfo k={r.data?.kaynaklar} label="Kaçan tıklama" />} />
+              note={`Aynı sıranın tipik oranının yarısından az · en az ${fmt(t!.lowMinImpressions)} gösterim`} info={<SeoInfo k={r.data?.kaynaklar} label="Az tıklanan arama" />}
+              explain="Sırası fena değil ama aynı sıradaki aramaların tipik tıklama oranının yarısından azını alıyor. Genellikle Google’da görünen başlık ve açıklama çekici değildir." />
+            <Kpi label="Kaçan tıklama" value={fmt(d.totals.dusuk_tiklama.clicks)} note="Tipik orana ulaşsa gelecek, marka dışı" info={<SeoInfo k={r.data?.kaynaklar} label="Kaçan tıklama" />}
+              explain="Az tıklanan aramalar kendi sıralarının tipik oranına ulaşsaydı 28 günde gelecek tıklama sayısı." />
           </section>
 
           <div className="sg-filters" role="toolbar" aria-label="Fırsat türü">
@@ -140,17 +146,20 @@ function Opportunities() {
             <Chip on={brand === '0'} onClick={() => pickBrand('0')} label="Marka dışı" />
             <Chip on={brand === '1'} onClick={() => pickBrand('1')} label="Marka araması" />
             <Chip on={brand === ''} onClick={() => pickBrand('')} label="Hepsi" />
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <Explain label="Marka araması" title="Yakın sıra, düşük tıklama, marka araması">
+                «Yakın sıra»: birkaç sıra yükselince ilk sonuçlara çıkacak aramalar. «Düşük tıklama»: görünüp az tıklananlar. «Marka araması»: içinde «timaş» geçen aramalar; sizi zaten arayanlar olduğu için ayrı tutulur.
+              </Explain>
+            </span>
           </div>
 
           {!d.source.rowCount ? (
-            <div className="sg-empty">
-              <h2>Arama verisi yok</h2>
-              <p>
-                {d.connected
-                  ? '“Search Console’dan yeniden oku”ya basın ya da gece okumasını bekleyin.'
-                  : 'Search Console bağlanınca son 28 günün aramaları burada fırsata dönüşür.'}
-              </p>
-            </div>
+            <EmptyHint
+              title="Arama verisi yok"
+              why={d.connected
+                ? '«Search Console’dan yeniden oku»ya basın ya da gece okumasını bekleyin.'
+                : <>Search Console bağlanınca son 28 günün aramaları burada fırsata dönüşür. Kurulum: <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranı.</>}
+            />
           ) : (
             <section className="sg-card">
               <h2>{kind === 'yakin' ? 'Yakın sıradaki aramalar' : 'Çok gösterilip az tıklananlar'}</h2>
@@ -160,10 +169,7 @@ function Opportunities() {
                   : 'Sıra fena değil ama başlık ve açıklama tıklatmıyor. Kitap sayfası eşleştiyse ürün denetiminde yeni başlık ve açıklama önerisi isteyin. Kaçan tıklamaya göre sıralı.'}
               </p>
               {!d.items.length ? (
-                <div className="sg-empty">
-                  <h2>Bu süzgeçte fırsat yok</h2>
-                  <p>Marka araması süzgecini değiştirmeyi deneyin.</p>
-                </div>
+                <EmptyHint title="Bu süzgeçte fırsat yok" why="Yukarıdan «Hepsi»ni ya da öteki fırsat türünü seçmeyi deneyin." />
               ) : (
                 <OppTable items={d.items} kind={kind} k={d.kaynaklar} />
               )}
@@ -213,10 +219,10 @@ function OppTable({ items, kind, k }: { items: OppItem[]; kind: OppKind; k?: Kay
           <tr>
             <th>Arama <SeoInfo k={k} label="Arama" /></th>
             <th>Sayfa</th>
-            <th>Gösterim <SeoInfo k={k} label="Gösterim" /></th>
+            <th><TermLabel k="impressions" label="Gösterim" /> <SeoInfo k={k} label="Gösterim" /></th>
             <th>Tıklama <SeoInfo k={k} label="Tıklama" /></th>
-            <th>Oran <SeoInfo k={k} label="Oran" /></th>
-            <th>Sıra <SeoInfo k={k} label="Sıra" /></th>
+            <th><TermLabel k="ctr" label="Oran" /> <SeoInfo k={k} label="Oran" /></th>
+            <th><TermLabel k="position" label="Sıra" /> <SeoInfo k={k} label="Sıra" /></th>
             <th>{kind === 'yakin' ? 'İlk üçte ek tıklama' : 'Kaçan tıklama'}</th>
             <th>Öneri</th>
           </tr>
@@ -284,7 +290,7 @@ function ProposeForQuery({ item, kind }: { item: OppItem; kind: OppKind }) {
     <>
       <button className="sg-button" onClick={() => ask.mutate()} disabled={ask.isPending} title="Bu arama için başlık ve açıklama önerisi">
         {ask.isPending ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
-        {ask.isPending ? 'Yazılıyor…' : 'Bu arama için öneri'}
+        {ask.isPending ? 'Hazırlanıyor…' : 'Bu aramaya göre öneri iste'}
       </button>
       {ask.error && <div role="alert" style={{ fontSize: 11, color: 'var(--sg-danger, #b4412f)', marginTop: 4 }}>{ask.error instanceof Error ? ask.error.message : 'Öneri yazılamadı.'}</div>}
     </>
@@ -316,6 +322,8 @@ function ImpactList() {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--sg-muted)' }}>
           {s?.state.finishedAt ? `Son denetim ${dateTime(s.state.finishedAt)} · her gece sürer` : 'Her gece, ürün eşitlemesinden sonra denetlenir'}
+          <br />
+          Onaylanan metni biz siteye göndermeyiz; gece okumasında sitedeki metin onaylananla aynı görülünce «yayında» sayılır.
         </p>
         <button className="sg-button" onClick={() => run.mutate()} disabled={run.isPending || running}>
           {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
@@ -334,10 +342,14 @@ function ImpactList() {
       {s && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Sitede bekleniyor" value={fmt(s.counts.bekliyor)} note="Onaylı; metin sitede henüz görünmüyor" info={<SeoInfo k={r.data?.kaynaklar} label="Sitede bekleniyor" />} />
-            <Kpi label="Ölçülüyor" value={fmt(s.counts.olculuyor)} note={`Yayında; ${s.windowDays}+${s.lagDays} gün dolunca ölçülür`} info={<SeoInfo k={r.data?.kaynaklar} label="Ölçülüyor" />} />
-            <Kpi label="Ölçüldü" value={fmt(s.counts.tamam)} note="Önce/sonra karşılaştırması hazır" info={<SeoInfo k={r.data?.kaynaklar} label="Ölçüldü" />} />
-            <Kpi label="Arama verisi yok" value={fmt(s.counts.veri_yok)} note="İki dönemde de Google’da gösterim yok" info={<SeoInfo k={r.data?.kaynaklar} label="Arama verisi yok" />} />
+            <Kpi label="Sitede bekleniyor" value={fmt(s.counts.bekliyor)} note="Onaylı; metin sitede henüz görünmüyor" info={<SeoInfo k={r.data?.kaynaklar} label="Sitede bekleniyor" />}
+              explain="Onaylanmış ama sitedeki metin henüz onaylananla aynı değil. Metin sitede görününce ölçüm kendiliğinden başlar." />
+            <Kpi label="Ölçülüyor" value={fmt(s.counts.olculuyor)} note={`Yayında; ${s.windowDays}+${s.lagDays} gün dolunca ölçülür`} info={<SeoInfo k={r.data?.kaynaklar} label="Ölçülüyor" />}
+              explain={`Metin sitede yayında; yayından sonraki ${s.windowDays} gün ve Google verisinin kesinleşmesi için ${s.lagDays} gün daha beklenir.`} />
+            <Kpi label="Ölçüldü" value={fmt(s.counts.tamam)} note="Önce/sonra karşılaştırması hazır" info={<SeoInfo k={r.data?.kaynaklar} label="Ölçüldü" />}
+              explain="Yayından önceki ve sonraki dönemin tıklama, gösterim, oran ve sıra karşılaştırması hazır; aşağıdaki tabloda görünür." />
+            <Kpi label="Arama verisi yok" value={fmt(s.counts.veri_yok)} note="İki dönemde de Google’da gösterim yok" info={<SeoInfo k={r.data?.kaynaklar} label="Arama verisi yok" />}
+              explain="Sayfa ne önceki ne sonraki dönemde Google sonuçlarında göründü; karşılaştırılacak veri yok." />
           </section>
 
           <div className="sg-filters" role="toolbar" aria-label="Durum">
@@ -354,14 +366,10 @@ function ImpactList() {
           </div>
 
           {!d!.items.length ? (
-            <div className="sg-empty">
-              <h2>{all ? 'Bu durumda değişiklik yok' : 'Henüz onaylanan değişiklik yok'}</h2>
-              <p>
-                {all
-                  ? 'Başka bir durum seçin.'
-                  : 'Ürün denetiminde bir öneri onaylandığında burada görünür; metin sitede yayına girince ölçüm başlar.'}
-              </p>
-            </div>
+            <EmptyHint
+              title={all ? 'Bu durumda değişiklik yok' : 'Henüz onaylanan değişiklik yok'}
+              why={all ? 'Yukarıdan başka bir durum seçin.' : 'Ürün denetiminde bir öneri onaylandığında burada görünür; metin sitede yayına girince ölçüm başlar.'}
+            />
           ) : (
             <section className="sg-card">
               <h2>Onaylanan değişiklikler <SeoInfo k={r.data?.kaynaklar} label="Onaylanan değişiklikler" /></h2>
@@ -380,8 +388,8 @@ function ImpactList() {
                       <th>Gösterim <SeoInfo k={r.data?.kaynaklar} label="Gösterim" /></th>
                       <th>Oran <SeoInfo k={r.data?.kaynaklar} label="Oran" /></th>
                       <th>Sıra <SeoInfo k={r.data?.kaynaklar} label="Sıra" /></th>
-                      <th>Site geneli</th>
-                      <th>Siteye göre</th>
+                      <th><ExplainLabel label="Site geneli">Aynı dönemlerde bütün sitenin tıklama ve gösterim değişimi. Mevsim ya da genel trafik etkisini görmek için karşılaştırma ölçüsüdür.</ExplainLabel></th>
+                      <th><ExplainLabel label="Siteye göre">Kitabın tıklama değişiminden site genelindeki değişim çıkarılır. Artıysa kitap siteden daha iyi gitmiş demektir; değişikliğin gerçek etkisine en yakın ölçü budur.</ExplainLabel></th>
                       <th>Durum</th>
                     </tr>
                   </thead>
@@ -500,10 +508,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

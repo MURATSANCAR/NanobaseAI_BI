@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { FIELD_LABEL, STATUS_LABEL, dateTime, fmt, seoApi, type SeoField } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { EmptyHint, ExplainLabel } from '../components/Explain';
 
 /** Gönderim geçmişi: karar verilmiş bütün öneriler — kim, ne zaman, hangi alanlar, sonuç. Geri alma ürün ekranında. */
 export default function SeoHistory() {
@@ -19,15 +20,15 @@ export default function SeoHistory() {
       crumb="Karar geçmişi"
       eyebrow="SEO & GEO · kararlar"
       title="Karar geçmişi"
-      lead="Onaylanan ve reddedilen öneriler: kim, ne zaman, hangi alanlar. T-soft’a hiçbir şey gönderilmez; onaylananlar CRM bağlantısı gelince CRM’e yazılacak."
+      lead="Ürün önerileri için verilen bütün kararlar: kim, ne zaman, hangi alanlar, puan nasıl değişti. Onay yalnız kayıt altına alınır; T-soft’a ve CRM’e hiçbir şey gönderilmez."
     >
       {h.isLoading && <Loading text="Geçmiş getiriliyor…" />}
       {h.error && <Failed error={h.error} />}
       {h.data && !items.length && (
-        <div className="sg-empty">
-          <h2>Henüz karar yok</h2>
-          <p>Ürün denetimi ekranında bir öneri onaylandığında ya da reddedildiğinde burada görünür.</p>
-        </div>
+        <EmptyHint
+          title="Henüz karar yok"
+          why={<>Ürün denetimi ekranında bir öneri onaylandığında ya da reddedildiğinde burada görünür. <Link to="/seo-geo/urun-denetimi?durum=hazir">Onay bekleyen önerilere git</Link></>}
+        />
       )}
       {items.length > 0 && (
         <section className="sg-card">
@@ -38,7 +39,7 @@ export default function SeoHistory() {
                   <th>Ürün</th>
                   <th>Durum</th>
                   <th>Alanlar</th>
-                  <th style={{ textAlign: 'right' }}>Puan</th>
+                  <th style={{ textAlign: 'right' }}><ExplainLabel label="Puan">Öneriden önceki ve öneri uygulanırsa beklenen SEO puanı (0–100).</ExplainLabel></th>
                   <th>Karar</th>
                   <th>Sonuç</th>
                 </tr>

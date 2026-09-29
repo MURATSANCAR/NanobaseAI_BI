@@ -7,6 +7,7 @@ import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } f
 import { Panel } from '../editorial/kit';
 import { dijitalApi, type Meta, type Platform } from './api';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Platform tanımları: e-kitap / sesli / abonelik platformu, dağıtım biçimi, rapor para birimi ve raporun ay kapanışından
  *  kaç gün sonra beklendiği (finans hatırlatması). Portal platformlara bağlanmaz; yalnız kayıt. */
@@ -52,7 +53,7 @@ export default function PlatformsTab({ meta }: { meta: Meta }) {
         </p>
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         <div className="mt-3 flex flex-col gap-2">
-          {q.data && !q.data.items.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Henüz platform tanımlanmadı.</div>}
+          {q.data && !q.data.items.length && <EmptyHint title="Henüz platform tanımlanmadı" why={can ? 'Aşağıdaki «Platform ekle» alanından e-kitap ya da sesli kitap platformlarını ekleyin.' : 'Yetkili biri platformları tanımladığında burada görünür.'} />}
           {q.data?.items.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white/80 p-3">
               <div className="min-w-0">
@@ -100,18 +101,18 @@ export default function PlatformsTab({ meta }: { meta: Meta }) {
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Rapor para birimi</span>
-              <input className={field} value={f.paraBirimi} maxLength={3} onChange={(e) => set('paraBirimi')(e.target.value)} />
+              <input className={field} value={f.paraBirimi} maxLength={3} onChange={(e) => set('paraBirimi')(e.target.value)} placeholder="Örn. TRY, USD, EUR" />
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Rapor günü (ay kapanışından sonra)</span>
-              <input className={field} inputMode="numeric" value={f.raporGunu} onChange={(e) => set('raporGunu')(e.target.value.replace(/\D/g, ''))} placeholder="boş: hatırlatma yok" />
+              <input className={field} inputMode="numeric" value={f.raporGunu} onChange={(e) => set('raporGunu')(e.target.value.replace(/\D/g, ''))} placeholder="Örn. 30 (boş: hatırlatma yok)" />
             </label>
           </div>
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             {editing && <button type="button" className={btnGhost} onClick={() => { setEditing(null); setF(EMPTY); }}>Vazgeç</button>}
             <button type="button" className={btnPrimary} disabled={!f.ad.trim() || f.paraBirimi.trim().length !== 3 || save.isPending} onClick={() => save.mutate()}>
               {!editing && <Plus aria-hidden className="h-4 w-4" />}
-              {editing ? 'Kaydet' : 'Ekle'}
+              {editing ? 'Kaydet' : 'Platformu ekle'}
             </button>
           </div>
         </Panel>

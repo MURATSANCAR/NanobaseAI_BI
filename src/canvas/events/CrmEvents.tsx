@@ -55,7 +55,7 @@ export default function CrmEvents() {
     <EventsFrame
       crumb="Fuar ve etkinlik"
       title="CRM etkinlikleri"
-      lead="CRM'deki etkinlik kayıtları; sınıf, portaldaki tip eşlemesinden gelir (eşlenmemiş tipler «Sınıfsız»). Kayıtlar yalnız okunur; düzeltme CRM'de yapılır."
+      lead="CRM'deki etkinlik kayıtlarının listesi. Sınıf (fuar, imza günü, söyleşi…), «Tip eşlemesi» ekranında yapılan eşlemeden gelir; eşlenmemiş tipler «Sınıfsız» görünür. Kayıtlar yalnız okunur, düzeltme CRM'de yapılır."
       source="CRM etkinlik"
       presence={list.data ? `${fmtInt(list.data.total)} kayıt` : '…'}
     >
@@ -99,7 +99,7 @@ export default function CrmEvents() {
         {list.error && <Note tone="err">{errText(list.error, 'CRM etkinlikleri okunamadı.')}</Note>}
         {list.isLoading && <Loading />}
         {list.data && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Katılımcı, satılan, gider ve toplam<SqlInfo k={list.data.kaynaklar} alan="items" label="CRM etkinlikleri" /></p>}
-        {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle kayıt yok.</p>}
+        {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle CRM etkinlik kaydı yok. Tarih aralığını genişletin ya da sınıf süzgecini değiştirin.</p>}
         {list.data && list.data.items.length > 0 && m && (
           <TableWrap>
             <thead>

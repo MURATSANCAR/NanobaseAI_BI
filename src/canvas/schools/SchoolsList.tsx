@@ -8,6 +8,7 @@ import { Pager, useDebounced } from '../editorial/kit';
 import { schoolsApi } from './api';
 import { CalendarNote, ScoreBadge, daysAgo, fmtDay, useSchoolsMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Okul listesi: kapsamdaki okullar öncelik sırasıyla (süzgeç: il, ilçe, kademe, tür, puan). Liste kesilmez, sayfalanır.
  *  Okul adıyla arama (en az 3 harf) bütün listede yapılır ki kapsam dışındaki yeni okul da açılabilsin. */
@@ -54,7 +55,7 @@ export default function SchoolsList({ params, update }: { params: URLSearchParam
           <Select label="İl" value={f.il} onChange={set('il')} options={(meta.data?.ils ?? []).map((x) => ({ key: x, label: x }))} />
           <label className="flex flex-col gap-1">
             <span className={labelCls}>İlçe</span>
-            <input className={field} key={f.ilce} defaultValue={f.ilce} onBlur={(e) => set('ilce')(e.target.value.trim())} placeholder="Hepsi" />
+            <input className={field} key={f.ilce} defaultValue={f.ilce} onBlur={(e) => set('ilce')(e.target.value.trim())} placeholder="Örn. Kadıköy (boş: hepsi)" />
           </label>
           <Select label="Kademe" value={f.kademe} onChange={set('kademe')} options={meta.data?.kademeler ?? []} />
           <Select label="Kurum türü" value={f.tur} onChange={set('tur')} options={meta.data?.kurumTurleri ?? []} />
@@ -114,7 +115,7 @@ export default function SchoolsList({ params, update }: { params: URLSearchParam
 
       {list.error && <Note tone="err">{errText(list.error, 'Okul listesi okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {d && d.items.length === 0 && <Note tone="info">Süzgece uyan okul yok.</Note>}
+      {d && d.items.length === 0 && <EmptyHint title="Süzgece uyan okul yok" why="İl, ilçe, kademe ya da puan süzgecini «Hepsi»ne alın. Okul adıyla aramada en az 3 harf yazın; arama bütün listede yapılır." />}
 
       <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {d?.items.map((s) => (

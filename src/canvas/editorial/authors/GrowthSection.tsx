@@ -228,7 +228,7 @@ function Readers({ g }: { g: AuthorGrowth }) {
   return (
     <Sub title="Okur sesi" k={g.kaynaklar} alan="readers">
       {!site.available ? (
-        <p className="text-[12px] text-canvas-muted">Sitedeki yorum özeti bu ortamda yok.</p>
+        <p className="text-[12px] text-canvas-muted">Sitedeki okur yorumları bu kurulumda okunamıyor.</p>
       ) : site.comments === 0 ? (
         <p className="text-[12px] text-canvas-muted">Yazarın kitaplarında sitede yorum yok.</p>
       ) : (
@@ -356,7 +356,7 @@ function Advice({ contactId, ready }: { contactId: string; ready: boolean }) {
   const a = q.data?.advice;
   return (
     <Sub
-      title="ZEKİ AI önerisi"
+      title="Zeki AI önerisi"
       k={q.data?.kaynaklar}
       alan={a ? 'advice' : undefined}
       aside={
@@ -374,7 +374,7 @@ function Advice({ contactId, ready }: { contactId: string; ready: boolean }) {
         <AdviceView a={a} />
       ) : (
         <p className="text-[12px] text-canvas-muted">
-          {q.data && !q.data.modelReady ? 'ZEKİ AI şu an bağlı değil.' : can ? 'Satış, sadakat, ilişki ısısı ve son görüşme notlarından bu yazar için ne yapılacağını önerir.' : 'Henüz öneri üretilmedi.'}
+          {q.data && !q.data.modelReady ? 'Zeki AI şu an bağlı değil; öneri üretilemiyor.' : can ? 'Satış, sadakat, ilişki ısısı ve son görüşme notlarından bu yazar için ne yapılacağını önerir.' : 'Henüz öneri üretilmedi.'}
         </p>
       )}
     </Sub>

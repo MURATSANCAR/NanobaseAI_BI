@@ -14,12 +14,23 @@ import { Renewals } from './Renewals';
 import { RunLines } from './RunLines';
 import { metaOptions, royaltyApi, runTone, type Meta, type Run } from './api';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
+import { TERM } from '../contracts/glossary';
 
 /** M54 Telif dönemi: dönem koşusu (M6'nın hesabıyla bütün satıştan ödemeli sözleşmeler), istisnalar, iki gözlü onay,
  *  hak sahibi beyannamesi, ödeme listesi, avans portföyü ve yenilemeler. CRM'e, Logo'ya ve bankaya yazılmaz. */
 
 type Tab = 'kosu' | 'istisna' | 'hak-sahipleri' | 'odeme' | 'avans' | 'yenileme';
 const BUSY = new Set(['hesaplaniyor', 'onaylaniyor']);
+/** Sekmenin ne işe yaradığı; sekme şeridinin altında tek cümle. */
+const TAB_HELP: Record<Tab, string> = {
+  kosu: 'Seçili koşunun özeti: kaç sözleşme hesaplandı, kaçı istisna, ne kadar ödenecek.',
+  istisna: 'Hesabı tamamlanamayan ya da kontrol isteyen sözleşmeler. Kaynağında düzeltip yeniden hesaplatın ya da gerekçesiyle kabul edin.',
+  'hak-sahipleri': 'Koşudaki telifin hak sahibi (yazar, çevirmen, mirasçı) başına dökümü ve beyannamesi.',
+  odeme: 'Onaylı koşunun kime ne kadar ödeneceğinin listesi; banka ödemesi portaldan yapılmaz.',
+  avans: 'Sözleşmelerde verilmiş avansların kalan (henüz telifden düşülmemiş) kısmı.',
+  yenileme: 'Süresi yaklaşan sözleşmeler ve yenileme kararları.',
+};
 
 export default function RoyaltyScreen() {
   const [params, setParams] = useSearchParams();
@@ -56,13 +67,13 @@ export default function RoyaltyScreen() {
       route="/telif-donem"
       crumb="Telif dönemi"
       title="Telif dönemi"
-      lead="Satıştan ödemeli bütün sözleşmelerin dönem telifi tek koşuda hesaplanır; yalnız istisnalarla uğraşırsınız. Onaylanan koşu sözleşmelerin hakedişini ve ödeme takvimini oluşturur. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz."
+      lead="Satıştan telif ödenen bütün sözleşmelerin dönem telifi tek seferde (koşu) hesaplanır; siz yalnız istisnalarla uğraşırsınız. Onaylanan koşu hakediş ve ödeme takvimini oluşturur. CRM'e, Logo'ya, bankaya yazılmaz."
       source="Logo satışı + CRM sözleşmeleri"
       presence={r ? `${r.no} · ${r.statusLabel}` : 'Kaynak: Logo ve CRM'}
       aside={
         <div className="flex flex-wrap items-center justify-start gap-1.5 lg:justify-end">
           {list.length > 0 && (
-            <select aria-label="Koşu" value={runId ?? ''} onChange={(e) => set('kosu', e.target.value)} className={`${field} w-auto max-w-full`}>
+            <select aria-label="Telif dönemi koşusu" value={runId ?? ''} onChange={(e) => set('kosu', e.target.value)} className={`${field} w-auto max-w-full`}>
               {list.map((x) => (
                 <option key={x.id} value={x.id}>{x.no} · {x.label} · {x.statusLabel}</option>
               ))}
@@ -71,7 +82,7 @@ export default function RoyaltyScreen() {
           {can?.run && (
             <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
               <Plus aria-hidden className="h-4 w-4" />
-              Yeni koşu
+              Yeni dönem koşusu
             </button>
           )}
         </div>
@@ -100,24 +111,37 @@ export default function RoyaltyScreen() {
           ]}
         />
       )}
+      {m && (
+        <p className="-mt-1 flex items-start gap-1 px-1 text-[12px] leading-snug text-canvas-muted">
+          <span>{TAB_HELP[tab] ?? TAB_HELP.kosu}</span>
+          {tab === 'kosu' && (
+            <Explain label="Koşu">
+              Koşu, seçtiğiniz dönem için kapsamdaki bütün sözleşmelerin telifinin bir kerede hesaplanmasıdır. Sırası: hesapla → istisnaları çöz → onaya gönder →
+              başka bir kişi onaylar. Onaylı koşu değişmez.
+            </Explain>
+          )}
+        </p>
+      )}
       {m && needsRun && !runId && !runs.isLoading && (
         <Panel>
-          <div className="py-8 text-center">
-            <p className="text-[13px] font-extrabold">Henüz telif dönemi koşusu yok</p>
-            <p className="mt-1 text-[12.5px] text-canvas-muted">Önerilen dönem {day(m.defaultPeriod.start)} – {day(m.defaultPeriod.end)}.</p>
-            {can?.run && (
-              <button type="button" className={`${btnPrimary} mt-3`} onClick={() => setCreating(true)}>
-                <Plus aria-hidden className="h-4 w-4" /> Koşu aç
-              </button>
-            )}
-          </div>
+          <EmptyHint
+            title="Henüz telif dönemi koşusu yok"
+            why={`Önerilen dönem ${day(m.defaultPeriod.start)} – ${day(m.defaultPeriod.end)}. Koşu açınca kapsamdaki bütün sözleşmelerin telifi hesaplanır.`}
+            action={
+              can?.run ? (
+                <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>
+                  <Plus aria-hidden className="h-4 w-4" /> Koşu aç
+                </button>
+              ) : undefined
+            }
+          />
         </Panel>
       )}
       {m && r && tab === 'kosu' && <Summary run={r} meta={m} onReason={(code) => setMany({ sekme: 'istisna', neden: code })} />}
       {m && r && tab === 'kosu' && <RunNotePanel key={r.id} run={r} />}
       {m && r && tab === 'kosu' && r.status !== 'taslak' && <RunLines run={r} meta={m} title="Bütün satırlar" />}
       {m && r && tab === 'istisna' && (
-        r.status === 'taslak' ? <Panel><p className="py-8 text-center text-[12.5px] text-canvas-muted">Koşu henüz hesaplanmadı.</p></Panel>
+        r.status === 'taslak' ? <Panel><EmptyHint title="Koşu henüz hesaplanmadı" why="Üstteki «Hesapla»ya basın; istisnalar hesap bitince burada listelenir." /></Panel>
           : <RunLines key={params.get('neden') ?? ''} run={r} meta={m} status="istisna" code={params.get('neden') ?? ''} />
       )}
       {m && r && tab === 'hak-sahipleri' && <PartyStatements run={r} can={m.can} />}
@@ -134,23 +158,30 @@ function Summary({ run, meta, onReason }: { run: Run; meta: Meta; onReason: (cod
   const k = run.kaynaklar;
   const totals = Object.entries(s.totals ?? {});
   if (run.status === 'taslak' && !s.lines) {
-    return <Panel><p className="py-6 text-center text-[12.5px] text-canvas-muted">Koşu açıldı; «Hesapla» ile kapsamdaki bütün sözleşmeler okunur ve hesaplanır.</p></Panel>;
+    return (
+      <Panel>
+        <EmptyHint title="Koşu açıldı, henüz hesaplanmadı" why="Üstteki «Hesapla» ile kapsamdaki bütün sözleşmelerin satışı Logo'dan okunur ve telifi hesaplanır." />
+      </Panel>
+    );
   }
   return (
     <>
       <KpiRow>
         <Kpi label="Kapsam" value={num(s.lines ?? 0, 0)} help={`CRM ${num(s.crmScope ?? 0, 0)}${s.portalOnly ? ` + portal ${num(s.portalOnly, 0)}` : ''} sözleşme`}
+          explain="Bu koşuda ele alınan sözleşmeler: CRM'de yürürlükteki satıştan ödemeli telif alış sözleşmeleri ve portalda açılmış olanlar. Her biri hesaplandı, istisna ya da hariç olarak sayılır."
           info={<SqlInfo k={k} alan="summary.lines" label="Kapsam" />} />
-        <Kpi label="Hesaplandı" value={num(s.counts?.hesaplandi ?? 0, 0)} help="Onaya hazır" info={<SqlInfo k={k} alan="summary.counts" label="Hesaplandı" />} />
+        <Kpi label="Hesaplandı" value={num(s.counts?.hesaplandi ?? 0, 0)} help="Onaya hazır" explain="Sorunsuz hesaplanan, onaya hazır sözleşmeler." info={<SqlInfo k={k} alan="summary.counts" label="Hesaplandı" />} />
         <Kpi label="İstisna" value={num(s.counts?.istisna ?? 0, 0)} help={s.counts?.istisna ? 'Çözülmeden onaya gitmez' : 'Yok'}
+          explain="Hesabı tamamlanamayan (ör. telif oranı, stok kodu ya da kur eksik) ya da insan kontrolü isteyen sözleşmeler. Hepsi çözülmeden koşu onaya gönderilemez."
           info={<SqlInfo k={k} alan="sayac.istisna" label="İstisna (İstisnalar sekmesinin rozeti)" />} />
-        <Kpi label="Hariç" value={num(s.counts?.haric ?? 0, 0)} help="Gerekçesiyle ya da dönem dışı" info={<SqlInfo k={k} alan="summary.counts" label="Hariç" />} />
+        <Kpi label="Hariç" value={num(s.counts?.haric ?? 0, 0)} help="Gerekçesiyle ya da dönem dışı" explain="Gerekçesiyle hesaptan çıkarılan ya da dönemle örtüşmeyen sözleşmeler; bu koşuda ödeme çıkmaz." info={<SqlInfo k={k} alan="summary.counts" label="Hariç" />} />
       </KpiRow>
       {totals.length > 0 && (
         <KpiRow>
           {totals.map(([cur, t]) => (
             <Kpi key={cur} label={`Ödenecek (${meta.currencies[cur] ?? cur})`} value={money(t.net, cur)}
               help={`Brüt ${money(t.gross, cur)} · avans ${money(t.advance, cur)} · stopaj ${money(t.withholding, cur)} · ${num(t.count ?? 0, 0)} sözleşme`}
+              explain={`Bu para birimindeki net ödeme: brüt telif − avans mahsubu − stopaj. ${TERM.stopaj}`}
               info={<SqlInfo k={k} alan="summary.totals" label={`Ödenecek (${cur})`} />} />
           ))}
         </KpiRow>
@@ -197,7 +228,7 @@ function RunHeader({ run, meta }: { run: Run; meta: Meta }) {
         <div className="ml-auto flex flex-wrap gap-1.5">
           {meta.can.run && (run.status === 'taslak' || run.status === 'hesaplandi') && (
             <>
-              <button type="button" className={btnGhost} onClick={() => setAction('fx')}>Kur</button>
+              <button type="button" className={btnGhost} onClick={() => setAction('fx')}>Kuru gir</button>
               <button type="button" className={run.status === 'taslak' ? btnPrimary : btnGhost} disabled={compute.isPending} onClick={() => compute.mutate()}>
                 {compute.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Calculator aria-hidden className="h-4 w-4" />}
                 {run.status === 'taslak' ? 'Hesapla' : 'Yeniden hesapla'}
@@ -225,7 +256,7 @@ function RunHeader({ run, meta }: { run: Run; meta: Meta }) {
             </>
           )}
           {meta.can.run && ['taslak', 'hesaplandi', 'onayda'].includes(run.status) && (
-            <button type="button" className={btnGhost} onClick={() => setAction('cancel')} aria-label="Koşuyu iptal et">
+            <button type="button" className={btnGhost} onClick={() => setAction('cancel')} aria-label="Koşuyu iptal et" title="Koşuyu iptal et">
               <X aria-hidden className="h-4 w-4" />
             </button>
           )}
@@ -386,8 +417,8 @@ function NewRunSheet({ meta, onClose, onCreated }: { meta: Meta; onClose: () => 
           <input value={note} onChange={(e) => setNote(e.target.value)} className={field} />
         </Field>
         <p className="text-[11.5px] text-canvas-muted">
-          Kapsam: CRM'de yürürlükteki satıştan / satıştan kademeli ödemeli Telif Alış sözleşmeleri (durum kodları {meta.scope.statuses.join(', ')})
-          ve portalda açılmış yürürlükteki satıştan ödemeli sözleşmeler. Hiçbiri sessizce düşmez: her biri hesaplandı, istisna ya da hariç olarak listelenir.
+          Kapsam: CRM'de yürürlükteki, satıştan ya da satıştan kademeli ödemeli telif alış sözleşmeleri ve portalda açılmış yürürlükteki satıştan
+          ödemeli sözleşmeler. Hiçbiri sessizce düşmez: her biri hesaplandı, istisna ya da hariç olarak listelenir.
         </p>
       </div>
     </Sheet>

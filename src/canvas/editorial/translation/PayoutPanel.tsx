@@ -16,6 +16,7 @@ import { Panel } from '../kit';
 import { PAYOUT_STATUS, TASK_STATUS, day, editNum, parseNum, stamp, tl } from '../freelance/shared';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { Explain } from '../../components/Explain';
 
 /** Çeviri işinin serbest çalışan tarafı (M4 → M8): çevirmenin M8 kaydı, kelime ücreti ve hakediş esası; M8'de iş
  *  paketi ve hakedişe aktarım. Aktarım yalnız son aktarımdan sonra onaylanan (ya da çevrilen) kelimeyi gönderir;
@@ -61,8 +62,8 @@ export default function PayoutPanel({ job }: { job: TranslationJobDetail }) {
     onSuccess: async (r) => {
       setNotice(
         r.created
-          ? `M8'de iş paketi açıldı: ${nf.format(r.units)} kelimelik görev çevirmene atandı.`
-          : `M8'deki görev güncellendi (${nf.format(r.units)} kelime).`,
+          ? `Serbest çalışanlarda iş paketi açıldı: ${nf.format(r.units)} kelimelik görev çevirmene atandı.`
+          : `Serbest çalışanlardaki görev güncellendi (${nf.format(r.units)} kelime).`,
       );
       await refresh();
     },
@@ -72,7 +73,7 @@ export default function PayoutPanel({ job }: { job: TranslationJobDetail }) {
     onSuccess: async (r) => {
       setNotice(
         r.moved
-          ? `${nf.format(r.moved)} kelime (${tl(r.amount)}) M8'de kabul edilmiş işe dönüştü; hakediş belgesi Serbest çalışanlar › Hakediş'te hazırlanır.`
+          ? `${nf.format(r.moved)} kelime (${tl(r.amount)}) Serbest çalışanlarda kabul edilmiş işe dönüştü; hakediş belgesi Serbest çalışanlar › Hakediş'te hazırlanır.`
           : 'Aktarılacak yeni kelime yok.',
       );
       await refresh();
@@ -152,16 +153,22 @@ export default function PayoutPanel({ job }: { job: TranslationJobDetail }) {
           <span className={label}>Kelime ücreti (₺)</span>
           <input value={rate} inputMode="decimal" placeholder="0,45" onChange={(e) => setRate(e.target.value)} className={`${field} mt-1 font-mono tabular-nums`} />
         </label>
-        <label className="block min-w-0">
-          <span className={label}>Hakediş esası</span>
-          <select value={basis} onChange={(e) => setBasis(e.target.value as PayoutBasis)} className={`${field} mt-1`}>
+        {/* «?» label içinde olmasın (etiket düğmeye bağlanır): div + aria-label. */}
+        <div className="block min-w-0">
+          <span className={`${label} flex items-center gap-1`}>
+            Hakediş esası
+            <Explain label="Hakediş esası">
+              Çevirmene hangi kelimelerin ödeneceği: yalnız inceleyenin onayladığı segmentler ya da çevirmenin çevirdiği bütün segmentler.
+            </Explain>
+          </span>
+          <select value={basis} aria-label="Hakediş esası" onChange={(e) => setBasis(e.target.value as PayoutBasis)} className={`${field} mt-1`}>
             {(Object.keys(d.bases) as PayoutBasis[]).map((k) => (
               <option key={k} value={k}>
                 {d.bases[k]}
               </option>
             ))}
           </select>
-        </label>
+        </div>
         <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
           <button type="submit" disabled={!personId || !rateOk || !dirty || busy} className={`${btn} bg-canvas-violet text-white`}>
             {save.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
@@ -189,7 +196,10 @@ export default function PayoutPanel({ job }: { job: TranslationJobDetail }) {
               <dd className="text-canvas-muted">{tl(link.transferredAmount)}</dd>
             </div>
             <div>
-              <dt className="text-canvas-muted">Aktarılacak</dt>
+              <dt className="flex items-center gap-1 text-canvas-muted">
+                Aktarılacak
+                <Explain label="Aktarılacak">Son aktarımdan sonra onaylanan (ya da çevrilen) ve henüz hakedişe gönderilmemiş kelime ile tutarı.</Explain>
+              </dt>
               <dd className="font-mono text-[14px] font-bold tabular-nums">{nf.format(pending)}</dd>
               <dd className="text-canvas-muted">{tl(link.pendingAmount)}</dd>
             </div>

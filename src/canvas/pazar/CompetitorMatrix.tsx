@@ -64,7 +64,7 @@ export default function CompetitorMatrix() {
       <Panel>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.5fr))_minmax(0,1fr)]">
           <label className="flex min-w-0 flex-col gap-1">
-            <span className={labelCls}>TİMAŞ kategorisi</span>
+            <span className={labelCls}>Timaş kategorisi</span>
             <CategorySelect value={kategori} onChange={setKategori} categories={cats.data?.items ?? []} className={field} />
           </label>
           <label className="flex min-w-0 flex-col gap-1">
@@ -121,15 +121,16 @@ export default function CompetitorMatrix() {
         <>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
             <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Rakip kitap" />} label="Rakip kitap" value={fmtInt(d.rakipOzet.kitap)} help={`${fmtInt(d.rakipOzet.yayinevi)} yayınevi · ${catLabel}`} />
-            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Rakip medyan fiyat" />} label="Rakip medyan fiyat" value={fmtTl(d.rakipOzet.medyan)} help={`Çeyrekler ${fmtTl(d.rakipOzet.q1)} – ${fmtTl(d.rakipOzet.q3)}`} />
-            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="TİMAŞ medyan fiyat" />} label="TİMAŞ medyan fiyat" value={fmtTl(d.timas[0]?.medyan)} help={`${fmtInt(d.timas[0]?.kitap)} kitap · KDV dahil`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Rakip medyan fiyat" />} label="Rakip medyan fiyat" value={fmtTl(d.rakipOzet.medyan)} help={`Çeyrekler ${fmtTl(d.rakipOzet.q1)} – ${fmtTl(d.rakipOzet.q3)}`} explain="Medyan: kitaplar fiyata göre dizildiğinde ortadaki kitabın fiyatı; birkaç çok pahalı kitaptan etkilenmez. Çeyrekler, kitapların ortadaki yarısının fiyat aralığıdır." />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Timaş medyan fiyat" />} label="Timaş medyan fiyat" value={fmtTl(d.timas[0]?.medyan)} help={`${fmtInt(d.timas[0]?.kitap)} kitap · KDV dahil`} />
             <Stat
-              info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="TİMAŞ'ın konumu" />}
-              label="TİMAŞ'ın konumu"
+              info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Timaş'ın konumu" />}
+              label="Timaş'ın konumu"
               value={d.timasKonum === null ? '—' : fmtPct(d.timasKonum, 0)}
-              help="Rakip fiyatlarının bu kadarı TİMAŞ medyanının altında"
+              help="Rakip fiyatlarının bu kadarı Timaş medyanının altında"
+              explain="Rakip kitapların yüzde kaçının bizim ortadaki fiyatımızdan ucuz olduğu. Yüksekse fiyatlarımız rakiplerin çoğundan pahalıdır."
             />
-            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Sayfa başı (medyan)" />} label="Sayfa başı (medyan)" value={`${fmtNum(round2(d.rakipOzet.sayfaBasiMedyan))} ₺`} help={`TİMAŞ: ${fmtNum(round2(d.timas[0]?.sayfaBasiMedyan))} ₺`} />
+            <Stat info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Sayfa başı (medyan)" />} label="Sayfa başı (medyan)" explain="Fiyatın sayfa sayısına bölümü; farklı kalınlıktaki kitapları karşılaştırmayı sağlar. Rakiplerin ortadaki değeri, altında bizimki." value={`${fmtNum(round2(d.rakipOzet.sayfaBasiMedyan))} ₺`} help={`Timaş: ${fmtNum(round2(d.timas[0]?.sayfaBasiMedyan))} ₺`} />
           </div>
           {d.eslenmemis !== null && d.eslenmemis > 0 && (
             <Note tone="warn">

@@ -1,12 +1,13 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
-import { Loading, Note, TableWrap, errText, field, label as labelCls, td, th } from '../admin/ui';
+import { Loading, Note, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Block, Empty, FieldFrame, Stat } from '../field/parts';
 import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../field/api';
 import { musteriApi, type Meta } from './api';
 import { AccountRow, SubNav } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** M38 Müşteri ilişkileri — özet (ilk açılış). Kanal bazında aktif cari, son 12 ay değer, riskli cari, veri sağlığı puanı ve
  *  Logo kesim tarihi; altında «bu hafta bakılacak cariler» (risk × değer). Temsilci yalnız kendi portföyünü görür. */
@@ -42,7 +43,7 @@ export function RunNotes({ meta }: { meta: Meta }) {
         </Note>
       ))}
       {!meta.me.canAll && meta.run.asof && meta.me.cari === 0 && (
-        <Note tone="info">CRM'de size atanmış müşteri carisi yok. Atama CRM'deki cari sahibi (BMT) ya da ilin müşteri temsilcisi alanından gelir.</Note>
+        <Note tone="info">CRM'de size atanmış müşteri yok. Müşteriler, CRM'deki cari sahibi ya da ilin müşteri temsilcisi alanından size bağlanır; eksikse CRM yöneticinizden atama isteyin.</Note>
       )}
     </>
   );
@@ -56,36 +57,37 @@ export default function CustomersHome() {
   const ov = useQuery({ queryKey: ['musteri', 'overview', temsilci], queryFn: () => musteriApi.overview(temsilci), enabled: ENGINE_ENABLED && !!m?.run.asof });
   const seg = useQuery({ queryKey: ['musteri', 'segments'], queryFn: musteriApi.segments, enabled: ENGINE_ENABLED && !!m?.run.asof && !!m?.me.canAll });
   const o = ov.data;
+  const segs = useShowMore(seg.data?.items, 6);
   const err = errText(meta.error ?? ov.error, 'Müşteri özeti açılamadı.');
 
   return (
     <FieldFrame
       crumb="Müşteri ilişkileri"
       title="Müşteri ilişkileri"
-      lead="Carinin son 12 ay değeri, nedenleri yazılı kayıp riski ve aksiyonların sonucu. Satış Logo'nun faturalı satırından (iki yıl kopyası cari koduyla birleşir), atama ve sipariş CRM'den okunur. Portal CRM'e yazmaz."
+      lead="Müşterilerinizin (cari) son 12 aydaki alımını, bizden alımı bırakma (kayıp) riskini nedenleriyle ve yazdığınız aksiyonların sonucunu gösterir. Satış Logo faturalarından, atama ve sipariş CRM'den okunur; portal CRM'e yazmaz."
       source={m?.run.kesim ? `Logo ${fmtDay(m.run.kesim)} tarihine kadar · CRM canlı` : 'Logo + CRM'}
       presence={m?.run.asof ? `Veri ${fmtDay(m.run.asof)}` : 'Hazırlanmadı'}
       aside={<RepPicker meta={m} value={temsilci} onChange={(v) => setParams(v ? { temsilci: v } : {}, { replace: true })} />}
     >
       <SubNav meta={m} />
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {(meta.isLoading || ov.isLoading) && <Loading />}
       {m && <RunNotes meta={m} />}
       {o && m && (
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Stat label="Aktif cari" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Aktif cari" />} value={o.kpi.aktif.toLocaleString('tr-TR')} help={`${o.kpi.cari.toLocaleString('tr-TR')} cari listede`} />
+            <Stat label="Aktif cari" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Aktif cari" />} value={o.kpi.aktif.toLocaleString('tr-TR')} help={`${o.kpi.cari.toLocaleString('tr-TR')} cari listede`} explain="Son 12 ayda en az bir faturası olan müşteri (cari) sayısı. Altında listedeki bütün cariler yazar." />
             <Stat label="Son 12 ay net" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Son 12 ay net" />} value={fmtShort(o.kpi.net12)} help={`Logo kesimine kadar`} />
             <Stat label="Bu yıl net" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Bu yıl net" />} value={fmtShort(o.kpi.netYil)} help={`1 Ocak – ${fmtDay(o.kesim)}`} />
-            <Stat label="Yüksek risk" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Yüksek risk" />} value={String(o.kpi.riskli)} tone={o.kpi.riskli ? 'err' : undefined} />
-            <Stat label="Kayıp" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Kayıp" />} value={String(o.kpi.kayip)} tone={o.kpi.kayip ? 'warn' : undefined} help={`Olağan aralığın ${m.rules.lostMultiple} katı, en az ${m.rules.lostMinDays} gün alımsız`} />
-            <Stat label="Veri sağlığı" info={<SqlInfo k={o.kaynaklar} alan="kpi.saglik" label="Veri sağlığı puanı" />} value={o.kpi.saglik === null ? '—' : `${o.kpi.saglik.toLocaleString('tr-TR')} / 100`} help="Bulgusu olmayan etkin CRM carisi payı" />
+            <Stat label="Yüksek risk" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Yüksek risk" />} value={String(o.kpi.riskli)} tone={o.kpi.riskli ? 'err' : undefined} explain={`Kayıp riski puanı ${m.rules.riskHigh} ve üstü olan cariler: alımları olağan düzeninden sapmış, bizden almayı bırakabilecek müşteriler. Puanın nasıl hesaplandığı sayfanın altında yazar.`} />
+            <Stat label="Kayıp" info={<SqlInfo k={o.kaynaklar} alan="kpi" label="Kayıp" />} value={String(o.kpi.kayip)} tone={o.kpi.kayip ? 'warn' : undefined} help={`Olağan aralığın ${m.rules.lostMultiple} katı, en az ${m.rules.lostMinDays} gün alımsız`} explain="Her zamanki alım aralığının çok üstünde süredir alım yapmayan, fiilen kaybedilmiş sayılan cariler." />
+            <Stat label="Veri sağlığı" info={<SqlInfo k={o.kaynaklar} alan="kpi.saglik" label="Veri sağlığı puanı" />} value={o.kpi.saglik === null ? '—' : `${o.kpi.saglik.toLocaleString('tr-TR')} / 100`} help="Bulgusu olmayan etkin CRM carisi payı" explain="CRM'deki cari kayıtlarının ne kadarının temiz olduğu (Logo bağı, sahibi, tekrar kaydı gibi bir sorunu olmayanların payı). Ayrıntısı «Veri sağlığı» sekmesindedir." />
           </div>
 
           <Block
             title="Bu hafta bakılacak cariler"
-            help="Yüksek risk ve kayıp düzeyindeki cariler, risk × değer sırasıyla. Nedenler kuraldan; puan bileşenleri aşağıda."
+            help="Yüksek risk ve kayıp düzeyindeki cariler; riski yüksek ve cirosu büyük olan önde. Kartın solundaki sayı kayıp riski puanıdır (0–100), altındaki etiketler nedenleridir."
             action={
               o.bakilacakToplam > o.bakilacak.length ? (
                 <span className="flex items-center gap-1">
@@ -100,7 +102,7 @@ export default function CustomersHome() {
             }
           >
             {o.bakilacak.length === 0 ? (
-              <Empty>Yüksek risk ya da kayıp düzeyinde cari yok.</Empty>
+              <Empty title="Bu hafta bakılacak cari yok">Yüksek risk ya da kayıp düzeyinde cari bulunmuyor.</Empty>
             ) : (
               <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {o.bakilacak.map((a) => (
@@ -110,8 +112,8 @@ export default function CustomersHome() {
             )}
           </Block>
 
-          <Block title="Kanallar" help="Logo özel kod 2 (kanal) başına. Aktif = son 12 ayda faturası olan cari.">
-            <TableWrap>
+          <Block title="Kanallar" help="Logo'daki satış kanalı başına. Aktif cari: son 12 ayda faturası olan cari. Kanal adına dokununca o kanalın carileri listelenir.">
+            <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white/80">
               <table className="w-full min-w-[560px] text-[12.5px]">
                 <thead>
                   <tr>
@@ -140,7 +142,7 @@ export default function CustomersHome() {
                   ))}
                 </tbody>
               </table>
-            </TableWrap>
+            </div>
           </Block>
 
           <Block title="Aksiyonların sonucu" action={<SqlInfo k={o.kaynaklar} alan="aksiyon" label="Aksiyon etkisi" />} help="Yazılan aksiyondan sonraki 30 ve 90 günde carinin yeniden alım yapıp yapmadığı (Logo; pencere dolunca ölçülür).">
@@ -155,7 +157,7 @@ export default function CustomersHome() {
           {seg.data && seg.data.items.length > 0 && (
             <Block title="En değerli segmentler" help={seg.data.kural} action={<SqlInfo k={seg.data.kaynaklar} alan="items" label="Segmentler" />}>
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {seg.data.items.slice(0, 6).map((s) => (
+                {segs.shown.map((s) => (
                   <li key={s.id}>
                     <Link
                       to={`/musteri-iliskileri/cariler?segment=${encodeURIComponent(s.ad)}`}
@@ -169,10 +171,11 @@ export default function CustomersHome() {
                   </li>
                 ))}
               </ul>
+              <ShowMoreButton more={segs} noun="segment" />
             </Block>
           )}
 
-          <Block title="Kayıp riski nasıl hesaplanır" help="Kural puanı (0–100); model puan vermez. Süre Logo kesim tarihine göre ölçülür, donmuş veri herkesi riskli göstermez.">
+          <Block title="Kayıp riski nasıl hesaplanır" help="Puan (0–100) sabit bir kuralla hesaplanır; Zeki AI puan vermez. Süreler Logo verisinin bittiği güne göre ölçülür, bu yüzden veri gecikse de herkes riskli görünmez.">
             <ul className="flex flex-col gap-1 text-[12.5px]">
               {m.weights.map((w) => (
                 <li key={w.key} className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0">
@@ -182,7 +185,7 @@ export default function CustomersHome() {
               ))}
             </ul>
             <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-              Yüksek ≥ {m.rules.riskHigh}, orta ≥ {m.rules.riskMid}. Olağan alım aralığı carinin son 24 aydaki alım günlerinin medyanıdır; {m.rules.minPurchaseDays} günden az alımı olan cari için kanalının medyanı kullanılır. Risk puanı cariye kendiliğinden bir sonuç doğurmaz (limit ya da fiyat değişmez).
+              Yüksek ≥ {m.rules.riskHigh}, orta ≥ {m.rules.riskMid}. Olağan alım aralığı, carinin son 24 aydaki alımları arasındaki sürenin ortancasıdır; {m.rules.minPurchaseDays} günden az alımı olan cari için kanalının ortancası kullanılır. Risk puanı cariye kendiliğinden bir sonuç doğurmaz (limit ya da fiyat değişmez).
             </p>
           </Block>
         </>

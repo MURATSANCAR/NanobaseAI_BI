@@ -10,6 +10,7 @@ import { translationIoApi } from './ioApi';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
 import { xlsxUrl } from '../../components/excel';
+import { EmptyHint, Explain, ExplainLabel } from '../../components/Explain';
 
 /** Terim bankası: dil çifti başına genel terimler ve işe özel terimler. Onaylı terimi «Terim bankası düzenleme»
  *  yetkisi olan yazar; çevirmenin önerisi «aday» olarak gelir, burada onaylanır. */
@@ -44,16 +45,19 @@ function TermForm({
     >
       <label className="block">
         <span className={label}>Kaynak terim</span>
-        <input value={d.source} onChange={set('source')} className={`${field} mt-1`} />
+        <input value={d.source} onChange={set('source')} className={`${field} mt-1`} placeholder="Kaynak dildeki yazımıyla" />
       </label>
       <label className="block">
         <span className={label}>Karşılık</span>
         <input value={d.target} onChange={set('target')} className={`${field} mt-1`} placeholder="Birden çok kabul için | ile ayırın" />
       </label>
-      <label className="block">
-        <span className={label}>Kullanılmayacak karşılıklar</span>
-        <input value={d.forbidden} onChange={set('forbidden')} className={`${field} mt-1`} placeholder="; ile ayırın" />
-      </label>
+      {/* «?» düğmesi label içinde olursa etiket input yerine düğmeye bağlanır; bu yüzden div + aria-label. */}
+      <div className="block">
+        <span className={label}>
+          <ExplainLabel label="Kullanılmayacak karşılıklar">Çeviride görülünce otomatik denetimin uyarı vereceği yanlış ya da istenmeyen karşılıklar.</ExplainLabel>
+        </span>
+        <input value={d.forbidden} onChange={set('forbidden')} aria-label="Kullanılmayacak karşılıklar" className={`${field} mt-1`} placeholder="; ile ayırın" />
+      </div>
       <label className="block">
         <span className={label}>Not</span>
         <input value={d.note} onChange={set('note')} className={`${field} mt-1`} placeholder="Bağlam, kaynak, karar" />
@@ -130,15 +134,15 @@ function TermRow({ t, canEdit, onChanged }: { t: Term; canEdit: boolean; onChang
                 Genel yap
               </button>
             )}
-            <button type="button" aria-label="Düzelt" onClick={() => setEditing(true)} className={`${btnGhost} min-h-9 px-2.5`}>
+            <button type="button" aria-label="Terimi düzelt" onClick={() => setEditing(true)} className={`${btnGhost} min-h-9 px-2.5`}>
               <Pencil aria-hidden className="h-4 w-4" />
             </button>
             <button
               type="button"
-              aria-label="Sil"
+              aria-label="Terimi sil"
               disabled={del.isPending}
               onClick={() => {
-                if (window.confirm(`«${t.source}» terimi silinsin mi?`)) del.mutate();
+                if (window.confirm(`«${t.source}» terimi silinsin mi? Bu geri alınamaz.`)) del.mutate();
               }}
               className={`${btnGhost} min-h-9 px-2.5 text-rose-700`}
             >
@@ -188,6 +192,9 @@ export default function TermBank() {
     <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start lg:gap-4">
       <Panel>
         <h2 className="px-1 text-[13px] font-extrabold">Dil çifti ve süzgeç</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
+          Terim bankası, özel adların ve kavramların her çeviride aynı karşılıkla yazılmasını sağlar; çeviri masası ve otomatik denetim buradaki onaylı terimlere bakar.
+        </p>
         <div className="mt-2 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
@@ -297,8 +304,12 @@ export default function TermBank() {
 
       <Panel>
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-          <h2 className="text-[13px] font-extrabold">
+          <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
             {langName(src)} → {langName(tgt)}
+            <Explain label="Terim durumları">
+              <b>Onaylı</b> terim çeviri masasında gösterilir ve denetime girer. <b>Aday</b>, çevirmenin önerisidir; yetkili kişi onaylayınca denetime girer.
+              «Yalnız: …» etiketi terimin tek bir çeviri işinde geçerli olduğunu, «Genel yap» ise bu dil çiftinin bütün işlerine açtığını gösterir.
+            </Explain>
           </h2>
           <span className="font-mono text-[11px] tabular-nums text-canvas-muted">
             {nf.format(items.length)} terim{candidates ? ` · ${nf.format(candidates)} aday` : ''}
@@ -326,7 +337,16 @@ export default function TermBank() {
         {terms.isLoading ? (
           <Loading />
         ) : !items.length ? (
-          <p className="mt-3 px-1 text-[12px] text-canvas-muted">{q ? 'Aramaya uyan terim yok.' : 'Bu dil çiftinde henüz terim yok.'}</p>
+          <div className="mt-3">
+            {q || status ? (
+              <EmptyHint title="Süzgece uyan terim yok" why="Aramayı temizleyin ya da «Durum» seçimini «Hepsi» yapın." />
+            ) : (
+              <EmptyHint
+                title="Bu dil çiftinde henüz terim yok"
+                why={canEdit ? '«Terim ekle» ile tek tek girin ya da soldan terim listesi (CSV ya da TBX) yükleyin.' : 'Çevirmenler çeviri masasından terim önerebilir; yetkili kişi onaylayınca burada görünür.'}
+              />
+            )}
+          </div>
         ) : (
           <ul className="mt-2 space-y-1.5">
             {items.map((t) => (

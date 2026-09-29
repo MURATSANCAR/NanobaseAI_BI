@@ -39,9 +39,10 @@ export function ArtModePicker({ value, onChange, disabled }: { value: StudioArtM
 
 /** Seçime göre başlatma uyarısının süre cümlesi. */
 export function artModeDuration(m: StudioArtMode): string {
-  if (m === 'none') return 'Resim çizilmeyecek; yerleşim ve dizgi birkaç dakika sürer.';
-  if (m === 'chapter') return 'Bölüm başı resimleri, kapak ve dizgi; süre bölüm sayısına bağlı, bu sırada resim üretimi GPU\'yu kullanır.';
-  return 'Sayfa yerleşimi, resimler, kapak ve dizgi yaklaşık 40 dakika sürer; bu sırada resim üretimi GPU\'yu kullanır.';
+  const leave = ' İş arka planda sürer; sayfadan ayrılabilirsiniz.';
+  if (m === 'none') return `Resim çizilmeyecek; yerleşim ve dizgi birkaç dakika sürer.${leave}`;
+  if (m === 'chapter') return `Bölüm başı resimleri, kapak ve dizgi hazırlanır; süre bölüm sayısına bağlıdır.${leave}`;
+  return `Sayfa yerleşimi, resimler, kapak ve dizgi yaklaşık 40 dakika sürer.${leave}`;
 }
 
 const ILLUSTRATION_TR: Record<string, string> = { HER_SAYFA: 'her sayfa resimli', BOLUM_BASI: 'yalnız bölüm başlarında', YOK: 'resimsiz' };
@@ -65,7 +66,7 @@ export function ArtModeCard({ job, d }: { job: string; d: StudioJob }) {
         <div className="min-w-0 text-[12.5px] leading-snug">
           <div className="font-extrabold">{TITLE[current]}{current === 'auto' && decided ? ` → ${decided}` : ''}</div>
           {current === 'auto' && why && <div className="text-canvas-muted">{why}</div>}
-          {current !== 'auto' && <div className="text-canvas-muted">Editörün seçimi; otomatik kararın önüne geçer.</div>}
+          {current !== 'auto' && <div className="text-canvas-muted">Elle seçildi; otomatik kararın yerine bu uygulanır.</div>}
         </div>
         <button type="button" className={btnGhost} disabled={busy} onClick={() => { setNext(current); change.reset(); setOpen(true); }}
           title={busy ? 'Süren iş bitince değiştirilebilir' : undefined}>Değiştir</button>

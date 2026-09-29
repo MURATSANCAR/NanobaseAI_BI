@@ -11,14 +11,15 @@ import { EticaretFrame } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import ItemDrawer from './ItemDrawer';
 import { FUNNEL_TABS, funnelTab, type FunnelTab } from './funnelTabs';
+import { EmptyHint } from '../components/Explain';
 
 const LEADS: Record<FunnelTab, { lead: string; source: string }> = {
   sayac: {
-    lead: "Sitedeki ürün sayaçları (tüm zamanlar) ve Logo'daki son dönem satışı. Çok görüntülenip az satan kitabın kartı önce iyileştirilir: kitabı açın, eksik alanlara bakın, Zeki AI'dan kart önerisi isteyin.",
+    lead: "Sitede kitapların kaç kez görüntülendiği ve kaç tane satıldığı (tüm zamanlar), yanında Logo'daki son dönem satışı. Çok bakılıp az satan kitabın ürün sayfası önce iyileştirilir: kitabı açın, eksik alanlara bakın, Zeki AI'dan kart önerisi isteyin.",
     source: 'Kaynak: site ürün sayaçları · Logo (kesim tarihiyle)',
   },
   siparis: {
-    lead: 'Seçilen günlerde sitedeki görüntülenme artışı (gece okumaları arasındaki fark) ve aynı günlerin geçerli site siparişleri. Çok görüntülenip az satan kitaplar üstte.',
+    lead: 'Seçtiğiniz günlerde kitapların sitede kaç kez görüntülendiği ve aynı günlerde kaç sipariş aldığı. Çok bakılıp az satan kitaplar üstte.',
     source: 'Kaynak: site ürün sayaçları (gece farkı) · site siparişleri',
   },
 };
@@ -36,7 +37,7 @@ export default function FunnelScreen() {
     setParams(k === 'sayac' ? {} : { sekme: k }, { replace: true });
   };
   return (
-    <EticaretFrame title="Huni: görüntülenme → satış" lead={LEADS[tab].lead} source={LEADS[tab].source}>
+    <EticaretFrame title="Huni: görüntülenmeden satışa" lead={LEADS[tab].lead} source={LEADS[tab].source}>
       <div role="tablist" aria-label="Huni verisi" className="flex w-full gap-1 rounded-2xl bg-slate-100 p-1 sm:w-max">
         {FUNNEL_TABS.map((t) => {
           const on = t.key === tab;
@@ -50,7 +51,7 @@ export default function FunnelScreen() {
           );
         })}
       </div>
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {tab === 'siparis' ? <OrderFunnel /> : (
         <>
           {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
@@ -99,9 +100,11 @@ function Body({ meta }: { meta: Meta }) {
           <Kpi label="Site satışı" value={fmtInt(d.toplam.satis)} help="Ürün sayacındaki toplam satış adedi"
             info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Site satışı" />} />
           <Kpi label="Ortanca dönüşüm" value={fmtPct(d.ortancaDonusum)} help="Satış ÷ görüntülenme, ürünlerin ortancası"
+            explain="Dönüşüm: bir kitabın sitedeki satış adedinin görüntülenme sayısına oranı. Ortanca, kitaplar küçükten büyüğe dizildiğinde ortadaki kitabın oranıdır; tipik bir kitabı gösterir."
             info={<SqlInfo k={d.kaynaklar} alan="ortancaDonusum" label="Ortanca dönüşüm" />} />
           <Kpi label="Düşük dönüşüm" value={dusuk ? fmtInt(d.total) : '—'} active={dusuk} onClick={() => set('dusuk', dusuk ? null : '1')}
             help={`En az ${fmtInt(d.dusukEsik.enAzGoruntulenme)} görüntülenme, dönüşümü ortancanın %${Math.round(d.dusukEsik.oran * 100)}'inden az`}
+            explain="Yeterince bakılmış ama tipik bir kitaba göre çok az satan kitaplar. Karta dokununca liste yalnız bunları gösterir; önce bu kitapların ürün sayfasını iyileştirin."
             info={<SqlInfo k={d.kaynaklar} alan="dusukEsik" label="Düşük dönüşüm" />} />
         </KpiRow>
       )}
@@ -137,7 +140,7 @@ function Body({ meta }: { meta: Meta }) {
             <InfoLabel k={d.kaynaklar} alan="total" label="Süzgece uyan kitap sayısı">{`${fmtInt(d.total)} kitap`}</InfoLabel>
           </div>
         )}
-        {d && !d.items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte kitap yok.</p>}
+        {d && !d.items.length && <EmptyHint title="Bu süzgece uyan kitap yok" why="Aramayı temizleyin ya da «Yalnız düşük dönüşüm» seçimini kaldırın." />}
         <div className="flex flex-col gap-2">
           {d?.items.map((x) => <Row key={x.productKey} x={x} median={d.ortancaDonusum} onOpen={setOpen} />)}
         </div>

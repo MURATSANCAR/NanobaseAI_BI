@@ -43,6 +43,10 @@ export default function CalendarGrid({ view, channels, onPick }: { view: MonthVi
 
   return (
     <>
+      <p className="mb-2 flex items-start gap-1.5 text-[11.5px] leading-snug text-canvas-muted">
+        <AlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" />
+        <span>Kırmızı çerçeveli kalem başka bir kalemle çakışıyor. «hedef altı» kitabın satış hedefinin gerisinde olduğunu, «elle» kalemin elle eklendiğini ya da düzeltildiğini gösterir.</span>
+      </p>
       <div className="hidden overflow-x-auto rounded-2xl border border-slate-100 bg-white/80 md:block">
         <table className="w-full min-w-[860px] border-collapse text-[12px]">
           <thead>

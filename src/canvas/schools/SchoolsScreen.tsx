@@ -49,7 +49,7 @@ export default function SchoolsScreen() {
   return (
     <SchoolsFrame
       title="Okul tanıtım ve ziyaret"
-      lead="Hangi okula, ne zaman, hangi kitaplarla gidileceği: okul listesi ve profili CRM ziyaret yerlerinden, öncelik kuralla (gerekçesi yazılı), katalog kademeye uygun ve stokta kitaplardan, bayi önerisi il/ilçe ve satış karmasından. Ziyaret raporu ve eşleşmeler portalda tutulur; CRM'e yazılmaz."
+      lead="Hangi okula, ne zaman, hangi kitaplarla gideceğinizi planlarsınız. Okullar CRM'den gelir, öncelik puanı gerekçesiyle yazar, katalog okulun kademesine uygun ve stokta olan kitaplardan hazırlanır. Ziyaret raporları yalnız burada tutulur, CRM'e yazılmaz."
       source={source}
       presence={presence}
       info={
@@ -62,7 +62,7 @@ export default function SchoolsScreen() {
       }
       aside={<Tabs tabs={tabs} value={tab} onChange={(t) => update({ sekme: t === 'hafta' ? null : t })} />}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Okul tanıtım bilgileri okunamadı.')}</Note>}
       {st?.warnings?.map((w) => (
         <Note key={w} tone="warn">

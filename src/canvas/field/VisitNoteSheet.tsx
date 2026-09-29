@@ -161,7 +161,7 @@ export default function VisitNoteSheet({
                 </label>
                 <label className="flex min-w-0 flex-col gap-1">
                   <span className="text-[11px] font-bold text-canvas-muted">Tutar (₺)</span>
-                  <input inputMode="decimal" autoComplete="off" className={`${field} font-mono tabular-nums`} value={promiseAmt} onChange={(e) => setPromiseAmt(e.target.value)} />
+                  <input inputMode="decimal" autoComplete="off" className={`${field} font-mono tabular-nums`} value={promiseAmt} placeholder="Örn. 20.000" onChange={(e) => setPromiseAmt(e.target.value)} />
                 </label>
               </div>
             </div>

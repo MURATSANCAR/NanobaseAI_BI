@@ -12,6 +12,7 @@ import { trendyolApi } from './api';
 import { TrendyolData, TrendyolFrame, useTrendyolMeta } from './parts';
 import { ReaderVoicePanel, TopicChip, useVoiceLabels } from '../../signals/ReaderVoice';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Taslak kutusu: Zeki AI'dan al, kopyala. Gönderim yok; yanıtı kişi panelden verir. */
 function Draft({ kind, id, text, canDraft }: { kind: 'questions' | 'reviews'; id: string; text: string | null; canDraft: boolean }) {
@@ -35,13 +36,13 @@ function Draft({ kind, id, text, canDraft }: { kind: 'questions' | 'reviews'; id
         {canDraft && (
           <button type="button" className={btnGhost} onClick={() => get.mutate()} disabled={get.isPending}>
             {get.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-            {text ? 'Yeniden yaz' : 'Zeki AI taslağı'}
+            {text ? 'Taslağı yeniden yaz' : 'Zeki AI ile taslak yaz'}
           </button>
         )}
         {text && (
           <button type="button" className={btnGhost} onClick={copy}>
             <Copy aria-hidden className="h-4 w-4" />
-            Kopyala
+            Taslağı kopyala
           </button>
         )}
       </div>
@@ -60,12 +61,15 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
       {d && (
         <KpiRow>
           <Kpi label="Cevapsız" value={fmtInt(d.cevapsiz)} help={`${fmtInt(d.toplam)} sorudan`}
+            explain="Yüklenen soru dosyalarında cevaplanmamış görünen sorular. Cevabı Trendyol panelinden verdikten sonra yeni soru dosyasını yüklerseniz bu sayı düşer."
             info={<SqlInfo k={d?.kaynaklar} alan="cevapsiz" label="Cevapsız" />} />
           <Kpi label="Geciken" value={fmtInt(d.geciken)} help={`${d.esikSaat} saati geçen cevapsız`}
+            explain="Sorulduğu andan bu yana altta yazan saatten uzun zaman geçmiş cevapsız sorular. Önce bunlara cevap verin."
             info={<SqlInfo k={d?.kaynaklar} alan="geciken" label="Geciken" />} />
           <Kpi label="Durumu bilinmeyen" value={fmtInt(d.bilinmeyen)} help="Dosyada cevap ya da durum kolonu yok"
+            explain="Yüklenen dosyada cevaplanıp cevaplanmadığını gösteren kolon bulunmadığı için durumu anlaşılamayan sorular. Panelden cevap ya da durum kolonunu içeren dosyayı indirin."
             info={<SqlInfo k={d?.kaynaklar} alan="bilinmeyen" label="Durumu bilinmeyen" />} />
-          <Kpi label="Liste" value={fmtInt(d.total)} help={only ? 'Cevapsızlar' : 'Bütün sorular'}
+          <Kpi label="Listede" value={fmtInt(d.total)} help={only ? 'Cevapsız ya da durumu bilinmeyen sorular' : 'Bütün sorular'}
             info={<SqlInfo k={d?.kaynaklar} alan="total" label="Liste" />} />
         </KpiRow>
       )}
@@ -76,7 +80,13 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
           <ExportLink show={canExport} href={trendyolApi.exportUrl('sorular', { cevapsiz: only === 'cevapsiz', q })} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Sorular açılamadı.')}</Note>}
-        {r.isLoading ? <Loading /> : d && (
+        {r.isLoading ? <Loading /> : d && (!d.items.length ? (
+          d.toplam ? (
+            <EmptyHint title={q ? 'Aramaya uyan soru yok' : 'Cevapsız soru yok'} why={q ? 'Aramayı temizleyin ya da «Hepsi» süzgecini seçin.' : 'Yüklenen dosyadaki bütün sorular cevaplanmış görünüyor.'} />
+          ) : (
+            <EmptyHint title="Soru dosyası yüklenmemiş" why="Trendyol satıcı panelinden müşteri sorularını Excel olarak indirip «Dosya yükle» sekmesinde yükleyin." />
+          )
+        ) : (
           <>
             <TableWrap>
               <thead><tr><th className={th}>Soru</th><th className={th}>Kitap</th><th className={th}>Yanıt taslağı</th></tr></thead>
@@ -88,7 +98,7 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-canvas-muted">
                         {fmtDay(x.tarih)}
                         <TopicChip label={topics.data?.items[x.id]} />
-                        {x.cevaplandi === true ? <Pill tone="ok">Cevaplandı</Pill> : x.gecikti ? <Pill tone="err">{Math.round(x.saat ?? 0)} saat</Pill> : x.cevaplandi === false ? <Pill tone="warn">Cevapsız</Pill> : null}
+                        {x.cevaplandi === true ? <Pill tone="ok">Cevaplandı</Pill> : x.gecikti ? <Pill tone="err">{Math.round(x.saat ?? 0)} saattir cevapsız</Pill> : x.cevaplandi === false ? <Pill tone="warn">Cevapsız</Pill> : null}
                       </div>
                     </td>
                     <td className={td}><BookCell name={x.ad} code={x.stokKodu} sub={x.barkod} /></td>
@@ -99,7 +109,7 @@ function QuestionList({ q, canDraft, canExport }: { q: string; canDraft: boolean
             </TableWrap>
             <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={r.isLoading} fetching={r.isFetching} onPage={setPage} />
           </>
-        )}
+        ))}
       </Panel>
     </>
   );
@@ -120,7 +130,13 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
           <ExportLink show={canExport} href={trendyolApi.exportUrl('yorumlar', { maxPuan: max || undefined, q })} />
         </div>
         {r.error && <Note tone="err">{errText(r.error, 'Yorumlar açılamadı.')}</Note>}
-        {r.isLoading ? <Loading /> : d && (
+        {r.isLoading ? <Loading /> : d && (!d.items.length ? (
+          d.toplam ? (
+            <EmptyHint title={q ? 'Aramaya uyan yorum yok' : 'Düşük puanlı yorum yok'} why={q ? 'Aramayı temizleyin ya da «Hepsi» süzgecini seçin.' : 'Yüklenen yorumların hiçbiri 3 ya da daha düşük puanlı değil.'} />
+          ) : (
+            <EmptyHint title="Yorum dosyası yüklenmemiş" why="Trendyol satıcı panelinden ürün yorumlarını Excel olarak indirip «Dosya yükle» sekmesinde yükleyin." />
+          )
+        ) : (
           <>
             <TableWrap>
               <thead><tr><th className={th}>Puan</th><th className={th}>Yorum</th><th className={th}>Kitap</th><th className={th}>Yanıt taslağı</th></tr></thead>
@@ -137,7 +153,7 @@ function ReviewList({ q, canDraft, canExport }: { q: string; canDraft: boolean; 
             </TableWrap>
             <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={r.isLoading} fetching={r.isFetching} onPage={setPage} />
           </>
-        )}
+        ))}
       </Panel>
       {d && d.kitaplar.length > 0 && (
         <Panel>
@@ -170,8 +186,8 @@ export default function TrendyolQuestions() {
   return (
     <TrendyolFrame
       title="Soru ve yorum"
-      lead="Cevapsız müşteri soruları ve düşük puanlı yorumlar; Zeki AI yanıt taslağı yazar, yanıtı siz panelden verirsiniz. E-posta, telefon ve uzun numaralar maskelenir."
-      aside={<input className={field} placeholder="Kitap, barkod ya da metin" value={text} onChange={(e) => setText(e.target.value)} />}
+      lead="Cevap bekleyen müşteri soruları ve düşük puanlı yorumlar. Zeki AI yanıt taslağı yazar; taslağı kopyalayıp yanıtı Trendyol panelinden siz verirsiniz. E-posta, telefon ve uzun numaralar gizlenir."
+      aside={<input className={field} aria-label="Ara" placeholder="Ara: kitap, barkod ya da metin" value={text} onChange={(e) => setText(e.target.value)} />}
     >
       <TrendyolData meta={m} />
       <ReaderVoicePanel sources={['trendyol-soru', 'trendyol-yorum']} />

@@ -30,14 +30,17 @@ function NewSuggestion() {
   const [code, setCode] = useState<string | null>(null);
   const send = useMutation({
     mutationFn: () => engApi.createSuggestion(text, anon),
-    onSuccess: (r) => { setText(''); setCode(r.followCode); toast.success('Öneriniz alındı.'); void qc.invalidateQueries({ queryKey: ['hr', 'eng', 'sugg'] }); },
+    onSuccess: (r) => { setText(''); setCode(r.followCode); toast.success('Öneriniz alındı. Teşekkürler.'); void qc.invalidateQueries({ queryKey: ['hr', 'eng', 'sugg'] }); },
     onError: (e) => toast.error(errText(e, 'Gönderilemedi.')),
   });
   return (
-    <Block title="Öneri ver">
-      <textarea className={`${field} min-h-[110px]`} value={text} maxLength={4000} onChange={(e) => setText(e.target.value)} placeholder="Önerinizi yazın" />
+    <Block title="Öneri ver" help="İK önerinizi konusuna göre ilgili birime yönlendirir ve cevaplar. Bir çalışanla ilgili şikâyetler birimlere gitmez, yalnız İK’da kalır.">
+      <textarea className={`${field} min-h-[110px]`} value={text} maxLength={4000} onChange={(e) => setText(e.target.value)} placeholder="ör. Toplantı odaları için ortak bir rezervasyon takvimi olsun" />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />Adsız gönder</label>
+        <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold">
+          <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />
+          <span>Adsız gönder <span className="font-normal text-canvas-muted">· size bir takip kodu verilir</span></span>
+        </label>
         <button type="button" className={btnPrimary} disabled={send.isPending || text.trim().length < 5} onClick={() => send.mutate()}>Gönder</button>
       </div>
       {code && <Note tone="warn">Takip kodunuz: <b className="font-mono">{code}</b> — bir yere not edin; tekrar gösterilmez.</Note>}
@@ -52,13 +55,13 @@ function Mine() {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
       <Block title="Adlı önerilerim">
-        {!mine.data?.items.length && <div className="text-[12px] text-canvas-muted">Adlı öneriniz yok.</div>}
+        {!mine.data?.items.length && <div className="text-[12px] text-canvas-muted">Adınızla verdiğiniz öneri yok. Adsız önerilerinizi yandaki takip koduyla izleyebilirsiniz.</div>}
         <ul className="flex flex-col gap-1.5">{(mine.data?.items ?? []).map((s) => <li key={s.id}><Card s={s} k={mine.data?.kaynaklar} /></li>)}</ul>
       </Block>
-      <Block title="Adsız önerimi izle">
+      <Block title="Adsız önerimi izle" help="Adsız öneri verdiğinizde size gösterilen 10 karakterlik takip kodunu girin.">
         <div className="flex gap-2">
           <input className={field} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABCDE-FGHJK" />
-          <button type="button" className={btnGhost} disabled={track.isPending || code.replace(/[^A-Z0-9]/g, '').length !== 10} onClick={() => track.mutate()}>Bak</button>
+          <button type="button" className={btnGhost} disabled={track.isPending || code.replace(/[^A-Z0-9]/g, '').length !== 10} onClick={() => track.mutate()}>Durumuna bak</button>
         </div>
         {track.data && <div className="mt-2"><Card s={track.data} k={track.data.kaynaklar} alan="topicProb" /></div>}
       </Block>
@@ -104,7 +107,7 @@ function Inbox({ meta }: { meta: EngMeta }) {
         </select>
       }>
       {q.error && <Note tone="err">{errText(q.error, 'Öneriler okunamadı.')}</Note>}
-      {q.data && !q.data.items.length && <div className="text-[12px] text-canvas-muted">Öneri yok.</div>}
+      {q.data && !q.data.items.length && <div className="text-[12px] text-canvas-muted">{state ? 'Bu durumda öneri yok.' : 'Henüz öneri gelmedi.'}</div>}
       <ul className="flex flex-col gap-2">
         {(q.data?.items ?? []).map((s) => (
           <li key={s.id}>
@@ -144,11 +147,11 @@ function Handle({ s, admin, meta, topics, busy, onAct }: {
       )}
       {s.state !== 'cevaplandi' && (
         <div className="flex flex-col gap-2 sm:flex-row">
-          <textarea className={`${field} min-h-[60px] flex-1`} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Cevap" />
+          <textarea className={`${field} min-h-[60px] flex-1`} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Öneri sahibine cevabınız (adsız öneride sahibi takip koduyla görür)" />
           <button type="button" className={btnPrimary} disabled={busy || !answer.trim()} onClick={() => onAct('answer', { answer })}>Cevapla</button>
         </div>
       )}
-      {admin && <div className="flex justify-end"><button type="button" className={btnGhost} disabled={busy} onClick={() => onAct('close', {})}>Kapat</button></div>}
+      {admin && <div className="flex justify-end"><button type="button" className={btnGhost} disabled={busy} onClick={() => onAct('close', {})}>Öneriyi kapat</button></div>}
     </div>
   );
 }

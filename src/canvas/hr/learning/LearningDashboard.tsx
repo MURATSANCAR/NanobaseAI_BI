@@ -25,20 +25,25 @@ export default function LearningDashboard() {
     <LearningFrame
       crumb="Eğitim ve gelişim"
       title="Eğitim panosu"
-      lead="Zorunlu eğitimlerin son tarihleri, oturumlar ve tamamlanma. Durum, doğrulanmış en son sertifikadan hesaplanır; geçerlilik süresi eğitim kartında İK'nın girdiği süredir."
+      lead="Zorunlu eğitimlerin son tarihleri, oturumlar ve tamamlanma. Bir çalışanın durumu, doğrulanmış en son sertifikasından ve eğitim kartındaki geçerlilik süresinden hesaplanır."
     >
       {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
       {dash.error && <Note tone="err">{errText(dash.error, 'Pano okunamadı.')}</Note>}
       {c && (
         <>
           <KpiRow>
-            <Kpi label="Süresi dolmuş" value={String(c.overdue + c.never)} help={`Dolmuş ${c.overdue} · hiç almamış ${c.never}`} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Süresi dolmuş" />} />
+            <Kpi label="Süresi dolmuş" value={String(c.overdue + c.never)} help={`Dolmuş ${c.overdue} · hiç almamış ${c.never}`}
+              explain="Zorunlu bir eğitimin geçerliliği bitmiş ya da o eğitimi hiç almamış çalışan-eğitim eşleşmelerinin sayısı. Bir kişi iki eğitimde eksikse iki kez sayılır." info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Süresi dolmuş" />} />
             <Kpi label="Dolacak" value={c.expiring === null ? '—' : String(c.expiring)}
-              help={c.alertDays ? `${c.alertDays} gün içinde` : 'Uyarı günü ayarlanmadı (Portal ayarları → İnsan kaynakları)'} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Dolacak" />} />
-            <Kpi label="Bu ay oturum" value={String(c.sessionsThisMonth)} help={c.awaitingClose ? `${c.awaitingClose} oturumun yoklaması kapatılmadı` : 'Planlı oturumlar'} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Bu ay oturum" />} />
-            <Kpi label="Tamamlanma" value={pct(c.completionRate)} help={`${c.completed} / ${c.enrolled} onaylı katılım`} info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Tamamlanma" />} />
+              help={c.alertDays ? `${c.alertDays} gün içinde` : 'Uyarı günü ayarlanmadı (Portal ayarları → İnsan kaynakları)'}
+              explain="Geçerliliği uyarı süresi içinde bitecek zorunlu eğitimler; bitmeden yenileme oturumu planlanmalı." info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Dolacak" />} />
+            <Kpi label="Bu ay oturum" value={String(c.sessionsThisMonth)} help={c.awaitingClose ? `${c.awaitingClose} oturumun yoklaması kapatılmadı` : 'Planlı oturumlar'}
+              explain="Bu ay içinde planlı, henüz kapatılmamış oturumlar. Oturum yapıldıktan sonra yoklama alınıp oturum kapatılmalı; kapatılmayan oturumun katılımcıları tamamlamış sayılmaz." info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Bu ay oturum" />} />
+            <Kpi label="Tamamlanma" value={pct(c.completionRate)} help={`${c.completed} / ${c.enrolled} onaylı katılım`}
+              explain="Onaylanmış katılımlardan, oturum kapatılırken yoklamada «katıldı» işaretlenenlerin payı." info={<SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Tamamlanma" />} />
           </KpiRow>
           <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11.5px] font-bold text-canvas-muted">Bekleyen işler</span>
             <SqlInfo k={dash.data?.kaynaklar} alan="counters" label="Bekleyen onay, belge, anket ve ihtiyaç" />
             <Pill tone={c.pendingApprovals ? 'warn' : 'muted'}>Onay bekleyen katılım {c.pendingApprovals}</Pill>
             <Pill tone={c.unverifiedCertificates ? 'warn' : 'muted'}>Doğrulama bekleyen belge {c.unverifiedCertificates}</Pill>
@@ -51,7 +56,7 @@ export default function LearningDashboard() {
       {dash.data && (
         <Block title="Birim × eğitim tamamlanma" help="İptal edilmemiş oturumlardaki onaylı katılımlardan tamamlananların payı." info={<SqlInfo k={dash.data.kaynaklar} alan="matrix" label="Birim × eğitim tamamlanma" />}>
           {dash.data.matrix.length === 0 ? (
-            <p className="text-[12px] text-canvas-muted">Henüz oturum kaydı yok.</p>
+            <p className="text-[12px] text-canvas-muted">Henüz oturum kaydı yok. «Katalog ve oturumlar»dan ilk oturumu açın.</p>
           ) : (
             <TableWrap>
               <thead>
@@ -390,7 +395,7 @@ function SpendPanel({ info }: { info?: Info }) {
           <input className={field} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={s?.budget ? String(s.budget.amount) : 'ör. 250000'} />
         </label>
         <button type="button" className={btnPrimary} disabled={!amount.trim() || save.isPending} onClick={() => save.mutate()}>Bütçeyi kaydet</button>
-        <button type="button" className={btnGhost} onClick={() => setShowAccounts((v) => !v)}>{showAccounts ? 'Hesap listesini kapat' : 'Aday gider hesapları'}</button>
+        <button type="button" className={btnGhost} onClick={() => setShowAccounts((v) => !v)}>{showAccounts ? 'Hesap listesini kapat' : 'Olası gider hesaplarını göster'}</button>
       </div>
       {showAccounts && (
         <div className="mt-2">

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, Mail } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Loading, Note, TableWrap, btnGhost, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { KIND_LABEL, fmtDay, fmtInt, fmtMoney, fmtPct, fmtUnit, supplyApi } from './api';
@@ -20,7 +21,7 @@ export default function Supplier() {
   return (
     <SupplyFrame
       title={d?.unvan ?? 'Tedarikçi'}
-      lead={d ? `${d.kod} · ${KIND_LABEL[d.tur] ?? d.tur}${d.crmMatbaa.length ? ` · CRM'de ${d.crmMatbaa.join(', ')}` : ''}` : 'Logo carisi'}
+      lead={d ? `${d.kod} · ${KIND_LABEL[d.tur] ?? d.tur}${d.crmMatbaa.length ? ` · CRM'de ${d.crmMatbaa.join(', ')}` : ''}. Bu tedarikçideki açık işler, borç ve ödemeler, faturalar ve teslim karnesi.` : 'Logo carisi'}
       back={{ to: '/tedarik/tedarikciler', label: 'Tedarikçiler' }}
       source={d?.logo ? `Logo ${d.logo.yil} · veri sonu ${fmtDay(d.logo.veriSonu)}` : undefined}
     >
@@ -29,11 +30,19 @@ export default function Supplier() {
       {d && (
         <>
           {d.crmMatbaa.length === 0 && d.tur !== 'kagit' && (
-            <Note tone="info">Bu cari henüz bir CRM matbaasına eşlenmedi; açık iş ve karne görünmez. Eşleme: Tedarikçiler → Matbaa ↔ cari.</Note>
+            <Note tone="info">Bu cari henüz CRM'deki bir matbaa adıyla eşlenmedi; bu yüzden açık iş ve karne görünmüyor. Eşlemeyi «Tedarikçiler» ekranının «Matbaa ↔ cari» sekmesinden yapabilirsiniz.</Note>
           )}
           {d.borcGorunur && ag ? (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="yaslandirma">Borç ve ödeme (FIFO yaklaşımı)</InfoLabel></h2>
+              <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+                <InfoLabel k={d.kaynaklar} alan="yaslandirma">Borç ve ödeme (tahmini)</InfoLabel>
+                <Explain label="Borç ve ödeme" title="Kutular ne gösterir?">
+                  <span className="block"><b>Bakiye:</b> bu tedarikçiye borcumuz (bu yıl başından alacak − borç).</span>
+                  <span className="block"><b>Vadesi geçmiş / gelmemiş:</b> ödeme planındaki satırların ödeme günü geçmiş ya da gelmemiş kısmı; alttaki kutular kaç gün geçtiğine ya da kaldığına göre ayrılır.</span>
+                  <span className="block"><b>Vade planı olmayan:</b> bakiyenin Logo'da ödeme planına bağlanmamış kısmı.</span>
+                  Logo'da ödemeler faturaya bağlanmadığından tutarlar yaklaşıktır.
+                </Explain>
+              </h2>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Box label="Bakiye" value={fmtMoney(ag.bakiye)} />
                 <Box label="Vadesi geçmiş" value={fmtMoney(ag.vadesiGecmis)} warn={ag.vadesiGecmis > 0} />
@@ -88,7 +97,7 @@ export default function Supplier() {
             <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="acikIsler" label="Açık işler">{`Açık işler (${fmtInt(d.acikIsler.length)})`}</InfoLabel></h2>
             <div className="mt-2">
               {d.acikIsler.length === 0 ? (
-                <Note tone="info">Bu matbaada baskıdan çıkmamış iş yok.</Note>
+                <EmptyHint title="Bu matbaada açık iş yok" why="Bu tedarikçiye atanmış, baskıdan henüz çıkmamış üretim kartı bulunmuyor." />
               ) : (
                 d.acikIsler.map((c) => (
                   <CardLine
@@ -97,11 +106,11 @@ export default function Supplier() {
                     right={
                       me?.canDecide ? (
                         <span className="flex gap-1.5">
-                          <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'sartname', kartId: c.id })} aria-label="Şartname taslağı">
+                          <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'sartname', kartId: c.id })} aria-label="Şartname taslağı hazırla" title="Şartname taslağı hazırla">
                             <FileText aria-hidden className="h-4 w-4" />
                           </button>
                           {c.gecikme > 0 && (
-                            <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'eskalasyon', kartId: c.id })} aria-label="Gecikme yazısı taslağı">
+                            <button type="button" className={btnGhost} disabled={draft.make.isPending} onClick={() => draft.make.mutate({ tur: 'eskalasyon', kartId: c.id })} aria-label="Gecikme yazısı taslağı hazırla" title="Gecikme yazısı taslağı hazırla">
                               <Mail aria-hidden className="h-4 w-4" />
                             </button>
                           )}
@@ -116,7 +125,13 @@ export default function Supplier() {
 
           {d.karne.length > 0 && (
             <Panel>
-              <h2 className="px-1 text-[13px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="karne">Karne (Üretim yönetimi)</InfoLabel></h2>
+              <h2 className="flex items-center gap-1 px-1 text-[13px] font-extrabold">
+                <InfoLabel k={d.kaynaklar} alan="karne">Karne (Üretim yönetimi)</InfoLabel>
+                <Explain label="Karne" title="Karne ne gösterir?">
+                  <span className="block"><b>Zamanında teslim:</b> planlanan baskı tarihinde ya da daha önce basılan işlerin oranı; «ölçüm», iki tarihi de bilinen iş sayısıdır.</span>
+                  <span className="block"><b>Dosya → depo:</b> baskı dosyasının matbaaya gitmesinden kitabın depoya girmesine kadar geçen ortanca gün.</span>
+                </Explain>
+              </h2>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {d.karne.map((k) => (
                   <div key={k.printer} className="contents">

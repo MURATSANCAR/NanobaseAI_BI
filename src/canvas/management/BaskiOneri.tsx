@@ -12,6 +12,7 @@ import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import SearchSelect from '../components/SearchSelect';
 import { useCan } from '../useAdmin';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
 import './management.css';
 import { notifyExport } from '../data-security/notify';
@@ -235,19 +236,19 @@ export default function BaskiOneri() {
               <h1>
                 Hangi kitap yeniden basılmalı<span>?</span>
               </h1>
-              <p>Satış hızına göre stok kaç ay yeter; bekleyen sipariş ve CRM önerisiyle birlikte.</p>
+              <p>Her kitabın stoğu bugünkü satış hızıyla kaç ay yeter; bekleyen sipariş ve CRM'deki baskı önerisiyle birlikte. Önce «Risk/Acil» ve «Kritik» kitaplara bakın.</p>
             </div>
             <div className="mg-actions">
               <button type="button" className="mg-button" onClick={() => openSheet({ kind: 'all' })}>
-                <Code2 size={16} /> SQL ve hesaplar
+                <Code2 size={16} /> Hesaplar ve kaynaklar
               </button>
               {canExport && (
                 <>
                   <button type="button" className="mg-button" onClick={download} disabled={!view || rows.length === 0}>
-                    <ArrowDownToLine size={16} /> CSV
+                    <ArrowDownToLine size={16} /> CSV indir
                   </button>
                   <button type="button" className="mg-button" onClick={downloadXlsx} disabled={!view || rows.length === 0}>
-                    <FileSpreadsheet size={16} /> Excel
+                    <FileSpreadsheet size={16} /> Excel indir
                   </button>
                 </>
               )}
@@ -280,13 +281,13 @@ export default function BaskiOneri() {
               ) : snap?.error ? (
                 <>
                   <h2>Rapor hazırlanamadı</h2>
-                  <p>Veri kaynaklarından biri yanıt vermedi. Ayrıntı yukarıda; “Verileri yenile” ile tekrar denenebilir.</p>
+                  <p>Logo ya da CRM yanıt vermedi. Ayrıntı yukarıda; biraz sonra «Verileri yenile» ile yeniden deneyebilirsiniz.</p>
                 </>
               ) : (
                 <>
                   <Loader2 className="animate-spin" size={22} />
                   <h2>Rapor hazırlanıyor</h2>
-                  <p>Logo ve CRM’den dokuz sorgu okunuyor. İlk okuma birkaç dakika sürebilir; sonra veriler beş dakikada bir kendiliğinden yenilenir.</p>
+                  <p>Logo ve CRM okunuyor. İlk okuma birkaç dakika sürebilir; sonra veriler beş dakikada bir kendiliğinden yenilenir.</p>
                 </>
               )}
             </section>
@@ -313,6 +314,13 @@ export default function BaskiOneri() {
                 </label>
               </div>
 
+              <div className="flex flex-wrap items-center gap-1 text-[12px] font-semibold text-canvas-muted">
+                <span>Öneri düzeyleri · dokunarak süzün</span>
+                <Explain label="Öneri düzeyleri" title="Öneri düzeyleri ne demek?">
+                  Stok, bugünkü satış hızıyla ne kadar yetiyor: Risk/Acil 1 ay ya da daha az (stok yoksa da), Kritik 1–1,5 ay, Karar Ver 1,5–2 ay, Takip Et 2–2,5 ay,
+                  Yeterli Stok 2,5 aydan fazla.{levels.includes('Talep yok') ? ' Talep yok: stok yok ama satış da fiilen durmuş; basım gerekmez.' : ''}
+                </Explain>
+              </div>
               <div className="mg-levels" role="group" aria-label="Öneriye göre süz" style={{ ['--mg-level-count' as string]: levels.length || 5 }}>
                 {levels.map((level) => {
                   const on = oneri.has(level);
@@ -342,6 +350,9 @@ export default function BaskiOneri() {
               {presets.length > 0 && (
                 <div className="mg-presets" role="group" aria-label="Mevcut rapor açılış süzgeçleri">
                   <span className="mg-presets-label">Mevcut rapor açılışı</span>
+                  <Explain label="Mevcut rapor açılışı">
+                    Şirketin alışık olduğu baskı öneri raporunun açılışta uyguladığı süzgeçler. Bir süzgece dokunarak kaldırabilir ya da geri ekleyebilirsiniz.
+                  </Explain>
                   {presets.map((preset) => {
                     const on = !dropped.has(preset.key);
                     const values = preset.values.map((v) => v ?? '(boş)');
@@ -449,7 +460,11 @@ function ReportTable({
   const stickyLeft = (i: number) => (i === 0 ? 0 : i === 1 ? widthOf(cols[0]) : undefined);
 
   if (rows.length === 0) {
-    return <div className="mg-table-wrap mg-table-empty">{view.rows.length === 0 && view.emptyText ? view.emptyText : 'Bu süzgeçlere uyan kitap yok.'}</div>;
+    return (
+      <div className="mg-table-wrap mg-table-empty">
+        {view.rows.length === 0 && view.emptyText ? view.emptyText : 'Bu süzgeçlere uyan kitap yok. Süzgeçleri gevşetin ya da «Süzgeçleri temizle» ile bütün listeye dönün.'}
+      </div>
+    );
   }
 
   return (

@@ -7,7 +7,7 @@ korunur (boş gönderilen alan sıfırlanır).
 
 **T-soft'a yazma YASAK (kullanıcı kararı 2026-09-25):** bu istemci yalnız okur. `READ_ONLY` dışındaki her yöntem
 (`update*`, `set*`, `delete*`, önbellek temizleme dahil) çağrılmadan hata atar. Onaylanan öneriler T-soft'a gitmez;
-gidecekleri yer CRM'dir (Web API yetkisi bekleniyor).
+CRM'e de yazılmaz (kullanıcı kuralı 2026-09-28); portalda kayıtlı durur.
 
 Google için yeni bağımlılık yok: servis hesabı JWT'si sunucudaki `openssl` ile imzalanır, belirteç ve
 Search Console çağrıları httpx ile yapılır.

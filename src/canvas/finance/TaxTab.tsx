@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { toast } from 'sonner';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
@@ -33,12 +34,12 @@ function EditSheet({ item, open, statuses, onClose }: { item: TaxItem | null; op
       return item ? financeApi.taxUpdate(item.id, body) : financeApi.taxCreate(body);
     },
     onSuccess: () => { toast.success('Beyan kaydedildi.'); qc.invalidateQueries({ queryKey: ['finance'] }); onClose(); },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Beyan kaydedilemedi; biraz sonra yeniden deneyin.') ?? ''),
   });
   const del = useMutation({
     mutationFn: () => financeApi.taxDelete(item!.id),
     onSuccess: () => { toast.success('Beyan silindi.'); qc.invalidateQueries({ queryKey: ['finance'] }); onClose(); },
-    onError: (e) => toast.error(errText(e, 'Silinemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Beyan silinemedi; biraz sonra yeniden deneyin.') ?? ''),
   });
   const set = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }));
   return (
@@ -50,7 +51,7 @@ function EditSheet({ item, open, statuses, onClose }: { item: TaxItem | null; op
           <label className="flex flex-col gap-1"><span className={labelCls}>Son gün</span><input type="date" className={field} value={d.sonGun} onChange={set('sonGun')} required /></label>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1"><span className={labelCls}>Sorumlu</span><input className={field} value={d.sorumlu} onChange={set('sorumlu')} /></label>
+          <label className="flex flex-col gap-1"><span className={labelCls}>Sorumlu</span><input className={field} value={d.sorumlu} onChange={set('sorumlu')} placeholder="Ör. Muhasebe" /></label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Durum</span>
             <select className={field} value={d.durum} onChange={set('durum')}>
@@ -60,13 +61,14 @@ function EditSheet({ item, open, statuses, onClose }: { item: TaxItem | null; op
         </div>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Tahmini ödeme (isteğe bağlı)</span>
-          <input inputMode="decimal" className={`${field} font-mono`} value={d.tutar} onChange={set('tutar')} placeholder="Nakit tablosunda çıkış olur" />
+          <input inputMode="decimal" className={`${field} font-mono`} value={d.tutar} onChange={set('tutar')} placeholder="Ör. 250.000" />
+          <span className="text-[11px] text-canvas-muted">Girerseniz son gün haftasında 13 haftalık nakit tablosuna çıkış olarak yazılır.</span>
         </label>
         <label className="flex flex-col gap-1"><span className={labelCls}>Not</span><textarea className={`${field} min-h-[72px]`} value={d.not} onChange={set('not')} /></label>
         <div className="flex flex-wrap justify-between gap-2">
           {item ? (
             <button type="button" className={`${btnGhost} text-red-700`} onClick={() => del.mutate()} disabled={del.isPending}>
-              <Trash2 aria-hidden className="h-4 w-4" /> Sil
+              <Trash2 aria-hidden className="h-4 w-4" /> Beyanı sil
             </button>
           ) : <span />}
           <div className="flex gap-2">
@@ -86,10 +88,10 @@ export default function TaxTab({ year, canEdit, statuses }: { year: number; canE
   const copy = useMutation({
     mutationFn: () => financeApi.taxCopy(year - 1, year),
     onSuccess: (r) => { toast.success(`${r.kopyalanan} beyan kopyalandı${r.atlanan ? `, ${r.atlanan} zaten vardı` : ''}. Günleri denetleyin.`); qc.invalidateQueries({ queryKey: ['finance', 'tax'] }); },
-    onError: (e) => toast.error(errText(e, 'Kopyalanamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Geçen yılın takvimi kopyalanamadı; biraz sonra yeniden deneyin.') ?? ''),
   });
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Vergi takvimi açılamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Vergi takvimi açılamadı; biraz sonra yeniden deneyin.')}</Note>;
   const d = q.data;
   if (!d) return null;
   return (
@@ -116,7 +118,14 @@ export default function TaxTab({ year, canEdit, statuses }: { year: number; canE
         </Note>
       )}
       {!d.items.length ? (
-        <Note tone="info">{year} için beyan girilmemiş. Takvim elle yüklenir; geçen yılın takvimi varsa kopyalanıp günleri denetlenebilir.</Note>
+        <EmptyHint
+          title={`${year} için beyan girilmemiş`}
+          why={
+            canEdit
+              ? `Takvim elle girilir. «Beyan ekle» ile tek tek ekleyebilir ya da «${year - 1} takvimini kopyala» ile geçen yılınkini alıp günleri denetleyebilirsiniz.`
+              : 'Takvim muhasebe tarafından elle girilir; henüz bu yıl için beyan eklenmemiş.'
+          }
+        />
       ) : (
         <Panel>
           <TableWrap>

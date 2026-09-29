@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { KpiRow, Kpi, Panel } from '../editorial/kit';
 import { STAGE_TONE, fmtDay, fmtInt, fmtMoney, inflApi, today, type Agg, type Meta, type Report } from './api';
@@ -30,8 +31,8 @@ export default function CollabReport() {
   return (
     <InflFrame
       title="İşbirliği raporu"
-      lead="Dönem günü: yayın günü, yoksa planlanan yayın, yoksa kayıt günü. Vazgeçilen işler sayılmaz. Etkileşim başı maliyet = harcama ÷ etkileşim."
-      aside={m?.me.canExport ? <a href={inflApi.reportUrl(frm, to)} className={btnGhost}><Download aria-hidden className="h-4 w-4" /> Excel</a> : undefined}
+      lead="Seçilen dönemdeki işbirliklerinin sonucu: kaç paylaşım yapıldı, ne kadar ilgi gördü, ne kadar harcandı. Bir iş, yayın gününe (yoksa planlanan yayın ya da kayıt gününe) göre döneme girer; vazgeçilen işler sayılmaz."
+      aside={m?.me.canExport ? <a href={inflApi.reportUrl(frm, to)} className={btnGhost}><Download aria-hidden className="h-4 w-4" /> Excel indir</a> : undefined}
     >
       <Panel>
         <div className="grid grid-cols-2 gap-2 sm:w-[420px]">
@@ -45,9 +46,11 @@ export default function CollabReport() {
         <>
           <KpiRow>
             <Kpi label="İşbirliği" value={fmtInt(r.total.collabs)} help={`${r.total.published} yayında`} info={<SqlInfo k={r.kaynaklar} alan="total" label="İşbirliği" />} />
-            <Kpi label="Etkileşim" value={fmtInt(r.total.engagement)} help={`erişim ${fmtInt(r.total.reach)}`} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim" />} />
+            <Kpi label="Etkileşim" value={fmtInt(r.total.engagement)} help={`erişim ${fmtInt(r.total.reach)}`} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim" />}
+              explain="Paylaşımların aldığı beğeni, yorum, paylaşım ve kaydetme toplamı; işbirliği kartına girilen sayılardan gelir. Alt satırdaki erişim, paylaşımı gören kişi sayısıdır." />
             <Kpi label="Harcama" value={r.total.spend !== null ? fmtMoney(r.total.spend) : '—'} help={r.total.spend !== null ? 'KDV hariç ücret toplamı' : 'ücretler yetkiyle görünür'} info={<SqlInfo k={r.kaynaklar} alan="total" label="Harcama" />} />
-            <Kpi label="Etkileşim başı maliyet" value={r.total.cpe !== null ? fmtMoney(r.total.cpe) : '—'} help={r.total.disclosureMissing ? `${r.total.disclosureMissing} yayında yasal etiket işaretlenmedi` : 'yasal etiket eksiği yok'} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim başı maliyet" />} />
+            <Kpi label="Etkileşim başı maliyet" value={r.total.cpe !== null ? fmtMoney(r.total.cpe) : '—'} help={r.total.disclosureMissing ? `${r.total.disclosureMissing} yayında yasal etiket işaretlenmedi` : 'yasal etiket eksiği yok'} info={<SqlInfo k={r.kaynaklar} alan="total" label="Etkileşim başı maliyet" />}
+              explain="Harcamanın etkileşime bölümü: bir beğeni, yorum ya da paylaşım için ortalama kaç lira ödendiği. Düşük olması daha verimli demektir. Tabloda «EBM» diye kısaltılır." />
           </KpiRow>
           <CrmSpend r={r} />
           <Panel>
@@ -89,7 +92,7 @@ function AggTable({ rows, fee }: { rows: Array<{ key: string; name: string; link
   return (
     <TableWrap>
       <table className="w-full min-w-[620px] text-[12.5px]">
-        <thead><tr><th className={th}>Ad</th><th className={th}>İşbirliği</th><th className={th}>Yayında</th><th className={th}>Erişim</th><th className={th}>Etkileşim</th>{fee && <th className={th}>Harcama</th>}{fee && <th className={th}>CPE</th>}</tr></thead>
+        <thead><tr><th className={th}>Ad</th><th className={th}>İşbirliği</th><th className={th}>Yayında</th><th className={th}>Erişim</th><th className={th}>Etkileşim</th>{fee && <th className={th}>Harcama</th>}{fee && <th className={th}><span className="inline-flex items-center gap-1">EBM<Explain label="EBM" title="Etkileşim başı maliyet">Harcamanın etkileşime bölümü: bir etkileşim için ortalama kaç lira ödendiği.</Explain></span></th>}</tr></thead>
         <tbody>
           {rows.map((x) => (
             <tr key={x.key} className="border-t border-slate-100">
@@ -109,11 +112,11 @@ function AggTable({ rows, fee }: { rows: Array<{ key: string; name: string; link
 }
 
 function Items({ r, meta }: { r: Report; meta: Meta }) {
-  if (!r.items.length) return <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu dönemde işbirliği yok.</div>;
+  if (!r.items.length) return <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu dönemde işbirliği yok. Dönemi genişletmeyi deneyin.</div>;
   return (
     <TableWrap>
       <table className="w-full min-w-[760px] text-[12.5px]">
-        <thead><tr><th className={th}>Gün</th><th className={th}>No</th><th className={th}>Kişi</th><th className={th}>Kitap</th><th className={th}>Aşama</th><th className={th}>Etiket</th><th className={th}>Etkileşim</th>{meta.me.canSeeFee && <th className={th}>Ücret</th>}</tr></thead>
+        <thead><tr><th className={th}>Gün</th><th className={th}>No</th><th className={th}>Kişi</th><th className={th}>Kitap</th><th className={th}>Aşama</th><th className={th}>Yasal etiket</th><th className={th}>Etkileşim</th>{meta.me.canSeeFee && <th className={th}>Ücret</th>}</tr></thead>
         <tbody>
           {r.items.map((c) => (
             <tr key={c.id} className="border-t border-slate-100">

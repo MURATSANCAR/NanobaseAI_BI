@@ -37,17 +37,17 @@ export default function BacklistScreen() {
     <MarketingFrame
       crumb="Backlist"
       title="Backlist pazarlama planları"
-      lead="Yayımlanalı bir yılı geçen kitapların uyku endeksi: satış eğilimi, stok, marj, tahmin ve hedef sapması ayrı ayrı görünür, ağırlıklarını siz belirlersiniz. Özel gün ve yazarın yeni kitabıyla eşleşen kitaplar için aktivasyon planı açılır; kampanyaların öncesi/sonrası satışı Etki sekmesinde."
+      lead="Backlist, yayımlanalı bir yılı geçmiş kitaplardır. Burada satışı uykuya dalan kitapları bulur, özel gün ya da yazarın yeni kitabı gibi fırsatlarla eşleştirir ve yeniden hareketlendirme (aktivasyon) planı açarsınız; kampanyanın öncesi ve sonrası satışı Etki sekmesinde."
       source={run?.veriSonu ? `Logo verisi ${fmtDay(run.veriSonu)} tarihine kadar · son tam ay ${run.sonTamAyAdi ?? '—'}` : 'Logo + CRM'}
       presence={run?.kume ? `${run.kume.sayi.toLocaleString('tr-TR')} kitap` : '…'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Backlist bilgisi açılamadı.')}</Note>}
-      {m && !run && <Note tone="info">Backlist listesi henüz kurulmadı. Her gece 04:00'te Logo ve CRM'den kurulur; ilk kurulum yöneticinin elle başlattığı koşuyla gelir.</Note>}
-      {m?.lastRun?.hata && <Note tone="warn">Son gece koşusu tamamlanamadı: {m.lastRun.hata}. Liste bir önceki başarılı koşudan.</Note>}
+      {m && !run && <Note tone="info">Backlist listesi henüz kurulmadı. Her gece 04:00'te Logo ve CRM'den kurulur; ilk liste, yöneticinin okumayı elle başlatmasıyla gelir.</Note>}
+      {m?.lastRun?.hata && <Note tone="warn">Son gece okuması tamamlanamadı: {m.lastRun.hata}. Liste bir önceki başarılı okumadan.</Note>}
       {run?.kume && (
         <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">
-          Küme: {run.kume.ad}. {run.kume.haric157 ? `${run.kume.haric157} ticari ürün (157) kitap olmadığı için dışarıda. ` : ''}
+          Küme: {run.kume.ad}. {run.kume.haric157 ? `${run.kume.haric157} ticari ürün kitap olmadığı için dışarıda. ` : ''}
           {run.son12 && run.onceki12 ? `Son 12 ay ${run.son12[0]} – ${run.son12[1]}, önceki 12 ay ${run.onceki12[0]} – ${run.onceki12[1]} (tam aylar).` : ''}
           {(run.notlar ?? []).map((n) => ` ${n}`)}
         </p>

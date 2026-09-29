@@ -7,6 +7,7 @@ import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { PROGRAM_TONE, fmtDay, fmtInt, fmtShare, okurApi, type InventoryRow, type TrendPoint } from './api';
 import { CoreMissing, OkurFrame, ShareBar } from './parts';
+import { Explain } from '../components/Explain';
 
 /** M37 «Okur kitlesi» (ilk açılış): kaynak ve kayıt tipine göre okur sayısı, KVKK/İYS/kanal izin oranları, izin çelişkileri,
  *  aylık eğilim, yaklaşan programlar, segment ve yorum durumu. Yalnız sayı; kişi adı hiçbir yerde yok. */
@@ -30,19 +31,19 @@ export default function AudienceScreen() {
     <OkurFrame
       crumb="Okur kitlesi"
       title="Okur kitlesi ve izin sağlığı"
-      lead="Kime ulaşabileceğimizin sayısı: okur kayıtlarının kaynağı, KVKK ve İYS onayı, e-posta ve SMS izni, ilgi alanı doluluğu ve izin çelişkileri. Yalnız toplam sayılar gösterilir; kişi listesi yoktur. Düzeltme CRM'de yapılır."
+      lead="Kaç okura yasal olarak ulaşabileceğimizi gösterir: okur kayıtlarının kaynağı, KVKK ve İYS onayı, e-posta ve SMS izni, ilgi alanı doluluğu ve izin çelişkileri. Yalnız toplam sayılar görünür, kişi listesi yoktur; düzeltme CRM'de yapılır."
       source="Kaynak: okur veri tabanı · CRM · portal kaydı"
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {ov.error && <Note tone="err">{errText(ov.error, 'Özet okunamadı.')}</Note>}
       {ov.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {inv && !inv.bagli && <CoreMissing message={inv.mesaj} />}
       {d && (
         <KpiRow>
           <Kpi label="Okur kaydı" value={fmtInt(total)} help={inv && inv.bagli && inv.tekil !== null ? `Tekil ${fmtInt(inv.tekil)}` : 'Kaynak kayıtları toplamı'} info={<SqlInfo k={k} alan="envanter" label="Okur kaydı" />} />
-          <Kpi label="KVKK onaylı" value={fmtShare(sum('kvkkOnayli'), total)} help={`${fmtInt(sum('kvkkOnayli'))} kayıt`} info={<SqlInfo k={k} alan="envanter" label="KVKK onaylı" />} />
-          <Kpi label="E-posta izinli" value={fmtInt(sum('epostaIzinli'))} help={`SMS izinli ${fmtInt(sum('smsIzinli'))}`} info={<SqlInfo k={k} alan="envanter" label="E-posta ve SMS izinli" />} />
-          <Kpi label="İzin çelişkisi" value={fmtInt(consentTotal)} help={consent && consent.bagli && consent.onceki !== undefined && consent.onceki !== null ? `Önceki ölçüm ${fmtInt(consent.onceki)}` : 'Hedef: 0'} info={<SqlInfo k={k} alan="izin" label="İzin çelişkisi" />} />
+          <Kpi label="KVKK onaylı" value={fmtShare(sum('kvkkOnayli'), total)} help={`${fmtInt(sum('kvkkOnayli'))} kayıt`} explain="Kişisel verilerinin pazarlama için işlenmesine açık rıza vermiş (KVKK onayı olan) okur kayıtlarının payı." info={<SqlInfo k={k} alan="envanter" label="KVKK onaylı" />} />
+          <Kpi label="E-posta izinli" value={fmtInt(sum('epostaIzinli'))} help={`SMS izinli ${fmtInt(sum('smsIzinli'))}`} explain="Ticari e-posta izni olan okur kaydı sayısı; altında SMS izni olanlar. İzinler İYS (İleti Yönetim Sistemi) kayıtlarından gelir." info={<SqlInfo k={k} alan="envanter" label="E-posta ve SMS izinli" />} />
+          <Kpi label="İzin çelişkisi" value={fmtInt(consentTotal)} help={consent && consent.bagli && consent.onceki !== undefined && consent.onceki !== null ? `Önceki ölçüm ${fmtInt(consent.onceki)}` : 'Hedef: 0'} explain="Kayıtlar arasında birbirini tutmayan izin bilgisi olan okur sayısı (ör. bir kayıtta izinli, ötekinde ret). Türleri aşağıdaki «İzin sağlığı» bölümündedir; düzeltme CRM'de yapılır." info={<SqlInfo k={k} alan="izin" label="İzin çelişkisi" />} />
         </KpiRow>
       )}
 
@@ -62,7 +63,7 @@ export default function AudienceScreen() {
                 <th className={th}><InfoLabel k={k} alan="envanter.satirlar">SMS izni</InfoLabel></th>
                 <th className={th}><InfoLabel k={k} alan="envanter.satirlar">İlgi alanı dolu</InfoLabel></th>
                 <th className={`${th} text-right`}><InfoLabel k={k} alan="envanter.satirlar">Silinebilir</InfoLabel></th>
-                <th className={`${th} text-right`}><InfoLabel k={k} alan="envanter.satirlar">18 yaş altı olası</InfoLabel></th>
+                <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={k} alan="envanter.satirlar">18 yaş altı olası</InfoLabel><Explain label="18 yaş altı olası">Doğum yılına göre 18 yaşından küçük olabilecek kayıtlar. Ebeveyn rızası ayrıca tutulmadığı için bu okurlar hiçbir listeye girmez.</Explain></span></th>
               </tr>
             </thead>
             <tbody>
@@ -147,7 +148,7 @@ export default function AudienceScreen() {
         <Panel>
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Yaklaşan programlar<SqlInfo k={k} alan="yaklasanProgramlar" label="Yaklaşan programlar" /></h2>
-            <Link to="/okur-toplulugu/programlar" className="text-[12px] font-bold text-canvas-violet hover:underline">Takvim</Link>
+            <Link to="/okur-toplulugu/programlar" className="text-[12px] font-bold text-canvas-violet hover:underline">Takvimi aç</Link>
           </div>
           <p className="mb-2 text-[12px] text-canvas-muted">Önümüzdeki 30 gün.</p>
           <ul className="flex flex-col gap-1.5">
@@ -159,7 +160,7 @@ export default function AudienceScreen() {
                 {p.sehir && <span className="text-[11.5px] text-canvas-muted">{p.sehir}</span>}
               </li>
             ))}
-            {d && !d.yaklasanProgramlar.length && <li className="text-[12px] text-canvas-muted">30 gün içinde program yok.</li>}
+            {d && !d.yaklasanProgramlar.length && <li className="text-[12px] text-canvas-muted">Önümüzdeki 30 günde program yok. Okuma kulübü, imza günü ya da anket «Programlar» bölümünden eklenir.</li>}
           </ul>
         </Panel>
 

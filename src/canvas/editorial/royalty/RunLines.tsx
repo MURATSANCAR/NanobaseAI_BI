@@ -8,6 +8,8 @@ import { Pager, Panel, useDebounced } from '../kit';
 import { Field, Row, Sheet, day, errMsg, money, num } from '../contracts/ui';
 import { lineTone, royaltyApi, type Meta, type Run } from './api';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain, ExplainLabel } from '../../components/Explain';
+import { TERM } from '../contracts/glossary';
 
 /** Koşunun satırları: süzgeç (durum, istisna nedeni, arama), sayfalı liste ve satırın hesabı. */
 
@@ -30,7 +32,15 @@ export function RunLines({ run, meta, status, code, title }: { run: Run; meta: M
   const d = lines.data;
   return (
     <Panel>
-      {title && <h3 className="mb-2 text-[13px] font-extrabold">{title}</h3>}
+      {title && (
+        <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">
+          {title}
+          <Explain label="Satır durumları">
+            Her satır bir sözleşmedir. <b>Hesaplandı</b>: onaya hazır. <b>İstisna</b>: turuncu etiket kontrol edip gerekçesiyle kabul edilebilir, kırmızı etiket sözleşme
+            düzeltilip yeniden hesaplatılmalı. <b>Hariç</b>: bu koşuda ödenmez. Satıra dokununca hesabı açılır.
+          </Explain>
+        </h3>
+      )}
       <div className="grid gap-2 sm:grid-cols-3">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Sözleşme, kitap ya da hak sahibi ara" aria-label="Ara" className={field} />
         {status === undefined && (
@@ -56,7 +66,15 @@ export function RunLines({ run, meta, status, code, title }: { run: Run; meta: M
       )}
       {lines.error && <div className="mt-2"><Note tone="err">{errMsg(lines.error)}</Note></div>}
       {lines.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
-      {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan satır yok.</p>}
+      {d && !d.items.length && (
+        <div className="mt-3">
+          {status === 'istisna' && !cd && !dq ? (
+            <EmptyHint title="Bu koşuda istisna yok" why="Bütün sözleşmeler sorunsuz hesaplandı ya da hariç tutuldu; koşu onaya gönderilebilir." />
+          ) : (
+            <EmptyHint title="Bu süzgece uyan satır yok" why="Aramayı temizleyin ya da durum ve neden süzgeçlerini «Bütün» yapın." />
+          )}
+        </div>
+      )}
       <ul className="mt-3 space-y-2">
         {d?.items.map((ln) => (
           <li key={ln.id}>
@@ -148,7 +166,7 @@ function LineSheet({ run, lineId, onClose }: { run: Run; lineId: number; onClose
           {contractKey && (
             <Link to={`/telif-sozlesme/${contractKey}?sekme=hakedis`} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
               <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-              Sözleşme sayfasını aç (düzeltme orada yapılır)
+              Sözleşme sayfasını aç (düzeltmeyi orada yapın)
             </Link>
           )}
           {ln.approvalError && <Note tone="err">Onay: {ln.approvalError}</Note>}
@@ -175,23 +193,23 @@ function LineSheet({ run, lineId, onClose }: { run: Run; lineId: number; onClose
               <dl>
                 <Row label="Dönem">{day(c.periodStart)} – {day(c.periodEnd)}</Row>
                 <Row label="Net adet">{num(c.quantity, 0)}</Row>
-                <Row label="Matrah">{money(c.base)}</Row>
+                <Row label="Matrah" explain="Telif oranının uygulandığı tutar: net satış tutarı ya da adet × kapak fiyatı; hesaplama iskontosu varsa düşülmüş olarak.">{money(c.base)}</Row>
                 <Row label="Brüt telif">{money(c.gross, c.currency)}{c.fx ? ` (kur ${num(c.fx.rate, 4)}, ${day(c.fx.on)}, ${c.fx.source})` : ''}</Row>
                 {c.carryIn ? <Row label="Önceki dönemden devir">{money(c.carryIn, c.currency)}</Row> : null}
                 {c.advance != null && <Row label="Avans">{money(c.advance, c.contractCurrency)} · önceden mahsup {money(c.advanceUsedBefore, c.contractCurrency)}</Row>}
                 {c.advanceBasis && <Row label="Avans açılışı">{money(c.advanceBasis.opening, c.contractCurrency)} ({day(c.advanceBasis.openingOn)}{c.advanceBasis.openingBy ? `, ${c.advanceBasis.openingBy}` : ''})</Row>}
-                <Row label="Avans mahsubu">{money(c.advanceOffset, c.currency)}</Row>
+                <Row label="Avans mahsubu" explain={TERM.mahsup}>{money(c.advanceOffset, c.currency)}</Row>
                 {c.advanceRemaining != null && <Row label="Kalan avans">{money(c.advanceRemaining, c.contractCurrency)}</Row>}
-                <Row label="Stopaj">{c.withholdingPct ? `%${num(c.withholdingPct)} · ` : ''}{money(c.withholding, c.currency)}</Row>
+                <Row label="Stopaj" explain={TERM.stopaj}>{c.withholdingPct ? `%${num(c.withholdingPct)} · ` : ''}{money(c.withholding, c.currency)}</Row>
                 <Row label="Ödenecek net">{money(c.net, c.currency)}</Row>
-                {c.carryOut ? <Row label="Sonraki döneme devir">{money(c.carryOut, c.currency)}</Row> : null}
+                {c.carryOut ? <Row label="Sonraki döneme devir" explain={TERM.devreden}>{money(c.carryOut, c.currency)}</Row> : null}
               </dl>
               <div className="overflow-x-auto rounded-2xl border border-slate-100">
                 <table className="w-full min-w-[560px] text-[12px]">
                   <thead>
                     <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                       <th className="px-2 py-1.5">Kitap</th><th className="px-2 py-1.5">Hak sahibi</th>
-                      <th className="px-2 py-1.5 text-right">Adet</th><th className="px-2 py-1.5 text-right">İade</th>
+                      <th className="px-2 py-1.5 text-right">Adet</th><th className="px-2 py-1.5 text-right"><ExplainLabel label="İade">Dönemde geri gelen adet; telif, iadeler düşülmüş net adetten hesaplanır.</ExplainLabel></th>
                       <th className="px-2 py-1.5 text-right">Matrah</th><th className="px-2 py-1.5 text-right">Oran</th>
                       <th className="px-2 py-1.5 text-right"><InfoLabel k={ln.kaynaklar} alan="calc" label="Kitap × hak sahibi satırları">Telif</InfoLabel></th>
                     </tr>
@@ -226,8 +244,8 @@ function LineSheet({ run, lineId, onClose }: { run: Run; lineId: number; onClose
             <Note tone="warn">Bu satırın hesabı yapılamadı; yukarıdaki nedeni sözleşme sayfasında düzeltip koşuyu yeniden hesaplatın.</Note>
           )}
           {editable && (
-            <Field label="Gerekçe" hint="Hariç tutma ve kabul gerekçesiyle kaydedilir; koşuda kimin yaptığı görünür.">
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={field} />
+            <Field label="Gerekçe" hint="«Hariç tut» ve «İstisnayı kabul et» için gerekçe zorunludur; koşuda kimin yaptığıyla birlikte görünür.">
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={field} placeholder="ör. Yazarla dönem sonu ayrıca anlaşıldı" />
             </Field>
           )}
         </div>

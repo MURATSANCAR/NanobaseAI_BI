@@ -85,13 +85,13 @@ const scoreTone = (s: number): 'err' | 'warn' | 'ok' => (s < 70 ? 'err' : s < 85
 export function QePill({ item, threshold = 85 }: { item: QeItem | undefined; threshold?: number }) {
   if (!flagged(item, threshold) || !item) return null;
   return item.stale ? (
-    <Pill tone="muted">ZEKİ {item.score} · eski</Pill>
+    <Pill tone="muted">Zeki AI {item.score} · eski</Pill>
   ) : (
-    <Pill tone={scoreTone(item.score)}>ZEKİ {item.score}</Pill>
+    <Pill tone={scoreTone(item.score)}>Zeki AI {item.score}</Pill>
   );
 }
 
-const DISCLAIMER = 'Tahmindir: inceleyenin MQM puanı yerine geçmez, yalnız bakılacak yeri gösterir.';
+const DISCLAIMER = 'Tahmindir: inceleyenin verdiği inceleme puanının yerine geçmez, yalnız önce bakılacak yeri gösterir.';
 
 /** Çeviri masasının yan panelindeki bölüm: puan, kategori, alıntılı gerekçe, eskime. */
 export function QeSection({ item, translated, threshold = 85 }: { item: QeItem | undefined; translated: boolean; threshold?: number }) {
@@ -99,7 +99,7 @@ export function QeSection({ item, translated, threshold = 85 }: { item: QeItem |
     <section className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold">
         <Gauge aria-hidden className="h-4 w-4 text-canvas-violet" />
-        ZEKİ kalite tahmini
+        Zeki AI kalite tahmini
       </h3>
       <div className="mt-2 text-[12px] leading-snug">
         {!item ? (
@@ -127,7 +127,7 @@ export function QeSection({ item, translated, threshold = 85 }: { item: QeItem |
                   )}
                 </p>
               ) : (
-                <p className="mt-1 text-[11.5px] text-canvas-muted">Gerekçe gösterilmiyor: ZEKİ'nin alıntıladığı bölüm çeviride birebir bulunamadı.</p>
+                <p className="mt-1 text-[11.5px] text-canvas-muted">Gerekçe gösterilmiyor: Zeki AI'ın alıntıladığı bölüm çeviride birebir bulunamadı.</p>
               ))}
             <p className="mt-1 text-[10.5px] text-canvas-muted">{dateTime(item.at)}</p>
           </>
@@ -158,7 +158,7 @@ export function QeStrip({ jobId, compact = false }: { jobId: string; compact?: b
         {r.canRun && (todo > 0 || running) && (
           <button type="button" disabled={running || start.isPending} onClick={() => start.mutate(false)} className={`${btn} bg-canvas-violet text-white`}>
             {running || start.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Gauge aria-hidden className="h-4 w-4" />}
-            {running ? 'Tahmin sürüyor…' : `ZEKİ ile kalite tahmini (${nf.format(todo)} segment)`}
+            {running ? 'Tahmin sürüyor…' : `Zeki AI ile kalite tahmini başlat (${nf.format(todo)} segment)`}
           </button>
         )}
         {r.canRun && !running && todo === 0 && s.scored > 0 && !compact && (
@@ -166,7 +166,7 @@ export function QeStrip({ jobId, compact = false }: { jobId: string; compact?: b
             type="button"
             disabled={start.isPending}
             onClick={() => {
-              if (window.confirm(`Güncel puanlar dahil ${nf.format(s.translated)} segment yeniden puanlansın mı? Model süresi harcar.`)) start.mutate(true);
+              if (window.confirm(`Güncel puanlar dahil ${nf.format(s.translated)} segment yeniden puanlansın mı? Bu iş Zeki AI'da zaman alır.`)) start.mutate(true);
             }}
             className={btnGhost}
           >
@@ -192,7 +192,7 @@ export function QeStrip({ jobId, compact = false }: { jobId: string; compact?: b
         <div>
           <ProgressBar done={r.run.done} approved={0} total={r.run.total} label="Kalite tahmini ilerlemesi" />
           <p className="mt-1 text-[11.5px] text-canvas-muted">
-            ZEKİ kalite tahmini: <span className="font-mono font-bold tabular-nums text-canvas-ink">%{pct(r.run.done, r.run.total)}</span> ({nf.format(r.run.done)} /{' '}
+            Zeki AI kalite tahmini: <span className="font-mono font-bold tabular-nums text-canvas-ink">%{pct(r.run.done, r.run.total)}</span> ({nf.format(r.run.done)} /{' '}
             {nf.format(r.run.total)} segment). Sayfadan ayrılabilirsiniz; tahmin arka planda sürer.
           </p>
         </div>
@@ -208,10 +208,10 @@ export function QeStrip({ jobId, compact = false }: { jobId: string; compact?: b
 export function QeJobPanel({ jobId }: { jobId: string }) {
   return (
     <Panel>
-      <h3 className="px-1 text-[13px] font-extrabold">ZEKİ kalite tahmini</h3>
+      <h3 className="px-1 text-[13px] font-extrabold">Zeki AI kalite tahmini</h3>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        ZEKİ çevrilmiş her segmenti kaynağıyla karşılaştırıp 0–100 arası puan verir (anlamın eksiksiz aktarılması ve akıcılık). 85 altı «şüpheli» sayılır;
-        gerekçe yalnız alıntısı çeviride birebir geçiyorsa gösterilir. {DISCLAIMER} Başlatma model süresi harcar; işin inceleyeni ya da yöneticisi başlatır.
+        Zeki AI çevrilmiş her segmenti kaynağıyla karşılaştırıp 0–100 arası puan verir (anlamın eksiksiz aktarılması ve akıcılık). 85 altı «şüpheli» sayılır;
+        gerekçe yalnız alıntısı çeviride birebir geçiyorsa gösterilir. {DISCLAIMER} Tahmin zaman alır; işin inceleyeni ya da yöneticisi başlatır.
       </p>
       <div className="mt-2.5">
         <QeStrip jobId={jobId} />
@@ -231,13 +231,13 @@ export function QePanel({ jobId }: { jobId: string }) {
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
-          ZEKİ kalite tahmini
+          Zeki AI kalite tahmini
           <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Kalite tahmini sayıları" />
         </h2>
-        <Pill tone="violet">Tahmin · MQM değil</Pill>
+        <Pill tone="violet">Tahmin · inceleme puanı değil</Pill>
       </div>
       <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Her çevrilmiş segmente ZEKİ'nin verdiği 0–100 puan. Yukarıdaki MQM inceleme puanı insan incelemesinden hesaplanır; bu tahmin onun yerine geçmez,
+        Her çevrilmiş segmente Zeki AI'ın verdiği 0–100 puan. Yukarıdaki inceleme puanı (MQM) insan incelemesinden hesaplanır; bu tahmin onun yerine geçmez,
         yalnız incelemede önce bakılacak segmentleri sıralar. Ortalama yalnız güncel puanlardan, segmentin kaynak kelime sayısıyla ağırlıklıdır.
       </p>
       <div className="mt-2.5">
@@ -284,7 +284,6 @@ export function QePanel({ jobId }: { jobId: string }) {
           {s.chapters.length > 1 && (
             <div className="mt-3">
               <TableWrap>
-                <table className="min-w-full text-[12px]">
                   <thead>
                     <tr>
                       <th className={th}>Bölüm</th>
@@ -307,7 +306,6 @@ export function QePanel({ jobId }: { jobId: string }) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
               </TableWrap>
             </div>
           )}
@@ -322,7 +320,7 @@ export function QePanel({ jobId }: { jobId: string }) {
                       <Link to={`/ceviri/masam/${jobId}?segment=${i.segmentId}`} className="font-mono font-bold text-canvas-violet underline">
                         #{i.no}
                       </Link>
-                      <Pill tone={scoreTone(i.score)}>ZEKİ {i.score}</Pill>
+                      <Pill tone={scoreTone(i.score)}>Zeki AI {i.score}</Pill>
                       {i.category && <span className="font-bold">{CATEGORY[i.category] ?? i.category}</span>}
                     </div>
                     {i.reason && <p className="mt-0.5">{i.reason}</p>}

@@ -59,7 +59,7 @@ export type Decide = (findingId: string, verdict: ProofVerdict | 'CLEAR', reason
 export function inheritedLabel(f: ProofingFinding) {
   const src = f.decision?.source;
   if (!src) return 'önceki okumadan';
-  return src.sameReading ? 'bu okumanın önceki koşusundan' : `önceki okumadan${src.readAt ? ` (${dateTime(src.readAt)})` : ''}`;
+  return src.sameReading ? 'bu okumanın önceki turundan' : `önceki okumadan${src.readAt ? ` (${dateTime(src.readAt)})` : ''}`;
 }
 
 /** Listede ve panelde aynı bulguyu tanıyan anahtar; kimlik yoksa denetim+sayfa+sıra. */

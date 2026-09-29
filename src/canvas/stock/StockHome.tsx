@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Note, errText, field, label as labelCls } from '../admin/ui';
+import { Note, btnGhost, errText, field, label as labelCls } from '../admin/ui';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../editorial/kit';
 import SearchSelect from '../components/SearchSelect';
 import { canOpenRoute, usePageAccess } from '../useAdmin';
@@ -98,12 +99,16 @@ export default function StockHome() {
           ))}
           <KpiRow>
             <Kpi label="Toplam stok" value={n0(o.toplamStok)} help={`${n0(o.stokluKitap)} kitapta, adet${o.deger ? ` · değeri ${tl(o.deger.toplam)}` : ''}`}
+              explain="Logo’daki bütün ambarlarda duran kitap adedi (giriş − çıkış). Henüz depoya girmemiş ileri tarihli üretim sayılmaz."
               info={<SqlInfo k={o.kaynaklar} alan={o.deger ? 'deger' : 'toplamStok'} label={o.deger ? 'Toplam stok ve stok değeri' : 'Toplam stok'} />} />
             <Kpi label="Stokta yok" value={n0(o.stoksuzAktif)} help="Satışı olan ama Logo stoğu bitmiş kitap" onClick={() => update({ durum: 'stoksuz' })} active={durum === 'stoksuz'}
+              explain="Hâlâ satılan ama Logo stoğu sıfıra inmiş kitaplar. Karta dokunursanız aşağıdaki liste yalnız bunları gösterir."
               info={<SqlInfo k={o.kaynaklar} alan="stoksuzAktif" label="Stokta yok" />} />
             <Kpi label={`${o.bitecekGun} günde bitecek`} value={n0(o.bitecek)} help={`${n0(o.kartsizKritik)} tanesinin açık üretim kartı yok · baskı süresi ${o.baskiSuresi} gün`} onClick={go('/stok/bitecekler')}
+              explain="Bugünkü satış hızıyla stoğu bu süre içinde ya da yeni baskının depoya gelmesinden önce bitecek kitaplar. «Açık üretim kartı yok» olanlar için henüz baskı planlanmamış."
               info={<SqlInfo k={o.kaynaklar} alan="kartsizKritik" label="Bitecek ve kartsız kritik kitaplar" />} />
             <Kpi label="Logo’ya geçmemiş" value={n0(o.aktarimHatasi)} help={`Hata mesajlı hareket; mesajsız bekleyen ${n0(o.aktarimBekleyen)}`} onClick={go('/stok/aktarim')}
+              explain="CRM’de yapılıp Logo’ya aktarılamamış depo hareketleri. Bunlar düzelmeden Logo stoğu ile raftaki adet tutmaz."
               info={<SqlInfo k={o.kaynaklar} alan="aktarimHatasi" label="Logo’ya geçmemiş hareketler" />} />
           </KpiRow>
         </>
@@ -169,6 +174,14 @@ export default function StockHome() {
               <div className="min-w-0 flex-1">
                 <Chips label="Durum" items={STATES.map((s) => ({ ...s, count: s.key ? o.durumlar.find((d) => d.key === s.key)?.adet : null }))} value={durum} onChange={(k) => update({ durum: k })} />
               </div>
+              <Explain label="Durumlar" title="Durumlar ne demek?">
+                <span className="block"><b>Stokta yok:</b> satışı var, Logo stoğu bitmiş.</span>
+                <span className="block"><b>Bitecek:</b> stok, seçilen gün içinde ya da yeni baskı gelmeden bitiyor.</span>
+                <span className="block"><b>Fazla:</b> stok varsayılan olarak 2 yıldan uzun yetiyor.</span>
+                <span className="block"><b>Hareketsiz:</b> son bir yılda hiç stok hareketi yok.</span>
+                <span className="block"><b>Satışı yok:</b> stok hareketi var ama satış yok.</span>
+                <span className="block"><b>Yeterli:</b> yukarıdakilerin hiçbiri; stok makul süre yetiyor.</span>
+              </Explain>
               <SqlInfo k={o.kaynaklar} alan="durumlar" label="Durum sayaçları" />
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -201,7 +214,13 @@ export default function StockHome() {
             </div>
           </div>
           {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-          {list.data && !list.data.items.length && <Empty>Bu süzgeçte kitap yok.</Empty>}
+          {list.data && !list.data.items.length && (
+            <EmptyHint
+              title="Bu süzgeçte kitap yok"
+              why="Seçtiğiniz durum, yayınevi, ambar ya da aramaya uyan kitap bulunamadı."
+              action={(durum || yayinevi || depo || dq) ? <button type="button" className={btnGhost} onClick={() => { setQ(''); update({ durum: null, yayinevi: null, depo: null, q: null }); }}>Süzgeçleri temizle</button> : undefined}
+            />
+          )}
           {!!list.data?.items.length && (
             <ItemList k={list.data.kaynaklar} items={list.data.items} cols={['bakiye', 'crmRaf', 'hiz', 'gun', 'tukenme', 'bekleyen', 'durum', 'deger']} />
           )}
@@ -247,7 +266,7 @@ function Today({ title, total, to, pages, children, k, alan }: { title: string; 
           <SqlInfo k={k} alan={alan.replace(/\.items\[\]\..*$/, '.total')} label={`${title} · sayı`} />
         </span>
       </div>
-      {total ? <ul className="divide-y divide-slate-100">{children}</ul> : <Empty>Kayıt yok.</Empty>}
+      {total ? <ul className="divide-y divide-slate-100">{children}</ul> : <Empty>Şu an bu başlıkta ilgilenilecek kitap yok.</Empty>}
       {total > 8 && <div className="mt-1 text-[11px] text-canvas-muted">En acil 8 kayıt; hepsi «Tümü» sayfasında, sayfalı.</div>}
     </Panel>
   );

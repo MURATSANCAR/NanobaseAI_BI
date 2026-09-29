@@ -17,7 +17,7 @@ export function FinanceFrame({ source, presence, aside, children }: { source: st
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Finansal raporlar</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
                   Logo muhasebesinden aylık gelir tablosu, bütçe–gerçekleşme, kitap ve kanal kârlılığı, 13 haftalık nakit ve vergi takvimi.
-                  Her rakam Logo fişine iner; yaklaşık olan rakamın yanında yazar.
+                  Her rakamın dayandığı Logo kaydını açabilirsiniz; tahmin içeren rakamın yanında «yaklaşık» yazar.
                 </p>
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[460px]">{aside}</div>}

@@ -34,12 +34,15 @@ export default function SessionScreen() {
         <>
           <KpiRow>
             <Kpi label="Durum" value={s.stateLabel} help={s.closedAt ? `Kapatıldı ${fmtWhen(s.closedAt)}` : s.course?.deliveryLabel ?? ''} />
-            <Kpi label="Katılımcı" value={String(s.counts.approved)} help={s.capacity ? `Kontenjan ${s.capacity} (bilgi)` : 'Onaylı'} info={<SqlInfo k={s.kaynaklar} alan="counts" label="Katılımcı" />} />
-            <Kpi label="Yoklama" value={`${s.counts.attended + s.counts.absent} / ${s.counts.approved}`} help={`${s.counts.attended} katıldı · ${s.counts.absent} gelmedi`} info={<SqlInfo k={s.kaynaklar} alan="counts" label="Yoklama" />} />
-            <Kpi label="Anket" value={`${s.feedback.answered} / ${s.feedback.invited}`} help="Yanıtlanan / gönderilen" info={<SqlInfo k={s.kaynaklar} alan="feedback" label="Anket yanıtı" />} />
+            <Kpi label="Katılımcı" value={String(s.counts.approved)} help={s.capacity ? `Kontenjan ${s.capacity} (bilgi)` : 'Onaylı'}
+              explain="Katılımı onaylanmış kişi sayısı. Onay bekleyen talepler bu sayıya girmez." info={<SqlInfo k={s.kaynaklar} alan="counts" label="Katılımcı" />} />
+            <Kpi label="Yoklama" value={`${s.counts.attended + s.counts.absent} / ${s.counts.approved}`} help={`${s.counts.attended} katıldı · ${s.counts.absent} gelmedi`}
+              explain="Yoklaması alınan kişi / onaylı katılımcı. Oturumu kapatmak için herkesin yoklaması alınmış olmalı." info={<SqlInfo k={s.kaynaklar} alan="counts" label="Yoklama" />} />
+            <Kpi label="Anket" value={`${s.feedback.answered} / ${s.feedback.invited}`} help="Yanıtlanan / gönderilen"
+              explain="Oturum kapanınca katılan herkese adsız bir anket açılır. Yanıtlar kişiye bağlanmaz." info={<SqlInfo k={s.kaynaklar} alan="feedback" label="Anket yanıtı" />} />
           </KpiRow>
           {manage && s.enrollments && <People s={s} />}
-          {!manage && <Note tone="info">Katılımcı listesi eğitim yönetimi yetkisiyle görünür.</Note>}
+          {!manage && <Note tone="info">Katılımcı listesini ve yoklamayı eğitim yönetimi yetkisi olanlar görür.</Note>}
           {manage && s.state === 'yapildi' && <FeedbackResult id={s.id} modelVar={!!info.data?.modelVar} />}
         </>
       )}
@@ -104,13 +107,13 @@ function People({ s }: { s: SessionDetail }) {
           open ? (
             <>
               <button type="button" className={btnGhost} onClick={() => setAdding(true)}>Katılımcı ekle</button>
-              <button type="button" className={btnGhost} onClick={() => setCancelling(true)}>İptal et</button>
+              <button type="button" className={btnGhost} onClick={() => setCancelling(true)}>Oturumu iptal et</button>
               <button type="button" className={btnPrimary} disabled={!approved.length} onClick={() => setClosing(true)}>Oturumu kapat</button>
             </>
           ) : undefined
         }
       >
-        {approved.length === 0 && <p className="text-[12px] text-canvas-muted">Onaylı katılımcı yok.</p>}
+        {approved.length === 0 && <p className="text-[12px] text-canvas-muted">Onaylı katılımcı yok.{open ? ' «Katılımcı ekle» ile kişi ekleyin; oturumu kapatmak için en az bir onaylı katılımcı gerekir.' : ''}</p>}
         <ul className="flex flex-col gap-2">
           {approved.map((e) => (
             <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2">
@@ -170,7 +173,7 @@ function People({ s }: { s: SessionDetail }) {
         open={closing}
         title="Oturumu kapat"
         message={missing ? `${missing} katılımcının yoklaması alınmadı; önce yoklamayı tamamlayın.` : 'Katılanlar tamamlandı sayılır, eğitimin geçerlilik süresine göre sertifikaları yazılır ve her birine anonim anket açılır. Kapanan oturumun yoklaması değişmez.'}
-        confirm="Kapat"
+        confirm="Oturumu kapat"
         busy={close.isPending}
         onClose={() => setClosing(false)}
         onConfirm={() => close.mutate()}
@@ -178,8 +181,8 @@ function People({ s }: { s: SessionDetail }) {
       <AskSheet
         open={cancelling}
         title="Oturumu iptal et"
-        message="İptal edilen oturum tamamlanma oranına girmez. Katılımcılara portal bildirim göndermez; haber vermeyi siz yaparsınız."
-        confirm="İptal et"
+        message="İptal edilen oturum tamamlanma oranına girmez ve geri açılamaz. Portal katılımcılara bildirim göndermez; haber vermeyi siz yaparsınız."
+        confirm="Oturumu iptal et"
         danger
         busy={cancel.isPending}
         onClose={() => setCancelling(false)}
@@ -236,7 +239,7 @@ function FeedbackResult({ id, modelVar }: { id: string; modelVar: boolean }) {
   return (
     <Block
       title="Anket sonucu"
-      help="Yanıtlar kişiye bağlı değildir. Puanlar veritabanındaki yanıtların ortalamasıdır; yorumlar ad ve iletişim bilgisi gizlenerek gösterilir."
+      help="Yanıtlar kişiye bağlı değildir. Puanlar verilen yanıtların ortalamasıdır (5 üzerinden); yorumlar ad ve iletişim bilgisi gizlenerek gösterilir."
       action={
         d && !d.hidden && d.comments.length > 0 && modelVar ? (
           <button type="button" className={btnGhost} disabled={themes.isPending} onClick={() => themes.mutate()}>

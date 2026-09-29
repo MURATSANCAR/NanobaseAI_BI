@@ -6,6 +6,7 @@ import { Loading, Note, errText } from '../admin/ui';
 import { fieldApi, fmtAge, fmtDay, fmtMoney, fmtShort, type BucketKey, type Collection, type FieldMeta } from './api';
 import { CustomerRow, Empty } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 /** Tahsilat: (1) vadesi geçmiş alacak FIFO kovaları (Logo, yaklaşık) ve (2) CRM tahsilat onay akışı — onay bekleyen ve
  *  reddedilen, nedeniyle. Tahsilat CRM'de girilir; burada yalnız görünür. */
@@ -63,10 +64,11 @@ function Buckets({ meta, temsilci, kova, setKova }: { meta: FieldMeta; temsilci:
   return (
     <>
       <div className="flex items-center gap-1 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-        Kova toplamları
+        Gecikme süresine göre toplamlar
+        <Explain label="Gecikme süresine göre toplamlar">Vadesi geçmiş alacak, kaç gün geciktiğine göre gruplara ayrılır. Bir kutuya dokununca yalnız o gruptaki müşteriler listelenir; yeniden dokununca süzgeç kalkar.</Explain>
         <SqlInfo k={d.kaynaklar} alan="totals" label="Vadesi geçmiş kova toplamları" />
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Kova süzgeci">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Gecikme süresi süzgeci">
         {meta.buckets.map((b) => (
           <button
             key={b.key}
@@ -84,7 +86,7 @@ function Buckets({ meta, temsilci, kova, setKova }: { meta: FieldMeta; temsilci:
       </div>
       <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">{d.note}</p>
       {d.items.length === 0 ? (
-        <Empty>{kova ? 'Bu kovada alacağı olan müşteri yok.' : 'Vadesi geçmiş alacağı olan müşteri yok.'}</Empty>
+        <Empty title={kova ? 'Bu gecikme aralığında alacak yok' : 'Vadesi geçmiş alacak yok'}>{kova ? 'Başka bir aralık seçin ya da seçili kutuya yeniden dokunarak hepsini görün.' : 'Müşterilerinizin vadesi dolmuş ödenmemiş borcu görünmüyor.'}</Empty>
       ) : (
         <>
           <div className="flex items-center gap-1 px-1 text-[12px] font-bold">
@@ -133,7 +135,7 @@ function CrmList({ durum, meta, temsilci }: { durum: 'onay-bekliyor' | 'reddedil
         <SqlInfo k={d.kaynaklar} alan="items[]" label="CRM tahsilat sorgusu" />
       </div>
       {d.items.length === 0 ? (
-        <Empty>{durum === 'onay-bekliyor' ? 'Onay bekleyen tahsilat yok.' : 'Son 30 günde reddedilen tahsilat yok.'}</Empty>
+        <Empty title={durum === 'onay-bekliyor' ? 'Onay bekleyen tahsilat yok' : 'Son 30 günde reddedilen tahsilat yok'}>{durum === 'onay-bekliyor' ? 'CRM\'e girdiğiniz tahsilatların hepsi finans tarafından sonuçlandırılmış.' : 'Finansın geri çevirdiği tahsilat olursa nedeniyle burada görünür.'}</Empty>
       ) : (
         <ul className="flex flex-col gap-2">
           {d.items.map((c) => (

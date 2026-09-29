@@ -139,6 +139,6 @@ export function Meter({ value, tone = 'violet' }: { value: number | null | undef
   );
 }
 
-export const approxNote = 'Yaklaşık: Logo\'da ödeme kapama kullanılmıyor; bakiye en yeni vadelerden geriye dağıtıldı (FIFO).';
+export const approxNote = 'Yaklaşık: Logo\'da tahsilatlar faturalarla tek tek eşlenmediği için açık bakiye en yeni vadelerden geriye doğru dağıtıldı.';
 
 export const pct = (v: number | null | undefined) => fmtPct(v);

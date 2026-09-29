@@ -62,7 +62,7 @@ export function AdsFrame({ title, lead, meta, aside, children }: { title: string
                 ))}
               </div>
             </nav>
-            {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı bu derlemede tanımlı değil.</Note>}
+            {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
             {children}
           </div>
         </ZoomStage>
@@ -140,10 +140,10 @@ export function DataEnd({ meta, verimDonemi }: { meta?: Meta; verimDonemi?: { ba
   return (
     <div className="flex flex-col gap-1.5">
       {!end ? (
-        <Note tone="warn">Logo satış verisi henüz okunmadı: e-ticaret cirosu, stok ve pazarlama verimi boş. Gece işi ya da «Satış verisini yenile» doldurur.</Note>
+        <Note tone="warn">Logo satış verisi henüz okunmadı: e-ticaret cirosu, stok ve pazarlama verimi boş. Veri her sabah kendiliğinden ya da «Satış verisini yenile» ile gelir.</Note>
       ) : (
         <Note tone="info">
-          Logo satış verisi <b>{fmtDay(end)}</b> tarihine kadar. E-ticaret cirosu kanal kodu {meta.settings.ecomChannels.join(', ')} olan carilerin faturalı net satışıdır.
+          Logo satış verisi <b>{fmtDay(end)}</b> tarihine kadar. E-ticaret cirosu, Logo'da e-ticaret kanalına (kanal kodu {meta.settings.ecomChannels.join(', ')}) bağlı müşterilerin faturalı net satışıdır.
           {verimDonemi === null && ' Seçilen dönemde satış verisi yok; pazarlama verimi hesaplanmadı.'}
         </Note>
       )}
@@ -219,7 +219,7 @@ export function BookPicker({ campaign, title, busy, onClose, onPick }: { campaig
     <Sheet open={!!campaign} modal onClose={() => { setQ(''); onClose(); }} title={title ?? 'Kitap seç'} subtitle={campaign?.ad}>
       <label className="flex flex-col gap-1">
         <span className={labelCls}>Kitap adı, stok kodu, barkod ya da yazar</span>
-        <input className={field} autoFocus value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className={field} autoFocus placeholder="En az iki harf yazın" value={q} onChange={(e) => setQ(e.target.value)} />
       </label>
       {hits.error && <div className="mt-2"><Note tone="err">{errText(hits.error, 'CRM okunamadı.')}</Note></div>}
       {hits.data && (

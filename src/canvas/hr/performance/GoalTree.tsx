@@ -54,16 +54,16 @@ export default function GoalTree() {
           <select className={`${field} w-auto`} value={year} onChange={(e) => setYear(e.target.value)} aria-label="Yıl">
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-          {can?.goalApprove && <button type="button" className={btnGhost} onClick={() => setOpen({ id: null, level: 'sirket' })}><Plus aria-hidden className="h-4 w-4" />Şirket hedefi</button>}
+          {can?.goalApprove && <button type="button" className={btnGhost} onClick={() => setOpen({ id: null, level: 'sirket' })}><Plus aria-hidden className="h-4 w-4" />Şirket hedefi ekle</button>}
           {(can?.goalApprove || (can?.goalWrite && (meta.data?.me.managedUnits.length ?? 0) > 0)) && (
-            <button type="button" className={btnGhost} onClick={() => setOpen({ id: null, level: 'birim' })}><Plus aria-hidden className="h-4 w-4" />Birim hedefi</button>
+            <button type="button" className={btnGhost} onClick={() => setOpen({ id: null, level: 'birim' })}><Plus aria-hidden className="h-4 w-4" />Birim hedefi ekle</button>
           )}
         </div>
       }
     >
       {q.error && <Note tone="err">{errText(q.error, 'Hedefler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
-      {q.data && !goals.length && <Note tone="info">{year} için hedef yok.</Note>}
+      {q.data && !goals.length && <Note tone="info">{year} için görebileceğiniz hedef yok. Başka bir yıl seçin{can?.goalApprove ? ' ya da «Şirket hedefi ekle» ile başlayın' : ''}.</Note>}
       {roots.length > 0 && (
         <Block title="Şirket hedefleri" info={<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Hedef değerleri" />}>
           <ul className="flex flex-col gap-2">{roots.map((g) => <Node key={g.id} g={g} depth={0} />)}</ul>

@@ -39,7 +39,7 @@ export default function MeetingPage() {
       ) : undefined}
     >
       {q.isLoading && <Loading />}
-      {q.error && <Note tone="err">{errText(q.error, 'Toplantı okunamadı.')}</Note>}
+      {q.error && <Note tone="err">{errText(q.error, 'Toplantı okunamadı; bağlantıyı kontrol edip yeniden deneyin.')}</Note>}
       {m && meta.data && (
         <>
           {m.katilimcilar.length > 0 && <p className="px-1 text-[12px] text-canvas-muted">Katılımcılar: {m.katilimcilar.join(', ')}</p>}
@@ -196,7 +196,7 @@ function PackagesPanel({ m, meta }: { m: Meeting; meta: KurulMeta }) {
         )}
       </div>
       <p className="mb-2 text-[11.5px] text-canvas-muted">Derleme göstergelerin son ölçümünü, onaylı yorumları, gündemi, önceki kararları ve onaylı risk/pazar özetlerini tek anlık görüntüde toplar. Dondurulan paket değişmez; düzeltme yeni sürümdür.</p>
-      {pk.length === 0 ? <Empty>Paket yok.</Empty> : (
+      {pk.length === 0 ? <Empty>Bu toplantı için henüz paket derlenmedi.</Empty> : (
         <ul className="flex flex-col gap-1.5">
           {pk.map((p) => (
             <li key={p.id}>

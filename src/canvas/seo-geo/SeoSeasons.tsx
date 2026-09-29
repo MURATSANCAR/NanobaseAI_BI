@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmRights } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 
 /** Sezon takvimi: /api/v1/seo-geo/seasons. Yaklaşan özel günler (CRM + hareketli günler), bağlı kitaplar ve
  *  sayfalarının hazırlığı; geçen yılın arama artışı Search Console'dan. Hiçbir yere yazılmaz. */
@@ -154,7 +155,7 @@ export default function SeoSeasons() {
       crumb="Sezon takvimi"
       eyebrow="SEO & GEO · CRM özel günleri"
       title="Sezon takvimi"
-      lead={`Yaklaşan özel günler ve CRM'de o güne bağlı kitaplar. Hazırlık günden ${c?.leadDays ?? 21} gün önce başlar: sayfa düzeltmesinin Google'da görünmesi zaman alır. Geçen yılın arama artışı Search Console'dan her gece hesaplanır.`}
+      lead={`Anneler Günü, bayramlar gibi yaklaşan özel günler ve CRM'de o güne bağlı kitaplar. Hazırlık günden ${c?.leadDays ?? 21} gün önce başlar, çünkü sayfa düzeltmesinin Google'da görünmesi zaman alır. Önce «Şimdi yapılacaklar»a bakın.`}
       actions={
         canRun ? (
           <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending || running}>
@@ -187,36 +188,44 @@ export default function SeoSeasons() {
           {c?.state.error && <p className="sg-banner err">Son okuma başarısız: {c.state.error}</p>}
           {c && !c.connected.crm && <p className="sg-banner">CRM bağlantısı tanımlı değil: yalnız hesaplanan günler görünür, kitap bağı yok.</p>}
           {c && !c.connected.gsc && (
-            <p className="sg-banner">Search Console bağlı değil: geçen yılın arama artışı hesaplanamıyor. Bağlantı Yönetim → SEO & GEO ekranından kurulur.</p>
+            <p className="sg-banner">Search Console bağlı değil: geçen yılın arama artışı hesaplanamıyor. Kurulum: <Link to="/seo-geo/baglantilar">Bağlantılar</Link> ekranı.</p>
           )}
           {c?.state.gscError && <p className="sg-banner err">Search Console okunamadı: {c.state.gscError}</p>}
 
           {c && (
             <>
               <section className="sg-kpis" aria-label="Özet">
-                <Kpi label="Yaklaşan gün" value={fmt(c.days.length)} note={`Önümüzdeki ${weeks === 52 ? 'bir yıl' : `${weeks} hafta`}`} info={<SeoInfo k={cal.data?.kaynaklar} label="Yaklaşan gün" />} />
-                <Kpi label="Hazırlık zamanı" value={fmt(c.days.filter((x) => x.phase === 'hazirlik').length)} note={`Güne ${c.leadDays} günden az kaldı`} info={<SeoInfo k={cal.data?.kaynaklar} label="Hazırlık zamanı" />} />
+                <Kpi label="Yaklaşan gün" value={fmt(c.days.length)} note={`Önümüzdeki ${weeks === 52 ? 'bir yıl' : `${weeks} hafta`}`} info={<SeoInfo k={cal.data?.kaynaklar} label="Yaklaşan gün" />}
+                  explain="Seçilen aralıkta tarihi belli olan özel gün sayısı: CRM’deki özel günler ve takvimden hesaplanan günler (bayramlar gibi)." />
+                <Kpi label="Hazırlık zamanı" value={fmt(c.days.filter((x) => x.phase === 'hazirlik').length)} note={`Güne ${c.leadDays} günden az kaldı`} info={<SeoInfo k={cal.data?.kaynaklar} label="Hazırlık zamanı" />}
+                  explain="Kitap sayfalarının hazırlanması gereken, yani güne hazırlık süresinden az kalan gün sayısı." />
                 <Kpi
                   label="Düzeltilecek sayfa"
                   value={fmt(c.days.filter((x) => x.phase !== 'yaklasiyor').reduce((a, x) => a + (x.counts?.duzelt ?? 0), 0))}
-                  note="Hazırlık zamanındaki günlerin kitapları" info={<SeoInfo k={cal.data?.kaynaklar} label="Düzeltilecek sayfa" />} />
-                <Kpi label="Rehber sayfası eksik" value={c.guidesAvailable ? fmt(c.actions.filter((a) => a.kind === 'rehber').length) : '—'} note="Hazırlık zamanındaki günler" info={<SeoInfo k={cal.data?.kaynaklar} label="Rehber sayfası eksik" />} />
+                  note="Hazırlık zamanındaki günlerin kitapları" info={<SeoInfo k={cal.data?.kaynaklar} label="Düzeltilecek sayfa" />}
+                  explain="Hazırlık zamanındaki günlere bağlı kitaplardan SEO puanı yetersiz ya da ciddi sorunu olan sayfa sayısı." />
+                <Kpi label="Rehber sayfası eksik" value={c.guidesAvailable ? fmt(c.actions.filter((a) => a.kind === 'rehber').length) : '—'} note="Hazırlık zamanındaki günler" info={<SeoInfo k={cal.data?.kaynaklar} label="Rehber sayfası eksik" />}
+                  explain="Hazırlık zamanındaki günlerden, o gün için «hangi kitap» sorusuna cevap veren rehber taslağı olmayanlar." />
               </section>
 
               {c.actions.length > 0 && <Actions actions={c.actions} onOpen={select} />}
 
               {!c.days.length ? (
-                <div className="sg-empty">
-                  <CalendarDays size={22} aria-hidden />
-                  <h2>Bu aralıkta özel gün yok</h2>
-                  <p>Daha uzun bir aralık seçin.</p>
-                </div>
+                <EmptyHint icon={<CalendarDays size={18} aria-hidden />} title="Bu aralıkta özel gün yok" why="Yukarıdan daha uzun bir aralık seçin." />
               ) : (
+                <>
+                <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sg-muted)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                  Bir güne dokunun, bağlı kitaplar ve hazırlık durumları açılsın.
+                  <Explain label="Geçen yıl satırı" title="«Geçen yıl» satırı ne demek?">
+                    Geçen yıl bu günden önceki haftalarda, güne ilişkin aramalarda sitemizin gösteriminin kıyas dönemine göre ne kadar değiştiği; «site geneli» aynı dönemde bütün sitenin değişimidir. Arama artışının ne zaman başladığını gösterir.
+                  </Explain>
+                </p>
                 <section aria-label="Yaklaşan günler" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))' }}>
                   {c.days.map((day) => (
                     <DayCard key={day.id} day={day} leadDays={c.leadDays} gsc={c.connected.gsc} onOpen={() => select(day.id)} />
                   ))}
                 </section>
+                </>
               )}
 
               {c.undated.length > 0 && (
@@ -252,7 +261,7 @@ function Actions({ actions, onOpen }: { actions: Calendar['actions']; onOpen: (i
   return (
     <section className="sg-card">
       <h2>Şimdi yapılacaklar</h2>
-      <p className="sg-sub">Hazırlık zamanına girmiş günler. Kitaplar çok satandan aza sıralı.</p>
+      <p className="sg-sub">Hazırlık zamanına girmiş günler için yapılacak işler. Kitaba dokunun, Ürün denetiminde önerisi açılsın; kitaplar çok satandan aza, yanındaki sayı SEO puanı.</p>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
         {actions.map((a) => (
           <li key={`${a.kind}-${a.dayId}`} style={{ padding: '10px 12px', borderRadius: 14, background: 'var(--sg-soft)' }}>
@@ -431,17 +440,17 @@ function DayBooks({ id, onBack }: { id: string; onBack: () => void }) {
               {x.readyScore} ve kritik/yüksek sorun olmamalı.
             </p>
             {!x.items.length ? (
-              <div className="sg-empty">
-                <h2>Kitap yok</h2>
-                <p>{day.crmBooks ? "CRM'deki kitapların hiçbiri sitede satışta değil." : "CRM'de bu güne bağlı kitap yok."}</p>
-              </div>
+              <EmptyHint
+                title="Bağlı kitap yok"
+                why={day.crmBooks ? "CRM'deki kitapların hiçbiri sitede satışta değil." : "CRM'de bu güne bağlı kitap yok; bağ CRM'deki özel gün kaydından kurulur."}
+              />
             ) : (
               <div className="sg-table-wrap">
                 <table className="sg-table">
                   <thead>
                     <tr>
                       <th>Kitap</th>
-                      <th>Hazırlık</th>
+                      <th><ExplainLabel label="Hazırlık">«Hazır»: puanı yeterli, kritik ya da yüksek sorunu yok. «Düzeltilmeli»: puanı düşük ya da ciddi sorunu var. «Öneri onay bekliyor»: Zeki AI önerisi karar bekliyor. «Onaylandı, sitede bekleniyor»: öneri onaylandı ama sayfadaki metin henüz değişmedi.</ExplainLabel></th>
                       <th>SEO puanı <SeoInfo k={r.data?.kaynaklar} label="SEO puanı" /></th>
                       <th>Açık sorun <SeoInfo k={r.data?.kaynaklar} label="Açık sorun" /></th>
                       <th>Hak</th>
@@ -510,10 +519,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

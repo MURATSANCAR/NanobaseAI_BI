@@ -25,6 +25,10 @@ export default function Calibration({ cycleId }: { cycleId: string }) {
   );
   return (
     <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Yöneticilerin verdiği genel puanların birim birim dağılımı. Amaç, bir birimin herkese çok yüksek ya da çok düşük puan verip vermediğini
+        görmektir; sistem puan üretmez. Toplantıda ekrana yansıtırken adları kapalı tutun.
+      </p>
       <Block title={`Şirket geneli · ${nf.format(d.n)} değerlendirme${d.mean !== null ? ` · ortalama ${nf.format(d.mean)}` : ''}`}
         info={<SqlInfo k={d.kaynaklar} alan="overall" label="Şirket geneli dağılım ve ortalama" />}
         action={<label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold sm:min-h-0"><input type="checkbox" checked={names} onChange={(e) => setNames(e.target.checked)} />Adları göster</label>}>

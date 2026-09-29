@@ -33,7 +33,7 @@ export default function PrBook() {
     <PrFrame
       crumb="Basın ilişkileri"
       title={b?.ad ?? 'Kitap'}
-      lead={b ? [b.yazar, b.yayinevi, b.kitaplik, b.hedefKitle, b.yayinTarihi && `ilk baskı ${fmtDay(b.yayinTarihi)}`].filter(Boolean).join(' · ') : undefined}
+      lead={b ? `Bu kitabın PR dosyaları, CRM'deki haber kayıtları ve basına gönderilen tanıtım kitapları. ${[b.yazar, b.yayinevi, b.kitaplik, b.hedefKitle, b.yayinTarihi && `ilk baskı ${fmtDay(b.yayinTarihi)}`].filter(Boolean).join(' · ')}` : undefined}
       source="CRM kitap kartı"
       presence={d ? `${d.archive.length} arşiv haberi` : '…'}
       back={{ to: '/basin-iliskileri', label: 'Basın ilişkileri' }}
@@ -63,7 +63,7 @@ export default function PrBook() {
                 {d.kits.map((k) => (
                   <li key={k.id}>
                     <Link to={`/basin-iliskileri/dosya/${encodeURIComponent(k.id)}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white/85 p-3 hover:border-canvas-violet/40">
-                      <span className="text-[13px] font-extrabold">{k.id}</span>
+                      <span className="text-[13px] font-extrabold">PR dosyası · {k.id}</span>
                       <span className="flex items-center gap-1.5 text-[11.5px] text-canvas-muted">
                         {k.sentCount ?? 0}/{k.sendCount ?? 0} gönderim · {k.coverageCount ?? 0} yansıma
                         <Pill tone={KIT_TONE[k.status]}>{k.statusLabel}</Pill>

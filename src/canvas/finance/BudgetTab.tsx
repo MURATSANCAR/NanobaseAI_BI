@@ -13,6 +13,7 @@ import { DEPT, TRACK, type DeptState, type TrackState } from '../budget/api';
 import { financeApi, fmtDay, fmtMoney, fmtPct, fmtShort, type BudgetView, type Note as FNote } from './api';
 import { DataEnd, Money } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { ExplainLabel } from '../components/Explain';
 
 /** Bütçe–gerçekleşme: M46'nın yürürlükteki planı (aynı tanım, yeniden hesap yok). Gider kalemine sapma açıklaması
  *  yazılır; kalemin muhasebe fişleri Gelir tablosu sekmesindeki hesap satırından açılır. */
@@ -25,7 +26,7 @@ function NoteSheet({ target, year, onClose }: { target: NoteTarget; year: number
   const save = useMutation({
     mutationFn: () => financeApi.saveNote({ year, anahtar: target!.anahtar, metin: text || target?.not?.metin || '' }),
     onSuccess: () => { toast.success('Açıklama kaydedildi.'); qc.invalidateQueries({ queryKey: ['finance', 'budget'] }); setText(''); onClose(); },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Açıklama kaydedilemedi; biraz sonra yeniden deneyin.') ?? ''),
   });
   return (
     <Sheet open={!!target} modal onClose={() => { setText(''); onClose(); }} title="Sapma açıklaması" subtitle={target?.baslik}>
@@ -47,7 +48,7 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
   const [why, setWhy] = useState<{ id: string; title: string } | null>(null);
   const q = useQuery({ queryKey: ['finance', 'budget', year], queryFn: () => financeApi.budget(year), enabled: ENGINE_ENABLED });
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Bütçe okunamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Bütçe okunamadı; biraz sonra yeniden deneyin.')}</Note>;
   const d: BudgetView | undefined = q.data;
   if (!d) return null;
   if (!d.plan) {
@@ -72,12 +73,16 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
       <DataEnd data={d} extra={<span>Plan: {d.plan.title}{d.plan.decidedBy ? ` · ${d.plan.decidedBy} onayladı, ${fmtDay(d.plan.decidedAt)}` : ''}</span>} />
       <KpiRow>
         <Kpi label="Satış (bugüne beklenen)" value={fmtPct(s?.oran)} help={`Gerçekleşen ${fmtShort(s?.gercekCiro)} / beklenen ${fmtShort(s?.beklenenCiro)}`}
+          explain="Yılbaşından bugüne gerçekleşen satışın, satış hedefinin bugüne düşen payına oranı. %100 ve üstü hedefte; sapma eşiğinin (genelde %80) altı sapma sayılır."
           info={<SqlInfo k={d.kaynaklar} alan="sirket" label="Satış (bugüne beklenen)" />} />
         <Kpi label="Yıllık satış hedefi" value={fmtShort(s?.hedefCiro)} help="Kitap hedefleri + yeni kitap programı"
+          explain="Yürürlükteki bütçe planındaki kitap satış hedefleri ile yeni kitap programının yıllık ciro toplamı."
           info={<SqlInfo k={d.kaynaklar} alan="sirket" label="Yıllık satış hedefi" />} />
         <Kpi label="Gider bütçesi kullanımı" value={fmtPct(g?.kullanim)} help={`Gerçekleşen ${fmtShort(g?.gercek)} / bugüne düşen ${fmtShort(g?.butceDonem)}`}
+          explain="Gerçekleşen giderin, gider bütçesinin bugüne düşen payına oranı. %100'ün üstü bütçenin aşıldığını gösterir."
           info={<SqlInfo k={d.kaynaklar} alan="gider" label="Gider bütçesi kullanımı" />} />
         <Kpi label="Aşan / sınırdaki kalem" value={`${g?.asim ?? 0} / ${g?.yaklasti ?? 0}`} help={`Açık sapma uyarısı: ${d.sapmaToplam ?? 0}`}
+          explain="Bugüne düşen bütçesinin %100'ünü aşan gider kalemi sayısı / %90'ına ulaşıp sınıra yaklaşan kalem sayısı."
           info={<SqlInfo k={d.kaynaklar} alan="gider" label="Aşan / sınırdaki kalem" />} />
       </KpiRow>
 
@@ -95,7 +100,9 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].gercek">Gerçekleşen</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].sapma">Sapma</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="departmanlar[].kullanim">Kullanım</InfoLabel></th>
-              <th className={th}>Durum</th>
+              <th className={th}>
+                <ExplainLabel label="Durum">Bütçe içinde: kullanım %90'ın altında. Sınıra yakın: %90–100. Aşıldı: bugüne düşen bütçenin %100'ü ve üstü.</ExplainLabel>
+              </th>
               <th className={th}>Açıklama</th>
             </tr>
           </thead>
@@ -125,7 +132,7 @@ export default function BudgetTab({ year, canNote }: { year: number; canNote: bo
 
       <Panel>
         <h3 className="flex items-center gap-1.5 text-[15px] font-extrabold">Açık sapma uyarıları ({d.sapmaToplam ?? 0})<SqlInfo k={d.kaynaklar} alan="sapmalar[]" label="Açık sapma uyarıları" /></h3>
-        {!(d.sapmalar ?? []).length ? <p className="text-[12.5px] text-canvas-muted">Açık uyarı yok.</p> : (
+        {!(d.sapmalar ?? []).length ? <p className="text-[12.5px] text-canvas-muted">Açık sapma uyarısı yok. Yeni bir sapma olursa saatlik kontrolde buraya düşer.</p> : (
           <ul className="mt-2 flex flex-col gap-1.5">
             {(d.sapmalar ?? []).map((a) => (
               <li key={a.id} className="flex flex-col gap-1 rounded-xl bg-white/80 px-3 py-2 sm:flex-row sm:items-center">

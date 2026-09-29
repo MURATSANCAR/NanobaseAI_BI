@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, ExternalLink, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { TermLabel } from './terms';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/links*) */
 type View = 'orphans' | 'deep' | 'author' | 'weak' | 'anchors';
@@ -120,7 +122,7 @@ export default function SeoLinks() {
       crumb="Site içi bağlantılar"
       eyebrow="SEO & GEO · teknik tarama"
       title="Site içi bağlantılar"
-      lead="Sitenin kendi sayfaları arasındaki bağlantılar: hiç bağlantı almayan kitaplar, anasayfadan çok uzakta kalanlar, yazar sayfası ile kitap sayfalarının birbirine bağlanıp bağlanmadığı ve bir şey anlatmayan bağlantı metinleri. Veri teknik taramadan gelir; siteye ayrıca istek gitmez, değişiklik yapılmaz."
+      lead="Sitemizin kendi sayfaları arasındaki bağlantılar: hiç bağlantı almayan kitaplar, anasayfadan çok uzakta kalanlar, yazar ve kitap sayfalarının birbirine bağlanıp bağlanmadığı, bir şey anlatmayan bağlantı metinleri. Bağlantı almayan sayfayı Google da okur da zor bulur. Veri teknik taramadan gelir; değişiklik yapılmaz."
     >
       <UrlLookup key={adres} value={adres} onChange={(u) => set('adres', u)} />
       <div className="sg-filters" role="tablist" aria-label="Bölüm" style={{ marginTop: 16 }}>
@@ -158,27 +160,29 @@ function ViewTab({ view, onUrl }: { view: View; onUrl: (u: string) => void }) {
       {s && d && (
         <>
           <section className="sg-kpis" aria-label="Özet">
-            <Kpi label="Bağlantısı okunan sayfa" value={fmt(s.crawledPages)} note={`${fmt(s.followedEdges)} izlenen bağlantı · son tarama ${dateTime(s.lastCrawl)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantısı okunan sayfa" />} />
+            <Kpi label="Bağlantısı okunan sayfa" value={fmt(s.crawledPages)} note={`${fmt(s.followedEdges)} izlenen bağlantı · son tarama ${dateTime(s.lastCrawl)}`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantısı okunan sayfa" />}
+              explain="Teknik taramada açılıp içindeki bağlantıları okunan sayfa sayısı; sonuçlar yalnız bu sayfalar kadar doğrudur." />
             <Kpi
               label="Kapsam"
               value={pct(s.coverage.share)}
               note={(['product', 'author', 'category', 'brand'] as Kind[])
                 .filter((k) => s.coverage.byKind[k])
                 .map((k) => `${KIND_LABEL[k]} ${fmt(s.coverage.byKind[k]!.crawled)}/${fmt(s.coverage.byKind[k]!.of)}`)
-                .join(' · ')} info={<SeoInfo k={r.data?.kaynaklar} label="Kapsam" />} />
-            <Kpi label="Bağlantı almayan kitap" value={fmt(s.counts.orphanProducts)} note={`Bütün türlerde ${fmt(s.counts.orphans)} sayfa`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantı almayan kitap" />} />
-            <Kpi label="Yazar ↔ kitap sorunu" value={fmt(s.counts.author)} note={`${fmt(s.authorsWithoutPage)} yazarın sitede yazar sayfası yok`} info={<SeoInfo k={r.data?.kaynaklar} label="Yazar ↔ kitap sorunu" />} />
+                .join(' · ')} info={<SeoInfo k={r.data?.kaynaklar} label="Kapsam" />}
+              explain="Bilinen sayfalardan bağlantıları okunanların payı. Düşükse bazı «bağlantı almıyor» sonuçları, taranmamış sayfalardan gelen bağlantılar yüzünden yanlış olabilir." />
+            <Kpi label="Bağlantı almayan kitap" value={fmt(s.counts.orphanProducts)} note={`Bütün türlerde ${fmt(s.counts.orphans)} sayfa`} info={<SeoInfo k={r.data?.kaynaklar} label="Bağlantı almayan kitap" />}
+              explain="Taranan hiçbir sayfadan bağlantı almayan satıştaki kitaplar. Google bunları yalnız site haritasından bulur ve önemsiz sayar." />
+            <Kpi label="Yazar ↔ kitap sorunu" value={fmt(s.counts.author)} note={`${fmt(s.authorsWithoutPage)} yazarın sitede yazar sayfası yok`} info={<SeoInfo k={r.data?.kaynaklar} label="Yazar ↔ kitap sorunu" />}
+              explain="Yazar sayfası kitaplarına ya da kitap sayfaları yazar sayfasına bağlantı vermeyen yazar sayısı." />
           </section>
 
           <CoverageNote s={s} running={!!d.crawl?.running} />
 
           {!s.crawledPages ? (
-            <div className="sg-empty">
-              <h2>Henüz bağlantı verisi yok</h2>
-              <p>
-                Bağlantılar teknik taramada okunur. <Link to="/seo-geo/teknik">Teknik sağlık</Link> ekranından taramayı başlatın ya da gece taramasını bekleyin.
-              </p>
-            </div>
+            <EmptyHint
+              title="Henüz bağlantı verisi yok"
+              why={<>Bağlantılar teknik taramada okunur. <Link to="/seo-geo/teknik">Teknik sağlık</Link> ekranından taramayı başlatın ya da gece taramasını bekleyin.</>}
+            />
           ) : (
             <section className="sg-card" style={{ marginTop: 16 }}>
               <h2>{TABS.find((t) => t.id === view)?.label}</h2>
@@ -217,10 +221,7 @@ function ViewTab({ view, onUrl }: { view: View; onUrl: (u: string) => void }) {
                 )}
               </div>
               {!d.items.length ? (
-                <div className="sg-empty">
-                  <h2>Kayıt yok</h2>
-                  <p>Taranan sayfalarda bu görünümde sorun bulunmadı.</p>
-                </div>
+                <EmptyHint title="Bu görünümde sorun yok" why={q.trim() ? 'Aramaya uyan kayıt yok; aramayı kısaltın.' : 'Taranan sayfalarda bu görünümde sorun bulunmadı.'} />
               ) : view === 'author' ? (
                 <AuthorTable rows={d.items as AuthorRow[]} />
               ) : (
@@ -237,7 +238,7 @@ function ViewTab({ view, onUrl }: { view: View; onUrl: (u: string) => void }) {
 
 const VIEW_HELP: Record<View, (s: Summary) => string> = {
   orphans: () =>
-    'Satıştaki kitaplar ve yazar/kategori/yayınevi sayfaları içinde, taranan sayfaların hiçbirinden (izlenen) bağlantı almayanlar. Arama motoru bu sayfaları yalnız sitemapten bulur ve önemsiz sayar. Çok satandan aza.',
+    'Satıştaki kitaplar ve yazar/kategori/yayınevi sayfaları içinde, taranan sayfaların hiçbirinden (izlenen) bağlantı almayanlar. Arama motoru bu sayfaları yalnız site haritasından bulur ve önemsiz sayar. Çok satandan aza; bu sayfalara kategori, yazar ya da benzer kitap sayfalarından bağlantı verilmeli.',
   weak: (s) => `Taranan sayfalardan ${fmt(s.weakInlinks)}'ten az bağlantı alan kitaplar, çok satandan aza. Bu kitaplara anasayfadan, kategori ve yazar sayfalarından, benzer kitaplardan bağlantı vermek önceliklidir.`,
   deep: (s) =>
     s.homeCrawled
@@ -307,8 +308,10 @@ function RowTable({ view, rows, s, onUrl }: { view: View; rows: Row[]; s: Summar
             <th>Sayfa</th>
             <th>Tür</th>
             <th style={{ textAlign: 'right' }}>Satış</th>
-            <th style={{ textAlign: 'right' }}>Gelen bağlantı</th>
-            <th>{view === 'deep' ? 'Derinlik' : view === 'anchors' ? 'Bağlantı metinleri' : 'Durum'}</th>
+            <th style={{ textAlign: 'right' }}>
+              <ExplainLabel label="Gelen bağlantı">Sitemizin taranan sayfalarından bu sayfaya verilen bağlantı sayısı. «İzlenmeyen» (nofollow) bağlantıları Google değerlendirmeye katmaz.</ExplainLabel>
+            </th>
+            <th>{view === 'deep' ? <TermLabel k="depth" label="Derinlik" /> : view === 'anchors' ? <TermLabel k="anchor" label="Bağlantı metinleri" /> : 'Durum'}</th>
           </tr>
         </thead>
         <tbody>
@@ -340,7 +343,7 @@ function RowTable({ view, rows, s, onUrl }: { view: View; rows: Row[]; s: Summar
               </td>
               <td className="sg-mono" style={{ textAlign: 'right' }}>
                 {fmt(row.inlinks)}
-                {row.nofollowInlinks > 0 && <div style={{ fontSize: 11 }}>+{fmt(row.nofollowInlinks)} nofollow</div>}
+                {row.nofollowInlinks > 0 && <div style={{ fontSize: 11 }}>+{fmt(row.nofollowInlinks)} izlenmeyen</div>}
               </td>
               <td>
                 <Status view={view} row={row} s={s} />
@@ -377,7 +380,7 @@ function Status({ view, row, s }: { view: View; row: Row; s: Summary }) {
   } else {
     if (!row.inlinks) chips.push(<span key="o" className="sg-chip bad">Bağlantı yok</span>);
     if (row.crawled) chips.push(<span key="c" className="sg-chip">Kendisi tarandı</span>);
-    if (row.inSitemap === false) chips.push(<span key="s" className="sg-chip bad">Sitemapte de yok</span>);
+    if (row.inSitemap === false) chips.push(<span key="s" className="sg-chip bad">Site haritasında da yok</span>);
     if (row.authorPageCrawled === true) chips.push(<span key="y" className="sg-chip mid">Yazar sayfası tarandı, bağlantı yok</span>);
     if (row.authorPageCrawled === false) chips.push(<span key="y" className="sg-chip">Yazar sayfası taranmadı</span>);
     if (row.depth != null) chips.push(<span key="d" className={`sg-chip ${row.depth > s.deepClicks ? 'mid' : ''}`}>{fmt(row.depth)} tıklama</span>);
@@ -465,13 +468,14 @@ function UrlLookup({ value, onChange }: { value: string; onChange: (u: string) =
   return (
     <section className="sg-card">
       <h2>Bir sayfanın bağlantıları <SeoInfo k={r.data?.kaynaklar} label="Bir sayfanın bağlantıları" /></h2>
+      <p className="sg-sub" style={{ margin: '0 0 4px' }}>Bir sayfa adresi yazın; o sayfaya hangi sayfalarımızın bağlantı verdiği ve onun nereye bağlantı verdiği görünsün.</p>
       <form onSubmit={submit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
         <label className="sg-search" style={{ flex: '1 1 260px' }}>
           <Search size={16} aria-hidden />
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Sayfa adresi (ör. timas.com.tr/kitap-adi)" aria-label="Sayfa adresi" />
         </label>
         <button className="sg-button" type="submit" disabled={!draft.trim()}>
-          Göster
+          Bağlantıları göster
         </button>
         {value && (
           <button
@@ -537,7 +541,7 @@ function LinkList({ title, items, empty, onPick }: { title: string; items: LinkI
                 {KIND_LABEL[l.kind] ?? l.kind}
                 {l.anchors.filter(Boolean).length ? ` · “${l.anchors.filter(Boolean).join('”, “')}”` : ''}
                 {CLASS_LABEL[l.anchorClass] && ` · ${CLASS_LABEL[l.anchorClass]}`}
-                {l.nofollow && ' · nofollow'}
+                {l.nofollow && ' · izlenmeyen (nofollow)'}
               </div>
             </li>
           ))}
@@ -549,10 +553,10 @@ function LinkList({ title, items, empty, onPick }: { title: string; items: LinkI
 }
 
 /* ------------------------------------------------------------------ küçük parçalar */
-function Kpi({ label, value, note, info }: { label: string; value: string; note?: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note?: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       {note && <div className="sg-kpi-note">{note}</div>}
     </div>

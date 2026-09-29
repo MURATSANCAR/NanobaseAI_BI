@@ -85,7 +85,7 @@ function LetterCard({ l, app, canWrite }: { l: Letter; app: AppDetail; canWrite:
                 Kaydet
               </button>
               <button type="button" className={btnPrimary} disabled={act.isPending} onClick={() => act.mutate('approve')}>
-                Onayla
+                Metni onayla
               </button>
               <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('delete')}>
                 Taslağı sil
@@ -128,7 +128,7 @@ function LetterCard({ l, app, canWrite }: { l: Letter; app: AppDetail; canWrite:
                   ))}
                 </select>
                 <button type="button" className={btnPrimary} disabled={act.isPending} onClick={() => act.mutate('sent')}>
-                  Gönderildi
+                  Gönderildi olarak işaretle
                 </button>
               </div>
             </>
@@ -155,7 +155,10 @@ export default function LettersPanel({ app, canWrite }: { app: AppDetail; canWri
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Yazara yazı</h2>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-extrabold">Yazara yazı</h2>
+          <p className="text-[11.5px] leading-snug text-canvas-muted">Taslak hazırlanır, onaylanır; yazıyı portal göndermez, siz gönderip «Gönderildi» diye işaretlersiniz.</p>
+        </div>
         {canWrite && kind && !has && (
           <button type="button" className={btnGhost} disabled={create.isPending} onClick={() => create.mutate()}>
             Yazı taslağı hazırla
@@ -168,7 +171,9 @@ export default function LettersPanel({ app, canWrite }: { app: AppDetail; canWri
           <LetterCard key={l.id} l={l} app={app} canWrite={canWrite} />
         ))}
       </ul>
-      {!app.letters.length && <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz yazı yok.</p>}
+      {!app.letters.length && (
+        <p className="mt-2 text-[12.5px] text-canvas-muted">Henüz yazı yok.{canWrite && kind ? ' Taslak için «Yazı taslağı hazırla»ya basın.' : ''}</p>
+      )}
     </Panel>
   );
 }

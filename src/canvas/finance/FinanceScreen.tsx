@@ -13,6 +13,7 @@ import PnlTab from './PnlTab';
 import BudgetTab from './BudgetTab';
 import ProfitTab from './ProfitTab';
 import CashTab from './CashTab';
+import { Explain } from '../components/Explain';
 import TaxTab from './TaxTab';
 
 /** M45 Finansal raporlar. Yıl, ay, dönem türü ve sekme adres çubuğunda (?yil=&ay=&donem=&sekme=); bağlantı paylaşılır. */
@@ -71,7 +72,7 @@ export default function FinanceScreen() {
   const refresh = useMutation({
     mutationFn: financeApi.refresh,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'meta'] }),
-    onError: (e) => toast.error(errText(e, 'Yenileme başlatılamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, "Logo'dan yenileme başlatılamadı; biraz sonra yeniden deneyin.") ?? ''),
   });
 
   const years = useMemo(() => [...new Set([...(meta.data?.years ?? []), year])].sort((a, b) => b - a), [meta.data, year]);
@@ -108,13 +109,16 @@ export default function FinanceScreen() {
 
   return (
     <FinanceFrame source={data?.veriSonu ? `Logo · ${fmtDay(data.veriSonu)}'e kadar` : 'Logo + CRM'} presence={`${year}`} aside={aside}>
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {meta.error && <Note tone="err">{errText(meta.error, 'Finansal raporlar açılamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; finansal raporlar gösterilemiyor.</Note>}
+      {meta.error && <Note tone="err">{errText(meta.error, 'Finansal raporlar açılamadı; biraz sonra sayfayı yenileyin.')}</Note>}
       {data && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white/70 px-3 py-2 text-[12px] font-semibold text-canvas-muted">
           <span>
             {data.veriSonu
-              ? <>Logo satış ve muhasebe verisi <strong className="text-canvas-ink">{fmtDay(data.veriSonu)}</strong> tarihinde bitiyor; raporlar bu güne kadardır, «bugün» değildir.</>
+              ? <>Logo satış ve muhasebe verisi <strong className="text-canvas-ink">{fmtDay(data.veriSonu)}</strong> tarihinde bitiyor; raporlar bu güne kadardır, «bugün» değildir.{' '}
+                  <Explain label="Yaklaşık" title="«Yaklaşık» rozeti ne demek?">
+                    Rakam tahmin içerir; ör. Logo'da maliyeti işlenmemiş satışlar ya da ödeme günü belli olmayan alacaklar. Nedeni rakamın yanında ya da altında yazar.
+                  </Explain></>
               : "Logo verisi henüz okunmadı; «Logo'dan yenile» ilk okumayı başlatır."}
             {running && <> · Okunuyor: {status.data?.step ?? data.step ?? '…'}</>}
             {data.error && !running && <span className="text-red-700"> · Son okuma: {data.error}</span>}

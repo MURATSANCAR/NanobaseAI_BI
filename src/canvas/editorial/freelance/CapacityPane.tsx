@@ -92,9 +92,9 @@ export default function CapacityPane({ ctx }: { ctx: FlCtx }) {
               </span>
             )}
             <span className="ml-auto flex flex-wrap items-center gap-2">
-              <Legend cls={loadTone(0.4)} text="rahat" />
-              <Legend cls={loadTone(0.9)} text="%85+" />
-              <Legend cls={loadTone(1.2)} text="aşırı" />
+              <Legend cls={loadTone(0.4)} text="rahat (%85 altı)" />
+              <Legend cls={loadTone(0.9)} text="dolu (%85–100)" />
+              <Legend cls={loadTone(1.2)} text="aşırı (%100 üstü)" />
               <Legend cls="bg-[repeating-linear-gradient(135deg,#e2e8f0_0_4px,#f8fafc_4px_8px)]" text="müsait değil" />
             </span>
           </div>
@@ -174,7 +174,7 @@ export default function CapacityPane({ ctx }: { ctx: FlCtx }) {
             </div>
           )}
           <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
-            Hücre: haftadaki iş yükü / kapasite (saat). Görevin tahmini saati başlangıç ile termin arasındaki iş günlerine eşit dağıtılır; resmî tatiller düşülmez.
+            Hücre: haftadaki iş yükü / kapasite (saat). Görevin tahmini saati başlangıç ile termin arasındaki iş günlerine eşit dağıtılır; resmî tatiller düşülmez. Kişinin adına dokunun, elindeki görevler açılsın.
           </p>
         </>
       )}

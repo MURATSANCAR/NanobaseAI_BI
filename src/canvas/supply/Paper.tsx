@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Loading, Note, TableWrap, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { Tabs } from '../budget/parts';
@@ -44,11 +45,11 @@ export default function Paper() {
   return (
     <SupplyFrame
       title="Kağıt ve malzeme"
-      lead="Baskıdan çıkmamış kartların CRM'deki kağıt ihtiyacı (kapak, iç, şömiz, harita, afiş, yan kağıt, ayraç), baskı ayı ve kağıt cinsine göre. Kağıdın bir kısmını Timaş, bir kısmını matbaa alıyor olabilir: alım önerisi bu ayara göre üretilir."
+      lead="Önümüzdeki baskılar için hangi ay, hangi cins kağıttan kaç kilo gerektiği (kapak, iç, şömiz, afiş, ayraç…). Bilgi CRM'deki üretim kartlarından gelir. Kağıdı kimin aldığı (Timaş ya da matbaa) ayara bağlıdır; alım zamanı önerisi buna göre hazırlanır."
       aside={
         <div className="flex flex-wrap items-end justify-start gap-2 lg:justify-end">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Ufuk</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kaç ay ileri</span>
             <select className={`${field} w-auto`} value={String(months ?? meta.data?.settings.paperMonths ?? 3)} onChange={(e) => update({ aylar: e.target.value })}>
               {[1, 2, 3, 6, 9, 12].map((n) => (
                 <option key={n} value={n}>
@@ -72,8 +73,8 @@ export default function Paper() {
       {p && tab === 'ihtiyac' && (
         <Panel>
           <p className="px-1 text-[12px] leading-snug text-canvas-muted">
-            Ölçü: {p.olcu === 'brut' ? 'brüt kg (fire dahil)' : 'net kg'} · toplam {fmtKg(p.toplamKg)} · kağıt bilgisi dolu {fmtInt(p.kapsam.dolu)} kart, boş{' '}
-            {fmtInt(p.kapsam.bos)} kart. CRM'deki «toplam kağıt ihtiyacı» kolonunun birimi henüz doğrulanmadı; ayrı sütunda gösterilir.
+            Ölçü: {p.olcu === 'brut' ? 'brüt kg (baskı firesi dahil)' : 'net kg (fire hariç)'} · toplam {fmtKg(p.toplamKg)} · kağıt bilgisi girilmiş {fmtInt(p.kapsam.dolu)} kart, girilmemiş{' '}
+            {fmtInt(p.kapsam.bos)} kart (bunlar toplama girmez; «Kağıt bilgisi eksik» sekmesine bakın). CRM'deki «toplam kağıt ihtiyacı» alanının birimi henüz doğrulanmadığı için ayrı sütunda gösterilir.
             <SqlInfo k={p.kaynaklar} alan="toplamKg" label="Toplam kağıt ve kapsam" className="ml-0.5" />
           </p>
           <div className="mt-3">
@@ -107,7 +108,7 @@ export default function Paper() {
                 {p.cinsler.length === 0 && (
                   <tr>
                     <td className={td} colSpan={p.aylar.length + 2}>
-                      Ufuktaki kartlarda kağıt ihtiyacı girilmemiş.
+                      Seçilen aylardaki kartlarda kağıt ihtiyacı girilmemiş; «Kağıt bilgisi eksik» sekmesinden kartları görün.
                     </td>
                   </tr>
                 )}
@@ -123,7 +124,7 @@ export default function Paper() {
                   <th className={th}>Kağıt cinsi</th>
                   <th className={`${th} text-right`}>{p.olcu === 'brut' ? 'Brüt kg' : 'Net kg'}</th>
                   <th className={`${th} text-right`}>{p.olcu === 'brut' ? 'Net kg' : 'Brüt kg'}</th>
-                  <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">CRM toplam</InfoLabel></th>
+                  <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={p.kaynaklar} alan="satirlar">CRM toplam</InfoLabel><Explain label="CRM toplam">CRM kartındaki «toplam kağıt ihtiyacı» alanının toplamı. Birimi henüz doğrulanmadığı için kg sütunlarıyla toplanmaz, yalnız karşılaştırma içindir.</Explain></span></th>
                   <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="satirlar">Kart</InfoLabel></th>
                   <th className={th}>Parça / ebat</th>
                 </tr>
@@ -154,11 +155,11 @@ export default function Paper() {
       {tab === 'oneri' && (
         <Panel>
           {p?.alici === 'matbaa' ? (
-            <Note tone="info">Ayara göre kağıdı matbaa alıyor; alım zamanı önerisi üretilmiyor.</Note>
+            <Note tone="info">Ayara göre kağıdı matbaa alıyor; bu yüzden kağıt alım zamanı önerisi hazırlanmıyor.</Note>
           ) : (
             <>
               <p className="mb-3 px-1 text-[12px] leading-snug text-canvas-muted">
-                En geç alım tarihi = baskı ayının ilk günü − tedarik süresi ({meta.data?.settings.paperLeadDays ?? '—'} gün, ayar; gerçek süre ölçülecek). Planı geçmiş kartların ihtiyacı «hemen»dir.
+                Kağıdın zamanında gelmesi için en geç ne zaman sipariş edilmesi gerektiği: baskı ayının ilk günü − kağıt tedarik süresi ({meta.data?.settings.paperLeadDays ?? '—'} gün; ayardır, gerçek süre henüz ölçülmedi). Baskı planı geçmiş kartların kağıdı «hemen» alınmalıdır.
               </p>
               <SuggestionList tur="kagit" canDecide={!!me?.canDecide} empty="Bekleyen kağıt alım önerisi yok." />
             </>
@@ -168,10 +169,10 @@ export default function Paper() {
       {p && tab === 'eksik' && (
         <Panel>
           {p.kagitsizKartlar.length === 0 ? (
-            <Note tone="ok">Ufuktaki bütün kartlarda kağıt bilgisi var.</Note>
+            <EmptyHint title="Eksik kağıt bilgisi yok" why="Seçilen aylardaki bütün kartlarda CRM'de kağıt ihtiyacı girilmiş." />
           ) : (
             <>
-              <p className="px-1 text-[12px] text-canvas-muted"><SqlInfo k={p.kaynaklar} alan="kagitsizKartlar" label="Kağıt bilgisi olmayan kartlar" className="mr-1" />Bu kartlarda CRM'de kağıt ihtiyacı girilmemiş; ihtiyaç toplamına girmez. CRM kartında tamamlanmalı.</p>
+              <p className="px-1 text-[12px] text-canvas-muted"><SqlInfo k={p.kaynaklar} alan="kagitsizKartlar" label="Kağıt bilgisi olmayan kartlar" className="mr-1" />Bu kartlarda CRM'de kağıt ihtiyacı girilmemiş, bu yüzden kağıt toplamına girmiyorlar. CRM'deki üretim kartında kağıt bilgisini tamamlayın.</p>
               <div className="mt-2">
                 {p.kagitsizKartlar.map((c) => (
                   <CardLine key={c.id} c={c} right={<span className="text-[11px] text-canvas-muted">{c.matbaa ?? 'matbaa yok'}</span>} />
@@ -184,11 +185,11 @@ export default function Paper() {
       {p && tab === 'fiyat' && me?.canCost && (
         <Panel>
           <p className="px-1 text-[12px] leading-snug text-canvas-muted">
-            Kağıtçı carilerinden mal alım satırları (Logo, son 12 ay): birim fiyat = satır net tutarı ÷ miktar (KDV hariç). Ölçü birimi (kg, tabaka) karışmaz, ayrı satırdır.
+            Kağıtçılardan son 12 ayda aldığımız malzemenin birim fiyatı ve değişimi (Logo). Birim fiyat = satır tutarı ÷ miktar, KDV hariç. Farklı ölçü birimleri (kg, tabaka) karıştırılmaz, ayrı satırda gösterilir.
           </p>
           {!p.fiyat?.length ? (
             <div className="mt-2">
-              <Note tone="info">Kağıtçı carisi bulunamadı ya da alış satırı yok (özel kod ayarını Tedarikçiler → Eşleme'den kontrol edin).</Note>
+              <EmptyHint title="Kağıt alış kaydı bulunamadı" why="Kağıtçı carisi tanımlanmamış ya da son 12 ayda alış satırı yok. Kağıtçıları tanıyan özel kod ayarını «Tedarikçiler» ekranından kontrol edin." />
             </div>
           ) : (
             <div className="mt-2">
@@ -201,7 +202,7 @@ export default function Paper() {
                     <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="fiyat">Ortalama</InfoLabel></th>
                     <th className={`${th} text-right`}><InfoLabel k={p.kaynaklar} alan="fiyat">İlk ay</InfoLabel></th>
                     <th className={`${th} text-right`}>Son ay</th>
-                    <th className={`${th} text-right`}>Değişim</th>
+                    <th className={`${th} text-right`}><span className="inline-flex items-center gap-1">Değişim<Explain label="Değişim">İlk aydaki birim fiyattan son aydaki birim fiyata yüzde değişim.</Explain></span></th>
                   </tr>
                 </thead>
                 <tbody>

@@ -7,7 +7,8 @@ import { fmtDay } from '../budget/api';
 import { n0, stockApi, tl, type Item } from './api';
 import SqlInfo from '../components/SqlInfo';
 import ItemList from './ItemList';
-import { Chips, DataDay, Empty, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { Chips, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { EmptyHint, Explain } from '../components/Explain';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
 
@@ -49,7 +50,7 @@ export default function Excess() {
         />
       </div>
     ) : (
-      <span className="text-[11.5px] text-canvas-muted">Öneri gece üretilir</span>
+      <span className="text-[11.5px] text-canvas-muted">Zeki AI önerisi her gece hazırlanır; bu kitap için henüz yok.</span>
     );
 
   return (
@@ -69,8 +70,8 @@ export default function Excess() {
       {d && (
         <KpiRow>
           <Kpi label="Kitap" value={n0(d.total)} help="Seçili türde" info={<SqlInfo k={d.kaynaklar} alan="total" label="Fazla ve hareketsiz kitap sayısı" />} />
-          <Kpi label="Toplam adet" value={n0(d.toplamAdet)} help="Logo stoğu" info={<SqlInfo k={d.kaynaklar} alan="toplamAdet" label="Toplam adet" />} />
-          <Kpi label="Fazla stok eşiği" value={`${n0(d.fazlaGun)} gün`} help="Bundan uzun yeten stok" info={<SqlInfo k={d.kaynaklar} alan="fazlaGun" label="Fazla stok eşiği" />} />
+          <Kpi label="Toplam adet" value={n0(d.toplamAdet)} help="Logo stoğu" explain="Listedeki kitapların Logo’daki toplam stok adedi." info={<SqlInfo k={d.kaynaklar} alan="toplamAdet" label="Toplam adet" />} />
+          <Kpi label="Fazla stok eşiği" value={`${n0(d.fazlaGun)} gün`} help="Bundan uzun yeten stok" explain="Stoğu bugünkü satış hızıyla bu kadar günden uzun yetecek kitaplar «fazla stok» sayılır." info={<SqlInfo k={d.kaynaklar} alan="fazlaGun" label="Fazla stok eşiği" />} />
           {d.deger ? (
             <Kpi label="Stok değeri" value={tl(d.deger.toplam)} help={`${n0(d.deger.maliyetli)} kitap maliyetli · ${n0(d.deger.maliyetsiz)} kitapta maliyet yok`}
               info={<SqlInfo k={d.kaynaklar} alan="deger" label="Stok değeri" />} />
@@ -81,11 +82,20 @@ export default function Excess() {
       )}
       <Panel>
         <div className="mb-3">
-          <Chips<Tur> label="Tür" items={TABS} value={tur} onChange={(k) => set('tur', k || null)} />
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <Chips<Tur> label="Tür" items={TABS} value={tur} onChange={(k) => set('tur', k || null)} />
+            </div>
+            <Explain label="Türler" title="Türler ne demek?">
+              <span className="block"><b>Fazla stok:</b> stok, eşikteki günden uzun yetiyor.</span>
+              <span className="block"><b>Hareketsiz:</b> seçili pencerede hiç stok hareketi yok (yılbaşı devri sayılmaz).</span>
+              <span className="block"><b>Satışı yok:</b> stok hareketi var ama satış yok.</span>
+            </Explain>
+          </div>
         </div>
         {q.error && <Note tone="err">{errText(q.error, 'Liste okunamadı.')}</Note>}
         {q.isLoading && <Loading what="Fazla stok" />}
-        {d && !d.items.length && <Empty>Bu türde kitap yok.</Empty>}
+        {d && !d.items.length && <EmptyHint title="Bu türde kitap yok" why="Seçili türe giren kitap bulunmadı; başka bir türü seçebilir ya da «Hepsi»ne dönebilirsiniz." />}
         {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'devir', 'sonHareket', 'net12', 'durum', 'deger']} action={action} />}
         {d && <Pager page={d.page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={q.isLoading} fetching={q.isFetching} onPage={(p) => set('sayfa', String(p))} />}
       </Panel>

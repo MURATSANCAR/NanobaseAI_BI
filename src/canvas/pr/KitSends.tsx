@@ -204,13 +204,13 @@ function MailSheet({ send, kit, onClose, onSent }: { send: Send; kit: Kit; onClo
   return (
     <Sheet open modal onClose={onClose} title="E-posta gönder" subtitle={`${send.contactName ?? ''}${send.outlet ? ` · ${send.outlet}` : ''}`}>
       <div className="flex flex-col gap-3 text-[13px] leading-snug">
-        <p>Bu e-posta yalnız <strong>{send.contactName}</strong> kişisine gider. Yanıt sizin adresinize döner.</p>
+        <p>Bu e-posta yalnız <strong>{send.contactName}</strong> kişisine gider ve geri alınamaz. Yanıt sizin adresinize döner.</p>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Konu</span>
           <input className={field} value={subject} onChange={(e) => setSubject(e.target.value)} />
         </label>
         <fieldset className="flex flex-col gap-1">
-          <legend className={labelCls}>Metnin altına bülten</legend>
+          <legend className={labelCls}>Metnin altına eklenecek bülten</legend>
           <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup">
             {([['ulusal', 'Ulusal'], ['yerel', 'Yerel'], ['yok', 'Ekleme']] as const).map(([v, l]) => (
               <button key={v} type="button" role="radio" aria-checked={bulten === v} disabled={v === 'yerel' && !kit.releaseLocal}
@@ -229,7 +229,7 @@ function MailSheet({ send, kit, onClose, onSent }: { send: Send; kit: Kit; onClo
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
           <button type="button" className={btnPrimary} disabled={mail.isPending || !subject.trim()} onClick={() => mail.mutate()}>
             {mail.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-            Gönder
+            E-postayı gönder
           </button>
         </div>
       </div>

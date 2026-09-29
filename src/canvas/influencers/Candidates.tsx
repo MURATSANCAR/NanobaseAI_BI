@@ -19,7 +19,7 @@ export default function Candidates() {
   return (
     <InflFrame
       title="Kitaba aday içerik üreticileri"
-      lead="Konu uyumu, kitlenin yaşı, geçmiş sonuç, ilişki puanı, son işbirliğinin tazeliği ve bütçeye göre sıra. Hesap keşfi ve sahte takipçi puanı yok; yalnız kayıt defterindeki kişiler sıralanır."
+      lead="Bir kitap seçin; kayıtlı içerik üreticileri bu kitaba uygunluklarına göre sıralanır: konu uyumu, kitlenin yaşı, geçmiş sonuçlar, ilişki, son işbirliğinden bu yana geçen süre ve bütçe. Yeni hesap aranmaz, yalnız kayıtlı kişiler sıralanır."
     >
       {!kitap ? <BookSearch /> : meta.data ? <Ranking kitap={kitap} meta={meta.data} /> : null}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
@@ -158,7 +158,7 @@ function BookHead({ d, meta, budget, setBudget }: { d: Data; meta: Meta; budget:
         {meta.me.canSeeFee && (
           <label className="flex w-full flex-col gap-1 lg:w-56">
             <span className={labelCls}>Kişi başı bütçe (₺)</span>
-            <input className={`${field} font-mono`} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="boş: bütçe puanı nötr" />
+            <input className={`${field} font-mono`} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Boş bırakırsanız bütçe sırayı etkilemez" />
           </label>
         )}
       </div>

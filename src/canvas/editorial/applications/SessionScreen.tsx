@@ -12,6 +12,7 @@ import { applicationsApi, boardApi, type AgendaItem, type SessionDetail, type Vo
 import { BoardReportView } from './ReportPanel';
 import SessionForm from './SessionForm';
 import { AXES, DECISION_TONE, ScoreField, TallyView, errMsg, invalidateApps, useAppMeta } from './shared';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** Kurul oturumu: gündemdeki her başvuru için üyenin kendi puanı ve oyu, oy dağılımı, başkanın kararı.
  *  Üye oy verene kadar başkalarının oylarını görmez; adıyla oylar başkana ve yetkili kişilere açıktır. */
@@ -74,9 +75,11 @@ function VoteForm({ s, it }: { s: SessionDetail; it: AgendaItem }) {
           <ScoreField key={ax.key} title={ax.title} hint={ax.hint} value={scores[ax.key]} onChange={(v) => setScores((p) => ({ ...p, [ax.key]: v }))} />
         ))}
       </div>
-      <p className="text-[12px] text-canvas-muted">
+      <p className="flex flex-wrap items-center gap-1 text-[12px] text-canvas-muted">
         Toplam karar skorunuz: <b className="font-mono text-canvas-ink">{total ?? '—'}</b>
+        <Explain label="Toplam karar skoru">Üç eksende verdiğiniz puanların ortalamasıdır; üç puan da girilince hesaplanır.</Explain>
       </p>
+      {!mine && it.tally.hidden && <p className="text-[11.5px] leading-snug text-canvas-muted">Diğer üyelerin oy dağılımı, siz oyunuzu kaydettikten sonra açılır.</p>}
       <fieldset>
         <legend className={label}>Oyunuz</legend>
         <div className="mt-1 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -149,7 +152,12 @@ function DecisionForm({ s, it }: { s: SessionDetail; it: AgendaItem }) {
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="text-[13px] font-extrabold">Kurul kararı</h4>
-        {suggestion && <span className="text-[11.5px] text-canvas-muted">Öneri: {it.tally.majorityLabel ?? it.tally.byScoreLabel}</span>}
+        {suggestion && (
+          <span className="inline-flex items-center gap-1 text-[11.5px] text-canvas-muted">
+            Öneri: {it.tally.majorityLabel ?? it.tally.byScoreLabel}
+            <Explain label="Karar önerisi">Oy çoğunluğu varsa odur; yoksa üyelerin puanlarından çıkan skor önerisidir. Yalnız yol gösterir, kararı siz seçersiniz.</Explain>
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {(meta.data?.decisions ?? []).map((o) => (
@@ -163,15 +171,15 @@ function DecisionForm({ s, it }: { s: SessionDetail; it: AgendaItem }) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <label className="block">
             <span className={label}>İlk baskı</span>
-            <input inputMode="numeric" value={printRun} onChange={(e) => setPrintRun(e.target.value.replace(/\D/g, ''))} className={`${field} mt-1`} />
+            <input inputMode="numeric" value={printRun} onChange={(e) => setPrintRun(e.target.value.replace(/\D/g, ''))} placeholder="Ör. 3000" className={`${field} mt-1`} />
           </label>
           <label className="block">
             <span className={label}>Fiyat (₺)</span>
-            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={`${field} mt-1`} />
+            <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ör. 250" className={`${field} mt-1`} />
           </label>
           <label className="block">
             <span className={label}>Telif (%)</span>
-            <input inputMode="decimal" value={royalty} onChange={(e) => setRoyalty(e.target.value)} className={`${field} mt-1`} />
+            <input inputMode="decimal" value={royalty} onChange={(e) => setRoyalty(e.target.value)} placeholder="Ör. 10" className={`${field} mt-1`} />
           </label>
           <label className="block">
             <span className={label}>Yayın tarihi</span>
@@ -249,6 +257,7 @@ function ItemCard({ s, it, open, onToggle, onReport }: { s: SessionDetail; it: A
           </div>
           {e && (
             <p className="text-[12px] text-canvas-muted">
+              <Explain label="Editör puanı" className="mr-1">Başvuruyu değerlendiren editörün raporunda verdiği puanlar. Kurul üyelerinin puanlarından ayrıdır.</Explain>
               Editör puanı: içerik <b className="font-mono text-canvas-ink">{e.contentScore ?? '—'}</b> · misyon <b className="font-mono text-canvas-ink">{e.mission ?? '—'}</b> ·
               yayıncılık <b className="font-mono text-canvas-ink">{e.publishing ?? '—'}</b> · ticari <b className="font-mono text-canvas-ink">{e.commercial ?? '—'}</b>
               {e.redline && e.redline !== 'temiz' && <span className="font-semibold text-rose-700"> · Yayın ilkeleri: {e.redlineLabel}</span>}
@@ -306,7 +315,7 @@ function AddToAgenda({ s }: { s: SessionDetail }) {
     <Panel>
       <h2 className="text-[15px] font-extrabold">Gündeme başvuru ekle</h2>
       {items.length === 0 ? (
-        <p className="mt-1 text-[12.5px] text-canvas-muted">Kurula çıkacak başvuru yok.</p>
+        <p className="mt-1 text-[12.5px] text-canvas-muted">Kurula çıkacak başvuru yok. Editör raporu kurula gönderilen başvuru burada seçilebilir hâle gelir.</p>
       ) : (
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <select aria-label="Başvuru" value={pick} onChange={(e) => setPick(e.target.value)} className={`${field} min-w-0 flex-1`}>
@@ -318,7 +327,7 @@ function AddToAgenda({ s }: { s: SessionDetail }) {
             ))}
           </select>
           <button type="button" className={btnPrimary} disabled={!pick || add.isPending} onClick={() => add.mutate()}>
-            Ekle
+            Gündeme ekle
           </button>
         </div>
       )}
@@ -414,7 +423,15 @@ export default function SessionScreen() {
                 {nf.format(s.items.length)} başvuru · {nf.format(pending)} karar bekliyor · skor eşikleri: kabul ≥ {s.thresholds.accept}, revizyon ≥ {s.thresholds.revise}
               </span>
             </div>
-            {s.items.length === 0 && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Gündem boş.</p>}
+            {s.items.length === 0 && (
+              <div className="mt-2">
+                <EmptyHint
+                  title="Gündem boş"
+                  why={s.canRun && s.state === 'planli' ? 'Yukarıdaki «Gündeme başvuru ekle» bölümünden kurula çıkacak başvuruları ekleyin.' : 'Bu oturuma henüz başvuru eklenmedi.'}
+                />
+              </div>
+            )}
+            {s.items.length > 0 && <p className="mt-1 text-[11.5px] text-canvas-muted">Oy vermek, raporu açmak ya da kararı görmek için başvuruya dokunun.</p>}
             <ol className="mt-2 space-y-2">
               {s.items.map((it) => (
                 <ItemCard key={it.appId} s={s} it={it} open={open === it.appId} onToggle={() => setOpen((v) => (v === it.appId ? null : it.appId))} onReport={() => setReport(it)} />

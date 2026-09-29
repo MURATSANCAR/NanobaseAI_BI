@@ -9,6 +9,7 @@ import { crmLabel, dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint } from '../components/Explain';
 
 /** M2 Editör atama — yalnız CRM'den okunur (kullanıcı kararı 2026-09-29). Editör, CRM proje kartındaki
  *  «Editörü» alanıdır; atama CRM'de yapılır, portal yazmaz. Sekmeler: editörsüz projeler, editörler ve projeleri.
@@ -91,15 +92,16 @@ function ProjectsTab() {
 
       {o && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör" />} label="Editör" value={nf.format(editors.length)} help={`${o.sinceYear} ve sonrası projesi olan`} />
-          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörlü proje" />} label="Editörlü proje" value={nf.format(assigned)} help="“Editörü” alanı dolu" />
-          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörsüz proje" />} label="Editörsüz proje" value={nf.format(unassigned)} help="“Editörü” alanı boş" />
-          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör başına" />} label="Editör başına" value={editors.length ? nf.format(Math.round(assigned / editors.length)) : '—'} help="Ortalama proje" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör" />} explain="CRM'de en az bir projenin «Editörü» alanında adı geçen kişi sayısı." label="Editör" value={nf.format(editors.length)} help={`${o.sinceYear} ve sonrası projesi olan`} />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörlü proje" />} explain="«Editörü» alanı dolu olan projeler; aşağıdaki durum renkleri bu projelerin dağılımıdır." label="Editörlü proje" value={nf.format(assigned)} help="“Editörü” alanı dolu" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editörsüz proje" />} explain="«Editörü» alanı boş olan projeler. Listesi «Editörsüz projeler» sekmesindedir." label="Editörsüz proje" value={nf.format(unassigned)} help="“Editörü” alanı boş" />
+          <Kpi info={<SqlInfo k={kaynakOf(o)} alan="_hepsi" label="Editör başına" />} explain="Editörlü proje sayısının editör sayısına bölümü; yuvarlanmış ortalamadır." label="Editör başına" value={editors.length ? nf.format(Math.round(assigned / editors.length)) : '—'} help="Ortalama proje" />
         </KpiRow>
       )}
 
       {o && (
         <Panel>
+          <p className="mb-1.5 text-[11.5px] font-semibold text-canvas-muted">Çubuk renkleri CRM'deki proje durumunu gösterir:</p>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]">
             {o.statuses.map((s, i) => (
               <li key={s.code} className="flex items-center gap-1.5">
@@ -115,6 +117,12 @@ function ProjectsTab() {
       <div className="grid gap-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start lg:gap-4">
         <Panel>
           <h2 className="px-1 text-[13px] font-extrabold">Editörler</h2>
+          <p className="px-1 text-[11.5px] leading-snug text-canvas-muted">Editöre dokunun, projeleri yanda listelensin. Sayı editörün proje sayısı, çubuk durumlara dağılımıdır.</p>
+          {o && !editors.length && (
+            <div className="mt-2">
+              <EmptyHint title="Editörü girilmiş proje yok" why="CRM'de «Editörü» alanı dolu proje bulunamadı." />
+            </div>
+          )}
           <ul className="mt-2 space-y-1.5">
             {editors.map((e) => (
               <EditorRow key={e.id} e={e} order={order} max={max} active={editor === e.id} onOpen={() => setEditor(editor === e.id ? '' : e.id)} />
@@ -140,7 +148,11 @@ function ProjectsTab() {
             </select>
           </div>
           <Pager page={page} pageSize={data?.pageSize ?? 50} total={data?.total ?? 0} shown={items.length} loading={list.isLoading || overview.isLoading} fetching={list.isFetching} db={data?.db} onPage={setPage} />
-          {!list.isLoading && !overview.isLoading && !items.length && !err && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan proje yok.</p>}
+          {!list.isLoading && !overview.isLoading && !items.length && !err && (
+            <div className="mt-3">
+              <EmptyHint title="Bu süzgece uyan proje yok" why="Aramayı temizleyin ya da «Tüm durumlar»ı seçin; editör seçiliyse ona yeniden dokunarak bütün projelere dönün." />
+            </div>
+          )}
           <ul className="mt-3 space-y-2">
             {items.map((j) => (
               <li key={j.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
@@ -204,7 +216,7 @@ export default function EditorsScreen() {
           </button>
         ))}
       </div>
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       <Suspense fallback={<Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Yükleniyor…</p></Panel>}>
         {tab === 'bekleyen' && <PendingTab />}
         {tab === 'projeler' && <ProjectsTab />}

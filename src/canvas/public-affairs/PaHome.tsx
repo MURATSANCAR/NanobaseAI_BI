@@ -27,7 +27,7 @@ export default function PaHome() {
   return (
     <PaFrame
       title="Kurumsal ilişkiler"
-      lead="Kanaat önderleri, kurumlar ve kamu projeleri: kiminle ne zaman görüşüldü, kime hangi kitap gitti, hangi projede hangi söz verildi. Kişi ve kurum bilgisi CRM'den okunur; notlar, hediye programı ve projeler portalda tutulur. Kişilere ve kurumlara hiçbir şey otomatik gönderilmez."
+      lead="Kanaat önderleri (yazar, akademisyen, gazeteci, kamu yöneticisi gibi etkili kişiler), kurumlar ve kamu projeleri: kiminle ne zaman görüşüldü, kime hangi kitap gitti, hangi projede ne söz verildi. Kişi ve kurum bilgisi CRM'den okunur; kimseye hiçbir şey otomatik gönderilmez."
       source={h ? `${fmtInt(h.peopleCounts.toplam)} kişi kartı` : 'Portal + CRM'}
       aside={
         canEdit ? (
@@ -38,13 +38,17 @@ export default function PaHome() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {home.error && <Note tone="err">{errText(home.error, 'Özet okunamadı.')}</Note>}
       <KpiRow>
-        <Kpi label="Temas zamanı gelen" value={h ? fmtInt(h.dueTotal) : '—'} help={st ? `Kritik ${st.criticalDays} gün, diğer ${st.contactDays} gün` : 'Son temastan bu yana'} onClick={() => navigate(`${BASE}/kisiler?kapsam=zamani`)} info={<SqlInfo k={h?.kaynaklar} alan="dueTotal" label="Temas zamanı gelen" />} />
-        <Kpi label="Açık proje" value={h ? fmtInt(h.projects.length) : '—'} help={h ? `${fmtInt(h.lateProjects)} adımı gecikmiş · ${fmtInt(h.quietProjects)} 30 gündür hareketsiz` : 'Fikir → rapor'} onClick={() => navigate(`${BASE}/projeler`)} info={<SqlInfo k={h?.kaynaklar} alan="projects" label="Açık proje" />} />
-        <Kpi label="Bu ay hediye" value={h ? fmtInt(h.giftBooks) : '—'} help={h ? `${fmtMonth(h.month)} · ${fmtInt(h.giftPeople)} kişi · ${fmtInt(h.waitingApproval)} onay bekliyor` : 'Aylık program'} onClick={() => navigate(`${BASE}/hediye`)} info={<SqlInfo k={h?.kaynaklar} alan="giftBooks" label="Bu ay hediye" />} />
-        <Kpi label="Geciken adım" value={h ? fmtInt(h.lateSteps) : '—'} help="Tarihi geçmiş, kapanmamış sıradaki adım" info={<SqlInfo k={h?.kaynaklar} alan="lateSteps" label="Geciken adım" />} />
+        <Kpi label="Temas zamanı gelen" value={h ? fmtInt(h.dueTotal) : '—'} help={st ? `Kritik ${st.criticalDays} gün, diğer ${st.contactDays} gün` : 'Son temastan bu yana'} onClick={() => navigate(`${BASE}/kisiler?kapsam=zamani`)} info={<SqlInfo k={h?.kaynaklar} alan="dueTotal" label="Temas zamanı gelen" />}
+          explain={st ? `Son temasın üstünden kritik kişilerde ${st.criticalDays}, diğerlerinde ${st.contactDays} gün ya da daha fazla geçmiş kişiler; hiç temas kaydı olmayan kritik kişiler de girer. Görüştükten sonra temas notu yazın.` : 'Son temasın üstünden belirlenen süreden fazla geçmiş kişiler.'} />
+        <Kpi label="Açık proje" value={h ? fmtInt(h.projects.length) : '—'} help={h ? `${fmtInt(h.lateProjects)} adımı gecikmiş · ${fmtInt(h.quietProjects)} 30 gündür hareketsiz` : 'Fikir → rapor'} onClick={() => navigate(`${BASE}/projeler`)} info={<SqlInfo k={h?.kaynaklar} alan="projects" label="Açık proje" />}
+          explain="Fikir aşamasından rapora kadar süren, kapanmamış kamu projeleri (okuma kampanyası, kütüphane bağışı gibi). Alt satırda adımı geciken ve 30 gündür kayıt girilmeyenler yazar." />
+        <Kpi label="Bu ay hediye" value={h ? fmtInt(h.giftBooks) : '—'} help={h ? `${fmtMonth(h.month)} · ${fmtInt(h.giftPeople)} kişi · ${fmtInt(h.waitingApproval)} onay bekliyor` : 'Aylık program'} onClick={() => navigate(`${BASE}/hediye`)} info={<SqlInfo k={h?.kaynaklar} alan="giftBooks" label="Bu ay hediye" />}
+          explain="Bu ayın hediye programında kişilere gönderilmesi planlanan kitap sayısı. Her hediye onaydan geçer; öneriyi yazan kendisi onaylayamaz." />
+        <Kpi label="Geciken adım" value={h ? fmtInt(h.lateSteps) : '—'} help="Tarihi geçmiş, kapanmamış sıradaki adım" info={<SqlInfo k={h?.kaynaklar} alan="lateSteps" label="Geciken adım" />}
+          explain="Projelerde sıradaki adımın tarihi geçtiği hâlde kapatılmamış olanlar." />
       </KpiRow>
       {home.isLoading && <Loading />}
 
@@ -102,9 +106,10 @@ export default function PaHome() {
                 ))}
               </ul>
             )}
+            {h.projects.length > 8 && <p className="mt-2 text-[11.5px] text-canvas-muted">ve {fmtInt(h.projects.length - 8)} proje daha — «Pano».</p>}
           </Block>
 
-          <Block title={`${fmtMonth(h.month)} hediye programı`} info={<SqlInfo k={h.kaynaklar} alan="gifts" label="Hediye programı" />} help="Onay durumu" action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/hediye`}>Programı aç</Link>}>
+          <Block title={`${fmtMonth(h.month)} hediye programı`} info={<SqlInfo k={h.kaynaklar} alan="gifts" label="Hediye programı" />} help="Bu ayın hediyelerinin onay ve sevk durumuna göre dağılımı." action={<Link className={`${btnGhost} !min-h-9 !py-1`} to={`${BASE}/hediye`}>Programı aç</Link>}>
             <dl className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
               {(meta.data?.giftStatus ?? []).map((s) => (
                 <div key={s.key} className="rounded-xl bg-white/70 px-2 py-2">

@@ -47,8 +47,8 @@ export default function CustomerContext({ initial }: { initial?: ContextQuery })
         </button>
       </form>
       <SourceLine>
-        Yazılanın türü kendiliğinden anlaşılır (e-posta, telefon, «120.…» cari kodu, geri kalanı sipariş numarası). Her arama değişiklik
-        kaydına yazılır; e-posta ve telefon kaydedilmez.
+        Yazdığınızın türü kendiliğinden anlaşılır (e-posta, telefon, «120.…» ile başlayan cari kodu; geri kalanı sipariş numarası sayılır).
+        Her arama kayda geçer; aradığınız e-posta ve telefon kaydedilmez.
       </SourceLine>
       {ctx.isLoading && query && <Loading />}
       {ctx.error && <Note tone="err">{errText(ctx.error, 'Bağlam okunamadı.')}</Note>}
@@ -69,7 +69,7 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
         <Note key={w} tone="info">{w}</Note>
       ))}
       {c.needsChoice && (
-        <Block title="Birden çok cari eşleşti" help="Bu bilgiler birden çok CRM carisine bağlı. Hangisi olduğunu seçin; Zeki AI seçmez.">
+        <Block title="Birden çok cari eşleşti" help="Bu bilgi CRM’de birden çok cariye bağlı. Doğru müşteriyi seçin; seçim size bırakılır.">
           <div className="flex flex-wrap gap-2">
             {c.match.accounts.map((a) => (
               <button key={a.id} type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-[12.5px] font-bold transition-transform duration-150 ease-out active:scale-[0.97]" onClick={() => onPick?.(a.id)}>
@@ -111,10 +111,10 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
       )}
       {!c.needsChoice && c.hidden.length === 0 && (
         <>
-          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Siparişler" />} title="Siparişler" help="Canlı CRM. Açık = bekleyen adedi olan ve tamamlanmamış/iptal edilmemiş sipariş (CRM kuralı).">
+          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Siparişler" />} title="Siparişler" help="CRM’den anlık okunur. «Açık»: gönderilmeyi bekleyen adedi olan, tamamlanmamış ve iptal edilmemiş sipariş.">
             {c.orders.length === 0 ? <Empty title="Sipariş yok">Bu müşteri için penceredeki CRM siparişi bulunamadı.</Empty> : <OrderTable orders={c.orders} />}
           </Block>
-          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Kargo" />} title="Kargo" help="Kargo firmasının gönderi kaydı CRM'de; takip numarası ya da irsaliye numarasıyla eşlenir.">
+          <Block info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Kargo" />} title="Kargo" help="Kargo firmasının gönderi kaydı CRM’dedir; siparişle takip numarası ya da irsaliye numarası üzerinden eşlenir.">
             {c.cargo.length === 0 ? (
               <Empty title="Kargo kaydı yok">Siparişlerde kargo firmasının gönderi kaydı bulunamadı.</Empty>
             ) : (
@@ -126,7 +126,7 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
                     <th className={th}>Çıkış → varış</th>
                     <th className={th}>Teslim</th>
                     <th className={th}>İade durumu</th>
-                    <th className={`${th} text-right`}>Desi</th>
+                    <th className={`${th} text-right`}>Desi (hacim)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,7 +149,7 @@ export function ContextView({ data, onPick, onOrder }: { data: Context; onPick?:
           <Block
             info={<SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Fatura ve iade" />}
             title="Fatura ve iade (Logo)"
-            help={c.logo?.dataEnd ? `Logo verisi ${fmtDay(c.logo.dataEnd)} tarihine kadar; sonrası için «fatura kesilmedi» denmez.` : 'Logo kaydı'}
+            help={c.logo?.dataEnd ? `Logo verisi ${fmtDay(c.logo.dataEnd)} tarihine kadar; bu tarihten sonrası için müşteriye «fatura kesilmedi» demeyin.` : 'Logo kaydı'}
           >
             {c.invoices.length === 0 ? (
               <Empty title="Fatura yok">{c.account?.cariKodu ? 'Pencerede bu cari koduna fatura yok.' : 'Cari kodu olmadığı için Logo aranamadı.'}</Empty>
@@ -209,7 +209,7 @@ export function OrderTable({ orders }: { orders: Order[] }) {
           <th className={th}>Sipariş</th>
           <th className={th}>Tarih</th>
           <th className={th}>Durum</th>
-          <th className={`${th} text-right`}>Adet / bekleyen</th>
+          <th className={`${th} text-right`}>Adet / gönderilmeyen</th>
           <th className={th}>Sevk</th>
           <th className={th}>Kargo</th>
           <th className={`${th} text-right`}>Tutar</th>

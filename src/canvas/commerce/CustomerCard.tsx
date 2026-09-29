@@ -8,6 +8,7 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { commerceApi, fmtDay, fmtInt, fmtTl } from './api';
 import { CommerceFrame, ROOT, SegmentPill, useMeta } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 const CONSENT: Record<string, { label: string; tone: 'ok' | 'err' | 'muted' }> = {
   izinli: { label: 'İzinli', tone: 'ok' }, ret: { label: 'Ret', tone: 'err' }, bilinmiyor: { label: 'Bilinmiyor', tone: 'muted' },
@@ -23,7 +24,7 @@ export default function CustomerCard() {
   const c = q.data;
   return (
     <CommerceFrame presence={c ? c.etiket : 'Müşteri'}>
-      <Link to={`${ROOT}/musteriler`} className={`${btnGhost} self-start`}><ArrowLeft aria-hidden className="h-4 w-4" />Müşteriler</Link>
+      <Link to={`${ROOT}/musteriler`} className={`${btnGhost} self-start`}><ArrowLeft aria-hidden className="h-4 w-4" />Müşterilere dön</Link>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Müşteri kartı açılamadı.')}</Note>}
       {c && (
@@ -36,7 +37,7 @@ export default function CustomerCard() {
           </div>
           <KpiRow>
             <Kpi label="Geçerli sipariş" value={fmtInt(c.siparis)} help={`İptal/iade ${fmtInt(c.iadeIptal)}`} info={<SqlInfo k={c.kaynaklar} alan="siparis" label="Geçerli sipariş" />} />
-            <Kpi label="Site cirosu" value={fmtTl(c.ciro)} help={`R ${c.r ?? '—'} · F ${c.f ?? '—'} · M ${c.m ?? '—'}`} info={<SqlInfo k={c.kaynaklar} alan="ciro" label="Site cirosu ve RFM puanı" />} />
+            <Kpi label="Site cirosu" value={fmtTl(c.ciro)} help={`R ${c.r ?? '—'} · F ${c.f ?? '—'} · M ${c.m ?? '—'}`} explain="Müşterinin sitedeki geçerli siparişlerinin toplam tutarı. Altındaki R, F, M puanları (1–5) sırasıyla son siparişin yakınlığını, sipariş sıklığını ve harcama büyüklüğünü gösterir; yüksek puan daha iyidir." info={<SqlInfo k={c.kaynaklar} alan="ciro" label="Site cirosu ve R, F, M puanı" />} />
             <Kpi label="İlk sipariş" value={fmtDay(c.ilkSiparis)} help="Geçerli sipariş" />
             <Kpi label="Son sipariş" value={fmtDay(c.sonSiparis)} help={`Segmentte ${fmtDay(c.segmentTarihi)} tarihinden beri`} />
           </KpiRow>
@@ -44,7 +45,7 @@ export default function CustomerCard() {
           <div className="grid gap-3 lg:grid-cols-[1fr_1.4fr] lg:gap-4">
             <div className="flex flex-col gap-3 lg:gap-4">
               <Panel>
-                <h3 className="text-[15px] font-extrabold">İzin</h3>
+                <h3 className="flex items-center gap-1 text-[15px] font-extrabold">İzin<Explain label="İzin">Müşterinin e-posta, SMS, arama ve KVKK izinleri; okur veri tabanından gelir. Herhangi bir kayıtta ret varsa ret sayılır.</Explain></h3>
                 {c.izin ? (
                   <ul className="mt-2 space-y-1 text-[12.5px]">
                     {(['email', 'sms', 'call', 'kvkk'] as const).map((ch) => (
@@ -57,7 +58,7 @@ export default function CustomerCard() {
                 ) : (
                   <p className="mt-1 text-[12.5px] text-canvas-muted">Okur veri tabanında henüz eşleşmedi (gece turundan sonra bağlanır).</p>
                 )}
-                {c.okur && <Link to={`/okurlar/kisi/${c.okur}`} className="mt-2 inline-flex min-h-11 items-center text-[12px] font-extrabold text-canvas-violet sm:min-h-0">Okur kartı →</Link>}
+                {c.okur && <Link to={`/okurlar/kisi/${c.okur}`} className="mt-2 inline-flex min-h-11 items-center text-[12px] font-extrabold text-canvas-violet sm:min-h-0">Okur kartını aç →</Link>}
                 <p className="mt-2 text-[11.5px] text-canvas-muted">Karar okur veri tabanının kuralıdır: herhangi bir kayıtta ret varsa ret.</p>
               </Panel>
               <Panel>

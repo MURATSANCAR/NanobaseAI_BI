@@ -45,7 +45,7 @@ export default function CatalogNewsletterHome({ initial = 'katalog' }: { initial
     <CnFrame
       crumb="Katalog ve bülten"
       title="Katalog ve bülten"
-      lead="Dönemsel kataloglar tek kitap verisinden kurulur: her kitabın neden katalogda olduğu yazar, fiyat ve stok basıma kadar izlenir. E-bülten segment sayısı izin kuralını delmez; portal toplu e-posta göndermez, kişi listesi vermez — onaylanan HTML şirketin e-posta aracından gönderilir."
+      lead="Dönemsel kataloglar ve e-bültenler. Her kitabın neden seçildiği yazar; fiyat ve stok basıma kadar izlenir. Bülten yalnız izin vermiş kişilere, şirketin e-posta aracından gönderilir: portal toplu e-posta göndermez ve kişi listesi vermez, yalnız onaylı bülten dosyasını hazırlar."
       source={m?.havuz.okuma ? `Kitap havuzu ${fmtStamp(m.havuz.okuma)}` : 'CRM + Logo'}
       presence={m ? `${m.havuz.kitap.toLocaleString('tr-TR')} kitap` : '…'}
       aside={
@@ -60,7 +60,7 @@ export default function CatalogNewsletterHome({ initial = 'katalog' }: { initial
         ) : null
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Katalog ve bülten bilgisi açılamadı.')}</Note>}
       {m && !m.havuz.okuma && (
         <Note tone={m.havuz.hata ? 'err' : 'info'}>

@@ -761,7 +761,7 @@ def indicators(engine: sa.engine.Engine, tenant: str, pazar: str, countries: lis
     hak = sorted({r.stok_kodu for r in rrows if r.ulke and any(w and (w in M.fold(r.ulke) or M.fold(r.ulke) in w) for w in fw)})
     return {"pazar": pazar, "ulkeler": sorted(want), "yillar": {str(k): {kk: round(vv, 2) for kk, vv in v.items()} for k, v in sorted(per_year.items())},
             "cariSayisi": len(caris),
-            "kitaplar": [{"stokKodu": k, "ad": names.get(k, ""), "netAdet": v} for k, v in sorted(top.items(), key=lambda kv: -kv[1])[:20]],
+            "kitaplar": [{"stokKodu": k, "ad": names.get(k, ""), "netAdet": v} for k, v in sorted(top.items(), key=lambda kv: -kv[1])],
             "hakSatilanKitap": len(hak), "parametre": _param_view(prm) if prm else None, "veriSonu": m.get("veriSonu"),
             "not": "Hak eşleşmesi ülke adının yazımına bağlıdır; ülke adı okunamadıysa sıfır çıkabilir."}
 

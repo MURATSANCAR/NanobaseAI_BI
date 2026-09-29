@@ -12,6 +12,7 @@ import RingCard from './RingCard';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import IncidentPanel from './IncidentPanel';
+import { Explain } from '../components/Explain';
 import { CapacityTab, IncidentsTab, JobsTab, ReleasesTab, SettingsTab } from './tabs';
 
 /** M48 Sistem durumu: ZEKİ'yi ayakta tutan yedi halka, olaylar, zamanlanmış işler, sürümler ve kapasite. Sekme ve
@@ -73,17 +74,17 @@ export default function SystemStatusScreen() {
   const tabs = TABS.map((t) => ({ ...t, badge: t.key === 'olaylar' ? s?.open.length ?? null : t.key === 'isler' ? s?.jobs.failed ?? null : null }));
 
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Altyapı ve destek', crumb: 'Sistem durumu', source: s ? `Son tur ${fmtAt(s.rings.map((r) => r.at).filter(Boolean).sort().pop() ?? null)}` : '', presence: s?.env === 'vm' ? "Müşteri VM'i" : 'Test sunucusu' }}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'Altyapı ve destek', crumb: 'Sistem durumu', source: s ? `Son tur ${fmtAt(s.rings.map((r) => r.at).filter(Boolean).sort().pop() ?? null)}` : '', presence: s?.env === 'vm' ? 'Şirket içi kurulum' : 'Test sunucusu' }}>
       <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Altyapı ve destek · IT altyapı ve sistem yönetimi</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Altyapı ve destek · BT altyapısı</div>
                 <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Sistem durumu</h1>
                 <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">
-                  Logo, CRM, giriş, Zeki AI modeli, e-posta, şirket ağı bağlantısı ve müşteri VM'i 5 dakikada bir denenir. İki ardışık başarısız deneme
-                  olay açar ve BT'ye e-postayla bildirilir; düzelince süresiyle ikinci bildirim gider. Denemeler yalnız okur, hiçbir servisi yeniden başlatmaz.
+                  Portalın bağlı olduğu yedi bağlantı (Logo, CRM, giriş, Zeki AI, e-posta, şirket ağı, şirket içi kurulum) 5 dakikada bir denenir.
+                  Art arda başarısız denemeler olay açar ve BT'ye e-postayla bildirilir; düzelince süresiyle ikinci bildirim gider. Denemeler yalnız okur, hiçbir hizmeti yeniden başlatmaz.
                 </p>
               </div>
               {s?.me.canCheck && (
@@ -120,8 +121,12 @@ export default function SystemStatusScreen() {
                     <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
                       Açık olaylar
                       <SqlInfo k={kaynakOf(s)} alan="open" label="Açık olaylar (sekme rozeti dahil)" />
+                      <Explain label="Açık olaylar">
+                        Bir bağlantı art arda başarısız olunca (varsayılan iki deneme) «Kopuk», Logo ya da CRM’deki en yeni kayıt çok eskiyse «Veri eski» olayı açılır.
+                        Bağlantı ilk başarılı denemede olay kendiliğinden kapanır.
+                      </Explain>
                     </h2>
-                    {!s.open.length && <p className="mt-1 text-[12.5px] text-canvas-muted">Açık olay yok.</p>}
+                    {!s.open.length && <p className="mt-1 text-[12.5px] text-canvas-muted">Şu an açık olay yok. Geçmiş olaylar «Olaylar» sekmesinde.</p>}
                     <ul className="mt-2 flex flex-col gap-1.5">
                       {s.open.map((i) => (
                         <li key={i.id}>
@@ -153,9 +158,12 @@ export default function SystemStatusScreen() {
                     </button>
                     {s.releases.parity !== null && (
                       <>
-                        <h2 className="mt-3 text-[13px] font-extrabold">Sürüm eşliği</h2>
+                        <h2 className="mt-3 flex items-center gap-1 text-[13px] font-extrabold">
+                          Sürüm eşliği
+                          <Explain label="Sürüm eşliği">Test sunucusunda doğrulanan kod sürümüyle şirket içi kurulumdaki sürümün aynı olup olmadığı. Ayrıntı «Sürümler» sekmesinde.</Explain>
+                        </h2>
                         <p className={`mt-1 font-semibold ${s.releases.parity ? 'text-emerald-700' : 'text-amber-800'}`}>
-                          {s.releases.parity ? "Test sunucusu ve müşteri VM'i aynı sürümde" : "Test sunucusu ve müşteri VM'i farklı sürümde"}
+                          {s.releases.parity ? 'Test sunucusu ve şirket içi kurulum aynı sürümde' : 'Test sunucusu ve şirket içi kurulum farklı sürümde'}
                         </p>
                       </>
                     )}

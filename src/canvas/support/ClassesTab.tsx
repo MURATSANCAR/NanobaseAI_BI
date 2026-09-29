@@ -12,7 +12,7 @@ export default function ClassesTab({ meta }: { meta: Meta }) {
   return (
     <Block
       title="Konu sınıfları"
-      help="Zeki AI talebi bu listeden bir konuya koyar; emin değilse «sınıflanamadı» der ve temsilci seçer. «Diğer» kapatılamaz."
+      help="Zeki AI talebi bu listeden bir konuya koyar; emin değilse «sınıflanamadı» der ve temsilci seçer. Süre alanları o konudaki talebin kaç saat içinde ilk yanıtı ve çözümü alması gerektiğini söyler; destek masasında ayrı süre tanımlıysa o geçerlidir. «Diğer» kapatılamaz."
       action={meta.me.canSettings ? <button type="button" className={btnGhost} onClick={() => setAdding(true)}>Sınıf ekle</button> : undefined}
     >
       <ul className="flex flex-col gap-2">
@@ -50,20 +50,20 @@ function ClassRow({ c, canEdit, onDone }: { c: SupportClass | null; canEdit: boo
         {c ? <input className={field} value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} aria-label="Ad" /> : (
           <>
             <input className={field} value={klass} onChange={(e) => setKlass(e.target.value)} placeholder="ör. yanlis-urun" />
-            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ad" aria-label="Ad" />
+            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ekranda görünen ad (ör. Yanlış ürün)" aria-label="Ad" />
           </>
         )}
       </label>
       <label className="flex flex-col gap-1">
         <span className={label}>Anlamı (Zeki AI bunu okur)</span>
-        <input className={field} value={desc} onChange={(e) => setDesc(e.target.value)} disabled={!canEdit} />
+        <input className={field} value={desc} onChange={(e) => setDesc(e.target.value)} disabled={!canEdit} placeholder="ör. Müşteriye sipariş ettiğinden farklı kitap gitmiş" />
       </label>
       <label className="flex flex-col gap-1">
-        <span className={label}>İlk yanıt (sa)</span>
+        <span className={label}>İlk yanıt (saat)</span>
         <input className={`${field} md:w-24`} inputMode="decimal" value={first} onChange={(e) => setFirst(e.target.value)} disabled={!canEdit} />
       </label>
       <label className="flex flex-col gap-1">
-        <span className={label}>Çözüm (sa)</span>
+        <span className={label}>Çözüm (saat)</span>
         <input className={`${field} md:w-24`} inputMode="decimal" value={resolve} onChange={(e) => setResolve(e.target.value)} disabled={!canEdit} />
       </label>
       <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-semibold">
@@ -72,7 +72,7 @@ function ClassRow({ c, canEdit, onDone }: { c: SupportClass | null; canEdit: boo
       </label>
       {canEdit && (
         <button type="button" className={btnPrimary} disabled={save.isPending || !name.trim() || !klass.trim()} onClick={() => save.mutate()}>
-          Kaydet
+          {c ? 'Kaydet' : 'Sınıfı ekle'}
         </button>
       )}
     </li>

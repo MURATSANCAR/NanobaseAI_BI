@@ -3,6 +3,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, TableWrap, errText, nf, td, th } from '../../admin/ui';
 import { Panel } from '../kit';
 import { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint, Explain } from '../../components/Explain';
 import { productionApi, type PrinterStat } from './api';
 import { fmtDay, fmtPct, fmtUnit } from './shared';
 
@@ -50,7 +51,11 @@ export default function PrintersTab({ onPick }: { onPick: (printer: string) => v
       </div>
       {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
       {q.isLoading && <Loading />}
-      {q.data && q.data.items.length === 0 && <div className="mt-3"><Note tone="info">Matbaası girilmiş üretim kartı yok.</Note></div>}
+      {q.data && q.data.items.length === 0 && (
+        <div className="mt-3">
+          <EmptyHint title="Matbaası girilmiş üretim kartı yok" why="Matbaa, CRM üretim kartında ya da kartın ayrıntısında seçilince performansı burada ölçülür." />
+        </div>
+      )}
       {q.data && q.data.items.length > 0 && (
         <div className="mt-3">
           <TableWrap>
@@ -58,13 +63,19 @@ export default function PrintersTab({ onPick }: { onPick: (printer: string) => v
               <tr className="border-b border-slate-100">
                 <th className={th}>Matbaa</th>
                 <th className={th}>
-                  <InfoLabel k={q.data.kaynaklar} alan="items[].score">Puan</InfoLabel>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={q.data.kaynaklar} alan="items[].score">Puan</InfoLabel>
+                    <Explain label="Matbaa puanı">
+                      0–100: zamanında teslim en çok 50, birim fiyat en çok 30 (bütün matbaaların ortancasından ucuzsa tam puan), kalite en çok 20. Ölçülemeyen parça yarım
+                      puan alır ve adın altında «ölçülemedi» yazar.
+                    </Explain>
+                  </span>
                 </th>
                 <th className={`${th} text-right`}>
                   <InfoLabel k={q.data.kaynaklar} alan="items[].jobs">İş</InfoLabel>
                 </th>
                 <th className={`${th} text-right`}>
-                  <InfoLabel k={q.data.kaynaklar} alan="items[].open">Süren</InfoLabel>
+                  <InfoLabel k={q.data.kaynaklar} alan="items[].open">Süren iş</InfoLabel>
                 </th>
                 <th className={`${th} text-right`}>
                   <InfoLabel k={q.data.kaynaklar} alan="items[].onTimeRate">Zamanında</InfoLabel>
@@ -76,10 +87,16 @@ export default function PrintersTab({ onPick }: { onPick: (printer: string) => v
                   <InfoLabel k={q.data.kaynaklar} alan="items[].unitRecent">Birim fiyat</InfoLabel>
                 </th>
                 <th className={`${th} text-right`}>
-                  <InfoLabel k={q.data.kaynaklar} alan="items[].unitTrend">12 ay eğilim</InfoLabel>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={q.data.kaynaklar} alan="items[].unitTrend">12 ay eğilim</InfoLabel>
+                    <Explain label="12 ay eğilim">Son 12 ayın birim fiyatının önceki 12 aya göre değişimi. Kırmızı artı pahalanma, yeşil eksi ucuzlama demektir.</Explain>
+                  </span>
                 </th>
                 <th className={`${th} text-right`}>
-                  <InfoLabel k={q.data.kaynaklar} alan="items[].qualityRate">Kalite</InfoLabel>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={q.data.kaynaklar} alan="items[].qualityRate">Kalite</InfoLabel>
+                    <Explain label="Kalite">Kalite kaydı girilmiş işlerden sorunsuz olanların oranı. Kalite, üretim kartının ayrıntısında işaretlenir.</Explain>
+                  </span>
                 </th>
               </tr>
             </thead>

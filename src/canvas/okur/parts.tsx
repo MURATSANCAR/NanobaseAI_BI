@@ -69,8 +69,8 @@ export function OkurFrame({ crumb, title, lead, source, aside, children }: {
 export function CoreMissing({ message }: { message?: string | null }) {
   return (
     <Note tone="warn">
-      {message || 'Okur çekirdeği bağlı değil'}. Okur sayıları, izin sağlığı ve segment büyüklüğü okur veri tabanı modülünden gelir;
-      o modül kurulunca burada görünür. Program takvimi, geçmiş etkinlikler ve yorum cevapları şimdiden çalışır.
+      {message || 'Okur veri tabanı bu ekrana henüz bağlı değil'}. Okur sayıları, izin sağlığı ve segment büyüklüğü «Okurlar» ekranındaki okur veri
+      tabanından gelir; bağlantı kurulunca burada görünür. Program takvimi, geçmiş etkinlikler ve yorum cevapları şimdiden çalışır.
     </Note>
   );
 }

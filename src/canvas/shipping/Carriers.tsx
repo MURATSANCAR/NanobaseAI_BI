@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Sparkles, Target, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -44,7 +45,7 @@ export default function Carriers() {
     <ShippingFrame
       crumb="Firma karnesi"
       title="Kargo firma karnesi"
-      lead="Kargo firmasının gönderi kaydından: gönderi, teslim süresi (ortanca, ortalama, %90), iade oranı ve teslim bekleyen; yetkiyle desi başı ve sevk başı maliyet. Dönem kargo irsaliye tarihine göredir. Termin tutulmadığı için «geç teslim» oranı yalnız sizin verdiğiniz il hedefine göre hesaplanır."
+      lead="Kargo firmalarını karşılaştırın: kaç gönderi taşıdılar, kaç günde teslim ettiler, ne kadarı iade döndü ve (yetkiniz varsa) desi başına ne ödedik. Dönem, kargoya veriliş (kargo irsaliyesi) tarihine göredir. Teslim için söz verilmiş bir tarih tutulmadığından «geç teslim» yalnız sizin verdiğiniz il hedef sürelerine göre hesaplanır."
       meta={m}
       aside={
         m && (
@@ -52,10 +53,10 @@ export default function Carriers() {
             {m.me.karar && (
               <button type="button" className={btnGhost} onClick={() => setTargetsOpen(true)}>
                 <Target aria-hidden className="h-4 w-4" />
-                İl hedefleri
+                İl hedeflerini düzenle
               </button>
             )}
-            <ExportButton list="firmalar" params={{ baslangic: bas || undefined, bitis: bit || undefined, kirilim, sehir: sehir || undefined, firma: firma || undefined }} can={m.me.disaAktar} label="Excel'e al" />
+            <ExportButton list="firmalar" params={{ baslangic: bas || undefined, bitis: bit || undefined, kirilim, sehir: sehir || undefined, firma: firma || undefined }} can={m.me.disaAktar} />
           </div>
         )
       }
@@ -72,7 +73,7 @@ export default function Carriers() {
             <input className={field} type="date" value={bit || d?.bitis || ''} onChange={(e) => set('bit', e.target.value)} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Kırılım</span>
+            <span className={labelCls}>Neye göre grupla</span>
             <select className={field} value={kirilim} onChange={(e) => set('kirilim', e.target.value === 'firma' ? '' : e.target.value)}>
               {Object.entries(m?.kirilimlar ?? { firma: 'Kargo firması' }).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
@@ -97,11 +98,15 @@ export default function Carriers() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
-            <Kpi label="Ortanca teslim" value={fmtDays(d.toplam.ortancaGun)} help={`${fmtInt(d.toplam.teslim)} teslim edilmiş gönderi`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Ortanca teslim" />} />
-            <Kpi label="İade" value={fmtInt(d.toplam.iade)} help={`Oran ${fmtPct(d.toplam.gonderi ? d.toplam.iade / d.toplam.gonderi : null)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="İade ve iade oranı" />} />
+            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`}
+              explain="Seçilen dönemde kargo irsaliyesi kesilmiş gönderi sayısı (kargo firmasının kaydından)." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
+            <Kpi label="Ortanca teslim" value={fmtDays(d.toplam.ortancaGun)} help={`${fmtInt(d.toplam.teslim)} teslim edilmiş gönderi`}
+              explain="Teslim edilen gönderilerin yarısı bu süre ya da daha kısa sürede teslim edildi. Birkaç çok geç gönderi ortalamayı bozabileceği için ortanca kullanılır." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Ortanca teslim" />} />
+            <Kpi label="İade" value={fmtInt(d.toplam.iade)} help={`Oran ${fmtPct(d.toplam.gonderi ? d.toplam.iade / d.toplam.gonderi : null)}`}
+              explain="Kargo kaydında iade olarak işaretlenen, alıcıya teslim edilemeyip geri dönen gönderiler; oran = iade ÷ bütün gönderi." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="İade ve iade oranı" />} />
             {cost ? (
-              <Kpi label="Desi başı" value={fmtMoney(d.toplam.desiBasi)} help={`Tutar ${fmtMoney(d.toplam.tutar)} · sevk başı ${fmtMoney(d.toplam.sevkBasi)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Desi başı, tutar ve sevk başı" />} />
+              <Kpi label="Desi başı" value={fmtMoney(d.toplam.desiBasi)} help={`Tutar ${fmtMoney(d.toplam.tutar)} · sevk başı ${fmtMoney(d.toplam.sevkBasi)}`}
+                explain="Kargo tutarı ÷ toplam desi. Desi, paketin hacim ağırlığıdır; kargo ücreti buna göre hesaplanır. «Sevk başı» tutarın sevk edilen adede bölümüdür." info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Desi başı, tutar ve sevk başı" />} />
             ) : (
               <Kpi label="Maliyet" value="—" help="Kargo maliyetini görme yetkisi gerekir" />
             )}
@@ -110,7 +115,7 @@ export default function Carriers() {
           <Panel>
             <h2 className="text-[14px] font-extrabold">{d.kirilimAdi}</h2>
             {d.items.length === 0 ? (
-              <Empty>Bu dönemde kargo kaydı yok. Bu «gecikme yok» demek değildir; veri sonuna bakın.</Empty>
+              <EmptyHint title="Bu dönemde kargo kaydı yok" why="Bu «gecikme yok» demek değildir; kargo kayıtları henüz gelmemiş olabilir. Yukarıdaki veri sonu notuna bakın ya da dönemi değiştirin." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -120,14 +125,14 @@ export default function Carriers() {
                       {(kirilim === 'sehir' || kirilim === 'firma-sehir') && <th className={th}>Şehir</th>}
                       {kirilim === 'sube' && <th className={th}>Çıkış şubesi</th>}
                       <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Gönderi</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Ortanca</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">%90</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Bekleyen</InfoLabel></th>
-                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">İade oranı</InfoLabel></th>
-                      {hasTarget && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Hedefi aşan</InfoLabel></th>}
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Ortanca</InfoLabel><Explain label="Ortanca">Teslim edilenlerin yarısı bu kadar günde ya da daha kısa sürede teslim edildi.</Explain></span></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">%90</InfoLabel><Explain label="%90">Teslim edilenlerin %90'ı bu kadar günde ya da daha kısa sürede teslim edildi; en yavaş %10 bunun üstünde.</Explain></span></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Bekleyen</InfoLabel><Explain label="Bekleyen">Henüz teslim edilmemiş ve iade de olmamış gönderi sayısı.</Explain></span></th>
+                      <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">İade oranı</InfoLabel><Explain label="İade oranı">Alıcıya teslim edilemeyip geri dönen gönderi ÷ bütün gönderi.</Explain></span></th>
+                      {hasTarget && <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Hedefi aşan</InfoLabel><Explain label="Hedefi aşan">Teslim süresi, o il için verdiğiniz hedef günü aşan gönderilerin payı.</Explain></span></th>}
                       {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Desi</InfoLabel></th>}
                       {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Tutar</InfoLabel></th>}
-                      {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Desi başı</InfoLabel></th>}
+                      {cost && <th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d.kaynaklar} alan="items[]">Desi başı</InfoLabel><Explain label="Desi başı">Kargo tutarı ÷ toplam desi (paketlerin hacim ağırlığı). Farklı büyüklükte paket taşıyan firmaları maliyetçe kıyaslamaya yarar.</Explain></span></th>}
                       {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Sevk başı</InfoLabel></th>}
                     </tr>
                   </thead>
@@ -189,7 +194,7 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-[14px] font-extrabold">Karar kaydı</h2>
-          <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">Kurye firması değişimi, bölge kuralı ve sözleşme kararları gerekçesiyle burada tutulur. Karar insanındır; portal kargo firmasına ya da CRM'e bir şey yazmaz.</p>
+          <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">Kargo firması değişimi, bölge kuralı ve sözleşme/fiyat kararlarını gerekçesiyle buraya yazın; «neden bu firmaya geçtik?» sorusunun cevabı burada kalır. Portal kargo firmasına ya da CRM'e bir şey yazmaz.</p>
         </div>
         {meta.me.karar && (
           <button type="button" className={btnPrimary} onClick={() => setOpen(true)}>
@@ -200,7 +205,7 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
       </div>
       {list.error && <div className="mt-2"><Note tone="err">{errText(list.error, 'Kararlar okunamadı.')}</Note></div>}
       {items.length === 0 ? (
-        <Empty>Henüz karar kaydı yok.</Empty>
+        <EmptyHint title="Henüz karar kaydı yok" why={meta.me.karar ? '«Karar ekle» ile ilk kararı gerekçesiyle kaydedebilirsiniz.' : 'Karar yetkisi olan kişi karar eklediğinde burada görünür.'} />
       ) : (
         <div className="mt-2 flex flex-col gap-2">
           {items.map((k) => (
@@ -210,7 +215,7 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
                 <span className="text-canvas-muted">{k.kararVeren} · {fmtDay(k.tarih)}</span>
                 {Object.entries(k.kapsam).map(([a, b]) => <Pill key={a} tone="muted">{a}: {b}</Pill>)}
                 {meta.me.karar && (
-                  <button type="button" className="ml-auto inline-flex min-h-9 items-center text-canvas-muted hover:text-red-700" aria-label="Kararı sil" onClick={() => del.mutate(k.id)}>
+                  <button type="button" className="ml-auto inline-flex min-h-9 items-center text-canvas-muted hover:text-red-700" aria-label="Kararı sil (geri alınamaz)" title="Kararı sil (geri alınamaz)" onClick={() => del.mutate(k.id)}>
                     <Trash2 aria-hidden className="h-4 w-4" />
                   </button>
                 )}
@@ -271,12 +276,12 @@ function DecisionSheet({ open, meta, bas, bit, sehir, onClose }: { open: boolean
           </label>
         </div>
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Karar *</span>
-          <textarea className={`${field} min-h-[64px]`} value={karar} onChange={(e) => setKarar(e.target.value)} />
+          <span className={labelCls}>Karar (zorunlu)</span>
+          <textarea className={`${field} min-h-[64px]`} value={karar} placeholder="ör. Doğu illeri gönderileri Ocak'tan itibaren başka firmayla gidecek." onChange={(e) => setKarar(e.target.value)} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Gerekçe</span>
-          <textarea className={`${field} min-h-[72px]`} value={gerekce} onChange={(e) => setGerekce(e.target.value)} />
+          <textarea className={`${field} min-h-[72px]`} value={gerekce} placeholder="Neden bu kararı verdiniz? Karnedeki hangi rakam etkili oldu?" onChange={(e) => setGerekce(e.target.value)} />
         </label>
         <div className="rounded-xl bg-slate-50 p-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -286,12 +291,12 @@ function DecisionSheet({ open, meta, bas, bit, sehir, onClose }: { open: boolean
               Karneden özet çıkar
             </button>
           </div>
-          {ozet ? <p className="mt-1.5 whitespace-pre-line text-[12px]">{ozet}</p> : <p className="mt-1.5 text-[11.5px] text-canvas-muted">Yalnız karnedeki rakamlar verilir; olgu dışı sayı içeren metin atılır.</p>}
+          {ozet ? <p className="mt-1.5 whitespace-pre-line text-[12px]">{ozet}</p> : <p className="mt-1.5 text-[11.5px] text-canvas-muted">İsterseniz Zeki AI karnedeki rakamlardan kısa bir özet yazar ve karara eklenir. Karnede olmayan bir sayı yazarsa özet kullanılmaz.</p>}
         </div>
         <div className="flex justify-end">
           <button type="button" className={btnPrimary} disabled={!karar.trim() || save.isPending} onClick={() => save.mutate()}>
             {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-            Kaydet
+            Kararı kaydet
           </button>
         </div>
       </div>
@@ -325,8 +330,8 @@ function TargetsSheet({ open, meta, cities, onClose }: { open: boolean; meta: Me
         </datalist>
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[minmax(0,1fr)_96px_44px] items-end gap-2">
-            <input className={field} list="kargo-iller" value={r.il} placeholder="İl" aria-label="İl" onChange={(e) => setRows((x) => x.map((y, j) => (j === i ? { ...y, il: e.target.value } : y)))} />
-            <input className={field} inputMode="numeric" value={r.gun} placeholder="Gün" aria-label="Hedef gün" onChange={(e) => setRows((x) => x.map((y, j) => (j === i ? { ...y, gun: e.target.value.replace(/\D/g, '').slice(0, 3) } : y)))} />
+            <input className={field} list="kargo-iller" value={r.il} placeholder="İl, ör. Van" aria-label="İl" onChange={(e) => setRows((x) => x.map((y, j) => (j === i ? { ...y, il: e.target.value } : y)))} />
+            <input className={field} inputMode="numeric" value={r.gun} placeholder="Gün, ör. 3" aria-label="Hedef gün" onChange={(e) => setRows((x) => x.map((y, j) => (j === i ? { ...y, gun: e.target.value.replace(/\D/g, '').slice(0, 3) } : y)))} />
             <button type="button" className={btnGhost} aria-label="Satırı sil" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>
               <Trash2 aria-hidden className="h-4 w-4" />
             </button>
@@ -339,7 +344,7 @@ function TargetsSheet({ open, meta, cities, onClose }: { open: boolean; meta: Me
         <div className="flex justify-end">
           <button type="button" className={btnPrimary} disabled={save.isPending} onClick={() => save.mutate()}>
             {save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-            Kaydet
+            Hedefleri kaydet
           </button>
         </div>
       </div>

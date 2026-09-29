@@ -15,6 +15,7 @@ import IndicatorsTab from './IndicatorCard';
 import ComplianceCalendar from './ComplianceCalendar';
 import ContinuityTab from './ContinuityTab';
 import ReportsTab from './ReportsTab';
+import { Explain } from '../components/Explain';
 
 /** M47 Risk yönetimi ve uyum: özet (ısı haritası, gözden geçir kuyruğu, geciken aksiyon, bu ayın uyumu), risk kaydı,
  *  göstergeler, uyum takvimi, sigorta ve iş sürekliliği, kurul brifingi. Sekme ve süzgeçler adres çubuğunda. */
@@ -24,7 +25,7 @@ const TABS = [
   { key: 'kayit', label: 'Risk kaydı' },
   { key: 'gostergeler', label: 'Göstergeler' },
   { key: 'uyum', label: 'Uyum' },
-  { key: 'sureklilik', label: 'BCP ve sigorta' },
+  { key: 'sureklilik', label: 'İş sürekliliği ve sigorta' },
   { key: 'raporlar', label: 'Raporlar' },
 ] as const;
 type Tab = (typeof TABS)[number]['key'];
@@ -49,7 +50,7 @@ export default function RiskScreen() {
   return (
     <RiskFrame
       title="Risk ve uyum"
-      lead="Riskin sahibi, olasılık × etki puanı, aksiyonu ve gözden geçirmesi tek kayıtta. Göstergeler Logo, CRM ve portalın hazır raporlarından kendiliğinden ölçülür; eşiği aşan gösterge riski «gözden geçir» kuyruğuna koyar. Puanı ve kararı insan verir; göstergeler inceleme adayıdır."
+      lead="Şirket risklerini sahibi, olasılık × etki puanı ve aksiyonuyla kaydeder. Logo, CRM ve portal raporlarından ölçülen gösterge eşiği aşınca risk gözden geçirmeye düşer; puanı ve kararı insan verir."
       aside={
         me?.canWrite ? (
           <div className="flex justify-start lg:justify-end">
@@ -61,8 +62,8 @@ export default function RiskScreen() {
         ) : undefined
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
-      {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; risk kayıtları gösterilemiyor.</Note>}
+      {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı; biraz sonra sayfayı yenileyin.')}</Note>}
       <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'ozet' ? null : t, hucre: null })} />
       {meta.data && tab === 'ozet' && <Overview meta={meta.data} onCell={(h) => update({ sekme: 'kayit', hucre: h })} />}
       {meta.data && tab === 'kayit' && <Register meta={meta.data} params={params} update={update} />}
@@ -81,23 +82,23 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
   const q = useQuery({ queryKey: ['risk', 'summary'], queryFn: riskApi.summary, enabled: ENGINE_ENABLED });
   const [cell, setCell] = useState<string | null>(null);
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Özet okunamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Özet okunamadı; biraz sonra yeniden deneyin.')}</Note>;
   const s = q.data as Summary & WithK;
   const k = s.kaynaklar;
   const picked = cell ? s.isiHaritasi.flat().find((c) => `${c.olasilik}x${c.etki}` === cell) : null;
   return (
     <>
       <KpiRow>
-        <Kpi label="Canlı risk" value={String(s.sayilar.canli)} help={`Kritik bantta ${s.sayilar.kritik}${s.puansiz ? ` · puansız ${s.puansiz}` : ''}`} info={<SqlInfo k={k} alan="sayilar" label="Canlı risk, kritik, puansız" />} />
-        <Kpi label="Gözden geçir" value={String(s.kuyruk.length)} help="Eşiği aşan gösterge, tarihi gelen ya da sahipsiz risk" info={<SqlInfo k={k} alan="kuyruk" label="Gözden geçir kuyruğu" />} />
-        <Kpi label="Geciken aksiyon" value={String(s.gecikenAksiyon.length)} help={`${meta.ayarlar.actionWarnDays} gün içinde termini gelen ${s.yaklasanAksiyon.length}`} info={<SqlInfo k={k} alan="gecikenAksiyon" label="Geciken ve yaklaşan aksiyon" />} />
-        <Kpi label="Kırmızı gösterge" value={String(s.sayilar.kirmizi)} help={`${s.sayilar.gosterge} göstergeden; eşiği girilmemiş ${s.sayilar.esiksiz}`} info={<SqlInfo k={k} alan="sayilar.kirmizi" label="Kırmızı gösterge" />} />
+        <Kpi label="Canlı risk" value={String(s.sayilar.canli)} help={`Kritik bantta ${s.sayilar.kritik}${s.puansiz ? ` · puansız ${s.puansiz}` : ''}`} explain="Açık, izlenen ya da kabul edilmiş riskler. «Kritik bant» olasılık × etki puanı en yüksek seviyedekiler, «puansız» henüz puan verilmemiş olanlardır." info={<SqlInfo k={k} alan="sayilar" label="Canlı risk, kritik, puansız" />} />
+        <Kpi label="Gözden geçir" value={String(s.kuyruk.length)} help="Eşiği aşan gösterge, tarihi gelen ya da sahipsiz risk" explain="Bağlı göstergesi kırmızıya dönen, gözden geçirme tarihi gelen, sahibi ya da puanı olmayan riskler. Her birini açıp gözden geçirme kaydı girin." info={<SqlInfo k={k} alan="kuyruk" label="Gözden geçir kuyruğu" />} />
+        <Kpi label="Geciken aksiyon" value={String(s.gecikenAksiyon.length)} help={`${meta.ayarlar.actionWarnDays} gün içinde termini gelen ${s.yaklasanAksiyon.length}`} explain="Termini geçtiği hâlde kapanmamış risk aksiyonları. Altında termini yakında gelecek olanların sayısı yazar." info={<SqlInfo k={k} alan="gecikenAksiyon" label="Geciken ve yaklaşan aksiyon" />} />
+        <Kpi label="Kırmızı gösterge" value={String(s.sayilar.kirmizi)} help={`${s.sayilar.gosterge} göstergeden; eşiği girilmemiş ${s.sayilar.esiksiz}`} explain="Son ölçümü kırmızı eşiği aşan göstergeler. Eşiği girilmemiş gösterge renk almaz; eşiği «Göstergeler» sekmesinde tanımlayın." info={<SqlInfo k={k} alan="sayilar.kirmizi" label="Kırmızı gösterge" />} />
       </KpiRow>
       {!s.tumunuGorur && <Note tone="info">Yalnız sahibi, açanı ya da aksiyon sahibi olduğunuz riskleri görüyorsunuz.</Note>}
       {s.oneriSayisi > 0 && <Note tone="info">Zeki AI'ın {s.oneriSayisi} risk önerisi kabul bekliyor (Risk kaydı → Öneriler).<SqlInfo k={k} alan="oneriSayisi" label="Öneri sayısı" className="ml-0.5" /></Note>}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-4">
         <Panel>
-          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Isı haritası<SqlInfo k={k} alan="isiHaritasi" label="Isı haritası" /></h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Isı haritası<Explain label="Isı haritası">Her risk olasılık (dikey, 1–5) ve etki (yatay, 1–5) puanına göre yerleşir; sağ üst köşe en tehlikelisidir. Hücredeki büyük sayı risk adedi, köşedeki küçük sayı olasılık × etki puanıdır. Hücreye dokununca o riskler listelenir.</Explain><SqlInfo k={k} alan="isiHaritasi" label="Isı haritası" /></h2>
           <HeatMap grid={s.isiHaritasi} selected={cell} onSelect={setCell} levels={s.seviyeler} />
           {picked && (
             <div className="mt-3 flex flex-col gap-1">
@@ -282,9 +283,9 @@ function Register({ meta, params, update }: { meta: RiskMeta; params: URLSearchP
           </div>
         )}
       </Panel>
-      {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
+      {list.error && <Note tone="err">{errText(list.error, 'Risk listesi okunamadı; biraz sonra yeniden deneyin.')}</Note>}
       {list.isLoading ? <Loading /> : items.length === 0 ? (
-        <Empty>{durum === 'oneri' ? 'Kabul bekleyen öneri yok.' : 'Bu süzgeçte risk yok.'}</Empty>
+        <Empty>{durum === 'oneri' ? 'Kabul bekleyen Zeki AI önerisi yok.' : 'Bu süzgeçte risk yok. Aramayı temizleyin ya da durum ve kategori süzgecini «Hepsi» yapın.'}</Empty>
       ) : (
         <Panel>
           <div className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">{items.length} risk · puana göre<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Risk kaydı: puan ve aksiyon sayıları" /></div>
@@ -329,15 +330,15 @@ export function RiskSheet({ open, meta, onClose, initial, id }: { open: boolean;
       onClose();
       if (!id) nav(`/risk-uyum/risk/${r.id}`);
     },
-    onError: (e) => toast.error(errText(e, 'Kaydedilemedi.')),
+    onError: (e) => toast.error(errText(e, 'Risk kaydedilemedi; biraz sonra yeniden deneyin.')),
   });
   const codes = f.gostergeler ?? [];
   return (
     <Sheet open={open} modal wide onClose={onClose} title={id ? 'Riski düzenle' : 'Yeni risk'}
       subtitle={id ? 'Olasılık ve etki gözden geçirmeyle değişir; iz kalır.' : 'Olasılık ve etkiyi siz verirsiniz; sistem puanı değiştirmez.'}>
       <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
-        <TextInput id="rs-baslik" label="Başlık" value={f.baslik ?? ''} onChange={(v) => set('baslik', v)} />
-        <TextInput id="rs-tanim" label="Tanım" area value={f.tanim ?? ''} onChange={(v) => set('tanim', v)} />
+        <TextInput id="rs-baslik" label="Başlık" value={f.baslik ?? ''} onChange={(v) => set('baslik', v)} placeholder="Ör. Ana matbaada kapasite yetersizliği" />
+        <TextInput id="rs-tanim" label="Tanım" area value={f.tanim ?? ''} onChange={(v) => set('tanim', v)} placeholder="Risk nedir, neyi etkiler? Bir iki cümle." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextInput id="rs-neden" label="Neden" area value={f.neden ?? ''} onChange={(v) => set('neden', v)} />
           <TextInput id="rs-sonuc" label="Sonuç (gerçekleşirse)" area value={f.sonuc ?? ''} onChange={(v) => set('sonuc', v)} />
@@ -352,7 +353,7 @@ export function RiskSheet({ open, meta, onClose, initial, id }: { open: boolean;
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextInput id="rs-sahip" label="Sahip (kullanıcı adı)" value={f.sahip ?? ''} onChange={(v) => set('sahip', v)} />
+          <TextInput id="rs-sahip" label="Sahip (kullanıcı adı)" value={f.sahip ?? ''} onChange={(v) => set('sahip', v)} help="Riskten sorumlu kişinin portal kullanıcı adı" />
           <TextInput id="rs-eposta" label="Sahibin e-postası" type="email" value={f.sahipEposta ?? ''} onChange={(v) => set('sahipEposta', v)}
             help="Gösterge kırmızıya dönünce ve termin yaklaşınca buraya yazılır" />
         </div>
@@ -364,6 +365,7 @@ export function RiskSheet({ open, meta, onClose, initial, id }: { open: boolean;
         )}
         <fieldset className="flex flex-col gap-1">
           <legend className={labelCls}>Bağlı göstergeler</legend>
+          <span className="text-[11px] leading-snug text-canvas-muted">Seçtiğiniz gösterge kırmızıya dönünce bu risk gözden geçirme kuyruğuna düşer.</span>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {(ind.data?.items ?? []).map((g) => {
               const on = codes.includes(g.kod);

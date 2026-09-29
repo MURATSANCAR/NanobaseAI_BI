@@ -8,6 +8,7 @@ import { contractApi, metaOptions, type Payment } from './api';
 import { PaidSheet, PaymentRow } from './PaymentsTab';
 import { errMsg, money } from './ui';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Bütün sözleşmelerin ödeme takvimi: vadesi gelen avans, tek ödeme ve hakedişler. */
 export default function PaymentsScreen() {
@@ -25,7 +26,7 @@ export default function PaymentsScreen() {
   const overdue = items.filter((p) => p.overdue);
   const totals = Object.entries(data?.totals ?? {});
   return (
-    <ModuleFrame route="/telif-sozlesme" crumb="Sözleşmeler" title="Ödeme takvimi" lead="Portalda izlenen sözleşmelerin avans, tek ödeme ve hakediş ödemeleri. Ödendi bilgisi portalda tutulur; Logo'ya yazılmaz." source="Portal">
+    <ModuleFrame route="/telif-sozlesme" crumb="Sözleşmeler" title="Ödeme takvimi" lead="Bütün sözleşmelerin avans, tek ödeme ve hakediş ödemeleri, vadesine göre sıralı. «Ödendi» bilgisi portalda tutulur; Logo'ya yazılmaz." source="Portal">
       <div className="px-1">
         <Link to="/telif-sozlesme" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
           <ChevronLeft aria-hidden className="h-4 w-4" />
@@ -36,11 +37,14 @@ export default function PaymentsScreen() {
       {data && status === 'planlandi' && (
         <KpiRow>
           <Kpi label="Bekleyen ödeme" value={String(items.length)} help={within ? `${within} gün içinde vadesi gelen ve vadesiz` : 'Bütün vadeler'}
+            explain="Henüz ödenmemiş (planlanmış) ödemeler: seçili süre içinde vadesi gelenler ve vade tarihi girilmemiş olanlar. Vadesi geçenler de dahildir."
             info={<SqlInfo k={data.kaynaklar} alan="sayac.bekleyen" label="Bekleyen ödeme" />} />
           <Kpi label="Vadesi geçen" value={String(overdue.length)} help={overdue.length ? 'Ödendi işaretlenmemiş' : 'Yok'}
+            explain="Vade tarihi geçtiği hâlde «Ödendi» işaretlenmemiş ödemeler. Ödeme yapıldıysa satırdaki düğmeyle işaretleyin."
             info={<SqlInfo k={data.kaynaklar} alan="sayac.vadesiGecen" label="Vadesi geçen" />} />
           {totals.slice(0, 2).map(([cur, t]) => (
             <Kpi key={cur} label={`Toplam (${cur})`} value={money(t.amount, cur)} help={t.overdue ? `${money(t.overdue, cur)} vadesi geçmiş` : 'Vadesi geçen yok'}
+              explain="Listedeki bekleyen ödemelerin bu para birimindeki toplam tutarı; farklı para birimleri ayrı kartta toplanır."
               info={<SqlInfo k={data.kaynaklar} alan="totals" label={`Toplam (${cur})`} />} />
           ))}
         </KpiRow>
@@ -67,7 +71,14 @@ export default function PaymentsScreen() {
           </select>
         </div>
         {q.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
-        {data && !items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan ödeme yok.</p>}
+        {data && !items.length && (
+          <div className="mt-3">
+            <EmptyHint
+              title="Bu süzgece uyan ödeme yok"
+              why="Vade aralığını genişletin ya da durumu «Hepsi» yapın. Ödemeler sözleşme sayfasındaki «Ödeme takvimi» sekmesinden eklenir."
+            />
+          </div>
+        )}
         {data && items.length > 0 && (
           <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
             <InfoLabel k={data.kaynaklar} alan="items[]" label="Ödemeler (tutar, vade, ödenen)">{`${items.length} ödeme`}</InfoLabel>

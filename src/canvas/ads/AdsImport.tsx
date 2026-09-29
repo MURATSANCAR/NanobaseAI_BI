@@ -148,7 +148,7 @@ export default function AdsImport() {
 
       {pv && m && (
         <Block title="3 · Kolon eşlemesi"
-          help={`Başlık ${pv.baslikSatiri}. satırda, ${pv.satirSayisi} veri satırı. Eşleme ${pv.eslemKaynagi === 'kayitli' ? 'hesabın kayıtlı eşlemesinden' : pv.eslemKaynagi === 'elle' ? 'sizin seçiminizden' : 'kolon adlarından'} geldi.`}>
+          help={`Dosyadaki her kolonun hangi bilgi olduğunu seçin (ör. «Cost» kolonu = Harcama); * işaretliler zorunludur. Başlık ${pv.baslikSatiri}. satırda, ${pv.satirSayisi} veri satırı. Eşleme ${pv.eslemKaynagi === 'kayitli' ? 'hesabın kayıtlı eşlemesinden' : pv.eslemKaynagi === 'elle' ? 'sizin seçiminizden' : 'kolon adlarından'} geldi.`}>
           {pv.zekiHata && <Note tone="warn">{pv.zekiHata}</Note>}
           {Object.keys(pv.zeki ?? {}).length > 0 && (
             <Note tone="info">Zeki AI önerisi: {Object.entries(pv.zeki).map(([f, v]) => `${m.fields[f]} → «${v.kolon}»`).join(', ')}. Kontrol edin.</Note>
@@ -205,14 +205,14 @@ export default function AdsImport() {
         <History rows={imports.data?.items ?? []} canUndo onUndo={setUndo} />
       </Panel>
       <AskSheet open={!!undo} title="Yüklemeyi geri al" confirm="Geri al" danger busy={undoImport.isPending}
-        message={undo ? `${undo.dosya} (${undo.hesap}): bu yüklemenin geçerli ${undo.gecerliKampanyaGun ?? 0} kampanya-gün satırı silinecek.` : ''}
+        message={undo ? `${undo.dosya} (${undo.hesap}): bu yüklemenin geçerli ${undo.gecerliKampanyaGun ?? 0} kampanya-gün satırı silinecek. Bu işlem geri alınamaz; gerekirse dosyayı yeniden yüklersiniz.` : ''}
         onClose={() => setUndo(null)} onConfirm={() => undo && undoImport.mutate(undo.id)} />
     </AdsFrame>
   );
 }
 
 function History({ rows, canUndo, onUndo }: { rows: ImportRow[]; canUndo: boolean; onUndo: (r: ImportRow) => void }) {
-  if (!rows.length) return <p className="py-3 text-[12px] text-canvas-muted">Henüz yükleme yok.</p>;
+  if (!rows.length) return <p className="py-3 text-[12px] text-canvas-muted">Henüz yükleme yok. Yukarıdan hesabı seçip ilk raporu yükleyin.</p>;
   return (
     <div className="mt-2">
       <TableWrap>

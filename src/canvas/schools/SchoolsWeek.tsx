@@ -10,6 +10,7 @@ import { CalendarNote, ScoreBadge, addDays, daysAgo, fmtDay, fmtDayShort, invali
 import VisitReportSheet from './VisitReportSheet';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** «Bu hafta» (telefon öncelikli): haftanın ziyaret planı güne göre, sıradaki adımlar, tatil/sınav uyarısı. Plan önerisi
  *  kuralla kurulur (öncelik puanı, son ziyaret, aynı ilçe aynı güne); temsilci düzeltir, yetkili onaylar. */
@@ -100,6 +101,7 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
         <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
           <h2 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             Sıradaki adımlar
+            <Explain label="Sıradaki adımlar">Ziyaret raporlarında yazılan «sonraki adım»lar. Tarihi geçenler kırmızı görünür; işi bitirince «Tamam» ile kapatın.</Explain>
             <SqlInfo k={d.kaynaklar} alan="nextSteps" label="Sıradaki adımlar" />
           </h2>
           <ul className="mt-2 space-y-1.5">
@@ -129,10 +131,10 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
       )}
 
       {d && d.items.length === 0 && (
-        <Note tone="info">
-          Bu hafta planda okul yok.{' '}
-          {me?.canVisit ? '«Plan öner» öncelik sırasıyla kapsamınızdaki okulları getirir; «Okullar» sekmesinden de tek tek ekleyebilirsiniz.' : ''}
-        </Note>
+        <EmptyHint
+          title="Bu hafta planda okul yok"
+          why={me?.canVisit ? '«Plan öner» öncelik sırasıyla kapsamınızdaki okulları getirir; «Okullar» sekmesinden de tek tek ekleyebilirsiniz.' : 'Temsilciler bu hafta için henüz okul planlamamış. Oklarla başka bir haftaya bakabilirsiniz.'}
+        />
       )}
 
       {d &&
@@ -334,7 +336,7 @@ function GenerateForm({ week, onDone }: { week: string; onDone: () => void }) {
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>İlçe</span>
-          <input className={field} value={ilce} onChange={(e) => setIlce(e.target.value)} placeholder="Hepsi" />
+          <input className={field} value={ilce} onChange={(e) => setIlce(e.target.value)} placeholder="Örn. Kadıköy (boş: hepsi)" />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kademe</span>

@@ -6,17 +6,18 @@ import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi, type StudioArt
 import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
-import { StepIcon, StudioInfo, ago, ghostBtn, gradientBtn } from './shared';
+import { StepIcon, StepLegend, StudioInfo, ago, ghostBtn, gradientBtn } from './shared';
 import { useCan } from '../../useAdmin';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import { EmptyHint, ExplainLabel } from '../../components/Explain';
 
 /** Kitabın Word dosyasıyla yeni tasarım (köprü sınırı editorial_studio.DOCX_MAX = 20 MB). */
 function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
   return (
     <FileDrop
       title="Kitabın Word dosyasını yükle"
-      hint="Yükleyince tasarım işi açılır; aşağıdaki resim kullanımı seçimi geçerlidir. Okunmuş bir kitabı aşağıdan da seçebilirsiniz."
+      hint="Dosyayı seçince ya da bırakınca tasarım hemen başlar; aşağıda seçtiğiniz resim kullanımı geçerlidir. Okunmuş bir kitabı aşağıdaki listeden de seçebilirsiniz."
       accept=".docx"
       maxBytes={20 * MB}
       feature="tasarim.uret"
@@ -44,8 +45,7 @@ export default function StudioHome() {
     const key = q.trim().toLocaleLowerCase('tr');
     return (catalog.data?.items ?? [])
       .filter((b) => b.contentAvailable)
-      .filter((b) => !key || b.title.toLocaleLowerCase('tr').includes(key) || (b.publisher?.title ?? '').toLocaleLowerCase('tr').includes(key))
-      .slice(0, 60);
+      .filter((b) => !key || b.title.toLocaleLowerCase('tr').includes(key) || (b.publisher?.title ?? '').toLocaleLowerCase('tr').includes(key));
   }, [catalog.data, q]);
 
   const err = errText(start.error || upload.error, '');
@@ -55,7 +55,7 @@ export default function StudioHome() {
       route="/kitap-tasarim"
       crumb="Kitap Tasarım Stüdyosu"
       title="Kitap Tasarım Stüdyosu"
-      lead="Kitabın metninden baskıya hazır iç sayfa ve kapak: CRM bilgisi, yaş ve tür, sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi. Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz."
+      lead="Kitabın metninden baskıya hazır iç sayfa ve kapak hazırlar. Word dosyası yükleyin ya da okunmuş bir kitap seçin; ZEKİ AI sayfaları yerleştirip resimler, siz resimleri düzeltip onaylarsınız."
       source="Editör · ZEKİ AI"
       aside={
         <div className="flex lg:justify-end">
@@ -65,7 +65,7 @@ export default function StudioHome() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu kurulumda açık değil; tasarımlar açılamaz. Sistem yöneticinize bildirin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr] lg:gap-4">
         {canProduce ? (
@@ -76,13 +76,15 @@ export default function StudioHome() {
             <StudioDrop run={(f) => upload.mutateAsync(f)} />
           </div>
           <div className="mt-2">
-            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Resim kullanımı</div>
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              <ExplainLabel label="Resim kullanımı">Kitapta hangi sayfalara resim çizileceği. Emin değilseniz «Otomatik»i bırakın; seçimi sonra tasarım sayfasından da değiştirebilirsiniz.</ExplainLabel>
+            </div>
             <ArtModePicker value={artMode} onChange={setArtMode} disabled={start.isPending || upload.isPending} />
           </div>
-          <p className="mt-3 text-[12px] text-canvas-muted">Word dosyası yükleyin ya da editörün okuduğu bir kitabı seçin; okunmuş metin ve analiz yeniden kullanılır.</p>
+          <p className="mt-3 text-[12px] text-canvas-muted">Ya da editörlerin daha önce okuttuğu bir kitabı seçin: metni ve incelemesi hazır olduğu için yeniden yüklemeniz gerekmez. Kitaba dokununca önce onay istenir.</p>
           <label className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
             <Search className="h-4 w-4 text-canvas-muted" aria-hidden />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı" aria-label="Kitap ara"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adıyla arayın" aria-label="Kitap ara"
               className="w-full bg-transparent text-[13px] outline-none" />
           </label>
           {pick && (() => {
@@ -116,7 +118,13 @@ export default function StudioHome() {
             );
           })()}
           {catalog.isLoading ? <Loading /> : (
-            <ul className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            <>
+            {books.length > 0 && (
+              <p className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+                {q.trim() ? `Aramaya uyan ${books.length.toLocaleString('tr-TR')} kitap` : `Okunmuş ${books.length.toLocaleString('tr-TR')} kitabın hepsi`} · listeyi kaydırarak görebilirsiniz
+              </p>
+            )}
+            <ul className="mt-2 grid max-h-[520px] gap-2 overflow-y-auto overscroll-contain pr-1 sm:grid-cols-2">
               {books.map((b) => (
                 <li key={b.id}>
                   <button type="button" disabled={start.isPending} onClick={() => setPick({ id: b.id, title: b.publisher?.title || b.title })}
@@ -130,8 +138,18 @@ export default function StudioHome() {
                   </button>
                 </li>
               ))}
-              {!books.length && <li className="text-[12px] text-canvas-muted">Eşleşen okunmuş kitap yok.</li>}
+              {!books.length && (
+                <li className="sm:col-span-2">
+                  <EmptyHint
+                    title={q.trim() ? 'Bu adla okunmuş kitap yok' : 'Okunmuş kitap yok'}
+                    why={q.trim()
+                      ? 'Listede yalnız metni okunmuş kitaplar var. Adın bir kısmını yazmayı deneyin ya da kitabın Word dosyasını yukarıya bırakın.'
+                      : 'Listede yalnız metni okunmuş kitaplar görünür. Kitabın Word dosyasını yukarıya bırakarak başlayabilirsiniz.'}
+                  />
+                </li>
+              )}
             </ul>
+            </>
           )}
         </Panel>
         ) : (
@@ -141,7 +159,7 @@ export default function StudioHome() {
             <div className="mt-2">
               <StudioDrop run={(f) => upload.mutateAsync(f)} />
             </div>
-            <p className="mt-2 text-[12.5px] text-canvas-muted">Var olan tasarımları yandan açabilirsiniz.</p>
+            <p className="mt-2 text-[12.5px] text-canvas-muted">Yeni tasarım başlatma yetkiniz yok; var olan tasarımları «Tasarımlar» listesinden açıp inceleyebilirsiniz. Yetki için yöneticinize başvurun.</p>
           </Panel>
         )}
 
@@ -149,7 +167,9 @@ export default function StudioHome() {
           <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
             Tasarımlar
             <StudioInfo label="Tasarım işleri" what="İş başına tamamlanan adım ÷ bütün adımlar; «bu kitabın N tasarımı» aynı kitap adıyla açılmış iş sayısı." />
+            <StepLegend />
           </h2>
+          <p className="mt-0.5 text-[11.5px] text-canvas-muted">Başlattığınız işler arka planda sürer; sayfadan ayrılabilirsiniz. Liste birkaç saniyede bir kendiliğinden yenilenir.</p>
           {jobs.isLoading ? <Loading /> : (
             <ul className="mt-3 flex flex-col gap-2">
               {(jobs.data?.jobs ?? []).map((j) => {
@@ -164,7 +184,7 @@ export default function StudioHome() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-bold">{j.title || j.source.file_name || 'Hazırlanıyor…'}</span>
                         <span className="block text-[11.5px] text-canvas-muted">
-                          {j.created_by} · {ago(j.created_at)} · {running ? running.label : failed ? `Hata: ${failed.label}` : `${done}/${j.steps.length} adım`}
+                          {j.created_by} · {ago(j.created_at)} · {running ? `Sürüyor: ${running.label}` : failed ? `Durdu: ${failed.label}` : j.steps.length && done === j.steps.length ? 'Bitti' : `${done}/${j.steps.length} adım bitti`}
                         </span>
                       </span>
                       <StepIcon status={failed ? 'fail' : running ? 'running' : j.steps.length && done === j.steps.length ? 'done' : 'waiting'} />
@@ -172,10 +192,17 @@ export default function StudioHome() {
                   </li>
                 );
               })}
-              {!jobs.data?.jobs.length && <li className="text-[12px] text-canvas-muted">Henüz tasarım yok.</li>}
+              {!jobs.data?.jobs.length && (
+                <li>
+                  <EmptyHint
+                    title="Henüz tasarım yok"
+                    why={canProduce ? '«Yeni tasarım» bölümünden Word dosyası yükleyin ya da okunmuş bir kitap seçin.' : 'Yeni tasarım başlatıldığında burada görünür.'}
+                  />
+                </li>
+              )}
             </ul>
           )}
-          <p className="mt-3 text-[11.5px] text-canvas-muted">Resim modeli yalnız resim üretilirken açılır; iş bitince kapanır, kart ana modele döner.</p>
+          <p className="mt-3 text-[11.5px] text-canvas-muted">Resimleri ZEKİ AI çizer. Başka bir kitabın resimleri çizilirken yeni tasarım sırada bekler ve o iş bitince kendiliğinden başlar.</p>
         </Panel>
       </div>
     </ModuleFrame>

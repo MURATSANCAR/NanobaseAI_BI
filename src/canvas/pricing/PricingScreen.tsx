@@ -47,12 +47,12 @@ export default function PricingScreen() {
   return (
     <Frame
       title="Fiyatlama ve maliyet"
-      lead="Kitap bazlı maliyet — basım Excel'indeki Kitap Maliyet Formu'yla aynı alanlar ve hesap (kâğıt, baskı, kapak, cilt, telif, dolaylı gider) — baskı adedi senaryoları, başabaş, kapak fiyatı önerisi ve kanal fiyat matrisi; Logo'dan gerçekleşen maliyet ve marj, backlist fiyat revizyonu. Onaylanan fiyat CRM kitap kartına ayrıca girilir; buradan CRM'e, Logo'ya ya da e-ticarete yazılmaz."
+      lead="Bir kitabın birim maliyetini basım Excel'indeki Kitap Maliyet Formu'yla aynı hesapla çıkarır; başabaş adedini, kapak fiyatı önerisini ve kanal fiyatlarını gösterir, gerçekleşen marjı ve eski kitapların fiyat güncellemesini izler. Onaylanan fiyat CRM'e elle girilir; buradan hiçbir sisteme yazılmaz."
       source={m ? `Logo + CRM · veri sonu ${day(m.dataEnd)}` : 'Logo + CRM'}
       presence={o?.status.refreshing ? 'Veriler yenileniyor…' : m ? `Görüntü ${day(m.asOf)}` : 'Hazırlanıyor'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {ov.error && <Note tone="err">{errText(ov.error, 'Özet okunamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; fiyatlama verileri gösterilemiyor.</Note>}
+      {ov.error && <Note tone="err">{errText(ov.error, 'Fiyatlama özeti şu an okunamadı; biraz sonra sayfayı yenileyin.')}</Note>}
       {o?.status.error && <Note tone="warn">{o.status.error}</Note>}
       {o && !m && (
         <Note tone="info">
@@ -76,6 +76,7 @@ export default function PricingScreen() {
             help={`${nf.format(o.counts.onayda ?? 0)} analiz onayda · ${nf.format(o.counts.onaylandi ?? 0)} onaylandı`}
             active={section === 'analizler'}
             onClick={() => go('analizler', { durum: 'onayda' })}
+            explain="Sizin imzanızı bekleyen fiyat analizleri. Karta dokunursanız «Analizler ve onay» sekmesi yalnız onaydakileri gösterir."
             info={<SqlInfo k={o.kaynaklar} alan="toApprove" label="Onayınızı bekleyen analizler" />}
           />
           <Kpi
@@ -84,6 +85,7 @@ export default function PricingScreen() {
             help={m ? `Son 12 ay kitap satışı, ${nf.format(m.channels.length)} müşteri grubu` : 'Ölçülüyor'}
             active={section === 'veri'}
             onClick={() => go('veri')}
+            explain="Son 12 ayın kitap satışlarında liste fiyatından ortalama ne kadar indirim yapıldığı: 1 − (net satış ÷ iskonto öncesi tutar). Bütün müşteri gruplarının toplamından hesaplanır."
             info={<SqlInfo k={o.kaynaklar} alan="measured.discount" label="Ortalama kanal iskontosu" />}
           />
           <Kpi
@@ -92,12 +94,14 @@ export default function PricingScreen() {
             help={m ? `${nf.format(m.printedBooks)} kitabın matbaa faturası (2021'den)` : 'Ölçülüyor'}
             active={section === 'gerceklesen'}
             onClick={() => go('gerceklesen')}
+            explain="Logo'daki matbaa baskı faturalarının sayısı. Kitap hesabında önerilen baskı bedeli, benzer sayfa sayısındaki kitapların bu faturalarından çıkarılır."
             info={<SqlInfo k={o.kaynaklar} alan="measured.printInvoices" label="Baskı faturası sayısı" />}
           />
           <Kpi
             label="Veri sonu"
             value={m ? day(m.dataEnd) : '—'}
             help={m ? `Logo'daki son fatura · ${m.copies.map((c) => `${c.from.slice(0, 4)}–${c.last.slice(0, 4)}`).join(', ')}` : 'Ölçülüyor'}
+            explain="Logo'daki en son faturanın tarihi. Bütün hesaplar bu tarihe kadarki veriyle yapılır; yanındaki yıllar okunan Logo dönemleridir."
             info={<SqlInfo k={o.kaynaklar} alan="measured.copies" label="Veri sonu ve Logo yıl kopyaları" />}
           />
         </KpiRow>
@@ -113,7 +117,7 @@ export default function PricingScreen() {
               { key: 'hesap', label: 'Kitap hesabı' },
               { key: 'analizler', label: 'Analizler ve onay', badge: o?.toApprove || undefined },
               { key: 'gerceklesen', label: 'Gerçekleşen' },
-              { key: 'backlist', label: 'Backlist revizyonu' },
+              { key: 'backlist', label: 'Eski kitap fiyatları' },
               { key: 'veri', label: 'Veri ve varsayımlar' },
             ]}
           />
@@ -127,7 +131,7 @@ export default function PricingScreen() {
           </button>
         )}
       </div>
-      {refresh.error && <Note tone="err">{errText(refresh.error, 'Yenileme başlatılamadı.')}</Note>}
+      {refresh.error && <Note tone="err">{errText(refresh.error, 'Veri yenileme başlatılamadı; biraz sonra yeniden deneyin.')}</Note>}
 
       {!o ? (
         !ov.error && <Loading />

@@ -131,6 +131,7 @@ export default function FoyScreen() {
       title={(f?.alanlar.find((a) => a.key === 'ad')?.deger as string) ?? stok}
       source={f ? `${f.stokKodu} · sürüm ${f.surum}` : stok}
       presence={f ? f.durumAdi : '…'}
+      lead="Bu kitabın tek sayfalık satış föyü. Solda föyün basılı hâli, sağda alanları ve nereden geldikleri; eksik ya da CRM–Logo arasında uyuşmayan bilgi onaydan önce burada görünür."
       back={{ to: `/pazarlama/foy${donem ? `?ay=${donem}` : ''}`, label: 'Satış föyleri' }}
     >
       {foy.error && <Note tone="err">{errText(foy.error, 'Föy açılamadı.')}</Note>}
@@ -144,7 +145,7 @@ export default function FoyScreen() {
                 {sharing ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Share2 aria-hidden className="h-4 w-4" />}Paylaş
               </button>
               <a className={btnGhost} href={monthApi.foyPdfUrl(f.stokKodu, f.donem)} target="_blank" rel="noopener noreferrer">
-                <FileText aria-hidden className="h-4 w-4" />PDF
+                <FileText aria-hidden className="h-4 w-4" />PDF aç
               </a>
             </div>
           </div>
@@ -154,7 +155,7 @@ export default function FoyScreen() {
               <Pill tone={FOY_TONE[f.durum]}>{f.durumAdi}</Pill>
               {f.eski && <Pill tone="err">CRM'de değişti: yenileyin</Pill>}
               <span className="text-[12px] font-semibold text-canvas-muted">
-                {f.onaylayan ? `Onaylayan ${f.onaylayan} (${fmtStamp(f.onayZamani)})` : f.gonderen ? `${f.gonderen} onaya gönderdi` : 'Onay bekliyor değil'}
+                {f.onaylayan ? `Onaylayan ${f.onaylayan} (${fmtStamp(f.onayZamani)})` : f.gonderen ? `${f.gonderen} onaya gönderdi` : 'Henüz onaya gönderilmedi'}
               </span>
               <div className="ml-auto flex flex-wrap gap-2">
                 {me.canFoyWrite && <button type="button" className={btnGhost} onClick={() => setAsk('refresh')}><RefreshCw aria-hidden className="h-4 w-4" />CRM'den yenile</button>}
@@ -214,7 +215,7 @@ export default function FoyScreen() {
                   Zeki AI satış argümanı taslağı
                 </button>
               )}
-              {me.canFoyWrite && !crmArgs && !meta.data?.modelReady && <p className="mt-1 text-[11px] text-canvas-muted">Zeki AI modeli bu kurulumda bağlı değil; argümanları elle yazın.</p>}
+              {me.canFoyWrite && !crmArgs && !meta.data?.modelReady && <p className="mt-1 text-[11px] text-canvas-muted">Zeki AI şu an bağlı değil; satış argümanlarını elle yazın.</p>}
             </Block>
 
             {!!f.crmTodo?.length && (

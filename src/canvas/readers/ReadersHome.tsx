@@ -28,10 +28,10 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <KpiRow>
-        <Kpi label="Tekil okur" value={fmtInt(o.readers)} help={`${fmtInt(o.records)} kaynak kaydından · ${fmtInt(o.multiSource)} okur birden çok kayıtla birleşti`} info={<SqlInfo k={o.kaynaklar} alan="readers" label="Tekil okur" />} />
-        <Kpi label="E-postayla ulaşılabilir" value={fmtInt(o.reach.email)} help={`İzinli${o.rules.requireKvkk ? ', KVKK rızalı' : ''}, 18 yaş üstü · okurların ${fmtPct(o.reach.email, o.readers)}'i`} info={<SqlInfo k={o.kaynaklar} alan="reach" label="E-postayla ulaşılabilir" />} />
+        <Kpi label="Tekil okur" value={fmtInt(o.readers)} help={`${fmtInt(o.records)} kaynak kaydından · ${fmtInt(o.multiSource)} okur birden çok kayıtla birleşti`} explain="CRM'deki kişi, aday ve İYS kayıtları aynı e-posta ya da telefonla birleştirildikten sonra kalan gerçek kişi sayısı. Aynı kişinin birden çok kaydı bir okur sayılır." info={<SqlInfo k={o.kaynaklar} alan="readers" label="Tekil okur" />} />
+        <Kpi label="E-postayla ulaşılabilir" value={fmtInt(o.reach.email)} help={`İzinli${o.rules.requireKvkk ? ', KVKK rızalı' : ''}, 18 yaş üstü · okurların ${fmtPct(o.reach.email, o.readers)}'i`} explain="Ticari e-posta izni olan, gerekiyorsa KVKK açık rızası da bulunan ve 18 yaşından büyük okurlar. Bir e-posta listesine yasal olarak girebilecek en fazla kişi budur." info={<SqlInfo k={o.kaynaklar} alan="reach" label="E-postayla ulaşılabilir" />} />
         <Kpi label="SMS ile ulaşılabilir" value={fmtInt(o.reach.sms)} help={`Aramayla ${fmtInt(o.reach.call)} · okurların ${fmtPct(o.reach.sms, o.readers)}'i`} info={<SqlInfo k={o.kaynaklar} alan="reach" label="SMS ile ulaşılabilir" />} />
-        <Kpi label="Birleştirme bekleyen" value={fmtInt(o.pendingCandidates)} help="Adı ve ili aynı, e-postası ve telefonu farklı okur çifti" info={<SqlInfo k={o.kaynaklar} alan="pendingCandidates" label="Birleştirme bekleyen" />} />
+        <Kpi label="Birleştirme bekleyen" value={fmtInt(o.pendingCandidates)} help="Adı ve ili aynı, e-postası ve telefonu farklı okur çifti" explain="Aynı kişi olabileceği düşünülen ama otomatik birleştirilmeyen okur çiftleri. «Birleştirme» bölümünde tek tek karar verirsiniz." info={<SqlInfo k={o.kaynaklar} alan="pendingCandidates" label="Birleştirme bekleyen" />} />
       </KpiRow>
 
       {!o.rules.exportEnabled && (
@@ -158,7 +158,7 @@ export default function ReadersHome({ overview, loading, error }: { overview?: O
         <Panel>
           <h2 className="flex items-center gap-1 text-[15px] font-extrabold">CRM kampanya geçmişi<SqlInfo k={o.kaynaklar} alan="run" label="CRM kampanya sayaçları" /></h2>
           {campaigns.length === 0 ? (
-            <p className="mt-1 text-[12.5px] text-canvas-muted">CRM'de e-posta/SMS kampanyası kaydı yok.</p>
+            <p className="mt-1 text-[12.5px] text-canvas-muted">CRM'de e-posta ya da SMS kampanyası kaydı bulunmuyor.</p>
           ) : (
             <div className="mt-2">
               <TableWrap>

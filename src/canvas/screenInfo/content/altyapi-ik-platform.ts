@@ -1,4 +1,49 @@
-import type { ScreenInfoMap } from '../types';
+import type { ScreenInfo, ScreenInfoMap } from '../types';
+
+/** Kanal alt ekranları hem menü öğesiyle hem `path:` anahtarıyla bağlanır: `path:/kanallar/:platform` kalıbı
+ *  `/kanallar/matris` gibi adresleri de tuttuğu için bu adresler kalıptan önce kendi metinlerine bağlanır. */
+const KANAL_MATRIS: ScreenInfo = {
+  summary: 'Hangi kanal hangi kitabı alıyor, hangisi iade ediyor: kitap × kanal net adet tablosu.',
+  how: [
+    'Net adet = kanala satış − kanaldan iade, Logo faturalı satırlarından.',
+    'Kanal, onaylı cari eşlemesiyle belirlenir.',
+    'Kanalın son tüketiciye sattığı adet değildir.',
+  ],
+  data: 'Logo faturalı satış ve iade satırları, onaylı cari eşlemesi',
+  refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
+  actions: ['Dönem seçip kitap ve kanalları karşılaştırın.', 'Tabloyu Excel’e aktarın.'],
+};
+
+const KANAL_D2C: ScreenInfo = {
+  summary:
+    'D2C, okura aracısız kendi sitemizden (timas.com.tr) satıştır: sitenin e-ticaret ve şirket içindeki payı, sitede pazar yerlerine göre daha iyi satan kitaplar ve siteye özel set önerisi.',
+  how: [
+    'Pay ve kitaplar Logo’dan, timas.com.tr’ye eşlenmiş cari ya da kanal kodu üzerinden hesaplanır.',
+    '«Oransal güçlü» kitap, sitedeki payı bütün kitapların ortalama site payının belirgin üstünde olandır.',
+    'Öneri portal kaydıdır, hiçbir platforma gönderilmez; Zeki AI yalnız rakamsız gerekçe ekler.',
+  ],
+  data: 'Logo faturalı satırları, site müşteri özetleri, onaylı cari eşlemesi',
+  refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
+  actions: ['Dönem seçip site payını izleyin.', 'Siteye özel set önerisi hazırlayın (yetkiyle).'],
+};
+
+const KANAL_ESLESME: ScreenInfo = {
+  summary:
+    'Hangi Logo carisi hangi platform: kanal karnesi, kitap × kanal ve Trendyol/Amazon ekranları bu eşlemeyi kullanır.',
+  how: [
+    'E-ticaret kanal kodlu her cari için aday platform önerilir: unvanda platform adı geçiyorsa adından, geçmiyorsa Zeki AI seçer.',
+    'Aday ancak sizin onayınızla kesinleşir; başka platform ya da «platform değil» seçebilirsiniz.',
+    'Çok carili bir kanal kodu bütünüyle bir platforma, CRM hedef bölgesi de platforma bağlanabilir.',
+    'Eşleme portal kaydıdır; CRM’e ve Logo’ya hiçbir şey yazılmaz.',
+  ],
+  data: 'Logo cari kartları, CRM hedef bölgeleri ve portaldaki eşleme kayıtları',
+  refresh: 'Adaylar her gece 04:00',
+  actions: [
+    'Aday eşlemeleri onaylayın ya da düzeltin (yetkiyle).',
+    'Kanal kodunu ve hedef bölgesini platforma bağlayın.',
+    'Eşlemeyi Excel’e aktarın.',
+  ],
+};
 
 /** Altyapı ve destek, İnsan Kaynakları, Platform (kanallar, Trendyol, Amazon), sözlük ve Portal ayarları ekranları. */
 const CONTENT: ScreenInfoMap = {
@@ -350,15 +395,6 @@ const CONTENT: ScreenInfoMap = {
       'Saklama sürelerini girin, imha tutanaklarını ve erişim kaydını inceleyin.',
     ],
   },
-  'path:/ik/anket/:token': {
-    summary: 'Size gönderilen kişisel bağlantıyla çalışan anketini doldurduğunuz sayfa; portal girişi gerekmez.',
-    how: [
-      'Bağlantı tek kullanımlıktır; anket bir kez cevaplanır.',
-      'Cevabınız adınız, bağlantı ve saat bilgisi olmadan, tarihi güne yuvarlanarak kaydedilir.',
-      'Açık uçlu cevaplar maskelenir ve diğer cevaplarınızdan ayrı saklanır.',
-    ],
-    actions: ['Soruları cevaplayıp gönderin.'],
-  },
   'path:/ik/anket/k': {
     summary: 'Bilgisayar kullanmayan çalışanlar için: İK’nın verdiği basılı karttaki 10 karakterlik kodu girip ankete geçtiğiniz sayfa.',
     how: [
@@ -376,6 +412,131 @@ const CONTENT: ScreenInfoMap = {
       'Anket kapanınca kod kayıtları da silinir.',
     ],
     actions: ['Soruları cevaplayıp gönderin.'],
+  },
+  // «/ik/anket/:token» kalıbı «/ik/anket/k» adresine de uyar; bu yüzden basılı kod sayfalarından sonra gelir.
+  'path:/ik/anket/:token': {
+    summary: 'Size gönderilen kişisel bağlantıyla çalışan anketini doldurduğunuz sayfa; portal girişi gerekmez.',
+    how: [
+      'Bağlantı tek kullanımlıktır; anket bir kez cevaplanır.',
+      'Cevabınız adınız, bağlantı ve saat bilgisi olmadan, tarihi güne yuvarlanarak kaydedilir.',
+      'Açık uçlu cevaplar maskelenir ve diğer cevaplarınızdan ayrı saklanır.',
+    ],
+    actions: ['Soruları cevaplayıp gönderin.'],
+  },
+
+  /* ------------------------------------------------------------------ İnsan Kaynakları: alt sayfalar */
+  'path:/ik/ise-alim/aday/:id': {
+    summary: 'Tek adayın kartı: aşama ve sonuç, özgeçmiş, Zeki AI’ın kanıtlı özeti, mülakatlar, mektup taslakları ve KVKK kaydı.',
+    how: [
+      'Kanıtlı özet, pozisyonun her yetkinliği için özgeçmişteki destekleyen satırı gösterir; puan ve sıralama yoktur, karar sizindir.',
+      'Özgeçmişteki kimlik, iletişim ve özel nitelikli bilgiler maskelenir; Zeki AI yalnız maskeli metni görür.',
+      'Görüşmeci kendi notunu teslim etmeden diğer görüşmecilerin notunu göremez.',
+      'Portal adaya e-posta göndermez; mektubu kendi e-postanızdan gönderip «Gönderdim» ile kaydedersiniz. Kartın her açılışı erişim kaydına yazılır.',
+    ],
+    data: 'Portaldaki aday kaydı ve yüklenen özgeçmiş',
+    refresh: 'Anlık',
+    actions: [
+      'Aşama kararı verin, mülakat planlayın, görüşme notunuzu teslim edin.',
+      'Şablondan mektup taslağı hazırlayın; teklif mektubunu onaya gönderin.',
+      'Rıza kaydedin; talep gelirse adayın verisini dışa aktarın ya da silin (yetkiyle).',
+    ],
+  },
+  'path:/ik/egitim/katalog': {
+    summary: 'Şirketin eğitim kataloğu ve planlanan oturumlar.',
+    how: [
+      'Eğitim kartı türü (zorunlu, gelişim, portal kullanımı), biçimi, süresi, geçerliliği ve kişi başı maliyeti taşır.',
+      'Zorunlu eğitimin geçerlilik süresi kartta girilir; boş bırakılırsa süresizdir.',
+      'Oturuma dokununca katılımcılar ve yoklama açılır.',
+    ],
+    data: 'Portaldaki eğitim ve oturum kayıtları',
+    refresh: 'Anlık',
+    actions: ['Eğitim kartı ekleyin ya da düzenleyin (yetkiyle).', 'Oturum açın ve katılımcı seçin.'],
+  },
+  'path:/ik/egitim/oturum/:id': {
+    summary: 'Tek eğitim oturumu: katılımcılar, telefondan yoklama, onay bekleyen talepler ve oturum sonrası anket sonucu.',
+    how: [
+      'Kişiye dokunarak «Katıldı» ya da «Gelmedi» işaretlersiniz; her dokunuş hemen kaydedilir.',
+      'Oturumu kapatmak için bütün onaylı katılımcıların yoklaması alınmış olmalı; kapanınca katılanlara sertifika yazılır ve adsız anket açılır.',
+      'Anket sonucu, yanıt sayısı gizlilik eşiğinin altındaysa gösterilmez.',
+    ],
+    data: 'Portaldaki oturum, katılım ve anket kayıtları',
+    refresh: 'Anlık',
+    actions: ['Katılımcı ekleyin, yoklama alın, oturumu kapatın ya da iptal edin.', 'Onay bekleyen katılım taleplerine karar verin.'],
+  },
+  'path:/ik/egitim/ihtiyaclar': {
+    summary: 'Çalışanların, yöneticilerin ve İK’nın bildirdiği eğitim ihtiyaçları ve eğitim başına öncelik sırası.',
+    how: [
+      'Zeki AI her ihtiyacı katalogdaki bir eğitime eşler, öncelik ve tek cümlelik gerekçe önerir; Zeki AI’a kişi adı gitmez.',
+      'Karar İK’nındır: ihtiyaç onaylanır, reddedilir ya da eğitim verilince «karşılandı» yapılır.',
+    ],
+    data: 'Portaldaki eğitim ihtiyacı kayıtları',
+    refresh: 'Anlık',
+    actions: ['İhtiyaç ekleyin.', 'Zeki AI’dan öneri alıp her ihtiyaç için karar verin.'],
+  },
+  'path:/ik/egitim/kullanim': {
+    summary: 'Hangi birimde hangi portal ekranının kullanıldığı: seçili dönemde ekranı en az bir kez açan farklı kişi sayısı.',
+    how: [
+      'Kişi adı gösterilmez; bu sayılar performans değerlendirmesinde kullanılmaz.',
+      'Gizlilik eşiği girildiyse küçük birimler tek sütunda birleştirilir.',
+      'Hiç açılmayan ekranlar ayrıca listelenir; eğitim ya da rehber için başlangıç noktasıdır.',
+    ],
+    data: 'Portal ekran ziyaret sayıları ve çalışan kaydı',
+    actions: ['Dönem ve çalışma alanı seçip haritayı inceleyin.'],
+  },
+  'path:/ik/egitim/rehberler': {
+    summary: 'Her portal ekranı için kısa, adım adım kullanım rehberi.',
+    how: [
+      'Zeki AI ekranın menü tanımından taslak yazar; yetkili kişi düzeltip yayımlar.',
+      'Yayımlanan rehber o ekranın üst şeridindeki «Nasıl kullanılır» düğmesinden açılır.',
+      'Okuyanların «yaradı / yaramadı» oyu yayımlanan sürüme sayılır.',
+    ],
+    data: 'Portaldaki rehber kayıtları ve menü tanımları',
+    actions: ['Ekran seçip rehber yazın ya da Zeki AI’dan taslak isteyin.', 'Rehberi yayımlayın ya da yayından kaldırın (yetkiyle).'],
+  },
+  'path:/ik/performansim/degerlendirme/:id': {
+    summary: 'Değerlendirme formunuz: öz değerlendirme, yöneticinizin paylaştığı değerlendirme ve yorumunuz.',
+    how: [
+      'Önce öz değerlendirmenizi doldurup teslim edersiniz; teslimden sonra değiştirilemez.',
+      'Yöneticinizin yazdıkları, görüşmede sizinle paylaşılana kadar size görünmez.',
+      'Paylaşılan değerlendirmeye yorum yazabilir, gerekiyorsa itiraz edebilirsiniz; sonra İK onaylar.',
+    ],
+    data: 'Portaldaki değerlendirme kaydı ve hedefleriniz',
+    refresh: 'Anlık',
+    actions: ['Öz değerlendirmeyi taslak kaydedin ya da teslim edin.', 'Paylaşılan değerlendirmeye yorum ya da itiraz yazın.'],
+  },
+  'path:/ik/ekibim/degerlendirme/:id': {
+    summary: 'Ekibinizdeki bir kişinin değerlendirme formu: yönetici değerlendirmesi, genel puan ve çalışanla paylaşım.',
+    how: [
+      'Puanı sistem vermez; genel değerlendirme puanını siz seçersiniz ve kalibrasyonda birim dağılımına girer.',
+      'Çalışanla paylaşana kadar yazdıklarınızı düzeltebilirsiniz; paylaşınca çalışan görür ve yorum yazabilir.',
+      'Not alanında «Zeki AI ile somutlaştır» metni yalnız yeniden yazar, yeni olay eklemez; adlar gönderilmeden gizlenir.',
+    ],
+    data: 'Portaldaki değerlendirme kaydı ve kişinin hedefleri',
+    refresh: 'Anlık',
+    actions: ['Yönetici değerlendirmesini doldurun ve teslim edin.', 'Görüşme tarihini girip çalışanla paylaşın.'],
+  },
+  'path:/ik/degerlendirme/:id': {
+    summary: 'Değerlendirme döneminden açılan tek değerlendirme: adımların durumu, çalışan yorumu ve İK onayı.',
+    how: [
+      'Adımlar: öz değerlendirme → yönetici değerlendirmesi → görüşme ve paylaşım → çalışan yorumu → İK onayı.',
+      'Ne görebildiğiniz ve yapabildiğiniz rolünüze göredir; her açılış erişim kaydına yazılır.',
+    ],
+    data: 'Portaldaki değerlendirme kaydı',
+    refresh: 'Anlık',
+    actions: ['Süreç adımlarını izleyin.', 'Yetkiniz varsa değerlendirmeyi onaylayın.'],
+  },
+
+  /* ------------------------------------------------------------------ Kategori ağacı: kitap profili */
+  'path:/kategori-agaci/kitap/:id': {
+    summary: 'Tek kitabın profili: CRM’deki bugünkü sınıflamaları ve Zeki AI’ın kategori, tür, yaş, tema ve etiket önerileri.',
+    how: [
+      'Her öneri alan alan kabul edilir, düzeltilir ya da reddedilir; «Emin önerileri onayla» yalnız Zeki AI’ın emin olduğu önerileri kabul eder.',
+      'Kitabın editörü ya da yayın yönetmeni karar verir; herkesin kitabı için ayrı yetki gerekir.',
+      'Portal CRM’e yazmaz; onaylanan fark «CRM’e işlenecek» listesine düşer.',
+    ],
+    data: 'CRM kitap kartı, Logo satışları ve sitenin kategori ağacı',
+    refresh: 'Anlık; kaynaklar her gece yeniden okunur',
+    actions: ['Önerileri onaylayın, düzeltin ya da reddedin.', 'Zeki AI’dan yeni öneri isteyin (yetkiyle).'],
   },
 
   /* ------------------------------------------------------------------ Platform: kanallar */
@@ -401,44 +562,28 @@ const CONTENT: ScreenInfoMap = {
       'Karneyi Excel’e aktarın.',
     ],
   },
-  'kanal-matris': {
-    summary: 'Hangi kanal hangi kitabı alıyor, hangisi iade ediyor: kitap × kanal net adet tablosu.',
-    how: [
-      'Net adet = kanala satış − kanaldan iade, Logo faturalı satırlarından.',
-      'Kanal, onaylı cari eşlemesiyle belirlenir.',
-      'Kanalın son tüketiciye sattığı adet değildir.',
-    ],
-    data: 'Logo faturalı satış ve iade satırları, onaylı cari eşlemesi',
-    refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
-    actions: ['Dönem seçip kitap ve kanalları karşılaştırın.', 'Tabloyu Excel’e aktarın.'],
-  },
-  'kanal-d2c': {
+  'kanal-matris': KANAL_MATRIS,
+  'kanal-d2c': KANAL_D2C,
+  'kanal-eslesme': KANAL_ESLESME,
+  // `path:/kanallar/:platform` kalıbı alt sekmeleri de tuttuğundan, sekmeler kalıptan önce kendi metinlerine bağlanır.
+  'path:/kanallar/matris': KANAL_MATRIS,
+  'path:/kanallar/d2c': KANAL_D2C,
+  'path:/kanallar/eslesme': KANAL_ESLESME,
+  'path:/kanallar/:platform': {
     summary:
-      'timas.com.tr’nin e-ticaret ve şirket içindeki payı, sitede pazar yerlerine göre oransal olarak daha iyi satan kitaplar ve siteye özel set önerisi.',
+      'Tek bir platformun (ör. Trendyol, Hepsiburada) ayrıntısı: ay ay net ciro, carileri, kitap bazında alım ve iade, hedef gerçekleşmesi; marj yetkisiyle iskonto simülasyonu.',
     how: [
-      'Pay ve kitaplar Logo’dan, timas.com.tr’ye eşlenmiş cari ya da kanal kodu üzerinden hesaplanır.',
-      '«Oransal güçlü» kitap, sitedeki payı bütün kitapların ortalama site payının belirgin üstünde olandır.',
-      'Öneri portal kaydıdır, hiçbir platforma gönderilmez; Zeki AI yalnız rakamsız gerekçe ekler.',
+      'Rakamlar, platforma bağlanmış carilere kesilen Logo satış ve iade faturalarından gelir; platformun okura sattığı değil, bizim platforma sattığımızdır.',
+      'Hedef, CRM bölge satış hedefinden ve bütçedeki kitap hedeflerinin kanala paylaştırılmasından gelir.',
+      'İskonto simülasyonu dönem ortalamasıyla «iskontoyu değiştirirsem kâr ne olur» sorusunu hesaplar; hiçbir yere yazmaz.',
+      'Platform panelinden indirdiğiniz satış raporunu yüklerseniz kanalın okura sattığı adet yan yana görünür.',
     ],
-    data: 'Logo faturalı satırları, site müşteri özetleri, onaylı cari eşlemesi',
+    data: 'Logo faturalı satış ve iade satırları, CRM satış hedefleri ve siparişleri, yüklenen panel dosyaları',
     refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
-    actions: ['Dönem seçip site payını izleyin.', 'Siteye özel set önerisi hazırlayın (yetkiyle).'],
-  },
-  'kanal-eslesme': {
-    summary:
-      'Hangi Logo carisi hangi platform: kanal karnesi, kitap × kanal ve Trendyol/Amazon ekranları bu eşlemeyi kullanır.',
-    how: [
-      'E-ticaret kanal kodlu her cari için aday platform önerilir: unvanda platform adı geçiyorsa adından, geçmiyorsa Zeki AI seçer.',
-      'Aday ancak sizin onayınızla kesinleşir; başka platform ya da «platform değil» seçebilirsiniz.',
-      'Çok carili bir kanal kodu bütünüyle bir platforma, CRM hedef bölgesi de platforma bağlanabilir.',
-      'Eşleme portal kaydıdır; CRM’e ve Logo’ya hiçbir şey yazılmaz.',
-    ],
-    data: 'Logo cari kartları, CRM hedef bölgeleri ve portaldaki eşleme kayıtları',
-    refresh: 'Adaylar her gece 04:00',
     actions: [
-      'Aday eşlemeleri onaylayın ya da düzeltin (yetkiyle).',
-      'Kanal kodunu ve hedef bölgesini platforma bağlayın.',
-      'Eşlemeyi Excel’e aktarın.',
+      'Kitap listesini ya da son 3 ayın iadelerini Excel olarak indirin.',
+      'İskonto simülasyonu yapıp öneri olarak kaydedin (marj yetkisiyle).',
+      'Platform panelinden indirdiğiniz satış raporunu yükleyin (yetkiyle).',
     ],
   },
 
@@ -486,6 +631,39 @@ const CONTENT: ScreenInfoMap = {
     refresh: 'Dosya yükleyince; iade sınıflama her gece',
     actions: ['Geciken paketleri izleyin.', 'İade oranı yüksek kitapları inceleyin.'],
   },
+  'path:/trendyol/vitrin': {
+    summary: 'Trendyol vitrininde öne çıkarmaya en uygun kitaplar: Trendyol’da hızlı satan ve depoda uzun süre yetecek stoğu olanlar önde.',
+    how: [
+      'Satış hızı yüklenen sipariş dosyasının son günlerinden, depo stoğu Logo’dan gelir; stoğu alt sınırın altındaki kitap listelenmez.',
+      'Sıra kuralla hesaplanır: haftalık satış × stoğun kaç hafta yeteceği.',
+      'Seçtiğiniz kitaplardan öneri hazırlanır; kararı hazırlayandan başka bir yetkili verir. Trendyol’a hiçbir şey gönderilmez.',
+    ],
+    data: 'Trendyol sipariş ve ürün dosyaları, Logo depo stoğu',
+    refresh: 'Dosya yükleyince; Logo tarafı her gece',
+    actions: ['Kitapları seçip öneri taslağı hazırlayın (yetkiyle).', 'Bekleyen öneriyi onaylayın ya da gerekçeyle reddedin (karar yetkisiyle).'],
+  },
+  'path:/trendyol/haftalik': {
+    summary: 'Trendyol mağazasının yedi günlük özeti: giden paketler, iade talepleri ve nedenleri, cevapsız sorular ve düşük puanlı yorumlar.',
+    how: [
+      '«Hafta sonu» boşsa yüklenen dosyalardaki en son gün esas alınır.',
+      'Cevapsız ve geciken soru sayıları seçilen haftaya değil bugüne göredir.',
+      'Rakamlar yüklenen dosyalardan hesaplanır; istenirse Zeki AI rakamsız kısa bir özet yazar.',
+    ],
+    data: 'Trendyol sipariş, iade, soru ve yorum dosyaları',
+    refresh: 'Dosya yükleyince',
+    actions: ['Haftanın son gününü seçin.', 'Zeki AI’a haftalık özet yazdırın.'],
+  },
+  'path:/trendyol/yukle': {
+    summary: 'Trendyol ekranlarını besleyen dosyaları yüklediğiniz yer: ürün listesi, siparişler, iadeler, müşteri soruları ve yorumlar.',
+    how: [
+      'Önce dosya türünü seçin, sonra satıcı panelinden indirdiğiniz Excel ya da CSV dosyasını bırakın (en çok 25 MB).',
+      'Yeni ürün listesi eskisinin yerine geçer; aynı paket yeniden gelirse son dosya geçerli olur.',
+      'Alıcı adı, adres ve telefon gibi kolonlar okunmaz, yalnız adları kayda geçer; metinlerdeki iletişim bilgileri gizlenir.',
+      'Barkodu Logo’daki bir kitapla eşleşmeyen satır stok ve fiyat karşılaştırmasına giremez.',
+    ],
+    data: 'Trendyol satıcı panelinden indirilen dosyalar',
+    actions: ['Dosya yükleyin (yetkiyle).', 'Yanlış yüklemeyi silin (yetkiyle; Trendyol’a bir şey gönderilmez).'],
+  },
   'trendyol-sorular': {
     summary: 'Cevapsız müşteri soruları ve düşük puanlı yorumlar; Zeki AI yanıt taslağı yazar, yanıtı siz panelden verirsiniz.',
     how: [
@@ -530,20 +708,40 @@ const CONTENT: ScreenInfoMap = {
   },
   'amazon-yurtdisi': {
     summary:
-      'Ülke ve cari bazında yurtdışı faturalı satış ve döviz; satılmış yabancı haklar; yeni pazar için değerlendirme kartı ve finans parametreleri.',
+      'Yurtdışındaki alıcılara faturayla sattığımız kitaplar: ülke, cari ve kitap bazında, TL ve döviz olarak; bu yıl ile geçen yılın ay ay kıyası. Satılan haklar ve pazar değerlendirmesi yan sekmelerdedir.',
     how: [
       'Yurtdışı kanal kodlu carilere faturalı satış: net = satış − iade; döviz tutarı fatura kuruyla, ülke Logo cari kartındaki yazımdır.',
-      'Haklar CRM’deki etkin telif satış sözleşmelerinden gelir; hak bilgisi olmayan kitap için «yurtdışında satılabilir» denmez.',
-      'Pazar kartındaki rakamlar hesaptan ve finansın girdiği parametrelerden gelir; Zeki AI yalnız rakamsız gerekçe yazar.',
-      'Kartın kararını yetkili verir; kartı hazırlayan karar veremez.',
+      'Cari tablosundaki «Geçen yıl» geçen yılın tamamıdır; aynı dönem kıyası üstteki karttadır.',
+      'Döviz faturası sayısı, o yıl Logo’da döviz cinsinden kesilen bütün faturalardır.',
     ],
-    data: 'Logo faturalı satırları, CRM telif satış sözleşmeleri, finansın girdiği parametreler',
+    data: 'Logo faturalı satış ve iade satırları',
     refresh: 'Her gece 04:00 turunda',
     actions: [
-      'Ülke ve cari kırılımında satışı inceleyin.',
-      'Pazar değerlendirme kartı açın (yetkiyle) ya da karar verin (karar yetkisiyle).',
-      'Finans parametrelerini girin (yetkiyle).',
+      'Yıl ve ülke seçip cari ya da kitap kırılımında satışı inceleyin.',
+      'Listeyi Excel olarak indirin (yetkiyle).',
     ],
+  },
+  'path:/amazon/haklar': {
+    summary: 'Çeviri ya da yayın hakkını yabancı yayınevlerine sattığımız kitaplar: ülke, yayınevi, sözleşme tarihleri ve kitabın yurtdışı satışı.',
+    how: [
+      'Bilgi CRM’deki etkin Telif Satış sözleşmelerinden gelir.',
+      'Listede olmayan kitabın hak durumu bilinmiyor demektir; «yurtdışında satılabilir» anlamına gelmez.',
+      'Yanındaki adet, bizim baskımızın yurtdışı carilere faturalı net satışıdır.',
+    ],
+    data: 'CRM telif satış sözleşmeleri, Logo faturalı satış satırları',
+    refresh: 'Her gece 04:00 turunda',
+    actions: ['Ülkeye göre süzün ya da kitap arayın.', 'Listeyi Excel olarak indirin (yetkiyle).'],
+  },
+  'path:/amazon/pazarlar': {
+    summary: 'Yeni bir yurtdışı pazara girilip girilmeyeceğini değerlendirme kartları: o ülkelere satışımız, sattığımız haklar ve finansın maliyet varsayımları.',
+    how: [
+      'Karttaki rakamlar Logo ve CRM’den hesaplanır; Zeki AI yalnız rakamsız kısa gerekçe yazar.',
+      'Kur, KDV, kargo ve komisyon varsayımlarını finans ekibi pazar parametresi olarak girer.',
+      'Kararı kartı hazırlayandan başka bir yetkili verir; «Bekle» ve «Girilmesin» için gerekçe zorunludur.',
+      'Karar yalnız portalda kayıt olur; Amazon’a hiçbir şey gönderilmez.',
+    ],
+    data: 'Logo yurtdışı faturalı satışları, CRM telif satış sözleşmeleri, finansın girdiği parametreler',
+    actions: ['Pazar kodu ve ülkeleri girip kart hazırlayın (yetkiyle).', 'Karta karar verin (karar yetkisiyle).', 'Pazar parametrelerini girin (yetkiyle).'],
   },
   'amazon-taslaklar': {
     summary:

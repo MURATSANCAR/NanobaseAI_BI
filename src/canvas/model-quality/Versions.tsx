@@ -7,6 +7,7 @@ import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { fmtAt, mqApi, shortSha } from './api';
 import { Empty } from './parts';
+import { Explain } from '../components/Explain';
 
 /** Sürümler: kod, katalog, bilgi paketi/kural, gündelik terim havuzu ve model tek satırda. Satır, bir parça değişince
  *  (koşu anında) ya da her kurulumda yazılır; «değişen» sütunu hangi parçanın değiştiğini söyler. */
@@ -16,6 +17,10 @@ export default function Versions() {
   return (
     <>
       <Panel>
+        <p className="mb-2 text-[12px] leading-snug text-canvas-muted">
+          Zeki AI’ın cevabını etkileyen bir parça (kod, veri sözlüğü, bilgi paketi, kurallar ya da Zeki AI ayarı) değiştiğinde yeni bir satır yazılır.
+          Kısa kodlar sürümü ayırt etmek içindir: iki satırda farklıysa o parça değişmiştir.
+        </p>
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.error && <Note tone="err">{errText(q.error, 'Sürümler okunamadı.')}</Note>}
         {q.data && !q.data.items.length && <Empty>Henüz sürüm kaydı yok. İlk kurulumda ya da ilk kalite koşusunda yazılır.</Empty>}
@@ -27,10 +32,15 @@ export default function Versions() {
                 <th className={th}>Kaynak</th>
                 <th className={th}>Değişen</th>
                 <th className={th}>Kod</th>
-                <th className={th}><InfoLabel k={kaynakOf(q.data)} alan="items">Katalog</InfoLabel></th>
-                <th className={th}>Bilgi paketi</th>
+                <th className={th}><InfoLabel k={kaynakOf(q.data)} alan="items">Veri sözlüğü</InfoLabel></th>
+                <th className={th}>
+                  <span className="inline-flex items-center gap-1">
+                    Bilgi paketi
+                    <Explain label="Bilgi paketi">Zeki AI’ın kullandığı iş tanımları ve açıklamalar (ör. «net ciro» ne demek).</Explain>
+                  </span>
+                </th>
                 <th className={th}>Kural</th>
-                <th className={th}>Model</th>
+                <th className={th}>Zeki AI ayarı</th>
               </tr>
             </thead>
             <tbody>
@@ -39,7 +49,7 @@ export default function Versions() {
                   <td className={`${td} whitespace-nowrap font-mono tabular-nums`}>{fmtAt(v.at)}</td>
                   <td className={td}>
                     {v.sourceLabel}
-                    {v.env && <span className="text-canvas-muted"> · {v.env === 'vm' ? 'müşteri' : 'test'}</span>}
+                    {v.env && <span className="text-canvas-muted"> · {v.env === 'vm' ? 'şirket içi' : 'test'}</span>}
                     {v.by && <div className="text-[11px] text-canvas-muted">{v.by}</div>}
                   </td>
                   <td className={td}>
@@ -49,7 +59,7 @@ export default function Versions() {
                   <td className={`${td} whitespace-nowrap`}>v{v.catalogVersion ?? '—'}<span className="text-canvas-muted"> · {v.catalogCertified ?? '—'} onaylı</span></td>
                   <td className={`${td} font-mono`}>{v.knowledgeDigest ?? '—'}</td>
                   <td className={`${td} font-mono`}>{v.rulesDigest ?? '—'}</td>
-                  <td className={td}>{v.model}<div className="font-mono text-[11px] text-canvas-muted">ayar {v.modelDigest ?? '—'}</div></td>
+                  <td className={`${td} font-mono`}>{v.modelDigest ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

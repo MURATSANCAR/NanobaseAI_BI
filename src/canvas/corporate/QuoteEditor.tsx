@@ -7,6 +7,7 @@ import { AskSheet } from '../budget/parts';
 import { useDebounced } from '../editorial/kit';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { Explain } from '../components/Explain';
 import { ENGINE_ENABLED } from '../engine';
 import {
   QUOTE_TONE,
@@ -155,7 +156,7 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
     mutationFn: () => corporateApi.letter(quote.id),
     onSuccess: (r) => {
       setLetter(r.mektup);
-      toast.success('ZEKİ AI taslağı hazır; düzenleyip kaydedin.');
+      toast.success('Zeki AI taslağı hazır; düzenleyip kaydedin.');
     },
     onError: fail('Mektup taslağı alınamadı.'),
   });
@@ -248,7 +249,7 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
               </button>
             </div>
             <span className="text-[11px] text-canvas-muted">
-              Onay eşiği: indirim %{meta.settings.discountApprovalPct ?? '—'}{meta.settings.marginMinPct !== null ? `, marj en az %${meta.settings.marginMinPct}` : ''}.
+              Müdür onayı gerekir: indirim %{meta.settings.discountApprovalPct ?? '—'} üstündeyse{meta.settings.marginMinPct !== null ? ` ya da marj %${meta.settings.marginMinPct} altındaysa` : ''}.
               <SqlInfo k={meta.kaynaklar} alan="settings" label="Teklif onay eşikleri (ayar)" className="ml-0.5" />
             </span>
           </div>
@@ -269,11 +270,11 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
           <div className="font-mono text-[15px] font-extrabold tabular-nums">{fmtMoney(dirtyLines ? local.net : quote.toplamNet)}</div>
         </div>
         <div>
-          <div className={`${labelCls} inline-flex items-center gap-1`}>Marj<SqlInfo k={k} alan="teklifler[].marj" label="Teklif marjı ve maliyet kapsamı" /></div>
+          <div className={`${labelCls} inline-flex items-center gap-1`}>Marj<Explain label="Marj">Teklif tutarından kitapların birim maliyeti düşüldükten sonra kalan kâr payı. Maliyeti bilinmeyen kitap varsa marj hesaplanmaz.</Explain><SqlInfo k={k} alan="teklifler[].marj" label="Teklif marjı ve maliyet kapsamı" /></div>
           <div className="font-bold">{dirtyLines ? 'kaydedince hesaplanır' : marginText(quote)}</div>
         </div>
       </div>
-      {!dirtyLines && quote.marj === null && <p className="text-[11.5px] text-canvas-muted">Birim maliyet kaynağı: {meta.costSourceLabel}. Maliyet gelmeden marj uydurulmaz; onay yalnız indirim eşiğine bakar.</p>}
+      {!dirtyLines && quote.marj === null && <p className="text-[11.5px] text-canvas-muted">Birim maliyet kaynağı: {meta.costSourceLabel}. Maliyet bilinmeden marj tahmin edilmez; bu durumda onay gerekip gerekmediğine yalnız indirim oranına bakılarak karar verilir.</p>}
       {!dirtyLines && quote.onayNedenleri.length > 0 && (
         <Note tone="warn">
           Müdür onayı gerekiyor: {quote.onayNedenleri.map((r) => r.metin).join(' · ')}
@@ -288,7 +289,7 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
           {canLetter && (
             <button type="button" className={btnGhost} disabled={draftLetter.isPending} onClick={() => draftLetter.mutate()}>
               {draftLetter.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-              ZEKİ AI taslağı
+              Zeki AI ile taslak yaz
             </button>
           )}
         </div>
@@ -328,7 +329,7 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
         )}
         {quote.durum === 'onayda' && meta.me.canApprove && mine && <span className="self-center text-[11.5px] text-canvas-muted">Onaya siz gönderdiniz; başka bir yetkili onaylar.</span>}
         {meta.me.canQuote && quote.durum === 'hazir' && (
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => act.mutate({ kind: 'sent' })}>Kuruma gönderildi</button>
+          <button type="button" className={btnPrimary} disabled={busy} onClick={() => act.mutate({ kind: 'sent' })}>Kuruma gönderildi olarak işaretle</button>
         )}
         {meta.me.canQuote && quote.durum === 'gonderildi' && (
           <>
@@ -344,10 +345,10 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
         {meta.me.canExport && (
           <>
             <a className={btnGhost} href={corporateApi.pdfUrl(quote.id)} download>
-              <Download aria-hidden className="h-4 w-4" /> PDF{quote.durum === 'taslak' || quote.durum === 'onayda' ? ' (taslak)' : ''}
+              <Download aria-hidden className="h-4 w-4" /> PDF indir{quote.durum === 'taslak' || quote.durum === 'onayda' ? ' (taslak)' : ''}
             </a>
             <a className={btnGhost} href={corporateApi.xlsxUrl(quote.id)} download>
-              <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel
+              <FileSpreadsheet aria-hidden className="h-4 w-4" /> Excel indir
             </a>
           </>
         )}
@@ -364,7 +365,7 @@ export default function QuoteEditor({ quote, meta, oppOpen, k }: { quote: Quote;
           reject: 'Teklif taslağa döner; gerekçe temsilciye görünür.',
           kabul: 'Fırsat «Kazanıldı» olur, değeri teklif tutarıdır.',
           ret: 'Fırsat açık kalır; yeni sürümle devam edebilir ya da fırsatı kaybedildi olarak kapatabilirsiniz.',
-          delete: 'Bu taslak silinir.',
+          delete: 'Bu taslak ve kalemleri silinir. Bu işlem geri alınmaz.',
         }[ask ?? 'approve']}
         confirm={{ approve: 'Onayla', reject: 'Geri gönder', kabul: 'Kaydet', ret: 'Kaydet', delete: 'Sil' }[ask ?? 'approve']}
         danger={ask === 'delete' || ask === 'reject'}

@@ -10,6 +10,7 @@ import Sheet from '../../editorial/studio/reader/Sheet';
 import { fmtDateTime, fmtDay, hrApi, type Employee, type HrMeta, type SyncPreview, type Unit } from '../hrApi';
 import { Block, HrFrame, Tabs } from '../parts';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** İK-0 ortak kayıtlar: çalışan ve birim (CRM ∩ AD'den öneri, İK onayıyla), aydınlatma metni sürümleri, saklama süreleri,
  *  imha tutanakları ve erişim kaydı. CRM'e hiçbir şey yazılmaz. M56–M58 bu kayıtları kullanır. */
@@ -39,18 +40,18 @@ export default function HrRecordsScreen() {
     <HrFrame
       crumb="Çalışan ve KVKK kayıtları"
       title="Çalışan ve KVKK kayıtları"
-      lead="İnsan kaynakları modüllerinin ortak kaydı. Çalışan ve birim listesi CRM ve Active Directory'den öneri olarak gelir, İK onaylayınca yazılır; CRM'e yazılmaz. T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz."
+      lead="İnsan Kaynakları ekranlarının ortak çalışan ve birim listesi, KVKK aydınlatma metinleri, saklama süreleri ve erişim kaydı. Liste CRM ve Active Directory'den öneri olarak gelir, İK onaylayınca yazılır; CRM'e yazılmaz. T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz."
     >
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.data?.me.isAdmin && !meta.data.settings.adminSeesPersonal && !can('kvkk-yonet') && (
-        <Note tone="info">Yöneticisiniz, ama İK kişisel veri yetkileri yöneticiye kendiliğinden verilmez; gerekiyorsa Yetkiler ekranından kendinize rol bağlayın (değişiklik kaydına düşer).</Note>
+        <Note tone="info">Portal yöneticisisiniz, ama İK kişisel veri yetkileri yöneticiye kendiliğinden verilmez; gerekiyorsa Yönetim → Yetkiler’den kendinize rol bağlayın (bu değişiklik kayda geçer).</Note>
       )}
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {meta.data && tab === 'calisanlar' && <Employees meta={meta.data} canEdit={can('calisan-yonet')} />}
       {meta.data && tab === 'birimler' && <Units canEdit={can('calisan-yonet')} />}
       {meta.data && tab === 'aydinlatma' && <Notices meta={meta.data} canEdit={can('kvkk-yonet')} />}
       {meta.data && tab === 'saklama' && <Retention canEdit={can('kvkk-yonet')} canRuns={can('kvkk-yonet') || can('erisim-kaydi')} />}
-      {meta.data && tab === 'erisim' && (can('erisim-kaydi') ? <AccessLog /> : <Note tone="info">Erişim kaydı rolünüzde yok.</Note>)}
+      {meta.data && tab === 'erisim' && (can('erisim-kaydi') ? <AccessLog /> : <Note tone="info">Erişim kaydını görme yetkiniz yok; gerekiyorsa İK yöneticisinden isteyin.</Note>)}
     </HrFrame>
   );
 }
@@ -69,7 +70,7 @@ function Employees({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
   return (
     <Block
       title="Çalışanlar"
-      help="Elle düzeltilen alan (kaynağı «İK») eşitlemede ezilmez. Bilgisayar kullanmayan çalışan elle eklenir."
+      help="Liste CRM ve AD (Active Directory, şirket hesapları) eşitlemesiyle dolar. Elle düzeltilen alan eşitlemede ezilmez. Bilgisayar kullanmayan çalışanı «Çalışan ekle» ile elle ekleyin."
       action={canEdit ? (
         <>
           <button type="button" className={btnGhost} onClick={() => setSyncing(true)}>
@@ -109,8 +110,8 @@ function Employees({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
       {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
       {list.data && (
         <div className="mt-3">
+          {!!list.data.items.length && (
           <TableWrap>
-            <table className="w-full min-w-[640px] text-[12.5px]">
               <thead>
                 <tr><th className={th}>Ad</th><th className={th}>Hesap</th><th className={th}>Birim</th><th className={th}>Unvan</th><th className={th}>İşe giriş</th><th className={th}>Durum</th></tr>
               </thead>
@@ -130,9 +131,15 @@ function Employees({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            
           </TableWrap>
-          {!list.data.items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Kayıt yok.{canEdit ? ' «CRM ve AD\'den eşitle» ile başlayın.' : ''}</div>}
+          )}
+          {!list.data.items.length && (
+            <EmptyHint
+              title={q || unit || status !== 'aktif' ? 'Süzgece uyan çalışan yok' : 'Henüz çalışan kaydı yok'}
+              why={q || unit || status !== 'aktif' ? 'Aramayı temizleyin ya da durum ve birim süzgecini gevşetin.' : canEdit ? '«CRM ve AD’den eşitle» ile listeyi doldurun; bilgisayar kullanmayan çalışanı elle ekleyin.' : 'Liste İK eşitleme yapınca dolar.'}
+            />
+          )}
           <div className="mt-1 flex items-center justify-end gap-1 font-mono text-[11.5px] text-canvas-muted">
             {list.data.total} çalışan <SqlInfo k={list.data.kaynaklar} alan="total" label="Çalışan sayısı" />
           </div>
@@ -174,8 +181,9 @@ function EmployeeSheet({ e, units, meta, onClose }: { e: Employee | null; units:
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>AD hesabı (bilgisayarsızda boş)</span>
-            <input className={field} value={f.username} onChange={(x) => setF({ ...f, username: x.target.value })} autoComplete="off" />
+            <span className={labelCls}>Şirket hesabı (AD)</span>
+            <input className={field} value={f.username} onChange={(x) => setF({ ...f, username: x.target.value })} autoComplete="off" placeholder="ör. ayse.yilmaz" />
+            <span className="text-[11px] leading-snug text-canvas-muted">Bilgisayar kullanmayan çalışanda boş bırakın.</span>
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Birim</span>
@@ -229,9 +237,9 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
   const d: SyncPreview | undefined = pv.data;
   const label: Record<string, string> = { units: 'Birimler', new: 'Yeni çalışanlar', changed: 'Değişen çalışanlar', departed: 'Ayrılanlar («ayrıldı» olarak işaretle)' };
   return (
-    <Sheet open modal wide onClose={onClose} title="CRM ve AD'den eşitleme" subtitle="Öneri CRM'deki etkin kullanıcılar ile AD'deki etkin kişi hesaplarının kesişimidir. Onaylamadan hiçbir şey yazılmaz.">
-      {pv.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">CRM ve AD okunuyor…</div>}
-      {pv.error && <Note tone="err">{errText(pv.error, 'CRM okunamadı.')}</Note>}
+    <Sheet open modal wide onClose={onClose} title="CRM ve AD'den eşitleme" subtitle="Öneri, CRM'deki etkin kullanıcılarla Active Directory'deki etkin kişi hesaplarının ikisinde de bulunan kişilerdir. Aşağıda seçip «Seçilenleri uygula»ya basmadan hiçbir şey yazılmaz.">
+      {pv.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">CRM ve Active Directory okunuyor…</div>}
+      {pv.error && <Note tone="err">{errText(pv.error, 'CRM okunamadı; biraz sonra yeniden deneyin.')}</Note>}
       {d && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
@@ -271,14 +279,13 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
                 </li>
               ))}
               {d.departed.map((e) => (
-                <li key={e.id}><Pill tone="muted">ayrıldı</Pill> {e.displayName}<span className="text-canvas-muted"> · CRM ∩ AD'de artık yok</span></li>
+                <li key={e.id}><Pill tone="muted">ayrıldı</Pill> {e.displayName}<span className="text-canvas-muted"> · artık CRM ya da AD'de etkin değil</span></li>
               ))}
             </ul>
           </details>
           <details className="rounded-xl bg-slate-50 p-2.5">
             <summary className="cursor-pointer text-[12.5px] font-bold">Birim ve ekip dağılımı (CRM)</summary>
             <TableWrap>
-              <table className="w-full min-w-[420px] text-[12px]">
                 <thead><tr><th className={th}>Birim</th><th className={th}><InfoLabel k={d.kaynaklar} alan="units">Devre dışı olmayan hesap</InfoLabel></th><th className={th}><InfoLabel k={d.kaynaklar} alan="units">Önerilen çalışan</InfoLabel></th></tr></thead>
                 <tbody>
                   {d.units.map((u) => (
@@ -287,7 +294,7 @@ function SyncSheet({ onClose }: { onClose: () => void }) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              
             </TableWrap>
             <div className="mt-2 text-[12px] font-bold"><InfoLabel k={d.kaynaklar} alan="teams" label="Ekip üye sayıları">Ekipler</InfoLabel></div>
             <ul className="text-[12px]">{d.teams.map((t) => <li key={t.teamId}>{t.team} · <span className="font-mono">{t.members}</span></li>)}</ul>
@@ -329,13 +336,13 @@ function Units({ canEdit }: { canEdit: boolean }) {
         <form className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={(e) => { e.preventDefault(); save.mutate({ body: { name } }); }}>
           <label className="flex flex-1 flex-col gap-1">
             <span className={labelCls}>Yeni birim</span>
-            <input className={field} value={name} onChange={(e) => setName(e.target.value)} />
+            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="ör. Çocuk Kitapları Editörlüğü" />
           </label>
-          <button type="submit" className={btnPrimary} disabled={!name.trim() || save.isPending}>Ekle</button>
+          <button type="submit" className={btnPrimary} disabled={!name.trim() || save.isPending}>Birim ekle</button>
         </form>
       )}
+      {!!items.length && (
       <TableWrap>
-        <table className="w-full min-w-[640px] text-[12.5px]">
           <thead><tr><th className={th}>Birim</th><th className={th}>Üst birim</th><th className={th}>Yönetici</th><th className={th}><InfoLabel k={units.data?.kaynaklar} alan="items[]" label="Birim çalışan sayısı">Çalışan</InfoLabel></th><th className={th}>Kaynak</th></tr></thead>
           <tbody>
             {items.map((u) => (
@@ -362,9 +369,10 @@ function Units({ canEdit }: { canEdit: boolean }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        
       </TableWrap>
-      {units.data && !items.length && <div className="py-6 text-center text-[12px] text-canvas-muted">Birim yok; Çalışanlar sekmesinden eşitleyin.</div>}
+      )}
+      {units.data && !items.length && <EmptyHint title="Henüz birim yok" why="Birimler Çalışanlar sekmesindeki «CRM ve AD’den eşitle» ile gelir; elle de ekleyebilirsiniz." />}
     </Block>
   );
 }
@@ -386,7 +394,7 @@ function Notices({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
   });
   const items = list.data?.items ?? [];
   return (
-    <Block title="Aydınlatma metinleri" help="Her yayım yeni sürümdür; eski sürüm silinmez. Rıza kaydı hangi sürüme dayandığını taşır. Metni TİMAŞ'ın hukukçusu ya da KVKK danışmanı onaylamalıdır.">
+    <Block title="Aydınlatma metinleri" help="Aday ve çalışanlara kişisel verilerinin nasıl işlendiğini anlatan metinler. Her yayım yeni sürümdür; eski sürüm silinmez ve her rıza kaydı hangi sürüme dayandığını taşır. Metni TİMAŞ'ın hukukçusu ya da KVKK danışmanı onaylamalıdır.">
       {canEdit && (
         <div className="mb-3 flex flex-col gap-2 rounded-xl bg-slate-50 p-2.5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[200px_1fr]">
@@ -398,7 +406,7 @@ function Notices({ meta, canEdit }: { meta: HrMeta; canEdit: boolean }) {
             </label>
             <label className="flex flex-col gap-1">
               <span className={labelCls}>Başlık</span>
-              <input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+              <input className={field} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="ör. Aday aydınlatma metni" />
             </label>
           </div>
           <label className="flex flex-col gap-1">
@@ -494,7 +502,7 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
         )}
       </Block>
       {canEdit && (
-        <Block title="Bu gece silinecek" help="Kayıt sayısı; ad ve kimlik gösterilmez." info={<SqlInfo k={preview.data?.kaynaklar} alan="items[]" label="Bu gece silinecek kayıt sayısı" />}>
+        <Block title="Bu gece silinecek" help="Saklama süresi dolduğu için bu gece silinecek kayıt sayısı; ad ve kimlik gösterilmez." info={<SqlInfo k={preview.data?.kaynaklar} alan="items[]" label="Bu gece silinecek kayıt sayısı" />}>
           <ul className="flex flex-col gap-1 text-[12.5px]">
             {(preview.data?.items ?? []).map((p) => (
               <li key={p.key} className="flex items-center justify-between rounded-lg bg-white/80 px-2 py-1.5">
@@ -503,12 +511,12 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
               </li>
             ))}
           </ul>
+          {preview.data && !preview.data.items.length && <p className="text-[12px] text-canvas-muted">Bu gece silinecek kayıt yok.</p>}
         </Block>
       )}
       {canRuns && (
-        <Block title="İmha tutanakları" help="Her gece her veri sınıfı için bir satır (sıfır da olsa); talep üzerine silmeler «talep» sınıfıyla.">
+        <Block title="İmha tutanakları" help="Silinen kişisel verinin kanıtı. Her gece her veri sınıfı için bir satır yazılır (hiç silinmese de); kişinin talebiyle yapılan silmeler «talep» sınıfında görünür.">
           <TableWrap>
-            <table className="w-full min-w-[560px] text-[12.5px]">
               <thead><tr><th className={th}>Zaman</th><th className={th}>Sınıf</th><th className={th}><InfoLabel k={runs.data?.pages[0]?.kaynaklar} alan="items">Silinen</InfoLabel></th><th className={th}>Kim</th><th className={th}>Hata</th></tr></thead>
               <tbody>
                 {(runs.data?.pages ?? []).flatMap((pg) => pg.items).map((r) => (
@@ -519,11 +527,11 @@ function Retention({ canEdit, canRuns }: { canEdit: boolean; canRuns: boolean })
                   </tr>
                 ))}
               </tbody>
-            </table>
+            
           </TableWrap>
           {runs.hasNextPage && (
             <div className="mt-2 flex justify-center">
-              <button type="button" className={btnGhost} disabled={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>Daha eski</button>
+              <button type="button" className={btnGhost} disabled={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>Daha eski kayıtlar</button>
             </div>
           )}
         </Block>
@@ -552,8 +560,8 @@ function AccessLog() {
     <Block title="Erişim kaydı" help="Aday ve çalışan kayıtlarının her görüntülenmesi, indirilmesi, dışa aktarılması ve silinmesi.">
       <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Kişi (hesap adı)</span>
-          <input className={field} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="off" />
+          <span className={labelCls}>Kaydı açan kişi (hesap adı)</span>
+          <input className={field} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="off" placeholder="ör. ayse.yilmaz" />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Kayıt kimliği</span>
@@ -561,8 +569,10 @@ function AccessLog() {
         </label>
       </div>
       {log.error && <Note tone="err">{errText(log.error, 'Erişim kaydı okunamadı.')}</Note>}
+      {log.data && !log.data.pages.some((pg) => pg.items.length) && (
+        <EmptyHint title="Bu süzgece uyan erişim yok" why={user || subject ? 'Hesap adını ya da kayıt kimliğini değiştirin.' : 'Henüz aday ya da çalışan kaydı açılmamış.'} />
+      )}
       <TableWrap>
-        <table className="w-full min-w-[560px] text-[12.5px]">
           <thead><tr><th className={th}>Zaman</th><th className={th}>Kişi</th><th className={th}>İşlem</th><th className={th}>Kayıt</th><th className={th}>Amaç</th></tr></thead>
           <tbody>
             {(log.data?.pages ?? []).flatMap((pg) => pg.items).map((r) => (
@@ -573,11 +583,11 @@ function AccessLog() {
               </tr>
             ))}
           </tbody>
-        </table>
+        
       </TableWrap>
       {log.hasNextPage && (
         <div className="mt-2 flex justify-center">
-          <button type="button" className={btnGhost} disabled={log.isFetchingNextPage} onClick={() => void log.fetchNextPage()}>Daha eski</button>
+          <button type="button" className={btnGhost} disabled={log.isFetchingNextPage} onClick={() => void log.fetchNextPage()}>Daha eski kayıtlar</button>
         </div>
       )}
     </Block>

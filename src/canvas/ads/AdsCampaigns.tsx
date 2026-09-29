@@ -40,7 +40,7 @@ export default function AdsCampaigns() {
   const rematch = useMutation({
     mutationFn: (id: string) => adsApi.rematch(id),
     onSuccess: (c) => done(c.bag === 'oneri' ? `Zeki AI önerdi: ${c.kitapAdi}` : c.bag === 'onayli' ? `Kodla bağlandı: ${c.kitapAdi}` : 'Zeki AI emin olamadı; aday listesinden seçin.'),
-    onError: (e) => toast.error(errText(e, 'Eşleştirme koşulamadı.') ?? ''),
+    onError: (e) => toast.error(errText(e, 'Eşleştirme yapılamadı.') ?? ''),
   });
   const d = list.data;
   const canEdit = !!m?.me.canEdit;
@@ -80,7 +80,7 @@ export default function AdsCampaigns() {
         {list.error && <Note tone="err">{errText(list.error, 'Kampanyalar açılamadı.')}</Note>}
         {list.isLoading && <Loading />}
         {d && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Harcama, tıklama, TBM, ROAS ve bağ sayıları<SqlInfo k={d.kaynaklar} alan="items" label="Kampanyalar" /></p>}
-        {d && d.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle kampanya yok.</p>}
+        {d && d.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle kampanya yok. Aramayı temizleyin ya da bağ süzgecini «Hepsi» yapın; hiç kampanya görünmüyorsa önce «Veri yükle» ekranından platform raporunu yükleyin.</p>}
         <ul className="flex flex-col gap-2">
           {d?.items.map((c) => (
             <li key={c.id} className="rounded-2xl border border-slate-100 bg-white/80 p-3">

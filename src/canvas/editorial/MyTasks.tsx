@@ -5,11 +5,12 @@ import { ArrowRight, Check } from 'lucide-react';
 import { assignApi, type EditorTask, type TaskStatus } from '../engine';
 import { Note, Pill, errText, nf } from '../admin/ui';
 import { crmLabel } from '../format';
-import { Kpi, KpiRow, Panel } from './kit';
+import { Kpi, KpiRow } from './kit';
 import { assignKeys, myTasksOptions } from './queries';
 import { STATUS_LABEL, STATUS_ORDER, Sheet, TaskEditor, day, daysBetween, projectMeta, todayIso } from './assign/parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Masam › Görevlerim (eski «Görevlerim» ekranı, 2026-09-29'da Masam'a taşındı). Liste CRM'den gelir: proje
  *  kartında «Editörü» siz olan iş planı / kurul onaylı projeler. Durum, termin, sayfa ve not sizin takibinizdir;
@@ -93,23 +94,27 @@ export default function MyTasks() {
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 id="gorevlerim" className="flex items-center gap-1 text-[13px] font-extrabold">
           Görevlerim
+          <Explain label="Görevlerim">
+            Liste CRM'den gelir; durumu, termini, sayfayı ve notu siz tutarsınız. Bu bilgiler yalnız portalda saklanır, CRM'e yazılmaz. Karta dokunup ayrıntıyı açın.
+          </Explain>
           <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Görevlerim" />
         </h2>
         <span className="text-[11.5px] text-canvas-muted">CRM'de editörü siz olan {d?.sinceYear ? `${d.sinceYear} ve sonrası ` : ''}iş durumundaki projeler</span>
       </div>
       {err && <Note tone="err">{err}</Note>}
       {d?.me && !tasks.length && (
-        <Panel>
-          <p className="py-4 text-center text-[12.5px] text-canvas-muted">CRM'de editörü siz olan, iş planı ya da kurul onaylı durumda proje yok.</p>
-        </Panel>
+        <EmptyHint
+          title="Şu an size ait görev yok"
+          why="CRM'de editörü siz olan, iş planı ya da kurul onaylı durumda proje bulunmuyor. Size proje atanınca burada görünür."
+        />
       )}
       {d?.me && tasks.length > 0 && (
         <>
           <KpiRow>
-            <Kpi label="Açık görev" value={nf.format(open.length)} help="Sırada, çalışılıyor, beklemede" />
-            <Kpi label="Gecikmiş" value={nf.format(overdue)} help="Termini geçmiş açık görev" />
-            <Kpi label="Bu hafta" value={nf.format(week)} help="Termini 7 gün içinde" />
-            <Kpi label="Termini yok" value={nf.format(undated)} help="Açık, termin girilmemiş" />
+            <Kpi label="Açık görev" value={nf.format(open.length)} help="Sırada, çalışılıyor, beklemede" explain="Tamamlanmamış ve iptal edilmemiş bütün görevleriniz." />
+            <Kpi label="Gecikmiş" value={nf.format(overdue)} help="Termini geçmiş açık görev" explain="Termin günü geçtiği hâlde henüz tamamlanmamış görevler." />
+            <Kpi label="Bu hafta" value={nf.format(week)} help="Termini 7 gün içinde" explain="Termini bugünden itibaren 7 gün içinde olan açık görevler; gecikmişler bu sayıya girmez." />
+            <Kpi label="Termini yok" value={nf.format(undated)} help="Açık, termin girilmemiş" explain="Termin girilmemiş açık görevler. Göreve dokunup termin ekleyebilirsiniz." />
           </KpiRow>
           <div role="tablist" aria-label="Görev sütunu" className="-mx-1 flex gap-1 overflow-x-auto px-1 lg:hidden">
             {STATUS_ORDER.map((s) => (
@@ -138,7 +143,7 @@ export default function MyTasks() {
                     <TaskCard key={t.projectId} t={t} onOpen={() => setOpenId(t.projectId)} />
                   ))}
                 </ul>
-                {!byStatus(s).length && <p className="py-6 text-center text-[12px] text-canvas-muted">Boş</p>}
+                {!byStatus(s).length && <p className="py-6 text-center text-[12px] text-canvas-muted">Bu sütunda görev yok.</p>}
               </section>
             ))}
           </div>

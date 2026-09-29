@@ -15,7 +15,7 @@ export default function ResultsTab() {
     <>
       <Panel>
         <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Kurum türüne göre<SqlInfo k={res.data?.kaynaklar} alan="ozet[]" label="Kurum türüne göre sonuçlar" /></h2>
-        <p className="text-[12px] text-canvas-muted">«Kazanan / liste» = kazanan teklifin aynı kalemlerin KDV hariç liste toplamına oranı (ortanca). Yeni ihalede fiyat oranı önerisi buradan gelir.</p>
+        <p className="text-[12px] text-canvas-muted">«Kazanan / liste»: kazanan teklifin, aynı kitapların KDV hariç liste fiyatı toplamına oranı (ortanca değer). Yeni ihalede önerilen fiyat oranı bu değerden gelir.</p>
         {res.error && <div className="mt-2"><Note tone="err">{errText(res.error, 'Sonuçlar okunamadı.')}</Note></div>}
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {(res.data?.ozet ?? []).map((o) => (
@@ -25,7 +25,7 @@ export default function ResultsTab() {
               <div className="text-[11.5px] text-canvas-muted">kazanılan · kazanan/liste {fmtPct(o.kazananOranOrtanca)} ({o.oranSayisi} fiyatlı sonuç)</div>
             </div>
           ))}
-          {res.data && !res.data.ozet.length && <div className="text-[12.5px] text-canvas-muted">Henüz sonuç kaydı yok.</div>}
+          {res.data && !res.data.ozet.length && <div className="text-[12.5px] text-canvas-muted">Henüz sonuç kaydı yok. Bir ihalenin sonucu, ihale sayfasındaki «Sonuç» sekmesinden girilince burada sayılır.</div>}
         </div>
       </Panel>
       {items.length > 0 && (

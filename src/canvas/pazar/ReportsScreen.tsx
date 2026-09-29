@@ -11,6 +11,7 @@ import { ROOT, useMeta } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** Sektör raporları: yükleme (PDF, Excel, CSV), Zeki AI ile sayfa sayfa rakam çıkarımı, onay. Dosya yalnız bu sayfanın
@@ -55,7 +56,7 @@ export default function ReportsScreen() {
         </p>
         {list.isLoading && <Loading />}
         {list.error && <Note tone="err">{errText(list.error, 'Raporlar açılamadı.')}</Note>}
-        {list.data && list.data.items.length === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">Henüz rapor yüklenmedi.</p>}
+        {list.data && list.data.items.length === 0 && <div className="mt-3"><EmptyHint title="Henüz rapor yüklenmedi" why="Sektör raporunu (ör. Yayıncılar Birliği raporu) yukarıdaki «Rapor yükle» alanından ekleyin; Zeki AI sayfalardaki rakamları önerir, siz onaylarsınız." /></div>}
         <ul className="mt-2 divide-y divide-slate-100">
           {list.data?.items.map((r) => (
             <ReportItem

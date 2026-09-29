@@ -71,10 +71,10 @@ export function ParamsForm({ value, onChange, sources, only, forecast, info }: {
       <label className="flex min-h-11 items-start gap-2 text-[12.5px]">
         <input type="checkbox" className="mt-1 h-4 w-4" checked={value.tahmin} onChange={(e) => onChange({ ...value, tahmin: e.target.checked })} />
         <span>
-          <strong>Backlist tabanında ZEKİ AI satış tahminini kullan</strong>
+          <strong>Eski kitaplarda (backlist) Zeki AI tahminlemeyi kullan</strong>
           <span className="block text-canvas-muted">
             {forecast ? `Baskı önerisinin kitap başına 12 aylık tahmini (${forecast} başlangıçlı). ` : 'Tahmin bu kurulumda henüz yok; seçilse de geçmiş satış kullanılır. '}
-            Senaryo tahmin aralığına bağlanır: muhafazakâr alt sınırı (p10), temel beklenen değeri (p50), iyimser üst sınırı (p90)
+            Senaryo tahmin aralığına bağlanır: muhafazakâr aralığın alt ucunu, temel beklenen değeri, iyimser aralığın üst ucunu
             kullanır; aralık yoksa üçü de beklenen değeri kullanır. Yalnız plan yılı Logo verisinin ötesindeyse uygulanır; tahmini
             olmayan kitapta taban dönemin satışı kalır.
           </span>

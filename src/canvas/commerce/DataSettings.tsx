@@ -45,7 +45,7 @@ export default function DataSettings() {
         )}
         <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
           Kişisel alanlar (e-posta, telefon, ad) okunduğu anda özetlenir; portalda düz metin durmaz. Gece 02:50'de son günler, pazar gecesi
-          bütün siparişler okunur. Görüntülenme sayısı SEO eşitlemesinden gelir.
+          bütün siparişler okunur. Kitapların sitede görüntülenme sayısı, SEO ekranının sitedeki ürünleri okuduğu gece turundan gelir.
         </p>
         {meta.data?.me.canSettings && <RefreshButtons />}
       </Panel>
@@ -105,18 +105,19 @@ function SettingsForm({ values, labels, limits, canEdit }: {
   return (
     <Panel>
       <h2 className="text-[15px] font-extrabold">Eşikler</h2>
+      <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">Müşterilerin hangi gruba (sadık, kayıp…) gireceğini ve kampanya ölçümünün nasıl yapılacağını belirleyen sınırlar. Her alanın altında izin verilen aralık yazar.</p>
       <form className="mt-2 grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
         {(Object.keys(values) as Array<keyof Settings>).map((k) => (
           <label key={k} className="flex flex-col gap-1">
             <span className={label}>{labels[k]}</span>
             <input className={field} inputMode="decimal" value={draft[k] ?? ''} disabled={!canEdit}
               onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} />
-            <span className="text-[11px] text-canvas-muted">{limits[k][0]}–{limits[k][1]}</span>
+            <span className="text-[11px] text-canvas-muted">İzin verilen aralık: {limits[k][0]}–{limits[k][1]}</span>
           </label>
         ))}
         {canEdit && (
           <div className="sm:col-span-2">
-            <button type="submit" className={btnPrimary} disabled={save.isPending}>{save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Kaydet</button>
+            <button type="submit" className={btnPrimary} disabled={save.isPending}>{save.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Eşikleri kaydet</button>
           </div>
         )}
       </form>

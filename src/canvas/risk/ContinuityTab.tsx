@@ -26,7 +26,7 @@ export default function ContinuityTab({ meta }: { meta: RiskMeta }) {
           {can && <button type="button" className={btnPrimary} onClick={() => setPolicy('new')}><Plus aria-hidden className="h-4 w-4" />Poliçe ekle</button>}
         </div>
         {pol.isLoading ? <Loading /> : pol.error ? <Note tone="err">{errText(pol.error, 'Poliçeler okunamadı.')}</Note> :
-          (pol.data?.items.length ?? 0) === 0 ? <Empty>Kayıtlı poliçe yok.</Empty> : (
+          (pol.data?.items.length ?? 0) === 0 ? <Empty>Kayıtlı poliçe yok.{can ? ' «Poliçe ekle» ile bitiş tarihini ve teminatları girin; bitişi yaklaşınca hatırlatılır.' : ''}</Empty> : (
             <ul className="flex flex-col gap-2">
               {pol.data!.items.map((p) => <PolicyRow key={p.id} p={p} can={can} onEdit={() => setPolicy(p)} />)}
             </ul>

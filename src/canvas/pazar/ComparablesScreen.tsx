@@ -57,7 +57,7 @@ export default function ComparablesScreen() {
               />
             </label>
             <div className="flex min-w-0 flex-col gap-1">
-              <span className={labelCls}>Ya da bir TİMAŞ kitabından başla</span>
+              <span className={labelCls}>Ya da bir Timaş kitabından başla</span>
               {base ? (
                 <div className="flex items-center justify-between gap-2 rounded-xl bg-canvas-violet/10 px-3 py-2">
                   <div className="min-w-0">
@@ -122,7 +122,7 @@ export default function ComparablesScreen() {
         <>
           <Note tone="info">
             {fmtInt(r.counts.havuz)} aday süzgeçten geçti, {fmtInt(r.counts.sozcukEslesen)} tanesi konuyla sözcük paylaşıyor.
-            {r.counts.anlamEklenen ? ` Sözcük paylaşmayan ${fmtInt(r.counts.anlamEklenen)} TİMAŞ kitabı özeti anlamca yakın olduğu için eklendi (sıra, sözcük ve anlam sırasının birleşimi).` : ''}
+            {r.counts.anlamEklenen ? ` Sözcük paylaşmayan ${fmtInt(r.counts.anlamEklenen)} Timaş kitabı özeti anlamca yakın olduğu için eklendi (sıra, sözcük ve anlam sırasının birleşimi).` : ''}
             {r.anlamNot ? ` ${r.anlamNot}` : ''} {r.note}
             {r.counts.zekiBenzemiyor > 0 && <> Zeki AI'ın «benzemiyor» dediği {fmtInt(r.counts.zekiBenzemiyor)} aday listeden çıkarıldı.</>}
             {r.stopped && <> {r.stopped}</>}
@@ -130,7 +130,7 @@ export default function ComparablesScreen() {
           </Note>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <ResultList title="Rakip emsaller" items={r.rakip} k={kaynakOf(r)} />
-            <ResultList title="TİMAŞ emsalleri" items={r.timas} salesYear={r.salesYear} k={kaynakOf(r)} />
+            <ResultList title="Timaş emsalleri" items={r.timas} salesYear={r.salesYear} k={kaynakOf(r)} />
           </div>
         </>
       )}

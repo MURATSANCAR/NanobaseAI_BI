@@ -99,7 +99,7 @@ export default function FairCard() {
     <EventsFrame
       crumb="Fuar ve etkinlik"
       title={f?.name ?? 'Fuar kartı'}
-      lead={f ? `${fmtRange(f.startsOn, f.endsOn)} · ${[f.venue, f.city].filter(Boolean).join(', ') || 'yer girilmedi'} · ${f.kindLabel}` : undefined}
+      lead={f ? `Bu fuarın hazırlığı: götürülecek kitaplar ve adetler, görevler, gider ve yazar programı. Katılım kararı ve bütçe onay ister. ${fmtRange(f.startsOn, f.endsOn)} · ${[f.venue, f.city].filter(Boolean).join(', ') || 'yer girilmedi'} · ${f.kindLabel}` : undefined}
       source={`Logo ${m?.settings.channel ?? 'FUAR'} kanalı · CRM`}
       presence={f ? (f.status === 'onayli' ? f.phaseLabel : f.statusLabel) : '…'}
       detail={f?.name}
@@ -159,7 +159,7 @@ export default function FairCard() {
             onConfirm={() => run.mutate(() => evApi.update(f.id, { status: 'iptal' }), { onSuccess: () => setAsk(null) })} />
           <AskSheet open={ask === 'delete'} title="Kartı sil" danger
             message={<>«{f.name}» kartı; kitap listesi, görevleri, giderleri, fişleri ve yazar programıyla birlikte kalıcı olarak silinir.</>}
-            confirm="Sil" busy={remove.isPending} onClose={() => setAsk(null)} onConfirm={() => remove.mutate()} />
+            confirm="Kalıcı olarak sil" busy={remove.isPending} onClose={() => setAsk(null)} onConfirm={() => remove.mutate()} />
         </>
       )}
     </EventsFrame>
@@ -220,9 +220,9 @@ function Summary({ f, m, onSave, busy }: { f: FairDetail; m: Meta; onSave: (b: {
 
       <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
         <Block title="Fuar carileri (Logo)"
-          help={`Sonuç raporu ve öneri bu carilerin «${m.settings.channel}» kanalı satışını sayar. Boşsa aynı günlerdeki bütün ${m.settings.channel} kanalı satışı sayılır.`}
+          help={`Cari, Logo'daki müşteri hesabıdır. Sonuç raporu ve kitap önerisi, fuardaki satışın faturalandığı bu carilerin «${m.settings.channel}» kanalı satışını sayar. Boşsa aynı günlerdeki bütün ${m.settings.channel} kanalı satışı sayılır.`}
           action={m.me.canEdit ? <button type="button" className={btnGhost} onClick={() => setPickClients((v) => !v)}>{pickClients ? 'Kapat' : 'Cari seç'}</button> : undefined}>
-          {f.logoClientCodes.length === 0 && !pickClients && <p className="text-[12.5px] text-canvas-muted">Cari bağlanmadı.</p>}
+          {f.logoClientCodes.length === 0 && !pickClients && <p className="text-[12.5px] text-canvas-muted">Cari bağlanmadı; sonuç, aynı günlerdeki bütün fuar kanalı satışıyla hesaplanır. Fuardaki satışın faturalandığı Logo carisini «Cari seç» ile bağlayın.</p>}
           {!pickClients && f.logoClientCodes.length > 0 && (
             <ul className="flex flex-wrap gap-1.5">
               {f.logoClientCodes.map((c) => <li key={c}><Pill tone="violet">{c}{clientName.get(c) ? ` · ${clientName.get(c)}` : ''}</Pill></li>)}
@@ -261,7 +261,7 @@ function Summary({ f, m, onSave, busy }: { f: FairDetail; m: Meta; onSave: (b: {
         <Block title="Bağlı CRM etkinlikleri"
           help="Katılımcı, satılan adet ve CRM'deki gider sonuç raporuna bu kayıtlardan gelir. CRM kaydı yalnız okunur."
           action={m.me.canEdit ? <button type="button" className={btnGhost} onClick={() => setPickEvents((v) => !v)}>{pickEvents ? 'Kapat' : 'Etkinlik bağla'}</button> : undefined}>
-          {f.crmEventIds.length === 0 && !pickEvents && <p className="text-[12.5px] text-canvas-muted">Bağlı CRM etkinliği yok.</p>}
+          {f.crmEventIds.length === 0 && !pickEvents && <p className="text-[12.5px] text-canvas-muted">Bağlı CRM etkinliği yok. CRM'de bu fuar için açılmış etkinlik kaydı varsa bağlayın; katılımcı ve satılan adet sonuca oradan gelir.</p>}
           {!pickEvents && f.crmEventIds.length > 0 && (
             <ul className="flex flex-col gap-1 text-[12.5px]">
               {f.crmEventIds.map((i) => {

@@ -75,7 +75,7 @@ export default function CatalogEditor() {
     } else if (j.durum === 'hata') toast.error(j.hata ?? 'Zeki AI işi hata verdi.');
   }, [jobQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ENGINE_ENABLED) return <CnFrame crumb="Katalog" title="Katalog" source="—" presence="—"><Note tone="warn">Veri bağlantısı tanımlı değil.</Note></CnFrame>;
+  if (!ENGINE_ENABLED) return <CnFrame crumb="Katalog" title="Katalog" source="—" presence="—"><Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note></CnFrame>;
   const list = c?.kitaplar ?? [];
   const save = (next: ItemEdit[]) => items.mutate(next);
   const edits = list.map(toEdit);
@@ -93,7 +93,7 @@ export default function CatalogEditor() {
     <CnFrame
       crumb="Katalog"
       title={c?.baslik ?? 'Katalog'}
-      lead={c ? `${c.turAdi}${c.donem ? ` · ${c.donem}` : ''}${c.tema ? ` · ${c.tema}` : ''} · fiyat: ${c.fiyatKaynagiAdi}` : undefined}
+      lead={c ? `Kataloğa kitap ekleyin, fiyat ve stok uyarılarını izleyin, onaydan sonra tasarımcı paketini indirin. ${c.turAdi}${c.donem ? ` · ${c.donem}` : ''}${c.tema ? ` · ${c.tema}` : ''} · fiyat: ${c.fiyatKaynagiAdi}` : undefined}
       source={c?.havuz?.okuma ? `Kitap havuzu ${fmtStamp(c.havuz.okuma)}` : 'CRM + Logo'}
       presence={c ? `${c.ozet.kitap} kitap` : '…'}
       back={{ to: '/katalog-bulten', label: 'Kataloglar' }}
@@ -105,14 +105,14 @@ export default function CatalogEditor() {
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             {m.me.canCatalog && c.durum === 'taslak' && <button type="button" className={btnPrimary} disabled={action.isPending || !list.length} onClick={() => action.mutate({ act: 'submit' })}>Onaya gönder</button>}
-            {m.me.canCatalog && c.durum === 'onayda' && <button type="button" className={btnGhost} onClick={() => action.mutate({ act: 'withdraw' })}>Geri çek</button>}
+            {m.me.canCatalog && c.durum === 'onayda' && <button type="button" className={btnGhost} onClick={() => action.mutate({ act: 'withdraw' })}>Onaydan geri çek</button>}
             {m.me.canApprove && c.durum === 'onayda' && c.gonderen !== m.me.username && (
               <>
                 <button type="button" className={btnPrimary} onClick={() => action.mutate({ act: 'approve' })}>Onayla</button>
                 <button type="button" className={btnGhost} onClick={() => setAsk('reject')}>Geri gönder</button>
               </>
             )}
-            {m.me.canCatalog && c.durum === 'onayli' && <button type="button" className={btnPrimary} onClick={() => action.mutate({ act: 'publish' })}>Yayında işaretle</button>}
+            {m.me.canCatalog && c.durum === 'onayli' && <button type="button" className={btnPrimary} onClick={() => action.mutate({ act: 'publish' })}>Yayında olarak işaretle</button>}
             {m.me.canCatalog && ['onayli', 'yayinda', 'arsiv'].includes(c.durum) && <button type="button" className={btnGhost} onClick={() => action.mutate({ act: 'reopen' })}>Taslağa geri al</button>}
             {m.me.canCatalog && ['taslak', 'onayli', 'yayinda'].includes(c.durum) && <button type="button" className={btnGhost} onClick={() => action.mutate({ act: 'archive' })}>Arşivle</button>}
             {m.me.canCatalog && c.durum === 'taslak' && (
@@ -165,7 +165,7 @@ export default function CatalogEditor() {
               </button>
             ) : undefined}
           >
-            {list.length === 0 && <p className="py-4 text-[12.5px] text-canvas-muted">Henüz kitap yok. Aşağıdaki önerilerden ekleyin.</p>}
+            {list.length === 0 && <p className="py-4 text-[12.5px] text-canvas-muted">Katalogda henüz kitap yok. Aşağıdaki «Önerilen kitaplar»dan «Önerileri getir» ile seçip ekleyin.</p>}
             <ol className="flex flex-col gap-2">
               {list.map((k, i) => (
                 <ItemRow key={k.crmKitapId} k={k} i={i} n={list.length} editable={editable} busy={items.isPending || accept.isPending}
@@ -180,7 +180,7 @@ export default function CatalogEditor() {
       )}
       <AskSheet open={ask === 'reject'} title="Geri gönder" message="Katalog hazırlayana gerekçeyle geri gider." confirm="Geri gönder" input="Gerekçe" required
         busy={action.isPending} onClose={() => setAsk(null)} onConfirm={(t) => action.mutate({ act: 'reject', note: t })} />
-      <AskSheet open={ask === 'delete'} title="Kataloğu sil" message="Taslak katalog ve kitap listesi silinir." confirm="Sil" danger
+      <AskSheet open={ask === 'delete'} title="Kataloğu sil" message="Taslak katalog ve kitap listesi silinir. Bu işlem geri alınamaz." confirm="Sil" danger
         busy={remove.isPending} onClose={() => setAsk(null)} onConfirm={() => remove.mutate()} />
     </CnFrame>
   );

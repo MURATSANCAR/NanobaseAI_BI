@@ -57,10 +57,12 @@ export default function DealerView() {
             <KpiRow>
               <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık sipariş" />} label="Açık sipariş" value={s ? fmtInt(s.open) : '—'} help={s?.oldestOpen ? `En eskisi ${fmtDay(s.oldestOpen)}` : 'Bekleyen adedi olan'} />
               <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen adet" />} label="Bekleyen adet" value={s ? fmtNum(s.pending) : '—'} help="Henüz gönderilmemiş" />
-              <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Risk onayında" />} label="Risk onayında" value={s ? fmtInt(s.risk) : '—'} help={s ? `${fmtTl(s.riskAmount)} · risk limiti onayı ya da bilgisi bekliyor` : 'CRM risk durumu'} />
+              <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Risk onayında" />} label="Risk onayında" value={s ? fmtInt(s.risk) : '—'}
+                explain="CRM’de risk limiti onayı ya da bilgisi bekleyen siparişlerin sayısı ve tutarı; kararı satış destek ya da finans verir."  help={s ? `${fmtTl(s.riskAmount)} · risk limiti onayı ya da bilgisi bekliyor` : 'CRM risk durumu'} />
               <Kpi
                 info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bakiye (yaklaşık)" />}
                 label="Bakiye (yaklaşık)"
+                explain="Bayinin Logo’daki yıl başından bu yana cari bakiyesi; Logo verisinin son gününe kadar. Vadesi geçen tutar, ödemelerin en eski borcu kapattığı varsayımıyla hesaplanır; bu yüzden yaklaşıktır."
                 value={d.balance ? fmtTl(d.balance.bakiye) : '—'}
                 help={d.balance ? `Vadesi geçen ${fmtTl(d.balance.vadesiGecmis)} · Logo ${fmtDay(d.balance.dataEnd)}'e kadar` : 'Logo carisi yok'}
               />
@@ -71,7 +73,7 @@ export default function DealerView() {
               </Block>
             )}
             <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Açık siparişler" />} title="Açık siparişler" help="Bekleyen adedi olan, tamamlanmamış siparişler (tarih penceresinden bağımsız hepsi).">
-              {d.open.length ? <OrderTable orders={d.open} /> : <Empty title="Açık sipariş yok" />}
+              {d.open.length ? <OrderTable orders={d.open} /> : <Empty title="Açık sipariş yok">Bu bayinin gönderilmeyi bekleyen siparişi yok.</Empty>}
             </Block>
             <ContextView data={d} />
           </>
@@ -92,10 +94,11 @@ export default function DealerView() {
           Ara
         </button>
       </form>
-      <SourceLine>CRM'deki etkin cariler; kanal süzgeci Yönetim → Ayarlar → Müşteri hizmetleri'nden.</SourceLine>
+      <SourceLine>CRM’deki etkin bayi carileri; hangi kanalların bayi sayılacağı Yönetim → Ayarlar → Müşteri hizmetleri’nden ayarlanır.</SourceLine>
+      {!q && <Empty title="Bir bayi arayın">Bayi adının ya da cari kodunun en az 2 harfini yazıp «Ara»ya basın; açık siparişleri, risk onayı bekleyenleri ve bakiyesi açılır.</Empty>}
       {list.isLoading && <Loading />}
       {list.error && <Note tone="err">{errText(list.error, 'Bayi listesi okunamadı.')}</Note>}
-      {list.data && list.data.items.length === 0 && <Empty title="Eşleşen cari yok" />}
+      {list.data && list.data.items.length === 0 && <Empty title="Eşleşen bayi yok">Adın başka bir parçasını ya da cari kodunu deneyin.</Empty>}
       {list.data && list.data.items.length > 0 && (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {list.data.items.map((a) => (
@@ -117,10 +120,10 @@ export default function DealerView() {
       {list.data && (offset > 0 || list.data.hasMore) && (
         <div className="flex gap-1.5">
           <button type="button" className={btnGhost} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 25))}>
-            Önceki
+            Önceki sayfa
           </button>
           <button type="button" className={btnGhost} disabled={!list.data.hasMore} onClick={() => setOffset(list.data?.nextOffset ?? offset)}>
-            Sonraki
+            Sonraki sayfa
           </button>
         </div>
       )}

@@ -5,6 +5,7 @@ import { Note, errText } from '../../admin/ui';
 import { Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn } from './shared';
 import { readableText } from '../../components/readableName';
+import { Explain } from '../../components/Explain';
 
 /** Künye: sistem kitabın kendi künyesinden (alıntıyla) doldurur; kaynağı olmayan alan «—» kalır ve ön baskı
  *  denetimi durur. Editör eksik ya da değişecek alanı burada yazar; kaydedince iç sayfa yeniden dizilir.
@@ -113,12 +114,18 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">Künye</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold">
+          Künye
+          <Explain label="Künye">Kitabın yayın bilgileri sayfası: kitap adı, yazar, ISBN, yayınevi, baskı ve emeği geçenler. İç kapağın arkasına basılır.</Explain>
+        </h2>
         <span className={`text-[12px] font-bold ${missing ? 'text-amber-700' : 'text-emerald-700'}`}>
-          {missing ? `${missing} alan eksik` : 'Tam'}
+          {missing ? `${missing} alan eksik` : 'Eksik alan yok'}
         </span>
       </div>
-      <p className="text-[11.5px] text-canvas-muted">Kitabın kendi künyesinden alındı; kaynağı olmayan alanı siz yazın. Resim ve tasarım satırları sistemindir.</p>
+      <p className="text-[11.5px] text-canvas-muted">
+        Alanlar kitabın kendi künyesinden alındı; kaynağı bulunamayan alanı siz yazın. Kutusu olmayan satırlar (resim, tasarım) otomatik doldurulur.
+        {missing ? ' Eksik alan kalırsa ön baskı denetimi geçmez.' : ''}
+      </p>
 
       {titleRow && authorRow && (
         <div className="mt-2 grid gap-2 md:grid-cols-2">

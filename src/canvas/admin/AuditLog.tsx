@@ -4,6 +4,7 @@ import { ChevronDown, Search } from 'lucide-react';
 import { adminApi, type AuditItem } from '../engine';
 import { readableName, readableText } from '../components/readableName';
 import { ACTION_LABEL, FIELD_LABEL, Loading, Note, Pill, Section, btnGhost, errText, field, fmtDate, show } from './ui';
+import { EmptyHint } from '../components/Explain';
 
 const KINDS = [
   ['', 'Her tür'],
@@ -116,7 +117,7 @@ export default function AuditLog() {
           }}
         >
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-canvas-muted" />
-          <input value={text} onChange={(e) => setText(e.target.value)} onBlur={() => setSearch(text.trim())} placeholder="Başlık, kişi ya da kimlik ara…" className={`${field} pl-8`} />
+          <input value={text} onChange={(e) => setText(e.target.value)} onBlur={() => setSearch(text.trim())} placeholder="Başlık, kişi ya da kayıt numarası ara…" className={`${field} pl-8`} />
         </form>
         <select value={kind} onChange={(e) => setKind(e.target.value)} className={`${field} sm:w-44`} aria-label="Tür">
           {KINDS.map(([v, l]) => (
@@ -146,7 +147,10 @@ export default function AuditLog() {
           </ul>
         </div>
       ) : (
-        <Note tone="info">Bu süzgece uyan kayıt yok.</Note>
+        <EmptyHint
+          title={search || kind || action ? 'Bu süzgece uyan kayıt yok' : 'Henüz kayıt yok'}
+          why={search || kind || action ? 'Aramayı temizleyin ya da tür ve işlem süzgecini «Her tür / Her işlem» yapın.' : 'Bundan sonra yapılan her ekleme, değişiklik ve silme burada görünür.'}
+        />
       )}
       {q.hasNextPage && (
         <button type="button" onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage} className={btnGhost}>

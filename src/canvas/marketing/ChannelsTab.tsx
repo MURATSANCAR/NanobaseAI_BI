@@ -7,6 +7,7 @@ import { NumField } from '../budget/parts';
 import { SOURCE_LABEL, fmtMoney, fmtPct, fmtShortDay, mktApi, parseNum, type Line, type Meta, type Plan } from './api';
 import { Block } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { Explain } from '../components/Explain';
 
 type Draft = Omit<Line, 'tutar'> & { tutar: string; key: string };
 
@@ -62,7 +63,7 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
             <div className="flex flex-wrap gap-2 text-[12px] sm:ml-auto">
               <span className="inline-flex items-center gap-0.5"><Pill tone={plan.butceCerceve !== null && total > plan.butceCerceve ? 'warn' : 'muted'}>Satır toplamı {fmtMoney(total)}</Pill><SqlInfo k={plan.kaynaklar} alan="butceToplam" label="Satır toplamı" /></span>
               {hedefCiro ? <span className="inline-flex items-center gap-0.5"><Pill tone="muted">Hedef cironun {fmtPct(total / hedefCiro)}</Pill><SqlInfo k={plan.kaynaklar} alan="oran" label="Hedef ciroya oran" /></span> : <Pill tone="muted">Onaylı hedef ciro yok</Pill>}
-              {cf?.oran?.oran != null && <span className="inline-flex items-center gap-0.5"><Pill tone="violet">Oran {fmtPct(cf.oran.oran)}{cf.oran.yil ? ` (${cf.oran.yil})` : ''}</Pill><SqlInfo k={plan.kaynaklar} alan="butceCerceve" label="Departman oranı" /></span>}
+              {cf?.oran?.oran != null && <span className="inline-flex items-center gap-0.5"><Pill tone="violet">Oran {fmtPct(cf.oran.oran)}{cf.oran.yil ? ` (${cf.oran.yil})` : ''}</Pill><SqlInfo k={plan.kaynaklar} alan="butceCerceve" label="Departman oranı" /><Explain label="Oran" title="Kitap bütçesi oranı">Yönetim ekranında girilen yüzde; girilmemişse son tam yılda pazarlama giderinin net ciroya oranı. Çerçeve orandan geldiyse kitabın hedef cirosu bu oranla çarpılır.</Explain></span>}
               {plan.ustOnayGerekli && <Pill tone="violet">Üst onay eşiğinin üstünde</Pill>}
             </div>
           </div>
@@ -74,7 +75,7 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
       <Block
         info={<SqlInfo k={plan.kaynaklar} alan="lines[]" label="Kanal ve bütçe satırları" />}
         title="Kanallar"
-        help="Kanal payı emsal kitapların CRM pazarlama bütçe kayıtlarından (yoksa şirket geneli) hesaplanır. Satırlar CRM'e yazılmaz; «Onay ve geçmiş» sekmesindeki listeyle CRM'e elle işlenir."
+        help="Bütçenin hangi kanala ne kadar ayrıldığı. Kanal payı emsal kitapların CRM'deki pazarlama harcamasından, o yoksa şirket genelinden hesaplanır. Satırlar CRM'e yazılmaz; «Onay ve geçmiş» sekmesindeki listeyle CRM'e elle işlenir."
         action={editable && (
           <button type="button" className={btnGhost}
             onClick={() => setRows((xs) => [...xs, { key: `n${Date.now()}`, kanal: 'diger', altKanal: null, aciklama: null, tutar: '', baslangic: plan.yayinTarihi, bitis: null, kaynak: 'kullanici' }])}>
@@ -95,7 +96,7 @@ export default function ChannelsTab({ plan, meta, editable: planEditable, onSave
                 </label>
                 <label className="flex min-w-0 flex-col gap-1">
                   <span className={labelCls}>Açıklama / mecra</span>
-                  <input className={field} value={r.aciklama ?? ''} disabled={!editable} onChange={(e) => set(i, { aciklama: e.target.value || null })} />
+                  <input className={field} value={r.aciklama ?? ''} placeholder="ör. Instagram reklamı, gazete ilanı" disabled={!editable} onChange={(e) => set(i, { aciklama: e.target.value || null })} />
                 </label>
                 {canBudget && (
                   <NumField id={`mkt-l-${r.key}`} label="Tutar" value={r.tutar} onChange={(v) => editable && set(i, { tutar: v })} suffix="₺" />

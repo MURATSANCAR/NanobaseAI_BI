@@ -10,6 +10,7 @@ import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi, type MemoryFile, type MemoryPair } from './ioApi';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint } from '../../components/Explain';
 
 /** Çeviri belleği: işlerde çevrilmiş/onaylı segmentler ve dışarıdan (TMX) alınan bellek. Çevirmen ekranındaki
  *  benzer cümle önerisi ikisine birden bakar; dış bellekten gelen öneri «Dış bellek: <dosya>» diye görünür. */
@@ -28,7 +29,7 @@ function FileRow({ pair, f, canManage, onChanged }: { pair: MemoryPair; f: Memor
               aria-label={`${f.origin} kayıtlarını kaldır`}
               disabled={del.isPending}
               onClick={() => {
-                if (window.confirm(`«${f.origin}» dosyasından alınan ${nf.format(f.count)} bellek kaydı kaldırılsın mı?`)) del.mutate();
+                if (window.confirm(`«${f.origin}» dosyasından alınan ${nf.format(f.count)} bellek kaydı kaldırılsın mı? Bu geri alınamaz.`)) del.mutate();
               }}
               className={`${btnGhost} min-h-9 px-2.5 text-rose-700`}
             >
@@ -69,6 +70,9 @@ export default function MemoryBank() {
     <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start lg:gap-4">
       <Panel>
         <h2 className="px-1 text-[13px] font-extrabold">Dil çifti</h2>
+        <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
+          Çeviri belleği, daha önce çevrilmiş cümle çiftlerinin arşividir. Çevirmen yeni bir cümlede çalışırken benzer eski çeviriler çeviri masasında önerilir.
+        </p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <label className="block">
             <span className={label}>Kaynak</span>
@@ -133,7 +137,7 @@ export default function MemoryBank() {
           </label>
         )}
         <p className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
-          TMX 1.4: Trados, memoQ, OmegaT ve Phrase belleği. Bölgesel dil kodu (en-US, tr-TR) seçilen dile sayılır; bellekte zaten olan cümle çifti ikinci kez yazılmaz. İndirilen dosyada bu dil çiftindeki bütün
+          TMX, çeviri programlarının (Trados, memoQ, OmegaT, Phrase) bellek dosyası biçimidir. Bölgesel dil kodu (en-US, tr-TR) seçilen dile sayılır; bellekte zaten olan cümle çifti ikinci kez yazılmaz. İndirilen dosyada bu dil çiftindeki bütün
           işlerin çevrilmiş ve onaylı segmentleri vardır.
         </p>
         {notice && (
@@ -155,7 +159,12 @@ export default function MemoryBank() {
         {memory.isLoading ? (
           <Loading />
         ) : !pairs.length ? (
-          <p className="mt-3 px-1 text-[12px] text-canvas-muted">Henüz çevrilmiş segment ya da içe aktarılmış bellek yok.</p>
+          <div className="mt-3">
+            <EmptyHint
+              title="Bellek henüz boş"
+              why="Çeviri işlerinde çevrilen cümleler buraya kendiliğinden eklenir. Elinizde eski bir bellek dosyası (TMX) varsa soldan yükleyebilirsiniz."
+            />
+          </div>
         ) : (
           <ul className="mt-2 space-y-2">
             {pairs.map((p) => {

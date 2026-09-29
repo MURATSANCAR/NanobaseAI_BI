@@ -80,7 +80,7 @@ export default function CategoriesScreen() {
       aside={aside}
       badges={{ [`${ROOT}/kuyruk`]: ov?.mine.pending || null, [`${ROOT}/tutarsizlik`]: ov?.findings.open || null, [`${ROOT}/crm-farki`]: ov?.crmDiff.stale || null }}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil; ekran boş kalır.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Kategori ağacı açılamadı.')}</Note>}
       {section}
     </CategoriesFrame>

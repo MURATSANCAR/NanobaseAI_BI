@@ -4,6 +4,7 @@ import { peopleApi, type JobStage, type SegmentStatus, type TranslationJob, type
 import { Pill, field, nf } from '../../admin/ui';
 import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
+import { Explain } from '../../components/Explain';
 
 /** M4 Çeviri ekranlarının ortak parçaları: etiketler, ilerleme çubuğu, kişi seçici, dosya düğmesi. */
 
@@ -92,6 +93,26 @@ export function ProgressBar({ done, approved, total, label }: { done: number; ap
       <span className="absolute inset-0 origin-left bg-canvas-violet/70" style={{ transform: `scaleX(${d})` }} />
       <span className="absolute inset-0 origin-left bg-emerald-500" style={{ transform: `scaleX(${a})` }} />
     </div>
+  );
+}
+
+/** Segment ve segment durumlarının sade açıklaması; çeviri ekranlarında sayıların yanında «?». */
+export function SegmentHelp() {
+  return (
+    <Explain label="Segment" title="Segment ve durumları">
+      Segment, kaynak metnin çeviri için bölündüğü tek cümle ya da başlıktır. <b>Boş</b>: çeviri yok. <b>Taslak</b>: yazıldı (ya da Zeki AI taslağı
+      yerleştirildi), çevirmen henüz onaylamadı. <b>Çevrildi</b>: çevirmen onayladı, inceleme bekliyor. <b>Onaylı</b>: inceleyen onayladı.
+    </Explain>
+  );
+}
+
+/** XLIFF dosyasının ne olduğu; dosya düğmelerinin yanında «?». */
+export function XliffHelp() {
+  return (
+    <Explain label="XLIFF" title="XLIFF dosyası">
+      Çevirmenlerin kullandığı masaüstü çeviri programlarının (Trados, memoQ, OmegaT, Phrase) açtığı ortak dosya biçimi. Portala girmeyen çevirmene bu
+      dosyayı verirsiniz; çevirip geri gönderdiği dosyayı «XLIFF yükle» ile alırsınız.
+    </Explain>
   );
 }
 

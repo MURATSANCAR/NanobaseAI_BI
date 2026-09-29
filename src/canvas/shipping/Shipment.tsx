@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 import { Copy, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtDays, fmtMoney, fmtNum, shippingApi, type Draft, type DraftType, type Meta, type ShipmentCard } from './api';
-import { Empty, FreshNote, ShippingFrame, StatusPill } from './parts';
+import { FreshNote, ShippingFrame, StatusPill } from './parts';
 
 /** M44 Gönderi kartı (/kargo/gonderi/:id): sipariş → depo → kutulama → sevk → kargo → teslim zaman çizelgesi, entegrasyon
  *  sonucu, kargo kaydı, CRM sevkiyatı ve Logo karşılığı, Zeki AI mesaj taslakları. Alıcı adı yalnız `kargo.alici` ile,
@@ -26,7 +27,7 @@ export default function Shipment() {
       crumb="Kargo"
       detail={o?.no ?? undefined}
       title={o ? `Sipariş ${o.no ?? ''}` : 'Gönderi'}
-      lead={o ? `${o.musteri ?? 'Müşteri yok'}${o.cariKodu ? ` · ${o.cariKodu}` : ''}${o.il ? ` · ${o.il}` : ''}` : 'Sipariş okunuyor…'}
+      lead={o ? `${o.musteri ?? 'Müşteri yok'}${o.cariKodu ? ` · ${o.cariKodu}` : ''}${o.il ? ` · ${o.il}` : ''}. Siparişin depodan teslime kadarki adımları, kargo kaydı ve Logo karşılığı.` : 'Sipariş okunuyor…'}
       meta={meta.data}
     >
       {card.isLoading && <Note tone="info">CRM sipariş, sevkiyat ve kargo kaydı okunuyor…</Note>}
@@ -60,12 +61,13 @@ export default function Shipment() {
                 }
               />
               <Fact label="Koli" value={fmtNum(o.kutu)} info={<SqlInfo k={d.kaynaklar} alan="siparis.kutu" label="Koli" />} />
-              <Fact label="Sipariş → sevk" value={fmtDays(o.sevkeKadarGun)} info={<SqlInfo k={d.kaynaklar} alan="siparis.sevkeKadarGun" label="Sipariş → sevk" />} />
+              <Fact label="Sipariş → sevk" value={fmtDays(o.sevkeKadarGun)} info={<><Explain label="Sipariş → sevk">Siparişin alındığı günden depodan sevk edildiği güne kadar geçen gün.</Explain><SqlInfo k={d.kaynaklar} alan="siparis.sevkeKadarGun" label="Sipariş → sevk" /></>} />
             </div>
           </Panel>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
             <Panel>
               <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="zamanCizelgesi">Zaman çizelgesi</InfoLabel></h2>
+              <p className="text-[11.5px] text-canvas-muted">Sipariş, depo, kutulama, sevk, kargo ve teslim adımları; her adımın yanında hangi sistemden geldiği ve bir önceki adımdan kaç gün sonra olduğu yazar.</p>
               <ol className="mt-2 flex flex-col">
                 {d.zamanCizelgesi.map((s, i) => (
                   <li key={`${s.asama}-${i}`} className="relative flex gap-3 pb-3 pl-1 last:pb-0">
@@ -84,13 +86,13 @@ export default function Shipment() {
                 ))}
               </ol>
               {d.kargo.length === 0 && (
-                <p className="mt-2 text-[11.5px] text-canvas-muted">Bu siparişe bağlanan kargo kaydı yok (eşleme: {d.eslemeYolu}). Teslim bilgisi bu yüzden görünmüyor olabilir.</p>
+                <p className="mt-2 text-[11.5px] text-canvas-muted">Bu siparişe bağlanan kargo kaydı yok (bağlama yöntemi: {d.eslemeYolu}). Teslim bilgisi bu yüzden görünmüyor olabilir.</p>
               )}
             </Panel>
             <Panel>
-              <h2 className="text-[14px] font-extrabold">Entegrasyon sonucu</h2>
+              <h2 className="text-[14px] font-extrabold">Kargo firmasına aktarım</h2>
               {d.hatalar.length === 0 ? (
-                <Empty>Kargo firması servisinden hata kaydı yok.</Empty>
+                <p className="mt-1 text-[12px] text-canvas-muted">Kargo firmasının sisteminden bu sipariş için hata dönmemiş.</p>
               ) : (
                 <div className="mt-2 flex flex-col gap-2">
                   {d.hatalar.map((f) => (
@@ -107,7 +109,7 @@ export default function Shipment() {
               )}
               <h3 className="mt-3 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">Takip kayıtları</h3>
               {d.takip.length === 0 ? (
-                <p className="text-[12px] text-canvas-muted">Yok.</p>
+                <p className="text-[12px] text-canvas-muted">Bu siparişe bağlı takip kaydı yok.</p>
               ) : (
                 <ul className="mt-1 flex flex-col gap-1 text-[12px]">
                   {d.takip.map((t, i) => (
@@ -123,11 +125,11 @@ export default function Shipment() {
           <Panel>
             <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="kargo">Kargo kaydı</InfoLabel></h2>
             <p className="text-[11.5px] text-canvas-muted">
-              Kargo firmasının gönderi kaydı (eşleme: {d.eslemeYolu}).{!d.aliciGorunur && ' Alıcı adı yetkiyle görünür.'}
+              Kargo firmasının bu gönderi için tuttuğu kayıt (bağlama yöntemi: {d.eslemeYolu}).{!d.aliciGorunur && ' Alıcı adı yetkiyle görünür.'}
               {!d.maliyetGorunur && ' Tutar ve desi yetkiyle görünür.'}
             </p>
             {d.kargo.length === 0 ? (
-              <Empty>Bağlı kargo kaydı yok.</Empty>
+              <EmptyHint title="Bağlı kargo kaydı yok" why="Kargo firmasının kaydı henüz gelmemiş ya da takip numarası eşleşmemiş olabilir. Takip numarası yoksa önce onu CRM'e girin." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -135,7 +137,7 @@ export default function Shipment() {
                     <tr>
                       <th className={th}>Firma</th>
                       <th className={th}>Takip no</th>
-                      <th className={th}>İrsaliye</th>
+                      <th className={th}>Kargo irsaliyesi</th>
                       <th className={th}>Teslim</th>
                       <th className={th}>Şehir / şube</th>
                       {d.aliciGorunur && <th className={th}>Alıcı / teslim alan</th>}
@@ -171,9 +173,10 @@ export default function Shipment() {
           </Panel>
           <Panel>
             <h2 className="text-[14px] font-extrabold">CRM sevkiyatı ve Logo</h2>
+            <p className="text-[11.5px] text-canvas-muted">Siparişin CRM'deki sevkiyat kayıtları ve her birinin Logo'da faturaya dönüşüp dönüşmediği.</p>
             {d.logoNotu && <div className="mt-1"><Note tone="warn">{d.logoNotu}</Note></div>}
             {d.sevkiyatlar.length === 0 ? (
-              <Empty>Bu siparişin sevkiyat kaydı yok.</Empty>
+              <EmptyHint title="Bu siparişin sevkiyat kaydı yok" why="Sipariş henüz depodan çıkmamış olabilir; durumunu yukarıdaki zaman çizelgesinden izleyin." />
             ) : (
               <div className="mt-2">
                 <TableWrap>
@@ -247,14 +250,14 @@ function DraftsPanel({ meta, card }: { meta: Meta; card: ShipmentCard }) {
             {(Object.keys(meta.taslakTurleri) as DraftType[]).map((t) => (
               <button key={t} type="button" className={btnGhost} disabled={create.isPending} onClick={() => create.mutate(t)}>
                 {create.isPending && create.variables === t && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
-                {meta.taslakTurleri[t]}
+                {meta.taslakTurleri[t]} taslağı yaz
               </button>
             ))}
           </div>
         )}
       </div>
       {card.taslaklar.length === 0 ? (
-        <Empty>Henüz taslak yok.</Empty>
+        <EmptyHint title="Henüz taslak yok" why={meta.me.taslak ? 'Yukarıdaki düğmelerden birine basın; Zeki AI müşteriye gönderebileceğiniz bir metin hazırlar.' : 'Taslak yazma yetkisi olan kişi hazırladığında burada görünür.'} />
       ) : (
         <div className="mt-2 flex flex-col gap-2">
           {card.taslaklar.map((dr) => <DraftItem key={dr.id} dr={dr} canEdit={meta.me.taslak} onChanged={() => qc.invalidateQueries({ queryKey: key })} />)}
@@ -296,7 +299,7 @@ function DraftItem({ dr, canEdit, onChanged }: { dr: Draft; canEdit: boolean; on
       <div className="mt-2 flex flex-wrap justify-end gap-1.5">
         <button type="button" className={btnGhost} onClick={copy}>
           <Copy aria-hidden className="h-4 w-4" />
-          Kopyala
+          Metni kopyala
         </button>
         {canEdit && dirty && (
           <button type="button" className={btnPrimary} disabled={save.isPending} onClick={() => save.mutate({ metin: text.trim() })}>
@@ -309,7 +312,7 @@ function DraftItem({ dr, canEdit, onChanged }: { dr: Draft; canEdit: boolean; on
           </button>
         )}
         {canEdit && (
-          <button type="button" className={btnGhost} aria-label="Taslağı sil" disabled={del.isPending} onClick={() => del.mutate()}>
+          <button type="button" className={btnGhost} aria-label="Taslağı sil (geri alınamaz)" title="Taslağı sil (geri alınamaz)" disabled={del.isPending} onClick={() => del.mutate()}>
             <Trash2 aria-hidden className="h-4 w-4" />
           </button>
         )}

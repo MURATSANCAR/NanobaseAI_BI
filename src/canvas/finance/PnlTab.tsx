@@ -12,6 +12,7 @@ import { AskSheet } from '../budget/parts';
 import { MAP_LABEL, RULE_LABEL, SOURCE_LABEL, financeApi, fmtDay, fmtMoney, fmtNum, fmtPct, type Grain, type Meta, type Period, type PnlRow } from './api';
 import { Approx, DataEnd, Money, pressable } from './parts';
 import AccountMapSheet from './AccountMapSheet';
+import { Explain } from '../components/Explain';
 
 /** Gelir tablosu: dönem · önceki dönem · geçen yıl · bütçe. Satır → hesaplar → Logo fiş satırları (iki dokunuş). */
 
@@ -78,7 +79,7 @@ function LineSheet({ row, period, onClose, onAccount }: { row: PnlRow | null; pe
     <Sheet open={!!row} onClose={onClose} modal wide title={row?.ad ?? ''}
       subtitle={d ? `${d.donem} · ${d.items.length} hesap · kâr etkisi ${fmtMoney(d.toplam)}. Hesaba dokununca Logo fişleri açılır.` : undefined}>
       {q.isLoading ? <Loading /> : q.error ? <Note tone="err">{errText(q.error, 'Hesaplar okunamadı.')}</Note> : d && (
-        !d.items.length ? <Note tone="info">Bu dönemde bu satıra düşen hareket yok.</Note> : (
+        !d.items.length ? <Note tone="info">Bu dönemde bu satıra düşen muhasebe hareketi yok; başka bir dönem seçebilirsiniz.</Note> : (
           <ul className="flex flex-col gap-1.5">
             <li className="flex items-center justify-end px-1 text-[11.5px] font-semibold text-canvas-muted">
               <InfoLabel k={d.kaynaklar} alan="items[]" label={`${row?.ad ?? 'Satır'} · hesaplar`}>Hesap tutarlarının kaynağı</InfoLabel>
@@ -160,7 +161,7 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
     onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.') ?? ''),
   });
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Gelir tablosu açılamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Gelir tablosu açılamadı; dönemi değiştirip ya da biraz sonra yeniden deneyin.')}</Note>;
   const d = q.data;
   if (!d) return null;
   const cols = COLS.filter(([k]) => d.columns[k]);
@@ -179,6 +180,9 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
             <Scale aria-hidden className="h-3.5 w-3.5" /> Mizan farkı {fmtMoney(d.mizan.fark)}
           </span>
         ) : <Pill tone="muted">Mizan okunmadı</Pill>}
+        <Explain label="Mizan">
+          Dönemin bütün muhasebe kayıtlarında borç toplamı alacak toplamına eşit mi? «Denk» ise kayıtlar kendi içinde tutarlıdır; fark varsa muhasebe kayıtları kontrol edilmelidir.
+        </Explain>
         <SqlInfo k={d.kaynaklar} alan="mizan" label="Mizan denkliği" />
         {grain === 'ay' && close?.durum === 'kapandi' && (
           <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[12px] font-bold">
@@ -192,7 +196,7 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
           </button>
           {meta.me.canExport && (
             <a className={btnGhost} href={financeApi.pnlExportUrl(period)} download>
-              <Download aria-hidden className="h-4 w-4" /> Excel
+              <Download aria-hidden className="h-4 w-4" /> Excel indir
             </a>
           )}
           {grain === 'ay' && meta.me.canClose && close?.durum !== 'kapandi' && cur.complete && (
@@ -221,6 +225,7 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
         </Note>
       )}
 
+      <p className="px-1 text-[12px] text-canvas-muted">Bir satıra dokununca o satırı oluşturan hesaplar, hesaba dokununca Logo fişleri açılır.</p>
       {/* Masaüstü: tablo; telefonda kart listesi. */}
       <div className="hidden sm:block">
         <TableWrap>

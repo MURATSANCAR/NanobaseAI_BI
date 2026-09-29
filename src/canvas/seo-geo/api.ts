@@ -327,10 +327,11 @@ export const FIELD_LABEL: Record<SeoField, string> = {
 export const STATUS_LABEL: Record<ProposalStatus, string> = {
   hazir: 'Onay bekliyor',
   onaylandi: 'Onaylandı',
-  gonderildi: 'Gönderildi',
+  // Eski kayıtlar: T-soft'a yazma 2026-09-25'te kapandı; bugün hiçbir öneri gönderilmez.
+  gonderildi: 'Gönderildi (eski kayıt)',
   reddedildi: 'Reddedildi',
-  hata: 'Gönderilemedi',
-  geri_alindi: 'Geri alındı',
+  hata: 'Gönderilemedi (eski kayıt)',
+  geri_alindi: 'Geri alındı (eski kayıt)',
 };
 
 export const fmt = (n: number | null | undefined, digits = 0) =>

@@ -45,17 +45,17 @@ export default function DealersScreen() {
     [params, setParams],
   );
 
-  const err = errText(meta.error, 'Bayi riski ekranı açılamadı.');
+  const err = errText(meta.error, 'Bayi riski ekranı açılamadı; biraz sonra sayfayı yenileyin.');
   const run = m?.run;
   return (
     <FieldFrame
       crumb="Bayi riski"
       title="Bayi riski"
-      lead="Her kitapçı ve bayi için günlük, açıklanabilir risk skoru (A/B/C/D), alacak yaşlandırması, çek olayı, iade ve CRM limit doluluğu. Skor kuraldan çıkar ve bileşenleriyle yazılır; kredi kararı satış müdürünündür. Onaylanan limit değişikliğini CRM'e insan işler."
+      lead="Her kitapçı ve bayi için günlük risk skoru (A en düşük, D en yüksek risk), alacak yaşlandırması ve limit önerisi. Skor kuralla hesaplanır, nedeni yazılır; kredi kararı ve CRM'e işleme insandadır."
       source={run?.gun ? `${run.scope ?? 0} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar · kural sürüm ${run.kural ?? '—'}` : 'Logo + CRM'}
       presence={run?.gun ? `Skor ${fmtDay(run.gun)}` : 'Hazırlanmadı'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; bayi riski gösterilemiyor.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {run?.gun && (
         <p className="flex flex-wrap items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
@@ -68,7 +68,7 @@ export default function DealersScreen() {
         <>
           {!run?.gun && <Note tone="warn">Bayi riski henüz hesaplanmadı: ilk günlük tur koştuğunda liste dolar (her gün 06:00).</Note>}
           {!m.me.canAll && run?.gun && m.me.cari === 0 && (
-            <Note tone="info">CRM'de size atanmış bayi ya da kitapçı yok. Atama CRM'deki cari sahibi (BMT) ya da ilin müşteri temsilcisi alanından gelir.</Note>
+            <Note tone="info">CRM'de size atanmış bayi ya da kitapçı yok. Atama CRM'deki cari sahibi ya da ilin müşteri temsilcisi alanından gelir; yanlışsa CRM'de düzeltilmesi gerekir.</Note>
           )}
           <Tabs tabs={TABS} value={tab} onChange={(t) => update({ sekme: t === 'pano' ? null : t })} />
           {tab === 'pano' && <PanoTab meta={m} goList={(p) => update({ sekme: 'bayiler', ...p })} />}

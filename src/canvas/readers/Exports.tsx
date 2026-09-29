@@ -6,6 +6,7 @@ import { Loading, Note, Section, TableWrap, btnGhost, errText, td, th } from '..
 import { fmtDay, fmtInt, readersApi } from './api';
 import { ROOT } from './parts';
 import { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Dışa aktarım günlüğü: kim, ne zaman, hangi segment, hangi kanal, kaç kişi, amaç ve dışarıda kalanlar. */
 export default function Exports() {
@@ -19,7 +20,7 @@ export default function Exports() {
     >
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Günlük açılamadı.')}</Note>}
-      {d && d.items.length === 0 && <Note tone="info">Henüz dışa aktarım yok.</Note>}
+      {d && d.items.length === 0 && <EmptyHint title="Henüz dışa aktarım yok" why="Onaylı bir segmentten liste alındığında kim, ne zaman, hangi amaçla aldı bilgisi burada tutulur." />}
       {d && d.items.length > 0 && (
         <TableWrap>
           <thead>

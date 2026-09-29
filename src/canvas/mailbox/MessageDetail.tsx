@@ -88,7 +88,7 @@ function Body({ d, meta }: { d: Detail; meta: Meta }) {
           </div>
           {d.attachments.length > 0 && (
             <ul className="mt-3 flex flex-wrap items-center gap-1.5">
-              <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İletinin SLA süresi ve ekleri" />
+              <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="İletinin yanıt süresi ve ekleri" />
               {d.attachments.map((a) => (
                 <li key={a.name} className="inline-flex max-w-full items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11.5px] font-semibold">
                   <Paperclip aria-hidden className="h-3.5 w-3.5 shrink-0" />
@@ -188,7 +188,7 @@ function WorkCard({ d, meta }: { d: Detail; meta: Meta }) {
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <CategoryPill m={d} />
           {d.categorySource === 'model' && d.categoryMargin !== null && (
-            <span className="text-[11px] text-canvas-muted">ikinci türle fark {probText(d.categoryMargin)}</span>
+            <span className="text-[11px] text-canvas-muted" title="Zeki AI'ın ilk ve ikinci tahmini arasındaki fark; küçükse tür kararsız olabilir, kontrol edin.">ikinci tahminle fark {probText(d.categoryMargin)}</span>
           )}
         </div>
         {meta.me.canAssign && (
@@ -230,12 +230,12 @@ function WorkCard({ d, meta }: { d: Detail; meta: Meta }) {
         {meta.me.canAssign && (
           <div className="mt-2 flex flex-col gap-2">
             <input
-              aria-label="Atanacak kişi (hesap adı)"
+              aria-label="Atanacak kişi (kullanıcı adı)"
               list={`people-${d.id}`}
               className={field}
               value={who}
               onChange={(e) => setWho(e.target.value.trim().toLowerCase())}
-              placeholder="Hesap adı, örn. ahmety"
+              placeholder="Kullanıcı adı, örn. ahmety"
               autoCapitalize="none"
               spellCheck={false}
             />
@@ -250,7 +250,7 @@ function WorkCard({ d, meta }: { d: Detail; meta: Meta }) {
             {d.isHr && <p className="text-[11.5px] text-amber-800">İş başvurusu yalnız İnsan Kaynakları yetkisi olan kişiye atanabilir.</p>}
             <div className="flex flex-wrap gap-1.5">
               <button type="button" className={btnPrimary} disabled={!who || assign.isPending || who === d.assignee} onClick={() => assign.mutate(who)}>
-                Ata
+                Bu kişiye ata
               </button>
               {d.assignee && (
                 <button type="button" className={btnGhost} disabled={assign.isPending} onClick={() => assign.mutate(null)}>
@@ -305,7 +305,7 @@ function DraftCard({ d }: { d: Detail }) {
         </div>
         <button type="button" className={btnGhost} disabled={draft.isPending || !!d.bodyError} onClick={() => draft.mutate()}>
           {draft.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-          {text ? 'Yeniden yaz' : 'Taslak yaz'}
+          {text ? 'Yeniden yaz' : 'Zeki AI ile taslak yaz'}
         </button>
       </div>
       {d.templates.length > 0 && (

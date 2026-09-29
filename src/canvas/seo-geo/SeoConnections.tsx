@@ -19,7 +19,7 @@ export default function SeoConnections() {
       crumb="Bağlantılar"
       eyebrow="SEO & GEO · kaynaklar"
       title="Bağlantılar"
-      lead="Modülün okuduğu ve yazdığı yerler. Kullanıcı, şifre ve anahtarlar Yönetim ekranında girilir; orada “Bağlantıyı sına” her kaynağı dener, hiçbir şey yazmaz."
+      lead="SEO ve GEO ekranlarının veri aldığı yerler ve bağlı olup olmadıkları. «Bağlı değil» olan kaynağın ekranları boş görünür. Kullanıcı, şifre ve anahtarları yöneticiniz Yönetim ekranında girer; oradaki «Bağlantıyı sına» her kaynağı dener, hiçbir şey yazmaz."
       actions={
         isAdmin && (
           <Link className="sg-button primary" to="/yonetim">
@@ -33,7 +33,7 @@ export default function SeoConnections() {
       {c && (
         <div className="sg-conn">
           <Item title="T-soft mağazası" ok={c.tsoft} okText="Tanımlı">
-            <p>Ürünler buradan <b>yalnız okunur</b>; T-soft’a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında durur, gidecekleri yer CRM (Web API yetkisi bekleniyor).</p>
+            <p>Ürünler buradan <b>yalnız okunur</b>; T-soft’a hiçbir şey yazılmaz. Onaylanan öneriler yalnız kayıt altında durur.</p>
             <p>Gerekli: T-soft panelinde web servis kullanıcısı (okuma); IP kısıtı varsa sunucu IP’si izinli olmalı.</p>
           </Item>
           <Item title="Google Search Console" ok={c.google} okText="Servis hesabı tanımlı">
@@ -47,7 +47,7 @@ export default function SeoConnections() {
             )}
           </Item>
           <Item title="Google Analytics 4" ok={c.google && c.ga4} okText="Mülk tanımlı">
-            <p>Organik trafik ve ChatGPT, Perplexity, Gemini gibi yapay zekâ asistanlarından gelen ziyaretler.</p>
+            <p>Google aramasından gelen ziyaretler ve yapay zekâ asistanlarından siteye gelen ziyaretler.</p>
             <p>Gerekli: GA4 mülkünde servis hesabına Görüntüleyici rolü ve mülk kimliği.</p>
           </Item>
           <Item title="Google Merchant Center" ok={c.google && c.merchant} okText="Hesap tanımlı">
@@ -55,7 +55,7 @@ export default function SeoConnections() {
             <p>Gerekli: Merchant Center’da servis hesabı kullanıcı olarak ve hesap kimliği.</p>
           </Item>
           <Item title="Yapay zekâ ölçümü" ok={false} okText="">
-            <p>İzlenen sorular Gemini (ücretsiz), ChatGPT, Perplexity ve Claude’a (ücretli) resmî API’leriyle sorulur. Anahtarlar: Yönetim → Yapay zekâ görünürlüğü. Durum: AI görünürlük ekranı.</p>
+            <p>İzlenen okur soruları yapay zekâ servislerine resmî yollarıyla sorulur; bir servis ücretsiz, ötekiler ücretlidir. Anahtarlar: Yönetim → Yapay zekâ görünürlüğü. Hangi servisin bağlı olduğu <Link to="/seo-geo/ai-gorunurluk">Yapay zekâ görünürlüğü</Link> ekranında görünür.</p>
           </Item>
         </div>
       )}

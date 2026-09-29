@@ -233,7 +233,7 @@ export default function ReviewPanel({ bookId }: { bookId: string }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold">İnceleme</h2>
+        <h2 className="text-[15px] font-extrabold">Zeki AI'ın okuma soruları</h2>
         {d && (
           <span className="text-[12px] font-bold text-canvas-muted">
             {d.open} soru bekliyor{d.advice ? ` · ${d.advice} öneri` : ''}{d.decided ? ` · ${d.decided} karara bağlandı` : ''}
@@ -241,7 +241,7 @@ export default function ReviewPanel({ bookId }: { bookId: string }) {
         )}
       </div>
       <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
-        Okuma bu yerlerde emin olamadı ve size soruyor. Sayfanın küçük resmine dokunursanız sayfa büyür.
+        Zeki AI kitabı okurken bu yerlerde emin olamadı ve size soruyor. Sayfanın küçük resmine dokunursanız sayfa büyür.
         Bunlar cevaplanmadan kitabın okuması yayına kabul edilmez.
         {d?.advice ? ' «Öneri» işaretliler bu kitabın türüne tam uymayan okumadan gelir; bakmanız iyi olur ama kabulü engellemez.' : ''}
       </p>

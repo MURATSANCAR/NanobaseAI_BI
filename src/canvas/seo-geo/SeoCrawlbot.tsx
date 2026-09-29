@@ -7,6 +7,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { Term, termText } from './terms';
 
 const PAGE = 40;
 
@@ -192,7 +194,7 @@ export default function SeoCrawlbot() {
       crumb="Google taraması"
       eyebrow="SEO & GEO · Google taraması"
       title="Google taraması"
-      lead="Googlebot'un sitede ne yaptığı, sunucu günlüğü olmadan: her kitap ve sayfa için Google'ın dizin kararı, son tarama tarihi ve seçtiği canonical Search Console'dan; bot istekleri site ağ geçidinden (CDN) okunur. Hiçbir yere yazılmaz."
+      lead={<>Google’ın kitap sayfalarımızı ne zaman okuduğu ve aramada gösterip göstermeyeceğine dair kararı (Search Console’dan), ayrıca Google’ın ve yapay zekâ servislerinin botlarının siteye ne kadar geldiği (site ağ geçidinden). Yalnız okunur, hiçbir yere yazılmaz. <Term k="googlebot" /></>}
       actions={
         canRun && ins?.configured ? (
           <button className="sg-button primary" onClick={() => run.mutate('inspect')} disabled={run.isPending || busy || ins.quota.remaining <= 0}>
@@ -236,24 +238,24 @@ export default function SeoCrawlbot() {
 
           <section className="sg-kpis" aria-label="Özet">
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Dizinde oranı <SeoInfo k={summary.data?.kaynaklar} label="Dizinde oranı" /></div>
+              <div className="sg-kpi-label">Dizinde oranı <SeoInfo k={summary.data?.kaynaklar} label="Dizinde oranı" /> <Explain label="Dizinde oranı">{`Denetlenen adreslerden yüzde kaçı Google’ın kayıtlı sayfa listesinde (dizinde). ${termText('index')} «Tarandı ama dizinde değil»: Google okudu ama göstermemeye karar verdi.`}</Explain></div>
               <div className="sg-kpi-value sg-mono">{pct(ins.indexedShare)}</div>
               <div className="sg-kpi-note">
                 Denetlenen {fmt(ins.inspected)} adresten {fmt(ins.indexed)} · tarandı ama dizinde değil {fmt(ins.crawledNotIndexed)} · keşfedildi ama taranmadı {fmt(ins.discoveredNotCrawled)}
               </div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">{ins.staleDays}+ gündür taranmayan satan kitap</div>
+              <div className="sg-kpi-label">{ins.staleDays}+ gündür taranmayan satan kitap <Explain label="Uzun süredir taranmayan kitap">Google bu sayfaları uzun süredir okumadığı için fiyat, stok ya da açıklama değişiklikleri aramaya geç yansır. Site içi bağlantı ve site haritası yardımcı olur.</Explain></div>
               <div className="sg-kpi-value sg-mono">{fmt(ins.staleSellers)}</div>
               <div className="sg-kpi-note">Satışı olan ve Google'ın {ins.staleDays} günden uzun süredir (ya da hiç) taramadığı kitap sayfaları</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Canonical uyuşmazlığı <SeoInfo k={summary.data?.kaynaklar} label="Canonical uyuşmazlığı" /></div>
+              <div className="sg-kpi-label">Asıl adres uyuşmazlığı <SeoInfo k={summary.data?.kaynaklar} label="Asıl adres uyuşmazlığı" /> <Term k="canonical" label="Asıl adres uyuşmazlığı" /></div>
               <div className="sg-kpi-value sg-mono">{fmt(ins.canonicalMismatch)}</div>
               <div className="sg-kpi-note">Google'ın sitenin gösterdiğinden başka bir adresi asıl saydığı sayfa</div>
             </div>
             <div className="sg-kpi">
-              <div className="sg-kpi-label">Bot istekleri (14 gün) <SeoInfo k={summary.data?.kaynaklar} label="Bot istekleri (14 gün)" /></div>
+              <div className="sg-kpi-label">Bot istekleri (14 gün) <SeoInfo k={summary.data?.kaynaklar} label="Bot istekleri (14 gün)" /> <Explain label="Bot istekleri">Son 14 günde arama motoru ve yapay zekâ botlarının siteye yaptığı istek sayısı. Bot sayfayı okumazsa ne aramada ne yapay zekâ cevabında çıkar.</Explain></div>
               <div className="sg-kpi-value sg-mono">{d.bots.configured ? fmt(d.bots.requests14) : '—'}</div>
               <div className="sg-kpi-note">{d.bots.configured ? `Googlebot ${fmt(d.bots.googlebot14)} · yapay zekâ botları ${fmt((d.bots.byGroup['yapay zekâ araması'] ?? 0) + (d.bots.byGroup['yapay zekâ eğitimi'] ?? 0))}` : 'Site ağ geçidi bağlı değil'}</div>
             </div>
@@ -284,7 +286,7 @@ export default function SeoCrawlbot() {
 const FILTER_LABEL: Record<Filter, string> = {
   all: 'Tümü',
   not_indexed: 'Dizinde değil',
-  canonical: 'Canonical uyuşmazlığı',
+  canonical: 'Asıl adres uyuşmazlığı',
   stale: 'Uzun süredir taranmayan',
   errors: 'Hatalar ve engeller',
   rich: 'Zengin sonuç sorunları',
@@ -324,10 +326,10 @@ function IndexTab({ s }: { s: Summary['inspect'] }) {
 
   if (s.total === 0) {
     return (
-      <section className="sg-empty">
-        <h2>Henüz denetlenen adres yok</h2>
-        <p>{s.configured ? 'İlk denetim bu gece yapılır; hemen başlatmak için “Şimdi denetle”.' : 'Search Console bağlantısı kurulunca her gece çok satan kitaplardan başlayarak denetlenir.'}</p>
-      </section>
+      <EmptyHint
+        title="Henüz denetlenen adres yok"
+        why={s.configured ? 'İlk denetim bu gece yapılır; hemen başlatmak için «Şimdi denetle»ye basın.' : 'Search Console bağlantısı kurulunca her gece çok satan kitaplardan başlayarak denetlenir.'}
+      />
     );
   }
   return (
@@ -381,7 +383,7 @@ function IndexTab({ s }: { s: Summary['inspect'] }) {
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı ya da adres" aria-label="Ara" style={{ fontSize: 16 }} />
         </label>
         {list.error && <Failed error={list.error} />}
-        {list.data && list.data.total === 0 && <p className="sg-sub">Bu süzgeçte adres yok.</p>}
+        {list.data && list.data.total === 0 && <EmptyHint title="Bu süzgeçte adres yok" why={query ? 'Aramayı kısaltın ya da temizleyin.' : 'Başka bir süzgeç seçin; bu durumda sayfa olmaması iyi haberdir.'} />}
         {list.data && list.data.total > 0 && (
           <div className="sg-table-wrap">
             <table className="sg-table">
@@ -391,8 +393,8 @@ function IndexTab({ s }: { s: Summary['inspect'] }) {
                   <th>Google'ın kararı</th>
                   <th>Son tarama <SeoInfo k={list.data?.kaynaklar} label="Son tarama" /></th>
                   <th>Tarayıcı</th>
-                  <th>Canonical</th>
-                  <th>Zengin sonuç</th>
+                  <th><ExplainLabel label="Asıl adres">{termText('canonical')} «Uyuşmuyor»: Google, sitenin gösterdiğinden başka bir adresi asıl saydı.</ExplainLabel></th>
+                  <th><ExplainLabel label="Zengin sonuç">Google sonucunda fiyat, stok, yıldız gibi ek bilgilerin çıkması için sayfadaki yapısal veri. Uyarı varsa bu ek bilgiler çıkmayabilir.</ExplainLabel></th>
                   <th>Denetlendi</th>
                 </tr>
               </thead>
@@ -560,7 +562,7 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
           </div>
         </div>
         {b.days.length === 0 ? (
-          <p className="sg-sub" style={{ marginTop: 14 }}>Bu dönemde okunmuş veri yok.</p>
+          <p className="sg-sub" style={{ marginTop: 14 }}>Bu dönemde okunmuş veri yok; dönemi uzatın ya da ertesi gece okumasını bekleyin.</p>
         ) : (
           <>
             <div className="sg-filters" role="group" aria-label="Botlar" style={{ margin: '14px 0 8px' }}>
@@ -599,7 +601,10 @@ function BotsTab({ configured, canRun, onRun, running }: { configured: boolean; 
         <div className="sg-grid">
           <section className="sg-card sg-span-8">
             <h2>Bot başına yanıtlar <SeoInfo k={q.data?.kaynaklar} label="Bot başına yanıtlar" /></h2>
-            <p className="sg-sub">Son {days} gün. 4xx ve 5xx yanıtları botun boşa harcadığı taramadır; 3xx çoksa bağlantılar eski adresleri gösteriyor olabilir.</p>
+            <p className="sg-sub">
+              Son {days} gün. 4xx ve 5xx yanıtları botun boşa harcadığı taramadır; 3xx çoksa bağlantılar eski adresleri gösteriyor olabilir.{' '}
+              <Explain label="Yanıt kodları" title="Yanıt kodları">2xx: sayfa açıldı. 3xx: başka adrese yönlendi. 4xx: bulunamadı ya da erişim yok. 5xx: sitenin sunucusunda hata. «Doğrulanmış»: gerçekten o bota ait olduğu doğrulanan istekler.</Explain>
+            </p>
             <div className="sg-table-wrap">
               <table className="sg-table">
                 <thead>

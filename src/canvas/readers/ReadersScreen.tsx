@@ -83,7 +83,7 @@ export default function ReadersScreen() {
       aside={aside}
       badges={{ [`${ROOT}/birlestirme`]: ov?.pendingCandidates || null }}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Okur veri tabanı açılamadı.')}</Note>}
       {section}
     </ReadersFrame>

@@ -9,6 +9,7 @@ import { Tabs } from '../editorial/freelance/shared';
 import { STATUS_TONE, num, overviewKey, pct, pricingApi, tl0, tl2, type Analysis, type AnalysisStatus, type ApproverRole, type Overview } from './api';
 import { Stat } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, ExplainLabel } from '../components/Explain';
 
 type Filter = 'onayda' | 'taslak' | 'onaylandi' | 'reddedildi' | 'hepsi' | 'arsiv';
 
@@ -38,11 +39,14 @@ export default function AnalysesPane({ ov }: { ov: Overview }) {
           { key: 'arsiv', label: 'Arşiv' },
         ]}
       />
-      {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
+      {list.error && <Note tone="err">{errText(list.error, 'Analiz listesi şu an okunamadı; biraz sonra sayfayı yenileyin.')}</Note>}
       {!list.data ? (
         !list.error && <Loading />
       ) : list.data.items.length === 0 ? (
-        <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu durumda analiz yok. «Kitap hesabı»ndan bir kitabın hesabını kaydedin.</p>
+        <EmptyHint
+          title={filter === 'onayda' ? 'Onay bekleyen analiz yok' : 'Bu durumda analiz yok'}
+          why="Yeni analiz için «Kitap hesabı» sekmesinde bir kitap seçin, hesabı yapın ve «Analiz olarak kaydet»e basın. Başka bir durum sekmesine de bakabilirsiniz."
+        />
       ) : (
         <TableWrap>
           <thead>
@@ -54,7 +58,11 @@ export default function AnalysesPane({ ov }: { ov: Overview }) {
               <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Kapak fiyatı</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Birim maliyet</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={list.data?.kaynaklar} alan="items[]">Marj</InfoLabel></th>
-              <th className={th}>İmzalar</th>
+              <th className={th}>
+                <ExplainLabel label="İmzalar">
+                  Analizi onaylaması gereken birimler. Yeşil: onayladı, kırmızı: geri gönderdi, gri: bekleniyor. Tahmini aşamada Mali İşler ve Satış, kesin aşamada ayrıca Pazarlama ve Üst Yönetim imzalar.
+                </ExplainLabel>
+              </th>
               <th className={th}>Son değişiklik</th>
             </tr>
           </thead>
@@ -118,7 +126,7 @@ function AnalysisDetail({ id, ov, onClose }: { id: string; ov: Overview; onClose
     onSuccess: done,
   });
   const a = q.data;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Analiz okunamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Analiz şu an okunamadı; biraz sonra yeniden deneyin.')}</Note>;
   if (!a) return <Loading />;
   const s = a.result?.summary;
   const signable = (a.status === 'onayda' ? a.required : []).filter(
@@ -223,8 +231,11 @@ function AnalysisDetail({ id, ov, onClose }: { id: string; ov: Overview; onClose
               {signable[0].label} adına geri gönder
             </button>
           </div>
-          {decide.error && <Note tone="err">{errText(decide.error, 'Karar kaydedilemedi.')}</Note>}
+          {decide.error && <Note tone="err">{errText(decide.error, 'Kararınız kaydedilemedi; biraz sonra yeniden deneyin.')}</Note>}
         </section>
+      )}
+      {signable.length > 0 && iSigned && (
+        <Note tone="info">Bu analizi siz onaya gönderdiniz ya da bu sürümde bir rol adına karar verdiniz; aynı sürümde yeniden imza atamazsınız.</Note>
       )}
       {a.status === 'onaylandi' && (
         <Note tone="ok">Onaylandı. Kapak fiyatını CRM kitap kartına ve satış kanallarına ayrıca girin; buradan CRM'e yazılmaz.</Note>
@@ -255,7 +266,7 @@ function AnalysisDetail({ id, ov, onClose }: { id: string; ov: Overview; onClose
           </button>
         )}
       </div>
-      {act.error && <Note tone="err">{errText(act.error, 'İşlem yapılamadı.')}</Note>}
+      {act.error && <Note tone="err">{errText(act.error, 'İşlem yapılamadı; biraz sonra yeniden deneyin.')}</Note>}
     </div>
   );
 }

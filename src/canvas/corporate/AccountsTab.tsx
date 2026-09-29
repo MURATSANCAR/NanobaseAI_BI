@@ -8,7 +8,8 @@ import { Loading, Note, Pill, TableWrap, errText, field, label as labelCls, td, 
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
-import { StagePill } from './parts';
+import { Empty, StagePill } from './parts';
+import { Explain } from '../components/Explain';
 import { corporateApi, fmtDay, fmtMonth, fmtPct, fmtShort, growth, monthName, type Meta } from './api';
 
 function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Meta; onClose: () => void }) {
@@ -42,7 +43,7 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
             </span>
           </label>
           <section>
-            <h3 className="text-[14px] font-extrabold">Alım geçmişi (Logo, KURUM kanalı)</h3>
+            <h3 className="text-[14px] font-extrabold">Alım geçmişi (Logo, kurum kanalı)</h3>
             {x.window && (
               <p className="text-[11.5px] text-canvas-muted">
                 {x.window.year} {x.window.label}: {fmtShort(x.buYil)} · geçen yıl aynı dönem {fmtShort(x.gecenYilAyni)}
@@ -73,7 +74,7 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
                 <SqlInfo k={x.kaynaklar} alan="enCokAy" label="En çok alım yapılan ay" className="ml-0.5" />
               </p>
             )}
-            {x.yillar.length === 0 && <p className="text-[12px] text-canvas-muted">Bu kurumun KURUM kanalında faturalı alımı yok.</p>}
+            {x.yillar.length === 0 && <p className="text-[12px] text-canvas-muted">Bu kurumun kurum kanalında faturalı alımı yok.</p>}
           </section>
           <section>
             <h3 className="text-[14px] font-extrabold">Fırsatlar</h3>
@@ -86,7 +87,7 @@ function AccountSheet({ refId, meta, onClose }: { refId: string | null; meta: Me
                   </Link>
                 </li>
               ))}
-              {x.firsatlar.length === 0 && <li className="text-canvas-muted">Fırsat yok.</li>}
+              {x.firsatlar.length === 0 && <li className="text-canvas-muted">Bu kuruma açılmış fırsat yok.</li>}
             </ul>
           </section>
           {x.hatirlatmalar.length > 0 && (
@@ -133,18 +134,19 @@ export default function AccountsTab({ meta }: { meta: Meta }) {
           <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
           <input className={`${field} pl-9`} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Unvan, cari kodu ya da il" />
         </label>
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className={`${labelCls} inline-flex items-center gap-1`}>
-            Segment
+            <label htmlFor="kurumsal-segment-suzgec">Segment</label>
+            <Explain label="Segment">Kurumun hangi gruba girdiği. Zeki AI’ın önerdiği segmentler sonunda «?» ile işaretlidir; kurum kartında segmenti seçip kaydederseniz onaylanmış olur.</Explain>
             <SqlInfo k={d?.kaynaklar} alan="segments" label="Segment başına kurum sayısı" />
           </span>
-          <select className={field} value={segment} onChange={(e) => { setSegment(e.target.value); setPage(0); }}>
+          <select id="kurumsal-segment-suzgec" className={field} value={segment} onChange={(e) => { setSegment(e.target.value); setPage(0); }}>
             <option value="">Hepsi</option>
             {Object.entries(meta.segments).map(([k, v]) => <option key={k} value={k}>{v}{d?.segments[k] ? ` (${d.segments[k]})` : ''}</option>)}
-            <option value="oneri">ZEKİ AI önerisi (onay bekliyor)</option>
+            <option value="oneri">Zeki AI önerisi (onay bekliyor)</option>
             <option value="bos">Belirsiz{d?.segments.bos ? ` (${d.segments.bos})` : ''}</option>
           </select>
-        </label>
+        </div>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Sıra</span>
           <select className={field} value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -156,11 +158,16 @@ export default function AccountsTab({ meta }: { meta: Meta }) {
         </label>
       </div>
       <p className="mt-2 text-[11.5px] text-canvas-muted">
-        Logo'da özel kod 2 = {meta.settings.channel} olan cariler ve CRM'de kurum rolü/kanalı KURUM olan kartlar. Tutarlar net ciro (faturalı satır, iade düşülmüş).
+        Logo'da kanalı «{meta.settings.channel}» olan cariler ve CRM'de kurum olarak işaretli kartlar listelenir. Tutarlar iadeler düşülmüş net satıştır; satıra dokununca kurumun ay ay alım geçmişi açılır.
       </p>
       {list.error && <Note tone="err">{errText(list.error, 'Kurumlar okunamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {d && (
+      {d && d.items.length === 0 && (
+        <div className="mt-3">
+          <Empty title="Aramaya uyan kurum yok">Unvanın bir kısmını, cari kodunu ya da ili yazın; segment süzgecini «Hepsi»ne alın.</Empty>
+        </div>
+      )}
+      {d && d.items.length > 0 && (
         <div className="mt-3">
           <TableWrap>
             <thead>

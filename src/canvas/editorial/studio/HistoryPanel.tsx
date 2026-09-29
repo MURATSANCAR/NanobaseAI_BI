@@ -42,9 +42,10 @@ export default function HistoryPanel({ job, rev, online, onRestored }: {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[12px] text-canvas-muted">Her kayıt ayrı bir sürümdür; hiçbiri silinmez. Şu an: sürüm {rev}.</p>
+      <p className="text-[12px] text-canvas-muted">Her kayıt ayrı bir sürümdür; hiçbiri silinmez. Eski bir sürüme dönmek şimdiki hâli silmez, o da geçmişte kalır. Şu an: sürüm {rev}.</p>
       {q.isLoading && <p className="text-[12px] text-canvas-muted">Yükleniyor…</p>}
-      {q.error && <p className="text-[12px] font-semibold text-rose-700">{(q.error as Error).message}</p>}
+      {q.error && <p className="text-[12px] font-semibold text-rose-700">Sürüm geçmişi okunamadı: {(q.error as Error).message}</p>}
+      {q.data && q.data.length === 0 && <p className="text-[12px] text-canvas-muted">Henüz kayıtlı sürüm yok; ilk değişikliğinizle birlikte burada görünür.</p>}
       <ol className="flex flex-col gap-1.5">
         {(q.data ?? []).map((h) => (
           <li key={h.rev} className="flex items-start justify-between gap-2 rounded-xl bg-white/70 px-2.5 py-2 text-[12px]">

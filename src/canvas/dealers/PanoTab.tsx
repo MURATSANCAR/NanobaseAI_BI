@@ -9,13 +9,16 @@ import { dealersApi, type Dealer, type DealersMeta } from './api';
 import { DealerRow, DistBar, approxNote } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { Explain } from '../components/Explain';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Pano: ilk açılış. Kötüleşen bayilere bakmak tek dokunuş (kart listesi burada), bayi kartı iki. */
 
 export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (p: Record<string, string | null>) => void }) {
   const q = useQuery({ queryKey: ['dealers', 'summary'], queryFn: dealersApi.summary, enabled: ENGINE_ENABLED && !!meta.run.gun });
   const s = q.data;
-  const err = errText(q.error, 'Pano okunamadı.');
+  const limits = useShowMore(s?.limitBekleyen, 5);
+  const err = errText(q.error, 'Pano okunamadı; biraz sonra yeniden deneyin.');
   if (!meta.run.gun) return null;
   if (q.isLoading) return <Loading />;
   if (err) return <Note tone="err">{err}</Note>;
@@ -24,6 +27,12 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
+        Bu göstergeler ne demek?
+        <Explain label="Pano göstergeleri" title="Pano göstergeleri">
+          Vadesi geçmiş: ödeme günü geçmiş açık bakiye (yaklaşık). 90+ gün: vadesi 90 günden fazla geçmiş kısmı. Riske takılı sipariş: CRM'de risk limiti yüzünden onay bekleyen sipariş sayısı. İlk 10 cari payı: açık bakiyenin en büyük 10 caride toplanan oranı; yükseldikçe alacak birkaç müşteriye bağımlı demektir.
+        </Explain>
+      </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Vadesi geçmiş" info={<SqlInfo k={s.kaynaklar} alan="vadesiGecmis" label="Vadesi geçmiş" />} value={fmtShort(s.vadesiGecmis)} tone={s.vadesiGecmis > 0 ? 'err' : undefined} help={`Yaklaşık · ${fmtDay(s.agingAsof)} itibarıyla`} />
         <Stat label="90+ gün" info={<SqlInfo k={s.kaynaklar} alan="kovalar" label="90+ gün" />} value={fmtShort(s.kovalar.k_90p)} tone={s.kovalar.k_90p > 0 ? 'err' : undefined} help={`${s.kovaCari.k_90p} cari`} />
@@ -35,6 +44,7 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
         title="Segment dağılımı"
         action={
           <span className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+            <Explain label="Segment" title="Segment ne demek?">Skor, ödeme gecikmesi, çek-senet olayı, iade oranı, limit doluluğu, sipariş düzensizliği ve tahsilat süresinden kuralla hesaplanır; yükseldikçe risk artar. A en düşük, D en yüksek risk segmentidir. Anahtar hesaplar (zincir, e-ticaret, dağıtıcı) kendi eşikleriyle değerlendirilir. Hareketsiz cari (bakiye yok, 12 ayda alım yok) segment almaz.</Explain>
             Bugün
             <SqlInfo k={s.kaynaklar} alan="segment" label="Segment dağılımı" />
             {s.segment30 && (
@@ -107,8 +117,9 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
         {s.limitBekleyen.length === 0 ? (
           <Empty>Onay bekleyen limit önerisi yok.</Empty>
         ) : (
+          <>
           <ul className="flex flex-col gap-1">
-            {s.limitBekleyen.slice(0, 5).map((p) => (
+            {limits.shown.map((p) => (
               <li key={p.id}>
                 <Link
                   to={`/bayi-risk/${encodeURIComponent(p.code)}#limit`}
@@ -122,6 +133,8 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
               </li>
             ))}
           </ul>
+          <ShowMoreButton more={limits} noun="öneri" />
+          </>
         )}
       </Block>
 

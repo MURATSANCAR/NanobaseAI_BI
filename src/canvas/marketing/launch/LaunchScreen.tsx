@@ -60,8 +60,8 @@ export default function LaunchScreen() {
   const cands = Object.entries(l?.ozet.adaylar ?? {});
   const aside = l && m ? (
     <div className="flex flex-wrap gap-2 lg:justify-end">
-      <Link className={btnGhost} to={`/pazarlama/plan/${encodeURIComponent(l.planId)}`}><ClipboardList aria-hidden className="h-4 w-4" />Pazarlama planı</Link>
-      {m.me.canExport && <a className={btnGhost} href={launchApi.pdfUrl(l.id)} download><FileText aria-hidden className="h-4 w-4" />Rapor PDF</a>}
+      <Link className={btnGhost} to={`/pazarlama/plan/${encodeURIComponent(l.planId)}`}><ClipboardList aria-hidden className="h-4 w-4" />Pazarlama planını aç</Link>
+      {m.me.canExport && <a className={btnGhost} href={launchApi.pdfUrl(l.id)} download><FileText aria-hidden className="h-4 w-4" />Rapor PDF indir</a>}
       {m.me.canWrite && (
         <button type="button" className={btnGhost} disabled={refresh.isPending} onClick={() => refresh.mutate()}>
           <RefreshCw aria-hidden className={`h-4 w-4 ${refresh.isPending ? 'animate-spin' : ''}`} />Verileri yenile
@@ -77,6 +77,7 @@ export default function LaunchScreen() {
       source={l ? `${l.id} · son okuma ${l.okuma ? fmtStamp(l.okuma) : '—'}` : ''}
       presence={l ? l.durumAdi : '…'}
       detail={l?.baslik}
+      lead="Bu kitabın yayın haftası ve ilk ayı. «D−7» yayına 7 gün kala, «D+7» yayından 7 gün sonra demektir. Yapılacakları işaretleyin, sipariş, satış ve stoğu izleyin; D+7 ve D+30'da değerlendirme raporu hazırlanır."
       back={{ to: '/pazarlama/lansman', label: 'Lansmanlar' }}
       aside={aside}
     >
@@ -89,7 +90,7 @@ export default function LaunchScreen() {
             {l.renk && <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ring-1 ring-inset ${TONE_CLASS[l.renk]}`}>{TONE_LABEL[l.renk]}</span>}
             <Pill tone="muted">{l.durumAdi}</Pill>
             <span className="text-[12px] font-semibold text-canvas-muted">
-              Yayın günü {fmtDay(l.yayinGunu)} ({l.yayinGunuKaynakAdi}) · stok kodu {l.stokKodu} · sahibi {l.sahip ?? '—'} · plan {l.plan.id} ({l.plan.durumAdi ?? '—'})
+              Yayın günü {fmtDay(l.yayinGunu)} ({l.yayinGunuKaynakAdi}) · stok kodu {l.stokKodu} · sahibi {l.sahip ?? '—'} · plan {l.plan.durumAdi ?? '—'}
             </span>
             {m.me.canWrite && (
               <div className="ml-auto">
@@ -128,16 +129,20 @@ export default function LaunchScreen() {
           <KpiRow>
             <Kpi label="Sipariş (yayından beri)" value={fmtInt(sig?.siparis)} help="CRM, saatte bir; sipariş satış değildir"
               active={tab === 'izleme'} onClick={() => go({ sekme: 'izleme' })}
-              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Sipariş (yayından beri)" />} />
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Sipariş (yayından beri)" />}
+              explain="Yayın gününden bu yana CRM'e düşen sipariş adedi; saatte bir okunur. Sipariş henüz satış değildir: faturası kesilince satışa geçer, iptal de olabilir." />
             <Kpi label="Faturalı satış" value={fmtInt(sig?.fatura)}
               help={sig?.veriSonuLogo ? `Logo, veri ${fmtDay(sig.veriSonuLogo)} tarihinde bitiyor` : 'Logo okunmadı'}
-              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Faturalı satış" />} />
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Faturalı satış" />}
+              explain="Yayın gününden bu yana Logo'da faturası kesilmiş satış adedi. Günde bir okunur; alt satırda Logo verisinin hangi güne kadar geldiği yazar." />
             <Kpi label="Hedef payına oran" value={sig?.oran != null ? fmtPct(sig.oran) : '—'}
               help={sig?.oran != null ? `${sig.oranEsas === 'fatura' ? 'Faturalı satış' : 'Sipariş'} / hedef payı · eşik ${fmtPct(m.settings.alertRatio)}` : 'Onaylı hedef yok ya da yayın günü gelmedi'}
-              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Hedef payına oran" />} />
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Hedef payına oran" />}
+              explain="Bugüne kadarki satışın (fatura yoksa siparişin), satış hedefinin bu güne düşen payına oranı. Eşiğin altına inerse lansman kırmızıya döner." />
             <Kpi label="Açık sipariş / depo" value={`${fmtInt(sig?.bekleyen)} / ${fmtInt(sig?.depo?.deger)}`}
               help={sig?.stokCatismasi ? 'Açık sipariş depo stokunun üstünde' : (sig?.depo?.kaynakAdi ?? 'Depo stoku okunmadı')}
-              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Açık sipariş / depo" />} />
+              info={<SqlInfo k={l.kaynaklar} alan="sinyal" label="Açık sipariş / depo" />}
+              explain="Henüz sevk edilmemiş sipariş adedi ile depodaki stok. Açık sipariş stoğu aşarsa baskı ya da sevk planını gözden geçirin." />
           </KpiRow>
 
           <Tabs tabs={TABS.map((t) => (t.key === 'kontrol' ? { ...t, badge: l.tasks.filter((x) => x.durum === 'bekliyor' && !!x.tarih && x.tarih < new Date().toISOString().slice(0, 10)).length } : t))}

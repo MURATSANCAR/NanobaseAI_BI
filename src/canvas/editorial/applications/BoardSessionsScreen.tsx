@@ -12,6 +12,7 @@ import SessionForm from './SessionForm';
 import { BoardTabs, useAppMeta } from './shared';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint } from '../../components/Explain';
 
 /** Yayın kurulu: portalda yürütülen kurul oturumları (gündem, üye oyu, karar). CRM'deki geçmiş kurul kararları
  *  `?gorunum=crm` ile aynı sayfada açılır. */
@@ -82,12 +83,12 @@ function Sessions() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       <KpiRow>
-        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Hazırlanan oturum" />} label="Hazırlanan oturum" value={list.data ? nf.format(open.length) : '—'} help="Kapanmamış kurul oturumu" />
-        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Oyunuzu bekleyen" />} label="Oyunuzu bekleyen" value={list.data ? nf.format(myTodo) : '—'} help="Üyesi olduğunuz oturumlarda" />
-        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kurula çıkacak" />} label="Kurula çıkacak" value={waiting.data ? nf.format(waiting.data.items.length) : '—'} help="Gündem bekleyen başvuru" />
-        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kapanan oturum" />} label="Kapanan oturum" value={list.data ? nf.format(closed.length) : '—'} help="Kararları kayıtlı" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Hazırlanan oturum" />} explain="Açılmış ama henüz kapatılmamış kurul oturumları; gündemi hazırlanıyor ya da oylama sürüyor." label="Hazırlanan oturum" value={list.data ? nf.format(open.length) : '—'} help="Kapanmamış kurul oturumu" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Oyunuzu bekleyen" />} explain="Üyesi olduğunuz açık oturumların gündeminde henüz oy vermediğiniz başvuru sayısı." label="Oyunuzu bekleyen" value={list.data ? nf.format(myTodo) : '—'} help="Üyesi olduğunuz oturumlarda" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kurula çıkacak" />} explain="Editör raporu tamamlanmış, «kurul bekliyor» durumundaki başvurular. Bir oturumun gündemine eklenmeyi bekler." label="Kurula çıkacak" value={waiting.data ? nf.format(waiting.data.items.length) : '—'} help="Gündem bekleyen başvuru" />
+        <Kpi info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label="Kapanan oturum" />} explain="Kapatılmış oturumlar. Kapanışta karara bağlanmamış başvurular ertelenip kurul sırasına döner." label="Kapanan oturum" value={list.data ? nf.format(closed.length) : '—'} help="Kararları kayıtlı" />
       </KpiRow>
       {list.error && <Note tone="err">{errText(list.error, 'Oturumlar okunamadı.')}</Note>}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-4">
@@ -95,7 +96,12 @@ function Sessions() {
           <h2 className="text-[15px] font-extrabold">Hazırlanan oturumlar</h2>
           {list.isLoading && <Loading />}
           {list.data && open.length === 0 && (
-            <p className="py-6 text-center text-[12.5px] text-canvas-muted">{canRun ? 'Açık oturum yok. «Yeni oturum» ile açın.' : 'Açık kurul oturumu yok.'}</p>
+            <div className="mt-2">
+              <EmptyHint
+                title="Hazırlanan kurul oturumu yok"
+                why={canRun ? 'Yeni bir kurul toplantısı için üstteki «Yeni oturum» düğmesiyle oturum açın.' : 'Kurul oturumunu açma yetkisi olan kişi açar; açılınca burada görünür.'}
+              />
+            </div>
           )}
           <ul className="mt-1">
             {open.map((s) => (
@@ -116,7 +122,11 @@ function Sessions() {
         <Panel>
           <h2 className="text-[15px] font-extrabold">Kurula çıkacak başvurular</h2>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">Editör raporu tamam, gündeme eklenmeyi bekliyor.</p>
-          {waiting.data && waiting.data.items.length === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">Bekleyen başvuru yok.</p>}
+          {waiting.data && waiting.data.items.length === 0 && (
+            <div className="mt-3">
+              <EmptyHint title="Kurula çıkacak başvuru yok" why="Editör raporu kurula gönderilen başvuru burada görünür." />
+            </div>
+          )}
           <ul className="mt-2">
             {(waiting.data?.items ?? []).map((a) => (
               <li key={a.id} className="border-t border-slate-100 py-2.5 first:border-t-0">

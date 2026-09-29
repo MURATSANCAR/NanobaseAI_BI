@@ -53,7 +53,7 @@ export default function AdsBudget() {
   return (
     <AdsFrame
       title="Reklam bütçesi"
-      lead="Ay × kanal plan ve gerçekleşme. Plan portalda tutulur; CRM'e ve platformlara yazılmaz. Ay sonu tahmini yalnız içinde bulunulan ay için: harcama ÷ geçen gün × ayın günü."
+      lead="Her ay ve her reklam kanalı için planlanan bütçe ile gerçekleşen harcama yan yana. Plan yalnız portalda tutulur, CRM'e ve platformlara yazılmaz. İçinde bulunulan ay için ay sonu tahmini: bugüne kadarki harcamanın günlük ortalaması × ayın gün sayısı."
       meta={m}
       aside={
         <div className="flex items-end gap-2">
@@ -78,9 +78,11 @@ export default function AdsBudget() {
       {b && (
         <>
           <KpiRow>
-            <Kpi label="Plan" value={fmtMoney(b.toplam.plan)} help={`${b.yil} bu ekranda girilen`} info={<SqlInfo k={b.kaynaklar} alan="toplam" label="Plan" />} />
+            <Kpi label="Plan" value={fmtMoney(b.toplam.plan)} help={`${b.yil} bu ekranda girilen`} info={<SqlInfo k={b.kaynaklar} alan="toplam" label="Plan" />}
+              explain="Bu ekranda ay ve kanal için girilen reklam bütçesinin yıllık toplamı." />
             <Kpi label="Harcama" value={fmtMoney(b.toplam.harcama)} help="Yüklenen dosyalar, TL" info={<SqlInfo k={b.kaynaklar} alan="toplam" label="Harcama" />} />
-            <Kpi label="M15 reklam satırları" value={fmtMoney(b.toplam.m15)} help={`Onaylı yeni kitap planları (${Object.values(b.m15.kanalEsleme).filter((v, i, a) => a.indexOf(v) === i).join(', ')})`} info={<SqlInfo k={b.kaynaklar} alan="m15" label="M15 reklam satırları" />} />
+            <Kpi label="Kitap planlarındaki reklam" value={fmtMoney(b.toplam.m15)} help={`Onaylı yeni kitap planları (${Object.values(b.m15.kanalEsleme).filter((v, i, a) => a.indexOf(v) === i).join(', ')})`} info={<SqlInfo k={b.kaynaklar} alan="m15" label="Kitap planlarındaki reklam" />}
+              explain="Onaylı yeni kitap pazarlama planlarında reklam kanallarına ayrılmış tutarların toplamı. Bu ekrandaki plandan ayrıdır; karşılaştırma için gösterilir." />
             <Kpi label="CRM pazarlama bütçesi" value={fmtMoney(b.toplam.crm)} help="Sosyal medya ve dijital pazarlama tipli kayıtlar" info={<SqlInfo k={b.kaynaklar} alan="crm" label="CRM pazarlama bütçesi" />} />
           </KpiRow>
           <Block title="Ay × kanal" info={<SqlInfo k={b.kaynaklar} alan="hucreler" label="Ay × kanal" />} help={canEdit ? 'Plan hücresine tutar yazın (boş bırakılan silinir), sonra Kaydet.' : undefined}>
@@ -89,7 +91,7 @@ export default function AdsBudget() {
                 <tr>
                   <th className={th}>Ay</th>
                   {channels.map(([k, v]) => <th key={k} className={`${th} text-right`}>{v}</th>)}
-                  <th className={`${th} text-right`}>M15</th>
+                  <th className={`${th} text-right`}>Kitap planları</th>
                   <th className={`${th} text-right`}>CRM</th>
                 </tr>
               </thead>
@@ -105,7 +107,7 @@ export default function AdsBudget() {
                         <td key={k} className={`${td} min-w-[132px] text-right`}>
                           {canEdit ? (
                             <input aria-label={`${monthName(ay)} ${k} planı`} inputMode="decimal" className={`${field} text-right font-mono tabular-nums`}
-                              value={v} placeholder="plan" onChange={(e) => setEdits({ ...edits, [key]: e.target.value })} />
+                              value={v} placeholder="tutar" onChange={(e) => setEdits({ ...edits, [key]: e.target.value })} />
                           ) : (
                             <div className="font-mono tabular-nums">{c?.plan != null ? fmtMoney(c.plan) : '—'}</div>
                           )}
@@ -123,7 +125,7 @@ export default function AdsBudget() {
               </tbody>
             </TableWrap>
           </Block>
-          <Block title="M15 kitap planlarının reklam satırları" info={<SqlInfo k={b.kaynaklar} alan="m15" label="M15 reklam satırları" />} help="Yeni kitap pazarlama planında onaylanmış, reklam kanalına düşen satırlar; tutar başlangıç–bitiş günlerine göre aylara bölünür."
+          <Block title="Kitap planlarındaki reklam satırları" info={<SqlInfo k={b.kaynaklar} alan="m15" label="Kitap planlarındaki reklam satırları" />} help="Yeni kitap pazarlama planında onaylanmış, reklam kanalına düşen satırlar; tutar başlangıç–bitiş günlerine göre aylara bölünür."
             action={<Link to="/pazarlama/yeni-kitap" className={btnGhost}>Yeni kitap planları</Link>}>
             {b.m15.satirlar.length === 0 ? (
               <p className="py-3 text-[12px] text-canvas-muted">Bu yıl onaylı planda reklam kanalı satırı yok.</p>

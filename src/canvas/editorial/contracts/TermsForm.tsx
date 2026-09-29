@@ -5,6 +5,7 @@ import { btnGhost, field, nf } from '../../admin/ui';
 import { useDebounced } from '../kit';
 import { contractApi, type Book, type LookupPage, type Meta, type Party, type Terms, type Tier } from './api';
 import { Field, num, toNum } from './ui';
+import { TERM } from './glossary';
 import SqlInfo from '../../components/SqlInfo';
 
 /** Sözleşme şartlarının formu: yeni taslakta, düzenlemede ve zeyilnamede aynı form kullanılır. */
@@ -244,14 +245,14 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
       </Group>
 
       <Group title="Telif">
-        <Field label="Ödeme şekli">
+        <Field label="Ödeme şekli" explain={TERM.odemeSekli}>
           <select value={value.paymentType} onChange={(e) => set('paymentType', e.target.value)} className={field}>
             {Object.entries(meta.paymentTypes).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
         </Field>
-        <Field label="Telif esası">
+        <Field label="Telif esası" explain={TERM.telifEsasi}>
           <select value={value.basis} onChange={(e) => set('basis', e.target.value)} className={field}>
             {Object.entries(meta.bases).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -268,10 +269,10 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
             }} suffix="%" />
           </Field>
         ))}
-        <Field label="Telif hesaplama iskontosu" hint="Matrah bu oranda azaltılır.">
+        <Field label="Telif hesaplama iskontosu" hint="Matrah bu oranda azaltılır." explain={TERM.iskonto}>
           <NumInput value={value.discountPct} onChange={(n) => set('discountPct', n)} suffix="%" />
         </Field>
-        <Field label="Stopaj" hint="Ödemeden düşülen yasal kesinti; boşsa düşülmez.">
+        <Field label="Stopaj" hint="Ödemeden düşülen yasal kesinti; boşsa düşülmez." explain={TERM.stopaj}>
           <NumInput value={value.withholdingPct} onChange={(n) => set('withholdingPct', n)} suffix="%" />
         </Field>
         {tiered && (
@@ -311,7 +312,7 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
             ))}
           </select>
         </Field>
-        <Field label="Avans">
+        <Field label="Avans" explain={TERM.avans}>
           <NumInput value={value.advance} onChange={(n) => set('advance', n)} />
         </Field>
         <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-semibold sm:col-span-2">

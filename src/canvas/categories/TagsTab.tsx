@@ -36,6 +36,10 @@ export default function TagsTab() {
   const counts = list.data?.counts ?? {};
   return (
     <Panel>
+      <p className="mb-2 text-[12px] leading-snug text-canvas-muted">
+        Kitaplara verilebilecek etiketlerin listesi. CRM anahtar kelimeleri CRM'de yönetilir; editörlerin önerdiği yeni etiketler burada sözlüğe alınır,
+        reddedilir ya da var olan bir etikete birleştirilir. Zeki AI yalnız bu sözlükteki etiketleri önerir.
+      </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="-mx-1 overflow-x-auto px-1">
           <div className="flex w-max items-center gap-1 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Etiket durumu">
@@ -50,7 +54,7 @@ export default function TagsTab() {
         </div>
         <label className="flex flex-col gap-1 sm:w-72">
           <span className={labelCls}>Ara</span>
-          <input className={field} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />
+          <input className={field} value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Etiket ara" />
         </label>
       </div>
       {list.error && <div className="mt-3"><Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note></div>}
@@ -68,7 +72,7 @@ export default function TagsTab() {
               <div className="flex flex-wrap items-center gap-1.5">
                 <button type="button" className={`${btnPrimary} !min-h-9`} disabled={act.isPending} onClick={() => act.mutate({ tag: t.tag, s: 'aktif' })}>Sözlüğe al</button>
                 <button type="button" className={`${btnGhost} !min-h-9`} disabled={act.isPending} onClick={() => act.mutate({ tag: t.tag, s: 'red' })}>Reddet</button>
-                <input className={`${field} !w-40`} placeholder="Birleştir: etiket" aria-label={`${t.tag} etiketini birleştir`} value={merge[t.tag] ?? ''}
+                <input className={`${field} !w-40`} placeholder="Birleşeceği etiket" aria-label={`${t.tag} etiketini birleştir`} value={merge[t.tag] ?? ''}
                   onChange={(e) => setMerge({ ...merge, [t.tag]: e.target.value })} />
                 <button type="button" className={`${btnGhost} !min-h-9`} disabled={act.isPending || !(merge[t.tag] ?? '').trim()}
                   onClick={() => act.mutate({ tag: t.tag, s: 'birlesti', into: merge[t.tag].trim() })}>Birleştir</button>
@@ -77,7 +81,7 @@ export default function TagsTab() {
           </li>
         ))}
       </ul>
-      {list.data && !list.data.total && <p className="mt-3 text-[12.5px] text-canvas-muted">Kayıt yok.</p>}
+      {list.data && !list.data.total && <p className="mt-3 text-[12.5px] text-canvas-muted">{q ? 'Aramaya uyan etiket yok.' : status === 'oneri' ? 'Onay bekleyen etiket önerisi yok.' : 'Bu durumda etiket yok.'}</p>}
       <Pager page={page} pageSize={list.data?.pageSize ?? 100} total={list.data?.total ?? 0} shown={list.data?.items.length ?? 0}
         loading={list.isLoading} fetching={list.isFetching} onPage={setPage} />
     </Panel>

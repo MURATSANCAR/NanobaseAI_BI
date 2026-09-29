@@ -9,6 +9,7 @@ import { ACTION_TEXT, categoriesApi, fmtDay, fmtInt } from './api';
 import { ROOT, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { ExplainLabel } from '../components/Explain';
 
 /** CRM'e işlenecek fark: onaylı profil ile CRM'in bugünkü değeri. Portal CRM'e yazmaz; liste CRM'de elle işlenir,
  *  bir sonraki okumada CRM aynı değeri gösterince satır kendiliğinden düşer. */
@@ -51,7 +52,7 @@ export default function CrmDiff() {
       )}
       {diff.isLoading && <Loading />}
       {diff.error && <div className="mt-3"><Note tone="err">{errText(diff.error, 'Liste açılamadı.')}</Note></div>}
-      {d && d.total === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">CRM'e işlenecek fark yok.</p>}
+      {d && d.total === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">CRM'e işlenecek fark yok: onaylı profiller CRM'deki değerlerle aynı.</p>}
       {d && d.total > 0 && (
         <div className="mt-3">
           <TableWrap>
@@ -59,9 +60,13 @@ export default function CrmDiff() {
               <tr className="border-b border-slate-100">
                 <th className={th}>Kitap</th>
                 <th className={th}>CRM alanı</th>
-                <th className={th}>İşlem</th>
+                <th className={th}>
+                  <ExplainLabel label="İşlem">CRM'de bu alanda yapılacak iş: değeri ekle, çıkar ya da değiştir. «Bilgi» satırı yalnız bilgi içindir.</ExplainLabel>
+                </th>
                 <th className={th}>CRM'de</th>
-                <th className={th}>Onaylı</th>
+                <th className={th}>
+                  <ExplainLabel label="Onaylı">Editörün portalda onayladığı değer; CRM'e bu yazılmalı.</ExplainLabel>
+                </th>
                 <th className={th}>Onaylayan</th>
               </tr>
             </thead>

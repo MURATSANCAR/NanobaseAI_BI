@@ -44,7 +44,7 @@ export default function DealerPanel({ schoolId, canDealer, canVisit }: { schoolI
       {q.isLoading && <Loading />}
       {d && (
         <>
-          {active.length === 0 && <p className="mt-2 text-[12px] text-canvas-muted">Bağlı bayi yok.</p>}
+          {active.length === 0 && <p className="mt-2 text-[12px] text-canvas-muted">Bu okula bağlı bayi yok.{d.candidates.length > 0 ? ' Aşağıdaki önerilerden birini bağlayabilir ya da onaya önerebilirsiniz.' : ''}</p>}
           <ul className="mt-2 space-y-1.5">
             {active.map((l) => (
               <LinkRow key={l.id} l={l} canDealer={canDealer} busy={decide.isPending} onDecide={(approve) => decide.mutate({ link: l.id, approve })} />
@@ -160,7 +160,7 @@ function CandidateRow({
         </div>
         <span className="flex shrink-0 items-center gap-0.5">
           <SqlInfo k={k} alan="candidates[]" row={c.code} label={`${c.name ?? c.code}: aday puanı ve kademe satışı`} />
-          <span className="font-mono text-[12px] font-bold tabular-nums" title="Aday puanı">
+          <span className="font-mono text-[12px] font-bold tabular-nums" title="Aday puanı: yükseldikçe bu okula daha uygun bayi">
             {Math.round(c.score)}
           </span>
         </span>

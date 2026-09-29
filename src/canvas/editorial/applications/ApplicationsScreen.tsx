@@ -13,6 +13,7 @@ import { FileDrop } from '../../components/FileDrop';
 import { MB } from '../../components/fileDropRules';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** M1 Başvurular: yeni kitap başvurularının kuyruğu, kabul edilenler ve arşiv (reddedilen, geri çekilen).
  *  Görünüm, süzgeç ve arama adres çubuğunda durur (?gorunum=, ?durum=, ?ara=, ?benim=1). */
@@ -135,8 +136,9 @@ export default function ApplicationsScreen() {
     </div>
   );
 
-  const kpi = (s: AppStatus, help: string) => (
+  const kpi = (s: AppStatus, help: string, explain: string) => (
     <Kpi
+      explain={`${explain} Karta dokununca kuyruk bu duruma süzülür; yeniden dokununca süzgeç kalkar.`}
       info={<SqlInfo k={kaynakOf(list.data)} alan="_hepsi" label={statusLabel(s)} />}
       label={statusLabel(s)}
       value={counts ? nf.format(counts[s]) : '—'}
@@ -151,12 +153,12 @@ export default function ApplicationsScreen() {
       route="/basvurular"
       crumb="Başvurular"
       title="Başvurular"
-      lead="Yeni kitap başvuruları: dosya kaydı, editörün ön değerlendirmesi ve raporu, yayın kuruluna çıkış, kurul kararı ve yazara gidecek yazı. Kayıtlar portalda tutulur; kategori, benzer kitaplar ve satışlar CRM ile Logo'dan okunur."
+      lead="Yeni kitap başvurularını kaydedin, editöre değerlendirtin, yayın kuruluna çıkarın ve kararı yazara bildirin. Kayıtlar portalda tutulur; kategori, benzer kitaplar ve satışlar CRM ile Logo'dan okunur."
       source={counts ? `${nf.format(totals?.kuyruk ?? 0)} başvuru kuyrukta` : 'Portal + CRM + Logo'}
       presence="Kaynak: portal"
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {/* Birincil eylem: eser dosyasını bırak → yeni başvuru formu dosya ekli ve eser adı dosya adından dolu açılır. */}
       <Panel>
         <FileDrop
@@ -173,15 +175,20 @@ export default function ApplicationsScreen() {
         />
       </Panel>
       <KpiRow>
-        {kpi('yeni', 'Editör atanmayı bekliyor')}
-        {kpi('degerlendirmede', 'Editör raporu yazılıyor')}
-        {kpi('kurul_bekliyor', 'Rapor tamam, kurul gündemi bekleniyor')}
-        {kpi('kurulda', 'Açık kurul oturumunun gündeminde')}
+        {kpi('yeni', 'Editör atanmayı bekliyor', 'Kaydedilmiş ama henüz değerlendirecek editörü atanmamış başvurular.')}
+        {kpi('degerlendirmede', 'Editör raporu yazılıyor', 'Editörü atanmış, ön değerlendirme raporu yazılan başvurular.')}
+        {kpi('kurul_bekliyor', 'Rapor tamam, kurul gündemi bekleniyor', 'Editör raporu tamamlanıp kurula gönderilmiş, henüz bir oturumun gündemine eklenmemiş başvurular.')}
+        {kpi('kurulda', 'Açık kurul oturumunun gündeminde', 'Açık bir yayın kurulu oturumunun gündeminde, kararı beklenen başvurular.')}
       </KpiRow>
 
       <Panel>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-[15px] font-extrabold">{TABS.find((t) => t.key === view)?.label}</h2>
+          <h2 className="flex items-center gap-1.5 text-[15px] font-extrabold">
+            {TABS.find((t) => t.key === view)?.label}
+            <Explain label="Başvuru durumları">
+              Başvuru yeni → değerlendirmede → kurul bekliyor → kurulda adımlarından geçer. Revizyon, yazardan düzeltme istendiğini gösterir. Kabul edilenler ayrı sekmede, reddedilen ve geri çekilenler arşivdedir.
+            </Explain>
+          </h2>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative block">
               <span className="sr-only">Ara</span>
@@ -216,15 +223,43 @@ export default function ApplicationsScreen() {
         {list.error && <div className="mt-3"><Note tone="err">{errText(list.error, 'Başvurular okunamadı.')}</Note></div>}
         {list.isLoading && <Loading />}
         {list.data && list.data.items.length === 0 && (
-          <p className="py-10 text-center text-[12.5px] text-canvas-muted">
-            {q || status || mine ? 'Süzgece uyan başvuru yok.' : view === 'kuyruk' ? 'Kuyrukta başvuru yok.' : view === 'kabul' ? 'Henüz kabul edilen başvuru yok.' : 'Arşiv boş.'}
-          </p>
+          <div className="mt-3">
+            {q || status || mine ? (
+              <EmptyHint
+                title="Süzgece uyan başvuru yok"
+                why="Aramayı, durum seçimini ya da «Bana atananlar» işaretini kaldırıp yeniden bakın."
+                action={
+                  <button
+                    type="button"
+                    className="min-h-9 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold hover:bg-slate-200"
+                    onClick={() => {
+                      setText('');
+                      update({ ara: null, durum: null, benim: null });
+                    }}
+                  >
+                    Süzgeçleri temizle
+                  </button>
+                }
+              />
+            ) : view === 'kuyruk' ? (
+              <EmptyHint title="Kuyrukta başvuru yok" why={canWrite ? 'Yeni gelen eser dosyasını yukarıdaki alana bırakarak ya da «Yeni başvuru» ile kaydedin.' : 'Yeni başvuru kaydedildiğinde burada görünür.'} />
+            ) : view === 'kabul' ? (
+              <EmptyHint title="Henüz kabul edilen başvuru yok" why="Yayın kurulunun kabul ettiği başvurular burada toplanır." />
+            ) : (
+              <EmptyHint title="Arşiv boş" why="Reddedilen ya da yazarın geri çektiği başvurular burada saklanır." />
+            )}
+          </div>
         )}
         <ul className={`mt-2 ${list.isFetching && !list.isLoading ? 'opacity-60' : ''}`}>
           {(list.data?.items ?? []).map((a) => (
             <Row key={a.id} a={a} />
           ))}
         </ul>
+        {view === 'kuyruk' && (list.data?.items.length ?? 0) > 0 && (
+          <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
+            Gün sayısı başvurunun son güncellemesinden bu yana geçen süredir; kırmızıysa 14 günden uzun süredir hareket yok. «Sizde» rozeti, değerlendirmesi size atanmış başvuruyu gösterir.
+          </p>
+        )}
       </Panel>
 
       <ApplicationForm

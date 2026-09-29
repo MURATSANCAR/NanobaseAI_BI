@@ -18,6 +18,8 @@ import { changedFields, show } from './terms';
 import { Field, Row, Sheet, Tabs, day, errMsg, money, num, stamp, statusTone, today } from './ui';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { LicenseTerms, RightChips } from '../crmRights';
+import { EmptyHint } from '../../components/Explain';
+import { TERM } from './glossary';
 
 /** M6: tek sözleşmenin sayfası. Adres CRM kimliği ya da portal kaydı kimliğidir; CRM sözleşmesi ilk
  *  düzenlemede portala alınır (CRM'e yazılmaz), sonra aynı adresten açılır. */
@@ -59,7 +61,7 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
               </ul>
             ) : '—'}
           </Row>
-          <Row label="Bölge / dil">{[t.territory, t.language].filter(Boolean).join(' · ') || '—'}</Row>
+          <Row label="Bölge / dil" explain={TERM.bolge}>{[t.territory, t.language].filter(Boolean).join(' · ') || '—'}</Row>
           <Row label="Haklar">{rights.length ? rights.join(', ') : '—'}</Row>
           {d.crm?.related && d.crm.related.length > 0 && (
             <Row label="Grup sözleşmesi">
@@ -81,16 +83,16 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
       <Panel>
         <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Telif ve ödeme <SqlInfo k={d.kaynaklar} alan="terms" label="Telif ve ödeme şartları" /></h3>
         <dl>
-          <Row label="Ödeme şekli">{meta.paymentTypes[t.paymentType] ?? t.paymentType}</Row>
-          <Row label="Telif esası">{meta.bases[t.basis] ?? t.basis}</Row>
-          <Row label="Oranlar">{rates.length ? rates.map(([k, v]) => `${meta.rates[k] ?? k} %${num(v)}`).join(' · ') : '—'}</Row>
-          {t.tiers.length > 0 && <Row label="Kademeler">{show('tiers', t.tiers, meta)}</Row>}
-          {t.discountPct != null && <Row label="Hesaplama iskontosu">%{num(t.discountPct)}</Row>}
-          <Row label="Avans">{money(t.advance, t.currency)}{t.advance ? (t.advanceRecoupable ? ' · telifden düşülür' : ' · düşülmez') : ''}</Row>
-          {t.flatFee != null && <Row label="Tek ödeme">{money(t.flatFee, t.currency)}</Row>}
-          {t.withholdingPct != null && <Row label="Stopaj">%{num(t.withholdingPct)}</Row>}
+          <Row label="Ödeme şekli" explain={TERM.odemeSekli}>{meta.paymentTypes[t.paymentType] ?? t.paymentType}</Row>
+          <Row label="Telif esası" explain={TERM.telifEsasi}>{meta.bases[t.basis] ?? t.basis}</Row>
+          <Row label="Oranlar" explain={TERM.telifOrani}>{rates.length ? rates.map(([k, v]) => `${meta.rates[k] ?? k} %${num(v)}`).join(' · ') : '—'}</Row>
+          {t.tiers.length > 0 && <Row label="Kademeler" explain={TERM.kademe}>{show('tiers', t.tiers, meta)}</Row>}
+          {t.discountPct != null && <Row label="Hesaplama iskontosu" explain={TERM.iskonto}>%{num(t.discountPct)}</Row>}
+          <Row label="Avans" explain={TERM.avans}>{money(t.advance, t.currency)}{t.advance ? (t.advanceRecoupable ? ' · telifden düşülür' : ' · düşülmez') : ''}</Row>
+          {t.flatFee != null && <Row label="Tek ödeme" explain={TERM.tekOdeme}>{money(t.flatFee, t.currency)}</Row>}
+          {t.withholdingPct != null && <Row label="Stopaj" explain={TERM.stopaj}>%{num(t.withholdingPct)}</Row>}
           <Row label="Süre">{day(t.start)} – {t.openEnded ? 'süresiz' : day(t.end)}{t.years ? ` · ${num(t.years)} yıl` : ''}</Row>
-          <Row label="Hakediş">{t.periodMonths} ayda bir · vade {t.paymentDays ?? '—'} gün</Row>
+          <Row label="Hakediş" explain={TERM.hakedis}>{t.periodMonths} ayda bir · vade {t.paymentDays ?? '—'} gün</Row>
           {t.printRun != null && <Row label="İlk baskı">{num(t.printRun, 0)} adet</Row>}
         </dl>
       </Panel>
@@ -99,7 +101,7 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
           <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">
             Haklar ve lisans (CRM) <SqlInfo k={d.kaynaklar} alan="crm" label="CRM sözleşme hakları ve lisans şartları" />
           </h3>
-          <p className="mb-2 text-[11.5px] leading-snug text-canvas-muted">CRM sözleşme kartından salt okunur; boş alan «girilmemiş» yazılır, «yok» sayılmaz.</p>
+          <p className="mb-2 text-[11.5px] leading-snug text-canvas-muted">CRM sözleşme kartından yalnız okunur; boş alan «girilmemiş» yazılır, «hak yok» anlamına gelmez.</p>
           <RightChips rights={d.crm.rights} />
         </Panel>
       )}
@@ -235,7 +237,12 @@ function StatusSheet({ d, meta, to, onClose }: { d: Detail; meta: Meta; to: Stat
 }
 
 function History({ d, meta }: { d: Detail; meta: Meta }) {
-  if (!d.events.length) return <p className="py-8 text-center text-[12.5px] text-canvas-muted">{d.record ? 'Henüz kayıt yok.' : 'Sözleşme portalda düzenlenmedi; geçmiş CRM\'de.'}</p>;
+  if (!d.events.length)
+    return d.record ? (
+      <EmptyHint title="Henüz geçmiş kaydı yok" why="Şart, durum, zeyilname ve ödeme değişiklikleri yapıldıkça burada kimin ne zaman değiştirdiği listelenir." />
+    ) : (
+      <EmptyHint title="Sözleşme portalda düzenlenmedi" why="Bu sözleşmenin değişiklik geçmişi CRM'de tutuluyor. Portalda düzenlediğinizde buradaki geçmiş başlar." />
+    );
   return (
     <>
     <div className="mb-2 text-[11.5px] font-semibold text-canvas-muted">
@@ -300,7 +307,7 @@ export default function ContractDetail() {
       route="/telif-sozlesme"
       crumb="Sözleşmeler"
       title={d?.terms.title || d?.no || 'Sözleşme'}
-      lead={d ? `${d.no}${d.crm ? ' · CRM kaydı' : ' · portalda açıldı'}` : 'Okunuyor…'}
+      lead={d ? `Sözleşme no ${d.no || '—'} · ${d.crm ? 'CRM kaydı' : 'portalda açıldı'}. Şartlar, metin, zeyilname, ödeme takvimi ve hakediş aşağıdaki sekmelerde.` : 'Okunuyor…'}
       source={d?.record ? 'Portal kaydı + CRM' : 'CRM sözleşmesi'}
     >
       <div className="px-1">
@@ -338,7 +345,7 @@ export default function ContractDetail() {
                 {d.record && (
                   <button type="button" className={btnGhost} onClick={download} disabled={busy}>
                     {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Download aria-hidden className="h-4 w-4" />}
-                    Word
+                    Word olarak indir
                   </button>
                 )}
               </div>
@@ -353,7 +360,7 @@ export default function ContractDetail() {
             {d.diff.length > 0 && (
               <div className="mt-3 rounded-2xl bg-violet-50/70 p-3 text-[12px]">
                 <div className="flex items-center font-extrabold text-canvas-violet">CRM'e işlenmesi gereken {d.diff.length} fark<SqlInfo k={d.kaynaklar} alan="diff" label="CRM ile fark" className="ml-0.5" /></div>
-                <p className="mt-0.5 text-canvas-muted">Portal CRM'e yazmaz. Bu değerler CRM kaydında elle güncellenmeli.</p>
+                <p className="mt-0.5 text-canvas-muted">Portal CRM'e yazmaz. Portalda değişen bu değerlerin CRM kaydında elle güncellenmesi gerekir.</p>
                 <ul className="mt-1.5 space-y-0.5">
                   {d.diff.map((c) => (
                     <li key={c.field}>

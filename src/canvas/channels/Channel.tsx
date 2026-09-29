@@ -11,10 +11,12 @@ import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../budget/
 import { NumField, Tabs } from '../budget/parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
+import { EmptyHint, Explain } from '../components/Explain';
 import { channelsApi, coverageText, type ChannelDetail, type ChannelsMeta, type Simulation, type WithK, type YM } from './api';
 import { ChannelsFrame, DataBar, Facts, PeriodPicker, deltaTone, signedPct, useChannelsMeta, usePeriod } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** M42 kanal detayı (/kanallar/:platform): aylık eğri, cariler, kitap ve iade listeleri, hedef ↔ gerçekleşen, iskonto
  * simülasyonu (marj yetkisi), panel dosyası (kanalın sattığı adet). */
@@ -72,7 +74,7 @@ function BookLists({ platform, p, meta }: { platform: string; p: YM; meta: Chann
         {meta.me.canExport && (
           <a className={btnGhost} href={channelsApi.exportUrl(tab, { ...p, platform, q: dq || undefined, aylar: 3 })} download>
             <Download aria-hidden className="h-4 w-4" />
-            Excel
+            Excel indir
           </a>
         )}
       </div>
@@ -88,10 +90,15 @@ function BookLists({ platform, p, meta }: { platform: string; p: YM; meta: Chann
           </select>
         </div>
       ) : (
-        returns.data && <p className="mb-2 text-[12px] text-canvas-muted">{returns.data.aralik.bas} – {returns.data.aralik.bit} arası kanaldan dönen adet; sevkiyat adedini düzeltmek için.</p>
+        returns.data && <p className="mb-2 text-[12px] text-canvas-muted">{returns.data.aralik.bas} – {returns.data.aralik.bit} arasında kanalın geri gönderdiği kitaplar. Kanala yeni sevkiyat planlarken bu iadeleri göz önünde bulundurun.</p>
       )}
       {cur.isLoading ? <Loading /> : cur.error ? <Note tone="err">{errText(cur.error, 'Liste okunamadı.')}</Note> : !data?.items.length ? (
-        <Note tone="info">Kayıt yok.</Note>
+        <EmptyHint
+          title={tab === 'kitaplar' ? (dq ? 'Aramaya uyan kitap yok' : 'Bu dönemde kitap satışı yok') : 'Son 3 ayda iade yok'}
+          why={tab === 'kitaplar'
+            ? (dq ? 'Kitap adını ya da stok kodunu kontrol edin.' : 'Seçilen dönemde bu platformun carilerine kesilmiş satış faturası bulunamadı. Üstten başka bir yıl ya da ay seçebilirsiniz.')
+            : 'Bu platformun carilerinden son 3 ayda iade faturası gelmemiş.'}
+        />
       ) : (
         <TableWrap>
           <thead>
@@ -101,9 +108,21 @@ function BookLists({ platform, p, meta }: { platform: string; p: YM; meta: Chann
               <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">İade</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Net adet</InfoLabel></th>
               <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Net ciro</InfoLabel></th>
-              <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">İade oranı</InfoLabel></th>
+              <th className={`${th} text-right`}>
+                <span className="inline-flex items-center gap-1">
+                  <InfoLabel k={data.kaynaklar} alan="items">İade oranı</InfoLabel>
+                  <Explain label="İade oranı">Bu listede adet üzerinden: iade gelen adet ÷ kanala satılan adet.</Explain>
+                </span>
+              </th>
               {margin && <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Brüt marj</InfoLabel></th>}
-              {margin && <th className={`${th} text-right`}><InfoLabel k={data.kaynaklar} alan="items">Maliyetsiz adet</InfoLabel></th>}
+              {margin && (
+                <th className={`${th} text-right`}>
+                  <span className="inline-flex items-center gap-1">
+                    <InfoLabel k={data.kaynaklar} alan="items">Maliyetsiz adet</InfoLabel>
+                    <Explain label="Maliyetsiz adet">Logo’da maliyeti girilmeden satılmış adet. Bu adetler brüt marj hesabına girmez.</Explain>
+                  </span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -139,6 +158,7 @@ function TargetsBlock({ d, yil }: { d: ChannelDetail; yil?: number }) {
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Hedef ↔ gerçekleşen <SqlInfo k={q.data?.kaynaklar} alan="crm" label="Hedef ↔ gerçekleşen" /></h2>
+      <p className="text-[12px] text-canvas-muted">Yüzde, yıllık hedefin bugüne kadar düşen payının ne kadarının satıldığını gösterir; %100 hedefin tam temposunda gidildiği anlamına gelir.</p>
       <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="rounded-xl bg-white/70 p-3">
           <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">CRM satış hedefi (adet)</div>
@@ -192,7 +212,7 @@ function Simulator({ d, p, meta }: { d: ChannelDetail; p: YM; meta: ChannelsMeta
   return (
     <Panel>
       <h2 className="flex items-center gap-1 text-[15px] font-extrabold">İskonto simülasyonu {res && <SqlInfo k={res.kaynaklar} alan="once" label="İskonto simülasyonu" />}</h2>
-      <p className="mb-2 text-[12px] text-canvas-muted">«İskontoyu şu kadar puan değiştirirsem marj ne olur?» Dönem ortalamasıyla hesaplanır; hiçbir yere yazılmaz. Marj yalnız maliyeti girilmiş satırlardan.</p>
+      <p className="mb-2 text-[12px] text-canvas-muted">«Bu kanala iskontoyu şu kadar puan artırır ya da azaltırsam kârımız ne olur?» sorusunu dönem ortalamasıyla hesaplar; hiçbir yere yazılmaz. Marj yalnız maliyeti girilmiş satırlardan. Örnek: 2 puan = iskonto %40’tan %42’ye.</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <NumField id="sim-puan" label="İskonto değişimi" suffix="puan" value={puan} onChange={setPuan} help="Artı: kanala daha çok iskonto" />
         <NumField id="sim-hacim" label="Adet değişimi (isteğe bağlı)" suffix="%" value={hacim} onChange={setHacim} />
@@ -269,6 +289,7 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
   const [bas, setBas] = useState('');
   const [bit, setBit] = useState('');
   const [open, setOpen] = useState<string | null>(d.imports[0]?.id ?? null);
+  const files = useShowMore(d.imports, 5);
   const up = useMutation({
     mutationFn: (f: File) => channelsApi.importFile(d.platform, f, bas || undefined, bit || undefined),
     onSuccess: (r) => {
@@ -288,10 +309,10 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
   const detail = useQuery({ queryKey: ['channels', 'import', open], queryFn: () => channelsApi.importDetail(open!), enabled: ENGINE_ENABLED && !!open });
   return (
     <Panel>
-      <h2 className="text-[15px] font-extrabold">Kanalın sattığı (panel dosyası)</h2>
+      <h2 className="text-[15px] font-extrabold">Kanalın okura sattığı (panel dosyası)</h2>
       <p className="mb-2 text-[12px] text-canvas-muted">
-        Platform panelinden indirilen satış raporu (Excel/CSV): kanalın son tüketiciye sattığı adet ve kanal stoğu, TİMAŞ'ın aynı dönemde kanala sattığıyla yan yana.
-        Yalnız ürün, adet, tutar ve stok kolonları alınır; müşteri adı, adres gibi kolonlar içeri alınmaz.
+        Platformun satıcı panelinden indirdiğiniz satış raporunu (Excel ya da CSV) yükleyin: kanalın okura sattığı adet ve kanal stoğu, TİMAŞ'ın aynı dönemde kanala sattığıyla yan yana görünür.
+        Dosyada ürün (barkod ya da stok kodu), adet, tutar ve stok kolonları okunur; müşteri adı, adres gibi kolonlar içeri alınmaz. Dönem boş bırakılırsa dosyadaki tarihlerden bulunur.
       </p>
       {/* Yükleme her zaman görünür; yetkisi olmayan kişi kilitli alanı ve gereken yetkiyi görür. */}
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,180px)_minmax(0,180px)_minmax(0,1fr)] sm:items-start">
@@ -308,16 +329,19 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
           onPick={(f) => up.mutate(f)}
         />
       </div>
-      {!d.imports.length ? <Note tone="info">Bu platform için yüklenmiş panel dosyası yok. Platform panelinden indirdiğiniz satış raporunu yukarıdaki alana bırakın.</Note> : (
+      {!d.imports.length ? (
+        <EmptyHint title="Henüz panel dosyası yüklenmemiş" why="Kanalın okura ne kadar sattığını görmek için platform panelinden indirdiğiniz satış raporunu yukarıdaki alana bırakın." />
+      ) : (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-1.5">
-            {d.imports.map((r) => (
+            {files.shown.map((r) => (
               <button key={r.id} type="button" onClick={() => setOpen(r.id)}
                 className={`min-h-9 rounded-lg px-2.5 text-[12px] font-bold transition-colors duration-150 ${open === r.id ? 'bg-canvas-violet text-white' : 'bg-slate-100'}`}>
                 {r.dosya || 'dosya'} · {fmtDay(r.tarih)}
               </button>
             ))}
           </div>
+          <ShowMoreButton more={files} noun="dosya" />
           {detail.isLoading ? <Loading /> : detail.data && (
             <>
               <p className="text-[12px] text-canvas-muted">
@@ -327,7 +351,7 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
                 <SqlInfo k={detail.data.kaynaklar} alan="satir" label="Panel dosyası satırları" className="ml-1" />
               </p>
               <TableWrap>
-                <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanalın sattığı</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">TİMAŞ'ın kanala sattığı</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Oran</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanal stoğu</InfoLabel></th></tr></thead>
+                <thead><tr><th className={th}>Kitap</th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanalın sattığı</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">TİMAŞ'ın kanala sattığı</InfoLabel></th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={detail.data.kaynaklar} alan="items">Oran</InfoLabel><Explain label="Oran">Kanalın okura sattığı adet ÷ TİMAŞ’ın kanala sattığı adet. %100’ün altı, kanalın bizden aldığından azını okura sattığını gösterir.</Explain></span></th><th className={`${th} text-right`}><InfoLabel k={detail.data.kaynaklar} alan="items">Kanal stoğu</InfoLabel></th></tr></thead>
                 <tbody>
                   {detail.data.items.map((x) => (
                     <tr key={x.stokKodu} className="border-t border-slate-100">
@@ -375,7 +399,7 @@ export default function Channel() {
       back
       title={label}
       detail={label}
-      lead="Kanala satış, iskonto, iade ve marj; kitap bazında alım ve iade, hedef gerçekleşmesi. Rakamlar Logo faturalı satırlarından, onaylı cari eşlemesiyle."
+      lead="Bu platforma ne kadar sattığımız, verdiğimiz iskonto, gelen iade ve kâr; hangi kitabı aldığı, hangisini iade ettiği ve hedefin neresinde olduğu. Rakamlar Logo faturalarından gelir."
       aside={<PeriodPicker meta={m} yil={yil} ay={ay} onChange={set} />}
     >
       <DataBar meta={m} yil={yil} />
@@ -385,16 +409,21 @@ export default function Channel() {
         <>
           <KpiRow>
             <Kpi label="Net ciro" value={`${fmtShort(d.donem.netCiro)} ₺`} help={`Geçen yıla göre ${signedPct(d.degisim)} · ${d.period.yil} Ocak–${d.period.ayAdi}`}
+              explain="Bu platformun carilerine kesilen satış faturaları eksi iade faturaları. Platformun okura sattığı değil, bizim platforma sattığımızdır."
               info={<SqlInfo k={d.kaynaklar} alan="donem" label="Net ciro" />} />
             <Kpi label="İskonto oranı" value={fmtPct(d.donem.iskontoOrani)} help={`Geçen yıl ${fmtPct(d.gecenYil?.iskontoOrani ?? null)}`}
+              explain="Faturada kanala yapılan indirimin, indirimsiz (liste fiyatıyla) satış tutarına oranı."
               info={<SqlInfo k={d.kaynaklar} alan="donem" label="İskonto oranı" />} />
             <Kpi label="İade oranı" value={fmtPct(d.donem.iadeOrani)} help={`Adette ${fmtPct(d.donem.iadeAdetOrani)} · geçen yıl ${fmtPct(d.gecenYil?.iadeOrani ?? null)}`}
+              explain="İade faturası tutarının satış faturası tutarına oranı. Alttaki «adette» oranı aynı hesabın adet üzerinden yapılmışıdır."
               info={<SqlInfo k={d.kaynaklar} alan="donem" label="İade oranı" />} />
             {canMargin ? (
               <Kpi label="Brüt marj" value={fmtPct(d.donem.marj ?? null)} help={`İade sonrası ${fmtPct(d.donem.iadeSonrasiMarj ?? null)}${d.donem.katkiMarj !== undefined ? ` · ek maliyet sonrası ${fmtPct(d.donem.katkiMarj ?? null)}` : ''}`}
+                explain="Satıştan maliyet düşülünce kalanın satışa oranı; yalnız Logo’da maliyeti girilmiş satırlar. «İade sonrası» iadeleri de düşer; «ek maliyet sonrası» aşağıda girilen komisyon, kargo ve reklam payını da düşer."
                 info={<SqlInfo k={d.kaynaklar} alan="donem" label="Brüt marj" />} />
             ) : (
               <Kpi label="Net adet" value={fmtShort(d.donem.netAdet)} help={`Kanala satış ${fmtShort(d.donem.satisAdet)} · iade ${fmtShort(d.donem.iadeAdet)}`}
+                explain="Kanala faturalanan adet eksi kanaldan iade gelen adet."
                 info={<SqlInfo k={d.kaynaklar} alan="donem" label="Net adet" />} />
             )}
           </KpiRow>
@@ -408,7 +437,7 @@ export default function Channel() {
           <MonthlyChart d={d} k={d.kaynaklar} />
           <Panel>
             <h2 className="flex items-center gap-1 text-[15px] font-extrabold">Cariler <SqlInfo k={d.kaynaklar} alan="cariler" label="Platformun carileri" /></h2>
-            <p className="mb-2 text-[12px] text-canvas-muted">Bu platforma eşlenen Logo carileri ve kanal kodları. CRM sipariş sayısı son {d.crmSiparisGun ?? '—'} gün.</p>
+            <p className="mb-2 text-[12px] text-canvas-muted">Bu platforma bağlanmış Logo carileri ve kanal kodları. «CRM siparişi», son {d.crmSiparisGun ?? '—'} günde CRM'de o cariye açılan sipariş sayısıdır, sipariş tipine göre.</p>
             <TableWrap>
               <thead><tr><th className={th}>Cari</th><th className={th}>Kanal kodu</th><th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="cariler">İade oranı</InfoLabel></th><th className={th}><InfoLabel k={d.kaynaklar} alan="cariler">CRM siparişi</InfoLabel></th></tr></thead>
               <tbody>

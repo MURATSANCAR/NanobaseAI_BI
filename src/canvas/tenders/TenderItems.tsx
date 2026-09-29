@@ -10,6 +10,7 @@ import {
   type Candidate, type Item, type MatchState, type TenderDetail, type TenderMeta,
 } from './api';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Şartname kalemleri: liste alma (yapıştır ya da yüklenen dosya), katalogla eşleştirme (ISBN → ad → Zeki AI), insan
  *  onayı ve düzeltmesi, adet ve birim teklif fiyatı, teklif tablosu toplamları ve Excel. Geniş tablo kendi içinde kayar. */
@@ -55,9 +56,9 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
           <div className="min-w-0">
             <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">Kalem–katalog eşleştirme<SqlInfo k={d.kaynaklar} alan="kalemler[]" label="Kalemler: eşleşme olasılığı, stok, fiyat" /></h2>
             <p className="max-w-[90ch] text-[12px] text-canvas-muted">
-              Sıra: ISBN/barkod birebir → ad birebir (yazarla ayıklanır) → benzer adlı {d.ayarlar.candidates} adaya Zeki AI «aynı eser hangisi» sorusu.
-              Olasılık %{Math.round(d.ayarlar.autoProb * 100)} ve üstü (marj %{Math.round(d.ayarlar.autoMargin * 100)}) kendiliğinden eşleşir,
-              %{Math.round(d.ayarlar.suggestProb * 100)} ve üstü onayınızı bekler, altı «emin değil». Stok ve fiyat Logo/CRM'den okunur.
+              Şartnamedeki her kitap önce ISBN/barkodla, sonra kitap adı ve yazarla kataloğumuzda aranır; bulunamazsa Zeki AI benzer adlı {d.ayarlar.candidates} aday arasından aynı eseri seçer.
+              Olasılığı %{Math.round(d.ayarlar.autoProb * 100)} ve üstü olan eşleşme kendiliğinden kabul edilir, %{Math.round(d.ayarlar.suggestProb * 100)} ve üstü onayınızı bekler,
+              daha düşüğü «emin değil» olarak kalır. Stok ve fiyat Logo/CRM'den okunur.
             </p>
           </div>
           {can && d.kalemler.length > 0 && (
@@ -67,14 +68,18 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
                 Katalogla eşleştir
               </button>
               {(t.durumlar.bekliyor || t.durumlar.belirsiz) ? (
-                <button type="button" className={btnGhost} disabled={busy || match.isPending} onClick={() => match.mutate(true)}>Yalnız bekleyenler</button>
+                <button type="button" className={btnGhost} disabled={busy || match.isPending} onClick={() => match.mutate(true)}>Yalnız bekleyenleri eşleştir</button>
               ) : null}
             </div>
           )}
         </div>
         {!meta.modelVar && <div className="mt-2"><Note tone="warn">Zeki AI bu kurulumda tanımlı değil: ISBN ve ad birebir eşleşmeyen kalemler aday listesinden elle seçilir.</Note></div>}
         {d.kararlar.some((k) => k.durum === 'onayda') && <div className="mt-2"><Note tone="info">Onay bekleyen karar var; kalemler karar sonuçlanana ya da geri çekilene kadar değişmez.</Note></div>}
-        <div className="mt-3 -mx-1 overflow-x-auto px-1">
+        <div className="mt-3 flex items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
+          Duruma göre süz
+          <Explain label="Eşleşme durumları">Eşleşti: kitap kataloğumuzda bulundu. Onay bekliyor: Zeki AI bir kitap önerdi, onayınız gerekiyor. Emin değil: aday var ama olasılık düşük, siz seçin. Katalogda yok: bizde karşılığı yok. Eşleştirilmedi: henüz aranmadı. Stok yetersiz: istenen adet stoktan fazla.</Explain>
+        </div>
+        <div className="mt-1 -mx-1 overflow-x-auto px-1">
           <div className="flex w-max gap-1.5">
             {chips.map((c) => (
               <button
@@ -93,7 +98,9 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
       </Panel>
 
       {d.kalemler.length === 0 ? (
-        <Panel><div className="py-6 text-center text-[12.5px] text-canvas-muted">Kalem listesi yok. Şartnamedeki kitap listesini yapıştırın ya da yüklenen dosyadan alın.</div></Panel>
+        <EmptyHint title="Kalem listesi yok" why="Şartnamedeki kitap listesini yukarıdaki «Kalem listesini al» alanına yapıştırın ya da yüklediğiniz dosyadan alın." />
+      ) : rows.length === 0 ? (
+        <EmptyHint title="Bu durumda kalem yok" why="Başka bir durum seçin ya da «Hepsi» ile bütün kalemleri görün." />
       ) : (
         <TableWrap>
           <thead>
@@ -149,7 +156,7 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
                           <Check aria-hidden className="h-4 w-4" />
                         </button>
                       )}
-                      <button type="button" className={btnGhost} onClick={() => setPicking(k)}>Seç</button>
+                      <button type="button" className={btnGhost} onClick={() => setPicking(k)}>Kitap seç</button>
                       {k.durum !== 'yok' && (
                         <button type="button" className={btnGhost} aria-label={`${k.sira}. kalem katalogda yok`} disabled={patch.isPending} onClick={() => patch.mutate({ sira: k.sira, b: { stokKodu: null } })}>
                           <X aria-hidden className="h-4 w-4" />
@@ -170,7 +177,7 @@ export default function TenderItems({ d, meta, busy }: { d: TenderDetail; meta: 
           {meta.me.canExport && t.fiyatli > 0 && (
             <a className={btnGhost} href={tendersApi.pricingUrl(d.id)}>
               <FileSpreadsheet aria-hidden className="h-4 w-4" />
-              Excel
+              Excel indir
             </a>
           )}
         </div>
@@ -325,10 +332,10 @@ function PickSheet({ d, item, onClose, onPick }: { d: TenderDetail; item: Item |
         {search.isFetching && <div className="text-[12px] text-canvas-muted">Aranıyor…</div>}
         {search.error && <Note tone="err">{errText(search.error, 'Arama yapılamadı.')}</Note>}
         <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{dq.trim().length >= 2 ? 'Arama sonucu' : 'Eşleştirme adayları'}</div>
-        {!list.length && <div className="text-[12.5px] text-canvas-muted">Aday yok; yukarıdan arayın.</div>}
+        {!list.length && <div className="text-[12.5px] text-canvas-muted">{dq.trim().length >= 2 ? 'Aramaya uyan kitap yok; başka bir kelime, yazar ya da ISBN deneyin.' : 'Bu kalem için aday yok; yukarıya en az 2 harf yazarak kataloğu arayın.'}</div>}
         <ul className="flex flex-col gap-1.5">
           {list.map((c) => (
-            <li key={c.stokKodu}>
+            <li key={c.stokKodu} className="relative">
               <button
                 type="button"
                 onClick={() => onPick(c.stokKodu)}
@@ -336,8 +343,14 @@ function PickSheet({ d, item, onClose, onPick }: { d: TenderDetail; item: Item |
               >
                 <div className="break-words font-semibold">{c.ad ?? '(adsız)'}</div>
                 <div className="break-words text-[11px] text-canvas-muted">{[c.yazar, c.yayinevi, c.isbn && `ISBN ${c.isbn}`, c.stokKodu].filter(Boolean).join(' · ')}</div>
-                {c.benzerlik != null && <div className="flex items-center gap-0.5 font-mono text-[10.5px] text-canvas-muted">benzerlik {fmtPct(c.benzerlik)}<SqlInfo k={search.data?.kaynaklar} alan="items[]" label="Benzerlik" /></div>}
+                {c.benzerlik != null && <div className="pr-7 font-mono text-[10.5px] text-canvas-muted">benzerlik {fmtPct(c.benzerlik)}</div>}
               </button>
+              {/* Sorgu bilgisi düğmenin dışında: düğme içinde düğme olmaz. */}
+              {c.benzerlik != null && (
+                <span className="absolute bottom-1.5 right-2">
+                  <SqlInfo k={search.data?.kaynaklar} alan="items[]" label="Benzerlik" />
+                </span>
+              )}
             </li>
           ))}
         </ul>

@@ -37,12 +37,13 @@ export default function SurveyForm() {
         {!key && (
           <div className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
             <h1 className="text-[20px] font-extrabold">Anket kodunuzu girin</h1>
-            <p className="text-[13px] text-canvas-muted">İnsan Kaynakları'nın verdiği basılı kartta 10 karakterlik bir kod var. Kod kimseye bağlı değildir.</p>
+            <p className="text-[13px] text-canvas-muted">İnsan Kaynakları'nın verdiği basılı kartta 10 karakterlik bir kod var. Kod kimseye bağlı değildir; cevaplarınız adınızla eşleşmez.</p>
             <input className={field} value={typed} onChange={(e) => setTyped(e.target.value.toUpperCase())} placeholder="ABCDE-FGHJK" autoCapitalize="characters" autoComplete="off" />
             <button type="button" className={btnPrimary} disabled={typed.replace(/[^A-Z0-9]/gi, '').length !== 10} onClick={() => nav(`/ik/anket/k/${encodeURIComponent(typed)}`)}>Ankete geç</button>
           </div>
         )}
-        {form.error && <Note tone="err">{errText(form.error, 'Bağlantı ya da kod geçersiz.')}</Note>}
+        {key && form.isLoading && <p className="py-6 text-center text-[13px] text-canvas-muted">Anket açılıyor…</p>}
+        {form.error && <Note tone="err">{errText(form.error, 'Bu bağlantı ya da kod geçersiz. Kodu kontrol edip yeniden deneyin.')}</Note>}
         {d && (
           <>
             <h1 className="text-[22px] font-extrabold leading-tight">{d.title}</h1>
@@ -61,7 +62,7 @@ export default function SurveyForm() {
             ) : d.alreadyResponded ? (
               <Note tone="info">Bu anket bu bağlantıyla cevaplandı. Teşekkürler.</Note>
             ) : !d.open ? (
-              <Note tone="warn">Anket şu an cevaba açık değil.</Note>
+              <Note tone="warn">Anket şu an cevaba açık değil; henüz başlamamış ya da kapanmış olabilir.</Note>
             ) : (
               <>
                 <ol className="flex flex-col gap-3" start={page * PER_PAGE + 1}>
@@ -71,16 +72,19 @@ export default function SurveyForm() {
                     </li>
                   ))}
                 </ol>
-                {send.error && <Note tone="err">{errText(send.error, 'Gönderilemedi.')}</Note>}
+                {send.error && <Note tone="err">{errText(send.error, 'Gönderilemedi. İnternet bağlantınızı kontrol edip yeniden deneyin.')}</Note>}
                 <div className="flex justify-between gap-2">
                   <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage(page - 1)}>Geri</button>
+                  {pages.length > 1 && <span className="self-center text-[12px] font-semibold text-canvas-muted">{page + 1} / {pages.length}</span>}
                   {page < pages.length - 1 ? (
                     <button type="button" className={btnPrimary} onClick={() => { setPage(page + 1); window.scrollTo({ top: 0 }); }}>Devam</button>
                   ) : (
-                    <button type="button" className={btnPrimary} disabled={send.isPending || !Object.keys(answers).length} onClick={() => send.mutate()}>Gönder</button>
+                    <button type="button" className={btnPrimary} disabled={send.isPending || !Object.keys(answers).length} onClick={() => send.mutate()}>{send.isPending ? 'Gönderiliyor…' : 'Cevapları gönder'}</button>
                   )}
                 </div>
-                <p className="text-center text-[11.5px] text-canvas-muted">Her soru isteğe bağlıdır. Kapanış: {new Date(d.closesAt).toLocaleDateString('tr-TR')}</p>
+                <p className="text-center text-[11.5px] text-canvas-muted">
+                  Her soru isteğe bağlıdır; göndermek için en az birini cevaplayın. Kapanış: {new Date(d.closesAt).toLocaleDateString('tr-TR')}
+                </p>
               </>
             )}
           </>

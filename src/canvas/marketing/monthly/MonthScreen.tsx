@@ -85,7 +85,7 @@ export default function MonthScreen() {
             {p ? 'Kaynaklardan yeniden kur' : 'Taslağı kur'}
           </button>
         )}
-        {me?.canExport && p && <a className={btnGhost} href={monthApi.summaryUrl(ay)} download><FileText aria-hidden className="h-4 w-4" />Özet PDF</a>}
+        {me?.canExport && p && <a className={btnGhost} href={monthApi.summaryUrl(ay)} download><FileText aria-hidden className="h-4 w-4" />Özet PDF indir</a>}
       </div>
     </div>
   ) : null;
@@ -94,12 +94,12 @@ export default function MonthScreen() {
     <MarketingFrame
       crumb="Aylık plan"
       title={ay ? `${monthLabel(ay)} pazarlama planı` : 'Aylık pazarlama planı'}
-      lead="Ayın yeni kitap lansmanları, backlist işleri, özel günler ve B2B kampanyaları tek takvimde; çakışmalar işaretli. Bütçe ayın satış hedefi payına ve önceki ayın hedef açığına göre önerilir, pazarlama müdürü düzeltip onaylar. Dışarıya hiçbir şey kendiliğinden gönderilmez."
+      lead="Ayın yeni kitap çıkışları, eski kitap (backlist) işleri, özel günler ve bayi kampanyaları tek takvimde; çakışmalar işaretli. Bütçe önerilir, pazarlama müdürü düzeltip onaylar. Dışarıya hiçbir şey kendiliğinden gönderilmez."
       source={p ? `${p.id} · sürüm ${p.surum}` : 'CRM + Logo + bütçe planı'}
       presence={p ? p.durumAdi : v ? 'plan yok' : '…'}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Veri bağlantısı kurulu değil; bu ekran şu an veri gösteremez. Sistem yöneticinize haber verin.</Note>}
       {month.error && <Note tone="err">{errText(month.error, 'Ay planı açılamadı.')}</Note>}
       {(month.isLoading || (!ay && meta.isLoading)) && <Loading />}
 
@@ -109,16 +109,20 @@ export default function MonthScreen() {
             <KpiRow>
               <Kpi label={`${o.donemAdi} hedefe oran`} value={fmtPct(o.oran)}
                 help={o.not ?? (me.canSeeBudget ? `${fmtMoney(o.gercek)} / ${fmtMoney(o.hedef)} (hedefli kitaplar)` : 'Hedefli kitapların net cirosu ÷ ay hedefi')}
-                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy" label={`${o.donemAdi} hedefe oran`} />} />
+                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy" label={`${o.donemAdi} hedefe oran`} />}
+                explain="Önceki ay, satış hedefi olan kitapların Logo'daki net cirosunun o ayın hedefine oranı. %100'ün altı hedefin gerisinde kalındığını gösterir; açık bu ayın bütçe önerisine yansır." />
               <Kpi label="Önceki ay işleri" value={o.isler.toplam ? `${o.isler.yapildi} / ${o.isler.toplam}` : '—'}
                 help={o.isler.toplam ? `Onaylı planların işleri; ${o.isler.atlandi} atlandı` : 'Önceki ay için onaylı plan işi yok'}
-                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy.isler" label="Önceki ay işleri" />} />
+                info={<SqlInfo k={v.kaynaklar} alan="oncekiAy.isler" label="Önceki ay işleri" />}
+                explain="Önceki ayın onaylı pazarlama planlarındaki işlerden kaçının «yapıldı» işaretlendiği. Atlanan işler ayrıca yazılır." />
               <Kpi label="Çakışma" value={String(v.cakismaSayisi)} help="Aynı hafta aynı kitaplıkta lansman ya da üst üste kampanya"
                 active={tab === 'takvim' && v.cakismaSayisi > 0} onClick={() => setParams({ sekme: 'takvim' }, { replace: true })}
-                info={<SqlInfo k={v.kaynaklar} alan="cakismaSayisi" label="Çakışma" />} />
+                info={<SqlInfo k={v.kaynaklar} alan="cakismaSayisi" label="Çakışma" />}
+                explain="Aynı haftada aynı kitaplıktan birden çok yeni kitap çıkışı ya da aynı kanalda tarihleri örtüşen kampanyalar. Takvimde kırmızıyla işaretlenir; birini kaydırmayı düşünün." />
               <Kpi label="Föy" value={`${v.foy.onayli} / ${v.foy.toplam}`} help={v.foy.eksik || v.foy.uyumsuz ? `${v.foy.eksik} eksik, ${v.foy.uyumsuz} uyumsuz` : 'Onaylı föy / ayın yeni kitabı'}
                 active={tab === 'foy'} onClick={() => setParams({ sekme: 'foy' }, { replace: true })}
-                info={<SqlInfo k={v.kaynaklar} alan="foy" label="Föy" />} />
+                info={<SqlInfo k={v.kaynaklar} alan="foy" label="Föy" />}
+                explain="Föy, bayilere ve satış ekibine verilen tek sayfalık kitap tanıtımıdır. Kart, bu ay çıkan yeni kitaplardan kaçının föyünün onaylandığını; eksik alanlı ve CRM–Logo bilgisi uyuşmayan föy sayısını gösterir." />
             </KpiRow>
           )}
 
@@ -165,7 +169,7 @@ export default function MonthScreen() {
                 {Object.entries(v.sayilar).filter(([, n]) => n > 0).map(([k, n]) => <span key={k}>{m.monthly?.types[k] ?? k}: {n}</span>)}
                 <SqlInfo k={v.kaynaklar} alan="items[]" label="Takvim kalemleri ve sayıları" />
               </div>
-              {p ? <CalendarGrid view={v} channels={m.channels} onPick={setPick} /> : <p className="text-[12.5px] text-canvas-muted">Plan kurulunca takvim burada.</p>}
+              {p ? <CalendarGrid view={v} channels={m.channels} onPick={setPick} /> : <p className="text-[12.5px] text-canvas-muted">Takvim, bu ayın plan taslağı kurulunca dolar.</p>}
             </Block>
           )}
 
@@ -183,7 +187,7 @@ export default function MonthScreen() {
           )}
 
           {tab === 'foy' && (
-            <Block title="Ayın föyleri" help="Yayın günü bu aya düşen yeni kitapların satış föyleri." action={<Link className={btnGhost} to={`/pazarlama/foy?ay=${v.donem}`}>Föy ekranı</Link>}>
+            <Block title="Ayın föyleri" help="Yayın günü bu aya düşen yeni kitapların satış föyleri." action={<Link className={btnGhost} to={`/pazarlama/foy?ay=${v.donem}`}>Föy ekranına git</Link>}>
               {foys.error && <Note tone="err">{errText(foys.error, 'Föyler açılamadı.')}</Note>}
               {foys.isLoading && <Loading />}
               {foys.data && <FoyTable rows={foys.data.items} fields={m.monthly?.foyFields ?? {}} />}
@@ -289,7 +293,7 @@ function ItemSheet({ item, view, editable, canSeeBudget, canNewBooks, channels, 
             {item.hedefKitle && <><dt className="text-canvas-muted">Hedef kitle</dt><dd>{item.hedefKitle}</dd></>}
             {d.sorumlu && <><dt className="text-canvas-muted">Sorumlu</dt><dd>{d.sorumlu}</dd></>}
             {d.hedefAy && <><dt className="text-canvas-muted">Bu ayın hedefi</dt><dd>{Math.round(d.hedefAy.adet ?? 0).toLocaleString('tr-TR')} adet{canSeeBudget && d.hedefAy.ciro != null ? ` · ${fmtMoney(d.hedefAy.ciro)}` : ''} (bütçe planı)</dd></>}
-            {d.crmBolgeHedefi && <><dt className="text-canvas-muted">CRM bölge hedefi</dt><dd>{Math.round(d.crmBolgeHedefi.adet).toLocaleString('tr-TR')} adet, {d.crmBolgeHedefi.bolge} bölge — yalnız bilgi; bütçe planıyla ilişkisi ölçülecek</dd></>}
+            {d.crmBolgeHedefi && <><dt className="text-canvas-muted">CRM bölge hedefi</dt><dd>{Math.round(d.crmBolgeHedefi.adet).toLocaleString('tr-TR')} adet, {d.crmBolgeHedefi.bolge} bölge · yalnız bilgi için; hesaplara girmez</dd></>}
             {d.sapma && <><dt className="text-canvas-muted">Hedef sapması</dt><dd className="font-bold text-red-700">hedefe oran {fmtPct(d.sapma.oran)}</dd></>}
             {d.kitapSayisi != null && <><dt className="text-canvas-muted">Bağlı kitap</dt><dd>{d.kitapSayisi}</dd></>}
             {d.yontem && <><dt className="text-canvas-muted">Tarih yöntemi</dt><dd>{d.yontem}</dd></>}
@@ -319,7 +323,7 @@ function ItemSheet({ item, view, editable, canSeeBudget, canNewBooks, channels, 
               {canSeeBudget && <label className="flex flex-col gap-1"><span className={labelCls}>Bütçe (TL)</span><input inputMode="decimal" className={`${field} font-mono`} value={f.butce} onChange={(e) => setF({ ...f, butce: e.target.value })} /></label>}
               <label className="flex flex-col gap-1"><span className={labelCls}>Not</span><textarea className={`${field} min-h-[72px]`} value={f.aciklama} onChange={(e) => setF({ ...f, aciklama: e.target.value })} /></label>
               <div className="flex flex-wrap justify-end gap-2">
-                {item.kaynak === 'kullanici' && <button type="button" className={`${btnGhost} !text-red-700`} onClick={() => remove.mutate()} disabled={remove.isPending}>Sil</button>}
+                {item.kaynak === 'kullanici' && <button type="button" className={`${btnGhost} !text-red-700`} onClick={() => remove.mutate()} disabled={remove.isPending}>Kalemi sil</button>}
                 <button type="button" className={btnPrimary} onClick={() => save.mutate()} disabled={save.isPending}>Kaydet</button>
               </div>
               {item.kaynak !== 'kullanici' && <p className="text-[11px] text-canvas-muted">Kaynaktan gelen kalem silinmez; yayın günü CRM'de ya da ilgili planda değişir.</p>}
@@ -350,7 +354,7 @@ function AddSheet({ open, ay, types, channels, onClose, onSaved }: {
             {Object.entries(types).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1"><span className={labelCls}>Başlık</span><input className={field} value={f.baslik} onChange={(e) => setF({ ...f, baslik: e.target.value })} /></label>
+        <label className="flex flex-col gap-1"><span className={labelCls}>Başlık</span><input className={field} placeholder="ör. Okul kampanyası, fuar standı" value={f.baslik} onChange={(e) => setF({ ...f, baslik: e.target.value })} /></label>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1"><span className={labelCls}>Başlangıç</span><input type="date" className={field} value={f.baslangic} onChange={(e) => setF({ ...f, baslangic: e.target.value })} /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Bitiş</span><input type="date" className={field} value={f.bitis} onChange={(e) => setF({ ...f, bitis: e.target.value })} /></label>

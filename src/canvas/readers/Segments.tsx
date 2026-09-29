@@ -8,6 +8,7 @@ import { fmtDay, fmtInt, readersApi, SEGMENT_TONE, type SegmentStatus } from './
 import { ROOT, useMeta } from './parts';
 import SegmentBuilder from './SegmentBuilder';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 const FILTERS: Array<{ id: string; label: string }> = [
   { id: '', label: 'Etkin' },
@@ -34,7 +35,7 @@ function SegmentList() {
   return (
     <Section
       title="Segmentler"
-      help="Kurala dayalı okur grupları. Sayılar kuralın kendisinden hesaplanır; onaylı segment gece sayılır ve dışa aktarılabilir."
+      help="Segment, belirli kurallara uyan okur grubudur (ör. İstanbul'da yaşayan, çocuk kitabıyla ilgilenen, e-posta izni olanlar). Sayılar kuraldan hesaplanır; onaylı segment her gece yeniden sayılır ve liste olarak alınabilir."
       action={me?.canSegment ? <Link to={`${ROOT}/segmentler/yeni`} className={btnPrimary}><Plus aria-hidden className="h-4 w-4" />Yeni segment</Link> : undefined}
     >
       <div className="flex flex-wrap gap-1">
@@ -47,7 +48,7 @@ function SegmentList() {
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Segmentler açılamadı.')}</Note>}
-      {q.data && q.data.items.length === 0 && <Note tone="info">Bu durumda segment yok.</Note>}
+      {q.data && q.data.items.length === 0 && <EmptyHint title="Bu durumda segment yok" why={me?.canSegment ? 'Başka bir durum seçin ya da «Yeni segment» ile ilk kuralınızı kurun.' : 'Başka bir durum seçin.'} />}
       {q.data && q.data.items.length > 0 && (
         <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">Son sayım rakamları<SqlInfo k={q.data.kaynaklar} alan="items[]" label="Segment son sayımları" /></p>
       )}

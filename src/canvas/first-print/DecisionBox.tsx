@@ -39,12 +39,15 @@ export default function DecisionBox({ fc, can }: { fc: Forecast; can?: { decide:
   const withdraw = useMutation({ mutationFn: (id: string) => firstPrintApi.withdraw(id), onSuccess: done });
   const items = list.data?.items ?? [];
   const open = items.find((d) => d.status === 'bekliyor');
-  const err = errText(create.error ?? approve.error ?? withdraw.error, 'İşlem yapılamadı.');
+  const err = errText(create.error ?? approve.error ?? withdraw.error, 'İşlem yapılamadı; biraz sonra yeniden deneyin.');
   if (fc.mode === 'launched' && items.length === 0) return null;
 
   return (
     <div className="mt-4 border-t border-slate-100 pt-3">
       <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Karar ve onay</div>
+      <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
+        Kararı kaydedince satış ve üretim onayı ayrı ayrı istenir. Karar yalnız portalda saklanır; CRM'e ve Logo'ya yazılmaz.
+      </p>
       {err && <div className="mt-2"><Note tone="err">{err}</Note></div>}
       {items.map((d) => (
         <div key={d.id} className="mt-2 rounded-xl border border-slate-100 bg-white/70 p-3 text-[12.5px]">
@@ -75,7 +78,7 @@ export default function DecisionBox({ fc, can }: { fc: Forecast; can?: { decide:
           </ul>
           {d.status === 'bekliyor' && (
             <button type="button" className={`${btnGhost} mt-2`} disabled={withdraw.isPending} onClick={() => withdraw.mutate(d.id)}>
-              Geri çek
+              Kararı geri çek
             </button>
           )}
         </div>
@@ -90,7 +93,8 @@ export default function DecisionBox({ fc, can }: { fc: Forecast; can?: { decide:
         >
           <label className="flex flex-col gap-1">
             <span className={label}>İlk baskı adedi</span>
-            <input className={field} inputMode="numeric" value={units} onChange={(e) => setUnits(e.target.value.replace(/[^\d.]/g, ''))} />
+            <input className={field} inputMode="numeric" value={units} onChange={(e) => setUnits(e.target.value.replace(/[^\d.]/g, ''))} placeholder="Ör. 3000" />
+            <span className="text-[11px] text-canvas-muted">Öneri {fmtUnits(fc.recommendation.units)} adet; farklı bir adet de yazabilirsiniz.</span>
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Not (isteğe bağlı)</span>
@@ -102,7 +106,7 @@ export default function DecisionBox({ fc, can }: { fc: Forecast; can?: { decide:
         </form>
       )}
       {!open && fc.mode === 'upcoming' && can && !can.decide && items.length === 0 && (
-        <p className="mt-2 text-[12px] text-canvas-muted">Karar kaydı için «İlk baskı kararı» yetkisi gerekir.</p>
+        <p className="mt-2 text-[12px] text-canvas-muted">Karar kaydetmek için «İlk baskı kararı» yetkisi gerekir; yetki için yöneticinize başvurun.</p>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { Empty, MailFrame } from './parts';
 import { fmtDay, fmtInt, hoursText, mailApi, pctText } from './api';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { ExplainLabel } from '../components/Explain';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -26,7 +27,7 @@ export default function MailReport() {
   return (
     <MailFrame
       title="E-posta raporu"
-      lead="Gelen iletilerin türe göre hacmi, ilk yanıt ve kapanış süreleri, SLA uyumu. Süreler iş saatiyle sayılır; yanıt zamanı kutunun konu zincirinden okunur."
+      lead="Gelen iletilerin türe göre sayısı, ilk yanıt ve kapanış süreleri ve hedef sürede yanıtlanma oranı. Süreler iş saatiyle sayılır; yanıt zamanı kutudaki yazışma zincirinden okunur."
       connection={meta.data?.connection}
       lastRun={meta.data?.lastRun}
     >
@@ -48,11 +49,11 @@ export default function MailReport() {
           <KpiRow>
             <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Gelen ileti" />} label="Gelen ileti" value={fmtInt(d.total)} help={`${fmtDay(d.start)} – ${fmtDay(d.end)}`} />
             <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Yanıtlanan" />} label="Yanıtlanan" value={fmtInt(d.replied)} help={d.total ? `%${Math.round((d.replied / d.total) * 100)} oranında` : '—'} />
-            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="SLA uyumu" />} label="SLA uyumu" value={pctText(d.slaRate)} help="Süresi gelmiş iletilerde hedef sürede ilk yanıt" />
-            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tür düzeltme" />} label="Tür düzeltme" value={pctText(d.correctedRate)} help={`Emin olunmayan payı ${pctText(d.unsureRate)}`} />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Hedef sürede yanıt" />} label="Hedef sürede yanıt" value={pctText(d.slaRate)} help="Süresi gelmiş iletilerde hedef sürede ilk yanıt" explain="Yanıt süresi dolmuş iletilerden, iletinin türü için tanımlı hedef sürede (iş saatiyle) ilk yanıtı almış olanların oranı." />
+            <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tür düzeltme" />} label="Tür düzeltme" value={pctText(d.correctedRate)} help={`Emin olunmayan payı ${pctText(d.unsureRate)}`} explain="Zeki AI'ın önerdiği türü bir kişinin değiştirdiği iletilerin oranı. Düşük olması önerilerin çoğunlukla doğru olduğunu gösterir." />
           </KpiRow>
           {d.categories.length === 0 ? (
-            <Empty title="Bu aralıkta ileti yok" />
+            <Empty title="Bu aralıkta ileti yok">Başlangıç tarihini daha geriye alarak aralığı genişletin.</Empty>
           ) : (
             <TableWrap>
               <thead>
@@ -61,10 +62,10 @@ export default function MailReport() {
                   <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="_hepsi">İleti</InfoLabel></th>
                   <th className={`${th} text-right`}>Açık</th>
                   <th className={`${th} text-right`}>Süresi aşan</th>
-                  <th className={`${th} text-right`}>İlk yanıt (iş saati)</th>
+                  <th className={`${th} text-right`}><ExplainLabel label="İlk yanıt (iş saati)">İletinin gelişinden ilk yanıta kadar geçen ortalama süre; yalnız iş saatleri sayılır. «Takvim» sütunu gece ve hafta sonunu da sayar.</ExplainLabel></th>
                   <th className={`${th} text-right`}>İlk yanıt (takvim)</th>
                   <th className={`${th} text-right`}>Kapanış (iş saati)</th>
-                  <th className={`${th} text-right`}>SLA uyumu</th>
+                  <th className={`${th} text-right`}>Hedef sürede yanıt</th>
                 </tr>
               </thead>
               <tbody>

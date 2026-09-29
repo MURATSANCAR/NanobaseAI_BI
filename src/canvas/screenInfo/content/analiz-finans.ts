@@ -9,15 +9,15 @@ const CONTENT: ScreenInfoMap = {
       "Zeki AI kutusuna yazdığınız soru Genel bakış ekranında Logo verisiyle cevaplanır.",
       "Rehber, CRM'deki etkin kullanıcılardan gelir; ad, birim ya da dahiliyle anında aranır.",
       "«Bugün» özeti uyarılarınızı, onay kuyruklarınızı ve ajandanızı yetkinize göre toplar; Zeki AI bunu üç cümleyle özetler.",
-      "Ajanda, eğitimler ve toplantı odaları gibi kartlar yalnız size ait ya da güncel bir kayıt varsa görünür.",
+      "Ajanda kartı yalnız sorumlusu olduğunuz etkinlik ve görevleri gösterir; «Matbaadan yeni çıkanlar» yalnız son günlerde basılan kitap varsa görünür.",
     ],
     data: "CRM kullanıcı kayıtları ve kişi profilleri, portalın kendi modülleri (ajanda, oda, eğitim, üretim), Logo satış verisi",
     refresh: "Sayfa açıldığında okunur; toplantı odalarının durumu 30 saniyede bir tazelenir.",
     actions: [
       "Zeki AI'a hazır örneklerden ya da kendi cümlenizle soru sorun.",
       "Rehberde kişi arayın; tek tıkla arayın ya da e-posta yazın.",
-      "Bir çalışma arkadaşınızı alkışlayın, profilinizi güncelleyin.",
-      "Ana modül kutularından ilgili ekrana geçin.",
+      "Bir çalışma arkadaşınızı alkışlayın (aynı kişiye günde bir alkış), profilinize dahili ve katınızı ekleyin.",
+      "Destek masasında talep açın; ana modül kutularından ilgili ekrana geçin.",
     ],
   },
 
@@ -167,6 +167,30 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  'path:/pazar-arastirma/raporlar/:id': {
+    summary:
+      "Tek sektör raporunun rakamları: Zeki AI'ın sayfalardan önerdiği rakamlar sayfa numaralarıyla; onaylanan rakam pazar özetine ve aylık yönetim özetine girer.",
+    how: [
+      "Önerilen her rakam sayfanın metninde birebir aranır; bulunamayan atılır.",
+      "Her rakamı düzeltip onaylayabilir ya da reddedebilirsiniz; siz onaylayana kadar öneridir.",
+      "Zeki AI'ın kaçırdığı rakamı sayfa numarasıyla elle girebilirsiniz.",
+    ],
+    data: "Sizin yüklediğiniz sektör raporu",
+    actions: ["Rakamları duruma göre süzün", "Rakamı onaylayın, düzeltin ya da reddedin", "Elle rakam ekleyin"],
+  },
+
+  'path:/pazar-arastirma/ozet/:donem': {
+    summary:
+      "Bir ayın yönetim özeti: Zeki AI'ın kaynaklara bağlı taslağı, düzenleme ve onay; onaylanan özet kurul paketine gider.",
+    how: [
+      "Taslaktaki her cümle bir kaynağa (Logo, sektör raporu, rakip verisi) bağlıdır; kaynaklar metnin yanında görünür.",
+      "Onaylı sektör rakamı yoksa pazar büyüklüğü için «kaynak yok» yazılır; tahmin üretilmez.",
+      "Özeti yazan ya da onaya gönderen onaylayamaz; onayı başka bir yönetici verir.",
+    ],
+    data: "Logo faturalı satış, onaylı sektör rakamları, CRM rakip kayıtları",
+    actions: ["Zeki AI taslağını yazdırın ve düzenleyin", "Onaya gönderin", "Yetkiniz varsa onaylayın ya da gerekçeyle geri gönderin"],
+  },
+
   'finansal-raporlar': {
     summary:
       "Gelir tablosu, bütçe–gerçekleşme, kârlılık, 13 haftalık nakit tahmini ve vergi takvimi; hepsi Logo muhasebe ve fatura kayıtlarından.",
@@ -249,7 +273,7 @@ const CONTENT: ScreenInfoMap = {
 
   fiyatlama: {
     summary:
-      "Bir kitabın birim maliyetini, başabaş adedini ve hedef marja göre kapak fiyatı önerisini hesaplar; gerçekleşen marjı ve backlist fiyat revizyonunu izler.",
+      "Bir kitabın birim maliyetini, başabaş adedini ve hedef marja göre kapak fiyatı önerisini hesaplar; gerçekleşen marjı ve eski kitapların (backlist) fiyat güncellemesini izler.",
     how: [
       "Baskı bedeli matbaanın Logo faturalarından, kâğıt Timaş'ın kâğıt alımlarından, telif CRM'deki sözleşmeden gelir.",
       "Hesap adede göre maliyet eğrisi, sabit giderler, avans ve telif türüyle yapılır; fiyat 5 ₺'ye yukarı yuvarlanır.",
@@ -264,7 +288,7 @@ const CONTENT: ScreenInfoMap = {
     actions: [
       "Bir kitap için maliyet, başabaş ve fiyat önerisi hesaplayın.",
       "Analizi kaydedip onaya gönderin ya da yetkiniz varsa imzalayın.",
-      "Gerçekleşen marjı ve backlist toplu zam önerisini inceleyin.",
+      "Gerçekleşen marjı ve eski kitaplar için toplu zam önerisini inceleyin.",
       "«Verileri yenile» ile kaynakları hemen okutun.",
     ],
   },
@@ -274,7 +298,7 @@ const CONTENT: ScreenInfoMap = {
       "Yayımlanacak kitabın emsallere dayalı satış senaryolarını ve önerilen ilk baskı adedini verir; kararı kaydedip onaya sunarsınız.",
     how: [
       "Kitaba en çok benzeyen emsaller (CRM emsali, yazar, dizi, kitaplık, tür, fiyat ve sayfa yakınlığı) puanlanır.",
-      "Emsallerin ilk 6 ve 12 aylık satışından muhafazakâr, temel ve iyimser senaryolar çıkar; öneri yayınevinin baskı basamağına yuvarlanır.",
+      "Emsallerin ilk 6 ve 12 aylık satışından kötümser, baz ve iyimser senaryolar çıkar; önerilen ilk baskı, ilk 6 ayın iyimser senaryosunun yayınevinin baskı basamağına yuvarlanmasıdır.",
       "«Tahmin ne kadar tutuyor» sekmesi geçmiş kitaplarda tahminin ne kadar isabetli olduğunu açıkça gösterir.",
       "Karar yalnız portalda kaydedilir; CRM'e ve Logo'ya yazılmaz.",
     ],
@@ -290,13 +314,44 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  'path:/ilk-baski/yeni': {
+    summary:
+      "CRM'de henüz kartı olmayan bir kitap için satış senaryoları ve ilk baskı önerisi; kitabın özelliklerini elle girersiniz.",
+    how: [
+      "Yazar, yayınevi, kitaplık, dizi, hedef kitle, tür, sayfa, fiyat ve yayın ayı emsal seçiminde kullanılır; ne kadar çok alan dolarsa emsal o kadar isabetli olur.",
+      "Tahmin CRM'deki kitaplarla aynı yoldan kurulur.",
+      "Sonuç kaydedilmez; kitap CRM'e girince yayımlanacak kitaplar listesinde kendiliğinden görünür.",
+    ],
+    data: "Girdiğiniz özellikler; emsaller için CRM kitap kartları ve Logo satışı",
+    actions: ["Kitabın özelliklerini girip «Tahmin et»e basın; senaryoları, ilk baskı seçeneklerini ve emsalleri inceleyin."],
+  },
+
+  'path:/ilk-baski/kitap/:code': {
+    summary:
+      "Tek kitabın ilk 6 ve 12 aylık satış senaryoları, ilk baskı adedi önerisi, kanal dağılımı ve tahminin dayandığı emsal kitaplar.",
+    how: [
+      "Tahmin, kitaba en çok benzeyen ve daha önce çıkmış emsallerin gerçek satışından çıkar; güven düzeyi güçlü emsal sayısına bağlıdır.",
+      "Önerilen ilk baskı, ilk 6 ayın iyimser senaryosunun yayınevinin kullandığı en yakın üst baskı adedine yuvarlanmasıdır; asgari seçenek 6 aylık baz satıştır.",
+      "Çıkmış kitapta çıkıştan 2 ay önce yapılabilecek tahmin gerçekleşen satışla üst üste çizilir.",
+      "İlk baskı kararı satış ve üretim onayı ister; karar yalnız portalda saklanır, CRM'e ve Logo'ya yazılmaz.",
+    ],
+    data: "CRM kitap kartları, emsal bağları ve baskı adetleri; Logo kitap, ay ve kanal bazında satış",
+    refresh: "Tahmin verisi günde bir kez yeniden hazırlanır.",
+    actions: [
+      "Yayımlanacak kitapta yayın ayını değiştirip senaryoların nasıl değiştiğini görün.",
+      "6 ve 12 aylık birikimli satış grafiği arasında geçin.",
+      "İlk baskı adedini karar olarak kaydedip onaya gönderin; yetkiniz varsa onaylayın ya da geri çekin.",
+      "Emsal kitabın adına basarak onun tahminini açın.",
+    ],
+  },
+
   butce: {
     summary:
       "Kitap bazlı satış hedeflerini, yeni kitap programını ve departman bütçesini planlar; yürürlükteki plana göre gerçekleşmeyi izler ve sapmada uyarır.",
     how: [
-      "Zeki AI geçmiş veriden muhafazakâr, temel ve iyimser üç senaryolu taslak hazırlar; satırları elle düzeltebilirsiniz.",
+      "«Veriden öneri» geçmiş Logo satışından, CRM kitap kartlarından ve Zeki AI tahminlemeden kurala göre muhafazakâr, temel ve iyimser üç senaryolu taslak hazırlar; satırları elle düzeltebilirsiniz.",
       "Plan onaya gönderilir, gönderen dışında bir yetkili onaylar; yıl için tek bir plan yürürlükte olur.",
-      "Gerçekleşme hedefin verinin bittiği güne kadarki payıyla karşılaştırılır; %80'in altı sapma sayılır.",
+      "Gerçekleşme hedefin verinin bittiği güne kadarki payıyla karşılaştırılır; eşiğin (genelde %80) altı sapma, gider kaleminde bütçenin %100'ü aşım sayılır.",
       "Değişiklik gerekirse gerekçeli yeni bir revizyon açılır; önceki plan korunur.",
     ],
     data: "Logo faturalı satış satırları ve gider fişleri (masraf merkezi bazında), CRM kitap kartları",
@@ -305,7 +360,7 @@ const CONTENT: ScreenInfoMap = {
       { name: "Gerçekleşme ve sapma kontrolü", when: "Saatte bir", what: "Logo gerçekleşmesini okur, yürürlükteki planda sapmaları değerlendirir ve yeni uyarıları tek e-postayla bildirir." },
     ],
     actions: [
-      "Zeki AI önerisiyle taslak plan oluşturun ve düzenleyin.",
+      "«Veriden öneri hazırla» ile taslak plan oluşturun ve düzenleyin.",
       "Planı onaya gönderin, onaydan çekin; yetkiniz varsa onaylayın ya da geri gönderin.",
       "Yürürlükteki planı gerekçeyle revize edin.",
       "İzleme sekmesinde kitap, yayınevi ve departman sapmalarını inceleyin.",
@@ -334,6 +389,41 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  'path:/risk-uyum/risk/:id': {
+    summary:
+      "Tek riskin kartı: tanım, neden ve sonuç, olasılık × etki puanı, bağlı göstergeler, aksiyonlar ve gözden geçirme geçmişi.",
+    how: [
+      "Puanı yalnız insan verir; olasılık ve etki «Gözden geçir» ile değişir ve her değişiklik geçmişe yazılır.",
+      "Bağlı göstergelerin son değeri ve rengi Göstergeler sekmesindeki ölçümden gelir; gösterge kırmızıya dönünce risk gözden geçirme kuyruğuna düşer.",
+      "Zeki AI önerisi olan risk, siz kabul edip puanlayana kadar risk kaydına girmez.",
+    ],
+    data: "Portaldaki risk ve aksiyon kayıtları; göstergeler Logo, CRM ve portal modüllerinden ölçülür",
+    actions: [
+      "Riski gözden geçirin: olasılığı, etkiyi ve notunuzu girin.",
+      "Aksiyon ekleyin, sahibini ve terminini yazın; ilerlemeyi güncelleyin.",
+      "Riski düzenleyin ya da gösterge bağlayın.",
+      "Zeki AI önerisini kabul edip puanlayın ya da gerekçeyle reddedin.",
+    ],
+  },
+
+  'path:/bayi-risk/:code': {
+    summary:
+      "Tek bayinin risk kartı: segment ve skor, skorun bileşenleri, alacak yaşlandırması, 12 aylık seyir, CRM limiti, limit önerisi, aksiyonlar ve notlar.",
+    how: [
+      "Skor altı bileşenden kuralla hesaplanır; her bileşenin değeri ve puana katkısı «Neden bu segment» bölümünde yazar.",
+      "Vadesi geçmiş tutar yaklaşıktır: Logo'da tahsilatlar faturalarla tek tek eşlenmediği için bakiye en yeni vadelerden geriye dağıtılır.",
+      "Limit önerisini kural üretir, satış müdürü onaylar; CRM'deki limiti insan değiştirir.",
+      "Skor bir sınıflandırmadır, kredi kararı değildir.",
+    ],
+    data: "Logo bakiye, vade, çek olayları ve 12 aylık satış, iade, ödeme; CRM cari kartı, limit ve riske takılan siparişler",
+    refresh: "Skor her gün 06:00'da hesaplanır.",
+    actions: [
+      "Ziyaret öncesi «Risk brifi»ni açın.",
+      "Not bırakın ya da aksiyon açın.",
+      "Yetkiniz varsa limit önerisini onaylayın ya da reddedin.",
+    ],
+  },
+
   kurul: {
     summary:
       "Danışma ve yönetim kurulu için tek sayfa göstergeler, toplantı gündemi, karar ve aksiyon takibi ile dondurulmuş kurul paketi.",
@@ -353,6 +443,31 @@ const CONTENT: ScreenInfoMap = {
       "Size ait göstergeye yorum yazın, aksiyonunuzun durumunu güncelleyin.",
       "Kurul paketini derleyin, onaylayıp dondurun ve PDF olarak indirin.",
     ],
+  },
+
+  'path:/kurul/toplanti/:id': {
+    summary: "Tek kurul toplantısının sayfası: gündem, kurul paketi, kararlar ve aksiyonlar, toplantı notları.",
+    how: [
+      "Gündem maddeleri sıralanır; her maddeye sunan ve süre yazılabilir.",
+      "«Paketi derle» göstergelerin son ölçümünü, onaylı yorumları, gündemi, önceki kararları ve onaylı risk ve pazar özetlerini tek belgede toplar.",
+      "Dondurulan paket değişmez; düzeltme yeni sürüm olarak derlenir.",
+      "Kararla birlikte açılan aksiyonlar Kurul ekranındaki «Kararlar ve aksiyonlar» sekmesinden izlenir.",
+    ],
+    data: "Portaldaki toplantı, karar ve aksiyon kayıtları; paket için modüllerin onaylı çıktıları",
+    actions: ["Gündemi düzenleyin.", "Paketi derleyin ve paket sayfasını açın.", "Karar ve aksiyon kaydedin, toplantı notlarını yazın."],
+  },
+
+  'path:/kurul/paket/:id': {
+    summary:
+      "Kurul paketinin sayfası: göstergeler, yönetici özeti, gündem, önceki kararlar, risk ve pazar özetleri; dondurma ve dağıtım kaydı.",
+    how: [
+      "Yönetici özetini Zeki AI taslak olarak önerir; genel müdür düzeltip onaylar.",
+      "Yorumu olmayan renkli göstergeler uyarı olarak listelenir; yorum gelince paket yeniden derlenir.",
+      "Paket dondurulunca PDF'i hazırlanır; dondurulan paket ve PDF bir daha değişmez.",
+      "Portal paketi kimseye kendisi göndermez; dağıtım ve PDF indirmeleri kayıt altına alınır.",
+    ],
+    data: "Derleme anındaki gösterge ve yorumlar, gündem, kararlar; onaylı risk brifingi ve pazar özeti",
+    actions: ["Yönetici özetini isteyin, düzeltin ve onaylayın.", "Yetkiniz varsa paketi dondurun ve PDF'i indirin.", "Dağıtımı kaydedin."],
   },
 };
 

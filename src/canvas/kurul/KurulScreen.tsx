@@ -16,6 +16,7 @@ import {
 import { AskSheet, ColorBadge, Empty, KurulFrame, SelectInput, Tabs, TextInput } from './parts';
 import IndicatorTile from './IndicatorTile';
 import IndicatorSheet from './IndicatorSheet';
+import { Explain } from '../components/Explain';
 
 /** DYK: kurulun tek sayfası. Panel (bölüm kartları, kritik şerit), toplantılar, kararlar ve aksiyonlar, paketler; yetkiyle
  *  gösterge kataloğu ve kurul üyeleri. Sekme ve dönem adres çubuğunda. Telefonda tek sütun. */
@@ -50,10 +51,10 @@ export default function KurulScreen() {
   return (
     <KurulFrame
       title="Kurul"
-      lead="Şirketin durumu tek sayfada: göstergeler modüllerin onaylı çıktılarından gelir, kaynağı olmayan gri durur ve sayı yazmaz. Sahibi her rengin yanına yorumunu yazar; paket bir tuşla derlenir, dondurulunca değişmez. Kararlar ve aksiyonlar aynı kayıttan izlenir."
+      lead="Kurul için şirketin durumu tek sayfada: modüllerin onaylı sonuçlarından gelen göstergeler, toplantılar, kararlar, aksiyonlar ve dondurulan kurul paketi. Kaynağı olmayan gösterge gri kalır."
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
-      {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Sunucu bağlantısı yok; kurul verileri gösterilemiyor.</Note>}
+      {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı; biraz sonra sayfayı yenileyin.')}</Note>}
       <Tabs tabs={tabs} value={tab} onChange={(t) => update({ sekme: t === 'panel' ? null : t })} />
       {meta.data && tab === 'panel' && <PanelTab meta={meta.data} donem={params.get('donem') ?? ''} setDonem={(d) => update({ donem: d || null })} />}
       {meta.data && tab === 'toplantilar' && <MeetingsTab meta={meta.data} />}
@@ -87,7 +88,7 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
     onError: (e) => toast.error(errText(e, 'Ölçüm başlatılamadı.')),
   });
   if (q.isLoading) return <Loading />;
-  if (q.error) return <Note tone="err">{errText(q.error, 'Panel okunamadı.')}</Note>;
+  if (q.error) return <Note tone="err">{errText(q.error, 'Panel okunamadı; biraz sonra yeniden deneyin.')}</Note>;
   if (!q.data) return null;
   const p = q.data;
   const next = meetings.data?.siradaki;
@@ -103,6 +104,9 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
             <span className="font-bold text-canvas-ink">{p.donemAdi}</span>
           )}
           <span>
+            <Explain label="Gösterge renkleri" title="Renkler ne demek?">
+              Yolunda (yeşil): değer eşiğin iyi tarafında. İzlenmeli (sarı): uyarı eşiği aşıldı. Dikkat (kırmızı): kırmızı eşik aşıldı; sahibinin yorumu beklenir. Eşik yok: değer ölçüldü ama eşik tanımlı değil. Kaynak yok: kaynak modülde bu dönem için onaylı sonuç yok, sayı yazılmaz. Okunamadı: kaynak şu an okunamadı.
+            </Explain>{' '}
             {p.sayilar.toplam} göstergeden {p.sayilar.hazir} hazır, {p.sayilar.gri} kaynak yok{p.sayilar.hata ? `, ${p.sayilar.hata} okunamadı` : ''}
             <SqlInfo k={p.kaynaklar} alan="sayilar" label="Gösterge sayıları" className="ml-0.5" />
             {p.olcum ? ` · son ölçüm ${fmtTime(p.olcum.at)}` : ''}
@@ -126,7 +130,7 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
             Dikkat isteyenler <SqlInfo k={p.kaynaklar} alan="kritik[]" label="Dikkat isteyenler" />
           </h2>
           {p.kritik.length === 0 ? (
-            <Empty>Kırmızı gösterge yok.</Empty>
+            <Empty>Kırmızı gösterge yok; bu dönem dikkat isteyen bir rakam görünmüyor.</Empty>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {p.kritik.map((g) => (
@@ -158,7 +162,7 @@ function PanelTab({ meta, donem, setDonem }: { meta: KurulMeta; donem: string; s
               <SqlInfo k={meetings.data?.kaynaklar} alan="siradaki" label="Sıradaki toplantı" />
             </div>
           ) : (
-            <Empty>Planlanmış toplantı yok.</Empty>
+            <Empty>Planlanmış toplantı yok.{meta.me.canPrepare ? ' «Toplantılar» sekmesinden yeni toplantı açabilirsiniz.' : ''}</Empty>
           )}
         </Panel>
         <Panel>
@@ -266,9 +270,9 @@ export function MeetingSheet({ open, meta, initial, onClose, onSaved }: {
           <TextInput id="k-tarih" label="Tarih" type="date" value={f.tarih} onChange={(v) => setF({ ...f, tarih: v })} />
           <TextInput id="k-saat" label="Saat" type="time" value={f.saat} onChange={(v) => setF({ ...f, saat: v })} />
         </div>
-        <TextInput id="k-yer" label="Yer" value={f.yer} onChange={(v) => setF({ ...f, yer: v })} />
+        <TextInput id="k-yer" label="Yer" value={f.yer} onChange={(v) => setF({ ...f, yer: v })} placeholder="Ör. Genel merkez toplantı salonu" />
         {initial && <SelectInput id="k-durum" label="Durum" value={f.durum} onChange={(v) => setF({ ...f, durum: v })} options={meta.toplantiDurumlari} />}
-        <TextInput id="k-kat" label="Katılımcılar" value={f.katilimcilar} onChange={(v) => setF({ ...f, katilimcilar: v })} help="Virgülle adlar" area />
+        <TextInput id="k-kat" label="Katılımcılar" value={f.katilimcilar} onChange={(v) => setF({ ...f, katilimcilar: v })} help="Adları virgülle ayırın" placeholder="Ör. Ayşe Yılmaz, Mehmet Demir" area />
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
           <button type="submit" className={btnPrimary} disabled={!f.tarih || save.isPending}>Kaydet</button>
@@ -296,7 +300,7 @@ function ActionsTab({ meta }: { meta: KurulMeta }) {
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Aksiyonlar okunamadı.')}</Note>}
-      {q.data && (q.data.items.length === 0 ? <Empty>Bu süzgeçte aksiyon yok.</Empty> : (
+      {q.data && (q.data.items.length === 0 ? <Empty>Bu süzgeçte aksiyon yok. Kurul aksiyonları toplantı sayfasında kararla birlikte açılır.</Empty> : (
         <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {q.data.items.map((a) => <li key={a.id}><ActionCard a={a} meta={meta} k={q.data?.kaynaklar} alan="items[]" /></li>)}
         </ul>
@@ -358,7 +362,7 @@ function PackagesTab() {
   if (q.isLoading) return <Loading />;
   if (q.error) return <Note tone="err">{errText(q.error, 'Paketler okunamadı.')}</Note>;
   const items = q.data?.items ?? [];
-  if (!items.length) return <Empty>Paket yok. Paket toplantı sayfasında derlenir.</Empty>;
+  if (!items.length) return <Empty>Henüz kurul paketi yok. Paket, toplantı sayfasındaki «Paketi derle» ile hazırlanır.</Empty>;
   return (
     <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
       {items.map((p) => (
@@ -444,7 +448,7 @@ function IndicatorEdit({ g, meta, onClose }: { g: IndicatorDef; meta: KurulMeta;
         <TextInput id="gi-sahip" label="Sahip (portal hesabı)" value={f.sahip} onChange={(v) => setF({ ...f, sahip: v })} help="Bölüm yöneticisinin giriş adı; yorumu o yazar" />
         <TextInput id="gi-ep" label="Sahibin e-postası" value={f.eposta} onChange={(v) => setF({ ...f, eposta: v })} help="Yorum hatırlatması yalnız iç adrese gider" />
         <div className="grid grid-cols-2 gap-2">
-          <TextInput id="gi-sira" label="Sıra" value={f.sira} onChange={(v) => setF({ ...f, sira: v })} />
+          <TextInput id="gi-sira" label="Sıra" value={f.sira} onChange={(v) => setF({ ...f, sira: v })} help="Bölüm içindeki gösterim sırası; küçük sayı önce gelir" />
           <label className="mt-5 inline-flex min-h-11 items-center gap-2 text-[12.5px] font-bold">
             <input type="checkbox" className="h-4 w-4" checked={f.aktif} onChange={(e) => setF({ ...f, aktif: e.target.checked })} /> Panelde göster
           </label>

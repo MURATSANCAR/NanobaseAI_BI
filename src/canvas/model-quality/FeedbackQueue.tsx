@@ -18,6 +18,10 @@ export default function FeedbackQueue({ meta }: { meta: Meta }) {
   const q = useQuery({ queryKey: ['mq', 'queue', verdict, state, page], queryFn: () => mqApi.queue({ verdict, state, page }), enabled: ENGINE_ENABLED });
   return (
     <Panel>
+      <p className="mb-2 text-[12px] leading-snug text-canvas-muted">
+        Kullanıcıların cevapların altındaki «Doğru / Kısmen / Yanlış» işaretleri. Kısmen ve Yanlış olanlar bir hata sınıfına bağlanır; iş
+        bitince ya da gerek yoksa kapatılır. Cevaptaki veri satırları kişisel veri içerebileceği için burada gösterilmez.
+      </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:w-[560px]">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Hüküm</span>
@@ -47,7 +51,7 @@ export default function FeedbackQueue({ meta }: { meta: Meta }) {
         )}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.error && <Note tone="err">{errText(q.error, 'Kuyruk okunamadı.')}</Note>}
-        {q.data && !q.data.items.length && <Empty>Bu süzgeçte bildirim yok.</Empty>}
+        {q.data && !q.data.items.length && <Empty>Bu süzgeçte geri bildirim yok. Hüküm ya da durumu «Hepsi» yaparak aramayı genişletin.</Empty>}
         {q.data?.items.map((f) => <Item key={f.id} f={f} meta={meta} />)}
       </div>
       {q.data && q.data.total > q.data.size && (
@@ -92,7 +96,7 @@ function Item({ f, meta }: { f: FeedbackItem; meta: Meta }) {
           <div className="mt-1 flex flex-col gap-1.5">
             <div className="break-words">{qq.answerSummary ?? qq.error ?? '—'}</div>
             <div className="text-[11px] text-canvas-muted">
-              {qq.rowCount !== null ? `${qq.rowCount} satır · ` : ''}katalog v{qq.catalogVersion ?? '—'} · {fmtAt(qq.createdAt)}
+              {qq.rowCount !== null ? `${qq.rowCount} satır · ` : ''}veri sözlüğü v{qq.catalogVersion ?? '—'} · {fmtAt(qq.createdAt)}
             </div>
             <SqlBox sql={qq.sql} />
           </div>
@@ -110,7 +114,7 @@ function Item({ f, meta }: { f: FeedbackItem; meta: Meta }) {
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Not</span>
-            <input className={field} value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder="Ne yapıldı / yapılacak" />
+            <input className={field} value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder="ör. «iade» eş anlamlısı eklendi" />
           </label>
           <div className="flex flex-wrap gap-1.5">
             <button type="button" className={btnPrimary} disabled={decide.isPending || !klass}

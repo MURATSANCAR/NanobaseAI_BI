@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { STAGE_TONE, type Stage } from './api';
+import { EmptyHint } from '../components/Explain';
 
 /** Kurumsal satış ekranlarının kabuğu. `back` verilirse başlığın üstünde geri bağlantısı (fırsat sayfası). */
 export function CorporateFrame({
@@ -63,10 +64,5 @@ export function SourceLine({ children }: { children: ReactNode }) {
 
 /** Boş durum: ne olmadığını ve ne yapılacağını söyler. */
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 px-4 py-8 text-center">
-      <div className="text-[13px] font-extrabold">{title}</div>
-      {children && <div className="mx-auto mt-1 max-w-[56ch] text-[12px] leading-snug text-canvas-muted">{children}</div>}
-    </div>
-  );
+  return <EmptyHint title={title} why={children} />;
 }

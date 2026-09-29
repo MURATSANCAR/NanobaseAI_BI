@@ -7,7 +7,8 @@ import SearchSelect from '../../components/SearchSelect';
 import { Panel, Pager, useDebounced } from '../kit';
 import SqlInfo from '../../components/SqlInfo';
 import { productionApi, type ProdCard } from './api';
-import { Chain, STAGE_TONE, daysText, fmtDay, nextPoint, useProductionMeta, worstDelay } from './shared';
+import { Chain, ChainLegend, STAGE_TONE, daysText, fmtDay, nextPoint, useProductionMeta, worstDelay } from './shared';
+import { EmptyHint } from '../../components/Explain';
 
 const STATES = [
   { key: 'acik', label: 'Süren' },
@@ -168,7 +169,7 @@ export default function CardsTab({
       {list.isLoading && <Loading />}
       {list.data && list.data.items.length === 0 && (
         <div className="mt-3">
-          <Note tone="info">Bu süzgeçle üretim kartı yok.</Note>
+          <EmptyHint title="Bu süzgeçle üretim kartı yok" why="Durumu «Hepsi» yapın, matbaa, baskı türü ve ürün süzgeçlerini kaldırın ya da aramayı temizleyin." />
         </div>
       )}
       {list.data && list.data.items.length > 0 && (
@@ -177,6 +178,8 @@ export default function CardsTab({
           <SqlInfo k={list.data.kaynaklar} alan="total" label="Süzgece uyan kart" />
           <span aria-hidden>·</span> satırdaki adet, gecikme günü ve tarihler
           <SqlInfo k={list.data.kaynaklar} alan="items[]" label="Üretim kartları" />
+          <span aria-hidden>·</span> adımlar ve renkler
+          <ChainLegend />
         </p>
       )}
       {list.data && list.data.items.length > 0 && (

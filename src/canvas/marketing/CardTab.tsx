@@ -75,7 +75,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
         <p className="mt-2 text-[11px] text-canvas-muted">Esas alınan sıra: {meta.settings.dateOrder.map((x) => meta.dateSources[x] ?? x).join(' → ')} (Yönetim → Pazarlama planları).</p>
       </Block>
 
-      <Block title="Satış hedefi" help="Bütçe ve hedefler modülünün yürürlükteki planı." info={<SqlInfo k={c.kaynaklar} alan="hedef" label="Satış hedefi" />}>
+      <Block title="Satış hedefi" help="Bütçe planında bu kitap için onaylanmış, yürürlükteki hedef." info={<SqlInfo k={c.kaynaklar} alan="hedef" label="Satış hedefi" />}>
         {c.hedef.planId && c.hedef.adet != null ? (
           <div className="flex flex-wrap gap-4 text-[13px]">
             <div><span className="text-canvas-muted">Hedef adet</span> <strong className="font-mono">{fmtInt(c.hedef.adet)}</strong></div>
@@ -89,7 +89,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
 
       <Block
         title="Emsal kitaplar"
-        help="CRM'de editörün girdiği emsaller ve ilk baskı tahmininin benzerlik puanıyla seçtiği kitaplar. Satış net adettir (iade düşülmüş), ilk yayın ayından itibaren."
+        help="Emsal: bu kitaba benzeyen, daha önce yayımlanmış kitap. Editörün CRM'de girdiği emsaller ve ilk baskı tahmininin benzerlikle seçtiği kitaplar listelenir. Satış, ilk yayın ayından itibaren iadesi düşülmüş net adettir."
         info={<SqlInfo k={c.kaynaklar} alan="emsal" label="Emsal kitapların satışı" />}
       >
         {!em.hazir ? (
@@ -224,7 +224,7 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
       )}
 
       {c.ozelGunler.length > 0 && (
-        <Block title="Bağlı özel günler" help="Tarih, SEO sezon takviminin yöntemiyle (kural, CRM tarihi ya da hafta) hesaplandı; takvime iş olarak eklenir.">
+        <Block title="Bağlı özel günler" help="Kitabın konusuna uyan özel günler. Tarih kuralla, CRM'deki tarihten ya da haftadan hesaplanır; takvime iş olarak eklenir.">
           <ul className="flex flex-col gap-1 text-[12.5px]">
             {c.ozelGunler.map((d) => (
               <li key={`${d.ad}-${d.baslangic}`} className="flex flex-wrap items-center justify-between gap-2">

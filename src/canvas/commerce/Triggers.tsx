@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label } from
 import { Panel } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import {
   RUN_TONE, commerceApi, fmtDay, fmtInt, fmtRatio, paramText,
   type Channel, type Preview, type Run, type Trigger, type TriggerKind,
@@ -53,16 +54,20 @@ export default function Triggers() {
           Liste dışa aktarımı okur veri tabanı ayarında kapalı (hukuk teyidi bekleniyor). Tetik çalışır, liste onaylanır; dosya ayar açılınca alınır.
         </Note>
       )}
+      <p className="px-1 text-[12px] leading-snug text-canvas-muted">
+        Tetik, belirli durumdaki müşterileri bulan kuraldır (ör. uzun süredir sipariş vermeyenler, yeni çıkan kitabın kategorisinden alanlar).
+        Listeyi çalıştırınca müşterilerin küçük bir kısmı «kontrol grubu» olarak ayrılır ve onlara ulaşılmaz; kampanyanın etkisi iki grup karşılaştırılarak ölçülür.
+      </p>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[15px] font-extrabold">Tetikler</h2>
         {me?.canTrigger && !creating && (
-          <button type="button" className={btnPrimary} onClick={() => setCreating(true)}><Plus aria-hidden className="h-4 w-4" />Yeni tetik</button>
+          <button type="button" className={btnPrimary} onClick={() => setCreating(true)}><Plus aria-hidden className="h-4 w-4" />Yeni tetik kur</button>
         )}
       </div>
       {creating && <TriggerForm onDone={() => { setCreating(false); refresh(); }} />}
 
       {(triggers.data?.items ?? []).length === 0 && !creating && (
-        <Note tone="info">Henüz tetik yok. Yeni kitap, geri kazanım ya da ikinci sipariş tetiği kurulabilir; terk sepeti için site sepet verisi okunmuyor.</Note>
+        <EmptyHint title="Henüz tetik yok" why="Yeni kitap, geri kazanım ya da ikinci sipariş tetiği kurabilirsiniz. Terk edilen sepet tetiği için site sepet verisi okunmuyor." />
       )}
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         {(triggers.data?.items ?? []).map((t) => (
@@ -75,7 +80,7 @@ export default function Triggers() {
       <h2 className="mt-2 text-[15px] font-extrabold">Listeler</h2>
       {runs.error && <Note tone="err">{errText(runs.error, 'Listeler açılamadı.')}</Note>}
       {(runs.data?.items ?? []).length === 0 ? (
-        <p className="text-[12.5px] text-canvas-muted">Henüz çalıştırılmış liste yok.</p>
+        <EmptyHint title="Henüz çalıştırılmış liste yok" why="Bir tetiğin kartındaki «Listeyi çalıştır» ile ilk listeyi oluşturun; liste onaydan sonra kullanılabilir." />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
           {(runs.data?.items ?? []).map((r) => <RunCard key={r.id} r={r} excl={excl} onChange={refresh} k={runs.data?.kaynaklar} />)}
@@ -121,7 +126,7 @@ function TriggerCard({ t, p, excl, canTrigger, busy, running, onPreview, onRun, 
       {canTrigger && (
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={btnGhost} onClick={onPreview} disabled={busy}>
-            {busy && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Önizle
+            {busy && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Sayıları önizle
           </button>
           <button type="button" className={btnPrimary} onClick={onRun} disabled={running}>
             {running ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Play aria-hidden className="h-4 w-4" />}Listeyi çalıştır
@@ -206,9 +211,9 @@ function TriggerForm({ onDone }: { onDone: () => void }) {
             </label>
           </>
         )}
-        <label className="flex flex-col gap-1"><span className={label}>Kontrol grubu payı (0–0,5)</span>
-          <input className={field} inputMode="decimal" value={share} onChange={(e) => setShare(e.target.value)} />
-        </label>
+        <div className="flex flex-col gap-1"><span className={`${label} inline-flex items-center gap-1`}><label htmlFor="tetik-kontrol-payi">Kontrol grubu payı (0–0,5)</label><Explain label="Kontrol grubu payı">Listedeki müşterilerin ulaşılmayacak kısmının oranı (ör. 0,1 = %10). Kampanya sonucu, ulaşılanlarla bu grubun alışverişi karşılaştırılarak ölçülür.</Explain></span>
+          <input id="tetik-kontrol-payi" className={field} inputMode="decimal" value={share} onChange={(e) => setShare(e.target.value)} placeholder="Örn. 0,1" />
+        </div>
         <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
           <button type="submit" className={btnPrimary} disabled={create.isPending}>{create.isPending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Kaydet</button>
           <button type="button" className={btnGhost} onClick={onDone}>Vazgeç</button>
@@ -312,8 +317,8 @@ function CampaignForm({ run, onDone }: { run: Run; onDone: () => void }) {
       <label className="flex flex-col gap-1"><span className={label}>Başlangıç</span><input type="date" className={field} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       <label className="flex flex-col gap-1"><span className={label}>Bitiş (boşsa ayardaki pencere)</span><input type="date" className={field} value={end} onChange={(e) => setEnd(e.target.value)} /></label>
       <div className="flex items-end gap-2">
-        <button type="submit" className={btnPrimary} disabled={create.isPending}>Aç</button>
-        <Link to={`${ROOT}/kampanyalar`} className={btnGhost}>Sonuçlar</Link>
+        <button type="submit" className={btnPrimary} disabled={create.isPending}>Kampanyayı aç</button>
+        <Link to={`${ROOT}/kampanyalar`} className={btnGhost}>Sonuçlara git</Link>
       </div>
     </form>
   );

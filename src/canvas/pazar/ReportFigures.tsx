@@ -10,6 +10,7 @@ import { STATUS_TONE, fmtInt, fmtNum, pazarApi, type Category, type Figure, type
 import { CategorySelect, ROOT, useMeta } from './parts';
 import { ReadingBadge } from '../components/ReadingBadge';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** Bir raporun rakamları: Zeki AI önerisi → insan kararı (onayla, düzelt, reddet). Her rakam sayfa numarası ve kısa
@@ -82,7 +83,7 @@ export default function ReportFigures({ id }: { id: string }) {
             </button>
           ))}
         </div>
-        {items.length === 0 && <p className="mt-3 text-[12.5px] text-canvas-muted">Bu durumda rakam yok.</p>}
+        {items.length === 0 && <div className="mt-3"><EmptyHint title="Bu durumda rakam yok" why="Başka bir durum seçin. Yetkiniz varsa Zeki AI'ın kaçırdığı rakamı aşağıdaki «Elle rakam ekle» ile sayfa numarasıyla girebilirsiniz." /></div>}
         <ul className="mt-2 divide-y divide-slate-100">
           {items.map((f) => (
             <FigureItem

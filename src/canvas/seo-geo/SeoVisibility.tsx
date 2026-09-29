@@ -5,6 +5,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type GeoResult, type Question } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
+import { Term } from './terms';
 
 /** AI görünürlük (GEO): izlenen sorular yapay zekâ motorlarına resmî API'leriyle sorulur; Timaş anıldı mı, site kaynak
  *  gösterildi mi, hangi kitaplar geçti. Anahtarı girilmemiş motor ölçülmez ve ekranda sonuç uydurulmaz. */
@@ -42,7 +44,7 @@ export default function SeoVisibility() {
       crumb="Yapay zekâ görünürlüğü"
       eyebrow="SEO & GEO · yapay zekâ cevapları"
       title="Yapay zekâ cevaplarında Timaş"
-      lead="İzlenen sorular Gemini, ChatGPT, Perplexity ve Claude’a resmî API’leriyle sorulur; cevapta Timaş’ın anılıp anılmadığı, timas.com.tr’nin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir. Gemini ücretsiz katmanla çalışır; diğerleri anahtar girilirse ölçülür."
+      lead={<>Okurun soracağı sorular ChatGPT, Gemini, Perplexity ve Claude’a sorulur; cevapta Timaş’ın anılıp anılmadığı, sitenin kaynak gösterilip gösterilmediği ve hangi kitapların geçtiği kaydedilir. <Term k="geo" label="GEO" /></>}
       actions={
         canRun && <button className="sg-button primary" onClick={() => measure.mutate()} disabled={!active.length || measure.isPending || run?.running || !items.length}>
           {run?.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Play size={16} aria-hidden />}
@@ -59,20 +61,30 @@ export default function SeoVisibility() {
           {engines.map((e) => (
             <div key={e.id} className="sg-kpi">
               {/* Marka adı: Türkçe büyük harf «GEMİNİ» yazmasın. */}
-              <div className="sg-kpi-label" lang="en">{e.label}</div>
+              <div className="sg-kpi-label">
+                <span lang="en">{e.label}</span>
+                {e.configured && (
+                  <>
+                    {' '}
+                    <Explain label={`${e.label}: anılma ve kaynak`} title="Anılma ve kaynak oranı">
+                      Ölçülen sorulardan yüzde kaçının cevabında Timaş’ın ya da bir Timaş kitabının adı geçti (anılma) ve kaçında timas.com.tr’ye bağlantı verildi (kaynak). Hata veren cevaplar sayılmaz.
+                    </Explain>
+                  </>
+                )}
+              </div>
               {e.configured ? (
                 <>
                   <div className="sg-kpi-value sg-mono" style={{ fontSize: 20 }}>
                     {rate(e.id, 'mentioned')} <small>anılma</small>
                   </div>
                   <div className="sg-kpi-note">
-                    Kaynak {rate(e.id, 'cited')} · bugün {fmt(e.usedToday)} / {fmt(e.daily)} {e.free ? '(ücretsiz)' : '(ücretli)'}
+                    Kaynak {rate(e.id, 'cited')} · bugün {fmt(e.usedToday)} / {fmt(e.daily)} soru hakkı {e.free ? '(ücretsiz)' : '(ücretli)'}
                   </div>
                 </>
               ) : (
                 <>
                   <div className="sg-kpi-value" style={{ fontSize: 16, color: 'var(--sg-muted)' }}>Bağlı değil</div>
-                  <div className="sg-kpi-note">{e.free ? 'Ücretsiz anahtar: aistudio.google.com' : 'Ücretli; anahtar girilirse ölçülür'} · Yönetim → Yapay zekâ görünürlüğü</div>
+                  <div className="sg-kpi-note">{e.free ? 'Ücretsiz anahtar: aistudio.google.com' : 'Ücretli; anahtar girilirse ölçülür'} · Anahtar Yönetim → Yapay zekâ görünürlüğü bölümünde girilir</div>
                 </>
               )}
             </div>
@@ -83,7 +95,7 @@ export default function SeoVisibility() {
 
       <section className="sg-card">
         <h2>İzlenen sorular <SeoInfo k={list.data?.kaynaklar} label="İzlenen sorular" /></h2>
-        <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”. Her soru her motorda haftada bir sorulur.</p>
+        <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”. Her soru her serviste varsayılan olarak haftada bir sorulur. Soruya dokunun, cevapların tamamı ve kaynakları açılır.</p>
         {canRun && <form
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}
           onSubmit={(e) => {
@@ -92,10 +104,10 @@ export default function SeoVisibility() {
           }}
         >
           <label className="sg-search" style={{ flex: '3 1 320px' }}>
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Soru" aria-label="Soru" maxLength={500} />
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Soru, ör. ergenler için roman önerir misin?" aria-label="Soru" maxLength={500} />
           </label>
           <label className="sg-search" style={{ flex: '1 1 160px' }}>
-            <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Konu (isteğe bağlı)" aria-label="Konu" maxLength={80} />
+            <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Konu (isteğe bağlı), ör. çocuk" aria-label="Konu" maxLength={80} />
           </label>
           <button className="sg-button primary" type="submit" disabled={add.isPending || text.trim().length < 5}>
             {add.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Plus size={16} aria-hidden />} Soru ekle
@@ -103,17 +115,19 @@ export default function SeoVisibility() {
         </form>}
         {add.error && <Failed error={add.error} />}
         {list.data && !items.length && (
-          <div className="sg-empty">
-            <h2>Henüz soru yok</h2>
-            <p>İlk soruları ekleyin; kategori, yazar ve kitap konusu başına birkaç soru iyi bir başlangıçtır.</p>
-          </div>
+          <EmptyHint
+            title="Henüz izlenen soru yok"
+            why={canRun ? 'Yukarıdaki kutudan ilk soruları ekleyin; kategori, yazar ve kitap konusu başına birkaç soru iyi bir başlangıçtır. Soru önerileri ekranında hazır adaylar da var.' : 'Soru eklemek için ölçüm yetkisi gerekir; yöneticinize başvurun.'}
+          />
         )}
         {items.length > 0 && (
           <div className="sg-table-wrap">
             <table className="sg-table">
               <thead>
                 <tr>
-                  <th>Soru</th>
+                  <th>
+                    <ExplainLabel label="Soru">«anıldı»: cevapta Timaş ya da bir Timaş kitabı geçti. «yok»: geçmedi. «kaynak»: cevap timas.com.tr’ye bağlantı verdi. «ölçülmedi»: bu soru o servise henüz sorulmadı.</ExplainLabel>
+                  </th>
                   {engines.map((e) => (
                     <th key={e.id} style={{ textAlign: 'center' }}>{e.label.split(' ')[0]}</th>
                   ))}
@@ -175,7 +189,7 @@ function Cell({ r, configured }: { r?: GeoResult; configured: boolean }) {
 
 function Answers({ q, labels }: { q: Question; labels: Record<string, string> }) {
   const res = Object.entries(q.results ?? {});
-  if (!res.length) return <p style={{ color: 'var(--sg-muted)', margin: 0 }}>Bu soru henüz sorulmadı.</p>;
+  if (!res.length) return <p style={{ color: 'var(--sg-muted)', margin: 0 }}>Bu soru henüz hiçbir servise sorulmadı; gece ölçümünü bekleyin ya da «Şimdi ölç»e basın.</p>;
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       {res.map(([id, r]) => (
@@ -190,7 +204,7 @@ function Answers({ q, labels }: { q: Question; labels: Record<string, string> })
               <div className="sg-before" style={{ background: '#faf8fc', color: 'var(--sg-text)', maxHeight: 260 }}>{r.answer}</div>
               {r.sources.length > 0 && (
                 <p style={{ margin: '8px 0 0', fontSize: 11.5, wordBreak: 'break-all' }}>
-                  <b>Kaynaklar:</b> {r.sources.slice(0, 10).map((s) => s.title || s.url).join(' · ')}
+                  <b>Kaynaklar:</b> {r.sources.map((s) => s.title || s.url).join(' · ')}
                 </p>
               )}
             </>

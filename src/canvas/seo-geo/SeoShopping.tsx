@@ -7,6 +7,8 @@ import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint } from '../components/Explain';
+import { TermLabel } from './terms';
 
 /** Google Alışveriş hazırlığı: satıştaki ürünler Google'ın ürün verisi kurallarına göre denetlenir. Hiçbir yere
  *  gönderilmez; besleme dosyası elle yüklenmek içindir. */
@@ -89,7 +91,7 @@ export default function SeoShopping() {
       crumb="Google Alışveriş hazırlığı"
       eyebrow="SEO & GEO · Google Alışveriş"
       title="Google Alışveriş hazırlığı"
-      lead="Satıştaki her ürün Google Alışveriş’in ürün verisi kurallarına göre denetlenir: başlık, açıklama, görsel, stok, fiyat, barkod (ISBN), yayınevi ve CRM yayın durumu. Hiçbir yere gönderilmez; besleme dosyasını indirip Google’a elle yüklersiniz."
+      lead="Satıştaki ürünler Google Alışveriş sonuçlarına çıkmaya hazır mı: başlık, açıklama, görsel, stok, fiyat, barkod (ISBN), yayınevi ve CRM yayın durumu denetlenir. Hiçbir yere gönderilmez; ürün listesi dosyasını («besleme dosyası») indirip Google’a elle yüklersiniz."
       actions={
         canExport && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -121,6 +123,9 @@ export default function SeoShopping() {
             <Kpi label="Engelleyici" value={fmt(s.blocked)} note="Google reddeder ya da reklama çıkmamalı" tone={s.blocked ? 'bad' : undefined} onClick={() => setStatus(status === 'engelleyici' ? '' : 'engelleyici')} active={status === 'engelleyici'} info={<SeoInfo k={list.data?.kaynaklar} label="Engelleyici" />} />
             <Kpi label="Son T-soft okuması" value={dateTime(d.lastSync)} note="Denetim bu veriden yapılır" small info={<SeoInfo k={list.data?.kaynaklar} label="Son T-soft okuması" />} />
           </section>
+          <p className="sg-kpi-note" style={{ margin: '8px 0 0' }}>
+            «Hazır»: Google’ın kurallarına uyuyor. «Sorunlu»: kabul edilir ama uyarı alır ya da az gösterilir. «Engelleyici»: Google reddeder; önce bunlar düzeltilmeli. Karta dokunun, liste süzülsün.
+          </p>
           {!d.merchant && (
             <p className="sg-banner" style={{ marginTop: 12 }}>
               Google Merchant Center’dan henüz ürün durumu okunmadı; aşağıdaki denetim yalnız hazırlık içindir. Dosyada fiyat KDV dahil ve Türk lirasıdır, kitaplar Google kategorisi {d.bookCategory} (Medya › Kitaplar) ile işaretlenir.
@@ -149,7 +154,7 @@ export default function SeoShopping() {
               ))}
             </div>
           ) : (
-            <p className="sg-kpi-note">Hiçbir üründe sorun bulunmadı.</p>
+            <p className="sg-banner ok">Hiçbir üründe sorun bulunmadı.</p>
           )}
           {issue && <p className="sg-kpi-note" style={{ margin: '10px 0 0' }}>{s.issues.find((i) => i.code === issue)?.why}</p>}
         </section>
@@ -167,10 +172,7 @@ export default function SeoShopping() {
             </label>
           </div>
           {!d.items.length ? (
-            <div className="sg-empty">
-              <h2>Ürün yok</h2>
-              <p>Bu süzgeçle eşleşen satıştaki ürün bulunmadı.</p>
-            </div>
+            <EmptyHint title="Bu süzgece uyan ürün yok" why="Aramayı kısaltın, durum kartındaki seçimi ya da sorun türünü kaldırın." />
           ) : (
             <div className="sg-table-wrap">
               <table className="sg-table">
@@ -180,7 +182,7 @@ export default function SeoShopping() {
                     <th>Durum</th>
                     <th>Fiyat <SeoInfo k={list.data?.kaynaklar} label="Fiyat" /></th>
                     <th>Stok <SeoInfo k={list.data?.kaynaklar} label="Stok" /></th>
-                    <th>Barkod</th>
+                    <th><TermLabel k="gtin" label="Barkod" /></th>
                     <th>Sorunlar <SeoInfo k={list.data?.kaynaklar} label="Sorunlar" /></th>
                   </tr>
                 </thead>
@@ -370,10 +372,7 @@ function MerchantSection() {
       {refresh.error && <Failed error={refresh.error} />}
       {(d?.state.error || snap?.error) && <p className="sg-banner err">Son okuma başarısız: {d?.state.error || snap?.error}</p>}
       {d && !sum && !running && (
-        <div className="sg-empty">
-          <h2>Henüz okunmadı</h2>
-          <p>“Şimdi oku”ya basın; sonra kendiliğinden okunur.</p>
-        </div>
+        <EmptyHint title="Google’daki durum henüz okunmadı" why="«Şimdi oku»ya basın; sonra kendiliğinden okunur." />
       )}
       {d && sum && (
         <>
@@ -435,7 +434,7 @@ function MerchantSection() {
             {listTitle} <span className="sg-mono" style={{ fontSize: 13, color: 'var(--sg-muted)' }}>{fmt(d.total)}</span>
           </h3>
           {!d.items.length ? (
-            <p className="sg-kpi-note">Bu süzgeçle ürün yok.</p>
+            <EmptyHint title="Bu süzgece uyan ürün yok" why="Başka bir durum kartı ya da sorun türü seçin." />
           ) : (
             <div className="sg-table-wrap">
               <table className="sg-table">

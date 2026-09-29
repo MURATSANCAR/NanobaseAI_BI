@@ -73,7 +73,7 @@ _ready: set[int] = set()
 _lock = threading.Lock()
 CRM_FILE_DEFAULT = "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"
 SOURCE_NOTE = ("Benzerlik: CRM kitap kartının adı, kitaplığı, kategorileri, türleri, temaları ve arka kapak metninden "
-               "anlam benzerliği (yalnız sıralama). Satış rakamları ayrı SQL'den.")
+               "anlam benzerliği (yalnız sıralama). Satış rakamları benzerlikten bağımsız, her ekranda ayrıca okunur.")
 
 Embed = Callable[[list[str]], list[list[float]]]
 

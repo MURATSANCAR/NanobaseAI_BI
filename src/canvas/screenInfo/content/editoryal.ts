@@ -1,5 +1,20 @@
 import type { ScreenInfoMap } from '../types';
 
+/** Kapak arşivi: menü öğesi (`kapak-arsivi`) ve `path:/kitap-tasarim/kapak-arsivi` kalıbı aynı metni kullanır. */
+const KAPAK_ARSIVI: ScreenInfoMap[string] = {
+  summary:
+    "Timaş'ın yayımlanmış kitap kapakları, sitedeki kategori ve alt kategorilere göre. Kapak tarzını düşünürken örneklere buradan bakın.",
+  how: [
+    'Kapak ve kategori yolu sitedeki ürün kaydından, çizer, okur kitlesi, yaş ve tür CRM kitap kartından gelir; ikisi barkodla eşlenir.',
+    'Yalnız kitaplar girer; sitede artık bulunmayan eski kayıtlar gizlenir.',
+    'Seçtiğiniz kategori, arama ve okur kitlesi adres çubuğunda durur; bağlantıyı paylaşınca aynı görünüm açılır.',
+  ],
+  data: 'Sitedeki (T-soft) ürün kayıtları ve CRM kitap kartları.',
+  refresh: 'Her gece sitenin ürün eşitlemesi bittikten sonra kendiliğinden tazelenir.',
+  jobs: [{ name: 'Kapak arşivi beslemesi', when: 'Her gece, 03:00 site eşitlemesinin ardından', what: 'Sitedeki kitap kapaklarını ve CRM bilgisini arşive ekler, sitede olmayanları gizler.' }],
+  actions: ['Kategori ve alt kategori ağacında gezinin; okur kitlesine göre süzün.', 'Kapağa tıklayıp yazar, çizer, okur kitlesi ve türü görün.'],
+};
+
 /** Editoryal parça: başvurudan baskıya editoryal masa, çeviri, tasarım, dijital yayın, telif ve kişiler. */
 const CONTENT: ScreenInfoMap = {
   basvurular: {
@@ -24,8 +39,9 @@ const CONTENT: ScreenInfoMap = {
       "Yazar giriş sürecinin 9 adımı üç evrede: başvurudan editör raporuna, kurul kararından sözleşme ve stok kartına kadar her CRM projesi nerede, kimde bekliyor.",
     how: [
       "Her kart bir CRM projesidir; adım, CRM'deki kanıttan (editör, rapor, kurul kararı, sözleşme, üretim kaydı) çıkarılır.",
-      'Sütunda en uzun bekleyen proje üsttedir; bir adımda 14 günden uzun bekleyen proje «gecikmiş» sayılır.',
-      "CRM'de karşılığı olmayan adımlar (ör. «Yazara bildirdim») portalda işaretlenir.",
+      'Sütunda en uzun bekleyen proje üsttedir; bir adımda gecikme sınırından (varsayılan 14 gün) uzun bekleyen proje «gecikmiş» sayılır.',
+      "CRM'de karşılığı olmayan adımlar («Rapor bitti», «Yazara bildirdim») portalda işaretlenir; yanlış işaret proje sayfasından geri alınır.",
+      'Kartın altındaki çizgi 9 adımı gösterir: yeşil biten, mor şu anki, kırmızımsı gecikmiş adım.',
     ],
     data: "CRM proje kartları, kurul kayıtları ve eser katılımları; portaldaki adım işaretleri. CRM'e yazılmaz.",
     refresh: "CRM'den 5 dakikada bir kendiliğinden okunur.",
@@ -55,11 +71,12 @@ const CONTENT: ScreenInfoMap = {
       'Metin işleme ve redaksiyon: eser metni yüklenir, bölümlere ayrılır ve ölçülür; Zeki AI yazım ve üslup önerisi çıkarır, kararı editör verir.',
     how: [
       'Yüklenen metin bölümlere ayrılır; okunabilirlik gibi ölçüler bölüm bölüm çıkar.',
-      '«ZEKİ ile denetle» bölümün yazım ve üslup önerilerini çıkarır; her öneriyi siz kabul ya da ret edersiniz.',
+      '«Zeki AI ile denetle» bölümün yazım ve üslup önerilerini çıkarır; her öneriyi siz kabul eder ya da yok sayarsınız.',
       'Kabul edilen öneri metne işlenir; metnin ilk hâli saklanır ve farkta görünür.',
+      'Karar bekleyen önerisi olan bölüm onaylanamaz.',
     ],
     data: 'Yüklediğiniz metin dosyası (DOCX, PDF ya da TXT) ve portaldaki redaksiyon kayıtları.',
-    actions: ['Soldan eseri seçin ya da yeni metin yükleyin; yeni yükleme yeni sürüm açar.', 'Önerileri tek tek ya da toplu kabul edin.', 'Bölümü onaylayın ya da onayı geri alın.'],
+    actions: ['Soldan eseri seçin ya da yeni metin yükleyin; yeni yükleme yeni sürüm açar.', 'Önerileri tek tek kabul edin ya da yok sayın.', 'Bölümü onaylayın ya da onayı geri alın.'],
   },
 
   ceviri: {
@@ -69,13 +86,14 @@ const CONTENT: ScreenInfoMap = {
       'Kaynak metin cümle cümle bölünür; çevirmen ve inceleyen işi «Çeviri masam» ekranında görür.',
       'İstenirse Zeki AI ham taslak hazırlar ve otomatik denetimin bulduğu sorunları düzeltir; çevirmen bu taslaktan başlar.',
       'Kalite raporu işin gerçek kayıtlarından (onaylar, işaretlenen hatalar) hesaplanır.',
-      'Dışarıdan çalışan çevirmene çeviri dosyası verilir, dönen dosya yüklenir.',
+      'Portala girmeyen çevirmene XLIFF dosyası (çeviri programlarının ortak dosyası) verilir, dönen dosya yüklenir.',
     ],
-    data: 'Çeviri işleri, terimler ve bellek portalda tutulur.',
+    data: 'Çeviri işleri, terimler ve bellek portalda tutulur; çevirmen karnesi yalnız portaldaki işlerden hesaplanır.',
     actions: [
-      'Yeni çeviri işi açıp kaynak metni yükleyin ve çevirmen atayın.',
-      'Terim bankasını ve çeviri belleğini düzenleyin.',
-      'Kalite raporunu açın; biten çeviriyi redaksiyona gönderin.',
+      'Kaynak metni bırakıp yeni çeviri işi açın, çevirmen ve inceleyen atayın.',
+      'Terim bankasını ve çeviri belleğini düzenleyin; çevirmenin terim önerilerini onaylayın.',
+      'Serbest çalışan çevirmenin kelime ücretini girip onaylanan kelimeleri hakedişe aktarın.',
+      'Kalite raporunu açın; biten çeviriyi redaksiyona aktarın.',
     ],
   },
 
@@ -84,15 +102,37 @@ const CONTENT: ScreenInfoMap = {
       'Çevirmenin ve inceleyenin kendi ekranı: solda kaynak ve hedef cümleler, sağda terimler, çeviri belleği, Zeki AI taslağı ve otomatik denetim.',
     how: [
       'Etkin cümleye yazarsınız; yazdığınız metin 1,5 saniye sonra taslak olarak kendiliğinden kaydedilir.',
-      'Terim bankası ve çeviri belleği cümleye uyan önerileri gösterir; otomatik denetim sayı, özel ad ve terim tutarsızlıklarını işaretler.',
-      'İnceleyen cümleyi onaylar, hata işaretler ya da çevirmene geri gönderir.',
+      'Terim bankası ve çeviri belleği cümleye uyan önerileri gösterir; otomatik denetim kaydedilen çeviride sayı, terim, noktalama, boşluk ve uzunluk sorunlarını işaretler.',
+      'Çevirmenin onayladığı cümle «Çevrildi» olur; inceleyen onaylar, hata işaretler ya da çevirmene geri gönderir.',
     ],
-    data: 'Size atanmış çeviri işlerinin kayıtları.',
+    data: 'Size çevirmen ya da inceleyen olarak atanmış çeviri işlerinin kayıtları.',
     actions: [
       'Cümleyi onaylayıp sonrakine geçin (⌘/Ctrl+Enter).',
-      'Terimi metne ekleyin ya da Zeki AI taslağını kullanın.',
+      'Terimi metne ekleyin, terim önerin ya da Zeki AI taslağını kullanın.',
       'İnceleme kipinde hata işaretleyin ya da çevirmene geri gönderin.',
     ],
+  },
+
+  'path:/ceviri/masam/:jobId': {
+    summary: 'Tek çeviri işinin masası: bölüm bölüm cümleler (segment), solda kaynak, sağda çeviri; terimler, benzer eski çeviriler ve denetim yanda.',
+    how: [
+      'Çeviri kipinde yazdığınız metin 1,5 saniye sonra taslak olarak kaydedilir; «Onayla ve geç» cümleyi «Çevrildi» yapar.',
+      'İnceleme kipinde inceleyen cümleyi onaylar, düzeltir, hata işaretler ya da çevirmene geri gönderir.',
+      '«Göster» süzgeciyle boş, taslak, onay bekleyen ya da uyarılı cümlelere odaklanabilirsiniz.',
+    ],
+    data: 'Bu çeviri işinin cümleleri, terim bankası ve çeviri belleği.',
+    actions: ['Cümleyi çevirip onaylayın (⌘/Ctrl+Enter).', 'Zeki AI taslaklarını boş cümlelere yerleştirin.', 'XLIFF dosyasını indirin ya da dönen dosyayı yükleyin.'],
+  },
+
+  'path:/ceviri/:jobId/kalite': {
+    summary: 'Bir çeviri işinin kalite raporu: inceleme puanı, düzeltme oranı, otomatik uyarılar, terim uyumu, bölüm ve gün gün ilerleme.',
+    how: [
+      'İnceleme puanı (MQM) inceleyenin işaretlediği hataların ağırlığından hesaplanır; 100 hatasız demektir.',
+      'Zeki AI kalite tahmini ayrı bir bölümdür ve tahmin olarak işaretlidir; inceleme puanının yerine geçmez.',
+      'Segment numarasına dokununca o cümle çeviri masasında açılır.',
+    ],
+    data: 'Bu çeviri işinin onay, hata ve ilerleme kayıtları.',
+    actions: ['Hataları ve uyarılı cümleleri açıp düzeltin.', 'Raporu CSV olarak indirin.'],
   },
 
   cevirmenler: {
@@ -112,12 +152,13 @@ const CONTENT: ScreenInfoMap = {
     how: [
       "Prova PDF'inden sayfa sayısı, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma kendiliğinden ölçülür.",
       'Gözle kontrol maddeleri elle işaretlenir; imza o prova dosyasına atılır, yeni prova imzaları sıfırlar.',
-      'Zeki AI kitabın metnini okuyup denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez.',
+      'Zeki AI kitabın metnini okuyup denetimleri yapar; bulgular yalnız öneridir, kontrol listesini etkilemez.',
+      '«Belge incele» ile yüklenen Word, PDF ya da metin belgesinde kelime tekrarı, kalıp ifade gibi metin denetimleri yapılır; belgeyi yalnız yükleyen ve yönetici görür.',
       'Matbaaya gönderim ya da başka bir sisteme aktarım yoktur.',
     ],
-    data: "Yüklediğiniz prova dosyası, Zeki AI'ın okuduğu kitap metni ve portaldaki onay kayıtları.",
+    data: "Yüklediğiniz prova dosyası ve belgeler, Zeki AI'ın okuduğu kitap metni ve portaldaki onay kayıtları.",
     actions: [
-      'Prova dosyasını yükleyin ve ölçülen maddelere bakın.',
+      '«Baskı provası»nı seçip prova PDF\'ini yükleyin ve ölçülen maddelere bakın.',
       'Zeki AI bulgusuna tıklayıp sayfadaki yeri görün, kararınızı verin.',
       'Bulguları Word yorumu olarak işlenmiş dosyada indirin.',
       'Kontrol maddelerini işaretleyip imzanızı atın.',
@@ -129,29 +170,96 @@ const CONTENT: ScreenInfoMap = {
       'Kitap Tasarım Stüdyosu: kitabın metninden baskıya hazır iç sayfa ve kapak; sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi.',
     how: [
       "Word dosyası yüklersiniz ya da Zeki AI'ın okuduğu bir kitabı seçersiniz; kitap bilgisi, yaş ve tür CRM'den gelir.",
-      'Resim kullanımını seçersiniz: her sayfa resimli, yalnız bölüm başları ya da resimsiz.',
-      'Resimli tasarım yaklaşık 40 dakika sürer; resimsiz yerleşim ve dizgi birkaç dakikadır.',
-      'Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz.',
+      'Resim kullanımını seçersiniz: otomatik (önerilen), her sayfa resimli, yalnız bölüm başları ya da resimsiz.',
+      'Resimli tasarım yaklaşık 40 dakika sürer; resimsiz yerleşim ve dizgi birkaç dakikadır. İş arka planda sürer, sayfadan ayrılabilirsiniz.',
+      'Başka bir kitabın resimleri çiziliyorsa yeni tasarım sırada bekler ve kendiliğinden başlar.',
+      'Her sayfanın resmini düzeltebilir ya da yeniden çizdirebilirsiniz.',
     ],
     data: "Yüklenen Word dosyası ya da okunmuş kitap metni ve CRM kitap kartı.",
+    refresh: 'Tasarımlar listesi birkaç saniyede bir kendiliğinden yenilenir.',
     actions: [
-      '«Word dosyası yükle» ya da listeden kitap seçip «Yeni tasarımı başlat».',
+      'Word dosyasını bırakın ya da listeden kitap seçip «Yeni tasarımı başlat»a basın.',
       'Önceki tasarımları açıp sayfaları ve kapağı düzenleyin.',
       'Kapak arşivine geçip örneklere bakın.',
     ],
   },
 
-  'kapak-arsivi': {
+  'kapak-arsivi': KAPAK_ARSIVI,
+
+  // Kitap tasarım alt sayfaları (menüde yok). Arşiv kalıbı iş kalıbından ÖNCE gelmeli: `/kitap-tasarim/:jobId`
+  // kalıbı `/kitap-tasarim/kapak-arsivi` adresine de uyar, kalıplar sırayla denenir.
+  'path:/kitap-tasarim/kapak-arsivi': KAPAK_ARSIVI,
+
+  'path:/kitap-tasarim/:jobId': {
     summary:
-      "Timaş'ın yayımlanmış kitap kapakları, sitedeki kategori ve alt kategorilere göre. Kapak tarzını düşünürken örneklere buradan bakın.",
+      "Bir kitap tasarımının durumu: kitabın metni, CRM'deki kitap bilgisi, tasarım kararları, üretim adımları, sayfalar, künye ve ön baskı denetimi.",
     how: [
-      'Kapak ve kategori yolu sitedeki ürün kaydından, çizer, okur kitlesi, yaş ve tür CRM kitap kartından gelir; ikisi barkodla eşlenir.',
-      'Yalnız kitaplar girer; sitede artık bulunmayan eski kayıtlar gizlenir.',
+      'Zeki AI kitabı okur; yaşa ve türe göre kitap ölçüsü, yazı tipi ve resim kararlarını verir, her kararın gerekçesini yazar.',
+      'Adımlar arka planda sırayla yapılır; sayfadan ayrılabilirsiniz. Başka bir kitabın resimleri çiziliyorsa tasarım sırada bekler ve kendiliğinden başlar.',
+      'İş yarıda durursa «Kaldığı yerden devam et» çizilmiş resimleri korur; «Baştan başlat» aynı kitapla yeni bir tasarım açar.',
+      'Künyede eksik alan kalırsa ön baskı denetimi geçmez; baskı PDF\'i denetim geçince üretilir.',
     ],
-    data: 'Sitedeki (T-soft) ürün kayıtları ve CRM kitap kartları.',
-    refresh: 'Her gece sitenin ürün eşitlemesi bittikten sonra kendiliğinden tazelenir.',
-    jobs: [{ name: 'Kapak arşivi beslemesi', when: 'Her gece, 03:00 site eşitlemesinin ardından', what: 'Sitedeki kitap kapaklarını ve CRM bilgisini arşive ekler, sitede olmayanları gizler.' }],
-    actions: ['Kategori ve alt kategori ağacında gezinin.', 'Kapağa tıklayıp yazar, çizer, okur kitlesi ve türü görün.'],
+    data: 'Yüklenen Word dosyası ya da okunmuş kitap metni ve CRM kitap kartı.',
+    refresh: 'İş sürerken birkaç saniyede bir kendiliğinden yenilenir.',
+    actions: [
+      'Resim kullanımını değiştirin; sayfa yerleşimi yeniden kurulur.',
+      'Künyedeki eksik alanları, kitap adını ve yazarı düzeltin.',
+      "İç sayfa, kapak ve baskı PDF'ini indirin.",
+      '«Stüdyoya geç» ile resimleri inceleyip onaylayın.',
+    ],
+  },
+
+  'path:/kitap-tasarim/:jobId/studyo': {
+    summary:
+      'Sayfa stüdyosu: dizilmiş kitabı açılım açılım görür, her resmi düzelttirir ya da yeniden çizdirir ve onaylarsınız. Pazarlama metinleri, e-kitap, sesli okuma ve baskı provası da buradadır.',
+    how: [
+      '«Düzelt» seçili resmi temel alıp yalnız yazdığınız değişikliği yapar; «Farklı çiz» sayfanın metninden sıfırdan yeni resim çizer.',
+      'Her yeni çizim ayrı bir sürüm olarak saklanır, seçili olur ve onayınızı bekler.',
+      "Bütün resimler onaylanıp ön baskı denetimi geçince matbaaya gidecek baskı PDF'i üretilir.",
+      'Resim çizdirmek «Kitap tasarımında üretim» yetkisi ister; yetkisi olmayanlar inceleyip onaylayabilir.',
+    ],
+    data: 'Tasarım işinin kendi kaydı: sayfalar, resim sürümleri ve onaylar.',
+    refresh: 'Resim çizilirken birkaç saniyede bir kendiliğinden yenilenir.',
+    actions: [
+      'Resmi düzelttirin, yeniden çizdirin ya da onaylayın.',
+      'Sayfa düzeni, karakterler ve kapak tarzı ekranlarına geçin.',
+      "İç sayfa, kapak ve baskı PDF'ini indirin.",
+      'Arka kapak yazısı, e-kitap, sesli okuma ve 3B prova bölümlerini kullanın.',
+    ],
+  },
+
+  'path:/kitap-tasarim/:jobId/sayfalar': {
+    summary:
+      'Sayfa düzeni: iç sayfaları ekler, siler, sıralarsınız; resim, yazı, balon, figür, fotoğraf ve süsleri sayfaya yerleştirirsiniz.',
+    how: [
+      'Her değişiklik kendiliğinden kaydedilir; bağlantı koparsa değişiklikler bu cihazda bekler, bağlantı gelince gönderilir.',
+      'Aynı sayfayı başkası da değiştirdiyse hangisinin kalacağını siz seçersiniz.',
+      'Her kayıt ayrı bir sürümdür; «Geçmiş» sekmesinden eski bir sürüme dönebilirsiniz.',
+      'Telefonda sayfa yalnız görüntülenir; ögeye dokunup düzenleme alanlarından değiştirirsiniz.',
+    ],
+    data: 'Tasarım işinin sayfa planı ve kütüphanesi (figür ve fotoğraflar).',
+    actions: [
+      'Sayfa ekleyin, silin ya da sürükleyerek sıralayın.',
+      'Fotoğraf yükleyin ya da Zeki AI ile figür çizdirin.',
+      'Balon önerisi alın; yazıyı, renkleri ve yerleşimi düzenleyin.',
+      'Geri alın (Ctrl/Cmd+Z) ya da eski bir sürüme dönün.',
+    ],
+  },
+
+  'path:/kitap-tasarim/:jobId/kapak': {
+    summary:
+      'Kapak: ön kapağın tarzını seçersiniz: resimli, kolaj ya da tipografik (yalnız yazı). Arka kapak, sırt ve barkod her tarzda aynıdır.',
+    how: [
+      'Resimli kapak, Sayfa stüdyosundaki kapak resmiyle kurulur; resmi orada düzeltebilirsiniz.',
+      'Kolajda siyah-beyaz fotoğraf yırtık kâğıt gibi kesilir, başlık daktilo şeritlerine yazılır; fotoğrafı Zeki AI üretir ya da siz yüklersiniz.',
+      "Zeki AI'ın ürettiği fotoğrafla kurulan kolaj, ticari kullanım izni gelene kadar taslaktır; yüklediğiniz fotoğraf taslak sayılmaz.",
+    ],
+    actions: [
+      'Kapak tarzını seçin.',
+      'Kolajda fotoğraf adayı isteyin ya da yükleyin, «Başka düzen» deneyin.',
+      'Başlığın şeritlere bölünüşünü düzenleyin.',
+      "Kapak PDF'ini indirin.",
+    ],
   },
 
   'dijital-yayin': {
@@ -184,6 +292,31 @@ const CONTENT: ScreenInfoMap = {
     ],
     data: "Yüklediğiniz platform raporları (Excel/CSV) ve Logo'daki e-kitap faturaları. Hiçbir sisteme yazılmaz.",
     actions: ['Yeni satış raporu yükleyin.', 'Eşleşmeyen satırları kitaplara eşleyin ve raporu onaylayın.', 'Önizlemedeki raporu silin ya da onaylı raporu iptal edin.'],
+  },
+
+  'path:/dijital-yayin/kitap/:id': {
+    summary:
+      'Tek kitabın dijital kartı: kimlik ve e-kitap dosyası, e-kitap ve sesli kitap hakları, sözleşme notları ve telif kararı, platform durumu, dijital fiyat kararı ve dijital satış.',
+    how: [
+      "Hak bilgisi CRM sözleşmelerinden gelir; hak notu olan sözleşme kendiliğinden «hak var» sayılmaz, kararı telif birimi yazar.",
+      'Platform durumunu siz girersiniz ya da onaylı satış raporundan gelir; geçmişi saklanır.',
+      "Dijital fiyat kararı platformlara gönderilmez; platform girişinin ve CRM kaydının dayanağıdır.",
+      "Portal CRM'e yazmaz; eksik alanlar «CRM'e işlenecek» listesinde durur.",
+    ],
+    data: "CRM kitap kartı ve telif sözleşmeleri, Logo satışı, onaylı platform raporları, Kitap Tasarım Stüdyosu e-kitapları",
+    actions: ['Platform durumunu güncelleyin.', 'Yetkiniz varsa hak notu için telif kararı yazın.', 'Yetkiniz varsa dijital fiyat kararını kaydedin.'],
+  },
+
+  'path:/dijital-yayin/firsatlar': {
+    summary:
+      'E-kitap ya da sesli kitap olarak çıkarmaya değer kitaplar: dijital hakkı temiz, dijital sürümü olmayan ve son 12 ayda basılıda iyi satan kitaplar.',
+    how: [
+      'Eşik, son 12 aydaki basılı satış adedidir; sesli kitap adaylarında tür süzgeci de uygulanabilir.',
+      'Puan, kitabın basılı satışta öteki kitaplar arasındaki yerini 0–100 arasında gösterir.',
+      'Hakkı eksik, yok ya da incelenmesi gereken kitap listeye girmez; eşik ve türler yönetim ekranından değişir.',
+    ],
+    data: 'CRM telif sözleşmeleri ve kitap kartları, Logo faturalı satış',
+    actions: ['E-kitap ve sesli kitap sekmeleri arasında geçin.', 'Kitabı açıp ayrıntısına bakın.', 'Yetkiniz varsa listeyi CSV olarak indirin.'],
   },
 
   'serbest-calisanlar': {
@@ -237,7 +370,8 @@ const CONTENT: ScreenInfoMap = {
     summary:
       'Yazarlarla ve aday yazarlarla temasın kaydı: yazar kartı, randevu ve görüşme notu, aday havuzu ve kimle ne zaman görüşüldüğünü gösteren ısı haritası.',
     how: [
-      'Isı puanı yalnız insan temasından hesaplanır: son görüşmenin yakınlığı, son 12 aydaki görüşme sayısı ve son görüşmelerin tonu.',
+      "Isı puanı 100 üzerinden: son temasın yakınlığı (görüşme ya da CRM'deki yeni eser, sözleşme), son 12 aydaki görüşme sayısı ve son görüşmelerin tonu; sıklık ve ton yalnız görüşmeden gelir.",
+      "Sadakat yalnız CRM'den hesaplanır: birlikte geçen yıllar, kitap sayısı, süreklilik ve yürürlükteki sözleşme.",
       "Aday havuzu, henüz yazar olmayan kartlarla CRM'de bir projenin olası yazarı olan kişilerden oluşur.",
       '«Yalnız ben ve katılımcılar» işaretli notun metni başkasına görünmez.',
     ],
@@ -285,9 +419,52 @@ const CONTENT: ScreenInfoMap = {
     ],
   },
 
+  'path:/telif-sozlesme/yeni': {
+    summary: 'Yeni telif ya da lisans sözleşmesinin taslağını açtığınız ekran. Taslak portalda tutulur, CRM\'e yazılmaz.',
+    how: [
+      'Taraflar ve kitaplar CRM\'den aranıp eklenir ya da elle yazılır; oran, avans, süre ve haklar formdan girilir.',
+      'İsterseniz imzalı ya da gelen sözleşmeyi yükleyin: şartlar belgedeki cümlesiyle önerilir, forma siz aktarırsınız.',
+      'Seçilen şablon sözleşme metnini üretir; şartlar imzaya kadar serbestçe düzenlenir.',
+    ],
+    data: 'CRM kişi, firma ve kitap kayıtları (yalnız okunur); taslak portalda.',
+    actions: ['Sözleşme adını ve şartları girip «Taslağı aç»a basın.', 'Belgeden şartları okutun.'],
+  },
+
+  'path:/telif-sozlesme/odemeler': {
+    summary: 'Bütün sözleşmelerin avans, tek ödeme ve hakediş ödemeleri vadesine göre; vadesi geçenler ayrıca sayılır.',
+    how: [
+      'Hakediş ödemeleri, sözleşmedeki hakediş onaylanınca kendiliğinden eklenir; avans ve tek ödeme sözleşme sayfasından planlanır.',
+      '«Ödendi» bilgisi finans yetkisiyle girilir ve portalda tutulur; Logo\'ya yazılmaz.',
+    ],
+    data: 'Portaldaki sözleşme ödeme takvimi.',
+    actions: ['Durum, vade aralığı ve türe göre süzün.', 'Yapılan ödemeyi tarih ve tutarıyla «Ödendi» işaretleyin.'],
+  },
+
+  'path:/telif-sozlesme/sablonlar': {
+    summary: 'Sözleşme, zeyilname ve hakediş bildirimi metinlerinin kalıpları; belge üretilirken şablondaki alanlar sözleşme şartlarıyla dolar.',
+    how: [
+      'Word şablonu yüklenebilir ya da metin şablonu yazılır; çift süslü parantezle yazılan alanlar ({{taraflar}} gibi) değerle değiştirilir.',
+      'Her kayıt şablonun sürümünü bir artırır; sözleşme hangi sürümden üretildiğini geçmişine yazar.',
+      'Kullanılmayan şablon arşive alınır, gerekirse geri çıkarılır.',
+    ],
+    data: 'Portaldaki şablon kütüphanesi.',
+    actions: ['Word şablonu yükleyin ya da «Yeni şablon» açın.', 'Şablonu örnek değerlerle önizleyin.'],
+  },
+
+  'path:/telif-sozlesme/:key': {
+    summary: 'Tek sözleşmenin sayfası: şartlar, metin, zeyilnameler, ödeme takvimi, hakediş ve değişiklik geçmişi.',
+    how: [
+      'CRM sözleşmesi ilk düzenlemede portala alınır; portal CRM\'e yazmaz, farklar «CRM\'e işlenmesi gereken» diye gösterilir.',
+      'Yürürlükteki sözleşmenin şartı yalnız zeyilnameyle değişir; kayıt hatası düzeltmesi gerekçe ister.',
+      'Hakediş dönem seçilerek Logo satışından (ya da girilen baskı adedinden) hesaplanır; onaylanınca ödeme takvimine düşer.',
+    ],
+    data: 'CRM sözleşme kartı, Logo satışları ve portaldaki sözleşme kaydı.',
+    actions: ['Şartları düzenleyin ya da durumu değiştirin.', 'Zeyilname açın, ödeme planlayın, hakediş hesaplayın.', 'Sözleşmeyi, zeyilnameyi ya da telif bildirimini Word olarak indirin.'],
+  },
+
   'telif-donem': {
     summary:
-      'Satıştan ödemeli bütün sözleşmelerin dönem telifi tek koşuda hesaplanır; yalnız istisnalarla uğraşırsınız. Onaylanan koşu hakedişi ve ödeme takvimini oluşturur.',
+      'Satıştan telif ödenen bütün sözleşmelerin dönem telifi tek seferde (koşu) hesaplanır; yalnız istisnalarla uğraşırsınız. Onaylanan koşu hakedişi ve ödeme takvimini oluşturur.',
     how: [
       'Kapsamdaki her sözleşme koşuda bir satırdır: hesaplandı, istisna ya da hariç (kim, neden).',
       'Hesaplatan ve onaya gönderen kişi koşuyu onaylayamaz; onaylı koşu değişmez, sonradan gelen iade sonraki döneme girer.',
@@ -314,8 +491,8 @@ const CONTENT: ScreenInfoMap = {
     summary:
       'Kitabın hangi hakkı elimizde, hangi dil ve ülkede lisans verildi, ne zaman bitiyor: hak kartı, verilen lisanslar ve hak açıklamaları.',
     how: [
-      "Hak bitleri CRM telif sözleşmelerinden okunur; dil/ülke kaydı ve verilen lisanslar portalda tutulur.",
-      'Sözleşmedeki serbest metinli hak açıklamalarını Zeki AI sınıflar; emin olmadığı açıklama «incelenecek» kalır, sınıfı telif uzmanı onaylar.',
+      "Haklar CRM telif alış sözleşmelerinden okunur: yürürlükteki bütün sözleşmelerde işaretliyse «Var»; dil/ülke kaydı ve verilen lisanslar portalda tutulur.",
+      'Sözleşmedeki serbest metinli hak açıklamalarını Zeki AI sınıflar ve hak haritası çıkarır; emin olmadığı açıklama «incelenecek» kalır, son onay telif uzmanındadır.',
       'Açıklamanın metni değişmedikçe yeniden sınıflanmaz; aynı sınıf dijital yayın ekranında da kullanılır.',
     ],
     data: "CRM telif sözleşmeleri ve portaldaki hak ve lisans kayıtları. CRM'e yazılmaz.",
@@ -368,6 +545,55 @@ const CONTENT: ScreenInfoMap = {
     actions: ['İletiyi sorumluya atayın, kapatın ya da arşivleyin.', 'Dosya başvurusunu yazar giriş sürecine aktarın.', 'Rapor, kurallar ve etiketleme ekranlarına geçin.'],
   },
 
+  'path:/kurumsal-eposta/ileti/:id': {
+    summary:
+      'Tek ileti: gönderen ve CRM eşleşmesi, Zeki AI özeti ve türü, ileti metni ve ekleri, yanıt taslağı, sorumlu kişi ve durum.',
+    how: [
+      'Tür ve önceliği Zeki AI önerir; türü değiştirirseniz düzeltme doğruluk ölçümüne yazılır.',
+      'Sorumlu kişi yönlendirme kurallarından önerilir; atamayı yetkisi olan kişi yapar.',
+      'Yanıt taslağını Zeki AI yazar; kopyalayıp kutudan siz gönderirsiniz. Portal ileti göndermez, taslağı ve ileti gövdesini saklamaz.',
+      'Kutudan gönderilen yanıt yazışma zincirinden kendiliğinden okunur.',
+    ],
+    data: 'timas@ kutusu (yalnız okuma) ve CRM kişi ve firma kayıtları.',
+    actions: ['Türü düzeltin, iletiyi bir kişiye atayın.', 'Yanıt taslağı yazdırıp kopyalayın.', 'Başvuru iletisini yazar giriş sürecine ya da İK aday kaydına aktarın.', 'Durumu değiştirin: kapatın, arşivleyin ya da yeniden açın.'],
+  },
+
+  'path:/kurumsal-eposta/rapor': {
+    summary:
+      'Seçtiğiniz tarih aralığında gelen iletilerin türe göre sayısı, ilk yanıt ve kapanış süreleri, hedef sürede yanıt oranı ve kişi ya da birime göre dağılımı.',
+    how: [
+      "Süreler iş saatiyle sayılır; «takvim» sütunu gece ve hafta sonunu da sayar.",
+      'Yanıt zamanı kutudaki yazışma zincirinden okunur.',
+      'Rakamlar portal kayıtlarından hesaplanır.',
+    ],
+    data: 'Portalın ileti kayıtları',
+    actions: ['Tarih aralığını seçin.'],
+  },
+
+  'path:/kurumsal-eposta/kurallar': {
+    summary:
+      'İleti türleri, her tür için sorumlu kişi ve birim, hatırlatma ve eskalasyon süreleri ve yanıt şablonları.',
+    how: [
+      "Zeki AI yalnız bu listedeki türlerden seçer; tür açıklaması Zeki AI'a gider.",
+      'Değişiklik taslak olarak kaydedilir, başka bir yetkili onaylayınca yürürlüğe girer.',
+      'İş saatleri ve varsayılan süreler Yönetim ekranındadır; otomatik «alındı» yanıtı yoktur.',
+    ],
+    data: 'Portalın kural kayıtları',
+    actions: ['Tür, yönlendirme ve şablonları düzenleyip taslak kaydedin.', 'Yetkiniz varsa taslağı yürürlüğe alın.'],
+  },
+
+  'path:/kurumsal-eposta/etiketleme': {
+    summary:
+      "İletilere doğru türü siz verirsiniz; Zeki AI'ın önerisi bilerek gösterilmez. Etiketler Zeki AI'ın ne kadar doğru tahmin ettiğini ölçer.",
+    how: [
+      "Doğruluk, insan etiketi ile Zeki AI'ın ilk tahmininin uyuşma oranıdır; hedef ekranda yazar.",
+      'Bir iletiye birden çok kişi etiket verirse çoğunluk esas alınır.',
+      'Hedef doğruluğa ulaşılmadan iletiler kendiliğinden atanmaz.',
+    ],
+    data: 'Portalın ileti ve etiket kayıtları',
+    actions: ['İletileri okuyup türünü seçin.', 'Tür bazında doğruluğu ve en sık karışan türü inceleyin.'],
+  },
+
   // Menüde olmayan adresler
   'path:/yazarlar': {
     summary: "CRM'de yazar olarak eser kaydı olan kişiler: eserleri, sözleşmeleri ve projeleri. Bu adres Kişiler ekranının «Yazarlar» sekmesini açar.",
@@ -416,12 +642,53 @@ const CONTENT: ScreenInfoMap = {
     actions: ['Emeği geçen kişiyi ya da sözleşmeyi açın.', 'Metne ve provaya geçin.'],
   },
 
+  'path:/basvurular/:id': {
+    summary:
+      'Tek başvurunun dosyası: eser ve yazar bilgisi, dosyalar, editör değerlendirmesi, Yayın Kurulu Raporu, kurul kararı, yazara gidecek yazı ve geçmiş.',
+    how: [
+      '«Sıradaki adım» kutusu başvurunun durumuna göre yapabileceğiniz işleri gösterir: değerlendirmeyi üstlenmek, kurula çıkarmak, revizyon istemek ya da reddetmek.',
+      'Zeki AI eser dosyasını ön okumadan geçirir; önerileri dosyadaki cümlesiyle gelir, forma aktarıp düzeltirsiniz. Puan ve karar editöründür.',
+      'Yayın Kurulu Raporu, aynı kitaplıkta daha önce çıkan benzer kitapların ilk yıl satışından kötümser, baz ve iyimser tahmin çıkarır.',
+      'Yazara gidecek yazı taslak olarak hazırlanır; portal göndermez, siz gönderip «Gönderildi» diye işaretlersiniz.',
+    ],
+    data: "Başvuru, değerlendirme, oy ve yazı kayıtları portalda tutulur; kategori ve benzer kitaplar CRM'den, satışlar Logo'dan okunur. CRM'e yazılmaz.",
+    actions: [
+      'Eser dosyası ekleyin ya da indirin.',
+      'Editör raporunu yazıp tamamlayın; başvuruyu kurula çıkarın.',
+      'Kabul edilen başvuruyu CRM proje kartına bağlayın.',
+    ],
+  },
+
+  'path:/yazar-giris/:id': {
+    summary: 'Bir CRM projesinin yazar giriş sürecindeki 9 adımı: hangi adım bitti, ne zaman, şu an kimde bekliyor; kurul kararları ve proje özeti.',
+    how: [
+      "Biten adımın altında tarihi ve kaynağı yazar: CRM kaydı, portalda işaret ya da sonraki adımdan çıkarım.",
+      "«Rapor bitti» ve «Yazara bildirdim» adımlarının CRM'de kaydı yoktur; projenin editörü ya da yönetici buradan işaretler, gerekirse geri alır.",
+      'Bekleme, bir önceki adımın bittiği günden sayılır; gecikme sınırını aşan adım kırmızıyla işaretlenir.',
+    ],
+    data: "CRM proje kartı, kurul kayıtları, sözleşme ve eser katılımları; portaldaki adım işaretleri. CRM'e yazılmaz.",
+    refresh: "CRM'den 5 dakikada bir kendiliğinden okunur.",
+    actions: ['Sıradaki adımı işaretleyin.', 'Stok kartı açılmışsa kitap sayfasına geçin.'],
+  },
+
+  'path:/yayin-kurulu/oturum/:id': {
+    summary: 'Bir yayın kurulu oturumunun gündemi: her başvuru için raporu, üyelerin puanı ve oyu, oy dağılımı ve başkanın kararı.',
+    how: [
+      'Üye her başvuruya misyon, yayıncılık ve ticari eksende 0–100 puan ile kabul, revizyon, red ya da çekimser oyu verir.',
+      'Diğer üyelerin oy dağılımı, siz oyunuzu kaydettikten sonra açılır; üyelerin adıyla oylarını başkan ve yetkili kişiler görür.',
+      'Oy çoğunluğu ve skor önerisi yalnız yol gösterir; kararı başkan ya da kurul yöneticisi kaydeder ve geri alabilir.',
+      'Oturum kapanınca kararı verilmemiş başvurular ertelenir ve kurul sırasına döner; kapanan oturumda oy ve karar değişmez.',
+    ],
+    data: 'Oturum, oy ve karar kayıtları portalda tutulur.',
+    actions: ['Gündeme kurula çıkacak başvuru ekleyin.', 'Başvuruyu açıp puanınızı ve oyunuzu kaydedin.', 'Kararı kaydedin, oturumu kapatın.'],
+  },
+
   editoryal: {
     summary:
       "Masam: editörün ana ekranı. En üstte şimdi sizi bekleyen işler, sonra Görevlerim panosu, altında size atanmış bütün dosyalar, çeviri masanız ve Zeki AI'a soru kutusu.",
     how: [
       'Dosya, CRM proje kartında editörü siz olan yazar giriş süreci projesidir; sırası sizde olan adım «Şimdi yapılacaklar»a düşer.',
-      "Görevlerim: CRM'de editörü siz olan iş planı ya da kurul onaylı projeler; durumu, termini ve notu siz tutarsınız, termin değişikliği gerekçe ister. CRM'e yazılmaz.",
+      "Görevlerim: CRM'de editörü siz olan iş planı ya da kurul onaylı projeler; durumu, termini ve notu siz tutarsınız; girilmiş termini değiştirmek gerekçe ister. CRM'e yazılmaz.",
       'Yönetici bütün editörlerin dosyalarını, gecikenleri ve editör atanmamış projeleri görür.',
       'Soru kutusunda bir kitaba soru sorarsınız; Zeki AI cevabı kitabın kendi metninden, sayfa numarasıyla verir.',
     ],

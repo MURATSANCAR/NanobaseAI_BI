@@ -9,6 +9,7 @@ import { changedFields, show } from './terms';
 import TermsForm from './TermsForm';
 import { Field, Sheet, day, errMsg, stamp, today } from './ui';
 import { InfoLabel } from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Zeyilname: imzalı sözleşmenin şart değişikliği. Taslakta hazırlanır, «imzalandı» işaretlenince şartlara işlenir. */
 
@@ -163,7 +164,12 @@ export default function AddendaTab({ d, meta }: { d: Detail; meta: Meta }) {
         )}
       </div>
       {!signed && <Note tone="info">Sözleşme «{d.statusLabel}»; zeyilname imzalı sözleşmeye yapılır. Taslağı doğrudan düzenleyin.</Note>}
-      {!d.addenda.length && signed && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Zeyilname yok.</p>}
+      {!d.addenda.length && signed && (
+        <EmptyHint
+          title="Bu sözleşmede zeyilname yok"
+          why={d.can.edit ? 'Şartlardan biri değişecekse (süre, oran, yeni hak) «Yeni zeyilname» ile taslak açın.' : 'Şart değişikliği olunca zeyilnameler burada listelenir.'}
+        />
+      )}
       {d.addenda.length > 0 && (
         <div className="mb-2 text-[11.5px] font-semibold text-canvas-muted">
           <InfoLabel k={d.kaynaklar} alan="sayac.zeyilname" label="Zeyilnameler (sayı ve değişen değerler)">{`${d.addenda.length} zeyilname`}</InfoLabel>
@@ -191,13 +197,13 @@ export default function AddendaTab({ d, meta }: { d: Detail; meta: Meta }) {
             <div className="mt-2 flex flex-wrap gap-1.5">
               <button type="button" className={btnGhost} onClick={() => download(a)}>
                 <Download aria-hidden className="h-4 w-4" />
-                Word
+                Word olarak indir
               </button>
               {a.status === 'taslak' && d.can.edit && (
                 <>
                   <button type="button" className={btnGhost} onClick={() => setOpen(a)}>Düzenle</button>
-                  <button type="button" className={btnPrimary} onClick={() => setSigning(a)}>İmzalandı</button>
-                  <button type="button" className={btnGhost} disabled={cancel.isPending} onClick={() => window.confirm(`${a.no} iptal edilsin mi?`) && cancel.mutate(a)}>İptal et</button>
+                  <button type="button" className={btnPrimary} onClick={() => setSigning(a)}>İmzalandı işaretle</button>
+                  <button type="button" className={btnGhost} disabled={cancel.isPending} onClick={() => window.confirm(`${a.no} zeyilname taslağı iptal edilsin mi? İptal edilen taslak yeniden açılamaz.`) && cancel.mutate(a)}>İptal et</button>
                 </>
               )}
             </div>

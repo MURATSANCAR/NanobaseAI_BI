@@ -50,6 +50,9 @@ export default function ProfileQueue() {
 
   return (
     <Panel>
+      <p className="mb-2 text-[12px] leading-snug text-canvas-muted">
+        Zeki AI'ın kategori, tür, yaş, tema ve etiket önerisi bekleyen kitaplar; en çok satan kitap en üstte. Kitaba dokunup önerileri alan alan onaylayın.
+      </p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(5,minmax(0,1fr))]">
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Ara</span>
@@ -132,7 +135,7 @@ export default function ProfileQueue() {
                     {b.findings}
                   </span>
                 )}
-                {b.lowConfidence > 0 && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">emin değil {b.lowConfidence}</span>}
+                {b.lowConfidence > 0 && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800" title="Zeki AI'ın emin olmadığı öneri sayısı">Zeki AI emin değil: {b.lowConfidence}</span>}
               </div>
               <div className="text-[12px] font-semibold sm:text-right">
                 <span className="font-mono tabular-nums">{fmtInt(b.priority)}</span>
@@ -142,7 +145,7 @@ export default function ProfileQueue() {
           </li>
         ))}
       </ul>
-      {list.data && list.data.total === 0 && !list.isFetching && <p className="mt-3 text-[12.5px] text-canvas-muted">Süzgece uyan kitap yok.</p>}
+      {list.data && list.data.total === 0 && !list.isFetching && <p className="mt-3 text-[12.5px] text-canvas-muted">Süzgece uyan kitap yok; aramayı temizleyin ya da süzgeçleri «Hepsi» yapın.</p>}
       {/* Satır bağlantı olduğu için «i» listenin altında: öncelik (son N ay net adet) ve toplam. */}
       {list.data && list.data.total > 0 && (
         <p className="mt-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">

@@ -10,6 +10,11 @@ import {
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { EmptyHint } from '../components/Explain';
+import { Term, type TermKey } from './terms';
+
+/** Alan → sözlük terimi (alan başlığının yanında «?»). */
+const FIELD_TERM: Partial<Record<SeoField, TermKey>> = { SeoTitle: 'seoTitle', SeoDescription: 'metaDescription', SearchKeywords: 'keywords' };
 
 const PAGE = 30;
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -56,7 +61,7 @@ export default function SeoAudit() {
       crumb="Ürün denetimi"
       eyebrow="SEO & GEO · T-soft ürünleri"
       title="Ürün denetimi ve onay"
-      lead="Her ürün kurallardan geçer; neden uyumsuz olduğu yazılır. ZEKİ AI ürünün kendi kaydından öneri üretir; onay kararı kayıt altına alınır. T-soft’a hiçbir şey gönderilmez."
+      lead="Her kitap sayfası SEO kurallarından geçer, eksikleri nedeniyle yazılır. Zeki AI kitabın kendi kaydından başlık ve açıklama önerir; siz düzenleyip onaylar ya da reddedersiniz. T-soft’a hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="toolbar" aria-label="Kural süzgeci">
         <button className="sg-filter" aria-pressed={!rule && !status} onClick={() => setParams(new URLSearchParams(), { replace: true })}>
@@ -74,6 +79,9 @@ export default function SeoAudit() {
             </button>
           ))}
       </div>
+      <p className="sg-sub" style={{ margin: '-6px 0 0', fontSize: 12, color: 'var(--sg-muted)', lineHeight: 1.5 }}>
+        Bir soruna dokunun, yalnız o sorunu taşıyan kitaplar listelensin. Nokta rengi sorunun ağırlığıdır: kırmızı kritik, turuncu yüksek, sarı orta, gri düşük.
+      </p>
 
       {overview.data && !overview.data.connections.tsoft && (
         <p className="sg-banner">
@@ -95,13 +103,19 @@ export default function SeoAudit() {
               Önce en düşük puan
             </button>
           </div>
+          <p style={{ margin: '0 0 10px', fontSize: 11.5, color: 'var(--sg-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            Sağdaki renkli sayı kitabın SEO puanıdır (0–100). <Term k="score" label="SEO puanı" />
+          </p>
           {list.isLoading && <Loading text="Ürünler getiriliyor…" />}
           {list.error && <Failed error={list.error} />}
           {list.data && !items.length && (
-            <div className="sg-empty">
-              <h2>Ürün yok</h2>
-              <p>{overview.data?.products ? 'Bu süzgece uyan ürün bulunamadı.' : 'T-soft’tan henüz ürün okunmadı.'}</p>
-            </div>
+            <EmptyHint
+              title={overview.data?.products ? 'Bu süzgece uyan kitap yok' : 'Henüz kitap okunmadı'}
+              why={overview.data?.products ? 'Aramayı kısaltın ya da seçili sorun süzgecini kaldırın.' : 'T-soft’tan ilk okuma bitince kitaplar burada puanlanır. Okuma her gece kendiliğinden yapılır.'}
+              action={overview.data?.products && (rule || status || query) ? (
+                <button className="sg-button" onClick={() => { setQ(''); setParams(new URLSearchParams(), { replace: true }); }}>Süzgeçleri temizle</button>
+              ) : undefined}
+            />
           )}
           <div className="sg-list">
             {items.map((p) => (
@@ -139,10 +153,10 @@ export default function SeoAudit() {
           {selected ? (
             <Detail id={selected} />
           ) : (
-            <div className="sg-empty">
-              <h2>Bir ürün seçin</h2>
-              <p>Soldaki listeden bir ürün seçtiğinizde neden uyumsuz olduğu, mevcut alanlar ve modelin önerisi burada açılır.</p>
-            </div>
+            <EmptyHint
+              title="Listeden bir kitap seçin"
+              why="Seçtiğiniz kitabın sorunları, sayfadaki mevcut metinler ve Zeki AI’ın önerdiği yeni metinler burada yan yana açılır."
+            />
           )}
         </section>
       </div>
@@ -199,7 +213,7 @@ function Detail({ id }: { id: string }) {
             )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /></div>
+            <div className="sg-kpi-label">Puan <SeoInfo k={d.data?.kaynaklar} label="Puan" /> <Term k="score" label="Puan" /></div>
             <div className="sg-kpi-value sg-mono" style={{ color: p.score >= 80 ? '#0f7a51' : p.score >= 50 ? '#9a5b00' : '#c2361b' }}>
               {p.score}
               <small>/100</small>
@@ -216,7 +230,7 @@ function Detail({ id }: { id: string }) {
       )}
 
       {p.issues.length === 0 ? (
-        <div className="sg-banner ok">Bu ürün kurallara uyuyor.</div>
+        <div className="sg-banner ok">Bu kitap sayfası bütün SEO kurallarına uyuyor; yapılacak iş yok.</div>
       ) : (
         <Review
           key={open?.id ?? 'bekliyor'}
@@ -276,13 +290,13 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>Uyarılar ve ZEKİ AI önerisi</h2>
+          <h2>Sorunlar ve Zeki AI önerisi</h2>
           <p className="sg-sub" style={{ margin: 0 }}>
             {pending
-              ? 'Öneriler yazılıyor…'
+              ? 'Zeki AI öneriyi hazırlıyor…'
               : proposal
-                ? `ZEKİ AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi onaylamadan önce düzenleyebilirsiniz.`
-                : 'Öneri henüz yok.'}
+                ? `Zeki AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Solda sorun ve mevcut metin, sağda öneri; öneriyi onaylamadan önce kutuda düzenleyebilirsiniz.`
+                : onRegenerate ? 'Öneri henüz yok; «Yeniden üret» ile isteyebilirsiniz.' : 'Öneri henüz yok.'}
           </p>
         </div>
         {onRegenerate && <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
@@ -316,7 +330,10 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
             return (
               <section key={k} className="sg-field" aria-label={FIELD_LABEL[k]}>
                 <div className="sg-field-head">
-                  <span>{FIELD_LABEL[k]}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {FIELD_LABEL[k]}
+                    {FIELD_TERM[k] && <Term k={FIELD_TERM[k]!} label={FIELD_LABEL[k]} />}
+                  </span>
                   {next && (
                     <span className={`sg-mono ${over ? 'over' : ''}`}>
                       {k === 'Details' ? `${fmt(len)} kelime · en az ${fmt(L.desc_min_words)}` : lim ? `${len} / ${lim[0]}–${lim[1]} karakter` : `${len} karakter`}
@@ -373,7 +390,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
                     {i.title}
                   </h3>
                   <p>{i.detail}</p>
-                  <p>Model bunu üretemez; CRM ya da T-soft kaydında düzeltilmeli.</p>
+                  <p>Zeki AI bunu düzeltemez; CRM ya da T-soft kaydında elle düzeltilmeli.</p>
                 </article>
               ))}
             </div>
@@ -392,7 +409,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
 
           {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
           <div className="sg-decide" style={{ marginTop: 16 }}>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (isteğe bağlı), ör. yazar adı düzeltildi" aria-label="Editör notu" />
             <button className="sg-button primary" disabled={!canApprove || decide.isPending || changed.length === 0} onClick={() => decide.mutate('approve')}>
               {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
               Onayla
@@ -402,7 +419,9 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
             </button>
             <small>
               {canApprove
-                ? 'Onay yalnız kaydedilir; T-soft’a gönderim yok. Onaylanan metin CRM bağlantısı gelince CRM’e yazılacak.'
+                ? changed.length === 0
+                  ? 'Önerilen metin sayfadakiyle aynı; onaylanacak değişiklik yok. Gerekirse kutularda düzenleyin ya da reddedin.'
+                  : 'Onay yalnız kayda geçer (kim, ne zaman, hangi metin); T-soft’a ve CRM’e hiçbir şey gönderilmez. Reddederseniz öneri kapanır.'
                 : 'Onay yetkiniz yok; öneriyi görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
             </small>
           </div>

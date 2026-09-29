@@ -8,6 +8,7 @@ import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtInt } from '../budget/api';
 import { channelsApi } from './api';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import { ChannelsFrame, DataBar, PeriodPicker, useChannelsMeta, usePeriod } from './parts';
 
 /** M42 kitap × kanal matrisi (/kanallar/matris): satır kitap, sütun platform; hücrede net adet (kanala satış − iade), altında
@@ -31,7 +32,7 @@ export default function Matrix() {
   return (
     <ChannelsFrame
       title="Kitap × kanal"
-      lead="Hangi kanal hangi kitabı alıyor, hangisi iade ediyor. Net adet = kanala satış − kanaldan iade (Logo faturalı satırları); kanalın son tüketiciye sattığı değil."
+      lead="Hangi pazar yeri hangi kitabı ne kadar alıyor, ne kadarını iade ediyor. Her hücre, o kanala faturalanan adetten iade gelen adedin düşülmüşüdür; kanalın okura sattığı adet değildir."
       aside={
         <div className="flex flex-col gap-2">
           <PeriodPicker meta={m} yil={yil} ay={ay} onChange={set} />
@@ -49,11 +50,19 @@ export default function Matrix() {
         {d && (
           <div className="mb-2 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             Kitap × kanal net adet · {fmtInt(d.total)} kitap <SqlInfo k={d.kaynaklar} alan="items" label="Kitap × kanal matrisi" />
+            <Explain label="Tablo nasıl okunur" title="Tablo nasıl okunur?">
+              <span className="block">Büyük rakam net adettir: kanala satılan − kanaldan iade gelen. Kırmızı rakam, iadenin satıştan fazla olduğu anlamına gelir.</span>
+              <span className="block">Altındaki küçük «alım − iade» satırı, iade varsa ikisini ayrı gösterir.</span>
+              <span className="block">Sütun başlığına dokunursanız liste o kanalın net adedine göre sıralanır.</span>
+            </Explain>
           </div>
         )}
-        <input className={`${field} mb-3`} placeholder="Kitap adı ya da stok kodu" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} aria-label="Kitap ara" />
+        <input className={`${field} mb-3`} placeholder="Kitap ara: ad ya da stok kodu" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} aria-label="Kitap ara" />
         {r.isLoading ? <Loading /> : r.error ? <Note tone="err">{errText(r.error, 'Matris hesaplanamadı.')}</Note> : !d?.items.length ? (
-          <Note tone="info">Kayıt yok.</Note>
+          <EmptyHint
+            title={dq ? 'Aramaya uyan kitap yok' : 'Bu dönemde kanal satışı yok'}
+            why={dq ? 'Kitap adını ya da stok kodunu kontrol edin.' : 'Seçilen dönemde e-ticaret carilerine kesilmiş fatura bulunamadı. Başka bir yıl ya da ay seçin ya da «Veriyi yenile» ile Logo’dan yeniden okuyun.'}
+          />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white/80">
             <table className="w-full min-w-[720px] text-[12px]">

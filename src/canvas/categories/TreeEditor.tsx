@@ -134,7 +134,7 @@ export default function TreeEditor() {
               </button>
             )}
             {shown && <Pill tone={TREE_TONE[shown.status]}>{shown.statusLabel}</Pill>}
-            {!live && !draft && <span className="text-[12.5px] font-semibold text-canvas-muted">Henüz ağaç yok.</span>}
+            {!live && !draft && <span className="text-[12.5px] font-semibold text-canvas-muted">Henüz ağaç yok.{me?.canEditTree ? ' «Veriden taslak oluştur» ile mevcut sınıflamalardan bir başlangıç taslağı hazırlanır.' : ''}</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             {me?.canEditTree && !draft && live && (
@@ -143,7 +143,7 @@ export default function TreeEditor() {
             {me?.canEditTree && (!draft || draft.status === 'taslak') && (
               <button type="button" className={btnGhost} disabled={busy} onClick={() => (draft?.nodes.length ? setAsk('suggest') : suggest.mutate(false))}>
                 {suggest.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <ListTree aria-hidden className="h-4 w-4" />}
-                Veriden taslak
+                Veriden taslak oluştur
               </button>
             )}
             {draft && (
@@ -193,7 +193,7 @@ export default function TreeEditor() {
                 Düğümler ({fmtInt(nodes.length)})
                 <SqlInfo k={kaynakOf(tree.data)} alan="_hepsi" label="Düğüm ve kitap sayıları" />
               </h2>
-              {editable && <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => addChild(null)}><Plus aria-hidden className="h-4 w-4" /> Yayınevi düğümü</button>}
+              {editable && <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => addChild(null)}><Plus aria-hidden className="h-4 w-4" /> Yayınevi düğümü ekle</button>}
             </div>
             <ul className="mt-2 flex flex-col">
               {(byParent.get(null) ?? []).map((n) => (
@@ -424,7 +424,7 @@ function ImpactSheet({ onClose }: { onClose: () => void }) {
           <Block title="Onaylı kategorisi kalkan kitaplar (yeniden onay gerekir)" empty={!d.orphanedApproved.length}>
             {d.orphanedApproved.map((o) => <li key={o.bookId}><Link to={`${ROOT}/kitap/${o.bookId}`} className="font-bold text-canvas-violet hover:underline">{o.name}</Link> — {o.path}</li>)}
           </Block>
-          <Block title="Editör atama (M2) kuralı etkilenen kategoriler" empty={!d.m2.length}>
+          <Block title="Editör atama kuralı etkilenen kategoriler" empty={!d.m2.length}>
             {d.m2.map((m) => <li key={m.id}>{m.name} ({m.kind === 'kitaplik' ? 'Kitaplık' : 'marka'}): {m.before.join(', ') || 'ağaçta yok'} → {m.after.join(', ') || 'ağaçta yok'}</li>)}
           </Block>
           <Block title="Site (T-soft) karşılığı olmayan alt düğümler" empty={!d.withoutTsoft.length}>

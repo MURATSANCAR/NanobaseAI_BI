@@ -180,8 +180,8 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
               <InfoLabel k={d.kaynaklar} alan="satirlar[]" label="Rapor satırları (adet, tutar, TL)">{preview ? '3. Eşleme' : 'Satırlar'}</InfoLabel>
             </h2>
             <p className="mt-0.5 max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
-              Kurallı eşleme: e-ISBN, e-kitap barkodu, ISBN, barkod, e-kitap stok kodu, stok kodu. Kalan satırlar için Zeki AI aday
-              önerir; hiçbir öneri kendiliğinden onaylanmaz.
+              Satırlar önce e-ISBN, e-kitap barkodu, ISBN, barkod ve stok koduyla kitaplarımıza eşlenir. Kalan satırlar için Zeki AI aday
+              kitap önerir; hiçbir öneri siz onaylamadan kabul edilmez.
             </p>
           </div>
           {editable && (
@@ -197,7 +197,7 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
           )}
         </div>
         {job?.durum === 'hata' && <Note tone="warn">{job.mesaj}</Note>}
-        {job?.durum === 'bitti' && job.model === false && <Note tone="info">Model şu an yok; adaylar yalnız ad/yazar benzerliğiyle sıralandı.</Note>}
+        {job?.durum === 'bitti' && job.model === false && <Note tone="info">Zeki AI şu an yanıt vermiyor; adaylar yalnız kitap adı ve yazar benzerliğiyle sıralandı.</Note>}
         <div className="mt-2 flex flex-wrap gap-1.5">
           {(['acik', 'eslesen', 'hepsi'] as const).map((k) => (
             <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
@@ -207,7 +207,7 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
           ))}
         </div>
         <div className="mt-2 flex flex-col gap-2">
-          {!shown.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte satır yok.</div>}
+          {!shown.length && <div className="py-6 text-center text-[12.5px] text-canvas-muted">{filter === 'acik' ? (preview ? 'Eşleşmemiş satır kalmadı; raporu onaylayabilirsiniz.' : 'Eşleşmemiş satır yok.') : 'Bu süzgeçte satır yok.'}</div>}
           {shown.map((r) => <RowCard key={r.id} r={r} k={d.kaynaklar} editable={editable} busy={rows.isPending} onPick={(kitapId, kaynak) => rows.mutate([{ id: r.id, kitapId, kaynak }])} />)}
         </div>
       </Panel>
@@ -225,7 +225,7 @@ function Preview({ id, canImport }: { id: string; canImport: boolean }) {
               {foreign.map((c) => (
                 <label key={c} className="flex flex-col gap-1">
                   <span className={labelCls}>1 {c} = ? TL</span>
-                  <input className={field} inputMode="decimal" value={rates[c] ?? ''} onChange={(e) => setRates((x) => ({ ...x, [c]: e.target.value }))} />
+                  <input className={field} inputMode="decimal" value={rates[c] ?? ''} placeholder="Örn. 41,25" onChange={(e) => setRates((x) => ({ ...x, [c]: e.target.value }))} />
                 </label>
               ))}
             </div>

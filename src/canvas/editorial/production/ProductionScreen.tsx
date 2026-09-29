@@ -76,12 +76,12 @@ export default function ProductionScreen() {
       route="/uretim"
       crumb="Üretim yönetimi"
       title="Üretim yönetimi"
-      lead="Baskı kararı verilen her kitabın üretim takvimi: baskı dosyası matbaada → matbaa → baskı çıkışı → depo girişi. Kart ve tarihler CRM üretim kartından, gerçekleşen üretim ve depo girişi Logo'dan okunur; CRM'de olmayan tarih, teklif, kalite ve onay burada kaydedilir. Gecikme önce sorumluya, süre aşılınca yöneticiye çıkar."
+      lead="Baskı kararı verilen kitapların matbaadan depoya kadar üretim takvimi, gecikmeler ve matbaa performansı. Tarihler CRM üretim kartından ve Logo depo girişinden okunur; CRM'de olmayan bilgi burada kaydedilir."
       source={o ? `${nf.format(o.total)} üretim kartı · ${fmtDay(o.historyFrom)} sonrası` : 'CRM + Logo'}
       presence={logoLine}
       aside={aside}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda açık değil; üretim kayıtları okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {o?.warnings.map((w) => (
         <Note key={w} tone="warn">
@@ -93,6 +93,7 @@ export default function ProductionScreen() {
           label="Süren üretim"
           value={o ? nf.format(o.open) : '—'}
           help={o ? `Depoya henüz girmemiş kart · ${nf.format(o.total)} kartın` : 'Depoya henüz girmemiş kart'}
+          explain="Depoya henüz girmemiş, iptal edilmemiş ve eskimemiş üretim kartları. Karta dokununca takvim bunları gösterir."
           info={o ? <SqlInfo k={o.kaynaklar} alan="open" label="Süren üretim" /> : undefined}
           active={tab === 'takvim' && (params.get('durum') ?? 'acik') === 'acik'}
           onClick={() => update({ sekme: null, durum: null })}
@@ -101,6 +102,7 @@ export default function ProductionScreen() {
           label="Gecikmede"
           value={o ? nf.format(o.late) : '—'}
           help={o ? `${nf.format(o.escalated)} tanesi yöneticiye çıktı` : 'Planı geçmiş adım'}
+          explain="Planlanan tarihi geçtiği hâlde gerçekleşmemiş en az bir adımı olan süren kartlar. Gecikme önce kartın sorumlusunda kalır, ayardaki gün aşılınca yöneticiye çıkar."
           info={o ? <SqlInfo k={o.kaynaklar} alan="late" label="Gecikmede" /> : undefined}
           active={tab === 'gecikme'}
           onClick={() => update({ sekme: 'gecikme' })}
@@ -109,6 +111,7 @@ export default function ProductionScreen() {
           label="14 gün içinde"
           value={o ? nf.format(o.dueSoon) : '—'}
           help="Planlanan adımı yaklaşan kart"
+          explain="Gecikmesi olmayan ve planlanan bir adımı önümüzdeki 14 gün içinde olan süren kartlar."
           info={o ? <SqlInfo k={o.kaynaklar} alan="dueSoon" label="14 gün içinde" /> : undefined}
           onClick={() => update({ sekme: null, durum: null })}
         />
@@ -116,6 +119,7 @@ export default function ProductionScreen() {
           label="Depoya girdi"
           value={o ? nf.format(o.doneRecent) : '—'}
           help="Son 30 günde"
+          explain="Son 30 gün içinde depo girişi gerçekleşen kartlar."
           info={o ? <SqlInfo k={o.kaynaklar} alan="doneRecent" label="Depoya girdi" /> : undefined}
           active={tab === 'takvim' && params.get('durum') === 'tamam'}
           onClick={() => update({ sekme: null, durum: 'tamam' })}

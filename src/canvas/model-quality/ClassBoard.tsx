@@ -9,6 +9,7 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } f
 import { Kpi, KpiRow, Pager, Panel } from '../editorial/kit';
 import { VERDICT_TONE, fmtAt, mqApi, type Cluster, type Meta, type QualityClass } from './api';
 import { Empty, WeekBars, weekLabels } from './parts';
+import { Explain } from '../components/Explain';
 
 /** Hata sınıfları: sınıf başına soru sayısı ve 4 haftalık eğilim. Tek soruyu değil sınıfı düzeltmek için
  *  (bellek fix-classes-not-questions). Sınıf kuralı veridir; insanın kuyrukta verdiği sınıf kuralın önüne geçer. */
@@ -24,10 +25,12 @@ export default function ClassBoard({ meta, selected, onSelect }: { meta: Meta; s
       {d && (
         <>
           <KpiRow>
-            <Kpi label="İncelenen soru" value={String(d.total)} help={`Son ${d.days} gün: SQL'li cevap almayan, boş dönen ya da Kısmen/Yanlış denen`} info={<SqlInfo k={kaynakOf(d)} alan="total" label="İncelenen soru" />} />
-            <Kpi label="İsabetsizlik sayılan" value={String(d.errorQuestions)} help="Yetki dışı, bağlantı, netleştirme ve veri yok hariç" info={<SqlInfo k={kaynakOf(d)} alan="errorQuestions" label="İsabetsizlik sayılan" />} />
+            <Kpi label="İncelenen soru" value={String(d.total)} help={`Son ${d.days} gün: cevap alamayan, boş sonuç dönen ya da Kısmen/Yanlış denen`}
+              explain="Zeki AI’ın rakamla cevap veremediği, sonucu boş dönen ya da kullanıcının «Kısmen» veya «Yanlış» dediği sorular. Her biri aşağıdaki hata sınıflarından birine ayrılır." info={<SqlInfo k={kaynakOf(d)} alan="total" label="İncelenen soru" />} />
+            <Kpi label="İsabetsizlik sayılan" value={String(d.errorQuestions)} help="Yetki dışı, bağlantı, netleştirme ve veri yok hariç"
+              explain="İncelenen sorulardan gerçekten Zeki AI’ın hatası sayılanlar. Yetki dışı, bağlantı kopması, soruyu netleştirme isteği ve kaynakta veri olmaması hata sayılmaz." info={<SqlInfo k={kaynakOf(d)} alan="errorQuestions" label="İsabetsizlik sayılan" />} />
             <Kpi label="Sınıflanamadı" value={String(unclassified)} help="Hiçbir kural tutmadı; kuyrukta elle sınıflanır" info={<SqlInfo k={kaynakOf(d)} alan="items" label="Sınıflanamadı" />} />
-            <Kpi label="Tanımlı sınıf" value={String(d.classes.filter((k) => k.active).length)} help="Kurallar tabloda; kod değişmeden düzeltilir" info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tanımlı sınıf" />} />
+            <Kpi label="Tanımlı sınıf" value={String(d.classes.filter((k) => k.active).length)} help="Sınıflama kuralları aşağıda; yazılım değişmeden düzeltilir" info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tanımlı sınıf" />} />
           </KpiRow>
           <Panel>
             <TableWrap>
@@ -36,7 +39,12 @@ export default function ClassBoard({ meta, selected, onSelect }: { meta: Meta; s
                   <th className={th}>Sınıf</th>
                   <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="items">Soru</InfoLabel></th>
                   <th className={`${th} text-right`}>Geri bildirimden</th>
-                  <th className={`${th} text-right`}>Son kapı koşusunda</th>
+                  <th className={`${th} text-right`}>
+                    <span className="inline-flex items-center gap-1">
+                      Son kalite koşusunda
+                      <Explain label="Son kalite koşusunda">Doğrulanmış soruların son ölçümünde bu sınıfa düşen soru sayısı.</Explain>
+                    </span>
+                  </th>
                   <th className={th}>4 hafta</th>
                 </tr>
               </thead>
@@ -72,7 +80,7 @@ const CRITERIA: Record<string, string> = {
   gateKeys: 'kapı gerekçesi',
   dropCodes: 'düşen kavram',
   textAny: 'metinde geçen',
-  unresolved: 'katalogda olmayan terim var',
+  unresolved: 'veri sözlüğünde olmayan terim var',
   executedEmpty: 'sorgu boş döndü',
   caseStatus: 'kapı hükmü',
 };
@@ -123,7 +131,7 @@ function ClassQuestions({ meta, klass, onBack }: { meta: Meta; klass: string; on
         </h2>
         {q.error && <Note tone="err">{errText(q.error, 'Sorular okunamadı.')}</Note>}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
-        {q.data && !q.data.items.length && !q.data.gateCases.length && <Empty>Bu sınıfta soru yok.</Empty>}
+        {q.data && !q.data.items.length && !q.data.gateCases.length && <Empty>Seçili dönemde bu sınıfa düşen soru yok.</Empty>}
         <div className="mt-2 flex flex-col gap-2">
           {q.data?.items.map((i) => (
             <div key={i.queryId} className="rounded-2xl border border-slate-100 bg-white/80 p-3">
@@ -142,7 +150,7 @@ function ClassQuestions({ meta, klass, onBack }: { meta: Meta; klass: string; on
         )}
         {q.data && q.data.gateCases.length > 0 && (
           <>
-            <h3 className="mt-4 text-[13px] font-extrabold">Son kapı koşularında bu sınıfa düşen vakalar</h3>
+            <h3 className="mt-4 text-[13px] font-extrabold">Son kalite koşularında bu sınıfa düşen sorular</h3>
             <ul className="mt-1 flex flex-col gap-1 text-[12px]">
               {q.data.gateCases.map((c) => (
                 <li key={`${c.runId}:${c.caseId}`} className="break-words">
@@ -228,7 +236,7 @@ function ClusterCard({ c, classes, canDecide }: { c: Cluster; classes: Array<{ k
             Zeki AI önerisi: {c.suggestedLabel}{p ? ` · ${p}` : ''}{c.confident ? '' : ' · emin değil'}
           </Pill>
         ) : (
-          <Pill tone="muted">{c.method === 'yok' ? 'Öneri yok (model bağlı değil)' : 'Öneri yok'}</Pill>
+          <Pill tone="muted">{c.method === 'yok' ? 'Öneri yok (Zeki AI o sırada bağlı değildi)' : 'Öneri yok'}</Pill>
         )}
       </div>
       <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[12px] leading-snug">

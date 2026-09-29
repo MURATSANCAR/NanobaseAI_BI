@@ -39,7 +39,7 @@ export default function UsageMap() {
     <LearningFrame
       crumb="Eğitim ve gelişim"
       title="Kullanım haritası"
-      lead="Hangi birimde hangi ekranın kullanıldığı: hücre, pencere içinde o ekranı en az bir kez açan farklı kişi sayısıdır. Kişi adı gösterilmez ve bu sayılar performans değerlendirmesinde kullanılmaz."
+      lead="Hangi birimde hangi ekranın kullanıldığı: her hücre, seçili dönemde o ekranı en az bir kez açan farklı kişi sayısıdır. Kırmızı 0, o birimde ekranı kimsenin açmadığını gösterir. Kişi adı gösterilmez; bu sayılar performans değerlendirmesinde kullanılmaz."
     >
       {q.error && <Note tone="err">{errText(q.error, 'Harita okunamadı.')}</Note>}
       {d?.note && <Note tone="warn">{d.note}</Note>}
@@ -54,14 +54,14 @@ export default function UsageMap() {
               <option value="">Bütün alanlar</option>
               {groups.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
-            <select className={`${field} w-auto`} value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Pencere">
+            <select className={`${field} w-auto`} value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Dönem">
               {[7, 30, 90, 180].map((n) => <option key={n} value={n}>Son {n} gün</option>)}
             </select>
           </>
         }
       >
         {q.isLoading && <p className="text-[12px] text-canvas-muted">Yükleniyor…</p>}
-        {d && modules.length === 0 && <p className="text-[12px] text-canvas-muted">Bu pencerede kayıtlı kullanım yok. Ekran sayacı yeni kuruldu ise veriler günler içinde birikir.</p>}
+        {d && modules.length === 0 && <p className="text-[12px] text-canvas-muted">Bu dönemde kayıtlı kullanım yok. Kullanım sayımı yeni başladıysa veriler günler içinde birikir; daha uzun bir dönem de seçebilirsiniz.</p>}
         {d && modules.length > 0 && (
           <TableWrap>
             <thead>
@@ -97,7 +97,7 @@ export default function UsageMap() {
         )}
       </Block>
       {d && unused.length > 0 && (
-        <Block title="Pencerede hiç açılmayan ekranlar" help="Hiçbir birimde kullanılmayan menü ekranları; eğitim ya da rehber için aday.">
+        <Block title="Bu dönemde hiç açılmayan ekranlar" help="Hiçbir birimde kullanılmayan menü ekranları; eğitim ya da rehber hazırlamak için iyi bir başlangıç.">
           <div className="flex flex-wrap gap-1.5 text-[12px]">
             {unused.map((u) => <span key={u} className="rounded-md bg-slate-100 px-2 py-1 font-semibold">{u}</span>)}
           </div>

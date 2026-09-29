@@ -7,6 +7,7 @@ import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
 import { FilePick } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
+import { ShowMoreButton, useShowMore } from '../components/ShowMore';
 
 /** Dosyanın süresini tarayıcı ölçer (sunucuda ses çözümleyici yok); ölçemezse null, ses yine çalar. */
 function measure(file: File): Promise<number | null> {
@@ -64,7 +65,7 @@ function Row({ b }: { b: Bulletin }) {
         </label>
         <label className="block">
           <span className={label}>Seslendiren</span>
-          <input value={draft.voice} onChange={(e) => setDraft({ ...draft, voice: e.target.value })} placeholder="ör. ZEKİ AI" className={field} />
+          <input value={draft.voice} onChange={(e) => setDraft({ ...draft, voice: e.target.value })} placeholder="ör. Zeki AI" className={field} />
         </label>
       </div>
       <label className="mt-2 block">
@@ -161,7 +162,8 @@ function GeneratePanel() {
   const secs = Math.round(text.trim().length / CHARS_PER_SEC);
   const groups = voices.data?.groups ?? {};
   const byGroup = list.reduce<Record<string, typeof list>>((acc, v) => ((acc[v.group] ??= []).push(v), acc), {});
-  const recent = (jobs.data?.items ?? []).slice(0, 6);
+  const recentMore = useShowMore(jobs.data?.items, 6);
+  const recent = recentMore.shown;
 
   return (
     <div className="rounded-2xl border border-canvas-violet/20 bg-canvas-violet/[0.04] p-3 sm:p-4">
@@ -196,7 +198,7 @@ function GeneratePanel() {
       </div>
       <label className="mt-2 block">
         <span className={label}>Bülten metni</span>
-        <textarea value={text} rows={8} maxLength={TEXT_MAX} onChange={(e) => setText(e.target.value)} placeholder="Paragraflar arasında boş satır bırakın; ZEKİ AI paragraf sonlarında biraz durur." className={`${field} resize-y`} />
+        <textarea value={text} rows={8} maxLength={TEXT_MAX} onChange={(e) => setText(e.target.value)} placeholder="Paragraflar arasında boş satır bırakın; Zeki AI paragraf sonlarında biraz durur." className={`${field} resize-y`} />
       </label>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button type="button" disabled={!text.trim() || go.isPending} onClick={() => go.mutate()} className={btnPrimary}>
@@ -228,6 +230,7 @@ function GeneratePanel() {
           })}
         </ul>
       )}
+      <ShowMoreButton more={recentMore} noun="bülten" />
     </div>
   );
 }
@@ -265,7 +268,7 @@ export default function BulletinsAdmin() {
   return (
     <Section
       title="Sesli bülten"
-      help={`Kampüs'teki «Haftanın Sesli Bülteni» en son yayınlanan kaydı çalar. Eklenen ses önce taslaktır; başlığını yazıp yayınlayın. mp3, m4a, ogg ya da wav, en çok ${maxMb} MB. Sunucuda üretilen ses sunucuda tek komutla da eklenir: sudo scripts/server/kampus-bulletin.sh add dosya.mp3 --title "…" --publish`}
+      help={`Kampüs'teki «Haftanın Sesli Bülteni» en son yayınlanan kaydı çalar. Eklenen ses önce taslaktır; başlığını yazıp yayınlayın. mp3, m4a, ogg ya da wav, en çok ${maxMb} MB.`}
       action={<FilePick label="Ses yükle" accept="audio/*,.mp3,.m4a,.ogg,.wav" maxBytes={maxMb * MB} busy={!!progress} onPick={(f) => void pick(f)} />}
     >
       <GeneratePanel />
@@ -300,7 +303,7 @@ export default function BulletinsAdmin() {
       ) : (
         <div className="flex flex-col items-center gap-2 py-8 text-center text-[13px] text-canvas-muted">
           <Radio className="h-6 w-6" aria-hidden />
-          Henüz bülten yok. Sunucuda üretilen sesi «Ses yükle» ile ekleyin.
+          Henüz bülten yok. Hazır bir ses dosyasını «Ses yükle» ile ekleyin ya da metinden seslendirin.
         </div>
       )}
     </Section>

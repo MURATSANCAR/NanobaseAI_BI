@@ -3,6 +3,7 @@ import { Note, Pill } from '../../admin/ui';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import type { Kaynaklar } from '../../components/sqlInfo';
 import { fmtNum, type Item, type Result } from './engApi';
+import { Explain } from '../../components/Explain';
 
 /** Anket sonucu gösterimi: eNPS, bağlılık endeksi, madde sonuçları. Gizlenmiş sonuçta nedeni açık yazar (eşik, açık anket,
  *  kırılım kapalı). Rakamlar köprüden; burada hesap yok. */
@@ -27,12 +28,20 @@ export default function ResultView({ r, onUnit, k, base = '', row }: {
       <div className="grid grid-cols-3 gap-2">
         <Big label="Yanıt" value={fmtNum(r.n, 0)} info={k && <SqlInfo k={k} alan={p('n')} row={row} label="Yanıt sayısı" />} />
         <Big label="eNPS" value={r.enps !== null && r.enps !== undefined ? `${r.enps > 0 ? '+' : ''}${fmtNum(r.enps)}` : '—'} help="9–10 verenler − 0–6 verenler"
+          explain="Çalışan tavsiye puanı: 0–10 arası «tavsiye eder misiniz» sorusunda 9–10 verenlerin yüzdesinden 0–6 verenlerin yüzdesi çıkarılır. −100 ile +100 arasıdır; sıfırın üstü olumludur."
           info={k && <SqlInfo k={k} alan={p('enps')} row={row} label="eNPS" />} />
-        <Big label="Bağlılık endeksi" value={fmtNum(r.index)} help="0–100; Likert maddelerinden" info={k && <SqlInfo k={k} alan={p('index')} row={row} label="Bağlılık endeksi" />} />
+        <Big label="Bağlılık endeksi" value={fmtNum(r.index)} help="0–100; katılım maddelerinden"
+          explain="1–5 arası «katılıyorum» sorularının ortalamasının 0–100 ölçeğine çevrilmiş hâli. 100, herkesin her maddeye «kesinlikle katılıyorum» dediği anlamına gelir." info={k && <SqlInfo k={k} alan={p('index')} row={row} label="Bağlılık endeksi" />} />
       </div>
       {k && (r.items ?? []).length > 0 && (
         <div className="text-[11px] font-semibold text-canvas-muted">
-          <InfoLabel k={k} alan={p('items')} row={row} label="Madde sonuçları">Madde ortalaması, olumlu % ve yanıt</InfoLabel>
+          <span className="inline-flex items-center gap-1">
+            <InfoLabel k={k} alan={p('items')} row={row} label="Madde sonuçları">Madde ortalaması, olumlu % ve yanıt</InfoLabel>
+            <Explain label="Madde sonuçları">
+              «ort.»: 1–5 arası puanların ortalaması. «olumlu %»: 4 ya da 5 verenlerin payı. Son sayı o soruya yanıt veren kişi sayısıdır.
+              Çubuk kırmızıdan (1) yeşile (5) cevap dağılımını gösterir.
+            </Explain>
+          </span>
         </div>
       )}
       <ul className="flex flex-col gap-1.5">
@@ -42,6 +51,9 @@ export default function ResultView({ r, onUnit, k, base = '', row }: {
         <div>
           <div className="mb-1 flex items-center gap-1 text-[12px] font-bold uppercase tracking-wide text-canvas-muted">
             Birimler (gösterim eşiği {r.minGroup}){k && <SqlInfo k={k} alan={p('units')} row={row} label="Birim yanıt sayıları" />}
+            <Explain label="Gösterim eşiği">
+              Kimin ne cevap verdiği anlaşılmasın diye, yanıt sayısı bu eşiğin altında kalan birimin sonucu tek başına gösterilmez; üst birimle birlikte sayılır.
+            </Explain>
           </div>
           <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {r.units.map((u) => (
@@ -66,10 +78,12 @@ export default function ResultView({ r, onUnit, k, base = '', row }: {
   );
 }
 
-function Big({ label, value, help, info }: { label: string; value: string; help?: string; info?: ReactNode }) {
+function Big({ label, value, help, info, explain }: { label: string; value: string; help?: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="rounded-2xl bg-white/80 px-3 py-2">
-      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}{info}</div>
+      <div className="flex flex-wrap items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        {label}{info}{explain && <Explain label={label}>{explain}</Explain>}
+      </div>
       <div className="text-[22px] font-extrabold tabular-nums">{value}</div>
       {help && <div className="text-[10.5px] leading-tight text-canvas-muted">{help}</div>}
     </div>

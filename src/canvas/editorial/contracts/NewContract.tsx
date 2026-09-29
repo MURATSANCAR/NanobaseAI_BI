@@ -45,7 +45,13 @@ export default function NewContract() {
   });
   const m = meta.data;
   return (
-    <ModuleFrame route="/telif-sozlesme" crumb="Sözleşmeler" title="Yeni sözleşme" lead="Taslak açılır; şartlar imzaya kadar serbestçe düzenlenir. Metin seçilen şablondan üretilir." source="Portal">
+    <ModuleFrame
+      route="/telif-sozlesme"
+      crumb="Sözleşmeler"
+      title="Yeni sözleşme"
+      lead="Yeni telif ya da lisans sözleşmesinin taslağını açın. Şartlar imzaya kadar serbestçe düzenlenir; sözleşme metni seçtiğiniz şablondan üretilir. Taslak portalda tutulur, CRM'e yazılmaz."
+      source="Portal"
+    >
       <div className="px-1">
         <Link to="/telif-sozlesme" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
           <ChevronLeft aria-hidden className="h-4 w-4" />
@@ -57,7 +63,10 @@ export default function NewContract() {
       {m && (
         <>
           <Panel>
-            <Field label="Şablon" hint={chosen ? `${chosen.name} · sürüm ${chosen.version}${chosen.description ? ` — ${chosen.description}` : ''}` : 'Şablon seçilmezse metin sonra üretilir.'}>
+            <Field
+              label="Şablon"
+              explain="Şablon, sözleşme metninin kalıbıdır; girdiğiniz şartlar (taraflar, oranlar, tarihler) metindeki yerlerine yerleşir. «Sözleşme türüne göre», aşağıda seçtiğiniz türün şablonunu kullanır."
+              hint={chosen ? `${chosen.name} · sürüm ${chosen.version}${chosen.description ? ` — ${chosen.description}` : ''}` : 'Şablon seçilmezse metin sonra üretilir.'}>
               <select value={tpl} onChange={(e) => setTpl(e.target.value)} className={field}>
                 <option value="auto">Sözleşme türüne göre</option>
                 <option value="">Şablonsuz (metin sonra)</option>
@@ -78,6 +87,7 @@ export default function NewContract() {
           />
           <TermsForm value={terms} onChange={setTerms} meta={m} lock={!m.can.edit} />
           {create.error && <Note tone="err">{errMsg(create.error)}</Note>}
+          {m.can.edit && !terms.title.trim() && <p className="px-1 text-[11.5px] text-canvas-muted">Taslağı açmak için sözleşme adını yazın.</p>}
           <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap justify-end gap-2 rounded-2xl bg-white/90 p-2 shadow-glass-float backdrop-blur">
             <Link to="/telif-sozlesme" className={btnGhost}>Vazgeç</Link>
             <button type="button" className={btnPrimary} disabled={!m.can.edit || !terms.title.trim() || create.isPending} onClick={() => create.mutate()}>

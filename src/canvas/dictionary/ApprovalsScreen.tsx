@@ -16,12 +16,13 @@ import AdminGuard from '../AdminGuard';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import ColName from '../components/ColName';
+import { Explain } from '../components/Explain';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g');
 
 const TYPE_LABEL: Record<string, string> = {
-  METRIC: 'Metrik',
+  METRIC: 'Ölçü',
   COLUMN: 'Kolon',
   DIMENSION_VALUE: 'Değer',
   RELATIONSHIP: 'İlişki',
@@ -31,10 +32,10 @@ const TYPE_LABEL: Record<string, string> = {
 /** Kararın ne anlama geldiğini düz Türkçe anlatır; ekranın asıl işi bu. */
 const EXPLAIN: Record<Decision, string> = {
   APPROVE:
-    'Onaylarsan bu tanım kalıcı olur. Bundan sonra bu kelime sorularda doğrudan kullanılır ve gece taraması onu düşüremez.',
-  REJECT: 'Reddedersen bu eşleşme bir daha önerilmez. Kelime sorularda kullanılmaz.',
+    'Onaylarsanız bu tanım kalıcı olur. Bundan sonra bu kelime sorularda doğrudan kullanılır ve gece taraması onu düşüremez.',
+  REJECT: 'Reddederseniz bu eşleşme bir daha önerilmez. Kelime sorularda kullanılmaz.',
   CORRECT:
-    'Düzeltirsen yanlış okuma kaldırılır ve senin açıklaman kaydedilir. Doğru kolonu yazarsan onun yerine o onaylanır.',
+    'Düzeltirseniz yanlış okuma kaldırılır ve açıklamanız kaydedilir. Doğru kolonu yazarsanız onun yerine o onaylanır.',
 };
 
 
@@ -43,7 +44,7 @@ const EVIDENCE_LABEL: Record<string, string> = {
   EXECUTION: 'Sorguda çalıştı',
   PROFILE: 'Veri profiline uyuyor',
   VALIDATED_SQL: 'Doğrulanmış sorguda kullanıldı',
-  LLM: 'Model önerdi',
+  LLM: 'Zeki AI önerdi',
   HUMAN: 'İnsan onayı',
 };
 
@@ -126,7 +127,7 @@ function ApprovalsScreenInner() {
   const correctNeedsNote = !note.trim();
   const errText =
     act.error instanceof EngineAuthError
-      ? 'Oturum gerekli.'
+      ? 'Oturumunuz kapanmış; yeniden giriş yapın.'
       : act.error
         ? (act.error as Error).message || 'Karar kaydedilemedi.'
         : null;
@@ -135,7 +136,7 @@ function ApprovalsScreenInner() {
     <Shell
       head={{
         tenant: 'Timaş Yayınları',
-        section: 'Yapay Zeka Raporları',
+        section: 'Yönetim',
         crumb: 'Onaylar',
         source: `${nf.format(queue.data?.waiting ?? 0)} bekleyen`,
         presence: `${nf.format(queue.data?.total ?? 0)} aday`,
@@ -153,12 +154,15 @@ function ApprovalsScreenInner() {
                 <SqlInfo k={kaynakOf(queue.data)} alan="items" label="Onay kuyruğu: bekleyen, aday ve destek sayıları" />
               </span>
             </div>
+            <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">
+              Zeki AI'ın Logo ve CRM'de bulduğu, onayınızı bekleyen terim eşleşmeleri. Bir terim seçin; doğruysa onaylayın, yanlışsa düzeltin ya da reddedin.
+            </p>
             <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
               <Search className="h-3.5 w-3.5 text-canvas-muted" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Terim ara…"
+                placeholder="Terim, tablo ya da kolon ara…"
                 className="w-full bg-transparent font-semibold outline-none placeholder:text-canvas-muted/70 text-base sm:text-[12.5px]"
               />
             </div>
@@ -169,9 +173,9 @@ function ApprovalsScreenInner() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               )}
-              {authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturum gerekli.</div>}
+              {authRequired && <div className="p-3 text-[12px] text-canvas-muted">Oturumunuz kapanmış; yeniden giriş yapın.</div>}
               {!queue.isLoading && !authRequired && !filtered.length && (
-                <div className="p-3 text-[12px] text-canvas-muted">Kuyrukta bekleyen terim yok.</div>
+                <div className="p-3 text-[12px] text-canvas-muted">{items.length ? 'Aramaya ya da kaynak süzgecine uyan terim yok.' : 'Onay bekleyen terim yok.'}</div>
               )}
               {filtered.map((i) => (
                 <button
@@ -204,7 +208,7 @@ function ApprovalsScreenInner() {
           <div ref={detailRef} className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:min-h-0 md:flex-1 md:shrink md:overflow-auto">
             {!cur ? (
               <div className="flex h-full items-center justify-center text-[13px] text-canvas-muted">
-                {authRequired ? 'Oturum gerekli.' : 'Kuyruk boş.'}
+                {authRequired ? 'Oturumunuz kapanmış; yeniden giriş yapın.' : 'Onay bekleyen terim yok. Yeni öneri çıkınca burada görünür.'}
               </div>
             ) : (
               <div className="space-y-5">
@@ -215,7 +219,7 @@ function ApprovalsScreenInner() {
                   </div>
                   <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.label || cur.term}</h2>
                   {cur.label && cur.label !== cur.term && (
-                    <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">motordaki kaydı: {cur.term}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">sistemdeki adı: {cur.term}</div>
                   )}
                 </div>
 
@@ -224,7 +228,7 @@ function ApprovalsScreenInner() {
                   <p className="text-[13.5px] leading-relaxed text-canvas-ink">
                     {cur.plain ?? (
                       <>
-                        Kullanıcı <strong>“{cur.term}”</strong> dediğinde sistem bunu kullanacak.
+                        Kullanıcı <strong>“{cur.term}”</strong> dediğinde Zeki AI bunu kullanacak.
                       </>
                     )}{' '}
                     <strong>Doğru mu?</strong>
@@ -245,7 +249,7 @@ function ApprovalsScreenInner() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 text-[12px]">
+                <div className="grid grid-cols-2 gap-3 text-[12px] sm:grid-cols-3">
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Tür</div>
                     <div className="font-semibold">{TYPE_LABEL[cur.type] ?? cur.type}</div>
@@ -258,7 +262,10 @@ function ApprovalsScreenInner() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Motorun güveni</div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                      Zeki AI'ın güveni
+                      <Explain label="Zeki AI'ın güveni">Önerinin kanıtlara göre ne kadar sağlam göründüğü. Yüksek olması tek başına doğru olduğu anlamına gelmez; kararı siz verirsiniz.</Explain>
+                    </div>
                     <div className="font-mono font-semibold tabular-nums">
                       {cur.confidence != null ? `%${Math.round(cur.confidence * 100)}` : '—'}
                     </div>
@@ -326,7 +333,7 @@ function ApprovalsScreenInner() {
 
                 <div>
                   <label className="text-[11px] font-bold text-canvas-muted" htmlFor="kolon">
-                    Doğru kolon <span className="font-normal">(biliyorsan yaz, o onaylanır)</span>
+                    Doğru kolon <span className="font-normal">(biliyorsanız yazın; o onaylanır)</span>
                   </label>
                   <input
                     id="kolon"

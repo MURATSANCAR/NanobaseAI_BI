@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
+import { Explain } from '../components/Explain';
 
 /** İnsan Kaynakları ekranlarının ortak kabuğu. Sekme çubuğu ve onay penceresi bütçe ekranınınkiyle aynıdır. */
 export { Tabs, AskSheet } from '../budget/parts';
@@ -44,13 +45,15 @@ export function HrFrame({ crumb, title, lead, detail, back, aside, children }: {
   );
 }
 
-/** Kısa etiketli değer (özet kutuları). `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`), etiketin yanında. */
-export function Fact({ label, value, help, info }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode }) {
+/** Kısa etiketli değer (özet kutuları). `info`: rakamın sorgu bilgisi düğmesi (`<SqlInfo …/>`), etiketin yanında;
+ *  `explain`: değerin sade dille anlamı («?», bkz. components/Explain). */
+export function Fact({ label, value, help, info, explain }: { label: string; value: ReactNode; help?: ReactNode; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
       <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
         <span className="min-w-0">{label}</span>
         {info}
+        {explain && <Explain label={label}>{explain}</Explain>}
       </div>
       <div className="mt-0.5 break-words text-[13.5px] font-bold">{value}</div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}

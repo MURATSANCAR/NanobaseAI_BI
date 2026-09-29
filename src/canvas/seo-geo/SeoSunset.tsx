@@ -6,6 +6,8 @@ import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
+import { termText } from './terms';
 
 const PAGE = 40;
 type Action = 'yeni_baski_301' | 'yazar_301' | 'stokta_yok' | 'gone_410' | 'arama_verisi';
@@ -87,7 +89,7 @@ export default function SeoSunset() {
       crumb="Satıştan kalkan kitaplar"
       eyebrow="SEO & GEO · Satıştan kalkan kitaplar"
       title="Satıştan kalkan kitaplar"
-      lead="Hakkı artık bizde olmayan, satıştan çekilen ya da baskısı biten kitapların sayfaları ve sitede kapalı olup hâlâ aranan sayfalar. Her biri için açık kurallarla öneri: yeni baskıya ya da yazar sayfasına yönlendirme, stokta yok olarak bırakma veya kalıcı kaldırma. Karar yalnız kaydedilir; siteye gönderilmez — CSV ile panelden girilir."
+      lead="Hakkı artık bizde olmayan, satıştan çekilen ya da baskısı biten kitapların sayfaları ne olmalı: yeni baskıya ya da yazar sayfasına yönlendirilsin mi, «stokta yok» olarak kalsın mı, kalıcı olarak kaldırılsın mı. Her sayfa için öneriyi onaylayın ya da değiştirin; karar yalnız kaydedilir, CSV ile T-soft paneline elle girilir."
       actions={
         <>
           {canRun && (
@@ -117,7 +119,7 @@ export default function SeoSunset() {
           <section className="sg-kpis" aria-label="Özet">
             {ORDER.map((a) => (
               <div key={a} className="sg-kpi">
-                <div className="sg-kpi-label">{d.actions[a]}</div>
+                <div className="sg-kpi-label">{d.actions[a]} <Explain label={d.actions[a]}>{ACTION_WHY[a]}</Explain></div>
                 <div className="sg-kpi-value sg-mono">{fmt(d.counts.action[a] ?? 0)}</div>
                 <div className="sg-kpi-note">{NOTE[a]}</div>
               </div>
@@ -156,10 +158,10 @@ export default function SeoSunset() {
           {!canApprove && me.data && <p className="sg-banner">Onay yetkiniz yok; önerileri görebilirsiniz.</p>}
 
           {!d.items.length && (
-            <div className="sg-empty">
-              <h2>Kayıt yok</h2>
-              <p>Bu süzgece uyan sayfa yok.</p>
-            </div>
+            <EmptyHint
+              title="Bu süzgece uyan sayfa yok"
+              why={status === 'bekliyor' && !action && !query ? 'Karar bekleyen sayfa kalmadı.' : 'Öneri, durum ya da arama süzgecini değiştirin.'}
+            />
           )}
           <div className="sg-list">
             {d.items.map((r) => (
@@ -184,6 +186,15 @@ export default function SeoSunset() {
     </SeoLayout>
   );
 }
+
+/** Öneri türlerinin sade anlamı (kart köşesindeki «?»). */
+const ACTION_WHY: Record<Action, string> = {
+  yeni_baski_301: `Eski sayfaya gelen ziyaretçi aynı kitabın satıştaki yeni baskısına gönderilir. ${termText('redirect')}`,
+  yazar_301: 'Kitabın yerine geçecek ürün yoksa ziyaretçi yazarın sayfasına kalıcı olarak yönlendirilir; sayfanın Google’daki değeri yazar sayfasına geçer.',
+  stokta_yok: 'Sayfa hâlâ aranıyor ya da yönlendirecek yer yok; sayfa açık kalır, «stokta yok» olarak görünür.',
+  gone_410: `Hakkı bizde olmayan ve aranmayan sayfa kalıcı olarak kaldırılır. ${termText('gone')}`,
+  arama_verisi: 'Search Console verisi olmadığı için sayfanın aranıp aranmadığı bilinmiyor; veri gelince öneri netleşir.',
+};
 
 const NOTE: Record<Action, string> = {
   yeni_baski_301: 'Aynı kitabın yaşayan başka ürünü var',

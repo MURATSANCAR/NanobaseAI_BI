@@ -7,6 +7,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, errText } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 import { KIND_TONE, ecomApi, fmtDay, fmtInt, fmtWhen, type DiffKind, type Meta, type Overview } from './api';
 import { DiffCard, EticaretFrame, Stamp } from './parts';
 import ItemDrawer from './ItemDrawer';
@@ -34,8 +35,8 @@ export default function EticaretHome() {
   return (
     <EticaretFrame
       title="Platform durumu"
-      lead="Sitedeki (T-soft) ürün, CRM kitap kartı ve Logo kaydı her gece yan yana konur; fark, eksik kart ve satışta olmaması gereken kitap burada görünür. Portal hiçbir sisteme yazmaz: düzeltmeyi T-soft panelinde ya da CRM'de siz yaparsınız, ertesi gecenin okuması doğrular."
-      source="Kaynak: site kaydı (SEO eşitlemesi) · CRM · Logo"
+      lead="Sitedeki (T-soft) ürünler her gece CRM kitap kartı ve Logo kaydıyla karşılaştırılır; fiyat ve stok farkı, eksik kart ve satışta olmaması gereken kitap burada görünür. Düzeltmeyi T-soft'ta ya da CRM'de siz yaparsınız, ertesi gece doğrulanır."
+      source="Kaynak: site kaydı · CRM · Logo"
       aside={meta.data?.me.canMark ? (
         <button type="button" className={btnGhost} disabled={running || refresh.isPending} onClick={() => refresh.mutate()}>
           {running || refresh.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <RefreshCw aria-hidden className="h-4 w-4" />}
@@ -43,7 +44,7 @@ export default function EticaretHome() {
         </button>
       ) : undefined}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {(meta.error || ov.error) && <Note tone="err">{errText(meta.error || ov.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {ov.isLoading && <div className="py-10 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {ov.data && meta.data && <Body ov={ov.data} meta={meta.data} onOpen={setOpen} />}
@@ -88,12 +89,16 @@ function Body({ ov, meta, onOpen }: { ov: Overview; meta: Meta; onOpen: (k: stri
     <>
       <KpiRow>
         <Kpi label="Sitede satışta" value={fmtInt(g.siteAktif)} help={`Site kaydı ${fmtWhen(siteAt)} · CRM'de «TSOFT Aktif» ${fmtInt(g.crmTsoftAktif)}`}
+          explain="Sitede şu an satışa açık ürün sayısı. Altında CRM'de «TSOFT Aktif» işaretli kitap sayısı yazar; ikisi arasındaki fark da incelenecek bir farktır."
           info={<SqlInfo k={k} alan="gostergeler.siteAktif" label="Sitede satışta" />} />
         <Kpi label="Açık fark" value={fmtInt(g.acikFark)} help={`Son okuma ${fmtWhen(ov.sonOkuma?.bitti)} · Logo kesimi ${fmtDay(cut)}`}
+          explain="Site, CRM ve Logo arasında bulunan ve henüz kapanmamış farkların sayısı (fiyat, stok, aktiflik, barkod, kart). Fark düzeltilince sonraki gece okumasında kendiliğinden kapanır."
           info={<SqlInfo k={k} alan="gostergeler.acikFark" label="Açık fark" />} />
         <Kpi label="Eksik ürün kartı" value={fmtInt(g.eksikKart)} help="Sitede satışta, CRM kartında zorunlu alan boş"
+          explain="Sitede satışta olduğu hâlde CRM kitap kartında zorunlu bir alanı boş kalan ürünler. Kartı CRM'de tamamlayınca listeden düşer."
           info={<SqlInfo k={k} alan="gostergeler.eksikKart" label="Eksik ürün kartı" />} />
         <Kpi label="Satışta olmaması gereken" value={fmtInt(g.satistaOlmamali)} help="CRM yayın durumu: bizim değil, devredildi, iptal, çekildi…"
+          explain="Sitede satışta görünen ama CRM'deki yayın durumuna göre satılmaması gereken kitaplar (ör. hakkı devredilmiş ya da iptal edilmiş). Hukuki risk taşıdığı için önce bunlara bakın."
           info={<SqlInfo k={k} alan="gostergeler.satistaOlmamali" label="Satışta olmaması gereken" />} />
       </KpiRow>
       {!ov.sonOkuma && <Note tone="info">Henüz okuma yapılmadı. Gece 04:30'da kendiliğinden koşar; yetkiniz varsa «Şimdi yeniden oku».</Note>}
@@ -111,7 +116,7 @@ function Body({ ov, meta, onOpen }: { ov: Overview; meta: Meta; onOpen: (k: stri
             <Stamp>Önce hukuki risk, sonra fiyat ve stok; aynı türde son dönem satışı büyük olan önde</Stamp>
           </div>
           <div className="mt-2 flex flex-col gap-2">
-            {!ov.bugun.items.length && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Açık fark yok.</p>}
+            {!ov.bugun.items.length && <EmptyHint title="Bugün bakılacak fark yok" why="Site, CRM ve Logo kayıtları son okumada birbiriyle uyumlu görünüyor." />}
             {ov.bugun.items.map((d) => <DiffCard key={d.id} d={d} onOpen={onOpen} k={k} alan="bugun.items" />)}
           </div>
           {ov.bugun.total > ov.bugun.items.length && (
@@ -150,7 +155,7 @@ function Body({ ov, meta, onOpen }: { ov: Overview; meta: Meta; onOpen: (k: stri
               {ov.haftalik.ortalamaKapanmaGun !== null ? `; ortalama kapanma ${ov.haftalik.ortalamaKapanmaGun.toLocaleString('tr-TR')} gün` : ''}.
             </p>
             <p className="mt-1 text-[12px] text-canvas-muted">
-              Bilinçli fark {fmtInt(ov.durumSayilari.bilincli)} · doğrulama bekleyen {fmtInt(ov.durumSayilari.duzeltildi)} · sonraya {fmtInt(ov.durumSayilari.sonra)}
+              Bilerek bırakılan {fmtInt(ov.durumSayilari.bilincli)} · doğrulama bekleyen {fmtInt(ov.durumSayilari.duzeltildi)} · sonraya {fmtInt(ov.durumSayilari.sonra)}
               <SqlInfo k={k} alan="durumSayilari" label="Durum sayıları" className="ml-0.5" />
             </p>
             <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">

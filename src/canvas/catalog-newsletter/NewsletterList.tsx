@@ -40,7 +40,7 @@ export default function NewsletterList({ meta }: { meta: Meta }) {
     <Block
       title="E-bültenler"
       info={<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Kitap, izinli okur ve sonuç oranları" />}
-      help="Portal bülteni göndermez: onaylanan bültenin HTML'i indirilir ve şirketin izin yönetimi olan e-posta aracından gönderilir. Segment sayısı yalnız izinli kişiyi sayar; kişi listesi portalda hiç görünmez."
+      help="Portal bülteni göndermez: onaylanan bültenin dosyası indirilir ve şirketin izin yönetimi olan e-posta aracından gönderilir. Hedef kitle (segment) sayısı yalnız izin vermiş kişileri sayar; kişi listesi portalda hiç görünmez."
       action={
         <div className="flex flex-wrap gap-2">
           <select className={`${field} w-auto`} value={durum} aria-label="Durum" onChange={(e) => setDurum(e.target.value)}>
@@ -81,7 +81,7 @@ export default function NewsletterList({ meta }: { meta: Meta }) {
       )}
       {list.error && <Note tone="err">{errText(list.error, 'Liste açılamadı.')}</Note>}
       {list.isLoading && <Loading />}
-      {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle bülten yok.</p>}
+      {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle bülten yok. Süzgeci değiştirin ya da yukarıdaki formla yeni bülten açın.</p>}
       <ul className="flex flex-col gap-2">
         {list.data?.items.map((n) => (
           <li key={n.id}>

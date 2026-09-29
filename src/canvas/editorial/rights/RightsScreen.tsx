@@ -11,6 +11,7 @@ import RightsMapView from './RightsMap';
 import { rightsApi, rightsMetaOptions, type BookCard, type Grant, type License, type RightState, type RightsMeta } from '../royalty/api';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 import { LicenseTerms, RightChips } from '../crmRights';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 /** M54 Haklar ve lisanslar: kitabın hak kartı (CRM hak bitleri + portaldaki dil/ülke kaydı + verilen lisanslar),
  *  yurtdışına verilen lisanslar ve serbest metinli hak açıklamalarının sınıfı. CRM'e yazılmaz. */
@@ -19,6 +20,12 @@ type Tab = 'kart' | 'lisans' | 'aciklama';
 const stateTone = (s: RightState['state']): 'ok' | 'warn' | 'err' | 'muted' =>
   s === 'var' ? 'ok' : s === 'incele' ? 'warn' : s === 'yok' ? 'err' : 'muted';
 const STATE_LABEL: Record<RightState['state'], string> = { var: 'Var', yok: 'Yok', incele: 'İncele', 'sozlesme-yok': 'Sözleşme yok', 'koruma-disi': 'Koruma dışı' };
+/** Sekmenin ne işe yaradığı; sekme şeridinin altında tek cümle. */
+const TAB_HELP: Record<Tab, string> = {
+  kart: 'Bir kitabı arayın: hangi hakların elimizde olduğu, dil ve ülke hakları, sözleşmeleri ve verdiğimiz lisanslar tek kartta.',
+  lisans: 'Kitaplarımızın yabancı yayınevlerine verdiğimiz lisansları: dil, ülke, süre, avans, tahsilat ve yazar payı.',
+  aciklama: 'CRM sözleşmelerindeki serbest metinli hak notlarının sınıflanması ve hak haritası; son onay telif uzmanındadır.',
+};
 
 export default function RightsScreen() {
   const [params, setParams] = useSearchParams();
@@ -44,6 +51,7 @@ export default function RightsScreen() {
             { id: 'lisans', label: 'Verilen lisanslar' },
             { id: 'aciklama', label: 'Hak açıklamaları' },
           ]} />
+          <p className="-mt-1 px-1 text-[12px] leading-snug text-canvas-muted">{TAB_HELP[tab] ?? TAB_HELP.kart}</p>
           {tab === 'kart' && <CardTab meta={m} book={book} onBook={(id) => setMany({ kitap: id })} />}
           {tab === 'lisans' && <Licenses meta={m} />}
           {tab === 'aciklama' && <Notes meta={m} />}
@@ -56,7 +64,7 @@ export default function RightsScreen() {
 function Shell({ children }: { children: ReactNode }) {
   return (
     <ModuleFrame route="/haklar" crumb="Haklar ve lisanslar" title="Haklar ve lisanslar"
-      lead="Kitabın hangi hakkı elimizde, hangi dil ve ülkede lisans verildi, ne zaman bitiyor. Hak bitleri CRM sözleşmelerinden okunur; dil/ülke kaydı ve verilen lisanslar portalda tutulur, CRM'e yazılmaz."
+      lead="Kitabın hangi hakları elimizde, hangi dil ve ülkede kime lisans verildi, ne zaman bitiyor. Haklar CRM sözleşmelerinden okunur; dil/ülke kaydı ve verilen lisanslar portalda tutulur, CRM'e yazılmaz."
       source="CRM sözleşmeleri + portal">
       <div className="px-1">
         <Link to="/telif-sozlesme" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
@@ -109,11 +117,15 @@ function CardTab({ meta, book, onBook }: { meta: RightsMeta; book: string | null
                 <Pager page={page} pageSize={20} total={search.data.total} shown={search.data.items.length} loading={search.isLoading} fetching={search.isFetching} onPage={setPage} />
               </>
             )}
-            {!search.data.total && <p className="py-4 text-center text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
+            {!search.data.total && <p className="py-4 text-center text-[12px] text-canvas-muted">Eşleşen kitap yok. Adın bir kısmını, stok kodunu ya da ISBN'i deneyin.</p>}
           </>
         )}
       </Panel>
-      {!book && <Panel><p className="py-8 text-center text-[12.5px] text-canvas-muted">Hak kartını görmek için kitap arayın.</p></Panel>}
+      {!book && (
+        <Panel>
+          <EmptyHint title="Hak kartı için bir kitap seçin" why="Yukarıya kitap adı, stok kodu ya da ISBN yazın (en az 2 harf); sonuçtan kitabı seçince hak kartı açılır." />
+        </Panel>
+      )}
       {card.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">CRM okunuyor…</p>}
       {card.error && <Callout tone="err">{errMsg(card.error)}</Callout>}
       {card.data && <Card c={card.data} meta={meta} />}
@@ -150,19 +162,29 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[11px] text-canvas-muted">«Var»: yürürlükteki bütün telif alış sözleşmelerinde hak işaretli. Kesin söz telif birimindedir; hak notu olan sözleşme «İncele» görünür.</p>
+        <p className="mt-2 flex items-start gap-1 text-[11px] text-canvas-muted">
+          <span>«Var»: yürürlükteki bütün telif alış sözleşmelerinde hak işaretli. Kesin söz telif birimindedir; hak notu olan sözleşme «İncele» görünür.</span>
+          <Explain label="Hak durumları">
+            <b>Var</b>: yürürlükteki bütün telif alış sözleşmelerinde hak işaretli. <b>Yok</b>: en az bir sözleşmede hak yok (hangisi olduğu yazar).{' '}
+            <b>İncele</b>: hak işaretli ama sözleşmede serbest metinli hak notu var, sözleşmeye bakılmalı. <b>Sözleşme yok</b>: yürürlükte telif alış sözleşmesi yok.{' '}
+            <b>Koruma dışı</b>: eser telif koruması dışında.
+          </Explain>
+        </p>
       </Panel>
 
       <Panel>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <h3 className="text-[13px] font-extrabold">Dil ve ülke hakları</h3>
+          <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+            Dil ve ülke hakları
+            <Explain label="Dil ve ülke hakları">CRM sözleşmesi hakkı dil ve ülke kırılımıyla tutmuyor. Hangi dilde, hangi ülkede, hangi tarihler arasında hakkımız olduğunu burada portalda kaydedersiniz; CRM'e yazılmaz.</Explain>
+          </h3>
           {c.can.rightsEdit && (
             <button type="button" className={`${btnGhost} ml-auto`} onClick={() => setGrant('new')}>
               <Plus aria-hidden className="h-4 w-4" /> Hak ekle
             </button>
           )}
         </div>
-        {!c.grants.length && <p className="text-[12px] text-canvas-muted">CRM'de dil/ülke kırılımı yok; hak kaydı portalda tutulur. Henüz kayıt yok.</p>}
+        {!c.grants.length && <p className="text-[12px] text-canvas-muted">Bu kitap için henüz dil/ülke hakkı kaydı yok.{c.can.rightsEdit ? ' «Hak ekle» ile ekleyebilirsiniz.' : ''}</p>}
         <ul className="space-y-1.5">
           {c.grants.map((g) => (
             <li key={g.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white/80 px-3 py-2 text-[12.5px]">
@@ -172,8 +194,8 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
               {g.note && <span className="text-[11.5px] text-canvas-muted">· {g.note}</span>}
               {c.can.rightsEdit && (
                 <span className="ml-auto flex gap-1">
-                  <button type="button" aria-label="Düzenle" className="grid h-11 w-11 place-items-center rounded-lg transition-transform duration-150 ease-out hover:bg-slate-100 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => setGrant(g)}><Pencil aria-hidden className="h-4 w-4" /></button>
-                  <button type="button" aria-label="Sil" className="grid h-11 w-11 place-items-center rounded-lg text-red-700 transition-transform duration-150 ease-out hover:bg-red-50 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => del.mutate(g.id)}><Trash2 aria-hidden className="h-4 w-4" /></button>
+                  <button type="button" aria-label="Hakkı düzenle" className="grid h-11 w-11 place-items-center rounded-lg transition-transform duration-150 ease-out hover:bg-slate-100 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => setGrant(g)}><Pencil aria-hidden className="h-4 w-4" /></button>
+                  <button type="button" aria-label="Hakkı sil" className="grid h-11 w-11 place-items-center rounded-lg text-red-700 transition-transform duration-150 ease-out hover:bg-red-50 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => window.confirm(`${g.kindLabel} hakkı kaydı silinsin mi? Bu geri alınamaz.`) && del.mutate(g.id)}><Trash2 aria-hidden className="h-4 w-4" /></button>
                 </span>
               )}
             </li>
@@ -210,7 +232,7 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
 }
 
 function ContractList({ items, meta }: { items: BookCard['contracts']; meta: RightsMeta }) {
-  if (!items.length) return <p className="text-[12px] text-canvas-muted">Yok.</p>;
+  if (!items.length) return <p className="text-[12px] text-canvas-muted">Bu kitaba bağlı yürürlükte ya da geçmiş telif alış sözleşmesi bulunamadı.</p>;
   return (
     <ul className="space-y-2">
       {items.map((x) => (
@@ -293,14 +315,14 @@ function GrantSheet({ c, meta, g, onClose }: { c: BookCard; meta: RightsMeta; g:
             {Object.entries(meta.grantKinds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </Field>
-        <Field label="Kaynak sözleşme">
+        <Field label="Kaynak sözleşme" hint="Bu hakkı bize veren telif alış sözleşmesi (isteğe bağlı).">
           <select value={contractKey} onChange={(e) => setContractKey(e.target.value)} className={field}>
             <option value="">—</option>
             {c.contracts.map((x) => <option key={x.id} value={x.id}>{x.no ?? x.id.slice(0, 8)}</option>)}
           </select>
         </Field>
-        <Field label="Dil" hint="Boş: bütün diller"><input value={language} onChange={(e) => setLanguage(e.target.value)} className={field} /></Field>
-        <Field label="Ülke / bölge" hint="Boş: bütün ülkeler"><input value={country} onChange={(e) => setCountry(e.target.value)} className={field} /></Field>
+        <Field label="Dil" hint="Boş: bütün diller"><input value={language} onChange={(e) => setLanguage(e.target.value)} className={field} placeholder="ör. Arapça" /></Field>
+        <Field label="Ülke / bölge" hint="Boş: bütün ülkeler"><input value={country} onChange={(e) => setCountry(e.target.value)} className={field} placeholder="ör. Mısır, Orta Doğu" /></Field>
         <Field label="Başlangıç"><input type="date" value={start} onChange={(e) => setStart(e.target.value)} className={field} /></Field>
         <Field label="Bitiş"><input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={field} /></Field>
         <Field label="Not" wide><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={field} /></Field>
@@ -312,7 +334,7 @@ function GrantSheet({ c, meta, g, onClose }: { c: BookCard; meta: RightsMeta; g:
 // ------------------------------------------------------------------ verilen lisanslar
 
 function LicenseList({ items, canEdit, onEdit }: { items: License[]; canEdit: boolean; onEdit: (x: License) => void }) {
-  if (!items.length) return <p className="text-[12px] text-canvas-muted">Kayıtlı lisans yok.</p>;
+  if (!items.length) return <p className="text-[12px] text-canvas-muted">Kayıtlı lisans yok. Yabancı bir yayınevine hak verildiğinde «Lisans ekle» ile kaydedilir.</p>;
   return (
     <ul className="space-y-1.5">
       {items.map((x) => (
@@ -403,9 +425,9 @@ function LicenseSheet({ meta, x, book, onClose }: { meta: RightsMeta; x: License
       </>}>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Kitap"><input value={f.book} disabled={!!book} onChange={(e) => up('book', e.target.value)} className={field} /></Field>
-        <Field label="Lisansı alan yayınevi"><input value={f.buyer} onChange={(e) => up('buyer', e.target.value)} className={field} /></Field>
-        <Field label="Dil"><input value={f.language} onChange={(e) => up('language', e.target.value)} className={field} /></Field>
-        <Field label="Ülke / bölge"><input value={f.country} onChange={(e) => up('country', e.target.value)} className={field} /></Field>
+        <Field label="Lisansı alan yayınevi"><input value={f.buyer} onChange={(e) => up('buyer', e.target.value)} className={field} placeholder="ör. yabancı yayınevinin adı" /></Field>
+        <Field label="Dil"><input value={f.language} onChange={(e) => up('language', e.target.value)} className={field} placeholder="ör. Almanca" /></Field>
+        <Field label="Ülke / bölge"><input value={f.country} onChange={(e) => up('country', e.target.value)} className={field} placeholder="ör. Almanya, Avusturya" /></Field>
         <Field label="Durum">
           <select value={f.status} onChange={(e) => up('status', e.target.value)} className={field}>
             {Object.entries(meta.licenseStatuses).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -416,8 +438,8 @@ function LicenseSheet({ meta, x, book, onClose }: { meta: RightsMeta; x: License
             {Object.entries(meta.currencies).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </Field>
-        <Field label="Avans"><NumInput value={f.advance} onChange={(v) => up('advance', v)} /></Field>
-        <Field label="Telif oranı (%)"><NumInput value={f.rate} onChange={(v) => up('rate', v)} /></Field>
+        <Field label="Avans" explain="Lisansı alan yayınevinin bize peşin ödediği tutar."><NumInput value={f.advance} onChange={(v) => up('advance', v)} /></Field>
+        <Field label="Telif oranı (%)" explain="Lisansı alan yayınevinin kendi satışından bize ödeyeceği yüzde."><NumInput value={f.rate} onChange={(v) => up('rate', v)} /></Field>
         <Field label="Başlangıç"><input type="date" value={f.start} onChange={(e) => up('start', e.target.value)} className={field} /></Field>
         <Field label="Bitiş"><input type="date" value={f.end} onChange={(e) => up('end', e.target.value)} className={field} /></Field>
         <Field label="Tahsilat durumu">
@@ -426,7 +448,7 @@ function LicenseSheet({ meta, x, book, onClose }: { meta: RightsMeta; x: License
             {Object.entries(meta.collectionStatuses).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </Field>
-        <Field label="Tahsil edilen"><NumInput value={f.collected} onChange={(v) => up('collected', v)} /></Field>
+        <Field label="Tahsil edilen" hint="Bu lisanstan bugüne kadar alınan toplam tutar."><NumInput value={f.collected} onChange={(v) => up('collected', v)} /></Field>
         <Field label="Yazar payı (%)" hint="Tahsilattan yazara düşen; ödemesi sözleşme sayfasından planlanır"><NumInput value={f.authorSharePct} onChange={(v) => up('authorSharePct', v)} /></Field>
         <Field label="Not" wide><textarea value={f.note} onChange={(e) => up('note', e.target.value)} rows={2} className={field} /></Field>
       </div>
@@ -499,7 +521,7 @@ function Notes({ meta }: { meta: RightsMeta }) {
           </button>
         )}
       </div>
-      <p className="mt-2 text-[11.5px] text-canvas-muted">CRM'deki serbest metinli hak açıklamaları. Zeki AI yalnız sınıf önerir; emin olmadığı açıklama «incelenecek»tir, sınıfı telif uzmanı onaylar. Hak haritası dil, ülke, format, bitiş ve münhasırlığı açıklamadan birebir alıntıyla çıkarır; alıntısı olmayan alan boş kalır, haritayı telif uzmanı onaylar.</p>
+      <p className="mt-2 text-[11.5px] text-canvas-muted">CRM'deki serbest metinli hak açıklamaları (ör. «yalnız Türkiye'de», «e-kitap hariç»). Zeki AI yalnız sınıf önerir; emin olmadığı açıklama «incelenecek»tir, sınıfı telif uzmanı onaylar. Hak haritası dil, ülke, format, bitiş ve münhasırlığı açıklamadan birebir alıntıyla çıkarır; alıntısı olmayan alan boş kalır, haritayı telif uzmanı onaylar.</p>
       {d && (
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">
           <InfoLabel k={d.kaynaklar} alan="counts" label="Durum sayıları (İncelenecek, öneri, onaylı)">Durum sayıları</InfoLabel>
@@ -510,7 +532,14 @@ function Notes({ meta }: { meta: RightsMeta }) {
       {d?.job.error && <div className="mt-2"><Callout tone="warn">{d.job.error}</Callout></div>}
       {d?.mapJob?.error && <div className="mt-2"><Callout tone="warn">{d.mapJob.error}</Callout></div>}
       {list.error && <div className="mt-2"><Callout tone="err">{errMsg(list.error)}</Callout></div>}
-      {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan açıklama yok.</p>}
+      {d && !d.items.length && (
+        <div className="mt-3">
+          <EmptyHint
+            title="Bu süzgece uyan açıklama yok"
+            why={status === 'incele' ? 'İncelenecek açıklama kalmadı. Başka durum seçin ya da sınıf süzgecini kaldırın.' : 'Durumu «Hepsi» yapın, sınıf süzgecini kaldırın ya da aramayı temizleyin.'}
+          />
+        </div>
+      )}
       <ul className="mt-3 space-y-2">
         {d?.items.map((n) => (
           <li key={n.id} className="rounded-xl bg-white/80 px-3 py-2">

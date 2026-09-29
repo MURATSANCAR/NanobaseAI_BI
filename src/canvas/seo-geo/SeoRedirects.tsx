@@ -6,6 +6,8 @@ import { fmt, seoApi, type Confidence, type Redirect } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
+import { EmptyHint, Explain } from '../components/Explain';
+import { Term } from './terms';
 
 const PAGE = 40;
 const CONF: Array<{ id: Confidence; label: string; tone: string }> = [
@@ -15,6 +17,13 @@ const CONF: Array<{ id: Confidence; label: string; tone: string }> = [
   { id: 'yok', label: 'Eşleşme yok', tone: 'bad' },
 ];
 const STATUS: Record<Redirect['status'], string> = { bekliyor: 'Bekliyor', onaylandi: 'Onaylandı', reddedildi: 'Reddedildi' };
+/** Güven düzeyinin nasıl verildiği (eşleştirme kuralları; ilk tutan kazanır). */
+const CONF_WHY: Record<Confidence, string> = {
+  kesin: 'Eski adreste ISBN var ve o ISBN’li kitap sitede satışta; yönlendirme aynı kitaba gider.',
+  yüksek: 'Aynı adlı kitabın yeni baskısı, aynı adlı yazar sayfası ya da adresin kelimelerinin büyük kısmı hedefte de geçiyor.',
+  orta: 'Yalnız iki kelime ya da yazım benzerliği tutuyor; hedefi açıp doğru sayfa olduğuna bakın.',
+  yok: 'Güvenilir bir hedef bulunamadı; hedef adresi sizin yazmanız gerekir.',
+};
 
 /** Anasayfaya giden 301 yönlendirmeleri: her biri için doğru hedef önerisi, gerekçesi ve alternatifleri. Karar yalnız
  *  kaydedilir; T-soft'a yazılmaz. Onaylananlar CSV olarak indirilip T-soft panelinden elle girilir. */
@@ -56,7 +65,7 @@ export default function SeoRedirects() {
       crumb="Yönlendirmeler"
       eyebrow="SEO & GEO · 301 yönlendirmeleri"
       title="Anasayfaya giden yönlendirmeler"
-      lead="Silinen sayfaların eski adresi anasayfaya yönlenirse Google bunu “yumuşak 404” sayar. Her eski adres için en doğru yaşayan sayfa önerilir: ISBN’den aynı kitap, aynı adlı yazar ya da adres benzerliği. Karar yalnız kaydedilir; T-soft’a gönderilmez — onaylananları CSV olarak indirip panelden girin."
+      lead={<>Silinen sayfaların eski adresi anasayfaya gidiyorsa Google bunu «yumuşak 404» (boş sayfa) sayar ve eski adresin değeri kaybolur. Her eski adres için yaşayan en doğru sayfa önerilir; siz onaylar ya da hedefi düzeltirsiniz. <Term k="redirect" /> Karar yalnız kaydedilir; onaylananları CSV olarak indirip T-soft paneline elle girin.</>}
       actions={
         canExport && (
           <>
@@ -73,7 +82,7 @@ export default function SeoRedirects() {
       <section className="sg-kpis" aria-label="Özet">
         {CONF.map((c) => (
           <div key={c.id} className="sg-kpi">
-            <div className="sg-kpi-label">{c.label}</div>
+            <div className="sg-kpi-label">{c.label} <Explain label={`Güven: ${c.label}`}>{CONF_WHY[c.id]}</Explain></div>
             <div className="sg-kpi-value sg-mono">{fmt(count(c.id))}</div>
             <div className="sg-kpi-note">
               {fmt(count(c.id, 'bekliyor'))} bekliyor · {fmt(count(c.id, 'onaylandi'))} onaylandı
@@ -110,10 +119,10 @@ export default function SeoRedirects() {
         {canApprove && (
           <>
             <button className="sg-button" disabled={bulk.isPending || !count('kesin', 'bekliyor')} onClick={() => bulk.mutate('kesin')}>
-              <Check size={16} aria-hidden /> Kesinlerin hepsini onayla ({fmt(count('kesin', 'bekliyor'))})
+              <Check size={16} aria-hidden /> Kesin eşleşmelerin hepsini onayla ({fmt(count('kesin', 'bekliyor'))})
             </button>
             <button className="sg-button" disabled={bulk.isPending || !count('yüksek', 'bekliyor')} onClick={() => bulk.mutate('yüksek')}>
-              <Check size={16} aria-hidden /> Yüksekleri onayla ({fmt(count('yüksek', 'bekliyor'))})
+              <Check size={16} aria-hidden /> Yüksek güvenlilerin hepsini onayla ({fmt(count('yüksek', 'bekliyor'))})
             </button>
           </>
         )}
@@ -124,10 +133,10 @@ export default function SeoRedirects() {
       {list.isLoading && <Loading text="Yönlendirmeler getiriliyor…" />}
       {list.error && <Failed error={list.error} />}
       {list.data && !list.data.items.length && (
-        <div className="sg-empty">
-          <h2>Kayıt yok</h2>
-          <p>{Object.keys(counts).length ? 'Bu süzgece uyan yönlendirme yok.' : 'Yönlendirmeler T-soft’tan bir sonraki okumada gelir.'}</p>
-        </div>
+        <EmptyHint
+          title={Object.keys(counts).length ? 'Bu süzgece uyan yönlendirme yok' : 'Henüz yönlendirme okunmadı'}
+          why={Object.keys(counts).length ? 'Güven ya da durum süzgecini değiştirin; «Bekliyor» boşsa bütün yönlendirmelere karar verilmiş demektir.' : 'Anasayfaya giden yönlendirmeler T-soft’tan bir sonraki okumada (her gece) gelir.'}
+        />
       )}
       <div className="sg-list">
         {list.data?.items.map((r) => (
@@ -171,7 +180,7 @@ function Row({ r, canApprove, onDone }: { r: Redirect; canApprove: boolean; onDo
         </span>
       </div>
       <p style={{ margin: '8px 0', fontSize: 12.5, color: 'var(--sg-muted)' }}>
-        Şu an → <span className="sg-mono">{r.current || 'anasayfa'}</span> · {r.reason}
+        Şu an gittiği yer → <span className="sg-mono">{r.current || 'anasayfa'}</span>{r.reason && <> · Neden bu öneri: {r.reason}</>}
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <label className="sg-search" style={{ flex: '1 1 280px' }}>
@@ -180,7 +189,7 @@ function Row({ r, canApprove, onDone }: { r: Redirect; canApprove: boolean; onDo
             className="sg-mono"
             value={target}
             onChange={(e) => setTarget(e.target.value.replace(/^\/+/, ''))}
-            placeholder="hedef adres (ör. yazar-adi)"
+            placeholder="hedef adres (ör. yazar-adi); öneriler için dokunun"
             aria-label="Hedef adres"
             list={`alt-${r.id}`}
             disabled={r.status !== 'bekliyor'}

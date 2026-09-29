@@ -9,6 +9,7 @@ import { Panel, Pager, useDebounced } from '../editorial/kit';
 import { ecomApi, isEan, type Diff, type DiffKind, type Meta } from './api';
 import { DiffCard, EticaretFrame, MarkSheet } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint, Explain } from '../components/Explain';
 import ItemDrawer from './ItemDrawer';
 import { xlsxUrl } from '../components/excel';
 
@@ -19,10 +20,10 @@ export default function DiffsScreen() {
   return (
     <EticaretFrame
       title="Farklar"
-      lead="Sitedeki ürün ile CRM kartı ve Logo kaydı arasındaki her fark bir satırdır. «Düzeltildi» dediğiniz fark ertesi gecenin okumasında doğrulanır; hâlâ varsa yeniden açılır. «Bilinçli fark» (ör. kampanya fiyatı) değerler değişmedikçe susar."
+      lead="Sitedeki ürün ile CRM kartı ve Logo kaydı arasındaki her uyumsuzluk bir satırdır. Farkı T-soft'ta ya da CRM'de düzeltip «Düzeltildi» diye işaretleyin; ertesi gece doğrulanır. Bilerek bıraktığınız fark (ör. kampanya fiyatı) değerler değişmedikçe yeniden açılmaz."
       source="Kaynak: site kaydı · CRM · Logo (kesim tarihiyle)"
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Bu kurulumda veri bağlantısı tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; liste açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.data && <Listing meta={meta.data} />}
     </EticaretFrame>
@@ -101,18 +102,21 @@ function Listing({ meta }: { meta: Meta }) {
                 onChange={(e) => { setQ(e.target.value); update({ q: e.target.value || null }); }} />
             </span>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className={labelCls}>Durum</span>
-            <select className={field} value={durum} onChange={(e) => update({ durum: e.target.value || null })}>
+          <div className="flex flex-col gap-1">
+            <span className={`${labelCls} inline-flex items-center gap-1`}>
+              <label htmlFor="eticaret-fark-durum">Durum</label>
+              <Explain label="Fark durumları">Açık: henüz ele alınmadı. Düzeltildi: siz düzelttiniz, gece okumasında doğrulanacak. Bilerek bırakıldı: fark kasıtlı, değerler değişmedikçe açılmaz. Sonraya: belirli bir süre listeden kalkar. Kapandı: fark ortadan kalktı.</Explain>
+            </span>
+            <select id="eticaret-fark-durum" className={field} value={durum} onChange={(e) => update({ durum: e.target.value || null })}>
               <option value="">İş bekleyenler (açık + sonra)</option>
               <option value="acik-hepsi">Kapanmamış olanların hepsi</option>
               {Object.entries(meta.durumlar).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               <option value="hepsi">Hepsi (kapananlar dahil)</option>
             </select>
-          </label>
+          </div>
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Sahip</span>
-            <input className={field} defaultValue={sahip} placeholder="kullanıcı adı" autoComplete="off"
+            <span className={labelCls}>Sorumlu kişi</span>
+            <input className={field} defaultValue={sahip} placeholder="Kullanıcı adı (boş: herkes)" autoComplete="off"
               onBlur={(e) => update({ sahip: e.target.value.trim() || null })}
               onKeyDown={(e) => { if (e.key === 'Enter') update({ sahip: (e.target as HTMLInputElement).value.trim() || null }); }} />
           </label>
@@ -128,7 +132,7 @@ function Listing({ meta }: { meta: Meta }) {
               <a className={`${btnGhost} ${packKeys.length ? '' : 'pointer-events-none opacity-50'}`} aria-disabled={!packKeys.length}
                 href={packKeys.length ? ecomApi.contentPackUrl(packKeys) : undefined}>
                 <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                İçerik paketi{packKeys.length ? ` (${packKeys.length} kitap)` : ''}
+                İçerik paketini indir{packKeys.length ? ` (${packKeys.length} kitap)` : ''}
               </a>
               <a className={btnGhost} href={ecomApi.diffsCsvUrl({ tur, durum, q: dq, sahip })}>
                 <Download aria-hidden className="h-4 w-4" />
@@ -146,12 +150,15 @@ function Listing({ meta }: { meta: Meta }) {
               {items.every((d) => picked[d.id]) ? 'Seçimi kaldır' : 'Bu sayfayı seç'}
             </button>
           )}
+          {meta.me.canExport && (
+            <Explain label="İçerik paketi">Seçtiğiniz barkodlu kitapların kart bilgilerini (Excel) indirir; sitedeki ürün sayfasını düzeltirken kullanılır. Barkodu olmayan kayıtlar pakete girmez.</Explain>
+          )}
         </div>
       </Panel>
       <Panel>
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
         {list.error && <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>}
-        {list.data && !items.length && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte fark yok.</p>}
+        {list.data && !items.length && <EmptyHint title="Bu süzgece uyan fark yok" why="Fark türünü «Hepsi»ne alın, durumu değiştirin ya da aramayı temizleyin." />}
         <div className="flex flex-col gap-2">
           {items.map((d) => (
             <DiffCard key={d.id} d={d} onOpen={setOpen} k={list.data?.kaynaklar}

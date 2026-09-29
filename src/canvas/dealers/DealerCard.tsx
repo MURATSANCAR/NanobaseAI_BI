@@ -26,7 +26,7 @@ export default function DealerCard() {
   const [sheet, setSheet] = useState<null | 'brif' | 'not' | 'aksiyon'>(null);
   const c = q.data;
   const m = meta.data;
-  const err = errText(q.error, 'Bayi kartı okunamadı.');
+  const err = errText(q.error, 'Bayi kartı okunamadı; biraz sonra yeniden deneyin.');
 
   return (
     <FieldFrame
@@ -69,7 +69,7 @@ export default function DealerCard() {
             }
           >
             {c.aksiyonlar.length === 0 ? (
-              <Empty>Aksiyon yok.</Empty>
+              <Empty>Bu cari için aksiyon yok.{m.me.canAction ? ' Ziyaret, arama ya da limit işi için «Aksiyon aç»ı kullanın.' : ''}</Empty>
             ) : (
               <ul className="flex flex-col gap-2">
                 {c.aksiyonlar.map((a) => (

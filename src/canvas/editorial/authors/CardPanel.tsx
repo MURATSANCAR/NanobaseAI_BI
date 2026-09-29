@@ -449,7 +449,7 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
           to={`/yazar-iliskileri?kisi=${encodeURIComponent((detail?.crmContactId || target.crm?.id) as string)}&ad=${encodeURIComponent(name)}`}
           className="inline-block text-[12px] font-extrabold text-canvas-violet underline"
         >
-          Satış gelişimi, sadakat ve ZEKİ AI önerisi
+          Satış gelişimi, sadakat ve Zeki AI önerisi
         </Link>
       )}
 

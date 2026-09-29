@@ -45,7 +45,7 @@ export default function CommerceScreen() {
       badges={{ [`${ROOT}/tetikler`]: runs.data?.total || null, [`${ROOT}/veri`]: fr && (fr.error || fr.missing.length) ? 1 : null }}
       badgeInfo={runs.data?.total ? <SqlInfo k={runs.data.kaynaklar} alan="total" label="Onay bekleyen liste sayısı (Tetikler rozeti)" /> : undefined}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Bu ekranın veri bağlantısı kurulmamış; sayılar açılamaz. Lütfen sistem yöneticinize bildirin.</Note>}
       {meta.error && <Note tone="err">{errText(meta.error, 'E-ticaret müşteri ekranı açılamadı.')}</Note>}
       {section}
     </CommerceFrame>

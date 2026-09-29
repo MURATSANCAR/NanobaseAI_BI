@@ -11,6 +11,7 @@ import { ROOT, useMeta } from './parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Etkinlik/fuar katılımcı dosyası: yükle → kolon eşle → eşleştir (eşleşti / yeni / geçersiz / izin eksik). */
 export default function Imports() {
@@ -53,7 +54,7 @@ function ImportList() {
       </div>
       {q.isLoading && <Loading />}
       {q.error && <Note tone="err">{errText(q.error, 'Yüklemeler açılamadı.')}</Note>}
-      {q.data && q.data.items.length === 0 && <Note tone="info">Henüz yükleme yok. Etkinlik ya da fuar katılımcı listesini yukarıdaki alana bırakın.</Note>}
+      {q.data && q.data.items.length === 0 && <EmptyHint title="Henüz yükleme yok" why="Etkinlik ya da fuar katılımcı listesini (CSV ya da Excel) yukarıdaki alana bırakın; katılımcılar okur kayıtlarıyla eşleştirilir." />}
       {q.data && q.data.items.length > 0 && (
         <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">Satır, eşleşme ve izin sayıları<SqlInfo k={q.data.kaynaklar} alan="items[]" label="Yükleme sayıları" /></p>
       )}

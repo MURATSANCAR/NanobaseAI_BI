@@ -70,6 +70,7 @@ export default function AccountsScreen() {
     <FieldFrame
       crumb="Müşteri ilişkileri"
       title="Cariler"
+      lead="Bütün müşterileriniz (cari), kayıp riski ve son 12 aydaki alımlarıyla. Kanal, il, risk ya da temsilciye göre süzün; karta dokununca ayrıntısı açılır."
       source={m?.run.kesim ? `Logo ${fmtDay(m.run.kesim)} tarihine kadar` : 'Logo + CRM'}
       presence={m?.run.asof ? `Veri ${fmtDay(m.run.asof)}` : 'Hazırlanmadı'}
       back={{ to: '/musteri-iliskileri', label: 'Özet' }}
@@ -142,7 +143,7 @@ export default function AccountsScreen() {
           <span className="text-canvas-muted">Segment:</span>
           <span className="font-extrabold">{f.segment}</span>
           <button type="button" className={`${btnGhost} !min-h-9`} onClick={() => update({ segment: null })}>
-            Kaldır
+            Segment süzgecini kaldır
           </button>
         </div>
       )}
@@ -157,17 +158,17 @@ export default function AccountsScreen() {
               <>
                 <a className={`${btnGhost} !min-h-9`} href={musteriApi.accountsCsvUrl(f)}>
                   <Download aria-hidden className="h-4 w-4" />
-                  CSV
+                  Listeyi indir (CSV)
                 </a>
                 <a className={`${btnGhost} !min-h-9`} href={xlsxUrl(musteriApi.accountsCsvUrl(f))}>
                   <FileSpreadsheet aria-hidden className="h-4 w-4" />
-                  Excel
+                  Listeyi indir (Excel)
                 </a>
               </>
             )}
           </div>
           {d.items.length === 0 ? (
-            <Empty>Süzgece uyan cari yok.</Empty>
+            <Empty title="Süzgece uyan cari yok">Aramayı kısaltın ya da kanal, il ve risk süzgeçlerini «Hepsi»ne alın.</Empty>
           ) : (
             <ul className={`grid grid-cols-1 gap-2 lg:grid-cols-2 ${list.isPlaceholderData ? 'opacity-60' : ''}`}>
               {d.items.map((a) => (

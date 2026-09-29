@@ -36,9 +36,9 @@ export default function FreelanceScreen() {
       title="Serbest çalışanlar"
       lead="Çizer, kapak tasarımcı, mizanpajcı, redaktör ve çevirmen havuzu: kayıt ve portfolyo, iş paketlerinin dağıtımı, haftalık kapasite, teslim ve hakediş, yazışma. Tutarlar anlaşılan brüt ücrettir (KDV hariç); ödeme Logo'da yapılır."
       source={o ? `${nf.format(o.people.active)} aktif kişi` : 'Serbest çalışan kayıtları'}
-      presence="Kaynak: ZEKİ AI kayıtları"
+      presence="Kaynak: portal kayıtları"
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {ov.error && <Note tone="err">{errText(ov.error, 'Özet okunamadı.')}</Note>}
 
       {o && (
@@ -48,6 +48,7 @@ export default function FreelanceScreen() {
             value={nf.format(o.tasks.unassigned)}
             help={o.tasks.unassigned ? 'Açık paketlerde kişisi olmayan görev' : 'Bütün görevlerin kişisi var'}
             info={<SqlInfo k={o.kaynaklar} alan="tasks.unassigned" label="Atanmayı bekleyen" />}
+            explain="Açık iş paketlerinde henüz bir kişiye verilmemiş görevler. Karta dokununca İş paketleri açılır."
             active={section === 'paketler'}
             onClick={() => go('paketler')}
           />
@@ -56,6 +57,7 @@ export default function FreelanceScreen() {
             value={nf.format(o.tasks.active)}
             help={o.tasks.late ? `${nf.format(o.tasks.late)} görevin termini geçti` : 'Termini geçen yok'}
             info={<SqlInfo k={o.kaynaklar} alan="tasks.active" label="Süren iş" />}
+            explain="Bir kişiye verilmiş, henüz bitmemiş görevler. Karta dokununca haftalık Kapasite açılır."
             active={section === 'kapasite'}
             onClick={() => go('kapasite')}
           />
@@ -64,6 +66,7 @@ export default function FreelanceScreen() {
             value={nf.format(o.tasks.review)}
             help="Kabul ya da revizyon bekleyen teslim"
             info={<SqlInfo k={o.kaynaklar} alan="tasks.review" label="Teslim incelemesi" />}
+            explain="Serbest çalışanın teslim ettiği, sizin kabul etmenizi ya da revizyon istemenizi bekleyen görevler."
             onClick={() => go('paketler', { durum: 'inceleme' })}
           />
           <Kpi
@@ -71,6 +74,7 @@ export default function FreelanceScreen() {
             value={tl(o.payable)}
             help={approvals ? `${nf.format(approvals)} hakediş onay bekliyor` : 'Kabul edilmiş, hakedişe girmemiş iş'}
             info={<SqlInfo k={o.kaynaklar} alan="payable" label="Ödenecek" />}
+            explain="Teslimi kabul edilmiş ama henüz hakediş belgesine girmemiş işlerin brüt tutarı (KDV hariç). Ödeme Logo'da yapılır."
             active={section === 'hakedis'}
             onClick={() => go('hakedis')}
           />

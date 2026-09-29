@@ -9,6 +9,7 @@ import { fmtDay, fmtDateTime } from '../hrApi';
 import { HrFrame, Tabs } from '../parts';
 import { InfoLabel } from '../../components/SqlInfo';
 import { SURVEY_TONE, engApi, type EngMeta, type Survey, type Template } from './engApi';
+import { EmptyHint } from '../../components/Explain';
 
 /** M58 Anket yönetimi (İK): şablonlar (ikinci kişi onaylar), anket açma, gösterim eşiği (kendiliğinden konmaz, İK girer;
  *  yalnız yükseltilir), birim kırılımı (eşik şart), basılı kodlar, kapanış ve birim sonucunu paylaşma. */
@@ -20,7 +21,7 @@ export default function SurveyAdmin() {
   const [tab, setTab] = useState<Tab>('anket');
   return (
     <HrFrame crumb="Anket yönetimi" title="Anket yönetimi"
-      lead="Şablondan anket başlatın. Gösterim eşiği bir gizlilik kuralıdır: en az kaç yanıt olmadan sonuç gösterilmeyeceğini siz girersiniz, portal kendiliğinden bir sayı koymaz. Eşik girilmeden hiçbir sonuç görünmez.">
+      lead="Onaylanmış şablondan adsız çalışan anketi başlatın, basılı kod üretin, kapatın ve birim sonuçlarını yöneticilerle paylaşın. Gösterim eşiği bir gizlilik kuralıdır: en az kaç yanıt olmadan sonuç gösterilmeyeceğini siz girersiniz; eşik girilmeden hiçbir sonuç görünmez.">
       <Tabs tabs={[{ key: 'anket' as const, label: 'Anketler' }, { key: 'sablon' as const, label: 'Şablonlar' }]} value={tab} onChange={setTab} />
       {meta.data && tab === 'anket' && <Surveys meta={meta.data} />}
       {meta.data && tab === 'sablon' && <Templates meta={meta.data} />}
@@ -36,6 +37,9 @@ function Surveys({ meta }: { meta: EngMeta }) {
       <div className="flex justify-start"><button type="button" className={btnPrimary} onClick={() => setEdit('new')}><Plus aria-hidden className="h-4 w-4" />Yeni anket</button></div>
       {q.error && <Note tone="err">{errText(q.error, 'Anketler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
+      {q.data && !q.data.items.length && (
+        <EmptyHint title="Henüz anket yok" why="«Yeni anket» ile onaylanmış bir şablondan anket hazırlayın; açınca hedef kitleye davet gider." />
+      )}
       <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {(q.data?.items ?? []).map((s) => (
           <li key={s.id}>
@@ -46,7 +50,7 @@ function Surveys({ meta }: { meta: EngMeta }) {
               </div>
               <div className="text-[11.5px] text-canvas-muted">{s.kindLabel} · {fmtDay(s.opensAt)} – {fmtDay(s.closesAt)} · {s.audienceNames?.length ? s.audienceNames.join(', ') : 'bütün çalışanlar'}</div>
               <div className="flex flex-wrap gap-1.5 text-[11.5px]">
-                <Pill tone={s.minGroup ? 'ok' : 'warn'}>{s.minGroup ? `eşik ${s.minGroup}` : 'eşik girilmedi'}</Pill>
+                <Pill tone={s.minGroup ? 'ok' : 'warn'}>{s.minGroup ? `gösterim eşiği ${s.minGroup}` : 'gösterim eşiği girilmedi'}</Pill>
                 {s.unitBreakdown && <Pill tone="violet">birim kırılımlı</Pill>}
                 {s.resultsSharedAt && <Pill tone="ok">birim sonucu paylaşıldı</Pill>}
               </div>
@@ -105,7 +109,7 @@ function SurveySheet({ s, meta, onClose }: { s: Survey | null; meta: EngMeta; on
             <span className={labelCls}>Şablon (onaylanmış)</span>
             <select className={field} value={f.templateId} onChange={(e) => setF({ ...f, templateId: e.target.value })}>
               <option value="">Seçin</option>
-              {approved.map((t) => <option key={t.id} value={t.id}>{t.title} · {t.kindLabel} (s{t.version})</option>)}
+              {approved.map((t) => <option key={t.id} value={t.id}>{t.title} · {t.kindLabel} (sürüm {t.version})</option>)}
             </select>
             {!approved.length && <span className="text-[11.5px] text-amber-800">Onaylanmış şablon yok; «Şablonlar» sekmesinden hazırlayıp ikinci bir kişiye onaylatın.</span>}
           </label>
@@ -117,7 +121,7 @@ function SurveySheet({ s, meta, onClose }: { s: Survey | null; meta: EngMeta; on
           <label className="flex flex-col gap-1"><span className={labelCls}>Açılış</span><input type="date" className={field} disabled={!draft} value={f.opensAt} onChange={(e) => setF({ ...f, opensAt: e.target.value })} /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Kapanış</span><input type="date" className={field} disabled={s?.state === 'kapandi'} value={f.closesAt} onChange={(e) => setF({ ...f, closesAt: e.target.value })} /></label>
           <label className="flex flex-col gap-1"><span className={labelCls}>Gösterim eşiği</span>
-            <input className={field} inputMode="numeric" value={f.minGroup} onChange={(e) => setF({ ...f, minGroup: e.target.value.replace(/\D/g, '') })} placeholder="İK kararı" />
+            <input className={field} inputMode="numeric" value={f.minGroup} onChange={(e) => setF({ ...f, minGroup: e.target.value.replace(/\D/g, '') })} placeholder="ör. 5" />
           </label>
         </div>
         <p className="text-[11.5px] leading-snug text-canvas-muted">Eşik: en az bu kadar yanıt olmadan hiçbir kapsamda (şirket ya da birim) sonuç gösterilmez. Girildikten sonra yalnız yükseltilir. Boş bırakılırsa sonuç eşik girilene kadar görünmez.</p>
@@ -125,7 +129,7 @@ function SurveySheet({ s, meta, onClose }: { s: Survey | null; meta: EngMeta; on
           <>
             <label className="flex min-h-11 items-center gap-2 text-[12.5px] font-bold">
               <input type="checkbox" checked={f.unitBreakdown} disabled={!f.minGroup} onChange={(e) => setF({ ...f, unitBreakdown: e.target.checked })} />
-              Birim kırılımlı (yalnız eşik girilmişse; açılıştan sonra değişmez)
+              Sonuçları birim birim de göster (yalnız eşik girilmişse; anket açıldıktan sonra değişmez)
             </label>
             <fieldset className="flex flex-col gap-1">
               <span className={labelCls}>Hedef kitle (boş: bütün aktif çalışanlar)</span>
@@ -149,16 +153,19 @@ function SurveySheet({ s, meta, onClose }: { s: Survey | null; meta: EngMeta; on
             </div>
             {codes && (
               <>
-                <Note tone="warn">Kodlar yalnız şimdi görünür; kişiye bağlı değildir. Yazdırıp karıştırarak dağıtın. Adres: portal → /ik/anket/k</Note>
+                <Note tone="warn">Kodlar yalnız şimdi görünür; sayfayı kapatmadan yazdırın. Kodlar kişiye bağlı değildir; karıştırarak dağıtın. Çalışan, portal adresinin sonuna /ik/anket/k yazıp kodunu girer.</Note>
                 <ul className="grid grid-cols-2 gap-1 font-mono text-[13px] sm:grid-cols-4">{codes.map((c) => <li key={c} className="rounded-lg bg-white px-2 py-1 text-center">{c}</li>)}</ul>
               </>
             )}
           </div>
         )}
+        {s && (s.state === 'acik' || s.state === 'planli') && (
+          <p className="text-[11.5px] leading-snug text-canvas-muted">Anketi kapatınca yeni cevap alınmaz, kimin cevapladığı bilgisi silinir ve basılı kodlar geçersiz olur.</p>
+        )}
         {s && <div className="text-[11.5px] text-canvas-muted">Açılış {fmtDateTime(s.openedAt)} · davet {s.invited} · basılı kod {s.paperIssued}{s.closedAt ? ` · kapanış ${fmtDateTime(s.closedAt)}` : ''}</div>}
         <div className="flex flex-wrap justify-end gap-2">
           {s?.state === 'taslak' && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('open')}>Anketi aç</button>}
-          {(s?.state === 'acik' || s?.state === 'planli') && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('close')}>Kapat</button>}
+          {(s?.state === 'acik' || s?.state === 'planli') && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('close')}>Anketi kapat</button>}
           {s?.state === 'kapandi' && s.unitBreakdown && !s.resultsSharedAt && <button type="button" className={btnGhost} disabled={act.isPending} onClick={() => act.mutate('share')}>Birim sonuçlarını yöneticilerle paylaş</button>}
           <button type="button" className={btnPrimary} disabled={save.isPending || (draft && (!f.templateId || !f.closesAt))} onClick={() => save.mutate()}>Kaydet</button>
         </div>
@@ -180,7 +187,7 @@ function Templates({ meta }: { meta: EngMeta }) {
           <li key={t.id}>
             <button type="button" onClick={() => setEdit(t)} className="glass-panel flex w-full flex-col gap-1 rounded-2xl p-3 text-left shadow-glass-float">
               <div className="flex flex-wrap items-center gap-1.5"><span className="min-w-0 flex-1 text-[14px] font-extrabold">{t.title}</span>
-                <Pill tone={t.state === 'yururlukte' ? 'ok' : t.state === 'onayda' ? 'warn' : 'muted'}>{t.stateLabel}</Pill><span className="font-mono text-[11px]">s{t.version}</span></div>
+                <Pill tone={t.state === 'yururlukte' ? 'ok' : t.state === 'onayda' ? 'warn' : 'muted'}>{t.stateLabel}</Pill><span className="font-mono text-[11px]">sürüm {t.version}</span></div>
               <div className="text-[11.5px] text-canvas-muted">{t.kindLabel} · {t.questions.length} soru{t.approvedBy ? ` · onaylayan ${t.approvedBy}` : ''}</div>
             </button>
           </li>
@@ -200,7 +207,7 @@ function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; met
   const save = useMutation({
     mutationFn: () => {
       let questions: unknown;
-      try { questions = JSON.parse(text); } catch { throw new Error('Sorular geçerli JSON değil.'); }
+      try { questions = JSON.parse(text); } catch { throw new Error('Soru metni bozuk; tırnak, virgül ve parantezleri kontrol edin.'); }
       const b = { kind, title, questions };
       return t ? engApi.updateTemplate(t.id, b) : engApi.createTemplate(b);
     },
@@ -223,7 +230,11 @@ function TemplateSheet({ t, meta, starters, onClose }: { t: Template | null; met
           <label className="flex flex-col gap-1"><span className={labelCls}>Ad</span><input className={field} value={title} onChange={(e) => setTitle(e.target.value)} /></label>
         </div>
         <label className="flex flex-col gap-1">
-          <span className={labelCls}>Sorular (JSON: key, text, type = enps | likert5 | secim | acik, options)</span>
+          <span className={labelCls}>Sorular (örnek yapıyı koruyarak düzenleyin)</span>
+          <span className="text-[11px] leading-snug text-canvas-muted">
+            text = soru metni; type = enps (0–10 tavsiye), likert5 (1–5 katılım), secim (seçenekli) ya da acik (açık uçlu); options = seçenekler.
+            Boşsa «Başlangıç sorularını yükle» ile hazır bir örnekten başlayın.
+          </span>
           <textarea className={`${field} min-h-[300px] font-mono text-[12px]`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
         </label>
         {starter && !text.trim() && (

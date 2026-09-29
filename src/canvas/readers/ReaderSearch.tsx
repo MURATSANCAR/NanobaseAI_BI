@@ -7,6 +7,7 @@ import { Loading, Note, Pill, Section, btnPrimary, errText, field } from '../adm
 import { fmtDay, readersApi, type ReaderSummary } from './api';
 import { ConsentPill, ROOT, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
+import { EmptyHint } from '../components/Explain';
 
 /** Okur ara: e-posta, cep telefonu ya da okur numarasıyla kesin arama (özet üzerinden). Ada göre arama yalnız kişisel veri yetkisiyle. */
 export default function ReaderSearch() {
@@ -28,13 +29,13 @@ export default function ReaderSearch() {
     >
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
         <label className="sr-only" htmlFor="okur-ara">Arama</label>
-        <input id="okur-ara" className={field} value={text} onChange={(e) => setText(e.target.value)} placeholder="ornek@eposta.com, 05xx xxx xx xx ya da OK…" autoComplete="off" />
+        <input id="okur-ara" className={field} value={text} onChange={(e) => setText(e.target.value)} placeholder="ornek@eposta.com, 05xx xxx xx xx ya da okur numarası" autoComplete="off" />
         <button type="submit" className={btnPrimary}><Search aria-hidden className="h-4 w-4" />Ara</button>
       </form>
       {res.isFetching && <Loading />}
       {res.error && <Note tone="err">{errText(res.error, 'Arama yapılamadı.')}</Note>}
       {res.data?.note && <Note tone="info">{res.data.note}</Note>}
-      {res.data && !res.data.note && res.data.items.length === 0 && <Note tone="info">Bu değerle eşleşen okur yok.</Note>}
+      {res.data && !res.data.note && res.data.items.length === 0 && <EmptyHint title="Bu değerle eşleşen okur yok" why="E-postayı ya da telefonu tam yazdığınızdan emin olun (telefon 05 ile başlayan cep numarası). Arama kesin eşleşmeyle yapılır." />}
       {res.data && res.data.items.length > 0 && (
         <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">{res.data.items.length} okur<SqlInfo k={res.data.kaynaklar} alan="items[]" label="Arama sonucu sayıları" /></p>
       )}

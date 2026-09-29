@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Yapay zekânın kaynakları: /api/v1/seo-geo/ai-sources, /ai-sources/{alan}, /ai-source-questions. Yalnız okunur. */
 
@@ -122,7 +123,7 @@ export default function SeoSources() {
       crumb="Yapay zekânın kaynakları"
       eyebrow="SEO & GEO · Yapay zekâ"
       title="Yapay zekânın kaynakları"
-      lead="İzlenen sorulara yapay zekâ motorlarının verdiği cevaplarda kaynak gösterilen siteler. Sık kaynak gösterilen ama o cevaplarda Timaş’ın anılmadığı siteler tanıtım ve iletişim için hedef listesidir. Ölçümlerden hesaplanır; hiçbir siteye istek gönderilmez."
+      lead="İzlenen okur sorularına yapay zekâ servislerinin verdiği cevaplarda kaynak gösterilen siteler. Sık kaynak gösterilen ama Timaş’ın anılmadığı siteler, tanıtım ve basın ilişkileri için hedef listesidir. Ölçümlerden hesaplanır; hiçbir siteye istek gönderilmez."
     >
       <div className="sg-filters" role="toolbar" aria-label="Bölüm">
         <button className="sg-filter" aria-pressed={tab === 'alanlar'} onClick={() => set('sekme', '')}>
@@ -132,6 +133,11 @@ export default function SeoSources() {
           Soru başına
         </button>
       </div>
+      <p style={{ margin: '-6px 0 0', fontSize: 12.5, color: 'var(--sg-muted)' }}>
+        {tab === 'alanlar'
+          ? 'Hangi siteler en çok kaynak gösteriliyor. Ne yapmalı: «Hedef listesi»ndeki sitelerde Timaş’ın yer alması için tanıtım ve iletişim çalışması planlayın.'
+          : 'Her sorunun, her servisteki son cevabında hangi sitelerin kaynak gösterildiği.'}
+      </p>
       {tab === 'alanlar' ? (
         <Domains engine={engine} setEngine={(v) => set('motor', v)} selected={params.get('alan') ?? ''} select={(v) => set('alan', v)} />
       ) : (
@@ -174,17 +180,21 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
           <EngineChips labels={d.engineLabels} seen={s.engines} engine={engine} onChange={(v) => { setEngine(v); setStart(0); }} />
 
           {!s.answers ? (
-            <div className="sg-empty">
-              <h2>Henüz ölçülmüş cevap yok</h2>
-              <p>Yapay zekâ görünürlüğü ekranında sorular ölçüldükçe kaynakları burada toplanır.</p>
-            </div>
+            <EmptyHint
+              title="Henüz ölçülmüş cevap yok"
+              why={<><Link to="/seo-geo/ai-gorunurluk">Yapay zekâ görünürlüğü</Link> ekranında sorular ölçüldükçe kaynakları burada toplanır.</>}
+            />
           ) : (
             <>
               <section className="sg-kpis" aria-label="Özet">
-                <Kpi label="Kaynak gösterilen site" value={fmt(s.domains)} note={`${fmt(s.citations)} kaynak, ${fmt(s.answersWithSources)} cevapta`} info={<SeoInfo k={r.data?.kaynaklar} label="Kaynak gösterilen site" />} />
-                <Kpi label="Sitemiz kaynak" value={pct(s.oursShare)} note={`${fmt(s.oursCited)} / ${fmt(s.answers)} cevap · ${d.our}`} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemiz kaynak" />} />
-                <Kpi label="Timaş anılıyor" value={pct(s.mentionShare)} note={`${fmt(s.mentioned)} / ${fmt(s.answers)} cevap`} info={<SeoInfo k={r.data?.kaynaklar} label="Timaş anılıyor" />} />
-                <Kpi label="Hedef site" value={fmt(s.targets)} note={`En az ${fmt(t!.targetMinQuestions)} soruda kaynak, Timaş cevapların en çok ${pct(t!.targetMaxMentionShare)}’inde`} info={<SeoInfo k={r.data?.kaynaklar} label="Hedef site" />} />
+                <Kpi label="Kaynak gösterilen site" value={fmt(s.domains)} note={`${fmt(s.citations)} kaynak, ${fmt(s.answersWithSources)} cevapta`} info={<SeoInfo k={r.data?.kaynaklar} label="Kaynak gösterilen site" />}
+                  explain="Yapay zekâ cevaplarının altında en az bir kez bağlantısı verilen farklı site sayısı." />
+                <Kpi label="Sitemiz kaynak" value={pct(s.oursShare)} note={`${fmt(s.oursCited)} / ${fmt(s.answers)} cevap · ${d.our}`} info={<SeoInfo k={r.data?.kaynaklar} label="Sitemiz kaynak" />}
+                  explain="Ölçülen cevapların yüzde kaçında timas.com.tr’ye bağlantı verildi." />
+                <Kpi label="Timaş anılıyor" value={pct(s.mentionShare)} note={`${fmt(s.mentioned)} / ${fmt(s.answers)} cevap`} info={<SeoInfo k={r.data?.kaynaklar} label="Timaş anılıyor" />}
+                  explain="Ölçülen cevapların yüzde kaçında metinde Timaş’ın ya da bir Timaş kitabının adı geçti." />
+                <Kpi label="Hedef site" value={fmt(s.targets)} note={`En az ${fmt(t!.targetMinQuestions)} soruda kaynak, Timaş cevapların en çok ${pct(t!.targetMaxMentionShare)}’inde`} info={<SeoInfo k={r.data?.kaynaklar} label="Hedef site" />}
+                  explain="Bizim konularımızda sık kaynak gösterilen ama Timaş’ın pek anılmadığı siteler. Sitemiz, rakipler ve pazar yerleri sayılmaz. Bu sitelerde görünmek, yapay zekâ cevaplarında anılmanın en kısa yoludur." />
               </section>
 
               <div className="sg-grid">
@@ -272,10 +282,10 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
                     : 'Kaynak gösterildiği cevap sayısına göre sıralı. Tür, açık kurallarla bulunur; gerekçesi sitenin ayrıntısında yazar. Rakip listesi Yönetim → SEO & GEO ayarından gelir.'}
                 </p>
                 {!d.items.length ? (
-                  <div className="sg-empty">
-                    <h2>{type === 'hedef' ? 'Hedef site yok' : 'Bu süzgeçte site yok'}</h2>
-                    <p>{type === 'hedef' ? 'Sık kaynak gösterilen sitelerin cevaplarında Timaş zaten anılıyor ya da ölçüm henüz az.' : 'Başka bir tür seçin.'}</p>
-                  </div>
+                  <EmptyHint
+                    title={type === 'hedef' ? 'Hedef site yok' : 'Bu süzgeçte site yok'}
+                    why={type === 'hedef' ? 'Sık kaynak gösterilen sitelerin cevaplarında Timaş zaten anılıyor ya da ölçüm henüz az.' : 'Başka bir tür seçin.'}
+                  />
                 ) : (
                   <div className="sg-table-wrap">
                     <table className="sg-table">
@@ -283,9 +293,9 @@ function Domains({ engine, setEngine, selected, select }: { engine: string; setE
                         <tr>
                           <th>Site</th>
                           <th>Cevap <SeoInfo k={r.data?.kaynaklar} label="Cevap" /></th>
-                          <th>Cevap payı <SeoInfo k={r.data?.kaynaklar} label="Cevap payı" /></th>
+                          <th>Cevap payı <SeoInfo k={r.data?.kaynaklar} label="Cevap payı" /> <Explain label="Cevap payı">Ölçülen bütün cevapların yüzde kaçında bu site kaynak gösterildi.</Explain></th>
                           <th>Soru</th>
-                          <th>Motor <SeoInfo k={r.data?.kaynaklar} label="Motor" /></th>
+                          <th>Servis <SeoInfo k={r.data?.kaynaklar} label="Servis" /></th>
                           <th>Timaş anılıyor</th>
                           <th>Örnek</th>
                         </tr>
@@ -396,7 +406,7 @@ function DomainPanel({ domain, engine, labels, onClose }: { domain: string; engi
                       <th>Soru</th>
                       <th>Cevap <SeoInfo k={r.data?.kaynaklar} label="Cevap" /></th>
                       <th>Timaş anıldı</th>
-                      <th>Motor <SeoInfo k={r.data?.kaynaklar} label="Motor" /></th>
+                      <th>Servis <SeoInfo k={r.data?.kaynaklar} label="Servis" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -459,7 +469,7 @@ function UrlList({ urls }: { urls: Url[] }) {
       {urls.map((u) => (
         <li key={`${u.url}|${u.title}`} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
           {u.redirect ? (
-            <span title="Motor, kaynağı yönlendirme adresiyle verdi; sayfanın kendi adresi bilinmiyor.">{u.title || u.url}</span>
+            <span title="Servis, kaynağı yönlendirme adresiyle verdi; sayfanın kendi adresi bilinmiyor.">{u.title || u.url}</span>
           ) : (
             <a href={u.url} target="_blank" rel="noreferrer">
               {u.title || u.url} <ExternalLink size={11} aria-hidden />
@@ -493,14 +503,14 @@ function Questions({ engine, setEngine }: { engine: string; setEngine: (v: strin
         <>
           <EngineChips labels={d.engineLabels} seen={Object.keys(d.engineLabels)} engine={engine} onChange={(v) => { setEngine(v); setStart(0); }} />
           {!d.items.length ? (
-            <div className="sg-empty">
-              <h2>Henüz ölçülmüş soru yok</h2>
-              <p>Yapay zekâ görünürlüğü ekranında sorular ölçüldükçe her cevabın kaynakları burada görünür.</p>
-            </div>
+            <EmptyHint
+              title="Henüz ölçülmüş soru yok"
+              why={<><Link to="/seo-geo/ai-gorunurluk">Yapay zekâ görünürlüğü</Link> ekranında sorular ölçüldükçe her cevabın kaynakları burada görünür.</>}
+            />
           ) : (
             <section className="sg-card">
-              <h2>Her motorun son cevabındaki kaynaklar <SeoInfo k={r.data?.kaynaklar} label="Her motorun son cevabındaki kaynaklar" /></h2>
-              <p className="sg-sub">Sorunun her motordaki son başarılı ölçümü. Yeşil: sitemiz; kırmızı: rakip kitapçı.</p>
+              <h2>Her servisin son cevabındaki kaynaklar <SeoInfo k={r.data?.kaynaklar} label="Her servisin son cevabındaki kaynaklar" /></h2>
+              <p className="sg-sub">Sorunun her servisteki son başarılı ölçümü. Yeşil: sitemiz; kırmızı: rakip kitapçı.</p>
               <div className="sg-list">
                 {d.items.map((q) => (
                   <article key={q.id} style={{ border: '1px solid var(--sg-line)', borderRadius: 16, padding: 14, minWidth: 0 }}>
@@ -554,8 +564,8 @@ function EngineChips({ labels, seen, engine, onChange }: { labels: Record<string
   const ids = Object.keys(labels).filter((e) => seen.includes(e) || e === engine);
   if (ids.length < 2 && !engine) return null;
   return (
-    <div className="sg-filters" role="toolbar" aria-label="Motor">
-      <Chip on={!engine} onClick={() => onChange('')} label="Bütün motorlar" />
+    <div className="sg-filters" role="toolbar" aria-label="Servis">
+      <Chip on={!engine} onClick={() => onChange('')} label="Bütün servisler" />
       {ids.map((e) => (
         <Chip key={e} on={engine === e} onClick={() => onChange(e)} label={shortEngine(labels[e], e)} />
       ))}
@@ -580,10 +590,10 @@ function Pager({ start, total, onChange }: { start: number; total: number; onCha
   );
 }
 
-function Kpi({ label, value, note, info }: { label: string; value: string; note: string; info?: ReactNode }) {
+function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {
   return (
     <div className="sg-kpi">
-      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}</div>
+      <div className="sg-kpi-label">{label}{info ? <> {info}</> : null}{explain ? <> <Explain label={label}>{explain}</Explain></> : null}</div>
       <div className="sg-kpi-value sg-mono">{value}</div>
       <div className="sg-kpi-note">{note}</div>
     </div>

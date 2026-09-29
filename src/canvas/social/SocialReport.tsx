@@ -68,7 +68,7 @@ export default function SocialReport() {
     <SocialFrame
       crumb="Rapor"
       title="Sosyal medya raporu"
-      lead="İçerik türü ve hesap bazında erişim ve etkileşim. Etkileşim = beğeni + yorum + paylaşım + kaydetme; oran = etkileşim ÷ erişim. Rapor kişi adı içermez."
+      lead="Paylaşımlarımız kaç kişiye ulaştı ve ne kadar ilgi gördü: içerik türüne ve hesaba göre. Rakamlar platformdan indirilen dosyadan ya da elle girilir; rapor kişi adı içermez."
       source="Platform dışa aktarım dosyaları"
       presence={r ? fmtMonth(r.ay) : '…'}
       aside={
@@ -91,11 +91,15 @@ export default function SocialReport() {
       {r && t && (
         <>
           <KpiRow>
-            <Kpi label="Erişim" value={fmtInt(t.reach)} help={`${fmtInt(r.olcuSatiri)} ölçü satırından`} info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Erişim" />} />
-            <Kpi label="Etkileşim" value={fmtInt(t.etkilesim)} help="Beğeni, yorum, paylaşım, kaydetme" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim" />} />
-            <Kpi label="Etkileşim oranı" value={fmtPct(t.oran)} help="Etkileşim ÷ erişim" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim oranı" />} />
+            <Kpi label="Erişim" value={fmtInt(t.reach)} help={`${fmtInt(r.olcuSatiri)} ölçü satırından`} info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Erişim" />}
+              explain="Gönderileri en az bir kez gören farklı hesap sayısı. Gösterimden farklıdır: aynı kişi gönderiyi üç kez görürse erişim 1, gösterim 3 sayılır." />
+            <Kpi label="Etkileşim" value={fmtInt(t.etkilesim)} help="Beğeni, yorum, paylaşım, kaydetme" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim" />}
+              explain="Beğeni, yorum, paylaşım ve kaydetme sayılarının toplamı." />
+            <Kpi label="Etkileşim oranı" value={fmtPct(t.oran)} help="Etkileşim ÷ erişim" info={<SqlInfo k={r.kaynaklar} alan="toplam" label="Etkileşim oranı" />}
+              explain="Etkileşimin erişime bölümü: ulaşılan her 100 kişiden kaçının gönderiye tepki verdiği. İçeriğin ilgi çekiciliğini karşılaştırmak için kullanılır." />
             <Kpi label="Onay süresi" value={r.onaySuresiSaat === null ? '—' : `${r.onaySuresiSaat.toLocaleString('tr-TR')} sa`}
-              help={`Onaya gönderme → onay medyanı, ${r.onaySayisi} gönderi`} info={<SqlInfo k={r.kaynaklar} alan="onaySuresiSaat" label="Onay süresi" />} />
+              help={`Onaya gönderme → onay, ortanca süre · ${r.onaySayisi} gönderi`} info={<SqlInfo k={r.kaynaklar} alan="onaySuresiSaat" label="Onay süresi" />}
+              explain="Gönderinin onaya gönderilmesiyle onaylanması arasında geçen sürenin ortanca değeri (saat). Gönderilerin yarısı bundan kısa, yarısı uzun sürede onaylanmıştır." />
           </KpiRow>
           {r.olcuSatiri === 0 && <Note tone="info">Bu ay için içgörü yok. Aşağıdan platformun dışa aktarım dosyasını yükleyin ya da yayınlanmış gönderiye elle girin.</Note>}
 
@@ -108,7 +112,7 @@ export default function SocialReport() {
             )}>
             {yText && <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed">{yText}</p>}
             {y?.durum === 'hata' && <Note tone="err">{y.hata}</Note>}
-            {!yText && !yRunning && y?.durum !== 'hata' && <p className="text-[12px] text-canvas-muted">Henüz yorum yok.</p>}
+            {!yText && !yRunning && y?.durum !== 'hata' && <p className="text-[12px] text-canvas-muted">Henüz yorum yok. Zeki AI yorumu rapordaki sayılardan yazılır.</p>}
           </Block>
 
           <div className="grid gap-3 xl:grid-cols-2 xl:gap-4">
@@ -143,7 +147,7 @@ export default function SocialReport() {
                       <td className={`${td} font-mono tabular-nums`}>{fmtInt(x.takipci)}{x.takipciGun ? <span className="ml-1 text-[10.5px] text-canvas-muted">({x.takipciGun})</span> : null}</td>
                     </tr>
                   ))}
-                  {r.hesaplar.length === 0 && <tr><td className={td} colSpan={5}>Ölçü yok.</td></tr>}
+                  {r.hesaplar.length === 0 && <tr><td className={td} colSpan={5}>Bu ay için hesap ölçüsü yok; aşağıdan içgörü dosyası yükleyin.</td></tr>}
                 </tbody>
               </TableWrap>
             </Block>

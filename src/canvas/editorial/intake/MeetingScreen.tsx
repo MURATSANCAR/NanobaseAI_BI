@@ -11,6 +11,7 @@ import { waitingText } from './parts';
 import { BoardTabs } from '../applications/shared';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
+import { EmptyHint } from '../../components/Explain';
 
 /** Yayın kurulu: bir toplantının gündemi ve kararları. Toplantı, CRM'de aynı güne yazılmış kurul kayıtlarıdır;
  *  ileri tarihli kayıt tutulmadığı için gelecek toplantı gösterilmez. */
@@ -96,7 +97,7 @@ export default function MeetingScreen() {
       route="/yayin-kurulu"
       crumb="Yayın kurulu"
       title={m ? `Geçmiş kurul · ${dayLabel(m.date)}` : 'Geçmiş kurul kararları'}
-      lead={m ? `Gündemde ${nf.format(m.total)} proje · ${nf.format(m.total - m.pending)} karar verildi · ${nf.format(m.pending)} bekliyor` : 'Kurul toplantıları ve kararları, CRM kurul kayıtlarından.'}
+      lead={m ? `Gündemde ${nf.format(m.total)} proje · ${nf.format(m.total - m.pending)} karar verildi · ${nf.format(m.pending)} bekliyor` : 'CRM\'e girilmiş geçmiş kurul toplantıları ve kararları. Toplantı, CRM\'de aynı güne yazılmış kurul kayıtlarından oluşur; ileri tarihli toplantı burada görünmez.'}
       source="Kaynak: CRM kurul kayıtları"
       aside={
         <div className="flex flex-col gap-2">
@@ -121,15 +122,15 @@ export default function MeetingScreen() {
         </div>
       }
     >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu kurulumda tanımlı değil; ekrandaki bilgiler okunamaz. Sistem yöneticinize haber verin.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {m && (
         <KpiRow>
-          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Kabul" />} label="Kabul" value={nf.format(m.accepted)} help="Onaylanan proje" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Kabul" />} explain="Bu toplantıda kurulun kabul ettiği projeler." label="Kabul" value={nf.format(m.accepted)} help="Onaylanan proje" />
           <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Red" />} label="Red" value={nf.format(m.rejected)} help="Uygun bulunmayan" />
-          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Yeniden değerlendirme" />} label="Yeniden değerlendirme" value={nf.format(m.revisit)} help="Geliştirilip tekrar gelecek" />
-          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Karar bekliyor" />} label="Karar bekliyor" value={nf.format(m.pending)} help="Bekleme ya da karar girilmemiş" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Yeniden değerlendirme" />} explain="Kurulun geliştirilip yeniden getirilmesini istediği projeler." label="Yeniden değerlendirme" value={nf.format(m.revisit)} help="Geliştirilip tekrar gelecek" />
+          <Kpi info={<SqlInfo k={kaynakOf(agenda.data)} alan="_hepsi" label="Karar bekliyor" />} explain="Kararı «bekleme» olan ya da CRM'e henüz karar girilmemiş projeler." label="Karar bekliyor" value={nf.format(m.pending)} help="Bekleme ya da karar girilmemiş" />
         </KpiRow>
       )}
 
@@ -137,7 +138,17 @@ export default function MeetingScreen() {
         <Panel>
           <h2 className="text-[15px] font-extrabold">Gündem</h2>
           {(meetings.isLoading || agenda.isLoading) && <Loading />}
-          {!agenda.isLoading && day && items.length === 0 && !err && <p className="py-8 text-center text-[12.5px] text-canvas-muted">Bu toplantıya kayıtlı proje yok.</p>}
+          {!agenda.isLoading && day && items.length === 0 && !err && (
+            <div className="mt-2">
+              <EmptyHint title="Bu toplantıya kayıtlı proje yok" why="Üstteki toplantı seçiciden başka bir toplantı tarihi seçin." />
+            </div>
+          )}
+          {!meetings.isLoading && meetings.data && list.length === 0 && !err && (
+            <div className="mt-2">
+              <EmptyHint title="CRM'de kurul kaydı yok" why="Kurul kararları CRM'e girildikçe toplantılar burada listelenir." />
+            </div>
+          )}
+          {items.length > 0 && <p className="mt-1 text-[11.5px] text-canvas-muted">Karar notunu ve ayrıntıları görmek için projeye dokunun.</p>}
           <ol className={`mt-1 ${agenda.isFetching && !agenda.isLoading ? 'opacity-60' : ''}`}>
             {items.map((it, i) => (
               <AgendaRow

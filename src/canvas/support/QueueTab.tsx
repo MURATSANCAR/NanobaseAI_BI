@@ -9,6 +9,7 @@ import { Block, Empty, SlaPill, SourceLine } from './parts';
 import { fmtDay, fmtPct, supportApi, type Meta, type QueueItem } from './api';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { Explain } from '../components/Explain';
 
 /** Açık talepler SLA'ya göre sıralı (aşılan → yaklaşan → süre içinde → SLA'sız). Talebe dokununca yanında Zeki AI önerisi,
  *  cevap taslağı ve müşteri bağlamı açılır. Talep masada cevaplanır; burada yalnız okunur ve taslak hazırlanır. */
@@ -22,9 +23,17 @@ export default function QueueTab({ meta }: { meta: Meta }) {
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <Block
-        info={<SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Açık talepler" />}
+        info={
+          <>
+            <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Açık talepler" />
+            <Explain label="Süre hedefi">
+              Her konunun ilk yanıt ve çözüm için bir süre hedefi vardır. Liste sırası: süresi aşılanlar, süresi dolmak üzere olanlar,
+              süre içindekiler, en sonda süre hedefi olmayanlar. Konunun yanındaki «?» Zeki AI’ın emin olmadığı tahmindir.
+            </Explain>
+          </>
+        }
         title="Açık talepler"
-        help={scope === 'mine' ? 'Size atananlar ve henüz kimseye atanmamışlar.' : 'Bütün temsilcilerin açık talepleri.'}
+        help={scope === 'mine' ? 'Size atananlar ve henüz kimseye atanmamışlar; süresi aşılanlar en üstte.' : 'Bütün temsilcilerin açık talepleri; süresi aşılanlar en üstte.'}
         action={
           meta.me.canAll ? (
             <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Kapsam">
@@ -40,11 +49,15 @@ export default function QueueTab({ meta }: { meta: Meta }) {
       >
         {q.isLoading && <Loading />}
         {q.error && <Note tone="err">{errText(q.error, 'Kuyruk okunamadı.')}</Note>}
-        {q.data && !q.data.configured && <Note tone="warn">Destek masası bağlantısı ayarlanmamış (Yönetim → Ayarlar → Müşteri hizmetleri).</Note>}
+        {q.data && !q.data.configured && <Note tone="warn">Destek masası bağlantısı ayarlanmamış; yöneticiniz Yönetim → Ayarlar → Müşteri hizmetleri’nden girebilir.</Note>}
         {q.data?.configured && scope === 'mine' && q.data.agentMapped === false && (
-          <Note tone="info">Masadaki kullanıcınız portal hesabınızla eşlenemedi; e-posta adresinin «@» öncesiyle eşleştirildi.</Note>
+          <Note tone="info">Destek masasındaki kullanıcınız portal hesabınızla birebir eşlenemedi; size atanan talepler e-posta adresinizin «@» öncesine göre bulundu.</Note>
         )}
-        {q.data?.configured && items.length === 0 && <Empty title="Açık talep yok">Kuyruk boş.</Empty>}
+        {q.data?.configured && items.length === 0 && (
+          <Empty title="Açık talep yok">
+            {scope === 'mine' ? 'Size atanmış ya da sahipsiz açık talep yok. Yeni talep masaya düşünce burada görünür.' : 'Masada şu an açık talep yok.'}
+          </Empty>
+        )}
         <ul className="flex flex-col gap-1.5">
           {items.map((t) => (
             <li key={t.ref}>
@@ -210,13 +223,13 @@ function TicketPanel({ item, meta, onClose }: { item: QueueItem; meta: Meta; onC
       </Block>
 
       {meta.me.canSuggest && (
-        <Block title="Cevap taslağı" help="Zeki AI yazar; sipariş no, tarih ve kargo bilgisi CRM/Logo'dan gelir, model rakam uydurmaz. Taslak hiçbir yere gönderilmez.">
+        <Block title="Cevap taslağı" help="Zeki AI yazar; sipariş numarası, tarih ve kargo bilgisi CRM ve Logo’dan gelir, kayıtta olmayan rakam içeren cümle taslaktan çıkarılır. Taslak hiçbir yere kendiliğinden gönderilmez.">
           <div className="flex flex-col gap-2">
             <label className="sr-only" htmlFor={`draft-${item.ref}`}>
               Taslak
             </label>
             <textarea id={`draft-${item.ref}`} className={`${field} min-h-[180px] font-normal leading-relaxed`} value={text} onChange={(e) => setText(e.target.value)}
-              placeholder="Taslak henüz yok." />
+              placeholder="Taslak henüz yok. «Taslak yaz»a basın ya da cevabınızı buraya yazın." />
             <div className="flex flex-wrap gap-1.5">
               <button type="button" className={btnPrimary} disabled={draft.isPending} onClick={() => draft.mutate()}>
                 {draft.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
@@ -224,7 +237,7 @@ function TicketPanel({ item, meta, onClose }: { item: QueueItem; meta: Meta; onC
               </button>
               <button type="button" className={btnGhost} disabled={!text.trim()} onClick={copy}>
                 <Copy aria-hidden className="h-4 w-4" />
-                Kopyala
+                Taslağı kopyala
               </button>
               {i?.draft && (
                 <>
@@ -238,7 +251,8 @@ function TicketPanel({ item, meta, onClose }: { item: QueueItem; meta: Meta; onC
               )}
             </div>
             <SourceLine>
-              «Masadan gönderdim» yalnız taslağın ne kadar değiştiğini ölçer (Zeki AI karnesi); gönderdiğiniz metin saklanmaz.
+              Cevabı masadan gönderdikten sonra «Masadan gönderdim»e, taslağı kullanmadıysanız «Kullanmadım»a basın. Bu yalnız taslağın ne
+              kadar değiştiğini ölçer (Zeki AI karnesi); gönderdiğiniz metin saklanmaz.
               {i?.finalSent !== null && i?.finalSent !== undefined && ` Son kayıt: ${i.finalSent ? `gönderildi, değişiklik ${fmtPct(i.editRatio)}` : 'kullanılmadı'}.`}
             </SourceLine>
           </div>

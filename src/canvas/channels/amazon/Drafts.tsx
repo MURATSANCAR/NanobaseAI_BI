@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, fmtDate, lab
 import { Pager, Panel } from '../../editorial/kit';
 import { amazonApi, type Draft } from './api';
 import { AmazonFrame, useAmazonMeta } from './parts';
+import { EmptyHint, Explain } from '../../components/Explain';
 
 const FIELD_NAMES: Record<string, string> = {
   baslik: 'Başlık', aciklama: 'Açıklama', anahtar_kelimeler: 'Anahtar kelimeler', moduller: 'A+ bölümleri', hedef_okur: 'Hedef okur',
@@ -47,7 +48,7 @@ function DraftCard({ d }: { d: Draft }) {
       {d.dusen.length > 0 && <p className="mt-2 text-[11.5px] text-amber-800">{d.dusen.length} cümle denetimden geçmedi ve çıkarıldı (kaynaksız rakam, kanıtsız iddia ya da uydurma alıntı).</p>}
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" className={btnGhost} onClick={() => navigator.clipboard?.writeText(text).then(() => toast.success('Kopyalandı.'), () => toast.error('Kopyalanamadı.'))}>
-          <Copy aria-hidden className="h-4 w-4" />Kopyala
+          <Copy aria-hidden className="h-4 w-4" />Metni kopyala
         </button>
         <button type="button" className={btnGhost} onClick={() => mark.mutate()} disabled={mark.isPending}>
           <Check aria-hidden className="h-4 w-4" />{d.durum === 'taslak' ? 'Kullanıldı olarak işaretle' : 'Taslağa geri al'}
@@ -76,15 +77,23 @@ export default function AmazonDrafts() {
   return (
     <AmazonFrame
       title="Listeleme taslakları"
-      lead="Tek kitap için hedef pazarda başlık, açıklama ve anahtar kelime, A+ metni ya da çeviri brief'i. Zeki AI CRM kitap kartından yazar; denetimden geçmeyen cümle çıkarılır. Hesaba koymak insanın işidir."
+      lead="Bir kitabı yurtdışı Amazon pazarında listelemek için Zeki AI'a başlık, açıklama ve anahtar kelime, A+ tanıtım metni ya da çevirmene iş tanımı (brief) yazdırın. Zeki AI CRM kitap kartındaki bilgiden yazar; taslağı Amazon hesabına siz koyarsınız."
     >
       {m && !m.modelReady && <Note tone="warn">Zeki AI şu an kullanılamıyor.</Note>}
       {m?.me.canDraft && (
         <Panel>
+          <p className="mb-2 flex items-center gap-1 text-[12px] text-canvas-muted">
+            Stok kodunu, hedef pazarı ve dili girip taslak türünü seçin.
+            <Explain label="Taslak türleri" title="Taslak türleri">
+              <span className="block"><b>Listeleme:</b> Amazon ürün sayfası için başlık, açıklama ve arama anahtar kelimeleri.</span>
+              <span className="block"><b>A+ içerik:</b> Amazon ürün sayfasının altındaki görselli, bölümlü tanıtım alanının metni.</span>
+              <span className="block"><b>Çeviri / yerelleştirme brief'i:</b> çevirmen ya da yerel ekip için hedef okur, ton ve dikkat edilecekleri anlatan kısa iş tanımı.</span>
+            </Explain>
+          </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.6fr_0.8fr_1fr_auto] lg:items-end">
-            <label className="flex flex-col gap-1"><span className={labelCls}>Stok kodu</span><input className={field} value={form.stokKodu} onChange={set('stokKodu')} placeholder="Logo / CRM stok kodu" /></label>
-            <label className="flex flex-col gap-1"><span className={labelCls}>Pazar</span><input className={field} value={form.pazar} onChange={set('pazar')} maxLength={12} /></label>
-            <label className="flex flex-col gap-1"><span className={labelCls}>Dil</span><input className={field} value={form.dil} onChange={set('dil')} maxLength={40} /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Stok kodu</span><input className={field} value={form.stokKodu} onChange={set('stokKodu')} placeholder="Logo ya da CRM stok kodu" /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Pazar</span><input className={field} value={form.pazar} onChange={set('pazar')} maxLength={12} placeholder="ör. DE, US, UK" /></label>
+            <label className="flex flex-col gap-1"><span className={labelCls}>Dil</span><input className={field} value={form.dil} onChange={set('dil')} maxLength={40} placeholder="ör. Almanca" /></label>
             <label className="flex flex-col gap-1"><span className={labelCls}>Tür</span>
               <select className={field} value={form.tur} onChange={set('tur')}>
                 {Object.entries(m.draftTypes).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -92,7 +101,7 @@ export default function AmazonDrafts() {
             </label>
             <button type="button" className={btnPrimary} onClick={() => create.mutate()} disabled={create.isPending || !form.stokKodu.trim() || !form.pazar.trim() || !form.dil.trim()}>
               {create.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
-              Taslak yaz
+              Zeki AI ile taslak yaz
             </button>
           </div>
         </Panel>
@@ -100,7 +109,9 @@ export default function AmazonDrafts() {
       {list.error && <Note tone="err">{errText(list.error, 'Taslaklar açılamadı.')}</Note>}
       {list.isLoading ? <Loading /> : list.data && (
         <Panel>
-          {!list.data.total ? <Note tone="info">Henüz taslak yok.</Note> : (
+          {!list.data.total ? (
+            <EmptyHint title="Henüz taslak yok" why={m?.me.canDraft ? 'Yukarıdaki alanları doldurup «Zeki AI ile taslak yaz» düğmesine basın; taslak burada listelenir.' : 'Taslak yazma yetkisi olan bir kişi taslak hazırladığında burada görünür.'} />
+          ) : (
             <div className="flex flex-col gap-2">
               {list.data.items.map((d) => <DraftCard key={d.id} d={d} />)}
             </div>

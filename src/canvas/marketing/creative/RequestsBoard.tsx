@@ -9,6 +9,7 @@ import { Pager, Panel, useDebounced } from '../../editorial/kit';
 import { BOARD, STATE_TONE, creativeApi, daysLeft, fmtDay, type CreativeRequest, type ReqState, type Summary } from './api';
 import { invalidateCreative, useCreativeMeta } from './useMeta';
 import SqlInfo from '../../components/SqlInfo';
+import { EmptyHint } from '../../components/Explain';
 
 /** Talep panosu. Masaüstünde beş sütun (Talep → Üretimde → Tasarım onayı → Mesaj onayı → Onaylı); telefonda durum
  *  çipleri ve tek sütun liste. Kart termine göre sıralı gelir (terminsizler sonda). */
@@ -149,9 +150,12 @@ export default function RequestsBoard({ params, update, due }: {
       {list.isLoading && <Loading />}
 
       {!list.isLoading && items.length === 0 && (
-        <p className="mt-3 text-[12.5px] text-canvas-muted">
-          {dq ? 'Bu aramada talep yok.' : closed ? 'Bu durumda talep yok.' : 'Açık talep yok. «Yeni talep» ile kitap, kanal ve biçim seçerek başlayın.'}
-        </p>
+        <div className="mt-3">
+          <EmptyHint
+            title={dq ? 'Bu aramada talep yok' : closed ? 'Bu durumda talep yok' : 'Açık talep yok'}
+            why={dq ? 'Kitap adını, stok kodunu ya da talep numarasını kontrol edin; aramayı temizleyince bütün talepler görünür.' : closed ? 'Başka bir durum seçin ya da durum süzgecini kaldırın.' : '«Yeni talep» ile kitap, kanal ve biçim seçerek başlayın. Onaylı pazarlama planlarının materyallerinden de talepler kendiliğinden açılır.'}
+          />
+        </div>
       )}
 
       {items.length > 0 && (durum ? (

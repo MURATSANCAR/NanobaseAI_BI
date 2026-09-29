@@ -6,6 +6,7 @@ import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td,
 import { Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { fmtAt, fmtEpoch, securityApi, type SecurityMeta, type SessionRow } from './api';
+import { EmptyHint, ExplainLabel } from '../components/Explain';
 
 /** Açık portal oturumları (kapatma: `guvenlik.oturum-kapat`) ve giriş olayları (başarılı/başarısız, adres). */
 export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
@@ -40,13 +41,22 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
       <Panel>
         <h2 className="text-[16px] font-extrabold tracking-tight">Açık oturumlar</h2>
         <p className="text-[12px] text-canvas-muted">
-          Portal oturumu 8 saat sürer. İşten ayrılan ya da cihazını kaybeden kişinin oturumu buradan kapatılır; AD hesabını
-          kapatmak BT'nin işidir.
+          Portal oturumu 8 saat sürer. İşten ayrılan ya da cihazını kaybeden kişinin oturumu buradan kapatılır; Active Directory
+          hesabını kapatmak BT'nin işidir.
         </p>
         {sessions.error && <div className="mt-2"><Note tone="err">{errText(sessions.error, 'Oturumlar okunamadı.')}</Note></div>}
         {sessions.data?.note && <div className="mt-2"><Note tone="warn">{sessions.data.note}</Note></div>}
-        {sessions.data && !sessions.data.configured && <p className="mt-2 text-[12.5px] text-canvas-muted">Giriş servisi bağlı değil.</p>}
-        {sessions.data?.configured && (
+        {sessions.data && !sessions.data.configured && (
+          <div className="mt-2">
+            <EmptyHint title="Açık oturumlar görünmüyor" why="Giriş hizmetiyle bağlantı kurulmamış; bu bağlantıyı BT’nin kurulum sırasında tanımlaması gerekir." />
+          </div>
+        )}
+        {sessions.data?.configured && !sessions.data.items.length && (
+          <div className="mt-3">
+            <EmptyHint title="Açık oturum yok" why="Şu an portala girişli kimse yok ya da bütün oturumların süresi dolmuş." />
+          </div>
+        )}
+        {sessions.data?.configured && !!sessions.data.items.length && (
           <div className="mt-3">
             <TableWrap>
               <thead>
@@ -54,8 +64,14 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
                   <th className={th}>Kişi</th>
                   <th className={th}>Açıldı</th>
                   <th className={th}>Bitiş</th>
-                  <th className={th}>Adres</th>
-                  <th className={th}>AD</th>
+                  <th className={th}>
+                    <ExplainLabel label="Adres">Oturumun açıldığı cihazın ağ adresi.</ExplainLabel>
+                  </th>
+                  <th className={th}>
+                    <ExplainLabel label="AD hesabı">
+                      Kişinin Active Directory (şirket hesabı) durumu. «Etkin değil» ise hesap kapatılmış ama portal oturumu hâlâ açıktır; oturumu kapatın.
+                    </ExplainLabel>
+                  </th>
                   {canRevoke && <th className={th}><span className="sr-only">İşlem</span></th>}
                 </tr>
               </thead>
@@ -76,15 +92,12 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
                       <td className={`${td} text-right`}>
                         <div className="flex flex-wrap justify-end gap-1.5">
                           <button type="button" className={btnGhost} onClick={() => setAsk({ session: s })}>Bu oturumu kapat</button>
-                          <button type="button" className={btnGhost} onClick={() => setAsk({ username: s.username })}>Kişinin bütün oturumları</button>
+                          <button type="button" className={btnGhost} onClick={() => setAsk({ username: s.username })}>Kişinin bütün oturumlarını kapat</button>
                         </div>
                       </td>
                     )}
                   </tr>
                 ))}
-                {!sessions.data.items.length && (
-                  <tr><td className={td} colSpan={canRevoke ? 6 : 5}>Açık oturum yok.</td></tr>
-                )}
               </tbody>
             </TableWrap>
           </div>
@@ -100,7 +113,7 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <label className="flex flex-col gap-1">
-            <span className={labelCls}>Hesap</span>
+            <span className={labelCls}>Hesap (kullanıcı adı)</span>
             <input className={field} value={user} onChange={(e) => setUser(e.target.value)} placeholder="ör. ahmety" autoComplete="off" />
           </label>
           <label className="flex flex-col gap-1">
@@ -117,6 +130,12 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
           </label>
         </div>
         {logins.error && <div className="mt-2"><Note tone="err">{errText(logins.error, 'Giriş kaydı okunamadı.')}</Note></div>}
+        {logins.data && !rows.length && (
+          <div className="mt-3">
+            <EmptyHint title="Bu süzgece uyan giriş yok" why="Hesap adını, sonucu ya da tarihi değiştirerek aramayı genişletin." />
+          </div>
+        )}
+        {!!rows.length && (
         <div className="mt-3">
           <TableWrap>
             <thead>
@@ -138,10 +157,10 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
                   <td className={`${td} font-mono text-[11.5px]`}>{r.addr ?? '—'}</td>
                 </tr>
               ))}
-              {logins.data && !rows.length && <tr><td className={td} colSpan={4}>Kayıt yok.</td></tr>}
             </tbody>
           </TableWrap>
         </div>
+        )}
         {logins.hasNextPage && (
           <div className="mt-3 flex justify-center">
             <button type="button" className={btnGhost} disabled={logins.isFetchingNextPage} onClick={() => logins.fetchNextPage()}>
@@ -158,7 +177,7 @@ export default function LoginsTab({ meta }: { meta?: SecurityMeta }) {
           ask?.session ? (
             <p>«{ask.session.display || ask.session.username}» kişisinin {fmtEpoch(ask.session.created)} tarihinde açılan oturumu kapanacak. Kişi yeniden giriş yapmak zorunda kalır.</p>
           ) : (
-            <p>«{ask?.username}» kişisinin bütün açık portal oturumları kapanacak. AD hesabı açık kalır; kişi yeniden giriş yapabilir.</p>
+            <p>«{ask?.username}» kişisinin bütün açık portal oturumları kapanacak. Active Directory hesabı açık kalır; kişi yeniden giriş yapabilir.</p>
           )
         }
         confirm="Oturumu kapat"

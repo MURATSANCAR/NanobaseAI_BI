@@ -12,6 +12,7 @@ import { STAGE_ORDER, daysText, recruitApi, type Card, type Pipeline, type Recru
 import { HrFrame, Tabs } from '../parts';
 import { FileDrop } from '../../components/FileDrop';
 import { MB, titleFromFilename } from '../../components/fileDropRules';
+import { Explain } from '../../components/Explain';
 
 /** M55 işe alım panosu: dört sayaç ve pozisyon başına aşama sütunları. Telefonda sütunlar sekmeye döner; aşama değişikliği
  *  kartın seçicisinden (sürükleme zorunlu değil). Kartta yalnız ad, pozisyon ve aşamadaki gün — puan ya da sıra yok. */
@@ -36,7 +37,7 @@ export default function RecruitBoard() {
     <HrFrame
       crumb="İşe alım panosu"
       title="İşe alım"
-      lead="Bütün başvurular aşamasıyla tek yerde. Zeki AI özgeçmişteki kanıtı gösterir; adayı elemez, puanlamaz, sıralamaz — her aşama kararı bir kişinin kaydıdır. Portal adaya e-posta göndermez; mektup taslağı hazırlanır, gönderimi siz yaparsınız."
+      lead="Bütün başvurular aşamasıyla tek yerde. Zeki AI özgeçmişteki kanıtı gösterir; adayı elemez, puanlamaz, sıralamaz. Her aşama kararını bir kişi verir. Portal adaya e-posta göndermez; mektup taslağı hazırlanır, gönderimi siz yaparsınız."
       aside={
         can?.all ? (
           <div className="flex justify-start lg:justify-end">
@@ -87,6 +88,12 @@ export default function RecruitBoard() {
             <div className="flex items-center gap-2 font-mono text-[11.5px] text-canvas-muted">
               {board.data.total} aday
               <SqlInfo k={board.data.kaynaklar} alan="columns" label="Aşama sayıları ve aşamada geçen gün" />
+              <Explain label="Karttaki işaretler">
+                <span className="block">Kartta adayın o aşamada kaç gündür beklediği yazar.</span>
+                <span className="block"><b>Bekliyor:</b> belirlenen günden uzun süredir aynı aşamada.</span>
+                <span className="block"><b>Adaya yazılmadı:</b> sonuçlandı ama adaya henüz dönüş yapılmadı.</span>
+                <span className="block"><b>Kanıtlı özet:</b> Zeki AI özgeçmişten, kaynağını gösteren bir özet çıkardı.</span>
+              </Explain>
             </div>
           </div>
           <div className="mt-3 lg:hidden">
@@ -131,15 +138,19 @@ function Counters({ data }: { data: Pipeline }) {
   const c = data.counters;
   return (
     <KpiRow>
-      <Kpi label="Açık pozisyon" value={String(c.openPositions)} help="Onaylanmış, başvuru alan" info={<SqlInfo k={data.kaynaklar} alan="counters.openPositions" label="Açık pozisyon" />} />
-      <Kpi label="Bu hafta gelen" value={String(c.thisWeek)} help="Son 7 günde açılan aday kaydı" info={<SqlInfo k={data.kaynaklar} alan="counters.thisWeek" label="Bu hafta gelen" />} />
+      <Kpi label="Açık pozisyon" value={String(c.openPositions)} help="Onaylanmış, başvuru alan"
+        explain="Onaylanıp başvuruya açılmış pozisyon sayısı. Taslak, onayda, beklemede ya da kapanmış pozisyonlar sayılmaz." info={<SqlInfo k={data.kaynaklar} alan="counters.openPositions" label="Açık pozisyon" />} />
+      <Kpi label="Bu hafta gelen" value={String(c.thisWeek)} help="Son 7 günde açılan aday kaydı"
+        explain="Son 7 günde açılan yeni aday kayıtları; e-postayla, ilan sitesinden, iç başvurudan ya da elle gelenlerin hepsi." info={<SqlInfo k={data.kaynaklar} alan="counters.thisWeek" label="Bu hafta gelen" />} />
       <Kpi
         label="Aşamasında bekleyen"
         value={c.overSla === null ? '—' : String(c.overSla)}
         help={c.slaDays === null ? 'Bekleme eşiği ayarlanmadı (Portal ayarları)' : `${c.slaDays} günden uzun aynı aşamada`}
+        explain="Aynı aşamada belirlenen günden uzun süredir bekleyen aday sayısı. Bu adaylara bir sonraki adımı atmak gerekir."
         info={<SqlInfo k={data.kaynaklar} alan="counters.overSla" label="Aşamasında bekleyen" />}
       />
-      <Kpi label="Cevap bekleyen" value={String(c.waitingReply)} help={`Sonuçlandı, adaya yazılmadı · 30 günü aşan açık başvuru ${c.unanswered30}`} info={<SqlInfo k={data.kaynaklar} alan="counters.waitingReply" label="Cevap bekleyen" />} />
+      <Kpi label="Cevap bekleyen" value={String(c.waitingReply)} help={`Sonuçlandı, adaya yazılmadı · 30 günü aşan açık başvuru ${c.unanswered30}`}
+        explain="Süreci sonuçlanmış ama adaya henüz dönüş yazılmamış başvurular. Her adaya sonuç bildirilmelidir; mektup taslağı aday kartında hazırlanır." info={<SqlInfo k={data.kaynaklar} alan="counters.waitingReply" label="Cevap bekleyen" />} />
     </KpiRow>
   );
 }
@@ -237,7 +248,7 @@ function NewCandidateSheet({ open, meta, positions, initialFile, onClose }: {
     onError: (e) => toast.error(errText(e, 'Aday açılamadı.')),
   });
   return (
-    <Sheet open={open} modal onClose={onClose} title="Yeni aday" subtitle="E-postayla gelen başvurular kurumsal e-posta modülünden kendiliğinden gelir; buradan elle ya da ilan sitesinden gelen başvuru girilir.">
+    <Sheet open={open} modal onClose={onClose} title="Yeni aday" subtitle="E-postayla gelen başvurular kendiliğinden eklenir; buradan elden, ilan sitesinden ya da iç başvuruyla gelen adayı girersiniz. Yalnız ad soyad zorunludur.">
       <form
         className="flex flex-col gap-3"
         onSubmit={(e) => {
@@ -247,16 +258,16 @@ function NewCandidateSheet({ open, meta, positions, initialFile, onClose }: {
       >
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Ad soyad</span>
-          <input className={field} value={f.fullName} onChange={(e) => set('fullName')(e.target.value)} autoComplete="off" required />
+          <input className={field} value={f.fullName} onChange={(e) => set('fullName')(e.target.value)} autoComplete="off" required placeholder="ör. Ayşe Yılmaz" />
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className={labelCls}>E-posta</span>
-            <input className={field} type="email" inputMode="email" value={f.email} onChange={(e) => set('email')(e.target.value)} autoComplete="off" />
+            <input className={field} type="email" inputMode="email" value={f.email} onChange={(e) => set('email')(e.target.value)} autoComplete="off" placeholder="ör. ayse@ornek.com" />
           </label>
           <label className="flex flex-col gap-1">
             <span className={labelCls}>Telefon</span>
-            <input className={field} inputMode="tel" value={f.phone} onChange={(e) => set('phone')(e.target.value)} autoComplete="off" />
+            <input className={field} inputMode="tel" value={f.phone} onChange={(e) => set('phone')(e.target.value)} autoComplete="off" placeholder="ör. 0532 000 00 00" />
           </label>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
