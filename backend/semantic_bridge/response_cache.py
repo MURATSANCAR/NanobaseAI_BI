@@ -112,8 +112,11 @@ NEVER_PREFIXES = (
     "/api/v1/editorial/applications/forms",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
+#: Kitaba sor soru/cevap uçları (`/editorial/ask`, `/editorial/ask/<soru>`) sohbettir: ilk yoklama yavaş gelince
+#: «bekliyor» cevabı saklanıyor, ekran cevabı tazeleme saatine kadar göremiyordu (2026-09-29 ZEKI-43 kabulünde bulundu).
+#: Kitap listesi, katalog, sayfa ve kapak uçları bu kurala girmez.
 NEVER_PARTS = re.compile(
-    r"(run-due|/status$|/progress|/jobs|/stream|export|/file$|/image$|/pdf|/photo|/download|/cover|/covers/|/snapshot$|"
+    r"(/editorial/ask(/[0-9a-f]{32})?$|run-due|/status$|/progress|/jobs|/stream|export|/file$|/image$|/pdf|/photo|/download|/cover|/covers/|/snapshot$|"
     r"\.(xlsx|csv|pdf|docx|png|jpe?g|webp|svg|zip|epub|mp3|wav)$)", re.I)
 
 REVALIDATE_HEADER = "x-swr-revalidate"

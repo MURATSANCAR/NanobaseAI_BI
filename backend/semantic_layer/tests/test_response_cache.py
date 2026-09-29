@@ -25,6 +25,11 @@ def test_paths_and_keys():
               "/api/v1/reports/run-due", "/api/v1/people/ayse/photo", "/health", "/api/v1/editorial/ask/covers/abc"):
         assert not RC.cacheable_path(p), p
     assert RC.cacheable_path("/api/v1/people")
+    # Kitaba sor: soru ve soru listesi hiç saklanmaz (bekleyen cevap donuyordu); kitap listesi/katalog saklanabilir.
+    assert not RC.cacheable_path("/api/v1/editorial/ask")
+    assert not RC.cacheable_path("/api/v1/editorial/ask/20437294592646eaa80ea7ed088aa08b")
+    assert RC.cacheable_path("/api/v1/editorial/ask/books")
+    assert RC.cacheable_path("/api/v1/editorial/ask/catalog")
     assert RC.module_of("/api/v1/seo-geo/products/1/propose") == "/api/v1/seo-geo"
     assert RC.module_of("/api/v1/editorial/contracts/records/9") == "/api/v1/editorial/contracts"
     assert RC.norm_query("b=2&a=1&_=99&refresh=true") == "a=1&b=2"
