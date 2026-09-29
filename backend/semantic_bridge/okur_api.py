@@ -26,6 +26,7 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import okur as O
 from semantic_bridge import okur_kaynak as K
 from semantic_bridge import okur_sources as src
@@ -46,6 +47,18 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     from semantic_bridge import board as board_mod
 
     comments = src.Comments()
+
+    def isit() -> None:
+        """Köprü açılışında okur çekirdeğinin envanteri ve izin sağlığı arkada hesaplanır (özeti ilk açan beklemesin)."""
+        r = rt()
+        if HK.sqlite_mi(r.store.engine):
+            return
+        c = core()
+        if c is not None:
+            c.inventory(r.settings.tenant_id)
+            c.consent(r.settings.tenant_id)
+
+    HK.acilista("okur.ozet", isit)
 
     def crm_path() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")

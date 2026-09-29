@@ -341,3 +341,123 @@ def test_etkinlik_takvimi_bellekten(ev_engine):
     r2 = c.get(f"/api/v1/events/calendar?year={y}&unmapped=1").json()
     assert r2["events"] == r1["events"] and r2["months"] == r1["months"]
     assert _bekle(lambda: fake.say("new_BalangTarihi >=") == 2)
+
+
+# ------------------------------------------------------------------ M37 okur topluluğu: okur çekirdeği özeti
+
+
+def _okur_engine(seed: int = 0, n: int = 0):
+    """Okur veri tabanı: sabit örnek (n=0) ya da `seed` ile üretilmiş `n` okur ve rastgele izin kanıtları."""
+    import json
+    import random
+    from datetime import datetime, timezone
+
+    from semantic_bridge import readers as R
+    from semantic_bridge import readers_segments as RS
+    from semantic_layer.store.catalog_store import open_store
+
+    now = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    e = open_store("sqlite://").engine
+    R._ready.discard(id(e))
+    R.ensure(e)
+    RS.ensure_tables(e)
+    with e.begin() as c:
+        def reader(rid, sources, *, status="aktif", interests=(), minor=False, attrs=None):
+            c.execute(R.READERS.insert().values(
+                reader_id=rid, tenant_id="t1", status=status, is_minor=minor, first_seen=now, last_touch=now,
+                interests_json=json.dumps([{"ad": i} for i in interests]), attrs_json=json.dumps(attrs or {}),
+                sources_json=json.dumps(sources), event_count=0, updated_at=now))
+
+        def consent(rid, ch, st, src, tenant="t1"):
+            c.execute(R.CONSENTS.insert().values(tenant_id=tenant, reader_id=rid, channel=ch, status=st, source=src, at=now))
+
+        if not n:
+            reader("r1", {"crm_contact": 1}, interests=["Tarih"])
+            reader("r2", {"crm_contact": 1, "crm_lead": 2}, interests=["Tarih", "Roman"], minor=True)
+            reader("r3", {"upload": 1}, attrs={"uyari": ["ortak_iletisim"]})
+            reader("r9", {"crm_contact": 1}, status="birlesti")
+            for rid, ch, st, src in (("r1", "email", "izinli", "iys"), ("r1", "kvkk", "izinli", "crm"), ("r2", "email", "izinli", "iys"),
+                                     ("r2", "email", "ret", "crm"), ("r2", "kvkk", "izinli", "crm"), ("r9", "email", "izinli", "iys"),
+                                     ("r9", "email", "ret", "crm")):
+                consent(rid, ch, st, src)
+        else:
+            rnd = random.Random(seed)
+            for i in range(n):
+                reader(f"r{i}", {rnd.choice(["crm_contact", "crm_lead", "upload"]): 1},
+                       status=rnd.choice(["aktif", "aktif", "aktif", "birlesti", "pasif"]),
+                       attrs={"uyari": ["ortak_iletisim"]} if rnd.random() < 0.1 else {})
+                for _ in range(rnd.randint(0, 5)):
+                    consent(f"r{i}", rnd.choice(["email", "sms", "call", "kvkk"]), rnd.choice(["izinli", "ret"]),
+                            rnd.choice(["iys", "crm", "form"]))
+                if rnd.random() < 0.05:
+                    consent(f"r{i}", "email", "izinli", "iys", tenant="t2")          # başka kiracı sayılmaz
+        R._stamp(c, "t1")
+    return e
+
+
+def _eski_izin(engine, tenant):
+    """2026-09-29 öncesi `Provider.izin_sagligi`: bütün izin tablosu Python'da."""
+    from collections import Counter, defaultdict
+
+    import sqlalchemy as sa
+
+    from semantic_bridge import readers as R
+    from semantic_bridge import readers_core as RC
+
+    profs = R.profiles(engine, tenant, R.settings())
+    alive = {p["id"] for p in profs}
+    seen = defaultdict(set)
+    with engine.connect() as c:
+        for r in c.execute(sa.select(R.CONSENTS.c.reader_id, R.CONSENTS.c.channel, R.CONSENTS.c.status)
+                           .where(R.CONSENTS.c.tenant_id == tenant)):
+            if r.reader_id in alive:
+                seen[(r.reader_id, r.channel)].add(r.status)
+    conflicts = Counter(ch for (_rid, ch), st in seen.items() if {"izinli", "ret"} <= st)
+    out = [{"tur": f"celiski_{ch}", "ad": RC.CONFLICT_LABELS[ch], "sayi": int(conflicts.get(ch, 0)),
+            "aciklama": "Ret kazanır; yanlış olan kaynak kaydı düzeltilmeli."} for ch in (*R.CHANNELS, "kvkk")]
+    shared = sum(1 for p in profs if "ortak_iletisim" in (p["attrs"].get("uyari") or []))
+    out.append({"tur": "ortak_iletisim", "ad": "Ortak iletişim bilgisi (ebeveyn–çocuk olabilir)", "sayi": shared,
+                "aciklama": "Aynı e-posta/telefonu taşıyan kayıtların doğum yılları 12+ yıl ayrışıyor."})
+    return out
+
+
+@pytest.mark.parametrize("seed,n", [(0, 0), (1, 300), (2, 800)])
+def test_okur_izin_celiskisi_sql_eski_hesapla_ayni(seed, n, monkeypatch):
+    from semantic_bridge import readers_core as RC
+
+    for k in ("READERS_REQUIRE_KVKK", "READERS_CONSENT_SOURCES"):
+        monkeypatch.delenv(k, raising=False)
+    e = _okur_engine(seed, n)
+    p = RC.Provider(lambda: e, lambda: "t1")
+    assert p.izin_sagligi("t1") == _eski_izin(e, "t1")
+    if not n:
+        assert {x["tur"]: x["sayi"] for x in p.izin_sagligi("t1")}["celiski_email"] == 1     # birleşmiş r9 sayılmaz
+
+
+def test_okur_ozeti_damga_degismedikce_bellekten(monkeypatch):
+    from semantic_bridge import readers as R
+    from semantic_bridge import readers_core as RC
+
+    e = _okur_engine()
+    p = RC.Provider(lambda: e, lambda: "t1")
+    n = {"envanter": 0, "izin": 0}
+    env0, izin0 = RC.Provider._envanter, RC.Provider._izin
+
+    def say(ad, f):
+        def w(*a):
+            n[ad] += 1
+            return f(*a)
+        return staticmethod(w)
+
+    monkeypatch.setattr(RC.Provider, "_envanter", say("envanter", env0))
+    monkeypatch.setattr(RC.Provider, "_izin", say("izin", izin0))
+    inv1, iz1 = p.okur_envanteri("t1"), p.izin_sagligi("t1")
+    assert inv1["toplam"] == 3 and {r["kayitTipi"]: r["iysOnayli"] for r in inv1["satirlar"]}["crm_contact"] == 2
+    assert p.okur_envanteri("t1") == inv1 and p.izin_sagligi("t1") == iz1 and n == {"envanter": 1, "izin": 1}
+    with e.begin() as c:                                      # okur verisi değişti (tur/birleştirme damgası)
+        c.execute(R.CONSENTS.insert().values(tenant_id="t1", reader_id="r1", channel="email", status="ret", source="crm"))
+        R._stamp(c, "t1")
+    time.sleep(0.002)
+    iz2 = {x["tur"]: x["sayi"] for x in p.izin_sagligi("t1")}
+    assert n["izin"] == 2 and iz2["celiski_email"] == 2       # eski damganın rakamı gösterilmez
+
