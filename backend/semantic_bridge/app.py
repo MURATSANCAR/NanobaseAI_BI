@@ -7002,6 +7002,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=503, detail={
                 "code": "UNAVAILABLE", "message": f"{source} okunamadı: {type(e).__name__}"}) from e
 
+    @app.get("/api/v1/access/subjects/members")
+    def access_subject_members(request: Request) -> dict[str, Any]:
+        """Bir grubun / OU'nun / CRM rolünün bugünkü etkin üyeleri (bağlanınca rolü alacak kişiler; canlı okunur)."""
+        _access_admin(request)
+        kind = request.query_params.get("type", "")
+        subject = request.query_params.get("subject", "")
+        try:
+            from semantic_bridge import admin_kaynak as ADK
+
+            items = access_dir.members_of(kind, subject)
+            out = {"type": kind, "subject": subject, "count": len(items), "items": items}
+            return P.bagla(out, lambda: ADK.for_members(kind, out, access_dir, SK.databases()[1]))
+        except access_mod.AccessError as e:
+            raise _access_fail(e) from e
+        except Exception as e:  # noqa: BLE001
+            source = "CRM" if kind == "crm_role" else "Active Directory"
+            raise HTTPException(status_code=503, detail={
+                "code": "UNAVAILABLE", "message": f"{source} okunamadı: {type(e).__name__}"}) from e
+
     @app.get("/api/v1/access/explain")
     def access_explain(user: str, request: Request) -> dict[str, Any]:
         """Kişi gözüyle: hangi AD grupları ve CRM rolleri, hangi roller hangi yoldan, hangi sayfalar."""

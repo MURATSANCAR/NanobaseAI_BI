@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
 import {
   accessApi,
   type AccessBinding,
@@ -417,6 +417,7 @@ function Bindings({ role }: { role: AccessRole }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [openB, setOpenB] = useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (id: string) => accessApi.deleteBinding(id),
     onSuccess: () => {
@@ -449,7 +450,7 @@ function Bindings({ role }: { role: AccessRole }) {
               <Pill tone={b.type === 'crm_role' ? 'ok' : b.type === 'user' ? 'muted' : 'violet'}>{b.typeLabel}</Pill>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12.5px] font-bold">{b.label}</span>
-                <BindingMeta b={b} />
+                <BindingMeta b={b} open={openB === b.id} onToggle={() => setOpenB(openB === b.id ? null : b.id)} />
               </span>
               {confirm === b.id ? (
                 <span className="inline-flex items-center gap-1.5">
@@ -470,6 +471,7 @@ function Bindings({ role }: { role: AccessRole }) {
                   Kaldır
                 </button>
               )}
+              {openB === b.id && <MemberList type={b.type} subject={b.subject} label={b.label} />}
             </li>
           ))}
         </ul>
@@ -481,13 +483,13 @@ function Bindings({ role }: { role: AccessRole }) {
   );
 }
 
-function BindingMeta({ b }: { b: AccessBinding }) {
+function BindingMeta({ b, open, onToggle }: { b: AccessBinding; open: boolean; onToggle: () => void }) {
   // Rol listesinin okuması önbellekte; üye sayısının kaynağı (üye görüntüsü ve onu dolduran okuma) oradan.
   const k = useQuery({ queryKey: ['access', 'roles'], queryFn: accessApi.roles, retry: false }).data?.kaynaklar;
   if (b.type === 'user') return <span className="block text-[11.5px] text-canvas-muted">{b.subject}</span>;
   return (
     <span className="block text-[11.5px] text-canvas-muted">
-      {b.members === null ? 'Üyeler henüz okunmadı' : `${nf.format(b.members)} kişi`}
+      {b.members === null ? 'Üyeler henüz okunmadı' : <MembersToggle n={b.members} open={open} onToggle={onToggle} />}
       {b.members !== null && <SqlInfo k={k} alan="items" label={`${b.label}: üye sayısı`} className="ml-0.5" />}
       {b.updatedAt ? ` · ${fmtDate(b.updatedAt)} itibarıyla` : ''}
       {b.error && <span className="ml-1 font-semibold text-amber-700">· son okuma başarısız, eski üyeler geçerli</span>}
@@ -495,10 +497,72 @@ function BindingMeta({ b }: { b: AccessBinding }) {
   );
 }
 
+/** «12 kişi» — tıklayınca bağın içindeki kişiler açılır. Sayı 0 ise açılacak bir şey yok, düz metin. */
+function MembersToggle({ n, open, onToggle }: { n: number; open: boolean; onToggle: () => void }) {
+  if (n === 0) return <>0 kişi</>;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="-my-1 inline-flex min-h-8 items-center gap-0.5 rounded-md px-1 font-bold text-canvas-violet hover:bg-canvas-violet/10"
+    >
+      {nf.format(n)} kişi
+      <ChevronDown className={`h-3.5 w-3.5 ${open ? 'rotate-180' : ''}`} />
+    </button>
+  );
+}
+
+function MemberList({ type, subject, label: name }: { type: AccessSubjectType; subject: string; label: string }) {
+  const [q, setQ] = useState('');
+  const m = useQuery({
+    queryKey: ['access', 'members', type, subject],
+    queryFn: () => accessApi.members(type, subject),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const needle = trFold(q.trim());
+  const items = (m.data?.items ?? []).filter((p) => !needle || trFold(`${p.label} ${p.subject} ${p.detail ?? ''}`).includes(needle));
+  return (
+    <div className="basis-full space-y-1.5 rounded-lg bg-slate-50 p-2">
+      {m.isLoading ? (
+        <Loading />
+      ) : m.error ? (
+        <Note tone="err">{errText(m.error, 'Kişiler okunamadı.')}</Note>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-canvas-muted">
+            <span className="flex items-center gap-0.5 font-bold">
+              {name}: bugün {nf.format(m.data?.count ?? 0)} kişi
+              <SqlInfo k={m.data?.kaynaklar} alan="items" label={`${name}: kişiler`} />
+            </span>
+            {(m.data?.count ?? 0) > 8 && (
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Bu listede ara" className={`${field} ml-auto h-8 max-w-[200px] py-1 text-[12px]`} />
+            )}
+          </div>
+          {items.length === 0 ? (
+            <p className="py-2 text-center text-[12px] text-canvas-muted">{needle ? 'Eşleşen kişi yok.' : 'Etkin üyesi yok.'}</p>
+          ) : (
+            <ul className="max-h-64 divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-md bg-white">
+              {items.map((p) => (
+                <li key={p.subject} className="px-2.5 py-1.5">
+                  <span className="block truncate text-[12px] font-bold">{p.label}</span>
+                  <span className="block truncate text-[11px] text-canvas-muted">{[p.subject, p.detail].filter(Boolean).join(' · ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => void }) {
   const qc = useQueryClient();
   const [type, setType] = useState<AccessSubjectType>('ad_group');
   const [q, setQ] = useState('');
+  const [openC, setOpenC] = useState<string | null>(null);
   const needle = trFold(q.trim());
   // Arama bütün türlerde yapılır: kişi adı «AD grubu» sekmesinde yazılınca «Eşleşen yok» deyip kalmasın,
   // hangi sekmede kaç eşleşme olduğu görünsün. Diğer türler yalnız bir şey yazılınca okunur (5 dk bellek).
@@ -585,7 +649,7 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
             const already = bound.has(c.subject.toLowerCase());
             const busy = add.isPending && add.variables?.subject === c.subject;
             return (
-              <li key={c.subject} className="flex items-center gap-3 px-3 py-2">
+              <li key={c.subject} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12.5px] font-bold">{c.label}</span>
                   {(c.hint || c.detail) && (
@@ -594,7 +658,7 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
                 </span>
                 {typeof c.count === 'number' && (
                   <span className="flex shrink-0 items-center gap-0.5 text-[11.5px] font-bold tabular-nums text-canvas-muted">
-                    {nf.format(c.count)} kişi
+                    <MembersToggle n={c.count} open={openC === c.subject} onToggle={() => setOpenC(openC === c.subject ? null : c.subject)} />
                     <SqlInfo k={list.data?.kaynaklar} alan="items" label={`${c.label}: kişi sayısı`} />
                   </span>
                 )}
@@ -610,6 +674,7 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ekle'}
                   </button>
                 )}
+                {openC === c.subject && <MemberList type={type} subject={c.subject} label={c.label} />}
               </li>
             );
           })}

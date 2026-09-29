@@ -196,6 +196,18 @@ def for_subjects(kind: str, out: dict[str, Any], directory: Any, crm_db: Optiona
     return k
 
 
+def for_members(kind: str, out: dict[str, Any], directory: Any, crm_db: Optional[str]) -> P.Kaynaklar:
+    k = P.Kaynaklar()
+    if kind == "crm_role" and directory is not None:
+        mem = k.sorgu("crm.yetki.rol-uyeleri", "CRM rol üyeleri", "crm", directory.crm_role_members_sql(),
+                      database=crm_db, description="Etkin, giriş yapabilen kullanıcılar; 5 dakika bellekte tutulur.")
+        ref = k.hesap("uye", "Rolü taşıyan etkin CRM kullanıcıları; ad ve birim AD kişi listesinden.", [mem])
+    else:
+        ref = k.hesap("uye", "Bağın etkin üyeleri: grupta iç içe gruplar, birimde alt birimler dahil.", dis=AD_DIS)
+    k.alanlar({"count": ref, "items": ref})
+    return k
+
+
 def for_explain(engine: Any, tenant: str, out: dict[str, Any], directory: Any, crm_db: Optional[str]) -> P.Kaynaklar:
     k = P.Kaynaklar()
     ins = _role_sources(k, engine, tenant, directory, crm_db)

@@ -300,3 +300,60 @@ def test_feature_gate_in_the_bridge(monkeypatch, store, settings):
     A.save_role(engine, TENANT, "zekiai", {"name": "Pano okuyucu", "perms": ["sayfa:panolar", "ozellik:pano.duzenle"]}, rid)
     A.invalidate()
     assert client.put("/api/v1/board", json={"cards": []}, headers=a).status_code != 403
+
+
+# ------------------------------------------------------------------ bağ adayları: sayılar ve üye listesi
+
+
+def test_ou_count_includes_sub_units_and_escaped_commas():
+    """Bağlanan OU alt ağacıyla okunur (`ou_members`); listede görünen sayı da alt birimleri saymalı."""
+    dns = [
+        "CN=Ali,OU=Satis,OU=Merkez,DC=timas,DC=local",
+        "CN=Yilmaz\\, Ayse,OU=Satis,OU=Merkez,DC=timas,DC=local",
+        "CN=Mehmet,OU=Merkez,DC=timas,DC=local",
+        "CN=Administrator,CN=Users,DC=timas,DC=local",
+    ]
+    counts = A.ou_subtree_counts(dns)
+    assert counts == {"OU=Satis,OU=Merkez,DC=timas,DC=local": 2, "OU=Merkez,DC=timas,DC=local": 3}
+    assert A._dn_parts(dns[1])[0] == "CN=Yilmaz\\, Ayse"
+
+
+def test_group_count_follows_nested_groups_and_skips_disabled_people():
+    people = {"cn=ali,ou=a,dc=x", "cn=veli,ou=a,dc=x", "cn=can,ou=a,dc=x"}
+    groups = {
+        "CN=Ust,OU=G,DC=x": ["CN=Ali,OU=A,DC=x", "CN=Alt,OU=G,DC=x", "CN=Kapali,OU=A,DC=x"],
+        "CN=Alt,OU=G,DC=x": ["CN=Veli,OU=A,DC=x", "CN=Ali,OU=A,DC=x", "CN=Ust,OU=G,DC=x"],   # döngü
+        "CN=Bos,OU=G,DC=x": [],
+    }
+    counts = A.nested_group_counts(groups, people)
+    assert counts == {"cn=ust,ou=g,dc=x": 2, "cn=alt,ou=g,dc=x": 2, "cn=bos,ou=g,dc=x": 0}
+
+
+class _MemberDirectory(A.Directory):
+    def __init__(self):
+        super().__init__(lambda: {}, lambda: "")
+
+    def list_people(self):
+        return [{"subject": "ali", "label": "Ali Kaya", "hint": "ali", "detail": "Satis"},
+                {"subject": "ayse", "label": "Ayşe Demir", "hint": "ayse", "detail": "Satis"}]
+
+    def group_members(self, group):
+        return {"ayse", "ali"} if group == "satis_group" else set()
+
+    def ou_members(self, ou):
+        return {"ali"}
+
+    def crm_role_members(self):
+        return {"11111111-2222-3333-4444-555555555555": {"ali", "eski"}}
+
+
+def test_members_of_lists_people_with_names_and_flags_unknown_accounts():
+    d = _MemberDirectory()
+    assert [p["label"] for p in d.members_of("ad_group", "satis_group")] == ["Ali Kaya", "Ayşe Demir"]
+    assert [p["subject"] for p in d.members_of("ou", "OU=Satis,DC=timas,DC=local")] == ["ali"]
+    crm = d.members_of("crm_role", "{11111111-2222-3333-4444-555555555555}")
+    assert [(p["subject"], p["detail"]) for p in crm] == [("ali", "Satis"), ("eski", "AD'de etkin hesabı yok")]
+    with pytest.raises(A.AccessError):
+        d.members_of("ou", " ")
+    with pytest.raises(A.AccessError):
+        d.members_of("yok", "x")

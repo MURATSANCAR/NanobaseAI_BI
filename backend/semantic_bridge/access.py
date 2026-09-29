@@ -1513,13 +1513,20 @@ class Directory:
             self._cache[key] = (time.monotonic(), val)
         return val
 
+    def _people_rows(self) -> list[dict[str, Any]]:
+        """Etkin kişiler (DN, hesap, görünen ad) — kişi listesi, OU sayıları ve iç içe grup sayıları buradan."""
+        return self._cached("people_rows", 300.0, lambda: self._search(_PERSON, ["sAMAccountName", "displayName"]))
+
     def list_groups(self) -> list[dict[str, Any]]:
-        """Güvenlik grupları (dağıtım listeleri ve Windows'un yerleşik grupları hariç), doğrudan üye sayısıyla."""
+        """Güvenlik grupları (dağıtım listeleri ve Windows'un yerleşik grupları hariç), etkin kişi sayısıyla
+        (iç içe gruplar dahil — bağlanınca rolü alacak kişi sayısının aynısı)."""
         def read() -> list[dict[str, Any]]:
             # Windows'un kendi grupları (Domain Admins, RODC, DnsAdmins…) isCriticalSystemObject taşır; listeye girmez.
             rows = self._search("(&(objectClass=group)(groupType:1.2.840.113556.1.4.803:=2147483648)"
                                 "(!(isCriticalSystemObject=TRUE)))",
                                 ["sAMAccountName", "description", "member", "groupType"])
+            counts = nested_group_counts({str(r.get("_dn") or ""): list(r.get("member") or []) for r in rows},
+                                         {str(p.get("_dn") or "") for p in self._people_rows()})
             out = []
             for r in rows:
                 gt = int(_first(r.get("groupType")) or 0) & 0xFFFFFFFF
@@ -1528,21 +1535,17 @@ class Directory:
                     continue
                 name = _first(r.get("sAMAccountName"))
                 if name:
-                    parent = dn.split(",", 1)[1] if "," in dn else ""
-                    out.append({"subject": name, "label": name, "hint": _ou_path(parent),
-                                "detail": _first(r.get("description")), "count": len(r.get("member") or [])})
+                    parts = _dn_parts(dn)
+                    out.append({"subject": name, "label": name, "hint": _ou_path(",".join(parts[1:])),
+                                "detail": _first(r.get("description")), "count": counts.get(dn.lower(), 0)})
             return sorted(out, key=lambda x: x["label"].lower())
         return self._cached("groups", 300.0, read)
 
     def list_ous(self) -> list[dict[str, Any]]:
-        """Etkin kişisi olan OU'lar, kişi sayısıyla (kişinin doğrudan bulunduğu OU)."""
+        """Etkin kişisi olan OU'lar, kişi sayısıyla — alt birimler dahil (bağlanınca rolü alacak kişi sayısının
+        aynısı: `ou_members` alt ağacı okur)."""
         def read() -> list[dict[str, Any]]:
-            counts: dict[str, int] = {}
-            for r in self._search(_PERSON, ["sAMAccountName"]):
-                dn = str(r.get("_dn") or "")
-                parent = dn.split(",", 1)[1] if "," in dn else ""
-                if parent.upper().startswith("OU="):
-                    counts[parent] = counts.get(parent, 0) + 1
+            counts = ou_subtree_counts(str(r.get("_dn") or "") for r in self._people_rows())
             return sorted(({"subject": ou, "label": _ou_name(ou), "hint": _ou_path(ou), "count": n}
                            for ou, n in counts.items()), key=lambda x: x["label"].lower())
         return self._cached("ous", 300.0, read)
@@ -1550,11 +1553,11 @@ class Directory:
     def list_people(self) -> list[dict[str, Any]]:
         def read() -> list[dict[str, Any]]:
             out = []
-            for r in self._search(_PERSON, ["sAMAccountName", "displayName"]):
+            for r in self._people_rows():
                 acc = _first(r.get("sAMAccountName")).lower()
                 if acc:
                     out.append({"subject": acc, "label": _first(r.get("displayName")) or acc, "hint": acc,
-                                "detail": _ou_name(str(r.get("_dn") or "").split(",", 1)[-1])})
+                                "detail": _ou_name(",".join(_dn_parts(str(r.get("_dn") or ""))[1:]))})
             return sorted(out, key=lambda x: x["label"].lower())
         return self._cached("people", 300.0, read)
 
@@ -1637,6 +1640,28 @@ class Directory:
         mine = [rid for rid, accs in self.crm_role_members().items() if user.lower() in accs]
         return sorted((roles.get(r, r) for r in mine), key=str.lower)
 
+    def members_of(self, t: str, subject: str) -> list[dict[str, Any]]:
+        """Bağın bugünkü etkin üyeleri, kişi listesindeki ad ve birimleriyle — üye görüntüsünü dolduran okumanın
+        aynısı (grupta iç içe gruplar, birimde alt birimler dahil). AD'de etkin olmayan CRM kullanıcısı hesap
+        adıyla gelir."""
+        subject = (subject or "").strip()
+        if not subject:
+            raise AccessError("Bağ seçilmedi.")
+        if t == "ad_group":
+            accs = self.group_members(subject)
+        elif t == "ou":
+            accs = self.ou_members(subject)
+        elif t == "crm_role":
+            accs = self.crm_role_members().get(subject.strip("{}").lower(), set())
+        elif t == "user":
+            accs = {subject.lower()}
+        else:
+            raise AccessError("Bilinmeyen bağ türü.")
+        people = {p["subject"]: p for p in self.list_people()}
+        out = [people.get(a) or {"subject": a, "label": a, "hint": a, "detail": "AD'de etkin hesabı yok"}
+               for a in accs if a]
+        return sorted(out, key=lambda x: x["label"].lower())
+
     def candidates(self, t: str) -> list[dict[str, Any]]:
         if t == "ad_group":
             return self.list_groups()
@@ -1650,6 +1675,57 @@ class Directory:
 
 
 _PERSON = "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))"
+
+
+def _dn_parts(dn: str) -> list[str]:
+    """DN'i bileşenlerine böler; kaçışlı virgül (`CN=Yılmaz\\, Ali`) bileşeni bölmez."""
+    parts, cur, esc = [], [], False
+    for ch in dn:
+        if esc:
+            cur.append(ch)
+            esc = False
+        elif ch == "\\":
+            cur.append(ch)
+            esc = True
+        elif ch == ",":
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    if cur or parts:
+        parts.append("".join(cur))
+    return parts
+
+
+def ou_subtree_counts(person_dns: Any) -> dict[str, int]:
+    """OU DN → altındaki (alt birimler dahil) kişi sayısı. Kişinin bütün üst OU'ları sayılır."""
+    counts: dict[str, int] = {}
+    for dn in person_dns:
+        parts = _dn_parts(dn)
+        for i in range(1, len(parts)):
+            if parts[i].strip().upper().startswith("OU="):
+                ou = ",".join(parts[i:])
+                counts[ou] = counts.get(ou, 0) + 1
+    return counts
+
+
+def nested_group_counts(group_members: dict[str, list[str]], person_dns: set[str]) -> dict[str, int]:
+    """Grup DN (küçük harf) → iç içe gruplar dahil etkin kişi sayısı. `group_members`: grup DN → `member`
+    değerleri; `person_dns`: etkin kişilerin DN'leri. Döngülü grup yapısı sonsuz dönmez."""
+    groups = {g.lower(): [m.lower() for m in ms] for g, ms in group_members.items()}
+    people = {p.lower() for p in person_dns}
+    out: dict[str, int] = {}
+    for g in groups:
+        seen_g, found, stack = {g}, set(), [g]
+        while stack:
+            for m in groups.get(stack.pop(), ()):
+                if m in people:
+                    found.add(m)
+                elif m in groups and m not in seen_g:
+                    seen_g.add(m)
+                    stack.append(m)
+        out[g] = len(found)
+    return out
 
 
 def _first(v: Any) -> str:

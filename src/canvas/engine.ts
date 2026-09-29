@@ -991,6 +991,10 @@ export const accessApi = {
   deleteBinding: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/access/bindings/${encodeURIComponent(id)}`, undefined, 30_000),
   subjects: (type: AccessSubjectType) =>
     send<WithK<{ type: AccessSubjectType; items: AccessCandidate[] }>>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
+  /** Bağın bugünkü etkin üyeleri (grupta iç içe gruplar, birimde alt birimler dahil). */
+  members: (type: AccessSubjectType, subject: string) =>
+    send<WithK<{ type: AccessSubjectType; subject: string; count: number; items: AccessCandidate[] }>>(
+      'GET', `/api/v1/access/subjects/members${qs({ type, subject })}`, undefined, 120_000),
   explain: (user: string) => send<WithK<AccessExplain>>('GET', `/api/v1/access/explain${qs({ user })}`, undefined, 120_000),
   /** Kataloğun her varlığı ve veri alanı; `manual`: alanı yönetici atadı (kural değil). */
   dataEntities: () =>
