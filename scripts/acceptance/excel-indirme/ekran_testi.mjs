@@ -35,7 +35,7 @@ const PAGES = [
   // Kart listesi yalnız portalda açılan sette çıkar (CRM'den gelen sette yok).
   { ad: 'set-kart-listesi', yol: async (req) => {
     const s = (await api(req, '/marketing/sets?durum=kart-bekliyor,satista')).items.find((x) => x.kaynak !== 'crm');
-    if (!s) throw new Error('portalda açılmış, kart bekleyen/satışta set yok');
+    if (!s) throw new Error('VERİ YOK: portalda açılmış, kart bekleyen/satışta set yok (CRM setinde kart listesi bölümü yok)');
     return `pazarlama/set-hediye/set/${s.id}`;
   } },
 ];
@@ -75,6 +75,9 @@ for (const p of PAGES) {
     // Veri gelene kadar düğme kapalı olabilir (ör. satır yokken): açık hâle gelmesini bekle.
     await page.waitForFunction(() => [...document.querySelectorAll('a,button')].some((e) => /Excel/.test(e.textContent || '') && !/CSV/.test(e.textContent || '') && !e.disabled), null, { timeout: 180_000 }).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
+    // İlk açılışta çıkan «Bu ekran nasıl çalışır?» kutusu düğmelerin önüne düşer; kişi gibi kapatılır.
+    const info = page.getByRole('button', { name: 'Bilgi kutusunu kapat' });
+    if (await info.count()) await info.first().click().catch(() => {});
     await page.screenshot({ path: path.join(OUT, `${p.ad}-masaustu.png`) });
     const n = await excel.count();
     const ciftler = [];

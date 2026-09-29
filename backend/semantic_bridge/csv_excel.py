@@ -228,7 +228,9 @@ class TooManyRows(ValueError):
 
 
 def _esc(v: str) -> str:
-    return v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    # Satır başı (\r) karakter referansıyla yazılır: XML okuyucular düz \r'yi siler (metindeki «\r\n» «\n» olurdu).
+    return (v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+            .replace("\r", "&#13;"))
 
 
 def _col(n: int) -> str:

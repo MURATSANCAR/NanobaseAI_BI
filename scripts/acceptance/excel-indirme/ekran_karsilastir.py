@@ -20,7 +20,8 @@ for line in sys.stdin:
     r = json.loads(line)
     ad = r["ad"]
     if "hata" in r:
-        KB.check(f"{ad} ekran", False, r["hata"])
+        veri_yok = "VERİ YOK" in r["hata"]
+        KB.check(f"{ad} ekran", None if veri_yok else False, r["hata"].split("\n")[0][:300])
         continue
     KB.check(f"{ad} ekran açıldı, Excel düğmesi var", bool(r["ciftler"]), f"/{r['yol']} ({r['sn']} sn)")
     if r.get("hatalar"):

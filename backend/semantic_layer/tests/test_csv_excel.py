@@ -108,6 +108,9 @@ def test_control_characters_long_cells_and_row_limit(monkeypatch):
     # Excel'in kabul etmediği kontrol karakteri atılır (dosya düşmez); sekme ve satır sonu kalır.
     data, _ = X.to_xlsx('Not\n"hata\x01 metni\tsekme\nsatır"\n', "t")
     assert _rows(_sheet(data))[1] == ["hata metni\tsekme\nsatır"]
+    # Satır başı korunur (XML okuyucu düz \r'yi silerdi).
+    data, _ = X.to_xlsx('Not\n"bir\r\niki"\n', "t")
+    assert _rows(_sheet(data))[1] == ["bir\r\niki"]
     # 32.767 karakteri aşan hücre «…» ile biter.
     data, _ = X.to_xlsx("Not\n" + "a" * 40000 + "\n", "t")
     v = _rows(_sheet(data))[1][0]
