@@ -187,18 +187,27 @@ def _stats(out: dict[str, Any]) -> dict[str, Any]:
 # ------------------------------------------------------------------ CRM portföyü (app.py uçları)
 
 
-def for_summary(schema: str, out: dict[str, Any], engine: Any = None) -> P.Kaynaklar:
-    """`GET /api/v1/editorial/contracts/summary`: yürürlükte, yenilemede, N günde bitiyor, ortalama telif, süzgeç sayıları."""
+#: Hız (2026-09-29): liste ve özetin CRM parçası süreç içi bellekte ya da editoryal masam hazırlığında tutulur.
+N_BELLEK = (" Sonuç köprünün sorgu önbelleği penceresi kadar (5 dk taze, 15 dk'ya kadar arkada yenilenerek) süreç içi "
+            "bellekte tutulur; «Verileri yenile» kaynağı bekler. Sorgunun çalıştığı an istatistikte.")
+N_HAZIR = (" Aynı sorgu editoryal masam hazırlığında (5 dakikada bir, önbellek atlanarak) çalıştı; rakam o hazırlıktan, "
+           "sorgunun çalıştığı an istatistikte.")
+
+
+def for_summary(schema: str, out: dict[str, Any], engine: Any = None, hazir_an: Optional[float] = None) -> P.Kaynaklar:
+    """`GET /api/v1/editorial/contracts/summary`: yürürlükte, yenilemede, N günde bitiyor, ortalama telif, süzgeç sayıları.
+    `hazir_an`: rakam editoryal masam hazırlığından geldiyse o hazırlığın anı (açıklama buna göre)."""
     k = P.Kaynaklar()
     db = crm_db(E._prefix(schema))
     warn = int(out.get("warnDays") or 60)
+    note = N_HAZIR if hazir_an else N_BELLEK
     ozet = k.sorgu("sozlesme.crm.ozet", "CRM sözleşme özeti", "crm", E.summary_sql(schema, warn), database=db, rows=1,
-                   description=f"Uyarı günü {warn} ile çalıştı; tarih koşulu sorgunun çalıştığı günün tarihidir (GETDATE).",
-                   **_stats(out))
+                   description=f"Uyarı günü {warn} ile çalıştı; tarih koşulu sorgunun çalıştığı günün tarihidir (GETDATE)."
+                   + note, **_stats(out))
     durum = k.sorgu("sozlesme.crm.durumlar", "CRM sözleşme durumları (süzgeç)", "crm", E.facet_sql(schema, "statuscode"),
-                    database=db, rows=len(out.get("statuses") or []))
+                    database=db, rows=len(out.get("statuses") or []), description=note.strip())
     tip = k.sorgu("sozlesme.crm.tipler", "CRM sözleşme tipleri (süzgeç)", "crm", E.facet_sql(schema, "new_SozlesmeTipi"),
-                  database=db, rows=len(out.get("kinds") or []))
+                  database=db, rows=len(out.get("kinds") or []), description=note.strip())
     inputs = [ozet]
     if engine is not None:
         inputs.append(settings_src(k, engine, "sozlesme.ayar", "Sözleşme uyarı günü ayarı", ["EDITORIAL_CONTRACT_WARN_DAYS"],
@@ -219,7 +228,7 @@ def for_page(engine: Any, tenant: str, schema: str, out: dict[str, Any], page: i
     cnt = k.sorgu("sozlesme.crm.sayim", "CRM sözleşme sayısı (süzgece uyan)", "crm", E.count_sql(schema, **flt), database=db,
                   rows=1)
     lst = k.sorgu("sozlesme.crm.liste", "CRM sözleşme listesi (bu sayfa)", "crm", E.list_sql(schema, page, order=order, **flt),
-                  database=db, rows=len(items), description="Sayfa başına 50 sözleşme; OFFSET sayfa numarasından.",
+                  database=db, rows=len(items), description="Sayfa başına 50 sözleşme; OFFSET sayfa numarasından." + N_BELLEK,
                   **_stats(out))
     inputs = [cnt, lst]
     ids = [c["id"] for c in items if c.get("id")]

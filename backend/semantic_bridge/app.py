@@ -4621,12 +4621,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return IZ.izli(engine, lambda: web_mod.book(engine, tenant, book_id), prefix="portal.basinweb.kitap",
                        title="Kitabın haberleri", text="Basın ve web: ilgili haber = modelin ilgili dediği açık kaynak haberi (model sayı üretmez, yalnız ilgili/ton seçer); olumlu/olumsuz ton sayıları; yazar bilgisi = aranan yazar sayısı; yazar/kitap başına haber sayısı; kanal tablosunda okunan/eşleşen/ilgili son gece taramasının raporundan. Haberler açık RSS ve Wikidata'dan gece okunur, portala yazılır.")
 
+    # Sözleşme özeti ve listesi CRM'i istek anında beklemez (contracts_hizli.py): özet editoryal masam hazırlığından,
+    # liste parçası süreç içi bellekten; «Verileri yenile» (X-Data-Refresh) eskisi gibi kaynağı bekler.
+    from semantic_bridge import contracts_hizli as contracts_hiz_mod
+
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
         from semantic_bridge import contracts_kaynak as K, provenance as P
         try:
-            return P.bagla(out := editorial_mod.summary(schema, run, _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60)), lambda: K.for_summary(schema, out, rt().store.engine))
+            out, hazir_an = contracts_hiz_mod.ozet(rt().settings.tenant_id, schema, run,
+                                                   _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60),
+                                                   app.state.editorial_home, fresh=FORCE_FRESH.get())
+            return P.bagla(out, lambda: K.for_summary(schema, out, rt().store.engine, hazir_an))
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
 
@@ -4636,13 +4643,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         schema, run = _editorial(request)
         expiring_days = _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None
         _remember_view("contracts", page, q, order=order, status=status, kind=kind, expiring_days=expiring_days)
+        engine, tenant, _, _ = _greetings(request)
         try:
-            out = editorial_mod.page(
-                schema, run, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days)
+            out = contracts_hiz_mod.sayfa(tenant, schema, run, page, order=order, fresh=FORCE_FRESH.get(),
+                                          q=q, status=status, kind=kind, expiring_days=expiring_days)
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
-        # Portalda düzenlenen CRM sözleşmeleri: satırda «portalda» rozeti ve durumu.
-        engine, tenant, _, _ = _greetings(request)
+        # Portalda düzenlenen CRM sözleşmeleri: satırda «portalda» rozeti ve durumu (her istekte portaldan).
         state = contracts_mod.crm_state(engine, tenant, [c["id"] for c in out["items"] if c.get("id")])
         for c in out["items"]:
             c["portal"] = state.get((c.get("id") or "").lower())
