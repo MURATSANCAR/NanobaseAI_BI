@@ -76,9 +76,23 @@ def test_copies_skip_old_and_bound_dates():
 
 
 def test_overlapping_copies_keep_bigger():
-    run, _ = _fake_run((("105", "2021-01-01", "2021-12-31", 10), ("015", "2021-01-01", "2021-12-31", 20)))
+    run, _ = _fake_run((("105", "2021-01-01", "2021-12-31", 10), ("115", "2021-01-01", "2021-12-31", 20)))
     b = D.Builder(run)
-    assert [c["firm"] for c in b.copies()] == ["015"] and b.warnings
+    assert [c["firm"] for c in b.copies()] == ["115"] and b.warnings
+
+
+def test_other_companies_copies_are_not_measured(monkeypatch):
+    """Canlı Logo'da başka şirketin 2026'sı (413) ve test firması (999) da INVOICE taşır; fatura sayısı fazla diye
+    seçilmemeli, hatta ölçülmemeli. Hariç tutulan kopya yılı (015) de okunmaz."""
+    monkeypatch.setenv("SEMANTIC_FIRMS", "015,016,105,115,171,181,191,201,211,411")
+    monkeypatch.delenv("SEMANTIC_EXCLUDE_CONTEXT", raising=False)
+    run = _fake_run((("211", "2021-01-02", "2025-12-31", 500000), ("411", "2026-01-01", "2026-08-17", 81000),
+                        ("413", "2026-01-01", "2026-09-28", 900000), ("999", "2026-01-01", "2026-09-28", 5),
+                        ("015", "2021-01-01", "2021-12-31", 999999)))
+    run, seen = run
+    b = D.Builder(run)
+    assert [c["firm"] for c in b.copies()] == ["211", "411"] and not b.warnings
+    assert not any(f in sql for _, sql in seen for f in ("LG_413_", "LG_999_", "LG_015_"))
 
 
 def test_build_snapshot(snap):
