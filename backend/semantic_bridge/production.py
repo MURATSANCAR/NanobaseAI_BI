@@ -23,6 +23,11 @@ CRM ve Logo yalnız okunur, köprünün kendi salt okunur bağlantılarıyla (y�
 Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`) ve istek onu
 hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
 değişti) ya da «Verileri yenile»de (X-Data-Refresh) kaynağı bekler.
+
+Kartların kurulması (okuma + portal kayıtları → birleştirme, plan, gecikme) ve özet de süreç belleğindedir
+(2026-09-29): anahtar okumanın anı + portal kayıtlarının parmak izi + ayarlar + gün; yeni okuma bitince ve portal kaydı
+yazılınca arkada yeniden kurulur. Bellek yalnız bu ekranın uçlarınındır; diğer modüller `Service.cards` ile her seferinde
+kendi kopyalarını kurar.
 """
 from __future__ import annotations
 
@@ -45,6 +50,7 @@ from fastapi import HTTPException, Request
 
 from semantic_layer.firm_scope import firm_in_scope
 
+from semantic_bridge import hizli_bellek as HB
 from semantic_bridge import production_plan as plan_mod
 from semantic_bridge import production_store as store
 from semantic_bridge.production_plan import KEYS, MILESTONES, STAGES, parse_day
@@ -299,6 +305,8 @@ class Source:
         self._snap: Optional[dict[str, Any]] = None
         self._at = 0.0
         self._disk_tried = False
+        #: Yeni okuma bitince çağrılır (Service kartları beklemeden arkada kurar); hata okumayı düşürmez.
+        self.on_new: Optional[Callable[[dict[str, Any]], None]] = None
 
     def _file(self) -> Path:
         return self._cache_dir() / "snapshot.pkl"
@@ -345,7 +353,12 @@ class Source:
             with self._lock:
                 self._snap, self._at = snap, at
             self._save(snap, at)
-            return snap
+        if self.on_new is not None:
+            try:
+                self.on_new(snap)
+            except Exception as e:  # noqa: BLE001 — ısıtma okumayı düşürmez
+                log.warning("production: yeni okuma sonrası ısıtma başlatılamadı: %s", e)
+        return snap
 
     def _refresh_later(self) -> None:
         if self._reading.locked():
@@ -686,6 +699,16 @@ def summary(c: dict[str, Any]) -> dict[str, Any]:
 
 # ------------------------------------------------------------------------------------------ servis
 
+def _parmak(entries: dict[str, list[dict]]) -> str:
+    """Portal kayıtlarının parmak izi: kartları etkileyen kayıtların (silinmemiş, bütün alanlarıyla) özeti. Kayıt
+    eklenince ya da silinince değişir; kartlar yeniden kurulur."""
+    return hashlib.sha256(repr(sorted(entries.items())).encode("utf-8")).hexdigest()
+
+
+def _ayar_anahtari(settings: dict[str, Any]) -> tuple:
+    return tuple(sorted((str(k), repr(v)) for k, v in (settings or {}).items()))
+
+
 class Service:
     """Ekranın uçları: kaynak okuması + portal kayıtları → kartlar ve raporlar."""
 
@@ -694,17 +717,127 @@ class Service:
         self.source = source
         self.settings = settings
         self.studio_jobs = studio_jobs
+        # Hız (2026-09-29): kartlar ve özet süreç belleğinde. Anahtar = motor + kiracı + portal kayıtlarının parmak izi
+        # + ayarlar + gün + kaynak okumasının anı: bunlardan biri değişince yeniden kurulur, rakam eski hesapla aynıdır.
+        # `en_cok` bellek korumasıdır (en eski anahtar düşer), sonuç kesilmez.
+        self._kartlar = HB.Bellek("uretim.kartlar", taze=float("inf"), en_cok=6)
+        self._ozetler = HB.Bellek("uretim.ozet", taze=float("inf"), en_cok=6)
+        self._lock = threading.Lock()
+        self._son: dict[tuple, tuple[tuple, dict[str, Any]]] = {}      # yan anahtar → (anahtar, okuma) son kurulan
+        self._baglam: dict[tuple, tuple] = {}                          # (motor, kiracı) → son isteğin kayıtları, ayarları
+        self._isitiliyor: set[tuple] = set()                           # arkada kurulan anahtarlar
+        self._okunan = threading.local()                               # bu isteğin kartlarının dayandığı okuma
+        source.on_new = self._yeni_okuma
 
     def cards(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> tuple[list[dict], dict]:
+        """Diğer modüllerin (tedarik, stok, dağıtım) okuduğu kartlar: her çağrıda yeniden kurulur (dönen liste
+        çağıranındır, değiştirebilir). Bu ekranın uçları bellekteki kopyayı `_kart_al` ile okur."""
         snap = self.source.snapshot(fresh)
         entries, _ = store.load(engine, tenant)
         cards = build_cards(snap, entries, settings=self.settings(), now=now)
         return cards, snap
 
+    # ---- bellek
+    def _hesap(self, yan: tuple, key: tuple, snap: dict[str, Any], entries: dict[str, list[dict]],
+               settings: dict[str, Any], now: date) -> Callable[[], list[dict]]:
+        def run() -> list[dict]:
+            cards = build_cards(snap, entries, settings=settings, now=now)
+            with self._lock:
+                son = self._son.get(yan)
+                if son is None or float(son[1].get("at") or 0) <= float(snap.get("at") or 0):
+                    self._son[yan] = (key, snap)
+            return cards
+        return run
+
+    def _kart_al(self, engine: Any, tenant: str, fresh: bool = False,
+                 now: Optional[date] = None) -> tuple[list[dict], dict[str, Any], tuple]:
+        """Ekranın kartları (değiştirilmez; uçlar yeni sözlük üretir). Aynı okuma + aynı portal kayıtları + aynı
+        ayarlar + aynı gün → bellekten. Kaynağın yeni okuması geldi ama kartları henüz kurulmadıysa önceki okumanın
+        kartları hemen döner (eskisi gibi: okuma arkada tazelenirken son okuma gösterilir), yenisi arkada kurulur.
+        «Verileri yenile» (`fresh`) kaynağı bekler ve o okumanın kartlarını kurar."""
+        return self._okumanin_kartlari(engine, tenant, self.source.snapshot(fresh), fresh, now or today())
+
+    def _okumanin_kartlari(self, engine: Any, tenant: str, snap: dict[str, Any], fresh: bool,
+                           now: date) -> tuple[list[dict], dict[str, Any], tuple]:
+        settings = self.settings()
+        entries, _ = store.load(engine, tenant)
+        yan = (id(engine), tenant, _parmak(entries), _ayar_anahtari(settings), now.isoformat())
+        key = yan + (snap.get("at"), snap.get("since"))
+        hesap = self._hesap(yan, key, snap, entries, settings, now)
+        with self._lock:
+            self._baglam[(id(engine), tenant)] = (id(engine), tenant, entries, settings)
+            son = self._son.get(yan)
+        if not fresh and self._kartlar.an(key) is None and son is not None and son[0] != key \
+                and self._kartlar.an(son[0]) is not None:
+            self._isit(key, hesap, snap, now)
+            old_key, old_snap = son
+            cards = self._kartlar.al(old_key, self._hesap(yan, old_key, old_snap, entries, settings, now))
+            self._okunan.snap = old_snap
+            return cards, old_snap, old_key
+        cards = self._kartlar.al(key, hesap)
+        self._okunan.snap = snap
+        return cards, snap, key
+
+    def yazildi(self, engine: Any, tenant: str) -> None:
+        """Portal kaydı eklendi ya da silindi: yeni kayıtlarla kartlar ve özet beklemeden arkada kurulur (ekran
+        yenilenince hesabın kalanını bekler). Okuma yoksa bir şey yapılmaz."""
+        try:
+            snap = self.source.peek()
+            if snap is None:
+                return
+            now, settings = today(), self.settings()
+            entries, _ = store.load(engine, tenant)
+            yan = (id(engine), tenant, _parmak(entries), _ayar_anahtari(settings), now.isoformat())
+            key = yan + (snap.get("at"), snap.get("since"))
+            with self._lock:
+                self._baglam[(id(engine), tenant)] = (id(engine), tenant, entries, settings)
+            if self._kartlar.an(key) is None:
+                self._isit(key, self._hesap(yan, key, snap, entries, settings, now), snap, now)
+        except Exception as e:  # noqa: BLE001 — ısıtılamazsa sonraki açılış kurar
+            log.info("production: yazma sonrası ısıtma başlatılamadı: %s", e)
+
+    def okunan(self) -> Optional[dict[str, Any]]:
+        """Bu iş parçacığında son `_kart_al`'ın dayandığı okuma (sorgu bilgisi o okumanın SQL'ini gösterir)."""
+        return getattr(self._okunan, "snap", None)
+
+    def _isit(self, key: tuple, hesap: Callable[[], list[dict]], snap: dict[str, Any], now: date) -> None:
+        """Kartları ve özeti beklemeden arkada kurar (tek iş: aynı anahtarı isteyen bu hesabı bekler)."""
+        with self._lock:
+            if key in self._isitiliyor:
+                return
+            self._isitiliyor.add(key)
+
+        def run() -> None:
+            try:
+                cards = self._kartlar.al(key, hesap)
+                self._ozetler.al(key, lambda: self._ozet(cards, snap, now))
+            except Exception as e:  # noqa: BLE001 — ısıtılamazsa istek kendisi kurar
+                log.warning("production: kartlar arkada kurulamadı: %s", e)
+            finally:
+                with self._lock:
+                    self._isitiliyor.discard(key)
+
+        threading.Thread(target=run, name="bellek:uretim.isit", daemon=True).start()
+
+    def _yeni_okuma(self, snap: dict[str, Any]) -> None:
+        """Kaynağın yeni okuması bitti: son isteğin portal kayıtları ve ayarlarıyla kartlar arkada kurulur (portal
+        tablosuna dokunmaz; kayıt o arada değiştiyse istek kendi anahtarıyla yeniden kurar)."""
+        now = today()
+        with self._lock:
+            ctxs = list(self._baglam.values())
+        for eid, tenant, entries, settings in ctxs:
+            yan = (eid, tenant, _parmak(entries), _ayar_anahtari(settings), now.isoformat())
+            key = yan + (snap.get("at"), snap.get("since"))
+            if self._kartlar.an(key) is None:
+                self._isit(key, self._hesap(yan, key, snap, entries, settings, now), snap, now)
+
     # ---- özet
     def overview(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
         now = now or today()
-        cards, snap = self.cards(engine, tenant, fresh, now)
+        cards, snap, key = self._kart_al(engine, tenant, fresh, now)
+        return self._ozetler.al(key, lambda: self._ozet(cards, snap, now))
+
+    def _ozet(self, cards: list[dict[str, Any]], snap: dict[str, Any], now: date) -> dict[str, Any]:
         leads = plan_mod.measure_leads(cards)
         open_ = [c for c in cards if c["stage"] not in ("tamam", "iptal", "eski")]
         late = [c for c in open_ if c["delays"]]
@@ -739,14 +872,14 @@ class Service:
     # ---- liste
     def list(self, engine: Any, tenant: str, *, durum: str = "", matbaa: str = "", q: str = "", tur: str = "",
              urun: str = "", page: int = 0, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
-        cards, _ = self.cards(engine, tenant, fresh, now)
+        cards, _, _ = self._kart_al(engine, tenant, fresh, now)
         items = filter_cards(cards, durum=durum, matbaa=matbaa, q=q, tur=tur, urun=urun)
         page = max(0, int(page or 0))
         return {"items": [summary(c) for c in items[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]], "total": len(items),
                 "page": page, "pageSize": PAGE_SIZE}
 
     def delays(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
-        cards, _ = self.cards(engine, tenant, fresh, now)
+        cards, _, _ = self._kart_al(engine, tenant, fresh, now)
         late = [c for c in cards if c["delays"]]
         late.sort(key=lambda c: (-max(d["days"] for d in c["delays"]), c["bookTitle"] or ""))
         return {"items": [summary(c) for c in late], "escalateDays": self.settings()["escalateDays"]}
@@ -754,7 +887,7 @@ class Service:
     # ---- matbaalar
     def printers(self, engine: Any, tenant: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
         now = now or today()
-        cards, snap = self.cards(engine, tenant, fresh, now)
+        cards, snap, _ = self._kart_al(engine, tenant, fresh, now)
         stats = plan_mod.printer_stats(cards, now)
         ref, prior = _price_ref(stats), plan_mod.overall_on_time(stats)
         for s in stats:
@@ -766,7 +899,7 @@ class Service:
     def detail(self, engine: Any, tenant: str, cid: str, fresh: bool = False, now: Optional[date] = None) -> dict[str, Any]:
         now = now or today()
         cid = store.card_id(cid)
-        cards, _ = self.cards(engine, tenant, fresh, now)
+        cards, _, _ = self._kart_al(engine, tenant, fresh, now)
         c = next((x for x in cards if x["id"] == cid), None)
         if c is None:
             raise ProductionError("Üretim kartı bulunamadı (geçmiş penceresinin dışında ya da CRM'de pasif olabilir).", 404)
@@ -808,7 +941,7 @@ class Service:
         pub = parse_day(publication)
         if not pub:
             raise ProductionError("Yayın tarihi YYYY-AA-GG biçiminde olmalı.")
-        cards, _ = self.cards(engine, tenant, fresh)
+        cards, _, _ = self._kart_al(engine, tenant, fresh)
         leads = plan_mod.measure_leads(cards)
         template = plan_mod.measure_template(cards)
         s = self.settings()
@@ -836,8 +969,7 @@ class Service:
         snap = self.source.peek()
         if snap is None:
             return {"items": [], "days": days, "ready": False, "asOf": None}
-        entries, _ = store.load(engine, tenant)
-        cards = build_cards(snap, entries, settings=self.settings(), now=now)
+        cards, snap, _ = self._okumanin_kartlari(engine, tenant, snap, False, now)
         return {"items": new_prints(cards, now, days), "days": days, "ready": True,
                 "asOf": datetime.fromtimestamp(snap["at"], TZ).isoformat(timespec="seconds")}
 
@@ -1065,20 +1197,20 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def production_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.overview, engine, tenant, fresh())
-        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, source.last()))
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, svc.okunan() or source.last()))
 
     @app.get(f"{P}/cards")
     def production_cards(request: Request, durum: str = "", matbaa: str = "", q: str = "", tur: str = "", urun: str = "",
                          page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.list, engine, tenant, durum=durum, matbaa=matbaa, q=q, tur=tur, urun=urun, page=page, fresh=fresh())
-        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, source.last()))
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, out, svc.okunan() or source.last()))
 
     @app.get(f"{P}/cards/{{card}}")
     def production_card(card: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.detail, engine, tenant, card, fresh())
-        return PV.bagla(out, lambda: K.for_detail(engine, tenant, out["id"], out, source.last()))
+        return PV.bagla(out, lambda: K.for_detail(engine, tenant, out["id"], out, svc.okunan() or source.last()))
 
     @app.post(f"{P}/cards/{{card}}/entries", status_code=201)
     def production_entry(card: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -1088,6 +1220,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(store.add_entry, engine, tenant, user, display, card, body, today())
         audit(engine, user, "create", "production_entry", out["id"], out["kindLabel"],
               {"card": out["cardId"], "milestone": out["milestone"], "day": out["day"], "value": out["value"]})
+        svc.yazildi(engine, tenant)
         return out
 
     @app.delete(f"{P}/entries/{{rid}}")
@@ -1095,6 +1228,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, _ = ctx(request)
         out = call(store.delete_entry, engine, tenant, user, is_admin(user), rid)
         audit(engine, user, "delete", "production_entry", out["id"], out["kindLabel"], {"card": out["cardId"]})
+        svc.yazildi(engine, tenant)
         return {"ok": True}
 
     @app.post(f"{P}/cards/{{card}}/quotes", status_code=201)
@@ -1120,25 +1254,26 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(store.add_entry, engine, tenant, user, display, card,
                    {"kind": "onay", "value": body.get("printer"), "note": body.get("note")}, today())
         audit(engine, user, "approve", "production_printer", out["id"], out["value"], {"card": out["cardId"], "note": out["note"]})
+        svc.yazildi(engine, tenant)
         return out
 
     @app.get(f"{P}/delays")
     def production_delays(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.delays, engine, tenant, fresh())
-        return PV.bagla(out, lambda: K.for_delays(engine, tenant, out, source.last()))
+        return PV.bagla(out, lambda: K.for_delays(engine, tenant, out, svc.okunan() or source.last()))
 
     @app.get(f"{P}/printers")
     def production_printers(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.printers, engine, tenant, fresh())
-        return PV.bagla(out, lambda: K.for_printers(engine, tenant, out, source.last()))
+        return PV.bagla(out, lambda: K.for_printers(engine, tenant, out, svc.okunan() or source.last()))
 
     @app.get(f"{P}/calendar")
     def production_calendar(request: Request, publication: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(svc.calendar, engine, tenant, publication, fresh())
-        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, out, source.last()))
+        return PV.bagla(out, lambda: K.for_calendar(engine, tenant, out, svc.okunan() or source.last()))
 
     @app.get(f"{P}/print-exit")
     def production_print_exit(request: Request, book: str = "") -> dict[str, Any]:
