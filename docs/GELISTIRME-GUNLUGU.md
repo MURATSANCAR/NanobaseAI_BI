@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-30 — Sohbet ayrıntılı kod ve çalışan imaj denetimi
+
+- Kaynak `ebc692820`, canlı imaj `157d9f6a8`; 7.922 kaynak dosyası, 419 bağımlılık JS dosyası seçili göstergelerle tarandı.
+- Gizli lisans/kota bulunmadı; Document360 yayın action'ı, kullanılmayan bulut/deneme UI dosyaları ve marketplace şemaları kaldığı açıkça belgelendi. Başlangıç process.exit uyumluluk kontrolü, telemetry yerel sayaç.
+- Salt okunur inceleme; canlı/yerel test, DB değişikliği, dağıtım veya yeni hesap yok. Rapor: `apps/zeki-chat/docs/zeki-code-audit-2026-09-30.md`.
+
+
 ## 2026-09-30 — Şirket içi sohbet: kullanım kotaları kaldırıldı, son canlı kabul geçti
 
 - `157d9f6a8` main'den test sunucusuna yedekli kuruldu; imaj `zeki-ai-chat:8.5.3-157d9f6a8`, 9.552 kaynak dosyası eş, AppleDouble 0. Mesaj/dosya/grup DM -1; 50 jeton budaması yok; yerel doğrulanmış REST/DDP/köprü istek kotası yok; saklama politikası kapalı.
