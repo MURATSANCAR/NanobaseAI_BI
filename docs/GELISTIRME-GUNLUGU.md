@@ -16,6 +16,11 @@
 - Gerçek portal SSO, mevcut `timasai`, 320/390/768/1440 px: oturum açık, taşma/görünür üretici metni/JS hatası 0. Sınanan tarayıcı akışlarında yalnız portal alan adı görüldü; tüm arka plan entegrasyonları için genel ağ kabulü iddia edilmez. İlk deneme uygulama başlarken bağlantı sıfırlaması aldı; hazır olduktan sonra yeniden koşu geçti.
 - Temizlik: yeni kullanıcı 0; 1 portal oturumu + 4 sohbet jetonu silindi, kalan kontrol jetonu 0. Kanıtlar sohbet deposunda `docs/evidence/2026-09-29-notices/`, belge commit'i `ad47d5e`.
 - Sohbet GitHub hedefi tekrar `Repository not found` döndü; yerel main ve test sunucusu güncel, GitHub yayını bekliyor. Bu BI deposunda yalnız proje durumu/günlük değişti.
+## 2026-09-29 (gece, 2) — Editör testi `test_labels_read_without_importing_checks` sıra bağımsız; müşteri VM'i `134b8b79` doğrulandı
+
+- **Test:** etiket okumasının denetim modüllerini yüklemediğini bütün süreçte arıyordu; önce koşan metin bütçesi testi `editor.proofing._continuity`'yi yüklediğinde düşüyordu. Artık okumadan önce/sonra fark sayılır. GPU'da `editor-py-studio:0.15.9-04698f28` imajında editör testleri 650/650.
+- **VM:** başka bir oturumun kurduğu `134b8b79` (bu işlerin hepsini içeriyor) doğrulandı: köprü hazır, dış kapı 200, pasif süzgeci, kurul oturumu düzeltmesi, İK gizlilik eşiği 5, pazar yeri modülü, kart 25, `STUDIO_LIBRARY_FEED=0`, `._*` 0.
+
 ## 2026-09-29 (gece) — GPU editörü main `04698f28` tek sürüm olarak kuruldu; parça kurulumlar bitti
 
 - **Neden:** gün içinde üç oturum main'in yalnız kendi parçasını çalışan imajın üstüne türeterek kurmuştu (`-kapak`, `-ses2`, `-ses2-read`); her biri öncekini ezdi (kapak tarzı düzeltmesi 15:29'da geri gitti). Main'deki bütün editör işleri (sesli okuma insan kaydı, OCR `/v1/read`, metin bütçesi/pencereleme, kapak tarzı, lisans taslağının kalkması, kapak önizlemesi WebP) tek sürümde.
