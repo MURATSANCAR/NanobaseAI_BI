@@ -2347,6 +2347,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             from semantic_bridge import data_security as ds_mod
             ds_mod.record_access(r.store.engine, user, kind, method, path, key)
 
+        return _gate_for_user(method, path, user, rule, wanted, data, _log)
+
+    def _gate_for_user(method: str, path: str, user: str, rule: Any, wanted: list, data: bool,
+                       _log: Any) -> tuple[Optional[tuple[int, str]], Any]:
+        """Kapının kişiye bağlı kısmı (oturumu çözülmüş kişi için). `_log`: 403 ve dışa aktarma kaydı."""
+        r = rt()
         if rule is None:
             log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
             if admin_mod.is_admin(user):
@@ -2369,6 +2375,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if "ozellik:veri.disa-aktar" in wanted:
             _log("export", "ozellik:veri.disa-aktar")
         return None, (access_mod.allowed_domains(acc) if data else _NO_SCOPE)
+
+    def _gate_allows(user: str, path: str) -> bool:
+        """Hazır cevap ısıtması: kişi bu GET ucunu açabilir mi — kapının aynı kararı, kayıt yazmadan (kişinin
+        göremediği sayfa denenmez, güvenlik kaydına 403 düşmez). Uç kendi yetkisini denetliyorsa (OWN) kapı geçer;
+        o uçta kişiye kapalıysa ısıtma 403 alır, kayıt saklanmaz."""
+        rule = access_mod.rule_for(path)
+        wanted = access_mod.features_for("GET", path)
+        data = path.startswith(_DATA_PATHS) and not path.endswith("/run-due")
+        if rule == access_mod.OWN or (rule == access_mod.OPEN and not wanted and not data):
+            return True
+        admin_mod.ensure(rt().store.engine)
+        verdict, _ = _gate_for_user("GET", path, user, rule, wanted, data, lambda kind, key: None)
+        return verdict is None
+
+    app.state.response_cache.may_open = _gate_allows
 
     @app.middleware("http")
     async def page_gate(request: Request, call_next):
@@ -4911,7 +4932,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "Proje CRM'de bulunamadı."})
         return assign_mod.project_row(rows[0])
 
-    def _asg_me(schema: str, run, user: str) -> Optional[dict[str, Any]]:
+    def _asg_me(schema: str, run, user: str, *, saklanmis: bool = True) -> Optional[dict[str, Any]]:
+        """Kişinin CRM kullanıcısı. Ekran okumaları saklanmış eşlemeden (`crm_kisi`: bütün CRM kullanıcıları tek
+        sorguda, gece + 10 dk'dan eskiyse arkada; kural `crm_me` ile aynı) — ilk açılış CRM'i beklemez. Görev
+        güncellemesi (yazma) ve eşlemenin cevap veremediği durum eskisi gibi canlı CRM'den."""
+        if saklanmis:
+            from semantic_bridge import budget_sources as _bsrc
+            from semantic_bridge import crm_kisi as _kisi
+
+            r = rt()
+            crm_path = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+            try:
+                return _kisi.bul(r.store.engine, r.settings.tenant_id, user, lambda: (schema, _bsrc.runner(crm_path)))
+            except _kisi.Bilinmiyor:
+                pass
+            except Exception as e:  # noqa: BLE001 — eşleme yoksa ve CRM okunamıyorsa eski yol (hatası ekrana gider)
+                log.info("editör atama: CRM kullanıcı eşlemesi okunamadı (%s), canlı okumaya dönülüyor: %s", user, e)
         return _asg_call(assign_mod.crm_me, schema, run, user)
 
     @app.get("/api/v1/editorial/assignments/pending")
@@ -4960,7 +4996,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.patch("/api/v1/editorial/tasks/mine/{project_id}")
     def assign_mine_update(project_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
-        me = _asg_me(schema, run, user)
+        me = _asg_me(schema, run, user, saklanmis=False)     # yazma: kişinin CRM kullanıcısı canlı okunur
         if not me:
             raise HTTPException(status_code=403, detail={"code": "EDITOR_ASSIGN", "message": "CRM'de kullanıcı kaydınız bulunamadı."})
         proj = _asg_project(schema, run, project_id)
