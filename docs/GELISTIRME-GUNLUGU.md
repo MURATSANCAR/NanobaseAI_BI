@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (akşam) — Kitap pazarı verisi uçtan uca incelendi; stok vekili Logo ile doğrulandı; ekran kullanım haritası
+
+- **Kullanıcı:** «verileri uçtan uca incele, ekranlarda nerede nasıl kullanabileceğimizi çıkar.»
+- **Doğrulama:** Logo'da Başarı cari `12001.01.BA104` (2025: 257.048 adet sevk, 2026 Eylül'e kadar 229.965). 2.150 TİMAŞ barkodunda Logo sevki ↔ Başarı arşivindeki stok hareketi korelasyonu 0,92–0,94; adet olarak arşiv ≈3 kat eksik (15 günlük görüntü). Sonuç: rakip kitaplar için «çıkış endeksi» sıralama/eğilim olarak kullanılır, adet değil.
+- **Kalite:** Başarı alanları %87–100 dolu (ebat/renk bilgisiz); D&R'de fiyat ve kategori yolu tam, stok `b2bstock`'ta (`available_stock` %1); `deleted` anlamı belirsiz. TİMAŞ başlıklarının %99'u Logo barkoduyla eşleşiyor.
+- **Bulgu:** Başarı'da «Baskısı Yok» görünen ≈385 TİMAŞ başlığının Logo'da stoğu var (satış kaybı adayı; adetler Stok formülüyle doğrulanmalı). Ortalama liste fiyatı 21 ayda 137 → 226 ₺.
+- **Harita:** 10 ekran; öncelik Pazar ve rakip (CRM «Rakip Kitap»ın yerine), Stok/Baskı önerisi (dağıtımcı stoğu), Fiyatlama (otomatik rakip fiyatı), İlk baskı (rakip emsali). Hepsinden önce gece görüntüsü + arşiv içe alma + eşleme. Belge: `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
+
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
 - **Karar (kullanıcı):** Kayıtta kişinin adı yerine «ZEKİ AI» yazsın (Claude'un kullanıcı adına yaptığı ayar «muratsancar» görünmüştü; zamanlayıcı işleri «sistem»/«zamanlayıcı»).
