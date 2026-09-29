@@ -46,6 +46,10 @@ def _undefined(path: Path) -> list[str]:
         if t.get_type() == "module":
             continue
         for s in t.get_symbols():
+            # Parametre hiçbir zaman tanımsız değildir. Python 3.12'nin sembol tablosu, adı «top» olan fonksiyonun
+            # parametrelerini global işaretliyor (modül kapsamının iç adı da «top»): ilk_baski_pazar.top yanlış alarm verdi.
+            if s.is_parameter():
+                continue
             if s.is_referenced() and s.is_global() and not s.is_assigned() and s.get_name() not in defined:
                 out.append(f"{path.name}:{t.get_name()}: {s.get_name()}")
     return out
@@ -57,6 +61,12 @@ MODULES = sorted(p for p in ROOT.rglob("*.py") if "tests" not in p.parts)
 @pytest.mark.parametrize("path", MODULES, ids=lambda p: str(p.relative_to(ROOT)))
 def test_module_has_no_undefined_globals(path: Path):
     assert _undefined(path) == []
+
+
+def test_function_named_top_is_not_a_false_alarm(tmp_path: Path):
+    ok = tmp_path / "ok.py"
+    ok.write_text("def top(rows, n=3):\n    known = [r for r in rows if r]\n    return known[:n]\n", encoding="utf-8")
+    assert _undefined(ok) == []
 
 
 def test_checker_catches_the_board_session_bug(tmp_path: Path):
