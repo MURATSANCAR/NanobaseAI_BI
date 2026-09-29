@@ -49,6 +49,8 @@ describe('readableName: ham veritabanı adı → ekrandaki başlık', () => {
     expect(readableName('NET_CIRO')).toBe('Net ciro');
     expect(readableName('d2026')).toBe('2026');
     expect(readableName('is_active')).toBe('Aktif');
+    expect(readableName('new_isPlaniAsamasi')).toBe('İş planı aşaması');
+    expect(readableName('new_tckimlikno')).toBe('TC kimlik no');
   });
 
   it('katalog yazım haritası gelince onun Türkçesi kullanılır', () => {

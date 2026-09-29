@@ -284,6 +284,19 @@ const WORDS: Record<string, string> = {
   gonderen: 'gönderen', gonderilen: 'gönderilen', ucret: 'ücret', ucreti: 'ücreti', odemesi: 'ödemesi', tahsilat: 'tahsilat',
   ocak: 'ocak', subat: 'şubat', mart: 'mart', nisan: 'nisan', mayis: 'mayıs', haziran: 'haziran', temmuz: 'temmuz',
   agustos: 'ağustos', eylul: 'eylül', ekim: 'ekim', kasim: 'kasım', aralik: 'aralık',
+  isleme: 'işleme', takildi: 'takıldı', gunler: 'günler', kitabin: 'kitabın', dosyalarin: 'dosyaların',
+  kategorileri: 'kategorileri', birimi: 'birimi', firmasi: 'firması', projesi: 'projesi', cariye: 'cariye',
+  is: 'iş', dogum: 'doğum', tanitim: 'tanıtım', rolu: 'rolü', oncesi: 'öncesi', yazari: 'yazarı', gonderi: 'gönderi',
+  gonderimi: 'gönderimi', fis: 'fiş', satir: 'satır', satiri: 'satırı', editor: 'editör', editoru: 'editörü',
+  anlik: 'anlık', karsiliksiz: 'karşılıksız', cek: 'çek', basin: 'basın', toplanti: 'toplantı', bas: 'başlangıç',
+  bit: 'bitiş', ytd: 'YTD', utm: 'UTM', eposta: 'e-posta', json: 'JSON', sql: 'SQL', ip: 'IP', hesabi: 'hesabı',
+  onayi: 'onayı', listesi: 'listesi', kimlik: 'kimlik', kdvli: 'KDV\'li', ziyareti: 'ziyareti', temsilcisi: 'temsilcisi',
+  yurtici: 'yurt içi', yurtdisi: 'yurt dışı', orjinal: 'orijinal', dili: 'dili', onerilen: 'önerilen', adeti: 'adedi',
+  cogaltma: 'çoğaltma', yabanci: 'yabancı', logoya: 'Logo\'ya', aktarildi: 'aktarıldı', yayinlandi: 'yayınlandı',
+  yoneticisi: 'yöneticisi', yonetici: 'yönetici', carisi: 'carisi', limiti: 'limiti', reddeden: 'reddeden',
+  plani: 'planı', tanim: 'tanım', uzmanlik: 'uzmanlık', anindaki: 'anındaki', varis: 'varış', subesi: 'şubesi',
+  siniflar: 'sınıflar', alinan: 'alınan', adresi: 'adresi', basvurusu: 'başvurusu', modulu: 'modülü', spotu: 'spotu',
+  asamasi: 'aşaması', senaryosu: 'senaryosu', click: 'tıklama', contract: 'sözleşme', rights: 'haklar',
   // Marka ve kısaltma yazımı
   instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook', twitter: 'Twitter', linkedin: 'LinkedIn',
   tiktok: 'TikTok', whatsapp: 'WhatsApp', google: 'Google', tsoft: 'T-soft', logo: 'Logo', b2b: 'B2B', b2c: 'B2C',
@@ -297,7 +310,7 @@ const WORDS: Record<string, string> = {
   country: 'ülke', product: 'ürün', products: 'ürünler', order: 'sipariş', orders: 'siparişler', customer: 'müşteri',
   customers: 'müşteriler', book: 'kitap', books: 'kitaplar', author: 'yazar', authors: 'yazarlar', page: 'sayfa',
   pages: 'sayfa', text: 'metin', note: 'not', notes: 'notlar', first: 'ilk', last: 'son', start: 'başlangıç',
-  end: 'bitiş', at: '', is: '', has: '', ms: '(ms)', pct: '(%)', percent: '(%)', avg: 'ortalama', min: 'en az',
+  end: 'bitiş', at: '', has: '', ms: '(ms)', pct: '(%)', percent: '(%)', avg: 'ortalama', min: 'en az',
   max: 'en çok', sum: 'toplam', net: 'net', gross: 'brüt', discount: 'indirim', tax: 'vergi', vat: 'KDV',
   stock: 'stok', warehouse: 'ambar', invoice: 'fatura', line: 'satır', lines: 'satırlar', row: 'satır', rows: 'satır',
   concept: 'kavram', mapping: 'eşleme', editorial: 'editoryal', tasks: 'görevler', task: 'görev',
@@ -305,6 +318,7 @@ const WORDS: Record<string, string> = {
   permission: 'izin', entity: 'varlık', blacklist: 'kara liste', integration: 'entegrasyon', field: 'alan',
   language: 'dil', original: 'orijinal', preview: 'önizleme', reviews: 'yorumlar', review: 'yorum', entries: 'kayıtlar',
   link: 'bağlantı', len: 'uzunluk', length: 'uzunluk', primary: 'birincil', approved: 'onaylayan', by: '',
+  age: 'yaş', bio: 'biyografi', long: 'uzun',
   sub: 'alt', group: 'grup', level: 'seviye', parent: 'üst', child: 'alt', version: 'sürüm', file: 'dosya',
 };
 
@@ -330,6 +344,9 @@ const STEMS = [
   'malzeme', 'hareketi', 'hareket', 'ait', 'yerleri', 'yer', 'tipi', 'durumu', 'adedi', 'miktari', 'sayisi', 'tarihi',
   'kanali', 'kategorisi', 'alani', 'ulkesi', 'kullanici', 'adi', 'numarasi', 'bedeli', 'butcesi', 'riski', 'sarti',
   'alisveris', 'gecmisi', 'toplantilari', 'kurulu', 'ilk', 'son', 'hazir', 'hazirlik', 'metin', 'kitabin', 'kitabi',
+  'bekleyen', 'gelen', 'giden', 'editoryal', 'alan', 'limite', 'grafik', 'teslim', 'baskiya',
+  'vade', 'kalma', 'senet', 'dile', 'departman', 'aktif', 'anahtar', 'kelime', 'yenileme', 'rakip', 'lot', 'akademi',
+  'pazarlama', 'tema', 'kvkk', 'sosyal', 'medya',
 ];
 
 /** Başında bilinmeyen bir ad olsa da bölünebilen son ekler: «stakkarti» → stak + kartı. Yalnız bu baş sözcükler
@@ -359,7 +376,7 @@ const IDENT = /^[\p{L}\p{N}_.[\]$#-]+$/u;
 let lexiconCache: Set<string> | null = null;
 function lexicon(): Set<string> {
   if (!lexiconCache) {
-    const short = new Set(['id', 'no', 'ad', 'ay', 'ek', 'il', 'ev']);
+    const short = new Set(['id', 'no', 'ad', 'ay', 'ek', 'il', 'ev', 'tc', 'ip']);
     lexiconCache = new Set<string>(
       [...STEMS, ...Object.keys(WORDS), ...Object.keys(displayWords)].filter(
         (w) => /^[a-z]+$/.test(w) && (w.length >= 3 || short.has(w)) && WORDS[w] !== '',
@@ -454,11 +471,12 @@ function part(raw: string): string {
     .replace(/^(new|obs)_/i, '')
     .replace(/([a-z])(?:Extension)?Base$/, '$1')
     .replace(/^(semantic|sl)_/i, '')
-    .replace(/^d(?=\d{4}(?:_|$))/, '');
+    .replace(/^d(?=\d{4}(?:_|$))/, '')
+    .replace(/^(is|has)_(?=[a-z])/, '');
   if (!s) return raw;
   const wholeUpper = s === s.toUpperCase() && /[A-Z]/.test(s);
   const toks = s
-    .replace(/b2([bc])(?![a-z])/gi, (m) => ` ${m.toUpperCase()} `) // B2B, B2C tek sözcük
+    .replace(/b2([bc])/gi, (m) => ` ${m.toUpperCase()} `) // B2B, B2C tek sözcük
     .replace(/([a-zçğıöşü])([A-ZÇĞİÖŞÜ])/g, '$1 $2') // camelCase
     .replace(/([A-ZÇĞİÖŞÜ]+)([A-ZÇĞİÖŞÜ][a-zçğıöşü])/g, '$1 $2') // HTTPServer → HTTP Server
     .split(/[_\s-]+/)

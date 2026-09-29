@@ -68,6 +68,14 @@
   hücrelerin hepsi kod (stok kodu, barkod, cari kodu, «.» yer tutucu). Sunucuda LibreOffice'in yalnız yazı modülü var (Calc yok):
   Office ile açılış yerine zip bütünlüğü + her XML parçası denetlendi.
 - **Durum:** dalda; main'e taşıma ve test sunucusu → VM kurulumu sırada. Ekranlarda görsel kontrol AD girişi istediği için yapılamadı.
+## 2026-09-29 — Ekranlarda ham tablo/alan adları okunur başlıkla gösteriliyor
+
+- **İstek:** «tüm ekranlarda tablolar vs alanlar da crm ve logo da ki tablo isimlerini yazmışısz ama kelimeler birleşik ya da _ gibi şekillerde yazılmış, görsel olarak tüm başlıkları düzelt».
+- **Genel mekanizma:** `src/canvas/components/readableName.ts` (`readableName`, `readableText`, `rawTitle`) + `ColName.tsx` + `useDisplayWords.ts` (kabukta; katalog yazım haritası ve Logo alan sözlüğü haritasını her ekran için yükler). Örnek başına yama yok: çekirdek Logo/CRM sözlüğü, Logo'nun kendi alan sözlüğünden üretilen harita (`scripts/logo-display-names.py` → `logoNames.json`, 274 tablo / 3.197 kolon), katalogdaki Türkçe yazım, kural. Tek parça büyük harfli bilinmeyen Logo adı yarım çevrilmez, olduğu gibi kalır.
+- **Bağlanan yerler:** pano tablo/eksen/ipucu/3B (`board/Chart*.tsx`), sorgu bilgisi penceresi başlık/açıklama/hesap (`SqlInfo.tsx`), yönetim raporu kaynak penceresi (`SourcesSheet.tsx`), Zeki AI cevap özeti ve pano hata metni, Promt izleyici sonuç tablosu, risk göstergesi kanıt tablosu ve kaynak notu, derin denetim tablosu, veri sözlüğü / eş anlamlılar / onaylar, veri alanları (Yönetim), kişisel veri envanteri, değişiklik kaydı, künye/ürün/kitap profili kaynak notları, föy CRM alanı, e-ticaret alan eşlemesi, SEO aylık CRM alanları.
+- **Dokunulmayan:** SQL metni (gösterilen = çalışan), CSV/Excel başlıkları ve dışa aktarım kodu (başka oturumun işi), Excel taslağı önizlemesi (Excel'e yazılan başlıkla aynı kalmalı), köprü uçları, yüklenen dosyanın kendi kolon adları, yıl kopyası listesi (fark önekte).
+- **Doğrulama:** test sunucusunda geçici ağaçta `tsc --noEmit` 0 hata, `vite build` geçti, vitest 43 dosya / 241 test geçti (yeni `readableName.test.ts` 13 test). 1.871 gerçek ad (Logo sözlüğü kolonları, CRM `new_`/`obs_` alanları, köprüdeki SQL takma adları) çeviriciden geçirilip gözden geçirildi. Canlı ekranda (kurulumla) **doğrulanmadı** — kurulum yapılmadı, main'e alınmadı.
+- **Açık:** CRM'in Türkçe harf atılmış şema adları («new_HaberMecrasName», «new_ProjeHakkndaDierGrler») ancak CRM görünen adı (`MetadataSchema` LocalizedLabel) okunursa düzelir; köprüde böyle bir uç yok.
 
 ## 2026-09-28 (17:05) — Müşteri VM'ine `04105220` kuruldu: 67 zamanlanmış iş, T-soft/Google bağlı
 

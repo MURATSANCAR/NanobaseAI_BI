@@ -21,6 +21,7 @@ OUT = ROOT / "src" / "canvas" / "components" / "logoNames.json"
 
 _SKIP = re.compile(r"(?i)kullan[ıi]mda de[ğg]il|^logical reference$|^fiziksel adres$|^rezerve|^reserved")
 # «… Ref.», «… Log. Ref.», «… Referansı», «… Referansi»: kolon o kaydı gösterir; başlıkta kaydın adı yeter.
+_RAW_WORD = re.compile(r"\b[A-Z]{5,}\b")
 _REF = re.compile(r"\s*(?:log(?:ical)?\.?\s*)?(?:ref\.?|referans[ıi]|referans|reference)\s*$", re.I)
 
 
@@ -61,7 +62,8 @@ def build() -> dict[str, dict[str, str]]:
             if not tr or _SKIP.search(tr) or tr.lower() == (c.get("description") or "").strip().lower():
                 continue
             s = sentence(tr)
-            if s and "_" not in s:
+            # Açıklamada başka bir Logo tablo adı kalmışsa («DEMANDFICHE / sipariş fişleri», «… ITEMS») alınmaz.
+            if s and "_" not in s and not _RAW_WORD.search(s):
                 cols[col][s] += 1
     columns = {k: v.most_common(1)[0][0] for k, v in sorted(cols.items())}
     return {"tables": dict(sorted(tables.items())), "columns": columns}
