@@ -650,6 +650,11 @@ def test_new_read_does_not_block_the_request_and_gives_the_same_model(engine, tm
     assert len(builds) == builds_before + 1
     same = S.build(newer, SETTINGS, store.approved_thresholds(engine, T), [], {})
     same["movementWindow"] = newer.get("movementWindow")
+    from semantic_bridge import pazar_dagitim            # modele dağıtımcı bilgisi de eklenir (eski yolda da aynı)
+    try:
+        same["dagitim"] = pazar_dagitim.attach_stock(engine, T, same["items"])
+    except Exception:  # noqa: BLE001
+        same["dagitim"] = None
     assert _same(m2) == _same(same)
 
 
