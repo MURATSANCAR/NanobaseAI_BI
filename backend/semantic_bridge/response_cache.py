@@ -167,6 +167,8 @@ def disk_dir(env: Optional[dict[str, str]] = None, argv: Optional[list[str]] = N
     explicit = (env.get("RESPONSE_CACHE_DIR") or "").strip()
     if explicit:
         return explicit
+    if env.get("PYTEST_CURRENT_TEST"):
+        return None          # test süreci canlı klasöre yazmaz (people.json'a ayse/mehmet/zekiai düşüyordu, 2026-09-29)
     port = _argv_port(argv)
     if port is not None and port != (env.get("RESPONSE_CACHE_LIVE_PORT") or LIVE_PORT):
         log.info("response cache: yan köprü (port %s) — hazır cevaplar yalnız bellekte, canlı klasöre yazılmaz", port)

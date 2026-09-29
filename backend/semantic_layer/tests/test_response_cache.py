@@ -271,4 +271,5 @@ def test_disk_dir_live_port_only():
     assert RC.disk_dir({}, side) is None
     assert RC.disk_dir({"RESPONSE_CACHE_DIR": "/tmp/x"}, side) == "/tmp/x"
     assert RC.disk_dir({"RESPONSE_CACHE_LIVE_PORT": "8801"}, side) == RC.LIVE_DIR
-    assert RC.disk_dir({}, ["pytest"]) == RC.LIVE_DIR    # port yok: eski davranış (testler conftest ile geçici klasör)
+    assert RC.disk_dir({}, ["pytest"]) == RC.LIVE_DIR    # port yok, test dışı süreç: eski davranış
+    assert RC.disk_dir({"PYTEST_CURRENT_TEST": "t"}, live) is None     # test süreci canlı klasöre yazmaz
