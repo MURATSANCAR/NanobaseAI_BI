@@ -1034,10 +1034,13 @@ class Runtime:
         # to hold something other than its name says) is said with the answer: "0 satır" or "1.061
         # satır" otherwise reads as a fact about the business when it is a fact about the data entry.
         try:
-            from semantic_layer.runtime.column_facts import notes_text, nothing_came_back, predicate_column_notes
-            data_notes = predicate_column_notes(sql, self.profiles, getattr(self.existing, "annotations", None) or {},
-                                                sources=self.router.gate_sources(),
-                                                result_is_empty=nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)))
+            from semantic_layer.runtime.column_facts import notes_text, nothing_came_back, predicate_column_notes, scope_notes
+            # What the resolver changed about the measure (a sibling read for the breakdown) comes first: it says
+            # which figure this is; the column notes then say how much of the data that figure covers.
+            data_notes = scope_notes(sq) + predicate_column_notes(
+                sql, self.profiles, getattr(self.existing, "annotations", None) or {},
+                sources=self.router.gate_sources(),
+                result_is_empty=nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)))
         except Exception as e:  # noqa: BLE001
             log.debug("column data notes unavailable: %s", e)
             data_notes = []

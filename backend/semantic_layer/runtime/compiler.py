@@ -2175,7 +2175,7 @@ class ExistingCompiler:
                                  + (f" — {g['why']}" if g['why'] else "")
                                  for g in exclude_groups(m))
                 lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "")
-                             + (f" (hariç: {excl})" if excl else "") + self._basis(m.formula))
+                             + (f" (hariç: {excl})" if excl else "") + self._basis(m.formula) + self._sparse(m.formula))
             elif m.values:
                 lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
             elif m.column:
@@ -2203,6 +2203,26 @@ class ExistingCompiler:
             lines.append("Yollar dolu görünenden boş görünene doğru sıralı. Hangisini okuduğunu -- yorum satırında yaz; "
                          "boş bir anahtarla bağlanan kırılım boş döner.")
         return "\n".join(lines)
+
+    def _sparse(self, formula: str) -> str:
+        """A measure over a column the profile saw mostly empty: whatever is counted or averaged beside it must be
+        counted over the same rows (the reviewer's COUNT_SCOPE rule, said before the statement is written)."""
+        from semantic_layer.runtime.critic import _SPARSE_MEASURE
+        refs = {(e.upper(), c.upper()) for e, c in re.findall(r"\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b", formula or "")}
+        ratios: dict[str, list[float]] = {}
+        for prof in self.profiles:
+            if not refs or prof.entity.upper() not in {e for e, _ in refs}:
+                continue
+            for e, c in refs:
+                col = prof.column(c) if e == prof.entity.upper() else None
+                if col is not None and col.null_ratio is not None:
+                    ratios.setdefault(f"{prof.entity}.{col.name}", []).append(float(col.null_ratio))
+        # Every profiled copy (year tables) must agree: one old copy with an empty column is not a sparse measure.
+        found = [ref for ref, rs in ratios.items() if min(rs) >= _SPARSE_MEASURE]
+        if not found:
+            return ""
+        return (f" [seyrek kolon: {', '.join(found)} örnekte satırların çoğunda boş — ölçü yalnız dolu satırları toplar; "
+                f"yanına sayım/ortalama koyarsan onu da aynı satırlarla sınırla ({found[0].split('.')[-1]} IS NOT NULL)]")
 
     def _basis(self, expression: str) -> str:
         """Documented basis of every column the expression touches ("KDV hariç", "birim maliyet").
