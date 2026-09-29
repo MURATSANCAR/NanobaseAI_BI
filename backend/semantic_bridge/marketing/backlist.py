@@ -40,6 +40,7 @@ import sqlalchemy as sa
 
 from semantic_bridge import budget as B
 from semantic_bridge import budget_sources as bsrc
+from semantic_bridge.hizli_bellek import Bellek
 from semantic_bridge.marketing import backlist_sql as Q
 from semantic_bridge.marketing import books as BK
 from semantic_bridge.marketing import core as C
@@ -407,6 +408,11 @@ def rows_stmt(tenant: str):
 
 def rows_in_stmt(tenant: str, codes: Iterable[str]):
     return sa.select(ROWS).where(ROWS.c.tenant_id == tenant, ROWS.c.stok_kodu.in_(list(codes) or [""]))
+
+
+def version_stmt(tenant: str):
+    """Kitap satırlarının sürümü: satır sayısı ve en son yazım anı (gece hesabı bütün satırları aynı `asof` ile yazar)."""
+    return sa.select(sa.func.count(), sa.func.max(ROWS.c.asof)).where(ROWS.c.tenant_id == tenant)
 
 
 def row_stmt(tenant: str, code: str):
@@ -815,29 +821,85 @@ def _upcoming(gunler: list[dict[str, Any]], today: date, weeks: int) -> list[dic
     return [g for g in gunler if g.get("baslangic") and (g.get("bitis") or g["baslangic"]) >= t and g["baslangic"] <= lim]
 
 
+#: Liste ucunun ağır parçası (2026-09-29 hız işi): bütün kitap satırlarını okuyup her satırın dört JSON kolonunu
+#: ayrıştırmak her istekte (sıralama, süzgeç, sayfa, arama değişince de) baştan yapılıyordu. Satırlar yalnız gece
+#: hesabında (`build`) değişir; ağırlıktan, bugünden ve planlardan bağımsız ayrıştırılmış hâl burada süreç içinde tutulur.
+#: Her istekte tablo sürümü (`version_stmt`: satır sayısı + en son yazım anı) okunur; değiştiyse beklenerek yeniden okunur,
+#: yani bellekteki değer her zaman tablonun şimdiki hâlidir («Verileri yenile» de aynı denetimden geçer). Endeks
+#: (ağırlığa bağlı), yaklaşan özel günler (bugüne bağlı) ve planlar (gün içinde değişir) her istekte hesaplanır/okunur.
+#: Zaman pencereleri yalnız tablonun elle düzeltildiği (sürümü değiştirmeyen) durumda güvenlik ağıdır.
+_TABAN = Bellek("pazarlama.backlist.satirlar", taze=900, bayat=86400, en_cok=32)
+
+
+def _surum(engine: sa.engine.Engine, tenant: str) -> tuple[int, Optional[str]]:
+    with engine.connect() as c:
+        n, at = c.execute(version_stmt(tenant)).one()
+    return int(n or 0), (None if at is None else str(at))
+
+
+def _taban_oku(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    """Satırlar bir kez okunur ve ayrıştırılır. Sürüm satırlardan ÖNCE okunur: arada gece hesabı yazarsa değer eski
+    sürümle etiketlenir, sonraki istek farkı görüp yeniden okur (tersi eski satırı yeni sürümle saklardı)."""
+    surum = _surum(engine, tenant)
+    with engine.connect() as c:
+        rows = c.execute(rows_stmt(tenant)).all()
+    satirlar: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+    for r in rows:
+        x = _row_dict(r, DEFAULT_WEIGHTS)
+        p = {k: x["bilesen"][k]["yuzdelik"] for k in KEYS}   # _row_dict'teki endeksin girdisi (yüzdelikler)
+        ara = G.fold(" ".join(str(v or "") for v in (x["ad"], x["yazar"], x["stokKodu"], x["yayinevi"])))
+        satirlar.append((x, p, ara))
+    items = [s[0] for s in satirlar]
+    facets = {"yayinevleri": sorted({x["yayinevi"] for x in items if x["yayinevi"]}, key=G.fold),
+              "kitapliklar": sorted({x["kitaplik"] for x in items if x["kitaplik"]}, key=G.fold),
+              "hedefKitleler": sorted({x["hedefKitle"] for x in items if x["hedefKitle"]}, key=G.fold)}
+    return {"surum": surum, "satirlar": satirlar, "facets": facets}
+
+
+def _taban(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
+    anahtar = (id(engine), tenant)
+    surum = _surum(engine, tenant)
+    t = _TABAN.al(anahtar, lambda: _taban_oku(engine, tenant))
+    if t["surum"] != surum:
+        t = _TABAN.al(anahtar, lambda: _taban_oku(engine, tenant), zorla=True)
+    return t
+
+
+def isit(engine: sa.engine.Engine, tenant: str) -> None:
+    """Gece hesabından sonra listeyi beklemeden arkada hazırlar (ilk açan kişi okumayı beklemesin)."""
+    _TABAN.isit((id(engine), tenant), lambda: _taban_oku(engine, tenant))
+
+
 def list_rows(engine: sa.engine.Engine, tenant: str, *, weights: dict[str, float], sirala: str = "oncelik", yon: str = "",
               yayinevi: str = "", kitaplik: str = "", hedef_kitle: str = "", m46: str = "", stokta: bool = False,
               ozel_gun: str = "", plan: str = "", q: str = "", page: int = 0, page_size: int = PAGE_SIZE,
               agenda_weeks: int = 8, today: Optional[date] = None) -> dict[str, Any]:
-    """Süzülmüş, sıralanmış, sayfalı liste; `total` süzgeç sonrası, `hepsi` kümenin tamamı (tavan yok)."""
+    """Süzülmüş, sıralanmış, sayfalı liste; `total` süzgeç sonrası, `hepsi` kümenin tamamı (tavan yok).
+
+    Satırların ayrıştırılmış hâli `_taban`dan gelir (tablo sürümüyle denetlenen süreç içi bellek). Dönen satırlar
+    üst düzeyde yeni sözlüktür; iç içe alanlar (m46, bilesen, ozelGunler, dijital, detay) bellekle paylaşılır — onları
+    değiştiren çağıran kopyalamalıdır (`backlist_api.hide_money` yeni sözlük kurar)."""
     ensure(engine)
     today = today or C.today()
-    with engine.connect() as c:
-        rows = c.execute(rows_stmt(tenant)).all()
-    items = [_row_dict(r, weights) for r in rows]
+    taban = _taban(engine, tenant)
+    items: list[dict[str, Any]] = []
+    folds: list[str] = []
+    for base, p, ara in taban["satirlar"]:
+        x = dict(base)
+        x["endeks"] = index_of(p, weights)
+        items.append(x)
+        folds.append(ara)
     in_plan = BK.by_codes(engine, tenant, kind="backlist")
-    facets = {"yayinevleri": sorted({x["yayinevi"] for x in items if x["yayinevi"]}, key=G.fold),
-              "kitapliklar": sorted({x["kitaplik"] for x in items if x["kitaplik"]}, key=G.fold),
-              "hedefKitleler": sorted({x["hedefKitle"] for x in items if x["hedefKitle"]}, key=G.fold)}
+    facets = {k: list(v) for k, v in taban["facets"].items()}
     days: dict[str, dict[str, Any]] = {}
     for x in items:
-        x["yaklasanGunler"] = _upcoming(x["ozelGunler"], today, agenda_weeks)
+        x["yaklasanGunler"] = _upcoming(x["ozelGunler"], today, agenda_weeks) if x["ozelGunler"] else []
         for g in x["yaklasanGunler"]:
             days.setdefault(g["id"], {"id": g["id"], "ad": g["ad"], "baslangic": g["baslangic"], "kitap": 0})["kitap"] += 1
         x["planlar"] = in_plan.get(x["stokKodu"], [])
     qf = G.fold(q)
     out = []
-    for x in items:
+    for x, fx in zip(items, folds):
         if yayinevi and x["yayinevi"] != yayinevi:
             continue
         if kitaplik and x["kitaplik"] != kitaplik:
@@ -859,7 +921,7 @@ def list_rows(engine: sa.engine.Engine, tenant: str, *, weights: dict[str, float
             continue
         if plan == "var" and not x["planlar"]:
             continue
-        if qf and qf not in G.fold(" ".join(str(v or "") for v in (x["ad"], x["yazar"], x["stokKodu"], x["yayinevi"]))):
+        if qf and qf not in fx:
             continue
         out.append(x)
     out.sort(key=_sort_key(sirala if sirala in SORTS else "oncelik"))

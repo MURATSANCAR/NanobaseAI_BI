@@ -32,6 +32,7 @@ END = date(2026, 8, 17)          # Logo veri sonu: son tam ay Temmuz 2026
 def _reset(e):
     for mod in (C, B, BK, BL):
         mod._ready.discard(id(e))
+    BL._TABAN.dusur()      # liste belleği süreç içidir; testler arasında taşınmaz
 
 
 @pytest.fixture
@@ -333,6 +334,114 @@ def test_weights_change_the_order_and_components_stay_visible(built):
     assert set(x["bilesen"]) == set(BL.KEYS) and x["bilesen"]["egilim"]["ham"] == 0.5 and x["satisYok"] is False
 
 
+def _eski_list_rows(engine, tenant, *, weights, sirala="oncelik", yon="", yayinevi="", kitaplik="", hedef_kitle="", m46="",
+                    stokta=False, ozel_gun="", plan="", q="", page=0, page_size=BL.PAGE_SIZE, agenda_weeks=8, today=None):
+    """Hız işinden (2026-09-29) önceki `list_rows`, birebir: her istekte bütün satırlar okunur ve ayrıştırılır."""
+    G = BL.G
+    today = today or C.today()
+    with engine.connect() as c:
+        rows_ = c.execute(BL.rows_stmt(tenant)).all()
+    items = [BL._row_dict(r, weights) for r in rows_]
+    in_plan = BK.by_codes(engine, tenant, kind="backlist")
+    facets = {"yayinevleri": sorted({x["yayinevi"] for x in items if x["yayinevi"]}, key=G.fold),
+              "kitapliklar": sorted({x["kitaplik"] for x in items if x["kitaplik"]}, key=G.fold),
+              "hedefKitleler": sorted({x["hedefKitle"] for x in items if x["hedefKitle"]}, key=G.fold)}
+    days = {}
+    for x in items:
+        x["yaklasanGunler"] = BL._upcoming(x["ozelGunler"], today, agenda_weeks)
+        for g in x["yaklasanGunler"]:
+            days.setdefault(g["id"], {"id": g["id"], "ad": g["ad"], "baslangic": g["baslangic"], "kitap": 0})["kitap"] += 1
+        x["planlar"] = in_plan.get(x["stokKodu"], [])
+    qf = G.fold(q)
+    out = []
+    for x in items:
+        if yayinevi and x["yayinevi"] != yayinevi:
+            continue
+        if kitaplik and x["kitaplik"] != kitaplik:
+            continue
+        if hedef_kitle and x["hedefKitle"] != hedef_kitle:
+            continue
+        if m46:
+            want = set(m46.split(","))
+            state = "acik" if x["m46"]["sapmaAcik"] else None
+            if not ({x["m46"]["durum"] or "yok", state} & want):
+                continue
+        if stokta and not (x["stok"] or 0) > 0:
+            continue
+        if ozel_gun == "yakin" and not x["yaklasanGunler"]:
+            continue
+        if ozel_gun and ozel_gun != "yakin" and not any(g["id"] == ozel_gun for g in x["ozelGunler"]):
+            continue
+        if plan == "yok" and x["planlar"]:
+            continue
+        if plan == "var" and not x["planlar"]:
+            continue
+        if qf and qf not in G.fold(" ".join(str(v or "") for v in (x["ad"], x["yazar"], x["stokKodu"], x["yayinevi"]))):
+            continue
+        out.append(x)
+    out.sort(key=BL._sort_key(sirala if sirala in BL.SORTS else "oncelik"))
+    if yon == "artan":
+        out.reverse()
+    page = max(0, int(page))
+    return {"items": out[page * page_size:(page + 1) * page_size], "total": len(out), "hepsi": len(items), "page": page,
+            "pageSize": page_size, "facets": facets,
+            "gunler": sorted(days.values(), key=lambda d: (d["baslangic"] or "", d["ad"] or "")),
+            "kpi": {"sapmaAcik": sum(1 for x in items if x["m46"]["sapmaAcik"]),
+                    "stokta": sum(1 for x in items if (x["stok"] or 0) > 0),
+                    "yakinGun": sum(1 for x in items if x["yaklasanGunler"]),
+                    "planli": sum(1 for x in items if x["planlar"])}}
+
+
+_LISTE_DURUMLARI = (
+    [{"sirala": s} for s in list(BL.SORTS) + ["tanimsiz"]]
+    + [{"sirala": s, "yon": "artan"} for s in ("oncelik", "endeks", "ad", "stok")]
+    + [{"stokta": True}, {"m46": "acik"}, {"m46": "yok,iyi"}, {"ozel_gun": "yakin"}, {"ozel_gun": "g1"}, {"plan": "yok"},
+       {"plan": "var"}, {"q": "yükselen"}, {"q": "YAZAR"}, {"q": "b3"}, {"yayinevi": "Timaş Yayınları"}, {"kitaplik": "Roman"},
+       {"hedef_kitle": "Çocuk"}, {"page_size": 2, "page": 1}, {"page_size": 1, "page": 5}, {"agenda_weeks": 1},
+       {"weights": BL.parse_weights("egilim:0,stok:1,marj:0,tahmin:0,sapma:0"), "sirala": "endeks"},
+       {"weights": BL.parse_weights("egilim:2,stok:0.5,marj:0,tahmin:1,sapma:3"), "sirala": "endeks", "yon": "artan"}]
+)
+
+
+def test_list_from_memory_equals_direct_table_read(built):
+    """Eski hesap = yeni hesap: bellekten dönen liste her süzgeç, sıralama, sayfa ve ağırlıkta tablodan okunanla aynı."""
+    engine, _, _ = built
+    for durum in _LISTE_DURUMLARI:
+        kw = {"weights": BL.DEFAULT_WEIGHTS, "today": TODAY, **durum}
+        eski = _eski_list_rows(engine, T, **kw)
+        assert BL.list_rows(engine, T, **kw) == eski, durum        # ilk okuma (bellek boşsa tablodan)
+        assert BL.list_rows(engine, T, **kw) == eski, durum        # bellekten
+
+
+def test_list_memory_reads_table_once_and_follows_nightly_build_and_plans(built, monkeypatch):
+    engine, _, _ = built
+    reads = []
+    real = BL._taban_oku
+    monkeypatch.setattr(BL, "_taban_oku", lambda e, t: reads.append(t) or real(e, t))
+    kw = {"weights": BL.DEFAULT_WEIGHTS, "today": TODAY}
+    first = BL.list_rows(engine, T, **kw)
+    BL.list_rows(engine, T, sirala="ad", q="kitap", **kw)
+    BL.list_rows(engine, T, weights=BL.parse_weights("tahmin:3"), today=TODAY)
+    assert len(reads) == 1                                                     # sıralama/süzgeç/ağırlık tabloyu yeniden okutmaz
+    # dönen satır üst düzeyde yeni sözlük: çağıranın eklediği anahtar belleğe geçmez
+    first["items"][0]["kaynaklar"] = "x"
+    assert "kaynaklar" not in BL.list_rows(engine, T, **kw)["items"][0]
+    # planlar gün içinde değişir: bellekten değil, her istekte okunur
+    pid = BL.create_activation(engine, T, "ayse", FakeCrm(), _mkt(), BL.settings(lambda k: ""), {"kitaplar": [{"stokKodu": "B3"}]},
+                               today=TODAY)
+    lst = BL.list_rows(engine, T, **kw)
+    assert lst == _eski_list_rows(engine, T, **kw) and lst["kpi"]["planli"] == 1
+    assert next(x for x in lst["items"] if x["stokKodu"] == "B3")["planlar"][0]["id"] == pid and len(reads) == 1
+    # gece hesabı tabloyu yeniden yazınca (sürüm değişir) bir kez yeniden okunur, rakamlar yeni tablodan
+    monkeypatch.setattr(bsrc, "read_forecast", lambda: {"start": "2026-09", "updatedAt": 2.0, "p50": {"B1": [1.0] * 12, "B3": [7.0] * 12}})
+    BL.build(engine, T, FakeSources(), BL.settings(lambda k: ""), today=TODAY)
+    after = BL.list_rows(engine, T, **kw)
+    assert len(reads) == 2 and after == _eski_list_rows(engine, T, **kw)
+    assert {x["stokKodu"]: x["tahmin12"] for x in after["items"]} == {"B1": 12.0, "B2": None, "B3": 84.0}
+    BL.list_rows(engine, T, **kw)
+    assert len(reads) == 2
+
+
 def test_money_is_hidden_without_budget_right(built):
     engine, _, _ = built
     d = BL.detail(engine, T, "B1", BL.settings(lambda k: ""), BL.DEFAULT_WEIGHTS, today=TODAY)
@@ -555,6 +664,13 @@ def test_endpoints_list_card_plan_and_scheduler_gate(monkeypatch, store, setting
     assert meta.json()["me"]["canWrite"] and [c["key"] for c in meta.json()["components"]] == BL.KEYS
     lst = client.get("/api/v1/marketing/backlist?agirlik=egilim:1,stok:1,marj:1,tahmin:1,sapma:1", headers=a).json()
     assert lst["total"] == lst["hepsi"] == 3 and lst["items"][0]["stokKodu"] == "B1"
+    from semantic_bridge import provenance as PV
+    from semantic_bridge.marketing import kaynak_backlist as KB
+    assert PV.uncovered_numbers(lst, KB.NOT_RAKAM) == []
+    assert "backlist.satir" in lst["kaynaklar"]["sources"]                       # bellekten dönen satırın SQL'i: tablo okuması
+    again = client.get("/api/v1/marketing/backlist?agirlik=egilim:1,stok:1,marj:1,tahmin:1,sapma:1",
+                       headers={**a, "X-Data-Refresh": "1"}).json()               # «Verileri yenile»: aynı sürüm, aynı rakam
+    assert {k: v for k, v in again.items() if k != "kaynaklar"} == {k: v for k, v in lst.items() if k != "kaynaklar"}
     assert client.get("/api/v1/marketing/backlist?agirlik=egilim:-1", headers=a).status_code == 400
     card = client.get("/api/v1/marketing/backlist/B1", headers=a)
     assert card.status_code == 200 and len(card.json()["seri"]) == 36

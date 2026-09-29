@@ -410,6 +410,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 src = sources()
                 try:
                     out["liste"] = BL.build(engine, tenant, src, st(), refresh_past=weekly, today=today)
+                    BL.isit(engine, tenant)   # listenin ayrıştırılmış hâli arkada hazırlanır; ilk açan beklemez
                 except (SourceError, C.MarketingError) as e:
                     out["hata"] = str(e)
                 if weekly and "hata" not in out:

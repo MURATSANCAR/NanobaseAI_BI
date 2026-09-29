@@ -98,7 +98,9 @@ def origins(k: P.Kaynaklar, engine: Any, tenant: str, logo_db: Optional[str]) ->
 def _rows(k: P.Kaynaklar, engine: Any, tenant: str, logo_db: Optional[str]) -> str:
     return k.portal("backlist.satir", "Backlist kitap satırları", BL.rows_stmt(tenant), engine,
                     origin=origins(k, engine, tenant, logo_db),
-                    description="Gece hesabının yazdığı kitap satırları (semantic_mkt_backlist_rows).")
+                    description="Gece hesabının yazdığı kitap satırları (semantic_mkt_backlist). Liste ucu bu okumanın "
+                                "sonucunu süreç içinde tutar; her istekte tablonun satır sayısı ve son yazım anı "
+                                "denetlenir, değiştiyse tablo yeniden okunur.")
 
 
 def _new(engine: Any, tenant: str) -> P.Kaynaklar:
