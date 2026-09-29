@@ -4980,14 +4980,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/editorial/contracts")
     def editorial_contracts(request: Request, q: str = "", status: Optional[int] = None, kind: Optional[int] = None,
-                            expiring: bool = False, order: str = "bitis", page: int = 0) -> dict[str, Any]:
+                            expiring: bool = False, order: str = "bitis", page: int = 0, term: str = "") -> dict[str, Any]:
         schema, run = _editorial(request)
         expiring_days = _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None
-        _remember_view("contracts", page, q, order=order, status=status, kind=kind, expiring_days=expiring_days)
+        # Süre süzgeci (ZEKI-20): devam | bitmis | suresiz; boş = hepsi.
+        term = term.strip()
+        _remember_view("contracts", page, q, order=order, status=status, kind=kind, expiring_days=expiring_days, term=term)
         engine, tenant, _, _ = _greetings(request)
         try:
             out = contracts_hiz_mod.sayfa(tenant, schema, run, page, order=order, fresh=FORCE_FRESH.get(),
-                                          q=q, status=status, kind=kind, expiring_days=expiring_days)
+                                          q=q, status=status, kind=kind, expiring_days=expiring_days, term=term)
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
         # Portalda düzenlenen CRM sözleşmeleri: satırda «portalda» rozeti ve durumu (her istekte portaldan).
@@ -4995,7 +4997,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         for c in out["items"]:
             c["portal"] = state.get((c.get("id") or "").lower())
         from semantic_bridge import contracts_kaynak as K, provenance as P
-        return P.bagla(out, lambda: K.for_page(engine, tenant, schema, out, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days))
+        return P.bagla(out, lambda: K.for_page(engine, tenant, schema, out, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days, term=term))
 
     from semantic_bridge import contracts as contracts_mod
     from semantic_bridge import contracts_api as contracts_api_mod
@@ -5048,12 +5050,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
         return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.role_facets, schema, r), lambda out, log: K.for_roles(out, log, schema))
 
-    @app.get("/api/v1/editorial/contributors")
-    def editorial_contributors(request: Request, roles: str = "", q: str = "", order: str = "son", page: int = 0) -> dict[str, Any]:
+    # Kaynak dil süzgeci (ZEKI-22): {contact_id} yolundan önce tanımlı olmalı («languages» kişi kimliği sanılmasın).
+    @app.get("/api/v1/editorial/contributors/languages")
+    def editorial_contributor_languages(request: Request, roles: str = "") -> dict[str, Any]:
         schema, run = _editorial(request)
-        _remember_view("contributors", page, q, roles=roles.split("|"), order=order)
         from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
-        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.contributors_page, schema, r, roles.split("|"), page, q=q, order=order), lambda out, log: K.for_contributors(out, log, schema, roles.split("|"), page, q, order))
+        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.language_facets, schema, r, roles.split("|")),
+                            lambda out, log: K.for_languages(out, log, schema, roles.split("|")))
+
+    @app.get("/api/v1/editorial/contributors")
+    def editorial_contributors(request: Request, roles: str = "", q: str = "", order: str = "son", page: int = 0,
+                               lang: str = "", langs: bool = False) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        lang = lang.strip()
+        _remember_view("contributors", page, q, roles=roles.split("|"), order=order, lang=lang, langs=langs)
+        from semantic_bridge import contributors_kaynak as K, sorgu_kaydi as SK
+        return SK.bagla_run(run, lambda r: _editorial_call(editorial_mod.contributors_page, schema, r, roles.split("|"), page, q=q, order=order, lang=lang, langs=langs), lambda out, log: K.for_contributors(out, log, schema, roles.split("|"), page, q, order, lang, langs))
 
     @app.get("/api/v1/editorial/contributors/{contact_id}")
     def editorial_contributor(contact_id: str, request: Request) -> dict[str, Any]:

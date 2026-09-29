@@ -21,9 +21,10 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     route: '/kisiler',
     crumb: 'Kişiler',
     title: 'Kişiler',
-    lead: "CRM'de tercüme rolüyle eser kaydı olan kişiler ve çevirdikleri kitaplar. Çeviri işleri, ilerleme, terim bankası ve kalite raporu «Çeviri» ekranındadır.",
+    lead: "CRM'de tercüme rolüyle eser kaydı olan kişiler ve çevirdikleri kitaplar; sözleşmesinde girilen kaynak dile göre süzülebilir. Çeviri işleri, ilerleme, terim bankası ve kalite raporu «Çeviri» ekranındadır.",
     roles: CONTRIBUTOR_ROLES.translators,
     people: 'çevirmen',
+    languages: true,
   },
   cizer: {
     tab: 'Çizer ve serbest',

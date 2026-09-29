@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarClock, FileDiff, FilePlus2, Library, Search } from 'lucide-react';
 import { canSeePage, usePageAccess } from '../useAdmin';
-import { ENGINE_ENABLED, type Contract, type ContractSummary } from '../engine';
+import { ENGINE_ENABLED, type Contract, type ContractSummary, type ContractTerm } from '../engine';
 import { contractsListOptions, contractsSummaryOptions } from './queries';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../admin/ui';
 import { crmLabel, dateTime, pct } from '../format';
@@ -13,7 +13,7 @@ import { Tabs, day, errMsg, statusTone as portalTone } from './contracts/ui';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import { RightChips } from './crmRights';
-import { EmptyHint, Explain } from '../components/Explain';
+import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { TERM } from './contracts/glossary';
 
 /** Köprü cevabındaki sorgu bilgisi (tipler engine.ts'te ortak; bu ekran yalnız okur). */
@@ -25,6 +25,13 @@ type WithK<T> = T & { kaynaklar?: Kaynaklar };
 
 const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 
+/** Süre süzgeci: üçü etkin sözleşmeleri örtüşmeden böler (köprüde `editorial.TERMS`). */
+const TERM_OPTIONS: Array<{ value: ContractTerm; label: string }> = [
+  { value: 'devam', label: 'Süresi devam eden' },
+  { value: 'bitmis', label: 'Süresi bitmiş' },
+  { value: 'suresiz', label: 'Süresiz ya da bitişi yok' },
+];
+
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   const t = (s || '').toLocaleLowerCase('tr');
   if (t.includes('yenileme')) return 'warn';
@@ -35,6 +42,7 @@ const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
 
 function DaysLeft({ c, warnDays }: { c: Contract; warnDays: number }) {
   if (c.openEnded) return <Pill tone="muted">Süresiz</Pill>;
+  if (!c.end) return <Pill tone="muted">Bitiş girilmemiş</Pill>;
   if (c.daysLeft == null) return null;
   if (c.daysLeft < 0) return <Pill tone="muted">{nf.format(-c.daysLeft)} gün önce bitti</Pill>;
   return <Pill tone={c.daysLeft <= warnDays ? 'err' : 'muted'}>{nf.format(c.daysLeft)} gün kaldı</Pill>;
@@ -69,13 +77,36 @@ function Rates({ c }: { c: Contract }) {
   );
 }
 
+/** Kitap adı bir kez yazılır. Aynı adı taşıyan birden çok kitap kartı (başka baskı ya da kart) bağlıysa ad tekrarlanmaz;
+ *  altında kaç kart olduğu ve stok kodları yazar (hangisinin sözleşmede olduğu ayırt edilsin). */
+type BookGroup = { title: string; codes: string[]; cards: number };
+function groupBooks(books: Contract['books']): BookGroup[] {
+  const by = new Map<string, BookGroup>();
+  for (const b of books) {
+    const title = b.title.trim();
+    const key = title.toLocaleLowerCase('tr');
+    const g = by.get(key) ?? { title, codes: [], cards: 0 };
+    g.cards += 1;
+    if (b.stockCode && !g.codes.includes(b.stockCode)) g.codes.push(b.stockCode);
+    by.set(key, g);
+  }
+  return [...by.values()];
+}
+
 function Title({ c }: { c: Contract }) {
-  const books = c.books.map((b) => b.title);
+  const groups = groupBooks(c.books);
+  const multi = groups.filter((g) => g.cards > 1);
   return (
     <div className="min-w-0">
       <Link to={`/telif-sozlesme/${c.id}`} className="break-words font-extrabold leading-snug hover:text-canvas-violet hover:underline">
-        {books.length ? books.join(' · ') : 'Kitap bağlanmamış'}
+        {groups.length ? groups.map((g) => g.title).join(' · ') : 'Kitap bağlanmamış'}
       </Link>
+      {multi.map((g) => (
+        <div key={g.title} className="mt-0.5 break-words text-[11px] leading-snug text-canvas-muted">
+          {groups.length > 1 ? `${g.title}: ` : ''}
+          {nf.format(g.cards)} ayrı kitap kartı{g.codes.length ? ` · stok ${g.codes.join(', ')}` : ''}
+        </div>
+      ))}
       <div className="mt-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-canvas-muted">
         {c.no || c.code || '—'}
         {c.portal && <Pill tone="violet">Portalda: {c.portal.statusLabel}{c.portal.diff ? ` · CRM'e işlenecek ${c.portal.diff} fark` : ''}</Pill>}
@@ -208,13 +239,14 @@ export default function ContractsScreen() {
   const [kind, setKind] = useState('');
   const [expiring, setExpiring] = useState(false);
   const [order, setOrder] = useState('bitis');
+  const [term, setTerm] = useState<ContractTerm | ''>('');
   const [page, setPage] = useState(0);
   const q = useDebounced(text.trim(), 350);
 
-  useEffect(() => setPage(0), [q, status, kind, expiring, order]);
+  useEffect(() => setPage(0), [q, status, kind, expiring, order, term]);
 
   const summary = useQuery(contractsSummaryOptions());
-  const list = useQuery(contractsListOptions(q, status, kind, expiring, order, page));
+  const list = useQuery(contractsListOptions(q, status, kind, expiring, order, page, term));
 
   const s = summary.data as WithK<ContractSummary> | undefined;
   const data = list.data as WithK<NonNullable<typeof list.data>> | undefined;
@@ -275,8 +307,8 @@ export default function ContractsScreen() {
 
             {source === 'portal' ? <PortalRecords /> : (
             <Panel>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_200px_180px_170px]">
-                <label className="relative block">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_170px_200px_160px]">
+                <label className="relative block sm:col-span-2 xl:col-span-1">
                   <span className="sr-only">Sözleşmelerde ara</span>
                   <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
                   <input
@@ -303,6 +335,15 @@ export default function ContractsScreen() {
                     </option>
                   ))}
                 </select>
+                <select aria-label="Süre" value={term} onChange={(e) => setTerm(e.target.value as ContractTerm | '')} className={field}>
+                  <option value="">Tüm süreler</option>
+                  {TERM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                      {s?.terms ? ` (${nf.format(s.terms[o.value] ?? 0)})` : ''}
+                    </option>
+                  ))}
+                </select>
                 <select aria-label="Sıralama" value={order} onChange={(e) => setOrder(e.target.value)} className={field}>
                   <option value="bitis">Bitişi en yakın</option>
                   <option value="yeni">Son değişen</option>
@@ -313,6 +354,12 @@ export default function ContractsScreen() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">
                 <InfoLabel k={s?.kaynaklar} alan="statuses[]" label="Durum süzgecindeki sayılar">Durum sayıları</InfoLabel>
                 <InfoLabel k={s?.kaynaklar} alan="kinds[]" label="Tip süzgecindeki sayılar">Tip sayıları</InfoLabel>
+                <InfoLabel k={s?.kaynaklar} alan="terms" label="Süre süzgecindeki sayılar">Süre sayıları</InfoLabel>
+                <ExplainLabel label="«Bitişi en yakın» sırası">
+                  Önce süresi devam edenler gelir, bitişi bugüne en yakın olan başta. Sonra süresi bitmişler (en son biten
+                  başta), en sonda süresiz ya da bitiş tarihi girilmemiş sözleşmeler. Yalnız birini görmek için «Süre»
+                  süzgecini kullanın.
+                </ExplainLabel>
                 <InfoLabel k={data?.kaynaklar} alan="total" label="Süzgece uyan sözleşme sayısı">Süzgeçteki toplam</InfoLabel>
               </div>
 
@@ -329,7 +376,7 @@ export default function ContractsScreen() {
 
               {!list.isLoading && !items.length && !err && (
                 <div className="mt-3">
-                  <EmptyHint title="Bu süzgece uyan sözleşme yok" why="Aramayı temizleyin, durum ve tip süzgeçlerini «Tüm» yapın ya da «günde bitiyor» kartındaki süzgeci kapatın." />
+                  <EmptyHint title="Bu süzgece uyan sözleşme yok" why="Aramayı temizleyin, durum, tip ve süre süzgeçlerini «Tüm» yapın ya da «günde bitiyor» kartındaki süzgeci kapatın." />
                 </div>
               )}
 

@@ -1445,7 +1445,8 @@ export type Contract = {
   stage: string | null;
   daysLeft: number | null;
   modifiedOn: string | null;
-  books: Array<{ id: string | null; title: string }>;
+  /** Aynı kitap kartı bir kez gelir; aynı adı taşıyan farklı kartlar stok koduyla ayrılır. */
+  books: Array<{ id: string | null; title: string; stockCode?: string | null; isbn?: string | null }>;
   parties: ContractParty[];
   /** Portalda düzenlenmişse portal kaydının durumu ve CRM'e işlenmemiş fark sayısı. */
   portal?: { id: string; status: string; statusLabel: string; updatedAt: string; diff: number } | null;
@@ -1460,11 +1461,15 @@ export type ContractSummary = {
   warnDays: number;
   avgRoyalty: number | null;
   avgRoyaltyOver: number;
+  /** Süre süzgecindeki sayılar: süresi devam eden, bitmiş, süresiz ya da bitişi girilmemiş (eski özet taşımayabilir). */
+  terms?: Record<ContractTerm, number>;
   statuses: ContractFacet[];
   kinds: ContractFacet[];
   db?: DbTiming | null;
 };
-export type ContractQuery = { q?: string; status?: number; kind?: number; expiring?: boolean; order?: string; page?: number };
+/** Süre süzgeci: devam = bitişi bugün ya da sonra, bitmis = bitişi geçmiş, suresiz = süresiz ya da bitişi girilmemiş. */
+export type ContractTerm = 'devam' | 'bitmis' | 'suresiz';
+export type ContractQuery = { q?: string; status?: number; kind?: number; expiring?: boolean; order?: string; term?: ContractTerm | ''; page?: number };
 
 /** M6 Telif & Sözleşme: CRM'deki sözleşme portföyü (salt okunur). */
 export const contractsApi = {
@@ -1472,13 +1477,22 @@ export const contractsApi = {
   list: (p: ContractQuery) =>
     send<ContractPage>(
       'GET',
-      `/api/v1/editorial/contracts${qs({ q: p.q, status: p.status, kind: p.kind, expiring: p.expiring ? 'true' : undefined, order: p.order, page: p.page })}`,
+      `/api/v1/editorial/contracts${qs({ q: p.q, status: p.status, kind: p.kind, expiring: p.expiring ? 'true' : undefined, order: p.order, term: p.term || undefined, page: p.page })}`,
       undefined,
       60_000,
     ),
 };
 
-export type Contributor = { id: string; name: string | null; works: number; recentWorks: number; last: string | null; roles: Array<{ role: string; works: number }> };
+export type Contributor = {
+  id: string;
+  name: string | null;
+  works: number;
+  recentWorks: number;
+  last: string | null;
+  roles: Array<{ role: string; works: number }>;
+  /** Sözleşmelerinde girilen kaynak diller (yalnız çevirmen listesi ister). */
+  languages?: string[];
+};
 export type ContributorPage = {
   items: Contributor[];
   total: number;
@@ -1490,6 +1504,10 @@ export type ContributorPage = {
   kaynaklar?: Kaynaklar;
 };
 export type RoleFacet = { role: string; records: number; people: number };
+/** Kaynak dil süzgeci: sözleşmedeki «orijinal dil» alanından; `unspecified` = hiçbir sözleşmesinde dil girilmemiş kişi. */
+export type LanguageFacets = { items: Array<{ id: string; name: string; people: number }>; unspecified: number; db?: DbTiming | null; kaynaklar?: Kaynaklar };
+/** Kaynak dil süzgecinde «Belirtilmemiş» seçeneğinin değeri. */
+export const LANG_NONE = 'yok';
 export type PersonDetail = {
   id: string;
   name: string | null;
@@ -1505,8 +1523,14 @@ export type PersonDetail = {
 /** M7 / M8 / M4: esere katkı verenler (yazar, çizer, çevirmen…), CRM eser katılım kayıtlarından. */
 export const contributorsApi = {
   roles: () => send<{ items: RoleFacet[]; db?: DbTiming | null; kaynaklar?: Kaynaklar }>('GET', '/api/v1/editorial/contributors/roles', undefined, 60_000),
-  list: (p: { roles: string[]; q?: string; order?: string; page?: number }) =>
-    send<ContributorPage>('GET', `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page })}`, undefined, 60_000),
+  list: (p: { roles: string[]; q?: string; order?: string; page?: number; lang?: string; langs?: boolean }) =>
+    send<ContributorPage>(
+      'GET',
+      `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page, lang: p.lang || undefined, langs: p.langs ? 'true' : undefined })}`,
+      undefined,
+      60_000,
+    ),
+  languages: (roles: string[]) => send<LanguageFacets>('GET', `/api/v1/editorial/contributors/languages${qs({ roles: roles.join('|') })}`, undefined, 60_000),
   person: (id: string) => send<PersonDetail>('GET', `/api/v1/editorial/contributors/${encodeURIComponent(id)}`, undefined, 60_000),
 };
 

@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BriefcaseBusiness, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
+import { ENGINE_ENABLED, LANG_NONE, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
 import { canSeePage, usePageAccess } from '../useAdmin';
-import { contributorsListOptions, roleFacetsOptions } from './queries';
+import { contributorsListOptions, languageFacetsOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct, crmLabel } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
 import { RelationBody } from './authors/CardPanel';
 import SqlInfo from '../components/SqlInfo';
+import SearchSelect from '../components/SearchSelect';
 import { RightChips, RightsDetails } from './crmRights';
-import { EmptyHint } from '../components/Explain';
+import { EmptyHint, Explain } from '../components/Explain';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -28,6 +29,8 @@ export type ContributorModule = {
   people: string;
   /** Kişi ayrıntısında M7 ilişki bölümü (randevu, görüşme notu, ısı). */
   relations?: boolean;
+  /** Kaynak dil süzgeci ve satırda kişinin kaynak dilleri (çevirmenler: sözleşmedeki orijinal dil alanından). */
+  languages?: boolean;
 };
 
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
@@ -177,7 +180,7 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
   );
 }
 
-function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: () => void }) {
+function Row({ c, active, onOpen, languages }: { c: Contributor; active: boolean; onOpen: () => void; languages?: boolean }) {
   return (
     <li>
       <button
@@ -193,6 +196,11 @@ function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: (
           <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">
             {c.roles.map((r) => `${r.role} ${nf.format(r.works)}`).join(' · ')}
           </span>
+          {languages && (
+            <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">
+              Kaynak dil: {c.languages?.length ? c.languages.join(', ') : 'belirtilmemiş'}
+            </span>
+          )}
         </span>
         <span className="shrink-0 text-right">
           <span className="block font-mono text-[15px] font-bold tabular-nums leading-none">{nf.format(c.works)}</span>
@@ -210,21 +218,33 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
   const [text, setText] = useState('');
   const [role, setRole] = useState('');
   const [order, setOrder] = useState('son');
+  const [lang, setLang] = useState('');
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const q = useDebounced(text.trim(), 350);
   const roles = useMemo(() => (role ? [role] : m.roles), [role, m.roles]);
+  const withLang = !!m.languages;
 
-  useEffect(() => setPage(0), [q, role, order]);
+  useEffect(() => setPage(0), [q, role, order, lang]);
 
   const facets = useQuery({ ...roleFacetsOptions(), enabled: ENGINE_ENABLED && m.roles.length > 1 });
-  const list = useQuery(contributorsListOptions(roles, q, order, page));
+  const langFacets = useQuery({ ...languageFacetsOptions(m.roles), enabled: ENGINE_ENABLED && withLang });
+  const list = useQuery(contributorsListOptions(roles, q, order, page, withLang ? lang : '', withLang));
   const person = useQuery({ queryKey: ['editorial', 'person', open], queryFn: () => contributorsApi.person(open as string), enabled: ENGINE_ENABLED && !!open });
 
   const data = list.data;
   const items = data?.items ?? [];
   const roleOptions = (facets.data?.items ?? []).filter((f) => m.roles.includes(f.role));
-  const err = errText(list.error || person.error, 'Kayıtlar okunamadı.');
+  const langOptions = useMemo(() => {
+    const d = langFacets.data;
+    if (!d) return [];
+    return [
+      ...d.items.map((f) => ({ value: f.id, label: `${f.name} (${nf.format(f.people)})` })),
+      { value: LANG_NONE, label: `Belirtilmemiş (${nf.format(d.unspecified)})` },
+    ];
+  }, [langFacets.data]);
+  const filtered = !!(q || role || lang);
+  const err = errText(list.error || person.error || langFacets.error, 'Kayıtlar okunamadı.');
 
   return (
     <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
@@ -236,8 +256,8 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           <Kpi
             label={m.people}
             value={nf.format(data.total)}
-            help={q || role ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
-            explain="CRM'de bu sekmenin rollerinden biriyle en az bir kitaba katılım kaydı olan kişi sayısı. Arama ya da rol seçiliyse yalnız uyanlar sayılır."
+            help={filtered ? 'Süzgece uyan kişi' : 'Eser katılım kaydı olan kişi'}
+            explain="CRM'de bu sekmenin rollerinden biriyle en az bir kitaba katılım kaydı olan kişi sayısı. Arama, rol ya da kaynak dil seçiliyse yalnız uyanlar sayılır."
             info={<SqlInfo k={data.kaynaklar} alan="total" label={m.people} />}
           />
           <Kpi
@@ -260,7 +280,11 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-start lg:gap-4">
         <Panel>
-          <div className={`grid gap-2 sm:grid-cols-2 ${m.roles.length > 1 ? 'lg:grid-cols-[minmax(0,1fr)_190px_170px]' : 'lg:grid-cols-[minmax(0,1fr)_170px]'}`}>
+          <div
+            className={`grid gap-2 sm:grid-cols-2 ${
+              m.roles.length > 1 || withLang ? 'lg:grid-cols-[minmax(0,1fr)_200px_170px]' : 'lg:grid-cols-[minmax(0,1fr)_170px]'
+            }`}
+          >
             <label className="relative block">
               <span className="sr-only">Kişi ara</span>
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
@@ -279,6 +303,25 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
                 <SqlInfo k={facets.data?.kaynaklar} alan="items[]" label="Rol başına kişi sayısı" />
               </div>
             )}
+            {withLang && (
+              <div className="flex min-w-0 items-center gap-1">
+                <SearchSelect
+                  label="Kaynak dil"
+                  placeholder="Tüm kaynak diller"
+                  options={langOptions}
+                  value={lang}
+                  onChange={setLang}
+                  disabled={!langFacets.data}
+                  className="min-w-0 flex-1"
+                />
+                <Explain label="Kaynak dil">
+                  Çevirinin yapıldığı dil, çevirmenin CRM sözleşmesindeki «orijinal dil» alanından okunur. Hiçbir sözleşmesinde bu
+                  alan dolu olmayan çevirmenler «Belirtilmemiş» grubundadır; dil başka bir kayıttan tahmin edilmez. İki dilden
+                  çeviri yapan kişi iki dilde de sayılır.
+                </Explain>
+                <SqlInfo k={langFacets.data?.kaynaklar} alan="items[]" label="Kaynak dil başına kişi sayısı" />
+              </div>
+            )}
             <select aria-label="Sıralama" value={order} onChange={(e) => setOrder(e.target.value)} className={field}>
               <option value="son">Son çalışan</option>
               <option value="eser">En çok eser</option>
@@ -289,16 +332,17 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           {!list.isLoading && !items.length && !err && (
             <div className="mt-3">
               <EmptyHint
-                title={q || role ? 'Süzgece uyan kişi yok' : 'Bu sekmede kişi yok'}
-                why={q || role ? 'Adı farklı yazmayı deneyin ya da «Tüm roller»i seçin.' : 'CRM\'de bu rollerle eser katılım kaydı olan kişi bulunamadı.'}
+                title={filtered ? 'Süzgece uyan kişi yok' : 'Bu sekmede kişi yok'}
+                why={filtered ? 'Adı farklı yazmayı deneyin, «Tüm roller»i ya da «Tüm kaynak diller»i seçin.' : 'CRM\'de bu rollerle eser katılım kaydı olan kişi bulunamadı.'}
                 action={
-                  q || role ? (
+                  filtered ? (
                     <button
                       type="button"
                       className="min-h-9 rounded-xl bg-slate-100 px-3 text-[12px] font-extrabold hover:bg-slate-200"
                       onClick={() => {
                         setText('');
                         setRole('');
+                        setLang('');
                       }}
                     >
                       Süzgeçleri temizle
@@ -323,7 +367,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           )}
           <ul className="mt-2 grid gap-2 xl:grid-cols-2">
             {items.map((c) => (
-              <Row key={c.id} c={c} active={sameId(c.id, open)} onOpen={() => setOpen(c.id)} />
+              <Row key={c.id} c={c} active={sameId(c.id, open)} onOpen={() => setOpen(c.id)} languages={withLang} />
             ))}
           </ul>
         </Panel>
