@@ -19,6 +19,7 @@ olmalı ve cümledeki her sayı bağlandığı kaynağın değeriyle tutmalıdı
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import logging
@@ -1014,9 +1015,46 @@ def _rakip_matrix_rows(engine: sa.engine.Engine, tenant: str, kaynak: str) -> tu
             for r in comp], None
 
 
+#: Başarı matrisi önbelleği: katalog günde bir değişir, 229 bin satırın her istekte yeniden gruplanması ~35 sn sürüyordu.
+#: Anahtar katalog tarihi + görüntü sayısı + onaylı eşleme / izlenen / TİMAŞ kitapları parmak izi + parametreler.
+_MATRIX_CACHE: dict[tuple, tuple[float, dict[str, Any]]] = {}
+_MATRIX_TTL = 900.0
+
+
+def _matrix_fingerprint(engine: sa.engine.Engine, tenant: str) -> str:
+    with engine.connect() as c:
+        maps = sorted((str(k), str(v)) for k, v in _approved_maps(c, tenant).items())
+        watch = sorted(str(tuple(r)) for r in c.execute(sa.select(WATCHLIST).where(WATCHLIST.c.tenant_id == tenant)).all())
+        own = c.execute(sa.select(sa.func.count(), sa.func.max(OWN_BOOKS.c.kopyalandi_at))
+                        .where(OWN_BOOKS.c.tenant_id == tenant)).first()
+    raw = json.dumps([maps, watch, [own[0], str(own[1])], settings().get("newDays")], default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def matrix(engine: sa.engine.Engine, tenant: str, *, kategori: str = "", include_suggested: bool = False,
            sayfa_min: Optional[int] = None, sayfa_max: Optional[int] = None, yayinevi_q: str = "",
            watch_only: bool = False, kaynak: str = "crm") -> dict[str, Any]:
+    kw = dict(kategori=kategori, include_suggested=include_suggested, sayfa_min=sayfa_min, sayfa_max=sayfa_max,
+              yayinevi_q=yayinevi_q, watch_only=watch_only, kaynak=kaynak)
+    if check_kaynak(kaynak) != "basari":
+        return _matrix(engine, tenant, **kw)
+    cat = basari_catalog(engine, tenant)
+    key = (id(engine), tenant, cat.get("tarih"), cat.get("goruntu"), _matrix_fingerprint(engine, tenant),
+           tuple(sorted(kw.items())))
+    import time as _t
+    hit = _MATRIX_CACHE.get(key)
+    if hit and _t.monotonic() - hit[0] < _MATRIX_TTL:
+        return copy.deepcopy(hit[1])
+    out = _matrix(engine, tenant, **kw)
+    if len(_MATRIX_CACHE) > 64:
+        _MATRIX_CACHE.clear()
+    _MATRIX_CACHE[key] = (_t.monotonic(), copy.deepcopy(out))
+    return out
+
+
+def _matrix(engine: sa.engine.Engine, tenant: str, *, kategori: str = "", include_suggested: bool = False,
+            sayfa_min: Optional[int] = None, sayfa_max: Optional[int] = None, yayinevi_q: str = "",
+            watch_only: bool = False, kaynak: str = "crm") -> dict[str, Any]:
     """Yayınevi × (seçili kategori) fiyat, sayfa ve format özeti; TİMAŞ satırları (marka ve toplam) aynı ölçülerle.
     Medyan ve çeyrekler SQL Server `PERCENTILE_CONT` ile aynı yöntemle; fiyatı 0/boş kayıt fiyat ölçüsüne girmez.
     `kaynak`: «crm» (CRM rakip kayıtları) ya da «basari» (Başarı kataloğu, TİMAŞ grubu dışı başlıklar, liste fiyatı)."""

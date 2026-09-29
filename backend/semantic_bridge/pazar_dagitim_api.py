@@ -82,7 +82,18 @@ def register(app: Any, deps: dict[str, Any]) -> Job:
 
     def tur(engine: Any, tenant: str, step: Callable[[str], None]) -> dict[str, Any]:
         run = bsrc.runner(deps["logo_file"]())
-        return D.run_all(engine, tenant, run, bsrc.firms_by_year(run), step=step)
+        out = D.run_all(engine, tenant, run, bsrc.firms_by_year(run), step=step)
+        try:
+            # Pazar › Rakipler varsayılan Başarı matrisi (229 bin başlık, ~35 sn) turdan sonra önbelleğe hazırlanır.
+            from semantic_bridge import pazar as PZ
+
+            step("Pazar rakip matrisi hazırlanıyor")
+            PZ.ensure(engine)
+            PZ.matrix(engine, tenant, kaynak="basari")
+            out["matrisHazir"] = True
+        except Exception as e:  # noqa: BLE001 — hazırlık düşerse ekran ilk istekte hesaplar
+            out["matrisHazir"] = str(e)[:200]
+        return out
 
     def day(v: str) -> Optional[date]:
         if not v:

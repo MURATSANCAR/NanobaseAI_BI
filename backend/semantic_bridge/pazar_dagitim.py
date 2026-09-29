@@ -256,6 +256,17 @@ def _txt(v: Any, n: int) -> Optional[str]:
     return t[:n] or None
 
 
+_TR_UP = {"i": "İ", "ı": "I"}
+
+
+def _words(v: Any, n: int) -> Optional[str]:
+    """Sınıf adı (kapak, kâğıt): kelime başları büyük, Türkçe i/ı doğru — «karton Kapak» ile «Karton Kapak» tek sınıf."""
+    t = _txt(v, n)
+    if not t:
+        return None
+    return " ".join((_TR_UP.get(w[0], w[0].upper()) + w[1:]) if w else w for w in t.split(" "))
+
+
 def _int(v: Any) -> Optional[int]:
     try:
         return int(float(str(v).strip().replace(",", ".")))
@@ -305,13 +316,17 @@ def basari_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
         return None
     kat = _txt(r.get("kategori"), 300)
     stok = _int(r.get("depo_stok"))
+    yil = _int(r.get("basimyili")) or None
+    bno = baski_no(r.get("baski_sayisi"))
+    if bno is not None and yil is not None and bno == yil:
+        bno = None          # baskı alanına basım yılı yazılmış («2018. Baskı»); 200+ gerçek baskılar (Nesil 1122.) kalır
     return {"barkod": b, "ad": _txt(r.get("urun_ad"), 400), "yazar": _txt(r.get("yazar"), 300),
             "cevirmen": _txt(r.get("cevirmen"), 300), "yayinevi": _txt(r.get("marka"), 200), "kategori": kat,
             "ust_kategori": ust(kat, "basari"), "sayfa": _int(r.get("sayfasayisi")) or None,
-            "kapak": _txt(r.get("kapak_turu"), 60), "kagit": _txt(r.get("kagit_cinsi"), 60),
-            "basim_yili": _int(r.get("basimyili")) or None, "stok": stok if stok is not None else 0,
+            "kapak": _words(r.get("kapak_turu"), 60), "kagit": _words(r.get("kagit_cinsi"), 60),
+            "basim_yili": yil, "stok": stok if stok is not None else 0,
             "site_stok": None, "fiyat": _num(r.get("satis_fiyat")), "iskonto": _num(r.get("iskonto")), "dr_fiyat": None,
-            "durum": _txt(r.get("stok_durum"), 60), "baski_no": baski_no(r.get("baski_sayisi"))}
+            "durum": _txt(r.get("stok_durum"), 60), "baski_no": bno}
 
 
 def dr_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -327,7 +342,7 @@ def dr_row(r: dict[str, Any]) -> Optional[dict[str, Any]]:
     ss = _int(r.get("available_stock"))
     return {"barkod": b, "ad": _txt(r.get("name"), 400), "yazar": None, "cevirmen": None,
             "yayinevi": _txt(r.get("brand_name"), 200), "kategori": kat, "ust_kategori": ust(kat, "dr"), "sayfa": None,
-            "kapak": _txt(r.get("characteristic_value"), 60), "kagit": None, "basim_yili": None,
+            "kapak": _words(r.get("characteristic_value"), 60), "kagit": None, "basim_yili": None,
             "stok": _int(r.get("b2bstock")) or 0,
             "site_stok": None if sil or ss is None or ss >= SITE_STOK_TAVAN else ss,
             "fiyat": _num(r.get("list_price")), "iskonto": None, "dr_fiyat": _num(r.get("dr_price")),
