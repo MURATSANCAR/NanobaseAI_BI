@@ -36,14 +36,18 @@ def is_admin(u: str) -> bool:
 
 
 def test_hr_pages_are_explicit_and_everyone_does_not_see_them():
-    ik_pages = {p["key"] for p in A.catalog()["pages"] if p["area"] == "ik"}
+    pages = [p for p in A.catalog()["pages"] if p["area"] == "ik"]
+    ik_pages = {p["key"] for p in pages}
     # M56–M58 kendi İK sayfalarını ekler; İK-0 ve M55 sayfaları hep var, hepsi açıkça verilir.
     assert ik_pages >= {"sayfa:ik-ise-alim", "sayfa:ik-pozisyonlar", "sayfa:ik-belgeler", "sayfa:ik-kayitlar"}
-    # Personel portalı (2026-09-29, kullanıcı kararı: eski personel portalının karşılığı) ve M60 izin: çalışanın kendi
-    # sayfaları Herkes'e açıktır; uçlar kişinin kendi / ekibinin verisini döner. Öteki bütün İK sayfaları açıkça verilir.
-    herkese = {"sayfa:ik-anasayfa", "sayfa:ik-profilim", "sayfa:ik-rehber", "sayfa:ik-duyurular", "sayfa:ik-evrak",
-               "sayfa:ik-sss", "sayfa:ik-izin", "sayfa:ik-izin-ekip"}
-    assert ik_pages - herkese <= A.explicit_keys()
+    # Tek istisna personel portalının çalışan sayfaları: bilerek Herkes'e açık (kişi yalnız kendi kaydını, ekibini ya da
+    # rehber alanlarını görür), katalogda `everyone` ile işaretli. Küme sabit: yeni bir İK sayfası ya explicit olur ya da
+    # bu listeye bilinçli bir kararla girer.
+    everyone = {p["key"] for p in pages if p.get("everyone")}
+    assert everyone == {"sayfa:ik-anasayfa", "sayfa:ik-profilim", "sayfa:ik-rehber", "sayfa:ik-duyurular", "sayfa:ik-evrak",
+                        "sayfa:ik-sss", "sayfa:ik-izin", "sayfa:ik-izin-ekip"}
+    assert not everyone & A.explicit_keys()
+    assert ik_pages - everyone <= A.explicit_keys()
     assert "sayfa:ik-yonetim" in A.explicit_keys()
     ik_features = {f["key"] for f in A.catalog()["features"] if f["area"] == "ik"}
     assert ik_features <= A.explicit_keys()
@@ -58,6 +62,8 @@ def test_everyone_role_with_all_pages_still_cannot_open_hr(engine):
     acc = A.effective(engine, TENANT, "biri", is_admin)
     assert acc.all and acc.can("sayfa:finansal-denetim")
     assert not acc.can("sayfa:ik-ise-alim") and not acc.can("ozellik:ik.aday-hepsi")
+    assert not acc.can("sayfa:ik-yonetim") and not acc.can("ozellik:ik.izin-yonet")
+    assert acc.can("sayfa:ik-profilim") and acc.can("sayfa:ik-izin")
 
 
 def test_admin_gets_sensitive_hr_keys_only_through_a_role(engine):

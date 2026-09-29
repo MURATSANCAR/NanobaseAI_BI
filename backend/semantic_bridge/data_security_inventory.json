@@ -552,6 +552,151 @@
       "module": "Eğitim ve gelişim (M57)"
     },
     {
+      "object": "semantic_hr_people",
+      "columns": [
+        "id_no",
+        "username",
+        "ad_soyad",
+        "mail_adresi",
+        "data_json"
+      ],
+      "data": "Özlük kaydı: personel no, ad soyad, e-posta, portal hesabı ve İK alanları (T.C. kimlik, IBAN, adres, doğum tarihi, iletişim vb.; hassas işaretli alanlar yalnız hassas yetkiyle görünür)",
+      "subjects": "çalışan",
+      "purpose": "Personel özlük kaydı, Profilim ve personel rehberi",
+      "retention": null,
+      "retentionNote": "Özlük kaydı; süreli imha yok, İK kaydı sildiğinde gider (belgeleriyle birlikte)",
+      "module": "İK personel portalı"
+    },
+    {
+      "object": "semantic_hr_people_files",
+      "columns": [
+        "person_id",
+        "filename",
+        "blob"
+      ],
+      "data": "Özlük belgesi ve çalışan fotoğrafı (dosya baytı veritabanında)",
+      "subjects": "çalışan",
+      "purpose": "Özlük dosyası",
+      "retention": null,
+      "retentionNote": "Özlük kaydıyla birlikte saklanır; kayıt ya da alan silinince gider",
+      "module": "İK personel portalı"
+    },
+    {
+      "object": "semantic_hr_doc_requests",
+      "columns": [
+        "username",
+        "display",
+        "mail",
+        "note",
+        "answer"
+      ],
+      "data": "Evrak talebi: talep edenin hesabı, adı, e-postası, notu ve İK cevabı",
+      "subjects": "çalışan",
+      "purpose": "Evrak talebi (çalışma belgesi, bordro vb.) takibi",
+      "retention": null,
+      "retentionNote": "İş kaydı; süreli imha yok, çalışan İK ele almadan geri alırsa silinir",
+      "module": "İK personel portalı"
+    },
+    {
+      "object": "semantic_hr_doc_request_files",
+      "columns": [
+        "request_id",
+        "filename",
+        "blob"
+      ],
+      "data": "İK'nın hazırladığı kişiye özel evrak (çalışma belgesi, bordro vb.)",
+      "subjects": "çalışan",
+      "purpose": "Hazır evrakın portaldan indirilmesi",
+      "retention": null,
+      "retentionNote": "İş kaydı; İK dosyayı silince gider",
+      "module": "İK personel portalı (M60)"
+    },
+    {
+      "object": "semantic_hr_leave_requests",
+      "columns": [
+        "person_id",
+        "username",
+        "deputy_person_id",
+        "contact",
+        "note",
+        "reject_reason"
+      ],
+      "data": "İzin talebi: kişi, tarih, tür (sağlık/doğum gibi hassas türler dahil), vekil, izindeyken iletişim bilgisi, not, ret gerekçesi",
+      "subjects": "çalışan",
+      "purpose": "İzin talebi, yönetici/İK onayı ve bordro izin listesi",
+      "retention": null,
+      "retentionNote": "İş kaydı (izin geçmişi); süreli imha yok. Hassas türün adı yöneticide, rehberde ve e-postada gösterilmez",
+      "module": "İzin yönetimi (M60)"
+    },
+    {
+      "object": "semantic_hr_leave_events",
+      "columns": [
+        "actor",
+        "note"
+      ],
+      "data": "İzin talebinin işlem geçmişi (işlemi yapan hesap, not)",
+      "subjects": "çalışan",
+      "purpose": "Onay/ret/iptal izi",
+      "retention": null,
+      "retentionNote": "Denetim izi; talep kaydıyla birlikte saklanır",
+      "module": "İzin yönetimi (M60)"
+    },
+    {
+      "object": "semantic_hr_leave_ledger",
+      "columns": [
+        "person_id",
+        "note",
+        "actor"
+      ],
+      "data": "Kişinin izin bakiyesi hareketleri (açılış, hakediş, kullanım, iade, düzeltme)",
+      "subjects": "çalışan",
+      "purpose": "İzin bakiyesi hesabı",
+      "retention": null,
+      "retentionNote": "İş kaydı (bakiye defteri); süreli imha yok",
+      "module": "İzin yönetimi (M60)"
+    },
+    {
+      "object": "semantic_hr_leave_files",
+      "columns": [
+        "request_id",
+        "filename",
+        "blob"
+      ],
+      "data": "İzin belgesi (ör. sağlık raporu — özel nitelikli kişisel veri olabilir)",
+      "subjects": "çalışan",
+      "purpose": "Belge isteyen izin türlerinde kanıt",
+      "retention": null,
+      "retentionNote": "İzin talebiyle birlikte saklanır; süreli imha yok",
+      "module": "İzin yönetimi (M60)"
+    },
+    {
+      "object": "semantic_hr_mail_outbox",
+      "columns": [
+        "recipient",
+        "username",
+        "subject",
+        "body"
+      ],
+      "data": "İK e-posta bildirimi: alıcı adresi ve hesabı, konu ve metin (hassas izin türünün adı yazılmaz)",
+      "subjects": "çalışan",
+      "purpose": "Evrak ve izin bildirimlerinin gönderim kuyruğu",
+      "retention": null,
+      "retentionNote": "Gönderim kuyruğu; gönderilen satır silinmez, süreli imha yok",
+      "module": "İK e-posta bildirimleri (M60)"
+    },
+    {
+      "object": "semantic_hr_mail_prefs",
+      "columns": [
+        "username"
+      ],
+      "data": "Çalışanın İK e-postası tercihi (kapalı/açık)",
+      "subjects": "çalışan",
+      "purpose": "Bildirim tercihi",
+      "retention": null,
+      "retentionNote": "Tercih kaydı; kişi başına tek satır, değişince üzerine yazılır; süreli imha yok",
+      "module": "İK e-posta bildirimleri (M60)"
+    },
+    {
       "object": "semantic_support_insights",
       "columns": [
         "contact_ref"

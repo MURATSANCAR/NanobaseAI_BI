@@ -1,5 +1,5 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Alanlar (areas) menünün ana modülleridir, aynı sırada ve aynı adla; sayfanın alanı öğenin menüdeki ana modülüdür (yalnız Yetkiler ekranındaki gruplama; yetkiyi değiştirmez). Kampüs sayfası her zaman açık; Yönetim'in ayar, onay ve sözlük ekranları yalnız yöneticide, burada yok (Yönetim alanında yalnız sayfa yetkisiyle açılan Kategori ağacı var). Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu ve alan eşleşmesini denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Alanlar (areas) menünün ana modülleridir, aynı sırada ve aynı adla; sayfanın alanı öğenin menüdeki ana modülüdür (yalnız Yetkiler ekranındaki gruplama; yetkiyi değiştirmez). Kampüs sayfası her zaman açık; Yönetim'in ayar, onay ve sözlük ekranları yalnız yöneticide, burada yok (Yönetim alanında yalnız sayfa yetkisiyle açılan Kategori ağacı var). Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu ve alan eşleşmesini denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler). 'everyone' işaretli sayfa bilerek «Herkes»e açıktır (İK personel portalının çalışan sayfaları: kişi yalnız kendi kaydını, ekibini ya da rehber alanlarını görür); İK alanında ne explicit ne everyone olan sayfa testte (test_hr_core.py) düşer.",
   "version": 2,
   "areas": [
     {
@@ -685,42 +685,50 @@
     {
       "key": "sayfa:ik-anasayfa",
       "area": "ik",
-      "label": "İK ana sayfası"
+      "label": "İK ana sayfası",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-profilim",
       "area": "ik",
-      "label": "Profilim (özlük kaydım)"
+      "label": "Profilim (özlük kaydım)",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-rehber",
       "area": "ik",
-      "label": "Personel rehberi"
+      "label": "Personel rehberi",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-duyurular",
       "area": "ik",
-      "label": "Şirket içi duyurular"
+      "label": "Şirket içi duyurular",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-evrak",
       "area": "ik",
-      "label": "Evrak deposu ve evrak talebi"
+      "label": "Evrak deposu ve evrak talebi",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-sss",
       "area": "ik",
-      "label": "İK sık sorulan sorular"
+      "label": "İK sık sorulan sorular",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-izin",
       "area": "ik",
-      "label": "İzinlerim"
+      "label": "İzinlerim",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-izin-ekip",
       "area": "ik",
-      "label": "Ekibimin izinleri"
+      "label": "Ekibimin izinleri",
+      "everyone": true
     },
     {
       "key": "sayfa:ik-yonetim",
