@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ArrowRight, Download, FileSpreadsheet, History, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
 import { EmptyHint, Explain } from '../components/Explain';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 type Owner = 'tsoft' | 'telif' | 'icerik' | 'bt' | 'yayin' | 'seo';
@@ -262,19 +263,7 @@ export default function SeoWorklist() {
                   <WorkRow key={it.key} it={it} canEdit={canRun} statuses={d.statuses} onDone={refresh} statusFilter={status} />
                 ))}
               </div>
-              {total > PAGE && (
-                <div className="sg-pager">
-                  <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                    <ChevronLeft size={16} aria-hidden />
-                  </button>
-                  <span className="sg-mono">
-                    {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-                  </span>
-                  <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                    <ChevronRight size={16} aria-hidden />
-                  </button>
-                </div>
-              )}
+              <SeoPager start={start} total={total} size={PAGE} onChange={setStart} style={{ marginTop: 0 }} />
             </>
           )}
         </>
@@ -419,19 +408,7 @@ function GroupItems({ gkey, canEdit, statuses, onDone, statusFilter }: { gkey: s
       {d.items.map((c) => (
         <WorkRow key={c.key} it={c} canEdit={canEdit} statuses={statuses} onDone={done} />
       ))}
-      {d.total > 20 && (
-        <div className="sg-pager">
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 20))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(d.total, start + 20))} / {fmt(d.total)}
-          </span>
-          <button className="sg-button" disabled={start + 20 >= d.total} onClick={() => setStart(start + 20)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={d.total} size={20} onChange={setStart} style={{ marginTop: 0 }} />
     </div>
   );
 }
@@ -487,19 +464,7 @@ function WorklistLog() {
           </table>
         </div>
       )}
-      {d && d.total > PAGE && (
-        <div className="sg-pager">
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(d.total, start + PAGE))} / {fmt(d.total)}
-          </span>
-          <button className="sg-button" disabled={start + PAGE >= d.total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={d?.total ?? 0} size={PAGE} onChange={setStart} style={{ marginTop: 0 }} />
     </>
   );
 }

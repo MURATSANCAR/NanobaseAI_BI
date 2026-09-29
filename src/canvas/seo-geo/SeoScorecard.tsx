@@ -2,13 +2,14 @@ import type { Kaynaklar } from '../components/sqlInfo';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, ExternalLink, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, call, dateTime, fmt, qs, scoreTone, type CrmBook, type CrmFlag, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /* ------------------------------------------------------------------ uç tipleri (/api/v1/seo-geo/scorecard*) */
 type Status = 'iyi' | 'dikkat' | 'sorun' | 'bilinmiyor';
@@ -172,19 +173,7 @@ function Picker({ onPick }: { onPick: (id: string) => void }) {
           </button>
         ))}
       </div>
-      {total > PAGE && (
-        <div className="sg-pager" style={{ marginTop: 12 }}>
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-          </span>
-          <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
     </section>
   );
 }

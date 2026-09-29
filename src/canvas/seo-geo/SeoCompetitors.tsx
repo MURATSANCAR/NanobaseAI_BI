@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Search } from 'lucide-react';
+import { ExternalLink, Loader2, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 type Verdict = 'geride' | 'onde' | 'yok';
 type RunState = { running: boolean; done: number; failed: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -214,19 +215,7 @@ export default function SeoCompetitors() {
                 </table>
               </div>
             )}
-            {total > PAGE && (
-              <div className="sg-pager" style={{ marginTop: 12 }}>
-                <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                  <ChevronLeft size={16} aria-hidden />
-                </button>
-                <span className="sg-mono">
-                  {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-                </span>
-                <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                  <ChevronRight size={16} aria-hidden />
-                </button>
-              </div>
-            )}
+            <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
           </section>
         </>
       )}

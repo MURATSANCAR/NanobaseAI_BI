@@ -2,13 +2,14 @@ import type { ReactNode } from 'react';
 import { useDeferredValue, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
+import { Download, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /** Google Alışveriş hazırlığı: satıştaki ürünler Google'ın ürün verisi kurallarına göre denetlenir. Hiçbir yere
  *  gönderilmez; besleme dosyası elle yüklenmek içindir. */
@@ -231,19 +232,7 @@ export default function SeoShopping() {
               </table>
             </div>
           )}
-          {d.total > PAGE && (
-            <div className="sg-pager" style={{ marginTop: 12 }}>
-              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-              <span className="sg-mono">
-                {fmt(start + 1)}–{fmt(Math.min(d.total, start + PAGE))} / {fmt(d.total)}
-              </span>
-              <button className="sg-button" disabled={start + PAGE >= d.total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
+          <SeoPager start={start} total={d.total} size={PAGE} onChange={setStart} />
         </section>
       )}
     </SeoLayout>
@@ -488,19 +477,7 @@ function MerchantSection() {
               </table>
             </div>
           )}
-          {d.total > M_PAGE && (
-            <div className="sg-pager" style={{ marginTop: 12 }}>
-              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - M_PAGE))} aria-label="Önceki sayfa">
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-              <span className="sg-mono">
-                {fmt(start + 1)}–{fmt(Math.min(d.total, start + M_PAGE))} / {fmt(d.total)}
-              </span>
-              <button className="sg-button" disabled={start + M_PAGE >= d.total} onClick={() => setStart(start + M_PAGE)} aria-label="Sonraki sayfa">
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
+          <SeoPager start={start} total={d.total} size={M_PAGE} onChange={setStart} />
         </>
       )}
     </section>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { Check, Download, ExternalLink, FileSpreadsheet, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
@@ -8,6 +8,7 @@ import { useCan } from '../useAdmin';
 import { xlsxUrl } from '../components/excel';
 import { EmptyHint, Explain } from '../components/Explain';
 import { termText } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 type Action = 'yeni_baski_301' | 'yazar_301' | 'stokta_yok' | 'gone_410' | 'arama_verisi';
@@ -168,19 +169,7 @@ export default function SeoSunset() {
               <SunsetRow key={r.id} r={r} actions={d.actions} canApprove={canApprove} onDone={refresh} />
             ))}
           </div>
-          {total > PAGE && (
-            <div className="sg-pager">
-              <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-              <span className="sg-mono">
-                {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-              </span>
-              <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            </div>
-          )}
+          <SeoPager start={start} total={total} size={PAGE} onChange={setStart} style={{ marginTop: 0 }} />
         </>
       )}
     </SeoLayout>

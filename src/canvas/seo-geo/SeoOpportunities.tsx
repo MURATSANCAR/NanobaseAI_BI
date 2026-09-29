@@ -2,13 +2,14 @@ import type { Kaynaklar } from '../components/sqlInfo';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { FIELD_LABEL, dateTime, fmt, seoApi } from './api';
 import { oppsApi, type Delta, type ImpactItem, type ImpactStatus, type Metrics, type OppItem, type OppKind } from './api-opps';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 50;
 
@@ -510,20 +511,7 @@ function Control({ d, m }: { d: Delta | null; m: Metrics | null }) {
 // ------------------------------------------------------------------ ortak
 
 function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {

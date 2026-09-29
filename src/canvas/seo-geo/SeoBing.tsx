@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search, Send } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Search, Send } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { EmptyHint, Explain, ExplainLabel } from '../components/Explain';
 import { Term, TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 const PAGE = 40;
 
@@ -69,21 +70,8 @@ const change = (cur: number, prev: number | null) => {
   return `Önceki 28 güne göre ${d >= 0 ? '+' : ''}${fmt(d, 1)}%`;
 };
 
-function Pager({ start, total, onChange }: { start: number; total: number; onChange: (s: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 /** Bing ve IndexNow: Bing Webmaster'dan yalnız okunan sorgu, trafik ve tarama verisi; Google ile aynı sorguların sıra
@@ -469,19 +457,7 @@ export default function SeoBing() {
                 </tbody>
               </table>
             </div>
-            {x.logTotal > 20 && (
-              <div className="sg-pager" style={{ marginTop: 12 }}>
-                <button className="sg-button" disabled={logStart === 0} onClick={() => setLogStart(Math.max(0, logStart - 20))} aria-label="Önceki sayfa">
-                  <ChevronLeft size={16} aria-hidden />
-                </button>
-                <span className="sg-mono">
-                  {fmt(logStart + 1)}–{fmt(Math.min(x.logTotal, logStart + 20))} / {fmt(x.logTotal)}
-                </span>
-                <button className="sg-button" disabled={logStart + 20 >= x.logTotal} onClick={() => setLogStart(logStart + 20)} aria-label="Sonraki sayfa">
-                  <ChevronRight size={16} aria-hidden />
-                </button>
-              </div>
-            )}
+            <SeoPager start={logStart} total={x.logTotal} size={20} onChange={setLogStart} />
           </>
         )}
       </section>

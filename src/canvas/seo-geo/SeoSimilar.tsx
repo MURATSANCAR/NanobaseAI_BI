@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, FileSpreadsheet, RefreshCw, Search, X } from 'lucide-react';
+import { Check, Download, ExternalLink, FileSpreadsheet, RefreshCw, Search, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { useCan } from '../useAdmin';
 import { call, dateTime, fmt, qs, seoApi } from './api';
@@ -10,6 +10,7 @@ import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { xlsxUrl } from '../components/excel';
 import { EmptyHint, Explain } from '../components/Explain';
 import { Term } from './terms';
+import SeoPager from './SeoPager';
 
 /** Benzer kitaplar: /api/v1/seo-geo/similar. CRM emsal bağları + tema/yaş + yazar/dizi → kitap sayfasından verilecek
  *  «ilgili ürünler» bağlantıları. Karar yalnız kaydedilir; onaylananlar CSV ile T-soft'a elle girilir. */
@@ -419,20 +420,7 @@ function LinkState({ s }: { s: Suggestion }) {
 }
 
 function Pager({ start, total, onChange }: { start: number; total: number; onChange: (n: number) => void }) {
-  if (total <= PAGE) return null;
-  return (
-    <div className="sg-pager" style={{ marginTop: 12 }}>
-      <button className="sg-button" disabled={start === 0} onClick={() => onChange(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-        <ChevronLeft size={16} aria-hidden />
-      </button>
-      <span className="sg-mono">
-        {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-      </span>
-      <button className="sg-button" disabled={start + PAGE >= total} onClick={() => onChange(start + PAGE)} aria-label="Sonraki sayfa">
-        <ChevronRight size={16} aria-hidden />
-      </button>
-    </div>
-  );
+  return <SeoPager start={start} total={total} size={PAGE} onChange={onChange} />;
 }
 
 function Kpi({ label, value, note, info, explain }: { label: string; value: string; note: string; info?: ReactNode; explain?: ReactNode }) {

@@ -1,13 +1,14 @@
 import { Fragment, useDeferredValue, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronDown, Download, ExternalLink, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, type WithK } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint } from '../components/Explain';
+import SeoPager from './SeoPager';
 
 /** Aramadan satışa: Google araması → organik ziyaret → sepete ekleme → satış → ciro, sayfa/kitap bazında.
  *  Veri Google Analytics ve Search Console'dan yalnız okunur; satırı açınca nedenler ayrıntılı iş kartı olarak gelir. */
@@ -374,19 +375,7 @@ export default function SeoSearchToSales() {
                 </table>
               </div>
             )}
-            {(list.data?.total ?? 0) > PAGE && (
-              <div className="sg-pager" style={{ marginTop: 12 }}>
-                <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-                  <ChevronLeft size={16} aria-hidden />
-                </button>
-                <span className="sg-mono">
-                  {fmt(start + 1)}–{fmt(Math.min(list.data?.total ?? 0, start + PAGE))} / {fmt(list.data?.total)}
-                </span>
-                <button className="sg-button" disabled={start + PAGE >= (list.data?.total ?? 0)} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-                  <ChevronRight size={16} aria-hidden />
-                </button>
-              </div>
-            )}
+            <SeoPager start={start} total={(list.data?.total ?? 0)} size={PAGE} onChange={setStart} />
           </section>
         </>
       )}

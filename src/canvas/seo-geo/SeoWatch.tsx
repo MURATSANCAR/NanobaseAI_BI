@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Send } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, Send } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
 import { EmptyHint, Explain } from '../components/Explain';
 import { TermLabel } from './terms';
+import SeoPager from './SeoPager';
 
 /** İzleme ve rapor: öteki ekranların sakladığı veriden gece çıkarılan olaylar (tıklama düşüşü, 404 artışı, robots.txt,
  *  sitemap, yapay zekâ cevaplarından düşme, CRM yayın durumu, hız) ve haftalık rapor. */
@@ -230,19 +231,7 @@ function EventsTab({ status }: { status: 'open' | 'resolved' }) {
           </article>
         ))}
       </div>
-      {total > PAGE && (
-        <div className="sg-pager" style={{ marginTop: 12 }}>
-          <button className="sg-button" disabled={start === 0} onClick={() => setStart(Math.max(0, start - PAGE))} aria-label="Önceki sayfa">
-            <ChevronLeft size={16} aria-hidden />
-          </button>
-          <span className="sg-mono">
-            {fmt(start + 1)}–{fmt(Math.min(total, start + PAGE))} / {fmt(total)}
-          </span>
-          <button className="sg-button" disabled={start + PAGE >= total} onClick={() => setStart(start + PAGE)} aria-label="Sonraki sayfa">
-            <ChevronRight size={16} aria-hidden />
-          </button>
-        </div>
-      )}
+      <SeoPager start={start} total={total} size={PAGE} onChange={setStart} />
     </section>
   );
 }

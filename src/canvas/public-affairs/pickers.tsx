@@ -8,21 +8,23 @@ import { Note, btnGhost, errText, field, label } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { fmtInt, paApi, type Book, type Place } from './api';
 import { usePaMeta } from './parts';
+import PageNumbers from '../components/PageNumbers';
 
 /** CRM kitap ve ziyaret yeri seçicileri (salt okuma, sayfalı; toplam görünür, sessiz kesme yok). */
 
 function Pager({ page, total, size, onPage, k, label: what }: { page: number; total: number; size: number; onPage: (p: number) => void; k?: Kaynaklar; label: string }) {
   if (total <= size) return null;
   return (
-    <div className="flex items-center justify-between gap-2 text-[11.5px] text-canvas-muted">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-canvas-muted">
       <span className="inline-flex items-center gap-1">
         {fmtInt(page * size + 1)}–{fmtInt(Math.min(total, (page + 1) * size))} / {fmtInt(total)}
         <SqlInfo k={k} alan="total" label={what} />
       </span>
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={page === 0} onClick={() => onPage(page - 1)}>
           Önceki
         </button>
+        <PageNumbers page={page} count={Math.ceil(total / size)} onPage={onPage} />
         <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={(page + 1) * size >= total} onClick={() => onPage(page + 1)}>
           Sonraki
         </button>

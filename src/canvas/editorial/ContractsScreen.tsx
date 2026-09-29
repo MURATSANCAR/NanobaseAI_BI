@@ -468,6 +468,19 @@ export default function ContractsScreen() {
                   </table>
                 </div>
               )}
+
+              {/* ZEKI-29: uzun listenin altında da sayfa numaraları ve önceki/sonraki. */}
+              <Pager
+                page={page}
+                pageSize={data?.pageSize ?? 50}
+                total={data?.total ?? 0}
+                shown={items.length}
+                loading={list.isLoading}
+                fetching={list.isFetching}
+                db={data?.db}
+                onPage={setPage}
+                placement="bottom"
+              />
             </Panel>
             )}
     </ModuleFrame>
