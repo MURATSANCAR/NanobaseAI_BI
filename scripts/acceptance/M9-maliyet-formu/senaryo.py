@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Excel'lerde hiç kullanılmamış seçenekler için kabul senaryoları: gerçek bir basım Excel'inin (varsayılan Dirsek
-Toplumu) girdi hücreleri değiştirilir, formüllere dokunulmaz; dosya LibreOffice'e yeniden hesaplatılır (`soffice
---convert-to xlsx`). Çıkan dosyalar `excel_oku.py` + `kabul.py` ile sistemle karşılaştırılır.
+Toplumu) girdi hücreleri değiştirilir, formüllere dokunulmaz. Sonuçları `pycel_referans.py` Excel formüllerinden
+bağımsız hesaplar (test sunucusunda LibreOffice Calc kurulu değil); `kabul.py` sistemle karşılaştırır.
 
-Denetim: aynı yol değiştirilmemiş dosyayla da koşar (`00-kontrol`) — LibreOffice'in Excel'le aynı hesapladığının
-kanıtı; ayrıca `01-adet` yalnız adedi değiştirir, yeniden hesaplamanın gerçekten olduğunun kanıtı.
+Denetim: `00-kontrol` değiştirilmemiş dosya (referans = Excel'in kendi sonucu olmalı); `01-adet` yalnız adedi değiştirir.
 
     python3 senaryo.py --taban Dirsek.xlsx --out /tmp/claude-<oturum>/senaryo
 """
@@ -12,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -62,10 +60,9 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     out = Path(a.out)
-    src, done = out / "girdi", out / "hesaplandi"
+    src = out / "girdi"
     shutil.rmtree(out, ignore_errors=True)
     src.mkdir(parents=True)
-    done.mkdir()
     for name, cells in SENARYOLAR.items():
         wb = load_workbook(a.taban)  # formüller korunur; kayıtta önbellek değerleri düşer, LibreOffice yeniden hesaplar
         for ws in wb.worksheets:
@@ -74,9 +71,7 @@ def main() -> int:
                     raise SystemExit(f"{name}: {ref} formül hücresi, girdi değil")
                 ws[ref].value = val
         wb.save(src / f"{name}.xlsx")
-    subprocess.run(["soffice", "--headless", "--calc", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", str(done),
-                    *sorted(str(p) for p in src.glob("*.xlsx"))], check=True, capture_output=True, timeout=900)
-    print(f"{len(list(done.glob('*.xlsx')))} senaryo LibreOffice'te hesaplandı → {done}")
+    print(f"{len(SENARYOLAR)} senaryo dosyası → {src} (hesap: pycel_referans.py --senaryo)")
     return 0
 
 
