@@ -1,5 +1,17 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (öğleden sonra) — Geri alınamaz silme ve kapatma işlemlerine onay adımı
+
+- **Neden:** Sabahki sadeleştirme turunda bazı düğmelerin etiketine «geri alınamaz» yazıldı ama düğme tıklanınca işlem onay sormadan çalışıyordu.
+- **Kalıp:** projede zaten 69 dosyada kullanılan `AskSheet` (`budget/parts.tsx`); yeni bileşen yazılmadı. Yalnız ön yüz; API çağrıları aynı.
+- **Onay eklenenler:** Yayın kurulu «Oturumu sil» (gündem boşken; `applications/SessionScreen.tsx`) ve başvuru dosyası çöp kutusu (`applications/ApplicationScreen.tsx`) · ihale dosyası silme (`tenders/TenderDetail.tsx`) · kanal panel yüklemesini silme (`channels/Channel.tsx`, silinemezse artık hata bildirimi de çıkar) · kargo kararı (`shipping/Carriers.tsx`) ve kargo taslağı (`shipping/Shipment.tsx`) · matbaa kapasite kaydı (`supply/Capacity.tsx`) · «Pozisyonu kapat» (`hr/recruit/PositionEditor.tsx`; köprüde kapanan pozisyon düzenlenemez/açılamaz, e-postayla gelen başvuru bağlanmaz — metin bunu söyler).
+- **Zaten onaylıydı, yalnız metne «geri alınamaz» eklendi:** ihale silme, ihale belge kasası (`DocumentsVault`).
+- **Not:** İstekte «Son okuma (ProofScreen)» deniyordu; «Oturumu sil» ve dosya çöp kutusu aslında Yayın kurulu / başvuru ekranlarında (`editorial/applications/`), onay oraya kondu.
+- **Ortak düzeltme:** `AskSheet` mesajına `break-words` — 320 px'te uzun dosya adı pencereyi yana taşırıyordu.
+- **Doğrulama (test sunucusu, geçici dizin, sonra silindi):** `tsc --noEmit` 0 hata; vitest `src/canvas` 44 dosya / 245 test geçti; `VITE_BASE=/timas/ vite build` geçti. Pencere, en uzun gerçek mesajla ayrı bir deneme sayfasında görünmez tarayıcıda 320 ve 1280 px'te ölçüldü: telefonda alttan, tam genişlik, yatay taşma 0, düğmeler 44 px. Oturumlu portal ekranında tıklayarak denenmedi.
+- **Kurulmadı:** test sunucusunun canlı portalına ve müşteri VM'ine kurulum yapılmadı.
+- **Açık kalan (ayrı iş):** `window.confirm` kullanan 4 ekran (`RightsScreen`, çeviri `TermBank`, `MemoryBank`, `TranslationScreen`) `AskSheet`e taşınabilir.
+
 ## 2026-09-29 (akşam) — Kur düzeltmesi (`2b87541c`) test sunucusunda; Logo faturası kuru ekranda
 
 - **Kurulum:** 6 dosya (pricing `data.py`, `kaynak.py`, `sources.py`; `CostForm.tsx`, `TariffPanel.tsx`, `help.ts`) sunucuda eski main'e eşitti (md5), yerleştirildi; sunucu ağacının kopyasında `tsc -b` + `vite build`, `index-DRmiBLOs.js`; köprü yeniden başladı, sağlık 200; `._*` 0.
