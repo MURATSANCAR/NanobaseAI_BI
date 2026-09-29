@@ -13,7 +13,7 @@ paragraflara, paragraflar cümle segmentlerine bölünür; bölüm başlıkları
   bağlantı/e-posta, boşluk, kaynağın aynen kopyası, iş içi tutarsızlık, uzunluk uç değeri (Tukey).
 - ZEKİ ham taslak (isteğe bağlı, işi yöneten başlatır): taslak ayrı sütuna yazılır, hedefe kendiliğinden
   geçmez; çevirmen kullanıp kullanmayacağına karar verir.
-- Dışa/içe: hedef DOCX, iki dilli XLIFF 1.2 (Trados/memoQ/OmegaT), terim bankası CSV. Biten çeviri
+- Dışa/içe: hedef DOCX, iki dilli XLIFF 1.2 (masaüstü çeviri programlarının ortak biçimi), terim bankası CSV. Biten çeviri
   M3 Redaksiyon'a yeni metin sürümü olarak aktarılır.
 
 Dosyalar diskte (`EDITORIAL_DIR/translation/<iş>`), kayıtlar `semantic_translation_*` tablolarında.

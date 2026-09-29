@@ -13,7 +13,7 @@
   «Dış bellek: <dosya>» diye etiketlenir.
 
 XML güvenliği: iç tanımlı DOCTYPE ve ENTITY bildirimi reddedilir (varlık genişletme saldırısı). Yalnız dış
-kimlikli, iç tanımı olmayan DOCTYPE (`<!DOCTYPE tmx SYSTEM "tmx14.dtd">`, OmegaT/Trados dosyalarında olağan)
+kimlikli, iç tanımı olmayan DOCTYPE (`<!DOCTYPE tmx SYSTEM "tmx14.dtd">`, masaüstü çeviri programlarının dosyalarında olağan)
 ayrıştırmadan önce atılır; dış DTD okunmaz.
 """
 from __future__ import annotations
