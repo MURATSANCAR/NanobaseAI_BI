@@ -55,7 +55,7 @@ def _num(value) -> float | None:
 def _close(a, b, tolerance: float) -> bool:
     x, y = _num(a), _num(b)
     if x is None or y is None:
-        return str(a or "").strip() == str(b or "").strip()
+        return _text(a).strip() == _text(b).strip()
     # Kuruş yuvarlaması büyük sayılarda kabul edilir; oranlarda (|değer| < 1) mutlak pay yoktur —
     # 0,01'lik sabit pay 0,1897 ile 0,1980'i "eşit" saymıştı.
     floor = 0.005 if min(abs(x), abs(y)) >= 1 else 1e-9
@@ -90,6 +90,12 @@ class Bridge:
             except Exception as ex:  # noqa: BLE001
                 answer["_partial"] = str(ex)[:200]
         return answer
+
+
+def _text(v) -> str:
+    """Anahtar değerinin metni: yalnız yok (None) boştur — 0 bir anahtardır («baskı adedi 0» kademesi Q40'ta boş dizgeye
+    dönüp eşleşmiyordu, 2026-09-29)."""
+    return "" if v is None else str(v)
 
 
 def _words(name: str) -> frozenset:
@@ -207,8 +213,8 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                     if want is not None and not any(_close(v, want, spec.get("tolerance", tolerance)) for v in cells):
                         problems.append(f"referans {column} = {want} cevapta yok")
         elif kind == "pairs":
-            want = {str(r.get(spec["reference_key"]) or "").strip(): r.get(spec["reference_value"]) for r in reference}
-            got = {str(_pick(r, spec["answer_key"]) or "").strip(): _pick(r, spec["answer_value"]) for r in records}
+            want = {_text(r.get(spec["reference_key"])).strip(): r.get(spec["reference_value"]) for r in reference}
+            got = {_text(_pick(r, spec["answer_key"])).strip(): _pick(r, spec["answer_value"]) for r in records}
             keys = list(want)[: int(spec.get("top", 10))]
             if spec.get("common_min"):
                 # Sıralama ölçütü meşru biçimde farklı olabilir (en çok satan: adet / tutar): değer,
@@ -225,7 +231,7 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                     problems.append(f"'{key[:40]}': {got[key]}, referans {want[key]}")
         elif kind == "lookup":
             for row in records[: int(spec.get("top", 3))]:
-                key = re.sub(r"[^0-9A-Za-z._-]", "", str(_pick(row, spec["answer_key"]) or ""))
+                key = re.sub(r"[^0-9A-Za-z._-]", "", _text(_pick(row, spec["answer_key"])))
                 if not key:
                     problems.append(f"cevapta '{spec['answer_key']}' anahtarı yok")
                     break
