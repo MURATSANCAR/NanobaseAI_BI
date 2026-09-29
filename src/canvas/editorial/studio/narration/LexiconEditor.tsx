@@ -4,6 +4,7 @@ import { Loader2, Play, Plus, Save, Trash2, Wand2 } from 'lucide-react';
 import { errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, press } from '../shared';
 import { narrationApi, type LexEntry } from './api';
+import { useCan } from '../../../useAdmin';
 
 /** Telaffuz sözlüğü: editör yazılışı ve okunuşu girer («Timaş → tımaş»). İki kapsam: bu kitap ve yayınevi (bütün
  *  kitaplar); aynı kelime ikisinde de varsa kitabınki geçerlidir. Kelime ek alabilir: «Timaş'ın» da düzelir.
@@ -25,6 +26,9 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
   playing: string | null;
 }) {
   const qc = useQueryClient();
+  // Sözlüğü yazmak ve okunuşu sesle dinlemek (GPU) «Kitap tasarımında üretim ve düzenleme» ister; «Nasıl okunur?»
+  // yalnız metin döndürdüğü için herkese açık.
+  const canEdit = useCan('tasarim.uret');
   const [scope, setScope] = useState<Scope>('job');
   const [draft, setDraft] = useState<Record<Scope, Row[]>>({ job: rows(lexicon.job), publisher: rows(lexicon.publisher) });
   const [probe, setProbe] = useState('');
@@ -81,30 +85,31 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
         <ul className="flex flex-col gap-1.5">
           {list.map((r) => (
             <li key={r.key} className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-1.5">
-              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120}
+              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120} readOnly={!canEdit}
                 onChange={(e) => set(r.key, { word: e.target.value })} className={input} />
-              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240}
+              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240} readOnly={!canEdit}
                 onChange={(e) => set(r.key, { say: e.target.value })} className={input} />
-              <button type="button" aria-label={`${r.word || 'Kelime'} okunuşunu dinle`} title="Dinle"
+              {canEdit && <button type="button" aria-label={`${r.word || 'Kelime'} okunuşunu dinle`} title="Dinle"
                 disabled={!r.say.trim() || !!playing} onClick={() => onPlay(r.say, narrator, `lex-${r.key}`)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-violet disabled:opacity-40 ${press}`}>
                 {playing === `lex-${r.key}` ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-              </button>
-              <button type="button" aria-label={`${r.word || 'Satırı'} sil`} title="Sil" onClick={() => del(r.key)}
+              </button>}
+              {canEdit && <button type="button" aria-label={`${r.word || 'Satırı'} sil`} title="Sil" onClick={() => del(r.key)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-muted hover:text-rose-600 ${press}`}>
                 <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
+              </button>}
             </li>
           ))}
         </ul>
       )}
-      <div className="flex flex-wrap gap-2">
+      {!canEdit && list.length === 0 && <p className="text-[12px] text-canvas-muted">Sözlükte kelime yok.</p>}
+      {canEdit && <div className="flex flex-wrap gap-2">
         <button type="button" className={ghostBtn} onClick={add}><Plus className="h-4 w-4" aria-hidden />Kelime ekle</button>
         <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sözlüğü kaydet' : 'Kaydedildi'}
         </button>
-      </div>
+      </div>}
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
 
       <form className="mt-1 flex flex-col gap-1.5 rounded-2xl bg-slate-50/80 p-2.5"
@@ -120,11 +125,11 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
         {probeOut != null && (
           <div className="flex items-start gap-2">
             <p className="flex-1 text-[13px] leading-snug text-canvas-ink">{probeOut || '—'}</p>
-            <button type="button" aria-label="Okunuşu dinle" disabled={!probeOut || !!playing}
+            {canEdit && <button type="button" aria-label="Okunuşu dinle" disabled={!probeOut || !!playing}
               onClick={() => onPlay(probe.trim(), narrator, 'probe')}
               className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-canvas-violet disabled:opacity-40 ${press}`}>
               {playing === 'probe' ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-            </button>
+            </button>}
           </div>
         )}
         {read.error && <p className="text-[12px] text-rose-700">{errText(read.error, 'Okunuş alınamadı.')}</p>}

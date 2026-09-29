@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Kitap Tasarım Stüdyosu'nun yazma işlemleri yetki kapısında
+
+- **Karar (kullanıcı, «rol evet»):** pazarlama kiti, e-kitap, ses yükleme, efekt ve öteki stüdyo işlemleri yalnız yetkisi olan rolde.
+- **Önce:** 155 stüdyo ucundan yalnız 14'ü (üretim başlatma, görsel/figür/boyama/kolaj adayı, seslendirme, insan kaydı, pazarlama üretimi) `tasarim.uret` istiyordu; 70 yazma ucu yalnız sayfa kuralına bağlıydı, bunların 66'sı işlemdi (künye, sürüm seçimi/onay, sayfa düzeni, karakter kartı, kolaj seçimi/yükleme, pazarlama metni/onay/SEO önerisi/sosyal görsel, e-kitap üretimi/e-ISBN/alt metin, ses ayarı, sözlük, ifade, örnek dinleme, efekt, okur, yaş raporu, ses kütüphanesine yükleme); 7 indirme de yalnız sayfa kuralındaydı.
+- **Sonra:** `access.py`'de stüdyo işinin altındaki her yazma `tasarim.uret` (yeni uçlar kendiliğinden; istisna iki okuma POST'u `plan/prepare`, `narration/read`), `POST /studio/voices` `tasarim.uret`, 7 indirme `veri.disa-aktar`. 80 yazma ucu korumalı, 4 yazma korumasız kalır (ikisi okuma, ikisi ucun içinde yalnız yönetici).
+- **İzin:** yeni anahtar açılmadı (rollere göç gerekirdi); `tasarim.uret` katalogda «Kitap tasarımında üretim ve düzenleme», açıklaması genişledi. Bugün üretebilen her rol ve Herkes («Bütün sayfalar») aynı erişimi korur; yalnız sayfası olup üretim yetkisi olmayan rol artık yazamaz. Roller veritabanından okunmadı (izin verilmedi), karar anahtarın anlamı üzerinden verildi.
+- **Ön yüz:** 28 dosya; kalıp mevcut stüdyo ekranları gibi «yetkisiz düğmeyi görmez», karar/durum gösteren düğmeler (yaş raporu kararları, kolaj tarzı, ses seçiciler) pasif, yükleme alanları gizlenmez kilitli (`FileDrop feature`), sayfa düzeni yetkisizde sunucu önizlemesiyle gezinme.
+- **Test (test sunucusu, geçici `/tmp/zk-rol`, silindi):** pytest yetki+stüdyo 34 + 39 geçti (yeni: uygulamadaki bütün stüdyo uçlarını tarayan sınıflandırma testi, sayfası olan ama yetkisi olmayan rolün 403 alması), köprü içe aktarma tamam; `tsc --noEmit` 0 hata, vitest 45 dosya / 251 test geçti. Canlıya kurulmadı.
+
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
 - **Karar (kullanıcı):** Kayıtta kişinin adı yerine «ZEKİ AI» yazsın (Claude'un kullanıcı adına yaptığı ayar «muratsancar» görünmüştü; zamanlayıcı işleri «sistem»/«zamanlayıcı»).

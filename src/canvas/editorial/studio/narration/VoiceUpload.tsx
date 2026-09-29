@@ -4,7 +4,7 @@ import { FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { useVoiceLibrary, voicesApi, type NarrationVoice, type VoiceLibrary } from './api';
-import { FileDrop } from '../../../components/FileDrop';
+import { FileDrop, useFeatureAllowed } from '../../../components/FileDrop';
 
 /** «Ses yükle»: yayınevinin kendi seslendirmeninin kaydını, kullanım hakkı belgesiyle ses kütüphanesine ekler.
  *  Hak beyanı zorunlu (onay kutusu, sesin sahibi, izin belgesi dosyası ya da belge numarası). Kayıt tarayıcıda çözülür
@@ -125,6 +125,8 @@ function Uploaded({ v, group, canRemove, busy, onRemove }: { v: NarrationVoice; 
 
 function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) {
   const f = useId();
+  // Ses yüklemek «Kitap tasarımında üretim ve düzenleme» ister; yoksa yükleme alanları kilitli görünür (gizlenmez).
+  const canUpload = useFeatureAllowed('tasarim.uret');
   const [audio, setAudio] = useState<{ file: File; wav: Blob; seconds: number } | null>(null);
   const [audioErr, setAudioErr] = useState<string | null>(null);
   const [decoding, setDecoding] = useState(false);
@@ -182,7 +184,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
       </div>
       <div className="flex flex-col gap-1">
         <span className={labelCls}>Ses kaydı</span>
-        <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding}
+        <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding} feature="tasarim.uret"
           picked={audio?.file} onPick={(file) => void pickAudio(file)} />
         {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ' — kısa görünüyor; en az 30 sn konuşma gerekir' : long ? ' — uzun görünüyor; en çok 60 sn konuşma kabul edilir' : ''}</span>}
         {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
@@ -211,7 +213,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         </label>
         <div className="flex flex-col gap-1">
           <span className={labelCls}>İzin belgesi</span>
-          <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
+          <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} feature="tasarim.uret" />
           {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
         </div>
         <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">
@@ -224,7 +226,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         </label>
       </fieldset>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className={gradientBtn} disabled={!ready || send.isPending}>
+        <button type="submit" className={gradientBtn} disabled={!ready || send.isPending || !canUpload}>
           {send.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
           {send.isPending ? 'Yükleniyor…' : 'Kütüphaneye ekle'}
         </button>

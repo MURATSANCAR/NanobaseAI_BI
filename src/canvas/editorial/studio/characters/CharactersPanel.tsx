@@ -8,6 +8,7 @@ import { Section } from '../elements/controls';
 import CardEditor from './CardEditor';
 import { cardsApi, cardsKey, useCardsView, type Card, type CardsView, type CheckItem } from './api';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
 
 /** «Karakterler» paneli: dizinin karakter kartları (görünüş ve renkler bir kez kaydedilir, dizinin her kitabında
  *  kullanılır), bu kitabın karakterleri ve karta uymayan resimler. Liste ile kart düzenleyici arasında geçiş
@@ -16,9 +17,9 @@ import { StudioInfo } from '../shared';
 const TASK_TEXT = { queued: 'sırada', running: 'sürüyor', done: 'bitti', fail: 'başarısız' } as const;
 const num = (v: number) => v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function SeriesBox({ jobId, view }: { jobId: string; view: CardsView }) {
+function SeriesBox({ jobId, view, canEdit }: { jobId: string; view: CardsView; canEdit: boolean }) {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState(!view.series);
+  const [editing, setEditing] = useState(!view.series && canEdit);
   const [name, setName] = useState(view.series?.name ?? '');
   const save = useMutation({
     mutationFn: (v: string) => cardsApi.setSeries(jobId, v),
@@ -26,16 +27,18 @@ function SeriesBox({ jobId, view }: { jobId: string; view: CardsView }) {
   });
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-white/70 bg-white/70 p-3">
-      {view.series && !editing ? (
+      {!view.series && !canEdit ? (
+        <Note tone="info">Bu kitabın dizisi künyeden ya da kitap kaydından belirlenemedi; karakter kartları dizi adı yazılınca görünür.</Note>
+      ) : view.series && !editing ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Dizi</div>
             <div className="truncate text-[14px] font-extrabold">{view.series.name}{view.series.number ? ` · ${view.series.number}. kitap` : ''}</div>
             <div className="text-[11.5px] text-canvas-muted">Kaynak: {view.series.source}{view.series.exists ? '' : ' · bu dizide henüz kart yok'}</div>
           </div>
-          <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} onClick={() => { setName(view.series?.name ?? ''); setEditing(true); }}>
+          {canEdit && <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} onClick={() => { setName(view.series?.name ?? ''); setEditing(true); }}>
             <Pencil className="h-4 w-4" aria-hidden />Değiştir
-          </button>
+          </button>}
         </div>
       ) : (
         <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); save.mutate(name); }}>
@@ -129,6 +132,8 @@ function Mismatch({ jobId, it }: { jobId: string; it: CheckItem }) {
 
 export default function CharactersPanel({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
+  // Dizi adı, yeni kart, öneri ve denetim «Kitap tasarımında üretim ve düzenleme» ister; yoksa kartlar yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const q = useCardsView(jobId);
   const [open, setOpen] = useState<{ card: Card | null; preset?: { name: string; species: string } } | null>(null);
   const run = useMutation({
@@ -162,17 +167,17 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <SeriesBox key={v.series?.id ?? 'yok'} jobId={jobId} view={v} />
+      <SeriesBox key={v.series?.id ?? 'yok'} jobId={jobId} view={v} canEdit={canEdit} />
       {run.error && <Note tone="err">{errText(run.error, 'İşlem başlatılamadı.')}</Note>}
 
       {v.series && <div className="-mb-2 flex justify-end"><StudioInfo label="Karakter kartları" what="Kart sayısı ve onaylı kart sayısı karakter kaydından." /></div>}
       {v.series && (
-        <Section title={`Dizinin kartları · ${v.cards.length}${v.cards.length ? ` (${approved} onaylı)` : ''}`} aside={
+        <Section title={`Dizinin kartları · ${v.cards.length}${v.cards.length ? ` (${approved} onaylı)` : ''}`} aside={canEdit ? (
           <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} onClick={() => setOpen({ card: null })}>
             <Plus className="h-4 w-4" aria-hidden />Yeni kart
           </button>
-        }>
-          {v.cards.length === 0 && <p className="text-[12px] text-canvas-muted">Bu dizide henüz kart yok. Aşağıdan bu kitabın karakterleri için öneri hazırlatabilirsiniz.</p>}
+        ) : undefined}>
+          {v.cards.length === 0 && <p className="text-[12px] text-canvas-muted">Bu dizide henüz kart yok.{canEdit ? ' Aşağıdan bu kitabın karakterleri için öneri hazırlatabilirsiniz.' : ''}</p>}
           <ul className="flex flex-col gap-2">
             {v.cards.map((c) => <CardRow key={c.id} jobId={jobId} card={c} inBook={inBook(c)} onOpen={() => setOpen({ card: c })} />)}
           </ul>
@@ -192,16 +197,19 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
                     className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/70 bg-white/80 px-3 text-[12px] font-bold ${press}`}>
                     <span className={`h-2 w-2 rounded-full ${b.card_status === 'approved' ? 'bg-emerald-500' : 'bg-amber-400'}`} aria-hidden />{b.name}
                   </button>
-                ) : (
+                ) : canEdit ? (
                   <button type="button" onClick={() => setOpen({ card: null, preset: { name: b.name, species: b.species ?? '' } })}
                     className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-white/50 px-3 text-[12px] font-bold text-canvas-muted ${press}`}>
                     <Plus className="h-3.5 w-3.5" aria-hidden />{b.name}
                   </button>
+                ) : (
+                  <span className="inline-flex min-h-10 items-center rounded-full border border-dashed border-slate-300 bg-white/50 px-3 text-[12px] font-bold text-canvas-muted"
+                    title="Bu karakterin kartı yok">{b.name}</span>
                 )}
               </li>
             ))}
           </ul>
-          {missing.length > 0 && (
+          {canEdit && missing.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <button type="button" className={gradientBtn} disabled={suggesting || run.isPending}
                 onClick={() => run.mutate(() => cardsApi.suggest(jobId, []))}>
@@ -219,14 +227,14 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
       )}
 
       {v.series && (
-        <Section title="Bu kitapta karta uymayan görseller" aside={
+        <Section title="Bu kitapta karta uymayan görseller" aside={canEdit ? (
           <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} disabled={checking || run.isPending || approved === 0 || (!!v.busy && !v.busy.error)}
             title={approved === 0 ? 'Önce bir kartı onaylayın' : undefined}
             onClick={() => run.mutate(() => cardsApi.check(jobId))}>
             {checking ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <ScanSearch className="h-4 w-4" aria-hidden />}
             {checking ? 'Denetleniyor…' : 'Denetle'}
           </button>
-        }>
+        ) : undefined}>
           <p className="-mt-1 text-[11.5px] text-canvas-muted">
             Her yeni resim onaylı kartlarla karşılaştırılır; uymayan resim en çok {v.max_retries} kez yeniden çizilir
             (Yönetim → Kitap Tasarım Stüdyosu), sonra burada uyarıyla görünür.

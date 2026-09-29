@@ -5,6 +5,7 @@ import { Note, errText } from '../../../admin/ui';
 import { Img, press } from '../shared';
 import { marketingApi, type MarketingView, type SocialEffect, type SocialTemplate, type SocialVisual } from './api';
 import { Approval, Section, field, ghostBtn, gradientBtn, label } from './parts';
+import { useCan } from '../../../useAdmin';
 
 const VISUALS: [SocialVisual, string, string][] = [
   ['cover', 'Kapak', 'Ön kapak, başlık ve kitap adı'],
@@ -22,6 +23,9 @@ const textOf = (t: { key: SocialTemplate; label: string }) => TEMPLATE_TEXT[t.ke
 
 export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: MarketingView; refresh: () => void }) {
   const s = v.social;
+  // Dizme, onay ve silme «Kitap tasarımında üretim ve düzenleme», indirme «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const [template, setTemplate] = useState<SocialTemplate>('kare');
   const [visual, setVisual] = useState<SocialVisual>('cover');
   const [source, setSource] = useState<string | null>(null);
@@ -50,8 +54,8 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
   const canMake = visual === 'quote' ? !!quote.trim() : !!source;
 
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <div className="flex min-w-0 flex-col gap-3">
+    <div className={`grid min-w-0 gap-4 ${canEdit ? 'lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]' : ''}`}>
+      {canEdit && <div className="flex min-w-0 flex-col gap-3">
         <Section title="Yeni görsel">
           <div role="radiogroup" aria-label="Şablon" className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1">
             {s.templates.map((t) => (
@@ -154,12 +158,12 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
             <ImagePlus className="h-4 w-4" aria-hidden />{add.isPending ? 'Diziliyor…' : 'Görseli diz'}
           </button>
         </Section>
-      </div>
+      </div>}
 
       <Section title={`Görseller (${s.items.length})`} aside={
-        approvedCount > 0 ? <a className={ghostBtn} href={marketingApi.socialZipUrl(jobId)}><Download className="h-4 w-4" aria-hidden />Onaylıları indir ({approvedCount}, zip)</a> : null}>
+        canExport && approvedCount > 0 ? <a className={ghostBtn} href={marketingApi.socialZipUrl(jobId)}><Download className="h-4 w-4" aria-hidden />Onaylıları indir ({approvedCount}, zip)</a> : null}>
         {s.items.length === 0 ? (
-          <p className="text-[12.5px] text-canvas-muted">Henüz görsel yok. Soldan şablon ve görsel seçip dizin; her görsel onaylanınca indirilebilir.</p>
+          <p className="text-[12.5px] text-canvas-muted">{canEdit ? 'Henüz görsel yok. Soldan şablon ve görsel seçip dizin; her görsel onaylanınca indirilebilir.' : 'Henüz görsel yok.'}</p>
         ) : (
           <ul className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {s.items.map((it) => (
@@ -177,17 +181,17 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{s.draft_note}
                   </p>
                 )}
-                <div className="flex flex-wrap gap-1.5">
-                  <button type="button" disabled={approve.isPending} onClick={() => approve.mutate({ id: it.id, ok: !it.approved })}
+                {(canEdit || (canExport && it.approved)) && <div className="flex flex-wrap gap-1.5">
+                  {canEdit && <button type="button" disabled={approve.isPending} onClick={() => approve.mutate({ id: it.id, ok: !it.approved })}
                     className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border-2 px-3 text-[12.5px] font-bold disabled:opacity-50 ${press} ${it.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
                     <Check className="h-4 w-4" aria-hidden />{it.approved ? 'Onayı geri al' : 'Onayla'}
-                  </button>
-                  {it.approved && <a className={ghostBtn} href={marketingApi.socialDownloadUrl(jobId, it.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
-                  <button type="button" className={ghostBtn} aria-label="Görseli sil" disabled={remove.isPending}
+                  </button>}
+                  {canExport && it.approved && <a className={ghostBtn} href={marketingApi.socialDownloadUrl(jobId, it.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
+                  {canEdit && <button type="button" className={ghostBtn} aria-label="Görseli sil" disabled={remove.isPending}
                     onClick={() => { if (window.confirm('Bu görsel silinsin mi?')) remove.mutate(it.id); }}>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
+                  </button>}
+                </div>}
               </li>
             ))}
           </ul>

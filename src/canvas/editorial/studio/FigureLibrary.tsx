@@ -78,10 +78,11 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
           title="Fotoğraf yükle"
           accept={[...PHOTO_TYPES, '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].join(',')}
           maxBytes={uploadLimit ? uploadLimit * MB : undefined}
+          feature="tasarim.uret"
           onPick={(f) => onUpload([f])}
         />
         <div className="sm:hidden">
-          <FilePick label="Kamerayla çek" accept="image/*" capture="environment" maxBytes={uploadLimit ? uploadLimit * MB : undefined} onPick={(f) => onUpload([f])} />
+          <FilePick label="Kamerayla çek" accept="image/*" capture="environment" maxBytes={uploadLimit ? uploadLimit * MB : undefined} feature="tasarim.uret" onPick={(f) => onUpload([f])} />
         </div>
         <p className="text-[11.5px] leading-snug text-canvas-muted">
           JPEG, PNG, WebP ya da HEIC{uploadLimit ? ` · fotoğraf başına en çok ${uploadLimit} MB` : ''}. Masaüstünde fotoğrafı doğrudan sayfanın

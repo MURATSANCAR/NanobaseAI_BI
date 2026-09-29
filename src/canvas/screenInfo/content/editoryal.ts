@@ -216,7 +216,7 @@ const CONTENT: ScreenInfoMap = {
       '«Düzelt» seçili resmi temel alıp yalnız yazdığınız değişikliği yapar; «Farklı çiz» sayfanın metninden sıfırdan yeni resim çizer.',
       'Her yeni çizim ayrı bir sürüm olarak saklanır, seçili olur ve onayınızı bekler.',
       "Bütün resimler onaylanıp ön baskı denetimi geçince matbaaya gidecek baskı PDF'i üretilir.",
-      'Resim çizdirmek «Kitap tasarımında üretim» yetkisi ister; yetkisi olmayanlar inceleyip onaylayabilir.',
+      'Resim çizdirmek, sürüm seçmek, onaylamak ve pazarlama, e-kitap, ses ve efekt işlemleri «Kitap tasarımında üretim ve düzenleme» yetkisi ister; yetkisi olmayanlar yalnız inceler. PDF indirmek «Dışa aktarma» ister.',
     ],
     data: 'Tasarım işinin kendi kaydı: sayfalar, resim sürümleri ve onaylar.',
     refresh: 'Resim çizilirken birkaç saniyede bir kendiliğinden yenilenir.',
@@ -236,6 +236,7 @@ const CONTENT: ScreenInfoMap = {
       'Aynı sayfayı başkası da değiştirdiyse hangisinin kalacağını siz seçersiniz.',
       'Her kayıt ayrı bir sürümdür; «Geçmiş» sekmesinden eski bir sürüme dönebilirsiniz.',
       'Telefonda sayfa yalnız görüntülenir; ögeye dokunup düzenleme alanlarından değiştirirsiniz.',
+      'Düzenlemek «Kitap tasarımında üretim ve düzenleme» yetkisi ister; yetkisi olmayan sayfaları gezip önizler.',
     ],
     data: 'Tasarım işinin sayfa planı ve kütüphanesi (figür ve fotoğraflar).',
     actions: [

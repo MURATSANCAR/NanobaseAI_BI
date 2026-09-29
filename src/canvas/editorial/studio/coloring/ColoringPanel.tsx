@@ -189,7 +189,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
 const SOURCE_TEXT: Record<string, string> = { model: 'ZEKİ AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
 
 function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  // Çizim (GPU) ve cümle düzeltme/onayı «Kitap tasarımında üretim ve düzenleme» ister; rolde yoksa düğme çıkmaz.
   const canProduce = useCan('tasarim.uret');
   const qc = useQueryClient();
   const refresh = () => {
@@ -253,7 +253,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kısa cümleler · boyama sayfasının karşısında</h3>
-            {waiting.length > 0 && (
+            {canProduce && waiting.length > 0 && (
               <button type="button" className={ghostBtn} disabled={save.isPending}
                 onClick={() => save.mutate(waiting.map((s) => ({ aid: s.aid, approved: true })))}>
                 <Check className="h-4 w-4" aria-hidden />Tümünü onayla
@@ -271,11 +271,11 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                     {s.approved ? <span className="font-bold text-emerald-700">Onaylı</span> : <span className="font-bold text-amber-700">Onay bekliyor</span>}
                   </div>
                   <div className="mt-1 flex flex-col gap-1.5 sm:flex-row">
-                    <input value={val} maxLength={400} aria-label={`${s.no ?? ''}. sayfanın cümlesi`}
+                    <input value={val} maxLength={400} aria-label={`${s.no ?? ''}. sayfanın cümlesi`} readOnly={!canProduce}
                       onChange={(e) => setDrafts((d) => ({ ...d, [s.aid]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === 'Enter' && dirty) save.mutate([{ aid: s.aid, text: val.trim() }]); }}
+                      onKeyDown={(e) => { if (canProduce && e.key === 'Enter' && dirty) save.mutate([{ aid: s.aid, text: val.trim() }]); }}
                       className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[13px] outline-none focus:border-canvas-violet" />
-                    <div className="flex gap-1.5">
+                    {canProduce && <div className="flex gap-1.5">
                       {dirty && (
                         <button type="button" className={ghostBtn} disabled={save.isPending || !val.trim()}
                           onClick={() => save.mutate([{ aid: s.aid, text: val.trim() }])}>Kaydet</button>
@@ -285,7 +285,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                         className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border-2 px-3 text-[12.5px] font-bold ${press} ${s.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
                         <Check className="h-4 w-4" aria-hidden />{s.approved ? 'Onayı geri al' : 'Onayla'}
                       </button>
-                    </div>
+                    </div>}
                   </div>
                   {s.original && s.original !== s.text && (
                     <details className="mt-1 text-[11.5px] text-canvas-muted">

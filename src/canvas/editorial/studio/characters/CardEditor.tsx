@@ -8,6 +8,7 @@ import { Img, ghostBtn, gradientBtn, press } from '../shared';
 import { ColorChips, Section } from '../elements/controls';
 import { CardsError, blankCard, cardsApi, cardsKey, toInput, type Candidate, type Card, type CardInput, type CardsView, type Part } from './api';
 import { FileDrop } from '../../../components/FileDrop';
+import { useCan } from '../../../useAdmin';
 
 /** Kart düzenleyici: ad, tür, yaş, görünüş (Türkçe + modele giden), sabit renkler, kitap paletindeki rengi,
  *  kıyafetler, referans görseller, onay. Kaydedilen kart taslağa döner; resimlerde yalnız onaylı kart kullanılır.
@@ -55,6 +56,9 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
   onDone: () => void;
 }) {
   const qc = useQueryClient();
+  // Kartı yazmak, onaylamak, silmek ve referans yüklemek «Kitap tasarımında üretim ve düzenleme» ister; yoksa kart
+  // yalnız okunur.
+  const canEdit = useCan('tasarim.uret');
   const [draft, setDraft] = useState<CardInput>(() => (card ? toInput(card) : blankCard(preset?.name, preset?.species)));
   const [baseline, setBaseline] = useState<CardInput | null>(() => (card ? toInput(card) : null));
   const [aliases, setAliases] = useState((card?.aliases ?? []).join(', '));
@@ -136,6 +140,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
         <Note tone="ok">Onaylı{live.approved_by ? ` · ${live.approved_by}` : ''} — dizinin her kitabında bu kart kullanılıyor.</Note>
       )}
 
+      <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
       <Section title="Kimlik">
         <label className="flex flex-col gap-1.5">
           <span className={label}>Ad</span>
@@ -212,12 +217,12 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
           : <ColorField name="Renk" value={draft.palette_color ?? undefined} onChange={(v) => set('palette_color', v ?? null)} />}
       </Section>
 
-      <Section title="Kıyafetler" aside={
+      <Section title="Kıyafetler" aside={canEdit ? (
         <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} onClick={() => set('outfits', [...draft.outfits,
           { name: '', look_tr: '', look_en: '', color: null, default: draft.outfits.length === 0 }])}>
           <Plus className="h-4 w-4" aria-hidden />Ekle
         </button>
-      }>
+      ) : undefined}>
         {draft.outfits.length === 0 && <p className="text-[12px] text-canvas-muted">Kıyafet yok; sahne işin kendi kıyafet tarifini kullanır.</p>}
         <ul className="flex flex-col gap-2">
           {draft.outfits.map((o, i) => {
@@ -255,6 +260,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
             title="Referans görsel yükle"
             accept="image/*"
             busy={busyAct}
+            feature="tasarim.uret"
             onPick={(f) => act.mutate(() => cardsApi.upload(jobId, card.id, f))}
           />
           <p className="-mt-1 text-[11.5px] text-canvas-muted">Yıldızlı görsel her resimde karakterin referansı olarak kullanılır; tercihen düz zeminde, bütün beden.</p>
@@ -281,7 +287,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
               </li>
             ))}
           </ul>
-          {candidates.length > 0 && (
+          {canEdit && candidates.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <span className={label}>Bu kitaptan ekle</span>
               <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -302,8 +308,9 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
           )}
         </Section>
       )}
+      </fieldset>
 
-      <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-slate-200/70 bg-white/85 px-4 py-3 backdrop-blur">
+      {canEdit && <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-slate-200/70 bg-white/85 px-4 py-3 backdrop-blur">
         <button type="button" className={`${gradientBtn} min-w-0 flex-1 whitespace-nowrap`} disabled={!dirty || busyAct || !draft.name.trim()} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Check className="h-4 w-4" aria-hidden />}
           {card ? 'Kaydet' : 'Kartı oluştur'}
@@ -320,7 +327,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
             <Trash2 className="h-4 w-4" aria-hidden />
           </button>
         )}
-      </div>
+      </div>}
       <ConfirmDialog open={confirmDel} danger title={`«${card?.name}» kartı silinsin mi?`}
         body="Kart dizinin bütün kitaplarından kalkar; eski hâli sürüm geçmişinde durur. Üretilmiş resimler silinmez."
         confirm="Sil" onClose={() => setConfirmDel(false)} onConfirm={() => { setConfirmDel(false); del.mutate(); }} />

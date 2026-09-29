@@ -7,6 +7,7 @@ import type { EditorCtx } from '../InspectorPanel';
 import { Progress } from '../shared';
 import { FRONT, pollWhilePreparing, preparing, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
 import { findSpan, replaceTarget, targetText } from './textEdit';
+import { useCan } from '../../../useAdmin';
 
 /** Okur paneli: «Çocuk gözüyle» (ZEKİ AI metni kitabın okur yaşında okur, takıldığı yerleri işaretler) ve resimli
  *  kitapta «Sayfa çevirme» (çift sayfanın son cümlesi merak uyandırıyor mu). Öneriyi uygulamak metni değiştirir ve
@@ -101,6 +102,9 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
   const s = run ?? summary;
   const running = s?.status === 'running';
   const stuck = s && (s.status === 'interrupted' || s.status === 'failed' || s.status === 'partial');
+  // Okumayı başlatmak/sürdürmek (model harcar) «Kitap tasarımında üretim ve düzenleme» ister.
+  const canEdit = useCan('tasarim.uret');
+  if (!canEdit && !s) return <p className="text-[12.5px] text-canvas-muted">Bu kitap henüz okunmadı.</p>;
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-violet-50/60 p-3">
       {s && (
@@ -117,7 +121,7 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
           <span className="text-[11.5px] text-canvas-muted">{s.progress[0]} / {s.progress[1]} {what} okundu. Okuma sürerken düzenlemeye devam edebilirsiniz.</span>
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
+      {canEdit && <div className="flex flex-wrap gap-2">
         {!running && (
           <button type="button" className={btnPrimary} disabled={starting} onClick={onStart}>
             {starting ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
@@ -125,7 +129,7 @@ function RunHeader({ info, summary, run, starting, onStart, onResume, startLabel
           </button>
         )}
         {stuck && s && <button type="button" className={btnGhost} onClick={() => onResume(s.id)}><RotateCcw className="h-4 w-4" aria-hidden />Kalan yerden sürdür</button>}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -305,6 +309,7 @@ function FlagCard({ ctx, f, decision, focused, onFocus, act, compact }: {
   const here = findSpan(text, f.quote, f.start, f.end);
   const applied = decision === 'applied';
   const stale = !applied && !here;
+  const canEdit = useCan('tasarim.uret');   // öneriyi uygulamak metni değiştirir; yoksayma karar kaydı yazar
   return (
     <div ref={ref} onClick={onFocus}
       className={`rounded-2xl border bg-white p-3 text-[12.5px] ${focused ? 'border-canvas-violet ring-2 ring-violet-200' : 'border-slate-200'} ${decision === 'dismissed' ? 'opacity-60' : ''}`}>
@@ -321,22 +326,22 @@ function FlagCard({ ctx, f, decision, focused, onFocus, act, compact }: {
         {applied && (
           <>
             <span className="inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700"><Check className="h-4 w-4" aria-hidden />Uygulandı</span>
-            <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'unapply'); }}>Geri al</button>
+            {canEdit && <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'unapply'); }}>Geri al</button>}
           </>
         )}
         {decision === 'dismissed' && (
           <>
             <span className="text-[12px] font-bold text-canvas-muted">Yoksayıldı</span>
-            <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'reopen'); }}>Geri al</button>
+            {canEdit && <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'reopen'); }}>Geri al</button>}
           </>
         )}
         {!decision && stale && <span className="text-[12px] font-semibold text-amber-800">Bu yerdeki metin okumadan sonra değişti.</span>}
-        {!decision && !stale && f.replacement && (
+        {canEdit && !decision && !stale && f.replacement && (
           <button type="button" className={btnPrimary} onClick={(e) => { e.stopPropagation(); act(f, 'apply'); }}>
             <Check className="h-4 w-4" aria-hidden />Öneriyi uygula
           </button>
         )}
-        {!decision && (
+        {canEdit && !decision && (
           <button type="button" className={btnGhost} onClick={(e) => { e.stopPropagation(); act(f, 'dismiss'); }}>
             <X className="h-4 w-4" aria-hidden />Yoksay
           </button>
@@ -365,6 +370,7 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
 }) {
   const [msg, setMsg] = useState<string | null>(null);
   const { local, decide } = useDecisions(ctx.job, run?.id);
+  const canEdit = useCan('tasarim.uret');   // kabul metni değiştirir, ret karar kaydı yazar
   const spreads = run?.spreads ?? [];
   const weak = spreads.filter((x) => x.status === 'suggested' || x.status === 'no_fix');
   const strong = spreads.filter((x) => x.status === 'strong');
@@ -422,20 +428,20 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
                 {dec === 'accepted' && (
                   <>
                     <span className="inline-flex items-center gap-1 text-[12px] font-bold text-emerald-700"><Check className="h-4 w-4" aria-hidden />Kabul edildi</span>
-                    <button type="button" className={btnGhost} onClick={() => act(x, 'unaccept')}>Geri al</button>
+                    {canEdit && <button type="button" className={btnGhost} onClick={() => act(x, 'unaccept')}>Geri al</button>}
                   </>
                 )}
                 {dec === 'rejected' && (
                   <>
                     <span className="text-[12px] font-bold text-canvas-muted">Reddedildi</span>
-                    <button type="button" className={btnGhost} onClick={() => act(x, 'reopen')}>Geri al</button>
+                    {canEdit && <button type="button" className={btnGhost} onClick={() => act(x, 'reopen')}>Geri al</button>}
                   </>
                 )}
                 {!dec && stale && <span className="text-[12px] font-semibold text-amber-800">Bu sayfanın son cümlesi değişti.</span>}
-                {!dec && !stale && x.status === 'suggested' && (
+                {canEdit && !dec && !stale && x.status === 'suggested' && (
                   <button type="button" className={btnPrimary} onClick={() => act(x, 'accept')}><Check className="h-4 w-4" aria-hidden />Kabul et</button>
                 )}
-                {!dec && <button type="button" className={btnGhost} onClick={() => act(x, 'reject')}><X className="h-4 w-4" aria-hidden />Reddet</button>}
+                {canEdit && !dec && <button type="button" className={btnGhost} onClick={() => act(x, 'reject')}><X className="h-4 w-4" aria-hidden />Reddet</button>}
               </div>
             </div>
           );

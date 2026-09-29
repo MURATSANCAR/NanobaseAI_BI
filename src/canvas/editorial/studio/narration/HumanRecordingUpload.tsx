@@ -79,7 +79,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
       <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Ses kaydı</span>
-          <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} picked={audio}
+          <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} picked={audio} feature="tasarim.uret"
             onPick={(file) => { setOk(null); setAudio(file); }} />
           {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
         </div>
@@ -112,7 +112,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
           </label>
           <div className="flex flex-col gap-1">
             <span className={labelCls}>İzin belgesi</span>
-            <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} />
+            <FileDrop size="sm" title="İzin belgesini seç" accept={DOC_ACCEPT} maxBytes={maxBytes} picked={doc} onPick={setDoc} feature="tasarim.uret" />
             {docErr && <span className="text-[12px] text-rose-700">{docErr}</span>}
           </div>
           <label htmlFor={`${f}-ref`} className="flex flex-col gap-1">

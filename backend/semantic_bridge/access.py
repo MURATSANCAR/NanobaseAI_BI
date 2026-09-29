@@ -1158,10 +1158,15 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"|visits/[^/]+/next-done)$", "ozellik:okul.ziyaret"),
     (frozenset({"POST"}), r"^/api/v1/schools/context/upload$", "ozellik:okul.baglam-yukle"),
     (frozenset({"GET"}), r"^/api/v1/schools/catalogs/[^/]+\.pdf$", "ozellik:veri.disa-aktar"),
-    (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
-    (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
-                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run|narration/recordings"
-                               r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
+    # Kitap Tasarım Stüdyosu: işin altındaki her yazma (üretim, düzenleme, onay, yükleme; yeni uçlar da kendiliğinden)
+    # «Kitap tasarımında üretim ve düzenleme» ister. Dışarıda kalan iki POST okumadır: `plan/prepare` sayfa düzeni
+    # ekranının açılışı, `narration/read` metnin nasıl okunacağını döndürür. Ses kütüphanesine yükleme de aynı yetki;
+    # sesi kaldırma ve kapak arşivi beslemesi ucun içinde yalnız yönetici. İndirilen dosyalar `veri.disa-aktar`.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}), _S + r"(/(?![^/]+/(plan/prepare|narration/read)$).*)?$",
+     "ozellik:tasarim.uret"),
+    (frozenset({"POST"}), r"^/api/v1/editorial/studio/voices$", "ozellik:tasarim.uret"),
+    (frozenset({"GET"}), _S + r"/[^/]+/(pdf/[^/]+|age/pdf|plan/versions/report|epub/file"
+                               r"|marketing/(product/export|social/zip|guide/pdf))$", "ozellik:veri.disa-aktar"),
     # M19: talep açma; üretim (görsel dizimi, Zeki AI metni, başlık önerisi), kapak yükleme ve varlık düzeltme.
     # Tasarım/mesaj onayı ve marka kiti açıkça verilen yetkilerle ucun içinde denetlenir.
     (frozenset({"POST"}), r"^/api/v1/marketing/creative/(requests|from-material/[^/]+)$", "ozellik:icerik.talep"),

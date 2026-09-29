@@ -4,6 +4,7 @@ import { ArrowLeftRight, ChevronDown, ChevronRight, FileDown, Loader2 } from 'lu
 import { Note, btnGhost, errText, field, label as labelCls } from '../../../admin/ui';
 import { FRONT, pollWhilePreparing, preparing, versionsApi, type Diff, type DiffPage, type Segment, type VersionJob } from '../reader/api';
 import '../reader/reader.css';
+import { useCan } from '../../../useAdmin';
 
 /** Sürüm farkı: iki sürüm sayfa sayfa yan yana. Sürümler bu işin kayıt geçmişi (her kayıt bir sürüm) ve aynı
  *  kitabın başka işleri. Metin farkı kelime düzeyinde, yerleşim farkı madde madde, görsel farkı önizlemede kırmızı
@@ -62,6 +63,7 @@ export default function ComparePanel({ job, goTo }: { job: string; goTo: (pid: s
     retry: false,
   });
   const [showSame, setShowSame] = useState(false);
+  const canExport = useCan('veri.disa-aktar');   // değişiklik raporu PDF'i
 
   if (list.isLoading) return <p className="text-[12.5px] text-canvas-muted">Sürümler yükleniyor…</p>;
   if (preparing(list.error)) return <Note tone="info">{list.error.message}</Note>;
@@ -84,9 +86,9 @@ export default function ComparePanel({ job, goTo }: { job: string; goTo: (pid: s
         <>
           <Summary d={d} />
           <div className="flex flex-wrap items-center gap-2">
-            <a className={btnGhost} href={versionsApi.reportUrl(job, pair[0], pair[1])} download>
+            {canExport && <a className={btnGhost} href={versionsApi.reportUrl(job, pair[0], pair[1])} download>
               <FileDown className="h-4 w-4" aria-hidden />Değişiklik raporu (PDF)
-            </a>
+            </a>}
             <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 text-[12.5px] font-bold">
               <input type="checkbox" className="h-4 w-4 accent-canvas-violet" checked={showSame} onChange={(e) => setShowSame(e.target.checked)} />
               Değişmeyen sayfaları da aç

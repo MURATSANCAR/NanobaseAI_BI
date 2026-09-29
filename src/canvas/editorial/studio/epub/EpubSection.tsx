@@ -9,6 +9,7 @@ import AltTextList from './AltTextList';
 import EpubPreview from './EpubPreview';
 import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubView, type EpubWant } from './api';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
 
 /** Stüdyonun «E-kitap» bölümü: aynı sayfa planından e-kitap. Biçim (otomatik öneriyle), ses (sesli e-kitap: okurken
  *  dinle, okunan kelime vurgulu — yalnız bütün sayfaların sesi hazırken; değilse uyarı ve eksik sesleri üretme), e-ISBN,
@@ -139,6 +140,9 @@ function Eisbn({ jobId, v }: { jobId: string; v: EpubView }) {
 
 export default function EpubSection({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
+  // Üretim, biçim, e-ISBN ve eksik sesler «Kitap tasarımında üretim ve düzenleme»; dosyayı indirmek «Dışa aktarma» ister.
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const q = useEpub(jobId);
   const v = q.data;
   const [want, setWant] = useState<EpubWant>('auto');
@@ -180,14 +184,14 @@ export default function EpubSection({ jobId }: { jobId: string }) {
               Basılı kitabın sayfa düzeninden e-kitap dosyası hazırlanır: metin seçilebilir ve sesli okunabilir, görsellere görme engelli okurlar için açıklama (alt metin) eklenir, yazı tipleri dosyanın içindedir.
             </p>
           </div>
-          {r && v.status !== 'running' && (
+          {canExport && r && v.status !== 'running' && (
             <a className={ghostBtn} href={epubApi.fileUrl(jobId)} download>
               <Download className="h-4 w-4" aria-hidden />E-kitabı indir <span className="font-semibold text-canvas-muted">· {mb(r.size)}</span>
             </a>
           )}
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
+        {canEdit && <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
           <div role="radiogroup" aria-label="E-kitap biçimi" className="grid gap-2 sm:grid-cols-3">
             {options.map(([k, t, help]) => (
               <button key={k} type="button" role="radio" aria-checked={want === k} onClick={() => setWant(k)}
@@ -199,15 +203,16 @@ export default function EpubSection({ jobId }: { jobId: string }) {
             ))}
           </div>
           <Eisbn jobId={jobId} v={v} />
-        </div>
+        </div>}
 
-        <AudioChoice jobId={jobId} info={v.audio} on={withAudio} setOn={setAudioChoice} />
+        {canEdit && <AudioChoice jobId={jobId} info={v.audio} on={withAudio} setOn={setAudioChoice} />}
 
+        {!canEdit && !r && !working && <p className="text-[12px] text-canvas-muted">Bu kitabın e-kitabı henüz üretilmedi.</p>}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button type="button" className={`${gradientBtn} sm:w-auto`} disabled={working || build.isPending} onClick={() => build.mutate()}>
+          {canEdit && <button type="button" className={`${gradientBtn} sm:w-auto`} disabled={working || build.isPending} onClick={() => build.mutate()}>
             {working || build.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <BookOpen className="h-4 w-4" aria-hidden />}
             {working ? (v.status === 'queued' ? 'Sırada…' : 'Üretiliyor…') : r ? 'E-kitabı yeniden üret' : 'E-kitap üret'}
-          </button>
+          </button>}
           {working && (
             <div className="flex min-w-0 flex-1 flex-col gap-1" aria-live="polite">
               <span className="text-[12px] font-semibold text-canvas-muted">
@@ -216,7 +221,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
               {v.status === 'running' && total > 0 && <Progress value={n} total={total} />}
             </div>
           )}
-          {!working && v.stale && <Note tone="warn">E-kitap son değişikliklerden önce üretildi; yeniden üretin.</Note>}
+          {!working && v.stale && <Note tone="warn">E-kitap son değişikliklerden önce üretildi{canEdit ? '; yeniden üretin' : ''}.</Note>}
         </div>
 
         {build.error && <Note tone="err">{errText(build.error, 'Başlatılamadı.')}</Note>}

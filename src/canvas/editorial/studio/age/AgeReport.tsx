@@ -8,6 +8,7 @@ import { ghostBtn, gradientBtn, press, Progress } from '../shared';
 import { ageApi, type AgeCheck, type AgeFinding, type AgeLevel, type AgeView, type AgeWord, type Decision, type PageRef } from './api';
 import './age.css';
 import { StudioInfo } from '../shared';
+import { useCan } from '../../../useAdmin';
 
 /** Yaş uygunluğu raporu (sözleşme: apps/editor/src/editor/production/age_report.py). Sayfa stüdyosunun üst
  *  şeridinde tek düğme; rapor yan sayfada açılır. Kelime düzeyi, cümle uzunluğu, hassas içerik ve okul/MEB
@@ -69,6 +70,10 @@ export default function AgeReportEntry({ jobId }: { jobId: string }) {
 function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeView | undefined; error: unknown; onNavigate: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  // Rapor çıkarma, karar ve metne uygulama «Kitap tasarımında üretim ve düzenleme», PDF «Dışa aktarma» ister. Yetkisi
+  // olmayan rapor ve kararları görür; karar düğmeleri pasif kalır (kararın durumunu da gösterdikleri için).
+  const canEdit = useCan('tasarim.uret');
+  const canExport = useCan('veri.disa-aktar');
   const [tab, setTab] = useState<Tab>('bulgu');
   const set = (v: AgeView) => qc.setQueryData(['studio', 'age', jobId], (old: AgeView | undefined) => ({ ...old, ...v }));
   const run = useMutation({
@@ -124,11 +129,11 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5">
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={gradientBtn} disabled={running || run.isPending} onClick={() => run.mutate()}>
+          {canEdit && <button type="button" className={gradientBtn} disabled={running || run.isPending} onClick={() => run.mutate()}>
             {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
             {running ? 'Çıkarılıyor…' : rep ? 'Raporu yenile' : 'Raporu çıkar'}
-          </button>
-          {rep && <a className={ghostBtn} href={ageApi.pdfUrl(jobId)}><Download className="h-4 w-4" aria-hidden />PDF indir</a>}
+          </button>}
+          {canExport && rep && <a className={ghostBtn} href={ageApi.pdfUrl(jobId)}><Download className="h-4 w-4" aria-hidden />PDF indir</a>}
         </div>
         {running && (
           <div className="mt-3 rounded-2xl border border-violet-100 bg-white/80 p-3" role="status" aria-live="polite">
@@ -141,7 +146,7 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
         {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
         {!view && !error && <div className="mt-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-canvas-violet motion-reduce:animate-none" aria-hidden /></div>}
         {view && !rep && !running && st?.state !== 'failed' && (
-          <p className="mt-4 text-[13px] text-canvas-muted">Henüz rapor yok. «Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer.</p>
+          <p className="mt-4 text-[13px] text-canvas-muted">Henüz rapor yok.{canEdit ? ' «Raporu çıkar» kitabın güncel metnini (sayfa düzeni varsa oradaki metni) hedef yaşa göre ölçer.' : ''}</p>
         )}
 
         {rep && (
@@ -156,10 +161,10 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
               ))}
             </div>
             <div className="mt-3" role="tabpanel">
-              {tab === 'bulgu' && <Findings items={findings} goto={goto} decide={decide.mutate} busy={decide.isPending} />}
-              {tab === 'kelime' && <Words rep={rep} goto={goto} decide={decide.mutate} apply={apply.mutate} busy={decide.isPending || apply.isPending} applied={apply.data} />}
+              {tab === 'bulgu' && <Findings items={findings} goto={goto} decide={decide.mutate} busy={decide.isPending || !canEdit} />}
+              {tab === 'kelime' && <Words rep={rep} goto={goto} decide={decide.mutate} apply={apply.mutate} busy={decide.isPending || apply.isPending || !canEdit} applied={apply.data} canEdit={canEdit} />}
               {tab === 'olcut' && <Checks items={rep.checks} goto={goto} />}
-              {tab === 'liste' && <Checklist view={view!} decide={decide.mutate} busy={decide.isPending} />}
+              {tab === 'liste' && <Checklist view={view!} decide={decide.mutate} busy={decide.isPending || !canEdit} readOnly={!canEdit} />}
             </div>
             <Sources view={view!} />
           </>
@@ -242,9 +247,9 @@ function Findings({ items, goto, decide, busy }: { items: AgeFinding[]; goto: (p
   );
 }
 
-function Words({ rep, goto, decide, apply, busy, applied }: {
+function Words({ rep, goto, decide, apply, busy, applied, canEdit }: {
   rep: NonNullable<AgeView['report']>; goto: (p: { pid: string | null }) => void; decide: Decide;
-  apply: (v: { lemma: string; form: string; to: string }) => void; busy: boolean; applied?: { count: number };
+  apply: (v: { lemma: string; form: string; to: string }) => void; busy: boolean; applied?: { count: number }; canEdit: boolean;
 }) {
   const ws = rep.word_stats;
   if (!ws.reference) return <p className="text-[13px] text-canvas-muted">Bu yaş bandı için kelime derlemi yok; seyrek kelime listesi çıkarılmadı.</p>;
@@ -256,7 +261,7 @@ function Words({ rep, goto, decide, apply, busy, applied }: {
       </p>
       {applied && <div className="mt-2"><Note tone="ok">{applied.count} yerde değiştirildi; sayfalar yeniden diziliyor.</Note></div>}
       <ul className="mt-2 flex flex-col gap-2">
-        {rep.words.map((w) => <WordCard key={w.lemma} w={w} goto={goto} decide={decide} apply={apply} busy={busy} canApply={rep.text_source === 'plan'} />)}
+        {rep.words.map((w) => <WordCard key={w.lemma} w={w} goto={goto} decide={decide} apply={apply} busy={busy} canApply={canEdit && rep.text_source === 'plan'} />)}
       </ul>
       {!!ws.unknown?.length && (
         <details className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3 text-[12px]">
@@ -347,7 +352,7 @@ function Checks({ items, goto }: { items: AgeCheck[]; goto: (p: { pid: string | 
   );
 }
 
-function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy: boolean }) {
+function Checklist({ view, decide, busy, readOnly }: { view: AgeView; decide: Decide; busy: boolean; readOnly?: boolean }) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   return (
     <div>
@@ -360,7 +365,7 @@ function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy
             <li key={c.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3">
               <p className="text-[13px] font-bold leading-snug">{c.title}</p>
               <p className="mt-0.5 text-[11px] text-canvas-muted">Kaynak: {c.source}</p>
-              <input value={note} onChange={(e) => setNotes((n) => ({ ...n, [c.id]: e.target.value }))} maxLength={500}
+              <input value={note} onChange={(e) => setNotes((n) => ({ ...n, [c.id]: e.target.value }))} maxLength={500} readOnly={readOnly}
                 placeholder="Not (isteğe bağlı)" aria-label={`${c.title} notu`}
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] outline-none focus:border-canvas-violet" />
               <div className="mt-2 flex flex-wrap gap-1.5">
