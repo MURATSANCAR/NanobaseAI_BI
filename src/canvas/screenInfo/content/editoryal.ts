@@ -45,9 +45,10 @@ const CONTENT: ScreenInfoMap = {
       'Başvuru yeni → değerlendirmede → kurul bekliyor → kurulda adımlarından geçer; kabul, red ya da revizyonla kapanır.',
       'Başvuru sayfasındaki Yayın Kurulu Raporu, aynı kitaplıkta son yıllarda çıkan benzer kitapların ilk yıl satışından kötümser, baz ve iyimser tahmin çıkarır.',
       'Kurul kararından sonra yazara gidecek yazının taslağı hazırlanır; portal yazıyı kendisi göndermez, siz gönderip «Gönderildi» diye işaretlersiniz.',
+      "Yazar başvuru formlarının (Çocuk, İlk Gençlik, Genç) yanıtları her biri bir kez «Yeni başvuru» olarak düşer; formun bütün cevapları başvuru sayfasındaki «Form yanıtları»ndadır, sayfa tahmini editörce girilir.",
     ],
-    data: "Başvuru, değerlendirme ve karar kayıtları portalda tutulur; kategori ve benzer kitaplar CRM'den, satışlar Logo'dan okunur. CRM'e yazılmaz.",
-    refresh: 'Başvuru kayıtları yaptığınız anda güncellenir.',
+    data: "Başvuru, değerlendirme ve karar kayıtları portalda tutulur; form başvuruları Google E-Tablo yanıtlarından yalnız okunur. Kategori ve benzer kitaplar CRM'den, satışlar Logo'dan okunur. CRM'e ve formlara yazılmaz.",
+    refresh: 'Başvuru kayıtları yaptığınız anda güncellenir; form yanıtları 15 dakikada bir okunur («Şimdi al» beklemeden okur).',
     actions: [
       '«Yeni başvuru» ile dosyayı kaydedin (PDF, DOCX, DOC).',
       'Kuyruk, Kabul edilenler ve Arşiv arasında geçin; duruma göre süzün ya da «Bana atananlar»ı seçin.',

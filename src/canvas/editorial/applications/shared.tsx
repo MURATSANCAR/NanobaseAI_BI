@@ -188,6 +188,7 @@ export function fmtBytes(n: number): string {
 
 export const ACTION_TEXT: Record<string, string> = {
   olusturuldu: 'Başvuru kaydedildi',
+  formdan: 'Yazar başvuru formundan alındı',
   duzenlendi: 'Bilgiler düzenlendi',
   dosya: 'Dosya yüklendi',
   dosya_silindi: 'Dosya silindi',

@@ -5709,6 +5709,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "crm": os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")},
         "run": lambda sql: rt().run_sql(sql, rt().settings.max_rows),
         "person": editorial_mod.person,
+        "require_caller": _require_caller,
+        "engine_tenant": lambda: (rt().store.engine, rt().settings.tenant_id),
     })
 
     # Öneri 12: başvuru ön okuması ve editör raporu taslağı (belge okuma + alıntılı kapalı küme; puan/karar insanda).
@@ -8131,6 +8133,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda priority: rt().llm_for("etkinlik", _SCHOOLS_BATCH if priority else None),
         "system": lambda: (rt().store.engine, rt().settings.tenant_id),
         "require_caller": _require_caller,
+        "engine_tenant": lambda: (rt().store.engine, rt().settings.tenant_id),
     })
 
     # M28 Kurumsal ilişkiler: kanaat önderi/kurum kartı, hediye kitap programı, kamu projeleri. Uçlar /api/v1/public-affairs/*.

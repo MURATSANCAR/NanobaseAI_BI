@@ -583,7 +583,7 @@ def inspect_url(url: str, site: str) -> dict[str, Any]:
         except httpx.HTTPError as e:
             raise InspectError("net", f"Google'a ulaşılamadı: {type(e).__name__}") from None
         if resp.status_code == 401 and attempt == 0:
-            connections._GTOKEN["token"] = None  # süresi dolmuş belirteç: bir kez yenile
+            connections._GTOKENS.clear()  # süresi dolmuş belirteç: bir kez yenile
             continue
         if resp.status_code == 403:
             raise InspectError("permission", f"Search Console erişimi reddetti: servis hesabı "
