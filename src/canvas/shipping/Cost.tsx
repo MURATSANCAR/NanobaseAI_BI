@@ -471,9 +471,8 @@ function SupplierTable({ d }: { d: ShippingCost }) {
                   <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(s.fatura)}</td>
                   <td className={td}>
                     {s.hizmetler.map((h) => (
-                      <div key={h.kod} className="text-[11.5px]">
-                        <span className="font-mono">{h.kod}</span>
-                        {h.ad && <span className="text-canvas-muted"> · {h.ad}</span>}
+                      <div key={h.kod} className="text-[11.5px]" title={h.kod}>
+                        {h.ad || <span className="font-mono">{h.kod}</span>}
                       </div>
                     ))}
                   </td>
