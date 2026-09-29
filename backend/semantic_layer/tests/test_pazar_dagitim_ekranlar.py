@@ -208,8 +208,8 @@ def test_scorecard_shows_distributor_sell_in_next_to_waiting_stock(engine, monke
     b = g["basari"]
     assert b["satisOkundu"] and b["unvan"] == "BAŞARI DAĞITIM"
     assert b["kanalaSatis"]["netAdet"] == pytest.approx(90 * 8)                                 # Ocak–Ağustos
-    assert b["gecenYil"]["netAdet"] == pytest.approx(90 * 7 + 90 * 17 / 31)                   # geçen yıl son ay gün payıyla
-    assert b["degisim"] == pytest.approx(720 / (630 + 90 * 17 / 31) - 1)
+    assert b["gecenYil"]["netAdet"] == pytest.approx(90 * 7 + 90 * 17 / 31, abs=0.01)         # geçen yıl son ay gün payıyla (2 basamak)
+    assert b["degisim"] == pytest.approx(720 / (630 + 90 * 17 / 31) - 1, abs=1e-4)  # yuvarlanmış adetten
     assert b["stok"]["stok"] == 100 and b["cikis"] is None and b["cikisNot"]
     assert g["dr"]["stok"]["stok"] == 45 and g["dr"]["kanalaSatis"] is None
     assert g["donem"] == {"bas": "2026-01-01", "son": "2026-08-17"}
