@@ -80,7 +80,7 @@ export function Tabs<T extends string>({
   onChange: (k: T) => void;
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none]" role="tablist" aria-label="Bölüm">
+    <div className="overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Bölüm">
       <div className="inline-flex min-w-full gap-1 rounded-2xl bg-slate-100 p-1">
         {items.map((it) => (
           <span key={it.key} className="inline-flex flex-1 items-center">

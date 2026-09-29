@@ -41,7 +41,7 @@ export function EticaretFrame({ title, lead, source, aside, children }: {
               {aside && <div className="w-full shrink-0 lg:w-auto">{aside}</div>}
             </header>
             {screens.length > 1 && (
-              <nav aria-label="E-ticaret ekranları" className="-mx-1 overflow-x-auto px-1">
+              <nav aria-label="E-ticaret ekranları" className="overflow-x-auto">
                 <div className="flex w-max min-w-full gap-1 rounded-2xl bg-slate-100 p-1">
                   {screens.map((s) => (
                     <NavLink

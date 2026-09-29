@@ -5,6 +5,11 @@
 - **Neden:** Kullanıcı: «tüm modülleri Zeki ana panelde modüllere ekledin mi; tıklanınca doğrudan ilgili modüle gitsin, solda yalnız o modülün menüleri gelsin». Kart 6 sabit kutuydu (`GROUP_HOME`'dan: Genel Bakış, Editoryal Süreç, Finans & Risk, Yönetim Raporları, SEO & GEO, İK); «Genel Bakış» ve «Yönetim Raporları» ikisi de Finans modülüne düşüyordu, 8 ana modül (Analiz, Fiyatlama ve üretim, Pazarlama, Saha satış, Dijital, Müşteri ve pazar, Platform, Lojistik, Altyapı, Yönetim) hiç yoktu.
 - **Yapılan:** kutular sol menünün ana modüllerinden türer (`useNavData().groups`, Kampüs hariç): ad, simge, açıklama, sıra ve rol/ortam süzgeci menüyle aynı — menüde görünmeyen modül burada da yok. Hedef `groupEntry()` (`navModel.ts`): modülde kişinin açabildiği, `matchActive` ile yine o modüle düşen ilk ekran; oraya gidilince ray `railView` ile yalnız o modülün ekranlarını gösterir (ray mantığı değişmedi).
 - **Doğrulama:** test sunucusunda geçici klasörde `tsc -b` 0, `navModel.test.ts` 42/42 (yeni: her ana modülün giriş ekranı kendi modülünü açar; rolde görünmeyen ekran atlanır; başka modülde daha uzun eşleşen ekran atlanır).
+## 2026-09-29 — Sayfa kenarındaki sekme şeritleri 4 px yatay taşıyordu (Pazar, Commerce, Reklam, E-ticaret, Serbest çalışan)
+
+- **Neden:** sekme şeridi `nav` `-mx-1 overflow-x-auto px-1` idi; sayfa kabının kenarında (panel dolgusu yok) negatif kenar boşluğu `main`in iki yanından 4'er px taşıyor, sağdaki 4 px `main`i yatay kaydırılabilir yapıyordu (solu kaydırılamaz).
+- **Düzeltme:** sayfa düzeyindeki beş şeritte (`pazar/parts.tsx`, `commerce/parts.tsx`, `ads/parts.tsx`, `eticaret/parts.tsx`, `editorial/freelance/shared.tsx` `Tabs`) yalnız `overflow-x-auto`; şeridin yeri değişmez (−4 + 4 = 0). Panel içindeki aynı kalıp (Pipeline, İhale kalemleri, E-ticaret farkları, Hakediş, Koşular, Dağıtım) taşmaz, dokunulmadı.
+- **Doğrulama (test portalı, Pazar, gerçek oturum):** kuralı sayfaya ekleyerek önce/sonra: `main` taşması 320/390/768 px'te 4 → 0; şerit sol 8,0 px, genişlik 522,1 px aynı; sekmeler şeridin içinde kayıyor.
 
 ## 2026-09-29 (16:45) — Sözleşme karşılaştırma: eksik kalan denemeler kapatıldı; ortak belge okumada açık bulundu
 
