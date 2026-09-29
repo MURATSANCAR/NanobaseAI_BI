@@ -69,18 +69,20 @@ export function EticaretFrame({ title, lead, source, aside, children }: {
 }
 
 /** Üç kaynağın değeri yan yana; boş olan tire. Telefonda alt alta. */
-export function ThreeValues({ crm, logo, site }: { crm: ReactNode; logo: ReactNode; site: ReactNode }) {
+export function ThreeValues({ crm, logo, site, dr }: { crm: ReactNode; logo: ReactNode; site: ReactNode; dr?: ReactNode }) {
   const cell = (k: string, v: ReactNode) => (
     <div className="min-w-0 rounded-lg bg-slate-50 px-2 py-1">
       <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">{k}</div>
       <div className="break-words font-mono text-[12px] font-semibold tabular-nums">{v ?? '—'}</div>
     </div>
   );
+  // D&R değeri yalnız «D&R fiyat farkı»nda gelir; o zaman dört hücre (telefonda alt alta, geniş ekranda 2 × 2 / 4 yan yana).
   return (
-    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+    <div className={`grid grid-cols-1 gap-1.5 ${dr ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
       {cell('CRM', crm)}
       {cell('Logo', logo)}
       {cell('Site', site)}
+      {dr ? cell('D&R', dr) : null}
     </div>
   );
 }
@@ -122,7 +124,7 @@ export function DiffCard({ d, onOpen, selected, onSelect, onMark, k, alan = 'ite
         <p className="mt-0.5 break-words text-[12px] leading-snug text-canvas-muted">{d.aciklama}</p>
         {(d.crm || d.logo || d.site) && (
           <div className="mt-2">
-            <ThreeValues crm={d.crm} logo={d.logo} site={d.site} />
+            <ThreeValues crm={d.crm} logo={d.logo} site={d.site} dr={d.dr} />
           </div>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-canvas-muted">

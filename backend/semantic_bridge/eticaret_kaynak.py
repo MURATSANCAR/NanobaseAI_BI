@@ -46,7 +46,10 @@ F_HAFTA = ("Son 7 gün: kapanan = son 7 günde «kapandı» durumuna geçen fark
            "görülme) gün ÷ kapanan sayısı, bir ondalık.")
 F_FARK = ("Fark satırı: CRM, Logo ve sitedeki değerler gece okumasından; etki = kitabın Logo son dönem net adedi (bütün "
           "kanallar; Logo yoksa sitedeki toplam satış adedi) — sıralama ağırlığı. Neden olasılığı Zeki AI'ın kapalı küme "
-          "seçimindeki güvenidir (rakam üretmez; eşik altı «belirsiz»).")
+          "seçimindeki güvenidir (rakam üretmez; eşik altı «belirsiz»). D&R fiyat farkı: TİMAŞ grubu kitabın barkodu D&R "
+          "kataloğunun son görüntüsünde; D&R satış fiyatı sitedeki fiyatımızdan (indirimli varsa o) ayardaki toleranstan "
+          "fazla düşükse ya da D&R'deki liste fiyatı bizim liste fiyatımızdan (ayardaki esas: CRM ya da Logo) farklıysa; "
+          "D&R indirimi = 1 − D&R satış fiyatı ÷ D&R liste fiyatı.")
 F_TOPLAM = "Toplam = süzgece uyan fark kaydı sayısı (sayfalı listede görünenden bağımsız)."
 F_OKUMA = "Son okumanın kaynak özeti: okunan ürün, CRM kartı, Logo stok kodu ve fiyat sayıları okuma kaydından."
 F_KITAP = ("Kitap: Logo stok = güncel firma, IOCODE 1,2 giriş − 3,4 çıkış (planlanan üretim girişi hariç); Logo fiyat = bugün "

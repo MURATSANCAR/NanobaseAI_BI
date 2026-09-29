@@ -136,6 +136,22 @@ def read_kanal(run: Runner, firms: dict[int, str], year: int) -> list[dict[str, 
     return out
 
 
+def dagitimci_cari() -> Optional[str]:
+    """Başarı Dağıtım'ın Logo cari kodu (M39 ayarı `PAZAR_DAGITIM_BASARI_CARI`). Kanal karnesinde dağıtımcıya satış
+    (sell-in) bu cariden, e-ticaret kapsamından ayrı okunur; platform toplamlarına girmez."""
+    try:
+        from semantic_bridge import pazar_dagitim as PD
+
+        return (PD.settings().get("basariCari") or "").strip() or None
+    except Exception:  # noqa: BLE001 — ayar okunamazsa dağıtımcı satırı okunmaz
+        return None
+
+
+def read_dagitimci(run: Runner, firms: dict[int, str], year: int, code: str) -> list[dict[str, Any]]:
+    """Dağıtımcı carisinin ay satırları: karnedeki cari × ay sorgusunun aynısı, kapsam yalnız bu cari."""
+    return [{"ay": r["ay"], **{k: r[k] for k in METRICS}} for r in read_cari(run, firms, year, scope_sql([], [code]), "C.CODE")]
+
+
 def read_cari(run: Runner, firms: dict[int, str], year: int, scope: str, grup: str) -> list[dict[str, Any]]:
     firm = bsrc._firm(firms, year)
     out = []

@@ -638,8 +638,9 @@ const CONTENT: ScreenInfoMap = {
       'Platform, Cari eşleme ekranında onaylanan cari eşlemesiyle belirlenir; eşleme değişince karne hemen güncellenir.',
       'Hedef, CRM satış hedefi bölgesinden gelir; maliyet, marj ve simülasyon yalnız marj yetkisiyle görünür.',
       'Maliyeti girilmemiş satırlar marja sessizce katılmaz; sayısı ve cirosu yanında yazılır.',
+      'Başarı Dağıtım ve D&R’de kanala satışın yanında kanalda bekleyen TİMAŞ stoğu durur (katalogların son görüntüsü); Başarı deposundan kitapçılara çıkış en az iki günlük görüntü birikince hesaplanır, okura satış değildir.',
     ],
-    data: 'Logo faturalı satış ve iade satırları, CRM satış hedefleri ve siparişleri, onaylı cari eşlemesi',
+    data: 'Logo faturalı satış ve iade satırları, CRM satış hedefleri ve siparişleri, onaylı cari eşlemesi, Başarı ve D&R katalogları',
     refresh: 'Her gece 04:00; «Veriyi yenile» ile hemen',
     jobs: [
       { name: 'Kanal okuması', when: 'Her gece 04:00', what: 'Logo kanal satışlarını ve CRM hedef ve siparişlerini tazeler, cari eşleme adaylarını üretir.' },

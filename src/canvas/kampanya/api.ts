@@ -176,12 +176,18 @@ export type Candidate = {
   hak: string | null;
   puan: number;
   gerekce: string;
+  /** D&R kataloğunun son görüntüsü (barkod eşleşmesi): liste ve satış fiyatı, indirim; eşleşme yoksa null. */
+  dr?: { fiyat: number | null; drFiyat: number | null; indirim: number | null; durum: string | null; siteSatista: boolean; katalogda: boolean; son: string | null } | null;
+  /** «D&R zaten %X indirimde» (sitede satışta ve indirim en az %1). */
+  drUyari?: string | null;
 };
 export type Candidates = Page<Candidate> & {
   kurallar: string[];
   esikler: { stokAy: number; dususPct: number; hizAy: number; sezonOncesiGun: number; marjMinPct: number | null; indirim: number };
   sezonlar: string[];
   dataEnd: string | null;
+  /** D&R kataloğunun son görüntü tarihi; hiç okunmadıysa null. */
+  drTarih?: string | null;
 };
 
 export type BookHit = { stok: string; ad: string | null; yazar: string | null; ean: string | null; stokAdet: number; liste: number | null; adet12: number };

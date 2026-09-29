@@ -191,7 +191,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def ch_scorecard(request: Request, yil: Optional[int] = None, ay: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         with Y.yakala(engine) as q:
-            out = view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay))
+            out = view(user, await run_in_threadpool(call, SC.scorecard, engine, tenant, yil, ay, dagitim=True))
         return PV.bagla(out, lambda: K.for_scorecard(engine, tenant, out, q))
 
     @app.get(R + "/channel/{platform}")

@@ -502,7 +502,7 @@ SPEC: list[dict[str, Any]] = [
      "default": "gorsel,arka_kapak,yazar,kategori,site_gorsel",
      "help": "Virgülle: gorsel, arka_kapak, spot, yazar, kategori, anahtar_kelime, foy, site_gorsel. Boş olan «eksik kart» farkı açar"},
     {"key": "ECOM_ALERT_KINDS", "group": "eticaret", "label": "E-posta gönderilen fark türleri", "type": "text", "default": "hak,fiyat,stok",
-     "help": "Virgülle: hak, fiyat, stok, aktiflik, barkod, ad, eksik_kart. Fark ilk kez görüldüğünde bir kez bildirilir"},
+     "help": "Virgülle: hak, fiyat, perakende (D&R fiyat farkı), stok, aktiflik, barkod, ad, eksik_kart. Fark ilk kez görüldüğünde bir kez bildirilir"},
     {"key": "ECOM_ALERT_RECIPIENTS", "group": "eticaret", "label": "Fark bildirimi alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (site sorumlusu). Boşsa e-posta gitmez; farklar ekranda durur"},
     {"key": "ECOM_WEEKLY_TO", "group": "eticaret", "label": "Haftalık özet alıcıları", "type": "text", "default": "",

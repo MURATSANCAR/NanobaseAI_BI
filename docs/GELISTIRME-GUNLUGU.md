@@ -164,6 +164,24 @@
   ve emsal bağı okumaları yazılmaz, Timaş kitapları CRM'den.
 - **Test:** `test_pazar_rakip_kaynak.py` (10), `api.test.ts`'e seçici adı. Yerelde koşturulmadı — DOĞRULANAMADI;
   testler ve gerçek katalogla kabul koordinatörde (test sunucusu).
+## 2026-09-29 (akşam) — Başarı ve D&R katalogları kanal karnesi, kampanya adayları ve e-ticaret farklarında
+
+- **Kanal karnesi (`/kanallar`):** yeni «Dağıtımcı ve perakendede bekleyen stok» paneli — Başarı Dağıtım'a kanala satış
+  (Logo sell-in; ayardaki `PAZAR_DAGITIM_BASARI_CARI` carisi, karnenin cari × ay sorgusunun aynısı, platform toplamlarına
+  girmez; kanal okumasında yıl yıl `dagitimci:<yıl>` okuma kaydına yazılır) yanında Başarı deposundaki TİMAŞ grubu stoğu ve
+  depodan kitapçılara çıkış (iki görüntü birikince; yoksa boş ve nedenini söyler). D&R: karnedeki D&R platformunun sell-in'i
+  yanında Prefix B2B stoğu ve D&R + İdefix site stoğu (999+ yer tutucu sayılmaz); D&R kanal detayında da «Kanalda bekleyen
+  stok». Uç değişmedi (`/api/v1/channels/scorecard`, `/channel/dr` cevabına alan eklendi); D2C/rapor/e-ticaret özetleri bloğu
+  kurmaz (`scorecard(..., dagitim=False)`).
+- **Kampanyalar › Aday kitaplar:** «D&R satış fiyatı» kolonu (D&R'nin kendi liste fiyatına göre indirim) ve «D&R zaten %X
+  indirimde» uyarısı (son görüntüde, sitede satışta, indirim ≥ %1); eşleşme stok kodunun Logo barkodu, yoksa EAN.
+- **E-ticaret › Farklar:** yeni fark türü «D&R fiyat farkı» (`perakende`): TİMAŞ grubu kitap D&R'de sitemizden (indirimli varsa
+  o) ucuzsa ya da D&R'nin liste fiyatı bizimkinden (ayardaki esas) farklıysa; kartta dördüncü hücre «D&R», CSV'de D&R kolonu.
+  `semantic_eticaret_diffs.dr_deger` kolonu `ensure` ile eklenir (yalnız ekler). D&R kataloğu okunamayan turda tür
+  hesaplanmaz ve kapanmaz.
+- **Ortak:** `pazar_dagitim.kanal_stok`, `dr_fiyatlari`, `dr_timas`, `dr_uyari`. Kaynağa, Logo'ya, CRM'e, T-soft'a yazma yok.
+- **Test:** `test_pazar_dagitim_ekranlar.py` (yapay veri, sqlite); gerçek veriyle kabul test sunucusunda bekliyor.
+
 ## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
 
 - **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.

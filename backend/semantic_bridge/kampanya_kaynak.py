@@ -17,6 +17,7 @@ CAMPS, ITEMS, CAL, RES, LEARN = ("semantic_kampanya_campaigns", "semantic_kampan
 SNAPS, BOOKS, CRMT, META = ("semantic_kampanya_price_snapshots", "semantic_kampanya_books", "semantic_kampanya_crm_types",
                             "semantic_kampanya_meta")
 DAYS = "semantic_seo_seasons_days"
+DR_TITLES, DR_BARKOD = "semantic_pazar_dagitim_titles", "semantic_pazar_dagitim_barkod"
 
 TABLOLAR = {
     CAMPS: ("Kampanya kaydı", "Kampanyanın başlığı, kanalı, tarihleri, durumu, kanal kesintisi ve beklenen satış artışı."),
@@ -31,6 +32,9 @@ TABLOLAR = {
     CRMT: ("CRM kampanya türü", "Bayi kampanyasının gece sınıflanan türü."),
     META: ("Okuma bilgisi", "Veri sonu, satış hızı penceresi, son okuma özeti."),
     DAYS: ("Özel günler", "Takvimdeki özel günler (SEO & GEO sezon takvimi)."),
+    DR_TITLES: ("D&R başlıkları (son hâl)", "D&R kataloğundaki başlıkların son hâli: liste fiyatı, D&R satış fiyatı, site "
+                                            "durumu, son görüldüğü görüntü."),
+    DR_BARKOD: ("Logo barkod ↔ stok kodu", "Logo barkodlarının stok koduyla eşleşmesi (dağıtımcı kataloğu turunda yenilenir)."),
 }
 KOKEN = {BOOKS: [C.KOKEN_OKUMA], ITEMS: [C.KOKEN_OKUMA], SNAPS: [C.KOKEN_OKUMA]}
 KOKEN_BASLIK = {C.KOKEN_OKUMA: "Gece okuması (kitap verisi)"}
@@ -101,7 +105,15 @@ def for_calendar(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) 
 def for_candidates(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -> P.Kaynaklar:
     b = _kur(engine, tenant, q)
     h = b.hesap("aday", F_ADAY, BOOKS)
-    return b.alanlar({"items": h, "total": h})
+    f = {"items": h, "total": h}
+    if any(x.get("dr") for x in out.get("items") or []):
+        from semantic_bridge import pazar_dagitim as PD
+
+        src = b.k.sorgu("kampanya.dagitim.dr", "D&R kataloğu", "logo", PD.SQL_DR,
+                        description="D&R Prefix kataloğu (liste ve satış fiyatı, site durumu); her gün okunur, yalnız değişen "
+                                    "satır saklanır.")
+        f["items[].dr"] = b.hesap("drFiyat", PD.F_DR_FIYAT, DR_TITLES, DR_BARKOD, src)
+    return b.alanlar(f)
 
 
 def for_books(engine: Any, tenant: str, out: dict[str, Any], q: Y.Yakalanan) -> Optional[P.Kaynaklar]:
