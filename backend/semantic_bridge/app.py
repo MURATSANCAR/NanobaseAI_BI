@@ -2970,8 +2970,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     #: Hız 4. tur (2026-09-29): bellekten dönen cevap bile her istekte sorgu bilgisiyle birleşip 5.000 terim (+ eşleme)
     #: yeniden JSON'a çevriliyordu (0,5 sn; olay döngüsünde, eşzamanlı açılan ekranları bekletiyordu). Şimdi bellekte
     #: cevabın bayt hâli durur (aynı JSONResponse biçimi); köprü açılışında katalog yüklenince veri sözlüğünün açılış
-    #: listesi (onaylı terimler) arkada hazırlanır.
-    _concepts_mem = _HB.Bellek("veri-sozlugu.terimler", taze=24 * 3600, en_cok=8)
+    #: listesi (onaylı terimler) arkada hazırlanır; son cevap `semantic_hizli_okuma`'da da durur (köprü yeniden başlayınca
+    #: katalog yüklenir yüklenmez hazır). Anahtar süreçteki profil nesnesi değil, varlık → kaynak eşlemesinin özetidir.
+    from semantic_bridge import hizli_kaynak as _HKC
+
+    _concepts_mem = _HB.Bellek("veri-sozlugu.terimler", taze=24 * 3600, en_cok=8, kalici=_HKC.Kalici(
+        "veri-sozlugu.terimler", lambda: (rt().store.engine, rt().settings.tenant_id), bicim="concepts-json:1"))
 
     def _concepts_body(r: Any, status: Optional[str], type_: Optional[str], q: Optional[str], limit: int) -> bytes:
         from fastapi.encoders import jsonable_encoder
@@ -2980,13 +2984,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import sozluk_kaynak as SZK
 
         s = r.settings
-        profiles = r.profiles
+        src = source_by_entity(r.profiles)
+        src_ozet = hashlib.sha256(json.dumps(src, sort_keys=True).encode("utf-8")).hexdigest()[:24]
         stamp = r.store.concept_stamp(s.tenant_id, s.datasource_id)
 
         def read() -> bytes:
             with IZ.izle(r.store.engine) as ran:
                 rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type_, limit=limit)
-            src = source_by_entity(profiles)
             # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
             maps = r.store.list_mappings_many([c.id for c in rows])
             out = {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
@@ -2997,9 +3001,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                                        text=SZK.F_TERIM))
             return json.dumps(jsonable_encoder(out), ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
 
-        return _concepts_mem.al((s.tenant_id, s.datasource_id, status, type_, q, limit, stamp, id(profiles)), read)
-
-    from semantic_bridge import hizli_kaynak as _HKC
+        return _concepts_mem.al((s.tenant_id, s.datasource_id, status, type_, q, limit, str(stamp), src_ozet), read)
 
     def _concepts_warm() -> None:
         r = rt()

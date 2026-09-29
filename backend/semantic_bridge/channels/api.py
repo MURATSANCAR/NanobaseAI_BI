@@ -58,6 +58,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     refresher = RF.Refresher(lambda: rt().store.engine, lambda: rt().settings.tenant_id, lambda: rt().settings.connection_file,
                              crm_file, lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", conf)
 
+    def isit() -> None:
+        """Köprü açılışı (hız 4. tur): verinin son yılının kitap × kanal matrisi arkada kurulur (ilk açan beklemesin)."""
+        from semantic_bridge import hizli_kaynak as HK
+
+        r = rt()
+        if HK.sqlite_mi(r.store.engine):
+            return
+        S.ensure(r.store.engine)
+        try:
+            SC.matrix(r.store.engine, r.settings.tenant_id)
+        except SC.ChannelError:
+            pass                                    # yıl henüz okunmadı: ekran bunu kendisi söyler
+
+    from semantic_bridge import hizli_kaynak as _HK
+    _HK.acilista("kanal.matris", isit)
+
     def st() -> dict[str, Any]:
         return M.settings(conf)
 
