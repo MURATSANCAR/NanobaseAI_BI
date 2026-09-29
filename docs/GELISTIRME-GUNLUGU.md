@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
+
+- **Test sunucusu:** `CalcPane.tsx` ve `help.ts` sunucuda önceki main hâlindeydi (md5), yerleştirildi; `index-DPaAEmv0.js`. Görünmez tarayıcı (timasai kısa oturum, silindi): yeni kitapta ve Mükemmeliyetçi Kişilik'te KDV «0», telif tabanı «Brüt — kapak fiyatı», doğuşu «Baskıdan ödeme — basılan adet»; sayfa hatası 0.
+- **Müşteri VM'i:** arada başka oturumların iki kurulumu (`14d2346d`, `151ee17d`, 14:49'da EXIT 0) — ikisi de `c9ad5e2b`'nin atası. Ön denetim `._*` 0, çakışma işareti 0, arşiv köprüsü 2.374 uç; `vm-deploy-c9ad5e2b` EXIT 0, 5 konteyner ayakta, `bi_var` 7 → 7. VM'in sunduğu `PricingScreen-WjtMwIfc.js` içinde `royaltyOn:"baski",vat:0`, «Excel tarifesi» 0.
+
 ## 2026-09-29 (15:45) — CRM başlıkları test sunucusunda ve müşteri VM'inde (`151ee17d`)
 
 - **Test sunucusu:** 5 dosya (md5 = değişiklik öncesi main), `tsc -b` 0, portal `index-DnyhC6rB.js`, köprü yeniden başladı.
