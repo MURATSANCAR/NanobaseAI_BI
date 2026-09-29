@@ -22,7 +22,7 @@
           </p>
 
           <p class="text-base pt-1.5">
-            {{ __("This helps us personalize your NanobaseAI experience.") }}
+            {{ __("This helps us personalize your ZEKİ AI experience.") }}
           </p>
         </div>
         <template v-if="question.type === 'text'">

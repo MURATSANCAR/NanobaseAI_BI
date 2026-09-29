@@ -6,7 +6,7 @@ Alan adı sürümden sürüme değişebildiği için yalnız mevcut alanlar yaz�
 
 import frappe
 
-BRAND = "NanobaseAI"
+BRAND = "ZEKİ AI"
 MARK = "/assets/nanobase_brand/images/logo-mark.svg"
 LOGO = "/assets/nanobase_brand/images/logo.svg"
 FAVICON = "/assets/nanobase_brand/images/favicon.svg"
@@ -57,7 +57,7 @@ SETTINGS = [
 
 CUSTOM_FIELDS = {
 	"HD Ticket": [
-		{"fieldname": "nb_yz_section", "fieldtype": "Section Break", "label": "NanobaseAI", "collapsible": 1},
+		{"fieldname": "nb_yz_section", "fieldtype": "Section Break", "label": "ZEKİ AI", "collapsible": 1},
 		{"fieldname": "nb_talep_birimi", "fieldtype": "Data", "label": "Talep edenin birimi", "read_only": 1,
 		 "insert_after": "nb_yz_section"},
 		{"fieldname": "nb_duygu", "fieldtype": "Select", "label": "Müşteri duygusu",
@@ -103,8 +103,58 @@ def apply():
 			frappe.db.commit()
 		except Exception:
 			frappe.db.rollback()
-			frappe.log_error(title=f"NanobaseAI marka ayarı yazılamadı: {doctype}")
+			frappe.log_error(title=f"ZEKİ AI marka ayarı yazılamadı: {doctype}")
 			frappe.db.commit()
+
+
+# Marka adı değişikliği (2026-09-29 kullanıcı: «NanobaseAI Destek değil, ZEKİ AI olacak»). Kayıtlar yeniden
+# adlandırılır, kopyası açılmaz: bağlantılar (oturum → asistan, kaynak → bilgi bankası, iletişim → e-posta hesabı)
+# yeni ada geçer; e-posta hesabının okuduğu son sıra da korunur.
+ESKI_ADLAR = (
+	("Flow Model", "NanobaseAI", "ZEKİ AI"),
+	("Flow Model", "NanobaseAI Gömme", "ZEKİ AI Gömme"),
+	("Flow Agent", "NanobaseAI", "ZEKİ AI"),
+	("Flow Knowledge Base", "NanobaseAI Destek Bilgisi", "ZEKİ AI Bilgi Bankası"),
+	("Email Account", "NanobaseAI Destek", "ZEKİ AI"),
+)
+ESKI_KARSILAMA = "NanobaseAI'ye hoş geldiniz"
+
+
+def eski_adlar():
+	for doctype, eski, yeni in ESKI_ADLAR:
+		if not frappe.db.exists("DocType", doctype) or not frappe.db.exists(doctype, eski):
+			continue
+		try:
+			if frappe.db.exists(doctype, yeni):
+				frappe.log_error(title=f"ZEKİ AI ad taşıma: {doctype} «{yeni}» zaten var, «{eski}» taşınmadı")
+				continue
+			# Çatının kendi ürettiği asistan ve bilgi bankası yeniden adlandırmaya kapalı: yalnız bu taşıma için açılır.
+			korumali = frappe.get_meta(doctype).has_field("is_system_generated") and \
+				frappe.db.get_value(doctype, eski, "is_system_generated")
+			if korumali:
+				frappe.db.set_value(doctype, eski, "is_system_generated", 0, update_modified=False)
+			frappe.rename_doc(doctype, eski, yeni, force=True, show_alert=False)
+			if korumali:
+				frappe.db.set_value(doctype, yeni, "is_system_generated", 1, update_modified=False)
+			if doctype == "Email Account":
+				from nanobase_brand.eposta import START_KEY
+
+				baslangic = frappe.db.get_default(START_KEY + eski)
+				if baslangic and not frappe.db.get_default(START_KEY + yeni):
+					frappe.db.set_default(START_KEY + yeni, baslangic)
+			if doctype == "Flow Knowledge Base":
+				# Vektör deposu satırları bilgi bankasını adıyla tutar: kaynaklar yeni adla yeniden işlenir.
+				for kaynak in frappe.get_all("Flow Knowledge Source", filters={"knowledge_base": yeni}, pluck="name"):
+					frappe.enqueue("flow.knowledge.ingest.ingest_source", source=kaynak, rebuild=True, queue="long",
+								   job_id=f"nb-bilgi-yeniden-{kaynak}", deduplicate=True)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(title=f"ZEKİ AI ad taşıma: {doctype} {eski}")
+	if frappe.db.exists("DocType", "HD Ticket"):
+		frappe.db.set_value("HD Ticket", {"subject": ESKI_KARSILAMA}, "subject", "ZEKİ AI'ya hoş geldiniz",
+							update_modified=False)
+		frappe.db.commit()
 
 
 def _write_single(doctype, values):
@@ -141,7 +191,7 @@ def _bt_duzeni():
 		frappe.db.commit()
 	except Exception:
 		frappe.db.rollback()
-		frappe.log_error(title="NanobaseAI BT kategorileri/ekibi kurulamadı")
+		frappe.log_error(title="ZEKİ AI BT kategorileri/ekibi kurulamadı")
 
 
 def _ileri_tarihli_isler():
@@ -178,7 +228,7 @@ def _help_menu():
 			frappe.db.commit()
 	except Exception:
 		frappe.db.rollback()
-		frappe.log_error(title="NanobaseAI yardım menüsü ayarlanamadı")
+		frappe.log_error(title="ZEKİ AI yardım menüsü ayarlanamadı")
 
 
 def _translated_doctypes():
@@ -192,7 +242,7 @@ def _translated_doctypes():
 			frappe.db.commit()
 		except Exception:
 			frappe.db.rollback()
-			frappe.log_error(title=f"NanobaseAI çeviri ayarı yazılamadı: {doctype}")
+			frappe.log_error(title=f"ZEKİ AI çeviri ayarı yazılamadı: {doctype}")
 
 
 def _custom_fields():
@@ -208,4 +258,4 @@ def _custom_fields():
 
 		bilgi.ensure()
 	except Exception:
-		frappe.log_error(title="NanobaseAI bilgi bankası kurulamadı")
+		frappe.log_error(title="ZEKİ AI bilgi bankası kurulamadı")

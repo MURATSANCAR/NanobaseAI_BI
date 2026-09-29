@@ -29,7 +29,7 @@ def bul(email: str | None) -> str:
 		dep = _ara(ldap, email)
 	except Exception:
 		# AD'ye ulaşılamadı: sonuç önbelleğe yazılmaz, sonraki kayıtta yeniden denenir.
-		frappe.log_error(title="NanobaseAI: talep edenin birimi AD'de aranamadı")
+		frappe.log_error(title="ZEKİ AI: talep edenin birimi AD'de aranamadı")
 		return ""
 	frappe.cache.set_value(CACHE + email, dep, expires_in_sec=CACHE_SECONDS)
 	return dep

@@ -1,6 +1,6 @@
 import { send } from '../engine';
 
-/** M51 Müşteri hizmetleri köprü istemcisi (`/api/v1/support/*`). Talep kaydı NanobaseAI Destek masasındadır; portal masayı
+/** M51 Müşteri hizmetleri köprü istemcisi (`/api/v1/support/*`). Talep kaydı ZEKİ AI Destek masasındadır; portal masayı
  *  yalnız okur. Müşteri bağlamı canlı CRM'den (sipariş, sevkiyat, kargo) ve Logo'dan (fatura, iade — veri sonu tarihiyle).
  *  Zeki AI taslağı hiçbir yere gönderilmez; temsilci masadan kendisi gönderir. */
 

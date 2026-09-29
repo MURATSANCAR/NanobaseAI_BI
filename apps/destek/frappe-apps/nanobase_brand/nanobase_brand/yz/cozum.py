@@ -31,7 +31,7 @@ GONDERILDI, COZULDU, COZULMEDI, BT = "Öneri gönderildi", "Öneriyle çözüld�
 DURUMLAR = ("", GONDERILDI, COZULDU, COZULMEDI, BT)
 
 SISTEM = (
-	"Sen NanobaseAI'sin, şirketin BT destek masasının asistanısın. Kendinden ve altyapıdan bahsetme, model ya da ürün "
+	"Sen ZEKİ AI'sın, şirketin BT destek masasının asistanısın. Kendinden ve altyapıdan bahsetme, model ya da ürün "
 	"adı verme. Yalnız verilen geçmiş çözümlere dayan; orada olmayan hiçbir adımı ekleme."
 )
 
@@ -60,7 +60,7 @@ def _yorum(ticket: str, metin: str) -> None:
 		frappe.get_doc({"doctype": "HD Ticket Comment", "reference_ticket": ticket, "commented_by": "Administrator",
 						"content": f"<p>{escape_html(metin).replace(chr(10), '<br>')}</p>"}).insert(ignore_permissions=True)
 	except Exception:
-		frappe.log_error(title=f"NanobaseAI iç not yazılamadı: {ticket}")
+		frappe.log_error(title=f"ZEKİ AI iç not yazılamadı: {ticket}")
 
 
 def bt_ata(ticket: str, neden: str) -> None:
@@ -78,10 +78,10 @@ def bt_ata(ticket: str, neden: str) -> None:
 	except Exception:
 		# Atama kuralı çalışamazsa (ekipte temsilci yok) alanlar kancasız yazılır; kayıt yine ekibin kuyruğundadır.
 		frappe.db.rollback()
-		frappe.log_error(title=f"NanobaseAI BT ataması: atama kuralı çalışmadı ({ticket})")
+		frappe.log_error(title=f"ZEKİ AI BT ataması: atama kuralı çalışmadı ({ticket})")
 		frappe.db.set_value("HD Ticket", ticket, {"agent_group": ekip, "nb_oneri_durumu": BT}, update_modified=False)
-	_yorum(ticket, f"NanobaseAI: kayıt BT ekibine atandı — {neden}" if ekip else
-		   f"NanobaseAI: kayıt BT'ye yönlendirildi — {neden}. BT ekibi henüz yok (AD'de BT biriminde kişi bulunamadı); "
+	_yorum(ticket, f"ZEKİ AI: kayıt BT ekibine atandı — {neden}" if ekip else
+		   f"ZEKİ AI: kayıt BT'ye yönlendirildi — {neden}. BT ekibi henüz yok (AD'de BT biriminde kişi bulunamadı); "
 		   "kayıt temsilci kuyruğunda bekliyor.")
 	frappe.db.commit()
 
@@ -92,12 +92,12 @@ def yeni_kayit(ticket: str) -> None:
 		kayit.classify(ticket)
 	except Exception:
 		frappe.db.rollback()
-		frappe.log_error(title=f"NanobaseAI sınıflama: {ticket}")
+		frappe.log_error(title=f"ZEKİ AI sınıflama: {ticket}")
 	try:
 		baslat(ticket)
 	except Exception:
 		frappe.db.rollback()
-		frappe.log_error(title=f"NanobaseAI otomatik öneri: {ticket}")
+		frappe.log_error(title=f"ZEKİ AI otomatik öneri: {ticket}")
 		bt_ata(ticket, "otomatik öneri hazırlanamadı")
 
 
@@ -177,7 +177,7 @@ def baslat(ticket: str) -> str:
 		"<p>Bu adımlar sorunu çözdüyse bu e-postayı <b>«Çözüldü»</b> diye yanıtlamanız yeterli. Çözülmediyse "
 		"<b>«Çözülmedi»</b> yazın; talebiniz hemen BT ekibine atanır. "
 		f"{saat} saat içinde yanıt gelmezse de talebiniz BT ekibine iletilir.</p>"
-		"<p>NanobaseAI Destek</p></div>"
+		"<p>ZEKİ AI</p></div>"
 	)
 	yazar = frappe.session.user
 	try:
@@ -193,7 +193,7 @@ def baslat(ticket: str) -> str:
 	son.nb_oneri_zamani = now_datetime()
 	son.nb_oneri_not = f"Güven %{round(p_evet * 100)} · kaynak: {', '.join('#' + k for k in kaynak_no)}"
 	son.save()
-	_yorum(ticket, f"NanobaseAI talep edene çözüm önerisi gönderdi (güven %{round(p_evet * 100)}; kaynak kayıtlar: "
+	_yorum(ticket, f"ZEKİ AI talep edene çözüm önerisi gönderdi (güven %{round(p_evet * 100)}; kaynak kayıtlar: "
 				   f"{', '.join('#' + k for k in kaynak_no)}). Yanıt «çözülmedi» olursa ya da {saat} saat içinde yanıt "
 				   "gelmezse kayıt BT ekibine atanır.\n\nGönderilen adımlar:\n"
 				   + "\n".join(f"{i + 1}. {a}" for i, a in enumerate(adimlar)))
@@ -227,9 +227,9 @@ def yanit(ticket: str) -> str:
 		doc.status = "Resolved"
 		doc.nb_oneri_durumu = COZULDU
 		if not doc.resolution_details:
-			doc.resolution_details = "<p>Talep eden, NanobaseAI'nin geçmiş BT çözümlerinden önerdiği adımlarla sorunu çözdü.</p>" + adim
+			doc.resolution_details = "<p>Talep eden, ZEKİ AI'ın geçmiş BT çözümlerinden önerdiği adımlarla sorunu çözdü.</p>" + adim
 		doc.save()
-		_yorum(ticket, f"NanobaseAI: talep eden sorunun önerilen adımlarla çözüldüğünü bildirdi (%{round(p * 100)}); kayıt çözüldü.")
+		_yorum(ticket, f"ZEKİ AI: talep eden sorunun önerilen adımlarla çözüldüğünü bildirdi (%{round(p * 100)}); kayıt çözüldü.")
 		frappe.db.commit()
 		return "çözüldü"
 	bt_ata(ticket, "talep eden önerilen adımların sorunu çözmediğini bildirdi" if r.get("choice") == "Çözülmedi"
@@ -258,7 +258,7 @@ def zaman_asimi() -> int:
 			bt_ata(ad, f"öneriye {saat} saat içinde yanıt gelmedi")
 		except Exception:
 			frappe.db.rollback()
-			frappe.log_error(title=f"NanobaseAI zaman aşımı ataması: {ad}")
+			frappe.log_error(title=f"ZEKİ AI zaman aşımı ataması: {ad}")
 	return len(adlar)
 
 

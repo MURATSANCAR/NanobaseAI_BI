@@ -160,7 +160,7 @@ const questions = [
   {
     key: "preferred_channels",
     title: __(
-      "How would you like your customers to create support tickets in NanobaseAI?"
+      "How would you like your customers to create support tickets in ZEKİ AI?"
     ),
     type: "choice",
     multiple: true,
@@ -206,7 +206,7 @@ const questions = [
   },
   {
     key: "referral_source",
-    title: __("How did you hear about NanobaseAI?"),
+    title: __("How did you hear about ZEKİ AI?"),
     type: "choice",
     options: [
       { label: __("GitHub"), value: "github" },
@@ -224,7 +224,7 @@ const questions = [
   },
   {
     key: "first_goal",
-    title: __("What would you like to do first in NanobaseAI?"),
+    title: __("What would you like to do first in ZEKİ AI?"),
     type: "choice",
     options: [
       { label: __("Connect my support email"), value: "connect_email" },
@@ -236,5 +236,5 @@ const questions = [
   },
 ] satisfies Question[];
 
-usePageMeta(() => ({ title: __("Welcome to NanobaseAI") }));
+usePageMeta(() => ({ title: __("Welcome to ZEKİ AI") }));
 </script>

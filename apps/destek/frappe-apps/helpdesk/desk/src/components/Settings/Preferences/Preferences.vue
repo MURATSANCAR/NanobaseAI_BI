@@ -26,7 +26,7 @@
             {{ __("Appearance") }}
           </div>
           <ThemeSwitcher
-            :name="config.brandName || 'NanobaseAI'"
+            :name="config.brandName || 'ZEKİ AI'"
             :logo="config.brandLogo || HDLogo"
           />
         </div>

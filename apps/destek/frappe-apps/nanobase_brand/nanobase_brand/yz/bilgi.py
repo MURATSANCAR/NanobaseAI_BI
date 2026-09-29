@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import frappe
 
-KB_TITLE = "NanobaseAI Destek Bilgisi"
-EMBED_DOC = "NanobaseAI Gömme"
+KB_TITLE = "ZEKİ AI Bilgi Bankası"
+EMBED_DOC = "ZEKİ AI Gömme"
 SOURCES = [
 	# (başlık, belge türü, içerik alanları, süzgeç)
 	("Yayımlanmış makaleler", "HD Article", ["title", "content"], {"status": "Published"}),
@@ -25,9 +25,9 @@ def kapali() -> bool:
 
 def ensure_embedding_model() -> str | None:
 	"""Gömme modeli sohbet modeliyle aynı uç ve anahtarla (kapı /embeddings'i BI'ın gömme servisine iletir)."""
-	if kapali() or not frappe.db.exists("Flow Model", "NanobaseAI"):
+	if kapali() or not frappe.db.exists("Flow Model", "ZEKİ AI"):
 		return None
-	chat = frappe.get_doc("Flow Model", "NanobaseAI")
+	chat = frappe.get_doc("Flow Model", "ZEKİ AI")
 	values = {"enabled": 1, "provider": chat.provider, "model_id": f"{chat.provider}/bge-m3",
 			  "base_url": chat.base_url, "api_key": chat.get_password("api_key", raise_exception=False)}
 	if frappe.db.exists("Flow Model", EMBED_DOC):
@@ -70,7 +70,7 @@ def search(query: str, limit: int = 5) -> list[dict]:
 	try:
 		return retrieve(query, kbs=[kb], limit=limit)
 	except Exception:
-		frappe.log_error(title="NanobaseAI bilgi bankası araması")
+		frappe.log_error(title="ZEKİ AI bilgi bankası araması")
 		return []
 
 

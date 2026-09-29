@@ -63,11 +63,11 @@ def konu(doc) -> dict | None:
 	try:
 		resp = requests.post(f"{url}/classify", json=body, headers=headers, timeout=170)
 		if resp.status_code >= 400:
-			frappe.log_error(title=f"NanobaseAI konu: köprü {resp.status_code} ({doc.name})", message=resp.text[:1000])
+			frappe.log_error(title=f"ZEKİ AI konu: köprü {resp.status_code} ({doc.name})", message=resp.text[:1000])
 			return None
 		return resp.json()
 	except (requests.RequestException, ValueError):
-		frappe.log_error(title=f"NanobaseAI konu: köprüye ulaşılamadı ({doc.name})")
+		frappe.log_error(title=f"ZEKİ AI konu: köprüye ulaşılamadı ({doc.name})")
 		return None
 
 

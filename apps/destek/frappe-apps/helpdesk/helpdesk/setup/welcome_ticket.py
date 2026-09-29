@@ -7,7 +7,7 @@ CONTENT = """
 <div style="font-family: 'DM Sans', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.8; color: #1b1f2a; max-width: 560px; margin: 0 auto;">
 Merhaba{{ " " + first_name if first_name else "" }},
 <br><br>
-Bu örnek kayıt, NanobaseAI destek ekranının nasıl çalıştığını göstermek için oluşturuldu.
+Bu örnek kayıt, ZEKİ AI destek ekranının nasıl çalıştığını göstermek için oluşturuldu.
 <br><br>
 <b>Etkinlik alanı:</b> kayda verdiğiniz her yanıt hemen altta, kaydın geçmişinde görünür; bütün yazışma tek yerde durur.
 <br><br>
@@ -27,7 +27,7 @@ Sonraki adımlar:<br>
   <li>Kendi kendine yardım için bilgi bankası makaleleri ekleyin.</li>
 </ul>
 <br>
-NanobaseAI
+ZEKİ AI
 </div>
 """
 
@@ -56,7 +56,7 @@ def create_ticket():
     )
 
     d = frappe.new_doc("HD Ticket")
-    d.subject = "NanobaseAI'ye hoş geldiniz"
+    d.subject = "ZEKİ AI'ya hoş geldiniz"
     d.description = rendered_content
     d.raised_by = AUTHOR_EMAIl
     d.contact = AUTHOR_NAME

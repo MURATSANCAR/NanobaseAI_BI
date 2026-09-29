@@ -1,7 +1,7 @@
 <template>
-  <!-- NanobaseAI: sınıflama sonucu, yazışma özeti, yanıt taslağı, makale taslağı.
+  <!-- ZEKİ AI: sınıflama sonucu, yazışma özeti, yanıt taslağı, makale taslağı.
        Arka uç: nanobase_brand/yz/kayit.py. Model hiçbir şeyi müşteriye göndermez. -->
-  <Section label="NanobaseAI" v-model:opened="opened">
+  <Section label="ZEKİ AI" v-model:opened="opened">
     <div class="space-y-3 pb-3 pt-0.5 text-p-sm text-ink-gray-7">
       <div v-if="info.duygu" class="flex items-center gap-2">
         <span class="text-ink-gray-5">{{ __("Customer mood") }}</span>
@@ -169,7 +169,7 @@ const draft = createResource({
       toast.error(__("Could not open the reply box"));
       return;
     }
-    insert({ title: "NanobaseAI", message: data.html, actions: [] });
+    insert({ title: "ZEKİ AI", message: data.html, actions: [] });
     toast.success(__("Draft added to the reply. Review it before sending."));
   },
 });

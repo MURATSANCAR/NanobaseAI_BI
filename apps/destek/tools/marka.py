@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Üst kaynaktan alınan Helpdesk ve Flow kodunu NanobaseAI markasına çevirir.
+"""Üst kaynaktan alınan Helpdesk ve Flow kodunu ZEKİ AI markasına çevirir.
 
 Tekrar koşturulabilir: her düzeltme ya uygulanır ya da zaten uygulanmıştır.
 Eski metin de yeni metin de bulunamazsa üst kaynak değişmiştir; betik durur ve
@@ -26,13 +26,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APPS = ROOT / "frappe-apps"
 MARKA = ROOT / "marka"
-BRAND = "NanobaseAI"
+BRAND = "ZEKİ AI"
 
 WELCOME = '''
 <div style="font-family: 'DM Sans', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.8; color: #1b1f2a; max-width: 560px; margin: 0 auto;">
 Merhaba{{ " " + first_name if first_name else "" }},
 <br><br>
-Bu örnek kayıt, NanobaseAI destek ekranının nasıl çalıştığını göstermek için oluşturuldu.
+Bu örnek kayıt, ZEKİ AI destek ekranının nasıl çalıştığını göstermek için oluşturuldu.
 <br><br>
 <b>Etkinlik alanı:</b> kayda verdiğiniz her yanıt hemen altta, kaydın geçmişinde görünür; bütün yazışma tek yerde durur.
 <br><br>
@@ -52,7 +52,7 @@ Sonraki adımlar:<br>
   <li>Kendi kendine yardım için bilgi bankası makaleleri ekleyin.</li>
 </ul>
 <br>
-NanobaseAI
+ZEKİ AI
 </div>
 '''
 
@@ -78,7 +78,7 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		[
 			('AUTHOR_EMAIl = "john@example.com"\nAUTHOR_NAME = "John Doe"',
 			 'AUTHOR_EMAIl = "ornek.musteri@example.com"\nAUTHOR_NAME = "Örnek Müşteri"'),
-			('d.subject = "Welcome to Helpdesk"', 'd.subject = "NanobaseAI\'ye hoş geldiniz"'),
+			('d.subject = "Welcome to Helpdesk"', 'd.subject = "ZEKİ AI\'ya hoş geldiniz"'),
 			('first_name = "there"\n    else:\n        first_name = (user_doc.first_name or "").strip() or "there"',
 			 'first_name = ""\n    else:\n        first_name = (user_doc.first_name or "").strip()'),
 		],
@@ -86,13 +86,13 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 	(
 		"helpdesk/helpdesk/api/onboarding.py",
 		[
-			('{"subject": "Welcome to Helpdesk"}', '{"subject": "NanobaseAI\'ye hoş geldiniz"}'),
-			('"subject": ["!=", "Welcome to Helpdesk"]', '"subject": ["!=", "NanobaseAI\'ye hoş geldiniz"]'),
+			('{"subject": "Welcome to Helpdesk"}', '{"subject": "ZEKİ AI\'ya hoş geldiniz"}'),
+			('"subject": ["!=", "Welcome to Helpdesk"]', '"subject": ["!=", "ZEKİ AI\'ya hoş geldiniz"]'),
 		],
 	),
 	(
 		"helpdesk/helpdesk/helpdesk/doctype/hd_ticket/hd_ticket.py",
-		[('if self.subject == "Welcome to Helpdesk":', 'if self.subject == "NanobaseAI\'ye hoş geldiniz":')],
+		[('if self.subject == "Welcome to Helpdesk":', 'if self.subject == "ZEKİ AI\'ya hoş geldiniz":')],
 	),
 	(
 		"helpdesk/helpdesk/helpdesk/workspace/helpdesk/helpdesk.json",
@@ -115,7 +115,7 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		"helpdesk/desk/vite.config.js",
 		[
 			('name: "Frappe Helpdesk",\n          short_name: "Helpdesk",', f'name: "{BRAND}",\n          short_name: "{BRAND}",'),
-			('"Modern, Streamlined, Free and Open Source Customer Service Software"', '"NanobaseAI müşteri destek ekranı"'),
+			('"Modern, Streamlined, Free and Open Source Customer Service Software"', '"ZEKİ AI müşteri destek ekranı"'),
 		],
 	),
 	(
@@ -385,7 +385,7 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		[("app.use(FrappeUI);", "app.use(FrappeUI, { socketio: false });")],
 	),
 	(
-		# Temsilci ekranı: «NanobaseAI» bölümü (sınıflama, özet, yanıt taslağı, makale taslağı) — bileşen bizim:
+		# Temsilci ekranı: «ZEKİ AI» bölümü (sınıflama, özet, yanıt taslağı, makale taslağı) — bileşen bizim:
 		# helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue, arka uç nanobase_brand/yz/kayit.py.
 		"helpdesk/desk/src/components/ticket-agent/TicketDetailsTab.vue",
 		[('        <!-- Key Info (core fields) -->\n', '        <NanobaseAIPanel />\n\n        <!-- Key Info (core fields) -->\n'),

@@ -22,7 +22,7 @@ from frappe.email.doctype.email_account.email_account import get_max_email_uid
 from frappe.utils import cint
 from helpdesk.overrides.email_account import CustomEmailAccount
 
-ACCOUNT = "NanobaseAI Destek"
+ACCOUNT = "ZEKİ AI"
 FOLDER = "INBOX"
 START_KEY = "nb_eposta_baslangic_uid::"
 # IMAP'te «UID n:*» kutuda n'den büyük e-posta yokken son e-postayı döndürür; üst sınır sayıyla verilir.

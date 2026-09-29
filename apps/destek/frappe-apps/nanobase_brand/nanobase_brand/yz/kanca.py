@@ -12,7 +12,7 @@ def on_ticket_insert(doc, method=None):
 		frappe.enqueue("nanobase_brand.yz.cozum.yeni_kayit", ticket=doc.name, queue="short",
 					   enqueue_after_commit=True, job_id=f"nb-yeni-kayit-{doc.name}", deduplicate=True)
 	except Exception:
-		frappe.log_error(title=f"NanobaseAI yeni kayıt işi kuyruğa alınamadı: {doc.name}")
+		frappe.log_error(title=f"ZEKİ AI yeni kayıt işi kuyruğa alınamadı: {doc.name}")
 
 
 COZULMUS = ("Resolved", "Closed")
@@ -39,7 +39,7 @@ def on_ticket_update(doc, method=None):
 			frappe.enqueue("flow.knowledge.ingest.ingest_source", source=source, queue="long",
 						   enqueue_after_commit=True, job_id="nb-bilgi-cozulen-kayitlar", deduplicate=True)
 	except Exception:
-		frappe.log_error(title=f"NanobaseAI bilgi bankası eşitlemesi kuyruğa alınamadı: {doc.name}")
+		frappe.log_error(title=f"ZEKİ AI bilgi bankası eşitlemesi kuyruğa alınamadı: {doc.name}")
 
 
 def on_communication_insert(doc, method=None):
@@ -54,4 +54,4 @@ def on_communication_insert(doc, method=None):
 		frappe.enqueue("nanobase_brand.yz.cozum.yanit", ticket=doc.reference_name, queue="short",
 					   enqueue_after_commit=True, job_id=f"nb-oneri-yaniti-{doc.name}", deduplicate=True)
 	except Exception:
-		frappe.log_error(title=f"NanobaseAI öneri yanıtı kuyruğa alınamadı: {doc.reference_name}")
+		frappe.log_error(title=f"ZEKİ AI öneri yanıtı kuyruğa alınamadı: {doc.reference_name}")

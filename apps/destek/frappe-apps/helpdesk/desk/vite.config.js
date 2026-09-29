@@ -57,11 +57,11 @@ export default defineConfig(async ({ mode }) => {
         },
         manifest: {
           display: "standalone",
-          name: "NanobaseAI",
-          short_name: "NanobaseAI",
+          name: "ZEKİ AI",
+          short_name: "ZEKİ AI",
           start_url: "/helpdesk",
           description:
-            "NanobaseAI müşteri destek ekranı",
+            "ZEKİ AI müşteri destek ekranı",
           icons: [
             {
               src: "/assets/helpdesk/desk/manifest/manifest-icon-192.maskable.png",

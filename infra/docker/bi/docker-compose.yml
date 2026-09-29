@@ -85,7 +85,7 @@ services:
     environment:
       CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
       ADMIN_TOKEN: ${SEMANTIC_ADMIN_TOKEN}
-      # NanobaseAI Destek ön kapısı (8446) ve iç model yolu (8447, yalnız bi_net). Boş kalabilir: Destek yoksa
+      # ZEKİ AI Destek ön kapısı (8446) ve iç model yolu (8447, yalnız bi_net). Boş kalabilir: Destek yoksa
       # 8446 502 verir, model yolu 503. Şablonda tanımsız değişken nginx'i durdurur; bu yüzden varsayılan boş.
       DESTEK_LLM_KEY: ${DESTEK_LLM_KEY:-}
       DESTEK_PUBLIC_ORIGIN: ${DESTEK_PUBLIC_ORIGIN:-}
@@ -93,7 +93,7 @@ services:
       - bi_metrics:/usr/share/nginx/metrics:ro
     ports:
       - "8088:80"          # geçici doğrudan erişim + doğrulama; NPM devreye girince kaldırılabilir
-      - "8446:8446"        # NanobaseAI Destek (iç ağ, HTTP)
+      - "8446:8446"        # ZEKİ AI Destek (iç ağ, HTTP)
     depends_on: [bridge, login]
     networks: [bi_net]
     restart: unless-stopped

@@ -384,7 +384,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopViewing(props.ticketId);
-  document.title = "NanobaseAI";
+  document.title = "ZEKİ AI";
   $socket.off("helpdesk:ticket-update");
 });
 </script>

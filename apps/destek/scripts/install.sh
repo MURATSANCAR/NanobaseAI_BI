@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NanobaseAI Destek kurulumu / güncellemesi (test sunucusu ya da müşteri VM'i).
+# ZEKİ AI kurulumu / güncellemesi (test sunucusu ya da müşteri VM'i).
 #
 #   apps/destek/scripts/install.sh <kaynak: git archive main'in apps/destek'i> <commit sha>
 #

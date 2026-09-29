@@ -42,7 +42,7 @@
     v-model="showHelpModal"
     v-model:articles="articles"
     appName="helpdesk"
-    title="NanobaseAI"
+    title="ZEKİ AI"
     :logo="logo"
     docsLink=""
     :afterSkip="(step: string) => capture('onboarding_step_skipped_' + step)"

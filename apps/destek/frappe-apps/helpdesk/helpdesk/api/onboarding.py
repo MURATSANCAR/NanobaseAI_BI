@@ -25,7 +25,7 @@ def mark_persona_captured(brand_name: str | None = None) -> None:
 @agent_manager_only
 def get_welcome_ticket() -> str | None:
     """Name of the seeded welcome ticket, if it still exists."""
-    return frappe.db.get_value("HD Ticket", {"subject": "NanobaseAI'ye hoş geldiniz"}, "name")
+    return frappe.db.get_value("HD Ticket", {"subject": "ZEKİ AI'ya hoş geldiniz"}, "name")
 
 
 @frappe.whitelist()
@@ -38,7 +38,7 @@ def get_first_ticket(ticket: str | None = None):
     result = frappe.get_all(
         "HD Ticket",
         filters={
-            "subject": ["!=", "NanobaseAI'ye hoş geldiniz"],
+            "subject": ["!=", "ZEKİ AI'ya hoş geldiniz"],
             "owner": ["=", frappe.session.user],
         },
         fields=["name"],

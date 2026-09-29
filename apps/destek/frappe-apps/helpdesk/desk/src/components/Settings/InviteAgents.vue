@@ -169,7 +169,7 @@ if (isAdmin) {
   roleOptions.push(managerRoleOption, {
     label: roleToLabel("System Manager"),
     value: "System Manager",
-    description: __("Can manage all aspects of NanobaseAI."),
+    description: __("Can manage all aspects of ZEKİ AI."),
   });
 } else if (isManager) {
   roleOptions.push(managerRoleOption);

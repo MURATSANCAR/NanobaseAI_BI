@@ -5,7 +5,7 @@ limit_req_zone $binary_remote_addr zone=timas_login:10m rate=20r/m;
 limit_req_zone $binary_remote_addr zone=timas_ask:10m rate=6r/m;
 limit_req_zone $binary_remote_addr zone=timas_api:10m rate=120r/m;
 limit_req_zone $binary_remote_addr zone=timas_studio_img:10m rate=600r/m;
-# NanobaseAI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
+# ZEKİ AI Destek (8446): şifre alan giriş uçları, IP başına dakikada 10 (test sunucusundaki vhost'la aynı).
 limit_req_zone $binary_remote_addr zone=destek_login:10m rate=10r/m;
 
 server {
@@ -302,7 +302,7 @@ server {
 }
 
 # ---------------------------------------------------------------------------------------------------------------
-# NanobaseAI Destek (apps/destek) — müşteri VM'inde ön kapı :8446 (HTTP, iç ağ). Destek kapsayıcısı bi_net'e
+# ZEKİ AI Destek (apps/destek) — müşteri VM'inde ön kapı :8446 (HTTP, iç ağ). Destek kapsayıcısı bi_net'e
 # `destek-frontend` adıyla bağlanır (apps/destek/docker/compose.bi-net.yaml). Ad istek anında çözülür: Destek kurulu
 # değilse yalnız bu port 502 verir, BI etkilenmez. Test sunucusunda bu işi nginx vhost'u yapar
 # (apps/destek/deploy/nginx-destek-8446.conf); iki yer aynı kuralları taşır.

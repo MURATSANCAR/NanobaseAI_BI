@@ -1,7 +1,7 @@
 import { ArrowRight, Headset, Plus } from 'lucide-react';
 
 /**
- * Destek masası (NanobaseAI Destek, apps/destek): talep aç ve izle. Masa portalla aynı sunucu adında 8446 portunda
+ * Destek masası (ZEKİ AI Destek, apps/destek): talep aç ve izle. Masa portalla aynı sunucu adında 8446 portunda
  * çalışır (test sunucusu https://portal.nanobase.ai:8446, müşteri VM'i http://192.168.0.55:8446); adres sayfanın
  * kendi adresinden türetilir, ayar gerekmez. Masa portal oturumuyla kendiliğinden açılır (tek oturum).
  * Bağlantılar talep portalına gider (çalışan yalnız kendi taleplerini görür); BT masayı /helpdesk'ten kullanır.

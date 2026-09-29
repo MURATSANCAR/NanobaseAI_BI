@@ -763,7 +763,7 @@ export default function KampusPage() {
 
         {/* SAĞ SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
-          {/* DESTEK MASASI — talep aç / izle (NanobaseAI Destek, aynı sunucu adında 8446). */}
+          {/* DESTEK MASASI — talep aç / izle (ZEKİ AI Destek, aynı sunucu adında 8446). */}
           <DestekCard />
           <RoomsCard />
 
