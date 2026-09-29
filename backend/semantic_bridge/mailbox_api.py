@@ -487,6 +487,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         except S.SourceError as e:
             out.update(ok=False, error=str(e))
             M.meta_set(engine, tenant, "last_run", out)
+            M.meta_set(engine, tenant, "ok_since", None)      # kesintisiz okuma dizisi koptu (düzelme şartı a)
             return out
         # Sınıflama: önce canlı (NORMAL), sonra geçmiş (BATCH, yalnız tür). Süre dolunca kalan sonraki tura.
         enabled = [c for c in rules["categories"] if c["enabled"]]
@@ -536,6 +537,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                    remaining=len(M.pending(engine, tenant, False)), remainingHistorical=len(M.pending(engine, tenant, True)))
         M.meta_set(engine, tenant, "last_run", out)
         M.meta_set(engine, tenant, "last_ok_at", out["at"])
+        # Düzelme şartları için: kesintisiz başarılı okumanın başladığı an ve kutu listesinin okunduğu son okuma.
+        if not M.meta_get(engine, tenant, "ok_since"):
+            M.meta_set(engine, tenant, "ok_since", out["at"])
+        M.meta_set(engine, tenant, "list_read", {"at": out["at"], "count": out["read"]})
         return out
 
     @app.post(f"{P}/run-due")
@@ -588,31 +593,44 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
                 out["notified"] += 1
                 out["noRecipient"] += int(not it["users"])
                 out["levels"][it["level"]] = out["levels"].get(it["level"], 0) + 1
-            # Bağlantı: bağlıyken son başarılı okuma eşikten eskiyse bir kez uyarılır (ortak iç bildirim şablonu); okuma
-            # düzelince, uyarı gitmişse tek bir «Düzeldi» e-postası gider ve kayıt sıfırlanır. Aynı kesinti için ikinci
-            # uyarı yok; yalnız gönderimi başarısız olan uyarı sonraki turda yeniden denenir.
+            # Bağlantı: bağlıyken son başarılı okuma eşikten eskiyse bir kez uyarılır (ortak iç bildirim şablonu). Aynı
+            # kesinti için ikinci uyarı yok; yalnız gönderimi başarısız olan uyarı sonraki turda yeniden denenir.
+            # «Düzeldi» yalnız gerçekten çözüldüyse (kullanıcı kararı 2026-09-29): (a) `ITOPS_RESOLVE_MIN` dk kesintisiz
+            # başarılı okuma, (b) kutu listesi okundu, (c) kutuyu kullanan ayrı bir zamanlanmış iş yok → (a)+(b) yeter ve
+            # e-postada yazar. Şartlar sağlanana dek uyarı kaydı durur; arada yeniden koparsa aynı kesinti sürer.
             state = S.connection_state(conf)
             last_ok = M.meta_get(engine, tenant, "last_ok_at")
             if state["connected"] and last_ok:
                 now = M._now()
                 ok_at = M._aware(datetime.fromisoformat(last_ok))
-                age = (now - ok_at).total_seconds() / 60
                 sent = M.meta_get(engine, tenant, "conn_alert_at")
                 address = conf("MAIL_ADDRESS", "") or ""
                 base = conf("ALERT_LINK") or ""
-                if age >= st["connectionAlertMin"] and (not sent or sent.get("eposta") == "failed"):
+                ok_since = M.meta_get(engine, tenant, "ok_since")
+                listed = M.meta_get(engine, tenant, "list_read") or {}
+                try:
+                    need = max(0, int(conf("ITOPS_RESOLVE_MIN", "15") or 15))
+                except ValueError:
+                    need = 15
+                back = M._aware(datetime.fromisoformat(ok_since)) if ok_since else None
+                listed_at = M._aware(datetime.fromisoformat(listed["at"])) if listed.get("at") else None
+                step = M.connection_decision(now, ok_at, sent, back, listed_at, st["connectionAlertMin"], need)
+                if step == "down":
                     run = M.meta_get(engine, tenant, "last_run") or {}
-                    status = IB.send(M.connection_down_notice(address, ok_at, now, run.get("error") or "", base),
+                    since = (M._aware(datetime.fromisoformat(sent["since"])) if sent and sent.get("since") else ok_at)
+                    status = IB.send(M.connection_down_notice(address, since, now, run.get("error") or "", base),
                                      st["connectionAlertTo"])
                     M.meta_set(engine, tenant, "conn_alert_at", {"at": now.isoformat(), "eposta": status,
-                                                                 "since": ok_at.isoformat()})
+                                                                 "since": since.isoformat()})
                     out["connectionAlert"] = status
-                elif age < st["connectionAlertMin"] and sent:
+                elif step == "resolved":
                     if sent.get("eposta") == "sent":
                         since = M._aware(datetime.fromisoformat(sent.get("since") or sent["at"]))
-                        out["connectionFixed"] = IB.send(M.connection_fixed_notice(address, since, ok_at, now, base),
-                                                         st["connectionAlertTo"])
+                        out["connectionFixed"] = IB.send(M.connection_fixed_notice(
+                            address, since, back, now, base, steady_min=int((now - back).total_seconds() // 60),
+                            need_min=need, listed_at=listed_at), st["connectionAlertTo"])
                     M.meta_set(engine, tenant, "conn_alert_at", None)
+                out["connectionStep"] = step
             return out
         finally:
             sla_lock.release()

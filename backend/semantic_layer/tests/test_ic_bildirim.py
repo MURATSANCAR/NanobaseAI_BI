@@ -31,8 +31,9 @@ LOCAL = timezone(timedelta(hours=3))
 T0 = datetime(2026, 9, 29, 6, 42, tzinfo=UTC)          # 09:42 İstanbul
 LINK = "https://portal.timas.com.tr/timas/uyarilar"
 BT = ["bilgiislem@timas.com.tr"]
-ST = {"everySec": 300, "failsToOpen": 2, "outageMin": 10, "restartGraceMin": 5, "logoStaleDays": 3, "crmStaleHours": 24,
-      "remindHours": 0, "staleRemindHours": 0, "weeklyDay": 1, "reportHour": 8}
+ST = {"everySec": 300, "failsToOpen": 2, "outageMin": 10, "restartGraceMin": 5, "resolveMin": 15, "logoStaleDays": 3,
+      "crmStaleHours": 24, "remindHours": 0, "staleRemindHours": 0, "weeklyDay": 1, "reportHour": 8}
+FRESH = datetime(2026, 9, 29, 6, 0, tzinfo=UTC)                # Logo'dan okunan son fatura (veri okuması şartı)
 DIRTY = "OperationalError: FreeTDS pyodbc; uvicorn systemd nginx; vLLM Qwen3.8-27B; Temporal PostgreSQL docker"
 
 
@@ -54,9 +55,17 @@ class Outbox:
         return self.result
 
 
-def tour(engine, ring, ok, at, st=ST, detail="zaman aşımı"):
-    I.record_check(engine, TENANT, ring, ok, detail=detail, at=at)
-    return I.evaluate(engine, TENANT, [{"ring": ring, "ok": ok, "detail": detail}], st, now=at)
+def tour(engine, ring, ok, at, st=ST, detail="zaman aşımı", data_end=None):
+    if ok and ring in I.STALE_RINGS and data_end is None:
+        data_end = FRESH                                         # başarılı Logo/CRM denemesi veri sonunu okur
+    if data_end is False:
+        data_end = None                                          # «bağlandı ama veri okunamadı» denemesi
+    I.record_check(engine, TENANT, ring, ok, detail=detail, at=at, data_end=data_end)
+    return I.evaluate(engine, TENANT, [{"ring": ring, "ok": ok, "detail": detail, "data_end": data_end}], st, now=at)
+
+
+def closed_ids(engine):
+    return [x["id"] for x in I.list_incidents(engine, TENANT, state="closed")["items"]]
 
 
 def assert_template(n: IB.Notice, tag: str, link_part: str) -> tuple[str, str]:
@@ -155,14 +164,63 @@ def test_long_outage_sends_one_down_and_one_fixed(engine):
     assert down.subject == "[Kesinti] Logo bağlantısı 09:42'den beri yanıt vermiyor"
     html, text = assert_template(down, "Kesinti", "/timas/sistem-durumu")
     assert "Satış, ciro" in text and "3 kez art arda" in text     # etkisi ve 10. dk'ya dek deneme sayısı
-    tour(engine, "logo", True, T0 + timedelta(minutes=45))
-    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=45))
-    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=50))
+    # «Otomatik düzelir» izlenimi yok; ne olacağı tek cümle.
+    assert "kendiliğinden" not in text and "yapmanız gerekmez" not in text
+    assert "Bağlantı 15 dakika kesintisiz çalışıp veri okununca «Düzeldi» e-postası gelir." in text
+    assert "kendiliğinden kapanır" not in I.RING_BY_ID["logo"]["recipe"]
+    # İlk başarılı deneme olayı kapatmaz: 15 dk kesintisiz çalışma + veri okuması gerekir.
+    for m in (45, 50, 55):
+        tour(engine, "logo", True, T0 + timedelta(minutes=m))
+        I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=m))
+    assert len(out.notices) == 1 and not closed_ids(engine)
+    st = I.status(engine, TENANT, ST, now=T0 + timedelta(minutes=55))
+    assert "doğrulama sürüyor" in st["summary"]["text"]
+    tour(engine, "logo", True, T0 + timedelta(minutes=60))
+    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=60))
+    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=65))
     assert len(out.notices) == 2
     fixed = out.notices[1]
     assert fixed.subject == "[Düzeldi] Logo bağlantısı 10:27'de geri geldi · 45 dk sürdü" and fixed.tone == "duzeldi"
-    assert_template(fixed, "Düzeldi", "/timas/sistem-durumu")
+    _, ftext = assert_template(fixed, "Düzeldi", "/timas/sistem-durumu")
+    assert "Kesintisiz çalışma: Sağlandı: 10:27'den bu yana 15 dk" in ftext
+    assert "Veri okuması: Sağlandı: Logo'dan son fatura tarihi okundu (29 Eylül 2026)" in ftext
+    assert "sık çalışan zamanlanmış iş yok; düzelme ilk iki şartla doğrulandı" in ftext
     assert IB.TONES["duzeldi"]["bar"] in IB.render_html(fixed) and IB.TONES["kesinti"]["bar"] in html
+
+
+def test_failure_during_recovery_keeps_the_same_incident(engine):
+    out = Outbox()
+    plan = [(0, False), (5, False), (10, False), (15, True), (20, False), (25, True), (30, True), (35, True), (40, True)]
+    for m, ok in plan:
+        tour(engine, "logo", ok, T0 + timedelta(minutes=m))
+        I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=m))
+    assert [n.badge for n in out.notices] == ["Kesinti", "Düzeldi"]          # yeni «Kesinti» yok
+    assert out.notices[1].subject == "[Düzeldi] Logo bağlantısı 10:07'de geri geldi · 25 dk sürdü"
+    assert len(I.list_incidents(engine, TENANT, state="all")["items"]) == 1
+
+
+def test_no_data_read_or_no_job_run_keeps_the_incident_open(engine):
+    out = Outbox()
+    for m in (0, 5, 10):
+        tour(engine, "logo", False, T0 + timedelta(minutes=m))
+    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=10))
+    # (b) bağlandı ama veri sonu okunamadı: 20 dk başarılı deneme olsa da kapanmaz
+    for m in (15, 20, 25, 30, 35):
+        tour(engine, "logo", True, T0 + timedelta(minutes=m), data_end=False)
+    assert not closed_ids(engine)
+    # (c) bağlantıyı kullanan sık iş var ama kurtulmadan sonra koşmadı → bekler; koşunca kapanır
+    I.upsert_job(engine, TENANT, "kopru-saglik", label="Sorgu motoru sağlık denetimi", source="watchdog",
+                 last_at=T0 + timedelta(minutes=2), last_ok=True)
+    for m in (40, 45, 50):
+        tour(engine, "logo", True, T0 + timedelta(minutes=m))
+    assert not closed_ids(engine)
+    I.upsert_job(engine, TENANT, "kopru-saglik", label="Sorgu motoru sağlık denetimi", source="watchdog",
+                 last_at=T0 + timedelta(minutes=52), last_ok=True)
+    tour(engine, "logo", True, T0 + timedelta(minutes=55))
+    assert closed_ids(engine)
+    I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(minutes=55))
+    text = IB.render_text(out.notices[-1])
+    assert "Zamanlanmış iş: Sağlandı: «Sorgu motoru sağlık denetimi»" in text
 
 
 def test_stale_data_notice_says_since_when(engine):
@@ -173,16 +231,24 @@ def test_stale_data_notice_says_since_when(engine):
     I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0)
     n = out.notices[0]
     assert n.subject == "[Uyarı] Logo verisi 17 Ağustos'tan beri güncellenmiyor" and n.tone == "uyari"
-    assert_template(n, "Uyarı", "/timas/sistem-durumu")
+    _, text = assert_template(n, "Uyarı", "/timas/sistem-durumu")
+    # Somut BT adımı; «BT ile görüşün» yok (e-posta zaten BT'ye gider); sunucu adı/adresi yok.
+    assert "BT ile görüşün" not in text and "canlı Logo sunucusunda okuma yetkisi verin" in text
+    assert "Yönetim → Ayarlar → Logo bağlantısında canlı Logo sunucusunu seçin" in text
+    assert re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", text) is None
     I.notify(engine, TENANT, ST, out, BT, link=LINK, now=T0 + timedelta(days=3))
     assert len(out.notices) == 1                                   # hatırlatma varsayılanda kapalı
 
 
-def test_jobs_digest_uses_the_template():
-    n = I.jobs_digest_notice([{"label": "Planlı raporlar", "lastAt": T0.isoformat(), "lastError": DIRTY, "every": "5 dk"}],
-                             T0, LINK)
-    assert n.subject == "[Uyarı] Zamanlanmış işler · 1 iş hata verdi · 29 Eylül"
-    assert_template(n, "Uyarı", "/timas/sistem-durumu")
+def test_jobs_digest_lists_only_it_actions():
+    jobs = [{"label": "Planlı raporlar", "lastAt": T0.isoformat(), "lastError": "Logo'ya ulaşılamadı. " + DIRTY,
+             "every": "5 dk"},
+            {"label": "Stok gece okuması", "lastAt": T0.isoformat(), "lastError": "Sayı dönüşümü taştı", "every": "gece"}]
+    n = I.jobs_digest_notice(jobs, T0, LINK)
+    assert n.subject == "[Uyarı] Zamanlanmış işler · 1 iş bağlantı ya da yetki hatası verdi · 29 Eylül"
+    _, text = assert_template(n, "Uyarı", "/timas/sistem-durumu")
+    assert "Stok gece okuması" not in text and "1 zamanlanmış iş uygulama kaynaklı hata verdi" in text
+    assert I.split_jobs(jobs) == ([jobs[0]], [jobs[1]])
 
 
 # ------------------------------------------------------------------ 2) haftalık sağlık özeti
@@ -191,12 +257,21 @@ def test_jobs_digest_uses_the_template():
 def test_weekly_notice(engine):
     for m in (0, 5, 10):
         tour(engine, "vpn", False, T0 - timedelta(days=2) + timedelta(minutes=m))
-    tour(engine, "vpn", True, T0 - timedelta(days=2) + timedelta(minutes=40))
+    for m in (40, 45, 50, 55):                                        # 15 dk kesintisiz → kapanır, kesinti 40 dk
+        tour(engine, "vpn", True, T0 - timedelta(days=2) + timedelta(minutes=m))
     now = datetime(2026, 9, 29, 5, 0, tzinfo=UTC)                   # 08:00 İstanbul; pencere 22–28 Eylül
-    n = I.weekly_notice(engine, TENANT, now, [], LINK)
+    jobs = [{"label": "Planlı raporlar", "lastAt": T0.isoformat(), "lastError": "CRM oturum açma reddedildi"},
+            {"label": "Stok gece okuması", "lastAt": T0.isoformat(), "lastError": "Sayı dönüşümü taştı"},
+            {"label": "Kampanya özeti", "lastAt": T0.isoformat(), "lastError": "Beklenmeyen boş sonuç"}]
+    n = I.weekly_notice(engine, TENANT, now, jobs, LINK)
     assert n.subject == "[Haftalık] Sistem sağlığı · 22–28 Eylül" and n.tone == "bilgi"
     html, text = assert_template(n, "Haftalık", "/timas/sistem-durumu")
     assert "Şirket ağı bağlantısı · 1 · 40 dk" in text and "toplam kesinti 40 dk" in n.headline
+    # «Ne yapmalı» yalnız BT'nin işi; uygulama hataları «Bilgi için» altında sayıyla.
+    assert "kök neden" not in " ".join(n.actions) and "Planlı raporlar" in text
+    assert "Stok gece okuması" not in text and "Kampanya özeti" not in text
+    assert n.info == ["2 zamanlanmış iş uygulama kaynaklı hata verdi; uygulama ekibi ilgileniyor, sizden bir işlem beklenmiyor."]
+    assert ">Bilgi için: uygulama ekibi ilgileniyor</p>" in html and "BİLGİ İÇİN: UYGULAMA EKİBİ İLGİLENİYOR" in text
     quiet = I.weekly_notice(engine, TENANT, now + timedelta(days=14), [], LINK)
     assert "kesintisiz" in quiet.headline
 
@@ -228,9 +303,30 @@ def test_mailbox_connection_notices():
     assert n.subject == "[Kesinti] Kurumsal e-posta kutusu 09:12'den beri okunamıyor"
     html, text = assert_template(n, "Kesinti", "/timas/kurumsal-eposta")
     assert "timas@timas.com.tr kutusu" in text
-    f = M.connection_fixed_notice("timas@timas.com.tr", since, T0 + timedelta(minutes=95), T0 + timedelta(minutes=96), LINK)
+    back = T0 + timedelta(minutes=95)
+    f = M.connection_fixed_notice("timas@timas.com.tr", since, back, back + timedelta(minutes=16), LINK,
+                                  steady_min=16, need_min=15, listed_at=back + timedelta(minutes=15))
     assert f.subject == "[Düzeldi] Kurumsal e-posta kutusu 11:17'de yeniden okundu · 2 sa 5 dk sürdü"
-    assert_template(f, "Düzeldi", "/timas/kurumsal-eposta")
+    _, ftext = assert_template(f, "Düzeldi", "/timas/kurumsal-eposta")
+    assert "Kesintisiz çalışma: Sağlandı: 11:17'den bu yana 16 dk" in ftext
+    assert "Veri okuması: Sağlandı: kutudaki ileti listesi okundu" in ftext
+    assert "Kutuyu kullanan ayrı bir zamanlanmış iş yok; düzelme ilk iki şartla doğrulandı" in ftext
+
+
+def test_mailbox_connection_resolves_only_when_really_fixed():
+    d = M.connection_decision
+    sent = {"eposta": "sent", "since": (T0 - timedelta(minutes=30)).isoformat()}
+    back = T0
+    # 30 dk okunamadı → bir kez uyarı; gönderilmişse ikinci uyarı yok
+    assert d(T0, T0 - timedelta(minutes=30), None, None, None, 30, 15) == "down"
+    assert d(T0, T0 - timedelta(minutes=45), sent, None, None, 30, 15) is None
+    assert d(T0, T0 - timedelta(minutes=45), {"eposta": "failed"}, None, None, 30, 15) == "down"
+    # okuma geldi ama 15 dk dolmadı ya da liste okunmadı → olay sürer
+    assert d(back + timedelta(minutes=10), back + timedelta(minutes=10), sent, back, back + timedelta(minutes=10), 30, 15) == "wait"
+    assert d(back + timedelta(minutes=20), back + timedelta(minutes=20), sent, back, None, 30, 15) == "wait"
+    assert d(back + timedelta(minutes=20), back + timedelta(minutes=20), sent, back, back + timedelta(minutes=20), 30, 15) == "resolved"
+    # uyarı hiç gitmediyse düzelme de sessiz
+    assert d(back + timedelta(minutes=20), back + timedelta(minutes=20), None, back, back, 30, 15) is None
 
 
 # ------------------------------------------------------------------ 5) departmansız CRM kullanıcıları
@@ -279,6 +375,7 @@ def test_all_five_recipient_settings_exist():
 
     keys = {s["key"] for s in admin_mod.SPEC}
     assert {"ITOPS_RECIPIENTS", "ITOPS_WEEKLY_TO", "SECURITY_ALERT_RECIPIENTS", "MAIL_CONNECTION_ALERT_TO",
-            "CRM_UNASSIGNED_TO", "ITOPS_OUTAGE_MIN", "ITOPS_RESTART_GRACE_MIN", "ITOPS_REMIND_HOURS"} <= keys
+            "CRM_UNASSIGNED_TO", "ITOPS_OUTAGE_MIN", "ITOPS_RESTART_GRACE_MIN", "ITOPS_REMIND_HOURS",
+            "ITOPS_RESOLVE_MIN"} <= keys
     st = I.settings(lambda k, d="": d)
-    assert (st["outageMin"], st["restartGraceMin"], st["remindHours"]) == (10, 5, 0)
+    assert (st["outageMin"], st["restartGraceMin"], st["remindHours"], st["resolveMin"]) == (10, 5, 0, 15)

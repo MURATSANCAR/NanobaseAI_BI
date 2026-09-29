@@ -230,6 +230,9 @@ class Notice:
     #: Neden bu adrese geldi (ayar adı), altta küçük yazı.
     why: str = ""
     tag: str = ""                  # rozet yazısı; boşsa durumun adı
+    #: «Ne yapmalı»dan sonra, alıcının yapacağı iş olmayan bilgi (ör. uygulama ekibinin ilgilendiği hatalar).
+    info: list[str] = field(default_factory=list)
+    info_title: str = "Bilgi için"
 
     @property
     def badge(self) -> str:
@@ -266,6 +269,7 @@ def render_text(n: Notice) -> str:
     section("NE OLDU", n.what)
     section("ETKİSİ", n.impact)
     section("NE YAPMALI", n.actions, numbered=True)
+    section(tr_upper(n.info_title), n.info)
     for t in n.tables:
         if not t.rows:
             continue
@@ -366,6 +370,8 @@ def render_html(n: Notice) -> str:
         parts.append(_section("Etkisi", _paras(n.impact)))
     if n.actions:
         parts.append(_section("Ne yapmalı", _steps(n.actions, tone)))
+    if n.info:
+        parts.append(_section(n.info_title, _paras(n.info)))
     for t in n.tables:
         if t.rows:
             parts.append(_section(plain(t.title) or "Ayrıntı", _table(t)))

@@ -25,9 +25,11 @@ from semantic_layer.tests.conftest import TENANT
 
 UTC = timezone.utc
 T0 = datetime(2026, 9, 28, 9, 0, tzinfo=UTC)
-# Bu dosyanın kural testleri deneme sayısını sınar: süre eşiği ve yeniden başlatma payı kapalı. Gürültü önleme
+# Bu dosyanın kural testleri deneme sayısını sınar: süre eşiği, yeniden başlatma payı ve düzelme süresi kapalı (düzelme
+# için veri okuması yine şart: Logo/CRM'de başarılı denemede veri sonu olmalı). Gürültü önleme ve düzelme şartları
 # (süre eşiği, açılış kaydı, tek kopma + tek düzelme) test_ic_bildirim.py'de.
-ST = {"everySec": 300, "failsToOpen": 2, "outageMin": 0, "restartGraceMin": 0, "logoStaleDays": 3, "crmStaleHours": 24,
+ST = {"everySec": 300, "failsToOpen": 2, "outageMin": 0, "restartGraceMin": 0, "resolveMin": 0, "logoStaleDays": 3,
+      "crmStaleHours": 24,
       "remindHours": 24, "staleRemindHours": 24, "weeklyDay": 1, "reportHour": 8}
 
 
@@ -101,7 +103,7 @@ def test_unsent_opening_is_retried_and_its_recovery_is_not_announced(engine):
     tour(engine, [{"ring": "crm", "ok": False}], T0 + timedelta(minutes=5))
     assert I.notify(engine, TENANT, ST, none, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=5))["sent"] == "no_smtp"
     assert I.notify(engine, TENANT, ST, none, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=10))["new"] == 1   # yeniden denendi
-    tour(engine, [{"ring": "crm", "ok": True}], T0 + timedelta(minutes=15))
+    tour(engine, [{"ring": "crm", "ok": True, "data_end": T0}], T0 + timedelta(minutes=15))
     ok = Outbox()
     I.notify(engine, TENANT, ST, ok, ["bt@timas.com.tr"], now=T0 + timedelta(minutes=15))
     assert ok.mails == []                                         # açılışı bilinmeyen olayın düzelmesi duyurulmaz

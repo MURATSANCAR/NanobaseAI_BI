@@ -12,6 +12,7 @@ Gerçek verili sürüm test sunucusunda `kabul.py` ile (canlı tablolardan kurul
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -44,7 +45,13 @@ def samples() -> dict[str, tuple[IB.Notice, list]]:
     # 1) ITOPS_RECIPIENTS — kopma ve düzelme
     logo = inc("logo", t(29, 9, 42), err="Bağlantı zaman aşımına uğradı (sunucu 60 sn içinde yanıt vermedi).")
     out["1a-kesinti-logo"] = (I.down_notice(None, "timas", [logo], t(29, 9, 52), LINK, fail_counts={"logo": 3}), [])
-    out["1b-duzeldi-logo"] = (I.fixed_notice([dict(logo, closed_at=t(29, 10, 27))], t(29, 10, 27), LINK), [])
+    # «Düzeldi» yalnız üç şart sağlanınca: 15 dk kesintisiz çalışma, veri okuması, bağlantıyı kullanan işin koşusu.
+    resolved = {"ok": True, "backAt": t(29, 10, 27).isoformat(), "confirmedAt": t(29, 10, 42).isoformat(),
+                "steadyMin": 15, "needMin": 15, "dataRead": True, "dataText": I.DATA_READ["logo"],
+                "dataEnd": t(29, 10, 5).isoformat(), "jobState": "var", "jobLabel": "Sorgu motoru sağlık denetimi",
+                "jobAt": t(29, 10, 35).isoformat(), "jobsWaiting": []}
+    out["1b-duzeldi-logo"] = (I.fixed_notice([dict(logo, closed_at=t(29, 10, 27), resolve_json=json.dumps(resolved))],
+                                             t(29, 10, 42), LINK), [])
     stale = inc("logo", t(29, 8, 5), kind="tazelik", err="Logo veri sonu 17.08.2026")
     out["1c-uyari-logo-verisi-eski"] = (I.stale_notice(None, "timas", [stale], ST, t(29, 8, 5), LINK,
                                                        data_ends={"logo": t(17, 21, 0, month=8)}), [])
@@ -52,8 +59,11 @@ def samples() -> dict[str, tuple[IB.Notice, list]]:
     dt = {r["id"]: {"count": 0, "minutes": 0} for r in I.RINGS}
     dt["logo"] = {"count": 1, "minutes": 45}
     dt["vpn"] = {"count": 2, "minutes": 18}
-    jobs = [{"label": "Birlikte alınan yazarlar", "lastAt": t(28, 3, 0).isoformat(),
-             "lastError": "Son koşu başarısız (zaman aşımı)."}]
+    # Biri BT'nin işi (yetki), ikisi uygulama hatası: «Ne yapmalı»da yalnız ilki, ötekiler «Bilgi için» altında sayıyla.
+    jobs = [{"label": "Departmansız CRM kullanıcıları e-postası", "lastAt": t(28, 12, 0).isoformat(),
+             "lastError": "CRM okuma hesabının oturum açması reddedildi."},
+            {"label": "Birlikte alınan yazarlar", "lastAt": t(28, 3, 0).isoformat(), "lastError": "Son koşu başarısız."},
+            {"label": "Stok gece okuması", "lastAt": t(28, 2, 0).isoformat(), "lastError": "Sayı dönüşümü taştı."}]
     out["2-haftalik-sistem-sagligi"] = (I.weekly_notice(None, "timas", t(29, 8, 0), jobs, LINK, dt=dt, still=[stale]), [])
     # 3) SECURITY_ALERT_RECIPIENTS — güvenlik uyarısı ve günlük erişim özeti
     alert = {"id": 1, "rule": "hatali_giris", "username": "ahmet.yilmaz", "severity": "kritik",
@@ -68,7 +78,8 @@ def samples() -> dict[str, tuple[IB.Notice, list]]:
                                                                 "Kutuya erişim reddedildi: hizmet hesabının yetkisi yok.",
                                                                 LINK), [])
     out["4b-duzeldi-eposta-kutusu"] = (M.connection_fixed_notice("timas@timas.com.tr", t(29, 9, 12), t(29, 11, 17),
-                                                                 t(29, 11, 20), LINK), [])
+                                                                 t(29, 11, 33), LINK, steady_min=16, need_min=15,
+                                                                 listed_at=t(29, 11, 32)), [])
     # 5) CRM_UNASSIGNED_TO — departmansız CRM kullanıcıları (Excel ekli)
     rows = [{"name": "Ali Kaya", "account": "ali.kaya", "adUnit": "Satış", "email": "", "created": "2025-01-02",
              "mainRoles": ["07-Temel Rol"], "roles": ["07-Temel Rol"], "crmUnit": "Timaş"},

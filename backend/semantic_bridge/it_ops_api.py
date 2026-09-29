@@ -81,6 +81,8 @@ def run_tour(ctx: S.Ctx, datasource: str, *, source: str = "timer", rings: Optio
             due = I.due_digests(ctx.engine, ctx.tenant, st, n)
             if due["daily"]:
                 failing = I.failing_jobs(ctx.engine, ctx.tenant, since=n - timedelta(hours=24))
+                # Yalnız BT'nin yapabileceği (bağlantı/hesap/yetki) hata varken gider; uygulama hataları BT'ye iş değildir.
+                failing = I.split_jobs(failing)[0] and failing
                 res = (send(I.jobs_digest_notice(failing, n, link), to) if failing and to
                        else ("empty" if not failing else "no_recipient"))
                 if res in ("sent", "empty"):

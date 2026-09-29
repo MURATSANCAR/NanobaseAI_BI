@@ -66,6 +66,8 @@ INCIDENTS = sa.Table(
     sa.Column("notify_status", sa.String(16)),         # sent | no_smtp | no_recipient | failed
     sa.Column("reminded_at", sa.DateTime(timezone=True)),
     sa.Column("closed_notify", sa.String(16)),         # sent | ... | skip (açılış bildirilmemişse)
+    # Kopma kapanırken sağlanan düzelme şartları (JSON): kesintisiz süre, veri okuması, zamanlanmış iş.
+    sa.Column("resolve_json", sa.Text),
     sa.Column("root_cause", sa.Text),
     sa.Column("root_cause_by", sa.String(120)),
     sa.Column("root_cause_at", sa.DateTime(timezone=True)),
@@ -142,9 +144,17 @@ RINGS: list[dict[str, str]] = [
 ]
 RING_BY_ID = {r["id"]: r for r in RINGS}
 STALE_RINGS = ("logo", "crm")
-STALE_RECIPE = ("Okunan veritabanındaki son kayıt eski. Bağlantı çalışıyor ama veri gelmiyor: okunan veritabanı canlı "
-                "sistemin donmuş bir kopyası olabilir. Raporlar bu tarihe kadar doğrudur; canlı veritabanına okuma "
-                "erişimi için BT ile görüşün.")
+#: «Veri eski» olayında BT'nin yapacağı iş (bildirim zaten BT'ye gider: «BT ile görüşün» yazılmaz). Sunucu adı ve adresi
+#: yazılmaz, «canlı Logo sunucusu» denir.
+STALE_RECIPES: dict[str, str] = {
+    "logo": ("Okunan Logo sunucusu canlı sistem değil, donmuş bir kopya: bağlantı çalışıyor ama yeni fatura gelmiyor. "
+             "Portalın okuma hesabına canlı Logo sunucusunda okuma yetkisi verin. Ardından portalda Yönetim → Ayarlar → "
+             "Logo bağlantısında canlı Logo sunucusunu seçin."),
+    "crm": ("Okunan CRM veritabanı canlı sistem değil ya da güncellenmiyor: bağlantı çalışıyor ama kitap kayıtlarında yeni "
+            "değişiklik gelmiyor. Portalın okuma hesabına canlı CRM sunucusunda okuma yetkisi verin. Ardından portalda "
+            "Yönetim → Ayarlar → CRM bağlantısında canlı CRM sunucusunu seçin."),
+}
+STALE_RECIPE = STALE_RECIPES["logo"]
 
 #: Ekrana ve e-postaya giden metinde geçmeyecek teknoloji adları → sade karşılığı (ortak liste `ic_bildirim.TECH`).
 #: İç günlükte ham metin kalır.
@@ -255,6 +265,9 @@ def ensure(engine: sa.engine.Engine) -> None:
             if "sql_text" not in have:
                 with engine.begin() as c:
                     c.execute(sa.text(f"ALTER TABLE {CHECKS.name} ADD COLUMN sql_text TEXT"))
+            if "resolve_json" not in {c["name"] for c in sa.inspect(engine).get_columns(INCIDENTS.name)}:
+                with engine.begin() as c:
+                    c.execute(sa.text(f"ALTER TABLE {INCIDENTS.name} ADD COLUMN resolve_json TEXT"))
 
         # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz (kolon eklenince tanım da değişir).
         from semantic_layer.store import schema_stamp
@@ -276,6 +289,9 @@ def settings(conf: Callable[[str, str], str]) -> dict[str, Any]:
         # arkasındaki bu kadar dakikadaki başarısız deneme sayılmaz (planlı yeniden başlatma).
         "outageMin": num("ITOPS_OUTAGE_MIN", 10),
         "restartGraceMin": num("ITOPS_RESTART_GRACE_MIN", 5),
+        # «Düzeldi» ancak gerçek çözümde: bu kadar dk kesintisiz başarılı denetim + veri okuması + (varsa) bağlantıyı
+        # kullanan zamanlanmış işin kurtulmadan sonra başarılı koşusu.
+        "resolveMin": num("ITOPS_RESOLVE_MIN", 15),
         "logoStaleDays": num("ITOPS_LOGO_STALE_DAYS", 3),
         "crmStaleHours": num("ITOPS_CRM_STALE_HOURS", 24),
         # 0: aynı olay için ikinci e-posta yok (düzelince tek «Düzeldi» gider).
@@ -348,6 +364,95 @@ def _fail_streak(c, tenant: str, ring: str, boots: list[datetime], grace_min: in
     return [r for r in rows if not in_restart_window(r["at"], boots, grace_min)]
 
 
+# ------------------------------------------------------------------ düzelme şartları («gerçekten çözüldü mü»)
+
+#: Halkanın kendi okuması: kopma kapanırken bunun başarılı olduğu söylenir (veri sorgusu olan halkada satır dönmüş olmalı).
+DATA_READ = {
+    "logo": "Logo'dan son fatura tarihi okundu",
+    "crm": "CRM'den son kitap kaydı değişikliği okundu",
+    "giris": "Şirket dizininde servis hesabıyla oturum açıldı",
+    "model": "Zeki AI modeli deneme sorusuna cevap verdi",
+    "eposta": "Posta sunucusunda oturum açıldı",
+    "vpn": "Şirket ağındaki sunucuya ulaşıldı",
+    "vm": "Müşteri sunucusu yanıt verdi",
+}
+
+_LOGO_JOBS = ["kopru-saglik", "tablo:planli-raporlar", "tablo:uyarilar", "tablo:pano-kartlari", "timas-budget.timer"]
+#: Bağlantıyı kullanan, sık (en çok saatte bir) çalışan zamanlanmış işler. Gece ya da günde iki kez çalışan iş düzelmeyi
+#: yarım gün bekletmesin diye burada değildir. «@jobs-container»: müşteri sunucusundaki iş kapsayıcısının bütün işleri.
+RESOLVE_JOBS: dict[str, list[str]] = {
+    "logo": _LOGO_JOBS, "vpn": _LOGO_JOBS, "eposta": ["tablo:planli-raporlar"], "vm": ["@jobs-container"],
+    "crm": [], "giris": [], "model": [],
+}
+#: Son 24 saatte hiç koşmamış iş «sık çalışan» sayılmaz (kurulu değil ya da durdurulmuş).
+RESOLVE_JOB_ACTIVE = timedelta(hours=24)
+
+
+def _ring_jobs(c, tenant: str, ring: str, now: datetime) -> list[Any]:
+    names = RESOLVE_JOBS.get(ring, [])
+    if not names:
+        return []
+    cond = []
+    plain_names = [n for n in names if not n.startswith("@")]
+    if plain_names:
+        cond.append(JOBS.c.job.in_(plain_names))
+    if "@jobs-container" in names:
+        cond.append(JOBS.c.source == "jobs-container")
+    rows = c.execute(sa.select(JOBS).where(JOBS.c.tenant_id == tenant, sa.or_(*cond))).mappings().all()
+    return [r for r in rows if _aware(r["last_at"]) is not None and now - _aware(r["last_at"]) <= RESOLVE_JOB_ACTIVE]
+
+
+def resolution(c, tenant: str, ring: str, st: dict[str, Any], now: datetime) -> dict[str, Any]:
+    """Kopmanın gerçekten çözüldüğünün üç şartı (kullanıcı kararı 2026-09-29, «sanki yapmışız gibi atmayacağız»):
+    (a) son başarısız denemeden sonraki ilk başarılı denemeden bu yana en az `resolveMin` dk kesintisiz başarılı denetim;
+    (b) halkanın kendi okuması o aralıkta başarılı (Logo/CRM'de veri sonu satırı dönmüş);
+    (c) bağlantıyı kullanan sık çalışan işlerden biri o andan sonra başarıyla koşmuş; böyle iş yoksa (a)+(b) yeter ve
+    bu e-postada yazar. Dönen sözlük olayın `resolve_json`'una yazılır."""
+    need = timedelta(minutes=int(st.get("resolveMin", 0) or 0))
+    last_fail = c.execute(sa.select(sa.func.max(CHECKS.c.at)).where(
+        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(False))).scalar()
+    q = sa.select(sa.func.min(CHECKS.c.at)).where(CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(True))
+    if last_fail is not None:
+        q = q.where(CHECKS.c.at > last_fail)
+    back = _aware(c.execute(q).scalar())
+    if back is None:
+        return {"ok": False}
+    steady = now - back >= need
+    rq = sa.select(CHECKS.c.at, CHECKS.c.data_end).where(
+        CHECKS.c.tenant_id == tenant, CHECKS.c.ring == ring, CHECKS.c.ok.is_(True), CHECKS.c.at >= back)
+    if ring in STALE_RINGS:
+        rq = rq.where(CHECKS.c.data_end.isnot(None))
+    read = c.execute(rq.order_by(CHECKS.c.at.desc(), CHECKS.c.id.desc()).limit(1)).mappings().first()
+    jobs = _ring_jobs(c, tenant, ring, now)
+    good = sorted((j for j in jobs if j["last_ok"] is True and _aware(j["last_at"]) >= back),
+                  key=lambda j: _aware(j["last_at"]))
+    job_state = "yok" if not jobs else ("var" if good else "bekliyor")
+    return {
+        "ok": bool(steady and read is not None and job_state != "bekliyor"),
+        "backAt": back.isoformat(), "confirmedAt": now.isoformat(),
+        "steadyMin": int((now - back).total_seconds() // 60), "needMin": int(need.total_seconds() // 60),
+        "dataRead": read is not None, "dataText": DATA_READ.get(ring, "Bağlantı denemesi başarılı"),
+        "dataEnd": _iso(read["data_end"]) if read is not None and read["data_end"] is not None else None,
+        "jobState": job_state, "jobLabel": good[0]["label"] if good else None,
+        "jobAt": _iso(good[0]["last_at"]) if good else None, "jobsWaiting": [j["label"] for j in jobs] if not good else [],
+    }
+
+
+def resolve_rows(res: Optional[dict[str, Any]]) -> list[list[str]]:
+    """E-postadaki «Ayrıntı»: hangi düzelme şartları sağlandı."""
+    if not res:
+        return []
+    rows = [["Kesintisiz çalışma", f"Sağlandı: {IB.hm_suffix(res['backAt'])} bu yana {human_minutes(res['steadyMin'])} "
+                                   f"başarılı denetim (şart: en az {res['needMin']} dk)"],
+            ["Veri okuması", "Sağlandı: " + res["dataText"]
+             + (f" ({IB.long_date(res['dataEnd'])})" if res.get("dataEnd") else "")]]
+    if res.get("jobState") == "var":
+        rows.append(["Zamanlanmış iş", f"Sağlandı: «{res['jobLabel']}» {IB.short_dt(res['jobAt'])} tarihinde başarıyla çalıştı"])
+    else:
+        rows.append(["Zamanlanmış iş", "Bu bağlantıyı kullanan sık çalışan zamanlanmış iş yok; düzelme ilk iki şartla doğrulandı"])
+    return rows
+
+
 # ------------------------------------------------------------------ köprü açılış kaydı (planlı yeniden başlatma)
 
 
@@ -402,8 +507,14 @@ def evaluate(engine: sa.engine.Engine, tenant: str, results: Iterable[dict[str, 
             if ok is not None:
                 cur = _open_incident(c, tenant, ring, "kopma")
                 if ok and cur:
-                    c.execute(INCIDENTS.update().where(INCIDENTS.c.id == cur["id"]).values(closed_at=now))
-                    closed.append(cur["id"])
+                    # Tek başarılı deneme olayı kapatmaz: üç şart birlikte (bkz. `resolution`). Sağlanana dek olay açık
+                    # kalır; arada yeniden kopma olursa aynı olay sürer, yeni «Kesinti» e-postası gitmez.
+                    res = resolution(c, tenant, ring, st, now)
+                    if res["ok"]:
+                        c.execute(INCIDENTS.update().where(INCIDENTS.c.id == cur["id"]).values(
+                            closed_at=_aware(datetime.fromisoformat(res["backAt"])),
+                            resolve_json=json.dumps(res, ensure_ascii=False)))
+                        closed.append(cur["id"])
                 elif not ok:
                     streak = _fail_streak(c, tenant, ring, boot_list, grace)
                     lasting = bool(streak) and now - _aware(streak[0]["at"]) >= outage
@@ -484,7 +595,8 @@ def _limit_text(ring: str, st: dict[str, Any]) -> str:
 
 
 def down_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any], now: datetime, link: str = "", *,
-                remind: bool = False, fail_counts: Optional[dict[str, int]] = None) -> IB.Notice:
+                remind: bool = False, fail_counts: Optional[dict[str, int]] = None,
+                resolve_min: int = 15) -> IB.Notice:
     """Kopma bildirimi (açılış ya da, ayarla açıldıysa, hatırlatma). Konu: «[Kesinti] Logo bağlantısı 09:42'den beri
     yanıt vermiyor». `fail_counts` verilirse (örnek üretimi) deneme sayısı tablodan okunmaz."""
     rows = sorted(rows, key=lambda r: _aware(r["opened_at"]))
@@ -505,8 +617,8 @@ def down_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any]
             impact.append(g["impact"])
         steps = IB.split_steps(g.get("recipe", ""))
         actions += [(f"{g['name']}: {s}" if len(rows) > 1 else s) for s in steps]
-    actions.append("Sorun çözülünce ayrıca bir şey yapmanız gerekmez: denetim 5 dakikada bir yapılır, olay kendiliğinden "
-                   "kapanır ve «Düzeldi» e-postası gelir.")
+    actions.append(f"Bağlantı {resolve_min} dakika kesintisiz çalışıp veri okununca «Düzeldi» e-postası gelir." if resolve_min
+                   else "Bağlantı yeniden çalışıp veri okununca «Düzeldi» e-postası gelir.")
     if len(rows) == 1:
         r = rows[0]
         table = IB.Table(title="Ayrıntı", columns=["Alan", "Değer"], rows=[
@@ -539,6 +651,7 @@ def stale_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any
     what = [f"{lbl} bağlantısı çalışıyor ama okunan son kayıt {IB.long_date(end) if end else 'bilinmiyor'} "
             f"tarihli ({human_minutes(_minutes(end, now)) if end else '—'} önce). Eşik: {_limit_text(r['ring'], st)}."
             for r, lbl, end in items]
+    what += [IB.split_steps(STALE_RECIPES.get(r["ring"], STALE_RECIPE))[0] for r, _, _ in items]
     table = IB.Table(title="Ayrıntı", columns=["Kaynak", "Son kayıt", "Eşik", "Fark edildi"], rows=[
         [lbl, IB.long_date(end) if end else "—", _limit_text(r["ring"], st), IB.short_dt(r["opened_at"])]
         for r, lbl, end in items])
@@ -548,8 +661,20 @@ def stale_notice(engine: Optional[sa.engine.Engine], tenant: str, rows: list[Any
         what=what,
         impact=["Raporlar ve ekranlar son kayıt tarihine kadar doğrudur; o tarihten sonraki fatura, satış ve kayıtlar "
                 "hiçbir ekranda görünmez."],
-        actions=IB.split_steps(STALE_RECIPE), tables=[table], link=IB.portal_link(link, "sistem-durumu"),
+        # Tarifin ilk cümlesi teşhistir («Ne oldu»), kalanı BT'nin adımları.
+        actions=[(f"{lbl}: {s}" if len(items) > 1 else s) for r, lbl, _ in items
+                 for s in IB.split_steps(STALE_RECIPES.get(r["ring"], STALE_RECIPE))[1:]]
+                + ["Canlı sunucudan yeni kayıt okununca «Düzeldi» e-postası gelir."],
+        tables=[table], link=IB.portal_link(link, "sistem-durumu"),
         link_label="Sistem durumunu aç", at=now, why=WHY_RECIPIENTS)
+
+
+def _resolve_of(r: Any) -> Optional[dict[str, Any]]:
+    try:
+        raw = r.get("resolve_json") if hasattr(r, "get") else None
+        return json.loads(raw) if raw else None
+    except (ValueError, TypeError):
+        return None
 
 
 def fixed_notice(rows: list[Any], now: datetime, link: str = "") -> IB.Notice:
@@ -578,13 +703,25 @@ def fixed_notice(rows: list[Any], now: datetime, link: str = "") -> IB.Notice:
              human_minutes(_minutes(r["opened_at"], r["closed_at"]))] for r in rows])
     what = [f"{name(r)} {IB.short_dt(r['closed_at'])} itibarıyla yeniden çalışıyor "
             f"({human_minutes(_minutes(r['opened_at'], r['closed_at']))} sürdü)." for r in rows]
+    # Kopmada «Düzeldi» ancak üç şart sağlanınca gider; hangilerinin sağlandığı ayrıntıda yazar.
+    tables = [table]
+    checks = [(r, _resolve_of(r)) for r in rows if r["kind"] == "kopma"]
+    if any(res for _, res in checks):
+        what.append("Sorunun gerçekten çözüldüğü doğrulandı: bağlantı kesintisiz çalıştı ve veri okundu; ayrıntıda hangi "
+                    "şartların sağlandığı yazıyor.")
+        if len(rows) == 1:
+            table.rows += resolve_rows(checks[0][1])
+        else:
+            extra = IB.Table(title="Doğrulama", columns=["Bağlantı", "Şart", "Durum"], rows=[
+                [name(r), a, b] for r, res in checks for a, b in resolve_rows(res)])
+            tables = [table, extra]
     return IB.Notice(
         tone="duzeldi", subject=IB.subject("Düzeldi", subj), headline=head, what=what,
         impact=["Etkilenen ekranlar ve işler yeniden güncel veriyi okuyor."],
         actions=["Yapmanız gereken bir şey yok.",
                  "Nedenini biliyorsanız Sistem durumu → Olaylar'da bu olaya kök neden notu yazın; olay değerlendirmesi "
                  "oradan hazırlanır."],
-        tables=[table], link=IB.portal_link(link, "sistem-durumu"), link_label="Olayı aç", at=now, why=WHY_RECIPIENTS)
+        tables=tables, link=IB.portal_link(link, "sistem-durumu"), link_label="Olayı aç", at=now, why=WHY_RECIPIENTS)
 
 
 def notify(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], send: Sender, recipients: list[str], *,
@@ -627,16 +764,18 @@ def notify(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], send: Send
     new_stale = [r for r in new if r["kind"] == "tazelik"]
     rem_down = [r for r in remind if r["kind"] == "kopma"]
     rem_stale = [r for r in remind if r["kind"] == "tazelik"]
+    rmin = int(st.get("resolveMin", 15) or 0)
     # Önce bildirimler kurulup gönderilir, sonra sonuçlar tek işlemde satırlara yazılır.
     updates: list[tuple[list[str], dict[str, Any]]] = []
-    for group, make in ((new_down, lambda g: down_notice(engine, tenant, g, now, link)),
+    for group, make in ((new_down, lambda g: down_notice(engine, tenant, g, now, link, resolve_min=rmin)),
                         (new_stale, lambda g: stale_notice(engine, tenant, g, st, now, link))):
         if group:
             res = fire(make(group))
             updates.append(([r["id"] for r in group], {"notify_status": res, **({"notified_at": now} if res == "sent" else {})}))
     if fixed and fire(fixed_notice(fixed, now, link)) == "sent":
         updates.append(([r["id"] for r in fixed], {"closed_notify": "sent"}))
-    for group, make in ((rem_down, lambda g: down_notice(engine, tenant, g, now, link, remind=True)),
+    for group, make in ((rem_down, lambda g: down_notice(engine, tenant, g, now, link, remind=True,
+                                                               resolve_min=rmin)),
                         (rem_stale, lambda g: stale_notice(engine, tenant, g, st, now, link, remind=True))):
         if group and fire(make(group)) == "sent":
             updates.append(([r["id"] for r in group], {"reminded_at": now}))
@@ -684,6 +823,22 @@ def downtime(engine: sa.engine.Engine, tenant: str, since: datetime, until: Opti
     return out
 
 
+#: Zamanlanmış iş hatasının BT'nin işi (bağlantı, hesap, yetki, sunucu) olduğunu gösteren sözcükler; gerisi uygulama hatasıdır.
+_BT_ERROR = re.compile(
+    r"bağlan|ulaşıl|erişil|erişim|yetki|izin ver|reddedil|parola|şifre|oturum aç|kimlik|hesab[ıi]|kilitl|zaman aşımı|"
+    r"sunucu|şirket ağı|sertifika|timeout|timed out|connect|refused|unreachable|denied|permission|login|authenticat|"
+    r"network|\bdns\b|certificate|\bssl\b|\btls\b", re.I)
+APP_INFO_TITLE = "Bilgi için: uygulama ekibi ilgileniyor"
+
+
+def split_jobs(jobs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(BT'nin yapabileceği: bağlantı/hesap/yetki/sunucu hatası, uygulama tarafında çözülecek hata)."""
+    bt, app = [], []
+    for j in jobs:
+        (bt if _BT_ERROR.search(str(j.get("lastError") or "")) else app).append(j)
+    return bt, app
+
+
 def weekly_notice(engine: Optional[sa.engine.Engine], tenant: str, now: datetime, failing_jobs: list[dict[str, Any]],
                   link: str = "", *, dt: Optional[dict[str, dict[str, Any]]] = None,
                   still: Optional[list[Any]] = None) -> IB.Notice:
@@ -708,8 +863,9 @@ def weekly_notice(engine: Optional[sa.engine.Engine], tenant: str, now: datetime
                 f"{human_minutes(total)}, en uzunu {_ring(worst[0])['name']} ({human_minutes(worst[1]['minutes'])}).")
     what = [f"{period} arasında {count} kesinti kaydedildi, toplam {human_minutes(total)}." if count
             else f"{period} arasında kesinti kaydedilmedi."]
-    if failing_jobs:
-        what.append(f"{len(failing_jobs)} zamanlanmış iş son koşusunda hata verdi.")
+    bt_jobs, app_jobs = split_jobs(failing_jobs)
+    if bt_jobs:
+        what.append(f"{len(bt_jobs)} zamanlanmış iş bağlantı, hesap ya da yetki hatası verdi.")
     impact = []
     if count:
         impact.append("Kesinti sürelerinde ilgili ekranlar son okunan veriyi gösterdi, bağlı raporlar ve uyarılar çalışmadı.")
@@ -719,16 +875,24 @@ def weekly_notice(engine: Optional[sa.engine.Engine], tenant: str, now: datetime
              else f"{_ring(r['ring'])['name']} yanıt vermiyor") for r in still]) + ". Çözülene kadar ilgili ekranlar etkilenir.")
     if not impact:
         impact.append("Kesinti kaynaklı bir etki olmadı.")
+    # «Ne yapmalı»: yalnız BT'nin yapabileceği işler (bağlantı, hesap, yetki, sunucu). Uygulama hataları BT'ye iş diye
+    # yazılmaz; «Bilgi için» altında sayıyla geçer.
     actions = []
-    if still:
-        actions.append("Açık sorunları Sistem durumu ekranında inceleyin; her birinin yanında ne yapılacağı yazar.")
-    if failing_jobs:
-        actions.append("Hata veren zamanlanmış işlerin son hata metnine bakın (aşağıdaki liste). Bağlantı kaynaklıysa "
-                       "bağlantı düzelince sonraki koşuda kendiliğinden toparlanır.")
-    if count:
-        actions.append("Kapanan olaylara kök neden notu yazılmadıysa Sistem durumu → Olaylar'dan ekleyin.")
+    for r in still:
+        if r["kind"] == "tazelik":
+            steps = IB.split_steps(STALE_RECIPES.get(r["ring"], STALE_RECIPE))[1:]
+            lbl = f"{RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']} verisi eski"
+        else:
+            steps = IB.split_steps(_ring(r["ring"]).get("recipe", ""))
+            lbl = f"{_ring(r['ring'])['name']} yanıt vermiyor"
+        actions.append(f"{lbl}: " + " ".join(steps))
+    if bt_jobs:
+        actions.append("Bağlantı ya da yetki hatası veren zamanlanmış işler için (aşağıdaki liste) ilgili bağlantının "
+                       "açık olduğunu ve portalın okuma hesabının kilitlenmediğini, yetkisinin durduğunu kontrol edin.")
     if not actions:
         actions.append("Yapmanız gereken bir şey yok.")
+    info = ([f"{len(app_jobs)} zamanlanmış iş uygulama kaynaklı hata verdi; uygulama ekibi ilgileniyor, sizden bir işlem "
+             "beklenmiyor."] if app_jobs else [])
     tables = [IB.Table(title="Bağlantılar", columns=["Bağlantı", "Kesinti", "Toplam süre"], numeric=(1, 2), rows=[
         [_ring(r["id"])["name"], dt.get(r["id"], {}).get("count", 0),
          human_minutes(dt.get(r["id"], {}).get("minutes", 0)) if dt.get(r["id"], {}).get("count") else "—"] for r in RINGS])]
@@ -737,12 +901,13 @@ def weekly_notice(engine: Optional[sa.engine.Engine], tenant: str, now: datetime
             [(f"{RING_BY_ID.get(r['ring'], {'label': r['ring']})['label']} verisi eski" if r["kind"] == "tazelik"
               else _ring(r["ring"])["name"]), IB.short_dt(r["opened_at"]), human_minutes(_minutes(r["opened_at"], now))]
             for r in still]))
-    if failing_jobs:
-        tables.append(IB.Table(title="Hata veren zamanlanmış işler", columns=["İş", "Son koşu", "Son hata"], rows=[
+    if bt_jobs:
+        tables.append(IB.Table(title="Bağlantı ya da yetki hatası veren işler", columns=["İş", "Son koşu", "Son hata"], rows=[
             [j["label"], IB.short_dt(_aware(j.get("lastAt"))), IB.plain(j.get("lastError") or "başarısız", 200)]
-            for j in failing_jobs]))
+            for j in bt_jobs]))
     return IB.Notice(tone="bilgi", tag="Haftalık", subject=IB.subject("Haftalık", f"Sistem sağlığı · {period}"),
                      headline=head, what=what, impact=impact, actions=actions, tables=tables,
+                     info=info, info_title=APP_INFO_TITLE,
                      link=IB.portal_link(link, "sistem-durumu"), link_label="Sistem durumunu aç", at=now, why=WHY_WEEKLY)
 
 
@@ -752,18 +917,24 @@ def weekly_text(engine: sa.engine.Engine, tenant: str, now: datetime, failing_jo
 
 
 def jobs_digest_notice(failing: list[dict[str, Any]], now: datetime, link: str = "") -> IB.Notice:
-    """Günlük «hata veren zamanlanmış işler» özeti (bildirim alıcılarına, günde bir)."""
-    k = len(failing)
+    """Günlük «hata veren zamanlanmış işler» özeti (bildirim alıcılarına, günde bir). BT'ye yalnız bağlantı, hesap,
+    yetki ya da sunucu hatası iş diye yazılır; uygulama hataları «Bilgi için» altında sayıyla geçer (`run_tour` yalnız
+    BT'lik hata varken gönderir)."""
+    bt, app = split_jobs(failing)
+    k = len(bt)
     return IB.Notice(
-        tone="uyari", subject=IB.subject("Uyarı", f"Zamanlanmış işler · {k} iş hata verdi · {IB.day_month(now)}"),
-        headline=f"Son 24 saatte {k} zamanlanmış iş son koşusunda hata verdi.",
-        what=[f"{j['label']}: {IB.plain(j.get('lastError') or 'başarısız', 200)}" for j in failing],
+        tone="uyari", subject=IB.subject("Uyarı", f"Zamanlanmış işler · {k} iş bağlantı ya da yetki hatası verdi · "
+                                                  f"{IB.day_month(now)}"),
+        headline=f"Son 24 saatte {k} zamanlanmış iş bağlantı, hesap ya da yetki hatası yüzünden çalışamadı.",
+        what=[f"{j['label']}: {IB.plain(j.get('lastError') or 'başarısız', 200)}" for j in bt],
         impact=["Bu işlerin ürettiği rapor, liste ya da veri tazelemesi son başarılı koşudaki hâliyle kalır."],
-        actions=["Hata metnine bakın. Bir bağlantı kopukluğundan kaynaklanıyorsa bağlantı düzelince sonraki koşuda "
-                 "kendiliğinden toparlanır.",
-                 "Sürekli hata veren iş için Sistem durumu → Zamanlanmış işler sekmesini açın."],
+        actions=["Hatada adı geçen bağlantının açık olduğunu ve portalın okuma hesabının kilitlenmediğini, yetkisinin "
+                 "durduğunu kontrol edin.",
+                 "Bağlantı düzelince işin sonraki koşusu Sistem durumu → Zamanlanmış işler sekmesinde görünür."],
+        info=([f"{len(app)} zamanlanmış iş uygulama kaynaklı hata verdi; uygulama ekibi ilgileniyor, sizden bir işlem "
+               "beklenmiyor."] if app else []), info_title=APP_INFO_TITLE,
         tables=[IB.Table(title="Ayrıntı", columns=["İş", "Son koşu", "Sıklık"], rows=[
-            [j["label"], IB.short_dt(_aware(j.get("lastAt"))), j.get("every") or "—"] for j in failing])],
+            [j["label"], IB.short_dt(_aware(j.get("lastAt"))), j.get("every") or "—"] for j in bt])],
         link=IB.portal_link(link, "sistem-durumu"), link_label="Zamanlanmış işleri aç", at=now,
         why="Bu adrese Sistem durumu ayarlarındaki «Kopma ve düzelme bildirimi alıcıları» listesinde olduğu için geldi.")
 
@@ -891,7 +1062,7 @@ def incident_view(r: Any, now: Optional[datetime] = None) -> dict[str, Any]:
         "rootCauseAt": _iso(r["root_cause_at"]), "falseAlarm": bool(r["false_alarm"]),
         "postmortemDraft": r["postmortem_draft"], "postmortemStatus": r["postmortem_status"] or "yok",
         "postmortemBy": r["postmortem_by"], "postmortemAt": _iso(r["postmortem_at"]),
-        "recipe": STALE_RECIPE if r["kind"] == "tazelik" else ring.get("recipe", ""),
+        "recipe": STALE_RECIPES.get(r["ring"], STALE_RECIPE) if r["kind"] == "tazelik" else ring.get("recipe", ""),
     }
 
 
@@ -1122,6 +1293,9 @@ def status(engine: sa.engine.Engine, tenant: str, st: dict[str, Any], *, now: Op
         head = downs[0]
         tone = "err"
         text = f"{head['label']} bağlantısı {human_minutes(head['incident']['minutes'])}'dır yok"
+        if head["ok"] is True:
+            text = (f"{head['label']} yeniden yanıt veriyor; düzeldi sayılması için doğrulama sürüyor "
+                    f"({st.get('resolveMin', 15)} dk kesintisiz çalışma, veri okuması, zamanlanmış iş)")
         if len(downs) > 1:
             text += f"; {len(downs) - 1} halka daha kopuk"
     elif fails:

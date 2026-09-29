@@ -764,6 +764,11 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ITOPS_RESTART_GRACE_MIN", "group": "itops", "label": "Yeniden başlatma payı (dk)", "type": "int", "default": "5",
      "help": "Zeki AI hizmeti yeniden başlatıldığında, açılışın bu kadar dakika öncesi ve sonrasındaki başarısız denemeler "
              "sayılmaz (planlı yeniden başlatma olay değildir). Açılış zamanı hizmetin kendi açılış kaydından okunur. 0: kapalı"},
+    {"key": "ITOPS_RESOLVE_MIN", "group": "itops", "label": "«Düzeldi» için kesintisiz çalışma (dk)", "type": "int",
+     "default": "15",
+     "help": "Olay ancak bağlantı bu kadar dakika kesintisiz çalışınca, kendi verisi okununca ve onu kullanan sık çalışan "
+             "bir zamanlanmış iş (varsa) başarıyla koşunca kapanır; «Düzeldi» e-postası o zaman gider. Kurumsal e-posta "
+             "kutusu da aynı kurala uyar"},
     {"key": "ITOPS_REMIND_HOURS", "group": "itops", "label": "Kopma hatırlatması (saat)", "type": "int", "default": "0",
      "help": "0: aynı olay için ikinci e-posta gitmez, düzelince tek «Düzeldi» e-postası gider. Sürerken hatırlatma "
              "isteniyorsa kaç saatte bir gideceğini girin"},
