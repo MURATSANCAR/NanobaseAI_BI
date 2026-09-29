@@ -925,6 +925,13 @@
       "explicit": true
     },
     {
+      "key": "ozellik:sohbet.yonet",
+      "area": "kampus",
+      "label": "Sohbet yönetimi",
+      "hint": "ZEKİ AI Sohbet'in yönetim ve ayar ekranları (kullanıcılar, kanallar, ayarlar); kişi sohbete her girişinde eşitlenir, portal yöneticilerinde açık",
+      "explicit": true
+    },
+    {
       "key": "ozellik:pano.duzenle",
       "area": "analiz",
       "page": "sayfa:panolar",

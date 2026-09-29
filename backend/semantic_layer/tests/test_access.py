@@ -246,7 +246,11 @@ def test_all_role_does_not_carry_the_explicit_features(engine):
     for key in A.explicit_keys():
         assert not everyone.can(key), key          # kurulumda kimsenin yöneticiye özel yetkisi genişlemez
     assert A.explicit_keys() >= {"ozellik:oda.yonet", "ozellik:masa.herkesinki", "ozellik:yazar-giris.herkesinki",
-                                 "ozellik:yayin-kurulu.gorusler", "ozellik:seo.onay"}
+                                 "ozellik:yayin-kurulu.gorusler", "ozellik:seo.onay", "ozellik:sohbet.yonet"}
+    # Sohbet yönetimi: giriş servisi /api/v1/access/me'den okur; Herkes'in «bütün yetkiler»i sohbeti yönetici yapmaz,
+    # portal yöneticisi (admin) her şeyi gördüğü gibi bunu da taşır.
+    assert "ozellik:sohbet.yonet" not in everyone.view()["perms"]
+    assert "ozellik:sohbet.yonet" in A.effective(engine, TENANT, "zekiai", is_admin).view()["perms"]
     rid = A.save_role(engine, TENANT, "zekiai", {"name": "Kurul", "perms": ["ozellik:yayin-kurulu.gorusler"]})["id"]
     A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
     assert A.effective(engine, TENANT, "ayse", is_admin).can("ozellik:yayin-kurulu.gorusler")

@@ -209,5 +209,172 @@ class Sessions(unittest.TestCase):
         self.assertEqual([r[2] for r in self.events()], ['ok', 'logout'])
 
 
+class FakeChat:
+    """Sohbet sunucusunun servis hesabıyla çağrılan REST uçlarının sahtesi: kullanıcılar, roller, dil."""
+
+    def __init__(self, users=None):
+        self.users = users or {}
+        self.calls = []
+
+    def __call__(self, config, method, path, query=None, body=None):
+        self.calls.append((method, path, query, body))
+        if path == 'users.info':
+            u = self.users.get(query['username'])
+            return {'success': True, 'user': json.loads(json.dumps(u))} if u else {'success': False, 'error': 'User not found.'}
+        if path == 'users.create':
+            u = {'_id': 'id-' + body['username'], 'username': body['username'], 'name': body['name'], 'active': True,
+                 'roles': ['user']}
+            self.users[body['username']] = u
+            return {'success': True, 'user': json.loads(json.dumps(u))}
+        by_id = {u['_id']: u for u in self.users.values()}
+        if path == 'users.update':
+            by_id[body['userId']].update(body['data'])
+            return {'success': True}
+        if path == 'users.setPreferences':
+            by_id[body['userId']]['language'] = body['data']['language']
+            return {'success': True}
+        if path == 'roles.addUserToRole':
+            self.users[body['username']]['roles'].append(body['roleId'])
+            return {'success': True}
+        if path == 'roles.removeUserFromRole':
+            self.users[body['username']]['roles'].remove(body['roleId'])
+            return {'success': True}
+        if path == 'users.createToken':
+            return {'success': True, 'data': {'authToken': 'tok-' + body['userId']}}
+        raise AssertionError(path)
+
+    def writes(self):
+        return [(p, b) for m, p, _, b in self.calls if m == 'POST' and p != 'users.createToken']
+
+
+class ChatSso(unittest.TestCase):
+    """/chat-sso: portalda oturumu olan herkes sohbete girer; yönetici rolü portal yetkisini izler, dil bir kez çekilir."""
+
+    request = Sessions.request
+    login = Sessions.login
+
+    def setUp(self):
+        Sessions.setUp(self)
+        conf = pathlib.Path(self.tmp.name) / 'chat.json'
+        conf.write_text(json.dumps({'url': 'http://chat.invalid', 'user_id': 'svc', 'token': 't', 'sso_secret': 's'}))
+        self.patches = [patch.object(login, 'CHAT_FILE', str(conf)), patch.object(login, 'chat_call', FakeChat()),
+                        patch.object(login, 'portal_can_manage_chat', self.can)]
+        for p in self.patches:
+            p.start()
+        self.chat = login.chat_call
+        self.perm = False
+        self.asked = []
+
+    def tearDown(self):
+        for p in reversed(self.patches):
+            p.stop()
+        Sessions.tearDown(self)
+
+    def can(self, token):
+        self.asked.append(token)
+        return self.perm
+
+    def sso(self, found=('muratsancar', 'Murat Sancar')):
+        cookie = self.login(found=found, username=found[0])[1]['Set-Cookie'].split(';')[0]
+        return self.request('/chat-sso', headers={'Cookie': cookie}), cookie.split('=', 1)[1]
+
+    def test_no_portal_session_no_token(self):
+        self.assertEqual(self.request('/chat-sso')[0], 401)
+        self.assertEqual(self.chat.calls, [])
+
+    def test_first_visit_opens_the_account_in_turkish_without_admin(self):
+        (status, _, data), token = self.sso(('ayse', 'Ayşe Yılmaz'))
+        self.assertEqual((status, data), (200, {'loginToken': 'tok-id-ayse'}))
+        u = self.chat.users['ayse']
+        self.assertEqual((u['name'], u['language'], u['roles']), ('Ayşe Yılmaz', 'tr', ['user']))
+        self.assertEqual(self.asked, [token])                      # yetki kişinin kendi oturumuyla soruldu
+        create = [b for p, b in self.chat.writes() if p == 'users.create'][0]
+        self.assertTrue(create['joinDefaultChannels'] and create['verified'])
+        self.assertEqual(create['username'], 'ayse')
+        # İkinci giriş: dil yeniden yazılmaz, rol değişmez.
+        self.chat.calls.clear()
+        self.sso(('ayse', 'Ayşe Yılmaz'))
+        self.assertEqual(self.chat.writes(), [])
+
+    def test_admin_role_follows_the_portal_permission(self):
+        self.perm = True
+        self.sso()
+        self.assertIn('admin', self.chat.users['muratsancar']['roles'])
+        self.perm = False
+        self.sso()
+        self.assertNotIn('admin', self.chat.users['muratsancar']['roles'])
+        self.perm = True
+        self.sso()
+        self.assertIn('admin', self.chat.users['muratsancar']['roles'])
+
+    def test_role_given_by_hand_in_the_chat_is_kept(self):
+        self.chat.users['ali'] = {'_id': 'id-ali', 'username': 'ali', 'name': 'Ali', 'active': True,
+                                  'roles': ['user', 'admin'], 'language': 'tr'}
+        self.perm = True
+        self.sso(('ali', 'Ali'))
+        self.perm = False
+        self.sso(('ali', 'Ali'))
+        self.assertIn('admin', self.chat.users['ali']['roles'])   # bu servis vermedi, geri almaz
+        self.assertEqual(self.chat.writes(), [])
+
+    def test_unknown_permission_changes_no_role(self):
+        self.perm = True
+        self.sso()
+        self.perm = None                                            # köprü cevap vermedi
+        self.sso()
+        self.assertIn('admin', self.chat.users['muratsancar']['roles'])
+
+    def test_language_only_pulled_from_empty_or_english_once(self):
+        self.chat.users['veli'] = {'_id': 'id-veli', 'username': 'veli', 'name': 'Veli', 'active': True,
+                                   'roles': ['user'], 'language': 'de'}
+        self.chat.users['can'] = {'_id': 'id-can', 'username': 'can', 'name': 'Can', 'active': True,
+                                  'roles': ['user'], 'language': 'en'}
+        self.sso(('veli', 'Veli'))
+        self.sso(('can', 'Can'))
+        self.assertEqual((self.chat.users['veli']['language'], self.chat.users['can']['language']), ('de', 'tr'))
+        self.chat.users['can']['language'] = 'en'                   # kişi sonra İngilizceyi kendisi seçti
+        self.sso(('can', 'Can'))
+        self.assertEqual(self.chat.users['can']['language'], 'en')
+
+    def test_deactivated_chat_account_is_refused(self):
+        self.chat.users['eski'] = {'_id': 'id-eski', 'username': 'eski', 'name': 'Eski', 'active': False, 'roles': ['user']}
+        self.assertEqual(self.sso(('eski', 'Eski'))[0][0], 403)
+
+    def test_portal_permission_read_uses_the_session_cookie_and_caller_token(self):
+        seen = {}
+
+        class Reply:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return json.dumps(seen['body']).encode()
+
+        def urlopen(request, timeout=None):
+            seen['url'], seen['headers'] = request.full_url, dict(request.header_items())
+            return Reply()
+
+        self.patches[2].stop()
+        try:
+            with patch.object(login, 'BRIDGE_CALLER_TOKEN', 'arayan'), patch.object(login.urllib.request, 'urlopen', urlopen):
+                seen['body'] = {'isAdmin': False, 'perms': ['sayfa:kampus', 'ozellik:sohbet.yonet']}
+                self.assertIs(login.portal_can_manage_chat('abc'), True)
+                self.assertEqual(seen['url'], login.BRIDGE_URL + '/api/v1/access/me')
+                self.assertEqual(seen['headers']['Cookie'], f'{login.COOKIE}=abc')
+                self.assertEqual(seen['headers']['X-semantic-caller'], 'arayan')
+                seen['body'] = {'isAdmin': True, 'perms': []}
+                self.assertIs(login.portal_can_manage_chat('abc'), True)
+                seen['body'] = {'isAdmin': False, 'perms': ['sayfa:kampus']}
+                self.assertIs(login.portal_can_manage_chat('abc'), False)
+                seen['body'] = {'detail': 'caller token required'}
+                self.assertIsNone(login.portal_can_manage_chat('abc'))
+            self.assertIsNone(login.portal_can_manage_chat(None))
+        finally:
+            self.patches[2].start()
+
+
 if __name__ == '__main__':
     unittest.main()
