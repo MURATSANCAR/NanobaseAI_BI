@@ -4,7 +4,8 @@ import { httpErrorText } from '../../../httpError';
 
 /** Sesli okuma uçları (köprü: /api/v1/editorial/studio/jobs/{job}/narration…). engine.ts'teki `send` ile aynı
  *  kurallar: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError. Servisin kodlu hataları
- *  (NO_PLAN, PREPARING, PLAN_FAILED, NO_VOICE, BUSY, NOTHING, HUMAN_RECORDING, RECORDING_REJECTED, TOO_LARGE) `NarrationError.code` ile ekrana taşınır. Planı olmayan
+ *  (NO_PLAN, PREPARING, PLAN_FAILED, NO_VOICE, BUSY, NOTHING, HUMAN_RECORDING, RECORDING_REJECTED, TOO_LARGE; yeniden
+ *  yerleştirmede de RECORDING_REJECTED, NOTHING) `NarrationError.code` ile ekrana taşınır. Planı olmayan
  *  işte ilk açılış sayfa düzenini kendiliğinden kurar: kurulum sürerken 409 PREPARING (`state`: preparing | waiting). */
 
 /** Ses: tarifle tasarlanmış (gerçek kişi kaydı yok) ya da ses kütüphanesine hak beyanıyla yüklenmiş (`uploaded`).
@@ -31,11 +32,14 @@ export type NarrationPageStatus = 'done' | 'stale' | 'missing' | 'empty';
 /** `human`: sayfanın sesi yüklenmiş insan kaydı (`owner` okuyan kişi); güncelliği yalnız metne bakar. */
 export type NarrationPageRow = { id: string; no: number; status: NarrationPageStatus; duration: number | null; estimated: boolean; words: number;
   human?: boolean; owner?: string | null };
-/** `mode: 'human'`: insan kaydının işlenmesi (kelimeler kayda yerleştirilir, sayfalara bölünür). */
+/** `mode: 'human'`: insan kaydının işlenmesi (kelimeler kayda yerleştirilir, sayfalara bölünür). `mode: 'realign'`:
+ *  metni düzeltilen insan kayıtlı sayfalarda kelimeler kayda yeniden yerleştirilir; `rejected`: metni kayıttan çok
+ *  farklı olduğu için güncellenmeyen sayfalar. */
 export type NarrationJob = {
   id: string; kind: 'narration'; status: 'queued' | 'running' | 'done' | 'fail'; pages: string[];
   progress: [number, number]; page?: string; error?: string; by?: string; workflow?: string; updated?: string;
-  mode?: 'human'; recording?: string;
+  mode?: 'human' | 'realign'; recording?: string;
+  rejected?: { page: string; no: number | null; error: string }[];
 };
 /** Yüklenmiş insan kaydı (bu kitapta). */
 export type HumanRecording = {
@@ -124,6 +128,13 @@ export const narrationApi = {
   /** İnsan kaydı yükle (hak beyanı zorunlu); işlenmesi arka planda, durum `overview().job`'da. */
   uploadRecording: (job: string, body: HumanRecordingUpload) =>
     call<{ workflow: string; job: string; recording: HumanRecording }>('POST', `${base(job)}/recordings`, body, 300_000),
+  /** Metni düzeltilen insan kayıtlı sayfalarda kelimeleri kayda yeniden yerleştir (kayıt ve süresi aynı kalır);
+   *  iş arka planda, durum `overview().job` (mode realign). */
+  realign: (job: string, pages: string[]) =>
+    call<{ workflow: string; job: string; pages: number }>('POST', `${base(job)}/realign`, { pages }),
+  /** Yüklemenin izin belgesi (PDF/PNG/JPEG; tarayıcıda açılır). */
+  recordingDocumentUrl: (job: string, rid: string) =>
+    `${ENGINE_BASE}${base(job)}/recordings/${encodeURIComponent(rid)}/document`,
   read: (job: string, text: string) => call<{ spoken: string }>('POST', `${base(job)}/read`, { text }, 30_000),
   /** Kısa deneme sesi; kaydedilmez. Model kapalıysa açılması bir dakikayı bulabilir. */
   sample: async (job: string, text: string, voice: string): Promise<Blob> => {

@@ -21,6 +21,11 @@ ifade işareti insan kaydını eskitmez. Metin değişince sayfa «güncel deği
 «Seslendir» insan kayıtlı sayfaları atlar; yalnız editör o sayfa için açıkça «yapay sesle değiştir» derse yazılır
 (`narration/run` `replace_human`).
 
+Kelimeleri kayda yeniden yerleştirme (`realign`, 2026-09-29): metin küçük düzeltilince kayıt yeniden yüklenmez; sayfanın
+kesilmiş sesi güncel metnin kelimeleriyle yalnız hizalamaya gider, zamanlar yeni `text_hash` ile yazılır (ses ve süre
+aynı, `source: human` ve okuyan kişi korunur). Kelimelerin çoğu kayıtta bulunamazsa sayfa güncellenmez. Temporal
+`HumanRealign`. İzin belgesi ekrandan açılır (`document`).
+
 İş klasöründe (`<iş>/ses/insan/<yükleme>/`):
     kayit.json   {id, pages, owner, rights{statement, confirmed, document, reference}, source{file, name, bytes,
                   seconds}, by, at, status queued|running|done|fail, error, result{pages: [{page, no, start, end,
@@ -215,6 +220,48 @@ def page_segments(plist_idx: list[list[int]], got: list[dict | None], filled: li
     return segs
 
 
+def _flatten(pages: list[tuple[list, list]]) -> tuple[list[str], list[list[list[int]]]]:
+    """Sayfaların okunuş kelimeleri tek düz listede (hizalayıcıya giden sıra) ve sayfa → parça → düz kelime sıraları.
+    `pages`: [(units, plist)] okuma sırasıyla."""
+    flat: list[str] = []
+    idx: list[list[list[int]]] = []
+    for units, plist in pages:
+        per = []
+        for p in plist:
+            xs = []
+            for k in p.words:
+                for s in units[p.unit].words[k].say:
+                    xs.append(len(flat))
+                    flat.append(s)
+            per.append(xs)
+        idx.append(per)
+    return flat, idx
+
+
+async def _align(src: Path, flat: list[str]) -> tuple[list[dict | None], dict]:
+    """Kaydı ses servisine yalnız hizalama için gönderir (`recording` + `words`; üretim yok). Dönen: kelime başına
+    {start, end, score} ya da None (hizalayıcı bulamadı → zamanı tahmin edilir) ve servisin yanıtı."""
+    from . import narration as N
+    with tempfile.TemporaryDirectory() as tmp:
+        low = Path(tmp) / "hiza.flac"         # hizalayıcı 16 kHz tek kanalla çalışır: kayıpsız, küçük gövde
+        r = await asyncio.to_thread(_ff, ["-i", str(src), "-ac", "1", "-ar", "16000", "-c:a", "flac", str(low)])
+        if r.returncode != 0 or not low.exists():
+            raise RecordingError("Ses dosyası çözülemedi; kaydı wav ya da mp3 olarak yeniden yükleyin.")
+        data = low.read_bytes()
+    import httpx
+    try:
+        out = await N._call({"recording": base64.b64encode(data).decode(), "words": flat, "align": True,
+                             "format": "none"})
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in (400, 422):
+            raise RecordingError("Ses servisi bu kaydı hizalayamadı; servis insan kaydını henüz desteklemiyor olabilir "
+                                 "ya da dosya bozuk.") from None
+        raise
+    got = list(out.get("words") or [])[:len(flat)]
+    got += [None] * (len(flat) - len(got))
+    return got, out
+
+
 async def apply(d: Path, uid: str, by: str, progress=None) -> dict:
     """Yüklemeyi işler: kelimeleri hizalar, sayfalara böler, her sayfanın sesini ve kaydını yazar, efekt karışımını
     yeniler. `progress(i, n)`: yazılan sayfa sayısı. Aynı yükleme yeniden işlenebilir (sonuç aynı)."""
@@ -238,39 +285,11 @@ async def apply(d: Path, uid: str, by: str, progress=None) -> dict:
             raise RecordingError(f"Sayfa {plan_mod.page_no(pl, pid)}'de okunacak metin kalmadı; kaydı yeniden yükleyin.")
         items.append((pid, units, plist, h))
 
-    flat: list[str] = []
-    idx: list[list[list[int]]] = []          # sayfa → parça → düz kelime sıraları
-    for _pid, units, plist, _h in items:
-        per = []
-        for p in plist:
-            xs = []
-            for k in p.words:
-                for s in units[p.unit].words[k].say:
-                    xs.append(len(flat))
-                    flat.append(s)
-            per.append(xs)
-        idx.append(per)
-
+    flat, idx = _flatten([(units, plist) for _pid, units, plist, _h in items])
     ud = up_dir(d) / uid
     src = ud / rec["source"]["file"]
-    with tempfile.TemporaryDirectory() as tmp:
-        low = Path(tmp) / "hiza.flac"         # hizalayıcı 16 kHz tek kanalla çalışır: kayıpsız, küçük gövde
-        r = await asyncio.to_thread(_ff, ["-i", str(src), "-ac", "1", "-ar", "16000", "-c:a", "flac", str(low)])
-        if r.returncode != 0 or not low.exists():
-            raise RecordingError("Ses dosyası çözülemedi; kaydı wav ya da mp3 olarak yeniden yükleyin.")
-        data = low.read_bytes()
-    import httpx
-    try:
-        out = await N._call({"recording": base64.b64encode(data).decode(), "words": flat, "align": True,
-                             "format": "none"})
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code in (400, 422):
-            raise RecordingError("Ses servisi bu kaydı hizalayamadı; servis insan kaydını henüz desteklemiyor olabilir "
-                                 "ya da dosya bozuk.") from None
-        raise
+    got, out = await _align(src, flat)
     total = float(out.get("duration") or 0) or float(rec["source"].get("seconds") or 0)
-    got = list(out.get("words") or [])[:len(flat)]
-    got += [None] * (len(flat) - len(got))
     aligned = sum(1 for w in got if w)
     if flat and not aligned and out.get("aligned", True):
         raise RecordingError("Kayıt sayfaların metniyle eşleşmedi (hiçbir kelime bulunamadı). Doğru dosyayı ve doğru "
@@ -313,3 +332,89 @@ async def apply(d: Path, uid: str, by: str, progress=None) -> dict:
     res = {"pages": result, "aligned": [aligned, len(flat)], "seconds": round(time.time() - t0, 1)}
     mark(d, uid, status="done", error=None, result=res, finished=_now())
     return res
+
+
+# ------------------------------------------------------------------ kelimeleri kayda yeniden yerleştirme
+# Metni küçük düzeltilen insan kayıtlı sayfa («güncel değil»): kayıt yeniden yüklenmez. Sayfanın kesilmiş sesi
+# (ses/sayfa/<pid>.mp3) güncel metnin okunuş kelimeleriyle yalnız hizalamaya gider; kelime zamanları yeni metne göre
+# yazılır, ses dosyası ve süresi değişmez, `source: human` ve okuyan kişi korunur.
+#
+# Ret kuralı («metin kayıttan çok farklı»): hizalayıcının kayıtta yerini bulamadığı (zamanı tahmin edilecek,
+# `estimated`) okunuş kelimeleri bulduklarından çoksa — kelimelerin çoğu kayıtta yoksa — sayfa güncellenmez. Ölçü
+# hizalayıcının kelime başına bulundu/bulunamadı işaretidir; ayrı bir eşik sabiti yoktur.
+def mostly_missing(aligned: int, total: int) -> bool:
+    """Kelimelerin çoğu (yarıdan fazlası) kayıtta bulunamadı mı."""
+    return total > 0 and (total - aligned) > aligned
+
+
+async def realign(d: Path, pid: str, by: str) -> dict:
+    """Tek sayfanın kelimelerini mevcut insan kaydına yeniden yerleştirir. Dönen: {page, no, aligned: [bulunan,
+    toplam], estimated}. Ret: RecordingError (Türkçe neden); sayfa kaydına dokunulmaz."""
+    from . import narration as N
+    from . import plan as plan_mod
+    pl = plan_mod.load(d)
+    if pl is None:
+        raise plan_mod.NoPlan(d.name)
+    try:
+        pg = plan_mod._page(pl, pid)
+    except KeyError:
+        raise RecordingError("Sayfa, sayfa düzeninden silindi.") from None
+    no = plan_mod.page_no(pl, pid)
+    rec, src = N.page_record(d, pid), N.audio_path(d, pid)
+    if not N.is_human(rec) or not src.exists():
+        raise RecordingError(f"Sayfa {no}: sesi insan kaydı değil; kelimeler yalnız insan kaydına yerleştirilir.")
+    units, plist, h = N.page_input(d, pg)
+    if not plist:
+        raise RecordingError(f"Sayfa {no}: okunacak metin kalmadı.")
+    t0 = time.time()
+    flat, idx = _flatten([(units, plist)])
+    got, out = await _align(src, flat)
+    if not out.get("aligned", True):
+        raise RecordingError("Ses servisi kelimeleri şu an yerleştiremiyor; biraz sonra yeniden deneyin.")
+    aligned = sum(1 for w in got if w)
+    if mostly_missing(aligned, len(flat)):
+        raise RecordingError(f"Sayfa {no}: metin kayıttan çok farklı ({len(flat)} kelimenin {len(flat) - aligned} "
+                             "tanesi kayıtta bulunamadı); kaydı yeniden yükleyin.")
+    total = float(rec.get("duration") or 0) or float(out.get("duration") or 0)
+    known = [(float(w["start"]), float(w["end"])) if w else None for w in got]
+    filled, _ = N.fill_times(known, [len(s) for s in flat], 0.0, total)
+    blocks = N.word_times(units, plist, page_segments(idx[0], got, filled, 0.0, total))
+    for bl in blocks:
+        bl["voice"] = ""                        # okuyan insan; yapay ses kimliği yok
+    est = any(w.get("estimated") for bl in blocks for w in bl["words"])
+    new = {**rec, "version": N.VERSION, "no": no, "hash": h, "text_hash": N.text_hash(units), "estimated": est,
+           "blocks": blocks, "realigned": {"by": by, "at": _now(), "aligned": [aligned, len(flat)],
+                                           "seconds": round(time.time() - t0, 1)}}
+    N._write(N.ses_dir(d) / "sayfa" / f"{pid}.json", new)
+    await N._efekt_kancasi(d, pid, by)
+    return {"page": pid, "no": no, "aligned": [aligned, len(flat)], "estimated": est}
+
+
+async def realign_pages(d: Path, pages: list[str], by: str, progress=None) -> dict:
+    """Seçili sayfalar sırayla; reddedilen sayfa ötekileri durdurmaz. Dönen: {pages: [realign sonucu],
+    rejected: [{page, no, error}]}. `progress(i, n)`: işlenen sayfa sayısı."""
+    from . import plan as plan_mod
+    done, rejected = [], []
+    for i, pid in enumerate(pages):
+        try:
+            done.append(await realign(d, pid, by))
+        except RecordingError as e:
+            try:
+                no = plan_mod.page_no(plan_mod.load(d) or {"pages": []}, pid)
+            except KeyError:
+                no = None
+            rejected.append({"page": pid, "no": no, "error": str(e)})
+        if progress:
+            progress(i + 1, len(pages))
+    return {"pages": done, "rejected": rejected}
+
+
+# ------------------------------------------------------------------ izin belgesi
+def document(d: Path, uid: str) -> tuple[Path, str, str]:
+    """Yüklemenin izin belgesi: (yol, tür, özgün ad). Belge dosya olarak yüklenmediyse FileNotFoundError; yükleme
+    yoksa KeyError."""
+    rec = load(d, uid)
+    doc = (rec.get("rights") or {}).get("document")
+    if not doc or not (up_dir(d) / uid / doc["file"]).is_file():
+        raise FileNotFoundError(uid)
+    return up_dir(d) / uid / doc["file"], doc["mime"], doc["name"]

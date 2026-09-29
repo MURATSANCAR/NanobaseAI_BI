@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28; sesli okumada insan kaydı 09-28) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28; kapak arşivi 09-28; sesli okumada insan kaydı 09-28; insan kaydında kelimeleri yeniden yerleştirme ve izin belgesi 09-29) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -391,6 +391,18 @@ if "EDITOR-STUDYO-INSANKAYDI" not in s:
                    f"\n        client_max_body_size {rec_mb}m;", timeout=300))
     s = s.replace("    # EDITOR-BITTI", insan + "    # EDITOR-BITTI", 1)
     changes.append(f"sesli okuma insan kaydı yolu (gövde {rec_mb} MB)")
+
+# 11) İnsan kaydında kelimeleri kayda yeniden yerleştirme (09-29; POST, gövde yalnız sayfa listesi, iş Temporal'da) ve
+#     yüklemenin izin belgesi (GET, PDF/PNG/JPEG). Kayıt kimliği `r` + 10 onaltılık (narration_human.UID).
+#     Düzenli ifadeli location'da proxy_pass yolu yakalanan parçayla ve $is_args$args ile verilir.
+if "EDITOR-STUDYO-INSANHIZA" not in s:
+    hiza = ("    # EDITOR-STUDYO-INSANHIZA  (insan kaydinda kelimeleri yeniden yerlestirme ve izin belgesi)\n"
+            + loc(f"jobs/({JOB})/narration/(realign)", "POST", "jobs/$1/narration/$2$is_args$args",
+                  "\n        client_max_body_size 1m;", timeout=60)
+            + loc(f"jobs/({JOB})/narration/recordings/(r[0-9a-f]{{10}})/document", "GET",
+                  "jobs/$1/narration/recordings/$2/document$is_args$args", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", hiza + "    # EDITOR-BITTI", 1)
+    changes.append("insan kaydında kelimeleri yeniden yerleştirme ve izin belgesi yolları")
 
 if s == orig:
     print("zaten var (güncel)")

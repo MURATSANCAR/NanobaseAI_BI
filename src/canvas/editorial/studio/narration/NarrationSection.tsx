@@ -6,7 +6,7 @@ import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import ExpressionEditor from './ExpressionEditor';
-import HumanRecordingUpload from './HumanRecordingUpload';
+import HumanRecordingUpload, { RightsProof } from './HumanRecordingUpload';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
 import SoundEffects from './SoundEffects';
@@ -122,6 +122,9 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   // insan kayıtlı güncel olmayan sayfalar yapay sesle üretilmez (yeni kayıt ya da açık «Yapay sesle değiştir»)
   const todo = d.summary.missing + d.summary.stale - (d.summary.human_stale ?? 0);
   const human = job?.mode === 'human';
+  const realigning = job?.mode === 'realign';
+  // metni düzeltilen insan kayıtlı sayfalar: kayıt aynı kalır, kelimeler yeni metne göre kayda yerleştirilir
+  const humanStale = useMemo(() => d.pages.filter((p) => p.human && p.status === 'stale').map((p) => p.id), [d.pages]);
   const player = usePlayer();
 
   // İş bitince sayfa kayıtları yenilenir (ekrandaki sayfa yeni zamanlarla gelir).
@@ -134,6 +137,10 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   const run = useMutation({
     mutationFn: (v: { pages: string[] | null; force?: boolean; replaceHuman?: boolean }) =>
       narrationApi.run(jobId, v.pages, v.force, v.replaceHuman),
+    onSuccess: refresh,
+  });
+  const realign = useMutation({
+    mutationFn: (pages: string[]) => narrationApi.realign(jobId, pages),
     onSuccess: refresh,
   });
   const sample = useMutation({
@@ -166,16 +173,31 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
       )}
       {job?.status === 'fail' && (human
         ? <Note tone="err">İnsan kaydı işlenemedi{job.error ? `: ${job.error}` : ''}</Note>
-        : <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>)}
-      {(run.error || sample.error) && <Note tone="err">{errText(run.error || sample.error, 'İşlem yapılamadı.')}</Note>}
+        : realigning
+          ? <Note tone="err">Kelimeler kayda yerleştirilemedi{job.error ? `: ${job.error}` : ''}</Note>
+          : <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>)}
+      {job?.status === 'done' && realigning && !!job.rejected?.length && (
+        <Note tone="err">
+          Bazı sayfaların kelimeleri kayda yerleştirilemedi, bu sayfalar değişmedi: {job.rejected.map((r) => r.error).join(' ')}
+        </Note>
+      )}
+      {(run.error || realign.error || sample.error) && <Note tone="err">{errText(run.error || realign.error || sample.error, 'İşlem yapılamadı.')}</Note>}
 
       {canProduce && <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={gradientBtn} disabled={!d.available || running || run.isPending || todo === 0}
           onClick={() => run.mutate({ pages: null })}
           title={todo ? 'Sesi olmayan ve güncel olmayan sayfalar seslendirilir' : 'Bütün sayfalar güncel'}>
           {running || run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Volume2 className="h-4 w-4" aria-hidden />}
-          {running ? (job?.status === 'queued' ? 'Sırada…' : human ? 'İnsan kaydı işleniyor…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
+          {running ? (job?.status === 'queued' ? 'Sırada…' : human ? 'İnsan kaydı işleniyor…' : realigning ? 'Kelimeler yerleştiriliyor…' : 'Seslendiriliyor…') : todo ? `Seslendir (${todo} sayfa)` : 'Bütün sayfalar güncel'}
         </button>
+        {!running && humanStale.length > 0 && (
+          <button type="button" className={ghostBtn} disabled={!d.available || realign.isPending}
+            onClick={() => realign.mutate(humanStale)}
+            title="Kayıtlar aynı kalır; kelimeler düzeltilmiş metne göre kayıtta yeniden bulunur">
+            {realign.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Mic className="h-4 w-4" aria-hidden />}
+            Kelimeleri kayda yeniden yerleştir ({humanStale.length} sayfa)
+          </button>
+        )}
         {!running && d.summary.done > 0 && (
           <button type="button" className={ghostBtn} disabled={!d.available || run.isPending}
             onClick={() => { if (window.confirm(`Bütün sayfalar baştan seslendirilsin mi? Mevcut sesler yenileriyle değişir.${d.summary.human ? ' İnsan kayıtlı sayfalara dokunulmaz.' : ''}`)) run.mutate({ pages: null, force: true }); }}>
@@ -189,14 +211,16 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
           <span className="text-[11.5px] text-canvas-muted">
             {job.status === 'queued' ? 'Sırada; önceki stüdyo işi bitince başlar.'
               : human ? ((job.progress?.[0] ?? 0) === 0 ? 'Kelimeler kayda yerleştiriliyor…' : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfanın sesi yazıldı`)
-                : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
+                : realigning ? `Kelimeler kayda yerleştiriliyor: ${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa`
+                  : `${job.progress?.[0] ?? 0}/${job.progress?.[1] ?? 0} sayfa seslendirildi`}
           </span>
         </div>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-        <Listen jobId={jobId} d={d} running={running} regenBusy={run.isPending} onUploaded={refresh}
-          onRegen={canProduce ? (pid, replaceHuman) => run.mutate({ pages: [pid], replaceHuman }) : undefined} />
+        <Listen jobId={jobId} d={d} running={running} regenBusy={run.isPending || realign.isPending} onUploaded={refresh}
+          onRegen={canProduce ? (pid, replaceHuman) => run.mutate({ pages: [pid], replaceHuman }) : undefined}
+          onRealign={canProduce ? (pid) => realign.mutate([pid]) : undefined} />
         <div className="flex min-w-0 flex-col gap-4">
           <Voices jobId={jobId} d={d} onPlay={play} playing={player.playing} onSaved={refresh} />
           <div className="h-px bg-slate-200/80" />
@@ -209,9 +233,9 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
 }
 
 // ---------------------------------------------------------------- dinle
-function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
+function Listen({ jobId, d, running, onRegen, onRealign, regenBusy, onUploaded }: {
   jobId: string; d: NarrationOverview; running: boolean; onRegen?: (pid: string, replaceHuman?: boolean) => void; regenBusy: boolean;
-  onUploaded: () => void;
+  onRealign?: (pid: string) => void; onUploaded: () => void;
 }) {
   const readable = useMemo(() => d.pages.filter((p) => p.status !== 'empty'), [d.pages]);
   const [pid, setPid] = useState<string | null>(null);
@@ -232,6 +256,9 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
   const page = pq.data;
   const done = row?.status === 'done' && page?.status === 'done';
   const src = done ? narrationApi.audioUrl(jobId, row!.id, page?.at) : undefined;
+  // insan kayıtlı sayfanın yüklemesi: izin belgesi ve belge numarası rozetin yanında gösterilir
+  const uploadId = row?.human ? page?.human?.upload : undefined;
+  const recording = uploadId ? d.recordings?.items.find((r) => r.id === uploadId) ?? null : null;
 
   // Sayfa değişince: otomatik geçişte yeni sayfa kendiliğinden çalar.
   useEffect(() => {
@@ -262,6 +289,7 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
         {row && (
           <span className="flex flex-wrap items-center justify-end gap-1.5 text-[11.5px] text-canvas-muted">
             {row.human && <HumanBadge owner={row.owner} />}
+            {recording && <RightsProof jobId={jobId} rec={recording} />}
             {STATUS[row.status].text}{row.estimated ? ' · bazı kelime zamanları tahmini' : ''}
           </span>
         )}
@@ -308,6 +336,13 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
                   onClick={() => setUpload((u) => !u)} title="Seslendirmenin okuduğu kayıt bu sayfanın sesi olur">
                   <Mic className="h-4 w-4" aria-hidden /><span>İnsan kaydı yükle</span>
                 </button>
+                {row.human && row.status === 'stale' && onRealign && (
+                  <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
+                    onClick={() => onRealign(row.id)}
+                    title="Kayıt ve süresi aynı kalır; kelimeler düzeltilmiş metne göre kayıtta yeniden bulunur">
+                    <Mic className="h-4 w-4" aria-hidden /><span>Kelimeleri kayda yeniden yerleştir</span>
+                  </button>
+                )}
                 {row.human ? (
                   <button type="button" className={ghostBtn} disabled={!d.available || running || regenBusy}
                     onClick={() => { if (window.confirm('Bu sayfanın insan kaydı yapay sesle değiştirilsin mi? Kayıt dosyası saklı kalır; yeniden yükleyerek geri dönebilirsiniz.')) onRegen(row.id, true); }}
@@ -332,7 +367,7 @@ function Listen({ jobId, d, running, onRegen, regenBusy, onUploaded }: {
           )}
           {row && row.status !== 'done' && (
             <p className="text-[11.5px] text-canvas-muted">
-              {row.status === 'stale' && row.human ? 'Bu sayfanın metni insan kaydından sonra değişti; kayıt eski metne göre. Yeni kaydı yükleyin ya da «Yapay sesle değiştir»i seçin.'
+              {row.status === 'stale' && row.human ? 'Bu sayfanın metni insan kaydından sonra değişti; kelime zamanları eski metne göre. Küçük bir düzeltmeyse «Kelimeleri kayda yeniden yerleştir»i seçin: kayıt aynı kalır, yalnız kelimelerin kayıttaki yeri yeni metne göre bulunur (metin kayıttan çok farklıysa sayfa değişmez). Metin yeniden okunduysa yeni kaydı yükleyin ya da «Yapay sesle değiştir»i seçin.'
                 : row.status === 'stale' ? 'Bu sayfanın metni, sesi ya da sözlüğü değişti; aşağıdaki metin yeni hâlidir. Yeniden üretince vurgulu dinlenir.'
                   : 'Bu sayfa henüz seslendirilmedi; metin okunacağı biçimde gösteriliyor.'}
             </p>

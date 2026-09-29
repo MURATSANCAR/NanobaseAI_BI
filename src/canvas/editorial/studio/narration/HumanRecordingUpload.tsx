@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2, Mic, X } from 'lucide-react';
+import { FileText, Loader2, Mic, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { ghostBtn, gradientBtn, secs } from '../shared';
 import { narrationApi, type HumanRecording, type NarrationOverview } from './api';
@@ -137,7 +137,7 @@ export default function HumanRecordingUpload({ jobId, d, pid, onClose, onDone }:
         {send.error && <Note tone="err">{errText(send.error, 'Kayıt yüklenemedi.')}</Note>}
         {ok && <Note tone="ok">{ok}</Note>}
       </form>
-      {!!info?.items.length && <Recent items={info.items} d={d} />}
+      {!!info?.items.length && <Recent jobId={jobId} items={info.items} d={d} />}
     </div>
   );
 }
@@ -146,7 +146,23 @@ const STATE: Record<HumanRecording['status'], string> = {
   queued: 'Sırada', running: 'İşleniyor', done: 'Hazır', fail: 'İşlenemedi',
 };
 
-function Recent({ items, d }: { items: HumanRecording[]; d: NarrationOverview }) {
+/** İnsan kaydının hak kanıtı: yüklenen izin belgesi (yeni sekmede açılır) ve/ya da girilen belge numarası. */
+export function RightsProof({ jobId, rec }: { jobId: string; rec: HumanRecording }) {
+  if (!rec.document && !rec.reference) return null;
+  return (
+    <>
+      {rec.document && (
+        <a href={narrationApi.recordingDocumentUrl(jobId, rec.id)} target="_blank" rel="noopener noreferrer"
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-1.5 font-bold text-canvas-violet underline">
+          <FileText className="h-3.5 w-3.5" aria-hidden />İzin belgesi
+        </a>
+      )}
+      {rec.reference && <span className="min-w-0 break-words">Belge: {rec.reference}</span>}
+    </>
+  );
+}
+
+function Recent({ jobId, items, d }: { jobId: string; items: HumanRecording[]; d: NarrationOverview }) {
   const no = (id: string) => d.pages.find((p) => p.id === id)?.no;
   const span = (r: HumanRecording) => {
     const a = no(r.pages[0]);
@@ -169,6 +185,9 @@ function Recent({ items, d }: { items: HumanRecording[]; d: NarrationOverview })
               </span>
             </span>
             {r.file && <span className="block truncate text-canvas-muted">{r.file}</span>}
+            {(r.document || r.reference) && (
+              <span className="flex flex-wrap items-center gap-x-2 text-canvas-muted"><RightsProof jobId={jobId} rec={r} /></span>
+            )}
             {r.status === 'fail' && r.error && <span className="block text-rose-700">{r.error}</span>}
           </li>
         ))}

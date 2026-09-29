@@ -16,6 +16,8 @@ iOS Safari sesi yalnız aralık desteği olan adresten çalar, ileri/geri sarma 
 `POST …/narration/recordings` {pages, owner, confirm, reference, audio: {name, data(b64)}, document?} — gövde base64
 JSON (ses kütüphanesiyle aynı 250 MB sınırı), hak beyanı zorunlu, denetim kaydı düşer; işlenmesi stüdyoda arka planda,
 durum `GET …/narration`'da. `POST …/narration/run` `replace_human`: insan kaydını yapay sesle değiştirme onayı.
+`POST …/narration/realign` {pages}: metni düzeltilen insan kayıtlı sayfada kelimeler kayda yeniden yerleşir (kayıt
+yeniden yüklenmez; denetim kaydı düşer). `GET …/narration/recordings/{kayıt}/document`: yüklemenin izin belgesi (inline).
 
 Ses kütüphanesi (yayınevi düzeyinde): `GET/POST /api/v1/editorial/studio/voices`, `GET …/voices/{ses}/document`
 (izin belgesi), `DELETE …/voices/{ses}` (yalnız yönetici). Yükleme hak beyanı ister (onay, sesin sahibi, belge ya da
@@ -46,6 +48,7 @@ SAMPLE_TEXT_MAX = 300
 READ_TEXT_MAX = 2000
 RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 VOICE_ID = re.compile(r"^yuklenen-[0-9a-f]{8}$")
+RECORDING_ID = re.compile(r"^r[0-9a-f]{10}$")        # insan kaydı yüklemesi (narration_human.UID)
 DOC_MIME = {"application/pdf", "image/png", "image/jpeg"}
 VOICE_BODY_MAX = 250 * 1024 * 1024        # üç dosya (kayıt, özgün dosya, belge) base64; servis dosya başına STUDIO_UPLOAD_MB uygular
                                           # (insan kaydı yüklemesi de: ses + izin belgesi)
@@ -245,6 +248,33 @@ def register(app, deps: dict[str, Any] | Any) -> None:
             except Exception:  # noqa: BLE001 — denetim kaydı düşmezse işlem geri alınmaz, günlüğe yazılır
                 log.exception("studio narration recording audit failed")
         return out
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/narration/realign")
+    def editorial_narration_realign(job: str, request: Request, body: dict[str, Any] | None = None):
+        # Metni düzeltilen insan kayıtlı sayfada kelimeler kayda yeniden yerleşir (kayıt ve süresi değişmez).
+        b = obj(body or {})
+        pages = b.get("pages") if isinstance(b.get("pages"), list) else []
+        if not pages:
+            raise HTTPException(400, "Sayfa seçin.")
+        clean = {"pages": [pid(str(p)) for p in pages]}
+        return write(request, "POST", job, "/realign",
+                     f"insan kaydında kelimeler kayda yeniden yerleştirildi: {len(clean['pages'])} sayfa", clean)
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/narration/recordings/{rid}/document")
+    def editorial_narration_recording_document(job: str, rid: str, request: Request):
+        # İnsan kaydı yüklemesinin izin belgesi; ikili geçiş (ses kütüphanesinin izin belgesiyle aynı kalıp).
+        auth(request)
+        if not RECORDING_ID.match(rid or ""):
+            raise HTTPException(404, "Kayıt bulunamadı.")
+        out = call(editorial_studio.get_bytes,
+                   f"/v1/studio/jobs/{editorial_studio._job(job)}/narration/recordings/{rid}/document", DOC_MIME)
+        if isinstance(out, Response):
+            return out
+        data, mime = out
+        ext = {"application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg"}[mime]
+        return Response(content=data, media_type=mime, headers={
+            "Content-Disposition": f'inline; filename="izin-belgesi-{rid}.{ext}"', "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "script-src 'none'; object-src 'none'"})
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}")
     def editorial_narration_page(job: str, page: str, request: Request):

@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Sesli okumada insan kaydı: kelimeleri kayda yeniden yerleştirme ve izin belgesini ekranda açma (dalda; kurulmadı)
+
+- **Neden:** insan kayıtlı sayfanın metni küçük düzeltilince sayfa «güncel değil» kalıyordu; tek çare kaydı yeniden yüklemek ya da yapay sesle ezmekti. İzin belgesi saklanıyor ama ekrandan açılamıyordu.
+- **Yeniden yerleştirme:** `narration_human.realign` — sayfanın kesilmiş MP3'ü güncel metnin okunuş kelimeleriyle ses servisine yalnız hizalama için gider (mevcut `recording` + `words` yolu); kelime zamanları yeni `text_hash` ile yazılır, ses dosyası, süre, `source: human` ve okuyan kişi aynı kalır, kayda `realigned {by, at, aligned}` düşer. Ret kuralı: hizalayıcının kayıtta bulamadığı (tahmini) kelime bulduğundan çoksa sayfa güncellenmez, «Sayfa N: metin kayıttan çok farklı (…); kaydı yeniden yükleyin». Ayrı eşik sabiti yok; not: hizalama zorlamalı olduğu için kelimeler çoğu zaman bir yere yerleşir, kural esas olarak kaydın metne hiç uymadığı durumları yakalar.
+- **Akış:** tek ya da seçili sayfalar, Temporal `HumanRealign` (insan kaydıyla tutarlı; iş kaydı `kind narration, mode realign`, reddedilen sayfa `rejected`, hiçbiri yerleşmezse iş düşer). Servis/köprü `POST …/narration/realign {pages}` (yetki `tasarim.uret`, denetim kaydı); insan kaydı olmayan sayfa 400 RECORDING_REJECTED, güncel sayfalar atlanır (hiç kalmazsa NOTHING).
+- **İzin belgesi:** servis/köprü `GET …/narration/recordings/{kayıt}/document` (doğru tür, `Content-Disposition: inline`; köprü ses kütüphanesi belgesiyle aynı ikili geçiş). Ekranda «İnsan sesi» rozetinin yanında ve «Yüklenen kayıtlar» listesinde «İzin belgesi» bağlantısı (yeni sekme), belge numarası metin olarak.
+- **Giriş kapısı:** `add-studio-routes.py` yeni blok `EDITOR-STUDYO-INSANHIZA` (realign POST, belge GET).
+- **Test (GPU, `editor-py-studio:0.15.9-ce0fd1ce`):** `test_narration_human.py` + `test_narration.py` 84 geçti (5 yeni test + kayıt testi genişletildi). Tam set **648 geçti** (ikinci koşu). İlk koşuda ilgisiz `test_portal_read::test_read_ocr_only_needed_and_requested_pages` bir kez düştü (OCR sayfa sırası [3, 2]; tek başına 5/5 geçiyor — sıraya bağlı kararsız test). Köprü, `access.py` ve giriş kapısı betiği yalnız sözdizimi denetimi (GPU'da); ön yüz tip denetimi ve tarayıcı denemesi yapılmadı (kurulumda). GPU'daki geçici klasör silindi.
+
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
 - **Karar (kullanıcı):** Kayıtta kişinin adı yerine «ZEKİ AI» yazsın (Claude'un kullanıcı adına yaptığı ayar «muratsancar» görünmüştü; zamanlayıcı işleri «sistem»/«zamanlayıcı»).
