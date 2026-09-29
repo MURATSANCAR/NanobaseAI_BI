@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
 import {
   accessApi,
   type AccessBinding,
+  type AccessCandidate,
   type AccessCatalog,
   type AccessRole,
   type AccessRoleInput,
@@ -496,16 +497,29 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
   const qc = useQueryClient();
   const [type, setType] = useState<AccessSubjectType>('ad_group');
   const [q, setQ] = useState('');
-  const list = useQuery({ queryKey: ['access', 'subjects', type], queryFn: () => accessApi.subjects(type), retry: false, staleTime: 5 * 60_000 });
+  const needle = trFold(q.trim());
+  // Arama bütün türlerde yapılır: kişi adı «AD grubu» sekmesinde yazılınca «Eşleşen yok» deyip kalmasın,
+  // hangi sekmede kaç eşleşme olduğu görünsün. Diğer türler yalnız bir şey yazılınca okunur (5 dk bellek).
+  const lists = useQueries({
+    queries: TYPES.map((t) => ({
+      queryKey: ['access', 'subjects', t.id],
+      queryFn: () => accessApi.subjects(t.id),
+      retry: false,
+      staleTime: 5 * 60_000,
+      enabled: t.id === type || !!needle,
+    })),
+  });
+  const list = lists[TYPES.findIndex((t) => t.id === type)];
   const bound = new Set(role.bindings.filter((b) => b.type === type).map((b) => b.subject.toLowerCase()));
   const add = useMutation({
     mutationFn: (c: { subject: string; label: string }) => accessApi.addBinding(role.id, { type, ...c }),
     onSuccess: () => void invalidateAccess(qc),
   });
-  const needle = trFold(q.trim());
-  const shown = (list.data?.items ?? []).filter(
-    (c) => !needle || trFold(`${c.label} ${c.hint ?? ''} ${c.detail ?? ''} ${c.subject}`).includes(needle),
-  );
+  const match = (items: AccessCandidate[] | undefined) =>
+    (items ?? []).filter((c) => !needle || trFold(`${c.label} ${c.hint ?? ''} ${c.detail ?? ''} ${c.subject}`).includes(needle));
+  const hits = TYPES.map((_, i) => (needle && lists[i].data ? match(lists[i].data!.items).length : null));
+  const shown = match(list.data?.items);
+  const elsewhere = TYPES.map((t, i) => ({ ...t, n: hits[i] ?? 0 })).filter((t) => t.id !== type && t.n > 0);
   const meta = TYPES.find((t) => t.id === type)!;
 
   return (
@@ -517,27 +531,25 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
         </button>
       </div>
       <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
-        {TYPES.map((t) => (
+        {TYPES.map((t, i) => (
           <button
             key={t.id}
             type="button"
-            onClick={() => {
-              setType(t.id);
-              setQ('');
-            }}
+            onClick={() => setType(t.id)}
             aria-pressed={type === t.id}
             className={`min-h-11 shrink-0 rounded-lg px-3 text-[12px] font-extrabold transition-colors sm:min-h-8 ${
               type === t.id ? 'bg-white text-canvas-ink shadow-sm ring-1 ring-canvas-violet/30' : 'text-canvas-muted hover:bg-white/70'
             }`}
           >
             {t.label}
+            {hits[i] !== null && <span className="ml-1 tabular-nums opacity-70">{nf.format(hits[i]!)}</span>}
           </button>
         ))}
       </div>
       <p className="text-[11.5px] text-canvas-muted">{meta.hint}</p>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${meta.label} ara`} className={`${field} pl-9`} autoFocus />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kişi, AD grubu, birim ya da CRM rolü ara" className={`${field} pl-9`} autoFocus />
       </div>
       {add.error && <Note tone="err">{errText(add.error, 'Bağ eklenemedi.')}</Note>}
       {add.data?.refresh && !add.data.refresh.ok && (
@@ -548,7 +560,23 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
       ) : list.error ? (
         <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>
       ) : shown.length === 0 ? (
-        <p className="py-4 text-center text-[12px] text-canvas-muted">Eşleşen yok.</p>
+        <div className="space-y-2 py-4 text-center text-[12px] text-canvas-muted">
+          <p>{needle ? `«${meta.label}» içinde eşleşen yok.` : 'Liste boş.'}</p>
+          {elsewhere.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {elsewhere.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setType(t.id)}
+                  className="min-h-11 rounded-lg bg-white px-3 text-[12px] font-extrabold text-canvas-violet ring-1 ring-canvas-violet/25 hover:bg-canvas-violet/10 sm:min-h-8"
+                >
+                  {t.label}: {nf.format(t.n)} eşleşme
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-xl border border-slate-100 bg-white">
           {shown.map((c) => {
