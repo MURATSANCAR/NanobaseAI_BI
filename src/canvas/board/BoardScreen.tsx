@@ -60,6 +60,7 @@ import {
 } from './store';
 import Shell, { ZoomStage, useShellZoom } from '../stitch/Shell';
 import { notifyExport } from '../data-security/notify';
+import { holdSelection, wantsTextSelection } from '../components/dragText';
 
 /** Giriş yapan kişi; pano ona ait. Oturum kapısıyla aynı sorgu: aynı anahtara ikinci bir sorgu işlevi
  *  (her hatayı «oturum yok» sayan) giriş servisinin 502'sini oturum düşmesi gibi gösteriyordu. */
@@ -293,12 +294,17 @@ function CardFrame({
   const [live, setLive] = useState<{ dx: number; dy: number; w: number; h: number } | null>(null);
   const [mode, setMode] = useState<'move' | 'size' | null>(null);
   const start = useRef({ x: 0, y: 0, cx: 0, cy: 0, w: 0, h: 0 });
+  // Kart sürüklenirken silinirse belge seçilemez kalmasın.
+  useEffect(() => () => holdSelection(false), []);
 
   const down = (e: React.PointerEvent, m: 'move' | 'size') => {
     if (mode) return; // ikinci parmak/tuş sürüklemeyi devralmasın
     if (m === 'move' && (e.target as HTMLElement).closest(INTERACTIVE)) return;
     if (e.button !== 0) return;
+    // Kart gövdesindeki yazıya fareyle basınca metin seçilir (ZEKI-30); başlık tutamacı her yerden taşır.
+    if (m === 'move' && !(e.target as HTMLElement).closest('.pano-handle') && wantsTextSelection(e)) return;
     e.stopPropagation();
+    holdSelection(true);
     setMode(m);
     start.current = { x: e.clientX, y: e.clientY, cx: card.x, cy: card.y, w: card.w, h: card.h };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -325,6 +331,7 @@ function CardFrame({
     }
   };
   const up = () => {
+    holdSelection(false);
     if (live) {
       onChange(mode === 'move' ? { x: card.x + live.dx, y: card.y + live.dy } : { w: live.w, h: live.h });
     }

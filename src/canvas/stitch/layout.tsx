@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useTimasSession } from '../TimasSession';
 import { prefsApi } from '../engine';
+import { holdSelection, wantsTextSelection } from '../components/dragText';
 
 /**
  * Kanvas düzeni. Kart konumları ve genişlikleri kişiye ait: sürükle,
@@ -278,6 +279,8 @@ export default function Node({
   const [drag, setDrag] = useState<{ dx: number; dy: number; x: number; y: number; moved: boolean; scale: number } | null>(null);
   const [live, setLive] = useState<Box | null>(null);
   const resizing = useRef<{ startX: number; startW: number; scale: number } | null>(null);
+  // Kart sürüklenirken kaldırılırsa belge seçilemez kalmasın.
+  useEffect(() => () => holdSelection(false), []);
 
   if (!box) return null;
   // Telefonda sürükleme yok: `touch-none` parmakla kaydırmayı da kilitliyordu.
@@ -293,6 +296,10 @@ export default function Node({
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest(INTERACTIVE)) return;
     if ((e.target as HTMLElement).dataset.resize) return;
+    if (e.button !== 0) return;
+    // Yazının üstünde fareyle basınca metin seçilir (ZEKI-30); kart boş alanından taşınır.
+    if (wantsTextSelection(e)) return;
+    holdSelection(true);
     bringFront(id);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({ dx: e.clientX, dy: e.clientY, x: b.x, y: b.y, moved: false, scale: stageScale(e.currentTarget as HTMLElement) });
@@ -313,6 +320,7 @@ export default function Node({
     }
   };
   const finish = () => {
+    holdSelection(false);
     if (live) set(id, live);
     setLive(null);
     setDrag(null);
@@ -336,6 +344,7 @@ export default function Node({
           title="Genişliği ayarla"
           onPointerDown={(e) => {
             e.stopPropagation();
+            holdSelection(true);
             (e.currentTarget.parentElement as HTMLElement).setPointerCapture(e.pointerId);
             resizing.current = { startX: e.clientX, startW: b.w, scale: stageScale(e.currentTarget as HTMLElement) };
           }}

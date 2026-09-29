@@ -164,7 +164,7 @@ export default function Shell({
     <NavUiContext.Provider value={ui}>
     <ZoomContext.Provider value={onZoom ? 1 : ownZoom}>
     <div
-      className="nav-root bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white"
+      className="nav-root bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden relative print:h-auto print:overflow-visible print:bg-white"
     >
     {/* Interactive Dot Grid Overlay */}
     <div className="absolute inset-0 dot-grid pointer-events-none z-0 print:hidden"></div>
@@ -173,7 +173,8 @@ export default function Shell({
 
     <div className="shell-stage">
     {/* ================= TOP FLOATING NAVIGATION ================= */}
-    <header className="print:hidden absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
+    {/* Seçim engeli yalnız kabuğun düğme şeridinde; ekran içeriği (tablo, cevap, kart) seçilip kopyalanır (ZEKI-30). */}
+    <header className="print:hidden select-none absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
       {/* Kırıntı: çalışma alanı › ekran › detay. Telefonda yalnız ekran adı. */}
       <nav aria-label="Konum" className="glass-panel min-w-0 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-2 sm:gap-3 pointer-events-auto">
         <Link to="/" aria-label={`${head.tenant} · Kampüs`} className="md:hidden w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-[11px] sm:text-xs shadow-sm">
