@@ -79,7 +79,7 @@ ST_APPROVED = (100000020, 100000019, 100000017)   # Kurul onaylı, İş planı �
 ST_REJECTED = 100000012
 ST_CANCELLED = (100000009, 100000021)
 # new_projeBase.new_icrapor: 1 Yok, 2 İstendi, 3 Tamamlandı
-REPORT_DONE = 3
+REPORT_REQUESTED, REPORT_DONE = 2, 3
 # new_yayinkurulutoplantilariBase.statuscode
 DECISIONS = {1: "Kabul", 100000000: "Red", 100000001: "Bekleme", 100000002: "Yeniden değerlendirme", 100000003: None}
 DEC_ACCEPT, DEC_REJECT = 1, 100000000
@@ -193,6 +193,21 @@ def agenda_sql(schema: str, day: str) -> str:
     )
 
 
+def project_files_sql(schema: str, project_ids: list[str]) -> str:
+    """Projelere CRM'de eklenmiş dosyaların sayısı (`AnnotationBase`, not değil belge; proje nesne türü 10000 —
+    denetim sorgusuyla aynı kod). Editör raporu CRM'de ayrı bir alanda tutulmuyor; 2026-09-24 ölçümünde rapor
+    dosyaları proje eki olarak duruyordu (docs/analiz/yazar-giris-sureci-crm-2026-09-24.md §1 adım 3). Sayı yalnız
+    «ek dosya var» ipucudur, dosyanın rapor olduğunu söylemez; dosya gövdesi okunmaz."""
+    p = _prefix(schema)
+    ids = ", ".join(f"'{_guid(i)}'" for i in project_ids)
+    return (
+        "SELECT a.ObjectId AS proje_id, COUNT(*) AS n"
+        f" FROM {p}AnnotationBase a"
+        f" WHERE a.IsDocument = 1 AND a.ObjectTypeCode = 10000 AND a.ObjectId IN ({ids})"
+        " GROUP BY a.ObjectId"
+    )
+
+
 def project_boards_sql(schema: str, project_id: str) -> str:
     p = _prefix(schema)
     return (
@@ -220,6 +235,12 @@ def _s(v: Any) -> Optional[str]:
         return None
     t = str(v).strip()
     return t or None
+
+
+def _rich(v: Any) -> Optional[str]:
+    """CRM zengin metin alanı (Word'den yapıştırılmış HTML olabilir) → düz paragraflar (ZEKI-23)."""
+    from semantic_bridge.crm_text import rich_text
+    return rich_text(v)
 
 
 def _i(v: Any) -> Optional[int]:
@@ -275,12 +296,12 @@ def fact(r: dict[str, Any]) -> dict[str, Any]:
         "modifiedOn": _day(r.get("modifiedon")),
         "bookId": _id(r.get("new_stakkarti")),
         "book": _s(r.get("kitap")),
-        "idea": _s(r.get("new_projefikritekcmleile")),
+        "idea": _rich(r.get("new_projefikritekcmleile")),
         "publishOn": _day(r.get("new_hedeflenenbaskitarihi")) or _day(r.get("new_nerilenyayntarihi")),
         "boardOn": _day(r.get("kurul_tarihi")),
         "boardCode": _i(r.get("kurul_kod")),
         "boardCount": _i(r.get("kurul_adet")) or 0,
-        "boardNote": _s(r.get("karar_notu")),
+        "boardNote": _rich(r.get("karar_notu")),
         "contractOn": _day(r.get("sozlesme_ilk")),
         "contracts": _i(r.get("sozlesme_adet")) or 0,
         "participationOn": _day(r.get("katilim_ilk")),
@@ -469,7 +490,7 @@ def board_row(r: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": _id(r.get("new_yayinkurulutoplantilariid")), "date": _day(r.get("new_toplantitarihi")),
         "decisionCode": code, "decision": DECISIONS.get(code) if code is not None else None,
-        "note": _s(r.get("new_toplantikararnotu")), "printRun": _s(r.get("new_yaynkurulubaskiadedi")),
+        "note": _rich(r.get("new_toplantikararnotu")), "printRun": _s(r.get("new_yaynkurulubaskiadedi")),
         "price": _s(r.get("new_yaynkurulufiyatonerisi")), "royalty": _s(r.get("new_onerilenteliforani")),
         "publishOn": _day(r.get("new_onerilenyayintarihi")),
     }
@@ -478,7 +499,7 @@ def board_row(r: dict[str, Any]) -> dict[str, Any]:
 def opinion_row(r: dict[str, Any]) -> dict[str, Any]:
     r = _lower(r)
     return {"projectId": _id(r.get("new_kitapprojesiid")), "by": _s(r.get("yazan")), "verdict": _s(r.get("new_genelkanaat")),
-            "text": _s(r.get("new_projehakkndadiergrler")), "on": _day(r.get("createdon"))}
+            "text": _rich(r.get("new_projehakkndadiergrler")), "on": _day(r.get("createdon"))}
 
 
 def meetings(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -495,7 +516,30 @@ def meetings(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(by_day.values(), key=lambda m: m["date"], reverse=True)
 
 
-def agenda(rows: Iterable[dict[str, Any]], opinions: Optional[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+def files_by_project(rows: Iterable[dict[str, Any]]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for r in map(_lower, rows):
+        pid = _id(r.get("proje_id"))
+        if pid:
+            out[pid] = out.get(pid, 0) + (_i(r.get("n")) or 0)
+    return out
+
+
+def report_state(code: Optional[int], mark: Optional[dict[str, Any]]) -> tuple[Optional[str], Optional[str]]:
+    """Editör raporu (adım 3) nereden biliniyor: panoyla (`steps_of`) aynı kural — CRM «İç rapor» = Tamamlandı ya da
+    portalda «Rapor bitti» işareti. (kaynak, işaretleyen)"""
+    if code == REPORT_DONE:
+        return "crm", None
+    if mark:
+        return "portal", mark.get("display") or mark.get("by")
+    return None, None
+
+
+def agenda(rows: Iterable[dict[str, Any]], opinions: Optional[list[dict[str, Any]]],
+           marks: Optional[dict[str, dict[int, dict[str, Any]]]] = None,
+           files: Optional[dict[str, int]] = None) -> list[dict[str, Any]]:
+    """Kurul gündemi. `marks`: portal adım işaretleri (proje → adım → işaret); `files`: projenin CRM ek dosyası
+    sayısı (okunamadıysa None — ekran sayı göstermez)."""
     by_project: dict[str, list[dict[str, Any]]] = {}
     for o in opinions or []:
         by_project.setdefault(o["projectId"] or "", []).append({k: v for k, v in o.items() if k != "projectId"})
@@ -503,11 +547,18 @@ def agenda(rows: Iterable[dict[str, Any]], opinions: Optional[list[dict[str, Any
     for r in map(_lower, rows):
         code, pid = _i(r.get("kod")), _id(r.get("proje_id"))
         ops = by_project.get(pid or "", []) if opinions is not None else None
+        rcode = _i(r.get("rapor_kod"))
+        source, marked_by = report_state(rcode, ((marks or {}).get(pid or "") or {}).get(3))
         out.append({
             "id": _id(r.get("new_yayinkurulutoplantilariid")), "projectId": pid, "project": _s(r.get("proje")),
             "author": _s(r.get("yazar")) or _s(r.get("new_olasiyazartext")), "editor": _s(r.get("editor")),
-            "report": _i(r.get("rapor_kod")) == REPORT_DONE, "decisionCode": code,
-            "decision": DECISIONS.get(code) if code is not None else None, "note": _s(r.get("new_toplantikararnotu")),
+            # ZEKI-19/24: eskiden yalnız CRM «İç rapor» alanına bakılıyordu («Tamamlandı» 2.115 projenin 5'inde,
+            # 2026-09-24 ölçümü); portal «Rapor bitti» işareti sayılmıyor, neredeyse her maddeye «CRM'de yok» yazılıyordu.
+            "report": source is not None, "reportSource": source, "reportBy": marked_by,
+            "reportRequested": source is None and rcode == REPORT_REQUESTED,
+            "files": (files.get(pid, 0) if pid else None) if files is not None else None,
+            "decisionCode": code,
+            "decision": DECISIONS.get(code) if code is not None else None, "note": _rich(r.get("new_toplantikararnotu")),
             "printRun": _s(r.get("new_yaynkurulubaskiadedi")), "price": _s(r.get("new_yaynkurulufiyatonerisi")),
             "royalty": _s(r.get("new_onerilenteliforani")), "advance": _s(r.get("new_avansbedeli")),
             "publishOn": _day(r.get("new_onerilenyayintarihi")),

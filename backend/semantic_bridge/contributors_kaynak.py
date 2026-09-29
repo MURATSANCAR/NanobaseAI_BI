@@ -114,6 +114,11 @@ def for_person(out: dict[str, Any], log: RunLog, schema: str, contact_id: str) -
                           description="Sözleşme no, durum, başlangıç/bitiş, telif oranı (new_Telif), ödeme payı.")
     projects = log.sorgu(k, PFX + "projeler", "Kişinin olası yazar olduğu projeler", "crm",
                          E.person_projects_sql(schema, contact_id), database=db)
+    ids = E.contract_book_ids(out.get("contracts") or [])
+    # Rakam değil, ad listesi: kaynak olarak listelenir, alana bağlanmaz.
+    if ids:
+        log.sorgu(k, PFX + "sozlesme_eserleri", "Sözleşmelere bağlı eserler", "crm", E.books_sql(schema, ids),
+                  database=db, description="Sözleşme satırında numaranın üstünde yazan eser adları.")
     fields: dict[str, str] = {}
     for key, src in (("works[]", works), ("contracts[]", contracts), ("projects[]", projects)):
         if src:

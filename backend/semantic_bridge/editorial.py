@@ -14,11 +14,10 @@ metin (arama) `_like` ile kaçışlanır; kimlikler GUID biçimine, kodlar tamsa
 """
 from __future__ import annotations
 
-import html
 import re
 from typing import Any, Callable, Optional
 
-from semantic_bridge import crm_rights
+from semantic_bridge import crm_rights, crm_text
 
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _GUID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
@@ -231,10 +230,9 @@ def _date(v: Any) -> Optional[str]:
 
 
 def _plain(v: Any) -> Optional[str]:
-    """CRM zengin metin alanları HTML tutar (<p>, &uuml;); ekranda düz paragraflar gösterilir."""
-    t = re.sub(r"(?i)<br\s*/?>|</(p|div|li)>", "\n", str(v or ""))
-    t = html.unescape(re.sub(r"<[^>]+>", "", t)).replace("\xa0", " ")
-    return "\n".join(x for x in (re.sub(r"[ \t]+", " ", ln).strip() for ln in t.splitlines()) if x) or None
+    """CRM zengin metin alanları HTML tutar (<p>, &uuml;); ekranda düz paragraflar gösterilir (ortak kural
+    `crm_text.rich_text`)."""
+    return crm_text.rich_text(v)
 
 
 def _rates(r: dict[str, Any]) -> list[dict[str, Any]]:
@@ -438,7 +436,7 @@ def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, 
         "id": _s(r.get("new_yayinkurulutoplantilariId")),
         "date": _date(r.get("new_toplantitarihi")),
         "decision": _s(r.get("statuscode")),
-        "note": _s(r.get("new_toplantikararnotu")),
+        "note": _plain(r.get("new_toplantikararnotu")),
         "royalty": _n(r.get("new_onerilenteliforani")) or None,
         "advance": _n(r.get("new_avansbedeli")) or None,
         "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
@@ -458,7 +456,7 @@ def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, 
             opinion = {
                 "by": _s(g.get("yazan")), "verdict": _s(g.get("new_GenelKanaat")), "sales": _s(g.get("new_SatTahmini")),
                 "printRun": _s(g.get("new_lkBaskAdedinerisi")), "price": _n(g.get("new_Fiyatnerisi")) or None,
-                "month": _s(g.get("new_BaskAynerisi")), "text": _s(g.get("new_ProjeHakkndaDierGrler")),
+                "month": _s(g.get("new_BaskAynerisi")), "text": _plain(g.get("new_ProjeHakkndaDierGrler")),
                 "titleIdea": _s(g.get("new_simnerisi")), "on": _date(g.get("CreatedOn")),
             }
             for it in by_project.get(str(g.get("new_kitapprojesiid") or "").lower(), []):
@@ -613,7 +611,7 @@ def person_works_sql(schema: str, contact_id: str) -> str:
 def person_contracts_sql(schema: str, contact_id: str) -> str:
     p = _prefix(schema)
     return (
-        "SELECT s.new_sozlesmeId, s.new_name, s.statuscode, s.new_SozlesmeTipi, s.new_SozlesmeBaslangicTarihi,"
+        "SELECT s.new_sozlesmeId, s.new_name, s.new_SozlesmeKodu, s.statuscode, s.new_SozlesmeTipi, s.new_SozlesmeBaslangicTarihi,"
         f" s.new_SozlesmeBitisTarihi, s.new_Telif, t.new_Odeme, {crm_rights.columns('s')}"
         f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
         f"{crm_rights.joins(p, 's')}"
@@ -674,22 +672,47 @@ def role_facets(schema: str, run: Callable[[str], dict[str, Any]]) -> dict[str, 
                       for r in res.get("records") or []], "db": _timing(res)}
 
 
+def contract_book_ids(contracts: list[dict[str, Any]]) -> list[str]:
+    """Eser adları okunacak sözleşme kimlikleri (sırası sorgu bilgisinde aynı SQL'i kurmak için sabit)."""
+    return [c["id"] for c in contracts if c.get("id") and _GUID.match(str(c["id"]))]
+
+
+def _attach_contract_books(schema: str, run: Callable[[str], dict[str, Any]], contracts: list[dict[str, Any]]) -> None:
+    """ZEKI-27: sözleşme yalnız numarasıyla okunmuyor; sözleşmeye bağlı eserlerin adı yanına yazılır
+    (`new_new_sozlesme_new_kitapBase`, sözleşme listesiyle aynı bağ — `books_sql`). Okuduğumuz sözleşme alanlarında
+    başlık yok (`new_name` sözleşme numarası, `new_SozlesmeKodu` kodu); ekranda başlık yerine eser adları durur."""
+    ids = contract_book_ids(contracts)
+    if not ids:
+        return
+    by_id = {c["id"].lower(): c for c in contracts if c.get("id")}
+    for b in run(books_sql(schema, ids)).get("records") or []:
+        c = by_id.get(str(b.get("new_sozlesmeid") or "").lower())
+        title = _s(b.get("new_name"))
+        if c is not None and title and all(x["title"] != title for x in c["books"]):
+            c["books"].append({"id": _s(b.get("new_kitapId")), "title": title})
+
+
 def person(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -> dict[str, Any]:
     head = (run(person_sql(schema, contact_id)).get("records") or [None])[0]
     if head is None:
         raise EditorialError("Kişi bulunamadı.", 404)
     works = run(person_works_sql(schema, contact_id))
+    contracts = _with_rights(schema, run, run(person_contracts_sql(schema, contact_id)).get("records") or [],
+                             lambda r: {"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")),
+                                        "code": _s(r.get("new_SozlesmeKodu")),
+                                        "status": _s(r.get("statuscode")), "kind": _s(r.get("new_SozlesmeTipi")),
+                                        "start": _date(r.get("new_SozlesmeBaslangicTarihi")),
+                                        "end": _date(r.get("new_SozlesmeBitisTarihi")),
+                                        "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme")),
+                                        "books": []})
+    _attach_contract_books(schema, run, contracts)
     return {
         "id": _s(head.get("ContactId")), "name": _s(head.get("FullName")),
-        "bio": _s(head.get("new_kisaozgecmis")) or _s(head.get("new_ozgecmis")),
+        # ZEKI-23: özgeçmiş alanları Word'den yapıştırılmış HTML tutabilir; ekrana düz paragraf gider.
+        "bio": _plain(head.get("new_kisaozgecmis")) or _plain(head.get("new_ozgecmis")),
         "works": [{"bookId": _s(r.get("new_kitapId")), "title": _s(r.get("kitap")), "role": _s(r.get("rol")),
                    "on": _date(r.get("CreatedOn"))} for r in works.get("records") or []],
-        "contracts": _with_rights(schema, run, run(person_contracts_sql(schema, contact_id)).get("records") or [],
-                                  lambda r: {"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")),
-                                             "status": _s(r.get("statuscode")), "kind": _s(r.get("new_SozlesmeTipi")),
-                                             "start": _date(r.get("new_SozlesmeBaslangicTarihi")),
-                                             "end": _date(r.get("new_SozlesmeBitisTarihi")),
-                                             "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme"))}),
+        "contracts": contracts,
         "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
                       "text": _s(r.get("new_icerikdurumu")), "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor"))}
                      for r in run(person_projects_sql(schema, contact_id)).get("records") or []],
@@ -1070,7 +1093,7 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str,
                       "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor")), "idea": _plain(r.get("fikir"))}
                      for r in projects],
         "board": [{"id": _s(r.get("new_yayinkurulutoplantilariId")), "date": _date(r.get("new_toplantitarihi")),
-                   "decision": _s(r.get("statuscode")), "note": _s(r.get("new_toplantikararnotu")),
+                   "decision": _s(r.get("statuscode")), "note": _plain(r.get("new_toplantikararnotu")),
                    "royalty": _n(r.get("new_onerilenteliforani")), "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
                    "project": _s(r.get("proje"))}
                   for r in board_res.get("records") or []],

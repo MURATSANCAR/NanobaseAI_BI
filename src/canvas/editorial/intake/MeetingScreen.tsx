@@ -20,6 +20,24 @@ const tone = (code: number | null) => (code === 1 ? 'ok' : code === 100000000 ? 
 const longDate = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 const dayLabel = (d: string) => longDate.format(new Date(`${d}T12:00:00`));
 
+/** Editör raporu yalnız kanıt varsa yazılır (CRM «İç rapor» alanı ya da portaldaki «Rapor bitti» işareti). Kanıt
+ *  yoksa satır boş kalır; neden boş olduğu listenin altında bir kez anlatılır (ZEKI-19/24). */
+function ReportPills({ it, opinionsVisible }: { it: IntakeAgendaItem; opinionsVisible: boolean }) {
+  const pills = [
+    it.reportSource === 'crm' && <Pill key="r" tone="ok">Editör raporu tamam</Pill>,
+    it.reportSource === 'portal' && (
+      <Pill key="r" tone="ok">
+        Editör raporu tamam{it.reportBy ? ` · ${it.reportBy}` : ''}
+      </Pill>
+    ),
+    it.reportRequested && <Pill key="q" tone="muted">Editör raporu istendi</Pill>,
+    (it.files ?? 0) > 0 && <Pill key="f" tone="muted">{nf.format(it.files ?? 0)} ek dosya</Pill>,
+    opinionsVisible && it.opinionCount != null && <Pill key="o" tone="muted">{nf.format(it.opinionCount)} görüş</Pill>,
+  ].filter(Boolean);
+  if (!pills.length) return null;
+  return <span className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">{pills}</span>;
+}
+
 function AgendaRow({ it, no, open, onToggle, opinionsVisible }: { it: IntakeAgendaItem; no: number; open: boolean; onToggle: () => void; opinionsVisible: boolean }) {
   const extra = [it.printRun && `Baskı ${it.printRun}`, it.price && `Fiyat ${it.price}`, it.royalty && `Telif %${it.royalty}`, it.advance && `Avans ${it.advance}`, it.publishOn && `Yayın ${dateTime(it.publishOn)}`].filter(Boolean);
   return (
@@ -31,10 +49,7 @@ function AgendaRow({ it, no, open, onToggle, opinionsVisible }: { it: IntakeAgen
           <span className="mt-0.5 block text-[11.5px] leading-snug text-canvas-muted">
             {[it.author && `Yazar: ${it.author}`, it.editor ? `Editör: ${it.editor}` : 'Editör yok'].filter(Boolean).join(' · ')}
           </span>
-          <span className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">
-            <Pill tone={it.report ? 'muted' : 'warn'}>Editör raporu: {it.report ? 'var' : 'CRM\'de yok'}</Pill>
-            {opinionsVisible && it.opinionCount != null && <Pill tone="muted">{nf.format(it.opinionCount)} görüş</Pill>}
-          </span>
+          <ReportPills it={it} opinionsVisible={opinionsVisible} />
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           <Pill tone={tone(it.decisionCode)}>{it.decision || 'Karar girilmedi'}</Pill>
@@ -161,8 +176,14 @@ export default function MeetingScreen() {
               />
             ))}
           </ol>
+          {items.length > 0 && (
+            <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] leading-snug text-canvas-muted">
+              {"«Editör raporu tamam» yalnız kanıt varsa yazılır: CRM'de projenin «İç rapor» alanı «Tamamlandı» ise ya da editör proje sayfasında «Rapor bitti» işaretini koyduysa. CRM'de bu alan çoğu projede doldurulmuyor; yazı yoksa rapor yazılmamış demek değildir."}
+              {agenda.data?.filesRead ? " «Ek dosya», projeye CRM'de eklenmiş dosyaların sayısıdır; editör raporu bu eklerin arasında olabilir." : ''}
+            </p>
+          )}
           {agenda.data && !agenda.data.opinionsVisible && items.length > 0 && (
-            <p className="mt-2 text-[11px] text-canvas-muted">Üyelerin adlı görüşlerini yöneticiler görür.</p>
+            <p className="mt-1 text-[11px] text-canvas-muted">Üyelerin adlı görüşlerini yöneticiler görür.</p>
           )}
         </Panel>
 

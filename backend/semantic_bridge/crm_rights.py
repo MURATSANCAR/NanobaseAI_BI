@@ -149,8 +149,8 @@ def _num(v: Any) -> Optional[float]:
 
 
 def _plain(v: Any) -> Optional[str]:
-    from semantic_bridge.editorial import _plain as plain
-    return plain(v)
+    from semantic_bridge.crm_text import rich_text
+    return rich_text(v)
 
 
 def rights(r: dict[str, Any]) -> list[dict[str, Any]]:

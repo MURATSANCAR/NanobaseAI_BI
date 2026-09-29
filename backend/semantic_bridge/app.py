@@ -4835,7 +4835,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @_izle_ep('crm.editoryal.gundem', 'Kurul gündemi',
                'Gündem: proje, karar (kabul, red, yeniden değerlendirme, bekliyor) ve madde başına görüş sayısı CRM kurul ve görüş kayıtlarından.')
     def editorial_intake_agenda(day: str, request: Request) -> dict[str, Any]:
-        _, _, user, _, _ = _intake_ctx(request)
+        engine, tenant, user, _, _ = _intake_ctx(request)
         see = _can(user, "ozellik:yayin-kurulu.gorusler")
         schema, run = _editorial(request)
         try:
@@ -4844,7 +4844,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             # Kurul üyelerinin adlı görüşleri: yönetici ya da «Yayın kurulu: üye görüşleri».
             opinions = [intake_mod.opinion_row(o) for o in run(intake_mod.opinions_sql(schema, ids)).get("records") or []] \
                 if see and ids else ([] if see else None)
-            return {"date": day, "items": intake_mod.agenda(rows, opinions), "opinionsVisible": see}
+            # ZEKI-19/24: editör raporu panodaki kuralla — CRM «İç rapor» ya da portaldaki «Rapor bitti» işareti.
+            marks = intake_mod.all_marks(engine, tenant)
+            # Projenin CRM ek dosyası sayısı (rapor dosyaları CRM'de proje eki olarak duruyor). Okunamazsa gündem yine
+            # döner, ekran sayı göstermez.
+            files = None
+            if ids:
+                try:
+                    files = intake_mod.files_by_project(run(intake_mod.project_files_sql(schema, ids)).get("records") or [])
+                except Exception as e:  # noqa: BLE001
+                    log.warning("kurul gündemi: proje ekleri okunamadı: %s", str(e)[:200])
+            return {"date": day, "items": intake_mod.agenda(rows, opinions, marks, files), "opinionsVisible": see,
+                    "filesRead": files is not None}
         except intake_mod.IntakeError as e:
             raise _intake_error(e) from e
 

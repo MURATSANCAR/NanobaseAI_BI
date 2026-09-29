@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BriefcaseBusiness, Search, X } from 'lucide-react';
+import { BriefcaseBusiness, ChevronDown, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, LANG_NONE, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
 import { canSeePage, usePageAccess } from '../useAdmin';
 import { contributorsListOptions, languageFacetsOptions, roleFacetsOptions } from './queries';
@@ -14,6 +14,7 @@ import SqlInfo from '../components/SqlInfo';
 import SearchSelect from '../components/SearchSelect';
 import { RightChips, RightsDetails } from './crmRights';
 import { EmptyHint, Explain } from '../components/Explain';
+import { groupWorks } from './personWorks';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -41,16 +42,59 @@ const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   return 'muted';
 };
 
-function Block({ title, count, info, children }: { title: string; count: number; info?: React.ReactNode; children: React.ReactNode }) {
+/** Açılır-kapanır bölüm (ZEKI-27). Başlıkta ad ve sayı her zaman görünür; içerik dokununca açılır. Sorgu bilgisi
+ *  düğmesi başlık düğmesinin dışında durur (düğme içinde düğme olmaz). İçerik anında açılır; yalnız ok döner. */
+function Block({ title, count, info, defaultOpen = false, children }: { title: string; count: number; info?: React.ReactNode; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
   return (
-    <section className="mt-4">
+    <section className="mt-3 border-t border-slate-100 pt-1">
       <h3 className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-extrabold">
-        {title}
-        <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={id}
+          className="-mx-1 flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left hover:bg-slate-50 sm:min-h-8"
+        >
+          <span className="min-w-0 break-words">{title}</span>
+          <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(count)}</span>
+          <ChevronDown
+            aria-hidden
+            className={`ml-auto h-4 w-4 shrink-0 text-canvas-muted transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
         {info}
       </h3>
-      {children}
+      <div id={id} hidden={!open}>
+        {open && children}
+      </div>
     </section>
+  );
+}
+
+/** Eserler rol başlığı altında: «Yazar» önce, sonra bu ekranın rolleri, sonra diğerleri (bkz. `personWorks`). */
+function Works({ works, screenRoles }: { works: PersonDetail['works']; screenRoles: string[] }) {
+  const groups = useMemo(() => groupWorks(works, screenRoles), [works, screenRoles]);
+  if (!groups.length) return <p className="mt-1.5 text-[12px] text-canvas-muted">Eser katılım kaydı yok.</p>;
+  return (
+    <div className="zk-scroll mt-1 max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-1">
+      {groups.map((g) => (
+        <div key={g.role}>
+          <div className="flex items-baseline gap-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            {g.role}
+            <span className="font-mono font-semibold normal-case tabular-nums">{nf.format(g.works.length)}</span>
+          </div>
+          <ul className="mt-0.5 space-y-1">
+            {g.works.map((w, i) => (
+              <li key={`${w.bookId}-${i}`} className="break-words">
+                {w.title || <span className="text-canvas-muted">Kitap bağlanmamış</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -101,7 +145,7 @@ function Relations({ p }: { p: PersonDetail }) {
   );
 }
 
-function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => void; relations?: boolean }) {
+function Detail({ p, onClose, relations, screenRoles }: { p: PersonDetail; onClose: () => void; relations?: boolean; screenRoles: string[] }) {
   return (
     <div className="text-[12.5px]">
       <div className="flex items-start justify-between gap-2">
@@ -115,16 +159,9 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
 
       {relations && <Relations p={p} />}
 
-      <Block title="Eserler" count={p.works.length} info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
+      <Block title="Eserler" count={p.works.length} defaultOpen info={<SqlInfo k={p.kaynaklar} alan="sayac.eser" label="Eserler" />}>
         {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste çok uzun olduğu için kısaltıldı; eserlerin tamamı gösterilmiyor.</p>}
-        <ul className="mt-1.5 max-h-72 space-y-1 overflow-y-auto pr-1">
-          {p.works.map((w, i) => (
-            <li key={`${w.bookId}-${w.role}-${i}`} className="flex items-baseline justify-between gap-2">
-              <span className="min-w-0 break-words">{w.title || 'Kitap bağlanmamış'}</span>
-              <span className="shrink-0 text-[11px] text-canvas-muted">{w.role}</span>
-            </li>
-          ))}
-        </ul>
+        <Works works={p.works} screenRoles={screenRoles} />
       </Block>
 
       <WebSection kind="person" id={p.id} />
@@ -145,7 +182,12 @@ function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => voi
           <ul className="zk-scroll mt-1.5 max-h-[28rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
             {p.contracts.map((c) => (
               <li key={c.id} className="border-t border-slate-100 pt-1.5 first:border-t-0 first:pt-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {c.books?.length ? (
+                  <div className="break-words font-semibold leading-snug">{c.books.map((b) => b.title).join(' · ')}</div>
+                ) : (
+                  <div className="text-[11.5px] text-canvas-muted">Sözleşmeye eser bağlanmamış</div>
+                )}
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="font-mono text-[11.5px] tabular-nums">{c.no || '—'}</span>
                   {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
                   {c.kind && <span className="text-[11px] text-canvas-muted">{crmLabel(c.kind)}</span>}
@@ -375,7 +417,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
         {/* Telefonda ayrıntı listenin üstüne gelir; masaüstünde sağda durur. */}
         {open && (
           <div className="order-first lg:sticky lg:top-0 lg:order-none">
-            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} /> : <Loading />}</Panel>
+            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} screenRoles={m.roles} /> : <Loading />}</Panel>
           </div>
         )}
       </div>

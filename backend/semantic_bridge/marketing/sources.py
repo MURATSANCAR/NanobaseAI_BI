@@ -315,11 +315,8 @@ def _long(v: Any) -> Optional[str]:
     """Çok satırlı metin: satır sonları korunur, fazla boşluk atılır; HTML etiketleri sökülür."""
     if v is None:
         return None
-    s = re.sub(r"<br\s*/?>|</p>", "\n", str(v), flags=re.I)
-    s = re.sub(r"<[^>]+>", "", s).replace("&nbsp;", " ").replace("&amp;", "&")
-    s = "\n".join(" ".join(x.split()) for x in s.splitlines())
-    s = re.sub(r"\n{3,}", "\n\n", s).strip()
-    return s or None
+    from semantic_bridge.crm_text import rich_text   # ZEKI-23: ortak kural, bütün HTML varlıkları çözülür
+    return rich_text(v, keep_blank=True)
 
 
 def book_row(r: dict[str, Any]) -> dict[str, Any]:

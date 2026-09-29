@@ -1322,7 +1322,15 @@ export type IntakeAgendaItem = {
   project: string | null;
   author: string | null;
   editor: string | null;
+  /** Editör raporu tamam: CRM «İç rapor» = Tamamlandı ya da portalda «Rapor bitti» işareti. */
   report: boolean;
+  reportSource: 'crm' | 'portal' | null;
+  /** Portalda «Rapor bitti» işaretini koyan kişi. */
+  reportBy: string | null;
+  /** CRM «İç rapor» = İstendi (henüz tamamlanmamış). */
+  reportRequested: boolean;
+  /** Projenin CRM'deki ek dosya sayısı; okunamadıysa null. */
+  files: number | null;
   decisionCode: number | null;
   decision: string | null;
   note: string | null;
@@ -1342,7 +1350,7 @@ export const intakeApi = {
   unmark: (id: string, step: number) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/intake/${encodeURIComponent(id)}/marks/${step}`, undefined, 30_000),
   meetings: () => send<{ items: IntakeMeeting[] }>('GET', '/api/v1/editorial/intake/meetings', undefined, 60_000),
   agenda: (day: string) =>
-    send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
+    send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean; filesRead?: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
 };
 
 // ------------------------------------------------------------ basın ve web (açık RSS + Wikidata)
@@ -1513,7 +1521,19 @@ export type PersonDetail = {
   name: string | null;
   bio: string | null;
   works: Array<{ bookId: string | null; title: string | null; role: string | null; on: string | null }>;
-  contracts: Array<{ id: string; no: string | null; status: string | null; kind: string | null; start: string | null; end: string | null; royalty: number | null; share: number | null } & CrmRightsFields>;
+  contracts: Array<{
+    id: string;
+    no: string | null;
+    code?: string | null;
+    status: string | null;
+    kind: string | null;
+    start: string | null;
+    end: string | null;
+    royalty: number | null;
+    share: number | null;
+    /** Sözleşmeye bağlı eserler (CRM sözleşme–kitap bağı); sözleşmenin başlığı yerine bunlar yazılır. */
+    books?: Array<{ id: string | null; title: string }>;
+  } & CrmRightsFields>;
   projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; on: string | null; editor: string | null }>;
   truncated: boolean;
   db?: DbTiming | null;

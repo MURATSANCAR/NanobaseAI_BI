@@ -557,9 +557,8 @@ def read_crm_books(run: Runner, schema: str) -> dict[str, dict[str, Any]]:
 def _strip_html(v: Any) -> Optional[str]:
     if v is None:
         return None
-    s = re.sub(r"<[^>]+>", " ", str(v))
-    s = s.replace("&nbsp;", " ").replace("&amp;", "&")
-    return clean(s, 1000)
+    from semantic_bridge.crm_text import rich_line   # ZEKI-23: bütün HTML varlıkları (&rsquo;, &Scedil;…) çözülür
+    return clean(rich_line(v) or "", 1000)
 
 
 def read_crm_book_themes(run: Runner, schema: str) -> dict[str, list[str]]:
