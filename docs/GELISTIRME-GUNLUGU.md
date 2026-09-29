@@ -45,6 +45,12 @@
 - **Kurulum (test sunucusu):** `f8ca7bdf` — yeni ve değişen dosyalar tek tek (md5: sunucu = önceki main); `access.py`/`app.py` sunucuda başka oturumun 14:38 kurulumunu taşıdığı için üzerine yazılmadı, yalnız bizim farkımız yamalandı. Canlı ağaçta 59 test geçti; köprü yeniden başladı; ön yüz sunucuda derlendi, `cockpit/dist`'e yayınlandı (`index-CseUMRKG.js`, `._*` 0); `timas-pazar-dagitim.timer` kuruldu, elle bir kez koştu (kaynak 25.09'dan beri yenilenmediği için görüntü atlandı), ilk otomatik tur 30.09 06:15.
 - **Canlı kabul (8795, `timasai` 15 dk oturumu, silindi):** baskısı yok 514/514, tükenmiş 1.121/1.121 (kaynağa doğrudan SQL referansı, fazla 0 eksik 0); kitap detayında kutu ve sorgu bilgisi; Bitecekler 50'de 47 dağıtımcılı.
 - **Tarayıcı (Playwright, 320/390/768/1280):** Stok listesi ve Pazar paneli taşma 0. Kitap detayı her genişlikte «Hata» ile düşüyordu: talep tahmini başlangıcı ay biçiminde («2026-08») ve `fmtDay` bunu gün sanıp `RangeError: Invalid time value` atıyordu — M43'ten (09-28) beri tahmini olan her kitap kartı kırıktı, bu işten bağımsız. Düzeltme ortak `fmtDay`'de: ay → «Ağustos 2026», çözülemeyen değer olduğu gibi (sınıf düzeltmesi). `budget/fmtDay.test.ts` (3), `tsc -b` temiz.
+## 2026-09-29 (akşam, 4) — İK anket ve değerlendirme formları: ham JSON kutusu yerine kart düzenleyici
+
+- **Anket şablonu (`hr/engagement/SurveyAdmin.tsx`):** soru başına kart — soru metni, cevap biçimi («Katılım (1–5)», «Tavsiye puanı (0–10)», «Seçenekli», «Açık uçlu»), seçenekli soruda seçenek satırları, ↑/↓/sil, «Soru ekle», boşken «Başlangıç sorularını yükle».
+- **Değerlendirme formu (`hr/performance/ReviewCycle.tsx`):** bölüm başına kart — başlık, tür (yetkinlik 1–5 / hedefler / açık uçlu), yetkinlikte maddeler, yol gösterici not; «Bölüm ekle».
+- **Ortak (`hr/ListEditor.tsx`):** var olan soru/bölüm/madde anahtarı aynen korunur (geçmiş sonuçlar anahtarla gruplanır); yeni anahtar kaydederken metnin ilk kelimelerinden üretilir (`a-z0-9_`, ≤24, çakışırsa `_2`). Bilinmeyen alanlar korunur; gönderilen veri eskisiyle aynı biçimde. Sunucu kuralları istemcide (boş metin, geçerli tür, seçenekli soruda ≥2 seçenek, tekil anahtar, ankette en çok 1 tavsiye puanı, yetkinlikte ≥1 madde, ölçek 5 satır) — «Kaydet» gerekçesiyle kapalı. Ekranda «JSON» kalmadı.
+- **Doğrulama:** test sunucusu SSH'ta erişilemez (IP engeli); derleme bağlantı açılınca.
 
 ## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
 

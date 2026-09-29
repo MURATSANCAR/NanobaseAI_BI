@@ -11,6 +11,8 @@ import { Block, Fact, HrFrame, Tabs } from '../parts';
 import SqlInfo from '../../components/SqlInfo';
 import Calibration from './Calibration';
 import { REVIEW_TONE, perfApi, pct, type Cycle, type Form, type PerfMeta, type Section } from './perfApi';
+import { EmptyHint } from '../../components/Explain';
+import { BlockedReason, ItemCard, TextRows, localId, makeKey, moveAt, tidy, type Row } from '../ListEditor';
 
 /** M56 Değerlendirme dönemi (İK): dönem aç/kapat, form şablonu, tamamlanma panosu, tek tıkla hatırlatma, kalibrasyon.
  *  Kalibrasyon ve kişi adlı dağılım yalnız kalibrasyon yetkisinde. */
@@ -275,22 +277,98 @@ function FormsTab() {
   );
 }
 
+/** Bölüm türleri; sunucudaki `SECTION_KINDS` (hr_performance.py) ve değerlendirme formundaki (ReviewForm) karşılığıyla aynı. */
+const SECTION_KINDS: { value: Section['kind']; label: string; hint: string }[] = [
+  { value: 'yetkinlik', label: 'Yetkinlik (1–5 puan)', hint: 'Her madde 1–5 arası puanlanır; hem çalışan hem yönetici puan verir. En az bir madde gerekir.' },
+  { value: 'hedef', label: 'Hedefler', hint: 'Madde yazılmaz; kişinin bu dönemdeki hedefleri ve ilerleme notları kendiliğinden gelir.' },
+  { value: 'acik', label: 'Açık uçlu', hint: 'Yazılı cevap alanı; madde yazılmaz.' },
+];
+const isSectionKind = (v: string): v is Section['kind'] => SECTION_KINDS.some((x) => x.value === v);
+
+/** Düzenlenen bölüm. `key`/`orig` kayıtlı ya da başlangıç formundan gelen bölümde dolu; yeni bölümde boş. */
+type SecDraft = { id: string; key: string | null; orig: Record<string, unknown> | null; title: string; kind: string; help: string; items: Row[] };
+
+function toSecDrafts(ss: Section[]): SecDraft[] {
+  const seen = new Set<string>();
+  return ss.map((s) => {
+    const key = typeof s.key === 'string' && s.key ? s.key : null;
+    const id = key && !seen.has(key) ? `bolum-${key}` : localId();
+    if (key) seen.add(key);
+    return {
+      id, key, orig: { ...s }, title: String(s.title ?? ''), kind: String(s.kind || 'acik'), help: String(s.help ?? ''),
+      items: (Array.isArray(s.items) ? s.items : []).map((it) => ({
+        id: localId(), key: typeof it?.key === 'string' && it.key ? it.key : null, orig: { ...it }, text: String(it?.label ?? ''),
+      })),
+    };
+  });
+}
+
+/** Sunucunun `_clean_sections` kurallarının (hr_performance.py) istemci karşılığı. Anahtarlar bölüm ve maddeler arasında tektir. */
+function checkSections(ds: SecDraft[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  const add = (id: string, m: string) => { (out[id] ??= []).push(m); };
+  const firstWithKey = new Map<string, number>();
+  const claim = (key: string | null | undefined, id: string, i: number) => {
+    if (!key) return;
+    const j = firstWithKey.get(key);
+    if (j !== undefined) add(id, j === i ? 'Bu bölümde aynı kimliği taşıyan iki kayıt var; birini silip yeniden ekleyin.' : `Bu bölüm ${j + 1}. bölümle aynı kimliği taşıyor; birini silip yeniden ekleyin.`);
+    else firstWithKey.set(key, i);
+  };
+  ds.forEach((s, i) => {
+    if (!isSectionKind(s.kind)) add(s.id, 'Bölüm türünü seçin.');
+    if (!tidy(s.title)) add(s.id, 'Bölüm başlığını yazın.');
+    if (s.kind === 'yetkinlik' && !s.items.some((it) => tidy(it.text))) add(s.id, 'Yetkinlik bölümüne en az bir madde yazın.');
+    claim(s.key, s.id, i);
+    if (s.kind === 'yetkinlik') s.items.filter((it) => tidy(it.text)).forEach((it) => claim(it.key, s.id, i));
+  });
+  return out;
+}
+
+/** Gönderilen dizi öncekiyle aynı biçimde: var olan bölüm/maddenin bilinmeyen alanları korunur, yalnız düzenlenenler yazılır.
+ *  Boş madde satırları sunucuda olduğu gibi atlanır; yetkinlik dışı bölümün maddesi yoktur. */
+function buildSections(ds: SecDraft[]): Record<string, unknown>[] {
+  const taken = new Set<string>();
+  ds.forEach((s) => {
+    if (s.key) taken.add(s.key);
+    s.items.forEach((it) => { if (it.key) taken.add(it.key); });
+  });
+  return ds.map((s, i) => {
+    const key = s.key ?? makeKey(s.title, `b${i + 1}`, taken);
+    const items = s.kind === 'yetkinlik'
+      ? s.items.filter((it) => tidy(it.text)).map((it, j) => ({ ...(it.orig ?? {}), key: it.key ?? makeKey(it.text, `${key}_${j + 1}`, taken), label: tidy(it.text) }))
+      : [];
+    return { ...(s.orig ?? {}), key, title: tidy(s.title), kind: s.kind, items, help: tidy(s.help) };
+  });
+}
+
 function FormEditor({ f, starter, onClose }: { f: Form | null; starter: { name: string; sections: Section[] }; onClose: () => void }) {
   const [name, setName] = useState(f?.name ?? starter.name);
   const [state, setState] = useState<Form['state']>(f?.state ?? 'taslak');
-  const [text, setText] = useState(JSON.stringify(f?.sections ?? starter.sections, null, 2));
+  const [drafts, setDrafts] = useState<SecDraft[]>(() => toSecDrafts(f?.sections ?? starter.sections));
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [labels, setLabels] = useState((f?.overallLabels ?? []).join('\n'));
+  const overall = labels.split('\n').map((x) => x.trim()).filter(Boolean);
   const save = useMutation({
     mutationFn: () => {
-      let sections: unknown;
-      try { sections = JSON.parse(text); } catch { throw new Error('Bölümler metni bozuk; tırnak, virgül ve parantezleri kontrol edin.'); }
-      const overall = labels.split('\n').map((x) => x.trim()).filter(Boolean);
-      const body: Record<string, unknown> = { name, state, sections, ...(overall.length ? { overallLabels: overall } : {}) };
+      const body: Record<string, unknown> = { name, state, sections: buildSections(drafts), ...(overall.length ? { overallLabels: overall } : {}) };
       return f ? perfApi.updateForm(f.id, body) : perfApi.createForm(body);
     },
     onSuccess: () => { toast.success('Form kaydedildi.'); onClose(); },
     onError: (e) => toast.error(errText(e, 'Form kaydedilemedi.')),
   });
+  const problems = checkSections(drafts);
+  const firstBad = drafts.findIndex((d) => problems[d.id]?.length);
+  const blocked = !name.trim() ? 'Forma bir ad verin.'
+    : !drafts.length ? 'En az bir bölüm ekleyin.'
+    : firstBad >= 0 ? `${firstBad + 1}. bölüm: ${problems[drafts[firstBad].id][0]}`
+    : overall.length && overall.length !== 5 ? `Genel değerlendirme ölçeği tam 5 satır olmalı (şu an ${overall.length}); boş bırakırsanız varsayılan kullanılır.`
+    : null;
+  const patch = (id: string, p: Partial<SecDraft>) => setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...p } : d)));
+  const addSection = () => {
+    const id = localId();
+    setFocusId(id);
+    setDrafts((ds) => [...ds, { id, key: null, orig: null, title: '', kind: 'yetkinlik', help: '', items: [{ id: localId(), text: '' }] }]);
+  };
   return (
     <Sheet open modal wide onClose={onClose} title={f ? f.name : 'Yeni form'} subtitle="Kısa form önerilir: 3–5 hedef, 4–6 yetkinlik, iki açık uç. Bölümler değişince sürüm artar; açık dönem kendi kopyasını kullanır.">
       <div className="flex flex-col gap-3">
@@ -302,17 +380,60 @@ function FormEditor({ f, starter, onClose }: { f: Form | null; starter: { name: 
             </select>
           </label>
         </div>
-        <label className="flex flex-col gap-1">
-          <span className={labelCls}>Bölümler (örnek yapıyı koruyarak düzenleyin: title = bölüm başlığı, kind = yetkinlik | hedef | acik, items = maddeler)</span>
-          <textarea className={`${field} min-h-[260px] font-mono text-[12px]`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
-        </label>
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className={labelCls}>Bölümler{drafts.length ? ` · ${drafts.length}` : ''}</span>
+          {drafts.length === 0 ? (
+            <EmptyHint title="Henüz bölüm yok" why="Kısa başlangıç formuyla başlayıp düzenleyebilir ya da «Bölüm ekle» ile kendiniz kurabilirsiniz."
+              action={<button type="button" className={btnGhost} onClick={() => { setDrafts(toSecDrafts(starter.sections)); if (!name.trim()) setName(starter.name); }}>Başlangıç bölümlerini yükle</button>} />
+          ) : (
+            <ol className="flex min-w-0 flex-col gap-2">
+              {drafts.map((s, i) => {
+                const known = isSectionKind(s.kind);
+                const hint = SECTION_KINDS.find((x) => x.value === s.kind)?.hint;
+                return (
+                  <ItemCard key={s.id} label={`${i + 1}. bölüm`} index={i} total={drafts.length} problems={problems[s.id] ?? []}
+                    onMove={(dir) => setDrafts((ds) => moveAt(ds, i, dir))} onRemove={() => setDrafts((ds) => ds.filter((x) => x.id !== s.id))}>
+                    <label className="flex flex-col gap-1">
+                      <span className={labelCls}>Bölüm başlığı</span>
+                      <input className={field} maxLength={200} value={s.title} autoFocus={s.id === focusId} onChange={(e) => patch(s.id, { title: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className={labelCls}>Bölüm türü</span>
+                      <select className={field} value={known ? s.kind : ''}
+                        onChange={(e) => patch(s.id, { kind: e.target.value, ...(e.target.value === 'yetkinlik' && !s.items.length ? { items: [{ id: localId(), text: '' }] } : {}) })}>
+                        {!known && <option value="" disabled>Seçin</option>}
+                        {SECTION_KINDS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                      </select>
+                      {hint && <span className="text-[11.5px] leading-snug text-canvas-muted">{hint}</span>}
+                    </label>
+                    {s.kind === 'yetkinlik' && (
+                      <div className="flex flex-col gap-1">
+                        <span className={labelCls}>Maddeler</span>
+                        <TextRows rows={s.items} onChange={(items) => patch(s.id, { items })} noun="madde" addLabel="Madde ekle" placeholder="Ör. Terminlere uyum ve önceliklendirme" maxLength={300} />
+                      </div>
+                    )}
+                    <label className="flex flex-col gap-1">
+                      <span className={labelCls}>Yol gösterici not (isteğe bağlı)</span>
+                      <textarea className={`${field} min-h-[56px] resize-y`} rows={2} maxLength={400} value={s.help} onChange={(e) => patch(s.id, { help: e.target.value })}
+                        placeholder="Formu dolduran kişi bölüm başlığının altında görür" />
+                    </label>
+                  </ItemCard>
+                );
+              })}
+            </ol>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={btnGhost} onClick={addSection}><Plus aria-hidden className="h-4 w-4" />Bölüm ekle</button>
+          </div>
+        </div>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>Genel değerlendirme ölçeği (5 satır; boşsa varsayılan)</span>
           <textarea className={`${field} min-h-[110px]`} value={labels} onChange={(e) => setLabels(e.target.value)} />
         </label>
+        {blocked && <BlockedReason id="form-kaydet-engel">{blocked}</BlockedReason>}
         <div className="flex justify-end gap-2">
           <button type="button" className={btnGhost} onClick={onClose}>Vazgeç</button>
-          <button type="button" className={btnPrimary} disabled={save.isPending || !name.trim()} onClick={() => save.mutate()}>Kaydet</button>
+          <button type="button" className={btnPrimary} disabled={save.isPending || !!blocked} aria-describedby={blocked ? 'form-kaydet-engel' : undefined} onClick={() => save.mutate()}>Kaydet</button>
         </div>
       </div>
     </Sheet>
