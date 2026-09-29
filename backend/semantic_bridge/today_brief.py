@@ -13,6 +13,7 @@ yetkisini ister; kişi kendi gönderdiği işi onay kuyruğunda görmez.
 | Saha | `sayfa:saha` | görülmemiş saha bildirimlerim (reddedilen tahsilat, riske takılan sipariş…) |
 | Onay kuyrukları | `ozellik:pazarlama.plan-onay`, `saha.odeme-plani-onay`, `bayi.limit-onay`, `topluluk.segment-onay` | onay bekleyen plan, ödeme planı, limit önerisi, okur segmenti |
 | Okur sesi | `sayfa:uretim` | açık baskı/cilt hatası kümesi uyarıları (öneri 15) |
+| İnsan Kaynakları | oturum + İK sayfası | kendi izin/evrak/anket/öneri/performans maddelerim; yöneticiye yalnız kendi ekibi (onay bekleyen izin, bugün izinde, eksik check-in, yazılacak değerlendirme, doğum günü/yıldönümü); teslim etmediğim mülakat notu (`hr_brief`) |
 
 **Özet:** kural özeti her zaman vardır (üç cümle, sayılar maddelerden). Zeki AI özeti yalnız kişi paneli açınca istenir
 (NORMAL), girdi (maddelerin sayıları) aynı kaldıkça gün içinde yeniden yazılmaz (`semantic_today_briefs`); metindeki her
@@ -245,6 +246,14 @@ def voice_items(engine, tenant: str, reviews_page: bool) -> list[dict[str, Any]]
                  ", ".join((r["ad"] or r["anahtar"]) for r in rows[:3]) + (" …" if len(rows) > 3 else ""))]
 
 
+def hr_items(engine, tenant: str, user: str, flag: Callable[[str], bool], today: date) -> list[dict[str, Any]]:
+    if not _has(engine, "semantic_hr_people"):
+        return []
+    from semantic_bridge import hr_brief as HB
+
+    return HB.items(engine, tenant, user, flag, today, item)
+
+
 def collect(engine, tenant: str, user: str, flag: Callable[[str], bool], st: dict[str, Any],
             today: Optional[date] = None, at: Optional[datetime] = None) -> dict[str, Any]:
     """Bütün kaynaklar, yetkiyle süzülmüş. Bir kaynak okunamazsa diğerleri sürer; hata adıyla döner (sessiz değil)."""
@@ -259,6 +268,8 @@ def collect(engine, tenant: str, user: str, flag: Callable[[str], bool], st: dic
         ("Saha", flag("sayfa:saha"), lambda: field_items(engine, tenant, user)),
         ("Onaylar", True, lambda: approval_items(engine, tenant, user, flag)),
         ("Okur sesi", flag("sayfa:uretim"), lambda: voice_items(engine, tenant, flag("sayfa:okur-yorumlar"))),
+        # İK: yalnız kişinin kendi izin/evrak/anket/öneri/performans kaydı; yönetici maddeleri yalnız kendi ekibi (hr_brief).
+        ("İnsan Kaynakları", True, lambda: hr_items(engine, tenant, user, flag, today)),
     ]
     for name, allowed, fn in steps:
         if not allowed:

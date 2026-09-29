@@ -802,11 +802,16 @@ def directory_photo_allowed(engine: sa.engine.Engine, tenant: str) -> bool:
     return any(f["key"] == "fotograf" and f["showDirectory"] for f in fields(engine, tenant))
 
 
+def birthdays_allowed(engine: sa.engine.Engine, tenant: str) -> bool:
+    """Doğum günü listesi açık mı: alan açık ve hassas işaretli değil (kapalı/hassassa gün-ay da kimseye gitmez)."""
+    f = next((x for x in fields(engine, tenant) if x["key"] == "dogum_tarihi"), None)
+    return f is not None and not f["sensitive"]
+
+
 def birthdays(engine: sa.engine.Engine, tenant: str, today: Optional[date] = None) -> dict[str, Any]:
     """Aktif personelin doğum günü (gün ve ay; yıl ve yaş gönderilmez). Bu ay ve önümüzdeki 7 gün."""
     today = today or date.today()
-    f = next((x for x in fields(engine, tenant) if x["key"] == "dogum_tarihi"), None)
-    if f is None or f["sensitive"]:
+    if not birthdays_allowed(engine, tenant):
         # Alan kapalı ya da hassas işaretliyse gün/ay da kimseye gitmez.
         return {"today": today.isoformat(), "items": [], "thisMonth": [], "upcoming": [], "off": True}
     with engine.connect() as c:

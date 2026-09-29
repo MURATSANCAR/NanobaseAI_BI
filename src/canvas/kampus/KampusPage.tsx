@@ -33,6 +33,7 @@ import BulletinCard from './BulletinCard';
 import AgendaCard from './AgendaCard';
 import TodayBrief from './TodayBrief';
 import LearningCard from '../hr/learning/LearningCard';
+import { HrCelebrationsCard, HrOnLeaveCard, HrPostsCard } from './HrKampusCards';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
@@ -409,6 +410,9 @@ export default function KampusPage() {
 
           {/* EĞİTİMLERİM — M57: yaklaşan oturum, dolacak zorunlu eğitim, bekleyen anket (yalnız kendi kaydım) */}
           <LearningCard />
+
+          {/* BUGÜN İZİNDE — İK: ad ve dönüş günü, izin türü yok. */}
+          <HrOnLeaveCard />
         </aside>
 
         {/* ORTA SÜTUN */}
@@ -490,6 +494,9 @@ export default function KampusPage() {
               </div>
             </div>
           </section>
+
+          {/* ŞİRKET İÇİ DUYURULAR — İK portalı; duyuru yoksa kart çizilmez. */}
+          <HrPostsCard />
 
           {/* MODÜLLER — ana modül sayfalarına geçiş */}
           <Card id="moduller" className="p-5">
@@ -684,6 +691,9 @@ export default function KampusPage() {
           </Card>
 
           {/* ALKIŞ DUVARI */}
+          {/* KUTLAMALAR — İK: doğum günü, iş yıldönümü, aramıza katılanlar (gün/ay; yaş yok); «Kutla» alkış duvarına yazar. */}
+          <HrCelebrationsCard />
+
           <Card id="praise-hub" className="p-5">
             <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2.5">

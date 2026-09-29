@@ -185,6 +185,14 @@ def register(app, hr: Any) -> None:
             raise HTTPException(404, detail={"code": "HR", "message": "Fotoğraf yok."})
         return _download(got[0], "fotograf", got[1], inline=True)
 
+    @app.get(P + "/kampus")
+    def portal_kampus(request: Request) -> dict[str, Any]:
+        """Kampüs ortak insan kartları: duyurular, aramıza katılanlar, doğum günleri, iş yıldönümleri, bugün izinde."""
+        from semantic_bridge import hr_brief as HB
+
+        engine, tenant, _, _ = ready(request)
+        return HB.kampus(engine, tenant)
+
     @app.get(P + "/birthdays")
     def portal_birthdays(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ready(request)
