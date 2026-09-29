@@ -8,7 +8,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } 
 import SearchSelect from '../../components/SearchSelect';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { fmtDay, usePeopleOptions } from '../authors/shared';
-import { dateTime } from '../../format';
+import { stamp } from '../../format';
 import { applicationsApi, boardApi, type AppDetail, type AppFile } from './api';
 import { AskSheet } from '../../budget/parts';
 import ApplicationForm from './ApplicationForm';
@@ -546,8 +546,9 @@ function FormAnswers({ form }: { form: NonNullable<AppDetail['form']> }) {
         </a>
       </div>
       <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-        {form.receivedAt ? `Gönderildi ${dateTime(form.receivedAt)}` : 'Gönderim zamanı yok'}
-        {form.updatedAt ? ` · tabloda ${dateTime(form.updatedAt)} tarihinde değişti` : ''}
+        {/* Form zamanları UTC gelir; yerel saatle yazılır (dateTime metni olduğu gibi keser). */}
+        {form.receivedAt ? `Gönderildi ${stamp(Date.parse(form.receivedAt))}` : 'Gönderim zamanı yok'}
+        {form.updatedAt ? ` · tabloda ${stamp(Date.parse(form.updatedAt))} tarihinde değişti` : ''}
       </p>
       <dl className="mt-2 grid gap-x-4 gap-y-2 text-[12.5px] sm:grid-cols-2">
         {form.answers

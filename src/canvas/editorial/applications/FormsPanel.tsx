@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 import { ENGINE_ENABLED } from '../../engine';
 import { btnGhost, errText, nf } from '../../admin/ui';
-import { dateTime } from '../../format';
+import { stamp } from '../../format';
 import { applicationsApi } from './api';
 
 /** Yazar başvuru formları (Google E-Tablo yanıtları): 15 dakikada bir okunur, her yanıt bir kez «Yeni başvuru» olur.
@@ -33,7 +33,7 @@ export default function FormsPanel() {
         <span className="font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(total)} başvuru</span>
       </div>
       <p className="mt-0.5 leading-snug text-canvas-muted">
-        {run ? `Son okuma ${dateTime(run.at)}${run.new ? ` · ${nf.format(run.new)} yeni` : ''}` : 'Henüz okunmadı'} · 15 dakikada bir
+        {run ? `Son okuma ${stamp(Date.parse(run.at))}${run.new ? ` · ${nf.format(run.new)} yeni` : ''}` : 'Henüz okunmadı'} · 15 dakikada bir
       </p>
       <ul className="mt-1.5 space-y-0.5">
         {d.sheets.map((s) => {

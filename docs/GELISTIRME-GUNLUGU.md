@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (18:45) — Başvuru formları test sunucusunda: 3.013 başvuru alındı, zamanlayıcı açık
+
+- **Kurulum:** main `ec0564061` (19 dosya; `access.py`/`app.py` kurulum anında başka oturumun stüdyo kurulumuyla değişmişti → main hâli = onların hâli + bu işin 4 satırı olduğu doğrulanıp o kuruldu; ön yüz onların güncel ağacından yeniden derlendi), sonra `d69fcc58b` (3 dosya). md5 kurulum öncesi ve sonrası denetlendi, `._*` 0, köprü sağlıklı.
+- **Paylaşım:** sahibi Çocuk ve İlk Gençlik tablolarını da servis hesabıyla paylaştı → üç tablo açık.
+- **İlk okuma (elle, kural gereği):** Çocuk (0-9) 1.897, İlk Gençlik (9-11) 839, Genç (11-14) 277 = **3.013** başvuru. Her tablo kendi Form ID sütunuyla karşılaştırıldı: eksik 0, fazla 0; hedef kitle çocuk 0–9 / genç 9–11 / genç 11–14; ikinci koşu 0 yeni. Kullanıcı kararı: hepsi «Yeni başvuru» olarak kalsın (test sunucusunun Başvurular listesi öncesinde boştu).
+- **Tarayıcı testi** (görünmez tarayıcı, portal, timasai kısa oturumu, silindi): liste ve form yanıtlı başvuru, 390/1280, taşma 0, hata 0.
+- **Testte bulunan ve düzeltilen:** (1) hazır cevap katmanı ilk açılışı yavaş süren durum ucunu içe aktarma öncesi hâliyle saklamıştı → panel «henüz okunmadı» diyordu; durum ucu önbellek dışı. (2) Katman `run-due` yollarını görmediği için zamanlayıcının yazması listeyi düşürmüyordu → zamanlayıcı yeni/değişen yanıtta Başvurular'ın hazır cevaplarını kendisi düşürür (başka modüllerin run-due'larına dokunulmadı). (3) «Son okuma» ve «Gönderildi» UTC saatini yazıyordu → yerel saat.
+- **Zamanlayıcı:** `timas-basvuru-form.timer` açıldı (15 dk). Müşteri VM'ine kurulmadı.
+
 ## 2026-09-29 (gece) — Personel silinince izin verisi sahipsiz kalmıyor; silme yerine pasife alma (arşiv)
 
 - **Sorun:** `hr_portal.delete_person` yalnız `semantic_hr_people` ve `semantic_hr_people_files` satırlarını siliyordu; M60'ın kişiye bağlı satırları (izin talepleri, talep geçmişi, izin belgeleri — sağlık raporu olabilir —, bakiye defteri, başkasının talebindeki vekil anılışı) sahipsiz kalıyordu.
