@@ -49,6 +49,7 @@ from semantic_layer.models import Mapping as SLMapping, SemanticType
 from semantic_layer.naming import label_context, logicalize_sql
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
+from semantic_layer.profiler.connection_pool import DEFAULT_LIMIT, SingleFlight, pooled, queue_wait
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, empty_result_note, fast_summary, is_empty_result
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
@@ -97,8 +98,45 @@ def db_timing(result: Optional[dict]) -> dict:
     return out
 
 
+def _concurrency(key: str):
+    """Bir kaynağa aynı anda giden sorgu sayısı (Yönetim ekranı > ortam > DEFAULT_LIMIT). Her yer
+    alışta okunur (ayar önbelleği kısa ömürlü): ekrandan değişen sınır yeniden başlatmadan geçerli olur."""
+    def read() -> int:
+        try:
+            from semantic_bridge import admin as admin_mod
+            raw = admin_mod.conf(key)
+        except Exception:  # noqa: BLE001 — ayar deposu yoksa ortam değeri
+            raw = os.environ.get(key, "")
+        try:
+            return max(1, int(str(raw).strip() or DEFAULT_LIMIT))
+        except ValueError:
+            log.warning("%s sayı değil (%r); %d kullanılıyor", key, raw, DEFAULT_LIMIT)
+            return DEFAULT_LIMIT
+    return read
+
+
 class Runtime:
     """Process-wide state: store, profiles, resolver, compilers, DB connector, recall index."""
+
+    # Canlı kaynak bağlantıları havuzdan: her okuma boşta bir bağlantı alır, iki ekranın iki sorgusu
+    # birbirini beklemez (2026-09-29'a kadar tek bağlantı + tek kilit vardı). Sunucuya aynı anda giden
+    # sorgu sayısı ayarla sınırlı (LOGO_MAX_CONCURRENT, CRM_MAX_CONCURRENT); dolunca sıra beklenir.
+    # Atama her yoldan (kuruluş, Yönetim ekranında bağlantı değişimi, testler) havuza girer.
+    @property
+    def connector(self):
+        return self.__dict__.get("_connector")
+
+    @connector.setter
+    def connector(self, value) -> None:
+        self.__dict__["_connector"] = pooled(value, "logo", _concurrency("LOGO_MAX_CONCURRENT"))
+
+    @property
+    def crm_connector(self):
+        return self.__dict__.get("_crm_connector")
+
+    @crm_connector.setter
+    def crm_connector(self, value) -> None:
+        self.__dict__["_crm_connector"] = pooled(value, "crm", _concurrency("CRM_MAX_CONCURRENT"))
 
     def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None):
         self.settings = settings
@@ -118,9 +156,12 @@ class Runtime:
         # screen swaps the client without a restart.
         self.jobs = LlmJobs.from_env(self.store.engine, lambda: self.llm, slots=self.queue.slots,
                                      tenant_id=settings.tenant_id, datasource_id=settings.datasource_id)
-        self._engine_lock = threading.Lock()
+        # Aynı SQL aynı anda iki kez gelirse kaynağa bir kez inilir; ikinci istek ilkinin sonucunu alır.
+        self._flight = SingleFlight()
         # Executed results, kept whole so the table, the chart and the export read the same rows.
         self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+        # _results ve _complete_cache (ve sonuç dosyalarının silinmesi) bu kilitle: dosyanın hâlâ
+        # kullanılıp kullanılmadığı iki kayda birlikte bakılarak karar verilir.
         self._results_lock = threading.RLock()
         self._complete_cache = OrderedDict()
         from semantic_bridge.result_files import ResultFiles
@@ -142,6 +183,7 @@ class Runtime:
         # kullanıcı toplam süreyi ekranda bekler. Önbellek bu beklemeyi devralır: istek anında elde
         # olanı alır, sorguyu kullanıcı adına arka plandaki tazeleyici çalıştırır.
         self._cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
+        self._cache_lock = threading.Lock()     # yalnız _cache; tutulurken _hot_lock alınmaz
         self._cache_ttl = int(os.environ.get("SEMANTIC_CACHE_TTL_SEC", "300"))
         # Son `hot_window` saniye içinde sorulan sorgular sıcaktır; tazeleyici yalnız onlara bakar,
         # bir kez sorulup bırakılan sorgu kendiliğinden listeden düşer.
@@ -156,8 +198,6 @@ class Runtime:
         self._stale_max = float(os.environ.get("SEMANTIC_STALE_MAX_SEC", "900"))
         self._hot: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
         self._hot_lock = threading.Lock()
-        self._waiting = 0                      # bağlantıyı bekleyen kullanıcı isteği sayısı
-        self._wait_lock = threading.Lock()
         self._stop = threading.Event()
         self._refresher: Optional[threading.Thread] = None
         self.rebuild()
@@ -467,8 +507,7 @@ class Runtime:
     def dry_run(self, sql: str) -> None:
         if self.connector is None:
             raise RuntimeError("no database connector")
-        with self._engine_lock:
-            self._conn_for(sql).dry_run(sql)
+        self._conn_for(sql).dry_run(sql)
 
     def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         out = self._run_sql(sql, limit, period, scope=scope, use_cache=use_cache)
@@ -499,7 +538,11 @@ class Runtime:
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if use_cache and self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
-            hit = None if FORCE_FRESH.get() else self._cache.get(key)
+            if FORCE_FRESH.get():
+                hit = None
+            else:
+                with self._cache_lock:
+                    hit = self._cache.get(key)
         else:
             hit = None
         if hit:
@@ -530,21 +573,19 @@ class Runtime:
     # ------------------------------------------------------------------ önbellek iç işleyişi
 
     def _execute(self, phys: str, limit: int, *, interactive: bool) -> tuple[dict[str, Any], float]:
-        """Tek bağlantı, tek sıra. `interactive` olan istek beklerken tazeleyici sıraya girmez."""
+        """Bir okuma, havuzdaki bir bağlantıda. Aynı SQL o anda zaten koşuyorsa kaynağa ikinci kez
+        inilmez, o koşunun sonucu alınır. `interactive` artık sıra belirlemez (kullanıcı ile tazeleyici
+        aynı kapıdan geçer); tazeleyici, kapıda bekleyen varsa kendi turunu erteler (`_refresh_tick`)."""
         if self.connector is None:
             raise RuntimeError("no database connector")
-        if interactive:
-            with self._wait_lock:
-                self._waiting += 1
-        try:
-            with self._engine_lock:
-                t0 = time.monotonic()
-                cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
-                duration = time.monotonic() - t0
-        finally:
-            if interactive:
-                with self._wait_lock:
-                    self._waiting -= 1
+        return self._flight.do(("rows", limit, phys), lambda: self._execute_once(phys, limit))
+
+    def _execute_once(self, phys: str, limit: int) -> tuple[dict[str, Any], float]:
+        with queue_wait() as waited:
+            t0 = time.monotonic()
+            cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
+            # Süre veritabanınındır: sunucu kapısında sıra beklenen süre düşülür.
+            duration = max(0.0, time.monotonic() - t0 - waited[0])
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
                 "dbMs": int(round(duration * 1000))}, duration
 
@@ -560,35 +601,43 @@ class Runtime:
         if not hasattr(self.connector, 'batches'):
             # Non-DB adapters retain their explicit bounded execution contract.
             return self.run_sql(sql, self.settings.max_rows, period, **({"scope": scope} if scope else {}))
-        with self._wait_lock:
-            self._waiting += 1
-        try:
-            with self._engine_lock:
-                key = hashlib.sha256(phys.encode()).hexdigest()
+        key = hashlib.sha256(phys.encode()).hexdigest()
+        if use_cache and self._cache_ttl > 0:
+            with self._results_lock:
                 cached = self._complete_cache.get(key)
-                if use_cache and cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
-                    return dict(self._served(cached[1], cached[0]), cached=True)
-                self._free_result_space()
-                db = [0.0]
-                try:
-                    mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
-                except Exception:  # noqa: BLE001
-                    mapping = {}
-                source = self._conn_for(phys).batches(phys)
-                if mapping:
-                    source = ((cols, value_labels.apply(rows, mapping)) for cols, rows in source)
+            if cached and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
+                return dict(self._served(cached[1], cached[0]), cached=True)
+        # Aynı SQL o anda koşuyorsa ikinci kez koşmaz: ikinci istek aynı sonuç dosyasını alır.
+        out, computed_at = self._flight.do(("complete", key), lambda: self._complete_once(sql, phys, key))
+        return self._served(dict(out, physicalSql=phys, cached=False), computed_at)
+
+    def _complete_once(self, sql: str, phys: str, key: str) -> tuple[dict[str, Any], float]:
+        self._free_result_space()
+        db = [0.0]
+        try:
+            mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
+        except Exception:  # noqa: BLE001
+            mapping = {}
+        raw = self._conn_for(phys).batches(phys)
+        source = raw
+        if mapping:
+            source = ((cols, value_labels.apply(rows, mapping)) for cols, rows in source)
+        try:
+            with queue_wait() as waited:
                 out = self.result_files.write(_timed(source, db), self.settings.max_rows)
-                out.update(physicalSql=phys, cached=False, dbMs=int(round(db[0] * 1000)))
-                computed_at = time.time()
-                self._complete_cache[key] = (computed_at, out)
-                self._complete_cache.move_to_end(key)
-                while len(self._complete_cache) > 64:
-                    self._forget_cached(*self._complete_cache.popitem(last=False))
         finally:
-            with self._wait_lock:
-                self._waiting -= 1
-        out.update(physicalSql=phys, cached=False)
-        return self._served(out, computed_at)
+            # Okuma yarıda kalsa da (satır sınırı, hata) bağlantı ve sunucudaki yer hemen bırakılır.
+            close = getattr(raw, "close", None)
+            if close:
+                close()
+        out.update(physicalSql=phys, cached=False, dbMs=int(round(max(0.0, db[0] - waited[0]) * 1000)))
+        computed_at = time.time()
+        with self._results_lock:
+            self._complete_cache[key] = (computed_at, out)
+            self._complete_cache.move_to_end(key)
+            while len(self._complete_cache) > 64:
+                self._forget_cached(*self._complete_cache.popitem(last=False))
+        return out, computed_at
 
     def _result_file_in_use(self, name) -> bool:
         return any(s.get('_result_file') == name for s in self._results.values()) or \
@@ -714,14 +763,17 @@ class Runtime:
             with self._hot_lock:
                 self._hot.pop(key, None)
             return
-        self._cache[key] = (time.time() if computed_at is None else computed_at, out)
-        self._cache.move_to_end(key)
         budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
-        while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
-            dropped, _ = self._cache.popitem(last=False)
-            with self._hot_lock:
-                self._hot.pop(dropped, None)
+        dropped_keys = []
+        with self._cache_lock:
+            self._cache[key] = (time.time() if computed_at is None else computed_at, out)
+            self._cache.move_to_end(key)
+            while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
+                dropped, _ = self._cache.popitem(last=False)
+                dropped_keys.append(dropped)
         with self._hot_lock:
+            for dropped in dropped_keys:
+                self._hot.pop(dropped, None)
             hot = self._hot.get(key)
             if hot is not None:
                 hot["duration"] = duration
@@ -769,8 +821,19 @@ class Runtime:
             except Exception as e:  # noqa: BLE001
                 log.warning("refresh tick failed: %s", e)
 
+    def _users_waiting(self) -> int:
+        """Canlı kaynağın kapısında sıra bekleyen okuma sayısı (Logo + CRM)."""
+        n = 0
+        for c in (self.connector, self.crm_connector):
+            fn = getattr(c, "pool_waiting", None) if c is not None else None
+            if callable(fn):
+                n += fn()
+        return n
+
     def _refresh_tick(self) -> None:
         now = time.time()
+        with self._cache_lock:
+            cached_at_of = {k: v[0] for k, v in self._cache.items()}
         with self._hot_lock:
             for k, hot in list(self._hot.items()):
                 if now - hot.get("asked", 0.0) > self._hot_window:
@@ -780,12 +843,12 @@ class Runtime:
             cycle = max(self._refresh_sec, sum(h.get("duration", 0.0) for h in self._hot.values()) * self._refresh_duty)
             due = []
             for k, hot in self._hot.items():
-                cached_at = self._cache[k][0] if k in self._cache else 0.0
+                cached_at = cached_at_of.get(k, 0.0)
                 if now - cached_at >= cycle:
                     due.append((k, dict(hot)))
         for key, hot in due:
-            if self._waiting or self._stop.is_set():
-                return                            # bekleyen bir kullanıcı varsa sıra onun
+            if self._users_waiting() or self._stop.is_set():
+                return                            # kapıda sıra bekleyen varsa sıra onun
             self._refresh_one(key, hot)
 
     def _refresh_one(self, key: str, hot: dict[str, Any]) -> None:
@@ -805,7 +868,15 @@ class Runtime:
     def cache_stats(self) -> dict[str, Any]:
         with self._hot_lock:
             hot = len(self._hot)
-        return {"entries": len(self._cache), "hot": hot, "ttlSec": self._cache_ttl, "refreshSec": self._refresh_sec, "refreshing": self._refresher_alive()}
+        with self._cache_lock:
+            entries = len(self._cache)
+        pools = {}
+        for name, c in (("logo", self.connector), ("crm", self.crm_connector)):
+            fn = getattr(c, "pool_stats", None) if c is not None else None
+            if callable(fn):
+                pools[name] = fn()
+        return {"entries": entries, "hot": hot, "ttlSec": self._cache_ttl, "refreshSec": self._refresh_sec, "refreshing": self._refresher_alive(),
+                "sameQueryJoined": self._flight.joined, "pools": pools}
 
     def summarize(self, question: str, sql: str, result: dict[str, Any], sq: Optional[SemanticQuery] = None) -> str:
         cols = [c["name"] for c in result.get("columns") or []]
@@ -1358,8 +1429,10 @@ class Runtime:
         if self._conn_for(phys) is not connector:
             raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
         box = [0.0]
-        try:
-            with self._engine_lock:
+        # Parça, havuzdaki bir bağlantıda okunur; parti parti okumada bağlantı son partiye kadar tutulur.
+        # Sunucu kapısında sıra beklenen süre veritabanı süresine yazılmaz.
+        with queue_wait() as waited:
+            try:
                 if hasattr(connector, "batches"):
                     yield from _timed(connector.batches(phys), box)
                 else:
@@ -1369,11 +1442,11 @@ class Runtime:
                     if truncated:
                         raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
                     yield cols, rows
-        finally:
-            if timing is not None:
-                # Parçanın koşan metni de gider: sorgu bilgisi her parçayı kendi veritabanında kopyala-çalıştır verir.
-                timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
-                               "ms": int(round(box[0] * 1000)), "sql": phys})
+            finally:
+                if timing is not None:
+                    # Parçanın koşan metni de gider: sorgu bilgisi her parçayı kendi veritabanında kopyala-çalıştır verir.
+                    timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
+                                   "ms": int(round(max(0.0, box[0] - waited[0]) * 1000)), "sql": phys})
 
     def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
                      sample_size, scope_args, report, execute):

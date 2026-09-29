@@ -84,8 +84,8 @@ def register(app, runtime, authorize):
                 r = runtime()
 
                 def run(sql):
-                    with getattr(r, '_engine_lock', None) or threading.Lock():
-                        _cols, rows, _truncated = r.connector.execute(sql, 10000)
+                    # Köprünün Logo bağlantı havuzu: kendi bağlantısını alır, sunucu sınırına uyar.
+                    _cols, rows, _truncated = r.connector.execute(sql, 10000)
                     return rows
                 firms[year] = resolve_firm(run, year)
             return firms[year]
