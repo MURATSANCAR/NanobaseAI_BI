@@ -13,6 +13,7 @@ import {
 import { CategoriesFrame, Confidence, ROOT, useMeta } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import { readableText } from '../components/readableName';
 
 /** Kitap profili: solda CRM'deki bugünkü sınıflamalar (ve site kategorisi), sağda alan alan öneri ve karar. */
 export default function BookProfile() {
@@ -272,7 +273,7 @@ function FieldCard({ fkey, label, kind, f, canDecide, busy, nodes, choices, onDe
         <details className="mt-2 text-[12px]">
           <summary className="cursor-pointer font-bold text-canvas-muted">Kaynak ve kanıt</summary>
           <div className="mt-1.5 flex flex-col gap-1 leading-snug">
-            {f?.source && <div><span className="font-bold">Kaynak:</span> {f.source}</div>}
+            {f?.source && <div><span className="font-bold">Kaynak:</span> {readableText(f.source)}</div>}
             {(f?.evidence ?? []).map((e, i) => (
               <div key={i} className="rounded-lg bg-white/80 px-2 py-1">
                 {e.term && <span className="font-bold">{e.term} {fmtProb(e.probability) ? `(${fmtProb(e.probability)})` : ''}: </span>}

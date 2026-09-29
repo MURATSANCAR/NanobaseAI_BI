@@ -10,6 +10,8 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtTime, fmtValue, parseNum, riskApi, type Indicator, type RiskMeta } from './api';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import ColName from '../components/ColName';
+import { readableText } from '../components/readableName';
 import { AskSheet, Empty, SelectInput, Spark, TextInput, ValuePill } from './parts';
 
 /** Göstergeler: her biri son değer, durum, son 12 ölçüm, eşik ve sahibiyle. Eşik ve sahip taslakla değişir, başka biri
@@ -121,7 +123,7 @@ function IndicatorCard({ g, meta, k, onEdit, expanded, onToggle }: { g: Indicato
       {expanded && (
         <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 text-[12px] leading-snug">
           {g.aciklama && <p>{g.aciklama}</p>}
-          <p className="text-canvas-muted">Kaynak: {g.kaynakRef}</p>
+          <p className="text-canvas-muted" title={g.kaynakRef}>Kaynak: {readableText(g.kaynakRef)}</p>
           {son && <Evidence kanit={son.kanit} birim={g.birim} />}
         </div>
       )}
@@ -141,15 +143,15 @@ function Evidence({ kanit, birim }: { kanit: Record<string, unknown>; birim: str
     <div className="space-y-2">
       {entries.map(([k, v]) => {
         if (Array.isArray(v)) {
-          if (!v.length) return <div key={k}><b>{k}</b>: —</div>;
-          if (typeof v[0] !== 'object') return <div key={k}><b>{k}</b>: {v.join(', ')}</div>;
+          if (!v.length) return <div key={k}><b><ColName name={k} /></b>: —</div>;
+          if (typeof v[0] !== 'object') return <div key={k}><b><ColName name={k} /></b>: {v.join(', ')}</div>;
           const cols = Object.keys(v[0] as Record<string, unknown>);
           return (
             <div key={k}>
-              <div className="font-bold">{k} ({v.length})</div>
+              <div className="font-bold"><ColName name={k} /> ({v.length})</div>
               <div className="mt-1 max-h-64 overflow-auto rounded-xl border border-slate-100 bg-white/80">
                 <table className="w-full min-w-[420px] text-[11.5px]">
-                  <thead><tr>{cols.map((c) => <th key={c} className="whitespace-nowrap px-2 py-1 text-left font-bold text-canvas-muted">{c}</th>)}</tr></thead>
+                  <thead><tr>{cols.map((c) => <th key={c} className="whitespace-nowrap px-2 py-1 text-left font-bold text-canvas-muted"><ColName name={c} /></th>)}</tr></thead>
                   <tbody>
                     {(v as Array<Record<string, unknown>>).map((row, i) => (
                       <tr key={i} className="border-t border-slate-100">
@@ -162,7 +164,7 @@ function Evidence({ kanit, birim }: { kanit: Record<string, unknown>; birim: str
             </div>
           );
         }
-        return <div key={k}><b>{k}</b>: {typeof v === 'number' && ['tutar', 'toplam', 'tlToplam'].includes(k) ? fmtValue(v, 'tl') : typeof v === 'object' ? JSON.stringify(v) : String(v ?? '—')}</div>;
+        return <div key={k}><b><ColName name={k} /></b>: {typeof v === 'number' && ['tutar', 'toplam', 'tlToplam'].includes(k) ? fmtValue(v, 'tl') : typeof v === 'object' ? JSON.stringify(v) : String(v ?? '—')}</div>;
       })}
       <div className="text-[10.5px] text-canvas-muted">Birim: {birim === 'yuzde' ? '%' : birim}</div>
     </div>

@@ -38,6 +38,7 @@ import { download, fileName, toCsv } from './export';
 import { useCan } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
 import AnswerFeedback from '../components/AnswerFeedback';
+import { readableText } from '../components/readableName';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 import CardInsight, { cardChange } from './CardInsight';
@@ -1162,7 +1163,7 @@ export default function BoardScreen() {
           {err && (
             <div className="glass-card mb-3 flex items-start justify-between gap-2 rounded-2xl px-4 py-2.5 text-[12px] font-semibold text-red-700 shadow-canvas-card">
               <span className="flex min-w-0 flex-col gap-1.5">
-                <span>{err}</span>
+                <span>{readableText(err)}</span>
                 <AnswerFeedback key={errQueryId ?? 'yok'} queryId={errQueryId} />
               </span>
               <button type="button" onClick={() => { setErr(null); setErrQueryId(null); }} aria-label="Kapat" className="pano-press shrink-0 rounded-lg p-1 hover:bg-red-50">

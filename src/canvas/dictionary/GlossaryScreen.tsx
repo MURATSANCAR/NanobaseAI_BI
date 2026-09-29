@@ -19,6 +19,8 @@ import { SourceBadge, SourceTabs, matchesSource, sourcesOf, useSourceFilter } fr
 import AdminGuard from '../AdminGuard';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import ColName from '../components/ColName';
+import { readableName, readableText } from '../components/readableName';
 
 /**
  * Veri Sözlüğü. Üç soruya cevap verir, her biri bir bölüm:
@@ -141,10 +143,10 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
               <div className="font-mono text-[12.5px] leading-relaxed">{m.formula ?? `${m.entity ?? ''}.${m.column ?? ''}`}</div>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-slate-400">
                 <SourceBadge source={m.source} className="mr-1" />
-                Tablo <span className="font-mono text-slate-300">{m.entity ?? m.table_pattern ?? '—'}</span>
+                Tablo <ColName name={m.entity ?? m.table_pattern ?? '—'} className="font-semibold text-slate-300" />
                 {m.column && (
                   <>
-                    {' · '}alan <span className="font-mono text-slate-300">{m.column}</span>
+                    {' · '}alan <ColName name={m.column} className="font-semibold text-slate-300" />
                   </>
                 )}
               </div>
@@ -288,11 +290,11 @@ function MissingColumn({ c, tablePattern, canWrite }: { c: GapColumn; tablePatte
   return (
     <li className="rounded-2xl border border-slate-200 bg-white/85 p-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="font-mono text-[13px] font-extrabold">{c.name}</span>
+        <ColName name={c.name} className="text-[13px] font-extrabold" />
         <span className="text-[11px] text-canvas-muted">
           {c.type}
           {c.isPrimaryKey ? ' · anahtar' : ''}
-          {c.ref ? ` · ${c.ref} ile bağlı` : ''}
+          {c.ref ? ` · ${readableText(c.ref)} ile bağlı` : ''}
         </span>
       </div>
       <div className="mt-1.5">
@@ -413,12 +415,12 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
           <span className={eyebrow}>{d.source === 'crm' ? 'CRM tablosu' : d.source === 'logo' ? 'Logo tablosu' : 'Tablo'}</span>
           <SourceBadge source={d.source} />
         </div>
-        <h2 className="break-all font-mono text-xl font-extrabold tracking-tight text-canvas-ink">{d.example}</h2>
+        <h2 className="break-words text-xl font-extrabold tracking-tight text-canvas-ink" title={d.example}>{readableName(d.example)}</h2>
         <TableDescription d={d} canWrite={canWrite} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-canvas-muted">
           <span className="inline-flex items-center gap-1">
             <strong className="font-mono tabular-nums text-canvas-ink">{nf.format(d.rows)}</strong> satır
-            <SqlInfo k={kaynakOf(q.data)} alan="rows" label={`${d.example}: satır ve alan sayıları`} />
+            <SqlInfo k={kaynakOf(q.data)} alan="rows" label={`${readableName(d.example)}: satır ve alan sayıları`} />
           </span>
           <span>
             <strong className="font-mono tabular-nums text-canvas-ink">{nf.format(total)}</strong> alan
@@ -475,7 +477,7 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
                 {d.described.map((c) => (
                   <tr key={c.name} className="border-t border-slate-100 align-top">
                     <td className="px-3 py-2">
-                      <div className="font-mono font-bold">{c.name}</div>
+                      <ColName name={c.name} className="block font-bold" />
                       <div className="text-[11px] text-canvas-muted">
                         {c.type}
                         {c.isPrimaryKey ? ' · anahtar' : ''}
@@ -584,7 +586,7 @@ function GlossaryScreenInner() {
           if (!t.missing && !t.tableMissing) return false;
           if (onlySuggested && !t.suggestions) return false;
         }
-        return !n || norm(`${t.example} ${t.tablePattern} ${t.description ?? ''}`).includes(n);
+        return !n || norm(`${t.example} ${readableName(t.example)} ${t.tablePattern} ${t.description ?? ''}`).includes(n);
       }),
     [items, tab, showEmpty, onlySuggested, n, source],
   );
@@ -791,7 +793,7 @@ function GlossaryScreenInner() {
                       <span className="flex items-center justify-between gap-2">
                         <span className="flex min-w-0 items-center gap-1.5">
                           {source === 'all' && <SourceBadge source={t.source} />}
-                          <span className="min-w-0 truncate font-mono text-[11px] text-canvas-muted">{t.example}</span>
+                          <ColName name={t.example} className="min-w-0 truncate text-[11px] text-canvas-muted" />
                         </span>
                         <span className="shrink-0 font-mono text-[11px] tabular-nums text-canvas-muted">{compact.format(t.rows)} satır</span>
                       </span>

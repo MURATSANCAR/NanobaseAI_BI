@@ -15,6 +15,7 @@ import { SourceBadge, SourceTabs, matchesSource, useSourceFilter } from './sourc
 import AdminGuard from '../AdminGuard';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import ColName from '../components/ColName';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g');
@@ -191,7 +192,7 @@ function ApprovalsScreenInner() {
                   <span className="flex items-center gap-2 text-[11px] text-canvas-muted">
                     {source === 'all' && <SourceBadge source={i.source} />}
                     <span>{TYPE_LABEL[i.type] ?? i.type}</span>
-                    {i.mapping?.entity && <span className="font-mono">{i.mapping.entity}</span>}
+                    {i.mapping?.entity && <ColName name={i.mapping.entity} />}
                     {i.confidence != null && <span>%{Math.round(i.confidence * 100)}</span>}
                   </span>
                 </button>
@@ -251,9 +252,9 @@ function ApprovalsScreenInner() {
                   </div>
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Tablo</div>
-                    <div className="flex flex-wrap items-center gap-1.5 font-mono font-semibold">
+                    <div className="flex flex-wrap items-center gap-1.5 font-semibold">
                       <SourceBadge source={cur.source} />
-                      <span className="break-all">{cur.mapping?.entity ?? '—'}</span>
+                      <ColName name={cur.mapping?.entity ?? '—'} className="break-words" />
                     </div>
                   </div>
                   <div>

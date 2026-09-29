@@ -9,6 +9,7 @@ import PhoneNav from '../nav/PhoneNav';
 import CommandPalette from '../nav/CommandPalette';
 import GuideLink from '../hr/learning/GuideLink';
 import { ScreenInfoButton, ScreenInfoPanel, useScreenInfo } from '../screenInfo/ScreenInfo';
+import { useDisplayWords } from '../components/useDisplayWords';
 import { pushRecent } from '../nav/navState';
 import { NavUiContext, initials, paletteKey, useNavData, type NavUi } from '../nav/useNav';
 import '../nav/nav.css';
@@ -100,6 +101,9 @@ export default function Shell({
 
   // Ekran bilgi kutusu: ilk girişte başlığın altında açılır, 15 sn sonra kapanır; «Bu ekran» düğmesi yeniden açar.
   const screenInfo = useScreenInfo(active?.item.id, loc.pathname);
+
+  // Ham veritabanı adlarının ekrandaki Türkçe yazımı (katalog haritası); her ekran aynı önbellekten okur.
+  useDisplayWords();
 
   // Son açılanlar: menüdeki her ekran ve detay sayfası (Kampüs hariç — rayda hep var).
   const { update } = nav;

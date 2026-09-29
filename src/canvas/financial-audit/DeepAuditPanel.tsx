@@ -9,6 +9,8 @@ import { accountingText, checkExplanations } from './presentation';
 import { ExceptionClusters, ExplainFinding } from './AuditAssist';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import ColName from '../components/ColName';
+import { readableName } from '../components/readableName';
 
 export type DeepCheck = { sqlResultColumns?: {tested: string; affected: string}; sql?: string; id: string; title: string; status: string; affected: number | null; tested: number | null; formula: string; limitation: string };
 export type DeepAudit = {
@@ -46,7 +48,7 @@ function value(key: string, v: string | number | null) {
 }
 function Rows({ rows, checkId, k, alan }: { rows: Array<Record<string, string | number | null>>; checkId?: string; k?: Kaynaklar; alan?: string }) {
   const columns = rows.length ? Object.keys(rows[0]).filter(k => k !== 'totalRows' && k !== 'sourceModule') : [];
-  return <div className="audit-table-scroll"><table><thead><tr>{checkId && <th>Bulgu açıklaması</th>}{columns.map((c, i) => <th key={c}>{i === 0 && alan ? <InfoLabel k={k} alan={alan} label="Kaynak kayıtları">{labels[c] ?? c}</InfoLabel> : labels[c] ?? c}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={i}>{checkId && <td className="audit-reason-cell"><FindingReason explanation={rowExplanation(checkId,r)} /></td>}{columns.map(c => <td key={c}>{value(c,r[c])}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="audit-table-scroll"><table><thead><tr>{checkId && <th>Bulgu açıklaması</th>}{columns.map((c, i) => <th key={c}>{i === 0 && alan ? <InfoLabel k={k} alan={alan} label="Kaynak kayıtları">{labels[c] ?? readableName(c)}</InfoLabel> : labels[c] ?? <ColName name={c} />}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={i}>{checkId && <td className="audit-reason-cell"><FindingReason explanation={rowExplanation(checkId,r)} /></td>}{columns.map(c => <td key={c}>{value(c,r[c])}</td>)}</tr>)}</tbody></table></div>;
 }
 
 export default function DeepAuditPanel({ data, runId, load, canDetail = true, k }: { data?: DeepAudit; runId?: string; load: <T>(path: string) => Promise<T>; /** «Denetim ayrıntısı» rolde yoksa istisna satırları açılmaz. */ canDetail?: boolean; /** Raporun sorgu bilgisi. */ k?: Kaynaklar }) {

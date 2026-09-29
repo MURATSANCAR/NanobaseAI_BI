@@ -12,6 +12,8 @@ import {
 } from '../engine';
 import { trFold } from '../nav/navModel';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import ColName from '../components/ColName';
+import { readableName } from '../components/readableName';
 import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
 
 /**
@@ -778,7 +780,7 @@ function DataDomains() {
   });
   const needle = trFold(q.trim());
   const rows = (list.data?.items ?? []).filter(
-    (r) => (active === 'all' || r.domain === active) && (!needle || trFold(`${r.entity} ${r.description}`).includes(needle)),
+    (r) => (active === 'all' || r.domain === active) && (!needle || trFold(`${r.entity} ${readableName(r.entity)} ${r.description}`).includes(needle)),
   );
   const [shown, setShown] = useState(100);
   useEffect(() => setShown(100), [active, needle]);
@@ -822,7 +824,7 @@ function DataDomains() {
             <li key={r.entity} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <span className="truncate font-mono text-[12px] font-bold">{r.entity}</span>
+                  <ColName name={r.entity} className="truncate text-[12.5px] font-bold" />
                   <Pill tone={r.source === 'crm' ? 'ok' : 'muted'}>{r.source === 'crm' ? 'CRM' : 'Logo'}</Pill>
                 </span>
                 <span className="block truncate text-[11.5px] text-canvas-muted">
@@ -830,7 +832,7 @@ function DataDomains() {
                 </span>
               </span>
               <select
-                aria-label={`${r.entity} veri alanı`}
+                aria-label={`${readableName(r.entity)} veri alanı`}
                 value={r.domain}
                 disabled={set.isPending}
                 onChange={(e) => set.mutate({ entity: r.entity, domain: e.target.value })}

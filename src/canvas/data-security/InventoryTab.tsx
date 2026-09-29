@@ -6,6 +6,8 @@ import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtBytes, fmtN, securityApi } from './api';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import ColName from '../components/ColName';
+import { readableName, readableText } from '../components/readableName';
 
 /** Kişisel veri envanteri: kaynakta (Logo, CRM) kişisel veri kolonları — değer gösterilmez — ve portalın kendi
  *  kopyaları (tablo/klasör, amaç, saklama). */
@@ -18,7 +20,7 @@ export default function InventoryTab() {
   const rows = useMemo(() => {
     const f = filter.trim().toLocaleLowerCase('tr-TR');
     return (d?.source ?? []).filter(
-      (s) => (!src || s.source === src) && (!f || `${s.entity} ${s.column} ${s.reason}`.toLocaleLowerCase('tr-TR').includes(f)),
+      (s) => (!src || s.source === src) && (!f || `${s.entity} ${s.column} ${readableName(s.entity)} ${readableName(s.column)} ${s.reason}`.toLocaleLowerCase('tr-TR').includes(f)),
     );
   }, [d, filter, src]);
   if (q.error) return <Note tone="err">{errText(q.error, 'Envanter okunamadı.')}</Note>;
@@ -52,8 +54,9 @@ export default function InventoryTab() {
               {d.portal.map((p) => (
                 <tr key={p.object} className="border-b border-slate-50 last:border-0">
                   <td className={td}>
-                    <div className="font-bold">{p.kind === 'tablo' ? p.purpose : p.object}</div>
-                    <div className="font-mono text-[10.5px] text-canvas-muted">{p.kind === 'tablo' ? p.object : p.path}</div>
+                    {/* Ham tablo adı yalnız üstüne gelince görünür; klasörde yol ekranda kalır (yol bir veritabanı adı değil). */}
+                    <div className="font-bold" title={p.kind === 'tablo' ? p.object : undefined}>{p.kind === 'tablo' ? p.purpose : readableText(p.object)}</div>
+                    {p.kind !== 'tablo' && <div className="font-mono text-[10.5px] text-canvas-muted">{p.path}</div>}
                   </td>
                   <td className={`${td} max-w-[320px] break-words`}>{p.data}</td>
                   <td className={td}>{p.subjects}</td>
@@ -82,7 +85,7 @@ export default function InventoryTab() {
             <span className={labelCls}>Kaynak</span>
             <select className={field} value={src} onChange={(e) => setSrc(e.target.value)}>
               <option value="">Hepsi</option>
-              {sources.map((s) => <option key={s} value={s}>{s} ({fmtN(d.sourceCounts[s].masked + d.sourceCounts[s].names)})</option>)}
+              {sources.map((s) => <option key={s} value={s}>{readableName(s)} ({fmtN(d.sourceCounts[s].masked + d.sourceCounts[s].names)})</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
@@ -104,9 +107,9 @@ export default function InventoryTab() {
             <tbody>
               {rows.map((s) => (
                 <tr key={`${s.source}:${s.entity}:${s.column}`} className="border-b border-slate-50 last:border-0">
-                  <td className={td}>{s.source}</td>
-                  <td className={`${td} font-mono text-[11.5px]`}>{s.entity}{s.tables > 1 ? <span className="ml-1 text-canvas-muted">×{s.tables}</span> : null}</td>
-                  <td className={`${td} font-mono text-[11.5px]`}>{s.column}</td>
+                  <td className={td}><ColName name={s.source} /></td>
+                  <td className={`${td} text-[12px]`}><ColName name={s.entity} />{s.tables > 1 ? <span className="ml-1 text-canvas-muted">×{s.tables}</span> : null}</td>
+                  <td className={`${td} text-[12px]`}><ColName name={s.column} /></td>
                   <td className={td}>{s.reason}</td>
                   <td className={td}>{s.masked ? <Pill tone="ok">maskeli</Pill> : <Pill tone="warn">maskesiz (ad)</Pill>}</td>
                 </tr>

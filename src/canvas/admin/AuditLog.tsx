@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ChevronDown, Search } from 'lucide-react';
 import { adminApi, type AuditItem } from '../engine';
+import { readableName, readableText } from '../components/readableName';
 import { ACTION_LABEL, FIELD_LABEL, Loading, Note, Pill, Section, btnGhost, errText, field, fmtDate, show } from './ui';
 
 const KINDS = [
@@ -40,7 +41,7 @@ function Detail({ d }: { d: Record<string, unknown> }) {
         const diff = v && typeof v === 'object' && !Array.isArray(v) && ('from' in v || 'to' in v) ? (v as { from: unknown; to: unknown }) : null;
         return (
           <div key={k} className="grid gap-x-2 sm:grid-cols-[120px_1fr]">
-            <dt className="font-bold text-canvas-muted">{FIELD_LABEL[k] ?? k}</dt>
+            <dt className="font-bold text-canvas-muted">{FIELD_LABEL[k] ?? readableName(k)}</dt>
             <dd className="min-w-0 break-words">
               {diff ? (
                 <>
@@ -78,7 +79,7 @@ export function AuditRow({ item }: { item: AuditItem }) {
             <Pill tone={a.tone}>{a.label}</Pill>
             <span className="text-canvas-muted">{item.kindLabel}</span>
           </span>
-          <span className="block truncate text-[12.5px] font-semibold">{item.title || item.objectId || '—'}</span>
+          <span className="block truncate text-[12.5px] font-semibold">{readableText(item.title || item.objectId || '—')}</span>
           {open && item.detail && <Detail d={item.detail} />}
         </span>
         {hasDetail && (

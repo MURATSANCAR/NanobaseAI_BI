@@ -21,27 +21,17 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartKind } from './store';
+import { rawTitle, readableName } from '../components/readableName';
 
 /** WebGL 3B grafikler (ECharts-GL) ayrı parçadır; yalnız 3B açıkken iner. */
 const Chart3D = lazy(() => import('./Chart3D'));
 const THREE_D: ChartKind[] = ['column', 'bar', 'pie', 'donut'];
 
-/** ASCII sözcük → katalogdaki Türkçe yazım («satis» → «satış»). Köprüden gelir (`/semantic/display-words`);
- *  gelene kadar boştur ve başlık alt çizgisiz ASCII yazılır. */
-let displayWords: Record<string, string> = {};
-export const setDisplayWords = (w: Record<string, string> | undefined) => {
-  if (w) displayWords = w;
-};
-
-/** Kolon adını okunur yapar: gecen_yila_net_ciro → Geçen yıla net ciro (harita varsa). */
+/** Kolon adını okunur yapar (gecen_yila_net_ciro → Geçen yıla net ciro, LG_411_CLCARD → Cari kart). Ortak kural
+ *  `components/readableName.ts`; katalogdaki Türkçe yazım haritası (`/semantic/display-words`) oradan okunur. */
+export { setDisplayWords } from '../components/readableName';
 export const humanize = (s: string) => {
-  const t = s
-    .replace(/^d(?=\d{4})/, '')
-    .replace(/_/g, ' ')
-    .trim()
-    .split(' ')
-    .map((w) => displayWords[w.toLowerCase()] ?? w)
-    .join(' ');
+  const t = readableName(s);
   return t.charAt(0).toLocaleUpperCase('tr-TR') + t.slice(1);
 };
 
@@ -255,6 +245,7 @@ function PbiTable({ cols, rows, nums }: { cols: Col[]; rows: Row[]; nums: string
                   'whitespace-nowrap border-b-2 border-[#252423]/80 px-2.5 py-2 font-semibold',
                   numSet.has(c.name) ? 'w-px text-right' : 'text-left',
                 ].join(' ')}
+                title={rawTitle(c.name)}
               >
                 {humanize(c.name)}
               </th>

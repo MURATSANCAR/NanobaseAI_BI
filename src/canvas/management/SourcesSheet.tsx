@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Database, Sigma, X } from 'lucide-react';
 import { managementApi, type ReportColumn, type ReportSource } from './api';
 import SqlGate from './SqlGate';
+import { readableText } from '../components/readableName';
 
 const SqlCode = lazy(() => import('./SqlCode'));
 
@@ -135,9 +136,9 @@ export default function SourcesSheet({
                 {query.data.formulas.map((f) => (
                   <li key={f.name} id={`mg-f-${f.name}`} className={focusedFormula === f.name ? 'is-focused' : undefined}>
                     <strong>
-                      <Sigma size={14} /> {f.name}
+                      <Sigma size={14} /> {readableText(f.name)}
                     </strong>
-                    <p>{f.text}</p>
+                    <p>{readableText(f.text)}</p>
                   </li>
                 ))}
               </ul>
@@ -175,8 +176,8 @@ function SourceCard({
     <article id={`mg-src-${source.id}`} className={'mg-src' + (highlighted ? ' is-focused' : '')}>
       <button type="button" className="mg-src-head" aria-expanded={open} onClick={onToggle}>
         <span className="mg-src-name">
-          <strong>{source.title}</strong>
-          <span>{source.description}</span>
+          <strong title={readableText(source.title) !== source.title ? source.title : undefined}>{readableText(source.title)}</strong>
+          <span>{readableText(source.description)}</span>
         </span>
         <span className="mg-src-stats">
           {stats?.skipped ? stats.skipped : stats ? `${stats.rows.toLocaleString('tr-TR')} satır` : 'henüz çalışmadı'}
@@ -186,7 +187,7 @@ function SourceCard({
       {feeds.length > 0 && (
         <div className="mg-feeds" aria-label="Beslediği kolonlar">
           {feeds.map((f) => (
-            <span key={f}>{f}</span>
+            <span key={f}>{readableText(f)}</span>
           ))}
         </div>
       )}

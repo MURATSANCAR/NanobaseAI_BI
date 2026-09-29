@@ -4,6 +4,7 @@ import { studioApi, type StudioBookEdit, type StudioJob, type StudioKunyeResult,
 import { Note, errText } from '../../admin/ui';
 import { Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn } from './shared';
+import { readableText } from '../../components/readableName';
 
 /** Künye: sistem kitabın kendi künyesinden (alıntıyla) doldurur; kaynağı olmayan alan «—» kalır ve ön baskı
  *  denetimi durur. Editör eksik ya da değişecek alanı burada yazar; kaydedince iç sayfa yeniden dizilir.
@@ -24,13 +25,13 @@ function SourceLine({ row }: { row: StudioKunyeRow }) {
   if (row.edited) {
     return (
       <span className="block text-[11px] leading-snug text-canvas-muted">
-        {row.source}{row.edited.at ? `, ${when(row.edited.at)}` : ''}
+        {readableText(row.source)}{row.edited.at ? `, ${when(row.edited.at)}` : ''}
         {row.edited.was ? <> · önceki: <span className="break-words">«{row.edited.was}»</span></> : null}
       </span>
     );
   }
   if (!row.source) return null;
-  return <span className="block text-[11px] leading-snug text-canvas-muted">{row.source}</span>;
+  return <span className="block text-[11px] leading-snug text-canvas-muted">{readableText(row.source)}</span>;
 }
 
 /** Kitap adı / yazar: tam genişlik, telefonda 16 px (odakta sayfa büyümesin). */
@@ -157,7 +158,7 @@ export default function KunyePanel({ jobId, front, rev = '', hasCover = false }:
               ) : (
                 <span className="block truncate px-1.5 text-[12.5px]">{r.value}</span>
               )}
-              {r.source && !r.missing && <span className="block px-1.5 text-[10.5px] text-canvas-muted">{r.source}</span>}
+              {r.source && !r.missing && <span className="block px-1.5 text-[10.5px] text-canvas-muted">{readableText(r.source)}</span>}
             </dd>
           </div>
         ))}

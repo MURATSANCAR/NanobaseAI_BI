@@ -4,6 +4,8 @@ import { Check, Loader2, MessageSquarePlus, Plus, Search, Sparkles, X } from 'lu
 import AdminGuard from '../AdminGuard';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
+import ColName from '../components/ColName';
+import { readableName } from '../components/readableName';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import {
   ENGINE_ENABLED,
@@ -78,7 +80,7 @@ function VocabularyInner() {
 
   const filtered = useMemo(() => {
     const n = norm(q.trim());
-    return groups.filter((g) => matchesSource(source, g.source) && (!n || norm(`${fieldName(g)} ${g.items.map((i) => i.term).join(' ')}`).includes(n)));
+    return groups.filter((g) => matchesSource(source, g.source) && (!n || norm(`${fieldName(g)} ${readableName(fieldName(g))} ${g.items.map((i) => i.term).join(' ')}`).includes(n)));
   }, [groups, q, source]);
   const sourceCounts = useMemo(
     () => ({ all: groups.length, logo: groups.filter((g) => g.source === 'logo').length, crm: groups.filter((g) => g.source === 'crm').length }),
@@ -206,7 +208,7 @@ function VocabularyInner() {
                   ].join(' ')}
                 >
                   {source === 'all' && <SourceBadge source={g.source} />}
-                  <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] font-bold">{fieldName(g)}</span>
+                  <ColName name={fieldName(g)} className="min-w-0 flex-1 truncate text-[12px] font-bold" />
                   {tab !== 'bosluk' && (
                     <span className="shrink-0 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-canvas-muted">{g.items.length}</span>
                   )}
@@ -229,7 +231,7 @@ function VocabularyInner() {
                       </span>
                       <SourceBadge source={cur.source} />
                     </div>
-                    <h2 className="mt-1 font-mono text-xl font-extrabold tracking-tight sm:text-2xl">{fieldName(cur)}</h2>
+                    <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl" title={fieldName(cur)}>{readableName(fieldName(cur))}</h2>
                   </div>
                   {tab !== 'bosluk' && (
                     <button

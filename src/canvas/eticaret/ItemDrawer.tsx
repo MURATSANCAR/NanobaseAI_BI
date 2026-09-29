@@ -12,6 +12,7 @@ import {
 import { DiffCard, MarkSheet, ThreeValues } from './parts';
 import SqlInfo from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { readableName } from '../components/readableName';
 
 /** Kitabın üç kaynaktaki değerleri, farkları, fark günlüğü ve Zeki AI kart önerileri. 2 tıkla açılır (liste → kitap). */
 export default function ItemDrawer({ itemKey, meta, onClose }: { itemKey: string | null; meta: Meta; onClose: () => void }) {
@@ -159,7 +160,7 @@ function Proposals({ k, kk, items, meta, busy, onPropose, onDone }: {
           <dl className="mt-2 flex flex-col gap-1.5">
             {Object.entries(p.fields).map(([f, v]) => (
               <div key={f} className="grid grid-cols-1 gap-0.5 sm:grid-cols-[130px_1fr] sm:gap-2">
-                <dt className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{FIELD_NAME[f] ?? f}</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{FIELD_NAME[f] ?? readableName(f)}</dt>
                 <dd className="break-words text-[12.5px]">
                   <span className="block">{v}</span>
                   {p.before[f] && p.before[f] !== v && <span className="block text-[11.5px] text-canvas-muted line-through">{p.before[f].slice(0, 400)}</span>}

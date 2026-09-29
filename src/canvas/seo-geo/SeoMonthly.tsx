@@ -9,6 +9,7 @@ import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import { call, dateTime, fmt, qs, seoApi } from './api';
 import SeoLayout, { Failed, Loading, SeoInfo } from './SeoLayout';
 import { useCan } from '../useAdmin';
+import { readableName } from '../components/readableName';
 
 /** Aylık yönetim raporu: önceki takvim ayının SEO & GEO özeti, PDF olarak; gece kendiliğinden hazırlanır, alıcı
  *  tanımlıysa e-postayla gider. */
@@ -369,10 +370,10 @@ function ReportView({ s, k }: { s: Summary; k?: Kaynaklar | null }) {
           {s.crm.available ? (
             <dl className="sg-facts">
               {Object.entries(s.crm.rights ?? {}).map(([k, v]) => (
-                <Fact key={k} k={s.crm.labels?.[k] ?? k} v={fmt(v)} />
+                <Fact key={k} k={s.crm.labels?.[k] ?? readableName(k)} v={fmt(v)} />
               ))}
               {Object.entries(s.crm.flags ?? {}).map(([k, v]) => (
-                <Fact key={`f-${k}`} k={s.crm.flagLabels?.[k] ?? k} v={fmt(v)} />
+                <Fact key={`f-${k}`} k={s.crm.flagLabels?.[k] ?? readableName(k)} v={fmt(v)} />
               ))}
             </dl>
           ) : (

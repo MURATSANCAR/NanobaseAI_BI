@@ -11,7 +11,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { Grid3DComponent } from 'echarts-gl/components';
 import { Bar3DChart, SurfaceChart } from 'echarts-gl/charts';
 import type { ChartKind } from './store';
-import { LABEL_MAX, SERIES, clip, labelCol, numericCols, prettyLabel, shortNum, type Col, type Row } from './Chart';
+import { LABEL_MAX, SERIES, clip, humanize, labelCol, numericCols, prettyLabel, shortNum, type Col, type Row } from './Chart';
 
 // Yalnız kullanılan parçalar paketlenir; tam ECharts + GL 1,7 MB'tı.
 echarts.use([TooltipComponent, CanvasRenderer, Grid3DComponent, Bar3DChart, SurfaceChart]);
@@ -83,6 +83,8 @@ function pieOption(kind: ChartKind, labels: string[], values: number[]): echarts
 
 function barOption(labels: string[], seriesNames: string[], rows: Row[], horizontal: boolean): echarts.EChartsCoreOption {
   const single = seriesNames.length === 1;
+  // Eksen ve ipucunda kolonun okunur adı (net_12ay → Net (12 ay)); veri yine ham adla okunur.
+  const seriesTitles = seriesNames.map(humanize);
   const data: Array<[number, number, number]> = [];
   rows.forEach((r, xi) => seriesNames.forEach((n, yi) => data.push([xi, yi, isNum(r[n]) ? (r[n] as number) : 0])));
   const cat = {
@@ -95,10 +97,10 @@ function barOption(labels: string[], seriesNames: string[], rows: Row[], horizon
   return {
     tooltip: {
       formatter: (p: { value: [number, number, number] }) =>
-        `<b>${labels[p.value[0]]}</b>${single ? '' : ` · ${seriesNames[p.value[1]]}`}<br/>${nf.format(p.value[2])}`,
+        `<b>${labels[p.value[0]]}</b>${single ? '' : ` · ${seriesTitles[p.value[1]]}`}<br/>${nf.format(p.value[2])}`,
     },
     xAxis3D: { ...cat, data: labels, name: '' },
-    yAxis3D: { ...cat, data: seriesNames, name: '', axisLabel: { ...cat.axisLabel, show: !single } },
+    yAxis3D: { ...cat, data: seriesTitles, name: '', axisLabel: { ...cat.axisLabel, show: !single } },
     zAxis3D: {
       type: 'value',
       name: '',

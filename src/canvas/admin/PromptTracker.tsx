@@ -4,6 +4,7 @@ import { AlertTriangle, Check, Copy, Download, FileDown, FileSpreadsheet, Search
 import { adminApi, type PromptDetail, type PromptRow } from '../engine';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
+import ColName from '../components/ColName';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, errText, field, fmtDate, nf, td, th } from './ui';
 import { xlsxUrl } from '../components/excel';
 
@@ -86,7 +87,7 @@ function ResultTable({ result }: { result: NonNullable<PromptDetail['result']> }
           <tr>
             {cols.map((c) => (
               <th key={c.name} className={th}>
-                {c.name}
+                <ColName name={c.name} />
               </th>
             ))}
           </tr>

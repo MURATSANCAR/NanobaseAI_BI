@@ -222,7 +222,7 @@ export default function FoyScreen() {
                 <ul className="flex flex-col gap-2 text-[12px]">
                   {f.crmTodo.map((t) => (
                     <li key={t.alan} className="rounded-xl bg-white/70 p-2">
-                      <div className="font-bold">{t.ad} <span className="font-mono text-[11px] text-canvas-muted">({t.alan})</span></div>
+                      <div className="font-bold" title={t.alan}>{t.ad}</div>
                       <p className="mt-0.5 whitespace-pre-line">{t.deger}</p>
                     </li>
                   ))}

@@ -13,6 +13,7 @@ import { toChips } from '@/canvas/interpret';
 import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, useCanvasQueries } from '@/canvas/data';
 import AlertsPanel from '@/canvas/alerts/AlertsPanel';
+import { readableText } from '@/canvas/components/readableName';
 
 /** Bu sayfa iki yolu çizer: /genel-bakis (CFO kanvası) ve /uyarilar (kural listesi). Planlı raporlar ayrı ekrandır. */
 
@@ -189,7 +190,7 @@ export default function BiCanvasPage() {
           ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ?? 'ZEKİ AI özet üretmedi.'}”`,
+            : `“${answer?.summary ? readableText(answer.summary) : 'ZEKİ AI özet üretmedi.'}”`,
         m1: { label: 'Satır:', value: String(rows) },
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },

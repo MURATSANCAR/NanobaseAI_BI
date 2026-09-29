@@ -5,6 +5,7 @@ import { Note, errText } from '../../../admin/ui';
 import { ago, press } from '../shared';
 import { marketingApi, type MarketingView, type ProductPage, type SeoCandidate } from './api';
 import { Approval, Generate, Lines, Section, copyText, field, ghostBtn, gradientBtn, label, tidy } from './parts';
+import { readableText } from '../../../components/readableName';
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -104,7 +105,7 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
             <ul className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {page.facts.map((f, i) => (
                 <li key={f.key || i} className="flex min-w-0 flex-col gap-1 rounded-xl border border-slate-200 bg-white/70 p-2">
-                  <span className="flex items-center justify-between gap-2 text-[11px]"><b>{f.label}</b><span className="truncate text-canvas-muted">{f.source}</span></span>
+                  <span className="flex items-center justify-between gap-2 text-[11px]"><b>{f.label}</b><span className="truncate text-canvas-muted">{readableText(f.source)}</span></span>
                   <input className={field} value={f.value} aria-label={f.label}
                     onChange={(e) => set('facts', page.facts.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} />
                 </li>

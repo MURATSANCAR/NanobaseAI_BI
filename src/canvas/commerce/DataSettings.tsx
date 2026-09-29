@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnPrimary, errText, field, label } from '../admin
 import { Panel } from '../editorial/kit';
 import SqlInfo from '../components/SqlInfo';
 import { commerceApi, fmtDay, fmtInt, type Settings } from './api';
+import ColName from '../components/ColName';
 import { useMeta } from './parts';
 
 /** Veri ve eşikler: T-soft okumasının tazeliği, hangi alanın bulunduğu (ölçüm), eksik alanlar; RFM ve kampanya eşikleri. */
@@ -38,7 +39,7 @@ export default function DataSettings() {
           <details className="mt-2 text-[12px]">
             <summary className="min-h-11 cursor-pointer content-center font-bold sm:min-h-0">Alan eşlemesi (ölçüm)</summary>
             <ul className="mt-1 space-y-0.5 text-canvas-muted">
-              {Object.entries(fr.fields).map(([role, name]) => <li key={role}><span className="font-mono">{role}</span> ← {name}</li>)}
+              {Object.entries(fr.fields).map(([role, name]) => <li key={role}><ColName name={role} className="font-semibold" /> ← <span className="font-mono">{name}</span></li>)}
             </ul>
           </details>
         )}

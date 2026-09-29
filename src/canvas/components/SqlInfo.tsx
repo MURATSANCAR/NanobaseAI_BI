@@ -3,6 +3,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { BookOpenText, Check, Copy, CornerDownRight, Database, FileSpreadsheet, Info, MapPin, Sigma, TriangleAlert, X } from 'lucide-react';
 import { useCan } from '../useAdmin';
 import { allSqlText, collect, copyText, fmtMs, fmtWhen, resolveRef, type KaynakSorgu, type Kaynaklar } from './sqlInfo';
+import { readableText, useDisplayWordsVersion } from './readableName';
 
 /**
  * Sorgu bilgisi düğmesi: bir rakamın, kartın ya da tablo başlığının yanında küçük «i». Açılan pencerede rakamı üreten
@@ -109,8 +110,8 @@ function Panel({ k, refId, label, help }: { k: Kaynaklar | null | undefined; ref
               <div className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-canvas-violet">
                 <Sigma aria-hidden className="h-3.5 w-3.5" /> Hesap
               </div>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-canvas-ink">{f.text}</p>
-              {f.external && <p className="mt-1 text-[12px] font-semibold text-canvas-muted">Kaynak: {f.external}</p>}
+              <p className="mt-1 text-[12.5px] leading-relaxed text-canvas-ink">{readableText(f.text)}</p>
+              {f.external && <p className="mt-1 text-[12px] font-semibold text-canvas-muted">Kaynak: {readableText(f.external)}</p>}
             </section>
           ))}
 
@@ -186,7 +187,11 @@ function CopyAll({ sources }: { sources: KaynakSorgu[] }) {
 }
 
 function SourceCard({ s, showSql }: { s: KaynakSorgu & { isOrigin: boolean }; showSql: boolean }) {
+  useDisplayWordsVersion();
   const stats = s.stats;
+  // Başlık ve açıklamadaki ham tablo/kolon adları okunur yazılır; ham metin üstüne gelince görünür. SQL metni aynen kalır.
+  const title = readableText(s.title);
+  const description = readableText(s.description);
   const meta = [
     stats?.rows != null ? `${stats.rows.toLocaleString('tr-TR')} satır` : null,
     fmtMs(stats?.dbMs),
@@ -201,7 +206,7 @@ function SourceCard({ s, showSql }: { s: KaynakSorgu & { isOrigin: boolean }; sh
               <CornerDownRight aria-hidden className="h-3 w-3" /> Tabloyu dolduran asıl sorgu
             </div>
           )}
-          <h3 className="text-[13.5px] font-extrabold leading-snug">{s.title}</h3>
+          <h3 className="text-[13.5px] font-extrabold leading-snug" title={title !== s.title ? s.title : undefined}>{title}</h3>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-canvas-muted">
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700">
               <Database aria-hidden className="h-3 w-3" />
@@ -214,13 +219,17 @@ function SourceCard({ s, showSql }: { s: KaynakSorgu & { isOrigin: boolean }; sh
             ))}
           </div>
         </div>
-        {showSql && s.sql && <CopyButton text={s.sql} label="Kopyala" what={`${s.title} SQL'ini`} />}
+        {showSql && s.sql && <CopyButton text={s.sql} label="Kopyala" what={`${title} SQL'ini`} />}
       </div>
-      {s.description && <p className="mt-1.5 text-[12px] leading-relaxed text-canvas-muted">{s.description}</p>}
+      {s.description && (
+        <p className="mt-1.5 text-[12px] leading-relaxed text-canvas-muted" title={description !== s.description ? s.description : undefined}>
+          {description}
+        </p>
+      )}
       {showSql && s.sql && (
         <pre
           tabIndex={0}
-          aria-label={`${s.title} SQL`}
+          aria-label={`${title} SQL`}
           className="mt-2 max-h-72 overflow-auto overscroll-contain whitespace-pre rounded-xl bg-slate-950 p-3 font-mono text-[11.5px] leading-relaxed text-slate-100 selection:bg-violet-500/40 max-sm:max-h-60 max-sm:text-[11px]"
         >
           <code>{s.sql}</code>
