@@ -24,6 +24,7 @@ from semantic_layer.normalize import (
     METRIC_VOCAB_S,
     normalize_term,
     MODIFIERS_S,
+    STOPWORDS,
     STOPWORDS_S,
     cardinal,
     derived_forms,
@@ -291,6 +292,20 @@ def _inflects(token: str, root: str) -> bool:
         return True
     return bool(root) and root[-1] in soft and is_inflection_of(token, root[:-1] + soft[root[-1]])
 
+
+
+
+_QUESTION_PARTICLE = re.compile(r"^m[iu](s[iu]n|y[iu]z|d[iu]r|s[iu]n[iu]z)?$")
+
+
+def _subject_position(tokens: list[str]) -> int:
+    """Position of the last content word — in a Turkish question, the head of what is asked about
+    ("…telif sözleşmeleri hangileri?" → sözleşmeleri). -1 when every word is a particle or stopword."""
+    for k in range(len(tokens) - 1, -1, -1):
+        w = fold(tokens[k])
+        if w and w not in STOPWORDS and not _QUESTION_PARTICLE.match(w):
+            return k
+    return -1
 
 
 def _temporal_positions(tokens: list[str], temporal) -> set[int]:
@@ -2382,6 +2397,7 @@ class SemanticResolver:
             # phrase) say which database the question is about.
             votes, named = dict(plain_votes), list(plain_named)
             plain = dict(votes)
+            subject = _subject_position(qf.tokens)
             # A certified phrase names its database as surely as a table's own word does: "fiziki
             # arşivde emanete verilmiş" is three CRM things, and the plain "kayıtlar" beside them is
             # one ERP word, not the question's subject.
@@ -2392,11 +2408,15 @@ class SemanticResolver:
                     # a phrase or a table's own word is a full voice; a lone word is half of one — two
                     # of them weigh what one deliberate phrase does, and one alone decides nothing
                     # against a table the question names in plain words
-                    # A certified phrase for a table itself ("telif sözleşmeleri" → the contracts table) is both
-                    # voices at once — a deliberate phrase *and* the table's own word — and it outweighs a
-                    # plain word whose stem only resembles some report table's name on the other side.
+                    # A certified phrase for a table itself, when it is what the question asks about ("…telif
+                    # sözleşmeleri hangileri?"), is both voices at once — a deliberate phrase *and* the
+                    # table's own word — and it outweighs a plain word whose stem only resembles some report
+                    # table's name on the other side. Only as the subject: "ISBN listesinde stok kartıyla
+                    # eşleşmemiş yayın numaraları" names the ERP item card as a complement, and weighting it
+                    # carried a CRM question to the ERP (A095, 2026-09-29).
                     span_len = s_.span[1] - s_.span[0]
-                    weight = 2 if s_.semantic_type == SemanticType.ENTITY and span_len >= 2 else (1 if self._names_a_source(s_) else 0.5)
+                    head = s_.semantic_type == SemanticType.ENTITY and span_len >= 2 and s_.span[0] <= subject < s_.span[1]
+                    weight = 2 if head else (1 if self._names_a_source(s_) else 0.5)
                     votes[src] = votes.get(src, 0) + weight
             ranked = sorted(votes.items(), key=lambda kv: -kv[1])
             homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
