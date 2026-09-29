@@ -21,7 +21,7 @@ function transform(value, path, collection, changes) {
 		let next = value;
 		// Exact system identifiers only; user message text and attachments are never rewritten.
 		if (value === legacyBot) {
-			const knownReference = /(^|\.)(_id|userId|uid|username)$/.test(path) || /(^|\.)(uids|usernames)\[\]$/.test(path);
+			const knownReference = collection.endsWith('_settings') || /(^|\.)(_id|userId|uid|username)$/.test(path) || /(^|\.)(uids|usernames)\[\]$/.test(path);
 			// Preserve authored content; report only field paths, never message values.
 			const authoredContent = /(^|\.)(msg|text|body|description|name|title|value)$/.test(path) || /(^|\.)attachments(\[\]|\.)/.test(path);
 			if (knownReference) next = 'zeki.bot';
