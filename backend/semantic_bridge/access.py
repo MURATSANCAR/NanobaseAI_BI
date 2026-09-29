@@ -830,6 +830,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/public-affairs/", frozenset({page("kurumsal-iliskiler")})),
     # M1: başvuru dosyası ve kurul oturumu iki sayfada birlikte açılır (kurul üyesi başvurunun raporunu ve dosyasını,
     # başvuru ekranı oturum listesini okur).
+    ("/api/v1/editorial/applications/forms/run-due", SYSTEM),
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
     ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
     # H4 Kurumsal e-posta. E-postayla gelen dosya başvurularını yazar giriş süreci ekranı da okur (sözleşme ucu).

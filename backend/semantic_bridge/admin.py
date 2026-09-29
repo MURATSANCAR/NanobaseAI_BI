@@ -193,6 +193,14 @@ SPEC: list[dict[str, Any]] = [
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Yayın kurulu: toplam karar skoru (misyon, yayıncılık, ticari puanların ortalaması) → skor önerisi.
+    {"key": "BASVURU_FORM_SHEETS", "group": "basvuru_form", "label": "Yazar başvuru formu yanıt tabloları",
+     "type": "text",
+     # 2026-09-29: TİMAŞ'ın üç yaş grubu formu (Çocuk 0-9, Genç 11-14, İlk Gençlik 9-11), sahibi basvuru@timas.com.tr.
+     "default": "1wME0i1A8aVoMHfP_w-qnn6nwssM7i0CbSbD67m5uvEM 1yAvMQXw9_U5ZwMABMUJ1OYndM4Avh9V_xV4GdDQ3cQ0 "
+                "1Berv8Cy09X3r7WlSQtoD5oKlXE6tHPs-Cy62-VGFgqA",
+     "help": "Google E-Tablo bağlantıları ya da kimlikleri, boşluk ya da satırla ayrılmış. Her tablo "
+             "zeki-seo servis hesabıyla Görüntüleyici olarak paylaşılmalı. Yanıtlar 15 dakikada bir okunur, her yanıt bir "
+             "kez Başvurular'a düşer; tablolara hiçbir şey yazılmaz."},
     {"key": "EDITORIAL_BOARD_ACCEPT_SCORE", "group": "crm", "label": "Kurul: kabul skoru", "type": "int", "default": "70",
      "help": "Üyelerin ortalama toplam karar skoru bu değer ve üstündeyse skor önerisi «Kabul» olur (0–100)"},
     {"key": "EDITORIAL_BOARD_REVISE_SCORE", "group": "crm", "label": "Kurul: revizyon skoru", "type": "int", "default": "50",
@@ -1444,6 +1452,8 @@ GROUPS = [
      "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
     {"id": "database", "category": "baglanti", "label": "Logo veritabanı (SQL Server)",
      "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
+    {"id": "basvuru_form", "category": "baglanti", "label": "Yazar başvuru formları (Google)",
+     "help": "Yazar başvuru formlarının yanıt tabloları servis hesabıyla yalnız okunur; her yanıt Başvurular'da yeni başvuru olur."},
     {"id": "crm", "category": "baglanti", "label": "CRM (Dynamics)", "help": "CRM prod sunucusu 192.168.0.28 (CRMDATBASE); kendi bağlantısıyla okunur."},
     {"id": "people", "category": "baglanti", "label": "Kişi rehberi",
      "help": "Rehber CRM'deki etkin kullanıcılardan gelir, Active Directory ile kesiştirilir: AD'de devre dışı olanlar ve "

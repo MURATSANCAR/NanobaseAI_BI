@@ -1,0 +1,10 @@
+[Unit]
+Description=Yazar başvuru formlarını 15 dakikada bir okur
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=timas-basvuru-form.service
+
+[Install]
+WantedBy=timers.target
