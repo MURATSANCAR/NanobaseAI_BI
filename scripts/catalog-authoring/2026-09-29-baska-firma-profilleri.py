@@ -28,7 +28,7 @@ import os
 import sys
 from collections import Counter
 
-for p in (os.environ.get("PYTHONPATH", ""), "/data/nanobaseai/bi/frontend/backend"):
+for p in ("/data/nanobaseai/bi/frontend/backend", os.environ.get("PYTHONPATH", "")):   # PYTHONPATH önde kalır
     if p and p not in sys.path:
         sys.path.insert(0, p)
 
