@@ -173,6 +173,23 @@ function edit(ctx: EditorCtx, ref: ItemRef, from: string, to: string): PlanPage 
   return replaceTarget(page, ref.target, ref.id, span[0], span[1], to);
 }
 
+/** Karar sunucuda kaydedilemediyse metin değişikliğini güncel sayfada tersine çevirir. Öneri metni kendi yerinde aynen
+ *  duruyorsa geri alınır (aradaki başka düzenlemeler kalır); o yer bu arada değiştiyse dokunulmaz ve false döner. */
+function revertEdit(ctxNow: EditorCtx, ref: ItemRef, applied: { from: string; to: string }, fid: string): boolean {
+  const back = edit(ctxNow, ref, applied.to, applied.from);
+  if (!back) return false;
+  ctxNow.setPage(back, `okur:${fid}:geri`);
+  return true;
+}
+
+function failText(why: string, reverted: boolean | null): string {
+  const head = `Karar kaydedilemedi${why ? ` (${why})` : ''}; `;
+  if (reverted === null) return `${head}işaret eski hâline döndü. Yeniden deneyin.`;
+  return reverted
+    ? `${head}metindeki değişiklik de geri alındı, işaret eski hâline döndü. Yeniden deneyin.`
+    : `${head}işaret eski hâline döndü, ama o yerdeki metin bu arada değiştiği için değişiklik kendiliğinden geri alınamadı. Gerekirse Ctrl/Cmd+Z ile geri alın.`;
+}
+
 // ------------------------------------------------------------------ çocuk gözüyle
 function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo }: {
   ctx: EditorCtx; info: ReaderInfo; run: ReaderRun | null; summary: RunSummary | null; starting: boolean;
@@ -182,6 +199,9 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
   const [focus, setFocus] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const { local, decide } = useDecisions(ctx.job, run?.id);
+  // Karar düşerse metni güncel sayfada geri almak için; await sonrası `ctx` eski kalır.
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
   const flags = run?.flags ?? [];
   const pageId = ctx.page?.id ?? null;
   const onPage = flags.filter((f) => f.page === pageId);
@@ -190,9 +210,11 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
 
   const act = async (f: ReaderFlag, what: 'apply' | 'unapply' | 'dismiss' | 'reopen') => {
     setMsg(null);
+    let applied: { from: string; to: string } | null = null;
     try {
       if (what === 'apply' || what === 'unapply') {
-        const p = what === 'apply' ? edit(ctx, f, f.quote, f.replacement) : edit(ctx, f, f.replacement, f.quote);
+        applied = what === 'apply' ? { from: f.quote, to: f.replacement } : { from: f.replacement, to: f.quote };
+        const p = edit(ctx, f, applied.from, applied.to);
         if (!p) { setMsg('Bu yerdeki metin değişmiş; öneri uygulanamadı.'); return; }
         ctx.setPage(p, `okur:${f.fid}`);
         await decide(f.fid, what === 'apply' ? 'applied' : 'open');
@@ -200,10 +222,7 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
         await decide(f.fid, what === 'dismiss' ? 'dismissed' : 'open');
       }
     } catch (e) {
-      const why = errText(e, '');
-      setMsg(`Karar kaydedilemedi${why ? ` (${why})` : ''}; ${what === 'apply' || what === 'unapply'
-        ? 'metindeki değişiklik kaydedildi ama işaret eski hâline döndü. Metni Ctrl/Cmd+Z ile geri alıp yeniden deneyin.'
-        : 'işaret eski hâline döndü. Yeniden deneyin.'}`);
+      setMsg(failText(errText(e, '') ?? '', applied ? revertEdit(ctxRef.current, f, applied, f.fid) : null));
     }
   };
 
@@ -386,6 +405,8 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
 }) {
   const [msg, setMsg] = useState<string | null>(null);
   const { local, decide } = useDecisions(ctx.job, run?.id);
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
   const spreads = run?.spreads ?? [];
   const weak = spreads.filter((x) => x.status === 'suggested' || x.status === 'no_fix');
   const strong = spreads.filter((x) => x.status === 'strong');
@@ -393,9 +414,11 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
 
   const act = async (x: TurnItem, what: 'accept' | 'unaccept' | 'reject' | 'reopen') => {
     setMsg(null);
+    let applied: { from: string; to: string } | null = null;
     try {
       if ((what === 'accept' || what === 'unaccept') && x.replacement) {
-        const p = what === 'accept' ? edit(ctx, x, x.quote, x.replacement) : edit(ctx, x, x.replacement, x.quote);
+        applied = what === 'accept' ? { from: x.quote, to: x.replacement } : { from: x.replacement, to: x.quote };
+        const p = edit(ctx, x, applied.from, applied.to);
         if (!p) { setMsg('Bu sayfanın son cümlesi değişmiş; öneri uygulanamadı.'); return; }
         ctx.setPage(p, `okur:${x.fid}`);
         await decide(x.fid, what === 'accept' ? 'accepted' : 'open');
@@ -403,10 +426,7 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
         await decide(x.fid, what === 'reject' ? 'rejected' : 'open');
       }
     } catch (e) {
-      const why = errText(e, '');
-      setMsg(`Karar kaydedilemedi${why ? ` (${why})` : ''}; ${what === 'accept' || what === 'unaccept'
-        ? 'metindeki değişiklik kaydedildi ama işaret eski hâline döndü. Metni Ctrl/Cmd+Z ile geri alıp yeniden deneyin.'
-        : 'işaret eski hâline döndü. Yeniden deneyin.'}`);
+      setMsg(failText(errText(e, '') ?? '', applied ? revertEdit(ctxRef.current, x, applied, x.fid) : null));
     }
   };
 

@@ -31,6 +31,7 @@
 - **Testte bulunan ve düzeltilen:** kişi kartı `?kisi=` bağlantısı küçük harfli kimlikle gelince sonsuza kadar «Yükleniyor» kalıyordu (CRM kimliği büyük harf; yazar ilişkileri, basın-web, serbest çalışanlar, komut paleti bağlantıları küçük harf taşıyabiliyor) → karşılaştırma harf duyarsız.
 - **Test verisi notları:** seçilen iki kayıt 404 verdi — CRM'de `statecode = 0` ama durum nedeni «Pasif»; d49b498f'nin genişlettiği süzgeç doğru gizliyor. Görevlerim panosunun dolu hâli, timasai'nin CRM'de projesi olmadığı için gerçek bir editörün (24 proje) CRM verisiyle tarayıcıda yerine konarak çizildi; yazma engelliydi.
 - **Açık:** müşteri VM'ine kurulmadı. Telefonda yönetici görünümünde yazar giriş ekranının «Editörlerin bekleyen işleri» listesi (596 iş) süzgeçleri aşağı itiyor (önceden var olan düzen).
+- **Okur paneli, sonradan:** metni değiştiren kararın kaydı düşerse metin de güncel sayfada tersine çevrilir (`revertEdit`: öneri metni kendi yerinde aynen duruyorsa geri alınır, aradaki başka düzenlemeler kalır; o yer bu arada değiştiyse dokunulmaz ve ekran bunu söyler). `await` sonrası güncel sayfa için `ctxRef`. Test sunucusunda `tsc` 0, `vite build`, vitest 256/256.
 
 ## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
 
