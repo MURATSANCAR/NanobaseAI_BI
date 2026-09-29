@@ -857,7 +857,7 @@ def reconcile(index: CargoIndex, start: date, end: date, *, carrier_codes: dict[
               invoices: list[dict[str, Any]], logo_shipments: Optional[list[dict[str, Any]]],
               crm_shipments: Optional[list[dict[str, Any]]], notes: list[str]) -> dict[str, Any]:
     """Ay: CRM kargo kaydı toplamı (firma) ↔ Logo kargo faturası (eşlenen cariler); mükerrer takip no; Logo sevk ↔ CRM
-    sevkiyat eşleşme oranı. Kargo kaydı tutarının KDV dahil mi hariç mi olduğu ölçülecek; Logo iki biçimde verilir."""
+    sevkiyat eşleşme oranı. Kargo kaydındaki tutar KDV hariçtir (2024 Aras faturalarıyla ölçüldü: tek gönderilik 34 faturanın 18'inin KDV hariç tutarı kargo kaydında birebir var, KDV dahil tutarı hiçbirinde yok). Logo iki biçimde verilir."""
     rows = [r for r in index.rows if r["irs"] and start <= r["irs"] < end]
     by_firm: dict[str, dict[str, Any]] = {}
     for r in rows:

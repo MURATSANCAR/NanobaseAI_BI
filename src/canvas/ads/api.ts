@@ -299,7 +299,7 @@ export const adsApi = {
     send<Suggestion>('POST', `/suggestions/${enc(id)}/decide`, { karar, not }),
   briefs: () => send<{ items: Brief[]; total: number; kaynaklar?: Kaynaklar }>('GET', '/briefs'),
   brief: (id: string) => send<Brief>('GET', `/briefs/${enc(id)}`),
-  newBrief: (stokKodu: string, not?: string) => send<Brief>('POST', '/briefs', { stokKodu, not }, 180_000),
+  newBrief: (stokKodu: string, not?: string, elle?: boolean) => send<Brief>('POST', '/briefs', { stokKodu, not, ...(elle ? { elle: true } : {}) }, 180_000),
   saveBrief: (id: string, b: { metin?: string; onayla?: boolean }) => send<Brief>('PATCH', `/briefs/${enc(id)}`, b),
   deleteBrief: (id: string) => send<{ ok: boolean }>('DELETE', `/briefs/${enc(id)}`),
   crm: (p: Period) => send<CrmRecords>('GET', `/crm${qs(p)}`, undefined, 180_000),

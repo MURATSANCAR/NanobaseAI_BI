@@ -72,7 +72,7 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
         <>
           <fieldset disabled={!canEdit} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
           <Section title="Ürün sayfası" aside={<Approval approved={approvedNow ? pr.approved : null} />}
-            explain="«SEO başlığı» arama sonuçlarında görünen başlık, «Meta açıklama» başlığın altındaki kısa tanıtım yazısıdır. Sayaç yeşilse uzunluk önerilen aralıkta, kırmızıysa kısa ya da uzundur. Değişiklikler «Kaydet» ile saklanır; indirme ve SEO önerisi onaydan sonra açılır.">
+            explain="«SEO başlığı» arama sonuçlarında görünen başlık, «Meta açıklama» başlığın altındaki kısa tanıtım yazısıdır. Sayaç yeşilse uzunluk önerilen aralıkta, kırmızıysa kısa ya da uzundur. Değişiklikler «Kaydet» ile saklanır; indirme ve SEO önerisi onaydan sonra açılır. Onaylı sayfada bir değişikliği kaydetmek onayı kaldırır; yeniden onaylamanız gerekir. «Onayla» değişiklikleri de kaydedip onaylar.">
             <div className="grid min-w-0 gap-3 md:grid-cols-2">
               <label className="flex min-w-0 flex-col gap-1">
                 <span className={label}>Ürün başlığı</span>

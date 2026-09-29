@@ -45,7 +45,7 @@ F_BEKLEYEN = ("Teslim bekleyen = kargo firmasının gönderi kaydında teslim ta
 F_KARNE = ("Firma karnesi (dönem = kargo irsaliye tarihi): gönderi = kayıt sayısı; teslim süresi = teslim − irsaliye günü "
            "(ortanca, ortalama, %90); iade oranı = iade ÷ gönderi; bekleyen = teslimsiz ve iadesiz; hedefi aşan = il hedef "
            "gününü aşan teslim; desi başı = Σ tutar ÷ Σ desi, sevk başı = Σ tutar ÷ Σ sevk adedi, gönderi başı = Σ tutar ÷ "
-           "gönderi. Tutarın KDV dahil mi hariç mi olduğu ölçülecek.")
+           "gönderi. Tutar KDV hariçtir (2024 Aras faturalarıyla ölçüldü).")
 F_VERI = ("Kargo verisi: kayıt = okunan etkin gönderi kaydı; veri sonu = en son kargo irsaliye tarihi; tarihsiz ve okunamayan "
           "= tarihi ya da sayısı çevrilemeyen kayıt sayısı.")
 F_SIPARIS = ("Sipariş satırı: koli = CRM koli adedi; kutulanalı gün = bugün − kutulandı (sevk yoksa); sevke kadar gün = sevk − "

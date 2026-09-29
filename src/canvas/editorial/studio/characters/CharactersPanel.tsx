@@ -228,7 +228,7 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
 
       {v.series && (
         <Section title="Bu kitapta karta uymayan görseller"
-          explain="Her resimdeki karakter, onaylı kartın referans görseliyle karşılaştırılır. «Kartla fark» ne kadar büyükse karakter karttan o kadar farklı çizilmiştir; sınırı aşan resim «uymuyor» sayılır. «Denetle» bu kitabın resimlerini onaylı kartlarla yeniden karşılaştırır."
+          explain="Her resimdeki karakter, onaylı kartın referans görseliyle karşılaştırılır. «Kartla fark» ne kadar büyükse karakter karttan o kadar farklı çizilmiştir; sınırı aşan resim «uymuyor» sayılır. «Denetle» bu kitapta seçili resimlerden henüz denetlenmemiş ya da kartı sonradan değişmiş olanları karşılaştırır. Yalnız denetlemekle kalmaz: karta uymayan resim, onaylanmamışsa ve elle düzeltilmiş bir sürüm değilse, yeniden deneme hakkı bitene kadar yeni bir sürüm olarak yeniden çizilir; eski sürümler silinmez. Onayladığınız ya da düzelttiğiniz resim yeniden çizilmez, yalnız işaretlenir."
           aside={canEdit ? (
           <button type="button" className={`${ghostBtn} !min-h-10 shrink-0 whitespace-nowrap`} disabled={checking || run.isPending || approved === 0 || (!!v.busy && !v.busy.error)}
             title={approved === 0 ? 'Önce bir kartı onaylayın' : undefined}

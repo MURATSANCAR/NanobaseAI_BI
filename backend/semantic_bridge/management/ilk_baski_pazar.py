@@ -184,7 +184,8 @@ def distribution(rows: list[Any], yillar: list[int]) -> dict[str, Any]:
     return out
 
 
-def top(rows: list[Any], n: int = ILK) -> list[dict[str, Any]]:
+def most_printed(rows: list[Any], n: int = ILK) -> list[dict[str, Any]]:
+    # Ad `top` olamaz: Python 3.12 sembol tablosu «top» adlı fonksiyonu modül sanıyor, tanımsız ad testi yanlış alarm verir.
     known = [r for r in rows if r.baski_no]
     known.sort(key=lambda r: (-r.baski_no, -(r.basim_yili or 0), r.ad or "", r.barkod))
     return [{"barkod": r.barkod, "ad": r.ad, "yazar": r.yazar, "yayinevi": r.yayinevi, "basimYili": r.basim_yili,
@@ -235,7 +236,7 @@ def similar(engine: sa.engine.Engine, tenant: str, *, code: Optional[str] = None
     out = {**base, "durum": "hazir", "kategori": kat,
            "kume": {"baslik": len(rows), "fiyatli": len(fiyatlar),
                     "fiyatMedyan": round(statistics.median(fiyatlar), 2) if fiyatlar else None},
-           "baskilar": distribution(rows, yillar), "enCokBasilan": top(rows)}
+           "baskilar": distribution(rows, yillar), "enCokBasilan": most_printed(rows)}
 
     win = D.stretch(engine, tenant)
     cikis: dict[str, Any] = {"toplam": None, "pencere": None, "not": NOTLAR["cikis"]}

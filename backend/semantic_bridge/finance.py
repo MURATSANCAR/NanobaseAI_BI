@@ -745,7 +745,7 @@ def reconciliation(engine: sa.engine.Engine, tenant: str, year: int, month: int,
             "muhasebede vardır.",
             "Faturası kesilip muhasebeleşmemiş ya da ayrı tarihte muhasebeleşen belge.",
             "Satış hesabına elle kaydedilen düzeltme ve mahsup fişleri.",
-            "Satış indirimleri (611) fatura satırında net tutardan düşülmüş gelir; muhasebede ayrı hesaptadır.",
+            "Satış indirimleri fatura satırında net tutardan düşülmüştür; muhasebede ise ayrı bir hesapta izlenir.",
         ],
         **freshness(engine),
     }
@@ -1208,7 +1208,8 @@ def build_cash(inputs: dict[str, Any], weeks: int = 13) -> dict[str, Any]:
             spec["ayrinti"][i].append(detail)
 
     for d, amt, cari in inputs.get("receivables") or []:
-        add("alacak", "giris", "Müşteri alacakları — ödeme planı vadeleri, FIFO yaklaşımı (Logo)", True, d, amt, {"vade": d.isoformat(), "cari": cari})
+        add("alacak", "giris", "Müşteri alacakları — ödeme planı vadeleri, tahsilat en eski faturadan düşülerek tahmini (Logo)", True, d, amt,
+            {"vade": d.isoformat(), "cari": cari})
     for tur, durum, d, amt in inputs.get("cheques") or []:
         yon = src.cheque_direction(tur, durum)
         if yon == "giris":
@@ -1218,7 +1219,8 @@ def build_cash(inputs: dict[str, Any], weeks: int = 13) -> dict[str, Any]:
     for d, amt in inputs.get("crm") or []:
         add("crm-tahsilat", "giris", "CRM'de onay bekleyen tahsilat (Logo'ya düşmemiş)", True, d, amt)
     for d, amt, cari in inputs.get("payables") or []:
-        add("satici", "cikis", "Satıcı borçları — ödeme planı vadeleri, FIFO yaklaşımı (Logo)", True, d, amt, {"vade": d.isoformat(), "cari": cari})
+        add("satici", "cikis", "Satıcı borçları — ödeme planı vadeleri, ödeme en eski faturadan düşülerek tahmini (Logo)", True, d, amt,
+            {"vade": d.isoformat(), "cari": cari})
     other_ccy: dict[str, float] = {}
     for d, amt, ccy in inputs.get("royalty") or []:
         if (ccy or "TRY").upper() not in ("TRY", "TL"):
@@ -1671,20 +1673,22 @@ def summary(engine: sa.engine.Engine, tenant: str, *, with_cash: bool) -> dict[s
     if loaded:
         vals = compute_lines(engine, tenant, ytd)["values"]
         cards.append({"id": "faaliyet", "label": "Faaliyet giderleri (yıl başından)", "value": _r(-vals.get("FAALIYET", 0.0)),
-                      "unit": "₺", "note": "Muhasebe (Ar-Ge, pazarlama-satış-dağıtım, genel yönetim), eşlemeyle.",
+                      "unit": "₺", "note": "Muhasebedeki Ar-Ge, pazarlama-satış-dağıtım ve genel yönetim giderleri, hesap eşlemesine göre.",
                       "yaklasik": False, "sekme": "gelir"})
     if with_cash:
         pos = meta_get(engine, f"position:{y}")
         if pos.get("groups"):
             g = pos["groups"]
             cards.append({"id": "nakit", "label": "Kasa ve banka", "value": _r(float(g.get("100") or 0) + float(g.get("102") or 0)),
-                          "unit": "₺", "note": f"{end.isoformat()} itibarıyla muhasebe bakiyesi (100 + 102).", "yaklasik": False,
+                          "unit": "₺", "note": f"Kasa ve banka hesaplarının {end.day} {AY[end.month - 1]} {end.year} itibarıyla muhasebe bakiyesi.",
+                          "yaklasik": False,
                           "sekme": "nakit"})
         c = cash(engine, tenant)
         if c.get("run"):
             od = float((c.get("vadesiGecmis") or {}).get("alacak") or 0)
             cards.append({"id": "vadesi-gecmis", "label": "Vadesi geçmiş alacak", "value": _r(od), "unit": "₺",
-                          "note": "Ödeme kapama kullanılmadığı için FIFO yaklaşımı.", "yaklasik": True, "sekme": "nakit"})
+                          "note": "Tahsilatlar faturalarla tek tek eşlenmediği için en eski faturadan başlanarak düşüldü "
+                                  "(ilk giren ilk çıkar yöntemiyle tahmini).", "yaklasik": True, "sekme": "nakit"})
     bud = None
     try:
         from semantic_bridge import budget as B

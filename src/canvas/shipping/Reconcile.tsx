@@ -114,7 +114,7 @@ export default function Reconcile() {
                 </TableWrap>
               </div>
             )}
-            <p className="mt-2 text-[11.5px] text-canvas-muted">Fark = Logo faturası (KDV hariç) − kargo kaydı tutarı. Kargo kaydındaki tutarın KDV dahil mi hariç mi olduğu henüz kesin değil; bu yüzden «Logo (KDV dahil)» sütunuyla birlikte okuyun.</p>
+            <p className="mt-2 text-[11.5px] text-canvas-muted">Fark = Logo faturası (KDV hariç) − kargo kaydı tutarı. Kargo kaydındaki tutar KDV hariçtir; bu yüzden fark KDV hariç Logo tutarıyla hesaplanır. Fark kalıyorsa kargo kaydında olmayan hizmet (iade, ek ücret, başka hesaptan gönderi) ya da fatura tarihinin aya kayması olabilir.</p>
           </Panel>
           {d.sevk && (
             <Panel>

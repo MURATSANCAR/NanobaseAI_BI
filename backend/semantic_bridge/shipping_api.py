@@ -656,7 +656,7 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
             notes.append(f"CRM sevkiyatı okunamadı: {e}")
         if idx.data_end and idx.data_end < end - timedelta(days=1):
             notes.append(f"Kargo kayıtları {idx.data_end.strftime('%d.%m.%Y')} tarihinde bitiyor.")
-        notes.append("Kargo kaydındaki tutarın KDV dahil mi hariç mi olduğu ölçülecek; Logo iki biçimde verildi.")
+        notes.append("Kargo kaydındaki tutar KDV hariçtir; fark KDV hariç Logo tutarıyla hesaplanır.")
         out = S.reconcile(idx, start, end, carrier_codes=c["carrierCodes"], invoices=invoices, logo_shipments=logo_ship,
                           crm_shipments=crm_ship, notes=notes)
         out["kargoVeri"] = idx.freshness(c, S.today())

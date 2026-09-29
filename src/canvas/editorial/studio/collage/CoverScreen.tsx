@@ -79,7 +79,7 @@ export default function CoverScreen() {
           <Panel>
             <div className="flex items-center gap-1">
               <div className={label} id="kapak-tarzi">Kapak tarzı</div>
-              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Başka bir tarza istediğiniz zaman geri geçebilirsiniz.</Explain>
+              <Explain label="Kapak tarzı">Seçtiğiniz tarz hemen uygulanır ve ön kapak yeniden kurulur; birkaç saniye sürebilir. Tarz değiştirmek hiçbir şeyi silmez: kolaj fotoğrafları ve adayları, seçtiğiniz fotoğraf, düzen ve başlık şeritleri ile resimli kapağın resmi saklanır; eski tarza döndüğünüzde kaldığınız yerden devam edersiniz.</Explain>
             </div>
             <div role="radiogroup" aria-labelledby="kapak-tarzi" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {STYLES.map(({ key, title: t, help, Icon }) => (

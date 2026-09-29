@@ -603,9 +603,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         book = next((b for b in books if b["stokKodu"] == stok), None)
         if not book:
             raise HTTPException(status_code=404, detail={"code": "ADS", "message": "Bu stok kodunda CRM'de etkin kitap kartı yok."})
-        b = call(A.create_brief, engine, tenant, user, book, body.get("not"))
-        audit(engine, user, "create", "ads_brief", b["id"], b["kitapAdi"], {"stok": stok, "istek": b["istek"]})
-        pool.submit(brief_job, tenant, b["id"], stok, b["istek"])
+        manual = body.get("elle") is True          # elle yazılacak boş taslak: Zeki AI'a gitmez, model bağlı olmasa da açılır
+        b = call(A.create_brief, engine, tenant, user, book, body.get("not"), manual=manual)
+        audit(engine, user, "create", "ads_brief", b["id"], b["kitapAdi"], {"stok": stok, "istek": b["istek"], "elle": manual})
+        if not manual:
+            pool.submit(brief_job, tenant, b["id"], stok, b["istek"])
         return b
 
     @app.get(R + "/briefs/{bid}")
