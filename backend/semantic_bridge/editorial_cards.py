@@ -723,14 +723,16 @@ def proofing_docx(book_id):
 
 
 # ------------------------------------------------------------------ belge incelemesi (kart servisi /v1/documents)
-def document_upload(data: bytes, filename: str, title: str, audience: str, age_from, age_to, user: str) -> dict:
-    """Yüklenen belge kart servisine çok parçalı gider; metin çıkarma ve kuyruk editörde. Yükleyen = oturum."""
+def document_upload(data, filename: str, title: str, audience: str, age_from, age_to, user: str) -> dict:
+    """Yüklenen belge kart servisine çok parçalı gider; metin çıkarma ve kuyruk editörde. Yükleyen = oturum.
+    `data`: bayt ya da açık dosya (ZEKI-26: köprü gövdeyi diske akıtır, dosya parça parça gönderilir, belleğe alınmaz)."""
     base,headers,ca=_headers()
     headers['X-Editor']=user[:200]
     form={'title':title or '','audience':audience or ''}
     if age_from not in (None,''): form['age_from']=str(int(age_from))
     if age_to not in (None,''): form['age_to']=str(int(age_to))
-    with httpx.Client(timeout=300,verify=ca or True,follow_redirects=False) as client:
+    # Büyük belge: gönderim ve kart servisindeki metin çıkarma dakikalar sürebilir (kapıdaki süre 30 dk).
+    with httpx.Client(timeout=httpx.Timeout(1800, connect=30),verify=ca or True,follow_redirects=False) as client:
         r=client.post(base+'/v1/documents',headers=headers,data=form,files={'file':(filename or 'belge',data)})
         r.raise_for_status()
         return r.json()

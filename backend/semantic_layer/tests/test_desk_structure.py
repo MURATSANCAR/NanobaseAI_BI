@@ -242,3 +242,20 @@ def test_title_and_author_editable_after_create(engine):
     assert got["title"] == "Doğru Ad" and got["author"] == "Doğru Yazar"
     desk.update_work(engine, TENANT, "editor", False, w["id"], {"title": "Doğru Ad", "author": ""})
     assert desk.list_works(engine, TENANT, "editor", False)[0]["author"] is None
+
+
+def test_translation_source_streams_without_cap(engine, tmp_path):
+    """Çeviri kaynağı da aynı yoldan: diske akar, kopyalanmadan işin klasörüne taşınır, geçici dosya kalmaz."""
+    from semantic_bridge import editorial_translation as T
+    T._ready.clear()
+    T.ensure(engine)
+    src = b"CHAPTER ONE\n\nIt was cold. We waited.\n\nCHAPTER TWO\n\nNobody came."
+    inc = asyncio.run(desk.receive(_chunks(src), len(src)))
+    try:
+        out = T.create_from_file(engine, TENANT, "editor", False, "Road.txt", inc, "en", "tr")
+    finally:
+        inc.discard()
+    assert out["version"] == 1 and out["segments"] >= 3 and inc.stored
+    assert os.listdir(os.path.join(tmp_path, ".incoming")) == []
+    path, _ = T.source_path(engine, TENANT, "editor", False, out["jobId"])
+    assert open(path, "rb").read() == src

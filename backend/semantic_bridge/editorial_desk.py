@@ -337,10 +337,10 @@ def atesman_band(score: Optional[float]) -> Optional[str]:
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
-def _docx_paragraphs(data: bytes) -> list[tuple[str, bool]]:
+def _docx_paragraphs(data: "Blob") -> list[tuple[str, bool]]:
     """(metin, başlık mı) çiftleri. Başlık: Word'ün başlık stili (Heading/Başlık/Title)."""
     try:
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
+        with zipfile.ZipFile(data.path if isinstance(data, Incoming) else io.BytesIO(data)) as z:
             xml = z.read("word/document.xml")
     except (zipfile.BadZipFile, KeyError) as e:
         raise DeskError("DOCX dosyası okunamadı.") from e

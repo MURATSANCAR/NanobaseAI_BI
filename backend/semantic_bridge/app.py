@@ -6027,20 +6027,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.put("/api/v1/editorial/translation/jobs-from-file")
     async def tr_job_from_file(request: Request, filename: str = "", sourceLang: str = "en", targetLang: str = "tr") -> dict[str, Any]:
         engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
-        data = await _tr_body(request, tr_mod.MAX_BYTES)
-        out = await run_in_threadpool(_tr_call, tr_mod.create_from_file, engine, tenant, user, see_all, filename, data,
-                                      sourceLang, targetLang)
+        data = await _desk_receive(request)          # ZEKI-26: diske akar, boyut tavanı yok
+        try:
+            out = await run_in_threadpool(_tr_call, tr_mod.create_from_file, engine, tenant, user, see_all, filename, data,
+                                          sourceLang, targetLang)
+        finally:
+            data.discard()
         admin_mod.audit(engine, user, "create", "translation_job", out["jobId"], out["title"],
                         {"sourceLang": sourceLang, "targetLang": targetLang, "fromFile": filename})
-        admin_mod.audit(engine, user, "upload", "translation_source", out["jobId"], filename, {**out, "bytes": len(data)})
+        admin_mod.audit(engine, user, "upload", "translation_source", out["jobId"], filename, {**out, "bytes": data.size})
         return out
 
     @app.put("/api/v1/editorial/translation/jobs/{job_id}/source")
     async def tr_job_source(job_id: str, request: Request, filename: str = "") -> dict[str, Any]:
         engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
-        data = await _tr_body(request, tr_mod.MAX_BYTES)
-        out = await run_in_threadpool(_tr_call, tr_mod.upload_source, engine, tenant, user, see_all, job_id, filename, data)
-        admin_mod.audit(engine, user, "upload", "translation_source", job_id, filename, {**out, "bytes": len(data)})
+        data = await _desk_receive(request)          # ZEKI-26: diske akar, boyut tavanı yok
+        try:
+            out = await run_in_threadpool(_tr_call, tr_mod.upload_source, engine, tenant, user, see_all, job_id, filename, data)
+        finally:
+            data.discard()
+        admin_mod.audit(engine, user, "upload", "translation_source", job_id, filename, {**out, "bytes": data.size})
         return out
 
     @app.get("/api/v1/editorial/translation/jobs/{job_id}/source")
@@ -6782,13 +6788,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         girer (kelime tekrarı, tik sözcük, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük). Yükleyen = oturum."""
         engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
         from semantic_bridge import editorial_cards
-        data = await request.body()
+        # ZEKI-26: gövde belleğe alınmaz, diske akar; kart servisine dosyadan parça parça gider. Boyut tavanı yok.
+        incoming = await _desk_receive(request)
+        if not incoming.size:
+            incoming.discard()
+            raise HTTPException(status_code=400, detail={"code": "EDITORIAL_DESK", "message": "Dosya boş."})
         try:
-            out = await run_in_threadpool(editorial_cards.document_upload, data, filename, title, audience,
+            out = await run_in_threadpool(editorial_cards.document_upload, incoming.open(), filename, title, audience,
                                           ageFrom or None, ageTo or None, user)
         except Exception as e:  # noqa: BLE001
             _doc_error(e, "Belge yüklenemedi.")
-        admin_mod.audit(engine, user, "upload", "editorial_document", out.get("id"), filename, {"bytes": len(data)})
+        finally:
+            incoming.discard()                      # kalıcı kopya kart servisinde; köprüdeki geçici dosya silinir
+        admin_mod.audit(engine, user, "upload", "editorial_document", out.get("id"), filename, {"bytes": incoming.size})
         return out
 
     @app.get("/api/v1/editorial/documents")

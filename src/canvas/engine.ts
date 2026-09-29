@@ -2129,7 +2129,7 @@ export type ProofState = {
   blocking: { failed: number; open: number; unsigned: number };
 };
 
-/** Eser metni / prova yüklemesinin hata cümlesi. Kapıdaki gövde sınırı (413) sunucu açıklaması taşımaz; kişi ham
+/** Kitap/belge yüklemesinin (eser metni, prova, belge incelemesi, çeviri kaynağı) hata cümlesi. Kapıdaki gövde sınırı (413) sunucu açıklaması taşımaz; kişi ham
  *  sayı yerine dosyasının boyutunu ve ne yapacağını görür (ZEKI-26). */
 export function deskUploadErrorText(status: number, size: number, message?: string | null): string {
   if (message) return message;
@@ -2322,7 +2322,8 @@ export async function putFile<T>(path: string, file: File): Promise<T> {
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
     body: file,
-    signal: AbortSignal.timeout(600_000),
+    // Kaynak metin kitap boyunda olabilir (ZEKI-26): yükleme ve segmentleme birlikte, kapıdaki süre 30 dk.
+    signal: AbortSignal.timeout(1_800_000),
   });
   if (res.status === 403) {
     const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } } | null;
@@ -2337,7 +2338,7 @@ export async function putFile<T>(path: string, file: File): Promise<T> {
   }
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
-    throw new Error(j?.detail?.message || httpErrorText(res.status));
+    throw new Error(deskUploadErrorText(res.status, file.size, j?.detail?.message));
   }
   return (await res.json()) as T;
 }
@@ -2875,7 +2876,8 @@ export const documentApi = {
       credentials: 'include',
       headers: { 'Content-Type': 'application/octet-stream' },
       body: file,
-      signal: AbortSignal.timeout(600_000),
+      // Belge kitap boyunda olabilir (ZEKI-26): köprü diske akıtıp kart servisine gönderir, kapıdaki süre 30 dk.
+      signal: AbortSignal.timeout(1_800_000),
     });
     if (res.status === 401 || res.status === 403) {
       authBlocked = true;
@@ -2884,7 +2886,7 @@ export const documentApi = {
     if (!res.ok) {
       const j = (await res.json().catch(() => null)) as { detail?: string | { message?: string } } | null;
       const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-      throw new Error(msg || httpErrorText(res.status));
+      throw new Error(deskUploadErrorText(res.status, file.size, msg));
     }
     return (await res.json()) as DocumentItem;
   },

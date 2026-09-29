@@ -223,11 +223,12 @@ server {
         client_max_body_size 251M;
     }
 
-    # Redaksiyon / son okuma: eser metni ve prova yükleme (ZEKI-26). Kitap PDF'i yüzlerce MB olabilir; genel API
-    # gövde sınırı (10 MB) bu uçlarda 413 veriyordu. Boyut tavanı yok (0): köprü gövdeyi diske akıtır, yalnız disk
-    # dolacaksa reddeder. Gövde nginx'te tamponlanmaz; büyük PDF'in bölümlenmesi dakikalar sürebilir.
-    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof))$" {
-        if ($request_method != PUT) { return 405; }
+    # Editoryal kitap/belge yüklemesi (ZEKI-26): redaksiyon eser metni ve son okuma provası, son okuma «Belge yükle
+    # ve incelet», çeviri kaynak metni. Kitap PDF'i yüzlerce MB olabilir; genel API gövde sınırı (10 MB) bu uçlarda
+    # 413 veriyordu. Boyut tavanı yok (0): köprü gövdeyi diske akıtır, yalnız disk dolacaksa reddeder. Gövde nginx'te
+    # tamponlanmaz; büyük PDF'in bölümlenmesi dakikalar sürebilir. Aynı yollardaki GET'ler (prova durumu, belge
+    # listesi, kaynak indirme) de buradan geçer; yöntem denetimi köprüdedir.
+    location ~ "^/timas/api/v1/editorial/(works-from-file|works/[0-9a-f]{32}/(manuscript|proof)|documents|translation/jobs-from-file|translation/jobs/[0-9a-f]{32}/source)$" {
         set $timas_original_method $request_method;
         auth_request /_timas_session_check;
         limit_req zone=timas_api burst=30 nodelay;
