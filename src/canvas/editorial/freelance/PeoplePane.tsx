@@ -804,6 +804,11 @@ function LogoPicker({ value, onPick }: { value: string; onPick: (code: string) =
             {res.isFetching && <li className="px-2 py-1.5 text-[12px] text-canvas-muted">Logo'da aranıyor…</li>}
             {res.error && <li className="px-2 py-1.5 text-[12px] text-red-700">{errText(res.error, 'Logo okunamadı.')}</li>}
             {res.data && !res.data.items.length && <li className="px-2 py-1.5 text-[12px] text-canvas-muted">Eşleşen cari yok.</li>}
+            {res.data?.truncated && (
+              <li className="px-2 py-1.5 text-[11.5px] font-semibold text-amber-800">
+                İlk {res.data.items.length.toLocaleString('tr-TR')} sonuç gösteriliyor; aradığınızı bulmak için adın ya da kodun daha çok harfini yazın.
+              </li>
+            )}
             {res.data?.items.map((c: FlLogoCard) => (
               <li key={c.code ?? ''}>
                 <button

@@ -110,7 +110,9 @@ def cards(run: Callable[[str], dict[str, Any]], q: str = "") -> dict[str, Any]:
     res = run(cards_sql(q))
     return {"items": [{"code": _s(r.get("code")), "name": _s(r.get("name")), "specode": _s(r.get("specode")),
                        "city": _s(r.get("city")), "freelance": bool(r.get("freelance"))} for r in _rows(res)],
-            "year": YEAR, "db": _timing(res)}
+            "year": YEAR, "db": _timing(res),
+            # Genel okuma sınırına takıldıysa ekran «aramayı daraltın» der; sessizce kesilmez.
+            "truncated": bool(res.get("truncated"))}
 
 
 def movements(run: Callable[[str], dict[str, Any]], code: str) -> dict[str, Any]:

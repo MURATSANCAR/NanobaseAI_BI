@@ -3345,7 +3345,7 @@ export const freelanceApi = {
   thread: (id: string) => send<FlThread>('GET', `${FL}/threads/${enc(id)}`, undefined, 30_000),
   post: (id: string, b: { kind: 'ic' | 'giden' | 'gelen'; body: string; personId?: string; taskId?: string }) =>
     send<{ id: string; emailStatus: FlMessage['emailStatus'] }>('POST', `${FL}/threads/${enc(id)}/messages`, b, 60_000),
-  logoCards: (q: string) => send<{ items: FlLogoCard[]; year: number; db?: DbTiming | null }>('GET', `${FL}/logo/cards${qs({ q })}`, undefined, 60_000),
+  logoCards: (q: string) => send<{ items: FlLogoCard[]; year: number; db?: DbTiming | null; truncated?: boolean }>('GET', `${FL}/logo/cards${qs({ q })}`, undefined, 60_000),
   logo: (personId: string) => send<FlLogoMovements>('GET', `${FL}/people/${enc(personId)}/logo`, undefined, 60_000),
 };
 
