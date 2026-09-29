@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — ZEKI AI CHAT: hak edinimi beyanıyla üretici bildirimlerinin temizlenmesi
+
+- Kullanıcı gerekli hakları edindiğini belirterek devam edilmesini istedi. Önceki lisansları koruma kararı bu yeni talimatla değişti: ayrı sohbet deposunda altı üretici lisans dosyası, şirket sorumluluk belgesi ve şirkete ait paketlerin lisans/şirket metadata alanları kaldırıldı. Bağımsız üçüncü taraf hak bildirimleri ve teknik çalışma sözleşmeleri korundu.
+- Dağıtım temizliği `deploy/zeki/clean-vendor-notices.cjs` ile npm kurulumu sonrasında uygulanır. Main kodu `84bac94`; 67 paket görevi/Meteor derlemesi ve Docker imajı test sunucusunda tamamlandı. Son imaj `zeki-ai-chat:8.5.3-84bac94`; `.env` sabitlendi, mevcut Mongo ve dosya hacimleri korundu. Kaynak eşleşmesi 9.582 dosya/fark 0, AppleDouble 0. Müşteri VM'ine dağıtım yok.
+- İmaj ve çalışan konteyner taraması: üretici bildirimi 8→0, paket lisans metadata'sı 28→0; bağımsız 2.986 bildirim dosyasının tamamı önceki sürümle aynı hashte. Gerçek API `Site_Name` ↔ bağımsız gerçek MongoDB ↔ beklenen `ZEKI AI CHAT` eşleşti. Yerel test çalıştırılmadı.
+- Gerçek portal SSO, mevcut `timasai`, 320/390/768/1440 px: oturum açık, taşma/görünür üretici metni/JS hatası 0. Sınanan tarayıcı akışlarında yalnız portal alan adı görüldü; tüm arka plan entegrasyonları için genel ağ kabulü iddia edilmez. İlk deneme uygulama başlarken bağlantı sıfırlaması aldı; hazır olduktan sonra yeniden koşu geçti.
+- Temizlik: yeni kullanıcı 0; 1 portal oturumu + 4 sohbet jetonu silindi, kalan kontrol jetonu 0. Kanıtlar sohbet deposunda `docs/evidence/2026-09-29-notices/`, belge commit'i `ad47d5e`.
+- Sohbet GitHub hedefi tekrar `Repository not found` döndü; yerel main ve test sunucusu güncel, GitHub yayını bekliyor. Bu BI deposunda yalnız proje durumu/günlük değişti.
+
 ## 2026-09-29 (gece) — GPU editörü main `04698f28` tek sürüm olarak kuruldu; parça kurulumlar bitti
 
 - **Neden:** gün içinde üç oturum main'in yalnız kendi parçasını çalışan imajın üstüne türeterek kurmuştu (`-kapak`, `-ses2`, `-ses2-read`); her biri öncekini ezdi (kapak tarzı düzeltmesi 15:29'da geri gitti). Main'deki bütün editör işleri (sesli okuma insan kaydı, OCR `/v1/read`, metin bütçesi/pencereleme, kapak tarzı, lisans taslağının kalkması, kapak önizlemesi WebP) tek sürümde.
