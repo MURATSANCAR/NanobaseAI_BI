@@ -2390,6 +2390,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         app.state.financial_audit.start()
         app.state.editorial_home.start()
         app.state.editorial_intake.start()
+        app.state.editorial_pending.start()
         app.state.author_snapshots.start()
         app.state.management_reports.start()
         if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
@@ -2428,6 +2429,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             if boot.stop():
                 app.state.editorial_home.stop()
                 app.state.editorial_intake.stop()
+                app.state.editorial_pending.stop()
                 app.state.author_snapshots.stop()
                 app.state.management_reports.stop()
                 app.state.financial_audit.stop()
@@ -5122,9 +5124,42 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 log.info("editör atama: CRM kullanıcı eşlemesi okunamadı (%s), canlı okumaya dönülüyor: %s", user, e)
         return _asg_call(assign_mod.crm_me, schema, run, user)
 
+    # Editörsüz projeler turu (editorial_assign.pending_all_sql): ilk açılış kapsamı beş dakikada bir, «Yenile» ile hemen.
+    def _pending_scope():
+        r = rt()
+        return [r.settings.tenant_id, r.settings.datasource_id, admin_mod.conf("CRM_SCHEMA"), _asg_since(None)]
+
+    def _pending_builders():
+        schema, year = admin_mod.conf("CRM_SCHEMA"), _asg_since(None)
+
+        def fetch_all(sql: str) -> list[dict[str, Any]]:
+            r = rt()
+            out = r.run_complete(sql, use_cache=False)
+            if out.get("truncated"):
+                # Sessiz tavan yok: eksik liste kaydedilmez, uç canlı sorguya döner.
+                raise ValueError("Editörsüz proje listesi eksik okundu.")
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+            return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+        return {"pending": lambda: assign_mod.pending_snapshot(fetch_all(assign_mod.pending_all_sql(schema, year)), year)}
+
+    app.state.editorial_pending = EditorialHomeSnapshots(_pending_scope, _pending_builders, sources=("editorial_assign.py",),
+                                                         name="editorial-pending")
+
+    def _pending_part_sql(out: Any) -> list:
+        """Sorgu bilgisi: cevap turdan geldiyse onu dolduran CRM okuması (koşan metin, satır ve süre o okumanın)."""
+        if not (isinstance(out, dict) and out.get("fromSnapshot")):
+            return []
+        try:
+            return list(((app.state.editorial_pending.read().get("parts") or {}).get("pending") or {}).get("sql") or [])
+        except Exception:  # noqa: BLE001
+            return []
+
     @app.get("/api/v1/editorial/assignments/pending")
     @_izle_ep('crm.editoryal.atama', 'Editörsüz projeler',
-               'Editörsüz projeler: CRM proje kartında «Editörü» boş, süzgece uyan etkin projeler (sayı ve sayfa) ve durum sayaçları; atama CRM\'de yapılır, portal yalnız okur.', skip=('page', 'pageSize', 'sinceYear', 'statuses'))
+               'Editörsüz projeler: CRM proje kartında «Editörü» boş, süzgece uyan etkin projeler (sayı ve sayfa) ve durum sayaçları; atama CRM\'de yapılır, portal yalnız okur. İlk açılış görünümü (arama yok, varsayılan yıl) beş dakikada bir okunan listeden süzülür.', skip=('page', 'pageSize', 'sinceYear', 'statuses'), onceki=_pending_part_sql)
     def assign_pending(request: Request, q: str = "", status: str = "", category: str = "", since: Optional[int] = None,
                        page: int = 0) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
@@ -5132,6 +5167,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         # Boş = ilk açılış süzgeci (iş durumları); «hepsi» = durum süzgeci yok.
         codes = ([] if status == "hepsi" else [int(c) for c in status.split("|") if c.strip().isdigit()]) if status \
             else list(assign_mod.WORK_STATUSES)
+        if not q.strip() and year == _asg_since(None):
+            if FORCE_FRESH.get():
+                app.state.editorial_pending.refresh(force=True)
+            part = app.state.editorial_pending.read()["parts"].get("pending") or {}
+            snap = part.get("data")
+            if isinstance(snap, dict) and snap.get("sinceYear") == year:
+                total, items, facets = _asg_call(assign_mod.pending_from_snapshot, snap, statuses=codes,
+                                                 category=category, page=page)
+                ran = part.get("sql") or [{}]
+                return {"items": items, "total": total, "page": max(0, int(page)), "pageSize": editorial_mod.PAGE_SIZE,
+                        "sinceYear": year, "statuses": codes, "defaultStatuses": list(assign_mod.WORK_STATUSES),
+                        "statusFacets": facets, "fromSnapshot": True,
+                        "db": {"dbMs": ran[0].get("ms"), "cached": True,
+                               "computedAt": round(float(part.get("updatedAt") or 0), 3) or None}}
         flt = {"statuses": codes, "since_year": year, "q": q, "category": category}
         total = int(editorial_mod._n((run(_asg_call(assign_mod.pending_count_sql, schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
         res = run(_asg_call(assign_mod.pending_list_sql, schema, page, **flt))
