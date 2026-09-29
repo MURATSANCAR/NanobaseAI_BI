@@ -1,5 +1,5 @@
 {
-  "_note": "Zeki AI sohbetinin portal veri alanları (2026-09-28). Modüllerin kendi sonuç tabloları (semantic_*, sl_*) Logo/CRM kataloğunun dışındadır; burada alan alan tanımlanır. Her alan: sohbet konusu (chat_topics.json `portal`), kişinin görmesi için gereken sayfa/özellik anahtarlarından BİRİ (`pages`, access_catalog.json), tablo deseni (`tables`, düzenli ifade, tam ad), tabloların model-yüzü adları (`labels`), sohbetin sınıflandırıcıya uğraması gereken ayırt edici kelimeler (`keywords`), satır kapsamı (`row_scope`: kişi yalnız bu kolonlardan birinde kendi hesabı olan satırı görür; `unless` anahtarlarından biri varsa hepsini; kolonu olmayan tablo o alanda yalnız `unless` sahibine açıktır) ve sabit satır süzgeci (`row_filters`; süzülen kolon seçenek olmaz), anlık görüntü tabloları (`snapshots`: her gün yeniden yazılan sayım tablosu; dönem sorulmadıkça yalnız en son günün satırları sayılır ki günler üst üste toplanmasın). Kolonlar tabloya bakılarak sınıflanır (chat_portal.profile); kişisel veri, gizli bilgi, serbest metin ve yapısal kolonlar HİÇBİR ZAMAN seçenek olmaz. `never_tables` alan deseninden önce gelir: İK ve kişi kayıtları hiçbir alanla açılmaz. Yalnız onaylı (certify) tablo sohbette kullanılır; profil ve onay: scripts/catalog-authoring/2026-09-28-sohbet-portal-verisi.py.",
+  "_note": "Zeki AI sohbetinin portal veri alanları (2026-09-28). Modüllerin kendi sonuç tabloları (semantic_*, sl_*) Logo/CRM kataloğunun dışındadır; burada alan alan tanımlanır. Her alan: sohbet konusu (chat_topics.json `portal`), kişinin görmesi için gereken sayfa/özellik anahtarlarından BİRİ (`pages`, access_catalog.json), tablo deseni (`tables`, düzenli ifade, tam ad), tabloların model-yüzü adları (`labels`), sohbetin sınıflandırıcıya uğraması gereken ayırt edici kelimeler (`keywords`), satır kapsamı (`row_scope`: kişi yalnız bu kolonlardan birinde kendi hesabı olan satırı görür; `unless` anahtarlarından biri varsa hepsini; kolonu olmayan tablo o alanda yalnız `unless` sahibine açıktır) ve sabit satır süzgeci (`row_filters`; süzülen kolon seçenek olmaz), anlık görüntü tabloları (`snapshots`: her gün yeniden yazılan sayım tablosu; dönem sorulmadıkça yalnız en son günün satırları sayılır ki günler üst üste toplanmasın). Kolonlar tabloya bakılarak sınıflanır (chat_portal.profile); kişisel veri, gizli bilgi, serbest metin ve yapısal kolonlar HİÇBİR ZAMAN seçenek olmaz. `never_tables` alan deseninden önce gelir: İK ve kişi kayıtları hiçbir alanla açılmaz. Yalnız onaylı (certify) tablo sohbette kullanılır; profil ve onay: scripts/catalog-authoring/2026-09-28-sohbet-portal-verisi.py. 2026-09-29 eklenenler: `snapshots` değeri {\"column\", \"per\"} olabilir (tablo birden çok kaynağın güncel hâlini tutuyorsa en son gün her `per` değeri için ayrı alınır: bir katalog o gün okunmadıysa onun son görüntüsü sayılır); `column_labels` (kolonun seçeneklerde ve cevapta görünen adı), `column_notes` (kolonun anlamı; cevapta kullanılan kolonun notu cümleye eklenir), `note` (alanın her cevabına eklenen sabit uyarı).",
   "version": 1,
   "settings": {
     "dimension_max_distinct": 40,
@@ -425,6 +425,57 @@
         "semantic_freelance_deliveries": "serbest çalışan teslimi"
       },
       "keywords": ["serbest çalışan"]
+    },
+    {
+      "id": "dagitimci-katalog",
+      "topic": "dagitimci",
+      "label": "Dağıtımcı ve perakende katalogları",
+      "pages": ["sayfa:pazar-arastirma", "sayfa:pazar-rakipler", "sayfa:stok"],
+      "tables": "^semantic_pazar_dagitim_titles$",
+      "labels": {
+        "semantic_pazar_dagitim_titles": "dağıtımcı ve perakende kataloğundaki kitap (Başarı Dağıtım, D&R)"
+      },
+      "keywords": ["başarı dağıtım", "dağıtımcı", "d&r kataloğu", "d&r'de", "idefix", "prefix", "baskısı yok", "temin edilemiyor", "perakende kataloğu"],
+      "snapshots": {"semantic_pazar_dagitim_titles": {"column": "son_gorulme", "per": "kaynak"}},
+      "column_labels": {
+        "semantic_pazar_dagitim_titles": {
+          "kaynak": "katalog (basari: Başarı Dağıtım, dr: D&R)",
+          "ad": "kitap adı",
+          "yayinevi": "yayınevi (marka)",
+          "ust_kategori": "üst kategori",
+          "stok": "dağıtımcı stoğu (Başarı deposu / D&R Prefix B2B)",
+          "site_stok": "D&R ve İdefix site stoğu",
+          "fiyat": "liste fiyatı",
+          "iskonto": "dağıtımcı iskontosu (%)",
+          "dr_fiyat": "D&R satış fiyatı",
+          "durum": "katalog durumu",
+          "baski_no": "baskı sayısı",
+          "basim_yili": "basım yılı",
+          "timas": "TİMAŞ grubu kitabı",
+          "stok_kodu": "Logo stok kodu",
+          "ilk_gorulme": "katalogda ilk görülme",
+          "son_gorulme": "katalogda son görülme",
+          "guncellendi_at": "portalda güncellenme"
+        }
+      },
+      "column_notes": {
+        "semantic_pazar_dagitim_titles": {
+          "kaynak": "basari = Başarı Dağıtım kataloğu; dr = D&R kataloğu (Prefix servisi).",
+          "stok": "Başarı'da dağıtımcı deposundaki stok; D&R'de Prefix B2B stoğu (kitapçılara toptan satış). Sitelerin stoğu değildir.",
+          "site_stok": "Yalnız D&R: D&R ve İdefix sitelerinin toplam stoğu; 999 ve üstü değerler sayım değil yer tutucudur, saklanmaz (boş). Başarı'da boş.",
+          "durum": "Başarı: stok durumu (Satışta, Baskısı Yok, Temin Edilemiyor, Satış Dışı). D&R: «Site: … · Prefix: …» — sitelerin durumu (Satışa açık, Stokta yok, Satış dışı; silinmiş = D&R ve İdefix sitelerinden kalkmış, Prefix'te satışı sürebilir) ve Prefix B2B durumu (Satışa açık, Stokta yok).",
+          "iskonto": "Yalnız Başarı: dağıtımcının kitapçıya uyguladığı iskonto (%). D&R'de boş.",
+          "fiyat": "Liste fiyatı (₺).",
+          "dr_fiyat": "Yalnız D&R: D&R satış fiyatı (₺).",
+          "timas": "TİMAŞ grubu elle seçilmez: başlıklarının en az %80'i TİMAŞ'ın Logo'sunda kartı olan markalar (TİMAŞ'ın dağıttığı başka şirket markaları dahil, perakendede satılan tek tük başka yayınevi kitabı hariç).",
+          "baski_no": "Yalnız Başarı: kitabın baskı sayısı.",
+          "basim_yili": "Yalnız Başarı.",
+          "ilk_gorulme": "Portalın başlığı ilk gördüğü görüntü; portalın ilk okumasından önce katalogda olan başlıklarda da ilk okuma günü yazar. Yayın tarihi değildir.",
+          "son_gorulme": "Başlığın görüldüğü son görüntü. Dönem sorulmadıkça her kataloğun yalnız son görüntüsündeki başlıklar sayılır.",
+          "stok_kodu": "Barkodla eşleşen Logo kartı; boşsa Logo'da kartı yok."
+        }
+      },
+      "note": "Dağıtımcı ve perakende katalogları kitapçılara açık listelerdir: okura satışı ve adet olarak satış hızını göstermez. Kaynak geçmiş tutmaz; portal her gün son hâlini okur."
     }
   ]
 }

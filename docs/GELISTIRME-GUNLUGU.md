@@ -182,6 +182,26 @@
 - **Ortak:** `pazar_dagitim.kanal_stok`, `dr_fiyatlari`, `dr_timas`, `dr_uyari`. Kaynağa, Logo'ya, CRM'e, T-soft'a yazma yok.
 - **Test:** `test_pazar_dagitim_ekranlar.py` (yapay veri, sqlite); gerçek veriyle kabul test sunucusunda bekliyor.
 
+## 2026-09-29 (akşam, 4) — Yazar kartında «Pazarda bu yazar» ve Zeki AI'da dağıtımcı katalogları
+
+- **Yazar ilişkileri:** yazar kartına (tam görünüm, yeni sayfa yok) «Pazarda bu yazar (dağıtımcı kataloğu)» bölümü
+  (`author_pazar.py`, `MarketSection.tsx`, uç `GET /api/v1/editorial/authors/pazar?kisi=&ad=`). Başarı kataloğunun son
+  görüntüsünde: yazarın CRM kitaplarının barkodu / stok kodunun Logo barkodu ile **doğrulanan** kitaplar + yazar alanı
+  parçalanıp (virgül, noktalı virgül, «/», «&», « - », « ve »; «Kolektif/Komisyon/Anonim» hariç; harf, noktalama, unvan
+  atılır) adla **eşleşen** kitaplar; Başarı'nın doğrulanan kitapta kullandığı yazım da aranır. TİMAŞ / başka yayınevi
+  kitap sayısı, satışta / baskısı yok, yayınevleri, en yüksek baskı, liste fiyatı aralığı, D&R'de de olanlar. Ad eşleşmesi
+  hiçbir kayda bağlanmaz; belirsizlik kuralla aranır ve nedeni yazılır (tek sözcük ad, barkodla doğrulanamama, alan farkı,
+  TİMAŞ'ta CRM'e bağlı olmayan aynı ad). Çıkış endeksi iki görüntü birikince (şimdilik açıklamalı boş). Sorgu bilgisi her rakamda.
+- **Zeki AI:** yeni konu `dagitimci` + portal alanı `dagitimci-katalog` (`semantic_pazar_dagitim_titles`). Kolon adları ve
+  anlamları (§0: stok, site stoğu, durum, iskonto, TİMAŞ grubu) alan kaydında (`column_labels`, `column_notes`); cevapta
+  kullanılan kolonun anlamı ve alanın uyarısı («okura satışı göstermez») cümleye eklenir. `chat_portal` genişledi:
+  `snapshots` `{column, per}` alır — tablo iki kataloğun güncel hâlini tuttuğu için en son gün **her katalog için ayrı**
+  (biri o gün okunmadıysa onun son görüntüsü sayılır); sayılan gün(ler) cümlede yazar. Yazar/çevirmen kolonu kişisel veri
+  kuralıyla seçenek değil (bilinçli). Onay: katalog betiği `--only dagitimci-katalog --apply`, sonra `--certify`.
+- **Test (yazıldı, koşulmadı — koordinatör test sunucusunda koşturacak):** `test_author_pazar.py` (yeni), `test_chat_portal.py`
+  (konu listesi + 4 soru), `test_chat_scope.py` (1 soru).
+- **Açık:** canlıda `CHAT_CONNECTED_TOPICS` doluysa `dagitimci` eklenmeli; alan onayı test sunucusunda; gerçek katalogla
+  ad eşleşmesi ölçümü (yaygın adlarda belirsizlik oranı) yapılmadı.
 ## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
 
 - **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.

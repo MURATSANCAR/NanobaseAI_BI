@@ -330,6 +330,8 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
         tenant_col = s["tenant_column"] if s["tenant_column"] in t.c else None
         where = [t.c[tenant_col] == tenant] if tenant_col else []
         fixed = {rf["column"] for rf in a.get("row_filters") or []}
+        names_of = (a.get("column_labels") or {}).get(name) or {}
+        notes_of = (a.get("column_notes") or {}).get(name) or {}
         cols: dict[str, dict[str, Any]] = {}
         with engine.connect() as c:
             rows = int(c.execute(sa.select(sa.func.count()).select_from(t).where(*where)).scalar() or 0)
@@ -338,7 +340,9 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
                 kind, why = classify_column(col.name, tname, primary=(pk == [col.name]))
                 if col.name in fixed and kind != EXCLUDED:
                     kind, why = EXCLUDED, "alanın sabit süzgeci"
-                info: dict[str, Any] = {"type": tname, "kind": kind, "label": humanize(col.name)}
+                info: dict[str, Any] = {"type": tname, "kind": kind, "label": names_of.get(col.name) or humanize(col.name)}
+                if notes_of.get(col.name):
+                    info["note"] = notes_of[col.name]
                 if why:
                     info["why"] = why
                 if kind == ATTRIBUTE:
@@ -354,9 +358,14 @@ def profile(engine: sa.engine.Engine, tenant: str, *, only: Optional[Iterable[st
                 info["kind"] = kind
                 cols[col.name] = info
         snap = (a.get("snapshots") or {}).get(name)
+        per = None
+        if isinstance(snap, dict):         # {"column", "per"}: en son gün her kaynak (per değeri) için ayrı
+            snap, per = snap.get("column"), snap.get("per")
+        snap_ok = snap in cols and cols[snap]["kind"] == TIME
         out.append({"table": name, "area": a["id"], "topic": a["topic"], "label": table_label(name, a),
                     "rows": rows, "tenant": tenant_col, "pk": pk if len(pk) == 1 else [], "columns": cols,
-                    "snapshot": snap if snap in cols and cols[snap]["kind"] == TIME else None,
+                    "snapshot": snap if snap_ok else None,
+                    "snapshot_per": per if snap_ok and per in cols else None,
                     "parents": [], "profiled_at": datetime.now(timezone.utc).isoformat()})
     _link_parents(engine, tenant, out)
     for p in out:
@@ -1063,10 +1072,16 @@ def compile_plan(plan: Plan, by_table: dict[str, dict[str, Any]], tenant: str, s
     if snap and not (plan.window and plan.time == ((), snap)) and not (plan.group and plan.group[:2] == ((), snap)):
         # Günlük yeniden yazılan sayım tablosu: dönem sorulmadıysa yalnız en son günün satırları (günler toplanmaz).
         s0 = _table_expr(base).alias("s0")
-        sub = sa.select(sa.func.max(s0.c[snap]))
+        per = base.get("snapshot_per")
+        sub = sa.select(*([s0.c[per]] if per else []), sa.func.max(s0.c[snap]))
         if base.get("tenant"):
             sub = sub.where(s0.c[tenant_col] == tenant)
-        where.append(t0.c[snap] == sub.scalar_subquery())
+        if per:
+            # Birden çok kaynağın güncel hâli tek tabloda: her kaynağın kendi son günü (biri o gün okunmadıysa onun
+            # son görüntüsü sayılır, bütün tablonun en büyüğü değil). İlişkisiz alt sorgu: bir kez çalışır.
+            where.append(sa.tuple_(t0.c[per], t0.c[snap]).in_(sub.group_by(s0.c[per])))
+        else:
+            where.append(t0.c[snap] == sub.scalar_subquery())
         plan.latest = snap
     for rf in area_conf.get("row_filters") or []:
         if rf["column"] in base["columns"]:
@@ -1216,18 +1231,44 @@ def fmt_num(v: Any) -> str:
     return str(v)
 
 
+def used_notes(plan: Plan, base: dict[str, Any]) -> list[str]:
+    """Cevapta kullanılan temel tablo kolonlarının anlamı (alanın `column_notes`'u): ölçü, kırılım, koşul, tarih."""
+    used: list[str] = []
+    if plan.measure[1]:
+        used.append(plan.measure[1])
+    if plan.group and not plan.group[0]:
+        used.append(plan.group[1])
+    used += [f.column for f in plan.filters if not f.path]
+    if plan.time and not plan.time[0]:
+        used.append(plan.time[1])
+    out: list[str] = []
+    for c in used:
+        info = base["columns"].get(c) or {}
+        text = f"{info.get('label') or c}: {info['note']}" if info.get("note") else None
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
 def sentence(plan: Plan, base: dict[str, Any], rows: list[dict[str, Any]], names: list[str],
-             area_conf: dict[str, Any]) -> str:
-    """Kural cümlesi: her sayı sonuç satırlarından; model yazmaz."""
+             area_conf: dict[str, Any], as_of: Optional[str] = None) -> str:
+    """Kural cümlesi: her sayı sonuç satırlarından; model yazmaz. Kullanılan kolonun anlamı (`column_notes`) ve
+    alanın sabit uyarısı (`note`) cümleye eklenir."""
     cond = [f.label for f in plan.filters]
     if plan.window:
         cond.append(f"dönem {plan.window.text} ({plan.time_label}: "
                     f"{plan.window.start.isoformat() if plan.window.start else '…'} – "
                     f"{(plan.window.end - timedelta(days=1)).isoformat() if plan.window.end else '…'})")
     if plan.latest:
-        cond.append(f"yalnız en son sayım günü ({base['columns'][plan.latest]['label']})")
+        cond.append(f"yalnız en son sayım günü ({base['columns'][plan.latest]['label']}"
+                    + (f": {as_of}" if as_of else "") + ")")
     tail = (" Koşullar: " + "; ".join(cond) + ".") if cond else ""
     src = f" Kaynak: {area_conf['label']} ({', '.join(page_labels(area_conf.get('pages') or []))})."
+    notes = used_notes(plan, base)
+    if notes:
+        src += " Alanların anlamı: " + " ".join(n if n.endswith(".") else n + "." for n in notes)
+    if area_conf.get("note"):
+        src += " " + str(area_conf["note"])
     if plan.measure[0] == "list":
         head = f"{base['label'].capitalize()}: {fmt_num(len(rows))} kayıt."
     elif not plan.group:
@@ -1302,8 +1343,35 @@ def answer(engine: sa.engine.Engine, tenant: str, question: str, topic: dict[str
                 "text": ("Bu soruya güvenilir bir cevap üretilemedi: kayıt tablosu okunamadı. Tablonun yapısı değişmiş "
                          "olabilir; yönetici sohbet kataloğunu yeniden profillemeli.")}
     columns = [{"name": n, "type": _col_type(rows, n)} for n in names]
-    return {"type": "TEXT_TO_SQL", "text": sentence(plan, base, rows, names, area_conf), "plan": plan.to_dict(),
+    as_of = latest_days(engine, base, tenant) if plan.latest else None
+    return {"type": "TEXT_TO_SQL", "text": sentence(plan, base, rows, names, area_conf, as_of), "plan": plan.to_dict(),
             "sql": sql, "columns": columns, "records": rows, "shown": rows[: max(1, int(sample_size or 50))]}
+
+
+def latest_days(engine: sa.engine.Engine, base: dict[str, Any], tenant: str) -> Optional[str]:
+    """Anlık görüntü tablosunda sayılan en son gün(ler): «2026-09-25» ya da kaynak başına «basari 2026-09-25, dr …»."""
+    snap, per = base.get("snapshot"), base.get("snapshot_per")
+    if not snap:
+        return None
+    t = _table_expr(base)
+    q = sa.select(*([t.c[per]] if per else []), sa.func.max(t.c[snap]))
+    if base.get("tenant"):
+        q = q.where(t.c[_setting("tenant_column")] == tenant)
+    if per:
+        q = q.group_by(t.c[per]).order_by(t.c[per])
+    try:
+        with engine.connect() as c:
+            got = c.execute(q).all()
+    except Exception as e:  # noqa: BLE001 — gün yazılamazsa cevap yine döner
+        log.debug("chat_portal: son gün okunamadı %s: %s", base["table"], e)
+        return None
+
+    def day(v: Any) -> str:
+        return v.isoformat()[:10] if isinstance(v, (date, datetime)) else str(v)[:10]
+
+    if per:
+        return ", ".join(f"{k} {day(v)}" for k, v in got if v is not None) or None
+    return day(got[0][0]) if got and got[0][0] is not None else None
 
 
 def _col_type(rows: list[dict[str, Any]], name: str) -> str:

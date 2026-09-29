@@ -5642,6 +5642,31 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except cop_mod.CopurchaseError as e:
             raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e)}) from e
 
+    # Pazarda bu yazar: dağıtımcı kataloğunda (Başarı) barkodla doğrulanan ve adla eşleşen kitaplar; ad eşleşmesi
+    # hiçbir kayda bağlanmaz, belirsizlik nedeniyle ekrana yazılır (author_pazar.py).
+    @app.get("/api/v1/editorial/authors/pazar")
+    def authors_pazar(request: Request, kisi: str = "", ad: str = "") -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        from semantic_bridge import author_pazar as apz
+        books = None
+        if kisi:
+            books = _growth_call(_snapshots().books_of, kisi)   # geçersiz kimlik → 400
+            if books is None:   # hazırlık bitmediyse yazarın kitapları canlı okunur; okunamazsa yalnız ad eşleşmesi
+                try:
+                    books = _editorial(request)[1](growth_mod.books_sql(admin_mod.conf("CRM_SCHEMA"), kisi)).get("records") or []
+                except Exception as e:  # noqa: BLE001
+                    log.warning("authors pazar: kitaplar okunamadı: %s", str(e)[:200])
+        if not ad.strip() and kisi:
+            schema, run = _editorial(request)
+            recs = run(editorial_mod.person_sql(schema, kisi)).get("records") or []
+            ad = str((recs[0] if recs else {}).get("FullName") or "")
+        if not ad.strip():
+            raise HTTPException(status_code=400, detail={"code": "AUTHOR_RELATIONS", "message": "Yazar adı gerekli."})
+        out = apz.market(engine, tenant, ad.strip()[:200], books=books)
+        stmts = out.pop("_sorgular", {})
+        from semantic_bridge import provenance as PV
+        return PV.bagla(out, lambda: apz.kaynaklar(engine, tenant, out, stmts))
+
     @app.delete("/api/v1/editorial/authors/meetings/{meeting_id}")
     def authors_meeting_delete(meeting_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)

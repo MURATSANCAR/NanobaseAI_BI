@@ -80,12 +80,22 @@ PORTAL_QUESTIONS = [
      "liste; termin önümüzdeki 30 gün"),
     ("editoryal", "Bu ay alınan baskı tekliflerinin ortalama birim fiyatı?", "semantic_production_quotes",
      "birim fiyat ortalaması; oluşturulma bu ay"),
+    # 2026-09-29: dağıtımcı ve perakende katalogları (Başarı Dağıtım, D&R) — her kataloğun son görüntüsü sayılır
+    ("dagitimci", "Başarı Dağıtım kataloğunda baskısı yok görünen TİMAŞ kitabı kaç tane?", "semantic_pazar_dagitim_titles",
+     "kayıt sayısı; katalog: basari, katalog durumu: Baskısı Yok (sorudan); TİMAŞ grubu kitabı: evet; son görüntü"),
+    ("dagitimci", "D&R kataloğunda yayınevine göre Prefix B2B stoğu toplamı?", "semantic_pazar_dagitim_titles",
+     "dağıtımcı stoğu toplamı; yayınevi kırılımı; katalog: dr; son görüntü"),
+    ("dagitimci", "Başarı'da satışta en çok kitabı olan 10 yayınevi hangisi?", "semantic_pazar_dagitim_titles",
+     "kayıt sayısı; yayınevi kırılımı; katalog: basari, katalog durumu: Satışta (sorudan); ilk 10"),
+    ("dagitimci", "Başarı'da üst kategoriye göre ortalama dağıtımcı iskontosu?", "semantic_pazar_dagitim_titles",
+     "dağıtımcı iskontosu ortalaması; üst kategori kırılımı; katalog: basari (sorudan)"),
 ]
 
 
 def test_every_portal_topic_has_three_realistic_questions():
     portal_topics = {t["id"] for t in chat_scope.topics() if t.get("portal")}
-    assert portal_topics == {"pazarlama", "dijital", "eticaret", "okur", "destek", "risk", "yonetim", "isletim", "editoryal"}
+    assert portal_topics == {"pazarlama", "dijital", "eticaret", "okur", "destek", "risk", "yonetim", "isletim", "editoryal",
+                             "dagitimci"}
     for tid in portal_topics:
         qs = [q for q in PORTAL_QUESTIONS if q[0] == tid]
         assert len(qs) >= 3, tid

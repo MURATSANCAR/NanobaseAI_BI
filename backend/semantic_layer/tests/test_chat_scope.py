@@ -129,6 +129,7 @@ MODULE_QUESTIONS = [
     ("M58", "Bu çeyrek eNPS kaç, geçen çeyreğe göre ne değişti?", "ik"),
     # Pazar araştırması, sistem ve Zeki AI işletimi (M39, M48, M50) — «model», «Zeki AI» geçse de şirket sorusu
     ("M39", "Rakip yayınevlerinde 200–300 sayfalık kişisel gelişim kitaplarının ortalama fiyatı ne?", "pazar"),
+    ("M39", "Başarı Dağıtım kataloğunda baskısı yok görünen TİMAŞ kitabı kaç tane?", "dagitimci"),
     ("M48", "Dün gece planlı raporlardan hangileri gitmedi, neden?", "isletim"),
     ("M48", "Bu hafta Zeki AI'ın ortalama cevap süresi geçen haftaya göre nasıl?", "isletim"),
     ("M48", "Model kuyruğunda en çok bekleyen modül hangisi?", "isletim"),

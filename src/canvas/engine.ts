@@ -1775,6 +1775,45 @@ export type AuthorRelated = {
   run: { at: string | null; orders: number; linesMatched: number; lines: number; pairs: number } | null;
   kaynaklar?: Kaynaklar;
 };
+/** Pazarda bu yazar: Başarı Dağıtım kataloğundaki kitapları (barkodla doğrulanan + ad eşleşmesi; ad eşleşmesi bağlanmaz). */
+export type AuthorPazarBook = {
+  barkod: string;
+  ad: string | null;
+  yayinevi: string | null;
+  ustKategori: string | null;
+  durum: string | null;
+  baskiNo: number | null;
+  fiyat: number | null;
+  basimYili: number | null;
+  timas: boolean;
+  dogrulandi: boolean;
+  drde: boolean;
+  cikis: number | null;
+};
+export type AuthorPazarGroup = { kitap: number; satista: number; baskisiYok: number; diger: number; dogrulanan: number };
+export type AuthorPazar = {
+  kaynak: string;
+  tarih: string | null;
+  kaynakZamani: string | null;
+  ad: string;
+  not: string;
+  okundu: boolean;
+  kitaplar: AuthorPazarBook[];
+  adlar: string[];
+  belirsiz: boolean;
+  nedenler: string[];
+  dogrulanan?: number;
+  kitapListesi?: boolean;
+  timas?: AuthorPazarGroup;
+  diger?: AuthorPazarGroup;
+  yayinevleri?: Array<{ yayinevi: string; kitap: number; satista: number; timas: boolean }>;
+  enYuksekBaski?: { baski: number; ad: string | null; yayinevi: string | null } | null;
+  fiyat?: { enDusuk: number; orta: number; enYuksek: number; kitap: number } | null;
+  drdeOlan?: number;
+  cikis?: { bas: string; son: string; timas: number; diger: number } | null;
+  cikisNot?: string | null;
+  kaynaklar?: Kaynaklar;
+};
 export type AuthorSimilar = {
   cards: Array<{ id: string; name: string; stage: string; stageLabel: string | null; archived: boolean; crmContactId: string | null }>;
   crm: Array<{ crmContactId: string; name: string | null; author: boolean; cardId: string | null }>;
@@ -1806,6 +1845,8 @@ export const authorsApi = {
     send<AuthorHeatmap>('GET', `${A}/heatmap${qs({ scope: p.scope, q: p.q, order: p.order, page: p.page })}`, undefined, 180_000),
   related: (contactId: string, page = 0) =>
     send<AuthorRelated>('GET', `${A}/related/${encodeURIComponent(contactId)}${qs({ page })}`, undefined, 30_000),
+  pazar: (p: { contactId?: string | null; name?: string | null }) =>
+    send<AuthorPazar>('GET', `${A}/pazar${qs({ kisi: p.contactId || undefined, ad: p.name || undefined })}`, undefined, 60_000),
   agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
   createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
   updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),

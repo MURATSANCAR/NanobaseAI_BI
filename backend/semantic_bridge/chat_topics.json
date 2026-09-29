@@ -145,6 +145,14 @@
       "data": ["yayin-crm", "satis"]
     },
     {
+      "id": "dagitimci",
+      "label": "dağıtımcı ve perakende katalogları",
+      "hint": "Başarı Dağıtım ve D&R kataloğundaki kitaplar: yayınevi ve kategoriye göre başlık sayısı, satışta / baskısı yok / temin edilemiyor durumu, dağıtımcı deposu ve D&R stoğu, liste fiyatı ve D&R satış fiyatı, dağıtımcı iskontosu, baskı sayısı, TİMAŞ grubu kitapları",
+      "modules": ["M39"],
+      "data": [],
+      "portal": ["dagitimci-katalog"]
+    },
+    {
       "id": "isletim",
       "label": "Zeki AI ve sistem işletimi",
       "hint": "planlı raporların gönderimi, bağlantı kesintisi, sohbet cevap süresi, soru kuyruğu, sürüm, hatalı cevaplar, eş anlamlı onayı, sunucu diski",
