@@ -24,7 +24,7 @@ COUNT), PDF metni bu betikte ayrıca okunur (pypdf), köprü veritabanı doğrud
   K16 liste: CSV satır sayısı = tarama toplamı; Excel eşi xlsx
   K17 taslak: kaydedilmeden emsal kontrolü (aşırı oran «yüksek»), kayıt yok (SQL)
   K18 ek ölçüt: ajans + hedef kitle seçilince emsal daralır, ölçütler kıyas grubunda
-  K19 pozisyon: «karton telif en çok %20» kuralına aykıran anlaşmalar = SQL (tip 5, satıştan ödeme, new_Telif > 20)
+  K19 pozisyon: «karton telif en çok %10» kuralına aykıran anlaşmalar = SQL (tip 5, satıştan ödeme, new_Telif > 10; 0 değil)
   K20 öneri: emsalden karton telif alt sınırı = SQL PERCENTILE_CONT(0,05) (anlaşma temsilcisi, son N yıl)
   K21 madde türü: gerçek PDF maddelerinde kuralla bulunan her tür, maddenin kendi metninde türün sözcüğünü taşır
   K22 Word: sözleşme raporu ve belge farkı açılır, metni taşır
@@ -229,7 +229,13 @@ def faz123(run, engine, meta: dict, scan: dict, created: list[str]) -> None:
         if m and not m["kur"]["okunuyor"] and m["kur"]["okunan"] > 0:
             break
         time.sleep(5)
-    ok("kur önbelleği", m["kur"]["okunan"] == m["kur"]["ay"], f"{m['kur']['okunan']}/{m['kur']['ay']} ay, {round(time.time() - t0)} sn")
+    # Başlangıcı gelecek aydaki sözleşmenin kuru TCMB'de henüz yok: en çok o aylar eksik kalabilir.
+    import datetime as _dt
+    future = sum(1 for r in run(f"SELECT DISTINCT CONVERT(varchar(7), new_SozlesmeBaslangicTarihi, 126) AS m FROM {P}new_sozlesmeBase "
+                                "WHERE statecode = 0 AND new_sozlesmeparabirimi = 1 AND new_SozlesmeBaslangicTarihi > GETDATE()")
+                 if r["m"] and r["m"] > _dt.date.today().strftime("%Y-%m"))
+    ok("kur önbelleği", m["kur"]["ay"] - m["kur"]["okunan"] <= future,
+       f"{m['kur']['okunan']}/{m['kur']['ay']} ay (gelecek ay {future}), {round(time.time() - t0)} sn")
     _, scan = http("GET", B + "/scan?only=sapan&page=0")
     # K13 kur
     rows = run(f"SELECT TOP 3 LOWER(CAST(new_sozlesmeId AS varchar(40))) AS id, new_sozlesmeavanstutari AS a, new_SozlesmeBaslangicTarihi AS b"
@@ -292,12 +298,12 @@ def faz123(run, engine, meta: dict, scan: dict, created: list[str]) -> None:
     ok("K18 ek ölçüt", st == 200 and st2 == 200 and dd["criteria"]["emsal"] <= base["criteria"]["emsal"] and ("ajans" in ids or "Ajans üzerinden" in ids),
        f"emsal {base['criteria']['emsal']} → {dd['criteria']['emsal']}; ölçütler {ids}")
     # K19 pozisyon
-    st, rule = http("POST", B + "/positions", {"clause": "new_Telif", "op": "max", "value": 20, "level": "kirmizi",
+    st, rule = http("POST", B + "/positions", {"clause": "new_Telif", "op": "max", "value": 10, "level": "kirmizi",
                                                 "scope": {"tip": 5, "odeme": 2}, "reason": "kabul denemesi"})
     items = all_items(B + "/scan?only=pozisyon&enAz=1")
     got_ag = {x["agreement"] for x in items}
-    want = run(rep + "SELECT COUNT(DISTINCT x.k) AS n FROM x WHERE x.new_SozlesmeTipi = 5 AND x.new_TelifTipi = 2 AND x.new_Telif > 20")[0]["n"]
-    ok("K19 pozisyon ihlali = SQL", st == 200 and len(got_ag) >= want and len(got_ag) - want <= max(2, want * 0.05),
+    want = run(rep + "SELECT COUNT(DISTINCT x.k) AS n FROM x WHERE x.new_SozlesmeTipi = 5 AND x.new_TelifTipi = 2 AND x.new_Telif > 10")[0]["n"]
+    ok("K19 pozisyon ihlali = SQL", st == 200 and want > 0 and len(got_ag) >= want and len(got_ag) - want <= max(2, want * 0.05),
        f"uç {len(got_ag)} anlaşma / SQL temsilci {want} (fark = temsilcisi uyan ama kopyası aykırı anlaşma)")
     http("DELETE", B + f"/positions/{rule['id']}") if st == 200 else None
     # K20 öneri
