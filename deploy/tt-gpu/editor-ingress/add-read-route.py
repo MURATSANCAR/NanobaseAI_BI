@@ -23,7 +23,8 @@ from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri 
 
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
-if "EDITOR-OKUMA" in s:
+if "EDITOR-OKUMA" in s or "location = /editor/cards/v1/read " in s:
+    # 2026-09-29: yol aynı gün başka bir kurulumla (işaretsiz) eklenmişti; ikinci blok `nginx -t`'yi düşürüyordu.
     print("zaten var")
     sys.exit(0)
 if "EDITOR-BITTI" not in s:
