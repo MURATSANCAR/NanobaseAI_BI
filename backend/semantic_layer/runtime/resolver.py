@@ -2431,20 +2431,35 @@ class SemanticResolver:
             # decided alone, the CRM words were handed over as "left to the model", and the ERP's total expense
             # was served as event spending (B064, 2026-09-29). A one-word measure is one voice; two independent
             # words that answer only to the other side, with a clear margin, decide instead.
+            # Counted by distinct table, not by word ("etkinlik … etkinlik sonrası" is one CRM thing), and only
+            # where the other side can itself say what the measure says: the CRM event table carries an
+            # expense column, so "gider" is answerable there; it carries no sales or revenue column, so
+            # "etkinlik sonrası satış / ciro" stays a two-database question (A072, B094).
             mhome = next(iter(homes))
             covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
             covered |= _temporal_positions(qf.tokens, sq.temporal)
-            pv, _pn = self._source_votes(qf, covered)
-            signal: dict[str, float] = dict(pv)
+            # source → {voice: tables}; a voice is one plain word or one table a certified phrase names
+            named_by: dict[str, dict[str, set[str]]] = {}
+            for k, src, ents in self._source_hits(qf, covered):
+                named_by.setdefault(src, {})[f"w{k}"] = set(ents)
             for s_ in sq.slots:
                 if s_ in metrics or s_.mapping is None or not s_.mapping.entity or s_.semantic_type == SemanticType.DEFAULT_FILTER:
                     continue
                 if s_.status == "CERTIFIED" and getattr(s_, "span", None) and self._names_a_source(s_):
-                    src = self._source_of(s_.mapping.entity)
-                    signal[src] = signal.get(src, 0) + 1
-            rivals = sorted(((src, v) for src, v in signal.items() if src != mhome), key=lambda kv: -kv[1])
-            mine = signal.get(mhome, 0) + len(metrics)
-            if rivals and rivals[0][1] >= 2 and rivals[0][1] >= 2 * mine:
+                    named_by.setdefault(self._source_of(s_.mapping.entity), {})[s_.mapping.entity] = {s_.mapping.entity}
+            forms = {f for m in metrics for w in fold(m.term).split() for f in (stem(w), short_root(w)) if f and len(f) >= 4}
+
+            def says_measure(voices: dict[str, set[str]]) -> bool:
+                for ent in {e for ents in voices.values() for e in ents}:
+                    prof = self.by_entity.get(ent)
+                    if prof is not None and any(f in fold(c.name) for c in prof.columns for f in forms):
+                        return True
+                return False
+
+            rivals = sorted(((src, voices) for src, voices in named_by.items() if src != mhome), key=lambda kv: -len(kv[1]))
+            mine = len(named_by.get(mhome, {})) + len(metrics)
+            if rivals and len(rivals[0][1]) >= 2 and len(rivals[0][1]) >= 2 * mine and says_measure(rivals[0][1]):
+                rivals = [(rivals[0][0], len(rivals[0][1]))]
                 other = rivals[0][0]
                 homes = {other}
                 sq.source_hint = other
@@ -2565,6 +2580,14 @@ class SemanticResolver:
         vote the wrong way. One vote per word, for a source whose tables alone answer to it."""
         votes: dict[str, int] = {}
         named: list[str] = []
+        for _k, src, ents in self._source_hits(qf, covered):
+            votes[src] = votes.get(src, 0) + 1
+            named += ents
+        return votes, named
+
+    def _source_hits(self, qf, covered: set[int]) -> list[tuple[int, str, list[str]]]:
+        """Each plain word that answers to the tables of exactly one source: (position, source, tables)."""
+        out: list[tuple[int, str, list[str]]] = []
         for k, tok in enumerate(qf.tokens):
             if k in covered or not is_domain_candidate(tok) or _COUNT_CUE.fullmatch(fold(tok)):
                 continue
@@ -2576,9 +2599,8 @@ class SemanticResolver:
                 hit.setdefault(self._source_of(prof.entity), []).append(prof.entity)
             if len(hit) == 1:
                 src, ents = next(iter(hit.items()))
-                votes[src] = votes.get(src, 0) + 1
-                named += ents
-        return votes, named
+                out.append((k, src, ents))
+        return out
 
     def _linked_across(self, entity: str, others: set[str]) -> bool:
         """Has the catalog measured a cross-source relationship between `entity` and any of `others`?"""
