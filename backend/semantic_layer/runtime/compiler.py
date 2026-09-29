@@ -147,6 +147,33 @@ def _parse_cond_column(key: str) -> Optional[tuple[str, str]]:
     return (m.group(1), m.group(2).upper()) if m else None
 
 
+def exclude_groups(mapping: Optional[Mapping]) -> list[dict]:
+    """Bir ölçünün «hariç grup» koşulları (katalog eşlemesi `extra.exclude_groups`), doğrulanmış biçimde.
+
+    Her biri {"key": "ACCFICHEREF", "column": "ACCOUNTCODE", "like": ["7_1%"], "why": "yansıtma fişi"}: aynı `key`
+    değerini taşıyan satırlardan biri `column LIKE <desen>` ise o gruptaki BÜTÜN satırlar ölçüden çıkar. Satır koşulu
+    («bu satırın hesabı 760») bunu anlatamaz: yıl sonu yansıtma/kapanış fişinin 760 satırı sıradan bir 760 alacağına
+    benzer, onu ayıran fişin ÖBÜR satırıdır (7x1 yansıtma hesabı). Soruya özel değil: yansıtmalı her gider ölçüsü, ya da
+    grup düzeyinde her dışlama («iadesi olan faturalar hariç») aynı biçimi kullanır."""
+    out = []
+    for g in ((mapping.extra or {}).get("exclude_groups") or []) if mapping is not None else []:
+        if not isinstance(g, dict):
+            continue
+        key, col = str(g.get("key") or ""), str(g.get("column") or "")
+        pats = [str(x) for x in (g.get("like") or []) if str(x)]
+        if re.fullmatch(r"\w+", key) and re.fullmatch(r"\w+", col) and pats and all("'" not in x for x in pats):
+            out.append({"key": key.upper(), "column": col.upper(), "like": pats, "why": str(g.get("why") or "")})
+    return out
+
+
+def exclude_group_sql(group: dict, source: str, alias: str, d: "Dialect", *, firm_col: Optional[str] = None) -> str:
+    """NOT EXISTS (SELECT 1 FROM <aynı kaynak> nb_g WHERE nb_g.key = alias.key AND (nb_g.col LIKE … OR …))."""
+    likes = " OR ".join(f"nb_g.{d.q(group['column'])} LIKE '{p}'" for p in group["like"])
+    firm = f" AND nb_g.{d.q(firm_col)} = {alias}.{d.q(firm_col)}" if firm_col else ""
+    return (f"NOT EXISTS (SELECT 1 FROM {source} AS nb_g WHERE nb_g.{d.q(group['key'])} = {alias}.{d.q(group['key'])}"
+            f"{firm} AND ({likes}))")
+
+
 def _ent_key(name: str) -> str:
     """Entity name as the gate compares it (audit._ent): no second-source prefix, no "LG_"."""
     from semantic_layer.runtime.audit import _ent
@@ -575,6 +602,9 @@ class DeterministicCompiler:
                 cond = _parse_cond_column(key)
                 if cond and cond[0] == entity:
                     used.add(cond[1])
+            if s_.mapping and s_.mapping.entity == entity:
+                for g in exclude_groups(s_.mapping):
+                    used.update((g["key"], g["column"]))
         for m in self._default_filters(entity):
             if m.column:
                 used.add(m.column)
@@ -827,6 +857,18 @@ class DeterministicCompiler:
             kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
             sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
         group += self._card_keys(plan, group, explain, by_firm)
+        # Grup düzeyinde dışlama (hariç fiş): aynı kaynağı ikinci kez okuyan NOT EXISTS. Ölçülerin hepsi aynı dışlamayı
+        # taşımıyorsa tek WHERE'e yazılamaz (öbür ölçüyü de daraltırdı) — o zaman bu derleyici yazmaz, model yazar ve
+        # kapı dışlamayı arar.
+        excl = [tuple(json.dumps(g, sort_keys=True) for g in exclude_groups(m.mapping)) for m in plan.metrics]
+        if any(excl):
+            if len(set(excl)) != 1:
+                log.debug("deterministic compile refused: metrics differ in excluded groups")
+                return None
+            for g in exclude_groups(plan.metrics[0].mapping):
+                where.append(exclude_group_sql(g, source, alias, d, firm_col=_FIRM_COL if by_firm else None))
+                explain.append(f"hariç grup: aynı {g['key']} içinde {g['column']} LIKE {g['like']} satırı olanlar"
+                               + (f" ({g['why']})" if g['why'] else ""))
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -2110,7 +2152,12 @@ class ExistingCompiler:
                 continue
             if m.formula:
                 cond = "; ".join((m.extra or {}).get("conditions") or [])
-                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "") + self._basis(m.formula))
+                excl = "; ".join(f"aynı {g['key']} içinde {g['column']} LIKE {' / '.join(g['like'])} satırı olan grup "
+                                 f"TAMAMEN hariç: NOT EXISTS (SELECT 1 FROM {m.entity} g WHERE g.{g['key']} = <takma ad>.{g['key']} "
+                                 f"AND g.{g['column']} LIKE '{g['like'][0]}')" + (f" — {g['why']}" if g['why'] else "")
+                                 for g in exclude_groups(m))
+                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "")
+                             + (f" (hariç: {excl})" if excl else "") + self._basis(m.formula))
             elif m.values:
                 lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
             elif m.column:

@@ -54,8 +54,8 @@ case "${1:-}" in
   katalog-kuru|katalog-yaz)
     args=(); [ "$1" = katalog-yaz ] && args+=(--apply); [ -n "$EXCLUDE" ] && args+=(--exclude "$EXCLUDE")
     run_env $VENV - ${args[@]+"${args[@]}"} < "$SRC/scripts/catalog-authoring/2026-09-29-kayit-adi-kolonlari.py" | tee "$W/$1.txt"
-    # etkinlik ve fuar gideri (Logo): kuruda --olc ile bu yıl toplamı + geçen yılın fiş türü dökümü; KAPANIS=<TRCODE> verilirse dışlanır
-    eargs=(); [ "$1" = katalog-yaz ] && eargs+=(--apply) || eargs+=(--olc); [ -n "${KAPANIS:-}" ] && eargs+=(--haric-fis-turu "$KAPANIS")
+    # etkinlik ve fuar gideri (Logo, yansıtma fişi hariç): kuruda --olc ile bu yıl (4.831.871,56) ve geçen yıl (≠ 0)
+    eargs=(); [ "$1" = katalog-yaz ] && eargs+=(--apply) || eargs+=(--olc)
     run_env $VENV - "${eargs[@]}" < "$SRC/scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py" | tee -a "$W/$1.txt"
     ;;
   hedefli)

@@ -1393,6 +1393,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                                      f"{slot.mapping.entity} tablosunu LEFT JOIN ile bağla: LEFT JOIN {slot.mapping.entity} ON {expression} "
                                      f"(INNER JOIN, {slot.mapping.entity} kaydı olmayan satırları düşürür)."))
 
+    out += _excluded_groups_unmet(sq, tree, occ)
+
     if not strict:
         return out + _closing(sq, tree, occ)
 
@@ -1434,6 +1436,40 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                              f"Ölçüye göre {'azalan' if sq.order_desc else 'artan'} sırala ve {sq.limit} satırla sınırla."))
 
     return out + _closing(sq, tree, occ)
+
+
+def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list[Unmet]:
+    """A measure that excludes whole groups (katalog `exclude_groups`: «aynı fişte 7x1 yansıtma satırı olan fiş hariç»)
+    must say so in the statement: somewhere a NOT EXISTS / NOT IN subquery reads the measure's own table, ties on the
+    group key and tests the column with the declared pattern. Checked whenever the statement reads the measure's
+    table — a year-end reflection voucher left in zeroes a closed year's expense and nothing on screen shows it."""
+    from semantic_layer.runtime.compiler import exclude_groups
+    out: list[Unmet] = []
+    subqueries = []
+    for node in tree.find_all(exp.Not):
+        inner = node.this.this if isinstance(node.this, exp.Paren) else node.this
+        if isinstance(inner, (exp.Exists, exp.In)):
+            subqueries.append(inner)
+    for metric in sq.metrics:
+        m = metric.mapping
+        groups = exclude_groups(m)
+        if not groups or not any(_same_entity(o.entity, m.entity) for o in occ):
+            continue
+        for g in groups:
+            def proves(node) -> bool:
+                if not any(_same_entity(logical_table(t.name).entity, m.entity) for t in node.find_all(exp.Table)):
+                    return False
+                cols = {c.name.upper() for c in node.find_all(exp.Column)}
+                pats = {str(like.expression.this) for like in node.find_all(exp.Like) if isinstance(like.expression, exp.Literal)}
+                return g["key"] in cols and g["column"] in cols and bool(pats & set(g["like"]))
+            if not any(proves(n) for n in subqueries):
+                pats = " / ".join(g["like"])
+                out.append(Unmet("filter", f"'{metric.term}' ölçüsünün hariç tuttuğu gruplar dışlanmadı: aynı {g['key']} içinde "
+                                 f"{g['column']} LIKE {pats} satırı olanlar" + (f" ({g['why']})" if g["why"] else ""),
+                                 f"{m.entity} kaynağını okuyan SELECT'in WHERE'ine ekle: NOT EXISTS (SELECT 1 FROM {m.entity} g "
+                                 f"WHERE g.{g['key']} = <takma ad>.{g['key']} AND g.{g['column']} LIKE '{g['like'][0]}').",
+                                 m.entity, g["key"]))
+    return out
 
 
 def _closing(sq, tree, occ=None) -> list[Unmet]:

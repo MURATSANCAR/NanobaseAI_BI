@@ -366,11 +366,20 @@
   CRM `new_ToplamEtkinlikGideri` eksik alan (2015–16, 28 kayıt, 9.275 ₺). Altın: `source=logo`, `expect=answer`, referans Logo
   hesap önekleri, gerekçe not alanında. Katalog: yeni ölçü «etkinlik ve fuar gideri»
   (`scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py`; «etkinlik gideri/giderleri» eş anlamlıları buraya, CRM kavramı
-  «crm etkinlik kartı gideri» adına daraltılır; kapanış fişi türü `--olc` ile ölçülüp `--haric-fis-turu` ile dışlanır). K7 artık
+  «crm etkinlik kartı gideri» adına daraltılır). **Yansıtma fişi hariç** (koordinatör `--olc` ölçümü: 2025'te 1.387 satır hepsi
+  fiş türü 4, net 0; yıl sonu kaydı aynı fişteki 7x1 yansıtma satırıyla ayrılıyor): katalog eşlemesine genel «hariç grup»
+  koşulu (`extra.exclude_groups`), derleyici `NOT EXISTS` yazar, kapı arar (`audit._excluded_groups_unmet`); altın B064
+  referansı aynı koşulu taşıyor (2026 değeri değişmez). K7 artık
   kayıt kelimesinin başka tablonun ENTITY'si olmasına izin veriyor (sertifikalı ad belirler). Bilgi paketi Kural C10/C21
   güncellendi: toplam harcama Logo'dan, etkinlik bütçesi hiçbir kaynakta tanımlı değil. Modelin «bütçe tanımlı değil,
   karşılaştırma yapılamaz» okuması bilgi paketinde belgelenmiş bir yokluğa denk geliyorsa artık ret sebebi değil
   (`CompilerRouter.compile`, `caveat_for(..., absence_only=True)`); başka itiraflar yine reddedilir.
+- **Sunucu testi (45241e2b, 4.220 geçti):** bu dalın düşen tek testi K6 kontrolüydü («Dağıtıcı müşterilere satış tutarı» →
+  DAGITICI süzgeci bekleniyordu). Kök neden K6 değil, test kurgusu: kırılım işareti olmayan cümlede K6'nın kelime kümesi boştur,
+  hiçbir şeyi atlamaz. Fikstürde CLCARD'ın üç kartında SPECODE2 üç farklı değer; profilci örnekten karar veren kuralında
+  (`_enum_candidate`: kısa VE tekrar eden değerler) bu kolonu kod listesi saymıyor, gözlenen değer yok → 2b'nin eşleyeceği bir şey
+  yok (aynı sebeple K6'nın «bazında» testi de boş yere geçiyordu). Testte gözlem açıkça yazıldı (`_observed_channels`) ve
+  değer dizininin «dagitici»yi taşıdığını sınayan ayrı bir test eklendi. Diğer 2 kırık main'in İK testleri.
 - **Q69 (A023):** Logo lookup cirosu kurala uyarlandı — faturalı satır (`INVOICEREF<>0`), iade (TRCODE 2,3) düşülür.
 - **Q29 (A031):** `bekleyen_siparis_tutari` `sum.answer` ve `pairs.answer_value` listelerine eklendi; referans aynı.
 - **Yan etki:** Q49 (A044, holdout) «etkinlik giderleri yazar bazında» artık Logo ölçüsünü okur; yazar kırılımı yalnız CRM kartında.

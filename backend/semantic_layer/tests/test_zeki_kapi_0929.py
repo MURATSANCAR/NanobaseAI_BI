@@ -208,15 +208,32 @@ def _value_filters(sq, value):
             and value in [str(v).upper() for v in (s.mapping.values or [])]]
 
 
+def _observed_channels(profiles):
+    """The fixture's CLCARD has three cards with three different SPECODE2 values; the profiler's sample rule
+    (`_enum_candidate`: short values that REPEAT) does not probe such a column, so it carries no observed values and
+    step 2b has nothing to match — the control below failed for that, not for K6 (sunucu koşusu 45241e2b). The live
+    column is a probed code list (KITAPCI, E-TICARET, DAGITICI …); the test states that observation explicitly."""
+    col = next(p for p in profiles if p.entity == "CLCARD").column("SPECODE2")
+    col.top_values = [("KITAPCI", 1), ("E-TICARET", 1), ("DAGITICI", 1)]
+    col.distinct_count = 3
+    return profiles
+
+
+def test_the_fixture_offers_the_observed_value_to_step_2b(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, _observed_channels(profiles))
+    r.resolve("Satış tutarı ne kadar?", today=TODAY)
+    assert "dagitici" in r._value_index, sorted(r._value_index)[:20]
+
+
 def test_a_word_that_opens_a_breakdown_is_not_read_as_an_observed_value(catalog, profiles):
     """A044: «yazar bazında … en pahalı beş yazar» — the word is what the answer is broken down by, at both places."""
-    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, _observed_channels(profiles))
     sq = r.resolve("Satış tutarı dağıtıcı bazında nasıl dağılıyor, en yüksek iki dağıtıcı kim?", today=TODAY)
     assert not _value_filters(sq, "DAGITICI"), [(s.term, s.semantic_type, s.mapping.values if s.mapping else None) for s in sq.slots]
 
 
 def test_the_same_word_without_a_breakdown_cue_is_still_a_value(catalog, profiles):
-    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, _observed_channels(profiles))
     sq = r.resolve("Dağıtıcı müşterilere satış tutarı ne kadar?", today=TODAY)
     assert _value_filters(sq, "DAGITICI"), [(s.term, s.semantic_type) for s in sq.slots]
 
@@ -284,3 +301,69 @@ def test_an_undocumented_gap_is_not_excused_by_an_unrelated_rule():
     from semantic_layer.runtime.compiler import caveat_for
     gap = "'birim' → UNITSETL.NAME (STLINE'da birim kolonu yok, birim kırılımı eklenemedi)"
     assert caveat_for(gap, _c21_rule(), absence_only=True) == ""
+
+
+# ---------------------------------------------------------------- K7c: hariç grup (yansıtma fişi) koşulu
+
+_NO_DISCOUNTED_INVOICE = {"key": "INVOICEREF", "column": "LINETYPE", "like": ["2%"], "why": "iskonto satırı olan fatura"}
+
+
+def test_exclude_groups_are_read_only_when_well_formed():
+    from semantic_layer.runtime.compiler import exclude_groups
+    m = Mapping(concept_id="", entity="EMFLINE", table_pattern="p", formula="SUM(EMFLINE.DEBIT)",
+                extra={"exclude_groups": [{"key": "ACCFICHEREF", "column": "ACCOUNTCODE", "like": ["7_1%"]},
+                                          {"key": "a b", "column": "X", "like": ["1%"]},
+                                          {"key": "K", "column": "Y", "like": ["x' OR 1=1 --"]},
+                                          {"key": "K", "column": "Y", "like": []}]})
+    assert exclude_groups(m) == [{"key": "ACCFICHEREF", "column": "ACCOUNTCODE", "like": ["7_1%"], "why": ""}]
+    assert exclude_groups(None) == []
+
+
+def _grouped_measure(catalog, profiles, *, excluded):
+    stl = next(p for p in profiles if p.entity == "STLINE")
+    extra = {"conditions": ["STLINE.TRCODE IN (7,8)", "STLINE.LINETYPE IN (0)"]}
+    if excluded:
+        extra["exclude_groups"] = [dict(_NO_DISCOUNTED_INVOICE)]
+    _certify(catalog, "yalın hacim", SemanticType.METRIC,
+             Mapping(concept_id="", entity="STLINE", table_pattern=stl.table_pattern, formula="SUM(STLINE.AMOUNT)", extra=extra))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    return SemanticResolver(catalog, TENANT, DS, profiles).resolve("Yalın hacim ne kadar?", today=TODAY)
+
+
+def _compile_run(catalog, profiles, logo_db, sq):
+    from semantic_layer.runtime.compiler import default_filters_provider
+    comp = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite",
+                                 default_filters=default_filters_provider(catalog, TENANT, DS))
+    out = comp.compile(sq, catalog)
+    assert out is not None, (comp.plan(sq)[1], sq.to_dict())
+    return out, logo_db.execute(out.sql).fetchall()[0][0]
+
+
+def test_a_measure_excluding_whole_groups_is_compiled_as_not_exists_on_the_same_source(catalog, profiles, logo_db):
+    """Yansıtma fişi sınıfı: a group (voucher / invoice) is dropped when ANY of its rows matches — a row condition
+    cannot say it. Fixture: invoice 3 carries a discount line (LINETYPE 2), so its item line (10) leaves the sum:
+    lines 10 + 5 + 2 = 17 → 5 + 2 = 7."""
+    sq = _grouped_measure(catalog, profiles, excluded=True)
+    out, value = _compile_run(catalog, profiles, logo_db, sq)
+    assert "NOT EXISTS" in out.sql.upper() and "LIKE '2%'" in out.sql, out.sql
+    assert value == 7, (value, out.sql)
+
+
+def test_without_the_exclusion_the_same_measure_counts_every_group(catalog, profiles, logo_db):
+    sq = _grouped_measure(catalog, profiles, excluded=False)
+    out, value = _compile_run(catalog, profiles, logo_db, sq)
+    assert "NOT EXISTS" not in out.sql.upper() and value == 17, (value, out.sql)
+
+
+def test_the_gate_refuses_an_answer_that_keeps_the_excluded_groups(catalog, profiles, logo_db):
+    from semantic_layer.runtime.audit import gate_report
+    sq = _grouped_measure(catalog, profiles, excluded=True)
+    out, _ = _compile_run(catalog, profiles, logo_db, sq)
+    kept = ("SELECT SUM(s.AMOUNT) AS yalin_hacim FROM LG_411_01_STLINE s "
+            "WHERE s.CANCELLED = 0 AND s.TRCODE IN (7, 8) AND s.LINETYPE IN (0)")
+    assert any("hariç tuttuğu gruplar" in u.text for u in gate_report(sq, kept)), [u.text for u in gate_report(sq, kept)]
+    assert not [u for u in gate_report(sq, out.sql) if "hariç tuttuğu gruplar" in u.text], out.sql
+    written = kept + (" AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE g WHERE g.INVOICEREF = s.INVOICEREF "
+                      "AND g.LINETYPE LIKE '2%')")
+    assert not [u for u in gate_report(sq, written) if "hariç tuttuğu gruplar" in u.text], "a model-written NOT EXISTS counts"
+

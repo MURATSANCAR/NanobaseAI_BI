@@ -15,9 +15,11 @@ Tanım (hesap planı alt hesapları; soruya özel değil, TDHP'nin 7'li gider s�
   tutar = Σ(DEBIT − CREDIT), EMFLINE, iptal hariç; ana hesap koşulu KEBIRCODE IN (740, 760, 770) (kapının ve derleyicinin
   okuduğu biçim), alt hesap kapsamı formülde (LIKE koşul olarak okunamıyor — tahsilat ölçüsündeki yöntem).
   Canlı ölçüm (koordinatör, LG_411_01_EMFLINE): 2026 = 4.831.871,56 ₺, 1.079 satır; en büyük 760.47.470 = 3.405.000,92.
-  2025 net 0: yıl sonu kapanış fişi 760'ları sıfırlıyor. Kapanış fişinin türü (EMFLINE.TRCODE) ölçülmedi; `--olc` son
-  kapanmış yılı fiş türüne göre döker, `--haric-fis-turu 7` gibi bir değerle o tür ölçüden dışlanır. Dışlanmadan da «bu
-  yıl» (varsayılan dönem) doğrudur; kapanmış bir yılın cevabı dışlama yazılana kadar 0'a yakın çıkar.
+  Yansıtma fişi HARİÇ (koordinatör ölçümü 2026-09-29): 2025'te 1.387 satır, hepsi fiş türü 4, borç = alacak, net 0 —
+  kapanış fiş türüyle ayrılamıyor. Aralık alacaklarının karşı hesabı 711/731/761/771/781: yıl sonu yansıtma/kapanış kaydı
+  (~7,2 Mn). Yıl içi alacaklar (karşı hesap 120 müşteriye yansıtılan gider, 320 tedarikçi iadesi) gerçek düzeltmedir, düşülür.
+  Tanım: aynı fişte (ACCFICHEREF) ACCOUNTCODE LIKE '7_1%' satırı olan fiş ölçüden tamamen çıkar — katalog eşlemesinin
+  genel «hariç grup» koşulu (`extra.exclude_groups`; derleyici NOT EXISTS yazar, kapı arar). 2026'da yansıtma yok.
 
 Bütçe: etkinlik bütçesi hiçbir kaynakta yok (Kural C21, bilgi paketi 2026-09-29'da güncellendi): cevap toplamı verir,
 bütçenin tanımlı olmadığını söyler.
@@ -28,8 +30,7 @@ DARALTILIR: eşlemesi aynı kalır, terimi «crm etkinlik kartı gideri», çak�
 bazında kırılım (yalnız CRM kartında var) o adla ve bilgi paketi Kural C10 ile okunur.
 
   kuru koşu (varsayılan)   ne yazılacağını, çakışan kavramları ve daraltmayı basar; yazmaz.
-  --olc                    Logo'da (SEMANTIC_CONNECTION_FILE, salt okuma) bu yıl ve geçen yıl toplamı + fiş türü dökümü.
-  --haric-fis-turu 7,1     bu EMFLINE.TRCODE değerlerini ölçüden dışla (--olc çıktısıyla karar verildikten sonra).
+  --olc                    Logo'da (SEMANTIC_CONNECTION_FILE, salt okuma) bu yıl ve geçen yıl, yansıtma fişi hariç ve dahil.
   --apply                  yazar (idempotent; human_certify), CRM kavramını daraltır, semantic_audit'e yazar.
 
 Koşu (sunucuda, köprünün ortamıyla):
@@ -77,16 +78,20 @@ def _open():
     return s, st, profiles, em
 
 
-def _mapping(em, excluded: list[int]):
+#: Yansıtma fişi: aynı fişte bir 7x1 yansıtma hesabı satırı (711, 721, … 791). Genel «hariç grup» koşulu.
+REFLECTION = {"key": "ACCFICHEREF", "column": "ACCOUNTCODE", "like": ["7_1%"],
+              "why": "yansıtma/kapanış fişi (aynı fişte 7x1 yansıtma hesabı satırı)"}
+
+
+def _mapping(em):
     from semantic_layer.models import Mapping
     e = em.entity
     scope = " OR ".join(f"{e}.ACCOUNTCODE LIKE '{a}%'" for a in ACCOUNTS)
     conds = [f"{e}.CANCELLED IN (0)", f"{e}.KEBIRCODE IN ({', '.join(str(k) for k in MAIN)})"]
-    if excluded:
-        conds.append(f"{e}.TRCODE NOT IN ({', '.join(str(x) for x in excluded)})")
     return Mapping(concept_id="", entity=e, table_pattern=em.table_pattern,
                    formula=f"SUM(CASE WHEN ({scope}) THEN {e}.DEBIT - {e}.CREDIT ELSE 0 END)",
-                   extra={"func": "SUM", "aliases": ["toplam_etkinlik_gideri"], "verb_bridge": False, "conditions": conds})
+                   extra={"func": "SUM", "aliases": ["toplam_etkinlik_gideri"], "verb_bridge": False, "conditions": conds,
+                          "exclude_groups": [dict(REFLECTION)]})
 
 
 def _crm_collisions(st, s, em):
@@ -103,48 +108,52 @@ def _crm_collisions(st, s, em):
     return list(out.values())
 
 
-def _measure(excluded: list[int]) -> None:
+def _measure() -> None:
+    """Ölçünün tanımıyla (yansıtma fişi hariç) bu yıl ve geçen yıl; karşılaştırma için yansıtma dahil de."""
     from semantic_layer.profiler.connectors import connector_from_file
     conn = connector_from_file(os.environ["SEMANTIC_CONNECTION_FILE"])
     scope = " OR ".join(f"L.ACCOUNTCODE LIKE '{a}%'" for a in ACCOUNTS)
-    ex = f" AND L.TRCODE NOT IN ({', '.join(map(str, excluded))})" if excluded else ""
+    likes = " OR ".join(f"Y.{REFLECTION['column']} LIKE '{p}'" for p in REFLECTION["like"])
     for firm, year in (("411", "YEAR(GETDATE())"), ("211", "YEAR(GETDATE())-1")):
-        sql = (f"SELECT L.TRCODE AS fis_turu, COUNT(*) AS satir, SUM(L.DEBIT) AS borc, SUM(L.CREDIT) AS alacak, "
-               f"SUM(L.DEBIT-L.CREDIT) AS net FROM LG_{firm}_01_EMFLINE L WHERE L.CANCELLED=0 AND YEAR(L.DATE_)={year} "
-               f"AND ({scope}){ex} GROUP BY L.TRCODE ORDER BY L.TRCODE")
+        refl = (f"EXISTS (SELECT 1 FROM LG_{firm}_01_EMFLINE Y WHERE Y.{REFLECTION['key']} = L.{REFLECTION['key']} "
+                f"AND ({likes}))")
+        sql = (f"SELECT SUM(CASE WHEN NOT {refl} THEN L.DEBIT-L.CREDIT ELSE 0 END) AS olcu, "
+               f"SUM(CASE WHEN NOT {refl} THEN 1 ELSE 0 END) AS olcu_satir, "
+               f"SUM(CASE WHEN NOT {refl} THEN L.CREDIT ELSE 0 END) AS olcu_alacak, "
+               f"SUM(L.DEBIT-L.CREDIT) AS yansitma_dahil, COUNT(*) AS tum_satir "
+               f"FROM LG_{firm}_01_EMFLINE L WHERE L.CANCELLED=0 AND YEAR(L.DATE_)={year} AND ({scope})")
         try:
-            cols, rows = conn.execute(sql, 1000)[:2]
+            rows = conn.execute(sql, 10)[1]
         except Exception as e:  # noqa: BLE001
             print(f"LG_{firm}: okunamadı: {str(e)[:200]}")
             continue
-        total = sum(float(r.get("net") or 0) for r in rows)
-        print(f"LG_{firm} ({year}) fiş türüne göre:", rows, f"| net toplam {total:,.2f}")
+        print(f"LG_{firm} ({year}) yansıtma fişi hariç (ölçü) / dahil:", rows[0] if rows else None)
+    print(f"beklenen: bu yıl ölçü = {REF:,.2f}; geçen yıl ölçü ≠ 0 (borç − yıl içi 120/320 düzeltmeleri)")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--olc", action="store_true")
-    ap.add_argument("--haric-fis-turu", default="")
     a = ap.parse_args()
-    excluded = [int(x) for x in a.haric_fis_turu.split(",") if x.strip()]
     s, st, _, em = _open()
     if em is None:
         print("profil yok: LG_{n0}_{n1}_EMFLINE — yazılmadı")
         return 2
-    missing = [c for c in ("ACCOUNTCODE", "KEBIRCODE", "DEBIT", "CREDIT", "CANCELLED", "DATE_", "TRCODE") if em.column(c) is None]
+    missing = [c for c in ("ACCOUNTCODE", "KEBIRCODE", "DEBIT", "CREDIT", "CANCELLED", "DATE_", "ACCFICHEREF") if em.column(c) is None]
     if missing:
         print(f"{em.entity} profilinde kolon yok: {missing} — yazılmadı")
         return 2
-    m = _mapping(em, excluded)
-    print(f"ÖLÇÜ  '{TERM}' → {m.entity}: {m.formula}\n      koşullar {m.extra['conditions']}\n      eş anlamlılar {SYNONYMS}")
+    m = _mapping(em)
+    print(f"ÖLÇÜ  '{TERM}' → {m.entity}: {m.formula}\n      koşullar {m.extra['conditions']}\n"
+          f"      hariç grup {m.extra['exclude_groups']}\n      eş anlamlılar {SYNONYMS}")
     crm = _crm_collisions(st, s, em)
     for c, maps, keys in crm:
         where = ", ".join(str(x.entity) + "." + str(x.column or (x.formula or "")[:50]) for x in maps)
         print(f"DARALT {c.id} '{c.term}' ({where}) çakışan anahtarlar {sorted(keys)} → terim '{CRM_NEW_TERM}', "
               "çakışan eş anlamlılar çıkar; eşleme aynı")
     if a.olc:
-        _measure(excluded)
+        _measure()
     if not a.apply:
         print(f"KURU KOŞU — yazılmadı. Referans (koordinatör, 2026): {REF:,.2f} ₺. Yazmak için --apply.")
         return 0
@@ -153,6 +162,7 @@ def main() -> int:
     from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, SemanticType
     from semantic_layer.normalize import normalize_term
     reason = ("etkinlik ve fuar gideri = Logo defteri EMFLINE Σ(borç − alacak), iptal hariç, hesaplar " + ", ".join(ACCOUNTS)
+              + "; aynı fişte 7x1 yansıtma satırı olan fiş (yıl sonu yansıtma/kapanış) hariç"
               + f"; 2026 = {REF:,.2f} ₺ (1.079 satır). Kayıt sistemi Logo; CRM new_ToplamEtkinlikGideri eksik alan (28 kayıt, 9.275 ₺). "
               "Etkinlik bütçesi hiçbir kaynakta yok (Kural C21).")
     # 1) CRM kavramını daralt (eşleme aynı kalır)
@@ -183,7 +193,7 @@ def main() -> int:
 
         admin.audit(st.engine, "operator:claude", "update", "catalog_concept", s.datasource_id,
                     "etkinlik ve fuar gideri (Logo) yazıldı; CRM etkinlik kartı gideri daraltıldı",
-                    {"concept": c.id, "narrowed": [x[0].id for x in crm], "accounts": ACCOUNTS, "excluded_trcode": excluded})
+                    {"concept": c.id, "narrowed": [x[0].id for x in crm], "accounts": ACCOUNTS, "exclude_groups": [REFLECTION]})
     except Exception as e:  # noqa: BLE001
         print("UYARI: değişiklik kaydı yazılamadı:", e)
     return 0
