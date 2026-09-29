@@ -95,7 +95,12 @@ class Bridge:
 def _text(v) -> str:
     """Anahtar değerinin metni: yalnız yok (None) boştur — 0 bir anahtardır («baskı adedi 0» kademesi Q40'ta boş dizgeye
     dönüp eşleşmiyordu, 2026-09-29)."""
-    return "" if v is None else str(v)
+    if v is None:
+        return ""
+    n = _num(v) if not isinstance(v, (bool, str)) else None
+    if n is not None and float(n).is_integer():      # 0, 0.0, Decimal('0') aynı anahtar
+        return str(int(n))
+    return str(v)
 
 
 def _words(name: str) -> frozenset:
