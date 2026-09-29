@@ -17,6 +17,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "EDITOR-INCELEME" in s:
@@ -40,7 +43,7 @@ if "EDITOR-BITTI" not in s:
     print("EDITOR bloğu bulunamadı; önce add-cards-routes.py koşmalı")
     sys.exit(1)
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', s).group(1)
-guard = f'''        allow 85.105.0.0/16; deny all;
+guard = f'''        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}'''
 uuid = "[0-9a-fA-F-]{36}"
 block = f'''    # EDITOR-INCELEME  (musteri VM -> inceleme kuyrugu; uc GET + bir POST, ayni uc kat koruma)

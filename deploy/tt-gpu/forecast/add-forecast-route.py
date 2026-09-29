@@ -10,6 +10,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from customer_sources import ALLOW  # noqa: E402 — müşteri kaynak adresleri tek yerde
+
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "BI-TAHMIN" in s:
@@ -18,14 +21,14 @@ if "BI-TAHMIN" in s:
 gate = re.search(r'\$http_x_editor_gate != "([^"]+)"', s).group(1)
 block = f'''    # BI-TAHMIN  (musteri VM -> ZEKI AI tahmin; yalniz saglik GET ve toplu tahmin POST, ayni uc kat koruma)
     location = /bi-forecast/health {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != GET) {{ return 405; }}
         proxy_pass http://127.0.0.1:8793/health;
         proxy_set_header Host $host;
     }}
     location = /bi-forecast/forecast/batch {{
-        allow 85.105.0.0/16; deny all;
+        {ALLOW}
         if ($http_x_editor_gate != "{gate}") {{ return 403; }}
         if ($request_method != POST) {{ return 405; }}
         client_max_body_size 64m;      # ~5.200 kitap x 140 ay
