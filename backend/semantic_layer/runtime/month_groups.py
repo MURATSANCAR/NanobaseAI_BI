@@ -374,7 +374,25 @@ def expand(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> tu
         col.set("this", exp.to_identifier(name))
     if not made:
         return sql, []
+    _complete_month_grouping(tree, set(made.values()))
     return head + tree.sql(dialect=dialect), notes
+
+
+def _complete_month_grouping(tree: exp.Expression, aliases: set[str]) -> None:
+    """`ay` ile `ay_adi` birebirdir: biri GROUP BY'da ise öbürü de eklenir — satırlar değişmez, ama `GROUP BY ay_adi
+    ORDER BY ay` (2026-09-30 tam kapı, B072) SQL Server'da 8127 hatasıyla düşmez."""
+    low = {a.lower() for a in aliases}
+    for select in tree.find_all(exp.Select):
+        group = select.args.get("group")
+        if group is None:
+            continue
+        have: dict[str, set[str]] = {}
+        for e in group.expressions:
+            if isinstance(e, exp.Column) and (e.table or "").lower() in low and e.name.lower() in ("ay", "ay_adi"):
+                have.setdefault(e.table, set()).add(e.name.lower())
+        for alias, names in have.items():
+            for missing in {"ay", "ay_adi"} - names:
+                group.append("expressions", exp.column(missing, table=alias))
 
 
 def collapse(sql: str) -> str:

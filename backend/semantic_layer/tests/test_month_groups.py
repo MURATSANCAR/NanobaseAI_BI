@@ -108,6 +108,15 @@ def test_unqualified_virtual_column_binds_only_when_one_grouped_table_is_read():
     assert MG.expand(same, [_hedef()]) == (same, [])
 
 
+def test_grouping_by_month_name_also_groups_by_month_number():
+    """B072 (2026-09-30 tam kapı): `GROUP BY h.ay_adi ORDER BY h.ay` SQL Server'da 8127 ile düştü; ay ↔ ay_adi birebir."""
+    sql = (f"SELECT h.ay_adi, COUNT(*) AS n FROM {LABEL} h WHERE ISNULL(h.ay_degeri, 0) = 0 "
+           "GROUP BY h.ay_adi ORDER BY h.ay")
+    out, _ = MG.expand(sql, [_hedef()])
+    group = sqlglot.parse_one(out, read="tsql").args["group"].expressions
+    assert {(c.table, c.name) for c in group} == {("nb_ay_h", "ay_adi"), ("nb_ay_h", "ay")}
+
+
 def test_a_statement_without_virtual_columns_is_returned_untouched():
     sql = f"SELECT SUM(h.new_ocak) AS ocak FROM {LABEL} h  -- tek ay"
     assert MG.expand(sql, [_hedef()]) == (sql, [])
