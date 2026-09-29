@@ -28,7 +28,41 @@ START_KEY = "nb_eposta_baslangic_uid::"
 UID_MAX = 4294967295
 
 
+# Otomatik e-posta (bildirim, bülten, otomatik yanıt, teslim hatası) kayıt açmaz. Standart başlıklara bakılır:
+# Auto-Submitted (RFC 3834), Precedence bulk/list/junk, liste başlıkları; gönderen noreply/mailer-daemon ise de atlanır.
+# 2026-09-29: zeki@ kutusuna gelen Jira ve Google Analytics bildirimleri kayıt açmıştı.
+OTOMATIK_GONDEREN = re.compile(r"^([^@]*(no-?reply|do-?not-?reply|donotreply)[^@]*|mailer-daemon|postmaster|bounces?([+._-][^@]*)?|notifications?([+._-][^@]*)?)@", re.I)
+
+
+def otomatik_mi(mail) -> str | None:
+	"""Otomatik e-postaysa nedenini döndürür, değilse None."""
+	h = mail.mail
+	auto = (h.get("Auto-Submitted") or "").strip().lower()
+	if auto and auto != "no":
+		return "Auto-Submitted"
+	if (h.get("Precedence") or "").strip().lower() in ("bulk", "list", "junk"):
+		return "Precedence"
+	if h.get("List-Id") or h.get("List-Unsubscribe"):
+		return "liste"
+	if (h.get("X-Auto-Response-Suppress") or "").strip().lower() in ("all", "oof"):
+		return "otomatik yanıt"
+	if OTOMATIK_GONDEREN.match(mail.from_email or ""):
+		return "gönderen"
+	return None
+
+
 class NanobaseEmailAccount(CustomEmailAccount):
+	def get_inbound_mails(self):
+		mails = super().get_inbound_mails()
+		kalan = []
+		for m in mails:
+			neden = otomatik_mi(m)
+			if neden:
+				frappe.logger("nanobase_eposta").info(f"otomatik e-posta atlandı ({neden}): uid {m.uid}")
+			else:
+				kalan.append(m)
+		return kalan
+
 	def build_email_sync_rule(self):
 		rule = super().build_email_sync_rule()
 		start = cint(frappe.db.get_default(START_KEY + self.name))
