@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (23:30) — Sohbet: bot adı test sunucusunda «zeki.bot», belge gönderimi sınandı, indirme simgesi düzeltildi
+
+- **Bot (kullanıcı: «rocket.cat bunu sil»):** silme yerine ad değişikliği (kullanıcı onayı) — uygulama botu silmeye izin vermiyor, silinse her açılışta yeniden kuruyor; hata bildirimi, giriş kilidi, kanal silme ona bağlı. Kaynaktaki ad/kimlik değişikliği aynı saatlerde başka oturumda `main`'e girdi (kimlik de `zeki.bot`, veritabanı için `apps/zeki-chat/deploy/zeki/migrate-owned-identity.cjs`); bu oturumun kaynak commit'i bu yüzden bırakıldı. Test sunucusunda veritabanında yalnız görünen ad değişti (yönetici ucu TOTP istedi): kullanıcı adı + avatar dosya adı + iki ayar `zeki.bot`, kimlik `rocket.cat` kaldı — göç betiği bu ara durumu tamamlar (kimlik çakışması kaydın kendisini dışlar). Tarayıcıda bot `zeki.bot`, Z avatarı; `rocket.cat` adında kullanıcı/ayar 0.
+- **Giriş servisi:** bot, kimliği `zeki.bot` ya da göç öncesi `rocket.cat` olsa da çevrimiçi sayılmaz; AD girişi bota asla jeton vermez (test). 20/20.
+- **`ee/`:** kullanıcı kararı (lisans sahibi) — üst kaynakla birebir tutulmaz, gerektiğinde değiştirilir.
+- **Belge gönderimi (soru: «belge gönderimi var mı»):** ayarlar açık (dosya başına 100 MB, GridFS, korumalı, DM'de açık, SVG yasak, sesli ileti açık). Arayüzden gerçek PDF: `rooms.media` 200, `mediaConfirm` 200, dosya adı bağlantısı 200 `application/pdf`, bayt eşit; oturumsuz 302, yalnız portal oturumu 403. **Hata:** genel dosya ekinin indirme simgesi öneksiz `/file-upload/…` → 404 (görsel/ses doğru); `GenericFileAttachment` düzeltildi — yeni imajla canlıya girer. Çevrilmemiş etiket: besteci «Upload file».
+- **Gözlem (kök neden kanıtlanmadı):** `timasai`'de 50 sohbet giriş jetonu birikince arayüz yükleme ekranında kaldı; jetonlar silinince açıldı. Her `/chat-sso` yeni jeton üretiyor, sohbet 50'de budama yapıyor (50 çağrı sonrası 2 kaldı). Açık iş: açık sohbet oturumu varken yeniden jeton istememe / jeton yeniden kullanımı.
+- **Temizlik:** test DM odaları (3), mesaj, dosya (GridFS dahil), `timasai` sohbet jetonları, kısa portal oturumu silindi; kalan `general` + 3 kullanıcı.
+
 ## 2026-09-29 — Sohbet lisans yapısı ve eski teknik kimlikler: kaynak dönüşümü
 
 - Kullanıcı bütün kalan lisans/üretici izlerinin temizlenmesini ve bütün kod/klasör/DB'nin yeniden taranmasını istedi. Paralel UI/backend/metadata incelemesiyle sahte2099 lisans nesnesi, plan/kota/premium UI ve broker lisans kapanışı kaldırıldı; yerel capability registry, gerçek yetki/2FA sınırları ve üçüncü taraf uygulama hakkı ayrıldı.
