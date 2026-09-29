@@ -214,6 +214,28 @@
 - **Efekt: üst üste binme:** «pat» için 4 sn'lik düşme sesi 3 sn sonraki «güm» ile çakışıyordu. `plan_placements` yerleşimleri başlangıca göre sıralar; bir efekt sonrakinin başlangıcını geçiyorsa sonrakinin başında biter, en az `FX_MIN_SEC = 2 × FX_FADE` (0,5 sn: çeyrek saniye tam düzey + çeyrek saniye yumuşak kısılma; daha kısası tık gibi duyulur), sesin kendisi daha kısaysa kendi süresi. Kısaltılan yerleşimde `trimmed`. `MIX_VERSION` 2 → 3 (eski karışımlar «güncel değil» olur, yeniden karıştırılmalı).
 - **Yetki kapısının ön yüz testi:** `studio/permissionGate.test.ts` — `useCan` sahte, sunucu tarafı çizim (FileDrop.test.ts kalıbı, yeni kütüphane yok), veri sorgu önbelleğine elle, ağ yok. İfade (öneri düğmesi, cümle pasif), Sosyal medya (diz/onay/sil/tek ve toplu indir; dört yetki bileşimi), Yaş raporu (raporu çıkar/yenile, PDF), Sesli okuma (seslendir, yeniden üret, insan kaydı, ses seçimi), Sürüm farkı (değişiklik raporu). Test için iki küçük ilk değer düzeltmesi: sesli okumada seçili sayfa ve sürüm farkında varsayılan çift ilk çizimde kurulur (etkiyi beklemek bir çizim boyunca seçimsiz sayfa ve «ikinci sürüm yok» notu gösteriyordu).
 - **Doğrulama:** GPU'da editör tam set 653 geçti, 1 bilinçli seçim dışı (`test_sfx.py` 21/21, yeni 4 test). Test sunucusunda geçici klasörde `tsc --noEmit` 0, `vitest src/canvas/editorial` 68/68 (yeni 11; sosyal görsel indirme kapısı geçici kaldırılınca «yalnız düzenleme» testi düştü), `test_access.py` 19/19, `import semantic_bridge.app` tamam. Kurulmadı; mevcut karışımlar sürüm artışıyla «güncel değil» görünecek.
+## 2026-09-29 (18:00) — İstenen kırılım sessizce düşmez (A044 sınıfı); eleştirmen gerilemesi (dal `zeki-kapi-sinif`)
+
+- **Gerileme (`test_prefer_base_tables::test_columns_only_the_ledger_has_point_the_bare_name_at_it`):** K1'in «aynı adlı
+  profil kolonu taşıyorsa ret yok» kuralı her bağlanışta çalışıyordu. main'e o arada `critic.prefer_base_tables` girmiş:
+  çıplak `CLFLINE` (görünüm) + taban tablonun kolonu eleştirmenden ÖNCE `LG_CLFLINE`'a çevriliyor ve test, çevrilmemiş
+  sorgunun eskisi gibi reddedildiğini sınıyor. Düzeltme: kardeş profile bakma yalnız tablo fiziksel addan TAHMİNLE bağlandıysa
+  (LG_211_01_CLFLINE → «CLFLINE»); adıyla/varlık adıyla/kalıbıyla bağlanan tabloda ret aynen.
+- **A044 sınıfı — kırılım sessizce düşüyordu:** «Etkinlik giderleri yazar bazında … en pahalı beş yazar» Logo «etkinlik ve
+  fuar gideri»ne bağlandı; «yazar» hiçbir kavrama yerleşmedi ve dilbilgisi sayılıp atıldı (`ignored`), deterministik derleyici
+  `TOP 5` tek toplam yazdı. Genel kural (`resolver._requested_breakdowns`, adım 6a2): açık kırılım işaretinin (bazında, bazlı,
+  kırılımında, kırılımlı, özelinde — «göre»/«başına» karşılaştırma da kurduğu için hariç) önündeki yerleşmemiş kelime
+  `requested_breakdowns`'a ve çözülemeyen kelimelere girer: deterministik yol yazmaz, model okumasını yazmak zorundadır.
+  Kapı (`gate_report`, her zaman): istenen kırılım varken hiçbir SELECT gruplamıyorsa ret. **Kardeş ölçü**
+  (`_breakdown_sibling_measure`): okunan ölçünün tablosundan kırılıma (kelimeyi taşıyan sertifikalı COLUMN/ENTITY kavramlarının
+  tabloları) katalog ilişkileriyle ≤ 2 adımda ulaşılamıyorsa, aynı ad ailesinden (adı okunanın bütün kelimelerini taşıyan ya da
+  bu addan daraltılmış) ulaşabilen TEK sertifikalı ölçü okunur, kapsam notu açıklamaya yazılır; varsayılan yıl, kardeş ölçü
+  tarihsizse geri alınır. Q49 gerçek katalogla (salt okuma): «crm etkinlik kartı gideri» (NEW_ETKINLIKBASE → etkinlik↔kişi
+  bağ tablosu → ContactBase), dönem yok, «yazar» modele. Kontroller değişmedi (Q63 Logo ölçüsü, Q11, «müşteri grubu bazında»).
+  Soruya özel kural/eşleme yok; altın değişmedi.
+- **Test (test sunucusu, kendi kopya `/tmp/claude-zeki-kapi-ajan/src`):** hedefli 71 geçti (bu dosya + prefer_base_tables +
+  critic); tam `semantic_layer/tests` sonucu raporda.
+
 ## 2026-09-29 (17:00) — Kampüs «Ana Modüller» bütün ana modülleri gösterir; kutu modüle gider, sol menü yalnız o modül
 
 - **Neden:** Kullanıcı: «tüm modülleri Zeki ana panelde modüllere ekledin mi; tıklanınca doğrudan ilgili modüle gitsin, solda yalnız o modülün menüleri gelsin». Kart 6 sabit kutuydu (`GROUP_HOME`'dan: Genel Bakış, Editoryal Süreç, Finans & Risk, Yönetim Raporları, SEO & GEO, İK); «Genel Bakış» ve «Yönetim Raporları» ikisi de Finans modülüne düşüyordu, 8 ana modül (Analiz, Fiyatlama ve üretim, Pazarlama, Saha satış, Dijital, Müşteri ve pazar, Platform, Lojistik, Altyapı, Yönetim) hiç yoktu.

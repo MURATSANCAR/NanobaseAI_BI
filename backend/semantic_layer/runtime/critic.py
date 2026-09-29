@@ -843,12 +843,14 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                 continue
             if prof.column(c.name) is None:
                 # 2026-09-29 tam kapı B019: «CLFLINE tablosunda AMOUNT adında kolon yok» — Logo cari hareketinde
-                # AMOUNT vardır. Varlık adı çakışınca (LG_CLFLINE ile düz CLFLINE) okunan profil başka bir tablonun
-                # olabilir: aynı adı (LG_ önekli ya da öneksiz) taşıyan profillerden biri kolonu taşıyorsa ret yok;
-                # hiçbiri taşımıyor ama tablo yalnız fiziksel addan tahminle bağlandıysa uyarı (veritabanı son sözü söyler).
+                # AMOUNT vardır. Tablo yalnız fiziksel addan TAHMİNLE bağlandıysa (sayıları atılıp kalan varlık adı,
+                # LG_211_01_CLFLINE → «CLFLINE» görünümü) okunan profil başka bir tablonun olabilir: aynı adı (LG_ önekli
+                # ya da öneksiz) taşıyan profillerden biri kolonu taşıyorsa ret yok, hiçbiri taşımıyorsa uyarı. Tablo
+                # adıyla, varlık adıyla ya da kalıbıyla bağlandıysa ret aynen: çıplak «CLFLINE» (görünüm) + taban tablonun
+                # kolonu, eleştirmenden önce `prefer_base_tables` ile LG_CLFLINE'a çevrilir; çevrilmemişse ret doğrudur.
                 node = nodes.get((c.table or "").upper()) if c.table else (next(iter(nodes.values())) if len(nodes) == 1 else None)
                 exact = node is not None and _resolved_exactly(node, prof)
-                if any(p.column(c.name) is not None for p in same_entity.get(_bare_of(prof.entity), ())):
+                if not exact and any(p.column(c.name) is not None for p in same_entity.get(_bare_of(prof.entity), ())):
                     continue
                 findings.append(Finding("UNKNOWN_COLUMN", "block" if exact else "warn",
                     f"{prof.entity} tablosunda {c.name} adında kolon yok."))

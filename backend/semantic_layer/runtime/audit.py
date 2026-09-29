@@ -1400,6 +1400,14 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                                      f"(INNER JOIN, {slot.mapping.entity} kaydı olmayan satırları düşürür)."))
 
     out += _excluded_groups_unmet(sq, tree, occ)
+    # «X bazında» asked and not placed: the answer must group by something — one total under a per-X question is a
+    # different question (2026-09-29, A044 sınıfı). Checked always, not only in strict mode.
+    if getattr(sq, "requested_breakdowns", None) and isinstance(tree, exp.Select) and not any(
+            s.args.get("group") is not None for s in tree.find_all(exp.Select)):
+        words = ", ".join(f"'{w}'" for w in sq.requested_breakdowns)
+        out.append(Unmet("grain", f"{words} bazında kırılım istendi; sorgu hiçbir şeye göre gruplamıyor",
+                         f"Sonucu {words} bazında grupla (GROUP BY); bu kırılıma ölçünün tablosundan ulaşılamıyorsa "
+                         f"NO_SQL yaz ve neden ulaşılamadığını söyle."))
 
     if not strict:
         return out + _closing(sq, tree, occ)

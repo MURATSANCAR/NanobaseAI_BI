@@ -408,3 +408,72 @@ def test_the_gate_refuses_an_answer_that_keeps_the_excluded_groups(catalog, prof
     unjoined = anti.replace("hx.INVOICEREF IS NULL", "1 = 1")
     assert any("hariç tuttuğu gruplar" in u.text for u in gate_report(sq, unjoined)), "a LEFT JOIN never tested IS NULL excludes nothing"
 
+
+# ---------------------------------------------------------------- K8b: istenen kırılım sessizce düşmez (A044 sınıfı)
+
+def test_a_breakdown_nothing_places_is_kept_as_an_undefined_word(catalog, profiles):
+    """«… yazar bazında»: no certified concept carries «yazar». It used to be dropped as grammar and one total came
+    back under a per-author question. Now it is a requested breakdown and a word the answer must account for."""
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Satış tutarı yazar bazında nasıl dağılıyor?", today=TODAY)
+    assert sq.requested_breakdowns == ["yazar"] and "yazar" in sq.unresolved and "yazar" not in sq.ignored, sq.to_dict()
+
+
+def test_a_placed_or_calendar_breakdown_is_not_a_requested_one(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    assert r.resolve("Kanal bazında satış tutarı", today=TODAY).requested_breakdowns == []
+    assert r.resolve("2026 ay bazında net ciro", today=TODAY).requested_breakdowns == []
+    assert r.resolve("Geçen yıla göre satış tutarı", today=TODAY).requested_breakdowns == [], "«göre» is a comparison too"
+
+
+def test_the_gate_refuses_an_answer_that_groups_by_nothing_under_a_requested_breakdown(catalog, profiles):
+    from semantic_layer.runtime.audit import gate_report
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Satış tutarı yazar bazında nasıl dağılıyor?", today=TODAY)
+    total = "-- yorum: 'yazar' → kırılım\nSELECT SUM(i.NETTOTAL) AS t FROM LG_411_01_INVOICE i WHERE i.CANCELLED = 0 AND i.TRCODE IN (7,8,9)"
+    grouped = ("-- yorum: 'yazar' → CLCARD.DEFINITION_\nSELECT c.DEFINITION_, SUM(i.NETTOTAL) AS t FROM LG_411_01_INVOICE i "
+               "JOIN LG_411_CLCARD c ON c.LOGICALREF = i.CLIENTREF WHERE i.CANCELLED = 0 AND i.TRCODE IN (7,8,9) GROUP BY c.DEFINITION_")
+    assert any("bazında kırılım istendi" in u.text for u in gate_report(sq, total))
+    assert not [u for u in gate_report(sq, grouped) if "bazında kırılım istendi" in u.text]
+
+
+def _family_world(store, *, with_breakdown_word=True):
+    """Two disconnected worlds: a ledger measure with no author anywhere near it, and an event-card measure that
+    reaches persons through a link table. The event-card measure was narrowed away from the ledger's name."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+
+    def prof(entity, cols, rels=()):
+        return SchemaProfile(datasource_id=DS, table_name=entity.lower(), table_pattern=entity.lower(), entity=entity,
+                             schema_name="crm.dbo" if entity != "LEDGER" else "dbo",
+                             columns=[ColumnProfile(name=n, data_type=t, is_primary_key=(n == "ID")) for n, t in cols],
+                             primary_key=["ID"], relationships=list(rels), row_count=100)
+    profiles = [prof("LEDGER", [("ID", "int"), ("AMOUNT", "decimal(18,2)"), ("DATE_", "datetime")]),
+                prof("EVENT", [("ID", "int"), ("COST", "decimal(18,2)")]),
+                prof("LINK", [("ID", "int"), ("EVENT_ID", "int"), ("PERSON_ID", "int")],
+                     rels=[{"column": "EVENT_ID", "ref_entity": "EVENT", "ref_column": "ID"},
+                           {"column": "PERSON_ID", "ref_entity": "PERSON", "ref_column": "ID"}]),
+                prof("PERSON", [("ID", "int"), ("NAME", "nvarchar(200)"), ("ISWRITER", "bit")])]
+    for p in profiles:
+        store.upsert_profile(p)
+    _certify(store, "olay gideri", SemanticType.METRIC, Mapping(concept_id="", entity="LEDGER", table_pattern="ledger",
+                                                                formula="SUM(LEDGER.AMOUNT)"))
+    card = _certify(store, "kart olay gideri", SemanticType.METRIC, Mapping(concept_id="", entity="EVENT", table_pattern="event",
+                                                                            formula="SUM(EVENT.COST)"))
+    store.update_concept(card.id, explain={"narrowed_from": {"term": "olay gideri"}})
+    if with_breakdown_word:
+        _certify(store, "yazar kaydı", SemanticType.COLUMN, Mapping(concept_id="", entity="PERSON", table_pattern="person",
+                                                                   column="ISWRITER", operator="COLUMN"))
+    EvidenceEngine(store, min_support=3).run(TENANT, DS, profiles)
+    return SemanticResolver(store, TENANT, DS, profiles)
+
+
+def test_a_sibling_measure_that_reaches_the_breakdown_is_read_with_a_scope_note(store):
+    sq = _family_world(store).resolve("Olay gideri yazar bazında nasıl dağılıyor?", today=TODAY)
+    metric = next(s for s in sq.slots if s.semantic_type == SemanticType.METRIC)
+    assert metric.mapping.entity == "EVENT" and (metric.explain or {}).get("source") == "breakdown_family", sq.to_dict()
+    assert any("kırılım için 'kart olay gideri'" in e for e in sq.explanation), sq.explanation
+    assert "yazar" in sq.unresolved, "the breakdown itself is still the model's to place, and the gate's to check"
+
+
+def test_without_a_reachable_breakdown_the_measure_stays_and_the_word_stays_undefined(store):
+    sq = _family_world(store, with_breakdown_word=False).resolve("Olay gideri yazar bazında nasıl dağılıyor?", today=TODAY)
+    metric = next(s for s in sq.slots if s.semantic_type == SemanticType.METRIC)
+    assert metric.mapping.entity == "LEDGER" and sq.requested_breakdowns == ["yazar"] and "yazar" in sq.unresolved

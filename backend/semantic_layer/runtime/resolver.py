@@ -86,6 +86,9 @@ _DEGREE_ADVERBS = frozenset("tamamen tumuyle butunuyle hala halen henuz gercekte
 _COMPARATORS = frozenset("altinda altindaki alti ustunde ustundeki ustu uzerinde uzerindeki uzeri "
                          "asagisinda dusuk asan asani".split())
 _BREAKDOWN_CUES = frozenset("bazinda bazli basina gore kiriliminda kirilimli ozelinde".split())
+#: Yalnız kırılım isteyen işaretler. «göre» (geçen yıla göre, hedefe göre) ve «başına» (kişi başına) karşılaştırma ya da
+#: oran da kurar; bir kırılımın düştüğü onlardan okunmaz.
+_EXPLICIT_BREAKDOWN = frozenset("bazinda bazli kiriliminda kirilimli ozelinde".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
@@ -1250,6 +1253,12 @@ class SemanticResolver:
         #     does not define, the schema may still contain: the question is then about a column
         #     nobody wrote down, not about something this deployment has no answer for.
         self._from_data(sq, index, qf, consumed)
+
+        # 6a2) "yazar bazında": a breakdown was asked for and nothing placed it. It is not grammar to ignore — the
+        #      answer would be one total under a per-author question. The word stays in front of the model as an
+        #      undefined term, the gate refuses an answer that groups by nothing, and when a sibling certified measure
+        #      (same name family) can reach the breakdown, that measure is read instead (with a scope note).
+        self._requested_breakdowns(sq, qf, hits, consumed, index)
 
         # 6b2) "kdvli iade tutarı": a word that only ever occurs in the names of certified measures, sitting
         #      on a measure it does not name. Sent on as an undefined word, the model wrote its own formula —
@@ -3327,6 +3336,114 @@ class SemanticResolver:
                 f"‘{phrase}’ katalogda tanımlı bir ölçü değil. ‘{tok}’ şu tanımlı ölçülerde geçiyor: "
                 f"{', '.join(names)}. Hangisini kastediyorsunuz?")
             sq.explanation.append(f"'{tok}' bir ölçü niteleyicisi; '{measure.term}' ile birlikte tanımlı değil — model formül yazmadı")
+
+    def _requested_breakdowns(self, sq: SemanticQuery, qf: Any, hits: list[ResolvedSlot], consumed: set[int],
+                              index: dict) -> None:
+        """Words right before an explicit breakdown marker ("yazar bazında") that no slot placed."""
+        placed_group_ends = {s.span[1] for s in sq.group_by if s.span}
+        words = []
+        for k in range(1, len(qf.tokens)):
+            if fold(qf.tokens[k]) not in _EXPLICIT_BREAKDOWN:
+                continue
+            w = k - 1
+            tok = qf.tokens[w]
+            if w in consumed or (w + 1) in placed_group_ends or tok.isdigit() or stem(tok) in STOPWORDS_S \
+                    or stem(tok) in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
+                continue
+            if any(h.span and h.span[0] <= w < h.span[1] for h in hits):
+                continue
+            words.append(tok)
+        if not words:
+            return
+        sq.requested_breakdowns = list(dict.fromkeys(words))
+        for tok in sq.requested_breakdowns:
+            if tok in sq.ignored:
+                sq.ignored.remove(tok)
+            if tok not in sq.unresolved:
+                sq.unresolved.append(tok)
+        sq.explanation.append("istenen kırılım yerleşmedi: " + ", ".join(f"'{w}' bazında" for w in sq.requested_breakdowns)
+                              + " — sessizce düşürülmez; cevap gruplamalı ya da açıkça reddedilmeli")
+        self._breakdown_sibling_measure(sq, hits, index)
+
+    #: Kırılımın ölçünün tablosundan en çok kaç ilişki adımıyla ulaşılabilir sayılacağı (bağ tablosu dahil: 2).
+    _BREAKDOWN_HOPS = 2
+
+    def _reach(self, entity: str, hops: int) -> set[str]:
+        """Entities reachable from `entity` over catalog relationships (either direction), up to `hops` steps."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        if getattr(self, "_rel_graph_for", None) is not self.profiles:
+            graph: dict[str, set[str]] = {}
+            for p in self.profiles:
+                for r in p.relationships or []:
+                    a, b = bare(p.entity), bare(str(r.get("ref_entity") or ""))
+                    if a and b and a != b:
+                        graph.setdefault(a, set()).add(b)
+                        graph.setdefault(b, set()).add(a)
+            self._rel_graph, self._rel_graph_for = graph, self.profiles
+        seen, frontier = {bare(entity)}, {bare(entity)}
+        for _ in range(hops):
+            frontier = {n for e in frontier for n in self._rel_graph.get(e, ())} - seen
+            seen |= frontier
+        return seen
+
+    def _breakdown_sibling_measure(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
+        """The measure read cannot reach the breakdown asked for, a sibling certified measure (the same name family:
+        its name carries every word of the one read, or it was narrowed away from this very name) can: read the sibling.
+
+        2026-09-29 (A044 sınıfı): «etkinlik giderleri yazar bazında» reads the ledger's event/fair expense, which has
+        no author; the CRM event-card expense — narrowed from «etkinlik gideri» when the ledger took the name — reaches
+        the author through the event↔contact link table. What the breakdown word names is read from the certified
+        vocabulary (COLUMN/ENTITY concepts carrying the word), never from a list. Exactly one reachable sibling, or
+        nothing changes and the word stays undefined (an honest refusal)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        metrics = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.concept_id]
+        if len(metrics) != 1:
+            return
+        metric = metrics[0]
+        word_stems = {stem(w) for w in sq.requested_breakdowns}
+        targets = {bare(m.entity) for key, senses in index.items() if word_stems & set(key.split())
+                   for c, maps in senses if c.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY)
+                   for m in maps if m.entity}
+        if not targets or self._reach(metric.mapping.entity, self._BREAKDOWN_HOPS) & targets:
+            return
+        key = str((metric.explain or {}).get("normalized") or normalize_term(metric.term))
+        family = set(key.split())
+        siblings: dict[str, tuple] = {}
+        for k, senses in index.items():
+            for c, maps in senses:
+                if c.semantic_type != SemanticType.METRIC or c.id == metric.concept_id or not maps:
+                    continue
+                narrowed = normalize_term(str(((c.explain or {}).get("narrowed_from") or {}).get("term") or ""))
+                if narrowed != key and not family <= set(c.normalized_term.split()):
+                    continue
+                if self._reach(maps[0].entity, self._BREAKDOWN_HOPS) & targets:
+                    siblings.setdefault(c.id, (c, maps))
+        if len(siblings) != 1:
+            return
+        c, maps = next(iter(siblings.values()))
+        slot = self._slot_from_senses(c.normalized_term, metric.term, [(c, maps)], metric.span)
+        if slot is None:
+            return
+        slot.status = "INFERRED"
+        note = (f"'{metric.term}' kırılım için '{c.term}' ({maps[0].entity}) olarak okundu: "
+                f"'{(metric.explain or {}).get('canonical') or metric.term}' ({metric.mapping.entity}) "
+                f"{', '.join(sq.requested_breakdowns)} kırılımına ulaşamıyor. Kapsam: yalnız '{c.term}' kaydının dolu "
+                f"olduğu satırlar; toplam, asıl ölçüden farklı olabilir.")
+        slot.explain = {**(slot.explain or {}), "source": "breakdown_family", "why": note,
+                        "replaced": (metric.explain or {}).get("canonical") or metric.term}
+        hits[hits.index(metric)] = slot
+        sq.slots = hits
+        sq.explanation.append(note)
+        # The default year was stamped for the measure just replaced; it stays only if the sibling is dated too.
+        if sq.temporal and all((t.params or {}).get("default") for t in sq.temporal):
+            dated = (self.conventions.time_column(slot.mapping.entity)
+                     and not (slot.mapping.extra or {}).get("undated")
+                     and not (slot.mapping.extra or {}).get("state_measure"))
+            if not dated:
+                sq.temporal = []
+                sq.explanation.append("varsayılan dönem geri alındı: kırılıma ulaşan ölçünün tarihi yok → tüm kayıtlar")
 
     #: How far back the record word of a split measure name may sit ("etkinliklere harcadığımız toplam gider": 3).
     _SPLIT_NAME_REACH = 3
