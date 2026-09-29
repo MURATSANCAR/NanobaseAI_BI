@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — ZEKI AI CHAT markası, ayrı depo ve gerçek sunucu kabulü
+
+- Sohbetin yerel deposu `~/Documents/GitHub/zeki-ai-chat` olarak adlandırıldı; mevcut SSO/dil düzeltmeleri `main`e birleştirildi, birleştirilen yerel dallar kaldırıldı. Bu BI deposunda ürün kodu değişmedi; bağlantı/durum belgeleri güncellendi.
+- Ayrı depoda çeviriler, SVG/React/PNG logolar, başlıklar ve mevcut e-posta/Livechat/IRC marka ayarları ZEKI AI CHAT oldu. Eski üretici logolu Heroku tanımı kaldırıldı. Lisans/telif bildirimleri, teknik paket/protokol kimlikleri ve özellik lisans kontrolleri korundu.
+- Kaynak `git archive main` ile test sunucusunda `~/zeki-ai-chat` dizinine taşındı; eski kirli kaynak ağacı üzerine yazılmadı. İmaj `zeki-ai-chat:8.5.3-c1cf845`, kod `c1cf84536132c53bc1ec5a74e7d21ea28c97b9f3`; kaynak karşılaştırması 9.581 dosya/fark 0, AppleDouble 0. MongoDB yedeği ve geri dönüş imajları korundu. Müşteri VM'ine dağıtım yapılmadı.
+- Gerçek portal/SSO, mevcut `timasai` ve gerçek MongoDB üzerinde kabul: 320/390/768/1440 px ana ekran oturumu açık; sayfa genişlikleri birebir, görünür üretici metni 0, JS hatası 0. İlk sürümde 320 px'de 9 px taşma bulundu; arama kapsayıcılarına `minWidth=0` düzeltmesi son imajda yeniden doğrulandı. `Site_Name`, `Livechat_title`, `Email_Header`, `Email_Footer`, `IRC_Description` API cevabı ↔ bağımsız DB ↔ beklenen içerik 5/5 eşleşti. Yerel test çalıştırılmadı.
+- Ağ gözlemi yalnız sınanan tarayıcı akışlarını kapsar: tek alan adı `portal.nanobase.ai`. Üretici bulut/marketplace/telemetri yollarının kapatılması önceki kodda zaten vardı. Bütün özelliklerin ve arka plan işlerinin ağ/işlev kabulü **DOĞRULANAMADI**; sınırsız özellik kabulü iddia edilmedi.
+- Temizlik: yeni kullanıcı 0; toplam 3 kısa süreli portal oturumu + 9 sohbet jetonu silindi, kalan kontrol jetonu/özel oturum dosyası 0. Gerçek hesap denetim izleri korunur. Ayrı depoda kanıt: `docs/evidence/2026-09-29-branding/`, ayrıntı `docs/zeki-branding-audit.md`.
+- GitHub hedefi `git@github.com:MURATSANCAR/zeki-ai-chat.git`; SSH hesabı doğrulandı ancak hedef `Repository not found` döndü. Repo oluşturmak için API/CLI kimliği yok; GitHub yayını bekliyor. Kaynak üretici deposuna push yapılmadı.
+
 ## 2026-09-29 (gece, 5) — İK: iki kırmızı test kökten düzeltildi (güvenlik envanteri, İK sayfa yetkisi)
 
 - **Bulgu:** iki test personel portalı commit'inden (`151ee17d6`) beri kırmızıydı, M60 (`51d24588d`) listeyi büyüttü. (1) `test_registry_covers_every_bridge_table_with_personal_columns`: `semantic_hr_people`, `semantic_hr_doc_requests` (portal) ve `semantic_hr_leave_requests` (M60) kişisel veri kolonu taşıyor ama `data_security_inventory.json`'da yoktu. (2) `test_hr_pages_are_explicit_and_everyone_does_not_see_them`: portal ve izin sayfaları (`ik-anasayfa|profilim|rehber|duyurular|evrak|sss|izin|izin-ekip`) belgelenmiş kararla Herkes'e açık, test ise her İK sayfasının explicit olmasını istiyordu.
