@@ -18,10 +18,12 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "backend"))
+_up = Path(__file__).resolve().parents  # repo içinde <kök>/backend; tek başına kopyalandıysa (--api) gerekmez
+sys.path.insert(0, str(_up[min(3, len(_up) - 1)] / "backend"))
 
 TOL_TL = 0.01
 TOL_PCT = 1e-6
@@ -46,12 +48,15 @@ def main() -> int:
     ap.add_argument("formlar")
     ap.add_argument("--api", help="portal kökü, ör. https://portal.nanobase.ai/timas")
     ap.add_argument("--out", help="sonuç JSON")
+    ap.add_argument("--bekle", type=float, default=0.0, help="uç istekleri arası saniye (ön kapıda istek sınırı olan kurulumlar, ör. müşteri VM'i)")
     a = ap.parse_args()
     forms = json.loads(Path(a.formlar).read_text(encoding="utf-8"))
     rows, bad = [], 0
     for f in forms:
         name = f"{f['file']} [{f['sheet']}]"
         try:
+            if a.api and a.bekle:
+                time.sleep(a.bekle)
             res = via_api(a.api, f) if a.api else via_module(f)
         except Exception as e:  # noqa: BLE001
             rows.append({"form": name, "durum": "HATA", "hata": str(e)[:300]})
