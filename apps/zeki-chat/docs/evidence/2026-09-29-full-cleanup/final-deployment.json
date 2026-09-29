@@ -1,0 +1,11 @@
+{
+  "version": "6c6d214d4",
+  "image": "zeki-ai-chat:8.5.3-6c6d214d4",
+  "database": "zeki",
+  "previousImage": "zeki-ai-chat:8.5.3-a1aec595a",
+  "backupBytes": 477939,
+  "backupSha256": "d1653190280d330aa337aa2f144de57ad11ea47cfbe86975e6c1747dbb59804b",
+  "backupVerified": true,
+  "migrationVerified": true,
+  "ready": true
+}

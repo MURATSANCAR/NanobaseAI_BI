@@ -1,0 +1,20 @@
+{
+  "databaseNames": [
+    "admin",
+    "config",
+    "local",
+    "zeki"
+  ],
+  "applicationDatabase": "zeki",
+  "collections": 90,
+  "indexes": 426,
+  "findings": [],
+  "obsoleteSettingCount": 0,
+  "botMatches": true,
+  "counts": {
+    "users": 3,
+    "zeki_room": 1,
+    "zeki_message": 1
+  },
+  "passed": true
+}
