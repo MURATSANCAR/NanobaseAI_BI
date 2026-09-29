@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (17:10) — Sözleşme karşılaştırma: HEIC yükle → oku → karşılaştır uçtan uca geçti
+
+- **Neden:** 16:45'te zincir okuma adımında duruyordu (GPU kart servisinde `/v1/read` yoktu). Ayrı oturum ucu kurdu (test sunucusundan `POST 127.0.0.1:18889/v1/read` anahtarsız 401, köprü günlüğünde 16:58'de 200).
+- **Deneme (test sunucusu, son main `96dcff2dc`, yan köprü :8801, timasai kısa oturumu):** metinli örnek HEIC → yükleme 201, JPEG'e çevrildi, OCR ile okundu, 7 madde; altı madde başlığının altısı da okundu (taraflar, konu, telif, süre, fesih, yetkili mahkeme); arşive karşı karşılaştırma 200. Gerçek iPhone fotoğrafı (12 MP, pasif sözleşmenin eki, yalnız okuma) → OCR 1 sayfa, en düşük güven %99,6, **19 madde**, madde türü 12'si Zeki AI ile, 7'si belirsiz (kural 0), arşive karşı 200. İki yükleme de silindi; fotoğrafın sunucudaki kopyası silindi; yalnız bu denemenin oturumu silindi (1).
+- **Kalan:** müşteri VM'inde okuma, TT GPU nginx beyaz listesinde `/editor/cards/v1/read` location'ına bağlı — okuma ucunu kuran oturumun işi; VM'de uçtan uca denenmedi.
+
 ## 2026-09-29 (17:30) — Belge okuma (OCR) GPU'da açıldı: kart servisine `/v1/read`; Sözleşme karşılaştırmada fotoğraf okunuyor
 
 - **Sorun:** `doc_read` taranmış sayfa ve fotoğrafı GPU kart servisinin `POST /v1/read` ucuna gönderiyor; GPU'daki kart servisi `0.15.9-ce0fd1ce-ses2` idi ve bu ucu içermiyordu (d47ac76bf ce0fd1ce'den sonra). Test sunucusunda her OCR «Taranmış sayfalar okunamadı: belge okuma servisi cevap vermedi» (18889 tüneli 404) veriyordu; köprü günlüğünde 7 gündür başarılı OCR yok. Etkilenen: sözleşme karşılaştırma (HEIC dahil), M6 şart çıkarma, şartname, özgeçmiş, sektör raporu, sertifika.
