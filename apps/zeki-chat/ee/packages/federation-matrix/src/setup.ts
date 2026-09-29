@@ -102,6 +102,10 @@ export function configureFederationMatrixSettings(settings: {
 }
 
 export async function setupFederationMatrix() {
+	if (process.env.ZEKI_LOCAL_ONLY === 'true') {
+		return;
+	}
+
 	await init({
 		dbConfig: {
 			uri: process.env.MONGO_URL || 'mongodb://localhost:3001/meteor',

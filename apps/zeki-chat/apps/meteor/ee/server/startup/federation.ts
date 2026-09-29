@@ -1,25 +1,26 @@
 import { api, FederationMatrix as FederationMatrixService } from '@zeki.chat/core-services';
-import { FederationMatrix, configureFederationMatrixSettings, setupFederationMatrix } from '@zeki.chat/federation-matrix';
 import { InstanceStatus } from '@zeki.chat/instance-status';
 import { Capabilities } from '@zeki.chat/capabilities';
 import { Logger } from '@zeki.chat/logger';
 
 import { settings } from '../../../app/settings/server';
 import { StreamerCentral } from '../../../server/modules/streamer/streamer.module';
-import { registerFederationRoutes } from '../api/federation';
 
 const logger = new Logger('Federation');
 
 let serviceEnabled = false;
 
+const isLocalOnly = () => process.env.ZEKI_LOCAL_ONLY === 'true' || settings.get('Zeki_Local_Only') === true;
+
 const configureFederation = async () => {
 	// only registers the typing listener if the service is enabled
-	serviceEnabled = (await Capabilities.hasModule('federation')) && settings.get('Federation_Service_Enabled');
+	serviceEnabled = !isLocalOnly() && (await Capabilities.hasModule('federation')) && settings.get('Federation_Service_Enabled');
 	if (!serviceEnabled) {
 		return;
 	}
 
 	try {
+		const { configureFederationMatrixSettings } = await import('@zeki.chat/federation-matrix');
 		configureFederationMatrixSettings({
 			instanceId: InstanceStatus.id(),
 			domain: settings.get('Federation_Service_Domain'),
@@ -38,6 +39,14 @@ const configureFederation = async () => {
 };
 
 export const startFederationService = async (): Promise<void> => {
+	// A disabled setting alone is insufficient: SDK initialization opens MongoDB,
+	// creates its own collections and schedules background event processing.
+	if (isLocalOnly()) {
+		return;
+	}
+
+	const { FederationMatrix, setupFederationMatrix } = await import('@zeki.chat/federation-matrix');
+	const { registerFederationRoutes } = await import('../api/federation');
 	api.registerService(new FederationMatrix());
 
 	await registerFederationRoutes();

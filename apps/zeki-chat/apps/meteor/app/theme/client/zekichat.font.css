@@ -5,3 +5,8 @@
 	font-display: block;
 	src: url('/fonts/zekichat.woff2') format('woff2');
 }
+
+/* Keep the local icon font selected even when the component stylesheet loads later. */
+.rcx-icon.rcx-icon {
+	font-family: ZekiChat;
+}
