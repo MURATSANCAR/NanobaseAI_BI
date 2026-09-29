@@ -32,6 +32,8 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
+from semantic_layer.firm_scope import firm_in_scope
+
 log = logging.getLogger("semantic.events.sources")
 TZ = ZoneInfo("Europe/Istanbul")
 UTC = ZoneInfo("UTC")
@@ -363,11 +365,10 @@ def account(domain_name: Any) -> Optional[str]:
 
 def firms_by_year(period_rows: list[dict[str, Any]]) -> dict[int, str]:
     """Her yıl hangi Logo firmasında (yıllar ayrı firma numarasıdır; kopya firmalar dışlanır, çakışmada büyük numara)."""
-    skip = {int(x) for x in os.environ.get("SEMANTIC_EXCLUDE_CONTEXT", "015,016").split(",") if x.strip().isdigit()}
     out: dict[int, int] = {}
     for r in period_rows:
         firm = ival(r.get("firmnr"))
-        if firm is None or firm in skip:
+        if firm is None or not firm_in_scope(firm):
             continue
         beg, end = dayiso(r.get("begdate")), dayiso(r.get("enddate"))
         if not beg or not end:

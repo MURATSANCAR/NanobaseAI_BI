@@ -20,6 +20,7 @@ from typing import Any, Callable, Optional
 
 from semantic_bridge.pricing import model as M
 from semantic_bridge.pricing import sources as SRC
+from semantic_layer.firm_scope import firm_in_scope
 
 log = logging.getLogger("semantic.pricing")
 
@@ -124,8 +125,8 @@ class Builder:
         found = []
         for r in self._q("logo_kopya", "logo", SRC.LOGO_COPIES_SQL):
             firm = str(r.get("firma") or "")
-            if not re.match(r"^\d{3}$", firm):
-                continue
+            if not re.match(r"^\d{3}$", firm) or not firm_in_scope(firm):
+                continue          # başka şirketin / test firmasının kopyası ölçülmez (SEMANTIC_FIRMS)
             rng = self._q("logo_kopya", "logo", SRC.LOGO_COPY_RANGE_SQL.format(f=firm))
             if not rng or not rng[0].get("son"):
                 continue

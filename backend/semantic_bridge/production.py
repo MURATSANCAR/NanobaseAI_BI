@@ -43,6 +43,8 @@ from zoneinfo import ZoneInfo
 # globallerinde arar; fonksiyon içinde içe aktarılırsa `request` sorgu parametresi sanılır ve her uç 422 döner.
 from fastapi import HTTPException, Request
 
+from semantic_layer.firm_scope import firm_in_scope
+
 from semantic_bridge import production_plan as plan_mod
 from semantic_bridge import production_store as store
 from semantic_bridge.production_plan import KEYS, MILESTONES, STAGES, parse_day
@@ -411,7 +413,7 @@ class Source:
                 have = {str(r["name"]).upper() for r in _rows(run(logo, "logo", "logo.tablolar", LOGO_TABLES_SQL, 1000))}
                 for r in _rows(run(logo, "logo", "logo.donemler", logo_periods_sql(since), 1000)):
                     firm, period = f"{int(r['firma']):03d}", f"{int(r['donem']):02d}"
-                    if f"LG_{firm}_PRODORD" not in have:
+                    if f"LG_{firm}_PRODORD" not in have or not firm_in_scope(firm):
                         continue
                     firms.append(firm)
                     fp = {"firm": firm, "period": period}

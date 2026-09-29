@@ -29,6 +29,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from semantic_layer.firm_scope import firm_in_scope
+
 log = logging.getLogger("semantic.budget.sources")
 
 QUERY_TIMEOUT = int(os.environ.get("BUDGET_QUERY_TIMEOUT_SEC", "1800"))
@@ -84,25 +86,15 @@ def runner(path: str, timeout: Optional[int] = None) -> Runner:
 # ------------------------------------------------------------------ yıl → Logo firması
 
 
-def _excluded_firms() -> set[int]:
-    raw = os.environ.get("SEMANTIC_EXCLUDE_CONTEXT", "015,016")
-    out = set()
-    for part in raw.split(","):
-        part = part.strip()
-        if part.isdigit():
-            out.add(int(part))
-    return out
-
-
 def firms_by_year(run: Runner) -> dict[int, str]:
     """Her yıl hangi firma numarasında: `L_CAPIPERIOD` dönemleri. Aynı yılı iki firma tutuyorsa (2015/2016 kopyaları)
-    dışlanan kopya atlanır, yine iki kalırsa büyük numara (sonraki düzeltmeler onda) alınır."""
+    dışlanan kopya atlanır, yine iki kalırsa büyük numara (sonraki düzeltmeler onda) alınır. Aynı sunucudaki başka
+    şirketlerin ve test firmalarının dönemleri `SEMANTIC_FIRMS` ile dışarıda kalır (bkz. `semantic_layer.firm_scope`)."""
     rows = run("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1")
-    skip = _excluded_firms()
     out: dict[int, int] = {}
     for r in rows:
         firm = int(r["FIRMNR"])
-        if firm in skip:
+        if not firm_in_scope(firm):
             continue
         beg, end = _day(r["BEGDATE"]), _day(r["ENDDATE"])
         if not beg or not end:
