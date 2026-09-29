@@ -5,7 +5,7 @@
 - **Test sunucusu:** canlı ağaçta main'den farklı 46 dosya vardı (31'i main'in eski sürümü, 15'i yeni; main dışı yama 0). Hepsi `git archive main`'den kondu; çalışan koda etki eden yalnız `src/canvas/kampus/DestekCard.tsx` → tsc temiz, ön yüz derlendi ve yayınlandı (`index-BVfiR10d.js`), köprü kodu değişmediği için yeniden başlatılmadı. Sonra 3.287 izlenen dosyada main (`81efd969`) ile fark 0, `._*` 0. Yeni `timas-pazar-dagitim.timer` yalnız ağaca kondu, systemd'ye kurulmadı (sahibi pazar işi; önce elle koşturulmalı).
 - **Dallar:** `git cherry` ile main'de olmayan commit'i 0 olan 38 yerel dal kapatıldı (15'i temiz worktree'siyle) + 2 kopuk worktree. Dokunulmayanlar: içeriği main'de olsa da son 3 saatte commit almış / kilitli / kirli 13 worktree (açık oturumlar) ve main'de olmayan commit'i olan 31 dal (18'i main'le çakışıyor) — birleştirme kararı sahibine/kullanıcıya bırakıldı. Uzak depoda içeriği main'de olan 6 dalın silinmesi izin denetimine takıldı, komut kullanıcıda.
 ## 2026-09-29 — Stok kartı mobilde sağdan kırpılıyordu: ızgara kolonu tabloyla genişliyordu (dalda; test sunucusunda doğrulanmadı)
-## 2026-09-29 — Stok kartı mobilde sağdan kırpılıyordu: ızgara kolonu tabloyla genişliyordu (dalda; canlı test portalında doğrulandı, kurulmadı)
+## 2026-09-29 — Stok kartı mobilde sağdan kırpılıyordu: ızgara kolonu tabloyla genişliyordu (main `eb433b32d`; test sunucusuna kuruldu, VM'e kurulmadı)
 
 - **Belirti:** `/timas/stok/:stokKodu` 320/390/768 px'te «Talep ve hareket» `dl`'inin sağ kolonu, «Zeki AI talep tahmini» kartları ve «Dağıtımcı ve perakende» kesiliyordu; sayfa düzeyinde taşma yoktu.
 - **Neden:** `grid gap-3 lg:grid-cols-2` mobilde kolon tanımsız → örtük `auto` kolon, en geniş hücrenin min-content'i kadar genişler. «Depo ve raf» panelindeki `TableWrap` tablosu `min-w-[640px]`; kolon 664 px'e çıkıyor, aynı kolondaki bütün paneller o genişlikte çiziliyor ve `StockFrame`'in `main`i (`overflow-y-auto` → yatayda da kaydırma kutusu) sağını kesiyordu. Küçük bir örnekle 390 px'te ölçüldü: önce kolon 664 px, düzeltmeyle 374 px.
@@ -35,6 +35,7 @@
 - **Uçtan uca (VM, gerçek e-posta):** e-posta → kayıt, SLA tarihleri, birim; temsilci yanıtı talep edene ulaştı, yanıt
   aynı kayda bağlandı; çözümde SLA «Fulfilled»; çözülmüş kayda yanıt kaydı yeniden açtı. Otomatik bildirim e-postaları
   (Drive, noreply, liste) kayıt açmaz: zeki@ kutusunda 51'in 48'i süzüldü; çöp kayıtlar silindi.
+- **Test sunucusu kurulumu (16:04):** yalnız iki dosya (sunucudaki kopya düzeltme öncesi main ile md5 aynıydı; kurulumdan sonra main ile aynı), derleme `index-aOsfcxqa.js`, arada başka yayın yok, `._*` 0. Yayındaki kodla (eklenmiş kural yok) stok kartı 320/390/768/1440 px: kırpılan 0, `main` taşması 0, mobilde kolon 296/366/616 px, masaüstünde 2×636 px.
 
 ## 2026-09-29 (15:40) — Stüdyo ses işleri kuruldu: fısıltı düzeyi, insan kaydı eksikleri, yetki kapısı, VM yükleme sınırı
 
