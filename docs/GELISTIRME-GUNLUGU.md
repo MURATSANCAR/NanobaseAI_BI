@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (22:15) — Müşteri VM'ine `411dd7be9`: hız 4, hazır cevap diski, Zeki kapı; katalog VM'de de yazıldı
+
+- **Ön denetim:** VM'deki son kurulum `1c615b80` ⊂ `411dd7be9` (geriye sarma yok); çakışma işareti 0; arşiv test sunucusunda açılıp `semantic_bridge.app` yüklendi.
+- **Kurulum (`vm-deploy-411dd7be`, `/tmp/vm-deploy-411dd7be.log`):** EXIT=0; bridge/web/login/jobs yeniden kuruldu, db dokunulmadı; rapor önbelleği 7 → 7 korundu; nginx -t geçti; oturumsuz uçlar 200/401. VM `._*` 0, imaj `nanobase-bi-bridge:latest`. Sürüm kaydı ilk koşuda «bilinmiyor» yazdı (CODE_SHA verilmemişti, ortam dosyası root'a ait) — iki köprüye `411dd7be9` ile yeniden yazıldı (VM kayıt 21, test sunucusu kayıt 2).
+- **Katalog:** kod kurulduktan sonra VM Q63'te hâlâ 9.275 ₺ (CRM alanı) dedi — VM kataloğu ayrı Postgres'te. `2026-09-29-etkinlik-fuar-gideri.py` ve `…kayit-adi-kolonlari.py` VM köprü konteynerinde kuru koşu (`--olc`: 2026 = 4.831.871,56 · 2025 = 6.625.966,51, test sunucusuyla aynı) → `--apply` (sem_fb2c1db9b29d CERTIFIED, iki CRM kavramı «crm etkinlik kartı gideri», işlem tipi kayıt adı).
+- **VM doğrulama:** «Etkinliklere harcadığımız toplam gider…» → 4.831.871,56 ₺; «…yazar bazında…» → 5 yazar satırı (test sunucusuyla aynı; sıralama/etkinlik sayısı açık işi burada da geçerli).
+
 ## 2026-09-29 — ZEKI AI CHAT kaynağı BI deposuna alındı
 
 - Kullanıcının «BI uygulaması kodu içine at» talebiyle ayrı sohbet deposunun `e7334b0` main ağacı bütünüyle `apps/zeki-chat/` altına alındı; ayrı Git/submodule yok. Son canlı kabulün `9b12e38` uygulama kodu, tam yerel ağ korumaları, paketler, logo, Docker dosyaları ve kabul kanıtları birlikte taşındı. Git dışı sunucu sırları/bağımlılık klasörleri taşınmadı.
