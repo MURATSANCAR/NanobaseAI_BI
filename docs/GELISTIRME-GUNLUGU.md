@@ -1,5 +1,18 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (13:20) — Excel indirme: düzeltmeler test sunucusunda, set kart listesi ekranı da denendi
+
+- **Kurulum (`bb527271`):** 8 dosya (md5 = değişiklik öncesi main), derleme, köprü yeniden başladı. `cockpit/dist/index.html`
+  12:19'da başka oturumun root kurulumuyla root'a geçmişti; yeni paketler kopyalandı (aynı adlı dosyalar içerik olarak aynı,
+  `cmp` ile denetlendi), `index.html` sudo ile yazıldı. Portal `index-D-pg7UdU.js`; Kampüs paketinde «Rehberi indir (Excel)» var.
+- **Set kart listesi ekranı (kullanıcı: «hadi dene»):** test sunucusunda portalda açılmış set yoktu. `set_karti_deneme.py`:
+  taslak set API'den açıldı (`MS-2026-0931`, iki gerçek kitap), durumu yalnız bu kayıt için «kart-bekliyor» yapıldı (onay dört
+  göz ister, başka kişi taklit edilmedi), tarayıcıda Excel düğmesi: 6/6 geçti (11 satır hücre hücre aynı, 390 px taşma yok);
+  sonra taslağa alınıp uygulamanın silme yoluyla silindi, kayıt ve bileşen 0. Numara `MS-2026-0931` boşta kaldı.
+- **Test sürecinde bulunan iki tuzak:** (1) 8794 portunu 12:28'de başka oturumun yan köprüsü aldı, test ona gitti → boş port
+  seçiliyor; (2) süreç canlı köprünün hazır cevap klasörünü kullanıyordu, açılışta bütün kişilerin kayıtlarını tazelemeye çalışıp
+  kilitlendi → `yerinde.py` artık süreç başına geçici klasör kullanır.
+
 ## 2026-09-29 (akşam) — Kitap pazarı verisi uçtan uca incelendi; stok vekili Logo ile doğrulandı; ekran kullanım haritası
 
 - **Kullanıcı:** «verileri uçtan uca incele, ekranlarda nerede nasıl kullanabileceğimizi çıkar.»
