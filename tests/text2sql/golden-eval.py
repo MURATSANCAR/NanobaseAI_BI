@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import date
@@ -35,6 +36,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--kind", default="base-table", help="base-table | view | all")
     ap.add_argument("--shard", default="", help="I/N: yalnız bu parçanın vakaları (paralel koşu)")
     ap.add_argument("--merge", nargs="*", default=None, help="parça çıktılarını birleştir, ölçüm yapma")
+    ap.add_argument("--selector", choices=("off", "on"), default="off",
+                    help="tablo seçici (model); taban seçicisiz kaydedildi, karşılaştırma aynı koşulda olmalı")
     args = ap.parse_args(argv)
 
     golden = json.loads(Path(args.golden).read_text(encoding="utf-8"))
@@ -47,6 +50,14 @@ def main(argv: list[str]) -> int:
     if args.shard:
         i, n = (int(x) for x in args.shard.split("/"))
         cases = cases[i::n]
+
+    # The measurement's conditions belong to the measurement, not to whoever starts it. The gate used to
+    # be told «selector off» through the caller's environment, and the bridge's own env file — loaded by
+    # systemd-run -p EnvironmentFile=, which outranks -E — said «on»: the model then kept one to three
+    # tables of eighty, dropped INVOICE, and twenty golden questions «regressed» against a baseline
+    # recorded without it (2026-09-29). Set here, after the caller's environment, nothing can override it.
+    os.environ["SEMANTIC_TABLE_SELECTOR"] = args.selector
+    os.environ["SEMANTIC_LLM"] = "0"
 
     from semantic_layer.config import SemanticSettings
     from semantic_layer.store.catalog_store import open_store
@@ -97,6 +108,7 @@ def main(argv: list[str]) -> int:
             "tables_sent": len(got), "prompt_chars": len(prompt),
             "tokens": round(len(prompt) / 3), "ms": round(ms),
             "gate": gate,
+            "selector": c.selector_mode,
         })
     return report(rows, args.out)
 
@@ -117,6 +129,8 @@ def report(rows: list[dict], out: str) -> int:
         "gate_recall": round(sum(1 for r in rows if r["gate"] == []) / (sum(1 for r in rows if r["gate"] is not None) or 1), 3),
         "gate_refused": sum(1 for r in rows if r["gate"]),
         "states": {k: sum(1 for r in rows if r["state"] == k) for k in ("RESOLVED", "PARTIAL", "UNRESOLVED")},
+        # the condition the numbers were taken under; "off" for rows written before it was recorded
+        "selector": ",".join(sorted({r.get("selector", "off") for r in rows})) or "off",
     }
     print(json.dumps(summary, ensure_ascii=False, indent=1))
     print("\n%-46s %-9s %-5s %-5s %6s  %s" % ("soru", "durum", "rec", "eks", "token", "fazladan"))

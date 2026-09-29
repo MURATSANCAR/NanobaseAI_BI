@@ -1181,6 +1181,26 @@ def test_a_word_that_only_appears_among_a_column_s_values_is_not_read_as_that_co
     assert bad == [], [s.term for s in bad]
 
 
+def test_everyday_words_inside_prose_values_are_not_value_hits():
+    """Bir notun, iptal nedeninin, özetin içindeki gündelik kelime o kolonun değeri değildir. «yıl»,
+    «durumda» CRM sözleşme notlarında değer eşleşmesi sayılıp yalnız dönem soran bir soruyu CRM'e
+    taşıyordu (2026-09-29). Etiket (kanal, başlık) değer eşleşmesi olmaya devam eder."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+    from semantic_layer.runtime.column_index import ColumnIndex
+
+    notes = [("Sözleşme geçen yılın ilk ayında imzalandı, yazar yeni kitap için görüşme durumunda", 1),
+             ("Telif oranı bu yıl yeniden görüşülecek, ödeme planı ayın sonunda netleşecek", 1),
+             ("Yayın hakkı süresi doldu, yenileme için yazarla iletişim kurulacak ve takip edilecek", 1)]
+    crm = SchemaProfile("crm", "NEW_SOZLESMEBASE", "NEW_SOZLESMEBASE", "NEW_SOZLESMEBASE",
+                        columns=[ColumnProfile("NEW_NOT", "nvarchar", top_values=notes)])
+    erp = SchemaProfile("logo", "LG_411_CLCARD", "LG_{n0}_CLCARD", "CLCARD",
+                        columns=[ColumnProfile("SPECODE2", "varchar", top_values=[("TRENDYOL", 5), ("BAYİ", 9)])])
+    idx = ColumnIndex([crm, erp])
+    hits = idx.search("geçen yılın ilk ayında ne durumda?")
+    assert all(not h["values"] for h in hits), hits
+    assert idx.search("trendyol satışları")[0]["values"] == ["trendyol"]
+
+
 # --- erişim: CTE adı katalog iznini aşamaz ---------------------------------------------------
 
 def test_a_cte_name_cannot_excuse_a_table_the_catalog_never_profiled(profiles):

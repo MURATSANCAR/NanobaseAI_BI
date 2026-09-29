@@ -129,6 +129,10 @@ def main(argv: list[str]) -> int:
     if (not old_ids or set(old_ids) != set(new_ids) or len(set(new_ids)) != len(new_ids)
             or len(set(old_ids)) != len(old_ids) or s.get("cases") != len(new_rows)):
         failed.append("soru kümesi eksik veya değişmiş")
+    # Two runs taken under different conditions are not a comparison. A baseline predating the field
+    # was recorded without the selector.
+    if base.get("selector", "off") != s.get("selector", "off"):
+        failed.append(f"ölçüm koşulu farklı: tablo seçici taban={base.get('selector', 'off')} şimdi={s.get('selector', 'off')}")
     previous = {r["id"]: r for r in old_rows}
     for row in new_rows:
         was = previous.get(row["id"])
