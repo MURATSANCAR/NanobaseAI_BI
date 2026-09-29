@@ -70,6 +70,30 @@
 - **Doğrulama (test sunucusu, geçici dizin, sonra silindi):** `tsc --noEmit` 0 hata; vitest `src/canvas` 44 dosya / 245 test geçti; `VITE_BASE=/timas/ vite build` geçti. Pencere, en uzun gerçek mesajla ayrı bir deneme sayfasında görünmez tarayıcıda 320 ve 1280 px'te ölçüldü: telefonda alttan, tam genişlik, yatay taşma 0, düğmeler 44 px. Oturumlu portal ekranında tıklayarak denenmedi.
 - **Kurulmadı:** test sunucusunun canlı portalına ve müşteri VM'ine kurulum yapılmadı.
 - **Açık kalan (ayrı iş):** `window.confirm` kullanan 4 ekran (`RightsScreen`, çeviri `TermBank`, `MemoryBank`, `TranslationScreen`) `AskSheet`e taşınabilir.
+## 2026-09-29 (13:30) — Excel indirme: test sunucusuna kuruldu, ekran testiyle 4 hata bulunup düzeltildi
+
+- **Test sunucusu kurulumu (`94ce10f4`):** 69 dosya tek tek, yazmadan önce md5 = değişiklik öncesi main denetimiyle; `SqlInfo.tsx`
+  sunucuda daha eski main hâlindeydi (maliyet formu kurulmamış) → yalnız başlık farkı `git merge-file` ile. `frontend/dist`
+  root'a ait (başka oturumun root derlemesi) → ayrı klasöre derlenip `cockpit/dist`'e kopyalandı; köprü yeniden başladı.
+  Canlı köprüde kabul (kurulu kod): 146 geçti, 0 kaldı.
+- **Ekran testi (yeni, `scripts/acceptance/excel-indirme/ekran_*`):** kurulu arayüz + köprü tek süreçte (kişi yalnız o süreçte
+  sabit, giriş servisine dokunulmaz, dışa aktarma kayıtları sayaçta); gerçek tarayıcıyla 22 ekranda her Excel düğmesine basılır,
+  yanındaki CSV ile hücre hücre karşılaştırılır, 390 px'te yatay taşma ölçülür. Bulunanlar:
+  1. Soru izleme (tüm kayıtlar) Excel'i 500 veriyordu: model hata metnindeki kontrol karakteri openpyxl'de `IllegalCharacterError`.
+  2. Cariler (248.537 satır) Excel'i 52–65 sn sürüyordu (CSV 7,5 sn): sunucuda lxml yok, openpyxl biçimsiz bile 31 sn.
+  3. Metindeki satır başı (`\r\n`) Excel'de `\n` oluyordu (XML okuyucu düz \r'yi siler).
+  4. Kârlılık: «Excel indir» ızgarada alt satıra düşüp dar sütunda kırılıyordu; Kampüs'te CSV düğmesinin adı «Excel için CSV».
+- **Düzeltmeler:** `csv_excel.to_xlsx` artık Office Open XML'i doğrudan akışla yazar (satır içi metin, sabit biçim tablosu,
+  `\r` → `&#13;`, kontrol karakteri atılır, 32.767'yi aşan hücre «…», sayfa sınırını aşan liste 422 — sessiz kesme yok; çeviri
+  hatası düz 500 yerine açıklamalı JSON). Ölçüm: cariler 52,5 → 11,6 sn, CRM düzeltilecek 22,5 → 4,3, bayi riski 10,5 → 2,2;
+  eski openpyxl çıktısıyla değer + sayı biçimi farkı 0 (5 gerçek liste). Nokta ondalıklı dosyada «4.333» artık sayı.
+  Kârlılık düğmeleri tek hücrede yan yana; «Rehberi indir (CSV/Excel)»; 10 ekran yardımında «CSV ya da Excel».
+- **Verisi olmayan 8 uç:** `test_csv_excel_uclar.py` — modüllerin kendi test kurgularıyla sqlite'ta veri, gerçek `create_app`
+  üzerinden CSV ve `bicim=xlsx`, bağımsız karşılaştırıcıyla hücre hücre: 9 adresin hepsi geçti.
+- **Son durum (güncel main + düzeltmeler, aday ağaç):** pytest 64 ✓ (Excel 28), tsc 0, vitest 251/251, derleme ✓; gerçek veri
+  kabulü 146/0; tarayıcı testi 130 geçti, 0 kaldı, 1 uyarı (portalda açılmış set yok — CRM setinde kart listesi bölümü yok).
+- **Kalan:** bu düzeltmelerin main'e taşınması → test sunucusuna kurulumu → müşteri VM'i (kullanıcı onayıyla).
+
 ## 2026-09-29 (akşam) — Kur düzeltmesi (`2b87541c`) test sunucusunda; Logo faturası kuru ekranda
 
 - **Kurulum:** 6 dosya (pricing `data.py`, `kaynak.py`, `sources.py`; `CostForm.tsx`, `TariffPanel.tsx`, `help.ts`) sunucuda eski main'e eşitti (md5), yerleştirildi; sunucu ağacının kopyasında `tsc -b` + `vite build`, `index-DRmiBLOs.js`; köprü yeniden başladı, sağlık 200; `._*` 0.
