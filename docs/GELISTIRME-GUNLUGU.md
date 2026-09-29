@@ -234,7 +234,9 @@
   bağ tablosu → ContactBase), dönem yok, «yazar» modele. Kontroller değişmedi (Q63 Logo ölçüsü, Q11, «müşteri grubu bazında»).
   Soruya özel kural/eşleme yok; altın değişmedi.
 - **Test (test sunucusu, kendi kopya `/tmp/claude-zeki-kapi-ajan/src`):** hedefli 71 geçti (bu dosya + prefer_base_tables +
-  critic); tam `semantic_layer/tests` sonucu raporda.
+  critic); tam `semantic_layer/tests` (dal `ff10e9650`, git archive): 4.535 geçti, 8 kırık — sekizi de main `e38ef6bee`'de aynı
+  kopyada da kırık (veri güvenliği kaydı, Destek sınıflama ×3, İK ×1–2, köprü açılışı ×2, ilk_baski_pazar tanımsız ad); dalın
+  getirdiği kırık yok.
 
 ## 2026-09-29 (17:00) — Kampüs «Ana Modüller» bütün ana modülleri gösterir; kutu modüle gider, sol menü yalnız o modül
 
