@@ -18,6 +18,13 @@
 - **Test sunucusu:** 4 dosya md5 korumalı kuruldu, ön yüz `index-BMhaD6Ig.js`, köprü yeniden başladı; `?yenile=1` ile canlı: Ups, HEPSİJET, Şehir İçi Sevkiyat → pazar yeri faturalıyor; Depodan Teslim, Sürat Kargo, Timaş Merkeze Sevk, Barış Ambarı, Along Kargo, DHL → faturası yok; sayfa metninde «760.34» yok.
 - **Test:** `test_shipping_cost.py` (+3 test: aday cari, faturasız kod, başka taşıyıcıya eşli cari aday değil; «KARGO» UPS'e aday getirmez); shipping/nav/köprü açılış 517 + vitest 47, `tsc` 0.
 - **Müşteri VM'i (`1c615b804`):** önce test sunucusu tam main'e eşitlendi (4 eski dosya: `test_response_cache.py`, VM nginx `web.default.conf.template` + `npm-custom-http.conf`, `timas-reports.timer` kaynak kopyası — kurulu birim zaten main'le aynı), `1c615b804` tam set `tsc` 0, vitest 304/304, pytest 4.665 geçti · 0 hata. VM atası `dcf910da2` (geri sarma yok), çakışma işareti 0, `._*` 0, köprü arşivden yüklendi (2.450 yol). `vm-deploy-1c615b80` **EXIT 0**: bridge/jobs/login/web yeni imajla, `bi_var` 7 → 7, kapılar 302/200/401, sürüm kaydı id 19. Konteynerde `shipping.py` main ile md5 aynı, `._*` 0, web `index-BMhaD6Ig.js` (test sunucusuyla aynı), `/timas/kargo/maliyet` 200.
+## 2026-09-29 (21:00) — Zeki AI kapı dalı main'e: kapı ölçümü ve kapı betiği düzeltmeleri
+
+- **Ölçüm (test sunucusu, yan köprü, dal kodu, canlı katalog):** tam kapı üç koşu 54/11/1, 53/10/4, 53/12/2 (SAĞLAM/BOZUK/KARARSIZ; temel 52/11/4). Sabit kazanç: Q63 etkinlik gideri (Logo, yansıtma fişi hariç, 2026 = 4.831.871,56 ₺), Q49 yazar kırılımı (CRM etkinlik kartı, kapsam notlu), Q18. Q65 kararsızlığı dalın değil (ilk sürüm de 68/30.334/189.649 veriyor; K13 ay açılımı modelde — ayrı iş). Q15/Q21/Q68 farkları canlı Logo'nun koşu sırasında değişmesiyle uyumlu küçük farklar.
+- **Kapı betiği:** kolon adı birebir yoksa aynı kelime kümesi (gider_toplam = toplam_gider); anahtar 0 boş dizgeye dönmez, sayısal anahtar değerle karşılaştırılır (Q40 doğru cevabı BOZUK sayılıyordu).
+- **Kalite kapısı:** main ile birebir aynı 6 kayıp (INVOICE/STLINE/CLCARD) — main'de ayrı iş olarak inceleniyor.
+- **Katalog (canlı):** «etkinlik ve fuar gideri» CERTIFIED (sem_b34bf77024ac), CRM kart gideri «crm etkinlik kartı gideri»ne daraltıldı, «işlem tipi» kayıt adı kolonu.
+
 ## 2026-09-29 (20:05) — Hız 4 ve hazır cevap diski test sunucusunda; test süreci canlı klasöre yazmaz
 
 - **Kurulum (main `bcbf3fa49`):** 28 kod dosyası (md5 denetimi: canlı dosyalar kurulum öncesi main'le aynıydı, yabancı düzenleme yok; iki belge farkı kurulmadı), `._*` 0, köprü 125 sn'de hazır, günlükte hata yok. `semantic_hizli_okuma` canlı DB'de oluştu (etkinlik yılı, kişi rehberi, okur kural alanları, yeni kitaplar, ayın kitapları, terim listesi).
