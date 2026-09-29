@@ -94,7 +94,8 @@ SUPPLIER_MAP = sa.Table(
 )
 #: Son kaynak okuması (M12 kartları + CRM teknik alanlar + Logo tedarikçi/fatura), kiracı başına tek satır. Gece turu
 #: (`run-due`) ve arka plan tazelemesi yazar; ekran uçları yalnız bunu okur. Gövde okumanın kendisidir (tarih, sayı
-#: anahtarlı sözlük, `runs` = çalışan SQL / satır / süre / an aynen korunsun diye pickle + zlib; yalnız köprü yazar).
+#: anahtarlı sözlük, Decimal, tuple ve `runs` = çalışan SQL / satır / süre / an aynen korunsun diye türleri koruyan JSON +
+#: zlib, `typed_json`; pickle değil — tablodan yalnız veri çözülür, kod çalışmaz).
 READS = sa.Table(
     "semantic_supply_reads", _md,
     sa.Column("tenant_id", sa.String(80), primary_key=True),
@@ -153,22 +154,21 @@ def read_at(engine: sa.engine.Engine, tenant: str) -> Optional[float]:
 
 
 def read_get(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
-    import pickle
-    import zlib
+    """Yalnız veri çözülür (türleri koruyan JSON); kod çalıştırılmaz. Çözülemeyen satır yok sayılır, kaynaktan okunur."""
+    from semantic_bridge import typed_json
 
     with engine.connect() as c:
         v = c.execute(read_stmt(tenant)).scalar()
     if not v:
         return None
-    out = pickle.loads(zlib.decompress(bytes(v)))
+    out = typed_json.unpack(v)          # bozuk satırda hata: çağıran (supply.Source) yakalar ve kaynaktan okur
     return out if isinstance(out, dict) else None
 
 
 def read_put(engine: sa.engine.Engine, tenant: str, snap: dict[str, Any]) -> None:
-    import pickle
-    import zlib
+    from semantic_bridge import typed_json
 
-    body = zlib.compress(pickle.dumps(snap, protocol=pickle.HIGHEST_PROTOCOL), 1)
+    body = typed_json.pack(snap)
     with engine.begin() as c:
         c.execute(READS.delete().where(READS.c.tenant_id == tenant))
         c.execute(READS.insert().values(tenant_id=tenant, read_at=float(snap.get("at") or 0), payload=body, updated_at=_now()))
