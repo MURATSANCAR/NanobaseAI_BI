@@ -35,6 +35,27 @@ Windows account name (`ali`, `TIMAS\ali` or `ali@timas.local`) and password.
 - `/etc/systemd/system/timas-login.service`, installed from this directory.
 - `/var/lib/timas-login/sessions.sqlite`, managed by the service. The `display`
   column is added on start; older sessions keep working.
+- `/etc/nanobase/timas-login.env` (root:root 0600, read by systemd): `LOGIN_ADMIN_TOKEN`
+  and, for ZEKİ AI Sohbet, `SEMANTIC_CALLER_TOKEN` (same value as the bridge's
+  `/etc/nanobase/semantic-bridge.env`). Optional: `BRIDGE_URL` (default
+  `http://127.0.0.1:8795`), `CHAT_ADMIN_FEATURE` (default `ozellik:sohbet.yonet`,
+  empty turns role sync off), `CHAT_ADMIN_ROLES` (default `admin`), `CHAT_LANGUAGE`
+  (default `tr`, empty turns it off).
+
+## ZEKİ AI Sohbet (`/chat-sso`)
+
+Every enabled directory user with a portal session gets a chat account on first
+visit (account name = AD account, name = AD displayName, joins default channels);
+there is no allow list. A chat account deactivated in the chat itself is refused (403).
+On every chat sign-in:
+
+- the chat admin role follows the portal permission `ozellik:sohbet.yonet` (Yönetim ›
+  Yetkiler; portal admins carry every key). The service reads it from the bridge's
+  `/api/v1/access/me` with the person's own session cookie. It grants `CHAT_ADMIN_ROLES`
+  and later revokes only what it granted (`chat_roles` table); roles given by hand in
+  the chat stay. Bridge unreachable → no role changes.
+- a language preference that is empty or English is set once to `CHAT_LANGUAGE`
+  (`chat_language` table); a later personal choice is left alone.
 
 ## Deployment
 
