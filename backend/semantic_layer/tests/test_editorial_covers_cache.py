@@ -13,6 +13,7 @@ import uuid
 
 import httpx
 import pytest
+from fastapi import FastAPI, Request, Response   # modül düzeyinde: erteli tip açıklamasında uç parametresi çözülür
 
 from semantic_bridge import editorial_cards as C
 
@@ -166,7 +167,6 @@ def test_kapak_kucuk_boya_iner():
 
 
 def test_kapak_ucu_etag_ile_304_doner(up, monkeypatch):
-    from fastapi import FastAPI, Request, Response
     from fastapi.testclient import TestClient
 
     app = FastAPI()

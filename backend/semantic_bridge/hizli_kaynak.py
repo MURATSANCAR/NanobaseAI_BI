@@ -50,9 +50,10 @@ def oku(b: Bellek, anahtar: Hashable, hesap: Callable[[], Any], *, zorla: bool =
     if durt and not zorla:
         yas = b.yas(anahtar)
         if yas is not None:
+            eldeki = b.al(anahtar, hesap)      # önce eldeki: arkadaki okuma hızlı bitse de bu istek beklemez, eldekini alır
             if yas >= DURT_EN_AZ:
                 b.isit(anahtar, hesap)
-            return b.al(anahtar, hesap)
+            return eldeki
     return b.al(anahtar, hesap, zorla=zorla)
 
 
