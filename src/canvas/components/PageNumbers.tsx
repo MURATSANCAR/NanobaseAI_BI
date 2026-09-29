@@ -23,7 +23,7 @@ export function pageItems(page: number, count: number, radius: number): Array<nu
 const nf = new Intl.NumberFormat('tr-TR');
 
 const base =
-  'inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl px-2 font-mono text-[12.5px] font-extrabold tabular-nums transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 sm:min-h-8 sm:min-w-8';
+  'inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl px-2 font-mono text-[12.5px] font-extrabold tabular-nums transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100 sm:min-h-8 sm:min-w-8';
 const TONE = {
   /** Portal düğmeleriyle aynı yumuşak zemin (admin/ui btnGhost). */
   soft: { idle: 'bg-slate-100 text-canvas-ink hover:bg-slate-200', on: 'bg-canvas-violet text-white shadow-sm' },
