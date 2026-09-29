@@ -529,6 +529,11 @@ def sales_last_months(part: Optional[dict[str, Any]], months: int = 36) -> Optio
 
 # ================================================================================ anlık görüntü (disk + bellek)
 
+# Diskteki görüntünün biçimi: okuma sorguları kolon ekleyince artar. Eski biçimdeki dosya (önceki sürümün yazdığı)
+# yaşına bakılmadan yeniden okunur; yoksa kurulumdan sonra `refresh_hours` boyunca yeni kolonlar boş görünür.
+SNAPSHOT_FORMAT = 2
+
+
 class Snapshots:
     """CRM okuması diskte tutulur (işçiler ve yeniden başlatma aynı görüntüyü okur). Yaşı `refresh_hours`'u geçince
     arka planda yenilenir, bu sırada eski görüntü verilir (cevapta yaşı yazar). Hiç yoksa ilk istek okumayı bekler."""
@@ -557,6 +562,7 @@ class Snapshots:
                 if path.exists() and path.stat().st_mtime >= asked:
                     return
                 data = self.reader()
+                data["format"] = SNAPSHOT_FORMAT
                 tmp = path.with_name("." + uuid.uuid4().hex + ".tmp")
                 with open(tmp, "x", encoding="utf-8") as fh:
                     os.chmod(tmp, 0o600)
@@ -601,6 +607,9 @@ class Snapshots:
         if hit is None or hit[0] != key:
             with open(path, encoding="utf-8") as fh:
                 data = json.load(fh)
+            if data.get("format") != SNAPSHOT_FORMAT:
+                self._build(tenant)
+                return self.get(tenant, cfg, sales=sales)
             months = needed_months(data)
             with self.lock:
                 self.months[tenant] = (mtime, months)
