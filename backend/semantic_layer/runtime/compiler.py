@@ -166,12 +166,25 @@ def exclude_groups(mapping: Optional[Mapping]) -> list[dict]:
     return out
 
 
-def exclude_group_sql(group: dict, source: str, alias: str, d: "Dialect", *, firm_col: Optional[str] = None) -> str:
-    """NOT EXISTS (SELECT 1 FROM <aynı kaynak> nb_g WHERE nb_g.key = alias.key AND (nb_g.col LIKE … OR …))."""
-    likes = " OR ".join(f"nb_g.{d.q(group['column'])} LIKE '{p}'" for p in group["like"])
-    firm = f" AND nb_g.{d.q(firm_col)} = {alias}.{d.q(firm_col)}" if firm_col else ""
-    return (f"NOT EXISTS (SELECT 1 FROM {source} AS nb_g WHERE nb_g.{d.q(group['key'])} = {alias}.{d.q(group['key'])}"
-            f"{firm} AND ({likes}))")
+def exclude_group_sql(group: dict, source: str, alias: str, d: "Dialect", *, hx: str = "nb_hx0",
+                      firm_col: Optional[str] = None) -> tuple[str, str]:
+    """Hariç grup, anti-join olarak: (JOIN metni, satırı tutan koşul).
+
+        LEFT JOIN (SELECT nb_g.key FROM <aynı kaynak> AS nb_g WHERE nb_g.col LIKE … GROUP BY nb_g.key) AS hx
+               ON hx.key = alias.key
+        … hx.key IS NULL
+
+    Neden NOT EXISTS değil: koşul bir ölçünün kendi kapsamı olarak toplama ifadesinin İÇİNE de yazılabilir
+    (SUM(CASE WHEN … THEN …)); SQL Server toplama ifadesinde alt sorguya izin vermez (hata 130), SQLite verir. Anti-join'de
+    toplamanın içinde yalnız `hx.key IS NULL` kalır — iki yerde de çalışır. GROUP BY: türetilmiş tablo anahtarında tekildir,
+    birleştirme satır çoğaltmaz (eleştirmen de öyle okur)."""
+    k, c = d.q(group["key"]), d.q(group["column"])
+    likes = " OR ".join(f"nb_g.{c} LIKE '{p}'" for p in group["like"])
+    fk = f", nb_g.{d.q(firm_col)}" if firm_col else ""
+    on_firm = f" AND {hx}.{d.q(firm_col)} = {alias}.{d.q(firm_col)}" if firm_col else ""
+    join = (f"LEFT JOIN (SELECT nb_g.{k}{fk} FROM {source} AS nb_g WHERE ({likes}) GROUP BY nb_g.{k}{fk}) AS {hx} "
+            f"ON {hx}.{k} = {alias}.{k}{on_firm}")
+    return join, f"{hx}.{k} IS NULL"
 
 
 def _ent_key(name: str) -> str:
@@ -857,16 +870,19 @@ class DeterministicCompiler:
             kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
             sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
         group += self._card_keys(plan, group, explain, by_firm)
-        # Grup düzeyinde dışlama (hariç fiş): aynı kaynağı ikinci kez okuyan NOT EXISTS. Ölçülerin hepsi aynı dışlamayı
-        # taşımıyorsa tek WHERE'e yazılamaz (öbür ölçüyü de daraltırdı) — o zaman bu derleyici yazmaz, model yazar ve
-        # kapı dışlamayı arar.
+        # Grup düzeyinde dışlama (hariç fiş): aynı kaynağı ikinci kez okuyan anti-join (toplama içinde alt sorgu yok).
+        # Ölçülerin hepsi aynı dışlamayı taşımıyorsa tek WHERE'e yazılamaz (öbür ölçüyü de daraltırdı) — o zaman bu
+        # derleyici yazmaz, model yazar ve kapı dışlamayı arar.
         excl = [tuple(json.dumps(g, sort_keys=True) for g in exclude_groups(m.mapping)) for m in plan.metrics]
         if any(excl):
             if len(set(excl)) != 1:
                 log.debug("deterministic compile refused: metrics differ in excluded groups")
                 return None
-            for g in exclude_groups(plan.metrics[0].mapping):
-                where.append(exclude_group_sql(g, source, alias, d, firm_col=_FIRM_COL if by_firm else None))
+            for n, g in enumerate(exclude_groups(plan.metrics[0].mapping)):
+                join_sql, keep = exclude_group_sql(g, source, alias, d, hx=f"nb_hx{n}",
+                                                   firm_col=_FIRM_COL if by_firm else None)
+                sql += f"\n{join_sql}"
+                where.append(keep)
                 explain.append(f"hariç grup: aynı {g['key']} içinde {g['column']} LIKE {g['like']} satırı olanlar"
                                + (f" ({g['why']})" if g['why'] else ""))
         if where:
@@ -2153,8 +2169,10 @@ class ExistingCompiler:
             if m.formula:
                 cond = "; ".join((m.extra or {}).get("conditions") or [])
                 excl = "; ".join(f"aynı {g['key']} içinde {g['column']} LIKE {' / '.join(g['like'])} satırı olan grup "
-                                 f"TAMAMEN hariç: NOT EXISTS (SELECT 1 FROM {m.entity} g WHERE g.{g['key']} = <takma ad>.{g['key']} "
-                                 f"AND g.{g['column']} LIKE '{g['like'][0]}')" + (f" — {g['why']}" if g['why'] else "")
+                                 f"TAMAMEN hariç: LEFT JOIN (SELECT {g['key']} FROM {m.entity} WHERE {g['column']} LIKE "
+                                 f"'{g['like'][0]}' GROUP BY {g['key']}) HX ON HX.{g['key']} = <takma ad>.{g['key']} ve "
+                                 f"HX.{g['key']} IS NULL (WHERE'de ya da toplamanın CASE'inde; toplama içine alt sorgu YAZMA)"
+                                 + (f" — {g['why']}" if g['why'] else "")
                                  for g in exclude_groups(m))
                 lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "")
                              + (f" (hariç: {excl})" if excl else "") + self._basis(m.formula))

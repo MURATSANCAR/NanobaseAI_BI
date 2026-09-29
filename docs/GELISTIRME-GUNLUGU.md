@@ -368,7 +368,10 @@
   (`scripts/catalog-authoring/2026-09-29-etkinlik-fuar-gideri.py`; «etkinlik gideri/giderleri» eş anlamlıları buraya, CRM kavramı
   «crm etkinlik kartı gideri» adına daraltılır). **Yansıtma fişi hariç** (koordinatör `--olc` ölçümü: 2025'te 1.387 satır hepsi
   fiş türü 4, net 0; yıl sonu kaydı aynı fişteki 7x1 yansıtma satırıyla ayrılıyor): katalog eşlemesine genel «hariç grup»
-  koşulu (`extra.exclude_groups`), derleyici `NOT EXISTS` yazar, kapı arar (`audit._excluded_groups_unmet`); altın B064
+  koşulu (`extra.exclude_groups`), derleyici anti-join yazar (`LEFT JOIN (… GROUP BY key) HX … HX.key IS NULL`; ilk sürüm NOT EXISTS'ti — `--olc` gerçek SQL
+  Server'da «aggregate … containing a subquery» (130) ile düştü, SQLite yakalamamıştı; toplama içinde alt sorgu olmadığını metinden
+  sınayan test eklendi), kapı NOT EXISTS/NOT IN ve anti-join'i kabul eder, anti-join tarafına dönem/süzgeç borcu yazmaz
+  (`audit._excluded_groups_unmet`, `_exclusion_join_aliases`); altın B064
   referansı aynı koşulu taşıyor (2026 değeri değişmez). K7 artık
   kayıt kelimesinin başka tablonun ENTITY'si olmasına izin veriyor (sertifikalı ad belirler). Bilgi paketi Kural C10/C21
   güncellendi: toplam harcama Logo'dan, etkinlik bütçesi hiçbir kaynakta tanımlı değil. Modelin «bütçe tanımlı değil,

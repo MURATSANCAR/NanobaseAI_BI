@@ -19,7 +19,7 @@ Tanım (hesap planı alt hesapları; soruya özel değil, TDHP'nin 7'li gider s�
   kapanış fiş türüyle ayrılamıyor. Aralık alacaklarının karşı hesabı 711/731/761/771/781: yıl sonu yansıtma/kapanış kaydı
   (~7,2 Mn). Yıl içi alacaklar (karşı hesap 120 müşteriye yansıtılan gider, 320 tedarikçi iadesi) gerçek düzeltmedir, düşülür.
   Tanım: aynı fişte (ACCFICHEREF) ACCOUNTCODE LIKE '7_1%' satırı olan fiş ölçüden tamamen çıkar — katalog eşlemesinin
-  genel «hariç grup» koşulu (`extra.exclude_groups`; derleyici NOT EXISTS yazar, kapı arar). 2026'da yansıtma yok.
+  genel «hariç grup» koşulu (`extra.exclude_groups`; derleyici anti-join yazar — LEFT JOIN … IS NULL —, kapı arar). 2026'da yansıtma yok.
 
 Bütçe: etkinlik bütçesi hiçbir kaynakta yok (Kural C21, bilgi paketi 2026-09-29'da güncellendi): cevap toplamı verir,
 bütçenin tanımlı olmadığını söyler.
@@ -114,14 +114,16 @@ def _measure() -> None:
     conn = connector_from_file(os.environ["SEMANTIC_CONNECTION_FILE"])
     scope = " OR ".join(f"L.ACCOUNTCODE LIKE '{a}%'" for a in ACCOUNTS)
     likes = " OR ".join(f"Y.{REFLECTION['column']} LIKE '{p}'" for p in REFLECTION["like"])
+    k = REFLECTION["key"]
     for firm, year in (("411", "YEAR(GETDATE())"), ("211", "YEAR(GETDATE())-1")):
-        refl = (f"EXISTS (SELECT 1 FROM LG_{firm}_01_EMFLINE Y WHERE Y.{REFLECTION['key']} = L.{REFLECTION['key']} "
-                f"AND ({likes}))")
-        sql = (f"SELECT SUM(CASE WHEN NOT {refl} THEN L.DEBIT-L.CREDIT ELSE 0 END) AS olcu, "
-               f"SUM(CASE WHEN NOT {refl} THEN 1 ELSE 0 END) AS olcu_satir, "
-               f"SUM(CASE WHEN NOT {refl} THEN L.CREDIT ELSE 0 END) AS olcu_alacak, "
+        # Anti-join: SQL Server toplama ifadesinin içinde alt sorguya izin vermez (hata 130); içeride yalnız IS NULL kalır.
+        sql = (f"SELECT SUM(CASE WHEN HX.{k} IS NULL THEN L.DEBIT-L.CREDIT ELSE 0 END) AS olcu, "
+               f"SUM(CASE WHEN HX.{k} IS NULL THEN 1 ELSE 0 END) AS olcu_satir, "
+               f"SUM(CASE WHEN HX.{k} IS NULL THEN L.CREDIT ELSE 0 END) AS olcu_alacak, "
                f"SUM(L.DEBIT-L.CREDIT) AS yansitma_dahil, COUNT(*) AS tum_satir "
-               f"FROM LG_{firm}_01_EMFLINE L WHERE L.CANCELLED=0 AND YEAR(L.DATE_)={year} AND ({scope})")
+               f"FROM LG_{firm}_01_EMFLINE L "
+               f"LEFT JOIN (SELECT Y.{k} FROM LG_{firm}_01_EMFLINE Y WHERE ({likes}) GROUP BY Y.{k}) HX ON HX.{k} = L.{k} "
+               f"WHERE L.CANCELLED=0 AND YEAR(L.DATE_)={year} AND ({scope})")
         try:
             rows = conn.execute(sql, 10)[1]
         except Exception as e:  # noqa: BLE001

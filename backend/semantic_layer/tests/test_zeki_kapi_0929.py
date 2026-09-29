@@ -319,7 +319,7 @@ def test_exclude_groups_are_read_only_when_well_formed():
     assert exclude_groups(None) == []
 
 
-def _grouped_measure(catalog, profiles, *, excluded):
+def _grouped_measure(catalog, profiles, *, excluded, question="Yalın hacim ne kadar?"):
     stl = next(p for p in profiles if p.entity == "STLINE")
     extra = {"conditions": ["STLINE.TRCODE IN (7,8)", "STLINE.LINETYPE IN (0)"]}
     if excluded:
@@ -327,7 +327,7 @@ def _grouped_measure(catalog, profiles, *, excluded):
     _certify(catalog, "yalın hacim", SemanticType.METRIC,
              Mapping(concept_id="", entity="STLINE", table_pattern=stl.table_pattern, formula="SUM(STLINE.AMOUNT)", extra=extra))
     EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
-    return SemanticResolver(catalog, TENANT, DS, profiles).resolve("Yalın hacim ne kadar?", today=TODAY)
+    return SemanticResolver(catalog, TENANT, DS, profiles).resolve(question, today=TODAY)
 
 
 def _compile_run(catalog, profiles, logo_db, sq):
@@ -339,20 +339,55 @@ def _compile_run(catalog, profiles, logo_db, sq):
     return out, logo_db.execute(out.sql).fetchall()[0][0]
 
 
-def test_a_measure_excluding_whole_groups_is_compiled_as_not_exists_on_the_same_source(catalog, profiles, logo_db):
+def test_a_measure_excluding_whole_groups_is_compiled_as_an_anti_join_on_the_same_source(catalog, profiles, logo_db):
     """Yansıtma fişi sınıfı: a group (voucher / invoice) is dropped when ANY of its rows matches — a row condition
     cannot say it. Fixture: invoice 3 carries a discount line (LINETYPE 2), so its item line (10) leaves the sum:
     lines 10 + 5 + 2 = 17 → 5 + 2 = 7."""
     sq = _grouped_measure(catalog, profiles, excluded=True)
     out, value = _compile_run(catalog, profiles, logo_db, sq)
-    assert "NOT EXISTS" in out.sql.upper() and "LIKE '2%'" in out.sql, out.sql
+    up = out.sql.upper()
+    assert "LEFT JOIN (SELECT" in up and "IS NULL" in up and "LIKE '2%'" in out.sql and "EXISTS" not in up, out.sql
     assert value == 7, (value, out.sql)
 
 
 def test_without_the_exclusion_the_same_measure_counts_every_group(catalog, profiles, logo_db):
     sq = _grouped_measure(catalog, profiles, excluded=False)
     out, value = _compile_run(catalog, profiles, logo_db, sq)
-    assert "NOT EXISTS" not in out.sql.upper() and value == 17, (value, out.sql)
+    assert "LEFT JOIN" not in out.sql.upper() and value == 17, (value, out.sql)
+
+
+def _aggregate_bodies(sql: str) -> list[str]:
+    """Every aggregate call's argument text, parentheses matched by hand — no parser, no dialect."""
+    import re as _re
+    out = []
+    for m in _re.finditer(r"\b(SUM|COUNT|AVG|MIN|MAX)\s*\(", sql, _re.I):
+        depth, i = 1, m.end()
+        while i < len(sql) and depth:
+            depth += {"(": 1, ")": -1}.get(sql[i], 0)
+            i += 1
+        out.append(sql[m.end():i - 1])
+    return out
+
+
+def test_no_aggregate_of_the_compiled_measure_contains_a_subquery(catalog, profiles, logo_db):
+    """SQL Server refuses an aggregate over an expression containing a subquery (error 130); SQLite accepts it, so
+    running the fixture cannot catch it. Checked on the text: no aggregate argument holds a SELECT."""
+    for question in ("Yalın hacim ne kadar?", "2026 yalın hacim ne kadar?"):
+        sq = _grouped_measure(catalog, profiles, excluded=True, question=question)
+        out, _ = _compile_run(catalog, profiles, logo_db, sq)
+        bodies = _aggregate_bodies(out.sql)
+        assert bodies and not [b for b in bodies if "SELECT" in b.upper()], out.sql
+
+
+def test_the_anti_join_side_owes_no_period_and_the_dated_answer_passes_the_gate(catalog, profiles, logo_db):
+    """The derived table reads the measure's table only to find the groups to drop; a period asked of the measure is
+    not owed on it."""
+    from semantic_layer.runtime.audit import gate_report, sources_from
+    sq = _grouped_measure(catalog, profiles, excluded=True, question="2026 yalın hacim ne kadar?")
+    out, value = _compile_run(catalog, profiles, logo_db, sq)
+    assert value == 7, (value, out.sql)
+    unmet = [u.text for u in gate_report(sq, out.sql, sources=sources_from(profiles))]
+    assert not [u for u in unmet if "dönemi" in u or "hariç tuttuğu" in u], (unmet, out.sql)
 
 
 def test_the_gate_refuses_an_answer_that_keeps_the_excluded_groups(catalog, profiles, logo_db):
@@ -366,4 +401,10 @@ def test_the_gate_refuses_an_answer_that_keeps_the_excluded_groups(catalog, prof
     written = kept + (" AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE g WHERE g.INVOICEREF = s.INVOICEREF "
                       "AND g.LINETYPE LIKE '2%')")
     assert not [u for u in gate_report(sq, written) if "hariç tuttuğu gruplar" in u.text], "a model-written NOT EXISTS counts"
+    anti = ("SELECT SUM(CASE WHEN hx.INVOICEREF IS NULL THEN s.AMOUNT ELSE 0 END) AS yalin_hacim FROM LG_411_01_STLINE s "
+            "LEFT JOIN (SELECT g.INVOICEREF FROM LG_411_01_STLINE g WHERE g.LINETYPE LIKE '2%' GROUP BY g.INVOICEREF) hx "
+            "ON hx.INVOICEREF = s.INVOICEREF WHERE s.CANCELLED = 0 AND s.TRCODE IN (7, 8) AND s.LINETYPE IN (0)")
+    assert not [u for u in gate_report(sq, anti) if "hariç tuttuğu gruplar" in u.text], "an anti-join tested inside the CASE counts"
+    unjoined = anti.replace("hx.INVOICEREF IS NULL", "1 = 1")
+    assert any("hariç tuttuğu gruplar" in u.text for u in gate_report(sq, unjoined)), "a LEFT JOIN never tested IS NULL excludes nothing"
 

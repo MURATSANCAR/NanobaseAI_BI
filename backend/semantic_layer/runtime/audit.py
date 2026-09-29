@@ -1126,6 +1126,12 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         return [Unmet("parse", "sorgu ayrıştırılamadı; soru koşulları doğrulanamadı", "Geçerli tek bir SELECT yaz.")]
     try:
         occ = _occurrences(tree, sources)
+        # The anti-join side of a measure's excluded groups reads the measure's table only to find the groups to
+        # drop; its rows are not the answer's rows, and the period, filters and scope of the question are not owed
+        # on it (compiler.exclude_group_sql).
+        hx = _exclusion_join_aliases(sq, tree)
+        if hx:
+            occ = [o for o in occ if (o.root_alias or "").upper() not in hx]
     except OptimizeError as e:
         # Two sources under one alias in the same scope (`… AS d JOIN … AS d`): no reading of which table a
         # condition belongs to is possible. A refusal with the reason goes back for the one repair every model
@@ -1438,11 +1444,45 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
     return out + _closing(sq, tree, occ)
 
 
+def _group_proof(node: exp.Expression, entity: str, g: dict) -> bool:
+    """This subquery reads `entity`, names the group key and the tested column, and tests the declared pattern."""
+    if not any(_same_entity(logical_table(t.name).entity, entity) for t in node.find_all(exp.Table)):
+        return False
+    cols = {c.name.upper() for c in node.find_all(exp.Column)}
+    pats = {str(like.expression.this) for like in node.find_all(exp.Like) if isinstance(like.expression, exp.Literal)}
+    return g["key"] in cols and g["column"] in cols and bool(pats & set(g["like"]))
+
+
+def _anti_joins(tree: exp.Expression) -> list[tuple[str, exp.Expression]]:
+    """(alias, subquery) for every LEFT JOIN of a derived table whose key is tested `IS NULL` somewhere in the
+    statement — in a WHERE or inside an aggregate's CASE."""
+    nulls = {((c.table or "").upper(), c.name.upper()) for i in tree.find_all(exp.Is)
+             if isinstance(i.expression, exp.Null) and isinstance((c := i.this), exp.Column)}
+    out = []
+    for join in tree.find_all(exp.Join):
+        src = join.this
+        if (join.side or "").upper() != "LEFT" or not isinstance(src, exp.Subquery) or not src.alias:
+            continue
+        alias = src.alias.upper()
+        if any(t == alias for t, _ in nulls):
+            out.append((alias, src))
+    return out
+
+
+def _exclusion_join_aliases(sq: SemanticQuery, tree: exp.Expression) -> set[str]:
+    from semantic_layer.runtime.compiler import exclude_groups
+    wanted = [(m.mapping.entity, g) for m in sq.metrics if m.mapping for g in exclude_groups(m.mapping)]
+    if not wanted:
+        return set()
+    return {alias for alias, src in _anti_joins(tree) if any(_group_proof(src, e, g) for e, g in wanted)}
+
+
 def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list[Unmet]:
     """A measure that excludes whole groups (katalog `exclude_groups`: «aynı fişte 7x1 yansıtma satırı olan fiş hariç»)
-    must say so in the statement: somewhere a NOT EXISTS / NOT IN subquery reads the measure's own table, ties on the
-    group key and tests the column with the declared pattern. Checked whenever the statement reads the measure's
-    table — a year-end reflection voucher left in zeroes a closed year's expense and nothing on screen shows it."""
+    must say so in the statement: a NOT EXISTS / NOT IN subquery, or an anti-join (LEFT JOIN of a derived table whose
+    key is tested IS NULL), reads the measure's own table, ties on the group key and tests the column with the declared
+    pattern. Checked whenever the statement reads the measure's table — a year-end reflection voucher left in zeroes a
+    closed year's expense and nothing on screen shows it."""
     from semantic_layer.runtime.compiler import exclude_groups
     out: list[Unmet] = []
     subqueries = []
@@ -1450,24 +1490,21 @@ def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list
         inner = node.this.this if isinstance(node.this, exp.Paren) else node.this
         if isinstance(inner, (exp.Exists, exp.In)):
             subqueries.append(inner)
+    anti = _anti_joins(tree)
     for metric in sq.metrics:
         m = metric.mapping
         groups = exclude_groups(m)
         if not groups or not any(_same_entity(o.entity, m.entity) for o in occ):
             continue
         for g in groups:
-            def proves(node) -> bool:
-                if not any(_same_entity(logical_table(t.name).entity, m.entity) for t in node.find_all(exp.Table)):
-                    return False
-                cols = {c.name.upper() for c in node.find_all(exp.Column)}
-                pats = {str(like.expression.this) for like in node.find_all(exp.Like) if isinstance(like.expression, exp.Literal)}
-                return g["key"] in cols and g["column"] in cols and bool(pats & set(g["like"]))
-            if not any(proves(n) for n in subqueries):
+            if not any(_group_proof(n, m.entity, g) for n in subqueries) and \
+                    not any(_group_proof(src, m.entity, g) for _, src in anti):
                 pats = " / ".join(g["like"])
                 out.append(Unmet("filter", f"'{metric.term}' ölçüsünün hariç tuttuğu gruplar dışlanmadı: aynı {g['key']} içinde "
                                  f"{g['column']} LIKE {pats} satırı olanlar" + (f" ({g['why']})" if g["why"] else ""),
-                                 f"{m.entity} kaynağını okuyan SELECT'in WHERE'ine ekle: NOT EXISTS (SELECT 1 FROM {m.entity} g "
-                                 f"WHERE g.{g['key']} = <takma ad>.{g['key']} AND g.{g['column']} LIKE '{g['like'][0]}').",
+                                 f"{m.entity} kaynağına anti-join ekle: LEFT JOIN (SELECT {g['key']} FROM {m.entity} WHERE "
+                                 f"{g['column']} LIKE '{g['like'][0]}' GROUP BY {g['key']}) HX ON HX.{g['key']} = <takma ad>.{g['key']}"
+                                 f" ve HX.{g['key']} IS NULL (WHERE'de ya da toplamanın CASE'inde; toplama içine alt sorgu yazma).",
                                  m.entity, g["key"]))
     return out
 
