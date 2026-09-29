@@ -434,6 +434,9 @@ class SemanticQuery:
     # «X bazında / X kırılımında» diye istenen ama hiçbir kırılım kolonuna yerleşmeyen kelimeler. Sessizce düşmez:
     # çözülemeyen kelime olarak modele gider ve kapı, gruplamayan bir cevabı reddeder (2026-09-29, A044 sınıfı).
     requested_breakdowns: list[str] = field(default_factory=list)
+    # Her istenen kırılım için ölçünün tablosundan kırılımı taşıyan tabloya katalog ilişkileriyle yol ve kelimeyi taşıyan
+    # dolu kolonlar ({word, path: [(a, a_col, b, b_col)…], columns: [(entity, column, term)…], empty: [...]}).
+    breakdown_paths: list[dict[str, Any]] = field(default_factory=list)
     absence_contract: Optional[dict[str, Any]] = None
     # Soru dönem söylemedi ama doğası gereği yıl aşıyor ("son üç baskı", "hiç sipariş vermemiş",
     # "ilk kez", "bugüne kadar"): okunacak aralık bir tarih koşulu DEĞİL, hangi yıl kopyalarının
@@ -520,6 +523,7 @@ class SemanticQuery:
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,
             "requestedBreakdowns": list(self.requested_breakdowns),
+            "breakdownPaths": [dict(p) for p in self.breakdown_paths],
             "periodScope": dict(self.period_scope) if self.period_scope else None,
             "absenceContract": {k: v for k, v in self.absence_contract.items() if k != "sql"} if self.absence_contract else None,
             "fullyResolved": self.fully_resolved,

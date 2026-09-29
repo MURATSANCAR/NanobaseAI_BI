@@ -214,6 +214,29 @@
 - **Efekt: üst üste binme:** «pat» için 4 sn'lik düşme sesi 3 sn sonraki «güm» ile çakışıyordu. `plan_placements` yerleşimleri başlangıca göre sıralar; bir efekt sonrakinin başlangıcını geçiyorsa sonrakinin başında biter, en az `FX_MIN_SEC = 2 × FX_FADE` (0,5 sn: çeyrek saniye tam düzey + çeyrek saniye yumuşak kısılma; daha kısası tık gibi duyulur), sesin kendisi daha kısaysa kendi süresi. Kısaltılan yerleşimde `trimmed`. `MIX_VERSION` 2 → 3 (eski karışımlar «güncel değil» olur, yeniden karıştırılmalı).
 - **Yetki kapısının ön yüz testi:** `studio/permissionGate.test.ts` — `useCan` sahte, sunucu tarafı çizim (FileDrop.test.ts kalıbı, yeni kütüphane yok), veri sorgu önbelleğine elle, ağ yok. İfade (öneri düğmesi, cümle pasif), Sosyal medya (diz/onay/sil/tek ve toplu indir; dört yetki bileşimi), Yaş raporu (raporu çıkar/yenile, PDF), Sesli okuma (seslendir, yeniden üret, insan kaydı, ses seçimi), Sürüm farkı (değişiklik raporu). Test için iki küçük ilk değer düzeltmesi: sesli okumada seçili sayfa ve sürüm farkında varsayılan çift ilk çizimde kurulur (etkiyi beklemek bir çizim boyunca seçimsiz sayfa ve «ikinci sürüm yok» notu gösteriyordu).
 - **Doğrulama:** GPU'da editör tam set 653 geçti, 1 bilinçli seçim dışı (`test_sfx.py` 21/21, yeni 4 test). Test sunucusunda geçici klasörde `tsc --noEmit` 0, `vitest src/canvas/editorial` 68/68 (yeni 11; sosyal görsel indirme kapısı geçici kaldırılınca «yalnız düzenleme» testi düştü), `test_access.py` 19/19, `import semantic_bridge.app` tamam. Kurulmadı; mevcut karışımlar sürüm artışıyla «güncel değil» görünecek.
+## 2026-09-29 (19:10) — Q49 boş cevap ve Q40 dönem reddi: kök nedenler (dal `zeki-kapi-sinif`)
+
+- **Q49 (0 satır):** model üç denemenin ikisinde `NEW_ETKINLIKBASE.new_lgiliYazar` ile bağladı — hiç dolu olmayan anahtar;
+  doğru yol etkinlik↔kişi bağ tablosu. İki kök neden: (1) bilgi paketindeki uyarı eskiydi («Etkinlik yazarı yok … hesaplanamaz»;
+  Kural C10 09-21'de düzeltilmiş, uyarı kalmıştı) → düzeltildi (`caveats/logo-timas.md`); (2) model kırılım yolunu kendisi
+  arıyordu. Genel mekanizmalar: `resolver._record_breakdown_paths` → `sq.breakdown_paths`: ölçünün tablosundan kırılım
+  kelimesini taşıyan tablolara bütün katalog birleşimleri (tablonun kendisi, tek anahtar, iki anahtarı da tutan BAĞ tablosu —
+  herkesin sahibi olan sistem kullanıcısı gibi merkezler yol sayılmaz), örneklemde boş görünen anahtardan geçen yol sona ve
+  etiketli; istemde «İSTENEN KIRILIM YOLU» bloğu, yol tabloları istemin tablo listesine girer. `Runtime._retry_documented_empty`:
+  model sorgusu boş döndü ve bilgi paketi bu boşluğun nedenini sorgunun okuduğu bir kolon adıyla belgeliyorsa, o cümleyle BİR
+  onarım; onarım aynı kapı/eleştirmen/veritabanından geçer, boş dönerse ilk sonuç kalır. Yan köprü 8813 (dal kodu): Q49 3/3
+  5 satır (biri onarımla), answer-gate `--only` Q49 SAĞLAM 3/3.
+- **Q40 (dönem reddi):** son kırılım değişikliğinin yan etkisi DEĞİL (Q40'ta istenen kırılım yok). Model aynı okumayı kimi zaman
+  tek parçalık plan (geçiyordu: K3), kimi zaman tek CRM sorgusu olarak yazıyor; tek sorgu yolunda Logo ölçüsü yüzünden damgalanan
+  VARSAYILAN yıl, Logo'yu hiç okumayan sorguda «dönem doğrulanamadı» diye reddediliyordu. Düzeltme kapıda (`audit._binding_read`):
+  sorulmamış varsayılan yıl, cevap ne bağlı tabloyu ne beyan edilmiş eşdeğerini okuyorsa yükümlülük değil — plan ve tek sorgu
+  aynı kural; kişinin yazdığı dönem aynen yükümlülük. 8813'te Q40 3/3 11 satır (kademe 0 → %4,75 referansla aynı). answer-gate
+  Q40'ı yine BOZUK sayıyor: cevabın anahtar kolonu `baski_adedi` altının `answer_key` listesinde yok ve kapının anahtar
+  dönüşümü (`str(v or "")`) 0'ı boş dizgeye çeviriyor — altın/araç kararı koordinatörde.
+- **Test:** hedefli 230 geçti (bu dosya + prefer_base_tables, critic, federated, runtime, gate_shapes, obligations); yeni testler:
+  bütün birleşim yolları ve boş anahtarın sona alınması, varsayılan yılın okunmayan tabloya borç olmaması. DOĞRULANAMADI —
+  `_retry_documented_empty` için birim testi yok (gerçek köprüde 1/3 denemede tetiklendi, günlükte «documented-empty retry answered»).
+
 ## 2026-09-29 (18:00) — İstenen kırılım sessizce düşmez (A044 sınıfı); eleştirmen gerilemesi (dal `zeki-kapi-sinif`)
 
 - **Gerileme (`test_prefer_base_tables::test_columns_only_the_ledger_has_point_the_bare_name_at_it`):** K1'in «aynı adlı

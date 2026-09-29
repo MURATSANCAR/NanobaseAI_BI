@@ -2188,6 +2188,22 @@ class ExistingCompiler:
                 lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
         return "\n".join(lines) or "(yok)"
 
+    @staticmethod
+    def breakdown_block(q: SemanticQuery) -> str:
+        lines = []
+        for p in getattr(q, "breakdown_paths", None) or []:
+            joins = " ; ".join(f"{a}.{ac} = {b}.{bc}" for a, ac, b, bc in p.get("path") or []) or "(aynı tablo)"
+            cols = ", ".join(f"{e}.{c} ('{t}')" for e, c, t in p.get("columns") or []) or "(tablonun kendisi)"
+            line = f"- '{p['word']}' bazında: bağlantı {joins}; kelimeyi taşıyan kolonlar: {cols}"
+            if p.get("sampleEmptyKeys"):
+                line += ("; DİKKAT örneklemde boş görünen anahtar/kolon: " + ", ".join(p["sampleEmptyKeys"])
+                         + " — bu yol büyük olasılıkla boş döner (bilgi paketindeki notuna bak)")
+            lines.append(line)
+        if lines:
+            lines.append("Yollar dolu görünenden boş görünene doğru sıralı. Hangisini okuduğunu -- yorum satırında yaz; "
+                         "boş bir anahtarla bağlanan kırılım boş döner.")
+        return "\n".join(lines)
+
     def _basis(self, expression: str) -> str:
         """Documented basis of every column the expression touches ("KDV hariç", "birim maliyet").
 
@@ -2214,6 +2230,14 @@ class ExistingCompiler:
         entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
         if self._plans_enabled(q):
             entities = self._with_bridges(q, entities)
+        # The tables a requested breakdown is reached through (resolver: breakdown_paths) are shown even when retrieval
+        # did not rank them — a link table is never what a question's words name.
+        path_entities = [e for p in (getattr(q, "breakdown_paths", None) or []) for edge in p.get("path") or []
+                         for e in (edge[0], edge[2])]
+        if path_entities:
+            by_bare = {re.sub(r"^LG_", "", k.upper()): k for k in self.by_entity}
+            extra = [by_bare[e] for e in dict.fromkeys(path_entities) if e in by_bare]
+            entities = list(entities) + [e for e in extra if e not in set(entities)]
         language_hits = [h for h in self.language_pool.search(q.question)
                          if all(c["entity"] in entities for c in h["columns"])] if self.language_pool else []
         ctx = [
@@ -2237,6 +2261,8 @@ class ExistingCompiler:
             # The person spelled out the report they want, column by column. Without this the model
             # sees only the words and routinely turns a requested column into a filter — the channel
             # asked for as the first column comes back as a WHERE and never appears in the result.
+            *(["## İSTENEN KIRILIM YOLU (ölçünün tablosundan katalog ilişkileriyle; GROUP BY bu yoldan kurulur)\n"
+               + self.breakdown_block(q)] if getattr(q, "breakdown_paths", None) else []),
             "## İSTENEN KOLONLAR (bu sırayla, SELECT'te hepsi bulunmalı)\n" + (
                 "\n".join(f"{i}. {c}" for i, c in enumerate(q.projection, 1)) if q.projection else "(belirtilmedi)"),
             # What those words look like in the data, where they turned out to be values. A term the

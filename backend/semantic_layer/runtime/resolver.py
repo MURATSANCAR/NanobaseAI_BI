@@ -3364,28 +3364,119 @@ class SemanticResolver:
         sq.explanation.append("istenen kırılım yerleşmedi: " + ", ".join(f"'{w}' bazında" for w in sq.requested_breakdowns)
                               + " — sessizce düşürülmez; cevap gruplamalı ya da açıkça reddedilmeli")
         self._breakdown_sibling_measure(sq, hits, index)
+        self._record_breakdown_paths(sq, hits, index)
 
-    #: Kırılımın ölçünün tablosundan en çok kaç ilişki adımıyla ulaşılabilir sayılacağı (bağ tablosu dahil: 2).
-    _BREAKDOWN_HOPS = 2
-
-    def _reach(self, entity: str, hops: int) -> set[str]:
-        """Entities reachable from `entity` over catalog relationships (either direction), up to `hops` steps."""
+    def _relationship_graph(self) -> None:
+        """Catalog relationships as declared FK edges: (holder entity, column) → (referenced entity, column)."""
         def bare(e: str) -> str:
             return re.sub(r"^LG_", "", (e or "").upper())
-        if getattr(self, "_rel_graph_for", None) is not self.profiles:
-            graph: dict[str, set[str]] = {}
-            for p in self.profiles:
-                for r in p.relationships or []:
-                    a, b = bare(p.entity), bare(str(r.get("ref_entity") or ""))
-                    if a and b and a != b:
-                        graph.setdefault(a, set()).add(b)
-                        graph.setdefault(b, set()).add(a)
-            self._rel_graph, self._rel_graph_for = graph, self.profiles
-        seen, frontier = {bare(entity)}, {bare(entity)}
-        for _ in range(hops):
-            frontier = {n for e in frontier for n in self._rel_graph.get(e, ())} - seen
-            seen |= frontier
+        if getattr(self, "_rel_graph_for", None) is self.profiles:
+            return
+        fks: dict[str, list[tuple[str, str, str]]] = {}          # holder → [(column, ref entity, ref column)]
+        for p in self.profiles:
+            for r in p.relationships or []:
+                a, b = bare(p.entity), bare(str(r.get("ref_entity") or ""))
+                if a and b and a != b:
+                    fks.setdefault(a, []).append((str(r.get("column") or ""), b, str(r.get("ref_column") or "")))
+        self._rel_fks, self._rel_graph_for = fks, self.profiles
+
+    def _join_paths(self, start: str, goals: set[str]) -> list[tuple[str, list[tuple[str, str, str, str]]]]:
+        """Every way the catalog joins `start` to a goal entity: the table itself; one declared key either way; or a
+        LINK table that holds a key to both (the N:N shape — «etkinlik ↔ kişi»). A table merely referenced by both
+        (system user, business unit — every CRM record's owner) is not a link: through it everything reaches
+        everything, and the path says nothing about the question."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        self._relationship_graph()
+        start = bare(start)
+        out: list[tuple[str, list[tuple[str, str, str, str]]]] = []
+        if start in goals:
+            out.append((start, []))
+        for col, ref, rcol in self._rel_fks.get(start, []):            # start.key → goal
+            if ref in goals:
+                out.append((ref, [(start, col, ref, rcol)]))
+        for holder, keys in self._rel_fks.items():
+            to_start = [(c, rc) for c, r, rc in keys if r == start]
+            if not to_start:
+                continue
+            if holder in goals:                                          # goal.key → start
+                out += [(holder, [(start, rc, holder, c)]) for c, rc in to_start]
+            for c2, goal, rc2 in keys:                                    # start ← link → goal
+                if goal in goals and goal != start and holder not in goals:
+                    out += [(goal, [(start, rc, holder, c), (holder, c2, goal, rc2)]) for c, rc in to_start]
+        return out
+
+    def _reach(self, entity: str, hops: int = 2) -> set[str]:
+        """Entities joinable from `entity` the way `_join_paths` joins (itself, a declared key, a link table)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        self._relationship_graph()
+        start = bare(entity)
+        seen = {start} | {ref for _, ref, _ in self._rel_fks.get(start, [])}
+        for holder, keys in self._rel_fks.items():
+            if any(r == start for _, r, _ in keys):
+                seen.add(holder)
+                seen |= {r for _, r, _ in keys}
         return seen
+
+    @staticmethod
+    def _values_all_missing(col) -> bool:
+        """The column's complete observed value list holds nothing but «none» (a probed code column). A sample-based
+        null ratio is not used — 20 sampled rows called a 60 % filled column empty."""
+        return col is not None and bool(col.top_values) and all(str(v).strip() in ("", "None", "NULL") for v, _ in col.top_values)
+
+    def _breakdown_targets(self, words: list[str], index: dict) -> tuple[list[tuple[str, str, str]], list[str]]:
+        """(columns, entities) the certified vocabulary names with one of `words`: a COLUMN concept carrying the word,
+        an ENTITY concept whose name ENDS with it («yazar etkinliği» names an event, not an author)."""
+        def bare(e: str) -> str:
+            return re.sub(r"^LG_", "", (e or "").upper())
+        stems = {stem(w) for w in words}
+        cols, ents = [], []
+        for key, senses in index.items():
+            if not stems & set(key.split()):
+                continue
+            for c, maps in senses:
+                for m in maps:
+                    if not m.entity:
+                        continue
+                    if c.semantic_type == SemanticType.ENTITY and key.split()[-1] in stems:
+                        ents.append(bare(m.entity))
+                    elif c.semantic_type == SemanticType.COLUMN and m.column:
+                        prof = self.by_entity.get(m.entity)
+                        if prof is not None and self._values_all_missing(prof.column(m.column)):
+                            continue
+                        cols.append((bare(m.entity), m.column, c.term))
+        return list(dict.fromkeys(cols)), list(dict.fromkeys(ents))
+
+    def _record_breakdown_paths(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
+        """For the measure finally read: every catalog join to a table that carries each requested breakdown word, with
+        those columns. Which one the question means is the model's reading to state; a join key the profile sample saw
+        only empty is marked, so the knowledge pack's note on it can be weighed."""
+        metric = next((h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.mapping.entity), None)
+        if metric is None:
+            return
+        by_bare = {re.sub(r"^LG_", "", e.upper()): p for e, p in self.by_entity.items()}
+
+        def sample_empty(ent: str, col: str) -> bool:
+            # Only a reference (key) column, never probed for values, whose whole profile sample was empty. Weak on its
+            # own (a sample), so it orders and labels a path — it never removes one.
+            cp = by_bare.get(ent).column(col) if by_bare.get(ent) else None
+            return cp is not None and bool(cp.ref_entity) and not cp.top_values and (cp.null_ratio or 0) >= 0.999
+
+        for word in sq.requested_breakdowns:
+            cols, ents = self._breakdown_targets([word], index)
+            goals = {e for e, _, _ in cols} | set(ents)
+            found = []
+            for end, path in self._join_paths(metric.mapping.entity, goals):
+                here = [list(c) for c in cols if c[0] == end]
+                sparse = [f"{e}.{c}" for a, ac, b, bc in path for e, c in ((a, ac), (b, bc)) if sample_empty(e, c)]
+                if not path:
+                    sparse += [f"{e}.{c}" for e, c, _ in here if sample_empty(e, c)]
+                found.append(({"word": word, "path": [list(e) for e in path], "columns": here,
+                               "sampleEmptyKeys": list(dict.fromkeys(sparse))}, bool(sparse), len(path), end))
+            # A path through a key the sample saw empty goes last: the first listed is what a reader tries first.
+            for entry, *_ in sorted(found, key=lambda x: (x[1], x[2], x[3])):
+                sq.breakdown_paths.append(entry)
 
     def _breakdown_sibling_measure(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
         """The measure read cannot reach the breakdown asked for, a sibling certified measure (the same name family:
@@ -3402,11 +3493,9 @@ class SemanticResolver:
         if len(metrics) != 1:
             return
         metric = metrics[0]
-        word_stems = {stem(w) for w in sq.requested_breakdowns}
-        targets = {bare(m.entity) for key, senses in index.items() if word_stems & set(key.split())
-                   for c, maps in senses if c.semantic_type in (SemanticType.COLUMN, SemanticType.ENTITY)
-                   for m in maps if m.entity}
-        if not targets or self._reach(metric.mapping.entity, self._BREAKDOWN_HOPS) & targets:
+        cols, ents = self._breakdown_targets(list(sq.requested_breakdowns), index)
+        targets = {e for e, _, _ in cols} | set(ents)
+        if not targets or self._reach(metric.mapping.entity) & targets:
             return
         key = str((metric.explain or {}).get("normalized") or normalize_term(metric.term))
         family = set(key.split())
@@ -3418,7 +3507,7 @@ class SemanticResolver:
                 narrowed = normalize_term(str(((c.explain or {}).get("narrowed_from") or {}).get("term") or ""))
                 if narrowed != key and not family <= set(c.normalized_term.split()):
                     continue
-                if self._reach(maps[0].entity, self._BREAKDOWN_HOPS) & targets:
+                if self._reach(maps[0].entity) & targets:
                     siblings.setdefault(c.id, (c, maps))
         if len(siblings) != 1:
             return

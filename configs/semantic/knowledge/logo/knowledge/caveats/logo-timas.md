@@ -27,7 +27,7 @@
 
 - **Hakediş verisi yok:** telif hakediş / ödeme hakediş tablosu (`NEW_ODEMEHAKEDISBASE`) bu kurulumda hiç kayıt içermiyor (0 satır) ve taramada profili yok; "ödenmemiş hakediş", "dönemi kapanmış hakediş", "hakediş tutarı" soruları cevaplanamaz — veri girilmemiş. Ödeme dönemi kayıtları (`NEW_ODEMEDONEMIBASE`, 7 kayıt) var ama hakedişe bağlı değil.
 - **Baskı işlemi / baskı maliyeti verisi eski:** `NEW_BASKIISLEMBASE` 2015–2017 (23 satır, birim fiyat 1 satırda dolu), `NEW_BASKIBASE` 2016–2018, satış senaryosu 2014 (4 satır). "Son bir yılda kitap başına baskı maliyeti", "birim fiyatı en çok artan işlem tipi" soruları bu yüzden boş döner — güncel veri yok.
-- **Etkinlik yazarı yok:** etkinlik–yazar eşleşme tablosu boş, `new_lgiliYazar` boş; yazar bazında etkinlik gideri hesaplanamaz.
+- **Etkinlik yazarı bağ tablosundadır (2026-09-21 ölçüm, Kural C10):** `new_lgiliYazar` ve `new_new_etkinlik_new_yazar` hiç dolu değil — bunlarla bağlanan sorgu boş döner. Etkinliğin kişileri `new_new_etkinlik_contact` bağ tablosunda (9.012 bağ); yazar olanlar `ContactBase.new_yazarmi = 1`. Yazar bazında etkinlik kartı gideri bu yoldan hesaplanır; gider alanı (`new_ToplamEtkinlikGideri`) yalnız 2015–16'da 28 etkinlikte dolu — cevap bunu söyler.
 - **Etkinlik bütçesi yok:** etkinliklere bağlı bütçe kaydı/sütunu bulunmuyor; "etkinlik gideri bütçenin neresinde" sorusunda karşılaştırma yapılamaz, yalnız toplam gider verilir.
 - **Reklam planı onayı boş:** 68 reklam planının hiçbirinde onay tarihi/onay biti ve teslim işareti dolu değil; "onaylanmış ama teslim edilmemiş" sorusu 0 döner (veri girilmemiş).
 - **Telif tahakkuk verisi eski:** `NEW_ODEMEBASE` tahakkuk kayıtları yalnız 2014 (48 kayıt); "bu yıl telif tahakkuku" boş döner — veri yok.

@@ -1462,6 +1462,7 @@ class Runtime:
                     "type": _type, "sql": sql,
                     "explanation": _exec_msg,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+        sql, result = self._retry_documented_empty(sq, sql, result, compiled, thread, scope_args, semantic)
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
         report("presenting")
         from semantic_bridge.presentation import presentation_spec
@@ -1548,6 +1549,56 @@ class Runtime:
             "semantic": semantic,
             "queryId": qid,
         }
+
+    def _retry_documented_empty(self, sq, sql, result, compiled, thread, scope_args, semantic):
+        """An empty answer whose cause the knowledge pack documents, on a column the statement actually uses: the
+        model is told that sentence and asked once more; the rewrite faces the same gate, reviewer and database.
+
+        2026-09-29 (A044 sınıfı): «etkinlik giderleri yazar bazında» was joined through `new_lgiliYazar` — a key the
+        pack documents as never filled, the link table being the way — 2 answers in 3 came back empty. The person was
+        then told the documented reason under an empty table instead of getting the rows the documented way gives.
+        Only a model statement (the deterministic compiler builds from the catalog; a rewrite would hide its bug), only
+        when the documented sentence names a column the statement reads, and exactly one retry. The first result
+        stands if the retry is refused, fails, or is empty too."""
+        from semantic_layer.runtime.column_facts import nothing_came_back
+        if compiled.compiler == "deterministic" or self.existing is None or not hasattr(self.existing, "repair"):
+            return sql, result
+        if not nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)):
+            return sql, result
+        why = empty_result_note(sql, self.rules_text).replace(" Muhtemel neden (bilgi paketi): ", "").strip()
+        if not why:
+            return sql, result
+        named = {w.upper() for w in re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", why)} | \
+                {w.upper() for w in re.findall(r"\b([a-z]+_[A-Za-z0-9_]+)\b", why)}
+        used = {c.upper() for c in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", re.sub(r"(?m)^\s*--.*$", "", sql))}
+        if not named & used:
+            return sql, result
+        try:
+            fixed = self.existing.repair(sq, sql, "Sorgu çalıştı ama BOŞ döndü. Bilgi paketi bunun nedenini belgeliyor: "
+                                         + why + " Belgelenen yolu kullanarak sorguyu yeniden yaz.", thread)
+        except Exception as e:  # noqa: BLE001
+            log.warning("documented-empty retry failed: %s", e)
+            return sql, result
+        fixed = strip_trailing_semicolon(fixed or "")
+        if not fixed or fixed.strip() == sql.strip():
+            return sql, result
+        ok, _why = validate_sql(fixed)
+        problems = (unmet_obligations(sq, fixed, sources=self.router.gate_sources())
+                    + audit_sql(sq, fixed, conventions=self.conventions)) if ok else ["geçersiz"]
+        blocking = [f for f in critic.review(fixed, self.profiles, self.settings.dialect or "tsql") if f.severity == "block"] if ok else []
+        if problems or blocking:
+            log.info("documented-empty retry refused: %s", (problems or [b.message for b in blocking])[:3])
+            return sql, result
+        try:
+            again = self.run_complete(fixed, self._asked_period(sq), **scope_args)
+        except Exception as e:  # noqa: BLE001
+            log.info("documented-empty retry did not run: %s", str(e)[:200])
+            return sql, result
+        if nothing_came_back(again.get("records") or [], int(again.get("totalRows") or 0)):
+            return sql, result
+        semantic["emptyRetry"] = {"reason": why, "firstSql": sql}
+        log.info("documented-empty retry answered rows=%s", again.get("totalRows"))
+        return fixed, again
 
     def _plan_rows(self, part, period, scope_args, timing=None):
         """One part of a two-server plan, read whole from the server its tables live on.

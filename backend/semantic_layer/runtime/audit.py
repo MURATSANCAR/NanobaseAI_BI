@@ -627,6 +627,12 @@ def _bindings(sq: SemanticQuery) -> list[dict]:
     return [b] + list(b.get("also") or [])
 
 
+def _binding_read(binding: dict, occ: list[_Occurrence]) -> bool:
+    """Does the statement read the bound entity or any declared equivalent of it?"""
+    names = [binding.get("entity", "")] + [a.get("entity", "") for a in binding.get("alternatives") or []]
+    return any(_same_entity(o.entity, n) for o in occ for n in names if n)
+
+
 def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) -> bool:
     """Every source of the bound entity is read for exactly this period on the declared date
     column — its own, or a declared equivalent one it is joined to in the same SELECT."""
@@ -1162,6 +1168,12 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         for binding in _bindings(sq):
             for period in sq.temporal:
                 p = _period_dict(period)
+                if (p.get("params") or {}).get("default") and not _binding_read(binding, occ):
+                    # The resolver's DEFAULT year (nobody asked for it) bounds the dated measure's rows; an answer that
+                    # reads neither that table nor a declared equivalent has nothing it bounds. Same rule for one
+                    # statement and for a plan (2026-09-29: Q40 answered by a CRM-only plan passed, the same reading
+                    # written as one CRM statement was refused). A period the person wrote stays an obligation.
+                    continue
                 if not _period_proven(p, binding, dated, tree):
                     text = getattr(period, "text", None) or p.get("text") or f"{p.get('start')}–{p.get('end')}"
                     out.append(Unmet("period", f"'{text}' dönemi doğru tarih sütununda doğrulanamadı" + _opaque_note(occ, binding['entity']),

@@ -477,3 +477,38 @@ def test_without_a_reachable_breakdown_the_measure_stays_and_the_word_stays_unde
     sq = _family_world(store, with_breakdown_word=False).resolve("Olay gideri yazar bazında nasıl dağılıyor?", today=TODAY)
     metric = next(s for s in sq.slots if s.semantic_type == SemanticType.METRIC)
     assert metric.mapping.entity == "LEDGER" and sq.requested_breakdowns == ["yazar"] and "yazar" in sq.unresolved
+
+
+# ---------------------------------------------------------------- K8c: kırılım yolu ve varsayılan dönem tutarlılığı
+
+def test_breakdown_paths_list_every_join_and_put_a_sample_empty_key_last(store):
+    """A044: the event card had a direct author key (`new_lgiliYazar`) that is never filled and a link table that is.
+    Both joins are offered; the one through the key the profile sample saw empty goes last and is labelled — the model
+    read the first one it saw, two answers in three came back empty."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+    r = _family_world(store)
+    event = next(p for p in r.profiles if p.entity == "EVENT")
+    event.columns.append(ColumnProfile(name="WRITER_ID", data_type="uniqueidentifier", null_ratio=1.0, ref_entity="PERSON"))
+    event.relationships.append({"column": "WRITER_ID", "ref_entity": "PERSON", "ref_column": "ID"})
+    r._rel_graph_for = None
+    sq = r.resolve("Olay gideri yazar bazında nasıl dağılıyor?", today=TODAY)
+    paths = [p["path"] for p in sq.breakdown_paths]
+    assert [e[2] for e in paths[0]] == ["LINK", "PERSON"], sq.breakdown_paths
+    assert paths[-1] == [["EVENT", "WRITER_ID", "PERSON", "ID"]] and sq.breakdown_paths[-1]["sampleEmptyKeys"] == ["EVENT.WRITER_ID"]
+    from semantic_layer.runtime.compiler import ExistingCompiler
+    block = ExistingCompiler.breakdown_block(sq)
+    assert "LINK.PERSON_ID = PERSON.ID" in block and "DİKKAT" in block, block
+
+
+def test_an_unasked_default_year_is_not_owed_by_a_statement_that_never_reads_the_dated_table(catalog, profiles):
+    """Q40: one CRM statement answering a question whose default year came from a Logo measure was refused for the
+    year; the same reading as a one-part plan passed. A year the person wrote stays an obligation."""
+    from semantic_layer.runtime.audit import gate_report
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("2026 satış tutarı", today=TODAY)
+    assert sq.temporal and sq.temporal_binding, sq.to_dict()
+    other = "SELECT c.SPECODE2, COUNT(*) AS n FROM LG_411_CLCARD c GROUP BY c.SPECODE2"
+    assert any(u.kind == "period" for u in gate_report(sq, other)), "asked year: still owed"
+    sq.temporal[0].params = {**(sq.temporal[0].params or {}), "default": True}
+    assert not [u for u in gate_report(sq, other) if u.kind == "period"], "default year, dated table not read: not owed"
+    dated = "SELECT SUM(i.NETTOTAL) FROM LG_411_01_INVOICE i WHERE i.CANCELLED = 0 AND i.TRCODE IN (7,8,9)"
+    assert any(u.kind == "period" for u in gate_report(sq, dated)), "default year on the dated table itself: still owed"
