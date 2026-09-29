@@ -65,12 +65,24 @@
    "soru": "Alacaklarımızı otuz, altmış, doksan gün diye yaşlandırıp gösterebilir misin?",
    "kaynak": "logo",
    "holdout": false,
-   "expect": "deny",
+   "expect": [
+    "deny",
+    "answer"
+   ],
    "verified": true,
    "source": "logo",
    "reference_sql": "SELECT P.LOGICALREF FROM LG_411_01_PAYTRANS P WHERE P.MODULENR=4 AND P.CANCELLED=0 AND (P.PAID>0 OR P.CROSSREF>0)",
-   "checks": [],
-   "note": "2026-09-18: dürüst ret doğrulandı. Referans, 2026 kopyasında kapatılmış (PAID > 0 ya da CROSSREF > 0) ödeme planı satırlarını arar: 0 satır — borç kapama işlenmemiş, yaşlandırma kovası üretilemez (iş tanımı 08, caveat 2026-09-16). Köprü NON_SQL_QUERY ile aynı gerekçeyi (70.521 satırın 0'ı kapalı) yazıyor. Fatura tarihine göre kesilen faturayı 'alacak' diye yaşlandıran bir cevap YANLIŞ sayılır. Referans satır döndürmeye başlarsa (borç kapama çalıştırılırsa) beklenti yeniden yazılır."
+   "checks": [
+    {
+     "kind": "data_note",
+     "column": [
+      "yaklaşık",
+      "YAKLAŞIK",
+      "FIFO"
+     ]
+    }
+   ],
+   "note": "2026-09-18: dürüst ret doğrulandı. Referans, 2026 kopyasında kapatılmış (PAID > 0 ya da CROSSREF > 0) ödeme planı satırlarını arar: 0 satır — borç kapama işlenmemiş, yaşlandırma kovası üretilemez (iş tanımı 08, caveat 2026-09-16). Köprü NON_SQL_QUERY ile aynı gerekçeyi (70.521 satırın 0'ı kapalı) yazıyor. Fatura tarihine göre kesilen faturayı 'alacak' diye yaşlandıran bir cevap YANLIŞ sayılır. Referans satır döndürmeye başlarsa (borç kapama çalıştırılırsa) beklenti yeniden yazılır. | 2026-09-29: 2026-09-21 muhasebe kararı (caveats/logo-timas.md, metrics 'Vadesi geçmiş'): kapama olmadığından yaşlandırma FIFO yaklaşımıyla — bakiye, plan satırlarının vadesine göre, fatura tarihine göre değil — YAKLAŞIK verilir. Ret de dürüsttür; cevap gelirse yaklaşık olduğunu söylemeli (data_note)."
   },
   {
    "n": 4,
@@ -531,7 +543,10 @@
      "tolerance": 0
     }
    ],
-   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor.  | 2026-09-20 iş kararı K6: dönemsiz mutlak yokluk ('hiç') bütün yıl kopyalarını okur (2021–2026) → 1.826 cari; yalnız 2026 kopyası 4 veriyordu."
+   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor.  | 2026-09-20 iş kararı K6: dönemsiz mutlak yokluk ('hiç') bütün yıl kopyalarını okur (2021–2026) → 1.826 cari; yalnız 2026 kopyası 4 veriyordu. | 2026-09-29: canlı .25'te referans 1.830, köprü 1.829. Fark 19501.01.ÖM002 (195 iş avansları = personel hesabı; 2021–25'te 1 satış siparişi). Bilgi belgesi müşteriyi 120 alıcılar hesabıyla tanımlıyor (metrics/logo-timas.md); iki okuma da meşru → 120 süzgeçli ikinci referans eklendi.",
+   "alt_reference_sql": [
+    "SELECT C.CODE AS cari_kodu FROM LG_411_CLCARD C WHERE C.CODE LIKE '120%' AND (EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0) OR EXISTS (SELECT 1 FROM LG_211_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0)) AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0) AND NOT EXISTS (SELECT 1 FROM LG_211_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0)"
+   ]
   },
   {
    "n": 18,
