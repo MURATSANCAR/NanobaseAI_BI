@@ -104,8 +104,9 @@ def main() -> int:
     try:
         per = direct(logo_file, "SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1")
         years = {}
+        own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
         for r in per:
-            if str(r["FIRMNR"]).zfill(3) in ("015", "016"):
+            if str(r["FIRMNR"]).zfill(3) in ("015", "016") or (own and int(r["FIRMNR"]) not in own):
                 continue
             end = r["ENDDATE"] if isinstance(r["ENDDATE"], (date, datetime)) else datetime.fromisoformat(str(r["ENDDATE"])[:19])
             years[end.year] = max(years.get(end.year, 0), int(r["FIRMNR"]))

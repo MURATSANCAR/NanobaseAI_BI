@@ -122,9 +122,10 @@ def main() -> int:
 
     # R7 · Logo veri sonu.
     skip = {int(x) for x in os.environ.get("SEMANTIC_EXCLUDE_CONTEXT", "015,016").split(",") if x.strip().isdigit()}
+    own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
     by_year: dict[int, int] = {}
     for r in logo("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1"):
-        if int(r["FIRMNR"]) in skip:
+        if int(r["FIRMNR"]) in skip or (own and int(r["FIRMNR"]) not in own):
             continue
         # Bağlantı tarihleri metin olarak da dönebilir ('2026-01-01T00:00:00'); yıl ilk dört karakterden okunur.
         for y in range(int(str(r["BEGDATE"])[:4]), int(str(r["ENDDATE"])[:4]) + 1):

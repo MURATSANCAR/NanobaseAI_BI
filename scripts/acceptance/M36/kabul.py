@@ -71,10 +71,11 @@ def day(v):
 
 def firms(logo) -> dict[int, str]:
     skip = {int(x) for x in os.environ.get("SEMANTIC_EXCLUDE_CONTEXT", "015,016").split(",") if x.strip().isdigit()}
+    own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
     out: dict[int, int] = {}
     for r in logo("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1"):
         f = int(r["FIRMNR"])
-        if f in skip or not day(r["BEGDATE"]) or not day(r["ENDDATE"]):
+        if f in skip or (own and f not in own) or not day(r["BEGDATE"]) or not day(r["ENDDATE"]):
             continue
         for y in range(day(r["BEGDATE"]).year, day(r["ENDDATE"]).year + 1):
             out[y] = max(out.get(y, 0), f)

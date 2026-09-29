@@ -74,7 +74,8 @@ def firm_of(logo, year: int) -> str | None:
     """Bağımsız yıl → firma: L_CAPIPERIOD, kopya firmalar (SEMANTIC_EXCLUDE_CONTEXT) hariç, en büyük numara."""
     skip = {int(x) for x in os.environ.get("SEMANTIC_EXCLUDE_CONTEXT", "015,016").split(",") if x.strip().isdigit()}
     rows = logo(f"SELECT FIRMNR FROM L_CAPIPERIOD WHERE ACTIVE = 1 AND YEAR(BEGDATE) <= {year} AND YEAR(ENDDATE) >= {year}")
-    firms = sorted(int(r["FIRMNR"]) for r in rows if int(r["FIRMNR"]) not in skip)
+    own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
+    firms = sorted(int(r["FIRMNR"]) for r in rows if int(r["FIRMNR"]) not in skip and (not own or int(r["FIRMNR"]) in own))
     return f"{firms[-1]:03d}" if firms else None
 
 

@@ -70,9 +70,10 @@ def logo():
 
 def firms(run) -> dict[int, str]:
     out: dict[int, int] = {}
+    own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
     for r in run("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1"):
         f = int(r["FIRMNR"])
-        if f in (15, 16):
+        if f in (15, 16) or (own and f not in own):
             continue
         for y in range(r["BEGDATE"].year, r["ENDDATE"].year + 1):
             out[y] = max(out.get(y, 0), f)

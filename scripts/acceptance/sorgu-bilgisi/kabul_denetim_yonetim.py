@@ -11,6 +11,7 @@ Ortam ve kullanım kabul.py ile aynı: python kabul_denetim_yonetim.py [--skip-h
 from __future__ import annotations
 
 import argparse
+import os
 
 from kabul import check, connector, contract, http, num, results, run_all
 
@@ -29,7 +30,9 @@ def main() -> None:
         k = contract("denetim /overview", rep, FK.NOT_RAKAM)
         got = run_all("denetim /overview", k, heavy)
         periods = connector("logo").execute("SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1", 1000)[1]
-        want = [f"{int(r['FIRMNR']):03d}" for r in periods if str(r["BEGDATE"])[:4] <= str(rep["year"]) <= str(r["ENDDATE"])[:4]]
+        own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
+        want = [f"{int(r['FIRMNR']):03d}" for r in periods if str(r["BEGDATE"])[:4] <= str(rep["year"]) <= str(r["ENDDATE"])[:4]
+                and (not own or int(r["FIRMNR"]) in own)]
         check("D1 denetim: firma kopyası yılın firması", rep.get("firm") in want, f"rapor {rep.get('firm')} · Logo {want}")
         h = got.get("denetim.hesaplar")
         if h is not None:

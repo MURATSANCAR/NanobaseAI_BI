@@ -142,6 +142,8 @@ check("4 dönem raporu sipariş tipleri", st == 200 and all(got.get(t, 0) == sql
 
 # 5. katalog: stok > 0 ve fiyat = geçerli genel liste
 periods = q(logo, "SELECT FIRMNR, BEGDATE, ENDDATE FROM L_CAPIPERIOD WHERE ACTIVE = 1")
+_own = {int(x) for x in os.environ.get("SEMANTIC_FIRMS", "").split(",") if x.strip().isdigit()}   # canlı Logo başka şirketleri de taşır
+periods = [r for r in periods if not _own or int(r["FIRMNR"]) in _own]
 firm = f"{max(periods, key=lambda r: r['ENDDATE'])['FIRMNR']:03d}"
 st, lst = api("GET", "/api/v1/schools?kapsam=hepsi&kademe=3&sirala=ogrenci", ADMIN)
 sid = lst["items"][0]["id"] if st == 200 and lst["items"] else None
