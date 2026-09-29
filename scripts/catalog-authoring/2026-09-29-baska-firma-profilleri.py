@@ -28,8 +28,10 @@ import os
 import sys
 from collections import Counter
 
-for p in ("/data/nanobaseai/bi/frontend/backend", os.environ.get("PYTHONPATH", "")):   # PYTHONPATH önde kalır
-    if p and p not in sys.path:
+for p in ("/data/nanobaseai/bi/frontend/backend", os.environ.get("PYTHONPATH", "")):   # PYTHONPATH en önde
+    if p:
+        while p in sys.path:
+            sys.path.remove(p)
         sys.path.insert(0, p)
 
 from semantic_layer.config import SemanticSettings  # noqa: E402
