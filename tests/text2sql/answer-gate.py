@@ -92,20 +92,35 @@ class Bridge:
         return answer
 
 
+def _words(name: str) -> frozenset:
+    return frozenset(w for w in re.split(r"[^0-9a-zçğıöşü]+", str(name).lower()) if w)
+
+
 def _pick(row: dict, names):
-    """Kolon adı model koşusuna göre değişir (barkod / barcode_key): ilk bulunan aday."""
-    for name in ([names] if isinstance(names, str) else list(names or [])):
+    """Kolon adı model koşusuna göre değişir (barkod / barcode_key): ilk bulunan aday. Sıra: birebir ad; sonra aynı
+    kelime kümesi (`gider_toplam` = `toplam_gider`; model sözcük sırasını değiştirince «*» yedeği başka kolona —
+    `gider_butceli` — düşüyordu, Q63 2026-09-29); en son «*» / «$text» yedekleri."""
+    names = [names] if isinstance(names, str) else list(names or [])
+    plain = [n for n in names if n not in ("*", "$text")]
+    for name in plain:
+        if name in row:
+            return row[name]
+    for name in plain:
+        key = _words(name)
+        hit = next((k for k in row if _words(k) == key), None)
+        if key and hit is not None:
+            return row[hit]
+    for name in names:
         if name == "*":                       # tek değerli cevap: ilk sayısal kolon, adı ne olursa olsun
             return next((v for v in row.values() if _num(v) is not None and not isinstance(v, bool)), None)
         if name == "$text":                   # anahtar kolonu: ilk metin değeri, adı ne olursa olsun
             return next((v for v in row.values() if isinstance(v, str) and _num(v) is None), None)
-        if name in row:
-            return row[name]
     return None
 
 
 def _has(row: dict, names) -> bool:
-    return any(n in ("*", "$text") or n in row for n in ([names] if isinstance(names, str) else list(names or [])))
+    names = [names] if isinstance(names, str) else list(names or [])
+    return any(n in ("*", "$text") or n in row or any(_words(k) == _words(n) for k in row) for n in names)
 
 
 def kind_of(answer: dict) -> str:
