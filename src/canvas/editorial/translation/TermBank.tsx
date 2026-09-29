@@ -8,6 +8,7 @@ import { useDebounced, Panel } from '../kit';
 import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi } from './ioApi';
 import SqlInfo from '../../components/SqlInfo';
+import { AskSheet } from '../../budget/parts';
 import { kaynakOf } from '../../components/kaynakOf';
 import { xlsxUrl } from '../../components/excel';
 import { EmptyHint, Explain, ExplainLabel } from '../../components/Explain';
@@ -88,7 +89,9 @@ const toBody = (d: Draft) => ({ source: d.source.trim(), target: d.target.trim()
 function TermRow({ t, canEdit, onChanged }: { t: Term; canEdit: boolean; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const upd = useMutation({ mutationFn: (b: Record<string, unknown>) => translationApi.updateTerm(t.id, b), onSuccess: () => { setEditing(false); onChanged(); } });
-  const del = useMutation({ mutationFn: () => translationApi.deleteTerm(t.id), onSuccess: onChanged });
+  const [asking, setAsking] = useState(false);
+  // Hata satırın altında yazılır; pencere her sonuçta kapanır ki görünsün.
+  const del = useMutation({ mutationFn: () => translationApi.deleteTerm(t.id), onSuccess: onChanged, onSettled: () => setAsking(false) });
   if (editing)
     return (
       <li className="rounded-2xl border border-canvas-violet/40 bg-white p-3">
@@ -141,9 +144,7 @@ function TermRow({ t, canEdit, onChanged }: { t: Term; canEdit: boolean; onChang
               type="button"
               aria-label="Terimi sil"
               disabled={del.isPending}
-              onClick={() => {
-                if (window.confirm(`«${t.source}» terimi silinsin mi? Bu geri alınamaz.`)) del.mutate();
-              }}
+              onClick={() => setAsking(true)}
               className={`${btnGhost} min-h-9 px-2.5 text-rose-700`}
             >
               <Trash2 aria-hidden className="h-4 w-4" />
@@ -156,6 +157,9 @@ function TermRow({ t, canEdit, onChanged }: { t: Term; canEdit: boolean; onChang
           <Note tone="err">{errText(upd.error || del.error, 'İşlem yapılamadı.')}</Note>
         </div>
       )}
+      <AskSheet open={asking} title="Terimi sil" confirm="Terimi sil" danger busy={del.isPending}
+        message={`«${t.source}»${t.target ? ` → «${t.target}»` : ''} terimi (${langName(t.sourceLang)} → ${langName(t.targetLang)}${t.jobId ? `, yalnız ${t.jobTitle ?? 'bir iş'}` : ''}) terim bankasından silinecek. Bu işlem geri alınamaz.`}
+        onClose={() => setAsking(false)} onConfirm={() => del.mutate()} />
     </li>
   );
 }

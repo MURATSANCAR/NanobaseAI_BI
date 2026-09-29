@@ -15,6 +15,7 @@ import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';
 import SqlInfo from '../../components/SqlInfo';
+import { AskSheet } from '../../budget/parts';
 import { kaynakOf } from '../../components/kaynakOf';
 import { EmptyHint } from '../../components/Explain';
 
@@ -386,7 +387,9 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
   const [notice, setNotice] = useState<string | null>(null);
   const draft = useMutation({ mutationFn: () => translationApi.draft(jobId, null), onSuccess: refresh });
   const toRed = useMutation({ mutationFn: () => translationApi.toRedaction(jobId), onSuccess: refresh });
-  const del = useMutation({ mutationFn: () => translationApi.deleteJob(jobId), onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['translation', 'jobs'] }); onDeleted(); } });
+  const [deleting, setDeleting] = useState(false);
+  // Hata ekranın üstündeki notta yazılır; pencere her sonuçta kapanır ki görünsün.
+  const del = useMutation({ mutationFn: () => translationApi.deleteJob(jobId), onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['translation', 'jobs'] }); onDeleted(); }, onSettled: () => setDeleting(false) });
   const j = q.data;
   const err = errText(q.error || draft.error || toRed.error || del.error, 'Çeviri işi okunamadı.');
   useEffect(() => setNotice(null), [jobId]);
@@ -653,15 +656,16 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
             type="button"
             disabled={del.isPending || drafting}
             className={`${btnGhost} text-rose-700`}
-            onClick={() => {
-              if (window.confirm(`«${j.title}» çeviri işi, bütün segmentleri, işe özel terimleri ve dosyalarıyla silinsin mi? Bu geri alınamaz.`)) del.mutate();
-            }}
+            onClick={() => setDeleting(true)}
           >
             <Trash2 aria-hidden className="h-4 w-4" />
             İşi kalıcı olarak sil
           </button>
         </div>
       )}
+      <AskSheet open={deleting} title="Çeviri işini sil" confirm="İşi sil" danger busy={del.isPending}
+        message={`«${j.title}» çeviri işi (${pair(j)}) ${nf.format(j.segments.total)} segmenti${j.segments.onaylandi ? ` (${nf.format(j.segments.onaylandi)} onaylı)` : ''}, işe özel terimleri ve dosyalarıyla birlikte silinecek. Bu işlem geri alınamaz.`}
+        onClose={() => setDeleting(false)} onConfirm={() => del.mutate()} />
     </div>
   );
 }

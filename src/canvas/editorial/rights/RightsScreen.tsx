@@ -10,6 +10,7 @@ import { Field, Sheet, Tabs, day, errMsg, money, num } from '../contracts/ui';
 import RightsMapView from './RightsMap';
 import { rightsApi, rightsMetaOptions, type BookCard, type Grant, type License, type RightState, type RightsMeta } from '../royalty/api';
 import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import { AskSheet } from '../../budget/parts';
 import { LicenseTerms, RightChips } from '../crmRights';
 import { EmptyHint, Explain } from '../../components/Explain';
 
@@ -137,9 +138,13 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
   const qc = useQueryClient();
   const [grant, setGrant] = useState<Grant | 'new' | null>(null);
   const [lic, setLic] = useState<License | 'new' | null>(null);
+  const [removing, setRemoving] = useState<Grant | null>(null);
   const del = useMutation({
     mutationFn: (id: number) => rightsApi.grantDelete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rights'] }),
+    onSuccess: () => {
+      setRemoving(null);
+      qc.invalidateQueries({ queryKey: ['rights'] });
+    },
     onError: (e) => toast.error(errMsg(e) ?? 'Silinemedi.'),
   });
   const alis = c.contracts.filter((x) => x.kind === 'alis');
@@ -195,7 +200,7 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
               {c.can.rightsEdit && (
                 <span className="ml-auto flex gap-1">
                   <button type="button" aria-label="Hakkı düzenle" className="grid h-11 w-11 place-items-center rounded-lg transition-transform duration-150 ease-out hover:bg-slate-100 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => setGrant(g)}><Pencil aria-hidden className="h-4 w-4" /></button>
-                  <button type="button" aria-label="Hakkı sil" className="grid h-11 w-11 place-items-center rounded-lg text-red-700 transition-transform duration-150 ease-out hover:bg-red-50 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => window.confirm(`${g.kindLabel} hakkı kaydı silinsin mi? Bu geri alınamaz.`) && del.mutate(g.id)}><Trash2 aria-hidden className="h-4 w-4" /></button>
+                  <button type="button" aria-label="Hakkı sil" className="grid h-11 w-11 place-items-center rounded-lg text-red-700 transition-transform duration-150 ease-out hover:bg-red-50 active:scale-[0.97] sm:h-8 sm:w-8" onClick={() => setRemoving(g)}><Trash2 aria-hidden className="h-4 w-4" /></button>
                 </span>
               )}
             </li>
@@ -227,6 +232,11 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
       </Panel>
       {grant && <GrantSheet c={c} meta={meta} g={grant === 'new' ? null : grant} onClose={() => setGrant(null)} />}
       {lic && <LicenseSheet meta={meta} x={lic === 'new' ? null : lic} book={c.book} onClose={() => setLic(null)} />}
+      <AskSheet open={!!removing} title="Hak kaydını sil" confirm="Kaydı sil" danger busy={del.isPending}
+        message={removing
+          ? `«${c.book.title}» kitabının ${removing.kindLabel} hakkı kaydı (${[removing.language, removing.country].filter(Boolean).join(' / ') || 'bütün dil ve ülkeler'}, ${removing.start || removing.end ? `${day(removing.start)} – ${day(removing.end)}` : 'süresiz'}) silinecek. Bu işlem geri alınamaz.`
+          : ''}
+        onClose={() => setRemoving(null)} onConfirm={() => removing && del.mutate(removing.id)} />
     </>
   );
 }

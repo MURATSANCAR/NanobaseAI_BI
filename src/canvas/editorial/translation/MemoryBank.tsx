@@ -9,6 +9,7 @@ import { Panel } from '../kit';
 import { FileButton, LANGS, langName } from './parts';
 import { translationIoApi, type MemoryFile, type MemoryPair } from './ioApi';
 import SqlInfo from '../../components/SqlInfo';
+import { AskSheet } from '../../budget/parts';
 import { kaynakOf } from '../../components/kaynakOf';
 import { EmptyHint } from '../../components/Explain';
 
@@ -16,7 +17,9 @@ import { EmptyHint } from '../../components/Explain';
  *  benzer cümle önerisi ikisine birden bakar; dış bellekten gelen öneri «Dış bellek: <dosya>» diye görünür. */
 
 function FileRow({ pair, f, canManage, onChanged }: { pair: MemoryPair; f: MemoryFile; canManage: boolean; onChanged: () => void }) {
-  const del = useMutation({ mutationFn: () => translationIoApi.deleteTmx(pair.sourceLang, pair.targetLang, f.origin), onSuccess: onChanged });
+  const [asking, setAsking] = useState(false);
+  // Hata satırın altında yazılır; pencere her sonuçta kapanır ki görünsün.
+  const del = useMutation({ mutationFn: () => translationIoApi.deleteTmx(pair.sourceLang, pair.targetLang, f.origin), onSuccess: onChanged, onSettled: () => setAsking(false) });
   return (
     <li className="rounded-xl border border-slate-100 bg-white px-2.5 py-2 text-[12px]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -28,9 +31,7 @@ function FileRow({ pair, f, canManage, onChanged }: { pair: MemoryPair; f: Memor
               type="button"
               aria-label={`${f.origin} kayıtlarını kaldır`}
               disabled={del.isPending}
-              onClick={() => {
-                if (window.confirm(`«${f.origin}» dosyasından alınan ${nf.format(f.count)} bellek kaydı kaldırılsın mı? Bu geri alınamaz.`)) del.mutate();
-              }}
+              onClick={() => setAsking(true)}
               className={`${btnGhost} min-h-9 px-2.5 text-rose-700`}
             >
               <Trash2 aria-hidden className="h-4 w-4" />
@@ -49,6 +50,9 @@ function FileRow({ pair, f, canManage, onChanged }: { pair: MemoryPair; f: Memor
           <Note tone="err">{errText(del.error, 'Kaldırılamadı.')}</Note>
         </div>
       )}
+      <AskSheet open={asking} title="Bellek kayıtlarını kaldır" confirm="Kayıtları kaldır" danger busy={del.isPending}
+        message={`«${f.origin}» dosyasından alınan ${nf.format(f.count)} bellek kaydı (${langName(pair.sourceLang)} → ${langName(pair.targetLang)}) kaldırılacak; çevirmen ekranında bu dosyadan öneri çıkmaz. Bu işlem geri alınamaz; gerekirse dosyayı yeniden yüklersiniz.`}
+        onClose={() => setAsking(false)} onConfirm={() => del.mutate()} />
     </li>
   );
 }
