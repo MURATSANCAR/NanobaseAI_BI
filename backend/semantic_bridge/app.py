@@ -600,6 +600,8 @@ class Runtime:
 
     def _free_result_space(self) -> None:
         """Yeni sonuçtan önce yer açar: süresi geçen sonuçlar, sahipsiz dosyalar, sonra en eski sonuç ve önbellek."""
+        if not hasattr(self, "_results_lock"):
+            return                  # sonuç kaydı tutmayan (yarım kurulmuş) çalışma zamanı: silinecek bir şey yok
         with self._results_lock:
             for rid, snap in list(self._results.items()):
                 if time.time() - snap['at'] > self._result_ttl:
