@@ -19,17 +19,28 @@ Kaynaklar (analiz `docs/analiz/kullanici-ihtiyaclari/M31-okul-tanitim-ziyaret.md
   ve geçerli satış fiyatı (`PRCLIST` PTYPE 2, ACTIVE 0, bugün BEGDATE–ENDDATE arasında).
 - **Kişiler** — CRM `SystemUserBase` (DomainName → AD hesabı, ad, iç e-posta).
 
-CRM tarihleri UTC saklanır; ekranda İstanbul gününe çevrilir. Okuma 10 dakika bellekte tutulur; «Verileri yenile»
-(X-Data-Refresh) yeniden okur. CRM'e ve Logo'ya hiçbir şey yazılmaz.
+CRM tarihleri UTC saklanır; ekranda İstanbul gününe çevrilir. CRM'e ve Logo'ya hiçbir şey yazılmaz.
+
+Hız (2026-09-29): bir okuma 35–177 sn sürüyor (test sunucusu ölçümü); istek onu beklemez. Son okuma bellekte ve portal
+tablosunda (`semantic_school_snapshot`; köprü yeniden başlasa da kaybolmaz) durur, istek onu hemen alır. `TTL`'den
+eskiyse ya da «Verileri yenile» (X-Data-Refresh) geldiyse yenisi ARKADA okunur; okuma bitince okul dizini ve puanlar
+arkada hazırlanır, modülün hazır cevapları düşer. İstek yalnız hiç okuma yokken (ilk kurulum ya da okuma sorgularının
+şekli değişti) kaynağı bekler; gece zamanlayıcısı (`run-due`) da bekleyerek okur.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import logging
 import os
 import re
 import threading
 import time
+import uuid
+import zlib
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo
 
@@ -39,6 +50,8 @@ log = logging.getLogger("semantic.school_visits.sources")
 TZ = ZoneInfo("Europe/Istanbul")
 UTC = ZoneInfo("UTC")
 TTL = int(os.environ.get("SCHOOLS_CACHE_SEC", "600"))
+#: «Verileri yenile»: bu kadar saniye içinde başlamış okuma varken yenisi açılmaz (ekranın 5–6 ucu aynı anda ister).
+FRESH_MIN_SEC = int(os.environ.get("SCHOOLS_FRESH_MIN_SEC", "60"))
 MAX_ROWS = 3_000_000  # güvenlik ağı; aşılırsa hata verilir, sessizce kesilmez
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _FIRM = re.compile(r"^[0-9]{3}$")
@@ -372,39 +385,202 @@ def _close(conn: Any) -> None:
 # ------------------------------------------------------------------------------------------ okuma
 
 
+# ------------------------------------------------------------------------------------------ okumanın saklanması
+
+#: Paketleme sürümü; `shape()` ile birlikte saklanan okumanın biçimini belirler.
+PACK_VERSION = "1"
+
+
+def shape() -> str:
+    """Okuma sorgularının ŞEKLİ (sabit girdilerle üretilen SQL metinleri) + paketleme sürümü. Sorgular değişince saklanan
+    eski okuma kullanılmaz (yeni kolon eksik kalmasın); tarih ve ayar değişimi şekli değiştirmez (onu `TTL` tazeler)."""
+    d = date(2000, 1, 1)
+    parts = [schools_sql("S.dbo", (1,)), visits_sql("S.dbo"), dealer_history_sql("S.dbo"), orders_sql("S.dbo", d),
+             dealers_sql("S.dbo"), books_sql("S.dbo"), users_sql("S.dbo"), districts_sql("S.dbo"), periods_sql(),
+             stock_sql("000"), price_sql("000", d), clcard_sql("000"), dealer_sales_sql("000", d, d),
+             dealer_months_sql("000", d, d), PACK_VERSION]
+    return hashlib.sha1("\n".join(parts).encode("utf-8")).hexdigest()
+
+
+_TAGS = ("$n", "$t", "$d", "$u", "$b")
+
+
+def _enc(o: Any) -> Any:
+    """JSON'un tanımadığı değer tür etiketiyle yazılır; açılınca aynı tür, aynı değer (Decimal metinle, tam)."""
+    if isinstance(o, Decimal):
+        return {"$n": str(o)}
+    if isinstance(o, datetime):
+        return {"$t": o.isoformat()}
+    if isinstance(o, date):
+        return {"$d": o.isoformat()}
+    if isinstance(o, uuid.UUID):
+        return {"$u": str(o)}
+    if isinstance(o, (bytes, bytearray)):
+        return {"$b": base64.b64encode(bytes(o)).decode("ascii")}
+    raise TypeError(f"okuma saklanamıyor: {type(o).__name__}")
+
+
+def _dec(d: dict[str, Any]) -> Any:
+    if len(d) == 1:
+        k, v = next(iter(d.items()))
+        if k in _TAGS and isinstance(v, str):
+            if k == "$n":
+                return Decimal(v)
+            if k == "$t":
+                return datetime.fromisoformat(v)
+            if k == "$d":
+                return date.fromisoformat(v)
+            if k == "$u":
+                return uuid.UUID(v)
+            return base64.b64decode(v)
+    return d
+
+
+_CHUNK = 50_000
+
+
+def pack(snap: dict[str, Any]) -> bytes:
+    """Okuma → sıkıştırılmış JSON. Satırlar olduğu gibi (sayı, tarih, GUID türüyle) saklanır: saklanan okumadan kurulan
+    dizin ve rakamlar canlı okumadakiyle birebir aynıdır. Yıl → firma sözlüğünün anahtarı sayıdır; çift listesi yazılır.
+    Büyük listeler (bayi × kitap satışı milyonlarca satır olabilir) parça parça yazılır: bellekte tam JSON metni oluşmaz."""
+    body = dict(snap)
+    body["firms"] = [[k, v] for k, v in (snap.get("firms") or {}).items()]
+    z = zlib.compressobj(3)
+    out: list[bytes] = []
+
+    def put(text: str) -> None:
+        out.append(z.compress(text.encode("utf-8")))
+
+    def dump(v: Any) -> str:
+        return json.dumps(v, default=_enc, ensure_ascii=False, separators=(",", ":"))
+
+    put("{")
+    for i, (k, v) in enumerate(body.items()):
+        put(("," if i else "") + json.dumps(str(k)) + ":")
+        if isinstance(v, list) and len(v) > _CHUNK:
+            put("[")
+            for j in range(0, len(v), _CHUNK):
+                put(("," if j else "") + dump(v[j:j + _CHUNK])[1:-1])
+            put("]")
+        else:
+            put(dump(v))
+    put("}")
+    out.append(z.flush())
+    return b"".join(out)
+
+
+def unpack(data: bytes) -> dict[str, Any]:
+    body = json.loads(zlib.decompress(data).decode("utf-8"), object_hook=_dec)
+    body["firms"] = {int(k): v for k, v in body.get("firms") or []}
+    return body
+
+
 class Source:
-    """CRM + Logo okuması. Bağlantı okuma başına açılıp kapanır; aynı anda tek okuma, sonuç `TTL` saniye bellekte.
-    Logo'ya ulaşılamazsa CRM ile devam edilir, uyarı ekranda yazılır (stok/fiyat/bayi satışı yok)."""
+    """CRM + Logo okuması. Bağlantı okuma başına açılıp kapanır; aynı anda tek okuma.
+
+    İstek okumayı beklemez: bellekteki (yoksa saklanan) son okuma hemen döner; `TTL`'den eskiyse ya da «Verileri
+    yenile» geldiyse yenisi arkada okunur. `store` (isteğe bağlı) `load() → okuma | None` ve `save(okuma)` verir: köprü
+    yeniden başlasa da son okuma kaybolmaz. Logo'ya ulaşılamazsa CRM ile devam edilir, uyarı ekranda yazılır."""
 
     def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any], schema: Callable[[], str],
-                 settings: Callable[[], dict[str, Any]]):
+                 settings: Callable[[], dict[str, Any]], store: Any = None):
         self._crm = crm_connect
         self._logo = logo_connect
         self._schema = schema
         self._settings = settings
-        self._lock = threading.Lock()
+        self._store = store
+        self._lock = threading.Lock()          # canlı okuma: aynı anda tek
+        self._restore_lock = threading.Lock()
+        self._bg_lock = threading.Lock()
+        self._restored = False
         self._snap: Optional[dict[str, Any]] = None
         self._at = 0.0
         self._listeners: list[Callable[[dict[str, Any]], None]] = []
+        self._bg: Optional[threading.Thread] = None
+        self.started = 0.0                     # son okumanın başladığı an (arkadaki dahil)
+        self.last_error: Optional[str] = None
 
     def on_read(self, fn: Callable[[dict[str, Any]], None]) -> None:
+        """Yeni okuma (canlı ya da saklanandan açılan) geldiğinde çağrılır; okuyan iş parçacığında çalışır."""
         self._listeners.append(fn)
 
     def cached(self) -> Optional[dict[str, Any]]:
         return self._snap
 
-    def snapshot(self, fresh: bool = False) -> dict[str, Any]:
-        with self._lock:
-            if not fresh and self._snap is not None and time.time() - self._at < TTL:
+    @property
+    def busy(self) -> bool:
+        """Arkada okuma sürüyor mu."""
+        return bool(self._bg is not None and self._bg.is_alive())
+
+    def snapshot(self, fresh: bool = False, wait: bool = False) -> dict[str, Any]:
+        """Son okuma hemen döner. Eskiyse (`TTL`) ya da `fresh` ise yenisi arkada okunur. Kaynak yalnız hiç okuma yokken
+        ya da `wait` (zamanlayıcı) istendiğinde beklenir."""
+        snap = self._snap if self._snap is not None else self.restore()
+        if snap is None or wait:
+            return self._read_now(since=time.time() if wait else None)
+        now = time.time()
+        if now - self._at >= TTL or (fresh and now - self.started >= FRESH_MIN_SEC):
+            self.refresh_async()
+        return snap
+
+    def restore(self) -> Optional[dict[str, Any]]:
+        """Saklanan son okuma (süreçte bir kez denenir; şekli bugünkü sorgulardan farklıysa `store` vermez)."""
+        if self._store is None or self._restored:
+            return self._snap
+        with self._restore_lock:
+            if self._restored:
                 return self._snap
+            try:
+                snap = self._store.load()
+            except Exception as e:  # noqa: BLE001 — saklanan okuma açılamazsa canlı okunur
+                log.warning("school_visits: saklanan okuma açılamadı: %s", e)
+                snap = None
+            if snap is not None and self._snap is None:
+                # Dinleyiciye haber verilmez: saklanan okuma yeni veri değildir (hazır cevaplar düşmez).
+                self._snap, self._at = snap, float(snap.get("at") or 0.0)
+            self._restored = True
+            return self._snap
+
+    def refresh_async(self) -> bool:
+        """Arkada yeni okuma başlatır; okuma sürüyorsa yenisini açmaz."""
+        with self._bg_lock:
+            if self._bg is not None and self._bg.is_alive():
+                return False
+            self.started = time.time()
+            self._bg = threading.Thread(target=self._bg_read, args=(self.started,), name="schools-read", daemon=True)
+            self._bg.start()
+            return True
+
+    def _bg_read(self, since: float) -> None:
+        try:
+            self._read_now(since=since)
+            self.last_error = None
+        except Exception as e:  # noqa: BLE001 — eski okuma yerinde kalır, ekran onu gösterir
+            self.last_error = str(e)
+            log.warning("school_visits: arka plan okuması başarısız: %s", e)
+
+    def _read_now(self, since: Optional[float] = None) -> dict[str, Any]:
+        """Tek okuma. Beklerken başka çağrı okumayı bitirdiyse (`since`'ten sonra) onun sonucu döner."""
+        with self._lock:
+            if self._snap is not None and (since is None or self._at >= since):
+                return self._snap
+            self.started = time.time()
             snap = self.read()
-            for fn in self._listeners:
+            self._snap, self._at = snap, float(snap.get("at") or time.time())
+            self._notify(snap)                  # önce dizin ve puan (ekran), sonra saklama
+            if self._store is not None:
                 try:
-                    fn(snap)
-                except Exception as e:  # noqa: BLE001
-                    log.warning("school_visits: okuma sonrası hazırlık başarısız: %s", e)
-            self._snap, self._at = snap, time.time()
+                    self._store.save(snap)
+                except Exception as e:  # noqa: BLE001 — saklanamasa da bellekte kullanılır
+                    log.warning("school_visits: okuma saklanamadı: %s", e)
             return snap
+
+    def _notify(self, snap: dict[str, Any]) -> None:
+        for fn in self._listeners:
+            try:
+                fn(snap)
+            except Exception as e:  # noqa: BLE001
+                log.warning("school_visits: okuma sonrası hazırlık başarısız: %s", e)
 
     def read(self) -> dict[str, Any]:
         st = self._settings()

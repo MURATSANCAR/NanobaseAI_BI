@@ -7497,6 +7497,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "llm": lambda priority: rt().llm_for("okul", _SCHOOLS_BATCH if priority else None),
         "system": lambda: (rt().store.engine, rt().settings.tenant_id),
         "require_caller": _require_caller,
+        # Okuma arkada (35–177 sn) biter: modülün hazır cevapları düşer ki sonraki açılış yeni okumayı görsün.
+        "invalidate": lambda: app.state.response_cache.invalidate("/api/v1/schools"),
+        "system_ready": lambda: state["rt"] is not None,
     })
 
     # Zeki AI sesli not (M30 saha / M31 okul ziyaret notu): ses → GPU'daki sesli not servisi → isteğe bağlı Zeki AI

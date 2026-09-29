@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
 import uuid
@@ -38,27 +39,100 @@ DAYS_TR = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi",
 
 
 class Service:
-    """Okuma (CRM + Logo) + portal kayıtları + hesaplar. Model ve puanlar bellekte; yazma olunca puanlar yeniden."""
+    """Okuma (CRM + Logo) + portal kayıtları + hesaplar.
 
-    def __init__(self, source: src.Source, settings: Callable[[], dict[str, Any]], llm: Callable[[int], Any]):
+    Hız (2026-09-29; `GET /plan` hazır cevapsız 35–177 sn ölçüldü): istek canlı okumayı, okul dizinini (Model) ve
+    68 bin okulun puanını beklemez. Okuma arkada (`Source`), dizin ve tam puan okuma bitince arkada (`_on_read`) ya da
+    köprü açılışında saklanan okumadan (`warm`) hazırlanır. Yazmadan sonra puan yalnız girdisi değişen okullar için
+    yeniden hesaplanır (aynı fonksiyon, aynı girdi → aynı rakam). Plan, kart, bayi ve dönem raporu tam puana hiç
+    muhtaç değildir: yalnız kendi okullarını hesaplar."""
+
+    def __init__(self, source: src.Source, settings: Callable[[], dict[str, Any]], llm: Callable[[int], Any],
+                 system: Optional[Callable[[], tuple[Any, str]]] = None, on_ready: Optional[Callable[[], Any]] = None):
         self.source = source
         self.settings = settings
         self.llm = llm
+        self.system = system
+        self.on_ready = on_ready
         self._lock = threading.Lock()
+        self._build_lock = threading.Lock()      # dizin kurma: aynı anda tek
+        self._score_lock = threading.Lock()      # tam puanlama: aynı anda tek
         self._model: Optional[tuple[tuple, SV.Model]] = None
         self._scored: Optional[tuple[tuple, dict[str, Any]]] = None
+        self._seen: Optional[tuple[Any, str]] = None
+        self._prep: Optional[threading.Thread] = None
+        if hasattr(source, "on_read"):
+            source.on_read(self._on_read)
 
     # -------------------------------------------------------------- model ve puan
-    def model(self, engine: Any, tenant: str, fresh: bool = False) -> SV.Model:
-        """Okumanın dizini; okuma yenilenince ya da yeni ad eşleşmesi kaydedilince yeniden kurulur."""
-        snap = self.source.snapshot(fresh)
+    def model(self, engine: Any, tenant: str, fresh: bool = False, *, wait: bool = False, sync: bool = False) -> SV.Model:
+        """Okumanın dizini. Hazır dizin hemen döner; yeni okumanın dizini arkada kurulur. `wait`: kaynağı bekleyerek
+        yeniden oku ve dizini kur (zamanlayıcı); `sync`: okumayı bekleme ama dizin eskiyse şimdi kur (ad eşleşmesi)."""
+        self._seen = (engine, tenant)
+        snap = self.source.snapshot(fresh, True) if wait else self.source.snapshot(fresh)
         key = (snap["at"], self._matches)
-        with self._lock:
-            if self._model and self._model[0] == key:
-                return self._model[1]
+        cur = self._model
+        if cur is not None and cur[0] == key:
+            return cur[1]
+        if cur is not None and not (wait or sync):
+            self._prepare_async(engine, tenant)
+            return cur[1]
+        return self._build(engine, tenant, snap, key)
+
+    def _build(self, engine: Any, tenant: str, snap: dict[str, Any], key: tuple) -> SV.Model:
+        with self._build_lock:
+            cur = self._model
+            if cur is not None and (cur[0] == key or cur[0][0] > key[0]):    # daha yeni okumanın dizini geri alınmaz
+                return cur[1]
             m = SV.Model(snap, self.settings(), SV.load_matches(engine, tenant))
-            self._model = (key, m)
+            with self._lock:
+                self._model = (key, m)
             return m
+
+    def _on_read(self, snap: dict[str, Any]) -> None:
+        """Yeni canlı okuma: dizin ve tam puan okuyan iş parçacığında (arkada) hazırlanır, sonra hazır cevaplar düşer."""
+        where = self._seen or (self.system() if self.system else None)
+        if where is None:
+            return
+        engine, tenant = where
+        SV.ensure(engine)
+        m = self._build(engine, tenant, snap, (snap["at"], self._matches))
+        self._score(engine, tenant, m)
+        self._folds(m)
+        if self.on_ready is not None:
+            try:
+                self.on_ready()
+            except Exception as e:  # noqa: BLE001
+                log.info("school_visits: hazır cevaplar düşürülemedi: %s", e)
+
+    def _prepare_async(self, engine: Any, tenant: str) -> None:
+        with self._lock:
+            if self._prep is not None and self._prep.is_alive():
+                return
+
+            def run() -> None:
+                try:
+                    snap = self.source.snapshot(False)
+                    m = self._build(engine, tenant, snap, (snap["at"], self._matches))
+                    self._score(engine, tenant, m)
+                    self._folds(m)
+                except Exception as e:  # noqa: BLE001 — istek eski dizinle sürer
+                    log.warning("school_visits: dizin arkada kurulamadı: %s", e)
+
+            self._prep = threading.Thread(target=run, name="schools-model", daemon=True)
+            self._prep.start()
+
+    def warm(self, engine: Any, tenant: str) -> bool:
+        """Köprü açılışı: saklanan okumadan dizin ve tam puan (canlı okuma yapmaz; saklanan yoksa ilk istek okur)."""
+        restore = getattr(self.source, "restore", None)
+        snap = restore() if restore else None
+        if snap is None:
+            return False
+        self._seen = self._seen or (engine, tenant)
+        m = self._build(engine, tenant, snap, (snap["at"], self._matches))
+        self._score(engine, tenant, m)
+        self._folds(m)
+        return True
 
     _matches = 0
 
@@ -68,48 +142,117 @@ class Service:
     def current(self) -> Optional[SV.Model]:
         return self._model[1] if self._model else None
 
-    def scored(self, engine: Any, tenant: str, fresh: bool = False) -> dict[str, Any]:
-        m = self.model(engine, tenant, fresh)
-        key = (id(m), SV.VERSION[0])
-        with self._lock:
-            if self._scored and self._scored[0] == key:
-                return self._scored[1]
-        ctx = SV.load_context(engine, tenant)
-        portal_last = SV.last_visits(engine, tenant)
-        portal_owner = SV.portal_owners(engine, tenant)
-        links = SV.approved_links(engine, tenant)
-        st = m.settings
-        refs = SV._ref_students(m)
+    def scored(self, engine: Any, tenant: str, fresh: bool = False, *, wait: bool = False, sync: bool = False) -> dict[str, Any]:
+        return self._score(engine, tenant, self.model(engine, tenant, fresh, wait=wait, sync=sync))
+
+    # ---- puan: bir okul (tam puanla aynı fonksiyon)
+    def _stat(self, m: SV.Model) -> dict[str, Any]:
+        """Dizine bağlı, portal kaydına bağlı olmayan girdiler (dizin başına bir kez)."""
+        stat = getattr(m, "_svc_stat", None)
+        if stat is None:
+            stat = {"refs": SV._ref_students(m), "fit": {}, "ekey": {}, "rules": set(m.settings["owners"])}
+            m._svc_stat = stat      # dizinle yaşar, dizinle gider
+        return stat
+
+    @staticmethod
+    def _portal(engine: Any, tenant: str, owners: bool = True) -> dict[str, Any]:
+        """Puana giren portal kayıtları (istek anında; küçük tablolar)."""
+        return {"ctx": SV.load_context(engine, tenant), "last": SV.last_visits(engine, tenant),
+                "owners": SV.portal_owners(engine, tenant) if owners else {}, "links": SV.approved_links(engine, tenant)}
+
+    @staticmethod
+    def _school(m: SV.Model, stat: dict[str, Any], portal: dict[str, Any], sid: str, sc: dict[str, Any], now: date,
+                prev: Optional[dict[str, Any]] = None) -> tuple[dict[str, Any], set[str], tuple]:
+        """Bir okulun puanı, son ziyareti, bağlı bayileri ve kapsamındaki hesaplar. `prev` aynı dizin, gün ve endeks
+        aralığıyla hesaplanmış önceki sonuçtur: okulun girdisi (son ziyaret, endeks, bayi var mı) aynıysa puan oradan."""
+        crm = m.crm_visits(sid)
+        crm_last = max((v["day"] for v in crm if v["done"] and v["day"]), default=None)
+        last = max((x for x in (crm_last, portal["last"].get(sid)) if x), default=None)
+        fit = stat["fit"].get(sc["grades"])
+        if fit is None:
+            fit = stat["fit"][sc["grades"]] = len(m.fitting_books(sc["grades"]))
+        ek = stat["ekey"].get(sid)
+        if ek is None:
+            ek = stat["ekey"][sid] = f"{fold(sc['il'])}|{fold(sc['ilce'])}"
+        ctx = portal["ctx"]
+        endeks = (ctx["ilce_endeks"].get(ek) or {}).get("endeks")
+        links = portal["links"].get(sid)
+        sig = (last, endeks, bool(links))
+        if prev is not None and prev["sig"].get(sid) == sig:
+            s = dict(prev["scores"][sid])
+        else:
+            s = SV.score_school(sc, weights=m.settings["weights"], ref_students=stat["refs"].get(sc["kurumTipiKod"], 0.0),
+                                last_visit=last, orders=m.orders_by_school.get(sid, []), fitting=fit, endeks=endeks,
+                                endeks_range=ctx["endeksRange"], has_dealer=bool(links), now=now)
+        s["lastVisit"] = last
+        s["dealers"] = [{"code": x["cari_kodu"], "name": x["bayi_adi"]} for x in links or []]
+        rules = stat["rules"]
+        who: set[str] = set(portal["owners"].get(sid, set()))
+        if "sahip" in rules and sc["owner"]:
+            who.add(sc["owner"])
+        if "il" in rules and sc["ilOwner"]:
+            who.add(sc["ilOwner"])
+        if "ziyaret" in rules:
+            who.update(v["owner"] for v in crm if v["owner"])
+        return s, who, sig
+
+    def _score(self, engine: Any, tenant: str, m: SV.Model) -> dict[str, Any]:
+        """Bütün okulların puanı ve kapsamı (liste ve plan önerisi için). Aynı dizin + aynı yazma sürümü + aynı gün:
+        hazır sonuç. Yazmadan sonra yalnız girdisi değişen okul yeniden puanlanır."""
         now = SV.today()
-        fit_memo: dict[frozenset, int] = {}
-        out: dict[str, dict[str, Any]] = {}
-        owners: dict[str, set[str]] = {}
-        rules = set(st["owners"])
-        for sid, sc in m.schools.items():
-            crm = m.crm_visits(sid)
-            crm_last = max((v["day"] for v in crm if v["done"] and v["day"]), default=None)
-            last = max((x for x in (crm_last, portal_last.get(sid)) if x), default=None)
-            if sc["grades"] not in fit_memo:
-                fit_memo[sc["grades"]] = len(m.fitting_books(sc["grades"]))
-            endeks = (ctx["ilce_endeks"].get(f"{fold(sc['il'])}|{fold(sc['ilce'])}") or {}).get("endeks")
-            s = SV.score_school(sc, weights=st["weights"], ref_students=refs.get(sc["kurumTipiKod"], 0.0), last_visit=last,
-                                orders=m.orders_by_school.get(sid, []), fitting=fit_memo[sc["grades"]], endeks=endeks,
-                                endeks_range=ctx["endeksRange"], has_dealer=bool(links.get(sid)), now=now)
-            s["lastVisit"] = last
-            s["dealers"] = [{"code": x["cari_kodu"], "name": x["bayi_adi"]} for x in links.get(sid, [])]
-            out[sid] = s
-            who: set[str] = set(portal_owner.get(sid, set()))
-            if "sahip" in rules and sc["owner"]:
-                who.add(sc["owner"])
-            if "il" in rules and sc["ilOwner"]:
-                who.add(sc["ilOwner"])
-            if "ziyaret" in rules:
-                who.update(v["owner"] for v in crm if v["owner"])
-            owners[sid] = who
-        res = {"model": m, "ctx": ctx, "scores": out, "owners": owners, "links": links, "at": time.time()}
-        with self._lock:
-            self._scored = (key, res)
-        return res
+        cur = self._scored
+        if cur is not None and cur[0] == (id(m), SV.VERSION[0], now) and cur[1]["model"] is m:
+            return cur[1]
+        with self._score_lock:
+            ver = SV.VERSION[0]            # hesap sürerken yazma olursa sonraki çağrı yeniden hesaplar
+            cur = self._scored
+            if cur is not None and cur[0] == (id(m), ver, now) and cur[1]["model"] is m:
+                return cur[1]
+            portal = self._portal(engine, tenant)
+            stat = self._stat(m)
+            prev = cur[1] if (cur is not None and cur[1]["model"] is m and cur[1]["now"] == now
+                              and cur[1]["ctx"]["endeksRange"] == portal["ctx"]["endeksRange"]) else None
+            out: dict[str, dict[str, Any]] = {}
+            owners: dict[str, set[str]] = {}
+            sigs: dict[str, tuple] = {}
+            for sid, sc in m.schools.items():
+                out[sid], owners[sid], sigs[sid] = self._school(m, stat, portal, sid, sc, now, prev)
+            res = {"model": m, "ctx": portal["ctx"], "scores": out, "owners": owners, "links": portal["links"],
+                   "sig": sigs, "now": now, "at": time.time()}
+            with self._lock:
+                latest = self._model[1] if self._model else None
+                if latest is None or latest is m:       # eski dizinin sonucu yenisinin hazır sonucunu silmez
+                    self._scored = ((id(m), ver, now), res)
+            return res
+
+    def _some(self, engine: Any, tenant: str, m: SV.Model, sids: list[str], owners: bool = True
+              ) -> tuple[dict[str, dict[str, Any]], dict[str, set[str]], dict[str, Any]]:
+        """Birkaç okulun puanı/kapsamı: tam sonuç hazırsa oradan, değilse yalnız bu okullar (aynı fonksiyon)."""
+        now = SV.today()
+        cur = self._scored
+        if cur is not None and cur[0] == (id(m), SV.VERSION[0], now) and cur[1]["model"] is m:
+            res = cur[1]
+            return ({sid: res["scores"][sid] for sid in sids if sid in res["scores"]},
+                    {sid: res["owners"][sid] for sid in sids if sid in res["owners"]}, res["ctx"])
+        portal = self._portal(engine, tenant, owners=owners)
+        stat = self._stat(m)
+        scores: dict[str, dict[str, Any]] = {}
+        who: dict[str, set[str]] = {}
+        for sid in dict.fromkeys(sids):
+            sc = m.schools.get(sid)
+            if sc is not None:
+                scores[sid], who[sid], _ = self._school(m, stat, portal, sid, sc, now)
+        return scores, who, portal["ctx"]
+
+    def _folds(self, m: SV.Model) -> dict[str, tuple[str, str, str, str, str]]:
+        """Okul başına sade ad, il, ilçe, kod, kademe (liste süzgeci ve sırası; dizin başına bir kez)."""
+        stat = self._stat(m)
+        f = stat.get("folds")
+        if f is None:
+            f = {sid: (fold(sc["name"]), fold(sc["il"]), fold(sc["ilce"]), fold(sc["code"]), fold(sc["kademe"]))
+                 for sid, sc in m.schools.items()}
+            stat["folds"] = f
+        return f
 
     # -------------------------------------------------------------- yardımcılar
     @staticmethod
@@ -130,7 +273,9 @@ class Service:
              page: int = 0, fresh: bool = False) -> dict[str, Any]:
         res = self.scored(engine, tenant, fresh)
         m = res["model"]
+        F = self._folds(m)                 # sade ad/il/ilçe/kod/kademe dizin başına bir kez (68 bin okul)
         qf = fold(q)
+        fil, filce, fkademe = fold(il), fold(ilce), fold(kademe)
         search_all = len(qf) >= 3 and kapsam != "benim"
         if kapsam == "hepsi" and not can_all and not search_all:
             raise SchoolError("Bütün okulları görmek yetkinizde yok; okul adıyla arayın (en az 3 harf).", 403)
@@ -142,25 +287,26 @@ class Service:
         for sid, sc in m.schools.items():
             if scope is not None and sid not in scope:
                 continue
-            if il and fold(sc["il"]) != fold(il):
+            f = F[sid]
+            if il and f[1] != fil:
                 continue
-            if ilce and fold(sc["ilce"]) != fold(ilce):
+            if ilce and f[2] != filce:
                 continue
-            if kademe and str(sc["kademeKod"] or "") != kademe and fold(sc["kademe"]) != fold(kademe):
+            if kademe and str(sc["kademeKod"] or "") != kademe and f[4] != fkademe:
                 continue
             if tur and str(sc["kurumTuruKod"] or "") != tur:
                 continue
             if min_score is not None and res["scores"][sid]["score"] < min_score:
                 continue
-            if qf and qf not in fold(sc["name"]) and qf not in fold(sc["code"]):
+            if qf and qf not in f[0] and qf not in f[3]:
                 continue
             items.append(sid)
         sc_ = res["scores"]
         key = {
-            "ad": lambda x: (fold(m.schools[x]["name"]),),
-            "ogrenci": lambda x: (-(m.schools[x]["students"] or -1), fold(m.schools[x]["name"])),
-            "son": lambda x: (sc_[x]["lastVisit"] or "0000", fold(m.schools[x]["name"])),
-        }.get(sort, lambda x: (-sc_[x]["score"], fold(m.schools[x]["name"])))
+            "ad": lambda x: (F[x][0],),
+            "ogrenci": lambda x: (-(m.schools[x]["students"] or -1), F[x][0]),
+            "son": lambda x: (sc_[x]["lastVisit"] or "0000", F[x][0]),
+        }.get(sort, lambda x: (-sc_[x]["score"], F[x][0]))
         items.sort(key=key)
         page = max(0, page)
         wk = SV.monday(SV.today())
@@ -186,12 +332,12 @@ class Service:
     # -------------------------------------------------------------- okul kartı
     def card(self, engine: Any, tenant: str, user: str, can_all: bool, sid: str, fresh: bool = False) -> dict[str, Any]:
         sid = SV.school_id(sid)
-        res = self.scored(engine, tenant, fresh)
-        m = res["model"]
+        m = self.model(engine, tenant, fresh)
         sc = m.schools.get(sid)
         if not sc:
             raise SchoolError("Okul bulunamadı (CRM'de etkin ziyaret yeri değil).", 404)
-        s = res["scores"][sid]
+        scores, owners, ctx = self._some(engine, tenant, m, [sid])    # yalnız bu okul; 68 bin okul puanlanmaz
+        s = scores[sid]
         crm = sorted(m.crm_visits(sid), key=lambda v: v["day"] or "", reverse=True)
         portal = [SV.visit_view(r, viewer=user, can_all=can_all) for r in SV.load_visits(engine, tenant, school=sid)]
         hidden_others = 0
@@ -202,7 +348,7 @@ class Service:
         plans = [SV.plan_view(r, None, []) for r in SV.load_plans(engine, tenant) if r["ziyaret_yeri_id"] == sid
                  and (can_all or r["sahip"] == user)]
         now = SV.today()
-        conf = SV.conflicts(res["ctx"], now, now + timedelta(days=21), sc["il"])
+        conf = SV.conflicts(ctx, now, now + timedelta(days=21), sc["il"])
         cats = []
         with engine.connect() as c:
             for r in c.execute(SV.catalogs_stmt(tenant, sid)).mappings():
@@ -213,7 +359,7 @@ class Service:
         return {
             "school": {k: v for k, v in sc.items() if k != "grades"} | {"grades": sorted(sc["grades"])},
             "score": s["score"], "parts": s["parts"], "reason": s["reason"], "lastVisit": s["lastVisit"],
-            "inScope": user in res["owners"].get(sid, set()),
+            "inScope": user in owners.get(sid, set()),
             "crmVisits": crm, "crmDoneLinked": done_linked,
             "crmDoneByName": sum(1 for v in m.visits_by_name.get(sid, []) if v["done"]),
             "portalVisits": portal, "hiddenOthers": hidden_others,
@@ -249,21 +395,23 @@ class Service:
     # -------------------------------------------------------------- plan
     def plan(self, engine: Any, tenant: str, user: str, can_all: bool, week: date, owner: Optional[str], everyone: bool,
              fresh: bool = False) -> dict[str, Any]:
-        res = self.scored(engine, tenant, fresh)
-        m = res["model"]
+        # Eskiden bütün okulların puanını (68 bin okul) ve canlı CRM + Logo okumasını bekliyordu; plan satırı yalnız
+        # kendi okulunun son ziyaretini ve bağlı bayisini gösterir: yalnız plandaki okullar hesaplanır (aynı fonksiyon).
+        m = self.model(engine, tenant, fresh)
         who = None if (everyone and can_all) else (owner if (owner and can_all) else user)
         rows = SV.load_plans(engine, tenant, week=week, owner=who)
         visits = SV.load_visits(engine, tenant, owner=who, since=datetime(week.year, week.month, week.day, tzinfo=SV.TZ))
+        scores, _, ctx = self._some(engine, tenant, m, [r["ziyaret_yeri_id"] for r in rows], owners=False)
         items = []
         for r in rows:
             sc = m.schools.get(r["ziyaret_yeri_id"]) or {}
             day = r.get("gun")
-            conf = SV.conflicts(res["ctx"], day or week, day or (week + timedelta(days=4)), sc.get("il")) if r["durum"] != "iptal" else []
+            conf = SV.conflicts(ctx, day or week, day or (week + timedelta(days=4)), sc.get("il")) if r["durum"] != "iptal" else []
             v = self._realized(r, visits, m)
             pv = SV.plan_view(r, v, conf)
             pv.update({"il": sc.get("il"), "ilce": sc.get("ilce"), "kademe": sc.get("kademe") or sc.get("gradesText"),
-                       "students": sc.get("students"), "lastVisit": (res["scores"].get(r["ziyaret_yeri_id"]) or {}).get("lastVisit"),
-                       "dealers": (res["scores"].get(r["ziyaret_yeri_id"]) or {}).get("dealers", [])})
+                       "students": sc.get("students"), "lastVisit": (scores.get(r["ziyaret_yeri_id"]) or {}).get("lastVisit"),
+                       "dealers": (scores.get(r["ziyaret_yeri_id"]) or {}).get("dealers", [])})
             items.append(pv)
         nexts = []
         for r in SV.load_visits(engine, tenant, owner=who):
@@ -272,7 +420,7 @@ class Service:
                 nexts.append({"visitId": r["id"], "school": r["hedef_kimlik"], "schoolName": sc.get("name"), "step": r.get("sonraki_adim"),
                               "day": SV._dstr(r["sonraki_tarih"]), "late": r["sonraki_tarih"] < SV.today(), "owner": r["sahip"]})
         nexts.sort(key=lambda x: x["day"] or "")
-        cal = [e for e in res["ctx"].get("takvim") or [] if not (e["bitis"] < week.isoformat() or e["baslangic"] > (week + timedelta(days=6)).isoformat())]
+        cal = [e for e in ctx.get("takvim") or [] if not (e["bitis"] < week.isoformat() or e["baslangic"] > (week + timedelta(days=6)).isoformat())]
         return {"week": week.isoformat(), "weekEnd": (week + timedelta(days=6)).isoformat(), "term": SV.term_of(week),
                 "owner": who, "items": items, "nextSteps": nexts, "calendar": cal,
                 "done": sum(1 for x in items if x["realized"]), "planned": sum(1 for x in items if x["state"] != "iptal"),
@@ -396,22 +544,23 @@ class Service:
     def add_plan(self, engine: Any, tenant: str, user: str, display: str, sid: str, body: dict[str, Any]) -> dict[str, Any]:
         """Karttan tek okulu plana ekleme (öneri olarak)."""
         sid = SV.school_id(sid)
-        res = self.scored(engine, tenant)
-        sc = res["model"].schools.get(sid)
+        m = self.model(engine, tenant)
+        sc = m.schools.get(sid)
         if not sc:
             raise SchoolError("Okul bulunamadı.", 404)
         day = SV.parse_day(body.get("gun"), "Gün", required=True)
         week = SV.monday(day)
         if any(r["ziyaret_yeri_id"] == sid and r["durum"] != "iptal" for r in SV.load_plans(engine, tenant, week=week, owner=user)):
             raise SchoolError("Bu okul o hafta zaten planınızda.", 409)
-        s = res["scores"][sid]
+        scores, _, ctx = self._some(engine, tenant, m, [sid], owners=False)
+        s = scores[sid]
         row = {"id": uuid.uuid4().hex, "tenant_id": tenant, "sahip": user, "sahip_ad": display, "donem": SV.term_of(week),
                "hafta": week, "gun": day, "ziyaret_yeri_id": sid, "okul_adi": sc["name"][:300], "puan": s["score"],
                "gerekce": s["reason"], "model_gerekce": None, "durum": "oneri", "not": SV._text(body.get("not"), 1000, "Not"),
                "onaylayan": None, "onay_zamani": None, "olusturan": user, "olusturma": SV.now_utc(), "guncelleyen": None,
                "guncelleme": None}
         SV.insert_plans(engine, [row])
-        return SV.plan_view(row, None, SV.conflicts(res["ctx"], day, day, sc["il"]))
+        return SV.plan_view(row, None, SV.conflicts(ctx, day, day, sc["il"]))
 
     def approve_plan(self, engine: Any, tenant: str, user: str, pid: str) -> dict[str, Any]:
         pid = SV.rid(pid, "Plan")
@@ -426,14 +575,13 @@ class Service:
     # -------------------------------------------------------------- bayi
     def dealers(self, engine: Any, tenant: str, sid: str) -> dict[str, Any]:
         sid = SV.school_id(sid)
-        res = self.scored(engine, tenant)
-        m = res["model"]
+        m = self.model(engine, tenant)       # puan gerekmez: yalnız onaylı bağlar (eskiden 68 bin okulun puanı beklenirdi)
         sc = m.schools.get(sid)
         if not sc:
             raise SchoolError("Okul bulunamadı.", 404)
         links = [SV.link_view(r, m) for r in SV.load_links(engine, tenant, school=sid)]
         counts: dict[str, int] = {}
-        for rs in res["links"].values():
+        for rs in SV.approved_links(engine, tenant).values():
             for r in rs:
                 if r.get("cari_kodu"):
                     counts[r["cari_kodu"].upper()] = counts.get(r["cari_kodu"].upper(), 0) + 1
@@ -611,13 +759,14 @@ class Service:
                     owner: str = "") -> dict[str, Any]:
         term = term or SV.term_of(SV.today())
         a, b = SV.term_range(term)
-        res = self.scored(engine, tenant)
-        m = res["model"]
+        m = self.model(engine, tenant)       # puan gerekmez: yalnız onaylı bağlar (eskiden 68 bin okulun puanı beklenirdi)
+        res = {"links": SV.approved_links(engine, tenant)}
         who = (owner.strip().lower() or None) if can_all else user
         fil = fold(il)
+        F = self._folds(m) if fil else {}
 
         def in_il(sid: str) -> bool:
-            return not fil or fold((m.schools.get(sid) or {}).get("il")) == fil
+            return not fil or (sid in F and F[sid][1] == fil)
 
         plans = [r for r in SV.load_plans(engine, tenant, since=a, until=b, owner=who) if r["durum"] != "iptal" and in_il(r["ziyaret_yeri_id"])]
         pvis = [r for r in SV.load_visits(engine, tenant, owner=who) if r["durum"] == "yapildi" and in_il(r["hedef_kimlik"])]
@@ -732,7 +881,7 @@ class Service:
         t0 = time.monotonic()
         out: dict[str, Any] = {"kind": kind}
         if kind == "weekly":
-            res = self.scored(engine, tenant, fresh=True)
+            res = self.scored(engine, tenant, fresh=True, wait=True)     # zamanlayıcı kaynağı bekleyerek okur
             week = SV.monday(SV.today())
             since = SV.now_utc() - timedelta(days=180)
             active = {r["sahip"] for r in SV.load_visits(engine, tenant, since=since)}
@@ -750,7 +899,7 @@ class Service:
             out.update(week=week.isoformat(), owners=len(active), created=made, skipped=skipped)
             out["ms"] = int((time.monotonic() - t0) * 1000)
             return out
-        m = self.model(engine, tenant, fresh=True)
+        m = self.model(engine, tenant, fresh=True, wait=True)            # zamanlayıcı kaynağı bekleyerek okur
         out["schools"] = len(m.schools)
         out["history"] = SV.sync_history_links(engine, tenant, m)
         out["profiles"] = SV.write_profiles(engine, tenant, m)
@@ -785,7 +934,7 @@ class Service:
             self.invalidate_matches()
         out["names"] = {"unmatched": len(m.unmatched_names), "asked": asked, "matched": matched, "unsure": unsure,
                         "pending": pending}
-        res = self.scored(engine, tenant, fresh=False)
+        res = self.scored(engine, tenant, fresh=False, sync=True)        # yeni ad eşleşmeleriyle dizin şimdi kurulur
         term = SV.term_of(SV.today())
         out["priority"] = SV.write_priority(engine, tenant, term, res["scores"], res["owners"])
         # Plandaki (bu ve gelecek hafta) bağlı bayisi olmayan okullar için en iyi aday öneri olarak kuyruğa.
@@ -868,11 +1017,38 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     auth(request) → (engine, tenant, user, display) · can(user, key) → bool · is_admin(user) → bool ·
     audit(engine, user, action, kind, id, title, detail) · conf(key, default) → str · fresh() → bool ·
     crm_connect() / logo_connect() → salt okunur bağlantı · llm(priority) → LLM kapısı istemcisi ya da None ·
-    system() → (engine, tenant) · require_caller(request) (zamanlayıcı jetonu)."""
+    system() → (engine, tenant) · require_caller(request) (zamanlayıcı jetonu) · isteğe bağlı: system_ready() → bool
+    (çalışma ortamı kuruldu mu; açılış hazırlığı bunu bekler) · invalidate() (arkadaki okuma bitince modülün hazır
+    cevaplarını düşürür)."""
     auth, can, is_admin, audit, conf, fresh = (deps[k] for k in ("auth", "can", "is_admin", "audit", "conf", "fresh"))
     settings = lambda: SV.settings_from(conf)  # noqa: E731
-    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"), settings)
-    svc = Service(source, settings, deps.get("llm") or (lambda _p: None))
+    system = deps.get("system")
+    store = SV.SnapshotStore(lambda: system()[0]) if system else None
+    source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"), settings, store=store)
+    svc = Service(source, settings, deps.get("llm") or (lambda _p: None), system=system, on_ready=deps.get("invalidate"))
+
+    # Köprü açılışı: saklanan son okumadan dizin + tam puan arkada (ilk açan beklemesin). Çalışma ortamı kurulmadan
+    # (`system_ready`) dokunulmaz; saklanan okuma yoksa canlı okuma yapılmaz (ilk istek okur).
+    ready = deps.get("system_ready")
+    warm_on = os.environ.get("SCHOOLS_WARM", "1").strip().lower() not in ("0", "false", "no", "off")
+    if system and ready and warm_on and "PYTEST_CURRENT_TEST" not in os.environ:    # testte arka plan DB işi yok
+        def _warm() -> None:
+            for _ in range(360):
+                if ready():
+                    break
+                time.sleep(5)
+            else:
+                return
+            try:
+                engine, tenant = system()
+                SV.ensure(engine)
+                t = time.monotonic()
+                if svc.warm(engine, tenant):
+                    log.info("school_visits: saklanan okumadan dizin hazır (%d ms)", int((time.monotonic() - t) * 1000))
+            except Exception as e:  # noqa: BLE001 — ilk istek hazırlar
+                log.warning("school_visits: açılışta hazırlık yapılamadı: %s", e)
+
+        threading.Thread(target=_warm, name="schools-warm", daemon=True).start()
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -920,7 +1096,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             if model is not None:
                 ils = sorted({sc["il"] for sc in model.schools.values() if sc["il"]}, key=fold)
                 status = {"asOf": model.as_of, "listChanged": model.list_changed, "logoOk": model.logo_ok,
-                          "warnings": model.warnings, "schools": len(model.schools)}
+                          "warnings": model.warnings, "schools": len(model.schools),
+                          # «Verileri yenile» ya da eskiyen okuma: kaynak arkada okunuyor, ekran son okumayı gösteriyor
+                          "refreshing": source.busy}
         except Exception as e:  # noqa: BLE001
             log.info("schools meta: il listesi okunamadı: %s", e)
         uploads = SV.load_context(engine, tenant)["uploads"]

@@ -16,6 +16,8 @@ yetkimiz olmadığı için (AGENTS.md «CRM'e yazma yok») portalın ürettiği 
   okul ziyaretine özgü alanlar `semantic_school_visit_details`'ta.
 - `semantic_school_name_matches` — CRM etkinliğindeki serbest «okul» metninin ziyaret yerine eşlenmesi (kural ya da
   Zeki AI kararı; bir kez sorulur, kalıcıdır).
+- `semantic_school_snapshot` — son CRM + Logo okumasının kendisi (sıkıştırılmış, satırlar olduğu gibi, çalışan SQL
+  kaydıyla). Ekran uçları canlı okumayı beklemez, bunu kullanır; köprü yeniden başlayınca buradan açılır.
 
 Rakam modelden gelmez: puan, sayı ve tutar kuraldan/SQL'den; model yalnız gerekçe cümlesi, öneri metni, serbest
 nottan alan önerisi ve «aynı okul mu» kapalı sorusunu yazar (LLM kapısı, `rt.llm_for("okul")`).
@@ -174,6 +176,16 @@ NAME_MATCHES = sa.Table(
     sa.Column("olasilik", sa.Float),
     sa.Column("zaman", sa.DateTime(timezone=True), nullable=False),
 )
+
+SNAPSHOT = sa.Table(
+    "semantic_school_snapshot", _md,
+    sa.Column("anahtar", sa.String(40), primary_key=True),             # tek satır: "crm+logo"
+    sa.Column("bicim", sa.String(64), nullable=False),                 # okuma sorgularının şekli (src.shape())
+    sa.Column("okuma", sa.DateTime(timezone=True), nullable=False),    # okumanın bittiği an
+    sa.Column("boyut", sa.Integer, nullable=False),                    # sıkıştırılmış bayt
+    sa.Column("veri", sa.LargeBinary, nullable=False),
+)
+SNAPSHOT_KEY = "crm+logo"
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -1635,6 +1647,44 @@ def write_priority(engine: sa.engine.Engine, tenant: str, term: str, scored: dic
         for i in range(0, len(rows), 2000):
             c.execute(PRIORITY.insert(), rows[i:i + 2000])
     return len(rows)
+
+
+def save_snapshot(engine: sa.engine.Engine, snap: dict[str, Any]) -> int:
+    """Son okumayı yazar (tek satır, üzerine). Dönen: sıkıştırılmış bayt."""
+    ensure(engine)
+    data = src.pack(snap)
+    at = datetime.fromtimestamp(float(snap.get("at") or 0.0), timezone.utc)
+    with engine.begin() as c:
+        c.execute(SNAPSHOT.delete().where(SNAPSHOT.c.anahtar == SNAPSHOT_KEY))
+        c.execute(SNAPSHOT.insert().values(anahtar=SNAPSHOT_KEY, bicim=src.shape(), okuma=at, boyut=len(data), veri=data))
+    return len(data)
+
+
+def load_snapshot(engine: sa.engine.Engine) -> Optional[dict[str, Any]]:
+    """Saklanan son okuma; yoksa ya da okuma sorgularının şekli bugünkünden farklıysa None."""
+    ensure(engine)
+    with engine.connect() as c:
+        r = c.execute(sa.select(SNAPSHOT.c.bicim, SNAPSHOT.c.veri).where(SNAPSHOT.c.anahtar == SNAPSHOT_KEY)).first()
+    if r is None:
+        return None
+    if r[0] != src.shape():
+        log.info("school_visits: saklanan okuma eski sorgularla; kullanılmadı")
+        return None
+    return src.unpack(bytes(r[1]))
+
+
+class SnapshotStore:
+    """`Source`'un saklama yeri: portal veritabanında `semantic_school_snapshot`. `engine()` istek anında çözülür."""
+
+    def __init__(self, engine: Callable[[], sa.engine.Engine]):
+        self._engine = engine
+
+    def load(self) -> Optional[dict[str, Any]]:
+        return load_snapshot(self._engine())
+
+    def save(self, snap: dict[str, Any]) -> None:
+        n = save_snapshot(self._engine(), snap)
+        log.info("school_visits: okuma saklandı (%d bayt)", n)
 
 
 def catalogs_stmt(tenant: str, sid: str) -> Any:
