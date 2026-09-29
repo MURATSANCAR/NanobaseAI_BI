@@ -288,3 +288,17 @@ def test_narrator_lead_in_is_neutral_when_sentence_has_speech(job):
     by = {p.text: getattr(p, "extra", {}) for p in plist}
     assert by["İçinden bir ses durmadan fısıldıyordu:"] == {}
     assert by["Hemen eve dön, hava kararıyor!"]["label"] == "fisilti"
+    # fısıltı üretimden sonra kısılır: tonlu (5+ kelime) parçada kalan fark −5 dB
+    assert by["Hemen eve dön, hava kararıyor!"]["tone"] is True
+    assert by["Hemen eve dön, hava kararıyor!"]["gain_db"] == X.TABLE["fisilti"]["gain_tone_db"]
+
+
+def test_short_whisper_has_no_tone_but_is_quiet(job):
+    from editor.production import studio
+    page = json.loads(json.dumps(PAGE))
+    page["text"]["blocks"][2]["runs"] = [{"text": "“Şşş, uyuyor.”"}]
+    studio.write(job, "plan.json", {"version": 1, "rev": 3, "pages": [page], "assets": {}})
+    X.set_marks(job, "p_1", [{"key": "c3:0", "label": "fisilti"}], "editör")
+    _units, plist, _h = N.page_input(job, page)
+    ex = next(p.extra for p in plist if "uyuyor" in p.text)
+    assert ex["tone"] is False and ex["gain_db"] == X.TABLE["fisilti"]["gain_db"]

@@ -138,6 +138,7 @@ class Segment(BaseModel):
     clone: str | None = Field(None, pattern="^(full|ref)$")     # referanslı seste klon kipi (boş: style → ref)
     cfg: float | None = Field(None, ge=1.0, le=3.0)            # ifade: yönlendirme gücü (boş: sunucu varsayılanı)
     min_sec: float | None = Field(None, ge=0, le=10)            # kısa ünlem: üretilen ses bundan kısaysa yavaşlatılır
+    gain_db: float = Field(0.0, ge=-30.0, le=12.0)              # ifade: üretimden sonra düzey (fısıltı alçak okunur)
 
 
 class Narrate(BaseModel):
@@ -226,6 +227,8 @@ def _speak(seg: Segment, tmp: str) -> np.ndarray:
         # Kısa ünlem yutulmasın («Tüh!» 0,2 sn, «O da ne!» 0,45 sn çıkıyordu): perdeyi koruyarak en az süreye esnetilir,
         # en çok MIN_STRETCH kadar (daha yavaşı yapay duyulur).
         wav = _stretch(wav, max(MIN_STRETCH, len(wav) / SR / seg.min_sec))
+    if seg.gain_db:
+        wav = (wav * np.float32(10 ** (seg.gain_db / 20))).astype(np.float32)
     return _fade(wav)
 
 
