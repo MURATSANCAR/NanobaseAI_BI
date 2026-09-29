@@ -100,8 +100,21 @@ def main() -> int:
     s, _ = http("GET", P + "/items/YOK-BOYLE-KOD-1")
     check("olmayan kitap 404", s == 404, str(s))
 
-    # 1. Taze okuma ve genel görünüm.
+    # 1. Taze okuma ve genel görünüm. «Verileri yenile» beklemez (2026-09-29): uç eldeki okumayla hemen döner, yenisi
+    # arka planda okunur; referanslar taze okumayla karşılaştırılsın diye okuma bitene kadar beklenir.
+    import time as _time
+
+    t0 = _time.monotonic()
     s, ov = http("GET", P + "/overview", fresh=True)
+    check("yenile isteği beklemeden döndü (< 1,5 sn)", s == 200 and _time.monotonic() - t0 < 1.5,
+          f"{_time.monotonic() - t0:.2f} sn")
+    deadline = _time.monotonic() + 1800
+    while _time.monotonic() < deadline:
+        s, meta = http("GET", P + "/meta")
+        if s != 200 or not meta.get("refreshing"):
+            break
+        _time.sleep(10)
+    s, ov = http("GET", P + "/overview")
     check("genel görünüm okundu", s == 200, json.dumps({k: ov.get(k) for k in ("veriSonu", "stokluKitap", "bitecek", "aktarimHatasi")}, ensure_ascii=False) if s == 200 else str(ov)[:300])
     if s != 200:
         return finish(a.out, created)

@@ -361,7 +361,7 @@ def _client(engine, monkeypatch, perms: set[str], llm=None):
             "engine": lambda: engine, "tenant": lambda: T, "logo_file": lambda: "", "crm_file": lambda: "",
             "llm": lambda priority: llm, "m12": lambda: None, "costs": lambda: FakeCosts()}
     svc = stock_api.register(app, deps)
-    monkeypatch.setattr(svc, "raw", lambda fresh=False: raw_fixture())
+    monkeypatch.setattr(svc, "raw", lambda fresh=False, **kw: raw_fixture())
     monkeypatch.setattr(svc, "settings", lambda: SETTINGS)
     return TestClient(app), audits, svc
 
@@ -444,3 +444,141 @@ def test_runout_date_survives_a_tiny_sales_speed():
     assert S.runout_date(date(2026, 8, 17), gun) is None
     assert S.runout_date(date(2026, 8, 17), 10.4) == "2026-08-27"
     assert S.runout_date(None, 10.0) is None and S.runout_date(date(2026, 8, 17), None) is None
+
+
+# ------------------------------------------------------------------ hız (2026-09-29): uç kaynağı beklemez
+
+
+def raw_live(at: float) -> dict:
+    """Canlı okumanın bellekteki biçimi (tarih nesnesi, sayı anahtar) — tablodan dönen JSON biçimiyle aynı rakamı vermeli."""
+    import copy
+
+    r = copy.deepcopy(raw_fixture())
+    r["at"] = at
+    r["dataEnd"] = date(2026, 8, 17)
+    r["warehouse"] = {k: {int(n): q for n, q in v.items()} for k, v in r["warehouse"].items()}
+    r["warehouses"] = {int(k): v for k, v in r["warehouses"].items()}
+    for v in r["movement"].values():
+        v["son"] = date.fromisoformat(v["son"])
+    for t in r["transfers"]:
+        t["fisTarihi"] = date.fromisoformat(t["fisTarihi"])
+    r["pick"] = [{"id": "s1", "no": "SP-1", "durum": 100000012, "tip": 1, "oncelik": 1, "siparis": date(2026, 9, 1),
+                  "depoda": datetime(2026, 9, 20, 8), "pusula": datetime(2026, 9, 20, 9), "kutulandi": None, "sevk": None,
+                  "depo": "Merkez", "toplayan": "Ali", "koli": 2},
+                 {"id": "s2", "no": "SP-2", "durum": 3, "tip": 1, "oncelik": 3, "siparis": date(2026, 9, 1),
+                  "depoda": datetime(2026, 9, 19, 8), "pusula": datetime(2026, 9, 19, 9), "kutulandi": datetime(2026, 9, 19, 12),
+                  "sevk": datetime(2026, 9, 19, 15), "depo": "Merkez", "toplayan": "Ali", "koli": 1}]
+    r["runs"] = {"logo_bakiye": {"sql": "SELECT 1", "rows": 8, "ms": 1200, "at": at}}
+    return r
+
+
+def _svc(tmp_path, **kw) -> S.Service:
+    return S.Service(lambda: None, lambda: None, lambda: "", lambda: SETTINGS, cache=lambda: tmp_path / "stock-raw.json", **kw)
+
+
+def _same(m: dict) -> str:
+    import json
+
+    return json.dumps({k: v for k, v in m.items() if k != "byCode"}, sort_keys=True, default=str)
+
+
+def test_table_read_gives_the_same_numbers_as_the_live_read(engine, tmp_path, monkeypatch):
+    """Eski hesap = yeni hesap: canlı okumadan kurulan model ile tablodan (köprü yeniden başladıktan sonra) kurulan model,
+    özet, listeler ve depo hattı birebir aynı."""
+    import json
+    import time as _t
+
+    live = raw_live(_t.time())
+    svc = _svc(tmp_path)
+    reads: list[int] = []
+    monkeypatch.setattr(svc, "read", lambda: (reads.append(1), raw_live(live["at"]))[1])
+    m1 = svc.model(engine, T)                       # hiç okuma yok: kaynak beklenir, okuma tabloya yazılır
+    assert reads == [1] and store.read_at(engine, T) == live["at"]
+    svc2 = _svc(tmp_path)                           # köprü yeniden başladı
+    reads2: list[int] = []
+    monkeypatch.setattr(svc2, "read", lambda: (reads2.append(1), raw_live(live["at"]))[1])
+    m2 = svc2.model(engine, T)
+    assert reads2 == [] and not svc2.refreshing()   # tablodaki okuma taze: kaynağa gidilmedi
+    assert _same(m2) == _same(m1)
+    now = date(2026, 9, 29)
+    for fn in (lambda m: S.overview(m, S.transfer_rows(m, {}, now=now)), lambda m: S.filter_items(m),
+               lambda m: S.running_out(m, 30), lambda m: S.excess(m), lambda m: S.diff_rows(m),
+               lambda m: S.transfer_rows(m, {}, "hata", now=now),
+               lambda m: S.pick_line(m, SETTINGS, True, now=datetime(2026, 9, 21))):
+        assert json.dumps(fn(m2), sort_keys=True, default=str) == json.dumps(fn(m1), sort_keys=True, default=str)
+
+
+def test_refresh_request_does_not_wait_for_the_source(engine, tmp_path, monkeypatch):
+    """«Verileri yenile»: uç eldeki okumayla hemen döner, yeni okuma arka planda; bitince tabloya yazılır ve sonraki istek
+    onu görür. Gece turu (`wait`) ise kaynağı bekler."""
+    import threading
+    import time as _t
+
+    first = raw_live(_t.time())
+    store.read_put(engine, T, first)                # gece turu yazmış
+    gate = threading.Event()
+    svc = _svc(tmp_path)
+
+    def slow_read():
+        gate.wait(10)
+        r = raw_live(first["at"] + 1)
+        r["balances"]["B-BIT"]["bakiye"] = 90.0
+        return r
+    monkeypatch.setattr(svc, "read", slow_read)
+    t0 = _t.monotonic()
+    m = svc.model(engine, T, fresh=True)
+    assert _t.monotonic() - t0 < 1.0 and m["readAt"] == first["at"] and svc.refreshing()
+    assert m["byCode"]["B-BIT"]["bakiye"] == 100.0
+    gate.set()
+    svc._bg.join(10)
+    m2 = svc.model(engine, T)
+    assert m2["readAt"] == first["at"] + 1 and m2["byCode"]["B-BIT"]["bakiye"] == 90.0
+    assert store.read_at(engine, T) == first["at"] + 1
+    # gece turu bekler: tabloda okuma olsa da kaynak okunur
+    monkeypatch.setattr(svc, "read", lambda: raw_live(first["at"] + 2))
+    assert svc.model(engine, T, fresh=True, wait=True)["readAt"] == first["at"] + 2
+
+
+def test_stale_read_takes_a_newer_one_from_the_table(engine, tmp_path, monkeypatch):
+    """Bellekteki okuma eskiyince önce tabloya bakılır: gece turu (ya da başka süreç) yenisini yazdıysa kaynağa gidilmez."""
+    import time as _t
+
+    svc = _svc(tmp_path)
+    old = raw_live(_t.time() - S.TTL - 60)
+    reads: list[int] = []
+    monkeypatch.setattr(svc, "read", lambda: (reads.append(1), old)[1])
+    svc.model(engine, T)
+    assert reads == [1]
+    store.read_put(engine, T, raw_live(_t.time()))   # tur yeni okumayı yazdı
+    m = svc.model(engine, T)
+    assert reads == [1] and m["readAt"] > old["at"] and not svc.refreshing()
+
+
+def test_production_cards_do_not_block_and_arrive_later(engine, tmp_path, monkeypatch):
+    """Üretim okuması yoksa stok ucu onu beklemez (kart boş); okuma gelince model yeniden kurulur."""
+    import time as _t
+
+    cards = [{"id": "c1", "stockCode": "B-BIT", "stage": "matbaada", "qty": 3000, "plan": {"depo": "2026-10-10"},
+              "created": "2026-09-01", "name": "URT-1"}]
+    ready = {"v": False}
+    svc = _svc(tmp_path, m12_cards=lambda e, t: cards if ready["v"] else [], m12_ready=lambda: ready["v"])
+    monkeypatch.setattr(svc, "read", lambda: raw_live(_t.time()))
+    assert svc.model(engine, T)["byCode"]["B-BIT"]["uretim"] is None
+    ready["v"] = True
+    assert svc.model(engine, T)["byCode"]["B-BIT"]["uretim"]["kartId"] == "c1"
+
+    class NoRead:
+        class source:
+            @staticmethod
+            def peek():
+                return None
+
+        def cards(self, engine, tenant):
+            raise AssertionError("üretim okuması beklenmemeli")
+
+    deps = {"auth": None, "require_caller": None, "can": lambda u, k: False, "is_admin": lambda u: False, "audit": None,
+            "conf": lambda k, d="": d, "fresh": lambda: False, "engine": lambda: engine, "tenant": lambda: T,
+            "logo_file": lambda: "", "crm_file": lambda: "", "llm": lambda p: None, "m12": lambda: NoRead(),
+            "costs": lambda: None}
+    api_svc = stock_api.register(FastAPI(), deps)
+    assert api_svc.m12_ready() is False and api_svc.m12_cards(engine, T) == []

@@ -104,7 +104,7 @@ def _client(engine, monkeypatch, perms: set[str]):
             "m12": lambda: FakeM12(), "costs": lambda: FakeCosts()}
     svc = stock_api.register(app, deps)
     raw = _raw()
-    monkeypatch.setattr(svc, "raw", lambda fresh=False: raw)
+    monkeypatch.setattr(svc, "raw", lambda fresh=False, **kw: raw)
     monkeypatch.setattr(svc, "settings", lambda: SETTINGS)
     return TestClient(app)
 
@@ -166,7 +166,7 @@ def test_unread_source_is_not_shown(engine, monkeypatch):
     import semantic_bridge.stock as S
 
     svc = S.Service(lambda: None, lambda: None, lambda: "", lambda: SETTINGS)
-    monkeypatch.setattr(svc, "raw", lambda fresh=False: raw)
+    monkeypatch.setattr(svc, "raw", lambda fresh=False, **kw: raw)
     m = svc.model(engine, T)
     k = K.for_overview(engine, T, m, {"aktarimHatasi": 1}, {"m12": FakeM12()})
     assert not any(sid.startswith("stok.crm_") for sid in k.sources)

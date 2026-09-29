@@ -26,8 +26,10 @@ sınıflar (`QueuedLlm.choose`, p ≥ eşik ve marj ≥ eşik), fazla stok için
 bülteninin özet cümlelerini yazar (metindeki her sayı olgularda geçmeli, yoksa kural metni). Model sırası gece işinde
 arka plan önceliğindedir; bitmeyen iş sonraki geceye kalır (sessiz tavan yok).
 
-Okuma 5 dakika bellekte ve diskte tutulur (köprü yeniden başlasa da son okuma kaybolmaz); eskiyince arka planda tazelenir,
-«Verileri yenile» (`X-Data-Refresh`) kaynağı beklenerek okur.
+**Hız (2026-09-29):** Logo + CRM okuması 3–6 dakika sürer (test sunucusunda `X-Data-Refresh` ile 332 sn). Uçlar kaynağı
+beklemez: son okuma portal tablosundadır (`semantic_stock_reads`; gece turu `run-due` ve arka plan tazelemesi yazar), istek
+onu bellekten ya da tablodan alır. Okuma 5 dakikadan eskiyse ya da «Verileri yenile» (`X-Data-Refresh`) istendiyse yenisi
+arka planda başlar (cevapta `yenileniyor`); biten okuma tabloya yazılır. Kaynak yalnız hiç okuma yokken beklenir.
 """
 from __future__ import annotations
 
@@ -670,13 +672,20 @@ def _cache_path() -> Path:
 
 
 class Service:
-    """Kaynak okuması (Logo + CRM) → önbellek → model. Aynı anda tek okuma; eski okuma varsa arka planda tazelenir."""
+    """Kaynak okuması (Logo + CRM) → son okuma tablosu (`semantic_stock_reads`) → model.
+
+    İstek kaynağı beklemez: bellekteki okuma yoksa tablodaki (o da yoksa eski disk dosyasındaki) son okuma alınır ve hemen
+    döner. Okuma 5 dakikadan eskiyse ya da «Verileri yenile» (`fresh`) istendiyse yenisi arka planda başlar; biten okuma
+    tabloya yazılır, sonraki istek onu görür. Kaynağın beklendiği iki durum: hiç okuma yok (kurulumdan sonraki ilk açılış,
+    gece turu henüz koşmamış) ve gece turu (`wait=True`). Aynı anda tek okuma."""
 
     def __init__(self, logo_run: Callable[[], src.Runner], crm_run: Callable[[], src.Runner], schema: Callable[[], str],
                  settings: Callable[[], dict[str, Any]], m12_cards: Callable[[Any, str], list[dict[str, Any]]] = lambda e, t: [],
-                 forecast: Callable[[], dict[str, Any]] = lambda: {}, cache: Callable[[], Path] = _cache_path):
+                 forecast: Callable[[], dict[str, Any]] = lambda: {}, cache: Callable[[], Path] = _cache_path,
+                 m12_ready: Callable[[], bool] = lambda: True):
         self.logo_run, self.crm_run, self.schema = logo_run, crm_run, schema
         self.settings, self.m12_cards, self.forecast, self.cache = settings, m12_cards, forecast, cache
+        self.m12_ready = m12_ready
         self._lock = threading.Lock()
         self._read_lock = threading.Lock()
         self._raw: Optional[dict[str, Any]] = None
@@ -741,7 +750,14 @@ class Service:
         raw["readMs"] = int((time.monotonic() - started) * 1000)
         return raw
 
-    def _persist(self, raw: dict[str, Any]) -> None:
+    def _persist(self, raw: dict[str, Any], engine: Any = None, tenant: Optional[str] = None) -> None:
+        """Son okuma tabloya yazılır (uçlar oradan okur); tablo yazılamazsa eski disk dosyasına."""
+        if engine is not None and tenant:
+            try:
+                store.read_put(engine, tenant, raw)
+                return
+            except Exception as e:  # noqa: BLE001 — okuma bellekte kalır, dosyaya düşülür
+                log.warning("stock: son okuma tabloya yazılamadı: %s", e)
         try:
             p = self.cache()
             p.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -751,13 +767,29 @@ class Service:
         except OSError as e:
             log.info("stock: önbellek dosyası yazılamadı: %s", e)
 
-    def _load(self) -> Optional[dict[str, Any]]:
+    def _load(self, engine: Any = None, tenant: Optional[str] = None) -> Optional[dict[str, Any]]:
+        """Tablodaki son okuma; tablo boşsa (bu sürümün ilk turundan önce) eski disk dosyası."""
+        if engine is not None and tenant:
+            try:
+                raw = store.read_get(engine, tenant)
+                if raw is not None:
+                    return raw
+            except Exception as e:  # noqa: BLE001
+                log.info("stock: son okuma tablodan okunamadı: %s", e)
         try:
             return json.loads(self.cache().read_text())
         except (OSError, ValueError):
             return None
 
-    def _refresh(self, since: float) -> dict[str, Any]:
+    def _adopt(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """Tablodan gelen okumayı bellekteki yerine koyar (yalnız daha yeniyse)."""
+        with self._lock:
+            if self._raw is None or float(raw.get("at") or 0) > float(self._raw.get("at") or 0):
+                self._raw, self._model = raw, None
+                self.sql = raw.get("sql") or {}
+            return self._raw
+
+    def _refresh(self, since: float, engine: Any = None, tenant: Optional[str] = None) -> dict[str, Any]:
         """Tek okuma: başka bir istek bu istekten sonra başlamış bir okumayı bitirdiyse onu kullanır (aynı ağır okuma
         iki kez koşmaz)."""
         with self._read_lock:
@@ -771,26 +803,47 @@ class Service:
             with self._lock:
                 self._raw, self._model = raw, None
             self.sql = raw.get("sql") or {}
-            self._persist(raw)
+            self._persist(raw, engine, tenant)
             return raw
 
-    def raw(self, fresh: bool = False) -> dict[str, Any]:
-        asked = time.time()
+    def _refresh_later(self, since: float, engine: Any = None, tenant: Optional[str] = None) -> None:
         with self._lock:
-            if self._raw is None and not fresh:
-                self._raw = self._load()
-                self.sql = (self._raw or {}).get("sql") or {}
-            cur = self._raw
-        if fresh or cur is None:
-            return self._refresh(asked)
-        if time.time() - float(cur.get("at") or 0) > TTL and not (self._bg and self._bg.is_alive()):
+            if self._bg and self._bg.is_alive():
+                return
+
             def bg() -> None:
                 try:
-                    self._refresh(asked)
+                    self._refresh(since, engine, tenant)
                 except Exception as e:  # noqa: BLE001 — eski okuma ekranda kalır
                     log.warning("stock: arka plan okuması başarısız: %s", e)
             self._bg = threading.Thread(target=bg, daemon=True, name="stock-refresh")
             self._bg.start()
+
+    def raw(self, fresh: bool = False, *, wait: bool = False, engine: Any = None, tenant: Optional[str] = None) -> dict[str, Any]:
+        """Son okuma, beklemeden. `fresh` («Verileri yenile»): yenisi arka planda başlar, bu istek eldekini alır.
+        `wait` (gece turu): kaynak beklenerek okunur."""
+        asked = time.time()
+        with self._lock:
+            cur = self._raw
+        if cur is None:
+            loaded = self._load(engine, tenant)
+            cur = self._adopt(loaded) if loaded is not None else None
+        if wait or cur is None:
+            return self._refresh(asked, engine, tenant)
+        stale = time.time() - float(cur.get("at") or 0) > TTL
+        if stale and engine is not None and tenant and not self.refreshing():
+            # Gece turu ya da başka bir köprü süreci daha yeni bir okuma yazdıysa önce o alınır.
+            try:
+                at = store.read_at(engine, tenant)
+                if at is not None and at > float(cur.get("at") or 0):
+                    newer = store.read_get(engine, tenant)
+                    if newer is not None:
+                        cur = self._adopt(newer)
+                        stale = time.time() - float(cur.get("at") or 0) > TTL
+            except Exception as e:  # noqa: BLE001
+                log.info("stock: son okuma anı okunamadı: %s", e)
+        if fresh or stale:
+            self._refresh_later(asked, engine, tenant)
         return cur
 
     def refreshing(self) -> bool:
@@ -800,11 +853,18 @@ class Service:
         with self._lock:
             self._model = None
 
-    def model(self, engine: Any, tenant: str, fresh: bool = False) -> dict[str, Any]:
-        raw = self.raw(fresh)
-        key = (raw.get("at"),)
+    def model(self, engine: Any, tenant: str, fresh: bool = False, wait: bool = False) -> dict[str, Any]:
+        """Kitap satırları. Aynı okuma, aynı ayar ve aynı üretim kartı durumu için bir kez kurulur (eşik onayı
+        `invalidate` ile düşürür). `fresh` modeli yeniden kurdurmaz: yeni okuma gelince model kendiliğinden yenilenir."""
+        raw = self.raw(fresh, wait=wait, engine=engine, tenant=tenant)
+        s = self.settings()
+        try:
+            ready = bool(self.m12_ready())
+        except Exception:  # noqa: BLE001
+            ready = True
+        key = (raw.get("at"), ready, json.dumps(s, sort_keys=True, default=str))
         with self._lock:
-            if self._model is not None and self._model[0] == key and not fresh:
+            if self._model is not None and self._model[0] == key:
                 return self._model[1]
         try:
             cards = self.m12_cards(engine, tenant) or []
@@ -815,7 +875,7 @@ class Service:
             fc = self.forecast() or {}
         except Exception:  # noqa: BLE001
             fc = {}
-        m = build(raw, self.settings(), store.approved_thresholds(engine, tenant), cards, fc)
+        m = build(raw, s, store.approved_thresholds(engine, tenant), cards, fc)
         m["movementWindow"] = raw.get("movementWindow")
         with self._lock:
             self._model = (key, m)

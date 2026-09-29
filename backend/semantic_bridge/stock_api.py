@@ -5,8 +5,9 @@ Excel `ozellik:veri.disa-aktar`. Açıkça verilen yetkiler uçların içinde de
 `ozellik:stok.esik-onay`, stok değeri ve birim maliyet `ozellik:stok.maliyet` (yoksa alanlar yanıtta hiç yoktur), depo
 hattında kişi bazlı toplama süresi `ozellik:stok.depo-hatti`.
 
-Zamanlayıcı (`timas-stock.timer`, 06:30) yalnız `POST /api/v1/stock/run-due`'yu çağırır: kaynağı yeniden okur, gece
-fotoğrafını yazar, Zeki AI sınıflamasını ve önerileri üretir, sabah bültenini iç ekibe (`STOCK_BULLETIN_RECIPIENTS`) gönderir.
+Zamanlayıcı (`timas-stock.timer`, 06:30) yalnız `POST /api/v1/stock/run-due`'yu çağırır: kaynağı bekleyerek yeniden okur
+(okuma `semantic_stock_reads`'e yazılır; ekran uçları yalnız onu okur, kaynağı beklemez), gece fotoğrafını yazar, Zeki AI
+sınıflamasını ve önerileri üretir, sabah bültenini iç ekibe (`STOCK_BULLETIN_RECIPIENTS`) gönderir.
 
 Diğer modüllere bağlantı noktası (onların koduna dokunmadan): `app.state.stock` (`Service`) — `model(engine, tenant)`
 kitap satırlarını verir (M11/M12 «kaç gün yeter», M29 depo stoğu, M45 stok değeri); `GET /suggestions?hedef=M12|M35|M53`
@@ -53,12 +54,24 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         deps[k] for k in ("auth", "require_caller", "can", "is_admin", "audit", "conf", "fresh"))
     settings = lambda: S.settings_from(conf)  # noqa: E731
 
+    def m12_ready() -> bool:
+        """Üretim modülünün okuması elde mi — beklemeden ve okuma başlatmadan (`last`). Yoksa kartlar boş gelir, üretim
+        okuması gelince model yeniden kurulur."""
+        svc12 = (deps.get("m12") or (lambda: None))()
+        source = getattr(svc12, "source", None)
+        probe = getattr(source, "last", None) or getattr(source, "peek", None)
+        return svc12 is None or probe is None or probe() is not None
+
     def m12_cards(engine: Any, tenant: str) -> list:
-        svc = (deps.get("m12") or (lambda: None))()
-        return svc.cards(engine, tenant)[0] if svc is not None else []
+        """Üretim kartları; üretim okuması henüz yoksa boş — stok ucu üretim modülünün Logo/CRM okumasını beklemez."""
+        svc12 = (deps.get("m12") or (lambda: None))()
+        if svc12 is None or not m12_ready():
+            return []
+        return svc12.cards(engine, tenant)[0]
 
     svc = S.Service(lambda: bsrc.runner(deps["logo_file"]()), lambda: bsrc.runner(deps["crm_file"]()),
-                    lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", settings, m12_cards, bsrc.read_forecast)
+                    lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo", settings, m12_cards, bsrc.read_forecast,
+                    m12_ready=m12_ready)
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -91,6 +104,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             raise HTTPException(status_code=502, detail={"code": "STOCK", "message": "Stok verisi okunamadı."}) from e
 
     def model(engine: Any, tenant: str) -> dict[str, Any]:
+        """Son okumadan kurulan model, beklemeden («Verileri yenile» yeni okumayı arka planda başlatır)."""
         return call(svc.model, engine, tenant, bool(fresh()))
 
     def kdeps(user: str) -> dict[str, Any]:
@@ -438,7 +452,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         started = time.monotonic()
         out: dict[str, Any] = {}
         try:
-            m = svc.model(engine, tenant, fresh=True)
+            m = svc.model(engine, tenant, fresh=True, wait=True)   # tur kaynağı bekler; okuma tabloya yazılır
         except Exception as e:  # noqa: BLE001
             log.exception("stock run-due: okuma başarısız")
             out["hata"] = str(e)[:300]

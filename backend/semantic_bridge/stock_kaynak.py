@@ -1,7 +1,7 @@
 """M43 Depo ve stok: ekrandaki her rakamın sorgu bilgisi (ortak sözleşme `provenance.py`).
 
-Rakamlar `stock.Service` okumasından (Logo + CRM, 5 dk bellek + disk önbelleği, gece `timas-stock.timer`) kurulan
-modelden gelir. Gösterilen Logo/CRM SQL'i o okumada ÇALIŞAN metnin kendisidir (`raw["runs"]`: firma, yıl kopyası, CRM
+Rakamlar `stock.Service` okumasından (Logo + CRM; gece `timas-stock.timer` ve arka plan tazelemesi son okuma tablosuna
+`semantic_stock_reads` yazar, uç oradan okur — `stok.portal.okuma`, kökeni Logo/CRM sorguları) kurulan modelden gelir. Gösterilen Logo/CRM SQL'i o okumada ÇALIŞAN metnin kendisidir (`raw["runs"]`: firma, yıl kopyası, CRM
 şeması, tarih penceresi yerinde; satır, süre ve çalıştığı an ile). Okunmamış kaynağın kaydı açılmaz. Portal okumaları
 (eşik, öneri, gece fotoğrafı, maliyet) uçta çalışan ifadenin kendisidir (`stock_store.*_stmt`).
 """
@@ -96,8 +96,14 @@ class Stock:
             self.ids[rid] = self.k.sorgu(
                 _sid(rid), title, conn, r["sql"], database=logo_db if conn == "logo" else crm_db, rows=r.get("rows"),
                 ms=r.get("ms"), ran_at=r.get("at"), period=f"Logo {year} kopyası" if year else None,
-                description=(desc + " Sonuç stok okumasının önbelleğinde tutulur (beş dakika, gece yenilenir); ekrandaki "
-                             "rakam bu okumadandır.").strip())
+                description=(desc + " Sorgu gece turunda ya da arka plan tazelemesinde çalışır, sonucu son stok okuması "
+                             "tablosunda tutulur; ekrandaki rakam bu okumadandır (çalıştığı an satırda).").strip())
+        if self.ids:
+            # Ucun çalıştırdığı portal okuması: son okuma tablosu; kökeni yukarıdaki Logo/CRM sorguları.
+            self.k.portal("stok.portal.okuma", "Son stok okuması", store.read_stmt(tenant), engine,
+                          origin=list(self.ids.values()),
+                          description="Gece turunun ya da arka plan tazelemesinin yazdığı son Logo + CRM okuması (kiracı "
+                                      "başına tek satır). Uç kaynağı beklemez, bu satırı okur.")
 
     def s(self, *run_ids: str) -> list[str]:
         """Okunmuş kaynakların kimlikleri (okunmayanlar atlanır). `logo_hareket` bütün yıl kopyalarını verir."""

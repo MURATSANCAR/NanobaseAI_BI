@@ -10,6 +10,7 @@ Logo `INVDEF` (asgari/azami seviye) ve CRM'e yazılmaz; onaylanan eşik ve öner
 - `semantic_stock_snapshots`: gece fotoğrafı (gün × kitap: Logo bakiyesi, CRM raf, satış hızı). Satır sınırı yok.
 - `semantic_stock_notes`: sayım/düzeltme notu.
 - `semantic_stock_meta`: son koşu özeti, aktarım mesajı sınıfları (Zeki AI), model sırasında kalan iş.
+- `semantic_stock_reads`: son Logo + CRM okuması (kiracı başına tek satır). Uçlar yalnız bunu okur.
 """
 from __future__ import annotations
 
@@ -79,6 +80,15 @@ META = sa.Table(
     "semantic_stock_meta", _md,
     sa.Column("tenant_id", sa.String(80), primary_key=True),
     sa.Column("key", sa.String(60), primary_key=True),
+    sa.Column("value_json", sa.Text, nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
+#: Son Logo + CRM okuması (kiracı başına tek satır): gece turu (`run-due`) ve arka plan tazelemesi yazar, uçlar yalnız
+#: buradan okur — istek kaynağı beklemez. Gövde okumanın kendisidir (JSON; `runs` = çalışan SQL, satır, süre, an).
+READS = sa.Table(
+    "semantic_stock_reads", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("read_at", sa.Float, nullable=False),            # okumanın anı (raw["at"], epoch)
     sa.Column("value_json", sa.Text, nullable=False),
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
 )
@@ -192,6 +202,36 @@ def meta_set(engine: sa.engine.Engine, tenant: str, key: str, value: dict[str, A
             c.execute(META.update().where(*cond).values(value_json=dump(value), updated_at=t))
         else:
             c.execute(META.insert().values(tenant_id=tenant, key=key, value_json=dump(value), updated_at=t))
+
+
+# ------------------------------------------------------------------ son okuma
+
+
+def read_at(engine: sa.engine.Engine, tenant: str) -> Optional[float]:
+    """Tablodaki son okumanın anı (gövdesiz, ucuz): başka süreç ya da gece turu daha yenisini yazdı mı."""
+    with engine.connect() as c:
+        v = c.execute(sa.select(READS.c.read_at).where(READS.c.tenant_id == tenant)).scalar()
+    return float(v) if v is not None else None
+
+
+def read_stmt(tenant: str) -> Any:
+    """Uçların son okumayı aldığı ifade (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return sa.select(READS.c.value_json).where(READS.c.tenant_id == tenant)
+
+
+def read_get(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
+    with engine.connect() as c:
+        v = c.execute(read_stmt(tenant)).scalar()
+    out = _j(v, None)
+    return out if isinstance(out, dict) else None
+
+
+def read_put(engine: sa.engine.Engine, tenant: str, raw: dict[str, Any]) -> None:
+    t = now()
+    body = dump(raw)
+    with engine.begin() as c:
+        c.execute(READS.delete().where(READS.c.tenant_id == tenant))
+        c.execute(READS.insert().values(tenant_id=tenant, read_at=float(raw.get("at") or 0), value_json=body, updated_at=t))
 
 
 # ------------------------------------------------------------------ eşikler
