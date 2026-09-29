@@ -1453,7 +1453,7 @@ def _group_proof(node: exp.Expression, entity: str, g: dict) -> bool:
     return g["key"] in cols and g["column"] in cols and bool(pats & set(g["like"]))
 
 
-def _anti_joins(tree: exp.Expression) -> list[tuple[str, exp.Expression]]:
+def _anti_join_sources(tree: exp.Expression) -> list[tuple[str, exp.Expression]]:
     """(alias, subquery) for every LEFT JOIN of a derived table whose key is tested `IS NULL` somewhere in the
     statement — in a WHERE or inside an aggregate's CASE."""
     nulls = {((c.table or "").upper(), c.name.upper()) for i in tree.find_all(exp.Is)
@@ -1474,7 +1474,7 @@ def _exclusion_join_aliases(sq: SemanticQuery, tree: exp.Expression) -> set[str]
     wanted = [(m.mapping.entity, g) for m in sq.metrics if m.mapping for g in exclude_groups(m.mapping)]
     if not wanted:
         return set()
-    return {alias for alias, src in _anti_joins(tree) if any(_group_proof(src, e, g) for e, g in wanted)}
+    return {alias for alias, src in _anti_join_sources(tree) if any(_group_proof(src, e, g) for e, g in wanted)}
 
 
 def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list[Unmet]:
@@ -1490,7 +1490,7 @@ def _excluded_groups_unmet(sq: SemanticQuery, tree: exp.Expression, occ) -> list
         inner = node.this.this if isinstance(node.this, exp.Paren) else node.this
         if isinstance(inner, (exp.Exists, exp.In)):
             subqueries.append(inner)
-    anti = _anti_joins(tree)
+    anti = _anti_join_sources(tree)
     for metric in sq.metrics:
         m = metric.mapping
         groups = exclude_groups(m)
