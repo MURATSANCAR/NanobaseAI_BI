@@ -307,7 +307,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
         c.netYtd > 0 ? trPct((c.customers.reduce((a, x) => a + x.net_ciro, 0) / c.netYtd) * 100) : '—',
     },
     c5: {
-      title: 'Kanıt & Kaynak',
+      title: 'Kaynak ve kanıt',
       info: { k: c.kaynaklar, alan: 'c5', label: 'Kaynak ve kanıt', explain: 'Bu ekrandaki rakamların dayandığı Logo kayıtlarının sayısı: fatura, fatura satırı ve cari. Rakamlara güvenmek için neye bakıldığını gösterir.' },
       badge: durum ? 'Bağlantı' : 'Canlı',
       summary: durum || `${money(c.units?.satir ?? 0)} satır · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
