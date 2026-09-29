@@ -8,7 +8,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label, nf } 
 import SearchSelect from '../../components/SearchSelect';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { fmtDay, usePeopleOptions } from '../authors/shared';
-import { applicationsApi, boardApi, type AppDetail } from './api';
+import { applicationsApi, boardApi, type AppDetail, type AppFile } from './api';
+import { AskSheet } from '../../budget/parts';
 import ApplicationForm from './ApplicationForm';
 import EvaluationPanel from './EvaluationPanel';
 import LettersPanel from './LettersPanel';
@@ -259,9 +260,11 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
   const qc = useQueryClient();
   const meta = useAppMeta();
   const [kind, setKind] = useState(a.status === 'revizyon' || a.round > 1 ? 'revizyon' : 'dosya');
+  const [removing, setRemoving] = useState<AppFile | null>(null);
   const del = useMutation({
     mutationFn: (id: string) => applicationsApi.deleteFile(id),
     onSuccess: async () => {
+      setRemoving(null);
       await invalidateApps(qc);
       toast.success('Dosya silindi');
     },
@@ -288,7 +291,7 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
                 İndir
               </a>
               {canWrite && open && (
-                <button type="button" aria-label={`${f.filename} dosyasını sil (geri alınamaz)`} title="Dosyayı sil (geri alınamaz)" className={`${btnGhost} !min-h-9 !py-1`} disabled={del.isPending} onClick={() => del.mutate(f.id)}>
+                <button type="button" aria-label={`${f.filename} dosyasını sil (geri alınamaz)`} title="Dosyayı sil (geri alınamaz)" className={`${btnGhost} !min-h-9 !py-1`} disabled={del.isPending} onClick={() => setRemoving(f)}>
                   <Trash2 aria-hidden className="h-4 w-4" />
                 </button>
               )}
@@ -325,6 +328,9 @@ function Files({ a, canWrite }: { a: AppDetail; canWrite: boolean }) {
           }}
         />
       </div>
+      <AskSheet open={!!removing} title="Dosyayı sil" confirm="Dosyayı sil" danger busy={del.isPending}
+        message={removing ? `«${removing.filename}» (${removing.kindLabel}${removing.round > 1 ? `, ${removing.round}. tur` : ''}) başvurudan silinecek. Bu işlem geri alınamaz; gerekirse dosyayı yeniden yüklersiniz.` : ''}
+        onClose={() => setRemoving(null)} onConfirm={() => removing && del.mutate(removing.id)} />
     </div>
   );
 }

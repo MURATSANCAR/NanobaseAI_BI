@@ -116,7 +116,7 @@ export function AskSheet({ open, title, message, confirm, danger, input, require
   return (
     <Sheet open={open} modal onClose={() => { setText(''); onClose(); }} title={title}>
       <div className="flex flex-col gap-3 text-[13px] leading-snug">
-        <div>{message}</div>
+        <div className="break-words">{message}</div>
         {input && (
           <label className="flex flex-col gap-1">
             <span className={labelCls}>{input}</span>

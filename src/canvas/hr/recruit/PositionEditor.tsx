@@ -123,7 +123,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
     competencies: p.competencies.join('\n'), note: p.note, postingText: p.postingText,
   });
   const [warnings, setWarnings] = useState<Warning[]>(p.postingWarnings);
-  const [ask, setAsk] = useState<null | 'reject'>(null);
+  const [ask, setAsk] = useState<null | 'reject' | 'close'>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ['hr', 'recruit'] });
   const dirty = f.title !== p.title || f.unitId !== (p.unitId ?? '') || f.hiringManager !== (p.hiringManager ?? '') ||
     f.team !== p.team.join(', ') || f.competencies !== p.competencies.join('\n') || f.note !== p.note || f.postingText !== p.postingText;
@@ -242,7 +242,7 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
             <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => action.mutate({ a: 'resume' })}>Yeniden aç</button>
           )}
           {can.positionOpen && p.state !== 'kapandi' && (
-            <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => action.mutate({ a: 'close' })}>Pozisyonu kapat</button>
+            <button type="button" className={btnGhost} disabled={action.isPending} onClick={() => setAsk('close')}>Pozisyonu kapat</button>
           )}
         </div>
       </Block>
@@ -322,6 +322,16 @@ function Editor({ p, meta }: { p: Position; meta: RecruitMeta }) {
         busy={action.isPending}
         onClose={() => setAsk(null)}
         onConfirm={(note) => action.mutate({ a: 'reject', note })}
+      />
+      <AskSheet
+        open={ask === 'close'}
+        title="Pozisyonu kapat"
+        message={`«${p.title}»${p.unitName ? ` (${p.unitName})` : ''} pozisyonu kapanacak. Kapanan pozisyon yeniden açılamaz ve düzenlenemez; e-postayla gelen başvurular artık bu pozisyona bağlanmaz. Bu işlem geri alınamaz. Adaylar ve görüşme kayıtları yerinde kalır.`}
+        confirm="Pozisyonu kapat"
+        danger
+        busy={action.isPending}
+        onClose={() => setAsk(null)}
+        onConfirm={() => action.mutate({ a: 'close' })}
       />
     </div>
   );

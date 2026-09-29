@@ -11,6 +11,7 @@ import { fmtDay } from '../authors/shared';
 import { applicationsApi, boardApi, type AgendaItem, type SessionDetail, type VoteChoice } from './api';
 import { BoardReportView } from './ReportPanel';
 import SessionForm from './SessionForm';
+import { AskSheet } from '../../budget/parts';
 import { AXES, DECISION_TONE, ScoreField, TallyView, errMsg, invalidateApps, useAppMeta } from './shared';
 import { EmptyHint, Explain } from '../../components/Explain';
 
@@ -346,6 +347,7 @@ export default function SessionScreen() {
   const [report, setReport] = useState<AgendaItem | null>(null);
   const [editing, setEditing] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => {
     if (s && !open && s.items.length === 1) setOpen(s.items[0].appId);
   }, [s, open]);
@@ -394,7 +396,7 @@ export default function SessionScreen() {
                   Düzenle
                 </button>
                 {s.items.length === 0 ? (
-                  <button type="button" className={btnGhost} disabled={remove.isPending} onClick={() => remove.mutate()}>
+                  <button type="button" className={btnGhost} disabled={remove.isPending} onClick={() => setDeleting(true)}>
                     <Trash2 aria-hidden className="h-4 w-4" />
                     Oturumu sil
                   </button>
@@ -445,6 +447,9 @@ export default function SessionScreen() {
       )}
       <ReportSheet item={report} onClose={() => setReport(null)} />
       {s && <SessionForm open={editing} session={s} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />}
+      <AskSheet open={deleting} title="Oturumu sil" confirm="Oturumu sil" danger busy={remove.isPending}
+        message={s ? `«${s.title}» oturumu (${fmtDay(s.date)}) silinecek. Bu işlem geri alınamaz; gerekirse oturumu yeniden oluşturursunuz.` : ''}
+        onClose={() => setDeleting(false)} onConfirm={() => remove.mutate()} />
       <Sheet open={closing} onClose={() => setClosing(false)} modal title="Oturumu kapat" subtitle={s?.title}>
         <div className="space-y-3 text-[12.5px]">
           <p>

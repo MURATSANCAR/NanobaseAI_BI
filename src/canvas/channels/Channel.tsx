@@ -8,7 +8,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel, Pager, useDebounced } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, fmtShort, parseNum } from '../budget/api';
-import { NumField, Tabs } from '../budget/parts';
+import { AskSheet, NumField, Tabs } from '../budget/parts';
 import { FileDrop } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
 import { EmptyHint, Explain } from '../components/Explain';
@@ -289,6 +289,7 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
   const [bas, setBas] = useState('');
   const [bit, setBit] = useState('');
   const [open, setOpen] = useState<string | null>(d.imports[0]?.id ?? null);
+  const [removing, setRemoving] = useState(false);
   const files = useShowMore(d.imports, 5);
   const up = useMutation({
     mutationFn: (f: File) => channelsApi.importFile(d.platform, f, bas || undefined, bit || undefined),
@@ -302,10 +303,13 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
   const del = useMutation({
     mutationFn: (id: string) => channelsApi.deleteImport(id),
     onSuccess: () => {
+      setRemoving(false);
       qc.invalidateQueries({ queryKey: ['channels', 'channel', d.platform] });
       setOpen(null);
     },
+    onError: (e) => toast.error(errText(e, 'Yükleme silinemedi.') ?? ''),
   });
+  const openRow = d.imports.find((r) => r.id === open);
   const detail = useQuery({ queryKey: ['channels', 'import', open], queryFn: () => channelsApi.importDetail(open!), enabled: ENGINE_ENABLED && !!open });
   return (
     <Panel>
@@ -366,7 +370,7 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
               </TableWrap>
               {meta.me.canImport && (
                 <div>
-                  <button type="button" className={btnGhost} onClick={() => open && del.mutate(open)} disabled={del.isPending}>
+                  <button type="button" className={btnGhost} onClick={() => setRemoving(true)} disabled={!open || del.isPending}>
                     <Trash2 aria-hidden className="h-4 w-4" />
                     Bu yüklemeyi sil
                   </button>
@@ -376,6 +380,11 @@ function Imports({ d, meta }: { d: ChannelDetail; meta: ChannelsMeta }) {
           )}
         </div>
       )}
+      <AskSheet open={removing && !!open} title="Panel yüklemesini sil" confirm="Yüklemeyi sil" danger busy={del.isPending}
+        message={openRow
+          ? `${d.label} için yüklenen «${openRow.dosya || 'dosya'}» (${fmtDay(openRow.tarih)}, ${fmtInt(openRow.satir)} satır) silinecek; kanalın okura sattığı ve kanal stoğu bu dosyadan artık görünmez. Bu işlem geri alınamaz; gerekirse dosyayı yeniden yüklersiniz.`
+          : ''}
+        onClose={() => setRemoving(false)} onConfirm={() => open && del.mutate(open)} />
     </Panel>
   );
 }

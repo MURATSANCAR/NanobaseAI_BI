@@ -7,8 +7,8 @@ import { InfoLabel } from '../components/SqlInfo';
 import { EmptyHint } from '../components/Explain';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
-import { NumField } from '../budget/parts';
-import { fmtInt, supplyApi } from './api';
+import { AskSheet, NumField } from '../budget/parts';
+import { fmtInt, supplyApi, type Capacity as CapacityRow } from './api';
 import { ErrorNote, SupplyFrame, useSupplyMeta } from './parts';
 
 /** M52 Matbaa kapasitesi (/tedarik/kapasite): aylık adet / forma kapasitesi. Ay boşsa her ay için geçerli; belirli ayın
@@ -19,6 +19,7 @@ export default function Capacity() {
   const can = !!meta.data?.me.canCapacity;
   const q = useQuery({ queryKey: ['supply', 'capacity'], queryFn: supplyApi.capacity, enabled: ENGINE_ENABLED });
   const [form, setForm] = useState({ matbaa: '', ay: '', adet: '', forma: '', not: '' });
+  const [removing, setRemoving] = useState<CapacityRow | null>(null);
   const done = () => void qc.invalidateQueries({ queryKey: ['supply'] });
   const save = useMutation({
     mutationFn: () => supplyApi.saveCapacity({ matbaa: form.matbaa, ay: form.ay || null, kapasiteAdet: form.adet, kapasiteForma: form.forma, not: form.not }),
@@ -32,6 +33,7 @@ export default function Capacity() {
   const remove = useMutation({
     mutationFn: supplyApi.deleteCapacity,
     onSuccess: () => {
+      setRemoving(null);
       toast.success('Kapasite kaydı silindi.');
       done();
     },
@@ -110,7 +112,7 @@ export default function Capacity() {
                     <td className={td}>{r.byName}</td>
                     {can && (
                       <td className={td}>
-                        <button type="button" className={btnGhost} aria-label="Kapasite kaydını sil (geri alınamaz)" title="Kapasite kaydını sil (geri alınamaz)" disabled={remove.isPending} onClick={() => remove.mutate(r.id)}>
+                        <button type="button" className={btnGhost} aria-label="Kapasite kaydını sil (geri alınamaz)" title="Kapasite kaydını sil (geri alınamaz)" disabled={remove.isPending} onClick={() => setRemoving(r)}>
                           <Trash2 aria-hidden className="h-4 w-4" />
                         </button>
                       </td>
@@ -123,6 +125,11 @@ export default function Capacity() {
           <p className="mt-2 px-1 text-[11.5px] text-canvas-muted">Aynı matbaa ve ay için en son girilen kayıt geçerlidir; eskiler listede kalır.</p>
         </Panel>
       )}
+      <AskSheet open={!!removing} title="Kapasite kaydını sil" confirm="Kaydı sil" danger busy={remove.isPending}
+        message={removing
+          ? `${removing.matbaa} için ${removing.ay ? `${removing.ay} ayının` : 'her ay geçerli'} kapasite kaydı (${[removing.kapasiteAdet !== null ? `${fmtInt(removing.kapasiteAdet)} adet` : '', removing.kapasiteForma !== null ? `${fmtInt(removing.kapasiteForma)} forma` : ''].filter(Boolean).join(', ') || 'değer girilmemiş'}; giren ${removing.byName}) silinecek. «Baskı yükü» bundan sonra varsa aynı ay için daha önce girilen kaydı, yoksa geçmiş referansı kullanır. Bu işlem geri alınamaz.`
+          : ''}
+        onClose={() => setRemoving(null)} onConfirm={() => removing && remove.mutate(removing.id)} />
     </SupplyFrame>
   );
 }

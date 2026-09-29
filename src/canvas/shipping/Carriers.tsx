@@ -9,7 +9,8 @@ import { EmptyHint, Explain } from '../components/Explain';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
-import { fmtDay, fmtDays, fmtInt, fmtMoney, fmtNum, fmtPct, shippingApi, type DecisionType, type Group, type Meta, type ScoreRow } from './api';
+import { AskSheet } from '../budget/parts';
+import { fmtDay, fmtDays, fmtInt, fmtMoney, fmtNum, fmtPct, shippingApi, type Decision, type DecisionType, type Group, type Meta, type ScoreRow } from './api';
 import { Empty, ExportButton, FreshNote, ShippingFrame } from './parts';
 
 /** M44 Firma karnesi (/kargo/firmalar): kargo firmalarının gönderi, teslim süresi, iade ve (yetkiyle) desi başı maliyeti;
@@ -183,9 +184,13 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ['shipping', 'decisions'], queryFn: shippingApi.decisions, enabled: ENGINE_ENABLED });
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState<Decision | null>(null);
   const del = useMutation({
     mutationFn: (id: string) => shippingApi.deleteDecision(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['shipping', 'decisions'] }),
+    onSuccess: () => {
+      setRemoving(null);
+      qc.invalidateQueries({ queryKey: ['shipping', 'decisions'] });
+    },
     onError: (e) => toast.error(errText(e, 'Silinemedi.') ?? ''),
   });
   const items = list.data?.items ?? [];
@@ -215,7 +220,7 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
                 <span className="text-canvas-muted">{k.kararVeren} · {fmtDay(k.tarih)}</span>
                 {Object.entries(k.kapsam).map(([a, b]) => <Pill key={a} tone="muted">{a}: {b}</Pill>)}
                 {meta.me.karar && (
-                  <button type="button" className="ml-auto inline-flex min-h-9 items-center text-canvas-muted hover:text-red-700" aria-label="Kararı sil (geri alınamaz)" title="Kararı sil (geri alınamaz)" onClick={() => del.mutate(k.id)}>
+                  <button type="button" className="ml-auto inline-flex min-h-9 items-center text-canvas-muted hover:text-red-700" aria-label="Kararı sil (geri alınamaz)" title="Kararı sil (geri alınamaz)" onClick={() => setRemoving(k)}>
                     <Trash2 aria-hidden className="h-4 w-4" />
                   </button>
                 )}
@@ -228,6 +233,11 @@ function DecisionsPanel({ meta, bas, bit, sehir }: { meta: Meta; bas: string; bi
         </div>
       )}
       <DecisionSheet open={open} meta={meta} bas={bas} bit={bit} sehir={sehir} onClose={() => setOpen(false)} />
+      <AskSheet open={!!removing} title="Kargo kararını sil" confirm="Kararı sil" danger busy={del.isPending}
+        message={removing
+          ? `${removing.turAdi} kararı «${removing.karar.length > 140 ? `${removing.karar.slice(0, 140)}…` : removing.karar}» (${removing.kararVeren}, ${fmtDay(removing.tarih)}) gerekçesiyle birlikte silinecek. Bu işlem geri alınamaz.`
+          : ''}
+        onClose={() => setRemoving(null)} onConfirm={() => removing && del.mutate(removing.id)} />
     </Panel>
   );
 }

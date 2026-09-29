@@ -10,7 +10,7 @@ import { ReadingBadge, ReadingNote } from '../components/ReadingBadge';
 import Sheet from '../editorial/studio/reader/Sheet';
 import {
   STATUS_TONE, fmtDay, fmtMoney, fmtPct, parseNum, tendersApi,
-  type Job, type Quote, type Summary, type TenderDetail as Detail, type TenderInput, type TenderMeta,
+  type FileRow, type Job, type Quote, type Summary, type TenderDetail as Detail, type TenderInput, type TenderMeta,
 } from './api';
 import { AskSheet, Fact, LeftPill, ScoreBadge, Tabs, TenderFrame } from './parts';
 import { FileDrop } from '../components/FileDrop';
@@ -129,6 +129,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
   const nav = useNavigate();
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [removingFile, setRemovingFile] = useState<FileRow | null>(null);
   const [fileTur, setFileTur] = useState<'sartname' | 'ek' | 'belge'>('sartname');
   const can = meta.me.canEdit;
   const invalidate = () => qc.invalidateQueries({ queryKey: ['tenders'] });
@@ -140,7 +141,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
   });
   const delFile = useMutation({
     mutationFn: (fid: string) => tendersApi.deleteFile(d.id, fid),
-    onSuccess: () => { invalidate(); toast.success('Dosya silindi.'); },
+    onSuccess: () => { setRemovingFile(null); invalidate(); toast.success('Dosya silindi.'); },
     onError: (e) => toast.error(errText(e, 'Silinemedi.') ?? ''),
   });
   const summarize = useMutation({
@@ -255,7 +256,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
                   </button>
                 )}
                 {can && (
-                  <button type="button" className={btnGhost} aria-label={`${f.ad} sil`} disabled={delFile.isPending} onClick={() => delFile.mutate(f.id)}>
+                  <button type="button" className={btnGhost} aria-label={`${f.ad} sil`} disabled={delFile.isPending} onClick={() => setRemovingFile(f)}>
                     <Trash2 aria-hidden className="h-4 w-4" />
                   </button>
                 )}
@@ -304,12 +305,22 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
       <AskSheet
         open={removing}
         title="İhaleyi sil"
-        message="Yanlış girilmiş kayıt içindir: ihale, kalemleri, kontrol listesi ve dosyaları silinir. Kararı ya da sonucu olan ihale silinmez."
+        message={`Yanlış girilmiş kayıt içindir: ${d.kurum} «${d.konu}» ihalesi, kalemleri, kontrol listesi ve dosyaları silinir. Bu işlem geri alınamaz. Kararı ya da sonucu olan ihale silinmez.`}
         confirm="Sil"
         danger
         busy={remove.isPending}
         onClose={() => setRemoving(false)}
         onConfirm={() => remove.mutate()}
+      />
+      <AskSheet
+        open={!!removingFile}
+        title="Dosyayı sil"
+        message={removingFile ? `«${removingFile.ad}» (${removingFile.tur === 'sartname' ? 'şartname' : removingFile.tur === 'ek' ? 'ek' : 'belge'}) bu ihaleden silinecek. Bu işlem geri alınamaz; gerekirse dosyayı yeniden yüklersiniz.` : ''}
+        confirm="Dosyayı sil"
+        danger
+        busy={delFile.isPending}
+        onClose={() => setRemovingFile(null)}
+        onConfirm={() => removingFile && delFile.mutate(removingFile.id)}
       />
     </>
   );

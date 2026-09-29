@@ -118,7 +118,7 @@ export default function DocumentsVault({ meta }: { meta: TenderMeta }) {
       <AskSheet
         open={!!removing}
         title="Belgeyi sil"
-        message={<>«{removing?.ad}» ve dosyası silinir; bu belgeye bağlı kontrol listesi kalemleri «eksik» olur.</>}
+        message={<>«{removing?.ad}» ve dosyası silinir; bu belgeye bağlı kontrol listesi kalemleri «eksik» olur. Bu işlem geri alınamaz.</>}
         confirm="Sil"
         danger
         busy={del.isPending}

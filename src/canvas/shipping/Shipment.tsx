@@ -10,6 +10,7 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } f
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtDays, fmtMoney, fmtNum, shippingApi, type Draft, type DraftType, type Meta, type ShipmentCard } from './api';
 import { FreshNote, ShippingFrame, StatusPill } from './parts';
+import { AskSheet } from '../budget/parts';
 
 /** M44 Gönderi kartı (/kargo/gonderi/:id): sipariş → depo → kutulama → sevk → kargo → teslim zaman çizelgesi, entegrasyon
  *  sonucu, kargo kaydı, CRM sevkiyatı ve Logo karşılığı, Zeki AI mesaj taslakları. Alıcı adı yalnız `kargo.alici` ile,
@@ -269,6 +270,7 @@ function DraftsPanel({ meta, card }: { meta: Meta; card: ShipmentCard }) {
 
 function DraftItem({ dr, canEdit, onChanged }: { dr: Draft; canEdit: boolean; onChanged: () => void }) {
   const [text, setText] = useState(dr.metin);
+  const [removing, setRemoving] = useState(false);
   const dirty = text.trim() !== dr.metin;
   const save = useMutation({
     mutationFn: (b: { metin?: string; durum?: 'taslak' | 'kullanildi' }) => shippingApi.updateDraft(dr.id, b),
@@ -280,7 +282,10 @@ function DraftItem({ dr, canEdit, onChanged }: { dr: Draft; canEdit: boolean; on
   });
   const del = useMutation({
     mutationFn: () => shippingApi.deleteDraft(dr.id),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setRemoving(false);
+      onChanged();
+    },
     onError: (e) => toast.error(errText(e, 'Silinemedi.') ?? ''),
   });
   const copy = () =>
@@ -312,11 +317,14 @@ function DraftItem({ dr, canEdit, onChanged }: { dr: Draft; canEdit: boolean; on
           </button>
         )}
         {canEdit && (
-          <button type="button" className={btnGhost} aria-label="Taslağı sil (geri alınamaz)" title="Taslağı sil (geri alınamaz)" disabled={del.isPending} onClick={() => del.mutate()}>
+          <button type="button" className={btnGhost} aria-label="Taslağı sil (geri alınamaz)" title="Taslağı sil (geri alınamaz)" disabled={del.isPending} onClick={() => setRemoving(true)}>
             <Trash2 aria-hidden className="h-4 w-4" />
           </button>
         )}
       </div>
+      <AskSheet open={removing} title="Taslağı sil" confirm="Taslağı sil" danger busy={del.isPending}
+        message={`${dr.siparisNo ? `${dr.siparisNo} siparişinin ` : ''}«${dr.turAdi}» taslağı (${dr.yazan}, ${fmtDay(dr.olusturma)}) metniyle birlikte silinecek. Bu işlem geri alınamaz.`}
+        onClose={() => setRemoving(false)} onConfirm={() => del.mutate()} />
     </div>
   );
 }
