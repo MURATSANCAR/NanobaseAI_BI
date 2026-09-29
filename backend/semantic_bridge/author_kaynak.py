@@ -267,7 +267,8 @@ def for_heatmap(engine: Any, tenant: str, schema: str, out: dict[str, Any], quer
         note = x.note(got)
     else:
         months = out.get("months") or R.month_keys()
-        live = "Hazırlık bitmeden bu istekte canlı çalıştı (tam sonuç)."
+        live = ("Hazırlık bitmeden canlı çalıştı (tam sonuç); aynı sorgunun sonucu hazırlık aralığı (5 dk) kadar süreç "
+                "içi bellekten verilir, «Verileri yenile» kaynağı bekler.")
         got = {"sozlesmeliYazarlar": x.crm_text("canli.sozlesmeliYazarlar", "CRM: yürürlükte sözleşmesi olan yazarlar",
                                                 R.contracted_authors_sql(schema), live),
                "olaylar": x.crm_text("canli.olaylar", "CRM: son 12 ayda yazar olayları",

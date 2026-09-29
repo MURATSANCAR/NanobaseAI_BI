@@ -964,11 +964,15 @@ def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engin
     since = keys[0] + "-01"
     cards, by_card = _cards_with_meetings(engine, tenant)
     rows: dict[str, dict[str, Any]] = {}
+    # Görüşmesiz satırın ısısı herkes için aynı: bir kez hesaplanır, satıra kopyası konur (binlerce yazarda her satırda
+    # yeniden ay anahtarı kurulmaz; değer `heat([], now)` ile aynı).
+    empty = heat([], now)
 
     def blank(key: str, name: str) -> dict[str, Any]:
         return {"key": key, "name": name, "cardId": None, "crmContactId": None, "stage": None, "stageLabel": None,
                 "owner": None, "ownerDisplay": None, "contracts": 0, "contractEnds": None,
-                "heat": heat([], now), "crm": [0] * len(keys), "crmBooks": 0, "crmContracts": 0}
+                "heat": dict(empty, parts=dict(empty["parts"]), months=list(empty["months"])),
+                "crm": [0] * len(keys), "crmBooks": 0, "crmContracts": 0}
 
     crm_ok, crm_error = True, None
     try:

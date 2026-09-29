@@ -12,6 +12,14 @@ Parçalar:
   günde bir yeniden okunur (geçmiş yıl görünümü değişmez; her 5 dakikada 6 yılı taramak Logo'yu boşuna yorar).
 
 Kişiye özel ve portal kayıtları (kart, görüşme, hakediş, yorum özeti) hazırlanmaz: her istekte canlı okunur, ucuzdur.
+
+Hız (2026-09-29): parçalar diskte onlarca MB JSON'dur (bütün yazarlar, bütün kitaplar, altı yılın satışı) ve her turda
+(5 dk) yeniden yazılır. Eskiden tur bitince ilk gelen istek (ısı haritası `status()`/`queries()` ile satış parçasını da)
+dosyayı istek içinde baştan ayrıştırıyordu; ekranı açan kişi bunu bekliyordu, aynı anda gelen kart/ajanda istekleri de
+aynı süreçte işlemci sırası bekliyordu. Şimdi: yeni dosya arkada ayrıştırılır (izleyici iş parçası tur yazar yazmaz
+yükler), ayrıştırma sürerken istek bir önceki hazırlığı alır (hazır veri zaten ≤ 5 dk eskidir; rakam hesabı aynı).
+Yalnız süreç açılışındaki ilk okuma beklenir (tek okuma, aynı anda gelenler onu bekler). Isı haritasının sadakat
+sözlüğü hazırlık ve gün başına bir kez kurulur; hazırlık yokken canlı CRM okuması 5 dk süreç içi bellekte tutulur.
 """
 from __future__ import annotations
 
@@ -25,12 +33,20 @@ from typing import Any, Callable, Optional
 from semantic_bridge import author_growth as G
 from semantic_bridge import author_relations as R
 from semantic_bridge.editorial_home import EditorialHomeSnapshots, INTERVAL
+from semantic_bridge.hizli_bellek import Bellek
 
 log = logging.getLogger("semantic.author_snapshots")
 
 #: Geçmiş yılların satışı bu kadar süre taze sayılır.
 PAST_YEAR_SECONDS = 24 * 3600
 SALES_YEARS = 6
+#: İzleyicinin yeni tur dosyasına bakma aralığı (saniye).
+WATCH_SECONDS = 5.0
+PARTS = ("crm", "sales")
+
+#: Hazırlık yokken (ilk kurulum, kod değişince yeni klasör) ısı haritasının canlı CRM okuması: aynı metin, tur
+#: aralığı kadar süreç içinde tutulur (bayat sunulmaz). Anahtar = kiracı + SQL metni.
+CANLI = Bellek("yazar.canli", taze=INTERVAL)
 
 
 def all_books_sql(schema: str) -> str:
@@ -88,9 +104,15 @@ class AuthorSnapshots:
         """`fetch_all(sql)` CRM'den tam sonuç (önbelleksiz); `logo()` → (views: set[int], run(sql) -> satırlar,
         data_end(yıl) -> date, close())."""
         self._schema, self._pool_since, self._fetch_all, self._logo = schema, pool_since, fetch_all, logo
-        self._memo: dict[str, tuple[float, Any]] = {}
+        # ad → (dosyanın mtime'ı, değer ya da None, dosya yolu). Yol da anahtardır: kapsam (şema, kiracı) değişince
+        # başka klasörün verisi sunulmaz.
+        self._memo: dict[str, tuple[float, Optional[dict[str, Any]], Path]] = {}
         self._memo_lock = threading.Lock()
+        self._load_locks: dict[str, threading.Lock] = {name: threading.Lock() for name in PARTS}
+        self._loading: set[str] = set()
+        self._loyalty: Optional[tuple[Any, date, dict[str, dict[str, Any]]]] = None
         self._bg: Optional[threading.Thread] = None
+        self._watch: Optional[threading.Thread] = None
         self.snap = EditorialHomeSnapshots(
             lambda: ["author-snapshots", *scope()], self._builders,
             sources=("author_snapshots.py", "author_growth.py", "author_relations.py"), name="author-snapshots")
@@ -127,7 +149,8 @@ class AuthorSnapshots:
         return out
 
     def _build_sales(self) -> dict[str, Any]:
-        previous = (EditorialHomeSnapshots.load(self.snap.directory() / "sales.json").get("data") or {})
+        # Önceki tur bellekteyse dosya ikinci kez ayrıştırılmaz (aynı dosya: mtime ve yol tutuyor).
+        previous = (self._previous("sales") or {}).get("data") or {}
         years_prev = previous.get("years") or {}
         views, run, data_end, close = self._logo()
         try:
@@ -158,7 +181,7 @@ class AuthorSnapshots:
                 "missing": [y for y in range(today.year - SALES_YEARS + 1, today.year + 1) if y not in views],
                 "seconds": round(time.time() - started, 1)}
 
-    # ---- okuma (dosya değişmedikçe bellekten)
+    # ---- okuma (dosya değişmedikçe bellekten; yeni dosya arkada ayrıştırılır)
     def part(self, name: str) -> Optional[dict[str, Any]]:
         path: Path = self.snap.directory() / f"{name}.json"
         try:
@@ -167,14 +190,70 @@ class AuthorSnapshots:
             return None
         with self._memo_lock:
             hit = self._memo.get(name)
-            if hit and hit[0] == mtime:
+        if hit and hit[2] == path:
+            if hit[0] == mtime:
                 return hit[1]
-        value = EditorialHomeSnapshots.load(path)
-        if not value.get("data"):
+            # Tur yeni dosya yazdı: ayrıştırma arkada, bu istek bir önceki hazırlığı alır (beklemez).
+            self._load_later(name, path)
+            return hit[1]
+        return self._load(name, path)
+
+    def _load(self, name: str, path: Path) -> Optional[dict[str, Any]]:
+        """Dosyayı ayrıştırıp belleğe koyar; aynı parçayı aynı anda isteyenler tek ayrıştırmayı bekler."""
+        with self._load_locks.setdefault(name, threading.Lock()):
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                return None
+            with self._memo_lock:
+                hit = self._memo.get(name)
+            if hit and hit[0] == mtime and hit[2] == path:
+                return hit[1]
+            value = EditorialHomeSnapshots.load(path)
+            value = value if value.get("data") else None
+            with self._memo_lock:
+                self._memo[name] = (mtime, value, path)
+            return value
+
+    def _load_later(self, name: str, path: Path) -> None:
+        with self._memo_lock:
+            if name in self._loading:
+                return
+            self._loading.add(name)
+
+        def run() -> None:
+            try:
+                self._load(name, path)
+            except Exception:  # noqa: BLE001 — önceki hazırlık sunulmaya devam eder
+                log.exception("author snapshots: %s parçası ayrıştırılamadı", name)
+            finally:
+                with self._memo_lock:
+                    self._loading.discard(name)
+
+        threading.Thread(target=run, daemon=True, name=f"author-snapshots-load-{name}").start()
+
+    def _previous(self, name: str) -> Optional[dict[str, Any]]:
+        """Turun okuduğu önceki kayıt: bellekteki aynı dosyaysa o, değilse diskten (hatalı kayıt da döner)."""
+        path: Path = self.snap.directory() / f"{name}.json"
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
             return None
         with self._memo_lock:
-            self._memo[name] = (mtime, value)
-        return value
+            hit = self._memo.get(name)
+        if hit and hit[0] == mtime and hit[2] == path and hit[1] is not None:
+            return hit[1]
+        return EditorialHomeSnapshots.load(path)
+
+    def warm(self) -> None:
+        """Diskteki parçaları belleğe alır (izleyici ve açılış); değişmemiş dosya yeniden ayrıştırılmaz."""
+        for name in PARTS:
+            if self.snap.stopping.is_set():
+                return
+            try:
+                self._load(name, self.snap.directory() / f"{name}.json")
+            except Exception:  # noqa: BLE001
+                log.exception("author snapshots: %s parçası belleğe alınamadı", name)
 
     def status(self) -> dict[str, Any]:
         out: dict[str, Any] = {"intervalSeconds": INTERVAL, "refreshing": bool(self._bg and self._bg.is_alive())}
@@ -200,6 +279,16 @@ class AuthorSnapshots:
     def start(self) -> None:
         self.snap.start()
 
+        def watch() -> None:
+            # Tur dosyayı yazar yazmaz ayrıştırılır; ekranı açan kişi ayrıştırmayı beklemez.
+            while True:
+                self.warm()
+                if self.snap.stopping.wait(WATCH_SECONDS):
+                    return
+
+        self._watch = threading.Thread(target=watch, daemon=True, name="author-snapshots-watch")
+        self._watch.start()
+
     def stop(self) -> None:
         self.snap.stop()
 
@@ -221,6 +310,26 @@ class AuthorSnapshots:
     def crm_for_heatmap(self) -> Optional[dict[str, Any]]:
         p = self.part("crm")
         return None if p is None else p["data"]
+
+    def loyalty_map(self, crm: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """Hazır CRM parçasının bütün yazarlarının sadakati (`G.loyalty_map`, bugünün tarihiyle). Parça ve gün başına
+        bir kez kurulur; sonuç paylaşılır, çağıran değiştirmez (ısı haritası yalnız okur)."""
+        today = G._now().date()
+        with self._memo_lock:
+            hit = self._loyalty
+        if hit is not None and hit[0] is crm and hit[1] == today:
+            return hit[2]
+        out = G.loyalty_map(crm["loyalty"], today)
+        with self._memo_lock:
+            self._loyalty = (crm, today, out)
+        return out
+
+    @staticmethod
+    def live_reader(fetch_all: Callable[[str], list[dict[str, Any]]], tenant: str,
+                    fresh: bool = False) -> Callable[[str], list[dict[str, Any]]]:
+        """Hazırlık yokken ısı haritasının canlı CRM okuyucusu: aynı metin `CANLI` bellekte (tur aralığı kadar);
+        `fresh` («Verileri yenile») kaynağı bekler. Dönen liste paylaşılır; çağıran değiştirmez."""
+        return lambda sql: CANLI.al((tenant, sql), lambda: fetch_all(sql), zorla=fresh)
 
     def growth_inputs(self, contact_id: str) -> Optional[dict[str, Any]]:
         """Bir yazarın hazır kitap satırları, sadakat izi ve satış okuyucusu; parçalar hazır değilse None."""

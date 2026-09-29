@@ -4995,11 +4995,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         schema = admin_mod.conf("CRM_SCHEMA")
         snaps = _snapshots()
         crm = snaps.crm_for_heatmap()
-        out = _rel_call(rel_mod.heatmap, schema, _crm_fetch_all, engine, tenant, user,
+        # Hazır parça varsa kaynak beklenmez, sadakat parça ve gün başına bir kez kurulur; yoksa canlı CRM okuması
+        # 5 dk süreç içi bellekte (Verileri yenile kaynağı bekler).
+        live = snaps.live_reader(_crm_fetch_all, tenant, FORCE_FRESH.get())
+        out = _rel_call(rel_mod.heatmap, schema, live, engine, tenant, user,
                         scope=scope, q=q, order=order, page_no=page,
                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60), crm=crm,
-                        loyalty=(lambda: growth_mod.loyalty_map(crm["loyalty"])) if crm else
-                        (lambda: growth_mod.loyalty_map(_crm_fetch_all(growth_mod.loyalty_sql(schema)))))
+                        loyalty=(lambda: snaps.loyalty_map(crm)) if crm else
+                        (lambda: growth_mod.loyalty_map(live(growth_mod.loyalty_sql(schema)))))
         from semantic_bridge import author_kaynak as K, sorgu_kaydi as SK
         return SK.bagla_out(dict(out, snapshot=snaps.status()), lambda o: K.for_heatmap(engine, tenant, schema, o, snaps.queries() if crm else None))
 
