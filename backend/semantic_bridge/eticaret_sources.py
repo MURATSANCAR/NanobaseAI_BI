@@ -20,7 +20,7 @@
   - **Logo liste fiyatı** `PRCLIST` satış listesi, bugün geçerli (seçim M53 ile aynı: cariye bağlı olmayan, küçük
     öncelik, en yeni başlangıç).
   - **Kesim tarihi** güncel firmanın son satış faturası günü; ekranda her Logo rakamının yanında yazar
-    (.155 kopyası 2026-08-17'de donmuş).
+    (canlı Logo .25; gecikme olursa ekranda görünür).
 """
 from __future__ import annotations
 

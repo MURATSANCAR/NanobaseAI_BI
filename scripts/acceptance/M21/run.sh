@@ -4,7 +4,7 @@
 #   cd <köprü kaynağı> && M21_COOKIE='timas_session=…' STOK=<e-ticarette satışı olan kitabın stok kodu> sh scripts/acceptance/M21/run.sh
 #
 # 1) Birim/kural testleri (SQLite, yapay veri; ürün doğruluğu kanıtı DEĞİLDİR, ayrı raporlanır).
-# 2) Canlı kabul: gerçek CRM .28 + Logo .155, çalışan köprüye karşı, doğrudan SQL referanslarıyla (kabul.py).
+# 2) Canlı kabul: gerçek CRM .28 + Logo .25, çalışan köprüye karşı, doğrudan SQL referanslarıyla (kabul.py).
 #    İlk koşuda satış önbelleği boşsa REFRESH=1 verin (POST /api/v1/ads/refresh, bitmesi beklenir).
 # 3) Temizlik: kabulün açtığı hesap/kampanya/dosya satırları ve değişiklik kaydı silinir (cleanup.py). timasai oturum
 #    satırı giriş servisinde ayrıca silinir.

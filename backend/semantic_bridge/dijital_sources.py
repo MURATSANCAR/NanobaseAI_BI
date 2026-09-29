@@ -16,7 +16,7 @@
 **Logo** (yıllar ayrı firma numarası; `budget_sources.firms_by_year`): faturalı satış satırı (`STLINE`, `LINETYPE 0`,
 `CANCELLED 0`, `INVOICEREF <> 0`, `TRCODE 7/8/9` satış, `2/3` iade eksi; net = `LINENET`). Satış görünümleri
 (`V_SatisRaporu_*`) okunmaz: tanım kokpit ve bütçeyle aynı olsun diye doğrudan `STLINE`. Son 12 ay veri sonundan
-geriye sayılır (Logo .155 kopyası 17.08.2026'da donmuş olabilir; pencere ekranda yazılır). E-kitap stok kodlarının
+geriye sayılır (pencere ekranda yazılır). E-kitap stok kodlarının
 satışı aynı sorgudan çıkar (kod listesi SQL'e girmez, plan tuzağı yok).
 
 **Stüdyo** (isteğe bağlı): iş listesi + işin e-kitap görünümü (`editorial_studio_epub.view`), CRM kitap kimliğiyle.

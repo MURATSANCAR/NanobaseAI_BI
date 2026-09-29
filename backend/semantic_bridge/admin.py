@@ -153,9 +153,9 @@ SPEC: list[dict[str, Any]] = [
     # Logo veritabanı. Değerler köprünün bağlantı dosyasında (`SEMANTIC_CONNECTION_FILE`) tutulur;
     # kaydedilince bağlantı yeniden kurulur, servis yeniden başlatılmaz.
     {"key": "DB_HOST", "group": "database", "label": "Sunucu", "type": "text", "default": "",
-     "help": "SQL Server adresi. Tünelle bağlanılıyorsa 127.0.0.1", "file": "host", "store": "db"},
+     "help": "SQL Server adresi, ağın içindeki gerçek adres (örn. 192.168.0.25)", "file": "host", "store": "db"},
     {"key": "DB_PORT", "group": "database", "label": "Port", "type": "int", "default": "1433",
-     "help": "Doğrudan 1433; bu kurulumda socat tüneli 14330", "file": "port", "store": "db"},
+     "help": "SQL Server portu, genellikle 1433", "file": "port", "store": "db"},
     {"key": "DB_NAME", "group": "database", "label": "Veritabanı", "type": "text", "default": "",
      "help": "Logo veritabanı, örn. LOGO_DB", "file": "database", "store": "db"},
     {"key": "DB_USER", "group": "database", "label": "Kullanıcı", "type": "text", "default": "",
@@ -773,7 +773,7 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ITOPS_VPN_IFACE", "group": "itops", "label": "Şirket ağı bağlantı arayüzü", "type": "text", "default": "tun0",
      "help": "Test sunucusunda şirket ağı bağlantısının arayüz adı. Müşteri VM'inde bakılmaz"},
     {"key": "ITOPS_VPN_PROBE", "group": "itops", "label": "Şirket ağında denenecek adres", "type": "text", "default": "",
-     "help": "sunucu:port, örn. 192.168.0.155:1433. Yerel tünel ağzı değil, ağın içindeki gerçek adres"},
+     "help": "sunucu:port, örn. 192.168.0.25:1433. Yerel tünel ağzı değil, ağın içindeki gerçek adres"},
     {"key": "ITOPS_VM_URL", "group": "itops", "label": "Müşteri VM'i adresi", "type": "text", "default": "",
      "help": "Test sunucusundan denenecek portal adresi, örn. http://192.168.0.55/timas/. Boşsa bu halka ölçülmez"},
     {"key": "ITOPS_VM_HEARTBEAT_SEC", "group": "itops", "label": "VM iş bildirimi beklenen en uzun süre (sn)", "type": "int",
@@ -2523,7 +2523,6 @@ SERVICES = [
     {"unit": "nanobase-semantic-bridge.service", "label": "Sorgu motoru (köprü)"},
     {"unit": "timas-login.service", "label": "Giriş servisi (Active Directory)"},
     {"unit": "timas-vpn-mfa.service", "label": "TİMAŞ VPN"},
-    {"unit": "timas-mssql-14330.service", "label": "Logo veritabanı tüneli"},
 ]
 
 

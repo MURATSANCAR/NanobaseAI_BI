@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M53 Set, hediye ve promosyon — test sunucusunda gerçek Logo (.155) + CRM (.28) ile ölçüm ve kabul.
+"""M53 Set, hediye ve promosyon — test sunucusunda gerçek Logo (.25) + CRM (.28) ile ölçüm ve kabul.
 
 Koşturma (köprünün sanal ortamında, köprünün env dosyasıyla; önce bir kez `run-due` elle koşturulmuş olmalı —
 `curl -X POST -H "X-Semantic-Caller: $SEMANTIC_CALLER_TOKEN" 'http://127.0.0.1:8795/api/v1/marketing/sets/run-due?basket=1&history=1'`

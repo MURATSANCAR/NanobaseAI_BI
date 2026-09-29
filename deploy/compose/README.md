@@ -54,7 +54,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bi_ro;
 
 ```bash
 ./add-datasource.sh --type mssql --id logo --label "Logo ERP" \
-  --host 192.168.0.155 --port 1433 --database LOGO_DB --user 'DOMAIN\\bi_ro' \
+  --host 192.168.0.25 --port 1433 --database LOGO_DB --user 'DOMAIN\\bi_ro' \
   --schemas dbo --patterns "LG_411_01_%,LG_411_[A-Z]%,L_CAPIFIRM,L_CAPIPERIOD"
 ```
 

@@ -16,7 +16,7 @@ if env_file.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
-host = os.environ.get("MSSQL_HOST", "192.168.0.155")
+host = os.environ.get("MSSQL_HOST", "192.168.0.25")
 port = int(os.environ.get("MSSQL_PORT", "1433"))
 user = os.environ.get("MSSQL_USER")
 pwd = os.environ.get("MSSQL_PASSWORD")

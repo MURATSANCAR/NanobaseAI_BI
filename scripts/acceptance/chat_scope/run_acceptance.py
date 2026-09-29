@@ -47,7 +47,7 @@ _spec.loader.exec_module(cases)
 
 TECH = re.compile(r"qwen|vllm|nvidia|\bgpt|llama|openai|anthropic|claude|gemini|mistral|temporal|timesfm", re.IGNORECASE)
 
-# 2026 (Logo `.155` donmuş kopya, veri 2026-08-17'de bitiyor). Çapa: 2026-09-10 canlı ölçümü (bellek live-bi-numbers-2026,
+# 2026 (canlı Logo .25; 2026-09-29 öncesi çapalar 2026-08-17'de donmuş eski kopyadandır). Çapa: 2026-09-10 canlı ölçümü (bellek live-bi-numbers-2026,
 # invoice-count-sales-scope). Referans SQL önce çapayla tutmalı; tutmazsa kendisi yanlıştır.
 _Y = "DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED = 0"
 REFERENCES = [

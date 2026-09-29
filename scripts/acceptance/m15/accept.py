@@ -1,4 +1,4 @@
-"""M15 Yeni kitap pazarlama planı — kabul (test sunucusunda, gerçek CRM .28 + Logo .155, çalışan köprüye karşı).
+"""M15 Yeni kitap pazarlama planı — kabul (test sunucusunda, gerçek CRM .28 + Logo .25, çalışan köprüye karşı).
 
 Koşum (test sunucusu, köprünün env'i ile; Mac'te koşulmaz):
 

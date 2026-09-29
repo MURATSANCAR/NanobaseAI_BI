@@ -247,7 +247,7 @@ for path in ['runs',run_path,review_path]:
     check('private-'+path,status==401,status)
 check('served-backend-hash-current',out['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit.py').read_bytes()).hexdigest())
 check('served-rules-hash-current',out['coverage']['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit_rules.py').read_bytes()+Path('configs/financial-audit/source.json').read_bytes()).hexdigest())
-report={'environment':'nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB','revision':out['revision'],'source':out['source'],'sourceLastDate':out['lastDate'],'checks':checks,'referenceSql':sql,'overview':out,'detail':detail,'nextPage':next_page}
+report={'environment':'nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .25 / LOGO_DB','revision':out['revision'],'source':out['source'],'sourceLastDate':out['lastDate'],'checks':checks,'referenceSql':sql,'overview':out,'detail':detail,'nextPage':next_page}
 fd=os.open('/tmp/financial-audit-acceptance.json',os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
 os.fchmod(fd,0o600)
 with os.fdopen(fd,'w') as artifact:

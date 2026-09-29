@@ -1,4 +1,4 @@
--- M45 Finansal raporlar — doğrudan SQL referansları (Logo .155, 2026 kopyası 411; köprü kodu kullanılmaz).
+-- M45 Finansal raporlar — doğrudan SQL referansları (Logo .25, 2026 kopyası 411; köprü kodu kullanılmaz).
 -- «Bugün» = veri son günü: SELECT MAX(DATE_) FROM LG_411_01_STLINE WHERE CANCELLED = 0 AND LINETYPE = 0 AND INVOICEREF <> 0 AND TRCODE IN (7,8,9)
 -- kabul.py aynı sorguları ay/yıl parametresiyle koşar; burada Temmuz 2026 örneği.
 

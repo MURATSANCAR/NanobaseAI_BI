@@ -41,7 +41,7 @@ WHERE s.statecode = 0 AND s.statuscode IN (100000000, 100000006, 100000007)
   AND ISNULL(s.new_suresizsozlesme, 0) = 0 AND s.new_SozlesmeBitisTarihi >= CAST(GETDATE() AS date)
   AND s.new_SozlesmeBitisTarihi < DATEADD(day, 61, CAST(GETDATE() AS date));
 
--- R6 · Logo verisinin yaşı: gösterge = bugün − bu gün (beklenen 2026-08-17, donmuş .155 kopyası).
+-- R6 · Logo verisinin yaşı: gösterge = bugün − bu gün (canlı Logo .25: son iş günü).
 SELECT MAX(DATE_) AS son FROM dbo.LG_411_01_INVOICE WHERE CANCELLED = 0;
 
 -- Uç ↔ uç karşılaştırmaları (analizin kabul 3 ve kaynak modül sözleşmeleri; doğrudan SQL değil, aynı veri tabanında):

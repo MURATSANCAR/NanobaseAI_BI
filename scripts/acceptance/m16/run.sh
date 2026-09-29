@@ -4,7 +4,7 @@
 #   cd <köprü kaynağı> && M16_COOKIE='timas_session=…' STOK=<kod> YAYIN=<YYYY-AA-GG> sh scripts/acceptance/m16/run.sh
 #
 # 1) Birim/kural testleri (SQLite, yapay veri; ürün doğruluğu kanıtı DEĞİLDİR, ayrı raporlanır).
-# 2) Canlı kabul: gerçek CRM .28 + Logo .155, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py) —
+# 2) Canlı kabul: gerçek CRM .28 + Logo .25, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py) —
 #    yakın geçmişte yayımlanmış bir yeni kitapta «geriye dönük lansman».
 # 3) Temizlik: kabul planı, lansman ve bütün satırları, değişiklik kaydı, yeni emsal önbelleği silinir (cleanup.py).
 #    timasai oturum satırı giriş servisinde ayrıca silinir (kullanıcı belleği «test-login-as-timasai»).

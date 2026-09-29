@@ -15,7 +15,7 @@ Kaynaklar (analiz `docs/analiz/kullanici-ihtiyaclari/M27-fuar-etkinlik-odul.md` 
   «FUAR»); fuara cari kodu eşlendiyse ayrıca `CLCARD.CODE IN (…)`. Yıllar ayrı firma numarasıdır (`L_CAPIPERIOD`,
   211 = 2021–2025, 411 = 2026); kopya firmalar (`SEMANTIC_EXCLUDE_CONTEXT`) atlanır.
 - **Stok** — güncel kopyada malzeme bakiyesi (IOCODE 1/2 giriş, 3/4 çıkış; tarih süzgeçsiz).
-- **Veri sonu** — `MAX(DATE_)` iptal edilmemiş fatura (`LG_<firma>_01_INVOICE`); .155 kopyası donmuş olabilir.
+- **Veri sonu** — `MAX(DATE_)` iptal edilmemiş fatura (`LG_<firma>_01_INVOICE`).
 - **Kitap kartı** — CRM `new_kitap` görünümü (stok kodu, ad, ilk yayın, yayınevi) + `powerbikitap` (yazar).
 
 CRM tarihleri UTC saklanır; gün sınırları İstanbul gününe göre UTC'ye çevrilerek sorulur. Okuma `EVENTS_CACHE_SEC`

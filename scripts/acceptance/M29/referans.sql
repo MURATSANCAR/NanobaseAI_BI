@@ -1,4 +1,4 @@
--- M29 İlk dağılım — doğrudan SQL referansları (köprü kopyası değil; Logo .155 / CRM .28 üzerinde salt okunur).
+-- M29 İlk dağılım — doğrudan SQL referansları (köprü kopyası değil; Logo .25 / CRM .28 üzerinde salt okunur).
 -- kabul.py bunları parametreli koşar; elle denemek için @ değişkenleri doldurun. Firma: 411 = 2026, 211 = 2021–2025.
 
 -- R1. Depoya giriş (dağılım bekleyen listesi): kitap başına pencere içindeki ilk gün ve adet. Yalnız gerçek giriş

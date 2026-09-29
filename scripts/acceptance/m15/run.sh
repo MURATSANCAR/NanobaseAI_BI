@@ -4,7 +4,7 @@
 #   cd <köprü kaynağı> && M15_COOKIE='timas_session=…' STOK=<yeni kitap stok kodu> sh scripts/acceptance/m15/run.sh
 #
 # 1) Birim/kural testleri (SQLite, yapay veri; ürün doğruluğu kanıtı DEĞİLDİR, ayrı raporlanır).
-# 2) Canlı kabul: gerçek CRM .28 + Logo .155, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py).
+# 2) Canlı kabul: gerçek CRM .28 + Logo .25, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py).
 # 3) Temizlik: kabulün bıraktığı plan/karne satırları ve değişiklik kaydı silinir (cleanup.py). timasai oturum satırı
 #    giriş servisinde ayrıca silinir (kullanıcı belleği «test-login-as-timasai»).
 set -eu

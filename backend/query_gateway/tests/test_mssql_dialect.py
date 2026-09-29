@@ -24,7 +24,7 @@ def mssql_settings(tmp_path):
                     "logo": {
                         "label": "ERP",
                         "host": "127.0.0.1",
-                        "port": 14330,
+                        "port": 1433,
                         "database": "LOGO_DB",
                         "user": "DOMAIN\\\\reader",
                         "password_file": str(tmp_path / "mssql-logo.password"),
@@ -47,7 +47,7 @@ def test_loader_builds_mssql_datasource(mssql_settings):
     d = ds["logo"]
     assert d["driver"] == "mssql" and d["dialect"] == "mssql"
     assert d["password"] == "s3cret"
-    assert d["port"] == 14330 and d["database"] == "LOGO_DB"
+    assert d["port"] == 1433 and d["database"] == "LOGO_DB"
     assert d["allowed_tables"] == "*"
     assert d["allowed_schemas"] == {"dbo"}
     assert d["table_patterns"] == ["LG_411_01_%", "LG_411_[A-Z]%"]

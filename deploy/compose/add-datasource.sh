@@ -3,7 +3,7 @@
 #
 #   ./add-datasource.sh --id erp --label "ERP" --host db.musteri.local --port 5432 \
 #       --database erpdb --user bi_ro [--no-ssl] [--schemas public,sales] [--tables "*"]
-#   ./add-datasource.sh --type mssql --id logo --label "Logo ERP" --host 192.168.0.155 --port 1433 \
+#   ./add-datasource.sh --type mssql --id logo --label "Logo ERP" --host 192.168.0.25 --port 1433 \
 #       --database LOGO_DB --user 'DOMAIN\\bi_ro' --schemas dbo --patterns "LG_411_01_%,LG_411_[A-Z]%"
 #
 # --type postgres (varsayılan) | mssql (Microsoft SQL Server; --patterns ile taranacak tablo

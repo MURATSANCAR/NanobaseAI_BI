@@ -1,6 +1,6 @@
 """M9 kaynak sorguları: Logo ve CRM'den yalnız okuma. Ekran bu SQL'lerin kendisini gösterir.
 
-Ölçümler (2026-09-28, .155 Logo kopyası, CRM .28):
+Ölçümler (2026-09-28, eski Logo kopyası; 2026-09-29'dan beri canlı Logo .25, CRM .28):
 - **Baskı hizmeti:** matbaanın «Komple Baskı Giderleri» faturası (alınan hizmet, INVOICE.TRCODE 4, hizmet kartı
   `730.38.381`) her satırda kitabın stok kodunu satırın özel kodunda (`STLINE.SPECODE` = `15201.01.xxxx`) taşır;
   miktar basılan adet, `LINENET` KDV hariç tutar. 2026'da 21 matbaa, 1.600'ü aşkın satır.

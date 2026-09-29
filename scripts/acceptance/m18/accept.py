@@ -1,4 +1,4 @@
-"""M18 Aylık pazarlama planı ve satış föyü — kabul (test sunucusunda, gerçek CRM .28 + Logo .155, çalışan köprüye karşı).
+"""M18 Aylık pazarlama planı ve satış föyü — kabul (test sunucusunda, gerçek CRM .28 + Logo .25, çalışan köprüye karşı).
 
 Koşum (test sunucusu, köprünün env'i ile; Mac'te koşulmaz):
 

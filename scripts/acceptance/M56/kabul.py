@@ -39,7 +39,7 @@ from semantic_layer.store.catalog_store import open_store  # noqa: E402
 
 RESULTS: list[dict] = []
 PREFIX = "KABUL TESTİ M56"
-START, END = date(2026, 1, 1), date(2026, 8, 17)     # .155 kopyası 2026-08-17'de donmuş
+START, END = date(2026, 1, 1), date(2026, 8, 17)     # sabit kabul penceresi (eski kopyanın son günü; canlı .25'te de kapalı dönem)
 
 
 def record(name: str, status: str, **detail) -> None:

@@ -1,5 +1,5 @@
 -- M56 Performans — bağımsız referans sorguları (uygulamanın SQL'i yeniden koşturulmaz; tanım analiz §14'ten).
--- Logo 2026 = LG_411 (bellek: logo-period-prefixes-are-years); .155 kopyası 2026-08-17'de donmuş.
+-- Logo 2026 = LG_411 (bellek: logo-period-prefixes-are-years); canlı Logo .25.
 
 -- K1 Satış temsilcisi alanı doluluğu (ölçüm; sistem ölçüsünü açma kararı buna bağlı)
 SELECT COUNT(*) AS satir, SUM(CASE WHEN i.SALESMANREF <> 0 THEN 1 ELSE 0 END) AS temsilcili

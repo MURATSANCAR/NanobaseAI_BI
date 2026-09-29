@@ -1,4 +1,4 @@
-"""M16 Lansman / yayın ayı — kabul (test sunucusunda, gerçek CRM .28 + Logo .155, çalışan köprüye karşı).
+"""M16 Lansman / yayın ayı — kabul (test sunucusunda, gerçek CRM .28 + Logo .25, çalışan köprüye karşı).
 
 «Geriye dönük lansman»: yakın geçmişte yayımlanmış bir yeni kitap için kabul planı ve lansmanı açılır, köprü CRM ve
 Logo'yu okur, ekrana giden rakamlar bağımsız doğrudan SQL ile karşılaştırılır, sonra her şey silinir (`cleanup.py`).
@@ -10,8 +10,8 @@ Koşum (köprünün env'i ile; Mac'te koşulmaz):
 
 `M16_COOKIE`: `timasai` hesabının kısa ömürlü (15 dk) oturumu; bitince oturum satırı silinir. Yeni kullanıcı adı
 uydurulmaz: kabul planının oluşturanı ve onaylayanı `timasai`dir (plan doğrudan onaylı yazılır; onay akışı M15
-kabulünde sınanıyor). Yayın günü olarak kitabın gerçek ilk satış haftası seçilmeli; Logo .155 17.08.2026'da donduğu
-için yayını bu tarihten en az 7 gün önce olan kitap seçilirse faturalı satış karşılaştırması anlamlı olur.
+kabulünde sınanıyor). Yayın günü olarak kitabın gerçek ilk satış haftası seçilmeli; Logo canlı (.25) olduğundan
+yayını en az 7 gün önce olan kitap seçilirse faturalı satış karşılaştırması anlamlı olur.
 
 Denetimler (her biri doğrudan SQL referanslı; «ölçülecek» notları günlükte):
   1. Sipariş sinyali: CRM sipariş satırı gün gün (UTC → İstanbul +3, `MARKETING_LAUNCH_ORDER_EXCLUDE` durumları hariç)

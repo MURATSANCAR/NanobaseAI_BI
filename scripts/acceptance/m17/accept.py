@@ -1,4 +1,4 @@
-"""M17 Backlist — kabul (test sunucusunda, gerçek Logo .155 + CRM .28, çalışan köprüye karşı).
+"""M17 Backlist — kabul (test sunucusunda, gerçek Logo .25 + CRM .28, çalışan köprüye karşı).
 
 Koşum (test sunucusu, köprünün env'i ile; Mac'te koşulmaz):
 

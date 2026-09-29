@@ -1,4 +1,4 @@
--- M53 Set, hediye ve promosyon — bağımsız referans sorguları (gerçek Logo .155 + CRM .28; yalnız okuma).
+-- M53 Set, hediye ve promosyon — bağımsız referans sorguları (gerçek Logo .25 + CRM .28; yalnız okuma).
 -- kabul.py bunları parametreleriyle koşturur; elle denemek için <...> yer tutucularını doldurun.
 -- Firma: 411 = 2026, 211 = 2021–2025 (L_CAPIPERIOD). CRM şeması Timas_MSCRM.dbo.
 

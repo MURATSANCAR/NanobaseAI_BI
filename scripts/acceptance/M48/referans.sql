@@ -1,6 +1,6 @@
 -- M48 Sistem durumu — bağımsız referans sorguları (test sunucusunda; Logo/CRM doğrudan bağlantıyla, meta DB psql ile).
 -- kabul.py bunları kendi parametreleriyle koşturur; elle koşturmak için yer tutuculu hâlleri burada.
--- Firma: 411 = 2026 (güncel kopya, .155 donmuş: son fatura 2026-08-17), 211 = 2021–2025.
+-- Firma: 411 = 2026 (güncel kopya, canlı Logo .25), 211 = 2021–2025.
 
 -- R1. Logo veri sonu (analiz §14 kabul 1). Portal: son «logo» denetiminin data_end'i (gün), Durum sekmesi Logo kartı.
 --     Bugünden ileri tarihli hatalı fatura veriyi taze göstermesin diye bugünle sınırlı (portal da aynı sınırı koyar).

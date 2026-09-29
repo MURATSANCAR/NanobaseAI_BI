@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M35 E-ticaret kampanya yönetimi — test sunucusunda gerçek Logo (.155) + CRM (.28) ile kabul.
+"""M35 E-ticaret kampanya yönetimi — test sunucusunda gerçek Logo (.25) + CRM (.28) ile kabul.
 
 Önce gece işi bir kez elle koşturulur ve süresi günlüğe yazılır:
 

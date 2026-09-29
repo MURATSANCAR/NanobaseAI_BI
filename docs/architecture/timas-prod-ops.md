@@ -32,7 +32,7 @@
 ## Müşteri tarafında yapılması gerekenler (bizim yapamayacaklarımız)
 
 ### 1. Logo veritabanına kalıcı erişim
-Bugün Logo'ya erişim **senin Mac'inden açılan ters SSH tüneliyle** (`ssh -N -R 127.0.0.1:14330:192.168.0.155:1433 nanobase`). Mac uyursa veya kapanırsa `/timas` tamamen durur; watchdog bunu `logo-tunnel:FAIL` olarak raporlar ama düzeltemez. Seçenekler:
+Logo = canlı prod SQL Server **192.168.0.25:1433** (`LOGODATABASEN`, `LOGO_DB`, salt okunur `zekiai`), 2026-09-29'dan beri. Test sunucusu ona WatchGuard OpenVPN tüneli (`tun0`, rota `192.168.0.0/23`) üzerinden **doğrudan** bağlanır; socat/ters tünel yok, eski .155 kopyasına hiçbir tanım gitmez. Aynı sunucuda TİMAŞ dışı şirketlerin firmaları da var; `SEMANTIC_FIRMS` (TİMAŞ'ın 10 firması) olmadan kurulmaz. Tünel kalıcı değil (MFA); kalıcı çözüm seçenekleri:
 - **Tercih:** müşteri ağında sabit bir makineden (Logo sunucusunun kendisi olabilir) `autossh` ile kalıcı ters tünel + systemd; anahtar tabanlı, yalnız port yönlendirme yetkili kullanıcı.
 - Alternatif: site-to-site VPN (WireGuard) — bağlantı dosyasındaki (`SEMANTIC_CONNECTION_FILE`) `host/port` VPN adresine çevrilir, başka değişiklik gerekmez.
 - Alternatif: on-prem kurulum (`deploy/compose`), tünel gerekmez.

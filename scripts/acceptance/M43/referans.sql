@@ -1,4 +1,4 @@
--- M43 Depo ve stok — doğrudan SQL referansları (köprü kodu kullanılmaz; Logo .155 / CRM .28 üzerinde salt okunur).
+-- M43 Depo ve stok — doğrudan SQL referansları (köprü kodu kullanılmaz; Logo .25 / CRM .28 üzerinde salt okunur).
 -- kabul.py bunları parametreli koşar; elle denemek için @ değişkenlerini doldurun. Firma: 411 = 2026, 211 = 2021–2025.
 
 -- R1. Logo stok bakiyesi (analiz §14 kabul 1) — katalog tanımı + planlanan üretim girişi hariç (STOCK_EXCLUDE_PLANNED=1).

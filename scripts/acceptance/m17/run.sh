@@ -6,7 +6,7 @@
 # 1) Birim/kural testleri (SQLite, yapay veri; ürün doğruluğu kanıtı DEĞİLDİR, ayrı raporlanır).
 # 2) BUILD=1: gece koşusu elle (liste + bileşenler + seri + kampanya etkisi; ilk koşuda geçmiş yıllar Logo'dan) — süresi
 #    ölçülür ve günlüğe yazılır (kullanıcı belleği «zamanlı işi önce elle koştur»).
-# 3) Canlı kabul: gerçek CRM .28 + Logo .155, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py).
+# 3) Canlı kabul: gerçek CRM .28 + Logo .25, çalışan köprüye karşı, doğrudan SQL referanslarıyla (accept.py).
 # 4) Temizlik: kabulün açtığı plan ve değişiklik kaydı silinir (cleanup.py). timasai oturum satırı giriş servisinde
 #    ayrıca silinir (kullanıcı belleği «test-login-as-timasai»).
 set -eu

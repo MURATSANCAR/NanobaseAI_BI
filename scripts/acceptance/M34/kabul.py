@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """M34 E-ticaret — test sunucusunda gerçek API ↔ doğrudan SQL kabulü (yerelde koşulmaz).
 
-Ekranın kullandığı uçların verdiği sonuç, köprü kodu kullanılmadan yazılmış doğrudan CRM (.28), Logo (.155) ve meta
+Ekranın kullandığı uçların verdiği sonuç, köprü kodu kullanılmadan yazılmış doğrudan CRM (.28), Logo (.25) ve meta
 Postgres sorgularıyla karşılaştırılır (`referans.sql` R1–R8). Uygulamanın SQL'i yeniden koşturulmaz. Örnekler her koşuda
 rastgele seçilir (sabit kitap yok). Her kontrol: OK / FARK / DOĞRULANAMADI / ÖLÇÜM; her 10 kontrolde ara durum yazılır.
 
