@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
+
+- **Karar (kullanıcı):** Kayıtta kişinin adı yerine «ZEKİ AI» yazsın (Claude'un kullanıcı adına yaptığı ayar «muratsancar» görünmüştü; zamanlayıcı işleri «sistem»/«zamanlayıcı»).
+- **Yapılan:** `admin.system_actor` — yapan boşsa ya da `sistem`/`system`/`zamanlayıcı`/`scheduler` ise yazarken ve listelerken `LLM_DISPLAY` («ZEKİ AI»); eski satırlar da ekranda böyle görünür, «ZEKİ AI» süzgeci onları da getirir; Yönetim → Kişiler'de kişi sayılmaz. `crm-unassigned/send` zamanlayıcıdan gelince yapan boş. Test sunucusunda Claude'un yazdığı `CRM_UNASSIGNED_TO` kaydı «ZEKİ AI»ye çevrildi.
+- **İlk gönderim:** 12:58'de kullanıcı isteğiyle elle; Bilgiislem@timas.com.tr, 105 kişi.
+- **Test:** `test_admin_audit_actor.py` (yeni, 2) + yönetim/yetki testleri 27 geçti.
+
 ## 2026-09-29 (öğleden sonra, 3) — Onay penceresi test sunucusunda tıklanarak denendi: 21/21
 
 - **Yol:** timasai 30 dk oturumu (silindi, kalan 0) + sunucuda görünmez tarayıcı, telefon 390 px. Test sunucusunda listeler boştu; her deneme için «ONAY-TESTİ» işaretli kayıt açıldı → silme düğmesi → pencere açıldı mı (alttan, tam genişlik, yatay taşma 0) → «Vazgeç» (kayıt duruyor mu, köprüden sorgulandı) → yeniden → onay → kayıt gitti mi.
