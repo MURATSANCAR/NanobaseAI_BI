@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (akşamüstü) — Kitap hesabı test sunucusunda; 37/37 Excel formu gerçek uçtan tuttu; kur Logo faturalarından
+
+- **Kurulum (`b2375604`, yalnız bu işin 16 dosyası):** sunucudaki hâlleri md5 ile eski main'e eşitti; ortak `SqlInfo.tsx`'te başka oturumun (f7cbea2b) değişikliği sunucudaydı — `merge-file` ile yalnız bu işin farkı uygulandı, sonuç main ile birebir. Sunucu ağacının kopyasında `tsc -b` + `vite build` (VITE_BASE=/timas/), `cockpit/dist`'e önce parçalar sonra `index.html` (`index-BHx2vbR9.js`), köprü yeniden başladı. `._*` 0.
+- **Gerçek uç kabulü:** timasai 15 dk oturumla `POST /timas/api/v1/pricing/form/calc`, Excel sayfalarının kendi fiyatlarıyla: **37/37 Excel'le aynı** (16 hücre, kuruş). `form/setup` yeni kitap 0,56 sn, kitaplı 0,14 sn. Görünmez tarayıcı (kendi `/tmp/claude-m9form/shot`, playwright-core): Kitap hesabı 1440 ve 390 px, yatay taşma 0, konsol hatası 0, «Excel tarifesi» ve ayrı sekme yok, «i» penceresi açılıyor. Oturum satırları silindi (3/3).
+- **Logo canlı:** «Verileri yenile» sonrası fiyatlama görüntüsü **2026-09-29**'a kadar (bağlantı artık .25, kopyalar 211 + 411; başka oturumun `firm_scope` işi). 60 gr 3. hamur Logo alışı 48,74 ₺/kg, bristol 33,85 ₺/kg.
+- **Kur:** ilk sorgu (`L_DAILYEXCHANGES`) 0 satır verdi. Canlı ölçüm: `L_DAILYEXCHANGES` yalnız CRTYPE 53 ve 1e-06 değerli, 2025'te bitiyor; `LG_EXCHANGE_411` boş, öbür `LG_EXCHANGE_*` en geç 2025. Kur faturada taşınıyor: `LG_411_01_INVOICE.TRRATE` (TRCURR 1 USD / 20 EUR; `L_CURRENCYLIST` doğruladı). `logo_kur` artık o dövizle kesilen son günün faturalarının ortalama kurunu okur — canlı: USD 48,79 (5 fatura), EUR 55,75 (1 fatura), 28.09.2026.
+- **Değişiklik kaydı:** timasai adına #7606 (`pricing_snapshot` run, 07:20 UTC) — gerçek hesabın izi, silinmedi. (#7593 başka oturumun.)
+- **Bekleyen:** kur düzeltmesinin main'e taşınıp kurulması ve yenilemeyle doğrulanması; müşteri VM'i (kullanıcı onayı; VM'in Logo bağlantısı da henüz .25'e çevrilmedi).
+
 ## 2026-09-29 — Yetkiler: bağın içindeki kişiler açılır, sayılar alt birim ve iç içe grubu sayar
 
 - **İstek (kullanıcı):** OU'nun altındaki kullanıcılar görünmüyordu; CRM departmanları da sorulmuştu.

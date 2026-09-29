@@ -217,11 +217,11 @@ class Builder:
         try:
             for r in self._q("logo_kur", "logo", SRC.logo_sql("logo_kur", copies[-1]["firm"], "", ymd(copies[-1]["to"]))):
                 cur = {1: "USD", 20: "EUR"}.get(_i(r.get("tur")) or 0)
-                rate = _f(r.get("satis")) or _f(r.get("alis"))
+                rate = _f(r.get("kur"))
                 if cur and rate and rate > 0:
-                    kur[cur] = {"rate": round(rate, 4), "date": _day(r.get("tarih"))}
+                    kur[cur] = {"rate": round(rate, 4), "date": _day(r.get("tarih")), "invoices": _i(r.get("fatura"))}
         except Exception as e:  # noqa: BLE001 — kur tablosu yoksa maliyet formu tarifedeki kuru kullanır
-            self.warnings.append(f"Logo günlük kur tablosu okunamadı ({type(e).__name__}); maliyet formu tarifedeki kuru kullanır.")
+            self.warnings.append(f"Logo faturalarından kur okunamadı ({type(e).__name__}); kitap hesabı fiyat listesindeki kuru kullanır.")
         channels = channel_table(list(chan.values()))
         net12 = sum(ch["net"] for ch in channels)
 

@@ -105,14 +105,16 @@ SOURCES: list[Source] = [
         "  AND SC.DEFINITION_ LIKE N'Satış Nakliye%' AND I.DATE_ >= '{start}' AND I.DATE_ < '{end}'",
     ),
     Source(
-        "logo_kur", "logo", "Günlük döviz kurları (Logo)",
-        "Logo'nun günlük kur tablosundan dolar (1) ve euro (20) için veri sonuna kadar girilmiş en son kur; maliyet "
-        "formunda dolar/euro fiyatlı malzemenin ₺ karşılığı için. Satış kuru (RATES2), yoksa alış (RATES1).",
-        "SELECT K.CRTYPE AS tur, CONVERT(date, K.EDATE) AS tarih, K.RATES1 AS alis, K.RATES2 AS satis\n"
-        "FROM dbo.L_DAILYEXCHANGES K\n"
-        "WHERE K.CRTYPE IN (1, 20) AND K.RATES1 > 0 AND K.EDATE < '{end}'\n"
-        "  AND K.EDATE = (SELECT MAX(D.EDATE) FROM dbo.L_DAILYEXCHANGES D\n"
-        "                 WHERE D.CRTYPE = K.CRTYPE AND D.RATES1 > 0 AND D.EDATE < '{end}')",
+        "logo_kur", "logo", "Dolar ve euro kuru (Logo faturaları)",
+        "Logo'da dolar (1) ya da euro (20) ile kesilen en son günün faturalarındaki işlem kuru (TRRATE), o günün "
+        "ortalaması. Logo'nun kur tabloları (L_DAILYEXCHANGES, LG_EXCHANGE_*) bu kurulumda güncel tutulmuyor "
+        "(2026-09-29 ölçümü); kur faturada taşınıyor.",
+        "SELECT I.TRCURR AS tur, CONVERT(date, I.DATE_) AS tarih, AVG(I.TRRATE) AS kur, COUNT(*) AS fatura\n"
+        "FROM dbo.LG_{f}_01_INVOICE I\n"
+        "WHERE I.CANCELLED = 0 AND I.TRCURR IN (1, 20) AND I.TRRATE > 1\n"
+        "  AND I.DATE_ = (SELECT MAX(D.DATE_) FROM dbo.LG_{f}_01_INVOICE D\n"
+        "                 WHERE D.CANCELLED = 0 AND D.TRCURR = I.TRCURR AND D.TRRATE > 1 AND D.DATE_ < '{end}')\n"
+        "GROUP BY I.TRCURR, CONVERT(date, I.DATE_)",
     ),
     Source(
         "crm_kitap", "crm", "CRM kitap kartları",

@@ -91,7 +91,7 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           value={form.kur?.USD ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), USD: v } })}
           placeholder={num(s.tariff.kur.USD)}
-          hint={logoKur.USD ? `Logo ${day(logoKur.USD.date)}: ${logoKur.USD.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.USD)} ₺`}
+          hint={logoKur.USD ? `Logo faturaları ${day(logoKur.USD.date)}: ${logoKur.USD.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.USD)} ₺`}
         />
         <NumField
           label="1 euro"
@@ -100,7 +100,7 @@ function BookGroup({ form, s, set }: { form: FormInputs; s: FormSetup; set: (p: 
           value={form.kur?.EUR ?? null}
           onChange={(v) => set({ kur: { ...(form.kur ?? {}), EUR: v } })}
           placeholder={num(s.tariff.kur.EUR)}
-          hint={logoKur.EUR ? `Logo ${day(logoKur.EUR.date)}: ${logoKur.EUR.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.EUR)} ₺`}
+          hint={logoKur.EUR ? `Logo faturaları ${day(logoKur.EUR.date)}: ${logoKur.EUR.rate.toLocaleString('tr-TR')} ₺` : `Fiyat listesi: ${num(s.tariff.kur.EUR)} ₺`}
         />
       </More>
     </Group>

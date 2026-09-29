@@ -74,9 +74,9 @@ export default function TariffPanel() {
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <NumField label="1 dolar" suffix="₺" disabled={!can} value={t.kur.USD} onChange={(v) => up({ kur: { ...t.kur, USD: v ?? t.kur.USD } })}
-          info={i(help('Logo\'da günlük kur yoksa ya da formda kur yazılmadıysa kullanılan dolar kuru.', { excel: 'J56.' }), '1 dolar')} />
+          info={i(help('Logo\'da dolar faturası yoksa ya da ekranda kur yazılmadıysa kullanılan dolar kuru.', { excel: 'J56.' }), '1 dolar')} />
         <NumField label="1 euro" suffix="₺" disabled={!can} value={t.kur.EUR} onChange={(v) => up({ kur: { ...t.kur, EUR: v ?? t.kur.EUR } })}
-          info={i(help('Logo\'da günlük kur yoksa ya da formda kur yazılmadıysa kullanılan euro kuru.', { excel: 'J57.' }), '1 euro')} />
+          info={i(help('Logo\'da euro faturası yoksa ya da ekranda kur yazılmadıysa kullanılan euro kuru.', { excel: 'J57.' }), '1 euro')} />
         <NumField label="Vade farkı (aylık)" suffix="%" disabled={!can} value={t.vade.oran} onChange={(v) => up({ vade: { ...t.vade, oran: v ?? 0 } })}
           info={i(help('Logo\'da alışı olmayan kâğıdın ton fiyatına eklenen vade farkı: aylık oran × vade süresi (5 × 6 = %30).', { excel: 'P7 (oran), P8 (süre), Q8 (fark).' }), 'Vade farkı')} />
         <NumField label="Vade süresi" suffix="ay" digits={0} disabled={!can} value={t.vade.ay} onChange={(v) => up({ vade: { ...t.vade, ay: v ?? 0 } })}

@@ -332,7 +332,7 @@ def for_form(engine: Any, tenant: str, snap: Optional[dict[str, Any]], out: dict
     fields["lines[]"] = "hesap:form"
     fields["prices[]"] = k.hesap("formKagit", "Kâğıt birim fiyatı. Fiyat listesi: ton fiyatı × (1 + vade farkı) × kur ÷ 1.000. "
                                              "Logo: son 6 ayın 15001 kâğıt kartı alışları, tutar ÷ kg.", [t] + kagit)
-    fields["kur"] = k.hesap("formKur", "Kur: formda yazılan; boşsa Logo günlük kur tablosunun veri sonundaki kuru, o da "
+    fields["kur"] = k.hesap("formKur", "Kur: ekranda yazılan; boşsa Logo'da o dövizle kesilen son faturaların kuru, o da "
                                        "yoksa fiyat listesindeki kur.", [t] + kur)
     k.alanlar(fields)
     return k
