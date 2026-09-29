@@ -66,6 +66,30 @@
 - **Neden:** kullanıcı «çok yer kaplıyor, kapatması zor» dedi. Kutu ilk girişte 600 px genişlik, ~560 px yükseklikte bütün metni (maddeler, veri, güncelleme, arka plan işleri, yapılabilecekler) açıp ekranın üstünü 15 sn örtüyordu; Esc yalnız odak kutudayken çalışıyor, dışarı tıklamak kapatmıyordu.
 - **Şimdi:** kutu «Bu ekran» düğmesinin altında sağa yaslı 380 px açılır (köken sağ üst). Kendiliğinden açılışta yalnız başlık + özet + «Nasıl çalışır →» (8 sn). Elle açılışta özet + maddeler; veri/güncelleme/işler/yapılabilecekler «Ayrıntılar» altında katlı. Büyük başlık etiketi ve alt not kalktı; kapat düğmesi 36 px. Dışarı tıklama ve Esc her yerden kapatır.
 - Dosyalar: `src/canvas/screenInfo/ScreenInfo.tsx`, `screenInfo.css`, `src/canvas/stitch/Shell.tsx` (yorum). İçerik ve test değişmedi (5/5).
+## 2026-09-30 (00:30) — Zeki kapı Q49 (A044, holdout): ölçünün satır kapsamı — sayım aynı satırlarda, kapsam notu cevapta
+
+Dal `zeki-q49-kapsam` (main'e koordinatör taşır). Soruya özel kural/eşleme/istem yok; üç genel mekanizma.
+- **Ahmed Günbay Yıldız neden yok:** kod değil kullanıcı kuralı. Kişi kartı `StateCode 0`, durum nedeni `StatusCode 100000000`
+  «Pasif»; `crm_active` bağlantı süzgeci (09-29 «pasif hiçbir yerde gelmez») düşürür. Kapı referansı da aynı süzgeçten geçer
+  (fark yok); altının 09-18 notundaki ilk beş süzgeç öncesi. Ölçüm: ContactBase 38.442 / 59.637 kayıt, yazarların 1.716 / 2.383'ü
+  bu durum nedeninde; gideri olan 14 yazarın 6'sı düşüyor. «Pasif» durum nedeni gerçekten pasif mi — iş sorusu, açık.
+- **Sayım ölçünün kapsamında:** canlı `etkinlik_sayisi` 56/287 (yazarın bütün etkinlikleri). Eleştirmen `COUNT_SCOPE`
+  (`critic._count_scope`): SUM/AVG'nin kolonu profilde ≥ %50 boş, kolon hiçbir yerde kısıtlanmıyor ve COUNT onu okumuyorsa ret +
+  onarım talimatı; istem seyrek kolonlu ölçüyü işaretler (`ExistingCompiler._sparse`). Yan köprüde üç denemede sayım 3/4/2/4/2
+  (referansla aynı), onarım gerekmedi. Bulgu: eleştirmen CRM sorgularında kördü — mantıksal ad `Timas_MSCRM_dbo_X` hiçbir
+  profile bağlanmıyordu; bu dalda yalnız `COUNT_SCOPE` için çözülür (`_second_source_names`). Bütün kuralları açınca Q49'un doğru
+  cevabı N:N bağ tablosu yüzünden FANOUT reddi alıyor — ayrı iş.
+- **Kapsam notu:** `_breakdown_sibling_measure` çalışıyordu, notu yalnız `sq.explanation`'a yazıyordu. Şimdi `slot.explain.scope_note`
+  → `column_facts.scope_notes` → `dataNotes` (MEASURE_SCOPE) + özet; `predicate_column_notes` toplanan ölçü kolonunu da okur
+  (VERİ NOTU beyanı her zaman; yoksa profil «taramada boş» + satır geldi → SPARSE_MEASURE). Kaç kayıt / hangi dönem: katalog betiği
+  `2026-09-30-seyrek-olcu-kapsami.py` (kuru koşu: 1 aday, `new_ToplamEtkinlikGideri` 57.972 kaydın 28'i, 2015-10-16 – 2016-07-21,
+  9.275). `--apply` KOŞULMADI — koordinatörde.
+- **Doğrulama (test sunucusu, yan köprü :8823, dal kodu, canlı katalog + Logo/CRM):** `answer-gate --only Q49 --repeat 3` SAĞLAM 3/3.
+  Tam kapı (69 × 3): SAĞLAM 48 · BOZUK 8 · KARARSIZ 11 · VERİ 2 (answer 174 / deny 29 / clarify 3 / error 1; yük ortalaması 18–23).
+  SAĞLAM düşenler Q18, Q30, Q36, Q39, Q41, Q56 (1/3 model reddi «X tanımlı değil»), Q48 (1/3 plan SQL hatası), Q38 (1 satırlık
+  toplam, 17:01Z'de dal öncesi koşularda da aynı biçim). `COUNT_SCOPE` kapı boyunca hiç tetiklenmedi (köprü günlüğü 0); seyrek
+  ölçü işareti yalnız Q45, Q49, Q51'in istemine giriyor (Q45 SAĞLAM, Q51 BOZUK — ikisi de değişmedi). Kazanç: Q40, Q43, Q44, Q63.
+  pytest `semantic_layer/tests` 4.713 geçti · 9 atlandı · 0 hata.
 
 ## 2026-09-29 (22:15) — Müşteri VM'ine `411dd7be9`: hız 4, hazır cevap diski, Zeki kapı; katalog VM'de de yazıldı
 
