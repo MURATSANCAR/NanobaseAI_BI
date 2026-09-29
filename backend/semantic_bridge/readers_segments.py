@@ -94,7 +94,8 @@ EXPORT_MEMBERS = sa.Table(
 
 
 def ensure_tables(engine: sa.engine.Engine) -> None:
-    _md.create_all(engine, checkfirst=True)
+    from semantic_layer.store import schema_stamp
+    schema_stamp.create_all(_md, engine)
 
 
 STATUS_LABELS = {"taslak": "Taslak", "onay-bekliyor": "Onay bekliyor", "onayli": "Onaylı", "arsiv": "Arşiv"}

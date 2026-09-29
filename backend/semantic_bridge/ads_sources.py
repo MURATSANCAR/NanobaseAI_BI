@@ -23,12 +23,12 @@ import hashlib
 import io
 import re
 import threading
-import time
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
 
 from semantic_bridge import ads as A
 from semantic_bridge import budget_sources as bsrc
+from semantic_bridge import hizli_kaynak as HK
 
 Runner = Callable[[str], list[dict[str, Any]]]
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -639,13 +639,20 @@ def _d(v: Any) -> Optional[str]:
 
 
 class Crm:
-    """CRM okumaları. Kitap listesi 30 dk bellekte (eşleştirme her kampanyada aynı listeyi kullanır)."""
+    """CRM okumaları bellekte (`hizli_kaynak`). Kitap listesi 30 dk (eşleştirme her kampanyada aynı listeyi kullanır),
+    reklam planı ve bütçe kayıtları 5 dk tazedir; eskiyse eldeki hemen döner ve CRM arkada yeniden okunur, hiç yoksa
+    beklenir. `fresh` kaynağı bekler.
+
+    Hız (2026-09-29): reklam özeti (`/ads/overview`) test sunucusunda iki girişte de 4,6 sn sürüyordu. Portal hesabı
+    (kampanya-gün satırları, Logo önbelleği) küçük; süre bütün etkin kitap kartlarının (stok kodu, EAN, yayıncılık
+    durumu etiketi) CRM'den okunmasıydı — yalnız özetteki kitapların «satış dışı» uyarısı için. Liste artık süre
+    dolunca ekranı bekletmez ve köprü açılışında ısıtılır (`ads_api`)."""
 
     def __init__(self, schema: Callable[[], str], runner: Callable[[], Runner]):
         self.schema = schema
         self.runner = runner
-        self._cache: dict[Any, tuple[float, Any]] = {}
         self._lock = threading.Lock()
+        self._bellekler: dict[int, Any] = {}
 
     def _run(self, sql: str) -> list[dict[str, Any]]:
         try:
@@ -655,13 +662,10 @@ class Crm:
 
     def _cached(self, key: Any, fresh: bool, fn: Callable[[], Any], ttl: int = CRM_TTL) -> Any:
         with self._lock:
-            hit = self._cache.get(key)
-        if hit and not fresh and time.monotonic() - hit[0] < ttl:
-            return hit[1]
-        val = fn()
-        with self._lock:
-            self._cache[key] = (time.monotonic(), val)
-        return val
+            b = self._bellekler.get(ttl)
+            if b is None:
+                b = self._bellekler[ttl] = HK.bellek(f"reklam.crm.{ttl}", ttl)
+        return HK.oku(b, key, fn, zorla=fresh)
 
     def books(self, off_sale: list[str], fresh: bool = False) -> list[dict[str, Any]]:
         def load() -> list[dict[str, Any]]:

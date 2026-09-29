@@ -247,7 +247,15 @@ sudo cp "${ROOT}/infra/systemd/nanobase-semantic-watchdog.service" "${ROOT}/infr
 sudo -E systemctl daemon-reload
 sudo -E systemctl enable --now nanobase-semantic-bridge.service nanobase-semantic-worker.timer nanobase-semantic-watchdog.timer
 sudo -E systemctl restart nanobase-semantic-bridge.service
-sleep 3
+# Port birkaç saniyede açılır, katalog arkada yüklenir (semantic_bridge/boot.py): /health `ready: true` olana kadar bekle.
+READY_WAIT="${SEMANTIC_BRIDGE_READY_WAIT_SEC:-600}"
+for ((i = 0; i < READY_WAIT; i += 2)); do
+  if curl -fsS -m 5 "http://127.0.0.1:${PORT}/health" 2>/dev/null | grep -q '"ready": *true'; then
+    log "bridge ready after ~${i}s"
+    break
+  fi
+  sleep 2
+done
 
 # --- 7. smoke: the service must answer, and answer from the catalog --------------------------------
 curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 20 "http://127.0.0.1:${PORT}/health" | head -c 400; echo

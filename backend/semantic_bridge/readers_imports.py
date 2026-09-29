@@ -68,7 +68,8 @@ IMPORT_ROWS = sa.Table(
 
 
 def ensure_tables(engine: sa.engine.Engine) -> None:
-    _md.create_all(engine, checkfirst=True)
+    from semantic_layer.store import schema_stamp
+    schema_stamp.create_all(_md, engine)
 
 
 ROLES = {"ad_soyad": "Ad soyad", "ad": "Ad", "soyad": "Soyad", "eposta": "E-posta", "telefon": "Cep telefonu",

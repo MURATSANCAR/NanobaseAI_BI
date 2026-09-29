@@ -8,6 +8,11 @@ işliyordu (test sunucusunda hazır cevap atlanınca 2–87 sn). Hesap artık `s
   ayarlar) ve kayıttaki damgaya bakar. Aynıysa sonuç süreç belleğinden ya da tablodan gelir. Girdi değiştiyse (gece
   eşitlemesi, «yeniden oku», karar) hesap o istekte bir kez yapılır ve yazılır — rakam hiçbir zaman eski girdiden gelmez.
 - Gece turu, eşitlemeler bittikten sonra kayıtlı bütün hesapları ısıtır (`isit`): ekranı ilk açan da beklemez.
+  Köprü açılışında da (`acilis`) kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır, güncel kayıt belleğe
+  alınır (2. tur, 2026-09-29: genel bakış kayıt yokken 12 sn bekliyordu).
+- 2. turda eklenenler: site içi bağlantılar (grafik hesabı 53 sn), fırsat listesi ve ürün adres eşlemesi, kimlik
+  (yazar toplamı + Google Kitaplar satırları), Google taraması (ürün bilgisi + denetim kayıtları), alışveriş denetimi,
+  CRM listesinin sıra/süzgeç alanları.
 - Sorgu bilgisi: hesap sırasında çalışan okumalar `semantic_query_origin`'e (`seo.hazir.<ad>`) yazılır; hazır kaydı
   okuyan sorgunun kökeni olarak «i» penceresinde görünür (kaynak.py).
 
@@ -20,7 +25,7 @@ import logging
 import threading
 import time
 from contextvars import ContextVar
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable, Iterable, Optional, Sequence
 
@@ -171,6 +176,62 @@ def al(seo: Any, name: str, stamp: str, hesapla: Callable[[], Any]) -> Any:
         return data
 
 
+def son(seo: Any, name: str) -> Optional[tuple[Any, float]]:
+    """Damgasına bakmadan son kayıt: (sonuç, kaç saniye önce hesaplandı); kayıt yoksa None. Yalnız girdisi tur boyunca
+    her saniye değişen hesap için (teknik tarama sürerken bağlantı grafiği): tur sürerken son hesap gösterilir, ekranda
+    hesap zamanı yazar; tur bitince damga yeniden bağlar."""
+    eng, tenant = seo.engine(), seo.tenant()
+    ensure(eng)
+    okunan = OKUNAN.get()
+    if okunan is not None and name not in okunan:
+        okunan.append(name)
+    with eng.connect() as c:
+        row = c.execute(sa.select(HAZIR.c.stamp, HAZIR.c.computed_at).where(HAZIR.c.tenant_id == tenant,
+                                                                            HAZIR.c.name == name)).first()
+    if row is None:
+        return None
+    stamp, at = row
+    key = (id(eng), tenant, name)
+    with _mem_lock:
+        m = _mem.get(key)
+    if m is not None and m[0] == stamp:
+        data = m[1]
+    else:
+        data = _stored_data(eng, tenant, name, stamp)
+        if data is _MISSING:
+            return None
+        with _mem_lock:
+            _mem[key] = (stamp, data)
+    if at is not None and at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    return data, ((now() - at).total_seconds() if at is not None else float("inf"))
+
+
+_arkada: set[tuple[int, str, str]] = set()
+
+
+def al_arkada(seo: Any, name: str, stamp: str, hesapla: Callable[[], Any]) -> bool:
+    """`al`'ı kendi iş parçacığında koşturur (istek beklemez). Aynı hesap zaten arkada koşuyorsa yenisi başlamaz."""
+    eng, tenant = seo.engine(), seo.tenant()
+    key = (id(eng), tenant, name)
+    with _mem_lock:
+        if key in _arkada:
+            return False
+        _arkada.add(key)
+
+    def run() -> None:
+        try:
+            al(seo, name, stamp, hesapla)
+        except Exception:  # noqa: BLE001 — sonraki istek yine dener
+            log.exception("seo hazır arka plan hesabı %s", name)
+        finally:
+            with _mem_lock:
+                _arkada.discard(key)
+
+    threading.Thread(target=run, name=f"seo-hazir-{name}", daemon=True).start()
+    return True
+
+
 def unut() -> None:
     """Süreç belleğini boşaltır (testler için; tablo kalır)."""
     with _mem_lock:
@@ -233,3 +294,54 @@ def isit(seo: Any, wait: Optional[float] = None, poll: float = 15.0) -> dict[str
 def isit_arkada(seo: Any) -> None:
     """Gece işinden çağrılır: bekleme gece sırasını (öneri/tarama turlarını) tutmasın diye kendi iş parçacığında."""
     threading.Thread(target=isit, args=(seo,), name="seo-hazir-isit", daemon=True).start()
+
+
+def _off(v: Any) -> bool:
+    return str(v or "").strip().lower() in ("0", "false", "no", "off", "hayir", "hayır")
+
+
+def acilis(seo: Any, poll: float = 5.0, wait: float = 900.0) -> bool:
+    """Köprü açılışı: veritabanı hazır olunca kayıtlı bütün hesaplar arkada ısıtılır. Kaydı olmayan ya da girdisi
+    değişmiş hesap bu turda hesaplanıp yazılır; güncel kayıt yalnız belleğe alınır. Böylece köprü yeniden kalktıktan sonra
+    ekranı ilk açan da (genel bakış, soru–cevap…) hesabı beklemez.
+
+    Kapatmak: ortam `SEO_HAZIR_ACILIS=0`. Test veritabanında (SQLite, tek bağlantı) çalışmaz: arka plan iş parçacığı
+    testin kendi okumalarıyla yarışırdı (veri sözlüğü ısıtmasıyla aynı kural). Dönen: iş parçacığı başladı mı."""
+    import os
+
+    if _off(os.environ.get("SEO_HAZIR_ACILIS", "1")):
+        return False
+
+    def raw_engine() -> Any:
+        """Bağlantı açmadan motor (lehçesine bakmak için); çalışma ortamı henüz kurulmadıysa hata."""
+        rt = getattr(seo, "runtime", None)
+        return rt().store.engine if callable(rt) else seo.engine()
+
+    try:
+        if raw_engine().dialect.name == "sqlite":
+            return False
+    except Exception:  # noqa: BLE001 — çalışma ortamı açılışta kurulur; iş parçacığı bekler
+        pass
+
+    def run() -> None:
+        deadline = time.monotonic() + max(0.0, wait)
+        eng = None
+        while eng is None:
+            try:
+                eng = raw_engine()        # köprü çalışma ortamı açılışta kurulur; hazır olana kadar beklenir
+            except Exception:  # noqa: BLE001
+                if time.monotonic() >= deadline:
+                    log.info("seo hazır açılış ısıtması: veritabanı hazır olmadı, atlandı")
+                    return
+                time.sleep(poll)
+        if eng.dialect.name == "sqlite":
+            return
+        try:
+            if _off(seo.conf("SEO_HAZIR_ACILIS")):
+                return
+        except Exception:  # noqa: BLE001
+            pass
+        isit(seo, wait=0, poll=poll)
+
+    threading.Thread(target=run, name="seo-hazir-acilis", daemon=True).start()
+    return True

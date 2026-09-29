@@ -329,9 +329,38 @@ def channel(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[
     return out
 
 
-def _book_rows(engine: sa.engine.Engine, tenant: str, yil: int) -> list[Any]:
+def _book_rows(engine: sa.engine.Engine, tenant: str, yil: int, groups: Optional[list[str]] = None,
+               months: Optional[Iterable[int]] = None) -> list[Any]:
+    """Grup × kitap × ay önbelleği. `groups` verilirse yalnız o grupların satırları, `months` verilirse yalnız o aylar
+    (hız, 2026-09-29: tek platformun kitap listesi yılın bütün e-ticaret satırlarını okuyup Python'da süzüyordu, Amazon
+    kitap listesi 4,3 sn). Süzgeç hesabın zaten atladığı satırları okumaz; sonuç aynı."""
+    t = S.BOOK_MONTHS
+    q = sa.select(t).where(t.c.tenant_id == tenant, t.c.yil == yil)
+    if months is not None:
+        q = q.where(t.c.ay.in_(sorted({int(m) for m in months})))
     with engine.connect() as c:
-        return c.execute(sa.select(S.BOOK_MONTHS).where(S.BOOK_MONTHS.c.tenant_id == tenant, S.BOOK_MONTHS.c.yil == yil)).all()
+        if groups is None:
+            return c.execute(q).all()
+        out: list[Any] = []
+        for i in range(0, len(groups), 500):
+            out += c.execute(q.where(t.c.grup.in_(groups[i:i + 500]))).all()
+        return out
+
+
+def _platform_groups(mp: Mapping, platform: str) -> Optional[list[str]]:
+    """`mp.platform(grup) == platform` olan gruplar: onaylı cari kodları ve platforma eşlenen kanal kodları
+    (`#K:<kod>`). Eşlenmemiş sütun (onaysız her grup) önceden sayılamaz: None → bütün satırlar okunur, Python süzer."""
+    if platform == M.UNMAPPED:
+        return None
+    out = {g for g, p in mp.amap.items() if p == platform and not g.startswith(KANAL_PREFIX)}
+    out |= {KANAL_PREFIX + k for k, p in mp.kmap.items() if p == platform}
+    return sorted(out)
+
+
+def _platform_book_rows(engine: sa.engine.Engine, tenant: str, yil: int, mp: Mapping, platform: str,
+                        weights: dict[int, float]) -> list[Any]:
+    """Platformun, ağırlığı olan aylardaki kitap satırları (`_book_sum` ağırlıksız ayı ve başka platformu zaten atlar)."""
+    return _book_rows(engine, tenant, yil, _platform_groups(mp, platform), [m for m, w in weights.items() if w])
 
 
 def _book_sum(rows: Iterable[Any], weights: dict[int, float], keep: Callable[[Any], bool]) -> dict[str, dict[str, float]]:
@@ -358,7 +387,8 @@ def _book_view(code: str, m: dict[str, float], name: str) -> dict[str, Any]:
 def m9_fill(engine: sa.engine.Engine, tenant: str, platform: str, p: dict[str, Any], mp: Mapping,
             unit_costs: Callable[[list[str]], dict[str, dict[str, Any]]]) -> dict[str, Any]:
     """Maliyetsiz satırları M9 birim maliyetiyle tamamlar. Birim maliyeti bilinmeyen kitap dışarıda kalır ve sayılır."""
-    books = _book_sum(_book_rows(engine, tenant, p["yil"]), _window(p, p["yil"]), lambda r: mp.platform(r.grup) == platform)
+    w = _window(p, p["yil"])
+    books = _book_sum(_platform_book_rows(engine, tenant, p["yil"], mp, platform, w), w, lambda r: mp.platform(r.grup) == platform)
     need = sorted(k for k, v in books.items() if v["maliyetsiz_adet"] > 0)
     costs = unit_costs(need) if need else {}
     base_c = sum(v["maliyetli_ciro"] for v in books.values())
@@ -390,7 +420,8 @@ def books(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[in
     p = period(engine, tenant, yil, ay)
     need_read(engine, tenant, [p["yil"]])
     mp = Mapping(engine, tenant)
-    agg = _book_sum(_book_rows(engine, tenant, p["yil"]), _window(p, p["yil"]), lambda r: mp.platform(r.grup) == platform)
+    w = _window(p, p["yil"])
+    agg = _book_sum(_platform_book_rows(engine, tenant, p["yil"], mp, platform, w), w, lambda r: mp.platform(r.grup) == platform)
     names = S.book_names(engine, tenant, list(agg))
     rows = [_book_view(k, v, names.get(k, "")) for k, v in agg.items()]
     rows = _search(rows, q)
@@ -413,7 +444,7 @@ def returns(engine: sa.engine.Engine, tenant: str, platform: str, yil: Optional[
     agg: dict[str, dict[str, float]] = {}
     for yy in years:
         wts = {m: 1.0 for (y2, m) in span if y2 == yy}
-        part = _book_sum(_book_rows(engine, tenant, yy), wts, lambda r: mp.platform(r.grup) == platform)
+        part = _book_sum(_platform_book_rows(engine, tenant, yy, mp, platform, wts), wts, lambda r: mp.platform(r.grup) == platform)
         for k, v in part.items():
             cur = agg.setdefault(k, {kk: 0.0 for kk in BOOK_METRICS})
             for kk in BOOK_METRICS:
@@ -667,7 +698,8 @@ def sell_in_books(engine: sa.engine.Engine, tenant: str, platform: str, months: 
     out: dict[str, float] = defaultdict(float)
     for yy in sorted({y for y, _ in months}):
         wts = {m: 1.0 for (y2, m) in months if y2 == yy}
-        for code, v in _book_sum(_book_rows(engine, tenant, yy), wts, lambda r: mp.platform(r.grup) == platform).items():
+        for code, v in _book_sum(_platform_book_rows(engine, tenant, yy, mp, platform, wts), wts,
+                                 lambda r: mp.platform(r.grup) == platform).items():
             out[code] += v["satis_adet"] - v["iade_adet"]
     return dict(out)
 

@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from datetime import date, datetime
 from typing import Any, Callable, Optional
 
@@ -22,6 +21,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as PV
 from semantic_bridge import public_affairs as PA
@@ -60,7 +60,10 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     auth, require_caller, can, is_admin, audit, conf = (deps[k] for k in ("auth", "require_caller", "can", "is_admin", "audit", "conf"))
     settings = lambda: PA.settings_from(conf)  # noqa: E731
     schema = lambda: conf("CRM_SCHEMA", "Timas_MSCRM.dbo")  # noqa: E731
-    cache: dict[str, tuple[float, Any]] = {}
+    # Hız (2026-09-29): CRM okumaları (kişi rolleri, «Karar Veren» sayısı, yılın tanıtım/bağış siparişleri, sipariş
+    # durum etiketleri) 10 dakikalık sözlükte tutuluyordu; süre dolunca ekranı açan CRM'i bekliyordu (/crm/roles 5,2 sn,
+    # /report 4,5 sn). Şimdi `hizli_kaynak` belleğinde: süre dolunca eldeki değer hemen, CRM arkada; açılışta ısıtılır.
+    cache = HK.bellek("iliskiler.crm", TTL)
     jobs: dict[str, threading.Thread] = {}
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
@@ -93,12 +96,31 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         return lambda sql: src.lower_rows(run(sql))
 
     def cached(key: str, fn: Callable[[], Any], fresh: bool = False) -> Any:
-        hit = cache.get(key)
-        if hit and not fresh and time.time() - hit[0] < TTL:
-            return hit[1]
-        val = fn()
-        cache[key] = (time.time(), val)
-        return val
+        return HK.oku(cache, key, fn, zorla=fresh)
+
+    def roles_read() -> dict[str, Any]:
+        run = crm()
+        roles = [{"id": src.lid(r.get("id")), "name": src.s(r.get("ad")), "people": src.ival(r.get("kisi")) or 0}
+                 for r in run(src.person_roles_sql(schema()))]
+        n = run(src.decision_makers_sql(schema()))
+        return {"personRoles": roles, "decisionMakers": src.ival(n[0].get("n")) if n else 0}
+
+    def promo_key(year: int, st: dict[str, Any]) -> str:
+        return f"promo:{year}:{st['orderTypes']}:{st['excludedStatus']}"
+
+    def promo_read(year: int, st: dict[str, Any]) -> list[dict[str, Any]]:
+        return crm()(src.promo_totals_sql(schema(), year, st["orderTypes"], st["excludedStatus"]))
+
+    def isit() -> None:
+        """Köprü açılışında kişi rolleri ve bu yılın tanıtım toplamları arkada okunur (ilk açan CRM'i beklemesin)."""
+        if HK.sqlite_mi(deps["engine"]()):
+            return
+        cached("roles", roles_read)
+        st = settings()
+        y = datetime.now(core.TZ).year
+        cached(promo_key(y, st), lambda: promo_read(y, st))
+
+    HK.acilista("iliskiler.crm", isit)
 
     def status_labels() -> dict[int, str]:
         def read() -> dict[int, str]:
@@ -473,14 +495,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
     async def pa_crm_roles(request: Request) -> dict[str, Any]:
         """CRM kişi rolleri ve kullanım sayısı; «Karar Veren» rolündeki etkin kişi sayısı (kabul 4)."""
         ctx(request)
-
-        def read() -> dict[str, Any]:
-            run = crm()
-            roles = [{"id": src.lid(r.get("id")), "name": src.s(r.get("ad")), "people": src.ival(r.get("kisi")) or 0}
-                     for r in run(src.person_roles_sql(schema()))]
-            n = run(src.decision_makers_sql(schema()))
-            return {"personRoles": roles, "decisionMakers": src.ival(n[0].get("n")) if n else 0}
-        return PV.bagla(await run_in_threadpool(lambda: call(cached, "roles", read)), K.for_roles)
+        return PV.bagla(await run_in_threadpool(lambda: call(cached, "roles", roles_read)), K.for_roles)
 
     @app.get(f"{P}/crm/books")
     async def pa_crm_books(request: Request, q: str = "", page: int = 0, month: str = "") -> dict[str, Any]:
@@ -751,9 +766,7 @@ def register(app: Any, deps: dict[str, Any]) -> dict[str, Any]:
         st = settings()
         rep = PA.report(engine, tenant, user, st, year)
         try:
-            def read() -> list[dict[str, Any]]:
-                return crm()(src.promo_totals_sql(schema(), year, st["orderTypes"], st["excludedStatus"]))
-            rows = cached(f"promo:{year}:{st['orderTypes']}:{st['excludedStatus']}", read)
+            rows = cached(promo_key(year, st), lambda: promo_read(year, st))
             rep["crm"] = {"types": [{"type": src.ival(r.get("tip")), "label": src.ORDER_TYPE_LABELS.get(src.ival(r.get("tip")) or 0, str(r.get("tip"))),
                                      "orders": src.ival(r.get("siparis")) or 0, "books": src.ival(r.get("adet")) or 0} for r in rows],
                           "excludedStatus": st["excludedStatus"], "error": None}

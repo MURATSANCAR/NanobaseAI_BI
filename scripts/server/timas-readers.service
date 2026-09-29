@@ -9,4 +9,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # (~63 bin) ve İYS günlüğü (~57 bin) okunur (tam tur; kişisel alanlar yalnız bellekte özete çevrilir). Köprünün
 # ortamında READERS_HASH_SALT (en az 16 karakter, bir kez üretilir, sonra değişmez) olmalı; yoksa okuma yapılmaz.
 # İlk kez elle koşturulur: systemctl start timas-readers.service
-ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/readers/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 3590 -X POST "http://127.0.0.1:8795/api/v1/readers/run-due"

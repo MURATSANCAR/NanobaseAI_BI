@@ -63,6 +63,18 @@ def izle(engine: Any) -> Iterator[list]:
             outer.extend(ran)
 
 
+@contextmanager
+def disarida() -> Iterator[None]:
+    """Blok içindeki okumalar izlenmez (portal ve Logo/CRM): rakam üretmeyen yardımcı okuma — ör. kişinin CRM
+    kullanıcısını bulan eşleme — ekranın sorgu bilgisine girmesin. Bloktan çıkınca dıştaki izleme sürer."""
+    t1, t2 = _REC.set(None), _EXT.set(None)
+    try:
+        yield
+    finally:
+        _EXT.reset(t2)
+        _REC.reset(t1)
+
+
 def kaynak(engine: Any, ran: list, out: Any, *, prefix: str, title: str, text: str, skip: tuple = (),
            extra: Optional[Callable[[P.Kaynaklar], list[str]]] = None, description: str = "",
            fields: Optional[Callable[[P.Kaynaklar, str], dict[str, str]]] = None,

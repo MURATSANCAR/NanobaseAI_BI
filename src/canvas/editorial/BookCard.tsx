@@ -14,7 +14,8 @@ export default function BookCard({ card, onAsk }: { card: Card; onAsk: () => voi
           {card.cover && !failed ? (
             <img src={bookCoverUrl(card.id)}
               alt={`${title} — ${card.cover.source === 'PDF_PAGE' ? 'kitabın içinden görsel' : 'kapak'}`}
-              loading="lazy" onError={() => setFailed(true)} className="aspect-[2/3] w-full object-contain" />
+              loading="lazy" decoding="async" width={112} height={168} onError={() => setFailed(true)}
+              className="aspect-[2/3] h-auto w-full object-contain" />
           ) : <div className="flex aspect-[2/3] flex-col items-center justify-center gap-2 px-2 text-center text-xs text-canvas-muted">
             <BookOpen aria-hidden className="h-6 w-6" />Kapak mevcut değil
           </div>}

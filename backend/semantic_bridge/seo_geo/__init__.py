@@ -1412,6 +1412,27 @@ def register(app, runtime, authorize, session_user):
                              .order_by(RUNS.c.started_at.desc()).limit(1)).scalar()
         return {**counts, "lastRead": iso(last), "state": seo.crm_state}
 
+    def _crm_rows() -> list[list[Any]]:
+        """Aktif ürünler CRM süzgeç alanlarıyla, çok satandan aza (hazır kayda yazılır): [ürün, hak, yayın durumu var,
+        eşleşmedi, önizleme var, video var]. Eskiden her sayfa isteğinde bütün ürünlerin JSON'u barkod eşleşmesi ve satış
+        sırası için iki kez açılırdı. Süzgeç ifadeleri eski WHERE koşullarının aynısıdır."""
+        data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
+        with seo.engine().connect() as c:
+            rows = c.execute(sa.select(PRODUCTS.c.product_id, CRM_BOOKS.c.rights, CRM_BOOKS.c.status_flag.isnot(None),
+                                       CRM_BOOKS.c.ean.is_(None), data["previewPdf"].as_string().isnot(None),
+                                       data["video"].as_string().isnot(None))
+                             .select_from(_crm_join()).where(PRODUCTS.c.tenant_id == seo.tenant(), PRODUCTS.c.active.is_(True))
+                             .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.product_id)).all()
+        return [[pid, rights, bool(flag), bool(unmatched), bool(prev), bool(video)]
+                for pid, rights, flag, unmatched, prev, video in rows]
+
+    def crm_rows() -> list[list[Any]]:
+        seo.engine()
+        st = hazir.damga(seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)])
+        return hazir.al(seo, "crm.rows", st, _crm_rows)
+
+    hazir.kaydet(seo, "crm.rows", crm_rows)
+
     @app.get("/api/v1/seo-geo/crm")
     def seo_crm(request: Request, filter: str = "", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
         """T-soft'ta aktif ürünler, CRM kitap kartı ve hak özetiyle; çok satandan aza."""
@@ -1419,27 +1440,23 @@ def register(app, runtime, authorize, session_user):
         if filter and filter not in CRM_FILTERS:
             raise _err(422, "Bilinmeyen süzgeç.")
         tenant, site = seo.tenant(), seo.conf("SEO_SITE_URL")
-        data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
-        cond = [PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True)]
-        if filter in crm.RIGHTS:
-            cond.append(CRM_BOOKS.c.rights == filter)
-        elif filter == "durum":
-            cond.append(CRM_BOOKS.c.status_flag.isnot(None))
-        elif filter == "eslesmedi":
-            cond.append(CRM_BOOKS.c.ean.is_(None))
-        elif filter == "onizleme":
-            cond.append(data["previewPdf"].as_string().isnot(None))
-        elif filter == "video":
-            cond.append(data["video"].as_string().isnot(None))
-        if q.strip():
-            like = f"%{q.strip()}%"
-            cond.append(sa.or_(PRODUCTS.c.name.ilike(like), PRODUCTS.c.code.ilike(like), PRODUCTS.c.brand.ilike(like)))
-        j = _crm_join()
+        # Sıra ve süzgeç alanları hazır kayıttan (crm.rows); arama kutusu ve sayfa satırları istekte, dizinli okumayla.
+        col = {"durum": 2, "eslesmedi": 3, "onizleme": 4, "video": 5}
+        match = [r[0] for r in crm_rows()
+                 if not filter or (r[1] == filter if filter in crm.RIGHTS else bool(r[col[filter]]))]
         with seo.engine().connect() as c:
-            total = c.execute(sa.select(sa.func.count()).select_from(j).where(*cond)).scalar() or 0
-            rows = c.execute(sa.select(PRODUCTS, CRM_BOOKS.c.data_json.label("crm_json")).select_from(j).where(*cond)
-                             .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.product_id)
-                             .offset(max(0, start)).limit(max(1, min(limit, 200)))).mappings().all()
+            if q.strip():
+                like = f"%{q.strip()}%"
+                hit = {r[0] for r in c.execute(sa.select(PRODUCTS.c.product_id).where(
+                    PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True),
+                    sa.or_(PRODUCTS.c.name.ilike(like), PRODUCTS.c.code.ilike(like), PRODUCTS.c.brand.ilike(like))))}
+                match = [pid for pid in match if pid in hit]
+            total = len(match)
+            page_ids = match[max(0, start):max(0, start) + max(1, min(limit, 200))]
+            got = {r["product_id"]: r for r in c.execute(
+                sa.select(PRODUCTS, CRM_BOOKS.c.data_json.label("crm_json")).select_from(_crm_join()).where(
+                    PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(page_ids))).mappings()} if page_ids else {}
+            rows = [got[pid] for pid in page_ids if pid in got]
         items = []
         for r in rows:
             b = loads(r["crm_json"], None) if r["crm_json"] else None
@@ -1498,6 +1515,9 @@ def register(app, runtime, authorize, session_user):
     hazir.mesgul(seo, lambda: bool(seo.state.get("running")))
     hazir.mesgul(seo, lambda: bool(seo.crm_state.get("running")))
     seo.nightly.append(("hazir", lambda: hazir.isit_arkada(seo)))
+    # Köprü açılışında da: kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır, güncel kayıt belleğe alınır.
+    # Çağrı köprünün arka plan açılışında (app.py `_boot_services`), çalışma ortamı kurulduktan sonra: kayıt sırasında
+    # çalışma ortamı istenirse köprünün açılışı onu bekler.
     # Sorgu bilgisi (2026-09-28): SEO & GEO okuma uçlarının cevabına «kaynaklar» (çalışan SQL + hesap) eklenir.
     from . import kaynak as sorgu_kaynak
 

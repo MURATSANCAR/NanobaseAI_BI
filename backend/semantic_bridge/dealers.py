@@ -182,7 +182,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         F.ensure(engine)              # ortak ziyaret ve bildirim tabloları (M30)
         _ready.add(id(engine))
 

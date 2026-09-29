@@ -18,8 +18,15 @@ Kaynaklar (analiz `docs/analiz/kullanici-ihtiyaclari/M27-fuar-etkinlik-odul.md` 
 - **Veri sonu** — `MAX(DATE_)` iptal edilmemiş fatura (`LG_<firma>_01_INVOICE`).
 - **Kitap kartı** — CRM `new_kitap` görünümü (stok kodu, ad, ilk yayın, yayınevi) + `powerbikitap` (yazar).
 
-CRM tarihleri UTC saklanır; gün sınırları İstanbul gününe göre UTC'ye çevrilerek sorulur. Okuma `EVENTS_CACHE_SEC`
-saniye bellekte tutulur; «Verileri yenile» yeniden okur. CRM'e ve Logo'ya hiçbir şey yazılmaz.
+CRM tarihleri UTC saklanır; gün sınırları İstanbul gününe göre UTC'ye çevrilerek sorulur. Okuma bellekte tutulur
+(`hizli_kaynak`): `EVENTS_CACHE_SEC` (600) saniyeden tazeyse hemen; eskiyse eldeki hemen döner ve kaynak arkada yeniden
+okunur; hiç yoksa beklenir. `fresh=True` (sonuç hesabı, gece turu) kaynağı bekler; takvim ve tip eşlemesi ekranında
+«Verileri yenile» beklemez, arkada okur (`durt`). CRM'e ve Logo'ya hiçbir şey yazılmaz.
+
+Hız (2026-09-29): tip eşlemesi (`/events/type-map`, 8,4 sn — 371 tipin kullanım sayısı bütün etkinlik tablosunun
+GROUP BY'ı) ve takvim (`/events/calendar`, 4,3 sn — yılın bütün etkinlikleri) ekranı açanı CRM'de bekletiyordu: eski
+önbellek 10 dakika dolunca ve «Verileri yenile»de kaynağı bekliyordu. Şimdi ikisi de bellekten; köprü açılışında
+ısıtılır (`events_api`).
 """
 from __future__ import annotations
 
@@ -32,6 +39,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
+from semantic_bridge import hizli_kaynak as HK
 from semantic_layer.firm_scope import firm_in_scope
 
 log = logging.getLogger("semantic.events.sources")
@@ -426,17 +434,37 @@ class Source:
         self._logo = logo_connect
         self._schema = schema
         self._lock = threading.Lock()
+        #: Yıl → firma eşlemesi: açık Logo bağlantısıyla okunur, arkada yenilenemez; eskisi gibi süreli sözlük.
         self._cache: dict[tuple, tuple[float, Any]] = {}
+        self._bellek = HK.bellek("etkinlik.kaynak", ttl())
+        self._okuyucu: dict[tuple, Callable[[], Any]] = {}
 
     # -------------------------------------------------------------- önbellek
     def _memo(self, key: tuple, fresh: bool, fn: Callable[[], Any]) -> Any:
+        """Bellekten; tazeyse hemen, eskiyse eldeki hemen + arkada okuma, yoksa beklenir. `fresh`: kaynak beklenir."""
         with self._lock:
-            hit = self._cache.get(key)
-            if hit and not fresh and time.time() - hit[0] < ttl():
+            self._okuyucu[key] = fn
+        return HK.oku(self._bellek, key, fn, zorla=fresh)
+
+    def durt(self, key: tuple) -> bool:
+        """«Verileri yenile»: bellekteki okuma 60 sn'den eskiyse arkada yeniden okunur (beklemeden). Okuyucu yoksa False."""
+        with self._lock:
+            fn = self._okuyucu.get(key)
+        if fn is None:
+            return False
+        yas = self._bellek.yas(key)
+        if yas is not None and yas >= HK.DURT_EN_AZ:
+            self._bellek.isit(key, fn)
+        return True
+
+    def _firms_memo(self, fn: Callable[[], Any]) -> Any:
+        with self._lock:
+            hit = self._cache.get(("firms",))
+            if hit and time.time() - hit[0] < ttl():
                 return hit[1]
         val = fn()
         with self._lock:
-            self._cache[key] = (time.time(), val)
+            self._cache[("firms",)] = (time.time(), val)
         return val
 
     def firms(self) -> dict[int, str]:
@@ -448,6 +476,7 @@ class Source:
     def clear(self) -> None:
         with self._lock:
             self._cache.clear()
+        self._bellek.dusur()
 
     def _crm_rows(self, sqls: list[str]) -> list[list[dict[str, Any]]]:
         conn = self._crm()
@@ -459,7 +488,7 @@ class Source:
     def _logo_rows(self, fn: Callable[[Any, dict[int, str]], Any]) -> Any:
         conn = self._logo()
         try:
-            firms = self._memo(("firms",), False, lambda: firms_by_year(rows(conn.execute(periods_sql(), 10_000))))
+            firms = self._firms_memo(lambda: firms_by_year(rows(conn.execute(periods_sql(), 10_000))))
             if not firms:
                 raise SourceError("Logo dönem listesi boş.")
             return fn(conn, firms)

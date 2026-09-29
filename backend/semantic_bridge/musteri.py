@@ -203,20 +203,25 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
-        insp = sa.inspect(engine)
-        for name, cols in _ADDED_COLUMNS.items():
-            have = {c["name"] for c in insp.get_columns(name)}
-            for col in cols:
-                if col in have:
-                    continue
-                ddl = _md.tables[name].c[col].type.compile(dialect=engine.dialect)
-                try:
-                    with engine.begin() as c:
-                        c.execute(sa.text(f"ALTER TABLE {name} ADD COLUMN {col} {ddl}"))
-                except Exception:  # noqa: BLE001 — başka süreç aynı anda eklediyse kolon vardır
-                    if col not in {c["name"] for c in sa.inspect(engine).get_columns(name)}:
-                        raise
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            insp = sa.inspect(engine)
+            for name, cols in _ADDED_COLUMNS.items():
+                have = {c["name"] for c in insp.get_columns(name)}
+                for col in cols:
+                    if col in have:
+                        continue
+                    ddl = _md.tables[name].c[col].type.compile(dialect=engine.dialect)
+                    try:
+                        with engine.begin() as c:
+                            c.execute(sa.text(f"ALTER TABLE {name} ADD COLUMN {col} {ddl}"))
+                    except Exception:  # noqa: BLE001 — başka süreç aynı anda eklediyse kolon vardır
+                        if col not in {c["name"] for c in sa.inspect(engine).get_columns(name)}:
+                            raise
+
+        # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz (kolon eklenince tanım da değişir).
+        from semantic_layer.store import schema_stamp
+        schema_stamp.run(engine, _md.sorted_tables, install)
         _ready.add(id(engine))
 
 

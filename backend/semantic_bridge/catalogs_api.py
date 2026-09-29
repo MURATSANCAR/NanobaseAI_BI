@@ -27,6 +27,7 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import catalogs as C
 from semantic_bridge import catalogs_kaynak as K
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import pazarlama_kaynak as PK
 from semantic_bridge import provenance as PV
 from semantic_bridge import catalogs_sources as S
@@ -60,6 +61,27 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def logo():
         return S.runner(rt().settings.connection_file)
+
+    # Hız (2026-09-29): bülten raporu (`/report`) her açılışta CRM kampanya kartlarını ve kampanya gönderim tablosunun
+    # kampanya başına sayımını (bütün `obs_kampanyagonderimleriBase` üzerinde GROUP BY) okuyordu: 4,1 / 3,0 sn, önbellek
+    # yoktu. Şimdi `hizli_kaynak` belleğinde: `CATALOG_CRM_TTL_SEC` (600) saniyeden tazeyse hemen, eskiyse eldeki hemen
+    # ve CRM arkada; «Verileri yenile» (X-Data-Refresh) beklemeden arkada okur. Köprü açılışında ısıtılır.
+    try:
+        kampanya_taze = max(0.0, float(os.environ.get("CATALOG_CRM_TTL_SEC", "600")))
+    except ValueError:
+        kampanya_taze = 600.0
+    kampanya_bellek = HK.bellek("katalog.crm-kampanya", kampanya_taze, en_cok=8)
+
+    def kampanyalar(durt: bool = False) -> list[dict[str, Any]]:
+        sch = schema()
+        return HK.oku(kampanya_bellek, sch, lambda: S.read_campaigns(crm(), sch), durt=durt)
+
+    def isit() -> None:
+        if HK.sqlite_mi(rt().store.engine):
+            return
+        kampanyalar()
+
+    HK.acilista("katalog.crm-kampanya", isit)
 
     def llm(module: str, batch: bool):
         try:
@@ -544,7 +566,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         out["crm"] = None
         if crmKampanyalar:
             try:
-                out["crm"] = await run_in_threadpool(S.read_campaigns, crm(), schema())
+                out["crm"] = await run_in_threadpool(kampanyalar, request.headers.get("x-data-refresh") == "1")
             except Exception as e:  # noqa: BLE001 — CRM okunamazsa portal sonuçları yine görünür
                 out["crmHata"] = str(e)[:200]
         return await run_in_threadpool(PV.bagla, out, lambda: K.for_report(engine, tenant, out, schema()))

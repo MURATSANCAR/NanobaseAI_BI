@@ -31,7 +31,7 @@ from urllib.parse import parse_qsl, unquote, urlencode, urljoin, urlsplit
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
-from . import rules
+from . import hazir, rules
 from .pages import _num
 from .store import LINKS, PRODUCTS, _md, dumps, iso, loads, now
 from .tech import LINK_KIND, SNAP, TECH, TRACKING, _fold
@@ -582,9 +582,36 @@ class Links:
             self._cache = {"tenant": tenant, "fp": fp, "at": time.monotonic(), "data": data}
             return data
 
+    # -------------------------------------------------------------- hazır hesap (ekran listeleri)
+    def _stamp(self) -> str:
+        """Hazır kaydın damgası: grafiğin girdileri (_fingerprint ile aynı tablolar) + site adresi."""
+        return hazir.damga(self.seo, [(EDGES, EDGES.c.seen_at), (TECH, TECH.c.checked_at), (PRODUCTS, PRODUCTS.c.synced_at),
+                                      (LINKS, LINKS.c.synced_at), (SNAP, SNAP.c.saved_at, SNAP.c.kind == "sitemaps")],
+                           ek=(self.site(),))
+
+    def _compute_lists(self) -> dict[str, Any]:
+        data = self.result(force=True)
+        return {"summary": data["summary"], "lists": data["lists"]}
+
+    def lists(self, fresh: bool = False) -> dict[str, Any]:
+        """Ekranın özeti ve listeleri (grafik hariç) hazır hesaptan: köprü yeniden kalkınca da, birden çok süreçte de ilk
+        açılış 50 sn'lik grafik hesabını beklemez. Teknik tarama sürerken girdiler her sayfada değişir: son kayıt
+        gösterilir (özetinde hesap zamanı yazar), `RUNNING_REUSE` sn'den eskiyse yenisi arkada hesaplanır (eskiden de
+        tarama sürerken hesap en çok bu sıklıkta yenilenirdi). `fresh`: gece özeti — tarama sürse de şimdi hesaplanır."""
+        self.engine()
+        st = self._stamp()
+        if not fresh and self._crawl_running():
+            got = hazir.son(self.seo, "links")
+            if got is not None:
+                data, age = got
+                if age >= RUNNING_REUSE:
+                    hazir.al_arkada(self.seo, "links", st, self._compute_lists)
+                return data
+        return hazir.al(self.seo, "links", st, self._compute_lists)
+
     def snapshot(self) -> dict[str, Any]:
-        """Gece: yeniden hesaplar, günün özetini kaydeder (eğilim için)."""
-        s = self.result(force=True)["summary"]
+        """Gece: yeniden hesaplar (girdi değiştiyse), günün özetini kaydeder (eğilim için)."""
+        s = self.lists(fresh=True)["summary"]
         compact = {"counts": s["counts"], "coverage": {"crawled": s["coverage"]["crawled"], "of": s["coverage"]["of"],
                                                        "share": s["coverage"]["share"]},
                    "crawledPages": s["crawledPages"], "edges": s["edges"], "homeCrawled": s["homeCrawled"]}
@@ -611,6 +638,7 @@ def _match(row: dict[str, Any], q: str) -> bool:
 def register(app, ctx) -> None:
     links = Links(ctx.seo)
     ctx.seo.links = links  # başka özellikler (ürün denetimi, izleme) tek adresin bağlantılarına buradan ulaşabilir
+    hazir.kaydet(ctx.seo, "links", links.lists)
 
     @app.get("/api/v1/seo-geo/links")
     def seo_links(request: Request, view: str = "orphans", kind: str = "", q: str = "", start: int = 0,
@@ -620,7 +648,7 @@ def register(app, ctx) -> None:
             raise _err(422, "Bilinmeyen görünüm.")
         if kind and kind not in KIND_FILTER:
             raise _err(422, "Bilinmeyen sayfa türü.")
-        data = links.result()
+        data = links.lists()
         rows = [r for r in data["lists"][view] if (not kind or r.get("kind") == kind) and _match(r, q)]
         tech = getattr(ctx.seo, "tech", None)
         start = max(0, start)

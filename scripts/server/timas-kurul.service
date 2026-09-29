@@ -9,4 +9,4 @@ EnvironmentFile=/etc/nanobase/semantic-bridge.env
 # yalnız iç adreslere (ALERT_RECIPIENT_DOMAINS) gider; kurul paketi kimseye gönderilmez. Logo/CRM'e yazma yok.
 # M45/M46/M47/M59 zamanlayıcılarından sonra koşar ki onların taze çıktısını okusun.
 # İlk kez elle koşturulur: systemctl start timas-kurul.service (bellek: run-it-before-it-runs-itself).
-ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/kurul/run-due'
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/kopru-cagir.sh -m 1790 -X POST "http://127.0.0.1:8795/api/v1/kurul/run-due"

@@ -25,6 +25,9 @@ TABLOLAR = {
     LOG: ("Fark günlüğü", "Her durum geçişi: kim, ne zaman, not."),
     RUNS: ("Okuma kaydı", "Gece okumasının başlangıcı, bitişi ve kaynak başına okunan kayıt sayıları."),
     PROPS: ("Zeki AI kart önerileri", "SEO öneri kaydındaki «E-ticaret» kaynaklı ürün kartı önerileri; puanlar kural denetiminden."),
+    "semantic_eticaret_market_reads": ("Pazar yeri Logo okuması (saklanan)",
+                                       "Pazar yeri Logo okumasının satırları ve o okumada çalışan Logo sorguları; köprü "
+                                       "yeniden başlayınca bir kez buradan okunur, sonra bellekten."),
 }
 KOKEN = {ITEMS: [E.KOKEN_OKUMA], DIFFS: [E.KOKEN_OKUMA]}
 KOKEN_BASLIK = {E.KOKEN_OKUMA: "Gece okuması"}

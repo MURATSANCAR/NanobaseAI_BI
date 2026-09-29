@@ -30,6 +30,11 @@ arka plan önceliğindedir; bitmeyen iş sonraki geceye kalır (sessiz tavan yok
 beklemez: son okuma portal tablosundadır (`semantic_stock_reads`; gece turu `run-due` ve arka plan tazelemesi yazar), istek
 onu bellekten ya da tablodan alır. Okuma 5 dakikadan eskiyse ya da «Verileri yenile» (`X-Data-Refresh`) istendiyse yenisi
 arka planda başlar (cevapta `yenileniyor`); biten okuma tabloya yazılır. Kaynak yalnız hiç okuma yokken beklenir.
+
+**Hız, 2. tur (2026-09-29):** okuma beklenmese de model (bütün kitap satırları, üretim kartları, tahmin) her yeni okumada
+istek içinde kuruluyordu; aynı anda gelen istekler (`/names` + `/items`) onu ayrı ayrı kuruyordu (14 sn). Artık model
+arkada kurulur, istek eldeki modeli alır; köprü açılışında tablodaki okumadan hazırlanır. Arama kutusu listesi, süzgeç
+sonucu ve yayınevi listesi model başına bir kez hesaplanır (`Service.memo`).
 """
 from __future__ import annotations
 
@@ -373,8 +378,14 @@ def _gun_key(i: dict[str, Any]) -> tuple:
     return (i["gun"] is None, i["gun"] if i["gun"] is not None else 0.0, i["ad"] or "")
 
 
+def search_text(i: dict[str, Any]) -> str:
+    """Kitap satırının aramada bakılan metni (sadeleştirilmiş)."""
+    return fold(f"{i['stokKodu']} {i['ad'] or ''} {i['yazar'] or ''} {i['yayinevi'] or ''}")
+
+
 def filter_items(model: dict[str, Any], *, q: str = "", yayinevi: str = "", depo: str = "", durum: str = "",
-                 sira: str = "gun", dagitim: str = "") -> list[dict[str, Any]]:
+                 sira: str = "gun", dagitim: str = "", folded: Optional[dict[str, str]] = None) -> list[dict[str, Any]]:
+    """`folded`: stok kodu → `search_text` (model başına bir kez hazırlanır); yoksa satır başına hesaplanır."""
     rows = model["items"]
     if dagitim:
         rows = [i for i in rows if (i.get("dagitim") or {}).get("isaret") == dagitim]
@@ -393,8 +404,8 @@ def filter_items(model: dict[str, Any], *, q: str = "", yayinevi: str = "", depo
         rows = [i for i in rows if any(a["no"] == no and a["adet"] > 0 for a in i["ambarlar"])]
     if q:
         words = fold(q).split()
-        rows = [i for i in rows if all(w in fold(f"{i['stokKodu']} {i['ad'] or ''} {i['yazar'] or ''} {i['yayinevi'] or ''}")
-                                       for w in words)]
+        text = (lambda i: folded.get(i["stokKodu"]) or search_text(i)) if folded is not None else search_text
+        rows = [i for i in rows if all(w in text(i) for w in words)]
     if sira == "bakiye":
         rows = sorted(rows, key=lambda i: (-i["bakiye"], i["ad"] or ""))
     elif sira == "ad":
@@ -679,7 +690,14 @@ class Service:
     İstek kaynağı beklemez: bellekteki okuma yoksa tablodaki (o da yoksa eski disk dosyasındaki) son okuma alınır ve hemen
     döner. Okuma 5 dakikadan eskiyse ya da «Verileri yenile» (`fresh`) istendiyse yenisi arka planda başlar; biten okuma
     tabloya yazılır, sonraki istek onu görür. Kaynağın beklendiği iki durum: hiç okuma yok (kurulumdan sonraki ilk açılış,
-    gece turu henüz koşmamış) ve gece turu (`wait=True`). Aynı anda tek okuma."""
+    gece turu henüz koşmamış) ve gece turu (`wait=True`). Aynı anda tek okuma.
+
+    Model de istekte kurulmaz (hız, 2. tur 2026-09-29: `/stock/names` ve `/stock/items` 14 sn): yeni okuma, ayar ya da üretim
+    durumu gelince model arka planda kurulur, o sırada istek eldeki modeli alır. Model yalnız hiç yokken (köprü yeni
+    kalktı, açılış hazırlığı bitmedi; ya da eşik onayıyla düşürüldü) beklenir; aynı anda gelen istekler tek kurulumu bekler
+    (eskiden eşzamanlı her istek modeli ayrı ayrı kuruyordu). Köprü açılışında son okuma tablodan alınıp model arkada
+    hazırlanır (`warm`, kaynağa gidilmez). Arka plan okuması okuma bittikten sonra en az 5 dakika yeniden başlamaz (okuma
+    5 dakikadan uzun sürünce ekran açık kaldıkça kaynak durmadan okunuyordu)."""
 
     def __init__(self, logo_run: Callable[[], src.Runner], crm_run: Callable[[], src.Runner], schema: Callable[[], str],
                  settings: Callable[[], dict[str, Any]], m12_cards: Callable[[Any, str], list[dict[str, Any]]] = lambda e, t: [],
@@ -690,9 +708,14 @@ class Service:
         self.m12_ready = m12_ready
         self._lock = threading.Lock()
         self._read_lock = threading.Lock()
+        self._load_lock = threading.Lock()       # köprü açılışında tablodan tek yükleme (açılış hazırlığı + ilk istek)
+        self._build_lock = threading.Lock()      # aynı anda tek model kurulumu
         self._raw: Optional[dict[str, Any]] = None
         self._bg: Optional[threading.Thread] = None
+        self._build_bg: Optional[threading.Thread] = None
         self._model: Optional[tuple[tuple, dict[str, Any]]] = None
+        self._where: Optional[tuple[Any, str]] = None
+        self._memo: dict[Any, tuple[dict[str, Any], Any]] = {}
         self.sql: dict[str, str] = {}
 
     # ---- okuma
@@ -784,12 +807,24 @@ class Service:
             return None
 
     def _adopt(self, raw: dict[str, Any]) -> dict[str, Any]:
-        """Tablodan gelen okumayı bellekteki yerine koyar (yalnız daha yeniyse)."""
+        """Tablodan gelen okumayı bellekteki yerine koyar (yalnız daha yeniyse). Model düşürülmez: yenisi arkada kurulur,
+        o sırada istekler eldeki modeli alır."""
         with self._lock:
             if self._raw is None or float(raw.get("at") or 0) > float(self._raw.get("at") or 0):
-                self._raw, self._model = raw, None
+                self._raw = raw
                 self.sql = raw.get("sql") or {}
             return self._raw
+
+    def _cold(self, engine: Any = None, tenant: Optional[str] = None) -> Optional[dict[str, Any]]:
+        """Bellekte okuma yokken tablodaki son okuma — tek yükleme (açılış hazırlığı ile ilk istek aynı anda gelirse ikincisi
+        birincinin yüklediğini alır)."""
+        with self._load_lock:
+            with self._lock:
+                cur = self._raw
+            if cur is not None:
+                return cur
+            loaded = self._load(engine, tenant)
+            return self._adopt(loaded) if loaded is not None else None
 
     def _refresh(self, since: float, engine: Any = None, tenant: Optional[str] = None) -> dict[str, Any]:
         """Tek okuma: başka bir istek bu istekten sonra başlamış bir okumayı bitirdiyse onu kullanır (aynı ağır okuma
@@ -802,8 +837,9 @@ class Service:
             started = time.time()
             raw = self.read()
             raw["_started"] = started
+            raw["_done"] = time.time()          # yeniden okuma bu andan sayılır (okuma 5 dakikadan uzun sürebilir)
             with self._lock:
-                self._raw, self._model = raw, None
+                self._raw = raw
             self.sql = raw.get("sql") or {}
             self._persist(raw, engine, tenant)
             return raw
@@ -815,7 +851,9 @@ class Service:
 
             def bg() -> None:
                 try:
-                    self._refresh(since, engine, tenant)
+                    raw = self._refresh(since, engine, tenant)
+                    if engine is not None and tenant:
+                        self._build(engine, tenant, raw)      # sonraki istek modeli hazır bulur
                 except Exception as e:  # noqa: BLE001 — eski okuma ekranda kalır
                     log.warning("stock: arka plan okuması başarısız: %s", e)
             self._bg = threading.Thread(target=bg, daemon=True, name="stock-refresh")
@@ -828,8 +866,7 @@ class Service:
         with self._lock:
             cur = self._raw
         if cur is None:
-            loaded = self._load(engine, tenant)
-            cur = self._adopt(loaded) if loaded is not None else None
+            cur = self._cold(engine, tenant)
         if wait or cur is None:
             return self._refresh(asked, engine, tenant)
         stale = time.time() - float(cur.get("at") or 0) > TTL
@@ -844,7 +881,9 @@ class Service:
                         stale = time.time() - float(cur.get("at") or 0) > TTL
             except Exception as e:  # noqa: BLE001
                 log.info("stock: son okuma anı okunamadı: %s", e)
-        if fresh or stale:
+        # Okuma bittikten sonra TTL dolmadan yeniden okunmaz (kendiliğinden; «Verileri yenile» her zaman başlatır).
+        just_done = time.time() - float(cur.get("_done") or 0) < TTL
+        if fresh or (stale and not just_done):
             self._refresh_later(asked, engine, tenant)
         return cur
 
@@ -852,22 +891,24 @@ class Service:
         return bool(self._bg and self._bg.is_alive())
 
     def invalidate(self) -> None:
+        """Model düşer (eşik onayı: onaylanan eşik hemen görünmeli); yenisi hemen arkada kurulmaya başlar, sonraki istek
+        yalnız kalanını bekler."""
         with self._lock:
             self._model = None
+            where = self._where
+        if where is not None:
+            self._build_later(*where)
 
-    def model(self, engine: Any, tenant: str, fresh: bool = False, wait: bool = False) -> dict[str, Any]:
-        """Kitap satırları. Aynı okuma, aynı ayar ve aynı üretim kartı durumu için bir kez kurulur (eşik onayı
-        `invalidate` ile düşürür). `fresh` modeli yeniden kurdurmaz: yeni okuma gelince model kendiliğinden yenilenir."""
-        raw = self.raw(fresh, wait=wait, engine=engine, tenant=tenant)
+    # ---- model
+    def _key(self, raw: dict[str, Any]) -> tuple[tuple, dict[str, Any]]:
         s = self.settings()
         try:
             ready = bool(self.m12_ready())
         except Exception:  # noqa: BLE001
             ready = True
-        key = (raw.get("at"), ready, json.dumps(s, sort_keys=True, default=str))
-        with self._lock:
-            if self._model is not None and self._model[0] == key:
-                return self._model[1]
+        return (raw.get("at"), ready, json.dumps(s, sort_keys=True, default=str)), s
+
+    def _compute(self, engine: Any, tenant: str, raw: dict[str, Any], s: dict[str, Any]) -> dict[str, Any]:
         try:
             cards = self.m12_cards(engine, tenant) or []
         except Exception as e:  # noqa: BLE001
@@ -887,6 +928,83 @@ class Service:
         except Exception as e:  # noqa: BLE001 — dağıtımcı bilgisi stok ekranını düşürmez
             log.info("stock: dağıtımcı bilgisi eklenemedi: %s", e)
             m["dagitim"] = None
-        with self._lock:
-            self._model = (key, m)
         return m
+
+    def _build(self, engine: Any, tenant: str, raw: dict[str, Any]) -> dict[str, Any]:
+        """Tek kurulum: kurulum sürerken gelen istek onu bekler, bitince aynı modeli alır (iki kez kurulmaz)."""
+        with self._build_lock:
+            key, s = self._key(raw)
+            with self._lock:
+                cur = self._model
+            if cur is not None and cur[0] == key:
+                return cur[1]
+            m = self._compute(engine, tenant, raw, s)
+            with self._lock:
+                self._model = (key, m)
+            return m
+
+    def _build_later(self, engine: Any, tenant: str) -> None:
+        with self._lock:
+            if self._build_bg and self._build_bg.is_alive():
+                return
+
+            def run() -> None:
+                try:
+                    with self._lock:
+                        raw = self._raw
+                    if raw is not None:
+                        self._build(engine, tenant, raw)
+                except Exception as e:  # noqa: BLE001 — istekler eldeki modelle sürer
+                    log.warning("stock: model arka planda kurulamadı: %s", e)
+            self._build_bg = threading.Thread(target=run, daemon=True, name="stock-model")
+            self._build_bg.start()
+
+    def model(self, engine: Any, tenant: str, fresh: bool = False, wait: bool = False) -> dict[str, Any]:
+        """Kitap satırları. Aynı okuma, aynı ayar ve aynı üretim kartı durumu için bir kez kurulur. Anahtar değiştiyse
+        (yeni okuma, ayar, üretim okuması geldi) eldeki model hemen döner, yenisi arkada kurulur; model hiç yoksa ya da
+        gece turunda (`wait`) kurulum beklenir. `fresh` modeli yeniden kurdurmaz: yeni okuma gelince model yenilenir."""
+        with self._lock:
+            self._where = (engine, tenant)
+        raw = self.raw(fresh, wait=wait, engine=engine, tenant=tenant)
+        key, _ = self._key(raw)
+        with self._lock:
+            cur = self._model
+        if cur is not None and cur[0] == key:
+            return cur[1]
+        if cur is not None and not wait:
+            self._build_later(engine, tenant)
+            return cur[1]
+        return self._build(engine, tenant, raw)
+
+    def warm(self, engine: Any, tenant: str) -> bool:
+        """Köprü açılışı: tablodaki son okumadan model (kaynağa gidilmez; okuma yoksa ilk istek okur)."""
+        with self._lock:
+            self._where = (engine, tenant)
+        raw = self._cold(engine, tenant)
+        if raw is None:
+            return False
+        self._build(engine, tenant, raw)
+        return True
+
+    def idle(self, timeout: float = 30.0) -> None:
+        """Arka plandaki okuma ve model kurulumunun bitmesini bekler (testler ve gece turu için)."""
+        for t in (self._bg, self._build_bg):
+            if t is not None:
+                t.join(timeout)
+
+    def memo(self, m: dict[str, Any], name: Any, fn: Callable[[], Any], keep: int = 64) -> Any:
+        """Modelden türetilen ve istek başına yeniden hesaplanması gereksiz sonuçlar (arama kutusu listesi, süzgeç
+        sonucu, yayınevi listesi): model değişince kendiliğinden düşer. Aynı model için en çok `keep` sonuç tutulur."""
+        with self._lock:
+            hit = self._memo.get(name)
+        if hit is not None and hit[0] is m:
+            return hit[1]
+        val = fn()
+        with self._lock:
+            stale = [k for k, (mm, _) in self._memo.items() if mm is not m]
+            for k in stale:
+                del self._memo[k]
+            if len(self._memo) >= keep:
+                self._memo.pop(next(iter(self._memo)))
+            self._memo[name] = (m, val)
+        return val

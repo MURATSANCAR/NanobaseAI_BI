@@ -29,7 +29,7 @@ from urllib.parse import quote
 import sqlalchemy as sa
 from fastapi import Request
 
-from . import rules, schema
+from . import hazir, rules, schema
 from .competitors import domain_of, matches
 from .store import CRM_BOOKS, PRODUCTS, _md, dumps, iso, loads, now
 
@@ -345,7 +345,8 @@ class Entity:
         eng = self.seo.engine()
         with _ready_lock:
             if id(eng) not in _ready:
-                _md.create_all(eng, tables=[ENTITY], checkfirst=True)
+                from semantic_layer.store import schema_stamp
+                schema_stamp.create_all(_md, eng, tables=[ENTITY])
                 _ready.add(id(eng))
         return eng
 
@@ -378,19 +379,39 @@ class Entity:
                              .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.product_id)).all()
         return [(pid, loads(d, {}), crm_json) for pid, d, crm_json in rows]
 
-    def authors(self, prods: Optional[list] = None) -> list[dict[str, Any]]:
-        """Yazarlar satış toplamıyla (çok satandan aza), önbellekteki Wikidata durumuyla."""
+    @staticmethod
+    def author_agg(prods: list) -> list[dict[str, Any]]:
+        """Ürünlerden yazar toplamı: [{key, name, sales, books: {ürün: ad}}], ürün sırasıyla ilk görülen yazar önce."""
         from . import _num
 
         agg: dict[str, dict[str, Any]] = {}
-        for pid, p, _ in prods if prods is not None else self.products():
+        for pid, p, _ in prods:
             for name in split_authors(p.get("Model")):
                 a = agg.setdefault(fold(name), {"name": name, "sales": 0, "books": {}})
                 a["sales"] += _num(p.get("CountTotalSales"))
                 a["books"][pid] = rules.text_of(p.get("ProductName"))
+        return [{"key": k, **a} for k, a in agg.items()]
+
+    def _base(self) -> dict[str, Any]:
+        prods = self.products()
+        return {"authors": self.author_agg(prods), "googleBooks": self._google_books(prods)}
+
+    def base(self) -> dict[str, Any]:
+        """Ürün ve CRM kartından kurulan kısım (yazar toplamı, Google Kitaplar satırları) hazır hesaptan: eskiden her
+        istekte bütün aktif ürünlerin ve CRM kartlarının JSON'u açılırdı (8,8 sn). Wikidata durumu (denetim önbelleği)
+        istekte eklenir; tur sürerken de güncel görünür."""
+        self.engine()
+        st = hazir.damga(self.seo, [(PRODUCTS, PRODUCTS.c.synced_at), (CRM_BOOKS, CRM_BOOKS.c.synced_at)],
+                         ek=(self.site(),))
+        return hazir.al(self.seo, "entity", st, self._base)
+
+    def authors(self, prods: Optional[list] = None) -> list[dict[str, Any]]:
+        """Yazarlar satış toplamıyla (çok satandan aza), önbellekteki Wikidata durumuyla."""
+        agg = self.author_agg(prods) if prods is not None else self.base()["authors"]
         cache = self.cached("author")
         out = []
-        for key, a in agg.items():
+        for a in agg:
+            key = a["key"]
             data, at = cache.get(key[:300], ({}, None))
             status = data.get("status") or "bekliyor"
             out.append({"key": key, "name": a["name"], "sales": a["sales"], "books": len(a["books"]),
@@ -514,11 +535,14 @@ class Entity:
                 "sameAs": rec["sameAs"], "jsonld": json.dumps(rec, ensure_ascii=False, indent=2)}
 
     def google_books(self, prods: Optional[list] = None) -> list[dict[str, Any]]:
+        return self._google_books(prods) if prods is not None else self.base()["googleBooks"]
+
+    def _google_books(self, prods: list) -> list[dict[str, Any]]:
         from . import _image, _num
 
         site = self.site()
         out = []
-        for pid, p, crm_json in prods if prods is not None else self.products():
+        for pid, p, crm_json in prods:
             b = loads(crm_json, None) if crm_json else None
             isbn, image = isbn13(p.get("Barcode")), _image(p, site)
             checks = gb_checks(isbn, b, image)
@@ -534,9 +558,8 @@ class Entity:
         return out
 
     def overview(self) -> dict[str, Any]:
-        prods = self.products()
-        authors = self.authors(prods)
-        gb = self.google_books(prods)
+        authors = self.authors()
+        gb = self.google_books()
         isbn = self.cached("books").get("_isbn")
         counts = {k: sum(1 for a in authors if a["status"] == k) for k in AUTHOR_STATUS}
         checked = [a["checkedAt"] for a in authors if a["checkedAt"]]
@@ -564,6 +587,7 @@ def _page(items: list, start: int, limit: int) -> tuple[int, list]:
 def register(app, ctx) -> None:
     ent = Entity(ctx.seo)
     ctx.seo.entity = ent
+    hazir.kaydet(ctx.seo, "entity", ent.base)
 
     @app.get("/api/v1/seo-geo/entity")
     def seo_entity(request: Request) -> dict[str, Any]:

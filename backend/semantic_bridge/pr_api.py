@@ -30,6 +30,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import hizli_kaynak as HK
 from semantic_bridge import pr as PR
 from semantic_bridge import pr_kaynak as K
 from semantic_bridge import pr_export as X
@@ -75,6 +76,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     pool = ThreadPoolExecutor(max_workers=max(1, int(os.environ.get("PR_JOB_WORKERS", "2"))), thread_name_prefix="pr")
     started = {"stale": False}
     lock = threading.Lock()
+
+    def isit() -> None:
+        """Köprü açılışında medya kişileri ve haber arşivi arkada okunur: kişiler ekranını ilk açan CRM'i beklemesin."""
+        if HK.sqlite_mi(rt().store.engine):
+            return
+        crm.media_contacts()
+        crm.archive()
+
+    HK.acilista("pr.kisiler", isit)
 
     def db() -> tuple[Any, str]:
         r = rt()

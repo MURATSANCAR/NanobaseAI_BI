@@ -90,6 +90,12 @@ class _DbApiBase:
     def conn(self):  # pragma: no cover - overridden
         raise NotImplementedError
 
+    def _gate_key(self) -> Optional[str]:
+        """Sunucunun adresi (host:port). Köprünün bağlantı havuzu eşzamanlılık sınırını bağlantıya değil
+        sunucuya koyar (bkz. connection_pool); aynı sunucuya giden değer yoklaması da aynı sınıra girer."""
+        from semantic_layer.profiler.connection_pool import server_key
+        return server_key(getattr(self, "cfg", None))
+
     def q(self, ident: str) -> str:
         return f"{self.quote_l}{ident}{self.quote_r}"
 
@@ -199,6 +205,14 @@ class MSSQLConnector(_DbApiBase):
         self.cfg = cfg
         dop = (os.environ.get("SEMANTIC_PROBE_MAXDOP") or "1").strip()
         self.probe_hint = f" OPTION (MAXDOP {int(dop)})" if dop.isdigit() and int(dop) > 0 else ""
+
+    def clone(self) -> "MSSQLConnector":
+        """Aynı tanımla, kendi bağlantısını açacak ikinci bir bağlayıcı. pyodbc/FreeTDS bağlantısı iş
+        parçacıkları arasında paylaşılamaz; bağlantı havuzu her eşzamanlı okuma için bir kopya açar."""
+        c = type(self)(dict(self.cfg))
+        c.query_timeout = self.query_timeout
+        c.probe_hint = self.probe_hint
+        return c
 
     def conn(self):
         if self._conn is None:
@@ -479,6 +493,16 @@ class PostgresConnector(_DbApiBase):
             with self._conn.cursor() as cur:
                 cur.execute(f"SET statement_timeout = {int(self.query_timeout) * 1000}")
         return self._conn
+
+    def clone(self) -> "PostgresConnector":
+        """Aynı tanımla, kendi bağlantısını açacak ikinci bir bağlayıcı (bağlantı havuzu için)."""
+        c = type(self)(dict(self.cfg))
+        c.query_timeout = self.query_timeout
+        return c
+
+    def _gate_key(self) -> Optional[str]:
+        from semantic_layer.profiler.connection_pool import server_key
+        return server_key(getattr(self, "cfg", None), default_port=5432)
 
     def _rows(self, sql: str, params: tuple = ()) -> tuple[list[str], list[tuple]]:
         return super()._rows(sql.replace("?", "%s"), params)

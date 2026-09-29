@@ -49,6 +49,7 @@ from semantic_layer.models import Mapping as SLMapping, SemanticType
 from semantic_layer.naming import label_context, logicalize_sql
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
+from semantic_layer.profiler.connection_pool import DEFAULT_LIMIT, SingleFlight, pooled, queue_wait
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, empty_result_note, fast_summary, is_empty_result
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
@@ -97,12 +98,100 @@ def db_timing(result: Optional[dict]) -> dict:
     return out
 
 
+def _concurrency(key: str):
+    """Bir kaynağa aynı anda giden sorgu sayısı (Yönetim ekranı > ortam > DEFAULT_LIMIT). Her yer
+    alışta okunur (ayar önbelleği kısa ömürlü): ekrandan değişen sınır yeniden başlatmadan geçerli olur."""
+    def read() -> int:
+        try:
+            from semantic_bridge import admin as admin_mod
+            raw = admin_mod.conf(key)
+        except Exception:  # noqa: BLE001 — ayar deposu yoksa ortam değeri
+            raw = os.environ.get(key, "")
+        try:
+            return max(1, int(str(raw).strip() or DEFAULT_LIMIT))
+        except ValueError:
+            log.warning("%s sayı değil (%r); %d kullanılıyor", key, raw, DEFAULT_LIMIT)
+            return DEFAULT_LIMIT
+    return read
+
+
+class _CatalogAttr:
+    """Katalogdan kurulan alan (profiller, çözümleyici, derleyiciler, dil havuzu).
+
+    Köprü açılışında katalog arkada yüklenir (`boot.py`); yüklenmeden bu alana dokunan iş parçacığı yükleme bitene
+    kadar bekler — yarım kurulmuş katalogla cevap üretilmez. Yükleyen iş parçacığı beklemez. Katalog bir kez hazır
+    olduktan sonra (sonraki `rebuild`'ler dahil) okuma eskisi gibi doğrudandır.
+
+    `event`: hangi hazırlık beklenir. Profiller (dönem kapsamı işlendikten sonra) katalogun geri kalanından önce
+    hazırdır: `run_sql` ile okuyan ekranlar kolon dizinini ve dil havuzunu beklemez."""
+
+    def __init__(self, event: str = "_catalog_ready") -> None:
+        self.event = event
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.public = name
+        self.slot = "_cat_" + name
+
+    def __get__(self, obj: Any, owner: Optional[type] = None) -> Any:
+        if obj is None:
+            return self
+        d = obj.__dict__
+        ready = d.get(self.event)
+        if ready is not None and not ready.is_set() and d.get("_catalog_builder") != threading.get_ident():
+            obj.wait_catalog(self.event)
+        try:
+            return d[self.slot]
+        except KeyError:
+            raise AttributeError(self.public) from None
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        obj.__dict__[self.slot] = value
+
+
 class Runtime:
     """Process-wide state: store, profiles, resolver, compilers, DB connector, recall index."""
 
-    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None):
+    # Canlı kaynak bağlantıları havuzdan: her okuma boşta bir bağlantı alır, iki ekranın iki sorgusu
+    # birbirini beklemez (2026-09-29'a kadar tek bağlantı + tek kilit vardı). Sunucuya aynı anda giden
+    # sorgu sayısı ayarla sınırlı (LOGO_MAX_CONCURRENT, CRM_MAX_CONCURRENT); dolunca sıra beklenir.
+    # Atama her yoldan (kuruluş, Yönetim ekranında bağlantı değişimi, testler) havuza girer.
+    @property
+    def connector(self):
+        return self.__dict__.get("_connector")
+
+    @connector.setter
+    def connector(self, value) -> None:
+        self.__dict__["_connector"] = pooled(value, "logo", _concurrency("LOGO_MAX_CONCURRENT"))
+
+    @property
+    def crm_connector(self):
+        return self.__dict__.get("_crm_connector")
+
+    @crm_connector.setter
+    def crm_connector(self, value) -> None:
+        self.__dict__["_crm_connector"] = pooled(value, "crm", _concurrency("CRM_MAX_CONCURRENT"))
+
+
+    profiles = _CatalogAttr("_profiles_ready")
+    conventions = _CatalogAttr("_profiles_ready")
+    resolver = _CatalogAttr()
+    existing = _CatalogAttr()
+    router = _CatalogAttr()
+    language_pool = _CatalogAttr()
+
+    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None,
+                 defer_catalog: bool = False):
+        """`defer_catalog=True`: katalog (profiller → derleyiciler) kurulmaz; çağıran `load_catalog()`'u arkada koşturur
+        (köprü açılışı). Varsayılan eskisi gibi: nesne döndüğünde katalog hazırdır (betikler, testler)."""
+        self.boot_timings: dict[str, float] = {}
+        self._catalog_ready = threading.Event()
+        self._profiles_ready = threading.Event()      # profiller + dönem kapsamı (katalogun ilk yarısı)
+        self._catalog_builder: Optional[int] = None
+        self._rebuild_lock = threading.RLock()
+        _t = time.perf_counter()
         self.settings = settings
         self.store = store or open_store(settings.store_dsn)
+        self.boot_timings["katalog-deposu"] = round(time.perf_counter() - _t, 3)
         self.connector = connector
         self.crm_connector = None
         _crm_file = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
@@ -112,15 +201,20 @@ class Runtime:
             except Exception as _e:  # noqa: BLE001
                 log.warning("CRM connector kurulamadi: %s", str(_e)[:200])
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
+        _t = time.perf_counter()
         self.queue = queue or LlmQueue.from_env(self.store.engine)
+        self.boot_timings["model-sirasi"] = round(time.perf_counter() - _t, 3)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         # Prompts other modules leave at the door (202 + id). Reads `self.llm` at run time: the admin
         # screen swaps the client without a restart.
         self.jobs = LlmJobs.from_env(self.store.engine, lambda: self.llm, slots=self.queue.slots,
                                      tenant_id=settings.tenant_id, datasource_id=settings.datasource_id)
-        self._engine_lock = threading.Lock()
+        # Aynı SQL aynı anda iki kez gelirse kaynağa bir kez inilir; ikinci istek ilkinin sonucunu alır.
+        self._flight = SingleFlight()
         # Executed results, kept whole so the table, the chart and the export read the same rows.
         self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+        # _results ve _complete_cache (ve sonuç dosyalarının silinmesi) bu kilitle: dosyanın hâlâ
+        # kullanılıp kullanılmadığı iki kayda birlikte bakılarak karar verilir.
         self._results_lock = threading.RLock()
         self._complete_cache = OrderedDict()
         from semantic_bridge.result_files import ResultFiles
@@ -129,10 +223,15 @@ class Runtime:
         self._result_ttl = float(os.environ.get("SEMANTIC_RESULT_TTL_SEC", "1800"))
         self.threads: dict[str, list[dict[str, str]]] = {}
         self.thread_plans: dict[str, Any] = {}
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id),
-                                              self.store.concept_entities(settings.tenant_id, settings.datasource_id))
+        # Profiller burada okunmaz: `rebuild()` ilk iş olarak okuyor. Eskiden ikisi de okuyordu — 4.874 profil her
+        # açılışta iki kez (hız 2. tur, 2026-09-29).
+        _t = time.perf_counter()
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
+        self.boot_timings["bilgi-paketi"] = round(time.perf_counter() - _t, 3)
+        # SQL dili katalogdan değil bağlantıdan gelir; ekran uçları (settings.dialect) katalog beklemeden okur.
+        if not settings.dialect:
+            settings.dialect = getattr(self.connector, "dialect", "") or "generic"
         self._catalog_version = None
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self._checked_at = 0.0
@@ -142,6 +241,7 @@ class Runtime:
         # kullanıcı toplam süreyi ekranda bekler. Önbellek bu beklemeyi devralır: istek anında elde
         # olanı alır, sorguyu kullanıcı adına arka plandaki tazeleyici çalıştırır.
         self._cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
+        self._cache_lock = threading.Lock()     # yalnız _cache; tutulurken _hot_lock alınmaz
         self._cache_ttl = int(os.environ.get("SEMANTIC_CACHE_TTL_SEC", "300"))
         # Son `hot_window` saniye içinde sorulan sorgular sıcaktır; tazeleyici yalnız onlara bakar,
         # bir kez sorulup bırakılan sorgu kendiliğinden listeden düşer.
@@ -156,11 +256,38 @@ class Runtime:
         self._stale_max = float(os.environ.get("SEMANTIC_STALE_MAX_SEC", "900"))
         self._hot: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
         self._hot_lock = threading.Lock()
-        self._waiting = 0                      # bağlantıyı bekleyen kullanıcı isteği sayısı
-        self._wait_lock = threading.Lock()
         self._stop = threading.Event()
         self._refresher: Optional[threading.Thread] = None
-        self.rebuild()
+        if not defer_catalog:
+            self.load_catalog()
+
+    # ------------------------------------------------------------------ catalog readiness
+    def catalog_is_ready(self) -> bool:
+        ev = self.__dict__.get("_catalog_ready")
+        return ev is None or ev.is_set()
+
+    def wait_catalog(self, event: str = "_catalog_ready") -> None:
+        """Katalog yüklenene kadar bekle (yükleyen iş parçacığı beklemez). İstekte süre sınırlı: dolarsa 503
+        «hazırlanıyor» (`boot.Warming`); arka plan işinde uzun bekler; olay döngüsünü hiç kilitlemez."""
+        ev = self.__dict__.get(event)
+        if ev is None or ev.is_set() or self.__dict__.get("_catalog_builder") == threading.get_ident():
+            return
+        from semantic_bridge import boot as boot_mod
+        boot_mod.wait(ev, "catalog")
+
+    def load_catalog(self) -> bool:
+        """Katalog kurulumu (profiller → çözümleyici → derleyiciler → dil havuzu). Açılışta arkada bir kez koşar;
+        bekleyenler bitince aynı anda serbest kalır."""
+        started = time.perf_counter()
+        self._catalog_builder = threading.get_ident()
+        try:
+            self.rebuild()
+        finally:
+            self._catalog_builder = None
+        self.boot_timings["katalog"] = round(time.perf_counter() - started, 2)
+        self._profiles_ready.set()
+        self._catalog_ready.set()
+        return True
 
     #: Documents the miner reads but the prompt does not carry. `sql/` holds the validated Q→SQL pairs,
     #: which reach the model through recall instead. `reference/` holds generated vendor material —
@@ -186,6 +313,10 @@ class Runtime:
         """Pick up a catalog published by another process (the nightly worker, the portal, a sibling
         uvicorn worker). A reload request only ever reaches one worker, so each worker checks for itself:
         one cheap version read at most every `every` seconds, and a rebuild only when it actually moved."""
+        if not self.catalog_is_ready():
+            # Açılışta katalog arkada yükleniyor: burada ikinci bir yükleme başlatılmaz, o yüklemenin bitmesi beklenir.
+            self.wait_catalog()
+            return
         now = time.time()
         if now - self._checked_at < every:
             return
@@ -236,28 +367,59 @@ class Runtime:
         threading.Thread(target=load, name="language-pool-reload", daemon=True).start()
 
     def rebuild(self) -> None:
+        """Katalogdan her şeyi yeniden kurar. İki yeniden kurulum aynı anda koşmaz (açılış yüklemesi sürerken gelen
+        reload/certify onu bekler, sonra kendi kurulumunu yapar)."""
+        import contextlib
+
+        lock = self.__dict__.get("_rebuild_lock") or contextlib.nullcontext()
+        with lock:
+            self._rebuild()
+
+    def _rebuild(self) -> None:
         s = self.settings
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(s.datasource_id),
-                                              self.store.concept_entities(s.tenant_id, s.datasource_id))
+        timings = self.__dict__.setdefault("boot_timings", {})
+        clock = [time.perf_counter()]
+
+        def mark(step: str) -> None:
+            now = time.perf_counter()
+            timings["katalog." + step] = round(now - clock[0], 3)
+            clock[0] = now
+
+        stored = self.store.list_profiles(s.datasource_id)
+        mark("profil-okuma")
+        entities = self.store.concept_entities(s.tenant_id, s.datasource_id)
+        mark("varlik-adlari")
+        self.profiles = one_entity_per_pattern(stored, entities)
+        mark("profil-birlestirme")
         self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
+        mark("katalog-surumu")
         self.conventions = Conventions.from_profiles(self.profiles)
         if s.project_dir:
             self.conventions.load_equivalences(s.project_dir / "equivalences.yml")
+        mark("gelenekler")
         # Declared period coverage the nightly measurement did not refute: the period chooser and the
         # gate read it off the profile; a table without it keeps needing its date filter.
         from semantic_layer import coverage as coverage_mod
         coverage_mod.apply(self.profiles, self.store, s)
+        mark("donem-kapsami")
+        # Profiller artık son hâlinde (açılışta: `run_sql` ile okuyan ekranlar buradan sonra beklemez).
+        profiles_ready = self.__dict__.get("_profiles_ready")
+        if profiles_ready is not None and not profiles_ready.is_set():
+            profiles_ready.set()
+            timings["profiller-hazir"] = round(sum(v for k, v in timings.items() if k.startswith("katalog.")), 2)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()
         self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions, verified_pairs=self.pairs)
+        mark("cozumleyici")
         det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id), conventions=self.conventions)
         existing = None
         if self.llm is not None:
             existing = ExistingCompiler(self.llm, self.profiles, s.context, rules_text=self.rules_text, recall=self.recall if s.recall_enabled else None, dialect=s.dialect, conventions=self.conventions)
         self.existing = existing
+        mark("derleyiciler")
         # SuperSonic joins only when configured: "shadow" measures it next to the answer, "primary"
         # is an explicit experiment. Neither is on by default (SEMANTIC_COMPILER / SUPERSONIC_MODE).
         alternates: dict[str, Any] = {}
@@ -273,6 +435,7 @@ class Runtime:
                 log.info("supersonic adapter enabled (mode=%s)", os.environ.get("SUPERSONIC_MODE", "shadow"))
         except Exception as e:  # noqa: BLE001
             log.warning("supersonic adapter unavailable: %s", e)
+        mark("supersonic")
         # The vocabulary someone has already written down tells the prompt which tables matter; a
         # three-hundred-table schema would not fit in a local model's context, and sending it whole
         # would bury the handful that answer the question.
@@ -291,6 +454,7 @@ class Runtime:
             existing.catalog_columns = cols
         except Exception as e:  # noqa: BLE001
             log.debug("catalog entity set unavailable: %s", e)
+        mark("sertifikali-dizin")
         # Vector routing over the catalog, for questions whose words nobody has written down yet. It
         # is strictly additional: the certified vocabulary above is consulted first and always, and a
         # deployment with no index — or one whose index is unreachable — routes exactly as before.
@@ -311,6 +475,7 @@ class Runtime:
                          len(existing.columns.docs), len(existing.columns.values))
             except Exception as e:  # noqa: BLE001
                 log.warning("column index unavailable, routing from the catalog alone: %s", e)
+        mark("kolon-dizini")
 
         # Narrows the retrieved shortlist before it becomes a prompt — the step every schema-linking
         # result says matters most. Measured on this deployment's golden set:
@@ -341,6 +506,7 @@ class Runtime:
                 log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
             except Exception as e:  # noqa: BLE001
                 log.warning("table selector unavailable, sending every retrieved table: %s", e)
+        mark("tablo-secici")
 
         # Looks a word the resolver could not place up in the data before the prompt is built —
         # the one move a person makes that this system did not: open the database and run a SELECT
@@ -354,6 +520,7 @@ class Runtime:
                          existing.probe.max_columns, existing.probe.budget)
             except Exception as e:  # noqa: BLE001
                 log.warning("value probe unavailable, questions answered from the catalog alone: %s", e)
+        mark("deger-yoklama")
 
         try:
             from semantic_layer.runtime.table_router import TableRouter
@@ -364,6 +531,7 @@ class Runtime:
                 log.info("table router enabled (%s, collection %s)", router.qdrant_url, router.collection)
         except Exception as e:  # noqa: BLE001
             log.debug("table router unavailable, routing from the catalog alone: %s", e)
+        mark("tablo-yonlendirici")
         # What people wrote in the portal is the last word on what a column means; until now the model
         # never saw it. The newest annotation for a table or column wins over an older one.
         try:
@@ -378,6 +546,7 @@ class Runtime:
                 log.info("%d portal annotations carried into the model prompt", len(said))
         except Exception as e:  # noqa: BLE001
             log.debug("annotations unavailable: %s", e)
+        mark("portal-aciklamalari")
         from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
         pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
         self._language_pool_stamp = file_stamp(pool_path)
@@ -391,8 +560,10 @@ class Runtime:
             existing.language_pool = self.language_pool
         log.info("language pool: %d candidates, %d stale/invalid rejected, hash %s",
                  len(self.language_pool.entries), self.language_pool.rejected, self.language_pool.content_hash[:12])
+        mark("dil-havuzu")
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
         self.warm_gaps()
+        mark("yonlendirici")
 
     # ------------------------------------------------------------------ recall (Memory ON)
     def recall(self, question: str, exclude_nl: Optional[str] = None) -> list[dict[str, str]]:
@@ -467,8 +638,7 @@ class Runtime:
     def dry_run(self, sql: str) -> None:
         if self.connector is None:
             raise RuntimeError("no database connector")
-        with self._engine_lock:
-            self._conn_for(sql).dry_run(sql)
+        self._conn_for(sql).dry_run(sql)
 
     def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         out = self._run_sql(sql, limit, period, scope=scope, use_cache=use_cache)
@@ -499,7 +669,11 @@ class Runtime:
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if use_cache and self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
-            hit = None if FORCE_FRESH.get() else self._cache.get(key)
+            if FORCE_FRESH.get():
+                hit = None
+            else:
+                with self._cache_lock:
+                    hit = self._cache.get(key)
         else:
             hit = None
         if hit:
@@ -530,21 +704,19 @@ class Runtime:
     # ------------------------------------------------------------------ önbellek iç işleyişi
 
     def _execute(self, phys: str, limit: int, *, interactive: bool) -> tuple[dict[str, Any], float]:
-        """Tek bağlantı, tek sıra. `interactive` olan istek beklerken tazeleyici sıraya girmez."""
+        """Bir okuma, havuzdaki bir bağlantıda. Aynı SQL o anda zaten koşuyorsa kaynağa ikinci kez
+        inilmez, o koşunun sonucu alınır. `interactive` artık sıra belirlemez (kullanıcı ile tazeleyici
+        aynı kapıdan geçer); tazeleyici, kapıda bekleyen varsa kendi turunu erteler (`_refresh_tick`)."""
         if self.connector is None:
             raise RuntimeError("no database connector")
-        if interactive:
-            with self._wait_lock:
-                self._waiting += 1
-        try:
-            with self._engine_lock:
-                t0 = time.monotonic()
-                cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
-                duration = time.monotonic() - t0
-        finally:
-            if interactive:
-                with self._wait_lock:
-                    self._waiting -= 1
+        return self._flight.do(("rows", limit, phys), lambda: self._execute_once(phys, limit))
+
+    def _execute_once(self, phys: str, limit: int) -> tuple[dict[str, Any], float]:
+        with queue_wait() as waited:
+            t0 = time.monotonic()
+            cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
+            # Süre veritabanınındır: sunucu kapısında sıra beklenen süre düşülür.
+            duration = max(0.0, time.monotonic() - t0 - waited[0])
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
                 "dbMs": int(round(duration * 1000))}, duration
 
@@ -560,35 +732,43 @@ class Runtime:
         if not hasattr(self.connector, 'batches'):
             # Non-DB adapters retain their explicit bounded execution contract.
             return self.run_sql(sql, self.settings.max_rows, period, **({"scope": scope} if scope else {}))
-        with self._wait_lock:
-            self._waiting += 1
-        try:
-            with self._engine_lock:
-                key = hashlib.sha256(phys.encode()).hexdigest()
+        key = hashlib.sha256(phys.encode()).hexdigest()
+        if use_cache and self._cache_ttl > 0:
+            with self._results_lock:
                 cached = self._complete_cache.get(key)
-                if use_cache and cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
-                    return dict(self._served(cached[1], cached[0]), cached=True)
-                self._free_result_space()
-                db = [0.0]
-                try:
-                    mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
-                except Exception:  # noqa: BLE001
-                    mapping = {}
-                source = self._conn_for(phys).batches(phys)
-                if mapping:
-                    source = ((cols, value_labels.apply(rows, mapping)) for cols, rows in source)
+            if cached and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
+                return dict(self._served(cached[1], cached[0]), cached=True)
+        # Aynı SQL o anda koşuyorsa ikinci kez koşmaz: ikinci istek aynı sonuç dosyasını alır.
+        out, computed_at = self._flight.do(("complete", key), lambda: self._complete_once(sql, phys, key))
+        return self._served(dict(out, physicalSql=phys, cached=False), computed_at)
+
+    def _complete_once(self, sql: str, phys: str, key: str) -> tuple[dict[str, Any], float]:
+        self._free_result_space()
+        db = [0.0]
+        try:
+            mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
+        except Exception:  # noqa: BLE001
+            mapping = {}
+        raw = self._conn_for(phys).batches(phys)
+        source = raw
+        if mapping:
+            source = ((cols, value_labels.apply(rows, mapping)) for cols, rows in source)
+        try:
+            with queue_wait() as waited:
                 out = self.result_files.write(_timed(source, db), self.settings.max_rows)
-                out.update(physicalSql=phys, cached=False, dbMs=int(round(db[0] * 1000)))
-                computed_at = time.time()
-                self._complete_cache[key] = (computed_at, out)
-                self._complete_cache.move_to_end(key)
-                while len(self._complete_cache) > 64:
-                    self._forget_cached(*self._complete_cache.popitem(last=False))
         finally:
-            with self._wait_lock:
-                self._waiting -= 1
-        out.update(physicalSql=phys, cached=False)
-        return self._served(out, computed_at)
+            # Okuma yarıda kalsa da (satır sınırı, hata) bağlantı ve sunucudaki yer hemen bırakılır.
+            close = getattr(raw, "close", None)
+            if close:
+                close()
+        out.update(physicalSql=phys, cached=False, dbMs=int(round(max(0.0, db[0] - waited[0]) * 1000)))
+        computed_at = time.time()
+        with self._results_lock:
+            self._complete_cache[key] = (computed_at, out)
+            self._complete_cache.move_to_end(key)
+            while len(self._complete_cache) > 64:
+                self._forget_cached(*self._complete_cache.popitem(last=False))
+        return out, computed_at
 
     def _result_file_in_use(self, name) -> bool:
         return any(s.get('_result_file') == name for s in self._results.values()) or \
@@ -714,14 +894,17 @@ class Runtime:
             with self._hot_lock:
                 self._hot.pop(key, None)
             return
-        self._cache[key] = (time.time() if computed_at is None else computed_at, out)
-        self._cache.move_to_end(key)
         budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
-        while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
-            dropped, _ = self._cache.popitem(last=False)
-            with self._hot_lock:
-                self._hot.pop(dropped, None)
+        dropped_keys = []
+        with self._cache_lock:
+            self._cache[key] = (time.time() if computed_at is None else computed_at, out)
+            self._cache.move_to_end(key)
+            while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
+                dropped, _ = self._cache.popitem(last=False)
+                dropped_keys.append(dropped)
         with self._hot_lock:
+            for dropped in dropped_keys:
+                self._hot.pop(dropped, None)
             hot = self._hot.get(key)
             if hot is not None:
                 hot["duration"] = duration
@@ -769,8 +952,19 @@ class Runtime:
             except Exception as e:  # noqa: BLE001
                 log.warning("refresh tick failed: %s", e)
 
+    def _users_waiting(self) -> int:
+        """Canlı kaynağın kapısında sıra bekleyen okuma sayısı (Logo + CRM)."""
+        n = 0
+        for c in (self.connector, self.crm_connector):
+            fn = getattr(c, "pool_waiting", None) if c is not None else None
+            if callable(fn):
+                n += fn()
+        return n
+
     def _refresh_tick(self) -> None:
         now = time.time()
+        with self._cache_lock:
+            cached_at_of = {k: v[0] for k, v in self._cache.items()}
         with self._hot_lock:
             for k, hot in list(self._hot.items()):
                 if now - hot.get("asked", 0.0) > self._hot_window:
@@ -780,12 +974,12 @@ class Runtime:
             cycle = max(self._refresh_sec, sum(h.get("duration", 0.0) for h in self._hot.values()) * self._refresh_duty)
             due = []
             for k, hot in self._hot.items():
-                cached_at = self._cache[k][0] if k in self._cache else 0.0
+                cached_at = cached_at_of.get(k, 0.0)
                 if now - cached_at >= cycle:
                     due.append((k, dict(hot)))
         for key, hot in due:
-            if self._waiting or self._stop.is_set():
-                return                            # bekleyen bir kullanıcı varsa sıra onun
+            if self._users_waiting() or self._stop.is_set():
+                return                            # kapıda sıra bekleyen varsa sıra onun
             self._refresh_one(key, hot)
 
     def _refresh_one(self, key: str, hot: dict[str, Any]) -> None:
@@ -805,7 +999,15 @@ class Runtime:
     def cache_stats(self) -> dict[str, Any]:
         with self._hot_lock:
             hot = len(self._hot)
-        return {"entries": len(self._cache), "hot": hot, "ttlSec": self._cache_ttl, "refreshSec": self._refresh_sec, "refreshing": self._refresher_alive()}
+        with self._cache_lock:
+            entries = len(self._cache)
+        pools = {}
+        for name, c in (("logo", self.connector), ("crm", self.crm_connector)):
+            fn = getattr(c, "pool_stats", None) if c is not None else None
+            if callable(fn):
+                pools[name] = fn()
+        return {"entries": entries, "hot": hot, "ttlSec": self._cache_ttl, "refreshSec": self._refresh_sec, "refreshing": self._refresher_alive(),
+                "sameQueryJoined": self._flight.joined, "pools": pools}
 
     def summarize(self, question: str, sql: str, result: dict[str, Any], sq: Optional[SemanticQuery] = None) -> str:
         cols = [c["name"] for c in result.get("columns") or []]
@@ -1358,8 +1560,10 @@ class Runtime:
         if self._conn_for(phys) is not connector:
             raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
         box = [0.0]
-        try:
-            with self._engine_lock:
+        # Parça, havuzdaki bir bağlantıda okunur; parti parti okumada bağlantı son partiye kadar tutulur.
+        # Sunucu kapısında sıra beklenen süre veritabanı süresine yazılmaz.
+        with queue_wait() as waited:
+            try:
                 if hasattr(connector, "batches"):
                     yield from _timed(connector.batches(phys), box)
                 else:
@@ -1369,11 +1573,11 @@ class Runtime:
                     if truncated:
                         raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
                     yield cols, rows
-        finally:
-            if timing is not None:
-                # Parçanın koşan metni de gider: sorgu bilgisi her parçayı kendi veritabanında kopyala-çalıştır verir.
-                timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
-                               "ms": int(round(box[0] * 1000)), "sql": phys})
+            finally:
+                if timing is not None:
+                    # Parçanın koşan metni de gider: sorgu bilgisi her parçayı kendi veritabanında kopyala-çalıştır verir.
+                    timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
+                                   "ms": int(round(max(0.0, box[0] - waited[0]) * 1000)), "sql": phys})
 
     def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
                      sample_size, scope_args, report, execute):
@@ -1896,14 +2100,16 @@ class AnnotationIn(BaseModel):
     author: str | None = None
 
 
-def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, allow_no_llm: bool = True) -> Runtime:
+def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, allow_no_llm: bool = True,
+                  defer_catalog: bool = False) -> Runtime:
+    """`defer_catalog=True`: katalog kurulmadan döner (köprü açılışı; `load_catalog()` arkada koşar)."""
     settings = settings or SemanticSettings.from_env()
     if connector is None and settings.connection_file and Path(settings.connection_file).exists():
         connector = connector_from_file(settings.connection_file)
     if llm is None and settings.llm_base and os.environ.get("SEMANTIC_LLM", "1") not in ("0", "false"):
         llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
                         extra=settings.llm_extra)
-    return Runtime(settings, store=store, connector=connector, llm=llm)
+    return Runtime(settings, store=store, connector=connector, llm=llm, defer_catalog=defer_catalog)
 
 
 def _lower_tr(text: str) -> str:
@@ -2166,24 +2372,47 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
     from semantic_bridge import admin as admin_mod
 
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        if state["rt"] is None:
-            state["rt"] = build_runtime()
-        rt = state["rt"]
-        log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
-        rt.start_refresher()
+    from semantic_bridge import boot as boot_mod
+
+    # Açılış (boot.py): uvicorn portu lifespan bitince açar; bu yüzden lifespan hiçbir ağır işi beklemez. Çalışma
+    # ortamı ve katalog tek arka plan iş parçacığında kurulur; ekran uçları çalışma ortamı hazır olunca (saniyeler),
+    # soru/katalog uçları katalog hazır olunca cevap verir. Önceden: `build_runtime()` lifespan içinde, 40–100 sn.
+    label_stop = threading.Event()
+
+    def _boot_build() -> Runtime:
+        r = build_runtime(defer_catalog=True)
+        state["rt"] = r
+        return r
+
+    def _boot_services(r: Runtime) -> None:
+        """Ekranların arka plan işleri: yalnız çalışma ortamını (depo, bağlantılar) ister, kataloğu beklemez."""
+        r.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
         app.state.editorial_intake.start()
+        app.state.editorial_pending.start()
         app.state.author_snapshots.start()
         app.state.management_reports.start()
+        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
+            r.jobs.start()
+        # SEO & GEO hazır hesapları: kaydı olmayan ya da girdisi değişmiş hesap arkada hesaplanır (seo_geo/hazir.py).
+        from semantic_bridge.seo_geo import hazir as seo_hazir
+        seo_hazir.acilis(app.state.seo_geo)
+
+    def _boot_catalog_services(r: Runtime) -> None:
+        log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(r.profiles), r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id).get("CERTIFIED"), bool(r.llm), bool(r.connector))
+        log.info("açılış adımları (sn): %s", r.boot_timings)
         # Label dictionary (every value of the certified text columns, every table copy): built on its own
         # connections when missing or a day old, then daily. The resolver only reads the file.
-        label_stop = threading.Event()
         if os.environ.get("SEMANTIC_LABEL_VALUES_BUILD", "1").strip().lower() not in ("0", "false", "no", "off"):
             from semantic_layer.runtime import label_values
-            label_values.start_refresher(lambda: state["rt"], label_stop)
+            label_values.start_refresher(rt, label_stop)
+
+    boot = boot_mod.Boot(_boot_build, _boot_services, _boot_catalog_services, runtime=runtime)
+    app_boot = boot
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -2192,19 +2421,24 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             anyio.to_thread.current_default_thread_limiter().total_tokens = int(os.environ.get("SEMANTIC_THREADPOOL", "200"))
         except Exception as e:  # noqa: BLE001
             log.warning("thread pool size left at its default: %s", e)
-        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
-            rt.jobs.start()
+        if runtime is not None and getattr(runtime, "catalog_is_ready", lambda: True)():
+            boot.run_inline()            # hazır verilen çalışma ortamı (testler): servisler eskisi gibi hemen başlar
+        else:
+            boot.start(services=True)
         try:
             yield
         finally:
             label_stop.set()
-            app.state.editorial_home.stop()
-            app.state.editorial_intake.stop()
-            app.state.author_snapshots.stop()
-            app.state.management_reports.stop()
-            app.state.financial_audit.stop()
-            rt.jobs.stop()
-            rt.stop_refresher()
+            if boot.stop():
+                app.state.editorial_home.stop()
+                app.state.editorial_intake.stop()
+                app.state.editorial_pending.stop()
+                app.state.author_snapshots.stop()
+                app.state.management_reports.stop()
+                app.state.financial_audit.stop()
+                if state["rt"] is not None:
+                    state["rt"].jobs.stop()
+                    state["rt"].stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
     # Bütün 403'ler FORBIDDEN koduyla: ön yüz başka kodlu 403'ü «oturum düştü» sayıyor (modül kodu `module` alanında).
@@ -2233,9 +2467,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     _board_for_cache.internal_session = app.state.response_cache.resolve_internal
 
     def rt() -> Runtime:
-        if state["rt"] is None:
-            state["rt"] = build_runtime()
-        return state["rt"]
+        """Çalışma ortamı. Açılış sürüyorsa kurulmasını bekler (istekte süre sınırlı → 503 «hazırlanıyor»);
+        hiçbir zaman ikinci bir çalışma ortamı kurmaz."""
+        r = state["rt"]
+        if r is not None:
+            return r
+        return app_boot.wait_runtime()
 
     from semantic_bridge import access as access_mod
 
@@ -2274,6 +2511,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             from semantic_bridge import data_security as ds_mod
             ds_mod.record_access(r.store.engine, user, kind, method, path, key)
 
+        return _gate_for_user(method, path, user, rule, wanted, data, _log)
+
+    def _gate_for_user(method: str, path: str, user: str, rule: Any, wanted: list, data: bool,
+                       _log: Any) -> tuple[Optional[tuple[int, str]], Any]:
+        """Kapının kişiye bağlı kısmı (oturumu çözülmüş kişi için). `_log`: 403 ve dışa aktarma kaydı."""
+        r = rt()
         if rule is None:
             log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
             if admin_mod.is_admin(user):
@@ -2296,6 +2539,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if "ozellik:veri.disa-aktar" in wanted:
             _log("export", "ozellik:veri.disa-aktar")
         return None, (access_mod.allowed_domains(acc) if data else _NO_SCOPE)
+
+    def _gate_allows(user: str, path: str) -> bool:
+        """Hazır cevap ısıtması: kişi bu GET ucunu açabilir mi — kapının aynı kararı, kayıt yazmadan (kişinin
+        göremediği sayfa denenmez, güvenlik kaydına 403 düşmez). Uç kendi yetkisini denetliyorsa (OWN) kapı geçer;
+        o uçta kişiye kapalıysa ısıtma 403 alır, kayıt saklanmaz."""
+        rule = access_mod.rule_for(path)
+        wanted = access_mod.features_for("GET", path)
+        data = path.startswith(_DATA_PATHS) and not path.endswith("/run-due")
+        if rule == access_mod.OWN or (rule == access_mod.OPEN and not wanted and not data):
+            return True
+        admin_mod.ensure(rt().store.engine)
+        verdict, _ = _gate_for_user("GET", path, user, rule, wanted, data, lambda kind, key: None)
+        return verdict is None
+
+    app.state.response_cache.may_open = _gate_allows
 
     @app.middleware("http")
     async def page_gate(request: Request, call_next):
@@ -2320,8 +2578,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/health")
     def health() -> JSONResponse:
-        r = rt()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "responseCache": app.state.response_cache.view()})
+        """Açılış sürerken de hemen cevap verir (200, `ready: false`): süreç ayakta, katalog yükleniyor. `ready: true`
+        olunca eskisiyle aynı alanlar (profil sayısı, katalog durumu…) döner. Bekçi ve kurulum betikleri `ready`'e bakar."""
+        r = state["rt"]
+        view = app_boot.view() | {"steps": dict(r.boot_timings) if r is not None else {}}
+        if r is None or not r.catalog_is_ready():
+            return JSONResponse({"status": "starting", "ready": False, "service": "nanobaseai-bi-semantic-bridge",
+                                 "version": SEMANTIC_LAYER_VERSION, "profiles": None,
+                                 "llm": bool(r.llm) if r is not None else None, "db": bool(r.connector) if r is not None else None,
+                                 "pid": os.getpid(), "boot": view, "responseCache": app.state.response_cache.view()})
+        return JSONResponse({"status": "ok", "ready": True, "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats(), "boot": view, "responseCache": app.state.response_cache.view()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:
@@ -2463,6 +2729,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         execute=bool(body.execute if body.execute is not None else True), progress=progress,
                         username=asker)
                     await queue.put({"event": "result", "result": _answer_kaynak(answer)})
+                except boot_mod.Warming:
+                    # Açılış sürüyor: hata değil, kısa bekleme (ekran aynı soruyu biraz sonra yeniden sorar).
+                    await queue.put({"event": "error", "message": boot_mod.WARMING_MESSAGE, "code": boot_mod.WARMING_CODE,
+                                     "retryable": True})
                 except Exception:
                     log.exception("stream ask failed")
                     await queue.put({"event": "error", "message": "Sorgu tamamlanamadı. Lütfen tekrar deneyin."})
@@ -4333,13 +4603,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return IZ_mod.izlenir(prefix, title, text, engine=lambda: rt().store.engine,
                               dbs=lambda: SK.databases(rt().settings.connection_file), **kw)
 
+    # Önbellek parçasını dolduran CRM metinleri: uç, parçayı zaten okuduysa sorgu bilgisi için ikinci kez diskten
+    # okunmaz (yazar giriş parçası bütün projelerin olgularıdır, her okuma MB'larca JSON). Bağlam isteğe özeldir.
+    _PART_SQL: ContextVar[Optional[list]] = ContextVar("editorial_part_sql", default=None)
+
     def _intake_part_sql(out: Any) -> list:
+        seen = _PART_SQL.get()
+        if seen is not None:
+            return list(seen)
         try:
             return list(((app.state.editorial_intake.read().get("parts") or {}).get("intake") or {}).get("sql") or [])
         except Exception:  # noqa: BLE001
             return []
 
     def _home_parts_sql(out: Any) -> list:
+        seen = _PART_SQL.get()
+        if seen is not None:
+            return list(seen)
         return [x for part in ((out or {}).get("parts") or {}).values() if isinstance(part, dict)
                 for x in (part.get("sql") or [])]
 
@@ -4367,7 +4647,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             from semantic_bridge import editorial_cards, editorial_books
             if not editorial_books.configured():
                 return {"items": [], "configured": False, "loading": False, "at": time.time()}
-            cards = editorial_cards.catalogue()
+            # Aynı okuma kitap kartı listesinin belleğini (/ask/catalog) ve kapak belleğini de tazeler.
+            cards = editorial_cards.catalogue_refresh()
             titles = list(dict.fromkeys(c["title"] for c in cards if c.get("contentAvailable") and c.get("title")))
             return {"items": titles, "configured": True, "loading": False, "at": time.time()}
 
@@ -4414,7 +4695,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if FORCE_FRESH.get():
             app.state.editorial_home.refresh(force=True)
         response.headers["Cache-Control"] = "private, no-store"
-        return dict(app.state.editorial_home.read(), works=works)
+        snap = app.state.editorial_home.read()
+        # Parçayı dolduran CRM metinleri ekrana ayrıca gitmez: sorgu bilgisine («i») bir kez girer (kaynaklar).
+        _PART_SQL.set([x for part in snap["parts"].values() if isinstance(part, dict) for x in (part.get("sql") or [])])
+        parts = {name: {k: v for k, v in part.items() if k != "sql"} if isinstance(part, dict) else part
+                 for name, part in snap["parts"].items()}
+        return dict(snap, parts=parts, works=works)
 
     # ------------------------------------------------------------------ yazar giriş süreci
     # Müşterinin 9 adımlık akışı. Dinleyici: CRM beş dakikada bir baştan okunur, sonuç diske yazılır
@@ -4491,12 +4777,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, _, is_admin = _intake_ctx(request)
         if FORCE_FRESH.get():
             app.state.editorial_intake.refresh(force=True)
-        snap, part = _intake_snapshot()
+        full = app.state.editorial_intake.read()          # tek okuma (önceden üç kez: pano, aralık, sorgu bilgisi)
+        part = full["parts"].get("intake") or {}
+        snap = part.get("data") or {}
+        _PART_SQL.set(list(part.get("sql") or []))
         response.headers["Cache-Control"] = "private, no-store"
         out = intake_mod.board(snap, intake_mod.all_marks(engine, tenant), user, today=_today(),
                                late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14), everyone=is_admin)
         return dict(out, loading="data" not in part, updatedAt=part.get("updatedAt"), error=part.get("error"),
-                    refreshIntervalSeconds=app.state.editorial_intake.read()["refreshIntervalSeconds"])
+                    refreshIntervalSeconds=full["refreshIntervalSeconds"])
 
     @app.get("/api/v1/editorial/intake/meetings")
     @_izle_ep('crm.editoryal.kurul', 'Yayın kurulu toplantıları',
@@ -4838,12 +5127,60 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "Proje CRM'de bulunamadı."})
         return assign_mod.project_row(rows[0])
 
-    def _asg_me(schema: str, run, user: str) -> Optional[dict[str, Any]]:
+    def _asg_me(schema: str, run, user: str, *, saklanmis: bool = True) -> Optional[dict[str, Any]]:
+        """Kişinin CRM kullanıcısı. Ekran okumaları saklanmış eşlemeden (`crm_kisi`: bütün CRM kullanıcıları tek
+        sorguda, gece + 10 dk'dan eskiyse arkada; kural `crm_me` ile aynı) — ilk açılış CRM'i beklemez. Görev
+        güncellemesi (yazma) ve eşlemenin cevap veremediği durum eskisi gibi canlı CRM'den."""
+        if saklanmis:
+            from semantic_bridge import budget_sources as _bsrc
+            from semantic_bridge import crm_kisi as _kisi
+
+            r = rt()
+            crm_path = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+            try:
+                return _kisi.bul(r.store.engine, r.settings.tenant_id, user, lambda: (schema, _bsrc.runner(crm_path)))
+            except _kisi.Bilinmiyor:
+                pass
+            except Exception as e:  # noqa: BLE001 — eşleme yoksa ve CRM okunamıyorsa eski yol (hatası ekrana gider)
+                log.info("editör atama: CRM kullanıcı eşlemesi okunamadı (%s), canlı okumaya dönülüyor: %s", user, e)
         return _asg_call(assign_mod.crm_me, schema, run, user)
+
+    # Editörsüz projeler turu (editorial_assign.pending_all_sql): ilk açılış kapsamı beş dakikada bir, «Yenile» ile hemen.
+    def _pending_scope():
+        r = rt()
+        return [r.settings.tenant_id, r.settings.datasource_id, admin_mod.conf("CRM_SCHEMA"), _asg_since(None)]
+
+    def _pending_builders():
+        schema, year = admin_mod.conf("CRM_SCHEMA"), _asg_since(None)
+
+        def fetch_all(sql: str) -> list[dict[str, Any]]:
+            r = rt()
+            out = r.run_complete(sql, use_cache=False)
+            if out.get("truncated"):
+                # Sessiz tavan yok: eksik liste kaydedilmez, uç canlı sorguya döner.
+                raise ValueError("Editörsüz proje listesi eksik okundu.")
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+            return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+        return {"pending": lambda: assign_mod.pending_snapshot(fetch_all(assign_mod.pending_all_sql(schema, year)), year)}
+
+    app.state.editorial_pending = EditorialHomeSnapshots(_pending_scope, _pending_builders, sources=("editorial_assign.py",),
+                                                         name="editorial-pending")
+
+    def _pending_part_sql(out: Any) -> list:
+        """Sorgu bilgisi: cevap turdan geldiyse onu dolduran CRM okuması (koşan metin, satır ve süre o okumanın)."""
+        if not (isinstance(out, dict) and out.get("fromSnapshot")):
+            return []
+        try:
+            return list(((app.state.editorial_pending.read().get("parts") or {}).get("pending") or {}).get("sql") or [])
+        except Exception:  # noqa: BLE001
+            return []
 
     @app.get("/api/v1/editorial/assignments/pending")
     @_izle_ep('crm.editoryal.atama', 'Editörsüz projeler',
-               'Editörsüz projeler: CRM proje kartında «Editörü» boş, süzgece uyan etkin projeler (sayı ve sayfa) ve durum sayaçları; atama CRM\'de yapılır, portal yalnız okur.', skip=('page', 'pageSize', 'sinceYear', 'statuses'))
+               'Editörsüz projeler: CRM proje kartında «Editörü» boş, süzgece uyan etkin projeler (sayı ve sayfa) ve durum sayaçları; atama CRM\'de yapılır, portal yalnız okur. İlk açılış görünümü (arama yok, varsayılan yıl) beş dakikada bir okunan listeden süzülür.', skip=('page', 'pageSize', 'sinceYear', 'statuses'), onceki=_pending_part_sql)
     def assign_pending(request: Request, q: str = "", status: str = "", category: str = "", since: Optional[int] = None,
                        page: int = 0) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
@@ -4851,6 +5188,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         # Boş = ilk açılış süzgeci (iş durumları); «hepsi» = durum süzgeci yok.
         codes = ([] if status == "hepsi" else [int(c) for c in status.split("|") if c.strip().isdigit()]) if status \
             else list(assign_mod.WORK_STATUSES)
+        if not q.strip() and year == _asg_since(None):
+            if FORCE_FRESH.get():
+                app.state.editorial_pending.refresh(force=True)
+            part = app.state.editorial_pending.read()["parts"].get("pending") or {}
+            snap = part.get("data")
+            if isinstance(snap, dict) and snap.get("sinceYear") == year:
+                total, items, facets = _asg_call(assign_mod.pending_from_snapshot, snap, statuses=codes,
+                                                 category=category, page=page)
+                ran = part.get("sql") or [{}]
+                return {"items": items, "total": total, "page": max(0, int(page)), "pageSize": editorial_mod.PAGE_SIZE,
+                        "sinceYear": year, "statuses": codes, "defaultStatuses": list(assign_mod.WORK_STATUSES),
+                        "statusFacets": facets, "fromSnapshot": True,
+                        "db": {"dbMs": ran[0].get("ms"), "cached": True,
+                               "computedAt": round(float(part.get("updatedAt") or 0), 3) or None}}
         flt = {"statuses": codes, "since_year": year, "q": q, "category": category}
         total = int(editorial_mod._n((run(_asg_call(assign_mod.pending_count_sql, schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
         res = run(_asg_call(assign_mod.pending_list_sql, schema, page, **flt))
@@ -4887,7 +5238,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.patch("/api/v1/editorial/tasks/mine/{project_id}")
     def assign_mine_update(project_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
-        me = _asg_me(schema, run, user)
+        me = _asg_me(schema, run, user, saklanmis=False)     # yazma: kişinin CRM kullanıcısı canlı okunur
         if not me:
             raise HTTPException(status_code=403, detail={"code": "EDITOR_ASSIGN", "message": "CRM'de kullanıcı kaydınız bulunamadı."})
         proj = _asg_project(schema, run, project_id)
@@ -6235,11 +6586,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/ask/catalog")
     def editorial_ask_catalog(request: Request) -> dict[str, Any]:
         """Kitap kartları (kimlik, ad, kapak var/yok, yayınevi kaydı): sohbet çipleri ve kitap detayı kapağı
-        buradan kimlik bulup `covers/{id}` ucunu çağırır. {qid} ucundan önce tanımlı."""
+        buradan kimlik bulup `covers/{id}` ucunu çağırır. {qid} ucundan önce tanımlı. Liste köprünün belleğinden
+        (editoryal masa turu beş dakikada bir, açılışta 60 sn'den eskiyse arkada tazeler); «Yenile» kart servisini bekler."""
         _books(request)
         from semantic_bridge import editorial_cards
         try:
-            return {"items": [editorial_cards.public_card(c) for c in editorial_cards.catalogue()]}
+            cards = editorial_cards.catalogue_snapshot(fresh=FORCE_FRESH.get())
+            return {"items": [editorial_cards.public_card(c) for c in cards]}
         except Exception as e:
             raise HTTPException(502, "Kitap kartları alınamadı.") from e
 
@@ -6432,15 +6785,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """Kitap listelerindeki kapak. Bir listede onlarca kapak birden istenir; `no-cache` her ekran açılışında hepsini
         yeniden istetiyor, kapağı olmayan kitabın 404'ü de her seferinde tekrarlanıyordu (kitap tasarım listesinde 20
         kapağın 14'ü 404, ikinci açılışta 429). Bulunan ve bulunamayan kapak 5 dk tarayıcıda kalır; editörün yüklediği
-        yeni kapak en geç 5 dk sonra görünür."""
+        yeni kapak en geç 5 dk sonra görünür.
+
+        2026-09-29: kapak her istekte kart servisinden (internet, tam boy sayfa render'ı) çekiliyordu, istek başına 4–5 sn.
+        Artık köprünün diskindeki küçük boy kopyadan döner (`editorial_cards.cover_thumb`); ETag ile 5 dk sonraki
+        tarayıcı doğrulaması 304 alır, süre dolunca tarayıcı eldekini gösterip arkada doğrular."""
         _books(request)
         from semantic_bridge import editorial_cards
-        cache = {"Cache-Control": "private, max-age=300"}
+        cache = {"Cache-Control": "private, max-age=300, stale-while-revalidate=86400"}
         try:
-            data, mime = editorial_cards.cover(book_id)
-            return Response(content=data, media_type=mime, headers=cache)
-        except Exception:
+            data, mime, etag = editorial_cards.cover_thumb(book_id)
+        except KeyError:
             raise HTTPException(404, "Kapak görseli bulunamadı.", headers=cache) from None
+        except Exception:
+            # Kart servisine ulaşılamadı: bulunamadı diye tarayıcıda saklanmaz, sonraki açılış yeniden dener.
+            raise HTTPException(404, "Kapak görseli bulunamadı.", headers={"Cache-Control": "private, no-store"}) from None
+        headers = dict(cache, ETag=etag)
+        if etag in [t.strip() for t in request.headers.get("if-none-match", "").split(",")]:
+            return Response(status_code=304, headers=headers)
+        return Response(content=data, media_type=mime, headers=headers)
 
     @app.get("/api/v1/editorial/ask/pages/{book_id}/{page_no}")
     def editorial_book_page(book_id: str, page_no: int, request: Request, w: int = 0):
@@ -7200,10 +7563,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if "timas_session" in request.headers.get("cookie", ""):
             _, _, actor = _access_admin(request)
         from semantic_bridge import crm_unassigned as CU
-        from semantic_bridge.corporate_sales_api import send_mail
 
         try:
-            out = CU.send(access_dir, admin_mod.conf, send_mail)
+            out = CU.send(access_dir, admin_mod.conf)
         except Exception as e:  # noqa: BLE001
             log.warning("crm-unassigned: liste gönderilemedi: %s", e)
             raise HTTPException(status_code=503, detail={
@@ -7743,6 +8105,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("stok", priority),
         "m12": lambda: getattr(app.state, "production", None), "costs": lambda: getattr(app.state, "pricing_costs", None),
+        "system_ready": lambda: state["rt"] is not None,
     })
 
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
@@ -7818,6 +8181,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "logo_file": lambda: rt().settings.connection_file,
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("kargo", priority), "send_mail": _shipping_send_mail,
+        "system_ready": lambda: state["rt"] is not None,
     })
 
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
@@ -7946,9 +8310,31 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
         "llm": lambda priority: rt().llm_for("kurul", priority), "send_mail": _ecom_send_mail,
     })
+    # Açılış kapısı — CSV→Excel çeviricisinin hemen içinde (en son eklenen ara katman en dışta çalışır). Çalışma ortamı kurulana kadar
+    # istek (sağlık ucu hariç) olay döngüsünü kilitlemeden bekler; süre dolarsa kısa 503 «hazırlanıyor». Bağlamdaki
+    # işaret, içerideki uçların kataloğu süre sınırıyla beklemesini sağlar (arka plan işleri süresiz bekler).
+    @app.middleware("http")
+    async def boot_gate(request: Request, call_next):
+        token = boot_mod.IN_REQUEST.set(True)
+        try:
+            if state["rt"] is None and request.url.path != "/health":
+                if not await app_boot.wait_runtime_async(boot_mod.request_wait_sec()):
+                    w = boot_mod.Warming("runtime")
+                    return JSONResponse(status_code=w.status_code, content={"detail": w.detail}, headers=w.headers)
+            return await call_next(request)
+        finally:
+            boot_mod.IN_REQUEST.reset(token)
+
+    # JSON cevapları gzip'li (istemci isterse, 1 KB üstü): CSV→Excel çeviricisinin hemen içinde, öteki katmanların dışında.
+    from semantic_bridge import gzip_json
+    gzip_json.install(app)
+
     # CSV indiren her uca Excel eşi: `bicim=xlsx` isteğinde CSV cevabı Excel'e çevrilir (en dış katman; kapı ve yetki aynı).
+    # Açılış kapısından sonra eklenir ki en dışta kalsın: kapının «hazırlanıyor» cevabı JSON olduğu için çevrilmez.
     from semantic_bridge import csv_excel
     csv_excel.register(app)
+
+    app.state.boot = boot
     return app
 
 

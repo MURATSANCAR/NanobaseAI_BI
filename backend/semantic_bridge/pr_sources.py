@@ -22,13 +22,12 @@ import ipaddress
 import os
 import re
 import socket
-import threading
-import time
 import urllib.parse
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
 
 from semantic_bridge import budget_sources as bsrc
+from semantic_bridge import hizli_kaynak as HK
 
 Runner = Callable[[str], list[dict[str, Any]]]
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -348,24 +347,22 @@ def archive_rows(heads: list[dict[str, Any]], links: list[dict[str, Any]]) -> li
 
 
 class Crm:
-    """CRM okumaları. Arşiv ve medya kişileri 10 dakika bellekte tutulur («yenile» kaynağa gider)."""
+    """CRM okumaları bellekte (`hizli_kaynak`): 10 dakikadan (`CACHE_TTL`) tazeyse hemen; eskiyse eldeki hemen döner ve
+    CRM arkada yeniden okunur; hiç yoksa beklenir. Ekrandaki «Yenile» (`fresh`) kaynağı bekler.
+
+    Hız (2026-09-29): medya kişileri ekranı (`/pr/contacts`) test sunucusunda 14,1 / 9,4 sn sürüyordu — kişi listesi, haber
+    arşivi (görünüm; olmazsa temel tablo) ve haber–kitap bağları her biri yeni bağlantıyla CRM'den okunuyor, eski
+    önbellek 10 dakika dolunca ekranı açan kişi üç okumayı bekliyordu. Şimdi süre dolunca eldeki liste gösterilir ve CRM
+    arkada okunur; köprü açılışında bir kez ısıtılır (`pr_api`). Rakamlar aynı SQL'in sonucudur."""
 
     def __init__(self, schema: Callable[[], str], roles: Callable[[], list[str]], runner: Callable[[], Runner] = crm_runner):
         self.schema = schema
         self.roles = roles
         self.runner = runner
-        self._cache: dict[Any, tuple[float, Any]] = {}
-        self._lock = threading.Lock()
+        self._bellek = HK.bellek("pr.crm", CACHE_TTL)
 
     def _cached(self, key: Any, fresh: bool, fn: Callable[[], Any]) -> Any:
-        with self._lock:
-            hit = self._cache.get(key)
-        if hit and not fresh and time.monotonic() - hit[0] < CACHE_TTL:
-            return hit[1]
-        val = fn()
-        with self._lock:
-            self._cache[key] = (time.monotonic(), val)
-        return val
+        return HK.oku(self._bellek, key, fn, zorla=fresh)
 
     def _run(self, sql: str) -> list[dict[str, Any]]:
         try:

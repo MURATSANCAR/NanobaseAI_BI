@@ -175,10 +175,23 @@ class ValueProbe:
         started = time.perf_counter()
         if remaining < 1 or not self._lock.acquire(timeout=max(0, remaining)):
             return []
+        # Yoklamanın kendi bağlantısı da sunucunun eşzamanlılık sınırına girer; sırası süre bütçesi
+        # içinde gelmezse yoklama yapılmaz (soru katalogla cevaplanır).
+        from semantic_layer.profiler.connection_pool import gate_of
+        gate = gate_of(self.c) if self._isolated else None
+        hold = None
         try:
             remaining -= time.perf_counter() - started
             if remaining < 1:
                 return []
+            if gate is not None:
+                queued = time.perf_counter()
+                hold = gate.acquire(timeout=remaining)
+                if hold is None:
+                    return []
+                remaining -= time.perf_counter() - queued
+                if remaining < 1:
+                    return []
             if self._isolated:
                 self.c.query_timeout = max(1, int(remaining))
                 self.c.cfg['login_timeout'] = self.c.query_timeout
@@ -193,6 +206,8 @@ class ValueProbe:
             # the shared report connection, and idle probes retain no DB session.
             if self._isolated:
                 self.c.close()
+            if gate is not None:
+                gate.release(hold)
             self._lock.release()
 
 

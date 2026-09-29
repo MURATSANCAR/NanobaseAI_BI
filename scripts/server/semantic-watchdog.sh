@@ -36,6 +36,18 @@ health="$(curl -fsS -m 10 "http://127.0.0.1:${PORT}/health" 2>/dev/null || true)
 [[ -n "$health" ]] || { log "no answer on :${PORT} — restarting ${UNIT}"; sudo systemctl restart "$UNIT"; sleep 5; health="$(curl -fsS -m 15 "http://127.0.0.1:${PORT}/health" || true)"; }
 [[ -n "$health" ]] || fail "service does not answer after a restart"
 
+# Açılış arkada sürer (semantic_bridge/boot.py): süreç hemen cevap verir, katalog birkaç on saniye içinde yüklenir.
+# O sürede profil sayısı henüz yoktur; bu bir arıza değildir. Hazırlık SEMANTIC_WATCHDOG_WARM_MAX_SEC'i aşarsa arızadır.
+warming="$(printf '%s' "$health" | python3 -c 'import json,sys; d=json.load(sys.stdin); b=d.get("boot") or {}; print("%s %d" % ("0" if d.get("ready", True) else "1", int(float(b.get("uptimeSec") or 0))))' 2>/dev/null || echo "0 0")"
+if [[ "${warming%% *}" == "1" ]]; then
+  up="${warming##* }"
+  if (( up < ${SEMANTIC_WATCHDOG_WARM_MAX_SEC:-900} )); then
+    log "bridge is starting (${up}s) — check skipped this round"
+    exit 0
+  fi
+  fail "bridge has been preparing for ${up}s — catalog load does not finish"
+fi
+
 certified="$(printf '%s' "$health" | python3 -c 'import json,sys; print((json.load(sys.stdin).get("catalog") or {}).get("CERTIFIED", 0))' 2>/dev/null || echo 0)"
 profiles="$(printf '%s' "$health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("profiles", 0))' 2>/dev/null || echo 0)"
 [[ "${profiles:-0}" -gt 0 ]] || fail "no schema profiles — the pipeline has never completed"

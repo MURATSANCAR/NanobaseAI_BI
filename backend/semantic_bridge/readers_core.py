@@ -12,16 +12,27 @@ başına son izin, `final_consent`), `readers.exportable` (dışa aktarım kural
 İzin sağlığı = düzeltilmesi gereken **çelişkiler** (hedef 0): aynı okurda aynı kanal için hem izin hem ret kanıtı (ret
 kazanır ama kaynaklardan biri yanlıştır), ve ortak iletişim bilgisi (aynı e-posta/telefon, doğum yılları 12+ yıl ayrışan
 kayıtlar). Düzeltme CRM'de/İYS'de yapılır; portal yazmaz.
+
+Hız (2026-09-29): okur topluluğu özeti (`/okur/overview`) test sunucusunda 8,2 sn sürüyordu. Her istekte envanter
+İYS izinli okurları ayrıca okuyordu, izin sağlığı bütün izin tablosunu (`semantic_reader_consents`, her okurun her
+kanal kanıtı) Python'a çekip çelişkiyi orada sayıyordu; profiller de okuma turundan sonra ilk istekte kuruluyordu.
+Şimdi: çelişki sayımı tek SQL (okur × kanal başına «izinli» ve «ret» ikisi de var mı, yalnız etkin okur); envanter
+satırları ve izin sağlığı okur verisinin damgasına (`readers.stamp`: okuma turu, birleştirme, içe aktarma yenir) ve
+ayarlara bağlı süreç belleğinde (`_OZET`) — damga değişmedikçe yeniden hesaplanmaz, değişince ilk istek hesaplar
+(eski damganın rakamı gösterilmez). Tazelik (kaynak başına son okuma) her istekte okunur. Gece turu (`timas-okur`
+03:50) ve köprü açılışı belleği doldurur. Rakamlar aynıdır (test: eski hesap = yeni hesap).
 """
 from __future__ import annotations
 
+import json
 from collections import Counter, defaultdict
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Hashable, Optional
 
 import sqlalchemy as sa
 
 from semantic_bridge import readers as R
 from semantic_bridge import readers_segments as S
+from semantic_bridge.hizli_bellek import Bellek
 
 CONFLICT_LABELS = {
     "email": "E-posta: aynı okurda hem izin hem ret kaydı",
@@ -29,6 +40,27 @@ CONFLICT_LABELS = {
     "call": "Arama: aynı okurda hem izin hem ret kaydı",
     "kvkk": "KVKK açık rıza: aynı okurda hem onay hem ret kaydı",
 }
+
+#: Damga + ayar anahtarlı özet belleği (değer anahtarın saf işlevi: süre yok, yalnız en eski anahtar düşer).
+_OZET = Bellek("okur.cekirdek.ozet", taze=float("inf"), en_cok=64)
+
+
+def conflicts_stmt(tenant: str):
+    """Etkin okurlarda kanal başına izin çelişkisi: aynı okur × kanal için hem «izinli» hem «ret» kanıtı (tek sorgu)."""
+    c, r = R.CONSENTS, R.READERS
+    pairs = (sa.select(c.c.reader_id, c.c.channel)
+             .where(c.c.tenant_id == tenant, c.c.status.in_(("izinli", "ret")))
+             .group_by(c.c.reader_id, c.c.channel)
+             .having(sa.func.count(sa.distinct(c.c.status)) == 2)).subquery()
+    return (sa.select(pairs.c.channel, sa.func.count().label("n"))
+            .select_from(pairs.join(r, r.c.reader_id == pairs.c.reader_id))
+            .where(r.c.tenant_id == tenant, r.c.status == "aktif")
+            .group_by(pairs.c.channel))
+
+
+def iys_ok_stmt(tenant: str):
+    return sa.select(R.CONSENTS.c.reader_id).where(
+        R.CONSENTS.c.tenant_id == tenant, R.CONSENTS.c.source == "iys", R.CONSENTS.c.status == "izinli").distinct()
 
 
 class Provider:
@@ -42,15 +74,31 @@ class Provider:
         engine, cfg = self._engine(), self._cfg()
         return engine, cfg, R.profiles(engine, tenant, cfg)
 
+    def _hatirla(self, ne: str, tenant: str, hesap: Callable[[sa.engine.Engine, dict[str, Any]], Any]) -> Any:
+        """Okur verisinin damgasına ve ayarlara bağlı bellek; damga yoksa (hiç okuma turu yok) her seferinde hesaplanır."""
+        engine, cfg = self._engine(), self._cfg()
+        R.ensure(engine)
+        st = R.stamp(engine, tenant)
+        if st is None:
+            return hesap(engine, cfg)
+        key: Hashable = (ne, id(engine), tenant, st, json.dumps(cfg, sort_keys=True, default=str))
+        return _OZET.al(key, lambda: hesap(engine, cfg))
+
     # ------------------------------------------------------------------ zorunlu dört yöntem
 
     def okur_envanteri(self, tenant: str) -> dict[str, Any]:
         """Kaynak başına okur sayısı ve izin/ilgi/çocuk doluluğu. Bir okur birden çok kaynaktaysa her satırda sayılır;
-        `toplam`/`tekil` tekil okurdur."""
-        engine, _cfg, profs = self._profiles(tenant)
+        `toplam`/`tekil` tekil okurdur. Satırlar damgaya bağlı bellekten; tazelik her istekte okunur."""
+        ozet = self._hatirla("envanter", tenant, lambda engine, cfg: self._envanter(engine, tenant, cfg))
+        engine, cfg = self._engine(), self._cfg()
+        tazelik = [{"kaynak": x["label"], "sonOkuma": x["at"]} for x in R.sources_state(engine, tenant, cfg)]
+        return {**ozet, "tazelik": tazelik}
+
+    @staticmethod
+    def _envanter(engine: sa.engine.Engine, tenant: str, cfg: dict[str, Any]) -> dict[str, Any]:
+        profs = R.profiles(engine, tenant, cfg)
         with engine.connect() as c:
-            iys_ok = {r[0] for r in c.execute(sa.select(R.CONSENTS.c.reader_id).where(
-                R.CONSENTS.c.tenant_id == tenant, R.CONSENTS.c.source == "iys", R.CONSENTS.c.status == "izinli").distinct())}
+            iys_ok = {r[0] for r in c.execute(iys_ok_stmt(tenant))}
         rows: dict[str, Counter] = defaultdict(Counter)
         for p in profs:
             for s in p["sources"]:
@@ -65,19 +113,16 @@ class Provider:
         order = list(R.SOURCE_LABELS) + sorted(set(rows) - set(R.SOURCE_LABELS))
         satirlar = [{"kaynak": R.SOURCE_LABELS.get(s, s), "kayitTipi": s, **{k: int(v) for k, v in rows[s].items()},
                      "silinebilir": None} for s in order if s in rows]
-        tazelik = [{"kaynak": x["label"], "sonOkuma": x["at"]} for x in R.sources_state(engine, tenant, _cfg)]
-        return {"toplam": len(profs), "tekil": len(profs), "satirlar": satirlar, "tazelik": tazelik}
+        return {"toplam": len(profs), "tekil": len(profs), "satirlar": satirlar}
 
     def izin_sagligi(self, tenant: str) -> list[dict[str, Any]]:
-        engine, _cfg, profs = self._profiles(tenant)
-        alive = {p["id"] for p in profs}
-        seen: dict[tuple[str, str], set[str]] = defaultdict(set)
+        return self._hatirla("izin", tenant, lambda engine, cfg: self._izin(engine, tenant, cfg))
+
+    @staticmethod
+    def _izin(engine: sa.engine.Engine, tenant: str, cfg: dict[str, Any]) -> list[dict[str, Any]]:
+        profs = R.profiles(engine, tenant, cfg)
         with engine.connect() as c:
-            for r in c.execute(sa.select(R.CONSENTS.c.reader_id, R.CONSENTS.c.channel, R.CONSENTS.c.status)
-                               .where(R.CONSENTS.c.tenant_id == tenant)):
-                if r.reader_id in alive:
-                    seen[(r.reader_id, r.channel)].add(r.status)
-        conflicts = Counter(ch for (_rid, ch), st in seen.items() if {"izinli", "ret"} <= st)
+            conflicts = Counter({ch: int(n) for ch, n in c.execute(conflicts_stmt(tenant))})
         out = [{"tur": f"celiski_{ch}", "ad": CONFLICT_LABELS[ch], "sayi": int(conflicts.get(ch, 0)),
                 "aciklama": "Ret kazanır; yanlış olan kaynak kaydı düzeltilmeli."} for ch in (*R.CHANNELS, "kvkk")]
         shared = sum(1 for p in profs if "ortak_iletisim" in (p["attrs"].get("uyari") or []))

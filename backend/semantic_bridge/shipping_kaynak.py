@@ -27,7 +27,7 @@ TITLES = {
 }
 TAGS = {"errors": "entegrasyon hatası olanlar", "untracked": "takip numarası olmadan sevk edilenler",
         "boxed": "kutulanıp sevk edilmemiş olanlar", "shipped": "pencerede sevk edilenler", "index": "gönderi kaydı",
-        "carriers": "kargo firmaları", "reconcile": "mutabakat ayı"}
+        "carriers": "kargo firmaları", "reconcile": "mutabakat ayı", "shipments": "gönderi listesi sayfası"}
 
 F_SEVK = ("Sevk edilen = pencerede (son N gün, ayar) sevk tarihi olan ve durumu ayardaki «sevk» durumlarından olan CRM "
           "siparişleri; bugün = bugünün sevkleri.")
@@ -96,20 +96,27 @@ class Ship:
             self.by_tag.setdefault(r.get("tag") or r["name"], []).append(sid)
 
     def _snapshot(self, r: dict[str, Any], seen: dict[str, str]) -> None:
-        """Portal anlık görüntü okuması: ekranda çalışan ifade; kökeni zamanlayıcıda çalışan CRM okuması (aynı etiket)."""
+        """Portal anlık görüntü okuması: ekranda çalışan ifade; kökeni zamanlayıcıda çalışan CRM/Logo okuması (aynı etiket;
+        görüntü iç içe okumalar taşıyorsa — mutabakattaki gönderi kaydı gibi — `tags`'teki her etiket)."""
         tag = r.get("tag") or ""
+        tags = [t for t in (r.get("tags") or [tag]) if t is not None]
         if r["sql"] in seen:
             sid = seen[r["sql"]]
         else:
             sid = f"kargo.{tag}.anlik" if tag else "kargo.anlik"
-            origin = [x for x in self.by_tag.get(tag, []) if x in self.k.sources and self.k.sources[x]["connection"] != "portal"]
+            origin = [x for t in tags for x in self.by_tag.get(t, [])
+                      if x in self.k.sources and self.k.sources[x]["connection"] != "portal"]
+            origin = list(dict.fromkeys(origin))
             self.k.sorgu(sid, "Anlık görüntü (portal)" + (f" · {TAGS[tag]}" if tag in TAGS else ""), "portal", r["sql"],
                          rows=r.get("rows"), ms=r.get("ms"), ran_at=r.get("at"), origin=origin,
                          description=(f"CRM okumasının {r['alindi']} tarihli anlık görüntüsü" if r.get("alindi") else
                                       "CRM okumasının anlık görüntüsü") + "; zamanlayıcı 15 dakikada bir yeniler, ekran CRM'i "
                                      "beklemeden buradan okur. Köken: o okumada çalışan CRM sorgusu.")
             seen[r["sql"]] = sid
-        self.by_tag.setdefault(tag or r["name"], []).append(sid)
+        for t in dict.fromkeys(tags or [tag]):
+            lst = self.by_tag.setdefault(t or r["name"], [])
+            if sid not in lst:
+                lst.append(sid)
 
     def t(self, *tags: str) -> list[str]:
         out: list[str] = []
@@ -221,7 +228,7 @@ def for_candidates(engine: Any, tenant: str, out: dict[str, Any], runs: list[dic
 
 def for_shipments(engine: Any, tenant: str, out: dict[str, Any], runs: list[dict[str, Any]], deps: dict[str, Any]) -> P.Kaynaklar:
     x = _new(engine, tenant, runs, deps)
-    bind(x.k, _orders(x, "items[]", "crm_siparis_asama"))
+    bind(x.k, _orders(x, "items[]", "shipments"))       # sayfa okuması «shipments» etiketiyle (bellek/görüntü)
     return x.k
 
 

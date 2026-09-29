@@ -15,10 +15,8 @@ Model çağrıları LLM kapısından: `rt.llm_for("eticaret", …)` (`deps["llm"
 from __future__ import annotations
 
 import logging
-import threading
-import time
 from datetime import date, timedelta
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
@@ -28,6 +26,7 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import eticaret as E
 from semantic_bridge import eticaret_kaynak as K
+from semantic_bridge import eticaret_pazar as PZ
 from semantic_bridge import eticaret_sources as src
 from semantic_bridge import provenance as PV
 from semantic_bridge import sorgu_yakala as Y
@@ -40,7 +39,6 @@ FEATURE_APPROVE = "ozellik:eticaret.oneri-onay"
 FEATURE_EXPORT = "ozellik:veri.disa-aktar"
 #: SEO öneri kaydında bu modülden gelen önerinin kaynağı (ekranda görünür; teknoloji adı yok).
 PROPOSAL_SOURCE = "E-ticaret · Zeki AI"
-MARKET_TTL = 30 * 60
 
 
 # Gövde modelleri modül düzeyinde: `from __future__ import annotations` fonksiyon içindeki modeli sorgu parametresi sanar.
@@ -63,24 +61,6 @@ class Decide(BaseModel):
     note: str = Field(default="", max_length=1000)
 
 
-class _Cache:
-    """Pazar yeri özetleri için süreli bellek (Logo okuması ağır; aynı yıl iki kez okunmaz)."""
-
-    def __init__(self) -> None:
-        self._data: dict[Any, tuple[float, Any]] = {}
-        self._lock = threading.Lock()
-
-    def get(self, key: Any, load: Callable[[], Any], fresh: bool = False) -> Any:
-        with self._lock:
-            hit = self._data.get(key)
-            if hit and not fresh and time.monotonic() - hit[0] < MARKET_TTL:
-                return hit[1]
-        val = load()
-        with self._lock:
-            self._data[key] = (time.monotonic(), val)
-        return val
-
-
 def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     """app.py'de bağlanır. `deps`: auth(request) → (engine, tenant, user, display) · require_caller(request) · can(user, key) ·
     is_admin(user) · audit(engine, user, action, kind, id, title, detail) · conf(key, default) · engine() · tenant() ·
@@ -90,8 +70,9 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     settings = lambda: E.settings_from(conf)  # noqa: E731
     schema = lambda: conf("CRM_SCHEMA", "Timas_MSCRM.dbo") or "Timas_MSCRM.dbo"  # noqa: E731
     refresher = E.Refresher(deps["engine"], deps["tenant"], deps["logo_file"], deps["crm_file"], schema, settings)
-    cache = _Cache()
-    firms_cache: dict[str, Any] = {"at": 0.0, "firms": None, "cut": None}
+    # Pazar yeri Logo okumaları (firma/kesim, cari × ay, kitap kırılımı): bellek → portal tablosu → Logo; eskiyse arkada
+    # yenilenir, ekranı açan kişi Logo'yu yalnız hiç okuma yokken bekler (`eticaret_pazar`).
+    pazar = PZ.PazarOkuma(deps["engine"], deps["tenant"], deps["logo_file"])
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -109,23 +90,11 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
         except src.SourceError as e:
             raise HTTPException(status_code=503, detail={"code": "ETICARET_SOURCE", "retryable": True, "message": str(e)}) from e
 
-    def logo():
-        # Sorgu bilgisi: Logo'ya giden her metin açık yakalamaya yazılır; firma/kesim okuması önbellekle saklanır.
-        run = Y.izle(src.runner(deps["logo_file"]()), "logo", Y.db_of(deps["logo_file"]()))
-        if not firms_cache["firms"] or time.time() - firms_cache["at"] > 600:
-            with Y.yakala() as fq:
-                firms = src.firms_by_year(run)
-                cut = src.read_data_end(run, firms)
-            firms_cache.update(firms=firms, cut=cut, at=time.time(), q=fq.queries)
-        return run, firms_cache["firms"], firms_cache["cut"]
-
-    #: Önbellekten dönen Logo rakamının sorgusu: önbellek anahtarı → o yüklemede koşan sorgular.
-    cache_q: dict[Any, list[dict[str, Any]]] = {}
-
-    def cached_queries(key: Any) -> Y.Yakalanan:
+    def read_queries(v: dict[str, Any]) -> Y.Yakalanan:
+        """Rakamı üreten okumada ÇALIŞAN Logo SQL'i (firma/kesim + satırlar; metin, satır, süre, an okumanın kendisi)."""
         y = Y.Yakalanan()
-        y.extend(firms_cache.get("q") or [])
-        y.extend(cache_q.get(key) or [])
+        y.extend(v.get("baglamQ") or [])
+        y.extend(v.get("q") or [])
         return y
 
     def llm(priority_name: str) -> Any:
@@ -140,40 +109,32 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
     def link() -> str:
         return (conf("ALERT_LINK", "") or "").split("/uyarilar")[0]
 
-    def markets(year: int, fresh: bool = False) -> dict[str, Any]:
-        key = ("m", year, tuple(settings()["channels"]))
+    def markets_read(year: int, fresh: bool = False, arkada: bool = False) -> tuple[dict[str, Any], dict[str, Any]]:
+        """(özet, okuma kaydı). Özet her istekte saklanan satırlardan aynı işlevle (`marketplace_summary`) hesaplanır."""
+        channels = settings()["channels"]
+        v = call(pazar.pazar, year, channels, fresh, arkada)
+        out = E.marketplace_summary(v["rows"], year, PZ.cut_of(v))
+        out["kanallar"] = channels
+        out["yillar"] = list(v.get("firms") or [])
+        out["okundu"] = v.get("okundu")
+        return out, v
 
-        def load() -> dict[str, Any]:
-            with Y.yakala() as mq:
-                run, firms, cut = logo()
-                this, prev = E.marketplace_windows(year, cut)
-                rows = src.read_marketplaces(run, firms, settings()["channels"], *prev) + src.read_marketplaces(run, firms, settings()["channels"], *this)
-            cache_q[key] = mq.queries
-            out = E.marketplace_summary(rows, year, cut)
-            out["kanallar"] = settings()["channels"]
-            out["yillar"] = sorted(firms)
-            return out
-        return call(cache.get, key, load, fresh)
+    def markets(year: int, fresh: bool = False) -> dict[str, Any]:
+        return markets_read(year, fresh)[0]
+
+    def stock_risk_read(engine, tenant: str, year: int, fresh: bool = False,
+                        arkada: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        st = settings()
+        v = call(pazar.risk, year, st["channels"], fresh, arkada)
+        rows = v["rows"]
+        books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), st)
+        return [b for b in books if b["tukenmeRiski"]], v
 
     def stock_risk(engine, tenant: str, year: int, fresh: bool = False) -> list[dict[str, Any]]:
-        st = settings()
+        return stock_risk_read(engine, tenant, year, fresh)[0]
 
-        key = ("r", year, tuple(st["channels"]))
-
-        def load() -> list[dict[str, Any]]:
-            with Y.yakala() as rq:
-                run, firms, cut = logo()
-                this, _ = E.marketplace_windows(year, cut)
-                rows = src.read_channel_books(run, firms, st["channels"], *this)
-            cache_q[key] = rq.queries
-            return rows
-        rows = call(cache.get, key, load, fresh)
-        books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), st)
-        return [b for b in books if b["tukenmeRiski"]]
-
-    def this_year() -> int:
-        cut = firms_cache.get("cut")
-        return cut.year if cut else date.today().year
+    def this_year(fresh: bool = False) -> int:
+        return call(pazar.this_year, fresh)
 
     # ------------------------------------------------------------------ genel
 
@@ -220,6 +181,7 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
         engine, tenant, st = deps["engine"](), deps["tenant"](), settings()
         E.ensure(engine)
         out: dict[str, Any] = {"read": await run_in_threadpool(refresher.run, "zamanlayıcı")}
+        out["pazarYeri"] = await run_in_threadpool(refresh_markets)
         if model and st["llmBudgetSec"]:
             out["model"] = await run_in_threadpool(E.classify_reasons, engine, tenant, llm("BATCH"), st, st["llmBudgetSec"])
         pending = E.pending_alerts(engine, tenant, st)
@@ -234,11 +196,24 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
             out["weekly"] = await run_in_threadpool(send_weekly, engine, tenant, st)
         return out
 
+    def refresh_markets() -> dict[str, Any]:
+        """Gece turu: firma/kesim, pazar yeri özeti ve kitap kırılımı Logo'dan okunup tabloya yazılır (ekranı ilk açan
+        beklemesin). Okunamazsa eski kayıt kalır, tur sürer."""
+        try:
+            year = this_year(fresh=True)
+            channels = settings()["channels"]
+            v = pazar.pazar(year, channels, zorla=True)
+            r = pazar.risk(year, channels, zorla=True)
+            return {"yil": year, "cari": len({x["kod"] for x in v["rows"]}), "kitap": len(r["rows"]), "okundu": v["okundu"]}
+        except Exception as e:  # noqa: BLE001 — pazar yeri okunamasa da fark turu ve bildirimler sürer
+            log.info("eticaret: pazar yeri okuması yapılamadı: %s", e)
+            return {"hata": str(e)[:300]}
+
     def send_weekly(engine, tenant: str, st: dict[str, Any]) -> dict[str, Any]:
         started = E.now()
         ov = E.overview(engine, tenant, refresher.status())
-        year = this_year()
         try:
+            year = this_year()
             mk = markets(year, fresh=True)
             risky = stock_risk(engine, tenant, year, fresh=True)
         except HTTPException as e:
@@ -426,26 +401,27 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
 
     # ------------------------------------------------------------------ pazar yerleri (Logo)
 
+    def refresh_asked(request: Request) -> bool:
+        """Üst şeritteki «Verileri yenile» (`X-Data-Refresh: 1`): Logo arkada okunur, ekran eldeki okumayla hemen açılır.
+        Ekrandaki pazar yeri yenilemesi (`yenile=true`) eskisi gibi Logo'yu bekler."""
+        return request.headers.get("x-data-refresh") == "1"
+
     @app.get(f"{P}/marketplaces")
     async def eticaret_marketplaces(request: Request, yil: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        if yil is None:
-            await run_in_threadpool(call, logo)
-        year = yil or this_year()
-        out = dict(await run_in_threadpool(markets, year, yenile))
-        q = cached_queries(("m", year, tuple(settings()["channels"])))
+        year = yil or await run_in_threadpool(this_year)
+        out, v = await run_in_threadpool(markets_read, year, yenile, refresh_asked(request))
+        q = read_queries(v)
         return PV.bagla(out, lambda: K.for_marketplaces(engine, tenant, out, q))
 
     @app.get(f"{P}/marketplaces/stock-risk")
     async def eticaret_stock_risk(request: Request, yil: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        if yil is None:
-            await run_in_threadpool(call, logo)
-        year = yil or this_year()
+        year = yil or await run_in_threadpool(this_year)
         with Y.yakala(engine) as q:
-            items = await run_in_threadpool(stock_risk, engine, tenant, year, yenile)
-        q.extend(cached_queries(("r", year, tuple(settings()["channels"]))).queries)
-        out = {"items": items, "yil": year, "kesim": firms_cache["cut"].isoformat() if firms_cache.get("cut") else None,
+            items, v = await run_in_threadpool(stock_risk_read, engine, tenant, year, yenile, refresh_asked(request))
+        q.extend(read_queries(v).queries)
+        out = {"items": items, "yil": year, "kesim": v.get("cut"), "okundu": v.get("okundu"),
                "esikGun": settings()["stockoutDays"], "satisAyi": settings()["salesMonths"]}
         return PV.bagla(out, lambda: K.for_stock_risk(engine, tenant, out, q))
 
@@ -457,12 +433,14 @@ def register(app: Any, deps: dict[str, Any]) -> E.Refresher:
 
         def load() -> dict[str, Any]:
             with Y.yakala(engine) as q:
-                run, firms, cut = logo()
+                b = pazar.baglam()
+                firms, cut = b["firms"], b["cut"]
+                run = Y.izle(src.runner(deps["logo_file"]()), "logo", Y.db_of(deps["logo_file"]()))
                 year = yil or (cut.year if cut else date.today().year)
                 this, _ = E.marketplace_windows(year, cut)
                 rows = src.read_marketplace_books(run, firms, code, *this)
                 books = E.marketplace_books(rows, E.items_by_code(engine, tenant, [r["stok"] for r in rows]), settings())
-            q.extend(firms_cache.get("q") or [])
+            q.extend(b.get("q") or [])
             out = {"kod": code, "yil": year, "donem": {"bas": this[0].isoformat(), "son": (this[1] - timedelta(days=1)).isoformat()},
                    "kesim": cut.isoformat() if cut else None,
                    "items": books, "total": len(books)}

@@ -221,7 +221,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if key in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _create_view(engine)
         _ready.add(key)
 

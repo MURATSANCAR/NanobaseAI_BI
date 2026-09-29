@@ -20,8 +20,8 @@ kalıyor (2025-06 sonrası 2.393 tekrar kartının 33'ünde depo, 100'ünde bask
 eski). Kart açılışından 30 günden eski «gerçekleşen» tarih önceki baskınındır, bu karta sayılmaz.
 
 CRM ve Logo yalnız okunur, köprünün kendi salt okunur bağlantılarıyla (yönetim raporları ve SEO/GEO'daki gibi).
-Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`) ve istek onu
-hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
+Bir okuma ≈ 45 sn sürer (2026-09-28: CRM 10 sn, Logo 33 sn). Son okuma diskte kalır (`PRODUCTION_CACHE_DIR`, türleri koruyan
+JSON; pickle değil) ve istek onu hemen alır; 5 dakikadan eskiyse yenisi arka planda okunur. İstek yalnız hiç okuma yokken (ilk kurulum, okuma sorguları
 değişti) ya da «Verileri yenile»de (X-Data-Refresh) kaynağı bekler.
 
 Kartların kurulması (okuma + portal kayıtları → birleştirme, plan, gecikme) ve özet de süreç belleğindedir
@@ -34,7 +34,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import pickle
 import re
 import statistics
 import threading
@@ -53,6 +52,7 @@ from semantic_layer.firm_scope import firm_in_scope
 from semantic_bridge import hizli_bellek as HB
 from semantic_bridge import production_plan as plan_mod
 from semantic_bridge import production_store as store
+from semantic_bridge import typed_json as TJ
 from semantic_bridge.production_plan import KEYS, MILESTONES, STAGES, parse_day
 from semantic_bridge.production_store import ProductionError
 
@@ -309,6 +309,12 @@ class Source:
         self.on_new: Optional[Callable[[dict[str, Any]], None]] = None
 
     def _file(self) -> Path:
+        """Türleri koruyan JSON + zlib (`typed_json`; 2026-09-29'a kadar pickle'dı). Pickle okunurken kod çalıştırabilir:
+        klasöre yazabilen biri köprüde kod çalıştırırdı. Eski `snapshot.pkl` hiç açılmaz; ilk okumada kaynaktan okunur
+        ve yeni kayıt yazılınca silinir."""
+        return self._cache_dir() / "snapshot.json.z"
+
+    def _legacy_file(self) -> Path:
         return self._cache_dir() / "snapshot.pkl"
 
     def _current(self) -> Optional[dict[str, Any]]:
@@ -317,9 +323,8 @@ class Source:
             if self._snap is None and not self._disk_tried:
                 self._disk_tried = True
                 try:
-                    with self._file().open("rb") as f:
-                        saved = pickle.load(f)
-                    if saved.get("shape") == SHAPE:
+                    saved = TJ.unpack(self._file().read_bytes())
+                    if isinstance(saved, dict) and saved.get("shape") == SHAPE:
                         self._snap, self._at = saved["snap"], float(saved["at"])
                 except FileNotFoundError:
                     pass
@@ -335,12 +340,19 @@ class Source:
         tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with tmp.open("wb") as f:
-                pickle.dump({"shape": SHAPE, "at": at, "snap": snap}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            tmp.write_bytes(TJ.pack({"shape": SHAPE, "at": at, "snap": snap}))
             os.replace(tmp, path)
-        except OSError as e:
+        except (OSError, TypeError, ValueError) as e:          # TypeError: typed_json'un tanımadığı tür (okuma bellekte kalır)
             log.warning("production: okuma diske yazılamadı (%s): %s", path, e)
-            tmp.unlink(missing_ok=True)
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return
+        try:
+            self._legacy_file().unlink(missing_ok=True)        # eski pickle: açılmadan silinir
+        except OSError:
+            pass
 
     def _refresh(self, asked: float) -> dict[str, Any]:
         """Kaynağı okur; bu istekten sonra başlamış bir okuma bittiyse onu kullanır."""

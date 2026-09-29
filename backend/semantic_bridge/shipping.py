@@ -102,6 +102,9 @@ SETTINGS = sa.Table(
 #: `SHIPPING_SNAPSHOT_MAX_MIN` dakikadan eskiyse CRM'e gider (ve buraya yazar). `deger` okumanın dönüşünün kendisidir
 #: (tür etiketli JSON: tarih, ondalık, kimlik aynen geri gelir; rakam değişmez), `sorgular` o okumada ÇALIŞAN CRM metinleri
 #: (sorgu bilgisinde köken). Kişisel kolon okuyan sorgu (alıcı, teslim alan) burada hiç yoktur.
+#: 2. tur (2026-09-29): gönderi listesinin açılış sayfası (aramasız, firmasız ilk sayfa; zamanlayıcı «hepsi»yi yeniler) ve
+#: ayın mutabakatı (Logo faturası/sevki + CRM sevkiyatı + gönderi kaydından hesaplanan sonuç; zamanlayıcı geçen ayı yeniler)
+#: da burada. `SNAPSHOT_KEEP_DAYS` gündür yenilenmeyen satır silinir (anahtarda pencere günü var).
 SNAPSHOTS = sa.Table(
     "semantic_shipping_snapshots", _md,
     sa.Column("tenant_id", sa.String(80), primary_key=True),
@@ -139,7 +142,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if key in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
+        from semantic_layer.store import schema_stamp
+        schema_stamp.create_all(_md, engine)
         _ready.add(key)
 
 
@@ -370,6 +374,33 @@ def unpack(v: Any) -> Any:
     return v
 
 
+def _unpack_hook(o: dict[str, Any]) -> Any:
+    """`unpack`'ın `json.loads` kancası: çözümleyici her sözlüğü içten dışa bir kez verir (ağaç ikinci kez gezilmez)."""
+    if len(o) != 2 or "$t" not in o or "v" not in o:
+        return o
+    t, x = o["$t"], o["v"]
+    if t == "dt":
+        return datetime.fromisoformat(x)
+    if t == "d":
+        return date.fromisoformat(x)
+    if t == "tm":
+        return dtime.fromisoformat(x)
+    if t == "dec":
+        return Decimal(x)
+    if t == "uuid":
+        return uuid.UUID(x)
+    if t == "b64":
+        return base64.b64decode(x)
+    if t == "tup":
+        return tuple(x)
+    return o
+
+
+def unpack_text(text: str) -> Any:
+    """`unpack(json.loads(text))` ile aynı sonuç, tek geçişte (8 MB'lık gönderi kaydı görüntüsü iki kez gezilmez)."""
+    return json.loads(text, object_hook=_unpack_hook)
+
+
 def snapshot_key(key: Any) -> str:
     """Bellek anahtarı → görüntü anahtarı (okunur metin; pencere günü ve durum kodları dahil)."""
     return json.dumps(list(key) if isinstance(key, tuple) else key, ensure_ascii=False, default=str)
@@ -399,19 +430,36 @@ def snapshot_read(engine: sa.engine.Engine, tenant: str, anahtar: str, max_min: 
     at = _aware(r.alindi)
     if at is None or _now() - at > timedelta(minutes=max_min):
         return None
-    return {"deger": unpack(json.loads(r.deger)), "sorgular": json.loads(r.sorgular or "[]"), "alindi": at, "stmt": stmt}
+    return {"deger": unpack_text(r.deger), "sorgular": json.loads(r.sorgular or "[]"), "alindi": at, "stmt": stmt}
+
+
+def snapshot_at(engine: sa.engine.Engine, tenant: str, anahtar: str) -> Optional[datetime]:
+    """Görüntünün yazıldığı an, gövde okunmadan (bellekteki değer hâlâ tablodakiyle aynı mı: ucuz denetim)."""
+    with engine.connect() as c:
+        v = c.execute(sa.select(SNAPSHOTS.c.alindi).where(SNAPSHOTS.c.tenant_id == tenant,
+                                                          SNAPSHOTS.c.anahtar == anahtar)).scalar()
+    return _aware(v)
+
+
+#: Bu kadar gündür yenilenmeyen görüntü satırı silinir: anahtarda pencere günü var, her gün yeni satır açılıyordu.
+SNAPSHOT_KEEP_DAYS = 7
 
 
 def snapshot_write(engine: sa.engine.Engine, tenant: str, anahtar: str, value: Any, runs: list[dict[str, Any]],
-                   ms: Optional[int] = None) -> None:
+                   ms: Optional[int] = None) -> datetime:
+    """Görüntüyü yazar; yazılan anı döndürür (bellekteki değer bu anla eşlenir)."""
     deger = json.dumps(pack(value), ensure_ascii=False)
     sorgular = json.dumps([{k: r.get(k) for k in ("name", "sql", "rows", "ms", "at", "tag")} for r in runs
                            if r.get("conn") != "portal"], ensure_ascii=False, default=str)
     cond = (SNAPSHOTS.c.tenant_id == tenant, SNAPSHOTS.c.anahtar == anahtar)
+    at = _now()
     with engine.begin() as c:
         c.execute(SNAPSHOTS.delete().where(*cond))
         c.execute(SNAPSHOTS.insert().values(tenant_id=tenant, anahtar=anahtar, deger=deger, sorgular=sorgular,
-                                            alindi=_now(), sure_ms=ms))
+                                            alindi=at, sure_ms=ms))
+        c.execute(SNAPSHOTS.delete().where(SNAPSHOTS.c.tenant_id == tenant,
+                                           SNAPSHOTS.c.alindi < at - timedelta(days=SNAPSHOT_KEEP_DAYS)))
+    return at
 
 
 # ------------------------------------------------------------------ küçük yardımcılar

@@ -1,8 +1,8 @@
 """M20 Basın ilişkileri: ekrandaki her rakamın sorgu bilgisi (ortak sözleşme `provenance.py`).
 
 CRM okumaları (ayın kitapları, kitap kartı ve yazarları, kitap araması, medya kişileri, haber arşivi, tanıtım gönderimi
-siparişleri) `pr_sources` içindeki aynı SQL üreticileriyle, aynı değerlerle kaydedilir; CRM okuması 10 dakika bellekte
-tutulur, gösterilen metin o okumanın metnidir. Portal okumaları (PR dosyası, gönderim, yansıma, kişi katmanı)
+siparişleri) `pr_sources` içindeki aynı SQL üreticileriyle, aynı değerlerle kaydedilir; CRM okuması bellekte tutulur
+(10 dakikadan eskiyse arkada yeniden okunur), gösterilen metin o okumanın metnidir. Portal okumaları (PR dosyası, gönderim, yansıma, kişi katmanı)
 `pr.py`'deki ifade işlevlerinden derlenir.
 
 KİŞİSEL VERİ: medya kişilerinin e-posta ve telefonu kişisel veridir; yalnız SQL metni kayda girer, satır asla.
@@ -51,7 +51,8 @@ def _schema() -> str:
 
 def _crm(k: P.Kaynaklar, id_: str, title: str, sql: str, desc: str = "") -> str:
     return k.sorgu(id_, title, "crm", sql, database=PK.crm_db(),
-                   description=desc or "CRM okuması (10 dakika bellekte tutulur; «yenile» kaynağa gider).")
+                   description=desc or "CRM okuması bellekte tutulur: 10 dakikadan eskiyse eldeki gösterilir ve arkada "
+                                       "yeniden okunur; «Yenile» kaynağı bekler.")
 
 
 def _archive(k: P.Kaynaklar, crm: Any) -> list[str]:

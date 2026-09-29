@@ -216,8 +216,14 @@ def ensure(engine: sa.engine.Engine) -> None:
     with _lock:
         if id(engine) in _ready:
             return
-        _md.create_all(engine, checkfirst=True)
-        _add_missing_columns(engine)
+        def install() -> None:
+            _md.create_all(engine, checkfirst=True)
+            _add_missing_columns(engine)
+
+        # Sürüm damgası: tanım değişmediyse açılışta veritabanına sorulmaz. Kolon ekleme listesi tanımda
+        # görünmeyebilir (tablo tanımı JSON/metin); listenin kendisi damgaya eklenir.
+        from semantic_layer.store import schema_stamp
+        schema_stamp.run(engine, _md.sorted_tables, install, extra="not_found,card_selection,parent_id,graph")
         _ready.add(id(engine))
 
 

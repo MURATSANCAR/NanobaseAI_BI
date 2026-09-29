@@ -24,6 +24,7 @@ from semantic_bridge import board as BOARD
 from semantic_bridge import categories as C
 from semantic_bridge import categories_api as CA
 from semantic_bridge import categories_sources as CS
+from semantic_bridge import crm_kisi as KISI
 from semantic_bridge import editorial_assign as M2
 from semantic_bridge import provenance as P
 from semantic_layer.store.catalog_store import open_store
@@ -91,21 +92,26 @@ def _eski_overview(engine: sa.engine.Engine, tenant: str, me_crm_id: Optional[st
 def engine():
     e = open_store("sqlite://").engine
     C._ready.discard(id(e))
+    KISI._ready.discard(id(e))
+    KISI.sifirla()
     C.ensure(e)
-    return e
+    yield e
+    _bekle()
+    KISI.sifirla()
 
 
 def _bekle() -> None:
     """Arkadaki bellek hesaplarını bekler (bellek içi SQLite tek bağlantı: test iş parçacığıyla çakışmasın)."""
     for t in threading.enumerate():
-        if t.name.startswith("bellek:") and t is not threading.current_thread():
+        if (t.name.startswith("bellek:") or t.name == "crm-kisi") and t is not threading.current_thread():
             t.join(10)
 
 
 @pytest.fixture
 def crm(monkeypatch):
-    """Sahte CRM: kişi → CRM kullanıcısı; kaç kez okunduğu sayılır. `down` True iken okuma hata verir."""
-    state = {"calls": 0, "down": False, "ids": {"ayse": "ED1", "mehmet": "ED2"}}
+    """Sahte CRM: bütün kullanıcılar tek sorguda (`crm_kisi.all_users_sql`) ve eski kişi başına okuma (`crm_me`);
+    ikisi de sayılır. `down` True iken okuma hata verir."""
+    state = {"calls": 0, "bulk": 0, "down": False, "ids": {"ayse": "ED1", "mehmet": "ED2"}}
 
     def fake_me(schema, run, username):
         state["calls"] += 1
@@ -114,8 +120,17 @@ def crm(monkeypatch):
         uid = state["ids"].get(username.lower())
         return {"id": uid, "name": username, "disabled": False} if uid else None
 
+    def fake_run(sql):
+        if "AS DomainNameLower" in sql:
+            state["bulk"] += 1
+            if state["down"]:
+                raise CS.SourceError("CRM kapalı")
+            return [{"SystemUserId": uid, "FullName": u, "IsDisabled": False, "DomainName": f"TIMAS\\{u}",
+                     "DomainNameLower": f"timas\\{u}"} for u, uid in state["ids"].items()]
+        return []
+
     monkeypatch.setattr(M2, "crm_me", fake_me)
-    monkeypatch.setattr(CS, "runner", lambda path, timeout=None: (lambda sql: []))
+    monkeypatch.setattr(CS, "runner", lambda path, timeout=None: fake_run)
     orig = ADM.conf
     monkeypatch.setattr(ADM, "conf", lambda k, d="": "Timas_MSCRM.dbo" if k == "CRM_SCHEMA" else orig(k, d))
     return state
@@ -204,36 +219,66 @@ def test_mine_is_personal_while_common_part_is_shared(engine, monkeypatch, crm):
     assert not any("'ED1'" in s["sql"] for s in m["kaynaklar"]["sources"].values())
 
 
-def test_crm_user_is_read_once_stored_and_refreshed_behind(engine, monkeypatch, crm):
+def test_crm_user_is_read_once_for_everyone_stored_and_refreshed_behind(engine, monkeypatch, crm):
+    """Hız 2. tur: kişi başına CRM okuması yok; bütün kullanıcılar tek sorguda okunur, portal tablosunda durur."""
     client = _client(engine, monkeypatch)
     assert client.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED1"
-    assert crm["calls"] == 1
-    assert C.meta_get(engine, T, "crm_me:ayse")["id"] == "ED1"                   # portal tablosunda
+    assert crm["bulk"] == 1 and crm["calls"] == 0                            # tek sorgu, kişi sorgusu yok
+    assert KISI.durum(engine, T)["satir"] == 2                               # portal tablosunda (herkes)
     client.get("/api/v1/categories/meta", headers=COOKIE)
-    assert crm["calls"] == 1                                                   # süreç belleğinden
+    assert crm["bulk"] == 1                                                  # süreç belleğinden
+
+    # İlk kez açan başka kişi CRM'i beklemez: aynı okumadan.
+    other = _client(engine, monkeypatch, "mehmet")
+    assert other.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED2"
+    assert crm["bulk"] == 1 and crm["calls"] == 0
 
     # Köprü yeniden kalktı (yeni bellek): CRM beklenmez, tablodan gelir.
+    KISI.sifirla()
     again = _client(engine, monkeypatch)
     assert again.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED1"
-    assert crm["calls"] == 1
+    assert crm["bulk"] == 1
 
-    # Süresi geçti: eldeki değer hemen döner, CRM arkada okunur.
-    monkeypatch.setattr(CA, "KISI_TAZE", -1)
+    # Süresi geçti: eldeki değer hemen döner, CRM arkada bir kez (herkes için) okunur.
+    monkeypatch.setattr(KISI, "TAZE", -1)
     assert again.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED1"
     _bekle()
-    assert crm["calls"] == 2
+    assert crm["bulk"] == 2
 
     # CRM kapalı, arkadaki okuma başarısız: eldeki değer kalır.
     crm["down"] = True
     assert again.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED1"
     _bekle()
+    assert crm["calls"] == 0
 
 
 def test_crm_user_unknown_when_crm_down_and_nothing_stored(engine, monkeypatch, crm):
     crm["down"] = True
     client = _client(engine, monkeypatch, "zeynep")
     assert client.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] is None
-    assert C.meta_get(engine, T, "crm_me:zeynep") is None                      # başarısız okuma saklanmaz
+    assert KISI.durum(engine, T) == {"okundu": None}                         # başarısız okuma saklanmaz
+    assert C.meta_get(engine, T, "crm_me:zeynep") is None
     crm["down"] = False
     crm["ids"]["zeynep"] = "ED9"
     assert client.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED9"
+
+
+def test_unsuitable_account_name_uses_the_old_per_person_path(engine, monkeypatch, crm):
+    """ASCII dışı hesap adı saklanmış eşlemeye sorulmaz (kural birebir kanıtlanamaz): eski kişi okuması."""
+    crm["ids"]["ayşe"] = "ED7"
+    client = _client(engine, monkeypatch, "ayşe")
+    assert client.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED7"
+    assert crm["calls"] == 1 and crm["bulk"] == 0
+
+
+def test_nightly_sync_reads_the_person_mapping(engine, monkeypatch, crm):
+    monkeypatch.setattr(CS, "read_crm", lambda schema, run: {"books": []})
+    monkeypatch.setattr(CS, "read_priority", lambda run, months: (_ for _ in ()).throw(CS.SourceError("Logo yok")))
+    monkeypatch.setattr(CS, "read_tsoft", lambda e, t: (_ for _ in ()).throw(CS.SourceError("T-soft yok")))
+    monkeypatch.setattr(C, "apply_sync", lambda *a, **k: {"at": C.iso(C.now())})
+    client = _client(engine, monkeypatch)
+    r = client.post("/api/v1/categories/run-due?propose=false", headers=COOKIE)
+    assert r.status_code == 200, r.text
+    assert r.json()["sync"]["kisiler"]["satir"] == 2 and crm["bulk"] == 1
+    assert client.get("/api/v1/categories/meta", headers=COOKIE).json()["me"]["crmId"] == "ED1"
+    assert crm["bulk"] == 1 and crm["calls"] == 0

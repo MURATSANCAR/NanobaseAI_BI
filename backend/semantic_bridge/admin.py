@@ -178,6 +178,10 @@ SPEC: list[dict[str, Any]] = [
      "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
     {"key": "RESPONSE_CACHE_ENABLED", "group": "performance", "label": "Yavaş ekranlarda hazır cevap", "type": "bool", "default": "1",
      "help": "Açıkken kaynağı 1,5 sn'den uzun bekleten ekran verisi hazır tutulur: ekran anında açılır, veri 5 dakikada bir ve «Yenile» ile tazelenir; bir modülde kayıt yapılınca o modülün hazır cevapları düşer"},
+    {"key": "LOGO_MAX_CONCURRENT", "group": "performance", "label": "Logo'ya aynı anda giden sorgu", "type": "int", "default": "4",
+     "help": "Ekranlar, Zeki AI ve arka planda tazelenen ekran verisi Logo sunucusuna aynı anda en çok bu kadar sorgu gönderir (en az 1). Dolunca yeni sorgu geliş sırasıyla bekler, düşürülmez. Logo canlı sistemdir: artırmadan önce sunucu yükü ölçülmeli"},
+    {"key": "CRM_MAX_CONCURRENT", "group": "performance", "label": "CRM'e aynı anda giden sorgu", "type": "int", "default": "4",
+     "help": "Ekranlar, Zeki AI ve arka planda tazelenen ekran verisi CRM sunucusuna aynı anda en çok bu kadar sorgu gönderir (en az 1). Dolunca yeni sorgu geliş sırasıyla bekler, düşürülmez"},
     {"key": "AUTHOR_REMINDERS_ENABLED", "group": "crm", "label": "Yazar ilişkileri sabah özeti", "type": "bool", "default": "1",
      "help": "Açıkken kişiye her sabah bugün/yarınki randevular, notu girilmemiş randevular ve geciken adımlar e-postayla gider (yalnız yayınevi içi; kişi kendi ekranından kapatabilir)"},
     {"key": "AUTHOR_REMINDER_TIME", "group": "crm", "label": "Sabah özeti saati", "type": "text", "default": "08:15",
@@ -753,15 +757,29 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ITOPS_REPORT_HOUR", "group": "itops", "label": "Özet saati", "type": "int", "default": "8",
      "help": "Haftalık özet ve günlük «hata veren zamanlanmış işler» e-postası bu saatten sonraki ilk turda gider (0–23)"},
     {"key": "ITOPS_FAILS_TO_OPEN", "group": "itops", "label": "Olay açmak için art arda başarısız deneme", "type": "int", "default": "2",
-     "help": "Tek başarısız deneme olay açmaz (yanlış alarm); 5 dk'lık turda 2 deneme ≈ 10 dk içinde bildirim"},
+     "help": "Tek başarısız deneme olay açmaz (yanlış alarm); kesinti ayrıca aşağıdaki en kısa süre kadar sürmeli"},
+    {"key": "ITOPS_OUTAGE_MIN", "group": "itops", "label": "Kesinti sayılması için en kısa süre (dk)", "type": "int", "default": "10",
+     "help": "Bağlantı bu kadar dakika art arda yanıt vermezse olay açılır ve bir kez e-posta gider; daha kısa kesinti olay "
+             "sayılmaz. 5 dk'lık turda 10 = üç ardışık başarısız deneme. 0: yalnız deneme sayısına bakılır"},
+    {"key": "ITOPS_RESTART_GRACE_MIN", "group": "itops", "label": "Yeniden başlatma payı (dk)", "type": "int", "default": "5",
+     "help": "Zeki AI hizmeti yeniden başlatıldığında, açılışın bu kadar dakika öncesi ve sonrasındaki başarısız denemeler "
+             "sayılmaz (planlı yeniden başlatma olay değildir). Açılış zamanı hizmetin kendi açılış kaydından okunur. 0: kapalı"},
+    {"key": "ITOPS_RESOLVE_MIN", "group": "itops", "label": "«Düzeldi» için kesintisiz çalışma (dk)", "type": "int",
+     "default": "15",
+     "help": "Olay ancak bağlantı bu kadar dakika kesintisiz çalışınca, kendi verisi okununca ve onu kullanan sık çalışan "
+             "bir zamanlanmış iş (varsa) başarıyla koşunca kapanır; «Düzeldi» e-postası o zaman gider. Kurumsal e-posta "
+             "kutusu da aynı kurala uyar"},
+    {"key": "ITOPS_REMIND_HOURS", "group": "itops", "label": "Kopma hatırlatması (saat)", "type": "int", "default": "0",
+     "help": "0: aynı olay için ikinci e-posta gitmez, düzelince tek «Düzeldi» e-postası gider. Sürerken hatırlatma "
+             "isteniyorsa kaç saatte bir gideceğini girin"},
     {"key": "ITOPS_LOGO_STALE_DAYS", "group": "itops", "label": "Logo verisi eski sayılır (gün)", "type": "int", "default": "3",
      "help": "Son fatura bu kadar günden eskiyse «veri eski» olayı açılır. 0: bakılmaz. Hafta sonu yanlış alarm vermesin diye 3"},
     {"key": "ITOPS_CRM_STALE_HOURS", "group": "itops", "label": "CRM verisi eski sayılır (saat)", "type": "int", "default": "24",
      "help": "Kitap kartlarında son değişiklik bu kadar saatten eskiyse «veri eski» olayı açılır. 0: bakılmaz"},
     {"key": "ITOPS_CRM_FRESH_TABLE", "group": "itops", "label": "CRM tazelik tablosu", "type": "text", "default": "new_kitapBase",
      "help": "Son değişiklik zamanına bakılan CRM tablosu"},
-    {"key": "ITOPS_STALE_REMIND_HOURS", "group": "itops", "label": "«Veri eski» hatırlatması (saat)", "type": "int", "default": "24",
-     "help": "Veri eskiliği sürerse bu kadar saatte bir yeniden bildirilir. Kopma hatırlatması uyarılarınkiyle aynı"},
+    {"key": "ITOPS_STALE_REMIND_HOURS", "group": "itops", "label": "«Veri eski» hatırlatması (saat)", "type": "int", "default": "0",
+     "help": "0: «veri eski» olayı için tek e-posta gider, veri güncellenince tek «Düzeldi». Sürerken hatırlatma isteniyorsa saat girin"},
     # DYK Kurul (göstergeler, toplantı, paket). Eşik ve sahip gösterge kataloğunda (Kurul ekranı) tutulur.
     {"key": "KURUL_COMPANY", "group": "kurul", "label": "Paketteki şirket adı", "type": "text", "default": "Timaş Yayınları",
      "help": "Kurul paketinin ve PDF'in üst bilgisinde yazar"},
@@ -1588,7 +1606,8 @@ def ensure(engine: sa.engine.Engine) -> None:
     global _engine
     with _lock:
         if id(engine) not in _ready:
-            _md.create_all(engine, checkfirst=True)
+            from semantic_layer.store import schema_stamp
+            schema_stamp.create_all(_md, engine)
             _ready.add(id(engine))
         _engine = engine
 
