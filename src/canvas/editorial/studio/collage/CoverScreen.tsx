@@ -178,7 +178,7 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok. {canProduce ? '«3 aday üret» ile Zeki AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : canEdit ? 'Kendi fotoğrafınızı aşağıdan yükleyin.' : ''}</p>
+          <p className="mt-2 text-[12px] text-canvas-muted">Henüz fotoğraf yok.{canProduce ? ' «3 aday üret» ile Zeki AI\'dan fotoğraf isteyin ya da kendi fotoğrafınızı yükleyin.' : ''}</p>
         )}
         {sel && !sel.overflow && sel.cut_note && <p className="mt-2 text-[11.5px] text-canvas-muted">{sel.cut_note} Kesim düz yırtık kâğıt olarak kuruldu.</p>}
 
