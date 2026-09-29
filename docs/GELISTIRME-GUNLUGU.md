@@ -44,6 +44,33 @@
 - **Kalite:** Başarı alanları %87–100 dolu (ebat/renk bilgisiz); D&R'de fiyat ve kategori yolu tam, stok `b2bstock`'ta (`available_stock` %1); `deleted` anlamı belirsiz. TİMAŞ başlıklarının %99'u Logo barkoduyla eşleşiyor.
 - **Bulgu:** Başarı'da «Baskısı Yok» görünen ≈385 TİMAŞ başlığının Logo'da stoğu var (satış kaybı adayı; adetler Stok formülüyle doğrulanmalı). Ortalama liste fiyatı 21 ayda 137 → 226 ₺.
 - **Harita:** 10 ekran; öncelik Pazar ve rakip (CRM «Rakip Kitap»ın yerine), Stok/Baskı önerisi (dağıtımcı stoğu), Fiyatlama (otomatik rakip fiyatı), İlk baskı (rakip emsali). Hepsinden önce gece görüntüsü + arşiv içe alma + eşleme. Belge: `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
+## 2026-09-29 — Yazar giriş panosuna süzgeç: marka, editör, adım, proje türü, başvuru yılı
+
+- **İstek (kullanıcı):** «yazar giriş ekranına filter eklenecek». Hangi süzgeç: iş kararı Claude'da, veriye bakılarak.
+- **Doluluk (canlı CRM .28, pano kapsamı: etkin, yeni/yenileme, 2025-01-01 sonrası = 2.112 proje; süren 1.164):**
+  marka (`new_yayinciid` → `new_marka`, 18 marka) 2.110 / 2.112 (süren 1.162); proje türü 2.112 (Editoryal 1.882, Pazarlama 221,
+  Satış 9 — Pazarlama'nın 221'i de hep «süren», süreçten hiç geçmiyor); başvuru tarihi 2.112 (2025: 1.550, 2026: 562);
+  editör 1.407 (süren 564 — boşu «Editör atanmamış» seçeneği, o da bir adım); adım her süren projede.
+  **Süzgeç yapılmayanlar:** kitaplık 902, dizi 749, oluşturma kanalı 985 (yarıdan az dolu; seçilince projelerin çoğu sessizce
+  dışarıda kalırdı); ürün tipi proje türüyle örtüşüyor; CRM statüsü adım hesabıyla çelişiyor (adım kanıttan çıkarılıyor).
+- **Yapılan:** `editorial_intake.facts_sql` → `new_markaBase` bağı ve `new_projeturu` kodu; kartta `brand`, `projectType`
+  (kod → `PROJECT_TYPES`, bilinmeyen kod «Diğer tür (kod)»). Ekran: beş seçim kutusu (telefonda 2 sütun), seçenekte diğer
+  süzgeçler uygulanmışken süren proje sayısı, «Yalnız gecikenler/benimkiler» sayıları da süzgeçli, açık süzgeç çipleri
+  (dokununca o süzgeç kalkar), «Süzgeçleri temizle», boş sütunda temizle düğmesi. Durum adres çubuğunda; paylaşılan bağlantı
+  aynı görünümü açar. Süzgeçler tamamlanan/kapanan listelerine de uygulanır; adım ya da gecikenler seçiliyken onlar gizlenir.
+  Telefonda adım seçilince evre sekmesi o adımın evresine geçer. Ekran bilgi kutusu güncellendi.
+- **Bulunan:** ilk sürüm tür etiketini SQL'de `StringMapBase` (+ `EntityView`) ile okuyordu; doğrudan bağlantıda çalıştı, ama
+  köprünün kendi sorgu yolunda «table not in the catalog» ile pano okuması düştü (aday köprüde görüldü). Etiket koda alındı.
+- **Test (test sunucusu, geçici `/tmp/claude-yazar-suzgec`, silindi):** `tsc -b` 0; vitest 46 dosya / 257 (yeni `filters.test.ts` 5);
+  pytest `test_editorial_intake_filters.py` 3; `tests/editorial/intake_steps.py` 20/20.
+- **Referans (aday köprünün gerçek ucu `/api/v1/editorial/intake`, yan port 8799, kişi süreç içinde sabit — `ekran_sunucu.py`;
+  giriş servisine ve oturum tablosuna dokunulmadı):** uç kartları ↔ doğrudan CRM GROUP BY: marka 19 değer, tür 3, yıl 2,
+  editör 32 — hepsi birebir (2.112 = 2.112); birleşik (Timaş Çocuk + Editoryal + 2026 + editör atanmamış) 15 = 15.
+- **Tarayıcı (aynı yan port, gerçek veri, 320/390/768/1440 px):** 42/42 — yatay taşma 0 (süzgeçsiz ve 5 süzgeç açıkken),
+  seçenek sayısı = uçtaki kart sayısı (Timaş Çocuk 232, bu markada editör atanmamış 63), adres/çip/temizle, adım 7 → «Yayınevine
+  giriş» sekmesi (65), adresten açılış (`?tur=Pazarlama&geciken=1` → 196), sayfa hatası 0.
+- **Kurulmadı:** test sunucusu ve müşteri VM'i (main'e merge ve kurulum ayrı adım). Kart şeması değiştiği için ilk açılışta pano
+  önbelleği yeniden okunur (kaynak dosyanın özeti anahtarda).
 
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 

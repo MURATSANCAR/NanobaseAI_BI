@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BellRing, ChevronDown, Search } from 'lucide-react';
+import { BellRing, ChevronDown, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, type IntakeCard } from '../../engine';
 import { intakeBoardOptions } from '../queries';
 import { Note, btnGhost, errText, field, nf } from '../../admin/ui';
 import { dateTime, stamp } from '../../format';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
 import { ProjectCard, TodoGroups, waitingText } from './parts';
+import { FACETS, NONE, activeCount, facetOptions, matches, readFilters, withFilter, withoutFilters, type Facet, type IntakeFilters } from './filters';
 import MailApplicationsBox from '../../mailbox/ApplicationsBox';
 import SqlInfo from '../../components/SqlInfo';
 import { kaynakOf } from '../../components/kaynakOf';
@@ -17,13 +18,8 @@ import { EmptyHint, Explain } from '../../components/Explain';
 
 const STEP_PAGE = 30;
 
-const matches = (c: IntakeCard, q: string) => {
-  if (!q) return true;
-  const t = q.toLocaleLowerCase('tr');
-  return [c.name, c.author, c.editor].some((v) => (v || '').toLocaleLowerCase('tr').includes(t));
-};
 
-function Column({ no, title, lead, steps, cards, filtering }: { no: number; title: string; lead: string; steps: string[]; cards: IntakeCard[]; filtering?: boolean }) {
+function Column({ no, title, lead, steps, cards, onClear }: { no: number; title: string; lead: string; steps: string[]; cards: IntakeCard[]; onClear?: () => void }) {
   const [shown, setShown] = useState(STEP_PAGE);
   return (
     <Panel>
@@ -39,8 +35,15 @@ function Column({ no, title, lead, steps, cards, filtering }: { no: number; titl
       {cards.length === 0 ? (
         <div className="mt-3">
           <EmptyHint
-            title={filtering ? 'Süzgece uyan proje yok' : 'Bu evrede proje yok'}
-            why={filtering ? 'Aramayı temizleyin ya da «Yalnız gecikenler» / «Yalnız benimkiler» süzgecini kapatın.' : 'Şu an bu evrenin adımlarında bekleyen proje bulunmuyor.'}
+            title={onClear ? 'Süzgece uyan proje yok' : 'Bu evrede proje yok'}
+            why={onClear ? 'Bu evrede seçtiğiniz süzgeçlere uyan proje yok. Bir süzgeci kaldırın ya da hepsini temizleyin.' : 'Şu an bu evrenin adımlarında bekleyen proje bulunmuyor.'}
+            action={
+              onClear && (
+                <button type="button" className={btnGhost} onClick={onClear}>
+                  Süzgeçleri temizle
+                </button>
+              )
+            }
           />
         </div>
       ) : (
@@ -133,19 +136,102 @@ export function TodoStrip({ todo, all = false }: { todo: IntakeCard[]; all?: boo
   );
 }
 
+/** Süzgecin ekrandaki adı, «hepsi» ve «boş» seçeneğinin sözü. */
+const FACET_TEXT: Record<Facet, { label: string; all: string; none: string }> = {
+  brand: { label: 'Marka', all: 'Bütün markalar', none: 'Marka girilmemiş' },
+  editor: { label: 'Editör', all: 'Bütün editörler', none: 'Editör atanmamış' },
+  step: { label: 'Adım', all: 'Bütün adımlar', none: 'Adım yok' },
+  type: { label: 'Proje türü', all: 'Bütün proje türleri', none: 'Tür girilmemiş' },
+  year: { label: 'Başvuru yılı', all: 'Bütün yıllar', none: 'Tarih yok' },
+};
+
+function FacetSelect({
+  facet,
+  cards,
+  f,
+  stepTitle,
+  onChange,
+}: {
+  facet: Facet;
+  cards: IntakeCard[];
+  f: IntakeFilters;
+  stepTitle: (no: number) => string;
+  onChange: (v: string) => void;
+}) {
+  const t = FACET_TEXT[facet];
+  const opts = facetOptions(cards, f, facet);
+  const name = (v: string) => (v === NONE ? t.none : facet === 'step' ? `${v}. ${stepTitle(Number(v))}` : v);
+  const on = !!f[facet];
+  return (
+    <label className="block min-w-0">
+      <span className="mb-0.5 block px-0.5 text-[11px] font-bold text-canvas-muted">{t.label}</span>
+      <select
+        value={f[facet]}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${field} truncate ${on ? 'border-canvas-violet bg-canvas-violet/5 text-canvas-violet' : ''}`}
+      >
+        <option value="">{t.all}</option>
+        {opts.map((o) => (
+          <option key={o.value} value={o.value}>
+            {name(o.value)} ({nf.format(o.count)})
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export default function IntakeBoardScreen() {
   const board = useQuery(intakeBoardOptions());
-  const [text, setText] = useState('');
-  const [onlyLate, setOnlyLate] = useState(false);
-  const [onlyMine, setOnlyMine] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const f = useMemo(() => readFilters(params), [params]);
+  const [text, setText] = useState(f.q);
   const [phase, setPhase] = useState(1);
   const q = useDebounced(text.trim(), 200);
   const d = board.data;
 
-  const filtered = useMemo(
-    () => (d?.items ?? []).filter((c) => matches(c, q) && (!onlyLate || c.late) && (!onlyMine || c.mine)),
-    [d, q, onlyLate, onlyMine],
-  );
+  const set = (key: keyof IntakeFilters, value: string | boolean) => setParams((p) => withFilter(p, key, value), { replace: true });
+  const clear = () => {
+    setText('');
+    setParams((p) => withoutFilters(p), { replace: true });
+  };
+  // Aramanın yazılan hâli adrese gecikmeyle gider; adres dışarıdan değişirse (temizle, geri tuşu) kutu da değişir.
+  useEffect(() => {
+    if (q !== f.q) set('q', q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+  useEffect(() => {
+    if (f.q !== q) setText(f.q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.q]);
+
+  // Telefonda tek evre görünür: adım seçilince o adımın evresine geçilir, yoksa boş sütun görülürdü.
+  const stepPhase = d?.phases.find((ph) => ph.steps.some((s) => String(s.no) === f.step))?.no;
+  useEffect(() => {
+    if (stepPhase) setPhase(stepPhase);
+  }, [stepPhase]);
+
+  const items = useMemo(() => d?.items ?? [], [d]);
+  const filtered = useMemo(() => items.filter((c) => matches(c, f)), [items, f]);
+  const completed = useMemo(() => (d?.completed ?? []).filter((c) => matches(c, f)), [d, f]);
+  const closed = useMemo(() => (d?.closed ?? []).filter((c) => matches(c, f)), [d, f]);
+  const active = activeCount(f);
+  const stepTitle = (no: number) => d?.steps.find((s) => s.no === no)?.title ?? '';
+  const lateCount = items.filter((c) => c.late && matches(c, f, 'late')).length;
+  const mineCount = items.filter((c) => c.mine && matches(c, f, 'mine')).length;
+  const facetName = (k: Facet) => (f[k] === NONE ? FACET_TEXT[k].none : k === 'step' ? `${f[k]}. ${stepTitle(Number(f[k]))}` : f[k]);
+  // Açık süzgeçlerin çipleri: dokununca yalnız o süzgeç kalkar.
+  const chips: Array<{ key: keyof IntakeFilters; text: string; off: string | boolean }> = [
+    ...(f.q ? [{ key: 'q' as const, text: `Arama: ${f.q}`, off: '' }] : []),
+    ...FACETS.filter((k) => f[k]).map((k) => ({ key: k, text: `${FACET_TEXT[k].label}: ${facetName(k)}`, off: '' })),
+    ...(f.late ? [{ key: 'late' as const, text: 'Yalnız gecikenler', off: false }] : []),
+    ...(f.mine ? [{ key: 'mine' as const, text: 'Yalnız benimkiler', off: false }] : []),
+  ];
+  const removeChip = (key: keyof IntakeFilters, off: string | boolean) => {
+    if (key === 'q') setText('');
+    set(key, off);
+  };
+
   const err = errText(board.error, 'Süreç okunamadı.');
   const lead = d?.since
     ? `${dateTime(d.since)} sonrası açılan yeni ve yenileme projeleri. Veriler CRM'den kendiliğinden gelir, beş dakikada bir tazelenir.`
@@ -185,24 +271,64 @@ export default function IntakeBoardScreen() {
       <MailApplicationsBox />
 
       {d && !d.loading && (
-        <div className="flex flex-wrap items-center gap-2 px-1 text-[12px]">
-          <button type="button" aria-pressed={onlyLate} onClick={() => setOnlyLate((v) => !v)} className={`${btnGhost} ${onlyLate ? 'ring-2 ring-canvas-violet' : ''}`}>
-            Yalnız gecikenler ({nf.format(d.items.filter((c) => c.late).length)})
-          </button>
-          <button type="button" aria-pressed={onlyMine} onClick={() => setOnlyMine((v) => !v)} className={`${btnGhost} ${onlyMine ? 'ring-2 ring-canvas-violet' : ''}`}>
-            Yalnız benimkiler ({nf.format(d.items.filter((c) => c.mine).length)})
-          </button>
-          <span className="inline-flex items-center gap-1 text-canvas-muted">
-            Kart altındaki çizgi
-            <Explain label="İlerleme çizgisi">
-              9 adımın her biri bir parçadır; evreler arasında boşluk vardır. Yeşil biten adım, mor şu anki adım, kırmızımsı gecikmiş şu anki adım, gri henüz gelinmemiş adımdır.
-            </Explain>
-          </span>
-          <span className="text-canvas-muted">
-            Gecikme: bir adımda {nf.format(d.lateDays)} günden uzun bekleme.
-            {d.lastBoard && <> Son kurul {dateTime(d.lastBoard)}.</>}
-          </span>
-        </div>
+        <section aria-label="Süzgeçler" className="space-y-2 px-1">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {FACETS.map((k) => (
+              <FacetSelect key={k} facet={k} cards={items} f={f} stepTitle={stepTitle} onChange={(v) => set(k, v)} />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <button type="button" aria-pressed={f.late} onClick={() => set('late', !f.late)} className={`${btnGhost} ${f.late ? 'ring-2 ring-canvas-violet' : ''}`}>
+              Yalnız gecikenler ({nf.format(lateCount)})
+            </button>
+            <button type="button" aria-pressed={f.mine} onClick={() => set('mine', !f.mine)} className={`${btnGhost} ${f.mine ? 'ring-2 ring-canvas-violet' : ''}`}>
+              Yalnız benimkiler ({nf.format(mineCount)})
+            </button>
+            <span className="inline-flex items-center gap-1 text-canvas-muted">
+              Kart altındaki çizgi
+              <Explain label="İlerleme çizgisi">
+                9 adımın her biri bir parçadır; evreler arasında boşluk vardır. Yeşil biten adım, mor şu anki adım, kırmızımsı gecikmiş şu anki adım, gri henüz gelinmemiş adımdır.
+              </Explain>
+            </span>
+            <span className="text-canvas-muted">
+              Gecikme: bir adımda {nf.format(d.lateDays)} günden uzun bekleme.
+              {d.lastBoard && <> Son kurul {dateTime(d.lastBoard)}.</>}
+            </span>
+          </div>
+          {active > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-canvas-violet/5 px-2.5 py-2 text-[12px]">
+              <span className="mr-1 font-semibold">
+                Süzgece uyan: <b className="font-mono tabular-nums">{nf.format(filtered.length)}</b> süren
+                {completed.length > 0 && (
+                  <>
+                    , <b className="font-mono tabular-nums">{nf.format(completed.length)}</b> tamamlanan
+                  </>
+                )}
+                {closed.length > 0 && (
+                  <>
+                    , <b className="font-mono tabular-nums">{nf.format(closed.length)}</b> kapanan
+                  </>
+                )}{' '}
+                proje
+              </span>
+              {chips.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => removeChip(c.key, c.off)}
+                  aria-label={`${c.text} süzgecini kaldır`}
+                  className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full bg-white px-2.5 py-1 font-semibold text-canvas-violet shadow-sm ring-1 ring-canvas-violet/20 transition-transform duration-150 ease-out active:scale-[0.97] sm:min-h-0"
+                >
+                  <span className="min-w-0 truncate">{c.text}</span>
+                  <X aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                </button>
+              ))}
+              <button type="button" onClick={clear} className="min-h-9 px-1.5 font-extrabold text-canvas-violet underline-offset-2 hover:underline sm:min-h-0">
+                Süzgeçleri temizle
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       {d && !d.loading && (
@@ -233,13 +359,13 @@ export default function IntakeBoardScreen() {
                   lead={ph.lead}
                   steps={ph.steps.map((s) => s.title)}
                   cards={filtered.filter((c) => c.phase === ph.no)}
-                  filtering={!!q || onlyLate || onlyMine}
+                  onClear={active > 0 ? clear : undefined}
                 />
               </div>
             ))}
           </div>
-          <Folded title="Tamamlanan projeler" cards={d.completed.filter((c) => matches(c, q))} />
-          <Folded title="Reddedilen ve iptal edilen projeler" cards={d.closed.filter((c) => matches(c, q))} />
+          <Folded title="Tamamlanan projeler" cards={completed} />
+          <Folded title="Reddedilen ve iptal edilen projeler" cards={closed} />
           {!d.audit && (
             <p className="px-1 text-[11px] text-canvas-muted">
               Editör atama ve rapor tarihleri CRM değişiklik kaydından okunamadı; bu adımlarda bekleme bir önceki bilinen tarihten sayılıyor.

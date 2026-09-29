@@ -1241,6 +1241,10 @@ export type IntakeCard = {
   modifiedOn: string | null;
   createdOn: string | null;
   mine: boolean;
+  /** CRM projesindeki «Yayınevi» (marka); girilmemişse null. */
+  brand?: string | null;
+  /** CRM proje türü etiketi (Editoryal, Pazarlama, Satış). */
+  projectType?: string | null;
 };
 export type IntakeStepDef = { no: number; title: string; waiting: string; owner: string; markable: string | null };
 export type IntakePhase = { no: number; title: string; lead: string; steps: Array<{ no: number; title: string }>; count: number; late: number };
