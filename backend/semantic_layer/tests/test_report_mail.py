@@ -67,3 +67,51 @@ def test_send_attaches_file(monkeypatch, tmp_path):
     names = [p.get_filename() for p in sent[0].iter_attachments()]
     assert names == ["rapor.xlsx"]
     assert sent[0].get_body(("html",)) is not None
+
+
+def test_link_opens_the_report_itself_not_alerts():
+    """ZEKI-55: ALERT_LINK uyarılar ekranıdır; rapor e-postası raporun kendi ayrıntısına gider."""
+    assert R.report_link("http://vm/timas/uyarilar", "rpt-1") == "http://vm/timas/planli-raporlar?id=rpt-1"
+    assert R.report_link("http://vm/timas/", "rpt-1") == "http://vm/timas/planli-raporlar?id=rpt-1"
+    assert R.report_link("", "rpt-1") == ""
+
+
+def _plan(tmp_path, monkeypatch):
+    import sqlalchemy as sa
+
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'r.db'}")
+    R._md.create_all(engine)
+    monkeypatch.setattr(R, "REPORT_DIR", tmp_path)
+    path = tmp_path / "rapor.xlsx"
+    path.write_bytes(b"PK")
+    monkeypatch.setattr(R, "build_file", lambda *a, **k: path)
+    sent: list = []
+    monkeypatch.setattr(R, "send_file", lambda rep, p, c, r, now, link="", change=None: sent.append(link) or "sent")
+    snaps: list = []
+    monkeypatch.setattr(R, "save_snapshot", lambda rid, c, r, now: snaps.append(rid))
+    rep = R.create_report(engine, "t", "d", "u", {"question": "net ciro", "at": "11:55", "recipients": ["a@example.com"]})
+    return engine, rep, sent, snaps
+
+
+def _asker(q):
+    return {"sql": "SELECT 1"}
+
+
+def _fetcher(sql):
+    return [{"name": "x", "type": "int"}], [{"x": 1}]
+
+
+def test_prepare_after_create_does_not_mail(tmp_path, monkeypatch):
+    """ZEKI-53: plan onayındaki ilk dosya e-posta atmaz; plan saati kaymaz, önceki sonuç yazılmaz."""
+    engine, rep, sent, snaps = _plan(tmp_path, monkeypatch)
+    out = R.run_report(engine, rep["id"], _asker, _fetcher, manual=True, link="http://vm/timas/uyarilar", send=False)
+    assert sent == [] and snaps == []
+    assert out["lastStatus"] == "ready" and out["lastRows"] == 1 and out["lastRunAt"]
+    assert out["nextRunAt"] == rep["nextRunAt"]
+
+
+def test_run_now_mails_with_the_report_link(tmp_path, monkeypatch):
+    engine, rep, sent, snaps = _plan(tmp_path, monkeypatch)
+    out = R.run_report(engine, rep["id"], _asker, _fetcher, manual=True, link="http://vm/timas/uyarilar")
+    assert out["lastStatus"] == "sent" and snaps == [rep["id"]]
+    assert sent == [f"http://vm/timas/planli-raporlar?id={rep['id']}"]

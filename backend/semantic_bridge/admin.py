@@ -2604,7 +2604,7 @@ def _unit(name: str) -> dict[str, Any]:
 
 TIMERS = [
     {"unit": "timas-alerts.timer", "label": "Uyarı kontrolü", "every": "15 dk"},
-    {"unit": "timas-reports.timer", "label": "Planlı raporlar", "every": "5 dk"},
+    {"unit": "timas-reports.timer", "label": "Planlı raporlar", "every": "her dakika"},
     {"unit": "timas-board.timer", "label": "Pano kartı tazeleme", "every": "15 dk"},
     {"unit": "timas-seo.timer", "label": "SEO & GEO eşitlemesi", "every": "gece 03:00"},
     {"unit": "nanobase-semantic-worker.timer", "label": "Gece katalog taraması", "every": "gece"},

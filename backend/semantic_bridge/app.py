@@ -4107,16 +4107,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True}
 
     @app.post("/api/v1/reports/{rid}/run")
-    def reports_run(rid: str, request: Request) -> dict[str, Any]:
+    def reports_run(rid: str, request: Request, send: bool = True) -> dict[str, Any]:
+        """Şimdi çalıştır. `send=false`: dosya hazırlanır, e-posta gitmez (plan onayındaki ilk dosya);
+        gönderim zamanlanan saatte `run-due` ile olur."""
         _require_caller(request)
         user = _board_user(request)
         r, engine, tenant, ds = _reports()
         if reports_mod.get_report(engine, tenant, ds, user, rid) is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
         out = reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
-                                     link=admin_mod.conf("ALERT_LINK"), explain=_report_explainer(r))
+                                     link=admin_mod.conf("ALERT_LINK"), explain=_report_explainer(r), send=send)
         admin_mod.audit(engine, user, "run", "report", rid, out.get("title"),
-                        {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError")})
+                        {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError"),
+                         "send": send})
         from semantic_bridge import reports_kaynak as RK
 
         return P.bagla(out, lambda: RK.for_report(engine, tenant, ds, user, out, *SK.databases(r.settings.connection_file)))

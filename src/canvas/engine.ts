@@ -572,7 +572,8 @@ export const boardApi = {
 export type ReportRecurrence = 'daily' | 'weekly' | 'monthly' | 'once';
 export type ReportFormat = 'xlsx' | 'csv';
 export type ReportStatus = 'active' | 'paused' | 'done';
-export type ReportLastStatus = 'sent' | 'no_smtp' | 'no_recipient' | 'failed' | null;
+/** `ready`: dosya hazırlandı, e-posta zamanlanan saatte gidecek (plan onayındaki ilk dosya). */
+export type ReportLastStatus = 'sent' | 'ready' | 'no_smtp' | 'no_recipient' | 'failed' | null;
 export type ColumnFormat = 'auto' | 'text' | 'number' | 'money' | 'percent' | 'date';
 /** Kişinin ekranda kurduğu kolon düzeni; `key` motorun verdiği kaynak kolon adıdır. Sıra dizinin sırasıdır. */
 export type ReportColumn = { key: string; label: string; hidden: boolean; format: ColumnFormat };
@@ -676,7 +677,9 @@ export const reportsApi = {
   create: (b: ReportInput) => send<ReportDto>('POST', '/api/v1/reports', b, 30_000),
   update: (id: string, b: Partial<ReportInput>) => send<ReportDto>('PATCH', `/api/v1/reports/${encodeURIComponent(id)}`, b, 30_000),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/reports/${encodeURIComponent(id)}`, undefined, 30_000),
-  run: (id: string) => send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run`, {}, 600_000),
+  /** `send: false` dosyayı hazırlar, e-posta göndermez; gönderim zamanlanan saatte olur. */
+  run: (id: string, opts: { send?: boolean } = {}) =>
+    send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run${opts.send === false ? '?send=false' : ''}`, {}, 600_000),
   fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/reports/${encodeURIComponent(id)}/file`,
 };
 

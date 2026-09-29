@@ -1,9 +1,11 @@
 [Unit]
-Description=Planlı rapor kontrolü, 5 dakikada bir
+Description=Planlı rapor kontrolü, her dakika (saat başına hizalı)
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=5min
+# Plan dakikası kişinin seçtiği saattir (11:55 gibi); 5 dakikalık ve açılıştan sayılan aralık gönderimi
+# 5 dakikaya kadar geciktiriyordu (ZEKI-53). Zamanı gelmemiş rapor yoksa run-due yalnız bir sorgu yapar.
+OnCalendar=*:*:00
+AccuracySec=1s
 Unit=timas-reports.service
 
 [Install]
