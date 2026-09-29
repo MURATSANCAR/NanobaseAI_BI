@@ -14,7 +14,8 @@ Akış:
 
 Uydurma yok: geçmiş çözüm yoksa öneri gitmez. Öneri e-postası `nb-otomatik-oneri` işaretini taşır; «BT'nin geçmiş
 çözümü» toplanırken bu e-posta sayılmaz (kendi önerisinden öğrenmesin).
-Ayarlar (site_config): nb_bt_ekibi (vars. «BT»), nb_oneri_min_p (0.80), nb_oneri_bekleme_saat (4),
+Ayarlar (site_config): nb_bt_ekibi (vars. «BT»), nb_oneri_min_p (0.70 — iki koşullu soruda açık eşleşme
+%80 civarında kalıyor, 2026-09-29 sınaması), nb_oneri_bekleme_saat (4),
 nb_otomatik_oneri_kapali (1 → öneri gönderilmez, kayıt doğrudan BT'ye).
 """
 
@@ -39,13 +40,18 @@ def _ayar(key: str, vars):
 	return frappe.conf.get(key) if frappe.conf.get(key) not in (None, "") else vars
 
 
-def bt_ekibi() -> str | None:
-	"""BT ekibi (site ayarı `nb_bt_ekibi`); yoksa açılır. Üyeleri AD eşitlemesi ekler (yz/temsilci.py)."""
+def bt_ekibi(uyeler: list[str] | None = None) -> str | None:
+	"""BT ekibi (site ayarı `nb_bt_ekibi`). Ekip en az bir üyeyle açılabilir: yoksa ve `uyeler` verildiyse onlarla
+	açılır (AD eşitlemesi, yz/temsilci.py); üye yoksa None."""
 	ad = str(_ayar("nb_bt_ekibi", "BT"))
 	if not frappe.db.exists("DocType", "HD Team"):
 		return None
-	if not frappe.db.exists("HD Team", ad):
-		frappe.get_doc({"doctype": "HD Team", "team_name": ad}).insert(ignore_permissions=True)
+	if frappe.db.exists("HD Team", ad):
+		return ad
+	if not uyeler:
+		return None
+	frappe.get_doc({"doctype": "HD Team", "team_name": ad,
+					"users": [{"user": u} for u in uyeler]}).insert(ignore_permissions=True)
 	return ad
 
 
@@ -74,7 +80,9 @@ def bt_ata(ticket: str, neden: str) -> None:
 		frappe.db.rollback()
 		frappe.log_error(title=f"NanobaseAI BT ataması: atama kuralı çalışmadı ({ticket})")
 		frappe.db.set_value("HD Ticket", ticket, {"agent_group": ekip, "nb_oneri_durumu": BT}, update_modified=False)
-	_yorum(ticket, f"NanobaseAI: kayıt BT ekibine atandı — {neden}")
+	_yorum(ticket, f"NanobaseAI: kayıt BT ekibine atandı — {neden}" if ekip else
+		   f"NanobaseAI: kayıt BT'ye yönlendirildi — {neden}. BT ekibi henüz yok (AD'de BT biriminde kişi bulunamadı); "
+		   "kayıt temsilci kuyruğunda bekliyor.")
 	frappe.db.commit()
 
 
@@ -133,7 +141,7 @@ def baslat(ticket: str) -> str:
 		bt_ata(ticket, "yapay zekâ şu an yanıt vermiyor")
 		return "bt"
 	p_evet = flt((r.get("probs") or {}).get("Evet"))
-	esik = flt(_ayar("nb_oneri_min_p", 0.80))
+	esik = flt(_ayar("nb_oneri_min_p", 0.70))
 	if r.get("choice") != "Evet" or p_evet < esik:
 		bt_ata(ticket, f"geçmiş çözümler kullanıcının uygulayabileceği bir yol göstermiyor (uyma olasılığı %{round(p_evet * 100)}; "
 					   f"eşik %{round(esik * 100)}; bakılan kayıtlar: {', '.join('#' + k['ad'] for k in kaynak)})")
@@ -212,7 +220,7 @@ def yanit(ticket: str) -> str:
 	except llm.ModelUnavailable:
 		r = {}
 	p = flt((r.get("probs") or {}).get("Çözüldü"))
-	if r.get("choice") == "Çözüldü" and p >= flt(_ayar("nb_oneri_min_p", 0.80)):
+	if r.get("choice") == "Çözüldü" and p >= flt(_ayar("nb_oneri_min_p", 0.70)):
 		adim = frappe.db.get_value("HD Ticket Comment", {"reference_ticket": ticket, "content": ["like", "%çözüm önerisi gönderdi%"]},
 								   "content", order_by="creation desc") or ""
 		doc.flags.ignore_permissions = True

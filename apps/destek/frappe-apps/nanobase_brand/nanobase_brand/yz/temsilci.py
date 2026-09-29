@@ -58,15 +58,15 @@ def talep_eden_yap(user) -> bool:
 
 def esitle() -> dict:
 	"""AD'deki BT birimini temsilci yapar, fazlalığı talep edene indirir."""
-	from nanobase_brand.ldap_ntlm import ACTIVE_PERSON, _department, _fold, ensure_admin, ensure_agent, ensure_team
+	from nanobase_brand.ldap_ntlm import ACTIVE_PERSON, _fold, ensure_admin, ensure_agent
 	from nanobase_brand.yz.cozum import bt_ekibi
 
 	ldap = frappe.get_doc("LDAP Settings")
 	if not ldap.enabled:
 		return {"atlandi": "AD kapalı"}
-	bt_ekibi()
 	conn = ldap.connect_to_ldap(ldap.base_dn, ldap.get_password(raise_exception=False))
 	temsilciler: set[str] = set()
+	bt_uyeler: list[tuple[str, str]] = []
 	eklenen = 0
 	try:
 		kayitlar = conn.extend.standard.paged_search(
@@ -97,11 +97,22 @@ def esitle() -> dict:
 			ensure_agent(user)
 			ensure_admin(user, str(sam))
 			if _fold(dep) in birimler():
-				ensure_team(user, dep)
+				bt_uyeler.append((user.name, dep))
 			temsilciler.add(user.name)
 			eklenen += int(yeni)
 	finally:
 		conn.unbind()
+
+	# Ekip en az bir üyeyle açılabildiği için üyeler toplandıktan sonra: yoksa bu üyelerle açılır, varsa eklenir.
+	ekip = bt_ekibi([u for u, _ in bt_uyeler])
+	if ekip:
+		doc = frappe.get_doc("HD Team", ekip)
+		mevcut = {m.user for m in doc.users}
+		for u, _dep in bt_uyeler:
+			if u not in mevcut:
+				doc.append("users", {"user": u})
+		if len(doc.users) != len(mevcut):
+			doc.save(ignore_permissions=True)
 
 	indirilen = 0
 	for ajan in frappe.get_all("HD Agent", pluck="name"):
@@ -112,4 +123,5 @@ def esitle() -> dict:
 			continue
 		indirilen += int(talep_eden_yap(user))
 	frappe.db.commit()
-	return {"temsilci": len(temsilciler), "yeni_kullanici": eklenen, "talep_edene_indirilen": indirilen}
+	return {"temsilci": len(temsilciler), "bt_ekibi": ekip, "bt_uye": len(bt_uyeler), "yeni_kullanici": eklenen,
+			"talep_edene_indirilen": indirilen}
