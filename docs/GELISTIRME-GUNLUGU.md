@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (akşam) — Kur düzeltmesi (`2b87541c`) test sunucusunda; Logo faturası kuru ekranda
+
+- **Kurulum:** 6 dosya (pricing `data.py`, `kaynak.py`, `sources.py`; `CostForm.tsx`, `TariffPanel.tsx`, `help.ts`) sunucuda eski main'e eşitti (md5), yerleştirildi; sunucu ağacının kopyasında `tsc -b` + `vite build`, `index-DRmiBLOs.js`; köprü yeniden başladı, sağlık 200; `._*` 0.
+- **Doğrulama (timasai 15 dk oturum, silindi):** «Verileri yenile» sonrası görüntü `kur` = USD 48,7901 (5 fatura), EUR 55,75 (1 fatura), 28.09.2026; uyarı yok; `/form/setup` başlangıç kuru aynı. Kitaptan hesap (Mükemmeliyetçi Kişilik): kâğıt Logo'dan 48,75 ₺/kg (60 gr), bristol 31,60 ₺/kg.
+- **Değişiklik kaydı:** timasai #7646 (`pricing_snapshot` run, 07:44 UTC), silinmedi.
+- **Bekleyen:** müşteri VM'i — kullanıcı onayı; VM'in Logo bağlantısı henüz .25'e çevrilmedi.
+
 ## 2026-09-29 (akşamüstü) — Kitap hesabı test sunucusunda; 37/37 Excel formu gerçek uçtan tuttu; kur Logo faturalarından
 
 - **Kurulum (`b2375604`, yalnız bu işin 16 dosyası):** sunucudaki hâlleri md5 ile eski main'e eşitti; ortak `SqlInfo.tsx`'te başka oturumun (f7cbea2b) değişikliği sunucudaydı — `merge-file` ile yalnız bu işin farkı uygulandı, sonuç main ile birebir. Sunucu ağacının kopyasında `tsc -b` + `vite build` (VITE_BASE=/timas/), `cockpit/dist`'e önce parçalar sonra `index.html` (`index-BHx2vbR9.js`), köprü yeniden başladı. `._*` 0.
