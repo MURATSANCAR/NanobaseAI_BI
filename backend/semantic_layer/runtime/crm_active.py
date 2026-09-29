@@ -13,6 +13,11 @@ Hangi tablo: CRM veritabanında `statecode` kolonu olan `new_*` tabloları ile `
 (kazanıldı, tamamlandı, çözüldü); onlar süzülmez. Kullanıcı hesabı (`SystemUserBase`) de süzülmez:
 kapalı hesap geçmiş kayıttaki editörün adıdır, ayrıca `IsDisabled` ile gösterilir.
 
+Etkin kayıtta durum nedeni «Pasif» (2026-09-29): CRM'de bazı kayıtlar `statecode = 0` (etkin) iken durum nedeni
+(`statuscode`) «Pasif» taşıyor (ör. eski yüklemeden gelen kitap kartları: aramada «Pasif» etiketiyle görünüyordu).
+Kullanıcı kuralı: pasif olan hiçbir yerde gelmez. Tablo başına etiketi «Pasif…» ya da «Inactive…» olan durum nedenleri
+(`StringMapBase`, bütün diller) bir kez okunur; süzgeç `statuscode NOT IN (…)` da ekler. Okunamazsa yalnız `statecode`.
+
 Sorgu metni yeniden yazılmaz; yalnız tablo başvurusunun karakter aralığı değiştirilir (sqlglot
 tanıtıcı konumları). Ayrıştırılamayan sorgu olduğu gibi gider ve günlüğe yazılır.
 
@@ -61,6 +66,39 @@ def tables_sql(database: str) -> str:
     )
 
 
+def passive_sql(database: str) -> str:
+    """Tablo (varlık adı, küçük harf) başına pasif anlamlı durum nedeni kodları. Temel tablo = varlık adı + «Base»."""
+    if not _NAME.match(database or ""):
+        raise ValueError(f"veritabanı adı geçerli değil: {database!r}")
+    return (
+        f"SELECT DISTINCT LOWER(e.Name) AS ent, sm.AttributeValue AS code FROM [{database}].dbo.StringMapBase sm"
+        f" JOIN [{database}].dbo.EntityView e ON e.ObjectTypeCode = sm.ObjectTypeCode"
+        f" WHERE sm.AttributeName = 'statuscode'"
+        f" AND (LTRIM(sm.Value) LIKE N'Pasif%' OR LTRIM(sm.Value) LIKE N'Inactive%')"
+    )
+
+
+def passive_codes(rows: Any) -> dict[str, tuple[int, ...]]:
+    """`passive_sql` satırları → {«new_kitapbase»: (2, …)}."""
+    out: dict[str, set[int]] = {}
+    for r in rows or []:
+        ent, code = str(r.get("ent") or "").strip().lower(), r.get("code")
+        if not ent or code is None:
+            continue
+        try:
+            out.setdefault(f"{ent}base", set()).add(int(code))
+        except (TypeError, ValueError):
+            continue
+    return {k: tuple(sorted(v)) for k, v in out.items()}
+
+
+def _where(table: str, passive: dict) -> str:
+    codes = passive.get(table.lower()) or ()
+    if not codes:
+        return "statecode = 0"
+    return f"statecode = 0 AND (statuscode IS NULL OR statuscode NOT IN ({', '.join(str(c) for c in codes)}))"
+
+
 def _span(tb: Any) -> Optional[tuple[int, int, int, str]]:
     """Tablo başvurusunun metindeki yeri: başlangıç, tablo adının sonu, takma adın sonu (dahil) ve takma ad.
     Takma ad yoksa tablo adı takma ad olur; `new_kitapBase.kolon` gibi nitelenmiş kolonlar çalışmaya devam eder."""
@@ -79,7 +117,8 @@ def _span(tb: Any) -> Optional[tuple[int, int, int, str]]:
 
 
 @lru_cache(maxsize=4096)
-def _rewrite(sql: str, eligible: frozenset) -> str:
+def _rewrite(sql: str, eligible: frozenset, passive_items: tuple = ()) -> str:
+    passive = dict(passive_items)
     import sqlglot
     from sqlglot import exp
 
@@ -102,7 +141,7 @@ def _rewrite(sql: str, eligible: frozenset) -> str:
                 log.warning("CRM etkin kayıt süzgeci %s tablosunun yerini bulamadı; süzgeçsiz", tb.name)
                 continue
             start, name_end, end, alias = span
-            cuts.append((start, end, f"(SELECT * FROM {sql[start:name_end + 1]} WHERE statecode = 0) {_quote(alias)}"))
+            cuts.append((start, end, f"(SELECT * FROM {sql[start:name_end + 1]} WHERE {_where(tb.name, passive)}) {_quote(alias)}"))
     if not cuts:
         return sql
     out = sql
@@ -115,14 +154,15 @@ def _quote(name: str) -> str:
     return name if _NAME.match(name) else f"[{name.replace(']', ']]')}]"
 
 
-def rewrite(sql: str, eligible: set[str] | frozenset) -> str:
-    """`eligible`: küçük harfli tablo adları. Uygun tablo geçmiyorsa sorgu hiç ayrıştırılmaz."""
+def rewrite(sql: str, eligible: set[str] | frozenset, passive: Optional[dict] = None) -> str:
+    """`eligible`: küçük harfli tablo adları; `passive`: tablo → pasif durum nedeni kodları (`passive_codes`).
+    Uygun tablo geçmiyorsa sorgu hiç ayrıştırılmaz."""
     if not sql or not eligible or not enabled():
         return sql
     low = sql.lower()
     if not any(t in low for t in eligible):
         return sql
-    return _rewrite(sql, frozenset(eligible))
+    return _rewrite(sql, frozenset(eligible), tuple(sorted((passive or {}).items())))
 
 
 class ActiveOnly:
@@ -133,6 +173,7 @@ class ActiveOnly:
         self._inner = inner
         self._database = database
         self._eligible: Optional[frozenset] = None
+        self._passive: dict[str, tuple[int, ...]] = {}
         self._failed_at = 0.0
         self._lock = threading.Lock()
 
@@ -153,8 +194,14 @@ class ActiveOnly:
                 return frozenset()
             try:
                 _, rows, _ = self._inner.execute(tables_sql(self._database), 100000)
-                self._eligible = frozenset(str(r.get("name") or "").lower() for r in rows if r.get("name"))
-                log.info("CRM etkin kayıt süzgeci: %d tablo", len(self._eligible))
+                eligible = frozenset(str(r.get("name") or "").lower() for r in rows if r.get("name"))
+                try:
+                    _, prow, _ = self._inner.execute(passive_sql(self._database), 100000)
+                    self._passive = {k: v for k, v in passive_codes(prow).items() if k in eligible}
+                except Exception as e:  # noqa: BLE001 — durum nedeni okunamazsa yalnız statecode süzülür
+                    log.warning("CRM pasif durum nedenleri okunamadı, yalnız statecode süzülüyor: %s", str(e)[:200])
+                self._eligible = eligible
+                log.info("CRM etkin kayıt süzgeci: %d tablo, %d tabloda pasif durum nedeni", len(eligible), len(self._passive))
             except Exception as e:  # noqa: BLE001 — süzgeç kurulamazsa okuma durmaz, günlüğe yazılır
                 self._failed_at = time.monotonic()
                 log.warning("CRM etkin kayıt süzgecinin tablo listesi okunamadı: %s", str(e)[:200])
@@ -162,7 +209,7 @@ class ActiveOnly:
         return self._eligible
 
     def _sql(self, sql: str) -> str:
-        return rewrite(sql, self.eligible()) if enabled() else sql
+        return rewrite(sql, self.eligible(), self._passive) if enabled() else sql
 
     def execute(self, sql: str, limit: int):
         return self._inner.execute(self._sql(sql), limit)

@@ -84,6 +84,12 @@
 - **Sayı hatası:** listede OU sayısı yalnız doğrudan kişileri, grup sayısı `member` sayısını (kapalı hesap ve alt grup dahil) gösteriyordu; bağlanınca rolü alan kişi ise alt ağaç / iç içe etkin kişi. Şimdi ikisi aynı hesap: `ou_subtree_counts`, `nested_group_counts` (döngülü grup güvenli), DN'de kaçışlı virgül `_dn_parts`.
 - **Yeni uç:** `GET /api/v1/access/subjects/members?type&subject` (`Directory.members_of`, sorgu bilgisi `admin_kaynak.for_members`). Ekranda «N kişi ▾» hem «Bağ ekle» listesinde hem rolün bağlarında; 8'den fazla kişide liste içi arama.
 - **Doğrulama (gerçek AD/CRM, test sunucusu):** 140/140 grupta ve en büyük 6 OU'da sayı = açılan liste; CRM rolünde AD'de etkin hesabı olmayan 3 kişi hesap adıyla görünür. `test_access.py` + `test_access_data.py` 23 test geçti.
+## 2026-09-29 — CRM: etkin kayıtta durum nedeni «Pasif» olanlar da hiçbir yerde yok
+
+- **Kullanıcı kuralı (yineledi):** «pasif olanlar hiçbir yerde gelmeyecek».
+- **Bulgu:** Editoryal sınamasında aramada ve kitap kartında «Pasif» kitaplar görünüyordu (ör. Binbir Gece Masalları 975-362-505-7). Arama sorgusu zaten `statecode = 0` istiyor ve süzgeç de yalnız `statecode`'a bakıyor: kayıt CRM'de etkin, ama durum nedeni (`statuscode`) «Pasif».
+- **Çözüm (bağlantıda, tek yer):** `crm_active.ActiveOnly` tablo listesiyle birlikte bir kez `StringMapBase` × `EntityView`'dan etiketi «Pasif…»/«Inactive…» olan durum nedeni kodlarını okur; o tablolarda süzgeç `statecode = 0 AND (statuscode IS NULL OR statuscode NOT IN (…))` olur. Okunamazsa eskisi gibi yalnız `statecode` (günlükte uyarı). Test `test_crm_active.py` (+2).
+
 ## 2026-09-29 — Editoryal: bütün ekranların sınaması, kitap üzerinde görünmeyen resimler, kurul oturumu 500
 
 - **İstek (kullanıcı):** Editoryal altındaki bütün sayfaları gerekirse örnek veriyle ayrıntılı sına; üretilen kitaplarda resimlerin ekranda kitap üzerinde görünmeme sorununa ayrıca bak.

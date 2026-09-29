@@ -68,3 +68,43 @@ def test_wrap_only_crm_databases():
     crm.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
     assert inner.seen[-1] == f"SELECT * FROM (SELECT * FROM {P}new_kitapBase WHERE statecode = 0) k"
     assert ca.wrap(crm, "Timas_MSCRM") is crm
+
+
+def test_active_record_with_passive_status_reason_is_filtered():
+    """Etkin kayıt (statecode 0) durum nedeni «Pasif» taşıyorsa da gelmez (kullanıcı kuralı 2026-09-29)."""
+    passive = ca.passive_codes([{"ent": "new_kitap", "code": 2}, {"ent": "new_kitap", "code": 100000003},
+                                {"ent": "contact", "code": "2"}, {"ent": "", "code": 5}, {"ent": "x", "code": None}])
+    assert passive == {"new_kitapbase": (2, 100000003), "contactbase": (2,)}
+    sql = f"SELECT b.new_name FROM {P}new_kitapBase b LEFT JOIN {P}new_projeBase j ON j.x = b.y"
+    out = ca.rewrite(sql, E, passive)
+    assert (f"(SELECT * FROM {P}new_kitapBase WHERE statecode = 0 AND (statuscode IS NULL OR statuscode NOT IN"
+            f" (2, 100000003))) b") in out
+    assert f"(SELECT * FROM {P}new_projeBase WHERE statecode = 0) j" in out
+    assert "N'Pasif%'" in ca.passive_sql("Timas_MSCRM")
+
+
+def test_wrapper_reads_passive_reasons_once_and_survives_failure():
+    class Fake:
+        def __init__(self, fail=False):
+            self.seen, self.fail = [], fail
+
+        def execute(self, sql, limit):
+            self.seen.append(sql)
+            if "sys.tables" in sql:
+                return [], [{"name": "new_kitapBase"}], False
+            if "StringMapBase" in sql:
+                if self.fail:
+                    raise RuntimeError("yetki yok")
+                return [], [{"ent": "new_kitap", "code": 2}], False
+            return [], [], False
+
+    inner = Fake()
+    crm = ca.wrap(inner, "Timas_MSCRM")
+    crm.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
+    crm.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
+    assert sum("StringMapBase" in s for s in inner.seen) == 1
+    assert "statuscode NOT IN (2)" in inner.seen[-1]
+    bad = Fake(fail=True)
+    crm2 = ca.wrap(bad, "Timas_MSCRM")
+    crm2.execute(f"SELECT * FROM {P}new_kitapBase k", 10)
+    assert bad.seen[-1] == f"SELECT * FROM (SELECT * FROM {P}new_kitapBase WHERE statecode = 0) k"
