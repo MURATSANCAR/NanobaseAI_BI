@@ -11,6 +11,7 @@ import frappe
 
 KB_TITLE = "ZEKİ AI Bilgi Bankası"
 EMBED_DOC = "ZEKİ AI Gömme"
+ESKI_EMBED_DOC = "NanobaseAI Gömme"
 SOURCES = [
 	# (başlık, belge türü, içerik alanları, süzgeç)
 	("Yayımlanmış makaleler", "HD Article", ["title", "content"], {"status": "Published"}),
@@ -44,6 +45,9 @@ def ensure_embedding_model() -> str | None:
 		settings.search_type = settings.search_type or "Hybrid"
 		settings.flags.ignore_permissions = True
 		settings.save()
+	# Marka adı değişikliğinden (2026-09-29) kalan eski gömme modeli: ayar artık yenisini gösteriyor.
+	if frappe.db.exists("Flow Model", ESKI_EMBED_DOC):
+		frappe.delete_doc("Flow Model", ESKI_EMBED_DOC, ignore_permissions=True, force=True)
 	return doc.name
 
 

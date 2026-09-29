@@ -109,10 +109,10 @@ def apply():
 
 # Marka adı değişikliği (2026-09-29 kullanıcı: «NanobaseAI Destek değil, ZEKİ AI olacak»). Kayıtlar yeniden
 # adlandırılır, kopyası açılmaz: bağlantılar (oturum → asistan, kaynak → bilgi bankası, iletişim → e-posta hesabı)
-# yeni ada geçer; e-posta hesabının okuduğu son sıra da korunur.
+# yeni ada geçer; e-posta hesabının okuduğu son sıra da korunur. Gömme modeli taşınmaz (yeniden adlandırmada anahtar
+# denetimi düşüyor): yenisi bilgi.ensure_embedding_model ile açılır, eskisi orada silinir.
 ESKI_ADLAR = (
 	("Flow Model", "NanobaseAI", "ZEKİ AI"),
-	("Flow Model", "NanobaseAI Gömme", "ZEKİ AI Gömme"),
 	("Flow Agent", "NanobaseAI", "ZEKİ AI"),
 	("Flow Knowledge Base", "NanobaseAI Destek Bilgisi", "ZEKİ AI Bilgi Bankası"),
 	("Email Account", "NanobaseAI Destek", "ZEKİ AI"),
@@ -142,6 +142,7 @@ def eski_adlar():
 				baslangic = frappe.db.get_default(START_KEY + eski)
 				if baslangic and not frappe.db.get_default(START_KEY + yeni):
 					frappe.db.set_default(START_KEY + yeni, baslangic)
+				frappe.db.delete("DefaultValue", {"defkey": START_KEY + eski})
 			if doctype == "Flow Knowledge Base":
 				# Vektör deposu satırları bilgi bankasını adıyla tutar: kaynaklar yeni adla yeniden işlenir.
 				for kaynak in frappe.get_all("Flow Knowledge Source", filters={"knowledge_base": yeni}, pluck="name"):

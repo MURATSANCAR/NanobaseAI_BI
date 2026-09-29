@@ -70,7 +70,14 @@ git archive main apps/destek | ssh nanobase-direct 'rm -rf ~/destek-src && mkdir
 ssh nanobase-direct "~/destek-src/apps/destek/scripts/install.sh ~/destek-src/apps/destek $(git rev-parse main)"
 ```
 
-`install.sh` imajı `nanobase-destek:<sürüm>-<sha8>` adıyla derler, `.env` yoksa üretir, yığını kaldırır,
+Müşteri VM'i (192.168.0.55): imaj test sunucusunda derlenir, `docker save | gzip -1 | ssh timas-vm "gunzip | docker load"`
+ile taşınır; kaynak `git archive` ile `/home/ai/destek-src`'ye açılır, sonra VM'de (ai kullanıcısı):
+
+```bash
+env DESTEK_DIR=/home/ai/destek PUBLIC_URL=http://192.168.0.55:8446 LLM_BASE=http://web:8447/destek-llm/v1 LLM_KEY_FILE=/home/ai/destek/secrets/llm.key ADMIN_FILE=/home/ai/destek/secrets/admin.txt AD_FILE=/home/ai/bi-docker/infra/docker/bi/secrets/ad/timas-ad.json SSO_FILE=/home/ai/bi-docker/infra/docker/bi/secrets/destek/destek-sso.key SSO_GROUP= BRIDGE_ENV=/home/ai/bi-docker/infra/docker/bi/.env COMPOSE_EXTRA=compose.bi-net.yaml SITE_CONFIG_EXTRA=nb_bilgi_bankasi_kapali=1 SMTP_FILE=/home/ai/destek/secrets/smtp.json bash /home/ai/destek-src/apps/destek/scripts/install.sh /home/ai/destek-src/apps/destek <sha>
+```
+
+`install.sh` imajı `nanobase-destek:<sürüm>-<içerik özeti>` adıyla derler (özet Containerfile + frappe-apps; imaj varsa derlemez), `.env` yoksa üretir, yığını kaldırır,
 site yoksa kurar (helpdesk + flow + nanobase_brand; telephony bağımlılık olarak), varsa `migrate` koşar,
 marka/bölge ayarlarını ve modeli yazar; sonda ping, imaj, `DESTEK_CODE_VERSION` ve `._*` sayısını basar.
 Veri volume'larda durur, kurulum silmez.
@@ -105,4 +112,5 @@ HTML etiketi tutmayan çeviri yazılmaz.
 
 ## Açık işler
 
-- Müşteri VM'ine kurulmadı.
+
+- Talep eden (BT dışı AD kullanıcısı) portal ekranı `/helpdesk/my-tickets` uçtan uca sınanmadı.

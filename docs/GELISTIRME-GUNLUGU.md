@@ -11,6 +11,30 @@
 - **Neden:** `grid gap-3 lg:grid-cols-2` mobilde kolon tanımsız → örtük `auto` kolon, en geniş hücrenin min-content'i kadar genişler. «Depo ve raf» panelindeki `TableWrap` tablosu `min-w-[640px]`; kolon 664 px'e çıkıyor, aynı kolondaki bütün paneller o genişlikte çiziliyor ve `StockFrame`'in `main`i (`overflow-y-auto` → yatayda da kaydırma kutusu) sağını kesiyordu. Küçük bir örnekle 390 px'te ölçüldü: önce kolon 664 px, düzeltmeyle 374 px.
 - **Düzeltme:** `Panel` (`editorial/kit.tsx`) `min-w-0` — ızgara hücresi olarak içindeki geniş tablo kolonu artık genişletmez, tablo kendi kutusunda kayar; aynı `Panel`'i kullanan bütün ekranlar bu tuzaktan çıkar. `StockItem.tsx`'teki iki ızgaraya açık `grid-cols-1`. Taşma gizlenmedi.
 - **Doğrulama (gerçek veri, test portalı, `15201.01.4119`):** oturumlu tarayıcıda yayındaki sayfa ölçüldü, sonra düzeltmenin iki kuralı (`section.glass-panel{min-width:0}`, ızgaraya `minmax(0,1fr)`) eklenip yeniden ölçüldü. Kırpılan öğe / `main` içi yatay taşma: 320 px 28 → 0 / 372 → 0 px; 390 px 19 → 0 / 302 → 0; 768 px 18 → 0 / 60 → 0; 1440 px 0 → 0 (iki kolon 636 px, değişmedi). `/stok` ve `/pazar-arastirma` 390 px'te `Panel` kuralıyla değişmedi (Pazar'da önceden de olan 4 px `main` taşması ayrı iş). Aday derleme test sunucusunda `/tmp/claude-stokkart/dist` altında hatasız bitti, yayına kopyalanmadı. timasai oturumu ile Playwright yolu izin denetimine takıldığı için kullanılmadı.
+## 2026-09-29 (17:30) — Destek: ad ZEKİ AI, rol modeli, geçmiş çözümden otomatik öneri, BT kategorileri, VM'de canlı
+
+- **Ad ZEKİ AI (kullanıcı: «NanobaseAI Destek değil, ZEKİ AI olacak; logo da»):** ekran, e-posta göndereni ve imzası,
+  asistan kimliği («Sen ZEKİ AI'sın»), uygulama başlıkları, çeviriler, Z harfli simge (aynı mercan→mor degrade; SVG +
+  `simge.py` PNG'leri). Veritabanındaki eski adlı kayıtlar (model, gömme modeli, asistan, bilgi bankası, e-posta hesabı)
+  kopyalanmaz, `before_migrate` → `install.eski_adlar` ile yeniden adlandırılır; bilgi bankası kaynakları vektör
+  deposu adla tuttuğu için yeniden işlenir. Kod adları (`nanobase_brand`, `NanobaseAIPanel`) değişmedi.
+- **Rol modeli (kullanıcı: «BT her şeyi görecek, kullanıcılar sadece kendi tasklarını»):** AD birimi BT olan, portal
+  yönetici listesindeki ya da yönetici grubundaki kişi temsilci; diğer herkes talep eden (talep portalında yalnız kendi
+  kayıtları). `yz/temsilci.py esitle` her sabah 06:15 ve kurulumda: BT ekibi üyeliği birebir, sıralı atama kuralı,
+  e-postasız AD hesapları (servis hesabı) dışarıda.
+- **Otomatik çözüm önerisi (kullanıcı: «geçmiş sorunların çözümüne göre gitmeli, çözülmediyse BT'ye atansın»):**
+  `yz/cozum.py` — yeni kayıt sınıflanır, benzer çözülmüş kayıtların BT çözümlerinden adım adım öneri çıkarılır (model
+  evet/hayır olasılığı ≥ 0,70, adımlar yalnız geçmiş çözümlerden) ve talep edene e-postayla gider; yanıtı «çözüldü»
+  ise kayıt kapanır, «çözülmedi» ya da 4 saat sessizlik ise BT ekibine atanır. Kaynak yoksa doğrudan BT.
+- **BT kategorileri:** 16 kayıt türü (`yz/kategori.py`: hesap/şifre, yetki, e-posta, donanım, yazıcı, ağ/VPN, telefon,
+  yazılım, Logo, CRM, Zeki AI portalı, e-ticaret, dosya/yedek, güvenlik, toplantı odası, diğer); şirket içi talep bu
+  listeden, dış müşteri talebi M51 konu listesinden sınıflanır.
+- **Müşteri VM'i:** Destek canlı, `http://192.168.0.55:8446` (BI web konteyneri ön kapı), zeki@ gelen kutusu yalnız
+  VM'de açık. Hyper-V temel işlemci modu (SSE4.2/POPCNT yok) NumPy 2.4'ü açmıyordu → imajda `numpy>=2.3,<2.4`.
+  Yeni sitede zamanlı işler UTC+5:30 ile ileri tarihli açılıyordu (e-posta hiç gitmiyordu) → `_ileri_tarihli_isler`.
+- **Uçtan uca (VM, gerçek e-posta):** e-posta → kayıt, SLA tarihleri, birim; temsilci yanıtı talep edene ulaştı, yanıt
+  aynı kayda bağlandı; çözümde SLA «Fulfilled»; çözülmüş kayda yanıt kaydı yeniden açtı. Otomatik bildirim e-postaları
+  (Drive, noreply, liste) kayıt açmaz: zeki@ kutusunda 51'in 48'i süzüldü; çöp kayıtlar silindi.
 
 ## 2026-09-29 (15:40) — Stüdyo ses işleri kuruldu: fısıltı düzeyi, insan kaydı eksikleri, yetki kapısı, VM yükleme sınırı
 
