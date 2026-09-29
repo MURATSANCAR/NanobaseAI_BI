@@ -278,7 +278,14 @@ def crm_me(schema: str, run: Callable[[str], dict[str, Any]], username: str) -> 
     """Oturumdaki kişinin CRM kullanıcısı; bulunamazsa None. Birden çok satırdan etkin olan seçilir."""
     if not (username or "").strip():
         return None
-    rows = run(me_sql(schema, username)).get("records") or []
+    return crm_me_from_rows(run(me_sql(schema, username)).get("records") or [], username)
+
+
+def crm_me_from_rows(rows: list[dict[str, Any]], username: str) -> Optional[dict[str, Any]]:
+    """`crm_me`'nin seçim kuralı: `me_sql`'in döndürdüğü satırlardan hesap kısmı kişininkiyle aynı olanlar, etkin
+    olan önce, aynı durumda okunma sırası. Saklanmış eşleme (`crm_kisi`) de bu fonksiyonu çağırır (kural tek yerde)."""
+    if not (username or "").strip():
+        return None
     acct = username.strip().lower()
     hits = [r for r in rows
             if ((_s(r.get("DomainName")) or "").rsplit("\\", 1)[-1].split("@", 1)[0]).lower() == acct]
