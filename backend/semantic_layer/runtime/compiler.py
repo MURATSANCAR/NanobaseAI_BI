@@ -1551,7 +1551,36 @@ class ExistingCompiler:
     def _plans_enabled(q: SemanticQuery) -> bool:
         """Two-server plans are written only when the question needs both databases and the runtime
         that executes plans is deployed (SEMANTIC_FEDERATED=1)."""
-        return len(q.sources) > 1 and os.environ.get("SEMANTIC_FEDERATED", "0") == "1"
+        return len(q.sources) > 1 and federated.plans_enabled()
+
+    def _unrunnable_on_one_server(self, q: SemanticQuery) -> Optional[str]:
+        """The sentence to refuse with when this question cannot be one statement on one server; else None.
+
+        ZEKI-54: with two-server plans off, a question whose certified readings the resolver left on
+        both databases was still handed to the model with both databases' tables and asked for ONE
+        statement. What came back depended on the model's pick: sometimes a statement on one server
+        (the other half silently dropped), sometimes one that joins both — which no server runs
+        ("Logo ve CRM artik ayri sunucularda"). The resolver already hands every other-database word
+        it can to the model to read on the measure's side; what is still placed on two sides here is
+        the question's own measures (or nothing decided a side), and that is refused, deterministically,
+        in words that name what sits where. A tie in the search vote alone places nothing and is left
+        as it was: the model reads one side's tables there."""
+        if len(q.sources) <= 1 or federated.plans_enabled():
+            return None
+        placed: dict[str, list[str]] = {}
+        for s in list(q.slots) + list(q.group_by):
+            if s.mapping is None or not s.mapping.entity or s.mapping.entity not in self.by_entity \
+                    or s.semantic_type == SemanticType.DEFAULT_FILTER:
+                continue
+            words = placed.setdefault(self.source_of(s.mapping.entity), [])
+            if s.term and s.term not in words:
+                words.append(s.term)
+        if len(placed) < 2:
+            return None
+        parts = "; ".join(f"{src or 'ana veri tabanı'}: " + ", ".join(f"'{w}'" for w in words)
+                          for src, words in sorted(placed.items()))
+        return ("Bu soru iki ayrı sunucudaki veriyi birlikte istiyor (" + parts + "). Bu kurulumda iki sunuculu "
+                "sorgu açık değil; tek sorguda birleştirilemez. Soruyu tek veri kaynağındaki bilgilerle sorun.")
 
     def source_of(self, entity: str) -> str:
         """The database a table lives in, as the catalog spells its schema ("Timas_MSCRM.dbo" →
@@ -2239,6 +2268,11 @@ class ExistingCompiler:
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
                                  explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
                                  certified=False, refusal="NO_FITTING_TABLE")
+        if (two_servers := self._unrunnable_on_one_server(q)) is not None:
+            log.info("two servers, plans off — refusing q=%r sources=%s", q.question[:80], q.sources)
+            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
+                                 explain=[two_servers], llm_ms=int((time.perf_counter() - t0) * 1000),
+                                 certified=False, refusal="TWO_SERVERS")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         if self._plans_enabled(q):

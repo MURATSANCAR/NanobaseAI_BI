@@ -3950,7 +3950,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     def _report_asker(r: Runtime):
         # Soru her çalışmada yeniden çözülür ("bu ay" o günü anlatsın); veri ayrıca tam çekilir.
-        return lambda q: r.ask(q, thread_id=None, sample_size=1, execute=False)
+        def ask(q: str) -> dict[str, Any]:
+            a = r.ask(q, thread_id=None, sample_size=1, execute=False)
+            # ZEKI-54: motorun kendisinin reddettiği bir sorgu (SQL_INVALID, INCOMPLETE_ANSWER) cevapta SQL taşır;
+            # rapor onu yine de çalıştırıyor, çalıştırma anındaki ham hata ("Logo ve CRM artik ayri…") e-postaya
+            # ve kayda gidiyordu. Motorun kendi cümlesiyle durur. İki sunuculu plan metni tek SQL değildir; rapor
+            # yolu planı çalıştırmaz, dürüstçe söylenir.
+            if a.get("sql") and a.get("type") != "TEXT_TO_SQL":
+                raise reports_mod.ReportError(str(a.get("explanation") or "Motor bu soruya çalışan bir sorgu üretmedi."))
+            if (a.get("semantic") or {}).get("plan"):
+                raise reports_mod.ReportError("Bu soru iki ayrı sunucudaki veriyi birleştiriyor; planlı rapor iki sunuculu "
+                                              "sorguyu henüz çalıştırmıyor.")
+            return a
+        return ask
 
     def _report_fetcher(r: Runtime):
         def fetch(sql: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:

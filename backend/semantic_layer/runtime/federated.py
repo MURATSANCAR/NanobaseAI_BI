@@ -27,6 +27,7 @@ What keeps it honest is checked before anything runs (`check_plan`):
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
 from dataclasses import dataclass, field
@@ -40,6 +41,16 @@ from semantic_layer.runtime.guardrails import allowed_tables, validate_sql
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 _JSON_BLOCK = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.S | re.I)
 _READING = re.compile(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$")
+
+
+def plans_enabled() -> bool:
+    """Is the runtime that executes two-server plans deployed here (SEMANTIC_FEDERATED=1)?
+
+    One switch, read where it is used: the compiler asks for a plan only when it is on, and the resolver
+    keeps a question's other-database words only when a plan can read them. With it off every question is
+    one statement on one server — a reading that leaves words on the other server makes a statement no
+    server can run (ZEKI-54)."""
+    return os.environ.get("SEMANTIC_FEDERATED", "0") == "1"
 
 
 @dataclass
@@ -328,5 +339,5 @@ def required_bridges_block(profiles: list[Any], placed: set[str]) -> str:
               "İÇİNDE bağla; kırılımı parçalar arası bağ anahtarı yapma.")
 
 
-__all__ = ["Part", "Plan", "parse_plan", "check_plan", "execute", "cross_links", "source_of_schema",
+__all__ = ["Part", "Plan", "plans_enabled", "parse_plan", "check_plan", "execute", "cross_links", "source_of_schema",
            "FORMAT", "links_block", "required_bridges_block"]

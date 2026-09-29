@@ -62,8 +62,9 @@ def _world(store, profiles):
 TWO_SERVERS = "question names things on two servers"
 
 
-def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_databases(store, profiles):
+def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_databases(store, profiles, monkeypatch):
     """Sevkiyat öteki veritabanında, fatura türü Logo'nun dönem tablolarında: tek ifade yazılmaz."""
+    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")        # iki sunuculu plan açık: öteki yarı plana kalır
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
@@ -73,14 +74,30 @@ def test_a_reference_into_period_tables_is_not_written_as_one_statement_across_d
     assert c.compile(sq, store) is None
 
 
-def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statement(store, profiles):
+def test_a_breakdown_read_from_the_other_database_is_not_written_as_one_statement(store, profiles, monkeypatch):
     """Kredi limiti öteki veritabanında, kanal Logo'nun cari kartında: öteki yarı düşürülüp tek
     kaynaklı (daha dar) bir cevap yazılmaz."""
+    monkeypatch.setenv("SEMANTIC_FEDERATED", "1")
     allp = _world(store, profiles)
     r = SemanticResolver(store, TENANT, DS, allp)
     c = DeterministicCompiler(allp, {}, "tsql")
     sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
     assert c.plan(sq) == (None, TWO_SERVERS), (c.plan(sq), sq.explanation)
+    assert c.compile(sq, store) is None
+
+
+def test_with_plans_off_the_other_half_goes_to_the_model_and_is_still_not_dropped(store, profiles, monkeypatch):
+    """ZEKI-54: iki sunuculu plan kapalıyken öteki veritabanındaki kırılım kelimesi ölçünün tarafında modele
+    bırakılır (yorum satırıyla) — iki sunucuyu okuyan tek ifade hiç istenmez. Deterministik derleyici yine de
+    o kelimeyi düşürüp daha dar bir soruyu cevaplamaz: kelime çözümsüz kalır, derleme reddedilir."""
+    monkeypatch.delenv("SEMANTIC_FEDERATED", raising=False)
+    allp = _world(store, profiles)
+    r = SemanticResolver(store, TENANT, DS, allp)
+    c = DeterministicCompiler(allp, {}, "tsql")
+    sq = r.resolve("kanal bazında kredi limiti", today=date(2026, 7, 20))
+    assert "CLCARD" not in {s.mapping.entity for s in list(sq.slots) + list(sq.group_by) if s.mapping}, sq.explanation
+    assert "kanal" in sq.unresolved, (sq.unresolved, sq.explanation)
+    assert any("iki sunuculu sorgu kapalı" in e for e in sq.explanation), sq.explanation
     assert c.compile(sq, store) is None
 
 

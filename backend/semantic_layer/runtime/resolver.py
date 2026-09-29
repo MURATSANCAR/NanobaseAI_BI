@@ -47,6 +47,7 @@ from dataclasses import replace
 from datetime import timedelta
 
 from semantic_layer.runtime.temporal import describe
+from semantic_layer.runtime import federated
 from semantic_layer.store.catalog_store import CatalogStore
 
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
@@ -144,6 +145,9 @@ _COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariy
 # quantity twin ("satılan adet"), not its amount. Matched on the folded word itself; "tane" stays a count cue.
 _QUANTITY_WORD = re.compile(r"(adet|adedi|adedini|aded|miktar|miktari|miktarini|miktarlari)")
 _QUANTITY_ROOTS = ("adet", "aded", "miktar")
+# The amount/count head of a measure name ("satış TUTARI", "fatura SAYISI"): with a unit word, the heads a second
+# coordinated measure is written with when its subject is left out ("satış tutarı ve adedi").
+_AMOUNT_HEAD = re.compile(r"(tutar|tutari|tutarini|tutarlari|tutarlarini|sayi|sayisi|sayisini|sayilari|sayilarini)")
 # Words that name the amount side of a measure or glue a participle; they carry no subject of their own.
 _QUANTITY_NEUTRAL = frozenset("toplam toplami tutar tutari deger degeri bedel bedeli edilen olan yapilan".split())
 # "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
@@ -693,6 +697,10 @@ class SemanticResolver:
         #      certified quantity measure whose own words are the measure's words ("satış" ↔ "satılan adet",
         #      "iade" ↔ "iade adedi"). None → the question is asked back, never answered with the amount.
         self._quantity_twins(question, qf, hits, consumed, index, sq)
+
+        # 2d3) "satış tutarı ve adedi" / "satış adedi ve tutarı": the second of two coordinated measure heads
+        #      carries the first one's subject, written once. Read as that measure and added beside the first.
+        self._coordinated_heads(question, qf, hits, consumed, index, sq)
 
         # 2f) "iade hariç toplam ciro": the label is named in order to be left out. Read as a filter it
         #     asked for the returns alone, and the gate refused every statement that did what was asked.
@@ -2049,26 +2057,9 @@ class SemanticResolver:
             words = self._content_words(" ".join(qf.tokens[lead[0].span[0]:measure.span[1]] if lead else qf.tokens[measure.span[0]:measure.span[1]]))
             if not words:
                 continue
-            twins = []
-            for key, c, maps, their_words in self._quantity_measures(index):
-                theirs = self._content_words(their_words)
-                if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
-                        and all(any(self._same_word(b, a) for a in words) for b in theirs):
-                    if c.id not in {t[1].id for t in twins}:
-                        twins.append((key, c, maps))
-            same_entity = [t for t in twins if any(mp.entity == m.entity for mp in t[2])]
-            twins = same_entity or twins
             span = (min(measure.span[0], lead[0].span[0] if lead else measure.span[0], k), max(measure.span[1], k + 1))
             phrase = " ".join(qf.tokens[span[0]:span[1]])
-            # Several concepts under one certified phrase ("satılan adet" names both "adet" and "satılan adet"):
-            # the twin is what that phrase resolves to when asked for directly — one reading, not a question.
-            keys = {key for key, _, _ in twins}
-            slot = None
-            if len(keys) == 1:
-                key = next(iter(keys))
-                senses = [(c, [mp for mp in maps if mp.entity == m.entity] or maps) for c, maps in index.get(key) or []
-                          if c.semantic_type == SemanticType.METRIC and c.id in {t[1].id for t in twins}]
-                slot = self._slot_from_senses(key, phrase, senses, span) if senses else None
+            slot, twins = self._twin_slot(words, m.entity, phrase, span, index)
             if slot is not None:
                 c = next(t[1] for t in twins if t[1].id == slot.concept_id)
                 slot.explain["source"] = "quantity_twin"
@@ -2089,6 +2080,101 @@ class SemanticResolver:
                 f"Hangisini kastediyorsunuz — ‘{measure.term}’ tutarını mı, yoksa bir adet ölçüsünü mü?")
             sq.explanation.append(f"'{tok}' adet soruyor; '{measure.term}' ölçüsünün adet karşılığı "
                                   f"{'belirsiz' if twins else 'katalogda yok'} — tutar verilmedi")
+
+    def _twin_slot(self, words: list[str], entity: str, phrase: str, span: tuple[int, int], index: dict) -> tuple[Optional[ResolvedSlot], list]:
+        """The certified quantity measure whose own content words are `words` ("satış" ↔ "satılan adet"), on
+        `entity` when it has one there: (slot, twins). The slot is None when there is no twin or the twins sit
+        under more than one certified phrase — a choice, which the caller asks back."""
+        twins = []
+        for key, c, maps, their_words in self._quantity_measures(index):
+            theirs = self._content_words(their_words)
+            if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
+                    and all(any(self._same_word(b, a) for a in words) for b in theirs):
+                if c.id not in {t[1].id for t in twins}:
+                    twins.append((key, c, maps))
+        same_entity = [t for t in twins if any(mp.entity == entity for mp in t[2])]
+        twins = same_entity or twins
+        # Several concepts under one certified phrase ("satılan adet" names both "adet" and "satılan adet"):
+        # the twin is what that phrase resolves to when asked for directly — one reading, not a question.
+        keys = {key for key, _, _ in twins}
+        slot = None
+        if len(keys) == 1:
+            key = next(iter(keys))
+            senses = [(c, [mp for mp in maps if mp.entity == entity] or maps) for c, maps in index.get(key) or []
+                      if c.semantic_type == SemanticType.METRIC and c.id in {t[1].id for t in twins}]
+            slot = self._slot_from_senses(key, phrase, senses, span) if senses else None
+        return slot, twins
+
+    def _coordinated_heads(self, question: str, qf, hits: list, consumed: set, index: dict, sq: SemanticQuery) -> None:
+        """"satış tutarı ve adedi", "satış adedi ve tutarı", "fatura sayısı ve tutarı": two measures that share
+        their subject, the subject written once. Turkish drops it from the second head, and the second head
+        alone — a bare "adedi" or "tutarı" — matched nothing: it was neither consumed nor reported, so the
+        question was answered with the first measure only, one column, as if it had asked for one figure
+        (ZEKI-47; the order of the two heads decided which one survived).
+
+        The second head takes the first measure's own words minus that measure's head ("satış" of "satış
+        tutarı") and is read as that phrase: a quantity head through the same certified-twin rule as "satış
+        adedi" (`_twin_slot`), any other head as the certified measure the phrase names, on the first
+        measure's table when it has one there. It is ADDED beside the first; nothing is replaced. When the
+        phrase names no certified measure, or several, the question is asked back — never answered with half.
+        Only a head directly after "ve"/"ile" or a comma that follows a measure of two or more words ending
+        in a head: "ciro, adet ve iade" (one-word measure, list items) is not an elided subject."""
+        folded_q = fold(question)
+
+        def is_head(word: str) -> bool:
+            return bool(_QUANTITY_WORD.fullmatch(word) or _AMOUNT_HEAD.fullmatch(word))
+
+        for k, tok in enumerate(qf.tokens):
+            head = fold(tok)
+            if k in consumed or k == 0 or not is_head(head):
+                continue
+            if fold(qf.tokens[k - 1]) in ("ve", "ile"):
+                end = k - 1
+            elif re.search(rf"\b{re.escape(fold(qf.tokens[k - 1]))}\s*,\s*{re.escape(head)}\b", folded_q):
+                end = k
+            else:
+                continue
+            measure = next((h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.span
+                            and h.span[1] == end and h.span[1] - h.span[0] >= 2), None)
+            if measure is None or not is_head(fold(qf.tokens[measure.span[1] - 1])):
+                continue
+            subject = [t for t in qf.tokens[measure.span[0]:measure.span[1] - 1] if fold(t) not in _QUANTITY_NEUTRAL]
+            if not subject:
+                continue
+            span, phrase = (k, k + 1), " ".join(subject + [tok])
+            entity = measure.mapping.entity
+            slot, found = None, []
+            if _QUANTITY_WORD.fullmatch(head):
+                words = self._content_words(" ".join(subject))
+                if words:
+                    slot, twins = self._twin_slot(words, entity, phrase, span, index)
+                    found = sorted({c.term for _, c, _ in twins})
+            else:
+                key = normalize_term(" ".join(subject + [tok]))
+                senses = [(c, maps) for c, maps in (index.get(key) or []) if c.semantic_type == SemanticType.METRIC and maps]
+                here = [(c, [mp for mp in maps if mp.entity == entity]) for c, maps in senses]
+                senses = [(c, maps) for c, maps in here if maps] or senses
+                found = sorted({c.term for c, _ in senses})
+                if len({c.id for c, _ in senses}) == 1:
+                    slot = self._slot_from_senses(key, phrase, senses, span)
+            consumed.add(k)
+            if slot is not None and slot.concept_id != measure.concept_id:
+                slot.explain["source"] = "coordinated_head"
+                slot.explain["why"] = f"'{tok}' '{measure.term}' ile aynı öznenin ikinci ölçüsü → '{phrase}'"
+                hits.append(slot)
+                sq.explanation.append(f"'{measure.term} ve {tok}': iki ölçü istendi → '{measure.term}' ve "
+                                      f"'{(slot.explain or {}).get('canonical') or phrase}'")
+                continue
+            if slot is not None:
+                continue            # the same measure named twice: one figure
+            if phrase not in sq.unhandled:
+                sq.unhandled.append(phrase)
+            sq.clarification.append(
+                f"‘{measure.term}’ ile birlikte ‘{phrase}’ de istendi; katalogda "
+                + (f"birden çok karşılığı var: {', '.join(found)}. Hangisini kastediyorsunuz?" if found
+                   else "bu adla tanımlı bir ölçü yok. Hangi ölçüyü kastediyorsunuz?"))
+            sq.explanation.append(f"'{tok}' '{measure.term}' ile birlikte ikinci ölçü olarak istendi; "
+                                  f"'{phrase}' {'belirsiz' if found else 'katalogda yok'} — yarım cevap verilmedi")
 
     def _slot_from_senses(self, key: str, surface: str, senses: list[tuple[Concept, list[Mapping]]], span: tuple[int, int]) -> Optional[ResolvedSlot]:
         usable = [(c, maps) for c, maps in senses if maps]
@@ -2523,16 +2609,28 @@ class SemanticResolver:
         homes_entities |= {s.mapping.entity for s in list(sq.slots) + list(sq.group_by)
                            if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                            and self._source_of(s.mapping.entity) == home}
+        # ZEKI-54: every exemption below keeps a word on the other database because a two-server plan can
+        # read it there. Where plans are off (SEMANTIC_FEDERATED≠1) nothing can: kept, the word made the
+        # compiler show the model both databases and ask for one statement, and whether the answer was
+        # a statement joining both servers (refused at run time) or one that quietly dropped the word
+        # was the model's coin toss — a scheduled report failed on some mornings and not on others.
+        # There the word is handed to the model to read on the measure's side, like any lone word, and
+        # the person sees that reading. A measure on the other side is the question's own figure and is
+        # never handed over: it stays, and the compiler says the question needs two servers.
+        one_server = not federated.plans_enabled()
         for lone in {id(s): s for s in others}.values():
-            if self._source_of(lone.mapping.entity) in named:
-                continue          # the question named this database by name: it is meant to be read
             span = getattr(lone, "span", None)
             if lone.semantic_type == SemanticType.METRIC and (lone.explain or {}).get("source") == "count_cue":
                 sq.slots.remove(lone)                     # a count composed on the other source's table
                 continue
-            if not span or span[1] - span[0] > 2:
+            if one_server:
+                if lone.semantic_type == SemanticType.METRIC:
+                    continue
+            elif self._source_of(lone.mapping.entity) in named:
+                continue          # the question named this database by name: it is meant to be read
+            elif not span or span[1] - span[0] > 2:
                 continue                                  # a certified phrase of three or more words is meant
-            if span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
+            elif span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
                     and lone.semantic_type in (SemanticType.METRIC, SemanticType.COLUMN) \
                     and not any(span[0] <= c < span[1] for c in counted_at):
                 # A deliberate two-word certified measure or column names its own subject: "telif
@@ -2542,22 +2640,28 @@ class SemanticResolver:
                 # that database. A lone word or a two-word value *filter* is still passed over below;
                 # only a certified analytical axis of two or more words is kept here.
                 continue
-            if lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
+            if not one_server and lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
                 continue                                  # "kanal bazında": the grouping is the question's structure
-            if self._linked_across(lone.mapping.entity, homes_entities):
+            if not one_server and self._linked_across(lone.mapping.entity, homes_entities):
                 continue                                  # the catalog measured a bridge: the question may span both
             if lone in sq.slots:
                 sq.slots.remove(lone)
             if lone in sq.group_by:
                 sq.group_by.remove(lone)
-            word = fold(qf.tokens[span[0]]) if span[0] < len(qf.tokens) else fold(lone.term)
-            if span[0] in counted_at:
+            if span and span[0] < len(qf.tokens):
+                # One server: the whole phrase is the model's to read ("kitap adı", not "kitap").
+                word = " ".join(fold(t) for t in qf.tokens[span[0]:span[1]]) if one_server else fold(qf.tokens[span[0]])
+            else:
+                word = fold(lone.term)
+            if span and span[0] in counted_at:
                 word = ""                                 # the measure already reads this word; it is not missing
             if word and word not in sq.unresolved:
                 sq.unresolved.append(word)
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
             sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
-                                  f"ölçü {home or 'ana veri tabanı'} verisinde → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+                                  f"ölçü {home or 'ana veri tabanı'} verisinde"
+                                  + (" ve bu kurulumda iki sunuculu sorgu kapalı" if one_server else "")
+                                  + " → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
 
     @staticmethod
     def _names_a_source(slot: ResolvedSlot) -> bool:
