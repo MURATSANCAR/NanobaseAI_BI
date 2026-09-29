@@ -383,11 +383,17 @@ def test_products_priority_order_equals_old_sql(client):
             data = c.get("/api/v1/seo-geo/products", params={**params, "start": start, "limit": limit}).json()
             total, ids = old(cond, start, limit)
             assert data["total"] == total and [i["id"] for i in data["items"]] == ids, (params, start, limit)
-    # satış değişince (eşitleme) sıra yeniden kurulur
+    # Eşitleme ürünü değiştirince hazır sıra yeniden kurulur ve yine eski sorguyla aynıdır. Test veritabanında
+    # `CAST(data_json AS JSON)` sayısal yakınlık alır (JSON metni 0 olur): satış/görüntülenme bütün ürünlerde 0, sıra
+    # puana düşer. Bu yüzden değişiklik puanı da taşır; eski sıra korunsaydı ilk ürün «1» (puan 50) kalırdı.
     with eng.begin() as conn:
         conn.execute(PRODUCTS.update().where(PRODUCTS.c.product_id == "7").values(
-            data_json=dumps({"ProductId": "7", "CountTotalSales": "9999"}), synced_at=datetime(2026, 9, 5, tzinfo=timezone.utc)))
-    assert c.get("/api/v1/seo-geo/products").json()["items"][0]["id"] == "7"
+            data_json=dumps({"ProductId": "7", "CountTotalSales": "9999"}), score=1,
+            synced_at=datetime(2026, 9, 5, tzinfo=timezone.utc)))
+    after = c.get("/api/v1/seo-geo/products").json()
+    total, ids = old(base, 0, 50)
+    assert after["total"] == total and [i["id"] for i in after["items"]] == ids
+    assert ids[0] == "7"
 
 
 def test_pages_equal_old_per_request_calculation(client):
