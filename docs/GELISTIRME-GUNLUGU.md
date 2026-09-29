@@ -50,7 +50,7 @@
 - **Anket şablonu (`hr/engagement/SurveyAdmin.tsx`):** soru başına kart — soru metni, cevap biçimi («Katılım (1–5)», «Tavsiye puanı (0–10)», «Seçenekli», «Açık uçlu»), seçenekli soruda seçenek satırları, ↑/↓/sil, «Soru ekle», boşken «Başlangıç sorularını yükle».
 - **Değerlendirme formu (`hr/performance/ReviewCycle.tsx`):** bölüm başına kart — başlık, tür (yetkinlik 1–5 / hedefler / açık uçlu), yetkinlikte maddeler, yol gösterici not; «Bölüm ekle».
 - **Ortak (`hr/ListEditor.tsx`):** var olan soru/bölüm/madde anahtarı aynen korunur (geçmiş sonuçlar anahtarla gruplanır); yeni anahtar kaydederken metnin ilk kelimelerinden üretilir (`a-z0-9_`, ≤24, çakışırsa `_2`). Bilinmeyen alanlar korunur; gönderilen veri eskisiyle aynı biçimde. Sunucu kuralları istemcide (boş metin, geçerli tür, seçenekli soruda ≥2 seçenek, tekil anahtar, ankette en çok 1 tavsiye puanı, yetkinlikte ≥1 madde, ölçek 5 satır) — «Kaydet» gerekçesiyle kapalı. Ekranda «JSON» kalmadı.
-- **Doğrulama:** test sunucusu SSH'ta erişilemez (IP engeli); derleme bağlantı açılınca.
+- **Doğrulama (test sunucusu geçici kopya, IP engeli kalkınca):** `tsc -b` 0, `vite build`, vitest 268/268 (48 dosya).
 
 ## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
 
