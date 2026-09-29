@@ -85,8 +85,8 @@ REVALIDATE_HEADER = "x-swr-revalidate"
 
 
 def _code_version() -> str:
-    """Köprü kodunun içerik özeti. Diskteki hazır cevap başka bir kod sürümünün cevabıysa kullanılmaz: kurulumdan sonra
-    eski biçimdeki cevap (ör. yeni eklenen alanı taşımayan) ekrana gelmesin."""
+    """Köprü kodunun içerik özeti. Diskteki hazır cevap başka bir kod sürümünündense bayat sayılır: ekrana hemen gelir
+    (beklenmez) ve ilk açılışta arkada yeni kodla yeniden üretilir; kurulumdan sonra hazır cevaplar kaybolmaz."""
     root = Path(__file__).resolve().parent
     h = hashlib.sha256()
     for f in sorted(root.rglob("*")):
@@ -189,13 +189,16 @@ class ResponseCache:
             try:
                 meta = json.loads(meta_path.read_text())
                 key = tuple(meta["key"])
-                if now - float(meta.get("asked", 0)) > KEEP_SECONDS or meta.get("code") != CODE_VERSION:
-                    self._unlink(key)          # eski ya da başka kod sürümünün cevabı
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
+                    self._unlink(key)
                     self.stats["dropped"] += 1
                     continue
+                other_code = meta.get("code") != CODE_VERSION     # başka kod sürümü: son tazeleme saatinden eski sayılır
                 body = meta_path.with_name(meta_path.name[: -len(".meta.json")] + ".body").read_bytes()
                 rows.append((float(meta.get("asked", 0)), key, Entry(body, [tuple(h) for h in meta["headers"]], int(meta["status"]),
-                                                                     float(meta["at"]), float(meta.get("seconds", 0)),
+                                                                     min(float(meta["at"]), last_refresh(now) - 1) if other_code
+                                                                     else float(meta["at"]),
+                                                                     float(meta.get("seconds", 0)),
                                                                      float(meta.get("asked", 0)))))
             except (OSError, ValueError, KeyError):
                 continue

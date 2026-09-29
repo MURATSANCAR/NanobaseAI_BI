@@ -150,16 +150,16 @@ def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
     assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
 
 
-def test_disk_answers_of_another_code_version_are_dropped(tmp_path, monkeypatch):
-    """Kurulumdan sonra eski kodun diskteki hazır cevabı kullanılmaz (yeni alanı taşımayan cevap ekrana gelmez)."""
+def test_disk_answers_of_another_code_version_are_stale(tmp_path, monkeypatch):
+    """Kurulumdan sonra eski kodun diskteki hazır cevabı kaybolmaz ama bayattır: hemen gelir, arkada yeniden üretilir."""
     key = ("ayse", "/api/v1/stock/overview", "")
     first = RC.ResponseCache(str(tmp_path))
     first.put(key, b'{"n": 1}', [("content-type", "application/json")], 200, 2.0, {})
     assert RC.ResponseCache(str(tmp_path)).get(key) is not None          # aynı kod: yeniden başlatmada kalır
     monkeypatch.setattr(RC, "CODE_VERSION", "baska-surum")
     again = RC.ResponseCache(str(tmp_path))
-    assert again.get(key) is None and again.stats["dropped"] == 1
-    assert not list(tmp_path.glob("*.meta.json"))
+    e = again.get(key)
+    assert e is not None and e.body == b'{"n": 1}' and RC.is_stale(e.at)
 
 
 def test_refresh_is_at_seven_and_noon_istanbul():
