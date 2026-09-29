@@ -36,6 +36,8 @@ def calls(monkeypatch):
         return {"ok": True}
 
     monkeypatch.setattr(jobs, "_post", post)
+    # Adımlar köprüyü bekleyen çağrıyla gider (call_bridge → /health); testte köprü hazır sayılır.
+    monkeypatch.setattr(jobs, "_bridge_pid", lambda: 1)
     monkeypatch.setattr(jobs, "report", lambda job, ok, detail="": rec["reports"].append((ok, detail)))
     monkeypatch.setattr(jobs, "_write_state", lambda name, at: rec["state"].append(name))
     return rec
