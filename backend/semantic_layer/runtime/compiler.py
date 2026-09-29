@@ -23,7 +23,7 @@ from datetime import timedelta
 from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
-from semantic_layer.naming import is_shadow_copy, physical_name, source_rank
+from semantic_layer.naming import is_shadow_copy, logical_table, physical_name, source_rank
 from semantic_layer.runtime import federated, periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
@@ -145,6 +145,12 @@ def _is_additive(formula: Optional[str]) -> bool:
 def _parse_cond_column(key: str) -> Optional[tuple[str, str]]:
     m = re.match(r"^(\w+)\.(\w+)\s", key.strip())
     return (m.group(1), m.group(2).upper()) if m else None
+
+
+def _ent_key(name: str) -> str:
+    """Entity name as the gate compares it (audit._ent): no second-source prefix, no "LG_"."""
+    from semantic_layer.runtime.audit import _ent
+    return _ent(name)
 
 
 def _snake(term: str) -> str:
@@ -820,6 +826,7 @@ class DeterministicCompiler:
                     explain.append(f"varsayılan filtre (birleştirme içinde): {m.entity}.{m.column} {m.operator} {m.values}")
             kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
             sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
+        group += self._card_keys(plan, group, explain, by_firm)
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -834,6 +841,39 @@ class DeterministicCompiler:
         return CompiledQuery(sql=sql, compiler=self.name, tables=tables, catalog_version=q.catalog_version, explain=explain, certified=True)
 
     # -- helpers
+    def _card_keys(self, plan: "_Plan", group: list[str], explain: list[str], by_firm: bool) -> list[str]:
+        """Kırılım bir kartın ADIYLA isteniyorsa kartın anahtarı da gruba girer: aynı adı taşıyan iki kart tek satıra
+        birleşmesin. 2026-09-29 tam kapı C015: iade oranı müşteri adına göre gruplanıyordu, canlıda aynı adlı iki cari
+        tek satır oldu (2.401 / 2.402) ve ikisinin sevk ile iadesi toplanıp tek oran verildi. İş kararı: kart bazında
+        anahtarla grupla (bilgi belgesi C015).
+
+        Yalnız kaydın KENDİ ADI olan kolonda: katalog eşlemesi `record_label` taşıyan COLUMN kavramı («müşteri» →
+        CLCARD.DEFINITION_, «kitap» → ITEMS.NAME). Bir niteliğe göre kırılımda («müşteri grubu», «şehir», «segment»)
+        anahtar eklemek sonucu kart kart böler — bu yüzden kolon tipinden ya da genişliğinden tahmin edilmez;
+        işaret katalog betiğiyle (scripts/catalog-authoring/2026-09-29-kayit-adi-kolonlari.py) yazılır.
+
+        Anahtar, olgudan karta giden katalog ilişkisinin hedef kolonudur (fact.CLIENTREF → CLCARD.LOGICALREF): ad
+        anahtara bağlı olduğundan eklemek hiçbir grubu birleştirmez, yalnız aynı adlı ayrı kartları ayırır; seçime
+        (SELECT) girmez, sonucun kolonları değişmez. Birden çok firma/yıl kopyası birlikte okunuyorsa eklenmez: kart
+        anahtarı kopyalar arasında aynı kalmayabilir (ITEMS'ta 71 kart), orada adla birleşme doğru olandır."""
+        if by_firm:
+            return []
+        d = self.d
+        added: list[str] = []
+        for s in plan.group_cols:
+            ent = s.mapping.entity
+            if ent == plan.entity or not (s.mapping.extra or {}).get("record_label"):
+                continue
+            edge = next((j for j in plan.joins if j[2] == ent and j[0] != ent), None)
+            if edge is None or edge[3].upper() == (s.mapping.column or "").upper():
+                continue
+            key = f"{ent}.{d.q(edge[3])}"
+            if key in group or key in added:
+                continue
+            added.append(key)
+            explain.append(f"grup anahtarı: '{s.term}' adıyla birlikte {ent}.{edge[3]} (aynı adlı kartlar ayrı kalır)")
+        return added
+
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
         return self.conventions.join_path(entity, other)
 
@@ -2074,7 +2114,10 @@ class ExistingCompiler:
             elif m.values:
                 lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
             elif m.column:
-                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu" + self._basis(f"{m.entity}.{m.column}"))
+                # Kaydın kendi adı (katalogda record_label): kırılımda aynı adlı iki kayıt tek satıra birleşmesin.
+                label = (" — kaydın adı; kırılımda kaydın anahtarıyla BİRLİKTE grupla (aynı adlı kayıtlar ayrı kalır)"
+                         if (m.extra or {}).get("record_label") else "")
+                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu" + label + self._basis(f"{m.entity}.{m.column}"))
         for t in q.temporal:
             if t.start and t.end:
                 lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
@@ -2534,9 +2577,15 @@ class CompilerRouter:
         profiles = getattr(existing, "profiles", []) if existing is not None else []
         context = getattr(existing, "context", {}) if existing is not None else {}
         dialect = getattr(existing, "dialect", "tsql") if existing is not None else "tsql"
-        problems = federated.check_plan(plan, profiles, context, dialect)
+        placed = {s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity}
+        problems = federated.check_plan(plan, profiles, context, dialect, placed=placed)
         if problems:
             return problems
+        # A one-part plan on a question whose two halves nothing joins (check_plan accepted it only then):
+        # the DEFAULT year was stamped because of a dated measure on the server this plan does not read.
+        # Nobody asked for that year, and the resolver withdraws it the same way when the source rule
+        # drops the dated measure. A period the person wrote stays an obligation.
+        unread_default = self._unread_default_period(q, plan) if len(plan.parts) == 1 else set()
         # Each part is an ordinary statement on its own server, and goes wrong the ordinary way: a
         # header total summed across its lines comes out multiplied. The single-statement path is
         # reviewed for that after its dry run; a part that skipped the review returned a revenue
@@ -2555,10 +2604,30 @@ class CompilerRouter:
         unmet_sets = []
         for text in [p.sql for p in plan.parts] + [plan.final]:
             try:
-                unmet_sets.append({u.text for u in gate_report(q, head + text, sources=sources)})
+                unmet_sets.append({u.text for u in gate_report(q, head + text, sources=sources)
+                                   if not (u.kind == "period" and _ent_key(u.entity) in unread_default)})
             except Exception:  # noqa: BLE001
                 continue
         return sorted(set.intersection(*unmet_sets)) if unmet_sets else []
+
+    #: The resolver's own words when it stamped the default period (resolver._resolve, «dönem belirtilmedi →
+    #: varsayılan … uygulandı»); the gate tooling reads the same sentence (DEFAULT_PERIOD_APPLIED).
+    _DEFAULT_PERIOD_NOTE = "dönem belirtilmedi → varsayılan"
+
+    def _unread_default_period(self, q: SemanticQuery, plan: "federated.Plan") -> set[str]:
+        """Entities the default period was bound to that no part of the plan reads — empty unless the period is
+        the resolver's default (not asked)."""
+        if not any(self._DEFAULT_PERIOD_NOTE in str(e) for e in (q.explanation or [])):
+            return set()
+        binding = getattr(q, "temporal_binding", None) or {}
+        bound = [binding] + list(binding.get("also") or []) if binding else []
+        read: set[str] = set()
+        for part in plan.parts:
+            try:
+                read |= {_ent_key(logical_table(t.name).entity) for t in federated._tables(part.sql, "tsql")}
+            except Exception:  # noqa: BLE001 — an unreadable part is refused elsewhere; nothing is excused here
+                return set()
+        return {_ent_key(b.get("entity", "")) for b in bound if b.get("entity") and _ent_key(b["entity"]) not in read}
 
     def _gate_plan(self, q: SemanticQuery, out: CompiledQuery, thread) -> CompiledQuery:
         problems = self.plan_problems(q, out.plan)

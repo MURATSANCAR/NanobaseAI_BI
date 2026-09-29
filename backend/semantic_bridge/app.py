@@ -1215,7 +1215,8 @@ class Runtime:
         # başka her karar eskisi gibi Logo/CRM hattında kalır.
         from semantic_bridge import chat_portal
         evidence = chat_scope.has_business_evidence(sq.slots)
-        if not evidence or chat_portal.mentions_portal(question):
+        # Portal kelimesi sertifikalı bir Logo/CRM öbeğinin içindeyse («ortalama sepet tutarı» ⊃ «sepet») ayırt edici değil.
+        if not evidence or chat_portal.mentions_portal(question, covered=chat_scope.strong_phrases(sq.slots)):
             scope = chat_scope.classify(question, self.llm_for("chat"),
                                         has_context=bool(self.thread_plans.get(thread_id)))
             if not scope.is_intro and scope.connected and chat_portal.serves(scope.topic):

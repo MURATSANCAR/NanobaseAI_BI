@@ -243,6 +243,11 @@ def _rooted(key: str) -> str:
     return " ".join(short_root(t) for t in key.split())
 
 
+def _bare(entity: str) -> str:
+    """One table's two catalog spellings (STLINE / LG_STLINE) compared as one."""
+    return re.sub(r"^LG_", "", (entity or "").upper())
+
+
 #: "Yıllık ciro" bu yılın yıllık tutarını da anlatabilir; yıllara YAYILMAYI yalnız açık kırılım ister.
 _YEARLY_BREAKDOWN = re.compile(r"\b(yillara gore|yil yil|yil bazinda|yillar bazinda|yillara bol\w*|her yil)\b")
 
@@ -578,6 +583,10 @@ class SemanticResolver:
             hits.append(slot)
             consumed.update(range(i, j))
 
+        # 1b) a certified measure whose name the question splits: "etkinliklere harcadığımız toplam gider" names
+        #     "etkinlik gideri"; the generic "gider" matched on its own and the record word went elsewhere.
+        self._split_measure_names(qf, hits, consumed, index, sq)
+
         # 2) explicit physical codes in the question: "(TRCODE 8)" / "TRCODE 7,8,9"
         for col, values in qf.explicit_codes:
             # "net ciro 2025": CIRO may also be a physical column, but here it
@@ -630,8 +639,16 @@ class SemanticResolver:
         # 2b) profile-backed literal values: a token that *is* a value of a certified column
         #     ("KITAPCI" ∈ CLCARD.SPECODE2 profile) — the column meaning is certified, the value is observed.
         literal: dict[tuple[str, str], list[tuple[int, int, str]]] = {}
+        # A word that opens a breakdown ("yazar bazında", "müşteriye göre", "kitap başına") names what the answer is
+        # broken down BY, never one value to filter on — wherever else in the sentence it recurs ("… en pahalı beş
+        # yazar kim?"). 2026-09-29 tam kapı A044: "yazar" was read as the observed value 'Yazar ' of a CRM contact
+        # description column; the breakdown vanished, a filter nobody asked for took its place and one NULL row came back.
+        breakdown_words = {stem(qf.tokens[k - 1]) for k in range(1, len(qf.tokens))
+                           if fold(qf.tokens[k]) in _BREAKDOWN_CUES}
         for i, j, _ in sorted(qf.terms, key=lambda t: (-(t[1] - t[0]), t[0])):
             if any(k in consumed for k in range(i, j)):
+                continue
+            if j - i == 1 and stem(qf.tokens[i]) in breakdown_words:
                 continue
             phrase = " ".join(qf.tokens[i:j])
             found_values = self._value_index.get(phrase) or self._value_index.get(" ".join(stem(t) for t in qf.tokens[i:j])) or []
@@ -3315,6 +3332,65 @@ class SemanticResolver:
                 f"‘{phrase}’ katalogda tanımlı bir ölçü değil. ‘{tok}’ şu tanımlı ölçülerde geçiyor: "
                 f"{', '.join(names)}. Hangisini kastediyorsunuz?")
             sq.explanation.append(f"'{tok}' bir ölçü niteleyicisi; '{measure.term}' ile birlikte tanımlı değil — model formül yazmadı")
+
+    #: How far back the record word of a split measure name may sit ("etkinliklere harcadığımız toplam gider": 3).
+    _SPLIT_NAME_REACH = 3
+
+    def _split_measure_names(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int], index: dict,
+                             sq: SemanticQuery) -> None:
+        """A generic measure word that, together with a record word a few words before it, is the name of ANOTHER
+        certified measure: that measure is the one asked for.
+
+        2026-09-29 tam kapı B064: "Etkinliklere harcadığımız toplam gider" — "gider" matched the ERP expense
+        measure on its own, "etkinliklere" went to the CRM event table and was then left to the model as an
+        other-server word; the model filtered ledger lines by a name and summed 3,4 Mn ₺. The catalog certifies
+        "etkinlik gideri" (Σ event cost, 9.275 ₺): both of its words are in the question, in order, with only
+        words between that belong to nothing. Greedy matching reads adjacent words only and could not see it.
+
+        Kept narrow on purpose: the words between must be unplaced (a relative verb, "toplam"); the record word
+        must be unplaced or an ENTITY of the very table the named measure maps to; exactly one certified measure
+        must carry that name. The slot is INFERRED — the name was put together, not written."""
+        reach = self._SPLIT_NAME_REACH
+        for slot in [h for h in hits if h.semantic_type == SemanticType.METRIC and h.span and h.mapping]:
+            i, j = slot.span
+            if j - i > 2 or slot not in hits:
+                continue
+            head = [w for w in qf.tokens[i:j] if fold(w) != "toplam"] or list(qf.tokens[i:j])
+            found = None
+            for t in range(i - 1, max(-1, i - 1 - reach), -1):        # nearest record word first
+                between = range(t + 1, i)
+                if any(k in consumed for k in between):
+                    break                                          # another reading sits in between: not one name
+                owner = next((h for h in hits if h is not slot and h.span and h.span[0] <= t < h.span[1]), None)
+                if t in consumed and (owner is None or owner.semantic_type != SemanticType.ENTITY
+                                      or owner.span != (t, t + 1) or not owner.mapping):
+                    continue
+                phrase = " ".join([qf.tokens[t], *head])
+                senses = index.get(normalize_term(phrase)) or self._by_root(index).get(_rooted(phrase)) or []
+                senses = [(c, maps) for c, maps in senses if c.semantic_type == SemanticType.METRIC and maps]
+                if len({c.id for c, _ in senses}) != 1 or senses[0][0].id == slot.concept_id:
+                    continue
+                if owner is not None and not any(_bare(m.entity) == _bare(owner.mapping.entity) for m in senses[0][1]):
+                    continue
+                found = (t, phrase, senses, owner)
+                break
+            if found is None:
+                continue
+            t, phrase, senses, owner = found
+            named = self._slot_from_senses(normalize_term(phrase), phrase, senses, (t, j))
+            if named is None:
+                continue
+            named.status = "INFERRED"
+            named.confidence = min(named.confidence, 0.8)
+            named.explain = {**(named.explain or {}), "source": "split_measure_name",
+                             "why": f"'{qf.tokens[t]} … {' '.join(qf.tokens[i:j])}' ayrık yazılmış ölçü adı → "
+                                    f"'{senses[0][0].term}' (genel '{slot.term}' değil)"}
+            hits.remove(slot)
+            if owner is not None:
+                hits.remove(owner)
+            hits.append(named)
+            consumed.update(range(t, j))
+            sq.explanation.append(named.explain["why"])
 
     def _metric_over_filter(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int], index: dict) -> Optional[ResolvedSlot]:
         """A certified measure named around a free measure word, on a table the question already reads.

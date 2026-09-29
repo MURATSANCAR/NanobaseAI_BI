@@ -154,10 +154,20 @@ def fold(text: Any) -> str:
     return " ".join(s.split())
 
 
-def mentions_portal(question: str) -> bool:
+def mentions_portal(question: str, covered: Iterable[str] = ()) -> bool:
     """Soruda bir portal alanının ayırt edici kelimesi geçiyor mu? Geçiyorsa soru, Logo/CRM kataloğunda güçlü bir kavrama
-    yerleşmiş olsa da konu sınıflandırıcısına sorulur («risk kaydı» cari riskine gitmesin)."""
+    yerleşmiş olsa da konu sınıflandırıcısına sorulur («risk kaydı» cari riskine gitmesin).
+
+    `covered`: sorunun Logo/CRM kataloğunda sertifikalı bir kavrama yerleşmiş öbekleri. Portal kelimesi böyle bir öbeğin
+    İÇİNDEyse ayırt edici değildir — kelimeyi katalog zaten kendi kavramının adı olarak okumuş. 2026-09-29 tam kapı A016:
+    «müşteri bazında ortalama sepet tutarı» sertifikalı Logo ölçüsü «ortalama sepet tutarı»na yerleşiyor, ama «sepet»
+    e-ticaret alanının anahtar kelimesi olduğu için soru sınıflandırıcıya gidiyor, üç denemenin birinde e-ticaret konusu
+    seçilip «henüz veri bağlı değil» deniyordu."""
     q = " " + fold(question) + " "
+    for phrase in covered or ():
+        f = fold(phrase)
+        if f:
+            q = q.replace(" " + f + " ", " " + " ".join("_" for _ in f.split()) + " ")
     for a in config()["areas"]:
         for k in a.get("keywords") or []:
             if " " + fold(k) in q:

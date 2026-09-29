@@ -358,6 +358,30 @@
 
 - **Test sunucusu:** `CalcPane.tsx` ve `help.ts` sunucuda önceki main hâlindeydi (md5), yerleştirildi; `index-DPaAEmv0.js`. Görünmez tarayıcı (timasai kısa oturum, silindi): yeni kitapta ve Mükemmeliyetçi Kişilik'te KDV «0», telif tabanı «Brüt — kapak fiyatı», doğuşu «Baskıdan ödeme — basılan adet»; sayfa hatası 0.
 - **Müşteri VM'i:** arada başka oturumların iki kurulumu (`14d2346d`, `151ee17d`, 14:49'da EXIT 0) — ikisi de `c9ad5e2b`'nin atası. Ön denetim `._*` 0, çakışma işareti 0, arşiv köprüsü 2.374 uç; `vm-deploy-c9ad5e2b` EXIT 0, 5 konteyner ayakta, `bi_var` 7 → 7. VM'in sunduğu `PricingScreen-WjtMwIfc.js` içinde `royaltyOn:"baski",vat:0`, «Excel tarifesi» 0.
+## 2026-09-29 (16:30) — Zeki AI cevap kapısı: 17 sağlam olmayan soru 14 sınıfa bağlandı, yedi sınıf kodda (dal `zeki-kapi-sinif`)
+
+- **Girdi:** test sunucusundaki tam kapı (69 soru × 3, 10:22 UTC): SAĞLAM 52 · BOZUK 11 · KARARSIZ 4 · VERİ 2. Rapor SQL taşımıyor;
+  kök nedenler koddan, 09-21 çözücü okumasından ve ret metinlerinden çıkarıldı. Analiz: `docs/analiz/zeki-kapi-2026-09-29.md`
+  (soru → sınıf → kök neden dosya:satır → düzeltme → beklenen etki).
+- **Kodda (soru değil sınıf):** K1 eleştirmen yıl kopyasını kalıbıyla bağlar, varlık adı çakışmasında yanlış profilden «kolon yok»
+  demez (Q4/B019: CLFLINE.AMOUNT). K2 barkod gibi küçük köprü tablosu yalnız kırılım anahtarıyken «şişirilmiş» ret yerine uyarı
+  (Q69/A023). K3 iki yarısını ölçülmüş bağ birleştirmeyen soruda tek parçalık plan geçer, sorulmamış varsayılan yıl okunmayan
+  tabloya bağlıysa düşer (Q40/D053; eskiden ret talimatı ile JSON'a bağlı onarım çelişiyordu). K4 «ortalama sepet tutarı» ⊃
+  «sepet»: portal kelimesi sertifikalı öbeğin içindeyse sınıflandırıcıya gidilmez (Q43/A016). K5 kaydın adıyla kırılımda kart
+  anahtarı GROUP BY'a — yalnız katalogda `record_label` işaretli kolonda; nitelik kırılımı bölünmez (Q11/C015). K6 «yazar
+  bazında» kelimesi profil değeri süzgeci olmaz (Q49/A044). K7 ayrık yazılmış ölçü adı («etkinliklere … toplam gider» →
+  «etkinlik gideri») (Q63/B064).
+- **Öneri olarak kalan:** K8 (Q10), K9 (Q2, Q4 — iş tanımı 06 ile tahsilat ölçüsü ayrı; holdout, kavram yazılmadı), K10 (Q44),
+  K11 (Q51 — «kurulda onaylanan» olay mı durum mu, katalog kararı), K12 (Q55), K13 (Q65), K14 (Q13). Q9/Q32 VERİ (açık üretim
+  emri yok). Holdout sorularına (Q2, Q4, Q10, Q44, Q49) kural/kavram yazılmadı; Kural C10 (etkinlik↔kişi N:N) düzeltmesi ayrı karar.
+- **Altın set değiştirilmedi:** Q29 cevabı referansla aynı ama kolon adı `bekleyen_siparis_tutari` listede yok ve anahtar müşteri
+  kodu; Q69 lookup cirosu faturalı satır şartı ve iade düşümü taşımıyor; Q63 referansı CRM, kayıt sistemi Logo — üçü de
+  koordinatör kararı.
+- **Katalog:** `scripts/catalog-authoring/2026-09-29-kayit-adi-kolonlari.py` (kuru koşu varsayılan, `--apply`, `--exclude`).
+- **DOĞRULANAMADI — testler koordinatörde.** Mac'te yalnız `py_compile`. Yeni test `test_zeki_kapi_0929.py` (18 test, yedi
+  sınıf + kontrol durumları). Sunucu sırası `scripts/acceptance/zeki-kapi-0929/calistir.sh`: pytest → hızlı kapı önce →
+  kurulum (7 dosya) → hızlı kapı sonra (beklenen fark yalnız A044 ve B064) → katalog kuru/yaz → hedefli tam kapı
+  (Q4,Q11,Q29,Q40,Q43,Q49,Q63,Q69) → tam kapı → golden kalite kapısı.
 
 ## 2026-09-29 (15:45) — CRM başlıkları test sunucusunda ve müşteri VM'inde (`151ee17d`)
 

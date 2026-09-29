@@ -136,19 +136,36 @@ def _tables(sql: str, dialect: Optional[str]) -> list[exp.Table]:
     return [t for t in tree.find_all(exp.Table) if t.name and t.name.upper() not in ctes]
 
 
-def check_plan(plan: Plan, profiles: list[Any], context: dict[str, str], dialect: str = "tsql") -> list[str]:
-    """Why this plan must not run; empty when it may."""
+def check_plan(plan: Plan, profiles: list[Any], context: dict[str, str], dialect: str = "tsql", *,
+               placed: Optional[Iterable[str]] = None) -> list[str]:
+    """Why this plan must not run; empty when it may.
+
+    `placed`: the tables the resolver placed the question's words on. With it, a plan of ONE part is accepted
+    when no measured cross-source link reaches those tables (`required_bridges_block` is empty): the question
+    was read onto two servers, but nothing joins its two halves, so no two-server answer exists and the
+    model's one-server reading is the only one there is. The gate still judges that part against every
+    obligation of the question. Without `placed` (callers that do not know) the old rule stands.
+
+    2026-09-29 tam kapı D053 («baskı adedi arttıkça telif yüzdemiz…»): «baskı adedi» Logo üretim ölçüsüne,
+    «telif yüzdesi» CRM telif kademesine yerleşti; iki tablo arasında ölçülmüş bağ yok. Model doğru olarak tek
+    CRM parçası yazdı; plan «tek SQL yazılmalı» diye reddedildi, onarım isteği ise yalnız JSON plan kabul ettiği
+    için model iki talimat arasında kaldı — üç denemede üç ret."""
     problems: list[str] = []
     by_source: dict[str, list[Any]] = {}
     for p in profiles:
         by_source.setdefault(source_of_schema(p.schema_name), []).append(p)
     names = [p.name for p in plan.parts]
-    if len(plan.parts) < 2:
+    bridged = placed is None or bool(required_bridges_block(profiles, {str(e) for e in placed if e}))
+    alone = len(plan.parts) == 1 and not bridged
+    if len(plan.parts) < 2 and not alone:
         problems.append("birleşik plan en az iki parça ister; tek kaynaklı soru tek SQL ile yazılmalı")
     if len(set(names)) != len(names) or not all(_NAME.match(n) for n in names):
         problems.append("parça adları küçük harf, benzersiz ve yalnız harf/rakam/alt çizgi olmalı")
-    if len({p.source for p in plan.parts}) < 2:
-        problems.append("parçaların hepsi aynı kaynakta; iki sunucuya gerek yok, tek SQL yazılmalı")
+    if len(plan.parts) > 1 and len({p.source for p in plan.parts}) < 2:
+        # Said in a form the plan-only repair can follow: a JSON plan, not «write one SQL».
+        problems.append("parçaların hepsi aynı kaynakta; " + (
+            "bu soru iki kaynağı birlikte istiyor: ZORUNLU KAYNAK BAĞI ile her kaynaktan bir parça yaz"
+            if bridged else "bu kaynağın okumasını TEK parçada yaz, final yalnız o parçayı okusun, links boş kalsın"))
     for part in plan.parts:
         if part.source not in by_source:
             problems.append(f"'{part.name}' bilinmeyen kaynak: {part.source or '(varsayılan)'}")
@@ -175,7 +192,9 @@ def check_plan(plan: Plan, profiles: list[Any], context: dict[str, str], dialect
         missing = set(names) - used
         if missing:
             problems.append("kullanılmayan parça: " + ", ".join(sorted(missing)))
-    problems += _check_links(plan, profiles)
+    if not alone:
+        # Kaynaklar arası bağ yalnız iki kaynağı birleştiren planda anlamlıdır.
+        problems += _check_links(plan, profiles)
     return problems
 
 
