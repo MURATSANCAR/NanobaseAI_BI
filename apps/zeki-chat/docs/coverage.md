@@ -1,6 +1,6 @@
 # Code Coverage
 
-This document explains how code coverage instrumentation works in Rocket.Chat's build and CI pipeline.
+This document explains how code coverage instrumentation works in ZEKI AI CHAT's build and CI pipeline.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Build (SWC + plugin)  -->  Run tests  -->  Process exit triggers report  -->  Me
 
 ### Modern build stack (SWC)
 
-Rocket.Chat uses Meteor's modern build stack with [SWC](https://swc.rs/) as the transpiler. For coverage builds, the [`swc-plugin-coverage-instrument`](https://github.com/kwonoj/swc-plugin-coverage-instrument) plugin is injected into `.swcrc` at build time.
+ZEKI AI CHAT uses Meteor's modern build stack with [SWC](https://swc.rs/) as the transpiler. For coverage builds, the [`swc-plugin-coverage-instrument`](https://github.com/kwonoj/swc-plugin-coverage-instrument) plugin is injected into `.swcrc` at build time.
 
 This is configured in `.github/actions/meteor-build/action.yml`:
 
@@ -87,7 +87,7 @@ Coverage is collected in the `ci-test-e2e.yml` workflow:
 1. **Build**: `meteor-build` action runs with `type: coverage`, producing a Docker image with instrumented code
 2. **Test**: E2E tests run against the instrumented server. On each test shard:
    - `COVERAGE_DIR`, `COVERAGE_FILE_NAME`, and `COVERAGE_REPORTER` are set
-   - When the Rocket.Chat process exits after tests, the coverage plugin writes a JSON report
+   - When the ZEKI AI CHAT process exits after tests, the coverage plugin writes a JSON report
 3. **Merge**: `nyc merge` combines per-shard JSON reports into a single coverage file
 4. **Upload**: Coverage data is uploaded to Codecov
 

@@ -66,7 +66,7 @@ Zod v4 re-exports all 50 locale files from its main entry point:
 export * as locales from "../locales/index.js";
 ```
 
-This means `import { z } from 'zod'` pulls in error messages for Arabic, Hebrew, Thai, Russian, and 46 other languages — even though Rocket.Chat only uses the English locale (loaded by default via `config(en())`).
+This means `import { z } from 'zod'` pulls in error messages for Arabic, Hebrew, Thai, Russian, and 46 other languages — even though ZEKI AI CHAT only uses the English locale (loaded by default via `config(en())`).
 
 **Measured impact:** 147 KB (50 locale files) out of 278 KB total for zod — **53% of the zod bundle was unused locale data**.
 

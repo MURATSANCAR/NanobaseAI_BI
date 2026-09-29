@@ -5,7 +5,7 @@ export type * from './ILicenseV3';
 export type * from './LicenseBehavior';
 export type * from './LicenseInfo';
 export type * from './LicenseLimit';
-export * from './LicenseModule';
+export * from './CapabilityModule';
 export type * from './LicensePeriod';
 export type * from './LicenseValidationOptions';
 export type * from './LimitContext';

@@ -4,9 +4,9 @@
 - The implementer of this should restrict the server setting access and environmental variables. Idea is to allow the implementer to have a default set of restricted ones while letting the admin/owner of the server to restrict it even further or lift the restriction on some more. Simple interface with settings and checkbox to allow/disallow them.  :thinking:
 
 ## What does the Apps-Engine enable you to do?
-The Apps-Engine is Rocket.Chat's _plugin framework_ - it provides the APIs for Rocket.Chat Apps to interact with the host system.
+The Apps-Engine is ZEKI AI CHAT's _plugin framework_ - it provides the APIs for ZEKI AI CHAT Apps to interact with the host system.
 
-Currently, a Rocket.Chat App can:
+Currently, a ZEKI AI CHAT App can:
 - Listen to message events
   - before/after sent
   - before/after updated
@@ -22,30 +22,30 @@ Some features the Engine allows Apps to use:
 - Key-Value Storage system
 - App specific settings
 
-## Development environment with Rocket.Chat
+## Development environment with ZEKI AI CHAT
 When developing new functionalities, you need to integrate the local version of the Apps-Engine with your local version of Rocket.Chat.
 
-First of all, make sure you've installed all required packages and compiled the changes you've made to the Apps-Engine, since that is what Rocket.Chat will execute:
+First of all, make sure you've installed all required packages and compiled the changes you've made to the Apps-Engine, since that is what ZEKI AI CHAT will execute:
 ```sh
 npm install
 npm run compile
 ```
 
-Now, you need to setup a local Rocket.Chat server, [so head to the project's README for instructions on getting started](https://github.com/RocketChat/Rocket.Chat#development) (if you haven't already). Make sure to actually clone the repo, since you will probably need to add some code to it in order to make your new functionality work.
+Now, you need to setup a local ZEKI AI CHAT server, so head to the project's README for instructions on getting started (if you haven't already). Make sure to actually clone the repo, since you will probably need to add some code to it in order to make your new functionality work.
 
-After that, `cd` into Rocket.Chat folder and run:
+After that, `cd` into ZEKI AI CHAT folder and run:
 ```sh
 meteor npm install PATH_TO_APPS_ENGINE
 ```
 
 Where `PATH_TO_APPS_ENGINE` is the path to the Apps-Engine repo you've cloned.
 
-That's it! Now when you start Rocket.Chat with the `meteor` command, it will use your local Apps-Engine instead of the one on NPM :)
+That's it! Now when you start ZEKI AI CHAT with the `meteor` command, it will use your local Apps-Engine instead of the one on NPM :)
 
 Whenever you make changes to the engine, run `npm run compile` again - meteor will take care of restarting the server due to the changes.
 
 ## Troubleshooting
-1. Sometimes, when you update the Apps-Engine code and compile it while Rocket.Chat is running, you might run on errors similar to these:
+1. Sometimes, when you update the Apps-Engine code and compile it while ZEKI AI CHAT is running, you might run on errors similar to these:
 
 ```
 Unable to resolve some modules:
@@ -70,7 +70,7 @@ npm ERR! dest PATH_TO_ROCKETCHAT/node_modules/.staging/@babel/code-frame-f369782
 npm ERR! errno -2
 npm ERR! enoent ENOENT: no such file or directory, rename 'PATH_TO_ROCKETCHAT/node_modules/.staging/@rocket.chat/apps-engine-c7135600/node_modules/@babel/code-frame' -> 'PATH_TO_ROCKETCHAT/node_modules/.staging/@babel/code-frame-f3697825'
 npm ERR! enoent This is related to npm not being able to find a file.
-npm ERR! enoent 
+npm ERR! enoent
 ```
 Here `PATH_TO_ROCKETCHAT` is the path to the main rocketchat server repo in your system
 To correct this we reinstall the package once again deleting the previous package
@@ -93,7 +93,7 @@ Makes great usage of TypeScript and decorators: https://github.com/alsatian-test
 * To generate the coverage information: `npm run check-coverage`
 * To view the coverage: `npm run view-coverage`
 
-# Rocket.Chat Apps TypeScript Definitions
+# ZEKI AI CHAT Apps TypeScript Definitions
 
 ## Handlers
 Handlers are essentially "listeners" for different events, except there are various ways to handle an event.
@@ -119,7 +119,7 @@ To update or generate the documentation, please commit your changes first and th
 
 # Engage with us
 ## Share your story
-We’d love to hear about [your experience](https://survey.zohopublic.com/zs/e4BUFG) and potentially feature it on our [Blog](https://rocket.chat/case-studies/?utm_source=github&utm_medium=readme&utm_campaign=community).
+We’d love to hear about [your experience](https://survey.zohopublic.com/zs/e4BUFG) and potentially feature it on our Blog.
 
 ## Subscribe for Updates
-Once a month our marketing team releases an email update with news about product releases, company related topics, events and use cases. [Sign Up!](https://rocket.chat/newsletter/?utm_source=github&utm_medium=readme&utm_campaign=community)
+Once a month our marketing team releases an email update with news about product releases, company related topics, events and use cases. Sign Up!

@@ -1,6 +1,6 @@
 import type { IServiceClass } from './ServiceClass';
 
-export interface ILicense extends IServiceClass {
+export interface ICapabilities extends IServiceClass {
 	hasModule(feature: string): boolean;
 
 	hasValidLicense(): boolean;

@@ -2,7 +2,7 @@
 	"name": "@rocket.chat/fuselage-ui-kit",
 	"version": "31.0.0",
 	"private": true,
-	"description": "UiKit elements for Rocket.Chat Apps built under Fuselage design system",
+	"description": "UiKit elements for ZEKI AI CHAT Apps built under Fuselage design system",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [

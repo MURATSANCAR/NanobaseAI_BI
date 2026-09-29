@@ -1,7 +1,7 @@
 import { api, FederationMatrix as FederationMatrixService } from '@rocket.chat/core-services';
 import { FederationMatrix, configureFederationMatrixSettings, setupFederationMatrix } from '@rocket.chat/federation-matrix';
 import { InstanceStatus } from '@rocket.chat/instance-status';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Logger } from '@rocket.chat/logger';
 
 import { settings } from '../../../app/settings/server';
@@ -14,7 +14,7 @@ let serviceEnabled = false;
 
 const configureFederation = async () => {
 	// only registers the typing listener if the service is enabled
-	serviceEnabled = (await License.hasModule('federation')) && settings.get('Federation_Service_Enabled');
+	serviceEnabled = (await Capabilities.hasModule('federation')) && settings.get('Federation_Service_Enabled');
 	if (!serviceEnabled) {
 		return;
 	}

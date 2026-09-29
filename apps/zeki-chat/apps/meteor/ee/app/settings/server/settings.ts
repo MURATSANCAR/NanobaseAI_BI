@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import type { ISetting, SettingValue, LicenseModule } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import type { ISetting, SettingValue, CapabilityModule } from '@rocket.chat/core-typings';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Settings } from '@rocket.chat/models';
 import { Meteor } from 'meteor/meteor';
 
@@ -12,7 +12,7 @@ export function changeSettingValue(record: ISetting): SettingValue {
 		return record.value;
 	}
 
-	if (!License.hasValidLicense()) {
+	if (!Capabilities.isReady()) {
 		return record.invalidValue;
 	}
 
@@ -21,7 +21,7 @@ export function changeSettingValue(record: ISetting): SettingValue {
 	}
 
 	for (const moduleName of record.modules) {
-		if (!License.hasModule(moduleName as LicenseModule)) {
+		if (!Capabilities.hasModule(moduleName as CapabilityModule)) {
 			return record.invalidValue;
 		}
 	}
@@ -59,7 +59,7 @@ async function updateSettings(): Promise<void> {
 Meteor.startup(async () => {
 	await updateSettings();
 
-	License.onValidateLicense(updateSettings);
-	License.onInvalidateLicense(updateSettings);
-	License.onRemoveLicense(updateSettings);
+	Capabilities.onReady(updateSettings);
+	Capabilities.onInvalidateLicense(updateSettings);
+	Capabilities.onRemoveLicense(updateSettings);
 });

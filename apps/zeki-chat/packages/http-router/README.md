@@ -1,6 +1,6 @@
-# Rocket.Chat HTTP Router
+# ZEKI AI CHAT HTTP Router
 
-This package provides a flexible HTTP routing solution for Rocket.Chat services, built on top of Hono and Express.
+This package provides a flexible HTTP routing solution for ZEKI AI CHAT services, built on top of Hono and Express.
 
 ## Features
 
@@ -30,7 +30,7 @@ const api = new Router('api');
 // Define routes with typed handlers
 api.get(
   'users',
-  { 
+  {
     // Request validation options
     query: {
       schema: {
@@ -62,9 +62,9 @@ api.get(
   // Route handler
   async (c) => {
     const { limit, skip } = c.req.valid('query');
-    
+
     return {
-      body: { 
+      body: {
         users: [],
         total: 0
       },

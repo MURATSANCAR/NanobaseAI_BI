@@ -14,13 +14,13 @@ or:
 
  First things first, let's import the SDK:
  `import  { DDPSDK }  from  '@rocket.chat/ddp-client';`
- 
+
  Now we need to create a new SDK instance. Fortunately, `DDPSDK` exposes a `create` function that initalizes everything for a quick setup:
  `const  sdk  =  DDPSDK.create('http://localhost:3000');`
- 
- We can then try to connect to the Rocket.Chat instance by doing:
+
+ We can then try to connect to the ZEKI AI CHAT instance by doing:
  `await sdk.connection.connect();`
- 
+
  You can check the connection status by referencing `sdk.connection.status`. If everything went right, it's value should be `'connected'`.
 
 > If you're feeling fancy, you can create and connect in a single function call:
@@ -45,7 +45,7 @@ Responsible for the Reconnection control
 
 ### RestClient
 
-Responsible for the REST API communication for more info [see here](https://developer.rocket.chat/reference/api/rest-api)
+Responsible for the REST API communication for more info see here
 
 ## Login handling
 
@@ -61,7 +61,7 @@ The just created `sdk` exposes an `account` interface (`sdk.account`), which sho
 While the `sdk` instance is kept in memory, you can find some user information and credentials by referencing `sdk.account.user`
 
 ## REST API
-> TIP: You might have to enable CORS in your Rocket.Chat instance for this to work.
+> TIP: You might have to enable CORS in your ZEKI AI CHAT instance for this to work.
 
 The sdk exposes a `rest` interface, which accept all rest methods (`get`, `post`, `put`, `delete`).
 
@@ -72,7 +72,7 @@ Example call:
 
 ## Streams
 
-Rocket.Chat uses websockets as to provide realtime data. You can subscribe to publications in order to listen to data updates.
+ZEKI AI CHAT uses websockets as to provide realtime data. You can subscribe to publications in order to listen to data updates.
 
 Below is an example of subscribing to the room-messages publication, which receives message updates from a room:
 ```ts

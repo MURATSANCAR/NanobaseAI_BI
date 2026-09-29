@@ -1,7 +1,7 @@
 {
 	"name": "@rocket.chat/message-parser",
 	"version": "0.31.36",
-	"description": "Rocket.Chat parser for messages",
+	"description": "ZEKI AI CHAT parser for messages",
 	"exports": {
 		".": {
 			"default": "./dist/messageParser.js",

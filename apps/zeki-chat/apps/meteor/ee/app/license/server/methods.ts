@@ -1,6 +1,6 @@
-import type { ILicenseTag, LicenseModule } from '@rocket.chat/core-typings';
+import type { ILicenseTag, CapabilityModule } from '@rocket.chat/core-typings';
 import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
@@ -18,15 +18,15 @@ Meteor.methods<ServerMethods>({
 	'license:hasLicense'(feature: string) {
 		check(feature, String);
 
-		return License.hasModule(feature as LicenseModule);
+		return Capabilities.hasModule(feature as CapabilityModule);
 	},
 	'license:getModules'() {
-		return License.getModules();
+		return Capabilities.getModules();
 	},
 	'license:getTags'() {
-		return License.getTags();
+		return Capabilities.getTags();
 	},
 	'license:isEnterprise'() {
-		return License.hasValidLicense();
+		return Capabilities.isReady();
 	},
 });

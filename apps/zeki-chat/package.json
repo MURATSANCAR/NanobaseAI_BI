@@ -2,7 +2,7 @@
 	"name": "rocket.chat",
 	"version": "8.5.3",
 	"private": true,
-	"description": "Rocket.Chat Monorepo",
+	"description": "ZEKI AI CHAT Monorepo",
 	"author": "",
 	"main": "index.js",
 	"workspaces": [

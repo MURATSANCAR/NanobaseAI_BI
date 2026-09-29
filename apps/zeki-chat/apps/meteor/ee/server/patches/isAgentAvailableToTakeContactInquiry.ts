@@ -1,5 +1,5 @@
 import type { ILivechatContact, ILivechatVisitor, IOmnichannelSource } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { LivechatContacts } from '@rocket.chat/models';
 
 import { isAgentAvailableToTakeContactInquiry } from '../../../app/livechat/server/lib/contacts/isAgentAvailableToTakeContactInquiry';
@@ -38,4 +38,4 @@ export const runIsAgentAvailableToTakeContactInquiry = async (
 	return { value: true };
 };
 
-isAgentAvailableToTakeContactInquiry.patch(runIsAgentAvailableToTakeContactInquiry, () => License.hasModule('contact-id-verification'));
+isAgentAvailableToTakeContactInquiry.patch(runIsAgentAvailableToTakeContactInquiry, () => Capabilities.hasModule('contact-id-verification'));

@@ -1,5 +1,5 @@
 {
-	"name": "@rocket.chat/license",
+	"name": "@zeki.chat/capabilities",
 	"version": "1.1.16",
 	"private": true,
 	"main": "./dist/index.js",
@@ -17,10 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rocket.chat/core-typings": "workspace:^",
-		"@rocket.chat/jwt": "workspace:^",
-		"@rocket.chat/logger": "workspace:^",
-		"bcrypt": "^6.0.0"
+		"@rocket.chat/core-typings": "workspace:^"
 	},
 	"devDependencies": {
 		"@rocket.chat/jest-presets": "workspace:~",

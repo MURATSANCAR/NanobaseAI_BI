@@ -1,24 +1,21 @@
 {
 	"name": "@rocket.chat/apps-engine",
 	"version": "1.63.0",
-	"description": "The public API and type definitions for Rocket.Chat App development.",
+	"description": "The public API and type definitions for ZEKI AI CHAT App development.",
 	"keywords": [
-		"rocket.chat",
+		"zeki-ai-chat",
 		"team chat",
 		"apps engine"
 	],
 	"contributors": [
 		{
-			"name": "Bradley Hilton",
-			"email": "bradley.hilton@rocket.chat"
+			"name": "Bradley Hilton"
 		},
 		{
-			"name": "Rodrigo Nascimento",
-			"email": "rodrigo.nascimento@rocket.chat"
+			"name": "Rodrigo Nascimento"
 		},
 		{
-			"name": "Douglas Gubert",
-			"email": "douglas.gubert@rocket.chat"
+			"name": "Douglas Gubert"
 		}
 	],
 	"files": [

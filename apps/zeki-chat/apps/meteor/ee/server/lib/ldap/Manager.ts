@@ -1,6 +1,6 @@
 import { Abac, Team } from '@rocket.chat/core-services';
 import type { ILDAPEntry, IUser, IRoom, IRole, IImportUser, IImportRecord } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Users, Roles, Subscriptions as SubscriptionsRaw, Rooms } from '@rocket.chat/models';
 import type ldapjs from 'ldapjs';
 import type { FindCursor } from 'mongodb';
@@ -108,7 +108,7 @@ export class LDAPEEManager extends LDAPManager {
 		if (
 			!settings.get('LDAP_Enable') ||
 			!settings.get('LDAP_Background_Sync_ABAC_Attributes') ||
-			!License.hasModule('abac') ||
+			!Capabilities.hasModule('abac') ||
 			!settings.get('ABAC_Enabled') ||
 			settings.get('ABAC_PDP_Type') === 'virtru'
 		) {
@@ -132,7 +132,7 @@ export class LDAPEEManager extends LDAPManager {
 	public static async syncUsersAbacAttributes(users: FindCursor<IUser>): Promise<void> {
 		if (
 			!settings.get('LDAP_Enable') ||
-			!License.hasModule('abac') ||
+			!Capabilities.hasModule('abac') ||
 			!settings.get('ABAC_Enabled') ||
 			settings.get('ABAC_PDP_Type') === 'virtru'
 		) {
@@ -205,7 +205,7 @@ export class LDAPEEManager extends LDAPManager {
 
 	public static async syncAvatarAndAbacAttributes(): Promise<void> {
 		const syncAvatars = settings.get('LDAP_Background_Sync_Avatars');
-		const syncAbac = settings.get('LDAP_Background_Sync_ABAC_Attributes') && License.hasModule('abac') && settings.get('ABAC_Enabled');
+		const syncAbac = settings.get('LDAP_Background_Sync_ABAC_Attributes') && Capabilities.hasModule('abac') && settings.get('ABAC_Enabled');
 		const abacMapping = syncAbac && this.parseJson(settings.get('LDAP_ABAC_AttributeMap'));
 
 		if (!syncAvatars && !syncAbac) {

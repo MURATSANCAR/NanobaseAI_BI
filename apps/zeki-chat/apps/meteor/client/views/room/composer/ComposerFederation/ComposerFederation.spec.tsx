@@ -1,4 +1,4 @@
-import type { LicenseModule } from '@rocket.chat/core-typings';
+import type { CapabilityModule } from '@rocket.chat/core-typings';
 import { mockAppRoot } from '@rocket.chat/mock-providers';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -12,7 +12,7 @@ jest.mock('../ComposerMessage', () => ({
 	default: ({ children }: { children: ReactNode }) => <div data-testid='composer-message'>{children}</div>,
 }));
 
-const appRoot = ({ enabled = true, activeModules = ['federation'] }: { enabled?: boolean; activeModules?: LicenseModule[] } = {}) =>
+const appRoot = ({ enabled = true, activeModules = ['federation'] }: { enabled?: boolean; activeModules?: CapabilityModule[] } = {}) =>
 	mockAppRoot()
 		.withJohnDoe()
 		.withTranslations('en', 'core', {

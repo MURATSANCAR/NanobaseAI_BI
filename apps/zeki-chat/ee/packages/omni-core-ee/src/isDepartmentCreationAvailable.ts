@@ -1,10 +1,10 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { isDepartmentCreationAvailable } from '@rocket.chat/omni-core';
 
 export function isDepartmentCreationAvailablePatch(): void {
 	isDepartmentCreationAvailable.patch(async (next) => {
 		// Skip the standard check when Livechat Enterprise is enabled, as it allows unlimited departments
-		if (License.hasModule('livechat-enterprise')) {
+		if (Capabilities.hasModule('livechat-enterprise')) {
 			return true;
 		}
 

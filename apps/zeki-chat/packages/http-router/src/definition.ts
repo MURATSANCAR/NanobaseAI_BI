@@ -1,4 +1,4 @@
-import type { LicenseModule } from '@rocket.chat/core-typings';
+import type { CapabilityModule } from '@rocket.chat/core-typings';
 import type { ValidateFunction } from 'ajv';
 import type { Request } from 'express';
 
@@ -52,6 +52,6 @@ export type TypedOptions = {
 	body?: ValidateFunction;
 	tags?: string[];
 	typed?: boolean;
-	license?: LicenseModule[];
+	license?: CapabilityModule[];
 	authRequired?: boolean;
 };

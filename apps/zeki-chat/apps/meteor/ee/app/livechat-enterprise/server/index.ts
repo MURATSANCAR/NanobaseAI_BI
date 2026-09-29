@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { patchOmniCore } from '@rocket.chat/omni-core-ee';
 import { Meteor } from 'meteor/meteor';
 
@@ -24,7 +24,7 @@ import { createDefaultPriorities } from './priorities';
 
 patchOmniCore();
 
-await License.onLicense('livechat-enterprise', async () => {
+await Capabilities.whenFeature('livechat-enterprise', async () => {
 	require('./hooks');
 	await import('./startup');
 	const { createPermissions } = await import('./permissions');

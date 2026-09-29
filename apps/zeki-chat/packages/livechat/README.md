@@ -1,17 +1,17 @@
 # Rocket.Chat.Livechat
-[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/RocketChat/Rocket.Chat.Livechat.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RocketChat/Rocket.Chat.Livechat/context:javascript)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/RocketChat/Rocket.Chat.Livechat.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/RocketChat/Rocket.Chat.Livechat/alerts/)
-[![Storybook](https://cdn.jsdelivr.net/gh/storybooks/brand@master/badge/badge-storybook.svg)](https://rocketchat.github.io/Rocket.Chat.Livechat)
+![Language grade: JavaScript]([upstream link removed])
+![Total alerts]([upstream link removed])
+[![Storybook](https://cdn.jsdelivr.net/gh/storybooks/brand@master/badge/badge-storybook.svg)]([upstream link removed])
 
 Currently, it's very common to find chat pop-ups when you're browsing websites.
 
-Those widgets, at Rocket.Chat, are called **LiveChat**.
+Those widgets, at ZEKI AI CHAT, are called **LiveChat**.
 
 **LiveChat** is a small and lightweight application designed to provide B2C (Business-to-customer) communication between Agents and website visitors and is developed with [Preact](https://preactjs.com).
 
 ## Running a development environment
 
-With your **Rocket.chat** running locally at http://localhost:3000
+With your **ZEKI AI CHAT** running locally at http://localhost:3000
 <br />
 
 1. Install all node dependencies.

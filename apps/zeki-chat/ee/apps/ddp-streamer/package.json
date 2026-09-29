@@ -2,9 +2,9 @@
 	"name": "@rocket.chat/ddp-streamer",
 	"version": "0.3.57",
 	"private": true,
-	"description": "Rocket.Chat DDP-Streamer service",
+	"description": "ZEKI AI CHAT DDP-Streamer service",
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"main": "./dist/service.js",
 	"files": [

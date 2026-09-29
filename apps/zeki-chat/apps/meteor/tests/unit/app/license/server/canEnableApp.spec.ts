@@ -2,7 +2,7 @@ import type { IMarketplaceInfo } from '@rocket.chat/apps/dist/server/marketplace
 import { AppInstallationSource, type IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
 import { AppStatus } from '@rocket.chat/apps-engine/definition/AppStatus';
 import type { Apps } from '@rocket.chat/core-services';
-import type { LicenseImp } from '@rocket.chat/license';
+import type { CapabilityRegistry } from '@zeki.chat/capabilities';
 import { expect } from 'chai';
 
 import { _canEnableApp } from '../../../../../ee/app/license/server/canEnableApp';
@@ -42,7 +42,7 @@ describe('canEnableApp', () => {
 			},
 		} as unknown as typeof Apps;
 
-		const LicenseMock = {} as unknown as LicenseImp;
+		const LicenseMock = {} as unknown as CapabilityRegistry;
 
 		const deps = { Apps: AppsMock, License: LicenseMock };
 
@@ -65,7 +65,7 @@ describe('canEnableApp', () => {
 		hasValidLicense() {
 			return false;
 		},
-	} as unknown as LicenseImp;
+	} as unknown as CapabilityRegistry;
 
 	const deps = { Apps: AppsMock, License: LicenseMock };
 
@@ -88,7 +88,7 @@ describe('canEnableApp', () => {
 	});
 
 	it('should throw the message "invalid-license" when appropriate', () => {
-		const License = { ...LicenseMock, shouldPreventAction: () => false } as unknown as LicenseImp;
+		const License = { ...LicenseMock, shouldPreventAction: () => false } as unknown as CapabilityRegistry;
 
 		const app = getDefaultApp();
 		app.installationSource = AppInstallationSource.MARKETPLACE;
@@ -117,7 +117,7 @@ describe('canEnableApp', () => {
 			hasValidLicense() {
 				return true;
 			},
-		} as unknown as LicenseImp;
+		} as unknown as CapabilityRegistry;
 
 		const deps = { Apps: AppsMock, License };
 

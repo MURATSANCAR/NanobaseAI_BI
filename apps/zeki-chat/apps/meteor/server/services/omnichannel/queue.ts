@@ -1,6 +1,6 @@
 import { ServiceStarter } from '@rocket.chat/core-services';
 import { LivechatInquiryStatus, type InquiryWithAgentInfo, type IOmnichannelQueue } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { LivechatInquiry, LivechatRooms } from '@rocket.chat/models';
 import { tracerSpan } from '@rocket.chat/tracing';
 
@@ -89,7 +89,7 @@ export class OmnichannelQueue implements IOmnichannelQueue {
 				return;
 			}
 
-			if (await License.shouldPreventAction('monthlyActiveContacts', 1)) {
+			if (await Capabilities.shouldPreventAction('monthlyActiveContacts', 1)) {
 				queueLogger.debug('MAC limit reached. Queue wont execute');
 				this.running = false;
 				return;

@@ -1,6 +1,6 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
-License.onToggledFeature('engagement-dashboard', {
+Capabilities.onToggledFeature('engagement-dashboard', {
 	up: async () => {
 		const { prepareAnalytics, attachCallbacks } = await import('../lib/engagementDashboard/startup');
 		await prepareAnalytics();

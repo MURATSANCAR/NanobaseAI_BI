@@ -1,5 +1,5 @@
 import type { ILivechatContact, ILivechatContactChannel, ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { LivechatContacts, LivechatRooms, Settings } from '@rocket.chat/models';
 import type { ClientSession } from 'mongodb';
 
@@ -60,4 +60,4 @@ export const runMergeContacts = async (
 	return LivechatContacts.findOneEnabledById(contactId, { session });
 };
 
-mergeContacts.patch(runMergeContacts, () => License.hasModule('contact-id-verification'));
+mergeContacts.patch(runMergeContacts, () => Capabilities.hasModule('contact-id-verification'));

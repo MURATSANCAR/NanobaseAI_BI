@@ -1,11 +1,11 @@
 import { MeteorError } from '@rocket.chat/core-services';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { validateUserRoles } from './validateUserRoles';
 import { callbacks } from '../../../../server/lib/callbacks';
 import { i18n } from '../../../../server/lib/i18n';
 
-License.onInstall(() => {
+Capabilities.onInstall(() => {
 	callbacks.add(
 		'beforeSaveUser',
 		async ({ user, oldUser }) => validateUserRoles(user, oldUser),
@@ -15,7 +15,7 @@ License.onInstall(() => {
 	callbacks.add(
 		'afterSaveUser',
 		async (user) => {
-			await License.shouldPreventAction('activeUsers');
+			await Capabilities.shouldPreventAction('activeUsers');
 
 			return user;
 		},
@@ -25,7 +25,7 @@ License.onInstall(() => {
 	callbacks.add(
 		'afterDeleteUser',
 		async (user) => {
-			await License.shouldPreventAction('activeUsers');
+			await Capabilities.shouldPreventAction('activeUsers');
 
 			return user;
 		},
@@ -36,7 +36,7 @@ License.onInstall(() => {
 	callbacks.add(
 		'afterDeactivateUser',
 		async (user) => {
-			await License.shouldPreventAction('activeUsers');
+			await Capabilities.shouldPreventAction('activeUsers');
 			return user;
 		},
 		callbacks.priority.HIGH,
@@ -46,7 +46,7 @@ License.onInstall(() => {
 	callbacks.add(
 		'beforeActivateUser',
 		async () => {
-			if (await License.shouldPreventAction('activeUsers')) {
+			if (await Capabilities.shouldPreventAction('activeUsers')) {
 				throw new MeteorError('error-license-user-limit-reached', i18n.t('error-license-user-limit-reached'));
 			}
 			return undefined;
@@ -56,7 +56,7 @@ License.onInstall(() => {
 	);
 });
 
-License.onInvalidate(() => {
+Capabilities.onInvalidate(() => {
 	callbacks.remove('beforeSaveUser', 'validateUserRoles');
 	callbacks.remove('afterSaveUser', 'validateUserRoles');
 	callbacks.remove('afterDeleteUser', 'validateUserRoles');

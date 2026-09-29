@@ -2,9 +2,9 @@
 	"name": "@rocket.chat/account-service",
 	"version": "0.4.57",
 	"private": true,
-	"description": "Rocket.Chat Account service",
+	"description": "ZEKI AI CHAT Account service",
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"main": "./dist/ee/apps/account-service/src/service.js",
 	"files": [

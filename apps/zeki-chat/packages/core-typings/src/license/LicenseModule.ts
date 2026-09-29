@@ -28,4 +28,4 @@ export const CoreModules = [
 
 export type InternalModuleName = (typeof CoreModules)[number];
 export type ExternalModuleName = `${string}.${string}`;
-export type LicenseModule = InternalModuleName | ExternalModuleName;
+export type CapabilityModule = InternalModuleName | ExternalModuleName;

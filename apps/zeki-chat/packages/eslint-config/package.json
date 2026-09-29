@@ -1,7 +1,7 @@
 {
 	"name": "@rocket.chat/eslint-config",
 	"version": "0.8.0",
-	"description": "Rocket.Chat's JS/TS ESLint config",
+	"description": "ZEKI AI CHAT's JS/TS ESLint config",
 	"type": "module",
 	"main": "./index.js",
 	"exports": {

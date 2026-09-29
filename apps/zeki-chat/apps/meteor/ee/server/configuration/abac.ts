@@ -1,6 +1,6 @@
 import { Abac } from '@rocket.chat/core-services';
 import { cronJobs } from '@rocket.chat/cron';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Users } from '@rocket.chat/models';
 import { isValidCron } from 'cron-validator';
 import { Meteor } from 'meteor/meteor';
@@ -14,7 +14,7 @@ Meteor.startup(async () => {
 	let stopWatcher: () => void;
 	let stopCronWatcher: () => void;
 
-	License.onToggledFeature('abac', {
+	Capabilities.onToggledFeature('abac', {
 		up: async () => {
 			const { addSettings } = await import('../settings/abac');
 			const { createPermissions } = await import('../lib/abac');

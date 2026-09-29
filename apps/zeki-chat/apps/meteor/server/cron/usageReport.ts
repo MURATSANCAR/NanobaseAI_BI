@@ -1,4 +1,4 @@
-import { AirGappedRestriction } from '@rocket.chat/license';
+import { AirGappedRestriction } from '@zeki.chat/capabilities';
 import type { Logger } from '@rocket.chat/logger';
 import { Statistics } from '@rocket.chat/models';
 

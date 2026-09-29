@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { Apps } from './orchestrator';
 import { settings, settingsRegistry } from '../../../app/settings/server';
@@ -63,11 +63,11 @@ export const startupApp = async function startupApp() {
 		void Apps.disableMarketplaceApps();
 	}
 
-	License.onInvalidateLicense(migratePrivateAppsCallback);
-	License.onRemoveLicense(migratePrivateAppsCallback);
+	Capabilities.onInvalidateLicense(migratePrivateAppsCallback);
+	Capabilities.onRemoveLicense(migratePrivateAppsCallback);
 
 	// Disable apps that depend on add-ons (external modules) if they are invalidated
-	License.onModule(disableAppsWithAddonsCallback);
+	Capabilities.onModule(disableAppsWithAddonsCallback);
 
 	Apps.initialize();
 

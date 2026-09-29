@@ -1,9 +1,9 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { addSettings } from '../settings/deviceManagement';
 
 let stopListening: (() => void) | undefined;
-License.onToggledFeature('device-management', {
+Capabilities.onToggledFeature('device-management', {
 	up: async () => {
 		const { createPermissions, createEmailTemplates } = await import('../lib/deviceManagement/startup');
 		const { listenSessionLogin } = await import('../lib/deviceManagement/session');

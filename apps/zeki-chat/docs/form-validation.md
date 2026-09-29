@@ -1,6 +1,6 @@
 # Form Validation Guidelines
 
-This document outlines the standardized form validation patterns and guidelines established in PR [#39590](https://github.com/RocketChat/Rocket.Chat/pull/39590) to ensure consistent user experience across Rocket.Chat forms.
+This document outlines the standardized form validation patterns and guidelines established in PR #39590 to ensure consistent user experience across ZEKI AI CHAT forms.
 
 ## Overview
 
@@ -37,7 +37,7 @@ const {
 
 After the first submit attempt, forms should revalidate fields intelligently:
 
-#### Default: `reValidateMode: 'onChange'` 
+#### Default: `reValidateMode: 'onChange'`
 For most forms, use the default onChange revalidation to provide immediate feedback as users correct errors.
 
 #### Exception: `reValidateMode: 'onBlur'` for Async Validation
@@ -144,8 +144,8 @@ const MyForm = ({ data, onSave }: FormProps) => {
 ### Submit Button States
 
 ```tsx
-<Button 
-  primary 
+<Button
+  primary
   type='submit'
   form={formId}
   loading={isSubmitting}
@@ -185,8 +185,8 @@ When updating an existing form to follow these guidelines:
 
 ```tsx
 // Good - accessible and provides feedback
-<Button 
-  type='submit' 
+<Button
+  type='submit'
   disabled={existingId ? !isDirty : false}
   loading={isSubmitting}
 >
@@ -212,7 +212,7 @@ useForm({ mode: 'onSubmit' })
 
 ```tsx
 // Bad - causes API call on every keystroke
-useForm({ 
+useForm({
   mode: 'onSubmit',
   // Uses default 'onChange' revalidation - too many API calls!
 })
@@ -222,7 +222,7 @@ useForm({
 
 ```tsx
 // Good - reduces API calls while maintaining feedback
-useForm({ 
+useForm({
   mode: 'onSubmit',
   reValidateMode: 'onBlur',
 })
@@ -232,4 +232,4 @@ useForm({
 
 - [React Hook Form Documentation](https://react-hook-form.com/)
 - [WCAG 2.1 Form Guidelines](https://www.w3.org/WAI/WCAG21/quickref/?showtechniques=332#error-identification)
-- [PR #39590 - Form Validation Standardization](https://github.com/RocketChat/Rocket.Chat/pull/39590)
+- PR #39590 - Form Validation Standardization

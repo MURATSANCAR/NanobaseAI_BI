@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Settings } from '@rocket.chat/models';
 import { Meteor } from 'meteor/meteor';
 
@@ -6,7 +6,7 @@ import { notifyOnSettingChangedById } from '../../../app/lib/server/lib/notifyLi
 import { updateAuditedBySystem } from '../../../server/settings/lib/auditedSettingUpdates';
 
 const handleHadTrial = (): void => {
-	if (License.getLicense()?.information.trial) {
+	if (Capabilities.getLicense()?.information.trial) {
 		void (async () => {
 			(
 				await updateAuditedBySystem({
@@ -18,5 +18,5 @@ const handleHadTrial = (): void => {
 };
 
 Meteor.startup(() => {
-	License.onValidateLicense(handleHadTrial);
+	Capabilities.onReady(handleHadTrial);
 });

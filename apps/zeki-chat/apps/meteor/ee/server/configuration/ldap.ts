@@ -1,6 +1,6 @@
 import type { IImportUser, ILDAPEntry, IUser } from '@rocket.chat/core-typings';
 import { cronJobs } from '@rocket.chat/cron';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Settings } from '@rocket.chat/models';
 import { isValidCron } from 'cron-validator';
 import { Meteor } from 'meteor/meteor';
@@ -14,7 +14,7 @@ import { LDAPEE } from '../sdk';
 import { addSettings, ldapIntervalValuesToCronMap } from '../settings/ldap';
 
 Meteor.startup(async () => {
-	await License.onLicense('ldap-enterprise', async () => {
+	await Capabilities.whenFeature('ldap-enterprise', async () => {
 		await addSettings();
 
 		// Configure background sync cronjob

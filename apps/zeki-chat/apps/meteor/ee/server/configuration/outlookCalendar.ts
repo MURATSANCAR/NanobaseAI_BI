@@ -1,11 +1,11 @@
 import { Calendar } from '@rocket.chat/core-services';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Meteor } from 'meteor/meteor';
 
 import { addSettings } from '../settings/outlookCalendar';
 
 Meteor.startup(() =>
-	License.onLicense('outlook-calendar', async () => {
+	Capabilities.whenFeature('outlook-calendar', async () => {
 		addSettings();
 
 		await Calendar.setupNextNotification();

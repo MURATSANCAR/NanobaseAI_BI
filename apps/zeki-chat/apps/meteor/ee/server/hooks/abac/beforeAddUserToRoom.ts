@@ -1,5 +1,5 @@
 import { Abac } from '@rocket.chat/core-services';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { beforeAddUserToRoom } from '../../../../app/lib/server/lib/beforeAddUserToRoom';
 import { settings } from '../../../../app/settings/server';
@@ -14,7 +14,7 @@ beforeAddUserToRoom.patch(async (prev, users, room, actor) => {
 	}
 
 	// Throw error (prevent add) if ABAC is disabled (setting, license) but room is ABAC managed
-	if (!settings.get('ABAC_Enabled') || !License.hasModule('abac')) {
+	if (!settings.get('ABAC_Enabled') || !Capabilities.hasModule('abac')) {
 		throw new Error('error-room-is-abac-managed');
 	}
 

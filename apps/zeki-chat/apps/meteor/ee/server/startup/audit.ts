@@ -1,8 +1,8 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { createPermissions } from '../lib/audit/startup';
 
-await License.onLicense('auditing', async () => {
+await Capabilities.whenFeature('auditing', async () => {
 	await import('../lib/audit/methods');
 	await import('../api/audit');
 

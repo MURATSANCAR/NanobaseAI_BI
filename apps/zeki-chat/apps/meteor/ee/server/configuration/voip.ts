@@ -1,9 +1,9 @@
 import { MediaCall } from '@rocket.chat/core-services';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { addSettings } from '../settings/voip';
 
-License.onValidateLicense(async () => {
+Capabilities.onReady(async () => {
 	await addSettings();
 
 	await MediaCall.hangupExpiredCalls();

@@ -1,6 +1,6 @@
 import type { ILicenseTag } from './ILicenseTag';
 import type { LicenseLimit } from './LicenseLimit';
-import type { ExternalModuleName, InternalModuleName } from './LicenseModule';
+import type { ExternalModuleName, InternalModuleName } from './CapabilityModule';
 import type { LicensePeriod } from './LicensePeriod';
 
 export type InternalModule = { module: InternalModuleName; external?: false };

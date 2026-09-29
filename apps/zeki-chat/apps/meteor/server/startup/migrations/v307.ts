@@ -1,6 +1,6 @@
 import { Apps } from '@rocket.chat/apps';
 import type { IAppStorageItem } from '@rocket.chat/apps/dist/server/storage/IAppStorageItem';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { addMigration } from '../../lib/migrations';
 
@@ -8,7 +8,7 @@ addMigration({
 	version: 307,
 	name: "Mark all installed private apps as 'migrated'",
 	async up() {
-		const isEE = License.hasValidLicense();
+		const isEE = Capabilities.isReady();
 		if (isEE) {
 			return;
 		}

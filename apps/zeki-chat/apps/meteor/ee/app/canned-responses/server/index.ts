@@ -1,6 +1,6 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
-await License.onLicense('canned-responses', async () => {
+await Capabilities.whenFeature('canned-responses', async () => {
 	const { createSettings } = await import('./settings');
 	await import('./permissions');
 	await import('./hooks/onRemoveAgentDepartment');

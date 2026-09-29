@@ -1,6 +1,6 @@
 import { api } from '@rocket.chat/core-services';
 import type { IUser, ISession, DeviceManagementSession, DeviceManagementPopulatedSession } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Users, Sessions } from '@rocket.chat/models';
 import type { PaginatedResult, PaginatedRequest } from '@rocket.chat/rest-typings';
 import { ajv, ajvQuery } from '@rocket.chat/rest-typings';
@@ -83,7 +83,7 @@ API.v1.addRoute(
 	{ authRequired: true, validateParams: isSessionsPaginateProps, license: ['device-management'] },
 	{
 		async get() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 
@@ -106,7 +106,7 @@ API.v1.addRoute(
 	{ authRequired: true, validateParams: isSessionsProps, license: ['device-management'] },
 	{
 		async get() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 
@@ -125,7 +125,7 @@ API.v1.addRoute(
 	{ authRequired: true, validateParams: isSessionsProps, license: ['device-management'] },
 	{
 		async post() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 
@@ -159,7 +159,7 @@ API.v1.addRoute(
 	},
 	{
 		async get() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 
@@ -205,7 +205,7 @@ API.v1.addRoute(
 	},
 	{
 		async get() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 
@@ -230,7 +230,7 @@ API.v1.addRoute(
 	},
 	{
 		async post() {
-			if (!License.hasModule('device-management')) {
+			if (!Capabilities.hasModule('device-management')) {
 				return API.v1.forbidden();
 			}
 

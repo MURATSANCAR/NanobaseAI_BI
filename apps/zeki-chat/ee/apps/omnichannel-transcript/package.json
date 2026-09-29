@@ -2,9 +2,9 @@
 	"name": "@rocket.chat/omnichannel-transcript",
 	"version": "0.4.57",
 	"private": true,
-	"description": "Rocket.Chat service",
+	"description": "ZEKI AI CHAT service",
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"main": "./dist/ee/apps/omnichannel-transcript/src/service.js",
 	"files": [

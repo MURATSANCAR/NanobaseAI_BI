@@ -1,19 +1,19 @@
-import type { ILicense } from '@rocket.chat/core-services';
+import type { ICapabilities } from '@rocket.chat/core-services';
 import { api, ServiceClassInternal } from '@rocket.chat/core-services';
-import type { LicenseModule } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import type { CapabilityModule } from '@rocket.chat/core-typings';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { guestPermissions } from '../../authorization/lib/guestPermissions';
 import { resetEnterprisePermissions } from '../../authorization/server/resetEnterprisePermissions';
 
-export class LicenseService extends ServiceClassInternal implements ILicense {
+export class LicenseService extends ServiceClassInternal implements ICapabilities {
 	protected name = 'license';
 
 	constructor() {
 		super();
 
-		License.onValidateLicense((): void => {
-			if (!License.hasValidLicense()) {
+		Capabilities.onReady((): void => {
+			if (!Capabilities.isReady()) {
 				return;
 			}
 
@@ -21,15 +21,15 @@ export class LicenseService extends ServiceClassInternal implements ILicense {
 			void resetEnterprisePermissions();
 		});
 
-		License.onModule((licenseModule) => {
+		Capabilities.onModule((licenseModule) => {
 			void api.broadcast('license.module', licenseModule);
 		});
 
-		this.onEvent('license.actions', (preventedActions) => License.syncShouldPreventActionResults(preventedActions));
+		this.onEvent('license.actions', (preventedActions) => Capabilities.syncShouldPreventActionResults(preventedActions));
 	}
 
 	override async started(): Promise<void> {
-		if (!License.hasValidLicense()) {
+		if (!Capabilities.isReady()) {
 			return;
 		}
 
@@ -37,16 +37,16 @@ export class LicenseService extends ServiceClassInternal implements ILicense {
 		await resetEnterprisePermissions();
 	}
 
-	hasModule(feature: LicenseModule): boolean {
-		return License.hasModule(feature);
+	hasModule(feature: CapabilityModule): boolean {
+		return Capabilities.hasModule(feature);
 	}
 
 	hasValidLicense(): boolean {
-		return License.hasValidLicense();
+		return Capabilities.isReady();
 	}
 
 	getModules(): string[] {
-		return License.getModules();
+		return Capabilities.getModules();
 	}
 
 	getGuestPermissions(): string[] {

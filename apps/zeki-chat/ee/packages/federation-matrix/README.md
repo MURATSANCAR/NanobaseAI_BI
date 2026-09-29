@@ -1,6 +1,6 @@
 # Federation Matrix
 
-Rocket.Chat's Matrix federation integration package for cross-platform communication.
+ZEKI AI CHAT's Matrix federation integration package for cross-platform communication.
 
 ## Integration Tests
 
@@ -16,7 +16,7 @@ Before running integration tests, add the following entries to your `/etc/hosts`
 
 ### How It Works
 
-The integration test script builds Rocket.Chat locally, starts federation services (Rocket.Chat, Synapse, MongoDB), waits for all services to be ready, then runs end-to-end tests. The script automatically handles cleanup unless you specify otherwise.
+The integration test script builds ZEKI AI CHAT locally, starts federation services (ZEKI AI CHAT, Synapse, MongoDB), waits for all services to be ready, then runs end-to-end tests. The script automatically handles cleanup unless you specify otherwise.
 
 ### Available Flags
 
@@ -70,7 +70,7 @@ yarn test:integration --image rocketchat/rocket.chat:latest --keep-running --ele
 
 ### Service URLs (when using --keep-running or --no-test)
 
-- **Rocket.Chat**: https://rc1
-- **Synapse**: https://hs1  
+- **ZEKI AI CHAT**: https://rc1
+- **Synapse**: https://hs1
 - **MongoDB**: localhost:27017
 - **Element**: https://element (when using --element flag)

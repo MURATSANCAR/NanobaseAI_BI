@@ -4,7 +4,7 @@ This document describes the pattern for navigating directly to a specific field 
 
 ## Problem
 
-Rocket.Chat uses a custom SPA router that intercepts link clicks via `e.preventDefault()` and navigates with `history.pushState()`. This means the browser's native hash-based scrolling does not work for cross-page navigation. When a user clicks a link like `/page-b#field`, the router renders the new page but does not scroll to the target element.
+ZEKI AI CHAT uses a custom SPA router that intercepts link clicks via `e.preventDefault()` and navigates with `history.pushState()`. This means the browser's native hash-based scrolling does not work for cross-page navigation. When a user clicks a link like `/page-b#field`, the router renders the new page but does not scroll to the target element.
 
 ## Solution
 

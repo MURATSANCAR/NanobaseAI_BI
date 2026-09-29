@@ -1,4 +1,4 @@
-# Rocket.Chat Micro-Services
+# ZEKI AI CHAT Micro-Services
 
 ## PM2
 
@@ -10,7 +10,7 @@ Start NATS first, you can it via Docker:
 docker run --rm -d -p 4222:4222 nats
 ```
 
-Then run Rocket.Chat as usual with an additional `TRANSPORTER` and `DISABLE_DB_WATCH` env vars:
+Then run ZEKI AI CHAT as usual with an additional `TRANSPORTER` and `DISABLE_DB_WATCH` env vars:
 
 ```
 TRANSPORTER=nats://localhost:4222 MOLECULER_LOG_LEVEL=debug DISABLE_DB_WATCH=true meteor
@@ -70,7 +70,7 @@ Used for the communication of the microservices
 `npm run build-containers` will build the typescript files and generate the containers
 
 ## Running with docker-compose
-`docker-compose up --remove-orphans` will run all the micro-services, still need to run MongoDB and Rocket.Chat Core separated
+`docker-compose up --remove-orphans` will run all the micro-services, still need to run MongoDB and ZEKI AI CHAT Core separated
 
-### Running rocket.chat core
+### Running ZEKI AI CHAT core
 `MONGO_URL=mongodb://localhost:27017/rocketchat MONGO_OPLOG_URL=mongodb://localhost:27017/local TRANSPORTER=nats://localhost:4222 MOLECULER_LOG_LEVEL=debug meteor`

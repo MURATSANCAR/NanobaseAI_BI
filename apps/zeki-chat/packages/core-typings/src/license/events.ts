@@ -1,8 +1,8 @@
 import type { LicenseLimitKind } from './ILicenseV3';
 import type { BehaviorWithContext, LicenseBehavior } from './LicenseBehavior';
-import type { LicenseModule } from './LicenseModule';
+import type { CapabilityModule } from './CapabilityModule';
 
-type ModuleValidation = Record<`${'invalid' | 'valid'}:${LicenseModule}`, undefined>;
+type ModuleValidation = Record<`${'invalid' | 'valid'}:${CapabilityModule}`, undefined>;
 type BehaviorTriggered = Record<`behavior:${LicenseBehavior}`, { reason: BehaviorWithContext['reason']; limit?: LicenseLimitKind }>;
 type BehaviorTriggeredToggled = Record<
 	`behaviorToggled:${LicenseBehavior}`,
@@ -19,6 +19,6 @@ export type LicenseEvents = ModuleValidation &
 		removed: undefined;
 		validate: undefined;
 		invalidate: undefined;
-		module: { module: LicenseModule; external: boolean; valid: boolean };
+		module: { module: CapabilityModule; external: boolean; valid: boolean };
 		sync: undefined;
 	};

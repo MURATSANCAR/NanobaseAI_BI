@@ -1,13 +1,13 @@
-## Rocket.Chat Slack Bridge
+## ZEKI AI CHAT Slack Bridge
 
-This package creates a bi-directional bridge between a single Slack installation and your Rocket.Chat installation.
+This package creates a bi-directional bridge between a single Slack installation and your ZEKI AI CHAT installation.
 
-* Configure Rocket.Chat with your Slack API token
+* Configure ZEKI AI CHAT with your Slack API token
 * Invite 'rocketbot' to your Slack channel
 
 ### Settings
 
-The following can be configured in your Rocket.Chat Administration SlackBridge panel.
+The following can be configured in your ZEKI AI CHAT Administration SlackBridge panel.
 
 #### Enabled
 

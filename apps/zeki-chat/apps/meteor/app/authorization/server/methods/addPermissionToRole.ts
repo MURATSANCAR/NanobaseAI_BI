@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/core-services';
+import { Capabilities } from '@rocket.chat/core-services';
 import type { ServerMethods } from '@rocket.chat/ddp-client';
 import { Permissions } from '@rocket.chat/models';
 import { Meteor } from 'meteor/meteor';
@@ -16,8 +16,8 @@ declare module '@rocket.chat/ddp-client' {
 
 Meteor.methods<ServerMethods>({
 	async 'authorization:addPermissionToRole'(permissionId, role) {
-		if (role === 'guest' && !AuthorizationUtils.hasRestrictionsToRole(role) && (await License.hasValidLicense())) {
-			AuthorizationUtils.addRolePermissionWhiteList(role, await License.getGuestPermissions());
+		if (role === 'guest' && !AuthorizationUtils.hasRestrictionsToRole(role) && (await Capabilities.isReady())) {
+			AuthorizationUtils.addRolePermissionWhiteList(role, await Capabilities.getGuestPermissions());
 		}
 
 		if (AuthorizationUtils.isPermissionRestrictedForRole(permissionId, role)) {

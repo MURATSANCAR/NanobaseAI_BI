@@ -2,9 +2,9 @@
 	"name": "@rocket.chat/queue-worker",
 	"version": "0.4.57",
 	"private": true,
-	"description": "Rocket.Chat service",
+	"description": "ZEKI AI CHAT service",
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"main": "./dist/ee/apps/queue-worker/src/service.js",
 	"files": [

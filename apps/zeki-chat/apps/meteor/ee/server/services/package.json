@@ -2,7 +2,7 @@
 	"name": "rocketchat-services",
 	"private": true,
 	"version": "2.0.48",
-	"description": "Rocket.Chat Authorization service",
+	"description": "ZEKI AI CHAT Authorization service",
 	"main": "index.js",
 	"scripts": {
 		"typecheck": "tsc --noEmit --skipLibCheck",
@@ -11,7 +11,7 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"dependencies": {
 		"@rocket.chat/apps-engine": "workspace:^",

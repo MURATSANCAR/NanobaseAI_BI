@@ -1,5 +1,5 @@
 import type { IAuthorization, RoomAccessValidator } from '@rocket.chat/core-services';
-import { License, ServiceClass } from '@rocket.chat/core-services';
+import { Capabilities, ServiceClass } from '@rocket.chat/core-services';
 import type { IUser, IRole, IRoom, ISubscription } from '@rocket.chat/core-typings';
 import { Subscriptions, Rooms, Users, Roles, Permissions } from '@rocket.chat/models';
 import mem from 'mem';
@@ -41,11 +41,11 @@ export class Authorization extends ServiceClass implements IAuthorization {
 
 	override async started(): Promise<void> {
 		try {
-			if (!(await License.hasValidLicense())) {
+			if (!(await Capabilities.isReady())) {
 				return;
 			}
 
-			const permissions = await License.getGuestPermissions();
+			const permissions = await Capabilities.getGuestPermissions();
 			if (!permissions) {
 				return;
 			}

@@ -4,7 +4,7 @@ import os from 'node:os';
 import { Analytics, Team, VideoConf, Presence } from '@rocket.chat/core-services';
 import type { IRoom, IStats, ISetting } from '@rocket.chat/core-typings';
 import { UserStatus } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import {
 	NotificationQueue,
 	Rooms,
@@ -561,7 +561,7 @@ export const statistics = {
 		statistics.matrixFederation = await getMatrixFederationStatistics();
 
 		// ABAC stats
-		if (License.hasModule('abac')) {
+		if (Capabilities.hasModule('abac')) {
 			statistics.abacEnabled = settings.get('ABAC_Enabled');
 			statsPms.push(
 				AbacAttributes.estimatedDocumentCount().then((result) => {

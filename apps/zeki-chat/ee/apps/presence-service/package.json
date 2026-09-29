@@ -2,9 +2,9 @@
 	"name": "@rocket.chat/presence-service",
 	"version": "0.4.57",
 	"private": true,
-	"description": "Rocket.Chat Presence service",
+	"description": "ZEKI AI CHAT Presence service",
 	"keywords": [
-		"rocketchat"
+		"zeki-ai-chat"
 	],
 	"main": "./dist/ee/apps/presence-service/src/service.js",
 	"files": [

@@ -1,9 +1,9 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 import { settings } from '../../../../../app/settings/server';
 import { BeforeSaveCannedResponse } from '../../../../server/hooks/messages/BeforeSaveCannedResponse';
 
-void License.onToggledFeature('canned-responses', {
+void Capabilities.onToggledFeature('canned-responses', {
 	up: () => {
 		// when the license is enabled, we need to check if the feature is enabled
 		BeforeSaveCannedResponse.enabled = settings.get('Canned_Responses_Enable');

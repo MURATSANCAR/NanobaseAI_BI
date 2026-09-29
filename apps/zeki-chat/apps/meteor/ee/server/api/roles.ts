@@ -1,5 +1,5 @@
 import type { IRole } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Roles } from '@rocket.chat/models';
 import { ajv } from '@rocket.chat/rest-typings';
 import { Meteor } from 'meteor/meteor';
@@ -93,7 +93,7 @@ API.v1.addRoute(
 	{ authRequired: true, license: ['custom-roles'] },
 	{
 		async post() {
-			if (!License.hasModule('custom-roles')) {
+			if (!Capabilities.hasModule('custom-roles')) {
 				throw new Meteor.Error('error-action-not-allowed', 'This is an enterprise feature');
 			}
 
@@ -149,7 +149,7 @@ API.v1.addRoute(
 
 			const role = await Roles.findOne(roleId);
 
-			if (!License.hasModule('custom-roles') && !role?.protected) {
+			if (!Capabilities.hasModule('custom-roles') && !role?.protected) {
 				throw new Meteor.Error('error-action-not-allowed', 'This is an enterprise feature');
 			}
 

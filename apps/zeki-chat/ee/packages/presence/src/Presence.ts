@@ -1,5 +1,5 @@
 import type { IPresence, IBrokerNode } from '@rocket.chat/core-services';
-import { License, ServiceClass, Settings } from '@rocket.chat/core-services';
+import { Capabilities, ServiceClass, Settings } from '@rocket.chat/core-services';
 import type { IUser } from '@rocket.chat/core-typings';
 import { UserStatus } from '@rocket.chat/core-typings';
 import { Users, UsersSessions } from '@rocket.chat/models';
@@ -91,8 +91,8 @@ export class Presence extends ServiceClass implements IPresence {
 		try {
 			await Settings.set('Presence_broadcast_disabled', false);
 
-			this.hasScalabilityLicense = await License.hasModule('scalability');
-			this.hasPresenceLicense = await License.hasModule('unlimited-presence');
+			this.hasScalabilityLicense = await Capabilities.hasModule('scalability');
+			this.hasPresenceLicense = await Capabilities.hasModule('unlimited-presence');
 			this.hasLicense = this.hasPresenceLicense || this.hasScalabilityLicense;
 		} catch (e: unknown) {
 			// ignore

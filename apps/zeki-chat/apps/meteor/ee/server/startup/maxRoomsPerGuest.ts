@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Meteor } from 'meteor/meteor';
 
 import { callbacks } from '../../../server/lib/callbacks';
@@ -10,7 +10,7 @@ callbacks.add(
 		if (user.roles?.includes('guest')) {
 			// extraCount = 1 checks if adding one more room would exceed the limit
 			// (not if they've already exceeded it, since this runs before adding them to the room)
-			if (await License.shouldPreventAction('roomsPerGuest', 1, { userId: user._id })) {
+			if (await Capabilities.shouldPreventAction('roomsPerGuest', 1, { userId: user._id })) {
 				throw new Meteor.Error('error-max-rooms-per-guest-reached', i18n.t('error-max-rooms-per-guest-reached'));
 			}
 		}

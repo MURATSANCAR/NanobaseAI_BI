@@ -29,6 +29,6 @@ If you ever had to build our ReactNative app, you likely have watchman installed
 
 ### Additional Issues with TurboRepo
 
-TurboRepo has an issue where the subprocesses it spawns are not always terminated along with the parent process. You may have noticed this before, as you often need to hit Ctrl+C twice to completely shutdown all processes. When Watchman is used as the watcher backend, this TurboRepo issue is aggravated and you now need to kill the watchman and node processes manually any time you want to stop the Rocket.Chat server. 
+TurboRepo has an issue where the subprocesses it spawns are not always terminated along with the parent process. You may have noticed this before, as you often need to hit Ctrl+C twice to completely shutdown all processes. When Watchman is used as the watcher backend, this TurboRepo issue is aggravated and you now need to kill the watchman and node processes manually any time you want to stop the ZEKI AI CHAT server.
 
 TurboRepo has [just recently released](https://github.com/vercel/turborepo/pull/12607) an improvement related to this, but we have not updated to it yet.

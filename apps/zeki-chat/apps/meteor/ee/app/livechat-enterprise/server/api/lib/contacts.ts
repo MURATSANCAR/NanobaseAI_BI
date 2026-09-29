@@ -1,5 +1,5 @@
 import type { IUser, ILivechatContactVisitorAssociation } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { LivechatContacts, LivechatRooms, LivechatVisitors } from '@rocket.chat/models';
 
 import { closeRoom } from '../../../../../../app/livechat/server/lib/closeRoom';
@@ -14,7 +14,7 @@ export async function changeContactBlockStatus({ block, visitor }: { visitor: IL
 }
 
 export function ensureSingleContactLicense() {
-	if (!License.hasModule('contact-id-verification')) {
+	if (!Capabilities.hasModule('contact-id-verification')) {
 		throw new Error('error-action-not-allowed');
 	}
 }

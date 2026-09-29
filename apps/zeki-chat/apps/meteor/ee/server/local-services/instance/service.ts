@@ -1,7 +1,7 @@
 import os from 'node:os';
 
 import type { AppStatusReport } from '@rocket.chat/core-services';
-import { Apps, License, ServiceClassInternal, Settings } from '@rocket.chat/core-services';
+import { Apps, Capabilities, ServiceClassInternal, Settings } from '@rocket.chat/core-services';
 import type { IInstanceStatus } from '@rocket.chat/core-typings';
 import { InstanceStatus, defaultPingInterval, indexExpire } from '@rocket.chat/instance-status';
 import { InstanceStatus as InstanceStatusRaw } from '@rocket.chat/models';
@@ -179,7 +179,7 @@ export class InstanceService extends ServiceClassInternal implements IInstanceSe
 		await InstanceStatus.registerInstance('rocket.chat', instance);
 
 		try {
-			const hasLicense = await License.hasModule('scalability');
+			const hasLicense = await Capabilities.hasModule('scalability');
 			if (!hasLicense) {
 				return;
 			}

@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 
-import type { IUser, LicenseModule, RequiredField } from '@rocket.chat/core-typings';
+import type { IUser, CapabilityModule, RequiredField } from '@rocket.chat/core-typings';
 import type { Logger } from '@rocket.chat/logger';
 import type { Method, MethodOf, OperationParams, OperationResult, PathPattern, UrlParams } from '@rocket.chat/rest-typings';
 import type { ValidateFunction } from 'ajv';
@@ -293,7 +293,7 @@ export type TypedOptions = {
 	body?: ValidateFunction;
 	tags?: string[];
 	typed?: boolean;
-	license?: LicenseModule[];
+	license?: CapabilityModule[];
 } & SharedOptions<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'>;
 
 export type TypedThis<TOptions extends TypedOptions, TPath extends string = ''> = {

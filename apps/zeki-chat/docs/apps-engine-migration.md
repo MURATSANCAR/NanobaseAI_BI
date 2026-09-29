@@ -22,18 +22,18 @@ Besides that, migrating app management code away from a public package enables u
 
 To make this migration easier to understand and review, we're using a stacked PR approach on Github - similar to a feature branch but disallowing sibling PRs. They are:
 
-- [40395](https://github.com/RocketChat/Rocket.Chat/pull/40395) The feature branch itself. It will accumulate the changes of the whole stack (⟶ `develop`)
-- [40183](https://github.com/RocketChat/Rocket.Chat/pull/40183) Replaces `AppPackageParser.getEngineVersion()` - which resolved the version by traversing the filesystem relative to `__dirname` - with a direct import of `ENGINE_VERSION`. This will support the migration of the `AppPackageParser` class itself (⟶ #40395)
-- [40184](https://github.com/RocketChat/Rocket.Chat/pull/40184) Copies all relevant source files from `packages/apps-engine/src/server`, `packages/apps-engine/src/client`, `packages/apps-engine/deno-runtime`, `packages/apps-engine/tests` and `packages/apps-engine/scripts` into  their corresponding path at `packages/apps` (⟶ #40183)
-- [40185](https://github.com/RocketChat/Rocket.Chat/pull/40185) Adapts the path resolution of the apps-engine package for the deno runtime (⟶ #40184)
-- [40186](https://github.com/RocketChat/Rocket.Chat/pull/40186) Flips the switch; changes code in `apps/meteor` and `packages/core-services` that pointed to `@rocket.chat/apps-engine` and makes it point to `@rocket.chat/apps`. This is the turning point in what is actually executed (⟶ #40185)
-- [40343](https://github.com/RocketChat/Rocket.Chat/pull/40343) Removes old files from the `@rocket.chat/apps-engine` package (⟶ #40186)
+- 40395 The feature branch itself. It will accumulate the changes of the whole stack (⟶ `develop`)
+- 40183 Replaces `AppPackageParser.getEngineVersion()` - which resolved the version by traversing the filesystem relative to `__dirname` - with a direct import of `ENGINE_VERSION`. This will support the migration of the `AppPackageParser` class itself (⟶ #40395)
+- 40184 Copies all relevant source files from `packages/apps-engine/src/server`, `packages/apps-engine/src/client`, `packages/apps-engine/deno-runtime`, `packages/apps-engine/tests` and `packages/apps-engine/scripts` into  their corresponding path at `packages/apps` (⟶ #40183)
+- 40185 Adapts the path resolution of the apps-engine package for the deno runtime (⟶ #40184)
+- 40186 Flips the switch; changes code in `apps/meteor` and `packages/core-services` that pointed to `@rocket.chat/apps-engine` and makes it point to `@rocket.chat/apps`. This is the turning point in what is actually executed (⟶ #40185)
+- 40343 Removes old files from the `@rocket.chat/apps-engine` package (⟶ #40186)
 
 ### Architecturally Relevant Decisions
 
 #### 1. `@rocket.chat/apps-engine` becomes a definition-only public package
 
-The most consequential decision in this migration is that `@rocket.chat/apps-engine` is narrowed to expose **only** its `definition/` directory. All server-side management code, the client UI host, the deno-runtime, scripts, and tests were removed from the package. The `files` field in `package.json` went from listing `client/**`, `definition/**`, `deno-runtime/**`, `lib/**`, `scripts/**`, and `server/**` down to just `definition/**`. The package description was updated to reflect this: "The public API and type definitions for Rocket.Chat App development."
+The most consequential decision in this migration is that `@rocket.chat/apps-engine` is narrowed to expose **only** its `definition/` directory. All server-side management code, the client UI host, the deno-runtime, scripts, and tests were removed from the package. The `files` field in `package.json` went from listing `client/**`, `definition/**`, `deno-runtime/**`, `lib/**`, `scripts/**`, and `server/**` down to just `definition/**`. The package description was updated to reflect this: "The public API and type definitions for ZEKI AI CHAT App development."
 
 This preserves the public contract for external app developers while keeping all server-side complexity private and under active control inside the monorepo.
 

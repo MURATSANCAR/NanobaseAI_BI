@@ -1,6 +1,6 @@
 import type { IMethodConnection, IUser } from '@rocket.chat/core-typings';
 import type { Route, Router } from '@rocket.chat/http-router';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Logger } from '@rocket.chat/logger';
 import { Users } from '@rocket.chat/models';
 import { Random } from '@rocket.chat/random';
@@ -928,7 +928,7 @@ export class APIClass<TBasePath extends string = '', TOperations extends Record<
 						logger,
 					}),
 					permissionsMiddleware(_options as TypedOptions),
-					license(_options as TypedOptions, License),
+					license(_options as TypedOptions, Capabilities),
 					(operations[method as keyof Operations<TPathPattern, TOptions>] as Record<string, any>).action,
 				);
 				this._routes.push({

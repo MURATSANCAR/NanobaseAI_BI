@@ -1,6 +1,6 @@
 import type { IReadReceiptWithUser, IMessage } from '@rocket.chat/core-typings';
 import type { ServerMethods } from '@rocket.chat/ddp-client';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Messages } from '@rocket.chat/models';
 import { check } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
@@ -16,7 +16,7 @@ declare module '@rocket.chat/ddp-client' {
 }
 
 export const getReadReceiptsFunction = async function (messageId: IMessage['_id'], userId: string): Promise<IReadReceiptWithUser[]> {
-	if (!License.hasModule('message-read-receipt')) {
+	if (!Capabilities.hasModule('message-read-receipt')) {
 		throw new Meteor.Error('error-action-not-allowed', 'This is an enterprise feature', { method: 'getReadReceipts' });
 	}
 	check(messageId, String);

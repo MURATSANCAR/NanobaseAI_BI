@@ -1,5 +1,5 @@
 import type { ILivechatDepartment } from '@rocket.chat/core-typings';
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { applyDepartmentRestrictions } from '@rocket.chat/omni-core';
 import type { FilterOperators } from 'mongodb';
 
@@ -13,7 +13,7 @@ export const applyDepartmentRestrictionsPatch = () => {
 			query: FilterOperators<ILivechatDepartment> = {},
 			userId: string,
 		) => {
-			if (!License.hasModule('livechat-enterprise')) {
+			if (!Capabilities.hasModule('livechat-enterprise')) {
 				return prev(query, userId);
 			}
 

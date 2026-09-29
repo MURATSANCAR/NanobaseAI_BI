@@ -1,11 +1,11 @@
-import type { LicenseModule } from '@rocket.chat/core-typings';
+import type { CapabilityModule } from '@rocket.chat/core-typings';
 import { QueryObserver } from '@tanstack/react-query';
 
 import { fetchFeatures } from './fetchFeatures';
 import { queryClient } from './queryClient';
 
 export const onToggledFeature = (
-	feature: LicenseModule,
+	feature: CapabilityModule,
 	{
 		up,
 		down,
@@ -15,7 +15,7 @@ export const onToggledFeature = (
 	},
 ): (() => void) => {
 	const observer = new QueryObserver(queryClient, {
-		queryKey: ['licenses'],
+		queryKey: ['capabilities', 'modules'],
 		queryFn: fetchFeatures,
 		staleTime: Infinity,
 	});

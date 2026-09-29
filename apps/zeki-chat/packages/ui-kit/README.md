@@ -1,20 +1,20 @@
 <!--header-->
 
 <p align="center">
-  <a href="https://rocket.chat" title="Rocket.Chat">
-    <img src="https://github.com/RocketChat/Rocket.Chat.Artwork/raw/master/Logos/2020/png/logo-horizontal-red.png" alt="Rocket.Chat" />
+  <a href="[upstream link removed] title="ZEKI AI CHAT">
+    <img src="[upstream link removed] alt="ZEKI AI CHAT" />
   </a>
 </p>
 
 # `@rocket.chat/ui-kit`
 
-> Interactive UI elements for Rocket.Chat Apps
+> Interactive UI elements for ZEKI AI CHAT Apps
 
 ---
 
-[![npm@latest](https://img.shields.io/npm/v/@rocket.chat/ui-kit/latest?style=flat-square)](https://www.npmjs.com/package/@rocket.chat/ui-kit/v/latest) [![npm@next](https://img.shields.io/npm/v/@rocket.chat/ui-kit/next?style=flat-square)](https://www.npmjs.com/package/@rocket.chat/ui-kit/v/next) ![npm downloads](https://img.shields.io/npm/dw/@rocket.chat/ui-kit?style=flat-square) ![License: MIT](https://img.shields.io/npm/l/@rocket.chat/ui-kit?style=flat-square)
+![npm@latest]([upstream link removed]) ![npm@next]([upstream link removed]) !npm downloads !License: MIT
 
-![deps](https://img.shields.io/librariesio/release/npm/@rocket.chat/ui-kit?style=flat-square) ![npm bundle size](https://img.shields.io/bundlephobia/min/@rocket.chat/ui-kit?style=flat-square)
+!deps !npm bundle size
 
 <!--/header-->
 
@@ -39,7 +39,7 @@ yarn add @rocket.chat/ui-kit
 <!--contributing(msg)-->
 
 Contributions, issues, and feature requests are welcome!<br />
-Feel free to check the [issues](https://github.com/RocketChat/Rocket.Chat/issues).
+Feel free to check the issues.
 
 <!--/contributing(msg)-->
 

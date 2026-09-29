@@ -14,7 +14,7 @@ import type { IFederationMatrixService } from './types/IFederationMatrixService'
 import type { IFederationService, IFederationServiceEE } from './types/IFederationService';
 import type { IImportService } from './types/IImportService';
 import type { ILDAPService } from './types/ILDAPService';
-import type { ILicense } from './types/ILicense';
+import type { ICapabilities } from './types/ICapabilities';
 import type { IMediaCallService } from './types/IMediaCallService';
 import type { IMediaService, ResizeResult } from './types/IMediaService';
 import type { IMessageReadsService } from './types/IMessageReadsService';
@@ -103,7 +103,7 @@ export type {
 	IDeviceManagementService,
 	IEnterpriseSettings,
 	ILDAPService,
-	ILicense,
+	ICapabilities,
 	IListRoomsFilter,
 	ILoginResult,
 	IMediaService,
@@ -161,7 +161,7 @@ export const Authorization = proxify<IAuthorization>('authorization');
 export const Apps = proxify<IAppsEngineService>('apps-engine');
 export const Presence = proxify<IPresence>('presence');
 export const Account = proxify<IAccount>('accounts');
-export const License = proxify<ILicense>('license');
+export const License = proxify<ICapabilities>('license');
 export const MeteorService = proxify<IMeteor>('meteor');
 export const Banner = proxify<IBannerService>('banner');
 export const UiKitCoreApp = proxify<IUiKitCoreAppService>('uikit-core-app');

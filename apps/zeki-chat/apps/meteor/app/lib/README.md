@@ -1,4 +1,4 @@
-## Rocket.Chat main library
+## ZEKI AI CHAT main library
 
 This package contains the main libraries of Rocket.Chat.
 

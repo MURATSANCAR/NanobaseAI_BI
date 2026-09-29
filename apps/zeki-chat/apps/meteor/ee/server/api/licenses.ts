@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 import { Users } from '@rocket.chat/models';
 import { isLicensesInfoProps } from '@rocket.chat/rest-typings';
 
@@ -14,7 +14,7 @@ API.v1.addRoute(
 			const unrestrictedAccess = await hasPermissionAsync(this.userId, 'view-privileged-setting');
 			const loadCurrentValues = unrestrictedAccess && Boolean(this.queryParams.loadValues);
 
-			const license = await License.getInfo({
+			const license = await Capabilities.getInfo({
 				limits: unrestrictedAccess,
 				license: unrestrictedAccess,
 				currentValues: loadCurrentValues,
@@ -32,7 +32,7 @@ API.v1.addRoute(
 	{ authRequired: true },
 	{
 		async get() {
-			const maxActiveUsers = License.getMaxActiveUsers();
+			const maxActiveUsers = Capabilities.getMaxActiveUsers();
 			const activeUsers = await Users.getActiveLocalUserCount();
 
 			return API.v1.success({ maxActiveUsers: maxActiveUsers > 0 ? maxActiveUsers : null, activeUsers });

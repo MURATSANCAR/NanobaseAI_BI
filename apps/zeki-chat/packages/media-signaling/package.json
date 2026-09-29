@@ -1,6 +1,6 @@
 {
 	"name": "@rocket.chat/media-signaling",
-	"description": "Rocket.Chat signaling client for media calls",
+	"description": "ZEKI AI CHAT signaling client for media calls",
 	"version": "1.0.0",
 	"publishConfig": {
 		"access": "public"

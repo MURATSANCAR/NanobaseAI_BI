@@ -1,4 +1,4 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 // To facilitate our lives with the stream
 // Collection will be registered on CE too
@@ -8,7 +8,7 @@ import('./AuditLog');
 import('./ReadReceipts');
 import('./ReadReceiptsArchive');
 
-void License.onLicense('livechat-enterprise', () => {
+void Capabilities.whenFeature('livechat-enterprise', () => {
 	import('./CannedResponse');
 	import('./LivechatTag');
 	import('./LivechatUnit');

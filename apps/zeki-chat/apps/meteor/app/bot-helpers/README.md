@@ -1,14 +1,14 @@
-# Rocket.chat bot helpers
+# ZEKI AI CHAT bot helpers
 
 This package provides some extra shortcut Meteor methods intended to help Hubot scripts.
 
 ## Approach
 
-This was an experiment in how to extend Hubot and Rocket.chat integration.
+This was an experiment in how to extend Hubot and ZEKI AI CHAT integration.
 
 Keeping controller logic out of Hubot scripts made sense to me, but its not necessarily the best approach.
 
-For bots to use these methods they obviously need this package added to Rocket.chat as well as the [rocketchat adapter](https://github.com/RocketChat/hubot-rocketchat).
+For bots to use these methods they obviously need this package added to ZEKI AI CHAT as well as the rocketchat adapter.
 
 ## Usage
 

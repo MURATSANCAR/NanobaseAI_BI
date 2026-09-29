@@ -1,7 +1,7 @@
 
 #  @rocket.chat/rest-typings
 
-Package containing all Rocket.Chat rest endpoint definitions
+Package containing all ZEKI AI CHAT rest endpoint definitions
 
 
 ## Contributing
@@ -19,7 +19,7 @@ However we have some recommendations.
 #### If you have an endpoint that accepts name or id, both are not optional, one of them is required
 
 ```typescript
-    
+
     type EndPointTestGetParams = { name?: string; id?: string; } // WRONG!
 
     type EndPointTestGetParams = { name: string; } | { id: string; } // Better :)
@@ -31,8 +31,8 @@ However we have some recommendations.
     export const isEndPointTestGetParams = (props: any) is EndPointTestGetParams => 'name' in prop || 'id' in prop; // WRONG!
 
     // .... Better
-    
-    
+
+
     import Ajv from 'ajv';
 
     const ajv = new Ajv();

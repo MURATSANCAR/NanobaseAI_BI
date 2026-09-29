@@ -1,7 +1,7 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
 export const disableCustomScripts = () => {
-	const license = License.getLicense();
+	const license = Capabilities.getLicense();
 
 	if (!license) {
 		return false;

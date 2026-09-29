@@ -1,5 +1,5 @@
-import { License } from '@rocket.chat/license';
+import { Capabilities } from '@zeki.chat/capabilities';
 
-await License.onLicense('message-read-receipt', async () => {
+await Capabilities.whenFeature('message-read-receipt', async () => {
 	await import('./hooks');
 });
