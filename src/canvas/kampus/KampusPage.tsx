@@ -41,6 +41,7 @@ import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
 import NewPrintsCard from './NewPrintsCard';
 import DestekCard from './DestekCard';
+import SohbetCard from './SohbetCard';
 import './kampus.css';
 import OutageStrip from '../it-ops/OutageStrip';
 import { notifyExport } from '../data-security/notify';
@@ -137,6 +138,10 @@ export default function KampusPage() {
     [everyone],
   );
   const units = useMemo(() => new Set(everyone.map((p) => p.unit).filter(Boolean)).size, [everyone]);
+  const photoOf = useMemo(() => {
+    const byUser = new Map(everyone.map((p) => [p.username.toLocaleLowerCase('tr'), p.photoVersion]));
+    return (username: string) => byUser.get(username.toLocaleLowerCase('tr')) ?? null;
+  }, [everyone]);
   const [floor, setFloor] = useState<string>(ALL_FLOORS);
   const [term, setTerm] = useState('');
   const directoryRef = useRef<HTMLDivElement>(null);
@@ -788,6 +793,9 @@ export default function KampusPage() {
 
         {/* SAĞ SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
+          {/* EKİP SOHBETİ — kaç kişi çevrimiçi, kişiye basınca doğrudan mesaj; sohbet bu kurulumda yoksa kart yok. */}
+          <SohbetCard me={session.data?.username ?? ''} photoOf={photoOf} />
+
           {/* DESTEK MASASI — talep aç / izle (ZEKİ AI Destek, aynı sunucu adında 8446). */}
           <DestekCard />
           <RoomsCard />

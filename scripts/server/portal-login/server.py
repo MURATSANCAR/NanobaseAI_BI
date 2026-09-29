@@ -18,6 +18,7 @@ import re
 import secrets
 import sqlite3
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -262,6 +263,41 @@ def chat_login_token(account, display):
     return token
 
 
+# Kampüs'teki sohbet kartı her açık ekranda yarım dakikada bir sorar; sohbete giden istek bu süre içinde bir tanedir.
+PRESENCE_TTL = 15
+# Sohbetin kendi hesapları (hoş geldin botu, kurulum yöneticisi) kişi sayılmaz.
+CHAT_SYSTEM_ACCOUNTS = {'rocket.cat'}
+PRESENCE_ORDER = {'online': 0, 'busy': 1, 'away': 2}
+_presence = {'at': 0.0, 'value': None}
+_presence_lock = threading.Lock()
+
+
+def chat_presence():
+    """Sohbette şu an çevrimdışı olmayan kişiler: {online, people:[{username, name, status}]}.
+
+    Yapılandırma yoksa None (bu kurulumda sohbet yok). Sohbet cevap vermezse ChatUnavailable."""
+    config = chat_config()
+    if not config:
+        return None
+    with _presence_lock:
+        if _presence['value'] is not None and time.time() - _presence['at'] < PRESENCE_TTL:
+            return _presence['value']
+        found = chat_call(config, 'GET', 'users.presence')
+        if not found.get('success'):
+            raise ChatUnavailable(f"presence refused: {found.get('errorType') or found.get('error')}")
+        skip = CHAT_SYSTEM_ACCOUNTS | {str(config.get('admin_username') or '').lower()}
+        people = [
+            {'username': u['username'], 'name': u.get('name') or u['username'], 'status': u.get('status')}
+            for u in found.get('users') or []
+            if u.get('username') and u.get('_id') != config.get('user_id') and u['username'].lower() not in skip
+            and u.get('status') in PRESENCE_ORDER
+        ]
+        people.sort(key=lambda p: (PRESENCE_ORDER[p['status']], p['name'].casefold()))
+        value = {'online': len(people), 'people': people}
+        _presence.update(at=time.time(), value=value)
+        return value
+
+
 def b64url(raw):
     return base64.urlsafe_b64encode(raw).rstrip(b'=').decode()
 
@@ -412,6 +448,18 @@ class Handler(BaseHTTPRequestHandler):
             if not token:
                 return self.reply(403)
             return self.reply(200, {'loginToken': token})
+        if self.path == '/chat-presence':
+            # Kampüs sohbet kartı: kaç kişi çevrimiçi. Yalnız portal oturumu olan görür.
+            if not session(self.headers.get('Cookie', '')):
+                return self.reply(401)
+            try:
+                found = chat_presence()
+            except ChatUnavailable as exc:
+                print(f'timas-login: chat presence unavailable ({exc})', file=sys.stderr, flush=True)
+                return self.reply(503, {'error': 'Sohbet şu an cevap vermiyor.'})
+            if found is None:
+                return self.reply(404, {'configured': False})
+            return self.reply(200, found)
         self.reply(404)
 
     def do_POST(self):
