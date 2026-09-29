@@ -18,6 +18,11 @@ services:
       ROOT_URL: ${ZEKI_ROOT_URL:-http://localhost:4000}
       PORT: "3000"
       DEPLOY_METHOD: docker
+      # ZEKI-28: sohbet İstanbul saatiyle çalışır (gün sınırı, raporlar, zamanlanmış işler, günlükler).
+      # Node saat dilimini kendi ICU verisinden çözer; bağlanan zoneinfo glibc araçları içindir.
+      TZ: Europe/Istanbul
+      OVERWRITE_SETTING_Default_Timezone_For_Reporting: custom
+      OVERWRITE_SETTING_Default_Custom_Timezone: Europe/Istanbul
       ZEKI_LOCAL_ONLY: "true"
       # Company messaging has no seat, message, upload-size or group-DM quota.
       OVERWRITE_SETTING_Message_MaxAllowedSize: "-1"
@@ -64,6 +69,7 @@ services:
       CREATE_TOKENS_FOR_USERS_SECRET: ${ZEKI_SSO_SECRET:?set ZEKI_SSO_SECRET}
     volumes:
       - zeki-uploads:/app/uploads
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     depends_on:
       zeki-mongo:
         condition: service_healthy
@@ -81,10 +87,13 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     entrypoint: ["nginx", "-g", "daemon off;"]
+    environment:
+      TZ: Europe/Istanbul
     tmpfs:
       - /tmp
     volumes:
       - ./nginx-local.conf:/etc/nginx/nginx.conf:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     ports:
       - "127.0.0.1:${ZEKI_PORT:-4000}:8080"
     depends_on:
@@ -99,9 +108,13 @@ services:
     dns: ["127.0.0.1"]
     restart: unless-stopped
     command: mongod --replSet rs0 --bind_ip_all --oplogSize 128
+    # Mongo tarihleri UTC saklar (değişmez); saat dilimi yalnız günlük ve kabuk görüntüsünü etkiler.
+    environment:
+      TZ: Europe/Istanbul
     volumes:
       - zeki-mongo-data:/data/db
       - zeki-mongo-config:/data/configdb
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'zeki-mongo:27017'}]}).ok }\" | grep -q 1"]
       interval: 10s

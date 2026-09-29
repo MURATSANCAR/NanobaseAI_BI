@@ -27,6 +27,8 @@ sudo systemctl enable --now zeki-local-egress.service
 
 Sonra `deploy/zeki` altında sabit imaj etiketiyle `docker compose --env-file .env -p zeki up -d` ve `bash clear-external-ice.sh` uygulanır. Mongo health ve aynı veri hacimleri doğrulanır. Docker ağı kalıcıdır; systemd guard UFW/netfilter/nftables restore birimlerinden sonra, Docker başlamadan önce uygulanır ve Docker için gerekli bir birimdir; guard başarısızsa Docker başlangıcı da başarısız olur. Docker yeniden başlatıldığında guard yeniden uygulanır. Build betiği restart öncesi yalnız active durumuna güvenmez, kuralları yeniden uygular. Ağ kartına dış ağ eklemek veya local-only modu kaldırmak bu kabulü geçersiz kılar.
 
+Saat dilimi (ZEKI-28): üç konteyner `TZ=Europe/Istanbul` ile ve hostun `/usr/share/zoneinfo` dizini salt okunur bağlanarak çalışır (yerel dosya, ağ gerektirmez); sohbette rapor saat dilimi `Default_Timezone_For_Reporting=custom` + `Default_Custom_Timezone=Europe/Istanbul` env ile sabittir. Mongo tarihleri UTC saklamaya devam eder; TZ yalnız günlük saatini ve sunucu tarafı gün hesabını etkiler. İmaj derlemesi gerekmez; `docker compose --env-file .env -p zeki up -d` üç konteyneri aynı veri hacimleriyle yeniden oluşturur.
+
 ## Kabul sınırı
 
 Kabul bu sürüm/ayar/ağ topolojisi içindir. Paket yakalama yalnız zaman penceresini gösterir; kalıcı koruma ağ topolojisi ve CSP'dir. Kullanıcının tarayıcı adres çubuğuna bir site yazması, sağ tıkla yeni sekmeye gitmesi veya sunucu yöneticisinin firewall/deployment politikasını değiştirmesi ürünün otomatik servis trafiği değildir ve bu korumanın kapsamı dışındadır. Tüm zamanlanmış işlerin her olası veriyle çalıştığı iddia edilmez; ağ bariyeri aynı konteynerdeki işlere uygulanır.
