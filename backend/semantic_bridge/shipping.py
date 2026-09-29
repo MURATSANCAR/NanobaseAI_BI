@@ -125,7 +125,11 @@ GROUPS = {"firma": "Kargo firması", "sehir": "Alıcı şehri", "sube": "Çıkı
 AGE_BUCKETS = ((0, 2, "0–2 gün"), (3, 5, "3–5 gün"), (6, 14, "6–14 gün"), (15, 30, "15–30 gün"), (31, None, "30+ gün"))
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXPORTS = {"hatalar": "Entegrasyon hataları", "takipsiz": "Takip numarasız sevk", "kutulandi": "Kutulandı, sevk edilmedi",
-           "bekleyen": "Teslim bekleyen gönderiler", "firmalar": "Kargo firma karnesi", "mutabakat": "Kargo mutabakatı"}
+           "bekleyen": "Teslim bekleyen gönderiler", "firmalar": "Kargo firma karnesi", "mutabakat": "Kargo mutabakatı",
+           "maliyet": "Kargo maliyeti: tedarikçiler"}
+#: Kargo ve nakliye gideri sayılan Logo hizmet kartı kodları (ölçüldü 2026-09-29: 760.34.341 posta ve kargo, 760.34.342
+#: satış nakliye, 770.34.341 genel yönetim posta ve kargo). Yönetim ekranındaki `SHIPPING_COST_SERVICE_CODES` değiştirir.
+COST_SERVICE_CODES_DEFAULT = "760.34.341,760.34.342,770.34.341"
 
 _lock = threading.Lock()
 _ready: set[int] = set()
@@ -221,6 +225,7 @@ def settings_from(conf: Callable[..., str]) -> dict[str, Any]:
         "codNo": {fold(x) for x in _split(c("SHIPPING_COD_NO_VALUES", "hayır,hayir,yok,0,false,-"))},
         "carrierCodes": parse_carrier_codes(c("SHIPPING_LOGO_CARRIER_CODES", "")),
         "carrierHints": _split(c("SHIPPING_LOGO_CARRIER_HINTS", "KARGO,KURYE,LOJİSTİK,EXPRESS")),
+        "costServiceCodes": _split(c("SHIPPING_COST_SERVICE_CODES", COST_SERVICE_CODES_DEFAULT)),
         "staleDays": _int(c("SHIPPING_STALE_DAYS", "3"), 3, 0, 365),
         "waitingDays": _int(c("SHIPPING_WAITING_DAYS", "5"), 5, 1, 365),
         "boxedDays": _int(c("SHIPPING_BOXED_DAYS", "2"), 2, 0, 365),
@@ -924,6 +929,296 @@ def reconcile(index: CargoIndex, start: date, end: date, *, carrier_codes: dict[
             "toplam": {"gonderi": sum(i["gonderi"] for i in items), "crmTutar": _r(sum(i["crmTutar"] or 0 for i in items)),
                        "logoKdvHaric": _r(sum(i["logoKdvHaric"] or 0 for i in items)),
                        "eslenmeyenFirma": sum(1 for i in items if not i["logoEslendi"] and i["gonderi"])}}
+
+
+# ------------------------------------------------------------------ kargo maliyeti (/kargo/maliyet)
+
+COST_GROUPS = {"kargo": "Kargo firması", "pazarYeri": "Pazar yeri", "nakliye": "Nakliye ve diğer"}
+NO_CARRIER = "(taşıyıcı yok)"
+
+
+def tax_key(v: Any) -> Optional[str]:
+    """Vergi kimliği karşılaştırma anahtarı: boşluksuz 10 (vergi no) ya da 11 (T.C. kimlik no) rakam. Hepsi aynı rakam olan
+    yer tutucu («11111111111») ve biçimsiz değer eşleşmeye girmez (`logo_kargo_alici.sql` süzgeciyle aynı kural)."""
+    s = re.sub(r"\s+", "", str(v or ""))
+    if not re.fullmatch(r"\d{10,11}", s) or len(set(s)) == 1:
+        return None
+    return s
+
+
+def carrier_code(v: Any) -> str:
+    """İrsaliyedeki taşıyıcı kodu (SHPAGNCOD) ve CRM kargo firması kodu (`new_kargokodu`) için ortak anahtar: Türkçe harf
+    sadeleşir, küçük harf, boşluksuz («HEPSİJET» = «hepsijet», «DEPO» = «depo»). Boş kod «(taşıyıcı yok)» olur."""
+    s = fold(v).replace(" ", "").lower()
+    return s or NO_CARRIER
+
+
+def _ym(d: Optional[date]) -> int:
+    return d.year * 12 + d.month if d else 0
+
+
+#: Pazar yeri sayılmak için alıcının yılın taşıyıcı kodlu irsaliyelerindeki en küçük payı.
+MARKET_MIN_SHARE = 0.01
+#: Pazar yerinin gönderi başı maliyeti, pazar yerlerinin ortancasından bu kat sapıyorsa gösterilmez.
+MARKET_OUTLIER = 10.0
+
+
+def cost_view(year: int, *, cost_rows: list[dict[str, Any]], receivers: list[dict[str, Any]], slips: list[dict[str, Any]],
+              sales: list[dict[str, Any]], carriers: dict[str, dict[str, Any]], carrier_codes: dict[str, list[str]],
+              asof: date, notes: list[str]) -> dict[str, Any]:
+    """Yılın kargo ve nakliye gideri (Logo alınan hizmet faturası satırları), net ciroya oranı, taşıyıcı koduna göre
+    irsaliye ve yaklaşık gönderi başı maliyet. Sabit eşleme yok; her şey veriden ve ayardan:
+
+    - Tedarikçi grubu: vergi kimliği, taşıyıcı kodlu irsaliye kestiğimiz bir alıcınınkiyle aynıysa «Pazar yeri» (bize kargo
+      faturası da kesen müşteri); değilse cari kodu `SHIPPING_LOGO_CARRIER_CODES` ayarındaysa «Kargo firması»; değilse
+      «Nakliye ve diğer».
+    - Taşıyıcı: irsaliyenin SHPAGNCOD'u (`carrier_code`), CRM kargo firması koduyla eşlenip adı alınır; aynı CRM firmasına
+      düşen kodlar tek satırdır. Logo carisi ayardan (firma adıyla ya da kodla); eşlenmişse irsaliye başı = eşlenen
+      carilerin gideri ÷ irsaliye, eşlenmemişse hesaplanmaz.
+    - Pazar yeri gönderisi başı = pazar yerinin gideri ÷ o pazar yerinin alıcı carilerine giden taşıyıcı kodlu irsaliye;
+      başka bir tedarikçi carisine eşlenmiş taşıyıcıyla giden irsaliye o tedarikçinin faturasındadır, sayılmaz.
+
+    Faturalar toplu kesilir (gönderi dökümü yok); gönderi başı rakamlar dönem toplamlarının oranıdır, yaklaşıktır."""
+    # -- tedarikçiler (kargo gideri faturaları)
+    sup: dict[str, dict[str, Any]] = {}
+    month_cost: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    last_cost: Optional[date] = None
+    undated = 0
+    for r in cost_rows:
+        cari = src.clean(r.get("cari")) or "(carisiz)"
+        amt = float(r.get("tutar") or 0)
+        s = sup.get(cari)
+        if s is None:
+            s = sup[cari] = {"cari": cari, "unvan": src.clean(r.get("unvan")), "vergi": tax_key(r.get("vergi")), "gider": 0.0,
+                             "faturalar": set(), "hizmetler": {}}
+        s["gider"] += amt
+        s["faturalar"].add(str(r.get("fatura")))
+        hk = src.clean(r.get("hizmet")) or "—"
+        hz = s["hizmetler"].setdefault(hk, {"kod": hk, "ad": src.clean(r.get("hizmet_adi")), "gider": 0.0})
+        hz["gider"] += amt
+        d = src.logo_day(r.get("tarih"))
+        if d is None or d.year != year:
+            undated += 1
+            continue
+        month_cost[d.month][cari] += amt
+        last_cost = d if last_cost is None or d > last_cost else last_cost
+
+    # -- pazar yeri alıcıları (vergi kimliği bir tedarikçininkiyle aynı olan alıcılar)
+    rx_by_tax: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for r in receivers:
+        t = tax_key(r.get("vergi"))
+        if t:
+            rx_by_tax[t].append({"cari": src.clean(r.get("cari")), "unvan": src.clean(r.get("unvan")),
+                                 "kod": carrier_code(r.get("kod")), "irsaliye": int(r.get("irsaliye") or 0)})
+    # -- irsaliyeler (ay × taşıyıcı kodu)
+    slip_month: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    slip_total: dict[str, int] = defaultdict(int)
+    spell: dict[str, Counter] = defaultdict(Counter)
+    last_slip: Optional[date] = None
+    for r in slips:
+        code = carrier_code(r.get("kod"))
+        n = int(r.get("irsaliye") or 0)
+        slip_month[int(r.get("ay") or 0)][code] += n
+        slip_total[code] += n
+        raw = src.clean(r.get("kod"))
+        if raw:
+            spell[code][raw] += n
+        d = src.logo_day(r.get("son"))
+        if d and (last_slip is None or d > last_slip):
+            last_slip = d
+
+    # -- tedarikçi grupları. Pazar yeri = vergi kimliği bir alıcınınkiyle aynı VE o alıcıya yılın taşıyıcı kodlu
+    # irsaliyelerinin en az MARKET_MIN_SHARE'i gitmiş (birkaç gönderilik müşteriye kesilen tek seferlik kargo faturası
+    # pazar yeri sayılmaz; 2026 ölçümü: 2 irsaliyeli bir lojistik cari gönderi başı 15.750 ₺ görünüyordu).
+    coded = sum(n for c, n in slip_total.items() if c != NO_CARRIER)
+    mapped_all = {c.strip() for cl in carrier_codes.values() for c in cl if c.strip()}
+    for s in sup.values():
+        rx_n = sum(rx["irsaliye"] for rx in rx_by_tax.get(s["vergi"], [])) if s["vergi"] else 0
+        if rx_n and coded and rx_n / coded >= MARKET_MIN_SHARE:
+            s["grup"] = "pazarYeri"
+        elif s["cari"] in mapped_all:
+            s["grup"] = "kargo"
+        else:
+            s["grup"] = "nakliye"
+
+    # -- taşıyıcı satırları: CRM kargo firması adı, Logo carisi ayardan
+    crm_by_code: dict[str, str] = {}
+    for v in sorted(carriers.values(), key=lambda v: str(v.get("ad") or "")):
+        if v.get("kod") and v.get("ad"):
+            crm_by_code.setdefault(carrier_code(v["kod"]), str(v["ad"]))
+    rows: dict[str, dict[str, Any]] = {}
+    code_row: dict[str, str] = {}
+    for code, n in slip_total.items():
+        name = crm_by_code.get(code) if code != NO_CARRIER else None
+        key = "crm:" + fold(name) if name else "kod:" + code
+        row = rows.setdefault(key, {"kodlar": {}, "crmFirma": name})
+        row["kodlar"][code] = row["kodlar"].get(code, 0) + n
+        code_row[code] = key
+    code_mapped: dict[str, set[str]] = {}
+    for key, row in rows.items():
+        cl: list[str] = list(carrier_codes.get(fold(row["crmFirma"]), [])) if row["crmFirma"] else []
+        for code in row["kodlar"]:
+            if code != NO_CARRIER:
+                cl += carrier_codes.get(fold(code), [])
+        row["cariler"] = list(dict.fromkeys(c.strip() for c in cl if c.strip()))
+        row["kod"] = max(row["kodlar"].items(), key=lambda kv: (kv[1], kv[0]))[0]
+        for code in row["kodlar"]:
+            code_mapped[code] = set(row["cariler"])
+
+    def display(row: dict[str, Any]) -> str:
+        if row["crmFirma"]:
+            return row["crmFirma"]
+        if row["kod"] == NO_CARRIER:
+            return NO_CARRIER
+        sp = spell.get(row["kod"])
+        return sp.most_common(1)[0][0] if sp else row["kod"]
+
+    for row in rows.values():
+        row["ad"] = display(row)
+
+    # -- pazar yerleri (vergi kimliği başına; birden çok carisi olabilir)
+    market: dict[str, dict[str, Any]] = {}
+    for s in sorted(sup.values(), key=lambda s: -s["gider"]):
+        if s["grup"] != "pazarYeri":
+            continue
+        m = market.setdefault(s["vergi"], {"cariler": [], "unvan": s["unvan"] or s["cari"], "gider": 0.0})
+        m["cariler"].append(s["cari"])
+        m["gider"] += s["gider"]
+    code_markets: dict[str, dict[str, int]] = defaultdict(dict)
+    markets_out = []
+    for t, m in market.items():
+        own = set(m["cariler"])
+        counted = other = 0
+        alicilar: dict[str, dict[str, Any]] = {}
+        kodlar: dict[str, int] = defaultdict(int)
+        for rx in rx_by_tax.get(t, []):
+            cm = code_markets[rx["kod"]]
+            cm[m["unvan"]] = cm.get(m["unvan"], 0) + rx["irsaliye"]
+            mapped = code_mapped.get(rx["kod"]) or set()
+            if mapped and not (mapped & own):
+                other += rx["irsaliye"]            # başka bir tedarikçiye eşlenmiş taşıyıcı: o tedarikçinin faturasında
+                continue
+            counted += rx["irsaliye"]
+            a = alicilar.setdefault(rx["cari"] or "—", {"cari": rx["cari"], "unvan": rx["unvan"], "irsaliye": 0})
+            a["irsaliye"] += rx["irsaliye"]
+            kodlar[rx["kod"]] += rx["irsaliye"]
+        markets_out.append({
+            "cariler": m["cariler"], "unvan": m["unvan"], "gider": _r(m["gider"]), "irsaliye": counted,
+            "baskaTasiyici": other, "gonderiBasi": _r(_div(m["gider"], counted)),
+            "alicilar": sorted(alicilar.values(), key=lambda a: (-a["irsaliye"], a["cari"] or "")),
+            "kodlar": [{"kod": k, "ad": rows[code_row[k]]["ad"] if k in code_row else k, "irsaliye": v}
+                       for k, v in sorted(kodlar.items(), key=lambda kv: (-kv[1], kv[0]))],
+        })
+    markets_out.sort(key=lambda m: -(m["gider"] or 0))
+    per = sorted(m["gonderiBasi"] for m in markets_out if m["gonderiBasi"])
+    if len(per) >= 3:
+        med = per[len(per) // 2] if len(per) % 2 else (per[len(per) // 2 - 1] + per[len(per) // 2]) / 2
+        for m in markets_out:
+            g = m["gonderiBasi"]
+            if g and med and (g < med / MARKET_OUTLIER or g > med * MARKET_OUTLIER):
+                m["gonderiBasi"], m["sapma"] = None, True      # gider büyük olasılıkla başka hesapta ya da tek seferlik
+
+    carriers_out = []
+    for row in rows.values():
+        n = sum(row["kodlar"].values())
+        none = row["kod"] == NO_CARRIER
+        mapped = bool(row["cariler"]) and not none
+        gider = _r(sum(sup[c]["gider"] for c in row["cariler"] if c in sup)) if mapped else None
+        mps: dict[str, int] = {}
+        for code in row["kodlar"]:
+            for u, v in code_markets.get(code, {}).items():
+                mps[u] = mps.get(u, 0) + v
+        carriers_out.append({
+            "kod": row["kod"], "kodlar": sorted(row["kodlar"]), "ad": row["ad"], "crmFirma": row["crmFirma"], "irsaliye": n,
+            "tasiyiciYok": none, "eslendi": mapped,
+            "eslenenCariler": [{"cari": c, "unvan": sup[c]["unvan"] if c in sup else None} for c in row["cariler"]] if mapped else [],
+            "gider": gider, "irsaliyeBasi": _r(_div(gider, n)) if mapped else None,
+            "pazarYeriIrsaliye": sum(mps.values()),
+            "pazarYerleri": [{"unvan": u, "irsaliye": v} for u, v in sorted(mps.items(), key=lambda kv: (-kv[1], kv[0]))],
+        })
+    carriers_out.sort(key=lambda r: (r["tasiyiciYok"], -r["irsaliye"], r["ad"]))
+
+    # -- aylar
+    sales_by_month: dict[int, float] = {}
+    last_sale: Optional[date] = None
+    for r in sales:
+        m = int(r.get("ay") or 0)
+        if m:
+            sales_by_month[m] = sales_by_month.get(m, 0.0) + float(r.get("satis") or 0) - float(r.get("iade") or 0)
+        d = src.logo_day(r.get("son"))
+        if d and (last_sale is None or d > last_sale):
+            last_sale = d
+    months = {m for m in month_cost} | {m for m in slip_month if m} | set(sales_by_month)
+    months.discard(0)
+    by_month = []
+    for m in range(1, (max(months) if months else 0) + 1):
+        g = {k: 0.0 for k in COST_GROUPS}
+        for cari, amt in (month_cost.get(m) or {}).items():
+            g[sup[cari]["grup"]] += amt
+        toplam = sum(g.values())
+        net = sales_by_month.get(m)
+        per_row: dict[str, int] = defaultdict(int)
+        for code, n in (slip_month.get(m) or {}).items():
+            if code != NO_CARRIER:
+                per_row[rows[code_row[code]]["kod"]] += n
+        by_month.append({
+            "ay": f"{year}-{m:02d}", "kargo": _r(g["kargo"]), "pazarYeri": _r(g["pazarYeri"]), "nakliye": _r(g["nakliye"]),
+            "toplam": _r(toplam), "netCiro": _r(net), "oran": _r(_div(toplam, net), 6), "irsaliye": sum(per_row.values()),
+            "tasiyici": [{"kod": k, "irsaliye": v} for k, v in sorted(per_row.items(), key=lambda kv: (-kv[1], kv[0]))],
+        })
+
+    # -- toplamlar
+    gider = sum(s["gider"] for s in sup.values())
+    grp = {k: sum(s["gider"] for s in sup.values() if s["grup"] == k) for k in COST_GROUPS}
+    net_total = sum(sales_by_month.values()) if sales_by_month else None
+    irs_total = sum(n for c, n in slip_total.items() if c != NO_CARRIER)
+    totals = {
+        "gider": _r(gider), "kargo": _r(grp["kargo"]), "pazarYeri": _r(grp["pazarYeri"]), "nakliye": _r(grp["nakliye"]),
+        "netCiro": _r(net_total), "oran": _r(_div(gider, net_total), 6), "irsaliye": irs_total,
+        "irsaliyeBasi": _r(_div(gider, irs_total)), "tasiyiciYok": slip_total.get(NO_CARRIER, 0),
+        "tedarikci": len(sup), "fatura": sum(len(s["faturalar"]) for s in sup.values()),
+    }
+    by_supplier = [{
+        "cari": s["cari"], "unvan": s["unvan"], "grup": s["grup"], "grupAdi": COST_GROUPS[s["grup"]], "gider": _r(s["gider"]),
+        "pay": _r(_div(s["gider"], gider), 6), "fatura": len(s["faturalar"]),
+        "hizmetler": [{**hz, "gider": _r(hz["gider"])} for hz in sorted(s["hizmetler"].values(), key=lambda x: x["kod"])],
+        "tasiyicilar": [c["kod"] for c in carriers_out if any(e["cari"] == s["cari"] for e in c["eslenenCariler"])],
+    } for s in sorted(sup.values(), key=lambda s: (-s["gider"], s["cari"]))]
+
+    # -- notlar (veriden)
+    out_notes = list(notes)
+    if undated:
+        out_notes.append(f"Tarihi okunamayan {undated} gider satırı aylara dağıtılmadı (yıl toplamında var).")
+    if last_cost and last_slip and _ym(last_cost) < _ym(last_slip):
+        out_notes.append(f"Son kargo gideri faturası {last_cost.strftime('%d.%m.%Y')}, irsaliyeler "
+                         f"{last_slip.strftime('%d.%m.%Y')} tarihine kadar: faturası henüz gelmemiş ayların gönderileri "
+                         "gönderi başı maliyeti olduğundan düşük gösterir.")
+    unmapped = [c for c in carriers_out if not c["eslendi"] and not c["tasiyiciYok"] and c["irsaliye"]]
+    if unmapped:
+        out_notes.append(f"{len(unmapped)} taşıyıcının Logo carisi eşlenmemiş; irsaliye başı maliyetleri hesaplanmaz. "
+                         "Eşleme «Kargo mutabakatı» ekranındaki aday carilerden, «Kargo firması → Logo cari kodları» "
+                         "ayarına yazılır.")
+    out_notes.append("Kargo faturaları toplu kesilir (gönderi dökümü yok); gönderi başı rakamlar dönem toplamlarının "
+                     "oranıdır, yaklaşıktır. Tutarlar KDV hariçtir.")
+    return {
+        "period": {"yil": year, "baslangic": date(year, 1, 1).isoformat(), "bitis": min(date(year, 12, 31), asof).isoformat()},
+        "dataEnd": last_sale.isoformat() if last_sale else None,
+        "giderSonu": last_cost.isoformat() if last_cost else None,
+        "irsaliyeSonu": last_slip.isoformat() if last_slip else None,
+        "totals": totals, "byMonth": by_month, "bySupplier": by_supplier, "byCarrier": carriers_out,
+        "marketplaces": markets_out, "groups": COST_GROUPS, "notes": out_notes,
+    }
+
+
+COST_SUPPLIER_COLUMNS = [("cari", "Cari kodu"), ("unvan", "Ünvan"), ("grupAdi", "Grup"), ("gider", "Gider (KDV hariç)"),
+                         ("pay", "Pay"), ("fatura", "Fatura"), ("hizmetKodlari", "Hizmet kodları"),
+                         ("tasiyiciKodlari", "Eşlenen taşıyıcı kodları")]
+
+
+def cost_supplier_rows(view: dict[str, Any]) -> list[dict[str, Any]]:
+    """Excel: tedarikçi tablosu, hizmet ve taşıyıcı kodları metin olarak."""
+    return [{**s, "hizmetKodlari": ", ".join(hz["kod"] for hz in s["hizmetler"]),
+             "tasiyiciKodlari": ", ".join(s["tasiyicilar"])} for s in view["bySupplier"]]
 
 
 # ------------------------------------------------------------------ Zeki AI: sınıflama

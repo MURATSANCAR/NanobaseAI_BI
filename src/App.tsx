@@ -92,6 +92,7 @@ const ShippingErrors = lazy(() => import('@/canvas/shipping/Errors'));
 const ShippingWaiting = lazy(() => import('@/canvas/shipping/Waiting'));
 const ShippingCarriers = lazy(() => import('@/canvas/shipping/Carriers'));
 const ShippingReconcile = lazy(() => import('@/canvas/shipping/Reconcile'));
+const ShippingCost = lazy(() => import('@/canvas/shipping/Cost'));
 const SupplyHome = lazy(() => import('@/canvas/supply/SupplyHome'));
 const SupplyLoad = lazy(() => import('@/canvas/supply/Load'));
 const SupplyPaper = lazy(() => import('@/canvas/supply/Paper'));
@@ -338,13 +339,14 @@ export default function App() {
             <Route path="sistem-durumu" element={<SystemStatusScreen />} />
             {/* M49 Veri güvenliği (Altyapı ve destek): giriş/erişim kaydı, uyarılar, hijyen, envanter, saklama (/api/v1/data-security). */}
             <Route path="veri-guvenligi" element={<DataSecurityScreen />} />
-            {/* M44 Lojistik ve kargo: günlük hat, gönderi kartı, hatalar, teslim bekleyen, firma karnesi, mutabakat (/api/v1/shipping). */}
+            {/* M44 Lojistik ve kargo: günlük hat, gönderi kartı, hatalar, teslim bekleyen, firma karnesi, mutabakat, kargo maliyeti (/api/v1/shipping). */}
             <Route path="kargo" element={<ShippingHome />} />
             <Route path="kargo/gonderi/:id" element={<ShippingShipment />} />
             <Route path="kargo/hatalar" element={<ShippingErrors />} />
             <Route path="kargo/bekleyen" element={<ShippingWaiting />} />
             <Route path="kargo/firmalar" element={<ShippingCarriers />} />
             <Route path="kargo/mutabakat" element={<ShippingReconcile />} />
+            <Route path="kargo/maliyet" element={<ShippingCost />} />
             {/* M52 Tedarik ve baskı (Lojistik) */}
             <Route path="tedarik" element={<SupplyHome />} />
             <Route path="tedarik/yuk" element={<SupplyLoad />} />

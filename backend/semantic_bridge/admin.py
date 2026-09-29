@@ -1337,8 +1337,14 @@ SPEC: list[dict[str, Any]] = [
     {"key": "SHIPPING_COD_NO_VALUES", "group": "shipping", "label": "Tahsilatlı kargo: «hayır» değerleri", "type": "text",
      "default": "hayır,hayir,yok,0,false,-", "help": "Tahsilatlı kargo alanında bu değerler tahsilatsız sayılır. Ölçülecek"},
     {"key": "SHIPPING_LOGO_CARRIER_CODES", "group": "shipping", "label": "Kargo firması → Logo cari kodları", "type": "text",
-     "default": "", "help": "Mutabakat için. Biçim: ARAS KARGO=320.01.001,320.01.002;MNG KARGO=320.01.003 (firma adı kargo "
-                            "kaydındaki gibi). Mutabakat ekranındaki «Aday cariler» listesinden seçilir"},
+     "default": "", "help": "Mutabakat ve kargo maliyeti için. Biçim: ARAS KARGO=320.01.001,320.01.002;MNG KARGO=320.01.003 "
+                            "(firma adı kargo kaydındaki ya da CRM kargo firmasındaki gibi; kargo maliyeti ekranı irsaliyedeki "
+                            "taşıyıcı kodunu da kabul eder). Mutabakat ekranındaki «Aday cariler» listesinden seçilir"},
+    {"key": "SHIPPING_COST_SERVICE_CODES", "group": "shipping", "label": "Kargo gideri hizmet kodları", "type": "text",
+     "default": "760.34.341,760.34.342,770.34.341",
+     "help": "Kargo maliyeti ekranı için. Virgülle Logo hizmet kartı kodları; alınan hizmet faturalarında bu kodlu satırların "
+             "tutarı (KDV hariç) kargo ve nakliye gideri sayılır. Varsayılan: posta ve kargo, satış nakliye, genel yönetim "
+             "posta ve kargo"},
     {"key": "SHIPPING_LOGO_CARRIER_HINTS", "group": "shipping", "label": "Aday cari ipuçları", "type": "text",
      "default": "KARGO,KURYE,LOJİSTİK,EXPRESS", "help": "Logo'da ünvanında bu sözcükler geçen hizmet faturası carileri aday olarak listelenir"},
     {"key": "SHIPPING_STALE_DAYS", "group": "shipping", "label": "Kargo kaydı eskime uyarısı (gün)", "type": "int", "default": "3",

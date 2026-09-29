@@ -302,6 +302,11 @@
       "label": "Kargo mutabakatı"
     },
     {
+      "key": "sayfa:kargo-maliyet",
+      "area": "lojistik",
+      "label": "Kargo maliyeti"
+    },
+    {
       "key": "sayfa:pazarlama-yeni-kitap",
       "area": "pazarlama",
       "label": "Yeni kitap planı"
@@ -1318,7 +1323,7 @@
       "area": "lojistik",
       "page": "sayfa:kargo-firmalar",
       "label": "Kargo maliyetini görme",
-      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı)",
+      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı), kargo maliyeti ekranı (gider, ciroya oranı, gönderi başı)",
       "explicit": true
     },
     {

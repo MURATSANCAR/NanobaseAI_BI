@@ -206,6 +206,7 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kargo/hatalar')).toBe('kargo');
     expect(at('/kargo/firmalar')).toBe('kargo-firmalar');
     expect(at('/kargo/mutabakat')).toBe('kargo-mutabakat');
+    expect(at('/kargo/maliyet')).toBe('kargo-maliyet');
     expect(at('/stok/15201.01.0001')).toBe('stok'); // M43 kitap stok kartı → Stok
     expect(at('/stok/bitecekler')).toBe('stok-bitecekler');
     expect(at('/stok/depo-hatti')).toBe('stok-depo-hatti');

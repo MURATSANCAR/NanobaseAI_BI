@@ -22,7 +22,8 @@ export default function Reconcile() {
   const allowed = !!meta.data?.me.mutabakat;
   const rec = useQuery({ queryKey: ['shipping', 'reconcile', ay], queryFn: () => shippingApi.reconcile(ay), enabled: ENGINE_ENABLED && allowed });
   const [summary, setSummary] = useState<string | null>(null);
-  const [showCandidates, setShowCandidates] = useState(false);
+  // ?adaylar=1: kargo maliyeti ekranındaki «eşlenmemiş» taşıyıcıdan gelindiyse aday cariler açık gelir.
+  const [showCandidates, setShowCandidates] = useState(params.get('adaylar') === '1');
   const cand = useQuery({ queryKey: ['shipping', 'candidates'], queryFn: shippingApi.candidates, enabled: ENGINE_ENABLED && allowed && showCandidates });
   const sum = useMutation({
     mutationFn: () => shippingApi.reconcileSummary(ay),

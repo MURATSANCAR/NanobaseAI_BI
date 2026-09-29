@@ -813,12 +813,15 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/model-quality/feedback", OPEN),
     ("/api/v1/model-quality/", frozenset({page("zeki-kalite")})),
     # M44 Lojistik ve kargo. Günlük hat, gönderi kartı ve taslak `kargo`; firma karnesi ve karar `kargo-firmalar`;
-    # mutabakat `kargo-mutabakat`. Meta, iş eşikleri ve Excel üç sayfada da (liste türünün sayfası ucun içinde denetlenir).
+    # mutabakat `kargo-mutabakat`; kargo maliyeti ve onun Excel'i `kargo-maliyet`. Meta dört sayfada, iş eşikleri ve öbür
+    # Excel'ler üç sayfada da (liste türünün sayfası ucun içinde denetlenir).
     ("/api/v1/shipping/run-due", SYSTEM),
     ("/api/v1/shipping/carriers", frozenset({page("kargo-firmalar")})),
     ("/api/v1/shipping/decisions", frozenset({page("kargo-firmalar")})),
     ("/api/v1/shipping/reconcile", frozenset({page("kargo-mutabakat")})),
-    ("/api/v1/shipping/meta", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
+    ("/api/v1/shipping/cost", frozenset({page("kargo-maliyet")})),
+    ("/api/v1/shipping/export/maliyet", frozenset({page("kargo-maliyet")})),
+    ("/api/v1/shipping/meta", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat"), page("kargo-maliyet")})),
     ("/api/v1/shipping/settings", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
     ("/api/v1/shipping/export/", frozenset({page("kargo"), page("kargo-firmalar"), page("kargo-mutabakat")})),
     ("/api/v1/shipping/", frozenset({page("kargo")})),
