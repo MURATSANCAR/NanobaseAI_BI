@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (21:40) — Zeki kapı + test süreci koruması test sunucusunda
+
+- **Kurulum (main `0f5ff3246`):** 20 dosya (köprü, çözücü/derleyici/kapı/eleştirmen, bilgi paketi `caveats/logo-timas.md` + `rules/crm-timas.md`, kapı betikleri), md5 denetimi: canlı dosyalar kurulum öncesi main'le aynıydı; `._*` 0; köprü 160 sn'de hazır, hata yok. Aynı yeniden başlatmada canlı hazır cevap klasöründen 90 test kaydı (timasai/ayse/mehmet/zekiai) silindi.
+- **Canlı doğrulama:** «Etkinliklere harcadığımız toplam gider bütçenin neresinde» → 4.831.871,56 ₺ (bütçeli 0). «Etkinlik giderleri yazar bazında» → 5 yazar satırı (CRM etkinlik kartı); bu denemede sıralama referanstan ayrıldı (Ahmed Günbay Yıldız yok) ve etkinlik sayısı gideri olmayan etkinlikleri de saydı, kapsam notu cevapta görünmedi — kapıda 3/3 geçmişti; açık iş.
+- **Not:** canlı klasörde timasai kaydı yeniden oluşuyor — başka oturumların timasai kısa oturumuyla yaptığı canlı denemeler (4 açık oturum); bu oturumun sorguları çağıran anahtarıyla, çerezsiz.
+
 ## 2026-09-29 (21:00) — ZEKI AI CHAT ikinci bağımsız dış çıkış taraması
 
 - Kullanıcının «tekrar bak başka kalmasın» talebiyle paralel kaynak/tarayıcı/ağ incelemesi. Ek yollar kapatıldı: worker yanlış kök scope ve dış URL/redirect; eski decrypted cache'den geniş/CSP'siz cevap; aynı-origin iframe; geniş ESTABLISHED izni; UFW restore sırası; chat/Mongo DNS fallback.
