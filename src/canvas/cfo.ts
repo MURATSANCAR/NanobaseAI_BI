@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, isAuthBlocked, runSql } from './engine';
 import type { DbTiming } from './DbTiming';
 import { httpErrorText } from './httpError';
+import { msUntilNextRefresh } from './refreshSchedule';
 import type { KaynakSorgu, Kaynaklar } from './components/sqlInfo';
 
 /**
@@ -310,7 +311,7 @@ export function useCfoData(): CfoData {
     queryFn: fetchSnapshot,
     enabled: ENGINE_ENABLED,
     staleTime: 60_000,
-    refetchInterval: () => (isAuthBlocked() ? false : 3 * 60_000),
+    refetchInterval: () => (isAuthBlocked() ? false : msUntilNextRefresh()),   // 07:00 ve 12:00 (İstanbul)
     retry: false,
   });
   const snapFailed = snap.isError && !(snap.error instanceof EngineAuthError);

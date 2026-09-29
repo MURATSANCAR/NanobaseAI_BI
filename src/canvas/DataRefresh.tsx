@@ -3,9 +3,11 @@ import { useIsFetching, useQueryClient, type Query } from '@tanstack/react-query
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { requestFreshData } from './engine';
+import { REFRESH_NOTE } from './refreshSchedule';
 
-/** Veri gösteren bütün ekranların otomatik yenileme aralığı (main.tsx varsayılanı). */
-export const DATA_REFRESH_MS = 5 * 60_000;
+/** Ekrandan ayrılıp dönünce verinin taze sayıldığı süre (main.tsx varsayılanı; sunucunun hazır cevabı zaten bu saatlerde tazelenir). */
+export const DATA_STALE_MS = 5 * 60_000;
+
 
 const SESSION_KEY = 'timas-session';
 const counted = (q: Query) => q.getObserversCount() > 0 && q.queryKey[0] !== SESSION_KEY;
@@ -27,15 +29,14 @@ function useOldestUpdate(): number {
 /**
  * Üst şeritteki "Verileri yenile": açık ekranın bütün sorgularını kaynaktan yeniden okutur
  * (köprü önbelleği atlanır). Sayfa yenilenmez; filtreler, yazılmış metin ve kaydırma yerinde kalır.
- * Yanında son güncelleme saati ve otomatik yenileme aralığı yazar.
+ * Yanında son güncelleme saati ve otomatik yenileme saatleri (07:00, 12:00) yazar.
  */
 export default function DataRefresh() {
   const qc = useQueryClient();
   const fetching = useIsFetching({ predicate: counted }) > 0;
   const [manual, setManual] = useState(false);
   const oldest = useOldestUpdate();
-  const minutes = Math.round(DATA_REFRESH_MS / 60_000);
-  const note = `${minutes} dk'da bir otomatik yenilenir`;
+  const note = REFRESH_NOTE;
   const when = oldest ? `Güncellendi ${clock.format(oldest)}` : 'Veriler alınıyor';
 
   const refresh = async () => {

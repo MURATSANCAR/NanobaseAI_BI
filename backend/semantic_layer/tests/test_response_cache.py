@@ -112,9 +112,9 @@ def _stale(cl, cache, c):
     a = {"cookie": "timas_session=a"}
     cl.get("/api/v1/mod/slow", headers=a)
     for e in cache._items.values():
-        e.at -= RC.FRESH_SECONDS + 1
+        e.at = RC.last_refresh() - 1
     r = cl.get("/api/v1/mod/slow", headers=a)
-    assert r.json()["n"] == 1 and int(r.headers["x-data-age"]) >= RC.FRESH_SECONDS
+    assert r.json()["n"] == 1 and int(r.headers["x-data-age"]) >= 1
     for _ in range(100):                      # arka plan tazelemesi kaydı yazana kadar
         if cache.view()["revalidated"] >= 1:
             break
@@ -128,7 +128,7 @@ def test_forgotten_entries_leave_and_due_skips_fresh():
     cache.put(("u", "/api/v1/x", ""), b"{}", [], 200, 2.0, {"cookie": "timas_session=u"})
     assert cache.due() == []
     e = cache._items[("u", "/api/v1/x", "")]
-    e.at -= RC.FRESH_SECONDS + 1
+    e.at = RC.last_refresh() - 1
     assert len(cache.due()) == 1
     e.asked -= RC.KEEP_SECONDS + 1
     assert cache.due() == [] and cache.view()["entries"] == 0
@@ -144,7 +144,7 @@ def test_ready_answers_survive_a_restart_without_cookies(tmp_path):
     again = RC.ResponseCache(str(tmp_path))                                              # yeniden başlatma
     e = again.get(key)
     assert e is not None and e.body == b'{"n": 1}' and e.replay == {} and again.view()["loaded"] == 1
-    e.at -= RC.FRESH_SECONDS + 1
+    e.at = RC.last_refresh() - 1
     assert again.due() == []              # çerezsiz kayıt arkada değil, kişinin açılışında tazelenir
     again.invalidate("/api/v1/mod")
     assert list(tmp_path.iterdir()) == [] and RC.ResponseCache(str(tmp_path)).get(key) is None
@@ -160,3 +160,20 @@ def test_disk_answers_of_another_code_version_are_dropped(tmp_path, monkeypatch)
     again = RC.ResponseCache(str(tmp_path))
     assert again.get(key) is None and again.stats["dropped"] == 1
     assert not list(tmp_path.glob("*.meta.json"))
+
+
+def test_refresh_is_at_seven_and_noon_istanbul():
+    """Hazır cevap her gün 07:00 ve 12:00'de (İstanbul) tazelenir; arada 5 dakikada bir değil."""
+    from datetime import datetime
+
+    def ts(h, m):
+        return datetime(2026, 9, 29, h, m, tzinfo=RC.TZ).timestamp()
+
+    assert RC.REFRESH_TIMES == ((7, 0), (12, 0))
+    assert RC.last_refresh(ts(9, 30)) == ts(7, 0)
+    assert RC.last_refresh(ts(12, 0)) == ts(12, 0)
+    assert RC.last_refresh(ts(23, 59)) == ts(12, 0)
+    assert RC.last_refresh(ts(6, 59)) == datetime(2026, 9, 28, 12, 0, tzinfo=RC.TZ).timestamp()
+    assert not RC.is_stale(ts(7, 5), ts(11, 59))       # 07:05'te üretilen, 12:00'ye kadar taze
+    assert RC.is_stale(ts(7, 5), ts(12, 1))            # 12:00'den sonra bayat
+    assert RC.is_stale(ts(11, 0), ts(7, 0) + 86400)    # ertesi sabah 07:00'de bayat

@@ -2,15 +2,17 @@
 
 Sorun: bazı ekranlar açılışta kaynağı bekliyordu (ölçüm 2026-09-28, 72 menü ekranı: yeni kitap 53 sn, SEO iş listesi
 17 sn, veri sözlüğü 13 sn, kişi rehberi 8–10 sn…). İstek: veri önden hazır olsun, ekranda «Yenile» ile ve kendiliğinden
-5 dakikada bir tazelensin — yalnız bir ekranda değil, benzer veri çeken hepsinde.
+5 dakikada bir tazelensin — yalnız bir ekranda değil, benzer veri çeken hepsinde. 2026-09-29 kullanıcı kararı: 5 dakikalık
+otomatik tazeleme yerine her gün 07:00 ve 12:00'de (İstanbul saati) tazelenir.
 
 Kural:
 - Yalnız **yavaş** (üretimi `SLOW_SECONDS` üstü süren) başarılı JSON GET cevabı saklanır; hızlı uçlar hiç etkilenmez.
 - Anahtar **kişi + yol + sorgu**: bir kişinin cevabı başkasına gitmez. Sayfa kapısı (oturum ve sayfa yetkisi) bu
   katmandan önce çalışır; hazır cevap yalnız kapıyı geçen isteğe verilir.
-- Saklanan cevap `FRESH_SECONDS` (5 dk) içinde ise hemen döner; daha eskiyse yine hemen döner ve aynı anda arkada
-  yeniden üretilir (aynı istek, aynı çerezle uygulamanın içinden). Son 24 saatte istenmiş cevaplar kimse açmasa da
-  5 dakikada bir arkada tazelenir; oturum düşmüşse (401/403) o kayıt bırakılır.
+- Saklanan cevap son tazeleme saatinden (`REFRESH_TIMES`: 07:00, 12:00 İstanbul) sonra üretildiyse tazedir, hemen döner;
+  daha önce üretildiyse yine hemen döner ve aynı anda arkada yeniden üretilir (aynı istek, aynı çerezle uygulamanın
+  içinden). Son 24 saatte istenmiş cevaplar kimse açmasa da 07:00 ve 12:00'de arkada tazelenir; oturum düşmüşse
+  (401/403) o kayıt bırakılır.
 - «Yenile» (üst şeritteki `X-Data-Refresh: 1` ya da ekranın kendi yenilemesi) beklemeden kaynaktan okur ve kaydı günceller.
 - Bir modülde yazma (POST/PUT/PATCH/DELETE) başarılı olunca o modülün bütün hazır cevapları hemen düşer (herkes için):
   kaydedilen şey eski cevapla görünmez.
@@ -34,13 +36,35 @@ import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import parse_qsl, urlencode
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger("semantic.response_cache")
 
-FRESH_SECONDS = 300
+#: Hazır cevapların tazelendiği saatler (İstanbul). Ortamla değişir: RESPONSE_CACHE_REFRESH_TIMES="07:00,12:00".
+TZ = ZoneInfo("Europe/Istanbul")
+REFRESH_TIMES: tuple[tuple[int, int], ...] = tuple(
+    (int(h), int(m)) for h, m in (t.strip().split(":") for t in
+                                  os.environ.get("RESPONSE_CACHE_REFRESH_TIMES", "07:00,12:00").split(",") if t.strip()))
+
+
+def last_refresh(now: Optional[float] = None) -> float:
+    """Şu andan önceki en son tazeleme saatinin zamanı (epoch)."""
+    now = time.time() if now is None else now
+    today = datetime.fromtimestamp(now, TZ).date()
+    slots = [datetime(d.year, d.month, d.day, h, m, tzinfo=TZ).timestamp()
+             for d in (today - timedelta(days=1), today) for h, m in REFRESH_TIMES]
+    return max(t for t in slots if t <= now)
+
+
+def is_stale(at: float, now: Optional[float] = None) -> bool:
+    """Cevap son tazeleme saatinden önce üretildiyse bayattır."""
+    return at < last_refresh(now)
+
+
 SLOW_SECONDS = 1.5
 KEEP_SECONDS = 24 * 3600
 MAX_BODY = 8 * 1024 * 1024
@@ -235,7 +259,7 @@ class ResponseCache:
                     forgotten.append(k)
                     continue
                 # Çerezi olmayan (yeniden başlatmadan diskten gelen) kayıt kişinin bir sonraki açılışında tazelenir.
-                if e.replay and not e.busy and now - e.at >= FRESH_SECONDS:
+                if e.replay and not e.busy and is_stale(e.at, now):
                     out.append((k, e))
         for k in forgotten:
             self._unlink(k)
@@ -323,7 +347,7 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any) -> None:
             e = cache.get(key)
             if e is not None:
                 age = time.time() - e.at
-                if age >= FRESH_SECONDS:
+                if is_stale(e.at):
                     cache.stats["stale"] += 1
                     asyncio.get_running_loop().create_task(_revalidate(key, e.replay or _replay_headers(request)))
                 else:

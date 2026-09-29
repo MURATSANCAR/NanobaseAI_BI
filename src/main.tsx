@@ -4,7 +4,8 @@ import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-qu
 import { Toaster } from 'sonner';
 import { LocaleProvider } from '@/context/LocaleContext';
 import { EngineAuthError, isAuthBlocked } from '@/canvas/engine';
-import { DATA_REFRESH_MS } from '@/canvas/DataRefresh';
+import { DATA_STALE_MS } from '@/canvas/DataRefresh';
+import { msUntilNextRefresh } from '@/canvas/refreshSchedule';
 import App from './App';
 import './index.css';
 import '@/canvas/canvas.css';
@@ -25,14 +26,15 @@ const queryClient: QueryClient = new QueryClient({
     },
   }),
   // Veri gösteren her ekran: alınan veri 5 dk taze sayılır ve ekrandan ayrılınca 30 dk bellekte kalır,
-  // menüler arası geçişte yeniden beklenmez. Açık ekranın verisi 5 dk'da bir arka planda yenilenir;
-  // sayfa yenilenmez, bileşen yeniden kurulmaz. Kendi aralığını veren sorgu (yoklama) kendi değerini korur.
+  // menüler arası geçişte yeniden beklenmez. Açık ekranın verisi her gün 07:00 ve 12:00'de (İstanbul) arka planda
+  // yenilenir (kullanıcı kararı 2026-09-29; önce 5 dk'da birdi); sayfa yenilenmez, bileşen yeniden kurulmaz.
+  // Kendi aralığını veren sorgu (iş ilerlemesi yoklaması) kendi değerini korur.
   // Üst şeritteki "Verileri yenile" düğmesi (DataRefresh) aynı sorguları istek anında tazeler.
   defaultOptions: {
     queries: {
-      staleTime: DATA_REFRESH_MS,
+      staleTime: DATA_STALE_MS,
       gcTime: 30 * 60_000,
-      refetchInterval: () => (isAuthBlocked() ? false : DATA_REFRESH_MS),
+      refetchInterval: () => (isAuthBlocked() ? false : msUntilNextRefresh()),
       refetchIntervalInBackground: true,
       retry: 1,
       refetchOnWindowFocus: false,
