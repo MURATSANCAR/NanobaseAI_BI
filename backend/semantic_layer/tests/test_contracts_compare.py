@@ -574,3 +574,11 @@ def test_word_reports_open_and_carry_text():
     d.update({"a": {"title": "A"}, "b": {"title": "B"}})
     xml2 = zipfile.ZipFile(io.BytesIO(RP.diff_docx(d))).read("word/document.xml").decode()
     assert "<w:strike/>" in xml2 and "Film hakları" in xml2 and "Yalnız incelenen belgede" in xml2
+
+
+def test_compare_endpoints_bypass_response_cache():
+    from semantic_bridge import response_cache as RC
+
+    assert not RC.cacheable_path("/api/v1/editorial/contracts/compare/meta")
+    assert not RC.cacheable_path("/api/v1/editorial/contracts/compare/scan")
+    assert RC.cacheable_path("/api/v1/editorial/contracts/records")
