@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Yetki üye okuması 07:00/12:00; departmansız CRM kullanıcıları Excel'i aynı saatlerde e-postayla
+
+- **Karar (kullanıcı):** AD/CRM üye okuması 15 dakikada bir değil, her gün 07:00 ve 12:00'de; aynı saatlerde CRM'de departmansız kullanıcı listesi Excel olarak e-postayla.
+- **Üye okuması:** `timas-admin-group.timer` → `OnCalendar` 07:00 ve 12:00 (`Persistent=true`, açılışta bir kez). Aynı tur yönetici AD grubunu da tazeler; gruba eklenen/çıkarılan kişi değişikliği bir sonraki okumada yansır (en uzun 12:00 → ertesi 07:00). Hemen için Yetkiler → «Üyeleri şimdi oku»; bağ eklenince o bağ zaten hemen okunur.
+- **Liste:** `crm_unassigned.py` — kök iş birimi (`ParentBusinessUnitId IS NULL`, ada bakılmaz) + etkin + giriş yapabilen + AD hesaplı CRM kullanıcıları; AD birimi kişi listesinden, roller ayrı sorguyla (CRM SQL Server'ında `STRING_AGG` yok). İlk ölçüm 107, dört saat sonra 105 kişi.
+- **Uçlar:** `GET /api/v1/access/crm-unassigned.xlsx` (Yetkiler başlığında «Departmansız CRM kullanıcıları» indirme, denetim kaydı), `POST /api/v1/access/crm-unassigned/send` (caller token ya da yönetici). Zamanlayıcı `timas-crm-unassigned.timer/.service`; VM'de `jobs.py` dosyadan kendiliğinden okur.
+- **Alıcılar:** Ayarlar → Bildirim ve raporlar → `CRM_UNASSIGNED_TO` (virgülle; `ALERT_RECIPIENT_DOMAINS` süzgeci). Boşsa CRM'e hiç gidilmez.
+- **Testler:** `test_crm_unassigned.py` (yeni, 4), `test_access*.py`, `test_vm_jobs_schedule.py` — 30 geçti; vitest ekran bilgisi + yönetim 10 geçti.
+
 ## 2026-09-29 (öğleden sonra) — Geri alınamaz silme ve kapatma işlemlerine onay adımı
 
 - **Neden:** Sabahki sadeleştirme turunda bazı düğmelerin etiketine «geri alınamaz» yazıldı ama düğme tıklanınca işlem onay sormadan çalışıyordu.
