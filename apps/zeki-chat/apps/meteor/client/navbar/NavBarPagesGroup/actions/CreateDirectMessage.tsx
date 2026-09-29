@@ -73,7 +73,7 @@ const CreateDirectMessage = ({ onClose }: CreateDirectMessageProps) => {
 								rules={{
 									required: t('Direct_message_creation_error'),
 									validate: (users) =>
-										users.length + 1 > directMaxUsers
+										directMaxUsers > 0 && users.length + 1 > directMaxUsers
 											? t('error-direct-message-max-user-exceeded', { maxUsers: directMaxUsers })
 											: undefined,
 								}}

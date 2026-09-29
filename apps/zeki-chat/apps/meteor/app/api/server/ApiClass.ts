@@ -412,6 +412,10 @@ export class APIClass<TBasePath extends string = '', TOperations extends Record<
 	}
 
 	protected async shouldVerifyRateLimit(route: string, userId?: string): Promise<boolean> {
+		// Company users have no request quota in the local product. Anonymous/authentication protection stays enabled.
+		if (process.env.ZEKI_LOCAL_ONLY === 'true' && userId) {
+			return false;
+		}
 		return (
 			rateLimiterDictionary.hasOwnProperty(route) &&
 			settings.get<boolean>('API_Enable_Rate_Limiter') === true &&

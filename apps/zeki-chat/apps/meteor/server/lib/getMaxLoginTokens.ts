@@ -1,5 +1,4 @@
-const maxLoginTokens = parseInt(String(process.env.MAX_RESUME_LOGIN_TOKENS)) || 50;
-
+/** Sessions expire or are revoked explicitly; opening another device never evicts an existing session. */
 export function getMaxLoginTokens(): number {
-	return maxLoginTokens;
+	return Number.POSITIVE_INFINITY;
 }

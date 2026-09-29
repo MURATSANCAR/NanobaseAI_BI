@@ -737,13 +737,13 @@ const chatEndpoints = API.v1
 			const { text, attachments } = this.bodyParams;
 			const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? 0;
 
-			if (text && text.length > maxAllowedSize) {
+			if (maxAllowedSize > 0 && text && text.length > maxAllowedSize) {
 				return API.v1.failure('error-message-size-exceeded');
 			}
 
 			if (attachments && attachments.length > 0) {
 				for (const attachment of attachments) {
-					if (attachment.text && attachment.text.length > maxAllowedSize) {
+					if (maxAllowedSize > 0 && attachment.text && attachment.text.length > maxAllowedSize) {
 						return API.v1.failure('error-message-size-exceeded');
 					}
 				}

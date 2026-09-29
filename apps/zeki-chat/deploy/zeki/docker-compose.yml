@@ -19,6 +19,12 @@ services:
       PORT: "3000"
       DEPLOY_METHOD: docker
       ZEKI_LOCAL_ONLY: "true"
+      # Company messaging has no seat, message, upload-size or group-DM quota.
+      OVERWRITE_SETTING_Message_MaxAllowedSize: "-1"
+      OVERWRITE_SETTING_DirectMesssage_maxUsers: "-1"
+      OVERWRITE_SETTING_FileUpload_MaxFileSize: "-1"
+      OVERWRITE_SETTING_Message_AllowConvertLongMessagesToAttachment: "false"
+      OVERWRITE_SETTING_RetentionPolicy_Enabled: "false"
       OVERWRITE_SETTING_Zeki_Local_Only: "true"
       OVERWRITE_SETTING_API_Embed: "false"
       OVERWRITE_SETTING_Push_enable: "false"

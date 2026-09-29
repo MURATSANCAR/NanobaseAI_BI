@@ -165,7 +165,7 @@ export const createMessageSettings = () =>
 			type: 'int',
 			public: true,
 		});
-		await this.add('Message_MaxAllowedSize', 5000, {
+		await this.add('Message_MaxAllowedSize', -1, {
 			type: 'int',
 			public: true,
 		});
@@ -238,7 +238,7 @@ export const createMessageSettings = () =>
 			values: MessageTypesValues,
 		});
 
-		await this.add('DirectMesssage_maxUsers', 8, {
+		await this.add('DirectMesssage_maxUsers', -1, {
 			type: 'int',
 			public: true,
 		});

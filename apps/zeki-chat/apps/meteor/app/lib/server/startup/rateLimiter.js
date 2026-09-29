@@ -61,6 +61,11 @@ RateLimiter.prototype.check = function (input) {
 		numInvocationsLeft: Infinity,
 	};
 
+	// A validated local session has no messaging request quota. Login attempts still use the normal rules.
+	if (process.env.ZEKI_LOCAL_ONLY === 'true' && session?.userId && input.name !== 'login') {
+		return reply;
+	}
+
 	const matchedRules = self._findAllMatchingRules(input);
 	_.each(matchedRules, (rule) => {
 		// ==== BEGIN OVERRIDE ====

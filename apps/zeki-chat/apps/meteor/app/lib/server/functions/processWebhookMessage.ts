@@ -43,7 +43,8 @@ export type WebhookResponseItem = WebhookFailureItem | WebhookSuccessItem;
 
 export const validateWebhookMessage = async (message: Partial<IMessage>, room: IRoom | null, user: IUser) => {
 	if (message.msg) {
-		if (message.msg.length > (settings.get<number>('Message_MaxAllowedSize') ?? 0)) {
+		const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? -1;
+		if (maxAllowedSize > 0 && message.msg.length > maxAllowedSize) {
 			throw Error('error-message-size-exceeded');
 		}
 	}

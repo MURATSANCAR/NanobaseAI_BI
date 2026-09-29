@@ -198,7 +198,7 @@ export class SlackImporter extends Importer {
 				importIds: [channel.id],
 				name: channel.name,
 				users: this._replaceSlackUserIds(channel.members),
-				t: channel.members.length > maxUsers ? 'p' : 'd',
+				t: maxUsers > 0 && channel.members.length > maxUsers ? 'p' : 'd',
 				topic: channel.topic?.value || undefined,
 				description: channel.purpose?.value || undefined,
 				ts: channel.created ? new Date(channel.created * 1000) : undefined,

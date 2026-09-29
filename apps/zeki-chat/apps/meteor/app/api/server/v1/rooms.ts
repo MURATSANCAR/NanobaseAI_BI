@@ -333,7 +333,8 @@ API.v1.addRoute(
 				throw new Meteor.Error('invalid-file');
 			}
 
-			if ((this.bodyParams.description?.length ?? 0) > settings.get<number>('Message_MaxAllowedSize')) {
+			const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? -1;
+			if (maxAllowedSize > 0 && (this.bodyParams.description?.length ?? 0) > maxAllowedSize) {
 				throw new Meteor.Error('error-message-size-exceeded');
 			}
 
@@ -446,7 +447,8 @@ const roomsSaveDraftEndpoint = API.v1.post(
 	async function action() {
 		const { rid, draft } = this.bodyParams;
 
-		if (draft.length > (settings.get<number>('Message_MaxAllowedSize') ?? 0)) {
+		const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? -1;
+		if (maxAllowedSize > 0 && draft.length > maxAllowedSize) {
 			return API.v1.failure('error-message-size-exceeded');
 		}
 

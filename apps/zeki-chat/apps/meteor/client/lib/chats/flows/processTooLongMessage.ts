@@ -10,7 +10,7 @@ import type { ChatAPI } from '../ChatAPI';
 export const processTooLongMessage = async (chat: ChatAPI, { msg }: Pick<IMessage, 'msg'>): Promise<boolean> => {
 	const maxAllowedSize = settings.peek('Message_MaxAllowedSize');
 
-	if (msg.length <= maxAllowedSize) {
+	if (maxAllowedSize <= 0 || msg.length <= maxAllowedSize) {
 		return false;
 	}
 	const fileUploadsEnabled = settings.peek('FileUpload_Enabled');

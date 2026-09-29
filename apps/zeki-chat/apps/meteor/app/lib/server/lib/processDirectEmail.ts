@@ -29,7 +29,8 @@ export const processDirectEmail = async function (email: ParsedMail): Promise<vo
 
 	let msg = email.text.split('\n\n').join('\n');
 
-	if (msg && msg.length > (settings.get('Message_MaxAllowedSize') as number)) {
+	const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? -1;
+	if (msg && maxAllowedSize > 0 && msg.length > maxAllowedSize) {
 		return;
 	}
 	const emailAdress = email.from.value[0].address;

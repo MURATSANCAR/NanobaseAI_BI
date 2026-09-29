@@ -7,7 +7,7 @@ export const createFileUploadSettings = () =>
 			public: true,
 		});
 
-		await this.add('FileUpload_MaxFileSize', 104857600, {
+		await this.add('FileUpload_MaxFileSize', -1, {
 			type: 'int',
 			public: true,
 			i18nDescription: 'FileUpload_MaxFileSizeDescription',

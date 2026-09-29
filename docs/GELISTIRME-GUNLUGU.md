@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — Şirket içi sohbet kullanım sınırları kaldırılıyor
+
+- Kullanıcı isteği: lisans uçları ve kullanıcı/mesaj/dosya/jeton kotaları olmasın. Eski lisans route kaydı yok; 404 genel bulunamadı yanıtı.
+- Mesaj 5.000 karakter, dosya 100 MB, grup DM 8 kişi sınırları sınırsız (-1); REST/DDP/istemci/diğer mesaj tüketicileri düzeltildi. Yerel doğrulanmış kullanıcı istek kotası ve 50 jeton budaması kaldırıldı; erişim ve giriş güvenliği korunur. Saklama politikası kapalı.
+- Yerel test yapılmadı. Yeni sürümün sunucu derlemesi ve gerçek API/DB/tarayıcı kabulü henüz **DOĞRULANAMADI**.
+
 ## 2026-09-29 — Sohbet tam yerel temizlik: nihai canlı kabul geçti
 
 - Yayındaki imaj `zeki-ai-chat:8.5.3-6c6d214d4`, kaynak main'den. 9.523 kaynak dosyası birebir; imajda 118.737 dosya/61 yerel manifest tarandı. Ürüne ait eski lisans alanları kaldırıldı.

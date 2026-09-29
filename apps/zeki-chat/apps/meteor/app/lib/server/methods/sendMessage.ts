@@ -63,7 +63,8 @@ export async function executeSendMessage(
 	}
 
 	if (message.msg) {
-		if (message.msg.length > (settings.get<number>('Message_MaxAllowedSize') ?? 0)) {
+		const maxAllowedSize = settings.get<number>('Message_MaxAllowedSize') ?? -1;
+		if (maxAllowedSize > 0 && message.msg.length > maxAllowedSize) {
 			throw new Meteor.Error('error-message-size-exceeded', 'Message size exceeds Message_MaxAllowedSize', {
 				method: 'sendMessage',
 			});

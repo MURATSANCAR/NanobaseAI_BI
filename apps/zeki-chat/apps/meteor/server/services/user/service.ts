@@ -9,6 +9,9 @@ export class UserService extends ServiceClassInternal implements IUserService {
 	protected name = 'user';
 
 	async ensureLoginTokensLimit(uid: string): Promise<void> {
+		if (!Number.isFinite(getMaxLoginTokens())) {
+			return;
+		}
 		const [{ tokens } = { tokens: [] }] = await Users.findAllResumeTokensByUserId(uid);
 		if (tokens.length < getMaxLoginTokens()) {
 			return;
