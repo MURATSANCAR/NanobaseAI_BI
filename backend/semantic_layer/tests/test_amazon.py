@@ -154,6 +154,7 @@ def test_international_by_country_currency_and_same_period(engine, monkeypatch):
     assert (de["netCiro"], de["gecenYil"], de["gecenYilAyniDonem"], de["cari"]) == (900.0, 1000.0, 800.0, 1)
     y1 = next(x for x in out["items"] if x["cari"] == "Y1")
     assert (y1["doviz"], y1["dovizNet"], y1["gecenYil"], y1["netAdet"]) == ("EUR", 30.0, 1000.0, 9.0)
+    assert sum(x["gecenYilAyniDonem"] for x in out["items"] if x["ulke"] == "ALMANYA") == 800.0   # cari satırı da aynı dönem
     assert out["dovizToplam"] == {"EUR": 30.0} and out["toplam"]["netCiro"] == 1400.0
     assert A.international(engine, TN, ulke="HOLLANDA")["toplam"]["netCiro"] == 500.0
     with pytest.raises(A.AmazonError):

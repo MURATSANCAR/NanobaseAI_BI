@@ -488,7 +488,7 @@ def orders(engine: sa.engine.Engine, tenant: str, durum: str = "", bas: str = ""
     packs: dict[str, set[str]] = defaultdict(set)
     books: dict[str, dict[str, Any]] = {}
     items = []
-    late = 0
+    late: set[str] = set()   # geciken paket: satırı gecikmiş paket bir kez sayılır (çok kitaplı paket satır sayısı kadar değil)
     for r in rows:
         k = r.durum or "Belirtilmemiş"
         packs[k].add(r.paket_id)
@@ -501,7 +501,8 @@ def orders(engine: sa.engine.Engine, tenant: str, durum: str = "", bas: str = ""
         bk["tutar"] += r.tutar or 0
         bk["paket"] += 1
         is_late = _late(r, now)
-        late += is_late
+        if is_late:
+            late.add(r.paket_id)
         items.append({"paketId": r.paket_id, "siparisNo": r.siparis_no, "tarih": PC.iso(r.siparis_tarihi), "durum": r.durum,
                       "kargoFirma": r.kargo_firma, "kargoDurum": r.kargo_durum, "termin": PC.iso(r.termin), "gecikti": is_late,
                       "barkod": r.barkod, "stokKodu": code, "ad": b.name(code, r.urun_adi), "adet": r.adet, "tutar": r.tutar})
@@ -514,7 +515,7 @@ def orders(engine: sa.engine.Engine, tenant: str, durum: str = "", bas: str = ""
     items = PC.search(items, q, ("ad", "barkod", "paketId", "siparisNo"))
     items.sort(key=lambda x: x["tarih"] or "", reverse=True)
     top = sorted(books.values(), key=lambda x: -x["adet"])
-    return PC.page(items, p, durumlar=dict(sorted(by_status.items(), key=lambda kv: -kv[1]["paket"])), geciken=late,
+    return PC.page(items, p, durumlar=dict(sorted(by_status.items(), key=lambda kv: -kv[1]["paket"])), geciken=len(late),
                    paketSayisi=len({r.paket_id for r in rows}), adet=sum(r.adet or 0 for r in rows),
                    tutar=round(sum(r.tutar or 0 for r in rows), 2), kitaplar=top, aralik=_range(rows, "siparis_tarihi"))
 

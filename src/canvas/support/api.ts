@@ -175,7 +175,7 @@ export type Quality = {
   topics: Array<{ klass: string; label: string; count: number; previous: number }>;
   weekly: Array<{ week: string; counts: Record<string, number> }>;
   repeat: { count: number; days: number; rate: number | null };
-  zeki: { classified: number; unsure: number; waiting: number; corrected: number; noFaq: number; drafts: number; sentAsIs: number };
+  zeki: { classified: number; unsure: number; waiting: number; corrected: number; noFaq: number; drafts: number; used: number; sentAsIs: number };
   agents: Array<{ agent: string; open: number }> | null;
 };
 

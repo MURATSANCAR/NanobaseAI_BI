@@ -125,7 +125,7 @@ export default function AmazonInternational() {
                 <EmptyHint title="Bu seçimde yurtdışı satış yok" why="Seçilen yıl ve ülkede yurtdışı carilere kesilmiş fatura bulunamadı. Başka bir yıl ya da ülke seçin." />
               ) : (
               <TableWrap>
-                <thead><tr><th className={th}>Cari</th><th className={th}>Ülke</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Döviz</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d?.kaynaklar} alan="items">Geçen yıl</InfoLabel><Explain label="Geçen yıl">Aynı carinin geçen yılın tamamındaki net cirosu (TL). Bu yılın rakamı yalnız bugüne kadar olduğu için doğrudan kıyaslamayın; aynı dönem kıyası üstteki kartta.</Explain></span></th></tr></thead>
+                <thead><tr><th className={th}>Cari</th><th className={th}>Ülke</th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net ciro</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Döviz</InfoLabel></th><th className={`${th} text-right`}><InfoLabel k={d?.kaynaklar} alan="items">Net adet</InfoLabel></th><th className={`${th} text-right`}><span className="inline-flex items-center gap-1"><InfoLabel k={d?.kaynaklar} alan="items">Geçen yıl aynı dönem</InfoLabel><Explain label="Geçen yıl aynı dönem">Aynı carinin geçen yıl Ocak–{AY[d.sonAy - 1]} arasındaki net cirosu (TL); bu yılın rakamıyla aynı aylar kıyaslanır. Altındaki küçük rakam geçen yılın tamamıdır.</Explain></span></th></tr></thead>
                 <tbody>
                   {d.items.map((x) => (
                     <tr key={`${x.cari}-${x.ulke}-${x.doviz}`} className="border-t border-slate-100">
@@ -134,7 +134,7 @@ export default function AmazonInternational() {
                       <td className={`${td} text-right font-mono tabular-nums`}>{tl(x.netCiro)}</td>
                       <td className={`${td} text-right font-mono tabular-nums`}>{x.doviz === 'TL' ? '—' : money(x.dovizNet, x.doviz)}</td>
                       <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(x.netAdet)}</td>
-                      <td className={`${td} text-right font-mono tabular-nums`}>{tl(x.gecenYil)}</td>
+                      <td className={`${td} text-right font-mono tabular-nums`}>{tl(x.gecenYilAyniDonem)}{d.sonAy < 12 && <div className="text-[11px] text-canvas-muted">tamamı {tl(x.gecenYil)}</div>}</td>
                     </tr>
                   ))}
                 </tbody>

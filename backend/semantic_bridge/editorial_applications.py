@@ -538,8 +538,45 @@ def _fold(text: str) -> str:
     return str(text).replace("İ", "i").replace("I", "ı").lower()
 
 
-def _waiting_days(r: Any, today: date) -> int:
-    ref = r.updated_at or r.created_at
+def _status_after(action: str, assigned: bool) -> Optional[str]:
+    """Kayıt satırının başvuruyu götürdüğü durum; durumu değiştirmeyen iş (düzenleme, dosya, yazı, oy) None."""
+    if action == "olusturuldu":
+        return "yeni"
+    if action == "atandi":
+        return "degerlendirmede"
+    if action == "yeniden_acildi":   # reopen(): editörü olan başvuru değerlendirmeye, olmayan yeniye döner
+        return "degerlendirmede" if assigned else "yeni"
+    if action in ("gundeme_alindi", "kurul_karari_geri"):
+        return "kurulda"
+    if action in ("gundemden_cikti", "kurul_ertelendi"):
+        return "kurul_bekliyor"
+    if action.startswith("karar_"):
+        return EDITOR_ACTIONS.get(action[len("karar_"):])
+    if action.startswith("kurul_"):
+        return BOARD_TO_STATUS.get(action[len("kurul_"):])
+    return None
+
+
+def _step_since(c: Any, ids: list[str]) -> dict[str, datetime]:
+    """Başvurunun bugünkü adımına geldiği an: işlem kaydı baştan oynatılır, durumun son değiştiği satır.
+    Güncelleme zamanı bu iş için kullanılmaz — düzenleme, dosya, yazı ve oy durumu değiştirmeden onu yeniler."""
+    if not ids:
+        return {}
+    since: dict[str, datetime] = {}
+    state: dict[str, Optional[str]] = {}
+    assigned: set[str] = set()
+    for row in c.execute(sa.select(LOG.c.app_id, LOG.c.at, LOG.c.action).where(LOG.c.app_id.in_(ids))
+                         .order_by(LOG.c.app_id, LOG.c.at, LOG.c.id)):
+        nxt = _status_after(row.action, row.app_id in assigned)
+        if row.action == "atandi":
+            assigned.add(row.app_id)
+        if nxt is not None and nxt != state.get(row.app_id):
+            state[row.app_id], since[row.app_id] = nxt, row.at
+    return since
+
+
+def _waiting_days(r: Any, since: Optional[datetime], today: date) -> int:
+    ref = since or r.created_at
     ref = (ref if ref.tzinfo else ref.replace(tzinfo=timezone.utc)).date() if isinstance(ref, datetime) else today
     return max(0, (today - ref).days)
 
@@ -569,6 +606,7 @@ def listing(engine: sa.engine.Engine, tenant: str, user: str, *, view: str = "ku
         evals = {(e.app_id, e.round): e for e in c.execute(sa.select(EVALS).where(EVALS.c.app_id.in_(ids)))} if ids else {}
         files = dict(c.execute(sa.select(FILES.c.app_id, sa.func.count()).where(FILES.c.app_id.in_(ids)).group_by(FILES.c.app_id)).all()) if ids else {}
         sessions = _open_agenda(c, ids)
+        steps = _step_since(c, [r.id for r in rows if r.status in QUEUE])
     today = _now().date()
     items = []
     for r in rows:
@@ -581,7 +619,7 @@ def listing(engine: sa.engine.Engine, tenant: str, user: str, *, view: str = "ku
             "mine": bool(user) and r.evaluator == user, "files": int(files.get(r.id, 0)),
             "evaluation": {"submitted": bool(e.submitted_at), "contentScore": e.content_score,
                            "recommendation": e.recommendation} if e is not None else None,
-            "session": sessions.get(r.id), "waitingDays": _waiting_days(r, today) if r.status in QUEUE else None,
+            "session": sessions.get(r.id), "waitingDays": _waiting_days(r, steps.get(r.id), today) if r.status in QUEUE else None,
             "decidedAt": _iso(r.decided_at), "decisionNote": r.decision_note,
         })
     return {"items": items, "counts": counts, "view": view,

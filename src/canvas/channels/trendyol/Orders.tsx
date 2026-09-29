@@ -41,9 +41,9 @@ function OrdersList({ bas, bit, q, canExport }: { bas: string; bit: string; q: s
           <Kpi label="Tutar" value={tl(d.tutar)} help="Dosyadaki faturalanacak tutar"
             explain="Sipariş dosyasındaki satırların tutar toplamı; Trendyol'un dosyada yazdığı rakamdır, Logo faturası değildir."
             info={<SqlInfo k={d?.kaynaklar} alan="tutar" label="Tutar" />} />
-          <Kpi label="Geciken" value={fmtInt(d.geciken)} help="Kargoya son gün geçti, kargoya verilmedi"
-            explain="Trendyol'un verdiği kargoya teslim son günü geçtiği hâlde henüz kargoya verilmemiş, iptal ya da teslim olmamış sipariş satırları. Gecikme mağaza puanını düşürür."
-            info={<SqlInfo k={d?.kaynaklar} alan="geciken" label="Geciken" />} />
+          <Kpi label="Geciken paket" value={fmtInt(d.geciken)} help="Kargoya son gün geçti, kargoya verilmedi"
+            explain="Trendyol'un verdiği kargoya teslim son günü geçtiği hâlde henüz kargoya verilmemiş, iptal ya da teslim olmamış paketler; birkaç kitaplı paket bir kez sayılır. «Geciken» sekmesi bu paketlerin kitap satırlarını listeler. Gecikme mağaza puanını düşürür."
+            info={<SqlInfo k={d?.kaynaklar} alan="geciken" label="Geciken paket" />} />
         </KpiRow>
       )}
       <Panel>

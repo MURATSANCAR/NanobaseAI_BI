@@ -70,7 +70,7 @@ export type Intl = {
   yil: number;
   sonAy: number;
   yillar: number[];
-  items: Array<{ cari: string; unvan: string | null; ulke: string; doviz: string; netCiro: number; netAdet: number; dovizNet: number; fatura: number; gecenYil: number }>;
+  items: Array<{ cari: string; unvan: string | null; ulke: string; doviz: string; netCiro: number; netAdet: number; dovizNet: number; fatura: number; gecenYil: number; gecenYilAyniDonem: number }>;
   ulkeler: Array<{ ulke: string; netCiro: number; netAdet: number; gecenYil: number; gecenYilAyniDonem: number; cari: number }>;
   dovizToplam: Record<string, number>;
   aylik: Array<{ ay: number; buYil: number; gecenYil: number }>;

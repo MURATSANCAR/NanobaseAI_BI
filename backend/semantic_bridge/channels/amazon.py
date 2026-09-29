@@ -452,7 +452,8 @@ def _net(r: Any) -> tuple[float, float]:
 
 def international(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = None, ulke: str = "") -> dict[str, Any]:
     """Yurtdışı karne: cari × ülke × döviz (seçilen yıl, geçen yıl kıyaslı), ülke özeti, aylık seyir. TL tutar LINENET;
-    döviz tutarı fatura kuruyla. Geçen yıl tam yıl; yıl kısmi ise geçen yılın aynı ayına kadar olan toplam da verilir."""
+    döviz tutarı fatura kuruyla. Geçen yıl tam yıl; yıl kısmi ise geçen yılın aynı ayına kadar olan toplam da verilir
+    (toplamda, ülkede ve cari satırında `gecenYilAyniDonem`; bu yılla kıyas bununla yapılır)."""
     m = _need_read(engine, tenant)
     years = sorted(int(y) for y in m.get("years") or [])
     if not years:
@@ -474,7 +475,8 @@ def international(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = No
             continue
         nc, na = _net(r)
         a = by_key.setdefault((r.cari, country, r.doviz), {"cari": r.cari, "unvan": r.unvan, "ulke": country, "doviz": currency(r.doviz),
-                                                           "netCiro": 0.0, "netAdet": 0.0, "dovizNet": 0.0, "fatura": 0, "gecenYil": 0.0})
+                                                           "netCiro": 0.0, "netAdet": 0.0, "dovizNet": 0.0, "fatura": 0, "gecenYil": 0.0,
+                                                           "gecenYilAyniDonem": 0.0})
         a["unvan"] = a["unvan"] or r.unvan
         if r.yil == y:
             a["netCiro"] += nc
@@ -491,6 +493,7 @@ def international(engine: sa.engine.Engine, tenant: str, yil: Optional[int] = No
             a["gecenYil"] += nc
             by_country[country]["gecenYil"] += nc
             if r.ay <= last_month:
+                a["gecenYilAyniDonem"] += nc
                 by_country[country]["gecenYilAyniDonem"] += nc
             monthly[r.ay]["gecenYil"] += nc
     items = sorted(by_key.values(), key=lambda x: (-x["netCiro"], -x["gecenYil"]))

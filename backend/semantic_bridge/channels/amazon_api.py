@@ -334,7 +334,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             d = await run_in_threadpool(call, A.international, engine, tenant, yil, ulke)
             rows = d["items"]
             cols = [("cari", "Cari"), ("unvan", "Unvan"), ("ulke", "Ülke"), ("doviz", "Döviz"), ("netCiro", "Net ciro (TL)"),
-                    ("dovizNet", "Net (döviz)"), ("netAdet", "Net adet"), ("fatura", "Fatura"), ("gecenYil", "Geçen yıl net ciro (TL)")]
+                    ("dovizNet", "Net (döviz)"), ("netAdet", "Net adet"), ("fatura", "Fatura"),
+                    ("gecenYilAyniDonem", "Geçen yıl aynı dönem net ciro (TL)"), ("gecenYil", "Geçen yıl tamamı net ciro (TL)")]
             note = f"Yurtdışı faturalı satış {d['yil']} · kanal kodları {', '.join(d['kodlar'] or [])}"
         elif liste == "yurtdisi-kitaplar":
             rows = await run_in_threadpool(everything, A.intl_books, engine, tenant, yil, ulke, q)

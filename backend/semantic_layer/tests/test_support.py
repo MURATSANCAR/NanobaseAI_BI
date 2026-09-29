@@ -287,8 +287,8 @@ def test_quality_numbers(engine):
            _t("B", "2026-09-21T10:00:00", status_category="Open", first_responded_on="2026-09-21 11:30:00", via_customer_portal=1),
            _t("C", "2026-09-22T10:00:00", status_category="Open")]
     prev = [_t("P", "2026-08-20T10:00:00")]
-    ins = {"A": {"klass": "kargo-gecikmesi", "raisedByHash": "h1", "faqHit": True},
-           "B": {"klass": "kargo-gecikmesi", "raisedByHash": "h1", "faqHit": False},
+    ins = {"A": {"klass": "kargo-gecikmesi", "raisedByHash": "h1", "faqHit": True, "finalSent": True, "editRatio": 0.05},
+           "B": {"klass": "kargo-gecikmesi", "raisedByHash": "h1", "faqHit": False, "finalSent": False},
            "C": {"klass": None, "raisedByHash": "h2", "faqHit": False},
            "P": {"klass": "fatura"}}
     q = S.quality(cur, prev, cur[1:], ins, S.list_classes(engine, T), date(2026, 9, 1), date(2026, 9, 30),
@@ -301,6 +301,7 @@ def test_quality_numbers(engine):
     assert topics["kargo-gecikmesi"]["count"] == 2 and topics["siniflanamadi"]["count"] == 1
     assert q["repeat"]["count"] == 1                        # aynı kişi, aynı konu, 1 gün arayla
     assert q["agents"] is None
+    assert (q["zeki"]["drafts"], q["zeki"]["used"], q["zeki"]["sentAsIs"]) == (2, 1, 1)   # «kullanmadım» kullanılmış sayılmaz
 
 
 # ------------------------------------------------------------------ sınıflar, SSS açığı, sonuç

@@ -184,6 +184,16 @@ def test_orders_mark_late_packages_only_when_not_shipped(engine):
     assert T.orders(engine, TN, bas="2026-08-18", bit="2026-08-19", now=NOW)["paketSayisi"] == 2
 
 
+def test_late_counts_packages_not_book_lines(engine):
+    """Çok kitaplı paket bir kez gecikir: «Geciken paket» satır değil paket sayar; liste satırları göstermeye devam eder."""
+    _seed_logo(engine)
+    extra = b"P1;O1;15.08.2026 10:00;Yeni;Aras;17.08.2026 10:00;978605000001;Birinci;1;60;X;Y;Z\n"
+    TI.store(engine, TN, "ayse", "siparis", "s.csv", ORDERS_CSV + extra)
+    out = T.orders(engine, TN, now=NOW)
+    assert out["geciken"] == 1 and out["paketSayisi"] == 3
+    assert T.orders(engine, TN, durum="geciken", now=NOW)["total"] == 2      # P1'in iki kitap satırı
+
+
 class Choice:
     def __init__(self, choice, p, margin):
         self.choice, self.probability, self.margin, self.method = choice, p, margin, "logprobs"

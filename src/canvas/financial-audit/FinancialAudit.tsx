@@ -102,7 +102,7 @@ export default function FinancialAudit() {
   useEffect(() => {
     if (selected && tab === 'catalog' && window.innerWidth < 768) document.getElementById('audit-source-detail')?.scrollIntoView({ block: 'start' });
   }, [selected, tab]);
-  const overview = useQuery({ queryKey: ['financial-audit', 2026, runChoice], queryFn: () => get<Overview>(runChoice ? `runs/${runChoice}` : 'overview'), enabled: ENGINE_ENABLED, retry: false, staleTime: 120000, refetchOnWindowFocus: false });
+  const overview = useQuery({ queryKey: ['financial-audit', 'overview', runChoice], queryFn: () => get<Overview>(runChoice ? `runs/${runChoice}` : 'overview'), enabled: ENGINE_ENABLED, retry: false, staleTime: 120000, refetchOnWindowFocus: false });
   const refreshStatus = useQuery({ queryKey: ['audit-refresh-status'], queryFn: () => get<RefreshStatus>('refresh-status'), enabled: ENGINE_ENABLED, retry: false, refetchInterval: q => q.state.data?.state === 'refreshing' ? 2000 : 15000 });
   const refresh = useMutation({ mutationFn: () => get<RefreshStatus>('refresh', 'POST'), onSuccess: status => {
     queryClient.setQueryData(['audit-refresh-status'], status);
@@ -110,7 +110,7 @@ export default function FinancialAudit() {
   }});
   useEffect(() => {
     if (!runChoice && refreshStatus.data?.runId && refreshStatus.data.runId !== overview.data?.runId) {
-      void queryClient.invalidateQueries({ queryKey: ['financial-audit', 2026, ''], exact: true });
+      void queryClient.invalidateQueries({ queryKey: ['financial-audit', 'overview', ''], exact: true });
     }
   }, [runChoice, refreshStatus.data?.runId, overview.data?.runId, queryClient]);
   const runs = useQuery({ queryKey: ['financial-audit-runs', overview.data?.runId], queryFn: () => get<{ items: Array<{runId: string; computedAt: string}>; total: number }>('runs'), enabled: !!overview.data?.runId, retry: false });

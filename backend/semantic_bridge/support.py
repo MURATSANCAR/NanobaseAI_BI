@@ -769,7 +769,8 @@ def quality(tickets: list[dict[str, Any]], previous: list[dict[str, Any]], open_
                    "rate": round(repeats / len(tickets), 4) if tickets else None},
         "zeki": {"classified": sum(1 for i in classified if i.get("klass")), "unsure": sum(1 for i in classified if not i.get("klass")),
                  "waiting": len(tickets) - len(classified), "corrected": sum(1 for i in classified if i.get("klassBy") not in (None, "zeki")),
-                 "noFaq": no_faq, "drafts": len(drafts),
+                 # drafts: sonucu işaretlenen taslak (gönderildi + «kullanmadım»); used: yalnız gönderilen.
+                 "noFaq": no_faq, "drafts": len(drafts), "used": sum(1 for i in drafts if i.get("finalSent")),
                  "sentAsIs": sum(1 for i in drafts if i.get("finalSent") and (i.get("editRatio") or 0) <= 0.1)},
         "agents": ([{"agent": a, "open": n} for a, n in sorted(agents.items(), key=lambda x: -x[1])] if per_agent else None),
     }

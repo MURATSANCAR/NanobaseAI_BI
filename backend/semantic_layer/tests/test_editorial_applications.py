@@ -9,7 +9,7 @@ Pazar özeti: ilk yıl = yayın ayı dahil 12 ay, iade düşülür, senaryolar �
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -109,6 +109,28 @@ def test_reject_archives_and_reopen_starts_a_new_round(engine):
     r = M.reopen(engine, T, "ayse", "Ayşe", a["id"], "Revize dosya geldi.", manager=False)
     assert r["status"] == "degerlendirmede" and r["round"] == 2
     assert M.detail(engine, T, "ayse", a["id"], can_see_names=False)["evaluation"] is None
+
+
+def test_waiting_days_count_from_the_step_not_the_last_edit(engine, monkeypatch):
+    """«N gündür bu adımda»: durumun değiştiği günden sayılır; düzenleme ve aynı durumda yeniden atama sıfırlamaz."""
+    t0 = datetime(2026, 9, 1, 9, tzinfo=timezone.utc)
+    clock = [t0]
+    monkeypatch.setattr(M, "_now", lambda: clock[0])
+    a = _app(engine)
+    clock[0] = t0 + timedelta(days=3)
+    assert M.listing(engine, T, "ayse")["items"][0]["waitingDays"] == 3
+    clock[0] = t0 + timedelta(days=2)
+    M.assign(engine, T, "ayse", "Ayşe", a["id"], "ayse", "Ayşe", manager=False)       # yeni → değerlendirmede
+    clock[0] = t0 + timedelta(days=9)
+    M.update(engine, T, "ayse", "Ayşe", a["id"], {"title": "Yeni ad"})               # durum değişmez
+    clock[0] = t0 + timedelta(days=10)
+    M.assign(engine, T, "ayse", "Ayşe", a["id"], "mehmet", "Mehmet", manager=True)   # durum yine değerlendirmede
+    clock[0] = t0 + timedelta(days=12)
+    assert M.listing(engine, T, "ayse")["items"][0]["waitingDays"] == 10
+    _evaluate(engine, a["id"], user="mehmet")
+    M.editor_decision(engine, T, "mehmet", "Mehmet", a["id"], "kurula", None, manager=False)
+    clock[0] = t0 + timedelta(days=13)
+    assert M.listing(engine, T, "ayse")["items"][0]["waitingDays"] == 1
 
 
 def test_files_are_checked_and_stored(engine):

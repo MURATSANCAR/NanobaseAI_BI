@@ -61,7 +61,7 @@ function Row({ a }: { a: AppListItem }) {
           <span className="block">Geldi {fmtDay(a.receivedOn)} · {a.channelLabel}</span>
           {a.waitingDays != null && (
             <span className={`block font-mono tabular-nums ${a.waitingDays > 14 ? 'font-bold text-red-700' : ''}`}>
-              {a.waitingDays === 0 ? 'bugün güncellendi' : `${nf.format(a.waitingDays)} gündür bu adımda`}
+              {a.waitingDays === 0 ? 'bugün bu adıma geldi' : `${nf.format(a.waitingDays)} gündür bu adımda`}
             </span>
           )}
           {closed && a.decidedAt && <span className="block">Karar {fmtDay(a.decidedAt)}</span>}
@@ -257,7 +257,7 @@ export default function ApplicationsScreen() {
         </ul>
         {view === 'kuyruk' && (list.data?.items.length ?? 0) > 0 && (
           <p className="mt-2 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Gün sayısı başvurunun son güncellemesinden bu yana geçen süredir; kırmızıysa 14 günden uzun süredir hareket yok. «Sizde» rozeti, değerlendirmesi size atanmış başvuruyu gösterir.
+            Gün sayısı başvurunun bugünkü adıma (yeni, değerlendirmede, revizyonda, kurul sırasında, kurulda) geldiği günden bu yana geçen süredir; düzenleme, dosya ya da yazı bu sayıyı sıfırlamaz. Kırmızıysa 14 günden uzun süredir aynı adımda. «Sizde» rozeti, değerlendirmesi size atanmış başvuruyu gösterir.
           </p>
         )}
       </Panel>

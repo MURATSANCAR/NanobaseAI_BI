@@ -97,14 +97,14 @@ export default function QualityTab({ meta, view }: { meta: Meta; view: 'ozet' | 
         <Kpi info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Memnuniyet" />} explain="Seçili dönemde müşterilerin destek masasının geri bildirim formunda verdiği puanların ortalaması (5 üzerinden)." label="Memnuniyet" value={d.csat === null ? '—' : `${fmtNum(d.csat)} / 5`} help={`${fmtInt(d.csatCount)} puan · masanın geri bildirim formundan`} />
       </KpiRow>
       <div className="grid gap-3 lg:grid-cols-2">
-        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI karnesi" />} title="Zeki AI karnesi" help="Zeki AI’ın bu dönemdeki talepleri konuya ayırma ve cevap taslağı yazma başarısı. İsabet, temsilcinin konuyu değiştirmediği paydır (hedef %85).">
+        <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Zeki AI karnesi" />} title="Zeki AI karnesi" help="Zeki AI’ın bu dönemdeki talepleri konuya ayırma ve cevap taslağı yazma başarısı. İsabet, temsilcinin konuyu değiştirmediği paydır (hedef %85). Taslak kullanıldı: gönderilen taslak / sonucu işaretlenen taslak (gönderildi ya da «kullanmadım»); az düzeltme, metnin en çok %10'unun değiştiği gönderimdir.">
           <ul className="grid grid-cols-2 gap-2 text-[12.5px]">
             <Stat label="Sınıflanan" value={fmtInt(d.zeki.classified)} />
             <Stat label="Sınıflanamadı" value={fmtInt(d.zeki.unsure)} />
             <Stat label="Sırada" value={fmtInt(d.zeki.waiting)} />
             <Stat label="Temsilci düzeltti" value={fmtInt(d.zeki.corrected)} />
             <Stat label="SSS bulunamadı" value={fmtInt(d.zeki.noFaq)} />
-            <Stat label="Taslak sonucu işaretlenen" value={`${fmtInt(d.zeki.drafts)} (az düzeltmeyle gönderilen ${fmtInt(d.zeki.sentAsIs)})`} />
+            <Stat label="Taslak kullanıldı" value={`${fmtInt(d.zeki.used)} / ${fmtInt(d.zeki.drafts)} (az düzeltmeyle ${fmtInt(d.zeki.sentAsIs)})`} />
           </ul>
         </Block>
         <Block info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Kanal ve durum" />} title="Kanal ve durum" help="Bu dönemde açılan taleplerin geldiği kanal ve destek masasındaki bugünkü durumu.">

@@ -74,7 +74,7 @@ export default function BookProfile() {
                   {b.crm.yayincilikStatusu ? ` · ${b.crm.yayincilikStatusu}` : ''}
                 </p>
                 <p className="mt-0.5 text-[12px] font-semibold text-canvas-muted">
-                  Son 24 ay net satış <span className="font-mono tabular-nums text-canvas-ink">{fmtInt(b.priority)}</span> adet
+                  Son {meta.data?.thresholds.priorityMonths ?? 24} ay net satış <span className="font-mono tabular-nums text-canvas-ink">{fmtInt(b.priority)}</span> adet
                   <SqlInfo k={kaynakOf(book.data)} alan="_hepsi" label="Kitabın sayıları" className="mx-0.5" /> · Editör {b.crm.editor?.name ?? '—'} · Yayın yönetmeni {b.crm.yonetmen?.name ?? '—'}
                 </p>
               </div>
