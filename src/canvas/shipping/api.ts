@@ -274,6 +274,9 @@ export type CostCarrier = {
   irsaliye: number;
   tasiyiciYok: boolean;
   eslendi: boolean;
+  /** eslendi · eslenebilir (Logo'da aday cari var) · pazarYeri (bedeli pazar yeri faturalıyor) · faturasiz · tasiyiciYok */
+  durum?: 'eslendi' | 'eslenebilir' | 'pazarYeri' | 'faturasiz' | 'tasiyiciYok';
+  adayCariler?: Array<{ cari: string; unvan: string | null; gider: number | null }>;
   eslenenCariler: Array<{ cari: string; unvan: string | null }>;
   gider: number | null;
   irsaliyeBasi: number | null;

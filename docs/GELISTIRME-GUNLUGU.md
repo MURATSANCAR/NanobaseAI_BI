@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (21:00) — Kargo maliyeti: «eşlenmemiş taşıyıcı» uyarısı yalnız eşlenebilecekleri sayar; açıklamada hesap kodu yok
+
+- **Neden:** Uyarı «9 taşıyıcının Logo carisi eşlenmemiş» diyordu; içinde depo, merkez, iç sevk gibi kargo firması olmayan irsaliye kodları ve bedelini pazar yerinin faturaladığı UPS/HEPSİJET vardı. Gider kartının açıklamasında muhasebe hizmet kodları yazıyordu (finans notlarında kod yok kararı).
+- **Yapılan (`shipping.cost_view`, sabit liste yok):** her taşıyıcıya `durum` + `adayCariler`. Sıra: taşıyıcı yok → eşlendi → **pazar yeri faturalıyor** (irsaliyelerin ≥ %50'si pazar yerine, `MARKET_CARRIER_SHARE`) → **eşlenebilir** (taşıyıcı adının ayırt edici parçası yılın kargo gideri tedarikçilerinden en çok 2'sinin ünvanında geçiyor, `CANDIDATE_MAX_SUPPLIERS`; birden çok taşıyıcı adında geçen parça — «KARGO» — ve başka taşıyıcıya eşli cari aday olmaz; 3 harfli parça tam kelime) → **faturası yok**. Notlar üç ayrı cümle; «eşleyin» yalnız eşlenebilir olanlar için. Ön yüz: Durum hapı (Pazar yeri faturalıyor / Faturası yok), Logo carisi sütununda «Aday» cari; KPI ve boş durum açıklamasından hizmet kodu listesi kalktı.
+- **Canlı Logo 2026:** UPS, HEPSİJET, ICSEVK → pazar yeri faturalıyor (26.516/46.100, 12.752/13.014, 2.636/4.489); depo, surat, merkez, BARISAMBARI, DHL, along → faturası yok (2026 kargo gideri tedarikçilerinde Barış/Along/Sürat yok, 38 tedarikçi tek tek bakıldı); eşlenebilir kalmadı (Aras, MNG eşli).
+- **Test:** `test_shipping_cost.py` (+3 test: aday cari, faturasız kod, başka taşıyıcıya eşli cari aday değil; «KARGO» UPS'e aday getirmez); shipping/nav/köprü açılış 517 + vitest 47, `tsc` 0.
+
 ## 2026-09-29 (19:30) — Kargo maliyeti test sunucusunda; test sunucusu tam main'e eşitlendi
 
 - **Kurulum (test sunucusu):** `5831f33ff` ile gelen 45 dosya (md5: sunucudakiler önceki main'le aynıydı). `hr_leave.py` sunucuda daha eski sürümdeydi (`7c3a52996` kurulmamıştı), önce yalnız damga satırı yamalandı. Sonra bütün ağaç main'le (`1a6de256a`) karşılaştırıldı: 15 dosya eski main sürümündeydi (İK kişi silme/pasife alma, Destek ön yüzü, altyapı dosyaları, iki kabul betiği) ve 3 test dosyası eksikti; sunucuda commit'lenmemiş iş yoktu. 18 dosya main sürümüyle değiştirildi, fark 0, `._*` 0. İK birimleri (`timas-hr-leave`, `timas-hr-mail`) `kopru-cagir.sh` ile kuruldu + `daemon-reload`; bütün `timas-*` birimleri main ile aynı. Ön yüz `index-DfcawrsS.js`, köprü yeniden başladı, hazır.

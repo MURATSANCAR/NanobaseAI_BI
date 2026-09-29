@@ -204,7 +204,33 @@ def test_per_slip_cost_only_when_carrier_is_mapped():
     assert not ups["eslendi"] and ups["gider"] is None and ups["irsaliyeBasi"] is None and ups["eslenenCariler"] == []
     none = v["byCarrier"][-1]
     assert none["irsaliyeBasi"] is None and none["gider"] is None
-    assert any(n.startswith("2 taşıyıcının Logo carisi eşlenmemiş") for n in v["notes"])        # UPS ve HEPSİJET
+    assert ups["durum"] == "pazarYeri" and ups["adayCariler"] == []        # 200 irsaliyenin 190'ı pazar yerine
+    assert by(v["byCarrier"], "kod", "hepsijet")["durum"] == "pazarYeri"
+    assert any(n.startswith("Bedelini pazar yeri faturalayan taşıyıcı:") for n in v["notes"])
+    assert not any("eşlenmemiş taşıyıcı" in n for n in v["notes"])
+
+
+def test_unmapped_carrier_with_invoice_gets_a_candidate():
+    v = view(codes="")
+    aras = by(v["byCarrier"], "ad", "ARAS KARGO")
+    assert aras["durum"] == "eslenebilir" and not aras["eslendi"]
+    assert [a["cari"] for a in aras["adayCariler"]] == ["32001.01.AR001"]
+    assert any(n.startswith("Logo'da faturası bulunan ama carisi eşlenmemiş taşıyıcı: ARAS KARGO") for n in v["notes"])
+    # «KARGO» iki taşıyıcı adında geçer, ayırt edici değil: UPS'e Aras aday gösterilmez
+    assert by(v["byCarrier"], "kod", "ups")["adayCariler"] == []
+
+
+def test_code_without_any_invoice_is_not_asked_to_be_mapped():
+    v = view(slips=slips() + [{"ay": 2, "kod": "depo", "irsaliye": 30, "son": date(Y, 2, 27)}])
+    depo = by(v["byCarrier"], "kod", "depo")
+    assert depo["durum"] == "faturasiz" and depo["adayCariler"] == [] and depo["irsaliyeBasi"] is None
+    assert any(n.startswith("Logo'da kargo faturası bulunmayan irsaliye kodları: depo") for n in v["notes"])
+
+
+def test_supplier_mapped_to_another_carrier_is_not_a_candidate():
+    extra = [{"ay": 2, "kod": "araskargo", "irsaliye": 5, "son": date(Y, 2, 27)}]
+    v = view(slips=slips() + extra)                                        # 32001.01.AR001 Aras'a eşli
+    assert by(v["byCarrier"], "kod", "araskargo")["durum"] == "faturasiz"
 
 
 def test_mapping_by_raw_carrier_code_works_without_crm_name():

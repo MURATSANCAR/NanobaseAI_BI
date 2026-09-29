@@ -127,7 +127,7 @@ export default function ShippingCostScreen() {
               help={`KDV hariç · ${fmtInt(t.fatura)} fatura, ${fmtInt(t.tedarikci)} tedarikçi`}
               explain={
                 <>
-                  Logo'da bize kesilen hizmet faturalarında, hizmet kodu kargo ve nakliye gideri olarak tanımlı satırların toplamı ({d.hizmetKodlari.join(', ') || 'kod tanımlı değil'}). Pazar yerlerinin kestiği kargo bedeli de buradadır. Tutar KDV hariçtir; tam tutar {fmtMoney(t.gider)}.
+                  Logo'da bize kesilen hizmet faturalarında, yönetim ayarında kargo ve nakliye gideri olarak seçilmiş hizmet satırlarının toplamı. Pazar yerlerinin kestiği kargo bedeli de buradadır. Tutar KDV hariçtir; tam tutar {fmtMoney(t.gider)}.
                 </>
               }
               info={<SqlInfo k={d.kaynaklar} alan="totals.gider" label="Kargo ve nakliye gideri" />}
@@ -272,6 +272,8 @@ function HeadWithHelp({ k, alan, label, children }: { k: ShippingCost['kaynaklar
 function CarrierStatus({ c }: { c: CostCarrier }) {
   if (c.tasiyiciYok) return <Pill tone="muted">Kargo yok</Pill>;
   if (c.eslendi) return <Pill tone="ok">Eşlendi</Pill>;
+  if (c.durum === 'pazarYeri') return <Pill tone="muted">Pazar yeri faturalıyor</Pill>;
+  if (c.durum === 'faturasiz') return <Pill tone="muted">Faturası yok</Pill>;
   return (
     <span className="flex flex-col items-start gap-1">
       <Pill tone="warn">Eşlenmemiş</Pill>
@@ -309,7 +311,7 @@ function CarrierTable({ d }: { d: ShippingCost }) {
               <th className={th}>
                 <span className="inline-flex items-center gap-1">
                   Durum
-                  <Explain label="Durum">Eşlendi: taşıyıcının Logo carisi yönetim ayarında tanımlı. Eşlenmemiş: cari bilinmiyor; kargo mutabakatı ekranındaki aday carilerden doğru olanı seçip «Kargo firması → Logo cari kodları» ayarına yazabilirsiniz. Kargo yok: taşıyıcı kodu boş irsaliye (mağaza kasa satışı).</Explain>
+                  <Explain label="Durum">Eşlendi: taşıyıcının Logo carisi yönetim ayarında tanımlı. Eşlenmemiş: Logo'da bu ada fatura kesen bir cari bulundu (Logo carisi sütununda «aday»); doğruysa «Kargo firması → Logo cari kodları» ayarına yazılır. Pazar yeri faturalıyor: irsaliyelerin çoğu pazar yerine gidiyor, bedeli pazar yerinin faturasında. Faturası yok: bu yıl Logo'da bu ada kesilmiş kargo gideri faturası bulunmadı (depodan teslimde bedel oluşmaz; fatura başka bir hizmetle geliyorsa o hizmet «Kargo gideri hizmet kodları» ayarına eklenir). Kargo yok: taşıyıcı kodu boş irsaliye (mağaza kasa satışı).</Explain>
                 </span>
               </th>
             </tr>
@@ -334,6 +336,14 @@ function CarrierTable({ d }: { d: ShippingCost }) {
                   {c.eslenenCariler.length ? (
                     c.eslenenCariler.map((e) => (
                       <div key={e.cari} className="min-w-0">
+                        <span className="font-mono text-[11.5px]">{e.cari}</span>
+                        {e.unvan && <span className="block break-words text-[11px] text-canvas-muted">{e.unvan}</span>}
+                      </div>
+                    ))
+                  ) : c.adayCariler?.length ? (
+                    c.adayCariler.map((e) => (
+                      <div key={e.cari} className="min-w-0">
+                        <span className="text-[11px] font-bold text-canvas-muted">Aday </span>
                         <span className="font-mono text-[11.5px]">{e.cari}</span>
                         {e.unvan && <span className="block break-words text-[11px] text-canvas-muted">{e.unvan}</span>}
                       </div>
@@ -432,7 +442,7 @@ function SupplierTable({ d }: { d: ShippingCost }) {
         ))}
       </div>
       {d.bySupplier.length === 0 ? (
-        <EmptyHint title="Bu yıl kargo gideri faturası yok" why={`Ayardaki hizmet kodlarıyla (${d.hizmetKodlari.join(', ') || 'tanımlı değil'}) alınan hizmet faturası bulunamadı. Kodları yönetim ekranındaki «Kargo gideri hizmet kodları» ayarından kontrol edin.`} />
+        <EmptyHint title="Bu yıl kargo gideri faturası yok" why="Ayarda kargo ve nakliye gideri olarak seçilmiş hizmetlerle alınan hizmet faturası bulunamadı. Seçimi yönetim ekranındaki «Kargo gideri hizmet kodları» ayarından kontrol edin." />
       ) : (
         <div className="mt-2">
           <TableWrap>

@@ -961,6 +961,45 @@ def _ym(d: Optional[date]) -> int:
 MARKET_MIN_SHARE = 0.01
 #: Pazar yerinin gönderi başı maliyeti, pazar yerlerinin ortancasından bu kat sapıyorsa gösterilmez.
 MARKET_OUTLIER = 10.0
+#: İrsaliyelerinin en az bu payı pazar yerine giden taşıyıcının bedelini pazar yeri faturalar (eşleme beklenmez).
+MARKET_CARRIER_SHARE = 0.5
+#: Aday cari: taşıyıcı adının bir parçası en çok bu kadar tedarikçi ünvanında geçmeli; daha çoğunda geçen parça
+#: («KARGO» gibi) ayırt edici değildir.
+CANDIDATE_MAX_SUPPLIERS = 2
+
+
+def _name_parts(*names: Any) -> set[str]:
+    """Taşıyıcı adından/kodundan karşılaştırılacak parçalar: sadeleşmiş, en az 3 harf."""
+    out: set[str] = set()
+    for n in names:
+        for w in re.split(r"[^A-Z0-9]+", fold(n)):
+            if len(w) >= 3:
+                out.add(w)
+    return out
+
+
+def _title_has(title: str, part: str) -> bool:
+    """Ünvanda parça geçiyor mu: 3 harfli parça tam kelime olmalı (UPS, MNG, DHL); daha uzunu boşluksuz ünvanda aranır
+    (irsaliye kodu «BARISAMBARI» ↔ «BARIŞ AMBARI»)."""
+    words = re.split(r"[^A-Z0-9]+", title)
+    if len(part) == 3:
+        return part in words
+    return part in "".join(words)
+
+
+def carrier_candidates(parts: set[str], sup: dict[str, dict[str, Any]], taken: set[str]) -> list[dict[str, Any]]:
+    """Eşlenmemiş taşıyıcı için Logo'da faturası olan aday tedarikçiler (pazar yeri ve başka taşıyıcıya eşlenmiş cari
+    hariç). Sabit liste yok: parça en çok CANDIDATE_MAX_SUPPLIERS ünvanda geçiyorsa ayırt edicidir; birden çok taşıyıcı
+    adında geçen parça («KARGO») çağıran tarafça önceden düşülür."""
+    pool = {c: fold(s.get("unvan")) for c, s in sup.items()
+            if s.get("grup") != "pazarYeri" and c not in taken and s.get("unvan")}
+    found: dict[str, dict[str, Any]] = {}
+    for part in parts:
+        hits = [c for c, title in pool.items() if _title_has(title, part)]
+        if 0 < len(hits) <= CANDIDATE_MAX_SUPPLIERS:
+            for c in hits:
+                found[c] = {"cari": c, "unvan": sup[c]["unvan"], "gider": _r(sup[c]["gider"])}
+    return sorted(found.values(), key=lambda x: (-(x["gider"] or 0), x["cari"]))
 
 
 def cost_view(year: int, *, cost_rows: list[dict[str, Any]], receivers: list[dict[str, Any]], slips: list[dict[str, Any]],
@@ -1118,8 +1157,16 @@ def cost_view(year: int, *, cost_rows: list[dict[str, Any]], receivers: list[dic
             if g and med and (g < med / MARKET_OUTLIER or g > med * MARKET_OUTLIER):
                 m["gonderiBasi"], m["sapma"] = None, True      # gider büyük olasılıkla başka hesapta ya da tek seferlik
 
+    # taşıyıcı adı parçaları; birden çok taşıyıcıda geçen parça ayırt edici değildir
+    row_parts = {key: _name_parts(row["ad"], *(c for c in row["kodlar"] if c != NO_CARRIER)) for key, row in rows.items()}
+    part_n: dict[str, int] = defaultdict(int)
+    for ps in row_parts.values():
+        for p_ in ps:
+            part_n[p_] += 1
+    taken = {c for row in rows.values() for c in row["cariler"]}
+
     carriers_out = []
-    for row in rows.values():
+    for key, row in rows.items():
         n = sum(row["kodlar"].values())
         none = row["kod"] == NO_CARRIER
         mapped = bool(row["cariler"]) and not none
@@ -1128,12 +1175,18 @@ def cost_view(year: int, *, cost_rows: list[dict[str, Any]], receivers: list[dic
         for code in row["kodlar"]:
             for u, v in code_markets.get(code, {}).items():
                 mps[u] = mps.get(u, 0) + v
+        mp_n = sum(mps.values())
+        market = bool(n) and mp_n / n >= MARKET_CARRIER_SHARE
+        adaylar = ([] if (none or mapped or market)
+                   else carrier_candidates({p_ for p_ in row_parts[key] if part_n[p_] == 1}, sup, taken))
+        durum = ("tasiyiciYok" if none else "eslendi" if mapped else "pazarYeri" if market
+                 else "eslenebilir" if adaylar else "faturasiz")
         carriers_out.append({
             "kod": row["kod"], "kodlar": sorted(row["kodlar"]), "ad": row["ad"], "crmFirma": row["crmFirma"], "irsaliye": n,
-            "tasiyiciYok": none, "eslendi": mapped,
+            "tasiyiciYok": none, "eslendi": mapped, "durum": durum, "adayCariler": adaylar,
             "eslenenCariler": [{"cari": c, "unvan": sup[c]["unvan"] if c in sup else None} for c in row["cariler"]] if mapped else [],
             "gider": gider, "irsaliyeBasi": _r(_div(gider, n)) if mapped else None,
-            "pazarYeriIrsaliye": sum(mps.values()),
+            "pazarYeriIrsaliye": mp_n,
             "pazarYerleri": [{"unvan": u, "irsaliye": v} for u, v in sorted(mps.items(), key=lambda kv: (-kv[1], kv[0]))],
         })
     carriers_out.sort(key=lambda r: (r["tasiyiciYok"], -r["irsaliye"], r["ad"]))
@@ -1193,11 +1246,21 @@ def cost_view(year: int, *, cost_rows: list[dict[str, Any]], receivers: list[dic
         out_notes.append(f"Son kargo gideri faturası {last_cost.strftime('%d.%m.%Y')}, irsaliyeler "
                          f"{last_slip.strftime('%d.%m.%Y')} tarihine kadar: faturası henüz gelmemiş ayların gönderileri "
                          "gönderi başı maliyeti olduğundan düşük gösterir.")
-    unmapped = [c for c in carriers_out if not c["eslendi"] and not c["tasiyiciYok"] and c["irsaliye"]]
-    if unmapped:
-        out_notes.append(f"{len(unmapped)} taşıyıcının Logo carisi eşlenmemiş; irsaliye başı maliyetleri hesaplanmaz. "
-                         "Eşleme «Kargo mutabakatı» ekranındaki aday carilerden, «Kargo firması → Logo cari kodları» "
-                         "ayarına yazılır.")
+    def names(state: str) -> list[str]:
+        return [c["ad"] for c in carriers_out if c["durum"] == state and c["irsaliye"]]
+
+    if names("eslenebilir"):
+        out_notes.append(f"Logo'da faturası bulunan ama carisi eşlenmemiş taşıyıcı: {', '.join(names('eslenebilir'))}. "
+                         "Eşlenene kadar irsaliye başı maliyeti hesaplanmaz; aday cari «Taşıyıcılar» tablosunda, eşleme "
+                         "«Kargo firması → Logo cari kodları» ayarına yazılır.")
+    if names("pazarYeri"):
+        out_notes.append(f"Bedelini pazar yeri faturalayan taşıyıcı: {', '.join(names('pazarYeri'))} "
+                         "(irsaliyelerinin çoğu pazar yerine gidiyor); maliyeti «Pazar yerleri» tablosunda.")
+    if names("faturasiz"):
+        out_notes.append(f"Logo'da kargo faturası bulunmayan irsaliye kodları: {', '.join(names('faturasiz'))}. "
+                         "Bu yıl bu adlara kesilmiş kargo gideri faturası yok, eşlenecek cari de yok. Depodan teslimde "
+                         "bedel oluşmaz; bir taşıyıcının faturası başka bir hizmetle geliyorsa o hizmet «Kargo gideri "
+                         "hizmet kodları» ayarına eklenir.")
     out_notes.append("Kargo faturaları toplu kesilir (gönderi dökümü yok); gönderi başı rakamlar dönem toplamlarının "
                      "oranıdır, yaklaşıktır. Tutarlar KDV hariçtir.")
     return {
