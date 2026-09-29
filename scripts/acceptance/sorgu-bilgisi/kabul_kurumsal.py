@@ -26,7 +26,7 @@ from kabul import check, contract, http, num, results, run_all
 
 def post(path: str, body: dict, timeout: int = 600):
     req = urllib.request.Request(kabul.BASE + path, data=json.dumps(body).encode("utf-8"), method="POST",
-                                 headers={"Cookie": kabul.COOKIE, "Content-Type": "application/json"})
+                                 headers=kabul.headers({"Content-Type": "application/json"}))
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read() or b"{}")

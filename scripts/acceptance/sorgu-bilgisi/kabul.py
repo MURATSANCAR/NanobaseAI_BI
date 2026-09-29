@@ -34,11 +34,20 @@ from semantic_bridge import provenance as PV
 
 BASE = os.environ.get("BASE", "http://127.0.0.1:8798").rstrip("/")
 COOKIE = os.environ.get("COOKIE", "")
+# Köprü çağıran anahtarı istiyorsa (canlı ortam dosyasındaki gibi) başlıkta gider; değer ekrana basılmaz.
+CALLER = os.environ.get("SEMANTIC_CALLER_TOKEN", "")
+
+
+def headers(extra: dict | None = None) -> dict:
+    h = {"Cookie": COOKIE, **(extra or {})}
+    if CALLER:
+        h["X-Semantic-Caller"] = CALLER
+    return h
 results: list[tuple[str, str, str]] = []
 
 
 def http(path: str, timeout: int = 900):
-    req = urllib.request.Request(BASE + path, headers={"Cookie": COOKIE})
+    req = urllib.request.Request(BASE + path, headers=headers())
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read() or b"{}")

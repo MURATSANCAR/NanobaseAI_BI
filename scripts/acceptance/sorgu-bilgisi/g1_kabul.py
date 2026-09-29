@@ -30,7 +30,7 @@ import kabul as K  # noqa: E402
 
 def post(path: str, body: dict, timeout: int = 900):
     req = urllib.request.Request(K.BASE + path, data=json.dumps(body).encode(), method="POST",
-                                 headers={"Cookie": K.COOKIE, "Content-Type": "application/json"})
+                                 headers=K.headers({"Content-Type": "application/json"}))
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read() or b"{}")
