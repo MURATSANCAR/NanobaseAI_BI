@@ -544,7 +544,41 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     for sub in out.find_all(exp.Subquery):
         if sub.alias:
             sub.args["alias"].set("this", exp.to_identifier(sub.alias, quoted=True))
+    if dialect == "tsql":
+        _average_as_fraction(out, prof_of_alias)
     return out.sql(dialect=dialect if dialect != "generic" else None)
+
+
+_INT_TYPES = {"int", "integer", "bigint", "smallint", "tinyint", "bit"}
+
+
+def _is_whole_number(node: exp.Expression, prof_of_alias: dict) -> bool:
+    """Does this expression evaluate to an integer on SQL Server?"""
+    if isinstance(node, exp.Paren):
+        return _is_whole_number(node.this, prof_of_alias)
+    if isinstance(node, (exp.DateDiff, exp.Count)):
+        return True
+    if isinstance(node, exp.Literal):
+        return not node.is_string and node.this.lstrip("-").isdigit()
+    if isinstance(node, exp.Case):
+        outs = [i.args.get("true") for i in node.args.get("ifs") or []] + [node.args.get("default")]
+        return all(o is not None and _is_whole_number(o, prof_of_alias) for o in outs)
+    if isinstance(node, exp.Column):
+        prof = prof_of_alias.get((node.table or "").upper())
+        col = prof.column(node.name) if prof is not None else None
+        return col is not None and (col.data_type or "").split("(")[0].strip().lower() in _INT_TYPES
+    return False
+
+
+def _average_as_fraction(tree: exp.Expression, prof_of_alias: dict) -> None:
+    """SQL Server averages integers in integers: AVG(DATEDIFF(day, a, b)) of 16 and 17 days is 16, and
+    AVG(CASE WHEN … THEN 1 ELSE 0 END) — a share — is 0. Nobody asking for an average means the floor of it,
+    so an integer argument is averaged as a fraction. Decimal and float arguments are left as written."""
+    for avg in list(tree.find_all(exp.Avg)):
+        arg = avg.this
+        if isinstance(arg, exp.Distinct) or not _is_whole_number(arg, prof_of_alias):
+            continue
+        avg.set("this", exp.Cast(this=arg.copy(), to=exp.DataType.build("FLOAT")))
 
 
 def _norm_key(*parts: Optional[str]) -> str:

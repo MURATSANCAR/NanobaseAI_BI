@@ -330,3 +330,16 @@ def test_an_undated_table_beside_a_date_test_elsewhere_reads_the_current_copy():
                           "SELECT SUM(A.TOTAL) FROM A WHERE DATEDIFF(day, A.DATE_, CAST(GETDATE() AS date)) <= 30",
                           [old, Y2026], {})
     assert "LG_411_01_STLINE" in sql and "LG_211_01_STLINE" not in sql
+
+
+def test_an_average_of_whole_numbers_is_a_fraction_on_sql_server():
+    """Canlı A094 (2026-09-29): AVG(DATEDIFF(day, …)) 16,71 gün yerine 16 döndü; AVG(CASE … 1 ELSE 0) oranı 0 olur."""
+    sql = physicalize_sql("SELECT AVG(DATEDIFF(day, DATE_, DATE_)) AS g, AVG(CASE WHEN TOTAL > 0 THEN 1 ELSE 0 END) AS pay,"
+                          " AVG(TOTAL) AS ort, AVG(CAST(TOTAL AS FLOAT)) AS f FROM STLINE", [Y2026], {},
+                          period=(date(2026, 1, 1), date(2026, 12, 31)))
+    up = sql.upper().replace(" ", "")
+    assert "AVG(CAST(DATEDIFF(" in up and "ASFLOAT)" in up
+    assert "AVG(CAST(CASEWHEN" in up
+    assert "AVG(TOTAL)" in up, "decimal kolon yazıldığı gibi kalır"
+    assert up.count("AVG(CAST(CAST(") == 0, "zaten dönüştürülmüş argüman ikinci kez sarılmaz"
+

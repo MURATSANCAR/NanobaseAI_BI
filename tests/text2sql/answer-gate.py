@@ -125,17 +125,25 @@ def check(case: dict, answer: dict, reference: list[dict], lookups, tolerance: f
     problems: list[str] = []
     if answer.get("_partial"):
         problems.append(f"cevabın tamamı alınamadı: {answer['_partial']}")
-    return problems + _check_specs(case.get("checks") or [], answer, reference, lookups, tolerance)
+    return problems + _check_specs(case.get("checks") or [], answer, reference, lookups, tolerance,
+                                   _blank_labels(case.get("reference_sql") or ""))
 
 
-def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tolerance: float) -> list[str]:
+def _blank_labels(sql: str) -> set[str]:
+    """Referansın boş değere verdiği ad: `ISNULL(C.DEFINITION_, '(merkezsiz)')`. Köprü aynı satırı adı boş (NULL)
+    olarak döndürür; ikisi aynı gruptur — yalnız yazılışı farklıdır."""
+    return {m.strip() for m in re.findall(r"(?:ISNULL|COALESCE)\s*\([^()]*?,\s*N?'([^']*)'\s*\)", sql, re.I)}
+
+
+def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tolerance: float,
+                 blank_labels: frozenset | set = frozenset()) -> list[str]:
     problems: list[str] = []
     records = answer.get("records") or []
     for spec in specs:
         kind = spec["kind"]
         if kind == "any_of":
             # Aynı soru iki meşru biçimde cevaplanabilir (döküm / özet): seçeneklerden biri tutarsa geçer.
-            tried = [_check_specs(option, answer, reference, lookups, tolerance) for option in spec["options"]]
+            tried = [_check_specs(option, answer, reference, lookups, tolerance, blank_labels) for option in spec["options"]]
             if all(tried):
                 problems.extend(min(tried, key=len))
         elif kind == "rows":
@@ -194,6 +202,8 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                 if len(keys) < int(spec["common_min"]):
                     problems.append(f"ortak anahtar {len(keys)} < {spec['common_min']}")
             for key in keys:
+                if key not in got and key in blank_labels and "" in got:
+                    got[key] = got[""]          # adı boş grup = referansın ISNULL adı
                 if key not in got:
                     problems.append(f"'{key[:40]}' cevapta yok")
                 elif not _close(got[key], want[key], spec.get("tolerance", tolerance)):

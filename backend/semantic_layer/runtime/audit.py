@@ -27,6 +27,7 @@ from datetime import date, timedelta
 from typing import Any, Optional
 
 from sqlglot import exp
+from sqlglot.errors import OptimizeError
 from sqlglot.optimizer.scope import Scope, build_scope
 
 from semantic_layer.history.sql_facts import (_Scope, _grain_of, _literal, _normalise_formula, _predicates_from,
@@ -1123,7 +1124,14 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         tree = repair_table_qualifiers(parse_sql(sql))
     except Exception:
         return [Unmet("parse", "sorgu ayrıştırılamadı; soru koşulları doğrulanamadı", "Geçerli tek bir SELECT yaz.")]
-    occ = _occurrences(tree, sources)
+    try:
+        occ = _occurrences(tree, sources)
+    except OptimizeError as e:
+        # Two sources under one alias in the same scope (`… AS d JOIN … AS d`): no reading of which table a
+        # condition belongs to is possible. A refusal with the reason goes back for the one repair every model
+        # answer gets; left to propagate it was a 502 for a question the model can answer with one rename.
+        return [Unmet("parse", f"sorguda takma ad çakışması ({e}); koşulların hangi tabloya ait olduğu okunamadı",
+                      "Aynı kapsamda her tabloya ve alt sorguya ayrı bir takma ad ver.")]
     strict = _strict_default() if strict is None else strict
     for s in sq.slots:
         s._owner = sq                       # the pivot rule needs to see its sibling filters

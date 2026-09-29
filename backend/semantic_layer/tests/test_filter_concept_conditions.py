@@ -75,3 +75,15 @@ def test_an_absence_subquery_must_correlate_by_a_reference_key():
             "SELECT 1 FROM LG_411_01_STLINE s JOIN LG_411_01_INVOICE i ON i.LOGICALREF = s.INVOICEREF WHERE s.ORDFICHEREF = o.LOGICALREF)")
     assert any("anahtarla bağlı değil" in u.text for u in gate_report(sq, bad, sources=sources))
     assert not any("anahtarla bağlı değil" in u.text for u in gate_report(sq, good, sources=sources))
+
+
+def test_one_alias_for_two_sources_is_a_repairable_refusal_not_a_crash():
+    """Canlı A028 (2026-09-29): modelin SQL'inde iki kaynak `d` adını taşıyordu; kapı sqlglot'un OptimizeError'ını
+    yukarı fırlattı, soru 502 döndü. Artık gerekçeli ve ipuçlu bir ret: model tek onarımda adı değiştirir."""
+    from semantic_layer.runtime.audit import gate_report
+    sq = SemanticQuery(question="asgari stok altındaki malzemeler", tenant_id="t", datasource_id="d", slots=[])
+    sql = ("SELECT d.ITEMREF FROM LG_411_INVDEF d JOIN (SELECT ITEMREF, SUM(ONHAND) AS q FROM LG_411_01_GNTOTST "
+           "GROUP BY ITEMREF) d ON d.ITEMREF = d.ITEMREF WHERE d.MINLEVEL > 0")
+    unmet = gate_report(sq, sql)
+    assert len(unmet) == 1 and unmet[0].kind == "parse" and "takma ad" in unmet[0].text and unmet[0].hint
+

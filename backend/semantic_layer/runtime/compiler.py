@@ -1035,6 +1035,19 @@ def interpretations(sql: str) -> list[str]:
     return [m.group(1) for m in _INTERPRETATION.finditer(sql or "")]
 
 
+# The model saying, in its own reading of a word, that the part it stands for could not be met: "birim kırılımı
+# eklenemedi", "karşılaştırma yapılamaz", "stok durumu bu şemada tanımlı değil, bu nedenle … varsayımı". Measured on
+# the query log (2026-09-29): 5 questions in 2.356 readings, every one an answer to a different question than asked —
+# total expenses served as "event spending against budget", a missing breakdown served without it.
+_ADMITTED_GAP = re.compile(r"yap[ıi]lamaz|eklenemedi|verilemez|hesaplanamad[ıi]|tan[ıi]ml[ıi] de[ğg]il|kar[şs][ıi]lanamaz|bulunamad[ıi]",
+                           re.I)
+
+
+def admitted_gaps(readings: list[str]) -> list[str]:
+    """Readings in which the model itself says a requested part is not in the answer."""
+    return [r for r in readings if _ADMITTED_GAP.search(r)]
+
+
 _OPEN_BLOCK = re.compile(r"```(?:sql)?\s*(.*)$", re.S | re.I)
 
 
@@ -2447,6 +2460,13 @@ class CompilerRouter:
         readings = interpretations(out.sql)
         if readings:
             out.explain = [f"yorum: {r}" for r in readings] + [e for e in out.explain if not str(e).startswith("yorum: ")]
+        gaps = admitted_gaps(readings)
+        if gaps:
+            # Served, it is a number for a question nobody asked, with the admission buried in a comment. Refused,
+            # the person reads what is missing in the model's own words — the honest answer.
+            log.warning("admitted gap q=%r gaps=%s", q.question[:80], gaps)
+            return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
+                                 explain=[f"Sorunun bir parçası veride karşılanamadı: {g}" for g in gaps], certified=False)
         sources = self.gate_sources()
         unmet = gate_report(q, out.sql, sources=sources)
         problems = [u.text for u in unmet] + audit_sql(q, out.sql)
