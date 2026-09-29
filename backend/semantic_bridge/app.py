@@ -5785,7 +5785,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
-    # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok).
+    # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok) ve diske akar.
     from starlette.concurrency import run_in_threadpool
     from semantic_bridge import editorial_desk as desk_mod
 
@@ -5826,14 +5826,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "update", "editorial_work", work_id, None, {k: body[k] for k in body if k in ("isbn", "members", "title", "author")})
         return {"ok": True}
 
+    async def _desk_receive(request: Request) -> Any:
+        """Yükleme gövdesi belleğe alınmaz, diske akar (ZEKI-26: kitap PDF'i yüzlerce MB olabilir). Boyut tavanı yok;
+        disk dolacaksa 507 ve düz Türkçe mesaj."""
+        try:
+            expected = int(request.headers.get("content-length") or 0)
+        except ValueError:
+            expected = 0
+        try:
+            return await desk_mod.receive(request.stream(), expected)
+        except desk_mod.DeskError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "EDITORIAL_DESK", "message": str(e)}) from e
+
     async def _desk_upload(request: Request, work_id: str, filename: str, fn, kind: str) -> dict[str, Any]:
         engine, tenant, user, is_admin = await run_in_threadpool(_desk, request)
-        length = int(request.headers.get("content-length") or 0)
-        if length > desk_mod.MAX_BYTES:
-            raise HTTPException(status_code=413, detail={"code": "EDITORIAL_DESK", "message": "Dosya 120 MB sınırını aşıyor."})
-        data = await request.body()
-        out = await run_in_threadpool(_desk_call, fn, engine, tenant, user, is_admin, work_id, filename, data)
-        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", work_id, filename, {"version": out.get("version"), "bytes": len(data)})
+        data = await _desk_receive(request)
+        try:
+            out = await run_in_threadpool(_desk_call, fn, engine, tenant, user, is_admin, work_id, filename, data)
+        finally:
+            data.discard()
+        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", work_id, filename, {"version": out.get("version"), "bytes": data.size})
         return out
 
     # Dosyadan yeni eser (M3 metin / M5 prova): eser adı dosya adından, tek istekte eser + ilk sürüm. Liste boşken
@@ -5841,13 +5853,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.put("/api/v1/editorial/works-from-file")
     async def desk_work_from_file(request: Request, kind: str = "manuscript", filename: str = "") -> dict[str, Any]:
         engine, tenant, user, is_admin = await run_in_threadpool(_desk, request)
-        length = int(request.headers.get("content-length") or 0)
-        if length > desk_mod.MAX_BYTES:
-            raise HTTPException(status_code=413, detail={"code": "EDITORIAL_DESK", "message": "Dosya 120 MB sınırını aşıyor."})
-        data = await request.body()
-        out = await run_in_threadpool(_desk_call, desk_mod.create_from_file, engine, tenant, user, is_admin, kind, filename, data)
+        data = await _desk_receive(request)
+        try:
+            out = await run_in_threadpool(_desk_call, desk_mod.create_from_file, engine, tenant, user, is_admin, kind, filename, data)
+        finally:
+            data.discard()
         admin_mod.audit(engine, user, "create", "editorial_work", out["workId"], out["title"], {"fromFile": filename})
-        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", out["workId"], filename, {"version": out.get("version"), "bytes": len(data)})
+        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", out["workId"], filename, {"version": out.get("version"), "bytes": data.size})
         return out
 
     @app.put("/api/v1/editorial/works/{work_id}/manuscript")
@@ -5920,6 +5932,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, is_admin = _desk(request)
         out = _desk_call(desk_mod.sign, engine, tenant, user, is_admin, work_id)
         admin_mod.audit(engine, user, "sign", "editorial_proof", work_id, None, out)
+        return out
+
+    # Yanlış yüklenen sürümü kaldırma (ZEKI-45): silinmez, iz olarak kalır; etkin sürüm bir öncekine döner.
+    @app.post("/api/v1/editorial/files/{file_id}/remove")
+    def desk_file_remove(file_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        out = _desk_call(desk_mod.remove_file, engine, tenant, user, is_admin, file_id)
+        admin_mod.audit(engine, user, "update", f"editorial_{out['kind']}", out["workId"], out["filename"],
+                        {"removedVersion": out["version"], "activeVersion": out["activeVersion"]})
         return out
 
     @app.get("/api/v1/editorial/files/{file_id}")

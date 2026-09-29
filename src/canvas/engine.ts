@@ -9,6 +9,7 @@
 import type { DbTiming } from './DbTiming';
 import type { Kaynaklar } from './components/sqlInfo';
 import { httpErrorText } from './httpError';
+import { fmtSize } from './components/fileDropRules';
 
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
@@ -2041,7 +2042,14 @@ export type DeskFile = {
     fullSignatures?: boolean;
     trimBoxMissing?: number;
     versus?: { version: number; pageDelta: number; changedPages: number[] };
+    /** Metnin nasıl ayrıldığı (ZEKI-44): bolum = kitabın kendi bölümleri, parca = yapı bulunamadı, eşit parçalar. */
+    unit?: 'bolum' | 'parca';
+    /** outline | typography | toc | styles | markdown | pattern | pieces */
+    structure?: string;
   };
+  /** Kaldırılan sürüm (ZEKI-45): kayıt ve dosya iz olarak kalır, etkin sürüm sayılmaz. */
+  removedAt?: string | null;
+  removedBy?: string | null;
 };
 export type Work = {
   id: string;
@@ -2121,13 +2129,24 @@ export type ProofState = {
   blocking: { failed: number; open: number; unsigned: number };
 };
 
+/** Eser metni / prova yüklemesinin hata cümlesi. Kapıdaki gövde sınırı (413) sunucu açıklaması taşımaz; kişi ham
+ *  sayı yerine dosyasının boyutunu ve ne yapacağını görür (ZEKI-26). */
+export function deskUploadErrorText(status: number, size: number, message?: string | null): string {
+  if (message) return message;
+  if (status === 413)
+    return `Dosya ${fmtSize(size)}; sunucunun yükleme kapısı bu boyutu henüz kabul etmiyor. Sistem yöneticisine bildirin (413).`;
+  if (status === 507) return `Sunucuda bu dosya için yer kalmadı; sistem yöneticisine bildirin (${status}).`;
+  return httpErrorText(status);
+}
+
 const upload = async (path: string, file: File) => {
   const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/octet-stream' },
     body: file,
-    signal: AbortSignal.timeout(600_000),
+    // Yüzlerce MB'lık kitap PDF'i: yükleme ve bölümleme birlikte (kapıdaki süre 30 dk).
+    signal: AbortSignal.timeout(1_800_000),
   });
   if (res.status === 401 || res.status === 403) {
     authBlocked = true;
@@ -2135,9 +2154,9 @@ const upload = async (path: string, file: File) => {
   }
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
-    throw new Error(j?.detail?.message || httpErrorText(res.status));
+    throw new Error(deskUploadErrorText(res.status, file.size, j?.detail?.message));
   }
-  return (await res.json()) as { fileId: string; version: number };
+  return (await res.json()) as { fileId: string; version: number; unit?: 'bolum' | 'parca' };
 };
 
 /** M3 ve M5: eser dosyaları, metin/prova sürümleri, öneriler, kontroller, imzalar. */
@@ -2150,7 +2169,16 @@ export const deskApi = {
   /** Dosyadan yeni eser: ad dosya adından, tek istekte eser + ilk metin/prova sürümü (liste boşken yükleme alanı). */
   createFromFile: (kind: 'manuscript' | 'proof', file: File) =>
     upload(`/api/v1/editorial/works-from-file?kind=${kind}`, file) as Promise<{ fileId: string; version: number; workId: string; title: string }>,
-  chapters: (id: string) => send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[] }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
+  chapters: (id: string) =>
+    send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[]; activeFileId?: string | null }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
+  /** Yüklenen sürümü kaldırır (ZEKI-45); silinmez, iz olarak kalır, etkin sürüm bir öncekine döner. */
+  removeFile: (id: string) =>
+    send<{ workId: string; kind: string; version: number; filename: string; activeVersion: number | null }>(
+      'POST',
+      `/api/v1/editorial/files/${encodeURIComponent(id)}/remove`,
+      {},
+      30_000,
+    ),
   chapter: (id: string) => send<ChapterDetail>('GET', `/api/v1/editorial/chapters/${encodeURIComponent(id)}`, undefined, 60_000),
   review: (id: string) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/review`, {}, 60_000),
   approve: (id: string, approve: boolean) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/approval`, { approve }, 30_000),

@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Pencil, Plus } from 'lucide-react';
 import { ENGINE_ENABLED, deskApi, type Work } from '../engine';
 import { Note, btn, btnGhost, errText, field, label, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { FileDrop } from '../components/FileDrop';
-import { MB } from '../components/fileDropRules';
 import { Panel } from './kit';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
@@ -13,9 +12,6 @@ import { kaynakOf } from '../components/kaynakOf';
 /** M3 ve M5'in ortak eser seçicisi: sayfanın üstündeki yükleme alanı (dosyadan eser açar), eser listesi, boş eser. */
 
 export const fmtBytes = (n: number) => (n >= 1e6 ? `${nf.format(Math.round(n / 1e5) / 10)} MB` : `${nf.format(Math.round(n / 1024))} KB`);
-
-/** Köprüdeki sınır (editorial_desk.MAX_BYTES). */
-export const DESK_MAX_BYTES = 120 * MB;
 
 export function useWorks() {
   return useQuery({ queryKey: ['editorial', 'works'], queryFn: deskApi.works, enabled: ENGINE_ENABLED });
@@ -25,7 +21,8 @@ type Uploaded = { workId: string; title: string; version: number; isNew: boolean
 
 /** Redaksiyon ve son okumanın birincil yükleme alanı: sayfanın üstünde, liste boşken de görünür. Hedef «yeni eser»
  *  ise eser dosyası dosya adından açılır (köprü `works-from-file`; yükleme reddedilirse açılan eser geri alınır);
- *  bir eser seçiliyse o esere yeni sürüm yüklenir. Dosyadan açılan eserin adı hemen altında düzeltilir. */
+ *  bir eser seçiliyse o esere yeni sürüm yüklenir. Dosyadan açılan eserin adı hemen altında düzeltilir. Boyut
+ *  tavanı yok (ZEKI-26): köprü dosyayı diske akıtır, yalnız sunucuda yer kalmazsa reddeder. */
 export function WorkUpload({
   kind,
   works,
@@ -74,11 +71,10 @@ export function WorkUpload({
         </label>
         <FileDrop<Uploaded>
           accept={kind === 'manuscript' ? '.docx,.pdf,.txt,.md' : '.pdf'}
-          maxBytes={DESK_MAX_BYTES}
           title={kind === 'manuscript' ? 'Metin dosyası yükle' : "Prova PDF'i yükle"}
           hint={
             current
-              ? `«${current.title}» için yeni ${noun} sürümü açılır${kind === 'manuscript' ? '; bölümler baştan kurulur' : '; kontroller yeniden ölçülür, imzalar sıfırlanır'}.`
+              ? `«${current.title}» için yeni ${noun} sürümü açılır${kind === 'manuscript' ? '; metin kitabın bölümlerine göre baştan ayrılır' : '; kontroller yeniden ölçülür, imzalar sıfırlanır'}.`
               : `Eser dosyası dosya adından açılır, ${noun} ilk sürüm olarak yüklenir; adı sonra düzeltebilirsiniz.`
           }
           run={run}
@@ -133,6 +129,78 @@ function RenameWork({ work, onSaved }: { work: { id: string; title: string }; on
           <Note tone="err">{errText(save.error, 'Ad kaydedilemedi.')}</Note>
         </div>
       )}
+    </form>
+  );
+}
+
+/** Eser bilgileri (ZEKI-45): «Boş eser dosyası aç»ta girilen ad ve yazar sonradan düzeltilir. Kapalıyken yalnız
+ *  okunur; «Düzenle» aynı yerde forma döner (sayfa kaymaz, başka panel açılmaz). */
+export function WorkInfo({ work }: { work: Pick<Work, 'id' | 'title' | 'author'> }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(work.title);
+  const [author, setAuthor] = useState(work.author ?? '');
+  // Başka eser seçilince ya da kayıt tazelenince form eserin güncel bilgisine döner.
+  useEffect(() => {
+    setEditing(false);
+    setTitle(work.title);
+    setAuthor(work.author ?? '');
+  }, [work.id, work.title, work.author]);
+  const save = useMutation({
+    mutationFn: () => deskApi.updateWork(work.id, { title: title.trim(), author: author.trim() }),
+    onSuccess: async () => {
+      setEditing(false);
+      await qc.invalidateQueries({ queryKey: ['editorial'] });
+    },
+  });
+  const dirty = !!title.trim() && (title.trim() !== work.title || author.trim() !== (work.author ?? ''));
+  if (!editing)
+    return (
+      <div className="flex items-start justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <p className="break-words text-[13px] font-extrabold leading-snug">{work.title}</p>
+          <p className="mt-0.5 break-words text-[11.5px] leading-snug text-canvas-muted">{work.author || 'Yazar girilmedi'}</p>
+        </div>
+        <button type="button" className={`${btnGhost} shrink-0`} onClick={() => setEditing(true)} aria-label="Eser adını ve yazarı düzenle">
+          <Pencil aria-hidden className="h-4 w-4" />
+          Düzenle
+        </button>
+      </div>
+    );
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (dirty && !save.isPending) save.mutate();
+      }}
+    >
+      <label className="block">
+        <span className={label}>Eser adı</span>
+        <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className={`${field} mt-1`} />
+      </label>
+      <label className="block">
+        <span className={label}>Yazar</span>
+        <input value={author} onChange={(e) => setAuthor(e.target.value)} className={`${field} mt-1`} />
+      </label>
+      {save.error && <Note tone="err">{errText(save.error, 'Eser bilgileri kaydedilemedi.')}</Note>}
+      <div className="flex flex-wrap gap-1.5">
+        <button type="submit" disabled={!dirty || save.isPending} className={`${btn} flex-1 justify-center bg-canvas-violet text-white`}>
+          {save.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : 'Kaydet'}
+        </button>
+        <button
+          type="button"
+          className={btnGhost}
+          onClick={() => {
+            setEditing(false);
+            setTitle(work.title);
+            setAuthor(work.author ?? '');
+            save.reset();
+          }}
+        >
+          Vazgeç
+        </button>
+      </div>
     </form>
   );
 }
