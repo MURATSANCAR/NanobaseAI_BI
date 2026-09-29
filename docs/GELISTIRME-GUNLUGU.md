@@ -7,6 +7,23 @@
 - **İK:** performans değerlendirme notunda düğmeler `<label>` dışına alındı; etiket yazı alanına bağlı.
 - **Doğrulama (test sunucusu geçici kopya):** `tsc -b` 0, `vite build`, vitest 256/256.
 - **Kalan:** okur panelinde metni değiştiren kararın kaydı düşerse metin değişmiş kalır, işaret geri döner (ekran «Ctrl/Cmd+Z ile geri alın» der); tam çözüm sayfa metnini de geri almak.
+## 2026-09-29 (15:00) — CRM alan ve varlık başlıkları CRM'in kendi Türkçe etiketiyle
+
+- **Sorun:** ekranda ham CRM adı kuralla bölününce CRM'de Türkçe harfi atılmış şema adı yanlış çıkıyordu («new_HaberMecrasName»
+  → «Haber mecras ad», «new_BaskSays» → «Bask says»).
+- **Çözüm:** köprüde `crm_names.py` + `GET /api/v1/semantic/crm-names`: CRM `MetadataSchema` (`LocalizedLabel`; 1055 Türkçe,
+  yoksa 1033; `OverwriteTime = 1900-01-01` etkin katman) → 689 varlık + 3.849 önekli alan etiketi (183 KB; ilk okuma CRM'den
+  ~7 sn, sonra 6 saat bellekte; CRM okunamazsa boş harita, ekran kurala düşer). Yalnız şema okunur, CRM'e yazma yok.
+  Ön yüzde `readableName` CRM etiketini kuraldan önce kullanır — yalnız CRM'e ait adda (yayıncı önekli alan: önekler
+  haritadan; `…Base` tablo), genel sözcükler («name», «status») CRM etiketi almaz. Nitelikli adda varlığa özel etiket;
+  bağlantı alanının etiketsiz «…name» eşi bağlandığı alanın etiketiyle; cümle düzeni («Haber Mecrası» → «Haber mecrası»,
+  kısaltma ve «(TL)» korunur, «Id» → «ID»); CRM etiketi yalnız harf farkıyla ayrılıyorsa («Editor» ~ «Editör») kuralın
+  Türkçe yazımı kalır.
+- **Gerçek veriyle ölçüm (kodda geçen 972 CRM adı, gerçek CRM haritası):** 396'sı değişti, alt çizgili ham ad 0; örn.
+  «Haber mecras ad» → «Haber mecrası», «Szleme yenilenme sklyl» → «Sözleşme yenilenme sıklığı (yıl)», «Kitabinonecikanyanlari»
+  → «Bu kitap neden önemli?», «Afiskagitcinsiid» → «Kağıt cinsi». CRM'in kendi etiketi yazıldığı için kişi CRM formunda gördüğü
+  adı görür (ör. «new_GenelKanaat» → «Yayın kararı»).
+- **Test:** `test_crm_names.py` (5) + `test_access` ✓, `readableName.test.ts` 16, vitest 48 dosya / 265 ✓, `tsc -b` 0.
 
 ## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
 

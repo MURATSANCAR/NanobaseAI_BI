@@ -146,9 +146,17 @@ describe('readableName: CRM\'in kendi Türkçe etiketleri', () => {
     expect(readableName('new_HaberMecrasName')).toBe('Haber mecrası');
     expect(readableName('new_hedefkitle')).toBe('Hedef kitle');
     expect(readableName('new_isbn')).toBe('ISBN no');
+    setCrmNames({ ...crm, attributes: { ...crm.attributes, new_gelir: 'Etkinlik Geliri (TL) (Baz)', new_anaid: 'Ana Sözleşme Id', new_insta: 'Yazar Instagram Hesabı' } });
+    expect(readableName('new_gelir')).toBe('Etkinlik geliri (TL) (baz)');
+    expect(readableName('new_anaid')).toBe('Ana sözleşme ID');
+    expect(readableName('new_insta')).toBe('Yazar instagram hesabı');
     expect(readableText('Okuma · new_HaberMecrasName')).toBe('Okuma · haber mecrası');
     // Bağlantı alanının «…name» eşi: bağlandığı alanın etiketi.
     expect(readableName('new_hedefkitleName')).toBe('Hedef kitle');
+    // CRM etiketi Türkçe harfsiz girilmişse kuralın yazımı kalır.
+    setCrmNames({ ...crm, attributes: { ...crm.attributes, new_editor: 'Editor', new_ekitap: 'E-Kitap' } });
+    expect(readableName('new_Editor')).toBe('Editör');
+    expect(readableName('new_EKitap')).toBe('E-kitap');
   });
 
   it('CRM tablosu (…Base) varlık etiketiyle; nitelikli adda varlığa özel alan etiketi', () => {

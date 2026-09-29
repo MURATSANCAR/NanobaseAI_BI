@@ -63,7 +63,13 @@ let crmPrefixes = new Set<string>();
 const sentenceCase = (v: string) =>
   v
     .split(' ')
-    .map((w, i) => (i === 0 || /^\p{Lu}{2,}\d*$/u.test(w) ? w : w.toLocaleLowerCase('tr-TR')))
+    .map((w, i) => {
+      const letters = w.replace(/[^\p{L}\d]/gu, '');
+      if (i === 0 || /^\p{Lu}{2,}\d*$/u.test(letters)) return w; // ilk sözcük, kısaltma: «(TL)», «ISBN»
+      if (/^id$/i.test(letters)) return w.replace(/id/i, 'ID');
+      // Türkçe harfli sözcük Türkçe kuralla («İl» → «il»); İngilizce sözcük düz («Instagram» → «instagram», «ınstagram» değil).
+      return /[çğıöşüÇĞİÖŞÜ]/.test(w) ? w.toLocaleLowerCase('tr-TR') : w.toLowerCase();
+    })
     .join(' ');
 
 export function setCrmNames(n: Partial<CrmNames> | undefined | null): void {
@@ -510,10 +516,23 @@ function logoData(up: string, table: boolean): string | null {
   return own(columns, up) ? columns[up] : null;
 }
 
-/** Bir ad parçasını (noktasız) sözcüklere çevirir. `entity`: nitelikli adda önceki parça (CRM tablosu olabilir). */
+/** Harf ve büyük/küçük farkı dışında aynı mı: «Editor» ~ «Editör», «E-Kitap» ~ «E-kitap». */
+const fold = (v: string) =>
+  v
+    .toLocaleLowerCase('tr-TR')
+    .replace(/[çğıöşü]/g, (c) => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' })[c] ?? c)
+    .replace(/[^a-z0-9]/g, '');
+
+/** Bir ad parçası: CRM'e aitse CRM'in etiketi; ancak etiket kuralın yazımıyla yalnız harf farkıyla ayrılıyorsa
+ *  (CRM'de Türkçe harfsiz girilmiş: «Editor») kuralın Türkçe yazımı kalır. `entity`: nitelikli adda önceki parça. */
 function part(raw: string, entity?: string): string {
   const crm = crmLabel(raw, entity);
-  if (crm) return crm;
+  const rule = ruleName(raw);
+  return crm && fold(crm) !== fold(rule) ? crm : rule;
+}
+
+/** Kuralla: önek atılır, sözcüklere bölünür, sözlükle Türkçeleşir. */
+function ruleName(raw: string): string {
   let s = raw.replace(/^\[|\]$/g, '');
   // Logo: LG_411_01_STLINE, LG_411_CLCARD, LV_411_…, L_CAPIFIRM. Firma/dönem numarası yıl yedeğidir; başlığa yazılmaz.
   const lg = /^L[GV]_(?:\d{3}|EXCHANGE)_(?:\d{2}_)?([A-Z0-9_]+)$/i.exec(s) ?? /^L_([A-Z0-9_]+)$/.exec(s);
