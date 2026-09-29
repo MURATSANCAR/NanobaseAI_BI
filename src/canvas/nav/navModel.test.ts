@@ -114,6 +114,16 @@ describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-egitimlerim'])))).toEqual(['kampus', 'ik-egitimlerim']);
   });
 
+  it('personel portalı: /ik ana sayfa; doğum günleri ve yemek listesi ana sayfayı, İK yönetimi kendi öğesini etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/dogum-gunleri')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/yemek')?.item.id).toBe('ik-anasayfa');
+    expect(matchActive(g, '/ik/yonetim')?.item.id).toBe('ik-yonetim');
+    expect(matchActive(g, '/ik/egitim/rehberler')?.item.id).toBe('ik-egitim');
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-anasayfa', 'sayfa:ik-profilim'])))).toEqual(['kampus', 'ik-anasayfa', 'ik-profilim']);
+  });
+
   it('aday kartı işe alım panosunu etkin yapar', () => {
     const g = visibleNav(admin, {});
     expect(matchActive(g, '/ik/ise-alim/aday/aday_1')?.item.id).toBe('ik-ise-alim');

@@ -39,7 +39,7 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     ne: 'Kitabın KDV dahil kapak (etiket) fiyatı. Telif ve satış fiyatı bundan hesaplanır.',
     nereden: 'Kitap seçilince CRM kitap kartındaki KDV dahil fiyat. Yeni kitapta boş; aşağıdaki öneri kartı hedef kâra göre fiyat önerir («Bu fiyatı kullan»).',
     excel: 'J3 «Kesinleşen satış fiyatı» (boşsa J2 «Şimdiki satış fiyatı»).',
-    dikkat: 'Excel\'de olduğu gibi KDV düşülmez: telif KDV dahil fiyattan, kâr KDV dahil satış fiyatından hesaplanır.',
+    dikkat: 'Kitaplarda KDV %0 olduğu için kapak fiyatı olduğu gibi kullanılır (Excel\'de de öyle).',
   },
   ozelIskonto: {
     ne: 'Bu kitaba özel vadeli iskonto. Doluysa yayınevinin fiyat listesindeki iskontosunun yerine geçer.',
@@ -171,11 +171,12 @@ export const FORM_HELP: Record<string, FieldHelp> = {
     excel: 'J33 formülündeki «/3».',
   },
   telif: {
-    ne: 'Yazar telif oranı (%). Telif = kapak fiyatı × basılan adet × oran (baskıdan ödeme gibi hesaplanır).',
+    ne: 'Yazar telif oranı (%). Telif = kapak fiyatı × basılan adet × oran.',
     nereden: 'Kitap seçilince CRM\'deki yürürlükteki sözleşmenin telif oranı.',
     excel: 'I35, bedel J35.',
-    dikkat: 'Excel\'deki gibi KDV dahil kapak fiyatı ve basılan adet üzerinden. Sözleşme satıştan ödeme ya da net fiyattan telif diyorsa gerçek telif bundan düşük olur; aşağıdaki fiyat hesabı (senaryolar, başabaş) telifi sözleşmeye göre (Telif bölümü) hesaplar.',
+    dikkat: 'Fiyat çalışmasındaki uygulamaya göre sözleşmenin ayrıntısına (net fiyattan ya da satıştan ödeme) bakılmaz; aşağıdaki «Telif» bölümünden değiştirilebilir.',
   },
+
   dolayli: {
     ne: 'İşletme (genel) giderlerinin kitaba yüklenen payı: kâğıt + matbaa + diğer giderler toplamının yüzdesi. Birim maliyetin çoğu zaman en büyük kalemidir.',
     nereden: 'Fiyat listesindeki varsayılan (%90; basım Excel\'lerinin çoğunda bu). Kitaba göre değiştirilebilir.',
@@ -277,16 +278,20 @@ export const CALC_HELP: Record<string, FieldHelp> = {
   avans: { ne: 'Sözleşmedeki telif avansı; telife mahsup edilir, avansı aşan telif ayrıca ödenir.', nereden: 'CRM yürürlükteki sözleşmenin avans tutarı (TL ise).' },
   royaltyRate: { ne: 'Telif oranı.', nereden: 'CRM yürürlükteki sözleşmenin telif oranı.', excel: 'I35.' },
   royaltyBase: {
-    ne: 'Telifin hangi fiyattan hesaplandığı: brüt (KDV hariç kapak fiyatı) ya da net (iskonto sonrası satış).',
-    nereden: 'CRM sözleşmesinin telif türü (1 Brüt, 2 Net).',
-    excel: 'Excel her zaman KDV dahil kapak fiyatını kullanır.',
+    ne: 'Telifin hangi fiyattan hesaplandığı: kapak fiyatı (brüt) ya da iskonto sonrası satış (net).',
+    nereden: 'Varsayılan kapak fiyatı: fiyat çalışmasında telif kapak fiyatı üzerinden hesaplanır, sözleşme ayrıntısına bakılmaz. Sözleşmenin CRM\'deki türü «Telif» başlığının altında yazar; isterseniz buradan değiştirebilirsiniz.',
+    excel: 'Excel de kapak fiyatını kullanır (I35 × J3).',
   },
   royaltyOn: {
-    ne: 'Telifin satılan adetten mi basılan adetten mi doğduğu.',
-    nereden: 'CRM sözleşmesinin telif tipi (baskıdan: 1/4/5, satıştan: 2/6/7).',
-    excel: 'Excel her zaman basılan adeti kullanır.',
+    ne: 'Telifin basılan adetten mi satılan adetten mi hesaplandığı.',
+    nereden: 'Varsayılan basılan adet (fiyat çalışmasındaki uygulama). CRM sözleşmesinde satıştan ödeme yazıyorsa buradan değiştirebilirsiniz.',
+    excel: 'Excel de basılan adeti kullanır (J35 = J3 × F5 × I35).',
   },
-  vat: { ne: 'Kitap KDV oranı; kapak fiyatından KDV düşülerek net gelir bulunur.', nereden: 'CRM kitap kartındaki KDV oranı.', excel: 'Excel KDV düşmez.' },
+  vat: {
+    ne: 'Kitap KDV oranı; kapak fiyatından KDV düşülerek net gelir bulunur. Kitaplarda KDV %0 olduğu için kapak fiyatı olduğu gibi gelir sayılır.',
+    nereden: 'CRM kitap kartındaki KDV oranı (kitapların hemen hepsinde %0); yeni kitapta %0.',
+    excel: 'Excel KDV düşmez; KDV %0 olduğu için sonuç aynıdır.',
+  },
   discount: {
     ne: 'Kanallara (bayi, zincir, e-ticaret…) verilen ortalama iskonto; net gelir = KDV hariç fiyat × (1 − iskonto).',
     nereden: 'Logo\'da son 12 ayın kitap satışları: 1 − net tutar ÷ iskonto öncesi tutar, müşteri grubuna göre ağırlıklı.',

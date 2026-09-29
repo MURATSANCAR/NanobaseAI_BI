@@ -2672,6 +2672,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 display_words.catalog_texts(r.store, s.tenant_id, s.datasource_id)))
         return {"words": _display_words["words"], "version": str(version)}
 
+    from semantic_bridge import crm_names as _crm_names_mod
+
+    def _crm_meta_rows(sql: str) -> list[dict[str, Any]]:
+        c = rt().crm_connector
+        if c is None:
+            raise RuntimeError("CRM bağlantısı tanımlı değil")
+        _, rows, truncated = c.execute(sql, 1_000_000)
+        if truncated:
+            raise RuntimeError("CRM meta verisi eksik okundu")
+        return rows
+
+    _crm_names = _crm_names_mod.CrmNames(_crm_meta_rows)
+
+    @app.get("/api/v1/semantic/crm-names")
+    def crm_names_map() -> dict[str, Any]:
+        """CRM varlık/alan mantıksal adı → CRM'in kendi Türkçe etiketi («new_habermecrasname» → «Haber Mecrası»).
+        Ekran başlıkları (`readableName`) kuraldan önce buna bakar; CRM okunamazsa boş harita (bkz. crm_names.py)."""
+        return _crm_names.get()
+
     from semantic_bridge import hizli_bellek as _HB
 
     #: Veri sözlüğü terim listesi (2026-09-29): 5.000 terim + eşlemeleri + sözlüğe çevirme her açılışta 1,2 sn, liste
@@ -7526,6 +7545,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M39 Pazar araştırması ve rekabet (Analiz): /api/v1/pazar/*.
     from semantic_bridge import pazar_api
     app.state.pazar = pazar_api.register(app, rt, _require_caller, _can)
+    # M39 Pazar — dağıtımcı/perakende katalogları (Başarı, D&R; Logo sunucusundaki ayrı veritabanı, yalnız okuma):
+    # gece görüntüsü, arşiv, çıkış endeksi, TİMAŞ eşleşmesi. Uçlar /api/v1/pazar/dagitim/*.
+    from semantic_bridge import pazar_dagitim_api
+    app.state.pazar_dagitim = pazar_dagitim_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+    })
     # Ortak yapı taşı 5: kitap benzerliği dizini (/api/v1/books/similar/*); arama modüllerin kendi uçlarından.
     from semantic_bridge import book_similarity_api
     app.state.book_similarity = book_similarity_api.register(app, rt, _require_caller, _can)
@@ -7880,6 +7907,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     from semantic_bridge import hr_engagement_api, hr_performance_api
     hr_performance_api.register(app, app.state.hr)
     hr_engagement_api.register(app, app.state.hr)
+    # İK personel portalı (eski AppSheet «Timaş Personel Portal»): İK ana sayfası, özlük kaydı, Profilim, rehber,
+    # duyuru, evrak, yemek listesi, SSS ve İK yönetimi (/api/v1/hr/portal/*).
+    from semantic_bridge import hr_portal_api
+    hr_portal_api.register(app, app.state.hr)
     # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
     from semantic_bridge import channels
     app.state.channels = channels.register(app, rt, _require_caller, _can)

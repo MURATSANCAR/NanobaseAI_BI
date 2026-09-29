@@ -189,16 +189,17 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
 
     @app.get(f"{P}/items")
     def stock_items(request: Request, q: str = "", yayinevi: str = "", depo: str = "", durum: str = "", sira: str = "gun",
-                    sayfa: int = 0) -> dict[str, Any]:
+                    sayfa: int = 0, dagitim: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         m = model(engine, tenant)
         rows = call(S.filter_items, m, q=q[:200], yayinevi=yayinevi[:200], depo=depo[:10], durum=durum[:80],
-                    sira=sira if sira in S.LIST_SORTS else "gun")
+                    sira=sira if sira in S.LIST_SORTS else "gun", dagitim=dagitim[:20])
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
         pg["yayinevleri"] = sorted({i["yayinevi"] for i in m["items"] if i["yayinevi"]}, key=S.fold)
         pg["ambarlar"] = m["warehouses"]
         pg["veriSonu"] = m["dataEnd"]
+        pg["dagitim"] = m.get("dagitim")      # işaret sayaçları, pencere, son görüntü tarihleri (M39 dağıtımcı)
         return PV.bagla(pg, lambda: K.for_items(engine, tenant, m, pg, kdeps(user)))
 
     @app.get(f"{P}/items/{{stok_kodu}}")
@@ -222,7 +223,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
                 "oneriler": store.list_suggestions(engine, tenant, stok=k, durum="")["items"],
                 "gecmis": store.snapshots(engine, tenant, k), "veriSonu": m["dataEnd"], "baskiSuresi": m["lead"],
                 "baskiSuresiKaynak": m["leadSource"], "hareketPenceresi": m.get("movementWindow"),
-                "tahminBaslangic": m.get("forecastStart")}
+                "tahminBaslangic": m.get("forecastStart"), "dagitimOzet": m.get("dagitim")}
         return PV.bagla(out, lambda: K.for_item(engine, tenant, m, out, kdeps(user)))
 
     @app.post(f"{P}/items/{{stok_kodu}}/notes", status_code=201)
@@ -251,7 +252,7 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
             rows = [i for i in rows if not i["uretim"]]
         pg = S.page_of(rows, sayfa)
         pg["items"], _ = with_cost(user, pg["items"])
-        out = {**pg, "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
+        out = {**pg, "dagitim": m.get("dagitim"), "gun": days, "baskiSuresi": m["lead"], "baskiSuresiKaynak": m["leadSource"],
                "guvenlikGun": m["settings"]["safetyDays"], "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_running_out(engine, tenant, m, out, kdeps(user)))
 
@@ -268,7 +269,8 @@ def register(app: Any, deps: dict[str, Any]) -> S.Service:
         for i in pg["items"]:
             o = sug.get(i["stokKodu"])
             i["oneri"] = {"id": o["id"], "hedef": o["hedef"], "hedefEtiket": o["hedefEtiket"], "gerekce": o["gerekce"]} if o else None
-        out = {**pg, "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value, "fazlaGun": m["settings"]["excessDays"],
+        out = {**pg, "dagitim": m.get("dagitim"), "toplamAdet": sum(i["bakiye"] for i in rows), "deger": value,
+               "fazlaGun": m["settings"]["excessDays"],
                "hareketPenceresi": m.get("movementWindow"), "veriSonu": m["dataEnd"]}
         return PV.bagla(out, lambda: K.for_excess(engine, tenant, m, out, kdeps(user)))
 

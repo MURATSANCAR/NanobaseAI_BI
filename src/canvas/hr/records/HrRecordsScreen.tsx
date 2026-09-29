@@ -40,7 +40,7 @@ export default function HrRecordsScreen() {
     <HrFrame
       crumb="Çalışan ve KVKK kayıtları"
       title="Çalışan ve KVKK kayıtları"
-      lead="İnsan Kaynakları ekranlarının ortak çalışan ve birim listesi, KVKK aydınlatma metinleri, saklama süreleri ve erişim kaydı. Liste CRM ve Active Directory'den öneri olarak gelir, İK onaylayınca yazılır; CRM'e yazılmaz. T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz."
+      lead="İnsan Kaynakları ekranlarının ortak çalışan ve birim listesi, KVKK aydınlatma metinleri, saklama süreleri ve erişim kaydı. Liste CRM ve Active Directory'den öneri olarak gelir, İK onaylayınca yazılır; CRM'e yazılmaz. Bu listede T.C. kimlik no, adres, ücret ve sağlık bilgisi tutulmaz; özlük dosyası (belgeler dahil) İK yönetimi › Personel'dedir."
     >
       {meta.error && <Note tone="err">{errText(meta.error, 'Ekran bilgisi okunamadı.')}</Note>}
       {meta.data?.me.isAdmin && !meta.data.settings.adminSeesPersonal && !can('kvkk-yonet') && (

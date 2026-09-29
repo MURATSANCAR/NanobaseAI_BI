@@ -1,5 +1,9 @@
 import {
   Activity,
+  IdCard,
+  FolderOpen,
+  CircleHelp,
+  Settings2,
   Headset,
   Server,
   Handshake,
@@ -663,6 +667,14 @@ export const NAV: NavGroup[] = [
     icon: Contact,
     explicit: true,
     items: [
+      // Personel portalı (eski AppSheet): ana sayfa, Profilim, rehber, duyuru, evrak, SSS herkese; İK yönetimi açıkça verilir.
+      { id: 'ik-anasayfa', label: 'İK ana sayfası', to: '/ik', icon: House, section: 'Personel portalı', hint: 'Kutucuklar, doğum günleri, son duyurular, bugünün menüsü; İK yetkilisine kadro sayıları', also: ['/ik/dogum-gunleri', '/ik/yemek'], keywords: ['ik', 'insan kaynakları', 'personel portalı', 'doğum günü', 'yemek listesi', 'menü'] },
+      { id: 'ik-profilim', label: 'Profilim', to: '/ik/profilim', icon: IdCard, section: 'Personel portalı', hint: 'Özlük bilgilerim ve belgelerim', keywords: ['profil', 'özlük', 'bilgilerim', 'belgelerim'] },
+      { id: 'ik-rehber', label: 'Personel rehberi', to: '/ik/rehber', icon: BookUser, section: 'Personel portalı', hint: 'Departman, unvan, e-posta, şirket hattı ve dahili no', keywords: ['rehber', 'dahili', 'telefon', 'e-posta', 'kim'] },
+      { id: 'ik-duyurular', label: 'Şirket içi duyurular', to: '/ik/duyurular', icon: Megaphone, section: 'Personel portalı', hint: 'Etkinlik, işe giriş ve genel duyurular', keywords: ['duyuru', 'etkinlik', 'haber'] },
+      { id: 'ik-evrak', label: 'Evrak', to: '/ik/evrak', icon: FolderOpen, section: 'Personel portalı', hint: 'Evrak deposu (formlar, rehberler) ve evrak talebi (çalışma belgesi, bordro…)', keywords: ['evrak', 'form', 'çalışma belgesi', 'bordro', 'hizmet dökümü', 'talep'] },
+      { id: 'ik-sss', label: 'Sık sorulan sorular', to: '/ik/sss', icon: CircleHelp, section: 'Personel portalı', hint: 'İzin, ücret, çalışma düzeni, eğitim', keywords: ['sss', 'soru', 'izin', 'maaş'] },
+      { id: 'ik-yonetim', label: 'İK yönetimi', to: '/ik/yonetim', icon: Settings2, section: 'Personel portalı', hint: 'Personel özlük kaydı ve belgeleri, Excel aktarma, duyuru, evrak talepleri, yemek listesi, SSS, alanlar', keywords: ['özlük', 'personel girişi', 'excel', 'alan ayarı', 'yönetici paneli'] },
       { id: 'ik-ise-alim', label: 'İşe alım panosu', to: '/ik/ise-alim', icon: ClipboardList, section: 'İşe alım', hint: 'Başvurular aşamalarıyla, aday kartı, kanıtlı özgeçmiş özeti ve mülakat notları', keywords: ['aday', 'başvuru', 'özgeçmiş', 'cv', 'mülakat', 'işe alım', 'ik'] },
       { id: 'ik-pozisyonlar', label: 'Pozisyonlar', to: '/ik/pozisyonlar', icon: BriefcaseBusiness, section: 'İşe alım', hint: 'Pozisyon kartı, yetkinlikler, ilan taslağı, mülakat soru seti ve onay', keywords: ['kadro', 'ilan', 'yetkinlik', 'pozisyon'] },
       { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },

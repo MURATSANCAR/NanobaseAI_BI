@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { rawTitle, readableName, readableText, setDisplayWords, setLogoNames, splitCompound } from './readableName';
+import { rawTitle, readableName, readableText, setCrmNames, setDisplayWords, setLogoNames, splitCompound } from './readableName';
 
 afterEach(() => {
   setDisplayWords({});
   setLogoNames({ tables: {}, columns: {} });
+  setCrmNames({ entities: {}, attributes: {} });
 });
 
 describe('readableName: ham veritabanı adı → ekrandaki başlık', () => {
@@ -124,5 +125,54 @@ describe('Logo alan sözlüğü haritası', () => {
     expect(readableName('new_yenib2b')).toBe('Yeni B2B');
     expect(readableName('new_youtubelink')).toBe('YouTube bağlantı');
     expect(readableName('new_Instagram')).toBe('Instagram');
+  });
+});
+
+describe('readableName: CRM\'in kendi Türkçe etiketleri', () => {
+  const crm = {
+    entities: { new_kitap: 'Kitap Kartı', account: 'Firma', new_projekarti: 'Proje Kartı' },
+    attributes: {
+      new_habermecrasname: 'Haber Mecrası',
+      new_hedefkitle: 'Hedef Kitle',
+      'new_kitap.new_durum': 'Kitap Durumu',
+      new_durum: 'Durum',
+      new_isbn: 'ISBN No',
+      total: 'CRM Toplam Alanı',
+    },
+  };
+
+  it('Türkçe harfi atılmış şema adı yerine CRM etiketi (cümle düzeninde)', () => {
+    setCrmNames(crm);
+    expect(readableName('new_HaberMecrasName')).toBe('Haber mecrası');
+    expect(readableName('new_hedefkitle')).toBe('Hedef kitle');
+    expect(readableName('new_isbn')).toBe('ISBN no');
+    setCrmNames({ ...crm, attributes: { ...crm.attributes, new_gelir: 'Etkinlik Geliri (TL) (Baz)', new_anaid: 'Ana Sözleşme Id', new_insta: 'Yazar Instagram Hesabı' } });
+    expect(readableName('new_gelir')).toBe('Etkinlik geliri (TL) (baz)');
+    expect(readableName('new_anaid')).toBe('Ana sözleşme ID');
+    expect(readableName('new_insta')).toBe('Yazar instagram hesabı');
+    expect(readableText('Okuma · new_HaberMecrasName')).toBe('Okuma · haber mecrası');
+    // Bağlantı alanının «…name» eşi: bağlandığı alanın etiketi.
+    expect(readableName('new_hedefkitleName')).toBe('Hedef kitle');
+    // CRM etiketi Türkçe harfsiz girilmişse kuralın yazımı kalır.
+    setCrmNames({ ...crm, attributes: { ...crm.attributes, new_editor: 'Editor', new_ekitap: 'E-Kitap' } });
+    expect(readableName('new_Editor')).toBe('Editör');
+    expect(readableName('new_EKitap')).toBe('E-kitap');
+  });
+
+  it('CRM tablosu (…Base) varlık etiketiyle; nitelikli adda varlığa özel alan etiketi', () => {
+    setCrmNames(crm);
+    expect(readableName('new_kitapBase')).toBe('Kitap kartı');
+    expect(readableName('AccountBase')).toBe('Firma');
+    expect(readableName('new_kitapBase.new_durum')).toBe('Kitap kartı · Kitap durumu');
+    expect(readableName('new_projekartiBase.new_durum')).toBe('Proje kartı · Durum');
+  });
+
+  it('genel sözcük ve CRM dışı ad CRM etiketi almaz; harita yoksa kural', () => {
+    setCrmNames(crm);
+    expect(readableName('total')).not.toBe('CRM toplam alanı');
+    expect(readableName('net_12ay')).toBe('Net (12 ay)');
+    expect(readableName('LG_411_CLCARD')).toBe('Cari kart');
+    setCrmNames({ entities: {}, attributes: {} });
+    expect(readableName('new_hedefkitle')).toBe('Hedef kitle');
   });
 });

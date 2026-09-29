@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
@@ -6,6 +6,7 @@ import { ENGINE_ENABLED } from '../../engine';
 import { Loading, Note, Pill, btnGhost, errText, field, label as labelCls } from '../../admin/ui';
 import { fmtDay } from '../api';
 import { Block } from '../parts';
+import { AskSheet } from '../../budget/parts';
 import SqlInfo from '../../components/SqlInfo';
 import { EmptyHint } from '../../components/Explain';
 import { launchApi, type Launch, type LaunchMeta } from './api';
@@ -19,6 +20,10 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['launch', 'media', launch.id], queryFn: () => launchApi.media(launch.id), enabled: ENGINE_ENABLED });
   const [add, setAdd] = useState({ mecra: '', baslik: '', url: '', tarih: new Date().toISOString().slice(0, 10), ton: 'notr' });
+  const [del, setDel] = useState<{ id: string; baslik: string } | null>(null);
+  // Pencere kapanırken (geçiş sürerken) başlık boşalmasın diye son silinecek kayıt tutulur.
+  const lastDel = useRef(del);
+  if (del) lastDel.current = del;
   const refetch = () => { qc.invalidateQueries({ queryKey: ['launch', 'media', launch.id] }); qc.invalidateQueries({ queryKey: ['launch', 'crm-todo', launch.id] }); };
   const create = useMutation({
     mutationFn: () => launchApi.addMedia(launch.id, add),
@@ -27,7 +32,7 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
   });
   const remove = useMutation({
     mutationFn: (id: string) => launchApi.deleteMedia(launch.id, id),
-    onSuccess: () => { toast.success('Kayıt silindi.'); refetch(); },
+    onSuccess: () => { toast.success('Kayıt silindi.'); setDel(null); refetch(); },
     onError: (e) => toast.error(errText(e, 'Kayıt silinemedi. Sayfayı yenileyip yeniden deneyin.') ?? ''),
   });
   const d = q.data;
@@ -64,11 +69,15 @@ export default function MediaTab({ launch, meta }: { launch: Launch; meta: Launc
               </div>
             </div>
             {meta.me.canWrite && m.kaynak === 'elle' && m.id && (
-              <button type="button" className={btnGhost} aria-label="Kaydı sil" onClick={() => remove.mutate(m.id as string)}><Trash2 aria-hidden className="h-4 w-4" /></button>
+              <button type="button" className={btnGhost} aria-label="Kaydı sil" onClick={() => setDel({ id: m.id as string, baslik: m.baslik })}><Trash2 aria-hidden className="h-4 w-4" /></button>
             )}
           </li>
         ))}
       </ul>
+      <AskSheet open={del !== null} title="Yansımayı sil"
+        message={`«${lastDel.current?.baslik || 'Başlıksız yansıma'}» yansıması silinecek. Bu işlem geri alınamaz.`}
+        confirm="Yansımayı sil" danger busy={remove.isPending}
+        onClose={() => setDel(null)} onConfirm={() => { if (del) remove.mutate(del.id); }} />
       {meta.me.canWrite && (
         <form className="mt-3 grid grid-cols-1 gap-2 rounded-2xl bg-slate-50 p-2.5 sm:grid-cols-[150px_1fr_1fr_150px_130px_auto] sm:items-end"
           onSubmit={(e) => { e.preventDefault(); if (add.baslik.trim()) create.mutate(); }}>

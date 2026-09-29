@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazar — dağıtımcı ve perakende katalogları (Başarı, D&R): her gün 06:15 görüntü, endeks, kalibrasyon
+
+[Timer]
+OnCalendar=*-*-* 06:15:00
+Persistent=true
+Unit=timas-pazar-dagitim.service
+
+[Install]
+WantedBy=timers.target

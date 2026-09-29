@@ -68,6 +68,14 @@ CUSTOM_FIELDS = {
 		 "insert_after": "nb_yz_not"},
 		{"fieldname": "nb_yz_ozet_zamani", "fieldtype": "Datetime", "label": "Özet zamanı", "read_only": 1,
 		 "insert_after": "nb_yz_ozet"},
+		# Otomatik çözüm önerisi (yz/cozum.py): durum, gönderim zamanı, güven ve kaynak kayıtlar.
+		{"fieldname": "nb_oneri_durumu", "fieldtype": "Select", "label": "Otomatik öneri",
+		 "options": "\nÖneri gönderildi\nÖneriyle çözüldü\nÖneriyle çözülmedi\nBT'ye atandı", "read_only": 1,
+		 "insert_after": "nb_yz_ozet_zamani"},
+		{"fieldname": "nb_oneri_zamani", "fieldtype": "Datetime", "label": "Öneri zamanı", "read_only": 1,
+		 "insert_after": "nb_oneri_durumu"},
+		{"fieldname": "nb_oneri_not", "fieldtype": "Small Text", "label": "Öneri kaynağı", "read_only": 1,
+		 "insert_after": "nb_oneri_zamani"},
 	],
 	"HD Article": [
 		{"fieldname": "nb_kaynak_kayit", "fieldtype": "Link", "options": "HD Ticket", "label": "Kaynak kayıt",
@@ -83,6 +91,7 @@ TRANSLATED_DOCTYPES = ("HD Ticket Status", "HD Ticket Type", "HD Ticket Priority
 def apply():
 	_ileri_tarihli_isler()
 	_custom_fields()
+	_bt_duzeni()
 	_translated_doctypes()
 	_help_menu()
 	for doctype, values in SETTINGS:
@@ -120,6 +129,19 @@ def _write_single(doctype, values):
 def _exists_for_link(meta, field, value):
 	target = meta.get_field(field).options
 	return not target or bool(frappe.db.exists(target, value))
+
+
+def _bt_duzeni():
+	"""BT talep kategorileri (yz/kategori.py) ve BT ekibi (yz/cozum.py); ekip üyeleri AD eşitlemesiyle gelir."""
+	try:
+		from nanobase_brand.yz import cozum, kategori
+
+		kategori.ensure()
+		cozum.bt_ekibi()
+		frappe.db.commit()
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(title="NanobaseAI BT kategorileri/ekibi kurulamadı")
 
 
 def _ileri_tarihli_isler():

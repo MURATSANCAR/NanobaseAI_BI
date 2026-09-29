@@ -16,6 +16,77 @@
 - **İzin:** yeni anahtar açılmadı (rollere göç gerekirdi); `tasarim.uret` katalogda «Kitap tasarımında üretim ve düzenleme», açıklaması genişledi. Bugün üretebilen her rol ve Herkes («Bütün sayfalar») aynı erişimi korur; yalnız sayfası olup üretim yetkisi olmayan rol artık yazamaz. Roller veritabanından okunmadı (izin verilmedi), karar anahtarın anlamı üzerinden verildi.
 - **Ön yüz:** 28 dosya; kalıp mevcut stüdyo ekranları gibi «yetkisiz düğmeyi görmez», karar/durum gösteren düğmeler (yaş raporu kararları, kolaj tarzı, ses seçiciler) pasif, yükleme alanları gizlenmez kilitli (`FileDrop feature`), sayfa düzeni yetkisizde sunucu önizlemesiyle gezinme.
 - **Test (test sunucusu, geçici `/tmp/zk-rol`, silindi):** pytest yetki+stüdyo 34 + 39 geçti (yeni: uygulamadaki bütün stüdyo uçlarını tarayan sınıflandırma testi, sayfası olan ama yetkisi olmayan rolün 403 alması), köprü içe aktarma tamam; `tsc --noEmit` 0 hata, vitest 45 dosya / 251 test geçti. Canlıya kurulmadı.
+## 2026-09-29 (15:00) — KDV %0 / telif varsayılanı (`c9ad5e2b`) test sunucusu ve müşteri VM'inde
+
+- **Test sunucusu:** `CalcPane.tsx` ve `help.ts` sunucuda önceki main hâlindeydi (md5), yerleştirildi; `index-DPaAEmv0.js`. Görünmez tarayıcı (timasai kısa oturum, silindi): yeni kitapta ve Mükemmeliyetçi Kişilik'te KDV «0», telif tabanı «Brüt — kapak fiyatı», doğuşu «Baskıdan ödeme — basılan adet»; sayfa hatası 0.
+- **Müşteri VM'i:** arada başka oturumların iki kurulumu (`14d2346d`, `151ee17d`, 14:49'da EXIT 0) — ikisi de `c9ad5e2b`'nin atası. Ön denetim `._*` 0, çakışma işareti 0, arşiv köprüsü 2.374 uç; `vm-deploy-c9ad5e2b` EXIT 0, 5 konteyner ayakta, `bi_var` 7 → 7. VM'in sunduğu `PricingScreen-WjtMwIfc.js` içinde `royaltyOn:"baski",vat:0`, «Excel tarifesi» 0.
+
+## 2026-09-29 (15:45) — CRM başlıkları test sunucusunda ve müşteri VM'inde (`151ee17d`)
+
+- **Test sunucusu:** 5 dosya (md5 = değişiklik öncesi main), `tsc -b` 0, portal `index-DnyhC6rB.js`, köprü yeniden başladı.
+  Canlı uç: 689 varlık + 3.848 alan (183 KB), ilk istek 13 sn, sonra 0,008 sn. Tarayıcıyla «Kişisel veri envanteri» ve
+  «Veri alanları»: sayfa metninde ham `new_`/`obs_` adı 0.
+- **Müşteri VM'i:** ön denetim (VM'deki `14d2346d` ata, 15 commit; çakışma 0; arşiv köprüyü 2.374 uçla yükledi; `._*` 0).
+  Kurulum komutu Claude oturumunda «Production Deploy» izin reddi → kullanıcı açık SSH bağlantısı üzerinden koştu (yeni
+  bağlantılar IP engeline takılıyordu): **EXIT 0**, 5 konteyner, `bi_var` 7 → 7. VM köprüsü CRM haritasını müşterinin canlı
+  CRM'inden okuyor: 689 varlık, 3.848 alan («Baskı Sayısı», «Yayın Kararı», «Haber Mecrası»).
+
+## 2026-09-29 (gece, 3) — Kitap hesabı: yeni kitapta KDV %0, telif varsayılanı kapak fiyatı × basılan adet
+
+- **Üretim/fiyat ekibinin geri bildirimi:** (1) kitapta KDV %0 — CRM'de 6.200 kitap %0, 16 kitap %8–20, 90 boş; (2) fiyat çalışmasında telif kapak fiyatı üzerinden, sözleşme ayrıntısına bakılmıyor; (3) dolaylı giderin telife uygulanması yönetime sorulacak; (4) küçük baskılar (500/200/100) için ayrı maliyet Excel'i var, üretimden istenecek.
+- **Hata:** Kitap hesabında yeni kitap açılınca KDV varsayılanı %10'du (`fromDefaults`) → fiyat analizinde net gelir %9 düşük. Varsayılan **%0**; kitap seçilince CRM'deki oran (değişmedi).
+- **Telif varsayılanı:** kitaptan ve yeni kitaptan **kapak fiyatı × basılan adet** (`royaltyBase: kapak`, `royaltyOn: baski`); CRM sözleşme türü «Telif» bölümünün açıklamasında yazar, seçimle değiştirilir. Bilgi metinleri (KDV, telif tabanı/doğuşu, kapak fiyatı, telif) buna göre.
+- **Mükemmeliyetçi Kişilik −%19:** hesap son baskının adediyle (10. baskı, 500 adet, 06.08.2026); 800 adetlik iç fire 500 adette basılanın 1,6 katı. Şablon küçük baskı için değil; küçük baskı Excel'i gelince eklenecek.
+- **Bekleyen sorular:** muhasebe — kâğıt alışındaki KDV maliyet mi (sistem ve Excel kâğıdı KDV hariç alıyor); yönetim — dolaylı gider telife uygulanacak mı; üretim — küçük baskı Excel'i.
+
+## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
+
+- **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.
+- **Pazarlama:** lansman medya kaydı onayla silinir (`AskSheet`); yeni işbirliği penceresi her açılışta sıfırlanır (ayrıca açıkken her yenilemede tekrar uyarısını silen etki düzeldi); içerik talebi penceresi kapanınca kanal/biçim ve eski hata notu sıfırlanır; görsel/metin reddi `window.prompt` yerine zorunlu nedenli `AskSheet`, gönderilen veri aynı.
+- **İK:** performans değerlendirme notunda düğmeler `<label>` dışına alındı; etiket yazı alanına bağlı.
+- **Doğrulama (test sunucusu geçici kopya):** `tsc -b` 0, `vite build`, vitest 256/256.
+- **Kalan:** okur panelinde metni değiştiren kararın kaydı düşerse metin değişmiş kalır, işaret geri döner (ekran «Ctrl/Cmd+Z ile geri alın» der); tam çözüm sayfa metnini de geri almak.
+## 2026-09-29 (15:00) — CRM alan ve varlık başlıkları CRM'in kendi Türkçe etiketiyle
+
+- **Sorun:** ekranda ham CRM adı kuralla bölününce CRM'de Türkçe harfi atılmış şema adı yanlış çıkıyordu («new_HaberMecrasName»
+  → «Haber mecras ad», «new_BaskSays» → «Bask says»).
+- **Çözüm:** köprüde `crm_names.py` + `GET /api/v1/semantic/crm-names`: CRM `MetadataSchema` (`LocalizedLabel`; 1055 Türkçe,
+  yoksa 1033; `OverwriteTime = 1900-01-01` etkin katman) → 689 varlık + 3.849 önekli alan etiketi (183 KB; ilk okuma CRM'den
+  ~7 sn, sonra 6 saat bellekte; CRM okunamazsa boş harita, ekran kurala düşer). Yalnız şema okunur, CRM'e yazma yok.
+  Ön yüzde `readableName` CRM etiketini kuraldan önce kullanır — yalnız CRM'e ait adda (yayıncı önekli alan: önekler
+  haritadan; `…Base` tablo), genel sözcükler («name», «status») CRM etiketi almaz. Nitelikli adda varlığa özel etiket;
+  bağlantı alanının etiketsiz «…name» eşi bağlandığı alanın etiketiyle; cümle düzeni («Haber Mecrası» → «Haber mecrası»,
+  kısaltma ve «(TL)» korunur, «Id» → «ID»); CRM etiketi yalnız harf farkıyla ayrılıyorsa («Editor» ~ «Editör») kuralın
+  Türkçe yazımı kalır.
+- **Gerçek veriyle ölçüm (kodda geçen 972 CRM adı, gerçek CRM haritası):** 396'sı değişti, alt çizgili ham ad 0; örn.
+  «Haber mecras ad» → «Haber mecrası», «Szleme yenilenme sklyl» → «Sözleşme yenilenme sıklığı (yıl)», «Kitabinonecikanyanlari»
+  → «Bu kitap neden önemli?», «Afiskagitcinsiid» → «Kağıt cinsi». CRM'in kendi etiketi yazıldığı için kişi CRM formunda gördüğü
+  adı görür (ör. «new_GenelKanaat» → «Yayın kararı»).
+- **Test:** `test_crm_names.py` (5) + `test_access` ✓, `readableName.test.ts` 16, vitest 48 dosya / 265 ✓, `tsc -b` 0.
+## 2026-09-29 (14:40) — Test sunucusuna main `81e16903` (yazar giriş süzgeci + kişi kartı düzeltmesi); uçtan uca tarayıcı testi 48/48
+
+- **Kurulum:** 8 dosya (sunucu hâli md5 ile bir önceki main `30e93c7a`), sunucu ağacı kopyasında `tsc -b` 0, vitest 62/62 (editoryal + ekran bilgisi), pytest 16/16, `vite build` 37 sn; md5 yeniden denetlendi, 8/8 yeni. Köprü yeniden başlatıldı, dışarıdan `index-DykogImY.js`, `._*` 0.
+- **Tarayıcı testi (görünmez tarayıcı test sunucusunda, portal üzerinden, timasai 45 dk oturumu, iş sonunda silindi):** 12 ekran × 320/390/768/1280 — Masam, eski `/gorevlerim` adresi, Görevlerim panosu ve penceresi, editör atama (2 sekme), sözleşme listesi ve ayrıntısı, kitap 360 (hak açılırı), kişi kartı (küçük harfli `?kisi=` bağlantısı), yazar giriş (süzgeçsiz ve `?tur=Editoryal&yil=2026`), Haklar ve lisanslar. Yatay taşma her açılışta 0, konsol ve istek hatası 0; 48/48 (kitap 320 ilk açılışı köprü açılışından hemen sonra 41 sn sürüp kaldı, tekrarında 3 sn ile geçti).
+- **Testte bulunan ve düzeltilen:** kişi kartı `?kisi=` bağlantısı küçük harfli kimlikle gelince sonsuza kadar «Yükleniyor» kalıyordu (CRM kimliği büyük harf; yazar ilişkileri, basın-web, serbest çalışanlar, komut paleti bağlantıları küçük harf taşıyabiliyor) → karşılaştırma harf duyarsız.
+- **Test verisi notları:** seçilen iki kayıt 404 verdi — CRM'de `statecode = 0` ama durum nedeni «Pasif»; d49b498f'nin genişlettiği süzgeç doğru gizliyor. Görevlerim panosunun dolu hâli, timasai'nin CRM'de projesi olmadığı için gerçek bir editörün (24 proje) CRM verisiyle tarayıcıda yerine konarak çizildi; yazma engelliydi.
+- **Açık:** müşteri VM'ine kurulmadı. Telefonda yönetici görünümünde yazar giriş ekranının «Editörlerin bekleyen işleri» listesi (596 iş) süzgeçleri aşağı itiyor (önceden var olan düzen).
+- **Okur paneli, sonradan:** metni değiştiren kararın kaydı düşerse metin de güncel sayfada tersine çevrilir (`revertEdit`: öneri metni kendi yerinde aynen duruyorsa geri alınır, aradaki başka düzenlemeler kalır; o yer bu arada değiştiyse dokunulmaz ve ekran bunu söyler). `await` sonrası güncel sayfa için `ctxRef`. Test sunucusunda `tsc` 0, `vite build`, vitest 256/256.
+
+## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
+
+- **Ön denetim:** VM'deki son kurulum `7fa258e8` kurulacak `14d2346d`'nin atası (42 commit, geri sarma yok); çakışma işareti 0;
+  `/tmp/bi-main-14d2346d` (git archive) test sunucusunda köprü yükledi (2.321 uç); `._*` 0. Kurulum komutu Claude oturumunda
+  «üretime kurulum» izin denetimine takıldı → kullanıcı koştu: `systemd-run --unit=vm-deploy-14d2346d`, günlük
+  `/tmp/vm-deploy-14d2346d.log`, **EXIT 0**; 5 konteyner ayakta, `bi_var` korundu (7 → 7), oturumsuz yollar 302/200/401,
+  VM sürüm kaydı `14d2346d` (test sunucusu köprüsüne kayıt 401 — betiğin bilinen eksiği). Web taraması kapalı
+  (`WEB_WATCH_ENABLED` tanımsız, zamanlayıcı yok).
+- **VM kabulü (köprü konteyneri içinde `yerinde.py`, müşteri verisi, yalnız okuma; denetim/erişim yazıcıları sayaçta, geçici
+  hazır cevap klasörü; bitince `/tmp/ek` ve geçici klasör silindi):** **152 geçti, 0 kaldı, 22 uyarı.** Cariler 248.351 satır
+  (947.871 sayı + 325.781 tarih hücresi) birebir; CRM düzeltilecek 113.545; bayi riski 25.685; kârlılık 10.096; baskı öneri 5.061;
+  set kart listesi 9. Uyarılar test sunucusundakilerle aynı türde (kayıtsız kimlikli uçlar, timasai rolünde olmayan İK
+  zorunlu eğitim, bilerek metin kalan kod kolonları).
+- **Kurulum sırası tamam:** main → test sunucusu (kabul 146/0, ekran 136/0) → müşteri VM'i (152/0).
+
 ## 2026-09-29 (13:20) — Excel indirme: düzeltmeler test sunucusunda, set kart listesi ekranı da denendi
 
 - **Kurulum (`bb527271`):** 8 dosya (md5 = değişiklik öncesi main), derleme, köprü yeniden başladı. `cockpit/dist/index.html`
@@ -37,6 +108,29 @@
 - **Tutar hatası (pazarlama formları kolu buldu):** ücret/bütçe alanına «7.500» yazan 7,5 kaydediyordu; aynı kalıp 10 modülün yardımcısında ve sözleşme `toNum`, eğitim kişi başı maliyet, okul fiyat üst sınırı, emsal fiyatı, ilk baskı fiyatında vardı. Ortak `components/trNumber.ts` + `trNumber.test.ts`; bütün bu yerler ona bağlandı. Serbest çalışan, uyarı eşiği, etkinlik, fiyatlama zaten doğruydu.
 - **Doğrulama (test sunucusu geçici kopya):** `tsc -b` 0, `vite build`, vitest 256/256 (46 dosya).
 - **Açık (kollar buldu, düzeltilmedi):** karakter referans görseli ve lansman medya kaydı onaysız siliniyor; boyama «Fark» 20 üstüne izin veriyor; yaş raporunda karardan sonra yazılan not kaydedilmiyor; telaffuz sözlüğünde okunuşu boş satır sessizce atılıyor; ses yükleme uyarısı sınır+10 sn'de; okur panelinde sunucu hatasında karar işareti geri alınmıyor; işbirliği ve içerik talebi pencereleri yeniden açılınca eski değerleri tutuyor; görsel/metin reddi `window.prompt` ile soruluyor.
+## 2026-09-29 (gece) — Dağıtımcı katalogları (Başarı, D&R) Stok ve Pazar ekranlarında; yalnız müşterinin kullandığı kaynaklar
+
+- **Kullanıcı kararları:** yeni sayfa yok, veriler mevcut ekranlarda; müşteri yalnız `basari_list`, `prefix_list`, `urun_list` kullanıyor, diğerleri (arşiv `urun_list_BACKUP` dahil) dikkate alınmaz; D&R alanları kullanıcının verdiği D&R Prefix servis belgesiyle çözülür.
+- **Köprü:** `pazar_dagitim.py` + `pazar_dagitim_api.py` (`/api/v1/pazar/dagitim/status|summary|outflow|refresh|run-due`), tablolar `semantic_pazar_dagitim_*` (yalnız değişen satır, önceki stok, çıkış/giriş, kaynağın bildirdiği kayıt sayısı; 35 günden uzun aralıkta çıkış hesaplanmaz). Barkod ↔ stok kodu çoklu (`0903` / `0903B`). TİMAŞ grubu veriden (≥%80 Logo kartı). Kalibrasyon (Logo Başarı carisi `12001.01.BA104` sevki ↔ çıkış) iki görüntüden sonra her tur. Zamanlayıcı `timas-pazar-dagitim.timer` 06:15; VM'de `jobs.py` dosyadan alır.
+- **Stok:** `stock.py` modele `dagitim` ekler (hata stok ekranını düşürmez), `/api/v1/stock/items?dagitim=baskisi_yok|tukendi`, sorgu bilgisi `stock_kaynak.dagitim()`. Ekran: Stok listesi kolon + süzgeç, Bitecekler ve Fazla stok kolonu, kitap detayında kutu. Baskı önerisi Power BI birebir kuralı yüzünden değiştirilmedi.
+- **Pazar › Özet:** «Dağıtımcı nabzı» paneli (kategori / yayınevi / ay; TİMAŞ grubu payı; «pazar payı değil» notu).
+- **D&R belgesiyle bulunan:** `deleted`=site silinmesi (Prefix B2B sürebilir), site ve B2B stoğu ayrı, site stoğunda yer tutucu (999, 500.000…), kaynakta 17. sayfa (20.000 ürün) eksik; Başarı `rc/pc/rn` sayfalama.
+- **Arşiv:** önce 20 görüntü içe alındı, kullanıcı kararıyla iş durduruldu ve o satırlar silindi (portalın kendi tablosu; kaynağa dokunulmadı). İlk gerçek görüntü 2026-09-25 (Başarı 234.681, D&R 385.932 başlık); kaynak o günden beri yenilenmedi.
+- **Kaynak tarihi ekranda (kullanıcı isteği):** Stok, Bitecekler, Fazla stok, kitap detayı ve Pazar paneli «Başarı Dağıtım kataloğu GG.AA.YYYY tarihli · D&R kataloğu …» satırını gösterir; kaynağın kendi damgası `PAZAR_DAGITIM_BAYAT_GUN` (2) günden eskiyse turuncu «N gündür yenilenmedi» (`D.freshness`, sorgu bilgisine bağlı).
+- **VM:** müşteri VM'i zaten .25'te (bağlantı dosyası, `SEMANTIC_FIRMS`, .25:1433 açık — 29.09 salt okuma denetimi); bağlantı değişikliği gerekmez, sıradan kurulum yeterli.
+- **Doğrulama:** sunucuda birim testleri 73 geçti (`test_pazar_dagitim.py` yeni, stok/erişim/sorgu bilgisi); `tsc -b` temiz. Yan köprü (:8788, `timasai` 15 dk oturumu, sonra silindi) gerçek veriyle: baskısı yok 514, tükenmiş 1.121 — kaynağa doğrudan SQL referansıyla birebir (fazla 0, eksik 0). Canlıya kurulum main'e merge'den sonra.
+## 2026-09-29 (gece) — İK personel portalı: İK ana sayfası, özlük kaydı ve İK yönetimi
+
+- **Kullanıcı:** eski AppSheet «Timaş Personel Portal» benzeri bir yapı; İK modülüne tıklayınca pano, veri girişi ve ayarlar için İK yönetim ekranı; alan listesi `personel_data.xlsx` (69 alan: tür, seçenek, zorunlu, yönetici paneli / profilim / personel rehberi görünürlüğü; 20 belge türü).
+- **AppSheet'te görülen:** kutucuklu ana sayfa (Profilim, Personel Rehberi, Şirket İçi Duyurular, Doğum Günleri, Yemek Listesi, Evrak Talebi, Evrak Deposu, Geri Bildirim, İzin Yönetimi, Eğitim Yönetimi, SSS); rehber departmana göre gruplu; evrak talebi = e-posta + tarih + evrak tipi + teslim şekli (e-posta / ıslak imzalı).
+- **Yapılan:** `/ik` İK ana sayfası (modül menüsü artık buraya açılır; kutucuklar + doğum günleri + son duyurular + bugünün menüsü; İK yetkilisine kadro, giren/ayrılan, devir, kıdem, dağılımlar, yaklaşan izin/tecil bitişi, iş yıldönümü, eksik alan/belge, açık evrak talebi — hepsi «i» sorgu bilgisiyle). Çalışan sayfaları `/ik/profilim`, `/ik/rehber`, `/ik/duyurular`, `/ik/dogum-gunleri`, `/ik/yemek`, `/ik/evrak` (depo + talep), `/ik/sss`. `/ik/yonetim`: personel listesi + kart (Excel'in bütün alanları gruplu, belgeler, silme onaylı), Excel'den yükleme (önizleme → yaz; personel no ile eşleşir, boş hücre silmez), Excel'e aktarma ve boş şablon, evrak talepleri kuyruğu, duyuru (görselli, ileri tarihli), evrak deposu, haftalık yemek listesi, SSS, alan ayarları (ad, seçenek, zorunlu, üç sayfa görünürlüğü, hassas, açık/kapalı, yeni alan) ve listeler.
+- **Karar (kullanıcı):** T.C., IBAN, adres, sağlık (kan grubu, engel), yakın bilgisi ve özlük belgeleri tutulur ama ayrı «Hassas özlük verisi» yetkisiyle (`ozellik:ik.ozluk-hassas`, duyarlı: yönetici bile rolüyle alır); yetkisize alan hiç gönderilmez. Her kart açma, belge indirme, Excel dışa aktarma `semantic_hr_access_log`'a düşer; değişiklik kaydına ad/değer değil personel no + alan anahtarı yazılır.
+- **Karar (Claude):** `f_ise_giris_tarihi` = «İlk işe giriş», `s_ise_giris_tarihi` = «Son işe giriş» (profilde görünen son giriş; kıdem ve iş yıldönümü bundan, yoksa ilkinden). Etiketler Alanlar sekmesinden değişir. Çalışan sayfaları «Herkes»e açık (eski portal gibi), İK yönetimi açıkça verilir. İzin yönetimi bu işte yok (ayrı modül).
+- **İnceleme (bağımsız ajan):** 1 derleme hatası + 5 yetki açığı bulundu, hepsi düzeltildi: alan ayarıyla hassas işareti kaldırma, portal hesabı/e-posta bağlayıp başkasının Profilim'ine (hassas alanlar) ulaşma, e-posta eşleşmesinde LIKE jokeri, doğum günü listesinin alan ayarını atlaması, kişisel verinin hazır cevap önbelleğine yazılması; boş şablon ayrı uca, ilk açılış yarışı kilitlendi.
+- **Doğrulama (test sunucusu, gerçek portal DB'si, `main`e girmeden yan köprü :8805, timasai 15 dk oturumu):** `tsc -b` 0, `vite build` 0. Uç kabulü A (hassas yetkisiz) 46/46, B (hassas yetkili, `HR_ADMIN_SEES_PERSONAL=1` yalnız yan köprüde) 10/10: kayıt, seçim listesi, T.C./IBAN kontrol hanesi, hassas alanın yetkisize hiç gitmemesi, rehber alanları, fotoğraf/hassas belge, Excel önizleme (hatalıyken yazmaz, yetkisiz kolon alınmaz), dışa aktarma kolonları, duyuru/SSS/evrak/menü/evrak talebi akışı. Bağımsız referans (doğrudan SQL) ↔ ana sayfa sayıları (aktif, pasif, bu ay giren, açık talep, departman dağılımı) birebir eşit. Görsel: canlı adreste Playwright route ile aday derleme + yan köprü, 1440/390/320 px'de 8 ekran; yatay taşma yok, JS/konsol hatası yok. Yan köprüde model kuyruğu ve arka plan tazeleme kapalıydı.
+- **Temizlik:** test kişisi (2 belgesiyle), duyuru, SSS, evrak, menü günü, 2 evrak talebi silindi (biri SQL ile: ele alınmış talebin silme ucu yok); 2 oturum satırı silindi; geçici klasör, ortam kopyası kaldırıldı; `var` altında root'a geçen dosya 0. Korunan izler (kural gereği): `semantic_audit` timasai 17 satır (id 7812–7828), `semantic_hr_access_log` 9 satır (id 3–11). Canlı DB'de portal tabloları oluştu ve alan tanımı 69 satırla doldu (kurulumda zaten olacaktı).
+- **Plan:** izin yönetimi ve İK e-posta bildirimleri İK modülünün içinde — `docs/analiz/kullanici-ihtiyaclari/M60-izin-yonetimi-ve-ik-bildirimleri.md` (F1: bildirim kuyruğu + evrak talebi bildirimi + izin talep/onay/bakiye defteri; F2: ekip takvimi, hakediş gece işi, bordro listesi; kodlamadan önce İK'ya 7 soru).
+- **Durum:** dalda; `main`e taşıma ve test sunucusuna kurulum kullanıcının merge'ünden sonra.
 
 ## 2026-09-29 (akşam) — Kitap pazarı verisi uçtan uca incelendi; stok vekili Logo ile doğrulandı; ekran kullanım haritası
 
@@ -45,6 +139,33 @@
 - **Kalite:** Başarı alanları %87–100 dolu (ebat/renk bilgisiz); D&R'de fiyat ve kategori yolu tam, stok `b2bstock`'ta (`available_stock` %1); `deleted` anlamı belirsiz. TİMAŞ başlıklarının %99'u Logo barkoduyla eşleşiyor.
 - **Bulgu:** Başarı'da «Baskısı Yok» görünen ≈385 TİMAŞ başlığının Logo'da stoğu var (satış kaybı adayı; adetler Stok formülüyle doğrulanmalı). Ortalama liste fiyatı 21 ayda 137 → 226 ₺.
 - **Harita:** 10 ekran; öncelik Pazar ve rakip (CRM «Rakip Kitap»ın yerine), Stok/Baskı önerisi (dağıtımcı stoğu), Fiyatlama (otomatik rakip fiyatı), İlk baskı (rakip emsali). Hepsinden önce gece görüntüsü + arşiv içe alma + eşleme. Belge: `docs/analiz/kitap-pazari-veri-kaynagi-API_URUN_DB-2026-09-29.md`. Kod değişikliği yok.
+## 2026-09-29 — Yazar giriş panosuna süzgeç: marka, editör, adım, proje türü, başvuru yılı
+
+- **İstek (kullanıcı):** «yazar giriş ekranına filter eklenecek». Hangi süzgeç: iş kararı Claude'da, veriye bakılarak.
+- **Doluluk (canlı CRM .28, pano kapsamı: etkin, yeni/yenileme, 2025-01-01 sonrası = 2.112 proje; süren 1.164):**
+  marka (`new_yayinciid` → `new_marka`, 18 marka) 2.110 / 2.112 (süren 1.162); proje türü 2.112 (Editoryal 1.882, Pazarlama 221,
+  Satış 9 — Pazarlama'nın 221'i de hep «süren», süreçten hiç geçmiyor); başvuru tarihi 2.112 (2025: 1.550, 2026: 562);
+  editör 1.407 (süren 564 — boşu «Editör atanmamış» seçeneği, o da bir adım); adım her süren projede.
+  **Süzgeç yapılmayanlar:** kitaplık 902, dizi 749, oluşturma kanalı 985 (yarıdan az dolu; seçilince projelerin çoğu sessizce
+  dışarıda kalırdı); ürün tipi proje türüyle örtüşüyor; CRM statüsü adım hesabıyla çelişiyor (adım kanıttan çıkarılıyor).
+- **Yapılan:** `editorial_intake.facts_sql` → `new_markaBase` bağı ve `new_projeturu` kodu; kartta `brand`, `projectType`
+  (kod → `PROJECT_TYPES`, bilinmeyen kod «Diğer tür (kod)»). Ekran: beş seçim kutusu (telefonda 2 sütun), seçenekte diğer
+  süzgeçler uygulanmışken süren proje sayısı, «Yalnız gecikenler/benimkiler» sayıları da süzgeçli, açık süzgeç çipleri
+  (dokununca o süzgeç kalkar), «Süzgeçleri temizle», boş sütunda temizle düğmesi. Durum adres çubuğunda; paylaşılan bağlantı
+  aynı görünümü açar. Süzgeçler tamamlanan/kapanan listelerine de uygulanır; adım ya da gecikenler seçiliyken onlar gizlenir.
+  Telefonda adım seçilince evre sekmesi o adımın evresine geçer. Ekran bilgi kutusu güncellendi.
+- **Bulunan:** ilk sürüm tür etiketini SQL'de `StringMapBase` (+ `EntityView`) ile okuyordu; doğrudan bağlantıda çalıştı, ama
+  köprünün kendi sorgu yolunda «table not in the catalog» ile pano okuması düştü (aday köprüde görüldü). Etiket koda alındı.
+- **Test (test sunucusu, geçici `/tmp/claude-yazar-suzgec`, silindi):** `tsc -b` 0; vitest 46 dosya / 257 (yeni `filters.test.ts` 5);
+  pytest `test_editorial_intake_filters.py` 3; `tests/editorial/intake_steps.py` 20/20.
+- **Referans (aday köprünün gerçek ucu `/api/v1/editorial/intake`, yan port 8799, kişi süreç içinde sabit — `ekran_sunucu.py`;
+  giriş servisine ve oturum tablosuna dokunulmadı):** uç kartları ↔ doğrudan CRM GROUP BY: marka 19 değer, tür 3, yıl 2,
+  editör 32 — hepsi birebir (2.112 = 2.112); birleşik (Timaş Çocuk + Editoryal + 2026 + editör atanmamış) 15 = 15.
+- **Tarayıcı (aynı yan port, gerçek veri, 320/390/768/1440 px):** 42/42 — yatay taşma 0 (süzgeçsiz ve 5 süzgeç açıkken),
+  seçenek sayısı = uçtaki kart sayısı (Timaş Çocuk 232, bu markada editör atanmamış 63), adres/çip/temizle, adım 7 → «Yayınevine
+  giriş» sekmesi (65), adresten açılış (`?tur=Pazarlama&geciken=1` → 196), sayfa hatası 0.
+- **Kurulmadı:** test sunucusu ve müşteri VM'i (main'e merge ve kurulum ayrı adım). Kart şeması değiştiği için ilk açılışta pano
+  önbelleği yeniden okunur (kaynak dosyanın özeti anahtarda).
 
 ## 2026-09-29 — Değişiklik kaydında sistem işleri «ZEKİ AI» adıyla
 
@@ -86,6 +207,16 @@
 - **Tıklayarak deneme yapılamadı:** timasai kısa oturumu açıldı, ama oturumla veri arayan istek izin denetiminde reddedildi; deneme orada durdu, oturum silindi (1 satır, kalan 0). İlk bakışta kargo kararı, kapasite ve terim listeleri boştu, yani çoğu ekranda denemek için önce kayıt açmak gerekecek. Pencerenin kendisi 320/1280 px'te ayrıca ölçülmüştü (önceki giriş).
 - **Başka oturumdan kalan test verisi:** Yayın kurulunda timasai'nin 29.09 07:24'te açtığı «TEST-Otomatik sınama kurulu» (planlı, 2 gündem maddesi, 2 oy) duruyor. Bu oturumun işi değil; dokunulmadı.
 - **Kurulmadı:** müşteri VM'i.
+## 2026-09-29 (13:00) — Logo geçişinin kalanları: VM canlı .25, katalogdan başka firma kopyaları, cevap kapısında 5 düzeltme
+
+- **Müşteri VM'i Logo'yu canlı .25'ten okuyor:** önce `de376907` (Logo geçişi + izin listesi) kuruldu; `.env`'e `SEMANTIC_FIRMS`, `secrets/logo-mssql-connection.json` → 192.168.0.25/`zekiai`. Köprü konteynerinden doğrulandı: `LOGODATABASEN`, 2026 fatura 100.280, veri sonu 2026-09-29, yıl→firma yalnız TİMAŞ firmaları. `main` ucu o sırada test sunucusuna kurulmamış başka oturum işi taşıdığı için VM'e test sunucusunda duran sürüm gitti; sonra test sunucusu `ba672046` ile birebir olunca (47 dosya md5 eşit) VM'e `ba672046` kuruldu.
+- **Deneme Docker yığını kaldırıldı:** test sunucusundaki `/tmp/bi-docker` (web :8090, .155'e doğrudan bağlı, 11 Eylül kodu) — 4 konteyner, `bi_pgdata`/`bi_metrics`, `bi_net`, 2 imaj, klasör.
+- **Katalog: başka firma kopyaları.** .155'ten taranan katalogda 698 profil TİMAŞ dışı 3 haneli sayı taşıyordu; ama bir kısmı firma değil — hesap kodu (`AA_CARI_EKSTRE_320`, `EOS_YR_KASA_710`) ya da kısa yıl (`NY_KITAP_TELIF_021`). Kural `firm_scope.foreign_tables`: sayı yalnız `LG_…` tablolarında ya da aynı ad kalıbının TİMAŞ firmalı kopyası varsa (`EOS_DAGITIM_MALIYET_211` yanında `…_019`) firmadır. 615 profil silindi (44 kalıp; en çok `L_RPLAYS`, `LG_EXCHANGE`, `L_TABLELAYS`, `LG_XT1015`), 83 sayılı TİMAŞ tablosu kaldı; tamamen silinen tek kalıp `LG_{n0}_SYSLOG` (eşleme/not 0). Tarayıcı kararı şemanın tamamında, daraltmadan önce verir. `zekiai` görünüm tanımı okuyamadığı için (`VIEW DEFINITION` yok) görünümlerin hangi firmayı okuduğu tanımdan doğrulanamadı; kural ad kalıbına dayanır. Profil silmek katalog sürümünü değiştirmez → `POST /api/v1/semantic/reload` (4.874 → 4.259).
+- **Cevap kapısı düzeltmeleri (sınıf olarak):** A028 — iki kaynak aynı takma adla, kapı sqlglot `OptimizeError` fırlatıp 502 veriyordu → ipuçlu, onarılabilir ret. A094 — T-SQL tam sayı ortalaması (16,71 gün → 16; `AVG(CASE … 1 ELSE 0)` oranı → 0) → `AVG` argümanı tam sayıysa `FLOAT` (`guardrails._average_as_fraction`). Modelin kendi yorumunda «yapılamaz / eklenemedi / tanımlı değil» dediği cevap sunulmaz, gerekçesiyle ret (sorgu kaydında 2.356 yorumun 5'i, hepsi başka soruya cevap). A053 — köprü doğruydu; `answer-gate` referansın `ISNULL(…,'(merkezsiz)')` grubunu köprünün boş anahtarıyla eşler. B007 — 2026-09-21 muhasebe kararı (FIFO yaklaşık yaşlandırma) altına işlendi, cevap «yaklaşık» demeli. D037 — fark tek cari (195 personel avansı); bilgi belgesindeki «müşteri = 120» okuması ikinci referans. C015 — bilgi belgesine «kart bazında anahtarla grupla».
+- **Sonuç:** kapı 50 SAĞLAM / 17 BOZUK / 2 VERİ → 52 / 14 / 3; doğrulanmışken sağlam olmayan 9 → 5. Düzelen A028, A053, A094, B007, D037; kötüleşen A010 (doğrulanmamış, join şişirmesi), C004 (20 Eylül'de de BOZUK, kapı reddi), B030 (referans DB kilitlenmesi). `semantic_layer` testleri 3.604 geçti (main 3.598 + 6 yeni).
+- **VM'de katalog temizliği ve son doğrulama (11:45):** `ba672046` kuruldu (bi_var 7 → 7, ._* 0); aynı betik köprü konteynerinde (`docker exec -i -w /app/backend bi-bridge-1 python3 - --apply < betik`) 615 profil sildi, reload → 4.259. Köprüden: `LOGODATABASEN`, 2026 fatura 100.404, veri sonu 2026-09-29, yıl→firma 105/115/171/181/191/201/211/411.
+- **Açık kalan:** A019 — tablo yönlendiricisi «telif sözleşmesi»ni CRM `new_sozlesmeBase` yerine Logo `LEASINGREG`'e götürüyor (0,49), 19 Eylül'deki «sözleşme süresi» (yıl sayısı) kavramı «süresi dolacak» ile çakışıyor. A060 — model üç denemede GROUP BY eksik; ayrıca bilgi belgesindeki DSO tahsilat süresi ile altının «vade» (plan tarihi − fatura tarihi) tanımı ayrışıyor, iş kararı ister. B064 — model bu koşuda eksikliği yorumunda söylemedi, toplam gideri etkinlik gideri diye verdi.
+
 ## 2026-09-29 — Sadeleştirme turunda bulunan yanıltıcı sayılar: dördünde hesap, ikisinde etiket düzeldi
 
 - **İstek (kullanıcı):** sabah turunda yalnız açıklaması düzeltilen 6 sayı için «etiket mi hesap mı» kararı koda bakarak verilsin (iş kararı Claude'da).
@@ -310,7 +441,10 @@
 - **Faz 3 (hukuk):** standart pozisyonlar (kural + emsalden öneri → onay; `ozellik:sozlesme-karsilastirma.pozisyon` açık yetki), 20 hukuki madde türü (önce kural; kalan madde kendi modelimize maskeli metinle kapalı küme sorusu, eşik altı belirsiz), arşivin çoğunda olup belgede olmayan türler, çoklu yükleme ve sözleşme numarasıyla kendiliğinden bağlama, maskeli metin (maskesiz görünüm kayıt altında), saklama süresi ayarı, Word raporları (sözleşme, belge farkı). HEIC yalnız `pillow_heif` kuruluysa (kurulu değil; VM işlemcisi nedeniyle paket kurulumu ayrı onaya bırakıldı).
 - **Kabulde bulunan hata:** bugün `main`e giren hazır cevap katmanı yavaş GET'leri 07:00/12:00'ye kadar saklıyor; «CRM'i yeniden oku» ve kur tamamlanması ekrana yansımıyordu → karşılaştırma uçları bu katmanın dışında (kendi disk görüntüsü var).
 - **Doğrulama (test sunucusu, yan köprü :8801 + gerçek CRM, `scripts/acceptance/sozlesme-karsilastirma/kabul.py`):** **119/0**. Uç ↔ doğrudan CRM SQL: sözleşme sayısı, emsal dağılımı, kur çevrimi (betiğin kendi TCMB okumasıyla), şekil eksiği, pozisyon ihlali (karton telif en çok %10 → uç 12 = SQL 12), öneri alt sınırı (%5 yüzdeliği), olay tarihi, CSV satırı = tarama toplamı; gerçek taranmış PDF'in 42 maddesi: 5'i kuralla, 28'i Zeki AI ile türlendi; yüklenen belge sözleşme numarasıyla kendiliğinden bağlandı. Kur 273/274 ay: eksik ay başlangıcı gelecekte olan sözleşmenin (TCMB'de yok, beklenen). Kabulün kendi yükleme/inceleme/pozisyon satırları silindi (0 satır); timasai değişiklik kaydı satırları 7675–7727 ve 7732–7784 kaldı. pytest (karşılaştırma ~41 + sözleşme/erişim/yönetim), tsc, vitest geçti. Ekran 320/390/768/1440: sayfa taşması 0, konsol hatası 0. Ekran bilgisi kutusu karşılaştırma adresinde tek sözleşme metnini açıyordu (`path:/telif-sozlesme/:key` kalıbı) → kendi adres anahtarı + test.
-- **Kurulum:** henüz yok (önceki modülün test sunucusu kurulumu da yayın adımında bekliyor: köprü yeniden başlatma + arayüz derlemesi izin denetimine takıldı, komut kullanıcıda).
+- **Kurulum (test sunucusu, main `586d22bc`):** 25 dosya canlı ağaca (md5 main ile eş; `admin.py` canlıda main'in yalnız bu işin iki ayarı eksik hâliydi, `contracts_royalty.py` root'a aitti → sudo), ön yüz derlendi ve yayınlandı, köprü yeniden başladı, `._*` 0. Ön kapıdan timasai kısa oturumuyla uçlar 200, oturum silindi.
+- **Kurulumda bulunan hata 1:** diskteki CRM görüntüsünün biçim sürümü yoktu; ilk sürümün yazdığı `portfoy.json` (61 kolon; `kitapsay`/`ulkevar` yok) 12 saat daha kullanılıyordu. Canlıda şekil eksiği 1.727 anlaşma göründü: «satışta ülke» 766 kayıtta yanlış eksik, «kitap» denetimi hiç çalışmıyor. Aynı veriyi yeni biçimle sayınca 1.368 (kitap 726, başlangıç 678, süre 447, ücret 415, taraf 397). `SNAPSHOT_FORMAT` eklendi: eski biçim yaşına bakılmadan yeniden okunur (+ test). VM'de de aynısı olurdu. Kabuldeki 2.398 ile fark ayrı: bugün main'e giren «pasif kayıt hiçbir ekrana gelmez» kuralı sözleşme satırını 14.865 → 11.490'a indirdi.
+- **Kurulumda bulunan hata 2:** hazır cevap katmanı, yol sonradan saklanmayanlara alınsa da diskteki eski kaydı yüklüyor ve arkada her 30 sn tazeliyordu (canlıda `compare/meta` 30 sn'de bir). Diskten yüklerken saklanmayacak yolun kaydı atılır (+ test).
+- **Düzeltmelerin kurulumu:** test sunucusuna `contracts_compare.py` + `response_cache.py` (+ testleri) main'den (md5 eş), köprü yeniden başladı; arka plandaki `compare/meta` çağrısı durdu (70 sn'de 0). Ön kapıdan timasai kısa oturumuyla: şekil eksiği **1.368** (görüntüden bağımsız hesapla aynı), CSV 1.369 satır, sözleşme/Word/pozisyon uçları 200, oturum silindi. **Müşteri VM'i:** Faz 1–3 başka bir oturumun `14d2346d` kurulumuyla gitmişti (düzeltmeler yoktu); yalnız bu iki dosya VM ağacına kondu (md5 main ile eş), köprü imajı yeniden derlendi — konteynerde md5 `690a467a`/`85ec7a68`, `._*` 0, servisler ayakta, sayfa 200, veri ucu oturumsuz 401. VM'de ekran ilk açıldığında eski biçimli görüntü kendiliğinden yeniden okunur.
 
 ## 2026-09-29 (10:40) — Sözleşme karşılaştırma: maddeler geçmiş sözleşmelerle (emsal), özgün notlar, belge madde madde
 

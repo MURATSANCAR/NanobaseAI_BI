@@ -8,7 +8,7 @@ import { fmtDay } from '../budget/api';
 import SqlInfo from '../components/SqlInfo';
 import { n0, stockApi } from './api';
 import ItemList from './ItemList';
-import { Chips, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
+import { Chips, DagitimTazelikLine, DataDay, ExportLink, Loading, SourcesButton, StockFrame } from './parts';
 import { EmptyHint, Explain } from '../components/Explain';
 import { RULES } from './rules';
 import { SuggestionActions } from './decisions';
@@ -97,7 +97,8 @@ export default function RunningOut() {
           {d && !d.items.length && (
             <EmptyHint title="Bu sürede bitecek kitap yok" why="Stoktaki her kitap, seçtiğiniz gün sayısından ve yeni baskının gelme süresinden uzun yetiyor. Daha uzun bir süre yazıp yeniden bakabilirsiniz." />
           )}
-          {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'deger']} />}
+          {!!d?.items.length && d.dagitim && <div className="mb-2"><DagitimTazelikLine t={d.dagitim.tazelik} /></div>}
+          {!!d?.items.length && <ItemList k={d.kaynaklar} items={d.items} cols={['bakiye', 'hiz', 'gun', 'tukenme', 'tahmin90', 'kritik', 'bekleyen', 'uretim', 'dagitim', 'deger']} />}
           {!!d?.items.some((i) => i.tahminAralik?.g90) && (
             <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
               «Tahmin · 90 gün»: tahmin başlangıcından sonraki üç ayın beklenen satışı (temel); altındaki aralık muhafazakâr–iyimser

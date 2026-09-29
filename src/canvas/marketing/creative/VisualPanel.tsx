@@ -8,6 +8,7 @@ import { EmptyHint } from '../../components/Explain';
 import { creativeApi, type Asset, type Meta, type RequestDetail, type VisualSetting } from './api';
 import { ApprovalLine, Block, DraftBadge, JobBar, chip, smallBtn } from './parts';
 import { invalidateCreative } from './useMeta';
+import { AskSheet } from '../../budget/parts';
 
 /** Orta sütun: görsel varyantlar. Bir varyant = aynı dizim ayarı (kapak/iç sayfa/alıntı, başlık, renk, efekt) bütün
  *  biçimlerde. «Düzenle» ayarı değiştirip varyantın bütün biçimlerini yeni sürümle yeniden dizer (tek tasarım → her boyut). */
@@ -109,6 +110,7 @@ export function AssetActions({ a, meta, onVersions }: { a: Asset; meta: Meta | u
   const withdraw = useMutation({ mutationFn: (s: 'tasarim' | 'mesaj') => creativeApi.withdraw(a.id, s), onSuccess: done, onError: fail });
   const reject = useMutation({ mutationFn: (n: string) => creativeApi.reject(a.id, n), onSuccess: done, onError: fail });
   const busy = approve.isPending || withdraw.isPending || reject.isPending;
+  const [rejecting, setRejecting] = useState(false);
   const mine = (x: { by: string } | null) => !!x && !!me && (me.admin || x.by.toLowerCase() === me.username.toLowerCase());
   const hatali = a.dogrulama?.durum === 'hata';
   return (
@@ -127,13 +129,15 @@ export function AssetActions({ a, meta, onVersions }: { a: Asset; meta: Meta | u
         <button type="button" className={smallBtn()} disabled={busy} onClick={() => withdraw.mutate('tasarim')}><Undo2 className="h-4 w-4" aria-hidden />Tasarım onayını geri al</button>
       )}
       {!a.red && (me?.tasarimOnay || me?.mesajOnay) && (
-        <button type="button" className={smallBtn('err')} disabled={busy} onClick={() => {
-          const n = window.prompt('Ret nedeni (talebi açan kişi görür; boş bırakırsanız reddedilmez):');
-          if (n && n.trim()) reject.mutate(n.trim());
-        }}><X className="h-4 w-4" aria-hidden />Reddet</button>
+        <button type="button" className={smallBtn('err')} disabled={busy} onClick={() => setRejecting(true)}><X className="h-4 w-4" aria-hidden />Reddet</button>
       )}
       {a.onayli && <a className={smallBtn()} href={creativeApi.downloadUrl(a.id)}><Download className="h-4 w-4" aria-hidden />İndir</a>}
       {a.surum > 1 && <button type="button" className={smallBtn()} onClick={() => onVersions(a)}><History className="h-4 w-4" aria-hidden />v{a.surum}</button>}
+      <AskSheet open={rejecting} title={a.tur === 'gorsel' ? 'Görseli reddet' : 'Metni reddet'}
+        message="Ret nedenini yazın; talebi açan kişi bu notu görür. Neden yazılmadan reddedilmez."
+        input="Ret nedeni *" required confirm="Reddet" danger busy={reject.isPending}
+        onClose={() => setRejecting(false)}
+        onConfirm={(n) => reject.mutate(n, { onSuccess: () => setRejecting(false) })} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ArrowRight, Headset, Plus } from 'lucide-react';
  * Destek masası (NanobaseAI Destek, apps/destek): talep aç ve izle. Masa portalla aynı sunucu adında 8446 portunda
  * çalışır (test sunucusu https://portal.nanobase.ai:8446, müşteri VM'i http://192.168.0.55:8446); adres sayfanın
  * kendi adresinden türetilir, ayar gerekmez. Masa portal oturumuyla kendiliğinden açılır (tek oturum).
+ * Bağlantılar talep portalına gider (çalışan yalnız kendi taleplerini görür); BT masayı /helpdesk'ten kullanır.
  */
 export function destekUrl(path = '/helpdesk'): string {
   const { protocol, hostname } = window.location;
@@ -20,7 +21,7 @@ export default function DestekCard() {
       <p className="text-xs text-muted">Bilgisayar, yazılım ya da iş talebinizi buradan açın; talebin durumunu «Taleplerim»den izleyin. Masa yeni sekmede açılır.</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <a
-          href={destekUrl('/helpdesk/tickets/new')}
+          href={destekUrl('/helpdesk/my-tickets/new')}
           target="_blank"
           rel="noreferrer"
           className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl bg-violet px-3 text-xs font-semibold text-white hover:bg-violet/90 sm:min-h-0 sm:py-2"
@@ -28,7 +29,7 @@ export default function DestekCard() {
           <Plus aria-hidden className="h-3.5 w-3.5" /> Talep aç
         </a>
         <a
-          href={destekUrl('/helpdesk/tickets')}
+          href={destekUrl('/helpdesk/my-tickets')}
           target="_blank"
           rel="noreferrer"
           className="kp-press flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-violet hover:bg-violet/5 sm:min-h-0 sm:py-2"

@@ -112,7 +112,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
                       {k === 'spot_difference' && on && (
                         <label className="flex items-center gap-1 text-[11.5px] text-canvas-muted">
                           Fark
-                          <input type="number" min={1} max={20} value={diffs} onChange={(e) => setDiffs(Math.max(1, Number(e.target.value) || 1))}
+                          <input type="number" min={1} max={20} value={diffs} onChange={(e) => setDiffs(Math.min(20, Math.max(1, Math.round(Number(e.target.value)) || 1)))}
                             className="h-9 w-14 rounded-lg border border-slate-200 bg-white px-2 text-[13px] text-canvas-ink" />
                         </label>
                       )}

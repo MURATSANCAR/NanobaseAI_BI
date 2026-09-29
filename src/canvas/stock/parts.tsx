@@ -8,7 +8,7 @@ import SqlCode from '../management/SqlCode';
 import { Note, Pill, btnGhost, errText } from '../admin/ui';
 import { fmtDay } from '../budget/api';
 import { ENGINE_ENABLED } from '../engine';
-import { STATE_TONE, n0, stockApi, type Item, type StockState } from './api';
+import { STATE_TONE, n0, stockApi, type DagitimTazelik, type Item, type StockState } from './api';
 
 /** Depo ve stok ekranlarının ortak kabuğu ve küçük parçaları. Menü alanı «Lojistik» (M43, M44 ve M52 ortak). */
 
@@ -158,6 +158,22 @@ export function Chips<T extends string>({ items, value, onChange, label }: {
         ))}
       </div>
     </div>
+  );
+}
+
+/** Dağıtımcı kataloglarının tarihi: «Başarı Dağıtım kataloğu 25.09.2026 tarihli · D&R kataloğu …». Kaynak `bayatGun`'den
+ *  eskiyse turuncu uyarı: rakamlar o güne aittir. Tarih kaynağın kendi damgasıdır, portalın okuma saati değil. */
+export function DagitimTazelikLine({ t }: { t?: DagitimTazelik | null }) {
+  if (!t) return null;
+  const rows = (['basari', 'dr'] as const).map((k) => t[k]).filter((x) => x?.tarih);
+  if (!rows.length) return <p className="text-[11.5px] text-canvas-muted">Dağıtımcı katalogları henüz okunmadı.</p>;
+  const stale = rows.filter((x) => x.bayat);
+  const oldest = Math.max(...stale.map((x) => x.yasGun ?? 0));
+  return (
+    <p className={`rounded-xl px-3 py-2 text-[11.5px] leading-snug ${stale.length ? 'bg-amber-50 font-semibold text-amber-900' : 'bg-slate-50 text-canvas-muted'}`}>
+      {rows.map((x) => `${x.ad} ${fmtDay(x.tarih!)} tarihli`).join(' · ')}.
+      {stale.length ? ` Kaynak ${oldest} gündür yenilenmedi; dağıtımcı rakamları o güne aittir.` : ''}
+    </p>
   );
 }
 

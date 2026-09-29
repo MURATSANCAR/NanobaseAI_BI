@@ -83,6 +83,9 @@ REPORT_DONE = 3
 # new_yayinkurulutoplantilariBase.statuscode
 DECISIONS = {1: "Kabul", 100000000: "Red", 100000001: "Bekleme", 100000002: "Yeniden değerlendirme", 100000003: None}
 DEC_ACCEPT, DEC_REJECT = 1, 100000000
+# new_projeBase.new_projeturu (StringMapBase, 2026-09-29; panodaki 2.112 projenin hepsinde dolu). Etiket SQL'de
+# StringMapBase'ten okunamaz: köprünün sorgu yolu katalogda olmayan tabloyu reddeder (aday köprüde görüldü).
+PROJECT_TYPES = {1: "Editoryal", 2: "Satış", 3: "Pazarlama"}
 # new_proje öznitelik sütun numaraları (MetadataSchema.Attribute.ColumnNumber): denetim kaydının AttributeMask'i.
 AUDIT_COLUMNS = {"editor": 439, "report": 55}
 
@@ -127,11 +130,12 @@ def facts_sql(schema: str, since: str, project_id: Optional[str] = None) -> str:
         " j.new_projefikritekcmleile, j.new_hedeflenenbaskitarihi, j.new_nerilenyayntarihi,"
         " y.tarih AS kurul_tarihi, y.kod AS kurul_kod, y.adet AS kurul_adet, y.karar_notu,"
         " sz.ilk AS sozlesme_ilk, sz.adet AS sozlesme_adet, kt.ilk AS katilim_ilk, kt.adet AS katilim_adet,"
-        " ur.ilk AS uretim_ilk"
+        " ur.ilk AS uretim_ilk, mk.new_name AS marka, CAST(j.new_projeturu AS int) AS tur_kod"
         f" FROM {p}new_projeBase j"
         f" LEFT JOIN {p}ContactBase c ON c.ContactId = j.new_olasyazaryazar"
         f" LEFT JOIN {p}SystemUserBase u ON u.SystemUserId = j.new_editoru"
         f" LEFT JOIN {p}new_kitapBase k ON k.new_kitapId = j.new_stakkarti"
+        f" LEFT JOIN {p}new_markaBase mk ON mk.new_markaId = j.new_yayinciid"
         " LEFT JOIN (SELECT x.new_YaynKuruluToplantlarId AS pid, x.new_toplantitarihi AS tarih,"
         " CAST(x.statuscode AS int) AS kod, x.new_toplantikararnotu AS karar_notu,"
         " ROW_NUMBER() OVER (PARTITION BY x.new_YaynKuruluToplantlarId ORDER BY x.new_toplantitarihi DESC, x.CreatedOn DESC) AS sira,"
@@ -246,6 +250,13 @@ def _account(domain: Optional[str]) -> Optional[str]:
     return t.rsplit("\\", 1)[-1] or None
 
 
+def _project_type(code: Optional[int]) -> Optional[str]:
+    """Bilinmeyen yeni bir seçenek kodu süzgeçte ayrı değer olarak görünsün (sessizce «boş»a düşmesin)."""
+    if code is None:
+        return None
+    return PROJECT_TYPES.get(code) or f"Diğer tür ({code})"
+
+
 def fact(r: dict[str, Any]) -> dict[str, Any]:
     """Bir CRM satırı → önbelleğe yazılan ham kanıt. Adım hesabı okumada yapılır (işaretler anlık)."""
     r = _lower(r)
@@ -275,6 +286,8 @@ def fact(r: dict[str, Any]) -> dict[str, Any]:
         "participationOn": _day(r.get("katilim_ilk")),
         "participations": _i(r.get("katilim_adet")) or 0,
         "productionOn": _day(r.get("uretim_ilk")),
+        "brand": _s(r.get("marka")),
+        "projectType": _project_type(_i(r.get("tur_kod"))),
         "editorOn": None,
         "reportOn": None,
     }
@@ -394,6 +407,8 @@ def summarize(f: dict[str, Any], marks: dict[int, dict[str, Any]], today: date, 
         "late": bool(waiting is not None and waiting > late_days), "outcome": outcome,
         "complete": current is None and not outcome, "boardOn": f.get("boardOn"),
         "modifiedOn": f.get("modifiedOn"), "createdOn": f.get("createdOn"),
+        # Panodaki süzgeçler için (marka = CRM «Yayınevi» alanı, new_marka; tür = Editoryal / Pazarlama / Satış).
+        "brand": f.get("brand"), "projectType": f.get("projectType"),
     }
 
 

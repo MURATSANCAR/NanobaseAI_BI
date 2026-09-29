@@ -711,6 +711,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/dijital/", frozenset({page("dijital-yayin")})),
     # M39 Pazar ve rakip. Meta, tazelik ve kategori listesi her üç sayfada; emsal M1/M10'da, matris M9'da da okunur.
     ("/api/v1/pazar/run-due", SYSTEM),
+    ("/api/v1/pazar/dagitim/run-due", SYSTEM),
+    ("/api/v1/pazar/dagitim/", _PAZAR),
     ("/api/v1/pazar/meta", _PAZAR),
     ("/api/v1/pazar/freshness", _PAZAR),
     ("/api/v1/pazar/status", _PAZAR),
@@ -728,6 +730,11 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/pazar/", frozenset({page("pazar-arastirma")})),
     # M57 Eğitim: Eğitimlerim, ekibim, anket ve rehber okuma oturumla (uç yalnız kişinin kendi kaydını döner); ekran
     # ziyaret sayacı yalnız kendi hesabına yazar.
+    # İK personel portalı: çalışan uçları portal sayfalarından birini ister (Herkes'e açık sayfalar; uç kişinin kendi
+    # kaydını ya da rehber alanlarını döner); İK yönetimi uçları açıkça verilen sayfayı.
+    ("/api/v1/hr/portal/admin/", frozenset({page("ik-yonetim")})),
+    ("/api/v1/hr/portal/", frozenset(page(x) for x in ("ik-anasayfa", "ik-profilim", "ik-rehber", "ik-duyurular", "ik-evrak",
+                                                      "ik-sss", "ik-yonetim"))),
     ("/api/v1/hr/visit", OPEN),
     ("/api/v1/hr/learning/me/", OPEN),
     ("/api/v1/hr/learning/reminders/run-due", SYSTEM),
@@ -900,6 +907,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # içinde; Excel dışa aktarma yetkisiyle. Sayım/düzeltme notu sayfa yetkisiyle gelir.
     (frozenset({"POST"}), r"^/api/v1/stock/(suggestions/[^/]+/decision|thresholds)$", "ozellik:stok.oneri-karar"),
     (frozenset({"GET"}), r"^/api/v1/stock/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
+    # İK personel listesinin Excel'i (kişisel veri): İK yetkisine ek olarak genel dışa aktarma yetkisi.
+    (frozenset({"GET"}), r"^/api/v1/hr/portal/admin/export$", "ozellik:veri.disa-aktar"),
     # İhale: kayıt, dosya, kalem, eşleştirme, kontrol listesi, karar önerisi, sonuç. Karar onayı/geri gönderme açıkça
     # verilen `ihale.karar` ile, ilan kaynağı `ihale.kaynak-yonet` ile ucun içinde; şirket belge arşivi `ihale.belge`.
     (frozenset({"POST", "PATCH", "DELETE"}),

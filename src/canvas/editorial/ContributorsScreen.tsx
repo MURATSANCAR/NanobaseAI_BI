@@ -203,6 +203,9 @@ function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: (
   );
 }
 
+/** CRM kimliği büyük harfle gelir; başka ekranların bağlantıları (?kisi=) küçük harfle taşıyabilir. */
+const sameId = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+
 export default function ContributorsScreen({ module: m, aside, initialOpen }: { module: ContributorModule; aside?: React.ReactNode; initialOpen?: string | null }) {
   const [text, setText] = useState('');
   const [role, setRole] = useState('');
@@ -320,7 +323,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
           )}
           <ul className="mt-2 grid gap-2 xl:grid-cols-2">
             {items.map((c) => (
-              <Row key={c.id} c={c} active={open === c.id} onOpen={() => setOpen(c.id)} />
+              <Row key={c.id} c={c} active={sameId(c.id, open)} onOpen={() => setOpen(c.id)} />
             ))}
           </ul>
         </Panel>
@@ -328,7 +331,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
         {/* Telefonda ayrıntı listenin üstüne gelir; masaüstünde sağda durur. */}
         {open && (
           <div className="order-first lg:sticky lg:top-0 lg:order-none">
-            <Panel>{person.data && person.data.id === open ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} /> : <Loading />}</Panel>
+            <Panel>{person.data && sameId(person.data.id, open) ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} /> : <Loading />}</Panel>
           </div>
         )}
       </div>

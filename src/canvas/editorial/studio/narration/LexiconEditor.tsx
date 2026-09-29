@@ -50,6 +50,10 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
 
   const list = draft[scope];
   const dirty = useMemo(() => dirtyOf(list, lexicon[scope]), [list, lexicon, scope]);
+  // Yalnız bir alanı dolu satır sunucuya gitmez; sessizce düşmesin diye kayıt durdurulur ve satır işaretlenir.
+  const noSay = list.filter((r) => r.word.trim() && !r.say.trim());
+  const noWord = list.filter((r) => !r.word.trim() && r.say.trim());
+  const incomplete = noSay.length + noWord.length > 0;
   const save = useMutation({
     mutationFn: () => narrationApi.saveLexicon(jobId, scope, list.filter((r) => r.word.trim() && r.say.trim())),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['studio', 'narration', jobId] }),
@@ -92,12 +96,15 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
       )}
       {list.length > 0 && (
         <ul className="flex flex-col gap-1.5">
-          {list.map((r) => (
+          {list.map((r) => {
+            const missWord = !r.word.trim() && !!r.say.trim();
+            const missSay = !!r.word.trim() && !r.say.trim();
+            return (
             <li key={r.key} className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-1.5">
-              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120} readOnly={!canEdit}
-                onChange={(e) => set(r.key, { word: e.target.value })} className={input} />
-              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240} readOnly={!canEdit}
-                onChange={(e) => set(r.key, { say: e.target.value })} className={input} />
+              <input aria-label="Yazılış" placeholder="Yazılış" value={r.word} maxLength={120} aria-invalid={missWord || undefined} readOnly={!canEdit}
+                onChange={(e) => set(r.key, { word: e.target.value })} className={`${input} ${missWord ? '!border-amber-400' : ''}`} />
+              <input aria-label="Okunuş" placeholder="Okunuş" value={r.say} maxLength={240} aria-invalid={missSay || undefined} readOnly={!canEdit}
+                onChange={(e) => set(r.key, { say: e.target.value })} className={`${input} ${missSay ? '!border-amber-400' : ''}`} />
               {canEdit && <button type="button" aria-label={`${r.word || 'Kelime'} okunuşunu dinle`} title="Dinle"
                 disabled={!r.say.trim() || !!playing} onClick={() => onPlay(r.say, narrator, `lex-${r.key}`)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-violet disabled:opacity-40 ${press}`}>
@@ -108,17 +115,25 @@ export default function LexiconEditor({ jobId, lexicon, narrator, onPlay, playin
                 <Trash2 className="h-4 w-4" aria-hidden />
               </button>}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
       {!canEdit && list.length === 0 && <p className="text-[12px] text-canvas-muted">Sözlükte kelime yok.</p>}
       {canEdit && <div className="flex flex-wrap gap-2">
         <button type="button" className={ghostBtn} onClick={add}><Plus className="h-4 w-4" aria-hidden />Kelime ekle</button>
-        <button type="button" className={gradientBtn} disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
+        <button type="button" className={gradientBtn} disabled={!dirty || incomplete || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
           {dirty ? 'Sözlüğü kaydet' : 'Kaydedildi'}
         </button>
       </div>}
+      {canEdit && incomplete && (
+        <p className="text-[12px] leading-snug text-amber-800">
+          {noSay.length > 0 && <>Okunuşu boş satırlar kaydedilmez: {noSay.map((r) => `«${r.word.trim()}»`).join(', ')}. </>}
+          {noWord.length > 0 && <>Yazılışı boş satırlar kaydedilmez: {noWord.map((r) => `«${r.say.trim()}»`).join(', ')}. </>}
+          Kaydetmek için bu satırları tamamlayın ya da silin.
+        </p>
+      )}
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
 
       <form className="mt-1 flex flex-col gap-1.5 rounded-2xl bg-slate-50/80 p-2.5"

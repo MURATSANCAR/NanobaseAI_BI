@@ -41,9 +41,10 @@ def ensure_ldap(config: dict | str | None = None) -> str:
 			"ldap_phone_field": "telephoneNumber",
 			"ldap_mobile_field": "mobile",
 			"ssl_tls_mode": "Off",
-			# Her etkin AD kişisi temsilcidir; yönetici grubu ayrıca yönetici rolleri alır.
-			"default_user_type": "System User",
-			"default_role": "Agent",
+			# 2026-09-29 rol modeli: yeni kişi talep edendir (portal kullanıcısı, yalnız kendi kayıtları); BT birimi ve
+			# yöneticiler girişte/eşitlemede temsilciye yükseltilir (ldap_ntlm.rol_uygula, yz/temsilci.py).
+			"default_user_type": "Website User",
+			"default_role": None,
 			"do_not_create_new_user": 0,
 		}
 	)

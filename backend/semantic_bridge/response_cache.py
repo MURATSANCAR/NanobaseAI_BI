@@ -78,6 +78,8 @@ NEVER_PREFIXES = (
     # Sözleşme karşılaştırmanın kendi disk görüntüsü ve arka plan yenilemesi var (CRM'i yeniden oku, kurlar); ikinci
     # önbellek yenilenen görüntüyü 07:00/12:00'ye kadar gizliyordu (2026-09-29 kabulünde bulundu).
     "/api/v1/editorial/contracts/compare",
+    # İK personel portalı: kişisel veri diske yazılmasın; kart açılışı her seferinde erişim kaydına düşsün.
+    "/api/v1/hr/portal/",
 )
 #: Yolun herhangi bir yerinde geçen parça → hiç saklanmaz (yoklama, ilerleme, dosya).
 NEVER_PARTS = re.compile(
@@ -246,7 +248,8 @@ class ResponseCache:
             try:
                 meta = json.loads(meta_path.read_text())
                 key = tuple(meta["key"])
-                if now - float(meta.get("asked", 0)) > KEEP_SECONDS:
+                # Saklanmayacak yol (sonradan dışarıda bırakılmış): eski kayıt yüklenip arkada sürekli tazelenmez.
+                if now - float(meta.get("asked", 0)) > KEEP_SECONDS or not cacheable_path(str(key[1])):
                     self._unlink(key)
                     self.stats["dropped"] += 1
                     continue
