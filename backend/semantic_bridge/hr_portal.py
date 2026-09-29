@@ -23,9 +23,10 @@ import json
 import re
 import threading
 import weakref
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import sqlalchemy as sa
 
@@ -663,15 +664,41 @@ def save_person(engine: sa.engine.Engine, tenant: str, actor: str, who_rights: d
     return get_person(engine, tenant, who_rights, pid), changed
 
 
-def delete_person(engine: sa.engine.Engine, tenant: str, pid: str) -> dict[str, Any]:
+@dataclass
+class PersonCleanup:
+    """Özlük kaydına bağlı başka bir İK modülünün verisi (izin talepleri, bakiye defteri…). Modül bu modülü içe aktarır,
+    tersi olmaz; bağı `register_person_cleanup` ile kurar. `ensure` tabloları işlem açılmadan hazırlar; `run` kişi
+    silinirken **aynı işlemde** kişinin satırlarını `H.Archiver` ile pasife alır (başkasının kaydındaki anılışını boşaltırken
+    eski değeri de arşive yazar) ve {ad: sayı} döner."""
+
+    key: str
+    ensure: Callable[[sa.engine.Engine], None]
+    run: Callable[[sa.engine.Connection, str, str, H.Archiver], dict[str, int]]
+
+
+_person_cleanups: dict[str, PersonCleanup] = {}
+
+
+def register_person_cleanup(p: PersonCleanup) -> None:
+    _person_cleanups[p.key] = p
+
+
+def delete_person(engine: sa.engine.Engine, tenant: str, pid: str, actor: str) -> dict[str, Any]:
+    """Özlük kaydını belgeleri ve bağlı modüllerin kişisel verisiyle birlikte tek işlemde **pasife alır**: satırlar ekranların
+    okuduğu tablolardan çıkar, `semantic_hr_archive`'e (kim, ne zaman) taşınır — hukuki süreçte kanıt kaybolmaz. Biri düşerse
+    hiçbiri taşınmaz. Dönen: personel no, belge sayısı, arşiv kimliği ve modül başına taşınan/boşaltılan satır sayıları."""
     ensure(engine)
+    for p in _person_cleanups.values():
+        p.ensure(engine)
     with engine.begin() as c:
         r = c.execute(sa.select(PEOPLE.c.id, PEOPLE.c.id_no).where(PEOPLE.c.id == pid, PEOPLE.c.tenant_id == tenant)).first()
         if r is None:
             raise HrError("Personel kaydı bulunamadı.", 404)
-        nf = c.execute(PFILES.delete().where(PFILES.c.tenant_id == tenant, PFILES.c.person_id == pid)).rowcount
-        c.execute(PEOPLE.delete().where(PEOPLE.c.id == pid))
-    return {"idNo": r.id_no, "files": int(nf or 0)}
+        arc = H.Archiver(c, tenant, new_id("arc"), pid, actor)
+        linked = {p.key: {k: int(v or 0) for k, v in p.run(c, tenant, pid, arc).items()} for p in _person_cleanups.values()}
+        nf = arc.move(PFILES, PFILES.c.tenant_id == tenant, PFILES.c.person_id == pid)
+        arc.move(PEOPLE, PEOPLE.c.tenant_id == tenant, PEOPLE.c.id == pid)
+    return {"idNo": r.id_no, "files": nf, "archiveId": arc.batch_id, "linked": linked}
 
 
 # ------------------------------------------------------------------ belgeler

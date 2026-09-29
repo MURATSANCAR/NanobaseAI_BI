@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (gece) — Personel silinince izin verisi sahipsiz kalmıyor; silme yerine pasife alma (arşiv)
+
+- **Sorun:** `hr_portal.delete_person` yalnız `semantic_hr_people` ve `semantic_hr_people_files` satırlarını siliyordu; M60'ın kişiye bağlı satırları (izin talepleri, talep geçmişi, izin belgeleri — sağlık raporu olabilir —, bakiye defteri, başkasının talebindeki vekil anılışı) sahipsiz kalıyordu.
+- **Kullanıcı kararı (iş sırasında):** «tamamen silme, pasife al; gelecekte hukuki süreç için lazım olabilir». Özlük kaydının kendisi de aynı gözle pasife alınıyor (asıl kanıt o).
+- **Yapılan:** `hr_core.ARCHIVE` (`semantic_hr_archive`) + `Archiver`: satır silinmez, kaynak tablo/kimlik, satırın tamamı (`row_json`), bayt (`blob`), yapan ve saatle arşive taşınır; ekranlar okumaz, kimlik/personel no yeniden kullanılabilir. `hr_portal.register_person_cleanup` kancası (hr_portal hr_leave'i içe aktarmaz; hr_leave `register_hooks()` ile bağlanır, `hr_leave_api.register`'da). `delete_person` tek işlemde: izin talepleri, geçmiş, belgeler, defter arşive; vekil boşaltılır, eski değer arşive; biri düşerse hiçbiri taşınmaz. Dönen: `files`, `archiveId`, `linked.izin` sayıları (erişim kaydı ve `semantic_audit`'e yazılır). Silme penceresi metni: «ekranlardan kaldırılacak; hukuki süreç için arşivde saklanır». Envanterde altı tablonun saklama notu ve yeni `semantic_hr_archive` satırı.
+- **Doğrulama (test sunucusu, git arşivi):** yeni `test_hr_person_delete.py` (3 test: taşınan sayılar ve arşiv içeriği, başka kişi/tenant'a dokunulmaz, bağlı modül düşerse geri alınır) + `test_data_security`/`test_hr_core` geçti. Tam `semantic_layer/tests`: dal 4547 geçti / 4 düştü, aynı anda koşan main 4544 / aynı 4 düştü (`test_hr_core::test_job_runs_in_background_and_reports`, `test_kopru_acilis` damga ve zamanlayıcı sarmalayıcı, `test_no_undefined_names[management/ilk_baski_pazar.py]`) — yeni düşüş yok, main'deki düşüşler bu işin dışında.
+- **Açık:** arşivin geri getirme ekranı ve süreli imhası (saklama süresi `register_purger` ile) yok — ayrı iş. Evrak talepleri (`semantic_hr_doc_requests`) kişiye değil hesap adına bağlı, bu işe girmedi.
+
 ## 2026-09-29 — ZEKI AI CHAT: hak edinimi beyanıyla üretici bildirimlerinin temizlenmesi
 
 - Kullanıcı gerekli hakları edindiğini belirterek devam edilmesini istedi. Önceki lisansları koruma kararı bu yeni talimatla değişti: ayrı sohbet deposunda altı üretici lisans dosyası, şirket sorumluluk belgesi ve şirkete ait paketlerin lisans/şirket metadata alanları kaldırıldı. Bağımsız üçüncü taraf hak bildirimleri ve teknik çalışma sözleşmeleri korundu.
@@ -8,7 +16,6 @@
 - Gerçek portal SSO, mevcut `timasai`, 320/390/768/1440 px: oturum açık, taşma/görünür üretici metni/JS hatası 0. Sınanan tarayıcı akışlarında yalnız portal alan adı görüldü; tüm arka plan entegrasyonları için genel ağ kabulü iddia edilmez. İlk deneme uygulama başlarken bağlantı sıfırlaması aldı; hazır olduktan sonra yeniden koşu geçti.
 - Temizlik: yeni kullanıcı 0; 1 portal oturumu + 4 sohbet jetonu silindi, kalan kontrol jetonu 0. Kanıtlar sohbet deposunda `docs/evidence/2026-09-29-notices/`, belge commit'i `ad47d5e`.
 - Sohbet GitHub hedefi tekrar `Repository not found` döndü; yerel main ve test sunucusu güncel, GitHub yayını bekliyor. Bu BI deposunda yalnız proje durumu/günlük değişti.
-
 ## 2026-09-29 (gece) — GPU editörü main `04698f28` tek sürüm olarak kuruldu; parça kurulumlar bitti
 
 - **Neden:** gün içinde üç oturum main'in yalnız kendi parçasını çalışan imajın üstüne türeterek kurmuştu (`-kapak`, `-ses2`, `-ses2-read`); her biri öncekini ezdi (kapak tarzı düzeltmesi 15:29'da geri gitti). Main'deki bütün editör işleri (sesli okuma insan kaydı, OCR `/v1/read`, metin bütçesi/pencereleme, kapak tarzı, lisans taslağının kalkması, kapak önizlemesi WebP) tek sürümde.
@@ -34,7 +41,6 @@
 - **Tanımsız ad denetiminin yanlış alarmı:** main'e 16:36'da giren `management/ilk_baski_pazar.py`'de `top(rows, n)` parametreleri tanımsız sayıldı. Python 3.12'nin sembol tablosu adı «top» olan fonksiyonun parametrelerini global işaretliyor (modül kapsamının iç adı da «top»). Denetim artık parametreyi hiç işaretlemez; yanlış alarm için test eklendi.
 - **Birleşik dal testinde İK görünürlük testi:** personel portalı ve M60 izin sayfaları kullanıcı kararıyla Herkes'e açık; eski test bütün İK sayfalarını «açıkça verilir» sayıyordu ve main'de de düşüyordu → test karara uyduruldu (öteki İK sayfaları açıkça verilir). `test_hr_core::test_job_runs_in_background_and_reports` yüklü sunucuda aralıklı düşüyor (süre sınırı), bu işle ilgisiz.
 - **GPU'da kurulum parçalanması:** bugün üç oturum GPU'ya main'in yalnız kendi parçasını, çalışan imajın üstüne türeterek kurdu (`-kapak` 11:52, `-ses2` 15:29, `-ses2-read` 16:50); her biri öncekini ezdi — kapak tarzı düzeltmesi 15:29'da geri gitti (`effective_style` yine «cocuk»). Çözüm: main'in tamamı (`04698f28`) tek sürüm olarak GPU'ya; `/data/editor/releases/04698f28`, imajlar derleniyor, editör testleri yeni imajda koşuyor.
-
 ## 2026-09-29 — ZEKI AI CHAT markası, ayrı depo ve gerçek sunucu kabulü
 
 - Sohbetin yerel deposu `~/Documents/GitHub/zeki-ai-chat` olarak adlandırıldı; mevcut SSO/dil düzeltmeleri `main`e birleştirildi, birleştirilen yerel dallar kaldırıldı. Bu BI deposunda ürün kodu değişmedi; bağlantı/durum belgeleri güncellendi.
