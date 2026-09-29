@@ -45,6 +45,7 @@ def talep_eden_yap(user) -> bool:
 			doc.set("users", [u for u in doc.users if u.user != user.name])
 			doc.save(ignore_permissions=True)
 		frappe.delete_doc("HD Agent", user.name, force=True, ignore_permissions=True)
+		user.reload()  # temsilci kaydı silinirken kullanıcı kaydı da değişir
 		degisti = True
 	kaldir = [r.role for r in user.get("roles") if r.role in ("Agent",)]
 	if kaldir:
@@ -86,6 +87,11 @@ def esitle() -> dict:
 				dep = ous[0] if ous else ""
 			if not (_fold(dep) in birimler() or str(sam).lower() in yoneticiler()):
 				continue
+			# AD'de e-postası olmayan hesap servis hesabıdır (ör. powerbiadmin, authpointadmin): kişi değil, kayıt
+			# atanmaz; portal yönetici listesindekiler hariç.
+			mail = attrs.get(ldap.ldap_email_field)
+			if not (mail[0] if isinstance(mail, list) and mail else mail) and str(sam).lower() not in yoneticiler():
+				continue
 			conn.search(search_base=e["dn"], search_filter="(objectClass=person)", attributes=ldap.get_ldap_attributes())
 			if len(conn.entries) != 1:
 				continue
@@ -104,14 +110,13 @@ def esitle() -> dict:
 		conn.unbind()
 
 	# Ekip en az bir üyeyle açılabildiği için üyeler toplandıktan sonra: yoksa bu üyelerle açılır, varsa eklenir.
+	# Üyelik birebir eşitlenir: BT biriminden ayrılan ya da servis hesabı olan çıkar (atama kuralı da güncellenir).
 	ekip = bt_ekibi([u for u, _ in bt_uyeler])
-	if ekip:
+	if ekip and bt_uyeler:
 		doc = frappe.get_doc("HD Team", ekip)
-		mevcut = {m.user for m in doc.users}
-		for u, _dep in bt_uyeler:
-			if u not in mevcut:
-				doc.append("users", {"user": u})
-		if len(doc.users) != len(mevcut):
+		istenen = [u for u, _ in bt_uyeler]
+		if {m.user for m in doc.users} != set(istenen):
+			doc.set("users", [{"user": u} for u in dict.fromkeys(istenen)])
 			doc.save(ignore_permissions=True)
 
 	indirilen = 0

@@ -200,16 +200,18 @@ def ensure_agent(user) -> None:
 		return
 	if user.user_type != "System User":
 		frappe.db.set_value("User", user.name, "user_type", "System User")
-	if frappe.db.exists("HD Agent", user.name):
-		return
-	frappe.get_doc(
-		{
-			"doctype": "HD Agent",
-			"user": user.name,
-			"agent_name": user.full_name or user.first_name or user.name,
-			"is_active": 1,
-		}
-	).insert(ignore_permissions=True)
+	if not frappe.db.exists("HD Agent", user.name):
+		frappe.get_doc(
+			{
+				"doctype": "HD Agent",
+				"user": user.name,
+				"agent_name": user.full_name or user.first_name or user.name,
+				"is_active": 1,
+			}
+		).insert(ignore_permissions=True)
+	# Kullanıcı kaydı yukarıda veritabanında değişti (tip, temsilci rolü): elimizdeki kopya tazelenir, yoksa ardından
+	# gelen rol eklemesi eski kopyayı kaydetmeye çalışıp TimestampMismatchError verir (2026-09-29 eşitleme).
+	user.reload()
 
 
 def _department(entry) -> str:
