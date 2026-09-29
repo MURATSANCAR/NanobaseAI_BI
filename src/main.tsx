@@ -52,6 +52,19 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+/** Yeni sürüm kurulunca eski sürümün ekran parçaları sunucudan silinir; açık sekme bir ekrana geçerken o parçayı
+ *  ister, 404 alır ve ekran «Hata» yazardı (Sayfa düzeni, Kapak). Parça yüklenemeyince sayfa yeni sürümle bir kez
+ *  yenilenir; 60 sn içinde ikinci kez olursa yenilenmez (döngü olmaz), hata ekranı görünür. */
+window.addEventListener('vite:preloadError', (e) => {
+  const KEY = 'timas:chunk-reload';
+  let last = 0;
+  try { last = Number(sessionStorage.getItem(KEY)) || 0; } catch { /* depolama kapalı */ }
+  if (Date.now() - last < 60_000) return;
+  try { sessionStorage.setItem(KEY, String(Date.now())); } catch { /* depolama kapalı */ }
+  e.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

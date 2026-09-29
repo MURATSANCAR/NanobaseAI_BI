@@ -1351,7 +1351,7 @@ def crm_contract(head: dict[str, Any], books: list[dict[str, Any]], parties: lis
                                                  ("ekitap", "new_e_kitap_telif"), ("sesli", "new_SesliKitap"),
                                                  ("yurtdisi", "new_yurtdisitelif"))}
     raw = {
-        "title": " · ".join(str(b.get("new_name")) for b in books if b.get("new_name")) or str(head.get("new_name") or "CRM sözleşmesi"),
+        "title": T.book_title(b.get("new_name") for b in books) or str(head.get("new_name") or "CRM sözleşmesi"),
         "kind": T.KIND_FROM_CRM.get(_i(head.get("tip_kod")), "telif-alis"),
         "company": str(head.get("sirket") or ""),
         "parties": ps,

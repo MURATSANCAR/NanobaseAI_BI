@@ -18,7 +18,7 @@ from __future__ import annotations
 import copy
 import re
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 
 class ContractError(ValueError):
@@ -344,14 +344,31 @@ def _norm(v: Any) -> Any:
     return v
 
 
+def book_title(names: Iterable[Any]) -> str:
+    """CRM sözleşmesinin adı = bağlı kitapların adları, « · » ile. Aynı kitabın birden çok kartı (baskı, ISBN) aynı
+    adı taşır; ad bir kez yazılır (ekranda «Binbir Gece Masalları · Binbir Gece Masalları · …» çıkıyordu)."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for n in names:
+        t = " ".join(str(n or "").split())
+        if t and t.casefold() not in seen:
+            seen.add(t.casefold())
+            out.append(t)
+    return " · ".join(out)
+
+
 def diff(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
-    """Değişen alanlar: [{field, label, old, new}] — alan sırası LABELS sırasıdır."""
+    """Değişen alanlar: [{field, label, old, new}] — alan sırası LABELS sırasıdır. Ad, tekrarlı kitap adları ayıklanarak
+    karşılaştırılır: tekrarlı adla benimsenmiş kaydın CRM kopyası «değişti» görünmez."""
     a, b = flatten(before or {}), flatten(after or {})
     out = []
     for key in LABELS:
         old, new = a.get(key), b.get(key)
         if key.startswith("rights."):
             old, new = bool(old), bool(new)
+        if key == "title" and isinstance(old, str) and isinstance(new, str) \
+                and book_title(old.split(" · ")) == book_title(new.split(" · ")):
+            continue
         if _norm(old) != _norm(new):
             out.append({"field": key, "label": LABELS[key], "old": old, "new": new})
     return out

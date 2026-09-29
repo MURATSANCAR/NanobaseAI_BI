@@ -44,8 +44,8 @@ def _check_can_edit(job: Any, user: str, see_all: bool) -> None:
         raise TranslationError("ZEKİ taslağı sürerken segmentler birleştirilemez ya da bölünemez.", 409)
 
 
-def _check_fresh(s: Any, expected: Any) -> None:
-    if expected and T._iso(s.updated_at) and expected != T._iso(s.updated_at):
+def _check_fresh(s: Any, body: dict[str, Any], key: str) -> None:
+    if T.stale(s, body, key):
         raise TranslationError(f"Segment bu arada {s.updated_by or 'başka biri'} tarafından değiştirildi; yeniden açın.", 409)
 
 
@@ -87,13 +87,13 @@ def merge_next(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, 
     with engine.begin() as conn:
         a, job = T._segment(conn, tenant, seg_id, user, see_all, lock=True)
         _check_can_edit(job, user, see_all)
-        _check_fresh(a, body.get("updatedAt"))
+        _check_fresh(a, body, "updatedAt")
         b = _next(conn, a, lock=True)
         if (reason := _merge_block(a, b)) is not None:
             raise TranslationError(reason, 409)
         if (want := body.get("nextId")) and want != b.id:
             raise TranslationError("Segment listesi bu arada değişti; yenileyip yeniden deneyin.", 409)
-        _check_fresh(b, body.get("nextUpdatedAt"))
+        _check_fresh(b, body, "nextUpdatedAt")
         source = _join(a.source, b.source)
         target = _join(a.target, b.target)
         if len(target) > MAX_TARGET:
@@ -137,7 +137,7 @@ def split_segment(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
     with engine.begin() as conn:
         s, job = T._segment(conn, tenant, seg_id, user, see_all, lock=True)
         _check_can_edit(job, user, see_all)
-        _check_fresh(s, body.get("updatedAt"))
+        _check_fresh(s, body, "updatedAt")
         if body.get("source") is not None and body["source"] != s.source:
             raise TranslationError("Segmentin kaynağı bu arada değişti; yeniden açın.", 409)
         if s.heading:

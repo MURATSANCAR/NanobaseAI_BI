@@ -28,6 +28,19 @@ function StudioDrop({ run }: { run: (f: File) => Promise<unknown> }) {
 
 /** Kitap Tasarım Stüdyosu girişi: okunmuş bir kitaptan ya da Word dosyasından yeni tasarım başlatır,
  *  önceki işleri listeler. Kitap bilgisi CRM'den, resimler Qwen-Image-2.1'den, dizgi Typst'ten gelir. */
+/** Tasarım listesinde üretilmiş kitabın kendi kapağı (dizilmiş kapak açılımının önizlemesi). Kapak henüz dizilmediyse
+ *  ya da okunamazsa kitap simgesi kalır; kırık resim çizilmez. `rev` biten adım sayısıdır: kapak yeniden dizilince adres
+ *  değişir, tarayıcı eski kapağı göstermez. Açılımın ön yüzü sağ yarıda olduğu için görüntü sağa dayalı kırpılır. */
+function JobCover({ jobId, rev }: { jobId: string; rev: number }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <BookOpen className="h-5 w-5 shrink-0 text-canvas-violet" aria-hidden />;
+  return (
+    <img src={studioApi.coverUrl(jobId, 360, String(rev))} alt="" loading="lazy" decoding="async"
+      onError={() => setFailed(true)}
+      className="h-14 w-10 shrink-0 rounded-md border border-slate-200/80 bg-slate-100 object-cover object-right" />
+  );
+}
+
 export default function StudioHome() {
   const nav = useNavigate();
   // «Kitap tasarımında üretim» (GPU) rolde yoksa yeni tasarım başlatılamaz; var olan işler açılır.
@@ -174,20 +187,24 @@ export default function StudioHome() {
             <ul className="mt-3 flex flex-col gap-2">
               {(jobs.data?.jobs ?? []).map((j) => {
                 const running = j.steps.find((s) => s.status === 'running');
-                const failed = j.steps.find((s) => s.status === 'fail');
+                // Ön baskı denetiminin FAIL'i iş hatası değil, kitapta düzeltilecek eksik (künye alanı, onay bekleyen
+                // resim): iş bitmiştir, stüdyoda açılır. Listede kırmızı «Hata» yazmaz, sarı uyarı olur.
+                const failedStep = j.steps.find((s) => s.status === 'fail');
+                const preflightOnly = failedStep?.key === 'on_kontrol' && !running;
+                const failed = preflightOnly ? undefined : failedStep;
                 const done = j.steps.filter((s) => s.status !== 'waiting' && s.status !== 'running').length;
                 return (
                   <li key={j.id}>
                     <Link to={`/kitap-tasarim/${j.id}`}
                       className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-3 transition-colors duration-150 hover:bg-white">
-                      <BookOpen className="h-5 w-5 shrink-0 text-canvas-violet" aria-hidden />
+                      <JobCover jobId={j.id} rev={done} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-bold">{j.title || j.source.file_name || 'Hazırlanıyor…'}</span>
                         <span className="block text-[11.5px] text-canvas-muted">
-                          {j.created_by} · {ago(j.created_at)} · {running ? `Sürüyor: ${running.label}` : failed ? `Durdu: ${failed.label}` : j.steps.length && done === j.steps.length ? 'Bitti' : `${done}/${j.steps.length} adım bitti`}
+                          {j.created_by} · {ago(j.created_at)} · {running ? `Sürüyor: ${running.label}` : failed ? `Durdu: ${failed.label}` : preflightOnly ? 'Ön baskıda düzeltilecek var' : j.steps.length && done === j.steps.length ? 'Bitti' : `${done}/${j.steps.length} adım bitti`}
                         </span>
                       </span>
-                      <StepIcon status={failed ? 'fail' : running ? 'running' : j.steps.length && done === j.steps.length ? 'done' : 'waiting'} />
+                      <StepIcon status={failed ? 'fail' : running ? 'running' : preflightOnly ? 'warn' : j.steps.length && done === j.steps.length ? 'done' : 'waiting'} />
                     </Link>
                   </li>
                 );

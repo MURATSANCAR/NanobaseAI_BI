@@ -889,6 +889,18 @@ def set_job(d: Path, **info) -> None:
 
 
 # ------------------------------------------------------------------ ekran görünümü
+def cover_style(cov: dict) -> str | None:
+    """Dizilmiş kapağın tarzı (STYLES'tan biri). `cover.json`'daki `style` iki anlam taşır: kolaj ve tipografik
+    kapakta kapak tarzı, resimli kapakta başlık yazısının tipografi ailesi (`cover_text.style_for`: «cocuk» …).
+    Ekran yalnız STYLES'ı tanır; aile adı gelince hiçbir tarz seçili görünmüyordu."""
+    if not cov:
+        return None
+    s = cov.get("style")
+    if s in STYLES:
+        return s
+    return "typographic" if cov.get("typographic") else "illustrated"
+
+
 def view(d: Path) -> dict:
     from . import studio
     st = load(d)
@@ -907,8 +919,7 @@ def view(d: Path) -> dict:
     pdf = d / "kapak" / "kapak.pdf"
     return {
         "style": st.get("style"),
-        "effective_style": cov.get("style") or ((("typographic" if cov.get("typographic") else "illustrated"))
-                                                if cov else None),
+        "effective_style": cover_style(cov),
         "layout": int(st.get("layout") or 0),
         "photos": [{k: p.get(k) for k in ("id", "source", "w_px", "h_px", "name", "by", "at", "seed", "note")}
                    | {"overflow": bool((p.get("cut") or {}).get("overflow")),

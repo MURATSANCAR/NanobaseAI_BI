@@ -350,3 +350,12 @@ def test_api_collage(tmp_path, monkeypatch):
     studio.set_busy(d, {"key": "kapak", "since": 0})
     r = c.post(base + "/photos", headers=h, json={"count": 2})
     assert r.status_code == 409 and r.json()["code"] == "BUSY"
+
+
+def test_cover_style_ignores_typography_family():
+    """Resimli kapakta cover.json'un `style`'ı başlık yazısının ailesidir («cocuk»); ekrana kapak tarzı gider."""
+    assert K.cover_style({}) is None
+    assert K.cover_style({"style": "cocuk", "typographic": False}) == "illustrated"
+    assert K.cover_style({"typographic": True}) == "typographic"
+    assert K.cover_style({"style": "typographic"}) == "typographic"
+    assert K.cover_style({"style": "collage", "photo": "p1"}) == "collage"

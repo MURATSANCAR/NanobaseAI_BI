@@ -1122,6 +1122,16 @@ def _event(conn: sa.Connection, job_id: str, seg: Any, user: str, action: str) -
                                           action=action, words=int(seg.words), at=_now()))
 
 
+def stale(seg: Any, body: dict[str, Any], key: str) -> bool:
+    """İyimser kilit: istemci segmenti hangi `updatedAt` ile açtığını `key`'de yollar. Hiç kaydedilmemiş segmentte bu
+    değer null'dur; null «denetleme» sayılırsa aynı boş segmenti açan iki kişiden ikincisi birincinin çevirisini
+    sessizce siliyordu (2026-09-29 kabul). Anahtar gövdede varsa null da denetlenir: segment bu arada kaydedildiyse
+    bayattır. Anahtarı hiç yollamayan çağrı (toplu işlem) denetlenmez."""
+    if key not in body:
+        return False
+    return (body.get(key) or None) != _iso(seg.updated_at)
+
+
 def save_segment(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, seg_id: str, body: dict[str, Any]) -> dict[str, Any]:
     """Çevirmenin kaydı: taslak (kaydet) ya da çevrildi (onayla). Onaylı segmenti yalnız inceleyen değiştirir."""
     target = str(body.get("target") if body.get("target") is not None else "")
@@ -1137,9 +1147,8 @@ def save_segment(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool
             raise TranslationError("Bu işte çevirmen değilsiniz.", 403)
         if s.status == "onaylandi":
             raise TranslationError("Segment onaylı; değiştirmek için inceleyen onayı geri almalı.", 409)
-        if expected := body.get("updatedAt"):
-            if _iso(s.updated_at) and expected != _iso(s.updated_at):
-                raise TranslationError(f"Segment bu arada {s.updated_by or 'başka biri'} tarafından değiştirildi; yeniden açın.", 409)
+        if stale(s, body, "updatedAt"):
+            raise TranslationError(f"Segment bu arada {s.updated_by or 'başka biri'} tarafından değiştirildi; yeniden açın.", 409)
         clean = target.strip()
         if status == "cevrildi" and not clean:
             raise TranslationError("Boş segment çevrildi olarak işaretlenemez.")

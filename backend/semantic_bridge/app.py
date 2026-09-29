@@ -6290,13 +6290,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/editorial/ask/covers/{book_id}")
     def editorial_book_cover(book_id: str, request: Request):
+        """Kitap listelerindeki kapak. Bir listede onlarca kapak birden istenir; `no-cache` her ekran açılışında hepsini
+        yeniden istetiyor, kapağı olmayan kitabın 404'ü de her seferinde tekrarlanıyordu (kitap tasarım listesinde 20
+        kapağın 14'ü 404, ikinci açılışta 429). Bulunan ve bulunamayan kapak 5 dk tarayıcıda kalır; editörün yüklediği
+        yeni kapak en geç 5 dk sonra görünür."""
         _books(request)
         from semantic_bridge import editorial_cards
+        cache = {"Cache-Control": "private, max-age=300"}
         try:
             data, mime = editorial_cards.cover(book_id)
-            return Response(content=data, media_type=mime, headers={"Cache-Control":"private, no-cache"})
+            return Response(content=data, media_type=mime, headers=cache)
         except Exception:
-            raise HTTPException(404, "Kapak görseli bulunamadı.") from None
+            raise HTTPException(404, "Kapak görseli bulunamadı.", headers=cache) from None
 
     @app.get("/api/v1/editorial/ask/pages/{book_id}/{page_no}")
     def editorial_book_page(book_id: str, page_no: int, request: Request, w: int = 0):

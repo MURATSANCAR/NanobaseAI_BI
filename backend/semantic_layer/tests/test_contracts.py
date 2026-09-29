@@ -490,3 +490,13 @@ def test_related_contracts_sort_by_number():
     assert [r["no"] for r in out] == ["2024007186-1", "2024007186-2", "2024007186-9", "2024007186-10",
                                       "2024007186-11", "2024007186-100"]
     assert out[0]["relation"] == "ana"
+
+
+def test_crm_title_names_each_book_once_and_diff_ignores_old_repeats():
+    """Aynı kitabın birden çok CRM kartı sözleşme adını tekrarlatmaz; tekrarlı adla benimsenmiş kayıt «değişti» sayılmaz."""
+    from semantic_bridge import contracts_terms as CT
+    assert CT.book_title(["Binbir Gece Masalları", "Binbir Gece Masalları ", None, "Kuyucaklı Yusuf"]) == \
+        "Binbir Gece Masalları · Kuyucaklı Yusuf"
+    old = {"title": "Binbir Gece Masalları · Binbir Gece Masalları · Binbir Gece Masalları"}
+    assert not [d for d in CT.diff(old, {"title": "Binbir Gece Masalları"}) if d["field"] == "title"]
+    assert [d for d in CT.diff(old, {"title": "Başka Kitap"}) if d["field"] == "title"]

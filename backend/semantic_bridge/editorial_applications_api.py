@@ -20,6 +20,13 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import editorial_applications as mod
 from semantic_bridge import editorial_applications_market as mkt
+from semantic_bridge import sorgu_izi as IZ
+
+# Kurul oturumu ekranının «i» hesabı (045c5aa8 bu adı ve IZ'yi kullanıyordu ama tanımlamamıştı: oturum detayı her
+# açılışta 500 veriyordu).
+T_OTURUM = ("Kurul oturumu: gündemdeki başvurular, üyelerin oyları ve puanları (misyon, yayıncılık, ticari; 0–100), "
+            "başvuru başına ortalama puan ve öneri eşikleri portaldaki kurul, gündem ve oy kayıtlarından hesaplanır; "
+            "karar başkanın kaydıdır.")
 
 log = logging.getLogger("semantic.editorial_applications")
 

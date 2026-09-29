@@ -158,6 +158,25 @@ def test_flow_translate_review_quality_and_versions(engine):
     assert {s["status"] for s in again if s["source"] == "The road was long."} == {"cevrildi", "taslak"}
 
 
+def test_never_saved_segment_lock_rejects_second_writer(engine):
+    """İki kişi aynı boş segmenti açar (ikisinde de updatedAt null). Birincinin kaydından sonra ikincinin null kilitli
+    kaydı 409 alır; eskiden sessizce birincinin çevirisini siliyordu. Kilidi hiç yollamayan çağrı eskisi gibi geçer."""
+    jid = _job(engine)
+    T.upload_source(engine, TENANT, "editor", False, jid, "road.txt", SRC)
+    seg = T.segments(engine, TENANT, "ayse", False, jid, None, "hepsi")["items"][1]
+    assert seg["updatedAt"] is None
+    first = T.save_segment(engine, TENANT, "ayse", False, seg["id"], {"target": "Yol uzundu.", "status": "taslak",
+                                                                       "updatedAt": None})
+    with pytest.raises(T.TranslationError) as e:
+        T.save_segment(engine, TENANT, "ayse", False, seg["id"], {"target": "Eski metin", "status": "taslak",
+                                                                  "updatedAt": None})
+    assert e.value.status == 409
+    ok = T.save_segment(engine, TENANT, "ayse", False, seg["id"], {"target": "Yol çok uzundu.", "status": "taslak",
+                                                                   "updatedAt": first["updatedAt"]})
+    T.save_segment(engine, TENANT, "ayse", False, seg["id"], {"target": "Kilitsiz", "status": "taslak"})
+    assert ok["updatedAt"]
+
+
 def test_xliff_round_trip_keeps_approved_segments(engine):
     jid = _job(engine)
     T.upload_source(engine, TENANT, "editor", False, jid, "road.txt", SRC)
