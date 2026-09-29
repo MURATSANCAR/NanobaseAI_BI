@@ -37,11 +37,16 @@ export default function NewRequestSheet({ open, onClose }: { open: boolean; onCl
     const k = meta?.kanallar.find((x) => x.key === kanal);
     if (k) setFormats(k.formatlar);
   }, [kanal, meta]);
+  // Kapanınca bütün form ilk hâline döner: kanal varsayılana, biçimler o kanalın biçimlerine, metin türleri varsayılana.
+  // Biçimler burada doğrudan kurulur; kanal zaten «instagram» ise yukarıdaki etki yeniden koşmaz.
   useEffect(() => {
     if (!open) {
       setQ(''); setBook(null); setF({ brief: '', hedefKitle: '', ton: '', gorselBasligi: '', termin: '', kampanya: '', etiketler: '', studioJob: '' });
+      setKanal('instagram');
+      setFormats(meta?.kanallar.find((x) => x.key === 'instagram')?.formatlar ?? []);
+      setKinds(['aciklama', 'hashtag']);
     }
-  }, [open]);
+  }, [open, meta]);
 
   const hits = useQuery({ queryKey: ['creative', 'books', dq], queryFn: () => creativeApi.books(dq), enabled: ENGINE_ENABLED && open && dq.length >= 2 && !book });
   const info = useQuery({ queryKey: ['creative', 'book', book?.stokKodu], queryFn: () => creativeApi.book(book!.stokKodu), enabled: ENGINE_ENABLED && !!book });
@@ -60,6 +65,11 @@ export default function NewRequestSheet({ open, onClose }: { open: boolean; onCl
       nav(`/pazarlama/icerik/${encodeURIComponent(r.id)}`);
     },
   });
+  // Önceki denemenin hata notu yeniden açılışta görünmesin.
+  const resetCreate = create.reset;
+  useEffect(() => {
+    if (!open) resetCreate();
+  }, [open, resetCreate]);
   const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((o) => ({ ...o, [k]: e.target.value }));
   const ready = !!book && (formats.length > 0 || kinds.length > 0);

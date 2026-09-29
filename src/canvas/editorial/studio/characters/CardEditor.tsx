@@ -59,6 +59,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
   const [baseline, setBaseline] = useState<CardInput | null>(() => (card ? toInput(card) : null));
   const [aliases, setAliases] = useState((card?.aliases ?? []).join(', '));
   const [confirmDel, setConfirmDel] = useState(false);
+  const [refDel, setRefDel] = useState<{ id: string; n: number; primary: boolean } | null>(null);
   const [msg, setMsg] = useState<{ tone: 'ok' | 'warn' | 'err'; text: string } | null>(null);
   const live = card ? view.cards.find((c) => c.id === card.id) ?? card : null;
   const input = (): CardInput => ({ ...draft, aliases: aliases.split(',').map((a) => a.trim()).filter(Boolean) });
@@ -261,7 +262,7 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
           <p className="-mt-1 text-[11.5px] text-canvas-muted">Yıldızlı görsel her resimde karakterin referansı olarak kullanılır; tercihen düz zeminde, bütün beden.</p>
           {live.refs.length === 0 && <Note tone="warn">Referans görsel yok: karakter yalnız tarif ve renklerle çizilir, resimler karta karşı denetlenemez.</Note>}
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {live.refs.map((r) => (
+            {live.refs.map((r, i) => (
               <li key={r.id} className="flex min-w-0 flex-col gap-1">
                 <div className={`relative overflow-hidden rounded-xl border bg-white ${r.primary ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-slate-200'}`}>
                   <Img src={cardsApi.refUrl(jobId, card.id, r.id, 240)} alt={`${live.name} referansı`} fallback="görsel" className="aspect-square w-full object-contain" />
@@ -273,8 +274,8 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
                     className={`flex h-10 flex-1 items-center justify-center rounded-lg bg-white/80 disabled:opacity-40 ${press}`}>
                     <Star className="h-4 w-4" aria-hidden />
                   </button>
-                  <button type="button" disabled={busyAct} aria-label="Referans görseli karttan kaldır" title="Karttan kaldır (hemen uygulanır)"
-                    onClick={() => act.mutate(() => cardsApi.removeRef(jobId, card.id, r.id))}
+                  <button type="button" disabled={busyAct} aria-label={`${i + 1}. referans görseli karttan kaldır`} title="Karttan kaldır"
+                    onClick={() => setRefDel({ id: r.id, n: i + 1, primary: r.primary })}
                     className={`flex h-10 flex-1 items-center justify-center rounded-lg bg-white/80 text-rose-600 disabled:opacity-40 ${press}`}>
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </button>
@@ -325,6 +326,10 @@ export default function CardEditor({ jobId, view, card, preset, onDone }: {
       <ConfirmDialog open={confirmDel} danger title={`«${card?.name}» kartı silinsin mi?`}
         body="Kart dizinin bütün kitaplarından kalkar; eski hâli sürüm geçmişinde durur. Üretilmiş resimler silinmez."
         confirm="Sil" onClose={() => setConfirmDel(false)} onConfirm={() => { setConfirmDel(false); del.mutate(); }} />
+      <ConfirmDialog open={refDel !== null} danger title="Referans görsel silinsin mi?"
+        body={refDel ? `«${live?.name ?? card?.name ?? 'Kart'}» kartının ${refDel.n}. referans görseli karttan silinir${refDel.primary ? '; birincil görsel olduğu için kalan ilk görsel birincil olur' : ''}. Kart yeniden taslağa döner; resimlerde kullanılması için yeniden onaylamanız gerekir. Bu işlem geri alınamaz.` : ''}
+        confirm="Görseli sil" onClose={() => setRefDel(null)}
+        onConfirm={() => { const r = refDel; setRefDel(null); if (r && card) act.mutate(() => cardsApi.removeRef(jobId, card.id, r.id)); }} />
     </div>
   );
 }

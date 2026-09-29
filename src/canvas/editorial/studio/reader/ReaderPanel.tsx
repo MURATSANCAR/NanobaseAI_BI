@@ -142,10 +142,24 @@ function Suggest({ from, to }: { from: string; to: string }) {
 function useDecisions(job: string, rid: string | undefined) {
   const [local, setLocal] = useState<Record<string, ReaderDecision | null>>({});
   useEffect(() => setLocal({}), [rid]);
+  // İşaret hemen değişir; sunucu reddederse önceki hâline döner (arada aynı işarete başka karar verildiyse ona dokunulmaz).
   const decide = async (fid: string, decision: ReaderDecision) => {
     if (!rid) return;
-    setLocal((l) => ({ ...l, [fid]: decision === 'open' ? null : decision }));
-    await readerApi.decide(job, rid, fid, decision);
+    const next = decision === 'open' ? null : decision;
+    const had = fid in local;
+    const prev = local[fid];
+    setLocal((l) => ({ ...l, [fid]: next }));
+    try {
+      await readerApi.decide(job, rid, fid, decision);
+    } catch (e) {
+      setLocal((l) => {
+        if (l[fid] !== next) return l;
+        const n = { ...l };
+        if (had) n[fid] = prev; else delete n[fid];
+        return n;
+      });
+      throw e;
+    }
   };
   return { local, decide };
 }
@@ -185,7 +199,12 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
       } else {
         await decide(f.fid, what === 'dismiss' ? 'dismissed' : 'open');
       }
-    } catch (e) { setMsg(errText(e, 'Karar kaydedilemedi; metindeki değişiklik kaydedildi.')); }
+    } catch (e) {
+      const why = errText(e, '');
+      setMsg(`Karar kaydedilemedi${why ? ` (${why})` : ''}; ${what === 'apply' || what === 'unapply'
+        ? 'metindeki değişiklik kaydedildi ama işaret eski hâline döndü. Metni Ctrl/Cmd+Z ile geri alıp yeniden deneyin.'
+        : 'işaret eski hâline döndü. Yeniden deneyin.'}`);
+    }
   };
 
   return (
@@ -383,7 +402,12 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
       } else {
         await decide(x.fid, what === 'reject' ? 'rejected' : 'open');
       }
-    } catch (e) { setMsg(errText(e, 'Karar kaydedilemedi; metindeki değişiklik kaydedildi.')); }
+    } catch (e) {
+      const why = errText(e, '');
+      setMsg(`Karar kaydedilemedi${why ? ` (${why})` : ''}; ${what === 'accept' || what === 'unaccept'
+        ? 'metindeki değişiklik kaydedildi ama işaret eski hâline döndü. Metni Ctrl/Cmd+Z ile geri alıp yeniden deneyin.'
+        : 'işaret eski hâline döndü. Yeniden deneyin.'}`);
+    }
   };
 
   return (

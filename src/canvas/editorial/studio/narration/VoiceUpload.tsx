@@ -170,7 +170,9 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
     },
   });
   const short = audio && audio.seconds < lib.limits.min_sec;
-  const long = audio && audio.seconds > lib.limits.max_sec + 10;
+  // Sunucu baştaki ve sondaki sessizliği kırpıp kalan süreyi max_sec ile karşılaştırır. Kırpılmış süre tarayıcıda
+  // bilinmez; toplam süre sınırı aşıyorsa uyarılır (sessizlik payı varsa kayıt yine de kabul edilebilir).
+  const long = audio && audio.seconds > lib.limits.max_sec;
 
   return (
     <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (ready) send.mutate(); }}>
@@ -188,7 +190,7 @@ function UploadForm({ lib, onDone }: { lib: VoiceLibrary; onDone: () => void }) 
         <span className={labelCls}>Ses kaydı</span>
         <FileDrop size="sm" title="Ses kaydını seç" accept={AUDIO_ACCEPT} maxBytes={maxBytes} busy={decoding}
           picked={audio?.file} onPick={(file) => void pickAudio(file)} />
-        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ` — kısa görünüyor; en az ${lib.limits.min_sec} sn konuşma gerekir` : long ? ` — uzun görünüyor; en çok ${lib.limits.max_sec} sn konuşma kabul edilir` : ''}</span>}
+        {audio && <span className="text-[11.5px] text-canvas-muted">{secs(audio.seconds)} kayıt{short ? ` — kısa görünüyor; en az ${lib.limits.min_sec} sn konuşma gerekir` : long ? ` — uzun görünüyor; baştaki ve sondaki sessizlik çıkınca en çok ${lib.limits.max_sec} sn konuşma kabul edilir` : ''}</span>}
         {audioErr && <span className="text-[12px] text-rose-700">{audioErr}</span>}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">

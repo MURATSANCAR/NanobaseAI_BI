@@ -204,7 +204,10 @@ function DecisionLine({ d }: { d: Decision | undefined }) {
   return <p className="mt-1 text-[11px] text-canvas-muted">{t[d.state] ?? d.state} · {d.by} · {when(d.at)}{d.note ? ` · “${d.note}”` : ''}</p>;
 }
 
-type Decide = (v: { kind: 'finding' | 'word' | 'check'; id: string; state: string | null; note?: string; choice?: Record<string, string> }) => void;
+type Decide = (
+  v: { kind: 'finding' | 'word' | 'check'; id: string; state: string | null; note?: string; choice?: Record<string, string> },
+  opts?: { onSuccess?: () => void; onError?: () => void },
+) => void;
 
 function Toggle({ on, children, onClick, disabled, tone = 'violet' }: { on: boolean; children: ReactNode; onClick: () => void; disabled?: boolean; tone?: 'violet' | 'ok' | 'bad' }) {
   const onCls = tone === 'ok' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : tone === 'bad' ? 'border-rose-400 bg-rose-50 text-rose-800' : 'border-canvas-violet bg-violet-50 text-canvas-violet';
@@ -354,6 +357,10 @@ function Checks({ items, goto }: { items: AgeCheck[]; goto: (p: { pid: string | 
 
 function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy: boolean }) {
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Karar verildikten sonra yazılan not aynı karar çağrısıyla (durum değişmeden) kaydedilir.
+  const [noteSave, setNoteSave] = useState<Record<string, 'saving' | 'ok' | 'err'>>({});
+  const mark = (id: string, v: 'saving' | 'ok' | 'err' | null) =>
+    setNoteSave((m) => { const n = { ...m }; if (v) n[id] = v; else delete n[id]; return n; });
   return (
     <div>
       <p className="text-[12px] leading-snug text-canvas-muted">Otomatik denetlenemeyen maddeler. İşaretleyen kişi ve zaman rapora ve PDF’e yazılır.</p>
@@ -361,17 +368,36 @@ function Checklist({ view, decide, busy }: { view: AgeView; decide: Decide; busy
         {view.checklist.map((c) => {
           const s = c.decision?.state;
           const note = notes[c.id] ?? c.decision?.note ?? '';
+          // Sunucu notu boşlukları sadeleştirerek saklar; karşılaştırma da öyle.
+          const noteDirty = !!s && note.split(/\s+/).filter(Boolean).join(' ') !== (c.decision?.note ?? '');
+          const saveNote = () => {
+            if (!s || !noteDirty || busy) return;
+            mark(c.id, 'saving');
+            decide({ kind: 'check', id: c.id, state: s, note }, { onSuccess: () => mark(c.id, 'ok'), onError: () => mark(c.id, 'err') });
+          };
+          const ns = noteSave[c.id];
           return (
             <li key={c.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3">
               <p className="text-[13px] font-bold leading-snug">{c.title}</p>
               <p className="mt-0.5 text-[11px] text-canvas-muted">Kaynak: {c.source}</p>
-              <input value={note} onChange={(e) => setNotes((n) => ({ ...n, [c.id]: e.target.value }))} maxLength={500}
+              <input value={note} onChange={(e) => { setNotes((n) => ({ ...n, [c.id]: e.target.value })); if (ns !== 'saving') mark(c.id, null); }} maxLength={500}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveNote(); } }}
                 placeholder="Not (isteğe bağlı)" aria-label={`${c.title} notu`}
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] outline-none focus:border-canvas-violet" />
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Toggle on={s === 'ok'} tone="ok" disabled={busy} onClick={() => decide({ kind: 'check', id: c.id, state: s === 'ok' ? null : 'ok', note })}>Uygun</Toggle>
                 <Toggle on={s === 'not_ok'} tone="bad" disabled={busy} onClick={() => decide({ kind: 'check', id: c.id, state: s === 'not_ok' ? null : 'not_ok', note })}>Uygun değil</Toggle>
+                {noteDirty && (
+                  <button type="button" disabled={busy} onClick={saveNote}
+                    className={`inline-flex min-h-9 items-center gap-1 rounded-xl border border-canvas-violet bg-white px-3 text-[12px] font-bold text-canvas-violet disabled:opacity-50 ${press}`}>
+                    {ns === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden />}
+                    Notu kaydet
+                  </button>
+                )}
               </div>
+              <p className="sr-only" role="status" aria-live="polite">{ns === 'ok' ? 'Not kaydedildi.' : ''}</p>
+              {ns === 'ok' && !noteDirty && <p className="mt-1 text-[11px] font-semibold text-emerald-700" aria-hidden>Not kaydedildi.</p>}
+              {ns === 'err' && <p className="mt-1 text-[11px] font-semibold text-rose-700" role="alert">Not kaydedilemedi; «Notu kaydet» ile yeniden deneyin.</p>}
               <DecisionLine d={c.decision} />
             </li>
           );

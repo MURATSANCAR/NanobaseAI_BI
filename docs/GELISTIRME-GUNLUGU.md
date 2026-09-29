@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 (akşam, 3) — Sadeleştirme turunda bulunan 11 mantık hatası düzeldi
+
+- **Stüdyo:** karakter referans görseli artık onayla silinir (stüdyonun `ConfirmDialog`'u; metin kartın taslağa döneceğini ve birincil görselin değişeceğini söyler); şekil «Sayfadan kaldır» geri alınabildiği için onay yerine «Ctrl/Cmd+Z ya da Geri al» notu; boyama «Fark» 1–20'ye sıkıştırılır; yaş raporunda karardan sonra yazılan not «Notu kaydet» ile aynı karar çağrısıyla kaydedilir; telaffuz sözlüğünde okunuşu ya da yazılışı boş satır varken «Sözlüğü kaydet» kapalı ve satırlar adıyla yazılır (sessizce atılmaz); ses yükleme «uzun» uyarısı sunucunun gerçek sınırında çıkar; okur panelinde sunucu kararı reddederse işaret geri döner.
+- **Pazarlama:** lansman medya kaydı onayla silinir (`AskSheet`); yeni işbirliği penceresi her açılışta sıfırlanır (ayrıca açıkken her yenilemede tekrar uyarısını silen etki düzeldi); içerik talebi penceresi kapanınca kanal/biçim ve eski hata notu sıfırlanır; görsel/metin reddi `window.prompt` yerine zorunlu nedenli `AskSheet`, gönderilen veri aynı.
+- **İK:** performans değerlendirme notunda düğmeler `<label>` dışına alındı; etiket yazı alanına bağlı.
+- **Doğrulama (test sunucusu geçici kopya):** `tsc -b` 0, `vite build`, vitest 256/256.
+- **Kalan:** okur panelinde metni değiştiren kararın kaydı düşerse metin değişmiş kalır, işaret geri döner (ekran «Ctrl/Cmd+Z ile geri alın» der); tam çözüm sayfa metnini de geri almak.
+
 ## 2026-09-29 (14:20) — Müşteri VM'ine `14d2346d` kuruldu; Excel indirme VM'de gerçek veriyle 152/0
 
 - **Ön denetim:** VM'deki son kurulum `7fa258e8` kurulacak `14d2346d`'nin atası (42 commit, geri sarma yok); çakışma işareti 0;

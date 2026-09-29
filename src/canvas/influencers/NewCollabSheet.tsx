@@ -32,14 +32,25 @@ export default function NewCollabSheet({ open, meta, onClose, person, book, onCr
   const [note, setNote] = useState('');
   const [repeat, setRepeat] = useState(false);
   const [dup, setDup] = useState<string | null>(null);
+  // Her açılışta form sıfırdan başlar. Bağımlılıklar ilkel değerler: çağıran `book`'u her çizimde yeni nesne olarak
+  // verebilir (Candidates); nesne kimliğine bağlanırsa açıkken yazılanlar silinirdi.
+  const personKey = person?.id ?? '';
+  const bookId = book?.id ?? '';
+  const bookTitle = book?.title ?? '';
   useEffect(() => {
     if (open) {
-      setPersonId(person?.id ?? '');
-      setPick(book ?? null);
+      setPersonId(personKey);
+      setPick(bookId ? { id: bookId, title: bookTitle } : null);
+      setQ('');
+      setKind('hediye');
+      setFee('');
+      setDue('');
+      setOrder('');
+      setNote('');
       setDup(null);
       setRepeat(false);
     }
-  }, [open, person?.id, book]);
+  }, [open, personKey, bookId, bookTitle]);
   const people = useQuery({ queryKey: ['influencers', 'people', 'pick'], queryFn: () => inflApi.people({}), enabled: open && !person && ENGINE_ENABLED });
   const books = useQuery({
     queryKey: ['influencers', 'book-search', dq],

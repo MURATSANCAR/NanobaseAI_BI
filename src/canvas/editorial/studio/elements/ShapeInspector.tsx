@@ -47,6 +47,7 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
   const hasText = item ? item.text : !!value.runs?.length;
   const strokeW = value.stroke_w ?? item?.stroke_w ?? 0.6;
   const opacity = value.opacity ?? 1;
+  const removeHint = useId();
 
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${className}`}>
@@ -74,10 +75,15 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
             </>
           )}
           {onRemove && (
-            <button type="button" onClick={onRemove}
+            <button type="button" onClick={onRemove} aria-describedby={removeHint}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white/80 px-3.5 text-[13px] font-bold text-rose-700 ${press}`}>
               <Trash2 className="h-4 w-4" aria-hidden />Sayfadan kaldır
             </button>
+          )}
+          {onRemove && (
+            <p id={removeHint} className="w-full text-[11.5px] text-canvas-muted">
+              Kaldırdığınız şekli Ctrl/Cmd+Z ya da «Geri al» düğmesiyle geri getirebilirsiniz.
+            </p>
           )}
         </div>
       )}
