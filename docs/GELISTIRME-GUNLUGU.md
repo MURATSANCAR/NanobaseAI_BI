@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-29 — ZEKI AI CHAT kaynağı BI deposuna alındı
+
+- Kullanıcının «BI uygulaması kodu içine at» talebiyle ayrı sohbet deposunun `e7334b0` main ağacı bütünüyle `apps/zeki-chat/` altına alındı; ayrı Git/submodule yok. Son canlı kabulün `9b12e38` uygulama kodu, tam yerel ağ korumaları, paketler, logo, Docker dosyaları ve kabul kanıtları birlikte taşındı. Git dışı sunucu sırları/bağımlılık klasörleri taşınmadı.
+- Build varsayılan kaynak yolu betiğin konumundan türetilir; BI köküne `deploy/zeki/build-chat.sh` girişi eklendi. Portal SSO kurulumunun varsayılan compose yolu BI altındaki sohbet dizinidir; eski kurulum için `CHAT_COMPOSE` override korunur. Kurulum belgesi `docs/ZEKI-CHAT.md`.
+- Kaynak Git blob/modları ile taşınan ağaç karşılaştırıldı; yalnız README ve build kaynak yolu uyarlaması farklı. BI TypeScript `src` ile sınırlı; mevcut Vitest `apps/**` dışlaması sohbet testlerini kapsamaz. Yerel test çalıştırılmadı. Bu kaynak yerleşimi değişikliği canlı konteyneri/DB'yi değiştirmez; test sunucusu hâlâ `zeki-ai-chat:8.5.3-9b12e38`. Yeni imaj/VM kurulumu yapılmadı.
+- Ayrı sohbet GitHub deposunun `Repository not found` engeli kaynak yayını için kaldırıldı: bundan sonra sohbet kodu BI `main` ile yayımlanır. Eski ayrı yerel depo otomatik silinmedi; yeni değişikliklerin yeri BI içindeki dizindir.
+
+
 ## 2026-09-29 (21:40) — Zeki kapı + test süreci koruması test sunucusunda
 
 - **Kurulum (main `0f5ff3246`):** 20 dosya (köprü, çözücü/derleyici/kapı/eleştirmen, bilgi paketi `caveats/logo-timas.md` + `rules/crm-timas.md`, kapı betikleri), md5 denetimi: canlı dosyalar kurulum öncesi main'le aynıydı; `._*` 0; köprü 160 sn'de hazır, hata yok. Aynı yeniden başlatmada canlı hazır cevap klasöründen 90 test kaydı (timasai/ayse/mehmet/zekiai) silindi.

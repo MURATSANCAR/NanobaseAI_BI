@@ -1,0 +1,49 @@
+{
+  "observedAt": "2026-09-29T15:39:53.768142+00:00",
+  "internalDns": {
+    "exitCode": 0,
+    "stdout": "Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\nNon-authoritative answer:\n\nNon-authoritative answer:\nName:\tzeki-chat\nAddress: 172.20.0.3",
+    "stderr": ""
+  },
+  "externalDns": {
+    "exitCode": 1,
+    "stdout": "Server:\t\t127.0.0.11\nAddress:\t127.0.0.11:53\n\n** server can't find cloud.rocket.chat: SERVFAIL\n\n** server can't find cloud.rocket.chat: SERVFAIL",
+    "stderr": ""
+  },
+  "externalHttp": {
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "wget: can't connect to remote host (1.1.1.1): Connection refused"
+  },
+  "hostRules": {
+    "exitCode": 0,
+    "stdout": "-N ZEKI-LOCAL-HOST\n-A ZEKI-LOCAL-HOST -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN\n-A ZEKI-LOCAL-HOST -j REJECT --reject-with icmp-port-unreachable",
+    "stderr": ""
+  },
+  "egressRules": {
+    "exitCode": 0,
+    "stdout": "-N ZEKI-LOCAL-EGRESS\n-A ZEKI-LOCAL-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN\n-A ZEKI-LOCAL-EGRESS -j REJECT --reject-with icmp-port-unreachable",
+    "stderr": ""
+  },
+  "dockerUserHook": {
+    "exitCode": 0,
+    "stdout": "-N DOCKER-USER\n-A DOCKER-USER -i zeki-ingress0 -j ZEKI-LOCAL-EGRESS",
+    "stderr": ""
+  },
+  "egressCounters": {
+    "exitCode": 0,
+    "stdout": "Chain ZEKI-LOCAL-EGRESS (2 references)\n pkts bytes target     prot opt in     out     source               destination         \n    0     0 RETURN     0    --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED\n    4   240 REJECT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            reject-with icmp-port-unreachable",
+    "stderr": ""
+  },
+  "guardActive": {
+    "exitCode": 0,
+    "stdout": "active",
+    "stderr": ""
+  },
+  "guardEnabled": {
+    "exitCode": 0,
+    "stdout": "enabled",
+    "stderr": ""
+  },
+  "allPassed": true
+}

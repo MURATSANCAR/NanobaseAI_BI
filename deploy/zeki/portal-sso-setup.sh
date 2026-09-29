@@ -4,8 +4,9 @@
 # Her adım idempotent; nginx yalnız `nginx -t` geçerse yeniden yüklenir.
 set -euo pipefail
 
-REPO="${REPO:-$HOME/NonobaseAI-BI}"          # portal-login/server.py buradan alınır
-CHAT_COMPOSE="${CHAT_COMPOSE:-$HOME/zeki-chat/deploy/zeki}"
+BI_SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO="${REPO:-$BI_SOURCE_ROOT}"          # portal-login/server.py buradan alınır
+CHAT_COMPOSE="${CHAT_COMPOSE:-$REPO/apps/zeki-chat/deploy/zeki}"
 SITE=/etc/nginx/sites-enabled/portal.nanobase.ai
 CHATJSON=/etc/nanobase/zeki-chat.json
 

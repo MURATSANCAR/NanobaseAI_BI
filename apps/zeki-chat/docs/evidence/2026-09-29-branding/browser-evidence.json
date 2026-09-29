@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 320,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 390,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 390,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 768,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 768,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    },
+    {
+      "width": 1440,
+      "authenticated": true,
+      "title": "Home - 1 unread message - ZEKI AI CHAT",
+      "scrollWidth": 1440,
+      "vendorTextCount": 0,
+      "overflowing": [],
+      "errors": []
+    }
+  ],
+  "requestHosts": [
+    "portal.nanobase.ai"
+  ]
+}

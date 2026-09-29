@@ -1,0 +1,128 @@
+# ZEKI AI CHAT — local-only runtime. Build dependencies are fetched on the build host.
+services:
+  zeki-chat:
+    image: ${ZEKI_CHAT_IMAGE:-zeki-ai-chat:8.5.3}
+    container_name: zeki-chat
+    dns: ["127.0.0.1"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    env_file:
+      # Existing workspace templates stay local; raw values preserve HTML and dollar signs.
+      - path: .branding.env
+        required: false
+        format: raw
+    environment:
+      MONGO_URL: mongodb://zeki-mongo:27017/zeki?replicaSet=rs0
+      MONGO_OPLOG_URL: mongodb://zeki-mongo:27017/local?replicaSet=rs0
+      ROOT_URL: ${ZEKI_ROOT_URL:-http://localhost:4000}
+      PORT: "3000"
+      DEPLOY_METHOD: docker
+      ZEKI_LOCAL_ONLY: "true"
+      OVERWRITE_SETTING_Zeki_Local_Only: "true"
+      OVERWRITE_SETTING_API_Embed: "false"
+      OVERWRITE_SETTING_Push_enable: "false"
+      OVERWRITE_SETTING_NPS_survey_enabled: "false"
+      OVERWRITE_SETTING_VoIP_TeamCollab_Ice_Servers: ""
+      OVERWRITE_SETTING_VoIP_TeamCollab_SIP_Integration_Enabled: "false"
+      OVERWRITE_SETTING_VoIP_TeamCollab_SIP_Integration_For_Internal_Calls: "false"
+      OVERWRITE_SETTING_VoIP_TeamCollab_Mobile_Ringing_Enabled: "false"
+      OVERWRITE_SETTING_VideoConf_Default_Provider: ""
+      OVERWRITE_SETTING_VideoConf_Mobile_Ringing: "false"
+      # Behind nginx: take the client IP from X-Forwarded-For, otherwise every user shares one IP for rate limits.
+      HTTP_FORWARDED_COUNT: "1"
+      # Admin bootstrap (used only on the very first start).
+      ADMIN_USERNAME: ${ZEKI_ADMIN_USERNAME:-zekiadmin}
+      ADMIN_PASS: ${ZEKI_ADMIN_PASS:?set ZEKI_ADMIN_PASS}
+      ADMIN_EMAIL: ${ZEKI_ADMIN_EMAIL:-zekiadmin@localhost}
+      # Skip the setup wizard; branding and AD settings are applied from our own script.
+      OVERWRITE_SETTING_Show_Setup_Wizard: completed
+      OVERWRITE_SETTING_Site_Name: ZEKI AI CHAT
+      # Workspace language. The client uses it before the browser language; people without their own choice
+      # (and, once, those left on English) get it from the portal sign-in. There is no separate
+      # "default user language" setting in this version: an unset user.language follows this one.
+      OVERWRITE_SETTING_Language: ${ZEKI_LANGUAGE:-tr}
+      # Client DDP/websocket + absolute links use Site_Url; must be the public sub-path URL, not localhost.
+      OVERWRITE_SETTING_Site_Url: ${ZEKI_ROOT_URL:-http://localhost:4000}
+      # Portal single sign-on: the portal login service is the only way in. The chat page asks
+      # ${ZEKI_PORTAL_ORIGIN}/timas/auth/chat-sso (same origin, portal cookie) for a login token;
+      # without a portal session the user is sent to the portal login page.
+      OVERWRITE_SETTING_Accounts_iframe_enabled: "true"
+      OVERWRITE_SETTING_Accounts_iframe_url: ${ZEKI_PORTAL_ORIGIN:-http://localhost}/timas/
+      OVERWRITE_SETTING_Accounts_Iframe_api_url: ${ZEKI_PORTAL_ORIGIN:-http://localhost}/timas/auth/chat-sso
+      OVERWRITE_SETTING_Accounts_Iframe_api_method: GET
+      OVERWRITE_SETTING_Accounts_RegistrationForm: Disabled
+      OVERWRITE_SETTING_Accounts_ShowFormLogin: "false"
+      OVERWRITE_SETTING_Accounts_PasswordReset: "false"
+      # Token secret for single sign-on from the BI portal.
+      CREATE_TOKENS_FOR_USERS_SECRET: ${ZEKI_SSO_SECRET:?set ZEKI_SSO_SECRET}
+    volumes:
+      - zeki-uploads:/app/uploads
+    depends_on:
+      zeki-mongo:
+        condition: service_healthy
+    networks:
+      - zeki
+
+  zeki-ingress:
+    image: nginx@sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427
+    container_name: zeki-ingress
+    # Embedded DNS still resolves Docker service names; external fallback stays in this container.
+    dns: ["127.0.0.1"]
+    restart: unless-stopped
+    user: "101:101"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./nginx-local.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "127.0.0.1:${ZEKI_PORT:-4000}:8080"
+    depends_on:
+      - zeki-chat
+    networks:
+      - zeki
+      - ingress
+
+  zeki-mongo:
+    image: mongo:8.0
+    container_name: zeki-mongo
+    dns: ["127.0.0.1"]
+    restart: unless-stopped
+    command: mongod --replSet rs0 --bind_ip_all --oplogSize 128
+    volumes:
+      - zeki-mongo-data:/data/db
+      - zeki-mongo-config:/data/configdb
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'zeki-mongo:27017'}]}).ok }\" | grep -q 1"]
+      interval: 10s
+      start_period: 30s
+      timeout: 10s
+      retries: 30
+    networks:
+      - zeki
+
+volumes:
+  zeki-uploads:
+  zeki-mongo-data:
+  zeki-mongo-config:
+
+networks:
+  zeki:
+    name: zeki-local
+    internal: true
+    enable_ipv6: false
+    driver_opts:
+      com.docker.network.bridge.name: zeki-local0
+  ingress:
+    name: zeki-ingress
+    # Explicit subnet avoids Docker's automatic pool overlapping the customer VPN.
+    ipam:
+      config:
+        - subnet: 10.254.250.0/28
+    enable_ipv6: false
+    driver_opts:
+      com.docker.network.bridge.name: zeki-ingress0

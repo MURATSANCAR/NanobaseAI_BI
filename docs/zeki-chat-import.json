@@ -1,0 +1,15 @@
+{
+  "sourceCommit": "e7334b06e5cbb499a8db614df431ac75926ed59c",
+  "destination": "apps/zeki-chat",
+  "sourceFiles": 9711,
+  "importedFiles": 9711,
+  "unchangedBlobAndMode": 9709,
+  "adaptedFiles": [
+    "README.md",
+    "deploy/zeki/build.sh"
+  ],
+  "nestedGit": false,
+  "localTestsRun": false,
+  "runtimeRedeployed": false,
+  "lastLiveApplicationVersion": "9b12e38"
+}

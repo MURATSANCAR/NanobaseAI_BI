@@ -1,0 +1,753 @@
+{
+  "queriedAtUtc": "2026-09-29T15:21:14.152845+00:00",
+  "image": "zeki-ai-chat:8.5.3-84bac94",
+  "source": "live zeki MongoDB via mongosh read-only; container /proc/net/tcp; runtime package source read-only",
+  "settings": [
+    {
+      "id": "SMS_Enabled",
+      "value": false
+    },
+    {
+      "id": "SMS_Twilio_FileUpload_Enabled",
+      "value": true
+    },
+    {
+      "id": "Omnichannel_External_Frame_Enabled",
+      "value": false
+    },
+    {
+      "id": "Assets_SvgFavicon_Enable",
+      "value": true
+    },
+    {
+      "id": "CROWD_Enable",
+      "value": false
+    },
+    {
+      "id": "Accounts_TwoFactorAuthentication_Enabled",
+      "value": true
+    },
+    {
+      "id": "Federation_Service_Enabled",
+      "value": false
+    },
+    {
+      "id": "CAS_enabled",
+      "value": false
+    },
+    {
+      "id": "Discussion_enabled",
+      "value": true
+    },
+    {
+      "id": "LDAP_Enable",
+      "value": false
+    },
+    {
+      "id": "IRC_Enabled",
+      "value": false
+    },
+    {
+      "id": "FileUpload_Enabled",
+      "value": true
+    },
+    {
+      "id": "E2E_Enable",
+      "value": false
+    },
+    {
+      "id": "Message_Attachments_Thumbnails_Enabled",
+      "value": true
+    },
+    {
+      "id": "SlackBridge_Enabled",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Drupal",
+      "value": false
+    },
+    {
+      "id": "Push_enable",
+      "value": true
+    },
+    {
+      "id": "DDP_Rate_Limit_IP_Enabled",
+      "value": true
+    },
+    {
+      "id": "RetentionPolicy_Enabled",
+      "value": false
+    },
+    {
+      "id": "Push_UseLegacy",
+      "value": false
+    },
+    {
+      "id": "Smarsh_Enabled",
+      "value": false
+    },
+    {
+      "id": "Threads_enabled",
+      "value": true
+    },
+    {
+      "id": "Webdav_Integration_Enabled",
+      "value": false
+    },
+    {
+      "id": "UserData_EnableDownload",
+      "value": true
+    },
+    {
+      "id": "Livechat_enabled",
+      "value": true
+    },
+    {
+      "id": "Accounts_TwoFactorAuthentication_By_TOTP_Enabled",
+      "value": true
+    },
+    {
+      "id": "E2E_Enabled_Default_DirectRooms",
+      "value": false
+    },
+    {
+      "id": "Push_production",
+      "value": true
+    },
+    {
+      "id": "Accounts_TwoFactorAuthentication_By_Email_Enabled",
+      "value": true
+    },
+    {
+      "id": "API_Enable_Direct_Message_History_EndPoint",
+      "value": false
+    },
+    {
+      "id": "E2E_Enabled_Default_PrivateRooms",
+      "value": false
+    },
+    {
+      "id": "Accounts_twoFactorAuthentication_email_available_for_OAuth_users",
+      "value": true
+    },
+    {
+      "id": "API_Enable_Shields",
+      "value": true
+    },
+    {
+      "id": "LDAP_Reconnect",
+      "value": false
+    },
+    {
+      "id": "E2E_Enable_Encrypt_Files",
+      "value": true
+    },
+    {
+      "id": "Message_AudioRecorderEnabled",
+      "value": true
+    },
+    {
+      "id": "DDP_Rate_Limit_User_Enabled",
+      "value": true
+    },
+    {
+      "id": "CAS_Creation_User_Enabled",
+      "value": true
+    },
+    {
+      "id": "LDAP_Login_Fallback",
+      "value": false
+    },
+    {
+      "id": "E2E_Enabled_Mentions",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_Apple",
+      "value": false
+    },
+    {
+      "id": "CAS_Sync_User_Data_Enabled",
+      "value": true
+    },
+    {
+      "id": "LDAP_Authentication",
+      "value": false
+    },
+    {
+      "id": "Prometheus_Enabled",
+      "value": false
+    },
+    {
+      "id": "Message_Read_Receipt_Enabled",
+      "value": false
+    },
+    {
+      "id": "SlackBridge_FileUpload_Enabled",
+      "value": true
+    },
+    {
+      "id": "Federation_Service_EDU_Process_Typing",
+      "value": true
+    },
+    {
+      "id": "API_Enable_CORS",
+      "value": false
+    },
+    {
+      "id": "SlackBridge_Out_Enabled",
+      "value": false
+    },
+    {
+      "id": "DDP_Rate_Limit_Connection_Enabled",
+      "value": true
+    },
+    {
+      "id": "Livechat_enable_message_character_limit",
+      "value": false
+    },
+    {
+      "id": "Federation_Service_EDU_Process_Presence",
+      "value": false
+    },
+    {
+      "id": "Direct_Reply_Enable",
+      "value": false
+    },
+    {
+      "id": "Message_Read_Receipt_Archive_Enabled",
+      "value": false
+    },
+    {
+      "id": "Federation_Service_EDU_Process_Receipt",
+      "value": false
+    },
+    {
+      "id": "Block_Multiple_Failed_Logins_Enabled",
+      "value": true
+    },
+    {
+      "id": "Federation_Service_Join_Encrypted_Rooms",
+      "value": false
+    },
+    {
+      "id": "FileUpload_Storage_Type",
+      "value": "GridFS"
+    },
+    {
+      "id": "Troubleshoot_Disable_Statistics_Generator",
+      "value": false
+    },
+    {
+      "id": "Federation_Service_Join_Non_Private_Rooms",
+      "value": false
+    },
+    {
+      "id": "Site_Url",
+      "hosts": [
+        "portal.nanobase.ai"
+      ]
+    },
+    {
+      "id": "LDAP_Reject_Unauthorized",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_GitHub_Enterprise",
+      "value": false
+    },
+    {
+      "id": "Federation_Service_Validate_User_Domain",
+      "value": false
+    },
+    {
+      "id": "SlackBridge_Reactions_Enabled",
+      "value": true
+    },
+    {
+      "id": "Cloud_Service_Agree_PrivacyTerms",
+      "value": false
+    },
+    {
+      "id": "DDP_Rate_Limit_User_By_Method_Enabled",
+      "value": true
+    },
+    {
+      "id": "Cloud_Workspace_Id",
+      "value": false
+    },
+    {
+      "id": "LDAP_Find_User_After_Login",
+      "value": true
+    },
+    {
+      "id": "Cloud_Workspace_Client_Id",
+      "value": false
+    },
+    {
+      "id": "Push_show_username_room",
+      "value": true
+    },
+    {
+      "id": "Enable_CSP",
+      "value": true
+    },
+    {
+      "id": "Push_show_message",
+      "value": true
+    },
+    {
+      "id": "Push_request_content_from_server",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_Gitlab",
+      "value": false
+    },
+    {
+      "id": "DDP_Rate_Limit_Connection_By_Method_Enabled",
+      "value": true
+    },
+    {
+      "id": "Login_Logs_Enabled",
+      "value": false
+    },
+    {
+      "id": "Cloud_Workspace_License",
+      "value": false
+    },
+    {
+      "id": "SMTP_Host",
+      "value": false
+    },
+    {
+      "id": "Cloud_Workspace_Had_Trial",
+      "value": false
+    },
+    {
+      "id": "SMTP_IgnoreTLS",
+      "value": true
+    },
+    {
+      "id": "LDAP_Group_Filter_Enable",
+      "value": false
+    },
+    {
+      "id": "API_Enable_Rate_Limiter",
+      "value": true
+    },
+    {
+      "id": "SMTP_Pool",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_Gitlab_merge_users",
+      "value": false
+    },
+    {
+      "id": "Accounts_iframe_enabled",
+      "value": true
+    },
+    {
+      "id": "API_Enable_Rate_Limiter_Dev",
+      "value": true
+    },
+    {
+      "id": "Accounts_iframe_url",
+      "hosts": [
+        "portal.nanobase.ai"
+      ]
+    },
+    {
+      "id": "Accounts_Iframe_api_url",
+      "hosts": [
+        "portal.nanobase.ai"
+      ]
+    },
+    {
+      "id": "Accounts_OAuth_Nextcloud",
+      "value": false
+    },
+    {
+      "id": "LDAP_Merge_Existing_Users",
+      "value": false
+    },
+    {
+      "id": "LDAP_Update_Data_On_Login",
+      "value": true
+    },
+    {
+      "id": "LDAP_Update_Data_On_OAuth_Login",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Wordpress",
+      "value": false
+    },
+    {
+      "id": "Livechat_enabled_when_agent_idle",
+      "value": true
+    },
+    {
+      "id": "LDAP_DataSync_UseVariables",
+      "value": false
+    },
+    {
+      "id": "Iframe_Integration_send_enable",
+      "value": false
+    },
+    {
+      "id": "Message_VideoRecorderEnabled",
+      "value": true
+    },
+    {
+      "id": "FileUpload_Enabled_Direct",
+      "value": true
+    },
+    {
+      "id": "LDAP_Sync_User_Avatar",
+      "value": true
+    },
+    {
+      "id": "AutoTranslate_Enabled",
+      "value": false
+    },
+    {
+      "id": "AutoTranslate_AutoEnableOnJoinRoom",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_start",
+      "value": false
+    },
+    {
+      "id": "Iframe_Integration_receive_enable",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_close",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_chat_taken",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_chat_queued",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_forward",
+      "value": false
+    },
+    {
+      "id": "HexColorPreview_Enabled",
+      "value": true
+    },
+    {
+      "id": "NPS_survey_enabled",
+      "value": true
+    },
+    {
+      "id": "Livechat_webhook_on_offline_msg",
+      "value": false
+    },
+    {
+      "id": "Katex_Enabled",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_Dolphin",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_visitor_message",
+      "value": false
+    },
+    {
+      "id": "MapView_Enabled",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_agent_message",
+      "value": false
+    },
+    {
+      "id": "Send_visitor_navigation_history_livechat_webhook_request",
+      "value": false
+    },
+    {
+      "id": "Livechat_webhook_on_capture",
+      "value": false
+    },
+    {
+      "id": "Message_CustomFields_Enabled",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Facebook",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Google",
+      "value": false
+    },
+    {
+      "id": "Livechat_enable_business_hours",
+      "value": false
+    },
+    {
+      "id": "Livechat_fileupload_enabled",
+      "value": true
+    },
+    {
+      "id": "Accounts_OAuth_Github",
+      "value": false
+    },
+    {
+      "id": "Livechat_enable_transcript",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Linkedin",
+      "value": false
+    },
+    {
+      "id": "Accounts_Registration_AuthenticationServices_Enabled",
+      "value": true
+    },
+    {
+      "id": "Omnichannel_enable_department_removal",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Meteor",
+      "value": false
+    },
+    {
+      "id": "Accounts_Default_User_Preferences_enableAutoAway",
+      "value": true
+    },
+    {
+      "id": "Livechat_OfflineMessageToChannel_enabled",
+      "value": false
+    },
+    {
+      "id": "Accounts_OAuth_Twitter",
+      "value": false
+    },
+    {
+      "id": "Accounts_Default_User_Preferences_enableMobileRinging",
+      "value": true
+    },
+    {
+      "id": "FEDERATION_Enabled",
+      "value": false
+    },
+    {
+      "id": "Federation_Matrix_enabled",
+      "value": false
+    },
+    {
+      "id": "Federation_Matrix_serve_well_known",
+      "value": true
+    },
+    {
+      "id": "Federation_Matrix_enable_ephemeral_events",
+      "value": false
+    },
+    {
+      "id": "Federation_Matrix_homeserver_url",
+      "hosts": [
+        "localhost"
+      ]
+    },
+    {
+      "id": "Federation_Matrix_homeserver_domain",
+      "hosts": [
+        "localhost"
+      ]
+    },
+    {
+      "id": "Federation_Matrix_bridge_url",
+      "hosts": [
+        "localhost"
+      ]
+    },
+    {
+      "id": "Canned_Responses_Enable",
+      "value": true
+    },
+    {
+      "id": "Device_Management_Enable_Login_Emails",
+      "value": true
+    },
+    {
+      "id": "VoIP_TeamCollab_Screen_Sharing_Enabled",
+      "value": true
+    },
+    {
+      "id": "VoIP_TeamCollab_Mobile_Ringing_Enabled",
+      "value": false
+    },
+    {
+      "id": "VoIP_TeamCollab_Ice_Servers",
+      "hosts": [
+        "stun.l.google.com"
+      ],
+      "configured": true
+    },
+    {
+      "id": "VoIP_TeamCollab_SIP_Integration_Enabled",
+      "value": false
+    },
+    {
+      "id": "LDAP_Background_Sync",
+      "value": false
+    },
+    {
+      "id": "LDAP_Background_Sync_Import_New_Users",
+      "value": true
+    },
+    {
+      "id": "LDAP_Background_Sync_Keep_Existant_Users_Updated",
+      "value": true
+    },
+    {
+      "id": "LDAP_Background_Sync_Merge_Existent_Users",
+      "value": false
+    },
+    {
+      "id": "LDAP_Background_Sync_Disable_Missing_Users",
+      "value": false
+    },
+    {
+      "id": "LDAP_Background_Sync_Avatars",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_AutoLogout_Enabled",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_Custom_Fields",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_User_Data_Roles",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_User_Data_Roles_AutoRemove",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_User_Data_Channels",
+      "value": false
+    },
+    {
+      "id": "LDAP_Sync_User_Data_Channels_Enforce_AutoChannels",
+      "value": false
+    },
+    {
+      "id": "LDAP_Enable_LDAP_Groups_To_RC_Teams",
+      "value": false
+    },
+    {
+      "id": "LDAP_Validate_Teams_For_Each_Login",
+      "value": false
+    },
+    {
+      "id": "LDAP_Background_Sync_ABAC_Attributes",
+      "value": false
+    },
+    {
+      "id": "Outlook_Calendar_Enabled",
+      "value": false
+    },
+    {
+      "id": "VideoConf_Enable_DMs",
+      "value": true
+    },
+    {
+      "id": "VideoConf_Enable_Channels",
+      "value": true
+    },
+    {
+      "id": "VideoConf_Enable_Groups",
+      "value": true
+    },
+    {
+      "id": "Calendar_BusyStatus_Enabled",
+      "value": true
+    },
+    {
+      "id": "VideoConf_Enable_Teams",
+      "value": true
+    },
+    {
+      "id": "VideoConf_Enable_Persistent_Chat",
+      "value": false
+    },
+    {
+      "id": "ABAC_Enabled",
+      "value": false
+    },
+    {
+      "id": "SAML_Custom_Default_idp_slo_redirect_url",
+      "hosts": [
+        "example.com"
+      ]
+    },
+    {
+      "id": "SAML_Custom_Default_channels_update",
+      "value": false
+    },
+    {
+      "id": "SAML_Custom_Default_include_private_channels_update",
+      "value": false
+    },
+    {
+      "id": "Search.defaultProvider.GlobalSearchEnabled",
+      "value": false
+    },
+    {
+      "id": "Omnichannel_calculate_dispatch_service_queue_statistics",
+      "value": true
+    }
+  ],
+  "counts": {
+    "apps": 0,
+    "integrations": 0,
+    "scheduledApps": 0,
+    "pushTokens": 0
+  },
+  "installedAppsWithNetworkingPermission": 0,
+  "cronNames": [
+    "VideoConferences",
+    "temporaryUploadCleanup",
+    "Cleanup OEmbed cache",
+    "UserDataDownload",
+    "aggregate-sessions",
+    "finish-sessions",
+    "Livechat Agent Activity Monitor"
+  ],
+  "establishedTcpPeers": {
+    "172.23.0.2:27017": 23
+  },
+  "licenseRuntime": {
+    "version": "1.1.16",
+    "outboundUrlLiterals": 0,
+    "outboundHttpOrWebsocketCallsFound": 0,
+    "path": "/app/bundle/programs/server/npm/node_modules/@rocket.chat/license",
+    "sourcePath": "ee/packages/license/src/AirGappedRestriction.ts",
+    "collectorMention": "comment only; computeRestriction local no-network stub"
+  },
+  "limits": [
+    "Point-in-time settings and TCP snapshot, not a full traffic capture",
+    "API_Embed enabled allows arbitrary message URL fetch unless egress prevented",
+    "Google STUN default can cause browser-side outbound traffic when calling features are used",
+    "Disabled configurable integrations may become enabled later; network enforcement needed for durable guarantee"
+  ]
+}

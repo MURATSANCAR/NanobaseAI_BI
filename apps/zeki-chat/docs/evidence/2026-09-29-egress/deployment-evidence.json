@@ -1,0 +1,101 @@
+{
+  "observedAt": "2026-09-29T15:37:57.986098+00:00",
+  "image": "zeki-ai-chat:8.5.3-43bcc94",
+  "imageId": "sha256:26a8ca9854d1d5bd92be67b4bbf9e21ce9ac3851a9d9bd3e10a9ac9f7199cf68",
+  "codeVersion": "43bcc94",
+  "configCommit": "521b595",
+  "settingsApi": {
+    "API_Embed": false,
+    "Push_enable": false,
+    "Site_Name": "ZEKI AI CHAT",
+    "VoIP_TeamCollab_Ice_Servers": "",
+    "Zeki_Local_Only": true
+  },
+  "settingsIndependentMongo": {
+    "API_Embed": false,
+    "Push_enable": false,
+    "Site_Name": "ZEKI AI CHAT",
+    "VoIP_TeamCollab_Ice_Servers": "",
+    "Zeki_Local_Only": true
+  },
+  "settingsMatch": true,
+  "network": {
+    "name": "zeki-local",
+    "internal": true,
+    "ipv6": false,
+    "members": [
+      "zeki-chat",
+      "zeki-ingress",
+      "zeki-mongo"
+    ],
+    "ipam": [
+      {
+        "Subnet": "172.20.0.0/16",
+        "IPRange": "",
+        "Gateway": "172.20.0.1"
+      }
+    ]
+  },
+  "volumes": {
+    "zeki-chat": [
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-uploads",
+        "Source": "/data/docker/volumes/zeki_zeki-uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    ],
+    "zeki-mongo": [
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-mongo-config",
+        "Source": "/data/docker/volumes/zeki_zeki-mongo-config/_data",
+        "Destination": "/data/configdb",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      },
+      {
+        "Type": "volume",
+        "Name": "zeki_zeki-mongo-data",
+        "Source": "/data/docker/volumes/zeki_zeki-mongo-data/_data",
+        "Destination": "/data/db",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    ]
+  },
+  "iceMigrationCommit": "f166bc5",
+  "finalConfigObservedAt": "2026-09-29T15:40:38.768350+00:00",
+  "ingress": {
+    "image": "nginx@sha256:d10753d9289b8e3f884386351f73554ce72b631378949deddd75e83ee296c427",
+    "readOnly": true,
+    "user": "101:101",
+    "dns": [
+      "127.0.0.1"
+    ],
+    "capDrop": [
+      "ALL"
+    ],
+    "networks": [
+      "zeki-ingress",
+      "zeki-local"
+    ],
+    "ports": {
+      "80/tcp": null,
+      "8080/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "4000"
+        }
+      ]
+    }
+  }
+}
