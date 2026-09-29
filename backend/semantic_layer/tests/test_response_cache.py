@@ -8,6 +8,7 @@ yolları hiç saklanmaz; oturumsuz istek saklanmaz.
 
 from __future__ import annotations
 
+import json
 import time
 
 import pytest
@@ -177,3 +178,71 @@ def test_refresh_is_at_seven_and_noon_istanbul():
     assert not RC.is_stale(ts(7, 5), ts(11, 59))       # 07:05'te üretilen, 12:00'ye kadar taze
     assert RC.is_stale(ts(7, 5), ts(12, 1))            # 12:00'den sonra bayat
     assert RC.is_stale(ts(11, 0), ts(7, 0) + 86400)    # ertesi sabah 07:00'de bayat
+
+
+def test_internal_identity_needs_this_process_secret(tmp_path):
+    """Arka plan tazelemesinin iç çerezi yalnız bu süreçteki gizli değerle geçer; kişi kaydında çerez yok."""
+    cache = RC.ResponseCache(str(tmp_path))
+    cache.remember({"username": "Ayse", "displayName": "Ayşe Y.", "token": "gizli"})
+    ok = cache.resolve_internal(cache.internal_cookie("Ayse"))
+    assert ok == {"username": "Ayse", "displayName": "Ayşe Y."}
+    assert cache.resolve_internal(f"{cache.INTERNAL_PREFIX}yanlis.Ayse") is None          # başka gizli değer
+    assert cache.resolve_internal(cache.internal_cookie("bilinmeyen")) is None            # kaydı olmayan kişi
+    assert cache.resolve_internal("timas_session=a") is None                              # gerçek çerez burada çözülmez
+    other = RC.ResponseCache(str(tmp_path))                                                # yeniden başlatma: yeni gizli değer
+    assert other.resolve_internal(cache.internal_cookie("Ayse")) is None
+    assert other.people["ayse"]["displayName"] == "Ayşe Y."                               # kimlik diskten gelir
+    assert b"gizli" not in (tmp_path / "people.json").read_bytes()
+
+
+def test_board_session_uses_internal_identity_only_with_hook(monkeypatch):
+    from semantic_bridge import board as B
+
+    cache = RC.ResponseCache()
+    cache.remember({"username": "ayse", "displayName": "Ayşe"})
+    monkeypatch.setattr(B, "internal_session", None)
+    monkeypatch.setattr(B, "_sessions", {})
+    monkeypatch.setattr(B.urllib.request, "urlopen", lambda *a, **k: (_ for _ in ()).throw(OSError("yok")))
+    assert B._fetch_session(cache.internal_cookie("ayse")) is None         # kanca yokken giriş servisine gider
+    monkeypatch.setattr(B, "internal_session", cache.resolve_internal)
+    assert B.user_of(cache.internal_cookie("ayse")) == "ayse"
+
+
+def test_after_restart_stale_entry_is_refreshed_with_internal_identity(tmp_path):
+    """Yeniden başlatmadan sonra çerez bellekte yok; 07:00/12:00 tazelemesi iç kimlikle yine çalışır."""
+    counters = {"n": 0}
+    app = FastAPI()
+    cache = RC.ResponseCache(str(tmp_path))
+    cache.remember({"username": "ayse", "displayName": "Ayşe"})
+
+    def user_of(cookie):
+        s = cache.resolve_internal(cookie) or ({"username": "ayse"} if cookie == "timas_session=a" else None)
+        if not s:
+            raise RuntimeError("oturum yok")
+        return s["username"]
+
+    RC.install(app, cache, user_of, lambda: True)
+
+    @app.get("/api/v1/mod/slow")
+    def slow():
+        counters["n"] += 1
+        time.sleep(0.1)
+        return {"n": counters["n"]}
+
+    key = ("ayse", "/api/v1/mod/slow", "")
+    cache.put(key, b'{"n": 0}', [("content-type", "application/json")], 200, 2.0, {})    # diskten gelmiş gibi: çerez yok
+    cache._items[key].at = RC.last_refresh() - 1
+    due = cache.due()
+    assert [k for k, _ in due] == [key]
+    import asyncio
+
+    async def run():
+        import httpx
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as client:
+            h = {"cookie": cache.internal_cookie("ayse"), RC.REVALIDATE_HEADER: cache.secret}
+            return await client.get("/api/v1/mod/slow", headers=h)
+
+    r = asyncio.run(run())
+    assert r.status_code == 200 and counters["n"] == 1
+    assert json.loads(cache.get(key).body)["n"] == 1 and not RC.is_stale(cache.get(key).at)

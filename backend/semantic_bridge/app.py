@@ -2127,7 +2127,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         finally:
             FORCE_FRESH.reset(token)
 
-    # Yavaş ekran verisi: önce hazır cevap, arkada tazele (5 dk; «Yenile» beklemeden; yazma o modülü düşürür).
+    # Yavaş ekran verisi: önce hazır cevap, arkada tazele (07:00 ve 12:00; «Yenile» beklemeden; yazma o modülü düşürür).
     # Sayfa kapısından önce kurulur ki kapının İÇİNDE çalışsın: hazır cevap yalnız oturumu ve sayfa yetkisi olan kişiye.
     from semantic_bridge import response_cache as rc_mod
     from semantic_bridge import board as _board_for_cache
@@ -2135,7 +2135,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.response_cache = rc_mod.ResponseCache(
         os.environ.get("RESPONSE_CACHE_DIR", "/data/nanobaseai/bi/var/response-cache"))
     rc_mod.install(app, app.state.response_cache, _board_for_cache.user_of,
-                   lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"))
+                   lambda: (admin_mod.conf("RESPONSE_CACHE_ENABLED") or "1").strip().lower() not in ("0", "false", "hayir", "off"),
+                   session_of=_board_for_cache._fetch_session)
+    _board_for_cache.internal_session = app.state.response_cache.resolve_internal
 
     def rt() -> Runtime:
         if state["rt"] is None:

@@ -66,7 +66,7 @@ def is_stale(at: float, now: Optional[float] = None) -> bool:
 
 
 SLOW_SECONDS = 1.5
-KEEP_SECONDS = 24 * 3600
+KEEP_SECONDS = 3 * 24 * 3600     # son 3 günde açılmış ekranlar 07:00 ve 12:00'de kimse açmasa da hazırlanır
 MAX_BODY = 8 * 1024 * 1024
 MAX_TOTAL = 400 * 1024 * 1024
 
@@ -142,14 +142,68 @@ class ResponseCache:
         self.stats = {"hit": 0, "stale": 0, "miss": 0, "stored": 0, "revalidated": 0, "dropped": 0, "invalidated": 0,
                       "loaded": 0}
         self.dir: Optional[Path] = None
+        #: Kişi → oturumun kimlik alanları (hesap adı, görünen ad). Arka plan tazelemesi çerez yerine bunu iç kimlikle
+        #: kullanır: köprü yeniden başlasa da 07:00/12:00 tazelemesi herkes için çalışır. Çerez/parola yazılmaz.
+        self.people: dict[str, dict[str, str]] = {}
         if directory:
             try:
                 self.dir = Path(directory)
                 self.dir.mkdir(parents=True, exist_ok=True, mode=0o700)
                 self._load()
+                self._load_people()
             except OSError as e:          # disk yoksa yalnız bellekte çalışır
                 log.warning("response cache: disk kullanılamıyor (%s): %s", directory, e)
                 self.dir = None
+
+    # ---- iç kimlik (arka plan tazelemesi; yalnız bu süreçte bilinen gizli değerle)
+    INTERNAL_PREFIX = "timas_session=swr."
+
+    def _people_path(self) -> Optional[Path]:
+        return self.dir / "people.json" if self.dir is not None else None
+
+    def _load_people(self) -> None:
+        p = self._people_path()
+        try:
+            data = json.loads(p.read_text()) if p and p.exists() else {}
+            self.people = {str(k): {"username": str(v.get("username") or k), "displayName": str(v.get("displayName") or "")}
+                           for k, v in data.items() if isinstance(v, dict)}
+        except (OSError, ValueError):
+            self.people = {}
+
+    def remember(self, session: Optional[dict[str, Any]]) -> None:
+        """Gerçek oturumla gelen kişinin kimlik alanları (değiştiyse diske yazılır)."""
+        user = str((session or {}).get("username") or "").strip()
+        if not user:
+            return
+        row = {"username": user, "displayName": str(session.get("displayName") or "").strip()}
+        if self.people.get(user.lower()) == row:
+            return
+        self.people[user.lower()] = row
+        p = self._people_path()
+        if p is None:
+            return
+        try:
+            tmp = p.with_name(p.name + f".{secrets.token_hex(4)}.tmp")
+            tmp.write_text(json.dumps(self.people, ensure_ascii=False))
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, p)
+        except OSError as err:
+            log.info("response cache: kişi kaydı yazılamadı: %s", err)
+
+    def internal_cookie(self, user: str) -> str:
+        return f"{self.INTERNAL_PREFIX}{self.secret}.{user}"
+
+    def resolve_internal(self, cookie: str) -> Optional[dict[str, str]]:
+        """İç çerez → oturum (yalnız gizli değer bu süreçteki ile aynıysa). Dışarıdan gelen istek bu değeri bilemez."""
+        at = cookie.find(self.INTERNAL_PREFIX)
+        if at < 0:
+            return None
+        rest = cookie[at + len(self.INTERNAL_PREFIX):].split(";")[0].strip()
+        secret, _, user = rest.partition(".")
+        if not user or not secrets.compare_digest(secret, self.secret):
+            return None
+        row = self.people.get(user.lower())
+        return dict(row) if row else None
 
     # ---- disk (yeniden başlatmada hazır cevap kaybolmasın)
     @staticmethod
@@ -262,7 +316,8 @@ class ResponseCache:
                     forgotten.append(k)
                     continue
                 # Çerezi olmayan (yeniden başlatmadan diskten gelen) kayıt kişinin bir sonraki açılışında tazelenir.
-                if e.replay and not e.busy and is_stale(e.at, now):
+                # Çerezi bellekte olmayan (yeniden başlatmadan diskten gelen) kayıt iç kimlikle tazelenir.
+                if not e.busy and (e.replay or k[0] in self.people) and is_stale(e.at, now):
                     out.append((k, e))
         for k in forgotten:
             self._unlink(k)
@@ -282,9 +337,10 @@ class ResponseCache:
                     "enabled": self.enabled, **self.stats}
 
 
-def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any) -> None:
-    """Köprüye ara katman ve 5 dakikalık arka plan tazeleyicisini ekler. `user_of(cookie)` → kullanıcı ya da istisna;
-    `enabled()` → ayar açık mı. Sayfa kapısından SONRA (içeride) çalışsın diye kapıdan önce kurulmalı."""
+def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any, session_of: Any = None) -> None:
+    """Köprüye ara katman ve 07:00/12:00 arka plan tazeleyicisini ekler. `user_of(cookie)` → kullanıcı ya da istisna;
+    `session_of(cookie)` → oturum sözlüğü (kimlik alanları iç kimlik için saklanır); `enabled()` → ayar açık mı.
+    Sayfa kapısından SONRA (içeride) çalışsın diye kapıdan önce kurulmalı."""
     from starlette.requests import Request
     from starlette.responses import Response
 
@@ -296,7 +352,19 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any) -> None:
             user = user_of(cookie)
         except Exception:  # noqa: BLE001 — oturumsuzsa saklanmaz
             return None
+        if session_of is not None and cache.INTERNAL_PREFIX not in cookie:
+            try:
+                cache.remember(session_of(cookie))
+            except Exception:  # noqa: BLE001 — kimlik saklanamasa da cevap saklanır
+                pass
         return (str(user).lower(), request.url.path, norm_query(request.url.query))
+
+    def _internal_headers(user: str) -> dict[str, str]:
+        h = {"cookie": cache.internal_cookie(user), "accept": "application/json"}
+        token = os.environ.get("SEMANTIC_CALLER_TOKEN", "")
+        if token:
+            h["x-semantic-caller"] = token
+        return h
 
     def _replay_headers(request: Request) -> dict[str, str]:
         keep = ("cookie", "x-semantic-caller", "authorization", "accept", "accept-language", "x-forwarded-for", "x-real-ip",
@@ -392,7 +460,7 @@ def install(app: Any, cache: ResponseCache, user_of: Any, enabled: Any) -> None:
                     continue
                 for key, e in cache.due():
                     # Sırayla: aynı anda tek arka plan üretimi; kaynağa yük bindirmez.
-                    await _revalidate(key, e.replay)
+                    await _revalidate(key, e.replay or _internal_headers(key[0]))
             except Exception:  # noqa: BLE001 — tazeleyici durmasın
                 log.exception("response cache: arka plan turu hata verdi")
 

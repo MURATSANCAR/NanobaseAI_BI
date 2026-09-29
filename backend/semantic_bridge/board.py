@@ -140,7 +140,13 @@ _sessions: dict[str, tuple[float, dict]] = {}
 _sessions_lock = threading.Lock()
 
 
+#: Arka plan tazelemesinin iç kimliği (response_cache kurar): yalnız o süreçte bilinen gizli değerle gelen iç çerez.
+internal_session: Optional[Callable[[str], Optional[dict]]] = None
+
+
 def _fetch_session(cookie: str) -> Optional[dict]:
+    if internal_session is not None and "timas_session=swr." in cookie:
+        return internal_session(cookie)
     key = hashlib.sha256(cookie.encode("utf-8")).hexdigest()
     now = time.monotonic()
     with _sessions_lock:
