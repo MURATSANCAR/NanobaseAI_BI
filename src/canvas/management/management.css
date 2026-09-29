@@ -87,6 +87,32 @@
 .mg-preset.is-on { border-color: var(--mg-violet); background: #f3effd; color: var(--mg-violet) }
 
 .mg-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px }
+
+/* Çok kolonlu sıralama şeridi (ZEKI-49): etkin anahtarlar sırayla; dokunmatikte de erişilir. */
+.mg-sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0 }
+.mg-sortbar-none { font-size: 12px; color: var(--mg-muted) }
+.mg-sortbar-hint { display: none; font-size: 11.5px; color: #9a8bab }
+@media (hover: hover) and (pointer: fine) { .mg-sortbar-hint { display: inline } }
+.mg-sortchip { display: inline-flex; align-items: stretch; max-width: 100%; border: 1px solid var(--mg-violet); border-radius: 999px; background: #f3effd; color: var(--mg-violet); overflow: hidden }
+.mg-sortchip button { border: 0; background: none; color: inherit; cursor: pointer; font: inherit }
+/* Çip taşanı kırpar; odak halkası iç düğmede kırpılmasın diye çipin kendisine çizilir. */
+.mg-sortchip:has(:focus-visible) { outline: 3px solid #aa87e8; outline-offset: 2px }
+.mg-page .mg-sortchip button:focus-visible { outline: none }
+.mg-sortchip-main {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; min-height: 36px; padding: 0 6px 0 10px;
+  font-size: 12px; font-weight: 700; transition: transform 140ms var(--ease-out);
+}
+.mg-sortchip-main:active { transform: scale(0.97) }
+.mg-sortchip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.mg-sortchip-n { display: grid; place-items: center; flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--mg-violet); color: #fff; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums }
+.mg-sortchip .mg-sortchip-x { display: grid; place-items: center; flex-shrink: 0; width: 34px; border-left: 1px solid #d9cefb }
+@media (hover: hover) and (pointer: fine) { .mg-sortchip .mg-sortchip-x:hover { background: #e7defd } }
+.mg-sortadd { max-width: 100%; min-width: 0 }
+.mg-sortadd select {
+  min-height: 36px; max-width: 100%; padding: 0 12px; border: 1px dashed #cbbdf0; border-radius: 999px; background: #fff;
+  font-size: 12px; font-weight: 700; color: var(--mg-violet); cursor: pointer;
+}
+.mg-th-order { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: var(--mg-violet); color: #fff; font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums }
 .mg-select { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 0 1 220px }
 .mg-select > span { font-size: 10.5px; font-weight: 750; letter-spacing: .04em; color: #8b8098 }
 .mg-count { margin: 0 0 0 auto; font-size: 12px; color: var(--mg-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px }
@@ -212,7 +238,7 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
 @media (prefers-reduced-motion: reduce) {
   .mg-sheet { transition: opacity 180ms ease }
   .mg-sheet[data-starting-style], .mg-sheet[data-ending-style] { transform: none; opacity: 0 }
-  .mg-button, .mg-level, .mg-preset, .mg-card, .mg-card-arrow { transition: none }
+  .mg-button, .mg-level, .mg-preset, .mg-card, .mg-card-arrow, .mg-sortchip-main { transition: none }
 }
 
 /* Canlılık satırı: renk durumu anlatır; sayaç sabit genişlikli rakamla titremez. */

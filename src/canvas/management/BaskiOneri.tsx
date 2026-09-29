@@ -14,6 +14,7 @@ import { useCan } from '../useAdmin';
 import SqlInfo from '../components/SqlInfo';
 import { Explain } from '../components/Explain';
 import type { Kaynaklar } from '../components/sqlInfo';
+import { sortStep, type SortKey } from './sortKeys';
 import './management.css';
 import { notifyExport } from '../data-security/notify';
 import { downloadCsvAsXlsx } from '../components/excel';
@@ -21,7 +22,7 @@ import { downloadCsvAsXlsx } from '../components/excel';
 const REPORT_ID = 'baski-oneri';
 
 type Row = ReportView['rows'][number];
-type Sort = { index: number; dir: 1 | -1 } | null;
+type Sort = SortKey[];
 
 const FILTER_LABELS: Record<string, string> = {
   baski_durum: 'Baskı durumu',
@@ -115,7 +116,7 @@ export default function BaskiOneri() {
   const [search, setSearch] = useState('');
   const [oneri, setOneri] = useState<Set<string>>(new Set());
   const [selects, setSelects] = useState<Record<string, string>>({});
-  const [sort, setSort] = useState<Sort>(null);
+  const [sort, setSort] = useState<Sort>([]);
   // Açılış süzgeçleri seçili başlar; burada yalnız kullanıcının kaldırdıkları tutulur.
   const [dropped, setDropped] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<{ open: boolean; focus: SheetFocus }>({ open: false, focus: { kind: 'all' } });
@@ -125,7 +126,7 @@ export default function BaskiOneri() {
     setOneri(new Set());
     setSelects({});
     setDropped(new Set());
-    setSort(null);
+    setSort([]);
   }, [viewId]);
 
   const presets = view?.defaultFilters ?? [];
@@ -169,29 +170,37 @@ export default function BaskiOneri() {
     const counts: Record<string, number> = {};
     if (oneriIdx !== undefined) for (const r of pre) counts[String(r[oneriIdx])] = (counts[String(r[oneriIdx])] ?? 0) + 1;
     let out = oneri.size && oneriIdx !== undefined ? pre.filter((r) => oneri.has(String(r[oneriIdx]))) : pre;
-    if (sort) {
-      const { index, dir } = sort;
+    if (sort.length) {
       // Power BI sırası: boş en küçük değerdir (artanda başta), NaN her iki yönde en sonda.
-      const numeric = isNum(view.columns[index]);
       const blank = (v: unknown) => v === null || v === undefined || v === '';
+      const compare = sort.map(({ index, dir }) => {
+        const numeric = isNum(view.columns[index]);
+        return (a: Row, b: Row) => {
+          const x = a[index];
+          const y = b[index];
+          if (blank(x) || blank(y)) return blank(x) && blank(y) ? 0 : (blank(x) ? -1 : 1) * dir;
+          if (numeric) {
+            const nx = numberOf(x) ?? 0;
+            const ny = numberOf(y) ?? 0;
+            if (Number.isNaN(nx) || Number.isNaN(ny)) return Number.isNaN(nx) && Number.isNaN(ny) ? 0 : Number.isNaN(nx) ? 1 : -1;
+            return (nx === ny ? 0 : nx < ny ? -1 : 1) * dir;
+          }
+          return String(x).localeCompare(String(y), 'tr') * dir;
+        };
+      });
+      // İlk anahtar eşitse sıradakine bakılır; hepsi eşitse raporun kendi sırası kalır (sort kararlıdır).
       out = [...out].sort((a, b) => {
-        const x = a[index];
-        const y = b[index];
-        if (blank(x) || blank(y)) return blank(x) && blank(y) ? 0 : (blank(x) ? -1 : 1) * dir;
-        if (numeric) {
-          const nx = numberOf(x) ?? 0;
-          const ny = numberOf(y) ?? 0;
-          if (Number.isNaN(nx) || Number.isNaN(ny)) return Number.isNaN(nx) && Number.isNaN(ny) ? 0 : Number.isNaN(nx) ? 1 : -1;
-          return (nx === ny ? 0 : nx < ny ? -1 : 1) * dir;
+        for (const c of compare) {
+          const r = c(a, b);
+          if (r) return r;
         }
-        return String(x).localeCompare(String(y), 'tr') * dir;
+        return 0;
       });
     }
     return { rows: out, counts };
   }, [view, search, selects, oneri, dropped, sort, colIndex, oneriIdx]);
 
-  const toggleSort = (index: number) =>
-    setSort((s) => (s?.index !== index ? { index, dir: -1 } : s.dir === -1 ? { index, dir: 1 } : null));
+  const toggleSort = (index: number, additive: boolean) => setSort((s) => sortStep(s, index, additive));
 
   const openSheet = useCallback((focus: SheetFocus) => setSheet({ open: true, focus }), []);
 
@@ -413,6 +422,7 @@ export default function BaskiOneri() {
                 </p>
               </div>
 
+              <SortBar columns={view.columns} sort={sort} onChange={setSort} />
               <ReportTable view={view} rows={rows} sort={sort} onSort={toggleSort} onSource={openSheet} k={snap?.kaynaklar} />
               {view.explain && <ExplainPanel explain={view.explain} />}
             </>
@@ -427,6 +437,71 @@ export default function BaskiOneri() {
         onOpenChange={(open) => setSheet((s) => ({ ...s, open }))}
       />
     </Shell>
+  );
+}
+
+/**
+ * Sıralama şeridi (ZEKI-49): etkin anahtarlar öncelik sırasıyla. Çipe dokunmak yönü çevirir, ×'e dokunmak çıkarır;
+ * «sonra şuna göre» seçicisi yeni anahtar ekler. Telefonda Shift olmadığı için çok kolonlu sıralamanın yolu budur;
+ * masaüstünde başlığa Shift ile tıklamak da aynı işi yapar.
+ */
+function SortBar({ columns, sort, onChange }: { columns: ReportColumn[]; sort: Sort; onChange: (s: Sort) => void }) {
+  const free = columns.map((c, i) => ({ c, i })).filter(({ i }) => !sort.some((k) => k.index === i));
+  return (
+    <div className="mg-sortbar" role="group" aria-label="Sıralama">
+      <span className="mg-presets-label">Sıralama</span>
+      {sort.length === 0 && <span className="mg-sortbar-none">Raporun kendi sırası</span>}
+      {sort.map((k, n) => {
+        const label = columns[k.index]?.label ?? '';
+        const dir = k.dir === 1 ? 'artan' : 'azalan';
+        return (
+          <span key={k.index} className="mg-sortchip">
+            <button
+              type="button"
+              className="mg-sortchip-main"
+              onClick={() => onChange(sort.map((x): SortKey => (x.index === k.index ? { ...x, dir: x.dir === 1 ? -1 : 1 } : x)))}
+              aria-label={`${n + 1}. sıralama: ${label}, ${dir}. Yönü çevir`}
+            >
+              {sort.length > 1 && (
+                <span className="mg-sortchip-n" aria-hidden>
+                  {n + 1}
+                </span>
+              )}
+              <span className="mg-sortchip-label">{label}</span>
+              {k.dir === 1 ? <ArrowUp size={13} aria-hidden /> : <ArrowDown size={13} aria-hidden />}
+            </button>
+            <button type="button" className="mg-sortchip-x" onClick={() => onChange(sort.filter((x) => x.index !== k.index))} aria-label={`${label} sıralamasını kaldır`}>
+              <X size={13} aria-hidden />
+            </button>
+          </span>
+        );
+      })}
+      {free.length > 0 && (
+        <label className="mg-sortadd">
+          <span className="sr-only">{sort.length ? 'Sonra şu sütuna göre sırala' : 'Sütuna göre sırala'}</span>
+          <select
+            value=""
+            onChange={(e) => {
+              const i = Number(e.target.value);
+              if (e.target.value !== '' && Number.isInteger(i)) onChange([...sort, { index: i, dir: -1 }]);
+            }}
+          >
+            <option value="">{sort.length ? '+ Sonra şuna göre' : '+ Sütuna göre sırala'}</option>
+            {free.map(({ c, i }) => (
+              <option key={c.key} value={i}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {sort.length > 0 && (
+        <button type="button" className="mg-link" onClick={() => onChange([])}>
+          Sıralamayı kaldır
+        </button>
+      )}
+      <span className="mg-sortbar-hint">Başlığa Shift ile tıklayarak da ek sıralama eklenir.</span>
+    </div>
   );
 }
 
@@ -448,7 +523,7 @@ function ReportTable({
   view: ReportView;
   rows: Row[];
   sort: Sort;
-  onSort: (index: number) => void;
+  onSort: (index: number, additive: boolean) => void;
   onSource: (f: SheetFocus) => void;
   /** Sorgu bilgisi: toplam satırının hesabı. */
   k?: Kaynaklar;
@@ -478,19 +553,36 @@ function ReportTable({
             <tr>
               {cols.map((c, i) => {
                 const left = stickyLeft(i);
-                const active = sort?.index === i;
+                const order = sort.findIndex((k) => k.index === i);
+                const key = order >= 0 ? sort[order] : undefined;
                 return (
                   <th
                     key={c.key}
                     scope="col"
                     style={{ width: widthOf(c), minWidth: widthOf(c), left }}
                     className={(left !== undefined ? `mg-sticky mg-sticky-${i}` : '') + (c.format !== 'text' && c.format !== 'oneri' && c.format !== 'date' ? ' is-num' : '')}
-                    aria-sort={active ? (sort!.dir === 1 ? 'ascending' : 'descending') : undefined}
+                    // aria-sort yalnız birincil anahtarda; ikincil anahtarlar düğme metninde okunur.
+                    aria-sort={order === 0 && key ? (key.dir === 1 ? 'ascending' : 'descending') : undefined}
                   >
                     <div className="mg-th">
-                      <button type="button" className="mg-th-sort" onClick={() => onSort(i)} title="Sırala">
+                      <button
+                        type="button"
+                        className="mg-th-sort"
+                        // Shift ile tıklama yazıyı boyamasın.
+                        onMouseDown={(e) => {
+                          if (e.shiftKey) e.preventDefault();
+                        }}
+                        onClick={(e) => onSort(i, e.shiftKey || e.ctrlKey || e.metaKey)}
+                        title="Sırala · Shift ile tıklayınca ek sıralama"
+                      >
                         {c.label}
-                        {active && (sort!.dir === 1 ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                        {key && (key.dir === 1 ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />)}
+                        {key && sort.length > 1 && (
+                          <span className="mg-th-order" aria-hidden>
+                            {order + 1}
+                          </span>
+                        )}
+                        {key && order > 0 && <span className="sr-only">{`, ${order + 1}. sıralama, ${key.dir === 1 ? 'artan' : 'azalan'}`}</span>}
                       </button>
                       <button type="button" className="mg-th-src" onClick={() => onSource(focusOf(c))} aria-label={`${c.label}: kaynağını göster`} title="Kaynağı ve SQL">
                         <Info size={12} />
